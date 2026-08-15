@@ -1,11 +1,14 @@
-# Reference kits — the exporter's ground truth
+# Reference kits — closing out the unverified bits
 
-The XPM writer is built by **substituting into a known-good file**, not by
-generating XML from a spec. The `ProgramPads-v2.10` JSON blob inside an `.xpm`
-(pad→MIDI-note map, pad colours) is not reliably documented, and a
-plausible-looking guess produces a file that loads but misbehaves.
+**Status: no longer blocking.** The XPM structure was recovered from a program
+saved by MPC standalone firmware 2.9.1.2 (see
+[`../docs/XPM_STRUCTURE.md`](../docs/XPM_STRUCTURE.md)) and the `:xpm` module
+writes it today.
 
-So the exporter is blocked until there's a real kit in `golden/`.
+But that structure is second-hand. A program exported off *your* hardware turns
+every open question in
+[Unverified](../docs/XPM_STRUCTURE.md#unverified) — instrument numbering base,
+gap handling, version header, element naming — from a debate into a diff.
 
 ## The procedure (~5 minutes, per device)
 
@@ -15,12 +18,15 @@ So the exporter is blocked until there's a real kit in `golden/`.
    filled pads are encoded.
 3. Give a few pads distinct **colours** and **names**, and nudge a couple of
    **tune** / **level** / **pan** values off default. This makes it obvious
-   which XML field maps to which parameter.
+   which XML field maps to which parameter — and pad colour is the one thing
+   the recovered template shows nothing about, since every value in its
+   `ProgramPads` blob is zero.
 4. Save the program: `Save As` → name it `SnipSnapRef` → save to SD or USB.
 5. Copy the resulting `.xpm` off the card.
 
-Do this on whichever devices you can. **MPC One first** — it's the acceptance
-target, and a program that loads there loads on all three.
+**MPC One first** — it's the acceptance target, and a program that loads there
+loads on all three. A Live III export is the second most useful, since it's the
+only one on the 3.x firmware line.
 
 ## Where to put them
 
@@ -47,12 +53,16 @@ A second export of the *same* kit with one single parameter changed (say, pad
 A05's tune) — diffing two near-identical files is the fastest way to locate a
 field with certainty.
 
-## What happens next
+## The other half: does our output load?
 
-With a golden file in place:
+Separately from harvesting references, the writer's output needs to survive
+contact with hardware:
 
-1. Extract it into a template + a substitution model
-2. Build the pure-Kotlin writer against it
-3. Golden-file test: fixed input kit → byte-identical expected output
-4. Round-trip test on hardware — generate 16 pads, load on the One, confirm
-   every pad fires the right sample
+1. `gradle :xpm:test` — proves no accidental drift
+2. Generate a 16-pad kit with real WAVs beside it
+3. Load it on the MPC One
+4. Confirm all 16 pads fire, on the right pads, at the right pitch, with the
+   hat mute group choking
+
+If the kit comes up **shifted by exactly one pad**, that's the instrument
+numbering base — flip `XpmWriter(instrumentBaseIndex = 1)` and it's solved.

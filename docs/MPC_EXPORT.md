@@ -101,28 +101,27 @@ XML. Broad shape:
 A drum program addresses up to 128 instruments (8 banks × 16 pads). We use the
 first 16 for MVP.
 
-### ⚠️ Do not author the pad map from documentation
+The full structure — recovered from a program saved by MPC standalone firmware
+2.9.1.2, along with the complete 128-entry pad→note map — is documented in
+[`XPM_STRUCTURE.md`](XPM_STRUCTURE.md), and implemented in the `:xpm` module.
 
-The pad→MIDI-note mapping and pad colour encoding live inside the
-`ProgramPads-v2.10` JSON blob, and the exact structure is not reliably
-documented anywhere public. Deriving it from blog posts or from an LLM's memory
-will produce a file that looks right and loads wrong.
-
-**The only correct approach:** export a real 16-pad kit from real hardware, keep
-it as a golden template, and have the writer substitute sample names and
-parameters into that known-good structure.
-
-See [`../reference/README.md`](../reference/README.md) for how to capture one.
+Do not hand-author the pad map from prose descriptions or from memory. It is a
+lookup table, not a formula, and a plausible-looking guess produces a file that
+loads but plays the wrong pads.
 
 ## Test strategy
 
 1. **Golden-file test** — writer output diffs against a byte-stable expected
-   file for a fixed input kit. Catches accidental structural drift.
+   file for a fixed input kit. Catches accidental structural drift. Implemented:
+   `gradle :xpm:test`.
 2. **Round-trip on hardware** — generate a 16-pad kit, load it on the MPC One,
    confirm all 16 pads trigger the right sample at the right pitch. Repeat on
    Live II and Live III. This is manual and it is mandatory before shipping.
 
-Automate (1), never skip (2).
+Automate (1), never skip (2). (1) only proves the writer is self-consistent; it
+says nothing about whether an MPC will accept the file. See
+[`XPM_STRUCTURE.md`](XPM_STRUCTURE.md#unverified) for the specific open
+questions (2) settles.
 
 ## Transfer to the device
 
