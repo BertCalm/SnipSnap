@@ -1,0 +1,9 @@
+# Reference programs only — no audio payloads.
+# The XPM writer needs the .xpm structure, not the samples it points at,
+# and factory WAVs are both large and not ours to redistribute.
+*.wav
+*.WAV
+*.aif
+*.aiff
+*.mp3
+*.flac
