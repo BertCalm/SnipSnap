@@ -1,6 +1,19 @@
-# Reference kits — closing out the unverified bits
+# Reference kits
 
-**Status: no longer blocking.** The XPM structure was recovered from a program
+## Blocking: one file from the Live III
+
+Now that MPC 3 is the primary target, a program saved by the **Live III** is
+blocking, not optional. Nothing about a native MPC 3 writer can be built until
+we know what container a saved program uses — see
+[`../docs/MPC3_FORMAT.md`](../docs/MPC3_FORMAT.md#the-check-two-minutes-on-the-live-iii).
+
+Build a drum program on the Live III, save it to SD, drop the file in
+`golden/liveiii-36/`. The first two bytes answer the question: `1F 8B` = gzip
+(new container), `<?xml` = it still writes MPC 2-style XPM.
+
+## Not blocking: MPC 2 reference programs
+
+The MPC 2 XPM structure was recovered from a program
 saved by MPC standalone firmware 2.9.1.2 (see
 [`../docs/XPM_STRUCTURE.md`](../docs/XPM_STRUCTURE.md)) and the `:xpm` module
 writes it today.

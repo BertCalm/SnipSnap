@@ -20,7 +20,8 @@ capture (rolling buffer)  →  trim  →  assign to 4×4 grid  →  export .xpm 
 |---|---|
 | Platform | Android only, minSdk 29 |
 | Hardware | Akai MPC One, MPC Live II, MPC Live III |
-| Export format | MPC 2-era `.xpm` drum program + 44.1 kHz WAVs, as a folder |
+| Primary format | MPC 3 native (gzip + ACVS header + JSON), Live III as acceptance device |
+| Compatibility format | MPC 2-era `.xpm` drum program + 44.1 kHz WAVs, as a folder — implemented |
 | Not supported | `.xpn` expansion installers (desktop MPC Software only — irrelevant here) |
 
 ## Modules
@@ -56,15 +57,21 @@ gradle :xpm:regenerateGolden   # only for deliberate format changes
 - [`docs/CONCEPT.md`](docs/CONCEPT.md) — product shape, MVP cut, architecture
 - [`docs/ANDROID_CAPTURE.md`](docs/ANDROID_CAPTURE.md) — how capture actually works and where it breaks
 - [`docs/MPC_EXPORT.md`](docs/MPC_EXPORT.md) — folder layouts and export paths
-- [`docs/XPM_STRUCTURE.md`](docs/XPM_STRUCTURE.md) — the format, its provenance, and what's still unverified
+- [`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md) — the MPC 3 container and drum schema, and the one thing blocking a native writer
+- [`docs/XPM_STRUCTURE.md`](docs/XPM_STRUCTURE.md) — the MPC 2 format, its provenance, and what's still unverified
 - [`docs/KIT_BEST_PRACTICES.md`](docs/KIT_BEST_PRACTICES.md) — pad layout, mute groups, naming, and what Akai does and doesn't document
 - [`reference/README.md`](reference/README.md) — harvesting reference programs off hardware
 
 ## Next step
 
-Load a generated kit on an **MPC One** and confirm all 16 pads fire on the pads
-they were assigned to. The golden test proves the writer is self-consistent; only
-hardware proves the MPC accepts it. See
-[`docs/XPM_STRUCTURE.md#unverified`](docs/XPM_STRUCTURE.md#unverified) for the
-specific open questions — the big one is whether instrument numbering is 0- or
-1-based, which shows up as a kit shifted by exactly one pad.
+**Find out what an MPC 3 saved program actually is.** Build a drum program on the
+Live III, save it to SD, and check the first two bytes — `1F 8B` means gzip and
+the new container, `<?xml` means it still writes MPC 2-style XPM. Nothing about a
+native MPC 3 writer can be built until that's answered. Procedure in
+[`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md#the-check-two-minutes-on-the-live-iii).
+
+Then, for the compatibility path: load a generated kit on an **MPC One** and
+confirm all 16 pads fire where they were assigned. See
+[`docs/XPM_STRUCTURE.md#unverified`](docs/XPM_STRUCTURE.md#unverified) — the big
+one is whether instrument numbering is 0- or 1-based, which shows up as a kit
+shifted by exactly one pad.

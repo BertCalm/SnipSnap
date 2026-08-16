@@ -8,19 +8,24 @@
 | MPC Live II | MPC 2.x / 3.x |
 | MPC Live III | ships on MPC 3.6 |
 
-### Format decision: target the MPC 2-era XPM
+### Format decision: MPC 3 native, with MPC 2 as the compatibility path
 
-MPC 3 restructured how programs work — a program is loaded into a track and
-becomes part of that track; the global program pool of MPC 2 is gone. MPC 3
-*projects* are not backward-compatible with MPC 2.15 desktop software. But
-MPC 3 hardware still reads MPC 2 content, and Live III is explicitly compatible
-with projects made on MPC 2 firmware.
+**Primary target: MPC 3, acceptance device MPC Live III.**
 
-So the common denominator across all three devices is the **MPC 2-era drum
-program**. Writing an MPC 3-native program would strand the One and Live II and
-buy nothing.
+MPC 3 is a different file format, not a revision of the old one — gzip-compressed
+JSON behind an ACVS header, with programs embedded in the project's `tracks[]`
+array rather than living in standalone XML. See
+[`MPC3_FORMAT.md`](MPC3_FORMAT.md) for the schema and for the open question that
+currently blocks a native writer.
 
-**The MPC One is the acceptance test.** If it loads there, it loads everywhere.
+**Compatibility path: the MPC 2-era XPM**, already implemented in `:xpm`. It
+stays for three reasons: MPC 3 loads MPC 2 content (exporting `.xpm` is Akai's
+own documented route across the 2/3 split), the MPC One and a 2.x Live II can't
+load anything else, and it's the fallback if the MPC 3 program container proves
+impractical to write from a phone.
+
+So: two writers, one target each. The MPC One remains the acceptance device for
+the MPC 2 path — if it loads there, it loads on every 2.x machine.
 
 ## What we do *not* build: `.xpn`
 
