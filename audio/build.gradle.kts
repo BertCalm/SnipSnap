@@ -1,0 +1,32 @@
+plugins {
+    kotlin("jvm") version "2.0.21"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation(kotlin("test"))
+    // Test-only: round-trip written WAVs back through the reader the exporter uses.
+    testImplementation(project(":xpm"))
+}
+
+// Java 17 bytecode so the Android app can consume this module directly.
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.test {
+    useJUnitPlatform()
+    testLogging {
+        events("passed", "failed", "skipped")
+    }
+}

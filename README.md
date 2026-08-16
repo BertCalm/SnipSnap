@@ -6,7 +6,8 @@ and exporting a drum kit your Akai MPC can load.
 
 > You heard it. You snipped it. It's on pad A03.
 
-**Status:** design, plus a working `.xpm` writer. No Android app yet.
+**Status:** design, plus a tested pure-Kotlin core — capture buffer, cleanup DSP,
+WAV writer and `.xpm` writer. No Android layer yet.
 
 ## The loop
 
@@ -25,6 +26,32 @@ capture (rolling buffer)  →  trim  →  assign to 4×4 grid  →  export .xpm 
 | Not supported | `.xpn` expansion installers (desktop MPC Software only — irrelevant here) |
 
 ## Modules
+
+Both are plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit
+tested on a normal JVM and the Android layer stays a thin shell over proven code.
+
+```
+./gradlew :audio:test :xpm:test      # 80 tests
+```
+
+### `:audio`
+
+The capture and conditioning core.
+
+- **`RingBuffer`** — the rolling capture buffer that makes retroactive snipping
+  work. Fixed capacity, oldest frames overwritten, `snapshot()` hands back the
+  most recent N frames in order. 60 s stereo @ 44.1 kHz ≈ 21 MB.
+- **`Cleanup`** — the commit-time chain: DC offset → trim silence → normalize →
+  fades. Order is deliberate; see the source.
+- **`WavWriter`** — 16/24-bit PCM at 44.1 kHz, and it refuses a non-MPC rate
+  rather than writing a file that loads wrong.
+
+```kotlin
+val buffer = RingBuffer.ofSeconds(60f)          // running in the capture service
+// ... user taps snip ...
+val snip = Snip(buffer.snapshotSeconds(8f), channels = 2, sampleRate = 44_100)
+WavWriter.write(File(kitDir, "SS_Kick_01.wav"), Cleanup.process(snip))
+```
 
 ### `:xpm`
 
@@ -48,8 +75,7 @@ XpmWriter().writeTo(kitDir, program)   // -> kitDir/SnipSnap Kit 01.xpm
 ```
 
 ```
-gradle :xpm:test               # unit + golden-file tests
-gradle :xpm:regenerateGolden   # only for deliberate format changes
+./gradlew :xpm:regenerateGolden   # only for deliberate format changes
 ```
 
 ## Docs
