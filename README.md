@@ -57,6 +57,7 @@ gradle :xpm:regenerateGolden   # only for deliberate format changes
 - [`docs/ANDROID_CAPTURE.md`](docs/ANDROID_CAPTURE.md) — how capture actually works and where it breaks
 - [`docs/MPC_EXPORT.md`](docs/MPC_EXPORT.md) — folder layouts and export paths
 - [`docs/XPM_STRUCTURE.md`](docs/XPM_STRUCTURE.md) — the format, its provenance, and what's still unverified
+- [`docs/KIT_BEST_PRACTICES.md`](docs/KIT_BEST_PRACTICES.md) — pad layout, mute groups, naming, and what Akai does and doesn't document
 - [`reference/README.md`](reference/README.md) — harvesting reference programs off hardware
 
 ## Next step

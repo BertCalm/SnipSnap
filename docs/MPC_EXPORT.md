@@ -66,6 +66,15 @@ Expansions/
         └── SnipSnap Kit 01.mp3 ← named to match the .xpm
 ```
 
+`Expansion.xml` carries Title, Manufacturer, Version (single digit), Identifier
+(reverse-domain notation, dots not spaces) and Description. Artwork is a square
+1000×1000 PNG or JPEG named to match the identifier.
+
+Akai's own **MPC Expansion Builder** (free, installs with the MPC software) is
+the reference implementation. Even though we never ship `.xpn`, pointing it at a
+content folder is the closest thing to a conformance check that exists — see
+[`KIT_BEST_PRACTICES.md`](KIT_BEST_PRACTICES.md).
+
 ## Sample requirements
 
 | | |
