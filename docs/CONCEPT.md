@@ -95,7 +95,9 @@ everything below is additive on top of a thing that already works.
 
 ## Deliberately v2
 
-- **Auto-chop** — transient detection splits one snip across 8 pads
+- **Auto-chop UI** — the detection and slicing themselves are done and tested
+  (`Transients`, `Chopper` in `:audio`); what's left is the gesture and the
+  review screen
 - **Auto-place** — on-device classifier (kick / snare / hat / clap / perc /
   tonal / loop) drops snips onto sensible default slots
 - **BPM + key detection** on loop-length snips, written into the filename

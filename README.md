@@ -31,7 +31,7 @@ Both are plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit
 tested on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew :audio:test :xpm:test      # 80 tests
+./gradlew :audio:test :xpm:test      # 110 tests
 ```
 
 ### `:audio`
@@ -45,12 +45,23 @@ The capture and conditioning core.
   fades. Order is deliberate; see the source.
 - **`WavWriter`** — 16/24-bit PCM at 44.1 kHz, and it refuses a non-MPC rate
   rather than writing a file that loads wrong.
+- **`Transients`** — energy-based onset detection with an adaptive threshold.
+  Finds *hits*, not notes, which is the right bias for a drum sampler. Cuts land
+  ~3 ms before the attack, never after.
+- **`Chopper`** — turns one captured bar into a bank of pads, either following
+  the hits or dividing evenly.
 
 ```kotlin
 val buffer = RingBuffer.ofSeconds(60f)          // running in the capture service
 // ... user taps snip ...
 val snip = Snip(buffer.snapshotSeconds(8f), channels = 2, sampleRate = 44_100)
 WavWriter.write(File(kitDir, "SS_Kick_01.wav"), Cleanup.process(snip))
+
+// ...or chop the whole bar onto pads
+Chopper.byTransients(snip, maxSlices = 16, cleanup = Chopper.SLICE_CLEANUP)
+    .forEachIndexed { i, slice ->
+        WavWriter.write(File(kitDir, "SS_Chop_%02d.wav".format(i + 1)), slice.snip)
+    }
 ```
 
 ### `:xpm`
