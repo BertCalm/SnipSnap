@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen:wght@400;700&family=Permanent+Marker&display=swap">
+  <style>
+    body{margin:0;}
+    a{color:#000082;} a:hover{color:#1878c8;}
+    :root{
+      --gray:#c3c7cb; --g-hi:#ffffff; --g-e:#e8ebee; --g-mid:#868a8e; --g-dk:#3f4347;
+      --lcd:#0c130b; --lcd-ink:#49e83e; --lcd-dim:#1d4a1a; --amber:#ffb000;
+    }
+    .raised{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-hi),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-e),inset -2px -2px 0 var(--g-mid);}
+    .pressed{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-dk),inset -1px -1px 0 var(--g-hi),inset 2px 2px 0 var(--g-mid),inset -2px -2px 0 var(--g-e);}
+    .sunken{background:#fff;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-e),inset 2px 2px 0 var(--g-dk),inset -2px -2px 0 var(--g-hi);}
+    .win{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-e),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-hi),inset -2px -2px 0 var(--g-mid);}
+    .px{font-family:'Silkscreen',Verdana,sans-serif;font-size:9px;letter-spacing:0.5px;}
+    .ui{font-family:Verdana,Tahoma,'DejaVu Sans',sans-serif;font-size:12px;}
+    .marker{font-family:'Permanent Marker','Comic Sans MS',cursive;}
+    .lcdf{font-family:'VT323','Courier New',monospace;}
+    .scan{background-image:repeating-linear-gradient(0deg, rgba(0,0,0,0.25) 0 1px, transparent 1px 3px);}
+  </style>
+</helmet>
+<div style="width:390px;height:844px;background:repeating-conic-gradient(#0a7a78 0% 25%,#0c817f 0% 50%) 0 0/4px 4px;padding:10px;box-sizing:border-box;display:flex;flex-direction:column;">
+  <div class="win" style="flex:1;display:flex;flex-direction:column;padding:3px;">
+
+    <div style="height:30px;background:linear-gradient(90deg,#000082,#1878c8);display:flex;align-items:center;gap:8px;padding:0 4px 0 8px;">
+      <svg width="20" height="14" viewBox="0 0 20 14"><rect x="0.5" y="0.5" width="19" height="13" rx="2" fill="#ff7a1a" stroke="#3f2205"/><circle cx="6" cy="7" r="2.6" fill="#f4efe4" stroke="#3f2205"/><circle cx="14" cy="7" r="2.6" fill="#f4efe4" stroke="#3f2205"/></svg>
+      <span class="ui" style="color:#fff;font-weight:bold;flex:1;">TAPE DECK — SNIP_014</span>
+      <div class="raised" style="width:24px;height:22px;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12"><path d="M2.5 2.5 L9.5 9.5 M9.5 2.5 L2.5 9.5" stroke="#1c1e20" stroke-width="1.8"/></svg></div>
+    </div>
+
+    <div style="flex:1;display:flex;flex-direction:column;gap:10px;padding:10px 8px 8px;">
+
+      <div style="display:flex;justify-content:center;">
+        <svg viewBox="0 0 340 128" width="340" height="128">
+          <rect x="2" y="2" width="336" height="124" rx="10" fill="#26282c" stroke="#0e0f11" stroke-width="2"/>
+          <rect x="14" y="10" width="312" height="34" rx="3" fill="#f4efe4" stroke="#0e0f11"/>
+          <rect x="14" y="10" width="312" height="9" fill="#ff7a1a"/>
+          <text x="170" y="36" font-family="Permanent Marker" font-size="15" text-anchor="middle" fill="#2c2013">SNIP_014 — from tape 08:16 PM</text>
+          <rect x="70" y="52" width="200" height="52" rx="26" fill="#101214" stroke="#0e0f11"/>
+          <circle cx="120" cy="78" r="19" fill="#efe8d8" stroke="#0e0f11" stroke-width="2"/>
+          <circle cx="220" cy="78" r="19" fill="#efe8d8" stroke="#0e0f11" stroke-width="2"/>
+          <g stroke="#26282c" stroke-width="3"><path d="M120 63 L120 71 M120 85 L120 93 M105 78 L113 78 M127 78 L135 78"/><path d="M220 63 L220 71 M220 85 L220 93 M205 78 L213 78 M227 78 L235 78"/></g>
+          <circle cx="120" cy="78" r="30" fill="none" stroke="#5c4a2a" stroke-width="7" opacity="0.85"/>
+          <circle cx="220" cy="78" r="24" fill="none" stroke="#5c4a2a" stroke-width="4" opacity="0.85"/>
+          <rect x="150" y="108" width="40" height="12" rx="2" fill="#101214"/>
+          <rect x="30" y="112" width="24" height="10" rx="2" fill="#3a3d42"/><rect x="286" y="112" width="24" height="10" rx="2" fill="#3a3d42"/>
+        </svg>
+      </div>
+
+      <div class="sunken scan" style="background:var(--lcd);height:170px;position:relative;overflow:hidden;">
+        <svg viewBox="0 0 350 150" width="100%" height="100%" preserveAspectRatio="none">
+          <rect x="118" y="0" width="112" height="150" fill="#ffb000" opacity="0.10"/>
+          <g fill="#2f7c2a">
+            <rect x="2" y="66" width="6" height="18"/><rect x="12" y="60" width="6" height="30"/><rect x="22" y="45" width="6" height="60"/><rect x="32" y="20" width="6" height="110"/><rect x="42" y="33" width="6" height="84"/><rect x="52" y="55" width="6" height="40"/><rect x="62" y="64" width="6" height="22"/><rect x="72" y="68" width="6" height="14"/><rect x="82" y="52" width="6" height="46"/><rect x="92" y="27" width="6" height="96"/><rect x="102" y="15" width="6" height="120"/><rect x="112" y="40" width="6" height="70"/>
+          </g>
+          <g fill="#49e83e">
+            <rect x="122" y="58" width="6" height="34"/><rect x="132" y="65" width="6" height="20"/><rect x="142" y="69" width="6" height="12"/><rect x="152" y="60" width="6" height="30"/><rect x="162" y="38" width="6" height="74"/><rect x="172" y="23" width="6" height="104"/><rect x="182" y="44" width="6" height="62"/><rect x="192" y="61" width="6" height="28"/><rect x="202" y="67" width="6" height="16"/><rect x="212" y="55" width="6" height="40"/><rect x="222" y="31" width="6" height="88"/>
+          </g>
+          <g fill="#2f7c2a">
+            <rect x="232" y="17" width="6" height="116"/><rect x="242" y="35" width="6" height="80"/><rect x="252" y="53" width="6" height="44"/><rect x="262" y="63" width="6" height="24"/><rect x="272" y="69" width="6" height="12"/><rect x="282" y="49" width="6" height="52"/><rect x="292" y="26" width="6" height="98"/><rect x="302" y="46" width="6" height="58"/><rect x="312" y="59" width="6" height="32"/><rect x="322" y="66" width="6" height="18"/><rect x="332" y="69" width="6" height="12"/>
+          </g>
+          <g stroke="#ffb000" stroke-width="2"><path d="M119 4 L119 146 M119 4 L127 4 M119 146 L127 146"/><path d="M229 4 L229 146 M229 4 L221 4 M229 146 L221 146"/></g>
+          <g stroke="#ffdf80" stroke-width="2"><line x1="175" y1="0" x2="175" y2="150"/></g>
+          <path d="M169 0 L181 0 L175 8 Z" fill="#ffdf80"/>
+          <g stroke="#8fd424" stroke-width="2"><line x1="33" y1="142" x2="33" y2="149"/><line x1="93" y1="142" x2="93" y2="149"/><line x1="122" y1="142" x2="122" y2="149"/><line x1="163" y1="142" x2="163" y2="149"/><line x1="233" y1="142" x2="233" y2="149"/><line x1="293" y1="142" x2="293" y2="149"/></g>
+        </svg>
+      </div>
+      <div class="px" style="text-align:center;color:#2c2f33;">DRAG THE TAPE — THE NEEDLE STAYS PUT</div>
+
+      <div style="display:flex;gap:6px;">
+        <div class="sunken" style="background:var(--lcd);flex:1.3;height:40px;display:flex;align-items:center;justify-content:center;"><span class="lcdf" style="color:var(--lcd-ink);font-size:24px;">POS 00:04.21</span></div>
+        <div class="sunken" style="background:var(--lcd);flex:1;height:40px;display:flex;align-items:center;justify-content:center;"><span class="lcdf" style="color:var(--amber);font-size:24px;">LEN 0:01.92</span></div>
+      </div>
+
+      <div style="display:flex;gap:6px;justify-content:center;">
+        <div class="raised" style="width:60px;height:46px;display:flex;align-items:center;justify-content:center;"><svg width="22" height="16"><path d="M11 2 L3 8 L11 14 Z" fill="#1c1e20"/><path d="M19 2 L11 8 L19 14 Z" fill="#1c1e20"/></svg></div>
+        <div class="pressed" style="width:60px;height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><svg width="16" height="16"><path d="M4 2 L14 8 L4 14 Z" fill="#1c1e20"/></svg><div style="width:6px;height:3px;background:#49e83e;box-shadow:0 0 4px #49e83e;"></div></div>
+        <div class="raised" style="width:60px;height:46px;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14"><rect x="2" y="2" width="10" height="10" fill="#1c1e20"/></svg></div>
+        <div class="raised" style="width:60px;height:46px;display:flex;align-items:center;justify-content:center;"><svg width="22" height="16"><path d="M3 2 L11 8 L3 14 Z" fill="#1c1e20"/><path d="M11 2 L19 8 L11 14 Z" fill="#1c1e20"/></svg></div>
+        <div class="raised" style="width:60px;height:46px;display:flex;align-items:center;justify-content:center;"><svg width="18" height="16" viewBox="0 0 18 16"><path d="M9 3 A 5.5 5.5 0 1 1 3.6 9.5" fill="none" stroke="#1c1e20" stroke-width="2"/><path d="M1 6 L4.4 11 L7 6.4 Z" fill="#1c1e20"/></svg></div>
+      </div>
+
+      <div style="display:flex;gap:6px;justify-content:center;">
+        <div class="pressed" style="padding:6px 10px;"><span class="px" style="color:#1c1e20;">SNAP: ONSET</span></div>
+        <div class="pressed" style="padding:6px 10px;"><span class="px" style="color:#1c1e20;">ZERO-X</span></div>
+        <div class="raised" style="padding:6px 10px;"><span class="px" style="color:#55595d;">ZOOM x2</span></div>
+        <div class="raised" style="padding:6px 10px;"><span class="px" style="color:#55595d;">LOOP PREVIEW</span></div>
+      </div>
+
+      <div style="flex:1;"></div>
+
+      <div style="display:flex;gap:8px;">
+        <div class="raised" style="flex:2;height:52px;display:flex;align-items:center;justify-content:center;gap:10px;">
+          <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="5" cy="5" r="2.6" fill="none" stroke="#1c1e20" stroke-width="1.8"/><circle cx="5" cy="15" r="2.6" fill="none" stroke="#1c1e20" stroke-width="1.8"/><path d="M7 6.5 L17 13.5 M7 13.5 L17 6.5" stroke="#1c1e20" stroke-width="1.8"/></svg>
+          <span class="ui" style="font-weight:bold;font-size:13px;color:#1c1e20;">COMMIT SNIP</span>
+        </div>
+        <div class="raised" style="flex:1;height:52px;display:flex;align-items:center;justify-content:center;"><span class="ui" style="font-size:12px;color:#1c1e20;">Chop…</span></div>
+      </div>
+    </div>
+
+    <div style="height:26px;display:flex;gap:3px;padding:2px 4px 4px;">
+      <div style="flex:1;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 #868a8e,inset -1px -1px 0 #fff;"><span class="px" style="color:#2c2f33;">24-BIT 44.1</span></div>
+      <div style="flex:1;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 #868a8e,inset -1px -1px 0 #fff;"><span class="px" style="color:#2c2f33;">6 ONSETS</span></div>
+      <div style="flex:1.2;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 #868a8e,inset -1px -1px 0 #fff;"><span class="px" style="color:#2c2f33;">CLEANUP: AUTO</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic { renderVals(){ return {}; } }
+</script>
+</body>
+</html>

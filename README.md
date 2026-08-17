@@ -103,6 +103,7 @@ XpmWriter().writeTo(kitDir, program)   // -> kitDir/SnipSnap Kit 01.xpm
 - [`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md) — the MPC 3 container and drum schema, and the one thing blocking a native writer
 - [`docs/XPM_STRUCTURE.md`](docs/XPM_STRUCTURE.md) — the MPC 2 format, its provenance, and what's still unverified
 - [`docs/KIT_BEST_PRACTICES.md`](docs/KIT_BEST_PRACTICES.md) — pad layout, mute groups, naming, and what Akai does and doesn't document
+- [`docs/UI_DESIGN.md`](docs/UI_DESIGN.md) — the TapeOS visual language (90s desktop × cassette) and the mockup artboards in [`design/`](design/)
 - [`reference/README.md`](reference/README.md) — harvesting reference programs off hardware
 
 ## Next step

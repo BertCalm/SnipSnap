@@ -1,0 +1,133 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen:wght@400;700&family=Permanent+Marker&display=swap">
+  <style>
+    body{margin:0;}
+    a{color:#000082;} a:hover{color:#1878c8;}
+    :root{
+      --gray:#c3c7cb; --g-hi:#ffffff; --g-e:#e8ebee; --g-mid:#868a8e; --g-dk:#3f4347;
+      --lcd:#0c130b; --lcd-ink:#49e83e; --amber:#ffb000;
+    }
+    .raised{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-hi),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-e),inset -2px -2px 0 var(--g-mid);}
+    .pressed{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-dk),inset -1px -1px 0 var(--g-hi),inset 2px 2px 0 var(--g-mid),inset -2px -2px 0 var(--g-e);}
+    .sunken{background:#fff;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-e),inset 2px 2px 0 var(--g-dk),inset -2px -2px 0 var(--g-hi);}
+    .px{font-family:'Silkscreen',Verdana,sans-serif;font-size:9px;letter-spacing:0.5px;}
+    .ui{font-family:Verdana,Tahoma,'DejaVu Sans',sans-serif;font-size:12px;}
+    .marker{font-family:'Permanent Marker','Comic Sans MS',cursive;}
+    .lcdf{font-family:'VT323','Courier New',monospace;}
+    .gb{position:relative;border:1px solid #868a8e;box-shadow:1px 1px 0 #fff, inset 1px 1px 0 #fff;padding:18px 12px 12px;}
+    .gb > .legend{position:absolute;top:-6px;left:10px;background:var(--gray);padding:0 5px;color:#1c1e20;}
+    .sw{width:44px;height:30px;border:1px solid #3f4347;}
+    .swl{display:flex;flex-direction:column;gap:3px;align-items:center;}
+  </style>
+</helmet>
+<div style="width:920px;height:640px;background:#c3c7cb;box-sizing:border-box;display:flex;flex-direction:column;padding:3px;box-shadow:inset 1px 1px 0 #e8ebee,inset -1px -1px 0 #3f4347,inset 2px 2px 0 #fff,inset -2px -2px 0 #868a8e;">
+
+  <div style="height:30px;background:linear-gradient(90deg,#000082,#1878c8);display:flex;align-items:center;gap:8px;padding:0 8px;">
+    <span class="ui" style="color:#fff;font-weight:bold;flex:1;">TAPEOS — DESIGN LANGUAGE v0.1</span>
+    <span class="px" style="color:#9fd8d6;">GRAY BEVELS = TOOLS · DARK LCD = SOUND</span>
+  </div>
+
+  <div style="flex:1;display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:12px;padding:12px;">
+
+    <div class="gb">
+      <span class="legend px">PALETTE</span>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;gap:8px;">
+          <div class="swl"><div class="sw" style="background:#c3c7cb;"></div><span class="px" style="color:#55595d;">CHROME</span></div>
+          <div class="swl"><div class="sw" style="background:#868a8e;"></div><span class="px" style="color:#55595d;">MID</span></div>
+          <div class="swl"><div class="sw" style="background:#3f4347;"></div><span class="px" style="color:#55595d;">DARK</span></div>
+          <div class="swl"><div class="sw" style="background:#0a7a78;"></div><span class="px" style="color:#55595d;">DESKTOP</span></div>
+          <div class="swl"><div class="sw" style="background:#000082;"></div><span class="px" style="color:#55595d;">TITLE</span></div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div class="swl"><div class="sw" style="background:#0c130b;"></div><span class="px" style="color:#55595d;">LCD BG</span></div>
+          <div class="swl"><div class="sw" style="background:#49e83e;"></div><span class="px" style="color:#55595d;">LCD INK</span></div>
+          <div class="swl"><div class="sw" style="background:#ffb000;"></div><span class="px" style="color:#55595d;">NEEDLE</span></div>
+          <div class="swl"><div class="sw" style="background:#e83a2e;"></div><span class="px" style="color:#55595d;">RECORD</span></div>
+          <div class="swl"><div class="sw" style="background:#ff7a1a;"></div><span class="px" style="color:#55595d;">TAPE</span></div>
+        </div>
+        <div class="px" style="color:#55595d;">DESKTOP IS DITHERED 4px CHECKER, NEVER FLAT</div>
+      </div>
+    </div>
+
+    <div class="gb">
+      <span class="legend px">BEVELS — THE WHOLE TRICK</span>
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div class="swl"><div class="raised" style="width:74px;height:50px;"></div><span class="px" style="color:#55595d;">RAISED</span></div>
+        <div class="swl"><div class="pressed" style="width:74px;height:50px;"></div><span class="px" style="color:#55595d;">PRESSED</span></div>
+        <div class="swl"><div class="sunken" style="width:74px;height:50px;"></div><span class="px" style="color:#55595d;">SUNKEN</span></div>
+      </div>
+      <div class="px" style="color:#55595d;margin-top:10px;">2px BEVEL, 4 SHADES. PRESSED = LIGHT SOURCE FLIPS.<br>EVERY CONTROL IS ONE OF THESE THREE.</div>
+    </div>
+
+    <div class="gb">
+      <span class="legend px">TYPE — 4 VOICES</span>
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <div><span class="ui" style="color:#1c1e20;">Verdana 12 — window text, menus</span></div>
+        <div><span class="px" style="color:#1c1e20;">SILKSCREEN 9 — PAD IDS, STATUS, HINTS</span></div>
+        <div><span class="lcdf" style="color:#1c1e20;font-size:26px;background:#0c130b;color:#49e83e;padding:1px 8px;">VT323 — 00:04.21</span></div>
+        <div><span class="marker" style="color:#1c1e20;font-size:17px;">Permanent Marker — anything handwritten on tape</span></div>
+      </div>
+    </div>
+
+    <div class="gb">
+      <span class="legend px">CONTROLS</span>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div class="raised" style="padding:6px 14px;"><span class="ui" style="color:#1c1e20;">Button</span></div>
+          <div class="raised" style="padding:6px 14px;border:1px solid #1c1e20;"><span class="ui" style="font-weight:bold;color:#1c1e20;">Default</span></div>
+          <div class="pressed" style="padding:6px 10px;"><span class="px" style="color:#1c1e20;">TOGGLE ON</span></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <div class="sunken" style="width:15px;height:15px;display:flex;align-items:center;justify-content:center;"><svg width="10" height="10"><path d="M1.5 5 L4 8 L8.5 2" fill="none" stroke="#1c1e20" stroke-width="2"/></svg></div>
+          <span class="ui" style="color:#1c1e20;">Checkbox</span>
+          <div style="flex:1;height:4px;box-shadow:inset 1px 1px 0 #868a8e,inset -1px -1px 0 #fff;margin:0 4px;position:relative;"><div class="raised" style="position:absolute;top:-7px;left:55%;width:12px;height:18px;"></div></div>
+          <span class="ui" style="color:#1c1e20;">Slider</span>
+        </div>
+        <div style="display:flex;height:16px;">
+          <div class="raised" style="width:16px;display:flex;align-items:center;justify-content:center;"><svg width="8" height="8"><path d="M6 1 L2 4 L6 7 Z" fill="#1c1e20"/></svg></div>
+          <div style="flex:1;background:repeating-conic-gradient(#fff 0% 25%,#c3c7cb 0% 50%) 0 0/2px 2px;position:relative;"><div class="raised" style="position:absolute;left:20%;width:30%;top:0;bottom:0;"></div></div>
+          <div class="raised" style="width:16px;display:flex;align-items:center;justify-content:center;"><svg width="8" height="8"><path d="M2 1 L6 4 L2 7 Z" fill="#1c1e20"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gb">
+      <span class="legend px">THE CASSETTE — ONE OBJECT, THREE JOBS</span>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <svg viewBox="0 0 100 64" width="110" height="70"><rect x="1" y="1" width="98" height="62" rx="6" fill="#ff7a1a" stroke="#3f2205"/><rect x="8" y="6" width="84" height="18" rx="2" fill="#f4efe4" stroke="#3f2205"/><text x="50" y="19" font-family="Permanent Marker" font-size="11" text-anchor="middle" fill="#33210a">KICK 01</text><rect x="24" y="30" width="52" height="22" rx="11" fill="#241a10" stroke="#3f2205"/><circle cx="38" cy="41" r="6.5" fill="#efe8d8" stroke="#3f2205"/><circle cx="62" cy="41" r="6.5" fill="#efe8d8" stroke="#3f2205"/><circle cx="38" cy="41" r="2.2" fill="#241a10"/><circle cx="62" cy="41" r="2.2" fill="#241a10"/></svg>
+        <div class="px" style="color:#55595d;line-height:1.9;">SHELL COLOR = DRUM CLASS<br>LABEL = MARKER, HAND-NAMED<br>REELS = BUFFER / SPIN WHEN LIVE<br>DASHED SHELL = UNCLASSIFIED</div>
+      </div>
+    </div>
+
+    <div class="gb">
+      <span class="legend px">CLASS COLORS — MATCH MPC PADS ON EXPORT</span>
+      <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px;">
+        <div style="display:flex;align-items:center;gap:6px;"><div style="width:16px;height:16px;background:#e8542e;border:1px solid #3f4347;"></div><span class="px" style="color:#1c1e20;">KICK</span></div>
+        <div style="display:flex;align-items:center;gap:6px;"><div style="width:16px;height:16px;background:#ffc41f;border:1px solid #3f4347;"></div><span class="px" style="color:#1c1e20;">SNARE</span></div>
+        <div style="display:flex;align-items:center;gap:6px;"><div style="width:16px;height:16px;background:#e8409f;border:1px solid #3f4347;"></div><span class="px" style="color:#1c1e20;">CLAP</span></div>
+        <div style="display:flex;align-items:center;gap:6px;"><div style="width:16px;height:16px;background:#1fc6cf;border:1px solid #3f4347;"></div><span class="px" style="color:#1c1e20;">HAT CL</span></div>
+        <div style="display:flex;align-items:center;gap:6px;"><div style="width:16px;height:16px;background:#7adfe4;border:1px solid #3f4347;"></div><span class="px" style="color:#1c1e20;">HAT OP</span></div>
+        <div style="display:flex;align-items:center;gap:6px;"><div style="width:16px;height:16px;background:#9a6cf0;border:1px solid #3f4347;"></div><span class="px" style="color:#1c1e20;">TOM</span></div>
+        <div style="display:flex;align-items:center;gap:6px;"><div style="width:16px;height:16px;background:#8fd424;border:1px solid #3f4347;"></div><span class="px" style="color:#1c1e20;">PERC</span></div>
+        <div style="display:flex;align-items:center;gap:6px;"><div style="width:16px;height:16px;background:#b06cf0;border:1px solid #3f4347;"></div><span class="px" style="color:#1c1e20;">TONAL</span></div>
+        <div style="display:flex;align-items:center;gap:6px;"><div style="width:16px;height:16px;background:#3f8cf0;border:1px solid #3f4347;"></div><span class="px" style="color:#1c1e20;">LOOP</span></div>
+      </div>
+      <div class="px" style="color:#55595d;margin-top:10px;">PAD COLOR IN-APP = PAD COLOR ON THE MPC. ONE LANGUAGE.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":920,"height":640}}'>
+class Component extends DCLogic { renderVals(){ return {}; } }
+</script>
+</body>
+</html>

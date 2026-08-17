@@ -1,0 +1,17 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 390, "h": 844, "title": "Kit Builder" },
+    { "file": "TapeDeck.dc.html", "x": 450, "y": 0, "w": 390, "h": 844, "title": "Tape Deck (Trim)" },
+    { "file": "ChopShop.dc.html", "x": 900, "y": 0, "w": 390, "h": 844, "title": "Chop Shop" },
+    { "file": "PlayMode.dc.html", "x": 1350, "y": 0, "w": 390, "h": 844, "title": "Play Mode" },
+    { "file": "ExportWizard.dc.html", "x": 1800, "y": 0, "w": 390, "h": 844, "title": "Export Wizard" },
+    { "file": "Bubble.dc.html", "x": 0, "y": 950, "w": 860, "h": 420, "title": "Capture Bubble" },
+    { "file": "TapeOS.dc.html", "x": 920, "y": 950, "w": 920, "h": 640, "title": "TapeOS Tokens" }
+  ],
+  "annotations": [
+    { "id": "note-direction", "x": 0, "y": -160, "w": 360, "text": "Direction: 90s desktop quirk x cassette tape.\nGray bevels = tool chrome. Dark green LCD = anything that plays or shows sound.\nThe ring buffer IS the tape - the metaphor is the mental model, not a costume." },
+    { "id": "note-trim", "x": 450, "y": -110, "w": 300, "text": "Trim = tape under a fixed needle: you drag the AUDIO, the playhead never moves. Precision without tiny handles." },
+    { "id": "note-bubble", "x": 0, "y": 1400, "w": 300, "text": "During capture the bubble IS the app. One tap = snip, never opens a screen. Trim always happens later." }
+  ],
+  "launch": { "view": "canvas" }
+}

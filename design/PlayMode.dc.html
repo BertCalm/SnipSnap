@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen:wght@400;700&family=Permanent+Marker&display=swap">
+  <style>
+    body{margin:0;background:#101215;}
+    a{color:#49e83e;} a:hover{color:#8fd424;}
+    .px{font-family:'Silkscreen',Verdana,sans-serif;font-size:9px;letter-spacing:0.5px;}
+    .ui{font-family:Verdana,Tahoma,'DejaVu Sans',sans-serif;font-size:12px;}
+    .marker{font-family:'Permanent Marker','Comic Sans MS',cursive;}
+    .lcdf{font-family:'VT323','Courier New',monospace;}
+    .dpad{background:#1b1e22;box-shadow:inset 1px 1px 0 #343a41,inset -1px -1px 0 #050607,inset 2px 2px 0 #24282d,inset -2px -2px 0 #101214;}
+    .dpressed{background:#15171a;box-shadow:inset 1px 1px 0 #050607,inset -1px -1px 0 #343a41,inset 2px 2px 0 #101214,inset -2px -2px 0 #24282d;}
+  </style>
+</helmet>
+<div style="width:390px;height:844px;background:#101215;display:flex;flex-direction:column;padding:8px;box-sizing:border-box;gap:8px;">
+
+  <div style="height:40px;background:#0c130b;box-shadow:inset 1px 1px 0 #050607,inset -1px -1px 0 #24282d;display:flex;align-items:center;padding:0 12px;gap:12px;background-image:repeating-linear-gradient(0deg, rgba(0,0,0,0.3) 0 1px, transparent 1px 3px);">
+    <span class="lcdf" style="color:#49e83e;font-size:22px;flex:1;">SNIPSNAP KIT 01</span>
+    <span class="lcdf" style="color:#ffb000;font-size:22px;">92 BPM</span>
+    <div class="dpad" style="width:52px;height:26px;display:flex;align-items:center;justify-content:center;"><span class="px" style="color:#868a8e;">EXIT</span></div>
+  </div>
+
+  <div style="flex:1;display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));grid-template-rows:repeat(4, minmax(0, 1fr));gap:8px;">
+    <div class="dpad" style="position:relative;"><span class="px" style="position:absolute;top:6px;left:8px;color:#4a4f55;">A13</span></div>
+    <div class="dpad" style="position:relative;"><span class="px" style="position:absolute;top:6px;left:8px;color:#4a4f55;">A14</span></div>
+    <div class="dpad" style="position:relative;"><span class="px" style="position:absolute;top:6px;left:8px;color:#4a4f55;">A15</span></div>
+    <div class="dpad" style="position:relative;border-bottom:3px solid #3f8cf0;"><span class="px" style="position:absolute;top:6px;left:8px;color:#8a9099;">A16</span><span class="marker" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;color:#3f8cf0;font-size:13px;">Loop 92</span></div>
+    <div class="dpad" style="position:relative;border-bottom:3px solid #9a6cf0;"><span class="px" style="position:absolute;top:6px;left:8px;color:#8a9099;">A09</span><span class="marker" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;color:#9a6cf0;font-size:13px;">Tom lo</span></div>
+    <div class="dpad" style="position:relative;"><span class="px" style="position:absolute;top:6px;left:8px;color:#4a4f55;">A10</span></div>
+    <div class="dpad" style="position:relative;"><span class="px" style="position:absolute;top:6px;left:8px;color:#4a4f55;">A11</span></div>
+    <div class="dpad" style="position:relative;border-bottom:3px solid #8fd424;"><span class="px" style="position:absolute;top:6px;left:8px;color:#8a9099;">A12</span><span class="marker" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;color:#8fd424;font-size:13px;">Shaker</span></div>
+    <div class="dpad" style="position:relative;"><span class="px" style="position:absolute;top:6px;left:8px;color:#4a4f55;">A05</span></div>
+    <div class="dpad" style="position:relative;border-bottom:3px solid #e8409f;"><span class="px" style="position:absolute;top:6px;left:8px;color:#8a9099;">A06</span><span class="marker" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;color:#e8409f;font-size:13px;">Clap</span></div>
+    <div class="dpad" style="position:relative;"><span class="px" style="position:absolute;top:6px;left:8px;color:#4a4f55;">A07</span></div>
+    <div class="dpad" style="position:relative;"><span class="px" style="position:absolute;top:6px;left:8px;color:#4a4f55;">A08</span></div>
+    <div class="dpad" style="position:relative;border-bottom:3px solid #e8542e;"><span class="px" style="position:absolute;top:6px;left:8px;color:#8a9099;">A01</span><span class="marker" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;color:#e8542e;font-size:13px;">Kick 01</span></div>
+    <div class="dpressed" style="position:relative;border-bottom:3px solid #ffc41f;box-shadow:inset 1px 1px 0 #050607,inset -1px -1px 0 #343a41, 0 0 22px rgba(255,196,31,0.45);background:#2a2412;"><span class="px" style="position:absolute;top:6px;left:8px;color:#ffc41f;">A02</span><span class="marker" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;color:#ffdf6e;font-size:13px;text-shadow:0 0 8px #ffc41f;">Snare 01</span></div>
+    <div class="dpad" style="position:relative;border-bottom:3px solid #1fc6cf;"><span class="px" style="position:absolute;top:6px;left:8px;color:#8a9099;">A03</span><span class="marker" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;color:#1fc6cf;font-size:13px;">Hat cl</span></div>
+    <div class="dpad" style="position:relative;border-bottom:3px solid #7adfe4;"><span class="px" style="position:absolute;top:6px;left:8px;color:#8a9099;">A04</span><span class="marker" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;color:#7adfe4;font-size:13px;">Hat op</span></div>
+  </div>
+
+  <div style="height:26px;display:flex;align-items:center;justify-content:center;">
+    <span class="px" style="color:#4a4f55;">TAP = PLAY · A03 CHOKES A04 · HOLD EXIT TO LEAVE</span>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic { renderVals(){ return {}; } }
+</script>
+</body>
+</html>
