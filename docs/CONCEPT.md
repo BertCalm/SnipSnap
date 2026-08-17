@@ -98,8 +98,10 @@ everything below is additive on top of a thing that already works.
 - **Auto-chop UI** — the detection and slicing themselves are done and tested
   (`Transients`, `Chopper` in `:audio`); what's left is the gesture and the
   review screen
-- **Auto-place** — on-device classifier (kick / snare / hat / clap / perc /
-  tonal / loop) drops snips onto sensible default slots
+- **Auto-place UI** — the classifier and layout logic are done and tested
+  (`Classifier`, `AutoPlace` in `:audio`); what's left is showing the result
+  and making it obvious it can be overridden. Thresholds are calibrated against
+  synthetic material and want a pass over real captures.
 - **BPM + key detection** on loop-length snips, written into the filename
 - **Velocity layers and round robins**
 - **Banks B–D**

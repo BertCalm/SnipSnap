@@ -31,7 +31,7 @@ Both are plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit
 tested on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew :audio:test :xpm:test      # 110 tests
+./gradlew :audio:test :xpm:test      # 158 tests
 ```
 
 ### `:audio`
@@ -50,6 +50,12 @@ The capture and conditioning core.
   ~3 ms before the attack, never after.
 - **`Chopper`** — turns one captured bar into a bank of pads, either following
   the hits or dividing evenly.
+- **`Classifier`** — tags a snip as kick / snare / clap / hat / tom / perc /
+  tonal / loop from cheap spectral and envelope features. Rule-based, so a
+  wrong answer is inspectable instead of mysterious.
+- **`AutoPlace`** — puts those on the conventional layout (kick A01, snare A02,
+  closed hat A03, open hat A04) and mute-groups the hats so one chokes the
+  other.
 
 ```kotlin
 val buffer = RingBuffer.ofSeconds(60f)          // running in the capture service
@@ -57,11 +63,11 @@ val buffer = RingBuffer.ofSeconds(60f)          // running in the capture servic
 val snip = Snip(buffer.snapshotSeconds(8f), channels = 2, sampleRate = 44_100)
 WavWriter.write(File(kitDir, "SS_Kick_01.wav"), Cleanup.process(snip))
 
-// ...or chop the whole bar onto pads
-Chopper.byTransients(snip, maxSlices = 16, cleanup = Chopper.SLICE_CLEANUP)
-    .forEachIndexed { i, slice ->
-        WavWriter.write(File(kitDir, "SS_Chop_%02d.wav".format(i + 1)), slice.snip)
-    }
+// ...or chop the whole bar, classify each piece, and lay it out playably
+val slices = Chopper.byTransients(snip, maxSlices = 16, cleanup = Chopper.SLICE_CLEANUP)
+val classified = slices.map { it.snip to Classifier.classify(it.snip).drumClass }
+
+AutoPlace.arrange(classified, padCount = 16) { it.second }   // kick -> A01, snare -> A02, ...
 ```
 
 ### `:xpm`
