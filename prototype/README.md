@@ -20,4 +20,9 @@ What's real in it:
 What's fake: the audio is synthesized, commit doesn't write a file, and the
 overview is mono. It's an interaction prototype, not the app.
 
+Personality, per [`../docs/PERSONALITY.md`](../docs/PERSONALITY.md): tap the
+cassette for a pencil rewind, leave it idle for the screensaver, triple-tap
+the position readout for the mechanical tape counter, and commit a few snips
+for the deck's opinions.
+
 The `window.__deck` handle exists only so automated checks can drive it.

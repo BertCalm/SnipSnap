@@ -39,7 +39,10 @@
     font-family:'VT323',monospace;font-size:20px;padding:8px 16px;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:9;
     box-shadow:0 0 0 2px var(--g-dk);}
   #toast.show{opacity:1;transform:translate(-50%,0);}
-  @media (prefers-reduced-motion: reduce){ .noesntial-motion{display:none;} }
+  #pencil{position:absolute;display:none;transform-origin:50% 86%;}
+  #pencil.go{display:block;animation:crank 0.45s linear infinite;}
+  @keyframes crank{from{transform:rotate(0deg)}to{transform:rotate(-360deg)}}
+  @media (prefers-reduced-motion: reduce){ #pencil.go{animation:none;} }
 </style>
 
 <div id="app">
@@ -51,7 +54,13 @@
     </div>
 
     <div id="body">
-      <div style="display:flex;justify-content:center;flex:none;">
+      <div id="cassetteWrap" style="position:relative;display:flex;justify-content:center;flex:none;cursor:pointer;">
+        <svg id="pencil" viewBox="0 0 24 90" width="19" height="72" style="left:calc(50% - 68px);top:-8px;z-index:2;">
+          <rect x="8" y="10" width="8" height="54" fill="#ffc41f" stroke="#3a2c02"/>
+          <rect x="7" y="2" width="10" height="9" rx="2" fill="#e8409f" stroke="#3a2c02"/>
+          <path d="M8 64 L12 80 L16 64 Z" fill="#e8c48a" stroke="#3a2c02"/>
+          <path d="M10.6 72 L12 80 L13.4 72 Z" fill="#241205"/>
+        </svg>
         <svg id="cassette" viewBox="0 0 340 96" width="300" height="85">
           <rect x="2" y="2" width="336" height="92" rx="9" fill="#26282c" stroke="#0e0f11" stroke-width="2"/>
           <rect x="14" y="9" width="312" height="26" rx="3" fill="#f4efe4" stroke="#0e0f11"/>
@@ -120,7 +129,7 @@
     <div style="height:24px;display:flex;gap:3px;padding:2px 4px 4px;flex:none;">
       <div style="flex:1;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);"><span class="px" id="stRate" style="color:var(--ink);">— HZ</span></div>
       <div style="flex:1;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);"><span class="px" id="stOnsets" style="color:var(--ink);">— ONSETS</span></div>
-      <div style="flex:1.1;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);"><span class="px" style="color:var(--ink);">MONO 12.8s</span></div>
+      <div style="flex:1.1;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);"><span class="px" id="stQuip" style="color:var(--ink);">MONO 12.8s</span></div>
     </div>
   </div>
 </div>
@@ -246,6 +255,50 @@
     return Math.max(0,Math.min(L-2,f));
   }
 
+  // ---------- delight: toast, ka-chunk, pencil, quips ----------
+  var toastEl=null;
+  function showToast(msg){
+    if(!toastEl) toastEl=document.getElementById('toast');
+    toastEl.textContent=msg; toastEl.classList.add('show');
+    clearTimeout(toastEl._h); toastEl._h=setTimeout(function(){toastEl.classList.remove('show');},1400);
+  }
+  function kachunk(){
+    if(!ctx) return;
+    var n=Math.floor(0.05*RATE), b=ctx.createBuffer(1,n,RATE), d=b.getChannelData(0);
+    for(var i=0;i<n;i++){ d[i]=(Math.random()*2-1)*Math.exp(-9*i/n); }
+    var src=ctx.createBufferSource(); src.buffer=b;
+    var f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=1300;
+    var g=ctx.createGain(); g.gain.value=0.45;
+    src.connect(f); f.connect(g); g.connect(ctx.destination); src.start();
+    var o=ctx.createOscillator(); o.frequency.value=72;
+    var g2=ctx.createGain(); g2.gain.setValueAtTime(0.5,ctx.currentTime);
+    g2.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.09);
+    o.connect(g2); g2.connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.1);
+  }
+  var pencilOn=false;
+  function pencilStart(){
+    if(pencilOn || eng.pos<RATE*0.05) return;
+    pencilOn=true; eng.mode='idle'; eng.target=-11; playOff();
+    document.getElementById('pencil').classList.add('go');
+  }
+  function pencilOff(){
+    if(!pencilOn) return;
+    pencilOn=false; if(eng.target<0) eng.target=0;
+    document.getElementById('pencil').classList.remove('go');
+  }
+  var QUIPS=['MONO 12.8s','NO DOLBY. WE LIKE HISS.','REWIND IS FREE.','CHROME BIAS: ON','HAND-WOUND SINCE 1996','AZIMUTH: VIBES'];
+  var quipIdx=0;
+  setInterval(function(){ if(!ctx) return;
+    quipIdx=(quipIdx+1)%QUIPS.length;
+    document.getElementById('stQuip').textContent=QUIPS[quipIdx]; },12000);
+  var COMMIT_LINES=['TAPED. NO TAKEBACKS.',"IT'S OURS NOW.",'CLEAN CUT. NICE EARS.','SHELF +1. LABEL IT LATER.'];
+  var commitIdx=0;
+  // screensaver
+  var lastAct=performance.now();
+  document.addEventListener('pointerdown',function(){ lastAct=performance.now(); },true);
+  var saver={x:60,y:30,dx:1.5,dy:1.1,ci:0,on:false};
+  var SCOL=['#e8542e','#ffc41f','#1fc6cf','#e8409f','#8fd424','#9a6cf0','#3f8cf0'];
+
   // ---------- canvases ----------
   var wave=document.getElementById('wave'), wctx=wave.getContext('2d');
   var over=document.getElementById('overview'), octx=over.getContext('2d');
@@ -317,6 +370,24 @@
     wctx.beginPath(); wctx.moveTo(cx0-6,0); wctx.lineTo(cx0+6,0); wctx.lineTo(cx0,8); wctx.closePath(); wctx.fill();
   }
 
+  function drawSaver(){
+    var m=fit(wave); wctx.setTransform(m.dpr,0,0,m.dpr,0,0);
+    wctx.fillStyle='#0c130b'; wctx.fillRect(0,0,m.w,m.h);
+    var W=72,H=44;
+    saver.x+=saver.dx; saver.y+=saver.dy;
+    if(saver.x<2||saver.x>m.w-W-2){ saver.dx*=-1; saver.ci=(saver.ci+1)%SCOL.length; saver.x=Math.max(2,Math.min(m.w-W-2,saver.x)); }
+    if(saver.y<2||saver.y>m.h-H-16){ saver.dy*=-1; saver.ci=(saver.ci+1)%SCOL.length; saver.y=Math.max(2,Math.min(m.h-H-16,saver.y)); }
+    var c=SCOL[saver.ci], x=saver.x, y=saver.y;
+    wctx.fillStyle=c; wctx.fillRect(x,y,W,H);
+    wctx.fillStyle='#f4efe4'; wctx.fillRect(x+7,y+4,W-14,10);
+    wctx.fillStyle='#0c130b'; wctx.fillRect(x+15,y+18,W-30,17);
+    wctx.fillStyle='#efe8d8';
+    wctx.beginPath(); wctx.arc(x+24,y+26,5.5,0,7); wctx.fill();
+    wctx.beginPath(); wctx.arc(x+W-24,y+26,5.5,0,7); wctx.fill();
+    wctx.fillStyle='#2f7c2a'; wctx.font='9px Silkscreen, Verdana, sans-serif';
+    wctx.textAlign='center'; wctx.fillText('SNIPSNAP — TAPE IDLE. TOUCH TO WAKE.',m.w/2,m.h-5); wctx.textAlign='left';
+  }
+
   // ---------- UI loop ----------
   var reelA=0;
   function fmt(f){ var s=f/RATE, mm=Math.floor(s/60), ss=s-mm*60;
@@ -324,8 +395,14 @@
   function tick(){
     requestAnimationFrame(tick);
     if(!ctx) return;
-    drawWave(); drawOverview();
-    document.getElementById('posLcd').textContent='POS '+fmt(eng.pos);
+    saver.on = !reduceMotion && !pencilOn && eng.mode==='idle' && eng.target===0 && eng.speed===0 && !playing
+      && (performance.now()-lastAct>25000);
+    if(saver.on){ drawSaver(); } else { drawWave(); }
+    drawOverview();
+    if(pencilOn && eng.pos<=1){ pencilOff(); showToast("REWOUND. YOU'RE WELCOME."); }
+    document.getElementById('posLcd').textContent = ui.odometer
+      ? 'CNT '+('00'+Math.floor(eng.pos/L*999)).slice(-3)
+      : 'POS '+fmt(eng.pos);
     document.getElementById('lenLcd').textContent = (sel.inF>=0&&sel.outF>sel.inF)? 'LEN '+((sel.outF-sel.inF)/RATE).toFixed(2)+'s' : 'LEN --.--';
     if(!reduceMotion){
       reelA += eng.dispSpeed*9;
@@ -345,7 +422,7 @@
     if(!ctx) return;
     wave.setPointerCapture(e.pointerId);
     drag.on=true; drag.lastX=e.clientX; drag.lastT=performance.now(); drag.vel=0;
-    eng.dragTarget=eng.pos; eng.mode='drag'; eng.target=0; playOff();
+    pencilOff(); eng.dragTarget=eng.pos; eng.mode='drag'; eng.target=0; playOff();
   });
   wave.addEventListener('pointermove',function(e){
     if(!drag.on) return;
@@ -367,6 +444,7 @@
   over.addEventListener('pointerdown',function(e){
     if(!ctx) return;
     var r=over.getBoundingClientRect();
+    pencilOff();
     eng.glideTarget=Math.max(0,Math.min(L-2,(e.clientX-r.left)/r.width*L));
     eng.mode='glide'; eng.target=0; playOff();
   });
@@ -377,15 +455,15 @@
     document.getElementById('playLed').style.background='#7a8288';
     document.getElementById('playLed').style.boxShadow='none';
     document.getElementById('btPlay').classList.remove('pressed'); }
-  function playOn(){ playing=true; eng.mode='idle'; eng.target=1;
+  function playOn(){ pencilOff(); playing=true; eng.mode='idle'; eng.target=1;
     if(ui.loop && sel.inF>=0 && sel.outF>sel.inF && (eng.pos<sel.inF||eng.pos>=sel.outF)) eng.pos=sel.inF;
     var led=document.getElementById('playLed');
     led.style.background='#49e83e'; led.style.boxShadow='0 0 5px #49e83e';
     document.getElementById('btPlay').classList.add('pressed'); }
   document.getElementById('btPlay').addEventListener('click',function(){ if(!ctx)return; playing? (eng.target=0,playOff()) : playOn(); });
-  document.getElementById('btStop').addEventListener('click',function(){ if(!ctx)return; eng.mode='idle'; eng.target=0; playOff(); });
+  document.getElementById('btStop').addEventListener('click',function(){ if(!ctx)return; pencilOff(); eng.mode='idle'; eng.target=0; playOff(); });
   function hold(btn,sp){ var el=document.getElementById(btn);
-    function dn(e){ if(!ctx)return; e.preventDefault(); el.classList.add('pressed'); eng.mode='idle'; eng.target=sp; playOff(); }
+    function dn(e){ if(!ctx)return; e.preventDefault(); pencilOff(); el.classList.add('pressed'); eng.mode='idle'; eng.target=sp; playOff(); }
     function up(){ if(!ctx)return; el.classList.remove('pressed'); if(eng.target===sp) eng.target=0; }
     el.addEventListener('pointerdown',dn); el.addEventListener('pointerup',up);
     el.addEventListener('pointercancel',up); el.addEventListener('pointerleave',up); }
@@ -408,15 +486,31 @@
     ui.zoomIdx=(ui.zoomIdx+1)%ZOOMS.length; ui.pxPerSec=ZOOMS[ui.zoomIdx];
     this.querySelector('.px').textContent='ZOOM x'+(ui.zoomIdx===0?1:ui.zoomIdx===1?2:4); });
 
+  // ---------- eggs ----------
+  document.getElementById('cassetteWrap').addEventListener('click',function(){
+    if(!ctx) return;
+    if(pencilOn){ pencilOff(); return; }
+    if(eng.pos<RATE*0.05){ showToast('ALREADY AT THE TOP.'); return; }
+    pencilStart();
+  });
+  var posTaps=0,posTapT=0;
+  document.getElementById('posLcd').addEventListener('click',function(){
+    var now=performance.now();
+    if(now-posTapT>1200) posTaps=0;
+    posTapT=now; posTaps++;
+    if(posTaps>=3){ posTaps=0; ui.odometer=!ui.odometer;
+      showToast(ui.odometer? 'TAPE COUNTER. LIKE THE OLD DAYS.' : 'BACK TO REAL TIME.'); }
+  });
+
   // ---------- commit ----------
   var SHELLS=['#e8542e','#ffc41f','#1fc6cf','#e8409f','#8fd424','#9a6cf0'];
   document.getElementById('commit').addEventListener('click',function(){
     if(!ctx) return;
-    var t=document.getElementById('toast');
-    if(!(sel.inF>=0&&sel.outF>sel.inF)){ t.textContent='SET IN + OUT FIRST'; }
-    else{
-      ui.shelf++;
-      t.textContent='SNIP '+((sel.outF-sel.inF)/RATE).toFixed(2)+'s → SHELF';
+    if(!(sel.inF>=0&&sel.outF>sel.inF)){ showToast('SET IN + OUT FIRST'); return; }
+    {
+      ui.shelf++; kachunk();
+      showToast('SNIP '+((sel.outF-sel.inF)/RATE).toFixed(2)+'s — '+COMMIT_LINES[commitIdx]);
+      commitIdx=(commitIdx+1)%COMMIT_LINES.length;
       var shelf=document.getElementById('shelf');
       document.getElementById('shelfLabel').textContent='SHELF '+ui.shelf;
       if(shelf.querySelectorAll('svg').length<3){
@@ -425,14 +519,13 @@
         d.innerHTML='<svg viewBox="0 0 100 64" width="25" height="16"><rect x="2" y="2" width="96" height="60" rx="8" fill="'+col+'" stroke="#241205" stroke-width="4"/><circle cx="35" cy="36" r="12" fill="#efe8d8" stroke="#241205" stroke-width="4"/><circle cx="65" cy="36" r="12" fill="#efe8d8" stroke="#241205" stroke-width="4"/><rect x="12" y="8" width="76" height="14" fill="#f4efe4"/></svg>';
         shelf.appendChild(d);
       }
-      if(navigator.vibrate) navigator.vibrate(30);
+      if(navigator.vibrate) navigator.vibrate([18,30,42]);
     }
-    t.classList.add('show');
-    clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove('show');},1400);
   });
 
   // debug handle for automated checks; harmless in normal use
-  window.__deck={eng:eng,sel:sel,ui:ui,isOn:function(){return !!ctx;},onsets:function(){return onsets.length;}};
+  window.__deck={eng:eng,sel:sel,ui:ui,isOn:function(){return !!ctx;},onsets:function(){return onsets.length;},
+    forceIdle:function(){lastAct=performance.now()-30000;},saverOn:function(){return saver.on;},pencilOn:function(){return pencilOn;}};
 
   // ---------- power on ----------
   document.getElementById('powerveil').addEventListener('click',function(){

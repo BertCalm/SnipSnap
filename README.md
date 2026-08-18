@@ -104,6 +104,7 @@ XpmWriter().writeTo(kitDir, program)   // -> kitDir/SnipSnap Kit 01.xpm
 - [`docs/XPM_STRUCTURE.md`](docs/XPM_STRUCTURE.md) — the MPC 2 format, its provenance, and what's still unverified
 - [`docs/KIT_BEST_PRACTICES.md`](docs/KIT_BEST_PRACTICES.md) — pad layout, mute groups, naming, and what Akai does and doesn't document
 - [`docs/UI_DESIGN.md`](docs/UI_DESIGN.md) — the TapeOS visual language (90s desktop × cassette) and the mockup artboards in [`design/`](design/)
+- [`docs/PERSONALITY.md`](docs/PERSONALITY.md) — the delight system: voice, the four laws, gag catalog, easter eggs
 - [`reference/README.md`](reference/README.md) — harvesting reference programs off hardware
 
 ## Next step

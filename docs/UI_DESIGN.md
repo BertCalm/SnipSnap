@@ -128,6 +128,7 @@ system asks for dark.
 - Group boxes with pixel-font legends replace "cards".
 - One signature animation: the snip's cassette flying onto the shelf.
   Reels spin whenever audio moves. Everything else is instant.
+- Quirk is governed: see [`PERSONALITY.md`](PERSONALITY.md) — plausible-in-1996 only, never in the signal path, never gating function, one visible gag per screen.
 - Error dialogs are honest little message boxes ("SPOTIFY BLOCKS THE TAPE —
   USE THE SCREEN RECORDER, I'LL PULL THE AUDIO OUT").
 
