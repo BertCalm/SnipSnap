@@ -1,0 +1,438 @@
+<title>Tape Deck</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen:wght@400;700&family=Permanent+Marker&display=swap">
+<style>
+  :root{
+    --gray:#c3c7cb; --g-hi:#ffffff; --g-e:#e8ebee; --g-mid:#868a8e; --g-dk:#3f4347;
+    --ink:#1c1e20; --ink2:#55595d; --t1:#000082; --t2:#1878c8;
+    --lcd:#0c130b; --lcd-ink:#49e83e; --lcd-dim:#2f7c2a; --amber:#ffb000; --amber-hi:#ffdf80;
+    --rec:#e83a2e; --tape:#ff7a1a;
+  }
+  html,body{margin:0;padding:0;}
+  body{
+    background:repeating-conic-gradient(#0a7a78 0% 25%,#0c817f 0% 50%) 0 0/4px 4px;
+    font-family:Verdana,Tahoma,'DejaVu Sans',sans-serif;
+    -webkit-tap-highlight-color:transparent;
+    display:flex;justify-content:center;min-height:100dvh;
+  }
+  .raised{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-hi),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-e),inset -2px -2px 0 var(--g-mid);}
+  .pressed{box-shadow:inset 1px 1px 0 var(--g-dk),inset -1px -1px 0 var(--g-hi),inset 2px 2px 0 var(--g-mid),inset -2px -2px 0 var(--g-e) !important;}
+  .sunken{background:#fff;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-e),inset 2px 2px 0 var(--g-dk),inset -2px -2px 0 var(--g-hi);}
+  .px{font-family:'Silkscreen',Verdana,sans-serif;font-size:9px;letter-spacing:0.5px;}
+  .lcdf{font-family:'VT323','Courier New',monospace;font-variant-numeric:tabular-nums;}
+  .marker{font-family:'Permanent Marker','Comic Sans MS',cursive;}
+  #app{width:min(430px,100vw);min-height:100dvh;box-sizing:border-box;padding:8px;display:flex;flex-direction:column;}
+  #deck{flex:1;display:flex;flex-direction:column;background:var(--gray);padding:3px;
+    box-shadow:inset 1px 1px 0 var(--g-e),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-hi),inset -2px -2px 0 var(--g-mid);}
+  #titlebar{height:30px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;gap:8px;padding:0 8px;flex:none;}
+  #body{flex:1;display:flex;flex-direction:column;gap:8px;padding:8px 8px 6px;min-height:0;}
+  .lcdbox{background:var(--lcd);position:relative;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-e),inset 2px 2px 0 var(--g-dk),inset -2px -2px 0 var(--g-hi);}
+  .scan{position:absolute;inset:4px;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.22) 0 1px,transparent 1px 3px);}
+  canvas{display:block;touch-action:none;}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;user-select:none;-webkit-user-select:none;cursor:pointer;color:var(--ink);appearance:none;-webkit-appearance:none;border-radius:0;padding:0;}
+  .btn:focus-visible{outline:2px dotted var(--ink);outline-offset:-5px;}
+  .toggle.on{box-shadow:inset 1px 1px 0 var(--g-dk),inset -1px -1px 0 var(--g-hi),inset 2px 2px 0 var(--g-mid),inset -2px -2px 0 var(--g-e);}
+  .toggle.on .px{color:var(--ink);}
+  .toggle .px{color:var(--ink2);}
+  #powerveil{position:absolute;inset:0;background:var(--lcd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:5;cursor:pointer;}
+  #toast{position:fixed;left:50%;bottom:90px;transform:translate(-50%,20px);background:var(--lcd);color:var(--lcd-ink);
+    font-family:'VT323',monospace;font-size:20px;padding:8px 16px;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:9;
+    box-shadow:0 0 0 2px var(--g-dk);}
+  #toast.show{opacity:1;transform:translate(-50%,0);}
+  @media (prefers-reduced-motion: reduce){ .noesntial-motion{display:none;} }
+</style>
+
+<div id="app">
+  <div id="deck">
+    <div id="titlebar">
+      <svg width="20" height="14" viewBox="0 0 20 14"><rect x="0.5" y="0.5" width="19" height="13" rx="2" fill="#ff7a1a" stroke="#3f2205"/><circle cx="6" cy="7" r="2.6" fill="#f4efe4" stroke="#3f2205"/><circle cx="14" cy="7" r="2.6" fill="#f4efe4" stroke="#3f2205"/></svg>
+      <span style="color:#fff;font-weight:bold;font-size:12px;flex:1;">TAPE DECK — LIVE TAPE</span>
+      <span class="px" style="color:#9fd8d6;">PROTOTYPE</span>
+    </div>
+
+    <div id="body">
+      <div style="display:flex;justify-content:center;flex:none;">
+        <svg id="cassette" viewBox="0 0 340 96" width="300" height="85">
+          <rect x="2" y="2" width="336" height="92" rx="9" fill="#26282c" stroke="#0e0f11" stroke-width="2"/>
+          <rect x="14" y="9" width="312" height="26" rx="3" fill="#f4efe4" stroke="#0e0f11"/>
+          <rect x="14" y="9" width="312" height="7" fill="#ff7a1a"/>
+          <text x="170" y="30" font-family="Permanent Marker, cursive" font-size="14" text-anchor="middle" fill="#2c2013">LIVE TAPE — 12.8s LOOP</text>
+          <rect x="80" y="42" width="180" height="44" rx="22" fill="#101214" stroke="#0e0f11"/>
+          <circle id="reelTapeL" cx="124" cy="64" r="24" fill="none" stroke="#5c4a2a" stroke-width="7"/>
+          <circle id="reelTapeR" cx="216" cy="64" r="14" fill="none" stroke="#5c4a2a" stroke-width="7"/>
+          <g id="reelL"><circle cx="124" cy="64" r="15" fill="#efe8d8" stroke="#0e0f11" stroke-width="2"/><g stroke="#26282c" stroke-width="3"><path d="M124 52 L124 58 M124 70 L124 76 M112 64 L118 64 M130 64 L136 64"/></g></g>
+          <g id="reelR"><circle cx="216" cy="64" r="15" fill="#efe8d8" stroke="#0e0f11" stroke-width="2"/><g stroke="#26282c" stroke-width="3"><path d="M216 52 L216 58 M216 70 L216 76 M204 64 L210 64 M222 64 L228 64"/></g></g>
+        </svg>
+      </div>
+
+      <div class="lcdbox" style="height:36px;flex:none;position:relative;">
+        <canvas id="overview" style="position:absolute;inset:4px;"></canvas>
+        <div class="scan"></div>
+      </div>
+
+      <div class="lcdbox" style="flex:1;min-height:130px;max-height:270px;position:relative;">
+        <canvas id="wave" style="position:absolute;inset:4px;"></canvas>
+        <div class="scan"></div>
+        <div id="powerveil">
+          <svg width="46" height="30" viewBox="0 0 46 30"><rect x="1" y="1" width="44" height="28" rx="4" fill="none" stroke="#2f7c2a" stroke-width="2"/><circle cx="15" cy="15" r="6" fill="none" stroke="#2f7c2a" stroke-width="2"/><circle cx="31" cy="15" r="6" fill="none" stroke="#2f7c2a" stroke-width="2"/></svg>
+          <span class="lcdf" style="color:var(--lcd-ink);font-size:24px;">TAP TO POWER ON</span>
+          <span class="px" style="color:var(--lcd-dim);">LOADS A 12.8s CAPTURED LOOP</span>
+        </div>
+      </div>
+      <div class="px" style="text-align:center;color:var(--ink2);flex:none;">DRAG THE TAPE — THE NEEDLE STAYS PUT · FLICK FOR MOMENTUM</div>
+
+      <div style="display:flex;gap:6px;flex:none;">
+        <div class="lcdbox" style="flex:1.25;height:38px;display:flex;align-items:center;justify-content:center;"><span id="posLcd" class="lcdf" style="color:var(--lcd-ink);font-size:24px;">POS 0:00.00</span></div>
+        <div class="lcdbox" style="flex:1;height:38px;display:flex;align-items:center;justify-content:center;"><span id="lenLcd" class="lcdf" style="color:var(--amber);font-size:24px;">LEN --.--</span></div>
+      </div>
+
+      <div style="display:flex;gap:6px;flex:none;">
+        <button id="setIn" class="btn raised" style="flex:1;height:44px;border:0;font:bold 12px Verdana;">SET IN</button>
+        <button id="setOut" class="btn raised" style="flex:1;height:44px;border:0;font:bold 12px Verdana;">SET OUT</button>
+        <button id="clearSel" class="btn raised" style="flex:0.8;height:44px;border:0;font:12px Verdana;color:var(--ink2);">Clear</button>
+        <button id="zoom" class="btn raised" style="flex:0.8;height:44px;border:0;"><span class="px">ZOOM x1</span></button>
+      </div>
+
+      <div style="display:flex;gap:6px;justify-content:center;flex:none;">
+        <button id="tgSnap" class="btn raised toggle on" style="border:0;padding:0 12px;height:34px;"><span class="px">SNAP: ONSET</span></button>
+        <button id="tgZero" class="btn raised toggle on" style="border:0;padding:0 12px;height:34px;"><span class="px">ZERO-X</span></button>
+        <button id="tgLoop" class="btn raised toggle" style="border:0;padding:0 12px;height:34px;"><span class="px">LOOP PREVIEW</span></button>
+      </div>
+
+      <div style="display:flex;gap:6px;justify-content:center;flex:none;">
+        <button id="btRew" class="btn raised" style="width:62px;height:48px;border:0;"><svg width="22" height="16"><path d="M11 2 L3 8 L11 14 Z" fill="#1c1e20"/><path d="M19 2 L11 8 L19 14 Z" fill="#1c1e20"/></svg></button>
+        <button id="btPlay" class="btn raised" style="width:62px;height:48px;border:0;flex-direction:column;gap:2px;"><svg width="16" height="14"><path d="M4 1 L14 7 L4 13 Z" fill="#1c1e20"/></svg><div id="playLed" style="width:7px;height:3px;background:#7a8288;"></div></button>
+        <button id="btStop" class="btn raised" style="width:62px;height:48px;border:0;"><svg width="14" height="14"><rect x="2" y="2" width="10" height="10" fill="#1c1e20"/></svg></button>
+        <button id="btFwd" class="btn raised" style="width:62px;height:48px;border:0;"><svg width="22" height="16"><path d="M3 2 L11 8 L3 14 Z" fill="#1c1e20"/><path d="M11 2 L19 8 L11 14 Z" fill="#1c1e20"/></svg></button>
+      </div>
+
+      <div style="display:flex;gap:8px;flex:none;align-items:center;">
+        <button id="commit" class="btn raised" style="flex:1;height:52px;border:0;">
+          <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="5" cy="5" r="2.6" fill="none" stroke="#1c1e20" stroke-width="1.8"/><circle cx="5" cy="15" r="2.6" fill="none" stroke="#1c1e20" stroke-width="1.8"/><path d="M7 6.5 L17 13.5 M7 13.5 L17 6.5" stroke="#1c1e20" stroke-width="1.8"/></svg>
+          <span style="font:bold 13px Verdana;">COMMIT SNIP</span>
+        </button>
+        <div style="width:86px;display:flex;gap:3px;align-items:center;justify-content:center;" id="shelf">
+          <span class="px" style="color:var(--ink2);" id="shelfLabel">SHELF 0</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:24px;display:flex;gap:3px;padding:2px 4px 4px;flex:none;">
+      <div style="flex:1;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);"><span class="px" id="stRate" style="color:var(--ink);">— HZ</span></div>
+      <div style="flex:1;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);"><span class="px" id="stOnsets" style="color:var(--ink);">— ONSETS</span></div>
+      <div style="flex:1.1;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);"><span class="px" style="color:var(--ink);">MONO 12.8s</span></div>
+    </div>
+  </div>
+</div>
+<div id="toast" class="lcdf">SNIP COMMITTED</div>
+
+<script>
+'use strict';
+(function(){
+  // ---------- state ----------
+  var ctx=null, RATE=44100, L=0;
+  var tape=null, bucket=null; var BUCKET=128;
+  var onsets=[];
+  var eng={ pos:0, speed:0, target:0, mode:'idle', dragTarget:0, glideTarget:0, prevPos:0, dispSpeed:0 };
+  var sel={ inF:-1, outF:-1 };
+  var ui={ pxPerSec:90, zoomIdx:0, snapOnset:true, snapZero:true, loop:false, shelf:0 };
+  var ZOOMS=[90,180,360];
+  var reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- synth: the "captured" tape ----------
+  function synthTape(){
+    L = Math.floor(12.8*RATE);
+    tape = new Float32Array(L);
+    var step = 0.4; // 150 bpm 16ths feel
+    function kick(at){ var n=Math.floor(0.30*RATE), s=Math.floor(at*RATE);
+      for(var i=0;i<n && s+i<L;i++){ var t=i/RATE; var f=118*Math.exp(-42*t)+44;
+        tape[s+i]+=0.95*Math.exp(-21*t)*Math.sin(2*Math.PI*f*t); } }
+    function snare(at,seed){ var n=Math.floor(0.22*RATE), s=Math.floor(at*RATE), lp=0, r=seed||1;
+      for(var i=0;i<n && s+i<L;i++){ var t=i/RATE; r=(r*1103515245+12345)&0x7fffffff; var w=(r/0x3fffffff)-1;
+        lp+=0.34*(w-lp); tape[s+i]+=0.8*Math.exp(-26*t)*(0.45*Math.sin(2*Math.PI*192*t)+1.25*lp); } }
+    function hat(at,dec,seed){ var n=Math.floor(0.09*RATE), s=Math.floor(at*RATE), pv=0, r=seed||7;
+      for(var i=0;i<n && s+i<L;i++){ var t=i/RATE; r=(r*1103515245+12345)&0x7fffffff; var w=(r/0x3fffffff)-1;
+        tape[s+i]+=0.34*Math.exp(-dec*t)*(w-pv); pv=w; } }
+    function tom(at,f0){ var n=Math.floor(0.32*RATE), s=Math.floor(at*RATE);
+      for(var i=0;i<n && s+i<L;i++){ var t=i/RATE; var f=f0*(1+0.14*Math.exp(-30*t));
+        tape[s+i]+=0.8*Math.exp(-10*t)*Math.sin(2*Math.PI*f*t); } }
+    onsets=[];
+    function on(at){ onsets.push(Math.floor(at*RATE)); }
+    for(var bar=0;bar<2;bar++){
+      var b=bar*6.4;
+      var KICKS=[0,2.4,4.0], SNARES=[0.8,2.0,4.8], TOMS=(bar? [5.6]:[]), OH=[1.2,3.6];
+      var i;
+      for(i=0;i<KICKS.length;i++){ kick(b+KICKS[i]); on(b+KICKS[i]); }
+      for(i=0;i<SNARES.length;i++){ snare(b+SNARES[i], 3+i); on(b+SNARES[i]); }
+      for(i=0;i<TOMS.length;i++){ tom(b+TOMS[i], 130); on(b+TOMS[i]); }
+      for(var st=0; st<16; st++){ var at=b+st*step; if(at>=b+6.4) break;
+        hat(at, 90, 11+st); if(st%4===0) continue; on(at); }
+      for(i=0;i<OH.length;i++){ hat(b+OH[i], 9, 5+i); }
+    }
+    onsets = onsets.filter(function(v,i,a){ return a.indexOf(v)===i; }).sort(function(a,b){return a-b;});
+    // normalize + clamp
+    var pk=0; for(var j=0;j<L;j++){ var a=Math.abs(tape[j]); if(a>pk) pk=a; }
+    var g=pk>0? 0.9/pk : 1;
+    for(j=0;j<L;j++){ var v=tape[j]*g; tape[j]= v>1?1: v<-1?-1: v; }
+    // peak buckets for drawing
+    bucket = new Float32Array(Math.ceil(L/BUCKET));
+    for(j=0;j<bucket.length;j++){ var m=0, s0=j*BUCKET, e0=Math.min(L,s0+BUCKET);
+      for(var k2=s0;k2<e0;k2++){ var a2=Math.abs(tape[k2]); if(a2>m) m=a2; } bucket[j]=m; }
+  }
+
+  // ---------- tape engine (per-sample chase = real tape feel) ----------
+  function startAudio(){
+    ctx = new (window.AudioContext||window.webkitAudioContext)();
+    RATE = ctx.sampleRate;
+    synthTape();
+    var sp = ctx.createScriptProcessor(1024,0,1);
+    sp.onaudioprocess = function(ev){
+      var out = ev.outputBuffer.getChannelData(0);
+      var pos=eng.pos, speed=eng.speed, mode=eng.mode;
+      for(var i=0;i<out.length;i++){
+        var prev=pos;
+        if(mode==='drag'){ pos += (eng.dragTarget-pos)*0.004; }
+        else if(mode==='glide'){ pos += (eng.glideTarget-pos)*0.002;
+          if(Math.abs(eng.glideTarget-pos)<40){ pos=eng.glideTarget; mode='idle'; speed=0; } }
+        else if(mode==='coast'){ pos += speed; speed*=0.99988;
+          if(Math.abs(speed)<0.02){ mode='idle'; speed=0; snapAfterStop(); } }
+        else { // transport
+          speed += (eng.target-speed)*0.0012;           // tape spin-up / wind-down
+          if(eng.target===0 && Math.abs(speed)<0.004) speed=0;
+          pos += speed;
+        }
+        // loop preview
+        if(ui.loop && sel.inF>=0 && sel.outF>sel.inF && mode==='idle' && eng.target===1){
+          if(pos>=sel.outF) pos=sel.inF + (pos-sel.outF);
+        }
+        if(pos<0){ pos=0; if(mode==='coast'){mode='idle';speed=0;} if(eng.target<0) eng.target=0; }
+        if(pos>L-2){ pos=L-2; if(mode==='coast'){mode='idle';speed=0;} if(eng.target>0){ eng.target=0; playOff(); } }
+        var d=pos-prev;
+        var idx=pos|0, fr=pos-idx;
+        var s=tape[idx]*(1-fr)+tape[idx+1]*fr;
+        var gain=Math.min(1, Math.abs(d)*1.4);
+        out[i]=s*gain*0.9;
+      }
+      eng.pos=pos; eng.speed=speed; eng.mode=mode;
+      eng.dispSpeed += ( (mode==='drag'? (pos-eng.prevPos)/out.length*8 : (mode==='idle'? speed*(eng.target||0? 1:0)+speed : speed)) - eng.dispSpeed)*0.3;
+      if(mode==='idle') eng.dispSpeed += (speed-eng.dispSpeed)*0.5;
+      eng.prevPos=pos;
+    };
+    sp.connect(ctx.destination);
+    window._sp=sp;
+    document.getElementById('stRate').textContent = RATE+' HZ';
+    document.getElementById('stOnsets').textContent = onsets.length+' ONSETS';
+    drawOverviewBase();
+  }
+
+  function nearestOnset(f, maxDist){
+    var best=-1, bd=1e18;
+    for(var i=0;i<onsets.length;i++){ var d=Math.abs(onsets[i]-f); if(d<bd){bd=d;best=onsets[i];} }
+    return (best>=0 && bd<=maxDist)? best : -1;
+  }
+  function nearestZero(f){
+    var span=2400, s=Math.max(1,(f|0)-span), e=Math.min(L-1,(f|0)+span), best=-1, bd=1e18;
+    for(var i=s;i<e;i++){ if((tape[i-1]<0)!==(tape[i]<0)){ var d=Math.abs(i-f); if(d<bd){bd=d;best=i;} } }
+    return best>=0? best : (f|0);
+  }
+  function snapAfterStop(){
+    if(!ui.snapOnset) return;
+    var o=nearestOnset(eng.pos, 0.30*RATE);
+    if(o>=0){ eng.glideTarget=o; eng.mode='glide'; }
+  }
+  function snapPoint(f){
+    if(ui.snapOnset){ var o=nearestOnset(f,0.12*RATE); if(o>=0) f=o; }
+    if(ui.snapZero) f=nearestZero(f);
+    return Math.max(0,Math.min(L-2,f));
+  }
+
+  // ---------- canvases ----------
+  var wave=document.getElementById('wave'), wctx=wave.getContext('2d');
+  var over=document.getElementById('overview'), octx=over.getContext('2d');
+  var obase=null;
+  function fit(c){ var r=c.getBoundingClientRect(), dpr=Math.min(2,window.devicePixelRatio||1);
+    if(c.width!==Math.round(r.width*dpr)||c.height!==Math.round(r.height*dpr)){ c.width=Math.round(r.width*dpr); c.height=Math.round(r.height*dpr); }
+    return {w:r.width,h:r.height,dpr:dpr}; }
+
+  function drawOverviewBase(){
+    var m=fit(over); obase=document.createElement('canvas');
+    obase.width=over.width; obase.height=over.height;
+    var g=obase.getContext('2d'); g.scale(m.dpr,m.dpr);
+    g.fillStyle='#0c130b'; g.fillRect(0,0,m.w,m.h);
+    g.fillStyle='#2f7c2a';
+    var n=Math.floor(m.w/2);
+    for(var x=0;x<n;x++){ var f0=x/n*L, f1=(x+1)/n*L, mm=0;
+      for(var b=Math.floor(f0/BUCKET);b<Math.ceil(f1/BUCKET)&&b<bucket.length;b++){ if(bucket[b]>mm) mm=bucket[b]; }
+      var h=Math.max(1,Math.pow(mm,0.55)*(m.h-4)); g.fillRect(x*2, (m.h-h)/2, 1.4, h); }
+  }
+  function drawOverview(){
+    if(!obase) return;
+    var m=fit(over); octx.setTransform(1,0,0,1,0,0); octx.drawImage(obase,0,0);
+    octx.setTransform(m.dpr,0,0,m.dpr,0,0);
+    if(sel.inF>=0&&sel.outF>sel.inF){ octx.fillStyle='rgba(255,176,0,0.28)';
+      octx.fillRect(sel.inF/L*m.w,0,(sel.outF-sel.inF)/L*m.w,m.h); }
+    var wr=document.getElementById('wave').getBoundingClientRect();
+    var winSec=wr.width/ui.pxPerSec, winW=winSec*RATE/L*m.w;
+    var cx0=eng.pos/L*m.w;
+    octx.strokeStyle='#49e83e'; octx.lineWidth=1;
+    octx.strokeRect(cx0-winW/2,0.5,winW,m.h-1);
+    octx.fillStyle='#ffdf80'; octx.fillRect(cx0-0.5,0,1.5,m.h);
+  }
+  function drawWave(){
+    var m=fit(wave); wctx.setTransform(m.dpr,0,0,m.dpr,0,0);
+    wctx.fillStyle='#0c130b'; wctx.fillRect(0,0,m.w,m.h);
+    var fpp=RATE/ui.pxPerSec, cx0=m.w/2;
+    if(sel.inF>=0&&sel.outF>sel.inF){
+      var x0=cx0+(sel.inF-eng.pos)/fpp, x1=cx0+(sel.outF-eng.pos)/fpp;
+      wctx.fillStyle='rgba(255,176,0,0.10)'; wctx.fillRect(x0,0,x1-x0,m.h);
+    }
+    var barW=2,step=3;
+    for(var x=0;x<m.w;x+=step){
+      var f0=eng.pos+(x-cx0)*fpp, f1=f0+step*fpp;
+      if(f1<0||f0>L) continue;
+      var mm=0;
+      for(var b=Math.max(0,Math.floor(f0/BUCKET)); b<Math.ceil(f1/BUCKET)&&b<bucket.length; b++){ if(bucket[b]>mm) mm=bucket[b]; }
+      var inSel = sel.inF>=0 && f0>=sel.inF && f1<=sel.outF;
+      wctx.fillStyle = inSel? '#49e83e' : '#2f7c2a';
+      var h=Math.max(1.5,Math.pow(mm,0.55)*(m.h-16));
+      wctx.fillRect(x,(m.h-h)/2,barW,h);
+    }
+    wctx.strokeStyle='#8fd424'; wctx.lineWidth=1.5; wctx.beginPath();
+    for(var i=0;i<onsets.length;i++){ var ox=cx0+(onsets[i]-eng.pos)/fpp;
+      if(ox<-2||ox>m.w+2) continue; wctx.moveTo(ox,m.h-9); wctx.lineTo(ox,m.h-1); }
+    wctx.stroke();
+    function bracket(f,dir){ var x=cx0+(f-eng.pos)/fpp; if(x<-4||x>m.w+4) return;
+      wctx.strokeStyle='#ffb000'; wctx.lineWidth=2; wctx.beginPath();
+      wctx.moveTo(x,2); wctx.lineTo(x,m.h-2); wctx.moveTo(x,2); wctx.lineTo(x+7*dir,2);
+      wctx.moveTo(x,m.h-2); wctx.lineTo(x+7*dir,m.h-2); wctx.stroke(); }
+    if(sel.inF>=0) bracket(sel.inF,1);
+    if(sel.outF>=0) bracket(sel.outF,-1);
+    wctx.fillStyle='#ffdf80'; wctx.fillRect(cx0-1,0,2,m.h);
+    wctx.beginPath(); wctx.moveTo(cx0-6,0); wctx.lineTo(cx0+6,0); wctx.lineTo(cx0,8); wctx.closePath(); wctx.fill();
+  }
+
+  // ---------- UI loop ----------
+  var reelA=0;
+  function fmt(f){ var s=f/RATE, mm=Math.floor(s/60), ss=s-mm*60;
+    return mm+':' + (ss<10?'0':'') + ss.toFixed(2); }
+  function tick(){
+    requestAnimationFrame(tick);
+    if(!ctx) return;
+    drawWave(); drawOverview();
+    document.getElementById('posLcd').textContent='POS '+fmt(eng.pos);
+    document.getElementById('lenLcd').textContent = (sel.inF>=0&&sel.outF>sel.inF)? 'LEN '+((sel.outF-sel.inF)/RATE).toFixed(2)+'s' : 'LEN --.--';
+    if(!reduceMotion){
+      reelA += eng.dispSpeed*9;
+      var frac=eng.pos/L;
+      document.getElementById('reelL').setAttribute('transform','rotate('+reelA+' 124 64)');
+      document.getElementById('reelR').setAttribute('transform','rotate('+(reelA*1.35)+' 216 64)');
+      document.getElementById('reelTapeL').setAttribute('r', String(24-9*frac));
+      document.getElementById('reelTapeR').setAttribute('r', String(14+9*frac));
+    }
+  }
+  requestAnimationFrame(tick);
+
+  // ---------- gestures ----------
+  var drag={on:false,lastX:0,lastT:0,vel:0};
+  wave.style.cursor='grab';
+  wave.addEventListener('pointerdown',function(e){
+    if(!ctx) return;
+    wave.setPointerCapture(e.pointerId);
+    drag.on=true; drag.lastX=e.clientX; drag.lastT=performance.now(); drag.vel=0;
+    eng.dragTarget=eng.pos; eng.mode='drag'; eng.target=0; playOff();
+  });
+  wave.addEventListener('pointermove',function(e){
+    if(!drag.on) return;
+    var now=performance.now(), dx=e.clientX-drag.lastX, dt=Math.max(1,now-drag.lastT);
+    var dF = -dx*(RATE/ui.pxPerSec);
+    eng.dragTarget=Math.max(0,Math.min(L-2,eng.dragTarget+dF));
+    var v = dF/dt*1000/RATE;                    // tape-seconds per second
+    drag.vel = drag.vel*0.7 + v*0.3;
+    drag.lastX=e.clientX; drag.lastT=now;
+  });
+  function endDrag(){
+    if(!drag.on) return; drag.on=false;
+    var vFramesPerSample = drag.vel*RATE/RATE;  // frames per sample = tapeSec/sec
+    if(Math.abs(drag.vel)>0.35){ eng.speed=Math.max(-14,Math.min(14,vFramesPerSample)); eng.mode='coast'; }
+    else { eng.mode='idle'; eng.speed=0; snapAfterStop(); }
+  }
+  wave.addEventListener('pointerup',endDrag);
+  wave.addEventListener('pointercancel',endDrag);
+  over.addEventListener('pointerdown',function(e){
+    if(!ctx) return;
+    var r=over.getBoundingClientRect();
+    eng.glideTarget=Math.max(0,Math.min(L-2,(e.clientX-r.left)/r.width*L));
+    eng.mode='glide'; eng.target=0; playOff();
+  });
+
+  // ---------- transport ----------
+  var playing=false;
+  function playOff(){ playing=false;
+    document.getElementById('playLed').style.background='#7a8288';
+    document.getElementById('playLed').style.boxShadow='none';
+    document.getElementById('btPlay').classList.remove('pressed'); }
+  function playOn(){ playing=true; eng.mode='idle'; eng.target=1;
+    if(ui.loop && sel.inF>=0 && sel.outF>sel.inF && (eng.pos<sel.inF||eng.pos>=sel.outF)) eng.pos=sel.inF;
+    var led=document.getElementById('playLed');
+    led.style.background='#49e83e'; led.style.boxShadow='0 0 5px #49e83e';
+    document.getElementById('btPlay').classList.add('pressed'); }
+  document.getElementById('btPlay').addEventListener('click',function(){ if(!ctx)return; playing? (eng.target=0,playOff()) : playOn(); });
+  document.getElementById('btStop').addEventListener('click',function(){ if(!ctx)return; eng.mode='idle'; eng.target=0; playOff(); });
+  function hold(btn,sp){ var el=document.getElementById(btn);
+    function dn(e){ if(!ctx)return; e.preventDefault(); el.classList.add('pressed'); eng.mode='idle'; eng.target=sp; playOff(); }
+    function up(){ if(!ctx)return; el.classList.remove('pressed'); if(eng.target===sp) eng.target=0; }
+    el.addEventListener('pointerdown',dn); el.addEventListener('pointerup',up);
+    el.addEventListener('pointercancel',up); el.addEventListener('pointerleave',up); }
+  hold('btRew',-7); hold('btFwd',7);
+
+  // ---------- selection ----------
+  document.getElementById('setIn').addEventListener('click',function(){ if(!ctx)return;
+    sel.inF=snapPoint(eng.pos);
+    if(sel.outF>=0&&sel.outF<=sel.inF) sel.outF=-1; });
+  document.getElementById('setOut').addEventListener('click',function(){ if(!ctx)return;
+    var f=snapPoint(eng.pos);
+    if(sel.inF>=0&&f<=sel.inF){ sel.outF=sel.inF; sel.inF=f; } else sel.outF=f; });
+  document.getElementById('clearSel').addEventListener('click',function(){ sel.inF=-1; sel.outF=-1; });
+
+  // ---------- toggles / zoom ----------
+  function bindToggle(id,key){ var el=document.getElementById(id);
+    el.addEventListener('click',function(){ ui[key]=!ui[key]; el.classList.toggle('on',ui[key]); }); }
+  bindToggle('tgSnap','snapOnset'); bindToggle('tgZero','snapZero'); bindToggle('tgLoop','loop');
+  document.getElementById('zoom').addEventListener('click',function(){
+    ui.zoomIdx=(ui.zoomIdx+1)%ZOOMS.length; ui.pxPerSec=ZOOMS[ui.zoomIdx];
+    this.querySelector('.px').textContent='ZOOM x'+(ui.zoomIdx===0?1:ui.zoomIdx===1?2:4); });
+
+  // ---------- commit ----------
+  var SHELLS=['#e8542e','#ffc41f','#1fc6cf','#e8409f','#8fd424','#9a6cf0'];
+  document.getElementById('commit').addEventListener('click',function(){
+    if(!ctx) return;
+    var t=document.getElementById('toast');
+    if(!(sel.inF>=0&&sel.outF>sel.inF)){ t.textContent='SET IN + OUT FIRST'; }
+    else{
+      ui.shelf++;
+      t.textContent='SNIP '+((sel.outF-sel.inF)/RATE).toFixed(2)+'s → SHELF';
+      var shelf=document.getElementById('shelf');
+      document.getElementById('shelfLabel').textContent='SHELF '+ui.shelf;
+      if(shelf.querySelectorAll('svg').length<3){
+        var col=SHELLS[(ui.shelf-1)%SHELLS.length];
+        var d=document.createElement('span');
+        d.innerHTML='<svg viewBox="0 0 100 64" width="25" height="16"><rect x="2" y="2" width="96" height="60" rx="8" fill="'+col+'" stroke="#241205" stroke-width="4"/><circle cx="35" cy="36" r="12" fill="#efe8d8" stroke="#241205" stroke-width="4"/><circle cx="65" cy="36" r="12" fill="#efe8d8" stroke="#241205" stroke-width="4"/><rect x="12" y="8" width="76" height="14" fill="#f4efe4"/></svg>';
+        shelf.appendChild(d);
+      }
+      if(navigator.vibrate) navigator.vibrate(30);
+    }
+    t.classList.add('show');
+    clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove('show');},1400);
+  });
+
+  // debug handle for automated checks; harmless in normal use
+  window.__deck={eng:eng,sel:sel,ui:ui,isOn:function(){return !!ctx;},onsets:function(){return onsets.length;}};
+
+  // ---------- power on ----------
+  document.getElementById('powerveil').addEventListener('click',function(){
+    if(ctx) return;
+    startAudio();
+    if(ctx.state==='suspended') ctx.resume();
+    this.style.display='none';
+  });
+})();
+</script>
