@@ -30,3 +30,13 @@ tasks.test {
         events("passed", "failed", "skipped")
     }
 }
+
+/** Generate the hardware acceptance kits into testkit/. See TestKitGenerator. */
+tasks.register<JavaExec>("generateTestKits") {
+    group = "distribution"
+    description = "Generate the MPC hardware acceptance kits under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.audio.TestKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
