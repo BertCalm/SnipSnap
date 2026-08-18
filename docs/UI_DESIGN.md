@@ -81,6 +81,44 @@ Everything in the app is one of two surfaces, and the split is period-correct
 - **Bubble** — four states over someone else's app: ARMED (partial ring),
   TAPE FULL, SNIP! (flash + count badge + heavy haptic), DRAG DOWN = EJECT.
 
+## Schemes (themes, the Win95 way)
+
+TapeOS themes exactly like the classic Appearance control panel: a scheme is a
+**token swap and nothing else** — same bevels, same layout, same type. Because
+every control is built from the token set, a theme is one small table, and a
+"custom scheme" feature (Save As…) falls out for free.
+
+Named after tape formulations:
+
+| Scheme | Chrome | Desktop | LCD ink | Character |
+|---|---|---|---|---|
+| **Chrome** (Type II, default) | `#c3c7cb` gray | teal `#0a7a78` | green `#49e83e` | the classic |
+| **Ferric** (Type I) | tan `#d4c8a8` | rust `#8a5a24` | amber `#ffb000` | 70s glovebox |
+| **Metal** (Type IV) | near-black `#2e3136` | `#101215` | ice `#7adfe4` | high-contrast dark; the 2am scheme |
+| **Snack Bar** | yellow `#ffd400` | red `#e81c1c` | yellow | the Hot-Dog-Stand homage, shipped out of respect |
+
+Full token sets live in the theme classes in
+[`../design/Main.dc.html`](../design/Main.dc.html) (`--gray/--g-*`, `--ink/--ink2`,
+`--t1/--t2/--title-ink`, `--desk1/--desk2`, `--lcd/--lcd-ink/--amber`,
+`--field`).
+
+**Fixed in every scheme** (not tokens):
+
+- the nine **class colours** — pad colour is the shared language with the MPC,
+  so kick red is kick red in every scheme
+- **record red** `#e83a2e` and the cassette shell/label anatomy
+- LCD contrast: ink hue may change per scheme, but sound surfaces stay dark
+
+Mockups: the **Schemes** artboard shows all four side by side; **Tape
+Properties** is the picker — the Display-Properties-style dialog with the CRT
+preview monitor, scheme list with swatch chips, Save As…/Apply. The **Main**
+artboard carries a live `Scheme` tweak on the canvas, so the real screen can be
+flipped between all four.
+
+In the app this is a Compose theme object holding the token table; scheme
+choice persists per user, and Metal doubles as the dark-room default if the
+system asks for dark.
+
 ## Rules of the language
 
 - Every control is one of three bevels; no flat buttons, no rounded-corner
@@ -100,3 +138,5 @@ Everything in the app is one of two surfaces, and the split is period-correct
 - Whether the desktop metaphor extends to a "My Kits" file-manager screen or
   kits stay a menu.
 - Landscape play mode layout.
+- Custom scheme editor (Save As… exists in the picker mock; the token table
+  makes it cheap, but it's not MVP).

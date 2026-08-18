@@ -11,14 +11,13 @@
   <style>
     body{margin:0;}
     a{color:#000082;} a:hover{color:#1878c8;}
-    :root{
-      --gray:#c3c7cb; --g-hi:#ffffff; --g-e:#e8ebee; --g-mid:#868a8e; --g-dk:#3f4347;
-      --navy1:#000082; --navy2:#1878c8; --teal:#0a7a78;
-      --lcd:#0c130b; --lcd-ink:#49e83e; --amber:#ffb000;
-    }
+    .t-chrome{ --gray:#c3c7cb; --g-hi:#ffffff; --g-e:#e8ebee; --g-mid:#868a8e; --g-dk:#3f4347; --ink:#1c1e20; --ink2:#55595d; --t1:#000082; --t2:#1878c8; --title-ink:#ffffff; --desk1:#0a7a78; --desk2:#0c817f; --lcd:#0c130b; --lcd-ink:#49e83e; --amber:#ffb000; --field:#ffffff; }
+    .t-ferric{ --gray:#d4c8a8; --g-hi:#faf4e4; --g-e:#e6dcc0; --g-mid:#9a8c6a; --g-dk:#463a26; --ink:#2c2214; --ink2:#6a5c42; --t1:#6a3210; --t2:#c87828; --title-ink:#faf4e4; --desk1:#8a5a24; --desk2:#936129; --lcd:#140e06; --lcd-ink:#ffb000; --amber:#ff7a1a; --field:#faf4e4; }
+    .t-metal{ --gray:#2e3136; --g-hi:#4a4f56; --g-e:#3a3e44; --g-mid:#17191c; --g-dk:#060708; --ink:#d8dbe0; --ink2:#8a9099; --t1:#0a0a0c; --t2:#2c3038; --title-ink:#7adfe4; --desk1:#101215; --desk2:#14171b; --lcd:#0a0c0e; --lcd-ink:#7adfe4; --amber:#ffb000; --field:#1b1e22; }
+    .t-snackbar{ --gray:#ffd400; --g-hi:#fff0a0; --g-e:#ffe45c; --g-mid:#b89200; --g-dk:#5c4a00; --ink:#241c00; --ink2:#6a5600; --t1:#e81c1c; --t2:#e81c1c; --title-ink:#ffffff; --desk1:#e81c1c; --desk2:#ee2424; --lcd:#1a0404; --lcd-ink:#ffd400; --amber:#ffffff; --field:#fff8d8; }
     .raised{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-hi),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-e),inset -2px -2px 0 var(--g-mid);}
     .pressed{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-dk),inset -1px -1px 0 var(--g-hi),inset 2px 2px 0 var(--g-mid),inset -2px -2px 0 var(--g-e);}
-    .sunken{background:#fff;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-e),inset 2px 2px 0 var(--g-dk),inset -2px -2px 0 var(--g-hi);}
+    .sunken{background:var(--field);box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-e),inset 2px 2px 0 var(--g-dk),inset -2px -2px 0 var(--g-hi);}
     .win{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-e),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-hi),inset -2px -2px 0 var(--g-mid);}
     .px{font-family:'Silkscreen',Verdana,sans-serif;font-size:9px;letter-spacing:0.5px;}
     .ui{font-family:Verdana,Tahoma,'DejaVu Sans',sans-serif;font-size:12px;}
@@ -26,21 +25,21 @@
     .lcdf{font-family:'VT323','Courier New',monospace;}
   </style>
 </helmet>
-<div style="width:390px;height:844px;background:repeating-conic-gradient(#0a7a78 0% 25%,#0c817f 0% 50%) 0 0/4px 4px;padding:10px;box-sizing:border-box;display:flex;flex-direction:column;">
+<div class="{{themeClass}}" style="width:390px;height:844px;background:repeating-conic-gradient(var(--desk1) 0% 25%,var(--desk2) 0% 50%) 0 0/4px 4px;padding:10px;box-sizing:border-box;display:flex;flex-direction:column;">
   <div class="win" style="flex:1;display:flex;flex-direction:column;padding:3px;">
 
-    <div style="height:30px;background:linear-gradient(90deg,#000082,#1878c8);display:flex;align-items:center;gap:8px;padding:0 4px 0 8px;">
+    <div style="height:30px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;gap:8px;padding:0 4px 0 8px;">
       <svg width="20" height="14" viewBox="0 0 20 14"><rect x="0.5" y="0.5" width="19" height="13" rx="2" fill="#ff7a1a" stroke="#3f2205"/><circle cx="6" cy="7" r="2.6" fill="#f4efe4" stroke="#3f2205"/><circle cx="14" cy="7" r="2.6" fill="#f4efe4" stroke="#3f2205"/></svg>
-      <span class="ui" style="color:#fff;font-weight:bold;flex:1;">SNIPSNAP.EXE</span>
+      <span class="ui" style="color:var(--title-ink);font-weight:bold;flex:1;">SNIPSNAP.EXE</span>
       <div style="display:flex;gap:2px;">
-        <div class="raised" style="width:24px;height:22px;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12"><rect x="2" y="9" width="8" height="2" fill="#1c1e20"/></svg></div>
-        <div class="raised" style="width:24px;height:22px;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12"><rect x="2" y="2" width="8" height="8" fill="none" stroke="#1c1e20" stroke-width="1.6"/></svg></div>
-        <div class="raised" style="width:24px;height:22px;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12"><path d="M2.5 2.5 L9.5 9.5 M9.5 2.5 L2.5 9.5" stroke="#1c1e20" stroke-width="1.8"/></svg></div>
+        <div class="raised" style="width:24px;height:22px;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12"><rect x="2" y="9" width="8" height="2" style="fill:var(--ink);"/></svg></div>
+        <div class="raised" style="width:24px;height:22px;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12"><rect x="2" y="2" width="8" height="8" fill="none" style="stroke:var(--ink);" stroke-width="1.6"/></svg></div>
+        <div class="raised" style="width:24px;height:22px;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12"><path d="M2.5 2.5 L9.5 9.5 M9.5 2.5 L2.5 9.5" style="stroke:var(--ink);" stroke-width="1.8"/></svg></div>
       </div>
     </div>
 
-    <div class="ui" style="height:26px;display:flex;align-items:center;gap:2px;padding:0 4px;color:#1c1e20;">
-      <span style="padding:3px 8px;"><u>F</u>ile</span><span style="padding:3px 8px;"><u>K</u>it</span><span style="padding:3px 8px;"><u>T</u>ape</span><span style="padding:3px 8px;"><u>H</u>elp</span>
+    <div class="ui" style="height:26px;display:flex;align-items:center;gap:2px;padding:0 4px;color:var(--ink);">
+      <span style="padding:3px 8px;"><u>F</u>ile</span><span style="padding:3px 8px;"><u>K</u>it</span><span style="padding:3px 8px;"><u>T</u>ape</span><span style="padding:3px 8px;"><u>S</u>cheme</span><span style="padding:3px 8px;"><u>H</u>elp</span>
     </div>
 
     <div style="flex:1;display:flex;flex-direction:column;gap:10px;padding:8px 8px 6px;">
@@ -51,50 +50,50 @@
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:8px;">
-        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:#63676b;">A13</span></div>
-        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:#63676b;">A14</span></div>
-        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:#63676b;">A15</span></div>
+        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:var(--ink2);">A13</span></div>
+        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:var(--ink2);">A14</span></div>
+        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:var(--ink2);">A15</span></div>
         <div class="raised" style="position:relative;height:76px;">
           <div class="sunken" style="position:absolute;inset:8px;background:#3f8cf0;display:flex;align-items:flex-end;justify-content:center;"><span class="marker" style="font-size:12px;color:#0c1c3a;padding-bottom:4px;">Loop 92</span></div>
-          <span class="px" style="position:absolute;top:1px;left:6px;color:#1c1e20;">A16</span>
+          <span class="px" style="position:absolute;top:1px;left:6px;color:var(--ink);">A16</span>
         </div>
         <div class="raised" style="position:relative;height:76px;">
           <div class="sunken" style="position:absolute;inset:8px;background:#9a6cf0;display:flex;align-items:flex-end;justify-content:center;"><span class="marker" style="font-size:12px;color:#241040;padding-bottom:4px;">Tom lo</span></div>
-          <span class="px" style="position:absolute;top:1px;left:6px;color:#1c1e20;">A09</span>
+          <span class="px" style="position:absolute;top:1px;left:6px;color:var(--ink);">A09</span>
         </div>
-        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:#63676b;">A10</span></div>
-        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:#63676b;">A11</span></div>
+        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:var(--ink2);">A10</span></div>
+        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:var(--ink2);">A11</span></div>
         <div class="raised" style="position:relative;height:76px;">
           <div class="sunken" style="position:absolute;inset:8px;background:#8fd424;display:flex;align-items:flex-end;justify-content:center;"><span class="marker" style="font-size:12px;color:#1e3006;padding-bottom:4px;">Shaker</span></div>
-          <span class="px" style="position:absolute;top:1px;left:6px;color:#1c1e20;">A12</span>
+          <span class="px" style="position:absolute;top:1px;left:6px;color:var(--ink);">A12</span>
         </div>
-        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:#63676b;">A05</span></div>
+        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:var(--ink2);">A05</span></div>
         <div class="raised" style="position:relative;height:76px;">
           <div class="sunken" style="position:absolute;inset:8px;background:#e8409f;display:flex;align-items:flex-end;justify-content:center;"><span class="marker" style="font-size:12px;color:#3a0a24;padding-bottom:4px;">Clap</span></div>
-          <span class="px" style="position:absolute;top:1px;left:6px;color:#1c1e20;">A06</span>
+          <span class="px" style="position:absolute;top:1px;left:6px;color:var(--ink);">A06</span>
         </div>
-        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:#63676b;">A07</span></div>
-        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:#63676b;">A08</span></div>
+        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:var(--ink2);">A07</span></div>
+        <div class="raised" style="position:relative;height:76px;"><span class="px" style="position:absolute;top:4px;left:6px;color:var(--ink2);">A08</span></div>
         <div class="raised" style="position:relative;height:76px;">
           <div class="sunken" style="position:absolute;inset:8px;background:#e8542e;display:flex;align-items:flex-end;justify-content:center;"><span class="marker" style="font-size:12px;color:#3a1005;padding-bottom:4px;">Kick 01</span></div>
-          <span class="px" style="position:absolute;top:1px;left:6px;color:#1c1e20;">A01</span>
+          <span class="px" style="position:absolute;top:1px;left:6px;color:var(--ink);">A01</span>
         </div>
         <div class="raised" style="position:relative;height:76px;">
           <div class="sunken" style="position:absolute;inset:8px;background:#ffc41f;display:flex;align-items:flex-end;justify-content:center;"><span class="marker" style="font-size:12px;color:#3a2c02;padding-bottom:4px;">Snare 01</span></div>
-          <span class="px" style="position:absolute;top:1px;left:6px;color:#1c1e20;">A02</span>
+          <span class="px" style="position:absolute;top:1px;left:6px;color:var(--ink);">A02</span>
         </div>
         <div class="pressed" style="position:relative;height:76px;">
           <div class="sunken" style="position:absolute;inset:9px 7px 7px 9px;background:#1fc6cf;display:flex;align-items:flex-end;justify-content:center;"><span class="marker" style="font-size:12px;color:#062e30;padding-bottom:4px;">Hat cl</span></div>
-          <span class="px" style="position:absolute;top:2px;left:7px;color:#1c1e20;">A03</span>
+          <span class="px" style="position:absolute;top:2px;left:7px;color:var(--ink);">A03</span>
         </div>
         <div class="raised" style="position:relative;height:76px;">
           <div class="sunken" style="position:absolute;inset:8px;background:#7adfe4;display:flex;align-items:flex-end;justify-content:center;"><span class="marker" style="font-size:12px;color:#0a3234;padding-bottom:4px;">Hat op</span></div>
-          <span class="px" style="position:absolute;top:1px;left:6px;color:#1c1e20;">A04</span>
+          <span class="px" style="position:absolute;top:1px;left:6px;color:var(--ink);">A04</span>
         </div>
       </div>
 
-      <div style="position:relative;border:1px solid #868a8e;box-shadow:1px 1px 0 #fff, inset 1px 1px 0 #fff;padding:14px 8px 8px;margin-top:4px;">
-        <span class="px" style="position:absolute;top:-6px;left:10px;background:var(--gray);padding:0 5px;color:#1c1e20;">SNIP SHELF — 12</span>
+      <div style="position:relative;border:1px solid var(--g-mid);box-shadow:1px 1px 0 var(--g-hi), inset 1px 1px 0 var(--g-hi);padding:14px 8px 8px;margin-top:4px;">
+        <span class="px" style="position:absolute;top:-6px;left:10px;background:var(--gray);padding:0 5px;color:var(--ink);">SNIP SHELF — 12</span>
         <div style="display:flex;gap:8px;">
           <svg viewBox="0 0 100 64" width="75" height="48"><rect x="1" y="1" width="98" height="62" rx="6" fill="#e8542e" stroke="#3a1005"/><rect x="8" y="6" width="84" height="18" rx="2" fill="#f4efe4" stroke="#3a1005"/><text x="50" y="19" font-family="Permanent Marker, cursive" font-size="11" text-anchor="middle" fill="#33210a">KICK 01</text><rect x="24" y="30" width="52" height="22" rx="11" fill="#241a10" stroke="#3a1005"/><circle cx="38" cy="41" r="6.5" fill="#efe8d8" stroke="#3a1005"/><circle cx="62" cy="41" r="6.5" fill="#efe8d8" stroke="#3a1005"/><circle cx="38" cy="41" r="2.2" fill="#241a10"/><circle cx="62" cy="41" r="2.2" fill="#241a10"/></svg>
           <svg viewBox="0 0 100 64" width="75" height="48"><rect x="1" y="1" width="98" height="62" rx="6" fill="#ffc41f" stroke="#3a2c02"/><rect x="8" y="6" width="84" height="18" rx="2" fill="#f4efe4" stroke="#3a2c02"/><text x="50" y="19" font-family="Permanent Marker, cursive" font-size="11" text-anchor="middle" fill="#33270a">SNARE 01</text><rect x="24" y="30" width="52" height="22" rx="11" fill="#241a10" stroke="#3a2c02"/><circle cx="38" cy="41" r="6.5" fill="#efe8d8" stroke="#3a2c02"/><circle cx="62" cy="41" r="6.5" fill="#efe8d8" stroke="#3a2c02"/><circle cx="38" cy="41" r="2.2" fill="#241a10"/><circle cx="62" cy="41" r="2.2" fill="#241a10"/></svg>
@@ -102,9 +101,9 @@
           <svg viewBox="0 0 100 64" width="75" height="48"><rect x="1" y="1" width="98" height="62" rx="6" fill="#3f8cf0" stroke="#0c1c3a"/><rect x="8" y="6" width="84" height="18" rx="2" fill="#f4efe4" stroke="#0c1c3a"/><text x="50" y="19" font-family="Permanent Marker, cursive" font-size="11" text-anchor="middle" fill="#10203c">LOOP 92</text><rect x="24" y="30" width="52" height="22" rx="11" fill="#241a10" stroke="#0c1c3a"/><circle cx="38" cy="41" r="6.5" fill="#efe8d8" stroke="#0c1c3a"/><circle cx="62" cy="41" r="6.5" fill="#efe8d8" stroke="#0c1c3a"/><circle cx="38" cy="41" r="2.2" fill="#241a10"/><circle cx="62" cy="41" r="2.2" fill="#241a10"/></svg>
         </div>
         <div style="display:flex;height:16px;margin-top:8px;">
-          <div class="raised" style="width:16px;display:flex;align-items:center;justify-content:center;"><svg width="8" height="8"><path d="M6 1 L2 4 L6 7 Z" fill="#1c1e20"/></svg></div>
-          <div style="flex:1;background:repeating-conic-gradient(#fff 0% 25%,#c3c7cb 0% 50%) 0 0/2px 2px;position:relative;"><div class="raised" style="position:absolute;left:8%;width:34%;top:0;bottom:0;"></div></div>
-          <div class="raised" style="width:16px;display:flex;align-items:center;justify-content:center;"><svg width="8" height="8"><path d="M2 1 L6 4 L2 7 Z" fill="#1c1e20"/></svg></div>
+          <div class="raised" style="width:16px;display:flex;align-items:center;justify-content:center;"><svg width="8" height="8"><path d="M6 1 L2 4 L6 7 Z" style="fill:var(--ink);"/></svg></div>
+          <div style="flex:1;background:repeating-conic-gradient(var(--field) 0% 25%,var(--gray) 0% 50%) 0 0/2px 2px;position:relative;"><div class="raised" style="position:absolute;left:8%;width:34%;top:0;bottom:0;"></div></div>
+          <div class="raised" style="width:16px;display:flex;align-items:center;justify-content:center;"><svg width="8" height="8"><path d="M2 1 L6 4 L2 7 Z" style="fill:var(--ink);"/></svg></div>
         </div>
       </div>
 
@@ -113,22 +112,27 @@
       <div class="raised" style="height:58px;display:flex;align-items:center;justify-content:center;gap:12px;">
         <svg width="20" height="20"><circle cx="10" cy="10" r="8" fill="#e83a2e" stroke="#5c0f08" stroke-width="1.5"/></svg>
         <div>
-          <div class="ui" style="font-weight:bold;font-size:13px;color:#1c1e20;">START SNIP SESSION</div>
-          <div class="px" style="color:#55595d;">ARMS 60s TAPE LOOP + BUBBLE</div>
+          <div class="ui" style="font-weight:bold;font-size:13px;color:var(--ink);">START SNIP SESSION</div>
+          <div class="px" style="color:var(--ink2);">ARMS 60s TAPE LOOP + BUBBLE</div>
         </div>
       </div>
     </div>
 
     <div style="height:26px;display:flex;gap:3px;padding:2px 4px 4px;">
-      <div style="flex:1.2;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 #868a8e,inset -1px -1px 0 #fff;"><span class="px" style="color:#2c2f33;">TAPE 60s</span></div>
-      <div style="flex:1;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 #868a8e,inset -1px -1px 0 #fff;"><span class="px" style="color:#2c2f33;">12 SNIPS</span></div>
-      <div style="flex:1.4;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 #868a8e,inset -1px -1px 0 #fff;"><span class="px" style="color:#2c2f33;">SD (E:) READY</span></div>
+      <div style="flex:1.2;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);"><span class="px" style="color:var(--ink);">TAPE 60s</span></div>
+      <div style="flex:1;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);"><span class="px" style="color:var(--ink);">12 SNIPS</span></div>
+      <div style="flex:1.4;display:flex;align-items:center;padding:0 8px;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);"><span class="px" style="color:var(--ink);">SD (E:) READY</span></div>
     </div>
   </div>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
-class Component extends DCLogic { renderVals(){ return {}; } }
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["chrome","ferric","metal","snackbar"],"default":"chrome","section":"Scheme"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme ?? 'chrome';
+    return { themeClass: 't-' + theme };
+  }
+}
 </script>
 </body>
 </html>

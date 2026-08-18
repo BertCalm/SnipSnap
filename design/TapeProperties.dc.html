@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen:wght@400;700&family=Permanent+Marker&display=swap">
+  <style>
+    body{margin:0;}
+    a{color:#000082;} a:hover{color:#1878c8;}
+    .t-chrome{ --gray:#c3c7cb; --g-hi:#ffffff; --g-e:#e8ebee; --g-mid:#868a8e; --g-dk:#3f4347; --ink:#1c1e20; --ink2:#55595d; --t1:#000082; --t2:#1878c8; --title-ink:#ffffff; --desk1:#0a7a78; --desk2:#0c817f; --lcd:#0c130b; --lcd-ink:#49e83e; --amber:#ffb000; --field:#ffffff; }
+    .t-ferric{ --gray:#d4c8a8; --g-hi:#faf4e4; --g-e:#e6dcc0; --g-mid:#9a8c6a; --g-dk:#463a26; --ink:#2c2214; --ink2:#6a5c42; --t1:#6a3210; --t2:#c87828; --title-ink:#faf4e4; --desk1:#8a5a24; --desk2:#936129; --lcd:#140e06; --lcd-ink:#ffb000; --amber:#ff7a1a; --field:#faf4e4; }
+    .raised{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-hi),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-e),inset -2px -2px 0 var(--g-mid);}
+    .sunken{background:var(--field);box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-e),inset 2px 2px 0 var(--g-dk),inset -2px -2px 0 var(--g-hi);}
+    .win{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-e),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-hi),inset -2px -2px 0 var(--g-mid);}
+    .px{font-family:'Silkscreen',Verdana,sans-serif;font-size:9px;letter-spacing:0.5px;}
+    .ui{font-family:Verdana,Tahoma,'DejaVu Sans',sans-serif;font-size:12px;}
+    .lcdf{font-family:'VT323','Courier New',monospace;}
+    .tab{padding:5px 12px 4px;position:relative;top:2px;}
+    .schemerow{display:flex;align-items:center;gap:8px;padding:8px 10px;}
+    .swchip{display:flex;width:34px;height:14px;border:1px solid #3f4347;}
+  </style>
+</helmet>
+<div class="t-chrome" style="width:390px;height:844px;background:repeating-conic-gradient(var(--desk1) 0% 25%,var(--desk2) 0% 50%) 0 0/4px 4px;padding:10px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;">
+  <div class="win" style="display:flex;flex-direction:column;padding:3px;">
+
+    <div style="height:30px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;gap:8px;padding:0 4px 0 8px;">
+      <span class="ui" style="color:var(--title-ink);font-weight:bold;flex:1;">Tape Properties</span>
+      <div class="raised" style="width:24px;height:22px;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12"><path d="M2.5 2.5 L9.5 9.5 M9.5 2.5 L2.5 9.5" style="stroke:var(--ink);" stroke-width="1.8"/></svg></div>
+    </div>
+
+    <div style="display:flex;padding:8px 8px 0;">
+      <div class="raised tab" style="z-index:2;box-shadow:inset 1px 1px 0 var(--g-hi),inset -1px 0 0 var(--g-dk),inset 2px 2px 0 var(--g-e),inset -2px 0 0 var(--g-mid);"><span class="ui" style="color:var(--ink);font-weight:bold;">Scheme</span></div>
+      <div class="raised tab" style="opacity:0.8;"><span class="ui" style="color:var(--ink2);">Tape</span></div>
+      <div class="raised tab" style="opacity:0.8;"><span class="ui" style="color:var(--ink2);">About</span></div>
+    </div>
+
+    <div class="raised" style="margin:0 8px 8px;display:flex;flex-direction:column;gap:12px;padding:14px 10px;">
+
+      <div style="position:relative;height:190px;">
+        <svg viewBox="0 0 230 190" width="230" height="190" style="position:absolute;left:calc(50% - 115px);top:0;">
+          <rect x="18" y="6" width="194" height="140" rx="10" fill="#d4c8a8" stroke="#463a26" stroke-width="2"/>
+          <rect x="30" y="16" width="170" height="118" rx="4" fill="#0e0f11"/>
+          <rect x="96" y="146" width="38" height="14" fill="#b9ac8c" stroke="#463a26"/>
+          <rect x="70" y="160" width="90" height="10" rx="3" fill="#c3b696" stroke="#463a26"/>
+          <circle cx="196" cy="153" r="3" fill="#49e83e"/>
+        </svg>
+        <div class="t-ferric" style="position:absolute;left:calc(50% - 79px);top:22px;width:158px;height:106px;background:repeating-conic-gradient(var(--desk1) 0% 25%,var(--desk2) 0% 50%) 0 0/3px 3px;padding:5px;box-sizing:border-box;">
+          <div class="win" style="height:100%;display:flex;flex-direction:column;padding:2px;box-sizing:border-box;">
+            <div style="height:12px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;padding:0 4px;"><span class="px" style="color:var(--title-ink);font-size:6px;">SNIPSNAP.EXE</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:3px;padding:4px;">
+              <div class="sunken" style="background:var(--lcd);height:13px;display:flex;align-items:center;padding:0 4px;"><span class="lcdf" style="color:var(--lcd-ink);font-size:10px;">KIT 01</span></div>
+              <div style="display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:2px;flex:1;">
+                <div class="raised" style="position:relative;"><div class="sunken" style="position:absolute;inset:2px;background:#e8542e;"></div></div>
+                <div class="raised" style="position:relative;"><div class="sunken" style="position:absolute;inset:2px;background:#ffc41f;"></div></div>
+                <div class="raised" style="position:relative;"><div class="sunken" style="position:absolute;inset:2px;background:#1fc6cf;"></div></div>
+                <div class="raised" style="position:relative;"><div class="sunken" style="position:absolute;inset:2px;background:#7adfe4;"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span class="ui" style="color:var(--ink);">S<u>c</u>heme:</span>
+        <div class="sunken" style="display:flex;flex-direction:column;">
+          <div class="schemerow">
+            <div class="swchip"><div style="flex:1;background:#c3c7cb;"></div><div style="flex:1;background:#0a7a78;"></div><div style="flex:1;background:#49e83e;"></div></div>
+            <span class="ui" style="color:var(--ink);">Chrome (Type II) — default</span>
+          </div>
+          <div class="schemerow" style="background:#000082;">
+            <div class="swchip"><div style="flex:1;background:#d4c8a8;"></div><div style="flex:1;background:#8a5a24;"></div><div style="flex:1;background:#ffb000;"></div></div>
+            <span class="ui" style="color:#fff;">Ferric (Type I)</span>
+          </div>
+          <div class="schemerow">
+            <div class="swchip"><div style="flex:1;background:#2e3136;"></div><div style="flex:1;background:#101215;"></div><div style="flex:1;background:#7adfe4;"></div></div>
+            <span class="ui" style="color:var(--ink);">Metal (Type IV) — dark</span>
+          </div>
+          <div class="schemerow">
+            <div class="swchip"><div style="flex:1;background:#ffd400;"></div><div style="flex:1;background:#e81c1c;"></div><div style="flex:1;background:#ffd400;"></div></div>
+            <span class="ui" style="color:var(--ink);">Snack Bar</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:6px;">
+        <div class="raised" style="flex:1;height:30px;display:flex;align-items:center;justify-content:center;"><span class="ui" style="color:var(--ink);">Save As…</span></div>
+        <div class="raised" style="flex:1;height:30px;display:flex;align-items:center;justify-content:center;"><span class="ui" style="color:var(--ink2);">Delete</span></div>
+      </div>
+
+      <div class="px" style="color:var(--ink2);line-height:1.8;">PAD CLASS COLORS NEVER CHANGE — YOUR PADS MATCH YOUR MPC IN EVERY SCHEME. METAL IS THE DARK-ROOM ONE.</div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:6px;padding:0 8px 8px;">
+      <div class="raised" style="width:84px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--ink);"><span class="ui" style="font-weight:bold;color:var(--ink);">OK</span></div>
+      <div class="raised" style="width:84px;height:30px;display:flex;align-items:center;justify-content:center;"><span class="ui" style="color:var(--ink);">Cancel</span></div>
+      <div class="raised" style="width:84px;height:30px;display:flex;align-items:center;justify-content:center;"><span class="ui" style="color:var(--ink);">Apply</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic { renderVals(){ return {}; } }
+</script>
+</body>
+</html>
