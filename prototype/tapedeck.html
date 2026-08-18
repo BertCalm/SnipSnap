@@ -12,7 +12,8 @@
     background:repeating-conic-gradient(#0a7a78 0% 25%,#0c817f 0% 50%) 0 0/4px 4px;
     font-family:Verdana,Tahoma,'DejaVu Sans',sans-serif;
     -webkit-tap-highlight-color:transparent;
-    display:flex;justify-content:center;min-height:100dvh;
+    touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%;
+    display:flex;justify-content:center;align-items:flex-start;
   }
   .raised{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-hi),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-e),inset -2px -2px 0 var(--g-mid);}
   .pressed{box-shadow:inset 1px 1px 0 var(--g-dk),inset -1px -1px 0 var(--g-hi),inset 2px 2px 0 var(--g-mid),inset -2px -2px 0 var(--g-e) !important;}
@@ -20,20 +21,20 @@
   .px{font-family:'Silkscreen',Verdana,sans-serif;font-size:9px;letter-spacing:0.5px;}
   .lcdf{font-family:'VT323','Courier New',monospace;font-variant-numeric:tabular-nums;}
   .marker{font-family:'Permanent Marker','Comic Sans MS',cursive;}
-  #app{width:min(430px,100vw);min-height:100dvh;box-sizing:border-box;padding:8px;display:flex;flex-direction:column;}
-  #deck{flex:1;display:flex;flex-direction:column;background:var(--gray);padding:3px;
+  #app{width:100%;max-width:430px;box-sizing:border-box;padding:8px;display:flex;flex-direction:column;}
+  #deck{display:flex;flex-direction:column;background:var(--gray);padding:3px;
     box-shadow:inset 1px 1px 0 var(--g-e),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-hi),inset -2px -2px 0 var(--g-mid);}
   #titlebar{height:30px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;gap:8px;padding:0 8px;flex:none;}
-  #body{flex:1;display:flex;flex-direction:column;gap:8px;padding:8px 8px 6px;min-height:0;}
+  #body{display:flex;flex-direction:column;gap:8px;padding:8px 8px 6px;}
   .lcdbox{background:var(--lcd);position:relative;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-e),inset 2px 2px 0 var(--g-dk),inset -2px -2px 0 var(--g-hi);}
-  .scan{position:absolute;inset:4px;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.22) 0 1px,transparent 1px 3px);}
+  .scan{position:absolute;left:4px;top:4px;right:4px;bottom:4px;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.22) 0 1px,transparent 1px 3px);}
   canvas{display:block;touch-action:none;}
   .btn{display:flex;align-items:center;justify-content:center;gap:8px;user-select:none;-webkit-user-select:none;cursor:pointer;color:var(--ink);appearance:none;-webkit-appearance:none;border-radius:0;padding:0;}
   .btn:focus-visible{outline:2px dotted var(--ink);outline-offset:-5px;}
   .toggle.on{box-shadow:inset 1px 1px 0 var(--g-dk),inset -1px -1px 0 var(--g-hi),inset 2px 2px 0 var(--g-mid),inset -2px -2px 0 var(--g-e);}
   .toggle.on .px{color:var(--ink);}
   .toggle .px{color:var(--ink2);}
-  #powerveil{position:absolute;inset:0;background:var(--lcd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:5;cursor:pointer;}
+  #powerveil{position:absolute;left:0;top:0;right:0;bottom:0;background:var(--lcd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:5;cursor:pointer;}
   #toast{position:fixed;left:50%;bottom:90px;transform:translate(-50%,20px);background:var(--lcd);color:var(--lcd-ink);
     font-family:'VT323',monospace;font-size:20px;padding:8px 16px;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:9;
     box-shadow:0 0 0 2px var(--g-dk);}
@@ -65,12 +66,12 @@
       </div>
 
       <div class="lcdbox" style="height:36px;flex:none;position:relative;">
-        <canvas id="overview" style="position:absolute;inset:4px;"></canvas>
+        <canvas id="overview" width="10" height="10" style="position:absolute;left:4px;top:4px;"></canvas>
         <div class="scan"></div>
       </div>
 
-      <div class="lcdbox" style="flex:1;min-height:130px;max-height:270px;position:relative;">
-        <canvas id="wave" style="position:absolute;inset:4px;"></canvas>
+      <div class="lcdbox" style="height:200px;flex:none;position:relative;">
+        <canvas id="wave" width="10" height="10" style="position:absolute;left:4px;top:4px;"></canvas>
         <div class="scan"></div>
         <div id="powerveil">
           <svg width="46" height="30" viewBox="0 0 46 30"><rect x="1" y="1" width="44" height="28" rx="4" fill="none" stroke="#2f7c2a" stroke-width="2"/><circle cx="15" cy="15" r="6" fill="none" stroke="#2f7c2a" stroke-width="2"/><circle cx="31" cy="15" r="6" fill="none" stroke="#2f7c2a" stroke-width="2"/></svg>
@@ -249,9 +250,13 @@
   var wave=document.getElementById('wave'), wctx=wave.getContext('2d');
   var over=document.getElementById('overview'), octx=over.getContext('2d');
   var obase=null;
-  function fit(c){ var r=c.getBoundingClientRect(), dpr=Math.min(2,window.devicePixelRatio||1);
-    if(c.width!==Math.round(r.width*dpr)||c.height!==Math.round(r.height*dpr)){ c.width=Math.round(r.width*dpr); c.height=Math.round(r.height*dpr); }
-    return {w:r.width,h:r.height,dpr:dpr}; }
+  function fit(c){
+    var p=c.parentElement.getBoundingClientRect();
+    var w=Math.max(50,p.width-8), h=Math.max(24,p.height-8);
+    var dpr=Math.min(2,window.devicePixelRatio||1);
+    var W=Math.round(w*dpr), H=Math.round(h*dpr);
+    if(c.width!==W||c.height!==H){ c.width=W; c.height=H; c.style.width=w+'px'; c.style.height=h+'px'; }
+    return {w:w,h:h,dpr:dpr}; }
 
   function drawOverviewBase(){
     var m=fit(over); obase=document.createElement('canvas');
@@ -266,7 +271,9 @@
   }
   function drawOverview(){
     if(!obase) return;
-    var m=fit(over); octx.setTransform(1,0,0,1,0,0); octx.drawImage(obase,0,0);
+    var m=fit(over);
+    if(obase.width!==over.width||obase.height!==over.height) drawOverviewBase();
+    octx.setTransform(1,0,0,1,0,0); octx.drawImage(obase,0,0);
     octx.setTransform(m.dpr,0,0,m.dpr,0,0);
     if(sel.inF>=0&&sel.outF>sel.inF){ octx.fillStyle='rgba(255,176,0,0.28)';
       octx.fillRect(sel.inF/L*m.w,0,(sel.outF-sel.inF)/L*m.w,m.h); }
