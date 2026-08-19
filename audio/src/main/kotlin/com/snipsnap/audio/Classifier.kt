@@ -45,6 +45,13 @@ object Classifier {
     private const val TONAL_DECAY_MS = 500f
     private const val KICK_MAX_CENTROID_HZ = 100f
 
+    // A kick with a beater click or a hard pitch sweep measures a centroid
+    // above 100 Hz while still being unmistakably a kick to the ear. When the
+    // low band utterly dominates, stretch the boundary; a tom's tonal centre
+    // pulls more energy into the mids, so this doesn't swallow real toms.
+    private const val KICK_STRETCH_CENTROID_HZ = 130f
+    private const val KICK_STRETCH_MIN_LOW_RATIO = 0.85f
+
     // Bright family
     private const val HAT_MIN_CENTROID_HZ = 12_000f
     private const val HAT_MIN_HIGH_RATIO = 0.95f
@@ -79,10 +86,13 @@ object Classifier {
         if (features.decayMs > TONAL_DECAY_MS) {
             return Classification(DrumClass.TONAL, margin(features.decayMs, TONAL_DECAY_MS, 500f), features)
         }
-        if (features.centroidHz < KICK_MAX_CENTROID_HZ) {
+        val isKick = features.centroidHz < KICK_MAX_CENTROID_HZ ||
+            (features.centroidHz < KICK_STRETCH_CENTROID_HZ &&
+                features.lowRatio > KICK_STRETCH_MIN_LOW_RATIO)
+        if (isKick) {
             return Classification(
                 DrumClass.KICK,
-                margin(KICK_MAX_CENTROID_HZ - features.centroidHz, 0f, 60f),
+                margin(KICK_STRETCH_CENTROID_HZ - features.centroidHz, 0f, 90f),
                 features,
             )
         }

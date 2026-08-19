@@ -35,6 +35,13 @@ A03/A04). Things to confirm:
   surviving the trip;
 - pads feel like one-shots, no clicks at the tail.
 
+### SnipSnap Thump Kit — do synthesized kits sound right?
+
+Twelve THUMP-rendered pads (analog-style kick/snare/hats/clap/toms/cowbell/
+rim) on the conventional layout, hats sharing choke group 1. Regenerate with
+`./gradlew :synth:generateThumpKit`. Things to confirm: it loads, it slaps,
+and A03 still chokes A04.
+
 ## Reporting back
 
 Three facts close out the format work: (1) loads or not, (2) beep count on

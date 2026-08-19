@@ -1,5 +1,7 @@
 package com.snipsnap.audio
 
+import kotlin.math.exp
+import kotlin.math.sin
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -64,6 +66,35 @@ class ClassifierTest {
         assertEquals(DrumClass.HAT_CLOSED, closed.drumClass)
         assertEquals(DrumClass.HAT_OPEN, open.drumClass)
         assertTrue(open.features.decayMs > closed.features.decayMs * 3)
+    }
+
+    @Test
+    fun `a clicky, hard-swept kick is still a kick`() {
+        // A beater click plus a fast pitch sweep pushes the measured centroid
+        // past 100 Hz while the energy stays overwhelmingly low-band. That is
+        // a kick to the ear, and the classifier's stretch branch exists for
+        // exactly this shape.
+        val rate = DrumSynth.RATE
+        val n = (0.3f * rate).toInt()
+        val buf = FloatArray(n)
+        var phase = 0.0
+        var lp = 0f
+        var seed = 5
+        for (i in 0 until n) {
+            val t = i.toDouble() / rate
+            val f = 55.0 * (1.0 + 3.0 * exp(-90.0 * t))
+            phase += f / rate
+            var s = (exp(-14.0 * t) * sin(2.0 * Math.PI * phase)).toFloat()
+            if (t < 0.005) {
+                seed = (seed * 1103515245 + 12345) and 0x7fffffff
+                val w = (seed.toFloat() / 0x3fffffff) - 1f
+                lp += 0.13f * (w - lp)
+                s += 1.2f * lp * (1f - t.toFloat() / 0.005f)
+            }
+            buf[i] = s.coerceIn(-1f, 1f)
+        }
+        val c = Classifier.classify(Snip(buf, 1, rate))
+        assertEquals(DrumClass.KICK, c.drumClass, "clicky kick read as ${c.drumClass} (${c.features.centroidHz} Hz, low ${c.features.lowRatio})")
     }
 
     @Test

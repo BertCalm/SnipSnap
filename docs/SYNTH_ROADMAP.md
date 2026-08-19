@@ -183,7 +183,7 @@ What follows from it:
 
 | Phase | Ships | Depends on |
 |---|---|---|
-| S1 | `:synth` module: THUMP voices + presets, SYNTH KIT render, patch JSON in `kit.json` | nothing — buildable now |
+| S1 | **shipped** — `:synth` module: THUMP voices, SCRAMBLE, patch JSON, SYNTH KIT render + testkit export | — |
 | S2 | CRUNCH character pass, per-pad, works on captured snips too | S1 (shared render plumbing) |
 | S3 | TINES percussion voices join THUMP kits | S1 |
 | S3.5 | PLUCK + TONEWHEEL render one-shots onto drum-kit pads (stabs, plucks) | S1 |

@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 223 tests across five modules
+./gradlew test    # 246 tests across six modules
 ```
 
 ### `:audio`
@@ -89,6 +89,22 @@ val kit = KitAssembler.assemble("Break Kit", arranged, kitDir)
 if (!Preflight.check(kit, kitDir).blocked()) {
     KitExporter.exportProgramFolder(kit, kitDir, sdCardRoot)
 }
+```
+
+### `:synth`
+
+THUMP, the analog-style drum voice engine — S1 of
+[`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md), real. Eight voices (kick,
+snare, closed/open hat, clap, tom, cowbell, rim), every macro normalized 0..1
+and mapped onto bounded musical ranges, so SCRAMBLE is a uniform roll that
+can't land on garbage. Patches serialize to JSON; `ThumpKits.classic()`
+renders a full kit that flows through assemble → preflight → export like any
+captured audio. The classifier is the test harness: a factory kick isn't done
+until analysis calls it a KICK.
+
+```kotlin
+val snip = Thump.render(ThumpVoice.KICK, mapOf("TUNE" to 0.2f, "DRIVE" to 0.7f))
+val rolled = Thump.render(ThumpVoice.SNARE, Thump.scramble(ThumpVoice.SNARE, Random(7)))
 ```
 
 ### `:mpc3`
