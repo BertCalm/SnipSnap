@@ -25,4 +25,19 @@ cassette for a pencil rewind, leave it idle for the screensaver, triple-tap
 the position readout for the mechanical tape counter, and commit a few snips
 for the deck's opinions.
 
-The `window.__deck` handle exists only so automated checks can drive it.
+## playmode.html — the 16-pad grid, playable
+
+Full-screen dark-LCD pad grid with a synthesized demo kit, for answering "does
+finger-drumming feel right" before any app exists.
+
+What's real: pre-rendered buffers triggered on pointerdown (multi-touch), the
+hat choke (A03 kills A04), mono bass (choke group 3), a self-choking loop pad,
+slide-across-pads rolls, sustained pads staying lit while they ring, and the
+CRT power-off on holding EXIT (personality catalog, shipped). The hint bar
+shows the context's reported base latency.
+
+What's fake: the sounds are synthesized, there's no kit loading, and true
+trigger latency on Android needs Oboe — a browser can only approximate it.
+
+The `window.__deck` / `window.__play` handles exist only so automated checks
+can drive the pages.

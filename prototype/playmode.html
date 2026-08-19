@@ -1,0 +1,297 @@
+<title>Play Mode</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen:wght@400;700&family=Permanent+Marker&display=swap">
+<style>
+  :root{
+    --bg:#101215; --panel:#1b1e22; --panel-hi:#343a41; --panel-lo:#050607;
+    --lcd:#0c130b; --lcd-ink:#49e83e; --lcd-dim:#2f7c2a; --amber:#ffb000;
+  }
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    font-family:Verdana,Tahoma,'DejaVu Sans',sans-serif;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%;
+    display:flex;justify-content:center;
+  }
+  .px{font-family:'Silkscreen',Verdana,sans-serif;font-size:9px;letter-spacing:0.5px;}
+  .lcdf{font-family:'VT323','Courier New',monospace;font-variant-numeric:tabular-nums;}
+  .marker{font-family:'Permanent Marker','Comic Sans MS',cursive;}
+  #app{width:100%;max-width:430px;height:100dvh;max-height:900px;box-sizing:border-box;
+    padding:8px;display:flex;flex-direction:column;gap:8px;}
+  #lcdbar{height:40px;flex:none;background:var(--lcd);display:flex;align-items:center;gap:12px;padding:0 12px;
+    box-shadow:inset 1px 1px 0 var(--panel-lo),inset -1px -1px 0 #24282d;
+    background-image:repeating-linear-gradient(0deg, rgba(0,0,0,0.3) 0 1px, transparent 1px 3px);}
+  #grid{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));
+    gap:8px;touch-action:none;min-height:0;}
+  .pad{position:relative;background:var(--panel);user-select:none;-webkit-user-select:none;cursor:pointer;
+    box-shadow:inset 1px 1px 0 var(--panel-hi),inset -1px -1px 0 var(--panel-lo),
+               inset 2px 2px 0 #24282d,inset -2px -2px 0 #101214;
+    border-bottom:3px solid var(--edge,#2a2e33);}
+  .pad .id{position:absolute;top:6px;left:8px;color:#4a4f55;}
+  .pad .nm{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:13px;color:var(--edge,#4a4f55);}
+  .pad.hit{background:var(--flash-bg,#22262b);
+    box-shadow:inset 1px 1px 0 var(--panel-lo),inset -1px -1px 0 var(--panel-hi),
+               0 0 22px var(--glow,rgba(255,255,255,0.2));}
+  .pad.hit .nm{text-shadow:0 0 8px var(--edge);color:#fff;}
+  .pad.hit .id{color:var(--edge);}
+  #hintbar{height:24px;flex:none;display:flex;align-items:center;justify-content:center;}
+  #veil{position:fixed;inset:0;background:var(--lcd);display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:14px;z-index:5;cursor:pointer;
+    background-image:repeating-linear-gradient(0deg, rgba(0,0,0,0.3) 0 1px, transparent 1px 3px);}
+  #crt{position:fixed;inset:0;background:#000;display:none;z-index:6;pointer-events:none;}
+  #crt .line{position:absolute;left:0;right:0;top:50%;height:100%;background:#fff;transform:translateY(-50%) scaleY(1);}
+  #crt.go{display:block;}
+  #crt.go .line{animation:collapse 0.28s ease-in forwards;}
+  @keyframes collapse{ 0%{transform:translateY(-50%) scaleY(1);opacity:1;}
+    70%{transform:translateY(-50%) scaleY(0.004);opacity:1;}
+    100%{transform:translateY(-50%) scaleY(0.004);opacity:0;} }
+  @media (prefers-reduced-motion: reduce){ #crt.go .line{animation:none;opacity:0;} .pad.hit{box-shadow:inset 1px 1px 0 var(--panel-lo),inset -1px -1px 0 var(--panel-hi);} }
+</style>
+
+<div id="app">
+  <div id="lcdbar">
+    <span class="lcdf" style="color:var(--lcd-ink);font-size:22px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:clip;min-width:0;">SNIPSNAP KIT 01</span>
+    <span class="lcdf" id="voicesLcd" style="color:var(--amber);font-size:22px;">0 VOICES</span>
+    <div id="exitBtn" class="pad" style="position:relative;width:54px;height:26px;display:flex;align-items:center;justify-content:center;flex:none;border-bottom:none;">
+      <span class="px" style="color:#868a8e;">EXIT</span>
+    </div>
+  </div>
+
+  <div id="grid"></div>
+
+  <div id="hintbar">
+    <span class="px" id="hintText" style="color:#4a4f55;">TAP = PLAY · SLIDE = ROLL · A03 CHOKES A04 · HOLD EXIT TO POWER OFF</span>
+  </div>
+</div>
+
+<div id="veil">
+  <svg width="52" height="34" viewBox="0 0 52 34"><rect x="1" y="1" width="50" height="32" rx="4" fill="none" stroke="#2f7c2a" stroke-width="2"/><g fill="none" stroke="#2f7c2a" stroke-width="2"><rect x="7" y="7" width="8" height="8"/><rect x="19" y="7" width="8" height="8"/><rect x="31" y="7" width="8" height="8"/><rect x="7" y="19" width="8" height="8"/><rect x="19" y="19" width="8" height="8"/><rect x="31" y="19" width="8" height="8"/></g></svg>
+  <span class="lcdf" style="color:var(--lcd-ink);font-size:24px;">TAP TO POWER ON</span>
+  <span class="px" style="color:var(--lcd-dim);">16 PADS · SYNTH DEMO KIT · SOUND ON</span>
+</div>
+<div id="crt"><div class="line"></div></div>
+
+<script>
+'use strict';
+(function(){
+  var ctx=null, master=null, R=44100;
+  var buffers={};        // pad id -> AudioBuffer
+  var groupVoices={};    // choke group -> [{src,gain,padId}]
+  var activeByPad={};    // pad id -> live voice count
+  var totalVoices=0;
+
+  // ---------- the demo kit ----------
+  // Layout matches AutoPlace: kick A01, snare A02, hats A03/A04 (choke group 1),
+  // second kick A05, clap A06, percs, toms, basses (mono via group 3), loop (group 2).
+  var PADS=[
+    {id:'A13',name:'Bass A',   color:'#b06cf0', synth:'bassA',  group:3},
+    {id:'A14',name:'Bass D',   color:'#b06cf0', synth:'bassD',  group:3},
+    {id:'A15',name:'Stab',     color:'#b06cf0', synth:'stab',   group:0},
+    {id:'A16',name:'Loop 92',  color:'#3f8cf0', synth:'loop',   group:2},
+    {id:'A09',name:'Tom lo',   color:'#9a6cf0', synth:'tomLo',  group:0},
+    {id:'A10',name:'Tom mid',  color:'#9a6cf0', synth:'tomMid', group:0},
+    {id:'A11',name:'Tom hi',   color:'#9a6cf0', synth:'tomHi',  group:0},
+    {id:'A12',name:'Shaker',   color:'#8fd424', synth:'shaker', group:0},
+    {id:'A05',name:'Kick 02',  color:'#e8542e', synth:'kick2',  group:0},
+    {id:'A06',name:'Clap',     color:'#e8409f', synth:'clap',   group:0},
+    {id:'A07',name:'Perc 1',   color:'#8fd424', synth:'perc1',  group:0},
+    {id:'A08',name:'Perc 2',   color:'#8fd424', synth:'perc2',  group:0},
+    {id:'A01',name:'Kick 01',  color:'#e8542e', synth:'kick',   group:0},
+    {id:'A02',name:'Snare 01', color:'#ffc41f', synth:'snare',  group:0},
+    {id:'A03',name:'Hat cl',   color:'#1fc6cf', synth:'hatC',   group:1},
+    {id:'A04',name:'Hat op',   color:'#7adfe4', synth:'hatO',   group:1},
+  ];
+
+  // ---------- synthesis (same recipes as the tape deck's tape) ----------
+  function makeBuffer(seconds, fill){
+    var b=ctx.createBuffer(1, Math.max(1,Math.floor(seconds*R)), R);
+    fill(b.getChannelData(0));
+    return b;
+  }
+  function rngFactory(seed){ var r=seed; return function(){ r=(r*1103515245+12345)&0x7fffffff; return (r/0x3fffffff)-1; }; }
+  function kickInto(d, decay, f0, f1, amp){
+    for(var i=0;i<d.length;i++){ var t=i/R; var f=f0*Math.exp(-42*t)+f1;
+      d[i]+=amp*Math.exp(-decay*t)*Math.sin(2*Math.PI*f*t); } }
+  function snareInto(d, seed, decay, noiseMix){
+    var rnd=rngFactory(seed), lp=0;
+    for(var i=0;i<d.length;i++){ var t=i/R; lp+=0.34*(rnd()-lp);
+      d[i]+=0.85*Math.exp(-decay*t)*((1-noiseMix)*Math.sin(2*Math.PI*192*t)+2.2*noiseMix*lp); } }
+  function hatInto(d, seed, decay, amp){
+    var rnd=rngFactory(seed), pv=0;
+    for(var i=0;i<d.length;i++){ var t=i/R; var w=rnd();
+      d[i]+=amp*Math.exp(-decay*t)*(w-pv); pv=w; } }
+  function tomInto(d, f0){
+    for(var i=0;i<d.length;i++){ var t=i/R; var f=f0*(1+0.14*Math.exp(-30*t));
+      d[i]+=0.85*Math.exp(-10*t)*Math.sin(2*Math.PI*f*t); } }
+  function bassInto(d, f0){
+    for(var i=0;i<d.length;i++){ var t=i/R;
+      var env=t<0.008? t/0.008 : Math.exp(-2.2*(t-0.008));
+      d[i]+=0.55*env*(Math.sin(2*Math.PI*f0*t)+0.4*Math.sin(2*Math.PI*f0*2*t)); } }
+  function clapInto(d){
+    var rnd=rngFactory(4);
+    [0,0.010,0.020,0.032].forEach(function(off){
+      var s=Math.floor(off*R), n=Math.floor(0.012*R);
+      for(var i=0;i<n && s+i<d.length;i++){ d[s+i]+=0.6*Math.exp(-160*i/R)*rnd(); }
+    });
+    var body=Math.floor(0.032*R);
+    for(var i=body;i<d.length;i++){ var t=(i-body)/R; d[i]+=0.35*Math.exp(-22*t)*rnd(); }
+  }
+  function loopInto(d){
+    var step=Math.floor(0.163*R); // ~92 BPM sixteenths
+    for(var st=0; st*step<d.length; st++){
+      var s=st*step;
+      var seg=d.subarray(s, Math.min(d.length, s+Math.floor(0.3*R)));
+      if(st%4===0) kickInto(seg, 21, 118, 45, 0.9);
+      if(st%8===4) snareInto(seg, 3+st, 26, 0.5);
+      hatInto(seg, 11+st, 90, 0.3);
+    }
+    for(var i=0;i<d.length;i++){ d[i]=Math.max(-1,Math.min(1,d[i])); }
+  }
+  function buildKit(){
+    buffers.kick  =makeBuffer(0.35,function(d){kickInto(d,21,118,45,0.95);});
+    buffers.kick2 =makeBuffer(0.5, function(d){kickInto(d,13,95,40,0.95);});
+    buffers.snare =makeBuffer(0.25,function(d){snareInto(d,1,26,0.5);});
+    buffers.hatC  =makeBuffer(0.09,function(d){hatInto(d,2,90,0.5);});
+    buffers.hatO  =makeBuffer(0.55,function(d){hatInto(d,3,7,0.4);});
+    buffers.clap  =makeBuffer(0.3, clapInto);
+    buffers.perc1 =makeBuffer(0.12,function(d){hatInto(d,11,60,0.45);});
+    buffers.perc2 =makeBuffer(0.16,function(d){hatInto(d,12,45,0.45);});
+    buffers.shaker=makeBuffer(0.07,function(d){hatInto(d,17,110,0.4);});
+    buffers.tomLo =makeBuffer(0.4, function(d){tomInto(d,100);});
+    buffers.tomMid=makeBuffer(0.4, function(d){tomInto(d,150);});
+    buffers.tomHi =makeBuffer(0.4, function(d){tomInto(d,220);});
+    buffers.bassA =makeBuffer(1.1, function(d){bassInto(d,110);});
+    buffers.bassD =makeBuffer(1.1, function(d){bassInto(d,146.83);});
+    buffers.stab  =makeBuffer(0.4, function(d){bassInto(d,220);});
+    buffers.loop  =makeBuffer(2.6, loopInto);
+  }
+
+  // ---------- voices + choke ----------
+  function choke(group, at){
+    var voices=groupVoices[group]||[];
+    voices.forEach(function(v){
+      v.gain.gain.setTargetAtTime(0, at, 0.004);
+      try{ v.src.stop(at+0.03); }catch(e){}
+    });
+    groupVoices[group]=[];
+  }
+  function trigger(pad){
+    if(!ctx) return;
+    var src=ctx.createBufferSource();
+    src.buffer=buffers[pad.synth];
+    var gain=ctx.createGain();
+    gain.gain.value=1;
+    src.connect(gain); gain.connect(master);
+    var now=ctx.currentTime;
+    if(pad.group){ choke(pad.group, now); (groupVoices[pad.group]=groupVoices[pad.group]||[]).push({src:src,gain:gain,padId:pad.id}); }
+    activeByPad[pad.id]=(activeByPad[pad.id]||0)+1; totalVoices++;
+    src.onended=function(){
+      activeByPad[pad.id]--; totalVoices--;
+      if(activeByPad[pad.id]<=0) unlight(pad.id);
+      updateLcd();
+    };
+    src.start(now);
+    light(pad); updateLcd();
+    if(navigator.vibrate) navigator.vibrate(8);
+  }
+  function updateLcd(){
+    document.getElementById('voicesLcd').textContent=totalVoices+' VOICES';
+  }
+
+  // ---------- grid ----------
+  var els={};
+  function light(pad){
+    var el=els[pad.id]; if(!el) return;
+    el.classList.add('hit');
+    clearTimeout(el._t);
+    // Percussive pads flash; sustained pads stay lit until their voice ends.
+    if(pad.synth!=='loop' && pad.synth.indexOf('bass')!==0){
+      el._t=setTimeout(function(){ if((activeByPad[pad.id]||0)===0 || true) el.classList.remove('hit'); },130);
+    }
+  }
+  function unlight(id){ var el=els[id]; if(el){ el.classList.remove('hit'); } }
+
+  var grid=document.getElementById('grid');
+  var byElement=new Map();
+  PADS.forEach(function(pad){
+    var el=document.createElement('div');
+    el.className='pad';
+    el.style.setProperty('--edge', pad.color);
+    el.style.setProperty('--glow', pad.color+'66');
+    el.innerHTML='<span class="id px">'+pad.id+'</span><span class="nm marker">'+pad.name+'</span>';
+    grid.appendChild(el);
+    els[pad.id]=el; byElement.set(el, pad);
+  });
+
+  var activePointers=new Set();
+  var lastPadByPointer={};
+  function padFromEvent(e){
+    var el=document.elementFromPoint(e.clientX,e.clientY);
+    while(el && !byElement.has(el)) el=el.parentElement;
+    return el? byElement.get(el) : null;
+  }
+  grid.addEventListener('pointerdown',function(e){
+    if(!ctx) return;
+    e.preventDefault();
+    activePointers.add(e.pointerId);
+    var pad=padFromEvent(e);
+    if(pad){ lastPadByPointer[e.pointerId]=pad.id; trigger(pad); }
+  });
+  grid.addEventListener('pointermove',function(e){
+    if(!ctx || !activePointers.has(e.pointerId)) return;
+    var pad=padFromEvent(e);
+    if(pad && lastPadByPointer[e.pointerId]!==pad.id){
+      lastPadByPointer[e.pointerId]=pad.id;
+      trigger(pad); // slide = roll
+    }
+  });
+  function lift(e){ activePointers.delete(e.pointerId); delete lastPadByPointer[e.pointerId]; }
+  grid.addEventListener('pointerup',lift);
+  grid.addEventListener('pointercancel',lift);
+
+  // ---------- exit: hold for the CRT power-off ----------
+  var exitTimer=null;
+  var exitBtn=document.getElementById('exitBtn');
+  exitBtn.addEventListener('pointerdown',function(){
+    if(!ctx) return;
+    exitTimer=setTimeout(powerOff, 600);
+  });
+  ['pointerup','pointerleave','pointercancel'].forEach(function(ev){
+    exitBtn.addEventListener(ev,function(){ clearTimeout(exitTimer); });
+  });
+  function powerOff(){
+    Object.keys(groupVoices).forEach(function(g){ choke(g, ctx.currentTime); });
+    var crt=document.getElementById('crt');
+    crt.classList.add('go');
+    setTimeout(function(){
+      crt.classList.remove('go');
+      document.getElementById('veil').style.display='flex';
+    }, 340);
+  }
+
+  // ---------- power on ----------
+  document.getElementById('veil').addEventListener('click',function(){
+    var veil=this;
+    if(!ctx){
+      ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});
+      R=ctx.sampleRate;
+      master=ctx.createGain(); master.gain.value=0.85; master.connect(ctx.destination);
+      buildKit();
+      var base=(ctx.baseLatency||0)*1000;
+      if(base>0) document.getElementById('hintText').textContent=
+        'TAP = PLAY · SLIDE = ROLL · A03 CHOKES A04 · BUF '+base.toFixed(1)+'ms · HOLD EXIT';
+    }
+    if(ctx.state==='suspended') ctx.resume();
+    veil.style.display='none';
+  });
+
+  // debug handle for automated checks; harmless in normal use
+  window.__play={
+    isOn:function(){return !!ctx;},
+    voices:function(){return totalVoices;},
+    voicesOn:function(id){return activeByPad[id]||0;},
+    hit:function(id){ var pad=PADS.filter(function(p){return p.id===id;})[0]; if(pad) trigger(pad); },
+    veilShown:function(){return document.getElementById('veil').style.display!=='none';},
+  };
+})();
+</script>
