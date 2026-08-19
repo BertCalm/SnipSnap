@@ -1,0 +1,130 @@
+# Synth roadmap — generate kits, not just capture them
+
+Capture is the headline; synthesis is the second leg. The goal: dial in drum
+sounds (and eventually keys) inside SnipSnap, render them to WAVs, and ship
+them through the exact same kit → preflight → export pipeline as captured
+snips. A kit where pad A01 came off a YouTube rip and pad A02 came out of the
+synth is one kit, not two features.
+
+## Why this is cheaper than it sounds
+
+Pads are one-shots. That means **synthesis here is offline rendering** — a
+pure function from parameters to a `Snip` — not a real-time engine:
+
+- No latency budget, no Oboe coupling, no voice management. Render on commit,
+  audition through the same player as any sample.
+- Every downstream stage already exists and is tested: `Cleanup`, `WavWriter`,
+  `KitAssembler`, `Preflight`, `KitExporter`.
+- It's already demonstrated: `DrumSynth` (kicks with pitch sweeps, filtered
+  snares, high-passed hats, FM-free toms) powers the play-mode prototype's
+  demo kit, and the `:kit` end-to-end test synthesizes a break and exports it
+  as a loadable MPC program. The roadmap below is "grow that seed", not
+  "build a synthesizer from nothing."
+- Fully testable in CI: rendered audio can be measured (centroid, decay,
+  pitch) with the analysis code we already have. The classifier becomes a
+  test harness: a THUMP kick preset must classify as KICK.
+
+## The one legal guardrail: sound yes, names never
+
+"Clones of classics" is a fine ambition **as sound**. Emulating the character
+of a vintage analog drum voice or an FM electric piano is legitimate and done
+industry-wide; the circuits' patents are long gone. What is not ours:
+
+- **Trademarked names and model numbers.** Nothing in the app, presets, or
+  store listing gets named after real machines — not the famous Roland/Akai/
+  Linn/E-mu/Yamaha model numbers, not obvious near-misses of them.
+- **Trade dress.** No recreating another machine's faceplate; everything
+  wears TapeOS.
+- **Sampled content from the originals.** All synthesis from scratch — which
+  is also what makes the sounds ours to ship.
+
+So the engines get our own cassette-era names, and preset descriptions say
+"boomy analog kick", never "the famous one".
+
+## The engines
+
+### THUMP — analog-style drum voices (the drum synth engine)
+
+One engine, per-class voice models, each a small parameter set with big
+range. First-generation voices:
+
+| Voice | Model | Macro knobs |
+|---|---|---|
+| Kick | sine w/ exponential pitch sweep + click transient | TUNE · SWEEP · DECAY · CLICK · DRIVE |
+| Snare | two detuned tones + filtered noise | TUNE · SNAP (noise mix) · DECAY · TONE |
+| Hats | six-oscillator square cluster → bandpass (the classic metallic recipe) | TUNE · DECAY (cl/op) · METAL |
+| Clap | burst train + noise tail | SPREAD · DECAY · TONE |
+| Tom / Conga | swept tone, tunable family | TUNE · SWEEP · DECAY |
+| Cowbell / Rim / Clave | two-tone square pair / damped tick | TUNE · DECAY |
+
+Presets ship, knobs refine — MVP is preset + 3-5 macros per voice, never a
+modular patchbay. A "SYNTH KIT" action renders a whole 16-pad kit from one
+style preset (the demo kit becomes THUMP's factory default).
+
+### CRUNCH — the character processor (not a synth, the secret weapon)
+
+Vintage sampler character as a per-pad effect: bit-depth reduction to ~12-bit,
+resample through a low, era-correct rate, filter. Two reasons it's in the
+synth roadmap:
+
+1. It's what makes THUMP sounds gel with captured material.
+2. Applied to *captured* snips, it's the "make my YouTube rip sound like
+   1987" knob — arguably more valuable than any oscillator.
+
+Cheap DSP (quantize + resample + one-pole filters), lives in the `Cleanup`
+stage as an optional pass, per-pad setting stored in `kit.json`.
+
+### TINES — FM percussion and keys (second wave)
+
+Two-operator FM: metallic hats, bells, congas on the drum side; the classic
+FM electric-piano/bells territory on the key side. Small parameter set
+(ratio, index, index envelope) with outsized range.
+
+### VELVET — subtractive poly for keys (second wave)
+
+Two oscillators (saw/pulse + detune), resonant low-pass, two envelopes, one
+LFO. Covers the warm-poly/brass/string-machine neighbourhood generically.
+
+## Keys need the keygroup door
+
+Drum engines render one-shots onto pads — zero new export work. **Key engines
+need KEYGROUP programs**: render the patch at several pitches (e.g. every
+minor third across 4 octaves), export as a multisampled keygroup instrument
+the MPC plays chromatically.
+
+That makes keygroup export the gating dependency for TINES/VELVET keys — and
+it's another golden-file job: save a keygroup program from real hardware,
+template it, round-trip it (same method that built the drum writer). Worth
+grabbing a keygroup export whenever the reference kits get made.
+
+## Where it lives
+
+- New `:synth` module, pure Kotlin, zero deps, same testing discipline.
+  `DrumSynth` in `:audio` is the seed and eventually thins to a wrapper over
+  THUMP presets.
+- Patches are JSON (via `:json`), stored per-pad in `kit.json` (a synth pad
+  keeps its recipe next to its rendered WAV, so it stays editable) and as
+  shareable preset files.
+- UI is a TapeOS control panel: sunken LCD scope showing the rendered
+  waveform, chunky sliders, preset list in a sunken listbox. Peak-1996
+  plausible — parameter synths in software are exactly the ReBirth-era move.
+  Engine panels are where SNACK BAR scheme users get what they deserve.
+
+## Phasing
+
+| Phase | Ships | Depends on |
+|---|---|---|
+| S1 | `:synth` module: THUMP voices + presets, SYNTH KIT render, patch JSON in `kit.json` | nothing — buildable now |
+| S2 | CRUNCH character pass, per-pad, works on captured snips too | S1 (shared render plumbing) |
+| S3 | TINES percussion voices join THUMP kits | S1 |
+| S4 | Keygroup export (golden-file method) | a keygroup `.xpm` off real hardware |
+| S5 | TINES/VELVET key patches → keygroup instruments | S3 + S4 |
+
+S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
+everything else. S4 is the one that needs hardware again.
+
+## Placement
+
+This slots after the app MVP (capture → kit → export must ship first — the
+synth makes kits better, capture makes the app exist). CRUNCH is the likely
+queue-jumper: it improves captured kits, which is MVP territory.

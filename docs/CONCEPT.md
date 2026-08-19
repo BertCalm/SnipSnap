@@ -107,6 +107,9 @@ everything below is additive on top of a thing that already works.
 - **Banks B–D**
 - **Expansion-format export** (browsable in the MPC's Expansion tab)
 - **Keygroup programs**
+- **Synth engines** — generate drum sounds and (later) keys in-app, rendered
+  offline through the same kit pipeline. Roadmapped in
+  [`SYNTH_ROADMAP.md`](SYNTH_ROADMAP.md).
 
 ## Architecture
 
