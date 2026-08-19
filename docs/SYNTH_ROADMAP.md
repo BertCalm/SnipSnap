@@ -74,16 +74,58 @@ synth roadmap:
 Cheap DSP (quantize + resample + one-pole filters), lives in the `Cleanup`
 stage as an optional pass, per-pad setting stored in `kit.json`.
 
-### TINES — FM percussion and keys (second wave)
+### The key engines — chosen for fun-per-knob
 
-Two-operator FM: metallic hats, bells, congas on the drum side; the classic
-FM electric-piano/bells territory on the key side. Small parameter set
-(ratio, index, index envelope) with outsized range.
+Brainstormed against one axis: playability. Every paradigm below is the
+*fun-first* version of itself, and all of them obey the playability rules
+(next section).
 
-### VELVET — subtractive poly for keys (second wave)
+**VELVET — subtractive.** The undisputed playability king: filter +
+resonance is the most gratifying knob in synthesis and it's nearly
+impossible to make an ugly sound. Two oscs, resonant low-pass, two
+envelopes, LFO. Macros: SHAPE (saw↔pulse w/ PWM) · FAT (detune/unison) ·
+CUTOFF · SQUEEZE (resonance + env amount) · GLIDE (mono). Basses, pads,
+brass, strings.
 
-Two oscillators (saw/pulse + detune), resonant low-pass, two envelopes, one
-LFO. Covers the warm-poly/brass/string-machine neighbourhood generically.
+**TINES — FM, deliberately small.** Full FM is famously unfun to program;
+the fun version is **two operators with RATIO snapped to musical values**
+and one BRIGHT knob driving the index. Macros: RATIO (snapped) · BRIGHT ·
+BITE (index envelope) · WOBBLE. E-pianos, bells, metallic percussion, growl
+basses. Three fixed algorithms, never more.
+
+**TONEWHEEL — additive, made playable.** Pure additive (draw 64 partials)
+is synthesis as data entry — the least playable paradigm there is. But
+additive with a handle humans have loved for 90 years is **drawbars**:
+eight harmonic sliders, a PERC click register, WARBLE (vibrato/chorus),
+DIRT (drive). TapeOS loves sliders, and organ stabs on a 4×4 grid are
+ridiculous fun. This is the additive engine.
+
+**PLUCK — Karplus-Strong physical modeling (1983, era-correct).** The best
+fun-per-parameter ratio in synthesis: essentially one knob (DAMP) and it
+always sounds good. Macros: DAMP · BODY (resonator colour) · PICK (exciter
+brightness) · DOUBLE (12-string detune). Kalimbas, nylon guitar, harps,
+koto. Cheap to render, impossible to ruin.
+
+**Free bonus, no engine required:** a chip-tune preset pack is VELVET
+squares rendered through CRUNCH. Maximum kitsch, zero new DSP.
+
+### The playability rules (these outrank the engine list)
+
+1. **Preset-first, knobs-second.** Every engine is playable at first touch;
+   3–6 macros, never a patchbay.
+2. **Macros speak plain words** — BRIGHT, FAT, DIRT, WOOD, AIR — never
+   "mod index". A macro moves several parameters underneath so it always
+   does something musical.
+3. **Bounded ranges.** You can't detune into garbage unless you ask; sweet
+   spots are wide by construction.
+4. **SCRAMBLE.** A dice roll within musical bounds on every panel, always
+   undoable. Half of synth fun is slot-machine discovery.
+5. **The instant loop.** Knob turn → re-render (one-shots render in tens of
+   ms) → auto-retrigger, so every move is heard immediately.
+6. **Sampling-era honesty.** Motion (LFO, sweeps) bakes into the render —
+   you are sampling a synth, which is exactly the workflow the MPC was born
+   into. Sustained key patches render a loopable sustain segment; loop-point
+   authoring joins the keygroup export work.
 
 ## Keys need the keygroup door
 
@@ -144,8 +186,9 @@ What follows from it:
 | S1 | `:synth` module: THUMP voices + presets, SYNTH KIT render, patch JSON in `kit.json` | nothing — buildable now |
 | S2 | CRUNCH character pass, per-pad, works on captured snips too | S1 (shared render plumbing) |
 | S3 | TINES percussion voices join THUMP kits | S1 |
+| S3.5 | PLUCK + TONEWHEEL render one-shots onto drum-kit pads (stabs, plucks) | S1 |
 | S4 | Keygroup export (golden-file method) | a keygroup `.xpm` off real hardware |
-| S5 | TINES/VELVET key patches → keygroup instruments | S3 + S4 |
+| S5 | VELVET/TINES/TONEWHEEL/PLUCK key patches → keygroup instruments | S3 + S4 |
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
