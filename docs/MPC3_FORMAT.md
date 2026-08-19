@@ -145,6 +145,11 @@ disk. Three candidates:
 **This is blocking, and only a Live III can answer it.** Nothing about a native
 MPC 3 writer can be built until we know which container a saved program uses.
 
+The reading side is already built: the `:mpc3` module detects the generation by
+content (`MpcFormats.detect`), opens containers (`Acvs.read`) and walks the
+documented project schema (`Mpc3Project`) — so a saved file from the Live III
+can be dissected the moment it lands.
+
 ### The check (two minutes on the Live III)
 
 1. Build a drum program with a few pads filled.

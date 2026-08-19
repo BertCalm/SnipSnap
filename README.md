@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew :audio:test :kit:test :xpm:test    # 204 tests
+./gradlew test    # 231 tests across five modules
 ```
 
 ### `:audio`
@@ -90,6 +90,20 @@ if (!Preflight.check(kit, kitDir).blocked()) {
     KitExporter.exportProgramFolder(kit, kitDir, sdCardRoot)
 }
 ```
+
+### `:mpc3`
+
+Reads the MPC 3 container: gzip + five-line ACVS header + JSON.
+`MpcFormats.detect` tells the generations apart by content (both use `.xpj`),
+`Acvs.read` opens a container, and `Mpc3Project` gives tolerant accessors over
+the documented project schema — built so a real Live III file gets dissected
+the moment one lands. Field paths are from the community knowledge base and
+carry its caveats; see [`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md).
+
+### `:json`
+
+The tiny strict JSON reader/writer under both `kit.json` and ACVS payloads.
+Zero dependencies, byte-stable output, hostile to malformed input.
 
 ### `:xpm`
 

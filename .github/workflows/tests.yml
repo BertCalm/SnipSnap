@@ -16,4 +16,4 @@ jobs:
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
       - name: Run test suites
-        run: ./gradlew --no-daemon :audio:test :kit:test :xpm:test
+        run: ./gradlew --no-daemon test

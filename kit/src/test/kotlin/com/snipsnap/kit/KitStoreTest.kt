@@ -1,6 +1,7 @@
 package com.snipsnap.kit
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.json.JsonException
 import java.io.File
 import java.io.IOException
 import kotlin.test.AfterTest

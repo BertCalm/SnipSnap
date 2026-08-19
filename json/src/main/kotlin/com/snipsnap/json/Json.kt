@@ -1,15 +1,15 @@
-package com.snipsnap.kit
+package com.snipsnap.json
 
 /**
- * A deliberately tiny JSON reader/writer for the kit sidecar.
+ * A deliberately tiny JSON reader/writer for SnipSnap's file formats — the
+ * kit.json sidecar and the JSON payload inside MPC 3 ACVS containers.
  *
- * Hand-rolled rather than a dependency because the schema is ours, small and
- * known, and every module in this repo stays consumable by the Android app
- * with nothing else on the classpath. It parses only what kit.json needs and
- * is strict about everything: duplicate keys, trailing garbage, control
- * characters and deep nesting are errors, not shrugs.
+ * Hand-rolled rather than a dependency so every module in this repo stays
+ * consumable by the Android app with nothing else on the classpath. Strict
+ * about everything: duplicate keys, trailing garbage, raw control characters
+ * and absurd nesting are errors, not shrugs.
  */
-internal sealed class JsonValue {
+sealed class JsonValue {
     data class Obj(val entries: Map<String, JsonValue>) : JsonValue()
     data class Arr(val items: List<JsonValue>) : JsonValue()
     data class Str(val value: String) : JsonValue()
@@ -32,11 +32,13 @@ internal sealed class JsonValue {
         throw JsonException("expected $wanted, got ${this::class.simpleName}")
 }
 
-internal class JsonException(message: String) : RuntimeException(message)
+class JsonException(message: String) : RuntimeException(message)
 
-internal object Json {
+object Json {
 
-    private const val MAX_DEPTH = 32
+    // MPC 3 projects nest ~10 levels deep; 64 leaves headroom without
+    // letting a malicious file recurse to a stack overflow.
+    private const val MAX_DEPTH = 64
 
     fun parse(text: String): JsonValue {
         val p = Parser(text)

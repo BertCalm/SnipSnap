@@ -1,6 +1,9 @@
 package com.snipsnap.kit
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.json.Json
+import com.snipsnap.json.JsonException
+import com.snipsnap.json.JsonValue
 import java.io.File
 import java.io.IOException
 

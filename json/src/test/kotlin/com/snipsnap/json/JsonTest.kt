@@ -1,4 +1,4 @@
-package com.snipsnap.kit
+package com.snipsnap.json
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -69,7 +69,7 @@ class JsonTest {
 
     @Test
     fun `rejects absurd nesting`() {
-        val deep = "[".repeat(60) + "]".repeat(60)
+        val deep = "[".repeat(90) + "]".repeat(90)
         assertFailsWith<JsonException> { Json.parse(deep) }
     }
 

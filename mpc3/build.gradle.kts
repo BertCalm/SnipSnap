@@ -8,8 +8,6 @@ repositories {
 
 dependencies {
     implementation(project(":json"))
-    implementation(project(":xpm"))
-    implementation(project(":audio"))
     testImplementation(kotlin("test"))
 }
 
