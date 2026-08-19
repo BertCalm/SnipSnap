@@ -109,6 +109,26 @@ object AutoPlace {
         else -> 0
     }
 
+    /**
+     * TapeOS class colour for a class, as #rrggbb.
+     *
+     * These are the tokens from docs/UI_DESIGN.md — shell colour, pad colour
+     * and (eventually) MPC pad colour are one language, so they live in code
+     * exactly once.
+     */
+    fun colorFor(drumClass: DrumClass): String = when (drumClass) {
+        DrumClass.KICK -> "#e8542e"
+        DrumClass.SNARE -> "#ffc41f"
+        DrumClass.CLAP -> "#e8409f"
+        DrumClass.HAT_CLOSED -> "#1fc6cf"
+        DrumClass.HAT_OPEN -> "#7adfe4"
+        DrumClass.TOM -> "#9a6cf0"
+        DrumClass.PERC -> "#8fd424"
+        DrumClass.TONAL -> "#b06cf0"
+        DrumClass.LOOP -> "#3f8cf0"
+        DrumClass.UNKNOWN -> "#b9bdc1"
+    }
+
     /** Suggested sample-name stem for a class, for generated filenames. */
     fun nameFor(drumClass: DrumClass): String = when (drumClass) {
         DrumClass.KICK -> "Kick"

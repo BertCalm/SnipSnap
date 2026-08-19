@@ -27,11 +27,11 @@ capture (rolling buffer)  →  trim  →  assign to 4×4 grid  →  export .xpm 
 
 ## Modules
 
-Both are plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit
-tested on a normal JVM and the Android layer stays a thin shell over proven code.
+All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
+on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew :audio:test :xpm:test      # 158 tests
+./gradlew :audio:test :kit:test :xpm:test    # 204 tests
 ```
 
 ### `:audio`
@@ -68,6 +68,27 @@ val slices = Chopper.byTransients(snip, maxSlices = 16, cleanup = Chopper.SLICE_
 val classified = slices.map { it.snip to Classifier.classify(it.snip).drumClass }
 
 AutoPlace.arrange(classified, padCount = 16) { it.second }   // kick -> A01, snare -> A02, ...
+```
+
+### `:kit`
+
+The product pipeline: a kit **is** a folder (WAVs + a `kit.json` sidecar), and
+this module owns that folder's whole life.
+
+- **`Kit` / `KitPad`** — the model; `kit.json` round-trips it byte-stable.
+- **`KitAssembler`** — arranged snips in, kit folder out: the last step of the
+  auto-chop pipeline.
+- **`Preflight`** — the export wizard's checklist as real checks. WARNs export;
+  FAILs block, because "exported but broken" is the worst thing a tool that
+  writes to someone's SD card can do.
+- **`KitExporter`** — kit folder → MPC program folder (`.xpm` + WAVs), names
+  sanitized consistently between the folder and the program.
+
+```kotlin
+val kit = KitAssembler.assemble("Break Kit", arranged, kitDir)
+if (!Preflight.check(kit, kitDir).blocked()) {
+    KitExporter.exportProgramFolder(kit, kitDir, sdCardRoot)
+}
 ```
 
 ### `:xpm`

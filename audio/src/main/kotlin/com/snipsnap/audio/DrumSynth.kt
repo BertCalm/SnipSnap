@@ -6,7 +6,7 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * Synthetic drum sounds for testing the classifier.
+ * Synthetic drum sounds — test material and first-run demo content.
  *
  * Not high fidelity, but structurally honest: kicks are low with a pitch drop,
  * hats are high-passed noise, snares are tone plus noise, and decay times are
