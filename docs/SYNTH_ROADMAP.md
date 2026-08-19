@@ -97,6 +97,33 @@ it's another golden-file job: save a keygroup program from real hardware,
 template it, round-trip it (same method that built the drum writer). Worth
 grabbing a keygroup export whenever the reference kits get made.
 
+## The play surface stays 4×4 — settled
+
+Keys are played on the same 4×4 pad grid as drums. No piano keyboard UI,
+ever. This is consistency with the instrument, not a compromise: the MPC
+itself plays keygroups on pads (Pad Perform), so what your hands learn in
+SnipSnap is exactly what the hardware gives you back.
+
+What follows from it:
+
+- **Note layouts, not keyboards.** Bottom-left pad (A01) is the root.
+  Two layouts at launch:
+  - **CHROMATIC** — 16 semitones ascending left→right, bottom→top; just over
+    an octave per bank.
+  - **SCALE** — only in-scale notes on the pads (pick key + scale), 16 notes
+    ≈ two-plus octaves, wrong notes physically impossible. The mode most
+    people should live in.
+  A fourths-stacked grid (rows offset by a fourth, chord shapes become
+  grips) is a later third option.
+- **Banks are octaves.** A/B/C/D shift the same layout up/down — the same
+  muscle-memory move as drum banks.
+- **Keys need note-off.** Drums are one-shots; keys sustain while held and
+  release on lift. The play engine grows hold/release, per-patch mono mode
+  with glide (SQUELCH-style basslines are exactly mono + glide), and slide
+  becomes glissando in scale mode.
+- **Export matches.** Rendered keygroup programs play the same way on the
+  MPC's own pads; the root-note and layout conventions travel with the kit.
+
 ## Where it lives
 
 - New `:synth` module, pure Kotlin, zero deps, same testing discipline.

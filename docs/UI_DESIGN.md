@@ -132,6 +132,13 @@ system asks for dark.
 - Error dialogs are honest little message boxes ("SPOTIFY BLOCKS THE TAPE —
   USE THE SCREEN RECORDER, I'LL PULL THE AUDIO OUT").
 
+## Settled since: keys on the grid
+
+Melodic content (keygroups, synth patches) plays on the **same 4×4 grid** —
+no piano keyboard UI. Root on A01, CHROMATIC and SCALE layouts, banks as
+octaves. Consistent with the MPC's own Pad Perform, so hands learn one
+surface. Details in [`SYNTH_ROADMAP.md`](SYNTH_ROADMAP.md#the-play-surface-stays-44--settled).
+
 ## Still open
 
 - Exact MPC 16-colour pad palette mapping (needs the colour encoding answer
