@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 269 tests across six modules
+./gradlew test    # 291 tests across six modules
 ```
 
 ### `:audio`
@@ -120,6 +120,15 @@ macro snapped to seven characters (never a mistuning), BRIGHT driving the
 modulation index, the bite baked in. Five voices (bell, chime, block, zap,
 toy) that fill the factory kit's top row, so `ThumpKits.classic()` is now
 sixteen pads from two engines.
+
+S3.5 makes the grid musical: PLUCK is Karplus-Strong — a noise burst in a
+tuned feedback loop, four body voices (kalimba, nylon, harp, koto), DAMP as
+the knob that always sounds good — and TONEWHEEL is additive with the handle
+people have loved for 90 years: eight drawbars, a PERC click register,
+WARBLE, DIRT. Both snap TUNE to semitones, so pads get notes;
+`SynthKits.melodic()` renders two octaves of A-minor-pentatonic plucks with
+a row of organ stabs — the keys-on-pads bet, playable before any keygroup
+work exists.
 
 ### `:mpc3`
 

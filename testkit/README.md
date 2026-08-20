@@ -44,6 +44,16 @@ group 1. Regenerate with `./gradlew :synth:generateThumpKit`. Things to
 confirm: it loads, it slaps, A03 still chokes A04, and the top row rings
 clean.
 
+### SnipSnap Melodic Kit — do note-per-pad kits feel playable?
+
+The first musical kit: A01–A12 walk two octaves of A minor pentatonic on
+plucked strings (nylon low, kalimba above, a harp on top), A13–A16 are organ
+stabs on the root, fourth, fifth and octave. Root bottom-left, ascending —
+the SCALE layout from the keys-on-pads plan, testable before any keygroup
+work exists. Regenerate with `./gradlew :synth:generateMelodicKit`. Things to
+confirm: it loads, runs feel musical (not just triggered), and no note has a
+click or an early cutoff.
+
 ## Reporting back
 
 Three facts close out the format work: (1) loads or not, (2) beep count on

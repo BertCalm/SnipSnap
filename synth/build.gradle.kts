@@ -43,3 +43,13 @@ tasks.register<JavaExec>("generateThumpKit") {
     workingDir = projectDir
     args("${rootDir}/testkit")
 }
+
+/** Render the melodic acceptance kit into testkit/. See MelodicKitGenerator. */
+tasks.register<JavaExec>("generateMelodicKit") {
+    group = "distribution"
+    description = "Render the PLUCK/TONEWHEEL melodic acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MelodicKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}

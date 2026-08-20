@@ -48,10 +48,13 @@ is what `:synth` renders on export, not an approximation of it.
 
 What's real:
 
-- **Two engines behind one panel**: all eight THUMP voices (kick, snare, both
-  hats, clap, tom, cowbell, rim) and all five TINES FM voices (bell, chime,
-  block, zap, toy — snapped RATIO included), each with its per-voice macro
-  set, every knob 0..1 over the same bounded musical ranges as the Kotlin.
+- **Four engines behind one panel**: all eight THUMP voices (kick, snare,
+  both hats, clap, tom, cowbell, rim), five TINES FM voices (bell, chime,
+  block, zap, toy — snapped RATIO included), four PLUCK Karplus-Strong
+  bodies (kalimba, nylon, harp, koto — TUNE snapped to semitones), and three
+  TONEWHEEL registrations with all eight drawbars as sliders plus
+  PERC/WARBLE/DIRT. Every knob 0..1 over the same bounded musical ranges as
+  the Kotlin.
 - **CRUNCH inline** — grit → zero-order hold → bit quantization → three-pole
   tone filter, peak-matched, exactly as in `Crunch.kt`. Sliding a CRUNCH macro
   switches it on; the OFF/ON button A/Bs it.
