@@ -60,6 +60,7 @@ object FeatureExtractor {
         if (total <= EPSILON) return silentFeatures(durationSeconds = snip.durationSeconds)
 
         var weighted = 0f
+        var power = 0f
         var low = 0f
         var mid = 0f
         var high = 0f
@@ -68,7 +69,13 @@ object FeatureExtractor {
         for (bin in spectrum.indices) {
             val hz = Fft.binToHz(bin, FFT_SIZE, snip.sampleRate)
             val m = spectrum[bin]
-            weighted += hz * m
+            // Centroid is power-weighted (m²), deliberately: magnitude
+            // weighting lets a -63 dB noise floor outvote a dominant sub
+            // fundamental — a 12-bit-crunched 40 Hz kick measured identical
+            // to a clean 150 Hz tom. Power weighting reports where the
+            // energy actually lives. Band ratios stay magnitude-based.
+            weighted += hz * m * m
+            power += m * m
             when {
                 hz < 200f -> low += m
                 hz < 2000f -> mid += m
@@ -77,7 +84,7 @@ object FeatureExtractor {
             logSum += ln((m + EPSILON).toDouble())
         }
 
-        val centroid = weighted / total
+        val centroid = if (power > EPSILON) weighted / power else 0f
 
         var cumulative = 0f
         var rolloffBin = spectrum.size - 1

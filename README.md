@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 246 tests across six modules
+./gradlew test    # 256 tests across six modules
 ```
 
 ### `:audio`
@@ -105,7 +105,15 @@ until analysis calls it a KICK.
 ```kotlin
 val snip = Thump.render(ThumpVoice.KICK, mapOf("TUNE" to 0.2f, "DRIVE" to 0.7f))
 val rolled = Thump.render(ThumpVoice.SNARE, Thump.scramble(ThumpVoice.SNARE, Random(7)))
+val aged = Crunch.process(snip, mapOf("BITS" to 0.7f, "RATE" to 0.6f))   // 1987 in a knob
 ```
+
+CRUNCH is the character processor from the roadmap's S2: input grit,
+zero-order hold at a lowered rate (the aliasing is the sound), bit-depth
+quantization, and a steep three-pole output tone filter, with output peak
+matched to input so character never masquerades as loudness. It works on
+captured snips exactly as on synthesized ones, and identity survives it —
+a crunched kick still classifies as a kick.
 
 ### `:mpc3`
 

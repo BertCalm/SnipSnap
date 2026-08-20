@@ -184,7 +184,7 @@ What follows from it:
 | Phase | Ships | Depends on |
 |---|---|---|
 | S1 | **shipped** — `:synth` module: THUMP voices, SCRAMBLE, patch JSON, SYNTH KIT render + testkit export | — |
-| S2 | CRUNCH character pass, per-pad, works on captured snips too | S1 (shared render plumbing) |
+| S2 | **shipped** — CRUNCH character pass in `:synth`, works on captured snips too | — |
 | S3 | TINES percussion voices join THUMP kits | S1 |
 | S3.5 | PLUCK + TONEWHEEL render one-shots onto drum-kit pads (stabs, plucks) | S1 |
 | S4 | Keygroup export (golden-file method) | a keygroup `.xpm` off real hardware |
