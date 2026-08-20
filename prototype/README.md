@@ -39,5 +39,28 @@ shows the context's reported base latency.
 What's fake: the sounds are synthesized, there's no kit loading, and true
 trigger latency on Android needs Oboe — a browser can only approximate it.
 
-The `window.__deck` / `window.__play` handles exist only so automated checks
-can drive the pages.
+## thumplab.html — the synth panel, auditioning the real algorithms
+
+The THUMP voice panel from [`../docs/SYNTH_ROADMAP.md`](../docs/SYNTH_ROADMAP.md),
+playable. Every DSP line is a straight JS port of the shipped Kotlin — same
+constants, same envelope shapes, same macro ranges — so what you audition here
+is what `:synth` renders on export, not an approximation of it.
+
+What's real:
+
+- **All eight THUMP voices** (kick, snare, both hats, clap, tom, cowbell, rim)
+  with their per-voice macro sets, every knob 0..1 over the same bounded
+  musical ranges as the Kotlin engine.
+- **CRUNCH inline** — grit → zero-order hold → bit quantization → three-pole
+  tone filter, peak-matched, exactly as in `Crunch.kt`. Sliding a CRUNCH macro
+  switches it on; the OFF/ON button A/Bs it.
+- **The playability loop**: every slider move re-renders and retriggers within
+  ~70 ms, so tweaking sounds like playing. SCRAMBLE is the uniform macro roll;
+  FACTORY resets the voice. The LCD scope draws the rendered buffer and the
+  RENDER readout shows real synthesis time.
+
+What's fake: nothing writes a patch file or a WAV — that's `ThumpPatch` and
+the export pipeline's job in the real app.
+
+The `window.__deck` / `window.__play` / `window.__lab` handles exist only so
+automated checks can drive the pages.
