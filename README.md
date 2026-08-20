@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 291 tests across six modules
+./gradlew test    # 308 tests across six modules
 ```
 
 ### `:audio`
@@ -129,6 +129,17 @@ WARBLE, DIRT. Both snap TUNE to semitones, so pads get notes;
 `SynthKits.melodic()` renders two octaves of A-minor-pentatonic plucks with
 a row of organ stabs — the keys-on-pads bet, playable before any keygroup
 work exists.
+
+Effects are the same trick as CRUNCH, generalized: pads are one-shots
+rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the
+WAV like it's 1993 — you sampled the reverb, you didn't rack it. SQUASH
+(lookahead compressor: fast clamp is glue, slow clamp is punch), ECHO (one
+delay line and one filter, repeats darkening as they fade), SPRING (a
+Schroeder network, 1962), and REVERSE. `FxChain` fixes the order —
+reverse → squash → crunch → echo → spring — owns the total tail budget so
+stacked reverbs can't turn a hit into a phrase, and serializes per-pad next
+to the WAV. Identity is tested: a kick through the whole default rack still
+classifies KICK.
 
 ### `:mpc3`
 

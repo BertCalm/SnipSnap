@@ -58,6 +58,10 @@ What's real:
 - **CRUNCH inline** — grit → zero-order hold → bit quantization → three-pole
   tone filter, peak-matched, exactly as in `Crunch.kt`. Sliding a CRUNCH macro
   switches it on; the OFF/ON button A/Bs it.
+- **The FX rack** — SQUASH (lookahead compressor), ECHO (darkening tape
+  delay), SPRING (Schroeder reverb) and REVERSE, applied in `FxChain.kt`'s
+  fixed order with the same chain-level tail budget. Sliding any macro
+  enables its section; the named buttons A/B each one.
 - **The playability loop**: every slider move re-renders and retriggers within
   ~70 ms, so tweaking sounds like playing. SCRAMBLE is the uniform macro roll;
   FACTORY resets the voice. The LCD scope draws the rendered buffer and the

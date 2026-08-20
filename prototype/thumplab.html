@@ -92,6 +92,25 @@
         </div>
       </div>
 
+      <div class="gb">
+        <span class="legend px">FX RACK — BAKED IN, LIKE 1993</span>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;gap:8px;align-items:flex-start;">
+            <button id="squashOn" class="btn raised fxBtn" style="width:56px;height:34px;flex:none;"><span class="px" style="color:var(--ink2);">SQUASH</span></button>
+            <div id="squashMacros" style="flex:1;display:flex;flex-direction:column;gap:2px;"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-start;">
+            <button id="echoOn" class="btn raised fxBtn" style="width:56px;height:34px;flex:none;"><span class="px" style="color:var(--ink2);">ECHO</span></button>
+            <div id="echoMacros" style="flex:1;display:flex;flex-direction:column;gap:2px;"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-start;">
+            <button id="springOn" class="btn raised fxBtn" style="width:56px;height:34px;flex:none;"><span class="px" style="color:var(--ink2);">SPRING</span></button>
+            <div id="springMacros" style="flex:1;display:flex;flex-direction:column;gap:2px;"></div>
+          </div>
+          <button id="reverseOn" class="btn raised" style="height:30px;"><span class="px" style="color:var(--ink2);">REVERSE</span></button>
+        </div>
+      </div>
+
       <div style="display:flex;gap:8px;align-items:stretch;">
         <div id="pad" class="btn raised" style="flex:1;height:74px;position:relative;">
           <div class="sunken" id="padInlay" style="position:absolute;left:8px;top:8px;right:8px;bottom:8px;background:#e8542e;display:flex;align-items:flex-end;justify-content:center;">
@@ -365,10 +384,78 @@
     return out;
   }
 
+  // ---------- FX rack: straight ports of Squash/Echo/Spring/FxChain.kt ----------
+  function peakOf(b){ var pk=0; for(var i=0;i<b.length;i++){var a=Math.abs(b[i]); if(a>pk)pk=a;} return pk; }
+  function peakMatch(b,inPk){ var pk=peakOf(b);
+    if(pk>1e-9&&inPk>1e-9){ var g=inPk/pk;
+      for(var i=0;i<b.length;i++) b[i]=Math.min(1,Math.max(-1,b[i]*g)); }
+    return b; }
+
+  function squash(src,m){
+    var amount=m.AMOUNT; if(amount<=0.001) return src;
+    var inPk=peakOf(src); if(inPk<=1e-9) return src;
+    var thr=inPk*expMap(1-amount,0.12,0.9), ratio=lin(amount,1.5,8), slope=1-1/ratio;
+    var aAtk=1-Math.exp(-1/(expMap(m.ATTACK,0.0004,0.008)*R)), aRel=1-Math.exp(-1/(0.09*R));
+    var look=Math.floor(0.002*R);
+    var env=new Float32Array(src.length), e=0;
+    for(var f=0;f<src.length;f++){ var a=Math.abs(src[f]); e+=(a>e?aAtk:aRel)*(a-e); env[f]=e; }
+    var out=new Float32Array(src.length);
+    for(f=0;f<src.length;f++){ var ah=env[Math.min(f+look,src.length-1)];
+      out[f]=src[f]*(ah>thr?Math.pow(thr/ah,slope):1); }
+    return peakMatch(out,inPk);
+  }
+
+  function echoFx(src,m){
+    var mix=m.MIX; if(mix<=0.001) return src;
+    var delay=Math.floor(expMap(m.TIME,0.06,0.35)*R), fb=lin(m.REPEAT,0.15,0.75);
+    var toneHz=expMap(m.TONE,1200,9000);
+    var taps=Math.max(1,Math.ceil(-6.9078/Math.log(fb)));
+    var tail=Math.min(taps*delay,Math.floor(1.1*R));
+    var n=src.length+tail, d=new Float32Array(n), out=new Float32Array(n), lp=OnePole(R);
+    var inPk=peakOf(src);
+    for(var f=0;f<n;f++){ var dry=f<src.length?src[f]:0;
+      d[f]=lp(dry+fb*(f>=delay?d[f-delay]:0),toneHz);
+      out[f]=dry+mix*(f>=delay?d[f-delay]:0); }
+    return peakMatch(out,inPk);
+  }
+
+  function springFx(src,m){
+    var mix=m.MIX; if(mix<=0.001) return src;
+    var scale=lin(m.SIZE,0.5,1.5)*R/44100, rt60=expMap(m.SIZE,0.25,1.4), toneHz=expMap(m.TONE,1800,9500);
+    var tail=Math.min(Math.floor(rt60*R),Math.floor(1.2*R));
+    var n=src.length+tail, out=new Float32Array(n), inPk=peakOf(src);
+    var CD=[1687,1601,2053,2251].map(function(x){return Math.max(32,Math.floor(x*scale));});
+    var bufs=CD.map(function(x){return new Float32Array(x);});
+    var fbs=CD.map(function(x){return Math.pow(10,-3*x/(rt60*R));});
+    var lps=CD.map(function(){return OnePole(R);});
+    var aps=[347,113].map(function(x){return new Float32Array(Math.max(16,Math.floor(x*scale)));});
+    for(var f=0;f<n;f++){ var dry=f<src.length?src[f]:0, wet=0;
+      for(var c=0;c<4;c++){ var b=bufs[c], idx=f%b.length, fed=b[idx];
+        wet+=fed; b[idx]=dry+fbs[c]*lps[c](fed,toneHz); }
+      wet*=0.25;
+      for(var a=0;a<2;a++){ var ab=aps[a], ai=f%ab.length, dl=ab[ai];
+        ab[ai]=wet+0.7*dl; wet=dl-0.7*ab[ai]; }
+      out[f]=dry+mix*wet; }
+    return peakMatch(out,inPk);
+  }
+
+  function reverseBuf(src){ var out=new Float32Array(src.length);
+    for(var i=0;i<src.length;i++) out[i]=src[src.length-1-i]; return out; }
+
+  var FX_DEFAULTS={
+    SQUASH:{AMOUNT:0.5,ATTACK:0.5},
+    ECHO:{TIME:0.4,REPEAT:0.4,TONE:0.5,MIX:0.4},
+    SPRING:{SIZE:0.35,TONE:0.55,MIX:0.3},
+  };
+
   // ---------- state ----------
   var state={ engine:'THUMP', voice:'KICK',
               lastVoice:{THUMP:'KICK',TINES:'BELL',PLUCK:'KALIMBA',TWHEEL:'FULL'},
               macros:{}, crunchOn:false, crunchMacros:Object.assign({},CRUNCH_DEFAULTS),
+              reverse:false,
+              fx:{SQUASH:{on:false,m:Object.assign({},FX_DEFAULTS.SQUASH)},
+                  ECHO:{on:false,m:Object.assign({},FX_DEFAULTS.ECHO)},
+                  SPRING:{on:false,m:Object.assign({},FX_DEFAULTS.SPRING)}},
               lastBuffer:null, renderMs:0, plays:0 };
   Object.keys(VOICES).forEach(function(v){ state.macros[v]=Object.assign({},VOICES[v].macros); });
 
@@ -376,7 +463,18 @@
     var t0=performance.now();
     var buf=VOICES[state.voice].render(state.macros[state.voice]);
     normalize(buf); fadeTail(buf,4);
+    // The rack, in FxChain.kt's fixed order: reverse -> squash -> crunch
+    // -> echo -> spring, then the chain-level tail budget.
+    var preLen=buf.length;
+    if(state.reverse) buf=reverseBuf(buf);
+    if(state.fx.SQUASH.on) buf=squash(buf,state.fx.SQUASH.m);
     if(state.crunchOn) buf=crunch(buf,state.crunchMacros);
+    if(state.fx.ECHO.on) buf=echoFx(buf,state.fx.ECHO.m);
+    if(state.fx.SPRING.on) buf=springFx(buf,state.fx.SPRING.m);
+    var maxLen=preLen+Math.floor(1.0*R);
+    if(buf.length>maxLen){ buf=buf.slice(0,maxLen);
+      var fd=Math.floor(0.01*R);
+      for(var i=0;i<Math.min(fd,buf.length);i++) buf[buf.length-1-i]*=i/fd; }
     state.renderMs=performance.now()-t0;
     state.lastBuffer=buf;
     document.getElementById('renderLcd').textContent='RENDER '+state.renderMs.toFixed(1)+'ms';
@@ -527,6 +625,34 @@
     toast(state.crunchOn?'WELCOME TO 1987.':'BACK TO THE FUTURE.');
   });
 
+  var FX_TOASTS={SQUASH:['SLAPPED.','UNSLAPPED.'],ECHO:['HELLO HELLO hello hello','JUST THE ONE, THEN.'],
+                 SPRING:['BOING.','ROOM FOR RENT.']};
+  function toggleFx(name,on){
+    state.fx[name].on=on;
+    var b=document.getElementById(name.toLowerCase()+'On');
+    b.classList.toggle('pressed',on);
+    b.querySelector('.px').style.color=on?'var(--ink)':'var(--ink2)';
+  }
+  Object.keys(FX_DEFAULTS).forEach(function(name){
+    Object.keys(FX_DEFAULTS[name]).forEach(function(macro){
+      slider(document.getElementById(name.toLowerCase()+'Macros'),macro,
+        function(){ return state.fx[name].m[macro]; },
+        function(x){ state.fx[name].m[macro]=x; if(!state.fx[name].on) toggleFx(name,true); });
+    });
+    document.getElementById(name.toLowerCase()+'On').addEventListener('click',function(){
+      if(!ctx)return; toggleFx(name,!state.fx[name].on); touched();
+      toast(FX_TOASTS[name][state.fx[name].on?0:1]);
+    });
+  });
+  document.getElementById('reverseOn').addEventListener('click',function(){
+    if(!ctx)return;
+    state.reverse=!state.reverse;
+    var b=this; b.classList.toggle('pressed',state.reverse);
+    b.querySelector('.px').style.color=state.reverse?'var(--ink)':'var(--ink2)';
+    toast(state.reverse?'DRAWKCAB.':'FORWARDS AGAIN.');
+    touched();
+  });
+
   var SCRAMBLE_LINES=['COULD BE A HIT.','NO REFUNDS.','THE DICE KNOW BEST.','SPIN AGAIN, DJ.'];
   var scrIdx=0, rngState=1234567;
   function rng(){ rngState=(rngState*1103515245+12345)&0x7fffffff; return rngState/0x7fffffff; }
@@ -581,6 +707,11 @@
     renderMs:function(){return state.renderMs;},
     plays:function(){return state.plays;},
     crunch:function(on){ toggleCrunch(on); renderCurrent(); },
+    fx:function(name,on){ toggleFx(name,on); renderCurrent(); },
+    reverse:function(on){ state.reverse=on; renderCurrent(); },
+    bufferLen:function(){ return (state.lastBuffer||[]).length; },
+    bufferRms:function(){ var b=state.lastBuffer||[]; if(!b.length) return 0;
+      var s=0; for(var i=0;i<b.length;i++) s+=b[i]*b[i]; return Math.sqrt(s/b.length); },
     scrambleBtn:function(){ document.getElementById('scramble').click(); },
   };
 })();
