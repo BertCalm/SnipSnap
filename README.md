@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 256 tests across six modules
+./gradlew test    # 269 tests across six modules
 ```
 
 ### `:audio`
@@ -114,6 +114,12 @@ quantization, and a steep three-pole output tone filter, with output peak
 matched to input so character never masquerades as loudness. It works on
 captured snips exactly as on synthesized ones, and identity survives it —
 a crunched kick still classifies as a kick.
+
+TINES is S3: FM percussion, deliberately small — two operators, a RATIO
+macro snapped to seven characters (never a mistuning), BRIGHT driving the
+modulation index, the bite baked in. Five voices (bell, chime, block, zap,
+toy) that fill the factory kit's top row, so `ThumpKits.classic()` is now
+sixteen pads from two engines.
 
 ### `:mpc3`
 

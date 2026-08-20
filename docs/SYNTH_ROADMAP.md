@@ -185,7 +185,7 @@ What follows from it:
 |---|---|---|
 | S1 | **shipped** — `:synth` module: THUMP voices, SCRAMBLE, patch JSON, SYNTH KIT render + testkit export | — |
 | S2 | **shipped** — CRUNCH character pass in `:synth`, works on captured snips too | — |
-| S3 | TINES percussion voices join THUMP kits | S1 |
+| S3 | **shipped** — TINES percussion voices (BELL/CHIME/BLOCK/ZAP/TOY, 2-op FM, snapped RATIO) fill A13-A16 of the factory kit | S1 |
 | S3.5 | PLUCK + TONEWHEEL render one-shots onto drum-kit pads (stabs, plucks) | S1 |
 | S4 | Keygroup export (golden-file method) | a keygroup `.xpm` off real hardware |
 | S5 | VELVET/TINES/TONEWHEEL/PLUCK key patches → keygroup instruments | S3 + S4 |

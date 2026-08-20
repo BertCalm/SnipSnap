@@ -30,7 +30,8 @@ class ThumpKitTest {
         assertEquals(DrumClass.SNARE, kit[1]?.second)
         assertEquals(DrumClass.HAT_CLOSED, kit[2]?.second)
         assertEquals(DrumClass.HAT_OPEN, kit[3]?.second)
-        assertTrue(kit[12] == null && kit[15] == null, "A13-A16 stay empty in the factory kit")
+        // S3: the top row is TINES metal - two engines, one kit.
+        assertTrue((12..15).all { kit[it] != null }, "A13-A16 carry the TINES row")
     }
 
     @Test
@@ -41,7 +42,7 @@ class ThumpKitTest {
         val kitDir = File(temp, "kit")
         val kit = KitAssembler.assemble("Thump Classic", ThumpKits.classic(), kitDir)
 
-        assertEquals(12, kit.pads.size)
+        assertEquals(16, kit.pads.size)
         assertEquals(kit, KitStore.load(kitDir))
 
         // Hats share the choke group, straight from the assembler.
@@ -52,7 +53,7 @@ class ThumpKitTest {
         assertTrue(!findings.blocked(), "factory synth kit must pass preflight: $findings")
 
         val result = KitExporter.exportProgramFolder(kit, kitDir, File(temp, "sd"))
-        assertEquals(12, result.samples.size)
+        assertEquals(16, result.samples.size)
         for (wav in result.samples) {
             val info = WavInfo.read(wav)
             assertEquals(44_100, info.sampleRate)
@@ -61,5 +62,6 @@ class ThumpKitTest {
         val xml = result.program.readText()
         assertTrue("<SampleName>A01_Kick_01</SampleName>" in xml)
         assertTrue("<SampleName>A12_Snare_02</SampleName>" in xml)
+        assertTrue("<SampleName>A16_Tonal_02</SampleName>" in xml, "the TINES bell exports on A16")
     }
 }

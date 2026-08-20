@@ -14,9 +14,13 @@ object ThumpKits {
     private fun slot(voice: ThumpVoice, drumClass: DrumClass, vararg macros: Pair<String, Float>) =
         Thump.render(voice, macros.toMap()) to drumClass
 
+    private fun tines(voice: TinesVoice, drumClass: DrumClass, vararg macros: Pair<String, Float>) =
+        Tines.render(voice, macros.toMap()) to drumClass
+
     /**
-     * The factory default: a tight, punchy analog-style kit across 12 pads.
-     * Index i lands on pad i+1; nulls are empty pads.
+     * The factory default: a tight, punchy analog-style kit on the first 12
+     * pads, TINES metal on the top row — one kit from two engines, which is
+     * the S3 promise. Index i lands on pad i+1.
      */
     fun classic(): List<Pair<Snip, DrumClass>?> = listOf(
         slot(ThumpVoice.KICK, DrumClass.KICK),                                     // A01
@@ -31,6 +35,9 @@ object ThumpKits {
         slot(ThumpVoice.TOM, DrumClass.TOM, "TUNE" to 0.5f),                       // A10
         slot(ThumpVoice.TOM, DrumClass.TOM, "TUNE" to 0.8f),                       // A11
         slot(ThumpVoice.SNARE, DrumClass.SNARE, "SNAP" to 0.85f, "TONE" to 0.8f, "DECAY" to 0.25f), // A12
-        null, null, null, null,                                                    // A13-A16
+        tines(TinesVoice.ZAP, DrumClass.PERC),                                     // A13
+        tines(TinesVoice.BLOCK, DrumClass.PERC),                                   // A14
+        tines(TinesVoice.CHIME, DrumClass.TONAL),                                  // A15
+        tines(TinesVoice.BELL, DrumClass.TONAL, "DECAY" to 0.7f),                  // A16
     )
 }

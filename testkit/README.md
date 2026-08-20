@@ -37,10 +37,12 @@ A03/A04). Things to confirm:
 
 ### SnipSnap Thump Kit — do synthesized kits sound right?
 
-Twelve THUMP-rendered pads (analog-style kick/snare/hats/clap/toms/cowbell/
-rim) on the conventional layout, hats sharing choke group 1. Regenerate with
-`./gradlew :synth:generateThumpKit`. Things to confirm: it loads, it slaps,
-and A03 still chokes A04.
+Sixteen synthesized pads: THUMP analog-style drums (kick/snare/hats/clap/
+toms/cowbell/rim) on the first twelve, TINES FM metal (zap A13, block A14,
+chime A15, bell A16) on the top row — two engines, one kit. Hats share choke
+group 1. Regenerate with `./gradlew :synth:generateThumpKit`. Things to
+confirm: it loads, it slaps, A03 still chokes A04, and the top row rings
+clean.
 
 ## Reporting back
 
