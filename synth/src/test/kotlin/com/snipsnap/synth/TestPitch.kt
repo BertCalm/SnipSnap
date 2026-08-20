@@ -20,7 +20,7 @@ internal object TestPitch {
         require(n > 1200) { "window too short for pitch estimate" }
 
         val minLag = snip.sampleRate / 1200  // 1.2 kHz ceiling
-        val maxLag = snip.sampleRate / 60    // 60 Hz floor
+        val maxLag = snip.sampleRate / 40    // 40 Hz floor - VELVET's sub octave reaches 55 Hz
 
         var energy = 0.0
         for (i in from until to) energy += snip.samples[i].toDouble() * snip.samples[i]

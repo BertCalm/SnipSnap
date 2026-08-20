@@ -112,7 +112,13 @@ object Classifier {
 
         // A clap is several bursts in quick succession, which is what separates
         // it from a snare — the spectra are too similar to split reliably.
-        if (attackBurstCount(snip) >= CLAP_MIN_BURSTS) {
+        // The flatness gate is load-bearing: a low tonal stab's own waveform
+        // dips between 64-frame hops just like clap impacts do, and every
+        // synth bass stab classified CLAP until noisiness was required too.
+        // A clap is *noise* in bursts (flatness ≈ 0.75); a stab is harmonic
+        // (≤ 0.15). A flam of two tonal hits now falls through to PERC,
+        // which is the better shelf for it anyway.
+        if (features.flatness > CLAP_MIN_FLATNESS && attackBurstCount(snip) >= CLAP_MIN_BURSTS) {
             return Classification(DrumClass.CLAP, confidence = 0.7f, features = features)
         }
 
@@ -128,6 +134,7 @@ object Classifier {
     }
 
     private const val CLAP_MIN_BURSTS = 3
+    private const val CLAP_MIN_FLATNESS = 0.35f
     private const val BURST_WINDOW_SECONDS = 0.08f
     private const val BURST_HOP = 64
     private const val BURST_THRESHOLD = 0.4f

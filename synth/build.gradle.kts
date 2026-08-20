@@ -53,3 +53,13 @@ tasks.register<JavaExec>("generateMelodicKit") {
     workingDir = projectDir
     args("${rootDir}/testkit")
 }
+
+/** Render the chip acceptance kit into testkit/. See ChipKitGenerator. */
+tasks.register<JavaExec>("generateChipKit") {
+    group = "distribution"
+    description = "Render the VELVET/CRUNCH chip acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChipKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}

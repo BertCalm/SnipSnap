@@ -188,6 +188,7 @@ What follows from it:
 | S2.5 | **shipped** — the FX rack: SQUASH (punch), ECHO (tape delay), SPRING (Schroeder reverb), REVERSE; `FxChain` fixes the order (reverse→squash→crunch→echo→spring), owns a total tail budget, serializes per-pad JSON | S2 |
 | S3 | **shipped** — TINES percussion voices (BELL/CHIME/BLOCK/ZAP/TOY, 2-op FM, snapped RATIO) fill A13-A16 of the factory kit | S1 |
 | S3.5 | **shipped** — PLUCK (Karplus-Strong, 4 body voices) + TONEWHEEL (8 drawbars + PERC/WARBLE/DIRT, 3 registrations) render one-shots; TUNE snaps to semitones; `SynthKits.melodic()` is a playable pentatonic kit | S1 |
+| S3.6 | **shipped** — VELVET one-shot stabs (BASS/BRASS/SQUELCH/CHIP: naive saw/pulse stack + sub, resonant SVF with envelope sweep, SHAPE/FAT/CUTOFF/SQUEEZE/DECAY) — and the chip-tune bonus is real: `SynthKits.chip()` runs VELVET squares and THUMP/TINES drums through one CRUNCH converter | S1 + S2 |
 | S4 | Keygroup export (golden-file method) | a keygroup `.xpm` off real hardware |
 | S5 | VELVET/TINES/TONEWHEEL/PLUCK key patches → keygroup instruments | S3 + S4 |
 

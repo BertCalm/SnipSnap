@@ -43,6 +43,25 @@ class SynthKitTest {
     }
 
     @Test
+    fun `the chip kit is sixteen crunched pads that keep their identities`() {
+        val kit = SynthKits.chip()
+        assertEquals(16, kit.size)
+        assertTrue(kit.all { it != null }, "no empty pads in the chip kit")
+        // The whole point of the kit: the converter grunge is character,
+        // not identity - the drums still classify as themselves.
+        assertEquals(DrumClass.KICK, com.snipsnap.audio.Classifier.classify(kit[0]!!.first).drumClass)
+        assertEquals(DrumClass.SNARE, com.snipsnap.audio.Classifier.classify(kit[1]!!.first).drumClass)
+        // And the chip notes ascend like the melodic kit's plucks do.
+        val pitches = (6 until 16).map { TestPitch.estimate(kit[it]!!.first, fromSec = 0.03f, windowSec = 0.15f) }
+        for (i in 1 until pitches.size) {
+            assertTrue(
+                pitches[i] > pitches[i - 1] * 1.02f,
+                "chip pad ${i + 7} (${pitches[i]} Hz) should sit above pad ${i + 6} (${pitches[i - 1]} Hz)",
+            )
+        }
+    }
+
+    @Test
     fun `melodic kit to sd card, end to end`() {
         val kitDir = File(temp, "kit")
         val kit = KitAssembler.assemble("Synth Melodic", SynthKits.melodic(), kitDir)

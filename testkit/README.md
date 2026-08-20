@@ -54,6 +54,14 @@ work exists. Regenerate with `./gradlew :synth:generateMelodicKit`. Things to
 confirm: it loads, runs feel musical (not just triggered), and no note has a
 click or an early cutoff.
 
+### SnipSnap Chip Kit — the fun one
+
+Crunched drums (kick/snare/hats plus the TOY game-over hit and the ZAP
+laser) on A01–A06, a VELVET square-wave pentatonic from A07 up, every pad
+through the same ~9-bit virtual converter. Regenerate with
+`./gradlew :synth:generateChipKit`. It answers nothing the other kits don't
+— it exists because it's fun, which is also a requirement.
+
 ## Reporting back
 
 Three facts close out the format work: (1) loads or not, (2) beep count on

@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 308 tests across six modules
+./gradlew test    # 319 tests across six modules
 ```
 
 ### `:audio`
@@ -129,6 +129,15 @@ WARBLE, DIRT. Both snap TUNE to semitones, so pads get notes;
 `SynthKits.melodic()` renders two octaves of A-minor-pentatonic plucks with
 a row of organ stabs — the keys-on-pads bet, playable before any keygroup
 work exists.
+
+VELVET closes the engine lineup: subtractive, the playability king — a naive
+saw/pulse unison pair over a sub, into a resonant SVF swept by its own
+envelope. SHAPE walks saw → square → PWM on one knob; SQUEEZE is resonance
+and envelope amount together, so the top of the knob is instant acid. Four
+stab voices (bass, brass, squelch, chip), TUNE snapped to semitones. And the
+roadmap's free bonus is cashed: `SynthKits.chip()` renders VELVET squares
+and THUMP/TINES drums through one CRUNCH converter — the chip kit, maximum
+kitsch, zero new DSP.
 
 Effects are the same trick as CRUNCH, generalized: pads are one-shots
 rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the
