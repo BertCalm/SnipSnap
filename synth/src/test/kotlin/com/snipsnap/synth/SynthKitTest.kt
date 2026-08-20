@@ -25,7 +25,7 @@ class SynthKitTest {
     fun `the melodic kit is sixteen tonal pads`() {
         val kit = SynthKits.melodic()
         assertEquals(16, kit.size)
-        assertTrue(kit.all { it != null && it.second == DrumClass.TONAL }, "every pad is a note")
+        assertTrue(kit.all { it != null && it.drumClass == DrumClass.TONAL }, "every pad is a note")
     }
 
     @Test
@@ -33,7 +33,7 @@ class SynthKitTest {
         // Root bottom-left, ascending - the SCALE layout convention, measured
         // off the actual renders by autocorrelation.
         val kit = SynthKits.melodic()
-        val pitches = (0 until 12).map { TestPitch.estimate(kit[it]!!.first) }
+        val pitches = (0 until 12).map { TestPitch.estimate(kit[it]!!.snip) }
         for (i in 1 until 12) {
             assertTrue(
                 pitches[i] > pitches[i - 1] * 1.02f,
@@ -49,10 +49,10 @@ class SynthKitTest {
         assertTrue(kit.all { it != null }, "no empty pads in the chip kit")
         // The whole point of the kit: the converter grunge is character,
         // not identity - the drums still classify as themselves.
-        assertEquals(DrumClass.KICK, com.snipsnap.audio.Classifier.classify(kit[0]!!.first).drumClass)
-        assertEquals(DrumClass.SNARE, com.snipsnap.audio.Classifier.classify(kit[1]!!.first).drumClass)
+        assertEquals(DrumClass.KICK, com.snipsnap.audio.Classifier.classify(kit[0]!!.snip).drumClass)
+        assertEquals(DrumClass.SNARE, com.snipsnap.audio.Classifier.classify(kit[1]!!.snip).drumClass)
         // And the chip notes ascend like the melodic kit's plucks do.
-        val pitches = (6 until 16).map { TestPitch.estimate(kit[it]!!.first, fromSec = 0.03f, windowSec = 0.15f) }
+        val pitches = (6 until 16).map { TestPitch.estimate(kit[it]!!.snip, fromSec = 0.03f, windowSec = 0.15f) }
         for (i in 1 until pitches.size) {
             assertTrue(
                 pitches[i] > pitches[i - 1] * 1.02f,
@@ -64,7 +64,7 @@ class SynthKitTest {
     @Test
     fun `melodic kit to sd card, end to end`() {
         val kitDir = File(temp, "kit")
-        val kit = KitAssembler.assemble("Synth Melodic", SynthKits.melodic(), kitDir)
+        val kit = KitAssembler.assembleArranged("Synth Melodic", SynthKits.melodic(), kitDir)
 
         assertEquals(16, kit.pads.size)
         val findings = Preflight.check(kit, kitDir)

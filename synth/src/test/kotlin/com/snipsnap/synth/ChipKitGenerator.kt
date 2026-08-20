@@ -21,7 +21,7 @@ object ChipKitGenerator {
         val work = File(root, ".chip-work")
         work.deleteRecursively()
 
-        val kit = KitAssembler.assemble("SnipSnap Chip Kit", SynthKits.chip(), work)
+        val kit = KitAssembler.assembleArranged("SnipSnap Chip Kit", SynthKits.chip(), work)
         val result = KitExporter.exportProgramFolder(kit, work, root, overwrite = true)
         work.deleteRecursively()
 

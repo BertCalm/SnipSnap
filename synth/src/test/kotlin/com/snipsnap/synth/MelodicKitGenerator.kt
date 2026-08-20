@@ -22,7 +22,7 @@ object MelodicKitGenerator {
         val work = File(root, ".melodic-work")
         work.deleteRecursively()
 
-        val kit = KitAssembler.assemble("SnipSnap Melodic Kit", SynthKits.melodic(), work)
+        val kit = KitAssembler.assembleArranged("SnipSnap Melodic Kit", SynthKits.melodic(), work)
         val result = KitExporter.exportProgramFolder(kit, work, root, overwrite = true)
         work.deleteRecursively()
 

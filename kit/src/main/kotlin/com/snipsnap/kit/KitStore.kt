@@ -66,6 +66,7 @@ object KitStore {
                             },
                         )
                     }
+                    p.recipe?.let { entries["recipe"] = it }
                     JsonValue.Obj(entries)
                 },
             ),
@@ -99,6 +100,10 @@ object KitStore {
                 source = (p["source"] as? JsonValue.Obj)?.entries
                     ?.mapValues { (_, v) -> v.str() }
                     ?: emptyMap(),
+                // Verbatim, no interpretation: a recipe written by a newer
+                // build (or another engine) must survive a load-save cycle
+                // here untouched.
+                recipe = p["recipe"] as? JsonValue.Obj,
             )
         }
         return Kit(name, pads)

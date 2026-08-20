@@ -26,10 +26,10 @@ class ThumpKitTest {
     fun `the factory kit lands on the conventional layout`() {
         val kit = ThumpKits.classic()
         assertEquals(16, kit.size)
-        assertEquals(DrumClass.KICK, kit[0]?.second)
-        assertEquals(DrumClass.SNARE, kit[1]?.second)
-        assertEquals(DrumClass.HAT_CLOSED, kit[2]?.second)
-        assertEquals(DrumClass.HAT_OPEN, kit[3]?.second)
+        assertEquals(DrumClass.KICK, kit[0]?.drumClass)
+        assertEquals(DrumClass.SNARE, kit[1]?.drumClass)
+        assertEquals(DrumClass.HAT_CLOSED, kit[2]?.drumClass)
+        assertEquals(DrumClass.HAT_OPEN, kit[3]?.drumClass)
         // S3: the top row is TINES metal - two engines, one kit.
         assertTrue((12..15).all { kit[it] != null }, "A13-A16 carry the TINES row")
     }
@@ -40,7 +40,7 @@ class ThumpKitTest {
         // pipeline assembles, preflights and exports it as a loadable MPC
         // program - synthesis and capture sharing one road.
         val kitDir = File(temp, "kit")
-        val kit = KitAssembler.assemble("Thump Classic", ThumpKits.classic(), kitDir)
+        val kit = KitAssembler.assembleArranged("Thump Classic", ThumpKits.classic(), kitDir)
 
         assertEquals(16, kit.pads.size)
         assertEquals(kit, KitStore.load(kitDir))

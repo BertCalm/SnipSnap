@@ -20,7 +20,7 @@ object ThumpKitGenerator {
         val work = File(root, ".thump-work")
         work.deleteRecursively()
 
-        val kit = KitAssembler.assemble("SnipSnap Thump Kit", ThumpKits.classic(), work)
+        val kit = KitAssembler.assembleArranged("SnipSnap Thump Kit", ThumpKits.classic(), work)
         val result = KitExporter.exportProgramFolder(kit, work, root, overwrite = true)
         work.deleteRecursively()
 

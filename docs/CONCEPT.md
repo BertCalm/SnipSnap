@@ -132,7 +132,7 @@ its export format are nearly the same thing:
 
 ```
 <app files>/kits/<kit-id>/
-├── kit.json          ← names, colours, per-pad params, source provenance
+├── kit.json          ← names, colours, per-pad params, provenance, recipes
 ├── pad_00.wav        ← already 24-bit / 44.1 kHz, already cleaned
 ├── pad_01.wav
 └── ...

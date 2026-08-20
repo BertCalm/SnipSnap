@@ -84,7 +84,7 @@ data class FxChain(
         return Snip(out, snip.channels, snip.sampleRate)
     }
 
-    fun toJsonText(): String {
+    fun toJsonValue(): JsonValue.Obj {
         val obj = LinkedHashMap<String, JsonValue>()
         obj["fx"] = JsonValue.Num(VERSION.toDouble())
         obj["reverse"] = JsonValue.Bool(reverse)
@@ -95,8 +95,10 @@ data class FxChain(
                 )
             }
         }
-        return Json.write(JsonValue.Obj(obj))
+        return JsonValue.Obj(obj)
     }
+
+    fun toJsonText(): String = Json.write(toJsonValue())
 
     companion object {
         const val VERSION = 1
@@ -104,8 +106,8 @@ data class FxChain(
         /** Most tail the whole rack may add over its input, seconds. */
         const val MAX_CHAIN_TAIL_SECONDS = 1.0f
 
-        fun fromJsonText(text: String): FxChain {
-            val obj = Json.parse(text).obj()
+        fun fromJsonValue(value: JsonValue): FxChain {
+            val obj = value.obj()
             val version = obj["fx"]?.int() ?: throw JsonException("not an fx chain: no fx version")
             if (version != VERSION) throw JsonException("unsupported fx version $version")
             fun section(name: String): Map<String, Float>? =
@@ -118,5 +120,7 @@ data class FxChain(
                 spring = section("spring"),
             )
         }
+
+        fun fromJsonText(text: String): FxChain = fromJsonValue(Json.parse(text))
     }
 }

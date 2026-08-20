@@ -54,6 +54,37 @@ class KitStoreTest {
     }
 
     @Test
+    fun `a pad recipe round-trips verbatim, even one this build cannot interpret`() {
+        // The recipe field is opaque here on purpose: the kit layer stores
+        // it, `:synth` reads it. A recipe from a future engine must survive
+        // a load-save cycle byte-identical.
+        val recipe = com.snipsnap.json.Json.parse(
+            """{"recipe":1,"patch":{"engine":"THEREMIN","version":9,"macros":{"SPOOKY":0.8}},"fx":{"fx":1}}""",
+        ) as com.snipsnap.json.JsonValue.Obj
+        val kit = Kit(
+            "Recipes",
+            listOf(KitPad(slot = 1, sampleFile = "A01_Kick_01.wav", recipe = recipe)),
+        )
+        val dir = File(temp, "recipes")
+        KitStore.save(kit, dir)
+        val loaded = KitStore.load(dir)
+        assertEquals(recipe, loaded.pad(1)?.recipe)
+        val first = File(dir, KitStore.FILE_NAME).readText()
+        KitStore.save(loaded, dir)
+        assertEquals(first, File(dir, KitStore.FILE_NAME).readText())
+    }
+
+    @Test
+    fun `a kit saved before recipes existed still loads`() {
+        val dir = File(temp, "old").apply { mkdirs() }
+        File(dir, KitStore.FILE_NAME).writeText(
+            """{"version":1,"name":"Old Kit","pads":[{"slot":1,"sample":"A01_Kick_01.wav"}]}""",
+        )
+        val kit = KitStore.load(dir)
+        assertEquals(null, kit.pad(1)?.recipe)
+    }
+
+    @Test
     fun `loading a folder without a sidecar fails clearly`() {
         val dir = File(temp, "empty").apply { mkdirs() }
         assertFailsWith<IOException> { KitStore.load(dir) }

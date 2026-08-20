@@ -173,7 +173,11 @@ What follows from it:
   THUMP presets.
 - Patches are JSON (via `:json`), stored per-pad in `kit.json` (a synth pad
   keeps its recipe next to its rendered WAV, so it stays editable) and as
-  shareable preset files.
+  shareable preset files. **Shipped**: `PadRecipe` (a [`Patch`] from any
+  engine + an `FxChain`) serializes into `KitPad.recipe` — opaque to `:kit`,
+  typed in `:synth` — and the factory kits carry it on every pad. The test
+  is the promise: a kit folder regenerates its own WAVs bit-for-bit from
+  nothing but `kit.json`.
 - UI is a TapeOS control panel: sunken LCD scope showing the rendered
   waveform, chunky sliders, preset list in a sunken listbox. Peak-1996
   plausible — parameter synths in software are exactly the ReBirth-era move.

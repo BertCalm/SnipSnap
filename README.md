@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 319 tests across six modules
+./gradlew test    # 327 tests across six modules
 ```
 
 ### `:audio`
@@ -76,6 +76,11 @@ The product pipeline: a kit **is** a folder (WAVs + a `kit.json` sidecar), and
 this module owns that folder's whole life.
 
 - **`Kit` / `KitPad`** — the model; `kit.json` round-trips it byte-stable.
+  Each pad can carry a **recipe** — an opaque JSON block this module stores
+  verbatim and `:synth` reads as a typed `PadRecipe` (engine patch + FX
+  chain). A synth pad regenerates from scratch; a captured pad re-treats its
+  raw audio. Tested promise: a kit folder rebuilds its own WAVs bit-for-bit
+  from nothing but the sidecar.
 - **`KitAssembler`** — arranged snips in, kit folder out: the last step of the
   auto-chop pipeline.
 - **`Preflight`** — the export wizard's checklist as real checks. WARNs export;

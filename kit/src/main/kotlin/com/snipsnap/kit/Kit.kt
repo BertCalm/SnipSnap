@@ -1,6 +1,7 @@
 package com.snipsnap.kit
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.json.JsonValue
 import com.snipsnap.xpm.DrumProgram
 import com.snipsnap.xpm.Pad
 
@@ -27,6 +28,14 @@ data class KitPad(
     val oneShot: Boolean = true,
     /** Provenance, freeform: where the snip came from ("app", "title", "at"). */
     val source: Map<String, String> = emptyMap(),
+    /**
+     * The pad's recipe — how to regenerate or re-treat its WAV — as an
+     * opaque JSON object round-tripped verbatim. The kit layer stores it
+     * next to the sample so the sound stays editable forever; *reading* it
+     * (synth patch, FX chain) is the `:synth` layer's business, which is
+     * what keeps this module ignorant of engines.
+     */
+    val recipe: JsonValue.Obj? = null,
 ) {
     init {
         require(slot in 1..128) { "slot out of range: $slot" }

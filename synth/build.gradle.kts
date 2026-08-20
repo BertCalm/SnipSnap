@@ -9,9 +9,11 @@ repositories {
 dependencies {
     implementation(project(":audio"))
     implementation(project(":json"))
+    // The factory kit builders hand ArrangedPads (audio + class + recipe)
+    // straight to the kit pipeline.
+    implementation(project(":kit"))
     testImplementation(kotlin("test"))
     // Integration tests drive a rendered kit through the real export pipeline.
-    testImplementation(project(":kit"))
     testImplementation(project(":xpm"))
 }
 
