@@ -11,12 +11,16 @@ import java.io.File
 /**
  * One slot of input for [KitAssembler.assemble]: the rendered audio, the
  * class the kit layer names and colours it by, and optionally the recipe
- * that regenerates it (opaque here; written by `:synth`).
+ * that regenerates it (opaque here; written by `:synth`), a mixer level
+ * (set by [Balance]), and tuning offsets (set by [InKey]).
  */
 data class ArrangedPad(
     val snip: Snip,
     val drumClass: DrumClass,
     val recipe: JsonValue.Obj? = null,
+    val level: Float? = null,
+    val tuneCoarse: Int = 0,
+    val tuneFine: Int = 0,
 )
 
 /**
@@ -67,6 +71,9 @@ object KitAssembler {
                 displayName = "%s %02d".format(className, n),
                 drumClass = pad.drumClass,
                 colorHex = AutoPlace.colorFor(pad.drumClass),
+                level = pad.level ?: 0.707946f,
+                tuneCoarse = pad.tuneCoarse,
+                tuneFine = pad.tuneFine,
                 muteGroup = AutoPlace.muteGroupFor(pad.drumClass),
                 recipe = pad.recipe,
             )
