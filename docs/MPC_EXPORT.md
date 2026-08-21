@@ -52,10 +52,20 @@ SnipSnap Kit 01/
 The `.xpm` references samples by name; the MPC resolves them from the same
 folder. Keep them adjacent and it just works.
 
-## Tier 2 — expansion folder (v2)
+## Tier 2 — expansion folder (implemented, XML shape unverified)
 
 Makes the kit browsable in the MPC's Expansion tab. Copy the whole instrument
-folder into an `Expansions` folder on the drive.
+folder into an `Expansions` folder on the drive. Implemented as
+`ExpansionWriter` in `:kit`; `./gradlew :synth:generateExpansionPack` builds
+the acceptance pack under `testkit/Expansions/`.
+
+> **Unverified:** the folder layout and field list below are
+> community-documented, but no real `Expansion.xml` has been diffed against
+> ours — every site that posts one is unreachable from the build
+> environment. The writer emits its elements from one table, so a single
+> real file (drop it in `reference/`, see `reference/README.md`) corrects
+> it in minutes. The hardware check: if the acceptance pack tiles up in the
+> Expansion browser, the shape is right.
 
 ```
 Expansions/

@@ -56,6 +56,16 @@ tasks.register<JavaExec>("generateMelodicKit") {
     args("${rootDir}/testkit")
 }
 
+/** Render the acceptance expansion into testkit/. See ExpansionPackGenerator. */
+tasks.register<JavaExec>("generateExpansionPack") {
+    group = "distribution"
+    description = "Render the browsable acceptance expansion under testkit/Expansions/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ExpansionPackGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 /** Render the chip acceptance kit into testkit/. See ChipKitGenerator. */
 tasks.register<JavaExec>("generateChipKit") {
     group = "distribution"

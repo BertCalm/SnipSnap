@@ -66,6 +66,13 @@ A second export of the *same* kit with one single parameter changed (say, pad
 A05's tune) — diffing two near-identical files is the fastest way to locate a
 field with certainty.
 
+An **`Expansion.xml` from any real pack** — Akai factory content or anything
+purchased/downloaded, straight off the SD card's `Expansions/` folder. Our
+`ExpansionWriter` emits the community-documented shape but no real file has
+been diffed against it; one example settles the element names for good. Drop
+it in `reference/golden/expansion/` (the artwork file's exact name is useful
+too).
+
 ## The other half: does our output load?
 
 Separately from harvesting references, the writer's output needs to survive

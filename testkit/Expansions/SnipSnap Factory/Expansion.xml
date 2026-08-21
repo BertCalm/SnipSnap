@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Expansion>
+  <Title>SnipSnap Factory</Title>
+  <Manufacturer>SnipSnap</Manufacturer>
+  <Version>1</Version>
+  <Identifier>app.snipsnap.factory</Identifier>
+  <Description>Sixteen synthesized pads from the THUMP and TINES engines.</Description>
+  <Img>SnipSnapFactory.png</Img>
+</Expansion>

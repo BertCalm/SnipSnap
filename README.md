@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 327 tests across six modules
+./gradlew test    # 332 tests across six modules
 ```
 
 ### `:audio`
@@ -88,6 +88,12 @@ this module owns that folder's whole life.
   writes to someone's SD card can do.
 - **`KitExporter`** — kit folder → MPC program folder (`.xpm` + WAVs), names
   sanitized consistently between the folder and the program.
+- **`ExpansionWriter`** — the tier-2 export: the same kit wrapped as a
+  browsable expansion (`Expansions/<Title>/` with `Expansion.xml`, a
+  1000×1000 tile, `Programs/`, `Samples/`) so it shows up in the MPC's
+  Expansion tab. The XML's element names are community-documented and
+  table-driven pending one real file; see
+  [`docs/MPC_EXPORT.md`](docs/MPC_EXPORT.md#tier-2--expansion-folder-implemented-xml-shape-unverified).
 
 ```kotlin
 val kit = KitAssembler.assemble("Break Kit", arranged, kitDir)

@@ -62,6 +62,23 @@ through the same ~9-bit virtual converter. Regenerate with
 `./gradlew :synth:generateChipKit`. It answers nothing the other kits don't
 — it exists because it's fun, which is also a requirement.
 
+### Expansions/SnipSnap Factory — does the pack tile up?
+
+The tier-2 export: the factory kit wrapped as a browsable expansion with a
+TapeOS tile (`SnipSnap_Expansion.zip`, or the `Expansions/` folder as-is).
+Copy `Expansions/` to the card root, merging with any existing `Expansions`
+folder, then look at the MPC's Expansion browser. Regenerate with
+`./gradlew :synth:generateExpansionPack`. Things to confirm:
+
+- the pack **appears in the Expansion tab with its green tile** — this is
+  the acceptance test for `Expansion.xml`, whose exact element names are
+  community-documented but unverified (see `docs/MPC_EXPORT.md`);
+- the program inside loads and plays.
+
+If the browser ignores it, nothing is lost — the program still loads from
+the file browser, and one real `Expansion.xml` (see `../reference/README.md`)
+fixes the writer in minutes.
+
 ## Reporting back
 
 Three facts close out the format work: (1) loads or not, (2) beep count on

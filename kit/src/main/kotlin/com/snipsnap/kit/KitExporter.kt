@@ -47,6 +47,25 @@ object KitExporter {
         dest.mkdirs()
         if (!dest.isDirectory) throw IOException("could not create $dest")
 
+        val (program, written) = writeProgramAndSamples(kit, kitDir, programDir = dest, samplesDir = dest)
+        return ExportResult(dest, program, written, findings)
+    }
+
+    /**
+     * The emission both export shapes share: copy each pad's WAV (stem
+     * sanitized) into [samplesDir], then write the `.xpm` referencing those
+     * stems into [programDir]. Tier 1 passes the same directory twice; the
+     * expansion layout separates them.
+     */
+    internal fun writeProgramAndSamples(
+        kit: Kit,
+        kitDir: File,
+        programDir: File,
+        samplesDir: File,
+    ): Pair<File, List<File>> {
+        programDir.mkdirs()
+        samplesDir.mkdirs()
+
         val written = mutableListOf<File>()
         val stemBySlot = HashMap<Int, String>()
         val frameCountBySlot = HashMap<Int, Long>()
@@ -56,7 +75,7 @@ object KitExporter {
             val stem = Names.sanitizeStem(p.sampleStem)
             check(used.add(stem.lowercase())) { "preflight let a name collision through: $stem" }
             val src = File(kitDir, p.sampleFile)
-            val dst = File(dest, "$stem.wav")
+            val dst = File(samplesDir, "$stem.wav")
             src.copyTo(dst, overwrite = true)
             stemBySlot[p.slot] = stem
             frameCountBySlot[p.slot] = WavInfo.read(dst).frameCount
@@ -76,8 +95,7 @@ object KitExporter {
                 oneShot = p.oneShot,
             )
         }
-        val program = XpmWriter().writeTo(dest, DrumProgram(kit.name, slots.toList()))
-
-        return ExportResult(dest, program, written, findings)
+        val program = XpmWriter().writeTo(programDir, DrumProgram(kit.name, slots.toList()))
+        return program to written
     }
 }
