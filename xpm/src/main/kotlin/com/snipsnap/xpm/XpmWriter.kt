@@ -205,9 +205,15 @@ class XpmWriter(
      * the empty three still have to be present.
      */
     private fun appendLayers(sb: StringBuilder, pad: Pad?) {
+        // Either the explicit velocity zones, or the classic single-sample
+        // shape: pad on layer 1 across the whole velocity range. The golden
+        // file pins the latter; zones only appear when a pad asks for them.
+        val zones: List<VelocityLayer?> = pad?.velocityLayers
+            ?: listOf(pad?.let { VelocityLayer(it.sampleName, it.frameCount, 0, 127) })
+
         sb.append("        <Layers>\n")
         for (layer in 1..4) {
-            val sample = if (layer == 1) pad else null
+            val sample = zones.getOrNull(layer - 1)
             sb.append("          <Layer number=\"").append(layer).append("\">\n")
             sb.append("            <Active>True</Active>\n")
             sb.append("            <Volume>").append(1f.f()).append("</Volume>\n")
@@ -215,8 +221,8 @@ class XpmWriter(
             sb.append("            <Pitch>").append(0f.f()).append("</Pitch>\n")
             sb.append("            <TuneCoarse>0</TuneCoarse>\n")
             sb.append("            <TuneFine>0</TuneFine>\n")
-            sb.append("            <VelStart>0</VelStart>\n")
-            sb.append("            <VelEnd>127</VelEnd>\n")
+            sb.append("            <VelStart>").append(sample?.velStart ?: 0).append("</VelStart>\n")
+            sb.append("            <VelEnd>").append(sample?.velEnd ?: 127).append("</VelEnd>\n")
             sb.append("            <SampleStart>0</SampleStart>\n")
             sb.append("            <SampleEnd>0</SampleEnd>\n")
             sb.append("            <Loop>False</Loop>\n")

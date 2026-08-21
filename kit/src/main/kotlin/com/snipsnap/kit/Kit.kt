@@ -6,6 +6,26 @@ import com.snipsnap.xpm.DrumProgram
 import com.snipsnap.xpm.Pad
 
 /**
+ * One velocity zone of a pad: which WAV answers which MIDI velocities.
+ * Zones ascend soft → hard without overlap; the hardware does the rest.
+ */
+data class KitLayer(
+    val sampleFile: String,
+    val velStart: Int,
+    val velEnd: Int,
+) {
+    init {
+        require(sampleFile.isNotBlank()) { "layer sampleFile must not be blank" }
+        require('/' !in sampleFile && '\\' !in sampleFile) { "layer sampleFile must be a bare filename" }
+        require(velStart in 0..127 && velEnd in 0..127 && velStart <= velEnd) {
+            "bad velocity window $velStart..$velEnd"
+        }
+    }
+
+    val sampleStem: String get() = sampleFile.substringBeforeLast('.')
+}
+
+/**
  * One pad's worth of a kit.
  *
  * [sampleFile] is a bare filename resolved against the kit's own folder — a
@@ -36,6 +56,12 @@ data class KitPad(
      * what keeps this module ignorant of engines.
      */
     val recipe: JsonValue.Obj? = null,
+    /**
+     * Velocity zones, soft first, when the pad is velocity-layered. Empty =
+     * the classic single-sample pad. When set, [sampleFile] is the loudest
+     * zone's file (so single-sample consumers still hear the right thing).
+     */
+    val velocityLayers: List<KitLayer> = emptyList(),
 ) {
     init {
         require(slot in 1..128) { "slot out of range: $slot" }
@@ -51,6 +77,17 @@ data class KitPad(
         require(muteGroup in 0..32) { "muteGroup out of range: $muteGroup" }
         colorHex?.let {
             require(Regex("^#[0-9a-fA-F]{6}$").matches(it)) { "colorHex must be #rrggbb: $it" }
+        }
+        if (velocityLayers.isNotEmpty()) {
+            require(velocityLayers.size in 1..4) { "a pad has 1..4 velocity layers" }
+            for (i in 1 until velocityLayers.size) {
+                require(velocityLayers[i].velStart > velocityLayers[i - 1].velEnd) {
+                    "velocity zones must ascend without overlap"
+                }
+            }
+            require(velocityLayers.last().sampleFile == sampleFile) {
+                "sampleFile must be the loudest zone's file when layered"
+            }
         }
     }
 

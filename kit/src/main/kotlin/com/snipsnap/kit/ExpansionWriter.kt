@@ -76,6 +76,14 @@ object ExpansionWriter {
         driveRoot: File,
         meta: ExpansionMeta,
         artworkPng: ByteArray? = null,
+        /**
+         * Preview audio for the pack browser, written as
+         * `[Previews]/<program>.wav`. The documented convention is an MP3
+         * with the program's name; a WAV is the honest best this pure-JVM
+         * layer can produce (MP3 encoding is the app layer's MediaCodec
+         * job), and the [Groove]-rendered demo makes a fine one.
+         */
+        preview: com.snipsnap.audio.Snip? = null,
         overwrite: Boolean = false,
     ): ExpansionResult {
         val findings = Preflight.check(kit, kitDir)
@@ -98,6 +106,13 @@ object ExpansionWriter {
             val f = File(dest, meta.artworkFileName)
             f.writeBytes(it)
             f
+        }
+
+        preview?.let {
+            val previews = File(dest, "[Previews]").apply { mkdirs() }
+            com.snipsnap.audio.WavWriter.write(
+                File(previews, program.name.removeSuffix(".xpm") + ".wav"), it,
+            )
         }
 
         val xml = File(dest, XML_NAME)

@@ -46,6 +46,7 @@ object ExpansionPackGenerator {
         val result = ExpansionWriter.write(
             kit, work, root, meta,
             artworkPng = tile(meta.title),
+            preview = Groove.render(ThumpKits.classic(), bpm = 92f, bars = 4, seed = 11),
             overwrite = true,
         )
         work.deleteRecursively()

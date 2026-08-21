@@ -2,6 +2,7 @@ package com.snipsnap.kit
 
 import com.snipsnap.xpm.DrumProgram
 import com.snipsnap.xpm.Pad
+import com.snipsnap.xpm.VelocityLayer
 import com.snipsnap.xpm.WavInfo
 import com.snipsnap.xpm.XpmWriter
 import java.io.File
@@ -69,17 +70,34 @@ object KitExporter {
         val written = mutableListOf<File>()
         val stemBySlot = HashMap<Int, String>()
         val frameCountBySlot = HashMap<Int, Long>()
+        val layersBySlot = HashMap<Int, List<VelocityLayer>>()
         val used = HashSet<String>()
 
-        for (p in kit.pads.sortedBy { it.slot }) {
-            val stem = Names.sanitizeStem(p.sampleStem)
+        fun copySample(file: String): Pair<String, Long> {
+            val stem = Names.sanitizeStem(file.substringBeforeLast('.'))
             check(used.add(stem.lowercase())) { "preflight let a name collision through: $stem" }
-            val src = File(kitDir, p.sampleFile)
             val dst = File(samplesDir, "$stem.wav")
-            src.copyTo(dst, overwrite = true)
-            stemBySlot[p.slot] = stem
-            frameCountBySlot[p.slot] = WavInfo.read(dst).frameCount
+            File(kitDir, file).copyTo(dst, overwrite = true)
             written += dst
+            return stem to WavInfo.read(dst).frameCount
+        }
+
+        for (p in kit.pads.sortedBy { it.slot }) {
+            if (p.velocityLayers.isEmpty()) {
+                val (stem, frames) = copySample(p.sampleFile)
+                stemBySlot[p.slot] = stem
+                frameCountBySlot[p.slot] = frames
+            } else {
+                // Every zone's WAV travels; the pad's headline sample fields
+                // point at the loudest zone so single-layer readers agree.
+                val zones = p.velocityLayers.map { l ->
+                    val (stem, frames) = copySample(l.sampleFile)
+                    VelocityLayer(stem, frames, l.velStart, l.velEnd)
+                }
+                layersBySlot[p.slot] = zones
+                stemBySlot[p.slot] = zones.last().sampleName
+                frameCountBySlot[p.slot] = zones.last().frameCount
+            }
         }
 
         val slots = arrayOfNulls<Pad>(kit.highestSlot)
@@ -93,6 +111,7 @@ object KitExporter {
                 tuneFine = p.tuneFine,
                 muteGroup = p.muteGroup,
                 oneShot = p.oneShot,
+                velocityLayers = layersBySlot[p.slot],
             )
         }
         val program = XpmWriter().writeTo(programDir, DrumProgram(kit.name, slots.toList()))

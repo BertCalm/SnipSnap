@@ -93,6 +93,25 @@ object Preflight {
                     p.slot,
                 )
             }
+
+            // Velocity zones ship their own WAVs; each must exist and claim
+            // a unique exported stem, same as any pad sample.
+            for (l in p.velocityLayers) {
+                if (l.sampleFile == p.sampleFile) continue
+                if (!File(kitDir, l.sampleFile).isFile) {
+                    out += Finding(Severity.FAIL, "missing layer file ${l.sampleFile}", p.slot)
+                    formatClean = false
+                    continue
+                }
+                val layerStem = Names.sanitizeStem(l.sampleStem)
+                stems.put(layerStem.lowercase(), p.slot)?.let { previous ->
+                    out += Finding(
+                        Severity.FAIL,
+                        "pads $previous and ${p.slot} collide on sample name \"$layerStem\"",
+                        p.slot,
+                    )
+                }
+            }
         }
 
         if (formatClean) {

@@ -1,6 +1,27 @@
 package com.snipsnap.xpm
 
 /**
+ * One velocity zone of a pad — the format gives every pad four layers, each
+ * with its own sample and velocity window, and this is how a phone-made kit
+ * gets soft hits that *sound* soft instead of just quiet.
+ */
+data class VelocityLayer(
+    val sampleName: String,
+    val frameCount: Long,
+    /** MIDI velocity window, 0..127 inclusive. */
+    val velStart: Int,
+    val velEnd: Int,
+) {
+    init {
+        require(sampleName.isNotBlank()) { "layer sampleName must not be blank" }
+        require(frameCount >= 0) { "layer frameCount must not be negative" }
+        require(velStart in 0..127 && velEnd in 0..127 && velStart <= velEnd) {
+            "bad velocity window $velStart..$velEnd"
+        }
+    }
+}
+
+/**
  * A single pad's worth of a drum program.
  *
  * [sampleName] is the WAV filename *without* extension — the MPC resolves it
@@ -22,6 +43,13 @@ data class Pad(
     val muteGroup: Int = 0,
     /** True = play the whole sample regardless of pad release. Right for drums. */
     val oneShot: Boolean = true,
+    /**
+     * Explicit velocity zones, soft first. Null = the single-sample pad
+     * (the default, and the shape the golden file pins): [sampleName] on
+     * layer 1 across the full 0..127. When set (1..4 zones), each zone
+     * becomes one `<Layer>` with its own sample and velocity window.
+     */
+    val velocityLayers: List<VelocityLayer>? = null,
 ) {
     init {
         require(sampleName.isNotBlank()) { "sampleName must not be blank" }
@@ -31,6 +59,15 @@ data class Pad(
         require(tuneCoarse in -36..36) { "tuneCoarse out of range: $tuneCoarse" }
         require(tuneFine in -100..100) { "tuneFine out of range: $tuneFine" }
         require(muteGroup in 0..32) { "muteGroup out of range: $muteGroup" }
+        velocityLayers?.let { layers ->
+            require(layers.size in 1..4) { "a pad has 1..4 layers, got ${layers.size}" }
+            for (i in 1 until layers.size) {
+                require(layers[i].velStart > layers[i - 1].velEnd) {
+                    "velocity zones must ascend without overlap: " +
+                        "${layers[i - 1].velStart}..${layers[i - 1].velEnd} then ${layers[i].velStart}..${layers[i].velEnd}"
+                }
+            }
+        }
     }
 }
 

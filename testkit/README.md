@@ -62,6 +62,25 @@ through the same ~9-bit virtual converter. Regenerate with
 `./gradlew :synth:generateChipKit`. It answers nothing the other kits don't
 — it exists because it's fun, which is also a requirement.
 
+### SnipSnap Velocity Kit — do ghost notes sound like ghost notes?
+
+The factory kit with three velocity zones per pad: soft and mid renders are
+darker (physics: a softer strike excites fewer high partials), the main
+sample on top. Regenerate with `./gradlew :synth:generateVelocityKit`.
+Things to confirm: quiet pad hits sound *soft*, not just quiet; full-force
+hits are the familiar factory sounds; nothing double-triggers at zone
+boundaries.
+
+### SnipSnap Shuffle Kit — banks A and B
+
+Bank A is a dice-rolled factory kit (every roll audited by the classifier,
+so the dice can't break it); bank B is the same sixteen pads re-treated
+through seeded FX — reversed, crushed, slapback, washed, punched.
+Regenerate with `./gradlew :synth:generateShuffleKit`. Things to confirm:
+**switch to bank B and check every pad plays its bank-A twin's treatment** —
+this is the first export to use pads 17–32, so it's also the bank-B
+note-map check.
+
 ### Expansions/SnipSnap Factory — does the pack tile up?
 
 The tier-2 export: the factory kit wrapped as a browsable expansion with a
@@ -73,7 +92,10 @@ folder, then look at the MPC's Expansion browser. Regenerate with
 - the pack **appears in the Expansion tab with its green tile** — this is
   the acceptance test for `Expansion.xml`, whose exact element names are
   community-documented but unverified (see `docs/MPC_EXPORT.md`);
-- the program inside loads and plays.
+- the program inside loads and plays;
+- `[Previews]` holds a rendered demo groove (WAV — the documented
+  convention is MP3, which is the app layer's encoder job; worth noting
+  whether the browser plays it, ignores it, or wants the MP3).
 
 If the browser ignores it, nothing is lost — the program still loads from
 the file browser, and one real `Expansion.xml` (see `../reference/README.md`)

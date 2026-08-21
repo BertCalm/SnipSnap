@@ -67,6 +67,19 @@ object KitStore {
                         )
                     }
                     p.recipe?.let { entries["recipe"] = it }
+                    if (p.velocityLayers.isNotEmpty()) {
+                        entries["layers"] = JsonValue.Arr(
+                            p.velocityLayers.map { l ->
+                                JsonValue.Obj(
+                                    linkedMapOf(
+                                        "sample" to JsonValue.Str(l.sampleFile),
+                                        "velStart" to JsonValue.Num(l.velStart.toDouble()),
+                                        "velEnd" to JsonValue.Num(l.velEnd.toDouble()),
+                                    ),
+                                )
+                            },
+                        )
+                    }
                     JsonValue.Obj(entries)
                 },
             ),
@@ -104,6 +117,14 @@ object KitStore {
                 // build (or another engine) must survive a load-save cycle
                 // here untouched.
                 recipe = p["recipe"] as? JsonValue.Obj,
+                velocityLayers = (p["layers"] as? JsonValue.Arr)?.items.orEmpty().map { layerJson ->
+                    val l = layerJson.obj()
+                    KitLayer(
+                        sampleFile = l["sample"]?.str() ?: throw JsonException("layer has no sample"),
+                        velStart = l["velStart"]?.int() ?: throw JsonException("layer has no velStart"),
+                        velEnd = l["velEnd"]?.int() ?: throw JsonException("layer has no velEnd"),
+                    )
+                },
             )
         }
         return Kit(name, pads)

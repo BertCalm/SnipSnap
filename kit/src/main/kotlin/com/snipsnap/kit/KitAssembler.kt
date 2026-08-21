@@ -21,7 +21,17 @@ data class ArrangedPad(
     val level: Float? = null,
     val tuneCoarse: Int = 0,
     val tuneFine: Int = 0,
-)
+    /**
+     * Softer renderings of the same hit, softest first, [snip] being the
+     * hardest. Up to three; each becomes a velocity zone under the main
+     * sample, so soft pad hits *sound* soft on the hardware.
+     */
+    val softVariants: List<Snip> = emptyList(),
+) {
+    init {
+        require(softVariants.size <= 3) { "at most 3 soft variants (4 zones total)" }
+    }
+}
 
 /**
  * Turns arranged snips into a kit folder — the last step of the auto-chop
@@ -65,6 +75,18 @@ object KitAssembler {
 
             WavWriter.write(File(dir, "$stem.wav"), pad.snip)
 
+            // Soft variants become velocity zones: the band 0..127 splits
+            // evenly, softest zone first, the main sample on top.
+            val layers = if (pad.softVariants.isEmpty()) emptyList() else buildList {
+                val zoneCount = pad.softVariants.size + 1
+                pad.softVariants.forEachIndexed { v, variant ->
+                    val file = "${stem}_v${v + 1}.wav"
+                    WavWriter.write(File(dir, file), variant)
+                    add(KitLayer(file, velStart = 128 * v / zoneCount, velEnd = 128 * (v + 1) / zoneCount - 1))
+                }
+                add(KitLayer("$stem.wav", velStart = 128 * pad.softVariants.size / zoneCount, velEnd = 127))
+            }
+
             pads += KitPad(
                 slot = slot,
                 sampleFile = "$stem.wav",
@@ -76,6 +98,7 @@ object KitAssembler {
                 tuneFine = pad.tuneFine,
                 muteGroup = AutoPlace.muteGroupFor(pad.drumClass),
                 recipe = pad.recipe,
+                velocityLayers = layers,
             )
         }
 

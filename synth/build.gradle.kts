@@ -66,6 +66,26 @@ tasks.register<JavaExec>("generateExpansionPack") {
     args("${rootDir}/testkit")
 }
 
+/** Render the velocity-layered acceptance kit into testkit/. See VelocityKitGenerator. */
+tasks.register<JavaExec>("generateVelocityKit") {
+    group = "distribution"
+    description = "Render the velocity-layered acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VelocityKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the shuffled A/B acceptance kit into testkit/. See ShuffleKitGenerator. */
+tasks.register<JavaExec>("generateShuffleKit") {
+    group = "distribution"
+    description = "Render the dice-rolled A/B acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ShuffleKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 /** Render the chip acceptance kit into testkit/. See ChipKitGenerator. */
 tasks.register<JavaExec>("generateChipKit") {
     group = "distribution"

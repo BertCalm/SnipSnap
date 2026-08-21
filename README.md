@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 332 tests across six modules
+./gradlew test    # 353 tests across six modules
 ```
 
 ### `:audio`
@@ -56,6 +56,12 @@ The capture and conditioning core.
 - **`AutoPlace`** — puts those on the conventional layout (kick A01, snare A02,
   closed hat A03, open hat A04) and mute-groups the hats so one chokes the
   other.
+- **`Pitch` / `Scales` / `Tuner`** — in-key sampling: autocorrelation pitch
+  detection, key/scale note grids (root on A01), and the retune that lands a
+  captured tonal snip on the nearest in-key note using the tune fields an
+  MPC pad already has. Unpitched material is never "corrected".
+- **`Loudness`** — perceived level (peaks aren't loudness), feeding kit-wide
+  balance.
 
 ```kotlin
 val buffer = RingBuffer.ofSeconds(60f)          // running in the capture service
@@ -88,6 +94,12 @@ this module owns that folder's whole life.
   writes to someone's SD card can do.
 - **`KitExporter`** — kit folder → MPC program folder (`.xpm` + WAVs), names
   sanitized consistently between the folder and the program.
+- **`Balance` / `InKey`** — kit-wide loudness balance (kick forward, hats
+  tucked, WAVs untouched — only the program levels move) and kit-wide
+  in-key retuning of tonal pads.
+- **Velocity layers** — a pad can carry up to four velocity zones
+  (`KitLayer`), written through to the XPM's per-layer velocity windows, so
+  soft hits sound soft on hardware, not just quiet.
 - **`ExpansionWriter`** — the tier-2 export: the same kit wrapped as a
   browsable expansion (`Expansions/<Title>/` with `Expansion.xml`, a
   1000×1000 tile, `Programs/`, `Samples/`) so it shows up in the MPC's
@@ -149,6 +161,13 @@ stab voices (bass, brass, squelch, chip), TUNE snapped to semitones. And the
 roadmap's free bonus is cashed: `SynthKits.chip()` renders VELVET squares
 and THUMP/TINES drums through one CRUNCH converter — the chip kit, maximum
 kitsch, zero new DSP.
+
+`Velocity` renders the darker soft-zone variants (a soft strike excites
+fewer partials — one filter, physics does the design), `Groove` makes a kit
+play itself (the expansion preview, the pre-export audition, and the best
+moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
+kits the classifier audits so a roll can't break them, plus a remix bank
+that doubles any kit onto pads 17–32 through seeded FX.
 
 Effects are the same trick as CRUNCH, generalized: pads are one-shots
 rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the
