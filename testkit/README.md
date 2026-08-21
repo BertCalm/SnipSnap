@@ -89,9 +89,10 @@ Copy `Expansions/` to the card root, merging with any existing `Expansions`
 folder, then look at the MPC's Expansion browser. Regenerate with
 `./gradlew :synth:generateExpansionPack`. Things to confirm:
 
-- the pack **appears in the Expansion tab with its green tile** — this is
-  the acceptance test for `Expansion.xml`, whose exact element names are
-  community-documented but unverified (see `docs/MPC_EXPORT.md`);
+- the pack **appears in the Expansion tab with its green tile** — the
+  acceptance test for `Expansion.xml`, now emitted in the XO_OX toolchain's
+  shipping schema with a plain-text `manifest` alongside (see
+  `docs/MPC_EXPORT.md`);
 - the program inside loads and plays;
 - `[Previews]` holds a rendered demo groove (WAV — the documented
   convention is MP3, which is the app layer's encoder job; worth noting
@@ -100,6 +101,24 @@ folder, then look at the MPC's Expansion browser. Regenerate with
 If the browser ignores it, nothing is lost — the program still loads from
 the file browser, and one real `Expansion.xml` (see `../reference/README.md`)
 fixes the writer in minutes.
+
+### SnipSnap Keys — the keygroup door (S4)
+
+A VELVET bass multisampled every minor third across two octaves, two
+velocity layers per zone, written as a **keygroup** program — the format the
+keys-on-pads roadmap needs. The writer's structure is unverified against a
+real standalone save; this program is the verification. Regenerate with
+`./gradlew :synth:generateKeysPack`. Things to confirm: it loads as a
+keygroup, plays **in tune chromatically** across the pads, and soft hits
+use the darker layer. If it fails, save any keygroup program from the
+hardware into `reference/golden/keygroup/` and the writer gets fixed.
+
+### SnipSnap_Factory.xpn — one-file import
+
+The factory kit as a single `.xpn` archive (structure from the XO_OX XPN
+toolchain). Regenerate with `./gradlew :synth:generateXpnFile`. The check:
+does the MPC's expansion import accept the file? A yes means one-file kit
+sharing; a no costs nothing — the folder exports stay the path.
 
 ## Reporting back
 

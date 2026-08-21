@@ -39,7 +39,7 @@ class ExpansionWriterTest {
     private val meta = ExpansionMeta(
         title = "Test Pack",
         manufacturer = "SnipSnap",
-        version = 1,
+        version = "1.0.0",
         identifier = "app.snipsnap.testpack",
         description = "Two pads & a promise",
     )
@@ -62,19 +62,32 @@ class ExpansionWriterTest {
     }
 
     @Test
-    fun `the xml carries every field, escaped, and is byte-stable`() {
+    fun `the xml matches the XO_OX toolchain schema, escaped and byte-stable`() {
         val kitDir = File(temp, "kit")
         val kit = buildKit(kitDir)
         val drive = File(temp, "drive")
         val spicy = meta.copy(description = "Kicks & snares <loud>")
 
-        val first = ExpansionWriter.write(kit, kitDir, drive, spicy, overwrite = true).xml.readText()
-        assertTrue("<Title>Test Pack</Title>" in first)
-        assertTrue("<Manufacturer>SnipSnap</Manufacturer>" in first)
-        assertTrue("<Version>1</Version>" in first)
-        assertTrue("<Identifier>app.snipsnap.testpack</Identifier>" in first)
-        assertTrue("<Description>Kicks &amp; snares &lt;loud&gt;</Description>" in first)
-        assertTrue("<Img>" !in first, "no artwork given, no Img element")
+        val result = ExpansionWriter.write(kit, kitDir, drive, spicy, overwrite = true)
+        val first = result.xml.readText()
+        // The lowercase schema, as shipped by the reference packager.
+        assertTrue(first.contains("<expansion version=\"2.0.0.0\" buildVersion=\"2.10.0.0\">"))
+        assertTrue("<local/>" in first)
+        assertTrue("<title>Test Pack</title>" in first)
+        assertTrue("<manufacturer>SnipSnap</manufacturer>" in first)
+        assertTrue("<version>1.0.0.0</version>" in first, "version is four-part")
+        assertTrue("<identifier>app.snipsnap.testpack</identifier>" in first)
+        assertTrue("<type>instrument</type>" in first)
+        assertTrue("<priority>50</priority>" in first)
+        assertTrue("<description>Kicks &amp; snares &lt;loud&gt;</description>" in first)
+        assertTrue("<separator>-</separator>" in first)
+        assertTrue("<img>" !in first, "no artwork given, no img element")
+
+        // The plain-text manifest rides alongside for older firmware.
+        val manifest = result.manifest.readText()
+        assertTrue("Name=Test Pack" in manifest)
+        assertTrue("Version=1.0.0" in manifest)
+        assertTrue("Author=SnipSnap" in manifest)
 
         val second = ExpansionWriter.write(kit, kitDir, drive, spicy, overwrite = true).xml.readText()
         assertEquals(first, second)
@@ -86,11 +99,14 @@ class ExpansionWriterTest {
         assertFailsWith<IllegalArgumentException> { meta.copy(identifier = "snip snap pack") }
         // A bare word is not reverse-domain.
         assertFailsWith<IllegalArgumentException> { meta.copy(identifier = "snipsnap") }
-        // Version is a single digit.
-        assertFailsWith<IllegalArgumentException> { meta.copy(version = 10) }
-        assertFailsWith<IllegalArgumentException> { meta.copy(version = 0) }
+        // Version is dotted digits.
+        assertFailsWith<IllegalArgumentException> { meta.copy(version = "one") }
+        assertFailsWith<IllegalArgumentException> { meta.copy(version = "1.0-beta") }
         // Titles become folder names on a FAT card.
         assertFailsWith<IllegalArgumentException> { meta.copy(title = "Bad:Title") }
+        // Four-part padding.
+        assertEquals("1.0.0.0", meta.versionFourPart)
+        assertEquals("2.1.0.0", meta.copy(version = "2.1").versionFourPart)
     }
 
     @Test

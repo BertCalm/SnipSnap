@@ -75,14 +75,23 @@ object KitAssembler {
 
             WavWriter.write(File(dir, "$stem.wav"), pad.snip)
 
-            // Soft variants become velocity zones: the band 0..127 splits
-            // evenly, softest zone first, the main sample on top.
+            // Soft variants become velocity zones: the band 1..127 splits
+            // evenly, softest zone first, the main sample on top. The first
+            // zone starts at 1, not 0 — velocity 0 is note-off, and a layer
+            // window that includes it can ghost-trigger (Rex Rule #3, via
+            // the XO_OX XPN toolchain).
             val layers = if (pad.softVariants.isEmpty()) emptyList() else buildList {
                 val zoneCount = pad.softVariants.size + 1
                 pad.softVariants.forEachIndexed { v, variant ->
                     val file = "${stem}_v${v + 1}.wav"
                     WavWriter.write(File(dir, file), variant)
-                    add(KitLayer(file, velStart = 128 * v / zoneCount, velEnd = 128 * (v + 1) / zoneCount - 1))
+                    add(
+                        KitLayer(
+                            file,
+                            velStart = if (v == 0) 1 else 128 * v / zoneCount,
+                            velEnd = 128 * (v + 1) / zoneCount - 1,
+                        ),
+                    )
                 }
                 add(KitLayer("$stem.wav", velStart = 128 * pad.softVariants.size / zoneCount, velEnd = 127))
             }

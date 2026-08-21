@@ -39,7 +39,7 @@ object ExpansionPackGenerator {
         val meta = ExpansionMeta(
             title = "SnipSnap Factory",
             manufacturer = "SnipSnap",
-            version = 1,
+            version = "1.0.0",
             identifier = "app.snipsnap.factory",
             description = "Sixteen synthesized pads from the THUMP and TINES engines.",
         )

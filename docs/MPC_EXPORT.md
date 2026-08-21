@@ -27,14 +27,20 @@ impractical to write from a phone.
 So: two writers, one target each. The MPC One remains the acceptance device for
 the MPC 2 path — if it loads there, it loads on every 2.x machine.
 
-## What we do *not* build: `.xpn`
+## `.xpn` — revised: implemented, pending a hardware yes
 
-`.xpn` is an *installer* produced by Akai's Expansion Builder, aimed at the
-desktop MPC Software / MPC Beats on Mac and Windows. Standalone hardware does
-not consume `.xpn` files at all — it reads folders off a drive.
+Earlier revisions of this doc called `.xpn` desktop-only and permanently out
+of scope. The XO_OX XPN toolchain (BertCalm/XO_OX-XOmnibus) revised that: it
+ships "MPC-loadable" `.xpn` ZIP archives with a documented internal
+structure (`Expansions/manifest` + `Expansion.xml`, `Programs/`,
+`Samples/<program>/`, root artwork), and its format notes are grounded in
+observed hardware behavior. An `.xpn` is just a ZIP, so `XpnPackager` in
+`:kit` now writes one — deterministic, preflight-gated, with pack-relative
+`<File>` sample paths (Rex Rule #5 from that toolchain).
 
-Since this project is standalone-only, `.xpn` is out of scope permanently, not
-just deferred. This removes a large reverse-engineering effort from the roadmap.
+The acceptance question: does the standalone MPC's expansion import take
+`testkit/SnipSnap_Factory.xpn`? If yes, SnipSnap gains one-file kit
+sharing. If no, the folder exports remain the path and nothing is lost.
 
 ## Tier 1 — bare program folder (MVP)
 
@@ -52,19 +58,20 @@ SnipSnap Kit 01/
 The `.xpm` references samples by name; the MPC resolves them from the same
 folder. Keep them adjacent and it just works.
 
-## Tier 2 — expansion folder (implemented, XML shape unverified)
+## Tier 2 — expansion folder (implemented)
 
 Makes the kit browsable in the MPC's Expansion tab. Copy the whole instrument
 folder into an `Expansions` folder on the drive. Implemented as
 `ExpansionWriter` in `:kit`; `./gradlew :synth:generateExpansionPack` builds
 the acceptance pack under `testkit/Expansions/`.
 
-> **Unverified:** the folder layout and field list below are
-> community-documented, but no real `Expansion.xml` has been diffed against
-> ours — every site that posts one is unreachable from the build
-> environment. The writer emits its elements from one table, so a single
-> real file (drop it in `reference/`, see `reference/README.md`) corrects
-> it in minutes. The hardware check: if the acceptance pack tiles up in the
+> **Provenance (revised):** the `Expansion.xml` schema is now the lowercase
+> `<expansion>` form lifted from the XO_OX XPN toolchain's shipping
+> packager (`xpn_packager.py`), replacing this writer's earlier guess from
+> prose walkthroughs — plus the plain-text `manifest` that toolchain emits
+> alongside for wider firmware compatibility. Grounding is "running code
+> that ships packs", one step short of "diffed against an Akai-authored
+> file"; the hardware check stands: if the acceptance pack tiles up in the
 > Expansion browser, the shape is right.
 
 ```
@@ -81,13 +88,14 @@ Expansions/
         └── SnipSnap Kit 01.mp3 ← named to match the .xpm
 ```
 
-`Expansion.xml` carries Title, Manufacturer, Version (single digit), Identifier
-(reverse-domain notation, dots not spaces) and Description. Artwork is a square
-1000×1000 PNG or JPEG named to match the identifier.
+`Expansion.xml` carries identifier, title, manufacturer, a four-part
+version, type ("instrument"), priority, an `img` artwork reference and a
+description, in a lowercase `<expansion version="2.0.0.0">` root; a
+plain-text `manifest` (Name=/Version=/Author=/Description=) rides alongside.
+Artwork is a square PNG named for the pack.
 
-Akai's own **MPC Expansion Builder** (free, installs with the MPC software) is
-the reference implementation. Even though we never ship `.xpn`, pointing it at a
-content folder is the closest thing to a conformance check that exists — see
+Akai's own **MPC Expansion Builder** (free, installs with the MPC software)
+remains a useful desktop conformance check — see
 [`KIT_BEST_PRACTICES.md`](KIT_BEST_PRACTICES.md).
 
 ## Sample requirements

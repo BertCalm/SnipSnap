@@ -24,6 +24,15 @@ class XpmWriter(
      * `docs/XPM_STRUCTURE.md`.
      */
     private val instrumentBaseIndex: Int = 0,
+    /**
+     * When set (e.g. `"Samples/My Kit"`), each layer also carries
+     * `<SampleFile>name.wav</SampleFile>` and a pack-root-relative
+     * `<File>prefix/name.wav</File>` — the convention `.xpn` archives use
+     * so samples resolve from `Samples/<program>/` (XO_OX toolchain,
+     * Rex Rule #5: relative paths only). Null (the default) keeps the
+     * adjacent-files shape the golden file pins.
+     */
+    private val samplePathPrefix: String? = null,
 ) {
 
     fun write(program: DrumProgram): String {
@@ -234,7 +243,12 @@ class XpmWriter(
             sb.append("            <RootNote>0</RootNote>\n")
             sb.append("            <KeyTrack>False</KeyTrack>\n")
             sb.append("            <SampleName>").append(sample?.sampleName?.xmlEscaped() ?: "").append("</SampleName>\n")
-            sb.append("            <SampleFile></SampleFile>\n")
+            if (samplePathPrefix != null && sample != null) {
+                sb.append("            <SampleFile>").append("${sample.sampleName}.wav".xmlEscaped()).append("</SampleFile>\n")
+                sb.append("            <File>").append("$samplePathPrefix/${sample.sampleName}.wav".xmlEscaped()).append("</File>\n")
+            } else {
+                sb.append("            <SampleFile></SampleFile>\n")
+            }
             sb.append("            <SliceIndex>129</SliceIndex>\n")
             sb.append("            <Direction>0</Direction>\n")
             sb.append("            <Offset>0</Offset>\n")

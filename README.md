@@ -23,7 +23,7 @@ capture (rolling buffer)  →  trim  →  assign to 4×4 grid  →  export .xpm 
 | Hardware | Akai MPC One, MPC Live II, MPC Live III |
 | Primary format | MPC 3 native (gzip + ACVS header + JSON), Live III as acceptance device |
 | Compatibility format | MPC 2-era `.xpm` drum program + 44.1 kHz WAVs, as a folder — implemented |
-| Not supported | `.xpn` expansion installers (desktop MPC Software only — irrelevant here) |
+| One-file sharing | `.xpn` ZIP archives — implemented via `XpnPackager`, pending the hardware import check |
 
 ## Modules
 
@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 353 tests across six modules
+./gradlew test    # 360 tests across six modules
 ```
 
 ### `:audio`
@@ -100,11 +100,14 @@ this module owns that folder's whole life.
 - **Velocity layers** — a pad can carry up to four velocity zones
   (`KitLayer`), written through to the XPM's per-layer velocity windows, so
   soft hits sound soft on hardware, not just quiet.
+- **`XpnPackager`** — the same expansion as a single deterministic `.xpn`
+  ZIP (structure from the XO_OX XPN toolchain, pack-relative sample paths),
+  for one-file kit sharing pending the hardware import check.
 - **`ExpansionWriter`** — the tier-2 export: the same kit wrapped as a
   browsable expansion (`Expansions/<Title>/` with `Expansion.xml`, a
   1000×1000 tile, `Programs/`, `Samples/`) so it shows up in the MPC's
-  Expansion tab. The XML's element names are community-documented and
-  table-driven pending one real file; see
+  Expansion tab, `Expansion.xml` in the XO_OX toolchain's shipping schema
+  with a plain-text `manifest` alongside; see
   [`docs/MPC_EXPORT.md`](docs/MPC_EXPORT.md#tier-2--expansion-folder-implemented-xml-shape-unverified).
 
 ```kotlin
@@ -218,6 +221,12 @@ XpmWriter().writeTo(kitDir, program)   // -> kitDir/SnipSnap Kit 01.xpm
 ```
 ./gradlew :xpm:regenerateGolden   # only for deliberate format changes
 ```
+
+`KeygroupWriter` renders multisampled **keygroup** programs (the keys-on-pads
+door): note-ranged instruments with velocity layers, the keygroup vocabulary
+from the XO_OX toolchain's shipping exporter on our hardware-verified 2.1
+chassis — unverified against a real standalone save, and
+`testkit/SnipSnap Keys` exists to settle exactly that.
 
 ## Docs
 

@@ -86,6 +86,26 @@ tasks.register<JavaExec>("generateShuffleKit") {
     args("${rootDir}/testkit")
 }
 
+/** Render the keygroup acceptance program into testkit/. See KeysPackGenerator. */
+tasks.register<JavaExec>("generateKeysPack") {
+    group = "distribution"
+    description = "Render the VELVET keygroup acceptance program under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.KeysPackGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Package the factory kit as a single .xpn file. See XpnFileGenerator. */
+tasks.register<JavaExec>("generateXpnFile") {
+    group = "distribution"
+    description = "Package the factory kit as testkit/SnipSnap_Factory.xpn."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.XpnFileGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 /** Render the chip acceptance kit into testkit/. See ChipKitGenerator. */
 tasks.register<JavaExec>("generateChipKit") {
     group = "distribution"

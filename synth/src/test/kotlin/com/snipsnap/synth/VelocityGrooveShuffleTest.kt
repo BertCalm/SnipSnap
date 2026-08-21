@@ -50,10 +50,11 @@ class VelocityGrooveShuffleTest {
 
         val pad = kit.pad(1)!!
         assertEquals(3, pad.velocityLayers.size)
-        assertEquals(0, pad.velocityLayers.first().velStart)
+        // Velocity 0 is note-off: the first zone starts at 1 (Rex Rule #3).
+        assertEquals(1, pad.velocityLayers.first().velStart)
         assertEquals(127, pad.velocityLayers.last().velEnd)
         assertEquals(pad.sampleFile, pad.velocityLayers.last().sampleFile, "main sample is the loudest zone")
-        // Zones tile 0..127 without gap or overlap.
+        // Zones tile upward without gap or overlap.
         for (i in 1 until pad.velocityLayers.size) {
             assertEquals(pad.velocityLayers[i - 1].velEnd + 1, pad.velocityLayers[i].velStart)
         }

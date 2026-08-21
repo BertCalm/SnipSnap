@@ -86,6 +86,15 @@ object Preflight {
             if (exportStem != p.sampleStem) {
                 out += Finding(Severity.WARN, "${p.sampleFile} will be renamed to $exportStem.wav on export", p.slot)
             }
+            // Observed hardware limit (XO_OX edge-case notes): filenames
+            // past ~64 chars may load but display blank or truncated.
+            if (exportStem.length + 4 > 64) {
+                out += Finding(
+                    Severity.WARN,
+                    "${p.sampleFile} exceeds 64 characters — the MPC UI may blank or truncate it",
+                    p.slot,
+                )
+            }
             stems.put(exportStem.lowercase(), p.slot)?.let { previous ->
                 out += Finding(
                     Severity.FAIL,

@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Expansion>
-  <Title>SnipSnap Factory</Title>
-  <Manufacturer>SnipSnap</Manufacturer>
-  <Version>1</Version>
-  <Identifier>app.snipsnap.factory</Identifier>
-  <Description>Sixteen synthesized pads from the THUMP and TINES engines.</Description>
-  <Img>SnipSnapFactory.png</Img>
-</Expansion>
+<expansion version="2.0.0.0" buildVersion="2.10.0.0">
+  <local/>
+  <identifier>app.snipsnap.factory</identifier>
+  <title>SnipSnap Factory</title>
+  <manufacturer>SnipSnap</manufacturer>
+  <version>1.0.0.0</version>
+  <type>instrument</type>
+  <priority>50</priority>
+  <img>SnipSnapFactory.png</img>
+  <description>Sixteen synthesized pads from the THUMP and TINES engines.</description>
+  <separator>-</separator>
+</expansion>

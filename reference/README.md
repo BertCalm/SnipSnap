@@ -66,12 +66,18 @@ A second export of the *same* kit with one single parameter changed (say, pad
 A05's tune) — diffing two near-identical files is the fastest way to locate a
 field with certainty.
 
-An **`Expansion.xml` from any real pack** — Akai factory content or anything
-purchased/downloaded, straight off the SD card's `Expansions/` folder. Our
-`ExpansionWriter` emits the community-documented shape but no real file has
-been diffed against it; one example settles the element names for good. Drop
-it in `reference/golden/expansion/` (the artwork file's exact name is useful
-too).
+An **`Expansion.xml` from an Akai-authored pack** — our writer now emits
+the XO_OX toolchain's shipping schema (a big upgrade from prose-sourced
+guessing), but a first-party Akai file would settle any remaining
+differences. Drop one in `reference/golden/expansion/`.
+
+**A keygroup program saved by standalone firmware** is now the single most
+valuable file on this list: `KeygroupWriter` exists (vocabulary from the
+XO_OX keygroup exporter on our verified 2.1 chassis) and
+`testkit/SnipSnap Keys` is the acceptance program — if it plays in tune
+across the pads, S4 is open; if it doesn't load, one real save fixes the
+writer. Build any keygroup program on a Live III/II/One, save, and copy the
+`.xpm` into `reference/golden/keygroup/`.
 
 ## The other half: does our output load?
 

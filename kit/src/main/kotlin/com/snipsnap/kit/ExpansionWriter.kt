@@ -4,26 +4,42 @@ import java.io.File
 import java.io.IOException
 
 /**
- * Metadata for an expansion pack — the fields Akai's documentation and
- * community walkthroughs agree `Expansion.xml` carries.
+ * Metadata for an expansion pack.
+ *
+ * Field set and shapes follow the XO_OX XPN toolchain (the sibling project's
+ * shipping packager, `Tools/xpn_packager.py` in BertCalm/XO_OX-XOmnibus),
+ * which is the closest thing to a live spec we have seen: lowercase
+ * `<expansion>` schema, four-part version, and a plain-text `manifest`
+ * alongside the XML for older firmware.
  */
 data class ExpansionMeta(
     /** Display name in the Expansion browser; also the folder name. */
     val title: String,
     val manufacturer: String = "SnipSnap",
-    /** Single digit — the format is documented as wanting exactly that. */
-    val version: Int = 1,
-    /** Reverse-domain identity, e.g. `app.snipsnap.thumpkit`. Dots, not spaces. */
+    /** Dotted version, e.g. "1.0.0". Serialized four-part ("1.0.0.0"). */
+    val version: String = "1.0.0",
+    /** Reverse-domain identity, e.g. `app.snipsnap.factory`. Dots, not spaces. */
     val identifier: String,
     val description: String = "",
+    /** Akai's pack taxonomy; "instrument" is the one drum/keygroup packs use. */
+    val type: String = "instrument",
 ) {
     init {
         require(Names.isMpcSafe(title)) { "title must be MPC-safe: $title" }
-        require(version in 1..9) { "version is a single digit, got $version" }
+        require(Regex("^\\d+(\\.\\d+)*$").matches(version)) { "version must be dotted digits: $version" }
         require(Regex("^[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+$").matches(identifier)) {
             "identifier must be reverse-domain style (dots, no spaces): $identifier"
         }
+        require(type.isNotBlank()) { "type must not be blank" }
     }
+
+    /** Version padded to Akai's four-part form: "1.0" → "1.0.0.0". */
+    val versionFourPart: String
+        get() {
+            val parts = version.split('.').toMutableList()
+            while (parts.size < 4) parts.add("0")
+            return parts.take(4).joinToString(".")
+        }
 
     /** Artwork filename: the title with everything but letters and digits dropped. */
     val artworkFileName: String
@@ -33,6 +49,7 @@ data class ExpansionMeta(
 data class ExpansionResult(
     val directory: File,
     val xml: File,
+    val manifest: File,
     val program: File,
     val samples: List<File>,
     val artwork: File?,
@@ -45,21 +62,21 @@ data class ExpansionResult(
  *
  * ```
  * Expansions/<Title>/
- * ├── Expansion.xml
- * ├── <Title>.png          ← 1000×1000 tile, supplied as bytes
+ * ├── Expansion.xml        ← lowercase <expansion> schema
+ * ├── manifest             ← plain-text Name=/Version=/Author= fallback
+ * ├── <Title>.png          ← square tile, supplied as bytes
  * ├── Programs/<Title>.xpm
  * └── Samples/ (the WAVs)
  * ```
  *
- * **Verification status: the folder layout and field list are
- * community-documented; the exact `Expansion.xml` element names have not
- * yet been checked against a real pack.** Every Akai domain and every MPC
- * community site that posts real files is unreachable from this
- * environment, so this writer is built the way the MPC 3 reader was: the
- * best-documented shape, emitted table-driven from [xmlElements] so one
- * real `Expansion.xml` (see `reference/README.md`) corrects it in minutes.
- * The acceptance check is the pack in `testkit/`: if it tiles up in the
- * Expansion browser on real hardware, the shape is right.
+ * **Provenance:** the XML schema, the dual-manifest convention, and the
+ * layout are lifted from the XO_OX XPN toolchain (BertCalm/XO_OX-XOmnibus,
+ * `Tools/xpn_packager.py` + `Tools/xpn_validator.py`) — running code that
+ * builds MPC-loadable packs, replacing this writer's earlier guess from
+ * prose walkthroughs. Both manifests are emitted because firmware support
+ * differs: plain-text is the widest-compat form, the XML carries artwork.
+ * Still worth one diff against an Akai-authored pack when one lands in
+ * `reference/`.
  *
  * Artwork arrives as PNG bytes rather than being rendered here: this module
  * stays free of JVM-only imaging APIs so the Android app can feed it a
@@ -69,6 +86,7 @@ object ExpansionWriter {
 
     const val EXPANSIONS_DIR = "Expansions"
     const val XML_NAME = "Expansion.xml"
+    const val MANIFEST_NAME = "manifest"
 
     fun write(
         kit: Kit,
@@ -77,11 +95,9 @@ object ExpansionWriter {
         meta: ExpansionMeta,
         artworkPng: ByteArray? = null,
         /**
-         * Preview audio for the pack browser, written as
-         * `[Previews]/<program>.wav`. The documented convention is an MP3
-         * with the program's name; a WAV is the honest best this pure-JVM
-         * layer can produce (MP3 encoding is the app layer's MediaCodec
-         * job), and the [Groove]-rendered demo makes a fine one.
+         * Preview audio, written as `[Previews]/<program>.wav`. The base
+         * name must match the program's (Rex Rule #4); this writer
+         * guarantees it. MP3 encoding is the app layer's MediaCodec job.
          */
         preview: com.snipsnap.audio.Snip? = null,
         overwrite: Boolean = false,
@@ -118,29 +134,38 @@ object ExpansionWriter {
         val xml = File(dest, XML_NAME)
         xml.writeText(renderXml(meta, artwork?.name), Charsets.UTF_8)
 
-        return ExpansionResult(dest, xml, program, samples, artwork)
+        val manifest = File(dest, MANIFEST_NAME)
+        manifest.writeText(renderManifest(meta), Charsets.UTF_8)
+
+        return ExpansionResult(dest, xml, manifest, program, samples, artwork)
     }
 
-    /** Element name → value, in emission order. The whole format, swappable. */
-    private fun xmlElements(meta: ExpansionMeta, artworkName: String?): List<Pair<String, String>> =
-        buildList {
-            add("Title" to meta.title)
-            add("Manufacturer" to meta.manufacturer)
-            add("Version" to meta.version.toString())
-            add("Identifier" to meta.identifier)
-            add("Description" to meta.description)
-            artworkName?.let { add("Img" to it) }
-        }
-
-    private fun renderXml(meta: ExpansionMeta, artworkName: String?): String = buildString {
+    /** The lowercase schema, verbatim shape from the XO_OX packager. */
+    internal fun renderXml(meta: ExpansionMeta, artworkName: String?): String = buildString {
         append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-        append("<Expansion>\n")
-        for ((element, value) in xmlElements(meta, artworkName)) {
-            append("  <").append(element).append('>')
-            append(escape(value))
-            append("</").append(element).append(">\n")
+        append("<expansion version=\"2.0.0.0\" buildVersion=\"2.10.0.0\">\n")
+        append("  <local/>\n")
+        append("  <identifier>").append(escape(meta.identifier)).append("</identifier>\n")
+        append("  <title>").append(escape(meta.title)).append("</title>\n")
+        append("  <manufacturer>").append(escape(meta.manufacturer)).append("</manufacturer>\n")
+        append("  <version>").append(meta.versionFourPart).append("</version>\n")
+        append("  <type>").append(escape(meta.type)).append("</type>\n")
+        append("  <priority>50</priority>\n")
+        artworkName?.let { append("  <img>").append(escape(it)).append("</img>\n") }
+        append("  <description>").append(escape(meta.description)).append("</description>\n")
+        append("  <separator>-</separator>\n")
+        append("</expansion>\n")
+    }
+
+    /** The plain-text key=value manifest — the widest-compatibility form. */
+    internal fun renderManifest(meta: ExpansionMeta): String {
+        fun clean(s: String) = s.replace("\r", "").replace("\n", " ").trim()
+        return buildString {
+            append("Name=").append(clean(meta.title)).append('\n')
+            append("Version=").append(clean(meta.version)).append('\n')
+            append("Author=").append(clean(meta.manufacturer)).append('\n')
+            append("Description=").append(clean(meta.description)).append('\n')
         }
-        append("</Expansion>\n")
     }
 
     private fun escape(value: String): String = buildString(value.length) {
