@@ -101,14 +101,17 @@ this module owns that folder's whole life.
   (`KitLayer`), written through to the XPM's per-layer velocity windows, so
   soft hits sound soft on hardware, not just quiet.
 - **`XpnPackager`** — the same expansion as a single deterministic `.xpn`
-  ZIP (structure from the XO_OX XPN toolchain, pack-relative sample paths),
-  for one-file kit sharing pending the hardware import check.
+  ZIP, for one-file kit sharing. Two known defects against real archives:
+  `Expansion.xml` belongs at the archive root, and the pack-relative sample
+  paths have no basis — no real program populates `<SampleFile>`. See
+  [`docs/MPC_EXPORT.md`](docs/MPC_EXPORT.md#xpn--implemented-and-two-of-our-three-layout-choices-are-wrong).
 - **`ExpansionWriter`** — the tier-2 export: the same kit wrapped as a
   browsable expansion (`Expansions/<Title>/` with `Expansion.xml`, a
   1000×1000 tile, `Programs/`, `Samples/`) so it shows up in the MPC's
-  Expansion tab, `Expansion.xml` in the XO_OX toolchain's shipping schema
-  with a plain-text `manifest` alongside; see
-  [`docs/MPC_EXPORT.md`](docs/MPC_EXPORT.md#tier-2--expansion-folder-implemented-xml-shape-unverified).
+  Expansion tab, with a plain-text `manifest` alongside. The `Expansion.xml`
+  schema is **confirmed correct** against commercial packs — we emit the
+  standalone dialect, element for element; see
+  [`docs/MPC_EXPORT.md`](docs/MPC_EXPORT.md#two-dialects-and-we-write-the-right-one).
 
 ```kotlin
 val kit = KitAssembler.assemble("Break Kit", arranged, kitDir)
