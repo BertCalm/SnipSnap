@@ -97,6 +97,17 @@ Named after tape formulations:
 | **Metal** (Type IV) | near-black `#2e3136` | `#101215` | ice `#7adfe4` | high-contrast dark; the 2am scheme |
 | **Snack Bar** | yellow `#ffd400` | red `#e81c1c` | yellow | the Hot-Dog-Stand homage, shipped out of respect |
 | **Oilslick** (Type ∞) | violet `#221a34` | deep violet `#0c0618` | lavender `#c8b2f8` | Y2K iridescence; cyan in the amber slot |
+| **Clear** (see-through shell) | silver `#e2e6ec` | pale blue-gray `#b8c8d4` | ice VFD `#9ae8ff` | the light scheme — silver hi-fi deck in daylight; orange `#ff9a1a` in the amber slot |
+
+**Clear** is the light mode, and it's built the way real light-mode hi-fi
+was: a silver deck with a **dark display**. The LCD surfaces stay near-black
+(`#101418`) with ice-cyan VFD ink — that's the fixed TapeOS rule (sound
+surfaces keep their contrast in every scheme), and it's also exactly what a
+90s tape deck looked like on a sunny shelf. Chrome bevels go pale
+(`#e2e6ec` with a true-white highlight), the desk is a pale dithered
+blue-gray, and the titlebar runs a silver-blue gradient. Named for the
+see-through cassette shell — the one with no tape-type notches and nothing
+to hide.
 
 **Oilslick** goes one token further than the others: the window frame and
 titlebar swap the bevel highlight/shadow pair for the OILSLICK conic gradient
@@ -121,15 +132,16 @@ Full token sets live in the theme classes in
 - **record red** `#e83a2e` and the cassette shell/label anatomy
 - LCD contrast: ink hue may change per scheme, but sound surfaces stay dark
 
-Mockups: the **Schemes** artboard shows all five side by side; **Tape
+Mockups: the **Schemes** artboard shows all six side by side; **Tape
 Properties** is the picker — the Display-Properties-style dialog with the CRT
 preview monitor, scheme list with swatch chips, Save As…/Apply. The **Main**
 artboard carries a live `Scheme` tweak on the canvas, so the real screen can be
-flipped between all five.
+flipped between all six.
 
 In the app this is a Compose theme object holding the token table; scheme
-choice persists per user, and Metal doubles as the dark-room default if the
-system asks for dark.
+choice persists per user, and the system theme maps onto schemes for free:
+Metal doubles as the dark-room default if the system asks for dark, Clear as
+the daylight default if it asks for light.
 
 ## Rules of the language
 
