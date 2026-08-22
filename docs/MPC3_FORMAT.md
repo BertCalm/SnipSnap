@@ -184,10 +184,10 @@ sometimes `1`, so `triggerMode` is not usable as a fill test either.
 Answered by the harvested kits, and it closes an open question in
 [`reference/README.md`](../reference/README.md).
 
-Akai emits **all 128 slots fully formed**. An unused pad is not omitted, null,
-or truncated — it carries the same key set as a used one, with plausible
-defaults (`highNote: 127`, `polyphony: 3`, `mixable.pan: 0.5`). The whole
-difference sits in `layersv[0]`:
+**Drum programs emit all 128 slots fully formed** — 7 of 7 harvested, no
+exceptions. An unused pad is not omitted, null, or truncated; it carries the
+same key set as a used one, with plausible defaults (`highNote: 127`,
+`polyphony: 3`, `mixable.pan: 0.5`). The whole difference sits in `layersv[0]`:
 
 | Field | Used pad | Empty pad |
 |---|---|---|
@@ -196,7 +196,24 @@ difference sits in `layersv[0]`:
 | `sliceInfo.End` | `3187907` | `0` |
 | `sliceInfo.LoopCrossfadeLength` | `-1` | `0` |
 
-Read `layersv[0].sampleName == ""` as the emptiness test. Write all 128 slots.
+Read `layersv[0].sampleName == ""` as the emptiness test.
+
+**Keygroup programs are not consistent about this, so a reader must not assume
+128.** Most write the full array too, but some write exactly `numKeygroups`:
+
+| `numKeygroups` | `instruments` length | Files |
+|---|---|---|
+| 5, 6, 7, 8, 9, 13, 23, 25 | 128 | all |
+| 1 | 128 | 38 |
+| 1 | **1** | 48 |
+
+It is not a vendor or build rule — **Timeless Glow ships both shapes inside one
+pack**, 19 single-slot files beside 38 padded ones, same `numKeygroups`, same
+exporter. So the array length is simply not load-bearing: MPC accepts either
+for identical content.
+
+For a writer, 128 is the safe choice — it is what every drum program does and
+what most keygroups do. For a reader, take the length from the array.
 
 ### Sample pool
 
@@ -368,29 +385,30 @@ both formats: `keygroup/Inst-Bass-NI Bass Artisan.xpm` (63 KB) and
 `mpc3-track/Inst-Bass-NI Bass Artisan.xty` (10 KB) — the cleanest available
 reference for how one instrument maps across the generation split.
 
-### The reader does not see any of this yet
+### The reader
 
-`:mpc3` detects and opens these files correctly — `MpcFormats.detect` dispatches
-on content, never extension, so `.xtd`/`.xty` need no special case, and
-`Acvs.read` accepts any object type on header line 3. Both were built right.
+`:mpc3` reads both containers. `MpcFormats.detect` dispatches on content, never
+extension, so `.xtd`/`.xty` need no special case, and `Acvs.read` accepts any
+object type on header line 3 — both were built right from the start.
 
-`Mpc3Project` models the **project** shape, and that model is now confirmed
-against real files rather than a third-party write-up: 59 `.xpj` projects from
-the Dirty Drummer Collection all carry `data.tracks[]` (4 tracks each), with
-`tracks[n].program.type`, 128 instruments, and `padNoteMap` on `program` — the
-same corrections that applied to track files. **The reader is right about
-projects.**
+`Mpc3Project` models the **project** shape, and that model is confirmed against
+real files rather than a third-party write-up: 59 `.xpj` projects from the Dirty
+Drummer Collection all carry `data.tracks[]` (4 tracks each), with
+`tracks[n].program.type` and `padNoteMap` on `program`.
 
-What it cannot do is read a **track** file. `.xtd`/`.xty` have no `tracks` key
-at all — `program` sits directly under `data` — so `drumPrograms()` returns an
-empty list for a file with 128 populated pads. The module is tolerant enough
-that this does not throw: **a silent total miss, not a crash.** One accessor for
-the un-nested shape covers it, and the existing project path stays as-is.
+It reads **track** files too, as of the commit that added this paragraph. A
+`.xtd`/`.xty` has no `tracks` key — `data` *is* the track, carrying the same
+name, colour, `samples` pool and `program` a project's array element does — so
+it surfaces as a one-track list, which is structurally what it is. Detection is
+by shape (`data.program` present) rather than by header line 3, so a file with
+an unexpected object type still reads.
 
-`mpc3/src/test/kotlin/com/snipsnap/mpc3/Mpc3ProjectTest.kt` also builds its
-fixture with `padNoteMap` nested inside `drum` and `"version": 28`. The test is
-self-consistent so it passes, but it is the only encoding of the schema in the
-codebase and it encodes the corrected-away version.
+Before that, `drumPrograms()` returned an empty list for a file with 128
+populated instrument slots: silent, not a crash, which is the worse failure.
+`Mpc3ProjectTest` now reads real files out of
+[`reference/golden/`](../reference/golden/) rather than only synthetic
+fixtures — which is what caught the keygroup slot-count variance documented
+above, since the old fixture asserted a shape no real file had.
 
 ### What this does *not* settle
 

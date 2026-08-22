@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 390 tests across six modules
+./gradlew test    # 393 tests across six modules
 ```
 
 ### `:audio`
@@ -268,22 +268,20 @@ the commercial keygroup programs in `reference/golden/keygroup/`
 
 ## Next step
 
-**Teach `:mpc3` to read a track file.** An MPC 3 saved program is now known: it
-is `.xtd`/`.xty` — gzip, ACVS header, `SerialisableTrackData`, JSON — established
-from four real Akai and F9 files now in
-[`reference/golden/mpc3-track/`](reference/golden/mpc3-track/). The container
-detection and ACVS reader already handle them, but `Mpc3Project` looks for
-programs under `data.tracks[]`, which a track file does not have, so it silently
-returns nothing for a file with 128 populated pads. One accessor for the
-un-nested shape unblocks the writer.
-[`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md#the-standalone-program-container--answered)
-has the schema, and the corrections it forced.
+**Load a kit on the Live III.** Every defect the harvested corpus exposed is now
+fixed and pinned by tests — `KeygroupWriter`, `XpnPackager`, pad colours, and
+`:mpc3` reading `.xtd`/`.xty` track files as well as projects. What none of that
+can establish is whether *our* output loads, which is a hardware acceptance test
+rather than anything a corpus can answer.
 
-**The Live III is the only target.** MPC 2 hardware verification is
-[backlogged](reference/README.md#backlog-mpc-2) — but `:xpm` stays live, because
-it is the only thing producing loadable output today and MPC 3 loads MPC 2
-content. So the acceptance test runs now: generate a 16-pad kit, load it on the
-**Live III**, confirm all 16 pads fire where they were assigned. See
-[`docs/XPM_STRUCTURE.md#unverified`](docs/XPM_STRUCTURE.md#unverified) — the big
-one is whether instrument numbering is 0- or 1-based, which shows up as a kit
-shifted by exactly one pad.
+Generate a 16-pad kit, load it, confirm all 16 pads fire where they were
+assigned. If it comes up shifted by exactly one pad, that is the instrument
+numbering base — flip `XpmWriter(instrumentBaseIndex = 1)`, which 20 of 20
+vendor programs argue for. Then import `testkit/SnipSnap_Factory.xpn` and see
+whether it appears in the Expansion browser. Procedure in
+[`reference/README.md`](reference/README.md).
+
+MPC 2 hardware verification stays [backlogged](reference/README.md#backlog-mpc-2)
+— nobody here owns an MPC One or a 2.x Live II — but `:xpm` is live regardless,
+since it is the only thing producing loadable output today and MPC 3 loads MPC 2
+content.
