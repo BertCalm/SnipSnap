@@ -96,6 +96,10 @@
         <span class="legend px">FX RACK — BAKED IN, LIKE 1993</span>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <div style="display:flex;gap:8px;align-items:flex-start;">
+            <button id="eqOn" class="btn raised fxBtn" style="width:56px;height:34px;flex:none;"><span class="px" style="color:var(--ink2);">EQ</span></button>
+            <div id="eqMacros" style="flex:1;display:flex;flex-direction:column;gap:2px;"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-start;">
             <button id="squashOn" class="btn raised fxBtn" style="width:56px;height:34px;flex:none;"><span class="px" style="color:var(--ink2);">SQUASH</span></button>
             <div id="squashMacros" style="flex:1;display:flex;flex-direction:column;gap:2px;"></div>
           </div>
@@ -145,6 +149,22 @@
   function expMap(m,lo,hi){ m=Math.min(1,Math.max(0,m)); return lo*Math.exp(Math.log(hi/lo)*m); }
   function Noise(seed){ var s=seed||1; return function(){ s=(s*1103515245+12345)&0x7fffffff; return (s/0x3fffffff)-1; }; }
   function OnePole(rate){ var st=0; return function(x,fc){ var a=1-Math.exp(-2*Math.PI*Math.min(fc,rate*0.45)/rate); st+=a*(x-st); return st; }; }
+  function Biquad(){ var b0=1,b1=0,b2=0,a1=0,a2=0,x1=0,x2=0,y1=0,y2=0;
+    function set(nb0,nb1,nb2,na0,na1,na2){ b0=nb0/na0;b1=nb1/na0;b2=nb2/na0;a1=na1/na0;a2=na2/na0; }
+    return {
+      proc:function(x){ var y=b0*x+b1*x1+b2*x2-a1*y1-a2*y2; x2=x1;x1=x;y2=y1;y1=y; return y; },
+      lowShelf:function(f0,db,rate){ var A=Math.pow(10,db/40),w0=2*Math.PI*f0/rate,cw=Math.cos(w0),sw=Math.sin(w0);
+        var al=sw/2*Math.SQRT2, sA=Math.sqrt(A);
+        set(A*((A+1)-(A-1)*cw+2*sA*al),2*A*((A-1)-(A+1)*cw),A*((A+1)-(A-1)*cw-2*sA*al),
+            (A+1)+(A-1)*cw+2*sA*al,-2*((A-1)+(A+1)*cw),(A+1)+(A-1)*cw-2*sA*al); },
+      highShelf:function(f0,db,rate){ var A=Math.pow(10,db/40),w0=2*Math.PI*f0/rate,cw=Math.cos(w0),sw=Math.sin(w0);
+        var al=sw/2*Math.SQRT2, sA=Math.sqrt(A);
+        set(A*((A+1)+(A-1)*cw+2*sA*al),-2*A*((A-1)+(A+1)*cw),A*((A+1)+(A-1)*cw-2*sA*al),
+            (A+1)-(A-1)*cw+2*sA*al,2*((A-1)-(A+1)*cw),(A+1)-(A-1)*cw-2*sA*al); },
+      peaking:function(f0,db,q,rate){ var A=Math.pow(10,db/40),w0=2*Math.PI*f0/rate,cw=Math.cos(w0),sw=Math.sin(w0);
+        var al=sw/(2*q);
+        set(1+al*A,-2*cw,1-al*A,1+al/A,-2*cw,1-al/A); }
+    }; }
   function TptSvf(rate){ var ic1=0,ic2=0,low=0,band=0,high=0;
     return { proc:function(x,fc,k){
         var g=Math.tan(Math.PI*Math.min(rate*0.49,Math.max(10,fc))/rate);
@@ -486,6 +506,19 @@
     return peakMatch(out,inPk);
   }
 
+  function eqFx(src,m){
+    function dB(x){ return (x-0.5)*24; }
+    var bassDb=dB(m.BASS), midDb=dB(m.MID), airDb=dB(m.AIR);
+    if(Math.abs(bassDb)<0.05&&Math.abs(midDb)<0.05&&Math.abs(airDb)<0.05) return src;
+    var inPk=peakOf(src);
+    var bass=Biquad(); bass.lowShelf(100,bassDb,R);
+    var mid=Biquad(); mid.peaking(900,midDb,0.9,R);
+    var air=Biquad(); air.highShelf(8000,airDb,R);
+    var out=new Float32Array(src.length);
+    for(var i=0;i<src.length;i++) out[i]=air.proc(mid.proc(bass.proc(src[i])));
+    return peakMatch(out,inPk);
+  }
+
   function tapeFx(src,m){
     var rate=R, baseDelay=0.005*rate;
     var wowDepth=lin(m.WOBBLE,0,0.55)*baseDelay, flutterDepth=lin(m.WOBBLE,0,0.12)*baseDelay;
@@ -510,6 +543,7 @@
     for(var i=0;i<src.length;i++) out[i]=src[src.length-1-i]; return out; }
 
   var FX_DEFAULTS={
+    EQ:{BASS:0.5,MID:0.5,AIR:0.5},
     SQUASH:{AMOUNT:0.5,ATTACK:0.5},
     TAPE:{WOBBLE:0.35,DRIVE:0.3,AGE:0.4},
     ECHO:{TIME:0.4,REPEAT:0.4,TONE:0.5,MIX:0.4},
@@ -521,7 +555,8 @@
               lastVoice:{THUMP:'KICK',TINES:'BELL',PLUCK:'KALIMBA',TWHEEL:'FULL',VELVET:'BASS'},
               macros:{}, crunchOn:false, crunchMacros:Object.assign({},CRUNCH_DEFAULTS),
               reverse:false,
-              fx:{SQUASH:{on:false,m:Object.assign({},FX_DEFAULTS.SQUASH)},
+              fx:{EQ:{on:false,m:Object.assign({},FX_DEFAULTS.EQ)},
+                  SQUASH:{on:false,m:Object.assign({},FX_DEFAULTS.SQUASH)},
                   TAPE:{on:false,m:Object.assign({},FX_DEFAULTS.TAPE)},
                   ECHO:{on:false,m:Object.assign({},FX_DEFAULTS.ECHO)},
                   SPRING:{on:false,m:Object.assign({},FX_DEFAULTS.SPRING)}},
@@ -536,6 +571,7 @@
     // -> echo -> spring, then the chain-level tail budget.
     var preLen=buf.length;
     if(state.reverse) buf=reverseBuf(buf);
+    if(state.fx.EQ.on) buf=eqFx(buf,state.fx.EQ.m);
     if(state.fx.SQUASH.on) buf=squash(buf,state.fx.SQUASH.m);
     if(state.crunchOn) buf=crunch(buf,state.crunchMacros);
     if(state.fx.TAPE.on) buf=tapeFx(buf,state.fx.TAPE.m);
@@ -696,7 +732,7 @@
     toast(state.crunchOn?'WELCOME TO 1987.':'BACK TO THE FUTURE.');
   });
 
-  var FX_TOASTS={SQUASH:['SLAPPED.','UNSLAPPED.'],TAPE:['CHROME, TYPE II.','FRESHLY DEMAGNETIZED.'],
+  var FX_TOASTS={EQ:['CARVED.','FLAT EARTH.'],SQUASH:['SLAPPED.','UNSLAPPED.'],TAPE:['CHROME, TYPE II.','FRESHLY DEMAGNETIZED.'],
                  ECHO:['HELLO HELLO hello hello','JUST THE ONE, THEN.'],SPRING:['BOING.','ROOM FOR RENT.']};
   function toggleFx(name,on){
     state.fx[name].on=on;

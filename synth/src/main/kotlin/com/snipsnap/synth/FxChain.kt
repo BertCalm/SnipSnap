@@ -8,7 +8,7 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    REVERSE → SQUASH → CRUNCH → TAPE → ECHO → SPRING
+ *    REVERSE → EQ → SQUASH → CRUNCH → TAPE → ECHO → SPRING
  *
  * Reverse first because you effect the flipped sample, not flip the
  * effected one (the sampling-era way); dynamics before character before
@@ -21,6 +21,7 @@ import com.snipsnap.json.JsonValue
  */
 data class FxChain(
     val reverse: Boolean = false,
+    val eq: Map<String, Float>? = null,
     val squash: Map<String, Float>? = null,
     val crunch: Map<String, Float>? = null,
     val tape: Map<String, Float>? = null,
@@ -29,6 +30,7 @@ data class FxChain(
 ) {
     init {
         for ((name, macros, known) in listOf(
+            Triple("eq", eq, Eq.MACROS),
             Triple("squash", squash, Squash.MACROS),
             Triple("crunch", crunch, Crunch.MACROS),
             Triple("tape", tape, Tape.MACROS),
@@ -45,11 +47,12 @@ data class FxChain(
     }
 
     val isBypass: Boolean
-        get() = !reverse && squash == null && crunch == null && tape == null && echo == null && spring == null
+        get() = !reverse && eq == null && squash == null && crunch == null && tape == null && echo == null && spring == null
 
     fun process(snip: Snip): Snip {
         var s = snip
         if (reverse) s = reversed(s)
+        eq?.let { s = Eq.process(s, it) }
         squash?.let { s = Squash.process(s, it) }
         crunch?.let { s = Crunch.process(s, it) }
         tape?.let { s = Tape.process(s, it) }
@@ -91,7 +94,7 @@ data class FxChain(
         val obj = LinkedHashMap<String, JsonValue>()
         obj["fx"] = JsonValue.Num(VERSION.toDouble())
         obj["reverse"] = JsonValue.Bool(reverse)
-        for ((name, macros) in listOf("squash" to squash, "crunch" to crunch, "tape" to tape, "echo" to echo, "spring" to spring)) {
+        for ((name, macros) in listOf("eq" to eq, "squash" to squash, "crunch" to crunch, "tape" to tape, "echo" to echo, "spring" to spring)) {
             if (macros != null) {
                 obj[name] = JsonValue.Obj(
                     macros.entries.associateTo(LinkedHashMap()) { (k, v) -> k to JsonValue.Num(v.toDouble()) },
@@ -117,6 +120,7 @@ data class FxChain(
                 (obj[name] as? JsonValue.Obj)?.entries?.mapValues { (_, v) -> v.num().toFloat() }
             return FxChain(
                 reverse = (obj["reverse"] as? JsonValue.Bool)?.value ?: false,
+                eq = section("eq"),
                 squash = section("squash"),
                 crunch = section("crunch"),
                 tape = section("tape"),

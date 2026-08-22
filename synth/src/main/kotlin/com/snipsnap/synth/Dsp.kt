@@ -82,6 +82,79 @@ internal object Dsp {
         fun reset() { ic1 = 0f; ic2 = 0f; low = 0f; band = 0f; high = 0f }
     }
 
+    /**
+     * Biquad section with coefficients from the RBJ Audio EQ Cookbook —
+     * the community-standard shelf and bell formulas (public-domain math,
+     * indexed by every DSP resource list worth reading). Direct form I.
+     */
+    class Biquad {
+        private var b0 = 1f; private var b1 = 0f; private var b2 = 0f
+        private var a1 = 0f; private var a2 = 0f
+        private var x1 = 0f; private var x2 = 0f; private var y1 = 0f; private var y2 = 0f
+
+        fun process(x: Float): Float {
+            val y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+            x2 = x1; x1 = x
+            y2 = y1; y1 = y
+            return y
+        }
+
+        private fun set(b0: Float, b1: Float, b2: Float, a0: Float, a1: Float, a2: Float) {
+            this.b0 = b0 / a0; this.b1 = b1 / a0; this.b2 = b2 / a0
+            this.a1 = a1 / a0; this.a2 = a2 / a0
+        }
+
+        fun lowShelf(f0: Float, gainDb: Float, rate: Int = RATE) {
+            val a = Math.pow(10.0, gainDb / 40.0).toFloat()
+            val w0 = (2.0 * PI * f0 / rate)
+            val cw = kotlin.math.cos(w0).toFloat()
+            val sw = kotlin.math.sin(w0).toFloat()
+            val alpha = sw / 2f * kotlin.math.sqrt(2f) // shelf slope S = 1
+            val sqA = kotlin.math.sqrt(a)
+            set(
+                a * ((a + 1) - (a - 1) * cw + 2 * sqA * alpha),
+                2 * a * ((a - 1) - (a + 1) * cw),
+                a * ((a + 1) - (a - 1) * cw - 2 * sqA * alpha),
+                (a + 1) + (a - 1) * cw + 2 * sqA * alpha,
+                -2 * ((a - 1) + (a + 1) * cw),
+                (a + 1) + (a - 1) * cw - 2 * sqA * alpha,
+            )
+        }
+
+        fun highShelf(f0: Float, gainDb: Float, rate: Int = RATE) {
+            val a = Math.pow(10.0, gainDb / 40.0).toFloat()
+            val w0 = (2.0 * PI * f0 / rate)
+            val cw = kotlin.math.cos(w0).toFloat()
+            val sw = kotlin.math.sin(w0).toFloat()
+            val alpha = sw / 2f * kotlin.math.sqrt(2f)
+            val sqA = kotlin.math.sqrt(a)
+            set(
+                a * ((a + 1) + (a - 1) * cw + 2 * sqA * alpha),
+                -2 * a * ((a - 1) + (a + 1) * cw),
+                a * ((a + 1) + (a - 1) * cw - 2 * sqA * alpha),
+                (a + 1) - (a - 1) * cw + 2 * sqA * alpha,
+                2 * ((a - 1) - (a + 1) * cw),
+                (a + 1) - (a - 1) * cw - 2 * sqA * alpha,
+            )
+        }
+
+        fun peaking(f0: Float, gainDb: Float, q: Float, rate: Int = RATE) {
+            val a = Math.pow(10.0, gainDb / 40.0).toFloat()
+            val w0 = (2.0 * PI * f0 / rate)
+            val cw = kotlin.math.cos(w0).toFloat()
+            val sw = kotlin.math.sin(w0).toFloat()
+            val alpha = sw / (2f * q)
+            set(
+                1 + alpha * a,
+                -2 * cw,
+                1 - alpha * a,
+                1 + alpha / a,
+                -2 * cw,
+                1 - alpha / a,
+            )
+        }
+    }
+
     /** One-pole low-pass; subtract from input for a high-pass. */
     class OnePole(private val rate: Int = RATE) {
         private var state = 0f
