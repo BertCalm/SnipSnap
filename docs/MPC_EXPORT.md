@@ -27,20 +27,95 @@ impractical to write from a phone.
 So: two writers, one target each. The MPC One remains the acceptance device for
 the MPC 2 path — if it loads there, it loads on every 2.x machine.
 
-## `.xpn` — revised: implemented, pending a hardware yes
+## `.xpn` — implemented, and two of our three layout choices are wrong
 
-Earlier revisions of this doc called `.xpn` desktop-only and permanently out
-of scope. The XO_OX XPN toolchain (BertCalm/XO_OX-XOmnibus) revised that: it
-ships "MPC-loadable" `.xpn` ZIP archives with a documented internal
-structure (`Expansions/manifest` + `Expansion.xml`, `Programs/`,
-`Samples/<program>/`, root artwork), and its format notes are grounded in
-observed hardware behavior. An `.xpn` is just a ZIP, so `XpnPackager` in
-`:kit` now writes one — deterministic, preflight-gated, with pack-relative
-`<File>` sample paths (Rex Rule #5 from that toolchain).
+Earlier revisions called `.xpn` desktop-only and out of scope. The XO_OX XPN
+toolchain (BertCalm/XO_OX-XOmnibus) revised that: it ships "MPC-loadable"
+`.xpn` archives with a documented internal structure, so `XpnPackager` in
+`:kit` writes one — deterministic, preflight-gated, with pack-relative `<File>`
+sample paths (Rex Rule #5 from that toolchain).
 
-The acceptance question: does the standalone MPC's expansion import take
-`testkit/SnipSnap_Factory.xpn`? If yes, SnipSnap gains one-file kit
-sharing. If no, the folder exports remain the path and nothing is lost.
+**Four real commercial `.xpn` archives** have now been examined, from three
+vendors across 2017–2026. They confirm the container — `PK\x03\x04`, an ordinary
+ZIP — and establish exactly one structural rule.
+
+> **Correction.** An earlier revision of this section claimed real `.xpn`
+> archives are "completely flat, zero nested entries," from two samples. That
+> was wrong twice over: Pro Studio Kit ships two deeply foldered archives, and
+> the Platinum count was produced by a shell one-liner splitting on whitespace,
+> which silently dropped five entries in a `[Previews]/` folder. Re-measured
+> with a real ZIP reader:
+
+| Archive | Entries | Nested | `Expansion.xml` |
+|---|---|---|---|
+| Masada Cycle (2017) | 456 | 0 | root |
+| Platinum Percussion (2026) | 283 | 5 | root |
+| Pro Studio Kit MPC2 (2026) | 232 | 230 | root |
+| Pro Studio Kit MPC3 (2026) | 191 | 189 | root |
+
+**The invariant is `Expansion.xml` at the archive root — 4 of 4.** Nesting is
+free. Pro Studio Kit MPC3 organises content properly:
+
+```
+Expansion.xml                        ← root, always
+pro-studio-3-mpc3-edition.png        ← root
+Drum Kits/*.xpm                      ← 17 programs
+Drum Kits/Samples/*.wav              ← a Samples/ folder
+Drum Kits/[Previews]/                ← per-program previews
+Drum Kits/[MIDI Patterns]/
+MPCe Kits/…                          ← a parallel second set
+```
+
+So `XpnPackager` nesting `Programs/` and `Samples/` is **not** a defect — real
+packs do exactly that. What it gets wrong is narrower, and the flat archives
+below still make the same point about paths.
+
+```
+Masada Cycle kit v.4 pt.1.xpn
+├── Expansion.xml            ← root, not Expansions/
+├── part-1.jpg               ← root artwork, no fixed name
+├── hiphop-Drum-kit-Mck4 01.xpm … 08.xpm    ← root, not Programs/
+├── load all.xpj             ← a project rides along
+└── 445 × .wav               ← root, not Samples/<program>/
+```
+
+**`<SampleFile>` is never populated, and this holds even when samples *are* in
+a subfolder.** Across every real program examined — three packs, 2017 and 2026,
+drum and keygroup — **zero non-empty `<SampleFile>` elements, zero `<File>`
+elements, and not one `<SampleName>` containing a path separator.** Pro Studio
+Kit MPC3 keeps its WAVs in `Drum Kits/Samples/` and *still* references them by
+bare name. MPC resolves samples by searching, not by path, exactly as
+[Tier 1](#tier-1--bare-program-folder-mvp) describes for loose folders.
+
+So `XpnPackager` has two real defects and one non-defect:
+
+| What it does | Verdict |
+|---|---|
+| `Expansions/Expansion.xml` | **Wrong.** All four real archives put `Expansion.xml` at the root. |
+| `XpmWriter(samplePathPrefix = "Samples/$programStem")`, populating `<SampleFile>` | **Wrong.** No real program does this, in any layout. |
+| `Programs/<Kit>.xpm` + `Samples/<Kit>/*.wav` subfolders | **Fine.** Real packs fold content into subfolders, `Samples/` included. |
+
+One more convention worth matching: real previews live in a `[Previews]/`
+folder, named for the program plus a second extension —
+`[Previews]/Percussion-Skins 1.xpm.wav`. `XpnPackager` writes
+`Programs/<Kit>.wav`.
+
+### What this does and doesn't prove
+
+**MPC accepts both layouts.** That was listed here as unresolvable from files;
+it isn't. Three vendors ship commercial products spanning fully flat (Masada),
+flat-plus-`[Previews]/` (Platinum), and deeply foldered (Pro Studio Kit), and
+all of them are sold as working expansions. Archive organisation is free.
+
+So the XO_OX toolchain's nested structure was never the problem — its one
+substantive error is putting `Expansion.xml` under `Expansions/` instead of at
+the root, which no real archive does.
+
+The acceptance test still **runs today**: import `testkit/SnipSnap_Factory.xpn`
+on the Live III. The KDoc's own warning — "get the structure wrong and nothing
+loads, no error, just silence" — is the failure mode to expect. If the pack
+doesn't appear, move `Expansion.xml` to the root and drop `samplePathPrefix`
+before touching anything else.
 
 ## Tier 1 — bare program folder (MVP)
 
@@ -65,14 +140,66 @@ folder into an `Expansions` folder on the drive. Implemented as
 `ExpansionWriter` in `:kit`; `./gradlew :synth:generateExpansionPack` builds
 the acceptance pack under `testkit/Expansions/`.
 
-> **Provenance (revised):** the `Expansion.xml` schema is now the lowercase
-> `<expansion>` form lifted from the XO_OX XPN toolchain's shipping
-> packager (`xpn_packager.py`), replacing this writer's earlier guess from
-> prose walkthroughs — plus the plain-text `manifest` that toolchain emits
-> alongside for wider firmware compatibility. Grounding is "running code
-> that ships packs", one step short of "diffed against an Akai-authored
-> file"; the hardware check stands: if the acceptance pack tiles up in the
-> Expansion browser, the shape is right.
+> **Provenance (confirmed):** the lowercase `<expansion>` form came from the
+> XO_OX XPN toolchain's packager (`xpn_packager.py`) — "running code that
+> ships packs", one step short of a diff against a real pack. That step is
+> now taken. A commercial 2026 standalone expansion
+> ([`reference/golden/expansion/ambientbox-standalone-Expansion.xml`](../reference/golden/expansion/ambientbox-standalone-Expansion.xml))
+> emits the same root attributes, the same elements, in the same order.
+> **This writer is correct.** The hardware check still stands as an
+> end-to-end test, but the schema is no longer the risk.
+
+### Two dialects, and we write the right one
+
+`Expansion.xml` comes in two forms, and they are not two generations — they
+are two deployment targets. Five real files split cleanly:
+
+| | Standalone / SD | Desktop-installed |
+|---|---|---|
+| Where | a flat expansion folder | `Library/Application Support/Akai/MPC 3/` |
+| Root | `version="2.0.0.0"` **+ `buildVersion`** | `version="1.0"`, no `buildVersion` |
+| `<directory>` | absent | present |
+| `<local/>` `<priority>` `<description>` | present | absent |
+| Examples | The Ambient Box, **ours** | Classic Drum Machines, F9 Gemini |
+
+`buildVersion` is the discriminator — present on every standalone file, absent
+from every desktop one. We target standalone, which is right for a Live III.
+
+**The axis is deployment target, not generation**, and the case that could have
+falsified it now exists. 2 Step Garage is an **MPC 2-era** desktop installer —
+it lands in `Akai/MPC/Content/` (no "3"), and ships `.xpm` programs with `.sxq`
+sequences, not `.xtd`. Its `Expansion.xml` is nonetheless the *desktop* form,
+identical in shape to the MPC 3 packs':
+
+```xml
+<expansion version="1.0">                    <!-- no buildVersion -->
+  …
+  <directory>com.akaipro.mpc.expansion.2stepgarage</directory>
+  <separator>-</separator>
+</expansion>                                 <!-- no local/priority/description -->
+```
+
+So MPC 2 content in a desktop installer uses the desktop dialect, and MPC 2
+content in a standalone folder (The Ambient Box, Masada) uses the standalone
+dialect. Where the pack is installed decides the schema; which generation of
+program it contains does not.
+
+**`buildVersion` is not something to worry about**, and an earlier revision of
+this section wrongly flagged our hardcoded `2.10.0.0` at
+`ExpansionWriter.kt:146` as stale. Platinum Percussion settles it by shipping
+*the same pack twice*, with a different value in each copy:
+
+| Copy | `buildVersion` | `<version>` |
+|---|---|---|
+| inside `MPC Software Installer.xpn` | `3.7.0.42` | `2.5.0.0` |
+| in the standalone folder | `2.11.2.2` | `2.5.0` |
+
+Both load. `buildVersion` records whichever MPC build wrote that file, nothing
+more, and `2.11.2.2` sits directly beside our `2.10.0.0`. The same pair also
+shows `<version>` is not strictly four-part — `2.5.0` ships fine.
+
+**`<separator>`** is optional: Masada, Platinum Percussion and Akai's desktop
+files include it, The Ambient Box omits it, all ship. We emit it.
 
 ```
 Expansions/

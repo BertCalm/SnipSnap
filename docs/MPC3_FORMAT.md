@@ -15,12 +15,26 @@ serialization, and a different program model.
 | Container | plain XML text | gzip-compressed, ACVS header + JSON |
 | Magic bytes | `3C 3F 78 6D 6C` (`<?xml`) | `1F 8B` (gzip) |
 | Programs | separate `.xpm` XML files | **embedded in the `tracks[]` JSON array** |
-| Companion folder | `.xpm`, `.xal`, `.sxq`, `.mcn` | WAV files only |
+| Standalone program | `.xpm` | `.xtd` (drum) / `.xty` (instrument) |
+| Companion folder | `.xpm`, `.xal`, `.sxq`, `.mcn` | `<name>_[TrackData]/` — WAVs, and optionally the MPC 2 twin |
 | Sequences | standard MIDI files (`.sxq`, 960 PPQ) | embedded JSON events |
 | Firmware range | 2.0 – ~2.12.x | 3.0 – 3.7.0.56 confirmed |
 
 Both generations use the `.xpj` extension for projects, so **detection must be
-content-based** — check magic bytes, never the extension.
+content-based** — check magic bytes, never the extension. Both halves of that
+are now verified against real files rather than asserted:
+
+| Generation | `.xpj` first bytes | Root |
+|---|---|---|
+| MPC 2 (2 Step Garage) | `3C 3F 78 6D 6C` `<?xml` | `<Project>` |
+| MPC 3 (Dirty Drummer) | `1F 8B` gzip | `ACVS` / `SerialisableProjectData` |
+
+Both are in [`reference/golden/mpc3-project/`](../reference/golden/mpc3-project/).
+
+The MPC 2 companion-file convention is confirmed too: a program ships beside a
+same-stem sequence — `Garage-Kit-Agent Kit 128.xpm` next to
+`Garage-Kit-Agent Kit 128.sxq` — and `.sxq` really is a standard MIDI file,
+`MThd`, format 1, with division `0x03C0` = **960 PPQ** exactly as documented.
 
 ### The ACVS header
 
@@ -42,27 +56,51 @@ header, data = lines[:5], json.loads(lines[5])["data"]
 ```
 
 Line 3 being an **object type name** is the interesting part — it implies the
-container is generic across MPC 3 object types, not specific to projects. See
-[The one real unknown](#the-one-real-unknown).
+container is generic across MPC 3 object types, not specific to projects. It
+is, and that is now confirmed rather than inferred:
+
+| Line 3 | Written to | Seen in |
+|---|---|---|
+| `SerialisableProjectData` | `.xpj` | 59 real projects; [`reference/golden/mpc3-project/`](../reference/golden/mpc3-project/) |
+| `SerialisableTrackData` | `.xtd`, `.xty` | [`reference/golden/mpc3-track/`](../reference/golden/mpc3-track/) |
+| `SerialisableAC50ExportData` | `.mpcsample` | [`reference/golden/mpc3-project/`](../reference/golden/mpc3-project/) |
+
+`.mpcsample` is a small sidecar (~1.2 KB) carrying only `muteGroups`,
+`sequences` and `simultPlayTargets` — not audio, despite the name.
+
+**A reader must survive files that are none of these.** A shipping commercial
+pack (Dirty Drummer Collection) contains a `.xpj` whose first 28,672 bytes —
+exactly `0x7000` — are zero, followed by high-entropy data with no gzip header.
+It is corrupt, not a third container, but it is *in the box*: real content
+includes files that match neither `1F 8B` nor `<?xml`, so detection must return
+"unknown" rather than assume or throw.
+
+Lines 2 and 5 describe the **exporter build and its host OS**, not the format
+and not the vendor. Observed builds span `0.1.0.979` … `0.1.0.1020`, `3.4.0.105`
+and `3.6.0.106`, on `Windows` and `Linux` — and a single pack can contain two of
+them. Neither line is a firmware version, and a reader must not gate on either.
+See [One format, several exporter builds](#one-format-several-exporter-builds).
 
 ## Drum program schema
 
-Path: `tracks[n].program.drum`. Schema version 28, 128 pads, 8 layers per pad.
+Path: `tracks[n].program.drum`. 128 pads, 8 layers per pad — both confirmed
+against real files. Corrected against
+[`reference/golden/mpc3-track/`](../reference/golden/mpc3-track/):
 
 ```json
 {
   "program": {
     "version": 4,
-    "name": "HipHop Kit",
+    "name": "Kit-SFM 808 Classy 124",
     "type": 0,
+    "padNoteMap": { "noteForPad": { "value0": 36, "value1": 37 } },
     "programPads": {},
     "mixable": {},
     "drum": {
-      "version": 2,
+      "version": 8,
       "drumVersion": 12,
-      "padNoteMap": { "noteForPad": { "value0": 36, "value1": 37 } },
       "instruments": [ /* always 128 slots */ ],
-      "poliphony": 6,
+      "poliphony": 0,            // see below — meaning unestablished
       "coarseTune": 0,
       "fineTune": 0,
       "padGroup": { /* value0..value127 */ }
@@ -71,27 +109,94 @@ Path: `tracks[n].program.drum`. Schema version 28, 128 pads, 8 layers per pad.
 }
 ```
 
+Three corrections from the previous, prose-sourced version of this block:
+
+- **`padNoteMap` sits on `program`, not `program.drum`.** One level up, and
+  checked in all four harvested files: present on `program` every time, absent
+  from `program.drum` every time. It is always a full 128-entry map — `36, 37,
+  … 51, …` on a drum track, and an inert identity map (`value0: 0, value1: 1`)
+  on an instrument track, which addresses pitch by zone key range instead.
+- **`drum.version` is 8**, not 2 — and it reads 8 on instrument tracks too.
+- **"Schema version 28" does not exist.** No `version` field in any harvested
+  file holds that value. It has been removed rather than corrected, because
+  nothing observed corresponds to it.
+
+**Do not gate a reader on any version integer.** `program.version` is `4` in
+one Classic Drum Machines kit and `2` in another from the same pack, and
+`drum.drumVersion` is present (`12`) in the first and **absent entirely** from
+the second. Akai's own content would fail a strict schema check.
+
 ### What maps across from our MPC 2 model
 
 | SnipSnap `Pad` | MPC 2 XPM | MPC 3 JSON |
 |---|---|---|
-| sample | `<SampleName>` (no extension) | `layersv[i].sampleName` (**with** extension) |
-| length | `<SliceEnd>` | `layersv[i].sampleEnd` |
+| sample | `<SampleName>` (no extension) | `layersv[i].sampleName` (no extension) **and** `layersv[i].sampleFile` (with extension) |
+| length | `<SliceEnd>` | `layersv[i].sliceInfo.End` |
 | mute group | `<MuteGroup>` | `whichMuteGroup` (0 = none, 1-32) |
-| one-shot | `<OneShot>` bool | `triggerMode` int — 0 One Shot, 1 Note Off, 2 Note On |
+| one-shot | `<OneShot>` bool | `triggerMode` int — see [below](#triggermode-all-three-values-observed) |
 | tune | `<TuneCoarse>` / `<TuneFine>` | `coarseTune` / `fineTune` |
-| pad→note | `<PadNoteMap>`, 1-based `<PadNote number>` | `padNoteMap.noteForPad`, **0-based** `value0..value127` |
+| pad→note | `<PadNoteMap>`, 1-based `<PadNote number>` | `program.padNoteMap.noteForPad`, **0-based** `value0..value127` |
 
 The model in `DrumProgram.kt` survives the transition nearly intact. That was
 worth getting right.
 
-### Two gotchas already visible
+### Three gotchas, two of them corrections
 
-1. **`sampleName` carries the extension in MPC 3** and did not in MPC 2. Easy to
-   get backwards, and it fails as a missing sample rather than an error.
-2. **The pad note map is 0-indexed here** (`value0` = pad 1) where MPC 2 used
+1. **A sample is named twice, in two fields.** `sampleName` is bare
+   (`Vintage-Kick-SFM 808 Kicks1`) and `sampleFile` carries the extension
+   (`Vintage-Kick-SFM 808 Kicks1.wav`). Both are populated on every used layer,
+   and both must match the track-level pool — `sampleName` to `samples[].name`,
+   `sampleFile` to `samples[].path`. Earlier revisions of this document claimed
+   the extension lived on `sampleName`; it does not, and the MPC 2 semantic
+   survived unchanged under a second field name.
+2. **`sampleEnd` is not the length field.** It reads `0` on all 16 populated
+   layers of both harvested kits; the real end offset is `sliceInfo.End` (e.g.
+   `3187907` for a kick, `8722` for a closed hat). This is the worst kind of
+   wrong to ship: `sampleEnd` exists, accepts a value, and is ignored, so a
+   writer that populates it produces kits that play at full sample length with
+   no error anywhere.
+3. **The pad note map is 0-indexed here** (`value0` = pad 1) where MPC 2 used
    1-based `<PadNote number="1">`. Same table, different base — exactly the class
    of off-by-one that put `instrumentBaseIndex` in the MPC 2 writer.
+
+### `triggerMode`: all three values observed
+
+The enum was documented from prose as `0` One Shot / `1` Note Off / `2` Note On.
+All three now appear on **filled** pads in real drum programs, and what they are
+used for confirms the labels:
+
+| Value | Filled pads | Used for |
+|---|---|---|
+| `0` One Shot | 595 | kicks, snares, hats — the whole sample fires and ends |
+| `1` Note Off | 34 | **rolls** — `Snare 14 Roll 01` plays while held, stops on release |
+| `2` Note On | 68 | vocals, loops, keys, guitar, sustained chops |
+
+Counts from Pro Studio Kit 3, which is the only pack of eleven carrying `1`.
+Earlier revisions of this document recorded `1` as never observed; it is now in
+[`reference/golden/mpc3-track/Kit-PSK 009 Hip Hop Kit.xtd`](../reference/golden/mpc3-track/).
+
+This is a **per-pad musical choice, not a program-type default.** One drum
+program routinely mixes all three. Empty slots carry `0` — and, in this pack,
+sometimes `1`, so `triggerMode` is not usable as a fill test either.
+
+### Empty vs. filled pads
+
+Answered by the harvested kits, and it closes an open question in
+[`reference/README.md`](../reference/README.md).
+
+Akai emits **all 128 slots fully formed**. An unused pad is not omitted, null,
+or truncated — it carries the same key set as a used one, with plausible
+defaults (`highNote: 127`, `polyphony: 3`, `mixable.pan: 0.5`). The whole
+difference sits in `layersv[0]`:
+
+| Field | Used pad | Empty pad |
+|---|---|---|
+| `sampleName` / `sampleFile` | `"…808 Kicks1"` / `"….wav"` | `""` / `""` |
+| `sliceIndex` | `0` | `128` (sentinel) |
+| `sliceInfo.End` | `3187907` | `0` |
+| `sliceInfo.LoopCrossfadeLength` | `-1` | `0` |
+
+Read `layersv[0].sampleName == ""` as the emptiness test. Write all 128 slots.
 
 ### Sample pool
 
@@ -100,86 +205,477 @@ MPC 3 adds a track-level `samples[]` pool alongside the per-layer references:
 ```json
 {
   "version": 1,
-  "name": "SS_Kick_01",          // no extension
-  "path": "SS_Kick_01.wav",      // with extension
+  "name": "Vintage-Kick-SFM 808 Kicks1",          // no extension
+  "path": "Vintage-Kick-SFM 808 Kicks1.wav",      // with extension
   "loadImpl": 0,
-  "metadata": { "tempo": 300.0, "rootNote": 60, "tune": 0.0, "key": "A# Natural Minor" }
+  "metadata": { "tempo": 85.5199966430664, "rootNote": 60, "tune": 0.0, "key": "G# Major" }
 }
 ```
 
-Observed conventions worth copying: `rootNote` 60 (C4) for one-shots, and a
-`tempo` of `30.0` or `300.0` as the sentinel for "not tempo-aware" — which is
-what every drum hit we export is. `metadata.key` is where BPM/key detection
-output would eventually land.
+The pool is **not optional bookkeeping**. In every harvested file the set of
+`samples[].name` equals the set of layer `sampleName`s exactly, and
+`samples[].path` equals the set of `sampleFile`s — a strict 1:1, deduplicated
+(one Classic Drum Machines kit has 16 used pads referencing 12 distinct
+samples, because hats repeat). `path` is a bare filename with no directory
+component: the WAVs live flat in the sibling `<name>_[TrackData]/` folder.
+
+`rootNote` 60 (C4) for one-shots holds — all 12 pool entries in the harvested
+kit use it. **The `30.0` / `300.0` "not tempo-aware" sentinel does not.** Real
+values are `20.0` for percussion and hats but `85.5199966430664` and
+`109.16100311279297` for kicks and snares — plausible detector output, not a
+flag. Treat `metadata.tempo` as an estimate to fill in, not a sentinel to match.
 
 ### Serialization patterns
 
 The firmware's C++ serializer leaves fingerprints a writer must reproduce:
 
-| Pattern | Example |
-|---|---|
-| indexed-dict — arrays as `valueN` keyed objects | `"noteForPad": {"value0": 36, ...}` |
-| enum wrapper | `"EnumCerealisationWrapper(behaviour)": "Off"` |
-| ADSR wrapper | `"Attack": {"value0": 0.0}` |
-| pan centre is not 0.5 | `0.5039370059967041` |
-| colour as packed int | `16711680` = `(R<<16)\|(G<<8)\|B` |
-| **`poliphony`** | misspelled in the schema; must be preserved exactly |
+| Pattern | Example | Status |
+|---|---|---|
+| indexed-dict — arrays as `valueN` keyed objects | `"noteForPad": {"value0": 36, ...}` | confirmed, pervasive |
+| ADSR wrapper | `"Attack": {"value0": 0.0}` | confirmed |
+| colour as packed int | `2733428` = `0x29B574` = `(R<<16)\|(G<<8)\|B` | confirmed |
+| **`poliphony`** | misspelled at `program.drum.poliphony` | confirmed — but see below |
+| bitmap-as-string | `noteRange.data` = 132 `"1"` characters | new |
+| enum wrapper | `"EnumCerealisationWrapper(selectedModifierType)": "Tuning (coarse)"` | confirmed, **but only inside sequence events** |
 
-Pad colour being a plain packed integer here is a genuine improvement over
-MPC 2, where it was buried in an escaped-JSON blob. The colour feature gets
-much cheaper on this target.
+Two of these need their scope pinned down, because the previous revision
+generalised both too far.
 
-## The one real unknown
+**The enum wrapper is not a program-level convention.** Its only occurrences in
+any harvested file are inside sequence note-modifier data. Every enum-ish field
+in the program schema — `filterType`, `oscillatorType`, `triggerMode`,
+`behaviour` (77 occurrences) — is a plain integer, and `tempoSync` is a plain
+string. Do not wrap program enums.
 
-Everything above documents the **project** container (`.xpj`). Nobody has
-publicly documented what MPC 3 writes when you save a *standalone program* to
-disk. Three candidates:
+**`poliphony` is one typo, not a convention.** The misspelling is real at
+`program.drum.poliphony`, and directly beside it `instruments[i].polyphony` is
+spelled correctly. They are different fields at different paths. Reproduce both
+spellings exactly; do not normalise either toward the other.
 
-1. **ACVS + gzip + JSON**, with an object type like `SerialisableProgramData` on
-   header line 3 — most likely, given the container is clearly generic.
-2. **MPC 2-style XML `.xpm`**, kept for interoperability — plausible, since
-   exporting `.xpm` is Akai's documented path for moving material between MPC 2
-   and MPC 3.
-3. Something else.
+Its *value* is a separate question. Both drum tracks carry `poliphony: 0,
+monophonic: false`; both instrument tracks carry `poliphony: 1, monophonic:
+true` on the same vestigial block, while their zones say `monophonic: false`.
+So `0` is what Akai writes for a working kit, but whether it means "unlimited"
+or "unset" is unestablished — copy it, don't reason from it. The earlier value
+of `6` in this sample was prose-sourced and appears nowhere in real content.
 
-**This is blocking, and only a Live III can answer it.** Nothing about a native
-MPC 3 writer can be built until we know which container a saved program uses.
+### `0.5039370059967041` is not a pan constant
 
-The reading side is already built: the `:mpc3` module detects the generation by
-content (`MpcFormats.detect`), opens containers (`Acvs.read`) and walks the
-documented project schema (`Mpc3Project`) — so a saved file from the Live III
-can be dissected the moment it lands.
+The previous revision recorded this as "pan centre is not 0.5" and told writers
+to emit it. That would have put every pad slightly right of centre forever.
 
-### The check (two minutes on the Live III)
+The value is `float32(64 / 127)` — the normalisation of **MIDI 64**, the centre
+of a 0–127 range. It shows up wherever a MIDI-domain value sits at its midpoint,
+and **which field carries it moves around by exporter build**:
 
-1. Build a drum program with a few pads filled.
-2. Save it to SD or USB.
-3. Look at the first two bytes of the resulting file:
-   - `1F 8B` → gzip → candidate 1. Decompress, read the 5-line header, and the
-     object type on line 3 tells us everything.
-   - `<?xml` → candidate 2, and the existing `:xpm` writer is already most of
-     the way there.
+| Build | `data.pan` | `program.mixable.pan` | `0.50393…` also seen as |
+|---|---|---|---|
+| `3.6.0.106`, `0.1.0.992` | `0.5` | `0.5` | a note `velocity` |
+| `0.1.0.979` | `0.5` | **`0.50393…`** | — |
+| `0.1.0.999` / `.1020` | **`0.50393…`** | `0.5` | automation event values |
 
-Drop the file in `reference/golden/liveiii-36/` either way.
+An earlier revision claimed `program.mixable.pan` is exactly `0.5` in all
+harvested files. Producer Kit Essentials falsifies that — there it is
+`0.50393…`, with `data.pan` at `0.5`, the exact inverse of the F9 packs.
+
+So there is no rule about which field holds it. Both values mean centre; real
+off-centre pans are ordinary floats (`0.39`, `0.59`, `0.61`). **Write `0.5` for
+centre, read either as centre.**
+
+### Pad colour: cheaper, but maybe not per-pad
+
+Colour as a plain packed integer is a genuine improvement over MPC 2, where it
+was buried in an escaped-JSON blob — `data.colour = 2733428` is RGB(41, 181,
+116), the first real colour value this project has seen.
+
+The catch: it is **track-level**. Across 128 instrument slots in both harvested
+kits there is no per-pad `colour` key at all, even though
+`padsFollowTrackColour: false` implies one should exist. Two files from one pack
+cannot separate "absent from the schema" from "never set by these kits", so the
+per-pad colour question stays open — but plan for track-level colour and treat
+per-pad as unproven rather than cheap.
+
+## The standalone program container — answered
+
+This section used to describe "the one real unknown": what MPC 3 writes when a
+program is saved on its own, with three candidates and a note that only a Live
+III could settle it. **Candidate 1 was right**, established from Akai-authored
+shipping content rather than hardware — see
+[what this does and doesn't settle](#what-this-does-not-settle).
+
+```
+$ xxd -l 2 "Kit-SFM 808 Classy 124.xtd"
+00000000: 1f8b                          ← gzip
+
+$ gzip -dc "Kit-SFM 808 Classy 124.xtd" | head -5
+ACVS
+3.6.0.106
+SerialisableTrackData          ← not SerialisableProgramData
+json
+Windows
+```
+
+Same ACVS container, generic as predicted. The refinement is line 3: MPC 3's
+unit of saving is a **track**, not a program. That is consistent with programs
+living at `tracks[n].program` inside a project — a standalone save is one
+element of that array hoisted into its own file, carrying the program plus the
+track's name, colour, mixer state, sample pool, and sequence clips.
+
+Two extensions share the container:
+
+| Extension | Contents | `program.type` |
+|---|---|---|
+| `.xtd` | drum track | `0` |
+| `.xty` | instrument / keygroup track | `1` |
+
+A program never ships alone. Each sits beside a sibling folder of its WAVs:
+
+```
+Kit-SFM 808 Classy 124.xtd
+Kit-SFM 808 Classy 124_[TrackData]/      ← flat, one WAV per samples[].path
+```
+
+### Shipping both generations from one folder
+
+Timeless Glow shows how a vendor covers MPC 2 and MPC 3 in a single pack, and it
+revises the "WAVs only" claim above. Every one of its 102 programs exists in
+both containers, name for name — 57 keygroups as `.xty` + `.xpm`, 45 drum kits
+as `.xtd` + `.xpm` — and **the MPC 2 twin lives inside the MPC 3 program's own
+data folder**:
+
+```
+Keygroups/
+├── Inst-Bass-NI Bass Artisan.xty                    ← MPC 3 program
+└── Inst-Bass-NI Bass Artisan_[TrackData]/
+    ├── Bass D# Artisan.WAV                          ← the samples
+    └── Inst-Bass-NI Bass Artisan.xpm                ← MPC 2 twin, beside them
+```
+
+One asset folder, two programs pointing at it. MPC 3 opens the `.xty`; an MPC 2
+machine browses into `_[TrackData]/` and finds a `.xpm` sitting with its samples,
+which is exactly the bare-folder arrangement [Tier 1](MPC_EXPORT.md) describes.
+
+This is a repeated pattern, not one vendor's quirk: Infinite Escape does the
+same thing, 79 programs, 79 twins, 79 `.xpm` inside `_[TrackData]/`, from the
+same build family (`3.4.1.96` / `3.6.0.134`).
+
+But it is still a *choice* — Classic Drum Machines' `_[TrackData]/` folders hold
+WAVs and nothing else, while Timeless Glow's hold 777 WAVs and 102 `.xpm`. A
+reader must not assume either.
+
+The pair in [`reference/golden/`](../reference/golden/) is the same program in
+both formats: `keygroup/Inst-Bass-NI Bass Artisan.xpm` (63 KB) and
+`mpc3-track/Inst-Bass-NI Bass Artisan.xty` (10 KB) — the cleanest available
+reference for how one instrument maps across the generation split.
+
+### The reader does not see any of this yet
+
+`:mpc3` detects and opens these files correctly — `MpcFormats.detect` dispatches
+on content, never extension, so `.xtd`/`.xty` need no special case, and
+`Acvs.read` accepts any object type on header line 3. Both were built right.
+
+`Mpc3Project` models the **project** shape, and that model is now confirmed
+against real files rather than a third-party write-up: 59 `.xpj` projects from
+the Dirty Drummer Collection all carry `data.tracks[]` (4 tracks each), with
+`tracks[n].program.type`, 128 instruments, and `padNoteMap` on `program` — the
+same corrections that applied to track files. **The reader is right about
+projects.**
+
+What it cannot do is read a **track** file. `.xtd`/`.xty` have no `tracks` key
+at all — `program` sits directly under `data` — so `drumPrograms()` returns an
+empty list for a file with 128 populated pads. The module is tolerant enough
+that this does not throw: **a silent total miss, not a crash.** One accessor for
+the un-nested shape covers it, and the existing project path stays as-is.
+
+`mpc3/src/test/kotlin/com/snipsnap/mpc3/Mpc3ProjectTest.kt` also builds its
+fixture with `padNoteMap` nested inside `drum` and `"version": 28`. The test is
+self-consistent so it passes, but it is the only encoding of the schema in the
+codebase and it encodes the corrected-away version.
+
+### What this does *not* settle
+
+These files were written by **authoring tools** — Akai's and F9 Audio's — not by
+a standalone MPC. That is strong evidence for what the firmware writes, not
+proof, and this document has been wrong before by trusting second-hand structure.
+
+So the Live III check in [`reference/README.md`](../reference/README.md) stays
+open, with a sharper question than before: not *which container*, but *does the
+hardware write the same one*. Build a drum program, save it, and confirm the
+first two bytes are `1F 8B` and header line 3 reads `SerialisableTrackData`.
+Drop it in `reference/golden/liveiii-36/`.
+
+## One format, several exporter builds
+
+An earlier revision of this section called this "two authors, two dialects" and
+split the differences by vendor — Akai versus F9 Audio. **That was wrong.** The
+variation tracks the **exporter build on header line 2**, and two different
+builds turn up inside a single Akai pack:
+
+| Build | `samples[]` | `program.base.*` | `data.pan` | `program.mixable.pan` | Seen in |
+|---|---|---|---|---|---|
+| `3.6.0.106` | `version` + `metadata` | 32 keys | `0.5` | `0.5` | Classic Drum Machines |
+| `0.1.0.979` | neither | none | `0.5` | **`0.50393…`** | Producer Kit Essentials |
+| `0.1.0.992` | neither | none | `0.5` | `0.5` | Classic Drum Machines |
+| `0.1.0.999` / `.1020` | neither | none | **`0.50393…`** | `0.5` | F9 Gemini |
+
+Classic Drum Machines — one Akai product — ships `Kit-SFM 808 Classy 124.xtd`
+stamped `3.6.0.106` beside `Kit-SFM 909 Crisp 123.xtd` stamped `0.1.0.992`, with
+different `samples[]` shapes. Producer Kit Essentials is Akai-published and
+entirely `0.1.0.98x`, i.e. the build family that was previously labelled "F9's".
+
+Two consequences for a writer:
+
+1. **Do not infer a house style from a vendor name.** The only thing that
+   predicts these fields is the build stamp, and one vendor uses several.
+2. **The richer output is still the safer target.** Emitting `samples[].version`
+   and `metadata` is what the newest-numbered build does, and every other build
+   omitting them loads fine — so the omission is clearly tolerated and the
+   inclusion is clearly tolerated.
+
+The keygroup schema below no longer carries a single-build caveat. It was first
+read from `0.1.0.999`/`.1020` files; Electric Bass 3 supplies 52 more instrument
+tracks from build **`3.9.0.31`** on OSX, and the structure holds unchanged —
+zones in `program.drum.instruments`, `program.keygroup` with no `instruments`
+key, 8 `layersv` slots, dual `filterData`/`lfoData` at `value0`/`value1`. What
+that pack *did* change is the `numKeygroups` rule, below.
+
+## Embedded sequences
+
+Undocumented until now, and directly relevant since the repo already ships a
+demo groove. A track file carries its own clips:
+
+```
+data.sharedClipMap[]                     ← pattern clips, populated (one had 127 events)
+data.arrangementClipMap[]                ← 128 entries, arrangement lanes, empty in these files
+  └ value.eventList.events[]
+      { time: 14640,                     ← pulse offset
+        type: 3,                         ← note event
+        note: { note: 36, velocity: 0.5039370059967041, length, probability,
+                ratchet, articulation, modifierValue0..15,
+                "EnumCerealisationWrapper(selectedModifierType)": "Tuning (coarse)" } }
+```
+
+Velocity is a normalised float, not a 0–127 int — which is where the
+`0.50393…` constant actually comes from. `probability` and `ratchet` per note
+are MPC 3 additions with no MPC 2 equivalent.
+
+## Keygroup program schema
+
+Read from the two F9 `.xty` files in
+[`reference/golden/mpc3-track/`](../reference/golden/mpc3-track/) — the first
+real keygroup programs this project has seen, after `KeygroupWriter` was built
+entirely from second-hand vocabulary. Everything here carries the F9-dialect
+caveat above.
+
+### Zones live in `program.drum.instruments`
+
+The counter-intuitive part, and the one most likely to cost a day:
+
+```
+program.type            = 1              ← the discriminator: 0 drum, 1 keygroup
+program.drum.instruments[0..127]         ← THE ZONES. lowNote, highNote, layers
+program.keygroup                         ← global synth state ONLY, no zones
+```
+
+`program.keygroup` contains **no** `instruments` key. It holds `numKeygroups`,
+pitch-bend ranges, wheel/aftertouch routing, a 32-slot mod matrix
+(`modlinksData.value0..value31`), unison, harmoniser, and four
+`*EnvelopeGlobal` booleans. The playable zones are in the same 128-slot
+`program.drum.instruments` array a drum kit uses.
+
+A writer that puts zones under `program.keygroup` produces a well-formed file
+with a correct `numKeygroups` and nothing to play.
+
+`program.drum`'s own top-level fields are vestigial on an instrument track —
+`monophonic: true, poliphony: 1` sits there while every actual zone says
+`monophonic: false`. Emit the block (both real files carry it in full), but do
+not wire controls to it.
+
+### Zone and layer model
+
+| Field | Path | Example |
+|---|---|---|
+| zone count | `program.keygroup.numKeygroups` | `13` |
+| key range | `instruments[i].lowNote` / `.highNote` | `0` / `37`, inclusive, tiled without gaps |
+| root note | `instruments[i].layersv[j].rootNote` | `37` — **per layer, not per zone** |
+| velocity range | `layersv[j].velocityStart` / `.velocityEnd` | `0` / `127` |
+| sample | `layersv[j].sampleName` / `.sampleFile` | as in drum programs |
+| trigger | `instruments[i].triggerMode` | `2` (Note On) on every zone |
+
+Conventions a writer must match:
+
+- **`numKeygroups` is a declared zone count, not a count of zones with
+  samples.** An earlier revision claimed it equals the populated slot count and
+  that populated slots are the first N contiguous from 0. Electric Bass 3
+  falsifies both halves, identically across all 52 of its instruments:
+
+  ```
+  numKeygroups          25          ← declared
+  slots with a sample   20          ← indices 4–23
+  slots 0,1,2,3 and 24  no sample   ← but real zones: lowNote 38, highNote 38
+  ```
+
+  The empty ones are fully formed zones with key ranges, just nothing assigned.
+  So gaps happen, and they happen *at the front*. Derive nothing from
+  `numKeygroups` about which slots are filled — test `layersv[0].sampleName`.
+- **8 `layersv` slots per zone**, always — unused ones fully formed with empty
+  `sampleName`. Not the 4 that MPC 2 used.
+- `triggerMode: 2` on every zone of both harvested instruments. It is a
+  reasonable keygroup default, but **not** a drum-vs-keygroup discriminator:
+  Producer Kit Essentials uses `2` on 54 filled *drum* pads against `0` on 586,
+  so drum programs mix both. Choose it per pad from whether the sound should
+  sustain, not from the program type.
+
+### Velocity layers — confirmed, with real examples
+
+This was the longest-standing open question and it is closed. Seven packs
+showed only `0..127` everywhere; three more supplied real splits in both
+containers.
+
+**The convention: layer 0 is the loudest.** Ranges descend down the layer array
+and tile `0..127` with no gaps and no overlaps.
+
+`Acoustic-Kit-BFD Funk Kit 95.xtd` — a drum pad, eight layers, **a different
+sample on each**:
+
+| Layer | Velocity | Sample |
+|---|---|---|
+| 0 | `120–127` | `Acoustic-Kick-B2 DB Hit 02` |
+| 1 | `109–119` | `…Hit 07` |
+| 2 | `96–108` | `…Hit 06` |
+| 3 | `85–95` | `…Hit 05` |
+| 4 | `74–84` | `…Hit 04` |
+| 5 | `60–73` | `…Hit 03` |
+| 6 | `30–59` | `…Hit 01` |
+| 7 | `0–29` | `…Hit 08` |
+
+Two things a writer should copy. **Boundaries are vendor-chosen, not
+auto-divided** — bands narrow toward the top (8, 11, 13, 11, 11, 14, 30, 30),
+spending resolution where playing dynamics land. And **sample order is not layer
+order**: Hit 02 is loudest, Hit 08 is quietest. The mapping is by sound, not by
+filename.
+
+They are chosen **per pad**, too, not once per program. `Acoustic-Kit-MPCe-DFH
+Drum Tools.xtd` — a David Fingers Haynes acoustic library — has 16
+velocity-layered pads carrying **12 distinct layouts** between them:
+
+```
+pad 0 (kick)   120-127 105-119  76-104  56-75  39-55  21-38   7-20   0-6
+pad 1 (snare)  120-127 105-119  83-104  64-82  48-63  34-47  13-33   0-12
+pad 2 (snare)  114-127 100-113  80-99   60-79  49-59  31-48  15-30   0-14
+```
+
+Each pad's breakpoints follow how *that instrument* responds, so there is no
+program-level velocity curve to read or write. Layer count is fixed at 8;
+everything else is per pad.
+
+Keygroups use the same mechanism. `Bass-MPC3 AM Upright Bass Advanced.xty`
+splits every zone eight ways at `111–127 / 95–110 / 79–94 / 64–78 / 48–63 /
+32–47 / 16–31 / 0–15` — an even division, this time — across 23 keygroups.
+
+So the **8 layer slots exist for 8-way velocity switching.** Round-robin (the
+Ambient Box pattern, identical ranges differentiated by `SliceIncrement`) is the
+same slots used a different way, not a separate mechanism.
+
+### Synth section
+
+Each zone carries its own `instruments[i].synthSection` (the copy on
+`program.keygroup` is dormant — all four `*EnvelopeGlobal` link toggles are
+`false`).
+
+- **Four envelopes**: `ampEnvelope`, `filterEnvelope`, `pitchEnvelope`,
+  `auxEnvelope`, each with `{"value0": …}` wrappers and curve fields defaulting
+  to `0.375`.
+- **Two filters**, `filterData.value0` and `.value1`, combined by
+  `filterSerialRouting` and `filterBlend`. `filterType` is a plain int.
+- **Two LFOs**, `lfoData.value0` / `.value1`; `lfoFilterCutOff` is itself
+  `{value0, value1}` so one LFO routes to both filters independently.
+
+Emit both filter and both LFO slots even for a single simple filter — the
+dual-slot shape is the schema, not an option.
+
+**`keyTrackEnable` is an ordinary per-zone toggle.** An earlier revision of this
+section called it a puzzle — "`false` on every layer, in files whose zones
+clearly transpose, so it is *not* base pitch tracking." That was an artefact of
+reading one file. Across both harvested instruments it splits cleanly and
+unanimously per program:
+
+**`keyTrackEnable` varies, but not with musical intent.** An earlier revision of
+this section read two F9 files — a sub-bass at `false`, an 808 bass at `true` —
+and concluded "it means what it says." A wider corpus kills that reading:
+
+| Pack | `program.type` | `keyTrackEnable` | Layers |
+|---|---|---|---|
+| Percussion Tools | drum | **`true`** on all | 5,746 |
+| Acoustic Drum Tools | drum | `false` on all | 2,560 |
+| Producer Kit Essentials | drum | `false` on all | 640 |
+| MPC Upright Bass | keygroup | `false` on all | 114 |
+| Electric Bass 3 | keygroup | `false` on all | 2,286 |
+
+**Both chromatically sampled basses — the content that must transpose — are
+entirely `false`**, while a percussion pack, which mostly shouldn't, is entirely
+`true`. That is the opposite of what a pitch-tracking flag would predict.
+
+The value is **uniform within a program** — every filled layer of a given file
+agrees, never mixed — but it does vary between programs, including inside one
+pack. MPCe Expressive Kits is 29 files all-`false` and 1 all-`true`, and the
+outlier is `Perc-Kit-MPCe-Mixed Perc 95`. (An earlier revision said "uniform per
+pack"; that held for the first packs examined and this one breaks it.)
+
+Percussion is the loose correlation — Percussion Tools is `true` throughout, and
+so is MPCe's one percussion kit. But percussion is the content least in need of
+pitch tracking, and both chromatic basses are `false`, so the correlation runs
+opposite to the field's name.
+
+So: `keyTrackEnable` is not always-`false` the way MPC 2's `<KeyTrack>` is, but
+its meaning is **not established**, and it is not base pitch tracking. Copy
+`false` — the value both real chromatic instruments use — and do not reason from
+it. The MPC 2 element is a separate matter again; see
+[`XPM_STRUCTURE.md`](XPM_STRUCTURE.md).
+
+`layersv[j].pitch` remains a third pitch field beside `coarseTune`/`fineTune`
+with an unresolved unit — `0.0` throughout. Copy the default.
 
 ## Why the MPC 2 writer survives
 
-Not wasted work, for three reasons:
+With MPC 2 hardware out of scope, one of the original three reasons is gone —
+there is no One or 2.x Live II to support. The other two got stronger:
 
-1. **MPC 3 loads MPC 2 content.** Exporting `.xpm` is Akai's own documented
-   route for moving programs across the 2/3 split.
-2. **The One and a 2.x Live II need it.** A native MPC 3 program will not load
-   on them.
-3. **It is the fallback** if the MPC 3 program container turns out to be
-   impractical to write from a phone.
+1. **MPC 3 loads MPC 2 content**, which is Akai's own documented route across
+   the 2/3 split. `:xpm` is not merely compatible, it is **the only thing in
+   this repo that produces a loadable kit today**. Until a native MPC 3 writer
+   exists, every kit that reaches the Live III goes through it.
+2. **It is the fallback** if the MPC 3 track container turns out to be
+   impractical to write from a phone — a 9.6 MB JSON body per kit is not
+   nothing on a handset.
 
-So `:xpm` becomes the compatibility path and a native MPC 3 writer becomes the
-primary — rather than the MPC 2 writer being replaced.
+So `:xpm` is the shipping path and a native MPC 3 writer is the goal. What is
+deprioritised is *verifying `:xpm` against MPC 2 devices* — see
+[`reference/README.md`](../reference/README.md#backlog-mpc-2) — not the writer
+itself. Its output still has to load on the Live III, and that test runs now.
 
 ## Sources
 
+**Primary.** Four real files in
+[`reference/golden/mpc3-track/`](../reference/golden/mpc3-track/), harvested
+from two commercial MPC 3 expansion installers — two Akai-authored drum tracks
+and two F9-authored instrument tracks. Every claim above marked confirmed was
+checked against them directly. See
+[`reference/golden/README.md`](../reference/golden/README.md) for provenance and
+the extraction recipe.
+
+Their limits, stated plainly: four files, two packs, two authoring tools, zero
+hardware saves. They cannot show a velocity split, a non-zero tune value, a
+per-pad colour, or anything a Live III does differently.
+
+**Secondary.**
+
 - [kurtjcu/MPC-project-file-definitions](https://github.com/kurtjcu/MPC-project-file-definitions)
-  — the `.xpj` 3.7+ knowledge base this document draws on.
+  — the `.xpj` 3.7+ knowledge base this document originally drew on. The
+  harvest contradicted five of its claims as recorded here (`sampleName`
+  extension, `sampleEnd` as length, the pan constant, schema version 28, the
+  `padNoteMap` path), which is roughly what its own confidence ratings would
+  predict — treat the remainder accordingly.
 
 Its own caveat applies here too, and should be taken seriously: reverse-engineered
 from 18 project files and the MPC 3.7 user guide, "likely to contain errors,

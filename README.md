@@ -20,7 +20,7 @@ capture (rolling buffer)  →  trim  →  assign to 4×4 grid  →  export .xpm 
 | | |
 |---|---|
 | Platform | Android only, minSdk 29 |
-| Hardware | Akai MPC One, MPC Live II, MPC Live III |
+| Hardware | Akai MPC Live III — the only device in hand and the only one tested against. The One and Live II should load the compatibility format, but that is [unverified and backlogged](reference/README.md#backlog-mpc-2). |
 | Primary format | MPC 3 native (gzip + ACVS header + JSON), Live III as acceptance device |
 | Compatibility format | MPC 2-era `.xpm` drum program + 44.1 kHz WAVs, as a folder — implemented |
 | One-file sharing | `.xpn` ZIP archives — implemented via `XpnPackager`, pending the hardware import check |
@@ -253,7 +253,7 @@ chassis — unverified against a real standalone save, and
 - [`docs/CONCEPT.md`](docs/CONCEPT.md) — product shape, MVP cut, architecture
 - [`docs/ANDROID_CAPTURE.md`](docs/ANDROID_CAPTURE.md) — how capture actually works and where it breaks
 - [`docs/MPC_EXPORT.md`](docs/MPC_EXPORT.md) — folder layouts and export paths
-- [`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md) — the MPC 3 container and drum schema, and the one thing blocking a native writer
+- [`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md) — the MPC 3 container, drum and keygroup schemas, verified against real Akai content
 - [`docs/XPM_STRUCTURE.md`](docs/XPM_STRUCTURE.md) — the MPC 2 format, its provenance, and what's still unverified
 - [`docs/KIT_BEST_PRACTICES.md`](docs/KIT_BEST_PRACTICES.md) — pad layout, mute groups, naming, and what Akai does and doesn't document
 - [`docs/UI_DESIGN.md`](docs/UI_DESIGN.md) — the TapeOS visual language (90s desktop × cassette) and the mockup artboards in [`design/`](design/)
@@ -263,14 +263,22 @@ chassis — unverified against a real standalone save, and
 
 ## Next step
 
-**Find out what an MPC 3 saved program actually is.** Build a drum program on the
-Live III, save it to SD, and check the first two bytes — `1F 8B` means gzip and
-the new container, `<?xml` means it still writes MPC 2-style XPM. Nothing about a
-native MPC 3 writer can be built until that's answered. Procedure in
-[`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md#the-check-two-minutes-on-the-live-iii).
+**Teach `:mpc3` to read a track file.** An MPC 3 saved program is now known: it
+is `.xtd`/`.xty` — gzip, ACVS header, `SerialisableTrackData`, JSON — established
+from four real Akai and F9 files now in
+[`reference/golden/mpc3-track/`](reference/golden/mpc3-track/). The container
+detection and ACVS reader already handle them, but `Mpc3Project` looks for
+programs under `data.tracks[]`, which a track file does not have, so it silently
+returns nothing for a file with 128 populated pads. One accessor for the
+un-nested shape unblocks the writer.
+[`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md#the-standalone-program-container--answered)
+has the schema, and the corrections it forced.
 
-Then, for the compatibility path: load a generated kit on an **MPC One** and
-confirm all 16 pads fire where they were assigned. See
+**The Live III is the only target.** MPC 2 hardware verification is
+[backlogged](reference/README.md#backlog-mpc-2) — but `:xpm` stays live, because
+it is the only thing producing loadable output today and MPC 3 loads MPC 2
+content. So the acceptance test runs now: generate a 16-pad kit, load it on the
+**Live III**, confirm all 16 pads fire where they were assigned. See
 [`docs/XPM_STRUCTURE.md#unverified`](docs/XPM_STRUCTURE.md#unverified) — the big
 one is whether instrument numbering is 0- or 1-based, which shows up as a kit
 shifted by exactly one pad.
