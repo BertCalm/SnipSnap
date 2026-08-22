@@ -138,6 +138,15 @@ internal object Dsp {
             )
         }
 
+        /** Constant-peak-gain bandpass — the RBJ cookbook's formant workhorse. */
+        fun bandpass(f0: Float, q: Float, rate: Int = RATE) {
+            val w0 = (2.0 * PI * f0 / rate)
+            val cw = kotlin.math.cos(w0).toFloat()
+            val sw = kotlin.math.sin(w0).toFloat()
+            val alpha = sw / (2f * q)
+            set(alpha, 0f, -alpha, 1 + alpha, -2 * cw, 1 - alpha)
+        }
+
         fun peaking(f0: Float, gainDb: Float, q: Float, rate: Int = RATE) {
             val a = Math.pow(10.0, gainDb / 40.0).toFloat()
             val w0 = (2.0 * PI * f0 / rate)

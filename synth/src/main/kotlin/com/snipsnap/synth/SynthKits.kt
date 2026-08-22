@@ -87,4 +87,47 @@ object SynthKits {
             chipNote(9, PENTATONIC[8]), chipNote(10, PENTATONIC[9]),                                        // A15 A16
         )
     }
+
+    /**
+     * The atmosphere kit: VOX choirs on the bottom rows, GRAINS clouds
+     * above — the first kit whose sounds come from granulating *other
+     * sounds*, which in the app means granulating your captures. GRAINS
+     * pads carry no recipe yet (a cloud's recipe needs a source-file
+     * reference, which is the app layer's kit-folder job); VOX pads are
+     * fully editable like every other synth pad.
+     */
+    fun cloud(): List<ArrangedPad?> {
+        fun vox(name: String, voice: VoxVoice, semitone: Int) = pad(
+            VoxPatch(name, voice, mapOf("TUNE" to semitone / Vox.TUNE_SEMITONES.toFloat())),
+            DrumClass.TONAL,
+        )
+
+        fun cloudOf(source: com.snipsnap.audio.Snip, cls: DrumClass, seconds: Float, seed: Int, vararg macros: Pair<String, Float>) =
+            ArrangedPad(Grains.render(source, macros.toMap(), seconds = seconds, seed = seed), cls)
+
+        val bell = Tines.render(TinesVoice.BELL, mapOf("DECAY" to 0.9f))
+        val chime = Tines.render(TinesVoice.CHIME, mapOf("DECAY" to 0.8f))
+        val brass = Velvet.render(VelvetVoice.BRASS, mapOf("DECAY" to 0.9f))
+        val koto = Pluck.render(PluckVoice.KOTO, mapOf("DAMP" to 0.2f))
+        val choirSrc = Vox.render(VoxVoice.CHOIR, mapOf("DECAY" to 1f))
+
+        return listOf(
+            vox("Choir Root", VoxVoice.CHOIR, 0),                                    // A01
+            vox("Choir Fourth", VoxVoice.CHOIR, 5),                                  // A02
+            vox("Choir Fifth", VoxVoice.CHOIR, 7),                                   // A03
+            vox("Robot Root", VoxVoice.ROBOT, 0),                                    // A04
+            vox("Ghost Low", VoxVoice.GHOST, 0),                                     // A05
+            vox("Ghost High", VoxVoice.GHOST, 12),                                   // A06
+            cloudOf(bell, DrumClass.PERC, 1.2f, 21, "SIZE" to 0.3f, "DRIFT" to 0.4f),      // A07 bell scatter
+            cloudOf(chime, DrumClass.PERC, 1.2f, 22, "SIZE" to 0.2f, "SHINE" to 0.5f),     // A08 glass stutter
+            cloudOf(koto, DrumClass.PERC, 1.2f, 23, "SIZE" to 0.35f, "DRIFT" to 0.6f),     // A09 koto scatter
+            cloudOf(brass, DrumClass.TONAL, 1.4f, 24, "SIZE" to 0.8f, "SMEAR" to 0.8f),    // A10 brass smear
+            cloudOf(choirSrc, DrumClass.TONAL, 1.4f, 25, "SIZE" to 0.9f, "PITCH" to 0.25f), // A11 choir under
+            cloudOf(bell, DrumClass.TONAL, 1.4f, 26, "SIZE" to 0.7f, "PITCH" to 0.75f, "SHINE" to 0.6f), // A12 bell above
+            cloudOf(choirSrc, DrumClass.LOOP, 2.5f, 27, "SIZE" to 1f, "SMEAR" to 1f, "PITCH" to 0.25f),  // A13 choir drone
+            cloudOf(brass, DrumClass.LOOP, 2.5f, 28, "SIZE" to 1f, "SMEAR" to 0.9f, "DRIFT" to 0.3f),    // A14 brass pad
+            cloudOf(bell, DrumClass.LOOP, 2.5f, 29, "SIZE" to 0.9f, "SHINE" to 0.8f, "DRIFT" to 0.5f),   // A15 shimmer wash
+            cloudOf(chime, DrumClass.LOOP, 2.5f, 30, "SIZE" to 0.6f, "PITCH" to 0.3f, "DRIFT" to 0.7f),  // A16 deep glass
+        )
+    }
 }

@@ -106,6 +106,16 @@ tasks.register<JavaExec>("generateXpnFile") {
     args("${rootDir}/testkit")
 }
 
+/** Render the atmosphere acceptance kit into testkit/. See CloudKitGenerator. */
+tasks.register<JavaExec>("generateCloudKit") {
+    group = "distribution"
+    description = "Render the VOX/GRAINS atmosphere acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CloudKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 /** Render the chip acceptance kit into testkit/. See ChipKitGenerator. */
 tasks.register<JavaExec>("generateChipKit") {
     group = "distribution"

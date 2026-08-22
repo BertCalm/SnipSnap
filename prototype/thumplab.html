@@ -66,7 +66,7 @@
       <div class="gb">
         <span class="legend px">ENGINE + VOICE</span>
         <div style="display:flex;flex-direction:column;gap:6px;">
-          <div style="display:flex;gap:6px;" id="engineRow"></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;" id="engineRow"></div>
           <div style="display:flex;gap:6px;" id="voiceRow1"></div>
           <div style="display:flex;gap:6px;" id="voiceRow2"></div>
         </div>
@@ -161,6 +161,9 @@
         var al=sw/2*Math.SQRT2, sA=Math.sqrt(A);
         set(A*((A+1)+(A-1)*cw+2*sA*al),-2*A*((A-1)+(A+1)*cw),A*((A+1)+(A-1)*cw-2*sA*al),
             (A+1)-(A-1)*cw+2*sA*al,2*((A-1)-(A+1)*cw),(A+1)-(A-1)*cw-2*sA*al); },
+      bandpass:function(f0,q,rate){ var w0=2*Math.PI*f0/rate,cw=Math.cos(w0),sw=Math.sin(w0);
+        var al=sw/(2*q);
+        set(al,0,-al,1+al,-2*cw,1-al); },
       peaking:function(f0,db,q,rate){ var A=Math.pow(10,db/40),w0=2*Math.PI*f0/rate,cw=Math.cos(w0),sw=Math.sin(w0);
         var al=sw/(2*q);
         set(1+al*A,-2*cw,1-al*A,1+al/A,-2*cw,1-al/A); }
@@ -425,11 +428,93 @@
     CHIP:velvetVoice('Chip',220,{TUNE:0.6,SHAPE:0.9,FAT:0.1,CUTOFF:0.9,SQUEEZE:0.1,DECAY:0.35}),
   };
 
+  // ---------- VOX voices: straight port of Vox.kt ----------
+  var VOX_VOWELS=[[800,1150,2900],[400,1600,2700],[250,1750,3800],[400,800,2830],[350,600,2700]];
+  var VOX_GAINS=[1,0.63,0.32];
+  function voxFormants(v){ var pos=Math.min(1,Math.max(0,v))*(VOX_VOWELS.length-1);
+    var i=Math.min(VOX_VOWELS.length-2,Math.floor(pos)), fr=pos-i;
+    var out=[0,0,0];
+    for(var f=0;f<3;f++) out[f]=VOX_VOWELS[i][f]+(VOX_VOWELS[i+1][f]-VOX_VOWELS[i][f])*fr;
+    return out; }
+  function sawp(p){ return 2*(p-Math.floor(p))-1; }
+  function voxVoice(name,root,kind,defaults){
+    return {name:name, color:'#e8409f', macros:defaults,
+      render:function(m){
+        var semis=Math.round(Math.min(1,Math.max(0,m.TUNE))*24);
+        var base=root*Math.pow(2,semis/12);
+        var fm=voxFormants(m.VOWEL), t60=expMap(m.DECAY,0.25,1.1);
+        var out=new Float32Array(frames(t60*1.3));
+        var filters=[Biquad(),Biquad(),Biquad()];
+        for(var f=0;f<3;f++) filters[f].bandpass(fm[f],9,R);
+        var nz=Noise(17), nlp=OnePole(R);
+        var p1=0,p2=0, det=(kind==='choir')?1.007:1.0;
+        for(var i=0;i<out.length;i++){ var t=i/R;
+          p1+=base/R; p2+=base*det/R;
+          var buzz = kind==='choir'?0.5*(sawp(p1)+sawp(p2)) : kind==='robot'?square(p1) : 0.7*sawp(p1);
+          var air=nlp(nz(),3000)*2;
+          var src=(1-m.BREATH)*buzz+m.BREATH*air;
+          var v=0;
+          for(f=0;f<3;f++) v+=VOX_GAINS[f]*filters[f].proc(src);
+          out[i]=v*Math.min(1,t/0.02)*envAt(t,t60); }
+        return out; }};
+  }
+  var VOX={
+    CHOIR:voxVoice('Choir',110,'choir',{TUNE:0.5,VOWEL:0.1,BREATH:0.15,DECAY:0.6}),
+    ROBOT:voxVoice('Robot',82.4,'robot',{TUNE:0.5,VOWEL:0.6,BREATH:0.05,DECAY:0.4}),
+    GHOST:voxVoice('Ghost',147,'ghost',{TUNE:0.45,VOWEL:0.85,BREATH:0.6,DECAY:0.7}),
+  };
+
+  // ---------- GRAINS: straight port of Grains.kt (sources = other engines) ----------
+  function grainsRender(src,m,seconds,seed){
+    var grainFrames=Math.floor(expMap(m.SIZE,0.015,0.25)*R);
+    var overlap=lin(m.SMEAR,1.5,6);
+    var driftFrames=Math.floor(m.DRIFT*0.5*src.length);
+    var semis=Math.round((Math.min(1,Math.max(0,m.PITCH))-0.5)*24);
+    var ratio=Math.pow(2,semis/12);
+    var shine=m.SHINE*0.5;
+    var out=new Float32Array(Math.floor(seconds*R));
+    var st=(seed===0)?1:seed;
+    function rnd(){ st=(st*1103515245+12345)&0x7fffffff; return st/0x7fffffff; }
+    function addGrain(start,readStart,rat,gain){
+      for(var g=0;g<grainFrames;g++){
+        var o=start+g; if(o>=out.length) return;
+        var pos=readStart+g*rat, i0=Math.floor(pos);
+        if(i0+1>=src.length) return;
+        var fr=pos-i0;
+        var sample=src[i0]+(src[i0+1]-src[i0])*fr;
+        var w=0.5*(1-Math.cos(2*Math.PI*g/grainFrames));
+        out[o]+=sample*w*gain; } }
+    var hop=Math.max(32,Math.floor(grainFrames/overlap));
+    for(var start=0;start<out.length;start+=hop){
+      var scan=Math.max(0,start/out.length*(src.length-grainFrames));
+      var wander=driftFrames>0?Math.floor((rnd()*2-1)*driftFrames):0;
+      var rs=Math.min(src.length-2,Math.max(0,scan+wander));
+      addGrain(start,rs,ratio,1);
+      if(shine>0.001) addGrain(start,rs,ratio*2,shine);
+    }
+    normalize(out); fadeTail(out,12);
+    return out;
+  }
+  function grainsVoice(name,makeSource){
+    return {name:name, color:'#3f8cf0', macros:{SIZE:0.5,SMEAR:0.55,DRIFT:0.25,PITCH:0.5,SHINE:0.2},
+      render:function(m){
+        var src=makeSource();
+        return grainsRender(src,m,2.0,21); }};
+  }
+  var GRAINS={
+    BELLCLOUD:grainsVoice('Bell cloud',function(){ return TINES.BELL.render({TUNE:0.45,RATIO:0.7,BRIGHT:0.5,DECAY:0.9}); }),
+    KEYSWASH:grainsVoice('Keys wash',function(){ return VELVET.BRASS.render({TUNE:0.5,SHAPE:0.1,FAT:0.6,CUTOFF:0.55,SQUEEZE:0.3,DECAY:0.9}); }),
+    SNOWFALL:grainsVoice('Snowfall',function(){ return TINES.CHIME.render({TUNE:0.5,SHIMMER:0.45,BRIGHT:0.55,DECAY:0.8}); }),
+    GHOSTPAD:grainsVoice('Ghost pad',function(){ return VOX.GHOST.render({TUNE:0.45,VOWEL:0.85,BREATH:0.6,DECAY:1}); }),
+  };
+
   Object.keys(VOICES).forEach(function(k){ VOICES[k].engine='THUMP'; });
   Object.keys(TINES).forEach(function(k){ TINES[k].engine='TINES'; VOICES[k]=TINES[k]; });
   Object.keys(PLUCK).forEach(function(k){ PLUCK[k].engine='PLUCK'; VOICES[k]=PLUCK[k]; });
   Object.keys(TWHEEL).forEach(function(k){ TWHEEL[k].engine='TWHEEL'; VOICES[k]=TWHEEL[k]; });
   Object.keys(VELVET).forEach(function(k){ VELVET[k].engine='VELVET'; VOICES[k]=VELVET[k]; });
+  Object.keys(VOX).forEach(function(k){ VOX[k].engine='VOX'; VOICES[k]=VOX[k]; });
+  Object.keys(GRAINS).forEach(function(k){ GRAINS[k].engine='GRAINS'; VOICES[k]=GRAINS[k]; });
 
   // ---------- CRUNCH: straight port of Crunch.kt ----------
   var CRUNCH_DEFAULTS={BITS:0.5,RATE:0.45,TONE:0.75,GRIT:0.15};
@@ -552,7 +637,8 @@
 
   // ---------- state ----------
   var state={ engine:'THUMP', voice:'KICK',
-              lastVoice:{THUMP:'KICK',TINES:'BELL',PLUCK:'KALIMBA',TWHEEL:'FULL',VELVET:'BASS'},
+              lastVoice:{THUMP:'KICK',TINES:'BELL',PLUCK:'KALIMBA',TWHEEL:'FULL',VELVET:'BASS',
+                         VOX:'CHOIR',GRAINS:'BELLCLOUD'},
               macros:{}, crunchOn:false, crunchMacros:Object.assign({},CRUNCH_DEFAULTS),
               reverse:false,
               fx:{EQ:{on:false,m:Object.assign({},FX_DEFAULTS.EQ)},
@@ -633,7 +719,8 @@
 
   var ENGINE_TOASTS={THUMP:'ANALOG-ISH. IN SPIRIT.',TINES:'TWO OPERATORS. THAT IS THE WHOLE STORY.',
                      PLUCK:'1983 CALLED. IT STILL SLAPS.',TWHEEL:'PULL BARS. FEEL IMPORTANT.',
-                     VELVET:'FILTER + RESONANCE. THE GOOD KNOB.'};
+                     VELVET:'FILTER + RESONANCE. THE GOOD KNOB.',
+                     VOX:'SHOPPING-MALL CHOIR. NO REFUNDS.',GRAINS:'YOUR SOUND, BUT WEATHER.'};
   function selectVoice(key){
     state.voice=key; state.lastVoice[VOICES[key].engine]=key;
     document.querySelectorAll('#voiceRow1 .voiceBtn, #voiceRow2 .voiceBtn').forEach(function(e){
@@ -660,10 +747,10 @@
       });
     });
   }
-  ['THUMP','TINES','PLUCK','TWHEEL','VELVET'].forEach(function(eng){
+  ['THUMP','TINES','PLUCK','TWHEEL','VELVET','VOX','GRAINS'].forEach(function(eng){
     var b=document.createElement('button');
     b.className='btn raised voiceBtn'+(eng===state.engine?' on pressed':'');
-    b.dataset.engine=eng; b.style.height='30px';
+    b.dataset.engine=eng; b.style.height='30px'; b.style.flex='1 0 22%';
     b.innerHTML='<span class="px">'+eng+'</span>';
     b.addEventListener('click',function(){
       if(state.engine===eng) return;

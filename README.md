@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 374 tests across six modules
+./gradlew test    # 384 tests across six modules
 ```
 
 ### `:audio`
@@ -171,6 +171,15 @@ play itself (the expansion preview, the pre-export audition, and the best
 moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
+
+VOX and GRAINS round out the lineup at seven. VOX is three-formant vocal
+synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
+continuously through A→E→I→O→U over CHOIR/ROBOT/GHOST throats. GRAINS is
+the engine that eats captures: granular resynthesis that rebuilds any
+source snip — a capture, a synth render — as a cloud (SIZE, SMEAR, DRIFT,
+snapped PITCH, SHINE), deterministic per seed, honest enough that a
+texture classifies as the LOOP it is. `SynthKits.cloud()` is the
+atmosphere kit both of them make together.
 
 Effects are the same trick as CRUNCH, generalized: pads are one-shots
 rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the

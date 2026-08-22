@@ -102,6 +102,15 @@ If the browser ignores it, nothing is lost — the program still loads from
 the file browser, and one real `Expansion.xml` (see `../reference/README.md`)
 fixes the writer in minutes.
 
+### SnipSnap Cloud Kit — the atmosphere kit
+
+VOX formant choirs (aah/ooh/robot/ghost) on the bottom rows, GRAINS clouds
+above: scattered bells, glass stutters, smeared brass, and four
+LOOP-length drones on the top row. Regenerate with
+`./gradlew :synth:generateCloudKit`. Things to confirm: the long pads play
+out fully (they are 2.5 s textures, not one-shot drums), and nothing
+clicks at the tails.
+
 ### SnipSnap Keys — the keygroup door (S4)
 
 A VELVET bass multisampled every minor third across two octaves, two
