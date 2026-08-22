@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<expansion version="1.0.0.0" buildVersion="1.9.6.1">
+  <local/>
+  <identifier>com.masada.kit41</identifier>
+  <title>Masada Cycle kit 4 p1</title>
+  <manufacturer>Masada</manufacturer>
+  <version>4.0.0.0</version>
+  <type>drum</type>
+  <priority>50</priority>
+  <img>part-1.jpg</img>
+  <description>The 4th follow up of cycle layer kit from Masada 
+</description>
+  <separator>-</separator>
+</expansion>

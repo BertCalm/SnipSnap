@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<expansion version="1.0">
+    <identifier>com.akaipro.mpc.expansion.f9geminifutureclassicsynths</identifier>    
+    <title>F9 Gemini Future Classic Synths</title>
+    <manufacturer>Akai Professional</manufacturer>
+    <version>1.0.4.0</version>
+    <type>drum</type>
+    <img>com.akaipro.mpc.expansion.f9geminifutureclassicsynths.jpg</img>
+    <directory>com.akaipro.mpc.expansion.f9geminifutureclassicsynths</directory>
+    <separator>-</separator>
+</expansion>
+
+

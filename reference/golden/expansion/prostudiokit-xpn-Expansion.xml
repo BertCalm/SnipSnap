@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<expansion version="2.0.0.0" buildVersion="3.9.0.31">
+  <local/>
+  <identifier>com.padpimps.prostudiokit3mpc3</identifier>
+  <title>Pro Studio Kit 3 - MPC3 Edition</title>
+  <manufacturer>Pad Pimps &amp; MPC Samples</manufacturer>
+  <version>3.5.0.0</version>
+  <type>drum</type>
+  <priority>50</priority>
+  <img>pro-studio-3-mpc3-edition.png</img>
+  <description>A fully multisampled Sonor Designer Kit for MPC3</description>
+  <separator>-</separator>
+</expansion>

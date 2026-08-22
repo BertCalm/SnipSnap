@@ -1,0 +1,191 @@
+         521  Expansion.xml
+      233402  pro-studio-3-mpc3-edition.png
+      315443  Drum Kits/Kit-PSK 014 Pop Kit.xpm
+      315128  Drum Kits/Kit-PSK 011 Jazz Kit.xpm
+      315058  Drum Kits/Kit-PSK 004 Chunked Kit.xpm
+      315380  Drum Kits/Kit-PSK 002 Boom Bap Kit.xpm
+      315048  Drum Kits/Kit-PSK 013 Neo Soul Kit.xpm
+      315212  Drum Kits/Kit-PSK 015 Rock Kit.xpm
+      315241  Drum Kits/Kit-PSK 008 Heavy Kit.xpm
+      315213  Drum Kits/Kit-PSK 017 Tripped Kit.xpm
+      315240  Drum Kits/Kit-PSK 009 Hip Hop Kit.xpm
+      315454  Drum Kits/Kit-PSK 016 Tough Kit.xpm
+     1524966  Drum Kits/Samples/Chain-PSK Cowbell Muted RR.wav
+     2946262  Drum Kits/Samples/Chain-PSK Snare 14 Flam.wav
+     2169624  Drum Kits/Samples/Chain-PSK Hi Hat 13 Pedal Shut.wav
+    16241780  Drum Kits/Samples/Chain-PSK Crash 18 Edge.wav
+     7251357  Drum Kits/Samples/Chain-PSK Ride 18 Centre.wav
+     2751656  Drum Kits/Samples/Chain-PSK Hi Hat 13 Tight Closed Tip.wav
+    15021452  Drum Kits/Samples/Chain-PSK Crash 18 Centre.wav
+     4195174  Drum Kits/Samples/Chain-PSK Hi Hat 13 Closed Edge.wav
+     7524128  Drum Kits/Samples/Chain-PSK Ride 18 Bell.wav
+     2534612  Drum Kits/Samples/Chain-PSK Hi Hat 13 Tight Closed Edge.wav
+    16347842  Drum Kits/Samples/Chain-PSK Hi Hat 13 Open.wav
+    21929044  Drum Kits/Samples/Chain-PSK Hi Hat 13 Pedal Open.wav
+     2354202  Drum Kits/Samples/SFX-Noise Layers.wav
+    10366171  Drum Kits/Samples/Chain-PSK Ride 18 Edge.wav
+     1466340  Drum Kits/Samples/Chain-PSK Cowbell Open RR.wav
+     1220970  Drum Kits/Samples/Snare-PSK Snare 14 Roll 01.wav
+     3026548  Drum Kits/Samples/Chain-PSK Snare 14 Centre.wav
+     1105470  Drum Kits/Samples/Snare-PSK Snare 14 Roll 02.wav
+     2981838  Drum Kits/Samples/Chain-PSK Snare 14 Drag.wav
+     3747682  Drum Kits/Samples/Chain-PSK Kick 22 Bleed.wav
+     6392858  Drum Kits/Samples/Chain-PSK Tom 14 Floor.wav
+     2915764  Drum Kits/Samples/Chain-PSK Snare 14 Rim Shot.wav
+     2981834  Drum Kits/Samples/Chain-PSK Snare 14 Cross Stick.wav
+     5087296  Drum Kits/Samples/Chain-PSK Tom 12 Rack.wav
+     3614480  Drum Kits/Samples/Chain-PSK Kick 22 Isolated.wav
+     3180364  Drum Kits/Samples/Chain-PSK Snare 14 Edge.wav
+    24202590  Drum Kits/Samples/Chain-PSK Hi Hat 13 Open Tip.wav
+      315377  Drum Kits/Kit-PSK 012 Jungle Kit.xpm
+      315033  Drum Kits/Kit-PSK 005 Blues Kit.xpm
+      315044  Drum Kits/Kit-PSK 006 Disco Kit.xpm
+      314958  Drum Kits/Kit-PSK 001 Pro Studio Kit.xpm
+      315480  Drum Kits/Kit-PSK 007 Funk Kit.xpm
+      315032  Drum Kits/Kit-PSK 003 Ambient Kit.xpm
+      317408  Drum Kits/[Previews]/Kit-PSK 013 Neo Soul Kit.xpm.mp3
+      322628  Drum Kits/[Previews]/Kit-PSK 005 Blues Kit.xpm.mp3
+      406148  Drum Kits/[Previews]/Kit-PSK 016 Tough Kit.xpm.mp3
+      494888  Drum Kits/[Previews]/Kit-PSK 017 Tripped Kit.xpm.mp3
+      464612  Drum Kits/[Previews]/Kit-PSK 004 Chunked Kit.xpm.mp3
+      351860  Drum Kits/[Previews]/Kit-PSK 007 Funk Kit.xpm.mp3
+      429116  Drum Kits/[Previews]/Kit-PSK 009 Hip Hop Kit.xpm.mp3
+      371696  Drum Kits/[Previews]/Kit-PSK 001 Pro Studio Kit.xpm.mp3
+      322628  Drum Kits/[Previews]/Kit-PSK 014 Pop Kit.xpm.mp3
+      228668  Drum Kits/[Previews]/Kit-PSK 012 Jungle Kit.xpm.mp3
+      329047  Drum Kits/[Previews]/Kit-PSK 011 Jazz Kit.xpm.mp3
+      476096  Drum Kits/[Previews]/Kit-PSK 002 Boom Bap Kit.xpm.mp3
+      526208  Drum Kits/[Previews]/Kit-PSK 003 Ambient Kit.xpm.mp3
+      322628  Drum Kits/[Previews]/Kit-PSK 008 Heavy Kit.xpm.mp3
+      393620  Drum Kits/[Previews]/Kit-PSK 010 Indie Rock Kit.xpm.mp3
+      386312  Drum Kits/[Previews]/Kit-PSK 015 Rock Kit.xpm.mp3
+      351860  Drum Kits/[Previews]/Kit-PSK 006 Disco Kit.xpm.mp3
+      172124  Drum Kits/[MIDI Patterns]/Kit-PSK 007 Funk Kit 110bpm.mpcpattern
+      119269  Drum Kits/[MIDI Patterns]/Kit-PSK 006 Disco Kit 120bpm.mpcpattern
+      156536  Drum Kits/[MIDI Patterns]/Kit-PSK 005 Blues Kit 120bpm.mpcpattern
+      184647  Drum Kits/[MIDI Patterns]/Kit-PSK 017 Tripped Kit 78bpm.mpcpattern
+      140667  Drum Kits/[MIDI Patterns]/Kit-PSK 009 Hip Hop Kit 90bpm.mpcpattern
+      187775  Drum Kits/[MIDI Patterns]/Kit-PSK 001 Pro Studio Kit 104bpm.mpcpattern
+      177183  Drum Kits/[MIDI Patterns]/Kit-PSK 016 Tough Kit 95bpm.mpcpattern
+      147165  Drum Kits/[MIDI Patterns]/Kit-PSK 014 Pop Kit 120bpm.mpcpattern
+      122800  Drum Kits/[MIDI Patterns]/Kit-PSK 010 Indie Rock Kit 98bpm.mpcpattern
+      114786  Drum Kits/[MIDI Patterns]/Kit-PSK 013 Neo Soul Kit 122bpm.mpcpattern
+      215894  Drum Kits/[MIDI Patterns]/Kit-PSK 011 Jazz Kit 120bpm.mpcpattern
+      152760  Drum Kits/[MIDI Patterns]/Kit-PSK 002 Boom Bap Kit 81bpm.mpcpattern
+      168995  Drum Kits/[MIDI Patterns]/Kit-PSK 008 Heavy Kit 120bpm.mpcpattern
+      148761  Drum Kits/[MIDI Patterns]/Kit-PSK 012 Jungle Kit 170bpm.mpcpattern
+      248267  Drum Kits/[MIDI Patterns]/Kit-PSK 015 Rock Kit 100bpm.mpcpattern
+      123526  Drum Kits/[MIDI Patterns]/Kit-PSK 003 Ambient Kit 97bpm.mpcpattern
+      228668  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 012 Jungle Kit 170bpm.mpcpattern.mp3
+      317408  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 013 Neo Soul Kit 122bpm.mpcpattern.mp3
+      322628  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 008 Heavy Kit 120bpm.mpcpattern.mp3
+      464612  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 004 Chunked Kit 83bpm.mpcpattern.mp3
+      526208  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 003 Ambient Kit 97bpm.mpcpattern.mp3
+      322628  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 005 Blues Kit 120bpm.mpcpattern.mp3
+      371696  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 001 Pro Studio Kit 104bpm.mpcpattern.mp3
+      351860  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 007 Funk Kit 110bpm.mpcpattern.mp3
+      429116  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 009 Hip Hop Kit 90bpm.mpcpattern.mp3
+      351860  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 006 Disco Kit 120bpm.mpcpattern.mp3
+      386312  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 015 Rock Kit 100bpm.mpcpattern.mp3
+      329047  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 011 Jazz Kit 120bpm.mpcpattern.mp3
+      322628  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 014 Pop Kit 120bpm.mpcpattern.mp3
+      406148  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 016 Tough Kit 95bpm.mpcpattern.mp3
+      393620  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 010 Indie Rock Kit 98bpm.mpcpattern.mp3
+      494888  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 017 Tripped Kit 78bpm.mpcpattern.mp3
+      476096  Drum Kits/[MIDI Patterns]/[Previews]/Kit-PSK 002 Boom Bap Kit 81bpm.mpcpattern.mp3
+      130140  Drum Kits/[MIDI Patterns]/Kit-PSK 004 Chunked Kit 83bpm.mpcpattern
+      315060  Drum Kits/Kit-PSK 010 Indie Rock Kit.xpm
+      294550  MPCe Kits/MPCe-PSK 017 Tripped Kit.xpm
+      293991  MPCe Kits/MPCe-PSK 002 Boom Bap Kit.xpm
+      294484  MPCe Kits/MPCe-PSK 013 Neo Soul Kit.xpm
+      294851  MPCe Kits/MPCe-PSK 007 Funk Kit.xpm
+      294521  MPCe Kits/MPCe-PSK 009 Hip Hop Kit.xpm
+      294589  MPCe Kits/MPCe-PSK 008 Heavy Kit.xpm
+      294873  MPCe Kits/MPCe-PSK 016 Tough Kit.xpm
+      293969  MPCe Kits/MPCe-PSK 004 Chunked Kit.xpm
+     1524966  MPCe Kits/Samples/Chain-PSK Cowbell Muted RR.wav
+     2946262  MPCe Kits/Samples/Chain-PSK Snare 14 Flam.wav
+     2169624  MPCe Kits/Samples/Chain-PSK Hi Hat 13 Pedal Shut.wav
+    16241780  MPCe Kits/Samples/Chain-PSK Crash 18 Edge.wav
+     7251357  MPCe Kits/Samples/Chain-PSK Ride 18 Centre.wav
+     2751656  MPCe Kits/Samples/Chain-PSK Hi Hat 13 Tight Closed Tip.wav
+    15021452  MPCe Kits/Samples/Chain-PSK Crash 18 Centre.wav
+     7524128  MPCe Kits/Samples/Chain-PSK Ride 18 Bell.wav
+     2534612  MPCe Kits/Samples/Chain-PSK Hi Hat 13 Tight Closed Edge.wav
+    16347842  MPCe Kits/Samples/Chain-PSK Hi Hat 13 Open.wav
+    21929044  MPCe Kits/Samples/Chain-PSK Hi Hat 13 Pedal Open.wav
+     2354202  MPCe Kits/Samples/SFX-Noise Layers.wav
+     1466340  MPCe Kits/Samples/Chain-PSK Cowbell Open RR.wav
+     1220970  MPCe Kits/Samples/Snare-PSK Snare 14 Roll 01.wav
+     3026548  MPCe Kits/Samples/Chain-PSK Snare 14 Centre.wav
+     1105470  MPCe Kits/Samples/Snare-PSK Snare 14 Roll 02.wav
+     2981838  MPCe Kits/Samples/Chain-PSK Snare 14 Drag.wav
+     3747682  MPCe Kits/Samples/Chain-PSK Kick 22 Bleed.wav
+     6392858  MPCe Kits/Samples/Chain-PSK Tom 14 Floor.wav
+     2915764  MPCe Kits/Samples/Chain-PSK Snare 14 Rim Shot.wav
+      730706  MPCe Kits/Samples/Chain-PSK Snare 14 Roll End.wav
+     2981834  MPCe Kits/Samples/Chain-PSK Snare 14 Cross Stick.wav
+     5087296  MPCe Kits/Samples/Chain-PSK Tom 12 Rack.wav
+     3614480  MPCe Kits/Samples/Chain-PSK Kick 22 Isolated.wav
+     3180364  MPCe Kits/Samples/Chain-PSK Snare 14 Edge.wav
+    24202590  MPCe Kits/Samples/Chain-PSK Hi Hat 13 Open Tip.wav
+      293854  MPCe Kits/MPCe-PSK 003 Ambient Kit.xpm
+      294478  MPCe Kits/MPCe-PSK 005 Blues Kit.xpm
+      294433  MPCe Kits/MPCe-PSK 001 Pro Studio Kit.xpm
+      294550  MPCe Kits/MPCe-PSK 015 Rock Kit.xpm
+      294655  MPCe Kits/MPCe-PSK 014 Pop Kit.xpm
+      294515  MPCe Kits/MPCe-PSK 006 Disco Kit.xpm
+      329047  MPCe Kits/[Previews]/MPCe-PSK 005 Blues Kit.xpm.mp3
+      412567  MPCe Kits/[Previews]/MPCe-PSK 016 Tough Kit.xpm.mp3
+      378115  MPCe Kits/[Previews]/MPCe-PSK 001 Pro Studio Kit.xpm.mp3
+      471031  MPCe Kits/[Previews]/MPCe-PSK 004 Chunked Kit.xpm.mp3
+      245527  MPCe Kits/[Previews]/MPCe-PSK 002 Boom Bap Kit.xpm.mp3
+      358279  MPCe Kits/[Previews]/MPCe-PSK 007 Funk Kit.xpm.mp3
+      400039  MPCe Kits/[Previews]/MPCe-PSK 010 Indie Rock Kit.xpm.mp3
+      520099  MPCe Kits/[Previews]/MPCe-PSK 017 Tripped Kit.xpm.mp3
+      503395  MPCe Kits/[Previews]/MPCe-PSK 003 Ambient Kit.xpm.mp3
+      435535  MPCe Kits/[Previews]/MPCe-PSK 009 Hip Hop Kit.xpm.mp3
+      329047  MPCe Kits/[Previews]/MPCe-PSK 008 Heavy Kit.xpm.mp3
+      329047  MPCe Kits/[Previews]/MPCe-PSK 014 Pop Kit.xpm.mp3
+      392731  MPCe Kits/[Previews]/MPCe-PSK 015 Rock Kit.xpm.mp3
+      358279  MPCe Kits/[Previews]/MPCe-PSK 006 Disco Kit.xpm.mp3
+      235087  MPCe Kits/[Previews]/MPCe-PSK 012 Jungle Kit.xpm.mp3
+      323827  MPCe Kits/[Previews]/MPCe-PSK 013 Neo Soul Kit.xpm.mp3
+      329047  MPCe Kits/[Previews]/MPCe-PSK 011 Jazz Kit.xpm.mp3
+      294577  MPCe Kits/MPCe-PSK 012 Jungle Kit.xpm
+      294548  MPCe Kits/MPCe-PSK 010 Indie Rock Kit.xpm
+      205709  MPCe Kits/[MIDI Patterns]/MPCe-PSK 012 Jungle Kit 170bpm.mpcpattern
+      192077  MPCe Kits/[MIDI Patterns]/MPCe-PSK 014 Pop Kit 120bpm.mpcpattern
+      169322  MPCe Kits/[MIDI Patterns]/MPCe-PSK 010 Indie Rock Kit.mpcpattern
+      175866  MPCe Kits/[MIDI Patterns]/MPCe-PSK 004 Chunked Kit 83bpm.mpcpattern
+      158894  MPCe Kits/[MIDI Patterns]/MPCe-PSK 013 Neo Soul Kit 122bpm.mpcpattern
+      233171  MPCe Kits/[MIDI Patterns]/MPCe-PSK 008 Heavy Kit 120bpm.mpcpattern
+      314050  MPCe Kits/[MIDI Patterns]/MPCe-PSK 015 Rock Kit 100bpm.mpcpattern
+      172212  MPCe Kits/[MIDI Patterns]/MPCe-PSK 003 Ambient Kit 97bpm.mpcpattern
+      255504  MPCe Kits/[MIDI Patterns]/MPCe-PSK 001 Pro Studio Kit 104bpm.mpcpattern
+      209684  MPCe Kits/[MIDI Patterns]/MPCe-PSK 002 Boom Bap Kit 81bpm.mpcpattern
+      307909  MPCe Kits/[MIDI Patterns]/MPCe-PSK 016 Tough Kit 95bpm.mpcpattern
+      248783  MPCe Kits/[MIDI Patterns]/MPCe-PSK 017 Tripped Kit 78bpm.mpcpattern
+      190388  MPCe Kits/[MIDI Patterns]/MPCe-PSK 009 Hip Hop Kit 90bpm.mpcpattern
+      248513  MPCe Kits/[MIDI Patterns]/MPCe-PSK 011 Jazz Kit 120bpm.mpcpattern
+      234698  MPCe Kits/[MIDI Patterns]/MPCe-PSK 007 Funk Kit 110bpm.mpcpattern
+      206226  MPCe Kits/[MIDI Patterns]/MPCe-PSK 005 Blues Kit 120bpm.mpcpattern
+      156031  MPCe Kits/[MIDI Patterns]/MPCe-PSK 006 Disco Kit 120bpm.mpcpattern
+      323827  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 013 Neo Soul Kit 122bpm.mpcpattern.mp3
+      329047  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 005 Blues Kit 120bpm.mpcpattern.mp3
+      329047  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 008 Heavy Kit 120bpm.mpcpattern.mp3
+      235087  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 012 Jungle Kit 170bpm.mpcpattern.mp3
+      503395  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 003 Ambient Kit 97bpm.mpcpattern.mp3
+      471031  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 004 Chunked Kit 83bpm.mpcpattern.mp3
+      245527  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 002 Boom Bap Kit 81bpm.mpcpattern.mp3
+      358279  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 007 Funk Kit 110bpm.mpcpattern.mp3
+      378115  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 001 Pro Studio Kit 104bpm.mpcpattern.mp3
+      329047  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 014 Pop Kit 120bpm.mpcpattern.mp3
+      392731  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 015 Rock Kit 100bpm.mpcpattern.mp3
+      400039  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 010 Indie Rock Kit.mpcpattern.mp3
+      329047  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 011 Jazz Kit 120bpm.mpcpattern.mp3
+      435535  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 009 Hip Hop Kit 90bpm.mpcpattern.mp3
+      412567  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 016 Tough Kit 95bpm.mpcpattern.mp3
+      520099  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 017 Tripped Kit 78bpm.mpcpattern.mp3
+      358279  MPCe Kits/[MIDI Patterns]/[Previews]/MPCe-PSK 006 Disco Kit 120bpm.mpcpattern.mp3
+      294508  MPCe Kits/MPCe-PSK 011 Jazz Kit.xpm

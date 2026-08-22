@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<expansion version="1.0">
+    <identifier>com.akaipro.mpc.expansion.timlessglowmpcexpansion</identifier>    
+    <title>Timeless Glow - MPC Expansion</title>
+    <manufacturer>Akai Professional</manufacturer>
+    <version>1.0.3</version>
+    <type>drum</type>
+    <img>com.akaipro.mpc.expansion.timlessglowmpcexpansion.jpg</img>
+    <directory>com.akaipro.mpc.expansion.timlessglowmpcexpansion</directory>
+    <separator>-</separator>
+</expansion>
+
+

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<expansion version="1.0">
+    <identifier>com.akaipro.mpc.expansion.classicdrummachines</identifier>    
+    <title>Classic Drum Machines</title>
+    <manufacturer>Akai Professional</manufacturer>
+    <version>1.0.1.0</version>
+    <type>drum</type>
+    <img>com.akaipro.mpc.expansion.classicdrummachines.jpg</img>
+    <directory>com.akaipro.mpc.expansion.classicdrummachines</directory>
+    <separator>-</separator>
+</expansion>
+
+

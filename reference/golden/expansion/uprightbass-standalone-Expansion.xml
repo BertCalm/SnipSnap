@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<expansion version="2.0.0.0" buildVersion="2.15.0.18">
+  <local/>
+  <identifier>com.padpimps.mpcuprightbass</identifier>
+  <title>MPC Upright Bass</title>
+  <manufacturer>Pad Pimps</manufacturer>
+  <version>1.0.0.2</version>
+  <type>drum</type>
+  <priority>50</priority>
+  <img>mpc-upright-bass-expansion.jpg</img>
+  <description>Fully multisampled Andreas Moretti double bass for MPC3, MPC2 and Akai Force.</description>
+  <separator>-</separator>
+</expansion>

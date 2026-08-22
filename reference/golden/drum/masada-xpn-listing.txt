@@ -1,0 +1,461 @@
+Archive:  /private/tmp/claude-501/-Users-joshuacramblet-SnipSnap/5712e3b5-ea16-42c5-a53a-1ecdfac948ba/scratchpad/mck/Masada Cycle kit v.4 pt.1.xpn
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+      458  05-18-2017 15:15   Expansion.xml
+  3650583  05-16-2017 18:25   part-1.jpg
+   124036  05-16-2017 19:33   Backing-mck4 backing layer .WAV
+   177544  05-16-2017 19:34   block-mck4 field b27.WAV
+   241200  05-16-2017 19:34   block-mck4 field b28.WAV
+   119464  05-16-2017 19:34   block-mck4 field b29.WAV
+   219616  05-16-2017 19:33   bongo-mck4 bon 01.WAV
+   228208  05-16-2017 19:33   bongo-mck4 bon 02.WAV
+    74612  05-16-2017 19:33   bongo-mck4 bon 04.WAV
+    77412  05-16-2017 19:33   bongo-mck4 bon 05.WAV
+    79136  05-16-2017 19:33   bongo-mck4 bon 06.WAV
+    80812  05-16-2017 19:33   bongo-mck4 bon 07.WAV
+    76064  05-16-2017 19:33   bongo-mck4 bon 09.WAV
+    74272  05-16-2017 19:33   bongo-mck4 bon 10.WAV
+   541752  05-16-2017 19:36   bongo-mck4 bong 30.WAV
+   122220  05-16-2017 19:36   bongo-mck4 k12 b06.WAV
+   134948  05-16-2017 19:36   bongo-mck4 k12 b12.WAV
+    69904  05-16-2017 19:36   bongo-mck4 k12 b18.WAV
+   118092  05-16-2017 19:36   break-mck4 brk 004.WAV
+   158056  05-16-2017 19:36   break-mck4 brk 007.WAV
+   159952  05-16-2017 19:36   break-mck4 brk 009.WAV
+   126768  05-16-2017 18:05   break-mck4 k23 br12.WAV
+    48084  05-16-2017 19:39   break-mck4 kit brk1 br07.WAV
+   146404  05-16-2017 19:39   break-mck4 kit brk1 br09.WAV
+   139128  05-16-2017 19:39   break-mck4 kit brk1 br20.WAV
+   112392  05-16-2017 19:33   congo-mck4 con 01.WAV
+   211036  05-16-2017 19:33   congo-mck4 con 02.WAV
+   220420  05-16-2017 18:13   congo-mck4 con 834.WAV
+   218428  05-16-2017 18:13   congo-mck4 con 882.WAV
+   176792  05-16-2017 19:36   field-mck4 f15 f18.WAV
+   113332  05-16-2017 19:36   field-mck4 f15 f19.WAV
+    48292  05-16-2017 19:34   field-mck4 field f17.WAV
+    52048  05-16-2017 19:34   field-mck4 field f18.WAV
+    38932  05-16-2017 19:34   field-mck4 field f19.WAV
+    98960  05-16-2017 19:34   field-mck4 glock 03.WAV
+   124064  05-16-2017 19:34   field-mck4 glock 12.WAV
+  1148760  05-16-2017 19:34   field-mck4 rockin chair.WAV
+   465560  05-16-2017 19:33   field-mck4 sfx2 06.WAV
+   400080  05-16-2017 19:33   field-mck4 sfx2 07.WAV
+   454720  05-16-2017 19:33   field-mck4 sfx2 08.WAV
+   275596  05-16-2017 19:33   field-mck4 sfx2 09.WAV
+    74172  05-16-2017 19:34   hat-Mck k3 h12.WAV
+    64916  05-16-2017 19:34   hat-Mck k3 h17.WAV
+   163972  05-16-2017 19:41   hat-mck4 backing layer -5.WAV
+    75460  05-16-2017 19:34   hat-mck4 h01 06.WAV
+    73200  05-16-2017 19:34   hat-mck4 h01 07.WAV
+    74596  05-16-2017 19:34   hat-mck4 h01 08.WAV
+    72220  05-16-2017 19:34   hat-mck4 h01 17.WAV
+   176532  05-16-2017 19:34   hat-mck4 h02 00.WAV
+   176532  05-16-2017 19:34   hat-Mck4 hat-1.WAV
+   144004  05-16-2017 19:38   hat-Mck4 hat-10.WAV
+   133252  05-16-2017 19:39   hat-Mck4 hat-11.WAV
+   127108  05-16-2017 19:39   hat-Mck4 hat-12.WAV
+   137476  05-16-2017 19:39   hat-Mck4 hat-13.WAV
+   159876  05-16-2017 19:39   hat-Mck4 hat-14.WAV
+   176532  05-16-2017 19:33   hat-Mck4 hat-22.WAV
+   170500  05-16-2017 19:33   hat-Mck4 hat-23.WAV
+   176532  05-16-2017 19:33   hat-Mck4 hat-24.WAV
+   176532  05-16-2017 19:33   hat-Mck4 hat-25.WAV
+   160132  05-16-2017 19:34   hat-Mck4 hat-3.WAV
+   136452  05-16-2017 19:36   hat-Mck4 hat-4.WAV
+   176532  05-16-2017 19:36   hat-Mck4 hat-5.WAV
+   168196  05-16-2017 19:36   hat-Mck4 hat-6.WAV
+   163588  05-16-2017 19:38   hat-Mck4 hat-7.WAV
+   145412  05-16-2017 19:38   hat-Mck4 hat-8.WAV
+   133252  05-16-2017 19:38   hat-Mck4 hat-9.WAV
+    82436  05-16-2017 19:34   hat-Mck4 hat.WAV
+    76876  05-16-2017 19:34   hat-mck4 hhsnr 005.WAV
+    74744  05-16-2017 19:34   hat-mck4 hhsnr 006.WAV
+    74076  05-16-2017 19:34   hat-mck4 hhsnr 007.WAV
+    76632  05-16-2017 19:34   hat-mck4 hhsnr 008.WAV
+   104672  05-16-2017 19:33   hat-mck4 k100 h25.WAV
+   102068  05-16-2017 19:33   hat-mck4 k100 h27.WAV
+   103264  05-16-2017 19:33   hat-mck4 k100 h35.WAV
+   110304  05-16-2017 19:33   hat-mck4 k100 h41.WAV
+   214664  05-16-2017 18:13   hat-mck4 k100 h58.WAV
+   181596  05-16-2017 18:13   hat-mck4 k100 h59.WAV
+    55764  05-16-2017 19:36   hat-mck4 k11 h03.WAV
+    50124  05-16-2017 19:36   hat-mck4 k11 h04.WAV
+    59800  05-16-2017 19:36   hat-mck4 k11 h12.WAV
+   117272  05-16-2017 19:36   hat-mck4 k11 h16.WAV
+    48740  05-16-2017 19:36   hat-mck4 k12 h08.WAV
+    62992  05-16-2017 19:36   hat-mck4 k12 h21.WAV
+   141508  05-16-2017 19:38   hat-mck4 k13 h03.WAV
+    68752  05-16-2017 19:38   hat-mck4 k13 h06.WAV
+   144804  05-16-2017 19:38   hat-mck4 k13 h09.WAV
+    74984  05-16-2017 19:38   hat-mck4 k14 h13.WAV
+   102832  05-16-2017 19:38   hat-mck4 k14 h16.WAV
+    58368  05-16-2017 19:38   hat-mck4 k15 h03.WAV
+   123344  05-16-2017 19:38   hat-mck4 k15 h20.WAV
+   123268  05-16-2017 19:38   hat-mck4 k15 h27.WAV
+   124096  05-16-2017 19:38   hat-mck4 k16 h03.WAV
+    57676  05-16-2017 19:38   hat-mck4 k16 h05.WAV
+    61364  05-16-2017 19:38   hat-mck4 k16 h07.WAV
+   129676  05-16-2017 19:38   hat-mck4 k16 h14.WAV
+   148620  05-16-2017 19:39   hat-mck4 k17 h03.WAV
+    83532  05-16-2017 19:39   hat-mck4 k17 h05.WAV
+    86808  05-16-2017 19:39   hat-mck4 k17 h11.WAV
+    93616  05-16-2017 19:39   hat-mck4 k17 h23.WAV
+    60808  05-16-2017 19:39   hat-mck4 k18 h03.WAV
+    66860  05-16-2017 19:39   hat-mck4 k18 h07.WAV
+    59232  05-16-2017 19:39   hat-mck4 k19 h03.WAV
+    65732  05-16-2017 19:39   hat-mck4 k19 h07.WAV
+    46484  05-16-2017 19:39   hat-mck4 k19 h14.WAV
+    65364  05-16-2017 19:39   hat-mck4 k20 h05.WAV
+    62564  05-16-2017 19:39   hat-mck4 k20 h11.WAV
+   104936  05-16-2017 18:05   hat-mck4 k21 h03.WAV
+   106324  05-16-2017 18:05   hat-mck4 k21 h05.WAV
+    29744  05-16-2017 18:05   hat-mck4 k23 h05.WAV
+    61788  05-16-2017 18:05   hat-mck4 k23 h07.WAV
+    82400  05-16-2017 18:05   hat-mck4 k24 h05.WAV
+    78396  05-16-2017 18:05   hat-mck4 k24 h10.WAV
+    81936  05-16-2017 18:05   hat-mck4 k24 h15.WAV
+    84328  05-16-2017 18:05   hat-mck4 k24 h21.WAV
+    56964  05-16-2017 18:05   hat-mck4 k25 h17.WAV
+    56136  05-16-2017 18:05   hat-mck4 k25 h22.WAV
+   136924  05-16-2017 18:05   hat-mck4 k26 h09.WAV
+    64144  05-16-2017 18:05   hat-mck4 k26 h22.WAV
+    69184  05-16-2017 18:05   hat-mck4 k27 h06.WAV
+    71040  05-16-2017 18:05   hat-mck4 k27 h08.WAV
+    59216  05-16-2017 18:05   hat-mck4 k27 h13.WAV
+    57700  05-16-2017 18:05   hat-mck4 k30 h03.WAV
+    59292  05-16-2017 18:05   hat-mck4 k30 h06.WAV
+    53972  05-16-2017 18:05   hat-mck4 k30 h09.WAV
+    50184  05-16-2017 19:33   hat-mck4 k31 h05.WAV
+    47768  05-16-2017 19:33   hat-mck4 k31 h09.WAV
+   107960  05-16-2017 19:33   hat-mck4 k33 h03.WAV
+    61712  05-16-2017 19:33   hat-mck4 k33 h05.WAV
+   109608  05-16-2017 19:33   hat-mck4 k33 h07.WAV
+    65500  05-16-2017 19:33   hat-mck4 k33 h09.WAV
+    65428  05-16-2017 19:33   hat-mck4 k34 h03.WAV
+    67896  05-16-2017 19:33   hat-mck4 k34 h11.WAV
+    75288  05-16-2017 19:33   hat-mck4 k34 h16.WAV
+    55348  05-16-2017 18:13   hat-mck4 k38 h03.WAV
+    57360  05-16-2017 18:13   hat-mck4 k38 h06.WAV
+    53556  05-16-2017 18:13   hat-mck4 k39 h03.WAV
+    54104  05-16-2017 18:13   hat-mck4 k39 h06.WAV
+    55476  05-16-2017 18:13   hat-mck4 k39 h08.WAV
+    56220  05-16-2017 18:13   hat-mck4 k39 h10.WAV
+    55604  05-16-2017 18:13   hat-mck4 k40 h03.WAV
+    57780  05-16-2017 18:13   hat-mck4 k40 h19.WAV
+    42192  05-16-2017 19:34   hat-mck4 k5 h31.WAV
+    56876  05-16-2017 19:34   hat-mck4 k5 h41.WAV
+    46372  05-16-2017 19:34   hat-mck4 k5 h43.WAV
+    45244  05-16-2017 19:36   hat-mck4 k8 h11.WAV
+    54388  05-16-2017 19:36   hat-mck4 k8 h14.WAV
+    44220  05-16-2017 19:36   hat-mck4 k8 h17.WAV
+   152708  05-16-2017 19:36   hat-Mck4 under H21.WAV
+   176532  05-16-2017 19:41   hat-open-mck4 backing layer -4.WAV
+   212128  05-16-2017 18:05   hat-open-mck4 k100 h03.WAV
+   119940  05-16-2017 19:36   hat-open-mck4 k11 h15.WAV
+   136380  05-16-2017 19:36   hat-open-mck4 k12 h09.WAV
+   110812  05-16-2017 19:36   hat-open-mck4 k12 h25.WAV
+   145900  05-16-2017 19:38   hat-open-mck4 k13 h11.WAV
+   212316  05-16-2017 19:38   hat-open-mck4 k13 h23.WAV
+   219220  05-16-2017 19:38   hat-open-mck4 k14 h08.WAV
+   141628  05-16-2017 19:38   hat-open-mck4 k14 h12.WAV
+   138180  05-16-2017 19:39   hat-open-mck4 k19 h10.WAV
+    71888  05-16-2017 19:39   hat-open-mck4 k19 h25.WAV
+   136940  05-16-2017 19:39   hat-open-mck4 k19 h28.WAV
+   136132  05-16-2017 18:05   hat-open-mck4 k26 h12.WAV
+   146084  05-16-2017 18:05   hat-open-mck4 k27 h03.WAV
+   921503  05-16-2017 19:33   hiphop-Drum-kit-Mck4 01.xpm
+   926255  05-16-2017 19:34   hiphop-Drum-kit-Mck4 02.xpm
+   921430  05-16-2017 19:36   hiphop-Drum-kit-Mck4 03.xpm
+   921504  05-16-2017 19:38   hiphop-Drum-kit-Mck4 04.xpm
+   923446  05-16-2017 19:41   hiphop-Drum-kit-Mck4 05.xpm
+   921384  05-16-2017 18:05   hiphop-Drum-kit-Mck4 06.xpm
+   921314  05-16-2017 18:05   hiphop-Drum-kit-Mck4 07.xpm
+   921376  05-16-2017 18:13   hiphop-Drum-kit-Mck4 08.xpm
+   131204  05-16-2017 19:41   kick-mck4 backing layer -2.WAV
+   160852  05-16-2017 19:34   kick-mck4 field k02.WAV
+    79072  05-16-2017 19:34   kick-mck4 field k04.WAV
+    62084  05-16-2017 19:34   kick-mck4 field k10.WAV
+   157628  05-16-2017 19:34   kick-mck4 field k11.WAV
+   109080  05-16-2017 19:34   kick-mck4 field k28.WAV
+   213468  05-16-2017 19:34   kick-mck4 field k29.WAV
+   155660  05-16-2017 19:34   kick-mck4 field k30.WAV
+   102776  05-16-2017 19:36   kick-mck4 k10 k07.WAV
+   103920  05-16-2017 19:36   kick-mck4 k10 k11.WAV
+   108560  05-16-2017 19:33   kick-mck4 k100 k01.WAV
+   102000  05-16-2017 19:33   kick-mck4 k100 k02.WAV
+   113036  05-16-2017 19:33   kick-mck4 k100 k03.WAV
+   106192  05-16-2017 19:33   kick-mck4 k100 k04.WAV
+   148352  05-16-2017 18:13   kick-mck4 k101 k02.WAV
+   151324  05-16-2017 18:13   kick-mck4 k101 k03.WAV
+   151076  05-16-2017 18:13   kick-mck4 k101 k06.WAV
+   186560  05-16-2017 19:38   kick-mck4 k102 k21.WAV
+    90620  05-16-2017 19:38   kick-mck4 k102 k25.WAV
+   188168  05-16-2017 19:38   kick-mck4 k102 k26.WAV
+   122288  05-16-2017 19:36   kick-mck4 k11 k02.WAV
+    55768  05-16-2017 19:36   kick-mck4 k11 k06.WAV
+    54596  05-16-2017 19:36   kick-mck4 k11 k09.WAV
+   115664  05-16-2017 19:36   kick-mck4 k11 k17.WAV
+   144216  05-16-2017 19:38   kick-mck4 k14 k02.WAV
+   149812  05-16-2017 19:38   kick-mck4 k14 k04.WAV
+   144832  05-16-2017 19:38   kick-mck4 k14 k09.WAV
+   145104  05-16-2017 19:38   kick-mck4 k14 k14.WAV
+   122584  05-16-2017 19:38   kick-mck4 k15 k02.WAV
+   119916  05-16-2017 19:38   kick-mck4 k15 k08.WAV
+   128832  05-16-2017 19:38   kick-mck4 k15 k12.WAV
+   124552  05-16-2017 19:38   kick-mck4 k16 k02.WAV
+    57000  05-16-2017 19:38   kick-mck4 k16 k06.WAV
+   127808  05-16-2017 19:38   kick-mck4 k16 k09.WAV
+    56632  05-16-2017 19:38   kick-mck4 k16 k20.WAV
+   128108  05-16-2017 19:39   kick-mck4 k17 k02.WAV
+    81648  05-16-2017 19:39   kick-mck4 k17 k07.WAV
+   136588  05-16-2017 19:39   kick-mck4 k17 k13.WAV
+   112744  05-16-2017 19:39   kick-mck4 k18 k02.WAV
+   113316  05-16-2017 19:39   kick-mck4 k18 k06.WAV
+   111540  05-16-2017 19:39   kick-mck4 k18 k09.WAV
+   148072  05-16-2017 19:39   kick-mck4 k19 k02.WAV
+    76708  05-16-2017 19:39   kick-mck4 k19 k04.WAV
+   143104  05-16-2017 19:39   kick-mck4 k19 k09.WAV
+   109452  05-16-2017 19:39   kick-mck4 k20 k02.WAV
+   114300  05-16-2017 19:39   kick-mck4 k20 k03.WAV
+   104220  05-16-2017 19:39   kick-mck4 k20 k07.WAV
+   112268  05-16-2017 18:05   kick-mck4 k21 k02.WAV
+   112164  05-16-2017 18:05   kick-mck4 k21 k15.WAV
+   124088  05-16-2017 18:05   kick-mck4 k22 k02.WAV
+   127696  05-16-2017 18:05   kick-mck4 k22 k03.WAV
+   129224  05-16-2017 18:05   kick-mck4 k22 k07.WAV
+   131188  05-16-2017 18:05   kick-mck4 k23 k02.WAV
+   128188  05-16-2017 18:05   kick-mck4 k23 k03.WAV
+   129820  05-16-2017 18:05   kick-mck4 k23 k08.WAV
+   131200  05-16-2017 18:05   kick-mck4 k23 k09.WAV
+   132836  05-16-2017 18:05   kick-mck4 k24 k02.WAV
+   128628  05-16-2017 18:05   kick-mck4 k24 k07.WAV
+   127464  05-16-2017 18:05   kick-mck4 k24 k12.WAV
+    86912  05-16-2017 18:05   kick-mck4 k24 k17.WAV
+   122936  05-16-2017 18:05   kick-mck4 k25 k02.WAV
+   114200  05-16-2017 18:05   kick-mck4 k25 k09.WAV
+   142048  05-16-2017 18:05   kick-mck4 k25 k12.WAV
+    63644  05-16-2017 18:05   kick-mck4 k26 k02.WAV
+    69396  05-16-2017 18:05   kick-mck4 k26 k05.WAV
+    60828  05-16-2017 18:05   kick-mck4 k28 k02.WAV
+    52504  05-16-2017 18:05   kick-mck4 k28 k03.WAV
+   120212  05-16-2017 18:05   kick-mck4 k29 k02.WAV
+   120156  05-16-2017 18:05   kick-mck4 k29 k03.WAV
+   123120  05-16-2017 18:05   kick-mck4 k29 k07.WAV
+   117216  05-16-2017 18:05   kick-mck4 k29 k17.WAV
+    60424  05-16-2017 18:05   kick-mck4 k30 k07.WAV
+    63660  05-16-2017 18:05   kick-mck4 k30 k10.WAV
+   105512  05-16-2017 19:33   kick-mck4 k31 k01.WAV
+    97724  05-16-2017 19:33   kick-mck4 k31 k02.WAV
+    96244  05-16-2017 19:33   kick-mck4 k31 k03.WAV
+   106340  05-16-2017 18:05   kick-mck4 k33 k02.WAV
+   157340  05-16-2017 18:05   kick-mck4 k33 k06.WAV
+    46680  05-16-2017 18:05   kick-mck4 k33 k10.WAV
+   138640  05-16-2017 19:33   kick-mck4 k34 k01.WAV
+    62316  05-16-2017 19:33   kick-mck4 k34 k02.WAV
+    66044  05-16-2017 19:33   kick-mck4 k34 k03.WAV
+   136256  05-16-2017 19:33   kick-mck4 k34 k04.WAV
+   137072  05-16-2017 19:33   kick-mck4 k34 k09.WAV
+   208916  05-16-2017 19:33   kick-mck4 k34 k13.WAV
+   109040  05-16-2017 18:13   kick-mck4 k35 k02.WAV
+    54252  05-16-2017 18:13   kick-mck4 k35 k04.WAV
+   113664  05-16-2017 18:13   kick-mck4 k35 k09.WAV
+    97672  05-16-2017 18:13   kick-mck4 k35 k10.WAV
+   114944  05-16-2017 18:13   kick-mck4 k36 k02.WAV
+   115780  05-16-2017 18:13   kick-mck4 k36 k05.WAV
+   124588  05-16-2017 18:13   kick-mck4 k36 k07.WAV
+   125928  05-16-2017 18:13   kick-mck4 k36 k15.WAV
+   119940  05-16-2017 18:13   kick-mck4 k36 k17.WAV
+   114376  05-16-2017 18:13   kick-mck4 k36 k19.WAV
+    59700  05-16-2017 18:13   kick-mck4 k36 k20.WAV
+   107420  05-16-2017 18:13   kick-mck4 k38 k02.WAV
+    53192  05-16-2017 18:13   kick-mck4 k38 k04.WAV
+   105908  05-16-2017 18:13   kick-mck4 k38 k07.WAV
+    55428  05-16-2017 18:13   kick-mck4 k39 k04.WAV
+    52316  05-16-2017 18:13   kick-mck4 k39 k07.WAV
+    47784  05-16-2017 18:13   kick-mck4 k39 k11.WAV
+   205376  05-16-2017 19:34   kick-mck4 k5 k02.WAV
+   106876  05-16-2017 19:34   kick-mck4 k5 k10.WAV
+    94740  05-16-2017 19:34   kick-mck4 k5 k36.WAV
+   135620  05-16-2017 19:34   kick-mck4 k7 k03.WAV
+   129324  05-16-2017 19:34   kick-mck4 k7 k06.WAV
+   119268  05-16-2017 19:34   kick-mck4 k7 k09.WAV
+    96752  05-16-2017 19:36   kick-mck4 k8 k10.WAV
+    43628  05-16-2017 19:36   kick-mck4 k8 k12.WAV
+   100380  05-16-2017 19:36   kick-mck4 k8 k16.WAV
+   113336  05-16-2017 19:36   kick-mck4 k9 k14.WAV
+   105036  05-16-2017 19:36   kick-mck4 k9 k15.WAV
+   176532  05-16-2017 19:36   kick-Mck4 under k1.WAV
+   176532  05-16-2017 19:38   kick-Mck4 under K2.WAV
+   140420  05-16-2017 19:38   kick-Mck4 under K3.WAV
+    37165  05-16-2017 19:52   load all.xpj
+   131204  05-16-2017 19:39   mck4 backing layer -2.WAV
+   176532  05-16-2017 19:39   mck4 backing layer -4.WAV
+   163972  05-16-2017 19:39   mck4 backing layer -5.WAV
+   135300  05-16-2017 19:39   mck4 backing layer -6.WAV
+   352932  05-16-2017 18:05   mck4 backing layer -7.WAV
+   114820  05-16-2017 19:34   mck4 backing layer 2.WAV
+   176532  05-16-2017 17:31   Mck4 hat-1.WAV
+   144004  05-15-2017 16:30   Mck4 hat-10.WAV
+   133252  05-16-2017 17:46   Mck4 hat-11.WAV
+   127108  05-16-2017 17:46   Mck4 hat-12.WAV
+   137476  05-16-2017 17:46   Mck4 hat-13.WAV
+   159876  05-16-2017 17:46   Mck4 hat-14.WAV
+   176532  05-16-2017 18:05   Mck4 hat-15.WAV
+   176532  05-16-2017 18:05   Mck4 hat-16.WAV
+   159748  05-16-2017 18:05   Mck4 hat-17.WAV
+   176532  05-16-2017 18:05   Mck4 hat-18.WAV
+   176532  05-16-2017 18:05   Mck4 hat-19.WAV
+   167428  05-16-2017 18:05   Mck4 hat-20.WAV
+   176532  05-16-2017 18:05   Mck4 hat-21.WAV
+   176532  05-16-2017 17:11   Mck4 hat-22.WAV
+   170500  05-16-2017 17:11   Mck4 hat-23.WAV
+   176532  05-16-2017 17:11   Mck4 hat-24.WAV
+   176532  05-16-2017 17:11   Mck4 hat-25.WAV
+   158212  05-16-2017 18:13   Mck4 hat-26.WAV
+   176532  05-16-2017 18:13   Mck4 hat-27.WAV
+   176532  05-16-2017 18:13   Mck4 hat-28.WAV
+   176532  05-16-2017 18:13   Mck4 hat-29.WAV
+   160132  05-16-2017 17:31   Mck4 hat-3.WAV
+   136452  05-15-2017 16:30   Mck4 hat-4.WAV
+   176532  05-15-2017 16:30   Mck4 hat-5.WAV
+   168196  05-15-2017 16:30   Mck4 hat-6.WAV
+   163588  05-15-2017 16:30   Mck4 hat-7.WAV
+   145412  05-15-2017 16:30   Mck4 hat-8.WAV
+   133252  05-15-2017 16:30   Mck4 hat-9.WAV
+    82436  05-16-2017 17:31   Mck4 hat.WAV
+    43360  05-16-2017 19:39   Mck4 kit brk1 008.WAV
+  1927604  05-16-2017 19:39   Mck4 kit brk1 009.WAV
+   357956  05-16-2017 19:34   Mck4 snap1 006.WAV
+    90756  05-15-2017 16:30   mck4 sub-13.WAV
+    96004  05-15-2017 16:30   mck4 sub-14.WAV
+   152708  05-15-2017 16:30   Mck4 under H21.WAV
+   176532  05-15-2017 16:30   Mck4 under k1.WAV
+   176532  05-15-2017 16:30   Mck4 under K2.WAV
+   176532  05-16-2017 19:34   Mck4 under K21.WAV
+   140420  05-15-2017 16:30   Mck4 under K3.WAV
+   176260  05-16-2017 19:39   Mck4 under K4.WAV
+   172164  05-16-2017 19:39   Mck4 under K5.WAV
+   160900  05-15-2017 16:30   Mck4 under S1.WAV
+   133252  05-15-2017 16:30   Mck4 under S2.WAV
+   143492  05-16-2017 19:34   Mck4 under S21.WAV
+   176532  05-16-2017 18:05   Mck4 under S4.WAV
+   176532  05-16-2017 18:05   Mck4 under S5.WAV
+   176532  05-16-2017 18:05   Mck4 under S6.WAV
+   176532  05-16-2017 18:13   Mck4 under S7.WAV
+    64372  05-16-2017 18:05   perc-mck4 k28 p04.WAV
+    59620  05-16-2017 18:05   perc-mck4 k28 p05.WAV
+    59544  05-16-2017 18:05   perc-mck4 k28 p16.WAV
+    64216  05-16-2017 18:05   perc-mck4 k28 p17.WAV
+   105828  05-16-2017 19:36   snare-mck4 k10 s09.WAV
+   105588  05-16-2017 19:36   snare-mck4 k10 s12.WAV
+   109812  05-16-2017 19:33   snare-mck4 k100 s08.WAV
+   104388  05-16-2017 19:33   snare-mck4 k100 s12.WAV
+   105500  05-16-2017 19:33   snare-mck4 k100 s16.WAV
+   106636  05-16-2017 19:33   snare-mck4 k100 s20.WAV
+   179068  05-16-2017 19:38   snare-mck4 k102 s18.WAV
+   178620  05-16-2017 19:38   snare-mck4 k102 s23.WAV
+   177276  05-16-2017 19:38   snare-mck4 k102 s29.WAV
+   183320  05-16-2017 19:38   snare-mck4 k103 s09.WAV
+   175712  05-16-2017 19:38   snare-mck4 k103 s15.WAV
+    62416  05-16-2017 19:36   snare-mck4 k11 s05.WAV
+   116876  05-16-2017 19:36   snare-mck4 k11 s14.WAV
+    58284  05-16-2017 19:36   snare-mck4 k11 s18.WAV
+    73960  05-16-2017 19:38   snare-mck4 k14 s05.WAV
+   148464  05-16-2017 19:38   snare-mck4 k14 s10.WAV
+   146984  05-16-2017 19:38   snare-mck4 k14 s11.WAV
+   144092  05-16-2017 19:38   snare-mck4 k14 s21.WAV
+   116000  05-16-2017 19:38   snare-mck4 k15 s05.WAV
+   118940  05-16-2017 19:38   snare-mck4 k15 s10.WAV
+   119336  05-16-2017 19:38   snare-mck4 k15 s19.WAV
+   386804  05-16-2017 19:38   snare-mck4 k15 s36.WAV
+   132172  05-16-2017 19:38   snare-mck4 k16 s04.WAV
+   120004  05-16-2017 19:38   snare-mck4 k16 s10.WAV
+   129220  05-16-2017 19:38   snare-mck4 k16 s15.WAV
+   120548  05-16-2017 19:38   snare-mck4 k16 s22.WAV
+   139776  05-16-2017 19:39   snare-mck4 k17 s04.WAV
+   137164  05-16-2017 19:39   snare-mck4 k17 s10.WAV
+   138852  05-16-2017 19:39   snare-mck4 k17 s15.WAV
+   113100  05-16-2017 19:39   snare-mck4 k18 s05.WAV
+    63652  05-16-2017 19:39   snare-mck4 k18 s10.WAV
+   118608  05-16-2017 19:39   snare-mck4 k18 s16.WAV
+    69632  05-16-2017 19:39   snare-mck4 k19 s05.WAV
+    77272  05-16-2017 19:39   snare-mck4 k19 s11.WAV
+    64740  05-16-2017 19:39   snare-mck4 k19 s27.WAV
+   112156  05-16-2017 19:39   snare-mck4 k20 s04.WAV
+   117796  05-16-2017 19:39   snare-mck4 k20 s10.WAV
+   115964  05-16-2017 18:05   snare-mck4 k21 s04.WAV
+   108304  05-16-2017 18:05   snare-mck4 k21 s09.WAV
+   117284  05-16-2017 18:05   snare-mck4 k21 s19.WAV
+    67176  05-16-2017 18:05   snare-mck4 k22 s04.WAV
+    62636  05-16-2017 18:05   snare-mck4 k22 s10.WAV
+    68760  05-16-2017 18:05   snare-mck4 k23 s04.WAV
+    67300  05-16-2017 18:05   snare-mck4 k23 s11.WAV
+    66788  05-16-2017 18:05   snare-mck4 k23 s13.WAV
+   130380  05-16-2017 18:05   snare-mck4 k24 s03.WAV
+   126728  05-16-2017 18:05   snare-mck4 k24 s04.WAV
+   128740  05-16-2017 18:05   snare-mck4 k24 s08.WAV
+   128028  05-16-2017 18:05   snare-mck4 k24 s09.WAV
+   127472  05-16-2017 18:05   snare-mck4 k24 s13.WAV
+   125668  05-16-2017 18:05   snare-mck4 k24 s19.WAV
+   114440  05-16-2017 18:05   snare-mck4 k25 s04.WAV
+    42620  05-16-2017 18:05   snare-mck4 k25 s08.WAV
+   115256  05-16-2017 18:05   snare-mck4 k25 s10.WAV
+   112080  05-16-2017 18:05   snare-mck4 k25 s14.WAV
+    64656  05-16-2017 18:05   snare-mck4 k26 s03.WAV
+   136644  05-16-2017 18:05   snare-mck4 k26 s06.WAV
+   103064  05-16-2017 18:05   snare-mck4 k27 s04.WAV
+   143856  05-16-2017 18:05   snare-mck4 k27 s12.WAV
+    61072  05-16-2017 18:05   snare-mck4 k28 s06.WAV
+    54864  05-16-2017 18:05   snare-mck4 k28 s14.WAV
+    54472  05-16-2017 18:05   snare-mck4 k29 s04.WAV
+    59644  05-16-2017 18:05   snare-mck4 k29 s09.WAV
+    58028  05-16-2017 18:05   snare-mck4 k29 s14.WAV
+    63676  05-16-2017 18:05   snare-mck4 k29 s18.WAV
+   118876  05-16-2017 18:05   snare-mck4 k30 s05.WAV
+   117568  05-16-2017 18:05   snare-mck4 k30 s11.WAV
+   102172  05-16-2017 19:33   snare-mck4 k31 s04.WAV
+    47184  05-16-2017 19:33   snare-mck4 k31 s11.WAV
+   136240  05-16-2017 19:33   snare-mck4 k34 s05.WAV
+   140500  05-16-2017 19:33   snare-mck4 k34 s10.WAV
+   139056  05-16-2017 19:33   snare-mck4 k34 s15.WAV
+   340276  05-16-2017 19:33   snare-mck4 k34 s20.WAV
+   112760  05-16-2017 18:13   snare-mck4 k35 s05.WAV
+   123260  05-16-2017 18:13   snare-mck4 k35 s12.WAV
+   117236  05-16-2017 18:13   snare-mck4 k35 s16.WAV
+   120820  05-16-2017 18:13   snare-mck4 k36 s04.WAV
+   116120  05-16-2017 18:13   snare-mck4 k36 s08.WAV
+   119600  05-16-2017 18:13   snare-mck4 k36 s14.WAV
+   118740  05-16-2017 18:13   snare-mck4 k36 s18.WAV
+   124840  05-16-2017 18:13   snare-mck4 k37 s02.WAV
+   125312  05-16-2017 18:13   snare-mck4 k37 s03.WAV
+   106084  05-16-2017 18:13   snare-mck4 k38 s05.WAV
+   113012  05-16-2017 18:13   snare-mck4 k38 s12.WAV
+    57644  05-16-2017 18:13   snare-mck4 k39 s09.WAV
+    59676  05-16-2017 18:13   snare-mck4 k39 s26.WAV
+    98752  05-16-2017 19:34   snare-mck4 k5 s03.WAV
+    98040  05-16-2017 19:34   snare-mck4 k5 s14.WAV
+    93352  05-16-2017 19:34   snare-mck4 k5 s28.WAV
+   157320  05-16-2017 19:34   snare-mck4 k7 s08.WAV
+   150096  05-16-2017 19:34   snare-mck4 k7 s11.WAV
+   151496  05-16-2017 19:34   snare-mck4 k7 s14.WAV
+   103924  05-16-2017 19:36   snare-mck4 k8 s07.WAV
+   109072  05-16-2017 19:36   snare-mck4 k8 s13.WAV
+    46956  05-16-2017 19:36   snare-mck4 k9 s17.WAV
+    57152  05-16-2017 19:36   snare-mck4 k9 s21.WAV
+   112324  05-16-2017 19:36   snare-mck4 k9 s22.WAV
+   160900  05-16-2017 19:36   snare-Mck4 under S1.WAV
+   133252  05-16-2017 19:38   snare-Mck4 under S2.WAV
+    90756  05-16-2017 19:36   sub-mck4 sub-13.WAV
+    96004  05-16-2017 19:36   sub-mck4 sub-14.WAV
+    90884  05-16-2017 19:34   tam-mck4 tam t14.WAV
+    88364  05-16-2017 19:34   tam-mck4 tam t15.WAV
+  2058156  05-14-2017 18:28   [Previews]\hiphop-Drum-kit-Mck4 01.xpm.wav
+  2058156  05-14-2017 18:28   [Previews]\hiphop-Drum-kit-Mck4 02.xpm.wav
+  2058156  05-14-2017 18:29   [Previews]\hiphop-Drum-kit-Mck4 03.xpm.wav
+  2058156  05-14-2017 18:30   [Previews]\hiphop-Drum-kit-Mck4 04.xpm.wav
+  2058156  05-14-2017 18:30   [Previews]\hiphop-Drum-kit-Mck4 05.xpm.wav
+  2058156  05-14-2017 18:31   [Previews]\hiphop-Drum-kit-Mck4 06.xpm.wav
+  2058156  05-14-2017 18:34   [Previews]\hiphop-Drum-kit-Mck4 07.xpm.wav
+  2058156  05-14-2017 18:34   [Previews]\hiphop-Drum-kit-Mck4 08.xpm.wav
+---------                     -------
+ 82742158                     456 files

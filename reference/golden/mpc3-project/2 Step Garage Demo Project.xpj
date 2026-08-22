@@ -1,0 +1,708 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Project>
+  <Version>
+    <File_Version>1.7</File_Version>
+    <Application>MPC-V</Application>
+    <Application_Version>1.9.7.1</Application_Version>
+    <Platform>OSX</Platform>
+  </Version>
+  <ProductCode>1299211094</ProductCode>
+  <BPM>120.000000</BPM>
+  <MasterVolume>0.707946</MasterVolume>
+  <FileList>
+    <File>./2 Step Garage Demo Project_[ProjectData]/All Sequences &amp; Songs.xal</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Bass-Ag Ana Bass.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Bass-Ag Sub 01.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Bass-Ag Sub 02.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Bass-Art Bass.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Bass-Art Sub.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Bass-Hea SHBass.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Bass-Sel Rev Bass.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Bass-Sel Space.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Clap-Fle Clap.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Clap-Sel Clap.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Cymbal-Art Crash.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Cymbal-Evi RevCrash.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Cymbal-Sel Crash.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Cymbal-Sel Ride.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Ag Cl Hat 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Ag Cl Hat 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Ag Cl Hat 3.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Art Cl Hat.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Art OpHat.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Evi Cl Hat.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Evi Op Hat.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Fee Cl Hat.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Fee OpHat.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Fle Cl Hat.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Fle OpHat 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Fle OpHat 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Fle OpHat 3.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Hea Cl Hat.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Hea OpHat 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Hea OpHat 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Sel Cl Hat.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-HiHat-Sel OpHat.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kick-Ag Kick 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kick-Ag Kick 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kick-Art Kick 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kick-Art Kick 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kick-Evi Kick 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kick-Evi Kick 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kick-Fee Kick 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kick-Fee Kick 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kick-Fle Kick 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kick-Fle Kick 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kick-Hea Kick 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kick-Hea Kick 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kick-Sel Kick 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kick-Sel Kick 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Perc-Ag Perc.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Perc-Art Perc.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Perc-Evi Perc.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Perc-Evi Zap.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Perc-Fee Block.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Perc-Fee Tamb.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Perc-Fle Conga.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Perc-Fle Shaker.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Perc-Hea Tamb.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Perc-Sel Block.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Perc-Sel Shaker.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Rim-Evi Rim.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Rim-Fee Rim 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Rim-Fee Rim 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Rim-Fee Rim 3.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Rim-Fle Rim.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-SFX-Art Woosh.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-SFX-Art Zap FX.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-SFX-Evi Stab FX.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-SFX-Fee Amb.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-SFX-Hea Zap FX.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-SFX-Sel Rev FX.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-SFX-Sel Rewind.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Snare-Ag Snare 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Snare-Ag Snare 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Snare-Art Snr 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Snare-Art Snr 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Snare-Evi Snare 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Snare-Evi Snare 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Snare-Fle Snare.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Snare-Hea Snr 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Snare-Hea Snr 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Snare-Sel Snare.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Ag Brass.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Ag Lead.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Ag Piano 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Ag Piano 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Ag Piano 3.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Art Guit.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Art String.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Evi M1 Org.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Evi Stab.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Fee Piano 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Fee Piano 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Fee Piano 3.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Fee Piano 4.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Fee Syn Chd.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Fle Chord1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Fle Chord2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Fle OrgBass.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Hea Rev Rhd.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Hea Rhode 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Hea Rhode 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Hea Rhode 3.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Hea SwirlOrg.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Stab-Sel SynHit.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Vocal-Art Voc 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Vocal-Art Voc 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Vocal-Evi Voc 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Vocal-Evi Voc 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Vocal-Evi Voc 3.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Vocal-Fee Voc.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Vocal-Fle Voc 1.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Vocal-Fle Voc 2.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Vocal-Hea Voc.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Vocal-Sel Voc.WAV</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Program 001.xpm</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kit-Agent Kit 128.xpm</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kit-Arful Kit 128.xpm</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kit-Evisu Kit 128.xpm</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kit-Feelings Kit 128.xpm</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kit-Flexxin Kit 128.xpm</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kit-Heartbeat Kit 130.xpm</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Garage-Kit-Selectha Kit 128.xpm</File>
+    <File>./2 Step Garage Demo Project_[ProjectData]/Midi Controller.mcn</File>
+  </FileList>
+  <Mixer>
+    <Mixer.Input number="1">
+      <Name>Input</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Input>
+    <Mixer.Return number="1">
+      <Name>Return 1</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Return>
+    <Mixer.Return number="2">
+      <Name>Return 2</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Return>
+    <Mixer.Return number="3">
+      <Name>Return 3</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Return>
+    <Mixer.Return number="4">
+      <Name>Return 4</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Return>
+    <Mixer.Submix number="1">
+      <Name>Submix 1</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Submix>
+    <Mixer.Submix number="2">
+      <Name>Submix 2</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Submix>
+    <Mixer.Submix number="3">
+      <Name>Submix 3</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Submix>
+    <Mixer.Submix number="4">
+      <Name>Submix 4</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Submix>
+    <Mixer.Submix number="5">
+      <Name>Submix 5</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Submix>
+    <Mixer.Submix number="6">
+      <Name>Submix 6</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Submix>
+    <Mixer.Submix number="7">
+      <Name>Submix 7</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Submix>
+    <Mixer.Submix number="8">
+      <Name>Submix 8</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Submix>
+    <Mixer.Output number="1">
+      <Name>Outputs 1/2</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="2">
+      <Name>Outputs 3/4</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="3">
+      <Name>Outputs 5/6</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="4">
+      <Name>Outputs 7/8</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="5">
+      <Name>Outputs 9/10</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="6">
+      <Name>Outputs 11/12</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="7">
+      <Name>Outputs 13/14</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="8">
+      <Name>Outputs 15/16</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="9">
+      <Name>Outputs 17/18</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="10">
+      <Name>Outputs 19/20</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="11">
+      <Name>Outputs 21/22</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="12">
+      <Name>Outputs 23/24</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="13">
+      <Name>Outputs 25/26</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="14">
+      <Name>Outputs 27/28</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="15">
+      <Name>Outputs 29/30</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+    <Mixer.Output number="16">
+      <Name>Outputs 31/32</Name>
+      <AudioRoute>
+        <AudioRoute>2</AudioRoute>
+        <AudioRouteSubIndex>0</AudioRouteSubIndex>
+        <InsertsEnabled>True</InsertsEnabled>
+      </AudioRoute>
+      <Send1>0.000000</Send1>
+      <Send2>0.000000</Send2>
+      <Send3>0.000000</Send3>
+      <Send4>0.000000</Send4>
+      <Volume>0.707946</Volume>
+      <Mute>False</Mute>
+      <Pan>0.500000</Pan>
+    </Mixer.Output>
+  </Mixer>
+  <FxQLinks>
+    <FxQlink number="1">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="2">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="3">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="4">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="5">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="6">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="7">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="8">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="9">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="10">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="11">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="12">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="13">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="14">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="15">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+    <FxQlink number="16">
+      <Controller>-1</Controller>
+      <Min>0.000000</Min>
+      <Max>100.000000</Max>
+      <TouchToMax>True</TouchToMax>
+      <FxIndex>-1</FxIndex>
+      <QLinkFxId>&lt;None&gt;</QLinkFxId>
+    </FxQlink>
+  </FxQLinks>
+  <EmulationType type="NONE"/>
+  <MasterTempo.Enabled>0</MasterTempo.Enabled>
+  <MasterTempo.Value>120.000000</MasterTempo.Value>
+  <Notes></Notes>
+</Project>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<expansion version="1.0">
+    <identifier>com.akaipro.mpc.expansion.acousticdrumtools</identifier>    
+    <title>Acoustic Drum Tools</title>
+    <manufacturer>Akai Professional</manufacturer>
+    <version>1.0.2.0</version>
+    <type>drum</type>
+    <img>com.akaipro.mpc.expansion.acousticdrumtools.jpg</img>
+    <directory>com.akaipro.mpc.expansion.acousticdrumtools</directory>
+    <separator>-</separator>
+</expansion>
+
+

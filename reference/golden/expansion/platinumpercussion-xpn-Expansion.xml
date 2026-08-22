@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<expansion version="2.0.0.0" buildVersion="3.7.0.42">
+  <local/>
+  <identifier>com.padpimps.platinumpercussion</identifier>
+  <title>Platinum Percussion</title>
+  <manufacturer>Pad Pimps</manufacturer>
+  <version>2.5.0.0</version>
+  <type>drum</type>
+  <priority>50</priority>
+  <img>Platinum-Percussion-Expansion.jpeg</img>
+  <description>Multisampled percussion instruments from around the world.</description>
+  <separator>-</separator>
+</expansion>
