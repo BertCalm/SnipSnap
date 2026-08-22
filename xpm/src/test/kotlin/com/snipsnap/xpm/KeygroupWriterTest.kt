@@ -1,5 +1,6 @@
 package com.snipsnap.xpm
 
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -95,6 +96,51 @@ class KeygroupWriterTest {
         assertFalse("<Loop>" in xml)
         assertFalse("<Mute>" in xml)
         assertTrue("<SliceLoop>0</SliceLoop>" in xml)
+    }
+
+    /**
+     * The generalisation of every assertion above: each element we emit must
+     * appear, at the same nesting level, in a real commercial program.
+     *
+     * The individual tests pin the eight defects we know about. This one
+     * catches the ninth — because every one of those defects was the same
+     * mistake, an element invented rather than observed, and the MPC's answer
+     * to an element it has never seen is silence rather than an error.
+     *
+     * A subset is fine and expected: real programs carry ~158 instrument-level
+     * elements and we write 15. The corpus also shows the parser tolerates
+     * surprises (one vendor ships a duplicate `<Resonance2>`), so this guards
+     * invention, not omission.
+     */
+    @Test
+    fun `emits no element absent from real programs`() {
+        val dir = File("../reference/golden/keygroup")
+        val corpus = dir.listFiles { f -> f.extension == "xpm" }
+        assertTrue(corpus != null && corpus.isNotEmpty(), "reference corpus missing: ${dir.absolutePath}")
+
+        fun tags(fragment: String) =
+            Regex("""<([A-Za-z_][A-Za-z0-9_.]*)[ >]""").findAll(fragment).map { it.groupValues[1] }
+
+        fun atInstrumentLevel(xml: String) =
+            Regex("""<Instrument number="\d+">(.*?)<Layers>""", RegexOption.DOT_MATCHES_ALL)
+                .findAll(xml).flatMap { tags(it.groupValues[1]) }.toSet()
+
+        fun atLayerLevel(xml: String) =
+            Regex("""<Layer number="\d+">(.*?)</Layer>""", RegexOption.DOT_MATCHES_ALL)
+                .findAll(xml).flatMap { tags(it.groupValues[1]) }.toSet()
+
+        val realInstrument = corpus!!.flatMap { atInstrumentLevel(it.readText()) }.toSet()
+        val realLayer = corpus.flatMap { atLayerLevel(it.readText()) }.toSet()
+
+        val ours = KeygroupWriter().write(program())
+        assertEquals(
+            emptySet(), atInstrumentLevel(ours) - realInstrument,
+            "instrument-level elements that appear in no real program",
+        )
+        assertEquals(
+            emptySet(), atLayerLevel(ours) - realLayer,
+            "layer-level elements that appear in no real program",
+        )
     }
 
     @Test
