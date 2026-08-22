@@ -1129,6 +1129,11 @@ package com.snipsnap.loop
  * Implementations must accept interleaved stereo floats and must not throw
  * from [write] — a sink that fails should degrade to dropping audio, not take
  * the transport down with it.
+ *
+ * **The caller owns the array and reuses it.** Both the engine and the bouncer
+ * hand the same buffer to [write] every interval, so an implementation must
+ * consume it or copy it before returning. Retaining the reference gets you the
+ * next interval's audio in place of this one, silently.
  */
 interface AudioSink {
     val sampleRate: Int

@@ -899,8 +899,10 @@ jobs:
       # all the pure-JVM tests go red for a reason that has nothing to do with
       # them.
       - uses: android-actions/setup-android@v3
+      # Everything except :app, by exclusion rather than by list — a module added
+      # later must not be silently untested because nobody updated this line.
       - name: Run JVM test suites
-        run: ./gradlew --no-daemon :json:test :xpm:test :audio:test :kit:test :mpc3:test :synth:test :loop:test
+        run: ./gradlew --no-daemon test -x :app:test
 
   android-build:
     runs-on: ubuntu-latest
@@ -916,7 +918,7 @@ jobs:
         run: ./gradlew --no-daemon :app:assembleDebug
 ```
 
-The JVM job now names its modules rather than running bare `test`, so a broken `:app` can never mask a green engine — which matters, because the engine is the part with the tests.
+The JVM job excludes `:app` rather than running bare `test`, so a broken `:app` can never mask a green engine — which matters, because the engine is the part with the tests.
 
 - [ ] **Step 4: Verify the build still works**
 
@@ -942,7 +944,7 @@ git commit -m "An eighth module and a screen at last — CI grows an SDK to matc
 
 **Interfaces:**
 - Consumes: `AudioSink` (Plan 02 Task 6).
-- Produces: `class AndroidAudioSink(sampleRate: Int) : AudioSink` and `fun deviceSampleRate(context: Context): Int`. Task 7 constructs both.
+- Produces: `class AndroidAudioSink(sampleRate: Int) : AudioSink` and `fun deviceSampleRate(context: Context): Int`. Task 7 constructs both. The sink takes only a rate — its device buffer is sized in milliseconds and is deliberately independent of the mix block size.
 
 Spec §06: the sink's native rate is queried once at session start and everything bakes at that rate, so no conversion ever happens in the callback.
 
@@ -982,13 +984,17 @@ fun deviceSampleRate(context: Context): Int {
  * the engine advances exactly as fast as the device drains, with no timer to
  * drift against.
  *
- * The buffer is four mix blocks deep. Too shallow and a slow bake underruns;
- * too deep and a mute takes a noticeable moment to be heard.
+ * The device buffer is deliberately unrelated to the mix block. An interval is
+ * 512,000 frames at the spec's defaults; asking AudioTrack for four of those
+ * would be a 16 MB request it will simply refuse. [write] already loops on
+ * partial writes, so the two sizes are independent — this asks for about 150 ms,
+ * which is enough to ride out a slow bake and short enough that a mute is felt
+ * rather than waited for.
+ *
+ * That short buffer is also what keeps the UI honest: the blocking write paces
+ * the engine, so the interval counter cannot run ahead of what is audible.
  */
-class AndroidAudioSink(
-    override val sampleRate: Int,
-    blockFrames: Int,
-) : AudioSink {
+class AndroidAudioSink(override val sampleRate: Int) : AudioSink {
 
     override val channels = 2
 
@@ -1006,7 +1012,7 @@ class AndroidAudioSink(
                 .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
                 .build(),
         )
-        .setBufferSizeInBytes(bufferBytes(sampleRate, blockFrames))
+        .setBufferSizeInBytes(bufferBytes(sampleRate))
         .setTransferMode(AudioTrack.MODE_STREAM)
         .build()
 
@@ -1030,10 +1036,10 @@ class AndroidAudioSink(
 
     private companion object {
         const val BYTES_PER_FLOAT = 4
-        const val BLOCKS_BUFFERED = 4
+        const val BUFFER_MILLIS = 150
 
-        fun bufferBytes(sampleRate: Int, blockFrames: Int): Int {
-            val wanted = blockFrames * 2 * BYTES_PER_FLOAT * BLOCKS_BUFFERED
+        fun bufferBytes(sampleRate: Int): Int {
+            val wanted = sampleRate * BUFFER_MILLIS / 1000 * 2 * BYTES_PER_FLOAT
             val minimum = AudioTrack.getMinBufferSize(
                 sampleRate,
                 AudioFormat.CHANNEL_OUT_STEREO,
@@ -1332,18 +1338,21 @@ class LoopActivity : ComponentActivity() {
     }
 
     private fun start(session: Session, dir: File) {
-        val audioSink = AndroidAudioSink(session.sampleRate, session.intervalFrames)
+        val audioSink = AndroidAudioSink(session.sampleRate)
         val residency = Residency(session, KitSampleSource(dir), bakers)
         val loopEngine = LoopEngine(residency, audioSink)
 
         sink = audioSink
         engine = loopEngine
-        // Bake the first two intervals before the sink asks for anything, or the
-        // opening block underruns while it decodes.
-        residency.buffersFor(0)
-        residency.prefetch(1)
 
-        audioThread = thread(name = "snipsnap-audio", isDaemon = true) { loopEngine.run() }
+        audioThread = thread(name = "snipsnap-audio", isDaemon = true) {
+            // Prime here, not in onCreate. Baking interval 0 is six WAV decodes,
+            // six resamples and possibly six slice-retriggers — seconds of work
+            // that must never touch the main thread.
+            residency.buffersFor(0)
+            residency.prefetch(1)
+            loopEngine.run()
+        }
     }
 
     override fun onDestroy() {
@@ -1386,7 +1395,7 @@ Launch the app and confirm, by ear and by eye:
 1. **It plays.** Audio comes out and does not stutter, click at interval boundaries, or underrun.
 2. **It phases.** With chains of 2 and 3, the two tracks realign every 6 intervals. Watch the lit cells and count.
 3. **Mute is immediate.** Tapping a track header drops it at the next boundary, within one interval, with no click.
-4. **The lit block matches what you hear.** If the highlight and the audio disagree, the UI is reading a position the engine has already passed — increase the poll rate or move to a callback.
+4. **The lit block matches what you hear.** If the highlight runs ahead, the poll rate is not the cause and raising it will not help. The engine increments its counter as soon as `sink.write` returns, so the size of the AudioTrack buffer *is* how far ahead the display can get: a buffer holding several intervals lets `write` return immediately and the counter sprint away from the audio. Check `BUFFER_MILLIS` before touching anything in the UI.
 5. **Fitting sounds acceptable on pads and vocals.** This is the risk flagged in spec §12: slice-and-retrigger suits drums and may not suit sustained material. Judge it now, while the fix is still cheap.
 
 Record what you hear. Anything wrong here is a real defect, not a tuning note.
