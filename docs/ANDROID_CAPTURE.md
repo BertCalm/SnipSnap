@@ -128,3 +128,14 @@ permission needed, and it is the only way to write to removable volumes anyway.
 
 MediaProjection audio capture does not work meaningfully on emulators. This
 needs a physical device in the loop from day one.
+
+## Real-time discipline for the capture callback
+
+Pinned from the open-source DSP literature before the Android layer exists:
+the audio callback that feeds `RingBuffer` runs on a high-priority realtime
+thread where allocation, locks, file/network I/O and JNI churn are all
+forbidden — miss the buffer deadline and the capture clicks. The proven
+pattern is a lock-free single-producer/single-consumer ring (Oboe callback
+writes, snip-commit reads), pre-allocated at service start. The JVM
+`RingBuffer` is the model, not the implementation: its Android incarnation
+must be allocation-free on the write path.

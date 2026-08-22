@@ -59,7 +59,7 @@
         <div class="scan"></div>
         <div id="veil">
           <span class="lcdf" style="color:var(--lcd-ink);font-size:24px;">TAP TO POWER ON</span>
-          <span class="px" style="color:var(--lcd-dim);">FOUR REAL ENGINES, PORTED TO THE SAMPLE · SOUND ON</span>
+          <span class="px" style="color:var(--lcd-dim);">FIVE REAL ENGINES + THE RACK, PORTED TO THE SAMPLE · SOUND ON</span>
         </div>
       </div>
 
@@ -98,6 +98,10 @@
           <div style="display:flex;gap:8px;align-items:flex-start;">
             <button id="squashOn" class="btn raised fxBtn" style="width:56px;height:34px;flex:none;"><span class="px" style="color:var(--ink2);">SQUASH</span></button>
             <div id="squashMacros" style="flex:1;display:flex;flex-direction:column;gap:2px;"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-start;">
+            <button id="tapeOn" class="btn raised fxBtn" style="width:56px;height:34px;flex:none;"><span class="px" style="color:var(--ink2);">TAPE</span></button>
+            <div id="tapeMacros" style="flex:1;display:flex;flex-direction:column;gap:2px;"></div>
           </div>
           <div style="display:flex;gap:8px;align-items:flex-start;">
             <button id="echoOn" class="btn raised fxBtn" style="width:56px;height:34px;flex:none;"><span class="px" style="color:var(--ink2);">ECHO</span></button>
@@ -141,6 +145,15 @@
   function expMap(m,lo,hi){ m=Math.min(1,Math.max(0,m)); return lo*Math.exp(Math.log(hi/lo)*m); }
   function Noise(seed){ var s=seed||1; return function(){ s=(s*1103515245+12345)&0x7fffffff; return (s/0x3fffffff)-1; }; }
   function OnePole(rate){ var st=0; return function(x,fc){ var a=1-Math.exp(-2*Math.PI*Math.min(fc,rate*0.45)/rate); st+=a*(x-st); return st; }; }
+  function TptSvf(rate){ var ic1=0,ic2=0,low=0,band=0,high=0;
+    return { proc:function(x,fc,k){
+        var g=Math.tan(Math.PI*Math.min(rate*0.49,Math.max(10,fc))/rate);
+        var kk=Math.max(0.1,k);
+        var a1=1/(1+g*(g+kk)), a2=g*a1, a3=g*a2;
+        var v3=x-ic2, v1=a1*ic1+a2*v3, v2=ic2+a2*ic1+a3*v3;
+        ic1=2*v1-ic1; ic2=2*v2-ic2;
+        low=v2; band=v1; high=x-kk*v1-v2; },
+      get low(){return low;}, get band(){return band;} }; }
   function Svf(rate){ var low=0,band=0,high=0;
     return { proc:function(x,f,damp){ var ff=2*Math.sin(Math.PI*Math.min(f,rate*0.22)/rate); low+=ff*band; high=x-low-damp*band; band+=ff*high; },
              get band(){return band;}, get low(){return low;} }; }
@@ -369,13 +382,13 @@
         var pulseMix=Math.min(1,Math.max(0,(m.SHAPE-0.5)*2));
         var width=lin(Math.min(1,Math.max(0,(m.SHAPE-0.75)*4)),0.5,0.12);
         var detune=lin(m.FAT,1.0005,1.012), subGain=lin(m.FAT,0.15,0.45);
-        var damp=lin(m.SQUEEZE,1.2,0.22), envAmount=lin(m.SQUEEZE,0.3,1);
-        var floorHz=expMap(m.CUTOFF,180,5200);
-        var peakHz=Math.min(5500,floorHz*lin(envAmount,1.5,6));
+        var damp=lin(m.SQUEEZE,1.8,0.3), envAmount=lin(m.SQUEEZE,0.3,1);
+        var floorHz=expMap(m.CUTOFF,180,12000);
+        var peakHz=Math.min(16000,floorHz*lin(envAmount,1.5,6));
         function saw(p){ return 2*(p-Math.floor(p))-1; }
         function pulseW(p,w){ return (p-Math.floor(p))<w?1:-1; }
         function osc(p){ return (1-pulseMix)*saw(p)+pulseMix*pulseW(p,width); }
-        var out=new Float32Array(frames(t60*1.4)), svf=Svf(R);
+        var out=new Float32Array(frames(t60*1.4)), svf=TptSvf(R);
         var p1=0,p2=0,pSub=0;
         for(var i=0;i<out.length;i++){ var t=i/R;
           p1+=base/R; p2+=base*detune/R; pSub+=base*0.5/R;
@@ -473,11 +486,32 @@
     return peakMatch(out,inPk);
   }
 
+  function tapeFx(src,m){
+    var rate=R, baseDelay=0.005*rate;
+    var wowDepth=lin(m.WOBBLE,0,0.55)*baseDelay, flutterDepth=lin(m.WOBBLE,0,0.12)*baseDelay;
+    var headHz=expMap(1-m.AGE,3200,16000);
+    var inPk=peakOf(src);
+    var out=new Float32Array(src.length), lp=OnePole(rate);
+    for(var f=0;f<src.length;f++){
+      var t=f/rate;
+      var sway=wowDepth*Math.sin(2*Math.PI*1.3*t)+flutterDepth*Math.sin(2*Math.PI*7.4*t+1.1);
+      var readPos=f-baseDelay+sway;
+      var i0=Math.floor(readPos), frac=readPos-i0;
+      var s0=(i0>=0&&i0<src.length)?src[i0]:0;
+      var s1=(i0+1>=0&&i0+1<src.length)?src[i0+1]:0;
+      var s=s0+(s1-s0)*frac;
+      if(m.DRIVE>0.001){ s=drive(s+0.06*m.DRIVE*s*s,m.DRIVE*0.8); }
+      out[f]=lp(s,headHz);
+    }
+    return peakMatch(out,inPk);
+  }
+
   function reverseBuf(src){ var out=new Float32Array(src.length);
     for(var i=0;i<src.length;i++) out[i]=src[src.length-1-i]; return out; }
 
   var FX_DEFAULTS={
     SQUASH:{AMOUNT:0.5,ATTACK:0.5},
+    TAPE:{WOBBLE:0.35,DRIVE:0.3,AGE:0.4},
     ECHO:{TIME:0.4,REPEAT:0.4,TONE:0.5,MIX:0.4},
     SPRING:{SIZE:0.35,TONE:0.55,MIX:0.3},
   };
@@ -488,6 +522,7 @@
               macros:{}, crunchOn:false, crunchMacros:Object.assign({},CRUNCH_DEFAULTS),
               reverse:false,
               fx:{SQUASH:{on:false,m:Object.assign({},FX_DEFAULTS.SQUASH)},
+                  TAPE:{on:false,m:Object.assign({},FX_DEFAULTS.TAPE)},
                   ECHO:{on:false,m:Object.assign({},FX_DEFAULTS.ECHO)},
                   SPRING:{on:false,m:Object.assign({},FX_DEFAULTS.SPRING)}},
               lastBuffer:null, renderMs:0, plays:0 };
@@ -503,6 +538,7 @@
     if(state.reverse) buf=reverseBuf(buf);
     if(state.fx.SQUASH.on) buf=squash(buf,state.fx.SQUASH.m);
     if(state.crunchOn) buf=crunch(buf,state.crunchMacros);
+    if(state.fx.TAPE.on) buf=tapeFx(buf,state.fx.TAPE.m);
     if(state.fx.ECHO.on) buf=echoFx(buf,state.fx.ECHO.m);
     if(state.fx.SPRING.on) buf=springFx(buf,state.fx.SPRING.m);
     var maxLen=preLen+Math.floor(1.0*R);
@@ -660,8 +696,8 @@
     toast(state.crunchOn?'WELCOME TO 1987.':'BACK TO THE FUTURE.');
   });
 
-  var FX_TOASTS={SQUASH:['SLAPPED.','UNSLAPPED.'],ECHO:['HELLO HELLO hello hello','JUST THE ONE, THEN.'],
-                 SPRING:['BOING.','ROOM FOR RENT.']};
+  var FX_TOASTS={SQUASH:['SLAPPED.','UNSLAPPED.'],TAPE:['CHROME, TYPE II.','FRESHLY DEMAGNETIZED.'],
+                 ECHO:['HELLO HELLO hello hello','JUST THE ONE, THEN.'],SPRING:['BOING.','ROOM FOR RENT.']};
   function toggleFx(name,on){
     state.fx[name].on=on;
     var b=document.getElementById(name.toLowerCase()+'On');

@@ -49,6 +49,39 @@ internal object Dsp {
         fun reset() { low = 0f; band = 0f; high = 0f }
     }
 
+    /**
+     * Topology-preserving (trapezoidal-integrated) state-variable filter,
+     * after Andy Simper's Cytomic papers — the "linear trap" design the
+     * modern open synths use.
+     *
+     * The Chamberlin [Svf] above goes unstable as its frequency coefficient
+     * nears 1 (≈7 kHz here), which is why VELVET's cutoff used to be capped
+     * at 5.2 kHz. This one is stable to Nyquist and clean under fast
+     * modulation, so filters can finally open all the way. [k] is damping:
+     * 2 = no resonance, small = ringing (keep ≥ ~0.1).
+     */
+    class TptSvf(private val rate: Int = RATE) {
+        var low = 0f; var band = 0f; var high = 0f
+        private var ic1 = 0f
+        private var ic2 = 0f
+        fun process(input: Float, freqHz: Float, k: Float) {
+            val g = kotlin.math.tan(PI * (freqHz.coerceIn(10f, rate * 0.49f)) / rate).toFloat()
+            val kk = k.coerceAtLeast(0.1f)
+            val a1 = 1f / (1f + g * (g + kk))
+            val a2 = g * a1
+            val a3 = g * a2
+            val v3 = input - ic2
+            val v1 = a1 * ic1 + a2 * v3
+            val v2 = ic2 + a2 * ic1 + a3 * v3
+            ic1 = 2f * v1 - ic1
+            ic2 = 2f * v2 - ic2
+            low = v2
+            band = v1
+            high = input - kk * v1 - v2
+        }
+        fun reset() { ic1 = 0f; ic2 = 0f; low = 0f; band = 0f; high = 0f }
+    }
+
     /** One-pole low-pass; subtract from input for a high-pass. */
     class OnePole(private val rate: Int = RATE) {
         private var state = 0f

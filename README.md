@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 360 tests across six modules
+./gradlew test    # 368 tests across six modules
 ```
 
 ### `:audio`
@@ -175,13 +175,22 @@ that doubles any kit onto pads 17–32 through seeded FX.
 Effects are the same trick as CRUNCH, generalized: pads are one-shots
 rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the
 WAV like it's 1993 — you sampled the reverb, you didn't rack it. SQUASH
-(lookahead compressor: fast clamp is glue, slow clamp is punch), ECHO (one
-delay line and one filter, repeats darkening as they fade), SPRING (a
-Schroeder network, 1962), and REVERSE. `FxChain` fixes the order —
-reverse → squash → crunch → echo → spring — owns the total tail budget so
-stacked reverbs can't turn a hit into a phrase, and serializes per-pad next
-to the WAV. Identity is tested: a kick through the whole default rack still
-classifies KICK.
+(lookahead compressor: fast clamp is glue, slow clamp is punch), TAPE (the
+cassette the whole app is dressed as: wow/flutter via a modulated
+fractional delay, hysteresis-flavored drive, head-wear HF loss — a
+physics-lite nod to ChowDSP's AnalogTapeModel), ECHO (one delay line and
+one filter, repeats darkening as they fade), SPRING (a Schroeder network,
+1962), and REVERSE. `FxChain` fixes the order — reverse → squash → crunch
+→ tape → echo → spring — owns the total tail budget so stacked reverbs
+can't turn a hit into a phrase, and serializes per-pad next to the WAV.
+Identity is tested: a kick through the whole default rack still classifies
+KICK.
+
+The filters got a generational upgrade from the DSP literature: `Dsp.TptSvf`
+is a topology-preserving (trapezoidal) state-variable filter after Andy
+Simper's Cytomic papers — stable to Nyquist where the Chamberlin design
+went unstable past ~7 kHz. VELVET's CUTOFF, once capped at 5.2 kHz for
+stability, now opens to 12 kHz with the envelope sweeping to 16 kHz.
 
 ### `:mpc3`
 

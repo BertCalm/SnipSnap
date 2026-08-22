@@ -93,17 +93,16 @@ object Velvet {
 
         // SQUEEZE is resonance and filter-envelope amount together: at the
         // top, the SVF rings and the envelope sweeps it — instant acid.
-        // Bounds are stability, not taste: the Chamberlin SVF goes unstable
-        // when its frequency coefficient nears 1 (≈7 kHz here) with low
-        // damping — CHIP's bright defaults rendered NaN silence until the
-        // cutoff ceiling and damping floor were pulled inside the region.
-        val damp = Dsp.lin(squeeze, 1.2f, 0.22f)
+        // The trapezoidal SVF is stable to Nyquist (unlike the Chamberlin
+        // that used to cap this filter at 5.2 kHz), so CUTOFF finally opens
+        // all the way.
+        val damp = Dsp.lin(squeeze, 1.8f, 0.3f)
         val envAmount = Dsp.lin(squeeze, 0.3f, 1f)
-        val floorHz = Dsp.expMap(cutoff, 180f, 5_200f)
-        val peakHz = (floorHz * Dsp.lin(envAmount, 1.5f, 6f)).coerceAtMost(5_500f)
+        val floorHz = Dsp.expMap(cutoff, 180f, 12_000f)
+        val peakHz = (floorHz * Dsp.lin(envAmount, 1.5f, 6f)).coerceAtMost(16_000f)
 
         val out = FloatArray((t60 * 1.4f * RATE).toInt().coerceAtLeast(64))
-        val svf = Dsp.Svf()
+        val svf = Dsp.TptSvf()
         var p1 = 0.0
         var p2 = 0.0
         var pSub = 0.0
