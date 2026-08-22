@@ -136,11 +136,25 @@ Regenerate with `./gradlew :synth:generateMpc3Kit`. Things to confirm:
   MPC 3's own 0-based chromatic table, a different mechanism from the XPM
   path);
 - A03 chokes A04 (`whichMuteGroup` surviving the new format);
-- the pads light in class colours (`program.programPads`, plain JSON here).
+- the pads light in class colours (`program.programPads`, plain JSON here);
+- **the track carries a clip called "SnipSnap Groove"** — the demo groove
+  as 75 real note events, something the MPC 2 format has nowhere to put.
+  Check the clip list: if it's there and plays the kit's own beat, the
+  native format just earned its keep.
 
 A yes makes MPC 3 native the shipping path. A no costs nothing — the MPC 2
 folder stays the path, and *how* it fails (error text, or silent absence
 from the browser) is the next format clue.
+
+### SnipSnap MPC3 Keys — native keys-on-pads
+
+The VELVET bass multisample (same zones as SnipSnap Keys) as a native
+`.xty` instrument track beside its `_[TrackData]/` WAVs — the S5 door in
+the Live III's own generation. Zones ride in `program.drum.instruments`
+with per-layer root notes, exactly where real instrument tracks keep them.
+Regenerate with `./gradlew :synth:generateMpc3Keys`. Things to confirm:
+it loads as an instrument track, plays **in tune chromatically** across
+the pads, and soft hits use the darker layer.
 
 ### SnipSnap_Factory.xpn — one-file import
 

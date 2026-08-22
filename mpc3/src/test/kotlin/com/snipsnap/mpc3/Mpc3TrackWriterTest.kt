@@ -3,12 +3,15 @@ package com.snipsnap.mpc3
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import com.snipsnap.xpm.DrumProgram
+import com.snipsnap.xpm.Keygroup
+import com.snipsnap.xpm.KeygroupProgram
 import com.snipsnap.xpm.Pad
 import com.snipsnap.xpm.VelocityLayer
 import java.io.File
 import java.util.zip.GZIPInputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -182,6 +185,137 @@ class Mpc3TrackWriterTest {
         assertTrue("\"tempo\": 120.0" in text)
     }
 
+    // ---- keygroup tracks --------------------------------------------------
+
+    private fun keygroupProgram() = KeygroupProgram(
+        name = "SnipSnap MPC3 Keys",
+        keygroups = listOf(
+            Keygroup(0, 35, rootNote = 33, layers = listOf(VelocityLayer("Keys_A1", 44_100L, 0, 127))),
+            Keygroup(
+                36, 38, rootNote = 38,
+                layers = listOf(
+                    VelocityLayer("Keys_D2_soft", 22_050L, 0, 63),
+                    VelocityLayer("Keys_D2", 44_100L, 64, 127),
+                ),
+            ),
+        ),
+        volumeRelease = 0.5f,
+    )
+
+    private fun kgTree(): Map<String, JsonValue> {
+        val root = Json.parse(writer.keygroupPayloadText(keygroupProgram())) as JsonValue.Obj
+        return (root.entries["data"] as JsonValue.Obj).entries
+    }
+
+    private fun kgProgram(): Map<String, JsonValue> = (kgTree()["program"] as JsonValue.Obj).entries
+
+    @Test
+    fun `a keygroup track reads back as one instrument track`() {
+        val bytes = writer.writeKeygroup(keygroupProgram())
+        val project = Mpc3Project.read(bytes)
+        assertTrue(project.isTrack)
+        assertTrue("1 keygroup" in project.describe(), project.describe())
+    }
+
+    @Test
+    fun `zones live in drum instruments and keygroup holds only global state`() {
+        val prog = kgProgram()
+        assertEquals(1, prog["type"]!!.int(), "type 1 = keygroup")
+        val kg = (prog["keygroup"] as JsonValue.Obj).entries
+        assertEquals(2, kg["numKeygroups"]!!.int())
+        assertFalse("instruments" in kg, "zones must NOT sit under program.keygroup - well-formed but silent")
+        val drum = (prog["drum"] as JsonValue.Obj).entries
+        val zones = (drum["instruments"] as JsonValue.Arr).items.map { (it as JsonValue.Obj).entries }
+        assertEquals(128, zones.size, "128 slots is what every real drum program and most keygroups write")
+        assertEquals(0, zones[0]["lowNote"]!!.int())
+        assertEquals(35, zones[0]["highNote"]!!.int())
+        assertEquals(2, zones[0]["triggerMode"]!!.int(), "every real zone sustains: Note On")
+        // Vestigial drum-level pair every real instrument track carries.
+        assertEquals(1, drum["poliphony"]!!.int())
+        assertEquals(true, drum["monophonic"]!!.bool())
+    }
+
+    @Test
+    fun `keygroup layers carry real root notes and the pad map is identity`() {
+        val prog = kgProgram()
+        val drum = (prog["drum"] as JsonValue.Obj).entries
+        val zones = (drum["instruments"] as JsonValue.Arr).items.map { (it as JsonValue.Obj).entries }
+        val zone1Layers = (zones[1]["layersv"] as JsonValue.Arr).items.map { (it as JsonValue.Obj).entries }
+        // Loudest first: the main D2 sample leads, the soft one follows.
+        assertEquals("Keys_D2", zone1Layers[0]["sampleName"]!!.str())
+        assertEquals(38, zone1Layers[0]["rootNote"]!!.int())
+        assertEquals(38, zone1Layers[1]["rootNote"]!!.int())
+        assertEquals(0, zone1Layers[2]["rootNote"]!!.int(), "empty layers write 0")
+        val map = ((prog["padNoteMap"] as JsonValue.Obj).entries["noteForPad"] as JsonValue.Obj).entries
+        assertEquals(0, map["value0"]!!.int(), "instrument tracks carry the inert identity map")
+        assertEquals(127, map["value127"]!!.int())
+    }
+
+    @Test
+    fun `keygroup output is deterministic and pools samples once`() {
+        assertTrue(writer.writeKeygroup(keygroupProgram()).contentEquals(writer.writeKeygroup(keygroupProgram())))
+        val pool = (kgTree()["samples"] as JsonValue.Arr).items.map { ((it as JsonValue.Obj).entries)["name"]!!.str() }
+        assertEquals(listOf("Keys_A1", "Keys_D2_soft", "Keys_D2"), pool)
+    }
+
+    @Test
+    fun `keygroup emits no key path absent from real instrument tracks`() {
+        val ours = mutableSetOf<String>()
+        collectPaths(Json.parse(writer.keygroupPayloadText(keygroupProgram())), "", ours)
+        assertEquals(emptySet(), ours - corpusPaths("xty"), "key paths that appear in no real instrument track")
+    }
+
+    // ---- the embedded groove clip -----------------------------------------
+
+    private fun clip() = Mpc3Clip(
+        name = "SnipSnap Groove",
+        bars = 2,
+        notes = listOf(
+            Mpc3Note(36, 0L, 0.9f),
+            Mpc3Note(38, 4 * Mpc3Clip.PULSES_PER_16TH, 0.85f),
+            Mpc3Note(42, 6 * Mpc3Clip.PULSES_PER_16TH, 0.3f),
+            Mpc3Note(36, Mpc3Clip.PULSES_PER_BAR, 0.9f),
+        ),
+    )
+
+    @Test
+    fun `an embedded clip lands in sharedClipMap with real note events`() {
+        val root = Json.parse(writer.payloadText(program(), clip = clip())) as JsonValue.Obj
+        val data = (root.entries["data"] as JsonValue.Obj).entries
+        val shared = (data["sharedClipMap"] as JsonValue.Arr).items.map { (it as JsonValue.Obj).entries }
+        assertEquals(1, shared.size)
+        val value = (shared[0]["value"] as JsonValue.Obj).entries
+        assertEquals("SnipSnap Groove", value["name"]!!.str())
+        assertEquals(2 * Mpc3Clip.PULSES_PER_BAR, value["endPulses"]!!.num().toLong())
+        val events = ((value["eventList"] as JsonValue.Obj).entries["events"] as JsonValue.Arr).items
+            .map { (it as JsonValue.Obj).entries }
+        assertEquals(4, events.size)
+        assertEquals(3, events[0]["type"]!!.int(), "note events are type 3")
+        val note = (events[0]["note"] as JsonValue.Obj).entries
+        assertEquals(36, note["note"]!!.int())
+        assertEquals(0.9f.toDouble(), note["velocity"]!!.num(), "velocity is the normalised float, not 0-127")
+        assertEquals(100, note["probability"]!!.int())
+        // Without a clip the map stays empty, and the round-trip still reads.
+        assertTrue("\"sharedClipMap\": []" in writer.payloadText(program()))
+        assertEquals(1, Mpc3Project.read(writer.write(program(), clip = clip())).drumPrograms().size)
+    }
+
+    @Test
+    fun `a clipped payload still emits no key path absent from real drum tracks`() {
+        val ours = mutableSetOf<String>()
+        collectPaths(Json.parse(writer.payloadText(program(), clip = clip())), "", ours)
+        assertEquals(emptySet(), ours - corpusPaths("xtd"), "key paths that appear in no real drum track")
+    }
+
+    @Test
+    fun `clip inputs are validated`() {
+        assertFailsWith<IllegalArgumentException> { Mpc3Note(200, 0L, 0.5f) }
+        assertFailsWith<IllegalArgumentException> { Mpc3Note(36, 0L, 1.5f) }
+        assertFailsWith<IllegalArgumentException> {
+            Mpc3Clip("Too Long", 1, listOf(Mpc3Note(36, Mpc3Clip.PULSES_PER_BAR, 0.5f)))
+        }
+    }
+
     // ---- the generalisation: no invented keys -----------------------------
 
     /**
@@ -197,33 +331,35 @@ class Mpc3TrackWriterTest {
      */
     @Test
     fun `emits no key path absent from real drum tracks`() {
-        val dir = File("../reference/golden/mpc3-track")
-        val corpus = dir.listFiles { f -> f.extension == "xtd" }
-        assertTrue(corpus != null && corpus.isNotEmpty(), "reference corpus missing: ${dir.absolutePath}")
+        val ours = mutableSetOf<String>()
+        collectPaths(Json.parse(writer.payloadText(program())), "", ours)
+        assertEquals(emptySet(), ours - corpusPaths("xtd"), "key paths that appear in no real drum track")
+    }
 
-        fun norm(key: String) = if (Regex("value\\d+").matches(key)) "value*" else key
+    // ---- corpus path machinery --------------------------------------------
 
-        fun paths(v: JsonValue, prefix: String, out: MutableSet<String>) {
-            when (v) {
-                is JsonValue.Obj -> v.entries.forEach { (k, child) ->
-                    val p = "$prefix.${norm(k)}"
-                    out.add(p)
-                    paths(child, p, out)
-                }
-                is JsonValue.Arr -> v.items.forEach { paths(it, "$prefix[*]", out) }
-                else -> {}
+    private fun collectPaths(v: JsonValue, prefix: String, out: MutableSet<String>) {
+        when (v) {
+            is JsonValue.Obj -> v.entries.forEach { (k, child) ->
+                val norm = if (Regex("value\\d+").matches(k)) "value*" else k
+                val p = "$prefix.$norm"
+                out.add(p)
+                collectPaths(child, p, out)
             }
+            is JsonValue.Arr -> v.items.forEach { collectPaths(it, "$prefix[*]", out) }
+            else -> {}
         }
+    }
 
+    private fun corpusPaths(extension: String): Set<String> {
+        val dir = File("../reference/golden/mpc3-track")
+        val corpus = dir.listFiles { f -> f.extension == extension }
+        assertTrue(corpus != null && corpus.isNotEmpty(), "reference corpus missing: ${dir.absolutePath}")
         val real = mutableSetOf<String>()
         for (f in corpus!!) {
             val text = GZIPInputStream(f.inputStream()).use { it.readBytes().toString(Charsets.UTF_8) }
-            paths(Json.parse(text.split("\n", limit = 6)[5]), "", real)
+            collectPaths(Json.parse(text.split("\n", limit = 6)[5]), "", real)
         }
-
-        val ours = mutableSetOf<String>()
-        paths(Json.parse(writer.payloadText(program())), "", ours)
-
-        assertEquals(emptySet(), ours - real, "key paths that appear in no real drum track")
+        return real
     }
 }

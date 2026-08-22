@@ -1,5 +1,6 @@
 package com.snipsnap.kit
 
+import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3TrackWriter
 import com.snipsnap.xpm.DrumProgram
 import java.io.File
@@ -24,6 +25,8 @@ object Mpc3Exporter {
         destRoot: File,
         overwrite: Boolean = false,
         trackColour: Int = Mpc3TrackWriter.DEFAULT_TRACK_COLOUR,
+        /** Optional embedded pattern — the kit arrives with a groove to play. */
+        clip: Mpc3Clip? = null,
     ): ExportResult {
         val findings = Preflight.check(kit, kitDir)
         if (findings.blocked()) throw ExportBlockedException(findings)
@@ -37,7 +40,7 @@ object Mpc3Exporter {
         dataDir.deleteRecursively()
 
         val (slots, written) = KitExporter.buildSlots(kit, kitDir, samplesDir = dataDir)
-        val program = Mpc3TrackWriter().writeTo(destRoot, DrumProgram(kit.name, slots), trackColour)
+        val program = Mpc3TrackWriter().writeTo(destRoot, DrumProgram(kit.name, slots), trackColour, clip)
         return ExportResult(destRoot, program, written, findings)
     }
 }

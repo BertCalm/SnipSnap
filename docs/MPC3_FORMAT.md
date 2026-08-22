@@ -703,6 +703,25 @@ firmware's serializer writes them.
 (`./gradlew :synth:generateMpc3Kit`). Header stamp: `3.7.0.56` / `Linux`,
 the standalone-firmware pairing observed on 59 real projects.
 
+The writer covers **both track types and the thing only this generation
+can do**:
+
+- **Keygroups** (`writeKeygroup` → `.xty`): zones in
+  `program.drum.instruments` with per-layer root notes — never under
+  `program.keygroup`, which carries only the global block (32 mod-link
+  slots, unison/harmoniser, the four dormant `*EnvelopeGlobal` toggles) —
+  the identity `padNoteMap`, `triggerMode 2` on every zone, sustained amp
+  envelopes, and the vestigial `poliphony 1 / monophonic true` drum pair
+  every real instrument track carries. Guarded against the `.xty` corpus
+  the same way the drum path is guarded against `.xtd`.
+  `testkit/SnipSnap MPC3 Keys.xty` is the acceptance artifact
+  (`:synth:generateMpc3Keys`).
+- **Embedded clips** (`Mpc3Clip`): a `sharedClipMap` pattern of real note
+  events — 960 PPQ pulse offsets, normalised float velocities, the full
+  modifier block — shaped like the clip-bearing SFM kits'. The factory
+  export uses it to ship the demo groove *inside the kit*, which the MPC 2
+  format has nowhere to put.
+
 ## Sources
 
 **Primary.** Four real files in
