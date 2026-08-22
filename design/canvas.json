@@ -1,6 +1,14 @@
 {
   "artboards": [
     {
+      "file": "TapeOS Oilslick.dc.html",
+      "x": -520,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "OILSLICK — Working Prototype"
+    },
+    {
       "file": "Main.dc.html",
       "x": 0,
       "y": 0,
@@ -74,6 +82,13 @@
     }
   ],
   "annotations": [
+    {
+      "id": "note-oilslick",
+      "x": -520,
+      "y": -160,
+      "w": 360,
+      "text": "OILSLICK (TYPE \u221e) — the chosen Y2K direction, fully working: boot splash, 9 screens (KITS/KIT/TAPE/CHOP/PLAY/SYNTH/EXPORT/\u2699/HELP), WebAudio pads + THUMP, capture bubble, scheme picker. Tokens + Android notes in HANDOFF.md."
+    },
     {
       "id": "note-direction",
       "x": 0,

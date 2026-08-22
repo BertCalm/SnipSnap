@@ -96,6 +96,18 @@ Named after tape formulations:
 | **Ferric** (Type I) | tan `#d4c8a8` | rust `#8a5a24` | amber `#ffb000` | 70s glovebox |
 | **Metal** (Type IV) | near-black `#2e3136` | `#101215` | ice `#7adfe4` | high-contrast dark; the 2am scheme |
 | **Snack Bar** | yellow `#ffd400` | red `#e81c1c` | yellow | the Hot-Dog-Stand homage, shipped out of respect |
+| **Oilslick** (Type ∞) | violet `#221a34` | deep violet `#0c0618` | lavender `#c8b2f8` | Y2K iridescence; cyan in the amber slot |
+
+**Oilslick** goes one token further than the others: the window frame and
+titlebar swap the bevel highlight/shadow pair for the OILSLICK conic gradient
+(`from 210deg`: `#5a2ae0 → #e040c8 → #40e0e8 → #8a5af0 → #5a2ae0`), which also
+rims primary buttons and fills progress bars. On Android that's a Compose
+`Brush.sweepGradient`, with a linear three-stop fallback below API 33. It has
+its own fully working phone-frame prototype —
+[`../design/TapeOS Oilslick.dc.html`](../design/TapeOS%20Oilslick.dc.html):
+boot splash, all nine screens, WebAudio pads, capture bubble, scheme picker —
+and an Android handoff with the complete token table in
+[`../design/HANDOFF.md`](../design/HANDOFF.md).
 
 Full token sets live in the theme classes in
 [`../design/Main.dc.html`](../design/Main.dc.html) (`--gray/--g-*`, `--ink/--ink2`,
@@ -109,11 +121,11 @@ Full token sets live in the theme classes in
 - **record red** `#e83a2e` and the cassette shell/label anatomy
 - LCD contrast: ink hue may change per scheme, but sound surfaces stay dark
 
-Mockups: the **Schemes** artboard shows all four side by side; **Tape
+Mockups: the **Schemes** artboard shows all five side by side; **Tape
 Properties** is the picker — the Display-Properties-style dialog with the CRT
 preview monitor, scheme list with swatch chips, Save As…/Apply. The **Main**
 artboard carries a live `Scheme` tweak on the canvas, so the real screen can be
-flipped between all four.
+flipped between all five.
 
 In the app this is a Compose theme object holding the token table; scheme
 choice persists per user, and Metal doubles as the dark-room default if the

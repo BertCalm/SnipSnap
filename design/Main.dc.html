@@ -15,6 +15,7 @@
     .t-ferric{ --gray:#d4c8a8; --g-hi:#faf4e4; --g-e:#e6dcc0; --g-mid:#9a8c6a; --g-dk:#463a26; --ink:#2c2214; --ink2:#6a5c42; --t1:#6a3210; --t2:#c87828; --title-ink:#faf4e4; --desk1:#8a5a24; --desk2:#936129; --lcd:#140e06; --lcd-ink:#ffb000; --amber:#ff7a1a; --field:#faf4e4; }
     .t-metal{ --gray:#2e3136; --g-hi:#4a4f56; --g-e:#3a3e44; --g-mid:#17191c; --g-dk:#060708; --ink:#d8dbe0; --ink2:#8a9099; --t1:#0a0a0c; --t2:#2c3038; --title-ink:#7adfe4; --desk1:#101215; --desk2:#14171b; --lcd:#0a0c0e; --lcd-ink:#7adfe4; --amber:#ffb000; --field:#1b1e22; }
     .t-snackbar{ --gray:#ffd400; --g-hi:#fff0a0; --g-e:#ffe45c; --g-mid:#b89200; --g-dk:#5c4a00; --ink:#241c00; --ink2:#6a5600; --t1:#e81c1c; --t2:#e81c1c; --title-ink:#ffffff; --desk1:#e81c1c; --desk2:#ee2424; --lcd:#1a0404; --lcd-ink:#ffd400; --amber:#ffffff; --field:#fff8d8; }
+    .t-oilslick{ --gray:#221a34; --g-hi:#40306a; --g-e:#2a2044; --g-mid:#120e1a; --g-dk:#060410; --ink:#c8b2f8; --ink2:#7a6aa0; --t1:#5a2ae0; --t2:#e040c8; --title-ink:#ffffff; --desk1:#0c0618; --desk2:#140b24; --lcd:#0a0714; --lcd-ink:#c8b2f8; --amber:#40e0e8; --field:#161020; }
     .raised{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-hi),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-e),inset -2px -2px 0 var(--g-mid);}
     .pressed{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-dk),inset -1px -1px 0 var(--g-hi),inset 2px 2px 0 var(--g-mid),inset -2px -2px 0 var(--g-e);}
     .sunken{background:var(--field);box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-e),inset 2px 2px 0 var(--g-dk),inset -2px -2px 0 var(--g-hi);}
@@ -126,7 +127,7 @@
   </div>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"theme":{"editor":"enum","options":["chrome","ferric","metal","snackbar"],"default":"chrome","section":"Scheme"},"$preview":{"width":390,"height":844}}'>
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["chrome","ferric","metal","snackbar","oilslick"],"default":"chrome","section":"Scheme"},"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   renderVals() {
     const theme = this.props.theme ?? 'chrome';
