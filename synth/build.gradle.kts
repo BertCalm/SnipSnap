@@ -46,6 +46,16 @@ tasks.register<JavaExec>("generateThumpKit") {
     args("${rootDir}/testkit")
 }
 
+/** Render the factory kit as a native MPC 3 track into testkit/. See Mpc3KitGenerator. */
+tasks.register<JavaExec>("generateMpc3Kit") {
+    group = "distribution"
+    description = "Render the factory kit as a native MPC 3 .xtd + _[TrackData]/ under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.Mpc3KitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 /** Render the melodic acceptance kit into testkit/. See MelodicKitGenerator. */
 tasks.register<JavaExec>("generateMelodicKit") {
     group = "distribution"

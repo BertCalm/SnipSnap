@@ -660,17 +660,48 @@ With MPC 2 hardware out of scope, one of the original three reasons is gone —
 there is no One or 2.x Live II to support. The other two got stronger:
 
 1. **MPC 3 loads MPC 2 content**, which is Akai's own documented route across
-   the 2/3 split. `:xpm` is not merely compatible, it is **the only thing in
-   this repo that produces a loadable kit today**. Until a native MPC 3 writer
-   exists, every kit that reaches the Live III goes through it.
+   the 2/3 split. `:xpm` is the **proven-shape** path — its structure comes
+   from a real firmware save — while the native writer below is corpus-shaped
+   and still awaiting its first hardware load.
 2. **It is the fallback** if the MPC 3 track container turns out to be
-   impractical to write from a phone — a 9.6 MB JSON body per kit is not
-   nothing on a handset.
+   impractical to write from a phone — our 16-pad factory kit renders to a
+   ~5.8 MB JSON body (194 KB gzipped), which is fine on a handset but worth
+   knowing.
 
-So `:xpm` is the shipping path and a native MPC 3 writer is the goal. What is
-deprioritised is *verifying `:xpm` against MPC 2 devices* — see
+So `:xpm` stays the shipping path until the native writer passes acceptance.
+What is deprioritised is *verifying `:xpm` against MPC 2 devices* — see
 [`reference/README.md`](../reference/README.md#backlog-mpc-2) — not the writer
 itself. Its output still has to load on the Live III, and that test runs now.
+
+## The native writer
+
+`Mpc3TrackWriter` in `:mpc3` writes the `.xtd` container this document
+describes, and `Mpc3Exporter` in `:kit` drives it through the same
+preflight/sanitize pipeline as every other export, emitting
+`<Kit Name>.xtd` beside a flat `<Kit Name>_[TrackData]/` of WAVs.
+
+Every load-bearing fact the corpus established is implemented and pinned by
+`Mpc3TrackWriterTest`: 128 fully-formed slots with the empty-pad encoding,
+8 `layersv` slots with velocity zones loudest-first, `sliceInfo.End` as the
+length (a test asserts `sampleEnd` stays 0), dual `sampleName`/`sampleFile`
+naming mirrored 1:1 in the deduplicated pool, the 0-based chromatic
+`padNoteMap`, both spellings of polyphony at their exact paths, `0.5` pan
+centre, per-pad `triggerMode`, and per-pad colours in `program.programPads`
+— which, note, turns out to carry the same packed-int `pads.valueN` blob as
+MPC 2, just as plain JSON: real kits (SFM 808/909) ship per-pad colours
+there, so the "per-pad colour unproven" caveat above is answered for drum
+programs.
+
+The generalised guard is the same one the MPC 2 keygroup writer earned:
+**no key path the writer emits may be absent from every real drum track**
+in `reference/golden/mpc3-track/`. Defaults are copied from
+`Kit-SFM 909 Crisp 123.xtd` (build `0.1.0.992`, the most common family)
+rather than invented, and floats render with their decimal point the way the
+firmware's serializer writes them.
+
+`testkit/SnipSnap MPC3 Kit.xtd` is the acceptance artifact
+(`./gradlew :synth:generateMpc3Kit`). Header stamp: `3.7.0.56` / `Linux`,
+the standalone-firmware pairing observed on 59 real projects.
 
 ## Sources
 

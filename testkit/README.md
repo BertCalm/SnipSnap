@@ -123,6 +123,25 @@ program is the on-hardware acceptance check. Regenerate with
 keygroup, plays **in tune chromatically** across the pads, and soft hits
 use the darker layer.
 
+### SnipSnap MPC3 Kit — the native-format headline check
+
+The factory kit written in the Live III's **own generation**: a gzip ACVS
+`SnipSnap MPC3 Kit.xtd` beside its flat `SnipSnap MPC3 Kit_[TrackData]/` WAV
+folder — the exact pair every commercial MPC 3 program ships as. Copy both
+(file + folder, side by side) anywhere browsable and load the `.xtd`.
+Regenerate with `./gradlew :synth:generateMpc3Kit`. Things to confirm:
+
+- it **loads at all** — the first ever acceptance test of `Mpc3TrackWriter`;
+- all 16 pads fire on the pads they were assigned (the note map here is
+  MPC 3's own 0-based chromatic table, a different mechanism from the XPM
+  path);
+- A03 chokes A04 (`whichMuteGroup` surviving the new format);
+- the pads light in class colours (`program.programPads`, plain JSON here).
+
+A yes makes MPC 3 native the shipping path. A no costs nothing — the MPC 2
+folder stays the path, and *how* it fails (error text, or silent absence
+from the browser) is the next format clue.
+
 ### SnipSnap_Factory.xpn — one-file import
 
 The factory kit as a single `.xpn` archive, in the layout every real

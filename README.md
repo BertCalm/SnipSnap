@@ -21,7 +21,7 @@ capture (rolling buffer)  →  trim  →  assign to 4×4 grid  →  export .xpm 
 |---|---|
 | Platform | Android only, minSdk 29 |
 | Hardware | Akai MPC Live III — the only device in hand and the only one tested against. The One and Live II should load the compatibility format, but that is [unverified and backlogged](reference/README.md#backlog-mpc-2). |
-| Primary format | MPC 3 native (gzip + ACVS header + JSON), Live III as acceptance device |
+| Primary format | MPC 3 native (gzip + ACVS header + JSON) — **implemented** via `Mpc3TrackWriter` (`.xtd` + `_[TrackData]/`), Live III load check pending |
 | Compatibility format | MPC 2-era `.xpm` drum program + 44.1 kHz WAVs, as a folder — implemented |
 | One-file sharing | `.xpn` ZIP archives — implemented via `XpnPackager`, pending the hardware import check |
 
@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 393 tests across six modules
+./gradlew test    # 409 tests across six modules
 ```
 
 ### `:audio`
@@ -208,12 +208,24 @@ stability, now opens to 12 kHz with the envelope sweeping to 16 kHz.
 
 ### `:mpc3`
 
-Reads the MPC 3 container: gzip + five-line ACVS header + JSON.
+Reads **and writes** the MPC 3 container: gzip + five-line ACVS header + JSON.
 `MpcFormats.detect` tells the generations apart by content (both use `.xpj`),
 `Acvs.read` opens a container, and `Mpc3Project` gives tolerant accessors over
-the documented project schema — built so a real Live III file gets dissected
-the moment one lands. Field paths are from the community knowledge base and
-carry its caveats; see [`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md).
+projects and standalone tracks alike — checked against 59 real projects and 13
+real track files in `reference/golden/`.
+
+**`Mpc3TrackWriter`** is the native writer — the primary-format target, real:
+a [`DrumProgram`] becomes a standalone `.xtd` drum track, templated
+field-for-field from commercial content. All 128 instrument slots fully
+formed, 8 layers each, velocity zones loudest-first, length in
+`sliceInfo.End` (never `sampleEnd`), the sample named twice per layer and
+mirrored 1:1 in the deduplicated `samples[]` pool, the 0-based chromatic pad
+note map, `poliphony` misspelled exactly where the format misspells it, and
+per-pad class colours as plain packed ints. The test that keeps it honest is
+the same one the keygroup writer earned: **no key path we emit may be absent
+from every real drum track** — invention, not omission, is how MPC files fail
+silently. `Mpc3Exporter` in `:kit` drives it from the same pipeline as every
+other export; see [`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md).
 
 ### `:json`
 
@@ -278,7 +290,9 @@ Generate a 16-pad kit, load it, confirm all 16 pads fire where they were
 assigned. If it comes up shifted by exactly one pad, that is the instrument
 numbering base — flip `XpmWriter(instrumentBaseIndex = 1)`, which 20 of 20
 vendor programs argue for. Then import `testkit/SnipSnap_Factory.xpn` and see
-whether it appears in the Expansion browser. Procedure in
+whether it appears in the Expansion browser. And now the headline check:
+load `testkit/SnipSnap MPC3 Kit.xtd` — the same factory kit written in the
+Live III's **own native generation**. Procedure in
 [`reference/README.md`](reference/README.md).
 
 MPC 2 hardware verification stays [backlogged](reference/README.md#backlog-mpc-2)
