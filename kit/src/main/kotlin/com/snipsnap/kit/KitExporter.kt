@@ -112,9 +112,18 @@ object KitExporter {
                 muteGroup = p.muteGroup,
                 oneShot = p.oneShot,
                 velocityLayers = layersBySlot[p.slot],
+                color = p.packedColor(),
             )
         }
         val program = XpmWriter().writeTo(programDir, DrumProgram(kit.name, slots.toList()))
         return program to written
     }
+
+    /**
+     * `#rrggbb` → the packed 24-bit int the ProgramPads blob carries, so the
+     * pads light up on the MPC in the same class colours the app shows.
+     * Pure black maps to unset — `0` means "no colour" in the format.
+     */
+    internal fun KitPad.packedColor(): Int? =
+        colorHex?.substring(1)?.toInt(16)?.takeIf { it > 0 }
 }

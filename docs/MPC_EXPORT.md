@@ -87,18 +87,21 @@ Kit MPC3 keeps its WAVs in `Drum Kits/Samples/` and *still* references them by
 bare name. MPC resolves samples by searching, not by path, exactly as
 [Tier 1](#tier-1--bare-program-folder-mvp) describes for loose folders.
 
-So `XpnPackager` has two real defects and one non-defect:
+So `XpnPackager` had two real defects and one non-defect — **both defects
+are now fixed**, and `XpnPackagerTest` pins the corrected layout:
 
-| What it does | Verdict |
-|---|---|
-| `Expansions/Expansion.xml` | **Wrong.** All four real archives put `Expansion.xml` at the root. |
-| `XpmWriter(samplePathPrefix = "Samples/$programStem")`, populating `<SampleFile>` | **Wrong.** No real program does this, in any layout. |
-| `Programs/<Kit>.xpm` + `Samples/<Kit>/*.wav` subfolders | **Fine.** Real packs fold content into subfolders, `Samples/` included. |
+| What it did | Verdict | Now |
+|---|---|---|
+| `Expansions/Expansion.xml` | **Wrong.** All four real archives put `Expansion.xml` at the root. | `Expansion.xml` at the archive root; nothing nests under `Expansions/`. |
+| `XpmWriter(samplePathPrefix = "Samples/$programStem")`, populating `<SampleFile>` | **Wrong.** No real program does this, in any layout. | The path mechanism is deleted from both writers — bare `SampleName`s, empty `SampleFile`, no `<File>`. |
+| `Programs/<Kit>.xpm` + `Samples/<Kit>/*.wav` subfolders | **Fine.** Real packs fold content into subfolders, `Samples/` included. | Kept. |
 
-One more convention worth matching: real previews live in a `[Previews]/`
+One more convention, also now matched: real previews live in a `[Previews]/`
 folder, named for the program plus a second extension —
 `[Previews]/Percussion-Skins 1.xpm.wav`. `XpnPackager` writes
-`Programs/<Kit>.wav`.
+`[Previews]/<Kit>.xpm.wav` (it used to write `Programs/<Kit>.wav`). The
+plain-text manifest stays out of the archive — none of the real ones carries
+one; it belongs to the on-card `Expansions/` folder layout.
 
 ### What this does and doesn't prove
 
@@ -112,10 +115,9 @@ substantive error is putting `Expansion.xml` under `Expansions/` instead of at
 the root, which no real archive does.
 
 The acceptance test still **runs today**: import `testkit/SnipSnap_Factory.xpn`
-on the Live III. The KDoc's own warning — "get the structure wrong and nothing
-loads, no error, just silence" — is the failure mode to expect. If the pack
-doesn't appear, move `Expansion.xml` to the root and drop `samplePathPrefix`
-before touching anything else.
+on the Live III — regenerated with the corrected layout (root `Expansion.xml`,
+bare sample names, `[Previews]/`). "Nothing loads, no error, just silence"
+remains the failure mode to expect if something else is still wrong.
 
 ## Tier 1 — bare program folder (MVP)
 

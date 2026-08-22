@@ -12,29 +12,29 @@
     <ProgramPads>{
     &quot;ProgramPads&quot;: {
         &quot;Universal&quot;: {
-            &quot;value0&quot;: true
+            &quot;value0&quot;: false
         },
         &quot;Type&quot;: {
             &quot;value0&quot;: 1
         },
         &quot;universalPad&quot;: 32512,
         &quot;pads&quot;: {
-            &quot;value0&quot;: 0,
-            &quot;value1&quot;: 0,
-            &quot;value2&quot;: 0,
-            &quot;value3&quot;: 0,
-            &quot;value4&quot;: 0,
-            &quot;value5&quot;: 0,
-            &quot;value6&quot;: 0,
-            &quot;value7&quot;: 0,
-            &quot;value8&quot;: 0,
-            &quot;value9&quot;: 0,
-            &quot;value10&quot;: 0,
-            &quot;value11&quot;: 0,
-            &quot;value12&quot;: 0,
-            &quot;value13&quot;: 0,
-            &quot;value14&quot;: 0,
-            &quot;value15&quot;: 0,
+            &quot;value0&quot;: 15225902,
+            &quot;value1&quot;: 16761887,
+            &quot;value2&quot;: 2082511,
+            &quot;value3&quot;: 8052708,
+            &quot;value4&quot;: 15225902,
+            &quot;value5&quot;: 15220895,
+            &quot;value6&quot;: 9425956,
+            &quot;value7&quot;: 9425956,
+            &quot;value8&quot;: 10120432,
+            &quot;value9&quot;: 10120432,
+            &quot;value10&quot;: 10120432,
+            &quot;value11&quot;: 16761887,
+            &quot;value12&quot;: 9425956,
+            &quot;value13&quot;: 9425956,
+            &quot;value14&quot;: 11562224,
+            &quot;value15&quot;: 11562224,
             &quot;value16&quot;: 0,
             &quot;value17&quot;: 0,
             &quot;value18&quot;: 0,
@@ -264,7 +264,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -464,7 +464,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -664,7 +664,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -864,7 +864,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -1064,7 +1064,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -1264,7 +1264,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -1464,7 +1464,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -1664,7 +1664,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -1864,7 +1864,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -2064,7 +2064,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -2264,7 +2264,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -2464,7 +2464,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -2664,7 +2664,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -2864,7 +2864,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -3064,7 +3064,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>
@@ -3264,7 +3264,7 @@
             <Pitch>0.000000</Pitch>
             <TuneCoarse>0</TuneCoarse>
             <TuneFine>0</TuneFine>
-            <VelStart>0</VelStart>
+            <VelStart>1</VelStart>
             <VelEnd>41</VelEnd>
             <SampleStart>0</SampleStart>
             <SampleEnd>0</SampleEnd>

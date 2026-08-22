@@ -50,6 +50,14 @@ data class Pad(
      * becomes one `<Layer>` with its own sample and velocity window.
      */
     val velocityLayers: List<VelocityLayer>? = null,
+    /**
+     * Pad colour as packed 24-bit `0xRRGGBB`, or null for unset. Real
+     * programs carry these in the ProgramPads blob (`pads.valueN`, `0` =
+     * unset) with `Universal` switched off — decoded from commercial packs,
+     * see docs/XPM_STRUCTURE.md. This is how a SnipSnap kit arrives on the
+     * MPC already wearing its class colours.
+     */
+    val color: Int? = null,
 ) {
     init {
         require(sampleName.isNotBlank()) { "sampleName must not be blank" }
@@ -59,6 +67,7 @@ data class Pad(
         require(tuneCoarse in -36..36) { "tuneCoarse out of range: $tuneCoarse" }
         require(tuneFine in -100..100) { "tuneFine out of range: $tuneFine" }
         require(muteGroup in 0..32) { "muteGroup out of range: $muteGroup" }
+        color?.let { require(it in 1..0xFFFFFF) { "color must be packed 0xRRGGBB (1..0xFFFFFF), got $it" } }
         velocityLayers?.let { layers ->
             require(layers.size in 1..4) { "a pad has 1..4 layers, got ${layers.size}" }
             for (i in 1 until layers.size) {

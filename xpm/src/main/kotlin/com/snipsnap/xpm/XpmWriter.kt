@@ -22,17 +22,14 @@ class XpmWriter(
      * third-party generator emits 1-based and reportedly loads. If a generated
      * kit comes up shifted by one pad on hardware, this is the knob. See
      * `docs/XPM_STRUCTURE.md`.
+     *
+     * There is deliberately no sample-path option: across every harvested
+     * commercial program `<SampleFile>` is empty, no `<File>` element exists,
+     * and no `<SampleName>` contains a path separator — even in packs that
+     * keep WAVs in a `Samples/` subfolder. The MPC resolves samples by
+     * searching, not by path.
      */
     private val instrumentBaseIndex: Int = 0,
-    /**
-     * When set (e.g. `"Samples/My Kit"`), each layer also carries
-     * `<SampleFile>name.wav</SampleFile>` and a pack-root-relative
-     * `<File>prefix/name.wav</File>` — the convention `.xpn` archives use
-     * so samples resolve from `Samples/<program>/` (XO_OX toolchain,
-     * Rex Rule #5: relative paths only). Null (the default) keeps the
-     * adjacent-files shape the golden file pins.
-     */
-    private val samplePathPrefix: String? = null,
 ) {
 
     fun write(program: DrumProgram): String {
@@ -42,7 +39,7 @@ class XpmWriter(
         appendVersion(sb)
         sb.append("  <Program type=\"Drum\">\n")
         sb.append("    <ProgramName>").append(program.name.xmlEscaped()).append("</ProgramName>\n")
-        appendProgramPads(sb)
+        appendProgramPads(sb, program)
         appendProgramParams(sb, program)
         appendInstruments(sb, program)
         appendPadNoteMap(sb)
@@ -71,20 +68,26 @@ class XpmWriter(
     /**
      * The ProgramPads blob: JSON, XML-escaped, embedded as element text.
      *
-     * Every entry is 0 (the "no override" value) and `universalPad` is the
-     * constant the firmware writes for a fresh program. Pad colours live here
-     * too, which is why v2 will need this to stop being a constant.
+     * Colour encoding decoded from commercial packs (docs/XPM_STRUCTURE.md):
+     * `pads.valueN` is packed 24-bit `0xRRGGBB`, `0` = unset, and
+     * `Universal.value0` switches between "every pad follows `universalPad`"
+     * and per-pad colours. A program with no pad colours emits the exact
+     * fresh-program blob the golden file pins (Universal on, all zeros);
+     * one with any [Pad.color] set flips Universal off and writes the packed
+     * colours — pad A01 is `value0`.
      */
-    private fun appendProgramPads(sb: StringBuilder) {
+    private fun appendProgramPads(sb: StringBuilder, program: DrumProgram) {
+        val colored = program.pads.any { it?.color != null }
         val json = buildString {
             append("{\n")
             append("    \"ProgramPads\": {\n")
-            append("        \"Universal\": {\n            \"value0\": true\n        },\n")
+            append("        \"Universal\": {\n            \"value0\": ").append(!colored).append("\n        },\n")
             append("        \"Type\": {\n            \"value0\": 1\n        },\n")
             append("        \"universalPad\": 32512,\n")
             append("        \"pads\": {\n")
             for (i in 0 until PadNoteMap.PAD_COUNT) {
-                append("            \"value").append(i).append("\": 0")
+                val color = if (colored) program.pads.getOrNull(i)?.color ?: 0 else 0
+                append("            \"value").append(i).append("\": ").append(color)
                 if (i != PadNoteMap.PAD_COUNT - 1) append(",")
                 append("\n")
             }
@@ -243,12 +246,7 @@ class XpmWriter(
             sb.append("            <RootNote>0</RootNote>\n")
             sb.append("            <KeyTrack>False</KeyTrack>\n")
             sb.append("            <SampleName>").append(sample?.sampleName?.xmlEscaped() ?: "").append("</SampleName>\n")
-            if (samplePathPrefix != null && sample != null) {
-                sb.append("            <SampleFile>").append("${sample.sampleName}.wav".xmlEscaped()).append("</SampleFile>\n")
-                sb.append("            <File>").append("$samplePathPrefix/${sample.sampleName}.wav".xmlEscaped()).append("</File>\n")
-            } else {
-                sb.append("            <SampleFile></SampleFile>\n")
-            }
+            sb.append("            <SampleFile></SampleFile>\n")
             sb.append("            <SliceIndex>129</SliceIndex>\n")
             sb.append("            <Direction>0</Direction>\n")
             sb.append("            <Offset>0</Offset>\n")

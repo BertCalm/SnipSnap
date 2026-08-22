@@ -151,10 +151,18 @@ no piano keyboard UI. Root on A01, CHROMATIC and SCALE layouts, banks as
 octaves. Consistent with the MPC's own Pad Perform, so hands learn one
 surface. Details in [`SYNTH_ROADMAP.md`](SYNTH_ROADMAP.md#the-play-surface-stays-44--settled).
 
+## Settled since: pad colours travel
+
+The colour encoding question is answered — there is no 16-colour palette to
+map to. MPC 2 XPM carries free 24-bit RGB per pad (packed `0xRRGGBB` in the
+ProgramPads blob, decoded from commercial packs — see
+[`XPM_STRUCTURE.md`](XPM_STRUCTURE.md#the-programpads-blob)), and the
+exporters now write the class colours straight through: kick red is kick red
+on the hardware pads too, exactly as "shell colour = pad colour = MPC pad
+colour" promised.
+
 ## Still open
 
-- Exact MPC 16-colour pad palette mapping (needs the colour encoding answer
-  from the golden-file work — packed RGB int in MPC 3 makes this easy).
 - Whether the desktop metaphor extends to a "My Kits" file-manager screen or
   kits stay a menu.
 - Landscape play mode layout.

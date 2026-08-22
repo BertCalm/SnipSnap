@@ -115,19 +115,31 @@ clicks at the tails.
 
 A VELVET bass multisampled every minor third across two octaves, two
 velocity layers per zone, written as a **keygroup** program — the format the
-keys-on-pads roadmap needs. The writer's structure is unverified against a
-real standalone save; this program is the verification. Regenerate with
+keys-on-pads roadmap needs. The writer is corrected line-by-line against the
+commercial keygroup programs in `reference/golden/keygroup/` (real root
+notes per zone, `KeyTrack=False`, 8 layer slots, chromatic pad map); this
+program is the on-hardware acceptance check. Regenerate with
 `./gradlew :synth:generateKeysPack`. Things to confirm: it loads as a
 keygroup, plays **in tune chromatically** across the pads, and soft hits
-use the darker layer. If it fails, save any keygroup program from the
-hardware into `reference/golden/keygroup/` and the writer gets fixed.
+use the darker layer.
 
 ### SnipSnap_Factory.xpn — one-file import
 
-The factory kit as a single `.xpn` archive (structure from the XO_OX XPN
-toolchain). Regenerate with `./gradlew :synth:generateXpnFile`. The check:
-does the MPC's expansion import accept the file? A yes means one-file kit
-sharing; a no costs nothing — the folder exports stay the path.
+The factory kit as a single `.xpn` archive, in the layout every real
+commercial archive shares: `Expansion.xml` at the archive root, bare sample
+names, previews under `[Previews]/`. Regenerate with
+`./gradlew :synth:generateXpnFile`. The check: does the MPC's expansion
+import accept the file? A yes means one-file kit sharing; a no costs
+nothing — the folder exports stay the path.
+
+### One check that applies to every kit: pad colours
+
+All the synth kits now write per-pad colours into the program (24-bit RGB in
+the ProgramPads blob, decoded from commercial packs) — kick red, snare
+yellow, hat teal, the app's class colours. On loading any kit, the pads
+should light in those colours. If they come up in a single uniform colour
+instead, note it — that's the one part of the blob no vendor file could
+fully prove.
 
 ## Reporting back
 

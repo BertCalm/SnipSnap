@@ -4,21 +4,29 @@ import java.io.File
 import java.util.Locale
 
 /**
- * One key zone of a keygroup program: the note span it answers, and its
- * velocity layers (same [VelocityLayer] the drum side uses).
+ * One key zone of a keygroup program: the note span it answers, the note the
+ * sample was recorded at, and its velocity layers (same [VelocityLayer] the
+ * drum side uses).
  */
 data class Keygroup(
     /** MIDI note range, inclusive. */
     val lowNote: Int,
     val highNote: Int,
-    /** 1..4 velocity zones, soft first. */
+    /**
+     * The MIDI note the sample plays untransposed at. Real programs put the
+     * root at the top of its zone (instrument 35..37 root 37), but any note
+     * inside the range is legal.
+     */
+    val rootNote: Int,
+    /** 1..8 velocity zones, soft first. Keygroup instruments carry 8 layer slots. */
     val layers: List<VelocityLayer>,
 ) {
     init {
         require(lowNote in 0..127 && highNote in 0..127 && lowNote <= highNote) {
             "bad note range $lowNote..$highNote"
         }
-        require(layers.size in 1..4) { "a keygroup has 1..4 layers, got ${layers.size}" }
+        require(rootNote in 0..127) { "rootNote out of range: $rootNote" }
+        require(layers.size in 1..8) { "a keygroup has 1..8 layers, got ${layers.size}" }
     }
 }
 
@@ -30,7 +38,7 @@ data class Keygroup(
 data class KeygroupProgram(
     val name: String,
     val keygroups: List<Keygroup>,
-    val pitchBendRange: Int = 12,
+    val pitchBendRange: Float = 0f,
     /** Seconds-ish release so held notes don't clip off. */
     val volumeRelease: Float = 0.5f,
 ) {
@@ -39,28 +47,28 @@ data class KeygroupProgram(
         require(keygroups.isNotEmpty() && keygroups.size <= 128) {
             "1..128 keygroups, got ${keygroups.size}"
         }
-        require(pitchBendRange in 0..24) { "pitchBendRange out of range: $pitchBendRange" }
+        require(pitchBendRange in 0f..24f) { "pitchBendRange out of range: $pitchBendRange" }
     }
 }
 
 /**
  * Renders a [KeygroupProgram] as an MPC `.xpm` keygroup program.
  *
- * **Provenance and status:** the keygroup element vocabulary
- * (`KeygroupNumKeygroups`, per-instrument `LowNote`/`HighNote`, the
- * `RootNote=0` auto-detect convention, `KeyTrack=True`, `VelStart=0` on
- * empty layers to prevent ghost triggering) is lifted from the XO_OX XPN
- * toolchain's shipping keygroup exporter (BertCalm/XO_OX-XOmnibus,
- * `Tools/xpn_keygroup_export.py` — "Rex's rules"). The surrounding chassis
+ * **Provenance and status:** shaped against the harvested commercial keygroup
+ * programs in `reference/golden/keygroup/` (Ambient Box 2026, plus the
+ * chromatically-sampled AM Upright Bass) — see "What `KeygroupWriter` gets
+ * wrong" in docs/XPM_STRUCTURE.md, all of whose definite defects are fixed
+ * here: no instrument-level Active/Tune/Transpose/RootNote/KeyTrack/OneShot,
+ * instrument-level TuneCoarse/TuneFine instead, real per-layer RootNote on
+ * filled layers, layer KeyTrack=False (13,083 of 13,083 real layers), 8 layer
+ * slots, KeygroupNumKeygroups/KeygroupPitchBendRange after the maps at the end
+ * of the program body, identity PadNoteMap (pad N → note N-1: keygroups are
+ * chromatic on pads) and an all-zero PadGroupMap. The surrounding chassis
  * (Version block, ProgramName) is ours, from the real standalone drum save.
- * **No real standalone keygroup save has been diffed against this yet** —
- * that golden file (see reference/README.md) remains the S4 acceptance
- * item; until then this writer's status matches ExpansionWriter's: best
- * available shape, one real file from fixing to verified.
+ * Still pending: loading the generated pack on hardware (the S4 acceptance
+ * item in reference/README.md).
  */
-class KeygroupWriter(
-    private val samplePathPrefix: String? = null,
-) {
+class KeygroupWriter {
 
     fun write(program: KeygroupProgram): String {
         val sb = StringBuilder(32 * 1024)
@@ -74,13 +82,17 @@ class KeygroupWriter(
         sb.append("  </Version>\n")
         sb.append("  <Program type=\"Keygroup\">\n")
         sb.append("    <ProgramName>").append(program.name.esc()).append("</ProgramName>\n")
-        sb.append("    <KeygroupNumKeygroups>").append(program.keygroups.size).append("</KeygroupNumKeygroups>\n")
-        sb.append("    <KeygroupPitchBendRange>").append(program.pitchBendRange).append("</KeygroupPitchBendRange>\n")
         sb.append("    <Instruments>\n")
         program.keygroups.forEachIndexed { index, kg ->
             appendInstrument(sb, index, kg, program.volumeRelease)
         }
         sb.append("    </Instruments>\n")
+        appendPadNoteMap(sb)
+        appendPadGroupMap(sb)
+        // Real programs put the Keygroup* block after the maps, at the end of
+        // the program body — never before <Instruments>.
+        sb.append("    <KeygroupNumKeygroups>").append(program.keygroups.size).append("</KeygroupNumKeygroups>\n")
+        sb.append("    <KeygroupPitchBendRange>").append(program.pitchBendRange.f()).append("</KeygroupPitchBendRange>\n")
         sb.append("  </Program>\n")
         sb.append("</MPCVObject>\n")
         return sb.toString()
@@ -95,29 +107,26 @@ class KeygroupWriter(
 
     private fun appendInstrument(sb: StringBuilder, index: Int, kg: Keygroup, release: Float) {
         sb.append("      <Instrument number=\"").append(index).append("\">\n")
-        sb.append("        <Active>True</Active>\n")
+        // Element order follows the harvested programs: mixer, filter,
+        // envelope, tune, note range. No Active/RootNote/KeyTrack/OneShot at
+        // this level — those exist only per layer (and OneShot not at all).
         sb.append("        <Volume>").append(1f.f()).append("</Volume>\n")
         sb.append("        <Pan>").append(0.5f.f()).append("</Pan>\n")
-        sb.append("        <Tune>0</Tune>\n")
-        sb.append("        <Transpose>0</Transpose>\n")
-        sb.append("        <VolumeAttack>").append(0f.f()).append("</VolumeAttack>\n")
-        sb.append("        <VolumeHold>").append(0f.f()).append("</VolumeHold>\n")
-        sb.append("        <VolumeDecay>").append(0f.f()).append("</VolumeDecay>\n")
-        sb.append("        <VolumeSustain>").append(1f.f()).append("</VolumeSustain>\n")
-        sb.append("        <VolumeRelease>").append(release.f()).append("</VolumeRelease>\n")
         sb.append("        <FilterType>2</FilterType>\n")
         sb.append("        <Cutoff>").append(1f.f()).append("</Cutoff>\n")
         sb.append("        <Resonance>").append(0f.f()).append("</Resonance>\n")
         sb.append("        <FilterEnvAmt>").append(0f.f()).append("</FilterEnvAmt>\n")
+        sb.append("        <VolumeHold>").append(0f.f()).append("</VolumeHold>\n")
+        sb.append("        <VolumeAttack>").append(0f.f()).append("</VolumeAttack>\n")
+        sb.append("        <VolumeDecay>").append(0f.f()).append("</VolumeDecay>\n")
+        sb.append("        <VolumeSustain>").append(1f.f()).append("</VolumeSustain>\n")
+        sb.append("        <VolumeRelease>").append(release.f()).append("</VolumeRelease>\n")
+        sb.append("        <TuneCoarse>0</TuneCoarse>\n")
+        sb.append("        <TuneFine>0</TuneFine>\n")
         sb.append("        <LowNote>").append(kg.lowNote).append("</LowNote>\n")
         sb.append("        <HighNote>").append(kg.highNote).append("</HighNote>\n")
-        // RootNote 0 = "auto-detect" convention; KeyTrack makes the zone
-        // transpose across its span.
-        sb.append("        <RootNote>0</RootNote>\n")
-        sb.append("        <KeyTrack>True</KeyTrack>\n")
-        sb.append("        <OneShot>False</OneShot>\n")
         sb.append("        <Layers>\n")
-        for (layer in 1..4) {
+        for (layer in 1..8) {
             val zone = kg.layers.getOrNull(layer - 1)
             sb.append("          <Layer number=\"").append(layer).append("\">\n")
             sb.append("            <Active>").append(if (zone != null) "True" else "False").append("</Active>\n")
@@ -130,25 +139,55 @@ class KeygroupWriter(
             // silent layer can ghost-trigger).
             sb.append("            <VelStart>").append(zone?.velStart ?: 0).append("</VelStart>\n")
             sb.append("            <VelEnd>").append(zone?.velEnd ?: 0).append("</VelEnd>\n")
-            sb.append("            <RootNote>0</RootNote>\n")
-            sb.append("            <KeyTrack>True</KeyTrack>\n")
-            sb.append("            <Loop>False</Loop>\n")
+            sb.append("            <SampleStart>0</SampleStart>\n")
+            sb.append("            <SampleEnd>0</SampleEnd>\n")
             sb.append("            <LoopStart>0</LoopStart>\n")
             sb.append("            <LoopEnd>0</LoopEnd>\n")
-            sb.append("            <Mute>False</Mute>\n")
+            sb.append("            <LoopCrossfadeLength>0</LoopCrossfadeLength>\n")
+            sb.append("            <LoopTune>0</LoopTune>\n")
+            // Filled layers carry the real root; only empty layers write 0.
+            // KeyTrack is False in every real program — transposition comes
+            // from RootNote and the zone, not this flag.
+            sb.append("            <RootNote>").append(if (zone != null) kg.rootNote else 0).append("</RootNote>\n")
+            sb.append("            <KeyTrack>False</KeyTrack>\n")
             sb.append("            <SampleName>").append(zone?.sampleName?.esc() ?: "").append("</SampleName>\n")
-            if (samplePathPrefix != null && zone != null) {
-                sb.append("            <SampleFile>").append("${zone.sampleName}.wav".esc()).append("</SampleFile>\n")
-                sb.append("            <File>").append("$samplePathPrefix/${zone.sampleName}.wav".esc()).append("</File>\n")
-            } else {
-                sb.append("            <SampleFile></SampleFile>\n")
-            }
+            sb.append("            <SampleFile></SampleFile>\n")
+            sb.append("            <SliceIndex>129</SliceIndex>\n")
+            sb.append("            <Direction>0</Direction>\n")
+            sb.append("            <Offset>0</Offset>\n")
             sb.append("            <SliceStart>0</SliceStart>\n")
             sb.append("            <SliceEnd>").append(zone?.frameCount ?: 0L).append("</SliceEnd>\n")
+            sb.append("            <SliceLoopStart>0</SliceLoopStart>\n")
+            sb.append("            <SliceLoop>0</SliceLoop>\n")
+            sb.append("            <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>\n")
             sb.append("          </Layer>\n")
         }
         sb.append("        </Layers>\n")
         sb.append("      </Instrument>\n")
+    }
+
+    /**
+     * Keygroup programs map pads chromatically: pad N plays note N-1, unlike
+     * the drum layout. Identity map in every harvested keygroup program.
+     */
+    private fun appendPadNoteMap(sb: StringBuilder) {
+        sb.append("    <PadNoteMap>\n")
+        for (pad in 1..PadNoteMap.PAD_COUNT) {
+            sb.append("      <PadNote number=\"").append(pad).append("\">\n")
+            sb.append("        <Note>").append(pad - 1).append("</Note>\n")
+            sb.append("      </PadNote>\n")
+        }
+        sb.append("    </PadNoteMap>\n")
+    }
+
+    private fun appendPadGroupMap(sb: StringBuilder) {
+        sb.append("    <PadGroupMap>\n")
+        for (pad in 1..PadNoteMap.PAD_COUNT) {
+            sb.append("      <PadGroup number=\"").append(pad).append("\">\n")
+            sb.append("        <Group>0</Group>\n")
+            sb.append("      </PadGroup>\n")
+        }
+        sb.append("    </PadGroupMap>\n")
     }
 
     private fun Float.f(): String = String.format(Locale.ROOT, "%.6f", this)

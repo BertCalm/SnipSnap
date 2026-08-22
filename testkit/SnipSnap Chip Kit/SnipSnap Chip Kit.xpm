@@ -12,29 +12,29 @@
     <ProgramPads>{
     &quot;ProgramPads&quot;: {
         &quot;Universal&quot;: {
-            &quot;value0&quot;: true
+            &quot;value0&quot;: false
         },
         &quot;Type&quot;: {
             &quot;value0&quot;: 1
         },
         &quot;universalPad&quot;: 32512,
         &quot;pads&quot;: {
-            &quot;value0&quot;: 0,
-            &quot;value1&quot;: 0,
-            &quot;value2&quot;: 0,
-            &quot;value3&quot;: 0,
-            &quot;value4&quot;: 0,
-            &quot;value5&quot;: 0,
-            &quot;value6&quot;: 0,
-            &quot;value7&quot;: 0,
-            &quot;value8&quot;: 0,
-            &quot;value9&quot;: 0,
-            &quot;value10&quot;: 0,
-            &quot;value11&quot;: 0,
-            &quot;value12&quot;: 0,
-            &quot;value13&quot;: 0,
-            &quot;value14&quot;: 0,
-            &quot;value15&quot;: 0,
+            &quot;value0&quot;: 15225902,
+            &quot;value1&quot;: 16761887,
+            &quot;value2&quot;: 2082511,
+            &quot;value3&quot;: 8052708,
+            &quot;value4&quot;: 9425956,
+            &quot;value5&quot;: 9425956,
+            &quot;value6&quot;: 11562224,
+            &quot;value7&quot;: 11562224,
+            &quot;value8&quot;: 11562224,
+            &quot;value9&quot;: 11562224,
+            &quot;value10&quot;: 11562224,
+            &quot;value11&quot;: 11562224,
+            &quot;value12&quot;: 11562224,
+            &quot;value13&quot;: 11562224,
+            &quot;value14&quot;: 11562224,
+            &quot;value15&quot;: 11562224,
             &quot;value16&quot;: 0,
             &quot;value17&quot;: 0,
             &quot;value18&quot;: 0,

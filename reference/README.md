@@ -92,7 +92,10 @@ while MPC 3 is the only target.
   from a debate into a diff. Goes in `golden/one-2x/` or `golden/liveii-2x/`.
 - **A keygroup `.xpm` off MPC 2 hardware.** Much less urgent than it was.
   `KeygroupWriter` was built from second-hand vocabulary and had never seen a
-  real keygroup program; [`golden/keygroup/`](golden/keygroup/) now holds three,
-  so its *structure* is referenceable. What a hardware save would still add is
+  real keygroup program; [`golden/keygroup/`](golden/keygroup/) now holds
+  three, and the writer has since been corrected against them (all the
+  definite defects in
+  [`../docs/XPM_STRUCTURE.md`](../docs/XPM_STRUCTURE.md#what-keygroupwriter-gets-wrong)
+  are fixed), so its *structure* is referenceable. What a hardware save would still add is
   firmware provenance — those three are one vendor's output, and a vendor can
   be idiosyncratic without being wrong.

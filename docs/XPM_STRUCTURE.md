@@ -129,8 +129,7 @@ three are still emitted.
 **Keygroup programs use 8, not 4.** Confirmed against all three harvested
 Ambient Box programs (`type="Keygroup"`): every instrument carries
 `<Layer number="1">` through `8`, unanimously, filled or not. `KeygroupWriter`
-assumes 4 — that's wrong for keygroups and needs fixing before velocity
-layers or round robins are wired up on that path. See
+now writes 8 (it assumed 4 until the corpus corrected it). See
 [What `KeygroupWriter` gets wrong](#what-keygroupwriter-gets-wrong) below.
 
 ### The ProgramPads blob
@@ -192,8 +191,12 @@ in this repo — 4 MB) reportedly has `Universal.value0=false`,
 `universalPad=15526948`, and 32 of 128 pads non-zero, consistent with the same
 encoding but not independently re-checked here.
 
-Since this is a real, decoded format, the constant-zero `pads` blob this app
-currently writes should stop being a constant once per-pad colour ships.
+Since this is a real, decoded format, the blob is no longer a constant:
+`XpmWriter` takes an optional packed `0xRRGGBB` per pad (`Pad.color`), flips
+`Universal` off when any pad carries one, and the kit exporters feed it the
+class colours the app already assigns — so a SnipSnap kit lands on the MPC
+wearing the same colour language as the app's pad grid. A program with no
+colours still emits the fresh-program constant the golden file pins.
 
 ### Element name: `<ProgramPads>` vs `<ProgramPads-v2.10>` — resolved
 
@@ -336,8 +339,9 @@ should be fine either way, and the header is a one-line change if not.
 
 ### `<KeyTrack>` is not the pitch control
 
-`KeygroupWriter` emits `<KeyTrack>True</KeyTrack>` on every layer. **No real
-program does.** Across 65 XPM files from five vendors spanning 2017–2026:
+`KeygroupWriter` emitted `<KeyTrack>True</KeyTrack>` on every layer (now
+fixed — it writes `False`). **No real program does.** Across 65 XPM files
+from five vendors spanning 2017–2026:
 
 ```
 filled layers: 13,083     <KeyTrack>False</KeyTrack>: 13,083     True: 0
@@ -385,6 +389,15 @@ Checked directly against
 [`xpm/src/main/kotlin/com/snipsnap/xpm/KeygroupWriter.kt`](../xpm/src/main/kotlin/com/snipsnap/xpm/KeygroupWriter.kt)
 line-by-line against the three harvested Ambient Box keygroup programs. Split
 by confidence.
+
+> **Status: every definite defect below is fixed in the writer.** The table
+> is kept as the evidence record; the "what it emits" column describes the
+> writer as audited, not as it stands. The fixes also brought the identity
+> `PadNoteMap`/all-zero `PadGroupMap` (present in every harvested keygroup
+> program, and keygroups are chromatic on pads), the float
+> `KeygroupPitchBendRange`, 8 layer slots, and per-zone real root notes —
+> `KeygroupWriterTest` pins all of it. Loading `testkit/SnipSnap Keys` on
+> hardware is the remaining acceptance check.
 
 ### Definite — confirmed against the corpus
 

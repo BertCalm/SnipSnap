@@ -16,11 +16,11 @@ import java.io.File
  * This is the S4/S5 door pushed open from our side: VELVET's bass rendered
  * every minor third across two octaves, each zone velocity-layered
  * (soft render underneath), written as a keygroup program the MPC should
- * play chromatically. The writer's structure is unverified against a real
- * standalone keygroup save — this pack IS the verification: if it loads
- * and plays in tune across the pads, S4 is open; if not, one saved
- * keygroup program off the hardware (reference/README.md) fixes the
- * writer.
+ * play chromatically. The writer's structure is corrected against the
+ * harvested commercial keygroup programs in reference/golden/keygroup/
+ * (real root notes, KeyTrack=False, 8 layer slots, maps-then-Keygroup*
+ * tail); loading this pack on hardware is the remaining S4 acceptance
+ * check (reference/README.md).
  */
 object KeysPackGenerator {
 
@@ -51,6 +51,7 @@ object KeysPackGenerator {
             keygroups += Keygroup(
                 lowNote = low.coerceIn(0, 127),
                 highNote = high.coerceIn(0, 127),
+                rootNote = midi,
                 layers = listOf(
                     VelocityLayer(softStem, WavInfo.read(File(dir, "$softStem.wav")).frameCount, 1, 63),
                     VelocityLayer(mainStem, WavInfo.read(File(dir, "$mainStem.wav")).frameCount, 64, 127),

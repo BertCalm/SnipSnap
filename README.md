@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 384 tests across six modules
+./gradlew test    # 390 tests across six modules
 ```
 
 ### `:audio`
@@ -101,9 +101,9 @@ this module owns that folder's whole life.
   (`KitLayer`), written through to the XPM's per-layer velocity windows, so
   soft hits sound soft on hardware, not just quiet.
 - **`XpnPackager`** — the same expansion as a single deterministic `.xpn`
-  ZIP, for one-file kit sharing. Two known defects against real archives:
-  `Expansion.xml` belongs at the archive root, and the pack-relative sample
-  paths have no basis — no real program populates `<SampleFile>`. See
+  ZIP, for one-file kit sharing, in the layout real commercial archives use:
+  `Expansion.xml` at the archive root, bare sample names (no real program
+  populates `<SampleFile>`), previews in `[Previews]/`. See
   [`docs/MPC_EXPORT.md`](docs/MPC_EXPORT.md#xpn--implemented-and-two-of-our-three-layout-choices-are-wrong).
 - **`ExpansionWriter`** — the tier-2 export: the same kit wrapped as a
   browsable expansion (`Expansions/<Title>/` with `Expansion.xml`, a
@@ -246,10 +246,12 @@ XpmWriter().writeTo(kitDir, program)   // -> kitDir/SnipSnap Kit 01.xpm
 ```
 
 `KeygroupWriter` renders multisampled **keygroup** programs (the keys-on-pads
-door): note-ranged instruments with velocity layers, the keygroup vocabulary
-from the XO_OX toolchain's shipping exporter on our hardware-verified 2.1
-chassis — unverified against a real standalone save, and
-`testkit/SnipSnap Keys` exists to settle exactly that.
+door): note-ranged instruments with velocity layers (8 slots, as real
+keygroups carry), real per-zone root notes, `KeyTrack=False`, and the
+maps-then-`Keygroup*` program tail — the shape corrected line-by-line against
+the commercial keygroup programs in `reference/golden/keygroup/`
+(see [`docs/XPM_STRUCTURE.md`](docs/XPM_STRUCTURE.md#what-keygroupwriter-gets-wrong)).
+`testkit/SnipSnap Keys` is the remaining on-hardware acceptance check.
 
 ## Docs
 

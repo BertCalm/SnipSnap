@@ -14,24 +14,25 @@ import java.util.zip.ZipOutputStream
  * Packages a kit as a single `.xpn` file — one shareable archive instead of
  * a folder tree.
  *
- * An `.xpn` is a ZIP with a specific internal structure ("get the structure
- * wrong and nothing loads — no error, just silence"):
+ * An `.xpn` is a ZIP with exactly one structural invariant, measured across
+ * four commercial archives from three vendors (docs/MPC_EXPORT.md):
+ * **`Expansion.xml` sits at the archive root** — 4 of 4, flat and deeply
+ * foldered alike. Everything else is free, so we keep a tidy layout:
  *
  * ```
  * MyPack.xpn
- * ├── Expansions/manifest        (plain-text Name=/Version=/Author=)
- * ├── Expansions/Expansion.xml   (lowercase <expansion> schema)
- * ├── Programs/<Kit>.xpm         (layers carry Samples/<Kit>/… File paths)
- * ├── Programs/<Kit>.wav         (preview — same base name, Rex Rule #4)
+ * ├── Expansion.xml              (root — the invariant; lowercase schema)
+ * ├── artwork.png                (root, referenced by <img>)
+ * ├── Programs/<Kit>.xpm         (bare SampleNames — MPC finds WAVs by search)
  * ├── Samples/<Kit>/…wav
- * └── artwork.png
+ * └── [Previews]/<Kit>.xpm.wav   (the real packs' preview convention)
  * ```
  *
- * **Provenance:** structure and rules from the XO_OX XPN toolchain
- * (BertCalm/XO_OX-XOmnibus, `xpn_packager.py` / `xpn_validator.py`), which
- * ships MPC-loadable packs this way. This *revises* our earlier docs claim
- * that `.xpn` is desktop-only — the acceptance question moved to "does the
- * MPC's expansion import take this file", which the testkit pack answers.
+ * No manifest rides in the archive (none of the real ones carries one — the
+ * plain-text manifest belongs to the on-card `Expansions/` folder layout,
+ * see [ExpansionWriter]), and no `<File>`/`<SampleFile>` paths appear in the
+ * program: across every harvested pack samples are referenced by bare name
+ * even when they live in a subfolder.
  *
  * Output is deterministic: fixed entry timestamps, stable ordering — the
  * same kit zips to the same bytes.
@@ -57,8 +58,8 @@ object XpnPackager {
         val programStem = kit.name
         val samplesPrefix = "Samples/$programStem"
 
-        // Sanitize + measure exactly the way the folder exporters do, but
-        // emit into the archive with pack-root-relative File paths.
+        // Sanitize + measure exactly the way the folder exporters do; the
+        // program references bare stems and the MPC finds the WAVs itself.
         data class Entry(val stem: String, val source: File, val frames: Long)
 
         val used = HashSet<String>()
@@ -100,10 +101,10 @@ object XpnPackager {
                 velocityLayers = layerEntries[p.slot]?.map { (e, l) ->
                     VelocityLayer(e.stem, e.frames, l.velStart, l.velEnd)
                 },
+                color = with(KitExporter) { p.packedColor() },
             )
         }
-        val programXml = XpmWriter(samplePathPrefix = samplesPrefix)
-            .write(DrumProgram(kit.name, slots.toList()))
+        val programXml = XpmWriter().write(DrumProgram(kit.name, slots.toList()))
 
         ZipOutputStream(outputFile.outputStream().buffered()).use { zip ->
             fun put(name: String, bytes: ByteArray) {
@@ -113,14 +114,14 @@ object XpnPackager {
                 zip.write(bytes)
                 zip.closeEntry()
             }
-            put("Expansions/manifest", ExpansionWriter.renderManifest(meta).toByteArray(Charsets.UTF_8))
-            put("Expansions/${ExpansionWriter.XML_NAME}", ExpansionWriter.renderXml(meta, if (artworkPng != null) "artwork.png" else null).toByteArray(Charsets.UTF_8))
+            put(ExpansionWriter.XML_NAME, ExpansionWriter.renderXml(meta, if (artworkPng != null) "artwork.png" else null).toByteArray(Charsets.UTF_8))
             put("Programs/$programStem.xpm", programXml.toByteArray(Charsets.UTF_8))
             preview?.let {
                 val tmp = File.createTempFile("preview", ".wav")
                 try {
                     com.snipsnap.audio.WavWriter.write(tmp, it)
-                    put("Programs/$programStem.wav", tmp.readBytes())
+                    // Real packs: [Previews]/<program name>.xpm.wav.
+                    put("[Previews]/$programStem.xpm.wav", tmp.readBytes())
                 } finally {
                     tmp.delete()
                 }

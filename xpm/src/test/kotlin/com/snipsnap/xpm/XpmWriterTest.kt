@@ -102,6 +102,29 @@ class XpmWriterTest {
     }
 
     @Test
+    fun `pad colours flip Universal off and pack as 24-bit RGB`() {
+        val xml = writer.write(
+            kit(
+                pads = listOf(
+                    Pad("Kick", 10L, color = 0xE8542E),
+                    Pad("Snare", 10L),
+                    Pad("Hat", 10L, color = 0x1FC6CF),
+                ),
+            ),
+        )
+        val blob = xml.substringAfter("<ProgramPads>").substringBefore("</ProgramPads>")
+        assertContains(blob, "&quot;Universal&quot;: {\n            &quot;value0&quot;: false")
+        assertContains(blob, "&quot;value0&quot;: ${0xE8542E}")
+        assertContains(blob, "&quot;value1&quot;: 0")
+        assertContains(blob, "&quot;value2&quot;: ${0x1FC6CF}")
+        // A colourless program keeps the fresh-program blob the golden pins.
+        val plain = writer.write(kit(pads = listOf(Pad("Kick", 10L))))
+        assertContains(plain, "&quot;Universal&quot;: {\n            &quot;value0&quot;: true")
+        assertFailsWith<IllegalArgumentException> { Pad("x", 1L, color = 0x1000000) }
+        assertFailsWith<IllegalArgumentException> { Pad("x", 1L, color = 0) }
+    }
+
+    @Test
     fun `names are xml escaped`() {
         val xml = writer.write(
             kit(name = "Jay & Co <demo>", pads = listOf(Pad("Snare \"hard\"", 10L))),
