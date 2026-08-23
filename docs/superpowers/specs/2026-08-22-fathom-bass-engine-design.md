@@ -163,7 +163,7 @@ Following `VelvetTest` beat for beat, plus three specific to this engine.
 | every voice renders clean audio at defaults and both corners | no NaN, no silence |
 | scrambles are reproducible and never garbage | SCRAMBLE stays a safe roll |
 | is deterministic | same macros → same bytes |
-| defaults classify as **tonal**, not percussion | it is a bass, and `Classifier` should say so |
+| defaults are **harmonic, not noise** (`flatness < 0.2`) | measures what matters. Deliberately *not* asserting a `DrumClass` up front: `VelvetTest` found the classifier files harmonic stabs under `PERC` — "the classifier's honest shelf for a harmonic hit" — so the label is observed after the voices exist and pinned then, never predicted and tuned toward |
 | `CUTOFF` opens / `DECAY` lengthens / `TUNE` snaps and tunes | the shared macros |
 | **`GLIDE` actually glides** | detected pitch in the first analysis window is below the last; with `GLIDE = 0` they match. `TestPitch` is the existing helper. |
 | **`SPREAD` beats** | amplitude-envelope modulation rate rises with the knob — the beating is the sound, so assert it directly |
