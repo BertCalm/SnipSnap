@@ -305,16 +305,23 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 
 Expected: all nine PASS. If `DRIVE adds harmonics` fails, widen the drive range in `drive()` (raise the `24f` upper bound) rather than weakening the assertion.
 
-Then **observe** what the classifier makes of the voices and pin it, rather than predicting it:
+Then **observe** what the classifier makes of the voices and pin it, rather than predicting it. Add this temporary test, run it, and read the three labels out of the output:
+
+```kotlin
+    @Test
+    fun `TEMPORARY - print the classifier verdicts`() {
+        for (voice in FathomVoice.entries) {
+            println("$voice -> ${Classifier.classify(Fathom.render(voice)).drumClass}")
+        }
+    }
+```
 
 ```bash
 export JAVA_HOME=$(/usr/libexec/java_home -v 17)
-cat > /tmp/probe.kt <<'EOF'
-// scratch: print the classifier's verdict for each voice
-EOF
+./gradlew :synth:test --console=plain --tests '*FathomTest*' --info 2>&1 | grep -E "DEEP ->|GRIND ->|GLASS ->"
 ```
 
-Simpler: add a temporary `println(Classifier.classify(Fathom.render(voice)).drumClass)` loop to a scratch test, run it, note the three labels, then replace the temporary with a real assertion:
+Then **delete that temporary test** and replace it with the real assertion:
 
 ```kotlin
     @Test
