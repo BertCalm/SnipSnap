@@ -242,8 +242,15 @@ class BlockBakerTest {
         }
     }
 
-    private fun blip(frames: Int, level: Float) =
-        Snip(FloatArray(frames * 2) { level }, 2, 48_000)
+    /**
+     * Left/right channels differ by default (right is left's negative half),
+     * so a bug that drops, swaps, or zeroes a channel is never invisible to a
+     * test that only bothers to check one index. Pass `right` explicitly to
+     * override; every existing call site relies on the default and only ever
+     * asserts on the left (even) channel, so the default costs them nothing.
+     */
+    private fun blip(frames: Int, level: Float, right: Float = -level / 2f) =
+        Snip(FloatArray(frames * 2) { if (it % 2 == 0) level else right }, 2, 48_000)
 
     @Test
     fun `renders a pattern block to one interval`() {
@@ -255,6 +262,7 @@ class BlockBakerTest {
         assertEquals(s.intervalFrames, baked.frameCount)
         assertEquals(2, baked.channels)
         assertTrue(abs(baked.samples[0] - 0.5f) < 1e-6f, "hit should land on frame 0")
+        assertTrue(abs(baked.samples[1] - -0.25f) < 1e-6f, "right channel should carry its own value, not be silenced")
     }
 
     @Test
@@ -275,6 +283,7 @@ class BlockBakerTest {
         val src = FakeSource(pads = mapOf(("kit" to 1) to blip(1_000, 0.8f)))
         val baked = BlockBaker.bake(PatternBlock("kit", listOf(Step(0, 1, velocity = 0.5f))), s, src)
         assertTrue(abs(baked.samples[0] - 0.4f) < 1e-6f, "got ${baked.samples[0]}")
+        assertTrue(abs(baked.samples[1] - -0.2f) < 1e-6f, "right channel should be scaled by velocity too, got ${baked.samples[1]}")
     }
 
     @Test
@@ -297,6 +306,10 @@ class BlockBakerTest {
 
         assertEquals(0f, baked.samples[0], "nudged hits should not be on the grid")
         assertTrue(abs(baked.samples[480 * 2] - 0.5f) < 1e-6f, "hit should be 480 frames late")
+        assertTrue(
+            abs(baked.samples[480 * 2 + 1] - -0.25f) < 1e-6f,
+            "right channel should also be nudged 480 frames late",
+        )
     }
 
     @Test
