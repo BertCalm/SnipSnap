@@ -195,4 +195,50 @@ class BlockBakerTest {
         assertEquals(s.intervalFrames, baked.frameCount)
         assertTrue(baked.peak() > 0.3f, "fallback must not produce silence")
     }
+
+    /**
+     * Frame at the start of each contiguous loud region in a mostly-silent
+     * buffer. A click's envelope in [clicks] is strictly decaying in
+     * magnitude, so a simple threshold crossing (no hysteresis) gives one
+     * clean start per burst rather than chattering mid-decay.
+     */
+    private fun loudRegionStarts(snip: Snip, threshold: Float = 0.2f): List<Int> {
+        val starts = mutableListOf<Int>()
+        var loud = false
+        for (f in 0 until snip.frameCount) {
+            val v = abs(snip.samples[f * snip.channels])
+            if (v > threshold) {
+                if (!loud) starts += f
+                loud = true
+            } else {
+                loud = false
+            }
+        }
+        return starts
+    }
+
+    @Test
+    fun `scales slice positions to the target grid, not just the first hit`() {
+        val s = session()
+        // clicks() places hit k at k * (srcFrames / 4). Correct scaling maps
+        // that to k * (srcFrames / 4) * (target / srcFrames) = k * (target / 4)
+        // regardless of source length, so one expected set covers both a
+        // too-long and a too-short source: proof the fit is scale-independent,
+        // not a coincidence of one ratio.
+        val expected = listOf(0, 128_000, 256_000, 384_000)
+
+        for (factor in listOf(1.4, 0.6)) {
+            val src = clicks((s.intervalFrames * factor).toInt(), count = 4)
+            val baked = BlockBaker.bake(LoopBlock("a.wav"), s, FakeSource(loops = mapOf("a.wav" to src)))
+
+            val starts = loudRegionStarts(baked)
+            assertEquals(4, starts.size, "expected 4 loud regions at factor $factor, got $starts")
+            for ((i, start) in starts.withIndex()) {
+                assertTrue(
+                    abs(start - expected[i]) <= 2_000,
+                    "hit $i at factor $factor landed at frame $start, expected near ${expected[i]}",
+                )
+            }
+        }
+    }
 }
