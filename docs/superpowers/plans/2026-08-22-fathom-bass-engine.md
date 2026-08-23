@@ -105,9 +105,23 @@ class FathomTest {
         for (i in 0..100) distinct.add(Fathom.frequencyFor(FathomVoice.DEEP, i / 100f))
         assertEquals(Fathom.TUNE_SEMITONES + 1, distinct.size)
 
-        val low = TestPitch.estimate(Fathom.render(FathomVoice.DEEP, mapOf("TUNE" to 0f, "SWEEP" to 0f)), fromSec = 0.05f, windowSec = 0.2f)
-        val high = TestPitch.estimate(Fathom.render(FathomVoice.DEEP, mapOf("TUNE" to 1f, "SWEEP" to 0f)), fromSec = 0.05f, windowSec = 0.2f)
-        assertTrue(high > low * 3f && high < low * 5f, "TUNE 0 -> 1 is two octaves: $low Hz -> $high Hz")
+        // Measured from TUNE 0.5 rather than 0. DEEP's root is 41.2 Hz and
+        // Pitch.MIN_HZ is 40f, so the bottom of the range sits on the
+        // detector's floor and reads as "no pitch" — a limit of the measuring
+        // tool, not of the engine. 0.5 -> 1.0 is one octave, 82.4 Hz ->
+        // 164.8 Hz, both comfortably inside the detector's range.
+        val low = TestPitch.estimate(
+            Fathom.render(FathomVoice.DEEP, mapOf("TUNE" to 0.5f, "SWEEP" to 0f)),
+            fromSec = 0.05f, windowSec = 0.2f,
+        )
+        val high = TestPitch.estimate(
+            Fathom.render(FathomVoice.DEEP, mapOf("TUNE" to 1f, "SWEEP" to 0f)),
+            fromSec = 0.05f, windowSec = 0.2f,
+        )
+        assertTrue(
+            high > low * 1.8f && high < low * 2.2f,
+            "TUNE 0.5 -> 1 is one octave: $low Hz -> $high Hz",
+        )
     }
 
     @Test
@@ -250,7 +264,10 @@ object Fathom {
      * that doubles as a gain control is impossible to set by ear.
      */
     private fun drive(x: Float, amount: Float): Float {
-        val k = Dsp.lin(amount, 1f, 24f)
+        // The ceiling is high because a sine starts with nothing above the
+        // fundamental: without enough folding, CUTOFF has no harmonics to
+        // open onto and the filter appears to do nothing.
+        val k = Dsp.lin(amount, 1f, 48f)
         return (tanh((k * x).toDouble()) / tanh(k.toDouble())).toFloat()
     }
 
@@ -303,7 +320,9 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 ./gradlew :synth:test --console=plain --tests '*FathomTest*'
 ```
 
-Expected: all nine PASS. If `DRIVE adds harmonics` fails, widen the drive range in `drive()` (raise the `24f` upper bound) rather than weakening the assertion.
+Expected: all nine PASS.
+
+If a macro test fails, widen that macro's range rather than weakening the assertion — a knob that doesn't audibly do anything across its full travel is a design bug. The `drive()` ceiling is already at `48f` for exactly this reason: at `24f` the sine had too few harmonics for `CUTOFF opens` to measure any brightening.
 
 Then **observe** what the classifier makes of the voices and pin it, rather than predicting it. Add this temporary test, run it, and read the three labels out of the output:
 
