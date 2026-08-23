@@ -416,11 +416,17 @@ These files were written by **authoring tools** — Akai's and F9 Audio's — no
 a standalone MPC. That is strong evidence for what the firmware writes, not
 proof, and this document has been wrong before by trusting second-hand structure.
 
-So the Live III check in [`reference/README.md`](../reference/README.md) stays
-open, with a sharper question than before: not *which container*, but *does the
-hardware write the same one*. Build a drum program, save it, and confirm the
+**The reading half is now settled on hardware (2026-08-23):** a Live III
+loaded and played our generated `.xtd` — the container, the schema this
+document describes, and our writer's output are all inside what real
+firmware accepts.
+
+What stays open is the *writing* half: does the hardware save the same
+container? Build a drum program on the Live III, save it, and confirm the
 first two bytes are `1F 8B` and header line 3 reads `SerialisableTrackData`.
-Drop it in `reference/golden/liveiii-36/`.
+Drop it in `reference/golden/liveiii-36/` — that save is also the last word
+on any field this corpus can't show (firmware-authored defaults, per-pad
+colour dialects, `fineTune` units).
 
 ## One format, several exporter builds
 
@@ -702,6 +708,13 @@ firmware's serializer writes them.
 `testkit/SnipSnap MPC3 Kit.xtd` is the acceptance artifact
 (`./gradlew :synth:generateMpc3Kit`). Header stamp: `3.7.0.56` / `Linux`,
 the standalone-firmware pairing observed on 59 real projects.
+
+**Acceptance passed, 2026-08-23, on a Live III:** the kit loaded and
+played, every pad on its assigned slot, pads lit in class colours
+(`program.programPads` confirmed live), A03 choked A04
+(`whichMuteGroup` confirmed), and the embedded "SnipSnap Groove" clip
+appeared in the clip list and played. **MPC 3 native is a proven shipping
+path**, no longer just the target.
 
 The writer covers **both track types and the thing only this generation
 can do**:

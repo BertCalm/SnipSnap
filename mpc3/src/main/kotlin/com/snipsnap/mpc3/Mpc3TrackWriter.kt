@@ -85,9 +85,11 @@ data class Mpc3Clip(
  * 4-space pretty style real files use, and floats keep their decimal point
  * (`"pitch": 0.0`, not `0`).
  *
- * These files were written by Akai's authoring tools; whether Live III
- * firmware accepts ours is the standing hardware check, exactly as it was
- * for the MPC 2 writer before it.
+ * **Hardware-verified, 2026-08-23:** the generated factory kit loaded and
+ * played on a Live III — pads on their assigned slots, class colours lit,
+ * A03 choking A04, and the embedded "SnipSnap Groove" clip playing from the
+ * clip list. The drum path is a proven shipping path; the keygroup path
+ * awaits its own load check.
  */
 class Mpc3TrackWriter(
     /** Header line 2 — the exporter build. Default is the standalone firmware stamp observed on 59 real projects. */

@@ -61,8 +61,10 @@ Nine years apart, both still XML `.xpm` — see
 matters ("the single strongest piece of evidence that `:xpm` is a real
 shipping path"). Full provenance and extraction recipe there.
 
-**This is still second-hand relative to hardware.** Nothing here has been
-loaded on a Live III yet. See [Unverified](#unverified) below.
+**Hardware-verified as of 2026-08-23.** The generated diag kit loaded and
+played on a Live III, and pad A01 gave **one beep** — our output is accepted
+by real firmware, on the pads it was written for. See
+[Unverified](#unverified) for what that run settled and what remains.
 
 ## Shape
 
@@ -274,24 +276,16 @@ this list entirely — see "Element name" under
 [The ProgramPads blob](#the-programpads-blob) above — because the corpus
 resolved it outright.
 
-### 1. Instrument numbering base — 0 or 1?
+### 1. Instrument numbering base — 0 or 1? **Resolved: 0-based works.**
 
-We emit **0-based**. The `mpckitcreator` script emits 1-based (`count+1`) and
-reportedly loads fine.
+**Hardware answer, 2026-08-23: the diag kit loaded on a Live III and pad A01
+played one beep.** Our 0-based emission puts every sample on the pad it was
+written for — no shift. (The corpus's all-1-based vendor files stand as
+evidence the *parser* accepts both bases; what mattered was whether ours is
+one of them, and it is.)
 
-**Still open, but the corpus adds real evidence pointing at 1-based.** Every
-`<Instrument number="…">` in all four harvested real programs — one drum
-program, three keygroup programs, both packs — starts at `1` and counts
-upward, no exceptions. That does **not** close the question: these are
-vendor-authored files (see [Provenance](#provenance)), which show what a
-vendor's tool writes and what the MPC's *parser* accepts, not what it requires
-of a file our own writer produces. A parser can easily accept both 0-based and
-1-based input. Still, "every real file we've seen is 1-based" is a stronger
-prior than the doc had before, and worth weighting when this finally gets a
-hardware check.
-
-`XpmWriter(instrumentBaseIndex = 1)` flips it. This is the first thing to check
-on hardware, and the cheapest to spot — a kit shifted by exactly one pad.
+`XpmWriter(instrumentBaseIndex = 1)` stays as a knob, now known to be one we
+never need to turn.
 
 ### 2. Do gaps need a placeholder instrument?
 

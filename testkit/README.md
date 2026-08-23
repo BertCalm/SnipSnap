@@ -123,6 +123,12 @@ program is the on-hardware acceptance check. Regenerate with
 keygroup, plays **in tune chromatically** across the pads, and soft hits
 use the darker layer.
 
+> **Results so far (Live III, 2026-08-23):** the native MPC3 kit **loaded
+> and played** — class colours ✓, A03 chokes A04 ✓, groove clip plays ✓ —
+> and the diag kit answered the numbering question: **A01 = one beep**,
+> 0-based confirmed. Still to test: both keys programs, the `.xpn` import,
+> the expansion tile, velocity feel, bank B.
+
 ### SnipSnap MPC3 Kit — the native-format headline check
 
 The factory kit written in the Live III's **own generation**: a gzip ACVS
