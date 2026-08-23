@@ -17,6 +17,7 @@ L ≈ a week-plus of sessions).
 | Design | done — TapeOS system, six schemes, ten artboards, **two fully working phone-frame prototypes** (Oilslick, Clear) |
 | Acceptance artifacts (`testkit/`) | done — 14 downloadable checks, from the diag kit to the one-file Session project |
 | CLI (`:cli`) | done, tested — `snipsnap.jar`: chop → classify → place → export from any desktop; the classifier's real-audio calibration tool (`docs/CLI.md`) |
+| View-models (`:shell`) | done, tested — scheme tables, peaks pyramid, tape-deck transport physics, voice allocation, chop review, kit builder, export wizard, personality system; `:app` binds Compose to these |
 | **The Android app** | **not started** — the only unbuilt product surface |
 | Hardware verification | drums passed; keys, instruments, `.xpn`, tile, Session pending (user) |
 
@@ -38,6 +39,13 @@ a *thin shell over proven code*. Every module is pure Kotlin/JVM targeting
 Java 17 exactly so `:app` can consume them directly. No algorithm gets
 written in the app layer; if a screen needs logic, it lands in a module
 with tests first.
+
+Since this plan was first written the shell got built for real: **`:shell`
+now holds every screen's state machine** — tape-deck transport physics,
+chop review, kit builder, export wizard, voice allocation, the scheme
+tables, the personality gates — as tested pure Kotlin. Where a milestone
+below says "wire to real buffers" or "port behaviour", the port already
+exists; the milestone's job is binding Compose to it.
 
 The UI spec is not a wireframe — it is two **working prototypes**
 (`design/TapeOS Oilslick.dc.html`, `design/TapeOS Clear.dc.html`) with
@@ -169,9 +177,9 @@ In value order, artifacts already on the branch under `testkit/`:
 
 ```
 desktop session : M0 → M1 → M2 → M3 → M4 → M5        (the app, in order)
-this session    : CLI ✓ · the :shell view-model layer · core support on
-                  demand · odds-and-ends S items · Live III save ingestion
-                  when it arrives
+this session    : CLI ✓ · :shell view-models ✓ · core support on demand ·
+                  odds-and-ends S items · Live III save ingestion when it
+                  arrives
 user            : one card session (Part 2) — ideally before M5, so the
                   export wizard ships against fully verified formats
 ```

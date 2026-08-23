@@ -9,10 +9,10 @@ repositories {
 dependencies {
     implementation(project(":audio"))
     implementation(project(":kit"))
+    implementation(project(":xpm"))
     implementation(project(":json"))
     testImplementation(kotlin("test"))
-    // Flow tests drive real exports end to end.
-    testImplementation(project(":xpm"))
+    // Flow tests verify real exports through the format detectors.
     testImplementation(project(":mpc3"))
 }
 

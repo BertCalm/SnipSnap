@@ -33,7 +33,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 466 tests across seven modules
+./gradlew test    # 523 tests across eight modules
 ```
 
 ### `:audio`
@@ -286,6 +286,33 @@ features behind the verdict — the calibration tool for tuning thresholds
 on real captures. `export` runs the format fan-out over any existing kit
 folder. It means kits can be made from a desktop today, and it's the first
 place the classifier meets real audio instead of synthetic test material.
+
+### `:shell`
+
+The app's brain: every screen's state machine as tested pure Kotlin, so the
+Android app is Compose bound to proven logic instead of logic written in a
+UI layer. What lives here:
+
+- **`Schemes`/`Type`/`Layout`/`Motion`** — the six TapeOS scheme token
+  tables as data (verbatim from the design system), pad-label ink tables
+  for dark schemes and CLEAR, and the layout/motion constants from the
+  handoff. The two-surface rule — the LCD stays dark in every scheme — is
+  a unit test now.
+- **`PeaksPyramid`** — min/max waveform mips with *exact* queries at any
+  zoom; what makes the tape deck's canvas flat-cost at 60 fps.
+- **`TapeDeckModel`** — the trim screen's transport physics, ported
+  coefficient-for-coefficient from the prototype that already feels right:
+  drag/flick/coast/glide, spin-up, onset snap, IN/OUT swap semantics, loop
+  preview, the pencil rewind, the odometer.
+- **`VoiceAllocator`** — play mode's choke/steal/note-off decisions behind
+  an interface, so the Oboe layer stays thin and dumb.
+- **`ChopReviewModel` / `KitBuilderModel` / `ExportWizardModel`** — chop
+  chips with tap-to-cycle overrides and NOT SURE honesty, the 4×4 grid's
+  assign/move/clear/edit over a kit folder, and the export wizard's
+  stage machine driving the same `Exporters` fan-out the CLI uses.
+- **`Personality`/`Delight`/`Copy`** — `docs/PERSONALITY.md` as executable
+  data: the four laws gate for real (OFF silences everything; deck sounds
+  hard-mute while capture is armed), all shipped copy, and the eggs.
 
 ## Docs
 
