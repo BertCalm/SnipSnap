@@ -1,7 +1,10 @@
 package com.snipsnap.loop
 
 import com.snipsnap.audio.Snip
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -101,7 +104,8 @@ class ResidencyTest {
     @Test
     fun `retain drops buffers no longer needed`() {
         val s = session(4, 1, 1, 1, 1, 1)
-        val r = Residency(s, CountingSource(s.intervalFrames), sameThread)
+        val src = CountingSource(s.intervalFrames)
+        val r = Residency(s, src, sameThread)
 
         r.buffersFor(0)
         r.buffersFor(1)
@@ -112,6 +116,17 @@ class ResidencyTest {
         // Track 0 contributes a distinct block per interval; the other five
         // share their single block. Two intervals is at most 7 distinct blocks.
         assertTrue(r.residentCount() <= 7, "still holding ${r.residentCount()}")
+
+        // Bounding the size is not the same as keeping the right blocks: a
+        // "retain evicts everything" bug satisfies the size bound above too.
+        // Interval 2's blocks were already baked, so asking for them again
+        // must not re-bake anything. (Interval 3 is deliberately not checked
+        // here — track 0's "t0-4.wav" for interval 3 was never baked above,
+        // so buffersFor(3) legitimately bakes one block and would make this
+        // assertion fail for the wrong reason.)
+        val before = src.loopCalls.get()
+        r.buffersFor(2)
+        assertEquals(before, src.loopCalls.get(), "retain(2, 3) should have kept interval 2's blocks")
     }
 
     @Test
@@ -191,5 +206,58 @@ class ResidencyTest {
         // ("t0-2.wav"), not the original index 3 ("t0-4.wav") — a different
         // block's audio, which a stale-index bug would get wrong.
         assertEquals(fillFor("t0-2.wav"), buffers[0].samples[0])
+    }
+
+    /**
+     * Deterministic by construction, not by timing: a real single-thread pool
+     * is used (unlike every other test here, which uses [sameThread]) because
+     * the race under test can only exist across two real threads, but the
+     * ordering across them is forced entirely by two latches — no sleeps, no
+     * retries. [bakeStarted] proves the pool thread is inside the bake (i.e.
+     * has already evaluated prefetch's one-and-only staleness check and found
+     * it still current) before the test's main thread calls [Residency.update];
+     * [releaseBake] then lets that in-flight bake finish and attempt its
+     * (now provably late) insert.
+     */
+    @Test
+    fun `a bake in flight when the bpm changes cannot poison the cache with a stale-length buffer`() {
+        val s = session(1, 1, 1, 1, 1, 1, bpm = 200f)
+        val bakeStarted = CountDownLatch(1)
+        val releaseBake = CountDownLatch(1)
+        val src = object : SampleSource {
+            override fun loop(sampleFile: String): Snip {
+                bakeStarted.countDown()
+                releaseBake.await(5, TimeUnit.SECONDS)
+                // Raw audio sized for the OLD (200bpm) interval — what a
+                // stale, in-flight bake would still be working from.
+                return Snip(FloatArray(s.intervalFrames * 2) { 0.5f }, 2, 48_000)
+            }
+            override fun pad(kit: String, slot: Int): Snip? = null
+        }
+        val pool = Executors.newSingleThreadExecutor()
+        try {
+            val r = Residency(s, src, pool)
+
+            r.prefetch(0)
+            assertTrue(bakeStarted.await(5, TimeUnit.SECONDS), "prefetch's bake never started")
+
+            // The bpm change lands while that bake is still in flight — the
+            // exact race window: the staleness check already passed, the
+            // bake (and therefore the insert) has not finished.
+            r.update(s.copy(bpm = 100f))
+
+            releaseBake.countDown()
+            pool.shutdown()
+            assertTrue(pool.awaitTermination(5, TimeUnit.SECONDS), "in-flight bake never finished")
+
+            // Whatever the late bake tried to insert, buffersFor(0) must
+            // return a buffer sized for the CURRENT session — never the
+            // stale, in-flight one the race was racing to poison the cache
+            // with.
+            val buffers = r.buffersFor(0)
+            assertEquals(r.session().intervalFrames, buffers[0].frameCount)
+        } finally {
+            pool.shutdownNow()
+        }
     }
 }

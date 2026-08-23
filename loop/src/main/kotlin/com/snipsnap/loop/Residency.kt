@@ -18,6 +18,28 @@ import java.util.concurrent.atomic.AtomicReference
  * not in the map and gets baked on demand, while every untouched block stays
  * cached — block-swap invalidation falls out of equality rather than needing
  * its own bookkeeping.
+ *
+ * The cache is stamped with [Session.intervalFrames], not keyed by [Block]
+ * alone. `putIfAbsent(key, BlockBaker.bake(...))` evaluates its argument
+ * before the call, so [prefetch]'s "is the session still current" check runs
+ * ONCE, before the bake, not again before the insert — the check-then-insert
+ * is not atomic, and a bake takes tens of milliseconds (decode, resample,
+ * chop). An [update] that changes [Session.intervalFrames] can land in that
+ * window: it clears the cache, and the in-flight prefetch's late insert would
+ * otherwise land under a key that is still "current" (the same [Block]),
+ * silently reintroducing a buffer of the wrong length that [retain] would
+ * never evict on a short chain. Stamping the key with the [Session] it was
+ * baked for makes a stale-length entry structurally unreachable — nothing
+ * ever looks it up — rather than merely unlikely. `update`'s `clear()` still
+ * matters for memory: without it, orphaned old-stamp entries would
+ * accumulate rather than being reclaimed on the next [retain] or the next
+ * length change.
+ *
+ * Bpm affects baking only through [Session.intervalFrames]: `BlockBaker`'s
+ * loop path uses it as the fit target and the drift ratio, and its pattern
+ * path uses it as the target and to derive step spacing — nothing else in
+ * the bake depends on bpm. [Session.stepsPerInterval] depends on
+ * `barsPerInterval`, not bpm, and `barsPerInterval` is not live.
  */
 class Residency(
     initial: Session,
@@ -25,8 +47,11 @@ class Residency(
     private val executor: Executor,
 ) {
 
+    /** A block stamped with the interval length it was baked for. */
+    private data class CacheKey(val block: Block, val intervalFrames: Int)
+
     private val current = AtomicReference(initial)
-    private val baked = ConcurrentHashMap<Block, Snip>()
+    private val baked = ConcurrentHashMap<CacheKey, Snip>()
 
     fun session(): Session = current.get()
 
@@ -41,7 +66,8 @@ class Residency(
         val s = current.get()
         return s.tracks.map { track ->
             val block = Arrangement.blockAt(track, interval)
-            baked.getOrPut(block) { BlockBaker.bake(block, s, source) }
+            val key = CacheKey(block, s.intervalFrames)
+            baked.getOrPut(key) { BlockBaker.bake(block, s, source) }
         }
     }
 
@@ -50,12 +76,16 @@ class Residency(
         val s = current.get()
         for (track in s.tracks) {
             val block = Arrangement.blockAt(track, interval)
-            if (baked.containsKey(block)) continue
+            val key = CacheKey(block, s.intervalFrames)
+            if (baked.containsKey(key)) continue
             executor.execute {
-                // Re-check the session: a BPM change may have landed while this
-                // was queued, and a buffer of the old length is worse than none.
+                // Cheap early-out for a session that's plainly gone stale
+                // before baking even starts. Not required for correctness —
+                // the stamped key already makes a late insert unreachable —
+                // but there is no reason to spend a bake on a length nothing
+                // will ever read.
                 if (current.get().intervalFrames == s.intervalFrames) {
-                    baked.putIfAbsent(block, BlockBaker.bake(block, s, source))
+                    baked.putIfAbsent(key, BlockBaker.bake(block, s, source))
                 }
             }
         }
@@ -64,9 +94,9 @@ class Residency(
     /** Drop every buffer not needed by one of [intervals]. */
     fun retain(vararg intervals: Int) {
         val s = current.get()
-        val keep = HashSet<Block>()
+        val keep = HashSet<CacheKey>()
         for (i in intervals) {
-            for (track in s.tracks) keep.add(Arrangement.blockAt(track, i))
+            for (track in s.tracks) keep.add(CacheKey(Arrangement.blockAt(track, i), s.intervalFrames))
         }
         baked.keys.retainAll(keep)
     }
