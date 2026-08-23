@@ -17,6 +17,7 @@ object WavReader {
 
     private const val FORMAT_PCM = 1
     private const val FORMAT_FLOAT = 3
+    private const val FORMAT_EXTENSIBLE = 0xFFFE
 
     fun read(file: File): Snip = read(file.readBytes())
 
@@ -41,10 +42,22 @@ object WavReader {
             when (id) {
                 "fmt " -> {
                     require(size >= 16) { "fmt chunk is $size bytes, need at least 16" }
+                    require(bytes.size >= body + 16) {
+                        "fmt chunk is truncated: only ${bytes.size - body} of a required 16 " +
+                            "fmt body bytes are present"
+                    }
                     format = leShort(bytes, body)
                     channels = leShort(bytes, body + 2)
                     sampleRate = leInt(bytes, body + 4)
                     bits = leShort(bytes, body + 14)
+                    if (format == FORMAT_EXTENSIBLE) {
+                        require(size >= 40) {
+                            "extensible fmt chunk is $size bytes, need 40"
+                        }
+                        // The real format code is the first two bytes of the
+                        // SubFormat GUID, 24 bytes into the fmt body.
+                        format = leShort(bytes, body + 24)
+                    }
                 }
                 "data" -> {
                     dataAt = body
@@ -67,6 +80,7 @@ object WavReader {
                 "unsupported bit depth $bits"
             }
         }
+        require(channels in 1..2) { "fmt chunk declares $channels channels, must be 1 or 2" }
 
         val bytesPerSample = bits / 8
         val stride = bytesPerSample * channels
