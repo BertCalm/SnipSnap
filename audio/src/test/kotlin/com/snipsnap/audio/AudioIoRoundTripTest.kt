@@ -72,8 +72,29 @@ class AudioIoRoundTripTest {
         // clone and populated on a machine that has harvested packs. Skip rather
         // than fail when there is nothing to read.
         val root = File("../reference/golden")
+        // The directory itself IS tracked (README.md, .gitignore, and the
+        // harvested non-audio reference files live in it) — only the .wav
+        // payloads are gitignored. So a missing directory means the test is
+        // running from the wrong working directory, not a clean clone; that
+        // must fail loudly rather than silently pass as "no wavs found".
+        // walkTopDown() on a missing directory returns an empty sequence
+        // without throwing, which is exactly the silent failure this guards.
+        assertTrue(
+            root.isDirectory,
+            "golden corpus directory not found at ${root.absolutePath} — " +
+                "wrong working directory (expected Gradle's module dir)?",
+        )
         val wavs = root.walkTopDown().filter { it.isFile && it.extension.lowercase() == "wav" }.toList()
-        if (wavs.isEmpty()) return
+        if (wavs.isEmpty()) {
+            // Legitimate on a clean clone: this verifies ZERO files. Printed
+            // so it can't be mistaken for having actually exercised the
+            // corpus below.
+            println(
+                "[AudioIoRoundTripTest] golden corpus at ${root.absolutePath} has no .wav files " +
+                    "— 0 files verified by this test run",
+            )
+            return
+        }
 
         for (wav in wavs) {
             val snip = WavReader.read(wav)

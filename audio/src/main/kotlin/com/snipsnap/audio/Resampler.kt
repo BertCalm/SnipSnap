@@ -17,12 +17,39 @@ import kotlin.math.sin
  *
  * Windowed sinc, evaluated per output sample. When downsampling the cutoff
  * follows the new Nyquist, which is what stops the aliasing.
+ *
+ * The kernel's half-width is a fixed 16 taps measured in SOURCE samples, so
+ * its effective bandwidth (and quality) shrinks as the rate ratio moves away
+ * from unity: downsampling packs more source samples per output sample, and
+ * the same 16-tap window covers a narrower slice of a lower-rate output's
+ * bandwidth. Measured flat to 18 kHz converting 48k -> 44.1k; already
+ * -5.0 dB at 3.8 kHz with only -13 dB stopband rejection converting
+ * 44.1k -> 8k. Ratios within roughly 0.5x-2x of unity (the range this class
+ * is actually used for — device output rates around the MPC's 44.1 kHz) stay
+ * well within the flat, well-rejected regime; treat conversions far outside
+ * that band as lower fidelity.
  */
 object Resampler {
 
     /** Taps either side of the centre. 16 is the usual quality/cost knee. */
     private const val HALF_TAPS = 16
 
+    /**
+     * JVM array allocation fails below `Int.MAX_VALUE` on most implementations
+     * (a handful of header words are reserved) — this is HotSpot's practical
+     * ceiling, used so the guard below rejects exactly what cannot be
+     * allocated, no more.
+     */
+    private const val MAX_ARRAY_LENGTH = Int.MAX_VALUE - 8
+
+    /**
+     * Converts [snip] to [targetRate].
+     *
+     * Returns [snip] itself, unchanged, when its rate already equals
+     * [targetRate] — no copy is made. Caller and result then share the same
+     * mutable `FloatArray`; a caller that mutates the returned [Snip]'s
+     * samples in that case will corrupt the input too.
+     */
     fun resample(snip: Snip, targetRate: Int): Snip {
         require(targetRate > 0) { "targetRate must be positive, was $targetRate" }
         if (snip.sampleRate == targetRate) return snip
@@ -30,7 +57,14 @@ object Resampler {
         val channels = snip.channels
         val srcFrames = snip.frameCount
         val ratio = targetRate.toDouble() / snip.sampleRate
-        val dstFrames = floor(srcFrames * ratio).toInt()
+        val dstFramesExact = floor(srcFrames * ratio)
+        require(dstFramesExact <= MAX_ARRAY_LENGTH / channels.toDouble()) {
+            "resampling $srcFrames frames from ${snip.sampleRate}Hz to " +
+                "${targetRate}Hz ($channels ch) would need $dstFramesExact output " +
+                "frames, which cannot be allocated (max ${MAX_ARRAY_LENGTH / channels} " +
+                "frames for $channels channel(s)); check the source sample rate"
+        }
+        val dstFrames = dstFramesExact.toInt()
         val out = FloatArray(dstFrames * channels)
 
         // Going down, pull the passband to the destination's Nyquist so nothing

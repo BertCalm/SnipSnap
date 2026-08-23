@@ -19,8 +19,22 @@ object WavReader {
     private const val FORMAT_FLOAT = 3
     private const val FORMAT_EXTENSIBLE = 0xFFFE
 
+    /**
+     * Reads [file] in full via [File.readBytes] and decodes it.
+     *
+     * The whole file is loaded into memory at once — there is no streaming
+     * path, so this is unsuitable for files too large to fit in the heap.
+     * Can throw [java.io.IOException] from the read itself, in addition to
+     * every [IllegalArgumentException] contract of [read] below.
+     */
     fun read(file: File): Snip = read(file.readBytes())
 
+    /**
+     * Decodes [bytes] as a WAV file.
+     *
+     * Throws only [IllegalArgumentException] — never any other exception —
+     * for any malformed, truncated, or unsupported input.
+     */
     fun read(bytes: ByteArray): Snip {
         require(bytes.size >= 12) { "not a WAV: only ${bytes.size} bytes" }
         require(tag(bytes, 0) == "RIFF") { "not a WAV: missing RIFF header" }
@@ -38,7 +52,23 @@ object WavReader {
             val id = tag(bytes, p)
             val size = leInt(bytes, p + 4)
             val body = p + 8
-            if (size < 0 || body + size > bytes.size + 1) break
+            // Long arithmetic here: `size` is untrusted input (a corrupt or
+            // hostile header can set it near Int.MAX_VALUE), and `body + size`
+            // in Int would silently wrap negative and slip past a bounds
+            // check meant to catch exactly this.
+            if (id == "data" && size >= 0 && body.toLong() + size > bytes.size) {
+                // The declared data size runs past what the file actually
+                // holds — a capture killed mid-write leaves exactly this
+                // shape, since WavWriter writes the size up front while
+                // streaming. Decode the frames that ARE present instead of
+                // falling through to the generic bounds check below, which
+                // would `break` before dataAt is ever set and report "no
+                // data chunk" for a file that plainly has one.
+                dataAt = body
+                dataLen = bytes.size - body
+                break
+            }
+            if (size < 0 || body.toLong() + size > bytes.size + 1) break
             when (id) {
                 "fmt " -> {
                     require(size >= 16) { "fmt chunk is $size bytes, need at least 16" }
@@ -60,8 +90,11 @@ object WavReader {
                     }
                 }
                 "data" -> {
+                    // The truncated-tail case is caught above before this
+                    // point is reached, so `size` here is always fully
+                    // present in `bytes`.
                     dataAt = body
-                    dataLen = minOf(size, bytes.size - body)
+                    dataLen = size
                 }
             }
             // RIFF chunks are word-aligned: an odd size is followed by a pad byte.

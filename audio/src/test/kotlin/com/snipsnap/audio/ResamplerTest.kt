@@ -70,6 +70,19 @@ class ResamplerTest {
         assertFailsWith<IllegalArgumentException> { Resampler.resample(dc(10, 0.1f), 0) }
     }
 
+    @Test
+    fun `rejects a rate ratio too extreme to allocate an output buffer`() {
+        // A corrupt header can hand WavReader any sampleRate > 0 (Snip's
+        // only constraint), which resample() then divides by. This ratio
+        // demands an output buffer far past what any JVM array can hold —
+        // it must fail loudly with IllegalArgumentException, matching the
+        // contract every other bad-input path in WavReader/Resampler keeps,
+        // rather than crash with NegativeArraySizeException or exhaust the
+        // heap trying to honor it.
+        val input = Snip(FloatArray(1_000), 1, 1)
+        assertFailsWith<IllegalArgumentException> { Resampler.resample(input, 2_000_000_000) }
+    }
+
     private fun sine(frames: Int, hz: Double, rate: Int, amplitude: Float = 0.5f) =
         Snip(
             FloatArray(frames) {
