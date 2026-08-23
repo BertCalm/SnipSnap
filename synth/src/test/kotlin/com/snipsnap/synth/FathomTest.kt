@@ -16,6 +16,11 @@ class FathomTest {
             emptyMap(),
             Fathom.macrosFor(FathomVoice.DEEP).associate { it.name to 0f },
             Fathom.macrosFor(FathomVoice.DEEP).associate { it.name to 1f },
+            // Cross corners, not just uniform ones: a full GLIDE at the
+            // bottom of the tuning range starts the slide at 20.6 Hz, and
+            // the shortest DECAY gives the clamp the least room to work in.
+            mapOf("GLIDE" to 1f, "TUNE" to 0f),
+            mapOf("GLIDE" to 1f, "TUNE" to 0f, "DECAY" to 0f),
         )) {
             val snip = Fathom.render(FathomVoice.DEEP, macros)
             assertTrue(snip.samples.isNotEmpty(), "DEEP rendered nothing for $macros")
@@ -158,6 +163,15 @@ class FathomTest {
         val end = TestPitch.estimate(snip, fromSec = 0.55f, windowSec = 0.25f)
         assertTrue(start > 0f && end > 0f, "pitch detection failed: $start Hz -> $end Hz")
         assertTrue(end > start * 1.3f, "GLIDE should rise into the target: $start Hz -> $end Hz")
+
+        // The slide must LAND, not merely travel — a glide still moving when
+        // the note ends is the one way this can sound broken, so the clamp
+        // that prevents it needs a test rather than a comment.
+        val target = Fathom.frequencyFor(FathomVoice.DEEP, 1f)
+        assertTrue(
+            kotlin.math.abs(end - target) < target * 0.05f,
+            "GLIDE should land on target: $end Hz vs $target Hz",
+        )
     }
 
     @Test
