@@ -219,17 +219,17 @@ class FathomTest {
         // Labels observed, not predicted — see `a bass note is harmonic, not
         // noise` for why we don't guess them.
         //
-        // GLASS still agrees with DEEP only because it currently shares
-        // DEEP's sine path, differing just in root frequency. Task 4 gives
-        // GLASS FM; when it lands, expect this test to fail there too. That
-        // is the signal that the voice now sounds different — re-observe and
-        // re-pin it. Do NOT tune a new voice to preserve an old label.
-        //
         // GRIND was re-pinned in Task 3: it moved from TOM to KICK once it
         // got its own detuned-saw source instead of sharing DEEP's sine path.
+        //
+        // GLASS was re-pinned in Task 4: it moved from TOM to PERC once it
+        // got its own FM source instead of sharing DEEP's sine path. The
+        // sidebands FM adds are exactly the kind of high-frequency energy
+        // that pushes the classifier off TOM and onto PERC — the same shelf
+        // VelvetTest found for harmonic stabs in general.
         assertEquals(DrumClass.KICK, Classifier.classify(Fathom.render(FathomVoice.DEEP)).drumClass)
         assertEquals(DrumClass.KICK, Classifier.classify(Fathom.render(FathomVoice.GRIND)).drumClass)
-        assertEquals(DrumClass.TOM, Classifier.classify(Fathom.render(FathomVoice.GLASS)).drumClass)
+        assertEquals(DrumClass.PERC, Classifier.classify(Fathom.render(FathomVoice.GLASS)).drumClass)
     }
 
     @Test
@@ -271,6 +271,44 @@ class FathomTest {
         assertTrue(
             kotlin.math.abs(end - start) < start * 0.1f,
             "GLIDE 0 should hold steady: $start Hz -> $end Hz",
+        )
+    }
+
+    @Test
+    fun `GLASS renders clean audio at defaults and both corners`() {
+        for (macros in listOf(
+            emptyMap(),
+            Fathom.macrosFor(FathomVoice.GLASS).associate { it.name to 0f },
+            Fathom.macrosFor(FathomVoice.GLASS).associate { it.name to 1f },
+        )) {
+            val snip = Fathom.render(FathomVoice.GLASS, macros)
+            assertTrue(snip.samples.all { it.isFinite() }, "GLASS rendered NaN/Inf for $macros")
+            assertTrue(snip.samples.any { kotlin.math.abs(it) > 0.1f }, "GLASS rendered silence for $macros")
+            // FM sidebands land at fc*(1 - n*ratio); RATIO's sub-octave snap
+            // (0.5) puts the n=2 sideband at 0 Hz, so GLASS is the one voice
+            // where DC is mechanically plausible. DEEP and GRIND both assert
+            // this; GLASS gets the same check for parity, worst case measured
+            // at RATIO=0 (0.5x), DRIVE=1 (index 14): DC = 6.45e-4.
+            val dc = snip.samples.average().toFloat()
+            assertTrue(kotlin.math.abs(dc) < 0.05f, "GLASS has DC offset $dc for $macros")
+        }
+    }
+
+    @Test
+    fun `RATIO snaps - the knob yields exactly the ratio set and no more`() {
+        val distinct = HashSet<Float>()
+        for (i in 0..200) distinct.add(Fathom.ratioFor(i / 200f))
+        assertEquals(Fathom.RATIOS.size, distinct.size, "RATIO must snap, never land between values")
+        assertEquals(Fathom.RATIOS.toSet(), distinct, "every declared ratio should be reachable")
+    }
+
+    @Test
+    fun `DRIVE on GLASS deepens the FM, not just the saturation`() {
+        val soft = FeatureExtractor.extract(Fathom.render(FathomVoice.GLASS, mapOf("DRIVE" to 0f)))
+        val hard = FeatureExtractor.extract(Fathom.render(FathomVoice.GLASS, mapOf("DRIVE" to 1f)))
+        assertTrue(
+            hard.centroidHz > soft.centroidHz * 1.5f,
+            "DRIVE should add sidebands as well as harmonics: ${soft.centroidHz}Hz -> ${hard.centroidHz}Hz",
         )
     }
 }

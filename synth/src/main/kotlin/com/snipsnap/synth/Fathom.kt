@@ -32,6 +32,16 @@ object Fathom {
 
     const val TUNE_SEMITONES = 24
 
+    /**
+     * The FM ratios RATIO snaps to, chosen for low end: sub-octave, unison, a
+     * hollow fifth-ish, octave, and a metallic twelfth. Snapping is the same
+     * guarantee TINES makes — the knob cannot land on a mistuning.
+     */
+    val RATIOS = floatArrayOf(0.5f, 1f, 1.5f, 2f, 3f)
+
+    fun ratioFor(macro: Float): Float =
+        RATIOS[Math.round(macro.coerceIn(0f, 1f) * (RATIOS.size - 1))]
+
     fun macrosFor(voice: FathomVoice): List<MacroSpec> = when (voice) {
         FathomVoice.DEEP -> listOf(
             MacroSpec("TUNE", 0.25f), MacroSpec("GLIDE", 0f), MacroSpec("DRIVE", 0.3f),
@@ -115,11 +125,17 @@ object Fathom {
         val spreadCents = Dsp.lin(m["SPREAD"] ?: 0f, 4f, 90f)
         val detune = 2f.pow(spreadCents / 2400f)       // half the spread, each way
 
+        // GLASS: DRIVE moves the FM index and the output saturation together,
+        // the same one-knob-can't-be-ugly device VELVET uses for SQUEEZE.
+        val fmRatio = ratioFor(m["RATIO"] ?: 0f)
+        val fmIndex = Dsp.lin(driveAmt, 1f, 14f)
+
         val out = FloatArray((t60 * 1.4f * RATE).toInt().coerceAtLeast(64))
         val svf = Dsp.TptSvf()
         var phase = 0.0
         var phaseLow = 0.0
         var phase2 = 0.0
+        var phaseMod = 0.0
         for (i in out.indices) {
             val t = i.toFloat() / RATE
             val blip = 2f.pow(sweepSemis * Dsp.envAt(t, sweepT60) / 12f)
@@ -134,6 +150,7 @@ object Fathom {
             phase += pitchHz / RATE
 
             val source = when (voice) {
+                FathomVoice.DEEP -> sin(2.0 * PI * phase).toFloat()
                 FathomVoice.GRIND -> {
                     phaseLow += pitchHz / detune / RATE
                     phase2 += pitchHz * detune / RATE
@@ -141,7 +158,17 @@ object Fathom {
                     // No comb or notch stage — interference alone does it.
                     0.5f * (saw(phaseLow) + saw(phase2))
                 }
-                else -> sin(2.0 * PI * phase).toFloat()
+                FathomVoice.GLASS -> {
+                    // Derived from the same pitchHz as the carrier: if the
+                    // modulator missed the glide, the FM ratio would drift
+                    // during the slide and the timbre would smear.
+                    phaseMod += pitchHz * fmRatio / RATE
+                    // The index rides the amp envelope, so the metallic edge
+                    // decays faster than the fundamental. That is what real FM
+                    // basses do, and it is what stops this being a static buzz.
+                    val idx = fmIndex * Dsp.envAt(t, t60 * 0.6f)
+                    sin(2.0 * PI * phase + idx * sin(2.0 * PI * phaseMod)).toFloat()
+                }
             }
             val driven = drive(source, driveAmt)
             svf.process(driven, fc, damp)
