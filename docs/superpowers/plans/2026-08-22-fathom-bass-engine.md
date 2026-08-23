@@ -387,9 +387,13 @@ Append to `FathomTest.kt`, inside the class:
     fun `GLIDE actually glides - pitch rises into the target`() {
         // Long decay so both analysis windows sit inside the note, and SWEEP
         // off so the attack blip cannot be mistaken for the glide.
+        // TUNE=1 puts the target at 164.8 Hz, so a full GLIDE starts an
+        // octave below at 82.4 Hz. Both ends clear Pitch.MIN_HZ = 40f. At
+        // TUNE=0.5 the glide would START at 41.2 Hz, on the detector's floor,
+        // and read as no pitch — the same trap the TUNE test hit in Task 1.
         val snip = Fathom.render(
             FathomVoice.DEEP,
-            mapOf("GLIDE" to 1f, "DECAY" to 0.9f, "SWEEP" to 0f, "TUNE" to 0.5f),
+            mapOf("GLIDE" to 1f, "DECAY" to 0.9f, "SWEEP" to 0f, "TUNE" to 1f),
         )
         val start = TestPitch.estimate(snip, fromSec = 0.02f, windowSec = 0.12f)
         val end = TestPitch.estimate(snip, fromSec = 0.55f, windowSec = 0.25f)
@@ -401,7 +405,7 @@ Append to `FathomTest.kt`, inside the class:
     fun `GLIDE at zero holds a steady pitch`() {
         val snip = Fathom.render(
             FathomVoice.DEEP,
-            mapOf("GLIDE" to 0f, "DECAY" to 0.9f, "SWEEP" to 0f, "TUNE" to 0.5f),
+            mapOf("GLIDE" to 0f, "DECAY" to 0.9f, "SWEEP" to 0f, "TUNE" to 1f),
         )
         val start = TestPitch.estimate(snip, fromSec = 0.02f, windowSec = 0.12f)
         val end = TestPitch.estimate(snip, fromSec = 0.55f, windowSec = 0.25f)
