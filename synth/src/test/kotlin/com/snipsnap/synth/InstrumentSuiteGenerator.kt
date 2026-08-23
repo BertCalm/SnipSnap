@@ -37,6 +37,7 @@ object InstrumentSuiteGenerator {
         )
 
         var samples = 0
+        val programs = mutableListOf<KeygroupProgram>()
         for ((name, render) in instruments) {
             val dataDir = File(out, Mpc3TrackWriter.trackDataDirName(name))
             dataDir.deleteRecursively()
@@ -44,9 +45,12 @@ object InstrumentSuiteGenerator {
             check(program.name == name) { "instrument name drifted: ${program.name} != $name" }
             Mpc3TrackWriter().writeKeygroupTo(out, program)
             KeygroupWriter().writeTo(dataDir, program)
+            programs += program
             samples += program.keygroups.sumOf { it.layers.size }
             println("wrote ${File(out, "$name.xty").absolutePath} (${program.keygroups.size} zones)")
         }
+        val sidecar = InstrumentSidecar.write(out, programs)
+        println("wrote ${sidecar.absolutePath} (the regeneration sidecar)")
         println("suite complete: ${instruments.size} instruments, $samples samples")
     }
 }

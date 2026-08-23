@@ -155,12 +155,15 @@ In value order, artifacts already on the branch under `testkit/`:
 
 ## Part 3 — Core odds and ends · each S, any order, none blocking
 
-- **Dual-generation drum export** — `Mpc3Exporter` option writing the
-  MPC 2 `.xpm` twin inside `_[TrackData]/` (the Timeless Glow layout the
-  instrument suite already uses). One flag, one test.
-- **Instrument regeneration sidecar** — the suite renders
-  deterministically but carries no recipe; an `instruments.json` mirroring
-  `kit.json`'s promise would make instrument folders self-rebuilding.
+- **Dual-generation drum export** — ✓ done: `Mpc3Exporter.exportTrack`
+  grew `mpc2Twin` (and `Exporters.export` grew `dualGeneration`), writing
+  the MPC 2 `.xpm` twin inside `_[TrackData]/` — the Timeless Glow layout
+  the instrument suite already uses. One flag, one test, as scoped.
+- **Instrument regeneration sidecar** — ✓ done: `instruments.json` at the
+  suite root records engine, zones, velocity layers and the organ's loop
+  points from the actual renders (which are deterministic), mirroring
+  `kit.json`'s promise. Written by the generator, shipped in
+  `testkit/Instruments/`, round-trip tested.
 - **Expansion previews as MP3** — the documented convention; we ship WAV.
   Recommendation: keep WAV until a hardware check shows the browser
   ignores it; a pure-Kotlin encoder is not worth it, Android has

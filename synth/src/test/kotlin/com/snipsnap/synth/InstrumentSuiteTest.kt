@@ -138,4 +138,52 @@ class InstrumentSuiteTest {
         assertTrue(read.isTrack)
         assertTrue("1 keygroup" in read.describe())
     }
+
+    @Test
+    fun `the sidecar records what actually rendered and round-trips as JSON`() {
+        val dir = File(temp, "sidecar")
+        val programs = InstrumentSuite.renderAll(dir)
+        val file = InstrumentSidecar.write(dir, programs)
+
+        val root = com.snipsnap.json.Json.parse(file.readText()).let {
+            it as com.snipsnap.json.JsonValue.Obj
+        }
+        assertEquals(1.0, (root.entries["version"] as com.snipsnap.json.JsonValue.Num).value)
+        val instruments = (root.entries["instruments"] as com.snipsnap.json.JsonValue.Arr).items
+        assertEquals(4, instruments.size)
+
+        fun obj(v: com.snipsnap.json.JsonValue) = (v as com.snipsnap.json.JsonValue.Obj).entries
+        fun num(v: com.snipsnap.json.JsonValue?) = (v as com.snipsnap.json.JsonValue.Num).value
+        fun str(v: com.snipsnap.json.JsonValue?) = (v as com.snipsnap.json.JsonValue.Str).value
+
+        instruments.forEachIndexed { i, inst ->
+            val entries = obj(inst)
+            assertEquals(programs[i].name, str(entries["name"]))
+            val zones = (entries["zones"] as com.snipsnap.json.JsonValue.Arr).items
+            assertEquals(programs[i].keygroups.size, zones.size)
+            zones.forEachIndexed { z, zone ->
+                val kg = programs[i].keygroups[z]
+                assertEquals(kg.rootNote.toDouble(), num(obj(zone)["rootMidi"]))
+                val samples = (obj(zone)["samples"] as com.snipsnap.json.JsonValue.Arr).items
+                assertEquals(kg.layers.size, samples.size)
+            }
+        }
+
+        // The organ's whole reason for a sidecar: its loop points survive.
+        val organ = instruments.map(::obj).first { str(it["name"]) == "SnipSnap Organ" }
+        val organZones = (organ["zones"] as com.snipsnap.json.JsonValue.Arr).items
+        organZones.forEach { zone ->
+            val samples = (obj(zone)["samples"] as com.snipsnap.json.JsonValue.Arr).items
+            assertTrue(num(obj(samples.single())["loopStartFrame"]) > 0, "organ zones carry loop points")
+        }
+
+        // The EP's darkness promise: two layers, soft window below the main.
+        val ep = instruments.map(::obj).first { str(it["name"]) == "SnipSnap EP" }
+        val epZone = obj((ep["zones"] as com.snipsnap.json.JsonValue.Arr).items.first())
+        val epSamples = (epZone["samples"] as com.snipsnap.json.JsonValue.Arr).items.map(::obj)
+        assertEquals(2, epSamples.size)
+        assertEquals(1.0, num(epSamples[0]["velStart"]))
+        assertEquals(63.0, num(epSamples[0]["velEnd"]))
+        assertEquals(127.0, num(epSamples[1]["velEnd"]))
+    }
 }

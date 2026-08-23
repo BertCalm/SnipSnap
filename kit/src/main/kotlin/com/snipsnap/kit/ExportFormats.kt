@@ -53,6 +53,8 @@ object Exporters {
         destRoot: File,
         overwrite: Boolean = false,
         meta: ExpansionMeta = defaultMeta(kit),
+        /** MPC3_TRACK only: also write the MPC 2 `.xpm` twin inside `_[TrackData]/`. */
+        dualGeneration: Boolean = false,
     ): ExportOutcome = when (format) {
         ExportFormat.PROGRAM_FOLDER -> {
             val r = KitExporter.exportProgramFolder(kit, kitDir, destRoot, overwrite)
@@ -67,7 +69,7 @@ object Exporters {
             ExportOutcome(format, f, null, findings(kit, kitDir))
         }
         ExportFormat.MPC3_TRACK -> {
-            val r = Mpc3Exporter.exportTrack(kit, kitDir, destRoot, overwrite)
+            val r = Mpc3Exporter.exportTrack(kit, kitDir, destRoot, overwrite, mpc2Twin = dualGeneration)
             ExportOutcome(
                 format, r.program,
                 File(destRoot, Mpc3TrackWriter.trackDataDirName(kit.name)), r.findings,

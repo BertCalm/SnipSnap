@@ -186,8 +186,11 @@ waveform periods — hold a pad and it sings forever), **SnipSnap Harp**
 
 Each instrument ships the Timeless Glow dual-generation layout: the `.xty`
 loads on MPC 3; an MPC 2 machine browses into `_[TrackData]/` and finds the
-`.xpm` sitting with its samples. Things to confirm: each loads, plays in
-tune chromatically, the EP's soft hits sound darker, and — the big one —
+`.xpm` sitting with its samples. An `instruments.json` sidecar rides at the
+folder root — engine, zones, velocity layers, and the organ's loop points,
+recorded from the actual renders — so the folder can rebuild itself (the
+renders are deterministic). Things to confirm: each loads, plays in tune
+chromatically, the EP's soft hits sound darker, and — the big one —
 **held organ pads sustain indefinitely** with no audible loop seam.
 
 ### SnipSnap_Factory.xpn — one-file import

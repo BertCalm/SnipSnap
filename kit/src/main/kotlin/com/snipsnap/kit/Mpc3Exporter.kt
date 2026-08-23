@@ -3,6 +3,7 @@ package com.snipsnap.kit
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3TrackWriter
 import com.snipsnap.xpm.DrumProgram
+import com.snipsnap.xpm.XpmWriter
 import java.io.File
 import java.io.IOException
 
@@ -27,6 +28,14 @@ object Mpc3Exporter {
         trackColour: Int = Mpc3TrackWriter.DEFAULT_TRACK_COLOUR,
         /** Optional embedded pattern — the kit arrives with a groove to play. */
         clip: Mpc3Clip? = null,
+        /**
+         * Dual-generation export — the Timeless Glow layout the instrument
+         * suite already ships: the MPC 2 `.xpm` twin is written *inside*
+         * `_[TrackData]/`, beside the samples it references. MPC 3 opens
+         * the `.xtd`; an MPC 2 machine browses into the folder and finds a
+         * bare program folder. One asset folder, every MPC ever made.
+         */
+        mpc2Twin: Boolean = false,
     ): ExportResult {
         val findings = Preflight.check(kit, kitDir)
         if (findings.blocked()) throw ExportBlockedException(findings)
@@ -41,6 +50,7 @@ object Mpc3Exporter {
 
         val (slots, written) = KitExporter.buildSlots(kit, kitDir, samplesDir = dataDir)
         val program = Mpc3TrackWriter().writeTo(destRoot, DrumProgram(kit.name, slots), trackColour, clip)
+        if (mpc2Twin) XpmWriter().writeTo(dataDir, DrumProgram(kit.name, slots))
         return ExportResult(destRoot, program, written, findings)
     }
 

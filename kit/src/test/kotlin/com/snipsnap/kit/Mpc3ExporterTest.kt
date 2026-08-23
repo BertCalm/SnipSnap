@@ -62,6 +62,30 @@ class Mpc3ExporterTest {
     }
 
     @Test
+    fun `dual-generation flag writes the MPC 2 twin inside TrackData`() {
+        val kitDir = File(temp, "kit")
+        val kit = buildKit(kitDir)
+        val dest = File(temp, "dual")
+        Mpc3Exporter.exportTrack(kit, kitDir, dest, mpc2Twin = true)
+
+        // The Timeless Glow layout: an MPC 2 machine browsing into the
+        // data folder finds a bare program folder — .xpm beside its WAVs.
+        val twin = File(dest, "MPC3 Kit_[TrackData]/MPC3 Kit.xpm")
+        assertTrue(twin.isFile, "the .xpm twin should sit beside the samples")
+        assertEquals(
+            com.snipsnap.mpc3.MpcFormat.MPC2_XML,
+            com.snipsnap.mpc3.MpcFormats.detect(twin),
+        )
+        val xml = twin.readText()
+        assertTrue("A01_Kick_01" in xml && "A02_Snare_01" in xml)
+
+        // Off by default: the plain export stays single-generation.
+        val plain = File(temp, "plain")
+        Mpc3Exporter.exportTrack(kit, kitDir, plain)
+        assertTrue(!File(plain, "MPC3 Kit_[TrackData]/MPC3 Kit.xpm").exists())
+    }
+
+    @Test
     fun `preflight failures block the export`() {
         val kitDir = File(temp, "kit")
         val kit = buildKit(kitDir)
