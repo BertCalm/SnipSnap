@@ -570,7 +570,23 @@ Add a second phase accumulator beside `var phase = 0.0`:
         var phase2 = 0.0
 ```
 
-Replace the source line inside the loop:
+**First, hoist the pitch.** Task 2 folded `blip` and `slide` directly into the single `phase +=` line. With a second oscillator arriving, that has to become one shared value — otherwise a new oscillator can read `base` directly and silently skip the glide, and Task 4's FM would drift its carrier/modulator ratio mid-slide. Replace:
+
+```kotlin
+            phase += base * blip * slide / RATE
+```
+
+with:
+
+```kotlin
+            // One pitch, derived once: every oscillator must inherit the
+            // SWEEP blip and the GLIDE slide, or it will drift away from
+            // the others mid-note.
+            val pitchHz = base * blip * slide
+            phase += pitchHz / RATE
+```
+
+Then replace the source line inside the loop:
 
 ```kotlin
             val source = sin(2.0 * PI * phase).toFloat()
@@ -581,7 +597,7 @@ with:
 ```kotlin
             val source = when (voice) {
                 FathomVoice.GRIND -> {
-                    phase2 += base * blip * slide * detune / RATE
+                    phase2 += pitchHz * detune / RATE
                     // The hollowness *is* the beating between the two saws.
                     // No comb or notch stage — interference alone does it.
                     0.5f * (saw(phase) + saw(phase2))
@@ -703,7 +719,10 @@ Extend the `when (voice)` in the loop with a `GLASS` branch, before `else`:
 
 ```kotlin
                 FathomVoice.GLASS -> {
-                    phaseMod += base * blip * slide * fmRatio / RATE
+                    // Derived from the same pitchHz as the carrier: if the
+                    // modulator missed the glide, the FM ratio would drift
+                    // during the slide and the timbre would smear.
+                    phaseMod += pitchHz * fmRatio / RATE
                     // The index rides the amp envelope, so the metallic edge
                     // decays faster than the fundamental. That is what real FM
                     // basses do, and it is what stops this being a static buzz.
