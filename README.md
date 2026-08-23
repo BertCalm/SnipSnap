@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 393 tests across six modules
+./gradlew test    # 412 tests across six modules
 ```
 
 ### `:audio`
@@ -167,6 +167,16 @@ stab voices (bass, brass, squelch, chip), TUNE snapped to semitones. And the
 roadmap's free bonus is cashed: `SynthKits.chip()` renders VELVET squares
 and THUMP/TINES drums through one CRUNCH converter — the chip kit, maximum
 kitsch, zero new DSP.
+
+FATHOM is the bass engine, and it exists for the three things VELVET
+structurally can't do: GLIDE, a pitch envelope travelling between notes and
+available on every voice because a slide is a gesture rather than a timbre;
+GRIND, two saws detuned by SPREAD and left to beat over a long tail, where the
+hollowness *is* the interference; and GLASS, 2-op FM tuned for the bottom with
+RATIO snapped so the knob can't land on a mistuning. DRIVE is owned by the
+engine and sits before the filter — saturation makes harmonics and the filter
+has to be downstream to shape them, which is why bass through an FX rack
+distortion sounds like a blanket.
 
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
