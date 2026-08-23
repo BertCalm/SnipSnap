@@ -498,18 +498,33 @@ end of the note, which is the feature itself rather than a proxy for it."
 Append to `FathomTest.kt`, inside the class:
 
 ```kotlin
-    /** Sign changes of the mean-removed amplitude envelope — a beat counter. */
+    /**
+     * Beat count: sign changes of the amplitude envelope after the decay
+     * trend is divided out.
+     *
+     * Crossings of the envelope's *global* mean cannot work here — the amp
+     * envelope decays monotonically, so it crosses its own mean once and the
+     * beating rides a slope it never out-climbs. Dividing each frame by its
+     * local trend removes the decay and leaves the ripple, which is the thing
+     * SPREAD controls.
+     */
     private fun beatCrossings(snip: Snip): Int {
         val win = Dsp.RATE / 100                       // 10 ms envelope frames
         val env = snip.samples.asIterable().chunked(win) { frame ->
             frame.maxOf { kotlin.math.abs(it) }
         }
         val body = env.drop(5).dropLast(5)             // skip attack and tail
-        if (body.size < 4) return 0
-        val mean = body.average().toFloat()
+        if (body.size < 8) return 0
+        val span = 8
+        val detrended = body.indices.map { i ->
+            val lo = maxOf(0, i - span)
+            val hi = minOf(body.size - 1, i + span)
+            val trend = body.subList(lo, hi + 1).average().toFloat()
+            if (trend > 1e-6f) body[i] / trend else 1f
+        }
         var crossings = 0
-        for (i in 1 until body.size) {
-            if ((body[i - 1] - mean) * (body[i] - mean) < 0f) crossings++
+        for (i in 1 until detrended.size) {
+            if ((detrended[i - 1] - 1f) * (detrended[i] - 1f) < 0f) crossings++
         }
         return crossings
     }
@@ -529,9 +544,18 @@ Append to `FathomTest.kt`, inside the class:
 
     @Test
     fun `SPREAD beats - wider detune modulates the envelope faster`() {
-        val narrow = beatCrossings(Fathom.render(FathomVoice.GRIND, mapOf("SPREAD" to 0f, "DECAY" to 1f)))
-        val wide = beatCrossings(Fathom.render(FathomVoice.GRIND, mapOf("SPREAD" to 1f, "DECAY" to 1f)))
-        assertTrue(wide > narrow, "SPREAD should beat faster: $narrow -> $wide envelope crossings")
+        // DRIVE pinned to 0. Saturation compresses amplitude variation, so at
+        // the default DRIVE the beating survives as spectral movement rather
+        // than envelope movement — real and musical, but invisible to an
+        // envelope measurement. Isolating SPREAD from that confound is what
+        // makes this a test of SPREAD.
+        val narrow = beatCrossings(
+            Fathom.render(FathomVoice.GRIND, mapOf("SPREAD" to 0f, "DECAY" to 1f, "DRIVE" to 0f)),
+        )
+        val wide = beatCrossings(
+            Fathom.render(FathomVoice.GRIND, mapOf("SPREAD" to 1f, "DECAY" to 1f, "DRIVE" to 0f)),
+        )
+        assertTrue(wide > narrow * 2f, "SPREAD should beat faster: $narrow -> $wide envelope crossings")
     }
 ```
 
@@ -613,7 +637,7 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 ./gradlew :synth:test --console=plain --tests '*FathomTest*'
 ```
 
-Expected: all eleven PASS. If `SPREAD beats` is flaky, raise the `90f` cents ceiling — do not weaken the assertion, and do not add a comb filter, which the spec rules out.
+Expected: all eleven PASS. If `SPREAD beats` is flaky, do NOT raise the `90f` cents ceiling — that was tried and refuted, since even a two-octave detune cannot make a ripple visible to a measurement that compares against a decaying envelope's global mean. Report the measured crossing counts and ask. Do not weaken the assertion, and do not add a comb or notch filter, which the spec rules out.
 
 - [ ] **Step 5: Commit**
 
