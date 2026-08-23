@@ -1,0 +1,73 @@
+package com.snipsnap.shell
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class PersonalityTest {
+
+    @Test
+    fun `OFF is respected everywhere without argument`() {
+        assertFalse(Delight.toastsEnabled(Personality.OFF))
+        assertFalse(Delight.quipsEnabled(Personality.OFF))
+        assertFalse(Delight.deckSoundsEnabled(Personality.OFF, captureArmed = false))
+    }
+
+    @Test
+    fun `quips need FULL, toasts settle for MILD`() {
+        assertTrue(Delight.toastsEnabled(Personality.MILD))
+        assertFalse(Delight.quipsEnabled(Personality.MILD))
+        assertTrue(Delight.toastsEnabled(Personality.FULL))
+        assertTrue(Delight.quipsEnabled(Personality.FULL))
+    }
+
+    @Test
+    fun `law 2 - deck sounds hard-mute while capture is armed, at any level`() {
+        for (level in Personality.entries) {
+            assertFalse(
+                Delight.deckSoundsEnabled(level, captureArmed = true),
+                "$level: a deck thunk must never land inside a snip",
+            )
+        }
+        assertTrue(Delight.deckSoundsEnabled(Personality.FULL, captureArmed = false))
+    }
+
+    @Test
+    fun `commit lines rotate in order and wrap`() {
+        assertEquals("TAPED. NO TAKEBACKS.", Copy.rotating(Copy.COMMIT_LINES, 0))
+        assertEquals("IT'S OURS NOW.", Copy.rotating(Copy.COMMIT_LINES, 1))
+        assertEquals(
+            Copy.rotating(Copy.COMMIT_LINES, 0),
+            Copy.rotating(Copy.COMMIT_LINES, Copy.COMMIT_LINES.size),
+        )
+    }
+
+    @Test
+    fun `law 3 - funny copy still says exactly what happened`() {
+        // The capture-blocked box names the problem and the way out.
+        assertTrue("SCREEN RECORDER" in Copy.CAPTURE_BLOCKED)
+        // Send-to-grid reports the real slice count.
+        assertEquals("7 SLICES ON THE GRID. CHOKE GROUP SET.", Copy.sentToGrid(7, chokeSet = true))
+        assertEquals("3 SLICES ON THE GRID.", Copy.sentToGrid(3, chokeSet = false))
+    }
+
+    @Test
+    fun `hidden eggs answer only their triggers`() {
+        assertEquals("VERY CREATIVE.", Copy.kitNameResponse("TEST"))
+        assertEquals("VERY CREATIVE.", Copy.kitNameResponse("  test "))
+        assertNull(Copy.kitNameResponse("Regroove"))
+        assertEquals("ELITE.", Copy.bpmResponse(133.7f))
+        assertNull(Copy.bpmResponse(120f))
+        // Konami: 8 steps, all on the 4x4 grid.
+        assertEquals(8, Copy.KONAMI_PADS.size)
+        assertTrue(Copy.KONAMI_PADS.all { it in 1..16 })
+    }
+
+    @Test
+    fun `boot sequence ends ready`() {
+        assertEquals("READY.", Copy.BOOT_LINES.last())
+        assertTrue(Copy.STATUS_QUIPS.isNotEmpty())
+    }
+}
