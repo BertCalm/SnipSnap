@@ -117,6 +117,11 @@ class KitSampleSourceTest {
         assertNotNull(clap)
         assertEquals(300, clap.frameCount)
         assertChannelValues(clap, left = 0.2f, right = -0.9f)
+
+        // Same cache contract as loop(): baking asks for the same pad
+        // repeatedly across a long cycle, so a second read must be the same
+        // decoded instance, not a fresh WavReader.read.
+        assertEquals(true, kick === source.pad("Thump Kit", 1), "second pad read should be cached")
     }
 
     @Test
@@ -138,15 +143,37 @@ class KitSampleSourceTest {
     fun `refuses a path that escapes the session folder`() {
         // sampleFile is meant to be a bare filename. A traversal attempt must
         // not read outside the session, whatever wrote loop.json. Plant a
-        // recognizable file one level up so a removed guard doesn't merely
-        // "pass" by coincidence of nothing being there to find.
-        val dir = tempDir()
-        val sentinelName = "sentinel-${dir.name}.wav"
-        val sentinel = writeWav(dir.parentFile, sentinelName, 100, left = 0.9f, right = 0.9f)
-        sentinel.deleteOnExit()
+        // recognizable file one level up, inside its own isolated parent
+        // directory (not the shared system temp root) so a removed guard
+        // doesn't merely "pass" by coincidence of nothing being there to
+        // find, and nothing is left loose in shared temp on an abnormal exit.
+        val parent = tempDir()
+        val dir = File(parent, "session").also { it.mkdirs() }
+        val sentinelName = "sentinel.wav"
+        writeWav(parent, sentinelName, 100, left = 0.9f, right = 0.9f)
 
         assertNull(KitSampleSource(dir).loop("../$sentinelName"))
         assertNull(KitSampleSource(dir).loop("../../etc/passwd"))
+    }
+
+    @Test
+    fun `a kit created after a failed lookup is not permanently poisoned`() {
+        val dir = tempDir()
+        val source = KitSampleSource(dir)
+
+        // First ask: the kit folder doesn't exist yet. This miss must not be
+        // cached forever, since Task 2 wires a live session where a kit can
+        // be written mid-session and needs to be found on the next ask.
+        assertNull(source.pad("Late Kit", 1))
+
+        val kitDir = File(dir, "Late Kit").also { it.mkdirs() }
+        writeWav(kitDir, "clave.wav", 400, left = 0.3f, right = -0.7f)
+        KitStore.save(Kit("Late Kit", listOf(KitPad(slot = 1, sampleFile = "clave.wav"))), kitDir)
+
+        val snip = source.pad("Late Kit", 1)
+        assertNotNull(snip)
+        assertEquals(400, snip.frameCount)
+        assertChannelValues(snip, left = 0.3f, right = -0.7f)
     }
 
     @Test

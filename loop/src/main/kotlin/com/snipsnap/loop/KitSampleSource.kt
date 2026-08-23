@@ -38,7 +38,7 @@ class KitSampleSource(private val dir: File) : SampleSource {
         val key = kit to slot
         pads[key]?.let { return it }
 
-        val slots = kitIndex.getOrPut(kit) { indexKit(kit) }
+        val slots = slotsFor(kit)
         val name = slots[slot] ?: return null
         val file = File(File(dir, kit), name)
         if (!file.isFile) return null
@@ -46,11 +46,23 @@ class KitSampleSource(private val dir: File) : SampleSource {
         return pads.putIfAbsent(key, snip) ?: snip
     }
 
-    /** slot -> bare filename, read once per kit. */
-    private fun indexKit(kit: String): Map<Int, String> {
+    /**
+     * slot -> bare filename for [kit], cached only once the kit has actually
+     * loaded. A kit that doesn't exist yet, or whose kit.json fails to parse,
+     * must not poison the index forever: the kit can be written (or fixed)
+     * later in the session, and the next lookup has to see it.
+     */
+    private fun slotsFor(kit: String): Map<Int, String> {
+        kitIndex[kit]?.let { return it }
+        val indexed = indexKit(kit) ?: return emptyMap()
+        return kitIndex.putIfAbsent(kit, indexed) ?: indexed
+    }
+
+    /** slot -> bare filename for [kit], or null if the kit can't be loaded right now. */
+    private fun indexKit(kit: String): Map<Int, String>? {
         val kitDir = File(dir, kit)
-        if (!kitDir.isDirectory) return emptyMap()
-        val loaded = runCatching { KitStore.load(kitDir) }.getOrNull() ?: return emptyMap()
+        if (!kitDir.isDirectory) return null
+        val loaded = runCatching { KitStore.load(kitDir) }.getOrNull() ?: return null
         return loaded.pads.associate { it.slot to it.sampleFile }
     }
 
