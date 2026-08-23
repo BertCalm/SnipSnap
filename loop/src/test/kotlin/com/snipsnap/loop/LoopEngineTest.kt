@@ -120,7 +120,7 @@ class LoopEngineTest {
 
     @Test
     fun `keeps the resident window bounded across a long run`() {
-        val s = session(4, 3, 2, 1, 1, 1)
+        val s = session(8, 7, 5, 3, 2, 1)
         val sink = RecordingSink()
         val residency = Residency(s, LevelSource(s.intervalFrames), sameThread)
         LoopEngine(residency, sink).runFor(24)
