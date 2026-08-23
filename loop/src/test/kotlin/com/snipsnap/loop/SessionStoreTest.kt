@@ -24,8 +24,8 @@ class SessionStoreTest {
             Track("Vocal Samples", listOf(LoopBlock("adlib.wav"))),
         ),
         bpm = 92f,
-        barsPerInterval = 4,
-        sampleRate = 48_000,
+        barsPerInterval = 8,
+        sampleRate = 44_100,
     )
 
     @Test
