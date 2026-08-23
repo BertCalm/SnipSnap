@@ -43,4 +43,16 @@ object Mpc3Exporter {
         val program = Mpc3TrackWriter().writeTo(destRoot, DrumProgram(kit.name, slots), trackColour, clip)
         return ExportResult(destRoot, program, written, findings)
     }
+
+    /**
+     * Stage a kit for **project** embedding: preflight, copy its WAVs into
+     * [samplesDir] (a project's flat `_[ProjectData]/`), and return the
+     * program for `Mpc3ProjectWriter` — which writes the `.xpj` itself.
+     */
+    fun stageTrack(kit: Kit, kitDir: File, samplesDir: File): DrumProgram {
+        val findings = Preflight.check(kit, kitDir)
+        if (findings.blocked()) throw ExportBlockedException(findings)
+        val (slots, _) = KitExporter.buildSlots(kit, kitDir, samplesDir)
+        return DrumProgram(kit.name, slots)
+    }
 }

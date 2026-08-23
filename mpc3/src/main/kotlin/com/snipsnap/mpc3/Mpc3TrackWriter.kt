@@ -163,6 +163,34 @@ class Mpc3TrackWriter(
         private const val BAR_PULSES = 7680L
     }
 
+    // ---- project-facing builders ------------------------------------------
+
+    internal fun drumTrackObject(program: DrumProgram, trackColour: Int, clip: Mpc3Clip?, includeSolo: Boolean): J =
+        trackObject(program.name, drumSampleNames(program), programObj(program), trackColour, clip, includeSolo)
+
+    internal fun keygroupTrackObject(program: KeygroupProgram, trackColour: Int, includeSolo: Boolean): J =
+        trackObject(program.name, keygroupSampleNames(program), keygroupProgramObj(program), trackColour, null, includeSolo)
+
+    /**
+     * The mixer-infrastructure tracks every harvested project carries beside
+     * its content: `Submix 1` (type 8) and the `Out N/N` pairs (type 9) —
+     * the track shell around a program with no drum or keygroup block.
+     */
+    internal fun infrastructureTrackObject(name: String, type: Int): J =
+        trackObject(
+            name,
+            sampleNames = emptyList(),
+            programObj = programShell(
+                name, type, uncolouredProgramPads(),
+                level = MPC_LEVEL, pan = 0.5,
+                padNoteMap = padNoteMap(chromaticFrom36 = true),
+                drum = null, keygroup = null,
+            ),
+            trackColour = 0,
+            clip = null,
+            includeSolo = false,
+        )
+
     // ---- payload assembly -------------------------------------------------
 
     private fun payload(program: DrumProgram, trackColour: Int, clip: Mpc3Clip?): J =
@@ -189,53 +217,74 @@ class Mpc3TrackWriter(
         programObj: J,
         trackColour: Int,
         clip: Mpc3Clip?,
-    ): J = obj(
-        "data" to obj(
-            "version" to i(5),
-            "name" to s(name),
-            "volume" to d(1.0),
-            "volumeKnown" to b(false),
-            "pan" to d(0.5),
-            "panKnown" to b(false),
-            "mute" to b(false),
-            "solo" to b(false),
-            "cvPort" to i(0),
-            "gatePort" to i(1),
-            "length" to i(0),
-            "velocityScale" to d(1.0),
-            "muteGroup" to i(0),
-            "transposition" to i(0),
-            "colour" to i(trackColour.toLong()),
-            "padsFollowTrackColour" to b(false),
-            "skipFromRowLaunch" to b(false),
-            "samples" to samplesPool(sampleNames),
-            "program" to programObj,
-            "lengthFollowsSequenceLength" to b(true),
-            "midiEventsFilter" to midiEventsFilter(),
-            "arrangementClipMap" to arrangementClips(name),
-            "sharedClipMap" to (clip?.let { J.A(listOf(clipEntry(it))) } ?: J.A(emptyList())),
-            "recordArm" to b(true),
-            "midiBankAndProgramNumber" to obj(
-                "midiBankEnable" to b(false),
-                "midiBankMsb" to i(0),
-                "midiBankLsb" to i(0),
-                "midiProgramNumberEnable" to b(false),
-                "midiProgramNumber" to i(0),
-            ),
-            "midiInputRoute" to obj(
-                "inputPort" to obj(
-                    "type" to i(0), "deviceName" to s("All Ports"), "deviceId" to s(""), "os" to s(platform),
+    ): J = obj("data" to trackObject(name, sampleNames, programObj, trackColour, clip, includeSolo = true))
+
+    /**
+     * One element of a project's `tracks[]` — identical to a standalone
+     * track file's `data`, which is the "hoisted" relationship the format
+     * doc describes. Projects omit `solo` (per the harvested DD1 project);
+     * standalone files carry it.
+     */
+    internal fun trackObject(
+        name: String,
+        sampleNames: List<String>,
+        programObj: J,
+        trackColour: Int,
+        clip: Mpc3Clip?,
+        includeSolo: Boolean,
+    ): J = J.O(
+        buildList {
+            add("version" to i(5))
+            add("name" to s(name))
+            add("volume" to d(1.0))
+            add("volumeKnown" to b(false))
+            add("pan" to d(0.5))
+            add("panKnown" to b(false))
+            add("mute" to b(false))
+            if (includeSolo) add("solo" to b(false))
+            add("cvPort" to i(0))
+            add("gatePort" to i(1))
+            add("length" to i(0))
+            add("velocityScale" to d(1.0))
+            add("muteGroup" to i(0))
+            add("transposition" to i(0))
+            add("colour" to i(trackColour.toLong()))
+            add("padsFollowTrackColour" to b(false))
+            add("skipFromRowLaunch" to b(false))
+            add("samples" to samplesPool(sampleNames))
+            add("program" to programObj)
+            add("lengthFollowsSequenceLength" to b(true))
+            add("midiEventsFilter" to midiEventsFilter())
+            add("arrangementClipMap" to arrangementClips(name))
+            add("sharedClipMap" to (clip?.let { J.A(listOf(clipEntry(it))) } ?: J.A(emptyList())))
+            add("recordArm" to b(true))
+            add(
+                "midiBankAndProgramNumber" to obj(
+                    "midiBankEnable" to b(false),
+                    "midiBankMsb" to i(0),
+                    "midiBankLsb" to i(0),
+                    "midiProgramNumberEnable" to b(false),
+                    "midiProgramNumber" to i(0),
                 ),
-                "inputChannel" to i(0),
-            ),
-            "midiOutputRoute" to obj(
-                "outputPort" to obj(
-                    "type" to i(1), "deviceName" to s("<none>"), "deviceId" to s(""), "os" to s(platform),
+            )
+            add(
+                "midiInputRoute" to obj(
+                    "inputPort" to obj(
+                        "type" to i(0), "deviceName" to s("All Ports"), "deviceId" to s(""), "os" to s(platform),
+                    ),
+                    "inputChannel" to i(0),
                 ),
-                "outputChannel" to i(0),
-            ),
-            "midiMonitorable" to obj("state" to i(2)),
-        ),
+            )
+            add(
+                "midiOutputRoute" to obj(
+                    "outputPort" to obj(
+                        "type" to i(1), "deviceName" to s("<none>"), "deviceId" to s(""), "os" to s(platform),
+                    ),
+                    "outputChannel" to i(0),
+                ),
+            )
+            add("midiMonitorable" to obj("state" to i(2)))
+        },
     )
 
     /**
@@ -295,7 +344,7 @@ class Mpc3TrackWriter(
         level: Double,
         pan: Double,
         padNoteMap: J,
-        drum: J,
+        drum: J?,
         keygroup: J?,
     ): J = J.O(
         buildList {
@@ -313,7 +362,7 @@ class Mpc3TrackWriter(
             add("renderable" to obj("sendToCueBus" to b(false)))
             add("xfaderRoute" to i(0))
             add("padNoteMap" to padNoteMap)
-            add("drum" to drum)
+            drum?.let { add("drum" to it) }
             // Real instrument tracks put the keygroup block right after drum.
             keygroup?.let { add("keygroup" to it) }
             add("fxRackQLinks" to J.A(emptyList()))
@@ -807,30 +856,44 @@ class Mpc3TrackWriter(
      */
     private fun clipEntry(clip: Mpc3Clip): J = obj(
         "key" to i(1),
-        "value" to obj(
-            "version" to i(1),
-            "launchQuantisation" to i(0),
-            "startPulses" to i(0),
-            "endPulses" to i(clip.bars * Mpc3Clip.PULSES_PER_BAR),
-            "loopStartPulses" to i(0),
-            "loopEndPulses" to i(clip.bars * Mpc3Clip.PULSES_PER_BAR),
-            "loop" to b(true),
-            "legato" to b(false),
-            "launch" to i(0),
-            "name" to s(clip.name),
-            "colour" to i(0),
-            "eventList" to obj(
-                "length" to i(INT64_MAX),
-                "events" to J.A(clip.notes.map { noteEvent(it) }),
-            ),
-            "midiBankAndProgramNumber" to obj(
-                "midiBankEnable" to b(false),
-                "midiBankMsb" to i(0),
-                "midiBankLsb" to i(0),
-                "midiProgramNumberEnable" to b(false),
-                "midiProgramNumber" to i(0),
-            ),
-        ),
+        "value" to clipValue(clip),
+    )
+
+    /**
+     * The clip object itself — also the value a sequence's `trackClipMaps`
+     * carries, where the real project omits the MIDI bank block.
+     */
+    internal fun clipValue(clip: Mpc3Clip, includeMidiBank: Boolean = true): J = J.O(
+        buildList {
+            add("version" to i(1))
+            add("launchQuantisation" to i(0))
+            add("startPulses" to i(0))
+            add("endPulses" to i(clip.bars * Mpc3Clip.PULSES_PER_BAR))
+            add("loopStartPulses" to i(0))
+            add("loopEndPulses" to i(clip.bars * Mpc3Clip.PULSES_PER_BAR))
+            add("loop" to b(true))
+            add("legato" to b(false))
+            add("launch" to i(0))
+            add("name" to s(clip.name))
+            add("colour" to i(0))
+            add(
+                "eventList" to obj(
+                    "length" to i(INT64_MAX),
+                    "events" to J.A(clip.notes.map { noteEvent(it) }),
+                ),
+            )
+            if (includeMidiBank) {
+                add(
+                    "midiBankAndProgramNumber" to obj(
+                        "midiBankEnable" to b(false),
+                        "midiBankMsb" to i(0),
+                        "midiBankLsb" to i(0),
+                        "midiProgramNumberEnable" to b(false),
+                        "midiProgramNumber" to i(0),
+                    ),
+                )
+            }
+        },
     )
 
     private fun noteEvent(n: Mpc3Note): J = J.O(
@@ -892,75 +955,4 @@ class Mpc3TrackWriter(
         },
     )
 
-    // ---- a tiny JSON node type with int/double control --------------------
-    // The shared :json writer renders whole doubles as integers; the MPC
-    // fingerprint style keeps "0.0" as a float, so this writer carries its
-    // own nodes and renderer (4-space pretty, the style real payloads use).
-
-    private sealed interface J {
-        class O(val e: List<Pair<String, J>>) : J
-        class A(val items: List<J>) : J
-        class S(val v: String) : J
-        class I(val v: Long) : J
-        class D(val v: Double) : J
-        class B(val v: Boolean) : J
-    }
-
-    private fun obj(vararg pairs: Pair<String, J>): J = J.O(pairs.toList())
-    private fun s(v: String): J = J.S(v)
-    private fun i(v: Long): J = J.I(v)
-    private fun i(v: Int): J = J.I(v.toLong())
-    private fun d(v: Double): J = J.D(v)
-    private fun b(v: Boolean): J = J.B(v)
-    private fun v0(v: J): J = J.O(listOf("value0" to v))
-
-    private fun render(root: J): String = StringBuilder(8 * 1024 * 1024).also { render(root, it, 0) }.toString()
-
-    private fun render(v: J, sb: StringBuilder, indent: Int) {
-        when (v) {
-            is J.S -> renderString(v.v, sb)
-            is J.I -> sb.append(v.v)
-            is J.B -> sb.append(if (v.v) "true" else "false")
-            is J.D -> sb.append(v.v)   // Double.toString keeps the decimal point: 1.0, 0.375, 0.7079460024833679
-            is J.A -> {
-                if (v.items.isEmpty()) { sb.append("[]"); return }
-                sb.append("[\n")
-                v.items.forEachIndexed { n, item ->
-                    pad(sb, indent + 1); render(item, sb, indent + 1)
-                    if (n != v.items.size - 1) sb.append(',')
-                    sb.append('\n')
-                }
-                pad(sb, indent); sb.append(']')
-            }
-            is J.O -> {
-                if (v.e.isEmpty()) { sb.append("{}"); return }
-                sb.append("{\n")
-                v.e.forEachIndexed { n, (k, item) ->
-                    pad(sb, indent + 1); renderString(k, sb); sb.append(": ")
-                    render(item, sb, indent + 1)
-                    if (n != v.e.size - 1) sb.append(',')
-                    sb.append('\n')
-                }
-                pad(sb, indent); sb.append('}')
-            }
-        }
-    }
-
-    private fun pad(sb: StringBuilder, indent: Int) = repeat(indent) { sb.append("    ") }
-
-    private fun renderString(str: String, sb: StringBuilder) {
-        sb.append('"')
-        for (c in str) {
-            when {
-                c == '"' -> sb.append("\\\"")
-                c == '\\' -> sb.append("\\\\")
-                c == '\n' -> sb.append("\\n")
-                c == '\r' -> sb.append("\\r")
-                c == '\t' -> sb.append("\\t")
-                c.code < 0x20 -> sb.append("\\u%04x".format(c.code))
-                else -> sb.append(c)
-            }
-        }
-        sb.append('"')
-    }
 }

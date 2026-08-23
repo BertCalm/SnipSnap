@@ -117,9 +117,12 @@ Three corrections from the previous, prose-sourced version of this block:
   … 51, …` on a drum track, and an inert identity map (`value0: 0, value1: 1`)
   on an instrument track, which addresses pitch by zone key range instead.
 - **`drum.version` is 8**, not 2 — and it reads 8 on instrument tracks too.
-- **"Schema version 28" does not exist.** No `version` field in any harvested
-  file holds that value. It has been removed rather than corrected, because
-  nothing observed corresponds to it.
+- **"Schema version 28" exists — at project level.** An earlier revision
+  removed it entirely ("no `version` field in any harvested file holds that
+  value") after checking track files, which carry `data.version: 5`. The DD1
+  Chamber **project** carries `data.version: 28`, vindicating the community
+  write-up on this one: the value is real, it just belongs to
+  `SerialisableProjectData`, not to tracks.
 
 **Do not gate a reader on any version integer.** `program.version` is `4` in
 one Classic Drum Machines kit and `2` in another from the same pack, and
@@ -462,6 +465,32 @@ tracks from build **`3.9.0.31`** on OSX, and the structure holds unchanged —
 zones in `program.drum.instruments`, `program.keygroup` with no `instruments`
 key, 8 `layersv` slots, dual `filterData`/`lfoData` at `value0`/`value1`. What
 that pack *did* change is the `numKeygroups` rule, below.
+
+## The project writer
+
+`Mpc3ProjectWriter` writes the whole session as one `.xpj` beside a flat
+`<name>_[ProjectData]/` of WAVs. Content tracks come from
+`Mpc3TrackWriter`'s builders — a project's `tracks[]` element is a hoisted
+track file minus `solo`, confirmed key-for-key — plus the
+mixer-infrastructure tracks every harvested project carries (`Submix 1`
+type 8, `Out N/N` type 9: the track shell around a program with no drum or
+keygroup block). The ~sixty boilerplate keys around them (mixer, QLink
+assignments, pad-perform settings, 32 empty song slots) are the DD1 Chamber
+project's own defaults, carried verbatim as a resource skeleton with the
+content-specific parts scrubbed — verbatim beats reconstruction.
+
+The first drum track's clip becomes `sequences[0]`: notes ride in
+`trackClipMaps` keyed by track name (every track mapped, empty clips on the
+rest), the project's tracks keep their own `sharedClipMap` empty, and the
+sequence clip values omit `midiBankAndProgramNumber` — all exactly as the
+real project does. `Mpc3ProjectWriterTest` guards key paths against the
+project corpus, with `tracks[*]` paths also legitimised by the track corpus
+under the hoisting equivalence.
+
+`testkit/SnipSnap Session.xpj` is the acceptance artifact
+(`./gradlew :synth:generateSessionProject`): the factory kit, all four S5
+instruments, and the demo groove on the timeline — the entire SnipSnap
+session in one file.
 
 ## Embedded sequences
 

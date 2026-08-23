@@ -33,7 +33,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 449 tests across six modules
+./gradlew test    # 455 tests across six modules
 ```
 
 ### `:audio`
@@ -227,7 +227,9 @@ per-pad class colours as plain packed ints. The test that keeps it honest is
 the same one the keygroup writer earned: **no key path we emit may be absent
 from every real drum track** — invention, not omission, is how MPC files fail
 silently. `Mpc3Exporter` in `:kit` drives it from the same pipeline as every
-other export; see [`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md).
+other export, and **`Mpc3ProjectWriter`** goes one further: the whole
+session — kit, instruments, groove on the timeline, mixer — as one `.xpj`
+the Live III opens directly; see [`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md).
 
 ### `:json`
 

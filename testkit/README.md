@@ -162,6 +162,18 @@ Regenerate with `./gradlew :synth:generateMpc3Keys`. Things to confirm:
 it loads as an instrument track, plays **in tune chromatically** across
 the pads, and soft hits use the darker layer.
 
+### SnipSnap Session — the whole thing in one file
+
+The capstone artifact: `SnipSnap Session.xpj` beside its flat
+`SnipSnap Session_[ProjectData]/` — the factory kit, all four suite
+instruments and the demo groove as **one MPC 3 project**. Open the `.xpj`
+and the entire session should be standing there: kit on track 1 in class
+colours, EP/Organ/Harp/Music Box on their own tracks, "SnipSnap Groove"
+on sequence 1 ready to play, mixer wired. Regenerate with
+`./gradlew :synth:generateSessionProject`. Things to confirm: it opens,
+every track plays, the sequence plays the kit, and the organ still
+sustains inside the project.
+
 ### Instruments/ — the S5 suite, dual-generation
 
 Four playable key instruments, engines at exact MIDI pitch, multisampled

@@ -58,6 +58,16 @@ tasks.register<JavaExec>("generateMpc3Kit") {
     args("${rootDir}/testkit")
 }
 
+/** Render the whole session as one MPC 3 project into testkit/. See SessionProjectGenerator. */
+tasks.register<JavaExec>("generateSessionProject") {
+    group = "distribution"
+    description = "Render kit + instruments + groove as one .xpj + _[ProjectData]/ under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SessionProjectGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 /** Render the S5 instrument suite (dual-generation) into testkit/Instruments/. See InstrumentSuiteGenerator. */
 tasks.register<JavaExec>("generateInstrumentSuite") {
     group = "distribution"
