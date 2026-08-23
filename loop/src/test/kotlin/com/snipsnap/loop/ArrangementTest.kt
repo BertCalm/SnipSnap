@@ -65,6 +65,23 @@ class ArrangementTest {
     }
 
     @Test
+    fun `blockAt resolves the actual block content, not just the right index`() {
+        // indexAt is proven exhaustively above; this proves blockAt actually
+        // maps that index back to the correct, distinguishable block. Chain
+        // length 3 does not divide 5, so interval 5 wraps past the chain's
+        // end onto index 2 (the last block) rather than looping back to 0 -
+        // the case a hardcoded `chain.first()` would get wrong.
+        val first = LoopBlock("first.wav")
+        val middle = LoopBlock("middle.wav")
+        val last = LoopBlock("last.wav")
+        val t = Track("t", listOf(first, middle, last))
+
+        assertEquals(first, Arrangement.blockAt(t, 0))
+        assertEquals(middle, Arrangement.blockAt(t, 1))
+        assertEquals(last, Arrangement.blockAt(t, 5))
+    }
+
+    @Test
     fun `shortening a chain past the playing index wraps instead of throwing`() {
         // Spec section 07: the current block finishes, then i % newSize takes
         // over. At interval 5 a 4-block chain is on index 1; cut to 2 blocks
