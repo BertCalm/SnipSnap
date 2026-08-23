@@ -19,6 +19,10 @@ object BlockBaker {
     /** How far off the interval a loop can be before it gets sliced instead of trimmed. */
     const val FIT_TOLERANCE = 0.02
 
+    /**
+     * On the already-fits path, the returned [Snip] aliases the [SampleSource]'s
+     * own `FloatArray` with no copy — a caller must not mutate it in place.
+     */
     fun bake(block: Block, session: Session, source: SampleSource): Snip = when (block) {
         is LoopBlock -> bakeLoop(block, session, source)
         is PatternBlock -> silence(session)
