@@ -73,18 +73,47 @@ class BouncerTest {
 
     @Test
     fun `writes a wav a reader can decode`() {
-        val s = session(1, 1, 1, 1, 1, 1)
+        // Track 0's two blocks must differ, or a sink that retains the
+        // caller's reused buffer (the exact hazard AudioSink's contract warns
+        // about) would pass every assertion here just as easily as a correct
+        // one: same rate, same channel count, same frame count, and — with a
+        // uniform-level fixture — identical samples too, since both intervals
+        // would render the same thing regardless of aliasing.
+        val s = session(2, 1, 1, 1, 1, 1)
+        val map = HashMap<String, Snip>()
+        map["t0-1.wav"] = dc(s.intervalFrames, 0.5f)
+        map["t0-2.wav"] = dc(s.intervalFrames, 0.1f)
+        for (t in s.tracks.drop(1)) {
+            for (b in t.chain) map[(b as LoopBlock).sampleFile] = dc(s.intervalFrames, 0f)
+        }
+
         val file = File.createTempFile("snipsnap-bounce", ".wav")
         file.deleteOnExit()
 
         WavSink(file, s.sampleRate).use { sink ->
-            Bouncer.toSink(s, sourceFor(s, 0.1f), sink, intervals = 2)
+            Bouncer.toSink(s, FakeSource(map), sink, intervals = 2)
         }
 
         val decoded = WavReader.read(file)
         assertEquals(48_000, decoded.sampleRate)
         assertEquals(2, decoded.channels)
         assertEquals(2 * s.intervalFrames, decoded.frameCount)
+
+        // Interval 0 is track 0's first block (0.5/-0.25); interval 1 is its
+        // second (0.1/-0.05). Under aliasing, WavSink.write would retain the
+        // caller's reused buffer, so both written chunks would read back as
+        // whatever was mixed last — interval 1's values — and the two
+        // first-interval assertions below would fail.
+        assertTrue(abs(decoded.samples[100] - 0.5f) < 1e-5f, "got ${decoded.samples[100]}")
+        assertTrue(abs(decoded.samples[101] - -0.25f) < 1e-5f, "got ${decoded.samples[101]}")
+        assertTrue(
+            abs(decoded.samples[(s.intervalFrames + 100) * 2] - 0.1f) < 1e-5f,
+            "got ${decoded.samples[(s.intervalFrames + 100) * 2]}",
+        )
+        assertTrue(
+            abs(decoded.samples[(s.intervalFrames + 100) * 2 + 1] - -0.05f) < 1e-5f,
+            "got ${decoded.samples[(s.intervalFrames + 100) * 2 + 1]}",
+        )
     }
 
     @Test
