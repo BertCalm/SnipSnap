@@ -3,12 +3,90 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.FeatureExtractor
+import com.snipsnap.audio.Snip
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class FathomTest {
+
+    /**
+     * How deeply the amplitude envelope ripples once its decay is removed —
+     * the depth of the beating between two detuned oscillators.
+     *
+     * Depth, not rate. Counting zero crossings was tried and abandoned: at
+     * SPREAD=0 the beat is ~0.19 Hz, under one cycle across the whole note,
+     * so there is no rate to count and the number produced is the
+     * measurement's own noise floor.
+     *
+     * 50 ms frames — 4.1 cycles of GRIND's 82.4 Hz carrier. Shorter frames
+     * alias against the carrier and manufacture a ripple that has nothing to
+     * do with SPREAD; at 10 ms the artifact was larger than the signal and
+     * inverted the comparison. RMS rather than peak for the same reason:
+     * taking an extremum per frame is phase-sensitive.
+     *
+     * The trend is removed by a least-squares line through the log envelope.
+     * An exponential decay is a straight line in log space, so the fit
+     * removes it exactly and filters nothing — unlike a moving average,
+     * whose window is the same order as the beat period and absorbs the
+     * ripple it is meant to expose.
+     */
+    private fun beatRipple(snip: Snip): Float {
+        val win = Dsp.RATE * 50 / 1000                 // 50 ms envelope frames
+        val env = snip.samples.asIterable().chunked(win) { frame ->
+            kotlin.math.sqrt(frame.map { it * it }.average()).toFloat()
+        }
+        val body = env.drop(1).dropLast(1).filter { it > 1e-9f }
+        val n = body.size
+        if (n < 8) return 0f
+
+        val logs = body.map { kotlin.math.ln(it.toDouble()) }
+        val meanX = (n - 1) / 2.0
+        val meanY = logs.average()
+        var sxy = 0.0
+        var sxx = 0.0
+        for (i in 0 until n) {
+            val dx = i - meanX
+            sxy += dx * (logs[i] - meanY)
+            sxx += dx * dx
+        }
+        val slope = if (sxx > 0.0) sxy / sxx else 0.0
+
+        val residuals = (0 until n).map { i -> logs[i] - (meanY + slope * (i - meanX)) }
+        val meanR = residuals.average()
+        val variance = residuals.map { (it - meanR) * (it - meanR) }.average()
+        return kotlin.math.sqrt(variance).toFloat()
+    }
+
+    @Test
+    fun `GRIND renders clean audio at defaults and both corners`() {
+        for (macros in listOf(
+            emptyMap(),
+            Fathom.macrosFor(FathomVoice.GRIND).associate { it.name to 0f },
+            Fathom.macrosFor(FathomVoice.GRIND).associate { it.name to 1f },
+        )) {
+            val snip = Fathom.render(FathomVoice.GRIND, macros)
+            assertTrue(snip.samples.all { it.isFinite() }, "GRIND rendered NaN/Inf for $macros")
+            assertTrue(snip.samples.any { kotlin.math.abs(it) > 0.1f }, "GRIND rendered silence for $macros")
+        }
+    }
+
+    @Test
+    fun `SPREAD beats - wider detune ripples the envelope more deeply`() {
+        // DRIVE pinned to 0. Saturation compresses amplitude variation, so at
+        // the default DRIVE the beating survives as spectral movement rather
+        // than envelope movement — real and musical, but invisible to an
+        // envelope measurement. Isolating SPREAD from that confound is what
+        // makes this a test of SPREAD.
+        val narrow = beatRipple(
+            Fathom.render(FathomVoice.GRIND, mapOf("SPREAD" to 0f, "DECAY" to 1f, "DRIVE" to 0f)),
+        )
+        val wide = beatRipple(
+            Fathom.render(FathomVoice.GRIND, mapOf("SPREAD" to 1f, "DECAY" to 1f, "DRIVE" to 0f)),
+        )
+        assertTrue(wide > narrow * 4f, "SPREAD should ripple deeper: $narrow -> $wide")
+    }
 
     @Test
     fun `DEEP renders clean audio at defaults and both corners`() {
@@ -136,14 +214,16 @@ class FathomTest {
         // Labels observed, not predicted — see `a bass note is harmonic, not
         // noise` for why we don't guess them.
         //
-        // GRIND and GLASS agree here only because they currently share DEEP's
-        // sine path, differing just in root frequency. Task 3 gives GRIND
-        // detuned saws and Task 4 gives GLASS FM; when either lands, expect
-        // this test to fail. That is the signal that the voice now sounds
-        // different — re-observe and re-pin it. Do NOT tune a new voice to
-        // preserve an old label.
+        // GLASS still agrees with DEEP only because it currently shares
+        // DEEP's sine path, differing just in root frequency. Task 4 gives
+        // GLASS FM; when it lands, expect this test to fail there too. That
+        // is the signal that the voice now sounds different — re-observe and
+        // re-pin it. Do NOT tune a new voice to preserve an old label.
+        //
+        // GRIND was re-pinned in Task 3: it moved from TOM to KICK once it
+        // got its own detuned-saw source instead of sharing DEEP's sine path.
         assertEquals(DrumClass.KICK, Classifier.classify(Fathom.render(FathomVoice.DEEP)).drumClass)
-        assertEquals(DrumClass.TOM, Classifier.classify(Fathom.render(FathomVoice.GRIND)).drumClass)
+        assertEquals(DrumClass.KICK, Classifier.classify(Fathom.render(FathomVoice.GRIND)).drumClass)
         assertEquals(DrumClass.TOM, Classifier.classify(Fathom.render(FathomVoice.GLASS)).drumClass)
     }
 

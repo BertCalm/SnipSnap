@@ -76,6 +76,9 @@ object Fathom {
         return (tanh((k * x).toDouble()) / tanh(k.toDouble())).toFloat()
     }
 
+    /** Naive saw from a 0..1 phase. Aliases; lo-fi is on-brand. */
+    private fun saw(phase: Double): Float = (2.0 * (phase - Math.floor(phase)) - 1.0).toFloat()
+
     fun render(voice: FathomVoice, macros: Map<String, Float> = emptyMap()): Snip {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
@@ -104,9 +107,15 @@ object Fathom {
         // impossible rather than documenting it.
         val glideTime = t60 * 0.35f
 
+        // SPREAD is a beat-rate knob. Bass is low, so even a wide detune
+        // beats slowly — a throb at the bottom of the knob, a growl at the top.
+        val spreadCents = Dsp.lin(m["SPREAD"] ?: 0f, 4f, 90f)
+        val detune = 2f.pow(spreadCents / 1200f)
+
         val out = FloatArray((t60 * 1.4f * RATE).toInt().coerceAtLeast(64))
         val svf = Dsp.TptSvf()
         var phase = 0.0
+        var phase2 = 0.0
         for (i in out.indices) {
             val t = i.toFloat() / RATE
             val blip = 2f.pow(sweepSemis * Dsp.envAt(t, sweepT60) / 12f)
@@ -114,9 +123,21 @@ object Fathom {
             // constant semitones per second reads as an even slide.
             val glideAt = (1f - t / glideTime).coerceIn(0f, 1f)
             val slide = 2f.pow(-glideSemis * glideAt / 12f)
-            phase += base * blip * slide / RATE
+            // One pitch, derived once: every oscillator must inherit the
+            // SWEEP blip and the GLIDE slide, or it will drift away from
+            // the others mid-note.
+            val pitchHz = base * blip * slide
+            phase += pitchHz / RATE
 
-            val source = sin(2.0 * PI * phase).toFloat()
+            val source = when (voice) {
+                FathomVoice.GRIND -> {
+                    phase2 += pitchHz * detune / RATE
+                    // The hollowness *is* the beating between the two saws.
+                    // No comb or notch stage — interference alone does it.
+                    0.5f * (saw(phase) + saw(phase2))
+                }
+                else -> sin(2.0 * PI * phase).toFloat()
+            }
             val driven = drive(source, driveAmt)
             svf.process(driven, fc, damp)
 
