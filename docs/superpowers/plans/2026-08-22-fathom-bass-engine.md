@@ -761,9 +761,18 @@ Add a third phase accumulator beside `phase2`:
         var phaseMod = 0.0
 ```
 
-Extend the `when (voice)` in the loop with a `GLASS` branch, before `else`:
+Extend the `when (voice)` in the loop with a `GLASS` branch — **and remove the `else ->`**, replacing it with an explicit `FathomVoice.DEEP ->`. With all three voices named, Kotlin enforces exhaustiveness: adding a fourth voice later then fails to compile instead of silently falling through to a sine. The whole block becomes:
 
 ```kotlin
+            val source = when (voice) {
+                FathomVoice.DEEP -> sin(2.0 * PI * phase).toFloat()
+                FathomVoice.GRIND -> {
+                    phaseLow += pitchHz / detune / RATE
+                    phase2 += pitchHz * detune / RATE
+                    // The hollowness *is* the beating between the two saws.
+                    // No comb or notch stage — interference alone does it.
+                    0.5f * (saw(phaseLow) + saw(phase2))
+                }
                 FathomVoice.GLASS -> {
                     // Derived from the same pitchHz as the carrier: if the
                     // modulator missed the glide, the FM ratio would drift
@@ -775,6 +784,7 @@ Extend the `when (voice)` in the loop with a `GLASS` branch, before `else`:
                     val idx = fmIndex * Dsp.envAt(t, t60 * 0.6f)
                     sin(2.0 * PI * phase + idx * sin(2.0 * PI * phaseMod)).toFloat()
                 }
+            }
 ```
 
 - [ ] **Step 4: Run the tests to verify they pass**
