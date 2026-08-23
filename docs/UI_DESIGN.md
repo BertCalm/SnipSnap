@@ -107,7 +107,11 @@ surfaces keep their contrast in every scheme), and it's also exactly what a
 (`#e2e6ec` with a true-white highlight), the desk is a pale dithered
 blue-gray, and the titlebar runs a silver-blue gradient. Named for the
 see-through cassette shell — the one with no tape-type notches and nothing
-to hide.
+to hide. Like Oilslick, it has a fully working phone-frame prototype —
+[`../design/TapeOS Clear.dc.html`](../design/TapeOS%20Clear.dc.html), all
+nine screens, WebAudio pads, capture bubble — which doubles as proof that
+the two-surface rule survives a light scheme: play mode and every sound
+surface stay dark VFD while the chrome goes daylight.
 
 **Oilslick** goes one token further than the others: the window frame and
 titlebar swap the bevel highlight/shadow pair for the OILSLICK conic gradient
