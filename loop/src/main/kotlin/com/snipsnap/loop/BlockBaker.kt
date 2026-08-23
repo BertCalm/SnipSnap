@@ -28,7 +28,7 @@ object BlockBaker {
      */
     fun bake(block: Block, session: Session, source: SampleSource): Snip = when (block) {
         is LoopBlock -> bakeLoop(block, session, source)
-        is PatternBlock -> silence(session)
+        is PatternBlock -> bakePattern(block, session, source)
     }
 
     private fun bakeLoop(block: LoopBlock, session: Session, source: SampleSource): Snip {
@@ -40,6 +40,37 @@ object BlockBaker {
 
         val drift = abs(stereo.frameCount - target).toDouble() / target
         return if (drift <= FIT_TOLERANCE) conform(stereo, target) else retrigger(stereo, target)
+    }
+
+    /**
+     * Render a pattern to one interval.
+     *
+     * Groove.kt does something like this for a generated pattern, but it mixes
+     * mono and picks its own hits. This takes authored steps, keeps stereo, and
+     * honours velocity and micro-offsets — a pattern block has to reproduce
+     * exactly what the user wrote, every cycle.
+     */
+    private fun bakePattern(block: PatternBlock, session: Session, source: SampleSource): Snip {
+        val target = session.intervalFrames
+        val out = FloatArray(target * 2)
+        val stepFrames = target.toDouble() / session.stepsPerInterval
+
+        for (step in block.steps) {
+            if (step.step >= session.stepsPerInterval) continue
+            val pad = source.pad(block.kit, step.slot) ?: continue
+            val stereo = toStereo(Resampler.resample(pad, session.sampleRate))
+
+            val at = (step.step * stepFrames).roundToInt() + step.microOffset
+            if (at >= target) continue
+            val from = if (at < 0) -at else 0
+            val base = (at + from) * 2
+            val room = (target - at - from) * 2
+            val n = minOf(stereo.samples.size - from * 2, room)
+            if (n <= 0) continue
+
+            for (i in 0 until n) out[base + i] += stereo.samples[from * 2 + i] * step.velocity
+        }
+        return Snip(out, 2, session.sampleRate)
     }
 
     /**

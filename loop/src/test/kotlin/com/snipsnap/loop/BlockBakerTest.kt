@@ -241,4 +241,88 @@ class BlockBakerTest {
             }
         }
     }
+
+    private fun blip(frames: Int, level: Float) =
+        Snip(FloatArray(frames * 2) { level }, 2, 48_000)
+
+    @Test
+    fun `renders a pattern block to one interval`() {
+        val s = session()
+        val src = FakeSource(pads = mapOf(("kit" to 1) to blip(1_000, 0.5f)))
+        val block = PatternBlock("kit", listOf(Step(step = 0, slot = 1)))
+        val baked = BlockBaker.bake(block, s, src)
+
+        assertEquals(s.intervalFrames, baked.frameCount)
+        assertEquals(2, baked.channels)
+        assertTrue(abs(baked.samples[0] - 0.5f) < 1e-6f, "hit should land on frame 0")
+    }
+
+    @Test
+    fun `places a step at its sixteenth of the interval`() {
+        val s = session()
+        val src = FakeSource(pads = mapOf(("kit" to 1) to blip(1_000, 0.5f)))
+        // 64 steps in a 4-bar interval; step 32 is the halfway point.
+        val baked = BlockBaker.bake(PatternBlock("kit", listOf(Step(32, 1))), s, src)
+
+        val expected = s.intervalFrames / 2
+        assertTrue(abs(baked.samples[expected * 2] - 0.5f) < 1e-6f, "no hit at the midpoint")
+        assertEquals(0f, baked.samples[0], "nothing should be on the downbeat")
+    }
+
+    @Test
+    fun `scales a hit by its velocity`() {
+        val s = session()
+        val src = FakeSource(pads = mapOf(("kit" to 1) to blip(1_000, 0.8f)))
+        val baked = BlockBaker.bake(PatternBlock("kit", listOf(Step(0, 1, velocity = 0.5f))), s, src)
+        assertTrue(abs(baked.samples[0] - 0.4f) < 1e-6f, "got ${baked.samples[0]}")
+    }
+
+    @Test
+    fun `sums overlapping hits`() {
+        val s = session()
+        val src = FakeSource(pads = mapOf(("kit" to 1) to blip(1_000, 0.3f)))
+        val baked = BlockBaker.bake(
+            PatternBlock("kit", listOf(Step(0, 1), Step(0, 1))),
+            s,
+            src,
+        )
+        assertTrue(abs(baked.samples[0] - 0.6f) < 1e-6f, "got ${baked.samples[0]}")
+    }
+
+    @Test
+    fun `applies a micro offset`() {
+        val s = session()
+        val src = FakeSource(pads = mapOf(("kit" to 1) to blip(500, 0.5f)))
+        val baked = BlockBaker.bake(PatternBlock("kit", listOf(Step(0, 1, microOffset = 480))), s, src)
+
+        assertEquals(0f, baked.samples[0], "nudged hits should not be on the grid")
+        assertTrue(abs(baked.samples[480 * 2] - 0.5f) < 1e-6f, "hit should be 480 frames late")
+    }
+
+    @Test
+    fun `skips a step whose pad is missing`() {
+        val s = session()
+        val baked = BlockBaker.bake(PatternBlock("kit", listOf(Step(0, 99))), s, FakeSource())
+        assertEquals(s.intervalFrames, baked.frameCount)
+        assertEquals(0f, baked.peak(), "a missing pad is silence, not a crash")
+    }
+
+    @Test
+    fun `clips a hit that would run past the end of the interval`() {
+        val s = session()
+        val long = blip(s.intervalFrames, 0.5f)
+        val src = FakeSource(pads = mapOf(("kit" to 1) to long))
+        // Last 16th: most of this pad has nowhere to go.
+        val baked = BlockBaker.bake(PatternBlock("kit", listOf(Step(63, 1))), s, src)
+        assertEquals(s.intervalFrames, baked.frameCount)
+    }
+
+    @Test
+    fun `ignores a step beyond the interval's resolution`() {
+        val s = session()
+        val src = FakeSource(pads = mapOf(("kit" to 1) to blip(1_000, 0.5f)))
+        // 64 steps exist; step 64 is off the end.
+        val baked = BlockBaker.bake(PatternBlock("kit", listOf(Step(64, 1))), s, src)
+        assertEquals(0f, baked.peak())
+    }
 }
