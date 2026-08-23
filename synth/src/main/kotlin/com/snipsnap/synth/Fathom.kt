@@ -95,13 +95,26 @@ object Fathom {
         val sweepSemis = Dsp.lin(m["SWEEP"] ?: 0f, 0f, 30f)
         val sweepT60 = 0.035f
 
+        // GLIDE: start up to an octave below the target and slide into it.
+        // Unipolar and upward-only on purpose — a downward or overshooting
+        // slide puts "sounds like a mistake" inside the knob's travel.
+        val glideSemis = Dsp.lin(m.getValue("GLIDE"), 0f, 12f)
+        // Always completes well inside the note. A slide still travelling when
+        // the sound ends is the one way this can sound broken, so make it
+        // impossible rather than documenting it.
+        val glideTime = t60 * 0.35f
+
         val out = FloatArray((t60 * 1.4f * RATE).toInt().coerceAtLeast(64))
         val svf = Dsp.TptSvf()
         var phase = 0.0
         for (i in out.indices) {
             val t = i.toFloat() / RATE
             val blip = 2f.pow(sweepSemis * Dsp.envAt(t, sweepT60) / 12f)
-            phase += base * blip / RATE
+            // Linear in semitones, which is what a portamento should be:
+            // constant semitones per second reads as an even slide.
+            val glideAt = (1f - t / glideTime).coerceIn(0f, 1f)
+            val slide = 2f.pow(-glideSemis * glideAt / 12f)
+            phase += base * blip * slide / RATE
 
             val source = sin(2.0 * PI * phase).toFloat()
             val driven = drive(source, driveAmt)
