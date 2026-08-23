@@ -34,9 +34,17 @@ class FathomTest {
     }
 
     @Test
-    fun `every voice declares exactly six macros`() {
+    fun `every voice declares the five shared macros plus its own`() {
+        val shared = listOf("TUNE", "GLIDE", "DRIVE", "CUTOFF", "DECAY")
+        val own = mapOf(
+            FathomVoice.DEEP to "SWEEP",
+            FathomVoice.GRIND to "SPREAD",
+            FathomVoice.GLASS to "RATIO",
+        )
         for (voice in FathomVoice.entries) {
-            assertEquals(6, Fathom.macrosFor(voice).size, "$voice should declare six macros")
+            val names = Fathom.macrosFor(voice).map { it.name }
+            assertEquals(names.size, names.toSet().size, "$voice declared a duplicate macro")
+            assertEquals(shared + own.getValue(voice), names, "$voice macro names or order")
         }
     }
 
@@ -120,8 +128,15 @@ class FathomTest {
 
     @Test
     fun `factory defaults classify consistently`() {
-        // Labels observed, not predicted - see the note in `a bass note is
-        // harmonic, not noise` for why.
+        // Labels observed, not predicted — see `a bass note is harmonic, not
+        // noise` for why we don't guess them.
+        //
+        // GRIND and GLASS agree here only because they currently share DEEP's
+        // sine path, differing just in root frequency. Task 3 gives GRIND
+        // detuned saws and Task 4 gives GLASS FM; when either lands, expect
+        // this test to fail. That is the signal that the voice now sounds
+        // different — re-observe and re-pin it. Do NOT tune a new voice to
+        // preserve an old label.
         assertEquals(DrumClass.KICK, Classifier.classify(Fathom.render(FathomVoice.DEEP)).drumClass)
         assertEquals(DrumClass.TOM, Classifier.classify(Fathom.render(FathomVoice.GRIND)).drumClass)
         assertEquals(DrumClass.TOM, Classifier.classify(Fathom.render(FathomVoice.GLASS)).drumClass)
