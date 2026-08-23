@@ -108,13 +108,17 @@ object Fathom {
         val glideTime = t60 * 0.35f
 
         // SPREAD is a beat-rate knob. Bass is low, so even a wide detune
-        // beats slowly — a throb at the bottom of the knob, a growl at the top.
+        // beats slowly — a throb at the bottom of the knob, a growl at the
+        // top. Split symmetrically about the centre: a one-sided detune
+        // would drag the perceived pitch sharp as the knob opens, which
+        // fights TUNE's exact semitone snapping.
         val spreadCents = Dsp.lin(m["SPREAD"] ?: 0f, 4f, 90f)
-        val detune = 2f.pow(spreadCents / 1200f)
+        val detune = 2f.pow(spreadCents / 2400f)       // half the spread, each way
 
         val out = FloatArray((t60 * 1.4f * RATE).toInt().coerceAtLeast(64))
         val svf = Dsp.TptSvf()
         var phase = 0.0
+        var phaseLow = 0.0
         var phase2 = 0.0
         for (i in out.indices) {
             val t = i.toFloat() / RATE
@@ -131,10 +135,11 @@ object Fathom {
 
             val source = when (voice) {
                 FathomVoice.GRIND -> {
+                    phaseLow += pitchHz / detune / RATE
                     phase2 += pitchHz * detune / RATE
                     // The hollowness *is* the beating between the two saws.
                     // No comb or notch stage — interference alone does it.
-                    0.5f * (saw(phase) + saw(phase2))
+                    0.5f * (saw(phaseLow) + saw(phase2))
                 }
                 else -> sin(2.0 * PI * phase).toFloat()
             }

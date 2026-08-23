@@ -69,6 +69,8 @@ class FathomTest {
             val snip = Fathom.render(FathomVoice.GRIND, macros)
             assertTrue(snip.samples.all { it.isFinite() }, "GRIND rendered NaN/Inf for $macros")
             assertTrue(snip.samples.any { kotlin.math.abs(it) > 0.1f }, "GRIND rendered silence for $macros")
+            val dc = snip.samples.average().toFloat()
+            assertTrue(kotlin.math.abs(dc) < 0.05f, "GRIND has DC offset $dc for $macros")
         }
     }
 
@@ -85,6 +87,9 @@ class FathomTest {
         val wide = beatRipple(
             Fathom.render(FathomVoice.GRIND, mapOf("SPREAD" to 1f, "DECAY" to 1f, "DRIVE" to 0f)),
         )
+        // Measured 0.0152 -> 0.1959, a 12.9x separation. The 4x factor leaves
+        // three-fold headroom so this does not turn fragile if GRIND's
+        // defaults are ever retuned.
         assertTrue(wide > narrow * 4f, "SPREAD should ripple deeper: $narrow -> $wide")
     }
 
