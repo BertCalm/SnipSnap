@@ -16,6 +16,7 @@ L ≈ a week-plus of sessions).
 | Synthesis (`:synth`) | done, tested — seven engines, FX rack, recipes, groove, S5 instrument suite with loop points |
 | Design | done — TapeOS system, six schemes, ten artboards, **two fully working phone-frame prototypes** (Oilslick, Clear) |
 | Acceptance artifacts (`testkit/`) | done — 14 downloadable checks, from the diag kit to the one-file Session project |
+| CLI (`:cli`) | done, tested — `snipsnap.jar`: chop → classify → place → export from any desktop; the classifier's real-audio calibration tool (`docs/CLI.md`) |
 | **The Android app** | **not started** — the only unbuilt product surface |
 | Hardware verification | drums passed; keys, instruments, `.xpn`, tile, Session pending (user) |
 
@@ -168,8 +169,9 @@ In value order, artifacts already on the branch under `testkit/`:
 
 ```
 desktop session : M0 → M1 → M2 → M3 → M4 → M5        (the app, in order)
-this session    : core support on demand · odds-and-ends S items ·
-                  Live III save ingestion when it arrives
+this session    : CLI ✓ · the :shell view-model layer · core support on
+                  demand · odds-and-ends S items · Live III save ingestion
+                  when it arrives
 user            : one card session (Part 2) — ideally before M5, so the
                   export wizard ships against fully verified formats
 ```

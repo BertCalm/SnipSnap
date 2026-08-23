@@ -1,0 +1,147 @@
+package com.snipsnap.cli
+
+import com.snipsnap.kit.ExportBlockedException
+import java.io.PrintStream
+import kotlin.system.exitProcess
+
+fun main(args: Array<String>) {
+    exitProcess(Cli.run(args))
+}
+
+/** A user-facing mistake: bad arguments, missing files, unknown formats. */
+class CliError(message: String) : Exception(message)
+
+/**
+ * The SnipSnap CLI — the whole product loop minus live capture, runnable
+ * anywhere a JVM runs.
+ *
+ * Point it at an audio file and out comes a kit: chopped at the hits,
+ * classified, laid out on the pads people expect, exportable in every
+ * format the writers speak — MPC 2 program folder, browsable expansion,
+ * one-file `.xpn`, native MPC 3 `.xtd`, or a whole `.xpj` project.
+ *
+ * It exists for three reasons: kits can be made from a desktop today,
+ * before the Android app ships; it is the first place the classifier
+ * meets *real* audio rather than synthetic test material (the calibration
+ * pass docs/CONCEPT.md asks for); and when the app misbehaves, this is
+ * the same pipeline with no phone in the way.
+ */
+object Cli {
+
+    val USAGE = """
+        |snipsnap - chop audio into MPC kits from the command line
+        |
+        |usage: snipsnap <command> [options]
+        |
+        |commands:
+        |  chop <input.wav>      chop, classify, auto-place, and build a kit folder
+        |  classify <wav...>     print what the classifier hears in each file
+        |  export <kit-dir>      export an existing kit folder to MPC formats
+        |  help                  this text
+        |
+        |chop options:
+        |  --name NAME       kit name (default: the input's file name, sanitized)
+        |  --out DIR         output root (default: snipsnap-out)
+        |  --slices N        chop at the N strongest hits (default 16)
+        |  --grid N          chop into N equal parts instead of following hits
+        |  --place / --no-place
+        |                    force auto-placement on or off (default: on when
+        |                    following hits, off on a grid - a grid's order is
+        |                    usually the point)
+        |  --balance         set per-pad levels so the kit sits right as a mix
+        |  --key SPEC        retune tonal pads into a key: Am, C, F#m, Eb major,
+        |                    Dminpent, Gchromatic
+        |  --export LIST     comma-separated: ${Exports.FORMATS.joinToString(",")}
+        |  --overwrite       replace same-named output
+        |
+        |export options: --export LIST, --out DIR, --overwrite (as above)
+        |
+        |Exports land under <out>/card/ - copy its contents onto the MPC's
+        |SD card or USB drive as-is.
+    """.trimMargin()
+
+    fun run(
+        args: Array<String>,
+        out: PrintStream = System.out,
+        err: PrintStream = System.err,
+    ): Int {
+        if (args.isEmpty()) {
+            err.println(USAGE)
+            return 2
+        }
+        return try {
+            when (args[0]) {
+                "chop" -> ChopCommand.run(args.drop(1), out)
+                "classify" -> ClassifyCommand.run(args.drop(1), out)
+                "export" -> ExportCommand.run(args.drop(1), out)
+                "help", "--help", "-h" -> {
+                    out.println(USAGE)
+                    0
+                }
+                else -> {
+                    err.println("snipsnap: unknown command '${args[0]}'")
+                    err.println(USAGE)
+                    2
+                }
+            }
+        } catch (e: CliError) {
+            err.println("snipsnap: ${e.message}")
+            2
+        } catch (e: ExportBlockedException) {
+            // Preflight refused to write a kit it knows is broken; show the
+            // full checklist, not just the failure line.
+            err.println("snipsnap: export blocked by preflight")
+            e.findings.forEach { err.println("  [${it.severity}] ${it.message}") }
+            1
+        } catch (e: IllegalArgumentException) {
+            err.println("snipsnap: ${e.message}")
+            1
+        } catch (e: java.io.IOException) {
+            err.println("snipsnap: ${e.message}")
+            1
+        }
+    }
+}
+
+/**
+ * Just enough option parsing: `--flag`, `--opt value`, `--opt=value`,
+ * everything else positional. Unknown options are errors — a typo that
+ * silently becomes a positional argument is how files get misread.
+ */
+class Options private constructor(
+    val positional: List<String>,
+    private val values: Map<String, String>,
+    private val flags: Set<String>,
+) {
+    operator fun get(name: String): String? = values[name]
+    fun has(name: String): Boolean = name in flags
+
+    fun int(name: String): Int? = values[name]?.let {
+        it.toIntOrNull() ?: throw CliError("$name wants a number, got '$it'")
+    }
+
+    companion object {
+        fun parse(args: List<String>, valued: Set<String>, boolean: Set<String>): Options {
+            val positional = mutableListOf<String>()
+            val values = mutableMapOf<String, String>()
+            val flags = mutableSetOf<String>()
+            var i = 0
+            while (i < args.size) {
+                val a = args[i]
+                when {
+                    !a.startsWith("--") -> positional += a
+                    a.substringBefore('=') in valued && a.contains('=') ->
+                        values[a.substringBefore('=')] = a.substringAfter('=')
+                    a in boolean -> flags += a
+                    a in valued -> {
+                        if (i + 1 >= args.size) throw CliError("$a wants a value")
+                        values[a] = args[++i]
+                    }
+                    else -> throw CliError("unknown option '$a' (see: snipsnap help)")
+                }
+                i++
+            }
+            return Options(positional, values, flags)
+        }
+    }
+}

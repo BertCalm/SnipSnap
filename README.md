@@ -33,7 +33,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 455 tests across six modules
+./gradlew test    # 466 tests across seven modules
 ```
 
 ### `:audio`
@@ -269,11 +269,30 @@ the commercial keygroup programs in `reference/golden/keygroup/`
 (see [`docs/XPM_STRUCTURE.md`](docs/XPM_STRUCTURE.md#what-keygroupwriter-gets-wrong)).
 `testkit/SnipSnap Keys` is the remaining on-hardware acceptance check.
 
+### `:cli`
+
+The product loop minus live capture, as one runnable jar — see
+[`docs/CLI.md`](docs/CLI.md):
+
+```
+./gradlew :cli:snipsnapJar    # -> cli/build/libs/snipsnap.jar
+java -jar snipsnap.jar chop break.wav --balance --export folder,xtd,xpj
+```
+
+`chop` reads any WAV, estimates tempo, chops at the hits (or on a grid),
+classifies every slice, auto-places the kit, and fans out to any export
+format the writers speak. `classify` prints class + confidence + the
+features behind the verdict — the calibration tool for tuning thresholds
+on real captures. `export` runs the format fan-out over any existing kit
+folder. It means kits can be made from a desktop today, and it's the first
+place the classifier meets real audio instead of synthetic test material.
+
 ## Docs
 
 - [`docs/CONCEPT.md`](docs/CONCEPT.md) — product shape, MVP cut, architecture
 - [`docs/APP_PLAN.md`](docs/APP_PLAN.md) — **the remaining work, scoped**: the Android app milestone by milestone, the hardware queue, and the odds and ends
 - [`docs/ANDROID_CAPTURE.md`](docs/ANDROID_CAPTURE.md) — how capture actually works and where it breaks
+- [`docs/CLI.md`](docs/CLI.md) — the SnipSnap CLI: chop a file into a kit from any desktop
 - [`docs/MPC_EXPORT.md`](docs/MPC_EXPORT.md) — folder layouts and export paths
 - [`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md) — the MPC 3 container, drum and keygroup schemas, verified against real Akai content
 - [`docs/XPM_STRUCTURE.md`](docs/XPM_STRUCTURE.md) — the MPC 2 format, its provenance, and what's still unverified
