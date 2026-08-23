@@ -63,7 +63,17 @@ object Tonewheel {
         return 110f * 2f.pow(semis / 12f)
     }
 
-    fun render(voice: TonewheelVoice, macros: Map<String, Float> = emptyMap()): Snip {
+    fun render(
+        voice: TonewheelVoice,
+        macros: Map<String, Float> = emptyMap(),
+        /**
+         * How long the key is held. The default is the one-shot stab the
+         * drum kits use; the key-patch instruments hold it long enough to
+         * cut a sustain loop from the steady region.
+         */
+        gateSeconds: Float = GATE_SECONDS,
+    ): Snip {
+        require(gateSeconds in 0.1f..8f) { "gateSeconds out of range: $gateSeconds" }
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -74,7 +84,7 @@ object Tonewheel {
         // Organ taper: drawbar throw is roughly logarithmic in level.
         val amps = FloatArray(8) { m.getValue("BAR${it + 1}").pow(1.6f) }
 
-        val total = GATE_SECONDS + RELEASE_SECONDS
+        val total = gateSeconds + RELEASE_SECONDS
         val out = FloatArray((total * RATE).toInt())
         val phases = DoubleArray(8)
         var percPhase = 0.0
@@ -98,8 +108,8 @@ object Tonewheel {
 
             val gate = when {
                 t < 0.004f -> t / 0.004f
-                t < GATE_SECONDS -> 1f
-                else -> (1f - (t - GATE_SECONDS) / RELEASE_SECONDS).coerceAtLeast(0f)
+                t < gateSeconds -> 1f
+                else -> (1f - (t - gateSeconds) / RELEASE_SECONDS).coerceAtLeast(0f)
             }
             // DIRT pushes *into* the drive: without the level boost a
             // quarter-scale bar sum barely tickles the tanh and "full dirt"

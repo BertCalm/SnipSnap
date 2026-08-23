@@ -606,8 +606,10 @@ class Mpc3TrackWriter(
         "sliceInfo" to obj(
             "Start" to i(0),
             "End" to i(zone?.frameCount ?: 0L),
-            "LoopStart" to i(0),
-            "LoopMode" to i(0),
+            // The sustain loop as PSK's rolls write it: LoopMode 1 +
+            // LoopStart, looping to End.
+            "LoopStart" to i(zone?.loopStartFrame ?: 0L),
+            "LoopMode" to i(if ((zone?.loopStartFrame ?: 0L) > 0L) 1 else 0),
             "PulsePosition" to i(0),
             "LoopCrossfadeLength" to i(if (filledInstrument) -1 else 0),
             "LoopCrossfadeType" to i(0),

@@ -162,6 +162,22 @@ Regenerate with `./gradlew :synth:generateMpc3Keys`. Things to confirm:
 it loads as an instrument track, plays **in tune chromatically** across
 the pads, and soft hits use the darker layer.
 
+### Instruments/ — the S5 suite, dual-generation
+
+Four playable key instruments, engines at exact MIDI pitch, multisampled
+every minor third across two octaves: **SnipSnap EP** (TINES electric piano
+— soft hits are *rendered darker*, not attenuated), **SnipSnap Organ**
+(TONEWHEEL held down, with a sustain loop cut at an exact whole number of
+waveform periods — hold a pad and it sings forever), **SnipSnap Harp**
+(PLUCK), **SnipSnap Music Box** (TINES chime twins). Regenerate with
+`./gradlew :synth:generateInstrumentSuite`.
+
+Each instrument ships the Timeless Glow dual-generation layout: the `.xty`
+loads on MPC 3; an MPC 2 machine browses into `_[TrackData]/` and finds the
+`.xpm` sitting with its samples. Things to confirm: each loads, plays in
+tune chromatically, the EP's soft hits sound darker, and — the big one —
+**held organ pads sustain indefinitely** with no audible loop seam.
+
 ### SnipSnap_Factory.xpn — one-file import
 
 The factory kit as a single `.xpn` archive, in the layout every real

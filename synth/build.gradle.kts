@@ -58,6 +58,16 @@ tasks.register<JavaExec>("generateMpc3Kit") {
     args("${rootDir}/testkit")
 }
 
+/** Render the S5 instrument suite (dual-generation) into testkit/Instruments/. See InstrumentSuiteGenerator. */
+tasks.register<JavaExec>("generateInstrumentSuite") {
+    group = "distribution"
+    description = "Render the four-instrument S5 suite as .xty + .xpm twins under testkit/Instruments/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.InstrumentSuiteGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 /** Render the keygroup program as a native MPC 3 .xty into testkit/. See Mpc3KeysGenerator. */
 tasks.register<JavaExec>("generateMpc3Keys") {
     group = "distribution"
