@@ -124,4 +124,75 @@ class BlockBakerTest {
         assertEquals(s.intervalFrames, baked.frameCount)
         assertEquals(0.5f, baked.samples[1], "right channel should carry the same mono signal as the left")
     }
+
+    /** Four evenly spaced clicks: unambiguous onsets for the detector. */
+    private fun clicks(frames: Int, count: Int, rate: Int = 48_000): Snip {
+        val out = FloatArray(frames * 2)
+        val every = frames / count
+        for (c in 0 until count) {
+            val at = c * every
+            for (i in 0 until 600) {
+                val f = at + i
+                if (f >= frames) break
+                // Short decaying burst — a transient the onset detector will find.
+                val v = (1f - i / 600f) * if (i % 3 == 0) 0.9f else -0.9f
+                out[f * 2] = v
+                out[f * 2 + 1] = v
+            }
+        }
+        return Snip(out, 2, rate)
+    }
+
+    @Test
+    fun `slices and re-places a loop that is far too long`() {
+        val s = session()
+        // 40% too long: well outside tolerance, so this must be sliced.
+        val tooLong = clicks((s.intervalFrames * 1.4).toInt(), count = 4)
+        val baked = BlockBaker.bake(LoopBlock("a.wav"), s, FakeSource(loops = mapOf("a.wav" to tooLong)))
+
+        assertEquals(s.intervalFrames, baked.frameCount)
+        assertEquals(2, baked.channels)
+        assertTrue(baked.peak() > 0.3f, "slices should still be audible, peak was ${baked.peak()}")
+    }
+
+    @Test
+    fun `slices and re-places a loop that is far too short`() {
+        val s = session()
+        val tooShort = clicks((s.intervalFrames * 0.6).toInt(), count = 4)
+        val baked = BlockBaker.bake(LoopBlock("a.wav"), s, FakeSource(loops = mapOf("a.wav" to tooShort)))
+
+        assertEquals(s.intervalFrames, baked.frameCount)
+        assertTrue(baked.peak() > 0.3f, "slices should still be audible, peak was ${baked.peak()}")
+    }
+
+    @Test
+    fun `keeps the first hit at the start of the interval`() {
+        val s = session()
+        val tooLong = clicks((s.intervalFrames * 1.4).toInt(), count = 4)
+        val baked = BlockBaker.bake(LoopBlock("a.wav"), s, FakeSource(loops = mapOf("a.wav" to tooLong)))
+
+        // Downbeat integrity: whatever else fitting does, the first slice must
+        // land at or near frame 0 or every loop starts late.
+        var firstLoud = -1
+        for (f in 0 until baked.frameCount) {
+            if (abs(baked.samples[f * 2]) > 0.2f) { firstLoud = f; break }
+        }
+        assertTrue(firstLoud in 0..2_000, "first hit landed at frame $firstLoud")
+    }
+
+    @Test
+    fun `falls back to trim and pad when there are no transients to slice on`() {
+        val s = session()
+        // A steady tone 40% too long has no onsets; slicing has nothing to work
+        // with and it must not return silence.
+        val tone = Snip(
+            FloatArray((s.intervalFrames * 1.4).toInt() * 2) { 0.4f },
+            2,
+            48_000,
+        )
+        val baked = BlockBaker.bake(LoopBlock("a.wav"), s, FakeSource(loops = mapOf("a.wav" to tone)))
+
+        assertEquals(s.intervalFrames, baked.frameCount)
+        assertTrue(baked.peak() > 0.3f, "fallback must not produce silence")
+    }
 }

@@ -1,7 +1,10 @@
 package com.snipsnap.loop
 
+import com.snipsnap.audio.Chopper
 import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Turns any block into exactly one interval of audio.
@@ -32,7 +35,55 @@ object BlockBaker {
         val raw = source.loop(block.sampleFile) ?: return silence(session)
         val atRate = Resampler.resample(raw, session.sampleRate)
         val stereo = toStereo(atRate)
-        return conform(stereo, session.intervalFrames)
+        val target = session.intervalFrames
+        if (stereo.frameCount == 0) return silence(session)
+
+        val drift = abs(stereo.frameCount - target).toDouble() / target
+        return if (drift <= FIT_TOLERANCE) conform(stereo, target) else retrigger(stereo, target)
+    }
+
+    /**
+     * Fit by slicing at transients and re-placing the slices on the new grid.
+     *
+     * The slices themselves are untouched — same pitch, same length, same decay.
+     * Only their positions scale. Stretched out, the gaps between hits grow;
+     * squeezed, hits overlap and sum. That is what Recycle did, what an MPC's
+     * chop-and-program does, and what SnipSnap's own Chopper was already built
+     * for.
+     */
+    private fun retrigger(snip: Snip, targetFrames: Int): Snip {
+        val slices = Chopper.byTransients(
+            snip,
+            maxSlices = 32,
+            cleanup = Chopper.SLICE_CLEANUP,
+        )
+        // Sustained material has no onsets to cut on. Trimming is a worse fit
+        // but an honest one; silence would be a bug.
+        if (slices.isEmpty()) return conform(snip, targetFrames)
+
+        // Onset detection cannot fire on an attack inside the first analysis window —
+        // the rectified energy derivative has no earlier window to rise from. A loop
+        // that starts on the downbeat therefore yields its first onset well after
+        // frame 0, and the head would be dropped. Recycle/REX always begin with a
+        // slice at the loop start; do the same.
+        val head = slices.first().sourceFrame
+        val placed = if (head > 0) {
+            listOf(Chopper.slice(snip, 0, head, onset = null, cleanup = Chopper.SLICE_CLEANUP)) + slices
+        } else {
+            slices
+        }
+
+        val out = FloatArray(targetFrames * 2)
+        val scale = targetFrames.toDouble() / snip.frameCount
+        for (slice in placed) {
+            val at = (slice.sourceFrame * scale).roundToInt()
+            if (at >= targetFrames) continue
+            val room = (targetFrames - at) * 2
+            val n = minOf(slice.snip.samples.size, room)
+            val base = at * 2
+            for (i in 0 until n) out[base + i] += slice.snip.samples[i]
+        }
+        return Snip(out, 2, snip.sampleRate)
     }
 
     /** Trim or zero-pad to exactly [targetFrames]. */
