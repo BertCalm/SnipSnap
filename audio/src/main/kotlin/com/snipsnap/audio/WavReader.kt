@@ -57,15 +57,30 @@ object WavReader {
 
         require(format != -1) { "no fmt chunk" }
         require(dataAt >= 0) { "no data chunk" }
-        require(format == FORMAT_PCM) { "unsupported WAV format code $format" }
-        require(bits == 16) { "unsupported bit depth $bits" }
+        require(format == FORMAT_PCM || format == FORMAT_FLOAT) {
+            "unsupported WAV format code $format (want 1 PCM or 3 float)"
+        }
+        if (format == FORMAT_FLOAT) {
+            require(bits == 32) { "float WAVs must be 32-bit, was $bits" }
+        } else {
+            require(bits == 8 || bits == 16 || bits == 24 || bits == 32) {
+                "unsupported bit depth $bits"
+            }
+        }
 
         val bytesPerSample = bits / 8
         val stride = bytesPerSample * channels
         val frames = dataLen / stride
         val out = FloatArray(frames * channels)
         for (i in out.indices) {
-            out[i] = leShort(bytes, dataAt + i * bytesPerSample).toShort() / 32768f
+            val at = dataAt + i * bytesPerSample
+            out[i] = when {
+                format == FORMAT_FLOAT -> Float.fromBits(leInt(bytes, at))
+                bits == 8 -> ((bytes[at].toInt() and 0xFF) - 128) / 128f
+                bits == 16 -> leShort(bytes, at).toShort() / 32768f
+                bits == 24 -> le24(bytes, at) / 8_388_608f
+                else -> leInt(bytes, at) / 2_147_483_648f
+            }
         }
         return Snip(out, channels, sampleRate)
     }
@@ -80,4 +95,12 @@ object WavReader {
             ((b[at + 1].toInt() and 0xFF) shl 8) or
             ((b[at + 2].toInt() and 0xFF) shl 16) or
             ((b[at + 3].toInt() and 0xFF) shl 24)
+
+    /** 24-bit little-endian, sign-extended into an Int. */
+    private fun le24(b: ByteArray, at: Int): Int {
+        val v = (b[at].toInt() and 0xFF) or
+            ((b[at + 1].toInt() and 0xFF) shl 8) or
+            ((b[at + 2].toInt() and 0xFF) shl 16)
+        return if (v and 0x800000 != 0) v or -0x1000000 else v
+    }
 }
