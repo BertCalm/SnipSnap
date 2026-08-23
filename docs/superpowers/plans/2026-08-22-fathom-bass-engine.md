@@ -499,34 +499,53 @@ Append to `FathomTest.kt`, inside the class:
 
 ```kotlin
     /**
-     * Beat count: sign changes of the amplitude envelope after the decay
-     * trend is divided out.
+     * How deeply the amplitude envelope ripples once its decay is removed —
+     * the depth of the beating between two detuned oscillators.
      *
-     * Crossings of the envelope's *global* mean cannot work here — the amp
-     * envelope decays monotonically, so it crosses its own mean once and the
-     * beating rides a slope it never out-climbs. Dividing each frame by its
-     * local trend removes the decay and leaves the ripple, which is the thing
-     * SPREAD controls.
+     * Depth, not rate. Counting zero crossings was tried and abandoned: at
+     * SPREAD=0 the beat is ~0.19 Hz, under one cycle across the whole note,
+     * so there is no rate to count and the number produced is the
+     * measurement's own noise floor.
+     *
+     * 50 ms frames — 4.1 cycles of GRIND's 82.4 Hz carrier. Shorter frames
+     * alias against the carrier and manufacture a ripple that has nothing to
+     * do with SPREAD; at 10 ms the artifact was larger than the signal and
+     * inverted the comparison. RMS rather than peak for the same reason:
+     * taking an extremum per frame is phase-sensitive.
+     *
+     * The trend is removed by a least-squares line through the log envelope.
+     * An exponential decay is a straight line in log space, so the fit
+     * removes it exactly and filters nothing — unlike a moving average,
+     * whose window is the same order as the beat period and absorbs the
+     * ripple it is meant to expose.
      */
-    private fun beatCrossings(snip: Snip): Int {
-        val win = Dsp.RATE / 100                       // 10 ms envelope frames
+    private fun beatRipple(snip: Snip): Float {
+        val win = Dsp.RATE / 20                        // 50 ms frames
         val env = snip.samples.asIterable().chunked(win) { frame ->
-            frame.maxOf { kotlin.math.abs(it) }
+            kotlin.math.sqrt(frame.sumOf { (it * it).toDouble() } / frame.size).toFloat()
         }
-        val body = env.drop(5).dropLast(5)             // skip attack and tail
-        if (body.size < 8) return 0
-        val span = 8
-        val detrended = body.indices.map { i ->
-            val lo = maxOf(0, i - span)
-            val hi = minOf(body.size - 1, i + span)
-            val trend = body.subList(lo, hi + 1).average().toFloat()
-            if (trend > 1e-6f) body[i] / trend else 1f
+        val body = env.drop(1).dropLast(1).filter { it > 1e-6f }
+        if (body.size < 8) return 0f
+
+        val logs = body.map { kotlin.math.ln(it.toDouble()) }
+        val n = logs.size
+        val meanX = (n - 1) / 2.0
+        val meanY = logs.average()
+        var sxy = 0.0
+        var sxx = 0.0
+        for (i in 0 until n) {
+            val dx = i - meanX
+            sxy += dx * (logs[i] - meanY)
+            sxx += dx * dx
         }
-        var crossings = 0
-        for (i in 1 until detrended.size) {
-            if ((detrended[i - 1] - 1f) * (detrended[i] - 1f) < 0f) crossings++
+        val slope = if (sxx > 0.0) sxy / sxx else 0.0
+
+        var sumSq = 0.0
+        for (i in 0 until n) {
+            val residual = logs[i] - (meanY + slope * (i - meanX))
+            sumSq += residual * residual
         }
-        return crossings
+        return kotlin.math.sqrt(sumSq / n).toFloat()
     }
 
     @Test
@@ -543,19 +562,22 @@ Append to `FathomTest.kt`, inside the class:
     }
 
     @Test
-    fun `SPREAD beats - wider detune modulates the envelope faster`() {
+    fun `SPREAD beats - wider detune ripples the envelope more deeply`() {
         // DRIVE pinned to 0. Saturation compresses amplitude variation, so at
         // the default DRIVE the beating survives as spectral movement rather
         // than envelope movement — real and musical, but invisible to an
         // envelope measurement. Isolating SPREAD from that confound is what
         // makes this a test of SPREAD.
-        val narrow = beatCrossings(
+        val narrow = beatRipple(
             Fathom.render(FathomVoice.GRIND, mapOf("SPREAD" to 0f, "DECAY" to 1f, "DRIVE" to 0f)),
         )
-        val wide = beatCrossings(
+        val wide = beatRipple(
             Fathom.render(FathomVoice.GRIND, mapOf("SPREAD" to 1f, "DECAY" to 1f, "DRIVE" to 0f)),
         )
-        assertTrue(wide > narrow * 2f, "SPREAD should beat faster: $narrow -> $wide envelope crossings")
+        // Measured 0.0164 -> 0.2024, a 12.3x separation. The 4x factor leaves
+        // three-fold headroom so this does not turn fragile if GRIND's
+        // defaults are ever retuned.
+        assertTrue(wide > narrow * 4f, "SPREAD should ripple deeper: $narrow -> $wide")
     }
 ```
 
