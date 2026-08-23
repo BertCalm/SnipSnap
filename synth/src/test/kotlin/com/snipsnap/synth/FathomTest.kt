@@ -7,6 +7,7 @@ import com.snipsnap.audio.Snip
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class FathomTest {
@@ -310,5 +311,29 @@ class FathomTest {
             hard.centroidHz > soft.centroidHz * 1.5f,
             "DRIVE should add sidebands as well as harmonics: ${soft.centroidHz}Hz -> ${hard.centroidHz}Hz",
         )
+    }
+
+    @Test
+    fun `a FATHOM patch round-trips through JSON`() {
+        val original = FathomPatch(
+            name = "Sliding Sub",
+            voice = FathomVoice.DEEP,
+            macros = mapOf("GLIDE" to 0.8f, "DRIVE" to 0.6f),
+        )
+        val restored = Patches.fromJsonText(original.toJsonText())
+        assertEquals(original.engine, restored.engine)
+        assertEquals(original.voiceName, restored.voiceName)
+        assertEquals(original.macros, restored.macros)
+        assertTrue(
+            original.render().samples.contentEquals(restored.render().samples),
+            "a restored patch must render identical audio",
+        )
+    }
+
+    @Test
+    fun `a FATHOM patch rejects a macro the voice does not have`() {
+        assertFailsWith<IllegalArgumentException> {
+            FathomPatch("Bad", FathomVoice.DEEP, mapOf("SPREAD" to 0.5f))
+        }
     }
 }
