@@ -970,10 +970,17 @@ Replace the number in `./gradlew test    # NNN tests across six modules` with th
 
 ```bash
 grep -n "FATHOM" README.md docs/SYNTH_ROADMAP.md
-grep -rniE "808|303|reese|dx7?" synth/src/main/kotlin/com/snipsnap/synth/Fathom.kt docs/SYNTH_ROADMAP.md README.md
+grep -rniE '\b(808|909|303|707|727|606|Reese|DX7|Juno|Jupiter|Moog|Prophet|Oberheim|Yamaha|Roland|Korg|Linn)\b' \
+  synth/src/main/kotlin/com/snipsnap/synth/Fathom.kt \
+  synth/src/test/kotlin/com/snipsnap/synth/FathomTest.kt \
+  docs/SYNTH_ROADMAP.md README.md
 ```
 
-Expected: FATHOM appears in both docs. The second grep must print **nothing** — that is the naming guardrail holding.
+Expected: FATHOM appears in both docs. The second grep must print **nothing** from `Fathom.kt` or `FathomTest.kt` — that is the naming guardrail holding.
+
+Word boundaries matter here. An earlier version of this check used `dx7?`, which makes the `7` optional and therefore matches `idx` and `fmIndex` — it fired on ordinary variable names and produced a false alarm. A guardrail that cries wolf is a guardrail people learn to wave through.
+
+Two hits in the docs are expected and correct: `SYNTH_ROADMAP.md` names the brands *in the rule that forbids them*, and `README.md` names Akai as the target hardware. The guardrail forbids naming our sounds after machines, not naming the device we export to.
 
 - [ ] **Step 5: Commit**
 
