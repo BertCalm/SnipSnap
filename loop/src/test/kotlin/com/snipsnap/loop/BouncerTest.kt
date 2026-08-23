@@ -6,6 +6,7 @@ import java.io.File
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class BouncerTest {
@@ -151,5 +152,53 @@ class BouncerTest {
         val secondRight = out.samples[(s.intervalFrames + 100) * 2 + 1]
         assertTrue(abs(firstRight - -0.25f) < 1e-5f, "first interval right was $firstRight")
         assertTrue(abs(secondRight - -0.05f) < 1e-5f, "second interval right was $secondRight")
+    }
+
+    @Test
+    fun `refuses to render a pathological cycle that would OOM`() {
+        // Chain lengths of 5, 7, 8 and 3 (each within Session.MAX_CHAIN) give
+        // an LCM of 840. At 8 bars and 40 BPM (both legal extremes) that is
+        // gigabytes of interleaved float audio buffered at once — a render
+        // this large must fail with a clear message, not an OOM.
+        val tracks = listOf(5, 7, 8, 3, 1, 1).mapIndexed { i, n ->
+            Track("t$i", (1..n).map { LoopBlock("t$i-$it.wav") })
+        }
+        val s = Session(tracks = tracks, bpm = 40f, barsPerInterval = 8, sampleRate = 48_000)
+        assertEquals(840, Arrangement.cycleIntervals(s))
+
+        val ex = assertFailsWith<IllegalArgumentException> {
+            Bouncer.render(s, FakeSource(emptyMap()))
+        }
+        assertTrue(ex.message!!.contains("840"), "message should name the cycle length: ${ex.message}")
+        assertTrue(ex.message!!.contains("intervals"), "message should name the interval count: ${ex.message}")
+    }
+
+    @Test
+    fun `a second close does not overwrite the file`() {
+        val s = session(1, 1, 1, 1, 1, 1)
+        val map = HashMap<String, Snip>()
+        for (t in s.tracks) for (b in t.chain) map[(b as LoopBlock).sampleFile] = dc(s.intervalFrames, 0.5f)
+
+        val file = File.createTempFile("snipsnap-bounce-idempotent", ".wav")
+        file.deleteOnExit()
+
+        val sink = WavSink(file, s.sampleRate)
+        Bouncer.toSink(s, FakeSource(map), sink, intervals = 1)
+        sink.close()
+        val sizeAfterFirstClose = file.length()
+        val decodedAfterFirstClose = WavReader.read(file)
+        assertEquals(s.intervalFrames, decodedAfterFirstClose.frameCount)
+
+        // Closeable.use{} calls close() on the way out even if the caller
+        // also closed explicitly; a second close must be a no-op.
+        sink.close()
+
+        assertEquals(sizeAfterFirstClose, file.length(), "second close must not rewrite the file")
+        val decoded = WavReader.read(file)
+        assertEquals(
+            s.intervalFrames,
+            decoded.frameCount,
+            "second close must not truncate the file to a 0-sample WAV",
+        )
     }
 }

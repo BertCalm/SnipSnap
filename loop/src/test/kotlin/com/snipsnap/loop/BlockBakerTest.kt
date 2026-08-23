@@ -80,10 +80,27 @@ class BlockBakerTest {
         // does. The ramp starts at 0, so the retained head should still start
         // near 0 — not near the source's tail value (close to 1).
         assertTrue(baked.samples[0] < 0.001f, "trim should keep the head (near-zero start), not the tail")
-        val expectedLast = (s.intervalFrames - 1).toFloat() / longFrames
+
+        // A trim now carries BlockBaker.TAIL_FADE_MS of fade-out, so the very
+        // last frame is deliberately pulled toward zero rather than landing on
+        // the ramp's raw value — check a frame safely before that window
+        // instead, which still proves the retained head ends where the head
+        // ends, not where the source ends.
+        val fadeFrames = (BlockBaker.TAIL_FADE_MS / 1000f * s.sampleRate).toInt()
+        val checkFrame = s.intervalFrames - fadeFrames - 1
+        val expectedAtCheck = checkFrame.toFloat() / longFrames
         assertTrue(
-            abs(baked.samples[baked.samples.size - 2] - expectedLast) < 1e-4f,
-            "last retained frame should land where the head ends, not where the source ends",
+            abs(baked.samples[checkFrame * 2] - expectedAtCheck) < 1e-4f,
+            "frame before the tail fade should land where the head ends, not where the source ends",
+        )
+
+        // The last frame itself should now be pulled toward zero by the tail
+        // fade rather than sitting at the ramp's raw (near-1) value.
+        val lastFrame = baked.samples[baked.samples.size - 2]
+        val rawLastValue = (s.intervalFrames - 1).toFloat() / longFrames
+        assertTrue(
+            abs(lastFrame) < abs(rawLastValue) / 2f,
+            "last sample should be faded toward zero, got $lastFrame (raw would have been $rawLastValue)",
         )
     }
 
@@ -153,6 +170,66 @@ class BlockBakerTest {
         assertEquals(s.intervalFrames, baked.frameCount)
         assertEquals(2, baked.channels)
         assertTrue(baked.peak() > 0.3f, "slices should still be audible, peak was ${baked.peak()}")
+    }
+
+    @Test
+    fun `fades the tail of a squeezed retrigger instead of ending mid-waveform`() {
+        val s = session()
+        // Silence, then a sustained full-scale square wave with no decay of
+        // its own, all the way to the very end of the source. One sharp
+        // onset at `quietFrames` gives the chopper one big trailing slice
+        // that runs clean off the end of the source — so the slice's own
+        // SLICE_CLEANUP fade-out (which targets the slice's *own* end) never
+        // gets reached by the truncated copy, and the only thing standing
+        // between this buffer and a click at the loop point is BlockBaker's
+        // own tail fade. A square wave, not a constant DC value: Cleanup's
+        // own DC-offset removal treats a non-oscillating constant as pure
+        // bias and erases it, which a real capture never looks like.
+        val quietFrames = 1_000
+        val level = 0.8f
+        val totalFrames = (s.intervalFrames * 1.4).toInt() // squeeze: source longer than target
+        val raw = FloatArray(totalFrames * 2)
+        for (f in quietFrames until totalFrames) {
+            val v = if (f % 2 == 0) level else -level
+            raw[f * 2] = v
+            raw[f * 2 + 1] = v
+        }
+        val loud = Snip(raw, 2, 48_000)
+
+        val baked = BlockBaker.bake(LoopBlock("a.wav"), s, FakeSource(loops = mapOf("a.wav" to loud)))
+        assertEquals(s.intervalFrames, baked.frameCount)
+
+        // A hard truncation would leave the very last sample sitting at (or
+        // near) the sustained level; the fade must pull it well below that.
+        val lastLeft = baked.samples[baked.samples.size - 2]
+        assertTrue(
+            abs(lastLeft) < level / 4f,
+            "final sample should be faded toward zero, not left mid-waveform: got $lastLeft",
+        )
+
+        // And it should be an actual ramp across the fade window, not a
+        // single zeroed sample: magnitude grows monotonically as frames move
+        // away from the very last one, back toward the sustained level.
+        val fadeFrames = (BlockBaker.TAIL_FADE_MS / 1000f * s.sampleRate).toInt()
+        var previous = 0f
+        for (i in 0 until fadeFrames) {
+            val frame = s.intervalFrames - 1 - i
+            val v = abs(baked.samples[frame * 2])
+            assertTrue(
+                v >= previous - 1e-6f,
+                "magnitude should not decrease moving away from the last frame: frame $frame was $v after $previous",
+            )
+            previous = v
+        }
+
+        // A frame well outside the fade window should still carry the
+        // sustained, un-faded level — proof this is a tail fade, not a
+        // reduction of the whole buffer.
+        val untouchedFrame = s.intervalFrames - fadeFrames - 500
+        assertTrue(
+            abs(abs(baked.samples[untouchedFrame * 2]) - level) < 1e-3f,
+            "audio well before the fade window should be untouched, got ${baked.samples[untouchedFrame * 2]}",
+        )
     }
 
     @Test

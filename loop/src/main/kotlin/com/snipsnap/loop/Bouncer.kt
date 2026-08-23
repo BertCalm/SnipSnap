@@ -15,14 +15,48 @@ import java.io.File
 object Bouncer {
 
     /**
+     * Upper bound on the size of the final merged buffer a single [render]
+     * call will allocate, in bytes.
+     *
+     * [render] holds the *entire* rendered cycle as one in-memory buffer
+     * before handing it back. A cycle is the least common multiple of the
+     * chain lengths, which grows fast — chains of 5, 7, 8 and 3 (all legal:
+     * [Session.MAX_CHAIN] is 8) give 840 intervals, and at roughly 4 MB per
+     * interval that is gigabytes, an OOM with no useful message. This bound
+     * is checked against that final array's size alone; actual peak memory
+     * is roughly double it, since the per-interval chunks (in `BufferSink`)
+     * are still alive while the merged array is being filled. 512 MB — so a
+     * peak near 1 GB — is comfortably above any real bounce (a single
+     * track's worth of intervals, or a handful of bars looped) while still
+     * catching any render whose total exceeds the bound, with margin left
+     * before it threatens typical JVM heap sizes. A render that hits this
+     * must go through [toSink] in smaller batches against a streaming
+     * [AudioSink] instead — [render] is not the only way to reach a sink;
+     * see [WavSink]'s KDoc for the one that deliberately isn't guarded.
+     */
+    const val MAX_RENDER_BYTES = 512L * 1024 * 1024
+
+    /**
      * Render [intervals] of [session], or one full phase cycle when 0.
      *
      * A cycle is the least common multiple of the chain lengths, which grows
      * fast — chains of 5, 7, 8 and 3 give 840 intervals. Call
      * [Arrangement.cycleIntervals] and show the number before rendering one.
+     *
+     * Throws [IllegalArgumentException] rather than let the JVM OOM when the
+     * requested render would exceed [MAX_RENDER_BYTES]; see that constant.
      */
     fun render(session: Session, source: SampleSource, intervals: Int = 0): Snip {
-        val count = if (intervals > 0) intervals else Arrangement.cycleIntervals(session)
+        val cycle = Arrangement.cycleIntervals(session)
+        val count = if (intervals > 0) intervals else cycle
+        val bytesPerInterval = session.intervalFrames.toLong() * 2 * Float.SIZE_BYTES
+        val totalBytes = bytesPerInterval * count
+        require(totalBytes <= MAX_RENDER_BYTES) {
+            "render is too large to buffer in memory: cycle length $cycle, " +
+                "$count intervals requested, ${totalBytes / (1024 * 1024)} MB " +
+                "(limit ${MAX_RENDER_BYTES / (1024 * 1024)} MB). " +
+                "Render in smaller batches via Bouncer.toSink against a streaming AudioSink instead."
+        }
         val sink = BufferSink(session.sampleRate)
         toSink(session, source, sink, count)
         return sink.toSnip()
@@ -68,9 +102,28 @@ object Bouncer {
  * A sink that writes a WAV.
  *
  * Buffers the whole render and writes on [close] because WavWriter takes a
- * finished Snip. A full cycle at 4 bars and 90 BPM is roughly 4 MB per
- * interval — fine for a bounce, which is not something you do sixty times a
- * second.
+ * finished Snip. That means the whole *cycle* sits in memory at once, not
+ * just one interval — a single interval is roughly 4 MB at 4 bars and
+ * 90 BPM, fine on its own, but a full cycle multiplies that by the interval
+ * count, which [Arrangement.cycleIntervals] can put in the hundreds.
+ *
+ * `WavSink` is reached only through [Bouncer.toSink], never through
+ * [Bouncer.render] — `render` builds its own private in-memory sink and
+ * never touches this class. [Bouncer.toSink] is the deliberate escape hatch
+ * for a render too large for `render`'s [Bouncer.MAX_RENDER_BYTES] bound
+ * (batch it across multiple `toSink` calls against a streaming
+ * [AudioSink]), so `toSink` itself is intentionally left unguarded — which
+ * also means a caller pointing `toSink` at a `WavSink` for a very large
+ * interval count is buffering that whole count in memory here, unchecked,
+ * and is responsible for keeping it sane. Fine for a bounce of reasonable
+ * length, which is not something you do sixty times a second; a
+ * pathological chain configuration handed to `render`'s default is caught
+ * before it ever gets this far, but nothing stops the same thing being fed
+ * to a `WavSink` directly via `toSink`.
+ *
+ * Implements [Closeable] to support `use {}`, so [close] must be safe to
+ * call more than once — the second call is a no-op rather than clearing
+ * [chunks] and overwriting a good file with a 0-sample WAV.
  */
 class WavSink(
     private val file: File,
@@ -80,10 +133,13 @@ class WavSink(
 
     override val channels = 2
     private val chunks = ArrayList<FloatArray>()
+    private var closed = false
 
     override fun write(block: FloatArray) { chunks.add(block.copyOf()) }
 
     override fun close() {
+        if (closed) return
+        closed = true
         val total = chunks.sumOf { it.size }
         val out = FloatArray(total)
         var at = 0
