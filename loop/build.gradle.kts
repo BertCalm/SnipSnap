@@ -9,6 +9,7 @@ repositories {
 dependencies {
     implementation(project(":json"))
     implementation(project(":audio"))
+    implementation(project(":kit"))
     testImplementation(kotlin("test"))
 }
 
