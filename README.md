@@ -31,7 +31,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 412 tests across six modules
+./gradlew test    # 410 tests across six modules
 ```
 
 ### `:audio`

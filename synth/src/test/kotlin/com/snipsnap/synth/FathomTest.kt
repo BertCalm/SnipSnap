@@ -61,17 +61,31 @@ class FathomTest {
     }
 
     @Test
-    fun `GRIND renders clean audio at defaults and both corners`() {
-        for (macros in listOf(
-            emptyMap(),
-            Fathom.macrosFor(FathomVoice.GRIND).associate { it.name to 0f },
-            Fathom.macrosFor(FathomVoice.GRIND).associate { it.name to 1f },
-        )) {
-            val snip = Fathom.render(FathomVoice.GRIND, macros)
-            assertTrue(snip.samples.all { it.isFinite() }, "GRIND rendered NaN/Inf for $macros")
-            assertTrue(snip.samples.any { kotlin.math.abs(it) > 0.1f }, "GRIND rendered silence for $macros")
-            val dc = snip.samples.average().toFloat()
-            assertTrue(kotlin.math.abs(dc) < 0.05f, "GRIND has DC offset $dc for $macros")
+    fun `every voice renders clean audio at defaults, both corners, and DEEP's cross corners`() {
+        for (voice in FathomVoice.entries) {
+            val cases = listOf(
+                emptyMap(),
+                Fathom.macrosFor(voice).associate { it.name to 0f },
+                Fathom.macrosFor(voice).associate { it.name to 1f },
+                // Cross corners, not just uniform ones: a full GLIDE at the
+                // bottom of the tuning range starts the slide an octave below
+                // TUNE=0's root, and the shortest DECAY gives the clamp the
+                // least room to work in. Both macros are shared by every
+                // voice, so the corners apply to all three, not just DEEP.
+                mapOf("GLIDE" to 1f, "TUNE" to 0f),
+                mapOf("GLIDE" to 1f, "TUNE" to 0f, "DECAY" to 0f),
+            )
+            for (macros in cases) {
+                val snip = Fathom.render(voice, macros)
+                assertTrue(snip.samples.isNotEmpty(), "$voice rendered nothing for $macros")
+                assertTrue(snip.samples.all { it.isFinite() }, "$voice rendered NaN/Inf for $macros")
+                assertTrue(snip.samples.any { kotlin.math.abs(it) > 0.1f }, "$voice rendered silence for $macros")
+                val dc = snip.samples.average().toFloat()
+                // Worst case measured across all three voices, all five
+                // cases: 0.0283 (DEEP, GLIDE=1/TUNE=0/DECAY=0). 0.05 leaves
+                // headroom rather than pinning the observed ceiling exactly.
+                assertTrue(kotlin.math.abs(dc) < 0.05f, "$voice has DC offset $dc for $macros")
+            }
         }
     }
 
@@ -92,34 +106,25 @@ class FathomTest {
         // three-fold headroom so this does not turn fragile if GRIND's
         // defaults are ever retuned.
         assertTrue(wide > narrow * 4f, "SPREAD should ripple deeper: $narrow -> $wide")
-    }
 
-    @Test
-    fun `DEEP renders clean audio at defaults and both corners`() {
-        for (macros in listOf(
-            emptyMap(),
-            Fathom.macrosFor(FathomVoice.DEEP).associate { it.name to 0f },
-            Fathom.macrosFor(FathomVoice.DEEP).associate { it.name to 1f },
-            // Cross corners, not just uniform ones: a full GLIDE at the
-            // bottom of the tuning range starts the slide at 20.6 Hz, and
-            // the shortest DECAY gives the clamp the least room to work in.
-            mapOf("GLIDE" to 1f, "TUNE" to 0f),
-            mapOf("GLIDE" to 1f, "TUNE" to 0f, "DECAY" to 0f),
-        )) {
-            val snip = Fathom.render(FathomVoice.DEEP, macros)
-            assertTrue(snip.samples.isNotEmpty(), "DEEP rendered nothing for $macros")
-            assertTrue(snip.samples.all { it.isFinite() }, "DEEP rendered NaN/Inf for $macros")
-            assertTrue(snip.samples.any { kotlin.math.abs(it) > 0.1f }, "DEEP rendered silence for $macros")
-            val dc = snip.samples.average().toFloat()
-            assertTrue(kotlin.math.abs(dc) < 0.05f, "DEEP has DC offset $dc for $macros")
-        }
-    }
-
-    @Test
-    fun `DEEP is deterministic`() {
-        val a = Fathom.render(FathomVoice.DEEP, mapOf("DRIVE" to 0.7f))
-        val b = Fathom.render(FathomVoice.DEEP, mapOf("DRIVE" to 0.7f))
-        assertTrue(a.samples.contentEquals(b.samples), "same macros must render the same bytes")
+        // A second case at GRIND's own default DRIVE (0.45) was proposed to
+        // close the gap between this DRIVE=0 measurement and the shipped
+        // operating point. Measured instead of assumed: the separation does
+        // not merely shrink under drive, it inverts. Swept at DECAY=1:
+        // DRIVE=0 -> 12.86x (matches above), DRIVE=0.1 -> 1.57x,
+        // DRIVE=0.2 -> 0.74x, DRIVE=0.3 -> 0.62x, DRIVE=0.45 -> 0.59x,
+        // DRIVE=1.0 -> 0.60x. At GRIND's shipped DECAY (0.7) and DRIVE
+        // (0.45) together the ratio is 0.99x — no separation at all. Drive
+        // saturation compresses the wide-SPREAD envelope's beat swings
+        // harder than the narrow one's (the wide pair's summed peaks clip
+        // deeper into tanh's flat region), so past a small amount of DRIVE
+        // the "wider ripples more" relationship this test measures no longer
+        // holds. That's the same confound the comment above already names —
+        // DRIVE moves the beating from the envelope into the spectrum — just
+        // stronger than assumed. No second assertion is added: one would
+        // have to assert the opposite of this test's claim at the shipped
+        // DRIVE, which is a different (also true) fact, not more coverage of
+        // this one.
     }
 
     @Test
@@ -137,49 +142,84 @@ class FathomTest {
         }
     }
 
+    /**
+     * The macro value to pin each voice's own confound to so [TestPitch] gets
+     * a clean, unambiguous fundamental: DEEP's SWEEP blip, GRIND's detuned
+     * beating pair, and GLASS's FM sidebands can each otherwise be mistaken
+     * for a different pitch than the one the oscillator(s) are actually
+     * playing. GLASS pins RATIO to its own default (0.25, which snaps to
+     * unison) rather than to 0 — at unison the modulator is exactly the
+     * carrier's frequency, so every FM sideband lands on an integer multiple
+     * of the true fundamental and the detector still reads it correctly.
+     * Measured clean for all three voices: TUNE 0.5->1 read as almost
+     * exactly a 2x octave (DEEP 2.0x, GRIND 2.0x, GLASS 1.995x).
+     */
+    private val pitchSafeConfound: Map<FathomVoice, Pair<String, Float>> = mapOf(
+        FathomVoice.DEEP to ("SWEEP" to 0f),
+        FathomVoice.GRIND to ("SPREAD" to 0f),
+        FathomVoice.GLASS to ("RATIO" to 0.25f),
+    )
+
     @Test
     fun `TUNE snaps to semitones and actually tunes`() {
-        val distinct = HashSet<Float>()
-        for (i in 0..100) distinct.add(Fathom.frequencyFor(FathomVoice.DEEP, i / 100f))
-        assertEquals(Fathom.TUNE_SEMITONES + 1, distinct.size)
+        for (voice in FathomVoice.entries) {
+            val distinct = HashSet<Float>()
+            for (i in 0..100) distinct.add(Fathom.frequencyFor(voice, i / 100f))
+            assertEquals(Fathom.TUNE_SEMITONES + 1, distinct.size, "$voice TUNE snap count")
 
-        // Measured from TUNE 0.5 rather than 0. DEEP's root is 41.2 Hz and
-        // Pitch.MIN_HZ is 40f, so the bottom of the range sits on the
-        // detector's floor and reads as "no pitch" — a limit of the measuring
-        // tool, not of the engine. 0.5 -> 1.0 is one octave, 82.4 Hz ->
-        // 164.8 Hz, both comfortably inside the detector's range.
-        val low = TestPitch.estimate(
-            Fathom.render(FathomVoice.DEEP, mapOf("TUNE" to 0.5f, "SWEEP" to 0f)),
-            fromSec = 0.05f, windowSec = 0.2f,
-        )
-        val high = TestPitch.estimate(
-            Fathom.render(FathomVoice.DEEP, mapOf("TUNE" to 1f, "SWEEP" to 0f)),
-            fromSec = 0.05f, windowSec = 0.2f,
-        )
-        assertTrue(
-            high > low * 1.8f && high < low * 2.2f,
-            "TUNE 0.5 -> 1 is one octave: $low Hz -> $high Hz",
-        )
+            val (confoundName, confoundValue) = pitchSafeConfound.getValue(voice)
+            // Measured from TUNE 0.5 rather than 0. DEEP's root is 41.2 Hz and
+            // Pitch.MIN_HZ is 40f, so the bottom of the range sits on the
+            // detector's floor and reads as "no pitch" — a limit of the measuring
+            // tool, not of the engine. 0.5 -> 1.0 is one octave, both ends
+            // comfortably inside the detector's range for every voice.
+            val low = TestPitch.estimate(
+                Fathom.render(voice, mapOf(confoundName to confoundValue, "TUNE" to 0.5f)),
+                fromSec = 0.05f, windowSec = 0.2f,
+            )
+            val high = TestPitch.estimate(
+                Fathom.render(voice, mapOf(confoundName to confoundValue, "TUNE" to 1f)),
+                fromSec = 0.05f, windowSec = 0.2f,
+            )
+            assertTrue(
+                high > low * 1.8f && high < low * 2.2f,
+                "$voice TUNE 0.5 -> 1 is one octave: $low Hz -> $high Hz",
+            )
+        }
     }
 
     @Test
-    fun `DRIVE adds harmonics without adding level`() {
-        val clean = FeatureExtractor.extract(Fathom.render(FathomVoice.DEEP, mapOf("DRIVE" to 0f)))
-        val dirty = FeatureExtractor.extract(Fathom.render(FathomVoice.DEEP, mapOf("DRIVE" to 1f)))
-        assertTrue(
-            dirty.centroidHz > clean.centroidHz * 1.3f,
-            "DRIVE should brighten: ${clean.centroidHz}Hz -> ${dirty.centroidHz}Hz",
-        )
+    fun `DRIVE adds harmonics`() {
+        // GRIND is deliberately excluded. Measured centroid ratio at
+        // DRIVE 0 -> 1 is 0.978 (soft=103.5Hz, hard=101.1Hz) — the centroid
+        // does not rise, it is flat to within noise. GRIND's source is
+        // already a raw saw pair, harmonically dense across the spectrum
+        // before DRIVE touches it, and its default CUTOFF (~330 Hz) sits
+        // well above where most of that energy already lives, so saturation
+        // has little new high-frequency content left to add that the filter
+        // would let through. This is a real difference in how DRIVE behaves
+        // on GRIND, not a measurement artifact — asserting a 1.3x brighten
+        // here would be false, not merely weak.
+        for (voice in listOf(FathomVoice.DEEP, FathomVoice.GLASS)) {
+            val clean = FeatureExtractor.extract(Fathom.render(voice, mapOf("DRIVE" to 0f)))
+            val dirty = FeatureExtractor.extract(Fathom.render(voice, mapOf("DRIVE" to 1f)))
+            assertTrue(
+                dirty.centroidHz > clean.centroidHz * 1.3f,
+                "$voice DRIVE should brighten: ${clean.centroidHz}Hz -> ${dirty.centroidHz}Hz",
+            )
+        }
     }
 
     @Test
     fun `CUTOFF opens`() {
-        val dark = FeatureExtractor.extract(Fathom.render(FathomVoice.DEEP, mapOf("CUTOFF" to 0.05f)))
-        val open = FeatureExtractor.extract(Fathom.render(FathomVoice.DEEP, mapOf("CUTOFF" to 0.95f)))
-        assertTrue(
-            open.centroidHz > dark.centroidHz * 1.5f,
-            "CUTOFF up should brighten: ${dark.centroidHz}Hz -> ${open.centroidHz}Hz",
-        )
+        for (voice in FathomVoice.entries) {
+            val dark = FeatureExtractor.extract(Fathom.render(voice, mapOf("CUTOFF" to 0.05f)))
+            val open = FeatureExtractor.extract(Fathom.render(voice, mapOf("CUTOFF" to 0.95f)))
+            assertTrue(
+                open.centroidHz > dark.centroidHz * 1.5f,
+                "$voice CUTOFF up should brighten: ${dark.centroidHz}Hz -> ${open.centroidHz}Hz",
+            )
+        }
     }
 
     @Test
@@ -188,7 +228,7 @@ class FathomTest {
         // classifier files harmonic stabs under PERC - "the classifier's
         // honest shelf for a harmonic hit" - so predicting the label for a
         // new engine is guesswork. Flatness measures the thing that actually
-        // matters. See Step 4 for pinning the label once it is observed.
+        // matters.
         for (voice in FathomVoice.entries) {
             val f = FeatureExtractor.extract(Fathom.render(voice))
             assertTrue(f.flatness < 0.2f, "$voice should measure harmonic, got flatness ${f.flatness}")
@@ -197,12 +237,14 @@ class FathomTest {
 
     @Test
     fun `DECAY lengthens`() {
-        val short = FeatureExtractor.extract(Fathom.render(FathomVoice.DEEP, mapOf("DECAY" to 0.1f)))
-        val long = FeatureExtractor.extract(Fathom.render(FathomVoice.DEEP, mapOf("DECAY" to 0.9f)))
-        assertTrue(
-            long.decayMs > short.decayMs * 1.5f,
-            "DECAY should stretch the note: ${short.decayMs}ms -> ${long.decayMs}ms",
-        )
+        for (voice in FathomVoice.entries) {
+            val short = FeatureExtractor.extract(Fathom.render(voice, mapOf("DECAY" to 0.1f)))
+            val long = FeatureExtractor.extract(Fathom.render(voice, mapOf("DECAY" to 0.9f)))
+            assertTrue(
+                long.decayMs > short.decayMs * 1.5f,
+                "$voice DECAY should stretch the note: ${short.decayMs}ms -> ${long.decayMs}ms",
+            )
+        }
     }
 
     @Test
@@ -235,72 +277,80 @@ class FathomTest {
 
     @Test
     fun `GLIDE actually glides - pitch rises into the target`() {
-        // Long decay so both analysis windows sit inside the note, and SWEEP
-        // off so the attack blip cannot be mistaken for the glide.
-        // TUNE=1 puts the target at 164.8 Hz, so a full GLIDE starts an
-        // octave below at 82.4 Hz. Both ends clear Pitch.MIN_HZ = 40f. At
-        // TUNE=0.5 the glide would START at 41.2 Hz, on the detector's floor,
-        // and read as no pitch — the same trap the TUNE test hit in Task 1.
-        val snip = Fathom.render(
-            FathomVoice.DEEP,
-            mapOf("GLIDE" to 1f, "DECAY" to 0.9f, "SWEEP" to 0f, "TUNE" to 1f),
-        )
-        val start = TestPitch.estimate(snip, fromSec = 0.02f, windowSec = 0.12f)
-        val end = TestPitch.estimate(snip, fromSec = 0.55f, windowSec = 0.25f)
-        assertTrue(start > 0f && end > 0f, "pitch detection failed: $start Hz -> $end Hz")
-        assertTrue(end > start * 1.3f, "GLIDE should rise into the target: $start Hz -> $end Hz")
+        for (voice in FathomVoice.entries) {
+            val (confoundName, confoundValue) = pitchSafeConfound.getValue(voice)
+            // Long decay so both analysis windows sit inside the note.
+            // TUNE=1 puts the target an octave above where a full GLIDE
+            // starts, and both ends clear Pitch.MIN_HZ = 40f for every
+            // voice's root. Each voice's own confound (see
+            // [pitchSafeConfound]) keeps SWEEP/SPREAD/RATIO from being
+            // mistaken for part of the glide.
+            val snip = Fathom.render(
+                voice,
+                mapOf(confoundName to confoundValue, "GLIDE" to 1f, "DECAY" to 0.9f, "TUNE" to 1f),
+            )
+            val start = TestPitch.estimate(snip, fromSec = 0.02f, windowSec = 0.12f)
+            val end = TestPitch.estimate(snip, fromSec = 0.55f, windowSec = 0.25f)
+            assertTrue(start > 0f && end > 0f, "$voice pitch detection failed: $start Hz -> $end Hz")
+            assertTrue(end > start * 1.3f, "$voice GLIDE should rise into the target: $start Hz -> $end Hz")
 
-        // The slide must LAND, not merely travel — a glide still moving when
-        // the note ends is the one way this can sound broken, so the clamp
-        // that prevents it needs a test rather than a comment.
-        val target = Fathom.frequencyFor(FathomVoice.DEEP, 1f)
-        assertTrue(
-            kotlin.math.abs(end - target) < target * 0.05f,
-            "GLIDE should land on target: $end Hz vs $target Hz",
-        )
+            // The slide must LAND, not merely travel — a glide still moving when
+            // the note ends is the one way this can sound broken, so the clamp
+            // that prevents it needs a test rather than a comment.
+            val target = Fathom.frequencyFor(voice, 1f)
+            assertTrue(
+                kotlin.math.abs(end - target) < target * 0.05f,
+                "$voice GLIDE should land on target: $end Hz vs $target Hz",
+            )
+        }
     }
 
     @Test
     fun `GLIDE at zero holds a steady pitch`() {
-        val snip = Fathom.render(
-            FathomVoice.DEEP,
-            mapOf("GLIDE" to 0f, "DECAY" to 0.9f, "SWEEP" to 0f, "TUNE" to 1f),
-        )
-        val start = TestPitch.estimate(snip, fromSec = 0.02f, windowSec = 0.12f)
-        val end = TestPitch.estimate(snip, fromSec = 0.55f, windowSec = 0.25f)
-        assertTrue(start > 0f && end > 0f, "pitch detection failed: $start Hz -> $end Hz")
-        assertTrue(
-            kotlin.math.abs(end - start) < start * 0.1f,
-            "GLIDE 0 should hold steady: $start Hz -> $end Hz",
-        )
+        for (voice in FathomVoice.entries) {
+            val (confoundName, confoundValue) = pitchSafeConfound.getValue(voice)
+            val snip = Fathom.render(
+                voice,
+                mapOf(confoundName to confoundValue, "GLIDE" to 0f, "DECAY" to 0.9f, "TUNE" to 1f),
+            )
+            val start = TestPitch.estimate(snip, fromSec = 0.02f, windowSec = 0.12f)
+            val end = TestPitch.estimate(snip, fromSec = 0.55f, windowSec = 0.25f)
+            assertTrue(start > 0f && end > 0f, "$voice pitch detection failed: $start Hz -> $end Hz")
+            assertTrue(
+                kotlin.math.abs(end - start) < start * 0.1f,
+                "$voice GLIDE 0 should hold steady: $start Hz -> $end Hz",
+            )
+        }
     }
 
     @Test
-    fun `GLASS renders clean audio at defaults and both corners`() {
-        for (macros in listOf(
-            emptyMap(),
-            Fathom.macrosFor(FathomVoice.GLASS).associate { it.name to 0f },
-            Fathom.macrosFor(FathomVoice.GLASS).associate { it.name to 1f },
-        )) {
-            val snip = Fathom.render(FathomVoice.GLASS, macros)
-            assertTrue(snip.samples.all { it.isFinite() }, "GLASS rendered NaN/Inf for $macros")
-            assertTrue(snip.samples.any { kotlin.math.abs(it) > 0.1f }, "GLASS rendered silence for $macros")
-            // FM sidebands land at fc*(1 - n*ratio); RATIO's sub-octave snap
-            // (0.5) puts the n=2 sideband at 0 Hz, so GLASS is the one voice
-            // where DC is mechanically plausible. DEEP and GRIND both assert
-            // this; GLASS gets the same check for parity, worst case measured
-            // at RATIO=0 (0.5x), DRIVE=1 (index 14): DC = 6.45e-4.
-            val dc = snip.samples.average().toFloat()
-            assertTrue(kotlin.math.abs(dc) < 0.05f, "GLASS has DC offset $dc for $macros")
+    fun `every voice is deterministic`() {
+        for (voice in FathomVoice.entries) {
+            val a = Fathom.render(voice, mapOf("DRIVE" to 0.7f))
+            val b = Fathom.render(voice, mapOf("DRIVE" to 0.7f))
+            assertTrue(a.samples.contentEquals(b.samples), "$voice: same macros must render the same bytes")
         }
     }
 
     @Test
     fun `RATIO snaps - the knob yields exactly the ratio set and no more`() {
-        val distinct = HashSet<Float>()
-        for (i in 0..200) distinct.add(Fathom.ratioFor(i / 200f))
-        assertEquals(Fathom.RATIOS.size, distinct.size, "RATIO must snap, never land between values")
-        assertEquals(Fathom.RATIOS.toSet(), distinct, "every declared ratio should be reachable")
+        // Render-level, not just ratioFor-level: sweeping RATIO and counting
+        // distinct rendered outputs proves the knob's snapping *and* that
+        // render actually reads fmRatio to produce audibly different audio
+        // for each snapped value — a test of ratioFor alone would still pass
+        // if render stopped consuming it. Five distinct renders from a
+        // five-element snap set also implies every index was hit: an
+        // unreachable ratio would mean fewer than RATIOS.size groups.
+        // Following TinesTest's `RATIO snaps to characters, not a continuum`
+        // pattern, including its List<Float> collection — a HashSet of
+        // FloatArray would hash by identity and make every render "distinct"
+        // regardless of content, passing vacuously.
+        val distinct = HashSet<List<Float>>()
+        for (i in 0..200) {
+            val snip = Fathom.render(FathomVoice.GLASS, mapOf("RATIO" to i / 200f))
+            distinct.add(snip.samples.take(512))
+        }
+        assertEquals(Fathom.RATIOS.size, distinct.size, "RATIO must snap to exactly the ratio set, never more")
     }
 
     @Test

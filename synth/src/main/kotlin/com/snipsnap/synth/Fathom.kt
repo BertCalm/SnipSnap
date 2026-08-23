@@ -39,7 +39,7 @@ object Fathom {
      */
     val RATIOS = floatArrayOf(0.5f, 1f, 1.5f, 2f, 3f)
 
-    fun ratioFor(macro: Float): Float =
+    private fun ratioFor(macro: Float): Float =
         RATIOS[Math.round(macro.coerceIn(0f, 1f) * (RATIOS.size - 1))]
 
     fun macrosFor(voice: FathomVoice): List<MacroSpec> = when (voice) {
@@ -79,9 +79,11 @@ object Fathom {
      * that doubles as a gain control is impossible to set by ear.
      */
     private fun drive(x: Float, amount: Float): Float {
-        // The ceiling is high because a sine starts with nothing above the
-        // fundamental: without enough folding, CUTOFF has no harmonics to
-        // open onto and the filter appears to do nothing.
+        // The ceiling is high because DEEP's sine starts with nothing above
+        // the fundamental: without enough folding, CUTOFF has no harmonics
+        // to open onto and the filter appears to do nothing. GRIND and GLASS
+        // are already harmonically rich, so the same ceiling gives them more
+        // headroom than they need rather than too little.
         val k = Dsp.lin(amount, 1f, 48f)
         return (tanh((k * x).toDouble()) / tanh(k.toDouble())).toFloat()
     }
@@ -98,8 +100,9 @@ object Fathom {
         val cutoff = m.getValue("CUTOFF")
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.2f, 1.6f)
 
-        // Bass wants a low, gently resonant filter; the range tops out well
-        // short of the SVF's stable limit because nothing here needs air.
+        // Bass wants a low, gently resonant filter. The 4 kHz ceiling is a
+        // taste choice, not a stability one — TptSvf is stable to Nyquist,
+        // as Velvet.kt documents — because nothing here needs air.
         val fc = Dsp.expMap(cutoff, 90f, 4_000f)
         val damp = 1.2f
 
