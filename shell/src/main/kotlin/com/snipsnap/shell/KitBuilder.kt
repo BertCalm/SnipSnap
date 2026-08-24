@@ -12,6 +12,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
 import com.snipsnap.xpm.PadNoteMap
 import java.io.File
+import java.util.Locale
 
 /**
  * The KIT screen: the 4×4 grid over a kit folder, every edit non-
@@ -69,7 +70,7 @@ class KitBuilderModel private constructor(
             slot = slot,
             sampleFile = "$stem.wav",
             displayName = displayName
-                ?: "%s %02d".format(AutoPlace.nameFor(drumClass), classCount(drumClass) + 1),
+                ?: String.format(Locale.ROOT, "%s %02d", AutoPlace.nameFor(drumClass), classCount(drumClass) + 1),
             drumClass = drumClass,
             colorHex = AutoPlace.colorFor(drumClass),
             muteGroup = AutoPlace.muteGroupFor(drumClass),
@@ -134,7 +135,7 @@ class KitBuilderModel private constructor(
         val base = "%s_%s".format(PadNoteMap.labelForPad(slot), AutoPlace.nameFor(dc))
         var n = 1
         while (true) {
-            val stem = Names.sanitizeStem("%s_%02d".format(base, n))
+            val stem = Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, n))
             val taken = kit.pads.any { it.sampleFile.equals("$stem.wav", ignoreCase = true) } ||
                 File(kitDir, "$stem.wav").exists()
             if (!taken) return stem
