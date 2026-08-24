@@ -155,6 +155,28 @@ class CliTest {
     }
 
     @Test
+    fun `import unpacks an xpn back into a kit folder`() {
+        val wav = writeBreak(File(temp, "imp.wav"))
+        val out = File(temp, "imp-out")
+        assertEquals(
+            0,
+            cli("chop", wav.path, "--out", out.path, "--name", "ImpKit", "--export", "xpn").first,
+        )
+        val xpn = File(out, "card/ImpKit.xpn")
+        assertTrue(xpn.isFile)
+
+        val dest = File(temp, "imp-dest")
+        val (code, stdout, stderr) = cli("import", xpn.path, "--out", dest.path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "ImpKit")
+        val imported = KitStore.load(File(dest, "ImpKit"))
+        assertEquals(
+            KitStore.load(File(out, "ImpKit")).pads.map { it.slot },
+            imported.pads.map { it.slot },
+        )
+    }
+
+    @Test
     fun `classify prints the class next to its features`() {
         val kick = File(temp, "kick.wav")
         WavWriter.write(kick, DrumSynth.kick())
