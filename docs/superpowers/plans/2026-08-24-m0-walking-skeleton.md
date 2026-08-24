@@ -15,7 +15,7 @@ Every task's requirements implicitly include this section.
 - **Kotlin stays at 2.0.21.** All eight modules declare it; `:app` matches. Do **not** bump Kotlin, Gradle, or any existing module's build file. The 525 green tests are out of scope and must stay green.
 - **Android:** `minSdk = 29`, `compileSdk = 35`, `targetSdk = 35`, `namespace`/`applicationId` = `com.snipsnap.app`, Java 17 source/target.
 - **Versions, exact:** AGP `8.13.2` · Compose BOM `2024.12.01` · Kotlin Compose compiler plugin `2.0.21` · activity-compose `1.9.3` · core-ktx `1.15.0` · lifecycle-runtime-ktx `2.8.7`.
-- **No Material.** TapeOS is a complete design system with its own surfaces; Material3 would fight it. Use `androidx.compose.foundation` only — `BasicText`, `Box`, `Row`, `Column`, `Canvas`. If you reach for `androidx.compose.material3.*`, stop: the composable you need is a TapeOS one from Task 2.
+- **No Material.** TapeOS is a complete design system with its own surfaces; Material3 would fight it. Use `androidx.compose.foundation` only — `BasicText`, `Box`, `Row`, `Column`, `Canvas`. If you reach for `androidx.compose.material3.*`, stop: the composable you need is a TapeOS one from Task 2. This binds the **dependency graph**, not just imports: `androidx.compose.material*` must not appear on any configuration, including debug-only ones. (`ui-tooling` pulls it in transitively, which is why M0 ships without it — see Task 1's dependency block.)
 - **`:app` declares its own module dependencies.** `:shell` uses `implementation`, not `api`, so nothing reaches `:app` transitively. `:app` declares all six it touches: `:json :xpm :audio :kit :synth :shell`. (`docs/APP_PLAN.md` says "all six modules" — that sentence predates `:shell` and `:synth`; this list governs.)
 - **No algorithm in `:app`.** If a screen needs logic, it lands in a module with tests first. `:app` holds Compose bindings, Android adapters, and nothing else.
 - **No `Context` in any constructor.** App-layer classes take `java.io.File` roots and plain data. `Context` appears only in named adapter files (`MainActivity.kt`, `PadPlayer.kt`, `Settings.kt`). This is what keeps the kit repository, the nav reducer and the token mapping testable as plain JUnit.
@@ -323,8 +323,13 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
 
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    implementation("androidx.compose.ui:ui-tooling-preview")
+    // Deliberately absent: androidx.compose.ui:ui-tooling and
+    // ui-tooling-preview. They exist to serve @Preview in Android Studio,
+    // M0 writes no @Preview, and ui-tooling drags
+    // androidx.compose.material onto the debug classpath — which the
+    // no-Material constraint forbids. A later milestone that actually
+    // wants previews can add them back with an
+    // `exclude(group = "androidx.compose.material")`.
 
     // JUnit 5, as in every other module. Named explicitly rather than via
     // kotlin("test") so the platform launcher is on the runtime classpath.
