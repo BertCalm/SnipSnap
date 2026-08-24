@@ -40,3 +40,13 @@ tasks.register<JavaExec>("generateTestKits") {
     workingDir = projectDir
     args("${rootDir}/testkit")
 }
+
+/** Write the decode-contract fixture WAVs into reference/fixtures/decode/. */
+tasks.register<JavaExec>("generateDecodeFixtures") {
+    group = "distribution"
+    description = "Write the DecodeContract fixture WAVs under reference/fixtures/decode/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.audio.DecodeFixtureGenerator")
+    workingDir = projectDir
+    args("${rootDir}/reference/fixtures/decode")
+}

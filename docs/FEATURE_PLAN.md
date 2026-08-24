@@ -50,7 +50,7 @@ groove: kick→A01, hats choking, 92 BPM detected).
 |---|---|---|---|---|
 | F2.1 | CHOP screen — bind Compose to `ChopReviewModel`, defrag-grid progress gag (= APP_PLAN M3) | APP | M | one captured bar → playable, sensibly-laid-out kit in under a minute |
 | F2.2 | The one tap — INSTANT KIT action on a fresh capture: chop with defaults straight into review | APP | S | capture 8 s of a break, tap once, play the kit |
-| F2.3 | Calibration harness — a labeled-corpus test: WAVs + expected classes under `reference/calibration/`, a report of confusion + per-threshold sensitivity; tune `Classifier` against it | CORE | S | thresholds justified by real captures, not synthetic renders |
+| F2.3 | ✓ done: calibration harness — a labeled-corpus test: WAVs + expected classes under `reference/calibration/`, a report of confusion + per-threshold sensitivity; tune `Classifier` against it | CORE | S | thresholds justified by real captures, not synthetic renders |
 | F2.4 | Calibration corpus — a dozen real captured hits (phone captures, not renders), labeled by ear | USER | S | F2.3 has something true to chew on |
 
 `snipsnap classify` is the collection tool for F2.4 — it prints the
@@ -66,7 +66,7 @@ on desktop today. The risk table's opt-out mitigation depends on this.
 |---|---|---|---|---|
 | F3.1 | Intent filters + receive activity → trim screen | APP | S | shared audio file lands in the tape deck |
 | F3.2 | Video demux — `MediaExtractor`/Media3 → float PCM → `Snip` → `Resampler` | APP | M | shared MP4's audio lands in the tape deck |
-| F3.3 | Demux conformance fixtures — tiny known-content WAV fixtures + a contract test the app's decode output must pass (rate, channels, sample accuracy) | CORE | S | app-side decode verified against ground truth without an SDK |
+| F3.3 | ✓ done: demux conformance fixtures — tiny known-content WAV fixtures + a contract test the app's decode output must pass (rate, channels, sample accuracy) | CORE | S | app-side decode verified against ground truth without an SDK |
 | F3.4 | Onboarding copy for opt-out apps (silence detection → screen-recorder path) — copy exists in `Copy`; wire it | APP | S | blocked capture shows the honest fallback, in voice |
 
 ## F4 — Synth starter kits
@@ -78,7 +78,7 @@ bounded macro rolls, and two generated kits are hardware-verified.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| F4.1 | Starter-kit registry — `StarterKits` in `:shell`: name → builder → blurb → seed policy, wrapping the main-source builders so the FRESH TAPE menu is data-driven | CORE | S | registry renders every kit through assemble→preflight in a test |
+| F4.1 | ✓ done: starter-kit registry — `StarterKits` in `:shell`: name → builder → blurb → seed policy, wrapping the main-source builders so the FRESH TAPE menu is data-driven | CORE | S | registry renders every kit through assemble→preflight in a test |
 | F4.2 | NEW KIT menu — pick a starter, reroll seed, land on the grid (needs M0 only) | APP | S | first-run user has a playable kit in 30 s, empty grid never shows |
 | F4.3 | SYNTH screen — macro panels over `Patches`, SCRAMBLE, RENDER TO PAD (= the M5 synth half) | APP | M | prototype's Thump Lab behaviour, on device |
 
@@ -92,8 +92,8 @@ Shipping today as the CLI's `--key`.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| F5.1 | Promote the key grammar — `KeySpec` (Am / F#m / "Eb major" / Dminpent parsing) moved from `:cli` into `:audio`, beside `Scales` where it belongs; CLI delegates | CORE | S | one parser, two consumers, same tests |
-| F5.2 | Kit key field — optional `key` on `Kit`/`kit.json` so the choice persists with the folder | CORE | S | round-trips through `KitStore`; absent = no key, old kits unaffected |
+| F5.1 | ✓ done: key grammar promoted — `KeySpec` (Am / F#m / "Eb major" / Dminpent parsing) moved from `:cli` into `:audio`, beside `Scales` where it belongs; CLI delegates | CORE | S | one parser, two consumers, same tests |
+| F5.2 | ✓ done: kit key field — optional `key` on `Kit`/`kit.json` so the choice persists with the folder | CORE | S | round-trips through `KitStore`; absent = no key, old kits unaffected |
 | F5.3 | Key picker + pad tune readout — kit-level key in the kit screen; IN KEY as a kit action; optional retune-on-assign for TONAL pads | APP | S | set Am, drop a captured bass note, it lands in key; the kick is untouched |
 
 ## F6 — One-file kit sharing (.xpn)
@@ -105,7 +105,7 @@ waiting.
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
 | F6.1 | Hardware import check — does the Live III's expansion import accept `SnipSnap_Factory.xpn`? (Part 2 queue, item 4) | USER | S | yes/no + exact error text if no |
-| F6.2 | `XpnImporter` — read an `.xpn` back into a kit folder (unzip, parse the program, resolve bare sample names); free CLI `import` command; the receive half of sharing | CORE | S | pack → import → re-export round-trips; a foreign commercial `.xpn` imports |
+| F6.2 | ✓ done: `XpnImporter` — read an `.xpn` back into a kit folder (unzip, parse the program, resolve bare sample names); free CLI `import` command; the receive half of sharing | CORE | S | pack → import → re-export round-trips; a foreign commercial `.xpn` imports |
 | F6.3 | Share/receive flow — ACTION_SEND a kit as `.xpn`; intent-filter receives one → `XpnImporter` → the shelf | APP | S | kit → messenger → friend's phone → their shelf → their MPC |
 
 F6.2 doesn't wait on F6.1: importing serves the app-to-app share loop even
@@ -116,10 +116,11 @@ if the hardware importer says no (folders remain the hardware path).
 ## Sequence
 
 ```
-CORE (now, any order — none block APP, each shrinks it):
-  F6.2 XpnImporter → F5.1 KeySpec promotion → F5.2 Kit.key →
-  F4.1 StarterKits registry → F3.3 demux fixtures → F2.3 calibration harness
-  (F2.3 idles until F2.4's corpus exists — build the harness, wait for WAVs)
+CORE: ✓ all six landed (2026-08-24) — XpnImporter, KeySpec promotion,
+  Kit.key, StarterKits registry, decode fixtures + contract, calibration
+  harness. F2.3's harness idles until F2.4's corpus has captures in it.
+  This session's remaining standing work: core support on demand, and the
+  Live III save dissection when it lands.
 
 APP (in milestone order; feature items slot in where their parent lands):
   M0 (F1.1) → +F4.2 new-kit menu

@@ -59,6 +59,13 @@ threshold by.
 Takes any folder with a `kit.json` (one this CLI chopped, or one synced off
 a phone) and writes the chosen formats.
 
+### `import <file.xpn>` — the receive half
+
+Unpacks an `.xpn` archive back into a kit folder — ours or a vendor's
+(either instrument-numbering base, samples found by bare name anywhere in
+the archive). The landed folder is editable and re-exportable like any
+other kit.
+
 ## Export formats
 
 All exports land under `<out>/card/`; copy its contents onto the MPC's SD
