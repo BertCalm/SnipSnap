@@ -11,6 +11,8 @@ dependencies {
     implementation(project(":kit"))
     implementation(project(":xpm"))
     implementation(project(":json"))
+    // The starter-kit registry renders through the synth engines.
+    implementation(project(":synth"))
     testImplementation(kotlin("test"))
     // Flow tests verify real exports through the format detectors.
     testImplementation(project(":mpc3"))
