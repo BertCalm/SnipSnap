@@ -318,6 +318,7 @@ UI layer. What lives here:
 
 - [`docs/CONCEPT.md`](docs/CONCEPT.md) — product shape, MVP cut, architecture
 - [`docs/APP_PLAN.md`](docs/APP_PLAN.md) — **the remaining work, scoped**: the Android app milestone by milestone, the hardware queue, and the odds and ends
+- [`docs/FEATURE_PLAN.md`](docs/FEATURE_PLAN.md) — the six product features ranked by ROI, each planned to done with owners and exit tests
 - [`docs/ANDROID_CAPTURE.md`](docs/ANDROID_CAPTURE.md) — how capture actually works and where it breaks
 - [`docs/CLI.md`](docs/CLI.md) — the SnipSnap CLI: chop a file into a kit from any desktop
 - [`docs/MPC_EXPORT.md`](docs/MPC_EXPORT.md) — folder layouts and export paths
