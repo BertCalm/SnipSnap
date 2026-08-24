@@ -92,7 +92,7 @@ Shipping today as the CLI's `--key`.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| F5.1 | Promote the key grammar — move `KeySpec` (Am / F#m / "Eb major" / Dminpent parsing) from `:cli` into `:shell`; CLI delegates | CORE | S | one parser, two consumers, same tests |
+| F5.1 | Promote the key grammar — `KeySpec` (Am / F#m / "Eb major" / Dminpent parsing) moved from `:cli` into `:audio`, beside `Scales` where it belongs; CLI delegates | CORE | S | one parser, two consumers, same tests |
 | F5.2 | Kit key field — optional `key` on `Kit`/`kit.json` so the choice persists with the folder | CORE | S | round-trips through `KitStore`; absent = no key, old kits unaffected |
 | F5.3 | Key picker + pad tune readout — kit-level key in the kit screen; IN KEY as a kit action; optional retune-on-assign for TONAL pads | APP | S | set Am, drop a captured bass note, it lands in key; the kick is untouched |
 

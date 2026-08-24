@@ -1,21 +1,28 @@
-package com.snipsnap.cli
-
-import com.snipsnap.audio.Scale
-import com.snipsnap.audio.Scales
+package com.snipsnap.audio
 
 /**
- * A parsed `--key` argument: root as semitones above C, plus the scale.
+ * A musical key: root as semitones above C, plus the scale. The one type
+ * every surface means by "the kit's key" — the CLI's `--key`, the app's
+ * key picker, and the `key` field persisted in `kit.json`.
  *
- * Accepts the ways people actually write keys — `Am`, `C`, `F#m`,
- * `Eb major`, `Bbmin`, `Dminpent` — rather than demanding an enum name.
- * A bare note means major, `m`/`min`/`minor` means minor, matching how
- * key signatures are read everywhere else.
+ * [parse] accepts the ways people actually write keys — `Am`, `C`,
+ * `F#m`, `Eb major`, `Bbmin`, `Dminpent` — rather than demanding an enum
+ * name. A bare note means major, `m`/`min`/`minor` means minor, matching
+ * how key signatures are read everywhere else.
  */
 data class KeySpec(val rootSemitone: Int, val scale: Scale) {
 
+    init {
+        require(rootSemitone in 0..11) { "root is 0..11 semitones above C, got $rootSemitone" }
+    }
+
+    /** "A minor", "D# major pentatonic" — display form. */
     val label: String
         get() = Scales.NOTE_NAMES[rootSemitone] + " " +
             scale.name.lowercase().replace('_', ' ')
+
+    /** "A MINOR" in machine-stable parts, for serialization. */
+    val noteName: String get() = Scales.NOTE_NAMES[rootSemitone]
 
     companion object {
 
@@ -42,16 +49,17 @@ data class KeySpec(val rootSemitone: Int, val scale: Scale) {
             "chromatic" to Scale.CHROMATIC,
         )
 
+        /** Throws [IllegalArgumentException] for anything it can't read. */
         fun parse(spec: String): KeySpec {
             val m = Regex("^([A-Ga-g])([#b]?)[\\s-]*([A-Za-z]*)$").matchEntire(spec.trim())
-                ?: throw CliError("can't read key '$spec' - try Am, C major, F#minpent")
+                ?: throw IllegalArgumentException("can't read key '$spec' - try Am, C major, F#minpent")
             var semi = NOTE_SEMITONE.getValue(m.groupValues[1].uppercase()[0])
             when (m.groupValues[2]) {
                 "#" -> semi = (semi + 1) % 12
                 "b" -> semi = (semi + 11) % 12
             }
             val scale = SCALE_WORDS[m.groupValues[3].lowercase()]
-                ?: throw CliError(
+                ?: throw IllegalArgumentException(
                     "unknown scale '${m.groupValues[3]}' in '$spec' - " +
                         "try major, minor, majpent, minpent, chromatic",
                 )

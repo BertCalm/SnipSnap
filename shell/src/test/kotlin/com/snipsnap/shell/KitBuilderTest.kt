@@ -111,6 +111,33 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `the kit key persists and IN KEY retunes only pitched tonal pads`() {
+        val dir = File(temp, "Keyed")
+        val m = KitBuilderModel.create("Keyed", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        // The default tonal() sits on 110 Hz - an A, out of C minor.
+        m.assign(13, DrumSynth.tonal(), DrumClass.TONAL)
+
+        assertEquals(emptyList(), m.retuneTonalPads(), "no key set, nothing happens")
+
+        m.setKey(com.snipsnap.audio.KeySpec.parse("Cm"))
+        m.save()
+        val reopened = KitBuilderModel.open(dir)
+        assertEquals(com.snipsnap.audio.KeySpec.parse("C minor"), reopened.kit.key)
+
+        val moved = reopened.retuneTonalPads()
+        assertEquals(listOf(13), moved)
+        val tonal = reopened.pad(13)!!
+        assertTrue(tonal.tuneCoarse != 0 || tonal.tuneFine != 0, "A must move into C minor")
+        assertEquals(0, reopened.pad(1)!!.tuneCoarse, "the kick is never 'corrected'")
+        assertEquals(emptyList(), reopened.retuneTonalPads(), "second pass is a no-op")
+
+        reopened.setKey(null)
+        reopened.save()
+        assertEquals(null, KitBuilderModel.open(dir).kit.key)
+    }
+
+    @Test
     fun `bank view and the TEST kit egg`() {
         val dir = File(temp, "Banks")
         val m = KitBuilderModel.create("Banks", dir)

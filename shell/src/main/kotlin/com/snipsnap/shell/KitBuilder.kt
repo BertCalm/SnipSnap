@@ -118,6 +118,41 @@ class KitBuilderModel private constructor(
         return edited
     }
 
+    /**
+     * Set or clear the kit's key. Choosing a key never retunes anything by
+     * itself — that's [retuneTonalPads], an explicit action.
+     */
+    fun setKey(key: com.snipsnap.audio.KeySpec?) {
+        if (kit.key == key) return
+        kit = kit.copy(key = key)
+        dirty = true
+    }
+
+    /**
+     * IN KEY: retune every TONAL pad onto the nearest note of the kit's
+     * key, via the tune fields the MPC pad already has — audio untouched,
+     * unpitched pads and non-tonal classes never "corrected". Returns the
+     * slots that moved. No key set, nothing happens.
+     */
+    fun retuneTonalPads(): List<Int> {
+        val key = kit.key ?: return emptyList()
+        val moved = mutableListOf<Int>()
+        for (pad in kit.pads) {
+            if (pad.drumClass != DrumClass.TONAL) continue
+            val snip = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+            val tune = com.snipsnap.audio.Tuner.inKey(snip, key.rootSemitone, key.scale) ?: continue
+            if (tune.tuneCoarse == pad.tuneCoarse && tune.tuneFine == pad.tuneFine) continue
+            kit = kit.copy(
+                pads = kit.pads.map {
+                    if (it.slot == pad.slot) it.copy(tuneCoarse = tune.tuneCoarse, tuneFine = tune.tuneFine) else it
+                },
+            )
+            moved += pad.slot
+        }
+        if (moved.isNotEmpty()) dirty = true
+        return moved
+    }
+
     /** Write `kit.json`. The moment the folder and the model agree again. */
     fun save(): File {
         val file = KitStore.save(kit, kitDir)

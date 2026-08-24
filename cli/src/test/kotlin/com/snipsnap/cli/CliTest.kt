@@ -250,28 +250,5 @@ class CliTest {
     }
 }
 
-class KeySpecTest {
-
-    @Test
-    fun `parses the ways people write keys`() {
-        assertEquals(KeySpec(9, com.snipsnap.audio.Scale.MINOR), KeySpec.parse("Am"))
-        assertEquals(KeySpec(0, com.snipsnap.audio.Scale.MAJOR), KeySpec.parse("C"))
-        assertEquals(KeySpec(6, com.snipsnap.audio.Scale.MINOR_PENTATONIC), KeySpec.parse("F#minpent"))
-        assertEquals(KeySpec(3, com.snipsnap.audio.Scale.MAJOR), KeySpec.parse("Eb major"))
-        assertEquals(KeySpec(10, com.snipsnap.audio.Scale.MINOR), KeySpec.parse("bb minor"))
-        assertEquals(KeySpec(7, com.snipsnap.audio.Scale.CHROMATIC), KeySpec.parse("G chromatic"))
-    }
-
-    @Test
-    fun `rejects what it cannot read`() {
-        assertFailsWith<CliError> { KeySpec.parse("H major") }
-        assertFailsWith<CliError> { KeySpec.parse("C mixolydian") }
-        assertFailsWith<CliError> { KeySpec.parse("") }
-    }
-
-    @Test
-    fun `labels read like key signatures`() {
-        assertEquals("A minor", KeySpec.parse("Am").label)
-        assertEquals("D# major pentatonic", KeySpec.parse("Ebmajpent").label)
-    }
-}
+// KeySpec's own tests live in :audio beside the parser (KeySpecTest);
+// the chop tests above cover the CLI's use of it.

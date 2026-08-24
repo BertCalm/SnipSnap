@@ -4,6 +4,7 @@ import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Chopper
 import com.snipsnap.audio.Classification
 import com.snipsnap.audio.Classifier
+import com.snipsnap.audio.KeySpec
 import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Slice
 import com.snipsnap.audio.Tempo
@@ -53,7 +54,13 @@ object ChopCommand {
         // Validate every option before touching audio: a typo'd format
         // should fail in a millisecond, not after a minute of chopping.
         val exportFormats = opts["--export"]?.let(Exports::parseFormats)
-        val key = opts["--key"]?.let(KeySpec::parse)
+        val key = opts["--key"]?.let {
+            try {
+                KeySpec.parse(it)
+            } catch (e: IllegalArgumentException) {
+                throw CliError(e.message ?: "can't read key '$it'")
+            }
+        }
         val grid = opts.int("--grid")
         val maxSlices = opts.int("--slices")
         if (grid != null && maxSlices != null) {
@@ -134,7 +141,7 @@ object ChopCommand {
             throw CliError("kit already exists: $kitDir (pass --overwrite to replace it)")
         }
 
-        val kit = KitAssembler.assembleArranged(name, arranged, kitDir)
+        val kit = KitAssembler.assembleArranged(name, arranged, kitDir, key)
 
         out.println()
         out.println("pad  class       conf   source     length")

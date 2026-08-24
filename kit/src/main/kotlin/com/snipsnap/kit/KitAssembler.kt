@@ -55,6 +55,8 @@ object KitAssembler {
         name: String,
         arranged: List<ArrangedPad?>,
         dir: File,
+        /** The kit's key, when in-key treatment chose one — persisted in kit.json. */
+        key: com.snipsnap.audio.KeySpec? = null,
     ): Kit {
         require(arranged.size <= 128) { "at most 128 pad slots, got ${arranged.size}" }
         dir.mkdirs()
@@ -111,7 +113,7 @@ object KitAssembler {
             )
         }
 
-        val kit = Kit(name, pads)
+        val kit = Kit(name, pads, key)
         KitStore.save(kit, dir)
         return kit
     }
