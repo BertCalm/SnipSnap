@@ -86,6 +86,9 @@ object Cli {
         |                    one-shot pad, so quiet hits sound soft
         |  --melodic         place slices low-to-high by detected pitch
         |                    (unpitched slices follow in capture order)
+        |  --fit-tempo BPM   repitch LOOP pads from the detected tempo to BPM,
+        |                    SP-style (pitch rides along); stems and kit
+        |                    metadata restamp to the new tempo
         |  --key SPEC        retune tonal pads into a key: Am, C, F#m, Eb major,
         |                    Dminpent, Gchromatic - or "auto" to let the
         |                    capture name its own key

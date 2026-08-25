@@ -48,7 +48,7 @@ object ChopCommand {
     fun chop(args: List<String>, out: PrintStream): Result {
         val opts = Options.parse(
             args,
-            valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export", "--swing", "--art"),
+            valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export", "--swing", "--art", "--fit-tempo"),
             boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview", "--no-art"),
         )
         val input = opts.positional.firstOrNull()
@@ -77,6 +77,10 @@ object ChopCommand {
             } catch (e: IllegalArgumentException) {
                 throw CliError(e.message ?: "can't read key '$it'")
             }
+        }
+        val fitTempo = opts["--fit-tempo"]?.let {
+            it.toFloatOrNull()?.takeIf { t -> t > 0f && t < 1000f }
+                ?: throw CliError("--fit-tempo wants a BPM, got '$it'")
         }
         val swing = opts.int("--swing")
         if (swing != null && !opts.has("--groove")) {
@@ -198,6 +202,35 @@ object ChopCommand {
                 )
             }
         }
+        // Fit before balance: repitched audio is what the levels should sit on.
+        if (fitTempo != null) {
+            if (tempo == null) {
+                throw CliError("--fit-tempo needs a confident source tempo - none was heard in this material")
+            }
+            var fitted = 0
+            arranged = arranged.map { pad ->
+                if (pad?.drumClass == com.snipsnap.audio.DrumClass.LOOP) {
+                    fitted++
+                    try {
+                        pad.copy(snip = com.snipsnap.audio.TempoFit.repitch(pad.snip, tempo.bpm, fitTempo))
+                    } catch (e: IllegalArgumentException) {
+                        throw CliError(e.message ?: "tempo fit refused")
+                    }
+                } else {
+                    pad
+                }
+            }
+            if (fitted == 0) {
+                out.println("(no LOOP pads - nothing to tempo-fit)")
+            } else {
+                out.println(
+                    "tempo fit: %d loop(s) repitched %s -> %dbpm (%+.1f semitones, SP-style)".format(
+                        fitted, tempo.label, Math.round(fitTempo),
+                        com.snipsnap.audio.TempoFit.semitones(tempo.bpm, fitTempo),
+                    ),
+                )
+            }
+        }
         if (opts.has("--balance")) {
             arranged = Balance.apply(arranged)
             out.println("balanced pad levels")
@@ -210,7 +243,7 @@ object ChopCommand {
         // The default name carries what detection learned: "break 92bpm".
         val name = opts["--name"] ?: buildString {
             append(Names.sanitizeStem(file.nameWithoutExtension))
-            tempo?.let { append(' ').append(it.label) }
+            (fitTempo ?: tempo?.bpm)?.let { append(' ').append("${Math.round(it)}bpm") }
         }
         if (!Names.isMpcSafe(name)) throw CliError("kit name isn't MPC-safe: '$name'")
         val outRoot = File(opts["--out"] ?: "snipsnap-out")
@@ -219,7 +252,9 @@ object ChopCommand {
             throw CliError("kit already exists: $kitDir (pass --overwrite to replace it)")
         }
 
-        var kit = KitAssembler.assembleArranged(name, arranged, kitDir, stampedKey, tempo?.bpm)
+        // A fitted kit *is* at the target tempo now - stems and metadata agree.
+        val kitBpm = fitTempo ?: tempo?.bpm
+        var kit = KitAssembler.assembleArranged(name, arranged, kitDir, stampedKey, kitBpm)
 
         if (opts.has("--ghosts")) {
             val model = com.snipsnap.shell.KitBuilderModel.open(kitDir)
@@ -305,7 +340,7 @@ object ChopCommand {
             // native exports through Exporters' own fallback.
             Exports.write(
                 kit, kitDir, File(outRoot, "card"), exportFormats, opts.has("--overwrite"), out,
-                tempoBpm = tempo?.bpm, preview = preview, artworkPng = artwork,
+                tempoBpm = kitBpm, preview = preview, artworkPng = artwork,
             )
         } else {
             out.println("(no --export given - kit folder only; formats: ${Exports.FORMATS.joinToString(",")})")

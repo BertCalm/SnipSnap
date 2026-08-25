@@ -708,6 +708,60 @@ class CliTest {
     }
 
     @Test
+    fun `fit-tempo repitches the loops and restamps the kit`() {
+        val rate = 44_100
+        val step = (60f / 100f / 4f * rate).toInt()
+        // The usual break for a confident tempo, then a long sustained tone
+        // that classifies LOOP (past the 1.5s hit-versus-phrase boundary).
+        val hits = listOf(
+            0 to DrumSynth.kick(), 2 to DrumSynth.closedHat(), 4 to DrumSynth.snare(),
+            6 to DrumSynth.closedHat(), 8 to DrumSynth.kick(), 10 to DrumSynth.closedHat(),
+            12 to DrumSynth.snare(), 14 to DrumSynth.closedHat(),
+        )
+        val loopAt = step * 16
+        val total = FloatArray(loopAt + (rate * 1.9f).toInt())
+        for ((stepIx, hit) in hits) {
+            val at = stepIx * step
+            for (i in hit.samples.indices) {
+                if (at + i < total.size) total[at + i] += hit.samples[i] * 0.8f
+            }
+        }
+        val loopTone = DrumSynth.tonal(seconds = 1.8f, freq = 220.0)
+        for (i in loopTone.samples.indices) {
+            if (loopAt + i < total.size) total[loopAt + i] += loopTone.samples[i] * 0.8f
+        }
+        val wav = File(temp, "ft.wav")
+        WavWriter.write(wav, Snip(total, 1, rate))
+        val out = File(temp, "ft-out")
+
+        val (code, stdout, stderr) = cli(
+            "chop", wav.path, "--out", out.path, "--name", "FitKit",
+            "--slices", "9", "--fit-tempo", "90",
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "-> 90bpm")
+        assertContains(stdout, "repitched")
+
+        val kit = KitStore.load(File(out, "FitKit"))
+        assertEquals(90f, kit.tempoBpm, "the fitted kit is at the target tempo now")
+        val loopPad = kit.pads.first { it.drumClass == DrumClass.LOOP }
+        assertTrue("Loop_90bpm" in loopPad.sampleFile, "the stem carries the new tempo: ${loopPad.sampleFile}")
+
+        // Asking to fit material with no tempo is an honest error. Half a
+        // second of silence first so the lone tone is choppable at all.
+        val toneOnly = File(temp, "ft-tone.wav")
+        val lone = DrumSynth.tonal(seconds = 1.0f, freq = 220.0)
+        val buf = FloatArray(rate / 2 + lone.samples.size)
+        lone.samples.copyInto(buf, rate / 2)
+        WavWriter.write(toneOnly, Snip(buf, 1, rate))
+        val (badCode, _, badErr) = cli(
+            "chop", toneOnly.path, "--out", out.path, "--name", "FitNone", "--fit-tempo", "90",
+        )
+        assertEquals(2, badCode)
+        assertContains(badErr, "confident source tempo")
+    }
+
+    @Test
     fun `the capture names its own key with --key auto, or just remembers it`() {
         val rate = 44_100
         val step = (rate * 0.7f).toInt()
