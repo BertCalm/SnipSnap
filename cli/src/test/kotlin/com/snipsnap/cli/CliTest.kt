@@ -157,6 +157,40 @@ class CliTest {
     }
 
     @Test
+    fun `feel transfers a donor's pocket onto a kit's patterns`() {
+        val wav = writeBreak(File(temp, "fl.wav"))
+        val out = File(temp, "fl-out")
+        assertEquals(
+            0,
+            cli("chop", wav.path, "--out", out.path, "--name", "FeelKit", "--slices", "8", "--groove").first,
+        )
+        val kitDir = File(out, "FeelKit")
+
+        // Donor: a hard-swung .mid — every offbeat 16th pushed 76 pulses.
+        val s16 = com.snipsnap.mpc3.Mpc3Clip.PULSES_PER_16TH
+        val donorClip = com.snipsnap.mpc3.Mpc3Clip(
+            "Swing Donor", 1,
+            (0 until 16).map { com.snipsnap.mpc3.Mpc3Note(42, it * s16 + if (it % 2 == 1) 76L else 0L, 0.8f) },
+        )
+        val donor = File(temp, "donor.mid").apply { writeBytes(MidiGroove.write(donorClip, 100f)) }
+
+        val (code, stdout, stderr) = cli("feel", kitDir.path, "--from", donor.path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "Swing Donor")
+
+        val felt = GrooveStore.load(kitDir).first()
+        assertTrue(felt.name.endsWith("Feel"), felt.name)
+        assertTrue(
+            felt.notes.filter { (it.timePulses / s16) % 2 == 1L }.all { it.timePulses % s16 == 76L },
+            "every offbeat leans the donor's 76 pulses: ${felt.notes.map { it.timePulses }}",
+        )
+
+        val (badCode, _, badErr) = cli("feel", kitDir.path)
+        assertEquals(2, badCode)
+        assertContains(badErr, "--from")
+    }
+
+    @Test
     fun `grooves leave as MIDI and a DAW beat arrives as one`() {
         val wav = writeBreak(File(temp, "md.wav"))
         val out = File(temp, "md-out")

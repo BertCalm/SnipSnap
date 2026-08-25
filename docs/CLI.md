@@ -96,6 +96,16 @@ Bank B becomes seeded FX re-treatments of bank A — reversed, crushed,
 slapback, washed, punched — one twin per pad, colour and choke group kept
 so the hats still cut each other in bank B. Reroll with `--seed N`.
 
+### `feel <kit-dir> --from <donor>` — steal the feel, not the notes
+
+Groove transfer, the MPC's own legendary feature. The donor — another
+kit's groove, or any `.mid` — gives up its pocket: how late or early
+each 16th-position lands, how hard it hits relative to the rest. The
+kit's patterns are rewritten with it: notes snap to the grid, then take
+the donor's timing offsets and accent shape (the standard four
+variations re-derive from the felt pattern). A position the donor never
+plays stays straight — no data, no opinion.
+
 ### `merge <a> <b>` — bank B, earned not invented
 
 A **new** kit folder: A's bank A stays put, B's bank A lands on pads

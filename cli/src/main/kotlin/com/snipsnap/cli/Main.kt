@@ -47,6 +47,10 @@ object Cli {
         |  remix <kit-dir>       bank B becomes seeded evil twins of bank A
         |  merge <a> <b>         a new kit: A's bank A + B's bank A on pads
         |                        17-32, everything carried, sources untouched
+        |  feel <kit-dir> --from <donor>
+        |                        groove transfer: the donor's timing-and-velocity
+        |                        pocket (a kit's groove or any .mid) rewrites
+        |                        this kit's patterns
         |  treat <kit-dir> <pad> <character>
         |                        crush/reverse/wash one pad (--undo restores)
         |  project <kit-dir>...  whole session -> one .xpj (kits + grooves +
@@ -119,6 +123,7 @@ object Cli {
                 "remix" -> RemixCommand.run(args.drop(1), out)
                 "merge" -> MergeCommand.run(args.drop(1), out)
                 "treat" -> TreatCommand.run(args.drop(1), out)
+                "feel" -> FeelCommand.run(args.drop(1), out)
                 "project" -> ProjectCommand.run(args.drop(1), out)
                 "backup" -> BackupCommand.backup(args.drop(1), out)
                 "restore" -> BackupCommand.restore(args.drop(1), out)

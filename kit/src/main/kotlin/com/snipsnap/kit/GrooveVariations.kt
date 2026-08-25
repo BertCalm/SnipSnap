@@ -111,7 +111,7 @@ object GrooveVariations {
     }
 
     /** "X Groove" → "X Tight"; anything else just gains the suffix. */
-    private fun variantName(base: String, suffix: String): String =
+    internal fun variantName(base: String, suffix: String): String =
         if (base.endsWith(" Groove")) base.removeSuffix(" Groove") + " " + suffix
         else "$base $suffix"
 }
