@@ -137,7 +137,16 @@ object ChopCommand {
         }
 
         var arranged = onPads.map { entry ->
-            entry?.let { (slice, c) -> ArrangedPad(slice.snip, c.drumClass) }
+            entry?.let { (slice, c) ->
+                ArrangedPad(
+                    slice.snip, c.drumClass,
+                    source = mapOf(
+                        "file" to file.name,
+                        "sourceFrame" to slice.sourceFrame.toString(),
+                        "lengthFrames" to slice.snip.frameCount.toString(),
+                    ),
+                )
+            }
         }
         if (opts.has("--balance")) {
             arranged = Balance.apply(arranged)
@@ -218,7 +227,10 @@ object ChopCommand {
                     }
                 }
                 clip = CapturedGroove.clip("$name Groove", hits, tempo.bpm, TARGET_RATE)
-                out.println("groove: \"${clip.name}\" - ${clip.notes.size} notes over ${clip.bars} bar(s), as captured")
+                // The folder is the kit: the groove persists beside kit.json,
+                // so exporting tomorrow still carries today's rhythm.
+                com.snipsnap.kit.GrooveStore.save(kitDir, listOf(clip))
+                out.println("groove: \"${clip.name}\" - ${clip.notes.size} notes over ${clip.bars} bar(s), as captured (saved to groove.json)")
             }
         }
 

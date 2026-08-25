@@ -30,6 +30,8 @@ object Mpc3Importer {
         val directory: File,
         /** The track name inside the container. */
         val trackName: String,
+        /** Clips found in the track and kept in `groove.json`. */
+        val grooveCount: Int = 0,
     )
 
     data class ProjectImportResult(
@@ -205,8 +207,48 @@ object Mpc3Importer {
 
         val kit = Kit(kitName, pads)
         KitStore.save(kit, destDir)
-        return ImportResult(kit, destDir, trackName)
+
+        // Total recall: the clips the track carries come home too.
+        val clips = parseClips(track)
+        if (clips.isNotEmpty()) GrooveStore.save(destDir, clips)
+
+        return ImportResult(kit, destDir, trackName, clips.size)
     }
+
+    /** The track's `sharedClipMap` entries, note events only, empties dropped. */
+    private fun parseClips(track: Map<String, JsonValue>): List<com.snipsnap.mpc3.Mpc3Clip> =
+        ((track["sharedClipMap"] as? JsonValue.Arr)?.items.orEmpty()).mapNotNull { entryJson ->
+            val entry = (entryJson as? JsonValue.Obj)?.entries ?: return@mapNotNull null
+            val value = (entry["value"] as? JsonValue.Obj)?.entries ?: return@mapNotNull null
+            val events = ((value["eventList"] as? JsonValue.Obj)?.entries
+                ?.get("events") as? JsonValue.Arr)?.items.orEmpty()
+            val notes = events.mapNotNull { eventJson ->
+                val event = (eventJson as? JsonValue.Obj)?.entries ?: return@mapNotNull null
+                val note = (event["note"] as? JsonValue.Obj)?.entries ?: return@mapNotNull null
+                com.snipsnap.mpc3.Mpc3Note(
+                    note = (note["note"] as? JsonValue.Num)?.value?.toInt()?.coerceIn(0, 127)
+                        ?: return@mapNotNull null,
+                    timePulses = ((event["time"] as? JsonValue.Num)?.value?.toLong() ?: 0L)
+                        .coerceAtLeast(0),
+                    velocity = ((note["velocity"] as? JsonValue.Num)?.value?.toFloat() ?: 0.75f)
+                        .coerceIn(0f, 1f),
+                    lengthPulses = ((note["length"] as? JsonValue.Num)?.value?.toLong() ?: 240L)
+                        .coerceAtLeast(1),
+                )
+            }
+            if (notes.isEmpty()) return@mapNotNull null
+            val endPulses = (value["endPulses"] as? JsonValue.Num)?.value?.toLong()
+            val bars = (endPulses?.let { (it / com.snipsnap.mpc3.Mpc3Clip.PULSES_PER_BAR).toInt() }
+                ?: ((notes.maxOf { it.timePulses } / com.snipsnap.mpc3.Mpc3Clip.PULSES_PER_BAR).toInt() + 1))
+                .coerceIn(1, 64)
+            val kept = notes.filter { it.timePulses < bars * com.snipsnap.mpc3.Mpc3Clip.PULSES_PER_BAR }
+            if (kept.isEmpty()) return@mapNotNull null
+            com.snipsnap.mpc3.Mpc3Clip(
+                name = (value["name"] as? JsonValue.Str)?.value?.takeIf { it.isNotBlank() } ?: "Clip",
+                bars = bars,
+                notes = kept,
+            )
+        }
 
     /** Slot-indexed (0-based) colour hex strings, or nulls when uncoloured. */
     private fun padColours(program: Map<String, JsonValue>): List<String?> {

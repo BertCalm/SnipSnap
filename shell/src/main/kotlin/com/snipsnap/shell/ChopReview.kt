@@ -109,12 +109,19 @@ class ChopReviewModel private constructor(
 
     fun sendToGrid(): SendResult {
         val placed = placementPreview()
-        val arranged = placed.map { row ->
-            row?.let { ArrangedPad(it.slice.snip, it.effectiveClass) }
-        }
+        val arranged = placed.map { row -> row?.let(::arrangedPad) }
         val choke = placed.any { it != null && AutoPlace.muteGroupFor(it.effectiveClass) != 0 }
         return SendResult(arranged, rows.size, choke)
     }
+
+    private fun arrangedPad(row: Row) = ArrangedPad(
+        row.slice.snip, row.effectiveClass,
+        source = mapOf(
+            "origin" to "chop",
+            "sourceFrame" to row.slice.sourceFrame.toString(),
+            "lengthFrames" to row.slice.snip.frameCount.toString(),
+        ),
+    )
 
     /** RE-CHOP: fresh detection, fresh labels, overrides gone. */
     fun rechop(newMode: ChopMode = mode): ChopReviewModel = chop(source, newMode)
@@ -164,9 +171,7 @@ class ChopReviewModel private constructor(
     /** SEND TO GRID, melodic layout. */
     fun sendToGridMelodic(): SendResult {
         val placed = melodicPreview()
-        val arranged = placed.map { row ->
-            row?.let { ArrangedPad(it.slice.snip, it.effectiveClass) }
-        }
+        val arranged = placed.map { row -> row?.let(::arrangedPad) }
         val choke = placed.any { it != null && AutoPlace.muteGroupFor(it.effectiveClass) != 0 }
         return SendResult(arranged, rows.size, choke)
     }

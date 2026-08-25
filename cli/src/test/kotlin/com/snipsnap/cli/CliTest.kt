@@ -170,6 +170,21 @@ class CliTest {
         assertContains(payload, "GrooveKit Groove")
         val xpj = Acvs.read(File(out, "card/GrooveKit.xpj")).payloadText
         assertContains(xpj, "GrooveKit Groove")
+
+        // Y1: the groove persisted beside kit.json, and provenance rode in.
+        assertTrue(File(out, "GrooveKit/groove.json").isFile, "groove.json saved at chop time")
+        val kit = KitStore.load(File(out, "GrooveKit"))
+        val pad = kit.pads.first()
+        assertEquals("groove.wav", pad.source["file"], "chopped pads remember their source")
+        assertTrue(pad.source.containsKey("sourceFrame"))
+
+        // Export later, without --groove context: still carries the rhythm.
+        val later = File(temp, "groove-later")
+        assertEquals(
+            0,
+            cli("export", File(out, "GrooveKit").path, "--export", "xtd", "--out", later.path).first,
+        )
+        assertContains(Acvs.read(File(later, "card/GrooveKit.xtd")).payloadText, "GrooveKit Groove")
     }
 
     @Test

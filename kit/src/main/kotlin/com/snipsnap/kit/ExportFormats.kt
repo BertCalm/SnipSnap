@@ -73,7 +73,9 @@ object Exporters {
             ExportOutcome(format, f, null, findings(kit, kitDir))
         }
         ExportFormat.MPC3_TRACK -> {
-            val r = Mpc3Exporter.exportTrack(kit, kitDir, destRoot, overwrite, clip = clip, mpc2Twin = dualGeneration)
+            // The call-site clip wins; the kit's remembered groove backs it up.
+            val effectiveClip = clip ?: GrooveStore.load(kitDir).firstOrNull()
+            val r = Mpc3Exporter.exportTrack(kit, kitDir, destRoot, overwrite, clip = effectiveClip, mpc2Twin = dualGeneration)
             ExportOutcome(
                 format, r.program,
                 File(destRoot, Mpc3TrackWriter.trackDataDirName(kit.name)), r.findings,
@@ -90,7 +92,8 @@ object Exporters {
             dataDir.deleteRecursively()
             val program = Mpc3Exporter.stageTrack(kit, kitDir, dataDir)
             val writer = Mpc3ProjectWriter()
-            val tracks = listOf(Mpc3ProjectTrack.Drum(program, clip = clip))
+            val effectiveClip = clip ?: GrooveStore.load(kitDir).firstOrNull()
+            val tracks = listOf(Mpc3ProjectTrack.Drum(program, clip = effectiveClip))
             // The call-site tempo wins; the kit's remembered tempo backs it up.
             val effectiveTempo = tempoBpm ?: kit.tempoBpm
             val file = if (effectiveTempo != null) {
