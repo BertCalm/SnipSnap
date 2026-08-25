@@ -42,6 +42,25 @@ class ChopperTest {
     }
 
     @Test
+    fun `auto slice count cuts at the knee between real hits and scraps`() {
+        // Four loud hits, six faint ones: the knee sits after the four.
+        val buf = FloatArray(rate * 5)
+        listOf(5_000, 40_000, 75_000, 110_000).forEach { hit(buf, it, 0.9f) }
+        listOf(145_000, 160_000, 175_000, 190_000, 205_000, 218_000).forEach { hit(buf, it, 0.18f) }
+        assertEquals(4, Chopper.autoSliceCount(Snip(buf, 1, rate)))
+    }
+
+    @Test
+    fun `auto slice count keeps hits that are all of a kind`() {
+        // Eight equal hits, no knee: the audio asked for eight.
+        val buf = FloatArray(rate * 5)
+        (0 until 8).forEach { hit(buf, 5_000 + it * 26_000, 0.8f) }
+        assertEquals(8, Chopper.autoSliceCount(Snip(buf, 1, rate)))
+
+        assertEquals(0, Chopper.autoSliceCount(Snip(FloatArray(rate), 1, rate)), "silence wants nothing")
+    }
+
+    @Test
     fun `chops a break at its hits`() {
         val slices = Chopper.byTransients(break4())
 

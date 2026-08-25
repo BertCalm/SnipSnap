@@ -33,7 +33,7 @@ tempo, chop, classify each slice, auto-place onto the conventional layout
 |---|---|
 | `--name NAME` | kit name (default: the input's file name, sanitized) |
 | `--out DIR` | output root (default `snipsnap-out`) |
-| `--slices N` | chop at the N strongest hits (default 16) |
+| `--slices N` | chop at the N strongest hits. Default: **auto** — every onset is ranked by the peak level behind it and the count is cut at the knee in that curve, where the real hits end and the detector's table scraps begin (bounded 2–64). An 8-hit break asks for 8; give N only when you want to overrule the audio |
 | `--grid N` | chop into N equal parts instead of following hits |
 | `--place` / `--no-place` | force auto-placement on or off. Default: on when following hits, off on a grid — a grid's order is usually the point |
 | `--balance` | per-pad levels via `Balance` so the kit sits right as a mix |

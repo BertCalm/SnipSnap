@@ -102,7 +102,12 @@ object ChopCommand {
         val slices = if (grid != null) {
             Chopper.intoEqualParts(snip, grid, cleanup = Chopper.SLICE_CLEANUP)
         } else {
-            Chopper.byTransients(snip, maxSlices = maxSlices ?: 16, cleanup = Chopper.SLICE_CLEANUP)
+            // No count given: let the audio answer. The knee in the
+            // onset-strength curve says where the real hits end.
+            val target = maxSlices ?: Chopper.autoSliceCount(snip).also {
+                if (it > 0) out.println("auto slice count: $it hits above the knee")
+            }
+            Chopper.byTransients(snip, maxSlices = target, cleanup = Chopper.SLICE_CLEANUP)
         }
         if (slices.isEmpty()) throw CliError("no slices came out - is the file silent?")
         out.println(

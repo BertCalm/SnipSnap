@@ -59,7 +59,8 @@ object Cli {
         |chop options:
         |  --name NAME       kit name (default: the input's file name, sanitized)
         |  --out DIR         output root (default: snipsnap-out)
-        |  --slices N        chop at the N strongest hits (default 16)
+        |  --slices N        chop at the N strongest hits (default: auto -
+        |                    the count the audio itself asks for)
         |  --grid N          chop into N equal parts instead of following hits
         |  --place / --no-place
         |                    force auto-placement on or off (default: on when

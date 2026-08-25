@@ -155,6 +155,17 @@ class CliTest {
     }
 
     @Test
+    fun `no slice count means the audio answers`() {
+        val wav = writeBreak(File(temp, "auto.wav"))
+        val out = File(temp, "auto-out")
+        val (code, stdout, stderr) = cli("chop", wav.path, "--out", out.path, "--name", "AutoKit")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "auto slice count:")
+        val kit = KitStore.load(File(out, "AutoKit"))
+        assertTrue(kit.pads.size in 6..10, "the 8-hit break asks for about 8, got ${kit.pads.size}")
+    }
+
+    @Test
     fun `swing rides the groove into the exports`() {
         val wav = writeBreak(File(temp, "sw.wav"))
         val out = File(temp, "sw-out")
