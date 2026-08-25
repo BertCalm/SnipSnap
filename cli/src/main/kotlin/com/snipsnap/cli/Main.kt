@@ -47,6 +47,9 @@ object Cli {
         |                        optional --keys instrument, mixer wired)
         |  backup <kits-root>    every kit as an .xpn inside one archive
         |  restore <backup.zip>  the archive back into kit folders
+        |  diff <a> <b>          structured key-path diff of two MPC files,
+        |                        either generation (--values lists differing
+        |                        values; exit 1 when different)
         |  help                  this text
         |
         |chop options:
@@ -99,6 +102,7 @@ object Cli {
                 "project" -> ProjectCommand.run(args.drop(1), out)
                 "backup" -> BackupCommand.backup(args.drop(1), out)
                 "restore" -> BackupCommand.restore(args.drop(1), out)
+                "diff" -> DiffCommand.run(args.drop(1), out)
                 "help", "--help", "-h" -> {
                     out.println(USAGE)
                     0

@@ -155,6 +155,36 @@ class CliTest {
     }
 
     @Test
+    fun `diff compares two MPC files and exits one when they differ`() {
+        val wav = writeBreak(File(temp, "df.wav"))
+        val out = File(temp, "df-out")
+        assertEquals(
+            0,
+            cli("chop", wav.path, "--out", out.path, "--name", "DiffA", "--slices", "8", "--export", "xtd").first,
+        )
+        assertEquals(
+            0,
+            cli("chop", wav.path, "--out", out.path, "--name", "DiffB", "--slices", "8", "--export", "xtd").first,
+        )
+        val a = File(out, "card/DiffA.xtd").path
+        val b = File(out, "card/DiffB.xtd").path
+
+        val same = cli("diff", a, a)
+        assertEquals(0, same.first, "a file agrees with itself: ${same.third}")
+        assertContains(same.second, "same structure, same values")
+
+        val (code, stdout, _) = cli("diff", a, b, "--values")
+        assertEquals(1, code, "different kits differ")
+        assertContains(stdout, "MPC 3 (ACVS")
+        assertContains(stdout, "values differ")
+        assertContains(stdout, "\"DiffA\" -> \"DiffB\"")
+
+        val (badCode, _, badErr) = cli("diff", a, wav.path)
+        assertEquals(1, badCode, "a wav is not an MPC file")
+        assertContains(badErr, "not an MPC 3 container")
+    }
+
+    @Test
     fun `preview flag renders the kit playing its own beat into the pack`() {
         val wav = writeBreak(File(temp, "prev.wav"))
         val out = File(temp, "prev-out")

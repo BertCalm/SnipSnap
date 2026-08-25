@@ -99,6 +99,29 @@ Every kit under a root packed as its own `.xpn` inside a single archive;
 restore feeds them back through the importer. A kit preflight refuses to
 pack is skipped **and named with the reason** — backups never pretend.
 
+### `diff <a> <b>` — the corpus guard as a bench tool
+
+A structured key-path diff of two MPC files, **either generation** —
+detection is by content, never extension (gzip magic = MPC 3 ACVS, XML
+declaration = MPC 2; bare JSON like a `kit.json` also works). Reports
+paths only in A, paths only in B, and (with `--values`) every concrete
+path where the values disagree, `A -> B`.
+
+The comparison is schema-aware the way the writer tests are: array
+indices collapse to `[*]` and pad-table `valueN` keys to `value*`, so a
+16-pad kit against a 128-pad kit isn't hundreds of lines of noise; and
+it is sentinel-tolerant — two INT64_MAX-ish numbers are the same
+"forever", floats match to a relative 1e-6.
+
+Exit 0 when the files agree, 1 when they differ — scriptable. This is
+the whole "why won't this file load" workflow:
+
+```
+$ java -jar snipsnap.jar diff ours.xtd firmware-save.xtd --values
+```
+
+…and the deltas are the answer.
+
 ## Export formats
 
 All exports land under `<out>/card/`; copy its contents onto the MPC's SD
