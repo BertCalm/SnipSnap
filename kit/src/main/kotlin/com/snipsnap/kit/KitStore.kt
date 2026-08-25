@@ -33,6 +33,13 @@ object KitStore {
     fun load(dir: File): Kit {
         val file = File(dir, FILE_NAME)
         if (!file.isFile) throw IOException("no $FILE_NAME in $dir")
+        return read(file)
+    }
+
+    /** Read any kit-json file — `kit.json` itself, or an archived take. */
+    @Throws(IOException::class)
+    fun read(file: File): Kit {
+        if (!file.isFile) throw IOException("no such file: $file")
         return fromJson(Json.parse(file.readText(Charsets.UTF_8)))
     }
 

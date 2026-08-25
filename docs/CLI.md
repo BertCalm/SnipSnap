@@ -87,6 +87,12 @@ beside `_[TrackData]/` with the `.xpm` twin). Unpitched material is
 refused by file name; two files detecting the same root refuse by both
 names — you pick, it doesn't.
 
+### `backup <kits-root>` / `restore <backup.zip>` — everything on one file
+
+Every kit under a root packed as its own `.xpn` inside a single archive;
+restore feeds them back through the importer. A kit preflight refuses to
+pack is skipped **and named with the reason** — backups never pretend.
+
 ## Export formats
 
 All exports land under `<out>/card/`; copy its contents onto the MPC's SD

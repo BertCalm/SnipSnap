@@ -201,6 +201,59 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `takes archive every meaningful save and restore rolls back`() {
+        val dir = File(temp, "Takes")
+        val m = KitBuilderModel.create("Takes", dir)
+        assertEquals(0, m.takes().size, "creation isn't a take")
+
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save() // archives the empty original
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save() // archives the one-pad version
+        assertEquals(2, m.takes().size)
+        m.save() // clean save: no new take
+        assertEquals(2, m.takes().size)
+
+        val onePadTake = m.takes().last()
+        m.restoreTake(onePadTake)
+        assertTrue(m.dirty)
+        assertEquals(1, m.kit.pads.size, "rolled back to the one-pad take")
+        assertEquals(DrumClass.KICK, m.pad(1)?.drumClass)
+    }
+
+    @Test
+    fun `the bin keeps deletes 30 days and takes pull samples back out`() {
+        val dir = File(temp, "Bin")
+        val m = KitBuilderModel.create("Bin", dir)
+        val pad = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save() // take_001 = the empty original
+        m.assign(2, DrumSynth.closedHat(), DrumClass.HAT_CLOSED)
+        m.save() // take_002 = the kick-only kit
+
+        m.clear(1)
+        assertFalse(File(dir, pad.sampleFile).exists(), "cleared from the kit")
+        val bin = m.binContents()
+        assertEquals(1, bin.size)
+        assertEquals(pad.sampleFile, bin[0].originalName, "recoverable, not gone")
+
+        // Restoring the kick-only take pulls the WAV back out of the bin.
+        m.restoreTake(m.takes().last())
+        assertEquals(DrumClass.KICK, m.pad(1)?.drumClass)
+        assertTrue(File(dir, pad.sampleFile).isFile, "the take brought its sample home")
+        assertEquals(0, m.binContents().size)
+
+        // Purge honours the 30-day promise; a fresh delete survives it.
+        m.clear(1)
+        assertEquals(0, m.purgeBin(nowMillis = System.currentTimeMillis()), "nothing is 30 days old yet")
+        assertEquals(1, m.purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000))
+        assertEquals(0, m.binContents().size)
+
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.clear(2)
+        assertEquals(1, m.emptyBin())
+    }
+
+    @Test
     fun `bank view and the TEST kit egg`() {
         val dir = File(temp, "Banks")
         val m = KitBuilderModel.create("Banks", dir)

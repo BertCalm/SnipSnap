@@ -235,11 +235,89 @@ class KitBuilderModel private constructor(
         return cleared
     }
 
-    /** Write `kit.json`. The moment the folder and the model agree again. */
+    /**
+     * Write `kit.json`. The moment the folder and the model agree again.
+     * The outgoing `kit.json` is archived as a take first — every save is
+     * a point you can roll back to.
+     */
     fun save(): File {
+        archiveTake()
         val file = KitStore.save(kit, kitDir)
         dirty = false
         return file
+    }
+
+    // ---------- takes ----------
+
+    /** Archived takes, oldest first. */
+    fun takes(): List<File> =
+        File(kitDir, TAKES_DIR).listFiles { f: File -> TAKE_NAME.matches(f.name) }
+            ?.sortedBy { it.name } ?: emptyList()
+
+    /**
+     * Roll back to an archived take. Samples the take references that were
+     * since binned come back out of the bin — takes and the bin are one
+     * promise. The restored state is unsaved ([dirty]) until [save].
+     */
+    fun restoreTake(take: File): Kit {
+        val restored = KitStore.read(take)
+        for (pad in restored.pads) {
+            val files = listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }
+            for (f in files) {
+                if (!File(kitDir, f).isFile) restoreFromBin(f)
+            }
+        }
+        kit = restored
+        dirty = true
+        return restored
+    }
+
+    private fun archiveTake() {
+        val current = File(kitDir, "kit.json")
+        // A clean save changes nothing; archiving it would duplicate takes.
+        if (!current.isFile || !dirty) return
+        val takesDir = File(kitDir, TAKES_DIR).apply { mkdirs() }
+        val next = (takes().lastOrNull()?.let { TAKE_NAME.find(it.name)!!.groupValues[1].toInt() } ?: 0) + 1
+        current.copyTo(File(takesDir, "take_%03d.json".format(next)))
+        // Rotate: the cap outlasts any honest session; oldest go first.
+        takes().dropLast(MAX_TAKES).forEach { it.delete() }
+    }
+
+    // ---------- the bin ----------
+
+    /** What's recoverable: file name it had, when it was binned, its bin file. */
+    data class BinEntry(val originalName: String, val binnedAtMillis: Long, val file: File)
+
+    /** Recoverable deletes, newest first. */
+    fun binContents(): List<BinEntry> =
+        File(kitDir, BIN_DIR).listFiles { f: File -> BIN_NAME.matches(f.name) }
+            ?.map {
+                val m = BIN_NAME.find(it.name)!!
+                BinEntry(m.groupValues[2], m.groupValues[1].toLong(), it)
+            }
+            ?.sortedByDescending { it.binnedAtMillis } ?: emptyList()
+
+    /** The newest binned copy of [originalName] back into the kit, or null. */
+    fun restoreFromBin(originalName: String): File? {
+        val entry = binContents().firstOrNull { it.originalName == originalName } ?: return null
+        val dest = File(kitDir, originalName)
+        entry.file.copyTo(dest, overwrite = true)
+        entry.file.delete()
+        return dest
+    }
+
+    /** THE BIN KEEPS IT 30 DAYS — this is the keeping-side of that promise. */
+    fun purgeBin(olderThanDays: Double = BIN_KEEP_DAYS, nowMillis: Long = System.currentTimeMillis()): Int {
+        val cutoff = nowMillis - (olderThanDays * 24 * 60 * 60 * 1000).toLong()
+        val old = binContents().filter { it.binnedAtMillis < cutoff }
+        old.forEach { it.file.delete() }
+        return old.size
+    }
+
+    fun emptyBin(): Int {
+        val all = binContents()
+        all.forEach { it.file.delete() }
+        return all.size
     }
 
     /** The kit-name easter egg, for the rename dialog to surface. */
@@ -263,11 +341,33 @@ class KitBuilderModel private constructor(
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).toSet()
         val stillUsed = kit.pads.flatMap { listOf(it.sampleFile) + it.velocityLayers.map { l -> l.sampleFile } }
         for (f in files) {
-            if (f !in stillUsed) File(kitDir, f).delete()
+            if (f !in stillUsed) moveToBin(f)
         }
     }
 
+    /** EJECTED. THE BIN KEEPS IT 30 DAYS — deletes are recoverable, not gone. */
+    private fun moveToBin(fileName: String) {
+        val src = File(kitDir, fileName)
+        if (!src.isFile) return
+        val binDir = File(kitDir, BIN_DIR).apply { mkdirs() }
+        val dest = File(binDir, "${System.currentTimeMillis()}_$fileName")
+        src.copyTo(dest, overwrite = true)
+        src.delete()
+    }
+
     companion object {
+
+        /** Where saves archive their history, inside the kit folder. */
+        const val TAKES_DIR = ".takes"
+
+        /** Where deletes wait out their 30 days. */
+        const val BIN_DIR = ".bin"
+
+        const val MAX_TAKES = 32
+        const val BIN_KEEP_DAYS = 30.0
+
+        internal val TAKE_NAME = Regex("take_(\\d{3})\\.json")
+        internal val BIN_NAME = Regex("(\\d+)_(.+)")
 
         /** Open an existing kit folder. */
         fun open(kitDir: File): KitBuilderModel =

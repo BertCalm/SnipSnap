@@ -277,6 +277,28 @@ class CliTest {
     }
 
     @Test
+    fun `backup and restore round-trip a folder of kits`() {
+        val wav = writeBreak(File(temp, "bk.wav"))
+        val out = File(temp, "bk-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "BK One").first)
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "BK Two").first)
+
+        val zip = File(temp, "bk.zip")
+        val (bCode, bOut, bErr) = cli("backup", out.path, "--out", zip.path)
+        assertEquals(0, bCode, "stderr: $bErr")
+        assertContains(bOut, "2 kit(s)")
+
+        val fresh = File(temp, "bk-fresh")
+        val (rCode, rOut, rErr) = cli("restore", zip.path, "--out", fresh.path)
+        assertEquals(0, rCode, "stderr: $rErr")
+        assertContains(rOut, "restored 2 kit(s)")
+        assertEquals(
+            KitStore.load(File(out, "BK One")).pads.map { it.slot },
+            KitStore.load(File(fresh, "BK One")).pads.map { it.slot },
+        )
+    }
+
+    @Test
     fun `classify prints the class next to its features`() {
         val kick = File(temp, "kick.wav")
         WavWriter.write(kick, DrumSynth.kick())

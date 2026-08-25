@@ -40,6 +40,8 @@ object Cli {
         |  import <file>         unpack an .xpn archive or a native .xtd into a kit folder
         |  keys <note.wav>       one pitched note -> a playable chromatic instrument
         |  remix <kit-dir>       bank B becomes seeded evil twins of bank A
+        |  backup <kits-root>    every kit as an .xpn inside one archive
+        |  restore <backup.zip>  the archive back into kit folders
         |  help                  this text
         |
         |chop options:
@@ -86,6 +88,8 @@ object Cli {
                 "import" -> ImportCommand.run(args.drop(1), out)
                 "keys" -> KeysCommand.run(args.drop(1), out)
                 "remix" -> RemixCommand.run(args.drop(1), out)
+                "backup" -> BackupCommand.backup(args.drop(1), out)
+                "restore" -> BackupCommand.restore(args.drop(1), out)
                 "help", "--help", "-h" -> {
                     out.println(USAGE)
                     0
