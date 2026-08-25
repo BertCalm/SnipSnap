@@ -978,11 +978,24 @@ class NavStateTest {
         )
     }
 
+    /**
+     * Exhaustive over `Screen.entries`, not three spot checks: the two
+     * renaming screens are the whole point of the property, and a test
+     * that names them without asserting both is worse than none.
+     */
     @Test
-    fun `the titlebar names the app everywhere except the tape deck`() {
-        assertEquals("SNIPSNAP.EXE", Screen.KITS.title)
-        assertEquals("SNIPSNAP.EXE", Screen.KIT.title)
-        assertEquals("TAPE DECK", Screen.TAPE.title)
+    fun `only the deck and the properties panel rename the window`() {
+        val renamed = mapOf(
+            Screen.TAPE to "TAPE DECK",
+            Screen.PROPS to "TAPE PROPERTIES",
+        )
+        for (screen in Screen.entries) {
+            assertEquals(
+                renamed[screen] ?: "SNIPSNAP.EXE",
+                screen.title,
+                "wrong titlebar for $screen",
+            )
+        }
     }
 
     @Test
@@ -1005,8 +1018,11 @@ class NavStateTest {
 
     @Test
     fun `quips wrap without running off the end`() {
-        val s = NavState(Screen.KITS, Personality.FULL, quipIndex = Copy.STATUS_QUIPS.size)
-        assertEquals(Copy.STATUS_QUIPS[0], s.statusQuip())
+        val n = Copy.STATUS_QUIPS.size
+        // The boundary alone would also pass a `if (i >= n) first else i`
+        // implementation; the second case pins the modulo.
+        assertEquals(Copy.STATUS_QUIPS[0], NavState(Screen.KITS, Personality.FULL, n).statusQuip())
+        assertEquals(Copy.STATUS_QUIPS[2], NavState(Screen.KITS, Personality.FULL, n + 2).statusQuip())
     }
 
     @Test
