@@ -13,8 +13,9 @@ dependencies {
     implementation(project(":xpm"))
     implementation(project(":mpc3"))
     implementation(project(":json"))
-    // remix / --ghosts drive the same kit actions the app binds to.
+    // remix / --ghosts / treat drive the same kit actions the app binds to.
     implementation(project(":shell"))
+    implementation(project(":synth"))
     testImplementation(kotlin("test"))
 }
 

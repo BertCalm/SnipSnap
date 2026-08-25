@@ -292,6 +292,28 @@ class CliTest {
     }
 
     @Test
+    fun `treat crushes one pad from the terminal and undoes it`() {
+        val wav = writeBreak(File(temp, "tr.wav"))
+        val out = File(temp, "tr-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "TR", "--slices", "8").first)
+        val kitDir = File(out, "TR")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(2)!!.sampleFile)
+        val before = padFile.readBytes()
+
+        val (code, stdout, stderr) = cli("treat", kitDir.path, "A02", "crushed", "--amount", "0.8")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "recipe recorded")
+        assertTrue(!before.contentEquals(padFile.readBytes()))
+
+        assertEquals(0, cli("treat", kitDir.path, "A02", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        val (badCode, _, badErr) = cli("treat", kitDir.path, "A02", "sparkled")
+        assertTrue(badCode != 0)
+        assertContains(badErr, "crushed")
+    }
+
+    @Test
     fun `project builds one session from several kits`() {
         val wav = writeBreak(File(temp, "sess.wav"))
         val out = File(temp, "sess-out")

@@ -254,6 +254,35 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `treatments re-render one pad, stack, and undo out of the bin`() {
+        val dir = File(temp, "Treat")
+        val m = KitBuilderModel.create("Treat", dir)
+        val pad = m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        val original = File(dir, pad.sampleFile).readBytes()
+
+        val treated = m.treatPad(2, "crushed")
+        assertTrue(treated.recipe != null, "the fx recipe is recorded")
+        val crushedBytes = File(dir, pad.sampleFile).readBytes()
+        assertTrue(!original.contentEquals(crushedBytes), "crushing must change the audio")
+        assertEquals(DrumClass.SNARE, treated.drumClass, "identity fields untouched")
+
+        // Stack a second character, then undo twice: back to the source.
+        m.treatPad(2, "washed", amount = 0.6f)
+        assertTrue(!File(dir, pad.sampleFile).readBytes().contentEquals(crushedBytes))
+        m.untreatPad(2)
+        assertTrue(File(dir, pad.sampleFile).readBytes().contentEquals(crushedBytes), "undo pops one layer")
+        m.untreatPad(2)
+        assertTrue(File(dir, pad.sampleFile).readBytes().contentEquals(original))
+        assertEquals(null, m.pad(2)?.recipe)
+        assertFailsWith<IllegalArgumentException> { m.untreatPad(2) }
+
+        assertFailsWith<IllegalArgumentException> { m.treatPad(2, "sparkled") }
+        m.addGhostLayers(2)
+        assertFailsWith<IllegalArgumentException> { m.treatPad(2, "crushed") }
+    }
+
+    @Test
     fun `bank view and the TEST kit egg`() {
         val dir = File(temp, "Banks")
         val m = KitBuilderModel.create("Banks", dir)

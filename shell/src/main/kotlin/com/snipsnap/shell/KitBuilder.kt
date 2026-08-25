@@ -226,6 +226,33 @@ class KitBuilderModel private constructor(
         return update(slot) { it.copy(velocityLayers = layers) }
     }
 
+    /**
+     * The FX rack pointed at one pad: re-render its sample through a named
+     * treatment (reversed / crushed / slapback / washed / punched), the
+     * original safely in the bin, the fx-only recipe recorded. Treatments
+     * stack; [untreatPad] pops the most recent one.
+     */
+    fun treatPad(slot: Int, treatment: String, amount: Float = 1f): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.velocityLayers.isEmpty()) {
+            "pad $slot is velocity-layered - clear the layers before treating"
+        }
+        val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        val treated = com.snipsnap.synth.Treatments.apply(treatment, original, amount)
+
+        moveToBin(pad.sampleFile)
+        WavWriter.write(File(kitDir, pad.sampleFile), treated.snip)
+        return update(slot) { it.copy(recipe = treated.recipe) }
+    }
+
+    /** Undo the last treatment: the previous audio comes back out of the bin. */
+    fun untreatPad(slot: Int): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        restoreFromBin(pad.sampleFile)
+            ?: throw IllegalArgumentException("nothing to restore for pad $slot - the bin holds no earlier take of it")
+        return update(slot) { it.copy(recipe = null) }
+    }
+
     /** Back to a single-sample pad; the soft renders are deleted. */
     fun clearGhostLayers(slot: Int): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")

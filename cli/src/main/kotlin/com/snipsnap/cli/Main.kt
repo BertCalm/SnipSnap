@@ -41,6 +41,8 @@ object Cli {
         |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
         |                        (--loop cuts sustain loops: held pads sing forever)
         |  remix <kit-dir>       bank B becomes seeded evil twins of bank A
+        |  treat <kit-dir> <pad> <character>
+        |                        crush/reverse/wash one pad (--undo restores)
         |  project <kit-dir>...  whole session -> one .xpj (kits + grooves +
         |                        optional --keys instrument, mixer wired)
         |  backup <kits-root>    every kit as an .xpn inside one archive
@@ -91,6 +93,7 @@ object Cli {
                 "import" -> ImportCommand.run(args.drop(1), out)
                 "keys" -> KeysCommand.run(args.drop(1), out)
                 "remix" -> RemixCommand.run(args.drop(1), out)
+                "treat" -> TreatCommand.run(args.drop(1), out)
                 "project" -> ProjectCommand.run(args.drop(1), out)
                 "backup" -> BackupCommand.backup(args.drop(1), out)
                 "restore" -> BackupCommand.restore(args.drop(1), out)
