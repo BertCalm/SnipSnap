@@ -77,13 +77,15 @@ Bank B becomes seeded FX re-treatments of bank A — reversed, crushed,
 slapback, washed, punched — one twin per pad, colour and choke group kept
 so the hats still cut each other in bank B. Reroll with `--seed N`.
 
-### `keys <note.wav>` — one note, whole keyboard
+### `keys <note.wav> [more.wav …]` — notes in, keyboard out
 
 MPC keygroups pitch the sample themselves, so one pitched capture plus its
-detected root is a full-range chromatic instrument. Lands the
-dual-generation layout (`.xty` beside `_[TrackData]/` with the `.xpm`
-twin). Unpitched material is refused with the reason — an instrument
-rooted on noise would be wrong on every key at once.
+detected root is a full-range chromatic instrument — and several captures
+become a real **multisample**: each note a zone at its detected root,
+zones tiled at the midpoints. Lands the dual-generation layout (`.xty`
+beside `_[TrackData]/` with the `.xpm` twin). Unpitched material is
+refused by file name; two files detecting the same root refuse by both
+names — you pick, it doesn't.
 
 ## Export formats
 

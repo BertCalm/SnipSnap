@@ -74,6 +74,68 @@ class OneNoteTest {
         OneNote.export("Test Bass", note220(), card, overwrite = true)
     }
 
+    private fun tone(hz: Double): Snip {
+        val n = rate
+        val out = FloatArray(n)
+        for (i in 0 until n) {
+            val t = i.toDouble() / rate
+            out[i] = ((0.5 * sin(2 * PI * hz * t) + 0.15 * sin(2 * PI * hz * 2 * t)) *
+                Math.exp(-2.0 * t)).toFloat()
+        }
+        return Snip(out, 1, rate)
+    }
+
+    @Test
+    fun `multisample - zones tile at the midpoints with real roots`() {
+        // 110 / 220 / 440 Hz = A2(45) / A3(57) / A4(69), given scrambled.
+        val result = OneNote.multiProgram(
+            "Multi Bass",
+            listOf("high.wav" to tone(440.0), "low.wav" to tone(110.0), "mid.wav" to tone(220.0)),
+        )
+        assertEquals(listOf(45, 57, 69), result.zones.map { it.rootMidi })
+        val kgs = result.program.keygroups
+        assertEquals(0, kgs[0].lowNote)
+        assertEquals(51, kgs[0].highNote, "boundary at the midpoint of A2 and A3")
+        assertEquals(52, kgs[1].lowNote)
+        assertEquals(63, kgs[1].highNote)
+        assertEquals(64, kgs[2].lowNote)
+        assertEquals(127, kgs[2].highNote)
+        kgs.forEach { assertTrue(it.rootNote in it.lowNote..it.highNote) }
+
+        // Zones tile without gaps or overlaps.
+        kgs.zipWithNext().forEach { (a, b) -> assertEquals(a.highNote + 1, b.lowNote) }
+    }
+
+    @Test
+    fun `multisample export lands every zone's WAV and both programs`() {
+        val card = File(temp, "multi-card")
+        val result = OneNote.multiExport(
+            "Multi Bass",
+            listOf("a.wav" to tone(110.0), "b.wav" to tone(220.0)),
+            card,
+        )
+        assertEquals(2, result.zones.size)
+        val dataDir = File(card, "Multi Bass_[TrackData]")
+        result.zones.forEach { assertTrue(File(dataDir, "${it.sampleStem}.wav").isFile, it.sampleStem) }
+        assertTrue(File(card, "Multi Bass.xty").isFile)
+        assertTrue(File(dataDir, "Multi Bass.xpm").isFile)
+    }
+
+    @Test
+    fun `multisample refusals carry the offending labels`() {
+        val rng = Random(9)
+        val noise = Snip(FloatArray(rate) { (rng.nextFloat() * 2 - 1) * 0.5f }, 1, rate)
+        val bad = assertFailsWith<IllegalArgumentException> {
+            OneNote.multiProgram("X", listOf("good.wav" to tone(220.0), "hiss.wav" to noise))
+        }
+        assertTrue("hiss.wav" in bad.message!!)
+
+        val dupe = assertFailsWith<IllegalArgumentException> {
+            OneNote.multiProgram("X", listOf("one.wav" to tone(220.0), "two.wav" to tone(220.5)))
+        }
+        assertTrue("one.wav" in dupe.message!! && "two.wav" in dupe.message!!)
+    }
+
     @Test
     fun `unpitched material is refused, never guessed at`() {
         val rng = Random(3)

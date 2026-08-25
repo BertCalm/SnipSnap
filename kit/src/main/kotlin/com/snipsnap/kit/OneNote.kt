@@ -81,6 +81,96 @@ object OneNote {
      */
     fun export(name: String, snip: Snip, destRoot: File, overwrite: Boolean = false): Result {
         val result = program(name, snip)
+        writePackage(name, result.program, mapOf(result.sampleStem to snip), destRoot, overwrite)
+        return result
+    }
+
+    // ---------- multisample ----------
+
+    /** One zone of a multisampled result. */
+    data class Zone(
+        val rootMidi: Int,
+        val rootName: String,
+        val detectedHz: Float,
+        val confidence: Float,
+        val sampleStem: String,
+        /** The label the caller gave the snip — usually its file name. */
+        val label: String,
+    )
+
+    data class MultiResult(val program: KeygroupProgram, val zones: List<Zone>)
+
+    /**
+     * Several pitched captures → a real multisampled instrument: each
+     * snip a zone at its detected root, zones tiling at the midpoints.
+     * Any unpitched snip refuses **by its label**; two snips detecting
+     * the same root refuse by both labels — the caller picks, we don't.
+     */
+    fun multiProgram(name: String, snips: List<Pair<String, Snip>>): MultiResult {
+        require(Names.isMpcSafe(name)) { "instrument name isn't MPC-safe: '$name'" }
+        require(snips.isNotEmpty()) { "no snips, no instrument" }
+        require(snips.map { it.first }.toSet().size == snips.size) { "labels must be unique" }
+        if (snips.size == 1) {
+            val r = program(name, snips.single().second)
+            return MultiResult(
+                r.program,
+                listOf(Zone(r.rootMidi, r.rootName, r.detectedHz, r.confidence, r.sampleStem, snips.single().first)),
+            )
+        }
+
+        val prefix = name.filter { !it.isWhitespace() }
+        val detected = snips.map { (label, snip) ->
+            val est = Pitch.detect(snip)
+                ?: throw IllegalArgumentException("$label: no pitch found - every zone needs a pitched note")
+            require(est.confidence >= MIN_CONFIDENCE) {
+                "%s: pitch too uncertain (%.0f Hz at confidence %.2f)".format(label, est.hz, est.confidence)
+            }
+            val root = Scales.hzToMidi(est.hz).roundToInt().coerceIn(0, 127)
+            Zone(root, Scales.nameOf(root), est.hz, est.confidence,
+                Names.sanitizeStem("${prefix}_${Scales.nameOf(root)}"), label) to snip
+        }.sortedBy { it.first.rootMidi }
+
+        detected.zipWithNext().forEach { (a, b) ->
+            require(a.first.rootMidi != b.first.rootMidi) {
+                "'${a.first.label}' and '${b.first.label}' both detect as ${a.first.rootName} - drop one"
+            }
+        }
+
+        val roots = detected.map { it.first.rootMidi }
+        val keygroups = detected.mapIndexed { i, (zone, snip) ->
+            Keygroup(
+                lowNote = if (i == 0) 0 else (roots[i - 1] + roots[i]) / 2 + 1,
+                highNote = if (i == detected.lastIndex) 127 else (roots[i] + roots[i + 1]) / 2,
+                rootNote = zone.rootMidi,
+                layers = listOf(
+                    VelocityLayer(zone.sampleStem, snip.frameCount.toLong(), velStart = 0, velEnd = 127),
+                ),
+            )
+        }
+        return MultiResult(KeygroupProgram(name, keygroups, volumeRelease = 0.35f), detected.map { it.first })
+    }
+
+    /** Multisample edition of [export]. */
+    fun multiExport(
+        name: String,
+        snips: List<Pair<String, Snip>>,
+        destRoot: File,
+        overwrite: Boolean = false,
+    ): MultiResult {
+        val result = multiProgram(name, snips)
+        val bySnip = snips.toMap()
+        val samples = result.zones.associate { zone -> zone.sampleStem to bySnip.getValue(zone.label) }
+        writePackage(name, result.program, samples, destRoot, overwrite)
+        return result
+    }
+
+    private fun writePackage(
+        name: String,
+        program: KeygroupProgram,
+        samples: Map<String, Snip>,
+        destRoot: File,
+        overwrite: Boolean,
+    ) {
         destRoot.mkdirs()
         val xty = File(destRoot, "$name.xty")
         val dataDir = File(destRoot, Mpc3TrackWriter.trackDataDirName(name))
@@ -89,9 +179,8 @@ object OneNote {
         }
         dataDir.deleteRecursively()
         dataDir.mkdirs()
-        WavWriter.write(File(dataDir, "${result.sampleStem}.wav"), snip)
-        Mpc3TrackWriter().writeKeygroupTo(destRoot, result.program)
-        KeygroupWriter().writeTo(dataDir, result.program)
-        return result
+        for ((stem, snip) in samples) WavWriter.write(File(dataDir, "$stem.wav"), snip)
+        Mpc3TrackWriter().writeKeygroupTo(destRoot, program)
+        KeygroupWriter().writeTo(dataDir, program)
     }
 }
