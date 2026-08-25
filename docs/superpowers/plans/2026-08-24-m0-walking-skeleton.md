@@ -2907,6 +2907,112 @@ Task 4 left `onNew = { }` inert. Give it state, and render the dialog over the w
             }
 ```
 
+- [ ] **Step 4h: Write `Toasts.kt` and its test**
+
+Which toast a FRESH TAPE attempt earns is a *rule*, not a rendering
+detail: personality law 3 says jokes never gate function, so the
+celebratory line is silenced at OFF and a failure speaks at every level.
+Left inline in the dialog's click handler, that rule is unreachable by
+any test — which is exactly how the first version came to swallow the
+failure toast at OFF along with the joke.
+
+`app/src/main/kotlin/com/snipsnap/app/ui/Toasts.kt`:
+
+```kotlin
+package com.snipsnap.app.ui
+
+import com.snipsnap.shell.Copy
+import com.snipsnap.shell.Delight
+import com.snipsnap.shell.Personality
+
+/** Shown when a kit could not be created, at every personality level. */
+const val CREATE_FAILED = "COULDN'T MAKE THAT TAPE."
+
+/**
+ * What to say after a FRESH TAPE attempt, or null to stay silent.
+ *
+ * Personality law 3 — jokes never gate function — is the whole content
+ * of this function. "FRESH TAPE. SMELLS LIKE FERRIC OXIDE." is a joke,
+ * so OFF silences it. "That didn't work" is function, so it speaks at
+ * every level: without that asymmetry a failed create at OFF looks
+ * exactly like a success, and the tape you just named is quietly
+ * missing from the shelf.
+ *
+ * It lives here rather than in the dialog's click handler because a rule
+ * belongs where a test can hold it still.
+ */
+fun newTapeToast(
+    created: Boolean,
+    name: String,
+    personality: Personality,
+): String? = when {
+    !created -> CREATE_FAILED
+    Delight.toastsEnabled(personality) -> Copy.kitNameResponse(name) ?: Copy.FRESH_TAPE
+    else -> null
+}
+```
+
+`app/src/test/kotlin/com/snipsnap/app/ui/ToastsTest.kt`:
+
+```kotlin
+package com.snipsnap.app.ui
+
+import com.snipsnap.shell.Copy
+import com.snipsnap.shell.Personality
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+
+class ToastsTest {
+
+    /** The regression this function exists to prevent. */
+    @Test
+    fun `failure speaks even when personality is off`() {
+        for (level in Personality.entries) {
+            assertEquals(
+                CREATE_FAILED,
+                newTapeToast(created = false, name = "NIGHT BUS", personality = level),
+                "failure was silenced at $level",
+            )
+        }
+    }
+
+    @Test
+    fun `success is celebrated at MILD and FULL`() {
+        for (level in listOf(Personality.MILD, Personality.FULL)) {
+            assertEquals(
+                Copy.FRESH_TAPE,
+                newTapeToast(created = true, name = "NIGHT BUS", personality = level),
+            )
+        }
+    }
+
+    @Test
+    fun `success is silent at OFF`() {
+        assertNull(newTapeToast(created = true, name = "NIGHT BUS", personality = Personality.OFF))
+    }
+
+    @Test
+    fun `the TEST egg replaces the celebration, and is still a joke`() {
+        assertEquals(
+            "VERY CREATIVE.",
+            newTapeToast(created = true, name = "TEST", personality = Personality.FULL),
+        )
+        assertNull(newTapeToast(created = true, name = "TEST", personality = Personality.OFF))
+    }
+}
+```
+
+The `onConfirm` handler then reduces to:
+
+```kotlin
+                            val made = runCatching {
+                                withContext(Dispatchers.IO) { library.create(name) }
+                            }
+                            entries = withContext(Dispatchers.IO) { library.list().entries }
+                            toast = newTapeToast(made.isSuccess, name, state.personality)
+```
+
 - [ ] **Step 5: Write `PropsScreen.kt`**
 
 ```kotlin
