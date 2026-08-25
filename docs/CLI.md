@@ -51,6 +51,15 @@ the core classes claim their bank-A pads, and the rest overflow upward.
 The pad table marks any classification under 0.5 confidence with a `?` —
 the same threshold behind the app's dashed **NOT SURE** treatment.
 
+### `chop-all <folder>` — the crate-digging verb
+
+Every `.wav` in the folder through the whole chop pipeline, folder first
+then any chop options (applied to every file). Kits are named after
+their files, so `--name` is refused. A file that fails is **named,
+never fatal**; one summary table shows what landed
+(`file -> kit (pads) ~tempo`). Exit 1 only when nothing succeeded.
+Doubles as the calibration corpus's mass-run tool.
+
 ### `classify <wav...>` — the calibration tool
 
 One line per file: class, confidence, duration, spectral centroid, decay,

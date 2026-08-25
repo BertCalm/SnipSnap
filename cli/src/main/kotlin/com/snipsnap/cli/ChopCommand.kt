@@ -37,7 +37,15 @@ object ChopCommand {
      */
     const val SURE_CONFIDENCE = 0.5f
 
+    /** What one chop produced — the batch verb's summary line reads this. */
+    data class Result(val kit: com.snipsnap.kit.Kit, val kitDir: File, val tempoLabel: String?)
+
     fun run(args: List<String>, out: PrintStream): Int {
+        chop(args, out)
+        return 0
+    }
+
+    fun chop(args: List<String>, out: PrintStream): Result {
         val opts = Options.parse(
             args,
             valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export", "--swing"),
@@ -270,6 +278,6 @@ object ChopCommand {
             out.println("(no --export given - kit folder only; formats: ${Exports.FORMATS.joinToString(",")})")
         }
 
-        return 0
+        return Result(kit, kitDir, tempo?.label)
     }
 }

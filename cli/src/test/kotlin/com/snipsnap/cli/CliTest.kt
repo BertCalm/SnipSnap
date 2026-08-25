@@ -155,6 +155,36 @@ class CliTest {
     }
 
     @Test
+    fun `chop-all digs a whole folder, naming failures instead of dying`() {
+        val crate = File(temp, "crate").apply { mkdirs() }
+        writeBreak(File(crate, "one.wav"))
+        writeBreak(File(crate, "two.wav"))
+        File(crate, "broken.wav").writeBytes(byteArrayOf(1, 2, 3, 4))
+        File(crate, "notes.txt").writeText("not audio")
+        val out = File(temp, "crate-out")
+
+        val (code, stdout, stderr) = cli("chop-all", crate.path, "--out", out.path, "--slices", "8")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "chopped 2 of 3 files")
+        // Default names come from the files (plus whatever tempo was heard).
+        val kitDirs = out.listFiles { f: File -> File(f, "kit.json").isFile }.orEmpty()
+        assertEquals(2, kitDirs.size, stdout)
+        assertTrue(kitDirs.any { it.name.startsWith("one") }, stdout)
+        assertTrue(kitDirs.any { it.name.startsWith("two") }, stdout)
+        assertContains(stdout, "broken.wav")
+        assertContains(stdout, "skipped 1 non-wav")
+
+        val (nameCode, _, nameErr) = cli("chop-all", crate.path, "--name", "X")
+        assertEquals(2, nameCode)
+        assertContains(nameErr, "drop --name")
+
+        // Nothing chopped at all: that's a failure worth an exit code.
+        val junkOnly = File(temp, "junk-crate").apply { mkdirs() }
+        File(junkOnly, "bad.wav").writeBytes(byteArrayOf(9, 9))
+        assertEquals(1, cli("chop-all", junkOnly.path, "--out", out.path).first)
+    }
+
+    @Test
     fun `no slice count means the audio answers`() {
         val wav = writeBreak(File(temp, "auto.wav"))
         val out = File(temp, "auto-out")

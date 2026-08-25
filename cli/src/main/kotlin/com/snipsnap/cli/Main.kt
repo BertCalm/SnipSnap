@@ -35,6 +35,8 @@ object Cli {
         |
         |commands:
         |  chop <input.wav>      chop, classify, auto-place, and build a kit folder
+        |  chop-all <folder>     every .wav in the folder through chop; failures
+        |                        named, never fatal; one summary table
         |  classify <wav...>     print what the classifier hears in each file
         |  export <kit-dir>      export an existing kit folder to MPC formats
         |  import <file>         unpack an .xpn archive or a native .xtd into a kit folder
@@ -101,6 +103,7 @@ object Cli {
         return try {
             when (args[0]) {
                 "chop" -> ChopCommand.run(args.drop(1), out)
+                "chop-all" -> ChopAllCommand.run(args.drop(1), out)
                 "classify" -> ClassifyCommand.run(args.drop(1), out)
                 "export" -> ExportCommand.run(args.drop(1), out)
                 "import" -> ImportCommand.run(args.drop(1), out)
