@@ -3229,15 +3229,28 @@ echo "== launch =="
 adb logcat -c
 adb shell am force-stop com.snipsnap.app
 adb shell am start -n com.snipsnap.app/.MainActivity
-sleep 10   # first run renders 16 synthesized pads
+
+# The factory kit is named, not guessed. An earlier draft took the first
+# folder alphabetically — which the script's own manual step 2 breaks the
+# moment you create a tape sorting before it.
+SEED="SNIPSNAP KIT 01"
+
+# Poll rather than sleep. Rendering sixteen pads measured ~24s on an
+# emulator (cold ART interpreting float DSP), so the previous fixed
+# `sleep 10` failed a genuine first run and wasted time on every other.
+echo "== waiting for the factory kit =="
+for _ in $(seq 1 150); do
+  n=$(adb shell "run-as com.snipsnap.app ls \"files/kits/$SEED\" 2>/dev/null | wc -l" 2>/dev/null | tr -d '\r')
+  [ "${n:-0}" -ge 17 ] && break
+  sleep 1
+done
 
 echo "== the shelf has a tape =="
 adb shell run-as com.snipsnap.app ls files/kits
 adb exec-out screencap -p > "$OUT/1-shelf.png"
 
 echo "== the kit folder is real =="
-KIT=$(adb shell run-as com.snipsnap.app ls files/kits | tr -d '\r' | head -1)
-adb shell run-as com.snipsnap.app ls "files/kits/$KIT" | tr -d '\r' | tee "$OUT/kit-listing.txt"
+adb shell "run-as com.snipsnap.app ls \"files/kits/$SEED\"" | tr -d '\r' | tee "$OUT/kit-listing.txt"
 grep -q 'kit.json' "$OUT/kit-listing.txt" || { echo "FAIL: no kit.json"; exit 1; }
 test "$(grep -c '\.wav$' "$OUT/kit-listing.txt")" -eq 16 || { echo "FAIL: expected 16 WAVs"; exit 1; }
 
