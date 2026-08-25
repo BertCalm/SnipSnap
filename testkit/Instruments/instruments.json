@@ -1,0 +1,714 @@
+{
+  "version": 1,
+  "regenerate": "./gradlew :synth:generateInstrumentSuite - renders are deterministic",
+  "instruments": [
+    {
+      "name": "SnipSnap EP",
+      "engine": "tines-ep",
+      "layers": [
+        "soft = true render at bright 0.35 (vel 1-63)",
+        "main = bright 0.8 (vel 64-127)"
+      ],
+      "volumeRelease": 0.5,
+      "zones": [
+        {
+          "rootMidi": 41,
+          "note": "F2",
+          "lowNote": 32,
+          "highNote": 42,
+          "samples": [
+            {
+              "sample": "EP_F2_soft",
+              "frames": 187425,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "EP_F2",
+              "frames": 187425,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 44,
+          "note": "G#2",
+          "lowNote": 43,
+          "highNote": 45,
+          "samples": [
+            {
+              "sample": "EP_G#2_soft",
+              "frames": 187425,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "EP_G#2",
+              "frames": 187425,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 47,
+          "note": "B2",
+          "lowNote": 46,
+          "highNote": 48,
+          "samples": [
+            {
+              "sample": "EP_B2_soft",
+              "frames": 166976,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "EP_B2",
+              "frames": 166976,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 50,
+          "note": "D3",
+          "lowNote": 49,
+          "highNote": 51,
+          "samples": [
+            {
+              "sample": "EP_D3_soft",
+              "frames": 140410,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "EP_D3",
+              "frames": 140410,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 53,
+          "note": "F3",
+          "lowNote": 52,
+          "highNote": 54,
+          "samples": [
+            {
+              "sample": "EP_F3_soft",
+              "frames": 118070,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "EP_F3",
+              "frames": 118070,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 56,
+          "note": "G#3",
+          "lowNote": 55,
+          "highNote": 57,
+          "samples": [
+            {
+              "sample": "EP_G#3_soft",
+              "frames": 99284,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "EP_G#3",
+              "frames": 99284,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 59,
+          "note": "B3",
+          "lowNote": 58,
+          "highNote": 60,
+          "samples": [
+            {
+              "sample": "EP_B3_soft",
+              "frames": 83488,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "EP_B3",
+              "frames": 83488,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 62,
+          "note": "D4",
+          "lowNote": 61,
+          "highNote": 63,
+          "samples": [
+            {
+              "sample": "EP_D4_soft",
+              "frames": 70205,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "EP_D4",
+              "frames": 70205,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 65,
+          "note": "F4",
+          "lowNote": 64,
+          "highNote": 74,
+          "samples": [
+            {
+              "sample": "EP_F4_soft",
+              "frames": 59035,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "EP_F4",
+              "frames": 59035,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SnipSnap Organ",
+      "engine": "tonewheel-soul-held",
+      "layers": [
+        "single layer; sustain loop cut at a whole number of periods of the 16' sub"
+      ],
+      "volumeRelease": 0.30000001192092896,
+      "zones": [
+        {
+          "rootMidi": 45,
+          "note": "A2",
+          "lowNote": 36,
+          "highNote": 46,
+          "samples": [
+            {
+              "sample": "Organ_A2",
+              "frames": 61740,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 52920
+            }
+          ]
+        },
+        {
+          "rootMidi": 48,
+          "note": "C3",
+          "lowNote": 47,
+          "highNote": 49,
+          "samples": [
+            {
+              "sample": "Organ_C3",
+              "frames": 96746,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 52920
+            }
+          ]
+        },
+        {
+          "rootMidi": 51,
+          "note": "D#3",
+          "lowNote": 50,
+          "highNote": 52,
+          "samples": [
+            {
+              "sample": "Organ_D#3",
+              "frames": 92041,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 52920
+            }
+          ]
+        },
+        {
+          "rootMidi": 54,
+          "note": "F#3",
+          "lowNote": 53,
+          "highNote": 55,
+          "samples": [
+            {
+              "sample": "Organ_F#3",
+              "frames": 87247,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 52920
+            }
+          ]
+        },
+        {
+          "rootMidi": 57,
+          "note": "A3",
+          "lowNote": 56,
+          "highNote": 58,
+          "samples": [
+            {
+              "sample": "Organ_A3",
+              "frames": 61740,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 52920
+            }
+          ]
+        },
+        {
+          "rootMidi": 60,
+          "note": "C4",
+          "lowNote": 59,
+          "highNote": 61,
+          "samples": [
+            {
+              "sample": "Organ_C4",
+              "frames": 74833,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 52920
+            }
+          ]
+        },
+        {
+          "rootMidi": 63,
+          "note": "D#4",
+          "lowNote": 62,
+          "highNote": 64,
+          "samples": [
+            {
+              "sample": "Organ_D#4",
+              "frames": 82119,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 52920
+            }
+          ]
+        },
+        {
+          "rootMidi": 66,
+          "note": "F#4",
+          "lowNote": 65,
+          "highNote": 67,
+          "samples": [
+            {
+              "sample": "Organ_F#4",
+              "frames": 74136,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 52920
+            }
+          ]
+        },
+        {
+          "rootMidi": 69,
+          "note": "A4",
+          "lowNote": 68,
+          "highNote": 78,
+          "samples": [
+            {
+              "sample": "Organ_A4",
+              "frames": 70560,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 52920
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SnipSnap Harp",
+      "engine": "pluck-harp",
+      "layers": [
+        "soft = main softened 0.6 (vel 1-63)",
+        "main (vel 64-127)"
+      ],
+      "volumeRelease": 0.5,
+      "zones": [
+        {
+          "rootMidi": 52,
+          "note": "E3",
+          "lowNote": 43,
+          "highNote": 53,
+          "samples": [
+            {
+              "sample": "Harp_E3_soft",
+              "frames": 49877,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Harp_E3",
+              "frames": 49877,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 55,
+          "note": "G3",
+          "lowNote": 54,
+          "highNote": 56,
+          "samples": [
+            {
+              "sample": "Harp_G3_soft",
+              "frames": 49877,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Harp_G3",
+              "frames": 49877,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 58,
+          "note": "A#3",
+          "lowNote": 57,
+          "highNote": 59,
+          "samples": [
+            {
+              "sample": "Harp_A#3_soft",
+              "frames": 49877,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Harp_A#3",
+              "frames": 49877,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 61,
+          "note": "C#4",
+          "lowNote": 60,
+          "highNote": 62,
+          "samples": [
+            {
+              "sample": "Harp_C#4_soft",
+              "frames": 49877,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Harp_C#4",
+              "frames": 49877,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 64,
+          "note": "E4",
+          "lowNote": 63,
+          "highNote": 65,
+          "samples": [
+            {
+              "sample": "Harp_E4_soft",
+              "frames": 49877,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Harp_E4",
+              "frames": 49877,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 67,
+          "note": "G4",
+          "lowNote": 66,
+          "highNote": 68,
+          "samples": [
+            {
+              "sample": "Harp_G4_soft",
+              "frames": 49877,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Harp_G4",
+              "frames": 49877,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 70,
+          "note": "A#4",
+          "lowNote": 69,
+          "highNote": 71,
+          "samples": [
+            {
+              "sample": "Harp_A#4_soft",
+              "frames": 49877,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Harp_A#4",
+              "frames": 49877,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 73,
+          "note": "C#5",
+          "lowNote": 72,
+          "highNote": 74,
+          "samples": [
+            {
+              "sample": "Harp_C#5_soft",
+              "frames": 49877,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Harp_C#5",
+              "frames": 49877,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 76,
+          "note": "E5",
+          "lowNote": 75,
+          "highNote": 85,
+          "samples": [
+            {
+              "sample": "Harp_E5_soft",
+              "frames": 49877,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Harp_E5",
+              "frames": 49877,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SnipSnap Music Box",
+      "engine": "tines-chime-twins",
+      "layers": [
+        "single layer - one dynamic, wistful"
+      ],
+      "volumeRelease": 0.5,
+      "zones": [
+        {
+          "rootMidi": 60,
+          "note": "C4",
+          "lowNote": 51,
+          "highNote": 61,
+          "samples": [
+            {
+              "sample": "MusicBox_C4",
+              "frames": 91723,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 63,
+          "note": "D#4",
+          "lowNote": 62,
+          "highNote": 64,
+          "samples": [
+            {
+              "sample": "MusicBox_D#4",
+              "frames": 84110,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 66,
+          "note": "F#4",
+          "lowNote": 65,
+          "highNote": 67,
+          "samples": [
+            {
+              "sample": "MusicBox_F#4",
+              "frames": 77129,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 69,
+          "note": "A4",
+          "lowNote": 68,
+          "highNote": 70,
+          "samples": [
+            {
+              "sample": "MusicBox_A4",
+              "frames": 70728,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 72,
+          "note": "C5",
+          "lowNote": 71,
+          "highNote": 73,
+          "samples": [
+            {
+              "sample": "MusicBox_C5",
+              "frames": 64858,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 75,
+          "note": "D#5",
+          "lowNote": 74,
+          "highNote": 76,
+          "samples": [
+            {
+              "sample": "MusicBox_D#5",
+              "frames": 59475,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 78,
+          "note": "F#5",
+          "lowNote": 77,
+          "highNote": 79,
+          "samples": [
+            {
+              "sample": "MusicBox_F#5",
+              "frames": 54539,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 81,
+          "note": "A5",
+          "lowNote": 80,
+          "highNote": 82,
+          "samples": [
+            {
+              "sample": "MusicBox_A5",
+              "frames": 50012,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 84,
+          "note": "C6",
+          "lowNote": 83,
+          "highNote": 93,
+          "samples": [
+            {
+              "sample": "MusicBox_C6",
+              "frames": 45861,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

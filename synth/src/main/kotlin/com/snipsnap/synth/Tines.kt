@@ -85,8 +85,10 @@ object Tines {
      * ratio × carrier, index starting at [index] and decaying [bite] times
      * faster than the amplitude. Everything in this file is this function
      * with different numbers — which is exactly the "deliberately small" bet.
+     * Internal so [Keys] can strike at exact MIDI frequencies for the
+     * key-patch instruments (S5) without a second FM core.
      */
-    private fun strike(
+    internal fun strike(
         out: FloatArray,
         carrierHz: Float,
         ratio: Float,

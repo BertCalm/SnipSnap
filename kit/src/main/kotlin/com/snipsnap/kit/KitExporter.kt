@@ -65,6 +65,27 @@ object KitExporter {
         samplesDir: File,
     ): Pair<File, List<File>> {
         programDir.mkdirs()
+        val (slots, written) = buildSlots(kit, kitDir, samplesDir)
+        val program = XpmWriter().writeTo(programDir, DrumProgram(kit.name, slots))
+        return program to written
+    }
+
+    /**
+     * Sample copying and slot assembly, shared by every program writer —
+     * MPC 2 XPM and MPC 3 track alike: copy each pad's WAVs (stems
+     * sanitized) into [samplesDir] and return the [Pad] slots referencing
+     * them, class colours included.
+     */
+    internal fun buildSlots(
+        kit: Kit,
+        kitDir: File,
+        samplesDir: File,
+        /**
+         * Prepended to every stem — how several kits share one flat
+         * `_[ProjectData]/` without their `A01_Kick_01`s colliding.
+         */
+        stemPrefix: String = "",
+    ): Pair<List<Pad?>, List<File>> {
         samplesDir.mkdirs()
 
         val written = mutableListOf<File>()
@@ -74,7 +95,7 @@ object KitExporter {
         val used = HashSet<String>()
 
         fun copySample(file: String): Pair<String, Long> {
-            val stem = Names.sanitizeStem(file.substringBeforeLast('.'))
+            val stem = Names.sanitizeStem(stemPrefix + file.substringBeforeLast('.'))
             check(used.add(stem.lowercase())) { "preflight let a name collision through: $stem" }
             val dst = File(samplesDir, "$stem.wav")
             File(kitDir, file).copyTo(dst, overwrite = true)
@@ -115,8 +136,7 @@ object KitExporter {
                 color = p.packedColor(),
             )
         }
-        val program = XpmWriter().writeTo(programDir, DrumProgram(kit.name, slots.toList()))
-        return program to written
+        return slots.toList() to written
     }
 
     /**

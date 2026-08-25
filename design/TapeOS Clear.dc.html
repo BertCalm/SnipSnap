@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen:wght@400;700&family=Permanent+Marker&family=Michroma&display=swap">
+<style>
+body{margin:0;background:#8fa2b0;display:flex;justify-content:center;align-items:flex-start;height:100vh;overflow:hidden}
+a{color:#1878b0}a:hover{color:#3888b8}
+.px{font-family:'Silkscreen',Verdana,sans-serif;font-size:9px;letter-spacing:.5px}
+.marker{font-family:'Permanent Marker',cursive}
+.lcdf{font-family:'VT323',monospace}
+.mch{font-family:'Michroma',sans-serif}
+.oil{background:conic-gradient(from 210deg at 50% 40%,#3888b8,#78c8e8 25%,#f0f8fc 50%,#58a8cc 75%,#3888b8)}
+.cyl{box-shadow:inset 0 3px 3px rgba(255,255,255,.55),inset 0 -4px 5px rgba(0,0,0,.55),inset 0 -1px 0 rgba(255,255,255,.15)}
+.oil-h{background:linear-gradient(90deg,#3888b8,#78c8e8 32%,#f0f8fc 68%,#58a8cc)}
+@keyframes reelspin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes toastup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes screenin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes bootbar{from{width:0}to{width:100%}}
+@keyframes bootblink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes pencilspin{from{transform:rotate(0)}to{transform:rotate(-360deg)}}
+.screen{animation:screenin .18s ease-out}
+</style>
+</helmet>
+<div style="width:390px;height:844px;background:radial-gradient(120% 80% at 50% 110%,#d8e6f0 0%,#b8c8d4 60%),#b8c8d4;position:relative;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;user-select:none;-webkit-user-select:none;transform:{{fitScale}};transform-origin:top center;">
+  <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(56,136,184,.10) 0 1px,transparent 1px 22px),repeating-linear-gradient(90deg,rgba(255,255,255,.4) 0 1px,transparent 1px 22px);pointer-events:none;"></div>
+
+  <sc-if value="{{isBoot}}" hint-placeholder-val="{{false}}">
+    <div onClick="{{skipBoot}}" style="position:absolute;inset:0;background:#101418;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;cursor:pointer;">
+      <svg width="120" height="84" viewBox="0 0 100 70">
+        <rect x="1" y="1" width="98" height="62" rx="8" fill="#14181e" stroke="#58c8e8" stroke-width="2"/>
+        <rect x="8" y="6" width="84" height="18" rx="3" fill="#0e1216" stroke="#3a444e"/>
+        <text x="50" y="19" font-family="Permanent Marker, cursive" font-size="11" text-anchor="middle" fill="#a8ecff">TapeOS</text>
+        <rect x="24" y="30" width="52" height="22" rx="11" fill="#0e1216" stroke="#3a444e"/>
+        <circle cx="38" cy="41" r="6.5" fill="none" stroke="#8fb8c8" stroke-width="2"/>
+        <circle cx="62" cy="41" r="6.5" fill="none" stroke="#8fb8c8" stroke-width="2"/>
+      </svg>
+      <div class="mch" style="font-size:14px;letter-spacing:3px;color:#a8ecff;text-shadow:0 0 12px rgba(120,200,240,.7);">TapeOS</div>
+      <div class="lcdf" style="color:#58c8e8;font-size:19px;text-shadow:0 0 8px rgba(88,200,232,.6);">{{bootLine}}</div>
+      <div style="width:200px;height:10px;background:#0e1216;border:1px solid #2a343e;border-radius:999px;overflow:hidden;">
+        <div class="oil-h cyl" style="height:100%;border-radius:999px;animation:bootbar 2.2s linear forwards;"></div>
+      </div>
+      <div class="px" style="color:#4a5866;animation:bootblink 1.2s step-end infinite;">TAP TO SKIP</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isLandscape}}" hint-placeholder-val="{{false}}">
+    <div style="position:absolute;inset:0;background:#101418;z-index:5;">
+      <div style="position:absolute;left:50%;top:50%;width:816px;height:362px;transform:translate(-50%,-50%) rotate(90deg);display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <span class="lcdf" style="color:#a8ecff;font-size:24px;text-shadow:0 0 12px rgba(120,200,240,.75);">PLAY KIT 01 — LANDSCAPE</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="lcdf" style="color:#ff9a1a;font-size:22px;">{{bpmText}}</span>
+            <div onClick="{{rotate}}" style="width:34px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid #58c8e8;border-radius:4px;cursor:pointer;"><span class="lcdf" style="color:#a0e8f8;font-size:18px;">⟳</span></div>
+          </div>
+        </div>
+        <div style="flex:1;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:10px;">
+          <sc-for list="{{pads}}" as="p" hint-placeholder-count="16">
+            <div style="{{p.playStyle}}" onPointerDown="{{p.trigger}}">
+              <span class="px" style="position:absolute;top:6px;left:8px;color:#5a6874;pointer-events:none;">{{p.id}}</span>
+              <span class="marker" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:14px;pointer-events:none;color:{{p.tint}};">{{p.label}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:10px;">
+          <span class="px" style="color:#5a6874;">LATENCY: LOW · MULTI-TOUCH OK</span>
+          <span class="px" style="color:#5a6874;">HAT CL CHOKES HAT OP</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <div class="oil" style="flex:1;padding:3px;border-radius:6px;box-shadow:0 14px 40px rgba(50,70,90,.4),0 0 34px rgba(120,180,220,.5);display:flex;position:relative;">
+  <div style="flex:1;background:linear-gradient(180deg,#eef1f5,#dfe4ea);border-radius:4px;display:flex;flex-direction:column;padding:4px;min-height:0;">
+
+    <div class="oil" style="height:34px;border-radius:4px;display:flex;align-items:center;gap:8px;padding:0 6px 0 10px;flex:none;">
+      <svg width="20" height="14" viewBox="0 0 20 14"><rect x="0.5" y="0.5" width="19" height="13" rx="2" fill="#14181e"/><circle cx="6" cy="7" r="2.6" fill="none" stroke="#78c8e8"/><circle cx="14" cy="7" r="2.6" fill="none" stroke="#ff9a1a"/></svg>
+      <span class="mch" style="color:#fff;font-size:11px;letter-spacing:2px;flex:1;text-shadow:0 1px 3px rgba(20,50,80,.6);">{{titleText}}</span>
+      <div style="display:flex;gap:3px;">
+        <div style="width:24px;height:22px;background:#f4f6f9;border:1px solid #9aa6b4;display:flex;align-items:center;justify-content:center;border-radius:3px;"><svg width="12" height="12"><rect x="2" y="9" width="8" height="2" fill="#3a4450"/></svg></div>
+        <div style="width:24px;height:22px;background:#f4f6f9;border:1px solid #9aa6b4;display:flex;align-items:center;justify-content:center;border-radius:3px;"><svg width="12" height="12"><path d="M2.5 2.5 L9.5 9.5 M9.5 2.5 L2.5 9.5" stroke="#b04868" stroke-width="1.8"/></svg></div>
+      </div>
+    </div>
+
+    <div class="px" style="height:26px;display:flex;align-items:center;gap:2px;padding:0 4px;color:#5c6874;flex:none;">
+      <span onClick="{{goKits}}" style="padding:3px 4px;cursor:pointer;color:{{kitsMenuColor}};">KITS</span>
+      <span onClick="{{goKit}}" style="padding:3px 4px;cursor:pointer;color:{{kitMenuColor}};">KIT</span>
+      <span onClick="{{goDeck}}" style="padding:3px 4px;cursor:pointer;color:{{deckMenuColor}};">TAPE</span>
+      <span onClick="{{goChop}}" style="padding:3px 4px;cursor:pointer;color:{{chopMenuColor}};">CHOP</span>
+      <span onClick="{{goPlay}}" style="padding:3px 4px;cursor:pointer;color:{{playMenuColor}};">PLAY</span>
+      <span onClick="{{goSynth}}" style="padding:3px 4px;cursor:pointer;color:{{synthMenuColor}};">SYNTH</span>
+      <span onClick="{{goExport}}" style="padding:3px 4px;cursor:pointer;color:{{exportMenuColor}};">EXPORT</span>
+      <span onClick="{{goProps}}" style="padding:3px 4px;cursor:pointer;color:{{propsMenuColor}};">⚙</span>
+      <span onClick="{{goOnboard}}" style="padding:3px 4px;cursor:pointer;color:{{helpMenuColor}};">HELP</span>
+    </div>
+
+    <sc-if value="{{isKit}}" hint-placeholder-val="{{true}}">
+      <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;">
+        <div style="background:#101418;border:1px solid #8a96a2;box-shadow:inset 0 2px 8px #000;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
+          <span class="lcdf" style="color:#a8ecff;font-size:25px;text-shadow:0 0 12px rgba(120,200,240,.75);">SNIPSNAP KIT 01</span>
+          <span class="lcdf" style="color:#ff9a1a;font-size:21px;text-shadow:0 0 10px rgba(255,154,26,.6);">BANK A</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;flex:none;">
+          <sc-for list="{{pads}}" as="p" hint-placeholder-count="16">
+            <div style="{{p.kitStyle}}" onPointerDown="{{p.trigger}}">
+              <span class="px" style="position:absolute;top:5px;left:7px;pointer-events:none;color:{{p.idColor}};">{{p.id}}</span>
+              <span class="marker" style="position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:13px;pointer-events:none;color:{{p.kitInk}};">{{p.label}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="position:relative;border:1px solid #b6c0cc;border-radius:6px;padding:16px 10px 10px;background:#f6f8fb;flex:none;">
+          <span class="px" style="position:absolute;top:-6px;left:12px;background:#ffffff;border:1px solid #1878b0;border-radius:999px;padding:1px 8px;color:#14506e;">SNIP SHELF — {{shelfCount}}</span>
+          <sc-if value="{{shelfEmpty}}" hint-placeholder-val="{{false}}">
+            <div style="height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1px dashed #b6c0cc;border-radius:6px;">
+              <span class="px" style="color:#7a8694;">NOTHING ON THE SHELF YET.</span>
+              <span class="px" style="color:#9aa4b0;">ARM A SESSION AND GO FIND A SOUND WORTH KEEPING.</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{shelfFull}}" hint-placeholder-val="{{true}}">
+          <div style="display:flex;gap:8px;">
+            <svg viewBox="0 0 100 64" width="68" height="44"><rect x="1" y="1" width="98" height="62" rx="6" fill="#f2f5f9" stroke="#e8542e" stroke-width="1.5"/><rect x="8" y="6" width="84" height="18" rx="2" fill="#ffffff" stroke="#e8542e"/><text x="50" y="19" font-family="Permanent Marker, cursive" font-size="11" text-anchor="middle" fill="#e8542e">KICK 01</text><rect x="24" y="30" width="52" height="22" rx="11" fill="#2a3038" stroke="#e8542e"/><circle cx="38" cy="41" r="6.5" fill="none" stroke="#e8542e"/><circle cx="62" cy="41" r="6.5" fill="none" stroke="#e8542e"/></svg>
+            <svg viewBox="0 0 100 64" width="68" height="44"><rect x="1" y="1" width="98" height="62" rx="6" fill="#f2f5f9" stroke="#ffc41f" stroke-width="1.5"/><rect x="8" y="6" width="84" height="18" rx="2" fill="#ffffff" stroke="#ffc41f"/><text x="50" y="19" font-family="Permanent Marker, cursive" font-size="11" text-anchor="middle" fill="#a87800">SNARE 01</text><rect x="24" y="30" width="52" height="22" rx="11" fill="#2a3038" stroke="#ffc41f"/><circle cx="38" cy="41" r="6.5" fill="none" stroke="#ffc41f"/><circle cx="62" cy="41" r="6.5" fill="none" stroke="#ffc41f"/></svg>
+            <svg viewBox="0 0 100 64" width="68" height="44"><rect x="1" y="1" width="98" height="62" rx="6" fill="#f2f5f9" stroke="#9aa4b0" stroke-dasharray="4 3" stroke-width="1.5"/><rect x="8" y="6" width="84" height="18" rx="2" fill="#ffffff" stroke="#9aa4b0"/><text x="50" y="19" font-family="Permanent Marker, cursive" font-size="11" text-anchor="middle" fill="#7a8694">VOX ?</text><rect x="24" y="30" width="52" height="22" rx="11" fill="#2a3038" stroke="#9aa4b0"/><circle cx="38" cy="41" r="6.5" fill="none" stroke="#9aa4b0"/><circle cx="62" cy="41" r="6.5" fill="none" stroke="#9aa4b0"/></svg>
+            <svg viewBox="0 0 100 64" width="68" height="44"><rect x="1" y="1" width="98" height="62" rx="6" fill="#f2f5f9" stroke="#3f8cf0" stroke-width="1.5"/><rect x="8" y="6" width="84" height="18" rx="2" fill="#ffffff" stroke="#3f8cf0"/><text x="50" y="19" font-family="Permanent Marker, cursive" font-size="11" text-anchor="middle" fill="#3f8cf0">LOOP 92</text><rect x="24" y="30" width="52" height="22" rx="11" fill="#2a3038" stroke="#3f8cf0"/><circle cx="38" cy="41" r="6.5" fill="none" stroke="#3f8cf0"/><circle cx="62" cy="41" r="6.5" fill="none" stroke="#3f8cf0"/></svg>
+          </div>
+          </sc-if>
+        </div>
+        <div style="flex:1;"></div>
+        <div class="oil" onClick="{{toggleArm}}" style="height:58px;border-radius:999px;padding:2px;box-shadow:0 0 20px rgba(56,136,184,.35);cursor:pointer;flex:none;">
+          <div style="height:100%;border-radius:999px;background:{{armBg}};display:flex;align-items:center;justify-content:center;gap:12px;">
+            <svg width="22" height="22"><circle cx="11" cy="11" r="9" fill="#e83a2e"/><circle cx="11" cy="11" r="9" fill="none" stroke="#ffffff" stroke-width="1.5"/></svg>
+            <div>
+              <div class="mch" style="font-size:12px;letter-spacing:2px;color:#a02434;text-shadow:none;">{{armTitle}}</div>
+              <div class="px" style="color:#7a626a;">{{armSub}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isDeck}}" hint-placeholder-val="{{false}}">
+      <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;">
+        <div onClick="{{pencilRewind}}" style="align-self:center;margin-top:4px;cursor:pointer;flex:none;position:relative;">
+          <svg viewBox="0 0 220 130" width="242" height="143">
+            <rect x="2" y="2" width="216" height="126" rx="12" fill="#f2f5f9" stroke="#3888b8" stroke-width="2"/>
+            <rect x="16" y="12" width="188" height="34" rx="4" fill="#ffffff" stroke="#9aa6b4"/>
+            <text x="110" y="35" font-family="Permanent Marker, cursive" font-size="19" text-anchor="middle" fill="#3888b8">last capture</text>
+            <rect x="46" y="56" width="128" height="52" rx="26" fill="#14181e" stroke="#5a6874"/>
+            <g style="{{reelSpin}}" transform-origin="78 82"><circle cx="78" cy="82" r="17" fill="#1c2228" stroke="#a8b6c0" stroke-width="2"/><path d="M78 65 v10 M78 89 v10 M61 82 h10 M85 82 h10" stroke="#a8b6c0" stroke-width="2"/></g>
+            <g style="{{reelSpin}}" transform-origin="142 82"><circle cx="142" cy="82" r="17" fill="#1c2228" stroke="#a8b6c0" stroke-width="2"/><path d="M142 65 v10 M142 89 v10 M125 82 h10 M149 82 h10" stroke="#a8b6c0" stroke-width="2"/></g>
+            <circle cx="110" cy="118" r="4" fill="#ff9a1a"/>
+          </svg>
+          <span class="px" style="position:absolute;bottom:-2px;left:0;right:0;text-align:center;color:#7a8694;">TAP CASSETTE TO REWIND</span>
+        </div>
+        <div style="background:#101418;border:1px solid #8a96a2;border-radius:4px;box-shadow:inset 0 2px 8px #000;padding:8px 0;position:relative;overflow:hidden;touch-action:none;flex:none;min-width:0;max-width:100%;box-sizing:border-box;"
+             onPointerDown="{{dragStart}}" onPointerMove="{{dragMove}}" onPointerUp="{{dragEnd}}" onPointerCancel="{{dragEnd}}" onPointerLeave="{{dragEnd}}">
+          <div style="height:110px;"></div>
+          <div style="position:absolute;top:8px;left:0;height:110px;display:flex;align-items:center;gap:1px;transform:{{waveTransform}};will-change:transform;">
+            <sc-for list="{{bars}}" as="b" hint-placeholder-count="40">
+              <div style="width:2px;flex:none;background:{{b.color}};height:{{b.h}};box-shadow:0 0 4px {{b.color}};"></div>
+            </sc-for>
+          </div>
+          <div style="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#ffb000;box-shadow:0 0 10px #ffb000;pointer-events:none;"></div>
+          <div style="position:absolute;top:4px;left:50%;transform:translateX(-50%);pointer-events:none;"><span class="px" style="color:#ffb000;">▼ NEEDLE</span></div>
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.3) 0 1px,transparent 1px 3px);pointer-events:none;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:0 4px;flex:none;">
+          <span class="lcdf" style="color:#2c3844;font-size:22px;">POS {{posText}}</span>
+          <span class="lcdf" style="color:#186478;font-size:22px;">IN {{inText}}</span>
+          <span class="lcdf" style="color:#a05818;font-size:22px;">OUT {{outText}}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;flex:none;">
+          <div onClick="{{togglePlayback}}" style="height:48px;background:linear-gradient(180deg,#f8fafc,#e4e8ee);border:1px solid #2898b8;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 10px rgba(40,152,184,.25);"><span class="px" style="color:#0e5468;">{{playLabel}}</span></div>
+          <div onClick="{{setIn}}" style="height:48px;background:linear-gradient(180deg,#f8fafc,#e4e8ee);border:1px solid #b6c0cc;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#2c3844;">SET IN</span></div>
+          <div onClick="{{setOut}}" style="height:48px;background:linear-gradient(180deg,#f8fafc,#e4e8ee);border:1px solid #b6c0cc;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#2c3844;">SET OUT</span></div>
+        </div>
+        <div style="display:flex;gap:8px;flex:none;">
+          <div style="flex:1;height:40px;background:#f6f8fb;border:1px solid #b6c0cc;border-radius:6px;display:flex;align-items:center;justify-content:space-between;padding:0 4px;box-sizing:border-box;">
+            <div onClick="{{zoomOut}}" style="width:36px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;background:#e4e8ee;"><span class="lcdf" style="color:#2c3844;font-size:20px;">−</span></div>
+            <span class="px" style="color:#5c6874;">ZOOM {{zoomText}}</span>
+            <div onClick="{{zoomIn}}" style="width:36px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;background:#e4e8ee;"><span class="lcdf" style="color:#2c3844;font-size:20px;">+</span></div>
+          </div>
+          <div onClick="{{toggleSnap}}" style="flex:1;height:40px;background:{{snapBg}};border:1px solid {{snapBorder}};border-radius:6px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;">
+            <div style="width:10px;height:10px;border-radius:50%;background:{{snapDot}};box-shadow:0 0 8px {{snapDot}};"></div>
+            <span class="px" style="color:{{snapInk}};">SNAP TO ONSET</span>
+          </div>
+        </div>
+        <div class="px" style="color:#7a8694;text-align:center;flex:none;">{{snapHint}}</div>
+        <div style="flex:1;"></div>
+        <div class="oil" onClick="{{commitSnip}}" style="height:58px;border-radius:6px;padding:2px;box-shadow:0 0 20px rgba(40,152,184,.3);cursor:pointer;flex:none;">
+          <div style="height:100%;border-radius:4px;background:linear-gradient(180deg,#eaf7fb,#d6edf5);display:flex;align-items:center;justify-content:center;gap:10px;">
+            <svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 3 L15 15 M15 3 L3 15" stroke="#1898c0" stroke-width="2.5"/><circle cx="4" cy="4" r="3" fill="none" stroke="#1898c0" stroke-width="1.5"/><circle cx="4" cy="14" r="3" fill="none" stroke="#1898c0" stroke-width="1.5"/></svg>
+            <span class="mch" style="font-size:12px;letter-spacing:2px;color:#0e5468;text-shadow:none;">COMMIT SNIP</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isProps}}" hint-placeholder-val="{{false}}">
+      <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;min-width:0;">
+        <div style="background:#101418;border:1px solid #8a96a2;box-shadow:inset 0 2px 8px #000;height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
+          <span class="lcdf" style="color:#a8ecff;font-size:23px;text-shadow:0 0 12px rgba(120,200,240,.75);">TAPE PROPERTIES</span>
+          <span class="px" style="color:#ff9a1a;">SCHEME</span>
+        </div>
+        <div style="align-self:center;flex:none;position:relative;width:242px;height:150px;">
+          <svg viewBox="0 0 230 143" width="242" height="150">
+            <rect x="18" y="6" width="194" height="118" rx="10" fill="#e8ecf1" stroke="{{schemeAccent}}" stroke-width="2"/>
+            <rect x="30" y="16" width="170" height="98" rx="4" fill="#14181e"/>
+            <rect x="96" y="124" width="38" height="10" fill="#d4dae2" stroke="#9aa6b4"/>
+            <circle cx="196" cy="131" r="3" fill="{{schemeAccent}}"/>
+          </svg>
+          <div style="position:absolute;left:36px;top:20px;width:158px;height:90px;background:{{miniDesk}};padding:4px;box-sizing:border-box;">
+            <div style="height:100%;display:flex;flex-direction:column;background:{{miniWin}};border:1px solid {{miniBorder}};box-sizing:border-box;">
+              <div style="height:12px;background:{{miniTitle}};display:flex;align-items:center;padding:0 4px;flex:none;"><span class="px" style="color:#fff;font-size:6px;">SNIPSNAP.EXE</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:3px;padding:4px;min-height:0;">
+                <div style="height:13px;background:{{miniLcd}};display:flex;align-items:center;padding:0 4px;flex:none;"><span class="lcdf" style="color:{{miniInk}};font-size:10px;">KIT 01</span></div>
+                <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;flex:1;min-height:0;">
+                  <div style="background:#e8542e;border-radius:2px;"></div><div style="background:#ffc41f;border-radius:2px;"></div><div style="background:#1fc6cf;border-radius:2px;"></div><div style="background:#7adfe4;border-radius:2px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1;overflow-y:auto;border:1px solid #b6c0cc;border-radius:6px;background:#ffffff;min-height:0;">
+          <sc-for list="{{schemes}}" as="sch" hint-placeholder-count="5">
+            <div onClick="{{sch.pick}}" style="{{sch.rowStyle}}">
+              <div style="display:flex;width:34px;height:14px;border:1px solid #8a96a2;flex:none;">
+                <div style="flex:1;background:{{sch.s1}};"></div><div style="flex:1;background:{{sch.s2}};"></div><div style="flex:1;background:{{sch.s3}};"></div>
+              </div>
+              <span class="px" style="color:{{sch.ink}};">{{sch.name}}</span>
+              <span class="px" style="color:#8a94a0;margin-left:auto;">{{sch.note}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:8px;flex:none;">
+          <div onClick="{{saveAs}}" style="flex:1;height:44px;background:linear-gradient(180deg,#f8fafc,#e4e8ee);border:1px solid #b6c0cc;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#2c3844;">SAVE AS…</span></div>
+          <div style="flex:1;height:44px;background:#eef1f5;border:1px solid #d4dae2;border-radius:6px;display:flex;align-items:center;justify-content:center;"><span class="px" style="color:#aab4be;">DELETE</span></div>
+        </div>
+        <div class="px" style="color:#7a8694;line-height:1.7;flex:none;">PAD CLASS COLORS NEVER CHANGE — YOUR PADS MATCH YOUR MPC IN EVERY SCHEME.</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isChop}}" hint-placeholder-val="{{false}}">
+      <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:9px;padding:6px 6px 4px;min-height:0;min-width:0;">
+        <div style="background:#101418;border:1px solid #8a96a2;box-shadow:inset 0 2px 8px #000;height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
+          <span class="lcdf" style="color:#a8ecff;font-size:23px;text-shadow:0 0 12px rgba(120,200,240,.75);">CHOP SHOP</span>
+          <span class="lcdf" style="color:#ff9a1a;font-size:19px;">SNIP_014</span>
+        </div>
+        <div style="background:#101418;border:1px solid #8a96a2;border-radius:4px;height:80px;position:relative;overflow:hidden;flex:none;">
+          <svg viewBox="0 0 350 84" width="100%" height="100%" preserveAspectRatio="none">
+            <g fill="#a8ecff"><rect x="4" y="14" width="5" height="58"/><rect x="12" y="30" width="5" height="26"/><rect x="20" y="38" width="5" height="12"/><rect x="28" y="34" width="5" height="18"/><rect x="40" y="10" width="5" height="66"/><rect x="48" y="26" width="5" height="34"/><rect x="56" y="36" width="5" height="14"/><rect x="68" y="16" width="5" height="54"/><rect x="76" y="30" width="5" height="26"/><rect x="88" y="12" width="5" height="62"/><rect x="96" y="28" width="5" height="30"/><rect x="104" y="36" width="5" height="14"/><rect x="118" y="18" width="5" height="50"/><rect x="126" y="32" width="5" height="22"/><rect x="140" y="10" width="5" height="66"/><rect x="148" y="24" width="5" height="38"/><rect x="156" y="34" width="5" height="18"/><rect x="170" y="16" width="5" height="54"/><rect x="178" y="30" width="5" height="26"/><rect x="192" y="12" width="5" height="62"/><rect x="200" y="26" width="5" height="34"/><rect x="212" y="36" width="5" height="14"/><rect x="224" y="14" width="5" height="58"/><rect x="232" y="28" width="5" height="30"/><rect x="246" y="10" width="5" height="66"/><rect x="254" y="24" width="5" height="38"/><rect x="266" y="34" width="5" height="18"/><rect x="278" y="16" width="5" height="54"/><rect x="286" y="30" width="5" height="26"/><rect x="300" y="12" width="5" height="62"/><rect x="308" y="28" width="5" height="30"/><rect x="320" y="36" width="5" height="14"/><rect x="332" y="20" width="5" height="46"/><rect x="340" y="32" width="5" height="22"/></g>
+            <g stroke="#ff9a1a" stroke-width="2"><line x1="4" y1="0" x2="4" y2="84"/><line x1="40" y1="0" x2="40" y2="84"/><line x1="68" y1="0" x2="68" y2="84"/><line x1="88" y1="0" x2="88" y2="84"/><line x1="140" y1="0" x2="140" y2="84"/><line x1="170" y1="0" x2="170" y2="84"/><line x1="246" y1="0" x2="246" y2="84"/><line x1="300" y1="0" x2="300" y2="84"/></g>
+          </svg>
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.3) 0 1px,transparent 1px 3px);pointer-events:none;"></div>
+        </div>
+        <div class="px" style="text-align:center;color:#7a8694;flex:none;">8 SLICES FOUND — TAP A LABEL TO CORRECT IT</div>
+        <div style="flex:1;overflow-y:auto;border:1px solid #b6c0cc;border-radius:6px;background:#ffffff;min-height:0;">
+          <sc-for list="{{slices}}" as="s" hint-placeholder-count="7">
+            <div style="display:flex;align-items:center;gap:10px;height:48px;padding:0 10px;border-bottom:1px solid #e2e7ed;">
+              <span class="lcdf" style="font-size:19px;color:#8a94a0;width:16px;flex:none;">{{s.n}}</span>
+              <div style="flex:1;height:18px;background:#14181e;border-radius:3px;position:relative;overflow:hidden;"><div style="position:absolute;left:0;top:3px;bottom:3px;width:{{s.w}};background:linear-gradient(90deg,{{s.c}},transparent);opacity:.7;border-radius:2px;"></div></div>
+              <span onClick="{{s.cycle}}" class="marker" style="{{s.chipStyle}}">{{s.label}}</span>
+              <span class="px" style="color:{{s.confColor}};width:52px;text-align:right;flex:none;">{{s.conf}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:#101418;border:1px solid #8a96a2;border-radius:4px;height:30px;display:flex;align-items:center;padding:0 10px;flex:none;overflow:hidden;min-width:0;max-width:100%;box-sizing:border-box;">
+          <span class="lcdf" style="color:#58c8e8;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">AUTO-PLACE: KICK→A01 SNARE→A02 HAT→A03 + CHOKE</span>
+        </div>
+        <div style="display:flex;gap:8px;flex:none;">
+          <div onClick="{{rechop}}" style="flex:1;height:52px;background:linear-gradient(180deg,#f8fafc,#e4e8ee);border:1px solid #b6c0cc;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#2c3844;">RE-CHOP…</span></div>
+          <div class="oil" onClick="{{sendToGrid}}" style="flex:2;height:52px;border-radius:6px;padding:2px;box-shadow:0 0 18px rgba(56,136,184,.3);cursor:pointer;box-sizing:border-box;">
+            <div style="height:100%;border-radius:4px;background:linear-gradient(180deg,#e8f2fa,#d8e8f4);display:flex;align-items:center;justify-content:center;gap:10px;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><g fill="none" stroke="#14506e" stroke-width="1.8"><rect x="2" y="2" width="5.5" height="5.5"/><rect x="10.5" y="2" width="5.5" height="5.5"/><rect x="2" y="10.5" width="5.5" height="5.5"/><rect x="10.5" y="10.5" width="5.5" height="5.5"/></g></svg>
+              <span class="mch" style="font-size:11px;letter-spacing:2px;color:#14506e;">SEND TO GRID</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isPlay}}" hint-placeholder-val="{{false}}">
+      <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;">
+        <div style="background:#101418;border:1px solid #8a96a2;box-shadow:inset 0 2px 8px #000;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
+          <span class="lcdf" style="color:#a8ecff;font-size:25px;text-shadow:0 0 12px rgba(120,200,240,.75);">PLAY KIT 01</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="lcdf" style="color:#ff9a1a;font-size:21px;text-shadow:0 0 10px rgba(255,154,26,.6);">{{bpmText}}</span>
+            <div onClick="{{rotate}}" style="width:32px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid #2898b8;border-radius:4px;cursor:pointer;"><span class="lcdf" style="color:#186478;font-size:17px;">⟳</span></div>
+          </div>
+        </div>
+        <div style="flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));gap:10px;min-height:0;">
+          <sc-for list="{{pads}}" as="p" hint-placeholder-count="16">
+            <div style="{{p.playStyle}}" onPointerDown="{{p.trigger}}">
+              <span class="px" style="position:absolute;top:6px;left:8px;color:#5a6874;pointer-events:none;">{{p.id}}</span>
+              <span class="marker" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:14px;pointer-events:none;color:{{p.tint}};">{{p.label}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;justify-content:space-between;flex:none;padding-bottom:2px;">
+          <span class="px" style="color:#7a8694;">LATENCY: LOW · MULTI-TOUCH OK</span>
+          <span class="px" style="color:#7a8694;">HAT CL CHOKES HAT OP</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isSynth}}" hint-placeholder-val="{{false}}">
+      <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;">
+        <div style="background:#101418;border:1px solid #8a96a2;box-shadow:inset 0 2px 8px #000;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
+          <span class="lcdf" style="color:#f8b09a;font-size:25px;text-shadow:0 0 12px rgba(232,84,46,.9);flex:none;">THUMP</span>
+          <span class="px" style="color:#5a6874;font-size:8px;text-align:right;line-height:1.5;">ANALOG-STYLE DRUM VOICES<br/>RENDERS TO PAD</span>
+        </div>
+        <div style="display:flex;gap:6px;flex:none;">
+          <sc-for list="{{voices}}" as="v" hint-placeholder-count="5">
+            <div onClick="{{v.pick}}" style="{{v.tabStyle}}"><span class="px" style="color:{{v.labelColor}};">{{v.name}}</span></div>
+          </sc-for>
+        </div>
+        <div style="background:#101418;border:1px solid #8a96a2;border-radius:6px;height:88px;position:relative;overflow:hidden;flex:none;">
+          <svg width="100%" height="100%" viewBox="0 0 340 88" preserveAspectRatio="none">
+            <path d="{{scopePath}}" fill="none" stroke="#58c8e8" stroke-width="1.5" style="filter:drop-shadow(0 0 4px rgba(88,200,232,.8));"></path>
+          </svg>
+          <span class="px" style="position:absolute;top:5px;left:8px;color:#5a6874;">SCOPE — RENDERED ONE-SHOT</span>
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.3) 0 1px,transparent 1px 3px);pointer-events:none;"></div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:9px;min-height:0;overflow-y:auto;">
+          <sc-for list="{{macros}}" as="m" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="px" style="width:52px;color:#2c3844;flex:none;">{{m.name}}</span>
+              <div style="flex:1;height:26px;background:#ffffff;border:1px solid #b6c0cc;border-radius:999px;position:relative;touch-action:none;cursor:pointer;"
+                   onPointerDown="{{m.down}}" onPointerMove="{{m.move}}" onPointerUp="{{m.up}}" onPointerCancel="{{m.up}}">
+                <div class="oil-h cyl" style="position:absolute;left:2px;top:2px;bottom:2px;border-radius:999px;width:{{m.pct}};pointer-events:none;"></div>
+                <div style="position:absolute;top:-3px;bottom:-3px;left:{{m.knobLeft}};width:14px;border-radius:999px;background:linear-gradient(180deg,#ffffff,#c8d2dc);border:1px solid #8a94a0;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.6);"></div>
+              </div>
+              <span class="lcdf" style="width:34px;color:#186478;font-size:18px;text-align:right;flex:none;">{{m.val}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:8px;flex:none;">
+          <div onClick="{{scramble}}" style="flex:1;height:48px;background:linear-gradient(180deg,#f8fafc,#e4e8ee);border:1px solid #1878b0;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-shadow:0 0 10px rgba(24,120,176,.2);">
+            <span class="lcdf" style="color:#14506e;font-size:20px;">⚄</span><span class="px" style="color:#14506e;">SCRAMBLE</span>
+          </div>
+          <div onClick="{{audition}}" style="flex:1;height:48px;background:linear-gradient(180deg,#f8fafc,#e4e8ee);border:1px solid #2898b8;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 10px rgba(40,152,184,.2);">
+            <span class="px" style="color:#0e5468;">► AUDITION</span>
+          </div>
+        </div>
+        <div class="oil" onClick="{{renderToPad}}" style="height:52px;border-radius:6px;padding:2px;box-shadow:0 0 18px rgba(232,84,46,.3);cursor:pointer;flex:none;">
+          <div style="height:100%;border-radius:4px;background:linear-gradient(180deg,#fdf0e4,#f6e2cc);display:flex;align-items:center;justify-content:center;gap:10px;">
+            <span class="mch" style="font-size:11px;letter-spacing:2px;color:#8a4410;text-shadow:none;">RENDER TO PAD {{targetPad}}</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isKits}}" hint-placeholder-val="{{false}}">
+      <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;">
+        <div style="background:#101418;border:1px solid #8a96a2;box-shadow:inset 0 2px 8px #000;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
+          <span class="lcdf" style="color:#a8ecff;font-size:25px;text-shadow:0 0 12px rgba(120,200,240,.75);">MY KITS</span>
+          <span class="lcdf" style="color:#ff9a1a;font-size:21px;text-shadow:0 0 10px rgba(255,154,26,.6);">{{kitCount}} TAPES</span>
+        </div>
+        <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:0;">
+          <sc-for list="{{kits}}" as="k" hint-placeholder-count="4">
+            <div onClick="{{k.open}}" style="{{k.rowStyle}}">
+              <svg viewBox="0 0 100 64" width="72" height="46" style="flex:none;"><rect x="1" y="1" width="98" height="62" rx="6" fill="#f2f5f9" stroke="{{k.c}}" stroke-width="2"/><rect x="8" y="6" width="84" height="18" rx="2" fill="#ffffff" stroke="{{k.c}}"/><text x="50" y="19" font-family="Permanent Marker, cursive" font-size="11" text-anchor="middle" fill="{{k.ci}}">{{k.name}}</text><rect x="24" y="30" width="52" height="22" rx="11" fill="#2a3038" stroke="{{k.c}}"/><circle cx="38" cy="41" r="6.5" fill="none" stroke="{{k.c}}"/><circle cx="62" cy="41" r="6.5" fill="none" stroke="{{k.c}}"/></svg>
+              <div style="flex:1;min-width:0;">
+                <div class="marker" style="font-size:15px;color:{{k.ci}};">{{k.name}}</div>
+                <div class="px" style="color:#7a8694;margin-top:3px;">{{k.meta}}</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none;">
+                <span class="px" style="color:{{k.statusColor}};">{{k.status}}</span>
+                <span class="lcdf" style="color:#5c6874;font-size:16px;">{{k.date}}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div class="oil" onClick="{{newKit}}" style="height:52px;border-radius:6px;padding:2px;box-shadow:0 0 18px rgba(56,136,184,.3);cursor:pointer;flex:none;">
+          <div style="height:100%;border-radius:4px;background:linear-gradient(180deg,#f6f8fb,#e8ecf2);display:flex;align-items:center;justify-content:center;gap:10px;">
+            <span class="lcdf" style="color:#2c3844;font-size:24px;">+</span>
+            <span class="mch" style="font-size:11px;letter-spacing:2px;color:#2c3844;">NEW BLANK TAPE</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isOnboard}}" hint-placeholder-val="{{false}}">
+      <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;">
+        <sc-if value="{{ob0}}" hint-placeholder-val="{{false}}">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+            <svg viewBox="0 0 100 64" width="150" height="96"><rect x="1" y="1" width="98" height="62" rx="6" fill="#f2f5f9" stroke="#3888b8" stroke-width="2"/><rect x="8" y="6" width="84" height="18" rx="2" fill="#ffffff" stroke="#9aa6b4"/><text x="50" y="19" font-family="Permanent Marker, cursive" font-size="11" text-anchor="middle" fill="#3888b8">your first tape</text><rect x="24" y="30" width="52" height="22" rx="11" fill="#2a3038" stroke="#9aa6b4"/><circle cx="38" cy="41" r="6.5" fill="none" stroke="#a8b6c0"/><circle cx="62" cy="41" r="6.5" fill="none" stroke="#a8b6c0"/></svg>
+            <div style="text-align:center;">
+              <div class="mch" style="font-size:14px;letter-spacing:2px;color:#2c3844;">HEAR IT. SNIP IT. PLAY IT.</div>
+              <div class="px" style="color:#55606c;margin-top:8px;line-height:1.8;">SNIPSNAP RECORDS WHAT YOUR PHONE IS PLAYING<br/>ONTO A ROLLING 60s TAPE LOOP.<br/>ONE TAP KEEPS THE LAST MINUTE. FOREVER.</div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ob1}}" hint-placeholder-val="{{false}}">
+          <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-height:0;">
+            <div class="mch" style="font-size:12px;letter-spacing:1.5px;color:#2c3844;flex:none;">WHAT CAN BE TAPED?</div>
+            <div class="px" style="color:#55606c;line-height:1.7;flex:none;">APPS DECIDE IF THEY CAN BE RECORDED. WE CHECK AT RUNTIME —<br/>THIS LIST IS A HINT, NOT A PROMISE. IT DRIFTS BETWEEN APP VERSIONS.</div>
+            <div style="border:1px solid #b6c0cc;border-radius:6px;background:#ffffff;flex:none;">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-bottom:1px solid #e2e7ed;"><span class="px" style="color:#3c7010;width:64px;flex:none;">USUALLY ✓</span><span class="px" style="color:#55606c;">YOUTUBE · MOST GAMES · MOST PLAYERS</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-bottom:1px solid #e2e7ed;"><span class="px" style="color:#a03818;width:64px;flex:none;">BLOCKS ✕</span><span class="px" style="color:#55606c;">SPOTIFY · CHROME (HISTORICALLY)</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;"><span class="px" style="color:#186478;width:64px;flex:none;">SILENCE?</span><span class="px" style="color:#55606c;">WE DETECT IT AND TELL YOU — NO EMPTY WAVEFORMS</span></div>
+            </div>
+            <div style="position:relative;border:1px solid #2898b8;border-radius:6px;padding:16px 10px 10px;background:#e8f6fa;flex:none;">
+              <span class="px" style="position:absolute;top:-6px;left:12px;background:#ffffff;border:1px solid #2898b8;border-radius:999px;padding:1px 8px;color:#0e5468;">THE ESCAPE HATCH</span>
+              <div class="px" style="color:#0e5468;line-height:1.8;">APP BLOCKS US? USE ANDROID'S SCREEN RECORDER,<br/>THEN SHARE THE VIDEO INTO SNIPSNAP.<br/>WE PULL THE AUDIO OUT. WORKS EVERYWHERE.</div>
+            </div>
+            <div class="px" style="color:#7a8694;flex:none;">YOUR SOURCES. YOUR PHONE. NOTHING LEAVES IT.</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ob2}}" hint-placeholder-val="{{false}}">
+          <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-height:0;">
+            <div class="mch" style="font-size:12px;letter-spacing:1.5px;color:#2c3844;flex:none;">ONE DIALOG. ONE SESSION. MANY SNIPS.</div>
+            <div class="px" style="color:#55606c;line-height:1.7;flex:none;">ANDROID ASKS FRESH CONSENT EVERY SESSION. SO WE ASK ONCE,<br/>THEN THE BUBBLE RIDES ALONG WHILE YOU LISTEN.</div>
+            <div style="flex:1;border:1px solid #b6c0cc;border-radius:6px;background:#f6f8fb;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:0;">
+              <div style="width:250px;background:#ffffff;border:1px solid #b6c0cc;border-radius:8px;padding:14px;box-shadow:0 10px 30px rgba(80,100,120,.35);">
+                <div class="px" style="color:#2c3844;">⬤ ANDROID SYSTEM</div>
+                <div class="px" style="color:#55606c;margin-top:8px;line-height:1.7;">START RECORDING OR CASTING<br/>WITH SNIPSNAP?</div>
+                <div style="display:flex;justify-content:flex-end;gap:14px;margin-top:12px;">
+                  <span class="px" style="color:#8a94a0;">CANCEL</span>
+                  <span onClick="{{consentOk}}" class="px" style="color:#1878b0;cursor:pointer;border:1px solid #1878b0;border-radius:4px;padding:4px 10px;">START NOW</span>
+                </div>
+              </div>
+              <div class="px" style="color:#7a8694;text-align:center;line-height:1.8;">↑ THE ONLY PERMISSION MOMENT.<br/>A QUIET NOTIFICATION HOLDS THE SESSION OPEN.</div>
+            </div>
+          </div>
+        </sc-if>
+        <div style="display:flex;gap:8px;flex:none;">
+          <div onClick="{{obSkip}}" style="flex:1;height:48px;background:linear-gradient(180deg,#f8fafc,#e4e8ee);border:1px solid #b6c0cc;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#55606c;">{{obSkipLabel}}</span></div>
+          <div class="oil" onClick="{{obNext}}" style="flex:2;height:48px;border-radius:6px;padding:2px;cursor:pointer;box-sizing:border-box;">
+            <div style="height:100%;border-radius:4px;background:linear-gradient(180deg,#f6f8fb,#e8ecf2);display:flex;align-items:center;justify-content:center;"><span class="mch" style="font-size:11px;letter-spacing:2px;color:#2c3844;">{{obNextLabel}}</span></div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:center;gap:6px;flex:none;padding-bottom:2px;">
+          <div style="width:20px;height:4px;border-radius:2px;background:{{obDot0}};"></div>
+          <div style="width:20px;height:4px;border-radius:2px;background:{{obDot1}};"></div>
+          <div style="width:20px;height:4px;border-radius:2px;background:{{obDot2}};"></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isExport}}" hint-placeholder-val="{{false}}">
+      <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;">
+        <div>
+          <div class="mch" style="font-size:12px;letter-spacing:1.5px;color:#2c3844;">EXPORT KIT WIZARD</div>
+          <div class="px" style="color:#55606c;margin-top:3px;">STEP 3 OF 3 — PREFLIGHT AND WRITE. NOT A SINGLE BYTE HITS THE CARD UNCHECKED.</div>
+        </div>
+        <div style="border:1px solid #b6c0cc;border-radius:6px;background:#ffffff;padding:2px;flex:none;">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid #e2e7ed;">
+            <svg width="16" height="16"><circle cx="8" cy="8" r="7" fill="none" stroke="#5a9c1c" stroke-width="1.5"/><path d="M4.5 8.5 L7 11 L11.5 5.5" fill="none" stroke="#5a9c1c" stroke-width="2"/></svg>
+            <span class="px" style="color:#3c7010;">{{shelfCount}} PADS ASSIGNED</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid #e2e7ed;">
+            <svg width="16" height="16"><circle cx="8" cy="8" r="7" fill="none" stroke="#5a9c1c" stroke-width="1.5"/><path d="M4.5 8.5 L7 11 L11.5 5.5" fill="none" stroke="#5a9c1c" stroke-width="2"/></svg>
+            <span class="px" style="color:#3c7010;">ALL WAVS 44.1 KHZ / 24-BIT</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid #e2e7ed;">
+            <svg width="17" height="16" viewBox="0 0 17 16"><path d="M8.5 1 L16 14.5 L1 14.5 Z" fill="none" stroke="#ffc41f" stroke-width="1.5"/><rect x="7.7" y="5.5" width="1.8" height="5" fill="#ffc41f"/><rect x="7.7" y="11.6" width="1.8" height="1.8" fill="#ffc41f"/></svg>
+            <span class="px" style="color:#8a6a00;">A07 EMPTY — WILL BE SKIPPED</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;">
+            <svg width="16" height="16"><circle cx="8" cy="8" r="7" fill="none" stroke="#5a9c1c" stroke-width="1.5"/><path d="M4.5 8.5 L7 11 L11.5 5.5" fill="none" stroke="#5a9c1c" stroke-width="2"/></svg>
+            <span class="px" style="color:#3c7010;">HATS SHARE CHOKE GROUP 1</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;flex:none;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="px" style="width:58px;color:#55606c;flex:none;">FORMAT</span>
+            <div onClick="{{cycleFormat}}" style="flex:1;height:30px;background:#ffffff;border:1px solid #b6c0cc;border-radius:4px;display:flex;align-items:center;padding:0 10px;justify-content:space-between;cursor:pointer;min-width:0;">
+              <span class="px" style="color:#2c3844;overflow:hidden;white-space:nowrap;">{{formatLabel}}</span>
+              <span class="px" style="color:#1878b0;">▼</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="px" style="width:58px;color:#55606c;flex:none;">WRITE TO</span>
+            <div style="flex:1;height:30px;background:#ffffff;border:1px solid #b6c0cc;border-radius:4px;display:flex;align-items:center;padding:0 10px;justify-content:space-between;min-width:0;">
+              <span class="px" style="color:#2c3844;overflow:hidden;white-space:nowrap;">SD CARD (E:) — 28.4 GB FREE</span>
+              <span class="px" style="color:#1878b0;">▼</span>
+            </div>
+          </div>
+        </div>
+        <div style="position:relative;border:1px solid #b6c0cc;border-radius:6px;padding:16px 10px 10px;background:#f6f8fb;flex:none;">
+          <span class="px" style="position:absolute;top:-6px;left:12px;background:#ffffff;border:1px solid #2898b8;border-radius:999px;padding:1px 8px;color:#0e5468;">{{dubLabel}}</span>
+          <div style="height:18px;background:#e4e8ee;border-radius:999px;border:1px solid #b6c0cc;padding:2px;box-sizing:border-box;overflow:hidden;">
+            <div class="oil-h cyl" style="height:100%;border-radius:999px;width:{{dubPct}};transition:width .12s linear;"></div>
+          </div>
+          <div class="lcdf" style="margin-top:8px;font-size:18px;background:#101418;color:#a8ecff;padding:3px 8px;border-radius:3px;text-shadow:0 0 8px rgba(120,200,240,.6);overflow:hidden;white-space:nowrap;">E:\Expansions\SNIPSNAP KIT 01\</div>
+          <div class="px" style="margin-top:6px;color:#7a8694;">{{dubFiles}}</div>
+        </div>
+        <div style="flex:1;"></div>
+        <div class="oil" onClick="{{writeKit}}" style="height:58px;border-radius:6px;padding:2px;box-shadow:0 0 20px rgba(90,156,28,.3);cursor:pointer;flex:none;">
+          <div style="height:100%;border-radius:4px;background:{{writeBg}};display:flex;align-items:center;justify-content:center;gap:10px;">
+            <svg width="18" height="18" viewBox="0 0 18 18"><rect x="2" y="2" width="14" height="14" rx="2" fill="none" stroke="#33660a" stroke-width="1.5"/><path d="M9 5 v6 M6 8.5 L9 11.5 L12 8.5" stroke="#33660a" stroke-width="1.8" fill="none"/></svg>
+            <span class="mch" style="font-size:12px;letter-spacing:2px;color:#33660a;text-shadow:none;">{{writeLabel}}</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="height:26px;display:flex;gap:3px;padding:2px 4px 4px;flex:none;">
+      <div style="flex:none;display:flex;align-items:center;padding:0 6px;background:#101418;border-radius:3px;"><span class="px" style="color:#a8ecff;">{{tapeCell}}</span></div>
+      <div style="flex:none;display:flex;align-items:center;padding:0 6px;background:#101418;border-radius:3px;"><span class="px" style="color:#ff9a1a;">{{snipCell}}</span></div>
+      <div style="flex:1;display:flex;align-items:center;padding:0 6px;background:#101418;border-radius:3px;overflow:hidden;white-space:nowrap;"><span class="px" style="color:#58c8e8;font-size:8px;">{{quip}}</span></div>
+    </div>
+  </div>
+  </div>
+
+  <sc-if value="{{silenceAlert}}" hint-placeholder-val="{{false}}">
+    <div style="position:absolute;inset:0;background:rgba(40,56,70,.45);z-index:25;display:flex;align-items:center;justify-content:center;padding:26px;box-sizing:border-box;">
+      <div class="oil" style="padding:2px;border-radius:8px;box-shadow:0 16px 50px rgba(0,0,0,.8);width:100%;">
+        <div style="background:#f2f5f9;border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <svg width="20" height="19" viewBox="0 0 17 16"><path d="M8.5 1 L16 14.5 L1 14.5 Z" fill="none" stroke="#ffb000" stroke-width="1.5"/><rect x="7.7" y="5.5" width="1.8" height="5" fill="#ffb000"/><rect x="7.7" y="11.6" width="1.8" height="1.8" fill="#ffb000"/></svg>
+            <span class="mch" style="font-size:12px;letter-spacing:1.5px;color:#8a6a00;">DIGITAL SILENCE</span>
+          </div>
+          <div style="background:#101418;border:1px solid #8a96a2;border-radius:4px;height:34px;display:flex;align-items:center;padding:0 10px;gap:2px;overflow:hidden;">
+            <div style="flex:1;height:2px;background:#3a444e;"></div>
+          </div>
+          <div class="px" style="color:#55606c;line-height:1.8;">AUDIO IS PLAYING, BUT THIS APP BLOCKS CAPTURE.<br/>WE'D RATHER TELL YOU THAN HAND YOU AN EMPTY WAVEFORM.</div>
+          <div style="border:1px solid #2898b8;border-radius:6px;padding:10px;background:#e8f6fa;">
+            <div class="px" style="color:#0e5468;line-height:1.8;">THE ESCAPE HATCH: RECORD WITH ANDROID'S SCREEN RECORDER, SHARE THE VIDEO INTO SNIPSNAP. WORKS EVERYWHERE.</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <div onClick="{{dismissSilence}}" style="flex:1;height:44px;background:linear-gradient(180deg,#f8fafc,#e4e8ee);border:1px solid #b6c0cc;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#55606c;">KEEP LISTENING</span></div>
+            <div onClick="{{dismissSilence}}" style="flex:1;height:44px;background:#e8f6fa;border:1px solid #2898b8;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#0e5468;">HOW-TO</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{bubbleOn}}" hint-placeholder-val="{{false}}">
+    <div style="position:absolute;left:0;top:0;z-index:20;transform:{{bubbleXform}};touch-action:none;cursor:grab;"
+         onPointerDown="{{bubDown}}" onPointerMove="{{bubMove}}" onPointerUp="{{bubUp}}" onPointerCancel="{{bubUp}}">
+      <div style="position:relative;width:84px;height:84px;">
+        <svg width="84" height="84" viewBox="0 0 96 96" style="filter:drop-shadow(0 6px 16px rgba(0,0,0,.7)) drop-shadow(0 0 14px rgba(56,136,184,.5));">
+          <circle cx="48" cy="48" r="44" fill="#e8ecf1"/>
+          <circle cx="48" cy="48" r="36" fill="#1c2228" stroke="#9aa6b4" stroke-width="2"/>
+          <circle cx="36" cy="48" r="9" fill="#14181e" stroke="#a8b6c0" stroke-width="2"/><circle cx="60" cy="48" r="9" fill="#14181e" stroke="#a8b6c0" stroke-width="2"/>
+          <circle cx="36" cy="48" r="3" fill="#a8b6c0"/><circle cx="60" cy="48" r="3" fill="#a8b6c0"/>
+          <rect x="36" y="62" width="24" height="7" rx="2" fill="#1878b0"/>
+          <circle cx="48" cy="48" r="41" fill="none" stroke="#c2ccd6" stroke-width="4"/>
+          <circle cx="48" cy="48" r="41" fill="none" stroke="#1898c0" stroke-width="4" stroke-linecap="round" stroke-dasharray="{{ringDash}}" transform="rotate(-90 48 48)" style="filter:drop-shadow(0 0 6px rgba(24,152,192,.8));"></circle>
+        </svg>
+        <sc-if value="{{hasBadge}}" hint-placeholder-val="{{false}}">
+          <div style="position:absolute;top:-4px;right:-4px;width:26px;height:26px;border-radius:50%;background:#e83a2e;border:2px solid #ffffff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(232,58,46,.8);"><span class="lcdf" style="color:#fff;font-size:17px;">{{badgeN}}</span></div>
+        </sc-if>
+      </div>
+      <div class="px" style="text-align:center;color:#38424c;margin-top:2px;">{{bubbleHint}}</div>
+    </div>
+    <sc-if value="{{ejectHot}}" hint-placeholder-val="{{false}}">
+      <div style="position:absolute;left:60px;right:60px;bottom:8px;height:52px;z-index:19;border:2px dashed #1878b0;border-radius:10px;background:rgba(24,120,176,.12);display:flex;align-items:center;justify-content:center;"><span class="px" style="color:#14506e;">RELEASE TO EJECT — TAPE IS KEPT</span></div>
+    </sc-if>
+  </sc-if>
+
+  <sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+    <div style="position:absolute;left:30px;right:30px;bottom:96px;z-index:9;animation:toastup .25s ease-out;pointer-events:none;">
+      <div class="oil" style="padding:2px;border-radius:6px;box-shadow:0 8px 30px rgba(60,80,100,.45);">
+        <div style="background:#f6f8fb;border-radius:4px;padding:10px 14px;text-align:center;"><span class="px" style="color:#14506e;font-size:11px;">{{toast}}</span></div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;personality&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;OFF&quot;,&quot;MILD&quot;,&quot;FULL&quot;],&quot;default&quot;:&quot;FULL&quot;,&quot;section&quot;:&quot;Personality&quot;},&quot;glow&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1.2,&quot;min&quot;:0,&quot;max&quot;:2,&quot;step&quot;:0.1,&quot;section&quot;:&quot;Look&quot;},&quot;scanlines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;section&quot;:&quot;Look&quot;},&quot;simulateBlocked&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;section&quot;:&quot;States&quot;},&quot;emptyShelf&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;section&quot;:&quot;States&quot;}}">
+class Component extends DCLogic {
+  state = { screen: 'kit', boot: true, bootLine: 'CHECKING HEADS…', konami: 0, armed: false, lit: {}, shelf: 12, offset: 0, inPt: 1.8, outPt: 3.2, playing: false, toast: null, quipIx: 0, commitIx: 0,
+    bubX: 292, bubY: 120, bubDragging: false, tapeSec: 0, sessionSnips: 0, formatIx: 0, dub: -1, obStep: 0,
+    schemeIx: 5, sliceLabels: null, zoom: 1, snap: true, landscape: false, voiceIx: 0, params: {KICK:[50,60,45,30,20], SNARE:[50,55,40,50], HATS:[60,30,70], CLAP:[40,45,50], TOM:[50,50,55]} };
+  VOICES = [
+    {name:'KICK', c:'#e8542e', ci:'#a03818', tint:'#f8b09a', macros:['TUNE','SWEEP','DECAY','CLICK','DRIVE']},
+    {name:'SNARE', c:'#ffc41f', ci:'#8a6a00', tint:'#ffe08e', macros:['TUNE','SNAP','DECAY','TONE']},
+    {name:'HATS', c:'#1fc6cf', ci:'#0e6870', tint:'#8eeef4', macros:['TUNE','DECAY','METAL']},
+    {name:'CLAP', c:'#e8409f', ci:'#a01860', tint:'#f8a8d4', macros:['SPREAD','DECAY','TONE']},
+    {name:'TOM', c:'#9a6cf0', ci:'#5c34a8', tint:'#c8b2f8', macros:['TUNE','SWEEP','DECAY']}
+  ];
+  KITS = [
+    {name:'KIT 01', c:'#1878b0', ci:'#14506e', tint:'#f8a8d4', meta:'12 SNIPS · MOSTLY DRUMS', status:'ON CARD ✓', sc:'#3c7010', date:'08-22'},
+    {name:'NIGHT BUS', c:'#3f8cf0', ci:'#2c5ea8', tint:'#9ec2f8', meta:'16 SNIPS · PADS + VOX', status:'DRAFT', sc:'#8a6a00', date:'08-19'},
+    {name:'ARCADE RIP', c:'#8fd424', ci:'#4a7a10', tint:'#c6ec8e', meta:'9 SNIPS · GAME SFX', status:'ON CARD ✓', sc:'#3c7010', date:'08-14'},
+    {name:'TAPE HISS 4', c:'#ffc41f', ci:'#8a6a00', tint:'#ffe08e', meta:'4 SNIPS · TEXTURES', status:'DRAFT', sc:'#8a6a00', date:'08-02'}
+  ];
+  FORMATS = ['MPC 2 FOLDER (ONE · LIVE II · III)', 'SP-404 MKII BANK', 'WAV FOLDER + KIT.JSON', 'ABLETON DRUM RACK (.ADG)'];
+  PADS = [
+    {id:'A13'},{id:'A14'},{id:'A15'},{id:'A16',label:'Loop 92',c:'#3f8cf0',tint:'#9ec2f8',syn:'loop'},
+    {id:'A09',label:'Tom lo',c:'#9a6cf0',tint:'#c8b2f8',syn:'tom'},{id:'A10'},{id:'A11'},{id:'A12',label:'Shaker',c:'#8fd424',tint:'#c6ec8e',syn:'perc'},
+    {id:'A05'},{id:'A06',label:'Clap',c:'#e8409f',tint:'#f8a8d4',syn:'clap'},{id:'A07'},{id:'A08'},
+    {id:'A01',label:'Kick 01',c:'#e8542e',tint:'#f8b09a',syn:'kick'},{id:'A02',label:'Snare 01',c:'#ffc41f',tint:'#ffe08e',syn:'snare'},{id:'A03',label:'Hat cl',c:'#1fc6cf',tint:'#8eeef4',syn:'hatc'},{id:'A04',label:'Hat op',c:'#7adfe4',tint:'#bef2f6',syn:'hato'}
+  ];
+  SCHEMES = [
+    {name:'CHROME (TYPE II)', note:'THE DEFAULT', s1:'#c3c7cb', s2:'#0a7a78', s3:'#49e83e', desk:'repeating-conic-gradient(#0a7a78 0% 25%,#0c817f 0% 50%) 0 0/3px 3px', win:'#c3c7cb', border:'#868a8e', title:'linear-gradient(90deg,#000082,#1878c8)', lcd:'#0c130b', ink:'#49e83e', accent:'#49e83e'},
+    {name:'FERRIC (TYPE I)', note:'70s GLOVEBOX', s1:'#d4c8a8', s2:'#8a5a24', s3:'#ffb000', desk:'repeating-conic-gradient(#8a5a24 0% 25%,#936129 0% 50%) 0 0/3px 3px', win:'#d4c8a8', border:'#9a8c6a', title:'linear-gradient(90deg,#6a3210,#c87828)', lcd:'#140e06', ink:'#ffb000', accent:'#ffb000'},
+    {name:'METAL (TYPE IV)', note:'THE 2AM ONE', s1:'#2e3136', s2:'#101215', s3:'#7adfe4', desk:'repeating-conic-gradient(#101215 0% 25%,#14171b 0% 50%) 0 0/3px 3px', win:'#2e3136', border:'#17191c', title:'linear-gradient(90deg,#0a0a0c,#2c3038)', lcd:'#0a0c0e', ink:'#7adfe4', accent:'#7adfe4'},
+    {name:'SNACK BAR', note:'YES, THAT ONE', s1:'#ffd400', s2:'#e81c1c', s3:'#ffd400', desk:'repeating-conic-gradient(#e81c1c 0% 25%,#ee2424 0% 50%) 0 0/3px 3px', win:'#ffd400', border:'#b89200', title:'linear-gradient(90deg,#e81c1c,#e81c1c)', lcd:'#1a0404', ink:'#ffd400', accent:'#ffd400'},
+    {name:'OILSLICK (TYPE ∞)', note:'THE NIGHT ONE', s1:'#221a34', s2:'#5a2ae0', s3:'#c8b2f8', desk:'repeating-conic-gradient(#0c0618 0% 25%,#140b24 0% 50%) 0 0/3px 3px', win:'#1a1424', border:'#34285a', title:'linear-gradient(90deg,#5a2ae0,#e040c8)', lcd:'#0a0714', ink:'#c8b2f8', accent:'#e040c8'},
+    {name:'CLEAR (NO TYPE)', note:'YOU ARE HERE', s1:'#e2e6ec', s2:'#3888b8', s3:'#9ae8ff', desk:'repeating-conic-gradient(#b8c8d4 0% 25%,#bfceda 0% 50%) 0 0/3px 3px', win:'#eef1f5', border:'#b6c0cc', title:'linear-gradient(90deg,#3888b8,#78c8e8)', lcd:'#101418', ink:'#9ae8ff', accent:'#1878b0'}
+  ];
+  CLASSES = [
+    {label:'Kick', c:'#e8542e', ink:'#3a1005'}, {label:'Snare', c:'#ffc41f', ink:'#3a2c02'},
+    {label:'Hat cl', c:'#1fc6cf', ink:'#062e30'}, {label:'Clap', c:'#e8409f', ink:'#3a0a24'},
+    {label:'Perc', c:'#8fd424', ink:'#1e3006'}, {label:'Tom', c:'#9a6cf0', ink:'#241040'}
+  ];
+  SLICES = [
+    {n:1, ci:0, conf:'92%', w:'85%'}, {n:2, ci:1, conf:'88%', w:'70%'},
+    {n:3, ci:4, conf:'NOT SURE', unsure:true, w:'30%'}, {n:4, ci:2, conf:'81%', w:'55%'},
+    {n:5, ci:0, conf:'90%', w:'80%'}, {n:6, ci:3, conf:'74%', w:'45%'}, {n:7, ci:2, conf:'85%', w:'35%'}
+  ];
+  QUIPS = ['NO DOLBY. WE LIKE HISS.','REWIND IS FREE.','DAYLIGHT SAFE.','SD (E:) READY','CLEAR SHELL. NOTHING TO HIDE.'];
+  COMMITS = ['TAPED. NO TAKEBACKS.',"IT'S OURS NOW.",'CLEAN CUT. NICE EARS.'];
+  componentDidMount(){
+    const per = this.props.personality ?? 'FULL';
+    const lines = ['CHECKING HEADS…', 'DEMAGNETIZING…', 'SHELL: TRANSPARENT', 'READY.'];
+    lines.forEach((l,i) => setTimeout(() => this.state.boot && this.setState({bootLine:l}), 500*(i+1)));
+    this._boot = setTimeout(() => this.setState({boot:false}), 2400);
+    this._fit = () => this.setState({fit: Math.min(1, window.innerHeight/844, window.innerWidth/390)});
+    window.addEventListener('resize', this._fit); this._fit();
+    if (per === 'FULL') this._qt = setInterval(() => this.setState(s => ({quipIx: (s.quipIx+1)%this.QUIPS.length})), 6000);
+    this._bars = [];
+    let seed = 7;
+    const rnd = () => (seed = (seed*16807)%2147483647) / 2147483647;
+    for (let i=0;i<240;i++){
+      const onset = i%22===4;
+      let h = 8 + rnd()*22;
+      if (onset) h = 66 + rnd()*30; else if (i%22>4 && i%22<11) h = 20+ (11-(i%22))*7*rnd()+10;
+      this._bars.push({h, onset});
+    }
+  }
+  componentWillUnmount(){ clearInterval(this._qt); clearInterval(this._pt); clearInterval(this._bt); clearInterval(this._dt); clearTimeout(this._boot); clearInterval(this._rw); window.removeEventListener('resize', this._fit); }
+  ctx(){ if(!this._ac) this._ac = new (window.AudioContext||window.webkitAudioContext)(); if(this._ac.state==='suspended') this._ac.resume(); return this._ac; }
+  synth(kind){
+    const ac = this.ctx(), t = ac.currentTime, out = ac.destination;
+    const noise = (dur, filt, freq, q, gainV) => {
+      const buf = ac.createBuffer(1, ac.sampleRate*dur, ac.sampleRate), d = buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i] = (Math.random()*2-1)*(1-i/d.length);
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const f = ac.createBiquadFilter(); f.type = filt; f.frequency.value = freq; f.Q.value = q||1;
+      const g = ac.createGain(); g.gain.setValueAtTime(gainV, t); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+      src.connect(f); f.connect(g); g.connect(out); src.start(t);
+    };
+    const boop = (f0, f1, dur, type, gainV) => {
+      const o = ac.createOscillator(); o.type = type||'sine';
+      o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t+dur*0.8);
+      const g = ac.createGain(); g.gain.setValueAtTime(gainV, t); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+      o.connect(g); g.connect(out); o.start(t); o.stop(t+dur);
+    };
+    if(kind==='kick') boop(130, 38, 0.42, 'sine', 0.9);
+    else if(kind==='snare'){ boop(190, 140, 0.15, 'triangle', 0.4); noise(0.22, 'highpass', 1600, 0.8, 0.5); }
+    else if(kind==='hatc') noise(0.06, 'highpass', 7500, 1, 0.4);
+    else if(kind==='hato') noise(0.4, 'highpass', 6800, 1, 0.32);
+    else if(kind==='clap'){ noise(0.16, 'bandpass', 1400, 2, 0.55); setTimeout(()=>noise(0.14,'bandpass',1500,2,0.4), 22); }
+    else if(kind==='tom') boop(150, 70, 0.34, 'sine', 0.7);
+    else if(kind==='perc') noise(0.09, 'bandpass', 2600, 5, 0.5);
+    else if(kind==='loop'){ boop(220, 220, 0.5, 'sawtooth', 0.16); boop(277, 277, 0.5, 'sawtooth', 0.14); boop(330, 330, 0.5, 'sawtooth', 0.14); }
+    else noise(0.05, 'bandpass', 900, 3, 0.12);
+  }
+  thump(){
+    const v = this.VOICES[this.state.voiceIx], p = this.state.params[v.name];
+    const ac = this.ctx(), t = ac.currentTime, out = ac.destination, n = (i) => (p[i]??50)/100;
+    const noise = (dur, filt, freq, q, gv) => {
+      const buf = ac.createBuffer(1, Math.max(1, ac.sampleRate*dur), ac.sampleRate), d = buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i] = (Math.random()*2-1)*(1-i/d.length);
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const f = ac.createBiquadFilter(); f.type = filt; f.frequency.value = freq; f.Q.value = q;
+      const g = ac.createGain(); g.gain.setValueAtTime(gv, t); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+      src.connect(f); f.connect(g); g.connect(out); src.start(t);
+    };
+    const boop = (f0, f1, dur, type, gv) => {
+      const o = ac.createOscillator(); o.type = type;
+      o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20,f1), t+dur*0.8);
+      const g = ac.createGain(); g.gain.setValueAtTime(gv, t); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+      o.connect(g); g.connect(out); o.start(t); o.stop(t+dur);
+    };
+    if(v.name==='KICK'){ const f0 = 80+n(0)*140, dur = 0.15+n(2)*0.6; boop(f0*(1+n(1)*2), f0*0.35, dur, 'sine', 0.7+n(4)*0.5); if(n(3)>0.05) noise(0.02+n(3)*0.03, 'highpass', 3000, 1, n(3)*0.7); }
+    else if(v.name==='SNARE'){ const f = 140+n(0)*160, dur = 0.1+n(2)*0.4; boop(f*1.3, f, dur*0.6, 'triangle', 0.45*(1-n(1)*0.5)); noise(dur, n(3)>0.5?'highpass':'bandpass', 1200+n(3)*3000, 1, 0.3+n(1)*0.5); }
+    else if(v.name==='HATS'){ const dur = 0.03+n(1)*0.5; noise(dur, 'highpass', 5500+n(0)*4000, 1+n(2)*8, 0.4); }
+    else if(v.name==='CLAP'){ const dur = 0.08+n(1)*0.3; noise(dur, 'bandpass', 1000+n(2)*1600, 2, 0.5); setTimeout(()=>noise(dur*0.9,'bandpass',1100+n(2)*1600,2,0.38), 15+n(0)*40); setTimeout(()=>noise(dur*1.4,'bandpass',1200+n(2)*1600,2,0.28), 30+n(0)*80); }
+    else { const f0 = 90+n(0)*180, dur = 0.15+n(2)*0.5; boop(f0*(1+n(1)*1.5), f0*0.55, dur, 'sine', 0.65); }
+  }
+  hit(p){
+    this.synth(p.syn || 'empty');
+    if(!p.syn) return;
+    if(p.id==='A03'){ /* hat choke gag: also kill A04 glow */ }
+    this.setState(s => ({lit: {...s.lit, [p.id]: true}}));
+    clearTimeout(this['_lt'+p.id]);
+    this['_lt'+p.id] = setTimeout(() => this.setState(s => ({lit: {...s.lit, [p.id]: false}})), 180);
+  }
+  fmt(sec){ const s = Math.max(0, sec); return s.toFixed(2).padStart(5,'0'); }
+  showToast(msg){ this.setState({toast: msg}); clearTimeout(this._tt); this._tt = setTimeout(()=>this.setState({toast:null}), 2600); }
+  renderVals(){
+    const S = this.state, glow = this.props.glow ?? 1, scan = this.props.scanlines ?? true;
+    const per = this.props.personality ?? 'FULL';
+    const KIT_INK = {'#e8542e':'#c73a12','#ffc41f':'#a87800','#1fc6cf':'#0e6870','#7adfe4':'#1a8a94','#e8409f':'#c0207a','#9a6cf0':'#6a3ec0','#8fd424':'#4a7a10','#3f8cf0':'#2c5ea8'};
+    const pads = this.PADS.map(p => {
+      const lit = S.lit[p.id];
+      const base = 'position:relative;border-radius:6px;cursor:pointer;touch-action:none;';
+      const kitEmpty = 'background:linear-gradient(180deg,#f8fafc,#e4e8ee);border:1px solid #b6c0cc;';
+      const kitFull = p.c ? `background:linear-gradient(180deg,#ffffff,#eef2f6);border:2px solid ${p.c};box-shadow:0 0 ${lit?22*glow+8:9*glow}px ${p.c}${lit?'':'55'}${lit?`,inset 0 0 20px ${p.c}44`:''};` : kitEmpty;
+      const playFull = p.c ? `background:linear-gradient(180deg,#1c2228,#14181e);border:2px solid ${p.c};box-shadow:0 0 ${lit?26*glow+8:14*glow}px ${p.c}${lit?'':'99'}${lit?`,inset 0 0 20px ${p.c}66`:''};` : '';
+      return {
+        id: p.id, label: p.label || '', tint: p.tint || '#5a6874', idColor: p.c ? (KIT_INK[p.c] || p.c) : '#9aa4b0', kitInk: p.c ? (KIT_INK[p.c] || p.c) : '#9aa4b0',
+        kitStyle: base + 'height:76px;' + kitFull,
+        playStyle: base + (p.c ? playFull : 'background:#171c22;border:1px solid #2a343e;') + (lit ? 'transform:scale(0.97);' : ''),
+        trigger: () => this.hit(p)
+      };
+    });
+    const px = 60;
+    return {
+      pads,
+      fitScale: `scale(${S.fit ?? 1})`,
+      isBoot: S.boot,
+      bootLine: S.bootLine,
+      skipBoot: () => { clearTimeout(this._boot); this.setState({boot:false}); },
+      isKit: S.screen==='kit', isDeck: S.screen==='deck', isPlay: S.screen==='play' && !S.landscape,
+      playMenuColor: S.screen==='play' ? '#1878b0' : '#5c6874',
+      titleText: S.screen==='deck' ? 'TAPE DECK' : 'SNIPSNAP.EXE',
+      kitMenuColor: S.screen==='kit' ? '#1878b0' : '#5c6874',
+      deckMenuColor: S.screen==='deck' ? '#1878b0' : '#5c6874',
+      goKit: () => this.setState({screen:'kit'}),
+      goDeck: () => this.setState({screen:'deck'}),
+      goPlay: () => this.setState({screen:'play'}),
+      bpmText: 'BPM 92',
+      isLandscape: S.screen==='play' && S.landscape,
+      rotate: () => this.setState(s => ({landscape: !s.landscape})),
+      shelfCount: S.shelf,
+      armBg: S.armed ? 'linear-gradient(180deg,#ffe4e8,#f8ccd4)' : 'linear-gradient(180deg,#fbf5f6,#f0e2e5)',
+      armTitle: S.armed ? 'SESSION ARMED — TAPE ROLLING' : 'START SNIP SESSION',
+      armSub: S.armed ? 'BUBBLE IS OUT · TAP IT WHEN YOU HEAR IT' : 'ARMS 60s TAPE LOOP + BUBBLE',
+      toggleArm: () => {
+        const on = !S.armed;
+        clearInterval(this._bt);
+        if(on) this._bt = setInterval(() => this.setState(s => ({tapeSec: Math.min(60, s.tapeSec + 0.5)})), 500);
+        if(on && (this.props.simulateBlocked ?? false)) setTimeout(() => this.setState({silence:true}), 3000);
+        this.setState({armed:on, tapeSec: on ? 0 : S.tapeSec, sessionSnips: on ? 0 : S.sessionSnips});
+        if(per!=='OFF') this.showToast(on ? 'TAPE ROLLING. GO STEAL A SOUND (LEGALLY).' : 'SESSION EJECTED.');
+      },
+      reelSpin: S.playing ? {animation:'reelspin 1.2s linear infinite'} : (S.rewinding ? {animation:'reelspin .5s linear infinite reverse'} : {}),
+      waveTransform: `translateX(${195 - S.offset*px*S.zoom}px) scaleX(${S.zoom})`,
+      bars: (this._bars||[]).map(b => ({h: b.h+'px', color: b.onset ? '#ffb000' : '#a8ecff'})),
+      posText: this.fmt(S.offset), inText: this.fmt(S.inPt), outText: this.fmt(S.outPt),
+      playLabel: S.playing ? '■ STOP' : '► PLAY',
+      dragStart: (e) => { this._drag = {x: e.clientX, o: S.offset}; e.currentTarget.setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId); },
+      dragMove: (e) => { if(!this._drag) return; const sc = S.fit ?? 1; const o = Math.min(4, Math.max(0, this._drag.o - (e.clientX - this._drag.x)/sc/px)); this.setState({offset:o}); },
+      dragEnd: () => { this._drag = null; },
+      togglePlayback: () => {
+        if(S.playing){ clearInterval(this._pt); this.setState({playing:false}); return; }
+        this.setState({playing:true});
+        this._pt = setInterval(() => this.setState(s => {
+          let o = s.offset + 0.05;
+          if(o > s.outPt) o = s.inPt;
+          if((Math.round(o*20))%22===4) this.synth('perc');
+          return {offset:o};
+        }), 50);
+      },
+      setIn: () => { const v = S.snap ? Math.round(S.offset/1.1)*1.1 : S.offset; this.setState({inPt: v}); if(S.snap && per==='FULL') this.showToast('SNAPPED TO THE HIT.'); },
+      setOut: () => { const v = S.snap ? Math.round(S.offset/1.1)*1.1 : S.offset; this.setState({outPt: Math.max(v, S.inPt+0.1)}); },
+      zoomText: S.zoom + 'X',
+      zoomIn: () => this.setState(s => ({zoom: Math.min(4, s.zoom*2)})),
+      zoomOut: () => this.setState(s => ({zoom: Math.max(1, s.zoom/2)})),
+      toggleSnap: () => this.setState(s => ({snap: !s.snap})),
+      snapBg: S.snap ? 'linear-gradient(180deg,#eaf7fb,#d6edf5)' : '#f6f8fb',
+      snapBorder: S.snap ? '#2898b8' : '#b6c0cc',
+      snapDot: S.snap ? '#1898c0' : '#b6c0cc',
+      snapInk: S.snap ? '#0e5468' : '#8a94a0',
+      snapHint: S.snap ? 'IN/OUT LAND ON DETECTED HITS — NO MID-TRANSIENT CUTS' : 'FREEHAND — CUT WHEREVER THE NEEDLE SITS',
+      pencilRewind: () => {
+        if(S.rewinding) return;
+        clearInterval(this._pt); this.setState({playing:false, rewinding:true});
+        const k = S.konami + 1; this.setState({konami: k});
+        this._rw = setInterval(() => this.setState(s => {
+          const o = s.offset - 0.22;
+          if(o <= 0){
+            clearInterval(this._rw);
+            if(per==='FULL' && k >= 5){ this.setState({konami:0}); this.showToast('★ GOLD CASSETTE UNLOCKED. IT DOES NOTHING. IT IS BEAUTIFUL. ★'); this.synth('loop'); }
+            else if(per==='FULL') this.showToast('REWOUND. BE KIND.');
+            return {offset:0, rewinding:false};
+          }
+          return {offset:o};
+        }), 50);
+      },
+      commitSnip: () => {
+        this.synth('kick');
+        this.setState(s => ({shelf: s.shelf+1, screen:'kit', commitIx: (s.commitIx+1)%this.COMMITS.length, playing:false}));
+        clearInterval(this._pt);
+        if(per!=='OFF') this.showToast(this.COMMITS[S.commitIx]);
+        if(navigator.vibrate) navigator.vibrate(30);
+      },
+      // Tape Properties
+      isProps: S.screen==='props',
+      propsMenuColor: S.screen==='props' ? '#1878b0' : '#5c6874',
+      goProps: () => this.setState({screen:'props'}),
+      schemeAccent: this.SCHEMES[S.schemeIx].accent,
+      miniDesk: this.SCHEMES[S.schemeIx].desk,
+      miniWin: this.SCHEMES[S.schemeIx].win,
+      miniBorder: this.SCHEMES[S.schemeIx].border,
+      miniTitle: this.SCHEMES[S.schemeIx].title,
+      miniLcd: this.SCHEMES[S.schemeIx].lcd,
+      miniInk: this.SCHEMES[S.schemeIx].ink,
+      schemes: this.SCHEMES.map((sc,i) => ({
+        ...sc,
+        ink: i===S.schemeIx ? '#14506e' : '#55606c',
+        rowStyle: 'display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;border-bottom:1px solid #e2e7ed;cursor:pointer;' + (i===S.schemeIx ? 'background:linear-gradient(90deg,#dcedf8,#eef4fa);box-shadow:inset 3px 0 0 #1878b0;' : ''),
+        pick: () => { this.setState({schemeIx:i}); if(per==='FULL' && i!==5) this.showToast(i===3 ? 'SNACK BAR. SHIPPED OUT OF RESPECT.' : 'PREVIEWING — THE PROTOTYPE STAYS CLEAR.'); }
+      })),
+      saveAs: () => { if(per!=='OFF') this.showToast('SAVED AS "MY CLEAR 2". IT\'S YOURS NOW.'); },
+      // Chop Shop
+      isChop: S.screen==='chop',
+      chopMenuColor: S.screen==='chop' ? '#1878b0' : '#5c6874',
+      goChop: () => this.setState({screen:'chop'}),
+      slices: this.SLICES.map((sl,i) => {
+        const ci = (S.sliceLabels && S.sliceLabels[i] != null) ? S.sliceLabels[i] : sl.ci;
+        const cl = this.CLASSES[ci];
+        const overridden = S.sliceLabels && S.sliceLabels[i] != null && S.sliceLabels[i] !== sl.ci;
+        return {
+          n: sl.n, w: sl.w, c: cl.c, label: cl.label,
+          conf: overridden ? 'YOU ✓' : sl.conf,
+          confColor: overridden ? '#186478' : (sl.unsure ? '#a87800' : '#8a94a0'),
+          chipStyle: `flex:none;font-size:13px;padding:4px 12px;border-radius:999px;cursor:pointer;background:${cl.c};color:${cl.ink};` + (sl.unsure && !overridden ? 'border:1px dashed #38424c;opacity:.8;' : ''),
+          cycle: () => this.setState(s => { const L = s.sliceLabels ? [...s.sliceLabels] : this.SLICES.map(()=>null); L[i] = ((L[i] ?? sl.ci) + 1) % this.CLASSES.length; return {sliceLabels: L}; })
+        };
+      }),
+      rechop: () => { this.setState({sliceLabels: null}); if(per==='FULL') this.showToast('RE-CHOPPED. THE MACHINE APOLOGIZES FOR SLICE 3.'); },
+      sendToGrid: () => { this.synth('snare'); this.setState({screen:'kit'}); if(per!=='OFF') this.showToast('7 SLICES ON THE GRID. CHOKE GROUP SET.'); },
+      // THUMP synth
+      isSynth: S.screen==='synth',
+      synthMenuColor: S.screen==='synth' ? '#1878b0' : '#5c6874',
+      goSynth: () => this.setState({screen:'synth'}),
+      voices: this.VOICES.map((v,i) => ({
+        name: v.name,
+        labelColor: i===S.voiceIx ? v.ci : '#8a94a0',
+        tabStyle: `flex:1;height:34px;display:flex;align-items:center;justify-content:center;border-radius:5px;cursor:pointer;background:linear-gradient(180deg,#f8fafc,#e4e8ee);border:${i===S.voiceIx ? '2px solid '+v.c+';box-shadow:0 0 10px '+v.c+'55' : '1px solid #b6c0cc'};`,
+        pick: () => this.setState({voiceIx:i})
+      })),
+      scopePath: (() => {
+        const v = this.VOICES[S.voiceIx], p = S.params[v.name], decay = (p[2]??p[1]??50)/100;
+        let d = 'M0 44', freq = 0.25 + (p[0]??50)/100*0.55;
+        for(let x=0;x<=340;x+=2){ const env = Math.exp(-x/(40+decay*260)); d += ` L${x} ${44 - Math.sin(x*freq)*40*env}`; }
+        return d;
+      })(),
+      macros: this.VOICES[S.voiceIx].macros.map((name,i) => {
+        const vname = this.VOICES[S.voiceIx].name, val = S.params[vname][i] ?? 50;
+        const setFromEvent = (e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          const nv = Math.round(Math.max(0, Math.min(100, (e.clientX - r.left)/r.width*100)));
+          this.setState(s => { const P = {...s.params}; P[vname] = [...P[vname]]; P[vname][i] = nv; return {params:P}; });
+        };
+        return {
+          name, val, pct: Math.max(4,val)+'%', knobLeft: `calc(${val}% - ${val*0.14}px)`,
+          down: (e) => { this._sl = true; e.currentTarget.setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId); setFromEvent(e); },
+          move: (e) => { if(this._sl) setFromEvent(e); },
+          up: () => { if(this._sl){ this._sl = false; clearTimeout(this._rt); this._rt = setTimeout(()=>this.thump(), 60); } }
+        };
+      }),
+      scramble: () => {
+        const vname = this.VOICES[S.voiceIx].name;
+        this.setState(s => { const P = {...s.params}; P[vname] = P[vname].map(() => 15 + Math.round(Math.random()*70)); return {params:P}; });
+        setTimeout(()=>this.thump(), 60);
+        if(per==='FULL') this.showToast('SCRAMBLED. UNDO IS A LIE (IN THIS PROTOTYPE).');
+      },
+      audition: () => this.thump(),
+      targetPad: 'A0' + (S.voiceIx+1),
+      renderToPad: () => { this.thump(); this.setState({screen:'kit'}); if(per!=='OFF') this.showToast('RENDERED. IT KEEPS ITS RECIPE.'); },
+      // My Kits
+      isKits: S.screen==='kits',
+      kitsMenuColor: S.screen==='kits' ? '#1878b0' : '#5c6874',
+      goKits: () => this.setState({screen:'kits'}),
+      kitCount: this.KITS.length,
+      kits: this.KITS.map((k,i) => ({
+        ...k, statusColor: k.sc,
+        rowStyle: 'display:flex;align-items:center;gap:10px;padding:8px 10px;background:linear-gradient(180deg,#f6f8fb,#e8ecf2);border:1px solid ' + (i===0 ? k.c : '#b6c0cc') + ';border-radius:6px;cursor:pointer;' + (i===0 ? `box-shadow:0 0 12px ${k.c}44;` : ''),
+        open: () => { this.setState({screen:'kit'}); if(per==='FULL' && i===0) this.showToast('KIT 01. THE HITS.'); }
+      })),
+      newKit: () => { if(per!=='OFF') this.showToast('FRESH TAPE. SMELLS LIKE FERRIC OXIDE.'); },
+      // Onboarding
+      isOnboard: S.screen==='onboard',
+      helpMenuColor: S.screen==='onboard' ? '#1878b0' : '#5c6874',
+      goOnboard: () => this.setState({screen:'onboard', obStep:0}),
+      ob0: S.obStep===0, ob1: S.obStep===1, ob2: S.obStep===2,
+      obDot0: S.obStep===0 ? '#1878b0' : '#c8d0da',
+      obDot1: S.obStep===1 ? '#1878b0' : '#c8d0da',
+      obDot2: S.obStep===2 ? '#1878b0' : '#c8d0da',
+      obSkipLabel: S.obStep===2 ? 'BACK' : 'SKIP',
+      obNextLabel: S.obStep===2 ? 'GOT IT — TAKE ME IN' : 'NEXT',
+      obSkip: () => S.obStep===2 ? this.setState({obStep:1}) : this.setState({screen:'kit', obStep:0}),
+      obNext: () => S.obStep===2 ? this.setState({screen:'kit', obStep:0}) : this.setState(s=>({obStep:s.obStep+1})),
+      consentOk: () => { this.setState({screen:'kit', obStep:0, armed:true, tapeSec:0, sessionSnips:0}); clearInterval(this._bt); this._bt = setInterval(() => this.setState(s => ({tapeSec: Math.min(60, s.tapeSec + 0.5)})), 500); if(per!=='OFF') this.showToast('TAPE ROLLING. GO STEAL A SOUND (LEGALLY).'); },
+      // Export wizard
+      isExport: S.screen==='export',
+      exportMenuColor: S.screen==='export' ? '#1878b0' : '#5c6874',
+      goExport: () => this.setState({screen:'export'}),
+      formatLabel: this.FORMATS[S.formatIx],
+      cycleFormat: () => this.setState(s => ({formatIx: (s.formatIx+1)%this.FORMATS.length})),
+      dubLabel: S.dub < 0 ? 'READY TO DUB' : (S.dub >= 24 ? 'DUB COMPLETE' : 'DUBBING…'),
+      dubPct: Math.max(0, Math.min(24, S.dub))/24*100 + '%',
+      dubFiles: S.dub < 0 ? 'SIDE A: PROGRAMS · SIDE B: SAMPLES · 24 FILES QUEUED' : (S.dub >= 24 ? 'ALL 24 FILES ON TAPE. GO MAKE THE THING.' : `SIDE A: PROGRAMS · SIDE B: SAMPLES · ${S.dub} OF 24 FILES`),
+      writeBg: S.dub >= 24 ? 'linear-gradient(180deg,#e2f4cc,#d0eab6)' : 'linear-gradient(180deg,#eef6e2,#deecca)',
+      writeLabel: S.dub < 0 ? 'WRITE KIT' : (S.dub >= 24 ? 'EJECT CARD ✓' : 'WRITING — DO NOT EJECT'),
+      writeKit: () => {
+        if(S.dub >= 0 && S.dub < 24) return;
+        if(S.dub >= 24){ this.setState({dub:-1}); if(per!=='OFF') this.showToast('CARD EJECTED. HAND IT TO THE MPC.'); return; }
+        this.setState({dub:0});
+        this._dt = setInterval(() => this.setState(s => {
+          if(s.dub >= 24){ clearInterval(this._dt); if(per!=='OFF') this.showToast('DUB DONE. SOUNDS 3% WARMER NOW.'); this.synth('perc'); return {}; }
+          return {dub: s.dub+1};
+        }), 180);
+      },
+      // States
+      shelfEmpty: (this.props.emptyShelf ?? false),
+      shelfFull: !(this.props.emptyShelf ?? false),
+      silenceAlert: !!S.silence,
+      dismissSilence: () => this.setState({silence:false}),
+      // Bubble
+      bubbleOn: S.armed,
+      bubbleXform: `translate(${S.bubX}px,${S.bubY}px)` + (S.bubDragging ? ' scale(1.08)' : ''),
+      ringDash: `${(S.tapeSec/60)*257.6} 257.6`,
+      hasBadge: S.sessionSnips > 0, badgeN: S.sessionSnips,
+      bubbleHint: S.bubDragging ? '' : 'TAP = SNIP',
+      ejectHot: S.bubDragging && S.bubY > 660,
+      bubDown: (e) => { this._bub = {x: e.clientX, y: e.clientY, bx: S.bubX, by: S.bubY, moved: false}; e.currentTarget.setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId); this.setState({bubDragging:true}); },
+      bubMove: (e) => {
+        if(!this._bub) return;
+        const sc = S.fit ?? 1;
+        const dx = (e.clientX - this._bub.x)/sc, dy = (e.clientY - this._bub.y)/sc;
+        if(Math.abs(dx)+Math.abs(dy) > 6) this._bub.moved = true;
+        this.setState({bubX: Math.max(0, Math.min(300, this._bub.bx + dx)), bubY: Math.max(0, Math.min(744, this._bub.by + dy))});
+      },
+      bubUp: () => {
+        if(!this._bub) return;
+        const moved = this._bub.moved; this._bub = null;
+        if(!moved){
+          this.synth('hatc'); if(navigator.vibrate) navigator.vibrate([20,30,40]);
+          this.setState(s => ({sessionSnips: s.sessionSnips+1, shelf: s.shelf+1, bubDragging:false}));
+          if(per!=='OFF') this.showToast('SNIP! LAST 60s KEPT.');
+        } else if(S.bubY > 660){
+          clearInterval(this._bt);
+          this.setState({armed:false, bubDragging:false, bubX:292, bubY:120});
+          if(per!=='OFF') this.showToast('EJECTED. TAPE IS KEPT.');
+        } else this.setState({bubDragging:false});
+      },
+      tapeCell: S.armed ? 'TAPE ● REC' : 'TAPE 60s',
+      snipCell: S.shelf + ' SNIPS',
+      quip: per==='FULL' ? this.QUIPS[S.quipIx] : 'SD (E:) READY',
+      hasToast: !!S.toast, toast: S.toast || ''
+    };
+  }
+}
+</script>
+</body>
+</html>

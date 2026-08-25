@@ -11,12 +11,24 @@ data class VelocityLayer(
     /** MIDI velocity window, 0..127 inclusive. */
     val velStart: Int,
     val velEnd: Int,
+    /**
+     * Sustain loop start frame; `0` = no loop. When set, the layer loops
+     * from here **to the end of the sample** — the one shape both real
+     * idioms share (MPC 2: `SliceLoop=1` + `SliceLoopStart`, looping to
+     * `SliceEnd`; MPC 3: `sliceInfo.LoopMode=1` + `LoopStart`, looping to
+     * `End`). Held notes sustain forever; release comes from the program's
+     * amp envelope. Drum programs ignore this.
+     */
+    val loopStartFrame: Long = 0,
 ) {
     init {
         require(sampleName.isNotBlank()) { "layer sampleName must not be blank" }
         require(frameCount >= 0) { "layer frameCount must not be negative" }
         require(velStart in 0..127 && velEnd in 0..127 && velStart <= velEnd) {
             "bad velocity window $velStart..$velEnd"
+        }
+        require(loopStartFrame in 0 until maxOf(frameCount, 1)) {
+            "loopStartFrame $loopStartFrame outside sample (0..<$frameCount)"
         }
     }
 }

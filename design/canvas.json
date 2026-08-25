@@ -1,6 +1,14 @@
 {
   "artboards": [
     {
+      "file": "TapeOS Clear.dc.html",
+      "x": -970,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "CLEAR — Working Prototype"
+    },
+    {
       "file": "TapeOS Oilslick.dc.html",
       "x": -520,
       "y": 0,
@@ -83,11 +91,18 @@
   ],
   "annotations": [
     {
+      "id": "note-clear",
+      "x": -970,
+      "y": -160,
+      "w": 360,
+      "text": "CLEAR (NO TYPE) — the light mode, same fully working prototype as OILSLICK: silver deck chrome in daylight, LCD/sound surfaces stay dark VFD (ice-cyan ink, orange in the amber slot). Play mode stays dark — the two-surface rule holds in every scheme."
+    },
+    {
       "id": "note-oilslick",
       "x": -520,
       "y": -160,
       "w": 360,
-      "text": "OILSLICK (TYPE \u221e) — the chosen Y2K direction, fully working: boot splash, 9 screens (KITS/KIT/TAPE/CHOP/PLAY/SYNTH/EXPORT/\u2699/HELP), WebAudio pads + THUMP, capture bubble, scheme picker. Tokens + Android notes in HANDOFF.md."
+      "text": "OILSLICK (TYPE ∞) — the chosen Y2K direction, fully working: boot splash, 9 screens (KITS/KIT/TAPE/CHOP/PLAY/SYNTH/EXPORT/⚙/HELP), WebAudio pads + THUMP, capture bubble, scheme picker. Tokens + Android notes in HANDOFF.md."
     },
     {
       "id": "note-direction",

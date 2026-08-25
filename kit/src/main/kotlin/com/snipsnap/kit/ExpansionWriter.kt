@@ -95,9 +95,10 @@ object ExpansionWriter {
         meta: ExpansionMeta,
         artworkPng: ByteArray? = null,
         /**
-         * Preview audio, written as `[Previews]/<program>.wav`. The base
-         * name must match the program's (Rex Rule #4); this writer
-         * guarantees it. MP3 encoding is the app layer's MediaCodec job.
+         * Preview audio, written as `[Previews]/<program>.xpm.wav` — the
+         * real packs' convention: the program's full file name plus `.wav`,
+         * which is how the browser pairs them (Rex Rule #4). MP3 encoding
+         * is the app layer's MediaCodec job.
          */
         preview: com.snipsnap.audio.Snip? = null,
         overwrite: Boolean = false,
@@ -127,7 +128,7 @@ object ExpansionWriter {
         preview?.let {
             val previews = File(dest, "[Previews]").apply { mkdirs() }
             com.snipsnap.audio.WavWriter.write(
-                File(previews, program.name.removeSuffix(".xpm") + ".wav"), it,
+                File(previews, program.name + ".wav"), it,
             )
         }
 

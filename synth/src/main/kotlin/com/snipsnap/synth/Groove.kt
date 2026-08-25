@@ -5,55 +5,59 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.kit.ArrangedPad
 
 /**
+ * One hit of the demo groove: which arranged pad, on which 16th-note step,
+ * how hard. The pattern itself — [Groove.hits] — is the product; the audio
+ * render and the MPC 3 embedded clip are two consumers of the same events.
+ */
+data class GrooveHit(
+    /** 0-based index into the arranged list (pad A01 = 0). */
+    val padIndex: Int,
+    /** 16th-note step from the top of the pattern. */
+    val step: Int,
+    /** 0..1, doubles as playback gain and as MPC note velocity. */
+    val velocity: Float,
+)
+
+/**
  * The demo groove: a kit playing itself.
  *
- * Given an arranged kit, render a few bars of pattern from its own pads —
+ * Given an arranged kit, build a few bars of pattern from its own pads —
  * kick on the floor, snare on the backbeat, hats keeping eighths, a tom
  * fill into the turnaround, tonal pads walking their notes. Three jobs, one
- * renderer: the audio preview an expansion wants, the "hear it slap" button
- * before export, and the most delightful moment in the app — your kit
- * playing back seconds after you made it.
+ * pattern: the audio preview an expansion wants, the "hear it slap" button
+ * before export, and — via the MPC 3 track writer — a clip the kit carries
+ * onto the hardware, ready to play.
  *
  * Deterministic per (kit, seed): same inputs, same groove, testable.
  */
 object Groove {
 
-    private const val STEPS_PER_BAR = 16
+    const val STEPS_PER_BAR = 16
 
-    fun render(
+    /** The pattern as events. [render] plays exactly these. */
+    fun hits(
         arranged: List<ArrangedPad?>,
-        bpm: Float = 92f,
         bars: Int = 4,
         seed: Int = 0,
-    ): Snip {
-        require(bpm in 40f..220f) { "bpm out of range: $bpm" }
+    ): List<GrooveHit> {
         require(bars in 1..16) { "bars out of range: $bars" }
 
-        val rate = arranged.firstNotNullOfOrNull { it?.snip?.sampleRate } ?: 44_100
-        val stepFrames = (60.0 / bpm / 4.0 * rate).toInt()
-        val tailFrames = rate // let the last hit ring
-        val total = stepFrames * STEPS_PER_BAR * bars + tailFrames
-        val mix = FloatArray(total)
-
-        val byClass = HashMap<DrumClass, MutableList<Snip>>()
-        for (pad in arranged) {
+        val byClass = HashMap<DrumClass, MutableList<Int>>()
+        for ((index, pad) in arranged.withIndex()) {
             if (pad == null) continue
-            byClass.getOrPut(pad.drumClass) { mutableListOf() }.add(
-                if (pad.snip.channels == 1) pad.snip else com.snipsnap.audio.Cleanup.toMono(pad.snip),
-            )
+            byClass.getOrPut(pad.drumClass) { mutableListOf() }.add(index)
         }
-        if (byClass.isEmpty()) return Snip(FloatArray(rate), 1, rate)
+        if (byClass.isEmpty()) return emptyList()
 
         var rng = if (seed == 0) 1 else seed
         fun roll(): Float { rng = (rng * 1103515245 + 12345) and 0x7fffffff; return rng / 0x7fffffff.toFloat() }
 
-        fun place(snip: Snip, step: Int, gain: Float) {
-            val start = step * stepFrames
-            val n = minOf(snip.samples.size, total - start)
-            for (i in 0 until n) mix[start + i] += snip.samples[i] * gain
+        val out = mutableListOf<GrooveHit>()
+        fun place(padIndex: Int, step: Int, velocity: Float) {
+            out.add(GrooveHit(padIndex, step, velocity))
         }
 
-        fun first(cls: DrumClass): Snip? = byClass[cls]?.firstOrNull()
+        fun first(cls: DrumClass): Int? = byClass[cls]?.firstOrNull()
 
         val tonal = byClass[DrumClass.TONAL].orEmpty()
         val toms = byClass[DrumClass.TOM].orEmpty()
@@ -108,6 +112,36 @@ object Groove {
                     place(toms[i % toms.size], base + s, 0.6f)
                 }
             }
+        }
+        return out
+    }
+
+    fun render(
+        arranged: List<ArrangedPad?>,
+        bpm: Float = 92f,
+        bars: Int = 4,
+        seed: Int = 0,
+    ): Snip {
+        require(bpm in 40f..220f) { "bpm out of range: $bpm" }
+
+        val rate = arranged.firstNotNullOfOrNull { it?.snip?.sampleRate } ?: 44_100
+        val stepFrames = (60.0 / bpm / 4.0 * rate).toInt()
+        val tailFrames = rate // let the last hit ring
+        val total = stepFrames * STEPS_PER_BAR * bars + tailFrames
+        val mix = FloatArray(total)
+
+        val pattern = hits(arranged, bars, seed)
+        if (pattern.isEmpty()) return Snip(FloatArray(rate), 1, rate)
+
+        val mono = HashMap<Int, Snip>()
+        for (hit in pattern) {
+            val snip = mono.getOrPut(hit.padIndex) {
+                val s = arranged[hit.padIndex]!!.snip
+                if (s.channels == 1) s else com.snipsnap.audio.Cleanup.toMono(s)
+            }
+            val start = hit.step * stepFrames
+            val n = minOf(snip.samples.size, total - start)
+            for (i in 0 until n) mix[start + i] += snip.samples[i] * hit.velocity
         }
 
         Dsp.normalize(mix)

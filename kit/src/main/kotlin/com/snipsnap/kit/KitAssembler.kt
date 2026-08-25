@@ -27,6 +27,12 @@ data class ArrangedPad(
      * sample, so soft pad hits *sound* soft on the hardware.
      */
     val softVariants: List<Snip> = emptyList(),
+    /**
+     * Provenance, carried through to [KitPad.source]: where this hit came
+     * from ("file", "sourceFrame", "lengthFrames", …). A chopped kit
+     * should remember its origins.
+     */
+    val source: Map<String, String> = emptyMap(),
 ) {
     init {
         require(softVariants.size <= 3) { "at most 3 soft variants (4 zones total)" }
@@ -55,6 +61,10 @@ object KitAssembler {
         name: String,
         arranged: List<ArrangedPad?>,
         dir: File,
+        /** The kit's key, when in-key treatment chose one — persisted in kit.json. */
+        key: com.snipsnap.audio.KeySpec? = null,
+        /** The source's detected tempo — persisted, and stamped into LOOP stems. */
+        tempoBpm: Float? = null,
     ): Kit {
         require(arranged.size <= 128) { "at most 128 pad slots, got ${arranged.size}" }
         dir.mkdirs()
@@ -71,7 +81,13 @@ object KitAssembler {
             val n = perClassCount.merge(pad.drumClass, 1, Int::plus)!!
             val label = PadNoteMap.labelForPad(slot)
             val className = AutoPlace.nameFor(pad.drumClass)
-            val stem = "%s_%s_%02d".format(label, className, n)
+            // A loop's tempo is the fact you browse for; it rides in the stem.
+            val stemClass = if (pad.drumClass == DrumClass.LOOP && tempoBpm != null) {
+                "%s_%dbpm".format(className, Math.round(tempoBpm))
+            } else {
+                className
+            }
+            val stem = "%s_%s_%02d".format(label, stemClass, n)
 
             WavWriter.write(File(dir, "$stem.wav"), pad.snip)
 
@@ -106,12 +122,13 @@ object KitAssembler {
                 tuneCoarse = pad.tuneCoarse,
                 tuneFine = pad.tuneFine,
                 muteGroup = AutoPlace.muteGroupFor(pad.drumClass),
+                source = pad.source,
                 recipe = pad.recipe,
                 velocityLayers = layers,
             )
         }
 
-        val kit = Kit(name, pads)
+        val kit = Kit(name, pads, key, tempoBpm)
         KitStore.save(kit, dir)
         return kit
     }

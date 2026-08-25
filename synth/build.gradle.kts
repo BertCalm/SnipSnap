@@ -15,6 +15,8 @@ dependencies {
     testImplementation(kotlin("test"))
     // Integration tests drive a rendered kit through the real export pipeline.
     testImplementation(project(":xpm"))
+    // The MPC 3 generators write native tracks with embedded groove clips.
+    testImplementation(project(":mpc3"))
 }
 
 // Java 17 bytecode so the Android app can consume this module directly.
@@ -42,6 +44,46 @@ tasks.register<JavaExec>("generateThumpKit") {
     description = "Render the synthesized THUMP acceptance kit under testkit/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ThumpKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the factory kit as a native MPC 3 track into testkit/. See Mpc3KitGenerator. */
+tasks.register<JavaExec>("generateMpc3Kit") {
+    group = "distribution"
+    description = "Render the factory kit as a native MPC 3 .xtd + _[TrackData]/ under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.Mpc3KitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the whole session as one MPC 3 project into testkit/. See SessionProjectGenerator. */
+tasks.register<JavaExec>("generateSessionProject") {
+    group = "distribution"
+    description = "Render kit + instruments + groove as one .xpj + _[ProjectData]/ under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SessionProjectGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the S5 instrument suite (dual-generation) into testkit/Instruments/. See InstrumentSuiteGenerator. */
+tasks.register<JavaExec>("generateInstrumentSuite") {
+    group = "distribution"
+    description = "Render the four-instrument S5 suite as .xty + .xpm twins under testkit/Instruments/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.InstrumentSuiteGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the keygroup program as a native MPC 3 .xty into testkit/. See Mpc3KeysGenerator. */
+tasks.register<JavaExec>("generateMpc3Keys") {
+    group = "distribution"
+    description = "Render the VELVET keygroup program as a native MPC 3 .xty + _[TrackData]/ under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.Mpc3KeysGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit")
 }

@@ -1,6 +1,8 @@
 package com.snipsnap.kit
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.KeySpec
+import com.snipsnap.audio.Scale
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
@@ -31,6 +33,13 @@ object KitStore {
     fun load(dir: File): Kit {
         val file = File(dir, FILE_NAME)
         if (!file.isFile) throw IOException("no $FILE_NAME in $dir")
+        return read(file)
+    }
+
+    /** Read any kit-json file — `kit.json` itself, or an archived take. */
+    @Throws(IOException::class)
+    fun read(file: File): Kit {
+        if (!file.isFile) throw IOException("no such file: $file")
         return fromJson(Json.parse(file.readText(Charsets.UTF_8)))
     }
 
@@ -41,10 +50,20 @@ object KitStore {
             ?: emptyList()
 
     private fun toJson(kit: Kit): JsonValue = JsonValue.Obj(
-        linkedMapOf(
+        linkedMapOf<String, JsonValue>(
             "version" to JsonValue.Num(VERSION.toDouble()),
             "name" to JsonValue.Str(kit.name),
-            "pads" to JsonValue.Arr(
+        ).also { root ->
+            kit.key?.let {
+                root["key"] = JsonValue.Obj(
+                    linkedMapOf(
+                        "root" to JsonValue.Num(it.rootSemitone.toDouble()),
+                        "scale" to JsonValue.Str(it.scale.name),
+                    ),
+                )
+            }
+            kit.tempoBpm?.let { root["tempoBpm"] = JsonValue.Num(it.toDouble()) }
+            root["pads"] = JsonValue.Arr(
                 kit.pads.sortedBy { it.slot }.map { p ->
                     val entries = linkedMapOf<String, JsonValue>(
                         "slot" to JsonValue.Num(p.slot.toDouble()),
@@ -82,8 +101,8 @@ object KitStore {
                     }
                     JsonValue.Obj(entries)
                 },
-            ),
-        ),
+            )
+        },
     )
 
     private fun fromJson(root: JsonValue): Kit {
@@ -93,6 +112,15 @@ object KitStore {
             throw JsonException("kit.json version $version is not supported (this build reads $VERSION)")
         }
         val name = obj["name"]?.str() ?: throw JsonException("kit.json has no name")
+        val key = (obj["key"] as? JsonValue.Obj)?.let { k ->
+            KeySpec(
+                rootSemitone = k.entries["root"]?.int() ?: throw JsonException("key has no root"),
+                scale = k.entries["scale"]?.str()?.let { s ->
+                    Scale.entries.firstOrNull { it.name == s }
+                        ?: throw JsonException("unknown scale '$s' in kit.json key")
+                } ?: throw JsonException("key has no scale"),
+            )
+        }
         val pads = obj["pads"]?.arr().orEmpty().map { padJson ->
             val p = padJson.obj()
             KitPad(
@@ -127,6 +155,6 @@ object KitStore {
                 },
             )
         }
-        return Kit(name, pads)
+        return Kit(name, pads, key, tempoBpm = obj["tempoBpm"]?.num()?.toFloat())
     }
 }

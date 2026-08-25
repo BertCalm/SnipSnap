@@ -1,6 +1,7 @@
 package com.snipsnap.kit
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.KeySpec
 import com.snipsnap.json.JsonValue
 import com.snipsnap.xpm.DrumProgram
 import com.snipsnap.xpm.Pad
@@ -104,8 +105,21 @@ data class KitPad(
 data class Kit(
     val name: String,
     val pads: List<KitPad>,
+    /**
+     * The kit's musical key, when one has been chosen — what in-key
+     * retuning targets and the keys-on-pads layouts root on. Null means
+     * no key: nothing is ever "corrected" against a key nobody set.
+     */
+    val key: KeySpec? = null,
+    /**
+     * The source material's tempo, when detection was confident. Project
+     * exports use it as the master tempo — which also buys warping for
+     * free, since the MPC stretches correctly when the metadata is right.
+     */
+    val tempoBpm: Float? = null,
 ) {
     init {
+        tempoBpm?.let { require(it > 0f && it < 1000f) { "tempoBpm out of range: $it" } }
         require(name.isNotBlank()) { "kit name must not be blank" }
         require(pads.map { it.slot }.toSet().size == pads.size) {
             "duplicate pad slots: ${pads.groupBy { it.slot }.filterValues { it.size > 1 }.keys}"

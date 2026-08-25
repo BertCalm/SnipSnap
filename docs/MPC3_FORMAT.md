@@ -117,9 +117,12 @@ Three corrections from the previous, prose-sourced version of this block:
   … 51, …` on a drum track, and an inert identity map (`value0: 0, value1: 1`)
   on an instrument track, which addresses pitch by zone key range instead.
 - **`drum.version` is 8**, not 2 — and it reads 8 on instrument tracks too.
-- **"Schema version 28" does not exist.** No `version` field in any harvested
-  file holds that value. It has been removed rather than corrected, because
-  nothing observed corresponds to it.
+- **"Schema version 28" exists — at project level.** An earlier revision
+  removed it entirely ("no `version` field in any harvested file holds that
+  value") after checking track files, which carry `data.version: 5`. The DD1
+  Chamber **project** carries `data.version: 28`, vindicating the community
+  write-up on this one: the value is real, it just belongs to
+  `SerialisableProjectData`, not to tracks.
 
 **Do not gate a reader on any version integer.** `program.version` is `4` in
 one Classic Drum Machines kit and `2` in another from the same pack, and
@@ -416,11 +419,17 @@ These files were written by **authoring tools** — Akai's and F9 Audio's — no
 a standalone MPC. That is strong evidence for what the firmware writes, not
 proof, and this document has been wrong before by trusting second-hand structure.
 
-So the Live III check in [`reference/README.md`](../reference/README.md) stays
-open, with a sharper question than before: not *which container*, but *does the
-hardware write the same one*. Build a drum program, save it, and confirm the
+**The reading half is now settled on hardware (2026-08-23):** a Live III
+loaded and played our generated `.xtd` — the container, the schema this
+document describes, and our writer's output are all inside what real
+firmware accepts.
+
+What stays open is the *writing* half: does the hardware save the same
+container? Build a drum program on the Live III, save it, and confirm the
 first two bytes are `1F 8B` and header line 3 reads `SerialisableTrackData`.
-Drop it in `reference/golden/liveiii-36/`.
+Drop it in `reference/golden/liveiii-36/` — that save is also the last word
+on any field this corpus can't show (firmware-authored defaults, per-pad
+colour dialects, `fineTune` units).
 
 ## One format, several exporter builds
 
@@ -456,6 +465,32 @@ tracks from build **`3.9.0.31`** on OSX, and the structure holds unchanged —
 zones in `program.drum.instruments`, `program.keygroup` with no `instruments`
 key, 8 `layersv` slots, dual `filterData`/`lfoData` at `value0`/`value1`. What
 that pack *did* change is the `numKeygroups` rule, below.
+
+## The project writer
+
+`Mpc3ProjectWriter` writes the whole session as one `.xpj` beside a flat
+`<name>_[ProjectData]/` of WAVs. Content tracks come from
+`Mpc3TrackWriter`'s builders — a project's `tracks[]` element is a hoisted
+track file minus `solo`, confirmed key-for-key — plus the
+mixer-infrastructure tracks every harvested project carries (`Submix 1`
+type 8, `Out N/N` type 9: the track shell around a program with no drum or
+keygroup block). The ~sixty boilerplate keys around them (mixer, QLink
+assignments, pad-perform settings, 32 empty song slots) are the DD1 Chamber
+project's own defaults, carried verbatim as a resource skeleton with the
+content-specific parts scrubbed — verbatim beats reconstruction.
+
+The first drum track's clip becomes `sequences[0]`: notes ride in
+`trackClipMaps` keyed by track name (every track mapped, empty clips on the
+rest), the project's tracks keep their own `sharedClipMap` empty, and the
+sequence clip values omit `midiBankAndProgramNumber` — all exactly as the
+real project does. `Mpc3ProjectWriterTest` guards key paths against the
+project corpus, with `tracks[*]` paths also legitimised by the track corpus
+under the hoisting equivalence.
+
+`testkit/SnipSnap Session.xpj` is the acceptance artifact
+(`./gradlew :synth:generateSessionProject`): the factory kit, all four S5
+instruments, and the demo groove on the timeline — the entire SnipSnap
+session in one file.
 
 ## Embedded sequences
 
@@ -660,17 +695,74 @@ With MPC 2 hardware out of scope, one of the original three reasons is gone —
 there is no One or 2.x Live II to support. The other two got stronger:
 
 1. **MPC 3 loads MPC 2 content**, which is Akai's own documented route across
-   the 2/3 split. `:xpm` is not merely compatible, it is **the only thing in
-   this repo that produces a loadable kit today**. Until a native MPC 3 writer
-   exists, every kit that reaches the Live III goes through it.
+   the 2/3 split. `:xpm` is the **proven-shape** path — its structure comes
+   from a real firmware save — while the native writer below is corpus-shaped
+   and still awaiting its first hardware load.
 2. **It is the fallback** if the MPC 3 track container turns out to be
-   impractical to write from a phone — a 9.6 MB JSON body per kit is not
-   nothing on a handset.
+   impractical to write from a phone — our 16-pad factory kit renders to a
+   ~5.8 MB JSON body (194 KB gzipped), which is fine on a handset but worth
+   knowing.
 
-So `:xpm` is the shipping path and a native MPC 3 writer is the goal. What is
-deprioritised is *verifying `:xpm` against MPC 2 devices* — see
+So `:xpm` stays the shipping path until the native writer passes acceptance.
+What is deprioritised is *verifying `:xpm` against MPC 2 devices* — see
 [`reference/README.md`](../reference/README.md#backlog-mpc-2) — not the writer
 itself. Its output still has to load on the Live III, and that test runs now.
+
+## The native writer
+
+`Mpc3TrackWriter` in `:mpc3` writes the `.xtd` container this document
+describes, and `Mpc3Exporter` in `:kit` drives it through the same
+preflight/sanitize pipeline as every other export, emitting
+`<Kit Name>.xtd` beside a flat `<Kit Name>_[TrackData]/` of WAVs.
+
+Every load-bearing fact the corpus established is implemented and pinned by
+`Mpc3TrackWriterTest`: 128 fully-formed slots with the empty-pad encoding,
+8 `layersv` slots with velocity zones loudest-first, `sliceInfo.End` as the
+length (a test asserts `sampleEnd` stays 0), dual `sampleName`/`sampleFile`
+naming mirrored 1:1 in the deduplicated pool, the 0-based chromatic
+`padNoteMap`, both spellings of polyphony at their exact paths, `0.5` pan
+centre, per-pad `triggerMode`, and per-pad colours in `program.programPads`
+— which, note, turns out to carry the same packed-int `pads.valueN` blob as
+MPC 2, just as plain JSON: real kits (SFM 808/909) ship per-pad colours
+there, so the "per-pad colour unproven" caveat above is answered for drum
+programs.
+
+The generalised guard is the same one the MPC 2 keygroup writer earned:
+**no key path the writer emits may be absent from every real drum track**
+in `reference/golden/mpc3-track/`. Defaults are copied from
+`Kit-SFM 909 Crisp 123.xtd` (build `0.1.0.992`, the most common family)
+rather than invented, and floats render with their decimal point the way the
+firmware's serializer writes them.
+
+`testkit/SnipSnap MPC3 Kit.xtd` is the acceptance artifact
+(`./gradlew :synth:generateMpc3Kit`). Header stamp: `3.7.0.56` / `Linux`,
+the standalone-firmware pairing observed on 59 real projects.
+
+**Acceptance passed, 2026-08-23, on a Live III:** the kit loaded and
+played, every pad on its assigned slot, pads lit in class colours
+(`program.programPads` confirmed live), A03 choked A04
+(`whichMuteGroup` confirmed), and the embedded "SnipSnap Groove" clip
+appeared in the clip list and played. **MPC 3 native is a proven shipping
+path**, no longer just the target.
+
+The writer covers **both track types and the thing only this generation
+can do**:
+
+- **Keygroups** (`writeKeygroup` → `.xty`): zones in
+  `program.drum.instruments` with per-layer root notes — never under
+  `program.keygroup`, which carries only the global block (32 mod-link
+  slots, unison/harmoniser, the four dormant `*EnvelopeGlobal` toggles) —
+  the identity `padNoteMap`, `triggerMode 2` on every zone, sustained amp
+  envelopes, and the vestigial `poliphony 1 / monophonic true` drum pair
+  every real instrument track carries. Guarded against the `.xty` corpus
+  the same way the drum path is guarded against `.xtd`.
+  `testkit/SnipSnap MPC3 Keys.xty` is the acceptance artifact
+  (`:synth:generateMpc3Keys`).
+- **Embedded clips** (`Mpc3Clip`): a `sharedClipMap` pattern of real note
+  events — 960 PPQ pulse offsets, normalised float velocities, the full
+  modifier block — shaped like the clip-bearing SFM kits'. The factory
+  export uses it to ship the demo groove *inside the kit*, which the MPC 2
+  format has nowhere to put.
 
 ## Sources
 

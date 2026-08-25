@@ -157,8 +157,10 @@ class KeygroupWriter {
             sb.append("            <Offset>0</Offset>\n")
             sb.append("            <SliceStart>0</SliceStart>\n")
             sb.append("            <SliceEnd>").append(zone?.frameCount ?: 0L).append("</SliceEnd>\n")
-            sb.append("            <SliceLoopStart>0</SliceLoopStart>\n")
-            sb.append("            <SliceLoop>0</SliceLoop>\n")
+            // The sustain loop, exactly as the corpus' looping keygroup
+            // writes it: SliceLoop=1 + SliceLoopStart, looping to SliceEnd.
+            sb.append("            <SliceLoopStart>").append(zone?.loopStartFrame ?: 0L).append("</SliceLoopStart>\n")
+            sb.append("            <SliceLoop>").append(if ((zone?.loopStartFrame ?: 0L) > 0L) 1 else 0).append("</SliceLoop>\n")
             sb.append("            <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>\n")
             sb.append("          </Layer>\n")
         }

@@ -123,6 +123,76 @@ program is the on-hardware acceptance check. Regenerate with
 keygroup, plays **in tune chromatically** across the pads, and soft hits
 use the darker layer.
 
+> **Results so far (Live III, 2026-08-23):** the native MPC3 kit **loaded
+> and played** — class colours ✓, A03 chokes A04 ✓, groove clip plays ✓ —
+> and the diag kit answered the numbering question: **A01 = one beep**,
+> 0-based confirmed. Still to test: both keys programs, the `.xpn` import,
+> the expansion tile, velocity feel, bank B.
+
+### SnipSnap MPC3 Kit — the native-format headline check
+
+The factory kit written in the Live III's **own generation**: a gzip ACVS
+`SnipSnap MPC3 Kit.xtd` beside its flat `SnipSnap MPC3 Kit_[TrackData]/` WAV
+folder — the exact pair every commercial MPC 3 program ships as. Copy both
+(file + folder, side by side) anywhere browsable and load the `.xtd`.
+Regenerate with `./gradlew :synth:generateMpc3Kit`. Things to confirm:
+
+- it **loads at all** — the first ever acceptance test of `Mpc3TrackWriter`;
+- all 16 pads fire on the pads they were assigned (the note map here is
+  MPC 3's own 0-based chromatic table, a different mechanism from the XPM
+  path);
+- A03 chokes A04 (`whichMuteGroup` surviving the new format);
+- the pads light in class colours (`program.programPads`, plain JSON here);
+- **the track carries a clip called "SnipSnap Groove"** — the demo groove
+  as 75 real note events, something the MPC 2 format has nowhere to put.
+  Check the clip list: if it's there and plays the kit's own beat, the
+  native format just earned its keep.
+
+A yes makes MPC 3 native the shipping path. A no costs nothing — the MPC 2
+folder stays the path, and *how* it fails (error text, or silent absence
+from the browser) is the next format clue.
+
+### SnipSnap MPC3 Keys — native keys-on-pads
+
+The VELVET bass multisample (same zones as SnipSnap Keys) as a native
+`.xty` instrument track beside its `_[TrackData]/` WAVs — the S5 door in
+the Live III's own generation. Zones ride in `program.drum.instruments`
+with per-layer root notes, exactly where real instrument tracks keep them.
+Regenerate with `./gradlew :synth:generateMpc3Keys`. Things to confirm:
+it loads as an instrument track, plays **in tune chromatically** across
+the pads, and soft hits use the darker layer.
+
+### SnipSnap Session — the whole thing in one file
+
+The capstone artifact: `SnipSnap Session.xpj` beside its flat
+`SnipSnap Session_[ProjectData]/` — the factory kit, all four suite
+instruments and the demo groove as **one MPC 3 project**. Open the `.xpj`
+and the entire session should be standing there: kit on track 1 in class
+colours, EP/Organ/Harp/Music Box on their own tracks, "SnipSnap Groove"
+on sequence 1 ready to play, mixer wired. Regenerate with
+`./gradlew :synth:generateSessionProject`. Things to confirm: it opens,
+every track plays, the sequence plays the kit, and the organ still
+sustains inside the project.
+
+### Instruments/ — the S5 suite, dual-generation
+
+Four playable key instruments, engines at exact MIDI pitch, multisampled
+every minor third across two octaves: **SnipSnap EP** (TINES electric piano
+— soft hits are *rendered darker*, not attenuated), **SnipSnap Organ**
+(TONEWHEEL held down, with a sustain loop cut at an exact whole number of
+waveform periods — hold a pad and it sings forever), **SnipSnap Harp**
+(PLUCK), **SnipSnap Music Box** (TINES chime twins). Regenerate with
+`./gradlew :synth:generateInstrumentSuite`.
+
+Each instrument ships the Timeless Glow dual-generation layout: the `.xty`
+loads on MPC 3; an MPC 2 machine browses into `_[TrackData]/` and finds the
+`.xpm` sitting with its samples. An `instruments.json` sidecar rides at the
+folder root — engine, zones, velocity layers, and the organ's loop points,
+recorded from the actual renders — so the folder can rebuild itself (the
+renders are deterministic). Things to confirm: each loads, plays in tune
+chromatically, the EP's soft hits sound darker, and — the big one —
+**held organ pads sustain indefinitely** with no audible loop seam.
+
 ### SnipSnap_Factory.xpn — one-file import
 
 The factory kit as a single `.xpn` archive, in the layout every real

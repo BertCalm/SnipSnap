@@ -43,21 +43,29 @@ Not a harvest — an acceptance test, and the distinction matters. The corpus
 shows what MPC reads. It cannot show whether what we write is inside that set.
 Runs **today**, since `:xpm` output is MPC 2 content and MPC 3 loads it:
 
-1. `gradle :xpm:test` — proves no accidental drift
-2. Generate a 16-pad kit with real WAVs beside it
-3. Load it on the **Live III**
-4. Confirm all 16 pads fire, on the right pads, at the right pitch, with the
-   hat mute group choking
+**Passed, 2026-08-23, on a Live III — both generations.**
 
-If the kit comes up **shifted by exactly one pad**, that is the instrument
-numbering base — flip `XpmWriter(instrumentBaseIndex = 1)` and it is solved.
-Twenty of twenty vendor programs number instruments from `1`, so that is the
-way to bet, but only our own output on hardware settles it.
+- **Native `.xtd`** (`SnipSnap MPC3 Kit`): loaded and played, pads on their
+  assigned slots, class colours lit, A03 choking A04, the embedded
+  "SnipSnap Groove" clip playing from the clip list.
+- **MPC 2 `.xpm`** (diag kit): loaded, and pad A01 gave **one beep** —
+  0-based instrument numbering confirmed, despite twenty of twenty vendor
+  programs numbering from 1. The parser takes both; ours is in the set.
 
-Then the same for one-file sharing: import `testkit/SnipSnap_Factory.xpn` and
-see whether it appears in the Expansion browser. If it doesn't, move
-`Expansion.xml` to the archive root and drop `samplePathPrefix` — both are
-[documented defects](../docs/MPC_EXPORT.md) with 4-of-4 evidence behind them.
+Still queued for a card session, in value order:
+
+1. **Keys** — `SnipSnap MPC3 Keys.xty` (native) and `SnipSnap Keys`
+   (MPC 2): do keygroups load and play in tune chromatically? This is the
+   S4/S5 acceptance.
+2. **One-file sharing** — import `testkit/SnipSnap_Factory.xpn`; the layout
+   now matches all four real archives (root `Expansion.xml`, bare names).
+3. **Expansion tile** — copy `testkit/Expansions/` to the card root, check
+   the Expansion browser.
+4. **Velocity feel and bank B** — the velocity kit's soft hits, the shuffle
+   kit's B-bank treatments.
+5. **The one save the corpus can't supply** — build any drum program on the
+   Live III, save it, drop the file in `golden/liveiii-36/`. It is the last
+   word on what firmware itself writes (container, defaults, dialects).
 
 ## What's in `golden/`
 

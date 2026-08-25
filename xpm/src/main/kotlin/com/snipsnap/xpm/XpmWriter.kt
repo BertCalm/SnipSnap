@@ -18,9 +18,9 @@ class XpmWriter(
     /**
      * Whether `<Instrument number="...">` counts from 0 or 1.
      *
-     * **Unverified.** Akai's own files appear to be 0-based, but at least one
-     * third-party generator emits 1-based and reportedly loads. If a generated
-     * kit comes up shifted by one pad on hardware, this is the knob. See
+     * **Hardware-verified: 0-based is correct.** The generated diag kit
+     * loaded on a Live III and pad A01 played one beep — no shift. The knob
+     * stays for the record; it never needs turning. See
      * `docs/XPM_STRUCTURE.md`.
      *
      * There is deliberately no sample-path option: across every harvested
