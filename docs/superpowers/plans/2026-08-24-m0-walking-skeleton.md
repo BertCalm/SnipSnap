@@ -1125,7 +1125,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
+// NB: no `import ...layout.weight` — RowScope.weight and ColumnScope.weight
+// are member extensions and cannot be imported by name. Inside a Row {} or
+// Column {} the scope receiver supplies them; an explicit import resolves to
+// an unrelated internal property and fails to compile.
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
