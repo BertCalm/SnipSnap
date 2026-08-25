@@ -100,9 +100,17 @@ class Mpc3TrackWriter(
 
     /** The `.xtd` container bytes. [clip] embeds a pattern the kit carries along. */
     fun write(program: DrumProgram, trackColour: Int = DEFAULT_TRACK_COLOUR, clip: Mpc3Clip? = null): ByteArray =
+        write(program, trackColour, listOfNotNull(clip))
+
+    /**
+     * The `.xtd` container bytes with up to [MAX_CLIPS] embedded patterns —
+     * the clip *list* is the container's own shape (commercial kits ship
+     * four named clips; the browser flips between them).
+     */
+    fun write(program: DrumProgram, trackColour: Int = DEFAULT_TRACK_COLOUR, clips: List<Mpc3Clip>): ByteArray =
         Acvs.write(
             AcvsHeader(firmware, Mpc3Project.TRACK_OBJECT_TYPE, AcvsHeader.ENCODING_JSON, platform),
-            payloadText(program, trackColour, clip),
+            payloadText(program, trackColour, clips),
         )
 
     /**
@@ -115,16 +123,28 @@ class Mpc3TrackWriter(
         program: DrumProgram,
         trackColour: Int = DEFAULT_TRACK_COLOUR,
         clip: Mpc3Clip? = null,
+    ): File = writeTo(directory, program, trackColour, listOfNotNull(clip))
+
+    /** [writeTo] with the clip list. */
+    fun writeTo(
+        directory: File,
+        program: DrumProgram,
+        trackColour: Int = DEFAULT_TRACK_COLOUR,
+        clips: List<Mpc3Clip>,
     ): File {
         require(directory.isDirectory) { "not a directory: $directory" }
         val file = File(directory, "${program.name}.xtd")
-        file.writeBytes(write(program, trackColour, clip))
+        file.writeBytes(write(program, trackColour, clips))
         return file
     }
 
     /** The uncompressed JSON payload, for tests and diffing. */
     fun payloadText(program: DrumProgram, trackColour: Int = DEFAULT_TRACK_COLOUR, clip: Mpc3Clip? = null): String =
-        render(payload(program, trackColour, clip))
+        payloadText(program, trackColour, listOfNotNull(clip))
+
+    /** [payloadText] with the clip list. */
+    fun payloadText(program: DrumProgram, trackColour: Int = DEFAULT_TRACK_COLOUR, clips: List<Mpc3Clip>): String =
+        render(payload(program, trackColour, clips))
 
     /** The `.xty` container bytes for a keygroup (instrument) track. */
     fun writeKeygroup(program: KeygroupProgram, trackColour: Int = DEFAULT_TRACK_COLOUR): ByteArray =
@@ -146,6 +166,9 @@ class Mpc3TrackWriter(
         render(keygroupPayload(program, trackColour))
 
     companion object {
+        /** The container's clip slots — commercial kits ship exactly four. */
+        const val MAX_CLIPS = 4
+
         /** Sibling folder name for the WAVs, per the corpus convention. */
         fun trackDataDirName(programName: String): String = "${programName}_[TrackData]"
 
@@ -166,10 +189,10 @@ class Mpc3TrackWriter(
     // ---- project-facing builders ------------------------------------------
 
     internal fun drumTrackObject(program: DrumProgram, trackColour: Int, clip: Mpc3Clip?, includeSolo: Boolean): J =
-        trackObject(program.name, drumSampleNames(program), programObj(program), trackColour, clip, includeSolo)
+        trackObject(program.name, drumSampleNames(program), programObj(program), trackColour, listOfNotNull(clip), includeSolo)
 
     internal fun keygroupTrackObject(program: KeygroupProgram, trackColour: Int, includeSolo: Boolean): J =
-        trackObject(program.name, keygroupSampleNames(program), keygroupProgramObj(program), trackColour, null, includeSolo)
+        trackObject(program.name, keygroupSampleNames(program), keygroupProgramObj(program), trackColour, emptyList(), includeSolo)
 
     /**
      * The mixer-infrastructure tracks every harvested project carries beside
@@ -187,20 +210,22 @@ class Mpc3TrackWriter(
                 drum = null, keygroup = null,
             ),
             trackColour = 0,
-            clip = null,
+            clips = emptyList(),
             includeSolo = false,
         )
 
     // ---- payload assembly -------------------------------------------------
 
-    private fun payload(program: DrumProgram, trackColour: Int, clip: Mpc3Clip?): J =
-        trackData(
+    private fun payload(program: DrumProgram, trackColour: Int, clips: List<Mpc3Clip>): J {
+        require(clips.size <= MAX_CLIPS) { "at most $MAX_CLIPS clips per track, got ${clips.size}" }
+        return trackData(
             name = program.name,
             sampleNames = drumSampleNames(program),
             programObj = programObj(program),
             trackColour = trackColour,
-            clip = clip,
+            clips = clips,
         )
+    }
 
     private fun keygroupPayload(program: KeygroupProgram, trackColour: Int): J =
         trackData(
@@ -208,7 +233,7 @@ class Mpc3TrackWriter(
             sampleNames = keygroupSampleNames(program),
             programObj = keygroupProgramObj(program),
             trackColour = trackColour,
-            clip = null,
+            clips = emptyList(),
         )
 
     private fun trackData(
@@ -216,8 +241,8 @@ class Mpc3TrackWriter(
         sampleNames: List<String>,
         programObj: J,
         trackColour: Int,
-        clip: Mpc3Clip?,
-    ): J = obj("data" to trackObject(name, sampleNames, programObj, trackColour, clip, includeSolo = true))
+        clips: List<Mpc3Clip>,
+    ): J = obj("data" to trackObject(name, sampleNames, programObj, trackColour, clips, includeSolo = true))
 
     /**
      * One element of a project's `tracks[]` — identical to a standalone
@@ -230,7 +255,7 @@ class Mpc3TrackWriter(
         sampleNames: List<String>,
         programObj: J,
         trackColour: Int,
-        clip: Mpc3Clip?,
+        clips: List<Mpc3Clip>,
         includeSolo: Boolean,
     ): J = J.O(
         buildList {
@@ -256,7 +281,9 @@ class Mpc3TrackWriter(
             add("lengthFollowsSequenceLength" to b(true))
             add("midiEventsFilter" to midiEventsFilter())
             add("arrangementClipMap" to arrangementClips(name))
-            add("sharedClipMap" to (clip?.let { J.A(listOf(clipEntry(it))) } ?: J.A(emptyList())))
+            add(
+                "sharedClipMap" to J.A(clips.mapIndexed { index, c -> clipEntry(c, key = index + 1) }),
+            )
             add("recordArm" to b(true))
             add(
                 "midiBankAndProgramNumber" to obj(
@@ -854,8 +881,8 @@ class Mpc3TrackWriter(
      * `type: 3`, with the modifier block and the one place the enum wrapper
      * genuinely appears in program-adjacent data.
      */
-    private fun clipEntry(clip: Mpc3Clip): J = obj(
-        "key" to i(1),
+    private fun clipEntry(clip: Mpc3Clip, key: Int): J = obj(
+        "key" to i(key.toLong()),
         "value" to clipValue(clip),
     )
 

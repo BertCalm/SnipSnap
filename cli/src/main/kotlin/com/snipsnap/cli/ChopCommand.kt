@@ -210,7 +210,6 @@ object ChopCommand {
         }
 
         // --groove: the capture's own rhythm rides along in the native formats.
-        var clip: com.snipsnap.mpc3.Mpc3Clip? = null
         if (opts.has("--groove")) {
             if (tempo == null) {
                 out.println("(no confident tempo - groove skipped)")
@@ -226,19 +225,26 @@ object ChopCommand {
                         )
                     }
                 }
-                clip = CapturedGroove.clip("$name Groove", hits, tempo.bpm, TARGET_RATE)
-                // The folder is the kit: the groove persists beside kit.json,
-                // so exporting tomorrow still carries today's rhythm.
-                com.snipsnap.kit.GrooveStore.save(kitDir, listOf(clip))
-                out.println("groove: \"${clip.name}\" - ${clip.notes.size} notes over ${clip.bars} bar(s), as captured (saved to groove.json)")
+                val clip = CapturedGroove.clip("$name Groove", hits, tempo.bpm, TARGET_RATE)
+                // The folder is the kit: the groove persists beside kit.json
+                // as the standard four variations, so exporting tomorrow
+                // still carries today's rhythm - four ways.
+                val variations = com.snipsnap.kit.GrooveVariations.standard(clip)
+                com.snipsnap.kit.GrooveStore.save(kitDir, variations)
+                out.println(
+                    "groove: \"${clip.name}\" - ${clip.notes.size} notes over ${clip.bars} bar(s), " +
+                        "saved as ${variations.size} patterns (captured/tight/half/sparse)",
+                )
             }
         }
 
         if (exportFormats != null) {
             out.println()
+            // No explicit clip: groove.json (all four variations) drives the
+            // native exports through Exporters' own fallback.
             Exports.write(
                 kit, kitDir, File(outRoot, "card"), exportFormats, opts.has("--overwrite"), out,
-                clip = clip, tempoBpm = tempo?.bpm,
+                tempoBpm = tempo?.bpm,
             )
         } else {
             out.println("(no --export given - kit folder only; formats: ${Exports.FORMATS.joinToString(",")})")

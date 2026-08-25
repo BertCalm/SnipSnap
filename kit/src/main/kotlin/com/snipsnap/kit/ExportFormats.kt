@@ -73,9 +73,11 @@ object Exporters {
             ExportOutcome(format, f, null, findings(kit, kitDir))
         }
         ExportFormat.MPC3_TRACK -> {
-            // The call-site clip wins; the kit's remembered groove backs it up.
-            val effectiveClip = clip ?: GrooveStore.load(kitDir).firstOrNull()
-            val r = Mpc3Exporter.exportTrack(kit, kitDir, destRoot, overwrite, clip = effectiveClip, mpc2Twin = dualGeneration)
+            // The call-site clip wins; the kit's remembered grooves back it
+            // up — all of them, up to the container's four slots.
+            val effectiveClips = clip?.let { listOf(it) }
+                ?: GrooveStore.load(kitDir).take(Mpc3TrackWriter.MAX_CLIPS)
+            val r = Mpc3Exporter.exportTrack(kit, kitDir, destRoot, overwrite, clips = effectiveClips, mpc2Twin = dualGeneration)
             ExportOutcome(
                 format, r.program,
                 File(destRoot, Mpc3TrackWriter.trackDataDirName(kit.name)), r.findings,
