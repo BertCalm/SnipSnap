@@ -1401,7 +1401,8 @@ The seed is `ThumpKits.classic()` rendered through `KitAssembler` **on device** 
 - Produces:
   - `class KitLibrary(private val root: File)` with `fun list(): List<KitEntry>`, `fun open(entry: KitEntry): KitBuilderModel`, `fun create(name: String): KitBuilderModel`, `fun seedIfEmpty(): Boolean`
   - `data class KitEntry(val dir: File, val name: String, val padCount: Int)`
-  - `@Composable fun KitsScreen(entries: List<KitEntry>, onOpen: (KitEntry) -> Unit, onNew: () -> Unit)`
+  - `@Composable fun KitsScreen(entries: List<KitEntry>, seeding: Boolean, onOpen: (KitEntry) -> Unit, onNew: () -> Unit)`
+  - `const val SEEDING_LINE` — what the shelf says while the factory kit renders
   - Seed kit name constant `KitLibrary.SEED_NAME = "SNIPSNAP KIT 01"`
 
 - [ ] **Step 1: Write the failing library test**
@@ -1703,10 +1704,14 @@ import com.snipsnap.app.theme.toColor
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 
+/** What the shelf says while the first-run factory kit is being rendered. */
+const val SEEDING_LINE = "MAKING YOU A STARTER KIT. SIXTEEN SOUNDS, FROM SCRATCH."
+
 /** MY KITS — the tape shelf. */
 @Composable
 fun KitsScreen(
     entries: List<KitEntry>,
+    seeding: Boolean,
     onOpen: (KitEntry) -> Unit,
     onNew: () -> Unit,
 ) {
@@ -1715,9 +1720,24 @@ fun KitsScreen(
         modifier = Modifier.fillMaxSize().padding(6.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        LcdHeader(left = "MY KITS", right = "${entries.size} TAPES")
+        LcdHeader(left = "MY KITS", right = tapes(entries.size))
 
-        if (entries.isEmpty()) {
+        // A bare shelf and a shelf mid-render look identical and mean
+        // opposite things. Rendering the factory kit takes tens of seconds
+        // on a real device, and for every one of them the empty-state line
+        // would be telling a confident lie about work already underway.
+        if (seeding) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                BasicText(
+                    text = SEEDING_LINE,
+                    style = TextStyle(
+                        color = s.lcdInk.toColor(),
+                        fontFamily = TapeFonts.pixel,
+                        fontSize = 9.sp,
+                    ),
+                )
+            }
+        } else if (entries.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 BasicText(
                     text = Copy.EMPTY_SHELF,
@@ -1841,9 +1861,24 @@ fun LcdHeader(left: String, right: String) {
             var state by remember { mutableStateOf(NavState(Screen.KITS)) }
             var entries by remember { mutableStateOf(emptyList<KitEntry>()) }
 
+            var seeding by remember { mutableStateOf(false) }
+
             LaunchedEffect(Unit) {
-                withContext(Dispatchers.IO) { library.seedIfEmpty() }
-                entries = withContext(Dispatchers.IO) { library.list() }
+                // Listing is cheap — it only looks for folders holding a
+                // kit.json — so ask first and seed only if the shelf is bare.
+                val existing = withContext(Dispatchers.IO) { library.list().entries }
+                if (existing.isEmpty()) {
+                    seeding = true
+                    // Dispatchers.Default, not IO: rendering sixteen pads is
+                    // compute, and IO's pool is sized for threads parked on
+                    // blocking calls. Measured at ~24s on an emulator against
+                    // 39ms on a warm desktop JVM — cold ART interpreting tight
+                    // float loops — so this is a real wait the UI must own,
+                    // not a blip to hide.
+                    withContext(Dispatchers.Default) { library.seedIfEmpty() }
+                    seeding = false
+                }
+                entries = withContext(Dispatchers.IO) { library.list().entries }
             }
             // …quip ticker as before…
 
