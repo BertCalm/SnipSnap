@@ -70,7 +70,8 @@ object ChopCommand {
             throw CliError("--art and --no-art contradict each other")
         }
         val artStyle = Exports.parseArtStyle(opts["--art"])
-        val key = opts["--key"]?.let {
+        val autoKey = opts["--key"]?.lowercase() == "auto"
+        val explicitKey = opts["--key"]?.takeUnless { autoKey }?.let {
             try {
                 KeySpec.parse(it)
             } catch (e: IllegalArgumentException) {
@@ -128,6 +129,31 @@ object ChopCommand {
         )
 
         val classified = slices.map { it to Classifier.classify(it.snip) }
+
+        // The capture can name its own key - a guess from the pitched slices.
+        val guess = com.snipsnap.audio.KeyGuess.guess(
+            classified.mapNotNull { (slice, _) ->
+                com.snipsnap.audio.Pitch.detect(slice.snip)?.takeIf { it.confidence >= 0.5f }?.hz
+            },
+        )
+        val key = when {
+            explicitKey != null -> explicitKey
+            autoKey -> {
+                val sure = guess?.takeIf { it.confidence >= com.snipsnap.audio.KeyGuess.SURE_CONFIDENCE }
+                    ?: throw CliError(
+                        "couldn't hear a key in this material - name one (--key Am) or drop --key",
+                    )
+                out.println("key: sounds like ${sure.key.label} (confidence %.2f)".format(sure.confidence))
+                sure.key
+            }
+            else -> null
+        }
+        // No key asked for: a confident guess still gets remembered (metadata
+        // only - retuning uninvited would be a different kit than captured).
+        val stampedKey = key ?: guess
+            ?.takeIf { it.confidence >= com.snipsnap.audio.KeyGuess.SURE_CONFIDENCE }
+            ?.key
+            ?.also { out.println("key: sounds like ${it.label} - remembered in kit.json (retune with --key auto)") }
 
         // Following hits usually means a break, where the playable layout is
         // the point; a grid usually means bars or a chromatic run, where the
@@ -193,7 +219,7 @@ object ChopCommand {
             throw CliError("kit already exists: $kitDir (pass --overwrite to replace it)")
         }
 
-        var kit = KitAssembler.assembleArranged(name, arranged, kitDir, key, tempo?.bpm)
+        var kit = KitAssembler.assembleArranged(name, arranged, kitDir, stampedKey, tempo?.bpm)
 
         if (opts.has("--ghosts")) {
             val model = com.snipsnap.shell.KitBuilderModel.open(kitDir)

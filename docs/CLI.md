@@ -40,7 +40,7 @@ tempo, chop, classify each slice, auto-place onto the conventional layout
 | `--groove` | embed the capture's own rhythm as a clip in the native exports (`xtd`/`xpj`) — timing as captured, velocities from the hits' own dynamics; needs a confident tempo |
 | `--swing PCT` | with `--groove`: the tight pattern swings instead, the way the hardware does it — quantize to 16ths, then push every even ("and") 16th late by `(pct−50)/50` of a 16th. 50 straight, 66 triplet feel, panel range 50–75 |
 | `--ghosts` | darker soft velocity zones under every one-shot pad — quiet hits sound soft, not just quiet |
-| `--key SPEC` | retune tonal pads into a key via `InKey`/`Tuner`: `Am`, `C`, `F#m`, `Eb major`, `Dminpent` |
+| `--key SPEC` | retune tonal pads into a key via `InKey`/`Tuner`: `Am`, `C`, `F#m`, `Eb major`, `Dminpent` — or **`auto`**: a pitch-class histogram over the pitched slices names the key itself (`KeyGuess`), erroring honestly when the material has none. Even without `--key`, a confident guess is remembered in `kit.json` — metadata only, nothing retunes uninvited |
 | `--export LIST` | comma-separated formats, see below |
 | `--preview` | render the kit playing its own beat (`KitPreview`) into the `expansion`/`xpn` exports as `[Previews]/<Kit>.xpm.wav` — the real packs' pairing convention, so the MPC browser auditions the kit before loading it. Uses the kit's saved groove; with none, an honest default: kick/snare/hat backbone when classes are known, a pad walk when they aren't |
 | `--art STYLE` / `--no-art` | expansion/`xpn` exports carry a procedural browser tile (`KitArt`) **by default** — the prototyping loop's verdict made `waveform` the standard look, with `rings` the runner-up (`grid` and `slices` also available). `--no-art` skips it |

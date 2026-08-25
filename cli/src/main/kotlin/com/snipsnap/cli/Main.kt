@@ -87,7 +87,8 @@ object Cli {
         |  --melodic         place slices low-to-high by detected pitch
         |                    (unpitched slices follow in capture order)
         |  --key SPEC        retune tonal pads into a key: Am, C, F#m, Eb major,
-        |                    Dminpent, Gchromatic
+        |                    Dminpent, Gchromatic - or "auto" to let the
+        |                    capture name its own key
         |  --export LIST     comma-separated: ${Exports.FORMATS.joinToString(",")}
         |  --preview         render the kit playing its own beat into the
         |                    expansion/xpn previews

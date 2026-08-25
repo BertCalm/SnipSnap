@@ -708,6 +708,50 @@ class CliTest {
     }
 
     @Test
+    fun `the capture names its own key with --key auto, or just remembers it`() {
+        val rate = 44_100
+        val step = (rate * 0.7f).toInt()
+        // An A minor arpeggio leaning on its root: A, C, E, A - the doubled
+        // root is what separates A minor from its relative C major.
+        val total = FloatArray(step * 5)
+        listOf(110.0, 130.81, 164.81, 220.0).forEachIndexed { i, hz ->
+            val tone = DrumSynth.tonal(seconds = 0.6f, freq = hz)
+            val at = (i + 1) * step
+            for (j in tone.samples.indices) {
+                if (at + j < total.size) total[at + j] += tone.samples[j] * 0.8f
+            }
+        }
+        val wav = File(temp, "triad.wav")
+        WavWriter.write(wav, Snip(total, 1, rate))
+        val out = File(temp, "auto-key-out")
+
+        // Asked for: the guess names the key and retunes into it.
+        val (code, stdout, stderr) = cli(
+            "chop", wav.path, "--out", out.path, "--name", "AutoKey", "--slices", "4", "--key", "auto",
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "sounds like A minor")
+        assertTrue(KitStore.load(File(out, "AutoKey")).key != null, "key stamped")
+
+        // Unasked: the confident guess is remembered, but nothing retunes.
+        assertEquals(
+            0,
+            cli("chop", wav.path, "--out", out.path, "--name", "Remembered", "--slices", "4").first,
+        )
+        val remembered = KitStore.load(File(out, "Remembered"))
+        assertTrue(remembered.key != null, "confident guess remembered in kit.json")
+        assertTrue(remembered.pads.all { it.tuneCoarse == 0 && it.tuneFine == 0 }, "metadata only, no retune")
+
+        // Drums have no key: asking for auto is an honest error.
+        val drums = writeBreak(File(temp, "nokey.wav"))
+        val (badCode, _, badErr) = cli(
+            "chop", drums.path, "--out", out.path, "--name", "NoKey", "--slices", "8", "--key", "auto",
+        )
+        assertEquals(2, badCode)
+        assertContains(badErr, "couldn't hear a key")
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")
