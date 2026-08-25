@@ -1,10 +1,9 @@
 package com.snipsnap.app.store
 
-import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
 import com.snipsnap.shell.KitBuilderModel
-import com.snipsnap.synth.ThumpKits
+import com.snipsnap.shell.StarterKits
 import java.io.File
 
 /** One tape on the shelf: the folder, its name, and how full it is. */
@@ -85,30 +84,24 @@ class KitLibrary(val root: File) {
     }
 
     /**
-     * First run: render the factory kit rather than ship WAVs. Sixteen pads
-     * of synthesized audio cost a second of CPU, weigh nothing in the APK,
-     * and prove the engines run on the device. Returns false — and touches
-     * nothing — if the shelf already has tapes on it.
+     * NEW KIT: render [starter] straight into a fresh folder and open it.
+     * Validates the derived folder exactly as [create] does — a starter's
+     * [StarterKits.Starter.displayName] can collide on disk with an
+     * existing kit the same way a typed name can, and `sanitizeStem`
+     * collapsing underscore runs is the same trap either way.
      *
-     * The "already has tapes" check is [KitStore.list], not [list]'s
-     * readable [ShelfListing.entries] — deliberately. Seeding only when
-     * *readable* entries are empty would seed straight into a folder the
-     * shelf merely failed to parse, silently clobbering whatever that
-     * folder held. Refusing over *any* existing kit folder, readable or
-     * not, is the safe default; it costs a user whose only kit is corrupt
-     * an explanation they don't currently get (M0 does not surface
-     * [ShelfListing.unreadable] anywhere), but that is a UI gap, not data
-     * loss.
+     * Rendering is compute (sixteen-ish pads of synthesized audio), not
+     * IO — the caller is expected to run this off [name] on
+     * `Dispatchers.Default`, not `Dispatchers.IO`, for the same reason the
+     * old first-run seed did: `Dispatchers.IO`'s pool is sized for threads
+     * parked on blocking calls, not CPU-bound rendering.
      */
-    fun seedIfEmpty(): Boolean {
-        root.mkdirs()
-        if (KitStore.list(root).isNotEmpty()) return false
-        val dir = File(root, Names.sanitizeStem(SEED_NAME))
-        KitAssembler.assembleArranged(SEED_NAME, ThumpKits.classic(), dir)
-        return true
-    }
-
-    companion object {
-        const val SEED_NAME = "SNIPSNAP KIT 01"
+    fun createFromStarter(starter: StarterKits.Starter, name: String, seed: Int): KitBuilderModel {
+        require(Names.isMpcSafe(name)) { "kit name isn't MPC-safe: '$name'" }
+        val dir = File(root, Names.sanitizeStem(name))
+        // Validate the *folder*, not just the name — see create()'s comment.
+        require(!dir.exists()) { "a kit folder named '${dir.name}' already exists" }
+        starter.render(name, dir, seed)
+        return KitBuilderModel.open(dir)
     }
 }

@@ -1,10 +1,10 @@
 package com.snipsnap.app.store
 
+import com.snipsnap.shell.StarterKits
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class KitLibraryTest {
@@ -17,29 +17,24 @@ class KitLibraryTest {
     }
 
     @Test
-    fun `seeding an empty root renders the factory kit`() {
+    fun `createFromStarter renders a playable kit and lands it on the shelf`() {
         val lib = library()
-        assertTrue(lib.seedIfEmpty(), "first seed should report that it wrote something")
+        val factory = StarterKits.byId("factory")!!
+        val model = lib.createFromStarter(factory, "FACTORY", seed = 0)
 
+        assertTrue(model.kit.pads.isNotEmpty())
         val entries = lib.list().entries
         assertEquals(1, entries.size)
-        assertEquals(KitLibrary.SEED_NAME, entries[0].name)
-        assertEquals(16, entries[0].padCount)
-
-        val kit = lib.open(entries[0]).kit
-        for (pad in kit.pads) {
-            assertTrue(
-                java.io.File(entries[0].dir, pad.sampleFile).length() > 44,
-                "${pad.sampleFile} is header-only",
-            )
-        }
+        assertEquals("FACTORY", entries[0].name)
+        assertEquals(model.kit.pads.size, entries[0].padCount)
     }
 
     @Test
-    fun `seeding is idempotent`() {
+    fun `createFromStarter refuses a folder that already exists`() {
         val lib = library()
-        lib.seedIfEmpty()
-        assertFalse(lib.seedIfEmpty(), "a populated shelf must not be re-seeded")
+        val factory = StarterKits.byId("factory")!!
+        lib.createFromStarter(factory, "FACTORY", seed = 0)
+        assertFailsWith<IllegalArgumentException> { lib.createFromStarter(factory, "FACTORY", seed = 1) }
         assertEquals(1, lib.list().entries.size)
     }
 

@@ -29,14 +29,11 @@ import com.snipsnap.app.theme.toColor
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 
-/** What the shelf says while the first-run factory kit is being rendered. */
-const val SEEDING_LINE = "MAKING YOU A STARTER KIT. SIXTEEN SOUNDS, FROM SCRATCH."
-
 /** MY KITS — the tape shelf. */
 @Composable
 fun KitsScreen(
     entries: List<KitEntry>,
-    seeding: Boolean,
+    renderingKit: String?,
     onOpen: (KitEntry) -> Unit,
     onNew: () -> Unit,
 ) {
@@ -48,13 +45,13 @@ fun KitsScreen(
         LcdHeader(left = "MY KITS", right = tapes(entries.size))
 
         // A bare shelf and a shelf mid-render look identical and mean
-        // opposite things. Rendering the factory kit takes tens of seconds
+        // opposite things. Rendering a starter kit takes tens of seconds
         // on a real device, and for every one of them the empty-state line
         // would be telling a confident lie about work already underway.
-        if (seeding) {
+        if (renderingKit != null) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 BasicText(
-                    text = SEEDING_LINE,
+                    text = renderingLine(renderingKit),
                     style = TextStyle(
                         color = s.lcdInk.toColor(),
                         fontFamily = TapeFonts.pixel,
@@ -95,7 +92,7 @@ fun KitsScreen(
             contentAlignment = Alignment.Center,
         ) {
             BasicText(
-                text = "+  NEW BLANK TAPE",
+                text = "+  NEW KIT",
                 style = TextStyle(
                     color = s.lcdInk.toColor(),
                     fontFamily = TapeFonts.display,

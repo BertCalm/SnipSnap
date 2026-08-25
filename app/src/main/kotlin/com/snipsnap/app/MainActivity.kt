@@ -30,14 +30,18 @@ import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.NewTapeDialog
 import com.snipsnap.app.ui.PropsScreen
 import com.snipsnap.app.ui.SnipSnapWindow
+import com.snipsnap.app.ui.StarterMenu
 import com.snipsnap.app.ui.ToastBanner
 import com.snipsnap.app.ui.ToastMessage
 import com.snipsnap.app.ui.newTapeToast
+import com.snipsnap.app.ui.starterKitName
 import com.snipsnap.app.ui.tapes
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.StarterKits
 import java.io.File
+import kotlin.random.Random
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -64,26 +68,58 @@ class MainActivity : ComponentActivity() {
             var entries by remember { mutableStateOf(emptyList<KitEntry>()) }
             var openKit by remember { mutableStateOf<KitEntry?>(null) }
             var newTape by remember { mutableStateOf(false) }
+            var starterMenu by remember { mutableStateOf(false) }
             var toast by remember { mutableStateOf<ToastMessage?>(null) }
             var nextToastId by remember { mutableStateOf(0) }
-            var seeding by remember { mutableStateOf(false) }
+            var renderingKit by remember { mutableStateOf<String?>(null) }
+
+            // Renders a starter into a fresh, auto-named kit folder and
+            // lands on the grid. Shared by the first-run auto-open and
+            // every later NEW KIT tap, since both are "pick a starter, get
+            // a playable kit" with no other difference.
+            fun renderStarter(starter: StarterKits.Starter) {
+                val name = starterKitName(starter, entries.map { it.name })
+                val seed = if (starter.seeded) Random.nextInt() else 0
+                renderingKit = name
+                scope.launch {
+                    // Dispatchers.Default, not IO: rendering a kit's worth
+                    // of pads is compute, and IO's pool is sized for
+                    // threads parked on blocking calls. Measured at ~24s on
+                    // an emulator against 39ms on a warm desktop JVM — cold
+                    // ART interpreting tight float loops — so this is a
+                    // real wait the UI must own, not a blip to hide.
+                    val made = runCatching {
+                        withContext(Dispatchers.Default) { library.createFromStarter(starter, name, seed) }
+                    }
+                    // Reset unconditionally, before branching on the
+                    // result — a throw from createFromStarter must not
+                    // leave the shelf stuck showing "MAKING X" forever.
+                    renderingKit = null
+                    entries = withContext(Dispatchers.IO) { library.list().entries }
+                    made.fold(
+                        onSuccess = { model ->
+                            openKit = entries.firstOrNull { it.dir == model.kitDir }
+                            if (openKit != null) state = state.goTo(Screen.KIT)
+                        },
+                        onFailure = {
+                            newTapeToast(created = false, name = name, personality = state.personality)?.let {
+                                nextToastId += 1
+                                toast = ToastMessage(nextToastId, it)
+                            }
+                        },
+                    )
+                }
+            }
 
             LaunchedEffect(Unit) {
                 // Listing is cheap — it only looks for folders holding a
-                // kit.json — so ask first and seed only if the shelf is bare.
-                val existing = withContext(Dispatchers.IO) { library.list().entries }
-                if (existing.isEmpty()) {
-                    seeding = true
-                    // Dispatchers.Default, not IO: rendering sixteen pads is
-                    // compute, and IO's pool is sized for threads parked on
-                    // blocking calls. Measured at ~24s on an emulator against
-                    // 39ms on a warm desktop JVM — cold ART interpreting tight
-                    // float loops — so this is a real wait the UI must own,
-                    // not a blip to hide.
-                    withContext(Dispatchers.Default) { library.seedIfEmpty() }
-                    seeding = false
-                }
+                // kit.json — so ask first, and open the starter menu only
+                // if the shelf is bare. Nothing auto-seeds any more: the
+                // wait becomes chosen, not imposed.
                 entries = withContext(Dispatchers.IO) { library.list().entries }
+                if (entries.isEmpty()) {
+                    starterMenu = true
+                }
             }
 
             LaunchedEffect(state.personality) {
@@ -150,9 +186,9 @@ class MainActivity : ComponentActivity() {
                                 if (entry == null) {
                                     KitsScreen(
                                         entries = entries,
-                                        seeding = seeding,
+                                        renderingKit = renderingKit,
                                         onOpen = { openKit = it; state = state.goTo(Screen.KIT) },
-                                        onNew = { newTape = true },
+                                        onNew = { starterMenu = true },
                                     )
                                 } else {
                                     val model = remember(entry.dir) { library.open(entry) }
@@ -170,6 +206,20 @@ class MainActivity : ComponentActivity() {
 
                         toast?.let { message -> ToastBanner(message.text) }
                     }
+                }
+
+                if (starterMenu) {
+                    StarterMenu(
+                        onPick = { starter ->
+                            starterMenu = false
+                            renderStarter(starter)
+                        },
+                        onBlank = {
+                            starterMenu = false
+                            newTape = true
+                        },
+                        onDismiss = { starterMenu = false },
+                    )
                 }
 
                 if (newTape) {
