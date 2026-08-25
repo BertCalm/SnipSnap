@@ -634,6 +634,26 @@ class CliTest {
     }
 
     @Test
+    fun `project --mixdown renders the session as one WAV beside the xpj`() {
+        val wav = writeBreak(File(temp, "mx.wav"))
+        val out = File(temp, "mx-out")
+        assertEquals(
+            0,
+            cli("chop", wav.path, "--out", out.path, "--name", "MixKit", "--slices", "8", "--groove").first,
+        )
+        val (code, stdout, stderr) = cli(
+            "project", File(out, "MixKit").path, "--name", "Mix Session", "--out", out.path, "--mixdown",
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "mixdown:")
+        val mixWav = File(out, "card/Mix Session.wav")
+        assertTrue(mixWav.isFile, "the session's own WAV landed")
+        val mix = com.snipsnap.audio.WavReader.read(mixWav)
+        assertEquals(2, mix.channels)
+        assertTrue(mix.peak() > 0.05f, "the session is audible")
+    }
+
+    @Test
     fun `backup and restore round-trip a folder of kits`() {
         val wav = writeBreak(File(temp, "bk.wav"))
         val out = File(temp, "bk-out")

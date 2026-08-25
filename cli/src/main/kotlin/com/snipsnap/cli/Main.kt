@@ -54,7 +54,8 @@ object Cli {
         |  treat <kit-dir> <pad> <character>
         |                        crush/reverse/wash one pad (--undo restores)
         |  project <kit-dir>...  whole session -> one .xpj (kits + grooves +
-        |                        optional --keys instrument, mixer wired)
+        |                        optional --keys instrument, mixer wired;
+        |                        --mixdown also renders the session as one WAV)
         |  backup <kits-root>    every kit as an .xpn inside one archive
         |  restore <backup.zip>  the archive back into kit folders
         |  diff <a> <b>          structured key-path diff of two MPC files,

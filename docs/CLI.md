@@ -131,6 +131,16 @@ whole-period loop found in each note's sustain (crossfaded when the raw
 seam isn't clean), trimmed to the loop-to-end idiom both formats share —
 held pads sing forever. A note with no honest sustain plays unlooped.
 
+### `project <kit-dir>... ` — whole session, one `.xpj`
+
+N kit folders (plus an optional `--keys a.wav,b.wav` multisampled
+instrument) become one project: kits on tracks in their colours, every
+kit's grooves as **switchable sequences** (sequence k plays each kit's
+k-th pattern), mixer wired, samples pooled per-kit-prefixed in
+`_[ProjectData]/`. `--mixdown` also renders the whole session — every
+kit playing its groove, summed and peak-limited — as `<Name>.wav`
+beside the `.xpj`: the beat as a file you can send anywhere.
+
 ### `backup <kits-root>` / `restore <backup.zip>` — everything on one file
 
 Every kit under a root packed as its own `.xpn` inside a single archive;
