@@ -485,6 +485,91 @@ everywhere). Standing rejects unchanged.
 
 ---
 
+# Wave 6 — kits become music
+
+The format pipeline is done and polished; this wave's lens shifts to
+arrangement, feel, key, and collections. One corpus-archaeology piece
+(AA1 — it leads, the probe gates its writer), two renders (AA2, AA5),
+three musical brains (AA3, AA4, AA6); everything after AA1 is
+independent. Build order: AA1 → AA6 → AA3 → AA4 → AA2 → AA5.
+
+## AA1 — Multi-sequence projects: verse/chorus on hardware
+
+Four groove variations ship per kit, but a `.xpj` carries one sequence —
+the variations ride the clip list the bench hasn't confirmed. Sequences
+are the corpus-standard mechanism (every commercial project carries
+several, named), and our own corpus rule already says grooves ride the
+sequence's `trackClipMaps`. Promote the variations to named sequences:
+the hardware's sequence switcher *is* the pattern flip.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| AA1.1 | Corpus probe — how commercial `.xpj`s encode multiple sequences (the sequence list's keys, names, per-sequence `trackClipMaps`, lengths); findings recorded in docs/MPC3_FORMAT.md | CORE | S | probe notes + the key paths, before any writer code |
+| AA1.2 | `Mpc3ProjectWriter` multi-sequence — a sequence list (name + per-track clips each); `SessionBuilder` ships the four variations as four named sequences; corpus-guarded like everything else | CORE | M | key-path guard green; our reader sees four sequences; `diff` vs a golden project shows only documented deltas |
+| AA1.3 | Bench — load the project, flip sequences on the Live III | USER | S | verse/chorus flips on hardware |
+
+## AA2 — Session mixdown: the whole beat as one WAV
+
+`KitPreview` renders one kit playing its beat; `SessionBuilder` stages
+several kits with grooves. Connect them: the entire session mixed to one
+stereo WAV — the demo beside every `.xpj`, the app's share-as-audio for
+sessions.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| AA2.1 | `SessionMixdown` (`:kit`) — each kit's groove rendered via `KitPreview` at the session tempo, summed, peak-limited; CLI `project --mixdown` writes `<Name>.wav` beside the `.xpj` | CORE | S | non-silent, deterministic, as long as the longest kit render; a solo-kit session mixes to that kit's own preview |
+
+## AA3 — Key guess: the capture names its own key
+
+`--key Am` assumes the user knows the key. Per-slice pitch already
+exists; a chroma histogram over the tonal slices scored against the
+scale table picks root + scale, with a confidence gate and an honest
+refusal when nothing tonal is there.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| AA3.1 | `KeyGuess` (`:audio`) — pitch-class histogram from pitched slices → best (root, scale) + confidence; drums-only material refused with a reason | CORE | S–M | a scrambled A-minor arpeggio → Am; DrumSynth kit → refusal |
+| AA3.2 | Wire — chop stamps `kit.key` when confidence clears the bar (and says so); `--key auto` asks for it explicitly and errors when the guess can't clear | CORE | S | chop of tonal material lands a keyed kit; `--key auto` retunes without naming a key |
+
+## AA4 — Tempo-fit: loops repitched, SP-style
+
+A 95 BPM loop in a 92 BPM kit drifts. The classic sampler answer is
+repitch — resample by the tempo ratio, pitch rides along, zero
+artifacts, and *the* revered lo-fi move. The sinc `Resampler` already
+does the work.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| AA4.1 | `TempoFit` (`:audio`) — repitch a snip by `from/to` tempo ratio; chop `--fit-tempo BPM` applies it to LOOP-class slices (detected tempo → target), loop stem names restamped to the new tempo | CORE | S | a 95→92 fit scales duration by exactly the ratio; the name says `92bpm`; one-shots untouched |
+
+## AA5 — Pack builder: N kits, one expansion
+
+Our expansion carries one kit; commercial packs carry a catalog under
+one tile. Turn chop-all's output into a shippable product.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| AA5.1 | `PackBuilder` (`:kit`) — many kit folders → one expansion (every program under `Programs/`, samples arranged the way real multi-program packs do it, per-kit previews, one manifest/XML); pack tile = the title over the kits' combined waveform (small `KitArt` extension); CLI `pack <kit...> --title NAME [--out] [--xpn]` | CORE | S–M | a 3-kit pack has every program loadable and round-trips through `import`; blocked kits skipped and named, backup-style |
+
+## AA6 — Groove transfer: steal the feel, not the notes
+
+The MPC's own legendary feature (groove templates): extract the
+timing-and-velocity deviations from any clip — a captured break, an
+imported `.mid` — and apply them to another kit's quantized grooves.
+Pure note-list math; composes with swing and humanize.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| AA6.1 | `GrooveFeel` (`:kit`) — `extract(clip)`: per-16th-position timing offsets + velocity shape; `apply(template, clip)`: quantized notes take the template's pocket; CLI `feel <kit-dir> --from <kit-dir or .mid>` rewrites the kit's variations with the donor's feel | CORE | S | extract-from-swung applied to straight reproduces the swing offsets; velocities follow the donor's shape; same donor, same result |
+
+**Below the line (wave 7 candidates):** auto velocity-stacking from
+similar slices (needs the calibration corpus's similarity ground truth);
+kit doctor auto-fix (Preflight's honest refusal is the feature until
+proven otherwise); phase-vocoder time-stretch (repitch is cheaper and
+more authentic). Standing rejects unchanged.
+
+---
+
 ## Sequence
 
 ```
@@ -509,6 +594,12 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   wire-through (Z6.2 verdict: waveform default, rings runner-up).
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
+
+CORE wave 6 (in order — AA1's corpus probe gates only its own writer;
+  everything after is independent):
+  AA1 multi-sequence projects (probe → writer) → AA6 groove transfer →
+  AA3 key guess → AA4 tempo-fit → AA2 session mixdown →
+  AA5 pack builder
 
 APP (in milestone order; feature items slot in where their parent lands):
   M0 (F1.1) → +F4.2 new-kit menu · +W3.3 open-.xtd
