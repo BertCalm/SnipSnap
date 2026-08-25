@@ -155,6 +155,28 @@ class CliTest {
     }
 
     @Test
+    fun `merge earns a bank B from a second kit`() {
+        val wav = writeBreak(File(temp, "mg.wav"))
+        val out = File(temp, "mg-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "MergeA", "--slices", "4").first)
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "MergeB", "--slices", "4").first)
+
+        val (code, stdout, stderr) = cli(
+            "merge", File(out, "MergeA").path, File(out, "MergeB").path, "--out", out.path,
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "MergeA (bank A) + MergeB (bank B)")
+
+        val merged = KitStore.load(File(out, "MergeA AB"))
+        assertEquals(8, merged.pads.size)
+        assertTrue(merged.pads.count { it.slot in 1..16 } == 4 && merged.pads.count { it.slot in 17..32 } == 4)
+        assertTrue(merged.pad(17)!!.sampleFile.startsWith("B01_"), merged.pad(17)!!.sampleFile)
+        // Both sources still load untouched.
+        assertEquals(4, KitStore.load(File(out, "MergeA")).pads.size)
+        assertEquals(4, KitStore.load(File(out, "MergeB")).pads.size)
+    }
+
+    @Test
     fun `chop-all digs a whole folder, naming failures instead of dying`() {
         val crate = File(temp, "crate").apply { mkdirs() }
         writeBreak(File(crate, "one.wav"))

@@ -90,6 +90,17 @@ Bank B becomes seeded FX re-treatments of bank A — reversed, crushed,
 slapback, washed, punched — one twin per pad, colour and choke group kept
 so the hats still cut each other in bank B. Reroll with `--seed N`.
 
+### `merge <a> <b>` — bank B, earned not invented
+
+A **new** kit folder: A's bank A stays put, B's bank A lands on pads
+17–32 with everything carried (colours, mute groups, tuning, velocity
+layers, recipes, provenance) and every sample copied byte-identical
+under a re-prefixed stem (`A03_Snare_01` arrives as `B03_Snare_01`).
+A brings its identity — key, tempo, `groove.json`. Both sources stay
+untouched. An occupied bank B refuses unless `--replace` says to swap
+it out; `--name`/`--out` place the result (default: `<A> AB` beside A).
+The complement of `remix`, which invents its bank B.
+
 ### `keys <note.wav> [more.wav …]` — notes in, keyboard out
 
 MPC keygroups pitch the sample themselves, so one pitched capture plus its
