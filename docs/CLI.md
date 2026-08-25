@@ -38,6 +38,7 @@ tempo, chop, classify each slice, auto-place onto the conventional layout
 | `--place` / `--no-place` | force auto-placement on or off. Default: on when following hits, off on a grid — a grid's order is usually the point |
 | `--balance` | per-pad levels via `Balance` so the kit sits right as a mix |
 | `--groove` | embed the capture's own rhythm as a clip in the native exports (`xtd`/`xpj`) — timing as captured, velocities from the hits' own dynamics; needs a confident tempo |
+| `--ghosts` | darker soft velocity zones under every one-shot pad — quiet hits sound soft, not just quiet |
 | `--key SPEC` | retune tonal pads into a key via `InKey`/`Tuner`: `Am`, `C`, `F#m`, `Eb major`, `Dminpent` |
 | `--export LIST` | comma-separated formats, see below |
 | `--overwrite` | replace same-named output |
@@ -69,6 +70,12 @@ found by bare name anywhere in the archive). A native MPC 3 drum track
 itself saved become editable kit folders**, levels, tunes, mute groups,
 velocity layers and pad colours intact. Either way the landed folder is
 editable and re-exportable like any other kit.
+
+### `remix <kit-dir>` — evil twins
+
+Bank B becomes seeded FX re-treatments of bank A — reversed, crushed,
+slapback, washed, punched — one twin per pad, colour and choke group kept
+so the hats still cut each other in bank B. Reroll with `--seed N`.
 
 ### `keys <note.wav>` — one note, whole keyboard
 

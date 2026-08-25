@@ -39,6 +39,7 @@ object Cli {
         |  export <kit-dir>      export an existing kit folder to MPC formats
         |  import <file>         unpack an .xpn archive or a native .xtd into a kit folder
         |  keys <note.wav>       one pitched note -> a playable chromatic instrument
+        |  remix <kit-dir>       bank B becomes seeded evil twins of bank A
         |  help                  this text
         |
         |chop options:
@@ -53,6 +54,8 @@ object Cli {
         |  --balance         set per-pad levels so the kit sits right as a mix
         |  --groove          embed the capture's own rhythm as a clip in the
         |                    native exports (needs a confident tempo)
+        |  --ghosts          render darker soft velocity zones under every
+        |                    one-shot pad, so quiet hits sound soft
         |  --key SPEC        retune tonal pads into a key: Am, C, F#m, Eb major,
         |                    Dminpent, Gchromatic
         |  --export LIST     comma-separated: ${Exports.FORMATS.joinToString(",")}
@@ -80,6 +83,7 @@ object Cli {
                 "export" -> ExportCommand.run(args.drop(1), out)
                 "import" -> ImportCommand.run(args.drop(1), out)
                 "keys" -> KeysCommand.run(args.drop(1), out)
+                "remix" -> RemixCommand.run(args.drop(1), out)
                 "help", "--help", "-h" -> {
                     out.println(USAGE)
                     0

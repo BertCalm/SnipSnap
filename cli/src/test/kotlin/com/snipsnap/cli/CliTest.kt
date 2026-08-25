@@ -195,6 +195,25 @@ class CliTest {
     }
 
     @Test
+    fun `ghosts flag layers pads and remix builds bank B`() {
+        val wav = writeBreak(File(temp, "gr.wav"))
+        val out = File(temp, "gr-out")
+        val (code, stdout, stderr) = cli(
+            "chop", wav.path, "--out", out.path, "--name", "GR", "--slices", "8", "--ghosts",
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "ghost notes:")
+        val kit = KitStore.load(File(out, "GR"))
+        assertTrue(kit.pads.any { it.velocityLayers.size == 2 }, "one-shot pads gained soft zones")
+
+        val (rCode, rOut, rErr) = cli("remix", File(out, "GR").path, "--seed", "9")
+        assertEquals(0, rCode, "stderr: $rErr")
+        assertContains(rOut, "evil twins")
+        val remixed = KitStore.load(File(out, "GR"))
+        assertTrue(remixed.pads.any { it.slot > 16 }, "bank B populated")
+    }
+
+    @Test
     fun `keys turns one pitched note into an instrument`() {
         val note = File(temp, "note.wav")
         // A clean 220 Hz decaying note - A3.

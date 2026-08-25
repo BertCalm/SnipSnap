@@ -153,6 +153,88 @@ class KitBuilderModel private constructor(
         return moved
     }
 
+    /**
+     * EVIL TWINS: bank B becomes seeded FX re-treatments of bank A, one
+     * twin per pad — [com.snipsnap.synth.Shuffle.withRemixBank] over the
+     * kit's own audio. Twins keep their source's colour and mute group
+     * (so the hats still choke in bank B) and carry fx-only recipes.
+     * Rerolling with a new seed replaces the bank. Returns bank-B slots.
+     */
+    fun remixBankB(seed: Int): List<Int> {
+        val bankA = (1..16).map { slot ->
+            pad(slot)?.let {
+                ArrangedPad(
+                    com.snipsnap.audio.WavReader.read(File(kitDir, it.sampleFile)),
+                    it.drumClass,
+                )
+            }
+        }
+        require(bankA.any { it != null }) { "bank A is empty - nothing to remix" }
+
+        (17..32).forEach { clear(it) }
+        val remixed = com.snipsnap.synth.Shuffle.withRemixBank(bankA, seed)
+        val added = mutableListOf<Int>()
+        remixed.drop(16).forEachIndexed { i, twin ->
+            twin ?: return@forEachIndexed
+            val slot = 17 + i
+            val source = pad(slot - 16) ?: return@forEachIndexed
+            val stem = nextStem(slot, twin.drumClass)
+            WavWriter.write(File(kitDir, "$stem.wav"), twin.snip)
+            kit = kit.copy(
+                pads = kit.pads + source.copy(
+                    slot = slot,
+                    sampleFile = "$stem.wav",
+                    displayName = "${source.displayName} B",
+                    recipe = twin.recipe,
+                    velocityLayers = emptyList(),
+                ),
+            )
+            added += slot
+        }
+        dirty = true
+        return added
+    }
+
+    /**
+     * Ghost notes: soft velocity zones rendered darker (not just quieter)
+     * under the pad's main sample, via the same softening the velocity
+     * kit ships with. [softZones] 1 or 2. Reversible with
+     * [clearGhostLayers].
+     */
+    fun addGhostLayers(slot: Int, softZones: Int = 1): KitPad {
+        require(softZones in 1..2) { "1 or 2 soft zones, got $softZones" }
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered" }
+        val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+
+        val amounts = if (softZones == 1) listOf(0.55f) else listOf(0.7f, 0.4f) // softest first
+        val zoneCount = softZones + 1
+        val layers = buildList {
+            amounts.forEachIndexed { v, amount ->
+                val file = "${pad.sampleStem}_v${v + 1}.wav"
+                WavWriter.write(File(kitDir, file), com.snipsnap.synth.Velocity.soften(main, amount))
+                add(
+                    com.snipsnap.kit.KitLayer(
+                        file,
+                        velStart = if (v == 0) 1 else 128 * v / zoneCount,
+                        velEnd = 128 * (v + 1) / zoneCount - 1,
+                    ),
+                )
+            }
+            add(com.snipsnap.kit.KitLayer(pad.sampleFile, 128 * softZones / zoneCount, 127))
+        }
+        return update(slot) { it.copy(velocityLayers = layers) }
+    }
+
+    /** Back to a single-sample pad; the soft renders are deleted. */
+    fun clearGhostLayers(slot: Int): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        val softFiles = pad.velocityLayers.map { it.sampleFile }.filter { it != pad.sampleFile }
+        val cleared = update(slot) { it.copy(velocityLayers = emptyList()) }
+        softFiles.forEach { File(kitDir, it).delete() }
+        return cleared
+    }
+
     /** Write `kit.json`. The moment the folder and the model agree again. */
     fun save(): File {
         val file = KitStore.save(kit, kitDir)

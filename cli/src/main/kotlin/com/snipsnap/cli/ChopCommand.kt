@@ -41,7 +41,7 @@ object ChopCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export"),
-            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove"),
+            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts"),
         )
         val input = opts.positional.firstOrNull()
             ?: throw CliError("chop wants an input file: snipsnap chop <input.wav>")
@@ -139,7 +139,21 @@ object ChopCommand {
             throw CliError("kit already exists: $kitDir (pass --overwrite to replace it)")
         }
 
-        val kit = KitAssembler.assembleArranged(name, arranged, kitDir, key)
+        var kit = KitAssembler.assembleArranged(name, arranged, kitDir, key)
+
+        if (opts.has("--ghosts")) {
+            val model = com.snipsnap.shell.KitBuilderModel.open(kitDir)
+            var layered = 0
+            for (pad in kit.pads) {
+                if (pad.oneShot && pad.velocityLayers.isEmpty()) {
+                    model.addGhostLayers(pad.slot)
+                    layered++
+                }
+            }
+            model.save()
+            kit = model.kit
+            out.println("ghost notes: $layered pads gained darker soft zones")
+        }
 
         out.println()
         out.println("pad  class       conf   source     length")
