@@ -41,14 +41,22 @@ private fun Modifier.bevel(
     )
 }
 
+// All three add exactly `inset` to the content box in each axis — only
+// *which* side differs. That is what makes a press look like a press:
+// the content travels down-right by `inset` while the node's measured
+// size never changes. Pad only the pressed state and a wrap-content
+// button grows 2dp when you touch it and shrinks when you let go, which
+// reads as a flinch rather than a click.
+
 /** A button at rest: light top-left, dark bottom-right. */
 @Composable
 fun Modifier.raised(inset: Dp = 2.dp): Modifier {
     val s = LocalScheme.current
     return bevel(s.gray.toColor(), s.grayHi.toColor(), s.grayDark.toColor(), inset)
+        .padding(bottom = inset, end = inset)
 }
 
-/** The same button held down: the light source flips. */
+/** The same button held down: the light source flips, content shifts in. */
 @Composable
 fun Modifier.pressed(inset: Dp = 2.dp): Modifier {
     val s = LocalScheme.current
@@ -61,4 +69,5 @@ fun Modifier.pressed(inset: Dp = 2.dp): Modifier {
 fun Modifier.sunken(inset: Dp = 2.dp): Modifier {
     val s = LocalScheme.current
     return bevel(s.field.toColor(), s.grayDark.toColor(), s.grayEdge.toColor(), inset)
+        .padding(bottom = inset, end = inset)
 }
