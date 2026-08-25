@@ -1918,7 +1918,7 @@ The 4×4 grid over a kit, and the `SoundPool` adapter that makes it audible. Two
   - `fun slotForCell(row: Int, col: Int, bankIndex: Int = 0): Int` — MPC orientation
   - `fun cellForSlot(slot: Int): Pair<Int, Int>`
   - `interface PadSound { fun load(slot: Int, file: File); fun reset(); fun play(slot: Int): Int; fun release() }`
-  - `class PadPlayer(context: Context) : PadSound`
+  - `class PadPlayer(maxStreams: Int = 8) : PadSound` — takes **no `Context`**: `SoundPool.Builder` and `AudioAttributes.Builder` need none, and an unused constructor parameter in the one class the guardrail carves an exception for is exactly the wrong place for dead weight.
   - `@Composable fun PadGrid(pads: List<KitPad?>, onHit: (Int) -> Unit)`
   - `@Composable fun KitScreen(model: KitBuilderModel, sound: PadSound, onHit: (Int) -> Unit)`
 
@@ -1952,6 +1952,17 @@ class PadGridLayoutTest {
     @Test
     fun `the bottom row is slots 1 to 4`() {
         assertEquals(listOf(1, 2, 3, 4), (0..3).map { slotForCell(row = 3, col = it) })
+    }
+
+    /**
+     * The two endpoints alone leave the middle unpinned — a formula that
+     * got the interior rows backwards would still satisfy them, and the
+     * "covers 1..16" check cannot tell the difference either.
+     */
+    @Test
+    fun `the interior rows descend between the endpoints`() {
+        assertEquals(listOf(9, 10, 11, 12), (0..3).map { slotForCell(row = 1, col = it) })
+        assertEquals(listOf(5, 6, 7, 8), (0..3).map { slotForCell(row = 2, col = it) })
     }
 
     @Test
@@ -2056,9 +2067,30 @@ interface PadSound {
  *
  * Holds a `Context` — one of the three files in this app allowed to.
  */
-class PadPlayer(context: Context, maxStreams: Int = 8) : PadSound {
+class PadPlayer(private val maxStreams: Int = 8) : PadSound {
 
-    private val pool = SoundPool.Builder()
+    /**
+     * Replaced wholesale by [reset], which is the point — see below.
+     */
+    private var pool: SoundPool = newPool()
+
+    /** slot → sound id, present only once the pool reports the load done. */
+    private val ready = HashMap<Int, Int>()
+    private val pending = HashMap<Int, Int>()
+
+    /**
+     * A fresh pool, listener attached.
+     *
+     * The listener's first act is to check that the callback came from the
+     * pool we are *currently* using. That check is the whole reason
+     * [reset] throws the pool away instead of unloading samples from it:
+     * `SoundPool` recycles sample ids after `unload()`, so a load issued
+     * before a reset whose completion lands after it can carry an id that
+     * now belongs to a *different* pad — and every map keyed by sample id
+     * will happily agree that it does. A pool reference is not recycled,
+     * so identity is the one thing a stale callback cannot fake.
+     */
+    private fun newPool(): SoundPool = SoundPool.Builder()
         .setMaxStreams(maxStreams)
         .setAudioAttributes(
             AudioAttributes.Builder()
@@ -2067,23 +2099,31 @@ class PadPlayer(context: Context, maxStreams: Int = 8) : PadSound {
                 .build(),
         )
         .build()
-
-    /** slot → sound id, present only once the pool reports the load done. */
-    private val ready = HashMap<Int, Int>()
-    private val pending = HashMap<Int, Int>()
-
-    init {
-        pool.setOnLoadCompleteListener { _, sampleId, status ->
-            val slot = pending.entries.firstOrNull { it.value == sampleId }?.key
-            if (status == 0 && slot != null) {
-                ready[slot] = sampleId
-                pending.remove(slot)
-                Log.i(TAG, "pad $slot loaded (sample $sampleId)")
-            } else {
-                Log.w(TAG, "pad load failed: sample=$sampleId status=$status slot=$slot")
+        .also { created ->
+            created.setOnLoadCompleteListener { source, sampleId, status ->
+                if (source !== pool) {
+                    Log.w(TAG, "load completed on a discarded pool: sample=$sampleId, dropped")
+                    return@setOnLoadCompleteListener
+                }
+                val slot = pending.entries.firstOrNull { it.value == sampleId }?.key
+                when {
+                    slot == null ->
+                        Log.w(TAG, "load completed for an unknown sample $sampleId, dropped")
+                    status != 0 -> {
+                        // Drop it from `pending` as well as logging: leaving
+                        // it there makes load()'s early-return permanent, so
+                        // the pad could never be retried.
+                        pending.remove(slot)
+                        Log.w(TAG, "pad $slot load failed: sample=$sampleId status=$status")
+                    }
+                    else -> {
+                        ready[slot] = sampleId
+                        pending.remove(slot)
+                        Log.i(TAG, "pad $slot loaded (sample $sampleId)")
+                    }
+                }
             }
         }
-    }
 
     override fun load(slot: Int, file: File) {
         if (ready.containsKey(slot) || pending.containsKey(slot)) return
@@ -2091,12 +2131,26 @@ class PadPlayer(context: Context, maxStreams: Int = 8) : PadSound {
             Log.w(TAG, "pad $slot: no such file ${file.name}")
             return
         }
-        pending[slot] = pool.load(file.absolutePath, 1)
+        val sampleId = pool.load(file.absolutePath, 1)
+        if (sampleId == 0) {
+            Log.w(TAG, "pad $slot: pool refused to load ${file.name}")
+            return
+        }
+        pending[slot] = sampleId
     }
 
+    /**
+     * Forget every pad by discarding the pool outright.
+     *
+     * Unloading sample-by-sample would leave this instance listening to a
+     * pool that can hand the same ids back out; releasing it means the old
+     * pool's in-flight callbacks arrive with a `source` we no longer
+     * recognise and are dropped. Kit switches are rare and already cost 16
+     * decodes, so a pool rebuild is not a cost worth optimising away.
+     */
     override fun reset() {
-        for (sampleId in ready.values) pool.unload(sampleId)
-        for (sampleId in pending.values) pool.unload(sampleId)
+        pool.release()
+        pool = newPool()
         ready.clear()
         pending.clear()
     }
@@ -2116,9 +2170,6 @@ class PadPlayer(context: Context, maxStreams: Int = 8) : PadSound {
         ready.clear()
         pending.clear()
     }
-
-    /** True once [slot] has finished loading — the exit test's hook. */
-    fun isReady(slot: Int): Boolean = ready.containsKey(slot)
 
     companion object {
         const val TAG = "SnipSnapPad"
@@ -2173,7 +2224,18 @@ fun PadGrid(pads: List<KitPad?>, onHit: (Int) -> Unit) {
                         if (pad != null) {
                             BasicText(
                                 text = pad.displayName,
-                                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp),
+                                // fillMaxWidth is what makes the ellipsis
+                                // work: maxLines alone constrains height,
+                                // not width, so without a width bound the
+                                // text lays out at its intrinsic size and
+                                // is hard-clipped by the pad's own clip —
+                                // "HatClosed 01" simply loses its tail with
+                                // no "…" to say it did.
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 4.dp)
+                                    .padding(bottom = 6.dp),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 style = TextStyle(
