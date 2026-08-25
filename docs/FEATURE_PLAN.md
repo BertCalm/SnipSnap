@@ -131,8 +131,8 @@ moment, above Instant Kit.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| W1.1 | `CapturedGroove` (`:kit`) — hits + classes + placement + BPM → `Mpc3Clip`: quantize source frames to pulses at the detected tempo (straight or unquantized as captured — keep both), notes on the pads the slices landed on | CORE | S | reconstructed clip's note times match detected onsets within a 16th's tolerance; note pads match placement |
-| W1.2 | Wire-through — `chop --groove` embeds the clip in `xtd`/`xpj` exports; `ChopReviewModel.grooveClip()` for the app | CORE | S | CLI chop of the factory groove render exports a clip that mirrors the render's own pattern |
+| W1.1 | ✓ done: `CapturedGroove` (`:kit`) — hits + classes + placement + BPM → `Mpc3Clip`: quantize source frames to pulses at the detected tempo (straight or unquantized as captured — keep both), notes on the pads the slices landed on | CORE | S | reconstructed clip's note times match detected onsets within a 16th's tolerance; note pads match placement |
+| W1.2 | ✓ done: wire-through — `chop --groove` embeds the clip in `xtd`/`xpj` exports; `ChopReviewModel.grooveClip()` for the app | CORE | S | CLI chop of the factory groove render exports a clip that mirrors the render's own pattern |
 | W1.3 | Bench check — does the reconstructed clip *feel* like the break on hardware | USER | S | play the clip beside the source capture; rhythm matches |
 
 ## W2 — One note → a playable instrument
@@ -144,8 +144,8 @@ chromatically. Near-zero new code; in-key capture's payoff squared.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| W2.1 | `OneNote` builder — snip → detected root → one-zone `KeygroupProgram` (full key range), refused with a reason when no confident pitch | CORE | S | known-pitch tone → program with right root; noise → clear refusal |
-| W2.2 | CLI `keys <note.wav>` — one-note instrument to `.xty` + `.xpm` twins | CORE | S | artifacts land, detected root printed |
+| W2.1 | ✓ done: `OneNote` builder — snip → detected root → one-zone `KeygroupProgram` (full key range), refused with a reason when no confident pitch | CORE | S | known-pitch tone → program with right root; noise → clear refusal |
+| W2.2 | ✓ done: CLI `keys <note.wav>` — one-note instrument to `.xty` + `.xpm` twins | CORE | S | artifacts land, detected root printed |
 | W2.3 | App action — MAKE INSTRUMENT on a tonal pad (after M3) | APP | S | long-press a tonal pad → instrument on the shelf |
 | W2.4 | Bench — plays in tune chromatically from one sample | USER | S | ears |
 
@@ -159,8 +159,8 @@ either wave: it doubles what the product is.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| W3.1 | `Mpc3Importer` — standalone drum `.xtd` + data folder → kit folder (levels, pans, tunes, mute groups, velocity layers, colours where present); missing samples refused by name; keygroup tracks refused with a reason | CORE | M | our export → import round-trips; a commercial `.xtd` from `reference/golden/` parses (sample-missing errors listed, not crashed) |
-| W3.2 | CLI `import` learns `.xtd` — dispatch by magic bytes, not extension | CORE | S | both archive kinds import through one command |
+| W3.1 | ✓ done: `Mpc3Importer` — standalone drum `.xtd` + data folder → kit folder (levels, pans, tunes, mute groups, velocity layers, colours where present); missing samples refused by name; keygroup tracks refused with a reason | CORE | M | our export → import round-trips; a commercial `.xtd` from `reference/golden/` parses (sample-missing errors listed, not crashed) |
+| W3.2 | ✓ done: CLI `import` learns `.xtd` — dispatch by magic bytes, not extension | CORE | S | both archive kinds import through one command |
 | W3.3 | App receive/browse — open a `.xtd` from storage onto the shelf (after M0) | APP | S | MPC-saved kit editable on the phone |
 | W3.4 | The Live III firmware save (Part 2 item 6) becomes this feature's fixture as well as the corpus's | USER | S | the round-trip claim tested against firmware's own output |
 
@@ -172,8 +172,8 @@ One action: bank B becomes your kit's evil twins.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| W4.1 | `KitBuilderModel.remixBankB(seed)` — bank A read back as arranged pads, `withRemixBank`, twins written to slots 17–32 with recipes; reroll replaces | CORE | S | any kit gains a bank B; same seed reproduces; recipes recorded |
-| W4.2 | CLI `remix <kit-dir> [--seed N]` | CORE | S | works on a chopped kit |
+| W4.1 | ✓ done: `KitBuilderModel.remixBankB(seed)` — bank A read back as arranged pads, `withRemixBank`, twins written to slots 17–32 with recipes; reroll replaces | CORE | S | any kit gains a bank B; same seed reproduces; recipes recorded |
+| W4.2 | ✓ done: CLI `remix <kit-dir> [--seed N]` | CORE | S | works on a chopped kit |
 | W4.3 | App action — EVIL TWINS in the kit menu (after M3) | APP | S | one tap, bank B lights up |
 
 ## W5 — Ghost notes from one capture
@@ -184,8 +184,8 @@ one-shots get real ghost notes, not just quieter ones.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| W5.1 | `KitBuilderModel.addGhostLayers(slot)` — soften into 1–2 soft zones under the main sample; reversible (clear layers) | CORE | S | zones valid, soft renders measure darker (centroid), pad reverts cleanly |
-| W5.2 | CLI `chop --ghosts` — layers on every one-shot pad | CORE | S | chopped kit exports with velocity zones |
+| W5.1 | ✓ done: `KitBuilderModel.addGhostLayers(slot)` — soften into 1–2 soft zones under the main sample; reversible (clear layers) | CORE | S | zones valid, soft renders measure darker (centroid), pad reverts cleanly |
+| W5.2 | ✓ done: CLI `chop --ghosts` — layers on every one-shot pad | CORE | S | chopped kit exports with velocity zones |
 | W5.3 | App toggle on the pad sheet (after M3) | APP | S | quiet hits sound soft on hardware |
 
 ## W6 — BPM + key metadata everywhere
@@ -195,8 +195,8 @@ free: the MPC warps loops itself when the tempo metadata is right.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| W6.1 | `Kit.tempoBpm` (optional, like `key`) — stamped by chop when confidence clears the bar; `.xpj` export uses it for the project tempo | CORE | S | round-trips; project master tempo = detected tempo |
-| W6.2 | Loop-class sample names carry the tempo (`Loop_92bpm_01`); kit name suggestion gains bpm/key when known | CORE | S | names match detection; off when detection isn't confident |
+| W6.1 | ✓ done: `Kit.tempoBpm` (optional, like `key`) — stamped by chop when confidence clears the bar; `.xpj` export uses it for the project tempo | CORE | S | round-trips; project master tempo = detected tempo |
+| W6.2 | ✓ done: loop-class sample names carry the tempo (`Loop_92bpm_01`); kit name suggestion gains bpm/key when known | CORE | S | names match detection; off when detection isn't confident |
 
 ## Wave-2 bench of medium bets (planned, not queued)
 
@@ -223,9 +223,9 @@ CORE wave 1: ✓ all six landed (2026-08-24) — XpnImporter, KeySpec
   promotion, Kit.key, StarterKits registry, decode fixtures + contract,
   calibration harness. F2.3's harness idles until F2.4's corpus fills.
 
-CORE wave 2 (in order; none block APP):
-  W1 groove capture → W3 Mpc3Importer → W2 one-note instrument →
-  W4 twin bank → W5 ghost layers → W6 bpm/key metadata
+CORE wave 2: ✓ all six landed (2026-08-24) — groove capture,
+  Mpc3Importer, one-note instrument, twin bank, ghost layers,
+  bpm metadata
   then the bench on demand: W8 melodic chop · W9 takes/bin · W11 backup ·
   W10 teach-the-machine · W7 sustain loops (hardest DSP, last)
 

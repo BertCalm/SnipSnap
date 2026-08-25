@@ -91,8 +91,10 @@ object Exporters {
             val program = Mpc3Exporter.stageTrack(kit, kitDir, dataDir)
             val writer = Mpc3ProjectWriter()
             val tracks = listOf(Mpc3ProjectTrack.Drum(program, clip = clip))
-            val file = if (tempoBpm != null) {
-                writer.writeTo(destRoot, kit.name, tracks, tempoBpm)
+            // The call-site tempo wins; the kit's remembered tempo backs it up.
+            val effectiveTempo = tempoBpm ?: kit.tempoBpm
+            val file = if (effectiveTempo != null) {
+                writer.writeTo(destRoot, kit.name, tracks, effectiveTempo)
             } else {
                 writer.writeTo(destRoot, kit.name, tracks)
             }

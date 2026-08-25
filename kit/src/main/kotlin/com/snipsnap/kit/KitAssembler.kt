@@ -57,6 +57,8 @@ object KitAssembler {
         dir: File,
         /** The kit's key, when in-key treatment chose one — persisted in kit.json. */
         key: com.snipsnap.audio.KeySpec? = null,
+        /** The source's detected tempo — persisted, and stamped into LOOP stems. */
+        tempoBpm: Float? = null,
     ): Kit {
         require(arranged.size <= 128) { "at most 128 pad slots, got ${arranged.size}" }
         dir.mkdirs()
@@ -73,7 +75,13 @@ object KitAssembler {
             val n = perClassCount.merge(pad.drumClass, 1, Int::plus)!!
             val label = PadNoteMap.labelForPad(slot)
             val className = AutoPlace.nameFor(pad.drumClass)
-            val stem = "%s_%s_%02d".format(label, className, n)
+            // A loop's tempo is the fact you browse for; it rides in the stem.
+            val stemClass = if (pad.drumClass == DrumClass.LOOP && tempoBpm != null) {
+                "%s_%dbpm".format(className, Math.round(tempoBpm))
+            } else {
+                className
+            }
+            val stem = "%s_%s_%02d".format(label, stemClass, n)
 
             WavWriter.write(File(dir, "$stem.wav"), pad.snip)
 
@@ -113,7 +121,7 @@ object KitAssembler {
             )
         }
 
-        val kit = Kit(name, pads, key)
+        val kit = Kit(name, pads, key, tempoBpm)
         KitStore.save(kit, dir)
         return kit
     }

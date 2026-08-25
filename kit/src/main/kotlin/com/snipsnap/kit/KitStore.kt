@@ -55,6 +55,7 @@ object KitStore {
                     ),
                 )
             }
+            kit.tempoBpm?.let { root["tempoBpm"] = JsonValue.Num(it.toDouble()) }
             root["pads"] = JsonValue.Arr(
                 kit.pads.sortedBy { it.slot }.map { p ->
                     val entries = linkedMapOf<String, JsonValue>(
@@ -147,6 +148,6 @@ object KitStore {
                 },
             )
         }
-        return Kit(name, pads, key)
+        return Kit(name, pads, key, tempoBpm = obj["tempoBpm"]?.num()?.toFloat())
     }
 }

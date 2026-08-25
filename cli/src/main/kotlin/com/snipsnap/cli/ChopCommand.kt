@@ -131,7 +131,11 @@ object ChopCommand {
             out.println("tonal pads retuned into ${key.label}")
         }
 
-        val name = opts["--name"] ?: Names.sanitizeStem(file.nameWithoutExtension)
+        // The default name carries what detection learned: "break 92bpm".
+        val name = opts["--name"] ?: buildString {
+            append(Names.sanitizeStem(file.nameWithoutExtension))
+            tempo?.let { append(' ').append(it.label) }
+        }
         if (!Names.isMpcSafe(name)) throw CliError("kit name isn't MPC-safe: '$name'")
         val outRoot = File(opts["--out"] ?: "snipsnap-out")
         val kitDir = File(outRoot, name)
@@ -139,7 +143,7 @@ object ChopCommand {
             throw CliError("kit already exists: $kitDir (pass --overwrite to replace it)")
         }
 
-        var kit = KitAssembler.assembleArranged(name, arranged, kitDir, key)
+        var kit = KitAssembler.assembleArranged(name, arranged, kitDir, key, tempo?.bpm)
 
         if (opts.has("--ghosts")) {
             val model = com.snipsnap.shell.KitBuilderModel.open(kitDir)
