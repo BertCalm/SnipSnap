@@ -479,13 +479,32 @@ assignments, pad-perform settings, 32 empty song slots) are the DD1 Chamber
 project's own defaults, carried verbatim as a resource skeleton with the
 content-specific parts scrubbed — verbatim beats reconstruction.
 
-The first drum track's clip becomes `sequences[0]`: notes ride in
-`trackClipMaps` keyed by track name (every track mapped, empty clips on the
-rest), the project's tracks keep their own `sharedClipMap` empty, and the
-sequence clip values omit `midiBankAndProgramNumber` — all exactly as the
-real project does. `Mpc3ProjectWriterTest` guards key paths against the
-project corpus, with `tracks[*]` paths also legitimised by the track corpus
-under the hoisting equivalence.
+Drum clips become the project's **sequences** (probed 2026-08-25 for the
+multi-sequence work): `data.sequences` is a keyed list of
+`{key: N, value: sequence}` entries — key 0-based, `data.currentSequence`
+picks by key — the same list idiom as `sharedClipMap`'s keys 1..4. Each
+sequence value carries `version 5`, its own `name` ("Sequence 01" in the
+harvested project), `bpm`, `lengthBars` + `lengthPulses`, loop bounds in
+both units, a `timeSignatureTrack`, six empty `locators`, an empty
+`seqEventList` (length INT64_MAX), and `trackClipMaps`: an outer
+single-element list wrapping a map keyed by **track name** — every track
+mapped, the groove's notes on the content track, empty clips on the
+mixer-infrastructure tracks (`Out 1/2`, `Out 3/4`, `Submix 1`). Sequence
+clip values carry `startPulses`/`endPulses`/`loop`/`legato`/`launch`/
+`colour`/`perClipParameterValues` and omit `midiBankAndProgramNumber`.
+`data.songs` is 32 `{name: "(unnamed)", ignoreTempo, items: []}` slots.
+
+Our writer generalises that shape: sequence *k* holds every drum track's
+*k*-th clip, so a kit's four groove variations arrive as four named,
+switchable sequences (`MAX_SEQUENCES` caps at 32, far under the
+hardware's 128). One caveat the corpus can't retire: the harvested
+project carries a single sequence, so "several entries in the keyed
+list" rests on the list idiom plus the hardware bench (AA1.3), not on a
+multi-sequence golden file — when one lands, `snipsnap diff` closes the
+question. `Mpc3ProjectWriterTest` guards key paths against the project
+corpus, with `tracks[*]` paths also legitimised by the track corpus under
+the hoisting equivalence, and runs the same guard through `MpcDiff` for
+the multi-sequence payload.
 
 `testkit/SnipSnap Session.xpj` is the acceptance artifact
 (`./gradlew :synth:generateSessionProject`): the factory kit, all four S5

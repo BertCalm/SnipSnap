@@ -17,11 +17,12 @@ import java.io.IOException
  *
  * Every kit's samples land in the shared flat `_[ProjectData]/` with a
  * per-kit stem prefix, so two chopped kits' `A01_Kick_01`s can't collide.
- * The first kit's first groove rides the sequence — the project plays
- * something the moment it opens. (The corpus rule for projects: hoisted
- * tracks carry no embedded clips, the timeline does — so the other kits'
- * grooves stay in their folders, riding their standalone exports.)
- * Tempo comes from the first kit that remembers one.
+ * Every kit's grooves become the project's **sequences** — sequence k
+ * plays each kit's k-th pattern, so a chopped kit's four variations
+ * arrive as four sequences and the hardware's sequence switcher is the
+ * pattern flip. (The corpus rule for projects still holds: hoisted
+ * tracks carry no embedded clips, the timeline does.) Tempo comes from
+ * the first kit that remembers one.
  */
 object SessionBuilder {
 
@@ -66,7 +67,7 @@ object SessionBuilder {
             val grooves = GrooveStore.load(kitDir)
             tracks += Mpc3ProjectTrack.Drum(
                 DrumProgram(kit.name, slots),
-                clip = grooves.firstOrNull(),
+                clips = grooves.take(Mpc3ProjectWriter.MAX_SEQUENCES),
             )
             kitTracks += kit.name
             if (tempo == null) tempo = kit.tempoBpm

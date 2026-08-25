@@ -13,7 +13,14 @@ sealed interface Mpc3ProjectTrack {
         val program: DrumProgram,
         val colour: Int = Mpc3TrackWriter.DEFAULT_TRACK_COLOUR,
         val clip: Mpc3Clip? = null,
-    ) : Mpc3ProjectTrack
+        /**
+         * The track's grooves, one per project sequence — sequence k plays
+         * this track's k-th clip. Empty falls back to [clip] alone.
+         */
+        val clips: List<Mpc3Clip> = emptyList(),
+    ) : Mpc3ProjectTrack {
+        val effectiveClips: List<Mpc3Clip> get() = clips.ifEmpty { listOfNotNull(clip) }
+    }
 
     data class Keys(
         val program: KeygroupProgram,
@@ -105,10 +112,15 @@ class Mpc3ProjectWriter(
             },
         )
 
-        // The first drum clip becomes the project sequence, its notes in
-        // trackClipMaps keyed by the track's name — where DD1 keeps its own.
-        val firstClip = tracks.filterIsInstance<Mpc3ProjectTrack.Drum>().firstNotNullOfOrNull { drum ->
-            drum.clip?.let { drum.program.name to it }
+        // Drum clips become the project sequences — sequence k holds every
+        // track's k-th groove, notes in trackClipMaps keyed by track name,
+        // where DD1 keeps its own. `sequences` is the corpus's keyed list
+        // (key 0.., `currentSequence` picks by key), scaled past one entry.
+        val clipLists = tracks.filterIsInstance<Mpc3ProjectTrack.Drum>()
+            .map { it.program.name to it.effectiveClips }
+        val seqCount = (clipLists.maxOfOrNull { it.second.size } ?: 0).coerceAtLeast(1)
+        require(seqCount <= MAX_SEQUENCES) {
+            "a project carries at most $MAX_SEQUENCES sequences, got $seqCount"
         }
         val allTrackNames = tracks.map {
             when (it) {
@@ -116,7 +128,14 @@ class Mpc3ProjectWriter(
                 is Mpc3ProjectTrack.Keys -> it.program.name
             }
         } + listOf("Submix 1", "Out 1/2", "Out 3/4")
-        val sequences = J.A(listOf(sequence(allTrackNames, firstClip, tempoBpm)))
+        val sequences = J.A(
+            (0 until seqCount).map { k ->
+                val clipsAt = clipLists.mapNotNull { (track, clips) ->
+                    clips.getOrNull(k)?.let { track to it }
+                }.toMap()
+                sequence(k, allTrackNames, clipsAt, tempoBpm)
+            },
+        )
 
         var text = skeleton
         text = text.replace("@TRACKS@", renderAt(J.A(trackObjs), SPLICE_INDENT).trimStart())
@@ -126,14 +145,14 @@ class Mpc3ProjectWriter(
         return text
     }
 
-    private fun sequence(trackNames: List<String>, clipByTrack: Pair<String, Mpc3Clip>?, tempoBpm: Float): J {
-        val bars = clipByTrack?.second?.bars ?: 2
+    private fun sequence(key: Int, trackNames: List<String>, clipByTrack: Map<String, Mpc3Clip>, tempoBpm: Float): J {
+        val bars = clipByTrack.values.maxOfOrNull { it.bars } ?: 2
         val pulses = bars * Mpc3Clip.PULSES_PER_BAR
         return obj(
-            "key" to i(0),
+            "key" to i(key.toLong()),
             "value" to obj(
                 "version" to i(5),
-                "name" to s(clipByTrack?.second?.name ?: "Sequence 01"),
+                "name" to s(clipByTrack.values.firstOrNull()?.name ?: "Sequence %02d".format(key + 1)),
                 "bpm" to d(tempoBpm.toDouble()),
                 "lengthBars" to i(bars.toLong()),
                 "loopStartBar" to i(0),
@@ -155,7 +174,7 @@ class Mpc3ProjectWriter(
                     listOf(
                         J.A(
                             trackNames.map { trackName ->
-                                val clip = clipByTrack?.takeIf { it.first == trackName }?.second
+                                val clip = clipByTrack[trackName]
                                     ?: Mpc3Clip(trackName, bars, emptyList())
                                 obj("key" to s(trackName), "value" to trackWriter.clipValue(clip, includeMidiBank = false))
                             },
@@ -188,6 +207,12 @@ class Mpc3ProjectWriter(
     }
 
     companion object {
+        /**
+         * Sequence-count ceiling — well under the hardware's 128, far over
+         * the four groove variations a kit ships.
+         */
+        const val MAX_SEQUENCES = 32
+
         /** Sibling folder name for a project's WAVs, per the corpus convention. */
         fun projectDataDirName(projectName: String): String = "${projectName}_[ProjectData]"
 

@@ -118,8 +118,11 @@ object Exporters {
             dataDir.deleteRecursively()
             val program = Mpc3Exporter.stageTrack(kit, kitDir, dataDir)
             val writer = Mpc3ProjectWriter()
-            val effectiveClip = clip ?: GrooveStore.load(kitDir).firstOrNull()
-            val tracks = listOf(Mpc3ProjectTrack.Drum(program, clip = effectiveClip))
+            // The call-site clip wins; otherwise every stored groove becomes
+            // its own sequence — the pattern flip on the hardware's switcher.
+            val effectiveClips = clip?.let { listOf(it) }
+                ?: GrooveStore.load(kitDir).take(Mpc3ProjectWriter.MAX_SEQUENCES)
+            val tracks = listOf(Mpc3ProjectTrack.Drum(program, clips = effectiveClips))
             // The call-site tempo wins; the kit's remembered tempo backs it up.
             val effectiveTempo = tempoBpm ?: kit.tempoBpm
             val file = if (effectiveTempo != null) {
