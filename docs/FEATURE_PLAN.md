@@ -309,6 +309,95 @@ MPC session's kits, editable on the phone.
 
 ---
 
+# Wave 4 — closing the loops we half-opened
+
+Three waves in, the ranking question shifts from "what's nearly free" to
+"what closes an open loop." Y1 fixes a leak in the product's core promise;
+Y2–Y3 multiply the hardware payoff of things already built; Y4–Y5 take the
+FX rack and the kit folder to their last unreached surfaces; Y6 turns test
+machinery into the bench tool the format work still needs.
+
+## Y1 — Total recall: kits remember their beat and their source
+
+Two holes in "the folder is the kit": `chop --groove` embeds the rhythm at
+export time only (chop today, export tomorrow — groove gone), and both
+importers **drop the clips** they find (an MPC kit round-trips minus its
+patterns). Also: chopped pads carry no provenance.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| Y1.1 | `groove.json` sidecar — the captured clip persisted beside `kit.json` (notes, bars, tempo); written by chop, read by `Exporters`, auto-embedded in every native export | CORE | S | chop → export *later* → the groove is still there |
+| Y1.2 | Importers keep clips — `Mpc3Importer` reads `sharedClipMap` entries back into `groove.json` | CORE | S | MPC kit with patterns round-trips with its patterns |
+| Y1.3 | Chop provenance — per-pad `source` gains file, sourceFrame, lengthFrames | CORE | S | every chopped pad says where it came from |
+
+## Y2 — Pattern variations: four grooves per kit
+
+`sharedClipMap` is a **list** — commercial tracks carry 4 entries, ours 1
+(hardware-accepted). Generate mechanical variations of the captured groove
+— as-captured, quantized-tight, half-time, sparse — and ship clips A–D:
+load a chopped break, flip between four ready patterns.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| Y2.1 | `GrooveVariations` — pure `Mpc3Note`-list transforms (quantize, half-time, thin, velocity-flatten), named clips | CORE | S | each variant provably derived: note counts/times follow the rule |
+| Y2.2 | Writer takes a clip **list** (≤4), corpus-guarded; chop `--groove` ships the four | CORE | S | key-path guard still green; payload carries 4 clips |
+| Y2.3 | Bench — the Live III's clip list shows and plays all four | USER | S | flip patterns on hardware |
+
+## Y3 — The session builder: `snipsnap project`
+
+`SessionProjectGenerator` builds the fixed factory session as test code.
+Generalized: N kit folders + M instrument packages → one `.xpj`, kits on
+tracks with their grooves, instruments beside them, mixer wired.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| Y3.1 | `SessionBuilder` (`:kit`) — stage kit folders + `.xty` instrument packages into `_[ProjectData]/`, hand `Mpc3ProjectWriter` the track list; grooves from `groove.json` ride onto the sequence | CORE | S–M | two kits + an instrument → one `.xpj` our reader accepts with the right track types |
+| Y3.2 | CLI `project <kit-dir>... [--keys pkg...] [--name]` | CORE | S | one command, whole session on the card |
+| Y3.3 | App: SESSION export in the wizard (after M5's SAF) | APP | S | the wizard's biggest format, one tap |
+
+## Y4 — Pad treatments: the FX rack pointed at one pad
+
+Remix bank B proves the whole path (FX on captured audio, fx-only recipes,
+re-treatability); there's just no way to *crush the snare*. Named
+treatments over the existing chains, recorded as recipes, reversible via
+the bin.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| Y4.1 | `KitBuilderModel.treatPad(slot, treatment, amount, seed)` — the Shuffle treatment table exposed singly + amount-scaled; original WAV binned, recipe recorded; `untreatPad` restores | CORE | S | treat → audibly different, recipe present; untreat → original bytes back from the bin |
+| Y4.2 | CLI `treat <kit-dir> <pad> <treatment> [--amount] [--seed]` | CORE | S | crush A02 from the terminal |
+| Y4.3 | App: treatment row on the pad sheet (after M3) | APP | S | one tap per character |
+
+## Y5 — The preview renderer: every kit listenable before loadable
+
+The kit's WAVs plus its groove is an offline sampler render away from a
+demo. Every expansion `[Previews]/`, every `.xpn`, and the app's "share as
+audio" story get *the kit playing its own beat*.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| Y5.1 | `KitPreview` (`:kit`) — mix pad WAVs at clip note times (levels, choke honoured); groove absent → a two-bar default pattern over the core classes | CORE | S | rendered preview is non-silent, right length, deterministic |
+| Y5.2 | Wire-through — expansion + `.xpn` previews use it when a groove exists; CLI `export` gains `--preview`; app share-as-audio hook | CORE | S | `[Previews]/<Kit>.xpm.wav` is the kit's own beat |
+| Y5.3 | Bench — does the expansion browser play it (the open WAV-vs-MP3 question) | USER | S | noted either way |
+
+## Y6 — `snipsnap diff`: the corpus guard as a bench tool
+
+The key-path machinery that keeps the writers honest lives in test code.
+As a CLI verb — structured diff of two MPC files, either generation — it
+becomes the instrument for the firmware-save job and the permanent
+"why won't this file load" tool.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| Y6.1 | `MpcDiff` (`:mpc3`) — key paths only-in-A / only-in-B / value-differs (schema-aware: arrays as `[*]`, sentinel-tolerant), for ACVS payloads and MPC 2 XML alike | CORE | S–M | our export vs a golden file reproduces the known documented deltas |
+| Y6.2 | CLI `diff <a> <b> [--values]` — grouped, readable, exit 1 when different | CORE | S | `diff ours.xtd firmware.xtd` is the whole liveiii-36 dissection |
+| Y6.3 | The firmware save lands → run Y6.2, promote surprises into the corpus guards | CORE+USER | S | the standing job, now one command |
+
+**Below the line (wave 5 candidates):** kit merge into banks A/B, batch
+chop over a folder, auto slice-count. Standing rejects unchanged.
+
+---
+
 ## Sequence
 
 ```
@@ -323,7 +412,12 @@ CORE wave 2: ✓ all six landed (2026-08-24) — groove capture,
 CORE wave 3: ✓ all seven landed (2026-08-24) — melodic chop,
   multisample keys, takes + the 30-day bin, one-file backup, the
   teach-the-machine data path, whole-project import, sustain loops.
-  Remaining on the bench: W12 pad waveforms (APP-only polish)
+
+CORE wave 4 (in order — Y1 first, it's a leak, not a feature):
+  Y1 total recall → Y2 pattern variations → Y3 session builder →
+  Y4 pad treatments → Y5 preview renderer → Y6 diff tool
+  Remaining on the bench: W12 pad waveforms (APP-only polish) ·
+  kit merge · batch chop · auto slice-count
 
 APP (in milestone order; feature items slot in where their parent lands):
   M0 (F1.1) → +F4.2 new-kit menu · +W3.3 open-.xtd
