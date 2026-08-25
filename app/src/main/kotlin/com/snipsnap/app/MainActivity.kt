@@ -41,9 +41,8 @@ import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.NewTapeDialog
 import com.snipsnap.app.ui.PropsScreen
 import com.snipsnap.app.ui.SnipSnapWindow
+import com.snipsnap.app.ui.newTapeToast
 import com.snipsnap.app.ui.tapes
-import com.snipsnap.shell.Copy
-import com.snipsnap.shell.Delight
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Schemes
@@ -159,12 +158,7 @@ class MainActivity : ComponentActivity() {
                                     withContext(Dispatchers.IO) { library.create(name) }
                                 }
                                 entries = withContext(Dispatchers.IO) { library.list().entries }
-                                if (Delight.toastsEnabled(state.personality)) {
-                                    toast = made.fold(
-                                        onSuccess = { Copy.kitNameResponse(name) ?: Copy.FRESH_TAPE },
-                                        onFailure = { "COULDN'T MAKE THAT TAPE." },
-                                    )
-                                }
+                                toast = newTapeToast(made.isSuccess, name, state.personality)
                             }
                         },
                     )

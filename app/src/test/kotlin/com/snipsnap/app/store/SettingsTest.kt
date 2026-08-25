@@ -43,8 +43,19 @@ class SettingsTest {
         assertEquals(Personality.MILD, reloaded.personality)
     }
 
+    /**
+     * "garbage" (no `=`) is dropped silently by `read()`'s `mapNotNull`,
+     * and the two unrecognized enum names parse into the map without
+     * throwing — so nothing here reaches `read()`'s `try/catch`. The
+     * fallback observed below comes from the per-property `?:` default
+     * firing on a map lookup miss, a different mechanism from the one the
+     * name used to claim. `read()`'s catch is defensive against a
+     * genuinely unreadable file (bad encoding, an I/O error) and is left
+     * without direct coverage here — portably forcing that condition
+     * isn't worth it for this test file.
+     */
     @Test
-    fun `a corrupt file falls back to defaults instead of crashing`() {
+    fun `unknown enum values fall back to defaults`() {
         val f = file()
         f.parentFile.mkdirs()
         f.writeText("scheme=NOT_A_SCHEME\npersonality=LOUD\ngarbage\n")
