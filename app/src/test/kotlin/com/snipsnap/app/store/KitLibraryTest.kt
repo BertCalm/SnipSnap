@@ -73,4 +73,33 @@ class KitLibraryTest {
         java.io.File(lib.root, "not-a-kit").mkdirs()
         assertEquals(listOf("REAL"), lib.list().map { it.name })
     }
+
+    @Test
+    fun `one unreadable kit is skipped, not fatal`() {
+        val lib = library()
+        lib.create("GOOD ONE")
+        lib.create("GOOD TWO")
+
+        val badDir = java.io.File(lib.root, "FUTURE")
+        badDir.mkdirs()
+        java.io.File(badDir, "kit.json").writeText(
+            """{"version": 99, "name": "FUTURE", "pads": []}""",
+        )
+
+        val entries = lib.list()
+        assertEquals(listOf("GOOD ONE", "GOOD TWO"), entries.map { it.name })
+        assertEquals(1, lib.unreadable.size)
+        assertEquals(badDir, lib.unreadable[0].dir)
+    }
+
+    @Test
+    fun `create refuses to overwrite a kit that sanitizes to the same folder`() {
+        val lib = library()
+        val first = lib.create("A_B")
+        assertFailsWith<IllegalArgumentException> { lib.create("A__B") }
+
+        // The one that matters: the first kit's kit.json must still be intact.
+        val reloaded = lib.open(lib.list().single { it.dir == first.kitDir })
+        assertEquals("A_B", reloaded.kit.name)
+    }
 }

@@ -64,6 +64,13 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
 
+    // MainActivity imports Dispatchers and withContext directly. Both
+    // arrive transitively through lifecycle and Compose today, but a
+    // library you import by name should be one you declare — a future BOM
+    // bump could drop the transitive without warning. Pinned to the
+    // version already resolving, so this changes nothing at runtime.
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
     // Deliberately absent: androidx.compose.ui:ui-tooling and
     // ui-tooling-preview. They exist to serve @Preview in Android Studio,
     // M0 writes no @Preview, and ui-tooling drags
