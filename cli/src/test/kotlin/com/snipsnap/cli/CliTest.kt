@@ -155,6 +155,24 @@ class CliTest {
     }
 
     @Test
+    fun `groove flag embeds the capture's own rhythm in native exports`() {
+        val wav = writeBreak(File(temp, "groove.wav"))
+        val out = File(temp, "groove-out")
+        val (code, stdout, stderr) = cli(
+            "chop", wav.path, "--out", out.path, "--name", "GrooveKit",
+            "--slices", "8", "--groove", "--export", "xtd,xpj",
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "groove: \"GrooveKit Groove\"")
+
+        val xtd = File(out, "card/GrooveKit.xtd")
+        val payload = Acvs.read(xtd).payloadText
+        assertContains(payload, "GrooveKit Groove")
+        val xpj = Acvs.read(File(out, "card/GrooveKit.xpj")).payloadText
+        assertContains(xpj, "GrooveKit Groove")
+    }
+
+    @Test
     fun `import unpacks an xpn back into a kit folder`() {
         val wav = writeBreak(File(temp, "imp.wav"))
         val out = File(temp, "imp-out")

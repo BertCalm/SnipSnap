@@ -115,6 +115,29 @@ class ChopReviewTest {
     }
 
     @Test
+    fun `grooveClip carries the capture's rhythm, or refuses without a tempo`() {
+        val model = ChopReviewModel.chop(breakSnip(), ChopReviewModel.ChopMode.ByHits(8))
+        val clip = model.grooveClip("Test Groove")
+        if (model.tempo != null) {
+            kotlin.test.assertNotNull(clip)
+            assertEquals(model.sliceCount, clip.notes.size, "every placed slice is a note")
+            assertTrue(clip.notes.first().timePulses == 0L, "anchored on the first hit")
+            // Notes play the pads the slices landed on (A01 = note 36).
+            val placed = model.placementPreview()
+            val kickPad = placed.indexOfFirst { it?.effectiveClass == DrumClass.KICK }
+            assertTrue(clip.notes.any { it.note == 36 + kickPad })
+        }
+
+        // A too-short snip has no confident tempo: the toggle greys out.
+        val short = ChopReviewModel.chop(
+            Snip(FloatArray(rate / 2) { if (it < 200) 0.5f else 0f }, 1, rate),
+            ChopReviewModel.ChopMode.Grid(2),
+        )
+        assertEquals(null, short.tempo)
+        assertEquals(null, short.grooveClip("X"))
+    }
+
+    @Test
     fun `unsure rows exist as a concept and chips name every class`() {
         // A near-silent blip classifies with low confidence somewhere.
         val quiet = Snip(FloatArray(rate) { if (it < 200) 0.02f else 0f }, 1, rate)

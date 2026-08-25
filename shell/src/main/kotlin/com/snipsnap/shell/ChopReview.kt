@@ -119,6 +119,38 @@ class ChopReviewModel private constructor(
     /** RE-CHOP: fresh detection, fresh labels, overrides gone. */
     fun rechop(newMode: ChopMode = mode): ChopReviewModel = chop(source, newMode)
 
+    /** The source's tempo, when it confidently has one. */
+    val tempo: com.snipsnap.audio.TempoEstimate? by lazy {
+        com.snipsnap.audio.Tempo.estimate(source)?.takeIf { it.confidence >= 0.3f }
+    }
+
+    /**
+     * The capture's own rhythm as an embeddable clip — [CapturedGroove]
+     * over the current placement, velocities from the hits' own dynamics.
+     * Null when the source has no confident tempo; the UI greys the
+     * GROOVE toggle rather than guessing one.
+     */
+    fun grooveClip(
+        name: String,
+        quantizeTo: Long? = null,
+    ): com.snipsnap.mpc3.Mpc3Clip? {
+        val t = tempo ?: return null
+        val placed = placementPreview()
+        val maxPeak = placed.filterNotNull()
+            .maxOfOrNull { it.slice.snip.peak() }?.coerceAtLeast(1e-6f) ?: return null
+        val hits = placed.mapIndexedNotNull { i, row ->
+            row?.let {
+                com.snipsnap.kit.CapturedGroove.Hit(
+                    padSlot = i + 1,
+                    sourceFrame = it.slice.sourceFrame.toLong(),
+                    lengthFrames = it.slice.snip.frameCount.toLong().coerceAtLeast(1),
+                    velocity = (it.slice.snip.peak() / maxPeak).coerceIn(0.05f, 1f),
+                )
+            }
+        }
+        return com.snipsnap.kit.CapturedGroove.clip(name, hits, t.bpm, source.sampleRate, quantizeTo)
+    }
+
     companion object {
         /** Below this the chip goes dashed — same threshold as the CLI's `?`. */
         const val NOT_SURE_BELOW = 0.5f

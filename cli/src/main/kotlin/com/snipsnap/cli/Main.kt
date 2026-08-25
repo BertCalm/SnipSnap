@@ -50,6 +50,8 @@ object Cli {
         |                    following hits, off on a grid - a grid's order is
         |                    usually the point)
         |  --balance         set per-pad levels so the kit sits right as a mix
+        |  --groove          embed the capture's own rhythm as a clip in the
+        |                    native exports (needs a confident tempo)
         |  --key SPEC        retune tonal pads into a key: Am, C, F#m, Eb major,
         |                    Dminpent, Gchromatic
         |  --export LIST     comma-separated: ${Exports.FORMATS.joinToString(",")}

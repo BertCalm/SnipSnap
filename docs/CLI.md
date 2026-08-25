@@ -37,6 +37,7 @@ tempo, chop, classify each slice, auto-place onto the conventional layout
 | `--grid N` | chop into N equal parts instead of following hits |
 | `--place` / `--no-place` | force auto-placement on or off. Default: on when following hits, off on a grid — a grid's order is usually the point |
 | `--balance` | per-pad levels via `Balance` so the kit sits right as a mix |
+| `--groove` | embed the capture's own rhythm as a clip in the native exports (`xtd`/`xpj`) — timing as captured, velocities from the hits' own dynamics; needs a confident tempo |
 | `--key SPEC` | retune tonal pads into a key via `InKey`/`Tuner`: `Am`, `C`, `F#m`, `Eb major`, `Dminpent` |
 | `--export LIST` | comma-separated formats, see below |
 | `--overwrite` | replace same-named output |
