@@ -195,6 +195,38 @@ class CliTest {
     }
 
     @Test
+    fun `melodic chop lays a scrambled scale out low to high`() {
+        val rate = 44_100
+        // 330, 110, 220 Hz — deliberately scrambled.
+        val freqs = listOf(330.0, 110.0, 220.0)
+        val total = FloatArray(rate * 3)
+        freqs.forEachIndexed { i, f ->
+            val tone = com.snipsnap.audio.DrumSynth.tonal(seconds = 0.9f, freq = f)
+            for (j in tone.samples.indices) {
+                if (i * rate + j < total.size) total[i * rate + j] += tone.samples[j] * 0.8f
+            }
+        }
+        val wav = File(temp, "scale.wav")
+        WavWriter.write(wav, Snip(total, 1, rate))
+
+        val out = File(temp, "mel-out")
+        val (code, stdout, stderr) = cli(
+            "chop", wav.path, "--out", out.path, "--name", "Mel", "--grid", "3", "--melodic",
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "melodic:")
+        val kit = KitStore.load(File(out, "Mel"))
+        val padHz = (1..3).map { slot ->
+            com.snipsnap.audio.Pitch.detect(
+                com.snipsnap.audio.WavReader.read(File(out, "Mel/${kit.pad(slot)!!.sampleFile}")),
+            )!!.hz
+        }
+        assertEquals(padHz.sorted(), padHz, "pads must ascend in pitch: $padHz")
+
+        assertEquals(2, cli("chop", wav.path, "--melodic", "--no-place").first)
+    }
+
+    @Test
     fun `ghosts flag layers pads and remix builds bank B`() {
         val wav = writeBreak(File(temp, "gr.wav"))
         val out = File(temp, "gr-out")

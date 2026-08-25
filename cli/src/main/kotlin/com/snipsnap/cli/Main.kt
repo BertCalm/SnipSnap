@@ -56,6 +56,8 @@ object Cli {
         |                    native exports (needs a confident tempo)
         |  --ghosts          render darker soft velocity zones under every
         |                    one-shot pad, so quiet hits sound soft
+        |  --melodic         place slices low-to-high by detected pitch
+        |                    (unpitched slices follow in capture order)
         |  --key SPEC        retune tonal pads into a key: Am, C, F#m, Eb major,
         |                    Dminpent, Gchromatic
         |  --export LIST     comma-separated: ${Exports.FORMATS.joinToString(",")}

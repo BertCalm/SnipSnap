@@ -119,6 +119,44 @@ class ChopReviewModel private constructor(
     /** RE-CHOP: fresh detection, fresh labels, overrides gone. */
     fun rechop(newMode: ChopMode = mode): ChopReviewModel = chop(source, newMode)
 
+    // ---------- melodic placement ----------
+
+    /** Per-row detected pitch (confident only), cached — melodic placement reads it. */
+    private val pitchByRow: Map<Row, com.snipsnap.audio.PitchEstimate> by lazy {
+        rows.mapNotNull { row ->
+            com.snipsnap.audio.Pitch.detect(row.slice.snip)
+                ?.takeIf { it.confidence >= MELODIC_PITCH_CONFIDENCE }
+                ?.let { row to it }
+        }.toMap()
+    }
+
+    /** The row's confident pitch, or null — the UI shows it on melodic chips. */
+    fun pitchOf(index: Int): com.snipsnap.audio.PitchEstimate? = pitchByRow[rows[index]]
+
+    /**
+     * MELODIC placement: pitched slices sorted **low → high** onto the
+     * pads (root at A01, ascending — the SCALE-layout spirit), unpitched
+     * slices appended after in capture order. A phrase becomes something
+     * you can perform.
+     */
+    fun melodicPreview(): List<Row?> {
+        val pitched = rows.filter { it in pitchByRow }.sortedBy { pitchByRow.getValue(it).hz }
+        val unpitched = rows.filter { it !in pitchByRow }
+        val ordered = pitched + unpitched
+        val padCount = (((ordered.size + 15) / 16) * 16).coerceAtMost(128)
+        return ordered.take(padCount) + List(padCount - ordered.size.coerceAtMost(padCount)) { null }
+    }
+
+    /** SEND TO GRID, melodic layout. */
+    fun sendToGridMelodic(): SendResult {
+        val placed = melodicPreview()
+        val arranged = placed.map { row ->
+            row?.let { ArrangedPad(it.slice.snip, it.effectiveClass) }
+        }
+        val choke = placed.any { it != null && AutoPlace.muteGroupFor(it.effectiveClass) != 0 }
+        return SendResult(arranged, rows.size, choke)
+    }
+
     /** The source's tempo, when it confidently has one. */
     val tempo: com.snipsnap.audio.TempoEstimate? by lazy {
         com.snipsnap.audio.Tempo.estimate(source)?.takeIf { it.confidence >= 0.3f }
@@ -154,6 +192,9 @@ class ChopReviewModel private constructor(
     companion object {
         /** Below this the chip goes dashed — same threshold as the CLI's `?`. */
         const val NOT_SURE_BELOW = 0.5f
+
+        /** Below this a slice counts as unpitched for melodic placement. */
+        const val MELODIC_PITCH_CONFIDENCE = 0.5f
 
         /** Chip tap-cycle order — core hits first, escape hatches last. */
         val CHIP_CYCLE: List<DrumClass> = listOf(

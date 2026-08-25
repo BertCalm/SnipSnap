@@ -41,7 +41,7 @@ object ChopCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export"),
-            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts"),
+            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic"),
         )
         val input = opts.positional.firstOrNull()
             ?: throw CliError("chop wants an input file: snipsnap chop <input.wav>")
@@ -50,6 +50,9 @@ object ChopCommand {
         }
         if (opts.has("--place") && opts.has("--no-place")) {
             throw CliError("--place and --no-place contradict each other")
+        }
+        if (opts.has("--melodic") && (opts.has("--place") || opts.has("--no-place"))) {
+            throw CliError("--melodic is its own placement - drop --place/--no-place")
         }
 
         // Validate every option before touching audio: a typo'd format
@@ -110,13 +113,27 @@ object ChopCommand {
             opts.has("--place") -> true
             else -> grid == null
         }
-        val onPads: List<Pair<Slice, Classification>?> = if (place) {
-            // Round up to whole banks so nothing gets dropped: the core
-            // classes claim their bank-A pads, the rest overflow upward.
-            val padCount = (((classified.size + 15) / 16) * 16).coerceAtMost(128)
-            AutoPlace.arrange(classified, padCount) { it.second.drumClass }
-        } else {
-            classified
+        val onPads: List<Pair<Slice, Classification>?> = when {
+            opts.has("--melodic") -> {
+                // Pitched slices low → high (the SCALE-layout spirit),
+                // unpitched after in capture order.
+                val withPitch = classified.map { pair ->
+                    pair to com.snipsnap.audio.Pitch.detect(pair.first.snip)
+                        ?.takeIf { it.confidence >= 0.5f }
+                }
+                val pitched = withPitch.filter { it.second != null }
+                    .sortedBy { it.second!!.hz }.map { it.first }
+                val unpitched = withPitch.filter { it.second == null }.map { it.first }
+                out.println("melodic: ${pitched.size} pitched slices low to high, ${unpitched.size} unpitched after")
+                pitched + unpitched
+            }
+            place -> {
+                // Round up to whole banks so nothing gets dropped: the core
+                // classes claim their bank-A pads, the rest overflow upward.
+                val padCount = (((classified.size + 15) / 16) * 16).coerceAtMost(128)
+                AutoPlace.arrange(classified, padCount) { it.second.drumClass }
+            }
+            else -> classified
         }
 
         var arranged = onPads.map { entry ->
