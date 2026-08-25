@@ -43,7 +43,7 @@ fun SnipSnapWindow(
     state: NavState,
     onMenu: (Screen) -> Unit,
     tapeCell: String,
-    snipCell: String,
+    countCell: String,
     content: @Composable () -> Unit,
 ) {
     val s = LocalScheme.current
@@ -70,7 +70,7 @@ fun SnipSnapWindow(
             Titlebar(title = state.screen.title)
             MenuRow(current = state.screen, onMenu = onMenu)
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) { content() }
-            StatusBar(tapeCell = tapeCell, snipCell = snipCell, quip = state.statusQuip())
+            StatusBar(tapeCell = tapeCell, countCell = countCell, quip = state.statusQuip())
         }
     }
 }
@@ -130,7 +130,7 @@ private fun MenuRow(current: Screen, onMenu: (Screen) -> Unit) {
 }
 
 @Composable
-private fun StatusBar(tapeCell: String, snipCell: String, quip: String) {
+private fun StatusBar(tapeCell: String, countCell: String, quip: String) {
     val s = LocalScheme.current
     Row(
         modifier = Modifier
@@ -140,7 +140,7 @@ private fun StatusBar(tapeCell: String, snipCell: String, quip: String) {
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         StatusCell(tapeCell, s.lcdInk.toColor())
-        StatusCell(snipCell, s.amber.toColor())
+        StatusCell(countCell, s.amber.toColor())
         StatusCell(quip, s.amber.toColor(), modifier = Modifier.weight(1f), fontSize = 8)
     }
 }

@@ -21,6 +21,19 @@ data class UnreadableKit(
 )
 
 /**
+ * One reading of the shelf: what was on it, and what could not be read.
+ *
+ * Returned as a value rather than left on the library as mutable state.
+ * A side-channel property cannot distinguish "checked, all clean" from
+ * "never checked" — both read as an empty list — and callers here fetch
+ * the shelf across an `await`, which is exactly where a stale read hides.
+ */
+data class ShelfListing(
+    val entries: List<KitEntry>,
+    val unreadable: List<UnreadableKit>,
+)
+
+/**
  * The shelf: kit folders under one root.
  *
  * Takes a [File], never a `Context` — the Activity resolves
@@ -30,15 +43,7 @@ data class UnreadableKit(
 class KitLibrary(val root: File) {
 
     /**
-     * Folders the last [list] call could not read. Not silent: the shelf
-     * skips them so one bad tape cannot take the app down, and the UI can
-     * say so.
-     */
-    var unreadable: List<UnreadableKit> = emptyList()
-        private set
-
-    /**
-     * The shelf, readable tapes only.
+     * The shelf: readable tapes, plus whatever could not be read.
      *
      * `KitStore.load` throws on a malformed `kit.json` and *deliberately*
      * refuses one written by a newer build — which is the right call for a
@@ -46,8 +51,12 @@ class KitLibrary(val root: File) {
      * propagate means one bad folder crashes the app on launch, with no
      * way back in to delete it. A tape that cannot be read is hidden, not
      * fatal.
+     *
+     * M0 does not yet show [ShelfListing.unreadable] anywhere; it is
+     * returned so the information exists rather than being swallowed, and
+     * so surfacing it later is a UI change and not an archaeology project.
      */
-    fun list(): List<KitEntry> {
+    fun list(): ShelfListing {
         val skipped = mutableListOf<UnreadableKit>()
         val kits = KitStore.list(root).mapNotNull { dir ->
             try {
@@ -58,8 +67,7 @@ class KitLibrary(val root: File) {
                 null
             }
         }.sortedBy { it.name.lowercase() }
-        unreadable = skipped
-        return kits
+        return ShelfListing(kits, skipped)
     }
 
     fun open(entry: KitEntry): KitBuilderModel = KitBuilderModel.open(entry.dir)

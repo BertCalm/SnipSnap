@@ -13,7 +13,7 @@ class KitLibraryTest {
 
     @Test
     fun `an empty root lists nothing`() {
-        assertTrue(library().list().isEmpty())
+        assertTrue(library().list().entries.isEmpty())
     }
 
     @Test
@@ -21,7 +21,7 @@ class KitLibraryTest {
         val lib = library()
         assertTrue(lib.seedIfEmpty(), "first seed should report that it wrote something")
 
-        val entries = lib.list()
+        val entries = lib.list().entries
         assertEquals(1, entries.size)
         assertEquals(KitLibrary.SEED_NAME, entries[0].name)
         assertEquals(16, entries[0].padCount)
@@ -40,7 +40,7 @@ class KitLibraryTest {
         val lib = library()
         lib.seedIfEmpty()
         assertFalse(lib.seedIfEmpty(), "a populated shelf must not be re-seeded")
-        assertEquals(1, lib.list().size)
+        assertEquals(1, lib.list().entries.size)
     }
 
     @Test
@@ -48,14 +48,14 @@ class KitLibraryTest {
         val lib = library()
         lib.create("ZEBRA")
         lib.create("APPLE")
-        assertEquals(listOf("APPLE", "ZEBRA"), lib.list().map { it.name })
+        assertEquals(listOf("APPLE", "ZEBRA"), lib.list().entries.map { it.name })
     }
 
     @Test
     fun `a new kit starts empty`() {
         val lib = library()
         assertEquals(0, lib.create("NIGHT BUS").kit.pads.size)
-        assertEquals(0, lib.list().single().padCount)
+        assertEquals(0, lib.list().entries.single().padCount)
     }
 
     @Test
@@ -63,7 +63,7 @@ class KitLibraryTest {
         val lib = library()
         assertFailsWith<IllegalArgumentException> { lib.create("BAD/NAME") }
         assertFailsWith<IllegalArgumentException> { lib.create("   ") }
-        assertTrue(lib.list().isEmpty(), "a refused name must not leave a folder behind")
+        assertTrue(lib.list().entries.isEmpty(), "a refused name must not leave a folder behind")
     }
 
     @Test
@@ -71,7 +71,7 @@ class KitLibraryTest {
         val lib = library()
         lib.create("REAL")
         java.io.File(lib.root, "not-a-kit").mkdirs()
-        assertEquals(listOf("REAL"), lib.list().map { it.name })
+        assertEquals(listOf("REAL"), lib.list().entries.map { it.name })
     }
 
     @Test
@@ -86,10 +86,10 @@ class KitLibraryTest {
             """{"version": 99, "name": "FUTURE", "pads": []}""",
         )
 
-        val entries = lib.list()
-        assertEquals(listOf("GOOD ONE", "GOOD TWO"), entries.map { it.name })
-        assertEquals(1, lib.unreadable.size)
-        assertEquals(badDir, lib.unreadable[0].dir)
+        val listing = lib.list()
+        assertEquals(listOf("GOOD ONE", "GOOD TWO"), listing.entries.map { it.name })
+        assertEquals(1, listing.unreadable.size)
+        assertEquals(badDir, listing.unreadable[0].dir)
     }
 
     @Test
@@ -99,7 +99,15 @@ class KitLibraryTest {
         assertFailsWith<IllegalArgumentException> { lib.create("A__B") }
 
         // The one that matters: the first kit's kit.json must still be intact.
-        val reloaded = lib.open(lib.list().single { it.dir == first.kitDir })
+        val reloaded = lib.open(lib.list().entries.single { it.dir == first.kitDir })
         assertEquals("A_B", reloaded.kit.name)
+    }
+
+    @Test
+    fun `creating the same name twice is refused`() {
+        val lib = library()
+        lib.create("APPLE")
+        assertFailsWith<IllegalArgumentException> { lib.create("APPLE") }
+        assertEquals(1, lib.list().entries.size)
     }
 }

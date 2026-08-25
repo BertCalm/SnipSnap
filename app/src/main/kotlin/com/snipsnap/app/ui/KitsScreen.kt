@@ -41,7 +41,7 @@ fun KitsScreen(
         modifier = Modifier.fillMaxSize().padding(6.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        LcdHeader(left = "MY KITS", right = "${entries.size} TAPES")
+        LcdHeader(left = "MY KITS", right = tapes(entries.size))
 
         if (entries.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -111,7 +111,7 @@ private fun ShelfRow(entry: KitEntry, onOpen: () -> Unit) {
                 ),
             )
             BasicText(
-                text = "${entry.padCount} SNIPS",
+                text = snips(entry.padCount),
                 style = TextStyle(
                     color = s.ink2.toColor(),
                     fontFamily = TapeFonts.pixel,

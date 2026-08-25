@@ -20,6 +20,7 @@ import com.snipsnap.app.theme.LcdSurface
 import com.snipsnap.app.theme.TapeOsTheme
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.SnipSnapWindow
+import com.snipsnap.app.ui.tapes
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Schemes
 import java.io.File
@@ -44,7 +45,7 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 withContext(Dispatchers.IO) { library.seedIfEmpty() }
-                entries = withContext(Dispatchers.IO) { library.list() }
+                entries = withContext(Dispatchers.IO) { library.list() }.entries
             }
 
             LaunchedEffect(state.personality) {
@@ -59,7 +60,7 @@ class MainActivity : ComponentActivity() {
                     state = state,
                     onMenu = { state = state.goTo(it) },
                     tapeCell = "TAPE 0:00",
-                    snipCell = "${entries.size} TAPES",
+                    countCell = tapes(entries.size),
                 ) {
                     when (state.screen) {
                         Screen.KITS -> KitsScreen(
