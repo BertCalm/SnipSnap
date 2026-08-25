@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -100,6 +101,12 @@ fun PadGrid(pads: List<KitPad?>, onHit: (Int) -> Unit) {
                                     color = Schemes.classColor(pad.drumClass).toColor(),
                                     fontFamily = TapeFonts.marker,
                                     fontSize = 13.sp,
+                                    // Needed *because* of fillMaxWidth above:
+                                    // the text box now spans the pad, so
+                                    // BottomCenter no longer centres the
+                                    // glyphs — without this they sit hard
+                                    // against the left edge.
+                                    textAlign = TextAlign.Center,
                                 ),
                             )
                         }
