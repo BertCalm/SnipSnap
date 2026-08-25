@@ -216,6 +216,99 @@ growth loop stays peer-to-peer `.xpn`).
 
 ---
 
+# Wave 3 — the bench comes off the bench
+
+Wave 2's medium bets promoted to planned work, plus two follow-ons that
+waves 1–2 opened up. Same ranking rule; X6 stays last because it's the
+wave's only real DSP.
+
+## X1 — Melodic chop (was W8)
+
+Grid-chop a phrase, `Pitch` each slice, lay the slices out **low → high**
+so the pads play like an instrument — a vocal run or a bass line becomes
+something you can perform.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| X1.1 | Melodic placement in `ChopReviewModel` — pitched slices sorted ascending onto the pads, unpitched appended in capture order; per-row pitch cached | CORE | S | out-of-order tones land in ascending pad order |
+| X1.2 | CLI `chop --melodic` | CORE | S | a scrambled scale chops into a playable run |
+| X1.3 | App toggle on the chop screen (after M3) | APP | S | MELODIC next to the classic layout |
+
+## X2 — Takes + the 30-day bin (was W9)
+
+Kit-is-a-folder makes history nearly free. Every save archives the
+previous `kit.json` as a take; cleared samples go to a bin instead of
+oblivion ("EJECTED. THE BIN KEEPS IT 30 DAYS" has been in the copy since
+day one — now it's true).
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| X2.1 | Takes — `save()` archives the outgoing `kit.json` under `.takes/`, capped and rotated; `takes()` lists, `restoreTake(n)` rolls back | CORE | S | edit → save → restore → the earlier kit is back |
+| X2.2 | The bin — deletes move to `.bin/` stamped with when; `binContents()`, `purgeBin(olderThanDays = 30)`, `emptyBin()` | CORE | S | a cleared pad's WAV is recoverable for 30 days |
+| X2.3 | Takes/bin UI (after M0) | APP | S | the copy's promise, visible |
+
+## X3 — One-file backup (was W11)
+
+Every kit as an `.xpn` inside one archive; restore feeds them back
+through `XpnImporter`. Retention insurance and the "new phone" story.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| X3.1 | `KitBackup` (`:kit`) — backup(kitsRoot) → one zip of per-kit `.xpn`s (preflight-blocked kits skipped and named); restore(zip) → kit folders | CORE | S | backup → wipe → restore round-trips every clean kit |
+| X3.2 | CLI `backup` / `restore` | CORE | S | works on a folder of chopped kits |
+| X3.3 | App share/backup action (after M0) | APP | S | one file leaves the phone with everything on it |
+
+## X4 — Teach the machine, data path (was W10's CORE half)
+
+Every chip override is a labeled example. Log **feature vectors + labels
+only** (never audio — rights-clean by construction) and let the
+calibration harness eat them.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| X4.1 | Split `Classifier` — `classify(Features)` beside `classify(Snip)`, so a feature vector is testable without its audio | CORE | S | both paths agree on every corpus render |
+| X4.2 | `TeachLog` (`:shell`) — jsonl of {features, label} from `ChopReviewModel`'s overridden rows; reader for the harness side | CORE | S | overrides round-trip; a log line re-classifies |
+| X4.3 | Harness ingestion — overrides.jsonl in `reference/calibration/` scored alongside the WAVs | CORE | S | logged corrections show up in the confusion report |
+| X4.4 | Consent switch + wiring in the app (after M3) | APP | S | off by default; nothing leaves the device either way |
+
+## X5 — Multisample keys (new)
+
+`keys` grows from one note to several: each pitched capture becomes a
+zone at its detected root, zones tiling at the midpoints — a real
+multisampled instrument from a handful of notes.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| X5.1 | `OneNote.multiProgram` — roots detected and sorted, zones tile without gaps, duplicate roots resolved, one bad note refuses by name | CORE | S | three tones → three tiled zones, roots right |
+| X5.2 | CLI `keys a.wav b.wav c.wav` | CORE | S | the multisample lands dual-generation |
+
+## X6 — Sustain loops on captured notes (was W7)
+
+The organ's whole-period loop cut, generalized to real audio: find a
+loop of whole periods in the sustain, trim the sample to end exactly on
+the loop boundary (both formats' idiom loops to sample end), and bake a
+short crossfade when the raw seam isn't clean enough. Hold a captured
+string and it sings forever.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| X6.1 | `LoopCut` (`:audio`) — pitch-tracked whole-period loop search in the sustain region, seam scored by periodicity, crossfade baked when needed; unpitched/too-short refused | CORE | M | seam periodicity error under 1% of signal energy on a vibrato-laden tone; noise refused |
+| X6.2 | `keys --loop` — one-note and multisample instruments gain sustain loops (both formats' loop idioms already ship) | CORE | S | the instrument's layers carry loop points |
+| X6.3 | Bench — a held pad sustains with no audible seam | USER | S | ears, the only judge that counts |
+
+## X7 — Whole-project import (new)
+
+W3's importer said "project import is a later step"; this is the step.
+Every drum track inside an `.xpj` becomes its own kit folder — a whole
+MPC session's kits, editable on the phone.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| X7.1 | `Mpc3Importer.importProject` — each drum-type track parsed by the same instrument walk, samples from `_[ProjectData]/`, names unique-ified; keygroup tracks skipped and named | CORE | S–M | our Session-style export round-trips into N kits; commercial `.xpj`s parse |
+| X7.2 | CLI `import` handles `.xpj` — imports every drum kit inside, reports each | CORE | S | one command, whole session |
+
+---
+
 ## Sequence
 
 ```
@@ -226,8 +319,11 @@ CORE wave 1: ✓ all six landed (2026-08-24) — XpnImporter, KeySpec
 CORE wave 2: ✓ all six landed (2026-08-24) — groove capture,
   Mpc3Importer, one-note instrument, twin bank, ghost layers,
   bpm metadata
-  then the bench on demand: W8 melodic chop · W9 takes/bin · W11 backup ·
-  W10 teach-the-machine · W7 sustain loops (hardest DSP, last)
+
+CORE wave 3 (in order; X6 last, it's the wave's only real DSP):
+  X1 melodic chop → X5 multisample keys → X2 takes/bin → X3 backup →
+  X4 teach-the-machine data path → X7 project import → X6 sustain loops
+  Remaining on the bench: W12 pad waveforms (APP-only polish)
 
 APP (in milestone order; feature items slot in where their parent lands):
   M0 (F1.1) → +F4.2 new-kit menu · +W3.3 open-.xtd
