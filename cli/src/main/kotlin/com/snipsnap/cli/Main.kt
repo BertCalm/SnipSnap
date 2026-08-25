@@ -68,6 +68,8 @@ object Cli {
         |  --key SPEC        retune tonal pads into a key: Am, C, F#m, Eb major,
         |                    Dminpent, Gchromatic
         |  --export LIST     comma-separated: ${Exports.FORMATS.joinToString(",")}
+        |  --preview         render the kit playing its own beat into the
+        |                    expansion/xpn previews
         |  --overwrite       replace same-named output
         |
         |export options: --export LIST, --out DIR, --overwrite (as above)

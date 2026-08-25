@@ -59,17 +59,22 @@ object Exporters {
         clip: com.snipsnap.mpc3.Mpc3Clip? = null,
         /** MPC3_PROJECT only: the project tempo; null keeps the writer's default. */
         tempoBpm: Float? = null,
+        /** EXPANSION/XPN only: preview audio (see `KitPreview.render`). */
+        preview: com.snipsnap.audio.Snip? = null,
     ): ExportOutcome = when (format) {
         ExportFormat.PROGRAM_FOLDER -> {
             val r = KitExporter.exportProgramFolder(kit, kitDir, destRoot, overwrite)
             ExportOutcome(format, r.program, null, r.findings)
         }
         ExportFormat.EXPANSION -> {
-            val r = ExpansionWriter.write(kit, kitDir, destRoot, meta, overwrite = overwrite)
+            val r = ExpansionWriter.write(kit, kitDir, destRoot, meta, preview = preview, overwrite = overwrite)
             ExportOutcome(format, r.directory, null, findings(kit, kitDir))
         }
         ExportFormat.XPN -> {
-            val f = XpnPackager.write(kit, kitDir, File(destRoot, "${kit.name}.xpn"), meta, overwrite = overwrite)
+            val f = XpnPackager.write(
+                kit, kitDir, File(destRoot, "${kit.name}.xpn"), meta,
+                preview = preview, overwrite = overwrite,
+            )
             ExportOutcome(format, f, null, findings(kit, kitDir))
         }
         ExportFormat.MPC3_TRACK -> {

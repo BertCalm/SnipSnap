@@ -155,6 +155,32 @@ class CliTest {
     }
 
     @Test
+    fun `preview flag renders the kit playing its own beat into the pack`() {
+        val wav = writeBreak(File(temp, "prev.wav"))
+        val out = File(temp, "prev-out")
+        val (code, stdout, stderr) = cli(
+            "chop", wav.path, "--out", out.path, "--name", "PrevKit",
+            "--slices", "8", "--preview", "--export", "expansion,xpn",
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "preview: rendered the kit playing its own beat")
+
+        // The expansion carries it by the real packs' pairing convention.
+        val previewWav = File(out, "card/Expansions/PrevKit/[Previews]/PrevKit.xpm.wav")
+        assertTrue(previewWav.isFile, "expansion preview landed")
+        assertTrue(previewWav.length() > 50_000, "preview is real audio, not a stub")
+        val rendered = com.snipsnap.audio.WavReader.read(previewWav)
+        assertEquals(2, rendered.channels)
+        assertTrue(rendered.peak() > 0.05f, "the preview is audible")
+
+        // And the .xpn archive has the same entry inside.
+        java.util.zip.ZipFile(File(out, "card/PrevKit.xpn")).use { zip ->
+            val entry = zip.getEntry("[Previews]/PrevKit.xpm.wav")
+            assertTrue(entry != null && entry.size > 50_000, "xpn preview entry present")
+        }
+    }
+
+    @Test
     fun `groove flag embeds the capture's own rhythm in native exports`() {
         val wav = writeBreak(File(temp, "groove.wav"))
         val out = File(temp, "groove-out")

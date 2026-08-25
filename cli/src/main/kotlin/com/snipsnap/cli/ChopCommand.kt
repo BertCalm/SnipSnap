@@ -41,7 +41,7 @@ object ChopCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export"),
-            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic"),
+            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview"),
         )
         val input = opts.positional.firstOrNull()
             ?: throw CliError("chop wants an input file: snipsnap chop <input.wav>")
@@ -240,11 +240,18 @@ object ChopCommand {
 
         if (exportFormats != null) {
             out.println()
+            val preview = if (opts.has("--preview")) {
+                com.snipsnap.kit.KitPreview.render(kit, kitDir).also {
+                    out.println("preview: rendered the kit playing its own beat (%.1fs)".format(it.durationSeconds))
+                }
+            } else {
+                null
+            }
             // No explicit clip: groove.json (all four variations) drives the
             // native exports through Exporters' own fallback.
             Exports.write(
                 kit, kitDir, File(outRoot, "card"), exportFormats, opts.has("--overwrite"), out,
-                tempoBpm = tempo?.bpm,
+                tempoBpm = tempo?.bpm, preview = preview,
             )
         } else {
             out.println("(no --export given - kit folder only; formats: ${Exports.FORMATS.joinToString(",")})")

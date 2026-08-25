@@ -41,6 +41,7 @@ tempo, chop, classify each slice, auto-place onto the conventional layout
 | `--ghosts` | darker soft velocity zones under every one-shot pad — quiet hits sound soft, not just quiet |
 | `--key SPEC` | retune tonal pads into a key via `InKey`/`Tuner`: `Am`, `C`, `F#m`, `Eb major`, `Dminpent` |
 | `--export LIST` | comma-separated formats, see below |
+| `--preview` | render the kit playing its own beat (`KitPreview`) into the `expansion`/`xpn` exports as `[Previews]/<Kit>.xpm.wav` — the real packs' pairing convention, so the MPC browser auditions the kit before loading it. Uses the kit's saved groove; with none, an honest default: kick/snare/hat backbone when classes are known, a pad walk when they aren't |
 | `--overwrite` | replace same-named output |
 
 More than 16 hits doesn't drop slices: placement rounds up to whole banks,
@@ -59,7 +60,7 @@ threshold by.
 ### `export <kit-dir>` — the fan-out over an existing kit folder
 
 Takes any folder with a `kit.json` (one this CLI chopped, or one synced off
-a phone) and writes the chosen formats.
+a phone) and writes the chosen formats. `--preview` works here too.
 
 ### `import <file>` — the receive half, both directions
 

@@ -43,10 +43,14 @@ object Exports {
         out: PrintStream,
         clip: com.snipsnap.mpc3.Mpc3Clip? = null,
         tempoBpm: Float? = null,
+        preview: com.snipsnap.audio.Snip? = null,
     ) {
         out.println("exports (copy the contents of ${cardDir.path} onto the card):")
         for (format in formats) {
-            val o = Exporters.export(format, kit, kitDir, cardDir, overwrite, clip = clip, tempoBpm = tempoBpm)
+            val o = Exporters.export(
+                format, kit, kitDir, cardDir, overwrite,
+                clip = clip, tempoBpm = tempoBpm, preview = preview,
+            )
             val extra = o.companion?.let { " (+ ${it.name}/)" } ?: ""
             out.println("  %-10s %s%s  (%s)".format(format.id, o.primary.path, extra, NOTES.getValue(format)))
         }

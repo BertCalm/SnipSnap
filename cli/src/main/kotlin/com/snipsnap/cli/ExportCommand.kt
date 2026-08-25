@@ -17,7 +17,7 @@ object ExportCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--export", "--out"),
-            boolean = setOf("--overwrite"),
+            boolean = setOf("--overwrite", "--preview"),
         )
         val dirArg = opts.positional.firstOrNull()
             ?: throw CliError("export wants a kit folder: snipsnap export <kit-dir> --export xtd")
@@ -40,7 +40,14 @@ object ExportCommand {
             opts["--export"] ?: throw CliError("say which formats: --export ${Exports.FORMATS.joinToString(",")}"),
         )
         val cardDir = File(opts["--out"] ?: "snipsnap-out", "card")
-        Exports.write(kit, kitDir, cardDir, formats, opts.has("--overwrite"), out)
+        val preview = if (opts.has("--preview")) {
+            com.snipsnap.kit.KitPreview.render(kit, kitDir).also {
+                out.println("preview: rendered the kit playing its own beat (%.1fs)".format(it.durationSeconds))
+            }
+        } else {
+            null
+        }
+        Exports.write(kit, kitDir, cardDir, formats, opts.has("--overwrite"), out, preview = preview)
         return 0
     }
 }
