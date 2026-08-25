@@ -1391,8 +1391,10 @@ The seed is `ThumpKits.classic()` rendered through `KitAssembler` **on device** 
 
 **Files:**
 - Create: `app/src/main/kotlin/com/snipsnap/app/store/KitLibrary.kt`
+- Create: `app/src/main/kotlin/com/snipsnap/app/ui/Counts.kt`
 - Create: `app/src/main/kotlin/com/snipsnap/app/ui/KitsScreen.kt`
 - Test: `app/src/test/kotlin/com/snipsnap/app/store/KitLibraryTest.kt`
+- Test: `app/src/test/kotlin/com/snipsnap/app/ui/CountsTest.kt`
 
 **Interfaces:**
 - Consumes: `KitStore.list(root: File): List<File>`, `KitStore.load(dir: File): Kit`, `KitStore.FILE_NAME` (`"kit.json"`); `KitBuilderModel.open(kitDir: File)`, `.create(name: String, kitDir: File)`; `KitAssembler.assembleArranged(...)`; `ThumpKits.classic()`; `Names.isMpcSafe(name)`, `Names.sanitizeStem(stem)`; `Copy.EMPTY_SHELF`, `Copy.FRESH_TAPE`; `Kit.pads`
@@ -1519,6 +1521,19 @@ data class UnreadableKit(
 )
 
 /**
+ * One reading of the shelf: what was on it, and what could not be read.
+ *
+ * Returned as a value rather than left on the library as mutable state.
+ * A side-channel property cannot distinguish "checked, all clean" from
+ * "never checked" — both read as an empty list — and callers here fetch
+ * the shelf across an `await`, which is exactly where a stale read hides.
+ */
+data class ShelfListing(
+    val entries: List<KitEntry>,
+    val unreadable: List<UnreadableKit>,
+)
+
+/**
  * The shelf: kit folders under one root.
  *
  * Takes a [File], never a `Context` — the Activity resolves
@@ -1528,15 +1543,7 @@ data class UnreadableKit(
 class KitLibrary(val root: File) {
 
     /**
-     * Folders the last [list] call could not read. Not silent: the shelf
-     * skips them so one bad tape cannot take the app down, and the UI can
-     * say so.
-     */
-    var unreadable: List<UnreadableKit> = emptyList()
-        private set
-
-    /**
-     * The shelf, readable tapes only.
+     * The shelf: readable tapes, plus whatever could not be read.
      *
      * `KitStore.load` throws on a malformed `kit.json` and *deliberately*
      * refuses one written by a newer build — which is the right call for a
@@ -1544,8 +1551,12 @@ class KitLibrary(val root: File) {
      * propagate means one bad folder crashes the app on launch, with no
      * way back in to delete it. A tape that cannot be read is hidden, not
      * fatal.
+     *
+     * M0 does not yet show [ShelfListing.unreadable] anywhere; it is
+     * returned so the information exists rather than being swallowed, and
+     * so surfacing it later is a UI change and not an archaeology project.
      */
-    fun list(): List<KitEntry> {
+    fun list(): ShelfListing {
         val skipped = mutableListOf<UnreadableKit>()
         val kits = KitStore.list(root).mapNotNull { dir ->
             try {
@@ -1556,8 +1567,7 @@ class KitLibrary(val root: File) {
                 null
             }
         }.sortedBy { it.name.lowercase() }
-        unreadable = skipped
-        return kits
+        return ShelfListing(kits, skipped)
     }
 
     fun open(entry: KitEntry): KitBuilderModel = KitBuilderModel.open(entry.dir)
@@ -1601,6 +1611,61 @@ class KitLibrary(val root: File) {
 ```
 
 Expected: PASS (7 tests).
+
+- [ ] **Step 4b: Write `Counts.kt` and its test**
+
+Counted nouns appear on the shelf header, in the status bar and on every
+shelf row. Formatting them inline produced `1 TAPES` on a real device, in
+two files at once. It is one line of logic, so it lives in a function that
+can be tested rather than in two composables that cannot.
+
+`app/src/main/kotlin/com/snipsnap/app/ui/Counts.kt`:
+
+```kotlin
+package com.snipsnap.app.ui
+
+/**
+ * Counted nouns, in TapeOS's shouting register.
+ *
+ * Trivial, and worth its own file anyway: the first version of this was a
+ * `"$n TAPES"` literal duplicated across the shelf header and the status
+ * bar, and it read "1 TAPES" on the device. Logic that renders text is
+ * still logic — it belongs somewhere a test can reach.
+ */
+fun tapes(n: Int): String = if (n == 1) "1 TAPE" else "$n TAPES"
+
+fun snips(n: Int): String = if (n == 1) "1 SNIP" else "$n SNIPS"
+```
+
+`app/src/test/kotlin/com/snipsnap/app/ui/CountsTest.kt`:
+
+```kotlin
+package com.snipsnap.app.ui
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class CountsTest {
+
+    @Test
+    fun `one is singular`() {
+        assertEquals("1 TAPE", tapes(1))
+        assertEquals("1 SNIP", snips(1))
+    }
+
+    @Test
+    fun `zero is plural`() {
+        assertEquals("0 TAPES", tapes(0))
+        assertEquals("0 SNIPS", snips(0))
+    }
+
+    @Test
+    fun `many is plural`() {
+        assertEquals("16 SNIPS", snips(16))
+        assertEquals("42 TAPES", tapes(42))
+    }
+}
+```
 
 - [ ] **Step 5: Write `KitsScreen.kt`**
 
