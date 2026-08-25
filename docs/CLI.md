@@ -141,6 +141,17 @@ k-th pattern), mixer wired, samples pooled per-kit-prefixed in
 kit playing its groove, summed and peak-limited — as `<Name>.wav`
 beside the `.xpj`: the beat as a file you can send anywhere.
 
+### `pack <kit-dir>... --title NAME` — N kits, one expansion
+
+The commercial-pack shape: a catalog of programs under one tile.
+Programs under `Programs/`, each kit's WAVs in `Samples/<Kit>/` (bare-name
+references keep colliding stems apart, the way every harvested pack does
+it), a preview per kit in `[Previews]/`, one cover wearing the pack's
+title (`--art`/`--no-art` as with exports), `Expansion.xml` + on-card
+manifest. `--xpn` also zips the lot into one shareable file — manifest
+excluded, byte-stable — and `import` of that archive brings back **every**
+kit inside. A kit preflight refuses is skipped and named, backup-style.
+
 ### `backup <kits-root>` / `restore <backup.zip>` — everything on one file
 
 Every kit under a root packed as its own `.xpn` inside a single archive;

@@ -66,6 +66,8 @@ object KitArt {
         scheme: Scheme = Schemes.CHROME,
         seed: Int = 0,
         size: Int = DEFAULT_SIZE,
+        /** The tile's caption — a pack tile carries the pack's title, not one kit's. */
+        label: String = kit.name,
     ): BufferedImage {
         require(size in 64..2048) { "size wants 64..2048, got $size" }
         val img = BufferedImage(size, size, BufferedImage.TYPE_INT_RGB)
@@ -87,10 +89,10 @@ object KitArt {
             }
 
             // The name, pixel type, centred in the bottom band.
-            val label = kit.name.uppercase()
+            val caption = label.uppercase()
             val bandTop = size - m - nameBand + (nameBand * 0.25f).toInt()
             PixelType.draw(
-                g, label, size / 2, bandTop, nameBand / 2, rgb(scheme.lcdInk),
+                g, caption, size / 2, bandTop, nameBand / 2, rgb(scheme.lcdInk),
                 centered = true, maxWidthPx = size - 2 * m,
             )
 
@@ -111,9 +113,10 @@ object KitArt {
         scheme: Scheme = Schemes.CHROME,
         seed: Int = 0,
         size: Int = DEFAULT_SIZE,
+        label: String = kit.name,
     ): ByteArray {
         val out = ByteArrayOutputStream()
-        ImageIO.write(render(kit, kitDir, style, scheme, seed, size), "png", out)
+        ImageIO.write(render(kit, kitDir, style, scheme, seed, size, label), "png", out)
         return out.toByteArray()
     }
 

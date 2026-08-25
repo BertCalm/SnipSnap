@@ -56,6 +56,10 @@ object Cli {
         |  project <kit-dir>...  whole session -> one .xpj (kits + grooves +
         |                        optional --keys instrument, mixer wired;
         |                        --mixdown also renders the session as one WAV)
+        |  pack <kit-dir>... --title NAME
+        |                        N kits under one expansion tile, the
+        |                        commercial-pack shape (--xpn also zips it;
+        |                        per-kit previews included)
         |  backup <kits-root>    every kit as an .xpn inside one archive
         |  restore <backup.zip>  the archive back into kit folders
         |  diff <a> <b>          structured key-path diff of two MPC files,
@@ -130,6 +134,7 @@ object Cli {
                 "treat" -> TreatCommand.run(args.drop(1), out)
                 "feel" -> FeelCommand.run(args.drop(1), out)
                 "project" -> ProjectCommand.run(args.drop(1), out)
+                "pack" -> PackCommand.run(args.drop(1), out)
                 "backup" -> BackupCommand.backup(args.drop(1), out)
                 "restore" -> BackupCommand.restore(args.drop(1), out)
                 "diff" -> DiffCommand.run(args.drop(1), out)

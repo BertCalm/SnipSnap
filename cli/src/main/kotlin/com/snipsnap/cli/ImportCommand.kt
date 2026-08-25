@@ -53,7 +53,25 @@ object ImportCommand {
                 Triple(r.kit, r.directory, "track '${r.trackName}' (MPC 3 native)")
             }
             isZip(file) -> {
-                val r = XpnImporter.import(file, destRoot, overwrite)
+                val all = XpnImporter.importAll(file, destRoot, overwrite)
+                if (all.kits.isEmpty()) {
+                    throw CliError(
+                        "nothing imported from ${file.name}: " +
+                            all.skipped.joinToString("; ") { "'${it.first}' - ${it.second}" },
+                    )
+                }
+                if (all.kits.size > 1 || all.skipped.isNotEmpty()) {
+                    // A multi-program pack: every drum program lands.
+                    out.println("imported ${all.kits.size} kit(s) from pack ${file.name}:")
+                    all.kits.forEach {
+                        out.println("  + '${it.kit.name}' -> ${it.directory.path} (${it.kit.pads.size} pads)")
+                    }
+                    all.skipped.forEach { (name, why) -> out.println("  ! skipped '$name' - $why") }
+                    out.println("(edit them, or re-export: snipsnap export <kit-dir> --export ...)")
+                    return 0
+                }
+                val r = all.kits.firstOrNull()
+                    ?: throw CliError("nothing imported from ${file.name}")
                 Triple(r.kit, r.directory, "'${r.programEntry}' (.xpn archive)")
             }
             else -> throw CliError(

@@ -654,6 +654,37 @@ class CliTest {
     }
 
     @Test
+    fun `pack puts several kits under one tile and import receives them all`() {
+        val wav = writeBreak(File(temp, "pk.wav"))
+        val out = File(temp, "pk-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "PackA", "--slices", "4").first)
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "PackB", "--slices", "4").first)
+
+        val (code, stdout, stderr) = cli(
+            "pack", File(out, "PackA").path, File(out, "PackB").path,
+            "--title", "Crate Vol 1", "--out", out.path, "--xpn",
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "2 kit(s) under one tile")
+
+        val dest = File(out, "card/Expansions/Crate Vol 1")
+        assertTrue(File(dest, "Programs/PackA.xpm").isFile && File(dest, "Programs/PackB.xpm").isFile)
+        assertTrue(File(dest, "[Previews]/PackA.xpm.wav").isFile)
+        assertTrue(File(dest, "CrateVol1.png").isFile, "the pack tile wears the pack's name")
+
+        // The one-file twin comes back as every kit it carried.
+        val fresh = File(temp, "pk-fresh")
+        val (impCode, impOut, _) = cli("import", File(out, "card/Crate Vol 1.xpn").path, "--out", fresh.path)
+        assertEquals(0, impCode)
+        assertContains(impOut, "2 kit(s) from pack")
+        assertTrue(File(fresh, "PackA/kit.json").isFile && File(fresh, "PackB/kit.json").isFile)
+
+        val (noTitle, _, titleErr) = cli("pack", File(out, "PackA").path)
+        assertEquals(2, noTitle)
+        assertContains(titleErr, "--title")
+    }
+
+    @Test
     fun `backup and restore round-trip a folder of kits`() {
         val wav = writeBreak(File(temp, "bk.wav"))
         val out = File(temp, "bk-out")

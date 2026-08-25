@@ -33,17 +33,60 @@ object XpnImporter {
         val programEntry: String,
     )
 
+    /** What a whole multi-program archive (a pack) yielded. */
+    data class AllResult(
+        val kits: List<ImportResult>,
+        /** Program entry name to the reason it was skipped. */
+        val skipped: List<Pair<String, String>>,
+    )
+
     fun import(xpnFile: File, destRoot: File, overwrite: Boolean = false): ImportResult {
         require(xpnFile.isFile) { "no such file: $xpnFile" }
         ZipFile(xpnFile).use { zip ->
             val entries = zip.entries().toList().filter { !it.isDirectory }
-
-            val programEntry = entries
-                .filter { it.name.endsWith(".xpm", ignoreCase = true) && !inPreviews(it.name) }
-                .sortedBy { if (it.name.contains("Programs/")) 0 else 1 }
-                .firstOrNull()
+            val programEntry = programEntries(entries).firstOrNull()
                 ?: throw IllegalArgumentException("no .xpm program inside $xpnFile")
+            return importProgram(zip, entries, programEntry, xpnFile, destRoot, overwrite)
+        }
+    }
 
+    /**
+     * Every drum program in the archive becomes its own kit folder — the
+     * receive half of a multi-kit pack. Programs that refuse (keygroups,
+     * missing samples) are skipped and named, not fatal.
+     */
+    fun importAll(xpnFile: File, destRoot: File, overwrite: Boolean = false): AllResult {
+        require(xpnFile.isFile) { "no such file: $xpnFile" }
+        ZipFile(xpnFile).use { zip ->
+            val entries = zip.entries().toList().filter { !it.isDirectory }
+            val programs = programEntries(entries)
+            require(programs.isNotEmpty()) { "no .xpm program inside $xpnFile" }
+            val kits = mutableListOf<ImportResult>()
+            val skipped = mutableListOf<Pair<String, String>>()
+            for (program in programs) {
+                try {
+                    kits += importProgram(zip, entries, program, xpnFile, destRoot, overwrite)
+                } catch (e: IllegalArgumentException) {
+                    skipped += program.name to (e.message ?: "refused")
+                }
+            }
+            return AllResult(kits, skipped)
+        }
+    }
+
+    private fun programEntries(entries: List<java.util.zip.ZipEntry>) = entries
+        .filter { it.name.endsWith(".xpm", ignoreCase = true) && !inPreviews(it.name) }
+        .sortedWith(compareBy({ if (it.name.contains("Programs/")) 0 else 1 }, { it.name }))
+
+    private fun importProgram(
+        zip: ZipFile,
+        entries: List<java.util.zip.ZipEntry>,
+        programEntry: java.util.zip.ZipEntry,
+        xpnFile: File,
+        destRoot: File,
+        overwrite: Boolean,
+    ): ImportResult {
+        run {
             val xml = zip.getInputStream(programEntry).readBytes().toString(Charsets.UTF_8)
             require(!Regex("<Program\\s+type=\"Keygroup\"").containsMatchIn(xml)) {
                 "'${programEntry.name}' is a keygroup program - only drum programs import as kits"
