@@ -292,6 +292,29 @@ class CliTest {
     }
 
     @Test
+    fun `project builds one session from several kits`() {
+        val wav = writeBreak(File(temp, "sess.wav"))
+        val out = File(temp, "sess-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Sess A", "--groove").first)
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Sess B").first)
+
+        val (code, stdout, stderr) = cli(
+            "project", File(out, "Sess A").path, File(out, "Sess B").path,
+            "--name", "CLI Session", "--out", out.path,
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "kit track:        Sess A")
+        assertContains(stdout, "kit track:        Sess B")
+        val xpj = File(out, "card/CLI Session.xpj")
+        assertTrue(xpj.isFile)
+        val read = com.snipsnap.mpc3.Mpc3Project.read(xpj)
+        assertTrue(read.isProject)
+        assertTrue(read.trackNames.containsAll(listOf("Sess A", "Sess B")))
+        // Kit A's groove (all four variations were saved) rides along.
+        assertContains(Acvs.read(xpj).payloadText, "Sess A Groove")
+    }
+
+    @Test
     fun `backup and restore round-trip a folder of kits`() {
         val wav = writeBreak(File(temp, "bk.wav"))
         val out = File(temp, "bk-out")
