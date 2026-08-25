@@ -36,6 +36,10 @@ object OneNote {
         val confidence: Float,
         /** The sample stem the program references. */
         val sampleStem: String,
+        /** What actually gets written — trimmed/crossfaded when looped. */
+        val sample: Snip,
+        /** 0 = plays unlooped; otherwise the frame playback wraps back to. */
+        val loopStartFrame: Long = 0,
     )
 
     /**
@@ -43,7 +47,7 @@ object OneNote {
      * [IllegalArgumentException] with the reason when no confident pitch
      * is found.
      */
-    fun program(name: String, snip: Snip): Result {
+    fun program(name: String, snip: Snip, sustainLoop: Boolean = false): Result {
         require(Names.isMpcSafe(name)) { "instrument name isn't MPC-safe: '$name'" }
         require(snip.frameCount > 0) { "empty snip" }
         val est = Pitch.detect(snip)
@@ -55,6 +59,10 @@ object OneNote {
                 est.hz, est.confidence, MIN_CONFIDENCE,
             ) + "try a cleaner sustained note"
         }
+        // A note that honestly has no sustain simply plays unlooped —
+        // pretending a pluck loops sounds worse than decay.
+        val looped = if (sustainLoop) com.snipsnap.audio.LoopCut.sustainLoop(snip) else null
+        val sample = looped?.snip ?: snip
         val rootMidi = Scales.hzToMidi(est.hz).roundToInt().coerceIn(0, 127)
         val stem = Names.sanitizeStem("${name.filter { !it.isWhitespace() }}_${Scales.nameOf(rootMidi)}")
         val program = KeygroupProgram(
@@ -65,13 +73,19 @@ object OneNote {
                     highNote = 127,
                     rootNote = rootMidi,
                     layers = listOf(
-                        VelocityLayer(stem, snip.frameCount.toLong(), velStart = 0, velEnd = 127),
+                        VelocityLayer(
+                            stem, sample.frameCount.toLong(), velStart = 0, velEnd = 127,
+                            loopStartFrame = looped?.loopStartFrame ?: 0,
+                        ),
                     ),
                 ),
             ),
             volumeRelease = 0.35f,
         )
-        return Result(program, rootMidi, Scales.nameOf(rootMidi), est.hz, est.confidence, stem)
+        return Result(
+            program, rootMidi, Scales.nameOf(rootMidi), est.hz, est.confidence, stem,
+            sample = sample, loopStartFrame = looped?.loopStartFrame ?: 0,
+        )
     }
 
     /**
@@ -79,9 +93,15 @@ object OneNote {
      * suite ships: `<Name>.xty` beside `<Name>_[TrackData]/` holding the
      * WAV and the MPC 2 `.xpm` twin.
      */
-    fun export(name: String, snip: Snip, destRoot: File, overwrite: Boolean = false): Result {
-        val result = program(name, snip)
-        writePackage(name, result.program, mapOf(result.sampleStem to snip), destRoot, overwrite)
+    fun export(
+        name: String,
+        snip: Snip,
+        destRoot: File,
+        overwrite: Boolean = false,
+        sustainLoop: Boolean = false,
+    ): Result {
+        val result = program(name, snip, sustainLoop)
+        writePackage(name, result.program, mapOf(result.sampleStem to result.sample), destRoot, overwrite)
         return result
     }
 
@@ -96,9 +116,16 @@ object OneNote {
         val sampleStem: String,
         /** The label the caller gave the snip — usually its file name. */
         val label: String,
+        /** 0 = plays unlooped; otherwise the frame playback wraps back to. */
+        val loopStartFrame: Long = 0,
     )
 
-    data class MultiResult(val program: KeygroupProgram, val zones: List<Zone>)
+    data class MultiResult(
+        val program: KeygroupProgram,
+        val zones: List<Zone>,
+        /** What actually gets written per stem — trimmed/crossfaded when looped. */
+        val samples: Map<String, Snip>,
+    )
 
     /**
      * Several pitched captures → a real multisampled instrument: each
@@ -106,15 +133,21 @@ object OneNote {
      * Any unpitched snip refuses **by its label**; two snips detecting
      * the same root refuse by both labels — the caller picks, we don't.
      */
-    fun multiProgram(name: String, snips: List<Pair<String, Snip>>): MultiResult {
+    fun multiProgram(name: String, snips: List<Pair<String, Snip>>, sustainLoop: Boolean = false): MultiResult {
         require(Names.isMpcSafe(name)) { "instrument name isn't MPC-safe: '$name'" }
         require(snips.isNotEmpty()) { "no snips, no instrument" }
         require(snips.map { it.first }.toSet().size == snips.size) { "labels must be unique" }
         if (snips.size == 1) {
-            val r = program(name, snips.single().second)
+            val r = program(name, snips.single().second, sustainLoop)
             return MultiResult(
                 r.program,
-                listOf(Zone(r.rootMidi, r.rootName, r.detectedHz, r.confidence, r.sampleStem, snips.single().first)),
+                listOf(
+                    Zone(
+                        r.rootMidi, r.rootName, r.detectedHz, r.confidence, r.sampleStem,
+                        snips.single().first, r.loopStartFrame,
+                    ),
+                ),
+                mapOf(r.sampleStem to r.sample),
             )
         }
 
@@ -125,9 +158,15 @@ object OneNote {
             require(est.confidence >= MIN_CONFIDENCE) {
                 "%s: pitch too uncertain (%.0f Hz at confidence %.2f)".format(label, est.hz, est.confidence)
             }
+            // Per-zone sustain loops: a zone that honestly has none plays unlooped.
+            val looped = if (sustainLoop) com.snipsnap.audio.LoopCut.sustainLoop(snip) else null
+            val sample = looped?.snip ?: snip
             val root = Scales.hzToMidi(est.hz).roundToInt().coerceIn(0, 127)
-            Zone(root, Scales.nameOf(root), est.hz, est.confidence,
-                Names.sanitizeStem("${prefix}_${Scales.nameOf(root)}"), label) to snip
+            Zone(
+                root, Scales.nameOf(root), est.hz, est.confidence,
+                Names.sanitizeStem("${prefix}_${Scales.nameOf(root)}"), label,
+                looped?.loopStartFrame ?: 0,
+            ) to sample
         }.sortedBy { it.first.rootMidi }
 
         detected.zipWithNext().forEach { (a, b) ->
@@ -137,17 +176,24 @@ object OneNote {
         }
 
         val roots = detected.map { it.first.rootMidi }
-        val keygroups = detected.mapIndexed { i, (zone, snip) ->
+        val keygroups = detected.mapIndexed { i, (zone, sample) ->
             Keygroup(
                 lowNote = if (i == 0) 0 else (roots[i - 1] + roots[i]) / 2 + 1,
                 highNote = if (i == detected.lastIndex) 127 else (roots[i] + roots[i + 1]) / 2,
                 rootNote = zone.rootMidi,
                 layers = listOf(
-                    VelocityLayer(zone.sampleStem, snip.frameCount.toLong(), velStart = 0, velEnd = 127),
+                    VelocityLayer(
+                        zone.sampleStem, sample.frameCount.toLong(), velStart = 0, velEnd = 127,
+                        loopStartFrame = zone.loopStartFrame,
+                    ),
                 ),
             )
         }
-        return MultiResult(KeygroupProgram(name, keygroups, volumeRelease = 0.35f), detected.map { it.first })
+        return MultiResult(
+            KeygroupProgram(name, keygroups, volumeRelease = 0.35f),
+            detected.map { it.first },
+            detected.associate { (zone, sample) -> zone.sampleStem to sample },
+        )
     }
 
     /** Multisample edition of [export]. */
@@ -156,11 +202,10 @@ object OneNote {
         snips: List<Pair<String, Snip>>,
         destRoot: File,
         overwrite: Boolean = false,
+        sustainLoop: Boolean = false,
     ): MultiResult {
-        val result = multiProgram(name, snips)
-        val bySnip = snips.toMap()
-        val samples = result.zones.associate { zone -> zone.sampleStem to bySnip.getValue(zone.label) }
-        writePackage(name, result.program, samples, destRoot, overwrite)
+        val result = multiProgram(name, snips, sustainLoop)
+        writePackage(name, result.program, result.samples, destRoot, overwrite)
         return result
     }
 

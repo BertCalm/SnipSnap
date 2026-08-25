@@ -15,7 +15,7 @@ import java.io.PrintStream
 object KeysCommand {
 
     fun run(args: List<String>, out: PrintStream): Int {
-        val opts = Options.parse(args, valued = setOf("--name", "--out"), boolean = setOf("--overwrite"))
+        val opts = Options.parse(args, valued = setOf("--name", "--out"), boolean = setOf("--overwrite", "--loop"))
         if (opts.positional.isEmpty()) {
             throw CliError("keys wants pitched notes: snipsnap keys <note.wav> [more.wav ...]")
         }
@@ -34,7 +34,14 @@ object KeysCommand {
         if (!Names.isMpcSafe(name)) throw CliError("instrument name isn't MPC-safe: '$name'")
         val cardDir = File(opts["--out"] ?: "snipsnap-out", "card")
 
-        val result = OneNote.multiExport(name, snips, cardDir, opts.has("--overwrite"))
+        val result = OneNote.multiExport(name, snips, cardDir, opts.has("--overwrite"), opts.has("--loop"))
+        if (opts.has("--loop")) {
+            val looped = result.zones.count { it.loopStartFrame > 0 }
+            out.println(
+                if (looped == 0) "sustain loops: none found - the notes play as they decay"
+                else "sustain loops: $looped of ${result.zones.size} zone(s) sing forever",
+            )
+        }
         if (result.zones.size == 1) {
             val z = result.zones.single()
             out.println(

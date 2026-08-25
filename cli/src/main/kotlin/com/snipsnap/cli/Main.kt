@@ -38,7 +38,8 @@ object Cli {
         |  classify <wav...>     print what the classifier hears in each file
         |  export <kit-dir>      export an existing kit folder to MPC formats
         |  import <file>         unpack an .xpn archive or a native .xtd into a kit folder
-        |  keys <note.wav>       one pitched note -> a playable chromatic instrument
+        |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
+        |                        (--loop cuts sustain loops: held pads sing forever)
         |  remix <kit-dir>       bank B becomes seeded evil twins of bank A
         |  backup <kits-root>    every kit as an .xpn inside one archive
         |  restore <backup.zip>  the archive back into kit folders

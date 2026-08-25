@@ -136,6 +136,47 @@ class OneNoteTest {
         assertTrue("one.wav" in dupe.message!! && "two.wav" in dupe.message!!)
     }
 
+    /** A genuinely sustained 220 Hz note (slow decay, light noise). */
+    private fun heldNote(): Snip {
+        val rng = Random(6)
+        val n = rate * 2
+        val out = FloatArray(n)
+        for (i in 0 until n) {
+            val t = i.toDouble() / rate
+            val env = (if (t < 0.01) t / 0.01 else Math.exp(-0.25 * (t - 0.01))).toFloat()
+            out[i] = ((0.5 * sin(2 * PI * 220 * t) + 0.15 * sin(2 * PI * 440 * t)).toFloat() +
+                (rng.nextFloat() * 2 - 1) * 0.002f) * env
+        }
+        return Snip(out, 1, rate)
+    }
+
+    @Test
+    fun `sustain loops ride into the instrument when asked and found`() {
+        val held = heldNote()
+        val r = OneNote.program("Held", held, sustainLoop = true)
+        assertTrue(r.loopStartFrame > 0, "a held note should loop")
+        val layer = r.program.keygroups.single().layers.single()
+        assertEquals(r.loopStartFrame, layer.loopStartFrame)
+        assertEquals(r.sample.frameCount.toLong(), layer.frameCount)
+        assertTrue(r.sample.frameCount < held.frameCount, "trimmed to the loop boundary")
+
+        // A fast-decaying pluck honestly has no sustain: plays unlooped.
+        val pluck = OneNote.program("Pluck", note220(), sustainLoop = true)
+        assertEquals(0, pluck.loopStartFrame)
+
+        // Multi path: the loop lands per zone and the written WAV is trimmed.
+        val card = File(temp, "loop-card")
+        val multi = OneNote.multiExport(
+            "Held Keys", listOf("held.wav" to held), card, sustainLoop = true,
+        )
+        val zone = multi.zones.single()
+        assertTrue(zone.loopStartFrame > 0)
+        val written = com.snipsnap.audio.WavReader.read(
+            File(card, "Held Keys_[TrackData]/${zone.sampleStem}.wav"),
+        )
+        assertEquals(multi.samples.getValue(zone.sampleStem).frameCount, written.frameCount)
+    }
+
     @Test
     fun `unpitched material is refused, never guessed at`() {
         val rng = Random(3)

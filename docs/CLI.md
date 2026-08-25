@@ -87,7 +87,10 @@ become a real **multisample**: each note a zone at its detected root,
 zones tiled at the midpoints. Lands the dual-generation layout (`.xty`
 beside `_[TrackData]/` with the `.xpm` twin). Unpitched material is
 refused by file name; two files detecting the same root refuse by both
-names — you pick, it doesn't.
+names — you pick, it doesn't. `--loop` cuts **sustain loops**: a
+whole-period loop found in each note's sustain (crossfaded when the raw
+seam isn't clean), trimmed to the loop-to-end idiom both formats share —
+held pads sing forever. A note with no honest sustain plays unlooped.
 
 ### `backup <kits-root>` / `restore <backup.zip>` — everything on one file
 
