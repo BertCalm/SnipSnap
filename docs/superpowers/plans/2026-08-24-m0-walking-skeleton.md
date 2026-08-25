@@ -1138,9 +1138,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 // NB: no `import ...layout.weight` — RowScope.weight and ColumnScope.weight
 // are member extensions and cannot be imported by name. Inside a Row {} or
 // Column {} the scope receiver supplies them; an explicit import resolves to
@@ -1183,7 +1186,13 @@ fun SnipSnapWindow(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            // The desk bleeds edge to edge — it is the desktop behind
+            // everything, and it should run under the status and gesture
+            // bars. The *window* must not: targetSdk 35 on Android 15 is
+            // edge-to-edge with no opt-out, so without this inset the
+            // system clock draws straight through the titlebar.
             .background(Brush.verticalGradient(listOf(s.desk1.toColor(), s.desk2.toColor())))
+            .windowInsetsPadding(WindowInsets.systemBars)
             .padding(Layout.OUTER_MARGIN.dp),
     ) {
         Column(
