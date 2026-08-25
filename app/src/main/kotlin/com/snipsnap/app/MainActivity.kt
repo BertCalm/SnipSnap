@@ -74,10 +74,24 @@ class MainActivity : ComponentActivity() {
             var openKit by remember { mutableStateOf<KitEntry?>(null) }
             var newTape by remember { mutableStateOf(false) }
             var toast by remember { mutableStateOf<String?>(null) }
+            var seeding by remember { mutableStateOf(false) }
 
             LaunchedEffect(Unit) {
-                withContext(Dispatchers.IO) { library.seedIfEmpty() }
-                entries = withContext(Dispatchers.IO) { library.list() }.entries
+                // Listing is cheap — it only looks for folders holding a
+                // kit.json — so ask first and seed only if the shelf is bare.
+                val existing = withContext(Dispatchers.IO) { library.list().entries }
+                if (existing.isEmpty()) {
+                    seeding = true
+                    // Dispatchers.Default, not IO: rendering sixteen pads is
+                    // compute, and IO's pool is sized for threads parked on
+                    // blocking calls. Measured at ~24s on an emulator against
+                    // 39ms on a warm desktop JVM — cold ART interpreting tight
+                    // float loops — so this is a real wait the UI must own,
+                    // not a blip to hide.
+                    withContext(Dispatchers.Default) { library.seedIfEmpty() }
+                    seeding = false
+                }
+                entries = withContext(Dispatchers.IO) { library.list().entries }
             }
 
             LaunchedEffect(state.personality) {
@@ -110,6 +124,7 @@ class MainActivity : ComponentActivity() {
                         when (state.screen) {
                             Screen.KITS -> KitsScreen(
                                 entries = entries,
+                                seeding = seeding,
                                 onOpen = { openKit = it; state = state.goTo(Screen.KIT) },
                                 onNew = { newTape = true },
                             )
@@ -117,7 +132,8 @@ class MainActivity : ComponentActivity() {
                                 val entry = openKit
                                 if (entry == null) {
                                     KitsScreen(
-                                        entries,
+                                        entries = entries,
+                                        seeding = seeding,
                                         onOpen = { openKit = it; state = state.goTo(Screen.KIT) },
                                         onNew = { newTape = true },
                                     )
