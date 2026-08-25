@@ -2242,6 +2242,12 @@ fun PadGrid(pads: List<KitPad?>, onHit: (Int) -> Unit) {
                                     color = Schemes.classColor(pad.drumClass).toColor(),
                                     fontFamily = TapeFonts.marker,
                                     fontSize = 13.sp,
+                                    // Needed *because* of fillMaxWidth above:
+                                    // the text box now spans the pad, so
+                                    // BottomCenter no longer centres the
+                                    // glyphs — without this they sit hard
+                                    // against the left edge.
+                                    textAlign = TextAlign.Center,
                                 ),
                             )
                         }
