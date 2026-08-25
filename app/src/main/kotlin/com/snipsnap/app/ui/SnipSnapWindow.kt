@@ -107,6 +107,8 @@ private fun MenuRow(current: Screen, onMenu: (Screen) -> Unit) {
                 modifier = Modifier
                     .clickable { onMenu(screen) }
                     .padding(horizontal = 4.dp, vertical = 3.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 style = TextStyle(
                     color = if (screen == current) s.lcdInk.toColor() else s.ink2.toColor(),
                     fontFamily = TapeFonts.pixel,
