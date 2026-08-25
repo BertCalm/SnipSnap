@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.snipsnap.app.audio.PadPlayer
 import com.snipsnap.app.nav.NavState
 import com.snipsnap.app.nav.Screen
 import com.snipsnap.app.nav.goTo
@@ -18,9 +19,11 @@ import com.snipsnap.app.store.KitEntry
 import com.snipsnap.app.store.KitLibrary
 import com.snipsnap.app.theme.LcdSurface
 import com.snipsnap.app.theme.TapeOsTheme
+import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.SnipSnapWindow
 import com.snipsnap.app.ui.tapes
+import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Schemes
 import java.io.File
@@ -34,9 +37,12 @@ import kotlinx.coroutines.withContext
  */
 class MainActivity : ComponentActivity() {
 
+    private lateinit var padSound: PadPlayer
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val library = KitLibrary(File(filesDir, "kits"))
+        padSound = PadPlayer(this)
 
         setContent {
             var state by remember { mutableStateOf(NavState(Screen.KITS)) }
@@ -70,10 +76,24 @@ class MainActivity : ComponentActivity() {
                             // TAPE dialog; the button is inert until then.
                             onNew = { },
                         )
+                        Screen.KIT -> {
+                            val entry = openKit
+                            if (entry == null) {
+                                KitsScreen(entries, onOpen = { openKit = it; state = state.goTo(Screen.KIT) }, onNew = {})
+                            } else {
+                                val model = remember(entry.dir) { KitBuilderModel.open(entry.dir) }
+                                KitScreen(model = model, sound = padSound, onHit = {})
+                            }
+                        }
                         else -> LcdSurface(modifier = Modifier.fillMaxSize()) { /* placeholder */ }
                     }
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        padSound.release()
+        super.onDestroy()
     }
 }
