@@ -48,8 +48,8 @@ object ChopCommand {
     fun chop(args: List<String>, out: PrintStream): Result {
         val opts = Options.parse(
             args,
-            valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export", "--swing"),
-            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview"),
+            valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export", "--swing", "--art"),
+            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview", "--no-art"),
         )
         val input = opts.positional.firstOrNull()
             ?: throw CliError("chop wants an input file: snipsnap chop <input.wav>")
@@ -66,6 +66,10 @@ object ChopCommand {
         // Validate every option before touching audio: a typo'd format
         // should fail in a millisecond, not after a minute of chopping.
         val exportFormats = opts["--export"]?.let(Exports::parseFormats)
+        if (opts.has("--no-art") && opts["--art"] != null) {
+            throw CliError("--art and --no-art contradict each other")
+        }
+        val artStyle = Exports.parseArtStyle(opts["--art"])
         val key = opts["--key"]?.let {
             try {
                 KeySpec.parse(it)
@@ -268,11 +272,14 @@ object ChopCommand {
             } else {
                 null
             }
+            val artwork = Exports.renderArtwork(
+                kit, kitDir, exportFormats, artStyle, opts.has("--no-art"), out,
+            )
             // No explicit clip: groove.json (all four variations) drives the
             // native exports through Exporters' own fallback.
             Exports.write(
                 kit, kitDir, File(outRoot, "card"), exportFormats, opts.has("--overwrite"), out,
-                tempoBpm = tempo?.bpm, preview = preview,
+                tempoBpm = tempo?.bpm, preview = preview, artworkPng = artwork,
             )
         } else {
             out.println("(no --export given - kit folder only; formats: ${Exports.FORMATS.joinToString(",")})")

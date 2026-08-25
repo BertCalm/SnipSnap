@@ -16,9 +16,13 @@ object ExportCommand {
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(
             args,
-            valued = setOf("--export", "--out"),
-            boolean = setOf("--overwrite", "--preview"),
+            valued = setOf("--export", "--out", "--art"),
+            boolean = setOf("--overwrite", "--preview", "--no-art"),
         )
+        if (opts.has("--no-art") && opts["--art"] != null) {
+            throw CliError("--art and --no-art contradict each other")
+        }
+        val artStyle = Exports.parseArtStyle(opts["--art"])
         val dirArg = opts.positional.firstOrNull()
             ?: throw CliError("export wants a kit folder: snipsnap export <kit-dir> --export xtd")
         if (opts.positional.size > 1) {
@@ -47,7 +51,11 @@ object ExportCommand {
         } else {
             null
         }
-        Exports.write(kit, kitDir, cardDir, formats, opts.has("--overwrite"), out, preview = preview)
+        val artwork = Exports.renderArtwork(kit, kitDir, formats, artStyle, opts.has("--no-art"), out)
+        Exports.write(
+            kit, kitDir, cardDir, formats, opts.has("--overwrite"), out,
+            preview = preview, artworkPng = artwork,
+        )
         return 0
     }
 }

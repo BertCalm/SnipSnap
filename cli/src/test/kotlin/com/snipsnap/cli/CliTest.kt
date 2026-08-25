@@ -284,6 +284,53 @@ class CliTest {
     }
 
     @Test
+    fun `expansion exports carry the waveform tile by default`() {
+        val wav = writeBreak(File(temp, "tile.wav"))
+        val out = File(temp, "tile-out")
+        val (code, stdout, stderr) = cli(
+            "chop", wav.path, "--out", out.path, "--name", "TileKit",
+            "--slices", "8", "--export", "expansion,xpn",
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "cover art: waveform tile")
+
+        val art = File(out, "card/Expansions/TileKit/TileKit.png")
+        assertTrue(art.isFile, "the browser tile landed")
+        val head = art.readBytes().copyOfRange(0, 4)
+        assertTrue(head[1] == 'P'.code.toByte() && head[2] == 'N'.code.toByte(), "a real PNG")
+        java.util.zip.ZipFile(File(out, "card/TileKit.xpn")).use { zip ->
+            assertTrue(zip.getEntry("artwork.png") != null, "the archive carries it too")
+        }
+
+        // The verdict's runner-up is one flag away; opting out is another.
+        val rings = File(temp, "rings-out")
+        assertEquals(
+            0,
+            cli(
+                "export", File(out, "TileKit").path, "--export", "expansion",
+                "--art", "rings", "--out", rings.path,
+            ).first,
+        )
+        assertTrue(File(rings, "card/Expansions/TileKit/TileKit.png").isFile)
+
+        val bare = File(temp, "bare-out")
+        val (bareCode, bareOut, _) = cli(
+            "export", File(out, "TileKit").path, "--export", "expansion",
+            "--no-art", "--out", bare.path,
+        )
+        assertEquals(0, bareCode)
+        assertTrue("cover art" !in bareOut, "opted out quietly")
+        assertTrue(!File(bare, "card/Expansions/TileKit/TileKit.png").exists())
+
+        val (clashCode, _, clashErr) = cli(
+            "export", File(out, "TileKit").path, "--export", "expansion",
+            "--art", "rings", "--no-art",
+        )
+        assertEquals(2, clashCode)
+        assertContains(clashErr, "contradict")
+    }
+
+    @Test
     fun `art renders cover tiles for a kit, all styles or one`() {
         val wav = writeBreak(File(temp, "art.wav"))
         val out = File(temp, "art-out")

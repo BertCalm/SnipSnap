@@ -474,8 +474,8 @@ style/scheme/seed, and the winning direction becomes the export default.
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
 | Z6.1 | ✓ done: `KitArt` (`:shell`) — cover renderer: kit name + waveform/pad-grid motifs drawn from the kit's own samples and classes, palette from `Schemes`, style + seed + size parameters; deterministic bytes for identical inputs; CLI `art <kit-dir> [--style NAME] [--scheme NAME] [--seed N] [--size PX] [--out FILE]` for the iteration loop | CORE | S–M | same inputs → identical PNG; valid dimensions; every style renders every starter kit without error |
-| Z6.2 | ▶ running: prototype loop — you regenerate and eyeball (`snipsnap art …`), call out directions; styles/parameters evolve per feedback until one is the keeper | USER+CORE | S | the default style is chosen by eye, not by me; verdict recorded here |
-| Z6.3 | Wire-through — the chosen style renders by default into expansion/`.xpn` exports (artwork param plumbed through `Exporters`); `--no-art` opts out | CORE | S | exported expansion carries the tile; the Live III browser shows it (bench) |
+| Z6.2 | ✓ done: prototype loop — **verdict (2026-08-25): waveform and rings won**; waveform is the export default, rings the runner-up one `--art rings` away | USER+CORE | S | the default style was chosen by eye |
+| Z6.3 | ✓ done: wire-through — waveform tiles render by default into expansion/`.xpn` exports (CLI and export wizard alike; artwork plumbed through `Exporters`); `--art` picks, `--no-art` opts out | CORE | S | exported expansion carries the tile; the Live III browser shows it (bench) |
 
 **Below the line (wave 6 candidates):** multi-sequence projects — the
 four groove variations as verse/chorus sequences in one `.xpj` (waits on
@@ -504,11 +504,11 @@ CORE wave 4: ✓ all six landed (2026-08-25) — total recall, pattern
   variations, session builder, pad treatments, preview renderer,
   diff tool. Bench rows (Y2.3/Y5.3/Y6.3) and app hooks remain.
 
-CORE wave 5: ✓ all CORE items landed (2026-08-25) — art renderer +
-  CLI, swing, auto slice-count, chop-all, kit merge, MIDI bridge.
-  Open: Z6.2 art prototyping loop (running — tiles delivered, verdict
-  pending) → Z6.3 wire-through once a style wins.
-  Remaining on the bench: W12 pad waveforms (APP-only polish)
+CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
+  auto slice-count, chop-all, kit merge, MIDI bridge, and the art
+  wire-through (Z6.2 verdict: waveform default, rings runner-up).
+  Remaining on the bench: W12 pad waveforms (APP-only polish) ·
+  the Live III showing the tile (rides the next card session)
 
 APP (in milestone order; feature items slot in where their parent lands):
   M0 (F1.1) → +F4.2 new-kit menu · +W3.3 open-.xtd

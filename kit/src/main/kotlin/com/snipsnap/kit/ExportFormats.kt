@@ -62,19 +62,24 @@ object Exporters {
         tempoBpm: Float? = null,
         /** EXPANSION/XPN only: preview audio (see `KitPreview.render`). */
         preview: com.snipsnap.audio.Snip? = null,
+        /** EXPANSION/XPN only: the browser tile (see `KitArt` in `:shell`). */
+        artworkPng: ByteArray? = null,
     ): ExportOutcome = when (format) {
         ExportFormat.PROGRAM_FOLDER -> {
             val r = KitExporter.exportProgramFolder(kit, kitDir, destRoot, overwrite)
             ExportOutcome(format, r.program, null, r.findings)
         }
         ExportFormat.EXPANSION -> {
-            val r = ExpansionWriter.write(kit, kitDir, destRoot, meta, preview = preview, overwrite = overwrite)
+            val r = ExpansionWriter.write(
+                kit, kitDir, destRoot, meta,
+                artworkPng = artworkPng, preview = preview, overwrite = overwrite,
+            )
             ExportOutcome(format, r.directory, null, findings(kit, kitDir))
         }
         ExportFormat.XPN -> {
             val f = XpnPackager.write(
                 kit, kitDir, File(destRoot, "${kit.name}.xpn"), meta,
-                preview = preview, overwrite = overwrite,
+                artworkPng = artworkPng, preview = preview, overwrite = overwrite,
             )
             ExportOutcome(format, f, null, findings(kit, kitDir))
         }

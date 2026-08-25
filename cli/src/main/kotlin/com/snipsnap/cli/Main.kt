@@ -87,9 +87,13 @@ object Cli {
         |  --export LIST     comma-separated: ${Exports.FORMATS.joinToString(",")}
         |  --preview         render the kit playing its own beat into the
         |                    expansion/xpn previews
+        |  --art STYLE       the expansion/xpn browser tile's style (default
+        |                    waveform; also rings, grid, slices)
+        |  --no-art          skip the browser tile
         |  --overwrite       replace same-named output
         |
-        |export options: --export LIST, --out DIR, --overwrite (as above)
+        |export options: --export LIST, --out DIR, --overwrite, --preview,
+        |                --art STYLE, --no-art (as above)
         |
         |Exports land under <out>/card/ - copy its contents onto the MPC's
         |SD card or USB drive as-is.
