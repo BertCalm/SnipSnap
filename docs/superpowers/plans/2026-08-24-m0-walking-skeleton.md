@@ -543,9 +543,16 @@ Fonts are **bundled**, not downloadable. `androidx.compose.ui.text.googlefonts` 
   - `@Composable fun TapeOsTheme(scheme: Scheme, content: @Composable () -> Unit)`
   - `fun Scheme.tokens(): List<Pair<String, Int>>`
   - `object TapeFonts { val lcd: FontFamily; val pixel: FontFamily; val display: FontFamily; val marker: FontFamily }`
-  - `@Composable fun Modifier.raised(radius: Dp = 0.dp): Modifier`
-  - `@Composable fun Modifier.pressed(radius: Dp = 0.dp): Modifier`
-  - `@Composable fun Modifier.sunken(radius: Dp = 0.dp): Modifier`
+  - `@Composable fun Modifier.raised(inset: Dp = 2.dp): Modifier`
+  - `@Composable fun Modifier.pressed(inset: Dp = 2.dp): Modifier`
+  - `@Composable fun Modifier.sunken(inset: Dp = 2.dp): Modifier`
+
+    `inset` is the **bevel edge thickness**, not a corner radius. The bevel
+    draws square edges; rounding is a separate concern composed by the
+    caller — `Modifier.clip(RoundedCornerShape(Layout.PAD_RADIUS.dp)).raised()`
+    clips the bevel to rounded corners, which is how Task 5's pad grid gets
+    its `r6` pads. Keeping them separate is why one bevel serves square
+    chrome, rounded pads and pill-shaped cells alike.
   - `@Composable fun LcdSurface(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit)`
   - `@Composable fun ChromeSurface(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit)`
 
@@ -890,7 +897,7 @@ Expected: BUILD SUCCESSFUL, all tests PASS.
 - [ ] **Step 10: Commit**
 
 ```bash
-git add app/src/main/res/font app/src/main/kotlin/com/snipsnap/app/theme app/src/test
+git add app/src/main/res/font app/licenses app/src/main/kotlin/com/snipsnap/app/theme app/src/test
 git commit -m "TapeOS theme: bind the scheme tables to Compose
 
 Tokens, the four bundled typefaces, the three bevel states, and the
