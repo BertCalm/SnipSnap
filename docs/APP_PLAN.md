@@ -18,7 +18,7 @@ L ≈ a week-plus of sessions).
 | Acceptance artifacts (`testkit/`) | done — 14 downloadable checks, from the diag kit to the one-file Session project |
 | CLI (`:cli`) | done, tested — `snipsnap.jar`: chop → classify → place → export from any desktop; the classifier's real-audio calibration tool (`docs/CLI.md`) |
 | View-models (`:shell`) | done, tested — scheme tables, peaks pyramid, tape-deck transport physics, voice allocation, chop review, kit builder, export wizard, personality system; `:app` binds Compose to these |
-| **The Android app** | **not started** — the only unbuilt product surface |
+| **The Android app** | **M0 done** — `:app` scaffolded on Compose over all six modules; TapeOS theme, window shell, kit shelf, audible pad grid, scheme picker. M1 (capture) is next |
 | Hardware verification | drums passed; keys, instruments, `.xpn`, tile, Session pending (user) |
 
 The concept doc's "deliberately v2" list (velocity layers, expansions,
@@ -54,7 +54,7 @@ with the Android notes (Compose brushes, fonts, dp constants, personality
 copy). Building a screen means porting behaviour that already runs, not
 inventing it.
 
-### M0 — Walking skeleton · M
+### M0 — Walking skeleton · M — ✓ done
 
 Scaffold `:app` (Compose, minSdk 29), depend on all six modules. TapeOS
 theme object: the six scheme token tables from `design/Main.dc.html`
