@@ -31,6 +31,18 @@ object ImportCommand {
 
         val (kit: Kit, directory: File, what: String) = when {
             MpcFormats.detect(file) == MpcFormat.MPC3_ACVS -> {
+                val project = com.snipsnap.mpc3.Mpc3Project.read(file)
+                if (project.isProject) {
+                    // A whole session: every drum track becomes its own kit.
+                    val r = Mpc3Importer.importProject(file, destRoot, overwrite)
+                    out.println("imported ${r.kits.size} kit(s) from project ${file.name}:")
+                    r.kits.forEach {
+                        out.println("  + '${it.trackName}' -> ${it.directory.path} (${it.kit.pads.size} pads)")
+                    }
+                    r.skipped.forEach { (name, why) -> out.println("  ! skipped '$name' - $why") }
+                    out.println("(edit them, or re-export: snipsnap export <kit-dir> --export ...)")
+                    return 0
+                }
                 val r = Mpc3Importer.import(file, destRoot, overwrite)
                 Triple(r.kit, r.directory, "track '${r.trackName}' (MPC 3 native)")
             }
@@ -39,7 +51,7 @@ object ImportCommand {
                 Triple(r.kit, r.directory, "'${r.programEntry}' (.xpn archive)")
             }
             else -> throw CliError(
-                "can't tell what ${file.name} is - import takes an .xpn archive or a native MPC 3 .xtd",
+                "can't tell what ${file.name} is - import takes an .xpn archive, a native .xtd, or a whole .xpj",
             )
         }
 

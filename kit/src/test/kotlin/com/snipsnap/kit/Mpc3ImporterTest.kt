@@ -131,6 +131,75 @@ class Mpc3ImporterTest {
     }
 
     @Test
+    fun `a whole project imports every drum track as its own kit`() {
+        // Stage two kits and a keygroup into one project, our own writer's shape.
+        val srcA = File(temp, "pa").apply { mkdirs() }
+        WavWriter.write(File(srcA, "A01_Kick_01.wav"), tone(11))
+        val kitA = Kit("Drums A", listOf(KitPad(slot = 1, sampleFile = "A01_Kick_01.wav", colorHex = "#e8542e")))
+        KitStore.save(kitA, srcA)
+
+        val srcB = File(temp, "pb").apply { mkdirs() }
+        WavWriter.write(File(srcB, "A02_Snare_01.wav"), tone(12))
+        val kitB = Kit("Drums B", listOf(KitPad(slot = 2, sampleFile = "A02_Snare_01.wav")))
+        KitStore.save(kitB, srcB)
+
+        val card = File(temp, "proj-card").apply { mkdirs() }
+        val dataDir = File(card, "Session_[ProjectData]")
+        val progA = Mpc3Exporter.stageTrack(kitA, srcA, dataDir)
+        val progB = Mpc3Exporter.stageTrack(kitB, srcB, dataDir)
+        WavWriter.write(File(dataDir, "Note_A2.wav"), tone(13))
+        val keys = KeygroupProgram(
+            "Keys",
+            listOf(Keygroup(0, 127, 45, listOf(VelocityLayer("Note_A2", 4410, 0, 127)))),
+        )
+        com.snipsnap.mpc3.Mpc3ProjectWriter().writeTo(
+            card, "Session",
+            listOf(
+                com.snipsnap.mpc3.Mpc3ProjectTrack.Drum(progA),
+                com.snipsnap.mpc3.Mpc3ProjectTrack.Keys(keys),
+                com.snipsnap.mpc3.Mpc3ProjectTrack.Drum(progB),
+            ),
+        )
+
+        val result = Mpc3Importer.importProject(File(card, "Session.xpj"), File(temp, "proj-in"))
+        assertEquals(listOf("Drums A", "Drums B"), result.kits.map { it.trackName })
+        assertEquals("#e8542e", result.kits[0].kit.pad(1)?.colorHex)
+        assertEquals(2, result.kits[1].kit.pads.single().slot)
+        result.kits.forEach { assertTrue(File(it.directory, "kit.json").isFile) }
+        // The keygroup and the infra tracks are skipped and named, not lost.
+        assertTrue(result.skipped.keys.any { "Keys" in it }, "${result.skipped}")
+        assertTrue(result.skipped.getValue("Keys").contains("keygroup"))
+    }
+
+    @Test
+    fun `commercial project files parse to named refusals, not crashes`() {
+        val golden = File("../reference/golden/mpc3-project")
+        // Both generations use .xpj; only ACVS containers are ours to read.
+        val xpjs = golden.listFiles { f: File -> f.extension == "xpj" }?.sortedBy { it.name }
+            ?.filter { com.snipsnap.mpc3.MpcFormats.detect(it) == com.snipsnap.mpc3.MpcFormat.MPC3_ACVS }
+            ?.take(8) ?: emptyList()
+        if (xpjs.isEmpty()) {
+            println("no golden .xpj files - skipping")
+            return
+        }
+        for (file in xpjs) {
+            try {
+                val r = Mpc3Importer.importProject(file, File(temp, "gp-${file.nameWithoutExtension}"))
+                assertTrue(r.kits.isNotEmpty(), file.name)
+            } catch (e: IllegalArgumentException) {
+                // No _[ProjectData]/ ships in the repo: every track resolves
+                // to a *named* refusal, which proves the whole parse worked.
+                assertTrue(
+                    "missing" in e.message!! || "keygroup" in e.message!! ||
+                        "no drum" in e.message!! || "no pads" in e.message!! ||
+                        "no instrument" in e.message!!,
+                    "${file.name}: unexpected refusal: ${e.message}",
+                )
+            }
+        }
+    }
+
+    @Test
     fun `commercial xtd files parse - the corpus proves the reader half`() {
         val golden = File("../reference/golden/mpc3-track")
         val xtds = golden.listFiles { f: File -> f.extension == "xtd" }?.sortedBy { it.name }

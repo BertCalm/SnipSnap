@@ -7,17 +7,21 @@ import java.io.File
 import java.io.IOException
 
 /**
- * Reads a native MPC 3 drum track back into a kit folder — the reverse
- * loop: kits the MPC itself saved (or any commercial `.xtd`) become
- * editable on the phone and re-exportable in every format.
+ * Reads native MPC 3 content back into kit folders — the reverse loop:
+ * kits the MPC itself saved become editable on the phone and
+ * re-exportable in every format.
+ *
+ * Two doors: [import] takes a standalone drum track (`.xtd` with its
+ * `_[TrackData]/` beside it); [importProject] takes a whole `.xpj` and
+ * lands **every drum track inside it** as its own kit folder, samples
+ * from the flat `_[ProjectData]/`, with non-drum tracks skipped and
+ * named rather than silently dropped.
  *
  * Mirrors [XpnImporter]'s discipline: faithful, not clever. Levels, pans,
  * tunes, mute groups, trigger modes, velocity layers and per-pad colours
  * come through as the file declares them (clamped into model range); no
  * class is invented — imported pads stay [DrumClass.UNKNOWN] until someone
- * says otherwise. Samples are expected in the sibling `_[TrackData]/`
- * folder, the pair every real `.xtd` ships as; whatever is missing is
- * refused by name, not silently dropped.
+ * says otherwise. Missing samples are refused by name.
  */
 object Mpc3Importer {
 
@@ -28,29 +32,82 @@ object Mpc3Importer {
         val trackName: String,
     )
 
+    data class ProjectImportResult(
+        val kits: List<ImportResult>,
+        /** Track name → why it didn't become a kit. */
+        val skipped: Map<String, String>,
+    )
+
+    /** A standalone drum track. Whole projects go through [importProject]. */
     fun import(xtdFile: File, destRoot: File, overwrite: Boolean = false): ImportResult {
         require(xtdFile.isFile) { "no such file: $xtdFile" }
         val project = Mpc3Project.read(xtdFile)
         require(!project.isProject) {
-            "'${xtdFile.name}' is a whole project - import the kit's .xtd (project import is a later step)"
+            "'${xtdFile.name}' is a whole project - use importProject (the CLI does this automatically)"
         }
         val track = project.tracks.firstOrNull()
             ?: throw IllegalArgumentException("'${xtdFile.name}' holds no track")
+        val dataDir = File(xtdFile.parentFile, "${xtdFile.nameWithoutExtension}_[TrackData]")
+        return importTrack(track, dataDir, destRoot, overwrite, xtdFile.name)
+    }
 
-        val trackName = (track["name"] as? JsonValue.Str)?.value
-            ?: xtdFile.nameWithoutExtension
+    /** Every drum track in an `.xpj`, each as its own kit folder. */
+    fun importProject(xpjFile: File, destRoot: File, overwrite: Boolean = false): ProjectImportResult {
+        require(xpjFile.isFile) { "no such file: $xpjFile" }
+        val project = Mpc3Project.read(xpjFile)
+        require(project.isProject) { "'${xpjFile.name}' is not a project - use import for tracks" }
+        require(project.tracks.isNotEmpty()) { "'${xpjFile.name}' holds no tracks" }
+
+        val dataDir = File(xpjFile.parentFile, "${xpjFile.nameWithoutExtension}_[ProjectData]")
+        val kits = mutableListOf<ImportResult>()
+        val skipped = linkedMapOf<String, String>()
+        val usedNames = HashSet<String>()
+
+        for (track in project.tracks) {
+            val trackName = (track["name"] as? JsonValue.Str)?.value ?: "(unnamed)"
+            try {
+                kits += importTrack(
+                    track, dataDir, destRoot, overwrite, xpjFile.name,
+                    uniqueName = { base ->
+                        var candidate = base
+                        var n = 2
+                        while (!usedNames.add(candidate.lowercase())) candidate = "$base $n".also { n++ }
+                        candidate
+                    },
+                )
+            } catch (e: IllegalArgumentException) {
+                skipped[trackName] = e.message ?: "unreadable"
+            }
+        }
+        require(kits.isNotEmpty()) {
+            "'${xpjFile.name}' yielded no kits: " +
+                skipped.entries.joinToString("; ") { "${it.key}: ${it.value}" }
+        }
+        return ProjectImportResult(kits, skipped)
+    }
+
+    // ---------- the shared track walk ----------
+
+    private fun importTrack(
+        track: Map<String, JsonValue>,
+        dataDir: File,
+        destRoot: File,
+        overwrite: Boolean,
+        sourceName: String,
+        uniqueName: (String) -> String = { it },
+    ): ImportResult {
+        val trackName = (track["name"] as? JsonValue.Str)?.value ?: "(unnamed)"
         val program = (track["program"] as? JsonValue.Obj)?.entries
-            ?: throw IllegalArgumentException("'${xtdFile.name}' has no program")
+            ?: throw IllegalArgumentException("'$trackName' has no program")
         val type = (program["type"] as? JsonValue.Num)?.value?.toInt()
         require(type != 1) {
-            "'${xtdFile.name}' is a keygroup instrument - only drum tracks import as kits"
+            "'$trackName' is a keygroup instrument - only drum tracks import as kits"
         }
         val drum = (program["drum"] as? JsonValue.Obj)?.entries
-            ?: throw IllegalArgumentException("'${xtdFile.name}' has no drum block")
+            ?: throw IllegalArgumentException("'$trackName' has no drum block")
         val instruments = (drum["instruments"] as? JsonValue.Arr)?.items.orEmpty()
-        require(instruments.isNotEmpty()) { "'${xtdFile.name}' has no instrument slots" }
+        require(instruments.isNotEmpty()) { "'$trackName' has no instrument slots" }
 
-        // Per-pad colours: packed 0xRRGGBB unless the Universal switch is on.
         val padColours = padColours(program)
 
         data class ParsedPad(
@@ -76,6 +133,8 @@ object Mpc3Importer {
                             ?.takeIf { it.isNotBlank() }?.plus(".wav")
                         ?: return@mapNotNull null
                     Triple(
+                        // Bare names are the rule, but strip a path if a
+                        // nonconforming file carries one anyway.
                         File(file.replace('\\', '/')).name,
                         (layer["velocityStart"] as? JsonValue.Num)?.value?.toInt() ?: 0,
                         (layer["velocityEnd"] as? JsonValue.Num)?.value?.toInt() ?: 127,
@@ -103,17 +162,17 @@ object Mpc3Importer {
                 oneShot = ((inst["triggerMode"] as? JsonValue.Num)?.value?.toInt() ?: 0) == 0,
             )
         }
-        require(parsed.isNotEmpty()) { "'${xtdFile.name}' has no pads with samples" }
+        require(parsed.isNotEmpty()) { "'$trackName' has no pads with samples" }
 
-        // Samples live flat in the sibling _[TrackData]/ folder.
-        val dataDir = File(xtdFile.parentFile, "${xtdFile.nameWithoutExtension}_[TrackData]")
         val referenced = parsed.flatMap { it.layers.map { l -> l.first } }.distinct()
         val missing = referenced.filter { !File(dataDir, it).isFile }
         require(missing.isEmpty()) {
             "samples missing from ${dataDir.name}/: " + missing.joinToString(", ")
         }
 
-        val kitName = trackName.takeIf { Names.isMpcSafe(it) } ?: Names.sanitizeStem(trackName)
+        val kitName = uniqueName(
+            trackName.takeIf { Names.isMpcSafe(it) } ?: Names.sanitizeStem(trackName),
+        )
         val destDir = File(destRoot, kitName)
         if (File(destDir, "kit.json").exists() && !overwrite) {
             throw IOException("kit already exists: $destDir (pass overwrite=true to replace it)")
@@ -137,7 +196,7 @@ object Mpc3Importer {
                 tuneFine = p.tuneFine,
                 muteGroup = p.muteGroup,
                 oneShot = p.oneShot,
-                source = mapOf("importedFrom" to xtdFile.name),
+                source = mapOf("importedFrom" to sourceName),
                 velocityLayers = if (p.layers.size < 2) emptyList() else {
                     p.layers.map { (file, velStart, velEnd) -> KitLayer(file, velStart, velEnd) }
                 },
