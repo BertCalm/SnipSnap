@@ -420,8 +420,8 @@ the classic MPC range is 54–75. A seeded humanize jitter rides along.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| Z1.1 | `GrooveVariations.swing(clip, percent)` — quantize-then-push on even 16ths, velocities untouched; `humanize(clip, amount, seed)` — bounded seeded jitter on times; when a swing is asked for, the "Tight" slot becomes the swung clip (four-slot budget respected) | CORE | S | even 16ths land late by exactly `(pct−50)/50 × 240` pulses, odd 16ths and velocities untouched; same seed, same jitter; 50% is a no-op |
-| Z1.2 | CLI `chop --swing PCT` (with `--groove`); range-checked 50..75 | CORE | S | the exported clip list carries the swung variant; the payload guard stays green |
+| Z1.1 | ✓ done: `GrooveVariations.swing(clip, percent)` — quantize-then-push on even 16ths, velocities untouched; `humanize(clip, amount, seed)` — bounded seeded jitter on times; when a swing is asked for, the "Tight" slot becomes the swung clip (four-slot budget respected) | CORE | S | even 16ths land late by exactly `(pct−50)/50 × 240` pulses, odd 16ths and velocities untouched; same seed, same jitter; 50% is a no-op |
+| Z1.2 | ✓ done: CLI `chop --swing PCT` (with `--groove`); range-checked 50..75 | CORE | S | the exported clip list carries the swung variant; the payload guard stays green |
 
 ## Z2 — MIDI bridge: grooves that leave the ecosystem
 
@@ -433,8 +433,8 @@ resolution.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| Z2.1 | `MidiGroove` (`:kit`) — SMF format-0 writer + reader: clip notes ↔ note-on/off pairs (velocity 0..1 ↔ 0..127), tempo meta event from the kit's BPM, 960-division header; unreadable files refused with a reason | CORE | S–M | write → read round-trips every note, time, length, velocity; a hand-built DAW-style fixture `.mid` imports correctly |
-| Z2.2 | CLI wire — `export --export mid` writes `<Kit> <Variant>.mid` per stored groove; `import <file.mid> --into <kit-dir>` lands a DAW beat as the kit's groove | CORE | S | chop --groove → export mid → files a DAW opens; import a `.mid` → native exports carry it |
+| Z2.1 | ✓ done: `MidiGroove` (`:kit`) — SMF format-0 writer + reader: clip notes ↔ note-on/off pairs (velocity 0..1 ↔ 0..127), tempo meta event from the kit's BPM, 960-division header; unreadable files refused with a reason | CORE | S–M | write → read round-trips every note, time, length, velocity; a hand-built DAW-style fixture `.mid` imports correctly |
+| Z2.2 | ✓ done: CLI wire — `export --export mid` writes `<Kit> <Variant>.mid` per stored groove; `import <file.mid> --into <kit-dir>` lands a DAW beat as the kit's groove | CORE | S | chop --groove → export mid → files a DAW opens; import a `.mid` → native exports carry it |
 
 ## Z3 — Auto slice-count: stop making the user guess
 
@@ -444,13 +444,13 @@ knee in that curve and keep what's above it.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| Z3.1 | `Chopper` auto mode — slice count chosen at the largest relative drop in sorted onset strength (bounded 2..64); CLI default becomes auto when `--slices`/`--grid` are absent, explicit values behave exactly as today | CORE | S | an 8-hit synthetic break auto-chops to 8; a dense roll stays bounded; `--slices N` output is byte-identical to before |
+| Z3.1 | ✓ done: `Chopper` auto mode — slice count chosen at the largest relative drop in sorted onset strength (bounded 2..64); CLI default becomes auto when `--slices`/`--grid` are absent, explicit values behave exactly as today | CORE | S | an 8-hit synthetic break auto-chops to 8; a dense roll stays bounded; `--slices N` output is byte-identical to before |
 
 ## Z4 — Batch chop: the crate-digging verb
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| Z4.1 | CLI `chop-all <folder>` — every audio file in the folder through the chop pipeline with shared options; per-file failures named and non-fatal; one summary table (file → kit → pads → tempo); exit 1 only when nothing succeeded | CORE | S | a mixed folder (good WAVs + one broken file) yields kits for the good ones and names the bad one; also the calibration corpus mass-run tool |
+| Z4.1 | ✓ done: CLI `chop-all <folder>` — every audio file in the folder through the chop pipeline with shared options; per-file failures named and non-fatal; one summary table (file → kit → pads → tempo); exit 1 only when nothing succeeded | CORE | S | a mixed folder (good WAVs + one broken file) yields kits for the good ones and names the bad one; also the calibration corpus mass-run tool |
 
 ## Z5 — Kit merge: bank B, earned not invented
 
@@ -459,7 +459,7 @@ another kit.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| Z5.1 | `KitMerge` (`:kit`) — B's bank-A pads onto the target's slots 17–32: samples copied under re-prefixed stems, colours/mute groups/velocity layers/recipes carried, A's groove and key kept; refuses when A's bank B is occupied (unless replacing is asked for); CLI `merge <a> <b> [--out DIR] [--replace]` | CORE | S | merged kit preflights clean; both sources untouched; B's audio byte-identical under its new stems |
+| Z5.1 | ✓ done: `KitMerge` (`:kit`) — B's bank-A pads onto the target's slots 17–32: samples copied under re-prefixed stems, colours/mute groups/velocity layers/recipes carried, A's groove and key kept; refuses when A's bank B is occupied (unless replacing is asked for); CLI `merge <a> <b> [--out DIR] [--replace]` | CORE | S | merged kit preflights clean; both sources untouched; B's audio byte-identical under its new stems |
 
 ## Z6 — Expansion tile art: the blank square on the hardware browser
 
@@ -473,8 +473,8 @@ style/scheme/seed, and the winning direction becomes the export default.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| Z6.1 | `KitArt` (`:shell`) — cover renderer: kit name + waveform/pad-grid motifs drawn from the kit's own samples and classes, palette from `Schemes`, style + seed + size parameters; deterministic bytes for identical inputs; CLI `art <kit-dir> [--style NAME] [--scheme NAME] [--seed N] [--size PX] [--out FILE]` for the iteration loop | CORE | S–M | same inputs → identical PNG; valid dimensions; every style renders every starter kit without error |
-| Z6.2 | Prototype loop — you regenerate and eyeball (`snipsnap art …`), call out directions; styles/parameters evolve per feedback until one is the keeper | USER+CORE | S | the default style is chosen by eye, not by me; verdict recorded here |
+| Z6.1 | ✓ done: `KitArt` (`:shell`) — cover renderer: kit name + waveform/pad-grid motifs drawn from the kit's own samples and classes, palette from `Schemes`, style + seed + size parameters; deterministic bytes for identical inputs; CLI `art <kit-dir> [--style NAME] [--scheme NAME] [--seed N] [--size PX] [--out FILE]` for the iteration loop | CORE | S–M | same inputs → identical PNG; valid dimensions; every style renders every starter kit without error |
+| Z6.2 | ▶ running: prototype loop — you regenerate and eyeball (`snipsnap art …`), call out directions; styles/parameters evolve per feedback until one is the keeper | USER+CORE | S | the default style is chosen by eye, not by me; verdict recorded here |
 | Z6.3 | Wire-through — the chosen style renders by default into expansion/`.xpn` exports (artwork param plumbed through `Exporters`); `--no-art` opts out | CORE | S | exported expansion carries the tile; the Live III browser shows it (bench) |
 
 **Below the line (wave 6 candidates):** multi-sequence projects — the
@@ -504,11 +504,10 @@ CORE wave 4: ✓ all six landed (2026-08-25) — total recall, pattern
   variations, session builder, pad treatments, preview renderer,
   diff tool. Bench rows (Y2.3/Y5.3/Y6.3) and app hooks remain.
 
-CORE wave 5 (in order — Z6.1 first so the art prototyping loop runs
-  beside the rest instead of gating the end):
-  Z6.1 art renderer + CLI → Z1 swing → Z3 auto slice-count →
-  Z4 batch chop → Z5 kit merge → Z2 MIDI bridge →
-  Z6.3 art wire-through (after the Z6.2 verdict)
+CORE wave 5: ✓ all CORE items landed (2026-08-25) — art renderer +
+  CLI, swing, auto slice-count, chop-all, kit merge, MIDI bridge.
+  Open: Z6.2 art prototyping loop (running — tiles delivered, verdict
+  pending) → Z6.3 wire-through once a style wins.
   Remaining on the bench: W12 pad waveforms (APP-only polish)
 
 APP (in milestone order; feature items slot in where their parent lands):
