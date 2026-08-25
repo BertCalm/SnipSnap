@@ -155,6 +155,29 @@ class CliTest {
     }
 
     @Test
+    fun `swing rides the groove into the exports`() {
+        val wav = writeBreak(File(temp, "sw.wav"))
+        val out = File(temp, "sw-out")
+        val (code, stdout, stderr) = cli(
+            "chop", wav.path, "--out", out.path, "--name", "SwingKit",
+            "--slices", "8", "--groove", "--swing", "62", "--export", "xtd",
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "captured/swing 62/half/sparse")
+        assertContains(Acvs.read(File(out, "card/SwingKit.xtd")).payloadText, "SwingKit Swing 62")
+
+        val (badCode, _, badErr) = cli("chop", wav.path, "--out", out.path, "--swing", "62")
+        assertEquals(2, badCode, "--swing without --groove is a usage error")
+        assertContains(badErr, "rides on --groove")
+
+        val (rangeCode, _, rangeErr) = cli(
+            "chop", wav.path, "--out", out.path, "--groove", "--swing", "95",
+        )
+        assertEquals(2, rangeCode)
+        assertContains(rangeErr, "50..75")
+    }
+
+    @Test
     fun `art renders cover tiles for a kit, all styles or one`() {
         val wav = writeBreak(File(temp, "art.wav"))
         val out = File(temp, "art-out")

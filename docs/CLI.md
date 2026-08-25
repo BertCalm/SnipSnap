@@ -38,6 +38,7 @@ tempo, chop, classify each slice, auto-place onto the conventional layout
 | `--place` / `--no-place` | force auto-placement on or off. Default: on when following hits, off on a grid — a grid's order is usually the point |
 | `--balance` | per-pad levels via `Balance` so the kit sits right as a mix |
 | `--groove` | embed the capture's own rhythm as a clip in the native exports (`xtd`/`xpj`) — timing as captured, velocities from the hits' own dynamics; needs a confident tempo |
+| `--swing PCT` | with `--groove`: the tight pattern swings instead, the way the hardware does it — quantize to 16ths, then push every even ("and") 16th late by `(pct−50)/50` of a 16th. 50 straight, 66 triplet feel, panel range 50–75 |
 | `--ghosts` | darker soft velocity zones under every one-shot pad — quiet hits sound soft, not just quiet |
 | `--key SPEC` | retune tonal pads into a key via `InKey`/`Tuner`: `Am`, `C`, `F#m`, `Eb major`, `Dminpent` |
 | `--export LIST` | comma-separated formats, see below |

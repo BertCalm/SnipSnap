@@ -57,6 +57,50 @@ class GrooveVariationsTest {
     }
 
     @Test
+    fun `swing pushes even 16ths late by exactly the formula and nothing else`() {
+        val swung = GrooveVariations.swing(base, 66)
+        // Quantized first (0, 480, 960, 1680, 1920), then every odd-index
+        // 16th pushed by (66-50)*240/50 = 76 pulses.
+        assertEquals(listOf(0L, 480L, 960L, 1680L + 76, 1920L), swung.notes.map { it.timePulses })
+        assertEquals(base.notes.map { it.velocity }, swung.notes.map { it.velocity }, "swing is time, not dynamics")
+        assertEquals("Break Swing 66", swung.name)
+
+        // 50% is straight: identical to plain quantize, name aside.
+        assertEquals(
+            GrooveVariations.quantize(base, Mpc3Clip.PULSES_PER_16TH).notes,
+            GrooveVariations.swing(base, 50).notes,
+        )
+        kotlin.test.assertFailsWith<IllegalArgumentException> { GrooveVariations.swing(base, 49) }
+        kotlin.test.assertFailsWith<IllegalArgumentException> { GrooveVariations.swing(base, 76) }
+    }
+
+    @Test
+    fun `humanize is seeded, bounded, and leaves dynamics alone`() {
+        val a = GrooveVariations.humanize(base, 1f, seed = 5)
+        val b = GrooveVariations.humanize(base, 1f, seed = 5)
+        assertEquals(a, b, "same seed, same feel")
+        assertTrue(a != GrooveVariations.humanize(base, 1f, seed = 6), "different dice, different feel")
+
+        base.notes.zip(a.notes).forEach { (orig, loose) ->
+            assertTrue(
+                kotlin.math.abs(loose.timePulses - orig.timePulses) <= Mpc3Clip.PULSES_PER_16TH / 2,
+                "loose, not sloppy: ${orig.timePulses} -> ${loose.timePulses}",
+            )
+            assertEquals(orig.velocity, loose.velocity)
+        }
+        assertEquals(base.notes, GrooveVariations.humanize(base, 0f, seed = 5).notes, "zero amount is a no-op")
+    }
+
+    @Test
+    fun `asking for swing swaps the tight slot, budget intact`() {
+        val four = GrooveVariations.standard(base, swingPercent = 62)
+        assertEquals(4, four.size)
+        assertEquals("Break Swing 62", four[1].name)
+        assertEquals(base, four[0])
+        assertEquals("Break Half", four[2].name)
+    }
+
+    @Test
     fun `four clips ride the payload with keys one to four`() {
         val four = GrooveVariations.standard(base)
         val writer = com.snipsnap.mpc3.Mpc3TrackWriter()

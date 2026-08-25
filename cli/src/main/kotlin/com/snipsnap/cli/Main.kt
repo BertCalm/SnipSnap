@@ -68,6 +68,9 @@ object Cli {
         |  --balance         set per-pad levels so the kit sits right as a mix
         |  --groove          embed the capture's own rhythm as a clip in the
         |                    native exports (needs a confident tempo)
+        |  --swing PCT       with --groove: the tight pattern swings instead,
+        |                    hardware-style (50 straight .. 75 heavy; 66 is
+        |                    the triplet feel)
         |  --ghosts          render darker soft velocity zones under every
         |                    one-shot pad, so quiet hits sound soft
         |  --melodic         place slices low-to-high by detected pitch

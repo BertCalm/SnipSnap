@@ -40,7 +40,7 @@ object ChopCommand {
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(
             args,
-            valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export"),
+            valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export", "--swing"),
             boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview"),
         )
         val input = opts.positional.firstOrNull()
@@ -64,6 +64,13 @@ object ChopCommand {
             } catch (e: IllegalArgumentException) {
                 throw CliError(e.message ?: "can't read key '$it'")
             }
+        }
+        val swing = opts.int("--swing")
+        if (swing != null && !opts.has("--groove")) {
+            throw CliError("--swing rides on --groove - add it")
+        }
+        if (swing != null && swing !in 50..75) {
+            throw CliError("--swing wants 50..75 (50 straight, 66 triplet feel), got $swing")
         }
         val grid = opts.int("--grid")
         val maxSlices = opts.int("--slices")
@@ -229,11 +236,12 @@ object ChopCommand {
                 // The folder is the kit: the groove persists beside kit.json
                 // as the standard four variations, so exporting tomorrow
                 // still carries today's rhythm - four ways.
-                val variations = com.snipsnap.kit.GrooveVariations.standard(clip)
+                val variations = com.snipsnap.kit.GrooveVariations.standard(clip, swingPercent = swing)
                 com.snipsnap.kit.GrooveStore.save(kitDir, variations)
+                val second = if (swing != null) "swing $swing" else "tight"
                 out.println(
                     "groove: \"${clip.name}\" - ${clip.notes.size} notes over ${clip.bars} bar(s), " +
-                        "saved as ${variations.size} patterns (captured/tight/half/sparse)",
+                        "saved as ${variations.size} patterns (captured/$second/half/sparse)",
                 )
             }
         }
