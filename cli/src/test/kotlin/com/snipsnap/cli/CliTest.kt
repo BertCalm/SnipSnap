@@ -195,6 +195,37 @@ class CliTest {
     }
 
     @Test
+    fun `keys turns one pitched note into an instrument`() {
+        val note = File(temp, "note.wav")
+        // A clean 220 Hz decaying note - A3.
+        val n = 44_100
+        WavWriter.write(
+            note,
+            Snip(
+                FloatArray(n) { i ->
+                    val t = i.toDouble() / n
+                    (0.5 * Math.sin(2 * Math.PI * 220 * i / n.toDouble()) * Math.exp(-2.0 * t)).toFloat()
+                },
+                1, n,
+            ),
+        )
+        val out = File(temp, "keys-out")
+        val (code, stdout, stderr) = cli("keys", note.path, "--name", "TestBass", "--out", out.path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "A3")
+        assertTrue(File(out, "card/TestBass.xty").isFile)
+        assertTrue(File(out, "card/TestBass_[TrackData]/TestBass.xpm").isFile)
+
+        // Noise refuses with the reason on stderr.
+        val noise = File(temp, "noise.wav")
+        val rng = kotlin.random.Random(5)
+        WavWriter.write(noise, Snip(FloatArray(n) { (rng.nextFloat() * 2 - 1) * 0.5f }, 1, n))
+        val (badCode, _, badErr) = cli("keys", noise.path, "--out", out.path)
+        assertTrue(badCode != 0)
+        assertContains(badErr, "pitch")
+    }
+
+    @Test
     fun `classify prints the class next to its features`() {
         val kick = File(temp, "kick.wav")
         WavWriter.write(kick, DrumSynth.kick())

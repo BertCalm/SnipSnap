@@ -37,7 +37,8 @@ object Cli {
         |  chop <input.wav>      chop, classify, auto-place, and build a kit folder
         |  classify <wav...>     print what the classifier hears in each file
         |  export <kit-dir>      export an existing kit folder to MPC formats
-        |  import <file.xpn>     unpack an .xpn archive into a kit folder
+        |  import <file>         unpack an .xpn archive or a native .xtd into a kit folder
+        |  keys <note.wav>       one pitched note -> a playable chromatic instrument
         |  help                  this text
         |
         |chop options:
@@ -78,6 +79,7 @@ object Cli {
                 "classify" -> ClassifyCommand.run(args.drop(1), out)
                 "export" -> ExportCommand.run(args.drop(1), out)
                 "import" -> ImportCommand.run(args.drop(1), out)
+                "keys" -> KeysCommand.run(args.drop(1), out)
                 "help", "--help", "-h" -> {
                     out.println(USAGE)
                     0

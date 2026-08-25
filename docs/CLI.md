@@ -70,6 +70,14 @@ itself saved become editable kit folders**, levels, tunes, mute groups,
 velocity layers and pad colours intact. Either way the landed folder is
 editable and re-exportable like any other kit.
 
+### `keys <note.wav>` — one note, whole keyboard
+
+MPC keygroups pitch the sample themselves, so one pitched capture plus its
+detected root is a full-range chromatic instrument. Lands the
+dual-generation layout (`.xty` beside `_[TrackData]/` with the `.xpm`
+twin). Unpitched material is refused with the reason — an instrument
+rooted on noise would be wrong on every key at once.
+
 ## Export formats
 
 All exports land under `<out>/card/`; copy its contents onto the MPC's SD
