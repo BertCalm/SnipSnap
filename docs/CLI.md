@@ -60,12 +60,15 @@ threshold by.
 Takes any folder with a `kit.json` (one this CLI chopped, or one synced off
 a phone) and writes the chosen formats.
 
-### `import <file.xpn>` — the receive half
+### `import <file>` — the receive half, both directions
 
-Unpacks an `.xpn` archive back into a kit folder — ours or a vendor's
-(either instrument-numbering base, samples found by bare name anywhere in
-the archive). The landed folder is editable and re-exportable like any
-other kit.
+Dispatches by content, never extension. An `.xpn` archive unpacks into a
+kit folder — ours or a vendor's (either instrument-numbering base, samples
+found by bare name anywhere in the archive). A native MPC 3 drum track
+(`.xtd` with its `_[TrackData]/` beside it) imports too — **kits the MPC
+itself saved become editable kit folders**, levels, tunes, mute groups,
+velocity layers and pad colours intact. Either way the landed folder is
+editable and re-exportable like any other kit.
 
 ## Export formats
 

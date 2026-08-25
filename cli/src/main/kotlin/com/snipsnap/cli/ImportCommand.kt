@@ -1,29 +1,57 @@
 package com.snipsnap.cli
 
+import com.snipsnap.kit.Kit
+import com.snipsnap.kit.Mpc3Importer
 import com.snipsnap.kit.XpnImporter
+import com.snipsnap.mpc3.MpcFormat
+import com.snipsnap.mpc3.MpcFormats
 import java.io.File
 import java.io.PrintStream
 
 /**
- * `snipsnap import <file.xpn>` — the receive half of one-file kit
- * sharing: an archive becomes a kit folder, ready to edit or re-export.
+ * `snipsnap import <file>` — the receive half of kit sharing, both
+ * directions: an `.xpn` archive, or a native MPC 3 drum track (`.xtd` +
+ * its `_[TrackData]/` beside it). Dispatch is by content, never by
+ * extension — the MPC's own rule, and ours.
  */
 object ImportCommand {
 
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(args, valued = setOf("--out"), boolean = setOf("--overwrite"))
         val input = opts.positional.firstOrNull()
-            ?: throw CliError("import wants an archive: snipsnap import <file.xpn>")
+            ?: throw CliError("import wants a file: snipsnap import <file.xpn | file.xtd>")
         if (opts.positional.size > 1) {
-            throw CliError("import takes one archive, got ${opts.positional.size}")
+            throw CliError("import takes one file, got ${opts.positional.size}")
         }
         val file = File(input)
         if (!file.isFile) throw CliError("no such file: $input")
 
-        val result = XpnImporter.import(file, File(opts["--out"] ?: "snipsnap-out"), opts.has("--overwrite"))
-        out.println("imported '${result.programEntry}' from ${file.name}")
-        out.println("kit folder: ${result.directory.path} (${result.kit.pads.size} pads)")
-        out.println("(edit it, or re-export: snipsnap export \"${result.directory.path}\" --export ...)")
+        val destRoot = File(opts["--out"] ?: "snipsnap-out")
+        val overwrite = opts.has("--overwrite")
+
+        val (kit: Kit, directory: File, what: String) = when {
+            MpcFormats.detect(file) == MpcFormat.MPC3_ACVS -> {
+                val r = Mpc3Importer.import(file, destRoot, overwrite)
+                Triple(r.kit, r.directory, "track '${r.trackName}' (MPC 3 native)")
+            }
+            isZip(file) -> {
+                val r = XpnImporter.import(file, destRoot, overwrite)
+                Triple(r.kit, r.directory, "'${r.programEntry}' (.xpn archive)")
+            }
+            else -> throw CliError(
+                "can't tell what ${file.name} is - import takes an .xpn archive or a native MPC 3 .xtd",
+            )
+        }
+
+        out.println("imported $what from ${file.name}")
+        out.println("kit folder: ${directory.path} (${kit.pads.size} pads)")
+        out.println("(edit it, or re-export: snipsnap export \"${directory.path}\" --export ...)")
         return 0
+    }
+
+    private fun isZip(file: File): Boolean {
+        val head = ByteArray(2)
+        file.inputStream().use { if (it.read(head) < 2) return false }
+        return head[0] == 'P'.code.toByte() && head[1] == 'K'.code.toByte()
     }
 }
