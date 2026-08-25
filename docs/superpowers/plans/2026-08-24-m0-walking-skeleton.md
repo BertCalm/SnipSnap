@@ -2874,12 +2874,22 @@ Task 4 left `onNew = { }` inert. Give it state, and render the dialog over the w
                                 withContext(Dispatchers.IO) { library.create(name) }
                             }
                             entries = withContext(Dispatchers.IO) { library.list().entries }
-                            if (Delight.toastsEnabled(state.personality)) {
-                                toast = made.fold(
-                                    onSuccess = { Copy.kitNameResponse(name) ?: Copy.FRESH_TAPE },
-                                    onFailure = { "COULDN'T MAKE THAT TAPE." },
-                                )
-                            }
+                            // Personality law 3: jokes never gate function.
+                            // FRESH TAPE is a joke, so OFF silences it. "That
+                            // didn't work" is function, and must survive every
+                            // personality level — otherwise at OFF a failed
+                            // create looks exactly like a successful one, and
+                            // the tape you just named is silently absent.
+                            toast = made.fold(
+                                onSuccess = {
+                                    if (Delight.toastsEnabled(state.personality)) {
+                                        Copy.kitNameResponse(name) ?: Copy.FRESH_TAPE
+                                    } else {
+                                        null
+                                    }
+                                },
+                                onFailure = { "COULDN'T MAKE THAT TAPE." },
+                            )
                         }
                     },
                 )
