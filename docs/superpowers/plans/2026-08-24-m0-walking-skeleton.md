@@ -2862,10 +2862,23 @@ Task 4 left `onNew = { }` inert. Give it state, and render the dialog over the w
                     onConfirm = { name ->
                         newTape = false
                         scope.launch {
-                            withContext(Dispatchers.IO) { library.create(name) }
-                            entries = withContext(Dispatchers.IO) { library.list() }
+                            // create() can reject a name verifyKitName just
+                            // accepted: verifyKitName compares kit *names*,
+                            // create() validates the *folder*, and
+                            // Names.sanitizeStem collapses underscore runs —
+                            // so "A_B" passes the dialog and then collides on
+                            // disk. It can also fail on plain IO. Either way
+                            // an uncaught throw here kills the app from a
+                            // button press, so the failure becomes a toast.
+                            val made = runCatching {
+                                withContext(Dispatchers.IO) { library.create(name) }
+                            }
+                            entries = withContext(Dispatchers.IO) { library.list().entries }
                             if (Delight.toastsEnabled(state.personality)) {
-                                toast = Copy.kitNameResponse(name) ?: Copy.FRESH_TAPE
+                                toast = made.fold(
+                                    onSuccess = { Copy.kitNameResponse(name) ?: Copy.FRESH_TAPE },
+                                    onFailure = { "COULDN'T MAKE THAT TAPE." },
+                                )
                             }
                         }
                     },
