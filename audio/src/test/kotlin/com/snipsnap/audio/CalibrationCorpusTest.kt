@@ -13,6 +13,21 @@ import kotlin.test.assertTrue
  */
 class CalibrationCorpusTest {
 
+    /** X4.1's contract: the snip path and the feature path are one classifier. */
+    @Test
+    fun `classify by snip and by features agree on every render`() {
+        val renders = listOf(
+            DrumSynth.kick(), DrumSynth.snare(), DrumSynth.closedHat(), DrumSynth.openHat(),
+            DrumSynth.clap(), DrumSynth.tom(), DrumSynth.tonal(), DrumSynth.loop(),
+        )
+        for (snip in renders) {
+            val bySnip = Classifier.classify(snip)
+            val byFeatures = Classifier.classify(FeatureExtractor.extract(snip))
+            kotlin.test.assertEquals(bySnip.drumClass, byFeatures.drumClass)
+            kotlin.test.assertEquals(bySnip.confidence, byFeatures.confidence)
+        }
+    }
+
     private val corpusDir = File("../reference/calibration")
 
     private val labels = mapOf(

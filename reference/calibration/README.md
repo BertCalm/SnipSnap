@@ -38,5 +38,14 @@ pre-check a label.
   confusion matrix, per-class and overall accuracy — and **fails below
   60% overall**, the "the classifier is broken on real material" line.
 
+## The overrides log
+
+Beside the WAVs, `overrides.jsonl` collects **teach-the-machine** data:
+every chip override in the chop screen, logged as a feature vector plus
+the human's label — never audio, so it's rights-clean by construction.
+The app appends it only behind a consent switch; `TeachLog` (`:shell`)
+is the reader/writer, and `TeachLogTest` scores every logged correction
+against the current rules on each test run.
+
 Threshold changes motivated by this corpus belong in `Classifier` with a
-comment naming the file(s) that motivated them.
+comment naming the file(s) or log line(s) that motivated them.

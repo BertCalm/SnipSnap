@@ -33,6 +33,13 @@ data class Features(
     /** Time from the peak down to -20 dB, milliseconds. */
     val decayMs: Float,
     val peak: Float,
+    /**
+     * Distinct attacks in the head of the snip ([Classifier.attackBurstCount]).
+     * A clap is physically several impacts a few ms apart; one clean attack
+     * is one hit. Carried here so a feature vector alone can be classified —
+     * the teach-the-machine log stores features, never audio.
+     */
+    val attackBursts: Int = 1,
 )
 
 object FeatureExtractor {
@@ -112,6 +119,7 @@ object FeatureExtractor {
             durationSeconds = snip.durationSeconds,
             decayMs = decayMs(mono, snip.sampleRate),
             peak = snip.peak(),
+            attackBursts = Classifier.attackBurstCount(snip),
         )
     }
 

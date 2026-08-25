@@ -119,6 +119,20 @@ class ChopReviewModel private constructor(
     /** RE-CHOP: fresh detection, fresh labels, overrides gone. */
     fun rechop(newMode: ChopMode = mode): ChopReviewModel = chop(source, newMode)
 
+    /**
+     * The teach-the-machine harvest: every overridden chip as a labeled
+     * example — the measurements plus the human's word, never the audio.
+     * The app appends these to the teach log only behind a consent switch.
+     */
+    fun labeledOverrides(): List<TeachLog.Example> =
+        rows.filter { it.overridden }.map {
+            TeachLog.Example(
+                label = it.effectiveClass,
+                features = it.classification.features,
+                machineSaid = it.classification.drumClass,
+            )
+        }
+
     // ---------- melodic placement ----------
 
     /** Per-row detected pitch (confident only), cached — melodic placement reads it. */

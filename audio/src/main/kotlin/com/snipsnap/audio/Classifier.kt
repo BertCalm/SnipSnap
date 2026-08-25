@@ -61,10 +61,15 @@ object Classifier {
     // Anything longer than this is a phrase, not a hit.
     private const val LOOP_MIN_SECONDS = 1.5f
 
-    fun classify(snip: Snip): Classification {
-        val features = FeatureExtractor.extract(snip)
+    fun classify(snip: Snip): Classification = classify(FeatureExtractor.extract(snip))
 
-        if (features.peak <= 0f || snip.frameCount == 0) {
+    /**
+     * Classify a feature vector alone — the rules never needed the audio,
+     * only its measurements. This is what lets the teach-the-machine log
+     * (features + labels, never samples) be replayed against the rules.
+     */
+    fun classify(features: Features): Classification {
+        if (features.peak <= 0f || features.durationSeconds <= 0f) {
             return Classification(DrumClass.UNKNOWN, confidence = 0f, features = features)
         }
 
@@ -77,7 +82,7 @@ object Classifier {
         return if (features.lowRatio > BASS_DOMINANT_LOW_RATIO) {
             classifyBass(features)
         } else {
-            classifyBright(snip, features)
+            classifyBright(features)
         }
     }
 
@@ -99,7 +104,7 @@ object Classifier {
         return Classification(DrumClass.TOM, margin(features.lowRatio, BASS_DOMINANT_LOW_RATIO, 0.3f), features)
     }
 
-    private fun classifyBright(snip: Snip, features: Features): Classification {
+    private fun classifyBright(features: Features): Classification {
         // Cymbals: bright and almost entirely high-band.
         if (features.centroidHz > HAT_MIN_CENTROID_HZ && features.highRatio > HAT_MIN_HIGH_RATIO) {
             val closed = features.decayMs < CLOSED_HAT_MAX_DECAY_MS
@@ -118,7 +123,7 @@ object Classifier {
         // A clap is *noise* in bursts (flatness ≈ 0.75); a stab is harmonic
         // (≤ 0.15). A flam of two tonal hits now falls through to PERC,
         // which is the better shelf for it anyway.
-        if (features.flatness > CLAP_MIN_FLATNESS && attackBurstCount(snip) >= CLAP_MIN_BURSTS) {
+        if (features.flatness > CLAP_MIN_FLATNESS && features.attackBursts >= CLAP_MIN_BURSTS) {
             return Classification(DrumClass.CLAP, confidence = 0.7f, features = features)
         }
 
