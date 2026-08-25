@@ -13,9 +13,16 @@ import kotlin.test.assertTrue
 
 /**
  * The architectural bet, made checkable: every algorithm this app calls is
- * pure Kotlin/JVM, so rendering a whole factory kit must work from inside
- * the Android module exactly as it does in `:kit`'s own suite. If the core
- * ever reaches for a desktop-only API, this is the test that says so.
+ * pure Kotlin/JVM, so it must compile and link against `:app`'s own
+ * classpath and render a full 16-pad factory kit from inside the Android
+ * module's source set, exactly as it does in `:kit`'s own suite — and the
+ * filenames it writes must stay ASCII under an Eastern-digit locale, the
+ * one behavioral difference porting to Android actually exposes.
+ *
+ * This runs as a JVM unit test on the desktop JDK (Robolectric-free, no
+ * device or emulator), so it cannot catch a call into a real Android-only
+ * API — only that the module wires together and behaves correctly for the
+ * pure-Kotlin surface it exercises.
  */
 class CorePortTest {
 

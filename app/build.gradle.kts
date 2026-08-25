@@ -64,8 +64,13 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
 
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    implementation("androidx.compose.ui:ui-tooling-preview")
+    // Deliberately absent: androidx.compose.ui:ui-tooling and
+    // ui-tooling-preview. They exist to serve @Preview in Android Studio,
+    // M0 writes no @Preview, and ui-tooling drags
+    // androidx.compose.material onto the debug classpath — which the
+    // no-Material constraint forbids. A later milestone that actually
+    // wants previews can add them back with an
+    // `exclude(group = "androidx.compose.material")`.
 
     // JUnit 5, as in every other module. Named explicitly rather than via
     // kotlin("test") so the platform launcher is on the runtime classpath.
