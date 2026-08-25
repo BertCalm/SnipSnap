@@ -39,7 +39,9 @@ object Cli {
         |                        named, never fatal; one summary table
         |  classify <wav...>     print what the classifier hears in each file
         |  export <kit-dir>      export an existing kit folder to MPC formats
-        |  import <file>         unpack an .xpn archive or a native .xtd into a kit folder
+        |  import <file>         unpack an .xpn archive or a native .xtd into a
+        |                        kit folder; a .mid needs --into <kit-dir> and
+        |                        becomes that kit's groove
         |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
         |                        (--loop cuts sustain loops: held pads sing forever)
         |  remix <kit-dir>       bank B becomes seeded evil twins of bank A

@@ -17,7 +17,7 @@ import java.io.PrintStream
 object ImportCommand {
 
     fun run(args: List<String>, out: PrintStream): Int {
-        val opts = Options.parse(args, valued = setOf("--out"), boolean = setOf("--overwrite"))
+        val opts = Options.parse(args, valued = setOf("--out", "--into"), boolean = setOf("--overwrite"))
         val input = opts.positional.firstOrNull()
             ?: throw CliError("import wants a file: snipsnap import <file.xpn | file.xtd>")
         if (opts.positional.size > 1) {
@@ -28,6 +28,12 @@ object ImportCommand {
 
         val destRoot = File(opts["--out"] ?: "snipsnap-out")
         val overwrite = opts.has("--overwrite")
+
+        // A .mid isn't a kit — it's a groove looking for one: --into says which.
+        if (isMidi(file)) return importMidi(file, opts["--into"], out)
+        if (opts["--into"] != null) {
+            throw CliError("--into is for .mid grooves - this file imports as its own kit")
+        }
 
         val (kit: Kit, directory: File, what: String) = when {
             MpcFormats.detect(file) == MpcFormat.MPC3_ACVS -> {
@@ -59,6 +65,38 @@ object ImportCommand {
         out.println("kit folder: ${directory.path} (${kit.pads.size} pads)")
         out.println("(edit it, or re-export: snipsnap export \"${directory.path}\" --export ...)")
         return 0
+    }
+
+    private fun importMidi(file: File, intoArg: String?, out: PrintStream): Int {
+        val kitDir = File(
+            intoArg ?: throw CliError(
+                "a .mid is a groove looking for a kit: snipsnap import ${file.name} --into <kit-dir>",
+            ),
+        )
+        if (!File(kitDir, "kit.json").isFile) {
+            throw CliError("not a kit folder (no kit.json): $kitDir")
+        }
+        val imported = try {
+            com.snipsnap.kit.MidiGroove.read(file)
+        } catch (e: IllegalArgumentException) {
+            throw CliError("can't read ${file.name}: ${e.message}")
+        }
+        val clip = imported.clip
+        // The DAW beat becomes the kit's groove, standard four included.
+        com.snipsnap.kit.GrooveStore.save(kitDir, com.snipsnap.kit.GrooveVariations.standard(clip))
+        val bpm = imported.bpm?.let { " at %.1f bpm".format(it) } ?: ""
+        out.println(
+            "groove: \"${clip.name}\"$bpm - ${clip.notes.size} notes over ${clip.bars} bar(s), " +
+                "now this kit's patterns (captured/tight/half/sparse)",
+        )
+        out.println("(native exports of ${kitDir.name} carry it from here)")
+        return 0
+    }
+
+    private fun isMidi(file: File): Boolean {
+        val head = ByteArray(4)
+        file.inputStream().use { if (it.read(head) < 4) return false }
+        return head.toString(Charsets.US_ASCII) == "MThd"
     }
 
     private fun isZip(file: File): Boolean {

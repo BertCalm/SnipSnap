@@ -84,6 +84,11 @@ imports too: every drum track inside becomes its own kit folder, non-drum
 tracks skipped and named. Either way the landed folders are editable and
 re-exportable like any other kit.
 
+A **`.mid` file** is a groove looking for a kit: `import beat.mid --into
+<kit-dir>` reads it (format 0 or 1, any division, running status handled),
+rescales to 960 PPQ, and makes it that kit's patterns — the standard four
+variations included — so the next native export carries the DAW beat.
+
 ### `remix <kit-dir>` — evil twins
 
 Bank B becomes seeded FX re-treatments of bank A — reversed, crushed,
@@ -170,6 +175,7 @@ card or USB drive as-is.
 | `xpn` | `<Kit>.xpn` | one-file archive for sharing |
 | `xtd` | `<Kit>.xtd` + `<Kit>_[TrackData]/` | MPC 3 native drum track — the hardware-verified primary format |
 | `xpj` | `<Kit>.xpj` + `<Kit>_[ProjectData]/` | a whole MPC 3 project with the kit on track 1 |
+| `mid` | `<Pattern>.mid` per stored groove | Standard MIDI Files — every DAW, and the MPC's own browser. 960 PPQ, drum channel, tempo meta from the kit. No groove? The honest default beat exports instead |
 
 ## A real run
 

@@ -23,6 +23,7 @@ object Exports {
         ExportFormat.XPN to "one-file archive",
         ExportFormat.MPC3_TRACK to "MPC 3 native",
         ExportFormat.MPC3_PROJECT to "whole MPC 3 project",
+        ExportFormat.MIDI to "grooves as MIDI files, every DAW",
     )
 
     fun parseFormats(list: String): List<ExportFormat> {

@@ -22,6 +22,7 @@ enum class ExportFormat(
     XPN("xpn", "XPN ARCHIVE (ONE FILE)"),
     MPC3_TRACK("xtd", "MPC 3 NATIVE (.XTD)"),
     MPC3_PROJECT("xpj", "MPC 3 PROJECT (.XPJ)"),
+    MIDI("mid", "MIDI GROOVES (EVERY DAW)"),
     ;
 
     companion object {
@@ -87,6 +88,19 @@ object Exporters {
                 format, r.program,
                 File(destRoot, Mpc3TrackWriter.trackDataDirName(kit.name)), r.findings,
             )
+        }
+        ExportFormat.MIDI -> {
+            // The kit's grooves as .mid files, one per pattern; a kit with
+            // no groove exports its honest default beat, same as preview.
+            val clips = clip?.let { listOf(it) }
+                ?: GrooveStore.load(kitDir).ifEmpty { listOf(KitPreview.defaultPattern(kit)) }
+            val bpm = tempoBpm ?: kit.tempoBpm ?: KitPreview.DEFAULT_BPM
+            val files = clips.map { c ->
+                MidiGroove.writeTo(
+                    File(destRoot, "${Names.sanitizeStem(c.name)}.mid"), c, bpm, overwrite,
+                )
+            }
+            ExportOutcome(format, files.first(), null, findings(kit, kitDir))
         }
         ExportFormat.MPC3_PROJECT -> {
             val dataDir = File(destRoot, Mpc3ProjectWriter.projectDataDirName(kit.name))

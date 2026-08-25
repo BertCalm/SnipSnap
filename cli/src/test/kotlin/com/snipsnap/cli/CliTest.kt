@@ -4,7 +4,9 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.MidiGroove
 import com.snipsnap.mpc3.Acvs
 import com.snipsnap.mpc3.MpcFormat
 import com.snipsnap.mpc3.MpcFormats
@@ -152,6 +154,47 @@ class CliTest {
         assertEquals(0, code, "stderr: $stderr")
         assertContains(stdout, "ExpKit.xtd")
         assertEquals(MpcFormat.MPC3_ACVS, MpcFormats.detect(File(out, "card/ExpKit.xtd")))
+    }
+
+    @Test
+    fun `grooves leave as MIDI and a DAW beat arrives as one`() {
+        val wav = writeBreak(File(temp, "md.wav"))
+        val out = File(temp, "md-out")
+        assertEquals(
+            0,
+            cli(
+                "chop", wav.path, "--out", out.path, "--name", "MidKit",
+                "--slices", "8", "--groove", "--export", "mid",
+            ).first,
+        )
+        // One .mid per stored pattern, each a file any DAW opens.
+        val mids = File(out, "card").listFiles { f: File -> f.extension == "mid" }.orEmpty()
+        assertEquals(4, mids.size, "the standard four left as MIDI")
+        val back = MidiGroove.read(mids.first { it.name == "MidKit Groove.mid" })
+        assertTrue(back.clip.notes.isNotEmpty())
+        assertTrue(back.bpm != null)
+
+        // The other direction: a .mid becomes an existing kit's groove.
+        val beat = File(temp, "beat.mid")
+        beat.writeBytes(
+            MidiGroove.write(
+                com.snipsnap.mpc3.Mpc3Clip(
+                    "Outside Beat", 1,
+                    listOf(com.snipsnap.mpc3.Mpc3Note(36, 0, 0.9f), com.snipsnap.mpc3.Mpc3Note(38, 960, 0.8f)),
+                ),
+                120f,
+            ),
+        )
+        val (code, stdout, stderr) = cli("import", beat.path, "--into", File(out, "MidKit").path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "Outside Beat")
+        val stored = GrooveStore.load(File(out, "MidKit"))
+        assertEquals(4, stored.size)
+        assertEquals("Outside Beat", stored[0].name)
+
+        val (lostCode, _, lostErr) = cli("import", beat.path)
+        assertEquals(2, lostCode)
+        assertContains(lostErr, "--into")
     }
 
     @Test
