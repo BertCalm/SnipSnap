@@ -133,14 +133,23 @@ class KitBuilderModel private constructor(
 
     private fun nextStem(slot: Int, dc: DrumClass): String {
         val base = "%s_%s".format(PadNoteMap.labelForPad(slot), AutoPlace.nameFor(dc))
-        var n = 1
-        while (true) {
+        // Bounded, not `while (true)`: the loop only terminates because the
+        // formatted counter varies from n to n, an invariant Locale.ROOT
+        // restores today but does not itself guarantee. A kit holds 128
+        // pads, so 999 candidates is ample headroom; if every one of them
+        // still collides — the invariant broken again, or genuinely 999
+        // takers of one stem — this fails loudly instead of hanging the
+        // caller (an onClick, in production) forever.
+        for (n in 1..MAX_STEM_ATTEMPTS) {
             val stem = Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, n))
             val taken = kit.pads.any { it.sampleFile.equals("$stem.wav", ignoreCase = true) } ||
                 File(kitDir, "$stem.wav").exists()
             if (!taken) return stem
-            n++
         }
+        throw IllegalStateException(
+            "couldn't find a free stem for '$base' after $MAX_STEM_ATTEMPTS attempts " +
+                "(kept producing '${Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, MAX_STEM_ATTEMPTS))}')",
+        )
     }
 
     private fun deleteIfUnreferenced(pad: KitPad) {
@@ -176,5 +185,8 @@ class KitBuilderModel private constructor(
             val kit = KitAssembler.assembleArranged(name, arranged, kitDir)
             return KitBuilderModel(kitDir, kit)
         }
+
+        /** [nextStem]'s bound. A kit holds 128 pads, so this is ample headroom. */
+        private const val MAX_STEM_ATTEMPTS = 999
     }
 }

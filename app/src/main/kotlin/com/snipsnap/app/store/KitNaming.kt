@@ -1,12 +1,10 @@
 package com.snipsnap.app.store
 
 import com.snipsnap.kit.Names
-import com.snipsnap.shell.Copy
 
 /** What the FRESH TAPE dialog does with what you typed. */
 sealed interface NameVerdict {
-    /** [quip] is the easter-egg line, if the name earned one. */
-    data class Ok(val name: String, val quip: String?) : NameVerdict
+    data class Ok(val name: String) : NameVerdict
     data class Rejected(val reason: String) : NameVerdict
 }
 
@@ -18,6 +16,12 @@ sealed interface NameVerdict {
  * folder that fails Preflight later. Duplicates are refused
  * case-insensitively because the card's filesystem does not distinguish
  * them.
+ *
+ * Does not compute the TEST-egg quip: [com.snipsnap.app.ui.newTapeToast]
+ * is the single decider of what the FRESH TAPE toast says, via
+ * `Copy.kitNameResponse`. An earlier version of [NameVerdict.Ok] carried
+ * its own `quip` field that nothing read — two independent sites deciding
+ * the same easter egg drift the moment one of them changes.
  */
 fun verifyKitName(proposed: String, existing: List<String>): NameVerdict {
     val name = proposed.trim()
@@ -26,5 +30,5 @@ fun verifyKitName(proposed: String, existing: List<String>): NameVerdict {
     if (existing.any { it.equals(name, ignoreCase = true) }) {
         return NameVerdict.Rejected("YOU ALREADY HAVE THAT TAPE.")
     }
-    return NameVerdict.Ok(name, Copy.kitNameResponse(name))
+    return NameVerdict.Ok(name)
 }

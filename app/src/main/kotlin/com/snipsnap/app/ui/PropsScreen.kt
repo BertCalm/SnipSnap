@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeFonts
 import com.snipsnap.app.theme.toColor
+import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Personality
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.Schemes
@@ -56,7 +57,7 @@ fun PropsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .height(Layout.MIN_HIT_TARGET.dp)
                     .clip(RoundedCornerShape(4.dp))
                     .background(scheme.gray.toColor())
                     .then(

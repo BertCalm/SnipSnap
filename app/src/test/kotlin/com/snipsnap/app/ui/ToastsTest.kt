@@ -13,7 +13,7 @@ class ToastsTest {
     fun `failure speaks even when personality is off`() {
         for (level in Personality.entries) {
             assertEquals(
-                CREATE_FAILED,
+                Copy.CREATE_FAILED,
                 newTapeToast(created = false, name = "NIGHT BUS", personality = level),
                 "failure was silenced at $level",
             )

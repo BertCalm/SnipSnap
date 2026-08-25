@@ -2,6 +2,7 @@ package com.snipsnap.app.audio
 
 import android.media.AudioAttributes
 import android.media.SoundPool
+import android.os.Looper
 import android.util.Log
 import java.io.File
 
@@ -9,15 +10,25 @@ import java.io.File
  * What a pad needs in order to make a sound. M4 replaces the
  * implementation with Oboe/AAudio for the latency the play surface wants;
  * keeping the seam here means that swap touches one file.
+ *
+ * **Main-thread only.** [PadPlayer]'s pool identity guard (the reason a
+ * callback from a retired `SoundPool` gets dropped instead of marking the
+ * wrong pad ready) depends on every call — [load], [reset], and the
+ * `SoundPool` completion callback itself — happening on the same thread.
+ * `pool` is a plain `var` and `ready`/`pending` are plain `HashMap`s: no
+ * visibility guarantee backs any of this off the main thread. Do not move
+ * kit-open's load loop onto `Dispatchers.IO` to get `file.isFile` off the
+ * UI thread — that reintroduces the exact cross-wired-pad bug the guard
+ * exists to prevent, silently.
  */
 interface PadSound {
-    /** Loads [file] for [slot]. Idempotent per slot. */
+    /** Loads [file] for [slot]. Idempotent per slot. Main-thread only. */
     fun load(slot: Int, file: File)
 
     /**
      * Forgets every loaded pad. Call before loading a different kit —
      * [load] is idempotent per *slot*, so without this the new kit's pad 1
-     * would keep playing the old kit's pad 1.
+     * would keep playing the old kit's pad 1. Main-thread only.
      */
     fun reset()
 
@@ -87,6 +98,7 @@ class PadPlayer(private val maxStreams: Int = 8) : PadSound {
     }
 
     override fun load(slot: Int, file: File) {
+        check(Looper.myLooper() == Looper.getMainLooper()) { "PadSound is main-thread only" }
         if (ready.containsKey(slot) || pending.containsKey(slot)) return
         if (!file.isFile) {
             Log.w(TAG, "pad $slot: no such file ${file.name}")
@@ -101,6 +113,7 @@ class PadPlayer(private val maxStreams: Int = 8) : PadSound {
     }
 
     override fun reset() {
+        check(Looper.myLooper() == Looper.getMainLooper()) { "PadSound is main-thread only" }
         pool.release()
         pool = newPool()
         ready.clear()

@@ -21,7 +21,13 @@ import com.snipsnap.app.theme.toColor
 import com.snipsnap.shell.KitBuilderModel
 import java.io.File
 
-/** The KIT screen: one bank of the open kit, audible. */
+/**
+ * The KIT screen: one bank of the open kit, audible.
+ *
+ * @param onHit fires with the slot on every pad hit, alongside [sound]
+ *   actually playing it. M0 wires it to a no-op (`MainActivity`); M4's
+ *   tap-glow feedback is the intended consumer.
+ */
 @Composable
 fun KitScreen(model: KitBuilderModel, sound: PadSound, onHit: (Int) -> Unit) {
     val s = LocalScheme.current

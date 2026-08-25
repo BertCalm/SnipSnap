@@ -89,6 +89,16 @@ class KitLibrary(val root: File) {
      * of synthesized audio cost a second of CPU, weigh nothing in the APK,
      * and prove the engines run on the device. Returns false — and touches
      * nothing — if the shelf already has tapes on it.
+     *
+     * The "already has tapes" check is [KitStore.list], not [list]'s
+     * readable [ShelfListing.entries] — deliberately. Seeding only when
+     * *readable* entries are empty would seed straight into a folder the
+     * shelf merely failed to parse, silently clobbering whatever that
+     * folder held. Refusing over *any* existing kit folder, readable or
+     * not, is the safe default; it costs a user whose only kit is corrupt
+     * an explanation they don't currently get (M0 does not surface
+     * [ShelfListing.unreadable] anywhere), but that is a UI gap, not data
+     * loss.
      */
     fun seedIfEmpty(): Boolean {
         root.mkdirs()

@@ -2,17 +2,15 @@ package com.snipsnap.app.store
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class KitNamingTest {
 
     @Test
-    fun `a plain name is accepted with no quip`() {
+    fun `a plain name is accepted`() {
         val v = verifyKitName("NIGHT BUS", existing = emptyList())
         assertTrue(v is NameVerdict.Ok)
         assertEquals("NIGHT BUS", v.name)
-        assertNull(v.quip)
     }
 
     @Test
@@ -42,10 +40,9 @@ class KitNamingTest {
     }
 
     @Test
-    fun `naming a kit TEST earns the egg but still works`() {
+    fun `naming a kit TEST still works`() {
         val v = verifyKitName("TEST", existing = emptyList())
         assertTrue(v is NameVerdict.Ok)
         assertEquals("TEST", v.name)
-        assertEquals("VERY CREATIVE.", v.quip)
     }
 }

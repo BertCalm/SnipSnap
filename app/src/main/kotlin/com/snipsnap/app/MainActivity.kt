@@ -2,27 +2,19 @@ package com.snipsnap.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import com.snipsnap.app.audio.PadPlayer
 import com.snipsnap.app.nav.NavState
 import com.snipsnap.app.nav.Screen
@@ -32,19 +24,18 @@ import com.snipsnap.app.store.FileSettings
 import com.snipsnap.app.store.KitEntry
 import com.snipsnap.app.store.KitLibrary
 import com.snipsnap.app.theme.LcdSurface
-import com.snipsnap.app.theme.LocalScheme
-import com.snipsnap.app.theme.TapeFonts
 import com.snipsnap.app.theme.TapeOsTheme
-import com.snipsnap.app.theme.toColor
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.NewTapeDialog
 import com.snipsnap.app.ui.PropsScreen
 import com.snipsnap.app.ui.SnipSnapWindow
+import com.snipsnap.app.ui.ToastBanner
+import com.snipsnap.app.ui.ToastMessage
 import com.snipsnap.app.ui.newTapeToast
 import com.snipsnap.app.ui.tapes
-import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Motion
+import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -73,7 +64,8 @@ class MainActivity : ComponentActivity() {
             var entries by remember { mutableStateOf(emptyList<KitEntry>()) }
             var openKit by remember { mutableStateOf<KitEntry?>(null) }
             var newTape by remember { mutableStateOf(false) }
-            var toast by remember { mutableStateOf<String?>(null) }
+            var toast by remember { mutableStateOf<ToastMessage?>(null) }
+            var nextToastId by remember { mutableStateOf(0) }
             var seeding by remember { mutableStateOf(false) }
 
             LaunchedEffect(Unit) {
@@ -101,14 +93,41 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(toast) {
+            // Keyed on the toast's own id, not the message text: two
+            // consecutive identical toasts (e.g. CREATE_FAILED twice) are
+            // different ids, so the second one restarts its own dwell timer
+            // instead of being a no-op assignment that a text-keyed effect
+            // would silently swallow.
+            LaunchedEffect(toast?.id) {
                 if (toast != null) {
                     delay(Motion.TOAST_DWELL_MS.toLong())
                     toast = null
                 }
             }
 
-            TapeOsTheme(Schemes[schemeId]) {
+            val scheme = Schemes[schemeId]
+            TapeOsTheme(scheme) {
+                // The desk (SnipSnapWindow.kt) deliberately bleeds the
+                // scheme's gradient behind the system bars, so the system
+                // bar icons have to track that desk's own luma per scheme —
+                // the seam where "the desk bleeds behind the bars" (Task 3)
+                // meets "the scheme is user-switchable" (Task 6).
+                SideEffect {
+                    WindowCompat.getInsetsController(window, window.decorView).apply {
+                        isAppearanceLightStatusBars = Scheme.luma(scheme.desk1) > 128
+                        isAppearanceLightNavigationBars = Scheme.luma(scheme.desk2) > 128
+                    }
+                }
+
+                // System back returns to the shelf from anywhere else;
+                // from the shelf itself, back keeps its default (exit).
+                // Does not dismiss NewTapeDialog — the dialog isn't part
+                // of Screen, so this handler can't see it; the dialog's own
+                // scrim tap and CANCEL button remain the way out of it.
+                BackHandler(enabled = state.screen != Screen.KITS) {
+                    state = state.goTo(Screen.KITS)
+                }
+
                 SnipSnapWindow(
                     state = state,
                     onMenu = { state = state.goTo(it) },
@@ -122,14 +141,12 @@ class MainActivity : ComponentActivity() {
                     // floating over the system bars outside the window.
                     Box(modifier = Modifier.fillMaxSize()) {
                         when (state.screen) {
-                            Screen.KITS -> KitsScreen(
-                                entries = entries,
-                                seeding = seeding,
-                                onOpen = { openKit = it; state = state.goTo(Screen.KIT) },
-                                onNew = { newTape = true },
-                            )
-                            Screen.KIT -> {
-                                val entry = openKit
+                            Screen.KITS, Screen.KIT -> {
+                                // KIT with nothing open falls back to the
+                                // same shelf as KITS — one call site for
+                                // both, rather than the shelf duplicated
+                                // verbatim across two branches.
+                                val entry = if (state.screen == Screen.KIT) openKit else null
                                 if (entry == null) {
                                     KitsScreen(
                                         entries = entries,
@@ -138,7 +155,7 @@ class MainActivity : ComponentActivity() {
                                         onNew = { newTape = true },
                                     )
                                 } else {
-                                    val model = remember(entry.dir) { KitBuilderModel.open(entry.dir) }
+                                    val model = remember(entry.dir) { library.open(entry) }
                                     KitScreen(model = model, sound = padSound, onHit = {})
                                 }
                             }
@@ -151,7 +168,7 @@ class MainActivity : ComponentActivity() {
                             else -> LcdSurface(modifier = Modifier.fillMaxSize()) { /* placeholder */ }
                         }
 
-                        toast?.let { message -> ToastBanner(message) }
+                        toast?.let { message -> ToastBanner(message.text) }
                     }
                 }
 
@@ -174,7 +191,10 @@ class MainActivity : ComponentActivity() {
                                     withContext(Dispatchers.IO) { library.create(name) }
                                 }
                                 entries = withContext(Dispatchers.IO) { library.list().entries }
-                                toast = newTapeToast(made.isSuccess, name, state.personality)
+                                newTapeToast(made.isSuccess, name, state.personality)?.let {
+                                    nextToastId += 1
+                                    toast = ToastMessage(nextToastId, it)
+                                }
                             }
                         },
                     )
@@ -186,43 +206,5 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         padSound.release()
         super.onDestroy()
-    }
-}
-
-/**
- * A one-line status toast, sat just above the status bar — an "oil-rim
- * card" per the handoff (`design/HANDOFF.md`), dismissed on its own by the
- * [Motion.TOAST_DWELL_MS] timer in [MainActivity.onCreate].
- *
- * Anchored inside [SnipSnapWindow]'s content slot (not a full-screen
- * sibling of the window), so "above the status bar" is measured from the
- * window's own status bar row rather than from the physical screen edge —
- * the window already consumes system insets, this slot does not need to.
- */
-@Composable
-private fun ToastBanner(text: String) {
-    val s = LocalScheme.current
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        contentAlignment = Alignment.BottomCenter,
-    ) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(s.gray.toColor())
-                .border(2.dp, s.lcdInk.toColor(), RoundedCornerShape(6.dp))
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        ) {
-            BasicText(
-                text = text,
-                style = TextStyle(
-                    color = s.ink.toColor(),
-                    fontFamily = TapeFonts.pixel,
-                    fontSize = 9.sp,
-                ),
-            )
-        }
     }
 }
