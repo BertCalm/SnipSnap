@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val library = KitLibrary(File(filesDir, "kits"))
-        padSound = PadPlayer(this)
+        padSound = PadPlayer()
 
         setContent {
             var state by remember { mutableStateOf(NavState(Screen.KITS)) }

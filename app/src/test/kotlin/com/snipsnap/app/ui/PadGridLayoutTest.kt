@@ -25,6 +25,17 @@ class PadGridLayoutTest {
         assertEquals(listOf(1, 2, 3, 4), (0..3).map { slotForCell(row = 3, col = it) })
     }
 
+    /**
+     * The two endpoints alone leave the middle unpinned — a formula that
+     * got the interior rows backwards would still satisfy them, and the
+     * "covers 1..16" check cannot tell the difference either.
+     */
+    @Test
+    fun `the interior rows descend between the endpoints`() {
+        assertEquals(listOf(9, 10, 11, 12), (0..3).map { slotForCell(row = 1, col = it) })
+        assertEquals(listOf(5, 6, 7, 8), (0..3).map { slotForCell(row = 2, col = it) })
+    }
+
     @Test
     fun `every cell maps to a distinct slot covering the bank`() {
         val slots = (0..3).flatMap { r -> (0..3).map { c -> slotForCell(r, c) } }

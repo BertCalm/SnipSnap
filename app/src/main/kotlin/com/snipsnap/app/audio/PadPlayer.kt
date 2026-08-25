@@ -1,6 +1,5 @@
 package com.snipsnap.app.audio
 
-import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
 import android.util.Log
@@ -33,51 +32,58 @@ interface PadSound {
  * fires them with acceptable jitter for browsing a kit. Good enough to
  * hear a pad; not good enough to play a groove, which is why M4 exists.
  *
- * Holds a `Context` — one of the three files in this app allowed to.
+ * Needs no `Context` — `SoundPool.Builder` and `AudioAttributes.Builder`
+ * ask for none.
  */
-class PadPlayer(context: Context, maxStreams: Int = 8) : PadSound {
+class PadPlayer(private val maxStreams: Int = 8) : PadSound {
 
-    private val pool = SoundPool.Builder()
-        .setMaxStreams(maxStreams)
-        .setAudioAttributes(
-            AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build(),
-        )
-        .build()
+    private var pool: SoundPool = newPool()
 
     /** slot → sound id, present only once the pool reports the load done. */
     private val ready = HashMap<Int, Int>()
     private val pending = HashMap<Int, Int>()
 
     /**
-     * `SoundPool` recycles sample ids after `unload()`. Without this, a
-     * load issued *before* [reset] that completes *after* it could match
-     * a reused sample id against the *new* `pending` map and mark the
-     * wrong slot ready. Every [reset] bumps [generation]; each pending
-     * load remembers the generation it was issued in via
-     * [pendingGeneration], and the completion callback drops any load
-     * whose generation no longer matches — a stale callback is dropped
-     * instead of cross-wiring pads.
+     * `SoundPool` recycles sample ids after `unload()`, so an id alone
+     * cannot tell a pre-[reset] load's stale completion apart from a
+     * post-[reset] load that was handed the same id — a generation
+     * counter compared *after* the fact has the same problem, since the
+     * new load's own bookkeeping overwrites whatever the counter said.
+     * The one thing `SoundPool` does *not* recycle is the pool object
+     * itself: [reset] retires the current pool wholesale and builds a
+     * fresh one, so a callback closed over the pool it belongs to can
+     * simply check identity against whichever pool is live *right now*.
+     * A stale callback from a retired pool fails that check and is
+     * dropped, no matter what sample id it reports.
      */
-    private var generation = 0
-    private val pendingGeneration = HashMap<Int, Int>()
-
-    init {
-        pool.setOnLoadCompleteListener { _, sampleId, status ->
+    private fun newPool(): SoundPool {
+        val newPool = SoundPool.Builder()
+            .setMaxStreams(maxStreams)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build(),
+            )
+            .build()
+        newPool.setOnLoadCompleteListener { source, sampleId, status ->
+            if (source !== pool) {
+                Log.w(TAG, "load completed on a discarded pool: sample=$sampleId, dropped")
+                return@setOnLoadCompleteListener
+            }
             val slot = pending.entries.firstOrNull { it.value == sampleId }?.key
-            if (slot == null || pendingGeneration[sampleId] != generation) {
-                Log.w(TAG, "pad load completed for a stale generation: sample=$sampleId, dropped")
+            if (slot == null) {
+                Log.w(TAG, "pad load completed for an unknown sample: sample=$sampleId, dropped")
             } else if (status == 0) {
                 ready[slot] = sampleId
                 pending.remove(slot)
-                pendingGeneration.remove(sampleId)
                 Log.i(TAG, "pad $slot loaded (sample $sampleId)")
             } else {
+                pending.remove(slot)
                 Log.w(TAG, "pad load failed: sample=$sampleId status=$status slot=$slot")
             }
         }
+        return newPool
     }
 
     override fun load(slot: Int, file: File) {
@@ -87,17 +93,18 @@ class PadPlayer(context: Context, maxStreams: Int = 8) : PadSound {
             return
         }
         val sampleId = pool.load(file.absolutePath, 1)
+        if (sampleId == 0) {
+            Log.w(TAG, "pad $slot: pool refused the load")
+            return
+        }
         pending[slot] = sampleId
-        pendingGeneration[sampleId] = generation
     }
 
     override fun reset() {
-        generation++
-        for (sampleId in ready.values) pool.unload(sampleId)
-        for (sampleId in pending.values) pool.unload(sampleId)
+        pool.release()
+        pool = newPool()
         ready.clear()
         pending.clear()
-        pendingGeneration.clear()
     }
 
     override fun play(slot: Int): Int {
@@ -115,9 +122,6 @@ class PadPlayer(context: Context, maxStreams: Int = 8) : PadSound {
         ready.clear()
         pending.clear()
     }
-
-    /** True once [slot] has finished loading — the exit test's hook. */
-    fun isReady(slot: Int): Boolean = ready.containsKey(slot)
 
     companion object {
         const val TAG = "SnipSnapPad"

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -88,7 +89,11 @@ fun PadGrid(pads: List<KitPad?>, onHit: (Int) -> Unit) {
                         if (pad != null) {
                             BasicText(
                                 text = pad.displayName,
-                                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp),
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 4.dp)
+                                    .padding(bottom = 6.dp),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 style = TextStyle(
