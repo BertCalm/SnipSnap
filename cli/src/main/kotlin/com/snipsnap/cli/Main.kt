@@ -50,6 +50,10 @@ object Cli {
         |  diff <a> <b>          structured key-path diff of two MPC files,
         |                        either generation (--values lists differing
         |                        values; exit 1 when different)
+        |  art <kit-dir>         procedural cover art from the kit itself
+        |                        (--style waveform|grid|slices|rings, --scheme,
+        |                        --seed N, --size PX, --out DIR; no --style
+        |                        renders every style side by side)
         |  help                  this text
         |
         |chop options:
@@ -103,6 +107,7 @@ object Cli {
                 "backup" -> BackupCommand.backup(args.drop(1), out)
                 "restore" -> BackupCommand.restore(args.drop(1), out)
                 "diff" -> DiffCommand.run(args.drop(1), out)
+                "art" -> ArtCommand.run(args.drop(1), out)
                 "help", "--help", "-h" -> {
                     out.println(USAGE)
                     0

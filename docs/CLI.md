@@ -99,6 +99,21 @@ Every kit under a root packed as its own `.xpn` inside a single archive;
 restore feeds them back through the importer. A kit preflight refuses to
 pack is skipped **and named with the reason** — backups never pretend.
 
+### `art <kit-dir>` — procedural cover tiles
+
+Cover art drawn from the kit itself — its waveforms, its class colours,
+its name in the built-in 5×7 pixel face — on the scheme's dark LCD.
+Deterministic: same kit, same parameters, same bytes.
+
+Four styles: `waveform` (all the pads end to end, each in its class
+colour), `grid` (the 4×4 bank-A grid, lit by class), `slices` (one bar
+per pad), `rings` (seeded arcs — `--seed N` reshuffles). `--scheme`
+picks any of the six TapeOS schemes (`chrome`…`clear`), `--size PX`
+sets the square edge (default 600), `--out DIR` says where the PNGs
+land. **No `--style` renders every style side by side** — the
+prototyping loop is one command per look. The winning direction becomes
+the expansion/`.xpn` export default (Z6.3).
+
 ### `diff <a> <b>` — the corpus guard as a bench tool
 
 A structured key-path diff of two MPC files, **either generation** —

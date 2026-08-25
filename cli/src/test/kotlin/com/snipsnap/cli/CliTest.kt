@@ -155,6 +155,37 @@ class CliTest {
     }
 
     @Test
+    fun `art renders cover tiles for a kit, all styles or one`() {
+        val wav = writeBreak(File(temp, "art.wav"))
+        val out = File(temp, "art-out")
+        assertEquals(
+            0,
+            cli("chop", wav.path, "--out", out.path, "--name", "ArtKit", "--slices", "8").first,
+        )
+        val kitDir = File(out, "ArtKit").path
+        val tiles = File(temp, "tiles")
+
+        val (code, stdout, stderr) = cli("art", kitDir, "--out", tiles.path, "--size", "128")
+        assertEquals(0, code, "stderr: $stderr")
+        for (style in listOf("waveform", "grid", "slices", "rings")) {
+            val png = File(tiles, "ArtKit_$style.png")
+            assertTrue(png.isFile && png.length() > 500, "$style tile landed non-trivially")
+            assertContains(stdout, png.path)
+        }
+
+        val one = File(temp, "one-tile")
+        assertEquals(
+            0,
+            cli("art", kitDir, "--style", "grid", "--scheme", "snack-bar", "--out", one.path, "--size", "128").first,
+        )
+        assertEquals(listOf("ArtKit_grid.png"), one.list()!!.toList())
+
+        val (badCode, _, badErr) = cli("art", kitDir, "--style", "cubist")
+        assertEquals(2, badCode)
+        assertContains(badErr, "unknown style")
+    }
+
+    @Test
     fun `diff compares two MPC files and exits one when they differ`() {
         val wav = writeBreak(File(temp, "df.wav"))
         val out = File(temp, "df-out")
