@@ -111,6 +111,149 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `the kit key persists and IN KEY retunes only pitched tonal pads`() {
+        val dir = File(temp, "Keyed")
+        val m = KitBuilderModel.create("Keyed", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        // The default tonal() sits on 110 Hz - an A, out of C minor.
+        m.assign(13, DrumSynth.tonal(), DrumClass.TONAL)
+
+        assertEquals(emptyList(), m.retuneTonalPads(), "no key set, nothing happens")
+
+        m.setKey(com.snipsnap.audio.KeySpec.parse("Cm"))
+        m.save()
+        val reopened = KitBuilderModel.open(dir)
+        assertEquals(com.snipsnap.audio.KeySpec.parse("C minor"), reopened.kit.key)
+
+        val moved = reopened.retuneTonalPads()
+        assertEquals(listOf(13), moved)
+        val tonal = reopened.pad(13)!!
+        assertTrue(tonal.tuneCoarse != 0 || tonal.tuneFine != 0, "A must move into C minor")
+        assertEquals(0, reopened.pad(1)!!.tuneCoarse, "the kick is never 'corrected'")
+        assertEquals(emptyList(), reopened.retuneTonalPads(), "second pass is a no-op")
+
+        reopened.setKey(null)
+        reopened.save()
+        assertEquals(null, KitBuilderModel.open(dir).kit.key)
+    }
+
+    @Test
+    fun `evil twins - bank B remixes bank A, keeps colour and choke, rerolls`() {
+        val dir = File(temp, "Twins")
+        val m = KitBuilderModel.create("Twins", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.assign(3, DrumSynth.closedHat(), DrumClass.HAT_CLOSED)
+        m.assign(4, DrumSynth.openHat(), DrumClass.HAT_OPEN)
+
+        val slots = m.remixBankB(seed = 5)
+        assertEquals(listOf(17, 19, 20), slots)
+        val twin = m.pad(19)!!
+        assertEquals(m.pad(3)!!.colorHex, twin.colorHex, "twins keep the class colour")
+        assertEquals(1, twin.muteGroup, "the hats still choke in bank B")
+        assertTrue(twin.displayName.endsWith(" B"))
+        assertTrue(File(dir, twin.sampleFile).isFile)
+        assertTrue(twin.recipe != null, "twins carry fx-only recipes")
+
+        // Reroll replaces the bank; a different seed treats differently.
+        val firstBytes = File(dir, m.pad(17)!!.sampleFile).readBytes()
+        m.remixBankB(seed = 6)
+        assertEquals(3, m.kit.pads.count { it.slot > 16 })
+        val secondBytes = File(dir, m.pad(17)!!.sampleFile).readBytes()
+        assertTrue(
+            !firstBytes.contentEquals(secondBytes) ||
+                m.pad(17)!!.recipe.toString() != twin.recipe.toString(),
+            "a new seed should treat differently",
+        )
+        m.save()
+        assertEquals(m.kit, KitStore.load(dir))
+
+        assertFailsWith<IllegalArgumentException> {
+            KitBuilderModel.create("Empty", File(temp, "Empty")).remixBankB(1)
+        }
+    }
+
+    @Test
+    fun `ghost layers - darker soft zones, and reversible`() {
+        val dir = File(temp, "Ghosts")
+        val m = KitBuilderModel.create("Ghosts", dir)
+        m.assign(1, DrumSynth.snare(), DrumClass.SNARE)
+
+        val layered = m.addGhostLayers(1)
+        assertEquals(2, layered.velocityLayers.size)
+        assertEquals(1, layered.velocityLayers[0].velStart, "soft zone starts at 1, not 0")
+        assertEquals(127, layered.velocityLayers[1].velEnd)
+        assertEquals(layered.sampleFile, layered.velocityLayers.last().sampleFile)
+
+        val softFile = File(dir, layered.velocityLayers[0].sampleFile)
+        assertTrue(softFile.isFile)
+        // The soft render is darker, not just quieter: lower centroid.
+        val softCentroid = com.snipsnap.audio.Classifier
+            .classify(com.snipsnap.audio.WavReader.read(softFile)).features.centroidHz
+        val mainCentroid = com.snipsnap.audio.Classifier
+            .classify(com.snipsnap.audio.WavReader.read(File(dir, layered.sampleFile))).features.centroidHz
+        assertTrue(softCentroid < mainCentroid, "soft $softCentroid vs main $mainCentroid")
+
+        assertFailsWith<IllegalArgumentException> { m.addGhostLayers(1) } // already layered
+
+        val cleared = m.clearGhostLayers(1)
+        assertTrue(cleared.velocityLayers.isEmpty())
+        assertFalse(softFile.exists(), "soft renders are deleted on revert")
+    }
+
+    @Test
+    fun `takes archive every meaningful save and restore rolls back`() {
+        val dir = File(temp, "Takes")
+        val m = KitBuilderModel.create("Takes", dir)
+        assertEquals(0, m.takes().size, "creation isn't a take")
+
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save() // archives the empty original
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save() // archives the one-pad version
+        assertEquals(2, m.takes().size)
+        m.save() // clean save: no new take
+        assertEquals(2, m.takes().size)
+
+        val onePadTake = m.takes().last()
+        m.restoreTake(onePadTake)
+        assertTrue(m.dirty)
+        assertEquals(1, m.kit.pads.size, "rolled back to the one-pad take")
+        assertEquals(DrumClass.KICK, m.pad(1)?.drumClass)
+    }
+
+    @Test
+    fun `the bin keeps deletes 30 days and takes pull samples back out`() {
+        val dir = File(temp, "Bin")
+        val m = KitBuilderModel.create("Bin", dir)
+        val pad = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save() // take_001 = the empty original
+        m.assign(2, DrumSynth.closedHat(), DrumClass.HAT_CLOSED)
+        m.save() // take_002 = the kick-only kit
+
+        m.clear(1)
+        assertFalse(File(dir, pad.sampleFile).exists(), "cleared from the kit")
+        val bin = m.binContents()
+        assertEquals(1, bin.size)
+        assertEquals(pad.sampleFile, bin[0].originalName, "recoverable, not gone")
+
+        // Restoring the kick-only take pulls the WAV back out of the bin.
+        m.restoreTake(m.takes().last())
+        assertEquals(DrumClass.KICK, m.pad(1)?.drumClass)
+        assertTrue(File(dir, pad.sampleFile).isFile, "the take brought its sample home")
+        assertEquals(0, m.binContents().size)
+
+        // Purge honours the 30-day promise; a fresh delete survives it.
+        m.clear(1)
+        assertEquals(0, m.purgeBin(nowMillis = System.currentTimeMillis()), "nothing is 30 days old yet")
+        assertEquals(1, m.purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000))
+        assertEquals(0, m.binContents().size)
+
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.clear(2)
+        assertEquals(1, m.emptyBin())
+    }
+
+    @Test
     fun `bank view and the TEST kit egg`() {
         val dir = File(temp, "Banks")
         val m = KitBuilderModel.create("Banks", dir)

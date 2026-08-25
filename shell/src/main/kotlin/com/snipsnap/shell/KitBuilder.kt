@@ -119,11 +119,210 @@ class KitBuilderModel private constructor(
         return edited
     }
 
-    /** Write `kit.json`. The moment the folder and the model agree again. */
+    /**
+     * Set or clear the kit's key. Choosing a key never retunes anything by
+     * itself — that's [retuneTonalPads], an explicit action.
+     */
+    fun setKey(key: com.snipsnap.audio.KeySpec?) {
+        if (kit.key == key) return
+        kit = kit.copy(key = key)
+        dirty = true
+    }
+
+    /**
+     * IN KEY: retune every TONAL pad onto the nearest note of the kit's
+     * key, via the tune fields the MPC pad already has — audio untouched,
+     * unpitched pads and non-tonal classes never "corrected". Returns the
+     * slots that moved. No key set, nothing happens.
+     */
+    fun retuneTonalPads(): List<Int> {
+        val key = kit.key ?: return emptyList()
+        val moved = mutableListOf<Int>()
+        for (pad in kit.pads) {
+            if (pad.drumClass != DrumClass.TONAL) continue
+            val snip = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+            val tune = com.snipsnap.audio.Tuner.inKey(snip, key.rootSemitone, key.scale) ?: continue
+            if (tune.tuneCoarse == pad.tuneCoarse && tune.tuneFine == pad.tuneFine) continue
+            kit = kit.copy(
+                pads = kit.pads.map {
+                    if (it.slot == pad.slot) it.copy(tuneCoarse = tune.tuneCoarse, tuneFine = tune.tuneFine) else it
+                },
+            )
+            moved += pad.slot
+        }
+        if (moved.isNotEmpty()) dirty = true
+        return moved
+    }
+
+    /**
+     * EVIL TWINS: bank B becomes seeded FX re-treatments of bank A, one
+     * twin per pad — [com.snipsnap.synth.Shuffle.withRemixBank] over the
+     * kit's own audio. Twins keep their source's colour and mute group
+     * (so the hats still choke in bank B) and carry fx-only recipes.
+     * Rerolling with a new seed replaces the bank. Returns bank-B slots.
+     */
+    fun remixBankB(seed: Int): List<Int> {
+        val bankA = (1..16).map { slot ->
+            pad(slot)?.let {
+                ArrangedPad(
+                    com.snipsnap.audio.WavReader.read(File(kitDir, it.sampleFile)),
+                    it.drumClass,
+                )
+            }
+        }
+        require(bankA.any { it != null }) { "bank A is empty - nothing to remix" }
+
+        (17..32).forEach { clear(it) }
+        val remixed = com.snipsnap.synth.Shuffle.withRemixBank(bankA, seed)
+        val added = mutableListOf<Int>()
+        remixed.drop(16).forEachIndexed { i, twin ->
+            twin ?: return@forEachIndexed
+            val slot = 17 + i
+            val source = pad(slot - 16) ?: return@forEachIndexed
+            val stem = nextStem(slot, twin.drumClass)
+            WavWriter.write(File(kitDir, "$stem.wav"), twin.snip)
+            kit = kit.copy(
+                pads = kit.pads + source.copy(
+                    slot = slot,
+                    sampleFile = "$stem.wav",
+                    displayName = "${source.displayName} B",
+                    recipe = twin.recipe,
+                    velocityLayers = emptyList(),
+                ),
+            )
+            added += slot
+        }
+        dirty = true
+        return added
+    }
+
+    /**
+     * Ghost notes: soft velocity zones rendered darker (not just quieter)
+     * under the pad's main sample, via the same softening the velocity
+     * kit ships with. [softZones] 1 or 2. Reversible with
+     * [clearGhostLayers].
+     */
+    fun addGhostLayers(slot: Int, softZones: Int = 1): KitPad {
+        require(softZones in 1..2) { "1 or 2 soft zones, got $softZones" }
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered" }
+        val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+
+        val amounts = if (softZones == 1) listOf(0.55f) else listOf(0.7f, 0.4f) // softest first
+        val zoneCount = softZones + 1
+        val layers = buildList {
+            amounts.forEachIndexed { v, amount ->
+                val file = "${pad.sampleStem}_v${v + 1}.wav"
+                WavWriter.write(File(kitDir, file), com.snipsnap.synth.Velocity.soften(main, amount))
+                add(
+                    com.snipsnap.kit.KitLayer(
+                        file,
+                        velStart = if (v == 0) 1 else 128 * v / zoneCount,
+                        velEnd = 128 * (v + 1) / zoneCount - 1,
+                    ),
+                )
+            }
+            add(com.snipsnap.kit.KitLayer(pad.sampleFile, 128 * softZones / zoneCount, 127))
+        }
+        return update(slot) { it.copy(velocityLayers = layers) }
+    }
+
+    /** Back to a single-sample pad; the soft renders are deleted. */
+    fun clearGhostLayers(slot: Int): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        val softFiles = pad.velocityLayers.map { it.sampleFile }.filter { it != pad.sampleFile }
+        val cleared = update(slot) { it.copy(velocityLayers = emptyList()) }
+        softFiles.forEach { File(kitDir, it).delete() }
+        return cleared
+    }
+
+    /**
+     * Write `kit.json`. The moment the folder and the model agree again.
+     * The outgoing `kit.json` is archived as a take first — every save is
+     * a point you can roll back to.
+     */
     fun save(): File {
+        archiveTake()
         val file = KitStore.save(kit, kitDir)
         dirty = false
         return file
+    }
+
+    // ---------- takes ----------
+
+    /** Archived takes, oldest first. */
+    fun takes(): List<File> =
+        File(kitDir, TAKES_DIR).listFiles { f: File -> TAKE_NAME.matches(f.name) }
+            ?.sortedBy { it.name } ?: emptyList()
+
+    /**
+     * Roll back to an archived take. Samples the take references that were
+     * since binned come back out of the bin — takes and the bin are one
+     * promise. The restored state is unsaved ([dirty]) until [save].
+     */
+    fun restoreTake(take: File): Kit {
+        val restored = KitStore.read(take)
+        for (pad in restored.pads) {
+            val files = listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }
+            for (f in files) {
+                if (!File(kitDir, f).isFile) restoreFromBin(f)
+            }
+        }
+        kit = restored
+        dirty = true
+        return restored
+    }
+
+    private fun archiveTake() {
+        val current = File(kitDir, "kit.json")
+        // A clean save changes nothing; archiving it would duplicate takes.
+        if (!current.isFile || !dirty) return
+        val takesDir = File(kitDir, TAKES_DIR).apply { mkdirs() }
+        val next = (takes().lastOrNull()?.let { TAKE_NAME.find(it.name)!!.groupValues[1].toInt() } ?: 0) + 1
+        // Locale.ROOT: this name is parsed back by TAKE_NAME, whose \d is
+        // ASCII-only. An unlocalised %03d writes take_٠٠١.json on an ar-EG
+        // device, the regex then misses, and the !! on the line above throws
+        // the next time a take is archived.
+        current.copyTo(File(takesDir, String.format(Locale.ROOT, "take_%03d.json", next)))
+        // Rotate: the cap outlasts any honest session; oldest go first.
+        takes().dropLast(MAX_TAKES).forEach { it.delete() }
+    }
+
+    // ---------- the bin ----------
+
+    /** What's recoverable: file name it had, when it was binned, its bin file. */
+    data class BinEntry(val originalName: String, val binnedAtMillis: Long, val file: File)
+
+    /** Recoverable deletes, newest first. */
+    fun binContents(): List<BinEntry> =
+        File(kitDir, BIN_DIR).listFiles { f: File -> BIN_NAME.matches(f.name) }
+            ?.map {
+                val m = BIN_NAME.find(it.name)!!
+                BinEntry(m.groupValues[2], m.groupValues[1].toLong(), it)
+            }
+            ?.sortedByDescending { it.binnedAtMillis } ?: emptyList()
+
+    /** The newest binned copy of [originalName] back into the kit, or null. */
+    fun restoreFromBin(originalName: String): File? {
+        val entry = binContents().firstOrNull { it.originalName == originalName } ?: return null
+        val dest = File(kitDir, originalName)
+        entry.file.copyTo(dest, overwrite = true)
+        entry.file.delete()
+        return dest
+    }
+
+    /** THE BIN KEEPS IT 30 DAYS — this is the keeping-side of that promise. */
+    fun purgeBin(olderThanDays: Double = BIN_KEEP_DAYS, nowMillis: Long = System.currentTimeMillis()): Int {
+        val cutoff = nowMillis - (olderThanDays * 24 * 60 * 60 * 1000).toLong()
+        val old = binContents().filter { it.binnedAtMillis < cutoff }
+        old.forEach { it.file.delete() }
+        return old.size
+    }
+
+    fun emptyBin(): Int {
+        val all = binContents()
+        all.forEach { it.file.delete() }
+        return all.size
     }
 
     /** The kit-name easter egg, for the rename dialog to surface. */
@@ -156,11 +355,33 @@ class KitBuilderModel private constructor(
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).toSet()
         val stillUsed = kit.pads.flatMap { listOf(it.sampleFile) + it.velocityLayers.map { l -> l.sampleFile } }
         for (f in files) {
-            if (f !in stillUsed) File(kitDir, f).delete()
+            if (f !in stillUsed) moveToBin(f)
         }
     }
 
+    /** EJECTED. THE BIN KEEPS IT 30 DAYS — deletes are recoverable, not gone. */
+    private fun moveToBin(fileName: String) {
+        val src = File(kitDir, fileName)
+        if (!src.isFile) return
+        val binDir = File(kitDir, BIN_DIR).apply { mkdirs() }
+        val dest = File(binDir, "${System.currentTimeMillis()}_$fileName")
+        src.copyTo(dest, overwrite = true)
+        src.delete()
+    }
+
     companion object {
+
+        /** Where saves archive their history, inside the kit folder. */
+        const val TAKES_DIR = ".takes"
+
+        /** Where deletes wait out their 30 days. */
+        const val BIN_DIR = ".bin"
+
+        const val MAX_TAKES = 32
+        const val BIN_KEEP_DAYS = 30.0
+
+        internal val TAKE_NAME = Regex("take_(\\d{3})\\.json")
+        internal val BIN_NAME = Regex("(\\d+)_(.+)")
 
         /** Open an existing kit folder. */
         fun open(kitDir: File): KitBuilderModel =

@@ -37,6 +37,8 @@ tempo, chop, classify each slice, auto-place onto the conventional layout
 | `--grid N` | chop into N equal parts instead of following hits |
 | `--place` / `--no-place` | force auto-placement on or off. Default: on when following hits, off on a grid — a grid's order is usually the point |
 | `--balance` | per-pad levels via `Balance` so the kit sits right as a mix |
+| `--groove` | embed the capture's own rhythm as a clip in the native exports (`xtd`/`xpj`) — timing as captured, velocities from the hits' own dynamics; needs a confident tempo |
+| `--ghosts` | darker soft velocity zones under every one-shot pad — quiet hits sound soft, not just quiet |
 | `--key SPEC` | retune tonal pads into a key via `InKey`/`Tuner`: `Am`, `C`, `F#m`, `Eb major`, `Dminpent` |
 | `--export LIST` | comma-separated formats, see below |
 | `--overwrite` | replace same-named output |
@@ -58,6 +60,43 @@ threshold by.
 
 Takes any folder with a `kit.json` (one this CLI chopped, or one synced off
 a phone) and writes the chosen formats.
+
+### `import <file>` — the receive half, both directions
+
+Dispatches by content, never extension. An `.xpn` archive unpacks into a
+kit folder — ours or a vendor's (either instrument-numbering base, samples
+found by bare name anywhere in the archive). A native MPC 3 drum track
+(`.xtd` with its `_[TrackData]/` beside it) imports too — **kits the MPC
+itself saved become editable kit folders**, levels, tunes, mute groups,
+velocity layers and pad colours intact. A whole **`.xpj` project**
+imports too: every drum track inside becomes its own kit folder, non-drum
+tracks skipped and named. Either way the landed folders are editable and
+re-exportable like any other kit.
+
+### `remix <kit-dir>` — evil twins
+
+Bank B becomes seeded FX re-treatments of bank A — reversed, crushed,
+slapback, washed, punched — one twin per pad, colour and choke group kept
+so the hats still cut each other in bank B. Reroll with `--seed N`.
+
+### `keys <note.wav> [more.wav …]` — notes in, keyboard out
+
+MPC keygroups pitch the sample themselves, so one pitched capture plus its
+detected root is a full-range chromatic instrument — and several captures
+become a real **multisample**: each note a zone at its detected root,
+zones tiled at the midpoints. Lands the dual-generation layout (`.xty`
+beside `_[TrackData]/` with the `.xpm` twin). Unpitched material is
+refused by file name; two files detecting the same root refuse by both
+names — you pick, it doesn't. `--loop` cuts **sustain loops**: a
+whole-period loop found in each note's sustain (crossfaded when the raw
+seam isn't clean), trimmed to the loop-to-end idiom both formats share —
+held pads sing forever. A note with no honest sustain plays unlooped.
+
+### `backup <kits-root>` / `restore <backup.zip>` — everything on one file
+
+Every kit under a root packed as its own `.xpn` inside a single archive;
+restore feeds them back through the importer. A kit preflight refuses to
+pack is skipped **and named with the reason** — backups never pretend.
 
 ## Export formats
 

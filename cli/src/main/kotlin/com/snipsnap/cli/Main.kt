@@ -37,6 +37,12 @@ object Cli {
         |  chop <input.wav>      chop, classify, auto-place, and build a kit folder
         |  classify <wav...>     print what the classifier hears in each file
         |  export <kit-dir>      export an existing kit folder to MPC formats
+        |  import <file>         unpack an .xpn archive or a native .xtd into a kit folder
+        |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
+        |                        (--loop cuts sustain loops: held pads sing forever)
+        |  remix <kit-dir>       bank B becomes seeded evil twins of bank A
+        |  backup <kits-root>    every kit as an .xpn inside one archive
+        |  restore <backup.zip>  the archive back into kit folders
         |  help                  this text
         |
         |chop options:
@@ -49,6 +55,12 @@ object Cli {
         |                    following hits, off on a grid - a grid's order is
         |                    usually the point)
         |  --balance         set per-pad levels so the kit sits right as a mix
+        |  --groove          embed the capture's own rhythm as a clip in the
+        |                    native exports (needs a confident tempo)
+        |  --ghosts          render darker soft velocity zones under every
+        |                    one-shot pad, so quiet hits sound soft
+        |  --melodic         place slices low-to-high by detected pitch
+        |                    (unpitched slices follow in capture order)
         |  --key SPEC        retune tonal pads into a key: Am, C, F#m, Eb major,
         |                    Dminpent, Gchromatic
         |  --export LIST     comma-separated: ${Exports.FORMATS.joinToString(",")}
@@ -74,6 +86,11 @@ object Cli {
                 "chop" -> ChopCommand.run(args.drop(1), out)
                 "classify" -> ClassifyCommand.run(args.drop(1), out)
                 "export" -> ExportCommand.run(args.drop(1), out)
+                "import" -> ImportCommand.run(args.drop(1), out)
+                "keys" -> KeysCommand.run(args.drop(1), out)
+                "remix" -> RemixCommand.run(args.drop(1), out)
+                "backup" -> BackupCommand.backup(args.drop(1), out)
+                "restore" -> BackupCommand.restore(args.drop(1), out)
                 "help", "--help", "-h" -> {
                     out.println(USAGE)
                     0

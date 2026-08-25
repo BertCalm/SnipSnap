@@ -4,12 +4,14 @@ import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Chopper
 import com.snipsnap.audio.Classification
 import com.snipsnap.audio.Classifier
+import com.snipsnap.audio.KeySpec
 import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Slice
 import com.snipsnap.audio.Tempo
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.ArrangedPad
 import com.snipsnap.kit.Balance
+import com.snipsnap.kit.CapturedGroove
 import com.snipsnap.kit.InKey
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.Names
@@ -39,7 +41,7 @@ object ChopCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export"),
-            boolean = setOf("--balance", "--overwrite", "--place", "--no-place"),
+            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic"),
         )
         val input = opts.positional.firstOrNull()
             ?: throw CliError("chop wants an input file: snipsnap chop <input.wav>")
@@ -49,11 +51,20 @@ object ChopCommand {
         if (opts.has("--place") && opts.has("--no-place")) {
             throw CliError("--place and --no-place contradict each other")
         }
+        if (opts.has("--melodic") && (opts.has("--place") || opts.has("--no-place"))) {
+            throw CliError("--melodic is its own placement - drop --place/--no-place")
+        }
 
         // Validate every option before touching audio: a typo'd format
         // should fail in a millisecond, not after a minute of chopping.
         val exportFormats = opts["--export"]?.let(Exports::parseFormats)
-        val key = opts["--key"]?.let(KeySpec::parse)
+        val key = opts["--key"]?.let {
+            try {
+                KeySpec.parse(it)
+            } catch (e: IllegalArgumentException) {
+                throw CliError(e.message ?: "can't read key '$it'")
+            }
+        }
         val grid = opts.int("--grid")
         val maxSlices = opts.int("--slices")
         if (grid != null && maxSlices != null) {
@@ -78,11 +89,8 @@ object ChopCommand {
             out.println("resampled to $TARGET_RATE Hz")
         }
 
-        Tempo.estimate(snip)?.let {
-            if (it.confidence >= 0.3f) {
-                out.println("tempo: ~%s (confidence %.2f)".format(it.label, it.confidence))
-            }
-        }
+        val tempo = Tempo.estimate(snip)?.takeIf { it.confidence >= 0.3f }
+        tempo?.let { out.println("tempo: ~%s (confidence %.2f)".format(it.label, it.confidence)) }
 
         val slices = if (grid != null) {
             Chopper.intoEqualParts(snip, grid, cleanup = Chopper.SLICE_CLEANUP)
@@ -105,13 +113,27 @@ object ChopCommand {
             opts.has("--place") -> true
             else -> grid == null
         }
-        val onPads: List<Pair<Slice, Classification>?> = if (place) {
-            // Round up to whole banks so nothing gets dropped: the core
-            // classes claim their bank-A pads, the rest overflow upward.
-            val padCount = (((classified.size + 15) / 16) * 16).coerceAtMost(128)
-            AutoPlace.arrange(classified, padCount) { it.second.drumClass }
-        } else {
-            classified
+        val onPads: List<Pair<Slice, Classification>?> = when {
+            opts.has("--melodic") -> {
+                // Pitched slices low → high (the SCALE-layout spirit),
+                // unpitched after in capture order.
+                val withPitch = classified.map { pair ->
+                    pair to com.snipsnap.audio.Pitch.detect(pair.first.snip)
+                        ?.takeIf { it.confidence >= 0.5f }
+                }
+                val pitched = withPitch.filter { it.second != null }
+                    .sortedBy { it.second!!.hz }.map { it.first }
+                val unpitched = withPitch.filter { it.second == null }.map { it.first }
+                out.println("melodic: ${pitched.size} pitched slices low to high, ${unpitched.size} unpitched after")
+                pitched + unpitched
+            }
+            place -> {
+                // Round up to whole banks so nothing gets dropped: the core
+                // classes claim their bank-A pads, the rest overflow upward.
+                val padCount = (((classified.size + 15) / 16) * 16).coerceAtMost(128)
+                AutoPlace.arrange(classified, padCount) { it.second.drumClass }
+            }
+            else -> classified
         }
 
         var arranged = onPads.map { entry ->
@@ -126,7 +148,11 @@ object ChopCommand {
             out.println("tonal pads retuned into ${key.label}")
         }
 
-        val name = opts["--name"] ?: Names.sanitizeStem(file.nameWithoutExtension)
+        // The default name carries what detection learned: "break 92bpm".
+        val name = opts["--name"] ?: buildString {
+            append(Names.sanitizeStem(file.nameWithoutExtension))
+            tempo?.let { append(' ').append(it.label) }
+        }
         if (!Names.isMpcSafe(name)) throw CliError("kit name isn't MPC-safe: '$name'")
         val outRoot = File(opts["--out"] ?: "snipsnap-out")
         val kitDir = File(outRoot, name)
@@ -134,7 +160,21 @@ object ChopCommand {
             throw CliError("kit already exists: $kitDir (pass --overwrite to replace it)")
         }
 
-        val kit = KitAssembler.assembleArranged(name, arranged, kitDir)
+        var kit = KitAssembler.assembleArranged(name, arranged, kitDir, key, tempo?.bpm)
+
+        if (opts.has("--ghosts")) {
+            val model = com.snipsnap.shell.KitBuilderModel.open(kitDir)
+            var layered = 0
+            for (pad in kit.pads) {
+                if (pad.oneShot && pad.velocityLayers.isEmpty()) {
+                    model.addGhostLayers(pad.slot)
+                    layered++
+                }
+            }
+            model.save()
+            kit = model.kit
+            out.println("ghost notes: $layered pads gained darker soft zones")
+        }
 
         out.println()
         out.println("pad  class       conf   source     length")
@@ -160,9 +200,34 @@ object ChopCommand {
             out.println("  [${it.severity}] ${it.message}")
         }
 
+        // --groove: the capture's own rhythm rides along in the native formats.
+        var clip: com.snipsnap.mpc3.Mpc3Clip? = null
+        if (opts.has("--groove")) {
+            if (tempo == null) {
+                out.println("(no confident tempo - groove skipped)")
+            } else {
+                val maxPeak = onPads.filterNotNull().maxOf { it.first.snip.peak() }.coerceAtLeast(1e-6f)
+                val hits = onPads.mapIndexedNotNull { i, entry ->
+                    entry?.let { (slice, _) ->
+                        CapturedGroove.Hit(
+                            padSlot = i + 1,
+                            sourceFrame = slice.sourceFrame.toLong(),
+                            lengthFrames = slice.snip.frameCount.toLong().coerceAtLeast(1),
+                            velocity = (slice.snip.peak() / maxPeak).coerceIn(0.05f, 1f),
+                        )
+                    }
+                }
+                clip = CapturedGroove.clip("$name Groove", hits, tempo.bpm, TARGET_RATE)
+                out.println("groove: \"${clip.name}\" - ${clip.notes.size} notes over ${clip.bars} bar(s), as captured")
+            }
+        }
+
         if (exportFormats != null) {
             out.println()
-            Exports.write(kit, kitDir, File(outRoot, "card"), exportFormats, opts.has("--overwrite"), out)
+            Exports.write(
+                kit, kitDir, File(outRoot, "card"), exportFormats, opts.has("--overwrite"), out,
+                clip = clip, tempoBpm = tempo?.bpm,
+            )
         } else {
             out.println("(no --export given - kit folder only; formats: ${Exports.FORMATS.joinToString(",")})")
         }

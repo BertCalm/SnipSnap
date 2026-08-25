@@ -119,9 +119,96 @@ class ChopReviewModel private constructor(
     /** RE-CHOP: fresh detection, fresh labels, overrides gone. */
     fun rechop(newMode: ChopMode = mode): ChopReviewModel = chop(source, newMode)
 
+    /**
+     * The teach-the-machine harvest: every overridden chip as a labeled
+     * example — the measurements plus the human's word, never the audio.
+     * The app appends these to the teach log only behind a consent switch.
+     */
+    fun labeledOverrides(): List<TeachLog.Example> =
+        rows.filter { it.overridden }.map {
+            TeachLog.Example(
+                label = it.effectiveClass,
+                features = it.classification.features,
+                machineSaid = it.classification.drumClass,
+            )
+        }
+
+    // ---------- melodic placement ----------
+
+    /** Per-row detected pitch (confident only), cached — melodic placement reads it. */
+    private val pitchByRow: Map<Row, com.snipsnap.audio.PitchEstimate> by lazy {
+        rows.mapNotNull { row ->
+            com.snipsnap.audio.Pitch.detect(row.slice.snip)
+                ?.takeIf { it.confidence >= MELODIC_PITCH_CONFIDENCE }
+                ?.let { row to it }
+        }.toMap()
+    }
+
+    /** The row's confident pitch, or null — the UI shows it on melodic chips. */
+    fun pitchOf(index: Int): com.snipsnap.audio.PitchEstimate? = pitchByRow[rows[index]]
+
+    /**
+     * MELODIC placement: pitched slices sorted **low → high** onto the
+     * pads (root at A01, ascending — the SCALE-layout spirit), unpitched
+     * slices appended after in capture order. A phrase becomes something
+     * you can perform.
+     */
+    fun melodicPreview(): List<Row?> {
+        val pitched = rows.filter { it in pitchByRow }.sortedBy { pitchByRow.getValue(it).hz }
+        val unpitched = rows.filter { it !in pitchByRow }
+        val ordered = pitched + unpitched
+        val padCount = (((ordered.size + 15) / 16) * 16).coerceAtMost(128)
+        return ordered.take(padCount) + List(padCount - ordered.size.coerceAtMost(padCount)) { null }
+    }
+
+    /** SEND TO GRID, melodic layout. */
+    fun sendToGridMelodic(): SendResult {
+        val placed = melodicPreview()
+        val arranged = placed.map { row ->
+            row?.let { ArrangedPad(it.slice.snip, it.effectiveClass) }
+        }
+        val choke = placed.any { it != null && AutoPlace.muteGroupFor(it.effectiveClass) != 0 }
+        return SendResult(arranged, rows.size, choke)
+    }
+
+    /** The source's tempo, when it confidently has one. */
+    val tempo: com.snipsnap.audio.TempoEstimate? by lazy {
+        com.snipsnap.audio.Tempo.estimate(source)?.takeIf { it.confidence >= 0.3f }
+    }
+
+    /**
+     * The capture's own rhythm as an embeddable clip — [CapturedGroove]
+     * over the current placement, velocities from the hits' own dynamics.
+     * Null when the source has no confident tempo; the UI greys the
+     * GROOVE toggle rather than guessing one.
+     */
+    fun grooveClip(
+        name: String,
+        quantizeTo: Long? = null,
+    ): com.snipsnap.mpc3.Mpc3Clip? {
+        val t = tempo ?: return null
+        val placed = placementPreview()
+        val maxPeak = placed.filterNotNull()
+            .maxOfOrNull { it.slice.snip.peak() }?.coerceAtLeast(1e-6f) ?: return null
+        val hits = placed.mapIndexedNotNull { i, row ->
+            row?.let {
+                com.snipsnap.kit.CapturedGroove.Hit(
+                    padSlot = i + 1,
+                    sourceFrame = it.slice.sourceFrame.toLong(),
+                    lengthFrames = it.slice.snip.frameCount.toLong().coerceAtLeast(1),
+                    velocity = (it.slice.snip.peak() / maxPeak).coerceIn(0.05f, 1f),
+                )
+            }
+        }
+        return com.snipsnap.kit.CapturedGroove.clip(name, hits, t.bpm, source.sampleRate, quantizeTo)
+    }
+
     companion object {
         /** Below this the chip goes dashed — same threshold as the CLI's `?`. */
         const val NOT_SURE_BELOW = 0.5f
+
+        /** Below this a slice counts as unpitched for melodic placement. */
+        const val MELODIC_PITCH_CONFIDENCE = 0.5f
 
         /** Chip tap-cycle order — core hits first, escape hatches last. */
         val CHIP_CYCLE: List<DrumClass> = listOf(

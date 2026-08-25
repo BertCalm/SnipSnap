@@ -55,6 +55,10 @@ object Exporters {
         meta: ExpansionMeta = defaultMeta(kit),
         /** MPC3_TRACK only: also write the MPC 2 `.xpm` twin inside `_[TrackData]/`. */
         dualGeneration: Boolean = false,
+        /** Native formats only: an embedded pattern (see `CapturedGroove`). */
+        clip: com.snipsnap.mpc3.Mpc3Clip? = null,
+        /** MPC3_PROJECT only: the project tempo; null keeps the writer's default. */
+        tempoBpm: Float? = null,
     ): ExportOutcome = when (format) {
         ExportFormat.PROGRAM_FOLDER -> {
             val r = KitExporter.exportProgramFolder(kit, kitDir, destRoot, overwrite)
@@ -69,7 +73,7 @@ object Exporters {
             ExportOutcome(format, f, null, findings(kit, kitDir))
         }
         ExportFormat.MPC3_TRACK -> {
-            val r = Mpc3Exporter.exportTrack(kit, kitDir, destRoot, overwrite, mpc2Twin = dualGeneration)
+            val r = Mpc3Exporter.exportTrack(kit, kitDir, destRoot, overwrite, clip = clip, mpc2Twin = dualGeneration)
             ExportOutcome(
                 format, r.program,
                 File(destRoot, Mpc3TrackWriter.trackDataDirName(kit.name)), r.findings,
@@ -85,7 +89,15 @@ object Exporters {
             }
             dataDir.deleteRecursively()
             val program = Mpc3Exporter.stageTrack(kit, kitDir, dataDir)
-            val file = Mpc3ProjectWriter().writeTo(destRoot, kit.name, listOf(Mpc3ProjectTrack.Drum(program)))
+            val writer = Mpc3ProjectWriter()
+            val tracks = listOf(Mpc3ProjectTrack.Drum(program, clip = clip))
+            // The call-site tempo wins; the kit's remembered tempo backs it up.
+            val effectiveTempo = tempoBpm ?: kit.tempoBpm
+            val file = if (effectiveTempo != null) {
+                writer.writeTo(destRoot, kit.name, tracks, effectiveTempo)
+            } else {
+                writer.writeTo(destRoot, kit.name, tracks)
+            }
             ExportOutcome(format, file, dataDir, findings(kit, kitDir))
         }
     }

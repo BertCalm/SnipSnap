@@ -11,9 +11,12 @@ dependencies {
     implementation(project(":kit"))
     implementation(project(":xpm"))
     implementation(project(":json"))
+    // The starter-kit registry renders through the synth engines.
+    implementation(project(":synth"))
+    // Groove capture hands the app Mpc3Clip values; the flow tests also
+    // verify real exports through the format detectors.
+    implementation(project(":mpc3"))
     testImplementation(kotlin("test"))
-    // Flow tests verify real exports through the format detectors.
-    testImplementation(project(":mpc3"))
 }
 
 // Java 17 bytecode so the Android app can consume this module directly —

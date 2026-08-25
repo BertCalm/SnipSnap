@@ -155,6 +155,150 @@ class CliTest {
     }
 
     @Test
+    fun `groove flag embeds the capture's own rhythm in native exports`() {
+        val wav = writeBreak(File(temp, "groove.wav"))
+        val out = File(temp, "groove-out")
+        val (code, stdout, stderr) = cli(
+            "chop", wav.path, "--out", out.path, "--name", "GrooveKit",
+            "--slices", "8", "--groove", "--export", "xtd,xpj",
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "groove: \"GrooveKit Groove\"")
+
+        val xtd = File(out, "card/GrooveKit.xtd")
+        val payload = Acvs.read(xtd).payloadText
+        assertContains(payload, "GrooveKit Groove")
+        val xpj = Acvs.read(File(out, "card/GrooveKit.xpj")).payloadText
+        assertContains(xpj, "GrooveKit Groove")
+    }
+
+    @Test
+    fun `import unpacks an xpn back into a kit folder`() {
+        val wav = writeBreak(File(temp, "imp.wav"))
+        val out = File(temp, "imp-out")
+        assertEquals(
+            0,
+            cli("chop", wav.path, "--out", out.path, "--name", "ImpKit", "--export", "xpn").first,
+        )
+        val xpn = File(out, "card/ImpKit.xpn")
+        assertTrue(xpn.isFile)
+
+        val dest = File(temp, "imp-dest")
+        val (code, stdout, stderr) = cli("import", xpn.path, "--out", dest.path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "ImpKit")
+        val imported = KitStore.load(File(dest, "ImpKit"))
+        assertEquals(
+            KitStore.load(File(out, "ImpKit")).pads.map { it.slot },
+            imported.pads.map { it.slot },
+        )
+    }
+
+    @Test
+    fun `melodic chop lays a scrambled scale out low to high`() {
+        val rate = 44_100
+        // 330, 110, 220 Hz — deliberately scrambled.
+        val freqs = listOf(330.0, 110.0, 220.0)
+        val total = FloatArray(rate * 3)
+        freqs.forEachIndexed { i, f ->
+            val tone = com.snipsnap.audio.DrumSynth.tonal(seconds = 0.9f, freq = f)
+            for (j in tone.samples.indices) {
+                if (i * rate + j < total.size) total[i * rate + j] += tone.samples[j] * 0.8f
+            }
+        }
+        val wav = File(temp, "scale.wav")
+        WavWriter.write(wav, Snip(total, 1, rate))
+
+        val out = File(temp, "mel-out")
+        val (code, stdout, stderr) = cli(
+            "chop", wav.path, "--out", out.path, "--name", "Mel", "--grid", "3", "--melodic",
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "melodic:")
+        val kit = KitStore.load(File(out, "Mel"))
+        val padHz = (1..3).map { slot ->
+            com.snipsnap.audio.Pitch.detect(
+                com.snipsnap.audio.WavReader.read(File(out, "Mel/${kit.pad(slot)!!.sampleFile}")),
+            )!!.hz
+        }
+        assertEquals(padHz.sorted(), padHz, "pads must ascend in pitch: $padHz")
+
+        assertEquals(2, cli("chop", wav.path, "--melodic", "--no-place").first)
+    }
+
+    @Test
+    fun `ghosts flag layers pads and remix builds bank B`() {
+        val wav = writeBreak(File(temp, "gr.wav"))
+        val out = File(temp, "gr-out")
+        val (code, stdout, stderr) = cli(
+            "chop", wav.path, "--out", out.path, "--name", "GR", "--slices", "8", "--ghosts",
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "ghost notes:")
+        val kit = KitStore.load(File(out, "GR"))
+        assertTrue(kit.pads.any { it.velocityLayers.size == 2 }, "one-shot pads gained soft zones")
+
+        val (rCode, rOut, rErr) = cli("remix", File(out, "GR").path, "--seed", "9")
+        assertEquals(0, rCode, "stderr: $rErr")
+        assertContains(rOut, "evil twins")
+        val remixed = KitStore.load(File(out, "GR"))
+        assertTrue(remixed.pads.any { it.slot > 16 }, "bank B populated")
+    }
+
+    @Test
+    fun `keys turns one pitched note into an instrument`() {
+        val note = File(temp, "note.wav")
+        // A clean 220 Hz decaying note - A3.
+        val n = 44_100
+        WavWriter.write(
+            note,
+            Snip(
+                FloatArray(n) { i ->
+                    val t = i.toDouble() / n
+                    (0.5 * Math.sin(2 * Math.PI * 220 * i / n.toDouble()) * Math.exp(-2.0 * t)).toFloat()
+                },
+                1, n,
+            ),
+        )
+        val out = File(temp, "keys-out")
+        val (code, stdout, stderr) = cli("keys", note.path, "--name", "TestBass", "--out", out.path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "A3")
+        assertTrue(File(out, "card/TestBass.xty").isFile)
+        assertTrue(File(out, "card/TestBass_[TrackData]/TestBass.xpm").isFile)
+
+        // Noise refuses with the reason on stderr.
+        val noise = File(temp, "noise.wav")
+        val rng = kotlin.random.Random(5)
+        WavWriter.write(noise, Snip(FloatArray(n) { (rng.nextFloat() * 2 - 1) * 0.5f }, 1, n))
+        val (badCode, _, badErr) = cli("keys", noise.path, "--out", out.path)
+        assertTrue(badCode != 0)
+        assertContains(badErr, "pitch")
+    }
+
+    @Test
+    fun `backup and restore round-trip a folder of kits`() {
+        val wav = writeBreak(File(temp, "bk.wav"))
+        val out = File(temp, "bk-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "BK One").first)
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "BK Two").first)
+
+        val zip = File(temp, "bk.zip")
+        val (bCode, bOut, bErr) = cli("backup", out.path, "--out", zip.path)
+        assertEquals(0, bCode, "stderr: $bErr")
+        assertContains(bOut, "2 kit(s)")
+
+        val fresh = File(temp, "bk-fresh")
+        val (rCode, rOut, rErr) = cli("restore", zip.path, "--out", fresh.path)
+        assertEquals(0, rCode, "stderr: $rErr")
+        assertContains(rOut, "restored 2 kit(s)")
+        assertEquals(
+            KitStore.load(File(out, "BK One")).pads.map { it.slot },
+            KitStore.load(File(fresh, "BK One")).pads.map { it.slot },
+        )
+    }
+
+    @Test
     fun `classify prints the class next to its features`() {
         val kick = File(temp, "kick.wav")
         WavWriter.write(kick, DrumSynth.kick())
@@ -228,28 +372,5 @@ class CliTest {
     }
 }
 
-class KeySpecTest {
-
-    @Test
-    fun `parses the ways people write keys`() {
-        assertEquals(KeySpec(9, com.snipsnap.audio.Scale.MINOR), KeySpec.parse("Am"))
-        assertEquals(KeySpec(0, com.snipsnap.audio.Scale.MAJOR), KeySpec.parse("C"))
-        assertEquals(KeySpec(6, com.snipsnap.audio.Scale.MINOR_PENTATONIC), KeySpec.parse("F#minpent"))
-        assertEquals(KeySpec(3, com.snipsnap.audio.Scale.MAJOR), KeySpec.parse("Eb major"))
-        assertEquals(KeySpec(10, com.snipsnap.audio.Scale.MINOR), KeySpec.parse("bb minor"))
-        assertEquals(KeySpec(7, com.snipsnap.audio.Scale.CHROMATIC), KeySpec.parse("G chromatic"))
-    }
-
-    @Test
-    fun `rejects what it cannot read`() {
-        assertFailsWith<CliError> { KeySpec.parse("H major") }
-        assertFailsWith<CliError> { KeySpec.parse("C mixolydian") }
-        assertFailsWith<CliError> { KeySpec.parse("") }
-    }
-
-    @Test
-    fun `labels read like key signatures`() {
-        assertEquals("A minor", KeySpec.parse("Am").label)
-        assertEquals("D# major pentatonic", KeySpec.parse("Ebmajpent").label)
-    }
-}
+// KeySpec's own tests live in :audio beside the parser (KeySpecTest);
+// the chop tests above cover the CLI's use of it.

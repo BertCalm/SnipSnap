@@ -1,6 +1,9 @@
 # The remaining work, scoped
 
 Everything left between here and a shipped product, sized and ordered.
+(The same work cut by product feature instead of by milestone, with the
+ROI ranking and per-feature exit tests, lives in
+[`FEATURE_PLAN.md`](FEATURE_PLAN.md).)
 Written after the format milestone: both MPC generations' writers are
 implemented, corpus-guarded, and — for drums — **hardware-verified on the
 Live III**. Sizes are working sessions (S ≈ under a day, M ≈ 1–3 days,

@@ -3,6 +3,7 @@ package com.snipsnap.shell
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.Snip
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -112,6 +113,66 @@ class ChopReviewTest {
         // Grid slices come back in source order with source frames ascending.
         val frames = rechopped.rows.map { it.slice.sourceFrame }
         assertEquals(frames.sorted(), frames)
+    }
+
+    @Test
+    fun `grooveClip carries the capture's rhythm, or refuses without a tempo`() {
+        val model = ChopReviewModel.chop(breakSnip(), ChopReviewModel.ChopMode.ByHits(8))
+        val clip = model.grooveClip("Test Groove")
+        if (model.tempo != null) {
+            kotlin.test.assertNotNull(clip)
+            assertEquals(model.sliceCount, clip.notes.size, "every placed slice is a note")
+            assertTrue(clip.notes.first().timePulses == 0L, "anchored on the first hit")
+            // Notes play the pads the slices landed on (A01 = note 36).
+            val placed = model.placementPreview()
+            val kickPad = placed.indexOfFirst { it?.effectiveClass == DrumClass.KICK }
+            assertTrue(clip.notes.any { it.note == 36 + kickPad })
+        }
+
+        // A too-short snip has no confident tempo: the toggle greys out.
+        val short = ChopReviewModel.chop(
+            Snip(FloatArray(rate / 2) { if (it < 200) 0.5f else 0f }, 1, rate),
+            ChopReviewModel.ChopMode.Grid(2),
+        )
+        assertEquals(null, short.tempo)
+        assertEquals(null, short.grooveClip("X"))
+    }
+
+    @Test
+    fun `melodic placement sorts pitched slices low to high, unpitched after`() {
+        // Three tones deliberately out of order, then a kick (unpitched-ish
+        // for melody purposes it still detects a pitch — so use a noise hat).
+        val step = rate
+        val parts = listOf(
+            DrumSynth.tonal(seconds = 0.9f, freq = 440.0),
+            DrumSynth.tonal(seconds = 0.9f, freq = 110.0),
+            DrumSynth.tonal(seconds = 0.9f, freq = 220.0),
+            DrumSynth.closedHat(),
+        )
+        val total = FloatArray(step * 4)
+        parts.forEachIndexed { i, p ->
+            for (j in p.samples.indices) {
+                if (i * step + j < total.size) total[i * step + j] += p.samples[j] * 0.8f
+            }
+        }
+        val model = ChopReviewModel.chop(
+            Snip(total, 1, rate),
+            ChopReviewModel.ChopMode.Grid(4),
+        )
+        val placed = model.melodicPreview()
+        val hzs = placed.filterNotNull().mapNotNull { row ->
+            model.pitchOf(model.rows.indexOf(row))?.hz
+        }
+        assertEquals(hzs.sorted(), hzs, "pitched slices must ascend")
+        assertTrue(hzs.size >= 3, "the three tones should all detect: $hzs")
+        assertTrue(abs(hzs.first() - 110f) < 8f, "lowest tone first, got ${hzs.first()}")
+
+        val sent = model.sendToGridMelodic()
+        assertEquals(4, sent.sliceCount)
+        assertEquals(
+            placed.filterNotNull().size,
+            sent.arranged.filterNotNull().size,
+        )
     }
 
     @Test
