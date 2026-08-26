@@ -597,6 +597,34 @@ allocation-bounded once BB2 lands). Standing rejects unchanged.
 
 ---
 
+# Wave CC — deeper hardening: numbers and the format contract
+
+Wave BB secured the untrusted-*structure* surface (traversal, bombs,
+torn writes, crash-on-parse). This wave secures the untrusted-*number*
+surface and the format contract itself. The lead is real: a float WAV
+decodes samples straight from bytes with **no non-finite guard anywhere**
+(`grep isNaN/isFinite` across `:audio` and `:kit` returns nothing), so a
+corrupt or hostile float WAV carrying `NaN`/`±Inf` poisons the whole
+pipeline — `peak()` goes `NaN`, normalization multiplies every sample by
+`NaN`, and the *exported* WAV is all-NaN garbage. CC1 closes that; the
+rest deepens the guarantees around it.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| CC1 | NaN/Inf sanitization — float `WavReader` maps every non-finite sample to 0 as it decodes; `WavWriter` refuses (or scrubs) any non-finite sample so no export can carry one; peak/normalization in `Cleanup` and the render path treat a non-finite input as 0, not as a poison value. The one untrusted-input class BB1–BB6 missed, because it arrives as a number, not a shape | CORE | S–M | a float WAV full of NaN/±Inf imports as clean silence; no export (WAV, preview, mixdown) ever contains a non-finite sample; a NaN in one pad can't silence a whole normalized kit |
+| CC2 | Overflow guards in frame math — `KitPreview.totalFrames`, `SessionMixdown`, `Resampler` output length and any `frames * channels` / `* 2` computed in `Int` are done in `Long` or bounded, so no validated-but-extreme input (a slow tempo, a long loop) yields a negative array size or a wrapped index | CORE | S | a kit at the tempo/length extremes renders or refuses cleanly, never `NegativeArraySizeException` |
+| CC3 | Golden snapshots — the factory kit exported to every format has its exact bytes committed under `reference/golden/snapshots/`; a test asserts byte-equality, so any silent format drift from a refactor fails loudly and on purpose (regenerate step documented) | CORE | S | exports match the committed goldens to the byte; a deliberate writer change fails the snapshot until the golden is refreshed |
+| CC4 | Round-trip property fuzz — seeded random valid kits + grooves → export (folder / xtd / xpj / xpn) → re-import → assert every pad, level, tune, mute group, colour and note survives; N seeds, deterministic. Catches *writer* bugs the reader fuzz (BB3) structurally cannot | CORE | M | N seeded kits round-trip with no lost or corrupted pad/note across every re-importable format |
+| CC5 | Temp-file leak audit — every `createTempFile`/`createTempDirectory` (`KitBackup`, `XpnPackager`, `PackBuilder`, `SessionBuilder`, the CLI) sits in a `try/finally`; a forced-failure test proves an exception mid-operation leaves no temp residue behind | CORE | S | inject a failure into each temp-using path; no stray temp file or dir survives |
+| CC6 | Preflight ⇒ export invariant — a kit that passes `Preflight.check` must always export without throwing; the two must never disagree. A property test fuzzes kits, keeps the preflight-clean ones, and asserts every one exports to every format | CORE | S | no preflight-clean kit throws on export in any format |
+
+**Below the line (post-CC):** audio watchdog/timeouts on the DSP path
+(the JVM work is already bounded and synchronous); differential fuzzing
+against a second MPC-format implementation (none exists to diff against).
+Standing rejects unchanged.
+
+---
+
 ## Sequence
 
 ```
@@ -621,6 +649,12 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   wire-through (Z6.2 verdict: waveform default, rings runner-up).
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
+
+CORE wave CC (deeper hardening, in order — CC1 is a real correctness
+  bug, it leads):
+  CC1 NaN/Inf sanitization → CC2 overflow guards → CC3 golden
+  snapshots → CC4 round-trip property fuzz → CC5 temp-file leak audit →
+  CC6 preflight-implies-export invariant
 
 CORE wave BB: ✓ all landed (2026-08-25) — SafePath traversal
   hardening, LimitedRead resource ceilings, the mutation-fuzz harness
