@@ -84,6 +84,55 @@ class WavReaderTest {
     }
 
     @Test
+    fun `extra chunks around the data are skipped, not mis-read`() {
+        // Real-world WAVs carry LIST/INFO, fact, JUNK padding and cue chunks
+        // before and after the audio. WavReader must step past every unknown
+        // chunk and land the same samples as a bare fmt+data twin.
+        val payload = byteArrayOf(1, 0, 2, 0, 3, 0, 4, 0) // 4 mono 16-bit frames
+        val plain = wav(1, 16, 1, 44_100, payload)
+
+        fun chunk(id: String, body: ByteArray): ByteArray {
+            val out = ByteArrayOutputStream()
+            out.write(id.toByteArray(Charsets.US_ASCII))
+            val n = body.size
+            out.write(byteArrayOf((n and 0xFF).toByte(), ((n ushr 8) and 0xFF).toByte(),
+                ((n ushr 16) and 0xFF).toByte(), ((n ushr 24) and 0xFF).toByte()))
+            out.write(body)
+            if (n % 2 == 1) out.write(0) // word alignment
+            return out.toByteArray()
+        }
+        val fmtBody = ByteArray(16).also {
+            it[0] = 1; it[2] = 1 // PCM, 1 channel
+            it[4] = (44_100 and 0xFF).toByte(); it[5] = ((44_100 ushr 8) and 0xFF).toByte()
+            it[6] = ((44_100 ushr 16) and 0xFF).toByte()
+            it[14] = 16 // bits
+        }
+        // byteRate/blockAlign fields left as the reader ignores them here.
+        val body = ByteArrayOutputStream().apply {
+            write("WAVE".toByteArray(Charsets.US_ASCII))
+            write(chunk("JUNK", ByteArray(7))) // odd size, before fmt
+            write(chunk("fmt ", fmtBody))
+            write(chunk("LIST", "INFOIART".toByteArray(Charsets.US_ASCII))) // between fmt and data
+            write(chunk("data", payload))
+            write(chunk("fact", byteArrayOf(4, 0, 0, 0))) // after data
+            write(chunk("cue ", byteArrayOf(0, 0, 0, 0)))
+        }.toByteArray()
+        val multi = ByteArrayOutputStream().apply {
+            write("RIFF".toByteArray(Charsets.US_ASCII))
+            val n = body.size
+            write(byteArrayOf((n and 0xFF).toByte(), ((n ushr 8) and 0xFF).toByte(),
+                ((n ushr 16) and 0xFF).toByte(), ((n ushr 24) and 0xFF).toByte()))
+            write(body)
+        }.toByteArray()
+
+        val a = WavReader.read(plain)
+        val b = WavReader.read(multi)
+        assertEquals(a.channels, b.channels)
+        assertEquals(a.frameCount, b.frameCount, "the same audio, extra chunks and all")
+        assertTrue(a.samples.contentEquals(b.samples), "extra chunks did not corrupt the decode")
+    }
+
+    @Test
     fun `a float wav carrying NaN and Inf decodes to finite silence`() {
         // Four float samples: NaN, +Inf, -Inf, and an honest 0.5.
         val payload = ByteArrayOutputStream()
