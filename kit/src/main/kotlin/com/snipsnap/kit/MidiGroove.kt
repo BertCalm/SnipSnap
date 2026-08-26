@@ -118,7 +118,11 @@ object MidiGroove {
         repeat(tracks) {
             require(r.ascii(4) == "MTrk") { "malformed MIDI file (missing MTrk)" }
             val length = r.int32()
-            val end = r.at + length
+            // The declared track length is untrusted: negative or absurd would
+            // send `end` (and later r.at) out of the array. Clamp to what is
+            // actually present - a truncated track reads what it can.
+            require(length >= 0) { "MIDI track length is negative: $length" }
+            val end = minOf(bytes.size.toLong(), r.at.toLong() + length).toInt()
             val open = mutableListOf<Open>()
             var tick = 0L
             var status = 0
@@ -213,7 +217,9 @@ object MidiGroove {
         }
 
         fun take(n: Int): ByteArray {
-            require(at + n <= bytes.size) { "truncated MIDI file" }
+            // Long arithmetic and a sign check: a mutated length must never
+            // make copyOfRange run off either end of the array.
+            require(n >= 0 && at >= 0 && at.toLong() + n <= bytes.size) { "truncated MIDI file" }
             return bytes.copyOfRange(at, at + n).also { at += n }
         }
 
