@@ -589,7 +589,7 @@ file.
 | BB3 | ✓ done: fuzz harness — seeded mutation fuzzing (byte-flips and truncations of valid fixtures) across `WavReader`, `Acvs`, `MidiGroove`, `XpnImporter`, `Mpc3Importer`, `MpcDiff.load`; every input yields a typed failure or a valid parse within a time bound, never an uncaught `AIOOBE`/OOM/hang. Hostile fixtures committed under `reference/fixtures/hostile/` | CORE | M | N seeded mutations per reader all end in a typed outcome inside the budget; the harness reruns deterministically |
 | BB4 | ✓ done: atomic saves — `KitStore`, `GrooveStore`, `TeachLog` write to a temp file and rename (atomic on the same volume), so a process killed mid-save never leaves a half-written `kit.json`; loaders skip torn entries in `.takes/`/`.bin/` rather than throwing | CORE | S | a truncated `kit.json` written mid-save is detectable and the prior file survives; a garbage `.takes/` entry doesn't break `takes()` |
 | BB5 | ✓ done: CLI catch-all + hostile sweep — `Cli.run` catches any unexpected `RuntimeException` and prints one honest line at exit 1 (no stack trace to the user); a sweep test runs every command against the hostile corpus and asserts a clean typed exit every time | CORE | S | no command ever prints a Java stack trace or exits non-{0,1,2} on a hostile file |
-| BB6 | Import metadata validation — duplicate pad slots, out-of-range levels/tunes/velocities, and self-referential or out-of-order velocity layers in an imported program are clamped where harmless and refused-with-a-name where not, before a `Kit` is built | CORE | S | a program with two pads on slot 1, a 9.0 level, and a layer pointing at a missing sample is refused with the specific reason |
+| BB6 | ✓ done: import metadata validation — duplicate pad slots, out-of-range levels/tunes/velocities, and self-referential or out-of-order velocity layers in an imported program are clamped where harmless and refused-with-a-name where not, before a `Kit` is built | CORE | S | a program with two pads on slot 1, a 9.0 level, and a layer pointing at a missing sample is refused with the specific reason |
 
 **Below the line (post-hardening):** signed-kit provenance (overkill for
 a sampler); sandboxed decode (the JVM readers are already
@@ -622,9 +622,14 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
 
-CORE wave BB (hardening, in order — BB1 is a live vuln, it leads):
-  BB1 traversal fix → BB2 resource ceilings → BB3 fuzz harness →
-  BB4 atomic saves → BB5 CLI catch-all + sweep → BB6 import validation
+CORE wave BB: ✓ all landed (2026-08-25) — SafePath traversal
+  hardening, LimitedRead resource ceilings, the mutation-fuzz harness
+  (which caught a real MidiGroove crash), atomic saves, the CLI
+  catch-all + hostile sweep, and import metadata validation. 686 tests.
+  Findings were honest: BB1 and BB6 were already defended (basename
+  flattening; the Kit constructor's invariants) - the wave made those
+  defenses explicit, central, and regression-locked; BB2/BB3 closed
+  real DoS and crash gaps.
 
 CORE wave 6: ✓ all landed (2026-08-25) — multi-sequence projects
   (probe first; the four variations arrive as switchable sequences),

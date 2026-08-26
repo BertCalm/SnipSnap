@@ -191,6 +191,64 @@ class XpnImporterTest {
         assertTrue(!canary.exists(), "nothing was written outside the destination")
     }
 
+    private fun xpnWithProgram(file: File, programBody: String, vararg samples: String): File {
+        samples.forEach { WavWriter.write(File(temp, "$it.wav"), tone(it.hashCode())) }
+        val program = """
+            <?xml version="1.0"?><MPCVObject><Program type="Drum">
+            <ProgramName>Meta Kit</ProgramName><Instruments>$programBody</Instruments>
+            </Program></MPCVObject>
+        """.trimIndent()
+        ZipOutputStream(file.outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry("Meta Kit.xpm")); zip.write(program.toByteArray()); zip.closeEntry()
+            samples.forEach {
+                zip.putNextEntry(ZipEntry("$it.wav")); zip.write(File(temp, "$it.wav").readBytes()); zip.closeEntry()
+            }
+        }
+        return file
+    }
+
+    private fun inst(number: Int, sample: String, extra: String = ""): String =
+        """<Instrument number="$number">$extra<Layers><Layer number="1">
+           <VelStart>0</VelStart><VelEnd>127</VelEnd><SampleName>$sample</SampleName>
+           </Layer></Layers></Instrument>"""
+
+    @Test
+    fun `duplicate pad slots are refused by name`() {
+        // Two instruments both numbered 0 (0-based) land on slot 1.
+        val xpn = xpnWithProgram(File(temp, "dup.xpn"), inst(0, "s") + inst(0, "s"), "s")
+        val err = assertFailsWith<IllegalArgumentException> { XpnImporter.import(xpn, File(temp, "dup-out")) }
+        assertTrue("duplicate pad slots" in err.message!!, err.message!!)
+    }
+
+    @Test
+    fun `an out-of-range level is clamped, not refused`() {
+        val xpn = xpnWithProgram(
+            File(temp, "loud.xpn"), inst(0, "s", "<Volume>9.000000</Volume>"), "s",
+        )
+        val kit = XpnImporter.import(xpn, File(temp, "loud-out")).kit
+        assertEquals(1f, kit.pad(1)!!.level, "9.0 clamped to the valid ceiling")
+    }
+
+    @Test
+    fun `a layer pointing at a missing sample is refused by name`() {
+        val xpn = xpnWithProgram(File(temp, "ghost.xpn"), inst(0, "ghost")) // no ghost.wav planted
+        val err = assertFailsWith<IllegalArgumentException> { XpnImporter.import(xpn, File(temp, "ghost-out")) }
+        assertTrue("missing" in err.message!! && "ghost" in err.message!!, err.message!!)
+    }
+
+    @Test
+    fun `an out-of-range velocity window is refused with a reason`() {
+        val bad = """<Instrument number="0"><Layers><Layer number="1">
+            <VelStart>0</VelStart><VelEnd>200</VelEnd><SampleName>s</SampleName></Layer>
+            <Layer number="2"><VelStart>100</VelStart><VelEnd>127</VelEnd>
+            <SampleName>s</SampleName></Layer></Layers></Instrument>"""
+        val xpn = xpnWithProgram(File(temp, "vel.xpn"), bad, "s")
+        // A velocity window of 0..200 is not a value to clamp silently - it's
+        // a malformed layer, refused by the KitLayer invariant.
+        val err = assertFailsWith<IllegalArgumentException> { XpnImporter.import(xpn, File(temp, "vel-out")) }
+        assertTrue("velocity" in err.message!!.lowercase(), err.message!!)
+    }
+
     @Test
     fun `a legit vendor subpath is flattened too`() {
         // Real packs carry names like "Samples/Deep/Kick" - honest, not hostile.
