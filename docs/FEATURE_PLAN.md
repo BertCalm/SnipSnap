@@ -625,6 +625,30 @@ Standing rejects unchanged.
 
 ---
 
+# Wave DD — deeper: parser robustness
+
+Waves BB and CC hardened the untrusted-input surface against attacks and
+bad numbers. This wave goes after **silent mis-parsing** — where an import
+succeeds but is quietly wrong — and the parser coverage gaps underneath.
+The lead is a real bug: `XpnImporter` reads `.xpm` programs with regular
+expressions, so legitimate XML variety (attribute order, extra attributes,
+whitespace, CDATA, comments) drops pads with no error. Not padded to six —
+each item is a real gap.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| DD1 | Robust `.xpm` parsing — replace the regex program parser in `XpnImporter` with a proper, XXE-safe DOM parse (the one `MpcDiff` already uses for MPC 2 XML), so attribute order, extra attributes, whitespace, CDATA and comments no longer silently drop pads — and numeric character references (`&#233;`, `&#x2764;`) resolve for free, which the hand-rolled `xmlUnescape` never did | CORE | M | a valid `.xpm` with reordered/extra attributes, a comment, a CDATA sample name and a numeric-entity program name imports every pad correctly; the golden corpus still imports unchanged |
+| DD2 | JSON parser property + fuzz — `parse(write(v)) == v` over seeded random `JsonValue` trees; direct mutation fuzz asserting typed-refusal-or-valid; and the edge cases a hand-rolled parser gets wrong (exponents, `-0`, huge/tiny numbers, `\u` escapes and surrogate pairs, duplicate keys). The most load-bearing parser in the codebase, currently the least adversarially tested | CORE | M | N random trees round-trip; every mutation ends typed-or-valid; the number/unicode edge cases parse to the right values |
+| DD3 | DSP invariant properties — over seeded synthetic audio: `Chopper` slices are in-bounds, ordered, and cover to the end; `Classifier` always returns a valid `DrumClass` with confidence in `0..1`; extracted features are never NaN. The pipeline's contracts, pinned as properties instead of examples | CORE | S | thousands of synthetic inputs hold every invariant, no NaN, no out-of-range |
+| DD4 | WAV chunk-variety lock — a test proving a WAV carrying `LIST`/`fact`/`JUNK`/`cue` chunks before and after `data` reads correctly (`WavReader` already skips unknown chunks; this pins it so a refactor can't quietly lose real-world-file support) | CORE | S | a multi-chunk WAV decodes to the same samples as its bare-`data` twin |
+
+**Below the line (post-DD):** a from-scratch streaming XML/JSON pull parser
+(the DOM + hand-rolled parsers are bounded and sufficient); schema
+validation of every payload field against the corpus (the key-path guard
+and golden snapshots already cover drift). Standing rejects unchanged.
+
+---
+
 ## Sequence
 
 ```
@@ -649,6 +673,11 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   wire-through (Z6.2 verdict: waveform default, rings runner-up).
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
+
+CORE wave DD (deeper — parser robustness, in order — DD1 is a real
+  silent-mis-parse bug, it leads):
+  DD1 robust .xpm DOM parse → DD2 JSON parser property+fuzz →
+  DD3 DSP invariant properties → DD4 WAV chunk-variety lock
 
 CORE wave CC: ✓ all landed (2026-08-26) — NaN/Inf sanitization
   (which also found peak() poisoned by Inf), tempo overflow guards,
