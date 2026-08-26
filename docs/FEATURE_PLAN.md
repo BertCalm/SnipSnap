@@ -616,7 +616,7 @@ rest deepens the guarantees around it.
 | CC3 | ✓ done: golden snapshots — the factory kit exported to every format has its exact bytes committed under `reference/golden/snapshots/`; a test asserts byte-equality, so any silent format drift from a refactor fails loudly and on purpose (regenerate step documented) | CORE | S | exports match the committed goldens to the byte; a deliberate writer change fails the snapshot until the golden is refreshed |
 | CC4 | ✓ done: round-trip property fuzz — seeded random valid kits + grooves → export (folder / xtd / xpj / xpn) → re-import → assert every pad, level, tune, mute group, colour and note survives; N seeds, deterministic. Catches *writer* bugs the reader fuzz (BB3) structurally cannot | CORE | M | N seeded kits round-trip with no lost or corrupted pad/note across every re-importable format |
 | CC5 | ✓ done: temp-file leak audit — every `createTempFile`/`createTempDirectory` (`KitBackup`, `XpnPackager`, `PackBuilder`, `SessionBuilder`, the CLI) sits in a `try/finally`; a forced-failure test proves an exception mid-operation leaves no temp residue behind | CORE | S | inject a failure into each temp-using path; no stray temp file or dir survives |
-| CC6 | Preflight ⇒ export invariant — a kit that passes `Preflight.check` must always export without throwing; the two must never disagree. A property test fuzzes kits, keeps the preflight-clean ones, and asserts every one exports to every format | CORE | S | no preflight-clean kit throws on export in any format |
+| CC6 | ✓ done: preflight ⇒ export invariant — a kit that passes `Preflight.check` must always export without throwing; the two must never disagree. A property test fuzzes kits, keeps the preflight-clean ones, and asserts every one exports to every format | CORE | S | no preflight-clean kit throws on export in any format |
 
 **Below the line (post-CC):** audio watchdog/timeouts on the DSP path
 (the JVM work is already bounded and synchronous); differential fuzzing
@@ -650,11 +650,11 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
 
-CORE wave CC (deeper hardening, in order — CC1 is a real correctness
-  bug, it leads):
-  CC1 NaN/Inf sanitization → CC2 overflow guards → CC3 golden
-  snapshots → CC4 round-trip property fuzz → CC5 temp-file leak audit →
-  CC6 preflight-implies-export invariant
+CORE wave CC: ✓ all landed (2026-08-26) — NaN/Inf sanitization
+  (which also found peak() poisoned by Inf), tempo overflow guards,
+  golden snapshots, round-trip property fuzz, temp-leak lock, and the
+  preflight-implies-export invariant. 695 tests. CC1/CC2 were real
+  bugs; CC3-CC6 are regression locks that hold the line.
 
 CORE wave BB: ✓ all landed (2026-08-25) — SafePath traversal
   hardening, LimitedRead resource ceilings, the mutation-fuzz harness
