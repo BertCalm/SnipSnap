@@ -33,6 +33,21 @@ class TeachLogTest {
     }
 
     @Test
+    fun `a torn last line from a killed append does not lose the good ones`() {
+        // Two whole records, then a line cut off mid-write - what a process
+        // death leaves behind.
+        val kick = FeatureExtractor.extract(DrumSynth.kick())
+        val whole = TeachLog.toJsonl(
+            listOf(
+                TeachLog.Example(DrumClass.KICK, kick, machineSaid = DrumClass.TOM),
+                TeachLog.Example(DrumClass.KICK, kick, machineSaid = DrumClass.TOM),
+            ),
+        )
+        val torn = whole + "{\"label\":\"KICK\",\"mach"
+        assertEquals(2, TeachLog.fromJsonl(torn).size, "the two complete records survive")
+    }
+
+    @Test
     fun `append accumulates and read of nothing is empty`() {
         val temp = java.nio.file.Files.createTempDirectory("teach").toFile()
         val file = File(temp, TeachLog.FILE_NAME)

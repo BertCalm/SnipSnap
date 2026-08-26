@@ -25,7 +25,7 @@ object KitStore {
         dir.mkdirs()
         require(dir.isDirectory) { "not a directory: $dir" }
         val file = File(dir, FILE_NAME)
-        file.writeText(Json.write(toJson(kit)) + "\n", Charsets.UTF_8)
+        AtomicFile.writeText(file, Json.write(toJson(kit)) + "\n")
         return file
     }
 

@@ -222,6 +222,24 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `a torn take from a killed archive is skipped, not surfaced`() {
+        val dir = File(temp, "TornTakes")
+        val m = KitBuilderModel.create("TornTakes", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        assertEquals(2, m.takes().size)
+
+        // A process killed mid-archive leaves a half-written take file.
+        File(dir, ".takes/take_003.json").writeText("{\"name\": \"Torn\", \"pads\": [{\"slo")
+        assertEquals(2, m.takes().size, "the torn take is skipped, the good ones remain")
+        // And a rollback still works, unbothered by the garbage beside them.
+        m.restoreTake(m.takes().last())
+        assertEquals(1, m.kit.pads.size)
+    }
+
+    @Test
     fun `the bin keeps deletes 30 days and takes pull samples back out`() {
         val dir = File(temp, "Bin")
         val m = KitBuilderModel.create("Bin", dir)

@@ -276,10 +276,21 @@ class KitBuilderModel private constructor(
 
     // ---------- takes ----------
 
-    /** Archived takes, oldest first. */
+    /**
+     * Archived takes, oldest first. A take that won't parse — a process
+     * killed mid-archive leaves exactly that — is skipped, not surfaced: a
+     * torn entry must never break the history or a rollback.
+     */
     fun takes(): List<File> =
         File(kitDir, TAKES_DIR).listFiles { f: File -> TAKE_NAME.matches(f.name) }
-            ?.sortedBy { it.name } ?: emptyList()
+            ?.sortedBy { it.name }
+            ?.filter {
+                try {
+                    KitStore.read(it); true
+                } catch (e: Exception) {
+                    false
+                }
+            } ?: emptyList()
 
     /**
      * Roll back to an archived take. Samples the take references that were
@@ -305,7 +316,7 @@ class KitBuilderModel private constructor(
         if (!current.isFile || !dirty) return
         val takesDir = File(kitDir, TAKES_DIR).apply { mkdirs() }
         val next = (takes().lastOrNull()?.let { TAKE_NAME.find(it.name)!!.groupValues[1].toInt() } ?: 0) + 1
-        current.copyTo(File(takesDir, "take_%03d.json".format(next)))
+        com.snipsnap.kit.AtomicFile.writeBytes(File(takesDir, "take_%03d.json".format(next)), current.readBytes())
         // Rotate: the cap outlasts any honest session; oldest go first.
         takes().dropLast(MAX_TAKES).forEach { it.delete() }
     }

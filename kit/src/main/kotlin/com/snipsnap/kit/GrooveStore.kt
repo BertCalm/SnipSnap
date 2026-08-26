@@ -25,7 +25,7 @@ object GrooveStore {
         require(clips.isNotEmpty()) { "no clips - use delete() to clear the grooves" }
         kitDir.mkdirs()
         val file = File(kitDir, FILE_NAME)
-        file.writeText(Json.write(toJson(clips)) + "\n", Charsets.UTF_8)
+        AtomicFile.writeText(file, Json.write(toJson(clips)) + "\n")
         return file
     }
 
