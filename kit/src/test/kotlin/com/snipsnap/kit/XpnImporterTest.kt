@@ -250,6 +250,51 @@ class XpnImporterTest {
     }
 
     @Test
+    fun `xml variety the old regex would drop still imports every pad`() {
+        // Everything a pattern-matcher mishandles at once: reordered and
+        // extra attributes on Instrument, a comment, insignificant
+        // whitespace, a CDATA sample name, a numeric-entity program name,
+        // and attributes on tags the old tag() regex assumed were bare.
+        WavWriter.write(File(temp, "kick.wav"), tone(1))
+        WavWriter.write(File(temp, "snare.wav"), tone(2))
+        val program = """<?xml version="1.0" encoding="UTF-8"?>
+            <MPCVObject><Program type="Drum">
+              <!-- exported by some other tool -->
+              <ProgramName>Kit &#38; &amp; Bass</ProgramName>
+              <Instruments>
+                <Instrument   number="0"  index="0" >
+                  <Volume>0.800000</Volume><Pan>0.5</Pan><MuteGroup>0</MuteGroup>
+                  <Layers><Layer number="1" enabled="true">
+                    <VelStart>0</VelStart><VelEnd>127</VelEnd>
+                    <SampleName><![CDATA[kick]]></SampleName>
+                  </Layer></Layers>
+                </Instrument>
+                <Instrument index="1" number="1">
+                  <Volume>0.6</Volume>
+                  <Layers><Layer number="1"><SampleName>snare</SampleName>
+                    <VelStart>0</VelStart><VelEnd>127</VelEnd></Layer></Layers>
+                </Instrument>
+              </Instruments>
+            </Program></MPCVObject>
+        """.trimIndent()
+        val xpn = File(temp, "variety.xpn")
+        ZipOutputStream(xpn.outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry("Variety.xpm")); zip.write(program.toByteArray()); zip.closeEntry()
+            for (s in listOf("kick", "snare")) {
+                zip.putNextEntry(ZipEntry("$s.wav")); zip.write(File(temp, "$s.wav").readBytes()); zip.closeEntry()
+            }
+        }
+
+        val result = XpnImporter.import(xpn, File(temp, "variety-out"))
+        assertEquals(2, result.kit.pads.size, "both pads survived the attribute variety, comment and CDATA")
+        assertEquals("kick.wav", result.kit.pad(1)!!.sampleFile)
+        assertEquals("snare.wav", result.kit.pad(2)!!.sampleFile)
+        // The numeric (&#38;) and named (&amp;) entities both resolved - the
+        // numeric one the old hand-rolled xmlUnescape never handled at all.
+        assertEquals("Kit & & Bass", result.kit.name)
+    }
+
+    @Test
     fun `a legit vendor subpath is flattened too`() {
         // Real packs carry names like "Samples/Deep/Kick" - honest, not hostile.
         val xpn = archiveWithSampleName(File(temp, "vendor.xpn"), "Samples/Deep/pwned")

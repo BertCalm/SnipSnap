@@ -4,6 +4,7 @@ import com.snipsnap.audio.DrumClass
 import java.io.File
 import java.io.IOException
 import java.util.zip.ZipFile
+import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Reads an `.xpn` archive back into a kit folder — the receive half of
@@ -90,23 +91,30 @@ object XpnImporter {
             val xml = zip.getInputStream(programEntry).use {
                 com.snipsnap.mpc3.LimitedRead.bytes(it, what = "program ${programEntry.name}")
             }.toString(Charsets.UTF_8)
-            require(!Regex("<Program\\s+type=\"Keygroup\"").containsMatchIn(xml)) {
+            // A real DOM parse, not a regex: attribute order, extra attributes,
+            // whitespace, comments, CDATA and numeric entities are all handled,
+            // where the old pattern-matcher silently dropped pads it couldn't
+            // shape-match. Parse refusal (not XML at all) is a typed reason.
+            val program = try {
+                parseProgram(xml)
+            } catch (e: Exception) {
+                if (e is IllegalArgumentException) throw e
+                throw IllegalArgumentException("'${programEntry.name}' isn't a readable MPC program: ${e.message}")
+            }
+            require(!program.isKeygroup) {
                 "'${programEntry.name}' is a keygroup program - only drum programs import as kits"
             }
 
-            val programName = Regex("<ProgramName>(.*?)</ProgramName>")
-                .find(xml)?.groupValues?.get(1)?.let(::xmlUnescape)
-            val kitName = (programName?.takeIf { Names.isMpcSafe(it) })
+            val kitName = (program.name?.takeIf { Names.isMpcSafe(it) })
                 ?: Names.sanitizeStem(File(programEntry.name).nameWithoutExtension)
 
-            val instruments = parseInstruments(xml)
+            val instruments = program.instruments
             require(instruments.isNotEmpty()) { "'${programEntry.name}' has no pads with samples" }
 
             // Base detection: a number-0 instrument anywhere in the file
             // (sampled or empty) marks a 0-based program — what we write,
-            // hardware-verified; otherwise vendor 1-based. Checked against
-            // the raw XML so an empty A01 can't disguise a 0-based file.
-            val zeroBased = INSTRUMENT_NUMBER.findAll(xml).any { it.groupValues[1] == "0" }
+            // hardware-verified; otherwise vendor 1-based.
+            val zeroBased = program.zeroBased
 
             // Samples resolve by bare stem, case-insensitive, anywhere.
             val wavByStem = HashMap<String, java.util.zip.ZipEntry>()
@@ -183,47 +191,104 @@ object XpnImporter {
         val oneShot: Boolean,
     )
 
-    private val INSTRUMENT = Regex("<Instrument number=\"(\\d+)\">([\\s\\S]*?)</Instrument>")
-    private val INSTRUMENT_NUMBER = Regex("<Instrument number=\"(\\d+)\">")
-    private val LAYER = Regex("<Layer number=\"\\d+\">([\\s\\S]*?)</Layer>")
+    private data class ParsedProgram(
+        val isKeygroup: Boolean,
+        val name: String?,
+        val instruments: List<ParsedInstrument>,
+        val zeroBased: Boolean,
+    )
 
-    private fun parseInstruments(xml: String): List<ParsedInstrument> =
-        INSTRUMENT.findAll(xml).mapNotNull { m ->
-            val body = m.groupValues[2]
-            val layers = LAYER.findAll(body).mapNotNull { lm ->
-                val lb = lm.groupValues[1]
-                val name = tag(lb, "SampleName")?.let(::xmlUnescape)?.trim()
-                if (name.isNullOrEmpty()) return@mapNotNull null
+    /**
+     * The `.xpm` program, parsed as XML rather than pattern-matched. A DOM
+     * parse is immune to the things a regex silently mishandles — attribute
+     * order and extras, insignificant whitespace, comments, CDATA sections —
+     * and resolves character entities (named *and* numeric) for free. The
+     * factory disables DOCTYPE, so a hostile program can't mount an XXE or
+     * billion-laughs attack through the parser.
+     */
+    private fun parseProgram(xml: String): ParsedProgram {
+        val dbf = DocumentBuilderFactory.newInstance().apply {
+            try {
+                setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+            } catch (_: Exception) {
+            }
+            isExpandEntityReferences = false
+            isNamespaceAware = false
+        }
+        // An XML declaration must sit at byte zero; a BOM or leading
+        // whitespace (both seen in real files) would otherwise make the
+        // parser reject the whole document. Strip them first.
+        val cleaned = xml.removePrefix("﻿").trimStart()
+        val doc = dbf.newDocumentBuilder()
+            .parse(org.xml.sax.InputSource(java.io.StringReader(cleaned)))
+        doc.documentElement.normalize()
+
+        val programEl = doc.getElementsByTagName("Program").item(0) as? org.w3c.dom.Element
+        val isKeygroup = programEl?.getAttribute("type")?.equals("Keygroup", ignoreCase = true) == true
+
+        val name = firstText(doc.documentElement, "ProgramName")?.trim()?.ifBlank { null }
+
+        val instrumentEls = elements(doc, "Instrument")
+        val zeroBased = instrumentEls.any { it.getAttribute("number").trim() == "0" }
+
+        val instruments = instrumentEls.mapNotNull { inst ->
+            val number = inst.getAttribute("number").trim().toIntOrNull() ?: return@mapNotNull null
+            val layers = childElements(inst, "Layer").mapNotNull { layer ->
+                val raw = firstText(layer, "SampleName")?.trim()
+                if (raw.isNullOrEmpty()) return@mapNotNull null
                 ParsedLayer(
-                    // Bare names are the rule; a nonconforming archive's legit
-                    // subpath is flattened, a traversal refused - untrusted.
-                    sampleName = SafePath.basename(name).substringBeforeLast('.'),
-                    velStart = tag(lb, "VelStart")?.toIntOrNull() ?: 0,
-                    velEnd = tag(lb, "VelEnd")?.toIntOrNull() ?: 127,
+                    // Bare names are the rule; a legit subpath flattens, a
+                    // traversal is refused (SafePath) - untrusted input.
+                    sampleName = SafePath.basename(raw).substringBeforeLast('.'),
+                    velStart = firstText(layer, "VelStart")?.trim()?.toIntOrNull() ?: 0,
+                    velEnd = firstText(layer, "VelEnd")?.trim()?.toIntOrNull() ?: 127,
                 )
-            }.toList()
+            }
             if (layers.isEmpty()) return@mapNotNull null
             ParsedInstrument(
-                number = m.groupValues[1].toInt(),
+                number = number,
                 layers = layers,
-                volume = tag(body, "Volume")?.toFloatOrNull() ?: 0.707946f,
-                pan = tag(body, "Pan")?.toFloatOrNull() ?: 0.5f,
-                tuneCoarse = tag(body, "TuneCoarse")?.toIntOrNull() ?: 0,
-                tuneFine = tag(body, "TuneFine")?.toIntOrNull() ?: 0,
-                muteGroup = tag(body, "MuteGroup")?.toIntOrNull() ?: 0,
-                oneShot = tag(body, "OneShot")?.equals("False", ignoreCase = true) != true,
+                volume = directText(inst, "Volume")?.toFloatOrNull() ?: 0.707946f,
+                pan = directText(inst, "Pan")?.toFloatOrNull() ?: 0.5f,
+                tuneCoarse = directText(inst, "TuneCoarse")?.toIntOrNull() ?: 0,
+                tuneFine = directText(inst, "TuneFine")?.toIntOrNull() ?: 0,
+                muteGroup = directText(inst, "MuteGroup")?.toIntOrNull() ?: 0,
+                oneShot = directText(inst, "OneShot")?.equals("False", ignoreCase = true) != true,
             )
-        }.toList()
+        }
+        return ParsedProgram(isKeygroup, name, instruments, zeroBased)
+    }
 
-    /** First occurrence of `<name>…</name>` in [body], or null. */
-    private fun tag(body: String, name: String): String? =
-        Regex("<$name>(.*?)</$name>").find(body)?.groupValues?.get(1)
+    // ---- DOM helpers -------------------------------------------------------
+
+    private fun elements(doc: org.w3c.dom.Document, tag: String): List<org.w3c.dom.Element> {
+        val nl = doc.getElementsByTagName(tag)
+        return (0 until nl.length).mapNotNull { nl.item(it) as? org.w3c.dom.Element }
+    }
+
+    /** All descendant elements of [tag] under [parent]. */
+    private fun childElements(parent: org.w3c.dom.Element, tag: String): List<org.w3c.dom.Element> {
+        val nl = parent.getElementsByTagName(tag)
+        return (0 until nl.length).mapNotNull { nl.item(it) as? org.w3c.dom.Element }
+    }
+
+    /** Text of the first descendant [tag] under [parent], entities resolved. */
+    private fun firstText(parent: org.w3c.dom.Element, tag: String): String? =
+        (parent.getElementsByTagName(tag).item(0) as? org.w3c.dom.Element)?.textContent
+
+    /**
+     * Text of a **direct** child [tag] — so an instrument's own `<Volume>`
+     * is never confused with a `<Volume>` nested deeper (a layer's, say).
+     */
+    private fun directText(parent: org.w3c.dom.Element, tag: String): String? {
+        val kids = parent.childNodes
+        for (i in 0 until kids.length) {
+            val n = kids.item(i)
+            if (n is org.w3c.dom.Element && n.tagName == tag) return n.textContent?.trim()
+        }
+        return null
+    }
 
     private fun inPreviews(path: String): Boolean =
         path.split('/', '\\').any { it.equals("[Previews]", ignoreCase = true) }
-
-    private fun xmlUnescape(s: String): String = s
-        .replace("&lt;", "<").replace("&gt;", ">")
-        .replace("&quot;", "\"").replace("&apos;", "'")
-        .replace("&amp;", "&")
 }
