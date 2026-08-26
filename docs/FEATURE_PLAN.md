@@ -570,6 +570,33 @@ more authentic). Standing rejects unchanged.
 
 ---
 
+# Wave BB — hardening: trust nothing that crossed the card
+
+Six feature waves grew the attack surface: SnipSnap now parses five
+formats people feed it from *outside* — `.xpn` zips, ACVS gzips, `.mid`,
+WAVs, `kit.json` — and writes files whose names come from inside those
+files. The contract this wave enforces: **any bytes in → a typed refusal
+or a valid result out, quickly; never a traversal, an OOM, a hang, a
+stack overflow, or a raw stack trace.** BB1 is a real vulnerability and
+leads; the rest is depth behind it. This wave adds no user-facing
+features — it makes the ones we shipped safe to point at a stranger's
+file.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| BB1 | Path-traversal fix — sample names from an imported program (`XpnImporter`, `Mpc3Importer`) and archive entry names (backup restore) drive file writes **before** the bare-filename guard runs; a crafted `../` escapes the destination. A shared `SafePath.child(dir, name)` rejects separators, `..`, absolute and root-relative names, and every importer/extractor routes reads and writes through it | CORE | S | a hand-built `.xpn`/`.xtd`/`.xpj`/backup with `../escape` in a sample name is refused with a reason; nothing lands outside the destination |
+| BB2 | Resource ceilings — `Acvs.read` caps inflated size (a gzip bomb is refused, not inflated); zip reads cap per-entry and total uncompressed bytes and entry count; `MidiGroove` caps event count; `WavReader` checks the declared data size against the file before allocating | CORE | S | a 10 KB gzip/zip bomb refuses in milliseconds under a fixed heap; a WAV claiming 4 GB of samples refuses instead of allocating |
+| BB3 | Fuzz harness — seeded mutation fuzzing (byte-flips and truncations of valid fixtures) across `WavReader`, `Acvs`, `MidiGroove`, `XpnImporter`, `Mpc3Importer`, `MpcDiff.load`; every input yields a typed failure or a valid parse within a time bound, never an uncaught `AIOOBE`/OOM/hang. Hostile fixtures committed under `reference/fixtures/hostile/` | CORE | M | N seeded mutations per reader all end in a typed outcome inside the budget; the harness reruns deterministically |
+| BB4 | Atomic saves — `KitStore`, `GrooveStore`, `TeachLog` write to a temp file and rename (atomic on the same volume), so a process killed mid-save never leaves a half-written `kit.json`; loaders skip torn entries in `.takes/`/`.bin/` rather than throwing | CORE | S | a truncated `kit.json` written mid-save is detectable and the prior file survives; a garbage `.takes/` entry doesn't break `takes()` |
+| BB5 | CLI catch-all + hostile sweep — `Cli.run` catches any unexpected `RuntimeException` and prints one honest line at exit 1 (no stack trace to the user); a sweep test runs every command against the hostile corpus and asserts a clean typed exit every time | CORE | S | no command ever prints a Java stack trace or exits non-{0,1,2} on a hostile file |
+| BB6 | Import metadata validation — duplicate pad slots, out-of-range levels/tunes/velocities, and self-referential or out-of-order velocity layers in an imported program are clamped where harmless and refused-with-a-name where not, before a `Kit` is built | CORE | S | a program with two pads on slot 1, a 9.0 level, and a layer pointing at a missing sample is refused with the specific reason |
+
+**Below the line (post-hardening):** signed-kit provenance (overkill for
+a sampler); sandboxed decode (the JVM readers are already
+allocation-bounded once BB2 lands). Standing rejects unchanged.
+
+---
+
 ## Sequence
 
 ```
@@ -594,6 +621,10 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   wire-through (Z6.2 verdict: waveform default, rings runner-up).
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
+
+CORE wave BB (hardening, in order — BB1 is a live vuln, it leads):
+  BB1 traversal fix → BB2 resource ceilings → BB3 fuzz harness →
+  BB4 atomic saves → BB5 CLI catch-all + sweep → BB6 import validation
 
 CORE wave 6: ✓ all landed (2026-08-25) — multi-sequence projects
   (probe first; the four variations arrive as switchable sequences),
