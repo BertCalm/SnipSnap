@@ -87,7 +87,9 @@ object XpnImporter {
         overwrite: Boolean,
     ): ImportResult {
         run {
-            val xml = zip.getInputStream(programEntry).readBytes().toString(Charsets.UTF_8)
+            val xml = zip.getInputStream(programEntry).use {
+                com.snipsnap.mpc3.LimitedRead.bytes(it, what = "program ${programEntry.name}")
+            }.toString(Charsets.UTF_8)
             require(!Regex("<Program\\s+type=\"Keygroup\"").containsMatchIn(xml)) {
                 "'${programEntry.name}' is a keygroup program - only drum programs import as kits"
             }
@@ -130,7 +132,9 @@ object XpnImporter {
             for (stem in referenced) {
                 val entry = wavByStem.getValue(stem.lowercase())
                 zip.getInputStream(entry).use { src ->
-                    SafePath.child(destDir, "$stem.wav").outputStream().use { src.copyTo(it) }
+                    SafePath.child(destDir, "$stem.wav").outputStream().use {
+                        com.snipsnap.mpc3.LimitedRead.copy(src, it, what = "sample $stem.wav")
+                    }
                 }
             }
 

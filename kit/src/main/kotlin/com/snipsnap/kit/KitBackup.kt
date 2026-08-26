@@ -72,7 +72,11 @@ object KitBackup {
                 require(entries.isNotEmpty()) { "no .xpn kits inside $backupFile - not a SnipSnap backup?" }
                 for (entry in entries.sortedBy { it.name }) {
                     val xpn = File(temp, File(entry.name).name)
-                    zip.getInputStream(entry).use { src -> xpn.outputStream().use { src.copyTo(it) } }
+                    zip.getInputStream(entry).use { src ->
+                        xpn.outputStream().use {
+                            com.snipsnap.mpc3.LimitedRead.copy(src, it, what = "backup entry ${entry.name}")
+                        }
+                    }
                     results += XpnImporter.import(xpn, destRoot, overwrite)
                 }
             }

@@ -25,6 +25,9 @@ object MidiGroove {
     const val DIVISION = 960
     const val DRUM_CHANNEL = 9
 
+    /** A groove is a few bars; past this a file is hostile or nonsense. */
+    const val MAX_NOTES = 100_000
+
     /** What a `.mid` carried: the clip, and the file's tempo when it had one. */
     data class Imported(val clip: Mpc3Clip, val bpm: Float?)
 
@@ -127,6 +130,9 @@ object MidiGroove {
                 val start = o.startTick * DIVISION / division
                 val len = (atTick * DIVISION / division - start).coerceAtLeast(1)
                 done += Mpc3Note(note, start, o.velocity, len)
+                // A groove is a bar or a few; a file with millions of notes is
+                // hostile or nonsense - refuse before the list eats the heap.
+                require(done.size <= MAX_NOTES) { "MIDI file has more than $MAX_NOTES notes" }
             }
 
             while (r.at < end) {
