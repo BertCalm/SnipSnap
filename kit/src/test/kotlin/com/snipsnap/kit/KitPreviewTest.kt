@@ -72,6 +72,25 @@ class KitPreviewTest {
     )
 
     @Test
+    fun `a pathological tempo renders bounded, never a negative array size`() {
+        val dir = File(temp, "slowkit")
+        val kit = buildKit(dir)
+        // tempoBpm is only validated >0; 0.001 would make framesPerPulse
+        // enormous and the frame math overflow to a negative FloatArray size.
+        val snip = KitPreview.render(kit, dir, clip = oneBar, tempoBpm = 0.001f)
+        assertTrue(snip.frameCount > 0, "rendered something bounded")
+        assertEquals(2, snip.channels)
+        // Clamped to MIN_BPM, one bar is at most a few seconds - not hours.
+        assertTrue(snip.durationSeconds < 60f, "clamped to a musical length: ${snip.durationSeconds}s")
+
+        // A huge tempo is fine too (short render), and a kit whose stored
+        // tempo is nonsense renders through the same clamp.
+        assertTrue(KitPreview.render(kit, dir, clip = oneBar, tempoBpm = 5000f).frameCount > 0)
+        KitStore.save(KitStore.load(dir).copy(tempoBpm = 0.002f), dir)
+        assertTrue(KitPreview.render(KitStore.load(dir), dir, clip = oneBar).durationSeconds < 60f)
+    }
+
+    @Test
     fun `renders the groove non-silent, stereo, deterministic, and the right length`() {
         val dir = File(temp, "kit")
         val kit = buildKit(dir)

@@ -25,6 +25,10 @@ object KitPreview {
     const val RATE = 44_100
     const val DEFAULT_BPM = 92f
 
+    /** A preview clamps tempo to a musical range, so frame math can't overflow. */
+    const val MIN_BPM = 20f
+    const val MAX_BPM = 400f
+
     /** Ring-out tail after the last bar, seconds. */
     private const val TAIL_SEC = 0.6f
 
@@ -39,7 +43,11 @@ object KitPreview {
     ): Snip {
         require(kit.pads.isNotEmpty()) { "an empty kit has nothing to preview" }
         val groove = clip ?: GrooveStore.load(kitDir).firstOrNull() ?: defaultPattern(kit)
-        val bpm = tempoBpm ?: kit.tempoBpm ?: DEFAULT_BPM
+        // kit.tempoBpm is only validated >0 <1000, so a hostile or nonsense
+        // 0.001 would blow framesPerPulse up until the frame math overflows to
+        // a negative array size. A preview clamps to a musical range - it is
+        // cosmetic, not the place to honour an impossible tempo.
+        val bpm = (tempoBpm ?: kit.tempoBpm ?: DEFAULT_BPM).coerceIn(MIN_BPM, MAX_BPM)
         val framesPerPulse = 60.0 / bpm * RATE / 960.0
 
         data class Voice(
