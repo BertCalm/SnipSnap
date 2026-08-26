@@ -84,6 +84,25 @@ class WavReaderTest {
     }
 
     @Test
+    fun `a float wav carrying NaN and Inf decodes to finite silence`() {
+        // Four float samples: NaN, +Inf, -Inf, and an honest 0.5.
+        val payload = ByteArrayOutputStream()
+        fun le32(v: Int) {
+            payload.write(v and 0xFF); payload.write((v ushr 8) and 0xFF)
+            payload.write((v ushr 16) and 0xFF); payload.write((v ushr 24) and 0xFF)
+        }
+        le32(Float.NaN.toRawBits())
+        le32(Float.POSITIVE_INFINITY.toRawBits())
+        le32(Float.NEGATIVE_INFINITY.toRawBits())
+        le32(0.5f.toRawBits())
+        val snip = WavReader.read(wav(3, 32, 1, 44_100, payload.toByteArray()))
+
+        assertTrue(snip.samples.all { it.isFinite() }, "no non-finite sample survives the decode")
+        assertEquals(0f, snip.samples[0]); assertEquals(0f, snip.samples[1]); assertEquals(0f, snip.samples[2])
+        assertTrue(kotlin.math.abs(snip.samples[3] - 0.5f) < 1e-6f, "the honest sample is untouched")
+    }
+
+    @Test
     fun `reads back a 24 bit wav`() {
         // Same structure as the 16-bit tolerance above: encoder rounds
         // x * 8_388_607, decoder divides by 8_388_608, so the bound is
