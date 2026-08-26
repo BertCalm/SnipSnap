@@ -164,6 +164,12 @@ object Cli {
         } catch (e: java.io.IOException) {
             err.println("snipsnap: ${e.message}")
             1
+        } catch (e: RuntimeException) {
+            // A reader threw a typed-but-uncatalogued refusal (a corrupt
+            // container, say) - a bad *file*, not a crashed program. One
+            // honest line, exit 1, never a Java stack trace at the user.
+            err.println("snipsnap: couldn't read that file (${e.javaClass.simpleName}: ${e.message})")
+            1
         }
     }
 }

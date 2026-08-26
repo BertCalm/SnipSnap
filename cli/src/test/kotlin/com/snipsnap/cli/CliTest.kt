@@ -857,6 +857,45 @@ class CliTest {
     }
 
     @Test
+    fun `every command exits cleanly on a corpus of hostile files`() {
+        val rnd = kotlin.random.Random(42)
+        fun junk(name: String, size: Int): File = File(temp, name).apply {
+            writeBytes(ByteArray(size) { rnd.nextInt(256).toByte() })
+        }
+        // A spread of malformed inputs: random noise, a fake gzip, a fake
+        // zip, an empty file, and a truncated real WAV.
+        val realWav = writeBreak(File(temp, "hostile-real.wav"))
+        val truncatedWav = File(temp, "trunc.wav").apply {
+            writeBytes(realWav.readBytes().copyOf(40))
+        }
+        val fakeGzip = File(temp, "fake.xtd").apply { writeBytes(byteArrayOf(0x1f, 0x8b.toByte()) + ByteArray(200) { 0 }) }
+        val fakeZip = File(temp, "fake.xpn").apply { writeBytes("PK".toByteArray() + ByteArray(200) { 0x7F }) }
+        val hostiles = listOf(
+            junk("noise.bin", 500), junk("noise.xpn", 500), junk("noise.xtd", 500),
+            junk("noise.mid", 300), junk("noise.wav", 300),
+            File(temp, "empty.bin").apply { writeBytes(ByteArray(0)) },
+            truncatedWav, fakeGzip, fakeZip,
+        )
+        val out = File(temp, "hostile-out")
+
+        // Each command that reads a file, against each hostile file: the run
+        // must return a clean exit (never throw, never exit outside 0..2).
+        val invocations: List<(File) -> Triple<Int, String, String>> = listOf(
+            { f -> cli("chop", f.path, "--out", out.path, "--overwrite") },
+            { f -> cli("classify", f.path) },
+            { f -> cli("import", f.path, "--out", out.path, "--overwrite") },
+            { f -> cli("keys", f.path, "--out", out.path) },
+            { f -> cli("diff", f.path, f.path) },
+        )
+        for (h in hostiles) {
+            for (invoke in invocations) {
+                val (code, _, _) = invoke(h)
+                assertTrue(code in 0..2, "hostile ${h.name}: exit $code out of range")
+            }
+        }
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")
