@@ -161,6 +161,44 @@ class XpnImporterTest {
         return file
     }
 
+    private fun archiveWithSampleName(file: File, sampleName: String): File {
+        val wav = File(temp, "planted.wav").also { WavWriter.write(it, tone(9)) }
+        val program = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <MPCVObject><Program type="Drum"><ProgramName>Evil Kit</ProgramName>
+              <Instruments><Instrument number="1"><Layers><Layer number="1">
+                <VelStart>0</VelStart><VelEnd>127</VelEnd>
+                <SampleName>$sampleName</SampleName>
+              </Layer></Layers></Instrument></Instruments></Program></MPCVObject>
+        """.trimIndent()
+        ZipOutputStream(file.outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry("Evil Kit.xpm")); zip.write(program.toByteArray()); zip.closeEntry()
+            zip.putNextEntry(ZipEntry("pwned.wav")); zip.write(wav.readBytes()); zip.closeEntry()
+        }
+        return file
+    }
+
+    @Test
+    fun `a traversing sample name is flattened to a basename, nothing escapes`() {
+        // The traversal collapses to "pwned.wav" and lands inside the kit;
+        // nothing is ever written up at the escape target.
+        val xpn = archiveWithSampleName(File(temp, "evil.xpn"), "../../../pwned")
+        val canary = File(temp, "pwned.wav").also { it.delete() }
+
+        val result = XpnImporter.import(xpn, File(temp, "dest"))
+        assertEquals("pwned.wav", result.kit.pad(1)!!.sampleFile)
+        assertTrue(File(result.directory, "pwned.wav").isFile, "landed inside the kit folder")
+        assertTrue(!canary.exists(), "nothing was written outside the destination")
+    }
+
+    @Test
+    fun `a legit vendor subpath is flattened too`() {
+        // Real packs carry names like "Samples/Deep/Kick" - honest, not hostile.
+        val xpn = archiveWithSampleName(File(temp, "vendor.xpn"), "Samples/Deep/pwned")
+        val result = XpnImporter.import(xpn, File(temp, "vendor-dest"))
+        assertEquals("pwned.wav", result.kit.pad(1)!!.sampleFile)
+    }
+
     @Test
     fun `a vendor-shaped archive imports - 1-based numbering, deep folders`() {
         val xpn = foreignArchive(File(temp, "Foreign.xpn"))

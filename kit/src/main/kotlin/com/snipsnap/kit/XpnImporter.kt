@@ -113,6 +113,8 @@ object XpnImporter {
                 wavByStem.putIfAbsent(File(e.name).nameWithoutExtension.lowercase(), e)
             }
 
+            // Names were made safe basenames at parse time; SafePath.child is
+            // the enforced invariant on the WAVs we write.
             val referenced = instruments.flatMap { it.layers.map { l -> l.sampleName } }.distinct()
             val missing = referenced.filter { wavByStem[it.lowercase()] == null }
             require(missing.isEmpty()) {
@@ -128,7 +130,7 @@ object XpnImporter {
             for (stem in referenced) {
                 val entry = wavByStem.getValue(stem.lowercase())
                 zip.getInputStream(entry).use { src ->
-                    File(destDir, "$stem.wav").outputStream().use { src.copyTo(it) }
+                    SafePath.child(destDir, "$stem.wav").outputStream().use { src.copyTo(it) }
                 }
             }
 
@@ -189,9 +191,9 @@ object XpnImporter {
                 val name = tag(lb, "SampleName")?.let(::xmlUnescape)?.trim()
                 if (name.isNullOrEmpty()) return@mapNotNull null
                 ParsedLayer(
-                    // Bare names are the rule, but strip a path if a
-                    // nonconforming archive carries one anyway.
-                    sampleName = File(name.replace('\\', '/')).nameWithoutExtension,
+                    // Bare names are the rule; a nonconforming archive's legit
+                    // subpath is flattened, a traversal refused - untrusted.
+                    sampleName = SafePath.basename(name).substringBeforeLast('.'),
                     velStart = tag(lb, "VelStart")?.toIntOrNull() ?: 0,
                     velEnd = tag(lb, "VelEnd")?.toIntOrNull() ?: 127,
                 )

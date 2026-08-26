@@ -114,6 +114,54 @@ class Mpc3ImporterTest {
     }
 
     @Test
+    fun `a payload sample name that traverses is refused, nothing escapes`() {
+        // Export a real .xtd, then rewrite its payload so a sample file name
+        // tries to climb out of the data folder - the shape a hostile file
+        // would carry.
+        val kitDir = File(temp, "trav-src").apply { mkdirs() }
+        WavWriter.write(File(kitDir, "A01_Kick_01.wav"), tone(6))
+        val kit = Kit("Trav", listOf(KitPad(slot = 1, sampleFile = "A01_Kick_01.wav")))
+        KitStore.save(kit, kitDir)
+        val card = File(temp, "trav-card")
+        Mpc3Exporter.exportTrack(kit, kitDir, card)
+
+        val xtd = File(card, "Trav.xtd")
+        val container = com.snipsnap.mpc3.Acvs.read(xtd)
+        val hostilePayload = container.payloadText.replace(
+            "A01_Kick_01.wav", "../../../../pwned.wav",
+        )
+        xtd.writeBytes(com.snipsnap.mpc3.Acvs.write(container.header, hostilePayload))
+        val canary = File(temp, "pwned.wav").also { it.delete() }
+
+        // The traversal is flattened to its basename ("pwned.wav") - which is
+        // then missing from the data folder, so the import refuses by name -
+        // and crucially, nothing is ever written outside the destination.
+        val err = assertFailsWith<IllegalArgumentException> { Mpc3Importer.import(xtd, File(temp, "trav-in")) }
+        assertTrue("pwned.wav" in err.message!! && "missing" in err.message!!, err.message!!)
+        assertTrue(!canary.exists(), "nothing written outside the destination")
+    }
+
+    @Test
+    fun `a legit shared-pool path is flattened and imports`() {
+        // Commercial tracks reference "../Samples/Kick.wav" - honest, not
+        // hostile. Flattened to the basename, resolved in the data folder.
+        val kitDir = File(temp, "pool-src").apply { mkdirs() }
+        WavWriter.write(File(kitDir, "A01_Kick_01.wav"), tone(6))
+        val kit = Kit("Pool", listOf(KitPad(slot = 1, sampleFile = "A01_Kick_01.wav")))
+        KitStore.save(kit, kitDir)
+        val card = File(temp, "pool-card")
+        Mpc3Exporter.exportTrack(kit, kitDir, card)
+
+        val xtd = File(card, "Pool.xtd")
+        val container = com.snipsnap.mpc3.Acvs.read(xtd)
+        val patched = container.payloadText.replace("A01_Kick_01.wav", "../Samples/A01_Kick_01.wav")
+        xtd.writeBytes(com.snipsnap.mpc3.Acvs.write(container.header, patched))
+
+        val result = Mpc3Importer.import(xtd, File(temp, "pool-in"))
+        assertEquals("A01_Kick_01.wav", result.kit.pad(1)!!.sampleFile)
+    }
+
+    @Test
     fun `missing TrackData samples are refused by name`() {
         val kitDir = File(temp, "m-src")
         kitDir.mkdirs()

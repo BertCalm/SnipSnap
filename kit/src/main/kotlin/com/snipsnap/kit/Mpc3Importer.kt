@@ -135,9 +135,10 @@ object Mpc3Importer {
                             ?.takeIf { it.isNotBlank() }?.plus(".wav")
                         ?: return@mapNotNull null
                     Triple(
-                        // Bare names are the rule, but strip a path if a
-                        // nonconforming file carries one anyway.
-                        File(file.replace('\\', '/')).name,
+                        // Bare names are the rule; a nonconforming file's
+                        // legit subpath is flattened, but a traversal is
+                        // refused (see SafePath.basename) - untrusted input.
+                        SafePath.basename(file),
                         (layer["velocityStart"] as? JsonValue.Num)?.value?.toInt() ?: 0,
                         (layer["velocityEnd"] as? JsonValue.Num)?.value?.toInt() ?: 127,
                     )
@@ -166,8 +167,10 @@ object Mpc3Importer {
         }
         require(parsed.isNotEmpty()) { "'$trackName' has no pads with samples" }
 
+        // Sample names were made safe basenames at parse time; SafePath.child
+        // is the enforced invariant that reads and writes stay in their folder.
         val referenced = parsed.flatMap { it.layers.map { l -> l.first } }.distinct()
-        val missing = referenced.filter { !File(dataDir, it).isFile }
+        val missing = referenced.filter { !SafePath.child(dataDir, it).isFile }
         require(missing.isEmpty()) {
             "samples missing from ${dataDir.name}/: " + missing.joinToString(", ")
         }
@@ -181,7 +184,7 @@ object Mpc3Importer {
         }
         destDir.mkdirs()
         for (file in referenced) {
-            File(dataDir, file).copyTo(File(destDir, file), overwrite = true)
+            SafePath.child(dataDir, file).copyTo(SafePath.child(destDir, file), overwrite = true)
         }
 
         val pads = parsed.map { p ->
