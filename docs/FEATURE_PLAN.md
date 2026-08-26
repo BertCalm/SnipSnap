@@ -79,10 +79,20 @@ bounded macro rolls, and two generated kits are hardware-verified.
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
 | F4.1 | ✓ done: starter-kit registry — `StarterKits` in `:shell`: name → builder → blurb → seed policy, wrapping the main-source builders so the FRESH TAPE menu is data-driven | CORE | S | registry renders every kit through assemble→preflight in a test |
-| F4.2 | NEW KIT menu — pick a starter, reroll seed, land on the grid (needs M0 only) | APP | S | first-run user has a playable kit in 30 s, empty grid never shows |
+| F4.2 | **built, device-unverified** — NEW KIT menu: first launch opens the starter list (six starters + BLANK TAPE), a pick renders and lands on the grid, seeded starters reroll by re-tapping. Replaces first-run auto-seeding entirely (`seedIfEmpty` deleted). On `claude/f42-starter-menu`, stacked on M0. | APP | S | first-run user has a playable kit in 30 s, empty grid never shows — **not yet measured**; see the note below |
 | F4.3 | SYNTH screen — macro panels over `Patches`, SCRAMBLE, RENDER TO PAD (= the M5 synth half) | APP | M | prototype's Thump Lab behaviour, on device |
 
 Also yields rights-clean Play Store demo content for free.
+
+**F4.2 still owes a device check.** The build is green (690 tests) and the
+naming logic is covered — including the `LUCKY DIP A/B` slash, which is not
+MPC-safe and would otherwise throw on the third menu row. What is unverified
+is everything a test cannot see: how the menu reads on a real screen, and
+whether launch-to-playable-grid actually meets the 30 s exit test. The one
+prior measurement of a starter render (~24 s) was taken on an 8 GB host that
+was swapping and later crashed the emulator, so treat it as an upper bound on
+bad hardware rather than a figure to design against. Re-measure on a real
+phone before calling this row done.
 
 ## F5 — In-key capture
 
