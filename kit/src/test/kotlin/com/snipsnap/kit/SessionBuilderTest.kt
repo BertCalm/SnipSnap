@@ -94,6 +94,11 @@ class SessionBuilderTest {
         assertTrue("A Groove" in payload)
         assertTrue("B Groove" in payload, "the second kit's groove rides its own track's clip map")
         assertTrue("\"masterTempo\": 96.5" in payload)
+
+        // GG3.1: song slot 1 wears the session's name; the other 31 stay
+        // the corpus's own empty slots (steps wait on the bench capture).
+        assertTrue("\"name\": \"Test Session\"" in payload, "song slot 1 named after the session")
+        assertEquals(31, Regex("\\(unnamed\\)").findAll(payload).count())
     }
 
     @Test

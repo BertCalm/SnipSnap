@@ -36,6 +36,25 @@ sealed interface Mpc3ProjectTrack {
 }
 
 /**
+ * Song slot 1 of a project. The corpus's 32 song slots all carry
+ * `{"name": "(unnamed)", "ignoreTempo": false, "items": []}` — the *step*
+ * schema (which sequence, how many repeats) has never been captured, so
+ * this type expresses the intent while the writer refuses non-empty
+ * [items] until a Live III capture with a saved song lands in
+ * `reference/` (FEATURE_PLAN GG3.2). Naming the slot is safe today: the
+ * output differs from the corpus by exactly that string.
+ */
+data class Mpc3Song(
+    val name: String,
+    /** GG3.2: `(sequenceKey, repeats)` steps — refused until corpus-verified. */
+    val items: List<Pair<Int, Int>> = emptyList(),
+) {
+    init {
+        require(name.isNotBlank()) { "song name must not be blank" }
+    }
+}
+
+/**
  * Writes a whole session as one MPC 3 project — the `.xpj` a Live III opens
  * directly: kit, instruments, mixer and sequence together, beside a flat
  * `<name>_[ProjectData]/` folder of WAVs.
@@ -66,21 +85,37 @@ class Mpc3ProjectWriter(
 
     private val trackWriter = Mpc3TrackWriter(firmware, platform)
 
-    fun write(name: String, tracks: List<Mpc3ProjectTrack>, tempoBpm: Float = 92f): ByteArray =
+    fun write(
+        name: String,
+        tracks: List<Mpc3ProjectTrack>,
+        tempoBpm: Float = 92f,
+        song: Mpc3Song? = null,
+    ): ByteArray =
         Acvs.write(
             AcvsHeader(firmware, Mpc3Project.PROJECT_OBJECT_TYPE, AcvsHeader.ENCODING_JSON, platform),
-            payloadText(name, tracks, tempoBpm),
+            payloadText(name, tracks, tempoBpm, song),
         )
 
     /** Write `<name>.xpj` into [directory]; WAVs go in the sibling `_[ProjectData]/`. */
-    fun writeTo(directory: File, name: String, tracks: List<Mpc3ProjectTrack>, tempoBpm: Float = 92f): File {
+    fun writeTo(
+        directory: File,
+        name: String,
+        tracks: List<Mpc3ProjectTrack>,
+        tempoBpm: Float = 92f,
+        song: Mpc3Song? = null,
+    ): File {
         require(directory.isDirectory) { "not a directory: $directory" }
         val file = File(directory, "$name.xpj")
-        file.writeBytes(write(name, tracks, tempoBpm))
+        file.writeBytes(write(name, tracks, tempoBpm, song))
         return file
     }
 
-    fun payloadText(name: String, tracks: List<Mpc3ProjectTrack>, tempoBpm: Float = 92f): String {
+    fun payloadText(
+        name: String,
+        tracks: List<Mpc3ProjectTrack>,
+        tempoBpm: Float = 92f,
+        song: Mpc3Song? = null,
+    ): String {
         require(tracks.isNotEmpty()) { "a project needs at least one content track" }
         require(tempoBpm in 30f..300f) { "tempo out of range: $tempoBpm" }
 
@@ -153,8 +188,25 @@ class Mpc3ProjectWriter(
         text = text.replace("@SAMPLES@", renderAt(samples, SPLICE_INDENT).trimStart())
         text = text.replace("@SEQUENCES@", renderAt(sequences, SPLICE_INDENT).trimStart())
         text = text.replace("@MASTER_TEMPO@", tempoBpm.toDouble().toString())
+        if (song != null) {
+            require(song.items.isEmpty()) {
+                "song steps need a corpus capture first - save a 2-step song on the " +
+                    "Live III and drop the .xpj in reference/ (FEATURE_PLAN GG3.2)"
+            }
+            // Song slot 1 takes the session's name - the one edit whose
+            // output differs from the corpus by exactly that string. The
+            // 32 slots are the corpus's own empty songs; naming the first
+            // is what the hardware does when you title a song.
+            text = text.replaceFirst(
+                "\"name\": \"(unnamed)\"",
+                "\"name\": \"" + escapeJson(song.name) + "\"",
+            )
+        }
         return text
     }
+
+    private fun escapeJson(s: String): String =
+        s.replace("\\", "\\\\").replace("\"", "\\\"")
 
     private fun sequence(key: Int, trackNames: List<String>, clipByTrack: Map<String, Mpc3Clip>, tempoBpm: Float): J {
         val bars = clipByTrack.values.maxOfOrNull { it.bars } ?: 2

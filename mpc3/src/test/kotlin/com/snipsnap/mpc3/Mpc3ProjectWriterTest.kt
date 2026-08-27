@@ -98,6 +98,31 @@ class Mpc3ProjectWriterTest {
     }
 
     @Test
+    fun `song slot one takes the name and nothing else moves - steps wait on the bench`() {
+        val plain = writer.payloadText("S", tracks(), tempoBpm = 92f)
+        val sung = writer.payloadText("S", tracks(), tempoBpm = 92f, song = Mpc3Song("Night Drive"))
+
+        assertTrue("\"name\": \"Night Drive\"" in sung, "slot 1 wears the song's name")
+        assertEquals(31, Regex("\\(unnamed\\)").findAll(sung).count(), "the other 31 slots stay the corpus's own")
+        assertEquals(
+            plain,
+            sung.replaceFirst("\"name\": \"Night Drive\"", "\"name\": \"(unnamed)\""),
+            "the name is the only byte that moves",
+        )
+        assertTrue(
+            Mpc3Project.read(writer.write("S", tracks(), song = Mpc3Song("Night Drive"))).isProject,
+            "the reader still accepts a named song",
+        )
+
+        // The step schema has never been captured; writing steps is refused
+        // with the bench instruction, not guessed.
+        val err = kotlin.test.assertFailsWith<IllegalArgumentException> {
+            writer.payloadText("S", tracks(), song = Mpc3Song("X", items = listOf(0 to 4)))
+        }
+        assertTrue("corpus capture" in err.message!!, err.message!!)
+    }
+
+    @Test
     fun `a keys track carries its clip into the sequence like any other track`() {
         // The clip map is keyed by track name and byte-shaped identically
         // for every track kind - a keygroup track's bassline rides the same

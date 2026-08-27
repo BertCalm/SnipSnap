@@ -125,10 +125,13 @@ object Exporters {
             val tracks = listOf(Mpc3ProjectTrack.Drum(program, clips = effectiveClips))
             // The call-site tempo wins; the kit's remembered tempo backs it up.
             val effectiveTempo = tempoBpm ?: kit.tempoBpm
+            // Song slot 1 wears the kit's name (GG3.1 plumbing; steps wait
+            // on the bench capture).
+            val song = com.snipsnap.mpc3.Mpc3Song(kit.name)
             val file = if (effectiveTempo != null) {
-                writer.writeTo(destRoot, kit.name, tracks, effectiveTempo)
+                writer.writeTo(destRoot, kit.name, tracks, effectiveTempo, song = song)
             } else {
-                writer.writeTo(destRoot, kit.name, tracks)
+                writer.writeTo(destRoot, kit.name, tracks, song = song)
             }
             ExportOutcome(format, file, dataDir, findings(kit, kitDir))
         }

@@ -112,8 +112,11 @@ object SessionBuilder {
         }
 
         val writer = Mpc3ProjectWriter()
-        val file = tempo?.let { writer.writeTo(destRoot, name, tracks, it) }
-            ?: writer.writeTo(destRoot, name, tracks)
+        // Song slot 1 wears the session's name (safe plumbing; the step
+        // list waits on the GG3.2 bench capture).
+        val song = com.snipsnap.mpc3.Mpc3Song(name)
+        val file = tempo?.let { writer.writeTo(destRoot, name, tracks, it, song = song) }
+            ?: writer.writeTo(destRoot, name, tracks, song = song)
         return Result(file, dataDir, kitTracks, instrumentTracks, tempo, answerTracks)
     }
 }
