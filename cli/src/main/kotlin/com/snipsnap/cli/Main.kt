@@ -42,6 +42,11 @@ object Cli {
         |                        --chop sends each song's best break through
         |                        the chop pipeline, provenance stamped)
         |  classify <wav...>     print what the classifier hears in each file
+        |  similar <target> <library-root>
+        |                        find me another one like this: nearest
+        |                        sounds across every kit under the root
+        |                        (target = a .wav, or a kit dir --pad A02;
+        |                        --top N matches)
         |  export <kit-dir>      export an existing kit folder to MPC formats
         |  import <file>         unpack an .xpn archive or a native .xtd into a
         |                        kit folder; a .mid needs --into <kit-dir> and
@@ -164,6 +169,7 @@ object Cli {
                 "chop-all" -> ChopAllCommand.run(args.drop(1), out)
                 "dig" -> DigCommand.run(args.drop(1), out)
                 "classify" -> ClassifyCommand.run(args.drop(1), out)
+                "similar" -> SimilarCommand.run(args.drop(1), out)
                 "export" -> ExportCommand.run(args.drop(1), out)
                 "import" -> ImportCommand.run(args.drop(1), out)
                 "keys" -> KeysCommand.run(args.drop(1), out)

@@ -84,6 +84,18 @@ and the low/mid/high band split. When the classifier is wrong about a real
 capture, this is where the wrongness becomes a number you can move a
 threshold by.
 
+### `similar <target> <library-root>` — find me another one like this
+
+Nearest-neighbour over the classifier's own features: the measurements
+it already hears (centroid, rolloff, flatness, band ratios, duration,
+decay) become a normalized vector, and distance is "does it sound
+alike" — level left out on purpose, because a quiet snare is still a
+snare. The target is a `.wav`, or a kit folder plus `--pad A02`; the
+library is any folder of kit folders, walked recursively. Matches come
+back ranked and named well enough to go grab them — kit, pad, display
+name, class, distance. The target is never its own best match, and the
+order is total and deterministic.
+
 ### `export <kit-dir>` — the fan-out over an existing kit folder
 
 Takes any folder with a `kit.json` (one this CLI chopped, or one synced off

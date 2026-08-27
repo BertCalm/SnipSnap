@@ -960,6 +960,43 @@ class CliTest {
     }
 
     @Test
+    fun `similar finds another snare like this one across the library`() {
+        // A little library: two kits built through the model, snares and all.
+        val library = File(temp, "sim-library").apply { mkdirs() }
+        fun buildKit(name: String, snareSeed: Int) {
+            val m = com.snipsnap.shell.KitBuilderModel.create(name, File(library, name))
+            m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+            m.assign(2, DrumSynth.snare(seed = snareSeed), DrumClass.SNARE)
+            m.assign(3, DrumSynth.closedHat(), DrumClass.HAT_CLOSED)
+            m.save()
+        }
+        buildKit("Sim A", snareSeed = 2)
+        buildKit("Sim B", snareSeed = 3)
+
+        val (code, stdout, stderr) = cli("similar", File(library, "Sim A").path, library.path, "--pad", "A02", "--top", "3")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "more like Sim A A02")
+        val firstMatch = stdout.lines().first { it.trim().startsWith("1.") }
+        assertContains(firstMatch, "Sim B A02")
+        assertContains(firstMatch, "SNARE")
+
+        // The target itself is never its own best match.
+        val matchLines = stdout.lines().filter { it.trim().matches(Regex("^\\d+\\. .*")) }
+        assertTrue(matchLines.none { "Sim A A02" in it }, stdout)
+
+        // A bare .wav works as a target too.
+        val wav = File(temp, "sim-snare.wav")
+        com.snipsnap.audio.WavWriter.write(wav, DrumSynth.snare(seed = 9))
+        val (wCode, wOut, _) = cli("similar", wav.path, library.path, "--top", "2")
+        assertEquals(0, wCode)
+        assertContains(wOut.lines().first { it.trim().startsWith("1.") }, "SNARE")
+
+        // Refusals: a kit target needs --pad; an empty library says so.
+        assertEquals(2, cli("similar", File(library, "Sim A").path, library.path).first)
+        assertEquals(2, cli("similar", wav.path, File(temp, "sim-empty").apply { mkdirs() }.path).first)
+    }
+
+    @Test
     fun `treat crushes one pad from the terminal and undoes it`() {
         val wav = writeBreak(File(temp, "tr.wav"))
         val out = File(temp, "tr-out")
