@@ -615,6 +615,71 @@ class CliTest {
     }
 
     @Test
+    fun `wear ages the kit at export time and the originals never change`() {
+        val wav = writeBreak(File(temp, "wr.wav"))
+        val out = File(temp, "wr-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "WornCli", "--slices", "4").first)
+        val kitDir = File(out, "WornCli")
+
+        val (statusCode, statusOut, _) = cli("wear", kitDir.path)
+        assertEquals(0, statusCode)
+        assertContains(statusOut, "not aging")
+
+        assertEquals(0, cli("wear", kitDir.path, "--on").first)
+        val (playsCode, playsOut, _) = cli("wear", kitDir.path, "--plays", "1000")
+        assertEquals(0, playsCode)
+        assertContains(playsOut, "mile")
+
+        val kit = KitStore.load(kitDir)
+        val originals = kit.pads.associate { it.sampleFile to File(kitDir, it.sampleFile).readBytes() }
+
+        // A worn export and a --no-wear export of the same kit must differ -
+        // and neither may touch the kit's own files.
+        assertEquals(0, cli("export", kitDir.path, "--export", "folder", "--out", File(temp, "wr-worn").path).first)
+        assertEquals(
+            0,
+            cli("export", kitDir.path, "--export", "folder", "--out", File(temp, "wr-new").path, "--no-wear").first,
+        )
+        for (pad in kit.pads) {
+            val worn = File(temp, "wr-worn/card/${kit.name}/${pad.sampleFile}").readBytes()
+            val pristine = File(temp, "wr-new/card/${kit.name}/${pad.sampleFile}").readBytes()
+            assertTrue(!worn.contentEquals(pristine), "${pad.sampleFile} exported worn")
+            assertTrue(
+                File(kitDir, pad.sampleFile).readBytes().contentEquals(originals.getValue(pad.sampleFile)),
+                "${pad.sampleFile} stayed pristine in the kit folder",
+            )
+        }
+
+        // Wiping the ledger is a new tape: the default export matches --no-wear.
+        assertEquals(0, cli("wear", kitDir.path, "--reset").first)
+        assertEquals(0, cli("export", kitDir.path, "--export", "folder", "--out", File(temp, "wr-back").path).first)
+        for (pad in kit.pads) {
+            assertTrue(
+                File(temp, "wr-back/card/${kit.name}/${pad.sampleFile}").readBytes()
+                    .contentEquals(File(temp, "wr-new/card/${kit.name}/${pad.sampleFile}").readBytes()),
+                "${pad.sampleFile} back to the new-tape sound",
+            )
+        }
+
+        // A deliberate --wear override ages even a fresh tape - past the earned ceiling.
+        assertEquals(
+            0,
+            cli("export", kitDir.path, "--export", "folder", "--out", File(temp, "wr-forced").path, "--wear", "1.5").first,
+        )
+        val forced = File(temp, "wr-forced/card/${kit.name}/${kit.pads.first().sampleFile}").readBytes()
+        assertTrue(!forced.contentEquals(File(temp, "wr-new/card/${kit.name}/${kit.pads.first().sampleFile}").readBytes()))
+
+        // Refusals: nonsense wear, contradictions, plays on a stopped deck.
+        assertEquals(2, cli("export", kitDir.path, "--export", "folder", "--out", File(temp, "wr-x").path, "--wear", "9").first)
+        assertEquals(
+            2,
+            cli("export", kitDir.path, "--export", "folder", "--out", File(temp, "wr-x").path, "--wear", "1", "--no-wear").first,
+        )
+        assertEquals(0, cli("wear", kitDir.path, "--off").first)
+        assertEquals(2, cli("wear", kitDir.path, "--plays", "5").first)
+    }
+
+    @Test
     fun `treat crushes one pad from the terminal and undoes it`() {
         val wav = writeBreak(File(temp, "tr.wav"))
         val out = File(temp, "tr-out")

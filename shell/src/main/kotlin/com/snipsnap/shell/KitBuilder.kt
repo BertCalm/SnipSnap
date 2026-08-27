@@ -305,12 +305,57 @@ class KitBuilderModel private constructor(
         return cleared
     }
 
+    // ---------- the wear ledger ----------
+
+    /**
+     * Opt the kit into aging. An existing ledger keeps its mileage — the
+     * tape remembers even while the deck was off. [k] retunes the curve
+     * when given; null keeps what the ledger has.
+     */
+    fun enableWear(k: Double? = null) {
+        kit = kit.copy(
+            wear = kit.wear?.copy(enabled = true, k = k ?: kit.wear!!.k)
+                ?: com.snipsnap.kit.WearLedger(k = k ?: com.snipsnap.kit.WearLedger.DEFAULT_K),
+        )
+        dirty = true
+    }
+
+    /** Aging off; the ledger (and its mileage) is kept, just not applied. */
+    fun disableWear() {
+        val wear = kit.wear ?: return
+        kit = kit.copy(wear = wear.copy(enabled = false))
+        dirty = true
+    }
+
+    /** Wipe the mileage — and because wear never rewrites audio, that IS a new tape. */
+    fun resetWear() {
+        val wear = kit.wear ?: return
+        kit = kit.copy(wear = wear.copy(mileage = 0.0))
+        dirty = true
+    }
+
+    /** The app's play hook: every pad hit or preview spin logs mileage. */
+    fun recordPlays(count: Int = 1) {
+        require(count > 0) { "plays must be positive, got $count" }
+        val wear = kit.wear?.takeIf { it.enabled } ?: return
+        kit = kit.copy(wear = wear.copy(mileage = wear.mileage + count))
+        dirty = true
+    }
+
     /**
      * Write `kit.json`. The moment the folder and the model agree again.
      * The outgoing `kit.json` is archived as a take first — every save is
-     * a point you can roll back to.
+     * a point you can roll back to. A save that persists real edits is a
+     * pass of the tape too: when the ledger is on, it accrues a mile.
+     * [accrueWear] false is for ledger management itself — resetting the
+     * mileage must not put the first mile straight back on.
      */
-    fun save(): File {
+    fun save(accrueWear: Boolean = true): File {
+        if (accrueWear && dirty) {
+            kit.wear?.takeIf { it.enabled }?.let {
+                kit = kit.copy(wear = it.copy(mileage = it.mileage + 1))
+            }
+        }
         archiveTake()
         val file = KitStore.save(kit, kitDir)
         dirty = false

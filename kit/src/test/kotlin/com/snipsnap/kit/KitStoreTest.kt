@@ -142,6 +142,29 @@ class KitStoreTest {
     }
 
     @Test
+    fun `the wear ledger rides the sidecar - mileage stored, w always derived`() {
+        val dir = File(temp, "kit")
+        val worn = sampleKit().copy(wear = WearLedger(mileage = 120.0, enabled = true, k = 300.0))
+        KitStore.save(worn, dir)
+        assertEquals(worn, KitStore.load(dir), "the ledger round-trips")
+        assertTrue("\"w\"" !in File(dir, KitStore.FILE_NAME).readText(), "w is derived, never written down")
+
+        // The patina curve: fast at first, asymptotic at well-worn, never 1.
+        val fresh = WearLedger(mileage = 0.0)
+        assertEquals(0f, fresh.w)
+        val atK = WearLedger(mileage = WearLedger.DEFAULT_K)
+        assertTrue(atK.w in 0.62f..0.64f, "one K of mileage is ~63% worn, got ${atK.w}")
+        val ancient = WearLedger(mileage = 1_000_000.0)
+        assertTrue(ancient.w <= 1f, "the curve saturates - a million plays is well-worn, not ruined")
+        assertTrue(ancient.w > atK.w)
+
+        // A ledger with nonsense in it is refused, not misread.
+        assertFailsWith<IllegalArgumentException> { WearLedger(mileage = -1.0) }
+        assertFailsWith<IllegalArgumentException> { WearLedger(mileage = Double.NaN) }
+        assertFailsWith<IllegalArgumentException> { WearLedger(mileage = 1.0, k = 0.0) }
+    }
+
+    @Test
     fun `name rules match the SD card`() {
         assertTrue(Names.isMpcSafe("SnipSnap Kit 01"))
         assertTrue(!Names.isMpcSafe("Kit: The Remix"))

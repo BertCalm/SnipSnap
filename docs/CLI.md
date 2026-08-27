@@ -121,6 +121,23 @@ slow deterministic wow, dulled highs, a whisper of seeded hiss), and
 Originals go to the bin and every pad records its recipe, so
 `--undo` brings the present back byte-identical.
 
+### `wear <kit-dir>` — the kit as a living tape
+
+The product pretends to be a tape deck; this makes the metaphor real.
+Opt a kit in with `--on` and its plays and saves accrue **mileage** in a
+wear ledger; its *renders* — previews, mixdowns, exports — age by
+`w = 1 − exp(−mileage/K)`. That curve is the feature: patina physics,
+fast at first, asymptotic at well-worn, never ruined. Hard caps at full
+wear: flutter ≤ ±6 cents, hiss ≤ −48 dBFS, the HF shelf never below
+8 kHz, dropouts rare and **never on a strong hit** (the envelope
+protects them structurally). The audio on disk is never rewritten —
+wear is a render-time recipe over pristine WAVs — so `--reset` is a
+genuinely new tape. `--plays N` logs mileage by hand (the deck the app
+drives); `--off` pauses aging with the mileage remembered; `--k N`
+retunes the curve. On `export`, `--no-wear` renders the pristine kit
+and `--wear W` forces a level — even past the earned ceiling, because
+chosen destruction is a treatment while earned patina is capped.
+
 ### `merge <a> <b>` — bank B, earned not invented
 
 A **new** kit folder: A's bank A stays put, B's bank A lands on pads

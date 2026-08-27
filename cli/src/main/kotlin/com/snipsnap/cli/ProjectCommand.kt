@@ -20,7 +20,7 @@ object ProjectCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--name", "--out", "--keys", "--keys-name"),
-            boolean = setOf("--overwrite", "--loop", "--mixdown"),
+            boolean = setOf("--overwrite", "--loop", "--mixdown", "--no-wear"),
         )
         if (opts.positional.isEmpty()) {
             throw CliError(
@@ -60,17 +60,41 @@ object ProjectCommand {
         if (!Names.isMpcSafe(name)) throw CliError("session name isn't MPC-safe: '$name'")
         val cardDir = File(opts["--out"] ?: "snipsnap-out", "card")
 
-        val result = SessionBuilder.build(name, kitDirs, cardDir, instruments, opts.has("--overwrite"))
-        out.println("session: ${result.xpj.path} (+ ${result.dataDir.name}/)")
-        result.kitTracks.forEach { out.println("  kit track:        $it") }
-        result.instrumentTracks.forEach { out.println("  instrument track: $it") }
-        result.tempoBpm?.let { out.println("  tempo: ${it.toInt()} bpm (from the first kit that remembered one)") }
-        if (opts.has("--mixdown")) {
-            // The whole beat as audio, beside the project it came from.
-            val mix = com.snipsnap.kit.SessionMixdown.render(kitDirs, result.tempoBpm)
-            val wav = File(cardDir, "$name.wav")
-            com.snipsnap.audio.WavWriter.write(wav, mix)
-            out.println("  mixdown: ${wav.path} (%.1fs - the session playing itself)".format(mix.durationSeconds))
+        // Kits that have earned wear join the session worn: each is staged
+        // as a disposable twin (pristine originals untouched), so the
+        // project's samples and the mixdown both carry the tape's age.
+        val wornStages = mutableListOf<File>()
+        var wornCount = 0
+        val effectiveDirs = if (opts.has("--no-wear")) {
+            kitDirs
+        } else {
+            kitDirs.map { dir ->
+                val kit = com.snipsnap.kit.KitStore.load(dir)
+                val w = com.snipsnap.shell.Wear.earnedW(kit) ?: return@map dir
+                wornCount++
+                val stage = java.nio.file.Files.createTempDirectory("snipsnap-worn").toFile()
+                wornStages += stage
+                com.snipsnap.shell.Wear.stageWorn(kit, dir, stage, w)
+            }
+        }
+        try {
+            val result = SessionBuilder.build(name, effectiveDirs, cardDir, instruments, opts.has("--overwrite"))
+            out.println("session: ${result.xpj.path} (+ ${result.dataDir.name}/)")
+            result.kitTracks.forEach { out.println("  kit track:        $it") }
+            result.instrumentTracks.forEach { out.println("  instrument track: $it") }
+            result.tempoBpm?.let { out.println("  tempo: ${it.toInt()} bpm (from the first kit that remembered one)") }
+            if (wornCount > 0) {
+                out.println("  wear: $wornCount kit(s) arrive worn, per their ledgers (--no-wear for the pristine session)")
+            }
+            if (opts.has("--mixdown")) {
+                // The whole beat as audio, beside the project it came from.
+                val mix = com.snipsnap.kit.SessionMixdown.render(effectiveDirs, result.tempoBpm)
+                val wav = File(cardDir, "$name.wav")
+                com.snipsnap.audio.WavWriter.write(wav, mix)
+                out.println("  mixdown: ${wav.path} (%.1fs - the session playing itself)".format(mix.durationSeconds))
+            }
+        } finally {
+            wornStages.forEach { it.deleteRecursively() }
         }
         out.println("(copy the .xpj and its _[ProjectData]/ side by side onto the card, then open it)")
         return 0

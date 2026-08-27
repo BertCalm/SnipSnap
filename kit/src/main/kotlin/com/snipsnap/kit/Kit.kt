@@ -97,6 +97,34 @@ data class KitPad(
 }
 
 /**
+ * The wear ledger — the kit as a living tape. Plays and saves accrue
+ * [mileage], and the kit's *rendered* sound ages by it. The curve is
+ * patina physics: `w = 1 − exp(−mileage/K)` — fast at first, asymptotic
+ * at well-worn, never ruined. Only the ledger is stored; [w] is derived,
+ * never written down. And because wear is a render-time recipe over
+ * pristine WAVs (no audio is ever rewritten), wiping the ledger *is* a
+ * new tape.
+ */
+data class WearLedger(
+    val mileage: Double = 0.0,
+    val enabled: Boolean = true,
+    /** Mileage at which the tape is ~63% worn. */
+    val k: Double = DEFAULT_K,
+) {
+    init {
+        require(mileage.isFinite() && mileage >= 0.0) { "mileage out of range: $mileage" }
+        require(k.isFinite() && k > 0.0) { "K must be positive: $k" }
+    }
+
+    /** Earned wear in [0, 1) — the curve saturates, it never arrives. */
+    val w: Float get() = (1.0 - Math.exp(-mileage / k)).toFloat().coerceIn(0f, 1f)
+
+    companion object {
+        const val DEFAULT_K = 250.0
+    }
+}
+
+/**
  * A kit: a name and up to 128 filled pad slots.
  *
  * On disk a kit is a folder holding the WAVs plus a `kit.json` sidecar (see
@@ -117,6 +145,12 @@ data class Kit(
      * free, since the MPC stretches correctly when the metadata is right.
      */
     val tempoBpm: Float? = null,
+    /**
+     * The tape's wear ledger, when the kit has opted into aging. Null
+     * means a kit that doesn't wear — the default, and every kit made
+     * before the ledger existed.
+     */
+    val wear: WearLedger? = null,
 ) {
     init {
         tempoBpm?.let { require(it > 0f && it < 1000f) { "tempoBpm out of range: $it" } }

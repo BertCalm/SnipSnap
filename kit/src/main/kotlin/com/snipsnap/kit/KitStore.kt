@@ -63,6 +63,16 @@ object KitStore {
                 )
             }
             kit.tempoBpm?.let { root["tempoBpm"] = JsonValue.Num(it.toDouble()) }
+            kit.wear?.let {
+                // The ledger only - w is derived from it, never stored.
+                root["wear"] = JsonValue.Obj(
+                    linkedMapOf(
+                        "mileage" to JsonValue.Num(it.mileage),
+                        "enabled" to JsonValue.Bool(it.enabled),
+                        "k" to JsonValue.Num(it.k),
+                    ),
+                )
+            }
             root["pads"] = JsonValue.Arr(
                 kit.pads.sortedBy { it.slot }.map { p ->
                     val entries = linkedMapOf<String, JsonValue>(
@@ -155,6 +165,13 @@ object KitStore {
                 },
             )
         }
-        return Kit(name, pads, key, tempoBpm = obj["tempoBpm"]?.num()?.toFloat())
+        val wear = (obj["wear"] as? JsonValue.Obj)?.let { w ->
+            WearLedger(
+                mileage = w.entries["mileage"]?.num() ?: 0.0,
+                enabled = w.entries["enabled"]?.bool() ?: true,
+                k = w.entries["k"]?.num() ?: WearLedger.DEFAULT_K,
+            )
+        }
+        return Kit(name, pads, key, tempoBpm = obj["tempoBpm"]?.num()?.toFloat(), wear = wear)
     }
 }

@@ -57,6 +57,10 @@ object Cli {
         |                        this kit's patterns
         |  treat <kit-dir> <pad> <character>
         |                        crush/reverse/wash one pad (--undo restores)
+        |  wear <kit-dir>        the wear ledger: an opted-in kit is a living
+        |                        tape - plays and saves accrue mileage and its
+        |                        renders age, capped patina-style (--on [--k N],
+        |                        --off, --reset, --plays N; audio never touched)
         |  project <kit-dir>...  whole session -> one .xpj (kits + grooves +
         |                        optional --keys instrument, mixer wired;
         |                        --mixdown also renders the session as one WAV)
@@ -110,7 +114,9 @@ object Cli {
         |  --overwrite       replace same-named output
         |
         |export options: --export LIST, --out DIR, --overwrite, --preview,
-        |                --art STYLE, --no-art (as above)
+        |                --art STYLE, --no-art (as above); --no-wear exports
+        |                the pristine kit, --wear W forces a wear level (past
+        |                the earned ceiling - chosen destruction, on purpose)
         |
         |Exports land under <out>/card/ - copy its contents onto the MPC's
         |SD card or USB drive as-is.
@@ -138,6 +144,7 @@ object Cli {
                 "treat" -> TreatCommand.run(args.drop(1), out)
                 "feel" -> FeelCommand.run(args.drop(1), out)
                 "era" -> EraCommand.run(args.drop(1), out)
+                "wear" -> WearCommand.run(args.drop(1), out)
                 "project" -> ProjectCommand.run(args.drop(1), out)
                 "pack" -> PackCommand.run(args.drop(1), out)
                 "backup" -> BackupCommand.backup(args.drop(1), out)

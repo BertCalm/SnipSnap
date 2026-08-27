@@ -197,7 +197,7 @@ object Eras {
         return sign(s) * ((exp(abs(s) * ln(1 + mu.toDouble())) - 1) / mu).toFloat()
     }
 
-    private fun onePoleLowpass(snip: Snip, cutoffHz: Float): Snip {
+    internal fun onePoleLowpass(snip: Snip, cutoffHz: Float): Snip {
         if (cutoffHz >= snip.sampleRate / 2f) return snip
         val a = (1.0 - exp(-2.0 * Math.PI * cutoffHz / snip.sampleRate)).toFloat()
         val out = FloatArray(snip.samples.size)
