@@ -106,6 +106,19 @@ A **`.mid` file** is a groove looking for a kit: `import beat.mid --into
 rescales to 960 PPQ, and makes it that kit's patterns — the standard four
 variations included — so the next native export carries the DAW beat.
 
+### `resample <kit-dir>` — the ritual
+
+The most MPC gesture there is: bounce what you have and chop it again.
+The kit renders its own groove — treatments and eras already live in
+its files, wear applies at render time (`--no-wear` skips it, `--wear
+W` forces a level) — and the bounce re-enters the chop pipeline as
+source material. Out comes a **new** kit (`<Name> Gen 2` by default,
+`--name` overrides), every pad stamped with `resampledFrom` and a
+generation counter that climbs on each pass while the name stays
+rooted (`Origin Gen 3`, not `Origin Gen 2 Gen 3`). The source kit is
+never touched. Generation loss is the point — stack it with the Time
+Machine and the tape gets a history you can hear.
+
 ### `remix <kit-dir>` — evil twins
 
 Bank B becomes seeded FX re-treatments of bank A — reversed, crushed,

@@ -152,6 +152,37 @@ class CliTest {
     }
 
     @Test
+    fun `resample bounces the kit into a new generation, source untouched`() {
+        val wav = writeBreak(File(temp, "rs.wav"))
+        val out = File(temp, "rs-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Origin", "--slices", "4").first)
+        val kitDir = File(out, "Origin")
+        val sourceBytes = kitDir.listFiles()!!.filter { it.isFile }
+            .associate { it.name to it.readBytes() }
+
+        val (code, stdout, stderr) = cli("resample", kitDir.path, "--out", out.path, "--slices", "4")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "generation 2 from Origin")
+        val gen2Dir = File(out, "Origin Gen 2")
+        val gen2 = KitStore.load(gen2Dir)
+        assertTrue(gen2.pads.isNotEmpty(), "the bounce chopped into pads")
+        assertTrue(
+            gen2.pads.all { it.source["resampledFrom"] == "Origin" && it.source["generation"] == "2" },
+            "lineage stamped: ${gen2.pads.first().source}",
+        )
+
+        // The source kit is byte-identical throughout.
+        for ((fname, bytes) in sourceBytes) {
+            assertTrue(File(kitDir, fname).readBytes().contentEquals(bytes), "$fname untouched")
+        }
+
+        // Resampling the resample counts one more pass of the machine.
+        assertEquals(0, cli("resample", gen2Dir.path, "--out", out.path, "--slices", "4").first)
+        val gen3 = KitStore.load(File(out, "Origin Gen 3"))
+        assertTrue(gen3.pads.all { it.source["generation"] == "3" }, "the counter climbs, the name stays rooted")
+    }
+
+    @Test
     fun `chop builds a placed kit and every export format`() {
         val wav = writeBreak(File(temp, "break.wav"))
         val out = File(temp, "out")

@@ -48,6 +48,10 @@ object Cli {
         |                        becomes that kit's groove
         |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
         |                        (--loop cuts sustain loops: held pads sing forever)
+        |  resample <kit-dir>    the ritual: bounce the kit playing its own
+        |                        groove (wear and eras in the sound) and chop
+        |                        the bounce into a NEW kit - generation loss
+        |                        as a tool, lineage stamped, source untouched
         |  remix <kit-dir>       bank B becomes seeded evil twins of bank A
         |  merge <a> <b>         a new kit: A's bank A + B's bank A on pads
         |                        17-32, everything carried, sources untouched
@@ -158,6 +162,7 @@ object Cli {
                 "import" -> ImportCommand.run(args.drop(1), out)
                 "keys" -> KeysCommand.run(args.drop(1), out)
                 "remix" -> RemixCommand.run(args.drop(1), out)
+                "resample" -> ResampleCommand.run(args.drop(1), out)
                 "merge" -> MergeCommand.run(args.drop(1), out)
                 "treat" -> TreatCommand.run(args.drop(1), out)
                 "feel" -> FeelCommand.run(args.drop(1), out)
