@@ -63,6 +63,16 @@ data class KitPad(
      * zone's file (so single-sample consumers still hear the right thing).
      */
     val velocityLayers: List<KitLayer> = emptyList(),
+    /**
+     * Pad shape as metadata — the hardware renders it, the audio on disk
+     * stays pristine, and undo is setting it back to null (the format's
+     * own default). All 0..1: [attack]/[decay] on the volume envelope,
+     * [cutoff]/[resonance] on the pad's filter.
+     */
+    val attack: Float? = null,
+    val decay: Float? = null,
+    val cutoff: Float? = null,
+    val resonance: Float? = null,
 ) {
     init {
         require(slot in 1..128) { "slot out of range: $slot" }
@@ -78,6 +88,9 @@ data class KitPad(
         require(muteGroup in 0..32) { "muteGroup out of range: $muteGroup" }
         colorHex?.let {
             require(Regex("^#[0-9a-fA-F]{6}$").matches(it)) { "colorHex must be #rrggbb: $it" }
+        }
+        for ((name, v) in listOf("attack" to attack, "decay" to decay, "cutoff" to cutoff, "resonance" to resonance)) {
+            v?.let { require(it in 0f..1f) { "$name out of range: $it" } }
         }
         if (velocityLayers.isNotEmpty()) {
             require(velocityLayers.size in 1..4) { "a pad has 1..4 velocity layers" }
@@ -180,6 +193,10 @@ data class Kit(
                 tuneFine = p.tuneFine,
                 muteGroup = p.muteGroup,
                 oneShot = p.oneShot,
+                attack = p.attack,
+                decay = p.decay,
+                cutoff = p.cutoff,
+                resonance = p.resonance,
             )
         }
         return DrumProgram(name, slots.toList())

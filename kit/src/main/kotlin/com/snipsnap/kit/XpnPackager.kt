@@ -102,6 +102,10 @@ object XpnPackager {
                     VelocityLayer(e.stem, e.frames, l.velStart, l.velEnd)
                 },
                 color = with(KitExporter) { p.packedColor() },
+                attack = p.attack,
+                decay = p.decay,
+                cutoff = p.cutoff,
+                resonance = p.resonance,
             )
         }
         val programXml = XpmWriter().write(DrumProgram(kit.name, slots.toList()))

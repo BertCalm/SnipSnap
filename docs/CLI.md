@@ -185,6 +185,20 @@ slow deterministic wow, dulled highs, a whisper of seeded hiss), and
 Originals go to the bin and every pad records its recipe, so
 `--undo` brings the present back byte-identical.
 
+### `shape <kit-dir> <pad>` — pad shape as metadata
+
+Attack, decay, filter cutoff and resonance (`--attack/--decay/
+--cutoff/--res`, all 0..1) land in the exported programs' **own
+fields** — `VolumeAttack`/`VolumeDecay`/`Cutoff`/`Resonance` in the
+MPC 2 `.xpm`, the amp envelope and first filter slot in the MPC 3
+`.xtd` — and the *hardware* renders them. The audio on disk never
+changes; a tighten is one number, and undo is `--reset` (null means
+"the format's own default", which is also why unshaped kits keep
+exporting byte-identical). The shape survives the round trip through
+both native containers, and the preview approximates it so you can
+hear a tightened pad before the card. Bench row: decay 0.3 audibly
+shortens a pad on the Live III in both generations.
+
 ### `wear <kit-dir>` — the kit as a living tape
 
 The product pretends to be a tape deck; this makes the metaphor real.

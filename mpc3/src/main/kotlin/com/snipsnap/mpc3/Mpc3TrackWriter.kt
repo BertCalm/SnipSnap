@@ -563,7 +563,7 @@ class Mpc3TrackWriter(
             lowNote = 0,
             highNote = 127,
             whichMuteGroup = pad?.muteGroup ?: 0,
-            synthSection = synthSection(filled, version = 15),
+            synthSection = synthSection(filled, version = 15, shape = pad),
             // 0 = One Shot (the whole sample fires), 2 = Note On (sustains
             // while held) — a per-pad musical choice in real kits.
             triggerMode = if (pad?.oneShot != false) 0 else 2,
@@ -716,10 +716,16 @@ class Mpc3TrackWriter(
         version: Int,
         sustained: Boolean = false,
         release: Double = 0.0,
+        /** Pad shape overrides (attack/decay/cutoff/resonance); null fields keep the defaults. */
+        shape: Pad? = null,
     ): J = obj(
         "version" to i(version.toLong()),
         "filterData" to obj(
-            "value0" to filterSlot(filterType = 2, version = version),
+            "value0" to filterSlot(
+                filterType = 2, version = version,
+                cutoff = shape?.cutoff?.toDouble() ?: 1.0,
+                resonance = shape?.resonance?.toDouble() ?: 0.0,
+            ),
             "value1" to filterSlot(filterType = 0, version = version),
         ),
         "filterSerialRouting" to b(false),
@@ -740,8 +746,9 @@ class Mpc3TrackWriter(
             envelope(decay = 1.0, decayFromEnd = true, sustain = 1.0, releaseTime = release, oneShot = false)
         } else {
             envelope(
-                decay = if (filled) 1.0 else SHORT_DECAY_EMPTY,
+                decay = shape?.decay?.toDouble() ?: if (filled) 1.0 else SHORT_DECAY_EMPTY,
                 decayFromEnd = !filled,
+                attack = shape?.attack?.toDouble() ?: 0.0,
             )
         },
         "pitchEnvelope" to envelope(
@@ -761,12 +768,17 @@ class Mpc3TrackWriter(
         "velocityToPan" to d(0.0),
     )
 
-    private fun filterSlot(filterType: Int, version: Int = 15): J = obj(
+    private fun filterSlot(
+        filterType: Int,
+        version: Int = 15,
+        cutoff: Double = 1.0,
+        resonance: Double = 0.0,
+    ): J = obj(
         "version" to i(version.toLong()),
         "filterKeytrack" to d(0.0),
         "filterType" to i(filterType.toLong()),
-        "filterCutoff" to d(1.0),
-        "filterResonance" to d(0.0),
+        "filterCutoff" to d(cutoff),
+        "filterResonance" to d(resonance),
         "filterEnvelopeAmount" to d(0.0),
         "afterTouchToFilter" to d(0.0),
         "filterVelocity" to d(0.0),
@@ -802,9 +814,10 @@ class Mpc3TrackWriter(
         sustain: Double = 1.0,
         releaseTime: Double = 0.0,
         oneShot: Boolean = true,
+        attack: Double = 0.0,
     ): J = obj(
         "version" to i(2),
-        "Attack" to v0(d(0.0)),
+        "Attack" to v0(d(attack)),
         "VelocityToAttack" to v0(d(0.0)),
         "Decay" to v0(d(decay)),
         "Sustain" to v0(d(sustain)),

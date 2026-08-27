@@ -162,6 +162,10 @@ object XpnImporter {
                     tuneFine = inst.tuneFine.coerceIn(-100, 100),
                     muteGroup = inst.muteGroup.coerceIn(0, 32),
                     oneShot = inst.oneShot,
+                    attack = inst.attack,
+                    decay = inst.decay,
+                    cutoff = inst.cutoff,
+                    resonance = inst.resonance,
                     source = mapOf("importedFrom" to xpnFile.name),
                     velocityLayers = if (ordered.size < 2) emptyList() else {
                         ordered.map { KitLayer("${it.sampleName}.wav", it.velStart, it.velEnd) }
@@ -189,6 +193,11 @@ object XpnImporter {
         val tuneFine: Int,
         val muteGroup: Int,
         val oneShot: Boolean,
+        /** Shape fields, already default-collapsed to null (see [shapeOrNull]). */
+        val attack: Float?,
+        val decay: Float?,
+        val cutoff: Float?,
+        val resonance: Float?,
     )
 
     private data class ParsedProgram(
@@ -254,9 +263,24 @@ object XpnImporter {
                 tuneFine = directText(inst, "TuneFine")?.toIntOrNull() ?: 0,
                 muteGroup = directText(inst, "MuteGroup")?.toIntOrNull() ?: 0,
                 oneShot = directText(inst, "OneShot")?.equals("False", ignoreCase = true) != true,
+                attack = shapeOrNull(directText(inst, "VolumeAttack"), default = 0f),
+                decay = shapeOrNull(directText(inst, "VolumeDecay"), default = 0.047244f),
+                cutoff = shapeOrNull(directText(inst, "Cutoff"), default = 1f),
+                resonance = shapeOrNull(directText(inst, "Resonance"), default = 0f),
             )
         }
         return ParsedProgram(isKeygroup, name, instruments, zeroBased)
+    }
+
+    /**
+     * A shape field reads back as null when it carries the format's own
+     * default - "unshaped" and "default-shaped" are the same pad, and
+     * keeping them null keeps re-exports byte-identical.
+     */
+    private fun shapeOrNull(text: String?, default: Float): Float? {
+        val v = text?.toFloatOrNull() ?: return null
+        if (kotlin.math.abs(v - default) < 1e-4f) return null
+        return v.coerceIn(0f, 1f)
     }
 
     // ---- DOM helpers -------------------------------------------------------

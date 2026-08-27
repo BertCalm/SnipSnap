@@ -121,7 +121,17 @@ object Mpc3Importer {
             val tuneFine: Int,
             val muteGroup: Int,
             val oneShot: Boolean,
+            /** Shape fields, default-collapsed to null so re-exports stay byte-identical. */
+            val attack: Float?,
+            val decay: Float?,
+            val cutoff: Float?,
+            val resonance: Float?,
         )
+
+        fun shapeOrNull(v: Double?, default: Double): Float? {
+            if (v == null || kotlin.math.abs(v - default) < 1e-4) return null
+            return v.toFloat().coerceIn(0f, 1f)
+        }
 
         val parsed = instruments.mapIndexedNotNull { index, instJson ->
             val inst = (instJson as? JsonValue.Obj)?.entries ?: return@mapIndexedNotNull null
@@ -163,6 +173,10 @@ object Mpc3Importer {
                     .coerceIn(0, 32),
                 // 0 = One Shot; 1 (note-off) and 2 (note-on) both gate.
                 oneShot = ((inst["triggerMode"] as? JsonValue.Num)?.value?.toInt() ?: 0) == 0,
+                attack = shapeOrNull(ampField(inst, "Attack"), default = 0.0),
+                decay = shapeOrNull(ampField(inst, "Decay"), default = 1.0),
+                cutoff = shapeOrNull(filterField(inst, "filterCutoff"), default = 1.0),
+                resonance = shapeOrNull(filterField(inst, "filterResonance"), default = 0.0),
             )
         }
         require(parsed.isNotEmpty()) { "'$trackName' has no pads with samples" }
@@ -201,6 +215,10 @@ object Mpc3Importer {
                 tuneFine = p.tuneFine,
                 muteGroup = p.muteGroup,
                 oneShot = p.oneShot,
+                attack = p.attack,
+                decay = p.decay,
+                cutoff = p.cutoff,
+                resonance = p.resonance,
                 source = mapOf("importedFrom" to sourceName),
                 velocityLayers = if (p.layers.size < 2) emptyList() else {
                     p.layers.map { (file, velStart, velEnd) -> KitLayer(file, velStart, velEnd) }
@@ -254,6 +272,22 @@ object Mpc3Importer {
         }
 
     /** Slot-indexed (0-based) colour hex strings, or nulls when uncoloured. */
+    /** `synthSection.ampEnvelope.<name>.value0` on one instrument, or null. */
+    private fun ampField(inst: Map<String, JsonValue>, name: String): Double? {
+        val synth = (inst["synthSection"] as? JsonValue.Obj)?.entries ?: return null
+        val env = (synth["ampEnvelope"] as? JsonValue.Obj)?.entries ?: return null
+        val holder = (env[name] as? JsonValue.Obj)?.entries ?: return null
+        return (holder["value0"] as? JsonValue.Num)?.value
+    }
+
+    /** `synthSection.filterData.value0.<name>` on one instrument, or null. */
+    private fun filterField(inst: Map<String, JsonValue>, name: String): Double? {
+        val synth = (inst["synthSection"] as? JsonValue.Obj)?.entries ?: return null
+        val data = (synth["filterData"] as? JsonValue.Obj)?.entries ?: return null
+        val slot = (data["value0"] as? JsonValue.Obj)?.entries ?: return null
+        return (slot[name] as? JsonValue.Num)?.value
+    }
+
     private fun padColours(program: Map<String, JsonValue>): List<String?> {
         val pp = (program["programPads"] as? JsonValue.Obj)?.entries ?: return List(128) { null }
         val universal = ((pp["Universal"] as? JsonValue.Obj)?.entries?.get("value0")

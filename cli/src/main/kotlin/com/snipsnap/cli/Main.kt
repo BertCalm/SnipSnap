@@ -75,6 +75,10 @@ object Cli {
         |                        this kit's patterns
         |  treat <kit-dir> <pad> <character>
         |                        crush/reverse/wash one pad (--undo restores)
+        |  shape <kit-dir> <pad> pad shape as metadata: --attack/--decay/
+        |                        --cutoff/--res (0..1) land in the exported
+        |                        programs' own fields - the HARDWARE renders
+        |                        them, audio untouched; --reset clears
         |  wear <kit-dir>        the wear ledger: an opted-in kit is a living
         |                        tape - plays and saves accrue mileage and its
         |                        renders age, capped patina-style (--on [--k N],
@@ -177,6 +181,7 @@ object Cli {
                 "resample" -> ResampleCommand.run(args.drop(1), out)
                 "merge" -> MergeCommand.run(args.drop(1), out)
                 "treat" -> TreatCommand.run(args.drop(1), out)
+                "shape" -> ShapeCommand.run(args.drop(1), out)
                 "feel" -> FeelCommand.run(args.drop(1), out)
                 "era" -> EraCommand.run(args.drop(1), out)
                 "wear" -> WearCommand.run(args.drop(1), out)

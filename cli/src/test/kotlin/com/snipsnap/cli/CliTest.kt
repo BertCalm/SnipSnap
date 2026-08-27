@@ -997,6 +997,36 @@ class CliTest {
     }
 
     @Test
+    fun `shape edits pad metadata only and reset restores the defaults`() {
+        val wav = writeBreak(File(temp, "sh.wav"))
+        val out = File(temp, "sh-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "ShapeCli", "--slices", "4").first)
+        val kitDir = File(out, "ShapeCli")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(1)!!.sampleFile)
+        val audioBefore = padFile.readBytes()
+
+        val (code, stdout, stderr) = cli("shape", kitDir.path, "A01", "--decay", "0.3", "--cutoff", "0.5")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "decay 0.30")
+        val shaped = KitStore.load(kitDir).pad(1)!!
+        assertEquals(0.3f, shaped.decay)
+        assertEquals(0.5f, shaped.cutoff)
+        assertEquals(null, shaped.attack, "unset fields stay unset")
+        assertTrue(padFile.readBytes().contentEquals(audioBefore), "shape never touches audio")
+
+        assertEquals(0, cli("shape", kitDir.path, "A01", "--reset").first)
+        val reset = KitStore.load(kitDir).pad(1)!!
+        assertEquals(null, reset.decay)
+        assertEquals(null, reset.cutoff)
+
+        // Refusals: out-of-range values, no-op calls, reset with values.
+        assertEquals(2, cli("shape", kitDir.path, "A01", "--decay", "1.5").first)
+        assertEquals(2, cli("shape", kitDir.path, "A01").first)
+        assertEquals(2, cli("shape", kitDir.path, "A01", "--reset", "--decay", "0.5").first)
+        assertEquals(2, cli("shape", kitDir.path, "H16", "--decay", "0.5").first)
+    }
+
+    @Test
     fun `treat crushes one pad from the terminal and undoes it`() {
         val wav = writeBreak(File(temp, "tr.wav"))
         val out = File(temp, "tr-out")

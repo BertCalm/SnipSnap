@@ -70,9 +70,23 @@ data class Pad(
      * MPC already wearing its class colours.
      */
     val color: Int? = null,
+    /**
+     * Pad shape as metadata — the hardware renders it, the audio stays
+     * pristine. Null means the format's own default, so an unshaped pad
+     * writes byte-identical to before these fields existed. All values
+     * 0..1 in the formats' own units: [attack]/[decay] on the volume
+     * envelope, [cutoff]/[resonance] on the pad's first filter slot.
+     */
+    val attack: Float? = null,
+    val decay: Float? = null,
+    val cutoff: Float? = null,
+    val resonance: Float? = null,
 ) {
     init {
         require(sampleName.isNotBlank()) { "sampleName must not be blank" }
+        for ((name, v) in listOf("attack" to attack, "decay" to decay, "cutoff" to cutoff, "resonance" to resonance)) {
+            v?.let { require(it in 0f..1f) { "$name out of range: $it" } }
+        }
         require(frameCount >= 0) { "frameCount must not be negative: $frameCount" }
         require(level in 0f..1f) { "level out of range: $level" }
         require(pan in 0f..1f) { "pan out of range: $pan" }

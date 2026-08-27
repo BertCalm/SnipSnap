@@ -6,6 +6,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import java.io.File
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -57,6 +58,9 @@ object KitPreview {
             val pan: Float,
             val muteGroup: Int,
             var end: Int,
+            /** Pad shape, approximated in the render (see below). Null = none. */
+            val attack: Float? = null,
+            val decay: Float? = null,
         )
 
         val cache = HashMap<String, Snip>()
@@ -73,6 +77,8 @@ object KitPreview {
                 pan = pad.pan,
                 muteGroup = pad.muteGroup,
                 end = start + snip.frameCount,
+                attack = pad.attack,
+                decay = pad.decay,
             )
             if (pad.muteGroup != 0) {
                 // The kit rule, honoured in the render: a new voice in the
@@ -93,14 +99,27 @@ object KitPreview {
             // Equal-power pan.
             val left = sqrt(1.0 - v.pan.toDouble()).toFloat() * v.gain
             val right = sqrt(v.pan.toDouble()).toFloat() * v.gain
+            // The pad shape, approximated so a tighten is audible before
+            // the card: attack ramps in over up to 0.4s; a decay of d fades
+            // the voice out by d x its own length. The hardware's exact
+            // envelope curves are its own; this render is honest about
+            // being a preview.
+            val attackFrames = v.attack?.let { (it * 0.4f * RATE).toInt() } ?: 0
+            val decayEnd = v.decay?.let { max(1, (it * v.samples.frameCount).toInt()) } ?: Int.MAX_VALUE
             for (i in 0 until frames) {
                 val at = v.start + i
                 if (at >= totalFrames) break
                 // Choke fade: the last CHOKE_FADE frames ramp out.
-                val fade = if (v.end - v.start < v.samples.frameCount && i >= frames - CHOKE_FADE) {
+                var fade = if (v.end - v.start < v.samples.frameCount && i >= frames - CHOKE_FADE) {
                     (frames - i).toFloat() / CHOKE_FADE
                 } else {
                     1f
+                }
+                if (i < attackFrames) fade *= i.toFloat() / attackFrames
+                if (i >= decayEnd) break
+                if (decayEnd != Int.MAX_VALUE) {
+                    // Linear fade across the shaped length - dies at decayEnd.
+                    fade *= 1f - i.toFloat() / decayEnd
                 }
                 val s = sampleMono(v.samples, i) * fade
                 out[at * 2] += s * left

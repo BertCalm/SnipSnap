@@ -88,6 +88,12 @@ object KitStore {
                         "oneShot" to JsonValue.Bool(p.oneShot),
                     )
                     p.colorHex?.let { entries["colorHex"] = JsonValue.Str(it) }
+                    // The shape rides only when set - null means "the
+                    // format's default", and defaults are never written down.
+                    p.attack?.let { entries["attack"] = JsonValue.Num(it.toDouble()) }
+                    p.decay?.let { entries["decay"] = JsonValue.Num(it.toDouble()) }
+                    p.cutoff?.let { entries["cutoff"] = JsonValue.Num(it.toDouble()) }
+                    p.resonance?.let { entries["resonance"] = JsonValue.Num(it.toDouble()) }
                     if (p.source.isNotEmpty()) {
                         entries["source"] = JsonValue.Obj(
                             p.source.entries.associateTo(LinkedHashMap()) { (k, v) ->
@@ -142,6 +148,10 @@ object KitStore {
                     DrumClass.entries.firstOrNull { it.name == cls } ?: DrumClass.UNKNOWN
                 } ?: DrumClass.UNKNOWN,
                 colorHex = (p["colorHex"] as? JsonValue.Str)?.value,
+                attack = p["attack"]?.num()?.toFloat(),
+                decay = p["decay"]?.num()?.toFloat(),
+                cutoff = p["cutoff"]?.num()?.toFloat(),
+                resonance = p["resonance"]?.num()?.toFloat(),
                 level = p["level"]?.num()?.toFloat() ?: 0.707946f,
                 pan = p["pan"]?.num()?.toFloat() ?: 0.5f,
                 tuneCoarse = p["tuneCoarse"]?.int() ?: 0,

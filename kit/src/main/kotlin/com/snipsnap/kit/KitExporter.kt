@@ -134,6 +134,10 @@ object KitExporter {
                 oneShot = p.oneShot,
                 velocityLayers = layersBySlot[p.slot],
                 color = p.packedColor(),
+                attack = p.attack,
+                decay = p.decay,
+                cutoff = p.cutoff,
+                resonance = p.resonance,
             )
         }
         return slots.toList() to written
