@@ -83,6 +83,43 @@ class GrooveVariationsTest {
     }
 
     @Test
+    fun `ghosts whisper around the backbeats and never pile on`() {
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        val kit = Kit(
+            "Ghost Kit",
+            listOf(
+                KitPad(1, "A01_Kick_01.wav", drumClass = com.snipsnap.audio.DrumClass.KICK),
+                KitPad(2, "A02_Snare_01.wav", drumClass = com.snipsnap.audio.DrumClass.SNARE),
+            ),
+        )
+        // Step 3 (the e of 2) is already occupied - a ghost must not land there.
+        val withE = base.copy(notes = base.notes + Mpc3Note(42, 3 * s16, 0.5f))
+        val ghosted = GrooveVariations.ghosted(withE, kit, seed = 4)
+        assertEquals("Break Ghosted", ghosted.name)
+
+        val backbone = withE.notes.sortedWith(compareBy({ it.timePulses }, { it.note }))
+        val kept = ghosted.notes.filter { it in withE.notes }.sortedWith(compareBy({ it.timePulses }, { it.note }))
+        assertEquals(backbone, kept, "the backbone is untouched")
+
+        val ghosts = ghosted.notes.filter { it !in withE.notes }
+        assertTrue(ghosts.isNotEmpty(), "the grammar found room to whisper")
+        for (g in ghosts) {
+            val step = (g.timePulses / s16).toInt() % 16
+            assertTrue(step in setOf(3, 5, 11, 13), "ghosts live on the e/a around 2 and 4, got step $step")
+            assertTrue(step != 3, "an occupied candidate is left alone")
+            assertTrue(
+                g.velocity <= GrooveVariations.GHOST_VELOCITY_CEILING && g.velocity >= 0.15f,
+                "a ghost is a whisper: ${g.velocity}",
+            )
+            assertEquals(35 + 2, g.note, "ghosts whisper on the snare")
+        }
+        assertEquals(ghosted, GrooveVariations.ghosted(withE, kit, seed = 4), "same seed, same ghosts")
+        kotlin.test.assertFailsWith<IllegalArgumentException> {
+            GrooveVariations.ghosted(base, Kit("K", listOf(KitPad(1, "a.wav", drumClass = com.snipsnap.audio.DrumClass.KICK))))
+        }
+    }
+
+    @Test
     fun `the standard four derive provably from the base`() {
         val four = GrooveVariations.standard(base)
         assertEquals(4, four.size)

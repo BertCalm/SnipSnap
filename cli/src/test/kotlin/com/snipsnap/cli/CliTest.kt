@@ -317,7 +317,7 @@ class CliTest {
         )
         // One .mid per stored pattern, each a file any DAW opens.
         val mids = File(out, "card").listFiles { f: File -> f.extension == "mid" }.orEmpty()
-        assertEquals(5, mids.size, "the standard four plus the fill left as MIDI")
+        assertEquals(6, mids.size, "the standard four plus fill and ghosts left as MIDI")
         val back = MidiGroove.read(mids.first { it.name == "MidKit Groove.mid" })
         assertTrue(back.clip.notes.isNotEmpty())
         assertTrue(back.bpm != null)
@@ -575,10 +575,14 @@ class CliTest {
         )
         assertEquals(0, code, "stderr: $stderr")
         assertContains(stdout, "groove: \"GrooveKit Groove\"")
-        // GG2: the kit has a snare to roll on, so the fill joins the set.
-        assertContains(stdout, "/fill)")
+        // GG2+GG5: the kit has a snare, so the fill and the ghosts join the set.
+        assertContains(stdout, "/fill/ghosted)")
         val grooves = com.snipsnap.kit.GrooveStore.load(File(out, "GrooveKit"))
-        assertEquals("GrooveKit Fill", grooves.last().name, "the fifth pattern is the fill")
+        assertEquals(
+            listOf("GrooveKit Fill", "GrooveKit Ghosted"),
+            grooves.takeLast(2).map { it.name },
+            "patterns five and six are the fill and the ghosts",
+        )
 
         val xtd = File(out, "card/GrooveKit.xtd")
         val payload = Acvs.read(xtd).payloadText

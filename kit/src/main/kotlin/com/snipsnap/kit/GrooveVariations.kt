@@ -171,6 +171,48 @@ object GrooveVariations {
         )
     }
 
+    /** Ghosts stay whispers: the loudest one sits at this velocity. */
+    const val GHOST_VELOCITY_CEILING = 0.32f
+
+    /**
+     * Ghost-note grammar — the classic funk vocabulary: the "e" before
+     * and the "a" after the backbeats (beats 2 and 4) whisper on the
+     * kit's own snare (clap standing in), velocities in ghost territory
+     * so `--ghosts` soft zones actually voice them. A candidate 16th
+     * already carrying a note is left alone — ghosts fill silence, they
+     * never pile on. Seeded; the backbone is untouched, provably.
+     */
+    fun ghosted(base: Mpc3Clip, kit: Kit, seed: Int = 1): Mpc3Clip {
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        val ghostSlot = kit.pads.firstOrNull { it.drumClass == com.snipsnap.audio.DrumClass.SNARE }?.slot
+            ?: kit.pads.firstOrNull { it.drumClass == com.snipsnap.audio.DrumClass.CLAP }?.slot
+        require(ghostSlot != null) { "ghosts whisper on a snare or clap - this kit has none" }
+        val rnd = kotlin.random.Random(seed)
+
+        val occupied = base.notes.map { (it.timePulses + s16 / 2) / s16 }.toSet()
+        val ghosts = mutableListOf<Mpc3Note>()
+        for (bar in 0 until base.bars) {
+            val barStep = bar * 16L
+            for (backbeat in listOf(4, 12)) {
+                for (cand in listOf(backbeat - 1, backbeat + 1)) {
+                    val step = barStep + cand
+                    if (step in occupied) continue
+                    if (rnd.nextFloat() < 0.6f) {
+                        ghosts += Mpc3Note(
+                            35 + ghostSlot, step * s16,
+                            velocity = 0.18f + rnd.nextFloat() * (GHOST_VELOCITY_CEILING - 0.18f),
+                            lengthPulses = s16 / 2,
+                        )
+                    }
+                }
+            }
+        }
+        return base.copy(
+            name = variantName(base.name, "Ghosted"),
+            notes = (base.notes + ghosts).sortedBy { it.timePulses },
+        )
+    }
+
     /** "X Groove" → "X Tight"; anything else just gains the suffix. */
     internal fun variantName(base: String, suffix: String): String =
         if (base.endsWith(" Groove")) base.removeSuffix(" Groove") + " " + suffix

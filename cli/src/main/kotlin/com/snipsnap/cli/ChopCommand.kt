@@ -325,12 +325,19 @@ object ChopCommand {
                 } catch (e: IllegalArgumentException) {
                     false
                 }
+                // And a sixth: the ghost-note grammar, when the kit can whisper.
+                val hasGhosts = try {
+                    variations += com.snipsnap.kit.GrooveVariations.ghosted(clip, kit)
+                    true
+                } catch (e: IllegalArgumentException) {
+                    false
+                }
                 com.snipsnap.kit.GrooveStore.save(kitDir, variations)
                 val second = if (swing != null) "swing $swing" else "tight"
                 out.println(
                     "groove: \"${clip.name}\" - ${clip.notes.size} notes over ${clip.bars} bar(s), " +
                         "saved as ${variations.size} patterns (captured/$second/half/sparse" +
-                        (if (hasFill) "/fill" else "") + ")",
+                        (if (hasFill) "/fill" else "") + (if (hasGhosts) "/ghosted" else "") + ")",
                 )
             }
         }
