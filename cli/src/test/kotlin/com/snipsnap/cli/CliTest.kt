@@ -1035,6 +1035,39 @@ class CliTest {
     }
 
     @Test
+    fun `crate indexes the library, names the dupes, and builds the best-of`() {
+        val root = File(temp, "crate-lib").apply { mkdirs() }
+        fun buildKit(name: String, kickTwin: Boolean) {
+            val m = com.snipsnap.shell.KitBuilderModel.create(name, File(root, name))
+            m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+            m.assign(2, DrumSynth.snare(seed = if (kickTwin) 9 else 2), DrumClass.SNARE)
+            m.save()
+        }
+        buildKit("Crate One", kickTwin = false)
+        buildKit("Crate Two", kickTwin = true)
+
+        val (code, stdout, stderr) = cli("crate", root.path, "--dupes", "--pick", "snare", "--top", "2")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "2 kit(s), 4 pads")
+        assertContains(stdout, "4 measured")
+        assertContains(stdout, "duplicate pair(s)")
+        assertContains(stdout, "best snares")
+
+        // The second run is all cache.
+        val (_, again, _) = cli("crate", root.path)
+        assertContains(again, "0 measured, 4 from the index")
+
+        // The best-of kit assembles and reports its pads.
+        val (bCode, bOut, bErr) = cli("crate", root.path, "--build", "Best Of", "--out", File(temp, "crate-best").path)
+        assertEquals(0, bCode, "stderr: $bErr")
+        assertContains(bOut, "built:")
+        assertTrue(File(temp, "crate-best/Best Of/kit.json").isFile)
+
+        assertEquals(2, cli("crate", root.path, "--pick", "vibraslap").first)
+        assertEquals(2, cli("crate", File(temp, "crate-nowhere").path).first)
+    }
+
+    @Test
     fun `treat crushes one pad from the terminal and undoes it`() {
         val wav = writeBreak(File(temp, "tr.wav"))
         val out = File(temp, "tr-out")

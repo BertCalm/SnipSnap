@@ -42,6 +42,11 @@ object Cli {
         |                        --chop sends each song's best break through
         |                        the chop pipeline, provenance stamped)
         |  classify <wav...>     print what the classifier hears in each file
+        |  crate <root>          the whole library as a collection: cached
+        |                        pad index + class census (--dupes finds
+        |                        same-sound files; --pick KICK [--top N]
+        |                        ranks a class; --build NAME assembles the
+        |                        strongest of every class into a new kit)
         |  similar <target> <library-root>
         |                        find me another one like this: nearest
         |                        sounds across every kit under the root
@@ -174,6 +179,7 @@ object Cli {
                 "dig" -> DigCommand.run(args.drop(1), out)
                 "classify" -> ClassifyCommand.run(args.drop(1), out)
                 "similar" -> SimilarCommand.run(args.drop(1), out)
+                "crate" -> CrateCommand.run(args.drop(1), out)
                 "export" -> ExportCommand.run(args.drop(1), out)
                 "import" -> ImportCommand.run(args.drop(1), out)
                 "keys" -> KeysCommand.run(args.drop(1), out)

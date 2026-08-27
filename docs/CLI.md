@@ -84,6 +84,20 @@ and the low/mid/high band split. When the classifier is wrong about a real
 capture, this is where the wrongness becomes a number you can move a
 threshold by.
 
+### `crate <root>` — the library as a collection
+
+Your whole output treated as one crate: an index of every kit pad's
+feature vector, class and classifier confidence, cached in
+`.crate-index.json` keyed by file + mtime + size — a second pass over
+an unchanged library measures **nothing** (the summary says how many
+came from the index). On top of it: a class census, `--dupes` (Similar
+distance ≈ 0 across different files — the same kick saved twice),
+`--pick KICK --top N` (the best of a class across everything,
+classifier confidence ranking), and `--build NAME` — the strongest pad
+of every class assembled into a fresh kit through the same model the
+app uses, auto-place colours and mute groups riding along. A torn
+index rebuilds silently; it is a cache, not a record.
+
 ### `similar <target> <library-root>` — find me another one like this
 
 Nearest-neighbour over the classifier's own features: the measurements
