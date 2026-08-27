@@ -742,6 +742,78 @@ Standing rejects unchanged.
 
 ---
 
+# Wave FF — the crate: from songs to sessions
+
+The EE lens continued: identity-deepening, compound, pure-JVM CORE.
+This wave completes the crate-digging ritual at both ends — finding
+the breaks *inside* full songs, and bouncing what you made back
+through the machine — and grows the Answer into a band. Build order
+**FF1 → FF3 → FF2 → FF5 → FF4**: the Dig is the headline, Resample
+is small and compounds with everything, then the Band, then the two
+utilities.
+
+## FF1 — The Dig: breaks found inside full songs
+
+`chop` assumes you hand it a break; the ritual starts earlier. Honest
+DSP, no ML: windowed percussive-vs-harmonic scoring (onset density,
+spectral flatness, low-band punch) over whole songs, candidate
+sections ranked, the best chopped straight through the pipeline with
+provenance ("bars at 1:32 of Track 07").
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| FF1.1 | `BreakFinder` (`:audio`) — windowed section scoring (onset density, flatness, harmonic ratio, punch), merged into candidate regions with times and a rank; deterministic | CORE | M | a synthetic song (verse with pads/melody, 8-bar drum break, outro) yields the break's exact region as candidate #1; pure-tone and pure-noise material yields no false break; deterministic |
+| FF1.2 | CLI `dig <file-or-folder> [--top N] [--chop]` — list candidates with timestamps and scores; `--chop` sends each winner through the chop pipeline, source/offset provenance stamped | CORE | S–M | dig on a folder names each song's break; --chop lands kit folders whose provenance says where in which song they came from |
+
+## FF3 — The Resample ritual
+
+The most MPC gesture there is: bounce what you have and chop it
+again. The kit's own performance — era, wear, treatments baked in —
+re-enters the pipeline as source material; generation loss becomes a
+creative tool. Nearly free: the pipeline eats its own output.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| FF3.1 | CLI `resample <kit-dir> [--name] [--slices] [--wear W]` — render the kit playing its groove (wear/era in the sound), re-chop the render into a NEW kit folder, provenance stamped ("generation 2 from <kit>"); source kit untouched | CORE | S–M | resample → a new kit whose pads come from the old kit's performance; generation counter increments on a second pass; source kit byte-identical throughout |
+
+## FF2 — The Band: the Answer grows sidemen
+
+Keys tracks carry clips now (EE3 built the road). Chord stabs and a
+counter-perc line join the bassline — three seeded, key-locked
+complements, each its own track in one `.xpj`.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| FF2.1 | `Answer.band` (`:shell`) — the stab line: sparse triads (root-third-fifth from the kit's scale) on gaps the bass leaves open, rendered through a Tonewheel stab to a keygroup + clip; the shaker line: a Velvet CHIP tick pattern on off-16ths the groove leaves free; both seeded off the same reroll seed | CORE | M | stabs avoid both the kit's strong hits and the bass's own notes; every stab tone is in the key; same seed, same band; different seed, different band |
+| FF2.2 | Wire — `answer --band` persists all three (answer.json grows a `band` list); `project` lands each as its own keys track playing its clip | CORE | S | chop a tonal break → answer --band → one .xpj with kit + bass + stabs + shaker tracks, each with notes |
+
+## FF5 — The Mix Doctor
+
+Preflight's musical sibling: it checks the sound, not the format.
+Findings first, `--fix` applies only the safe subset via the DSP we
+already own.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| FF5.1 | `MixDoctor` (`:shell`) — findings from real measurement: low-band masking between two busy low pads, two hats outside a mute group, harsh-band buildup, a pad far louder than the kit's median, DC/rumble; each finding names the pads and the numbers | CORE | M | a deliberately sick kit (boomy kick + boomy bass loop, clashing hats, one screaming pad) draws exactly those findings; a healthy starter kit draws none |
+| FF5.2 | CLI `doctor <kit-dir> [--fix]` — print the findings; `--fix` applies the safe subset (complementary low carve via `:synth` Eq, level trim toward the median, mute-group suggestion applied), bin-backed like every treatment | CORE | S–M | doctor → named findings; --fix → re-run reports the fixed ones gone; undo path restores byte-identical |
+
+## FF4 — More-like-this
+
+The classifier's features exist per slice already; nearest-neighbour
+over them across everything you've made.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| FF4.1 | `Similar` (`:audio`) — a compact feature vector per WAV (the extractor's own features, normalized), cosine/euclidean distance, ranked matches | CORE | S | a snare's nearest neighbours in a mixed library are the other snares; identical file distance 0; deterministic order |
+| FF4.2 | CLI `similar <pad-or-wav> <library-root> [--top N]` — resolve the target (a kit pad like `A02` in a kit dir, or any .wav), scan the library's kits, print ranked matches with kit/pad names | CORE | S | pointed at a snare pad, the top matches are snares from other kits, named well enough to go grab them |
+
+**Below the line:** real stem separation (needs ML we won't fake with
+EQ tricks); networked anything; app-side autoplay. Standing rejects
+unchanged.
+
+---
+
 ## Sequence
 
 ```
@@ -766,6 +838,10 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   wire-through (Z6.2 verdict: waveform default, rings runner-up).
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
+
+CORE wave FF (the crate, in order):
+  FF1 the Dig (breaks inside songs) → FF3 resample ritual →
+  FF2 the Band → FF5 mix doctor → FF4 more-like-this
 
 CORE wave EE: ✓ all landed (2026-08-27) — the Time Machine eras,
   tape wear (the ledger, the capped patina chain, the render-time
