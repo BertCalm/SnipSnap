@@ -107,6 +107,20 @@ the donor's timing offsets and accent shape (the standard four
 variations re-derive from the felt pattern). A position the donor never
 plays stays straight — no data, no opinion.
 
+### `era <kit-dir> <machine>` — the Time Machine
+
+The whole kit rendered through the specific math of a specific machine —
+not a "lo-fi" knob. Four eras: `sp1200` (12 bits truncated at 26.04 kHz,
+decimated with no anti-alias filter and brought back zero-order-hold,
+because that folding *is* the sound), `mpc60` (µ-law-style companding
+around a 12-bit quantizer, gentle top-end roll), `tape` (soft saturation,
+slow deterministic wow, dulled highs, a whisper of seeded hiss), and
+`phone` (the 300–3400 Hz band, 8-bit µ-law, an 8 kHz rate trip).
+`--amount 0.6` interpolates from transparent toward full character;
+`--pads A01,B03` ages a subset. Velocity layers age with their pads.
+Originals go to the bin and every pad records its recipe, so
+`--undo` brings the present back byte-identical.
+
 ### `merge <a> <b>` — bank B, earned not invented
 
 A **new** kit folder: A's bank A stays put, B's bank A lands on pads

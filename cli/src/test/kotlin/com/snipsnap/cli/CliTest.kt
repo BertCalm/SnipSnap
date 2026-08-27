@@ -589,6 +589,32 @@ class CliTest {
     }
 
     @Test
+    fun `era runs the kit through a machine and undo brings it back`() {
+        val wav = writeBreak(File(temp, "er.wav"))
+        val out = File(temp, "er-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "EraCli", "--slices", "4").first)
+        val kitDir = File(out, "EraCli")
+        val kit = KitStore.load(kitDir)
+        val before = kit.pads.associate { it.sampleFile to File(kitDir, it.sampleFile).readBytes() }
+
+        val (code, stdout, stderr) = cli("era", kitDir.path, "sp1200", "--amount", "0.8")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "sp1200")
+        for ((f, bytes) in before) {
+            assertTrue(!File(kitDir, f).readBytes().contentEquals(bytes), "$f aged")
+        }
+
+        assertEquals(0, cli("era", kitDir.path, "--undo").first)
+        for ((f, bytes) in before) {
+            assertTrue(File(kitDir, f).readBytes().contentEquals(bytes), "$f restored byte-identical")
+        }
+
+        val (badCode, _, badErr) = cli("era", kitDir.path, "victrola")
+        assertEquals(2, badCode)
+        assertContains(badErr, "unknown era")
+    }
+
+    @Test
     fun `treat crushes one pad from the terminal and undoes it`() {
         val wav = writeBreak(File(temp, "tr.wav"))
         val out = File(temp, "tr-out")

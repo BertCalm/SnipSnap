@@ -245,6 +245,49 @@ class KitBuilderModel private constructor(
         return update(slot) { it.copy(recipe = treated.recipe) }
     }
 
+    /**
+     * Age one pad through a Time Machine era — every file it references
+     * (velocity layers included, unlike single-sample treatments: an era is
+     * whole-kit character, so a layered snare ages in all its zones).
+     * Originals go to the bin; the era recipe rides the pad.
+     */
+    fun eraPad(slot: Int, era: String, amount: Float = 1f): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
+        var recipe: com.snipsnap.json.JsonValue.Obj? = null
+        for (f in files) {
+            val original = com.snipsnap.audio.WavReader.read(File(kitDir, f))
+            val aged = com.snipsnap.synth.Eras.apply(era, original, amount)
+            moveToBin(f)
+            WavWriter.write(File(kitDir, f), aged.snip)
+            recipe = aged.recipe
+        }
+        return update(slot) { it.copy(recipe = recipe) }
+    }
+
+    /**
+     * The whole kit through one era — the Time Machine's main gesture.
+     * Returns how many pads aged. [slots] narrows it; null means every pad.
+     */
+    fun eraKit(era: String, amount: Float = 1f, slots: List<Int>? = null): Int {
+        val targets = kit.pads.map { it.slot }.filter { slots == null || it in slots }
+        require(targets.isNotEmpty()) { "no pads to age" }
+        targets.forEach { eraPad(it, era, amount) }
+        return targets.size
+    }
+
+    /** Undo an era on one pad: every file it references comes back out of the bin. */
+    fun unEraPad(slot: Int): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
+        var restoredAny = false
+        for (f in files) {
+            if (restoreFromBin(f) != null) restoredAny = true
+        }
+        require(restoredAny) { "nothing to restore for pad $slot - the bin holds no earlier take of it" }
+        return update(slot) { it.copy(recipe = null) }
+    }
+
     /** Undo the last treatment: the previous audio comes back out of the bin. */
     fun untreatPad(slot: Int): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
