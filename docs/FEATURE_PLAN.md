@@ -814,6 +814,45 @@ unchanged.
 
 ---
 
+# Wave GG — the hardware feels it
+
+Three lanes in the user's chosen order: **hardware-deep** (what the
+Live III does with our files), then **performance realism**, then
+**the library**. The format probes are done: both generations carry
+per-pad volume envelopes and a filter slot we write as fixed defaults
+today (GG1 is pure metadata), and the `.xpj` has 32 song slots whose
+`items` step schema the corpus only shows *empty* — so GG3 splits
+into safe plumbing now and a bench-fed writer later. Build order
+**GG1 → GG2 → GG3 → GG4 → GG5 → GG6 → GG7**.
+
+## Lane 1 — hardware-deep
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| GG1 | Pad shape as metadata — `KitPad` gains nullable `attack`/`decay`/`cutoff`/`resonance` (null = the format's own default, so goldens stay byte-stable); both writers substitute set values into their existing fields (`VolumeAttack`/`VolumeDecay`/`Cutoff`/`Resonance` in `.xpm`; `ampEnvelope`/`filterData.value0` in `.xtd`); kit.json round-trips; importers read them back; KitPreview approximates the envelope so you can hear a tighten before the card; CLI `shape <kit> <pad> [--attack] [--decay] [--cutoff] [--res] [--reset]`. Bench row: decay 0.3 audibly shortens a pad on the Live III in both generations | CORE | M | unshaped kits export byte-identical to before; a shaped pad's values land in both formats' fields; round-trip through kit.json + import; worn preview shortens audibly |
+| GG2 | Fills — `GrooveVariations.fill(base, kit)`: the last bar of every 4 gets a fill (density ramp into the downbeat, rolls built from the kit's own snare/hat at rising velocities, 32nds near the turn); deterministic, seeded; joins the standard variation set so it lands as one more switchable sequence | CORE | S–M | non-fill bars byte-equal the base; the fill bar is denser toward beat 4, uses only pads the kit has, velocities ramp; same seed same fill |
+| GG3 | Song mode — GG3.1: song-slot plumbing (`Mpc3ProjectWriter` can name song 1 and carry items when given; `sidea`/`project` name it after the session) — safe because empty-items output is byte-identical to today's. GG3.2: the items writer, **blocked on corpus**: save a 2-step song on the Live III, drop the `.xpj` in `reference/`, and the step schema stops being a guess | CORE | M | GG3.1: named song, all-else-identical output, reader accepts; GG3.2 lands only after the bench capture |
+
+## Lane 3 — performance realism
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| GG4 | Round-robin probe — the `.xtd` pad block carries `sliceIncrement`/`sliceCycleLength`/`sliceIncrementRngSeed`; probe what the corpus does with them and whether `.xpm` has a twin; if a real alternate-hit mechanism exists, wire subtle variant renders (ghost-layer style) through it; if not, an honest documented refusal | CORE | S–M | probe findings documented either way; if wired: alternating hits survive export+import; if refused: the refusal names the missing field |
+| GG5 | Ghost-note grammar — `GrooveVariations.ghosted(base, kit)`: low-velocity snare ghosts on the e/a around the backbeat (classic funk grammar), seeded, never colliding with existing notes, velocities ≤ 0.35 so `--ghosts` soft zones actually voice them | CORE | S–M | ghosts sit only on empty off-positions around beats 2/4, at ghost velocity; the backbone is untouched; same seed same ghosts |
+
+## Lane 2 — the library
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| GG6 | The Crate — `crate <root>`: an index of every kit pad's feature vector + class, cached in `.crate-index.json` keyed by file+mtime (second run extracts nothing); `--dupes` (Similar distance ≈ 0 across kits), `--pick CLASS --top N` (best of a class across everything), `--build NAME` (the picks become a new kit folder via auto-place) | CORE | M | index caches (proven by a no-reextract second run); a planted duplicate is found; picks are the right class; the built kit passes preflight |
+| GG7 | Liner notes — `notes <kit-dir>`: the kit's story as prose (dug from which song at what timestamp, resample generation, wear mileage, key/tempo, classes, groove, treatments) written to `liner-notes.txt`; expansion export drops it beside the J-card | CORE | S | the notes name the kit's actual provenance; deterministic; expansion carries it |
+
+**Below the line:** velocity-curve fields (fold into a later shape pass
+if the corpus shows them varying); pad insert FX (big corpus surface,
+none captured yet). Standing rejects unchanged.
+
+---
+
 ## Sequence
 
 ```
@@ -838,6 +877,12 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   wire-through (Z6.2 verdict: waveform default, rings runner-up).
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
+
+CORE wave GG (lanes in the user's order — hardware-deep, then
+  performance realism, then the library):
+  GG1 pad shape → GG2 fills → GG3 song mode (3.2 bench-blocked) →
+  GG4 round-robin probe → GG5 ghost grammar → GG6 the crate →
+  GG7 liner notes
 
 CORE wave FF: ✓ all landed (2026-08-27) — the Dig (breaks found
   inside full songs, no false positives on tone/noise/silence), the
