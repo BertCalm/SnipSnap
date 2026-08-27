@@ -907,13 +907,23 @@ class CliTest {
             assertTrue(card.readBytes().contentEquals(first), "deterministic card")
         }.isNotEmpty())
 
-        // The expansion export drops the card beside the artwork.
+        // The expansion export drops the card beside the artwork, and the
+        // liner notes beside the card.
         assertEquals(
             0,
             cli("export", kitDir.path, "--export", "expansion", "--out", File(temp, "jc-exp").path).first,
         )
         val expansion = File(temp, "jc-exp/card/Expansions/Card Kit")
         assertTrue(File(expansion, "J-Card.png").isFile, "the expansion carries the insert")
+        assertTrue(File(expansion, "liner-notes.txt").isFile, "and the liner notes")
+        assertContains(File(expansion, "liner-notes.txt").readText(), "CARD KIT")
+
+        // The notes verb prints the story and writes it beside the kit.
+        val (nCode, nOut, nErr) = cli("notes", kitDir.path)
+        assertEquals(0, nCode, "stderr: $nErr")
+        assertContains(nOut, "Chopped from \"jc.wav\".")
+        assertContains(nOut, "THE SOUNDS")
+        assertTrue(File(kitDir, "liner-notes.txt").isFile)
 
         // And the pack builder gets per-kit cards for free.
         assertEquals(

@@ -110,6 +110,10 @@ object Cli {
         |  diff <a> <b>          structured key-path diff of two MPC files,
         |                        either generation (--values lists differing
         |                        values; exit 1 when different)
+        |  notes <kit-dir>       liner notes: the kit's story as prose from
+        |                        what it tracks (where it was dug or chopped,
+        |                        generation, mileage, key, patterns, pads);
+        |                        expansion exports carry it beside the J-card
         |  jcard <kit-dir>       the kit's cassette insert: front, spine and
         |                        back panels in one fold-ready PNG (art, pads
         |                        with classes and sources, groove notation,
@@ -201,6 +205,7 @@ object Cli {
                 "doctor" -> DoctorCommand.run(args.drop(1), out)
                 "art" -> ArtCommand.run(args.drop(1), out)
                 "jcard" -> JCardCommand.run(args.drop(1), out)
+                "notes" -> NotesCommand.run(args.drop(1), out)
                 "help", "--help", "-h" -> {
                     out.println(USAGE)
                     0

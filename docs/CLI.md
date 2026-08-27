@@ -337,6 +337,18 @@ mute group, DC gets removed — audio edits bin-backed with recipes,
 the rest metadata-only. Taste stays advice. Exit 0 healthy, 1 while
 findings remain, so it scripts like a check.
 
+### `notes <kit-dir>` — liner notes
+
+The kit's story as prose, written from what it already tracks: dug
+from which song at what timestamp (or chopped from which file, or
+which generation of which bounce, or imported from where — the most
+specific origin wins), the miles on the tape, key and tempo, the
+patterns it plays and its B-side, then every pad with its class and
+what's been done to it ("through the sp1200", "shaped", "humanized").
+Printed and written as `liner-notes.txt` beside the kit; expansion
+exports drop it next to the J-card — the insert you read, beside the
+one you look at. Deterministic: same kit, same words.
+
 ### `jcard <kit-dir>` — every kit gets its cassette insert
 
 Everything a J-card needs is already tracked, so the kit renders its
