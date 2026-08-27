@@ -68,6 +68,89 @@ class CliTest {
         return file
     }
 
+    /** verse pads (8s) | dense drum break (8s) | outro pads (5s) — a "song". */
+    private fun writeSong(file: File): File {
+        val rate = 44_100
+        fun pads(seconds: Float): FloatArray {
+            val n = (seconds * rate).toInt()
+            return FloatArray(n) { i ->
+                var s = 0.0
+                for (hz in doubleArrayOf(220.0, 277.18, 329.63)) {
+                    s += Math.sin(2.0 * Math.PI * hz * i / rate)
+                }
+                (0.18 * s).toFloat()
+            }
+        }
+        fun breakSec(seconds: Float): FloatArray {
+            val n = (seconds * rate).toInt()
+            val out = FloatArray(n)
+            val beat = (60f / 100f * rate).toInt()
+            fun place(hit: Snip, at: Int, gain: Float) {
+                for (i in hit.samples.indices) {
+                    if (at + i >= n) break
+                    out[at + i] += hit.samples[i] * gain
+                }
+            }
+            var t = 0
+            var count = 0
+            while (t < n) {
+                place(DrumSynth.kick(), t, 0.9f)
+                if (count % 2 == 1) place(DrumSynth.snare(), t, 0.8f)
+                place(DrumSynth.closedHat(), t, 0.5f)
+                place(DrumSynth.closedHat(), t + beat / 2, 0.4f)
+                t += beat
+                count++
+            }
+            return out
+        }
+        val parts = listOf(pads(8f), breakSec(8f), pads(5f))
+        val total = FloatArray(parts.sumOf { it.size })
+        var at = 0
+        for (p in parts) {
+            p.copyInto(total, at)
+            at += p.size
+        }
+        WavWriter.write(file, Snip(total, 1, rate))
+        return file
+    }
+
+    @Test
+    fun `dig finds the break inside a song and chops it with provenance`() {
+        val song = writeSong(File(temp, "Track 07.wav"))
+        val out = File(temp, "dig-out")
+
+        val (code, stdout, stderr) = cli("dig", song.path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "Track 07.wav:")
+        assertContains(stdout, "1. 0:0")
+
+        val (chopCode, chopOut, chopErr) = cli("dig", song.path, "--chop", "--out", out.path)
+        assertEquals(0, chopCode, "stderr: $chopErr")
+        assertContains(chopOut, "1 break(s) dug and chopped")
+        val kitDir = File(out, "Track 07 Break")
+        assertTrue(File(kitDir, "kit.json").isFile, "the dug break became a kit")
+        val kit = KitStore.load(kitDir)
+        assertTrue(kit.pads.isNotEmpty())
+        assertTrue(
+            kit.pads.all { it.source["song"] == "Track 07.wav" && it.source["at"] != null },
+            "every pad knows which song and where: ${kit.pads.first().source}",
+        )
+
+        // A song with no break says so instead of inventing one.
+        val toneFile = File(temp, "Ambient.wav").also { f ->
+            val rate = 44_100
+            WavWriter.write(
+                f,
+                Snip(FloatArray(6 * rate) { i -> (0.4 * Math.sin(2.0 * Math.PI * 220.0 * i / rate)).toFloat() }, 1, rate),
+            )
+        }
+        val (tCode, tOut, _) = cli("dig", toneFile.path)
+        assertEquals(0, tCode)
+        assertContains(tOut, "no break heard")
+
+        assertEquals(2, cli("dig", File(temp, "missing-folder").path).first)
+    }
+
     @Test
     fun `chop builds a placed kit and every export format`() {
         val wav = writeBreak(File(temp, "break.wav"))

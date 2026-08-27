@@ -37,6 +37,10 @@ object Cli {
         |  chop <input.wav>      chop, classify, auto-place, and build a kit folder
         |  chop-all <folder>     every .wav in the folder through chop; failures
         |                        named, never fatal; one summary table
+        |  dig <file-or-folder>  find the drum breaks inside full songs and
+        |                        name where they live (--top N candidates;
+        |                        --chop sends each song's best break through
+        |                        the chop pipeline, provenance stamped)
         |  classify <wav...>     print what the classifier hears in each file
         |  export <kit-dir>      export an existing kit folder to MPC formats
         |  import <file>         unpack an .xpn archive or a native .xtd into a
@@ -148,6 +152,7 @@ object Cli {
             when (args[0]) {
                 "chop" -> ChopCommand.run(args.drop(1), out)
                 "chop-all" -> ChopAllCommand.run(args.drop(1), out)
+                "dig" -> DigCommand.run(args.drop(1), out)
                 "classify" -> ClassifyCommand.run(args.drop(1), out)
                 "export" -> ExportCommand.run(args.drop(1), out)
                 "import" -> ImportCommand.run(args.drop(1), out)

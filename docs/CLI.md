@@ -53,6 +53,21 @@ the core classes claim their bank-A pads, and the rest overflow upward.
 The pad table marks any classification under 0.5 confidence with a `?` —
 the same threshold behind the app's dashed **NOT SURE** treatment.
 
+### `dig <file-or-folder>` — breaks found inside full songs
+
+The crate-digging ritual from the top: `chop` assumes you hand it a
+break, but the ritual starts with *songs*. The Dig scores each second
+of a track on three honest measures — onset density (a break hits
+steadily and often), spectral flatness (drums are broadband, notes are
+peaky), and low-band pulse (kicks make the sub pump; sustained bass
+just sits there) — merges scoring windows into candidate sections, and
+names where the breaks live with timestamps and scores (`--top N`).
+`--chop` sends each song's best section straight through the chop
+pipeline; every pad's provenance then says which song and at what
+timestamp it was dug from. A song of pads says "no break heard" rather
+than inventing one; unreadable files are named and skipped, never
+fatal. Deterministic: the same song always yields the same dig.
+
 ### `chop-all <folder>` — the crate-digging verb
 
 Every `.wav` in the folder through the whole chop pipeline, folder first
