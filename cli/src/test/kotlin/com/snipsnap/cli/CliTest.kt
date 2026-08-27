@@ -821,6 +821,25 @@ class CliTest {
         assertContains(pOut, "answer track")
         assertTrue(File(temp, "an-proj/card/Answer Session.xpj").isFile)
 
+        // --band grows the answer into sidemen, and the session lands every one.
+        val (bandCode, bandOut, bandErr) = cli("answer", kitDir.path, "--seed", "5", "--band")
+        assertEquals(0, bandCode, "stderr: $bandErr")
+        assertContains(bandOut, "Stabs")
+        val withBand = com.snipsnap.kit.AnswerStore.load(kitDir)!!
+        assertTrue(withBand.band.isNotEmpty(), "the band persisted")
+        assertTrue(
+            withBand.band.all { File(kitDir, it.sampleFile).isFile && it.clip.notes.isNotEmpty() },
+            "every sideman has a rendered note and a line",
+        )
+        val (bpCode, bpOut, bpErr) = cli(
+            "project", kitDir.path, "--name", "Band Session", "--out", File(temp, "an-band-proj").path,
+        )
+        assertEquals(0, bpCode, "stderr: $bpErr")
+        assertEquals(
+            1 + withBand.band.size, Regex("answer track").findAll(bpOut).count(),
+            "bass and every sideman land as their own tracks: $bpOut",
+        )
+
         // No key, no answer - an honest refusal, not a guess.
         val out2 = File(temp, "an-out2")
         assertEquals(0, cli("chop", wav.path, "--out", out2.path, "--name", "KeylessCli", "--slices", "4").first)

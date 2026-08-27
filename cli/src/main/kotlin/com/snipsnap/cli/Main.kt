@@ -61,8 +61,9 @@ object Cli {
         |                        the machine (--amount, --pads, --undo)
         |  answer <kit-dir>      the B-side: an S5 bassline in the kit's key,
         |                        playing the gaps of its groove with its feel
-        |                        (--seed N rerolls; project lands it as a
-        |                        keys track playing its clip)
+        |                        (--seed N rerolls; --band adds stab chords
+        |                        and a shaker tick; project lands every one
+        |                        as a keys track playing its clip)
         |  feel <kit-dir> --from <donor>
         |                        groove transfer: the donor's timing-and-velocity
         |                        pocket (a kit's groove or any .mid) rewrites

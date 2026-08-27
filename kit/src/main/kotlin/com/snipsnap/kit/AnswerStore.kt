@@ -17,6 +17,20 @@ object AnswerStore {
     const val FILE_NAME = "answer.json"
     const val VERSION = 1
 
+    /** One sideman the band brought: its track name, note file, and line. */
+    data class BandMember(
+        val name: String,
+        val sampleFile: String,
+        val clip: Mpc3Clip,
+    ) {
+        init {
+            require(name.isNotBlank()) { "band member name must not be blank" }
+            require('/' !in sampleFile && '\\' !in sampleFile) {
+                "band sample must be a bare filename inside the kit folder: $sampleFile"
+            }
+        }
+    }
+
     data class StoredAnswer(
         /** The reroll seed that produced this answer. */
         val seed: Int,
@@ -26,6 +40,8 @@ object AnswerStore {
         val sampleFile: String,
         /** The bassline. */
         val clip: Mpc3Clip,
+        /** The sidemen, when the answer grew into a band. */
+        val band: List<BandMember> = emptyList(),
     ) {
         init {
             require(name.isNotBlank()) { "answer name must not be blank" }
@@ -38,20 +54,27 @@ object AnswerStore {
     fun save(kitDir: File, answer: StoredAnswer): File {
         kitDir.mkdirs()
         val file = File(kitDir, FILE_NAME)
-        AtomicFile.writeText(
-            file,
-            Json.write(
-                JsonValue.Obj(
-                    linkedMapOf(
-                        "version" to JsonValue.Num(VERSION.toDouble()),
-                        "seed" to JsonValue.Num(answer.seed.toDouble()),
-                        "name" to JsonValue.Str(answer.name),
-                        "sample" to JsonValue.Str(answer.sampleFile),
-                        "clip" to GrooveStore.clipToJson(answer.clip),
-                    ),
-                ),
-            ) + "\n",
+        val root = linkedMapOf<String, JsonValue>(
+            "version" to JsonValue.Num(VERSION.toDouble()),
+            "seed" to JsonValue.Num(answer.seed.toDouble()),
+            "name" to JsonValue.Str(answer.name),
+            "sample" to JsonValue.Str(answer.sampleFile),
+            "clip" to GrooveStore.clipToJson(answer.clip),
         )
+        if (answer.band.isNotEmpty()) {
+            root["band"] = JsonValue.Arr(
+                answer.band.map { m ->
+                    JsonValue.Obj(
+                        linkedMapOf(
+                            "name" to JsonValue.Str(m.name),
+                            "sample" to JsonValue.Str(m.sampleFile),
+                            "clip" to GrooveStore.clipToJson(m.clip),
+                        ),
+                    )
+                },
+            )
+        }
+        AtomicFile.writeText(file, Json.write(JsonValue.Obj(root)) + "\n")
         return file
     }
 
@@ -69,6 +92,14 @@ object AnswerStore {
             name = (obj["name"] as JsonValue.Str).value,
             sampleFile = (obj["sample"] as JsonValue.Str).value,
             clip = GrooveStore.clipFromJson(obj["clip"] ?: throw IllegalArgumentException("answer.json has no clip")),
+            band = (obj["band"] as? JsonValue.Arr)?.items.orEmpty().map { memberJson ->
+                val m = (memberJson as JsonValue.Obj).entries
+                BandMember(
+                    name = (m["name"] as JsonValue.Str).value,
+                    sampleFile = (m["sample"] as JsonValue.Str).value,
+                    clip = GrooveStore.clipFromJson(m["clip"] ?: throw IllegalArgumentException("band member has no clip")),
+                )
+            },
         )
     }
 

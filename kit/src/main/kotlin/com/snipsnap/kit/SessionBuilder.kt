@@ -81,15 +81,19 @@ object SessionBuilder {
         val answerTracks = mutableListOf<String>()
         for (kitDir in kitDirs) {
             val answer = AnswerStore.load(kitDir) ?: continue
-            val wav = File(kitDir, answer.sampleFile)
-            if (!wav.isFile) {
-                throw IOException("answer.json in $kitDir points at a missing sample: ${answer.sampleFile}")
+            val members = listOf(Triple(answer.name, answer.sampleFile, answer.clip)) +
+                answer.band.map { Triple(it.name, it.sampleFile, it.clip) }
+            for ((name, sampleFile, memberClip) in members) {
+                val wav = File(kitDir, sampleFile)
+                if (!wav.isFile) {
+                    throw IOException("answer.json in $kitDir points at a missing sample: $sampleFile")
+                }
+                val one = OneNote.program(name, com.snipsnap.audio.WavReader.read(wav))
+                val dest = File(dataDir, "${one.sampleStem}.wav")
+                if (!dest.exists()) WavWriter.write(dest, one.sample)
+                tracks += Mpc3ProjectTrack.Keys(one.program, clips = listOf(memberClip))
+                answerTracks += name
             }
-            val one = OneNote.program(answer.name, com.snipsnap.audio.WavReader.read(wav))
-            val dest = File(dataDir, "${one.sampleStem}.wav")
-            if (!dest.exists()) WavWriter.write(dest, one.sample)
-            tracks += Mpc3ProjectTrack.Keys(one.program, clips = listOf(answer.clip))
-            answerTracks += answer.name
         }
 
         val instrumentTracks = mutableListOf<String>()

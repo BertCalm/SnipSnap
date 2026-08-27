@@ -140,6 +140,15 @@ beside the kit (`answer.json` + the rendered bass note) and `project`
 lands it automatically: a keys track playing its clip, in the same
 `.xpj` as the break — the magic-moment demo in two commands.
 
+`--band` grows the answer into sidemen, all off the same seed: Tonewheel
+**stab triads** (root, the scale's own third, the fifth) on gaps the
+bass leaves open too — favouring the and-of-the-beat, at most one per
+few steps — and a Velvet CHIP **shaker tick** on the off-16ths the
+groove leaves completely free. Both follow the feel and both refuse
+honestly when the groove leaves them no room (a wall of hats gets no
+shaker). Asking for the band never rewrites the bass: same seed, same
+answer, sidemen added. `project` lands each as its own keys track.
+
 ### `feel <kit-dir> --from <donor>` — steal the feel, not the notes
 
 Groove transfer, the MPC's own legendary feature. The donor — another
