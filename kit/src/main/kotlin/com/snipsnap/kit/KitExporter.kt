@@ -138,6 +138,7 @@ object KitExporter {
                 decay = p.decay,
                 cutoff = p.cutoff,
                 resonance = p.resonance,
+                humanize = p.humanize,
             )
         }
         return slots.toList() to written

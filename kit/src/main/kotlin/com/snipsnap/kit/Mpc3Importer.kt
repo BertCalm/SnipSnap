@@ -126,6 +126,7 @@ object Mpc3Importer {
             val decay: Float?,
             val cutoff: Float?,
             val resonance: Float?,
+            val humanize: Float?,
         )
 
         fun shapeOrNull(v: Double?, default: Double): Float? {
@@ -177,6 +178,13 @@ object Mpc3Importer {
                 decay = shapeOrNull(ampField(inst, "Decay"), default = 1.0),
                 cutoff = shapeOrNull(filterField(inst, "filterCutoff"), default = 1.0),
                 resonance = shapeOrNull(filterField(inst, "filterResonance"), default = 0.0),
+                // humanize writes VolumeRandom = h * 0.2 on every layer;
+                // the first filled layer's value inverts back to h.
+                humanize = shapeOrNull(
+                    (((inst["layersv"] as? JsonValue.Arr)?.items?.firstOrNull() as? JsonValue.Obj)
+                        ?.entries?.get("VolumeRandom") as? JsonValue.Num)?.value?.let { it / 0.2 },
+                    default = 0.0,
+                ),
             )
         }
         require(parsed.isNotEmpty()) { "'$trackName' has no pads with samples" }
@@ -219,6 +227,7 @@ object Mpc3Importer {
                 decay = p.decay,
                 cutoff = p.cutoff,
                 resonance = p.resonance,
+                humanize = p.humanize,
                 source = mapOf("importedFrom" to sourceName),
                 velocityLayers = if (p.layers.size < 2) emptyList() else {
                     p.layers.map { (file, velStart, velEnd) -> KitLayer(file, velStart, velEnd) }

@@ -106,6 +106,7 @@ object XpnPackager {
                 decay = p.decay,
                 cutoff = p.cutoff,
                 resonance = p.resonance,
+                humanize = p.humanize,
             )
         }
         val programXml = XpmWriter().write(DrumProgram(kit.name, slots.toList()))

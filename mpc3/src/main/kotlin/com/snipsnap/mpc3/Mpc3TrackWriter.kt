@@ -567,7 +567,9 @@ class Mpc3TrackWriter(
             // 0 = One Shot (the whole sample fires), 2 = Note On (sustains
             // while held) — a per-pad musical choice in real kits.
             triggerMode = if (pad?.oneShot != false) 0 else 2,
-            layers = (0 until 8).map { slot -> layer(zones.getOrNull(slot), filledInstrument = filled, rootNote = 0) },
+            layers = (0 until 8).map { slot ->
+                layer(zones.getOrNull(slot), filledInstrument = filled, rootNote = 0, humanize = pad?.humanize)
+            },
             keygroupExtras = false,
             level = pad?.level?.toDouble() ?: MPC_LEVEL_EMPTY,
             pan = pad?.pan?.toDouble() ?: 0.5,
@@ -650,7 +652,20 @@ class Mpc3TrackWriter(
         },
     )
 
-    private fun layer(zone: VelocityLayer?, filledInstrument: Boolean, rootNote: Int): J = obj(
+    private fun layer(
+        zone: VelocityLayer?,
+        filledInstrument: Boolean,
+        rootNote: Int,
+        /**
+         * Per-hit randomization 0..1 (GG4). The corpus has no layer
+         * round-robin field in either generation - these per-hit random
+         * fields are the format's own "no two hits alike" mechanism,
+         * present (all zero) on every commercial layer. Scaling is
+         * conservative and bench-bound: pitch x0.05, volume x0.2,
+         * pan x0.1 of the macro.
+         */
+        humanize: Float? = null,
+    ): J = obj(
         "active" to b(true),
         "volume" to obj("gainCoefficient" to d(1.0), "controlValue" to d(1.0), "law" to i(0)),
         "pan" to d(0.5),
@@ -694,9 +709,10 @@ class Mpc3TrackWriter(
             "NumLoopRepeats" to i(0),
         ),
         "version" to i(7),
-        "pitchRandom" to d(0.0),
-        "VolumeRandom" to d(0.0),
-        "PanRandom" to d(0.0),
+        // Empty layer slots keep the corpus's zeros even on a humanized pad.
+        "pitchRandom" to d(if (zone != null) ((humanize ?: 0f) * 0.05f).toDouble() else 0.0),
+        "VolumeRandom" to d(if (zone != null) ((humanize ?: 0f) * 0.2f).toDouble() else 0.0),
+        "PanRandom" to d(if (zone != null) ((humanize ?: 0f) * 0.1f).toDouble() else 0.0),
         "OffsetRandom" to d(0.0),
         "sliceIncrement" to i(0),
         "sliceCycleLength" to i(1),

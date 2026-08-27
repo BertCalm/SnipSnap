@@ -81,10 +81,21 @@ data class Pad(
     val decay: Float? = null,
     val cutoff: Float? = null,
     val resonance: Float? = null,
+    /**
+     * Per-hit randomization, 0..1 — MPC 3 only. The corpus probe (GG4)
+     * found no layer round-robin field in either generation, but the
+     * `.xtd` layer carries real pitch/volume/pan randomization the
+     * hardware renders per hit. The `.xpm` has no such fields, so the
+     * MPC 2 generation honestly ignores this.
+     */
+    val humanize: Float? = null,
 ) {
     init {
         require(sampleName.isNotBlank()) { "sampleName must not be blank" }
-        for ((name, v) in listOf("attack" to attack, "decay" to decay, "cutoff" to cutoff, "resonance" to resonance)) {
+        for ((name, v) in listOf(
+            "attack" to attack, "decay" to decay, "cutoff" to cutoff,
+            "resonance" to resonance, "humanize" to humanize,
+        )) {
             v?.let { require(it in 0f..1f) { "$name out of range: $it" } }
         }
         require(frameCount >= 0) { "frameCount must not be negative: $frameCount" }

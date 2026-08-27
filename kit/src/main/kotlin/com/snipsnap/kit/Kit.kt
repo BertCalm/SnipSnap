@@ -73,6 +73,12 @@ data class KitPad(
     val decay: Float? = null,
     val cutoff: Float? = null,
     val resonance: Float? = null,
+    /**
+     * Per-hit randomization 0..1 — subtle pitch/volume/pan variation the
+     * MPC 3 renders on every hit (no two alike). MPC 2 exports have no
+     * such fields and honestly ignore it.
+     */
+    val humanize: Float? = null,
 ) {
     init {
         require(slot in 1..128) { "slot out of range: $slot" }
@@ -89,7 +95,10 @@ data class KitPad(
         colorHex?.let {
             require(Regex("^#[0-9a-fA-F]{6}$").matches(it)) { "colorHex must be #rrggbb: $it" }
         }
-        for ((name, v) in listOf("attack" to attack, "decay" to decay, "cutoff" to cutoff, "resonance" to resonance)) {
+        for ((name, v) in listOf(
+            "attack" to attack, "decay" to decay, "cutoff" to cutoff,
+            "resonance" to resonance, "humanize" to humanize,
+        )) {
             v?.let { require(it in 0f..1f) { "$name out of range: $it" } }
         }
         if (velocityLayers.isNotEmpty()) {
@@ -197,6 +206,7 @@ data class Kit(
                 decay = p.decay,
                 cutoff = p.cutoff,
                 resonance = p.resonance,
+                humanize = p.humanize,
             )
         }
         return DrumProgram(name, slots.toList())

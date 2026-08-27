@@ -199,6 +199,17 @@ both native containers, and the preview approximates it so you can
 hear a tightened pad before the card. Bench row: decay 0.3 audibly
 shortens a pad on the Live III in both generations.
 
+`--humanize H` (0..1) is the round-robin probe's honest verdict made
+useful: neither generation has a layer-cycling field (the corpus was
+searched — `sliceIncrement` is the slice-step feature, not round
+robin), but the MPC 3 layer carries real per-hit randomization fields
+(`pitchRandom`/`VolumeRandom`/`PanRandom`, all zero on every
+commercial layer) — the format's own "no two hits alike" mechanism.
+Humanize scales them conservatively (pitch ×0.05, volume ×0.2, pan
+×0.1) and the hardware rolls the dice on every hit. MPC 2 exports
+have no such fields and honestly ignore it. Bench row: humanize 0.5
+on the Live III — audible variation at a sane amount.
+
 ### `wear <kit-dir>` — the kit as a living tape
 
 The product pretends to be a tape deck; this makes the metaphor real.

@@ -15,7 +15,7 @@ object ShapeCommand {
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(
             args,
-            valued = setOf("--attack", "--decay", "--cutoff", "--res"),
+            valued = setOf("--attack", "--decay", "--cutoff", "--res", "--humanize"),
             boolean = setOf("--reset"),
         )
         val dirArg = opts.positional.getOrNull(0)
@@ -34,12 +34,13 @@ object ShapeCommand {
         val decay = value("--decay")
         val cutoff = value("--cutoff")
         val resonance = value("--res")
+        val humanize = value("--humanize")
         val reset = opts.has("--reset")
-        if (reset && listOf(attack, decay, cutoff, resonance).any { it != null }) {
+        if (reset && listOf(attack, decay, cutoff, resonance, humanize).any { it != null }) {
             throw CliError("--reset stands alone - it clears the whole shape")
         }
-        if (!reset && listOf(attack, decay, cutoff, resonance).all { it == null }) {
-            throw CliError("say what to shape: --attack, --decay, --cutoff, --res (or --reset)")
+        if (!reset && listOf(attack, decay, cutoff, resonance, humanize).all { it == null }) {
+            throw CliError("say what to shape: --attack, --decay, --cutoff, --res, --humanize (or --reset)")
         }
 
         val slot = parsePad(padArg)
@@ -47,13 +48,14 @@ object ShapeCommand {
         model.pad(slot) ?: throw CliError("no pad on $padArg")
         val shaped = model.update(slot) { p ->
             if (reset) {
-                p.copy(attack = null, decay = null, cutoff = null, resonance = null)
+                p.copy(attack = null, decay = null, cutoff = null, resonance = null, humanize = null)
             } else {
                 p.copy(
                     attack = attack ?: p.attack,
                     decay = decay ?: p.decay,
                     cutoff = cutoff ?: p.cutoff,
                     resonance = resonance ?: p.resonance,
+                    humanize = humanize ?: p.humanize,
                 )
             }
         }
@@ -63,6 +65,7 @@ object ShapeCommand {
         val line = listOf(
             show("attack", shaped.attack), show("decay", shaped.decay),
             show("cutoff", shaped.cutoff), show("res", shaped.resonance),
+            show("humanize", shaped.humanize),
         ).filter { it.isNotEmpty() }
         if (line.isEmpty()) {
             out.println("$padArg: back to the format's own defaults - unshaped")
@@ -70,6 +73,9 @@ object ShapeCommand {
             out.println("$padArg: ${line.joinToString(", ")}")
         }
         out.println("  metadata only - the hardware renders it, the audio on disk is untouched")
+        if (shaped.humanize != null) {
+            out.println("  humanize is MPC 3 only: per-hit pitch/volume/pan variation; the MPC 2 generation has no such fields")
+        }
         out.println("  re-export to put the shape on the card; the preview approximates it now")
         return 0
     }

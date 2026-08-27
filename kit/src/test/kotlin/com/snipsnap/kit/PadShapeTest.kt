@@ -133,6 +133,48 @@ class PadShapeTest {
     }
 
     @Test
+    fun `humanize rides the MPC 3 random fields and the MPC 2 honestly ignores it`() {
+        // GG4 probe verdict, pinned: neither generation has a layer
+        // round-robin field, but the .xtd layer carries real per-hit
+        // randomization (all zero on every commercial layer) - that IS the
+        // format's "no two hits alike" mechanism. The .xpm has nothing.
+        val dir = File(temp, "hum")
+        val kit = buildKit(dir, shaped = false).let { k ->
+            k.copy(pads = k.pads.map { if (it.slot == 1) it.copy(humanize = 0.5f) else it })
+        }
+        KitStore.save(kit, dir)
+        assertEquals(kit, KitStore.load(dir), "humanize round-trips through kit.json")
+
+        val (slots, _) = KitExporter.buildSlots(kit, dir, File(temp, "hum-samples"))
+        // MPC 3: layer randoms scaled from the macro; empty layers stay zero.
+        val payload = Json.parse(
+            Mpc3TrackWriter().payloadText(com.snipsnap.xpm.DrumProgram(kit.name, slots)),
+        ) as JsonValue.Obj
+        val drum = findDrum(payload)
+        val inst = ((drum["instruments"] as JsonValue.Arr).items[0] as JsonValue.Obj).entries
+        val layers = (inst["layersv"] as JsonValue.Arr).items.map { (it as JsonValue.Obj).entries }
+        fun rand(l: Map<String, JsonValue>, k: String) = (l[k] as JsonValue.Num).value
+        assertTrue(abs(rand(layers[0], "VolumeRandom") - 0.1) < 1e-6, "volume random = h * 0.2")
+        assertTrue(abs(rand(layers[0], "pitchRandom") - 0.025) < 1e-6, "pitch random = h * 0.05")
+        assertTrue(abs(rand(layers[0], "PanRandom") - 0.05) < 1e-6, "pan random = h * 0.1")
+        assertTrue(rand(layers[1], "VolumeRandom") == 0.0, "empty layer slots keep the corpus's zeros")
+
+        // MPC 2: no such fields exist - the .xpm is identical with or without.
+        val xpmWith = com.snipsnap.xpm.XpmWriter().write(com.snipsnap.xpm.DrumProgram(kit.name, slots))
+        val plainSlots = slots.map { it?.copy(humanize = null) }
+        val xpmWithout = com.snipsnap.xpm.XpmWriter().write(com.snipsnap.xpm.DrumProgram(kit.name, plainSlots))
+        assertEquals(xpmWithout, xpmWith, "the MPC 2 generation honestly ignores humanize")
+
+        // And it comes back from the .xtd.
+        val card = File(temp, "hum-card")
+        Mpc3Exporter.exportTrack(kit, dir, card)
+        val xtd = card.walkTopDown().first { it.extension == "xtd" }
+        val back = Mpc3Importer.import(xtd, File(temp, "hum-in")).kit
+        assertTrue(abs(back.pad(1)!!.humanize!! - 0.5f) < 1e-4f, "humanize back from .xtd: ${back.pad(1)!!.humanize}")
+        assertEquals(null, back.pad(2)!!.humanize)
+    }
+
+    @Test
     fun `the preview approximates the shape - a tightened pad dies early`() {
         val dir = File(temp, "pv")
         buildKit(dir, shaped = false)
