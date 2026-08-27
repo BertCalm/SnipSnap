@@ -315,11 +315,22 @@ object ChopCommand {
                 // as the standard four variations, so exporting tomorrow
                 // still carries today's rhythm - four ways.
                 val variations = com.snipsnap.kit.GrooveVariations.standard(clip, swingPercent = swing)
+                    .toMutableList()
+                // A fifth pattern when the kit can roll one: the fill. It
+                // rides the .xpj's sequences; the .xtd keeps its four-slot
+                // budget with the original four.
+                val hasFill = try {
+                    variations += com.snipsnap.kit.GrooveVariations.fill(clip, kit)
+                    true
+                } catch (e: IllegalArgumentException) {
+                    false
+                }
                 com.snipsnap.kit.GrooveStore.save(kitDir, variations)
                 val second = if (swing != null) "swing $swing" else "tight"
                 out.println(
                     "groove: \"${clip.name}\" - ${clip.notes.size} notes over ${clip.bars} bar(s), " +
-                        "saved as ${variations.size} patterns (captured/$second/half/sparse)",
+                        "saved as ${variations.size} patterns (captured/$second/half/sparse" +
+                        (if (hasFill) "/fill" else "") + ")",
                 )
             }
         }
