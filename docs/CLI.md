@@ -233,6 +233,20 @@ land. **No `--style` renders every style side by side** — the
 prototyping loop is one command per look. The winning direction becomes
 the expansion/`.xpn` export default (Z6.3).
 
+### `jcard <kit-dir>` — every kit gets its cassette insert
+
+Everything a J-card needs is already tracked, so the kit renders its
+own: one fold-ready PNG in cassette proportions — **front** (the
+waveform in class colours, the name, key/tempo), **spine** (name, key,
+tempo, and the wear ledger's mileage on one strip — a new tape says
+so), **back** (the pad list with class chips, names and sources in up
+to two columns of sixteen, and the groove folded to a 16-step notation
+row, brightness riding velocity). Amber hairlines mark the folds.
+KitArt-family: same LCD surface, same pixel type, deterministic to the
+byte. `--width PX` scales it; expansion exports drop `J-Card.png`
+beside the artwork, and `pack` lands every kit's insert under
+`[J-Cards]/` — inside the `.xpn` twin too.
+
 ### `diff <a> <b>` — the corpus guard as a bench tool
 
 A structured key-path diff of two MPC files, **either generation** —

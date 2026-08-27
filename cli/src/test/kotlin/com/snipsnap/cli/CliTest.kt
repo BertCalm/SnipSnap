@@ -750,6 +750,42 @@ class CliTest {
     }
 
     @Test
+    fun `jcard renders the insert and rides expansions and packs`() {
+        val wav = writeBreak(File(temp, "jc.wav"))
+        val out = File(temp, "jc-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Card Kit", "--slices", "4").first)
+        val kitDir = File(out, "Card Kit")
+
+        val (code, stdout, stderr) = cli("jcard", kitDir.path, "--out", File(temp, "jc-card").path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "j-card")
+        val card = File(temp, "jc-card/Card Kit J-Card.png")
+        assertTrue(card.isFile, "the insert renders")
+        assertTrue(card.readBytes().also { first ->
+            assertEquals(0, cli("jcard", kitDir.path, "--out", File(temp, "jc-card").path).first)
+            assertTrue(card.readBytes().contentEquals(first), "deterministic card")
+        }.isNotEmpty())
+
+        // The expansion export drops the card beside the artwork.
+        assertEquals(
+            0,
+            cli("export", kitDir.path, "--export", "expansion", "--out", File(temp, "jc-exp").path).first,
+        )
+        val expansion = File(temp, "jc-exp/card/Expansions/Card Kit")
+        assertTrue(File(expansion, "J-Card.png").isFile, "the expansion carries the insert")
+
+        // And the pack builder gets per-kit cards for free.
+        assertEquals(
+            0,
+            cli("pack", kitDir.path, "--title", "Card Pack", "--out", File(temp, "jc-pack").path).first,
+        )
+        assertTrue(
+            File(temp, "jc-pack/card/Expansions/Card Pack/[J-Cards]/Card Kit.png").isFile,
+            "the pack carries every kit's insert",
+        )
+    }
+
+    @Test
     fun `treat crushes one pad from the terminal and undoes it`() {
         val wav = writeBreak(File(temp, "tr.wav"))
         val out = File(temp, "tr-out")

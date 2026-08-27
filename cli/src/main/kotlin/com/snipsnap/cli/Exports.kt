@@ -82,6 +82,11 @@ object Exports {
             )
             val extra = o.companion?.let { " (+ ${it.name}/)" } ?: ""
             out.println("  %-10s %s%s  (%s)".format(format.id, o.primary.path, extra, NOTES.getValue(format)))
+            if (format == ExportFormat.EXPANSION) {
+                // The expansion gets its cassette insert beside the artwork.
+                File(o.primary, "J-Card.png").writeBytes(com.snipsnap.shell.JCard.png(kit, kitDir))
+                out.println("             + J-Card.png (the kit's cassette insert)")
+            }
         }
     }
 }

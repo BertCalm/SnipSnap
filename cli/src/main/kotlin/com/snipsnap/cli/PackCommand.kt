@@ -52,6 +52,17 @@ object PackCommand {
             )
         }
 
+        // Every kit's cassette insert rides the pack under [J-Cards]/ —
+        // written through the builder so the .xpn twin carries them too.
+        val jcards = if (opts.has("--no-art")) {
+            emptyMap()
+        } else {
+            kitDirs.associate { dir ->
+                val kit = KitStore.load(dir)
+                "[J-Cards]/${kit.name}.png" to com.snipsnap.shell.JCard.png(kit, dir)
+            }
+        }
+
         val result = try {
             PackBuilder.build(
                 kitDirs, File(opts["--out"] ?: "snipsnap-out", "card"), meta,
@@ -59,6 +70,7 @@ object PackCommand {
                 withPreviews = !opts.has("--no-previews"),
                 asXpn = opts.has("--xpn"),
                 overwrite = opts.has("--overwrite"),
+                extraFiles = jcards,
             )
         } catch (e: java.io.IOException) {
             throw CliError(e.message ?: "pack refused")

@@ -38,6 +38,12 @@ object PackBuilder {
         withPreviews: Boolean = true,
         asXpn: Boolean = false,
         overwrite: Boolean = false,
+        /**
+         * Extra files to land inside the pack (relative path → bytes),
+         * written before the `.xpn` twin zips — how per-kit J-cards ride
+         * along without this module knowing how to draw one.
+         */
+        extraFiles: Map<String, ByteArray> = emptyMap(),
     ): Result {
         require(kitDirs.isNotEmpty()) { "a pack needs at least one kit" }
 
@@ -78,6 +84,14 @@ object PackBuilder {
             )
         }
 
+        for ((rel, bytes) in extraFiles) {
+            require(!rel.startsWith("/") && "\\" !in rel && ".." !in rel.split('/')) {
+                "extra file path must stay inside the pack: '$rel'"
+            }
+            val f = File(dest, rel)
+            f.parentFile.mkdirs()
+            f.writeBytes(bytes)
+        }
         artworkPng?.let { File(dest, meta.artworkFileName).writeBytes(it) }
         File(dest, ExpansionWriter.XML_NAME)
             .writeText(ExpansionWriter.renderXml(meta, artworkPng?.let { meta.artworkFileName }), Charsets.UTF_8)

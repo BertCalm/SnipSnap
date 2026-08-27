@@ -122,7 +122,7 @@ object KitArt {
 
     // ---- styles ------------------------------------------------------------
 
-    private data class Box(val x: Int, val y: Int, val w: Int, val h: Int)
+    internal data class Box(val x: Int, val y: Int, val w: Int, val h: Int)
 
     /** A pad's audio and looks, loaded once per render. */
     private data class Voice(val mono: FloatArray, val color: Color, val peak: Float)
@@ -141,7 +141,7 @@ object KitArt {
             Voice(mono, rgb(Schemes.classColor(pad.drumClass)), peak)
         }
 
-    private fun waveform(g: Graphics2D, box: Box, kit: Kit, kitDir: File) {
+    internal fun waveform(g: Graphics2D, box: Box, kit: Kit, kitDir: File) {
         val vs = voices(kit, kitDir)
         if (vs.isEmpty()) return
         val total = vs.sumOf { it.mono.size }

@@ -82,6 +82,10 @@ object Cli {
         |  diff <a> <b>          structured key-path diff of two MPC files,
         |                        either generation (--values lists differing
         |                        values; exit 1 when different)
+        |  jcard <kit-dir>       the kit's cassette insert: front, spine and
+        |                        back panels in one fold-ready PNG (art, pads
+        |                        with classes and sources, groove notation,
+        |                        key/tempo/mileage; --width PX, --out DIR)
         |  art <kit-dir>         procedural cover art from the kit itself
         |                        (--style waveform|grid|slices|rings, --scheme,
         |                        --seed N, --size PX, --out DIR; no --style
@@ -162,6 +166,7 @@ object Cli {
                 "restore" -> BackupCommand.restore(args.drop(1), out)
                 "diff" -> DiffCommand.run(args.drop(1), out)
                 "art" -> ArtCommand.run(args.drop(1), out)
+                "jcard" -> JCardCommand.run(args.drop(1), out)
                 "help", "--help", "-h" -> {
                     out.println(USAGE)
                     0

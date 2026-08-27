@@ -671,8 +671,8 @@ treatment.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| EE2.1 | `Eras` (`:synth`) — named era chains built from exact primitives: `sp1200` (12-bit truncation at 26.04 kHz with the aliasing that implies), `mpc60` (12-bit non-linear companding, its input filter), `tape` (saturation + wow + HF loss), `phone` (band-limit + companding). Each a deterministic Snip→Snip with an `amount`; recipes recorded | CORE | M | each era measurably does its math (bit depth, rate, spectrum); deterministic; recipe round-trips |
-| EE2.2 | Wire — CLI `era <kit-dir> <era> [--amount] [--pads]` (bin-backed undo like `treat`); preview/mixdown render through it; era rides the kit as metadata | CORE | S | era → audibly/measurably different kit; undo restores byte-identical originals |
+| EE2.1 | ✓ done: `Eras` (`:synth`) — named era chains built from exact primitives: `sp1200` (12-bit truncation at 26.04 kHz with the aliasing that implies), `mpc60` (12-bit non-linear companding, its input filter), `tape` (saturation + wow + HF loss), `phone` (band-limit + companding). Each a deterministic Snip→Snip with an `amount`; recipes recorded | CORE | M | each era measurably does its math (bit depth, rate, spectrum); deterministic; recipe round-trips |
+| EE2.2 | ✓ done (era ages the *files*, bin-backed, so every render and export carries it): Wire — CLI `era <kit-dir> <era> [--amount] [--pads]` (bin-backed undo like `treat`); preview/mixdown render through it; era rides the kit as metadata | CORE | S | era → audibly/measurably different kit; undo restores byte-identical originals |
 
 ## EE1 — Tape wear: the kit as a living tape
 
@@ -693,9 +693,9 @@ capped — FULL personality may comment).
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| EE1.1 | `TapeWear` (`:synth`) — the wear chain (flutter via slow resample wobble, hiss, HF shelf, protected-dropout logic) parameterised by `w`, deterministic per (kit, mileage); the caps as constants with tests | CORE | M | w=1 renders inside every cap; downbeat protection holds; deterministic; w=0 is bit-identical passthrough |
-| EE1.2 | Wear ledger — `wear` block in `kit.json` (mileage, enabled, K); accrual hooks in `KitBuilderModel` (play/save) and CLI; `w` derived, never stored | CORE | S | ledger round-trips; accrual saturates on the curve; wiping it restores the new-tape sound |
-| EE1.3 | Wire — preview, mixdown and audio exports render through the kit's wear when enabled; `--no-wear` bypass; a worn kit passes preflight + CC6 across every format | CORE | S | worn preview ≠ pristine preview; every export gate stays green |
+| EE1.1 | ✓ done: `TapeWear` (`:synth`) — the wear chain (flutter via slow resample wobble, hiss, HF shelf, protected-dropout logic) parameterised by `w`, deterministic per (kit, mileage); the caps as constants with tests | CORE | M | w=1 renders inside every cap; downbeat protection holds; deterministic; w=0 is bit-identical passthrough |
+| EE1.2 | ✓ done: Wear ledger — `wear` block in `kit.json` (mileage, enabled, K); accrual hooks in `KitBuilderModel` (play/save) and CLI; `w` derived, never stored | CORE | S | ledger round-trips; accrual saturates on the curve; wiping it restores the new-tape sound |
+| EE1.3 | ✓ done (previews wear as one tape pass; exports stage a worn twin; project brings each kit in worn per its own ledger, mixdown included): Wire — preview, mixdown and audio exports render through the kit's wear when enabled; `--no-wear` bypass; a worn kit passes preflight + CC6 across every format | CORE | S | worn preview ≠ pristine preview; every export gate stays green |
 
 ## EE3 — The Answer: chop a break, get the B-side
 
@@ -707,8 +707,8 @@ landed as a keys track + its groove in the session.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| EE3.1 | `Answer` (`:synth`) — counter-pattern derivation (notes in the groove's gaps, root-and-fifth weighted toward the key, donor feel applied), rendered through an S5 bass patch to a keygroup instrument + clip; seeded, rerollable | CORE | M | answer notes avoid the kit's strong hits, sit in the detected key, follow the feel; same seed same answer |
-| EE3.2 | CLI `answer <kit-dir> [--seed]` — builds the instrument + groove and (with `project`) lands both in one session | CORE | S | chop a tonal break → answer → one .xpj where the break plays with a bassline that fits |
+| EE3.1 | ✓ done (landed in `:shell`, the compose-everything layer — `:synth` would have needed new main-source deps on `:mpc3`/`:xpm` for no gain): `Answer` (`:synth`) — counter-pattern derivation (notes in the groove's gaps, root-and-fifth weighted toward the key, donor feel applied), rendered through an S5 bass patch to a keygroup instrument + clip; seeded, rerollable | CORE | M | answer notes avoid the kit's strong hits, sit in the detected key, follow the feel; same seed same answer |
+| EE3.2 | ✓ done (keys tracks gained `clips` in the project writer — same name-keyed trackClipMaps idiom as drum tracks; bench row: hear a keys clip play on the Live III): CLI `answer <kit-dir> [--seed]` — builds the instrument + groove and (with `project`) lands both in one session | CORE | S | chop a tonal break → answer → one .xpj where the break plays with a bassline that fits |
 
 ## EE4 — SIDE A: the beat tape
 
@@ -720,8 +720,8 @@ label, and the whole thing as an `.xpj`.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| EE4.1 | `BeatTape` (`:kit`) — arrangement (bars per kit, pattern rotation), transition DSP (tape-stop ramp, pull-up), continuous mixdown; deterministic | CORE | M | N kits → one WAV with audible, sample-accurate transitions at the right bars; deterministic |
-| EE4.2 | CLI `sidea <kit-dir>... --title [--bars]` — WAV + tracklist.txt + cover (KitArt spine variant) + session `.xpj` in one folder | CORE | S | one command → a postable beat tape folder |
+| EE4.1 | ✓ done: `BeatTape` (`:kit`) — arrangement (bars per kit, pattern rotation), transition DSP (tape-stop ramp, pull-up), continuous mixdown; deterministic | CORE | M | N kits → one WAV with audible, sample-accurate transitions at the right bars; deterministic |
+| EE4.2 | ✓ done: CLI `sidea <kit-dir>... --title [--bars]` — WAV + tracklist.txt + cover (KitArt spine variant) + session `.xpj` in one folder | CORE | S | one command → a postable beat tape folder |
 
 ## EE5 — The J-card: every kit gets its cassette insert
 
@@ -732,8 +732,8 @@ the tape's history.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| EE5.1 | `JCard` (`:shell`) — a KitArt-family renderer producing the fold-ready card PNG (front/spine/back panels): art, name, pad list with classes and sources, groove notation in PixelType, key/tempo/mileage | CORE | S–M | deterministic card for the factory kit; every starter kit renders; long names and 32-pad kits fit |
-| EE5.2 | CLI `jcard <kit-dir> [--out]`; expansion export drops the card beside the artwork | CORE | S | one command → the kit's insert; the pack builder gets pack cards for free |
+| EE5.1 | ✓ done: `JCard` (`:shell`) — a KitArt-family renderer producing the fold-ready card PNG (front/spine/back panels): art, name, pad list with classes and sources, groove notation in PixelType, key/tempo/mileage | CORE | S–M | deterministic card for the factory kit; every starter kit renders; long names and 32-pad kits fit |
+| EE5.2 | ✓ done (`pack` lands per-kit cards under `[J-Cards]/`, `.xpn` twin included): CLI `jcard <kit-dir> [--out]`; expansion export drops the card beside the artwork | CORE | S | one command → the kit's insert; the pack builder gets pack cards for free |
 
 **Below the line (wave FF candidates):** generative autoplay
 environments (app-side by nature); sample-archaeology annotated
@@ -767,10 +767,13 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
 
-CORE wave EE (iconic, in order — eras first, they hand wear its
-  saturation/filter primitives):
-  EE2 Time Machine eras → EE1 tape wear (capped patina) →
-  EE3 the Answer → EE4 SIDE A beat tape → EE5 J-card
+CORE wave EE: ✓ all landed (2026-08-27) — the Time Machine eras,
+  tape wear (the ledger, the capped patina chain, the render-time
+  wire-through), the Answer (counter-pattern bassline in the key, in
+  the gaps, with the feel), SIDE A (the beat tape with tape-stop and
+  pull-up transitions), and the J-card. 737 tests. Bench rows for the
+  Live III: a keys clip playing from a sequence (EE3), a worn export
+  A/B'd against a pristine one (EE1), an era'd kit (EE2).
 
 CORE wave DD: ✓ all landed (2026-08-26) — robust .xpm DOM parse
   (fixed a real silent pad-drop + numeric entities), JSON parser
