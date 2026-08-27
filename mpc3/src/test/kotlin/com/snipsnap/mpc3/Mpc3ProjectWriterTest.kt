@@ -98,6 +98,31 @@ class Mpc3ProjectWriterTest {
     }
 
     @Test
+    fun `a keys track carries its clip into the sequence like any other track`() {
+        // The clip map is keyed by track name and byte-shaped identically
+        // for every track kind - a keygroup track's bassline rides the same
+        // idiom as a drum track's groove.
+        val bassline = Mpc3Clip(
+            "Answer", 2,
+            listOf(Mpc3Note(45, 2 * Mpc3Clip.PULSES_PER_16TH, 0.8f), Mpc3Note(52, 10 * Mpc3Clip.PULSES_PER_16TH, 0.7f)),
+        )
+        val withKeysClip = listOf(
+            tracks()[0],
+            (tracks()[1] as Mpc3ProjectTrack.Keys).copy(clips = listOf(bassline)),
+        )
+        val root = Json.parse(writer.payloadText("S", withKeysClip, tempoBpm = 92f)) as JsonValue.Obj
+        val d = (root.entries["data"] as JsonValue.Obj).entries
+        val v = ((d["sequences"] as JsonValue.Arr).items.map { (it as JsonValue.Obj).entries }
+            .single()["value"] as JsonValue.Obj).entries
+        val row = ((v["trackClipMaps"] as JsonValue.Arr).items[0] as JsonValue.Arr).items
+            .map { (it as JsonValue.Obj).entries }
+        val keysEvents = ((((row.first { it["key"]!!.str() == "Session Keys" }["value"] as JsonValue.Obj)
+            .entries["eventList"]) as JsonValue.Obj).entries["events"] as JsonValue.Arr).items
+        assertEquals(2, keysEvents.size, "the bassline's notes ride the keys track's clip")
+        assertTrue(Mpc3Project.read(writer.write("S", withKeysClip)).isProject, "the reader still accepts it")
+    }
+
+    @Test
     fun `several clips become several keyed sequences, hardware-switchable`() {
         val variations = listOf(
             clip(),

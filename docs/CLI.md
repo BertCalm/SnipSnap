@@ -97,6 +97,21 @@ Bank B becomes seeded FX re-treatments of bank A — reversed, crushed,
 slapback, washed, punched — one twin per pad, colour and choke group kept
 so the hats still cut each other in bank B. Reroll with `--seed N`.
 
+### `answer <kit-dir>` — chop a break, get the B-side
+
+The kit already knows its key (KeyGuess), its groove, its feel; this
+derives the complement: an S5 bassline (the Velvet BASS engine tuned to
+the key's root) playing a **counter-pattern in the groove's gaps** — the
+pocket inverted. Three rules: never on a strong hit (a 16th carrying
+≥60% of the groove's peak velocity is the kit's statement), in the key
+(scale degrees off the root in the bass register, weighted hard toward
+root and fifth), and following the feel (the donor's timing/accent
+template, its lean generalised by 16th parity into the gaps it never
+played). Deterministic per `--seed`, rerollable. The result persists
+beside the kit (`answer.json` + the rendered bass note) and `project`
+lands it automatically: a keys track playing its clip, in the same
+`.xpj` as the break — the magic-moment demo in two commands.
+
 ### `feel <kit-dir> --from <donor>` — steal the feel, not the notes
 
 Groove transfer, the MPC's own legendary feature. The donor — another

@@ -51,6 +51,10 @@ object Cli {
         |                        the Time Machine: the kit through sp1200,
         |                        mpc60, tape, or phone - the specific math of
         |                        the machine (--amount, --pads, --undo)
+        |  answer <kit-dir>      the B-side: an S5 bassline in the kit's key,
+        |                        playing the gaps of its groove with its feel
+        |                        (--seed N rerolls; project lands it as a
+        |                        keys track playing its clip)
         |  feel <kit-dir> --from <donor>
         |                        groove transfer: the donor's timing-and-velocity
         |                        pocket (a kit's groove or any .mid) rewrites
@@ -145,6 +149,7 @@ object Cli {
                 "feel" -> FeelCommand.run(args.drop(1), out)
                 "era" -> EraCommand.run(args.drop(1), out)
                 "wear" -> WearCommand.run(args.drop(1), out)
+                "answer" -> AnswerCommand.run(args.drop(1), out)
                 "project" -> ProjectCommand.run(args.drop(1), out)
                 "pack" -> PackCommand.run(args.drop(1), out)
                 "backup" -> BackupCommand.backup(args.drop(1), out)

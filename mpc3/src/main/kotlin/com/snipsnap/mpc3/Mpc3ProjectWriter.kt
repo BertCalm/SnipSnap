@@ -25,6 +25,13 @@ sealed interface Mpc3ProjectTrack {
     data class Keys(
         val program: KeygroupProgram,
         val colour: Int = Mpc3TrackWriter.DEFAULT_TRACK_COLOUR,
+        /**
+         * Pitched grooves, one per project sequence — same idiom as a drum
+         * track's: sequence k plays this track's k-th clip. The clip map in
+         * a sequence is keyed by track name and byte-shaped identically for
+         * every track kind, so a keygroup track carries notes the same way.
+         */
+        val clips: List<Mpc3Clip> = emptyList(),
     ) : Mpc3ProjectTrack
 }
 
@@ -112,12 +119,16 @@ class Mpc3ProjectWriter(
             },
         )
 
-        // Drum clips become the project sequences — sequence k holds every
+        // Clips become the project sequences — sequence k holds every
         // track's k-th groove, notes in trackClipMaps keyed by track name,
         // where DD1 keeps its own. `sequences` is the corpus's keyed list
         // (key 0.., `currentSequence` picks by key), scaled past one entry.
-        val clipLists = tracks.filterIsInstance<Mpc3ProjectTrack.Drum>()
-            .map { it.program.name to it.effectiveClips }
+        val clipLists = tracks.map {
+            when (it) {
+                is Mpc3ProjectTrack.Drum -> it.program.name to it.effectiveClips
+                is Mpc3ProjectTrack.Keys -> it.program.name to it.clips
+            }
+        }
         val seqCount = (clipLists.maxOfOrNull { it.second.size } ?: 0).coerceAtLeast(1)
         require(seqCount <= MAX_SEQUENCES) {
             "a project carries at most $MAX_SEQUENCES sequences, got $seqCount"

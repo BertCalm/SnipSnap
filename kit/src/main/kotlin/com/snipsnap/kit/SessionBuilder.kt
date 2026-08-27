@@ -32,6 +32,8 @@ object SessionBuilder {
         val kitTracks: List<String>,
         val instrumentTracks: List<String>,
         val tempoBpm: Float?,
+        /** Answer basslines that joined the session, one track name per kit that had one. */
+        val answerTracks: List<String> = emptyList(),
     )
 
     fun build(
@@ -73,6 +75,23 @@ object SessionBuilder {
             if (tempo == null) tempo = kit.tempoBpm
         }
 
+        // A kit that has an answer brings it along: the stored bass note
+        // rebuilds its keygroup program deterministically via OneNote, and
+        // the bassline clip rides the keys track into the sequences.
+        val answerTracks = mutableListOf<String>()
+        for (kitDir in kitDirs) {
+            val answer = AnswerStore.load(kitDir) ?: continue
+            val wav = File(kitDir, answer.sampleFile)
+            if (!wav.isFile) {
+                throw IOException("answer.json in $kitDir points at a missing sample: ${answer.sampleFile}")
+            }
+            val one = OneNote.program(answer.name, com.snipsnap.audio.WavReader.read(wav))
+            val dest = File(dataDir, "${one.sampleStem}.wav")
+            if (!dest.exists()) WavWriter.write(dest, one.sample)
+            tracks += Mpc3ProjectTrack.Keys(one.program, clips = listOf(answer.clip))
+            answerTracks += answer.name
+        }
+
         val instrumentTracks = mutableListOf<String>()
         for ((program, samples) in instruments) {
             for ((stem, snip) in samples) {
@@ -91,6 +110,6 @@ object SessionBuilder {
         val writer = Mpc3ProjectWriter()
         val file = tempo?.let { writer.writeTo(destRoot, name, tracks, it) }
             ?: writer.writeTo(destRoot, name, tracks)
-        return Result(file, dataDir, kitTracks, instrumentTracks, tempo)
+        return Result(file, dataDir, kitTracks, instrumentTracks, tempo, answerTracks)
     }
 }

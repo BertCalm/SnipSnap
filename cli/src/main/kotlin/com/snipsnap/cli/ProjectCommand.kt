@@ -82,6 +82,7 @@ object ProjectCommand {
             out.println("session: ${result.xpj.path} (+ ${result.dataDir.name}/)")
             result.kitTracks.forEach { out.println("  kit track:        $it") }
             result.instrumentTracks.forEach { out.println("  instrument track: $it") }
+            result.answerTracks.forEach { out.println("  answer track:     $it (the B-side, playing its clip)") }
             result.tempoBpm?.let { out.println("  tempo: ${it.toInt()} bpm (from the first kit that remembered one)") }
             if (wornCount > 0) {
                 out.println("  wear: $wornCount kit(s) arrive worn, per their ledgers (--no-wear for the pristine session)")

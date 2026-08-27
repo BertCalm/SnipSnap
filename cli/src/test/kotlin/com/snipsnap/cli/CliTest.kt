@@ -680,6 +680,42 @@ class CliTest {
     }
 
     @Test
+    fun `answer derives the B-side and project lands it as a keys track`() {
+        val wav = writeBreak(File(temp, "an.wav"))
+        val out = File(temp, "an-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "AnswerCli", "--slices", "4", "--key", "Am").first)
+        val kitDir = File(out, "AnswerCli")
+
+        val (code, stdout, stderr) = cli("answer", kitDir.path, "--seed", "5")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "A minor")
+        assertTrue(File(kitDir, "answer.json").isFile, "the answer persists beside the kit")
+        val answer = com.snipsnap.kit.AnswerStore.load(kitDir)!!
+        assertTrue(File(kitDir, answer.sampleFile).isFile, "the rendered bass note lands in the kit folder")
+        assertTrue(answer.clip.notes.isNotEmpty())
+
+        // Same seed, same answer - byte-stable on disk.
+        val first = File(kitDir, "answer.json").readBytes()
+        assertEquals(0, cli("answer", kitDir.path, "--seed", "5").first)
+        assertTrue(File(kitDir, "answer.json").readBytes().contentEquals(first), "same seed reproduces the file")
+        assertEquals(0, cli("answer", kitDir.path, "--seed", "6").first)
+        assertTrue(!File(kitDir, "answer.json").readBytes().contentEquals(first), "a new seed rerolls")
+
+        // One session: the break's kit track plus the answer's keys track.
+        val (pCode, pOut, pErr) = cli("project", kitDir.path, "--name", "Answer Session", "--out", File(temp, "an-proj").path)
+        assertEquals(0, pCode, "stderr: $pErr")
+        assertContains(pOut, "answer track")
+        assertTrue(File(temp, "an-proj/card/Answer Session.xpj").isFile)
+
+        // No key, no answer - an honest refusal, not a guess.
+        val out2 = File(temp, "an-out2")
+        assertEquals(0, cli("chop", wav.path, "--out", out2.path, "--name", "KeylessCli", "--slices", "4").first)
+        val (badCode, _, badErr) = cli("answer", File(out2, "KeylessCli").path)
+        assertEquals(2, badCode)
+        assertContains(badErr, "key")
+    }
+
+    @Test
     fun `treat crushes one pad from the terminal and undoes it`() {
         val wav = writeBreak(File(temp, "tr.wav"))
         val out = File(temp, "tr-out")
