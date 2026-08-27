@@ -270,6 +270,22 @@ land. **No `--style` renders every style side by side** — the
 prototyping loop is one command per look. The winning direction becomes
 the expansion/`.xpn` export default (Z6.3).
 
+### `doctor <kit-dir>` — the mix doctor
+
+Preflight's musical sibling: it checks the **sound**, not the format.
+Every finding is a measurement with pad names and numbers: two
+sustained sub-heavy pads fighting for the low end, open and closed
+hats outside one mute group, a pile of bright pads where brightness
+isn't the pad's job (hats, snares, claps and percussion never count —
+top end *is* their trade), a pad ≥4× the kit's median loudness, DC
+offset the speaker pays for. `--fix` applies only the safe subset:
+the sub carve hands the low end to its rightful owner (a real
+high-pass on the less-committed pad — a shelf can't un-sub a sub),
+the level trim lands a screamer just above the median, hats get one
+mute group, DC gets removed — audio edits bin-backed with recipes,
+the rest metadata-only. Taste stays advice. Exit 0 healthy, 1 while
+findings remain, so it scripts like a check.
+
 ### `jcard <kit-dir>` — every kit gets its cassette insert
 
 Everything a J-card needs is already tracked, so the kit renders its

@@ -246,6 +246,29 @@ class KitBuilderModel private constructor(
     }
 
     /**
+     * Rewrite one pad's audio through [transform], bin-backed like every
+     * treatment — the mix doctor's fixes and future processors all use
+     * this one door. Layered pads are refused: a transform tuned on the
+     * loud zone would lie on the soft ones.
+     */
+    fun replaceAudio(
+        slot: Int,
+        recipe: com.snipsnap.json.JsonValue.Obj?,
+        transform: (Snip) -> Snip,
+    ): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.velocityLayers.isEmpty()) {
+            "pad $slot is velocity-layered - clear the layers before rewriting its audio"
+        }
+        val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        val processed = transform(original)
+        require(processed.frameCount > 0) { "a rewrite must leave audio behind" }
+        moveToBin(pad.sampleFile)
+        WavWriter.write(File(kitDir, pad.sampleFile), processed)
+        return update(slot) { it.copy(recipe = recipe ?: it.recipe) }
+    }
+
+    /**
      * Age one pad through a Time Machine era — every file it references
      * (velocity layers included, unlike single-sample treatments: an era is
      * whole-kit character, so a layered snare ages in all its zones).

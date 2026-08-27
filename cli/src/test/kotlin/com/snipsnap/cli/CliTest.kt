@@ -919,6 +919,47 @@ class CliTest {
     }
 
     @Test
+    fun `doctor names what is wrong with the sound and --fix cures the safe subset`() {
+        // A deliberately sick kit, built through the same model the app uses.
+        val kitDir = File(temp, "SickCli")
+        val m = com.snipsnap.shell.KitBuilderModel.create("SickCli", kitDir)
+        val rate = 44_100
+        fun boomy(hz: Double, seconds: Float, seed: Int): Snip {
+            val rnd = kotlin.random.Random(seed)
+            return Snip(
+                FloatArray((seconds * rate).toInt()) { i ->
+                    (0.5 * Math.sin(2.0 * Math.PI * hz * i / rate)).toFloat() + (rnd.nextFloat() * 2 - 1) * 0.01f
+                },
+                1, rate,
+            )
+        }
+        m.assign(1, boomy(60.0, 0.8f, 1), DrumClass.LOOP)
+        m.assign(2, boomy(55.0, 0.9f, 2), DrumClass.LOOP)
+        m.assign(3, DrumSynth.closedHat(), DrumClass.HAT_CLOSED)
+        m.assign(4, DrumSynth.openHat(), DrumClass.HAT_OPEN)
+        m.update(3) { it.copy(muteGroup = 0) }
+        m.update(4) { it.copy(muteGroup = 0) }
+        m.save()
+
+        val (code, stdout, stderr) = cli("doctor", kitDir.path)
+        assertEquals(1, code, "a sick kit exits 1 so it scripts like a check; stderr: $stderr")
+        assertContains(stdout, "fight for the sub")
+        assertContains(stdout, "mute group")
+
+        val (fixCode, fixOut, _) = cli("doctor", kitDir.path, "--fix")
+        assertContains(fixOut, "fixed:")
+        val (again, againOut, _) = cli("doctor", kitDir.path)
+        assertEquals(fixCode, again, "the fix run and the follow-up check agree")
+        assertTrue("[fixable]" !in againOut, "nothing fixable remains, advice may: $againOut")
+
+        // A healthy kit is healthy on the first visit.
+        val wav = writeBreak(File(temp, "dr.wav"))
+        assertEquals(0, cli("chop", wav.path, "--out", File(temp, "dr-out").path, "--name", "DrKit", "--slices", "4").first)
+        val (hCode, hOut, _) = cli("doctor", File(temp, "dr-out/DrKit").path)
+        assertEquals(0, hCode, "a chopped break is healthy: $hOut")
+    }
+
+    @Test
     fun `treat crushes one pad from the terminal and undoes it`() {
         val wav = writeBreak(File(temp, "tr.wav"))
         val out = File(temp, "tr-out")

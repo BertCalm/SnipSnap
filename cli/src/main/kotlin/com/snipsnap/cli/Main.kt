@@ -88,6 +88,11 @@ object Cli {
         |                        per-kit previews included)
         |  backup <kits-root>    every kit as an .xpn inside one archive
         |  restore <backup.zip>  the archive back into kit folders
+        |  doctor <kit-dir>      the mix doctor: measured findings about the
+        |                        SOUND (sub masking, clashing hats, level
+        |                        outliers, DC) - --fix applies the safe
+        |                        subset, bin-backed; exit 1 while findings
+        |                        remain, so it scripts like a check
         |  diff <a> <b>          structured key-path diff of two MPC files,
         |                        either generation (--values lists differing
         |                        values; exit 1 when different)
@@ -176,6 +181,7 @@ object Cli {
                 "backup" -> BackupCommand.backup(args.drop(1), out)
                 "restore" -> BackupCommand.restore(args.drop(1), out)
                 "diff" -> DiffCommand.run(args.drop(1), out)
+                "doctor" -> DoctorCommand.run(args.drop(1), out)
                 "art" -> ArtCommand.run(args.drop(1), out)
                 "jcard" -> JCardCommand.run(args.drop(1), out)
                 "help", "--help", "-h" -> {
