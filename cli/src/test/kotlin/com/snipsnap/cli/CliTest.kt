@@ -716,6 +716,40 @@ class CliTest {
     }
 
     @Test
+    fun `sidea presses two kits into one postable beat tape folder`() {
+        val wav = writeBreak(File(temp, "sa.wav"))
+        val out = File(temp, "sa-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Tape Kit A", "--slices", "4").first)
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Tape Kit B", "--slices", "8").first)
+
+        val (code, stdout, stderr) = cli(
+            "sidea", File(out, "Tape Kit A").path, File(out, "Tape Kit B").path,
+            "--title", "Night Drive", "--bars", "2", "--out", File(temp, "sa-tape").path,
+        )
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "tape stop")
+
+        val tapeDir = File(temp, "sa-tape/Night Drive")
+        assertTrue(File(tapeDir, "Night Drive.wav").isFile, "the continuous tape")
+        assertTrue(File(tapeDir, "cover.png").isFile, "the labelled cover")
+        assertTrue(File(tapeDir, "Night Drive.xpj").isFile, "the session rides along")
+        val tracklist = File(tapeDir, "tracklist.txt").readText()
+        assertContains(tracklist, "Tape Kit A")
+        assertContains(tracklist, "Tape Kit B")
+        assertContains(tracklist, "0:00")
+
+        // Refusals: a title is required, and existing output needs --overwrite.
+        assertEquals(2, cli("sidea", File(out, "Tape Kit A").path).first)
+        assertEquals(
+            2,
+            cli(
+                "sidea", File(out, "Tape Kit A").path, "--title", "Night Drive",
+                "--out", File(temp, "sa-tape").path,
+            ).first,
+        )
+    }
+
+    @Test
     fun `treat crushes one pad from the terminal and undoes it`() {
         val wav = writeBreak(File(temp, "tr.wav"))
         val out = File(temp, "tr-out")

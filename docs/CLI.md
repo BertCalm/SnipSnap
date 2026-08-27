@@ -187,6 +187,20 @@ k-th pattern), mixer wired, samples pooled per-kit-prefixed in
 kit playing its groove, summed and peak-limited — as `<Name>.wav`
 beside the `.xpj`: the beat as a file you can send anywhere.
 
+### `sidea <kit-dir>... --title NAME` — the beat tape
+
+The output stops being kits and becomes a finished artifact. Each kit
+plays its patterns for a few bars (`--bars`, default 8), rotating
+through its stored grooves exactly where the hardware's sequence
+switcher would flip them, chained with the two transitions every beat
+tape knows: the **tape stop** (a repitch ramp to zero — the reel
+dragging to silence, in place, so the next track starts exactly where
+this one would have ended) and the **pull-up** (the spinback: the last
+moments rewound fast, pitch rising, falling away before the next beat
+drops). One folder comes out: the continuous WAV, `tracklist.txt` with
+sample-accurate timestamps, a cover wearing the tape's title, and the
+whole session as an `.xpj`. Deterministic end to end.
+
 ### `pack <kit-dir>... --title NAME` — N kits, one expansion
 
 The commercial-pack shape: a catalog of programs under one tile.

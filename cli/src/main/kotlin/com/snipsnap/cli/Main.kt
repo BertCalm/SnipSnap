@@ -65,6 +65,11 @@ object Cli {
         |                        tape - plays and saves accrue mileage and its
         |                        renders age, capped patina-style (--on [--k N],
         |                        --off, --reset, --plays N; audio never touched)
+        |  sidea <kit-dir>... --title NAME
+        |                        the beat tape: N kits, a few bars each,
+        |                        tape-stop and pull-up transitions -> one
+        |                        folder with the WAV, tracklist.txt, cover,
+        |                        and the session .xpj ([--bars N] per kit)
         |  project <kit-dir>...  whole session -> one .xpj (kits + grooves +
         |                        optional --keys instrument, mixer wired;
         |                        --mixdown also renders the session as one WAV)
@@ -150,6 +155,7 @@ object Cli {
                 "era" -> EraCommand.run(args.drop(1), out)
                 "wear" -> WearCommand.run(args.drop(1), out)
                 "answer" -> AnswerCommand.run(args.drop(1), out)
+                "sidea" -> SideACommand.run(args.drop(1), out)
                 "project" -> ProjectCommand.run(args.drop(1), out)
                 "pack" -> PackCommand.run(args.drop(1), out)
                 "backup" -> BackupCommand.backup(args.drop(1), out)
