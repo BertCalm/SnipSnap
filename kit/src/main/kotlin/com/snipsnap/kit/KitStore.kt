@@ -96,12 +96,25 @@ object KitStore {
                     p.resonance?.let { entries["resonance"] = JsonValue.Num(it.toDouble()) }
                     p.humanize?.let { entries["humanize"] = JsonValue.Num(it.toDouble()) }
                     p.chain?.let { c ->
-                        entries["chain"] = JsonValue.Obj(
-                            linkedMapOf(
-                                "cycle" to JsonValue.Num(c.cycle.toDouble()),
-                                "boundaries" to JsonValue.Arr(c.boundaries.map { JsonValue.Num(it.toDouble()) }),
-                            ),
+                        val chain = linkedMapOf<String, JsonValue>(
+                            "cycle" to JsonValue.Num(c.cycle.toDouble()),
+                            "boundaries" to JsonValue.Arr(c.boundaries.map { JsonValue.Num(it.toDouble()) }),
                         )
+                        c.zones?.let { zs ->
+                            chain["zones"] = JsonValue.Arr(
+                                zs.map { z ->
+                                    JsonValue.Obj(
+                                        linkedMapOf(
+                                            "velStart" to JsonValue.Num(z.velStart.toDouble()),
+                                            "velEnd" to JsonValue.Num(z.velEnd.toDouble()),
+                                            "baseSlice" to JsonValue.Num(z.baseSlice.toDouble()),
+                                            "cycle" to JsonValue.Num(z.cycle.toDouble()),
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+                        entries["chain"] = JsonValue.Obj(chain)
                     }
                     if (p.source.isNotEmpty()) {
                         entries["source"] = JsonValue.Obj(
@@ -167,6 +180,15 @@ object KitStore {
                         boundaries = ((c.entries["boundaries"] as? JsonValue.Arr)?.items.orEmpty())
                             .map { (it as JsonValue.Num).value.toLong() },
                         cycle = c.entries["cycle"]?.int() ?: 2,
+                        zones = (c.entries["zones"] as? JsonValue.Arr)?.items?.map { zoneJson ->
+                            val z = zoneJson.obj()
+                            ChainZone(
+                                velStart = z["velStart"]?.int() ?: throw JsonException("zone has no velStart"),
+                                velEnd = z["velEnd"]?.int() ?: throw JsonException("zone has no velEnd"),
+                                baseSlice = z["baseSlice"]?.int() ?: throw JsonException("zone has no baseSlice"),
+                                cycle = z["cycle"]?.int() ?: throw JsonException("zone has no cycle"),
+                            )
+                        },
                     )
                 },
                 level = p["level"]?.num()?.toFloat() ?: 0.707946f,

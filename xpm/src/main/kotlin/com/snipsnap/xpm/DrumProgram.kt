@@ -34,22 +34,64 @@ data class VelocityLayer(
 }
 
 /**
+ * One velocity zone of a chain grid, frame windows already resolved:
+ * which velocities anchor at which slice, and the anchor take's own
+ * frame window ([windowStart]..[windowEnd]) for writers that speak in
+ * frames rather than slice indices (the MPC 2 layer, `sliceInfo`).
+ */
+data class ChainZonePlay(
+    val velStart: Int,
+    val velEnd: Int,
+    val baseSlice: Int,
+    val cycle: Int,
+    val windowStart: Long,
+    val windowEnd: Long,
+) {
+    init {
+        require(velStart in 0..127 && velEnd in 0..127 && velStart <= velEnd) {
+            "bad velocity window $velStart..$velEnd"
+        }
+        require(baseSlice >= 0) { "baseSlice must not be negative: $baseSlice" }
+        require(cycle >= 1) { "a zone cycles at least 1 take, got $cycle" }
+        require(windowStart in 0 until windowEnd) { "bad frame window $windowStart..$windowEnd" }
+    }
+}
+
+/**
  * Chain playback for a pad (MPC 3 "Slice Motion"): the pad's sample is a
  * chain of takes, and each hit steps to the next slice. Decoded from the
  * corpus's PSK kit — per-layer `sliceIndex` with `sliceIncrement 1` and
  * `sliceCycleLength` = takes cycled. The MPC 2 generation has no Slice
  * Motion; its export windows the layer to slice 0 ([firstSliceEnd]) so
  * the pad plays take one instead of the whole chain.
+ *
+ * [zones] is the full velocity × round-robin grid (the PSK scheme):
+ * 2..4 zones, soft first, tiling 0..127. The `.xtd` writes one layer
+ * per zone (loudest first, per-zone base slice and cycle); the `.xpm`
+ * windows each layer to its zone's anchor take — real velocity
+ * switching on the MPC 2, no robin, that generation's honest ceiling.
  */
 data class ChainPlay(
     /** End frame of slice 0 — the MPC 2 fallback window. */
     val firstSliceEnd: Long,
-    /** Slices cycled per hit, 2..128. */
+    /** Slices cycled per hit, 2..128 (single-zone; zones carry their own). */
     val cycle: Int,
+    val zones: List<ChainZonePlay>? = null,
 ) {
     init {
         require(firstSliceEnd > 0) { "firstSliceEnd must be positive: $firstSliceEnd" }
         require(cycle in 2..128) { "cycle is 2..128, got $cycle" }
+        zones?.let { zs ->
+            require(zs.size in 2..4) { "a grid has 2..4 zones, got ${zs.size}" }
+            require(zs.first().velStart == 0 && zs.last().velEnd == 127) {
+                "zones tile 0..127 - got ${zs.first().velStart}..${zs.last().velEnd}"
+            }
+            for (i in 1 until zs.size) {
+                require(zs[i].velStart == zs[i - 1].velEnd + 1) {
+                    "zones must be contiguous soft-first: ${zs[i - 1].velEnd} then ${zs[i].velStart}"
+                }
+            }
+        }
     }
 }
 

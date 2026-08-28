@@ -124,16 +124,48 @@ data class KitPad(
 }
 
 /**
+ * One velocity zone of a chain grid: which velocities tap in at which
+ * slice, and how many takes cycle from that anchor. The PSK convention:
+ * the chain is dynamics-graded soft→hard, so soft zones anchor at low
+ * slices and the anchor rises with velocity.
+ */
+data class ChainZone(
+    val velStart: Int,
+    val velEnd: Int,
+    /** The zone's anchor take — the first slice its hits cycle from. */
+    val baseSlice: Int,
+    /** Takes cycled from the anchor, `[baseSlice, baseSlice + cycle)`. */
+    val cycle: Int,
+) {
+    init {
+        require(velStart in 0..127 && velEnd in 0..127 && velStart <= velEnd) {
+            "bad velocity window $velStart..$velEnd"
+        }
+        require(baseSlice >= 0) { "baseSlice must not be negative: $baseSlice" }
+        require(cycle >= 1) { "a zone cycles at least 1 take, got $cycle" }
+    }
+}
+
+/**
  * A chain pad (MPC 3 "Slice Motion"): the pad's WAV is a chain of takes
  * and each hit steps to the next slice. [boundaries] are the slice start
  * frames, ascending from 0 — WE build the chains, so the boundaries are
  * ours; slice i runs from `boundaries[i]` to the next start (the last to
  * the end of the sample). [cycle] slices are cycled per hit. The MPC 2
  * generation has no Slice Motion; its export windows to slice 0.
+ *
+ * [zones] is the full velocity × round-robin grid (the PSK scheme):
+ * 2..4 zones, soft first, tiling 0..127, each anchoring at its own
+ * [ChainZone.baseSlice] with its own cycle. Null = the single-zone
+ * chain, where [cycle] alone rules; with zones set, each zone's own
+ * cycle is authoritative and [cycle] is just the single-zone fallback.
+ * Capped at 4 (the format allows 8) so every zone stays representable
+ * on the MPC 2's four layer slots too.
  */
 data class ChainInfo(
     val boundaries: List<Long>,
     val cycle: Int,
+    val zones: List<ChainZone>? = null,
 ) {
     init {
         require(boundaries.size >= 2) { "a chain has at least 2 slices, got ${boundaries.size}" }
@@ -142,6 +174,23 @@ data class ChainInfo(
             require(boundaries[i] > boundaries[i - 1]) { "slice boundaries must ascend" }
         }
         require(cycle in 2..boundaries.size) { "cycle is 2..${boundaries.size}, got $cycle" }
+        zones?.let { zs ->
+            require(zs.size in 2..4) { "a grid has 2..4 zones, got ${zs.size}" }
+            require(zs.first().velStart == 0 && zs.last().velEnd == 127) {
+                "zones tile 0..127 - got ${zs.first().velStart}..${zs.last().velEnd}"
+            }
+            for (i in 1 until zs.size) {
+                require(zs[i].velStart == zs[i - 1].velEnd + 1) {
+                    "zones must be contiguous soft-first: ${zs[i - 1].velEnd} then ${zs[i].velStart}"
+                }
+            }
+            for (z in zs) {
+                require(z.baseSlice + z.cycle <= boundaries.size) {
+                    "zone ${z.velStart}..${z.velEnd} cycles ${z.baseSlice} until ${z.baseSlice + z.cycle} " +
+                        "but the chain has $sliceCount slices"
+                }
+            }
+        }
     }
 
     val sliceCount: Int get() = boundaries.size
@@ -152,6 +201,28 @@ data class ChainInfo(
         val end = if (i + 1 < boundaries.size) boundaries[i + 1] else sampleFrames
         return boundaries[i] until end
     }
+
+    /** The zone [velocity] taps into, or null on a single-zone chain. */
+    fun zoneFor(velocity: Int): ChainZone? =
+        zones?.firstOrNull { velocity in it.velStart..it.velEnd } ?: zones?.last()
+
+    /**
+     * The per-program projection, frame windows resolved — the one place
+     * every exporter builds its [com.snipsnap.xpm.ChainPlay] from.
+     */
+    fun toPlay(sampleFrames: Long): com.snipsnap.xpm.ChainPlay =
+        com.snipsnap.xpm.ChainPlay(
+            firstSliceEnd = boundaries[1],
+            cycle = cycle,
+            zones = zones?.map { z ->
+                val w = window(z.baseSlice, sampleFrames)
+                com.snipsnap.xpm.ChainZonePlay(
+                    velStart = z.velStart, velEnd = z.velEnd,
+                    baseSlice = z.baseSlice, cycle = z.cycle,
+                    windowStart = w.first, windowEnd = w.last + 1,
+                )
+            },
+        )
 }
 
 /**
@@ -229,9 +300,10 @@ data class Kit(
     fun toDrumProgram(frameCountOf: (KitPad) -> Long): DrumProgram {
         val slots = arrayOfNulls<Pad>(highestSlot)
         for (p in pads) {
+            val frames = frameCountOf(p)
             slots[p.slot - 1] = Pad(
                 sampleName = p.sampleStem,
-                frameCount = frameCountOf(p),
+                frameCount = frames,
                 level = p.level,
                 pan = p.pan,
                 tuneCoarse = p.tuneCoarse,
@@ -243,9 +315,7 @@ data class Kit(
                 cutoff = p.cutoff,
                 resonance = p.resonance,
                 humanize = p.humanize,
-                chain = p.chain?.let { c ->
-                    com.snipsnap.xpm.ChainPlay(firstSliceEnd = c.boundaries[1], cycle = c.cycle)
-                },
+                chain = p.chain?.toPlay(frames),
             )
         }
         return DrumProgram(name, slots.toList())

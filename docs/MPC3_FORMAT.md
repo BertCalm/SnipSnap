@@ -649,6 +649,42 @@ So the **8 layer slots exist for 8-way velocity switching.** Round-robin (the
 Ambient Box pattern, identical ranges differentiated by `SliceIncrement`) is the
 same slots used a different way, not a separate mechanism.
 
+### The velocity × round-robin grid — the PSK scheme, decoded
+
+`Kit-PSK 009 Hip Hop Kit.xtd` (saved by MPC 3.9.0.31) combines both uses
+of the slots into the full grid, and a 2026-08-28 probe of all 16 pads
+pinned the geometry exactly:
+
+- **One chain WAV per pad** — every layer's `sampleName` is the same
+  `Chain-…` file; the takes are concatenated inside it.
+- **8 layers, loudest first** (the standard convention: L0 = `122–127`
+  down to L7 = `0–16`), tiling `0..127`.
+- **The base `sliceIndex` grades with intensity**: the softest zone
+  anchors at slice 0 and the anchor *rises* with velocity — L7→0, L6→1,
+  L5→2, L4→3, L3→4, L2→5, L1→6, L0→8 on a typical pad. The chain is a
+  dynamics-graded sequence of takes, soft→hard, and each zone taps in at
+  its intensity point.
+- **Per-zone robin**: every layer has `sliceIncrement 1` and
+  `sliceCycleLength` 2–4 (mostly 3; the top zone often 4), so each hit
+  steps to the next take near the zone's anchor.
+- **One `sliceIncrementRngSeed` per pad**, shared by all 8 layers (a
+  6-digit value, different per pad).
+- **`sliceInfo` is NOT a per-slice window in Akai's writing**: on every
+  pad the four loud layers carry `Start=0, End=<full chain>` while the
+  four soft layers window roughly the last 12% of the chain. Whatever
+  the firmware does with that, the per-slice boundaries must come from
+  the slice map embedded in the chain WAV (see HH1.4 — not in the
+  `.xtd`).
+
+Adjacent zones' cycle windows overlap (base 4 cycling 3 reaches into
+base 5's ground), which suggests the firmware treats
+`[base, base+cycle)` as a window over shared takes. Our writers use
+non-overlapping windows — a stricter instance of the same encoding —
+and write each layer's `sliceInfo` as the zone's base-take window, so
+firmware without the slice map degrades to honest 4-way velocity
+switching. Our grids cap at 4 zones: the MPC 2 `.xpm` has 4 layer
+slots, and 4 keeps every zone representable on both generations.
+
 ### Synth section
 
 Each zone carries its own `instruments[i].synthSection` (the copy on

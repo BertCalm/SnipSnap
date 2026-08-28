@@ -93,6 +93,75 @@ class KitChainTest {
     }
 
     @Test
+    fun `a grid round-trips through kit json and bad grids are refused`() {
+        val dir = File(temp, "grid-store")
+        dir.mkdirs()
+        // 6 takes: 3 zones x 2 robins, dynamics-graded soft->hard.
+        val samples = FloatArray(segFrames * 6)
+        for (seg in 0 until 6) {
+            for (i in 0 until segFrames) samples[seg * segFrames + i] = 0.1f + seg * 0.1f
+        }
+        WavWriter.write(File(dir, "A01_Grid_01.wav"), Snip(samples, 1, rate))
+        val boundaries = (0 until 6).map { it.toLong() * segFrames }
+        val zones = listOf(
+            ChainZone(velStart = 0, velEnd = 50, baseSlice = 0, cycle = 2),
+            ChainZone(velStart = 51, velEnd = 100, baseSlice = 2, cycle = 2),
+            ChainZone(velStart = 101, velEnd = 127, baseSlice = 4, cycle = 2),
+        )
+        val kit = Kit(
+            "Grid Kit",
+            listOf(
+                KitPad(
+                    slot = 1, sampleFile = "A01_Grid_01.wav", drumClass = DrumClass.SNARE,
+                    chain = ChainInfo(boundaries, cycle = 2, zones = zones),
+                ),
+            ),
+        )
+        KitStore.save(kit, dir)
+        assertEquals(kit, KitStore.load(dir), "the grid survives the sidecar")
+        assertTrue("\"zones\"" in File(dir, KitStore.FILE_NAME).readText())
+
+        // The projection resolves each zone's anchor window in frames.
+        val play = kit.pads.single().chain!!.toPlay(samples.size.toLong())
+        assertEquals(3, play.zones!!.size)
+        assertEquals(2L * segFrames, play.zones!![1].windowStart)
+        assertEquals(3L * segFrames, play.zones!![1].windowEnd)
+
+        // And velocity finds its zone.
+        val chain = kit.pads.single().chain!!
+        assertEquals(0, chain.zoneFor(30)!!.baseSlice)
+        assertEquals(2, chain.zoneFor(75)!!.baseSlice)
+        assertEquals(4, chain.zoneFor(127)!!.baseSlice)
+
+        // The shapes the grid refuses.
+        fun zonesOf(vararg z: ChainZone) = z.toList()
+        assertFailsWith<IllegalArgumentException>("one zone is no grid") {
+            ChainInfo(boundaries, 2, zonesOf(ChainZone(0, 127, 0, 2)))
+        }
+        assertFailsWith<IllegalArgumentException>("five zones exceed the cap") {
+            ChainInfo(
+                boundaries, 2,
+                zonesOf(
+                    ChainZone(0, 20, 0, 1), ChainZone(21, 40, 1, 1), ChainZone(41, 60, 2, 1),
+                    ChainZone(61, 80, 3, 1), ChainZone(81, 127, 4, 1),
+                ),
+            )
+        }
+        assertFailsWith<IllegalArgumentException>("a velocity gap") {
+            ChainInfo(boundaries, 2, zonesOf(ChainZone(0, 50, 0, 2), ChainZone(52, 127, 2, 2)))
+        }
+        assertFailsWith<IllegalArgumentException>("a velocity overlap") {
+            ChainInfo(boundaries, 2, zonesOf(ChainZone(0, 50, 0, 2), ChainZone(50, 127, 2, 2)))
+        }
+        assertFailsWith<IllegalArgumentException>("zones must reach 127") {
+            ChainInfo(boundaries, 2, zonesOf(ChainZone(0, 50, 0, 2), ChainZone(51, 100, 2, 2)))
+        }
+        assertFailsWith<IllegalArgumentException>("a window past the chain") {
+            ChainInfo(boundaries, 2, zonesOf(ChainZone(0, 50, 0, 2), ChainZone(51, 127, 5, 2)))
+        }
+    }
+
+    @Test
     fun `the MPC 3 writes chain pads the PSK way`() {
         val dir = File(temp, "xtd")
         val kit = chainKit(dir)

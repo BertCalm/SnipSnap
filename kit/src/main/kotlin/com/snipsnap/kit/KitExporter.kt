@@ -139,9 +139,7 @@ object KitExporter {
                 cutoff = p.cutoff,
                 resonance = p.resonance,
                 humanize = p.humanize,
-                chain = p.chain?.let { c ->
-                    com.snipsnap.xpm.ChainPlay(firstSliceEnd = c.boundaries[1], cycle = c.cycle)
-                },
+                chain = p.chain?.toPlay(frameCountBySlot.getValue(p.slot)),
             )
         }
         return slots.toList() to written
