@@ -1,8 +1,12 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.Snip
+import com.snipsnap.kit.AnswerStore
+import com.snipsnap.kit.BeatTape
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.GrooveVariations
 import com.snipsnap.kit.Kit
+import com.snipsnap.kit.KitPreview
 import com.snipsnap.mpc3.Mpc3Clip
 import java.io.File
 import java.util.Random
@@ -82,5 +86,146 @@ object Arranger {
             add(Section("outro", half, repeats(half, OUTRO_BARS)))
         }
         return Arrangement("${kit.name} Song", seed, sections)
+    }
+
+    // ---- the mixdown (KK3) ------------------------------------------------
+
+    /** The stitched song plus where each section starts, in frames. */
+    data class Mix(val snip: Snip, val sectionStarts: List<Int>)
+
+    /** The bed sits under the body sections only — never the intro or the turn. */
+    private val BED_SECTIONS = setOf("theme", "variation", "reprise")
+
+    /** The Answer plays under the song at bed level. */
+    private const val BED_GAIN = 0.8f
+
+    /**
+     * The song as one WAV: every section rendered through [KitPreview]
+     * (its ring-out included — that's the room), a pull-up spinning into
+     * the turn, a tape stop ending the outro — SIDE A's own transitions —
+     * and the Answer's bass riding under the body sections when the kit
+     * has one (its root re-detected from the stored note, the OneNote
+     * way; an undetectable root skips the bed honestly).
+     */
+    fun mixdown(kit: Kit, kitDir: File, plan: Arrangement): Mix {
+        val bpm = (kit.tempoBpm ?: KitPreview.DEFAULT_BPM)
+            .coerceIn(KitPreview.MIN_BPM, KitPreview.MAX_BPM)
+        val bed = answerBed(kitDir)
+
+        val segments = plan.sections.mapIndexed { i, s ->
+            val tiledClip = tiled(s.clip, s.repeats)
+            var seg = KitPreview.render(kit, kitDir, clip = tiledClip, tempoBpm = bpm)
+            if (bed != null && s.name in BED_SECTIONS) {
+                seg = sum(seg, renderBed(bed, s.repeats, bpm))
+            }
+            when {
+                plan.sections.getOrNull(i + 1)?.name == "the turn" ->
+                    concatFrames(seg, BeatTape.pullUp(seg))
+                i == plan.sections.lastIndex -> BeatTape.tapeStop(seg)
+                else -> seg
+            }
+        }
+
+        val starts = ArrayList<Int>(segments.size)
+        var at = 0
+        for (seg in segments) {
+            starts += at
+            at += seg.frameCount
+        }
+        val out = FloatArray(at * 2)
+        segments.forEachIndexed { i, seg ->
+            seg.samples.copyInto(out, starts[i] * 2)
+        }
+        var peak = 0f
+        for (v in out) {
+            val a = if (v < 0) -v else v
+            if (a > peak) peak = a
+        }
+        if (peak > 0.95f) {
+            val k = 0.95f / peak
+            for (i in out.indices) out[i] *= k
+        }
+        return Mix(Snip(out, 2, KitPreview.RATE), starts)
+    }
+
+    private fun tiled(clip: Mpc3Clip, repeats: Int): Mpc3Clip {
+        if (repeats == 1) return clip
+        val barPulses = clip.bars.toLong() * Mpc3Clip.PULSES_PER_BAR
+        return clip.copy(
+            bars = clip.bars * repeats,
+            notes = (0 until repeats).flatMap { r ->
+                clip.notes.map { it.copy(timePulses = it.timePulses + r * barPulses) }
+            },
+        )
+    }
+
+    private class Bed(val sample: Snip, val rootMidi: Int, val clip: Mpc3Clip)
+
+    private fun answerBed(kitDir: File): Bed? {
+        val answer = AnswerStore.load(kitDir) ?: return null
+        val file = File(kitDir, answer.sampleFile).takeIf { it.isFile } ?: return null
+        val sample = try {
+            com.snipsnap.audio.WavReader.read(file)
+        } catch (e: Exception) {
+            return null
+        }
+        val pitch = com.snipsnap.audio.Pitch.detect(sample)?.takeIf { it.confidence >= 0.5f } ?: return null
+        val rootMidi = Math.round(69.0 + 12.0 * Math.log(pitch.hz / 440.0) / Math.log(2.0)).toInt()
+        return Bed(sample, rootMidi, answer.clip)
+    }
+
+    /** The bass clip tiled across the section, each note repitched from the root. */
+    private fun renderBed(bed: Bed, repeats: Int, bpm: Float): Snip {
+        val framesPerPulse = 60.0 / bpm * KitPreview.RATE / 960.0
+        val tiledClip = tiled(bed.clip, repeats)
+        val total = (tiledClip.bars * Mpc3Clip.PULSES_PER_BAR * framesPerPulse).toInt() + bed.sample.frameCount
+        val out = FloatArray(total * 2)
+        val cache = HashMap<Int, Snip>()
+        for (note in tiledClip.notes) {
+            val voiced = cache.getOrPut(note.note) {
+                val speed = Math.pow(2.0, (note.note - bed.rootMidi) / 12.0).toFloat()
+                if (speed in 0.51f..1.99f && Math.abs(speed - 1f) > 1e-4f) {
+                    com.snipsnap.audio.TempoFit.repitch(bed.sample, 1000f, 1000f * speed)
+                } else {
+                    bed.sample
+                }
+            }
+            val start = (note.timePulses * framesPerPulse).toInt()
+            val gain = BED_GAIN * (0.35f + 0.65f * note.velocity)
+            for (f in 0 until voiced.frameCount) {
+                val at = start + f
+                if (at >= total) break
+                val s = mono(voiced, f) * gain
+                out[at * 2] += s * 0.7071f
+                out[at * 2 + 1] += s * 0.7071f
+            }
+        }
+        return Snip(out, 2, KitPreview.RATE)
+    }
+
+    private fun mono(snip: Snip, frame: Int): Float =
+        if (snip.channels == 1) {
+            snip.samples[frame]
+        } else {
+            var sum = 0f
+            for (ch in 0 until snip.channels) sum += snip.samples[frame * snip.channels + ch]
+            sum / snip.channels
+        }
+
+    /** Sum two stereo snips, the longer one setting the length. */
+    private fun sum(a: Snip, b: Snip): Snip {
+        val frames = maxOf(a.frameCount, b.frameCount)
+        val out = FloatArray(frames * 2)
+        a.samples.copyInto(out)
+        for (i in b.samples.indices) out[i] += b.samples[i]
+        return Snip(out, 2, KitPreview.RATE)
+    }
+
+    /** [b] appended after [a] — the pull-up's spinback tail. */
+    private fun concatFrames(a: Snip, b: Snip): Snip {
+        val out = FloatArray((a.frameCount + b.frameCount) * 2)
+        a.samples.copyInto(out)
+        b.samples.copyInto(out, a.frameCount * 2)
+        return Snip(out, 2, KitPreview.RATE)
     }
 }

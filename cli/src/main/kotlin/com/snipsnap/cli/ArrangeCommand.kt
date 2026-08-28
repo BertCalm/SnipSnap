@@ -23,7 +23,7 @@ object ArrangeCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--seed", "--out"),
-            boolean = setOf("--overwrite"),
+            boolean = setOf("--overwrite", "--mixdown"),
         )
         val dirArg = opts.positional.getOrNull(0)
             ?: throw CliError("arrange wants a kit: snipsnap arrange <kit-dir> [--seed N] [--out DIR]")
@@ -69,6 +69,21 @@ object ArrangeCommand {
         }
         out.println("project: ${xpj.path}")
         out.println("  flip sequences 01..%02d in order on the hardware - that's the song".format(plan.sections.size))
+
+        if (opts.has("--mixdown")) {
+            val mix = Arranger.mixdown(kit, kitDir, plan)
+            val wav = File(destRoot, "${plan.name}.wav")
+            if (wav.exists() && !overwrite) {
+                throw CliError("destination already exists: $wav (pass --overwrite to replace it)")
+            }
+            com.snipsnap.audio.WavWriter.write(wav, mix.snip)
+            out.println(
+                "mixdown: ${wav.path} (%.1fs - pull-up into the turn, tape stop on the outro%s)".format(
+                    mix.snip.durationSeconds,
+                    if (com.snipsnap.kit.AnswerStore.load(kitDir) != null) ", the Answer under the body" else "",
+                ),
+            )
+        }
         return 0
     }
 }

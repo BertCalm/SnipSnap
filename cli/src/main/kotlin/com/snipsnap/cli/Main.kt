@@ -111,7 +111,10 @@ object Cli {
         |                        laid into intro/theme/variation/turn/
         |                        reprise/outro and written as numbered
         |                        switchable sequences in an .xpj - flip
-        |                        01.. in order, that's the song ([--seed N])
+        |                        01.. in order, that's the song ([--seed N];
+        |                        --mixdown also renders it as one WAV with
+        |                        SIDE A's transitions and the Answer under
+        |                        the body sections)
         |  project <kit-dir>...  whole session -> one .xpj (kits + grooves +
         |                        optional --keys instrument, mixer wired;
         |                        --mixdown also renders the session as one WAV)

@@ -363,6 +363,14 @@ the hardware and that's the song — with the song slot named for the
 arrangement (steps stay bench-blocked, GG3.2). Honest refusals and
 skips: no groove refuses, nothing to roll on drops the turn.
 
+`--mixdown` also renders the song as **one WAV**: every section
+through the kit's own preview engine (ring-outs included — that's the
+room), a **pull-up** spinning into the turn and a **tape stop**
+ending the outro (SIDE A's own transitions), and the Answer's bass
+riding under the body sections when the kit has one — its root
+re-detected from the stored note the OneNote way, the bed skipped
+honestly when nothing detects. Deterministic: same plan, same song.
+
 ### `project <kit-dir>... ` — whole session, one `.xpj`
 
 N kit folders (plus an optional `--keys a.wav,b.wav` multisampled

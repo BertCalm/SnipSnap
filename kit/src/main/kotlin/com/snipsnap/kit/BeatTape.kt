@@ -109,7 +109,7 @@ object BeatTape {
      * to silence. In place, length unchanged: the next track starts where
      * this one *would* have ended.
      */
-    internal fun tapeStop(snip: Snip, seconds: Float = STOP_SEC): Snip {
+    fun tapeStop(snip: Snip, seconds: Float = STOP_SEC): Snip {
         val n = minOf((seconds * snip.sampleRate).toInt(), snip.frameCount)
         if (n < 8) return snip
         val start = snip.frameCount - n
@@ -130,7 +130,7 @@ object BeatTape {
      * tail, read backwards at a speed ramping 1 → 3 with the gain falling
      * away — the rewind you hear before the next beat drops.
      */
-    internal fun pullUp(snip: Snip, seconds: Float = SPIN_SEC): Snip {
+    fun pullUp(snip: Snip, seconds: Float = SPIN_SEC): Snip {
         val n = (seconds * snip.sampleRate).toInt()
         if (n < 8 || snip.frameCount < 8) return Snip(FloatArray(0), snip.channels, snip.sampleRate)
         val out = FloatArray(n * snip.channels)

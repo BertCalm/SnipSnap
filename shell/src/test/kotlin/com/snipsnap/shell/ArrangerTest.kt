@@ -75,6 +75,43 @@ class ArrangerTest {
     }
 
     @Test
+    fun `the mixdown stitches the song - transitions, density, determinism`() {
+        val m = model("Mix")
+        val plan = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        val mix = Arranger.mixdown(m.kit, m.kitDir, plan)
+
+        assertEquals(plan.sections.size, mix.sectionStarts.size)
+        assertTrue(mix.sectionStarts.zipWithNext().all { (a, b) -> b > a }, "sections in order")
+        val framesPerBar = (60.0 / com.snipsnap.kit.KitPreview.DEFAULT_BPM *
+            com.snipsnap.kit.KitPreview.RATE * 4).toInt()
+        assertTrue(
+            mix.snip.frameCount > plan.totalBars * framesPerBar,
+            "the song is at least its bars (ring-outs and transitions on top)",
+        )
+
+        // The fill section is measurably denser than the intro.
+        fun rms(fromFrame: Int, frames: Int): Double {
+            var acc = 0.0
+            var n = 0
+            for (f in fromFrame until minOf(fromFrame + frames, mix.snip.frameCount)) {
+                val s = mix.snip.samples[f * 2]
+                acc += s * s.toDouble()
+                n++
+            }
+            return Math.sqrt(acc / n.coerceAtLeast(1))
+        }
+        val turnIx = plan.sections.indexOfFirst { it.name == "the turn" }
+        val window = framesPerBar * 2
+        val introRms = rms(mix.sectionStarts[0], window)
+        val turnRms = rms(mix.sectionStarts[turnIx], window)
+        assertTrue(turnRms > introRms, "the turn plays denser than the sparse intro: $introRms vs $turnRms")
+
+        // Deterministic: same plan, same samples.
+        val again = Arranger.mixdown(m.kit, m.kitDir, plan)
+        assertTrue(mix.snip.samples.contentEquals(again.snip.samples), "same plan, same song")
+    }
+
+    @Test
     fun `honest refusals and skips - no groove, nothing to roll on`() {
         val bare = KitBuilderModel.create("Bare", File(temp, "Bare"))
         bare.assign(1, DrumSynth.kick(), DrumClass.KICK)

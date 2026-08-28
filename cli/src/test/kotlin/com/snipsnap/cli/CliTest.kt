@@ -1277,6 +1277,13 @@ class CliTest {
             "same seed, same song",
         )
 
+        // --mixdown renders the stitched song beside the project.
+        val (mCode, mOut, mErr) = cli("arrange", kitDir.path, "--out", out.path, "--overwrite", "--mixdown")
+        assertEquals(0, mCode, "stderr: $mErr")
+        assertContains(mOut, "mixdown:")
+        assertContains(mOut, "tape stop on the outro")
+        assertTrue(File(out, "card/AR Song.wav").length() > 44, "the song WAV lands")
+
         val (noCode, _, noErr) = cli("arrange", File(out, "nowhere").path)
         assertEquals(2, noCode)
         assertContains(noErr, "kit.json")
