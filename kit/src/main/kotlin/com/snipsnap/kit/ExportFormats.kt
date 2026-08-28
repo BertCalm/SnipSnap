@@ -24,6 +24,7 @@ enum class ExportFormat(
     MPC3_PROJECT("xpj", "MPC 3 PROJECT (.XPJ)"),
     MIDI("mid", "MIDI GROOVES (EVERY DAW)"),
     SFZ("sfz", "SFZ (EVERY SAMPLER)"),
+    DECENT_SAMPLER("ds", "DECENTSAMPLER (FREE, EVERYWHERE)"),
     ;
 
     companion object {
@@ -110,6 +111,10 @@ object Exporters {
         }
         ExportFormat.SFZ -> {
             val f = SfzWriter.write(kit, kitDir, destRoot, overwrite)
+            ExportOutcome(format, f, File(f.parentFile, "Samples"), findings(kit, kitDir))
+        }
+        ExportFormat.DECENT_SAMPLER -> {
+            val f = DecentSamplerWriter.write(kit, kitDir, destRoot, overwrite)
             ExportOutcome(format, f, File(f.parentFile, "Samples"), findings(kit, kitDir))
         }
         ExportFormat.MPC3_PROJECT -> {

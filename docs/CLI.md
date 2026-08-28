@@ -139,6 +139,15 @@ SFZ has **native round robin** (`seq_length`/`seq_position` with
 export *fully* — takes actually cycle, zones actually switch — richer
 than the MPC 2's own fallback.
 
+**`ds`** is the same door into DecentSampler (free, everywhere):
+`<Kit> DecentSampler/<Kit>.dspreset` + `Samples/`. One group per pad —
+or per grid zone, since `seqLength` lives on the group — with
+`seqMode="round_robin"` cycling chain takes through `start`/`end`
+windows, `loVel`/`hiVel` velocity ranges, tag chokes for mute groups,
+level/pan/tuning and the amp shape carried; one-shot pads ring out via
+a sample-length release (the DS drum idiom). Filter shape and humanize
+have no per-sample DS home and are honestly skipped.
+
 ### `import <file>` — the receive half, both directions
 
 Dispatches by content, never extension. An `.xpn` archive unpacks into a
