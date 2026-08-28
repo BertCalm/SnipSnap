@@ -298,6 +298,15 @@ pad so the sound stays regenerable; and provenance stamps the parents,
 so `lineage` shows a hit with two of them. Deterministic: same
 parents, same recipe, same bytes.
 
+`--roulette [--seed N] [--root DIR]` lets the **crate deal the
+parent**: Similar ranks every pad under the root (the cached crate
+index does the measuring), dupes are excluded — a copy isn't a
+partner — and a seeded spin lands on one of the 8 nearest; `--wild`
+spins across the whole crate instead. Never the pad itself, named in
+the output, the spin recorded in the recipe beside the parent it
+dealt. Deterministic per (crate, seed); combines with `--splice` and
+`--split` like any parent.
+
 ### `robin <kit-dir> <pad>` — round robin, rendered
 
 The PSK corpus trick aimed the other way. Commercial kits chain N

@@ -21,8 +21,8 @@ object MutateCommand {
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(
             args,
-            valued = setOf("--with", "--at", "--hz"),
-            boolean = setOf("--splice", "--split", "--undo"),
+            valued = setOf("--with", "--at", "--hz", "--seed", "--root"),
+            boolean = setOf("--splice", "--split", "--undo", "--roulette", "--wild"),
         )
         val dirArg = opts.positional.getOrNull(0)
             ?: throw CliError(
@@ -51,15 +51,42 @@ object MutateCommand {
             opts.has("--split") -> Mutate.Mode.SPLIT
             else -> Mutate.Mode.STACK
         }
-        val sources = (opts["--with"] ?: throw CliError("who are the parents? --with A03,other/kit:B02,hit.wav"))
-            .split(',').map { it.trim() }.filter { it.isNotEmpty() }
-            .map { loadSource(it, kitDir) }
+        if (opts.has("--roulette") && opts["--with"] != null) {
+            throw CliError("--roulette lets the crate pick the parent - drop --with, or spin without it")
+        }
+        var extraRecipe = emptyMap<String, com.snipsnap.json.JsonValue>()
+        val sources = if (opts.has("--roulette")) {
+            val root = File(opts["--root"] ?: kitDir.absoluteFile.parent ?: ".")
+            if (!root.isDirectory) throw CliError("no such crate root: ${root.path}")
+            val seed = opts.int("--seed") ?: 0
+            val pick = try {
+                Mutate.roulette(model, slot, root, seed = seed, wild = opts.has("--wild"))
+            } catch (e: IllegalArgumentException) {
+                throw CliError(e.message ?: "the roulette refused")
+            }
+            val how = if (opts.has("--wild")) "wild" else "distance %.2f".format(pick.distance)
+            out.println("roulette: the crate dealt ${pick.label} ($how, seed $seed)")
+            extraRecipe = mapOf(
+                "roulette" to com.snipsnap.json.JsonValue.Obj(
+                    linkedMapOf(
+                        "seed" to com.snipsnap.json.JsonValue.Num(seed.toDouble()),
+                        "wild" to com.snipsnap.json.JsonValue.Bool(opts.has("--wild")),
+                    ),
+                ),
+            )
+            listOf(Mutate.Source(pick.label, WavReader.read(pick.file)))
+        } else {
+            (opts["--with"] ?: throw CliError("who are the parents? --with A03,other/kit:B02,hit.wav (or --roulette)"))
+                .split(',').map { it.trim() }.filter { it.isNotEmpty() }
+                .map { loadSource(it, kitDir) }
+        }
         if (sources.isEmpty()) throw CliError("--with named no parents")
 
         val outcome = Mutate.apply(
             model, slot, sources, mode,
             spliceAtMs = opts.int("--at") ?: Mutate.DEFAULT_SPLICE_MS,
             crossoverHz = opts.int("--hz")?.toFloat() ?: Mutate.DEFAULT_CROSSOVER_HZ,
+            extraRecipe = extraRecipe,
         )
         model.save()
 

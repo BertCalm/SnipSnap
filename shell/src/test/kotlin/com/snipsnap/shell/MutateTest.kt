@@ -138,6 +138,25 @@ class MutateTest {
     }
 
     @Test
+    fun `roulette - the crate deals the partner, seeded and never the pad itself`() {
+        val m = model("Roul")
+        model("Roul2")
+        val self = File(m.kitDir, m.pad(1)!!.sampleFile).canonicalPath
+
+        val pick = Mutate.roulette(m, 1, root = temp, seed = 5)
+        assertTrue(File(pick.file.path).canonicalPath != self, "never the pad itself")
+        assertEquals(pick, Mutate.roulette(m, 1, root = temp, seed = 5), "same seed, same deal")
+
+        val wildPick = Mutate.roulette(m, 1, root = temp, seed = 5, wild = true)
+        assertTrue(File(wildPick.file.path).canonicalPath != self)
+
+        val empty = File(temp, "empty-crate").apply { mkdirs() }
+        assertFailsWith<IllegalArgumentException>("an empty crate refuses") {
+            Mutate.roulette(m, 1, root = empty, seed = 0)
+        }
+    }
+
+    @Test
     fun `guards hold - chained pads refused, splice takes one parent`() {
         val m = model("Guards")
         Robin.apply(m, 2, takes = 2)

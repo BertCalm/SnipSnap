@@ -46,6 +46,57 @@ object Mutate {
     /** Stack: correlation below this reads as phase cancellation. */
     const val CANCEL_CORRELATION = -0.2f
 
+    /** Guided roulette spins among this many nearest compatible sounds. */
+    const val ROULETTE_WINDOW = 8
+
+    /** What the roulette dealt: the parent's name, its file, how alike it is. */
+    data class Pick(val label: String, val file: File, val distance: Float)
+
+    /**
+     * The crate picks the partner (LL2): guided by default — [Similar]'s
+     * distance ranks every pad under [root], dupes are excluded (a copy
+     * isn't a partner), and a seeded spin lands on one of the
+     * [ROULETTE_WINDOW] nearest — or `--wild`, a seeded spin across the
+     * whole crate. Never the pad itself. Deterministic per (crate, seed).
+     */
+    fun roulette(
+        model: KitBuilderModel,
+        slot: Int,
+        root: File,
+        seed: Int = 0,
+        wild: Boolean = false,
+    ): Pick {
+        val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        val index = Crate.index(root)
+        val self = File(model.kitDir, pad.sampleFile).canonicalPath
+        val candidates = index.entries.filter { e ->
+            File(root, e.file).canonicalPath != self
+        }
+        require(candidates.isNotEmpty()) { "the crate under $root has nothing to spin for" }
+
+        val rng = java.util.Random(seed.toLong())
+        val chosen = if (wild) {
+            candidates[rng.nextInt(candidates.size)] to -1f
+        } else {
+            val snip = com.snipsnap.audio.WavReader.read(File(model.kitDir, pad.sampleFile))
+            val target = com.snipsnap.audio.Similar
+                .vector(com.snipsnap.audio.FeatureExtractor.extract(snip)).toList()
+            val ranked = candidates.map { it to Crate.distance(target, it.vector) }
+                .filter { it.second > Crate.DUPE_DISTANCE }
+                .sortedWith(compareBy({ it.second }, { it.first.file }))
+            require(ranked.isNotEmpty()) {
+                "every sound in the crate is this pad's double - spin --wild instead"
+            }
+            val window = ranked.take(ROULETTE_WINDOW)
+            window[rng.nextInt(window.size)]
+        }
+        return Pick(
+            label = "${chosen.first.kitName}:${chosen.first.label}",
+            file = File(root, chosen.first.file),
+            distance = chosen.second,
+        )
+    }
+
     fun apply(
         model: KitBuilderModel,
         slot: Int,
@@ -53,6 +104,8 @@ object Mutate {
         mode: Mode = Mode.STACK,
         spliceAtMs: Int = DEFAULT_SPLICE_MS,
         crossoverHz: Float = DEFAULT_CROSSOVER_HZ,
+        /** Extra recipe fields — how the roulette records its spin. */
+        extraRecipe: Map<String, JsonValue> = emptyMap(),
     ): Outcome {
         require(sources.isNotEmpty()) { "mutate wants at least one --with parent" }
         if (mode != Mode.STACK) {
@@ -86,6 +139,7 @@ object Mutate {
                         if (flipped.isNotEmpty()) {
                             r["flipped"] = JsonValue.Arr(flipped.map { JsonValue.Str(it) })
                         }
+                        r.putAll(extraRecipe)
                     },
                 ),
             ),

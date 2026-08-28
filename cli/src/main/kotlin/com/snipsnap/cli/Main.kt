@@ -92,7 +92,9 @@ object Cli {
         |                        pad's attack onto the parent's body, --at ms),
         |                        or --split (pad lows + parent highs, --hz N);
         |                        parents are pad refs, kit:pad, or .wav files
-        |                        (--undo restores)
+        |                        (--undo restores); --roulette lets the crate
+        |                        deal the parent instead: Similar's nearest
+        |                        few under --root, seeded, or --wild chance
         |  robin <kit-dir> <pad> round robin: N seeded subtle takes rendered
         |                        into a chain WAV - the MPC 3 cycles one per
         |                        hit (Slice Motion), the MPC 2 plays take one

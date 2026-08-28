@@ -1345,6 +1345,20 @@ class CliTest {
         val (noneCode, _, noneErr) = cli("mutate", kitDir.path, "A02")
         assertEquals(2, noneCode)
         assertContains(noneErr, "--with")
+
+        // The roulette: the crate deals a parent, seeded, recipe stamped.
+        val (rCode, rOut, rErr) = cli("mutate", kitDir.path, "A02", "--roulette", "--seed", "3", "--root", out.path)
+        assertEquals(0, rCode, "stderr: $rErr")
+        assertContains(rOut, "roulette: the crate dealt")
+        val dealt = KitStore.load(kitDir).pad(2)!!
+        assertTrue(
+            (dealt.recipe!!.entries["mutate"] as com.snipsnap.json.JsonValue.Obj)
+                .entries.containsKey("roulette"),
+            "the spin is in the recipe",
+        )
+        val (clashCode, _, clashErr) = cli("mutate", kitDir.path, "A02", "--roulette", "--with", "A01")
+        assertEquals(2, clashCode)
+        assertContains(clashErr, "drop --with")
     }
 
     @Test
