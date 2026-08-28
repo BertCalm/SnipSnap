@@ -1351,6 +1351,44 @@ class CliTest {
     }
 
     @Test
+    fun `album releases the labeled crate across two sides`() {
+        val wav = writeBreak(File(temp, "al.wav"))
+        val root = File(temp, "al-root")
+        assertEquals(0, cli("chop", wav.path, "--out", root.path, "--name", "AL One", "--slices", "4", "--groove").first)
+        assertEquals(0, cli("chop", wav.path, "--out", root.path, "--name", "AL Two", "--slices", "4", "--groove").first)
+        assertEquals(0, cli("chop", wav.path, "--out", root.path, "--name", "AL Dry", "--slices", "4").first)
+        assertEquals(0, cli("label", root.path, "--init", "Side Hustle", "--prefix", "SH").first)
+
+        val out = File(temp, "al-out")
+        val (code, stdout, stderr) =
+            cli("album", root.path, "--title", "First Tape", "--out", out.path, "--seed", "1")
+        assertEquals(0, code, "stderr: $stderr")
+        val dest = File(out, "First Tape")
+        assertTrue(File(dest, "SIDE A.wav").length() > 44, "side A tape lands")
+        assertTrue(File(dest, "SIDE B.wav").length() > 44, "side B tape lands")
+        assertTrue(File(dest, "SIDE A").listFiles()!!.any { it.name.startsWith("01 ") }, "per-track WAVs land")
+        assertTrue(File(dest, "cover.png").isFile, "the cover lands")
+
+        val tracklist = File(dest, "tracklist.txt").readText()
+        assertContains(tracklist, "a Side Hustle release")
+        assertContains(tracklist, "SH-002", message = "catalog numbers ride the tracklist")
+        assertContains(tracklist, "SIDE B")
+        assertContains(tracklist, "left off: AL Dry")
+        assertContains(stdout, "2 track(s) across 2 side(s)")
+
+        // Deterministic: the same crate and seed release the same album.
+        assertEquals(
+            0,
+            cli("album", root.path, "--title", "First Tape", "--out", out.path, "--seed", "1", "--overwrite").first,
+        )
+        assertEquals(tracklist, File(dest, "tracklist.txt").readText(), "same seed, same tape")
+
+        val (noTitle, _, titleErr) = cli("album", root.path)
+        assertEquals(2, noTitle)
+        assertContains(titleErr, "--title")
+    }
+
+    @Test
     fun `beat runs the whole ritual - one song in, a release out`() {
         val song = writeSong(File(temp, "Track 11.wav"))
         val out = File(temp, "beat-out")

@@ -137,6 +137,12 @@ object Cli {
         |                        --mixdown also renders it as one WAV with
         |                        SIDE A's transitions and the Answer under
         |                        the body sections)
+        |  album <root> --title NAME
+        |                        the crate's release: every kit with a groove
+        |                        arranged into a song, tracks across SIDE A/B
+        |                        (per-track WAVs + each side as one tape),
+        |                        tracklist, cover - catalog numbers when the
+        |                        root runs a label; grooveless kits named
         |  project <kit-dir>...  whole session -> one .xpj (kits + grooves +
         |                        optional --keys instrument, mixer wired;
         |                        --mixdown also renders the session as one WAV)
@@ -262,6 +268,7 @@ object Cli {
                 "wear" -> WearCommand.run(args.drop(1), out)
                 "answer" -> AnswerCommand.run(args.drop(1), out)
                 "sidea" -> SideACommand.run(args.drop(1), out)
+                "album" -> AlbumCommand.run(args.drop(1), out)
                 "project" -> ProjectCommand.run(args.drop(1), out)
                 "arrange" -> ArrangeCommand.run(args.drop(1), out)
                 "pack" -> PackCommand.run(args.drop(1), out)

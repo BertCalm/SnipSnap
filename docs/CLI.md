@@ -471,6 +471,20 @@ drops). One folder comes out: the continuous WAV, `tracklist.txt` with
 sample-accurate timestamps, a cover wearing the tape's title, and the
 whole session as an `.xpj`. Deterministic end to end.
 
+### `album <root> --title NAME` — the crate's release
+
+The label's endgame: every kit under the root with a groove is
+arranged into a song (the Arranger's own grammar, `--seed` steered)
+and mixed down, and the songs land as tracks across **SIDE A** and
+**SIDE B** — per-track WAVs in the side folders, plus each side as one
+continuous tape with leader gaps between tracks, the cassette way.
+`tracklist.txt` lists every track with its length — and its **catalog
+number** when the root runs a label (the album triggers the label's
+own stable-numbering pass, so new kits get cataloged on the way).
+A cover tile wears the title. Kits without a groove are *left off and
+named* in the tracklist itself, the honest sleeve note. Deterministic:
+same crate, same seed, same album.
+
 ### `pack <kit-dir>... --title NAME` — N kits, one expansion
 
 The commercial-pack shape: a catalog of programs under one tile.
