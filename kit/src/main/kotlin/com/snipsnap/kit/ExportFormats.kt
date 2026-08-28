@@ -23,6 +23,7 @@ enum class ExportFormat(
     MPC3_TRACK("xtd", "MPC 3 NATIVE (.XTD)"),
     MPC3_PROJECT("xpj", "MPC 3 PROJECT (.XPJ)"),
     MIDI("mid", "MIDI GROOVES (EVERY DAW)"),
+    SFZ("sfz", "SFZ (EVERY SAMPLER)"),
     ;
 
     companion object {
@@ -106,6 +107,10 @@ object Exporters {
                 )
             }
             ExportOutcome(format, files.first(), null, findings(kit, kitDir))
+        }
+        ExportFormat.SFZ -> {
+            val f = SfzWriter.write(kit, kitDir, destRoot, overwrite)
+            ExportOutcome(format, f, File(f.parentFile, "Samples"), findings(kit, kitDir))
         }
         ExportFormat.MPC3_PROJECT -> {
             val dataDir = File(destRoot, Mpc3ProjectWriter.projectDataDirName(kit.name))

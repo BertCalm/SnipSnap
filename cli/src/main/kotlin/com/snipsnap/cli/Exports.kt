@@ -24,6 +24,7 @@ object Exports {
         ExportFormat.MPC3_TRACK to "MPC 3 native",
         ExportFormat.MPC3_PROJECT to "whole MPC 3 project",
         ExportFormat.MIDI to "grooves as MIDI files, every DAW",
+        ExportFormat.SFZ to "open sampler format, chains cycle for real",
     )
 
     /**

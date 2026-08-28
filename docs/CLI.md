@@ -128,6 +128,17 @@ order is total and deterministic.
 Takes any folder with a `kit.json` (one this CLI chopped, or one synced off
 a phone) and writes the chosen formats. `--preview` works here too.
 
+**`sfz`** is the escape hatch: `<Kit> SFZ/<Kit>.sfz` + `Samples/`,
+loadable in nearly any DAW or free sampler. Pads land on keys 36 up
+(the MPC 3's own pad map), velocity layers become `lovel`/`hivel`,
+mute groups become `group`/`off_by` chokes, shape and humanize ride
+their own opcodes (the preview's documented approximations; pan
+randomization has no SFZ opcode and is honestly skipped). And because
+SFZ has **native round robin** (`seq_length`/`seq_position` with
+`offset`/`end` windows into the one chain WAV), chains and grids
+export *fully* — takes actually cycle, zones actually switch — richer
+than the MPC 2's own fallback.
+
 ### `import <file>` — the receive half, both directions
 
 Dispatches by content, never extension. An `.xpn` archive unpacks into a
