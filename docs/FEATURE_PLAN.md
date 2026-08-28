@@ -981,9 +981,9 @@ an arrangement. A structure grammar turns them into a song.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| KK1 | `Arranger` (`:shell`) — the structure grammar: intro (sparse), theme (captured), variation (tight/swing or ghosted), the turn (fill bar), outro (half, fading), section lengths in bars, seeded choices deterministic per seed; honest refusals when the kit has no grooves | CORE | M | deterministic plan per (kit, seed); every section clip is one of the kit's own stored variations; bar totals add up |
-| KK2 | `arrange <kit-dir>` — the plan lands as switchable sequences in the `.xpj` (the AA1 multi-sequence writer), song slot named for the arrangement (GG3.1); the printed map shows section order and bars | CORE | S–M | the `.xpj` carries the sections in plan order and the reader accepts it; re-running with the same seed is byte-identical |
-| KK3 | `arrange --mixdown` — the song as one WAV: sections rendered through KitPreview and stitched with SIDE A's tape-stop/pull-up transitions at the turns, the Answer (and band) riding under sections that want them | CORE | M | mixdown length matches the plan; the fill section is measurably denser; deterministic |
+| KK1 | ✓ done (the rng draws before deriving, so the stream never depends on what the kit supports): `Arranger` (`:shell`) — the structure grammar: intro (sparse), theme (captured), variation (tight/swing or ghosted), the turn (fill bar), outro (half, fading), section lengths in bars, seeded choices deterministic per seed; honest refusals when the kit has no grooves | CORE | M | deterministic plan per (kit, seed); every section clip is one of the kit's own stored variations; bar totals add up |
+| KK2 | ✓ done (sequence names carry the order - "01 intro".."06 outro" - so flipping IS performing): `arrange <kit-dir>` — the plan lands as switchable sequences in the `.xpj` (the AA1 multi-sequence writer), song slot named for the arrangement (GG3.1); the printed map shows section order and bars | CORE | S–M | the `.xpj` carries the sections in plan order and the reader accepts it; re-running with the same seed is byte-identical |
+| KK3 | ✓ done (the Answer's root is re-detected from the stored note the OneNote way; tapeStop/pullUp promoted from internal): `arrange --mixdown` — the song as one WAV: sections rendered through KitPreview and stitched with SIDE A's tape-stop/pull-up transitions at the turns, the Answer (and band) riding under sections that want them | CORE | M | mixdown length matches the plan; the fill section is measurably denser; deterministic |
 
 **Below the line for KK:** hardware song-mode *steps* (still
 GG3.2-bench-blocked — sequences are the performable substitute);
@@ -1017,8 +1017,15 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
 
-CORE wave KK (the Arranger, in order): KK1 structure grammar →
-  KK2 arrange verb (sequences) → KK3 the mixdown.
+CORE wave KK: ✓ all landed (2026-08-28) — songs, not loops. The
+  structure grammar over the kit's own variations (honest skips: no
+  turn without a roll pad, tight when nothing whispers), the arrange
+  verb landing numbered switchable sequences in the .xpj (flip
+  01..06 in order - that's the song; same seed, byte-identical
+  project), and the mixdown stitching sections with SIDE A's own
+  pull-up and tape stop, the Answer's bass under the body when the
+  kit has one. 801 tests. Bench row: flip the arranged sequences on
+  the Live III and hear the song.
 
 CORE wave JJ: ✓ all landed (2026-08-28) — the kit escapes the MPC.
   SFZ writer (native seq_length/seq_position round robin: chains and
