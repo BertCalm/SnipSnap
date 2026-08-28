@@ -68,6 +68,20 @@ object Fft {
     }
 
     /**
+     * In-place inverse transform, 1/n scale included — the conjugate
+     * trick over [forward], so both directions share one butterfly.
+     */
+    fun inverse(re: FloatArray, im: FloatArray) {
+        val n = re.size
+        for (i in 0 until n) im[i] = -im[i]
+        forward(re, im)
+        for (i in 0 until n) {
+            re[i] /= n
+            im[i] = -im[i] / n
+        }
+    }
+
+    /**
      * Magnitude spectrum of real input, bins `0..size/2`.
      *
      * Input is Hann-windowed and zero-padded or truncated to [size]. The window
