@@ -357,6 +357,41 @@ class CliTest {
         val (badCode, _, badErr) = cli("feel", kitDir.path)
         assertEquals(2, badCode)
         assertContains(badErr, "--from")
+
+        // --save bottles the (now felt) kit's pocket as a .pocket file...
+        val pocketPath = File(temp, "fl-swing").path
+        val (sCode, sOut, sErr) = cli("feel", kitDir.path, "--save", pocketPath)
+        assertEquals(0, sCode, "stderr: $sErr")
+        assertContains(sOut, "pocket saved")
+        val pocket = File("$pocketPath.pocket")
+        assertTrue(pocket.isFile, "the extension arrives on its own")
+
+        // ...and applying the file moves a kit exactly the way the donor
+        // kit's own groove would - the round-trip promise.
+        assertEquals(
+            0,
+            cli("chop", wav.path, "--out", out.path, "--name", "FeelKit2", "--slices", "8", "--groove").first,
+        )
+        val kit2 = File(out, "FeelKit2")
+        assertEquals(0, cli("feel", kit2.path, "--from", pocket.path).first)
+        val viaPocket = File(kit2, "groove.json").readBytes()
+
+        assertEquals(
+            0,
+            cli(
+                "chop", wav.path, "--out", out.path, "--name", "FeelKit2",
+                "--slices", "8", "--groove", "--overwrite",
+            ).first,
+        )
+        assertEquals(0, cli("feel", kit2.path, "--from", kitDir.path).first)
+        assertTrue(
+            viaPocket.contentEquals(File(kit2, "groove.json").readBytes()),
+            "the bottled pocket applies identically to the donor kit itself",
+        )
+
+        val (bothCode, _, bothErr) = cli("feel", kitDir.path, "--from", pocket.path, "--save", "x")
+        assertEquals(2, bothCode)
+        assertContains(bothErr, "pick one")
     }
 
     @Test
@@ -1274,7 +1309,7 @@ class CliTest {
     fun `pack puts several kits under one tile and import receives them all`() {
         val wav = writeBreak(File(temp, "pk.wav"))
         val out = File(temp, "pk-out")
-        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "PackA", "--slices", "4").first)
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "PackA", "--slices", "4", "--groove").first)
         assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "PackB", "--slices", "4").first)
 
         val (code, stdout, stderr) = cli(
@@ -1288,6 +1323,9 @@ class CliTest {
         assertTrue(File(dest, "Programs/PackA.xpm").isFile && File(dest, "Programs/PackB.xpm").isFile)
         assertTrue(File(dest, "[Previews]/PackA.xpm.wav").isFile)
         assertTrue(File(dest, "CrateVol1.png").isFile, "the pack tile wears the pack's name")
+        // A kit with a groove ships its pocket; one without honestly doesn't.
+        assertTrue(File(dest, "[Pockets]/PackA.pocket").isFile, "the feel travels with the kit")
+        assertTrue(!File(dest, "[Pockets]/PackB.pocket").exists(), "no groove, no pocket")
 
         // The one-file twin comes back as every kit it carried.
         val fresh = File(temp, "pk-fresh")

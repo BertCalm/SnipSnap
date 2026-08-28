@@ -198,6 +198,14 @@ the donor's timing offsets and accent shape (the standard four
 variations re-derive from the felt pattern). A position the donor never
 plays stays straight — no data, no opinion.
 
+Feels are tradeable artifacts too: `--save x.pocket` bottles this
+kit's own pocket — sixteen timing offsets, sixteen accents, a name —
+as a small `.pocket` file, and `--from x.pocket` applies one as-is
+(silent positions stay `null` in the file exactly as in the template,
+so a saved-then-applied pocket moves a kit the same way its donor
+would have). `pack` ships each groove-carrying kit's pocket under
+`[Pockets]/` automatically — the feel travels with the kit.
+
 ### `era <kit-dir> <machine>` — the Time Machine
 
 The whole kit rendered through the specific math of a specific machine —

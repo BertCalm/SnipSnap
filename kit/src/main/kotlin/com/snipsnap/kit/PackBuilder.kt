@@ -75,6 +75,14 @@ object PackBuilder {
                     KitPreview.render(kit, kitDir),
                 )
             }
+            // The kit's feel rides the pack as a tradeable pocket - one
+            // small file per kit that has a groove to bottle.
+            GrooveStore.load(kitDir).firstOrNull()?.let { groove ->
+                PocketStore.save(
+                    PocketStore.Pocket(groove.name, GrooveFeel.extract(groove)),
+                    File(File(dest, "[Pockets]"), "${kit.name}.${PocketStore.EXTENSION}"),
+                )
+            }
             packed += kit.name
         }
         if (packed.isEmpty()) {

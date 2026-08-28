@@ -79,8 +79,10 @@ object Cli {
         |                        as a keys track playing its clip)
         |  feel <kit-dir> --from <donor>
         |                        groove transfer: the donor's timing-and-velocity
-        |                        pocket (a kit's groove or any .mid) rewrites
-        |                        this kit's patterns
+        |                        pocket (a kit's groove, any .mid, or a bottled
+        |                        .pocket file) rewrites this kit's patterns;
+        |                        --save x.pocket bottles this kit's own feel
+        |                        as a tradeable file instead
         |  treat <kit-dir> <pad> <character>
         |                        crush/reverse/wash one pad (--undo restores)
         |  robin <kit-dir> <pad> round robin: N seeded subtle takes rendered
@@ -107,7 +109,9 @@ object Cli {
         |  pack <kit-dir>... --title NAME
         |                        N kits under one expansion tile, the
         |                        commercial-pack shape (--xpn also zips it;
-        |                        per-kit previews included)
+        |                        per-kit previews included, and each kit
+        |                        with a groove ships its .pocket under
+        |                        [Pockets]/)
         |  backup <kits-root>    every kit as an .xpn inside one archive
         |  restore <backup.zip>  the archive back into kit folders
         |  doctor <kit-dir>      the mix doctor: measured findings about the
