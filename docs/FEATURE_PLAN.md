@@ -950,6 +950,48 @@ without the HH1.4 bench, so our windows don't overlap).
 
 ---
 
+# Wave JJ — the kit escapes the MPC
+
+A kit folder is already a clean, self-describing thing; two small
+plain-text writers make every SnipSnap kit loadable in nearly any DAW
+or free sampler. The happy surprise: **SFZ has native round robin**
+(`seq_length`/`seq_position`) and velocity ranges, so chains and grids
+export to SFZ *fully* — sample-offset windows into the one chain WAV,
+takes actually cycling — richer than the MPC 2's own fallback. Reach,
+not depth: the same crate, playable everywhere.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| JJ1 | SFZ writer (`:kit`) + export format `sfz` — pads → regions at key 36+slot−1 with level (dB re the MPC default), pan, tune, mute groups as `group`/`off_by` chokes, one-shot mode; velocity layers → `lovel`/`hivel`; shape → `ampeg_*`/filter opcodes using the preview's own documented approximations; humanize → `*_random`; chains and grids → real round robin: `seq_length`/`seq_position` with `offset`/`end` windows into the chain WAV, zones as velocity ranges | CORE | M | deterministic text; a grid pad yields zones × takes regions with the right windows, ranges and seq positions; every pad feature mapped or honestly skipped |
+| JJ2 | DecentSampler writer + format `ds` — `.dspreset` XML, one group per pad (`seqMode="round_robin"` when chained), `loVel`/`hiVel`, `start`/`end` windows, tuning/pan/volume carried | CORE | S–M | deterministic; chain pads carry seq positions; velocity zones carry ranges; plain kits stay plain |
+| JJ3 | SFZ importer + `import x.sfz` — regions → pads by key, `lovel`/`hivel` → velocity layers, samples copied into the kit folder, provenance stamped; unknown opcodes ignored (that's the format's own rule); non-WAV samples and out-of-range keys named and skipped, never fatal | CORE | M | JJ1's own output round-trips to an equivalent kit; a small foreign fixture imports; hostile/malformed files refuse honestly |
+
+**Below the line for JJ:** Kontakt/EXS (binary, no spec); Renoise;
+`.dspreset` import (DS users author in DS); FLAC/AIFF sample support
+(the kit folder is WAV by design).
+
+---
+
+# Wave KK — the Arranger: songs, not loops
+
+Everything the kit plays is one repeating pattern, but it already owns
+five-plus variations (captured, tight/swing, half, sparse, fill,
+ghosted), an Answer, a band, and a mixdown engine — the ingredients of
+an arrangement. A structure grammar turns them into a song.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| KK1 | `Arranger` (`:shell`) — the structure grammar: intro (sparse), theme (captured), variation (tight/swing or ghosted), the turn (fill bar), outro (half, fading), section lengths in bars, seeded choices deterministic per seed; honest refusals when the kit has no grooves | CORE | M | deterministic plan per (kit, seed); every section clip is one of the kit's own stored variations; bar totals add up |
+| KK2 | `arrange <kit-dir>` — the plan lands as switchable sequences in the `.xpj` (the AA1 multi-sequence writer), song slot named for the arrangement (GG3.1); the printed map shows section order and bars | CORE | S–M | the `.xpj` carries the sections in plan order and the reader accepts it; re-running with the same seed is byte-identical |
+| KK3 | `arrange --mixdown` — the song as one WAV: sections rendered through KitPreview and stitched with SIDE A's tape-stop/pull-up transitions at the turns, the Answer (and band) riding under sections that want them | CORE | M | mixdown length matches the plan; the fill section is measurably denser; deterministic |
+
+**Below the line for KK:** hardware song-mode *steps* (still
+GG3.2-bench-blocked — sequences are the performable substitute);
+arrangement-aware wear (a song is one long play; the ledger already
+counts it as such).
+
+---
+
 ## Sequence
 
 ```
@@ -974,6 +1016,11 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   wire-through (Z6.2 verdict: waveform default, rings runner-up).
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
+
+CORE wave JJ (formats, in order): JJ1 SFZ writer → JJ2 DecentSampler
+  writer → JJ3 SFZ importer.
+CORE wave KK (the Arranger, after JJ): KK1 structure grammar →
+  KK2 arrange verb (sequences) → KK3 the mixdown.
 
 CORE wave II: ✓ all landed (2026-08-28) — the velocity × round-robin
   grid, decoded from a fresh PSK probe (zones loudest-first, base
