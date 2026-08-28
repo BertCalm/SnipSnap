@@ -1034,10 +1034,44 @@ byte-identical, not "processed gently".
 | MM3 | ✓ done: `measureFloor` + `expand` — the floor is the 10th percentile of 50 ms-window RMS in dBFS (null on very short audio; under −60 means clean and callers leave it alone), and the gate is a 2:1 downward expander easing in below floor + 12 dB with a 12 dB depth cap, instant attack, 80 ms release, channels linked. The planted −44 dB hiss reads within the honest band, the noise tail recedes > 6 dB but never past the cap, and drum peaks move < 5% | CORE | S–M | drums over −40 dB noise: the gaps drop by ≥ 6 dB, drum peaks within 5%; a clean fixture unchanged; the floor report matches the planted noise level |
 | MM4 | ✓ done: `clean(snip)` composes the visit — hum first (a hum lifts the floor reading), then clicks/dropouts, then the floor — every leg gated by its own detector, untouched input returned **as the same object** with "clean - nothing done". The verb: a WAV gets its findings printed and a `<stem> Clean.wav` twin (`--in-place`/`--out`/`--overwrite`); a kit sends every plain pad through `replaceAudio` (bin-backed, `clean` recipe stamped, layered/chained/distorted pads skipped by name) and `--undo` restores every cleaned pad byte-identical; `--dry` doctor-style; `chop --clean` (forwarded by `dig`) scrubs the capture before the first slice — the test kit carries under a third of the raw chop's 50 Hz energy. One finding: a click in near-silence fails the follow test *after* the notch (the filter's own ringing "follows"), so real clicks are hunted on program material — which the fixtures now honestly are | CORE | S–M | the CLI round trip on a dirty WAV and a dirty kit; nothing-to-clean touches nothing and says so; `--undo` byte-identical; `chop --clean` yields a cleaner kit than `chop` on the same dirty source |
 
-**Below the line for MM:** spectral de-noise (FFT gating — more power,
-less honesty than the expander); de-reverb (the Room's inverse — a
-research project, not a wave item); auto-clean-on-capture in the app
+**Below the line for MM:** spectral de-noise → promoted to NN2;
+de-reverb → its honest first step (the tail-knee trimmer) promoted to
+NN3, the real thing still below; auto-clean-on-capture in the app
 (the app session wires the same `CaptureDoctor`, M-milestone work).
+
+---
+
+## Wave NN — the Deep Clean (CORE)
+
+MM's Capture Doctor works in *time*: the expander can only duck the
+gaps between hits, and during a hat tail the hiss rides along
+untouched because the frame as a whole is loud. The Deep Clean works
+in *frequency*: hiss lives in different bins than the cymbal energy,
+so it can be pulled out from **underneath** the drums. Same house
+rules as MM, doubled down — the known failure mode of spectral gating
+is *musical noise* (per-bin gates flickering open on random noise
+peaks), and every design choice below exists to keep the cure quieter
+than the disease: the profile is learned from the capture's own
+quietest moments, gains are smoothed in both time and frequency, and
+attenuation is capped so noise recedes but never vanishes into warble.
+De-reverb proper stays below the line (blind deconvolution — the
+drum's decay and the room's decay are entangled by construction); its
+honest first step ships instead: a measured knee where the hit's own
+decay hands off to the room's slower one, and a gentle fade from there.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| NN1 | FFT + STFT plumbing (`:audio` `Spectral`) — iterative radix-2 FFT, Hann-windowed analysis/synthesis frames with overlap-add and correct COLA normalization, exposed as one honest door: process(snip, perFrameGains) → snip. Everything NN2 needs and nothing it doesn't | CORE | M | a pure tone lands its energy in the right bin; forward→inverse round-trips within float tolerance; STFT analyze→synthesize with unity gains reconstructs the beat within tolerance (start/end edges included); Parseval sanity on a noise frame |
+| NN2 | Spectral de-noise (`CaptureDoctor.denoise`) — the noise fingerprint averaged from the capture's quietest frames (measureFloor's own percentile idea, per-bin; too few quiet frames → no profile → untouched), then per-bin downward gating against profile + margin with temporal one-pole gain smoothing, frequency smoothing across neighbor bins, and a hard attenuation floor (~−12 dB, the same gentle-cap philosophy as MM3). A floor already under −60 dBFS → byte-identical input back | CORE | M | beat + hiss: the noise-only tail recedes ≥ 6 dB and never past the cap; hiss *under* a sustained tone drops while the tone's own bin moves < 5%; drum peaks within 5%; a clean beat returns the same object; anti-warble: per-bin gains in a noise-only stretch sit pinned near the floor (low variance), not flickering |
+| NN3 | The tail knee (`CaptureDoctor.trimRoomTail`) — de-reverb's honest first step, per one-shot: the post-peak envelope in dB, a two-segment fit hunting the knee where the hit's steep decay hands off to a measurably shallower, quieter room tail; a valid knee (slope ratio + depth thresholds) gets a gentle fade continuing the hit's own slope from the knee. No knee → untouched: a dry hit is single-slope by construction | CORE | M | a kick convolved with a synthetic room IR (exponentially decaying noise): knee found near the true handoff, post-knee tail energy drops ≥ 6 dB, the hit's own body within 5%; the dry kick comes back untouched; the trim never cuts, always fades |
+| NN4 | The wiring — `clean --denoise` upgrades the floor leg from the expander to spectral de-noise (never both — no double-dipping on the same hiss), reported in the summary and the kit recipe; `clean <kit-dir> --deroom` runs the tail knee on one-shot pads (LOOP pads skipped by name — a texture's tail is content); `chop --clean --denoise` forwarded by `dig`; docs | CORE | S–M | CLI round trips: --denoise names the profile and beats the expander's tail number on the same hissy fixture; --deroom trims the roomy pad, skips the LOOP pad by name, --undo byte-identical; summaries honest on clean input |
+
+**Below the line for NN:** true de-reverb (blind deconvolution / WPE —
+still a research project; the bench fixture that would ground it is a
+phone-mic capture of real hardware in a real room, wanted in
+`reference/` regardless); a learned noise profile passed between takes
+("this room's fingerprint" as a file, like pockets bottle grooves);
+NN2 inside the app's capture path (rides the app session's auto-clean).
 
 ---
 
