@@ -962,9 +962,9 @@ not depth: the same crate, playable everywhere.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| JJ1 | SFZ writer (`:kit`) + export format `sfz` — pads → regions at key 36+slot−1 with level (dB re the MPC default), pan, tune, mute groups as `group`/`off_by` chokes, one-shot mode; velocity layers → `lovel`/`hivel`; shape → `ampeg_*`/filter opcodes using the preview's own documented approximations; humanize → `*_random`; chains and grids → real round robin: `seq_length`/`seq_position` with `offset`/`end` windows into the chain WAV, zones as velocity ranges | CORE | M | deterministic text; a grid pad yields zones × takes regions with the right windows, ranges and seq positions; every pad feature mapped or honestly skipped |
-| JJ2 | DecentSampler writer + format `ds` — `.dspreset` XML, one group per pad (`seqMode="round_robin"` when chained), `loVel`/`hiVel`, `start`/`end` windows, tuning/pan/volume carried | CORE | S–M | deterministic; chain pads carry seq positions; velocity zones carry ranges; plain kits stay plain |
-| JJ3 | SFZ importer + `import x.sfz` — regions → pads by key, `lovel`/`hivel` → velocity layers, samples copied into the kit folder, provenance stamped; unknown opcodes ignored (that's the format's own rule); non-WAV samples and out-of-range keys named and skipped, never fatal | CORE | M | JJ1's own output round-trips to an equivalent kit; a small foreign fixture imports; hostile/malformed files refuse honestly |
+| JJ1 | ✓ done: SFZ writer (`:kit`) + export format `sfz` — pads → regions at key 36+slot−1 with level (dB re the MPC default), pan, tune, mute groups as `group`/`off_by` chokes, one-shot mode; velocity layers → `lovel`/`hivel`; shape → `ampeg_*`/filter opcodes using the preview's own documented approximations; humanize → `*_random`; chains and grids → real round robin: `seq_length`/`seq_position` with `offset`/`end` windows into the chain WAV, zones as velocity ranges | CORE | M | deterministic text; a grid pad yields zones × takes regions with the right windows, ranges and seq positions; every pad feature mapped or honestly skipped |
+| JJ2 | ✓ done (one group per grid ZONE - seqLength lives on the group and zones may cycle differently): DecentSampler writer + format `ds` — `.dspreset` XML, one group per pad (`seqMode="round_robin"` when chained), `loVel`/`hiVel`, `start`/`end` windows, tuning/pan/volume carried | CORE | S–M | deterministic; chain pads carry seq positions; velocity zones carry ranges; plain kits stay plain |
+| JJ3 | ✓ done (boundaries must come from offset AND end+1 - the test caught interior windows smearing without the ends): SFZ importer + `import x.sfz` — regions → pads by key, `lovel`/`hivel` → velocity layers, samples copied into the kit folder, provenance stamped; unknown opcodes ignored (that's the format's own rule); non-WAV samples and out-of-range keys named and skipped, never fatal | CORE | M | JJ1's own output round-trips to an equivalent kit; a small foreign fixture imports; hostile/malformed files refuse honestly |
 
 **Below the line for JJ:** Kontakt/EXS (binary, no spec); Renoise;
 `.dspreset` import (DS users author in DS); FLAC/AIFF sample support
@@ -1017,10 +1017,17 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
 
-CORE wave JJ (formats, in order): JJ1 SFZ writer → JJ2 DecentSampler
-  writer → JJ3 SFZ importer.
-CORE wave KK (the Arranger, after JJ): KK1 structure grammar →
+CORE wave KK (the Arranger, in order): KK1 structure grammar →
   KK2 arrange verb (sequences) → KK3 the mixdown.
+
+CORE wave JJ: ✓ all landed (2026-08-28) — the kit escapes the MPC.
+  SFZ writer (native seq_length/seq_position round robin: chains and
+  grids export FULLY, richer than the MPC 2 fallback and waiting on
+  no bench), DecentSampler writer (one group per grid zone), and the
+  SFZ importer (our own output round-trips - identity, layers, chains
+  and grids data-equal; the test caught boundary reconstruction
+  needing region ends, not just offsets; foreign files get the sfz
+  courtesy, hostile ones honest refusals). 797 tests.
 
 CORE wave II: ✓ all landed (2026-08-28) — the velocity × round-robin
   grid, decoded from a fresh PSK probe (zones loudest-first, base
