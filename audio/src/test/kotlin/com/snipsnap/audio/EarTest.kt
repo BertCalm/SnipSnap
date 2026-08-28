@@ -58,6 +58,25 @@ class EarTest {
     }
 
     @Test
+    fun `a beat that starts ON the hit is heard from the downbeat`() {
+        // The chopped-break shape: the kick at frame zero, where the
+        // detector has no baseline - the hot-open guard supplies it.
+        val kick = DrumSynth.kick()
+        val hat = DrumSynth.closedHat()
+        val total = FloatArray((1.2f * rate).toInt())
+        for (i in kick.samples.indices) total[i] += kick.samples[i] * 0.9f
+        for (i in hat.samples.indices) {
+            val idx = (0.5f * rate).toInt() + i
+            if (idx < total.size) total[idx] += hat.samples[i] * 0.5f
+        }
+        val hits = Ear.listen(Snip(total, 1, rate))
+        assertEquals(2, hits.size, "the downbeat is not lost")
+        assertEquals(0, hits[0].frame)
+        assertEquals(DrumClass.KICK, hits[0].drumClass)
+        assertEquals(DrumClass.HAT_CLOSED, hits[1].drumClass)
+    }
+
+    @Test
     fun `tones and silence are not beats`() {
         val tone = Snip(
             FloatArray(3 * rate) { i -> (0.4 * Math.sin(2.0 * Math.PI * 220.0 * i / rate)).toFloat() },
