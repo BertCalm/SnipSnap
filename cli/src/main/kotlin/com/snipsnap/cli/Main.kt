@@ -78,6 +78,12 @@ object Cli {
         |                        (--seed N rerolls; --band adds stab chords
         |                        and a shaker tick; project lands every one
         |                        as a keys track playing its clip)
+        |  learn <beat.wav> --into <kit-dir>
+        |                        the Ear - bite a beat: a recorded performance
+        |                        transcribed (onsets heard, hits classified)
+        |                        and played by YOUR kit's pads, timing kept
+        |                        raw, velocities from the hits' dynamics;
+        |                        uncertain hits are marked, never invented
         |  feel <kit-dir> --from <donor>
         |                        groove transfer: the donor's timing-and-velocity
         |                        pocket (a kit's groove, any .mid, or a bottled
@@ -243,6 +249,7 @@ object Cli {
                 "mutate" -> MutateCommand.run(args.drop(1), out)
                 "shape" -> ShapeCommand.run(args.drop(1), out)
                 "feel" -> FeelCommand.run(args.drop(1), out)
+                "learn" -> LearnCommand.run(args.drop(1), out)
                 "era" -> EraCommand.run(args.drop(1), out)
                 "wear" -> WearCommand.run(args.drop(1), out)
                 "answer" -> AnswerCommand.run(args.drop(1), out)

@@ -215,6 +215,26 @@ honestly when the groove leaves them no room (a wall of hats gets no
 shaker). Asking for the band never rewrites the bass: same seed, same
 answer, sidemen added. `project` lands each as its own keys track.
 
+### `learn <beat.wav> --into <kit-dir>` — the Ear: bite a beat
+
+Everything else chops audio into *sounds*; the Ear hears a recording
+as a *performance*. The same onset detection the chopper trusts finds
+the hits, the same classifier chop runs on its slices classifies each
+inter-onset window, and the transcription plays back on **your** kit:
+hits land on the pads whose classes match (with the preview's own
+stand-ins — snare↔clap, the hats for each other, perc on a hat),
+timing kept raw — that's the feel — and velocities from the hits' own
+dynamics. The result becomes the kit's groove with the standard
+variations, ready for every native export.
+
+Honest throughout: no confident tempo refuses (the ear needs a grid
+to write onto); hits under the confidence bar are counted and left
+out — *marked, never invented*; classes the kit has no pad for are
+named, not guessed around. Deterministic: same audio, same hearing.
+Scope is beats, not mixes — a song with bass and vocals over the
+drums is not what this ear is for, and the classifier's confidence
+gate is what says so.
+
 ### `feel <kit-dir> --from <donor>` — steal the feel, not the notes
 
 Groove transfer, the MPC's own legendary feature. The donor — another

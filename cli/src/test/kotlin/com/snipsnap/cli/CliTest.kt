@@ -1311,6 +1311,46 @@ class CliTest {
     }
 
     @Test
+    fun `learn bites a beat onto the kit's own pads`() {
+        val wav = writeBreak(File(temp, "lr.wav"))
+        val out = File(temp, "lr-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "LR", "--slices", "8").first)
+        val kitDir = File(out, "LR")
+
+        val (code, stdout, stderr) = cli("learn", wav.path, "--into", kitDir.path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "learned:")
+        assertContains(stdout, "kick")
+        val learned = GrooveStore.load(kitDir).first()
+        assertTrue(learned.name.endsWith("Learned"), learned.name)
+        assertTrue(learned.notes.isNotEmpty())
+        val kit = KitStore.load(kitDir)
+        assertTrue(
+            learned.notes.all { kit.pad(it.note - 35) != null },
+            "every learned hit lands on a pad the kit has",
+        )
+        // The kick pad opens the beat, right where writeBreak put it.
+        val kickSlot = kit.pads.first { it.drumClass == DrumClass.KICK }.slot
+        assertEquals(35 + kickSlot, learned.notes.minByOrNull { it.timePulses }!!.note)
+
+        // A held tone is not a beat - the ear refuses, named.
+        val toneFile = File(temp, "lr-tone.wav").also { f ->
+            val rate = 44_100
+            WavWriter.write(
+                f,
+                Snip(FloatArray(4 * rate) { i -> (0.4 * Math.sin(2.0 * Math.PI * 220.0 * i / rate)).toFloat() }, 1, rate),
+            )
+        }
+        val (tCode, _, tErr) = cli("learn", toneFile.path, "--into", kitDir.path)
+        assertEquals(2, tCode)
+        assertTrue("tempo" in tErr || "beat" in tErr, tErr)
+
+        val (noCode, _, noErr) = cli("learn", wav.path)
+        assertEquals(2, noCode)
+        assertContains(noErr, "--into")
+    }
+
+    @Test
     fun `mutate breeds one hit from many parents at the terminal`() {
         val wav = writeBreak(File(temp, "mu.wav"))
         val out = File(temp, "mu-out")
