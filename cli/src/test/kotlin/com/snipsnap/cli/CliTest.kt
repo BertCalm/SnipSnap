@@ -1311,6 +1311,43 @@ class CliTest {
     }
 
     @Test
+    fun `mutate breeds one hit from many parents at the terminal`() {
+        val wav = writeBreak(File(temp, "mu.wav"))
+        val out = File(temp, "mu-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "MU", "--slices", "4").first)
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "MU2", "--slices", "4").first)
+        val kitDir = File(out, "MU")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(1)!!.sampleFile)
+        val before = padFile.readBytes()
+
+        // Stack with a same-kit pad and another kit's pad in one call.
+        val (code, stdout, stderr) =
+            cli("mutate", kitDir.path, "A01", "--with", "A02,${File(out, "MU2").path}:A02")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "one hit, 3 parents")
+        assertTrue(!before.contentEquals(padFile.readBytes()), "the pad's audio changed")
+        val mutated = KitStore.load(kitDir).pad(1)!!
+        assertContains(mutated.source["mutatedWith"]!!, "MU2:A02")
+        assertTrue(mutated.recipe!!.entries.containsKey("mutate"))
+
+        // Lineage shows the extra parentage.
+        val (_, lin, _) = cli("lineage", kitDir.path)
+        assertContains(lin, "mutated with")
+
+        assertEquals(0, cli("mutate", kitDir.path, "A01", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()), "undo is byte-identical")
+
+        // Splice from a WAV parent, then the contradictions refuse.
+        assertEquals(0, cli("mutate", kitDir.path, "A01", "--with", wav.path, "--splice", "--at", "30").first)
+        val (bothCode, _, bothErr) = cli("mutate", kitDir.path, "A02", "--with", "A01", "--splice", "--split")
+        assertEquals(2, bothCode)
+        assertContains(bothErr, "pick one")
+        val (noneCode, _, noneErr) = cli("mutate", kitDir.path, "A02")
+        assertEquals(2, noneCode)
+        assertContains(noneErr, "--with")
+    }
+
+    @Test
     fun `robin chains a pad from the terminal and undoes it byte-identical`() {
         val wav = writeBreak(File(temp, "rb.wav"))
         val out = File(temp, "rb-out")

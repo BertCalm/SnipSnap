@@ -85,7 +85,13 @@ object Lineage {
                     else -> null
                 }
             }.distinct().sorted()
-            if (origins.isEmpty()) children += Node("made from scratch") else origins.forEach { children += Node(it) }
+            // Mutation is extra parentage, not a replacement origin: a
+            // chopped pad that was later mutated shows both lines.
+            val mutations = kit.pads.mapNotNull { p ->
+                p.source["mutatedWith"]?.let { "mutated with $it" }
+            }.distinct().sorted()
+            val all = origins + mutations
+            if (all.isEmpty()) children += Node("made from scratch") else all.forEach { children += Node(it) }
         }
         return Node(kit.name, children)
     }

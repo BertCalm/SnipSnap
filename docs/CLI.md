@@ -274,6 +274,30 @@ Humanize scales them conservatively (pitch ×0.05, volume ×0.2, pan
 have no such fields and honestly ignore it. Bench row: humanize 0.5
 on the Live III — audible variation at a sane amount.
 
+### `mutate <kit-dir> <pad> --with <src>[,<src>…]` — one hit from many parents
+
+Sound design by **recombination** — where `treat` and `era` transform a
+single sound, mutate breeds a new one. Parents are pad refs (`A03`),
+another kit's pads (`path/to/kit:B02`), or bare `.wav` files; mono
+parents widen, foreign rates resample, and every layer is
+**transient-aligned** (onset-trimmed) so nothing flams. Three moves:
+
+- default **stack** — parents summed at the loudest parent's own level,
+  with an honest polarity check: a layer whose first ~46ms measurably
+  cancels against the pad is flipped, and the output says so;
+- `--splice [--at ms]` — the classic mash: the pad's attack up to the
+  split (default 40ms), a 10ms equal-power handover, then the parent's
+  body *from the same time position*, so its decay continues as if both
+  had been hit together;
+- `--split [--hz N]` — the pad below the crossover (default 200 Hz),
+  the parent above: sub from this kick, crack from that snare.
+
+Bin-backed through the same door as every treatment (`--undo` restores
+byte-identical); the recipe — mode, parents, split, flips — rides the
+pad so the sound stays regenerable; and provenance stamps the parents,
+so `lineage` shows a hit with two of them. Deterministic: same
+parents, same recipe, same bytes.
+
 ### `robin <kit-dir> <pad>` — round robin, rendered
 
 The PSK corpus trick aimed the other way. Commercial kits chain N

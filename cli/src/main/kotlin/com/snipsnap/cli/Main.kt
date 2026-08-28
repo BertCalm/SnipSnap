@@ -86,6 +86,13 @@ object Cli {
         |                        as a tradeable file instead
         |  treat <kit-dir> <pad> <character>
         |                        crush/reverse/wash one pad (--undo restores)
+        |  mutate <kit-dir> <pad> --with <src>[,<src>..]
+        |                        one hit from many parents: transient-aligned
+        |                        stack (with a polarity check), --splice (the
+        |                        pad's attack onto the parent's body, --at ms),
+        |                        or --split (pad lows + parent highs, --hz N);
+        |                        parents are pad refs, kit:pad, or .wav files
+        |                        (--undo restores)
         |  robin <kit-dir> <pad> round robin: N seeded subtle takes rendered
         |                        into a chain WAV - the MPC 3 cycles one per
         |                        hit (Slice Motion), the MPC 2 plays take one
@@ -231,6 +238,7 @@ object Cli {
                 "merge" -> MergeCommand.run(args.drop(1), out)
                 "treat" -> TreatCommand.run(args.drop(1), out)
                 "robin" -> RobinCommand.run(args.drop(1), out)
+                "mutate" -> MutateCommand.run(args.drop(1), out)
                 "shape" -> ShapeCommand.run(args.drop(1), out)
                 "feel" -> FeelCommand.run(args.drop(1), out)
                 "era" -> EraCommand.run(args.drop(1), out)
