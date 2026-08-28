@@ -108,6 +108,52 @@ class CaptureDoctorTest {
     }
 
     @Test
+    fun `the floor is measured honestly and the gate is gentle`() {
+        // Drums over -44ish dB of hiss, with a noise-only tail to gate.
+        val rnd = java.util.Random(7)
+        val noisy = beat().copyOf()
+        for (i in noisy.indices) noisy[i] += (rnd.nextFloat() * 2f - 1f) * 0.01f
+        val snip = Snip(noisy, 1, rate)
+
+        val floor = CaptureDoctor.measureFloor(snip)!!
+        assertTrue(floor in -50f..-38f, "the floor reads the planted hiss: $floor dBFS")
+
+        val gated = CaptureDoctor.expand(snip, floor)
+        fun rmsAt(s: FloatArray, fromSec: Float, toSec: Float): Double {
+            var acc = 0.0
+            var n = 0
+            for (i in (fromSec * rate).toInt() until minOf((toSec * rate).toInt(), s.size)) {
+                acc += s[i] * s[i].toDouble()
+                n++
+            }
+            return Math.sqrt(acc / n.coerceAtLeast(1))
+        }
+        // The noise-only tail recedes by at least 6 dB...
+        val before = rmsAt(noisy, 2.4f, 2.9f)
+        val after = rmsAt(gated.samples, 2.4f, 2.9f)
+        assertTrue(
+            20 * Math.log10(after / before) < -6,
+            "the tail recedes: ${20 * Math.log10(after / before)} dB",
+        )
+        // ...but never below the depth cap - gentle, not a mute.
+        assertTrue(
+            20 * Math.log10(after / before) > -CaptureDoctor.MAX_ATTEN_DB - 1.0,
+            "the gate never slams",
+        )
+        // The drums keep their peaks - the gate opens instantly.
+        val kickPeakBefore = (0 until rate).maxOf { Math.abs(noisy[it]) }
+        val kickPeakAfter = (0 until rate).maxOf { Math.abs(gated.samples[it]) }
+        assertTrue(
+            Math.abs(kickPeakAfter - kickPeakBefore) < 0.05f * kickPeakBefore,
+            "peaks survive: $kickPeakBefore -> $kickPeakAfter",
+        )
+
+        // A clean beat's floor reads as clean - callers leave it alone.
+        val cleanFloor = CaptureDoctor.measureFloor(Snip(beat(), 1, rate))!!
+        assertTrue(cleanFloor < CaptureDoctor.CLEAN_FLOOR_DB, "a clean capture reads clean: $cleanFloor")
+    }
+
+    @Test
     fun `60 Hz is heard as 60, harmonics counted, clean audio stays silent`() {
         val sixty = withHum(beat(), 60.0, 0.04f)
         val report = CaptureDoctor.detectHum(sixty)

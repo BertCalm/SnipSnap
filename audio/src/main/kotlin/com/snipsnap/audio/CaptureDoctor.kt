@@ -298,6 +298,79 @@ object CaptureDoctor {
         return Math.sqrt(acc / (to - from)).toFloat()
     }
 
+    // ---- the noise floor (MM3) --------------------------------------------
+
+    /** Below this floor the capture is clean and the gate stays out of it. */
+    const val CLEAN_FLOOR_DB = -60f
+
+    /** The expander eases in below floor + this margin. */
+    const val EXPAND_MARGIN_DB = 12f
+
+    /** 2:1 downward — quiet gets quieter, never gone. */
+    const val EXPAND_RATIO = 2f
+
+    /** The depth cap: a gentle gate, not a mute. */
+    const val MAX_ATTEN_DB = 12f
+
+    private const val FLOOR_WINDOW_SEC = 0.05f
+    private const val RELEASE_SEC = 0.08f
+
+    /**
+     * The capture's noise floor in dBFS, read from its quietest tenth of
+     * [FLOOR_WINDOW_SEC] windows. Null when the audio is too short to
+     * say. A floor under [CLEAN_FLOOR_DB] means a clean capture —
+     * callers leave those alone.
+     */
+    fun measureFloor(snip: Snip): Float? {
+        val mono = if (snip.channels == 1) snip else Cleanup.toMono(snip)
+        val win = (FLOOR_WINDOW_SEC * mono.sampleRate).toInt()
+        val hop = win / 2
+        if (mono.frameCount < win * 4) return null
+        val rmses = mutableListOf<Float>()
+        var at = 0
+        while (at + win <= mono.frameCount) {
+            rmses += rms(mono.samples, at, at + win)
+            at += hop
+        }
+        rmses.sort()
+        val floor = rmses[(rmses.size / 10).coerceIn(0, rmses.size - 1)]
+        return 20f * Math.log10(floor.toDouble().coerceAtLeast(1e-7)).toFloat()
+    }
+
+    /**
+     * The gentle gate: a downward expander below `floor + margin`,
+     * [EXPAND_RATIO]:1 in dB with the depth capped at [MAX_ATTEN_DB] —
+     * hiss recedes, tails breathe, nothing slams shut. The envelope
+     * opens instantly (a transient must never be clipped by its own
+     * gate) and releases over [RELEASE_SEC]. Channels move together.
+     */
+    fun expand(snip: Snip, floorDb: Float): Snip {
+        val thresholdLin = Math.pow(10.0, (floorDb + EXPAND_MARGIN_DB) / 20.0).toFloat()
+        val release = Math.exp(-1.0 / (RELEASE_SEC * snip.sampleRate)).toFloat()
+        val out = FloatArray(snip.samples.size)
+        var env = 0f
+        for (f in 0 until snip.frameCount) {
+            var level = 0f
+            for (ch in 0 until snip.channels) {
+                val v = Math.abs(snip.samples[f * snip.channels + ch])
+                if (v > level) level = v
+            }
+            env = if (level > env) level else level + release * (env - level)
+            val gainDb = if (env >= thresholdLin) {
+                0f
+            } else {
+                val envDb = 20f * Math.log10(env.toDouble().coerceAtLeast(1e-7)).toFloat()
+                ((envDb - (floorDb + EXPAND_MARGIN_DB)) * (EXPAND_RATIO - 1f))
+                    .coerceAtLeast(-MAX_ATTEN_DB)
+            }
+            val g = Math.pow(10.0, gainDb / 20.0).toFloat()
+            for (ch in 0 until snip.channels) {
+                out[f * snip.channels + ch] = snip.samples[f * snip.channels + ch] * g
+            }
+        }
+        return Snip(out, snip.channels, snip.sampleRate)
+    }
+
     /** Goertzel amplitude of [hz] over the first [n] frames. */
     internal fun goertzel(samples: FloatArray, n: Int, hz: Float, rate: Int): Float {
         val w = 2.0 * Math.PI * hz / rate
