@@ -938,10 +938,10 @@ still rides HH1.4's slice-map capture, like every chain.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| II1 | Grid model — probe findings written into MPC3_FORMAT.md; `ChainInfo` gains `zones: List<ChainZone>?` (velStart/velEnd/baseSlice/cycle; 2..4 zones, contiguous soft-first tiling of 0..127, each window inside the slice count); kit.json round-trips; `KitPad` still refuses `velocityLayers` + `chain` together (zones ARE the layers now) | CORE | S–M | probe documented; store round-trip; overlapping/gapped/out-of-range grids refused |
-| II2 | Grid writers — `.xtd`: one filled layer per zone, loudest first, the PSK field shapes (`sliceIndex` = zone base, `sliceIncrement 1`, `sliceCycleLength` = zone cycle, zone velocity windows, per-zone `sliceInfo` windowing the base take); `.xpm`: per-layer `SliceStart`/`SliceEnd` windows into the one chain WAV — real velocity switching on MPC 2, no robin, the generation's honest ceiling | CORE | M | grid layer fields match the PSK pattern; single-zone chains and non-chain kits byte-identical (goldens) |
-| II3 | Grid preview — velocity picks the zone, repeated hits cycle takes within it (per slot-and-zone counters), so the full grid is audible before the card | CORE | S | soft and hard notes play different windows; repeats at one velocity alternate takes; single-zone behavior unchanged |
-| II4 | `robin --zones N` — the graded chain from one take: N velocity zones × T takes, soft zones rendered softer *and darker* (the ghost-layer math), robin jitter within every zone, chain laid out soft→hard like the PSK's; bin-backed undo byte-identical; the audio-door guards from HH1.2 hold | CORE | M | N×T slices with zone grading (soft zone measurably quieter and darker); both generations export; undo byte-identical |
+| II1 | ✓ done (toPlay became the one projection every exporter shares, replacing three hand-rolled copies): Grid model — probe findings written into MPC3_FORMAT.md; `ChainInfo` gains `zones: List<ChainZone>?` (velStart/velEnd/baseSlice/cycle; 2..4 zones, contiguous soft-first tiling of 0..127, each window inside the slice count); kit.json round-trips; `KitPad` still refuses `velocityLayers` + `chain` together (zones ARE the layers now) | CORE | S–M | probe documented; store round-trip; overlapping/gapped/out-of-range grids refused |
+| II2 | ✓ done (goldens proved non-grid exports byte-identical through the SliceStart change): Grid writers — `.xtd`: one filled layer per zone, loudest first, the PSK field shapes (`sliceIndex` = zone base, `sliceIncrement 1`, `sliceCycleLength` = zone cycle, zone velocity windows, per-zone `sliceInfo` windowing the base take); `.xpm`: per-layer `SliceStart`/`SliceEnd` windows into the one chain WAV — real velocity switching on MPC 2, no robin, the generation's honest ceiling | CORE | M | grid layer fields match the PSK pattern; single-zone chains and non-chain kits byte-identical (goldens) |
+| II3 | ✓ done (per-lane counters: each zone cycles independently, single-zone lane = slot exactly as before): Grid preview — velocity picks the zone, repeated hits cycle takes within it (per slot-and-zone counters), so the full grid is audible before the card | CORE | S | soft and hard notes play different windows; repeats at one velocity alternate takes; single-zone behavior unchanged |
+| II4 | ✓ done (soften normalizes peak, so quiet comes from an explicit level grade 0.55→1.0 beside the tone grade): `robin --zones N` — the graded chain from one take: N velocity zones × T takes, soft zones rendered softer *and darker* (the ghost-layer math), robin jitter within every zone, chain laid out soft→hard like the PSK's; bin-backed undo byte-identical; the audio-door guards from HH1.2 hold | CORE | M | N×T slices with zone grading (soft zone measurably quieter and darker); both generations export; undo byte-identical |
 
 **Below the line for II:** 8-zone grids (MPC 3-only; revisit if the
 4-zone cap ever pinches); wrap-around cycle semantics (the PSK's
@@ -975,9 +975,18 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
 
-CORE wave II (the grid, in order):
-  II1 grid model → II2 grid writers → II3 grid preview →
-  II4 robin --zones (the graded chain)
+CORE wave II: ✓ all landed (2026-08-28) — the velocity × round-robin
+  grid, decoded from a fresh PSK probe (zones loudest-first, base
+  sliceIndex grading with intensity, per-zone cycles, one seed per
+  pad, and Akai's own sliceInfo proven NOT a per-slice window): the
+  ChainZone model with the 4-zone cap (MPC 2 parity), both writers
+  speaking the grid (the .xpm as slice-window velocity switching —
+  that generation's honest ceiling), the per-lane preview, and
+  robin --zones rendering the graded chain from one take (quieter
+  AND darker soft zones, pristine top anchor, byte-identical undo).
+  791 tests. Hardware robin audibility still rides HH1.4's capture;
+  bench row: a --zones 3 pad on the Live III velocity-switching and
+  (post-capture) cycling.
 
 CORE wave HH: ✓ all landed (2026-08-28) except HH1.4 (bench-blocked
   on the Sample-Edit capture) — chain plumbing with the GG4 verdict
