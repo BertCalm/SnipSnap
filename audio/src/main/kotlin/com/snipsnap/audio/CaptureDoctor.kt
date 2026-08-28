@@ -509,6 +509,168 @@ object CaptureDoctor {
         return DenoiseReport(floorDb, quietCount, cleaned)
     }
 
+    // ---- the tail knee (NN3) ----------------------------------------------
+
+    /** Envelope resolution for the knee hunt — 10 ms smooths a noise tail's wiggle without hiding the knee. */
+    private const val TAIL_WINDOW_SEC = 0.01f
+
+    /** Each side of a candidate knee needs this much line to fit. */
+    private const val KNEE_MIN_SEG_SEC = 0.05f
+
+    /** The handoff must sit at least this far under the hit's peak. */
+    const val KNEE_DEPTH_DB = -18f
+
+    /** The hit's decay must be at least this many times steeper than the tail's. */
+    const val KNEE_SLOPE_RATIO = 2f
+
+    /** A tail flatter than this isn't a room decaying — it's a floor, and the de-noiser's job. */
+    const val TAIL_MIN_SLOPE_DB_PER_SEC = -3f
+
+    /**
+     * Two segments must still beat one line by this much — a coarse
+     * sanity floor, not the discriminator: a real noise tail's wiggle
+     * is shared error both fits pay, so the ratio never gets far below
+     * one, while dry hits are rejected earlier by the validity gauntlet
+     * (depth, slopes, ratio, live tail) with no valid candidate at all.
+     */
+    private const val KNEE_FIT_GAIN = 0.8f
+
+    /** The fade's depth cap: gentle, never a cut. */
+    const val FADE_FLOOR_DB = 24f
+
+    private const val ENV_FLOOR_DB = -80f
+
+    /** Where the hit handed off to the room, and the trimmed result. */
+    data class RoomTail(
+        /** Seconds from the hit's peak to the handoff. */
+        val kneeSec: Float,
+        val hitSlopeDbPerSec: Float,
+        val tailSlopeDbPerSec: Float,
+        val snip: Snip,
+    )
+
+    /**
+     * De-reverb's honest first step, for one-shots: not the room
+     * undone (blind deconvolution — a research project), but the room's
+     * *tail* found and faded. The post-peak envelope is fit as two
+     * lines hunting the knee where the hit's steep decay hands off to
+     * a measurably shallower, still-decaying room tail — valid only
+     * when the knee sits well under the peak ([KNEE_DEPTH_DB]), the
+     * hit's slope is at least [KNEE_SLOPE_RATIO]× steeper, the tail
+     * still decays (flatter than [TAIL_MIN_SLOPE_DB_PER_SEC] is a
+     * noise floor, a different doctor's patient), and two segments
+     * genuinely beat one. From the knee the hit's own slope continues
+     * as a gain ramp — a fade capped at [FADE_FLOOR_DB], never a cut.
+     * A dry hit is single-slope by construction and comes back null.
+     */
+    fun trimRoomTail(snip: Snip): RoomTail? {
+        val mono = if (snip.channels == 1) snip else Cleanup.toMono(snip)
+        val win = (TAIL_WINDOW_SEC * mono.sampleRate).toInt()
+        if (win == 0 || mono.frameCount < win) return null
+        val windows = mono.frameCount / win
+        val env = FloatArray(windows) { w ->
+            val r = rms(mono.samples, w * win, (w + 1) * win)
+            (20f * Math.log10(r.toDouble().coerceAtLeast(1e-7)).toFloat()).coerceAtLeast(ENV_FLOOR_DB)
+        }
+        val peak = env.indices.maxBy { env[it] }
+        val minSeg = Math.max(2, (KNEE_MIN_SEG_SEC / TAIL_WINDOW_SEC).toInt())
+        // The fit runs to the last *live* window: the silence after the
+        // tail dies is nobody's decay, and letting it into the tail
+        // segment flattens every slope it touches.
+        val last = (windows - 1 downTo peak).firstOrNull { env[it] > ENV_FLOOR_DB + 6f }
+            ?: return null
+        if (last - peak < 2 * minSeg) return null
+
+        // One line as the baseline, two lines hunting the knee — the best
+        // *valid* knee, because a real envelope can have three regimes
+        // (hit → room tail → silence floor) and the raw SSE optimum may
+        // sit on the tail-to-floor corner, which is nobody's handoff.
+        val (_, _, sseOne) = fitLine(env, peak, last)
+        val perSec = 1f / TAIL_WINDOW_SEC
+        var bestK = -1
+        var bestSse = Float.MAX_VALUE
+        var bestS1 = 0f
+        var bestS2 = 0f
+        for (k in peak + minSeg..last - minSeg) {
+            val (s1, _, e1) = fitLine(env, peak, k)
+            val (s2, _, e2) = fitLine(env, k, last)
+            if (e1 + e2 >= bestSse) continue
+            val hit = s1 * perSec
+            val tail = s2 * perSec
+            // The tail must be a live, decaying room — mostly above the
+            // envelope floor (silence is dry, not roomy), still falling,
+            // measurably shallower than the hit, and well under the peak.
+            var alive = 0
+            for (i in k..last) if (env[i] > ENV_FLOOR_DB + 6f) alive++
+            val valid = env[k] - env[peak] <= KNEE_DEPTH_DB &&
+                hit < 0f && tail < TAIL_MIN_SLOPE_DB_PER_SEC &&
+                hit <= tail * KNEE_SLOPE_RATIO &&
+                alive * 2 >= last - k + 1
+            if (valid) {
+                bestSse = e1 + e2
+                bestK = k
+                bestS1 = s1
+                bestS2 = s2
+            }
+        }
+        if (bestK < 0 || bestSse >= KNEE_FIT_GAIN * sseOne) return null
+        val hitSlope = bestS1 * perSec
+        val tailSlope = bestS2 * perSec
+
+        // The fade: the hit's own slope carries on from the knee.
+        val out = FloatArray(snip.samples.size)
+        val kneeFrame = bestK * win
+        val gainDb = FloatArray(windows) { w ->
+            if (w < bestK) 0f
+            else {
+                val target = env[bestK] + bestS1 * (w - bestK)
+                (target - env[w]).coerceIn(-FADE_FLOOR_DB, 0f)
+            }
+        }
+        for (f in 0 until snip.frameCount) {
+            val w = (f / win).coerceAtMost(windows - 1)
+            val next = (w + 1).coerceAtMost(windows - 1)
+            val frac = (f - w * win).toFloat() / win
+            val db = gainDb[w] + (gainDb[next] - gainDb[w]) * frac
+            val g = Math.pow(10.0, db / 20.0).toFloat()
+            for (ch in 0 until snip.channels) {
+                out[f * snip.channels + ch] = snip.samples[f * snip.channels + ch] * g
+            }
+        }
+        return RoomTail(
+            kneeSec = (kneeFrame - peak * win).toFloat() / mono.sampleRate,
+            hitSlopeDbPerSec = hitSlope,
+            tailSlopeDbPerSec = tailSlope,
+            snip = Snip(out, snip.channels, snip.sampleRate),
+        )
+    }
+
+    /** Least-squares line over env[from..to]: (slope per window, intercept, SSE). */
+    private fun fitLine(env: FloatArray, from: Int, to: Int): Triple<Float, Float, Float> {
+        val n = to - from + 1
+        var sx = 0.0
+        var sy = 0.0
+        var sxx = 0.0
+        var sxy = 0.0
+        for (i in from..to) {
+            val x = (i - from).toDouble()
+            val y = env[i].toDouble()
+            sx += x
+            sy += y
+            sxx += x * x
+            sxy += x * y
+        }
+        val denom = n * sxx - sx * sx
+        val slope = if (denom == 0.0) 0.0 else (n * sxy - sx * sy) / denom
+        val intercept = (sy - slope * sx) / n
+        var sse = 0.0
+        for (i in from..to) {
+            val e = env[i] - (intercept + slope * (i - from))
+            sse += e * e
+        }
+        return Triple(slope.toFloat(), intercept.toFloat(), sse.toFloat())
+    }
+
     /** Goertzel amplitude of [hz] over the first [n] frames. */
     internal fun goertzel(samples: FloatArray, n: Int, hz: Float, rate: Int): Float {
         val w = 2.0 * Math.PI * hz / rate

@@ -228,6 +228,62 @@ class CaptureDoctorTest {
     }
 
     @Test
+    fun `the tail knee finds the room's handoff, fades it gently, and leaves dry hits alone`() {
+        // A tight hit: fast decay (~-350 dB/s), gone in a quarter second.
+        val hitLen = (0.25f * rate).toInt()
+        val hit = FloatArray(hitLen) { i ->
+            val t = i.toDouble() / rate
+            (0.8 * Math.sin(2.0 * Math.PI * 180.0 * t) * Math.exp(-40.0 * t)).toFloat()
+        }
+        val dry = FloatArray(rate)
+        hit.copyInto(dry)
+        assertNull(CaptureDoctor.trimRoomTail(Snip(dry, 1, rate)), "a dry hit is single-slope: no knee")
+
+        // The room: unit direct sound plus decaying noise (~-61 dB/s,
+        // much shallower than the hit) - convolve and the tail hangs on.
+        val rnd = java.util.Random(5)
+        val irLen = (0.5f * rate).toInt()
+        val ir = FloatArray(irLen) { i ->
+            if (i == 0) 1f else ((rnd.nextFloat() * 2f - 1f) * 0.01 * Math.exp(-7.0 * i / rate)).toFloat()
+        }
+        val roomyLen = (1.2f * rate).toInt()
+        val roomy = FloatArray(roomyLen)
+        for (i in 0 until hitLen) {
+            val h = hit[i]
+            for (j in ir.indices) {
+                val idx = i + j
+                if (idx < roomyLen) roomy[idx] += h * ir[j]
+            }
+        }
+        val result = CaptureDoctor.trimRoomTail(Snip(roomy, 1, rate))
+        assertTrue(result != null, "the roomy hit has a knee")
+        assertTrue(result!!.kneeSec in 0.03f..0.2f, "the knee sits near the true handoff: ${result.kneeSec}s")
+        assertTrue(
+            result.hitSlopeDbPerSec <= result.tailSlopeDbPerSec * CaptureDoctor.KNEE_SLOPE_RATIO,
+            "the hit is measurably steeper: ${result.hitSlopeDbPerSec} vs ${result.tailSlopeDbPerSec} dB/s",
+        )
+
+        // The hit's own body is untouched - the fade starts at the knee.
+        for (i in 0 until (0.04f * rate).toInt()) {
+            assertTrue(Math.abs(result.snip.samples[i] - roomy[i]) < 1e-6f, "the body is not the tail's to pay")
+        }
+
+        // The tail recedes - but it's a fade with a floor, never a cut.
+        fun rmsAt(s: FloatArray, fromSec: Float, toSec: Float): Double {
+            var acc = 0.0
+            var n = 0
+            for (i in (fromSec * rate).toInt() until minOf((toSec * rate).toInt(), s.size)) {
+                acc += s[i] * s[i].toDouble()
+                n++
+            }
+            return Math.sqrt(acc / n.coerceAtLeast(1))
+        }
+        val drop = 20 * Math.log10(rmsAt(result.snip.samples, 0.35f, 0.7f) / rmsAt(roomy, 0.35f, 0.7f))
+        assertTrue(drop < -6, "the room recedes: $drop dB")
+        assertTrue(drop > -CaptureDoctor.FADE_FLOOR_DB - 2.0, "gently - the floor holds: $drop dB")
+    }
+
+    @Test
     fun `clean composes the whole visit - findings named, clean audio returned as-is`() {
         // Hum over hiss over the beat, with one click riding the noise — a
         // proper bad capture: every leg of the visit has work to do.
