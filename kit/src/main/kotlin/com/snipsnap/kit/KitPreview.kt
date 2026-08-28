@@ -65,17 +65,22 @@ object KitPreview {
 
         val cache = HashMap<String, Snip>()
         val voices = mutableListOf<Voice>()
-        // Chain pads step per hit, so the preview needs to count them.
-        val hitsBySlot = HashMap<Int, Int>()
+        // Chain pads step per hit, so the preview counts them - per zone
+        // lane on a grid, so each zone cycles its own takes independently.
+        val hitsByLane = HashMap<Int, Int>()
         for (note in groove.notes.sortedBy { it.timePulses }) {
             val slot = note.note - 36 + 1
             val pad = kit.pad(slot) ?: continue
             val whole = cache.getOrPut(pad.sampleFile) { WavReader.read(File(kitDir, pad.sampleFile)) }
-            // Slice Motion, audible before the card: hit k on a chain pad
-            // plays slice (k mod cycle), same as the hardware's increment.
-            val hit = hitsBySlot.merge(slot, 1, Int::plus)!! - 1
+            // Slice Motion, audible before the card: velocity picks the
+            // zone (grids grade soft->hard), then hit k in that lane plays
+            // slice (base + k mod cycle), same as the hardware's increment.
             val snip = pad.chain?.let { c ->
-                val w = c.window(hit % c.cycle, whole.frameCount.toLong())
+                val zone = c.zoneFor((note.velocity * 127).roundToInt().coerceIn(0, 127))
+                val base = zone?.baseSlice ?: 0
+                val cycle = zone?.cycle ?: c.cycle
+                val hit = hitsByLane.merge(slot * 1000 + base, 1, Int::plus)!! - 1
+                val w = c.window(base + hit % cycle, whole.frameCount.toLong())
                 val from = w.first.toInt().coerceIn(0, whole.frameCount)
                 val to = (w.last + 1).toInt().coerceIn(from, whole.frameCount)
                 Snip(

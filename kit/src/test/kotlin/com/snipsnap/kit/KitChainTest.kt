@@ -299,6 +299,40 @@ class KitChainTest {
     }
 
     @Test
+    fun `the preview's grid - velocity picks the zone and hits cycle within it`() {
+        val dir = File(temp, "grid-pv")
+        val kit = gridKit(dir)
+        // Two soft hits then two hard: the soft lane cycles takes 1-2
+        // (amps 0.1/0.2), the hard lane takes 5-6 (amps 0.5/0.6).
+        val q = Mpc3Clip.PULSES_PER_16TH * 4L
+        val clip = Mpc3Clip(
+            "GridSteps", 1,
+            listOf(
+                Mpc3Note(36, 0, 0.2f),
+                Mpc3Note(36, q, 0.2f),
+                Mpc3Note(36, 2 * q, 1.0f),
+                Mpc3Note(36, 3 * q, 1.0f),
+            ),
+        )
+        val out = KitPreview.render(kit, dir, clip = clip, tempoBpm = 92f)
+        val framesPerPulse = 60.0 / 92f * KitPreview.RATE / 960.0
+        fun peakAt(hit: Int): Float {
+            val start = Math.round(hit * q * framesPerPulse).toInt()
+            var peak = 0f
+            for (f in start until minOf(start + segFrames, out.frameCount)) {
+                val s = Math.abs(out.samples[f * 2])
+                if (s > peak) peak = s
+            }
+            return peak
+        }
+        val p = (0 until 4).map { peakAt(it) }
+        // Same velocity within each pair, so peak ratios are take ratios.
+        assertTrue(Math.abs(p[1] / p[0] - 2f) < 0.1f, "the soft lane steps 0.1 -> 0.2: $p")
+        assertTrue(Math.abs(p[3] / p[2] - 0.6f / 0.5f) < 0.05f, "the hard lane steps 0.5 -> 0.6: $p")
+        assertTrue(p[2] > p[1], "the hard zone plays harder takes: $p")
+    }
+
+    @Test
     fun `the preview steps through the slices hit by hit`() {
         val dir = File(temp, "pv")
         val kit = chainKit(dir, cycle = 3)
