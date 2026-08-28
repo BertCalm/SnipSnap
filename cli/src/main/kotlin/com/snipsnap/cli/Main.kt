@@ -118,6 +118,11 @@ object Cli {
         |  diff <a> <b>          structured key-path diff of two MPC files,
         |                        either generation (--values lists differing
         |                        values; exit 1 when different)
+        |  lineage <kit-dir>     the kit's family tree from the provenance
+        |                        every verb stamps: resample generations,
+        |                        merge parents, dig songs, chops, imports
+        |                        (--root <crate> resolves parents by name;
+        |                        --png renders the tree as a card)
         |  notes <kit-dir>       liner notes: the kit's story as prose from
         |                        what it tracks (where it was dug or chopped,
         |                        generation, mileage, key, patterns, pads);
@@ -219,6 +224,7 @@ object Cli {
                 "art" -> ArtCommand.run(args.drop(1), out)
                 "jcard" -> JCardCommand.run(args.drop(1), out)
                 "notes" -> NotesCommand.run(args.drop(1), out)
+                "lineage" -> LineageCommand.run(args.drop(1), out)
                 "help", "--help", "-h" -> {
                     out.println(USAGE)
                     0

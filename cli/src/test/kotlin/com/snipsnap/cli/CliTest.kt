@@ -212,6 +212,32 @@ class CliTest {
     }
 
     @Test
+    fun `lineage walks dig to generation 3 from the terminal`() {
+        val song = writeSong(File(temp, "Track 09.wav"))
+        val out = File(temp, "lin-out")
+        assertEquals(0, cli("dig", song.path, "--chop", "--out", out.path).first)
+        val breakDir = File(out, "Track 09 Break")
+        assertEquals(0, cli("resample", breakDir.path, "--out", out.path, "--slices", "4").first)
+        assertEquals(0, cli("resample", File(out, "Track 09 Break Gen 2").path, "--out", out.path, "--slices", "4").first)
+
+        val gen3Dir = File(out, "Track 09 Break Gen 3")
+        val (code, stdout, stderr) = cli("lineage", gen3Dir.path, "--png")
+        assertEquals(0, code, "stderr: $stderr")
+        // The full chain, in order, down to the dug origin.
+        val stops = listOf(
+            "Track 09 Break Gen 3",
+            "resampled from Track 09 Break Gen 2",
+            "resampled from Track 09 Break\n",
+            "dug from Track 09.wav at ",
+        ).map { stdout.indexOf(it) }
+        assertTrue(stops.all { it >= 0 }, "every hop prints:\n$stdout")
+        assertEquals(stops, stops.sorted(), "hops print in chain order:\n$stdout")
+        assertTrue(File(gen3Dir, "${gen3Dir.name}-lineage.png").isFile, "the card lands beside the kit")
+
+        assertEquals(2, cli("lineage", File(temp, "not-a-kit").path).first)
+    }
+
+    @Test
     fun `chop builds a placed kit and every export format`() {
         val wav = writeBreak(File(temp, "break.wav"))
         val out = File(temp, "out")

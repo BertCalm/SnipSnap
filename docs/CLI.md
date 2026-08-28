@@ -374,6 +374,23 @@ mute group, DC gets removed — audio edits bin-backed with recipes,
 the rest metadata-only. Taste stays advice. Exit 0 healthy, 1 while
 findings remain, so it scripts like a check.
 
+### `lineage <kit-dir>` — the crate's family tree
+
+Every verb already stamps provenance; this walks it into genealogy.
+Kit-to-kit edges come from `resampledFrom` (the ritual's generation
+counter) and `mergedFrom` (merge now stamps both parents onto the pads
+it carries); parents are resolved **by kit name** among the kits under
+`--root` (default: the kit's own parent folder, where its siblings
+live), so the walk crosses folders. Where the chain bottoms out, the
+terminal origins print: `dug from <song> at <time>`, `chopped from
+<file>`, `imported from <archive>`, `captured from <app>` — or `made
+from scratch`. Inherited stamps ride every resample generation, so
+origins are shown only at the roots rather than repeated per level;
+a parent that left the crate is still shown, labeled `(not in the
+crate)`; cycles and diamonds print once. Deterministic — the same
+crate always draws the same tree. `--png` renders the tree as a card
+beside the kit (`--out DIR` to aim it elsewhere).
+
 ### `notes <kit-dir>` — liner notes
 
 The kit's story as prose, written from what it already tracks: dug
