@@ -154,6 +154,80 @@ class CaptureDoctorTest {
     }
 
     @Test
+    fun `spectral de-noise pulls hiss from under the drums and never warbles`() {
+        val rnd = java.util.Random(7)
+        val noisy = beat().copyOf()
+        for (i in noisy.indices) noisy[i] += (rnd.nextFloat() * 2f - 1f) * 0.01f
+        val report = CaptureDoctor.denoise(Snip(noisy, 1, rate))
+        assertTrue(report != null, "a hissy capture gets the deep clean")
+        val out = report!!.snip.samples
+        assertTrue(report.profileFrames >= 8, "the fingerprint came from real frames: ${report.profileFrames}")
+
+        fun rmsAt(s: FloatArray, fromSec: Float, toSec: Float): Double {
+            var acc = 0.0
+            var n = 0
+            for (i in (fromSec * rate).toInt() until minOf((toSec * rate).toInt(), s.size)) {
+                acc += s[i] * s[i].toDouble()
+                n++
+            }
+            return Math.sqrt(acc / n.coerceAtLeast(1))
+        }
+        // The noise-only tail recedes - but never past the cap.
+        val tailDrop = 20 * Math.log10(rmsAt(out, 2.4f, 2.9f) / rmsAt(noisy, 2.4f, 2.9f))
+        assertTrue(tailDrop < -6, "the tail recedes: $tailDrop dB")
+        assertTrue(tailDrop > -14, "but gently - the cap holds: $tailDrop dB")
+
+        // The kick keeps its peak - a loud frame opens every bin instantly.
+        val peakBefore = (0 until rate / 2).maxOf { Math.abs(noisy[it]) }
+        val peakAfter = (0 until rate / 2).maxOf { Math.abs(out[it]) }
+        assertTrue(Math.abs(peakAfter - peakBefore) < 0.05f * peakBefore, "peaks survive: $peakBefore -> $peakAfter")
+
+        // The claim the expander can't make: hiss drops UNDER a loud
+        // sound. A 6 kHz burst keeps every frame loud (the time-domain
+        // gate would stand wide open), yet the mid band holds only hiss
+        // - and recedes anyway - while the burst itself is untouched.
+        val rnd2 = java.util.Random(8)
+        val burst = FloatArray(3 * rate) { i ->
+            val hiss = (rnd2.nextFloat() * 2f - 1f) * 0.01f
+            val on = i >= rate / 2 && i < 5 * rate / 2
+            hiss + if (on) (0.4 * Math.sin(2.0 * Math.PI * 6000.0 * i / rate)).toFloat() else 0f
+        }
+        val burstOut = CaptureDoctor.denoise(Snip(burst, 1, rate))!!.snip.samples
+        fun bandAmp(s: FloatArray, hz: Float): Float {
+            val seg = s.copyOfRange(rate, 2 * rate)
+            return CaptureDoctor.goertzel(seg, seg.size, hz, rate)
+        }
+        val midBefore = bandAmp(burst, 500f) + bandAmp(burst, 800f) + bandAmp(burst, 1300f)
+        val midAfter = bandAmp(burstOut, 500f) + bandAmp(burstOut, 800f) + bandAmp(burstOut, 1300f)
+        assertTrue(
+            20 * Math.log10(midAfter / midBefore.toDouble()) < -6,
+            "hiss under the burst recedes: ${20 * Math.log10(midAfter / midBefore.toDouble())} dB",
+        )
+        val toneBefore = bandAmp(burst, 6000f)
+        val toneAfter = bandAmp(burstOut, 6000f)
+        assertTrue(Math.abs(toneAfter - toneBefore) < 0.05f * toneBefore, "the burst itself is untouched: $toneBefore -> $toneAfter")
+
+        // Anti-warble: the attenuated tail stays steady noise, not a
+        // flicker of tonal bursts - its level variance doesn't blow up.
+        fun cov(s: FloatArray): Double {
+            val win = (0.02f * rate).toInt()
+            val rmses = mutableListOf<Double>()
+            var at = (2.4f * rate).toInt()
+            while (at + win <= (2.9f * rate).toInt()) {
+                rmses += rmsAt(s, at.toFloat() / rate, (at + win).toFloat() / rate)
+                at += win
+            }
+            val mean = rmses.average()
+            val varr = rmses.sumOf { (it - mean) * (it - mean) } / rmses.size
+            return Math.sqrt(varr) / mean
+        }
+        assertTrue(cov(out) < cov(noisy) * 1.5 + 0.05, "no warble: ${cov(noisy)} -> ${cov(out)}")
+
+        // Clean audio has nothing to learn from and is left alone.
+        assertNull(CaptureDoctor.denoise(Snip(beat(), 1, rate)), "a clean beat gets no de-noise")
+    }
+
+    @Test
     fun `clean composes the whole visit - findings named, clean audio returned as-is`() {
         // Hum over hiss over the beat, with one click riding the noise — a
         // proper bad capture: every leg of the visit has work to do.

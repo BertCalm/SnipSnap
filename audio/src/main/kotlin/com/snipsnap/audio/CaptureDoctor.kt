@@ -415,6 +415,100 @@ object CaptureDoctor {
         return Snip(out, snip.channels, snip.sampleRate)
     }
 
+    // ---- spectral de-noise (NN2) ------------------------------------------
+
+    /** Gate a bin only when it sits within this factor of the profile (+6 dB). */
+    const val DENOISE_MARGIN = 2f
+
+    /** The attenuation cap, −12 dB as a gain: noise recedes, never vanishes into warble. */
+    const val DENOISE_FLOOR_GAIN = 0.25f
+
+    /** The quietest tenth of frames teaches the fingerprint. */
+    private const val QUIET_FRACTION = 0.1f
+
+    /** Fewer quiet frames than this is nothing to learn from. */
+    private const val MIN_PROFILE_FRAMES = 8
+
+    /** Per-bin gain release, one pole per frame; opening is instant. */
+    private const val GAIN_RELEASE = 0.6f
+
+    /** Gains move with their neighbors: ±2 bins averaged, no lone flickers. */
+    private const val FREQ_SMOOTH_BINS = 2
+
+    /** What the deep clean learned and did. */
+    data class DenoiseReport(val floorDb: Float, val profileFrames: Int, val snip: Snip)
+
+    /**
+     * Spectral de-noise — the frequency-domain answer to [expand]'s
+     * time-domain gate. The expander can only duck the gaps *between*
+     * hits; hiss lives in different bins than the drums, so this pulls
+     * it out from **underneath** them.
+     *
+     * The noise fingerprint is the average spectrum of the capture's
+     * quietest tenth of frames — its own gaps, nobody else's room. Each
+     * frame's bins then gate downward against `profile ×`[DENOISE_MARGIN]:
+     * a bin at hiss level recedes toward [DENOISE_FLOOR_GAIN], a bin
+     * carrying a drum passes untouched. Three defenses against the
+     * classic musical-noise warble: the attenuation cap (noise reduced,
+     * never zeroed), frequency smoothing (neighbors move together), and
+     * an instant-open / eased-shut gain envelope per bin — the same
+     * attack philosophy as [expand], for the same reason.
+     *
+     * Null when there is nothing to do or nothing to learn from: a
+     * floor already under [CLEAN_FLOOR_DB], audio too short to measure,
+     * or too few quiet frames to make an honest fingerprint.
+     */
+    fun denoise(snip: Snip): DenoiseReport? {
+        val floorDb = measureFloor(snip) ?: return null
+        if (floorDb <= CLEAN_FLOOR_DB) return null
+
+        // Pass one: every frame's spectrum, per channel.
+        val allMags = Array(snip.channels) { mutableListOf<FloatArray>() }
+        Spectral.forEachFrame(snip) { ch, _, mags -> allMags[ch].add(mags.copyOf()) }
+        val frameCount = allMags[0].size
+        val quietCount = Math.max(MIN_PROFILE_FRAMES, Math.ceil(frameCount * QUIET_FRACTION.toDouble()).toInt())
+        if (frameCount < quietCount * 2) return null
+
+        // The fingerprint: the quietest frames' average spectrum.
+        val profiles = Array(snip.channels) { ch ->
+            val byEnergy = allMags[ch].sortedBy { mags -> mags.sumOf { (it * it).toDouble() } }
+            val profile = FloatArray(Spectral.BINS)
+            for (i in 0 until quietCount) {
+                val m = byEnergy[i]
+                for (b in profile.indices) profile[b] += m[b] / quietCount
+            }
+            profile
+        }
+
+        // Pass two: gate each bin against the fingerprint, smoothed.
+        val prev = Array(snip.channels) { FloatArray(Spectral.BINS) { 1f } }
+        val target = FloatArray(Spectral.BINS)
+        val cleaned = Spectral.process(snip) { ch, _, mags ->
+            val profile = profiles[ch]
+            for (b in target.indices) {
+                target[b] = if (mags[b] < profile[b] * DENOISE_MARGIN) DENOISE_FLOOR_GAIN else 1f
+            }
+            val gains = FloatArray(Spectral.BINS)
+            for (b in gains.indices) {
+                var acc = 0f
+                var n = 0
+                for (k in b - FREQ_SMOOTH_BINS..b + FREQ_SMOOTH_BINS) {
+                    if (k in target.indices) {
+                        acc += target[k]
+                        n++
+                    }
+                }
+                val smoothed = acc / n
+                val p = prev[ch][b]
+                gains[b] = (if (smoothed > p) smoothed else smoothed + GAIN_RELEASE * (p - smoothed))
+                    .coerceIn(DENOISE_FLOOR_GAIN, 1f)
+                prev[ch][b] = gains[b]
+            }
+            gains
+        }
+        return DenoiseReport(floorDb, quietCount, cleaned)
+    }
+
     /** Goertzel amplitude of [hz] over the first [n] frames. */
     internal fun goertzel(samples: FloatArray, n: Int, hz: Float, rate: Int): Float {
         val w = 2.0 * Math.PI * hz / rate
