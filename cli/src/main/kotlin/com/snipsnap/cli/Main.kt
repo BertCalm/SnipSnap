@@ -89,7 +89,10 @@ object Cli {
         |                        into a chain WAV - the MPC 3 cycles one per
         |                        hit (Slice Motion), the MPC 2 plays take one
         |                        ([--takes N] [--seed S]; --undo restores the
-        |                        single take byte-identical)
+        |                        single take byte-identical); --zones Z (2..4)
+        |                        renders the full velocity x robin grid - a
+        |                        dynamics-graded chain where soft hits play
+        |                        quieter, darker takes
         |  shape <kit-dir> <pad> pad shape as metadata: --attack/--decay/
         |                        --cutoff/--res (0..1) land in the exported
         |                        programs' own fields - the HARDWARE renders

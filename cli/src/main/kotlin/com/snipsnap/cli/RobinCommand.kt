@@ -15,7 +15,7 @@ import java.io.PrintStream
 object RobinCommand {
 
     fun run(args: List<String>, out: PrintStream): Int {
-        val opts = Options.parse(args, valued = setOf("--takes", "--seed"), boolean = setOf("--undo"))
+        val opts = Options.parse(args, valued = setOf("--takes", "--seed", "--zones"), boolean = setOf("--undo"))
         val dirArg = opts.positional.getOrNull(0)
             ?: throw CliError(
                 "robin wants a kit and a pad: snipsnap robin <kit-dir> A01 [--takes 3] [--seed 7]",
@@ -36,15 +36,27 @@ object RobinCommand {
 
         val takes = opts.int("--takes") ?: Robin.DEFAULT_TAKES
         val seed = opts.int("--seed") ?: 0
-        val pad = Robin.apply(model, slot, takes = takes, seed = seed)
+        val zones = opts.int("--zones")
+        val pad = Robin.apply(model, slot, takes = takes, seed = seed, zones = zones)
         model.save()
-        out.println(
-            "pad $padArg is a round-robin chain of $takes takes (seed $seed) - " +
-                "take one untouched, the rest subtle seeded variants",
-        )
-        out.println("  ${pad.sampleFile} is now the chain; the preview alternates takes per hit,")
-        out.println("  and the MPC 3 metadata cycles them (Slice Motion). until chains carry their")
-        out.println("  slice map, hardware of either generation plays take one. undo: --undo")
+        if (zones != null) {
+            out.println(
+                "pad $padArg is a velocity x round-robin grid: $zones zones x $takes takes " +
+                    "(seed $seed) - soft hits play quieter, darker takes",
+            )
+            out.println("  ${pad.sampleFile} is the graded chain, soft to hard; the preview picks the")
+            out.println("  zone by velocity and cycles takes within it. the MPC 3 metadata does the")
+            out.println("  same (Slice Motion); the MPC 2 velocity-switches the zones' anchor takes.")
+            out.println("  undo: --undo")
+        } else {
+            out.println(
+                "pad $padArg is a round-robin chain of $takes takes (seed $seed) - " +
+                    "take one untouched, the rest subtle seeded variants",
+            )
+            out.println("  ${pad.sampleFile} is now the chain; the preview alternates takes per hit,")
+            out.println("  and the MPC 3 metadata cycles them (Slice Motion). until chains carry their")
+            out.println("  slice map, hardware of either generation plays take one. undo: --undo")
+        }
         return 0
     }
 

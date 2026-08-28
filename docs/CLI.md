@@ -269,6 +269,19 @@ a robin'd pad on the Live III audibly alternates takes (pending the
 HH1.4 slice-chunk capture; until then the hardware plays take one, the
 declared fallback).
 
+`--zones Z` (2..4) renders the **full velocity × round-robin grid**
+from that one take — the PSK corpus scheme. The chain becomes
+dynamics-graded, soft→hard: each zone gets `--takes` takes of a graded
+render (soft zones both *quieter* — level from 0.55 up to unity — and
+*darker*, via the ghost layers' own soften depths; the top zone's
+anchor is the untouched original), with the robin jitter inside every
+zone. The `.xtd` writes one layer per zone the PSK way (its own base
+`sliceIndex` and cycle); the `.xpm` velocity-switches the zones'
+anchor takes through slice windows — real dynamics on the MPC 2, no
+robin, that generation's ceiling. The preview picks the zone by
+velocity and cycles takes within it: quiet hits sound soft *and*
+never repeat a take.
+
 ### `wear <kit-dir>` — the kit as a living tape
 
 The product pretends to be a tape deck; this makes the metaphor real.

@@ -113,6 +113,67 @@ class RobinTest {
     }
 
     @Test
+    fun `the grid - zones x takes graded soft to hard, undo byte-identical`() {
+        val m = model("Grid")
+        val padFile = File(m.kitDir, m.pad(1)!!.sampleFile)
+        val originalBytes = padFile.readBytes()
+        val original = WavReader.read(padFile)
+
+        val pad = Robin.apply(m, 1, takes = 2, seed = 5, zones = 3)
+        m.save()
+        val chain = pad.chain!!
+        assertEquals(6, chain.sliceCount, "3 zones x 2 takes")
+        val zones = chain.zones!!
+        assertEquals(3, zones.size)
+        assertEquals(0, zones[0].velStart)
+        assertEquals(127, zones[2].velEnd)
+        assertEquals(0, zones[0].baseSlice)
+        assertEquals(4, zones[2].baseSlice, "zone anchors step by takes")
+        assertEquals(2, zones[1].cycle)
+
+        val chained = WavReader.read(padFile)
+        fun slice(i: Int): FloatArray {
+            val w = chain.window(i, chained.frameCount.toLong())
+            return chained.samples.copyOfRange(w.first.toInt(), (w.last + 1).toInt())
+        }
+        // The top zone's anchor (slice 4) is the pristine original.
+        val top = slice(4)
+        assertEquals(original.frameCount, top.size)
+        for (i in top.indices) {
+            assertTrue(
+                abs(top[i] - original.samples[i]) <= 2f / 32767f,
+                "the hard anchor strays from the original at $i",
+            )
+        }
+        // The soft zone's anchor is quieter AND darker than the hard one.
+        fun rms(x: FloatArray): Double {
+            var acc = 0.0
+            for (v in x) acc += v * v.toDouble()
+            return Math.sqrt(acc / x.size.coerceAtLeast(1))
+        }
+        fun roughness(x: FloatArray): Double {
+            var acc = 0.0
+            for (i in 1 until x.size) acc += Math.abs(x[i] - x[i - 1]).toDouble()
+            return acc / (x.size - 1).coerceAtLeast(1) / rms(x).coerceAtLeast(1e-9)
+        }
+        val soft = slice(0)
+        assertTrue(rms(soft) < rms(top) * 0.75, "the soft anchor plays quieter: ${rms(soft)} vs ${rms(top)}")
+        assertTrue(
+            roughness(soft) < roughness(top) * 0.9,
+            "the soft anchor plays darker: ${roughness(soft)} vs ${roughness(top)}",
+        )
+
+        // A grid kit still exports natively, then undo is byte-identical.
+        com.snipsnap.kit.Mpc3Exporter.exportTrack(m.kit, m.kitDir, File(temp, "grid-card"))
+        val undone = Robin.undo(m, 1)
+        assertEquals(null, undone.chain)
+        assertTrue(padFile.readBytes().contentEquals(originalBytes), "undo restores the single take")
+
+        assertFailsWith<IllegalArgumentException>("zones range") { Robin.apply(m, 1, zones = 5) }
+        assertFailsWith<IllegalArgumentException>("zones range") { Robin.apply(m, 1, zones = 1) }
+    }
+
+    @Test
     fun `a robin'd kit still saves, previews and exports`() {
         val m = model("Ship")
         Robin.apply(m, 1, takes = 3, seed = 3)

@@ -1260,6 +1260,20 @@ class CliTest {
         val (badCode, _, badErr) = cli("robin", kitDir.path, "A01", "--takes", "1")
         assertTrue(badCode != 0)
         assertContains(badErr, "takes")
+
+        // --zones renders the full velocity x robin grid from the same pad.
+        val (gCode, gOut, gErr) = cli("robin", kitDir.path, "A01", "--zones", "3", "--takes", "2", "--seed", "5")
+        assertEquals(0, gCode, "stderr: $gErr")
+        assertContains(gOut, "3 zones x 2 takes")
+        val grid = KitStore.load(kitDir).pad(1)!!.chain!!
+        assertEquals(6, grid.sliceCount)
+        assertEquals(3, grid.zones!!.size)
+        assertEquals(0, cli("robin", kitDir.path, "A01", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()), "grid undo is byte-identical too")
+
+        val (bzCode, _, bzErr) = cli("robin", kitDir.path, "A01", "--zones", "9")
+        assertTrue(bzCode != 0)
+        assertContains(bzErr, "zones")
     }
 
     @Test
