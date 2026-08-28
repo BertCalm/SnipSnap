@@ -90,6 +90,214 @@ object CaptureDoctor {
         return Snip(out, snip.channels, snip.sampleRate)
     }
 
+    // ---- clicks and dropouts (MM2) ----------------------------------------
+
+    /** What the repair pass did — zeros throughout when nothing needed doing. */
+    data class Repair(val snip: Snip, val clicks: Int, val dropouts: Int, val repairedFrames: Int) {
+        val touched: Boolean get() = repairedFrames > 0
+    }
+
+    /** Wider than ~2ms isn't a click, it's music — left alone. */
+    const val MAX_CLICK_FRAMES = 96
+
+    /** A click's derivative stands this many sigmas over its block's. */
+    const val CLICK_SIGMA = 8f
+
+    /** ...and at least this far in absolute terms, so silence can't flag noise. */
+    const val CLICK_FLOOR = 0.05f
+
+    /** More than this fraction of full-scale jumps is distortion — refused. */
+    const val DAMAGE_CEILING = 0.01f
+
+    /** A single-sample jump past this is a cliff no sane capture makes often. */
+    const val DAMAGE_CLIFF = 1.0f
+
+    /** A digital dropout: at least this many exact zeros in living audio. */
+    const val MIN_DROPOUT_FRAMES = 8
+
+    /** ...and at most ~20ms — longer is intentional silence. */
+    const val MAX_DROPOUT_FRAMES = 900
+
+    /** An onset's energy persists past it; a click's dies. The follow test. */
+    private const val GUARD_FRAMES = 240
+
+    /**
+     * Find and repair clicks (derivative outliers with the transient
+     * guard) and dropouts (runs of exact zeros inside living audio),
+     * per channel, interpolating across each region. When nothing needs
+     * repair the input comes back **unchanged**. A capture where more
+     * than [DAMAGE_CEILING] of the frames flag as clicks refuses: that
+     * is distortion, and pretending to fix it would be a lie.
+     */
+    fun repairClicks(snip: Snip): Repair {
+        val out = snip.samples.copyOf()
+        var clicks = 0
+        var dropouts = 0
+        var repaired = 0
+
+        for (ch in 0 until snip.channels) {
+            val x = FloatArray(snip.frameCount) { f -> snip.samples[f * snip.channels + ch] }
+            // Dropouts first: their edges are derivative cliffs, and the
+            // click hunt must see the mended signal, not the hole's walls.
+            val drops = dropoutRegions(x)
+            for (r in drops) {
+                interpolate(x, 1, 0, r.first, r.last)
+                dropouts++
+                repaired += r.last - r.first + 1
+            }
+            val regions = clickRegions(x)
+            for (r in regions) {
+                interpolate(x, 1, 0, r.first, r.last)
+                clicks++
+                repaired += r.last - r.first + 1
+            }
+            if (drops.isNotEmpty() || regions.isNotEmpty()) {
+                for (f in 0 until snip.frameCount) out[f * snip.channels + ch] = x[f]
+            }
+        }
+        return if (repaired == 0) {
+            Repair(snip, 0, 0, 0)
+        } else {
+            Repair(Snip(out, snip.channels, snip.sampleRate), clicks, dropouts, repaired)
+        }
+    }
+
+    /** Click candidates as frame ranges, transient-guarded. */
+    private fun clickRegions(x: FloatArray): List<IntRange> {
+        if (x.size < 3) return emptyList()
+        val flagged = BooleanArray(x.size)
+        val block = 4096
+        var b = 1
+        while (b < x.size) {
+            val end = minOf(b + block, x.size)
+            var acc = 0.0
+            var n = 0
+            for (i in b until end) {
+                val d = x[i] - x[i - 1]
+                acc += d * d
+                n++
+            }
+            val sigma = Math.sqrt(acc / n.coerceAtLeast(1)).toFloat()
+            val bar = maxOf(CLICK_SIGMA * sigma, CLICK_FLOOR)
+            for (i in b until end) {
+                if (Math.abs(x[i] - x[i - 1]) > bar) flagged[i] = true
+            }
+            b = end
+        }
+
+        // The damage ceiling can't lean on the sigma flags - wall-to-wall
+        // distortion raises its own sigma until nothing "stands out". It
+        // reads an absolute cliff instead: full-scale single-sample jumps,
+        // which sane audio essentially never makes and clipping makes
+        // constantly. Too many and repair would lie.
+        var cliffs = 0
+        for (i in 1 until x.size) {
+            if (Math.abs(x[i] - x[i - 1]) > DAMAGE_CLIFF) cliffs++
+        }
+        require(cliffs <= x.size * DAMAGE_CEILING) {
+            "$cliffs full-scale jumps in ${x.size} samples - " +
+                "that's distortion, not clicks, and repair would lie"
+        }
+
+        val regions = mutableListOf<IntRange>()
+        var i = 0
+        while (i < x.size) {
+            if (!flagged[i]) {
+                i++
+                continue
+            }
+            var j = i
+            var gap = 0
+            var k = i
+            while (k < x.size && gap <= 8) {
+                if (flagged[k]) {
+                    j = k
+                    gap = 0
+                } else {
+                    gap++
+                }
+                k++
+            }
+            val width = j - i + 1
+            if (width <= MAX_CLICK_FRAMES && isClickNotOnset(x, i, j) && isIsolated(x, i, j)) {
+                regions += i..j
+            }
+            i = j + 1
+        }
+        return regions
+    }
+
+    /**
+     * A click's jump dwarfs its immediate surroundings; noise (a hat, a
+     * snare body) jumps everywhere at once. The region's peak derivative
+     * must stand 4× over the biggest derivative just outside it.
+     */
+    private fun isIsolated(x: FloatArray, start: Int, end: Int): Boolean {
+        var peak = 0f
+        for (i in maxOf(1, start)..minOf(end, x.size - 1)) {
+            val d = Math.abs(x[i] - x[i - 1])
+            if (d > peak) peak = d
+        }
+        var surround = 0f
+        for (i in maxOf(1, start - 64) until maxOf(1, start - 1)) {
+            val d = Math.abs(x[i] - x[i - 1])
+            if (d > surround) surround = d
+        }
+        for (i in minOf(end + 2, x.size) until minOf(end + 64, x.size)) {
+            val d = Math.abs(x[i] - x[i - 1])
+            if (d > surround) surround = d
+        }
+        return surround < peak / 4f
+    }
+
+    /** The follow test: a drum onset's energy persists after the jump; a click's dies. */
+    private fun isClickNotOnset(x: FloatArray, start: Int, end: Int): Boolean {
+        val pre = rms(x, maxOf(0, start - GUARD_FRAMES), maxOf(0, start - 8))
+        val post = rms(x, minOf(x.size, end + 8), minOf(x.size, end + GUARD_FRAMES))
+        return post <= 3f * pre + 1e-4f
+    }
+
+    /** Runs of exact zeros inside living audio — the digital dropout. */
+    private fun dropoutRegions(x: FloatArray): List<IntRange> {
+        val regions = mutableListOf<IntRange>()
+        var i = 0
+        while (i < x.size) {
+            if (x[i] != 0f) {
+                i++
+                continue
+            }
+            var j = i
+            while (j + 1 < x.size && x[j + 1] == 0f) j++
+            val width = j - i + 1
+            val leftAlive = i > 0 && Math.abs(x[i - 1]) > 0.005f
+            val rightAlive = j + 1 < x.size && Math.abs(x[j + 1]) > 0.005f
+            if (width in MIN_DROPOUT_FRAMES..MAX_DROPOUT_FRAMES && leftAlive && rightAlive) {
+                regions += i..j
+            }
+            i = j + 1
+        }
+        return regions
+    }
+
+    private fun interpolate(samples: FloatArray, channels: Int, ch: Int, startFrame: Int, endFrame: Int) {
+        val fromFrame = startFrame - 1
+        val toFrame = endFrame + 1
+        val from = if (fromFrame >= 0) samples[fromFrame * channels + ch] else 0f
+        val to = if (toFrame * channels + ch < samples.size) samples[toFrame * channels + ch] else 0f
+        val span = (toFrame - fromFrame).coerceAtLeast(1)
+        for (f in startFrame..endFrame) {
+            val t = (f - fromFrame).toFloat() / span
+            samples[f * channels + ch] = from + (to - from) * t
+        }
+    }
+
+    private fun rms(x: FloatArray, from: Int, to: Int): Float {
+        if (to <= from) return 0f
+        var acc = 0.0
+        for (i in from until to) acc += x[i] * x[i].toDouble()
+        return Math.sqrt(acc / (to - from)).toFloat()
+    }
+
     /** Goertzel amplitude of [hz] over the first [n] frames. */
     internal fun goertzel(samples: FloatArray, n: Int, hz: Float, rate: Int): Float {
         val w = 2.0 * Math.PI * hz / rate

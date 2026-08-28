@@ -63,6 +63,51 @@ class CaptureDoctorTest {
     }
 
     @Test
+    fun `clicks and dropouts are found, repaired and counted - transients never flagged`() {
+        // A steady tone with three planted clicks and one zero dropout.
+        val n = 2 * rate
+        val pure = FloatArray(n) { i -> (0.4 * Math.sin(2.0 * Math.PI * 220.0 * i / rate)).toFloat() }
+        val dirty = pure.copyOf()
+        val clickAt = listOf(rate / 2, rate, rate * 3 / 2)
+        for (at in clickAt) dirty[at] = 0.9f
+        val dropAt = rate / 4 + 13 // mid-phase, neighbors alive
+        for (i in dropAt until dropAt + 20) dirty[i] = 0f
+
+        val repair = CaptureDoctor.repairClicks(Snip(dirty, 1, rate))
+        assertTrue(repair.touched)
+        assertEquals(3, repair.clicks, "every planted click found")
+        assertEquals(1, repair.dropouts, "the dropout found")
+        for (at in clickAt) {
+            assertTrue(
+                Math.abs(repair.snip.samples[at] - pure[at]) < 0.06f,
+                "click at $at repaired toward the tone: ${repair.snip.samples[at]} vs ${pure[at]}",
+            )
+        }
+        // Outside the repaired frames, not a sample moved.
+        var untouched = 0
+        for (i in 0 until n) {
+            if (repair.snip.samples[i] == dirty[i]) untouched++
+        }
+        assertTrue(n - untouched <= repair.repairedFrames, "repair touched only what it reported")
+
+        // A real beat's transients are onsets, not clicks - nothing flagged.
+        val beatRepair = CaptureDoctor.repairClicks(Snip(beat(), 1, rate))
+        assertEquals(0, beatRepair.clicks, "drum onsets pass the follow test")
+        assertTrue(!beatRepair.touched, "a clean beat comes back unchanged")
+
+        // Spikes everywhere is distortion, and repair refuses to lie.
+        val trashed = pure.copyOf()
+        var i = 100
+        while (i < n) {
+            trashed[i] = if (trashed[i] > 0) -0.9f else 0.9f
+            i += 40
+        }
+        kotlin.test.assertFailsWith<IllegalArgumentException> {
+            CaptureDoctor.repairClicks(Snip(trashed, 1, rate))
+        }
+    }
+
+    @Test
     fun `60 Hz is heard as 60, harmonics counted, clean audio stays silent`() {
         val sixty = withHum(beat(), 60.0, 0.04f)
         val report = CaptureDoctor.detectHum(sixty)
