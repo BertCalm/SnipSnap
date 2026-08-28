@@ -1340,6 +1340,36 @@ class CliTest {
     }
 
     @Test
+    fun `label runs an imprint from the terminal and the jcard wears the number`() {
+        val wav = writeBreak(File(temp, "lb.wav"))
+        val root = File(temp, "lb-root")
+        assertEquals(0, cli("chop", wav.path, "--out", root.path, "--name", "LB Two", "--slices", "4").first)
+        assertEquals(0, cli("chop", wav.path, "--out", root.path, "--name", "LB One", "--slices", "4").first)
+
+        val (code, stdout, stderr) = cli("label", root.path, "--init", "Dusty Fingers")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "Dusty Fingers [DF]")
+        assertContains(stdout, "DF-001  LB One")
+        assertContains(stdout, "DF-002  LB Two")
+        assertTrue(File(root, "catalog.txt").isFile, "the ledger lands")
+
+        // Re-running moves nothing; a new kit appends.
+        assertEquals(0, cli("chop", wav.path, "--out", root.path, "--name", "LB Also", "--slices", "4").first)
+        val (_, again, _) = cli("label", root.path)
+        assertContains(again, "DF-001  LB One")
+        assertContains(again, "DF-003  LB Also")
+
+        // The J-card under the labeled root wears its number.
+        val (jCode, jOut, _) = cli("jcard", File(root, "LB One").path, "--out", File(temp, "lb-cards").path)
+        assertEquals(0, jCode)
+        assertContains(jOut, "(DF-001)")
+
+        val (noCode, _, noErr) = cli("label", File(temp, "lb-unlabeled").apply { mkdirs() }.path)
+        assertEquals(2, noCode)
+        assertContains(noErr, "--init")
+    }
+
+    @Test
     fun `backup and restore round-trip a folder of kits`() {
         val wav = writeBreak(File(temp, "bk.wav"))
         val out = File(temp, "bk-out")

@@ -122,6 +122,12 @@ object Cli {
         |  diff <a> <b>          structured key-path diff of two MPC files,
         |                        either generation (--values lists differing
         |                        values; exit 1 when different)
+        |  label <root>          run your own imprint: --init NAME [--prefix
+        |                        XYZ] starts a label at the crate root; every
+        |                        run catalogs new kits (XYZ-001...) without
+        |                        ever moving an existing number and rewrites
+        |                        catalog.txt; J-card spines and liner notes
+        |                        wear the number under a labeled root
         |  lineage <kit-dir>     the kit's family tree from the provenance
         |                        every verb stamps: resample generations,
         |                        merge parents, dig songs, chops, imports
@@ -229,6 +235,7 @@ object Cli {
                 "jcard" -> JCardCommand.run(args.drop(1), out)
                 "notes" -> NotesCommand.run(args.drop(1), out)
                 "lineage" -> LineageCommand.run(args.drop(1), out)
+                "label" -> LabelCommand.run(args.drop(1), out)
                 "help", "--help", "-h" -> {
                     out.println(USAGE)
                     0

@@ -382,6 +382,22 @@ mute group, DC gets removed — audio edits bin-backed with recipes,
 the rest metadata-only. Taste stays advice. Exit 0 healthy, 1 while
 findings remain, so it scripts like a check.
 
+### `label <root>` — run your own imprint
+
+A crate root with a `label.json` is a label. `--init NAME [--prefix
+XYZ]` starts the imprint (the prefix defaults to the name's initials —
+`DF` for Dusty Fingers — and is set once); every run, init included,
+catalogs any new kits with the next numbers in **name order**
+(`XYZ-001`, `XYZ-002`, …) and rewrites `catalog.txt`, the
+human-readable ledger. The stable-numbering promise is the feature:
+an existing number never moves and is never reused — re-running
+changes nothing, new kits only append, and a kit that leaves the
+crate keeps its entry marked `(gone)`, the way a real catalog keeps
+deleted releases. Once the crate is labeled, the kit's inserts wear
+the number: the J-card **spine** leads with it, the liner notes'
+identity line starts with it, and the expansion export and `pack`'s
+`[J-Cards]/` carry it too.
+
 ### `lineage <kit-dir>` — the crate's family tree
 
 Every verb already stamps provenance; this walks it into genealogy.

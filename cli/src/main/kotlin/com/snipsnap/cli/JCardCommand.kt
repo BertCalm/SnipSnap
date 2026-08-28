@@ -23,10 +23,12 @@ object JCardCommand {
         if (width !in 300..2400) throw CliError("--width is 300..2400, got $width")
 
         val kit = KitStore.load(kitDir)
+        // Under a labeled crate, the spine wears the catalog number.
+        val catalog = com.snipsnap.shell.Label.forKit(kitDir)
         val outDir = File(opts["--out"] ?: "snipsnap-out").apply { mkdirs() }
         val file = File(outDir, "${kit.name} J-Card.png")
-        file.writeBytes(JCard.png(kit, kitDir, width = width))
-        out.println("j-card: ${file.path}")
+        file.writeBytes(JCard.png(kit, kitDir, width = width, catalog = catalog))
+        out.println("j-card: ${file.path}" + (catalog?.let { " ($it)" } ?: ""))
         out.println("  front, spine, back - print, cut at the amber fold lines, slide into the case")
         return 0
     }

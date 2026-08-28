@@ -59,7 +59,8 @@ object PackCommand {
         } else {
             kitDirs.associate { dir ->
                 val kit = KitStore.load(dir)
-                "[J-Cards]/${kit.name}.png" to com.snipsnap.shell.JCard.png(kit, dir)
+                "[J-Cards]/${kit.name}.png" to
+                    com.snipsnap.shell.JCard.png(kit, dir, catalog = com.snipsnap.shell.Label.forKit(dir))
             }
         }
 

@@ -44,6 +44,8 @@ object JCard {
         kitDir: File,
         scheme: Scheme = Schemes.CHROME,
         width: Int = DEFAULT_WIDTH,
+        /** The label's catalog number (`DF-001`), worn on the spine when set. */
+        catalog: String? = null,
     ): BufferedImage {
         require(width in 300..2400) { "width wants 300..2400, got $width" }
         val frontH = (width * FRONT).toInt()
@@ -59,7 +61,7 @@ object JCard {
 
             val m = (width * 0.05f).toInt()
             front(g, kit, kitDir, scheme, width, frontH, m)
-            spine(g, kit, scheme, width, frontH, spineH, m)
+            spine(g, kit, scheme, width, frontH, spineH, m, catalog)
             back(g, kit, kitDir, scheme, width, frontH + spineH, backH, m)
 
             // Fold hairlines where the card creases.
@@ -78,9 +80,10 @@ object JCard {
         kitDir: File,
         scheme: Scheme = Schemes.CHROME,
         width: Int = DEFAULT_WIDTH,
+        catalog: String? = null,
     ): ByteArray {
         val out = ByteArrayOutputStream()
-        ImageIO.write(render(kit, kitDir, scheme, width), "png", out)
+        ImageIO.write(render(kit, kitDir, scheme, width, catalog), "png", out)
         return out.toByteArray()
     }
 
@@ -100,8 +103,10 @@ object JCard {
         )
     }
 
-    private fun spine(g: Graphics2D, kit: Kit, scheme: Scheme, w: Int, top: Int, h: Int, m: Int) {
-        val line = "${kit.name.uppercase()}  ${keyTempoLine(kit)}  ${mileageLine(kit)}"
+    private fun spine(g: Graphics2D, kit: Kit, scheme: Scheme, w: Int, top: Int, h: Int, m: Int, catalog: String?) {
+        // The catalog number leads the spine, the way real labels press it.
+        val line = (catalog?.let { "$it  " } ?: "") +
+            "${kit.name.uppercase()}  ${keyTempoLine(kit)}  ${mileageLine(kit)}"
         val px = (h * 0.4f).toInt()
         PixelType.draw(
             g, line, w / 2, top + (h - min(px, PixelType.ROWS * (px / PixelType.ROWS))) / 2,

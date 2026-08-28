@@ -18,12 +18,18 @@ object LinerNotes {
 
     const val FILE_NAME = "liner-notes.txt"
 
-    fun render(kit: Kit, kitDir: File): String = buildString {
+    fun render(
+        kit: Kit,
+        kitDir: File,
+        /** The label's catalog number, leading the identity line when set. */
+        catalog: String? = null,
+    ): String = buildString {
         appendLine(kit.name.uppercase())
         appendLine("=".repeat(maxOf(kit.name.length, 8)))
         appendLine()
 
         val identity = mutableListOf<String>()
+        catalog?.let { identity += it }
         kit.key?.let { identity += it.label }
         kit.tempoBpm?.let { identity += "%.0f bpm".format(it) }
         identity += "${kit.pads.size} pad${if (kit.pads.size == 1) "" else "s"}"
@@ -97,9 +103,9 @@ object LinerNotes {
         appendLine("Made with SnipSnap.")
     }
 
-    fun writeTo(kit: Kit, kitDir: File, dest: File): File {
+    fun writeTo(kit: Kit, kitDir: File, dest: File, catalog: String? = null): File {
         dest.parentFile?.mkdirs()
-        dest.writeText(render(kit, kitDir), Charsets.UTF_8)
+        dest.writeText(render(kit, kitDir, catalog), Charsets.UTF_8)
         return dest
     }
 

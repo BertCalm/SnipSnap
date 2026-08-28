@@ -84,10 +84,12 @@ object Exports {
             out.println("  %-10s %s%s  (%s)".format(format.id, o.primary.path, extra, NOTES.getValue(format)))
             if (format == ExportFormat.EXPANSION) {
                 // The expansion gets its cassette insert beside the artwork,
-                // and the liner notes beside the insert.
-                File(o.primary, "J-Card.png").writeBytes(com.snipsnap.shell.JCard.png(kit, kitDir))
+                // and the liner notes beside the insert - catalog number on
+                // both when the kit's crate is a label.
+                val catalog = com.snipsnap.shell.Label.forKit(kitDir)
+                File(o.primary, "J-Card.png").writeBytes(com.snipsnap.shell.JCard.png(kit, kitDir, catalog = catalog))
                 com.snipsnap.shell.LinerNotes.writeTo(
-                    kit, kitDir, File(o.primary, com.snipsnap.shell.LinerNotes.FILE_NAME),
+                    kit, kitDir, File(o.primary, com.snipsnap.shell.LinerNotes.FILE_NAME), catalog,
                 )
                 out.println("             + J-Card.png + ${com.snipsnap.shell.LinerNotes.FILE_NAME} (the kit's inserts)")
             }

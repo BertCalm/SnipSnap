@@ -21,11 +21,13 @@ object NotesCommand {
         if (!File(kitDir, "kit.json").isFile) throw CliError("not a kit folder (no kit.json): $dirArg")
 
         val kit = KitStore.load(kitDir)
-        val text = LinerNotes.render(kit, kitDir)
+        // Under a labeled crate, the notes lead with the catalog number.
+        val catalog = com.snipsnap.shell.Label.forKit(kitDir)
+        val text = LinerNotes.render(kit, kitDir, catalog)
         out.print(text)
 
         val destDir = opts["--out"]?.let { File(it).apply { mkdirs() } } ?: kitDir
-        val file = LinerNotes.writeTo(kit, kitDir, File(destDir, LinerNotes.FILE_NAME))
+        val file = LinerNotes.writeTo(kit, kitDir, File(destDir, LinerNotes.FILE_NAME), catalog)
         out.println("-> ${file.path}")
         return 0
     }
