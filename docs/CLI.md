@@ -350,6 +350,19 @@ whole-period loop found in each note's sustain (crossfaded when the raw
 seam isn't clean), trimmed to the loop-to-end idiom both formats share —
 held pads sing forever. A note with no honest sustain plays unlooped.
 
+### `arrange <kit-dir>` — songs, not loops
+
+The Arranger's structure grammar lays the kit's **own** variations into
+a song: intro (sparse) → theme (captured) → variation (ghosted, or
+tight when nothing whispers) → the turn (fill) → reprise → outro
+(half), the classic beat-tape proportions, short patterns stretched by
+repeats. Every clip derives fresh from the stored base groove; `--seed
+N` rerolls the grammar's choices deterministically. The plan lands as
+**numbered switchable sequences** in an `.xpj` — flip `01` upward on
+the hardware and that's the song — with the song slot named for the
+arrangement (steps stay bench-blocked, GG3.2). Honest refusals and
+skips: no groove refuses, nothing to roll on drops the turn.
+
 ### `project <kit-dir>... ` — whole session, one `.xpj`
 
 N kit folders (plus an optional `--keys a.wav,b.wav` multisampled

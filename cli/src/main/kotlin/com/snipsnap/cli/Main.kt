@@ -107,6 +107,11 @@ object Cli {
         |                        tape-stop and pull-up transitions -> one
         |                        folder with the WAV, tracklist.txt, cover,
         |                        and the session .xpj ([--bars N] per kit)
+        |  arrange <kit-dir>     songs, not loops: the kit's own variations
+        |                        laid into intro/theme/variation/turn/
+        |                        reprise/outro and written as numbered
+        |                        switchable sequences in an .xpj - flip
+        |                        01.. in order, that's the song ([--seed N])
         |  project <kit-dir>...  whole session -> one .xpj (kits + grooves +
         |                        optional --keys instrument, mixer wired;
         |                        --mixdown also renders the session as one WAV)
@@ -230,6 +235,7 @@ object Cli {
                 "answer" -> AnswerCommand.run(args.drop(1), out)
                 "sidea" -> SideACommand.run(args.drop(1), out)
                 "project" -> ProjectCommand.run(args.drop(1), out)
+                "arrange" -> ArrangeCommand.run(args.drop(1), out)
                 "pack" -> PackCommand.run(args.drop(1), out)
                 "backup" -> BackupCommand.backup(args.drop(1), out)
                 "restore" -> BackupCommand.restore(args.drop(1), out)

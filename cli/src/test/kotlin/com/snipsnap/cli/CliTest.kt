@@ -1233,6 +1233,56 @@ class CliTest {
     }
 
     @Test
+    fun `arrange lays the song into numbered switchable sequences`() {
+        val wav = writeBreak(File(temp, "ar.wav"))
+        val out = File(temp, "ar-out")
+        assertEquals(
+            0,
+            cli("chop", wav.path, "--out", out.path, "--name", "AR", "--slices", "8", "--groove").first,
+        )
+        val kitDir = File(out, "AR")
+
+        val (code, stdout, stderr) = cli("arrange", kitDir.path, "--out", out.path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "\"AR Song\"")
+        assertContains(stdout, "01  intro")
+        assertContains(stdout, "the turn")
+        assertContains(stdout, "flip sequences 01..06")
+        val xpj = File(out, "card/AR Song.xpj")
+        assertTrue(xpj.isFile, "the project lands")
+
+        // The reader accepts the project, and the sequences carry the
+        // sections numbered in plan order - the flip order IS the song.
+        val project = com.snipsnap.mpc3.Mpc3Project.read(xpj)
+        assertTrue(project.isProject)
+        val seqNames = (project.data!!["sequences"] as com.snipsnap.json.JsonValue.Arr).items.map { seq ->
+            val value = (seq as com.snipsnap.json.JsonValue.Obj).entries["value"] as com.snipsnap.json.JsonValue.Obj
+            (value.entries["name"] as com.snipsnap.json.JsonValue.Str).value
+        }
+        assertEquals(
+            listOf("01 intro", "02 theme", "03 variation", "04 the turn", "05 reprise", "06 outro"),
+            seqNames,
+            "six sections, six sequences, in order",
+        )
+        // And the .xpj still imports as a kit.
+        val fresh = File(temp, "ar-fresh")
+        assertEquals(0, cli("import", xpj.path, "--out", fresh.path).first)
+        assertTrue(fresh.listFiles { f: File -> File(f, "kit.json").isFile }!!.isNotEmpty())
+
+        // Deterministic per seed: same seed, same project bytes.
+        val out2 = File(temp, "ar-out2")
+        assertEquals(0, cli("arrange", kitDir.path, "--out", out2.path).first)
+        assertTrue(
+            xpj.readBytes().contentEquals(File(out2, "card/AR Song.xpj").readBytes()),
+            "same seed, same song",
+        )
+
+        val (noCode, _, noErr) = cli("arrange", File(out, "nowhere").path)
+        assertEquals(2, noCode)
+        assertContains(noErr, "kit.json")
+    }
+
+    @Test
     fun `a kit leaves as sfz and ds and comes home through import`() {
         val wav = writeBreak(File(temp, "es.wav"))
         val out = File(temp, "es-out")
