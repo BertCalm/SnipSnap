@@ -1012,7 +1012,32 @@ as one gesture, orchestrating everything shipped.
 **Below the line for LL:** spectral-domain mutation (phase-vocoder
 morphs — big DSP, small honesty); learn-from-polyphonic-music (the
 Ear does beats, not mixes with bass and vocals — refusals say so);
-the Capture Doctor and the Room (queued as future lanes).
+the Room (queued as a future lane).
+
+---
+
+# Wave MM — the Capture Doctor
+
+The app's real input is a phone mic in a room; captures arrive with
+mains hum, clicks and dropouts, and hiss, and nothing shipped so far
+treats them. The Capture Doctor is `doctor`'s sibling with a different
+patient: **`doctor` treats the mix** (masking, levels, DC), **the
+Capture Doctor treats the capture** (defects the microphone and the
+room put there). Same house rules: measure first, act only on what
+measurably exists, name everything, and leave clean audio untouched —
+byte-identical, not "processed gently".
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| MM1 | Hum removal (`:audio` `CaptureDoctor`) — mains hum *detected* first (tone probes at 50 and 60 Hz against neighboring-frequency baselines; only a hum that measurably stands out is treated), then notched with narrow biquads at the fundamental and its harmonics. No hum heard → the audio comes back untouched | CORE | M | a drums+50 Hz fixture: hum down ≥ 20 dB at 50/100/150 Hz, the drums' own spectrum elsewhere within tolerance; a clean fixture returns byte-identical; 60 Hz detected as 60, not 50 |
+| MM2 | Click and dropout repair — derivative-outlier detection with a **transient guard** (a click's energy dies where a drum onset's persists — the follow-window test tells them apart), clustered into regions capped at click width, repaired by interpolation; exact-zero dropout runs likewise. Too much flagged refuses honestly: that's distortion, not clicks | CORE | M | planted clicks in a tone and in a beat get found and repaired (residual small at the sites, elsewhere untouched); a clean drum hit's transient is never flagged; the too-damaged refusal fires |
+| MM3 | Noise floor: measure + gentle gate — the floor estimated from the quietest windows (reported in dBFS), then a *downward expander*, never a hard mute: gain eases off below the floor's neighborhood with smoothed attack/release and a capped depth. A quiet-floored capture is left alone | CORE | S–M | drums over −40 dB noise: the gaps drop by ≥ 6 dB, drum peaks within 5%; a clean fixture unchanged; the floor report matches the planted noise level |
+| MM4 | The verb + the capture path — `clean <wav-or-kit-dir>`: a WAV gets a cleaned twin (or `--in-place`), a kit gets every pad through the treatment door (bin-backed, recipe stamped, chained pads refused with the usual pointer, `--undo` restores); `--dry` reports without touching, `doctor`-style; and `chop --clean` (forwarded by `dig`) runs the pipeline on the capture before the first slice | CORE | S–M | the CLI round trip on a dirty WAV and a dirty kit; nothing-to-clean touches nothing and says so; `--undo` byte-identical; `chop --clean` yields a cleaner kit than `chop` on the same dirty source |
+
+**Below the line for MM:** spectral de-noise (FFT gating — more power,
+less honesty than the expander); de-reverb (the Room's inverse — a
+research project, not a wave item); auto-clean-on-capture in the app
+(the app session wires the same `CaptureDoctor`, M-milestone work).
 
 ---
 
@@ -1040,6 +1065,9 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   wire-through (Z6.2 verdict: waveform default, rings runner-up).
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
+
+CORE wave MM (the Capture Doctor, in order): MM1 hum → MM2 clicks →
+  MM3 the floor → MM4 the clean verb + chop --clean.
 
 CORE wave LL: ✓ all landed (2026-08-28) — mutate, the ear, the
   session. Mutate (recombination: transient-aligned stacks with an
