@@ -4,6 +4,7 @@ import com.snipsnap.xpm.DrumProgram
 import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
 import com.snipsnap.xpm.ChainPlay
+import com.snipsnap.xpm.ChainZonePlay
 import com.snipsnap.xpm.Pad
 import com.snipsnap.xpm.VelocityLayer
 import java.io.File
@@ -556,7 +557,15 @@ class Mpc3TrackWriter(
     private fun instrument(pad: Pad?): J {
         val filled = pad != null
         // MPC 3 layers descend from loudest at index 0; ours ascend soft-first.
-        val zones = pad?.let { zonesOf(it).asReversed() } ?: emptyList()
+        // A chain grid's zones become the layers: every one references the
+        // same chain WAV, differing only in velocity window and slice anchor.
+        val gridZones = pad?.chain?.zones?.asReversed()
+        val zones = when {
+            gridZones != null && pad != null ->
+                gridZones.map { z -> VelocityLayer(pad.sampleName, pad.frameCount, z.velStart, z.velEnd) }
+            pad != null -> zonesOf(pad).asReversed()
+            else -> emptyList()
+        }
         return instrumentShell(
             coarseTune = pad?.tuneCoarse ?: 0,
             fineTune = pad?.tuneFine ?: 0,
@@ -572,6 +581,7 @@ class Mpc3TrackWriter(
                 layer(
                     zones.getOrNull(slot), filledInstrument = filled, rootNote = 0,
                     humanize = pad?.humanize, chain = pad?.chain,
+                    gridZone = gridZones?.getOrNull(slot),
                 )
             },
             keygroupExtras = false,
@@ -677,6 +687,13 @@ class Mpc3TrackWriter(
          * windows slice 0 so hardware without the map plays take one.
          */
         chain: ChainPlay? = null,
+        /**
+         * This layer's zone of the velocity × round-robin grid (II2):
+         * the PSK scheme, one layer per zone, base [ChainZonePlay.baseSlice]
+         * with the zone's own cycle, sliceInfo windowing the anchor take
+         * so map-less firmware degrades to honest velocity switching.
+         */
+        gridZone: ChainZonePlay? = null,
     ): J = obj(
         "active" to b(true),
         "volume" to obj("gainCoefficient" to d(1.0), "controlValue" to d(1.0), "law" to i(0)),
@@ -703,12 +720,19 @@ class Mpc3TrackWriter(
         "keyTrackEnable" to b(false),
         "sampleName" to s(zone?.sampleName ?: ""),
         "sampleFile" to s(zone?.let { "${it.sampleName}.wav" } ?: ""),
-        "sliceIndex" to i(if (zone != null) 0 else 128),
+        "sliceIndex" to i(if (zone != null) (gridZone?.baseSlice ?: 0).toLong() else 128),
         "direction" to i(0),
         "offset" to i(0),
         "sliceInfo" to obj(
-            "Start" to i(0),
-            "End" to i(if (zone != null && chain != null) chain.firstSliceEnd else zone?.frameCount ?: 0L),
+            "Start" to i(if (zone != null) gridZone?.windowStart ?: 0L else 0L),
+            "End" to i(
+                when {
+                    zone == null -> 0L
+                    gridZone != null -> gridZone.windowEnd
+                    chain != null -> chain.firstSliceEnd
+                    else -> zone.frameCount
+                },
+            ),
             // The sustain loop as PSK's rolls write it: LoopMode 1 +
             // LoopStart, looping to End.
             "LoopStart" to i(zone?.loopStartFrame ?: 0L),
@@ -727,7 +751,9 @@ class Mpc3TrackWriter(
         "PanRandom" to d(if (zone != null) ((humanize ?: 0f) * 0.1f).toDouble() else 0.0),
         "OffsetRandom" to d(0.0),
         "sliceIncrement" to i(if (zone != null && chain != null) 1 else 0),
-        "sliceCycleLength" to i(if (zone != null && chain != null) chain.cycle.toLong() else 1),
+        "sliceCycleLength" to i(
+            if (zone != null && chain != null) (gridZone?.cycle ?: chain.cycle).toLong() else 1,
+        ),
         "sliceIncrementRngSeed" to i(RNG_SEED),
         "oscillatorMode" to b(false),
         "oscillatorType" to i(0),

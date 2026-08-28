@@ -161,6 +161,88 @@ class KitChainTest {
         }
     }
 
+    private fun gridKit(dir: File): Kit {
+        dir.mkdirs()
+        // 6 takes: 3 zones x 2 robins, graded soft->hard by level.
+        val samples = FloatArray(segFrames * 6)
+        for (seg in 0 until 6) {
+            for (i in 0 until segFrames) samples[seg * segFrames + i] = 0.1f + seg * 0.1f
+        }
+        WavWriter.write(File(dir, "A01_Grid_01.wav"), Snip(samples, 1, rate))
+        val kit = Kit(
+            "Grid Kit",
+            listOf(
+                KitPad(
+                    slot = 1, sampleFile = "A01_Grid_01.wav", drumClass = DrumClass.SNARE,
+                    chain = ChainInfo(
+                        boundaries = (0 until 6).map { it.toLong() * segFrames },
+                        cycle = 2,
+                        zones = listOf(
+                            ChainZone(velStart = 0, velEnd = 50, baseSlice = 0, cycle = 2),
+                            ChainZone(velStart = 51, velEnd = 100, baseSlice = 2, cycle = 2),
+                            ChainZone(velStart = 101, velEnd = 127, baseSlice = 4, cycle = 2),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        KitStore.save(kit, dir)
+        return kit
+    }
+
+    @Test
+    fun `both generations write the grid - PSK shapes and slice windows`() {
+        val dir = File(temp, "grid-gen")
+        val kit = gridKit(dir)
+        val (slots, _) = KitExporter.buildSlots(kit, dir, File(temp, "grid-samples"))
+
+        // MPC 3: one layer per zone, loudest first, each anchoring its own
+        // base slice with its own cycle - the PSK field pattern exactly.
+        val payload = Json.parse(
+            Mpc3TrackWriter().payloadText(com.snipsnap.xpm.DrumProgram(kit.name, slots)),
+        ) as JsonValue.Obj
+        val drum = findDrum(payload)
+        val inst = ((drum["instruments"] as JsonValue.Arr).items[0] as JsonValue.Obj).entries
+        val layers = (inst["layersv"] as JsonValue.Arr).items.map { (it as JsonValue.Obj).entries }
+        fun num(l: Map<String, JsonValue>, k: String) = (l[k] as JsonValue.Num).value
+        fun info(l: Map<String, JsonValue>, k: String) =
+            ((l["sliceInfo"] as JsonValue.Obj).entries[k] as JsonValue.Num).value
+
+        // L0 = loudest zone (101-127, base 4); L2 = softest (0-50, base 0).
+        val expect = listOf(
+            Triple(101 to 127, 4, 4 * segFrames to 5 * segFrames),
+            Triple(51 to 100, 2, 2 * segFrames to 3 * segFrames),
+            Triple(0 to 50, 0, 0 to segFrames),
+        )
+        expect.forEachIndexed { li, (vel, base, window) ->
+            val l = layers[li]
+            assertEquals(vel.first.toDouble(), num(l, "velocityStart"), "L$li velStart")
+            assertEquals(vel.second.toDouble(), num(l, "velocityEnd"), "L$li velEnd")
+            assertEquals(base.toDouble(), num(l, "sliceIndex"), "L$li anchors its zone's base")
+            assertEquals(1.0, num(l, "sliceIncrement"))
+            assertEquals(2.0, num(l, "sliceCycleLength"))
+            assertEquals(window.first.toDouble(), info(l, "Start"), "L$li window start")
+            assertEquals(window.second.toDouble(), info(l, "End"), "L$li window end")
+            assertEquals("A01_Grid_01", (l["sampleName"] as JsonValue.Str).value, "one chain, every layer")
+        }
+        assertEquals(128.0, num(layers[3], "sliceIndex"), "slots past the zones stay empty")
+
+        // MPC 2: the same zones as slice windows into the one WAV - real
+        // velocity switching, no robin, that generation's honest ceiling.
+        val xpm = com.snipsnap.xpm.XpmWriter().write(com.snipsnap.xpm.DrumProgram(kit.name, slots))
+        val pad1 = xpm.substringAfter("<Instrument number=\"0\">").substringBefore("</Instrument>")
+        assertTrue("<VelStart>0</VelStart>" in pad1 && "<VelEnd>50</VelEnd>" in pad1)
+        assertTrue("<SliceStart>0</SliceStart>" in pad1 && "<SliceEnd>$segFrames</SliceEnd>" in pad1)
+        assertTrue("<SliceStart>${2 * segFrames}</SliceStart>" in pad1)
+        assertTrue("<SliceEnd>${3 * segFrames}</SliceEnd>" in pad1)
+        assertTrue("<SliceStart>${4 * segFrames}</SliceStart>" in pad1)
+        assertEquals(
+            3,
+            Regex("<SampleName>A01_Grid_01</SampleName>").findAll(pad1).count(),
+            "three layers, one chain WAV",
+        )
+    }
+
     @Test
     fun `the MPC 3 writes chain pads the PSK way`() {
         val dir = File(temp, "xtd")

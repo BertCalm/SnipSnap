@@ -217,11 +217,18 @@ class XpmWriter(
      * the empty three still have to be present.
      */
     private fun appendLayers(sb: StringBuilder, pad: Pad?) {
-        // Either the explicit velocity zones, or the classic single-sample
-        // shape: pad on layer 1 across the whole velocity range. The golden
-        // file pins the latter; zones only appear when a pad asks for them.
-        val zones: List<VelocityLayer?> = pad?.velocityLayers
-            ?: listOf(pad?.let { VelocityLayer(it.sampleName, it.frameCount, 0, 127) })
+        // Either the explicit velocity zones, the chain grid's zones (every
+        // layer the same chain WAV, sliced to its zone's anchor take), or
+        // the classic single-sample shape: pad on layer 1 across the whole
+        // velocity range. The golden file pins the latter; zones only
+        // appear when a pad asks for them.
+        val gridZones = pad?.chain?.zones
+        val zones: List<VelocityLayer?> = when {
+            gridZones != null && pad != null ->
+                gridZones.map { z -> VelocityLayer(pad.sampleName, pad.frameCount, z.velStart, z.velEnd) }
+            else -> pad?.velocityLayers
+                ?: listOf(pad?.let { VelocityLayer(it.sampleName, it.frameCount, 0, 127) })
+        }
 
         sb.append("        <Layers>\n")
         for (layer in 1..4) {
@@ -250,11 +257,19 @@ class XpmWriter(
             sb.append("            <SliceIndex>129</SliceIndex>\n")
             sb.append("            <Direction>0</Direction>\n")
             sb.append("            <Offset>0</Offset>\n")
-            sb.append("            <SliceStart>0</SliceStart>\n")
             // A chain pad windows to slice 0 on this generation: MPC 2 has
-            // no Slice Motion, so it plays take one, not the whole chain.
+            // no Slice Motion, so it plays take one, not the whole chain —
+            // and a grid layer windows its zone's anchor take, which is
+            // real velocity switching, this generation's honest ceiling.
             // Empty layer slots keep their zeros either way.
-            val sliceEnd = if (sample != null) pad?.chain?.firstSliceEnd ?: sample.frameCount else 0L
+            val window = if (sample != null) gridZones?.getOrNull(layer - 1) else null
+            val sliceStart = window?.windowStart ?: 0L
+            val sliceEnd = when {
+                sample == null -> 0L
+                window != null -> window.windowEnd
+                else -> pad?.chain?.firstSliceEnd ?: sample.frameCount
+            }
+            sb.append("            <SliceStart>").append(sliceStart).append("</SliceStart>\n")
             sb.append("            <SliceEnd>").append(sliceEnd).append("</SliceEnd>\n")
             sb.append("            <SliceLoopStart>0</SliceLoopStart>\n")
             sb.append("            <SliceLoop>0</SliceLoop>\n")
