@@ -874,9 +874,9 @@ Build order **HH1 → HH2 → HH3 → HH4 → HH5**.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| HH1.1 | Chain plumbing — `KitPad` gains a nullable `chain` block (slice boundary list + cycle length; the boundaries are OURS, we build the chains); kit.json round-trips it; `Mpc3TrackWriter` writes chain pads the PSK way (per-layer `sliceIndex`, per-instrument `sliceIncrement`/`sliceCycleLength`); `KitPreview` steps through slices on repeated hits so cycling is audible today; GG4's "no round-robin" wording corrected in docs and comments | CORE | M | a chain pad's `.xtd` fields match the PSK shapes; kit.json round-trip; preview of 3 repeated notes plays 3 different slices; non-chain kits byte-identical |
-| HH1.2 | Round robin for our kits — `robin <kit> <pad> [--takes N]`: N subtle deterministic variant renders (seeded micro level/pitch/start jitter) concatenated into a chain WAV, pad marked to cycle; undo restores the single take from the bin | CORE | M | robin → chain WAV of N takes + cycling metadata; preview alternates takes; --undo byte-identical |
-| HH1.3 | The break pad — `chop`/`dig --chop` gain `--break-pad`: one extra pad carrying the whole source as a chain whose slices are the chop's own boundaries, `sliceIncrement 1`, cycle = slice count — tap through the break on one pad (the workflow MPC users build by hand) | CORE | S–M | the pad's chain boundaries equal the chop slices; preview taps through in order; provenance stamped |
+| HH1.1 | ✓ done (also caught the XpmWriter empty-layer slots inheriting the chain window - fixed in the same pass): Chain plumbing — `KitPad` gains a nullable `chain` block (slice boundary list + cycle length; the boundaries are OURS, we build the chains); kit.json round-trips it; `Mpc3TrackWriter` writes chain pads the PSK way (per-layer `sliceIndex`, per-instrument `sliceIncrement`/`sliceCycleLength`); `KitPreview` steps through slices on repeated hits so cycling is audible today; GG4's "no round-robin" wording corrected in docs and comments | CORE | M | a chain pad's `.xtd` fields match the PSK shapes; kit.json round-trip; preview of 3 repeated notes plays 3 different slices; non-chain kits byte-identical |
+| HH1.2 | ✓ done (take one is the untouched original, deliberately first, so the MPC 2 fallback plays pristine; treat/era/doctor refuse chained pads - a rewrite would orphan the boundaries): Round robin for our kits — `robin <kit> <pad> [--takes N]`: N subtle deterministic variant renders (seeded micro level/pitch/start jitter) concatenated into a chain WAV, pad marked to cycle; undo restores the single take from the bin | CORE | M | robin → chain WAV of N takes + cycling metadata; preview alternates takes; --undo byte-identical |
+| HH1.3 | ✓ done: The break pad — `chop`/`dig --chop` gain `--break-pad`: one extra pad carrying the whole source as a chain whose slices are the chop's own boundaries, `sliceIncrement 1`, cycle = slice count — tap through the break on one pad (the workflow MPC users build by hand) | CORE | S–M | the pad's chain boundaries equal the chop slices; preview taps through in order; provenance stamped |
 | HH1.4 | **Bench-blocked:** the WAV slice chunk — decode the Sample-Edit capture, embed the slice map in our chain WAVs, and the hardware steps. Until then chain pads export with the honest note that on hardware they play but may not cycle | CORE | S–M | after the capture: our chain WAV's chunk byte-matches the idiom; Live III steps through slices (bench) |
 
 ## HH2 — The Air: every dig yields two crates
@@ -887,25 +887,25 @@ texture kit (LOOP/TONAL pads, long cuts).
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| HH2 | `BreakFinder.air(...)` (lowest composite score + tonal + non-silent, merged sections) + `dig --air`: the best texture section chopped into a texture kit ("<Song> Air"), pads classed LOOP, provenance stamped | CORE | S–M | on the synthetic song, air lands inside the pad sections and never overlaps the break; a drums-only file honestly yields no air |
+| HH2 | ✓ done (gates: score ≤ 0.30 + flatness ≤ 0.12, then trimmed against every break candidate so window overlap can't leak): `BreakFinder.air(...)` (lowest composite score + tonal + non-silent, merged sections) + `dig --air`: the best texture section chopped into a texture kit ("<Song> Air"), pads classed LOOP, provenance stamped | CORE | S–M | on the synthetic song, air lands inside the pad sections and never overlaps the break; a drums-only file honestly yields no air |
 
 ## HH3 — The Lineage: the library knows its genealogy
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| HH3 | `Lineage` (`:shell`) — walk the crate's provenance (dig song/at, resampledFrom/generation, merge/remix parents, importedFrom) into a family tree; `lineage <kit> [--root <crate>]` prints it, `--png` renders a KitArt-family tree card | CORE | M | dig→chop→resample→resample yields the full chain in order; a merged kit shows both parents; deterministic |
+| HH3 | ✓ done (KitMerge now stamps mergedFrom on both sides - the one gap in the record; origins print only at roots since resample inherits stamps): `Lineage` (`:shell`) — walk the crate's provenance (dig song/at, resampledFrom/generation, merge/remix parents, importedFrom) into a family tree; `lineage <kit> [--root <crate>]` prints it, `--png` renders a KitArt-family tree card | CORE | M | dig→chop→resample→resample yields the full chain in order; a merged kit shows both parents; deterministic |
 
 ## HH4 — Pocket files: feels as tradeable artifacts
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| HH4 | `.pocket` files — GrooveFeel templates serialized (offsets + accents + name); `feel <kit> --save x.pocket` and `feel <kit> --from x.pocket`; `pack` ships the kits' pockets under `[Pockets]/` | CORE | S | save→from round-trips to the same applied timing; a pocket from kit A moves kit B the way A's groove would |
+| HH4 | ✓ done (a bottled pocket applies byte-identically to feeling from the donor kit itself): `.pocket` files — GrooveFeel templates serialized (offsets + accents + name); `feel <kit> --save x.pocket` and `feel <kit> --from x.pocket`; `pack` ships the kits' pockets under `[Pockets]/` | CORE | S | save→from round-trips to the same applied timing; a pocket from kit A moves kit B the way A's groove would |
 
 ## HH5 — The Label: run your own imprint
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| HH5 | `label <root> --init NAME [--prefix XYZ]` — label.json at the crate root; catalog numbers assigned in stable order (XYZ-001…), `catalog.txt` written; J-card spines, liner notes and pack tiles wear the catalog number when the kit is under a labeled root | CORE | S–M | init → stable numbering that survives re-runs and new kits (existing numbers never move); the J-card spine shows the number |
+| HH5 | ✓ done (append-only catalog: re-runs change nothing, departures keep their entry marked "(gone)"): `label <root> --init NAME [--prefix XYZ]` — label.json at the crate root; catalog numbers assigned in stable order (XYZ-001…), `catalog.txt` written; J-card spines, liner notes and pack tiles wear the catalog number when the kit is under a labeled root | CORE | S–M | init → stable numbering that survives re-runs and new kits (existing numbers never move); the J-card spine shows the number |
 
 **Below the line:** sample-pool metadata (tempo/root/key on pool
 entries — the PSK shape; nice, but changes golden bytes for cosmetic
@@ -940,9 +940,20 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
 
-CORE wave HH (differentiators, in order):
-  HH1 Slice Motion chains (1.4 bench-blocked on the Sample-Edit
-  capture) → HH2 the Air → HH3 lineage → HH4 pockets → HH5 the label
+CORE wave HH: ✓ all landed (2026-08-28) except HH1.4 (bench-blocked
+  on the Sample-Edit capture) — chain plumbing with the GG4 verdict
+  corrected in docs and code (round robin IS chain-based Slice
+  Motion), robin (rendered takes, take one pristine first, undo
+  byte-identical, every other audio door refusing chained pads),
+  the break pad (chop's own cuts as a tap-through chain), the Air
+  (the inverse dig, trimmed to never overlap the break), lineage
+  (merge now stamps both parents; origins print only at the roots),
+  pockets (.pocket files applying byte-identically to feeling from
+  the donor kit), and the label (append-only catalog, numbers never
+  move, the J-card spine wears them). 787 tests. Bench rows: the
+  HH1.4 slice-chunk capture (chop a sample in Sample Edit, save,
+  drop WAV + kit in reference/), then a robin'd pad audibly
+  alternating takes on the Live III.
 
 CORE wave GG: ✓ all landed (2026-08-27) — pad shape as metadata
   (both generations' own envelope/filter fields, goldens untouched),
