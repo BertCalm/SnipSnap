@@ -141,6 +141,23 @@ class CliTest {
         assertTrue(breakPad.chain != null, "the break pad is a chain")
         assertEquals("Break", breakPad.displayName)
 
+        // --air: the same dig also cuts the song's calm stretch into a
+        // texture kit - LOOP pads by declaration, provenance stamped.
+        val (airCode, airOut, airErr) = cli("dig", song.path, "--air", "--out", out.path)
+        assertEquals(0, airCode, "stderr: $airErr")
+        assertContains(airOut, "air kit(s) cut")
+        val airDir = File(out, "Track 07 Air")
+        assertTrue(File(airDir, "kit.json").isFile, "the air became a kit")
+        val airKit = KitStore.load(airDir)
+        assertTrue(airKit.pads.isNotEmpty())
+        assertTrue(
+            airKit.pads.all {
+                it.drumClass == com.snipsnap.audio.DrumClass.LOOP &&
+                    it.source["song"] == "Track 07.wav" && it.source["at"] != null
+            },
+            "air pads are LOOPs that know their song: ${airKit.pads.first().source}",
+        )
+
         // A song with no break says so instead of inventing one.
         val toneFile = File(temp, "Ambient.wav").also { f ->
             val rate = 44_100
@@ -152,6 +169,13 @@ class CliTest {
         val (tCode, tOut, _) = cli("dig", toneFile.path)
         assertEquals(0, tCode)
         assertContains(tOut, "no break heard")
+
+        // Drums wall to wall: --air honestly cuts nothing.
+        val drumsFile = writeBreak(File(temp, "AllDrums.wav"))
+        val (dCode, dOut, _) = cli("dig", drumsFile.path, "--air", "--out", out.path)
+        assertEquals(0, dCode)
+        assertContains(dOut, "no air heard")
+        assertContains(dOut, "no air cut")
 
         assertEquals(2, cli("dig", File(temp, "missing-folder").path).first)
     }

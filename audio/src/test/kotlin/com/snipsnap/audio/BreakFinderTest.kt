@@ -105,4 +105,38 @@ class BreakFinderTest {
         assertEquals(1, found.size, "one continuous section")
         assertTrue(found[0].startSec < 1.5f && found[0].endSec > 8.5f, "covers the material")
     }
+
+    @Test
+    fun `the air lands in the pad sections and never overlaps the break`() {
+        // verse (8s) | break (8s) | outro (6s) - the air is the verse/outro.
+        val song = join(padSection(8f), breakSection(8f), padSection(6f))
+        val air = BreakFinder.air(song)
+        assertTrue(air.isNotEmpty(), "a song with a verse has air")
+
+        val breaks = BreakFinder.find(song)
+        assertTrue(breaks.isNotEmpty())
+        for (a in air) {
+            val mid = (a.startSec + a.endSec) / 2
+            assertTrue(
+                mid < 8f || mid > 16f,
+                "air sits in the pad sections, got ${a.startSec}..${a.endSec}",
+            )
+            for (b in breaks) {
+                assertTrue(
+                    a.endSec <= b.startSec || a.startSec >= b.endSec,
+                    "air ${a.startSec}..${a.endSec} overlaps break ${b.startSec}..${b.endSec}",
+                )
+            }
+        }
+        assertEquals(air, BreakFinder.air(song), "the same song always yields the same air")
+    }
+
+    @Test
+    fun `drums wall to wall and silence honestly yield no air`() {
+        assertTrue(
+            BreakFinder.air(Snip(breakSection(10f), 1, rate)).isEmpty(),
+            "a drums-only file has no air - loud percussive material everywhere",
+        )
+        assertTrue(BreakFinder.air(Snip(FloatArray(10 * rate), 1, rate)).isEmpty(), "silence is not air")
+    }
 }

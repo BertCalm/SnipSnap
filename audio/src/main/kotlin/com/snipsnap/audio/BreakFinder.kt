@@ -56,12 +56,56 @@ object BreakFinder {
     private const val LOW_BAND_HZ = 150f
     private const val PULSE_SUBFRAME_SEC = 0.05f
 
+    /** The air's window gates: at most this break-score... */
+    const val AIR_MAX_SCORE = 0.30f
+
+    /** ...and at most this flatness — tonal material, not broadband wash. */
+    const val AIR_MAX_FLATNESS = 0.12f
+
     fun find(snip: Snip, config: Config = Config()): List<Candidate> {
+        val a = analyze(snip, config) ?: return emptyList()
+        val candidates = mergeSections(config, a.count, qualifies = { w -> a.scores[w] >= config.minScore }) { i, j ->
+            var mean = 0f
+            for (k in i..j) mean += a.scores[k]
+            mean / (j - i + 1)
+        }
+        return candidates.sortedWith(compareByDescending<Candidate> { it.score }.thenBy { it.startSec })
+    }
+
+    /**
+     * The inverse dig (HH2): every dig yields two crates. The same window
+     * scores, selected the other way — non-silent, *low* break score, and
+     * tonal (low flatness: notes and pads, not drums or wash) — merged
+     * into sections, then trimmed against every break candidate so the
+     * air can never overlap the break. Ranked most air-like first
+     * (score here is `1 − break-score`, so higher = calmer).
+     */
+    fun air(snip: Snip, config: Config = Config()): List<Candidate> {
+        val a = analyze(snip, config) ?: return emptyList()
+        val sections = mergeSections(
+            config, a.count,
+            qualifies = { w ->
+                !a.silent[w] && a.scores[w] <= AIR_MAX_SCORE && a.flatness[w] <= AIR_MAX_FLATNESS
+            },
+        ) { i, j ->
+            var mean = 0f
+            for (k in i..j) mean += 1f - a.scores[k]
+            mean / (j - i + 1)
+        }
+        if (sections.isEmpty()) return emptyList()
+        val breaks = find(snip, config)
+        return sections.flatMap { subtract(it, breaks, config.minSectionSec) }
+            .sortedWith(compareByDescending<Candidate> { it.score }.thenBy { it.startSec })
+    }
+
+    private class WindowAnalysis(val scores: FloatArray, val flatness: FloatArray, val silent: BooleanArray, val count: Int)
+
+    private fun analyze(snip: Snip, config: Config): WindowAnalysis? {
         val rate = snip.sampleRate
         val mono = if (snip.channels == 1) snip.samples else Cleanup.toMono(snip).samples
         val win = (config.windowSec * rate).toInt()
         val hop = (config.hopSec * rate).toInt()
-        if (mono.size < win) return emptyList()
+        if (mono.size < win) return null
 
         val onsets = Transients.detect(Snip(mono, 1, rate))
         val onsetFrames = IntArray(onsets.size) { onsets[it].frame }
@@ -69,13 +113,18 @@ object BreakFinder {
 
         val count = (mono.size - win) / hop + 1
         val scores = FloatArray(count)
+        val flatnesses = FloatArray(count)
+        val silent = BooleanArray(count)
         for (w in 0 until count) {
             val start = w * hop
             val end = start + win
 
             var energy = 0f
             for (i in start until end) energy += mono[i] * mono[i]
-            if (energy / win < 1e-7f) continue // silence stays scoreless
+            if (energy / win < 1e-7f) {
+                silent[w] = true // silence stays scoreless
+                continue
+            }
 
             val density = countInRange(onsetFrames, start, end) / config.windowSec
             val dNorm = (density / FULL_CREDIT_ONSETS_PER_SEC).coerceAtMost(1f)
@@ -83,29 +132,59 @@ object BreakFinder {
             val flatness = FeatureExtractor.extract(Snip(mono.copyOfRange(start, end), 1, rate)).flatness
             val fNorm = (flatness / FULL_CREDIT_FLATNESS).coerceAtMost(1f)
 
+            flatnesses[w] = flatness
             scores[w] = 0.45f * dNorm + 0.30f * fNorm + 0.25f * lowPulse(low, start, end, rate)
         }
+        return WindowAnalysis(scores, flatnesses, silent, count)
+    }
 
-        // Adjacent windows above the floor merge into one section.
-        val candidates = mutableListOf<Candidate>()
+    /** Adjacent qualifying windows merge into one section of at least minSectionSec. */
+    private inline fun mergeSections(
+        config: Config,
+        count: Int,
+        qualifies: (Int) -> Boolean,
+        sectionScore: (Int, Int) -> Float,
+    ): MutableList<Candidate> {
+        val sections = mutableListOf<Candidate>()
         var i = 0
         while (i < count) {
-            if (scores[i] < config.minScore) {
+            if (!qualifies(i)) {
                 i++
                 continue
             }
             var j = i
-            while (j + 1 < count && scores[j + 1] >= config.minScore) j++
+            while (j + 1 < count && qualifies(j + 1)) j++
             val startSec = i * config.hopSec
             val endSec = j * config.hopSec + config.windowSec
             if (endSec - startSec >= config.minSectionSec) {
-                var mean = 0f
-                for (k in i..j) mean += scores[k]
-                candidates += Candidate(startSec, endSec, mean / (j - i + 1))
+                sections += Candidate(startSec, endSec, sectionScore(i, j))
             }
             i = j + 1
         }
-        return candidates.sortedWith(compareByDescending<Candidate> { it.score }.thenBy { it.startSec })
+        return sections
+    }
+
+    /**
+     * [s] minus every break interval — overlapping windows mean an air
+     * section can brush a break's edge; the pieces that survive must
+     * still be full sections.
+     */
+    private fun subtract(s: Candidate, breaks: List<Candidate>, minSectionSec: Float): List<Candidate> {
+        var pieces = mutableListOf(s.startSec to s.endSec)
+        for (b in breaks) {
+            val next = mutableListOf<Pair<Float, Float>>()
+            for ((ps, pe) in pieces) {
+                if (b.endSec <= ps || b.startSec >= pe) {
+                    next += ps to pe
+                    continue
+                }
+                if (b.startSec > ps) next += ps to b.startSec
+                if (b.endSec < pe) next += b.endSec to pe
+            }
+            pieces = next
+        }
+        return pieces.filter { (ps, pe) -> pe - ps >= minSectionSec }
+            .map { (ps, pe) -> Candidate(ps, pe, s.score) }
     }
 
     /**

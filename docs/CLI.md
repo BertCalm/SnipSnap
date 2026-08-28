@@ -66,7 +66,18 @@ names where the breaks live with timestamps and scores (`--top N`).
 `--chop` sends each song's best section straight through the chop
 pipeline; every pad's provenance then says which song and at what
 timestamp it was dug from (`--break-pad` rides along, so the dug break
-can land tap-through-able on one pad too). A song of pads says "no break heard" rather
+can land tap-through-able on one pad too).
+
+`--air` is the inverse dig — every dig yields two crates. The same
+window scores selected the other way: non-silent, *low* break score
+(≤ 0.30, safely under the break floor) and tonal (flatness ≤ 0.12 —
+notes and pads, not drums or wash), merged into sections and trimmed
+against every break candidate so the air can never overlap the break.
+The best stretch is cut on a grid of 4 long parts (a texture wants
+sustained material in source order, not hit-chopped shards) into a
+companion kit named "`<Song> Air`", every pad classed LOOP by
+declaration with the song/timestamp provenance stamped. A drums-only
+file honestly says "no air heard". A song of pads says "no break heard" rather
 than inventing one; unreadable files are named and skipped, never
 fatal. Deterministic: the same song always yields the same dig.
 

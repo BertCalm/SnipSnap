@@ -20,7 +20,7 @@ object DigCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--top", "--out", "--slices"),
-            boolean = setOf("--chop", "--overwrite", "--break-pad"),
+            boolean = setOf("--chop", "--overwrite", "--break-pad", "--air"),
         )
         val targetArg = opts.positional.getOrNull(0)
             ?: throw CliError("dig wants songs: snipsnap dig <file-or-folder> [--top N] [--chop]")
@@ -42,6 +42,7 @@ object DigCommand {
         }
 
         var chopped = 0
+        var aired = 0
         for (file in files) {
             val candidates = try {
                 BreakFinder.find(WavReader.read(file))
@@ -109,9 +110,75 @@ object DigCommand {
                     tmpDir.deleteRecursively()
                 }
             }
+
+            // --air: the inverse dig - the same song's most tonal, least
+            // percussive stretch becomes a companion texture kit.
+            if (opts.has("--air")) {
+                val airSections = try {
+                    BreakFinder.air(WavReader.read(file))
+                } catch (e: Exception) {
+                    emptyList()
+                }
+                if (airSections.isEmpty()) {
+                    out.println("  no air heard in ${file.name}")
+                } else {
+                    val best = airSections.first()
+                    val kitName = Names.sanitizeStem(file.nameWithoutExtension) + " Air"
+                    val outDir = opts["--out"] ?: "snipsnap-out"
+                    val tmpDir = java.nio.file.Files.createTempDirectory("snipsnap-air").toFile()
+                    try {
+                        val song = WavReader.read(file)
+                        val startFrame = (best.startSec * song.sampleRate).toInt().coerceIn(0, song.frameCount - 1)
+                        val endFrame = (best.endSec * song.sampleRate).toInt().coerceIn(startFrame + 1, song.frameCount)
+                        val excerpt = com.snipsnap.audio.Snip(
+                            song.samples.copyOfRange(startFrame * song.channels, endFrame * song.channels),
+                            song.channels, song.sampleRate,
+                        )
+                        val tmp = File(tmpDir, file.name)
+                        com.snipsnap.audio.WavWriter.write(tmp, excerpt)
+
+                        // Long cuts on a grid - a texture wants sustained
+                        // material in source order, not hit-chopped shards.
+                        val airArgs = mutableListOf(tmp.path, "--name", kitName, "--out", outDir, "--grid", "4")
+                        if (opts.has("--overwrite")) airArgs += "--overwrite"
+                        val code = try {
+                            ChopCommand.run(airArgs, out)
+                        } catch (e: CliError) {
+                            out.println("  couldn't cut the air: ${e.message}")
+                            continue
+                        }
+                        if (code != 0) continue
+
+                        // Texture pads by declaration: whatever the classifier
+                        // heard in the cuts, these are LOOPs - and the kit
+                        // knows which song and where its air came from.
+                        val kitDir = File(outDir, kitName)
+                        val kit = KitStore.load(kitDir)
+                        KitStore.save(
+                            kit.copy(
+                                pads = kit.pads.map { p ->
+                                    p.copy(
+                                        drumClass = com.snipsnap.audio.DrumClass.LOOP,
+                                        colorHex = com.snipsnap.audio.AutoPlace.colorFor(com.snipsnap.audio.DrumClass.LOOP),
+                                        source = p.source + mapOf("song" to file.name, "at" to stamp(best.startSec)),
+                                    )
+                                },
+                            ),
+                            kitDir,
+                        )
+                        out.println("  -> $kitName (air from ${stamp(best.startSec)}-${stamp(best.endSec)} of ${file.name})")
+                        aired++
+                    } finally {
+                        tmpDir.deleteRecursively()
+                    }
+                }
+            }
         }
         if (opts.has("--chop")) {
             out.println(if (chopped > 0) "$chopped break(s) dug and chopped" else "nothing chopped - no break stood out")
+        }
+        if (opts.has("--air")) {
+            out.println(if (aired > 0) "$aired air kit(s) cut" else "no air cut - nothing calm and tonal stood apart")
         }
         return 0
     }

@@ -40,7 +40,10 @@ object Cli {
         |  dig <file-or-folder>  find the drum breaks inside full songs and
         |                        name where they live (--top N candidates;
         |                        --chop sends each song's best break through
-        |                        the chop pipeline, provenance stamped)
+        |                        the chop pipeline, provenance stamped;
+        |                        --air also cuts the song's most tonal,
+        |                        least percussive stretch into a companion
+        |                        texture kit of LOOP pads)
         |  classify <wav...>     print what the classifier hears in each file
         |  crate <root>          the whole library as a collection: cached
         |                        pad index + class census (--dupes finds
