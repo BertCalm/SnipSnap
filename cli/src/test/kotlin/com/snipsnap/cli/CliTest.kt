@@ -1100,6 +1100,36 @@ class CliTest {
     }
 
     @Test
+    fun `robin chains a pad from the terminal and undoes it byte-identical`() {
+        val wav = writeBreak(File(temp, "rb.wav"))
+        val out = File(temp, "rb-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "RB", "--slices", "8").first)
+        val kitDir = File(out, "RB")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(1)!!.sampleFile)
+        val before = padFile.readBytes()
+
+        val (code, stdout, stderr) = cli("robin", kitDir.path, "A01", "--takes", "4", "--seed", "7")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "chain of 4 takes")
+        val chained = KitStore.load(kitDir).pad(1)!!.chain
+        assertEquals(4, chained!!.sliceCount)
+        assertTrue(padFile.readBytes().size > before.size * 3, "four takes ride in the WAV")
+
+        // A chained pad refuses the other audio doors with a pointer home.
+        val (guardCode, _, guardErr) = cli("treat", kitDir.path, "A01", "crushed")
+        assertTrue(guardCode != 0)
+        assertContains(guardErr, "robin --undo")
+
+        assertEquals(0, cli("robin", kitDir.path, "A01", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()), "undo is byte-identical")
+        assertEquals(null, KitStore.load(kitDir).pad(1)!!.chain)
+
+        val (badCode, _, badErr) = cli("robin", kitDir.path, "A01", "--takes", "1")
+        assertTrue(badCode != 0)
+        assertContains(badErr, "takes")
+    }
+
+    @Test
     fun `project builds one session from several kits`() {
         val wav = writeBreak(File(temp, "sess.wav"))
         val out = File(temp, "sess-out")

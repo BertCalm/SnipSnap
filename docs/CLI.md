@@ -226,6 +226,28 @@ Humanize scales them conservatively (pitch ×0.05, volume ×0.2, pan
 have no such fields and honestly ignore it. Bench row: humanize 0.5
 on the Live III — audible variation at a sane amount.
 
+### `robin <kit-dir> <pad>` — round robin, rendered
+
+The PSK corpus trick aimed the other way. Commercial kits chain N
+*recorded* takes per pad and let MPC 3 **Slice Motion** step through
+them (`sliceIncrement`/`sliceCycleLength` on the layer); our pads have
+one take, so `robin` renders the missing ones: `--takes N` (default 3,
+2..8) seeded variants — micro level (±8%), micro pitch (±10 cents,
+repitch-style so length rides along), up to 2ms of start jitter — the
+differences real drummers can't help making, concatenated into one
+chain WAV. Take one is the **untouched original, deliberately first**:
+the MPC 2 generation has no Slice Motion, its export windows the pad to
+slice 0, so older hardware plays the pristine hit. The MPC 3 cycles a
+take per hit and so does the preview. `--seed S` rerolls
+deterministically; the same (takes, seed) always renders the same
+chain. `--undo` pulls the single take back out of the bin
+byte-identical and clears the chain. While a pad is chained, the other
+audio doors (`treat`, `era`, `doctor --fix`) refuse it — a rewrite
+would orphan the slice boundaries — undo the robin first. Bench row:
+a robin'd pad on the Live III audibly alternates takes (pending the
+HH1.4 slice-chunk capture; until then the hardware plays take one, the
+declared fallback).
+
 ### `wear <kit-dir>` — the kit as a living tape
 
 The product pretends to be a tape deck; this makes the metaphor real.

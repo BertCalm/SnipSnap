@@ -80,6 +80,11 @@ object Cli {
         |                        this kit's patterns
         |  treat <kit-dir> <pad> <character>
         |                        crush/reverse/wash one pad (--undo restores)
+        |  robin <kit-dir> <pad> round robin: N seeded subtle takes rendered
+        |                        into a chain WAV - the MPC 3 cycles one per
+        |                        hit (Slice Motion), the MPC 2 plays take one
+        |                        ([--takes N] [--seed S]; --undo restores the
+        |                        single take byte-identical)
         |  shape <kit-dir> <pad> pad shape as metadata: --attack/--decay/
         |                        --cutoff/--res (0..1) land in the exported
         |                        programs' own fields - the HARDWARE renders
@@ -191,6 +196,7 @@ object Cli {
                 "resample" -> ResampleCommand.run(args.drop(1), out)
                 "merge" -> MergeCommand.run(args.drop(1), out)
                 "treat" -> TreatCommand.run(args.drop(1), out)
+                "robin" -> RobinCommand.run(args.drop(1), out)
                 "shape" -> ShapeCommand.run(args.drop(1), out)
                 "feel" -> FeelCommand.run(args.drop(1), out)
                 "era" -> EraCommand.run(args.drop(1), out)

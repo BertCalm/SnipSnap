@@ -237,6 +237,7 @@ class KitBuilderModel private constructor(
         require(pad.velocityLayers.isEmpty()) {
             "pad $slot is velocity-layered - clear the layers before treating"
         }
+        requireNotChained(pad, "treating")
         val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
         val treated = com.snipsnap.synth.Treatments.apply(treatment, original, amount)
 
@@ -260,6 +261,7 @@ class KitBuilderModel private constructor(
         require(pad.velocityLayers.isEmpty()) {
             "pad $slot is velocity-layered - clear the layers before rewriting its audio"
         }
+        requireNotChained(pad, "rewriting")
         val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
         val processed = transform(original)
         require(processed.frameCount > 0) { "a rewrite must leave audio behind" }
@@ -276,6 +278,7 @@ class KitBuilderModel private constructor(
      */
     fun eraPad(slot: Int, era: String, amount: Float = 1f): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        requireNotChained(pad, "aging")
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
         var recipe: com.snipsnap.json.JsonValue.Obj? = null
         for (f in files) {
@@ -302,6 +305,7 @@ class KitBuilderModel private constructor(
     /** Undo an era on one pad: every file it references comes back out of the bin. */
     fun unEraPad(slot: Int): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        requireNotChained(pad, "un-aging")
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
         var restoredAny = false
         for (f in files) {
@@ -314,6 +318,7 @@ class KitBuilderModel private constructor(
     /** Undo the last treatment: the previous audio comes back out of the bin. */
     fun untreatPad(slot: Int): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        requireNotChained(pad, "un-treating")
         restoreFromBin(pad.sampleFile)
             ?: throw IllegalArgumentException("nothing to restore for pad $slot - the bin holds no earlier take of it")
         return update(slot) { it.copy(recipe = null) }
@@ -471,6 +476,17 @@ class KitBuilderModel private constructor(
 
     /** The kit-name easter egg, for the rename dialog to surface. */
     fun nameResponse(proposed: String): String? = Copy.kitNameResponse(proposed)
+
+    /**
+     * A chain pad's slice boundaries index into its WAV frame-for-frame;
+     * any rewrite (or restore) that isn't the robin's own would orphan
+     * them. One gate for every audio door.
+     */
+    private fun requireNotChained(pad: KitPad, doing: String) {
+        require(pad.chain == null) {
+            "pad ${pad.slot} is a round-robin chain - `robin --undo` before $doing it"
+        }
+    }
 
     private fun classCount(dc: DrumClass): Int = kit.pads.count { it.drumClass == dc }
 
