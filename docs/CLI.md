@@ -152,7 +152,14 @@ have no per-sample DS home and are honestly skipped.
 
 Dispatches by content, never extension. An `.xpn` archive unpacks into a
 kit folder — ours or a vendor's (either instrument-numbering base, samples
-found by bare name anywhere in the archive). A native MPC 3 drum track
+found by bare name anywhere in the archive). An `.sfz` instrument comes
+home too: regions land on pads by key (36 = A01), `lovel`/`hivel` become
+velocity layers, our own writer's chains and grids reassemble into
+chains and grids (boundaries from the regions' `offset`/`end` windows),
+opcode inheritance from `<global>`/`<master>`/`<group>` is honoured, and
+unknown opcodes are ignored — that IS the sfz rule. Anything that can't
+become a pad — a multi-key region, a missing or non-WAV sample, a chain
+that doesn't reassemble — is named and skipped, never fatal. A native MPC 3 drum track
 (`.xtd` with its `_[TrackData]/` beside it) imports too — **kits the MPC
 itself saved become editable kit folders**, levels, tunes, mute groups,
 velocity layers and pad colours intact. A whole **`.xpj` project**

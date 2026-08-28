@@ -1233,6 +1233,27 @@ class CliTest {
     }
 
     @Test
+    fun `a kit leaves as sfz and ds and comes home through import`() {
+        val wav = writeBreak(File(temp, "es.wav"))
+        val out = File(temp, "es-out")
+        assertEquals(
+            0,
+            cli("chop", wav.path, "--out", out.path, "--name", "Escape", "--slices", "4", "--export", "sfz,ds").first,
+        )
+        val sfz = File(out, "card/Escape SFZ/Escape.sfz")
+        assertTrue(sfz.isFile, "the sfz lands")
+        assertTrue(File(out, "card/Escape SFZ/Samples").isDirectory)
+        assertTrue(File(out, "card/Escape DecentSampler/Escape.dspreset").isFile, "the dspreset lands")
+
+        val (code, stdout, stderr) = cli("import", sfz.path, "--out", File(temp, "es-home").path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, ".sfz instrument")
+        val home = KitStore.load(File(temp, "es-home/Escape"))
+        assertEquals(KitStore.load(File(out, "Escape")).pads.size, home.pads.size, "every pad comes home")
+        assertTrue(home.pads.all { it.source["importedFrom"] == "Escape.sfz" }, "provenance stamped")
+    }
+
+    @Test
     fun `robin chains a pad from the terminal and undoes it byte-identical`() {
         val wav = writeBreak(File(temp, "rb.wav"))
         val out = File(temp, "rb-out")

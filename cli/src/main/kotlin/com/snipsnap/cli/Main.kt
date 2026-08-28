@@ -56,9 +56,10 @@ object Cli {
         |                        (target = a .wav, or a kit dir --pad A02;
         |                        --top N matches)
         |  export <kit-dir>      export an existing kit folder to MPC formats
-        |  import <file>         unpack an .xpn archive or a native .xtd into a
-        |                        kit folder; a .mid needs --into <kit-dir> and
-        |                        becomes that kit's groove
+        |  import <file>         unpack an .xpn archive, a native .xtd, or an
+        |                        .sfz instrument into a kit folder; a .mid
+        |                        needs --into <kit-dir> and becomes that
+        |                        kit's groove
         |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
         |                        (--loop cuts sustain loops: held pads sing forever)
         |  resample <kit-dir>    the ritual: bounce the kit playing its own
