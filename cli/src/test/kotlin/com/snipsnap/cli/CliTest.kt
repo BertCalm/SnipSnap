@@ -1351,6 +1351,39 @@ class CliTest {
     }
 
     @Test
+    fun `beat runs the whole ritual - one song in, a release out`() {
+        val song = writeSong(File(temp, "Track 11.wav"))
+        val out = File(temp, "beat-out")
+        val (code, stdout, stderr) = cli("beat", song.path, "--out", out.path)
+        assertEquals(0, code, "stderr: $stderr\nstdout: $stdout")
+        assertContains(stdout, "== the release ==")
+
+        val kitDir = File(out, "Track 11 Break")
+        assertTrue(File(kitDir, "kit.json").isFile, "the kit landed")
+        assertTrue(File(out, "Track 11 Air/kit.json").isFile, "the air rode along")
+        assertTrue(File(out, "card/Track 11 Break Song.xpj").isFile, "the song landed")
+        assertTrue(File(out, "card/Track 11 Break Song.wav").length() > 44, "the mixdown landed")
+        assertTrue(File(kitDir, "liner-notes.txt").isFile, "the notes landed")
+        assertTrue(kitDir.listFiles()!!.any { it.name.endsWith("J-Card.png") }, "the card landed")
+        assertTrue(KitStore.load(kitDir).pads.any { it.chain != null }, "chains landed (break pad / robins)")
+
+        // The synthetic song has no key - the Answer sat out, and said so.
+        assertContains(stdout, "sat out")
+
+        // A keyless tone has no break at all: the ritual aborts honestly.
+        val toneFile = File(temp, "beat-tone.wav").also { f ->
+            val rate = 44_100
+            WavWriter.write(
+                f,
+                Snip(FloatArray(6 * rate) { i -> (0.4 * Math.sin(2.0 * Math.PI * 220.0 * i / rate)).toFloat() }, 1, rate),
+            )
+        }
+        val (tCode, tOut, _) = cli("beat", toneFile.path, "--out", out.path)
+        assertEquals(1, tCode)
+        assertContains(tOut, "no break stood out")
+    }
+
+    @Test
     fun `learn --pocket bottles a real pocket off the record`() {
         // 100 bpm, two bars: kicks straight on the quarters, hats on the
         // off-8ths pushed 76 pulses (~47ms) late - a rendered swing.

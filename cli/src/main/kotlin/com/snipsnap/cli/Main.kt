@@ -44,6 +44,11 @@ object Cli {
         |                        --air also cuts the song's most tonal,
         |                        least percussive stretch into a companion
         |                        texture kit of LOOP pads)
+        |  beat <song.wav>       the whole ritual as one verb: dig the break
+        |                        (+ air), chop with groove/ghosts/break-pad,
+        |                        doctor, robin the core drums, the Answer +
+        |                        band, arrange + mixdown, inserts - one song
+        |                        in, a release folder out; every skip named
         |  classify <wav...>     print what the classifier hears in each file
         |  crate <root>          the whole library as a collection: cached
         |                        pad index + class census (--dupes finds
@@ -237,6 +242,7 @@ object Cli {
                 "chop" -> ChopCommand.run(args.drop(1), out)
                 "chop-all" -> ChopAllCommand.run(args.drop(1), out)
                 "dig" -> DigCommand.run(args.drop(1), out)
+                "beat" -> BeatCommand.run(args.drop(1), out)
                 "classify" -> ClassifyCommand.run(args.drop(1), out)
                 "similar" -> SimilarCommand.run(args.drop(1), out)
                 "crate" -> CrateCommand.run(args.drop(1), out)

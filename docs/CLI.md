@@ -81,6 +81,21 @@ file honestly says "no air heard". A song of pads says "no break heard" rather
 than inventing one; unreadable files are named and skipped, never
 fatal. Deterministic: the same song always yields the same dig.
 
+### `beat <song.wav>` — the whole ritual as one verb
+
+One song in, a release folder out. Six steps, each the real verb run
+in order, its output printed as it happens: **the dig** (break + air,
+chopped with groove, ghosts and the break pad, provenance stamped),
+**the doctor** (`--fix`, before any pad becomes a chain — a chained
+pad refuses rewrites, that's its boundary promise), **the robins**
+(subtle takes on the plain kick and snare), **the answer** (with the
+band, when the material named its key), **the arrangement** (`arrange
+--mixdown`: the song as sequences and as one WAV), and **the
+inserts** (liner notes + J-card). Every skip is *named* — no break
+aborts honestly, no key sits the Answer out, nothing to roll on gets
+no turn — and `--seed N` steers every seeded step, so the same song
+and seed build the same release.
+
 ### `chop-all <folder>` — the crate-digging verb
 
 Every `.wav` in the folder through the whole chop pipeline, folder first
