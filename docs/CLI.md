@@ -41,6 +41,7 @@ tempo, chop, classify each slice, auto-place onto the conventional layout
 | `--swing PCT` | with `--groove`: the tight pattern swings instead, the way the hardware does it — quantize to 16ths, then push every even ("and") 16th late by `(pct−50)/50` of a 16th. 50 straight, 66 triplet feel, panel range 50–75 |
 | `--fit-tempo BPM` | repitch LOOP pads from the detected tempo to BPM, SP-style (`TempoFit`): resample by the ratio, pitch rides along — the revered lo-fi move, and the semitone cost is printed. One-shots untouched; stems and `kit.json` restamp to the new tempo; refused past double/half speed, and an honest error when no source tempo was heard |
 | `--ghosts` | darker soft velocity zones under every one-shot pad — quiet hits sound soft, not just quiet |
+| `--break-pad` | one **extra** pad carrying the whole break as a chain whose slice boundaries are the chop's own cuts (cycle = slice count) — tap through the break in order on one pad, the workflow MPC users build by hand in Sample Edit. The pad's WAV starts at the first hit so slice one is frame 0; class LOOP, provenance stamped like every slice; the preview steps through it and the MPC 3 metadata cycles it (hardware audibility rides HH1.4's slice map, like every chain). Also rides `dig --chop` |
 | `--key SPEC` | retune tonal pads into a key via `InKey`/`Tuner`: `Am`, `C`, `F#m`, `Eb major`, `Dminpent` — or **`auto`**: a pitch-class histogram over the pitched slices names the key itself (`KeyGuess`), erroring honestly when the material has none. Even without `--key`, a confident guess is remembered in `kit.json` — metadata only, nothing retunes uninvited |
 | `--export LIST` | comma-separated formats, see below |
 | `--preview` | render the kit playing its own beat (`KitPreview`) into the `expansion`/`xpn` exports as `[Previews]/<Kit>.xpm.wav` — the real packs' pairing convention, so the MPC browser auditions the kit before loading it. Uses the kit's saved groove; with none, an honest default: kick/snare/hat backbone when classes are known, a pad walk when they aren't |
@@ -64,7 +65,8 @@ just sits there) — merges scoring windows into candidate sections, and
 names where the breaks live with timestamps and scores (`--top N`).
 `--chop` sends each song's best section straight through the chop
 pipeline; every pad's provenance then says which song and at what
-timestamp it was dug from. A song of pads says "no break heard" rather
+timestamp it was dug from (`--break-pad` rides along, so the dug break
+can land tap-through-able on one pad too). A song of pads says "no break heard" rather
 than inventing one; unreadable files are named and skipped, never
 fatal. Deterministic: the same song always yields the same dig.
 

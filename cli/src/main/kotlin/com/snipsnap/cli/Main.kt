@@ -147,6 +147,10 @@ object Cli {
         |                    the triplet feel)
         |  --ghosts          render darker soft velocity zones under every
         |                    one-shot pad, so quiet hits sound soft
+        |  --break-pad       one extra pad carrying the whole break as a
+        |                    chain whose slices are the chop's own cuts -
+        |                    tap through the break on one pad (also rides
+        |                    dig --chop)
         |  --melodic         place slices low-to-high by detected pitch
         |                    (unpitched slices follow in capture order)
         |  --fit-tempo BPM   repitch LOOP pads from the detected tempo to BPM,

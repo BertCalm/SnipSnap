@@ -49,7 +49,7 @@ object ChopCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export", "--swing", "--art", "--fit-tempo"),
-            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview", "--no-art"),
+            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview", "--no-art", "--break-pad"),
         )
         val input = opts.positional.firstOrNull()
             ?: throw CliError("chop wants an input file: snipsnap chop <input.wav>")
@@ -268,6 +268,49 @@ object ChopCommand {
             model.save()
             kit = model.kit
             out.println("ghost notes: $layered pads gained darker soft zones")
+        }
+
+        // --break-pad: one extra pad carrying the whole break as a chain
+        // whose slices ARE the chop's boundaries - tap through the break
+        // on one pad, the workflow MPC users build by hand in Sample Edit.
+        if (opts.has("--break-pad")) {
+            val first = slices.first().sourceFrame
+            val boundaries = slices.map { (it.sourceFrame - first).toLong() }.distinct()
+            when {
+                boundaries.size < 2 -> out.println("(fewer than 2 slices - no break pad to tap through)")
+                kit.highestSlot >= 128 -> out.println("(no free pad slot left for the break pad)")
+                else -> {
+                    // The pad's WAV starts at the first hit, so slice one
+                    // begins at frame 0 the way ChainInfo (and the ear) expect.
+                    val breakSnip = com.snipsnap.audio.Snip(
+                        snip.samples.copyOfRange(first * snip.channels, snip.samples.size),
+                        snip.channels, snip.sampleRate,
+                    )
+                    val slot = kit.highestSlot + 1
+                    val stem = Names.sanitizeStem("${PadNoteMap.labelForPad(slot)}_Break")
+                    com.snipsnap.audio.WavWriter.write(File(kitDir, "$stem.wav"), breakSnip)
+                    kit = kit.copy(
+                        pads = kit.pads + com.snipsnap.kit.KitPad(
+                            slot = slot,
+                            sampleFile = "$stem.wav",
+                            displayName = "Break",
+                            drumClass = com.snipsnap.audio.DrumClass.LOOP,
+                            colorHex = AutoPlace.colorFor(com.snipsnap.audio.DrumClass.LOOP),
+                            source = mapOf(
+                                "file" to file.name,
+                                "sourceFrame" to first.toString(),
+                                "lengthFrames" to breakSnip.frameCount.toString(),
+                            ),
+                            chain = com.snipsnap.kit.ChainInfo(boundaries, cycle = boundaries.size),
+                        ),
+                    )
+                    com.snipsnap.kit.KitStore.save(kit, kitDir)
+                    out.println(
+                        "break pad: ${PadNoteMap.labelForPad(slot)} carries the whole break as a " +
+                            "chain of ${boundaries.size} slices - tap through it in order",
+                    )
+                }
+            }
         }
 
         out.println()

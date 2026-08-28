@@ -124,7 +124,7 @@ class CliTest {
         assertContains(stdout, "Track 07.wav:")
         assertContains(stdout, "1. 0:0")
 
-        val (chopCode, chopOut, chopErr) = cli("dig", song.path, "--chop", "--out", out.path)
+        val (chopCode, chopOut, chopErr) = cli("dig", song.path, "--chop", "--break-pad", "--out", out.path)
         assertEquals(0, chopCode, "stderr: $chopErr")
         assertContains(chopOut, "1 break(s) dug and chopped")
         val kitDir = File(out, "Track 07 Break")
@@ -135,6 +135,11 @@ class CliTest {
             kit.pads.all { it.source["song"] == "Track 07.wav" && it.source["at"] != null },
             "every pad knows which song and where: ${kit.pads.first().source}",
         )
+        // --break-pad rides dig --chop: the dug break also lands whole,
+        // tap-through-able, with the same song provenance as every slice.
+        val breakPad = kit.pads.maxBy { it.slot }
+        assertTrue(breakPad.chain != null, "the break pad is a chain")
+        assertEquals("Break", breakPad.displayName)
 
         // A song with no break says so instead of inventing one.
         val toneFile = File(temp, "Ambient.wav").also { f ->
@@ -1097,6 +1102,49 @@ class CliTest {
         val (badCode, _, badErr) = cli("treat", kitDir.path, "A02", "sparkled")
         assertTrue(badCode != 0)
         assertContains(badErr, "crushed")
+    }
+
+    @Test
+    fun `break-pad adds one chain pad whose slices are the chop's own cuts`() {
+        val wav = writeBreak(File(temp, "bp.wav"))
+        val out = File(temp, "bp-out")
+        val (code, stdout, stderr) =
+            cli("chop", wav.path, "--out", out.path, "--name", "BP", "--slices", "8", "--break-pad")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "break pad:")
+
+        val kit = KitStore.load(File(out, "BP"))
+        val sliceCount = kit.pads.count { it.chain == null }
+        assertTrue(sliceCount >= 2, "the fixture chops into several hits")
+        assertContains(stdout, "chain of $sliceCount slices")
+        assertEquals(sliceCount + 1, kit.pads.size, "the slices + one break pad")
+        val breakPad = kit.pads.maxBy { it.slot }
+        assertEquals("Break", breakPad.displayName)
+        assertEquals(com.snipsnap.audio.DrumClass.LOOP, breakPad.drumClass)
+        val chain = breakPad.chain!!
+        assertEquals(sliceCount, chain.sliceCount)
+        assertEquals(sliceCount, chain.cycle)
+        assertEquals(0L, chain.boundaries[0])
+
+        // The chain's boundaries ARE the chop's cuts: each slice pad's
+        // sourceFrame, re-based to the first cut, appears as a boundary.
+        val first = breakPad.source["sourceFrame"]!!.toLong()
+        val sliceStarts = kit.pads.filter { it.chain == null }
+            .map { it.source["sourceFrame"]!!.toLong() - first }
+            .sorted()
+        assertEquals(sliceStarts, chain.boundaries, "boundaries equal the chop slices")
+
+        // The pad's WAV runs from the first cut to the end of the source.
+        val sourceFrames = com.snipsnap.xpm.WavInfo.read(wav).frameCount
+        val breakFrames = com.snipsnap.xpm.WavInfo.read(File(out, "BP/${breakPad.sampleFile}")).frameCount
+        assertEquals(sourceFrames - first, breakFrames)
+
+        // One slice can't be tapped through - the pad is skipped, not broken.
+        val (oneCode, oneOut, _) =
+            cli("chop", wav.path, "--out", out.path, "--name", "BP1", "--slices", "1", "--break-pad")
+        assertEquals(0, oneCode)
+        assertContains(oneOut, "no break pad")
+        assertEquals(null, KitStore.load(File(out, "BP1")).pads.single().chain)
     }
 
     @Test
