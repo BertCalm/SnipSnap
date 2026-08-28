@@ -38,14 +38,20 @@ object LearnCommand {
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(args, valued = setOf("--into", "--pocket"), boolean = emptySet())
         val input = opts.positional.firstOrNull()
-            ?: throw CliError("learn wants a beat: snipsnap learn <beat.wav> --into <kit-dir>")
+            ?: throw CliError("learn wants a beat: snipsnap learn <beat.wav> --into <kit-dir> [--pocket x.pocket]")
         if (opts.positional.size > 1) throw CliError("learn takes one beat file")
         val file = File(input)
         if (!file.isFile) throw CliError("no such file: $input")
         val intoArg = opts["--into"]
-            ?: throw CliError("whose pads play it? --into <kit-dir>")
-        val kitDir = File(intoArg)
-        if (!File(kitDir, "kit.json").isFile) throw CliError("not a kit folder (no kit.json): $intoArg")
+        val pocketArg = opts["--pocket"]
+        if (intoArg == null && pocketArg == null) {
+            throw CliError("where does it go? --into <kit-dir> plays it, --pocket x.pocket bottles the feel - or both")
+        }
+        val kitDir = intoArg?.let {
+            File(it).also { d ->
+                if (!File(d, "kit.json").isFile) throw CliError("not a kit folder (no kit.json): $it")
+            }
+        }
 
         var snip = WavReader.read(file)
         if (snip.sampleRate != TARGET_RATE) snip = Resampler.resample(snip, TARGET_RATE)
@@ -55,9 +61,17 @@ object LearnCommand {
         val hits = Ear.listen(snip)
         if (hits.size < 2) throw CliError("no beat heard in ${file.name} - the ear finds hits, not tones")
 
-        val kit = KitStore.load(kitDir)
         val sure = hits.filter { it.confidence >= SURE_CONFIDENCE }
         val uncertain = hits.size - sure.size
+
+        // --pocket: the recording's FEEL, bottled - no pads needed, a
+        // pocket is timing and accent alone.
+        pocketArg?.let { bottlePocket(it, file, sure, tempo.bpm, out) }
+        if (kitDir == null) {
+            if (uncertain > 0) out.println("  $uncertain uncertain hit(s) left out - marked, not invented")
+            return 0
+        }
+        val kit = KitStore.load(kitDir)
 
         val unmapped = linkedSetOf<DrumClass>()
         val framesPerPulse = 60.0 / tempo.bpm * TARGET_RATE / 960.0
@@ -98,6 +112,34 @@ object LearnCommand {
         }
         out.println("patterns rewritten: the beat plays on ${kit.name}'s own pads (captured/tight/half/sparse)")
         return 0
+    }
+
+    /** A real drummer's timing, straight off the record: hits → template → file. */
+    private fun bottlePocket(
+        pocketArg: String,
+        file: File,
+        sure: List<Ear.Hit>,
+        bpm: Float,
+        out: PrintStream,
+    ) {
+        if (sure.size < 2) throw CliError("too few confident hits to bottle a feel from ${file.name}")
+        val framesPerPulse = 60.0 / bpm * TARGET_RATE / 960.0
+        val notes = sure.map {
+            Mpc3Note(note = 36, timePulses = Math.round(it.frame / framesPerPulse), velocity = it.velocity)
+        }
+        val bars = ((notes.maxOf { it.timePulses } / Mpc3Clip.PULSES_PER_BAR) + 1).toInt().coerceIn(1, 64)
+        val name = Names.sanitizeStem(file.nameWithoutExtension)
+        val template = com.snipsnap.kit.GrooveFeel.extract(Mpc3Clip("$name Pocket", bars, notes))
+        val dest = File(
+            if (pocketArg.endsWith(".${com.snipsnap.kit.PocketStore.EXTENSION}")) pocketArg
+            else "$pocketArg.${com.snipsnap.kit.PocketStore.EXTENSION}",
+        )
+        com.snipsnap.kit.PocketStore.save(com.snipsnap.kit.PocketStore.Pocket(name, template), dest)
+        val covered = template.offsets.count { it != null }
+        out.println(
+            "pocket bottled: ${dest.path} (\"$name\", $covered of " +
+                "${com.snipsnap.kit.GrooveFeel.POSITIONS} positions - a real pocket, off the record)",
+        )
     }
 
     /** The class's pad, with the preview's own sensible stand-ins. */

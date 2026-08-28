@@ -235,6 +235,14 @@ Scope is beats, not mixes — a song with bass and vocals over the
 drums is not what this ear is for, and the classifier's confidence
 gate is what says so.
 
+`--pocket x.pocket` bottles the recording's **feel** instead of (or
+beside) its notes: the confident hits through `GrooveFeel.extract`
+into a `.pocket` file — a real drummer's timing and accents, straight
+off the record, no pads needed. Apply it anywhere `feel --from`
+takes a pocket; `pack` ships pockets already. A rendered swing
+survives the round trip: the off-8ths come back leaning by the same
+push that was played.
+
 ### `feel <kit-dir> --from <donor>` — steal the feel, not the notes
 
 Groove transfer, the MPC's own legendary feature. The donor — another

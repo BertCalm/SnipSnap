@@ -1351,6 +1351,49 @@ class CliTest {
     }
 
     @Test
+    fun `learn --pocket bottles a real pocket off the record`() {
+        // 100 bpm, two bars: kicks straight on the quarters, hats on the
+        // off-8ths pushed 76 pulses (~47ms) late - a rendered swing.
+        val rate = 44_100
+        val total = FloatArray(6 * rate)
+        fun place(hit: Snip, atSec: Double, gain: Float) {
+            val start = (atSec * rate).toInt()
+            for (i in hit.samples.indices) {
+                val idx = start + i
+                if (idx < total.size) total[idx] += hit.samples[i] * gain
+            }
+        }
+        val beat = 0.6
+        val swingSec = 76.0 * 60 / (100.0 * 960)
+        for (bar in 0 until 2) {
+            for (q in 0 until 4) {
+                val t = (bar * 4 + q) * beat
+                place(DrumSynth.kick(), t, 0.9f)
+                place(DrumSynth.closedHat(), t + beat / 2 + swingSec, 0.5f)
+            }
+        }
+        val wav = File(temp, "swung.wav")
+        WavWriter.write(wav, Snip(total, 1, rate))
+
+        val pocketPath = File(temp, "swung-feel").path
+        val (code, stdout, stderr) = cli("learn", wav.path, "--pocket", pocketPath)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "pocket bottled")
+        val pocket = com.snipsnap.kit.PocketStore.read(File("$pocketPath.pocket"))
+
+        // The off-8th positions lean the rendered push; downbeats stay straight.
+        val late = listOf(2, 6, 10, 14).mapNotNull { pocket.template.offsets[it] }
+        assertTrue(late.isNotEmpty(), "the hats covered off-8th positions")
+        assertTrue(late.all { it > 40 }, "the swing survives off the record: $late")
+        val straight = listOf(0, 4, 8, 12).mapNotNull { pocket.template.offsets[it] }
+        assertTrue(straight.all { Math.abs(it) < 32 }, "downbeats stay straight: $straight")
+
+        val (noneCode, _, noneErr) = cli("learn", wav.path)
+        assertEquals(2, noneCode)
+        assertContains(noneErr, "--pocket")
+    }
+
+    @Test
     fun `mutate breeds one hit from many parents at the terminal`() {
         val wav = writeBreak(File(temp, "mu.wav"))
         val out = File(temp, "mu-out")

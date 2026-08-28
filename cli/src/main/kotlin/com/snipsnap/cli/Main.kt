@@ -83,7 +83,9 @@ object Cli {
         |                        transcribed (onsets heard, hits classified)
         |                        and played by YOUR kit's pads, timing kept
         |                        raw, velocities from the hits' dynamics;
-        |                        uncertain hits are marked, never invented
+        |                        uncertain hits are marked, never invented;
+        |                        --pocket x.pocket bottles the record's FEEL
+        |                        as a tradeable pocket instead (or beside)
         |  feel <kit-dir> --from <donor>
         |                        groove transfer: the donor's timing-and-velocity
         |                        pocket (a kit's groove, any .mid, or a bottled
