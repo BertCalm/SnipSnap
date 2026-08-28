@@ -992,6 +992,30 @@ counts it as such).
 
 ---
 
+# Wave LL — mutate, the ear, the session
+
+Three lanes, in order. **Mutate** (the user's own): sound design by
+recombination — one hit from many parents, distinct from `treat`/`era`
+which transform a single sound. **The Ear**: learn a *performance*
+from any recording, not just sounds. **The Session**: the whole ritual
+as one gesture, orchestrating everything shipped.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| LL1 | `mutate <kit> <pad> --with <src>…` — one hit from many parents, three moves: **stack** (transient-aligned layering with an honest polarity check — a layer that measurably cancels gets flipped, and the output says so), **splice** (`--splice [--at ms]`: the pad's transient crossfaded into the source's body — the classic mash), **split** (`--split [--hz N]`: pad below the crossover, source above). Sources are pad refs (`A03`, `other/kit:B02`) or WAVs. Bin-backed like every audio door, chained/layered pads refused; the recipe (mode, sources, split, flips) rides the pad so the sound stays regenerable; provenance stamps the parents so `lineage` shows a hit with two of them | CORE | M | splice: output's transient window correlates with the pad, tail with the source; split: low band provably from the pad, high from the source; polarity: a deliberately inverted twin gets caught and flipped; same recipe, same bytes; `--undo` byte-identical |
+| LL2 | `mutate --roulette [--seed N]` — the crate picks the partner: Similar finds the nearest same-class-adjacent sound across the library (`--root`), or pure chance with `--wild`; seeded, deterministic, the pick named in the output and the recipe | CORE | S | same seed, same partner and bytes; the pick is never the pad itself; refusal on an empty crate |
+| LL3 | The Ear — `learn <beat.wav> --into <kit>`: transcribe a recorded *beat* into a clip for your kit — onsets detected, each hit coarsely classed (kick/snare/hat by band energy at the onset), mapped onto the kit's own pads, velocities from the hits' dynamics; confidence gating with named uncertainty; needs a confident tempo to place the grid | CORE | M | a synthetic DrumSynth beat transcribes to the exact pattern (classes, positions, count); a toneless file refuses honestly; low-confidence hits are marked, not invented |
+| LL4 | `learn --pocket x.pocket` — the recording's *feel*, bottled: the transcription through `GrooveFeel.extract` into a `.pocket` file — steal a real drummer's timing from the record itself | CORE | S | the pocket from a synthetically swung beat carries the swing (offbeat offsets match the rendered push); applies to a kit like any pocket |
+| LL5 | The Session — `beat <song.wav>`: the whole ritual as one verb — dig the break (+ air), chop `--break-pad --groove --ghosts`, robin the core pads, the Answer + band, doctor `--fix`, arrange `--mixdown`, j-card + notes; every step honest about skips (no break, no key, nothing to roll on); one song in, a release folder out | CORE | M | on the synthetic song: the folder holds kit + air + arrangement + mixdown + inserts; each skipped step is named; deterministic |
+| LL6 | `album <root> --title NAME` — the crate's release: the label's kits (or crate picks) each arranged into a song, mixdowns sequenced onto SIDE A/SIDE B, catalog numbers, j-cards and liner notes riding — one folder, a releasable cassette | CORE | M | two-kit crate → two songs across two sides with tracklist, inserts and catalog numbers; deterministic; a kit without a groove is skipped and named |
+
+**Below the line for LL:** spectral-domain mutation (phase-vocoder
+morphs — big DSP, small honesty); learn-from-polyphonic-music (the
+Ear does beats, not mixes with bass and vocals — refusals say so);
+the Capture Doctor and the Room (queued as future lanes).
+
+---
+
 ## Sequence
 
 ```
@@ -1016,6 +1040,9 @@ CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   wire-through (Z6.2 verdict: waveform default, rings runner-up).
   Remaining on the bench: W12 pad waveforms (APP-only polish) ·
   the Live III showing the tile (rides the next card session)
+
+CORE wave LL (in order): LL1 mutate → LL2 roulette → LL3 the Ear →
+  LL4 learn --pocket → LL5 beat → LL6 album.
 
 CORE wave KK: ✓ all landed (2026-08-28) — songs, not loops. The
   structure grammar over the kit's own variations (honest skips: no
