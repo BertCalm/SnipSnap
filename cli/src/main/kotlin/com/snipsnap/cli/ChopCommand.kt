@@ -50,7 +50,7 @@ object ChopCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export", "--swing", "--art", "--fit-tempo"),
-            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview", "--no-art", "--break-pad", "--clean"),
+            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview", "--no-art", "--break-pad", "--clean", "--denoise"),
         )
         val input = opts.positional.firstOrNull()
             ?: throw CliError("chop wants an input file: snipsnap chop <input.wav>")
@@ -113,9 +113,12 @@ object ChopCommand {
             snip = Resampler.resample(snip, TARGET_RATE)
             out.println("resampled to $TARGET_RATE Hz")
         }
+        if (opts.has("--denoise") && !opts.has("--clean")) {
+            throw CliError("--denoise rides on --clean - add it")
+        }
         if (opts.has("--clean")) {
             val report = try {
-                CaptureDoctor.clean(snip)
+                CaptureDoctor.clean(snip, denoise = opts.has("--denoise"))
             } catch (e: IllegalArgumentException) {
                 throw CliError("--clean: ${e.message}")
             }

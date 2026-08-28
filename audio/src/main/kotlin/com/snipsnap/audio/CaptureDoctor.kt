@@ -309,6 +309,8 @@ object CaptureDoctor {
         val floorDb: Float?,
         val gated: Boolean,
         val snip: Snip,
+        /** True when the floor leg was the spectral de-noiser, not the expander. */
+        val denoised: Boolean = false,
     ) {
         val touched: Boolean get() = hum != null || clicks > 0 || dropouts > 0 || gated
 
@@ -318,7 +320,10 @@ object CaptureDoctor {
             hum?.let { parts += "%.0f Hz hum notched (%d harmonic(s), %.0f dBFS)".format(it.hz, it.harmonics, it.levelDb) }
             if (clicks > 0) parts += "$clicks click(s) repaired"
             if (dropouts > 0) parts += "$dropouts dropout(s) repaired"
-            if (gated) parts += "floor %.0f dBFS, gently gated".format(floorDb)
+            if (gated) {
+                parts += (if (denoised) "floor %.0f dBFS, spectrally de-noised" else "floor %.0f dBFS, gently gated")
+                    .format(floorDb)
+            }
             return if (parts.isEmpty()) "clean - nothing done" else parts.joinToString("; ")
         }
     }
@@ -326,16 +331,26 @@ object CaptureDoctor {
     /**
      * The full visit, every treatment gated by its own detector: hum
      * first (a hum lifts the floor reading), then clicks and dropouts,
-     * then the floor and its gentle gate. Nothing found means the input
-     * comes back **as-is** — the same object, bytes untouched. Throws
-     * like [repairClicks] when the capture is distortion, not clicks.
+     * then the floor leg — the gentle expander, or with [denoise] the
+     * spectral de-noiser instead (never both: they'd double-dip on the
+     * same hiss). Nothing found means the input comes back **as-is** —
+     * the same object, bytes untouched. Throws like [repairClicks]
+     * when the capture is distortion, not clicks.
      */
-    fun clean(snip: Snip): CleanReport {
+    fun clean(snip: Snip, denoise: Boolean = false): CleanReport {
         var cur = snip
         val hum = detectHum(cur)
         if (hum != null) cur = removeHum(cur, hum)
         val repair = repairClicks(cur)
         cur = repair.snip
+        if (denoise) {
+            val deep = denoise(cur)
+            return if (deep == null) {
+                CleanReport(hum, repair.clicks, repair.dropouts, measureFloor(cur), gated = false, snip = cur)
+            } else {
+                CleanReport(hum, repair.clicks, repair.dropouts, deep.floorDb, gated = true, snip = deep.snip, denoised = true)
+            }
+        }
         val floor = measureFloor(cur)
         val gate = floor != null && floor > CLEAN_FLOOR_DB
         if (gate) cur = expand(cur, floor!!)
@@ -417,8 +432,16 @@ object CaptureDoctor {
 
     // ---- spectral de-noise (NN2) ------------------------------------------
 
-    /** Gate a bin only when it sits within this factor of the profile (+6 dB). */
-    const val DENOISE_MARGIN = 2f
+    /**
+     * Gate a bin only when it sits within this factor of the profile
+     * (+9.5 dB). High on purpose: noise magnitudes are Rayleigh-spread,
+     * and at 2× a noise peak pops the instant-open gate ~4% of frames —
+     * each opening then eases shut, lifting the average gain well off
+     * the floor. At 3× a pure-noise bin opens ~0.1% of the time, so
+     * noise actually reaches the cap while drums still clear the bar
+     * by tens of dB.
+     */
+    const val DENOISE_MARGIN = 3f
 
     /** The attenuation cap, −12 dB as a gain: noise recedes, never vanishes into warble. */
     const val DENOISE_FLOOR_GAIN = 0.25f

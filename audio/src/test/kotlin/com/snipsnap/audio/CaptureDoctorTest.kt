@@ -300,6 +300,11 @@ class CaptureDoctorTest {
         assertTrue("hum notched" in summary && "1 click(s) repaired" in summary, "every finding named: $summary")
         assertTrue("gently gated" in summary, "the gate is named too: $summary")
 
+        // The same visit with the deep clean on the floor leg.
+        val deep = CaptureDoctor.clean(Snip(dirty, 1, rate), denoise = true)
+        assertTrue(deep.denoised && deep.gated, "the floor leg went spectral")
+        assertTrue("spectrally de-noised" in deep.summary(), "and says so: ${deep.summary()}")
+
         val clean = Snip(beat(), 1, rate)
         val cleanReport = CaptureDoctor.clean(clean)
         assertTrue(!cleanReport.touched, "nothing found on a clean beat")

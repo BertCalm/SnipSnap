@@ -165,8 +165,12 @@ object Cli {
         |                        own detector, clean audio left untouched
         |                        (a WAV gets a cleaned twin, a kit's pads go
         |                        through the treatment door; --dry, --undo;
-        |                        chop/dig take --clean to scrub the capture
-        |                        before the first slice)
+        |                        --denoise deep-cleans the floor spectrally,
+        |                        pulling hiss from under the drums; --deroom
+        |                        fades a kit one-shot's room tail from the
+        |                        measured knee; chop/dig take --clean
+        |                        [--denoise] to scrub the capture before
+        |                        the first slice)
         |  diff <a> <b>          structured key-path diff of two MPC files,
         |                        either generation (--values lists differing
         |                        values; exit 1 when different)

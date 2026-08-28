@@ -37,7 +37,7 @@ tempo, chop, classify each slice, auto-place onto the conventional layout
 | `--grid N` | chop into N equal parts instead of following hits |
 | `--place` / `--no-place` | force auto-placement on or off. Default: on when following hits, off on a grid — a grid's order is usually the point |
 | `--balance` | per-pad levels via `Balance` so the kit sits right as a mix |
-| `--clean` | the Capture Doctor on the whole capture **before the first slice** (see `clean` below): measured hum notched, clicks and dropouts repaired, a hissy floor gently gated — each move gated by its own detector, so a clean file passes through untouched and says so. `dig --chop` forwards it |
+| `--clean` | the Capture Doctor on the whole capture **before the first slice** (see `clean` below): measured hum notched, clicks and dropouts repaired, a hissy floor gently gated — each move gated by its own detector, so a clean file passes through untouched and says so. `--denoise` upgrades the floor leg to the spectral deep clean (hiss pulled from under the drums). `dig --chop` forwards both |
 | `--groove` | embed the capture's own rhythm as a clip in the native exports (`xtd`/`xpj`) — timing as captured, velocities from the hits' own dynamics; needs a confident tempo. Saves the standard four patterns **plus the fill**: the last bar of every four densifies into the turn — beat 3 rolls 16ths, beat 4 rolls 32nds on the kit's own snare (clap or perc standing in), hat eighths underneath, velocities ramping into the downbeat, seeded jitter keeping it human. The fill rides the `.xpj`'s sequences; the `.xtd` keeps its four-slot budget with the original four. A sixth pattern adds the **ghost-note grammar**: the "e" before and the "a" after beats 2 and 4 whisper on the kit's own snare at ghost velocity (≤0.32, so `--ghosts` soft zones actually voice them), never piling onto a 16th that already plays. A kit with nothing to roll or whisper on honestly skips them |
 | `--swing PCT` | with `--groove`: the tight pattern swings instead, the way the hardware does it — quantize to 16ths, then push every even ("and") 16th late by `(pct−50)/50` of a 16th. 50 straight, 66 triplet feel, panel range 50–75 |
 | `--fit-tempo BPM` | repitch LOOP pads from the detected tempo to BPM, SP-style (`TempoFit`): resample by the ratio, pitch rides along — the revered lo-fi move, and the semitone cost is printed. One-shots untouched; stems and `kit.json` restamp to the new tempo; refused past double/half speed, and an honest error when no source tempo was heard |
@@ -561,15 +561,41 @@ byte-identical and is told so:
   margin, 12 dB depth cap, instant attack) makes the hiss recede
   between hits without ever slamming shut.
 
+**The deep clean, `--denoise`:** the floor leg upgraded from the
+expander to spectral gating (never both — they'd double-dip on the
+same hiss). The noise fingerprint is the average spectrum of the
+capture's own quietest tenth of frames; every STFT bin then gates
+downward against fingerprint × 2 with a −12 dB depth cap, gains
+smoothed across neighboring bins and eased shut over time (opening is
+instant — a transient is never dulled by its own gate). The power the
+expander doesn't have: the expander can only duck the gaps *between*
+hits, while hiss lives in different bins than the drums — so the deep
+clean pulls it out from **underneath** them, mid-band hiss receding
+even while a cymbal keeps the frame loud. Too few quiet frames to
+learn from, or a floor already clean, and nothing happens.
+
+**The tail knee, `--deroom`** (kits only): de-reverb's honest first
+step — not the room undone (blind deconvolution stays a research
+project), but the room's *tail* found and shown out, per one-shot.
+The post-peak envelope is fit as two lines hunting the knee where the
+hit's steep decay hands off to a measurably shallower, still-decaying
+room tail; a valid knee (≥ 18 dB under the peak, hit at least twice
+as steep, tail alive and still falling — a flat tail is a noise
+floor, the de-noiser's patient) gets the hit's own slope continued as
+a fade capped at −24 dB, never a cut. A dry hit is single-slope by
+construction and is left alone; LOOP pads are skipped by name — a
+texture's tail is content.
+
 A WAV gets its findings printed and a cleaned twin beside it
 (`<name> Clean.wav`; `--in-place` overwrites, `--out DIR` redirects,
 `--overwrite` replaces an existing twin). A kit dir sends every plain
-pad through the treatment door — bin-backed, `clean` recipe stamped,
+pad through the treatment door — bin-backed, `clean` recipe stamped
+(with `denoised` and `deroomKneeMs` when those legs acted),
 velocity-layered and chained pads skipped **by name** — and
 `--undo` pulls every cleaned pad back out of the bin byte-identical.
 `--dry` reports without touching anything, doctor-style. To scrub a
-capture *before* it becomes a kit, `chop --clean` (forwarded by
-`dig`) runs the same pipeline ahead of the first slice.
+capture *before* it becomes a kit, `chop --clean [--denoise]`
+(forwarded by `dig`) runs the same pipeline ahead of the first slice.
 
 ### `label <root>` — run your own imprint
 

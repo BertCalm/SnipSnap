@@ -1,6 +1,7 @@
 package com.snipsnap.cli
 
 import com.snipsnap.audio.CaptureDoctor
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.JsonValue
@@ -26,7 +27,7 @@ object CleanCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--out"),
-            boolean = setOf("--dry", "--in-place", "--undo", "--overwrite"),
+            boolean = setOf("--dry", "--in-place", "--undo", "--overwrite", "--denoise", "--deroom"),
         )
         val input = opts.positional.getOrNull(0)
             ?: throw CliError("clean wants a capture or a kit: snipsnap clean <wav-or-kit-dir> [--dry]")
@@ -41,8 +42,9 @@ object CleanCommand {
 
     private fun cleanWav(file: File, opts: Options, out: PrintStream): Int {
         if (opts.has("--undo")) throw CliError("--undo is for kits - a WAV's cleaned twin sits beside the original")
+        if (opts.has("--deroom")) throw CliError("--deroom is for kits - the knee reads one hit at a time, not a whole capture")
         val report = try {
-            CaptureDoctor.clean(WavReader.read(file))
+            CaptureDoctor.clean(WavReader.read(file), denoise = opts.has("--denoise"))
         } catch (e: IllegalArgumentException) {
             throw CliError("${file.name}: ${e.message}")
         }
@@ -97,16 +99,27 @@ object CleanCommand {
                 continue
             }
             val report = try {
-                CaptureDoctor.clean(WavReader.read(File(kitDir, pad.sampleFile)))
+                CaptureDoctor.clean(WavReader.read(File(kitDir, pad.sampleFile)), denoise = opts.has("--denoise"))
             } catch (e: IllegalArgumentException) {
                 skipped += "$label (${e.message})"
                 continue
             }
-            if (!report.touched) {
+            // The tail knee rides --deroom, one-shots only: a LOOP's
+            // tail is content, not a room to be shown out.
+            val trim = if (opts.has("--deroom") && pad.drumClass != DrumClass.LOOP) {
+                CaptureDoctor.trimRoomTail(report.snip)
+            } else {
+                null
+            }
+            if (opts.has("--deroom") && pad.drumClass == DrumClass.LOOP) {
+                out.println("  $label ${pad.displayName}: LOOP - the knee leaves it alone, a texture's tail is content")
+            }
+            if (!report.touched && trim == null) {
                 alreadyClean++
                 continue
             }
-            out.println("  $label ${pad.displayName}: ${report.summary()}")
+            val trimNote = trim?.let { "; room tail faded from %.0f ms".format(it.kneeSec * 1000) } ?: ""
+            out.println("  $label ${pad.displayName}: ${report.summary()}$trimNote")
             if (!opts.has("--dry")) {
                 val recipe = JsonValue.Obj(
                     linkedMapOf<String, JsonValue>(
@@ -116,11 +129,14 @@ object CleanCommand {
                                 if (report.clicks > 0) r["clicks"] = JsonValue.Num(report.clicks.toDouble())
                                 if (report.dropouts > 0) r["dropouts"] = JsonValue.Num(report.dropouts.toDouble())
                                 if (report.gated) r["floorDb"] = JsonValue.Num(report.floorDb!!.toDouble())
+                                if (report.denoised) r["denoised"] = JsonValue.Bool(true)
+                                trim?.let { r["deroomKneeMs"] = JsonValue.Num(it.kneeSec * 1000.0) }
                             },
                         ),
                     ),
                 )
-                model.replaceAudio(pad.slot, recipe) { report.snip }
+                val cleaned = trim?.snip ?: report.snip
+                model.replaceAudio(pad.slot, recipe) { cleaned }
             }
             treated++
         }

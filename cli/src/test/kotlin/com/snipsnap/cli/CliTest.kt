@@ -2004,6 +2004,118 @@ class CliTest {
     }
 
     @Test
+    fun `clean --denoise pulls hiss from under a loud burst where the expander can't`() {
+        val rate = 44_100
+        // Hiss throughout, a loud 6 kHz burst in the middle: the burst
+        // keeps the frame loud, so a level gate stands wide open there.
+        val rnd = java.util.Random(21)
+        fun writeBurst(file: File): File {
+            val rnd2 = java.util.Random(rnd.nextLong())
+            val s = FloatArray(3 * rate) { i ->
+                val hiss = (rnd2.nextFloat() * 2f - 1f) * 0.01f
+                val on = i >= rate / 2 && i < 5 * rate / 2
+                hiss + if (on) (0.4 * Math.sin(2.0 * Math.PI * 6000.0 * i / rate)).toFloat() else 0f
+            }
+            WavWriter.write(file, Snip(s, 1, rate))
+            return file
+        }
+        val a = writeBurst(File(temp, "burst a.wav"))
+        val b = writeBurst(File(temp, "burst b.wav"))
+
+        val (codeA, outA, _) = cli("clean", a.path)
+        assertEquals(0, codeA, outA)
+        assertContains(outA, "gently gated")
+        val (codeB, outB, _) = cli("clean", b.path, "--denoise")
+        assertEquals(0, codeB, outB)
+        assertContains(outB, "spectrally de-noised")
+
+        fun mid(file: File): Double {
+            val s = com.snipsnap.audio.WavReader.read(file).samples.copyOfRange(rate, 2 * rate)
+            return listOf(500.0, 800.0, 1300.0).sumOf { tone(s, it, rate) }
+        }
+        val expanded = mid(File(temp, "burst a Clean.wav"))
+        val denoised = mid(File(temp, "burst b Clean.wav"))
+        val rawMid = mid(a)
+        assertTrue(expanded > rawMid * 0.8, "the expander can't touch hiss under the burst: $rawMid -> $expanded")
+        assertTrue(denoised < expanded * 0.5, "the deep clean can: $expanded -> $denoised")
+    }
+
+    @Test
+    fun `clean --deroom fades the roomy pad's tail and names the loop it leaves alone`() {
+        val rate = 44_100
+        val out = File(temp, "deroomkit")
+        val wav = writeBreak(File(temp, "drsrc.wav"))
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Roomy").first)
+        val kitDir = File(out, "Roomy")
+        val model = com.snipsnap.shell.KitBuilderModel.open(kitDir)
+        val pads = model.kit.pads.sortedBy { it.slot }
+        val victim = pads[0]
+        val loopPad = pads[1]
+        model.update(loopPad.slot) { it.copy(drumClass = DrumClass.LOOP) }
+        model.save()
+
+        // The victim becomes a roomy one-shot: a tight hit over a
+        // shallower decaying noise tail - the knee's textbook patient.
+        val rnd = java.util.Random(6)
+        val roomy = FloatArray((12 * rate) / 10) { i ->
+            val t = i.toDouble() / rate
+            (0.8 * Math.sin(2.0 * Math.PI * 180.0 * t) * Math.exp(-40.0 * t)).toFloat() +
+                ((rnd.nextFloat() * 2f - 1f) * 0.06 * Math.exp(-7.0 * t)).toFloat()
+        }
+        val victimFile = File(kitDir, victim.sampleFile)
+        WavWriter.write(victimFile, Snip(roomy, 1, rate))
+        val bytesBefore = KitStore.load(kitDir).pads.associate { it.sampleFile to File(kitDir, it.sampleFile).readBytes() }
+
+        val (code, stdout, _) = cli("clean", kitDir.path, "--deroom")
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "room tail faded from")
+        assertContains(stdout, "LOOP - the knee leaves it alone")
+
+        val treated = KitStore.load(kitDir).pads.first { it.slot == victim.slot }
+        val cleanRecipe = treated.recipe?.entries?.get("clean")
+        assertTrue(
+            (cleanRecipe as? com.snipsnap.json.JsonValue.Obj)?.entries?.containsKey("deroomKneeMs") == true,
+            "the knee rides the recipe",
+        )
+        fun tailRms(s: FloatArray): Double {
+            var acc = 0.0
+            var n = 0
+            for (i in (0.4f * rate).toInt() until minOf((0.8f * rate).toInt(), s.size)) {
+                acc += s[i] * s[i].toDouble()
+                n++
+            }
+            return Math.sqrt(acc / n.coerceAtLeast(1))
+        }
+        val faded = com.snipsnap.audio.WavReader.read(victimFile).samples
+        assertTrue(
+            20 * Math.log10(tailRms(faded) / tailRms(roomy)) < -6,
+            "the room recedes on disk too",
+        )
+
+        val (undoCode, undoOut, _) = cli("clean", kitDir.path, "--undo")
+        assertEquals(0, undoCode, undoOut)
+        for ((f, bytes) in bytesBefore) {
+            assertTrue(File(kitDir, f).readBytes().contentEquals(bytes), "$f back byte-identical")
+        }
+    }
+
+    @Test
+    fun `chop forwards the deep clean and refuses --denoise on its own`() {
+        val rate = 44_100
+        assertEquals(2, cli("chop", "x.wav", "--denoise").first, "--denoise rides on --clean")
+
+        val rnd = java.util.Random(31)
+        val base = com.snipsnap.audio.WavReader.read(writeBreak(File(temp, "hissy tmp.wav"))).samples
+        val hissy = FloatArray(base.size) { i -> base[i] + (rnd.nextFloat() * 2f - 1f) * 0.01f }
+        val src = File(temp, "hissy break.wav")
+        WavWriter.write(src, Snip(hissy, 1, rate))
+        val out = File(temp, "denoisechop")
+        val (code, stdout, _) = cli("chop", src.path, "--out", out.path, "--name", "Deep", "--clean", "--denoise")
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "spectrally de-noised")
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")
