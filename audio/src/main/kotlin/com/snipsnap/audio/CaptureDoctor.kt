@@ -298,6 +298,50 @@ object CaptureDoctor {
         return Math.sqrt(acc / (to - from)).toFloat()
     }
 
+    // ---- the whole visit (MM4) --------------------------------------------
+
+    /** Everything one pass found and did. [snip] is the input itself when untouched. */
+    data class CleanReport(
+        val hum: HumReport?,
+        val clicks: Int,
+        val dropouts: Int,
+        /** The floor as measured after repairs, dBFS; null on very short audio. */
+        val floorDb: Float?,
+        val gated: Boolean,
+        val snip: Snip,
+    ) {
+        val touched: Boolean get() = hum != null || clicks > 0 || dropouts > 0 || gated
+
+        /** The one-line diagnosis, every finding named. */
+        fun summary(): String {
+            val parts = mutableListOf<String>()
+            hum?.let { parts += "%.0f Hz hum notched (%d harmonic(s), %.0f dBFS)".format(it.hz, it.harmonics, it.levelDb) }
+            if (clicks > 0) parts += "$clicks click(s) repaired"
+            if (dropouts > 0) parts += "$dropouts dropout(s) repaired"
+            if (gated) parts += "floor %.0f dBFS, gently gated".format(floorDb)
+            return if (parts.isEmpty()) "clean - nothing done" else parts.joinToString("; ")
+        }
+    }
+
+    /**
+     * The full visit, every treatment gated by its own detector: hum
+     * first (a hum lifts the floor reading), then clicks and dropouts,
+     * then the floor and its gentle gate. Nothing found means the input
+     * comes back **as-is** — the same object, bytes untouched. Throws
+     * like [repairClicks] when the capture is distortion, not clicks.
+     */
+    fun clean(snip: Snip): CleanReport {
+        var cur = snip
+        val hum = detectHum(cur)
+        if (hum != null) cur = removeHum(cur, hum)
+        val repair = repairClicks(cur)
+        cur = repair.snip
+        val floor = measureFloor(cur)
+        val gate = floor != null && floor > CLEAN_FLOOR_DB
+        if (gate) cur = expand(cur, floor!!)
+        return CleanReport(hum, repair.clicks, repair.dropouts, floor, gate, cur)
+    }
+
     // ---- the noise floor (MM3) --------------------------------------------
 
     /** Below this floor the capture is clean and the gate stays out of it. */

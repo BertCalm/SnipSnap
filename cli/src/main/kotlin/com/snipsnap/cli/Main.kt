@@ -159,6 +159,14 @@ object Cli {
         |                        outliers, DC) - --fix applies the safe
         |                        subset, bin-backed; exit 1 while findings
         |                        remain, so it scripts like a check
+        |  clean <wav-or-kit>    the Capture Doctor: measured hum notched,
+        |                        clicks and dropouts repaired, the noise
+        |                        floor gently gated - each move gated by its
+        |                        own detector, clean audio left untouched
+        |                        (a WAV gets a cleaned twin, a kit's pads go
+        |                        through the treatment door; --dry, --undo;
+        |                        chop/dig take --clean to scrub the capture
+        |                        before the first slice)
         |  diff <a> <b>          structured key-path diff of two MPC files,
         |                        either generation (--values lists differing
         |                        values; exit 1 when different)
@@ -276,6 +284,7 @@ object Cli {
                 "restore" -> BackupCommand.restore(args.drop(1), out)
                 "diff" -> DiffCommand.run(args.drop(1), out)
                 "doctor" -> DoctorCommand.run(args.drop(1), out)
+                "clean" -> CleanCommand.run(args.drop(1), out)
                 "art" -> ArtCommand.run(args.drop(1), out)
                 "jcard" -> JCardCommand.run(args.drop(1), out)
                 "notes" -> NotesCommand.run(args.drop(1), out)

@@ -1877,6 +1877,132 @@ class CliTest {
         }
     }
 
+    /** How loudly [hz] rings across the whole array — a plain DFT probe. */
+    private fun tone(samples: FloatArray, hz: Double, rate: Int): Double {
+        var c = 0.0
+        var s = 0.0
+        for (i in samples.indices) {
+            val w = 2.0 * Math.PI * hz * i / rate
+            c += samples[i] * Math.cos(w)
+            s += samples[i] * Math.sin(w)
+        }
+        return Math.hypot(c, s) / samples.size
+    }
+
+    /** The break under a 50 Hz hum; optionally two clicks planted in the tail. */
+    private fun writeDirtyBreak(file: File, clicks: Boolean): File {
+        val rate = 44_100
+        writeBreak(file)
+        val base = com.snipsnap.audio.WavReader.read(file)
+        val dirty = FloatArray(base.samples.size) { i ->
+            base.samples[i] + 0.05f * Math.sin(2.0 * Math.PI * 50.0 * i / rate).toFloat()
+        }
+        if (clicks) {
+            dirty[dirty.size - rate / 8] = 0.9f
+            dirty[dirty.size - rate / 16] = -0.9f
+        }
+        WavWriter.write(file, Snip(dirty, 1, rate))
+        return file
+    }
+
+    @Test
+    fun `clean scrubs a dirty WAV into a twin and leaves a clean one alone`() {
+        val rate = 44_100
+        val dirty = writeDirtyBreak(File(temp, "dirty take.wav"), clicks = true)
+        val twin = File(temp, "dirty take Clean.wav")
+
+        // --dry names the findings but writes nothing.
+        val (dryCode, dryOut, _) = cli("clean", dirty.path, "--dry")
+        assertEquals(0, dryCode)
+        assertContains(dryOut, "hum notched")
+        assertTrue(!twin.exists(), "--dry writes nothing")
+
+        val (code, stdout, _) = cli("clean", dirty.path)
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "hum notched")
+        assertContains(stdout, "click(s) repaired")
+        assertTrue(twin.isFile, "the cleaned twin lands beside the original")
+        val before = tone(com.snipsnap.audio.WavReader.read(dirty).samples, 50.0, rate)
+        val after = tone(com.snipsnap.audio.WavReader.read(twin).samples, 50.0, rate)
+        assertTrue(after < before * 0.2, "the twin really lost the hum: $before -> $after")
+
+        // A clean capture is told so, and no twin appears.
+        val fine = writeBreak(File(temp, "fine take.wav"))
+        val (fineCode, fineOut, _) = cli("clean", fine.path)
+        assertEquals(0, fineCode)
+        assertContains(fineOut, "clean - nothing done")
+        assertTrue(!File(temp, "fine take Clean.wav").exists(), "nothing to write for a clean take")
+    }
+
+    @Test
+    fun `clean treats a kit's dirty pad, stamps the recipe, and --undo restores every byte`() {
+        val rate = 44_100
+        val out = File(temp, "cleankit")
+        val wav = writeBreak(File(temp, "cksrc.wav"))
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Grimy").first)
+        val kitDir = File(out, "Grimy")
+        val kit = KitStore.load(kitDir)
+
+        // Dirty one pad by hand: its own hit under two seconds of 50 Hz hum.
+        val victim = kit.pads.minBy { it.slot }
+        val padFile = File(kitDir, victim.sampleFile)
+        val hit = com.snipsnap.audio.WavReader.read(padFile)
+        val dirty = FloatArray(2 * rate) { i ->
+            (if (i < hit.samples.size) hit.samples[i] else 0f) +
+                0.05f * Math.sin(2.0 * Math.PI * 50.0 * i / rate).toFloat()
+        }
+        WavWriter.write(padFile, Snip(dirty, 1, rate))
+        val bytesBefore = kit.pads.associate { it.sampleFile to File(kitDir, it.sampleFile).readBytes() }
+
+        // --dry diagnoses without touching a byte.
+        val (dryCode, dryOut, _) = cli("clean", kitDir.path, "--dry")
+        assertEquals(0, dryCode)
+        assertContains(dryOut, "hum notched")
+        assertContains(dryOut, "--dry: nothing written")
+        assertTrue(padFile.readBytes().contentEquals(bytesBefore[victim.sampleFile]!!), "--dry leaves the audio alone")
+
+        val (code, stdout, _) = cli("clean", kitDir.path)
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "pad(s) treated")
+        assertContains(stdout, "originals in the bin")
+        val treated = KitStore.load(kitDir).pads.first { it.slot == victim.slot }
+        assertTrue(treated.recipe?.entries?.containsKey("clean") == true, "the clean recipe rides the pad")
+        assertTrue(!padFile.readBytes().contentEquals(bytesBefore[victim.sampleFile]!!), "the pad's audio was rewritten")
+
+        // --undo pulls every treated pad back out of the bin, byte-identical.
+        val (undoCode, undoOut, _) = cli("clean", kitDir.path, "--undo")
+        assertEquals(0, undoCode, undoOut)
+        assertContains(undoOut, "restored")
+        for ((f, bytes) in bytesBefore) {
+            assertTrue(File(kitDir, f).readBytes().contentEquals(bytes), "$f back byte-identical")
+        }
+        assertTrue(
+            KitStore.load(kitDir).pads.first { it.slot == victim.slot }.recipe == null,
+            "the recipe is gone with the treatment",
+        )
+        // Nothing left to undo now.
+        assertEquals(2, cli("clean", kitDir.path, "--undo").first)
+    }
+
+    @Test
+    fun `chop --clean scrubs the capture before the first slice`() {
+        val rate = 44_100
+        val hummy = writeDirtyBreak(File(temp, "hummy.wav"), clicks = false)
+        val out = File(temp, "chopclean")
+        assertEquals(0, cli("chop", hummy.path, "--out", out.path, "--name", "Raw").first)
+        val (code, stdout, _) = cli("chop", hummy.path, "--out", out.path, "--name", "Scrubbed", "--clean")
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "clean:")
+
+        fun humAcross(kitDir: File): Double =
+            KitStore.load(kitDir).pads.sumOf {
+                tone(com.snipsnap.audio.WavReader.read(File(kitDir, it.sampleFile)).samples, 50.0, rate)
+            }
+        val raw = humAcross(File(out, "Raw"))
+        val scrubbed = humAcross(File(out, "Scrubbed"))
+        assertTrue(scrubbed < raw * 0.3, "the scrubbed kit's pads lost the hum: $raw -> $scrubbed")
+    }
+
     @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)

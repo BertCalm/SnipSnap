@@ -20,7 +20,7 @@ object DigCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--top", "--out", "--slices"),
-            boolean = setOf("--chop", "--overwrite", "--break-pad", "--air", "--groove", "--ghosts"),
+            boolean = setOf("--chop", "--overwrite", "--break-pad", "--air", "--groove", "--ghosts", "--clean"),
         )
         val targetArg = opts.positional.getOrNull(0)
             ?: throw CliError("dig wants songs: snipsnap dig <file-or-folder> [--top N] [--chop]")
@@ -87,6 +87,7 @@ object DigCommand {
                     if (opts.has("--break-pad")) chopArgs += "--break-pad"
                     if (opts.has("--groove")) chopArgs += "--groove"
                     if (opts.has("--ghosts")) chopArgs += "--ghosts"
+                    if (opts.has("--clean")) chopArgs += "--clean"
                     val code = try {
                         ChopCommand.run(chopArgs, out)
                     } catch (e: CliError) {

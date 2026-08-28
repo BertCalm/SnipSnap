@@ -154,6 +154,30 @@ class CaptureDoctorTest {
     }
 
     @Test
+    fun `clean composes the whole visit - findings named, clean audio returned as-is`() {
+        // Hum over hiss over the beat, with one click riding the noise — a
+        // proper bad capture: every leg of the visit has work to do.
+        val rnd = java.util.Random(11)
+        val dirty = withHum(beat(), 50.0, 0.05f).samples.copyOf()
+        for (i in dirty.indices) dirty[i] += (rnd.nextFloat() * 2f - 1f) * 0.01f
+        dirty[2 * rate + rate / 2] = 0.9f
+        val report = CaptureDoctor.clean(Snip(dirty, 1, rate))
+        assertTrue(report.touched)
+        assertEquals(50f, report.hum?.hz)
+        assertEquals(1, report.clicks, "the planted click survives the notch and is found")
+        assertTrue(report.gated, "the hiss floor is heard and gated")
+        val summary = report.summary()
+        assertTrue("hum notched" in summary && "1 click(s) repaired" in summary, "every finding named: $summary")
+        assertTrue("gently gated" in summary, "the gate is named too: $summary")
+
+        val clean = Snip(beat(), 1, rate)
+        val cleanReport = CaptureDoctor.clean(clean)
+        assertTrue(!cleanReport.touched, "nothing found on a clean beat")
+        assertTrue(cleanReport.snip === clean, "untouched audio comes back as the very same object")
+        assertEquals("clean - nothing done", cleanReport.summary())
+    }
+
+    @Test
     fun `60 Hz is heard as 60, harmonics counted, clean audio stays silent`() {
         val sixty = withHum(beat(), 60.0, 0.04f)
         val report = CaptureDoctor.detectHum(sixty)

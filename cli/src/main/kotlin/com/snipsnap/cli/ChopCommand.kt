@@ -1,6 +1,7 @@
 package com.snipsnap.cli
 
 import com.snipsnap.audio.AutoPlace
+import com.snipsnap.audio.CaptureDoctor
 import com.snipsnap.audio.Chopper
 import com.snipsnap.audio.Classification
 import com.snipsnap.audio.Classifier
@@ -49,7 +50,7 @@ object ChopCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export", "--swing", "--art", "--fit-tempo"),
-            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview", "--no-art", "--break-pad"),
+            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview", "--no-art", "--break-pad", "--clean"),
         )
         val input = opts.positional.firstOrNull()
             ?: throw CliError("chop wants an input file: snipsnap chop <input.wav>")
@@ -111,6 +112,19 @@ object ChopCommand {
         if (snip.sampleRate != TARGET_RATE) {
             snip = Resampler.resample(snip, TARGET_RATE)
             out.println("resampled to $TARGET_RATE Hz")
+        }
+        if (opts.has("--clean")) {
+            val report = try {
+                CaptureDoctor.clean(snip)
+            } catch (e: IllegalArgumentException) {
+                throw CliError("--clean: ${e.message}")
+            }
+            if (report.touched) {
+                snip = report.snip
+                out.println("clean: ${report.summary()}")
+            } else {
+                out.println("clean: capture already clean")
+            }
         }
 
         val tempo = Tempo.estimate(snip)?.takeIf { it.confidence >= 0.3f }

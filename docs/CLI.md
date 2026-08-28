@@ -37,6 +37,7 @@ tempo, chop, classify each slice, auto-place onto the conventional layout
 | `--grid N` | chop into N equal parts instead of following hits |
 | `--place` / `--no-place` | force auto-placement on or off. Default: on when following hits, off on a grid — a grid's order is usually the point |
 | `--balance` | per-pad levels via `Balance` so the kit sits right as a mix |
+| `--clean` | the Capture Doctor on the whole capture **before the first slice** (see `clean` below): measured hum notched, clicks and dropouts repaired, a hissy floor gently gated — each move gated by its own detector, so a clean file passes through untouched and says so. `dig --chop` forwards it |
 | `--groove` | embed the capture's own rhythm as a clip in the native exports (`xtd`/`xpj`) — timing as captured, velocities from the hits' own dynamics; needs a confident tempo. Saves the standard four patterns **plus the fill**: the last bar of every four densifies into the turn — beat 3 rolls 16ths, beat 4 rolls 32nds on the kit's own snare (clap or perc standing in), hat eighths underneath, velocities ramping into the downbeat, seeded jitter keeping it human. The fill rides the `.xpj`'s sequences; the `.xtd` keeps its four-slot budget with the original four. A sixth pattern adds the **ghost-note grammar**: the "e" before and the "a" after beats 2 and 4 whisper on the kit's own snare at ghost velocity (≤0.32, so `--ghosts` soft zones actually voice them), never piling onto a 16th that already plays. A kit with nothing to roll or whisper on honestly skips them |
 | `--swing PCT` | with `--groove`: the tight pattern swings instead, the way the hardware does it — quantize to 16ths, then push every even ("and") 16th late by `(pct−50)/50` of a 16th. 50 straight, 66 triplet feel, panel range 50–75 |
 | `--fit-tempo BPM` | repitch LOOP pads from the detected tempo to BPM, SP-style (`TempoFit`): resample by the ratio, pitch rides along — the revered lo-fi move, and the semitone cost is printed. One-shots untouched; stems and `kit.json` restamp to the new tempo; refused past double/half speed, and an honest error when no source tempo was heard |
@@ -66,7 +67,8 @@ names where the breaks live with timestamps and scores (`--top N`).
 `--chop` sends each song's best section straight through the chop
 pipeline; every pad's provenance then says which song and at what
 timestamp it was dug from (`--break-pad` rides along, so the dug break
-can land tap-through-able on one pad too).
+can land tap-through-able on one pad too; `--clean` rides along the
+same way, scrubbing each dug capture before its first slice).
 
 `--air` is the inverse dig — every dig yields two crates. The same
 window scores selected the other way: non-silent, *low* break score
@@ -532,6 +534,42 @@ the level trim lands a screamer just above the median, hats get one
 mute group, DC gets removed — audio edits bin-backed with recipes,
 the rest metadata-only. Taste stays advice. Exit 0 healthy, 1 while
 findings remain, so it scripts like a check.
+
+### `clean <wav-or-kit-dir>` — the Capture Doctor
+
+The doctor's sibling with the other patient: `doctor` treats the
+**mix**, `clean` treats the **capture** — the phone-mic, room-recorded,
+ground-loop reality the app's whole premise invites. Three visits, in
+order, each gated by its own detector so clean audio comes back
+byte-identical and is told so:
+
+- **hum** — Goertzel probes at 50 and 60 Hz against their ±4 Hz
+  neighbors; only a tone that *stands out* 4× and clears the floor is
+  hum. What's found is notched (narrow biquad, Q 30) at the fundamental
+  and every standing harmonic — the drums' own low end never qualifies,
+  so kicks keep their sub.
+- **clicks and dropouts** — dropouts (dead-zero runs with live
+  neighbors) are bridged first, then clicks: per-block derivative
+  outliers that *don't follow through* (a real hit sustains after its
+  attack; a click doesn't) and stand isolated over their surround.
+  Repairs interpolate only the flagged frames and are counted honestly.
+  Wall-to-wall damage is **distortion, not clicks** — `clean` refuses
+  rather than sand off a sound that *is* broken transients.
+- **the floor** — measured from the quietest tenth of the capture's
+  50 ms windows. Under −60 dBFS the capture is clean and nothing
+  happens; above it, a downward expander (2:1 below the floor's
+  margin, 12 dB depth cap, instant attack) makes the hiss recede
+  between hits without ever slamming shut.
+
+A WAV gets its findings printed and a cleaned twin beside it
+(`<name> Clean.wav`; `--in-place` overwrites, `--out DIR` redirects,
+`--overwrite` replaces an existing twin). A kit dir sends every plain
+pad through the treatment door — bin-backed, `clean` recipe stamped,
+velocity-layered and chained pads skipped **by name** — and
+`--undo` pulls every cleaned pad back out of the bin byte-identical.
+`--dry` reports without touching anything, doctor-style. To scrub a
+capture *before* it becomes a kit, `chop --clean` (forwarded by
+`dig`) runs the same pipeline ahead of the first slice.
 
 ### `label <root>` — run your own imprint
 
