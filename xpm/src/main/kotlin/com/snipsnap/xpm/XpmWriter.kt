@@ -251,7 +251,11 @@ class XpmWriter(
             sb.append("            <Direction>0</Direction>\n")
             sb.append("            <Offset>0</Offset>\n")
             sb.append("            <SliceStart>0</SliceStart>\n")
-            sb.append("            <SliceEnd>").append(sample?.frameCount ?: 0L).append("</SliceEnd>\n")
+            // A chain pad windows to slice 0 on this generation: MPC 2 has
+            // no Slice Motion, so it plays take one, not the whole chain.
+            // Empty layer slots keep their zeros either way.
+            val sliceEnd = if (sample != null) pad?.chain?.firstSliceEnd ?: sample.frameCount else 0L
+            sb.append("            <SliceEnd>").append(sliceEnd).append("</SliceEnd>\n")
             sb.append("            <SliceLoopStart>0</SliceLoopStart>\n")
             sb.append("            <SliceLoop>0</SliceLoop>\n")
             sb.append("            <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>\n")

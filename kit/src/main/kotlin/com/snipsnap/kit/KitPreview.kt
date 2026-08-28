@@ -65,10 +65,25 @@ object KitPreview {
 
         val cache = HashMap<String, Snip>()
         val voices = mutableListOf<Voice>()
+        // Chain pads step per hit, so the preview needs to count them.
+        val hitsBySlot = HashMap<Int, Int>()
         for (note in groove.notes.sortedBy { it.timePulses }) {
             val slot = note.note - 36 + 1
             val pad = kit.pad(slot) ?: continue
-            val snip = cache.getOrPut(pad.sampleFile) { WavReader.read(File(kitDir, pad.sampleFile)) }
+            val whole = cache.getOrPut(pad.sampleFile) { WavReader.read(File(kitDir, pad.sampleFile)) }
+            // Slice Motion, audible before the card: hit k on a chain pad
+            // plays slice (k mod cycle), same as the hardware's increment.
+            val hit = hitsBySlot.merge(slot, 1, Int::plus)!! - 1
+            val snip = pad.chain?.let { c ->
+                val w = c.window(hit % c.cycle, whole.frameCount.toLong())
+                val from = w.first.toInt().coerceIn(0, whole.frameCount)
+                val to = (w.last + 1).toInt().coerceIn(from, whole.frameCount)
+                Snip(
+                    whole.samples.copyOfRange(from * whole.channels, to * whole.channels),
+                    whole.channels,
+                    whole.sampleRate,
+                )
+            } ?: whole
             val start = (note.timePulses * framesPerPulse).roundToInt()
             val voice = Voice(
                 start = start,

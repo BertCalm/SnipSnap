@@ -107,6 +107,9 @@ object XpnPackager {
                 cutoff = p.cutoff,
                 resonance = p.resonance,
                 humanize = p.humanize,
+                chain = p.chain?.let { c ->
+                    com.snipsnap.xpm.ChainPlay(firstSliceEnd = c.boundaries[1], cycle = c.cycle)
+                },
             )
         }
         val programXml = XpmWriter().write(DrumProgram(kit.name, slots.toList()))

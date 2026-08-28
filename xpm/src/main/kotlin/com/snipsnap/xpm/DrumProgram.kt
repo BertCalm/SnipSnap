@@ -34,6 +34,26 @@ data class VelocityLayer(
 }
 
 /**
+ * Chain playback for a pad (MPC 3 "Slice Motion"): the pad's sample is a
+ * chain of takes, and each hit steps to the next slice. Decoded from the
+ * corpus's PSK kit — per-layer `sliceIndex` with `sliceIncrement 1` and
+ * `sliceCycleLength` = takes cycled. The MPC 2 generation has no Slice
+ * Motion; its export windows the layer to slice 0 ([firstSliceEnd]) so
+ * the pad plays take one instead of the whole chain.
+ */
+data class ChainPlay(
+    /** End frame of slice 0 — the MPC 2 fallback window. */
+    val firstSliceEnd: Long,
+    /** Slices cycled per hit, 2..128. */
+    val cycle: Int,
+) {
+    init {
+        require(firstSliceEnd > 0) { "firstSliceEnd must be positive: $firstSliceEnd" }
+        require(cycle in 2..128) { "cycle is 2..128, got $cycle" }
+    }
+}
+
+/**
  * A single pad's worth of a drum program.
  *
  * [sampleName] is the WAV filename *without* extension — the MPC resolves it
@@ -82,16 +102,21 @@ data class Pad(
     val cutoff: Float? = null,
     val resonance: Float? = null,
     /**
-     * Per-hit randomization, 0..1 — MPC 3 only. The corpus probe (GG4)
-     * found no layer round-robin field in either generation, but the
-     * `.xtd` layer carries real pitch/volume/pan randomization the
-     * hardware renders per hit. The `.xpm` has no such fields, so the
-     * MPC 2 generation honestly ignores this.
+     * Per-hit randomization, 0..1 — MPC 3 only. The `.xtd` layer
+     * carries real pitch/volume/pan randomization the hardware renders
+     * per hit; the `.xpm` has no such fields, so the MPC 2 generation
+     * honestly ignores this. Distinct from round robin, which the MPC 3
+     * does have — chain-based Slice Motion, see [chain].
      */
     val humanize: Float? = null,
+    /** Chain playback (see [ChainPlay]); null = the ordinary one-shot pad. */
+    val chain: ChainPlay? = null,
 ) {
     init {
         require(sampleName.isNotBlank()) { "sampleName must not be blank" }
+        if (chain != null) {
+            require(velocityLayers == null) { "a chain pad is single-zone (velocity x round-robin grids come later)" }
+        }
         for ((name, v) in listOf(
             "attack" to attack, "decay" to decay, "cutoff" to cutoff,
             "resonance" to resonance, "humanize" to humanize,

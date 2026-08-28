@@ -79,9 +79,14 @@ data class KitPad(
      * such fields and honestly ignore it.
      */
     val humanize: Float? = null,
+    /** Chain playback (see [ChainInfo]); null = the ordinary pad. */
+    val chain: ChainInfo? = null,
 ) {
     init {
         require(slot in 1..128) { "slot out of range: $slot" }
+        if (chain != null) {
+            require(velocityLayers.isEmpty()) { "a chain pad is single-zone (velocity x round-robin grids come later)" }
+        }
         require(sampleFile.isNotBlank()) { "sampleFile must not be blank" }
         require('/' !in sampleFile && '\\' !in sampleFile) {
             "sampleFile must be a bare filename inside the kit folder: $sampleFile"
@@ -116,6 +121,37 @@ data class KitPad(
 
     /** Filename without extension — what the MPC program refers to. */
     val sampleStem: String get() = sampleFile.substringBeforeLast('.')
+}
+
+/**
+ * A chain pad (MPC 3 "Slice Motion"): the pad's WAV is a chain of takes
+ * and each hit steps to the next slice. [boundaries] are the slice start
+ * frames, ascending from 0 — WE build the chains, so the boundaries are
+ * ours; slice i runs from `boundaries[i]` to the next start (the last to
+ * the end of the sample). [cycle] slices are cycled per hit. The MPC 2
+ * generation has no Slice Motion; its export windows to slice 0.
+ */
+data class ChainInfo(
+    val boundaries: List<Long>,
+    val cycle: Int,
+) {
+    init {
+        require(boundaries.size >= 2) { "a chain has at least 2 slices, got ${boundaries.size}" }
+        require(boundaries.first() == 0L) { "the first slice starts at frame 0" }
+        for (i in 1 until boundaries.size) {
+            require(boundaries[i] > boundaries[i - 1]) { "slice boundaries must ascend" }
+        }
+        require(cycle in 2..boundaries.size) { "cycle is 2..${boundaries.size}, got $cycle" }
+    }
+
+    val sliceCount: Int get() = boundaries.size
+
+    /** Slice [i]'s window; the last slice runs to [sampleFrames]. */
+    fun window(i: Int, sampleFrames: Long): LongRange {
+        require(i in boundaries.indices) { "slice $i of $sliceCount" }
+        val end = if (i + 1 < boundaries.size) boundaries[i + 1] else sampleFrames
+        return boundaries[i] until end
+    }
 }
 
 /**
@@ -207,6 +243,9 @@ data class Kit(
                 cutoff = p.cutoff,
                 resonance = p.resonance,
                 humanize = p.humanize,
+                chain = p.chain?.let { c ->
+                    com.snipsnap.xpm.ChainPlay(firstSliceEnd = c.boundaries[1], cycle = c.cycle)
+                },
             )
         }
         return DrumProgram(name, slots.toList())

@@ -95,6 +95,14 @@ object KitStore {
                     p.cutoff?.let { entries["cutoff"] = JsonValue.Num(it.toDouble()) }
                     p.resonance?.let { entries["resonance"] = JsonValue.Num(it.toDouble()) }
                     p.humanize?.let { entries["humanize"] = JsonValue.Num(it.toDouble()) }
+                    p.chain?.let { c ->
+                        entries["chain"] = JsonValue.Obj(
+                            linkedMapOf(
+                                "cycle" to JsonValue.Num(c.cycle.toDouble()),
+                                "boundaries" to JsonValue.Arr(c.boundaries.map { JsonValue.Num(it.toDouble()) }),
+                            ),
+                        )
+                    }
                     if (p.source.isNotEmpty()) {
                         entries["source"] = JsonValue.Obj(
                             p.source.entries.associateTo(LinkedHashMap()) { (k, v) ->
@@ -154,6 +162,13 @@ object KitStore {
                 cutoff = p["cutoff"]?.num()?.toFloat(),
                 resonance = p["resonance"]?.num()?.toFloat(),
                 humanize = p["humanize"]?.num()?.toFloat(),
+                chain = (p["chain"] as? JsonValue.Obj)?.let { c ->
+                    ChainInfo(
+                        boundaries = ((c.entries["boundaries"] as? JsonValue.Arr)?.items.orEmpty())
+                            .map { (it as JsonValue.Num).value.toLong() },
+                        cycle = c.entries["cycle"]?.int() ?: 2,
+                    )
+                },
                 level = p["level"]?.num()?.toFloat() ?: 0.707946f,
                 pan = p["pan"]?.num()?.toFloat() ?: 0.5f,
                 tuneCoarse = p["tuneCoarse"]?.int() ?: 0,

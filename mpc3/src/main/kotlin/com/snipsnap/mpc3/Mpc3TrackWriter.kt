@@ -3,6 +3,7 @@ package com.snipsnap.mpc3
 import com.snipsnap.xpm.DrumProgram
 import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
+import com.snipsnap.xpm.ChainPlay
 import com.snipsnap.xpm.Pad
 import com.snipsnap.xpm.VelocityLayer
 import java.io.File
@@ -568,7 +569,10 @@ class Mpc3TrackWriter(
             // while held) — a per-pad musical choice in real kits.
             triggerMode = if (pad?.oneShot != false) 0 else 2,
             layers = (0 until 8).map { slot ->
-                layer(zones.getOrNull(slot), filledInstrument = filled, rootNote = 0, humanize = pad?.humanize)
+                layer(
+                    zones.getOrNull(slot), filledInstrument = filled, rootNote = 0,
+                    humanize = pad?.humanize, chain = pad?.chain,
+                )
             },
             keygroupExtras = false,
             level = pad?.level?.toDouble() ?: MPC_LEVEL_EMPTY,
@@ -657,14 +661,22 @@ class Mpc3TrackWriter(
         filledInstrument: Boolean,
         rootNote: Int,
         /**
-         * Per-hit randomization 0..1 (GG4). The corpus has no layer
-         * round-robin field in either generation - these per-hit random
-         * fields are the format's own "no two hits alike" mechanism,
-         * present (all zero) on every commercial layer. Scaling is
+         * Per-hit randomization 0..1 (GG4). These random fields are the
+         * format's "no two hits alike" mechanism, present (all zero) on
+         * every commercial layer - distinct from round robin, which is
+         * chain-based Slice Motion (see [chain] below). Scaling is
          * conservative and bench-bound: pitch x0.05, volume x0.2,
          * pan x0.1 of the macro.
          */
         humanize: Float? = null,
+        /**
+         * Chain playback (MPC 3 Slice Motion, decoded from the corpus's
+         * PSK kit): base slice 0, step 1 per hit, cycling [ChainPlay.cycle]
+         * slices. The slice *boundaries* live in the chain WAV itself
+         * (HH1.4, bench-blocked); until that chunk is written, sliceInfo
+         * windows slice 0 so hardware without the map plays take one.
+         */
+        chain: ChainPlay? = null,
     ): J = obj(
         "active" to b(true),
         "volume" to obj("gainCoefficient" to d(1.0), "controlValue" to d(1.0), "law" to i(0)),
@@ -696,7 +708,7 @@ class Mpc3TrackWriter(
         "offset" to i(0),
         "sliceInfo" to obj(
             "Start" to i(0),
-            "End" to i(zone?.frameCount ?: 0L),
+            "End" to i(if (zone != null && chain != null) chain.firstSliceEnd else zone?.frameCount ?: 0L),
             // The sustain loop as PSK's rolls write it: LoopMode 1 +
             // LoopStart, looping to End.
             "LoopStart" to i(zone?.loopStartFrame ?: 0L),
@@ -714,8 +726,8 @@ class Mpc3TrackWriter(
         "VolumeRandom" to d(if (zone != null) ((humanize ?: 0f) * 0.2f).toDouble() else 0.0),
         "PanRandom" to d(if (zone != null) ((humanize ?: 0f) * 0.1f).toDouble() else 0.0),
         "OffsetRandom" to d(0.0),
-        "sliceIncrement" to i(0),
-        "sliceCycleLength" to i(1),
+        "sliceIncrement" to i(if (zone != null && chain != null) 1 else 0),
+        "sliceCycleLength" to i(if (zone != null && chain != null) chain.cycle.toLong() else 1),
         "sliceIncrementRngSeed" to i(RNG_SEED),
         "oscillatorMode" to b(false),
         "oscillatorType" to i(0),

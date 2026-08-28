@@ -134,10 +134,10 @@ class PadShapeTest {
 
     @Test
     fun `humanize rides the MPC 3 random fields and the MPC 2 honestly ignores it`() {
-        // GG4 probe verdict, pinned: neither generation has a layer
-        // round-robin field, but the .xtd layer carries real per-hit
-        // randomization (all zero on every commercial layer) - that IS the
-        // format's "no two hits alike" mechanism. The .xpm has nothing.
+        // The .xtd layer carries real per-hit randomization (all zero on
+        // every commercial layer) - the format's "no two hits alike"
+        // mechanism, distinct from chain-based Slice Motion round robin
+        // (KitChainTest). The .xpm has nothing.
         val dir = File(temp, "hum")
         val kit = buildKit(dir, shaped = false).let { k ->
             k.copy(pads = k.pads.map { if (it.slot == 1) it.copy(humanize = 0.5f) else it })
