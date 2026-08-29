@@ -63,7 +63,7 @@ object KitArt {
         kit: Kit,
         kitDir: File,
         style: Style,
-        scheme: Scheme = Schemes.CHROME,
+        scheme: Scheme = Schemes.DEFAULT,
         seed: Int = 0,
         size: Int = DEFAULT_SIZE,
         /** The tile's caption — a pack tile carries the pack's title, not one kit's. */
@@ -110,7 +110,7 @@ object KitArt {
         kit: Kit,
         kitDir: File,
         style: Style,
-        scheme: Scheme = Schemes.CHROME,
+        scheme: Scheme = Schemes.DEFAULT,
         seed: Int = 0,
         size: Int = DEFAULT_SIZE,
         label: String = kit.name,

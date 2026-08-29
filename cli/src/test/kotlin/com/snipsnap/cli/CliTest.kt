@@ -590,7 +590,7 @@ class CliTest {
         val one = File(temp, "one-tile")
         assertEquals(
             0,
-            cli("art", kitDir, "--style", "grid", "--scheme", "snack-bar", "--out", one.path, "--size", "128").first,
+            cli("art", kitDir, "--style", "grid", "--scheme", "petrol", "--out", one.path, "--size", "128").first,
         )
         assertEquals(listOf("ArtKit_grid.png"), one.list()!!.toList())
 

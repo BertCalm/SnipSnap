@@ -42,7 +42,7 @@ object JCard {
     fun render(
         kit: Kit,
         kitDir: File,
-        scheme: Scheme = Schemes.CHROME,
+        scheme: Scheme = Schemes.DEFAULT,
         width: Int = DEFAULT_WIDTH,
         /** The label's catalog number (`DF-001`), worn on the spine when set. */
         catalog: String? = null,
@@ -78,7 +78,7 @@ object JCard {
     fun png(
         kit: Kit,
         kitDir: File,
-        scheme: Scheme = Schemes.CHROME,
+        scheme: Scheme = Schemes.DEFAULT,
         width: Int = DEFAULT_WIDTH,
         catalog: String? = null,
     ): ByteArray {

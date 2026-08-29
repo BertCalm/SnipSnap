@@ -9,15 +9,25 @@ import kotlin.test.assertTrue
 class SchemesTest {
 
     @Test
-    fun `six schemes in picker order`() {
+    fun `eight dark schemes in picker order, OILSLICK by default`() {
         assertEquals(
             listOf(
-                SchemeId.CHROME, SchemeId.FERRIC, SchemeId.METAL,
-                SchemeId.SNACK_BAR, SchemeId.OILSLICK, SchemeId.CLEAR,
+                SchemeId.METAL, SchemeId.OILSLICK, SchemeId.PETROL, SchemeId.INFRARED,
+                SchemeId.ACID, SchemeId.SODIUM, SchemeId.ICE, SchemeId.VAPOR,
             ),
             Schemes.ALL.map { it.id },
         )
-        assertEquals(SchemeId.CHROME, Schemes.DEFAULT.id)
+        assertEquals(SchemeId.OILSLICK, Schemes.DEFAULT.id)
+    }
+
+    @Test
+    fun `every scheme is dark now - the light shells are gone`() {
+        for (scheme in Schemes.ALL) {
+            assertTrue(
+                Scheme.luma(scheme.gray) < 90,
+                "${scheme.id}: chrome ${"%06x".format(scheme.gray)} is a light shell, and those were cut",
+            )
+        }
     }
 
     @Test
@@ -56,7 +66,7 @@ class SchemesTest {
 
     @Test
     fun `pad label inks are darker than their pads in both ink tables`() {
-        for (scheme in listOf(Schemes.OILSLICK, Schemes.CLEAR)) {
+        for (scheme in listOf(Schemes.OILSLICK)) {
             for (dc in DrumClass.entries) {
                 val pad = Schemes.classColor(dc)
                 val ink = Schemes.padLabelInk(scheme, dc)
@@ -68,13 +78,11 @@ class SchemesTest {
         }
         // Spot-check the tables verbatim from the prototypes.
         assertEquals(0x3A1005, Schemes.padLabelInk(Schemes.OILSLICK, DrumClass.KICK))
-        assertEquals(0xC73A12, Schemes.padLabelInk(Schemes.CLEAR, DrumClass.KICK))
-        assertEquals(0x0E6870, Schemes.padLabelInk(Schemes.CLEAR, DrumClass.HAT_CLOSED))
     }
 
     @Test
     fun `scheme lookup and css cross-reference`() {
-        assertEquals(Schemes.CLEAR, Schemes[SchemeId.CLEAR])
+        assertEquals(Schemes.PETROL, Schemes[SchemeId.PETROL])
         assertEquals("t-oilslick", Schemes.OILSLICK.cssClass)
         assertEquals(5, Schemes.OILSLICK_SWEEP.size)
         assertEquals(Schemes.OILSLICK_SWEEP.first(), Schemes.OILSLICK_SWEEP.last())

@@ -37,7 +37,7 @@ object ArtCommand {
                     ?: throw CliError("unknown style '$it' - styles: ${styleIds()}"),
             )
         } ?: KitArt.Style.entries.toList()
-        val scheme = opts["--scheme"]?.let { parseScheme(it) } ?: Schemes.CHROME
+        val scheme = opts["--scheme"]?.let { parseScheme(it) } ?: Schemes.DEFAULT
         val seed = opts.int("--seed") ?: 0
         val size = opts.int("--size") ?: KitArt.DEFAULT_SIZE
         if (size !in 64..2048) throw CliError("--size wants 64..2048, got $size")
@@ -62,7 +62,7 @@ object ArtCommand {
 
     private fun schemeIds() = Schemes.ALL.joinToString(",") { schemeWord(it) }
 
-    /** `SNACK BAR` on the box, `snack-bar` on the command line. */
+    /** `displayName` lowercased with spaces hyphenated, for the `--scheme` flag. */
     private fun schemeWord(s: Scheme) = s.id.displayName.lowercase().replace(' ', '-')
 
     private fun parseScheme(word: String): Scheme =
