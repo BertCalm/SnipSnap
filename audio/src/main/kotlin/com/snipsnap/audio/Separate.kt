@@ -8,7 +8,11 @@ package com.snipsnap.audio
  * lines (a note holds its bins across time) and percussive content
  * draws *vertical* ones (a hit covers all bins for a moment). A median
  * filter across time keeps the horizontal and erases the vertical; a
- * median filter across frequency does the opposite. The two filtered
+ * median filter across frequency does the opposite.
+ *
+ * Memory is input-bound like the readers themselves (~2 KB per frame
+ * per channel for the spectrogram, hours-long files being the heap's
+ * problem before they are ours); nothing here multiplies the input. The two filtered
  * spectrograms become soft Wiener-style masks that sum to one per bin,
  * so **the parts sum back to the input** — separation that can prove
  * it lost nothing. No seeds, no thresholds tuned by ear: it is all

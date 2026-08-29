@@ -24,6 +24,9 @@ object Pghi {
     /** Bins below this fraction of the global peak get random phase — there is nothing there to integrate. */
     const val TOLERANCE = 1e-6f
 
+    /** The stretch's output ceiling, like [Stretch]'s: a ×100 factor on a long file is an OOM, not a wish. */
+    const val MAX_OUT_SEC = 300f
+
     private const val FRAME = Spectral.FRAME
     private const val HOP = Spectral.HOP
     private const val BINS = Spectral.BINS
@@ -83,8 +86,13 @@ object Pghi {
         require(mono.frameCount > 0) { "the source is empty" }
         val mags = mutableListOf<FloatArray>()
         Spectral.forEachFrame(mono) { _, _, m -> mags.add(m.copyOf()) }
-        val outFrames = (mono.frameCount * factor.toDouble()).toInt()
-        val outCount = ((mags.size - 1) * factor.toDouble()).toInt() + 1
+        val outFrames = (mono.frameCount * factor.toDouble()).toLong()
+            .coerceAtMost((MAX_OUT_SEC * mono.sampleRate).toLong()).toInt()
+        // Only as many stretched frames as the capped output needs.
+        val outCount = minOf(
+            ((mags.size - 1) * factor.toDouble()).toInt() + 1,
+            (outFrames + 2 * FRAME) / HOP + 1,
+        )
         val stretched = ArrayList<FloatArray>(outCount)
         for (j in 0 until outCount) {
             val x = j / factor.toDouble()

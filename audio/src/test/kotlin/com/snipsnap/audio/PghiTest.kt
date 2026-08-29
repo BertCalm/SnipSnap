@@ -55,6 +55,17 @@ class PghiTest {
     }
 
     @Test
+    fun `the clear stretch caps its output like its sibling - an absurd ask is bounded, not an OOM`() {
+        // 10 s at a factor of 100 asks for 1000 s; the ceiling answers 300.
+        val long = Snip(FloatArray(10 * 8000), 1, 8000)
+        val out = Pghi.stretch(long, factor = 100f, seed = 1)
+        assertTrue(
+            out.frameCount == (Pghi.MAX_OUT_SEC * 8000).toInt(),
+            "capped at the ceiling: ${out.frameCount} frames",
+        )
+    }
+
+    @Test
     fun `the clear stretch keeps a sine a narrow line - the wash admits it can't`() {
         val tone = Snip(
             FloatArray(rate / 2) { i -> (0.5 * Math.sin(2.0 * Math.PI * 440.0 * i / rate)).toFloat() },
