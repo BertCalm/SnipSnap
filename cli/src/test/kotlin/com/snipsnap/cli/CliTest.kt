@@ -2346,6 +2346,58 @@ class CliTest {
     }
 
     @Test
+    fun `split hands back a song's drums and music - and the halves sum to the song`() {
+        val rate = 44_100
+        fun snappy(len: Int): FloatArray {
+            val s = FloatArray(len)
+            for ((at, hit) in listOf(
+                0.2f to DrumSynth.closedHat(), 0.8f to DrumSynth.snare(),
+                1.4f to DrumSynth.closedHat(), 2.0f to DrumSynth.clap(), 2.6f to DrumSynth.closedHat(),
+            )) {
+                val start = (at * rate).toInt()
+                for (i in hit.samples.indices) {
+                    val idx = start + i
+                    // Tame: the hat's first-difference noise can peak well
+                    // past its nominal level, and full scale clips on disk.
+                    if (idx < len) s[idx] += hit.samples[i] * 0.4f
+                }
+            }
+            return s
+        }
+        val n = 3 * rate
+        val mixWav = File(temp, "mixsong.wav")
+        val drums = snappy(n)
+        val mix = FloatArray(n) { i ->
+            var c = 0.0
+            for (hz in doubleArrayOf(220.0, 329.63)) c += Math.sin(2.0 * Math.PI * hz * i / rate)
+            drums[i] + (0.12 * c).toFloat()
+        }
+        WavWriter.write(mixWav, Snip(mix, 1, rate))
+
+        val (code, stdout, _) = cli("split", mixWav.path)
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "drums ")
+        val dOut = com.snipsnap.audio.WavReader.read(File(temp, "mixsong Drums.wav"))
+        val mOut = com.snipsnap.audio.WavReader.read(File(temp, "mixsong Music.wav"))
+
+        // The chord went to Music, and the halves rebuild the song.
+        assertTrue(tone(mOut.samples, 220.0, rate) > 5 * tone(dOut.samples, 220.0, rate), "the chord is Music's")
+        var worst = 0f
+        for (i in mix.indices) {
+            val d = Math.abs(dOut.samples[i] + mOut.samples[i] - mix[i])
+            if (d > worst) worst = d
+        }
+        assertTrue(worst < 2e-4f, "the halves sum back to the song: $worst")
+
+        // Drums alone are called what they are.
+        val drumsWav = File(temp, "onlydrums.wav")
+        WavWriter.write(drumsWav, Snip(snappy(n), 1, rate))
+        val (dCode, dStdout, _) = cli("split", drumsWav.path)
+        assertEquals(0, dCode, dStdout)
+        assertContains(dStdout, "mostly drums")
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")

@@ -116,6 +116,11 @@ object Cli {
         |                        renders the full velocity x robin grid - a
         |                        dynamics-graded chain where soft hits play
         |                        quieter, darker takes
+        |  split <song.wav>      the Split at song scale: "<Song> Drums.wav"
+        |                        + "<Song> Music.wav" - median-filter masks,
+        |                        so the halves sum back to the song; the
+        |                        summary names the verdict with measured
+        |                        shares; chop the drums, keys the music
         |  dissect <wav> | <kit-dir> <pad>
         |                        the anatomy lesson: one sound as three pads
         |                        - sines (body), transient (attack), air
@@ -318,6 +323,7 @@ object Cli {
                 "stretch" -> StretchCommand.run(args.drop(1), out)
                 "euclid" -> EuclidCommand.run(args.drop(1), out)
                 "dissect" -> DissectCommand.run(args.drop(1), out)
+                "split" -> SplitCommand.run(args.drop(1), out)
                 "art" -> ArtCommand.run(args.drop(1), out)
                 "jcard" -> JCardCommand.run(args.drop(1), out)
                 "notes" -> NotesCommand.run(args.drop(1), out)
