@@ -247,8 +247,12 @@ object Type {
     /** Michroma — display headers and key actions. 11–12dp, +2 tracking. */
     const val DISPLAY = "Michroma"
 
-    /** Permanent Marker — handwriting on pads and cassette labels. 13–15dp. */
-    const val MARKER = "Permanent Marker"
+    /**
+     * Rock Salt — handwriting on pads, cassette labels and loop blocks.
+     * 11–15dp. Replaced Permanent Marker; the LOOP section of the handoff
+     * still names the old face and is stale.
+     */
+    const val MARKER = "Rock Salt"
 }
 
 /** Layout constants from the handoff, dp at the 390dp design width. */
@@ -265,6 +269,27 @@ object Layout {
     const val PAD_RADIUS = 6
     const val PRIMARY_ACTION_H = 52
     const val MIN_HIT_TARGET = 44
+
+    /** LCD headers run 40–44 depending on whether they carry a counter. */
+    const val LCD_HEADER_MAX_H = 44
+
+    // LOOP — the six-column phasing grid.
+    /** Track column header; tap toggles mute. */
+    const val TRACK_HEADER_H = 24
+    /** A block cell grows between these bounds to fill its column. */
+    const val BLOCK_MIN_H = 30
+    const val BLOCK_MAX_H = 46
+    /** Landscape LOOP frame — transport moves to a top bar, cycle strip to the bottom. */
+    const val LANDSCAPE_W = 816
+    const val LANDSCAPE_H = 362
+
+    // GROOVE — the needle-roll.
+    /** The needle is fixed; the notes scroll under it. */
+    const val NEEDLE_Y = 96
+    /** Horizontal distance one step travels. */
+    const val STEP_W = 20
+    /** Note block height in a lane. */
+    const val NOTE_H = 17
 }
 
 /**
@@ -284,4 +309,6 @@ object Motion {
     const val DUB_FILE_MS = 180
     /** Status-bar quip rotation, ms. */
     const val QUIP_ROTATE_MS = 6000
+    /** The bubble swells while dragged, so the eject gesture reads as physical. */
+    const val BUBBLE_DRAG_SCALE = 1.08f
 }

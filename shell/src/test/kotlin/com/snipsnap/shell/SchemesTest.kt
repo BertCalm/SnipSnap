@@ -136,4 +136,28 @@ class SchemesTest {
             }
         }
     }
+
+    @Test
+    fun `the handwriting is Rock Salt`() {
+        assertEquals("Rock Salt", Type.MARKER)
+    }
+
+    @Test
+    fun `LOOP block cells have room to grow but not to sprawl`() {
+        assertTrue(Layout.BLOCK_MIN_H < Layout.BLOCK_MAX_H, "a block cell grows between two bounds")
+        assertTrue(Layout.BLOCK_MIN_H >= 30, "below 30dp a two-line block cell clips its name")
+        assertTrue(Layout.TRACK_HEADER_H >= 24, "the header is a tap target for mute")
+    }
+
+    @Test
+    fun `the landscape frame is the portrait frame turned over`() {
+        assertTrue(
+            Layout.LANDSCAPE_W > Layout.LANDSCAPE_H,
+            "landscape is wider than tall",
+        )
+        assertTrue(
+            Layout.LANDSCAPE_H < Layout.FRAME_W,
+            "landscape loses height to the system bars — 362 against a 390 width",
+        )
+    }
 }
