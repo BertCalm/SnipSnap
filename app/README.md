@@ -1,0 +1,64 @@
+# :app — the Android shell (M0, pre-written)
+
+This tree is APP_PLAN.md's **M0 walking skeleton**, written ahead of time
+by the cloud session — which **cannot compile it**: that environment has
+no Android SDK and its network policy blocks `dl.google.com`. Every other
+module on this branch is tested; this one is carefully written, reviewed
+Kotlin that has **never been through a compiler**. Treat it accordingly.
+
+## Building (desktop session or any machine with an Android SDK)
+
+1. Point the build at an SDK — any one of:
+   - `local.properties` at the repo root with `sdk.dir=/path/to/Android/sdk`
+   - `ANDROID_HOME` / `ANDROID_SDK_ROOT` in the environment
+
+   `settings.gradle.kts` includes `:app` only when it can locate an SDK,
+   so the pure-JVM modules (and the cloud session) build exactly as
+   before whether or not one is present.
+
+2. `./gradlew :app:assembleDebug`
+
+3. Fix what the compiler finds. The likely nit categories, in honesty
+   order: Compose API drift against the pinned BOM (2024.12.01), an
+   import the blind write missed, a modifier-order surprise. The
+   architecture is deliberately boring — no algorithm lives here, every
+   screen binds to `:shell`/`:kit` code that is already tested.
+
+4. Install: `adb install app/build/outputs/apk/debug/app-debug.apk`
+   (or copy the APK to the phone and tap it).
+
+## M0's exit test (from docs/APP_PLAN.md)
+
+Browse kits on a phone, tap pads, hear WAVs (interim `SoundPool`), flip
+schemes in Tape Properties. The FRESH TAPE menu (six starters from
+`StarterKits`, rendered by the `:synth` engines on-device) makes the
+shelf useful before capture (M1) exists.
+
+## What's here
+
+| Piece | Source |
+|---|---|
+| Scaffold | `build.gradle.kts` (AGP 8.7.3, Kotlin 2.0.21 + Compose plugin, minSdk 29, foundation-only Compose — no Material; TapeOS draws itself) |
+| Theme | `theme/` — `:shell`'s `Schemes`/`Type`/`Layout`/`Motion` tables bound to Compose; bevel/LCD/desk modifiers; OILSLICK sweep |
+| Window | `ui/Chrome.kt` — SNIPSNAP.EXE titlebar, 9-item menu row, 3-cell status bar with `Copy` quips, toast overlay |
+| Screens | KITS (shelf + FRESH TAPE), KIT (4×4 bank A, MPC geometry: A13 top-left, A01 bottom-left), SETUP (live scheme picker + PERSONALITY), HELP, honest stubs naming M2–M5 |
+| Data | `KitShelf` over `KitStore` (kits under app files/Kits); `PadPlayer` (SoundPool interim — choke/velocity belong to M4's Oboe allocator) |
+| Fonts | `res/font/` — VT323, Silkscreen, Michroma, Permanent Marker, committed |
+
+## Things to verify on first run (beyond "does it compile")
+
+- **SoundPool vs the kit WAVs**: starters render standard PCM WAVs;
+  confirm depth/rate decode cleanly. If any pad is silent, check the
+  logcat `SoundPool` line first.
+- **Scheme flip repaint**: every colour flows from `LocalScheme`, so a
+  SETUP flip should repaint the whole window instantly; a stale surface
+  means a colour got captured outside the composition local.
+- **First FRESH TAPE dub time** on a real phone (the synth render is
+  seconds on desktop JVM; status bar shows DUBBING… meanwhile).
+
+## Fonts / licensing
+
+The four faces were fetched from Google Fonts (open licenses — OFL /
+Apache 2.0 families). Fine for development and sideloaded test builds;
+before any public release, confirm each family's license on its Google
+Fonts page and bundle the license texts.
