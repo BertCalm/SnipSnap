@@ -1154,9 +1154,9 @@ coherent phases for the sound between them.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| QQ1 | PGHI (`:audio` `Pghi`) — log-magnitude time/frequency gradients, heap-ordered phase integration, random-phase fallback below the significance threshold; `invert(magnitudeSpectrogram) → snip` as the one door; a PGHI-driven `stretch --clear` mode beside the paulstretch wash | CORE | M–L | inverting an unmodified magnitude spectrogram reconstructs a tone and a beat audibly intact (probe + envelope within tolerance); a PGHI stretch of a tone stays a narrow spectral line (vs the wash's admitted spread); onset rise time of a stretched beat measurably sharper than the paulstretch equivalent |
-| QQ2 | Hybrid TSM (`TempoFit.retime`) — PP1 splits, the harmonic half stretches through the QQ1 vocoder at big frames, the percussive half through short-frame WSOLA, the halves sum; wired as `--fit-tempo BPM --keep-pitch` on chop (forwarded by dig) plus a standalone `retime <wav> --to BPM [--from BPM]` | CORE | M | 100→120 BPM: duration ratio exact, a tonal probe stays at its own frequency (no repitch), kick attack rise time within tolerance of the original; the repitch path untouched without the flag; refused past double/half like TempoFit |
-| QQ3 | `mutate --morph <pad> --with <src> [--amount 0..1]` — the Séance piece, promoted from the OO below-line: both parents' magnitude spectrograms time-aligned (transient-anchored, shorter padded), bin-wise interpolated at the given amount, PGHI phases, recipe + provenance like every mutate mode | CORE | M | amount 0 reconstructs parent A's spectrum and 1 parent B's (spectral distance); 0.5 sits between them in spectral distance, not a crossfade (single onset, not two); seeded where any tie-break needs it; bin-backed, undo restores |
+| QQ1 | ✓ done: `Pghi` — phase from the magnitude spectrogram's own gradients, heap-integrated loudest-first, random phase below tolerance, disjoint islands restarting coherently; geometry shared with `Spectral` so `forEachFrame` magnitudes invert straight back. Two calibration findings earned on a numpy known-phase rig rather than guessed: the gradient coefficients are each direction's *reciprocal* (time γ/(aM), frequency −aM/γ — the first draft had them swapped, a 5% error reading as slow drift), and our start-referenced frames need a −π-per-bin center term. `stretch --clear` rides it | CORE | M–L | inverting unmodified magnitudes rebuilds a tone at 95%+ coherence and a beat with every onset in place; the clear stretch keeps a sine a >20× narrow line and provably narrower than the paulstretch wash; seeded determinism |
+| QQ2 | ✓ done — with the wave's headline finding: the planned Driedger hybrid was **built and then retired by measurement**. The hybrid's unaligned OLA+vocoder sum smeared a kick's attack rise from 33 ms to 51 ms while plain PGHI matched the original's 33 ms — the hybrid exists to fix the classic vocoder's transient smear, and PGHI doesn't have the disease. `Retime` ships as the PGHI vocoder with TempoFit's double/half refusal; `retime <wav> --to BPM [--from]` + `chop --fit-tempo BPM --keep-pitch`. (Dig doesn't forward --fit-tempo today, so nothing new to forward) | CORE | M | duration is the ratio's; the 440 bed stays 440 (no repitch); hits land at their new times; attack rise within 12 ms of the original; out-of-range refused; CLI round trip + riding rule |
+| QQ3 | ✓ done: `mutate --morph [--amount 0..1]` — both parents' magnitude spectrograms transient-aligned, interpolated bin-wise, PGHI phases; length and level interpolate; amount in the recipe, undo through the same bin | CORE | M | amount 0 stays the pad, 1 becomes the parent (probe ratios); halfway both parents sing in ONE hit — a single onset, the not-a-crossfade proof; --amount without --morph refused |
 
 **Below the line for QQ:** real-time PGHI (app-session territory);
 formant-preserving pitch shift (needs envelope/cepstral lifting —
@@ -1231,6 +1231,13 @@ CORE wave MM: ✓ all landed (2026-08-28) — the Capture Doctor. Hum
   capture before the first slice. Clean audio comes back the very same
   object, every time.
 
+CORE wave QQ: ✓ all landed (2026-08-29) — Time, Done Right. PGHI
+  (coefficients calibrated on a known-phase rig, not guessed), the
+  clear stretch beside the wash, retime / --keep-pitch (the Driedger
+  hybrid built and retired by measurement - PGHI alone keeps attacks
+  at the original's rise), and mutate --morph conjuring the sound
+  between two parents in one onset.
+
 CORE wave PP: ✓ all landed (2026-08-29) — the Split. The median-
   filter mask engine (HPSS + fuzzy STN, masks summing to one so every
   separation proves it lost nothing), dissect's anatomy kits, split's
@@ -1238,11 +1245,8 @@ CORE wave PP: ✓ all landed (2026-08-29) — the Split. The median-
   landed stronger than planned: a break the plain dig cannot hear at
   all comes out clean from under a chord that never stops.
 
-CORE waves QQ → RR (planned 2026-08-28 from the research sweep):
-  QQ Time Done Right (PGHI, hybrid TSM
-  as --fit-tempo --keep-pitch / retime, mutate --morph; RIDES PP) →
-  RR the Restoration (SPADE declip, WPE deverb, the reference/
-  scorecard; standalone — can run before or after the others).
+CORE wave RR (planned 2026-08-28 from the research sweep, next up):
+  SPADE declip, WPE deverb, the reference/ scorecard.
 
 CORE wave OO: ✓ all landed (2026-08-28) — the Sculptor: the Torso
   S-4's engine room, minus the knobs. The grain engine (seeded,
