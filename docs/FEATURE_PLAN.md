@@ -1105,6 +1105,97 @@ rather than riding this one).
 
 ---
 
+## Wave PP — the Split (CORE)
+
+The research verdict (2026 sweep): the highest-value modern DSP this
+codebase can honestly own is **median-filter mask separation** — one
+machine, two tellings. Fitzgerald's HPSS: median-filter a spectrogram
+*across time* and harmonic content survives, *across frequency* and
+percussive content survives; turn the two into soft masks that sum to
+one and the parts sum back to the input — **perfect reconstruction is
+the exit test**. Aalto's STN (Fierro & Välimäki, DAFx 2021 / JAES
+2023) runs the same machinery in two rounds and splits audio into
+sines + transients + noise — the anatomy of a drum hit. Everything
+rides the NN1 `Spectral` door: masks are exactly the per-bin gains
+`process` already applies. The flagship is `dig --unearth`: the break
+pulled out from UNDER the song — drums isolated even where bass and
+keys play over them — instead of hoping a clean stretch exists.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| PP1 | The mask engine (`:audio` `Separate`) — HPSS: magnitude spectrogram via `Spectral.forEachFrame`, median filters across time (harmonic) and frequency (percussive), soft Wiener-style masks (power 2) applied as per-bin gains through `Spectral.process`, phases untouched. `harmonic(snip)` / `percussive(snip)` / both-at-once | CORE | M | masks sum to one, so harmonic + percussive reconstructs the input within float tolerance; on a drums+pad synthetic mix the percussive part holds the kick/hat energy (probe) and the harmonic part holds the tone; drums-only input lands overwhelmingly percussive; deterministic (no seeds — it's all measurement) |
+| PP2 | STN (`Separate.stn`) — round one at big frames pulls sines, round two at small frames splits the residual into transients and noise, fuzzy soft masks per the papers; `dissect <kit-dir> <pad>` lands the three parts as a "<Name> Dissected" kit (Sines / Transient / Noise pads, provenance + recipe), the pieces re-mutable like any pads | CORE | M | the three parts sum back to the input within tolerance; a synthetic kick (sine body + click attack + noise air) dissects with each ingredient dominant in its own part (probe per part); a pure tone lands in sines, a click in transients, hiss in noise |
+| PP3 | `split <song.wav>` — HPSS at song scale: "<Song> Drums.wav" + "<Song> Music.wav" beside the source, honest summary of the energy split; the halves then feed any existing verb (`chop` the drums, `keys`/`dig --air` the music) | CORE | S–M | CLI round trip on a synthetic song: the Drums twin carries the percussive probes, the Music twin the tonal ones, the two sum to the source; a drums-only file says so rather than manufacturing a Music half |
+| PP4 | `dig --unearth` — the flagship: the dig scores (and `--chop` chops) the *percussive layer* instead of the raw mix, so a break buried under loud pads is found and extracted; provenance says unearthed; plain dig behavior unchanged without the flag | CORE | M | a synthetic song whose drums are fully overlaid by loud pads: plain `dig --chop` yields a kit whose pads carry heavy tonal bleed, `--unearth` yields pads whose tonal probe sits ≥ 10 dB lower; timestamps still honest; a song with no drums still says "no break heard" |
+
+**Below the line for PP:** KAM (kernel additive modeling — HPSS's
+generalized successor, heavier for modest gain here); using the
+percussive layer inside `learn` (the Ear listening through the mask)
+and `--key auto` (the tonal layer only) — natural follow-ups once PP1
+exists; vocal isolation (needs repetition-based methods like REPET, a
+different machine).
+
+---
+
+## Wave QQ — Time, Done Right (CORE)
+
+Stacked on the Split. PGHI ("Phase Vocoder Done Right", Průša &
+Søndergaard 2017) reconstructs phase from the magnitude spectrogram's
+own gradients, integrating along a heap ordered by magnitude — still
+the DSP baseline neural vocoder papers compare against in 2026, and
+buildable on our FFT in an afternoon of care. On top of it, Driedger &
+Müller's hybrid TSM: HPSS-split the signal, phase-vocode the harmonic
+half with big frames, plain overlap-add the percussive half with tiny
+ones — the known-best classical time-stretch, transients kept crisp.
+That gives `fit-tempo` the move it's always lacked: change the tempo
+and NOT the pitch. And PGHI's spectrogram inversion opens the Séance's
+`morph` properly: interpolate two parents' magnitudes, let PGHI invent
+coherent phases for the sound between them.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| QQ1 | PGHI (`:audio` `Pghi`) — log-magnitude time/frequency gradients, heap-ordered phase integration, random-phase fallback below the significance threshold; `invert(magnitudeSpectrogram) → snip` as the one door; a PGHI-driven `stretch --clear` mode beside the paulstretch wash | CORE | M–L | inverting an unmodified magnitude spectrogram reconstructs a tone and a beat audibly intact (probe + envelope within tolerance); a PGHI stretch of a tone stays a narrow spectral line (vs the wash's admitted spread); onset rise time of a stretched beat measurably sharper than the paulstretch equivalent |
+| QQ2 | Hybrid TSM (`TempoFit.retime`) — PP1 splits, the harmonic half stretches through the QQ1 vocoder at big frames, the percussive half through short-frame WSOLA, the halves sum; wired as `--fit-tempo BPM --keep-pitch` on chop (forwarded by dig) plus a standalone `retime <wav> --to BPM [--from BPM]` | CORE | M | 100→120 BPM: duration ratio exact, a tonal probe stays at its own frequency (no repitch), kick attack rise time within tolerance of the original; the repitch path untouched without the flag; refused past double/half like TempoFit |
+| QQ3 | `mutate --morph <pad> --with <src> [--amount 0..1]` — the Séance piece, promoted from the OO below-line: both parents' magnitude spectrograms time-aligned (transient-anchored, shorter padded), bin-wise interpolated at the given amount, PGHI phases, recipe + provenance like every mutate mode | CORE | M | amount 0 reconstructs parent A's spectrum and 1 parent B's (spectral distance); 0.5 sits between them in spectral distance, not a crossfade (single onset, not two); seeded where any tie-break needs it; bin-backed, undo restores |
+
+**Below the line for QQ:** real-time PGHI (app-session territory);
+formant-preserving pitch shift (needs envelope/cepstral lifting —
+worthwhile, its own item once QQ1 exists); `smear` (transient removed,
+keeping the wash — trivial once PP2's transient mask exists, candidate
+for a small dessert wave with `sculpt --keys`).
+
+---
+
+## Wave RR — the Restoration (CORE)
+
+The Capture Doctor's missing limbs, from the declipping literature
+(SPADE, Kitić et al., Inria — still the reference family in the 2020
+large-scale evaluation) and the de-reverberation one (WPE). Declipping
+treats clipped samples as *missing data with a known lower bound* (the
+clip level tells you the truth was louder) and finds the sparsest
+spectrum consistent with the surviving samples — iterative hard
+thresholding plus a consistency projection, all machinery we own.
+WPE models late reverb as a linear prediction from earlier STFT frames
+and subtracts it — per-band normal equations, a few iterations.
+Single-channel WPE is real but tuned for speech; it ships as an
+explicit opt-in with synthetic exit tests, and its real-world verdict
+waits on the phone-mic reference capture.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| RR1 | Declip (`CaptureDoctor.declip`) — detection first (flat-top runs at a measured ceiling, clipped fraction reported; the `repairClicks` distortion refusal now *refers*: "that's clipping - `clean --declip`"), then A-SPADE per frame: reliable samples pinned, clipped samples constrained past the ceiling in their own sign, sparsity relaxing per iteration; wired as `clean --declip`, gated by its own detector like every leg | CORE | M–L | a beat clipped at −6 dB: SNR against the unclipped original improves ≥ 10 dB over the clipped input, peaks rebuilt past the ceiling; unclipped audio comes back byte-identical and told so; the referral fires from repairClicks on the old distortion fixture |
+| RR2 | De-reverb (`CaptureDoctor.deverb`, single-channel WPE) — per-band delayed linear prediction (delay ~2 frames so the direct sound never predicts itself, order ~10), normal equations per band, 2–3 iterations; explicit `clean --deverb` opt-in (no auto-detector — "how roomy is too roomy" is taste), honest about being speech-lineage math | CORE | M–L | the NN3 fixture (hit convolved with a decaying-noise IR): direct-to-tail energy ratio measurably improves and the tail knee finds a *later, quieter* knee after treatment; a dry hit passes through within tolerance; composes with the tail knee rather than replacing it |
+| RR3 | The scorecard (`reference/` eval harness) — a small `bench` runner that takes any capture dropped into `reference/`, runs the whole Capture Doctor (hum/clicks/floor/denoise/declip/deverb, each gated), and prints one measured before/after card per file — so the awaited phone-mic capture becomes an instant verdict on RR2 and the tail knee the day it lands | CORE | S | on the synthetic fixtures the card's numbers match the individual tests' measurements; on an empty `reference/` it says what it's waiting for rather than inventing a corpus |
+
+**Below the line for RR:** bandwidth extension for lo-fi captures
+(spectral band replication-style — fun, but the eras deliberately go
+the other way); packet-loss-style inpainting of longer gaps (the
+dropout repair's big sibling; SPADE machinery again, wants real
+fixtures first); learned room fingerprints shared between takes
+(pairs with the NN below-line noise-profile idea).
+
+---
+
 ## Sequence
 
 ```
@@ -1139,6 +1230,13 @@ CORE wave MM: ✓ all landed (2026-08-28) — the Capture Doctor. Hum
   door, --undo byte-identical, `chop --clean` (via dig) scrubbing the
   capture before the first slice. Clean audio comes back the very same
   object, every time.
+
+CORE waves PP → QQ → RR (planned 2026-08-28 from the research sweep):
+  PP the Split (median-filter mask engine: HPSS + STN, split verb,
+  dig --unearth as flagship) → QQ Time Done Right (PGHI, hybrid TSM
+  as --fit-tempo --keep-pitch / retime, mutate --morph; RIDES PP) →
+  RR the Restoration (SPADE declip, WPE deverb, the reference/
+  scorecard; standalone — can run before or after the others).
 
 CORE wave OO: ✓ all landed (2026-08-28) — the Sculptor: the Torso
   S-4's engine room, minus the knobs. The grain engine (seeded,
