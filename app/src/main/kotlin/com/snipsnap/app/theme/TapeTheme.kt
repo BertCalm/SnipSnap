@@ -55,8 +55,18 @@ object TapeFonts {
     /** Michroma — display headers and key actions. */
     val Display = FontFamily(Font(R.font.michroma))
 
-    /** Permanent Marker — handwriting on pads and cassette labels. */
-    val Marker = FontFamily(Font(R.font.permanent_marker))
+    /**
+     * Rock Salt — handwriting on pads, cassette labels and loop blocks.
+     * Matches `Type.MARKER` in `:shell`, which is the design system's name
+     * for this slot; keep the two in step, because Compose needs an
+     * `R.font` resource and cannot read the constant.
+     *
+     * The prototype exposes this as a "Look" control with four options
+     * (Permanent Marker, Gochi Hand, Caveat, Rock Salt) defaulting to Rock
+     * Salt. Only the default is vendored; `permanent_marker.ttf` stays for
+     * the day that control ships.
+     */
+    val Marker = FontFamily(Font(R.font.rock_salt))
 }
 
 /** Text styles per the handoff; sizes are dp-at-390 read as sp. */

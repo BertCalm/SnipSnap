@@ -255,8 +255,14 @@ object Type {
 
     /**
      * Rock Salt — handwriting on pads, cassette labels and loop blocks.
-     * 11–15dp. Replaced Permanent Marker; the LOOP section of the handoff
-     * still names the old face and is stale.
+     * 11–15dp. Replaced Permanent Marker.
+     *
+     * The prototype drives this through a `--marker` CSS variable whose
+     * "Look" control offers four faces and defaults to Rock Salt; the
+     * `'Permanent Marker'` seen in the artboards is that variable's CSS
+     * fallback, not the choice. `:app` vendors the matching TTF and pins
+     * `TapeFonts.Marker` to it — Compose needs an `R.font` resource and
+     * cannot read this string, so the two are kept in step by hand.
      */
     const val MARKER = "Rock Salt"
 }

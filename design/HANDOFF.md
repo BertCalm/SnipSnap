@@ -79,7 +79,7 @@ Block type tag: LOOP `#40E0E8`, PAT `#E040C8`. Muted track: everything `#40306A`
 
 **Column header** (tap = mute toggle): h24, r4, engaged = `#0A0714` fill, 1px track-colour border, glow `track@33%` 8px + inset `0 2px 6px #000`; label Silkscreen 9px in tint (muted appends " ✕").
 
-**Block cell**: flex column, grows 30–46px, r5, pad 2×3, fill `linear(180deg, #221A34 → #161020)`, border 1px `#34285A`. Contents stacked centered: type tag (Silkscreen 7px, type colour) over name (Permanent Marker 11px, tint, nowrap+clip). States — *lit* (playhead, playing, engaged): 2px type-colour border, glow 16px + inset `type@27%` 14px, name goes `#FFF`; *selected*: border `#F8A8D4` + inset ring `#E040C8`. Tap = select/inspect; tap again = pull (min 1 block per chain). "+" add slot: h24, dashed 1px `#34285A`, r5, cap 8.
+**Block cell**: flex column, grows 30–46px, r5, pad 2×3, fill `linear(180deg, #221A34 → #161020)`, border 1px `#34285A`. Contents stacked centered: type tag (Silkscreen 7px, type colour) over name (Rock Salt 11px, tint, nowrap+clip). States — *lit* (playhead, playing, engaged): 2px type-colour border, glow 16px + inset `type@27%` 14px, name goes `#FFF`; *selected*: border `#F8A8D4` + inset ring `#E040C8`. Tap = select/inspect; tap again = pull (min 1 block per chain). "+" add slot: h24, dashed 1px `#34285A`, r5, cap 8.
 
 **Transport (portrait 390)**: LCD header 40 (title cyan `#8EEEF4`, INT counter `#C8B2F8`); PLAY/BPM row h44 (BPM ±2 steppers 32×36 on `#221A34`); info strip h28 LCD (`#40E0E8` 15px, VT323); FULL CYCLE LCD + BOUNCE button h52 (oil-rim 2px, dark teal fill `linear(#0C2426 → #081418)`, cyan glow 20px @35%). Landscape 816×362: same parts, transport in top bar h30, cycle strip bottom h36; playback/mute/BPM state shared across rotation.
 
