@@ -748,6 +748,20 @@ velocity-layered and chained pads skipped **by name** — and
 capture *before* it becomes a kit, `chop --clean [--denoise]`
 (forwarded by `dig`) runs the same pipeline ahead of the first slice.
 
+### `checkup [dir]` — the reference scorecard
+
+Every capture in `reference/` (or the named dir) gets one measured
+card: hum (frequency, harmonics, level), clipping (pinned fraction,
+ceiling, runs), clicks and dropouts (or the distortion refusal, named),
+the noise floor with its verdict, the room's tail knee (handoff time
+and both slopes), and how much of the signal's energy WPE reads as
+predictable room. Every number comes from the same detectors `clean`
+trusts, and nothing is written — it measures and names, `clean`
+treats. The point is the bench: the day a phone-mic capture of real
+hardware in a real room lands in `reference/`, this is the instant
+verdict on the whole Capture Doctor; an empty folder says what it's
+waiting for rather than inventing a corpus.
+
 ### `label <root>` — run your own imprint
 
 A crate root with a `label.json` is a label. `--init NAME [--prefix

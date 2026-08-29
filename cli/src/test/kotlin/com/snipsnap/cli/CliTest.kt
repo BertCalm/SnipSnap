@@ -2602,6 +2602,41 @@ class CliTest {
     }
 
     @Test
+    fun `checkup scores every capture in the folder and invents nothing for an empty one`() {
+        val rate = 44_100
+        val refDir = File(temp, "reference")
+        refDir.mkdirs()
+
+        // Empty: it says what it's waiting for.
+        val (emptyCode, emptyOut, _) = cli("checkup", refDir.path)
+        assertEquals(0, emptyCode, emptyOut)
+        assertContains(emptyOut, "no captures yet")
+
+        // A hummy beat and a clipped tonal hit - the detectors' own numbers.
+        val base = com.snipsnap.audio.WavReader.read(writeBreak(File(temp, "cksrc2.wav"))).samples
+        val hummy = FloatArray(base.size) { i ->
+            base[i] + 0.05f * Math.sin(2.0 * Math.PI * 50.0 * i / rate).toFloat()
+        }
+        WavWriter.write(File(refDir, "hummy take.wav"), Snip(hummy, 1, rate))
+        val hit = FloatArray(rate) { i ->
+            val t = i.toDouble() / rate
+            (Math.sin(2.0 * Math.PI * 90.0 * t) * Math.exp(-4.0 * t)).toFloat().coerceIn(-0.4f, 0.4f)
+        }
+        WavWriter.write(File(refDir, "clipped take.wav"), Snip(hit, 1, rate))
+
+        val (code, stdout, _) = cli("checkup", refDir.path)
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "50 Hz")
+        assertContains(stdout, "pinned at 0.40")
+        assertContains(stdout, "nothing was written")
+        // Read-only: the captures' bytes are exactly as dropped.
+        assertTrue(
+            com.snipsnap.audio.WavReader.read(File(refDir, "hummy take.wav")).samples.size == hummy.size,
+            "checkup measures, never writes",
+        )
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")

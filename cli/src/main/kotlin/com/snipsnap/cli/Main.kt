@@ -201,6 +201,11 @@ object Cli {
         |                        outliers, DC) - --fix applies the safe
         |                        subset, bin-backed; exit 1 while findings
         |                        remain, so it scripts like a check
+        |  checkup [dir]         the reference scorecard: every capture in
+        |                        reference/ (or dir) gets one measured card
+        |                        - hum, flat-tops, clicks, floor, the room's
+        |                        knee, WPE-predictable energy - read-only,
+        |                        from the same detectors clean trusts
         |  clean <wav-or-kit>    the Capture Doctor: measured hum notched,
         |                        clicks and dropouts repaired, the noise
         |                        floor gently gated - each move gated by its
@@ -331,6 +336,7 @@ object Cli {
                 "diff" -> DiffCommand.run(args.drop(1), out)
                 "doctor" -> DoctorCommand.run(args.drop(1), out)
                 "clean" -> CleanCommand.run(args.drop(1), out)
+                "checkup" -> CheckupCommand.run(args.drop(1), out)
                 "sculpt" -> SculptCommand.run(args.drop(1), out)
                 "stretch" -> StretchCommand.run(args.drop(1), out)
                 "euclid" -> EuclidCommand.run(args.drop(1), out)
