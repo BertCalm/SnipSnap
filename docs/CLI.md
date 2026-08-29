@@ -378,7 +378,10 @@ replaced with seeded random ones** while every magnitude is kept.
 Phase carries *when*; magnitude carries *what* — throw the when away
 and a 200 ms hit becomes half a minute of evolving wash that still
 sounds like itself, with no grain artifacts and no chipmunk. `--by N`
-(2–100, default 8) sets the factor; `--freeze [--at sec]` is the same
+(2–100, default 8) sets the factor; `--clear` swaps the random phases
+for PGHI-reconstructed ones — a sine stays a narrow line instead of
+becoming the wash, the surgical stretch beside the atmospheric one;
+`--freeze [--at sec]` is the same
 move with the analysis position nailed down — one instant of the
 source held forever (`--seconds N`, default 8), defaulting to the
 source's own loudest moment when `--at` is not given. Left and right
@@ -418,6 +421,14 @@ on the Live III — audible variation at a sane amount.
 
 ### `mutate <kit-dir> <pad> --with <src>[,<src>…]` — one hit from many parents
 
+**`--morph [--amount 0..1]`** is the fourth move, the Séance's:
+both parents' magnitude spectrograms, transient-aligned, interpolated
+bin by bin at the given amount, with PGHI re-inventing the phases — a
+sound *between* the parents, not a crossfade of them (one onset, both
+voices in one hit; length and level interpolate too). Amount 0 is the
+pad, 1 is the parent, and the amount rides the recipe like every
+mutate parameter.
+
 Sound design by **recombination** — where `treat` and `era` transform a
 single sound, mutate breeds a new one. Parents are pad refs (`A03`),
 another kit's pads (`path/to/kit:B02`), or bare `.wav` files; mono
@@ -448,6 +459,21 @@ spins across the whole crate instead. Never the pad itself, named in
 the output, the spin recorded in the recipe beside the parent it
 dealt. Deterministic per (crate, seed); combines with `--splice` and
 `--split` like any parent.
+
+### `retime <wav> --to BPM` — the other tempo move
+
+Where `--fit-tempo` repitches SP-style (the revered lo-fi trade),
+`retime` changes the tempo and **not** the pitch: PGHI time-scale
+modification — the magnitude spectrogram resampled along time, phases
+reconstructed from its own gradients. The source tempo is heard from
+the material (`--from BPM` when it won't say), refused past double or
+half speed, and `chop --fit-tempo BPM --keep-pitch` does the same to
+a kit's loops. An honest engineering note recorded in the code: the
+famous Driedger hybrid (split, vocoder the notes, OLA the hits) was
+built and then *retired by measurement* — PGHI alone kept a kick's
+attack at the original's 33 ms rise while the hybrid's unaligned sum
+smeared it to 51 ms. Modern phase reconstruction ate the reason the
+hybrid existed.
 
 ### `robin <kit-dir> <pad>` — round robin, rendered
 

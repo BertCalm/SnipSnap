@@ -107,7 +107,10 @@ object Cli {
         |                        one hit from many parents: transient-aligned
         |                        stack (with a polarity check), --splice (the
         |                        pad's attack onto the parent's body, --at ms),
-        |                        or --split (pad lows + parent highs, --hz N);
+        |                        --split (pad lows + parent highs, --hz N),
+        |                        or --morph [--amount 0..1] (the sound BETWEEN
+        |                        the parents: interpolated spectra, PGHI
+        |                        phases - one onset, both voices);
         |                        parents are pad refs, kit:pad, or .wav files
         |                        (--undo restores); --roulette lets the crate
         |                        deal the parent instead: Similar's nearest

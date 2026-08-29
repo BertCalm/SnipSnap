@@ -2515,6 +2515,65 @@ class CliTest {
     }
 
     @Test
+    fun `morph conjures the sound between two parents - not a crossfade`() {
+        val rate = 44_100
+        val out = File(temp, "morphkit")
+        val wav = writeBreak(File(temp, "morphsrc.wav"))
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Morpher").first)
+        val kitDir = File(out, "Morpher")
+        val model = com.snipsnap.shell.KitBuilderModel.open(kitDir)
+        val pad = model.kit.pads.minBy { it.slot }
+        fun toneHit(hz: Double): FloatArray = FloatArray(rate) { i ->
+            val t = i.toDouble() / rate
+            (0.6 * Math.sin(2.0 * Math.PI * hz * t) * Math.exp(-5.0 * t)).toFloat()
+        }
+        WavWriter.write(File(kitDir, pad.sampleFile), Snip(toneHit(300.0), 1, rate))
+        val parent = File(temp, "morph parent.wav")
+        WavWriter.write(parent, Snip(toneHit(1200.0), 1, rate))
+        val padRef = "A%02d".format(pad.slot)
+
+        fun padMono(): FloatArray {
+            val p = KitStore.load(kitDir).pads.first { it.slot == pad.slot }
+            val s = com.snipsnap.audio.WavReader.read(File(kitDir, p.sampleFile))
+            return FloatArray(s.frameCount) { f ->
+                (0 until s.channels).sumOf { ch -> s.samples[f * s.channels + ch].toDouble() }.toFloat() / s.channels
+            }
+        }
+        fun morphTo(amount: String): FloatArray {
+            val r = cli("mutate", kitDir.path, padRef, "--morph", "--with", parent.path, "--amount", amount)
+            assertEquals(0, r.first, r.third)
+            val m = padMono()
+            val undo = cli("mutate", kitDir.path, padRef, "--undo")
+            assertEquals(0, undo.first, undo.third)
+            return m
+        }
+
+        // Amount 0 is the pad; amount 1 is the parent.
+        val at0 = morphTo("0")
+        assertTrue(tone(at0, 300.0, rate) > 5 * tone(at0, 1200.0, rate), "amount 0 stays the pad")
+        val at1 = morphTo("1")
+        assertTrue(tone(at1, 1200.0, rate) > 5 * tone(at1, 300.0, rate), "amount 1 becomes the parent")
+
+        // Halfway, BOTH parents sing in one hit - between, not either.
+        val mid = morphTo("0.5")
+        val p300 = tone(mid, 300.0, rate)
+        val p1200 = tone(mid, 1200.0, rate)
+        assertTrue(minOf(p300, p1200) > 0.2f * maxOf(p300, p1200), "both parents audible: $p300 / $p1200")
+        val onsets = com.snipsnap.audio.Transients.detect(Snip(mid, 1, rate))
+        assertTrue(onsets.size <= 1, "one hit, not a crossfade of two: ${onsets.size} onsets")
+
+        // The recipe records the mode and the amount.
+        val r = cli("mutate", kitDir.path, padRef, "--morph", "--with", parent.path, "--amount", "0.5")
+        assertEquals(0, r.first, r.third)
+        assertContains(r.second, "morphed 50% toward")
+        val recipe = KitStore.load(kitDir).pads.first { it.slot == pad.slot }
+            .recipe?.entries?.get("mutate") as? com.snipsnap.json.JsonValue.Obj
+        assertTrue(recipe?.entries?.get("mode")?.let { (it as com.snipsnap.json.JsonValue.Str).value } == "morph")
+        assertTrue(recipe?.entries?.containsKey("amount") == true, "the amount rides the recipe")
+        assertEquals(2, cli("mutate", kitDir.path, padRef, "--amount", "0.5", "--with", parent.path).first, "--amount rides on --morph")
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")

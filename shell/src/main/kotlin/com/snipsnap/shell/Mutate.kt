@@ -27,7 +27,7 @@ import java.io.File
  */
 object Mutate {
 
-    enum class Mode { STACK, SPLICE, SPLIT }
+    enum class Mode { STACK, SPLICE, SPLIT, MORPH }
 
     /** A parent sound: where it came from (for the recipe) and its audio. */
     data class Source(val label: String, val snip: Snip)
@@ -104,6 +104,8 @@ object Mutate {
         mode: Mode = Mode.STACK,
         spliceAtMs: Int = DEFAULT_SPLICE_MS,
         crossoverHz: Float = DEFAULT_CROSSOVER_HZ,
+        /** MORPH only: 0 = all pad, 1 = all parent. */
+        morphAmount: Float = 0.5f,
         /** Extra recipe fields — how the roulette records its spin. */
         extraRecipe: Map<String, JsonValue> = emptyMap(),
     ): Outcome {
@@ -113,6 +115,7 @@ object Mutate {
         }
         require(spliceAtMs in 5..2000) { "--at wants 5..2000 ms, got $spliceAtMs" }
         require(crossoverHz in 40f..8000f) { "--hz wants 40..8000, got $crossoverHz" }
+        require(morphAmount in 0f..1f) { "--amount wants 0..1, got $morphAmount" }
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
 
         val base = com.snipsnap.audio.WavReader.read(File(model.kitDir, pad.sampleFile))
@@ -125,6 +128,7 @@ object Mutate {
             Mode.STACK -> stack(baseAligned, parents, flipped)
             Mode.SPLICE -> splice(baseAligned, parents.single().snip, spliceAtMs, rate)
             Mode.SPLIT -> split(baseAligned, parents.single().snip, crossoverHz, rate)
+            Mode.MORPH -> morph(baseAligned, parents.single().snip, morphAmount, rate)
         }
 
         val recipe = JsonValue.Obj(
@@ -136,6 +140,7 @@ object Mutate {
                     ).also { r ->
                         if (mode == Mode.SPLICE) r["at"] = JsonValue.Num(spliceAtMs.toDouble())
                         if (mode == Mode.SPLIT) r["hz"] = JsonValue.Num(crossoverHz.toDouble())
+                        if (mode == Mode.MORPH) r["amount"] = JsonValue.Num(morphAmount.toDouble())
                         if (flipped.isNotEmpty()) {
                             r["flipped"] = JsonValue.Arr(flipped.map { JsonValue.Str(it) })
                         }
@@ -210,6 +215,45 @@ object Mutate {
         val out = FloatArray(frames * 2)
         for (i in lows.samples.indices) out[i] += lows.samples[i]
         for (i in top.samples.indices) out[i] += top.samples[i] - topLows.samples[i]
+        return Snip(out, 2, rate)
+    }
+
+    /**
+     * The Séance's move, done properly on the spectral door: both
+     * parents' magnitude spectrograms (transient-aligned by the caller)
+     * interpolated bin by bin at [amount], phases re-invented by
+     * [com.snipsnap.audio.Pghi] — a sound *between* the parents, not a
+     * crossfade of them. Length and level interpolate too.
+     */
+    private fun morph(base: Snip, parent: Snip, amount: Float, rate: Int): Snip {
+        fun monoMags(s: Snip): Pair<List<FloatArray>, Int> {
+            val mono = Snip(
+                FloatArray(s.frameCount) { f -> (s.samples[f * 2] + s.samples[f * 2 + 1]) / 2f },
+                1, s.sampleRate,
+            )
+            val mags = mutableListOf<FloatArray>()
+            com.snipsnap.audio.Spectral.forEachFrame(mono) { _, _, m -> mags.add(m.copyOf()) }
+            return mags to mono.frameCount
+        }
+        val (ma, la) = monoMags(base)
+        val (mb, lb) = monoMags(parent)
+        val frames = maxOf(ma.size, mb.size)
+        val silence = FloatArray(com.snipsnap.audio.Spectral.BINS)
+        val mixed = ArrayList<FloatArray>(frames)
+        for (f in 0 until frames) {
+            val a = ma.getOrElse(f) { silence }
+            val b = mb.getOrElse(f) { silence }
+            mixed.add(FloatArray(a.size) { i -> a[i] * (1f - amount) + b[i] * amount })
+        }
+        val outFrames = Math.round(la * (1f - amount) + lb * amount)
+        val morphed = com.snipsnap.audio.Pghi.invert(mixed, outFrames, rate)
+        val target = (peak(base.samples) * (1f - amount) + peak(parent.samples) * amount).coerceAtMost(0.99f)
+        val out = FloatArray(outFrames * 2)
+        for (f in 0 until outFrames) {
+            out[f * 2] = morphed.samples[f]
+            out[f * 2 + 1] = morphed.samples[f]
+        }
+        normalizeTo(out, target)
         return Snip(out, 2, rate)
     }
 
