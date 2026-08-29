@@ -2207,6 +2207,35 @@ class CliTest {
     }
 
     @Test
+    fun `stretch writes the slow-motion twin and freeze holds an instant`() {
+        val rate = 44_100
+        val src = File(temp, "stretch src.wav")
+        WavWriter.write(
+            src,
+            Snip(FloatArray(rate / 2) { i -> (0.5 * Math.sin(2.0 * Math.PI * 440.0 * i / rate)).toFloat() }, 1, rate),
+        )
+        val (code, stdout, _) = cli("stretch", src.path, "--by", "8", "--seed", "3")
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "stretched x8")
+        val twin = com.snipsnap.audio.WavReader.read(File(temp, "stretch src Stretched.wav"))
+        assertEquals(4 * rate, twin.frameCount, "eight times half a second")
+        val m = FloatArray(twin.frameCount) { f -> (twin.samples[f * 2] + twin.samples[f * 2 + 1]) / 2f }
+        assertTrue(
+            tone(m, 440.0, rate) > 5 * tone(m, 330.0, rate),
+            "the wash stays in tune",
+        )
+
+        val (fCode, fOut, _) = cli("stretch", src.path, "--freeze", "--seconds", "2", "--seed", "3")
+        assertEquals(0, fCode, fOut)
+        assertContains(fOut, "frozen at")
+        assertEquals(2 * rate, com.snipsnap.audio.WavReader.read(File(temp, "stretch src Frozen.wav")).frameCount)
+
+        assertEquals(2, cli("stretch", src.path, "--by", "8", "--freeze").first, "--by and --freeze contradict")
+        assertEquals(2, cli("stretch", src.path, "--at", "1").first, "--at rides on --freeze")
+        assertEquals(2, cli("stretch", src.path, "--by", "1").first, "factor out of range")
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")

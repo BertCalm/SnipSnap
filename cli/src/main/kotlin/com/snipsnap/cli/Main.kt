@@ -122,6 +122,13 @@ object Cli {
         |                        LOOP pads (--mode cloud|scrub|swarm,
         |                        --seconds N, --seed N; same seed, same
         |                        texture; provenance + recipe stamped)
+        |  stretch <wav>         the slow-motion wash: paulstretch spectral
+        |                        resynthesis (--by N, default 8) - a hit
+        |                        becomes an evolving texture that still
+        |                        sounds like itself; --freeze [--at sec]
+        |                        holds one instant (default: the loudest)
+        |                        forever instead; seeded, stereo, honest
+        |                        about level
         |  shape <kit-dir> <pad> pad shape as metadata: --attack/--decay/
         |                        --cutoff/--res (0..1) land in the exported
         |                        programs' own fields - the HARDWARE renders
@@ -296,6 +303,7 @@ object Cli {
                 "doctor" -> DoctorCommand.run(args.drop(1), out)
                 "clean" -> CleanCommand.run(args.drop(1), out)
                 "sculpt" -> SculptCommand.run(args.drop(1), out)
+                "stretch" -> StretchCommand.run(args.drop(1), out)
                 "art" -> ArtCommand.run(args.drop(1), out)
                 "jcard" -> JCardCommand.run(args.drop(1), out)
                 "notes" -> NotesCommand.run(args.drop(1), out)

@@ -316,6 +316,25 @@ a cloud of a quiet sound is a quiet cloud. `--seconds N` (default 8),
 kit: it previews, exports, eras, and resamples like any other — sculpt
 a texture, age it through tape, put the Answer under it.
 
+### `stretch <wav>` — the slow-motion wash
+
+Paulstretch, the honest way: big Hann windows (93 ms) analyzed along
+the source at 1/factor of the synthesis pace, every frame's **phases
+replaced with seeded random ones** while every magnitude is kept.
+Phase carries *when*; magnitude carries *what* — throw the when away
+and a 200 ms hit becomes half a minute of evolving wash that still
+sounds like itself, with no grain artifacts and no chipmunk. `--by N`
+(2–100, default 8) sets the factor; `--freeze [--at sec]` is the same
+move with the analysis position nailed down — one instant of the
+source held forever (`--seconds N`, default 8), defaulting to the
+source's own loudest moment when `--at` is not given. Left and right
+draw different phases from the same seed, so the twin is a
+decorrelated stereo field; the peak comes home to the source's own.
+Lands beside the source as "`<stem> Stretched.wav`" /
+"`<stem> Frozen.wav`" (`--out`, `--overwrite`). A kit pad is a WAV in
+a folder — point stretch straight at it, then `sculpt` or `chop` the
+result: the Sculptor's verbs compose.
+
 ### `shape <kit-dir> <pad>` — pad shape as metadata
 
 Attack, decay, filter cutoff and resonance (`--attack/--decay/
