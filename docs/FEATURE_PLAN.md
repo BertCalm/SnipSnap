@@ -1221,6 +1221,35 @@ real-world broken captures (grows in reference/ as they appear).
 
 ---
 
+## Wave TT — the Calibration (CORE)
+
+The reference capture delivered the finding the CLI existed to
+surface: chopped end to end it classified **zero kicks** — a phone
+across a room rolls off the sub, and the kick rule *requires* the sub
+(`lowRatio > 0.55`, centroid under ~130 Hz), so real kicks arrive
+gutless and file as SNARE/PERC. The fix is not loosening thresholds
+(that would wreck the synthetic truth the 863 tests pin down) but
+**context**: measure the capture's own bass reach once, and when the
+sub is provably rolled off, judge a kick by what survives the mic —
+its darkness, its shape, its single attack — at honest confidence.
+F2.3's labeled-corpus harness (reading `reference/calibration/`)
+finally gets fed.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| TT1 | `CaptureProfile` (`:audio`) — measured once from the whole capture: the share of low-band energy that survived the signal chain; provably rolled-off captures flagged with the estimated reach. `Classifier.classify(features, profile)` overload: under a rolled-off profile the bass gate can't trust `lowRatio`, so a "gutless kick" rule judges darkness (low centroid relative to what survived), low high-band share, one attack, drum-length decay — at honest sub-certain confidence. No profile → behavior byte-identical to today | CORE | M | synthetic phone-sim (DrumSynth hits high-passed like a phone mic): the kick classifies KICK with the profile and not without; snare/hat/clap/tom classifications unchanged by the profile; full-range material yields a not-rolled-off profile whose classifications match no-profile exactly; every existing classifier test untouched |
+| TT2 | The wire-through — `chop` measures the profile before slicing, prints the honest line when rolled off ("phone capture heard: sub rolled off — kicks judged by shape"), classifies with it so AutoPlace lands the kick on A01; `classify` gains nothing (one file is no context) and says so in docs | CORE | S–M | re-chop of the reference capture classifies kicks and prints the line; a full-range synthetic break chops identically to before (existing chop tests are the guard) |
+| TT3 | The corpus fed — the F2.3 harness gains a permanent phone-sim corpus (synthetic renders through the mic simulation, labeled by construction) so it no longer idles; docs/CALIBRATION.md explains the `reference/calibration/<label> NN.wav` naming so real isolated-drum captures join as they're recorded | CORE | S | the harness runs green on the phone-sim corpus with and without profile awareness asserted per label; the docs name the on-ramp; an empty real-corpus dir stays an honest skip, not a failure |
+
+**Below the line for TT:** real isolated-drum captures from the bench
+(each Live III drum alone, close-miked and room-miked — the labeled
+truth that would let thresholds be *fit* rather than reasoned); a
+`--profile` override flag; profile-aware `learn` (the Ear listening
+through the same context); per-device profiles remembered like
+pockets.
+
+---
+
 ## Sequence
 
 ```
