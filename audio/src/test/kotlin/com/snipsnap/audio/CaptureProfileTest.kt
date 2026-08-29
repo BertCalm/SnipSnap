@@ -105,13 +105,18 @@ class CaptureProfileTest {
         for ((name, hit) in listOf(
             "snare" to DrumSynth.snare(), "closedHat" to DrumSynth.closedHat(),
             "openHat" to DrumSynth.openHat(), "clap" to DrumSynth.clap(),
-            "tom" to DrumSynth.tom(), "tonal" to DrumSynth.tonal(),
+            "tom" to DrumSynth.tom(),
         )) {
             val ph = phoneSim(hit)
             val without = Classifier.classify(ph)
             val with = Classifier.classify(ph, rolled)
             assertEquals(without.drumClass, with.drumClass, "$name unchanged by the profile")
         }
+        // The sustained note is the rule's OTHER patient: dark and long,
+        // its identity also lived in the eaten sub - promoted to TONAL.
+        val phTonal = phoneSim(DrumSynth.tonal())
+        assertEquals(DrumClass.PERC, Classifier.classify(phTonal).drumClass, "blind, it shelves")
+        assertEquals(DrumClass.TONAL, Classifier.classify(phTonal, rolled).drumClass, "seen, it sings")
         // And a full-range profile changes nothing at all.
         val full = CaptureProfile.measure(beat())
         for (hit in listOf(realisticKick(), DrumSynth.snare(), DrumSynth.tom())) {

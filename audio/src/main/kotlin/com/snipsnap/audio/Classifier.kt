@@ -90,15 +90,26 @@ object Classifier {
     fun classify(features: Features, profile: CaptureProfile?): Classification {
         val base = classify(features)
         if (profile?.rolledOff != true || base.drumClass != DrumClass.PERC) return base
-        val kickish = features.centroidHz < PHONE_KICK_MAX_CENTROID_HZ &&
+        // The shared signature of a sound whose identity lived in the
+        // sub the mic ate: dark, near-tonal, not bursty. Its DECAY then
+        // says which sound it was - punchy is a kick, sustained is a
+        // note; the gap between stays honestly PERC.
+        val dark = features.centroidHz < PHONE_KICK_MAX_CENTROID_HZ &&
             features.highRatio < PHONE_KICK_MAX_HIGH_RATIO &&
-            features.flatness < PHONE_KICK_MAX_FLATNESS &&
-            features.decayMs < PHONE_KICK_MAX_DECAY_MS &&
-            features.attackBursts <= PHONE_KICK_MAX_BURSTS
-        if (!kickish) return base
+            features.flatness < PHONE_KICK_MAX_FLATNESS
+        if (!dark) return base
         val darkness = ((PHONE_KICK_MAX_CENTROID_HZ - features.centroidHz) / PHONE_KICK_MAX_CENTROID_HZ)
             .coerceIn(0f, 1f)
-        return Classification(DrumClass.KICK, 0.5f + 0.2f * darkness, features)
+        return when {
+            // The burst gate belongs to the kick alone: it tells one
+            // impact from a flam, while a sustained low note's own
+            // cycles read as "bursts" and mean nothing about it.
+            features.decayMs < PHONE_KICK_MAX_DECAY_MS && features.attackBursts <= PHONE_KICK_MAX_BURSTS ->
+                Classification(DrumClass.KICK, 0.5f + 0.2f * darkness, features)
+            features.decayMs > TONAL_DECAY_MS ->
+                Classification(DrumClass.TONAL, 0.5f + 0.15f * darkness, features)
+            else -> base
+        }
     }
 
     /**
