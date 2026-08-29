@@ -111,16 +111,21 @@ class SchemesTest {
     }
 
     @Test
-    fun `the three ink tiers descend in every scheme`() {
+    fun `the three ink tiers never invert in any scheme`() {
         for (scheme in Schemes.ALL) {
-            val tiers = listOf(scheme.ink, scheme.ink2, scheme.ink3).map { Scheme.luma(it) }
-            val descending = tiers.zipWithNext().all { (a, b) -> a >= b }
-            val ascending = tiers.zipWithNext().all { (a, b) -> a <= b }
-            assertTrue(
-                descending || ascending,
-                "${scheme.id}: ink tiers $tiers don't form a hierarchy — " +
-                    "ink2 and ink3 must step away from ink, not straddle it",
-            )
+            val ink = Scheme.luma(scheme.ink)
+            val ink2 = Scheme.luma(scheme.ink2)
+            val ink3 = Scheme.luma(scheme.ink3)
+            // Dark schemes run bright -> dim; light schemes run dim -> bright.
+            // Either direction is legal, but the tiers must not turn around
+            // mid-way, and ink3 must never step back past ink2.
+            if (Scheme.luma(scheme.gray) < 90) {
+                assertTrue(ink > ink2, "${scheme.id}: ink $ink must be brighter than ink2 $ink2")
+                assertTrue(ink3 <= ink2, "${scheme.id}: ink3 $ink3 must not be brighter than ink2 $ink2")
+            } else {
+                assertTrue(ink < ink2, "${scheme.id}: on a light scheme ink $ink must be darker than ink2 $ink2")
+                assertTrue(ink3 >= ink2, "${scheme.id}: ink3 $ink3 must not be darker than ink2 $ink2")
+            }
         }
     }
 }
