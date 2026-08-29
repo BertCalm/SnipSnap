@@ -288,7 +288,7 @@ on the retirement list anyway.
 
 ---
 
-## 3. Questions for the designer — still open
+## 3. Questions for the designer — all answered
 
 > **Note, 2026-08-29: all three questions below are closed.** See 3.1, 3.2, 3.3.
 
