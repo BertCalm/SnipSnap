@@ -827,6 +827,18 @@ class CliTest {
     }
 
     @Test
+    fun `era survives AMT 0 from the terminal - the value Eras treats as a no-op`() {
+        val wav = writeBreak(File(temp, "erz.wav"))
+        val out = File(temp, "erz-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "EraZeroCli", "--slices", "4").first)
+        val kitDir = File(out, "EraZeroCli")
+
+        val (code, stdout, stderr) = cli("era", kitDir.path, "sp1200", "--amount", "0")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "sp1200")
+    }
+
+    @Test
     fun `wear ages the kit at export time and the originals never change`() {
         val wav = writeBreak(File(temp, "wr.wav"))
         val out = File(temp, "wr-out")

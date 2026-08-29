@@ -52,8 +52,8 @@ object EraCommand {
             throw CliError("unknown era '$era' - try one of: ${Eras.names.joinToString(", ")}")
         }
         val amount = opts["--amount"]?.let {
-            it.toFloatOrNull()?.takeIf { a -> a > 0f && a <= 1f }
-                ?: throw CliError("--amount wants a number in (0, 1], got '$it'")
+            it.toFloatOrNull()?.takeIf { a -> a in 0f..1f }
+                ?: throw CliError("--amount wants a number in 0..1, got '$it'")
         } ?: 1f
 
         val aged = model.eraKit(era, amount, slots)

@@ -36,7 +36,7 @@ object TreatCommand {
         val treatment = opts.positional.getOrNull(2)
             ?: throw CliError("which character? one of: ${Treatments.names.joinToString(", ")}")
         val amount = opts["--amount"]?.let {
-            it.toFloatOrNull() ?: throw CliError("--amount wants a number in (0, 1], got '$it'")
+            it.toFloatOrNull() ?: throw CliError("--amount wants a number, got '$it'")
         } ?: 1f
 
         val pad = model.treatPad(slot, treatment, amount)
