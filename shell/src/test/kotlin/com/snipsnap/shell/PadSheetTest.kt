@@ -1,0 +1,42 @@
+package com.snipsnap.shell
+
+import com.snipsnap.synth.Eras
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class PadSheetTest {
+
+    @Test
+    fun `the four segments the design draws, NONE first`() {
+        assertEquals(listOf("NONE", "CRUSH", "TAPE", "DIRT"), PadSheet.SEGMENTS)
+    }
+
+    @Test
+    fun `every segment but NONE names a real era`() {
+        for (segment in PadSheet.SEGMENTS - PadSheet.NONE) {
+            val era = PadSheet.eraFor(segment)
+            assertTrue(
+                era in Eras.names,
+                "$segment maps to '$era', which Eras does not know: ${Eras.names}",
+            )
+        }
+    }
+
+    @Test
+    fun `NONE is the absence of an era, not an era called none`() {
+        assertNull(PadSheet.eraFor(PadSheet.NONE))
+    }
+
+    @Test
+    fun `an unknown segment is refused, not silently ignored`() {
+        assertFailsWith<IllegalArgumentException> { PadSheet.eraFor("WOBBLE") }
+    }
+
+    @Test
+    fun `the sheet opens at NONE, 35 percent`() {
+        assertEquals(0.35f, PadSheet.DEFAULT_AMOUNT)
+    }
+}

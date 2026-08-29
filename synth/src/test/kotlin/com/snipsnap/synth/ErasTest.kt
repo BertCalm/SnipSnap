@@ -113,6 +113,21 @@ class ErasTest {
         assertTrue(abs((aged.recipe.entries.getValue("amount") as JsonValue.Num).value - 0.7) < 1e-6)
 
         assertFailsWith<IllegalArgumentException> { Eras.process("victrola", src) }
-        assertFailsWith<IllegalArgumentException> { Eras.process("tape", src, amount = 0f) }
+        // amount = 0f is now a valid no-op (see "AMT zero is reachable..." below);
+        // only genuinely out-of-range amounts should still be refused.
+        assertFailsWith<IllegalArgumentException> { Eras.process("tape", src, amount = 1.5f) }
+    }
+
+    @Test
+    fun `AMT zero is reachable and leaves the audio alone`() {
+        val n = 4410
+        val s = Snip(FloatArray(n) { i -> (if (i % 8 < 4) 0.6f else -0.6f) * (1f - i.toFloat() / n) }, 1, 44_100)
+        for (era in Eras.names) {
+            val out = Eras.process(era, s, 0f)
+            assertEquals(
+                s.samples.toList(), out.samples.toList(),
+                "$era at AMT 0 must be a no-op — the pad sheet can reach zero in one tap",
+            )
+        }
     }
 }

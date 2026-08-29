@@ -44,15 +44,18 @@ object Eras {
     }
 
     fun process(name: String, snip: Snip, amount: Float = 1f): Snip {
-        require(amount > 0f && amount <= 1f) { "amount is (0, 1], got $amount" }
+        require(amount in 0f..1f) { "amount is 0..1, got $amount" }
+        require(name in names) {
+            "unknown era '$name' - try one of: ${names.joinToString(", ")}"
+        }
+        // AMT 0 is "no era", and it must be bit-exact, not merely close.
+        if (amount <= 0f) return Snip(snip.samples.copyOf(), snip.channels, snip.sampleRate)
         return when (name) {
             "sp1200" -> sp1200(snip, amount)
             "mpc60" -> mpc60(snip, amount)
             "tape" -> tape(snip, amount)
             "phone" -> phone(snip, amount)
-            else -> throw IllegalArgumentException(
-                "unknown era '$name' - try one of: ${names.joinToString(", ")}",
-            )
+            else -> throw IllegalStateException("unreachable: name checked above")
         }
     }
 

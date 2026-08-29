@@ -17,11 +17,14 @@ object Treatments {
     val names: List<String> get() = Shuffle.TREATMENTS.map { it.first }
 
     fun chain(name: String, amount: Float = 1f): FxChain {
-        require(amount > 0f && amount <= 1f) { "amount is (0, 1], got $amount" }
+        require(amount in 0f..1f) { "amount is 0..1, got $amount" }
         val base = Shuffle.TREATMENTS.firstOrNull { it.first == name }?.second
             ?: throw IllegalArgumentException(
                 "unknown treatment '$name' - try one of: ${names.joinToString(", ")}",
             )
+        // An unknown name is refused even at AMT 0 - a typo must not
+        // silently become "no treatment". Checked above, before bypass.
+        if (amount <= 0f) return FxChain()
         if (amount >= 0.999f) return base
         fun scale(params: Map<String, Float>?): Map<String, Float>? =
             params?.mapValues { (_, v) -> (v * amount).coerceIn(0f, 1f) }
@@ -39,6 +42,7 @@ object Treatments {
 
     fun apply(name: String, snip: Snip, amount: Float = 1f): Treated {
         val fx = chain(name, amount)
+        if (fx.isBypass) return Treated(snip, PadRecipe(fx = fx).toJsonValue())
         return Treated(fx.process(snip), PadRecipe(fx = fx).toJsonValue())
     }
 }
