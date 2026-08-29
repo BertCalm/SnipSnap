@@ -99,4 +99,28 @@ class SchemesTest {
         assertEquals(0x40E0E8, Schemes.OILSLICK.amber, "the amber slot is cyan in OILSLICK")
         assertEquals(0xFFB000, Schemes.OILSLICK.warn, "but the needle stays amber")
     }
+
+    @Test
+    fun `OILSLICK matches the handoff token table exactly`() {
+        val s = Schemes.OILSLICK
+        assertEquals(0xE040C8, s.accent, "accent — selection and row inset bar")
+        assertEquals(0x221A34, s.raised, "raised — button and empty-pad gradient start")
+        assertEquals(0x1A1424, s.win, "win — window body gradient start")
+        assertEquals(0x2A1050, s.deskGlow, "desk-glow — the radial behind everything")
+        assertEquals(0x584A80, s.ink3, "ink3 — third text tier")
+    }
+
+    @Test
+    fun `the three ink tiers descend in every scheme`() {
+        for (scheme in Schemes.ALL) {
+            val tiers = listOf(scheme.ink, scheme.ink2, scheme.ink3).map { Scheme.luma(it) }
+            val descending = tiers.zipWithNext().all { (a, b) -> a >= b }
+            val ascending = tiers.zipWithNext().all { (a, b) -> a <= b }
+            assertTrue(
+                descending || ascending,
+                "${scheme.id}: ink tiers $tiers don't form a hierarchy — " +
+                    "ink2 and ink3 must step away from ink, not straddle it",
+            )
+        }
+    }
 }

@@ -59,6 +59,25 @@ data class Scheme(
      * drawn with [amber] vanishes into the readouts it is supposed to cross.
      */
     val warn: Int = 0xFFB000,
+    /**
+     * Third text tier, below [ink2]. OILSLICK uses it for the dimmest
+     * chrome labels; schemes that never needed a third tier reuse [ink2].
+     */
+    val ink3: Int = ink2,
+    /** Selection: the chosen menu item, the 3px inset bar on a selected row. */
+    val accent: Int = title2,
+    /** Raised-surface gradient start (buttons, empty pads). Ends at [field]. */
+    val raised: Int = gray,
+    /** Window-body gradient start. Ends at [grayMid]. */
+    val win: Int = grayMid,
+    /**
+     * Window frame, 3px. Replaces the bevel highlight/shadow pair for
+     * schemes that don't bevel — OILSLICK draws [Schemes.OILSLICK_SWEEP]
+     * here instead of a flat colour.
+     */
+    val winFrame: Int = title2,
+    /** Centre of the radial glow behind the desk; fades to [desk1]. */
+    val deskGlow: Int = desk2,
 ) {
     /** Rec.601 luma 0..255 — used by the two-surface test and ink fallbacks. */
     companion object {
@@ -125,7 +144,7 @@ object Schemes {
         title1 = 0x5A2AE0, title2 = 0xE040C8, titleInk = 0xFFFFFF,
         desk1 = 0x0C0618, desk2 = 0x140B24,
         lcd = 0x0A0714, lcdInk = 0xC8B2F8, amber = 0x40E0E8, field = 0x161020,
-        warn = 0xFFB000,
+        warn = 0xFFB000, ink3 = 0x584A80, win = 0x1A1424, deskGlow = 0x2A1050,
     )
 
     val CLEAR = Scheme(
