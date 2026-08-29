@@ -237,6 +237,7 @@ class KitBuilderModel private constructor(
         require(pad.velocityLayers.isEmpty()) {
             "pad $slot is velocity-layered - clear the layers before treating"
         }
+        requireNotChained(pad, "treating")
         val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
         val treated = com.snipsnap.synth.Treatments.apply(treatment, original, amount)
 
@@ -245,9 +246,79 @@ class KitBuilderModel private constructor(
         return update(slot) { it.copy(recipe = treated.recipe) }
     }
 
+    /**
+     * Rewrite one pad's audio through [transform], bin-backed like every
+     * treatment — the mix doctor's fixes and future processors all use
+     * this one door. Layered pads are refused: a transform tuned on the
+     * loud zone would lie on the soft ones.
+     */
+    fun replaceAudio(
+        slot: Int,
+        recipe: com.snipsnap.json.JsonValue.Obj?,
+        transform: (Snip) -> Snip,
+    ): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.velocityLayers.isEmpty()) {
+            "pad $slot is velocity-layered - clear the layers before rewriting its audio"
+        }
+        requireNotChained(pad, "rewriting")
+        val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        val processed = transform(original)
+        require(processed.frameCount > 0) { "a rewrite must leave audio behind" }
+        moveToBin(pad.sampleFile)
+        WavWriter.write(File(kitDir, pad.sampleFile), processed)
+        return update(slot) { it.copy(recipe = recipe ?: it.recipe) }
+    }
+
+    /**
+     * Age one pad through a Time Machine era — every file it references
+     * (velocity layers included, unlike single-sample treatments: an era is
+     * whole-kit character, so a layered snare ages in all its zones).
+     * Originals go to the bin; the era recipe rides the pad.
+     */
+    fun eraPad(slot: Int, era: String, amount: Float = 1f): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        requireNotChained(pad, "aging")
+        val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
+        var recipe: com.snipsnap.json.JsonValue.Obj? = null
+        for (f in files) {
+            val original = com.snipsnap.audio.WavReader.read(File(kitDir, f))
+            val aged = com.snipsnap.synth.Eras.apply(era, original, amount)
+            moveToBin(f)
+            WavWriter.write(File(kitDir, f), aged.snip)
+            recipe = aged.recipe
+        }
+        return update(slot) { it.copy(recipe = recipe) }
+    }
+
+    /**
+     * The whole kit through one era — the Time Machine's main gesture.
+     * Returns how many pads aged. [slots] narrows it; null means every pad.
+     */
+    fun eraKit(era: String, amount: Float = 1f, slots: List<Int>? = null): Int {
+        val targets = kit.pads.map { it.slot }.filter { slots == null || it in slots }
+        require(targets.isNotEmpty()) { "no pads to age" }
+        targets.forEach { eraPad(it, era, amount) }
+        return targets.size
+    }
+
+    /** Undo an era on one pad: every file it references comes back out of the bin. */
+    fun unEraPad(slot: Int): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        requireNotChained(pad, "un-aging")
+        val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
+        var restoredAny = false
+        for (f in files) {
+            if (restoreFromBin(f) != null) restoredAny = true
+        }
+        require(restoredAny) { "nothing to restore for pad $slot - the bin holds no earlier take of it" }
+        return update(slot) { it.copy(recipe = null) }
+    }
+
     /** Undo the last treatment: the previous audio comes back out of the bin. */
     fun untreatPad(slot: Int): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        requireNotChained(pad, "un-treating")
         restoreFromBin(pad.sampleFile)
             ?: throw IllegalArgumentException("nothing to restore for pad $slot - the bin holds no earlier take of it")
         return update(slot) { it.copy(recipe = null) }
@@ -262,12 +333,57 @@ class KitBuilderModel private constructor(
         return cleared
     }
 
+    // ---------- the wear ledger ----------
+
+    /**
+     * Opt the kit into aging. An existing ledger keeps its mileage — the
+     * tape remembers even while the deck was off. [k] retunes the curve
+     * when given; null keeps what the ledger has.
+     */
+    fun enableWear(k: Double? = null) {
+        kit = kit.copy(
+            wear = kit.wear?.copy(enabled = true, k = k ?: kit.wear!!.k)
+                ?: com.snipsnap.kit.WearLedger(k = k ?: com.snipsnap.kit.WearLedger.DEFAULT_K),
+        )
+        dirty = true
+    }
+
+    /** Aging off; the ledger (and its mileage) is kept, just not applied. */
+    fun disableWear() {
+        val wear = kit.wear ?: return
+        kit = kit.copy(wear = wear.copy(enabled = false))
+        dirty = true
+    }
+
+    /** Wipe the mileage — and because wear never rewrites audio, that IS a new tape. */
+    fun resetWear() {
+        val wear = kit.wear ?: return
+        kit = kit.copy(wear = wear.copy(mileage = 0.0))
+        dirty = true
+    }
+
+    /** The app's play hook: every pad hit or preview spin logs mileage. */
+    fun recordPlays(count: Int = 1) {
+        require(count > 0) { "plays must be positive, got $count" }
+        val wear = kit.wear?.takeIf { it.enabled } ?: return
+        kit = kit.copy(wear = wear.copy(mileage = wear.mileage + count))
+        dirty = true
+    }
+
     /**
      * Write `kit.json`. The moment the folder and the model agree again.
      * The outgoing `kit.json` is archived as a take first — every save is
-     * a point you can roll back to.
+     * a point you can roll back to. A save that persists real edits is a
+     * pass of the tape too: when the ledger is on, it accrues a mile.
+     * [accrueWear] false is for ledger management itself — resetting the
+     * mileage must not put the first mile straight back on.
      */
-    fun save(): File {
+    fun save(accrueWear: Boolean = true): File {
+        if (accrueWear && dirty) {
+            kit.wear?.takeIf { it.enabled }?.let {
+                kit = kit.copy(wear = it.copy(mileage = it.mileage + 1))
+            }
+        }
         archiveTake()
         val file = KitStore.save(kit, kitDir)
         dirty = false
@@ -276,10 +392,21 @@ class KitBuilderModel private constructor(
 
     // ---------- takes ----------
 
-    /** Archived takes, oldest first. */
+    /**
+     * Archived takes, oldest first. A take that won't parse — a process
+     * killed mid-archive leaves exactly that — is skipped, not surfaced: a
+     * torn entry must never break the history or a rollback.
+     */
     fun takes(): List<File> =
         File(kitDir, TAKES_DIR).listFiles { f: File -> TAKE_NAME.matches(f.name) }
-            ?.sortedBy { it.name } ?: emptyList()
+            ?.sortedBy { it.name }
+            ?.filter {
+                try {
+                    KitStore.read(it); true
+                } catch (e: Exception) {
+                    false
+                }
+            } ?: emptyList()
 
     /**
      * Roll back to an archived take. Samples the take references that were
@@ -305,7 +432,7 @@ class KitBuilderModel private constructor(
         if (!current.isFile || !dirty) return
         val takesDir = File(kitDir, TAKES_DIR).apply { mkdirs() }
         val next = (takes().lastOrNull()?.let { TAKE_NAME.find(it.name)!!.groupValues[1].toInt() } ?: 0) + 1
-        current.copyTo(File(takesDir, "take_%03d.json".format(next)))
+        com.snipsnap.kit.AtomicFile.writeBytes(File(takesDir, "take_%03d.json".format(next)), current.readBytes())
         // Rotate: the cap outlasts any honest session; oldest go first.
         takes().dropLast(MAX_TAKES).forEach { it.delete() }
     }
@@ -349,6 +476,17 @@ class KitBuilderModel private constructor(
 
     /** The kit-name easter egg, for the rename dialog to surface. */
     fun nameResponse(proposed: String): String? = Copy.kitNameResponse(proposed)
+
+    /**
+     * A chain pad's slice boundaries index into its WAV frame-for-frame;
+     * any rewrite (or restore) that isn't the robin's own would orphan
+     * them. One gate for every audio door.
+     */
+    private fun requireNotChained(pad: KitPad, doing: String) {
+        require(pad.chain == null) {
+            "pad ${pad.slot} is a round-robin chain - `robin --undo` before $doing it"
+        }
+    }
 
     private fun classCount(dc: DrumClass): Int = kit.pads.count { it.drumClass == dc }
 

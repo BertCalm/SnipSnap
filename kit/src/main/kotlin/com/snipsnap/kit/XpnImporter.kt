@@ -4,6 +4,7 @@ import com.snipsnap.audio.DrumClass
 import java.io.File
 import java.io.IOException
 import java.util.zip.ZipFile
+import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Reads an `.xpn` archive back into a kit folder — the receive half of
@@ -33,35 +34,87 @@ object XpnImporter {
         val programEntry: String,
     )
 
+    /** What a whole multi-program archive (a pack) yielded. */
+    data class AllResult(
+        val kits: List<ImportResult>,
+        /** Program entry name to the reason it was skipped. */
+        val skipped: List<Pair<String, String>>,
+    )
+
     fun import(xpnFile: File, destRoot: File, overwrite: Boolean = false): ImportResult {
         require(xpnFile.isFile) { "no such file: $xpnFile" }
         ZipFile(xpnFile).use { zip ->
             val entries = zip.entries().toList().filter { !it.isDirectory }
-
-            val programEntry = entries
-                .filter { it.name.endsWith(".xpm", ignoreCase = true) && !inPreviews(it.name) }
-                .sortedBy { if (it.name.contains("Programs/")) 0 else 1 }
-                .firstOrNull()
+            val programEntry = programEntries(entries).firstOrNull()
                 ?: throw IllegalArgumentException("no .xpm program inside $xpnFile")
+            return importProgram(zip, entries, programEntry, xpnFile, destRoot, overwrite)
+        }
+    }
 
-            val xml = zip.getInputStream(programEntry).readBytes().toString(Charsets.UTF_8)
-            require(!Regex("<Program\\s+type=\"Keygroup\"").containsMatchIn(xml)) {
+    /**
+     * Every drum program in the archive becomes its own kit folder — the
+     * receive half of a multi-kit pack. Programs that refuse (keygroups,
+     * missing samples) are skipped and named, not fatal.
+     */
+    fun importAll(xpnFile: File, destRoot: File, overwrite: Boolean = false): AllResult {
+        require(xpnFile.isFile) { "no such file: $xpnFile" }
+        ZipFile(xpnFile).use { zip ->
+            val entries = zip.entries().toList().filter { !it.isDirectory }
+            val programs = programEntries(entries)
+            require(programs.isNotEmpty()) { "no .xpm program inside $xpnFile" }
+            val kits = mutableListOf<ImportResult>()
+            val skipped = mutableListOf<Pair<String, String>>()
+            for (program in programs) {
+                try {
+                    kits += importProgram(zip, entries, program, xpnFile, destRoot, overwrite)
+                } catch (e: IllegalArgumentException) {
+                    skipped += program.name to (e.message ?: "refused")
+                }
+            }
+            return AllResult(kits, skipped)
+        }
+    }
+
+    private fun programEntries(entries: List<java.util.zip.ZipEntry>) = entries
+        .filter { it.name.endsWith(".xpm", ignoreCase = true) && !inPreviews(it.name) }
+        .sortedWith(compareBy({ if (it.name.contains("Programs/")) 0 else 1 }, { it.name }))
+
+    private fun importProgram(
+        zip: ZipFile,
+        entries: List<java.util.zip.ZipEntry>,
+        programEntry: java.util.zip.ZipEntry,
+        xpnFile: File,
+        destRoot: File,
+        overwrite: Boolean,
+    ): ImportResult {
+        run {
+            val xml = zip.getInputStream(programEntry).use {
+                com.snipsnap.mpc3.LimitedRead.bytes(it, what = "program ${programEntry.name}")
+            }.toString(Charsets.UTF_8)
+            // A real DOM parse, not a regex: attribute order, extra attributes,
+            // whitespace, comments, CDATA and numeric entities are all handled,
+            // where the old pattern-matcher silently dropped pads it couldn't
+            // shape-match. Parse refusal (not XML at all) is a typed reason.
+            val program = try {
+                parseProgram(xml)
+            } catch (e: Exception) {
+                if (e is IllegalArgumentException) throw e
+                throw IllegalArgumentException("'${programEntry.name}' isn't a readable MPC program: ${e.message}")
+            }
+            require(!program.isKeygroup) {
                 "'${programEntry.name}' is a keygroup program - only drum programs import as kits"
             }
 
-            val programName = Regex("<ProgramName>(.*?)</ProgramName>")
-                .find(xml)?.groupValues?.get(1)?.let(::xmlUnescape)
-            val kitName = (programName?.takeIf { Names.isMpcSafe(it) })
+            val kitName = (program.name?.takeIf { Names.isMpcSafe(it) })
                 ?: Names.sanitizeStem(File(programEntry.name).nameWithoutExtension)
 
-            val instruments = parseInstruments(xml)
+            val instruments = program.instruments
             require(instruments.isNotEmpty()) { "'${programEntry.name}' has no pads with samples" }
 
             // Base detection: a number-0 instrument anywhere in the file
             // (sampled or empty) marks a 0-based program — what we write,
-            // hardware-verified; otherwise vendor 1-based. Checked against
-            // the raw XML so an empty A01 can't disguise a 0-based file.
-            val zeroBased = INSTRUMENT_NUMBER.findAll(xml).any { it.groupValues[1] == "0" }
+            // hardware-verified; otherwise vendor 1-based.
+            val zeroBased = program.zeroBased
 
             // Samples resolve by bare stem, case-insensitive, anywhere.
             val wavByStem = HashMap<String, java.util.zip.ZipEntry>()
@@ -70,6 +123,8 @@ object XpnImporter {
                 wavByStem.putIfAbsent(File(e.name).nameWithoutExtension.lowercase(), e)
             }
 
+            // Names were made safe basenames at parse time; SafePath.child is
+            // the enforced invariant on the WAVs we write.
             val referenced = instruments.flatMap { it.layers.map { l -> l.sampleName } }.distinct()
             val missing = referenced.filter { wavByStem[it.lowercase()] == null }
             require(missing.isEmpty()) {
@@ -85,7 +140,9 @@ object XpnImporter {
             for (stem in referenced) {
                 val entry = wavByStem.getValue(stem.lowercase())
                 zip.getInputStream(entry).use { src ->
-                    File(destDir, "$stem.wav").outputStream().use { src.copyTo(it) }
+                    SafePath.child(destDir, "$stem.wav").outputStream().use {
+                        com.snipsnap.mpc3.LimitedRead.copy(src, it, what = "sample $stem.wav")
+                    }
                 }
             }
 
@@ -105,6 +162,10 @@ object XpnImporter {
                     tuneFine = inst.tuneFine.coerceIn(-100, 100),
                     muteGroup = inst.muteGroup.coerceIn(0, 32),
                     oneShot = inst.oneShot,
+                    attack = inst.attack,
+                    decay = inst.decay,
+                    cutoff = inst.cutoff,
+                    resonance = inst.resonance,
                     source = mapOf("importedFrom" to xpnFile.name),
                     velocityLayers = if (ordered.size < 2) emptyList() else {
                         ordered.map { KitLayer("${it.sampleName}.wav", it.velStart, it.velEnd) }
@@ -132,49 +193,126 @@ object XpnImporter {
         val tuneFine: Int,
         val muteGroup: Int,
         val oneShot: Boolean,
+        /** Shape fields, already default-collapsed to null (see [shapeOrNull]). */
+        val attack: Float?,
+        val decay: Float?,
+        val cutoff: Float?,
+        val resonance: Float?,
     )
 
-    private val INSTRUMENT = Regex("<Instrument number=\"(\\d+)\">([\\s\\S]*?)</Instrument>")
-    private val INSTRUMENT_NUMBER = Regex("<Instrument number=\"(\\d+)\">")
-    private val LAYER = Regex("<Layer number=\"\\d+\">([\\s\\S]*?)</Layer>")
+    private data class ParsedProgram(
+        val isKeygroup: Boolean,
+        val name: String?,
+        val instruments: List<ParsedInstrument>,
+        val zeroBased: Boolean,
+    )
 
-    private fun parseInstruments(xml: String): List<ParsedInstrument> =
-        INSTRUMENT.findAll(xml).mapNotNull { m ->
-            val body = m.groupValues[2]
-            val layers = LAYER.findAll(body).mapNotNull { lm ->
-                val lb = lm.groupValues[1]
-                val name = tag(lb, "SampleName")?.let(::xmlUnescape)?.trim()
-                if (name.isNullOrEmpty()) return@mapNotNull null
+    /**
+     * The `.xpm` program, parsed as XML rather than pattern-matched. A DOM
+     * parse is immune to the things a regex silently mishandles — attribute
+     * order and extras, insignificant whitespace, comments, CDATA sections —
+     * and resolves character entities (named *and* numeric) for free. The
+     * factory disables DOCTYPE, so a hostile program can't mount an XXE or
+     * billion-laughs attack through the parser.
+     */
+    private fun parseProgram(xml: String): ParsedProgram {
+        val dbf = DocumentBuilderFactory.newInstance().apply {
+            try {
+                setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+            } catch (_: Exception) {
+            }
+            isExpandEntityReferences = false
+            isNamespaceAware = false
+        }
+        // An XML declaration must sit at byte zero; a BOM or leading
+        // whitespace (both seen in real files) would otherwise make the
+        // parser reject the whole document. Strip them first.
+        val cleaned = xml.removePrefix("﻿").trimStart()
+        val doc = dbf.newDocumentBuilder()
+            .parse(org.xml.sax.InputSource(java.io.StringReader(cleaned)))
+        doc.documentElement.normalize()
+
+        val programEl = doc.getElementsByTagName("Program").item(0) as? org.w3c.dom.Element
+        val isKeygroup = programEl?.getAttribute("type")?.equals("Keygroup", ignoreCase = true) == true
+
+        val name = firstText(doc.documentElement, "ProgramName")?.trim()?.ifBlank { null }
+
+        val instrumentEls = elements(doc, "Instrument")
+        val zeroBased = instrumentEls.any { it.getAttribute("number").trim() == "0" }
+
+        val instruments = instrumentEls.mapNotNull { inst ->
+            val number = inst.getAttribute("number").trim().toIntOrNull() ?: return@mapNotNull null
+            val layers = childElements(inst, "Layer").mapNotNull { layer ->
+                val raw = firstText(layer, "SampleName")?.trim()
+                if (raw.isNullOrEmpty()) return@mapNotNull null
                 ParsedLayer(
-                    // Bare names are the rule, but strip a path if a
-                    // nonconforming archive carries one anyway.
-                    sampleName = File(name.replace('\\', '/')).nameWithoutExtension,
-                    velStart = tag(lb, "VelStart")?.toIntOrNull() ?: 0,
-                    velEnd = tag(lb, "VelEnd")?.toIntOrNull() ?: 127,
+                    // Bare names are the rule; a legit subpath flattens, a
+                    // traversal is refused (SafePath) - untrusted input.
+                    sampleName = SafePath.basename(raw).substringBeforeLast('.'),
+                    velStart = firstText(layer, "VelStart")?.trim()?.toIntOrNull() ?: 0,
+                    velEnd = firstText(layer, "VelEnd")?.trim()?.toIntOrNull() ?: 127,
                 )
-            }.toList()
+            }
             if (layers.isEmpty()) return@mapNotNull null
             ParsedInstrument(
-                number = m.groupValues[1].toInt(),
+                number = number,
                 layers = layers,
-                volume = tag(body, "Volume")?.toFloatOrNull() ?: 0.707946f,
-                pan = tag(body, "Pan")?.toFloatOrNull() ?: 0.5f,
-                tuneCoarse = tag(body, "TuneCoarse")?.toIntOrNull() ?: 0,
-                tuneFine = tag(body, "TuneFine")?.toIntOrNull() ?: 0,
-                muteGroup = tag(body, "MuteGroup")?.toIntOrNull() ?: 0,
-                oneShot = tag(body, "OneShot")?.equals("False", ignoreCase = true) != true,
+                volume = directText(inst, "Volume")?.toFloatOrNull() ?: 0.707946f,
+                pan = directText(inst, "Pan")?.toFloatOrNull() ?: 0.5f,
+                tuneCoarse = directText(inst, "TuneCoarse")?.toIntOrNull() ?: 0,
+                tuneFine = directText(inst, "TuneFine")?.toIntOrNull() ?: 0,
+                muteGroup = directText(inst, "MuteGroup")?.toIntOrNull() ?: 0,
+                oneShot = directText(inst, "OneShot")?.equals("False", ignoreCase = true) != true,
+                attack = shapeOrNull(directText(inst, "VolumeAttack"), default = 0f),
+                decay = shapeOrNull(directText(inst, "VolumeDecay"), default = 0.047244f),
+                cutoff = shapeOrNull(directText(inst, "Cutoff"), default = 1f),
+                resonance = shapeOrNull(directText(inst, "Resonance"), default = 0f),
             )
-        }.toList()
+        }
+        return ParsedProgram(isKeygroup, name, instruments, zeroBased)
+    }
 
-    /** First occurrence of `<name>…</name>` in [body], or null. */
-    private fun tag(body: String, name: String): String? =
-        Regex("<$name>(.*?)</$name>").find(body)?.groupValues?.get(1)
+    /**
+     * A shape field reads back as null when it carries the format's own
+     * default - "unshaped" and "default-shaped" are the same pad, and
+     * keeping them null keeps re-exports byte-identical.
+     */
+    private fun shapeOrNull(text: String?, default: Float): Float? {
+        val v = text?.toFloatOrNull() ?: return null
+        if (kotlin.math.abs(v - default) < 1e-4f) return null
+        return v.coerceIn(0f, 1f)
+    }
+
+    // ---- DOM helpers -------------------------------------------------------
+
+    private fun elements(doc: org.w3c.dom.Document, tag: String): List<org.w3c.dom.Element> {
+        val nl = doc.getElementsByTagName(tag)
+        return (0 until nl.length).mapNotNull { nl.item(it) as? org.w3c.dom.Element }
+    }
+
+    /** All descendant elements of [tag] under [parent]. */
+    private fun childElements(parent: org.w3c.dom.Element, tag: String): List<org.w3c.dom.Element> {
+        val nl = parent.getElementsByTagName(tag)
+        return (0 until nl.length).mapNotNull { nl.item(it) as? org.w3c.dom.Element }
+    }
+
+    /** Text of the first descendant [tag] under [parent], entities resolved. */
+    private fun firstText(parent: org.w3c.dom.Element, tag: String): String? =
+        (parent.getElementsByTagName(tag).item(0) as? org.w3c.dom.Element)?.textContent
+
+    /**
+     * Text of a **direct** child [tag] — so an instrument's own `<Volume>`
+     * is never confused with a `<Volume>` nested deeper (a layer's, say).
+     */
+    private fun directText(parent: org.w3c.dom.Element, tag: String): String? {
+        val kids = parent.childNodes
+        for (i in 0 until kids.length) {
+            val n = kids.item(i)
+            if (n is org.w3c.dom.Element && n.tagName == tag) return n.textContent?.trim()
+        }
+        return null
+    }
 
     private fun inPreviews(path: String): Boolean =
         path.split('/', '\\').any { it.equals("[Previews]", ignoreCase = true) }
-
-    private fun xmlUnescape(s: String): String = s
-        .replace("&lt;", "<").replace("&gt;", ">")
-        .replace("&quot;", "\"").replace("&apos;", "'")
-        .replace("&amp;", "&")
 }

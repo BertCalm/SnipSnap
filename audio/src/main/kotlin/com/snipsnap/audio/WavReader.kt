@@ -122,7 +122,11 @@ object WavReader {
         for (i in out.indices) {
             val at = dataAt + i * bytesPerSample
             out[i] = when {
-                format == FORMAT_FLOAT -> Float.fromBits(leInt(bytes, at))
+                // Float WAVs are the one format that can carry NaN or +-Inf -
+                // a corrupt or hostile file, or a decoder that emitted them.
+                // A non-finite sample poisons every downstream sum, peak and
+                // normalization, so it becomes silence right here at the door.
+                format == FORMAT_FLOAT -> Float.fromBits(leInt(bytes, at)).let { if (it.isFinite()) it else 0f }
                 bits == 8 -> ((bytes[at].toInt() and 0xFF) - 128) / 128f
                 bits == 16 -> leShort(bytes, at).toShort() / 32768f
                 bits == 24 -> le24(bytes, at) / 8_388_608f

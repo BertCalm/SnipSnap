@@ -479,13 +479,32 @@ assignments, pad-perform settings, 32 empty song slots) are the DD1 Chamber
 project's own defaults, carried verbatim as a resource skeleton with the
 content-specific parts scrubbed — verbatim beats reconstruction.
 
-The first drum track's clip becomes `sequences[0]`: notes ride in
-`trackClipMaps` keyed by track name (every track mapped, empty clips on the
-rest), the project's tracks keep their own `sharedClipMap` empty, and the
-sequence clip values omit `midiBankAndProgramNumber` — all exactly as the
-real project does. `Mpc3ProjectWriterTest` guards key paths against the
-project corpus, with `tracks[*]` paths also legitimised by the track corpus
-under the hoisting equivalence.
+Drum clips become the project's **sequences** (probed 2026-08-25 for the
+multi-sequence work): `data.sequences` is a keyed list of
+`{key: N, value: sequence}` entries — key 0-based, `data.currentSequence`
+picks by key — the same list idiom as `sharedClipMap`'s keys 1..4. Each
+sequence value carries `version 5`, its own `name` ("Sequence 01" in the
+harvested project), `bpm`, `lengthBars` + `lengthPulses`, loop bounds in
+both units, a `timeSignatureTrack`, six empty `locators`, an empty
+`seqEventList` (length INT64_MAX), and `trackClipMaps`: an outer
+single-element list wrapping a map keyed by **track name** — every track
+mapped, the groove's notes on the content track, empty clips on the
+mixer-infrastructure tracks (`Out 1/2`, `Out 3/4`, `Submix 1`). Sequence
+clip values carry `startPulses`/`endPulses`/`loop`/`legato`/`launch`/
+`colour`/`perClipParameterValues` and omit `midiBankAndProgramNumber`.
+`data.songs` is 32 `{name: "(unnamed)", ignoreTempo, items: []}` slots.
+
+Our writer generalises that shape: sequence *k* holds every drum track's
+*k*-th clip, so a kit's four groove variations arrive as four named,
+switchable sequences (`MAX_SEQUENCES` caps at 32, far under the
+hardware's 128). One caveat the corpus can't retire: the harvested
+project carries a single sequence, so "several entries in the keyed
+list" rests on the list idiom plus the hardware bench (AA1.3), not on a
+multi-sequence golden file — when one lands, `snipsnap diff` closes the
+question. `Mpc3ProjectWriterTest` guards key paths against the project
+corpus, with `tracks[*]` paths also legitimised by the track corpus under
+the hoisting equivalence, and runs the same guard through `MpcDiff` for
+the multi-sequence payload.
 
 `testkit/SnipSnap Session.xpj` is the acceptance artifact
 (`./gradlew :synth:generateSessionProject`): the factory kit, all four S5
@@ -629,6 +648,42 @@ splits every zone eight ways at `111–127 / 95–110 / 79–94 / 64–78 / 48�
 So the **8 layer slots exist for 8-way velocity switching.** Round-robin (the
 Ambient Box pattern, identical ranges differentiated by `SliceIncrement`) is the
 same slots used a different way, not a separate mechanism.
+
+### The velocity × round-robin grid — the PSK scheme, decoded
+
+`Kit-PSK 009 Hip Hop Kit.xtd` (saved by MPC 3.9.0.31) combines both uses
+of the slots into the full grid, and a 2026-08-28 probe of all 16 pads
+pinned the geometry exactly:
+
+- **One chain WAV per pad** — every layer's `sampleName` is the same
+  `Chain-…` file; the takes are concatenated inside it.
+- **8 layers, loudest first** (the standard convention: L0 = `122–127`
+  down to L7 = `0–16`), tiling `0..127`.
+- **The base `sliceIndex` grades with intensity**: the softest zone
+  anchors at slice 0 and the anchor *rises* with velocity — L7→0, L6→1,
+  L5→2, L4→3, L3→4, L2→5, L1→6, L0→8 on a typical pad. The chain is a
+  dynamics-graded sequence of takes, soft→hard, and each zone taps in at
+  its intensity point.
+- **Per-zone robin**: every layer has `sliceIncrement 1` and
+  `sliceCycleLength` 2–4 (mostly 3; the top zone often 4), so each hit
+  steps to the next take near the zone's anchor.
+- **One `sliceIncrementRngSeed` per pad**, shared by all 8 layers (a
+  6-digit value, different per pad).
+- **`sliceInfo` is NOT a per-slice window in Akai's writing**: on every
+  pad the four loud layers carry `Start=0, End=<full chain>` while the
+  four soft layers window roughly the last 12% of the chain. Whatever
+  the firmware does with that, the per-slice boundaries must come from
+  the slice map embedded in the chain WAV (see HH1.4 — not in the
+  `.xtd`).
+
+Adjacent zones' cycle windows overlap (base 4 cycling 3 reaches into
+base 5's ground), which suggests the firmware treats
+`[base, base+cycle)` as a window over shared takes. Our writers use
+non-overlapping windows — a stricter instance of the same encoding —
+and write each layer's `sliceInfo` as the zone's base-take window, so
+firmware without the slice map degrades to honest 4-way velocity
+switching. Our grids cap at 4 zones: the MPC 2 `.xpm` has 4 layer
+slots, and 4 keeps every zone representable on both generations.
 
 ### Synth section
 

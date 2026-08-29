@@ -6,6 +6,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import java.io.File
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -25,6 +26,10 @@ object KitPreview {
     const val RATE = 44_100
     const val DEFAULT_BPM = 92f
 
+    /** A preview clamps tempo to a musical range, so frame math can't overflow. */
+    const val MIN_BPM = 20f
+    const val MAX_BPM = 400f
+
     /** Ring-out tail after the last bar, seconds. */
     private const val TAIL_SEC = 0.6f
 
@@ -39,7 +44,11 @@ object KitPreview {
     ): Snip {
         require(kit.pads.isNotEmpty()) { "an empty kit has nothing to preview" }
         val groove = clip ?: GrooveStore.load(kitDir).firstOrNull() ?: defaultPattern(kit)
-        val bpm = tempoBpm ?: kit.tempoBpm ?: DEFAULT_BPM
+        // kit.tempoBpm is only validated >0 <1000, so a hostile or nonsense
+        // 0.001 would blow framesPerPulse up until the frame math overflows to
+        // a negative array size. A preview clamps to a musical range - it is
+        // cosmetic, not the place to honour an impossible tempo.
+        val bpm = (tempoBpm ?: kit.tempoBpm ?: DEFAULT_BPM).coerceIn(MIN_BPM, MAX_BPM)
         val framesPerPulse = 60.0 / bpm * RATE / 960.0
 
         data class Voice(
@@ -49,14 +58,37 @@ object KitPreview {
             val pan: Float,
             val muteGroup: Int,
             var end: Int,
+            /** Pad shape, approximated in the render (see below). Null = none. */
+            val attack: Float? = null,
+            val decay: Float? = null,
         )
 
         val cache = HashMap<String, Snip>()
         val voices = mutableListOf<Voice>()
+        // Chain pads step per hit, so the preview counts them - per zone
+        // lane on a grid, so each zone cycles its own takes independently.
+        val hitsByLane = HashMap<Int, Int>()
         for (note in groove.notes.sortedBy { it.timePulses }) {
             val slot = note.note - 36 + 1
             val pad = kit.pad(slot) ?: continue
-            val snip = cache.getOrPut(pad.sampleFile) { WavReader.read(File(kitDir, pad.sampleFile)) }
+            val whole = cache.getOrPut(pad.sampleFile) { WavReader.read(File(kitDir, pad.sampleFile)) }
+            // Slice Motion, audible before the card: velocity picks the
+            // zone (grids grade soft->hard), then hit k in that lane plays
+            // slice (base + k mod cycle), same as the hardware's increment.
+            val snip = pad.chain?.let { c ->
+                val zone = c.zoneFor((note.velocity * 127).roundToInt().coerceIn(0, 127))
+                val base = zone?.baseSlice ?: 0
+                val cycle = zone?.cycle ?: c.cycle
+                val hit = hitsByLane.merge(slot * 1000 + base, 1, Int::plus)!! - 1
+                val w = c.window(base + hit % cycle, whole.frameCount.toLong())
+                val from = w.first.toInt().coerceIn(0, whole.frameCount)
+                val to = (w.last + 1).toInt().coerceIn(from, whole.frameCount)
+                Snip(
+                    whole.samples.copyOfRange(from * whole.channels, to * whole.channels),
+                    whole.channels,
+                    whole.sampleRate,
+                )
+            } ?: whole
             val start = (note.timePulses * framesPerPulse).roundToInt()
             val voice = Voice(
                 start = start,
@@ -65,6 +97,8 @@ object KitPreview {
                 pan = pad.pan,
                 muteGroup = pad.muteGroup,
                 end = start + snip.frameCount,
+                attack = pad.attack,
+                decay = pad.decay,
             )
             if (pad.muteGroup != 0) {
                 // The kit rule, honoured in the render: a new voice in the
@@ -85,14 +119,27 @@ object KitPreview {
             // Equal-power pan.
             val left = sqrt(1.0 - v.pan.toDouble()).toFloat() * v.gain
             val right = sqrt(v.pan.toDouble()).toFloat() * v.gain
+            // The pad shape, approximated so a tighten is audible before
+            // the card: attack ramps in over up to 0.4s; a decay of d fades
+            // the voice out by d x its own length. The hardware's exact
+            // envelope curves are its own; this render is honest about
+            // being a preview.
+            val attackFrames = v.attack?.let { (it * 0.4f * RATE).toInt() } ?: 0
+            val decayEnd = v.decay?.let { max(1, (it * v.samples.frameCount).toInt()) } ?: Int.MAX_VALUE
             for (i in 0 until frames) {
                 val at = v.start + i
                 if (at >= totalFrames) break
                 // Choke fade: the last CHOKE_FADE frames ramp out.
-                val fade = if (v.end - v.start < v.samples.frameCount && i >= frames - CHOKE_FADE) {
+                var fade = if (v.end - v.start < v.samples.frameCount && i >= frames - CHOKE_FADE) {
                     (frames - i).toFloat() / CHOKE_FADE
                 } else {
                     1f
+                }
+                if (i < attackFrames) fade *= i.toFloat() / attackFrames
+                if (i >= decayEnd) break
+                if (decayEnd != Int.MAX_VALUE) {
+                    // Linear fade across the shaped length - dies at decayEnd.
+                    fade *= 1f - i.toFloat() / decayEnd
                 }
                 val s = sampleMono(v.samples, i) * fade
                 out[at * 2] += s * left

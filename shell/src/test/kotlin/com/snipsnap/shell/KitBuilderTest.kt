@@ -222,6 +222,55 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `an era ages the whole kit, layers included, and undo restores it`() {
+        val dir = File(temp, "EraKit")
+        val m = KitBuilderModel.create("EraKit", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.addGhostLayers(2) // a layered pad: every zone must age
+        m.save()
+        val originals = m.kit.pads.flatMap { p ->
+            (listOf(p.sampleFile) + p.velocityLayers.map { it.sampleFile }).distinct()
+        }.associateWith { File(dir, it).readBytes() }
+
+        val aged = m.eraKit("sp1200")
+        m.save()
+        assertEquals(2, aged)
+        for ((f, bytes) in originals) {
+            assertFalse(File(dir, f).readBytes().contentEquals(bytes), "$f aged")
+        }
+        assertTrue(m.kit.pads.all { it.recipe != null }, "era recipes recorded")
+
+        // Undo brings the previous audio back out of the bin, byte-identical.
+        m.unEraPad(1)
+        m.save()
+        assertTrue(m.pad(1)!!.recipe == null, "pad 1 recipe cleared on undo")
+        val restored = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        assertTrue(
+            restored.contentEquals(originals.getValue(m.pad(1)!!.sampleFile)),
+            "pad 1 audio restored byte-identical",
+        )
+    }
+
+    @Test
+    fun `a torn take from a killed archive is skipped, not surfaced`() {
+        val dir = File(temp, "TornTakes")
+        val m = KitBuilderModel.create("TornTakes", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        assertEquals(2, m.takes().size)
+
+        // A process killed mid-archive leaves a half-written take file.
+        File(dir, ".takes/take_003.json").writeText("{\"name\": \"Torn\", \"pads\": [{\"slo")
+        assertEquals(2, m.takes().size, "the torn take is skipped, the good ones remain")
+        // And a rollback still works, unbothered by the garbage beside them.
+        m.restoreTake(m.takes().last())
+        assertEquals(1, m.kit.pads.size)
+    }
+
+    @Test
     fun `the bin keeps deletes 30 days and takes pull samples back out`() {
         val dir = File(temp, "Bin")
         val m = KitBuilderModel.create("Bin", dir)

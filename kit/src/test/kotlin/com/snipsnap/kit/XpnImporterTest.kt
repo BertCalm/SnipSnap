@@ -161,6 +161,147 @@ class XpnImporterTest {
         return file
     }
 
+    private fun archiveWithSampleName(file: File, sampleName: String): File {
+        val wav = File(temp, "planted.wav").also { WavWriter.write(it, tone(9)) }
+        val program = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <MPCVObject><Program type="Drum"><ProgramName>Evil Kit</ProgramName>
+              <Instruments><Instrument number="1"><Layers><Layer number="1">
+                <VelStart>0</VelStart><VelEnd>127</VelEnd>
+                <SampleName>$sampleName</SampleName>
+              </Layer></Layers></Instrument></Instruments></Program></MPCVObject>
+        """.trimIndent()
+        ZipOutputStream(file.outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry("Evil Kit.xpm")); zip.write(program.toByteArray()); zip.closeEntry()
+            zip.putNextEntry(ZipEntry("pwned.wav")); zip.write(wav.readBytes()); zip.closeEntry()
+        }
+        return file
+    }
+
+    @Test
+    fun `a traversing sample name is flattened to a basename, nothing escapes`() {
+        // The traversal collapses to "pwned.wav" and lands inside the kit;
+        // nothing is ever written up at the escape target.
+        val xpn = archiveWithSampleName(File(temp, "evil.xpn"), "../../../pwned")
+        val canary = File(temp, "pwned.wav").also { it.delete() }
+
+        val result = XpnImporter.import(xpn, File(temp, "dest"))
+        assertEquals("pwned.wav", result.kit.pad(1)!!.sampleFile)
+        assertTrue(File(result.directory, "pwned.wav").isFile, "landed inside the kit folder")
+        assertTrue(!canary.exists(), "nothing was written outside the destination")
+    }
+
+    private fun xpnWithProgram(file: File, programBody: String, vararg samples: String): File {
+        samples.forEach { WavWriter.write(File(temp, "$it.wav"), tone(it.hashCode())) }
+        val program = """
+            <?xml version="1.0"?><MPCVObject><Program type="Drum">
+            <ProgramName>Meta Kit</ProgramName><Instruments>$programBody</Instruments>
+            </Program></MPCVObject>
+        """.trimIndent()
+        ZipOutputStream(file.outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry("Meta Kit.xpm")); zip.write(program.toByteArray()); zip.closeEntry()
+            samples.forEach {
+                zip.putNextEntry(ZipEntry("$it.wav")); zip.write(File(temp, "$it.wav").readBytes()); zip.closeEntry()
+            }
+        }
+        return file
+    }
+
+    private fun inst(number: Int, sample: String, extra: String = ""): String =
+        """<Instrument number="$number">$extra<Layers><Layer number="1">
+           <VelStart>0</VelStart><VelEnd>127</VelEnd><SampleName>$sample</SampleName>
+           </Layer></Layers></Instrument>"""
+
+    @Test
+    fun `duplicate pad slots are refused by name`() {
+        // Two instruments both numbered 0 (0-based) land on slot 1.
+        val xpn = xpnWithProgram(File(temp, "dup.xpn"), inst(0, "s") + inst(0, "s"), "s")
+        val err = assertFailsWith<IllegalArgumentException> { XpnImporter.import(xpn, File(temp, "dup-out")) }
+        assertTrue("duplicate pad slots" in err.message!!, err.message!!)
+    }
+
+    @Test
+    fun `an out-of-range level is clamped, not refused`() {
+        val xpn = xpnWithProgram(
+            File(temp, "loud.xpn"), inst(0, "s", "<Volume>9.000000</Volume>"), "s",
+        )
+        val kit = XpnImporter.import(xpn, File(temp, "loud-out")).kit
+        assertEquals(1f, kit.pad(1)!!.level, "9.0 clamped to the valid ceiling")
+    }
+
+    @Test
+    fun `a layer pointing at a missing sample is refused by name`() {
+        val xpn = xpnWithProgram(File(temp, "ghost.xpn"), inst(0, "ghost")) // no ghost.wav planted
+        val err = assertFailsWith<IllegalArgumentException> { XpnImporter.import(xpn, File(temp, "ghost-out")) }
+        assertTrue("missing" in err.message!! && "ghost" in err.message!!, err.message!!)
+    }
+
+    @Test
+    fun `an out-of-range velocity window is refused with a reason`() {
+        val bad = """<Instrument number="0"><Layers><Layer number="1">
+            <VelStart>0</VelStart><VelEnd>200</VelEnd><SampleName>s</SampleName></Layer>
+            <Layer number="2"><VelStart>100</VelStart><VelEnd>127</VelEnd>
+            <SampleName>s</SampleName></Layer></Layers></Instrument>"""
+        val xpn = xpnWithProgram(File(temp, "vel.xpn"), bad, "s")
+        // A velocity window of 0..200 is not a value to clamp silently - it's
+        // a malformed layer, refused by the KitLayer invariant.
+        val err = assertFailsWith<IllegalArgumentException> { XpnImporter.import(xpn, File(temp, "vel-out")) }
+        assertTrue("velocity" in err.message!!.lowercase(), err.message!!)
+    }
+
+    @Test
+    fun `xml variety the old regex would drop still imports every pad`() {
+        // Everything a pattern-matcher mishandles at once: reordered and
+        // extra attributes on Instrument, a comment, insignificant
+        // whitespace, a CDATA sample name, a numeric-entity program name,
+        // and attributes on tags the old tag() regex assumed were bare.
+        WavWriter.write(File(temp, "kick.wav"), tone(1))
+        WavWriter.write(File(temp, "snare.wav"), tone(2))
+        val program = """<?xml version="1.0" encoding="UTF-8"?>
+            <MPCVObject><Program type="Drum">
+              <!-- exported by some other tool -->
+              <ProgramName>Kit &#38; &amp; Bass</ProgramName>
+              <Instruments>
+                <Instrument   number="0"  index="0" >
+                  <Volume>0.800000</Volume><Pan>0.5</Pan><MuteGroup>0</MuteGroup>
+                  <Layers><Layer number="1" enabled="true">
+                    <VelStart>0</VelStart><VelEnd>127</VelEnd>
+                    <SampleName><![CDATA[kick]]></SampleName>
+                  </Layer></Layers>
+                </Instrument>
+                <Instrument index="1" number="1">
+                  <Volume>0.6</Volume>
+                  <Layers><Layer number="1"><SampleName>snare</SampleName>
+                    <VelStart>0</VelStart><VelEnd>127</VelEnd></Layer></Layers>
+                </Instrument>
+              </Instruments>
+            </Program></MPCVObject>
+        """.trimIndent()
+        val xpn = File(temp, "variety.xpn")
+        ZipOutputStream(xpn.outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry("Variety.xpm")); zip.write(program.toByteArray()); zip.closeEntry()
+            for (s in listOf("kick", "snare")) {
+                zip.putNextEntry(ZipEntry("$s.wav")); zip.write(File(temp, "$s.wav").readBytes()); zip.closeEntry()
+            }
+        }
+
+        val result = XpnImporter.import(xpn, File(temp, "variety-out"))
+        assertEquals(2, result.kit.pads.size, "both pads survived the attribute variety, comment and CDATA")
+        assertEquals("kick.wav", result.kit.pad(1)!!.sampleFile)
+        assertEquals("snare.wav", result.kit.pad(2)!!.sampleFile)
+        // The numeric (&#38;) and named (&amp;) entities both resolved - the
+        // numeric one the old hand-rolled xmlUnescape never handled at all.
+        assertEquals("Kit & & Bass", result.kit.name)
+    }
+
+    @Test
+    fun `a legit vendor subpath is flattened too`() {
+        // Real packs carry names like "Samples/Deep/Kick" - honest, not hostile.
+        val xpn = archiveWithSampleName(File(temp, "vendor.xpn"), "Samples/Deep/pwned")
+        val result = XpnImporter.import(xpn, File(temp, "vendor-dest"))
+        assertEquals("pwned.wav", result.kit.pad(1)!!.sampleFile)
+    }
+
     @Test
     fun `a vendor-shaped archive imports - 1-based numbering, deep folders`() {
         val xpn = foreignArchive(File(temp, "Foreign.xpn"))

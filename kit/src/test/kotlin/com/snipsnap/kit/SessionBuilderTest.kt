@@ -87,12 +87,33 @@ class SessionBuilderTest {
         assertTrue(read.isProject)
         assertTrue(read.trackNames.containsAll(listOf("Drums A", "Drums B", "Session Keys", "Submix 1")), "tracks: ${read.trackNames}")
 
-        // The first kit's groove rides the sequence — the corpus rule for
-        // projects: hoisted tracks carry no embedded clips, the timeline
-        // does. Kit B's groove stays in its folder for standalone exports.
+        // Every kit's grooves ride the timeline — the corpus rule for
+        // projects: hoisted tracks carry no embedded clips, the sequences
+        // do. Both kits' patterns are in the project, not just the first's.
         val payload = Acvs.read(result.xpj).payloadText
         assertTrue("A Groove" in payload)
+        assertTrue("B Groove" in payload, "the second kit's groove rides its own track's clip map")
         assertTrue("\"masterTempo\": 96.5" in payload)
+
+        // GG3.1: song slot 1 wears the session's name; the other 31 stay
+        // the corpus's own empty slots (steps wait on the bench capture).
+        assertTrue("\"name\": \"Test Session\"" in payload, "song slot 1 named after the session")
+        assertEquals(31, Regex("\\(unnamed\\)").findAll(payload).count())
+    }
+
+    @Test
+    fun `a kit's four variations arrive as four switchable sequences`() {
+        val dir = makeKit("Vari Kit", 1, tempo = 92f, groove = "Vari Groove")
+        val base = GrooveStore.load(dir).first()
+        GrooveStore.save(dir, GrooveVariations.standard(base, swingPercent = 62))
+
+        val result = SessionBuilder.build("Vari Session", listOf(dir), File(temp, "vari-out"))
+        val payload = Acvs.read(result.xpj).payloadText
+        for (name in listOf("Vari Groove", "Vari Swing 62", "Vari Half", "Vari Sparse")) {
+            assertTrue("\"name\": \"$name\"" in payload, name)
+        }
+        // Keyed 0..3, the corpus list idiom - currentSequence picks by key.
+        for (k in 0..3) assertTrue("\"key\": $k" in payload, "sequence key $k")
     }
 
     @Test

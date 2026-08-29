@@ -24,6 +24,8 @@ object Exports {
         ExportFormat.MPC3_TRACK to "MPC 3 native",
         ExportFormat.MPC3_PROJECT to "whole MPC 3 project",
         ExportFormat.MIDI to "grooves as MIDI files, every DAW",
+        ExportFormat.SFZ to "open sampler format, chains cycle for real",
+        ExportFormat.DECENT_SAMPLER to "free sampler preset, chains cycle here too",
     )
 
     /**
@@ -82,6 +84,17 @@ object Exports {
             )
             val extra = o.companion?.let { " (+ ${it.name}/)" } ?: ""
             out.println("  %-10s %s%s  (%s)".format(format.id, o.primary.path, extra, NOTES.getValue(format)))
+            if (format == ExportFormat.EXPANSION) {
+                // The expansion gets its cassette insert beside the artwork,
+                // and the liner notes beside the insert - catalog number on
+                // both when the kit's crate is a label.
+                val catalog = com.snipsnap.shell.Label.forKit(kitDir)
+                File(o.primary, "J-Card.png").writeBytes(com.snipsnap.shell.JCard.png(kit, kitDir, catalog = catalog))
+                com.snipsnap.shell.LinerNotes.writeTo(
+                    kit, kitDir, File(o.primary, com.snipsnap.shell.LinerNotes.FILE_NAME), catalog,
+                )
+                out.println("             + J-Card.png + ${com.snipsnap.shell.LinerNotes.FILE_NAME} (the kit's inserts)")
+            }
         }
     }
 }

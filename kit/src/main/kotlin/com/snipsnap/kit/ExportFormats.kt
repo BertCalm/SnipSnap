@@ -23,6 +23,8 @@ enum class ExportFormat(
     MPC3_TRACK("xtd", "MPC 3 NATIVE (.XTD)"),
     MPC3_PROJECT("xpj", "MPC 3 PROJECT (.XPJ)"),
     MIDI("mid", "MIDI GROOVES (EVERY DAW)"),
+    SFZ("sfz", "SFZ (EVERY SAMPLER)"),
+    DECENT_SAMPLER("ds", "DECENTSAMPLER (FREE, EVERYWHERE)"),
     ;
 
     companion object {
@@ -107,6 +109,14 @@ object Exporters {
             }
             ExportOutcome(format, files.first(), null, findings(kit, kitDir))
         }
+        ExportFormat.SFZ -> {
+            val f = SfzWriter.write(kit, kitDir, destRoot, overwrite)
+            ExportOutcome(format, f, File(f.parentFile, "Samples"), findings(kit, kitDir))
+        }
+        ExportFormat.DECENT_SAMPLER -> {
+            val f = DecentSamplerWriter.write(kit, kitDir, destRoot, overwrite)
+            ExportOutcome(format, f, File(f.parentFile, "Samples"), findings(kit, kitDir))
+        }
         ExportFormat.MPC3_PROJECT -> {
             val dataDir = File(destRoot, Mpc3ProjectWriter.projectDataDirName(kit.name))
             val xpj = File(destRoot, "${kit.name}.xpj")
@@ -118,14 +128,20 @@ object Exporters {
             dataDir.deleteRecursively()
             val program = Mpc3Exporter.stageTrack(kit, kitDir, dataDir)
             val writer = Mpc3ProjectWriter()
-            val effectiveClip = clip ?: GrooveStore.load(kitDir).firstOrNull()
-            val tracks = listOf(Mpc3ProjectTrack.Drum(program, clip = effectiveClip))
+            // The call-site clip wins; otherwise every stored groove becomes
+            // its own sequence — the pattern flip on the hardware's switcher.
+            val effectiveClips = clip?.let { listOf(it) }
+                ?: GrooveStore.load(kitDir).take(Mpc3ProjectWriter.MAX_SEQUENCES)
+            val tracks = listOf(Mpc3ProjectTrack.Drum(program, clips = effectiveClips))
             // The call-site tempo wins; the kit's remembered tempo backs it up.
             val effectiveTempo = tempoBpm ?: kit.tempoBpm
+            // Song slot 1 wears the kit's name (GG3.1 plumbing; steps wait
+            // on the bench capture).
+            val song = com.snipsnap.mpc3.Mpc3Song(kit.name)
             val file = if (effectiveTempo != null) {
-                writer.writeTo(destRoot, kit.name, tracks, effectiveTempo)
+                writer.writeTo(destRoot, kit.name, tracks, effectiveTempo, song = song)
             } else {
-                writer.writeTo(destRoot, kit.name, tracks)
+                writer.writeTo(destRoot, kit.name, tracks, song = song)
             }
             ExportOutcome(format, file, dataDir, findings(kit, kitDir))
         }

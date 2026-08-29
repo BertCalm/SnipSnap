@@ -98,6 +98,137 @@ class Mpc3ProjectWriterTest {
     }
 
     @Test
+    fun `song slot one takes the name and nothing else moves - steps wait on the bench`() {
+        val plain = writer.payloadText("S", tracks(), tempoBpm = 92f)
+        val sung = writer.payloadText("S", tracks(), tempoBpm = 92f, song = Mpc3Song("Night Drive"))
+
+        assertTrue("\"name\": \"Night Drive\"" in sung, "slot 1 wears the song's name")
+        assertEquals(31, Regex("\\(unnamed\\)").findAll(sung).count(), "the other 31 slots stay the corpus's own")
+        assertEquals(
+            plain,
+            sung.replaceFirst("\"name\": \"Night Drive\"", "\"name\": \"(unnamed)\""),
+            "the name is the only byte that moves",
+        )
+        assertTrue(
+            Mpc3Project.read(writer.write("S", tracks(), song = Mpc3Song("Night Drive"))).isProject,
+            "the reader still accepts a named song",
+        )
+
+        // The step schema has never been captured; writing steps is refused
+        // with the bench instruction, not guessed.
+        val err = kotlin.test.assertFailsWith<IllegalArgumentException> {
+            writer.payloadText("S", tracks(), song = Mpc3Song("X", items = listOf(0 to 4)))
+        }
+        assertTrue("corpus capture" in err.message!!, err.message!!)
+    }
+
+    @Test
+    fun `a keys track carries its clip into the sequence like any other track`() {
+        // The clip map is keyed by track name and byte-shaped identically
+        // for every track kind - a keygroup track's bassline rides the same
+        // idiom as a drum track's groove.
+        val bassline = Mpc3Clip(
+            "Answer", 2,
+            listOf(Mpc3Note(45, 2 * Mpc3Clip.PULSES_PER_16TH, 0.8f), Mpc3Note(52, 10 * Mpc3Clip.PULSES_PER_16TH, 0.7f)),
+        )
+        val withKeysClip = listOf(
+            tracks()[0],
+            (tracks()[1] as Mpc3ProjectTrack.Keys).copy(clips = listOf(bassline)),
+        )
+        val root = Json.parse(writer.payloadText("S", withKeysClip, tempoBpm = 92f)) as JsonValue.Obj
+        val d = (root.entries["data"] as JsonValue.Obj).entries
+        val v = ((d["sequences"] as JsonValue.Arr).items.map { (it as JsonValue.Obj).entries }
+            .single()["value"] as JsonValue.Obj).entries
+        val row = ((v["trackClipMaps"] as JsonValue.Arr).items[0] as JsonValue.Arr).items
+            .map { (it as JsonValue.Obj).entries }
+        val keysEvents = ((((row.first { it["key"]!!.str() == "Session Keys" }["value"] as JsonValue.Obj)
+            .entries["eventList"]) as JsonValue.Obj).entries["events"] as JsonValue.Arr).items
+        assertEquals(2, keysEvents.size, "the bassline's notes ride the keys track's clip")
+        assertTrue(Mpc3Project.read(writer.write("S", withKeysClip)).isProject, "the reader still accepts it")
+    }
+
+    @Test
+    fun `several clips become several keyed sequences, hardware-switchable`() {
+        val variations = listOf(
+            clip(),
+            clip().copy(name = "SnipSnap Swing 62"),
+            clip().copy(name = "SnipSnap Half", bars = 4),
+            clip().copy(name = "SnipSnap Sparse"),
+        )
+        val multi = listOf(
+            (tracks()[0] as Mpc3ProjectTrack.Drum).copy(clip = null, clips = variations),
+            tracks()[1],
+        )
+        val root = Json.parse(writer.payloadText("SnipSnap Session", multi, tempoBpm = 92f)) as JsonValue.Obj
+        val d = (root.entries["data"] as JsonValue.Obj).entries
+        val seqs = (d["sequences"] as JsonValue.Arr).items.map { (it as JsonValue.Obj).entries }
+
+        assertEquals(4, seqs.size)
+        assertEquals(listOf(0, 1, 2, 3), seqs.map { it["key"]!!.int() }, "keyed 0.. like the corpus list")
+        val values = seqs.map { (it["value"] as JsonValue.Obj).entries }
+        assertEquals(
+            listOf("SnipSnap Groove", "SnipSnap Swing 62", "SnipSnap Half", "SnipSnap Sparse"),
+            values.map { it["name"]!!.str() },
+            "each sequence wears its pattern's name",
+        )
+        assertEquals(4, values[2]["lengthBars"]!!.int(), "half-time's own bar count, not the first clip's")
+        for (v in values) {
+            val row = ((v["trackClipMaps"] as JsonValue.Arr).items[0] as JsonValue.Arr).items
+                .map { (it as JsonValue.Obj).entries }
+            assertEquals(5, row.size, "every track mapped in every sequence")
+            val kitEvents = ((((row.first { it["key"]!!.str() == "Session Kit" }["value"] as JsonValue.Obj)
+                .entries["eventList"]) as JsonValue.Obj).entries["events"] as JsonValue.Arr).items
+            assertEquals(2, kitEvents.size)
+        }
+
+        // The whole thing still reads, and the cap is a refusal, not a wedge.
+        assertTrue(Mpc3Project.read(writer.write("S", multi)).isProject)
+        kotlin.test.assertFailsWith<IllegalArgumentException> {
+            writer.payloadText(
+                "Too Many",
+                listOf(multi[0].let { it as Mpc3ProjectTrack.Drum }.copy(clips = List(33) { clip() })),
+            )
+        }
+    }
+
+    @Test
+    fun `a multi-sequence project only uses paths the real project has`() {
+        val golden = File("../reference/golden/mpc3-project").listFiles { f ->
+            f.extension == "xpj" && MpcFormats.detect(f) == MpcFormat.MPC3_ACVS
+        }
+        assertTrue(!golden.isNullOrEmpty(), "reference project corpus missing")
+
+        // A hoisted track is a track file (proven identical shape), so
+        // tracks[*] paths the old-build project lacks are legitimised by
+        // the track corpus — same rule as the single-sequence guard.
+        fun collect(v: JsonValue, prefix: String, out: MutableSet<String>) {
+            when (v) {
+                is JsonValue.Obj -> v.entries.forEach { (k, child) ->
+                    val p = "$prefix.${if (Regex("value\\d+").matches(k)) "value*" else k}"
+                    out.add(p)
+                    collect(child, p, out)
+                }
+                is JsonValue.Arr -> v.items.forEach { collect(it, "$prefix[*]", out) }
+                else -> {}
+            }
+        }
+        val trackPaths = File("../reference/golden/mpc3-track").listFiles { f -> f.extension.startsWith("xt") }!!
+            .flatMap { f -> mutableSetOf<String>().also { collect(MpcDiff.load(f), "", it) } }.toSet()
+
+        val variations = List(4) { i -> clip().copy(name = "Var $i") }
+        val multi = listOf((tracks()[0] as Mpc3ProjectTrack.Drum).copy(clip = null, clips = variations))
+        val ours = Json.parse(writer.payloadText("Bench Session", multi, tempoBpm = 92f))
+        for (g in golden!!) {
+            val result = MpcDiff.diff(ours, MpcDiff.load(g))
+            val unexplained = result.onlyInA.filterNot { path ->
+                path.startsWith(".data.tracks[*]") &&
+                    path.replaceFirst(".data.tracks[*]", ".data") in trackPaths
+            }
+            assertEquals(emptyList(), unexplained, "${g.name}: no invented key paths")
+        }
+    }
+
+    @Test
     fun `project tracks omit solo like the harvested project`() {
         val d = data()
         val t0 = ((d["tracks"] as JsonValue.Arr).items[0] as JsonValue.Obj).entries

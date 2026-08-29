@@ -23,10 +23,17 @@ data class Snip(
     val frameCount: Int get() = samples.size / channels
     val durationSeconds: Float get() = frameCount.toFloat() / sampleRate
 
-    /** Loudest absolute sample, 0f for silence. */
+    /**
+     * Loudest absolute sample, 0f for silence. Non-finite samples (a NaN or
+     * ±Inf a corrupt float WAV or a DSP bug can produce) are ignored: they
+     * are not "the loudest" — a peak of Inf would drive normalization to
+     * divide everything to silence, and a peak of NaN would poison it whole.
+     * The peak is of the real, finite audio.
+     */
     fun peak(): Float {
         var peak = 0f
         for (s in samples) {
+            if (!s.isFinite()) continue
             val a = abs(s)
             if (a > peak) peak = a
         }
