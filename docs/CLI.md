@@ -292,6 +292,30 @@ slow deterministic wow, dulled highs, a whisper of seeded hiss), and
 Originals go to the bin and every pad records its recipe, so
 `--undo` brings the present back byte-identical.
 
+### `sculpt <wav> | <kit-dir> <pad>` — hits become matter
+
+The Sculptor: the S-4-inspired granular engine pointed at anything —
+a WAV or one pad of a kit — growing textures from it. Modes, not
+knobs:
+
+- **cloud** (default) — dense grains hovering just past the attack
+  (position 0.35, ±5% wander): a hit becomes weather.
+- **scrub** — the read position crawls the whole source over the
+  render: the break as a slow landscape, opening where the source
+  opens and closing where it closes.
+- **swarm** — a cloud detuned across ±7 semitones at higher density:
+  the thickener.
+
+Four seeded takes (seed, seed+1, …) land as a "`<Name> Sculpt`" kit,
+every pad LOOP by declaration with `sculptedFrom` provenance and a
+regenerable recipe — **the same seed always grows the same texture**,
+byte for byte, because every random draw comes from the seed in
+schedule order. Output level is honest against the source's own peak:
+a cloud of a quiet sound is a quiet cloud. `--seconds N` (default 8),
+`--seed N`, `--out`, `--name`, `--overwrite`. The result is a real
+kit: it previews, exports, eras, and resamples like any other — sculpt
+a texture, age it through tape, put the Answer under it.
+
 ### `shape <kit-dir> <pad>` — pad shape as metadata
 
 Attack, decay, filter cutoff and resonance (`--attack/--decay/

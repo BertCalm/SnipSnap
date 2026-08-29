@@ -2116,6 +2116,97 @@ class CliTest {
     }
 
     @Test
+    fun `sculpt grows texture kits - modes proven by probe, seeds regenerable`() {
+        val rate = 44_100
+        // First half sings 220 Hz, second half 2 kHz - position is audible.
+        val src = File(temp, "sculpt src.wav")
+        WavWriter.write(
+            src,
+            Snip(
+                FloatArray(rate) { i ->
+                    val hz = if (i < rate / 2) 220.0 else 2000.0
+                    (0.5 * Math.sin(2.0 * Math.PI * hz * i / rate)).toFloat()
+                },
+                1, rate,
+            ),
+        )
+        val out = File(temp, "sculptout")
+        fun probe(s: FloatArray, from: Int, to: Int, hz: Float): Float =
+            tone(s.copyOfRange(from, to), hz.toDouble(), rate).toFloat()
+        fun padMono(kitDir: File, slot: Int): FloatArray {
+            val kit = KitStore.load(kitDir)
+            val pad = kit.pads.first { it.slot == slot }
+            val snip = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+            return FloatArray(snip.frameCount) { f ->
+                (0 until snip.channels).sumOf { ch -> snip.samples[f * snip.channels + ch].toDouble() }
+                    .toFloat() / snip.channels
+            }
+        }
+
+        // The default cloud hovers post-attack (position 0.35): the low half.
+        val (code, stdout, _) = cli("sculpt", src.path, "--out", out.path, "--seconds", "2", "--seed", "11")
+        assertEquals(0, code, stdout)
+        val cloudDir = File(out, "sculpt src Sculpt")
+        val cloudKit = KitStore.load(cloudDir)
+        assertEquals(4, cloudKit.pads.size, "four seeded takes")
+        for (pad in cloudKit.pads) {
+            assertEquals(DrumClass.LOOP, pad.drumClass, "every pad a LOOP by declaration")
+            assertEquals("sculpt src.wav", pad.source["sculptedFrom"], "provenance stamped")
+            val recipe = pad.recipe?.entries?.get("sculpt") as? com.snipsnap.json.JsonValue.Obj
+            assertTrue(recipe != null && recipe.entries.containsKey("seed"), "the recipe is regenerable")
+        }
+        val cloud = padMono(cloudDir, 1)
+        assertTrue(
+            probe(cloud, 0, cloud.size, 220f) > 5 * probe(cloud, 0, cloud.size, 2000f),
+            "the cloud hovers where it was pointed",
+        )
+
+        // A scrub crawls the source: opens low, closes high.
+        val scrubRun = cli("sculpt", src.path, "--out", out.path, "--name", "Scrubbed", "--mode", "scrub", "--seconds", "4", "--seed", "11")
+        assertEquals(0, scrubRun.first, scrubRun.third)
+        val scrub = padMono(File(out, "Scrubbed"), 1)
+        val quarter = scrub.size / 4
+        assertTrue(
+            probe(scrub, 0, quarter, 220f) > 5 * probe(scrub, 0, quarter, 2000f),
+            "the scrub opens where the source opens",
+        )
+        assertTrue(
+            probe(scrub, scrub.size - quarter, scrub.size, 2000f) > 5 * probe(scrub, scrub.size - quarter, scrub.size, 220f),
+            "and closes where it closes",
+        )
+
+        // Same seed, same texture - the kit rebuilds byte-identical.
+        val firstBytes = File(cloudDir, cloudKit.pads.first { it.slot == 1 }.sampleFile).readBytes()
+        val rebuild = cli("sculpt", src.path, "--out", out.path, "--seconds", "2", "--seed", "11", "--overwrite")
+        assertEquals(0, rebuild.first, rebuild.third)
+        val rebuilt = KitStore.load(cloudDir)
+        assertTrue(
+            File(cloudDir, rebuilt.pads.first { it.slot == 1 }.sampleFile).readBytes().contentEquals(firstBytes),
+            "the texture is a recipe: same seed, same bytes",
+        )
+
+        // A swarm is measurably wider than a cloud of the same tone.
+        val tone = File(temp, "sculpt tone.wav")
+        WavWriter.write(
+            tone,
+            Snip(FloatArray(rate) { i -> (0.5 * Math.sin(2.0 * Math.PI * 1000.0 * i / rate)).toFloat() }, 1, rate),
+        )
+        val tc = cli("sculpt", tone.path, "--out", out.path, "--name", "ToneCloud", "--seconds", "2", "--seed", "5")
+        assertEquals(0, tc.first, tc.third)
+        val ts = cli("sculpt", tone.path, "--out", out.path, "--name", "ToneSwarm", "--mode", "swarm", "--seconds", "2", "--seed", "5")
+        assertEquals(0, ts.first, ts.third)
+        fun offOverIn(kit: String): Float {
+            val s = padMono(File(out, kit), 1)
+            return (probe(s, 0, s.size, 840f) + probe(s, 0, s.size, 1190f)) / probe(s, 0, s.size, 1000f)
+        }
+        assertTrue(offOverIn("ToneSwarm") > 3 * offOverIn("ToneCloud"), "the swarm spreads")
+
+        // And the texture kit is a real kit: it exports.
+        val exp = cli("export", cloudDir.path, "--export", "folder", "--out", File(temp, "sculptexp").path)
+        assertEquals(0, exp.first, exp.third)
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")

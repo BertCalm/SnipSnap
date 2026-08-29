@@ -116,6 +116,12 @@ object Cli {
         |                        renders the full velocity x robin grid - a
         |                        dynamics-graded chain where soft hits play
         |                        quieter, darker takes
+        |  sculpt <wav> | <kit-dir> <pad>
+        |                        the Sculptor: hits become matter - four
+        |                        seeded granular takes as a texture kit of
+        |                        LOOP pads (--mode cloud|scrub|swarm,
+        |                        --seconds N, --seed N; same seed, same
+        |                        texture; provenance + recipe stamped)
         |  shape <kit-dir> <pad> pad shape as metadata: --attack/--decay/
         |                        --cutoff/--res (0..1) land in the exported
         |                        programs' own fields - the HARDWARE renders
@@ -289,6 +295,7 @@ object Cli {
                 "diff" -> DiffCommand.run(args.drop(1), out)
                 "doctor" -> DoctorCommand.run(args.drop(1), out)
                 "clean" -> CleanCommand.run(args.drop(1), out)
+                "sculpt" -> SculptCommand.run(args.drop(1), out)
                 "art" -> ArtCommand.run(args.drop(1), out)
                 "jcard" -> JCardCommand.run(args.drop(1), out)
                 "notes" -> NotesCommand.run(args.drop(1), out)
