@@ -15,6 +15,9 @@
 - Test method names are backticked prose: ``fun `six schemes in picker order`()``. Assertions sweep `Schemes.ALL` as properties rather than spot-checking one scheme.
 - `FxChain` validates macro **names** against `Eq/Squash/Crunch/Tape/Echo/Spring.MACROS` and **values** to `0f..1f` in its `init`. An unknown macro name throws at construction, so treatment chains are compile-time-ish safe but must use real names: `Tape` = `WOBBLE`/`DRIVE`/`AGE`, `Crunch` = `BITS`/`RATE`/`TONE`/`GRIT`, `Squash` = `AMOUNT`/`ATTACK`.
 - All user-facing copy is SHOUTED — full caps, terminal period. See `docs/PERSONALITY.md`.
+  **One exception**, and it is in the design spec verbatim: interpolated key names keep their
+  case, so `Copy.keySet("Am")` yields `"Am SET. TONAL PADS RETUNE ON ASSIGN — THE KICK IS
+  UNTOUCHED."` — a shouted `AM` reads as the word "am". The terminal period still applies.
 - Commit messages: one evocative line, then a plain body. Match `git log` style (`"Z6.3 art wire-through: the waveform tile ships by default"`). No `feat:`/`fix:` prefixes — this repo doesn't use them.
 - Run the full module suite before every commit: `./gradlew :shell:test :synth:test :kit:test`.
 
