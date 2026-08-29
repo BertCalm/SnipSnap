@@ -161,4 +161,13 @@ class PadRecipeTest {
         val old = """{"recipe":1,"fx":{"fx":1,"reverse":true}}"""
         assertNull(PadRecipe.fromJsonText(old).amount, "an amount-less recipe is not an error")
     }
+
+    @Test
+    fun `Treatments-apply records both the name and the amount it used`() {
+        val snip = Thump.render(ThumpVoice.SNARE)
+        val treated = Treatments.apply("crushed", snip, 0.4f)
+        val recipe = PadRecipe.fromJsonValue(treated.recipe)
+        assertEquals("crushed", recipe.treatment)
+        assertEquals(0.4f, recipe.amount)
+    }
 }

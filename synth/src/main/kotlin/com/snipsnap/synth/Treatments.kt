@@ -42,7 +42,8 @@ object Treatments {
 
     fun apply(name: String, snip: Snip, amount: Float = 1f): Treated {
         val fx = chain(name, amount)
-        if (fx.isBypass) return Treated(snip, PadRecipe(fx = fx).toJsonValue())
-        return Treated(fx.process(snip), PadRecipe(fx = fx).toJsonValue())
+        val recipe = PadRecipe(fx = fx, treatment = name, amount = amount).toJsonValue()
+        if (fx.isBypass) return Treated(snip, recipe)
+        return Treated(fx.process(snip), recipe)
     }
 }

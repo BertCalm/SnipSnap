@@ -35,8 +35,10 @@ data class PadRecipe(
      *
      * Stored beside the name for the same reason: both `Treatments.chain` and
      * `Eras.process` scale by this, so the resulting chain cannot be run
-     * backwards to recover the amount that made it. The pad sheet restores
-     * its slider from here.
+     * backwards to recover the amount that made it. This field serves the
+     * `Treatments` path (`treatPad`, and bank-B twins) — the pad sheet's
+     * TREATMENT card goes through `Eras`, which keeps its own `{"era",
+     * "amount"}` recipe.
      */
     val amount: Float? = null,
 ) {
