@@ -1237,9 +1237,9 @@ finally gets fed.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| TT1 | `CaptureProfile` (`:audio`) — measured once from the whole capture: the share of low-band energy that survived the signal chain; provably rolled-off captures flagged with the estimated reach. `Classifier.classify(features, profile)` overload: under a rolled-off profile the bass gate can't trust `lowRatio`, so a "gutless kick" rule judges darkness (low centroid relative to what survived), low high-band share, one attack, drum-length decay — at honest sub-certain confidence. No profile → behavior byte-identical to today | CORE | M | synthetic phone-sim (DrumSynth hits high-passed like a phone mic): the kick classifies KICK with the profile and not without; snare/hat/clap/tom classifications unchanged by the profile; full-range material yields a not-rolled-off profile whose classifications match no-profile exactly; every existing classifier test untouched |
-| TT2 | The wire-through — `chop` measures the profile before slicing, prints the honest line when rolled off ("phone capture heard: sub rolled off — kicks judged by shape"), classifies with it so AutoPlace lands the kick on A01; `classify` gains nothing (one file is no context) and says so in docs | CORE | S–M | re-chop of the reference capture classifies kicks and prints the line; a full-range synthetic break chops identically to before (existing chop tests are the guard) |
-| TT3 | The corpus fed — the F2.3 harness gains a permanent phone-sim corpus (synthetic renders through the mic simulation, labeled by construction) so it no longer idles; docs/CALIBRATION.md explains the `reference/calibration/<label> NN.wav` naming so real isolated-drum captures join as they're recorded | CORE | S | the harness runs green on the phone-sim corpus with and without profile awareness asserted per label; the docs name the on-ramp; an empty real-corpus dir stays an honest skip, not a failure |
+| TT1 | ✓ done: `CaptureProfile.measure` — the share of sub-1 kHz energy below 150 Hz, once per capture; the reference kept 0.0009 against 0.83 for full-range synthetics, a thousandfold gap the boundary sits inside. `classify(features, profile)`: under a provably rolled-off profile a PERC is re-judged by what survived — dark centroid (< 700 Hz, the real kicks' knock clusters at 350–670), low high band, near-tonal flatness — and decay decides: punchy → KICK, sustained → TONAL, between → PERC. Confidence capped 0.5–0.7; no profile = byte-identical. Fixture lessons recorded in docs/CALIBRATION.md | CORE | M | phone-sim kick → KICK with profile only; snare/hat/clap/tom unchanged; full-range profile a no-op; sustained note promoted TONAL; every prior classifier test untouched |
+| TT2 | ✓ done: `chop` measures the profile before classifying and prints the honest line; the reference re-chop names **ten KICKs at 0.51–0.60 where yesterday it named zero**, A01 a kick again; every full-range chop test untouched | CORE | S–M | reference re-chop shows kicks + the line; a full-range synthetic break chops identically |
+| TT3 | ✓ done: the F2.3 harness gains a permanent phone-sim corpus (labeled by construction) guarding the rule per label; docs/CALIBRATION.md names the `reference/calibration/<label> NN.wav` on-ramp and keeps every fixture lesson taught (pure-sub kicks can't lose their sub, ~24 dB/oct chains, sustained notes defeat naive rolloff assumptions, bursts belong to the kick gate alone) | CORE | S | harness green on the phone-sim corpus; docs name the on-ramp; empty real corpus an honest skip |
 
 **Below the line for TT:** real isolated-drum captures from the bench
 (each Live III drum alone, close-miked and room-miked — the labeled
@@ -1284,6 +1284,16 @@ CORE wave MM: ✓ all landed (2026-08-28) — the Capture Doctor. Hum
   door, --undo byte-identical, `chop --clean` (via dig) scrubbing the
   capture before the first slice. Clean audio comes back the very same
   object, every time.
+
+CORE wave TT: ✓ all landed (2026-08-29) — the Calibration. The
+  reference capture's zero-kick finding fixed with context, not
+  looser thresholds: CaptureProfile measures how much sub survived
+  the chain, and only a provable rolloff re-judges the PERC shelf -
+  dark + punchy is a kick, dark + sustained is a note, sub-certain
+  confidence that says so. The reference re-chop names ten KICKs
+  where it named none; the phone-sim corpus guards it; the labeled
+  on-ramp is documented for the isolated-drum captures that will turn
+  reasoning into fitting.
 
 CORE wave SS: ✓ all landed (2026-08-29) — the Hardening. The junk
   corpus meets all 44 verbs' file doors and a broken-kit corpus meets
