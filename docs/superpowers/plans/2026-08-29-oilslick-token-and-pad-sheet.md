@@ -8,6 +8,8 @@
 
 **Tech Stack:** Kotlin 2.0.21 / JVM 17, Gradle, `kotlin.test` on the JUnit platform. No Android, no Compose — everything here runs under `./gradlew test`.
 
+**Baseline:** re-verified against `00835bf`, which merged 119 commits of origin (waves OO–SS) under the design work. The plan was first written against a checkout that far behind; every line reference and assumption below has been re-checked against the merged tree. Two things changed materially — `Eras` now exists (Task 6 is rewritten around it) and TAKES + BIN turned out to be already built (dropped from the follow-on list).
+
 ## Global Constraints
 
 - Colours are packed `0xRRGGBB` `Int`. Never strings, never `0xAARRGGBB`.
@@ -30,12 +32,13 @@
 | TAPE / DIRT treatments | **Author real chains** from `Tape` and `Crunch` macros. |
 | FRESH TAPE roster | **Keep code names** (FACTORY, LUCKY DIP), add a VELOCITY starter, keep LUCKY DIP A/B. The design doc gets updated to the real seven. |
 | `plan-03-live-android` | **Out of scope.** LOOP + Compose is a separate, gated plan. |
+| Pad-sheet treatments | **Delegate to `Eras`** (ruled 2026-08-29, after the merge revealed it). No new DSP. |
 
 ## Out of scope — follow-on plans
 
 These gaps are real and remain open after this plan lands:
 
-- **§2b TAKES + BIN** — needs a retention model in `:kit`. `Personality.kt` already ships `"EJECTED. THE BIN KEEPS IT 30 DAYS."` with nothing behind it.
+- ~~**§2b TAKES + BIN**~~ — **already built.** `KitBuilder` on origin has `TAKES_DIR ".takes"`, `MAX_TAKES 32`, `takes()`, `restoreTake()`, `archiveTake()` on every save, and `BIN_DIR ".bin"`, `BIN_KEEP_DAYS 30.0`, `binContents()`, `restoreFromBin()`, `purgeBin()`, `emptyBin()`. The shipped toast cashes.
 - **§2c GROOVE PROG E** — user step-edit storage. A–D already map onto `GrooveVariations`.
 - **§2a LOOP screen** — blocked on the `plan-03-live-android` branch decision.
 
@@ -48,7 +51,9 @@ These gaps are real and remain open after this plan lands:
 | `shell/src/main/kotlin/com/snipsnap/shell/KitArt.kt` | two default-param call sites | 3 |
 | `cli/src/main/kotlin/com/snipsnap/cli/ArtCommand.kt` | one default-param call site | 3 |
 | `shell/src/main/kotlin/com/snipsnap/shell/Personality.kt` | shipped copy | 5 |
-| `synth/src/main/kotlin/com/snipsnap/synth/Treatments.kt` | pad-sheet treatment table | 6 |
+| `synth/src/main/kotlin/com/snipsnap/synth/Treatments.kt` | AMT range fix | 6 |
+| `synth/src/main/kotlin/com/snipsnap/synth/Eras.kt` | AMT range fix | 6 |
+| `shell/src/main/kotlin/com/snipsnap/shell/PadSheet.kt` | segment → era mapping (new file) | 6 |
 | `synth/src/main/kotlin/com/snipsnap/synth/PadRecipe.kt` | persist the treatment name and amount | 7, 9 |
 | `synth/src/main/kotlin/com/snipsnap/synth/Shuffle.kt` | record the name at remix time | 7 |
 | `shell/src/main/kotlin/com/snipsnap/shell/StarterKits.kt` | the VELOCITY starter | 8 |
@@ -281,7 +286,7 @@ This is the task that breaks call sites — `SchemesTest` pins the six-scheme ro
 
 **Files:**
 - Modify: `shell/src/main/kotlin/com/snipsnap/shell/Schemes.kt` (`SchemeId` enum, all tables, `ALL`, `DEFAULT`, `padLabelInk`, `CLEAR_PAD_INK`)
-- Modify: `shell/src/main/kotlin/com/snipsnap/shell/KitArt.kt:66` and `:111` — `scheme: Scheme = Schemes.CHROME`
+- Modify: `shell/src/main/kotlin/com/snipsnap/shell/KitArt.kt:66` and `:113` — `scheme: Scheme = Schemes.CHROME`
 - Modify: `cli/src/main/kotlin/com/snipsnap/cli/ArtCommand.kt:40` — `?: Schemes.CHROME`
 - Test: `shell/src/test/kotlin/com/snipsnap/shell/SchemesTest.kt`
 
@@ -436,7 +441,7 @@ Delete the entire `CLEAR_PAD_INK` map. Leave the `scheme` parameter in place —
 
 - [ ] **Step 5: Fix the three CHROME call sites**
 
-`shell/src/main/kotlin/com/snipsnap/shell/KitArt.kt`, both line 66 and line 111:
+`shell/src/main/kotlin/com/snipsnap/shell/KitArt.kt`, both line 66 and line 113:
 
 ```kotlin
         scheme: Scheme = Schemes.DEFAULT,
@@ -690,141 +695,140 @@ A property test holds every new line to the house voice: full caps, full stop."
 
 ---
 
-### Task 6: TAPE and DIRT become real, and AMT reaches zero
+### Task 6: The pad sheet's treatments delegate to the Time Machine
 
-`docs/DESIGN_GAP.md` §1c. Two defects and one authoring job:
+`docs/DESIGN_GAP.md` §1c, re-scoped after the merge. The original plan hand-rolled TAPE and DIRT `FxChain`s from `Tape` and `Crunch` macros. `synth/Eras.kt` arrived in wave QQ and already does this properly — `"sp1200"`, `"mpc60"`, `"tape"`, `"phone"`, each the documented signal-path arithmetic of a specific machine rather than a crush knob.
 
-1. `Treatments.chain()` has `require(amount > 0f && amount <= 1f)`, but the pad sheet specs *"AMT 0-100 in 5s"* — AMT=0 is one stepper tap away and throws.
-2. `NONE` is not a name in `Shuffle.TREATMENTS`; calling `chain("NONE", …)` throws `unknown treatment`.
-3. `TAPE` and `DIRT` match no existing chain.
+**Use `Eras`, author nothing.** Two reasons beyond not duplicating work:
 
-**The new chains do not join `Shuffle.TREATMENTS`.** `withRemixBank` picks with `TREATMENTS[random.nextInt(TREATMENTS.size)]`, so growing that list from 5 to 7 changes what every previously-saved seed produces. Bank B's reproducibility is a promise the code already makes (`"TWINS REROLLED. SAME SEED, DIFFERENT SINS."` implies the same seed gives the same sins). The pad sheet gets its own table.
+1. `KitBuilder` already carries both call sites, and its own doc draws the line: `eraPad` ages *"every file it references (velocity layers included, unlike single-sample treatments: an era is whole-kit character, so a layered snare ages in all its zones)."* Task 8 adds a VELOCITY starter whose pads are layered — `treatPad` would age the top layer and leave the ghost notes untouched. `eraPad` is the only correct one here.
+2. `Eras.apply` already returns `{"era", "amount"}` as its recipe, `KitBuilder.eraPad` already bin-backs the originals, and `LinerNotes.kt:114` already reads the era back out. The whole round trip exists.
+
+The mapping is presentation vocabulary, so it lives in `:shell` next to `Schemes`/`Type`/`Layout`, not in the DSP.
+
+| segment | era | why |
+|---|---|---|
+| `NONE` | — | absence; never calls a chain |
+| `CRUSH` | `sp1200` | 12-bit at 26.04 kHz — the crunchiest of the four |
+| `TAPE` | `tape` | the era named for exactly this |
+| `DIRT` | `mpc60` | 12-bit + µ-law companding + an 11 kHz lid: gritty and warm |
+
+`phone` stays unmapped — it is a telephone band-limit, not a pad treatment. It remains reachable from the CLI's `era` verb.
+
+This task also fixes the AMT defect, which the merge revealed in **two** files: `Treatments.kt:20` and `Eras.kt:47` both `require(amount > 0f && amount <= 1f)` while the pad sheet specs *"AMT 0-100 in 5s"*.
 
 **Files:**
-- Modify: `synth/src/main/kotlin/com/snipsnap/synth/Treatments.kt`
-- Test: `synth/src/test/kotlin/com/snipsnap/synth/TreatmentsTest.kt` (create if absent)
+- Modify: `synth/src/main/kotlin/com/snipsnap/synth/Eras.kt:47`
+- Modify: `synth/src/main/kotlin/com/snipsnap/synth/Treatments.kt:20`
+- Create: `shell/src/main/kotlin/com/snipsnap/shell/PadSheet.kt`
+- Test: `shell/src/test/kotlin/com/snipsnap/shell/PadSheetTest.kt` (create), `synth/src/test/kotlin/com/snipsnap/synth/ErasTest.kt` (append)
 
 **Interfaces:**
-- Consumes: `Tape.MACROS` (`WOBBLE`/`DRIVE`/`AGE`), `Crunch.MACROS` (`BITS`/`RATE`/`TONE`/`GRIT`), `Squash.MACROS` (`AMOUNT`/`ATTACK`), `Shuffle.TREATMENTS`.
-- Produces: `Treatments.NONE: String`; `Treatments.PAD_SHEET: List<Pair<String, FxChain>>`; `Treatments.padSheetNames: List<String>`; `Treatments.chain(name, amount)` accepting `amount == 0f` and `name == "NONE"`, both returning a bypass `FxChain()`.
+- Consumes: `Eras.names`, `Eras.process(name, snip, amount)`, `KitBuilder.eraPad(slot, era, amount)`.
+- Produces: `PadSheet.NONE: String`; `PadSheet.SEGMENTS: List<String>`; `PadSheet.eraFor(segment: String): String?` returning null for `NONE` and throwing on an unknown segment; `PadSheet.DEFAULT_AMOUNT: Float`. Task 9 stores the chosen segment and amount via `PadRecipe`.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the failing tests**
 
-Create `synth/src/test/kotlin/com/snipsnap/synth/TreatmentsTest.kt`:
+Create `shell/src/test/kotlin/com/snipsnap/shell/PadSheetTest.kt`:
 
 ```kotlin
-package com.snipsnap.synth
+package com.snipsnap.shell
 
-import com.snipsnap.audio.Snip
+import com.snipsnap.synth.Eras
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class TreatmentsTest {
+class PadSheetTest {
 
-    private fun tick(): Snip {
-        val n = 4410
-        val samples = FloatArray(n) { i ->
-            val env = 1f - i.toFloat() / n
-            (if (i % 8 < 4) 0.6f else -0.6f) * env * env
-        }
-        return Snip(samples, 1, 44_100)
+    @Test
+    fun `the four segments the design draws, NONE first`() {
+        assertEquals(listOf("NONE", "CRUSH", "TAPE", "DIRT"), PadSheet.SEGMENTS)
     }
 
     @Test
-    fun `the pad sheet offers exactly NONE CRUSH TAPE DIRT`() {
-        assertEquals(listOf("NONE", "CRUSH", "TAPE", "DIRT"), Treatments.padSheetNames)
-    }
-
-    @Test
-    fun `AMT zero is reachable and does nothing`() {
-        assertTrue(Treatments.chain("CRUSH", 0f).isBypass, "AMT 0 is a bypass, not a crash")
-        val s = tick()
-        val out = Treatments.apply("CRUSH", s, 0f).snip
-        assertEquals(s.samples.toList(), out.samples.toList(), "AMT 0 must not touch the audio")
-    }
-
-    @Test
-    fun `NONE is a treatment the pad sheet can pick`() {
-        assertTrue(Treatments.chain("NONE", 1f).isBypass, "NONE is the absence of treatment, not an error")
-    }
-
-    @Test
-    fun `TAPE and DIRT are real chains that change the audio`() {
-        val s = tick()
-        for (name in listOf("TAPE", "DIRT")) {
-            val out = Treatments.apply(name, s, 1f).snip
+    fun `every segment but NONE names a real era`() {
+        for (segment in PadSheet.SEGMENTS - PadSheet.NONE) {
+            val era = PadSheet.eraFor(segment)
             assertTrue(
-                out.samples.toList() != s.samples.toList(),
-                "$name left the audio untouched — it isn't wired to a chain",
+                era in Eras.names,
+                "$segment maps to '$era', which Eras does not know: ${Eras.names}",
             )
         }
     }
 
     @Test
-    fun `the remix bank keeps its five - adding pad-sheet treatments must not reseed bank B`() {
-        assertEquals(
-            listOf("reversed", "crushed", "slapback", "washed", "punched"),
-            Shuffle.TREATMENTS.map { it.first },
-            "growing this list changes what every saved seed produces",
-        )
+    fun `NONE is the absence of an era, not an era called none`() {
+        assertNull(PadSheet.eraFor(PadSheet.NONE))
+    }
+
+    @Test
+    fun `an unknown segment is refused, not silently ignored`() {
+        assertFailsWith<IllegalArgumentException> { PadSheet.eraFor("WOBBLE") }
+    }
+
+    @Test
+    fun `the sheet opens at NONE, 35 percent`() {
+        assertEquals(0.35f, PadSheet.DEFAULT_AMOUNT)
     }
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `./gradlew :synth:test --tests "com.snipsnap.synth.TreatmentsTest"`
-Expected: FAIL — `Unresolved reference: padSheetNames`.
-
-- [ ] **Step 3: Author the chains and fix the range**
-
-In `Treatments.kt`, inside `object Treatments`, above the existing `names`:
+Append to `synth/src/test/kotlin/com/snipsnap/synth/ErasTest.kt`:
 
 ```kotlin
-    /** The pad sheet's "no treatment" segment. Not a chain — the absence of one. */
-    const val NONE = "NONE"
-
-    /**
-     * The PAD SHEET's four segments, which are deliberately **not**
-     * [Shuffle.TREATMENTS].
-     *
-     * The remix bank picks from its own five by index against a seed, so
-     * growing that list would change what every previously-saved seed
-     * produces — bank B promises the same seed gives the same sins. These
-     * four are the per-pad vocabulary instead: CRUSH borrows the remix
-     * bank's converter, TAPE and DIRT are their own.
-     */
-    val PAD_SHEET: List<Pair<String, FxChain>> = listOf(
-        "CRUSH" to Shuffle.TREATMENTS.first { it.first == "crushed" }.second,
-        // Wow, flutter, saturation and a worn head. The tape *sound*, not the
-        // tape *machine* — no echo, so it stacks under anything.
-        "TAPE" to FxChain(
-            tape = mapOf("WOBBLE" to 0.5f, "DRIVE" to 0.45f, "AGE" to 0.6f),
-        ),
-        // Grit into a small converter, squashed first so the drive has
-        // something consistent to bite. Darker and nastier than CRUSH.
-        "DIRT" to FxChain(
-            squash = mapOf("AMOUNT" to 0.5f, "ATTACK" to 0.4f),
-            crunch = mapOf("BITS" to 0.4f, "RATE" to 0.35f, "TONE" to 0.4f, "GRIT" to 0.85f),
-        ),
-    )
-
-    /** Segment order for the pad sheet's control, NONE first. */
-    val padSheetNames: List<String> = listOf(NONE) + PAD_SHEET.map { it.first }
+    @Test
+    fun `AMT zero is reachable and leaves the audio alone`() {
+        val n = 4410
+        val s = Snip(FloatArray(n) { i -> (if (i % 8 < 4) 0.6f else -0.6f) * (1f - i.toFloat() / n) }, 1, 44_100)
+        for (era in Eras.names) {
+            val out = Eras.process(era, s, 0f)
+            assertEquals(
+                s.samples.toList(), out.samples.toList(),
+                "$era at AMT 0 must be a no-op — the pad sheet can reach zero in one tap",
+            )
+        }
+    }
 ```
 
-Then replace `chain`:
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `./gradlew :shell:test --tests "com.snipsnap.shell.PadSheetTest" :synth:test --tests "com.snipsnap.synth.ErasTest"`
+Expected: FAIL — `Unresolved reference: PadSheet`, and `ErasTest` failing with `amount is (0, 1], got 0.0`.
+
+- [ ] **Step 3: Let both engines reach zero**
+
+`Eras.kt:47` — replace the guard, and return the input untouched rather than running a chain interpolated to transparency (floating-point interpolation at `amount = 0` is not exactly identity, and "no treatment" should be exact):
+
+```kotlin
+    fun process(name: String, snip: Snip, amount: Float = 1f): Snip {
+        require(amount in 0f..1f) { "amount is 0..1, got $amount" }
+        require(name in names) {
+            "unknown era '$name' - try one of: ${names.joinToString(", ")}"
+        }
+        // AMT 0 is "no era", and it must be bit-exact, not merely close.
+        if (amount <= 0f) return Snip(snip.samples.copyOf(), snip.channels, snip.sampleRate)
+        return when (name) {
+            "sp1200" -> sp1200(snip, amount)
+            "mpc60" -> mpc60(snip, amount)
+            "tape" -> tape(snip, amount)
+            "phone" -> phone(snip, amount)
+            else -> throw IllegalStateException("unreachable: name checked above")
+        }
+    }
+```
+
+`Treatments.kt:20` — the same range fix, and `NONE` handled as bypass:
 
 ```kotlin
     fun chain(name: String, amount: Float = 1f): FxChain {
         require(amount in 0f..1f) { "amount is 0..1, got $amount" }
-        // AMT 0 and NONE are the same statement made two ways.
-        if (name == NONE || amount <= 0f) return FxChain()
-        val base = PAD_SHEET.firstOrNull { it.first == name }?.second
-            ?: Shuffle.TREATMENTS.firstOrNull { it.first == name }?.second
+        if (amount <= 0f) return FxChain()
+        val base = Shuffle.TREATMENTS.firstOrNull { it.first == name }?.second
             ?: throw IllegalArgumentException(
-                "unknown treatment '$name' - try one of: ${(padSheetNames + names).joinToString(", ")}",
+                "unknown treatment '$name' - try one of: ${names.joinToString(", ")}",
             )
         if (amount >= 0.999f) return base
         fun scale(params: Map<String, Float>?): Map<String, Float>? =
@@ -840,11 +844,7 @@ Then replace `chain`:
     }
 ```
 
-The lookup tries `PAD_SHEET` first, then falls back to `Shuffle.TREATMENTS`, so the existing `snipsnap treat` CLI keeps working with `crushed`/`washed`/`punched` unchanged.
-
-- [ ] **Step 4: Make `apply` bypass cleanly at zero**
-
-`apply` builds `PadRecipe(fx = fx)`, and `PadRecipe`'s `init` requires `patch != null || fx != null` — an empty `FxChain()` is non-null, so it constructs. Return the input untouched on a bypass rather than routing it through `FxChain.process` and `capTail`: a treatment set to zero should be a no-op by construction, not by the good behaviour of a tail limiter.
+And make `apply` short-circuit so a bypass is exact:
 
 ```kotlin
     fun apply(name: String, snip: Snip, amount: Float = 1f): Treated {
@@ -854,31 +854,93 @@ The lookup tries `PAD_SHEET` first, then falls back to `Shuffle.TREATMENTS`, so 
     }
 ```
 
+`Shuffle.TREATMENTS` is untouched — bank B keeps its five, and its seeded output is unchanged.
+
+- [ ] **Step 4: Add the segment table**
+
+Create `shell/src/main/kotlin/com/snipsnap/shell/PadSheet.kt`:
+
+```kotlin
+package com.snipsnap.shell
+
+import com.snipsnap.synth.Eras
+
+/**
+ * The PAD SHEET's TREATMENT card, as data.
+ *
+ * The design draws four segments; the DSP behind three of them already
+ * exists as Time Machine eras, so this is a vocabulary mapping and nothing
+ * more. It lives in `:shell` because the words are the app's, not the
+ * engine's — [Eras] should never learn what a "segment" is.
+ *
+ * The card drives [KitBuilderModel.eraPad], not `treatPad`: an era ages
+ * every file a pad references, velocity layers included, so a pad with
+ * ghost notes ages in all its zones instead of growing an untreated
+ * underside.
+ */
+object PadSheet {
+
+    /** The leftmost segment: no treatment at all. */
+    const val NONE = "NONE"
+
+    /** Segment order, left to right, as the card draws it. */
+    val SEGMENTS: List<String> = listOf(NONE, "CRUSH", "TAPE", "DIRT")
+
+    /** Where the AMT stepper sits when a pad has never been treated. */
+    const val DEFAULT_AMOUNT = 0.35f
+
+    private val ERA_FOR: Map<String, String> = mapOf(
+        // 12-bit at 26.04 kHz — the crunchiest of the four.
+        "CRUSH" to "sp1200",
+        // The era named for exactly this.
+        "TAPE" to "tape",
+        // 12-bit, µ-law companding, an 11 kHz lid: gritty and warm.
+        "DIRT" to "mpc60",
+        // "phone" stays unmapped — a telephone band-limit is not a pad
+        // treatment. It remains reachable from the CLI's `era` verb.
+    )
+
+    /**
+     * The era behind a segment, or null for [NONE]. Throws on a segment the
+     * card does not draw — a typo should not silently become "no treatment".
+     */
+    fun eraFor(segment: String): String? {
+        require(segment in SEGMENTS) {
+            "unknown pad-sheet segment '$segment' - the card draws: ${SEGMENTS.joinToString(", ")}"
+        }
+        return ERA_FOR[segment]
+    }
+}
+```
+
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `./gradlew :synth:test`
-Expected: PASS — the whole `:synth` suite, not just `TreatmentsTest`, since `chain()` changed under the CLI's feet.
+Run: `./gradlew :shell:test :synth:test :cli:test`
+Expected: PASS. `:cli` is in the blast radius — `EraCommand` and `TreatCommand` both call the guards that changed.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add synth/src/main/kotlin/com/snipsnap/synth/Treatments.kt \
-        synth/src/test/kotlin/com/snipsnap/synth/TreatmentsTest.kt
-git commit -m "TAPE and DIRT get chains, and AMT is allowed to be zero
+git add synth/src/main/kotlin/com/snipsnap/synth/Eras.kt \
+        synth/src/main/kotlin/com/snipsnap/synth/Treatments.kt \
+        shell/src/main/kotlin/com/snipsnap/shell/PadSheet.kt \
+        shell/src/test/kotlin/com/snipsnap/shell/PadSheetTest.kt \
+        synth/src/test/kotlin/com/snipsnap/synth/ErasTest.kt
+git commit -m "The pad sheet borrows the Time Machine instead of building a second one
 
-The pad sheet's four segments never matched the remix bank's five names.
-CRUSH borrows the bank's converter; TAPE is wow, flutter and a worn head;
-DIRT is grit into a small converter with a squash in front of it.
+CRUSH, TAPE and DIRT were going to be hand-rolled FxChains until the merge
+turned up Eras, which already models sp1200, mpc60, tape and phone as the
+documented arithmetic of specific machines. The card is now a vocabulary
+mapping over those, living in :shell because the words are the app's.
 
-They live in their own table on purpose. withRemixBank picks by index
-against a seed, so growing Shuffle.TREATMENTS from five to seven would
-change what every saved seed produces, and a test now pins that list.
+It drives eraPad rather than treatPad on purpose: an era ages every file a
+pad references, so a pad with velocity layers ages in all its zones. The
+single-sample path would have left ghost notes untreated.
 
-chain() also accepted (0, 1] while the design spec'd 0-100 in steps of 5,
-so the first tap down from 5 threw. Zero and NONE now both mean bypass."
+Both engines also refused AMT 0 while the design specs 0-100 in fives, so
+one tap down from 5 threw. Zero is now an exact no-op in each — copied, not
+interpolated to almost-transparent."
 ```
-
----
 
 ### Task 7: Bank B remembers which sin it committed
 
@@ -892,7 +954,7 @@ Persisting the name at remix time is cheap and exact. A reverse lookup is not: `
 - Test: `synth/src/test/kotlin/com/snipsnap/synth/PadRecipeTest.kt` (create if absent)
 
 **Interfaces:**
-- Consumes: `Treatments.PAD_SHEET`, `Shuffle.TREATMENTS`.
+- Consumes: `Shuffle.TREATMENTS`.
 - Produces: `PadRecipe.treatment: String?` — the third constructor param, serialized as `"treatment"` in the recipe object, absent when null. `PadRecipe.VERSION` stays `1`: a new optional key is a backward-compatible addition, and old recipes parse with `treatment == null`.
 
 - [ ] **Step 1: Write the failing test**
@@ -1145,8 +1207,8 @@ note that REROLL only means anything on the two seeded ones."
 And Y3.3 renames the `.XPJ` cycler line, which promises grooves ride along with the kits.
 
 **Files:**
-- Modify: `kit/src/main/kotlin/com/snipsnap/kit/Kit.kt` (the `KitPad` data class, ~line 36–66)
-- Modify: `kit/src/main/kotlin/com/snipsnap/kit/KitStore.kt` (save ~line 66–80, load ~line 124–145)
+- Modify: `kit/src/main/kotlin/com/snipsnap/kit/Kit.kt` (`KitPad`, `oneShot` is at `:49`)
+- Modify: `kit/src/main/kotlin/com/snipsnap/kit/KitStore.kt` (save: conditional appends begin `:90`; load: `oneShot` is at `:199`)
 - Modify: `synth/src/main/kotlin/com/snipsnap/synth/PadRecipe.kt`
 - Modify: `kit/src/main/kotlin/com/snipsnap/kit/ExportFormats.kt:24`
 - Test: `kit/src/test/kotlin/com/snipsnap/kit/KitStoreTest.kt`, `synth/src/test/kotlin/com/snipsnap/synth/PadRecipeTest.kt` (from Task 7)
@@ -1186,9 +1248,9 @@ Add to `synth/src/test/kotlin/com/snipsnap/synth/PadRecipeTest.kt`:
 ```kotlin
     @Test
     fun `the treatment amount round-trips with its name`() {
-        val r = PadRecipe(fx = Treatments.chain("DIRT", 0.35f), treatment = "DIRT", amount = 0.35f)
+        val r = PadRecipe(fx = Treatments.chain("crushed", 0.35f), treatment = "crushed", amount = 0.35f)
         val back = PadRecipe.fromJsonText(r.toJsonText())
-        assertEquals("DIRT", back.treatment)
+        assertEquals("crushed", back.treatment)
         assertEquals(0.35f, back.amount)
     }
 ```
@@ -1224,7 +1286,7 @@ In `Kit.kt`, in the `KitPad` data class, immediately after `oneShot`:
 
 - [ ] **Step 4: Serialize it**
 
-In `KitStore.kt`'s save block, alongside the other conditional appends after the `linkedMapOf` (next to `p.colorHex?.let { … }`):
+In `KitStore.kt`'s save block, alongside the other conditional appends that follow the `linkedMapOf` — `p.colorHex?.let` at `:90`, then `attack`/`decay`/`cutoff`/`resonance`/`humanize` at `:93-97`:
 
 ```kotlin
                     if (p.ghosts) entries["ghosts"] = JsonValue.Bool(true)
@@ -1274,7 +1336,7 @@ In `ExportFormats.kt`, line 24:
     MPC3_PROJECT("xpj", "MPC SESSION (.XPJ) — KITS + GROOVES"),
 ```
 
-The `id` stays `"xpj"` — it is the CLI's `--export` word and changing it would break every script that uses it. Only the wizard's cycler line moves.
+The `id` stays `"xpj"` — it is the CLI's `--export` word and changing it would break every script that uses it. Only the wizard's cycler line moves. The enum now has eight entries (`SFZ` and `DECENT_SAMPLER` arrived with the merge); `MPC3_PROJECT` is still the fifth, at line 24. No test in the repo pins the entry count, so adding the label change breaks nothing.
 
 - [ ] **Step 7: Run tests to verify they pass**
 

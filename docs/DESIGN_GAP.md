@@ -3,6 +3,12 @@
 Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 `design-sync/`), read against branch `claude/mobile-mpc-drum-sampler-t58x74`.
 
+> **Re-verified 2026-08-29 at `00835bf`.** The first pass read a checkout 119
+> commits behind origin. After merging waves OO–SS, two findings below changed:
+> §2b is **closed** (TAKES + BIN is fully built) and §1c is **re-scoped** (the new
+> `synth/Eras.kt` supplies the treatments rather than new hand-written chains).
+> Everything else re-checked and still stands.
+
 The handoff is unusually implementable — it states tokens in the form Compose
 consumes and names repo symbols (`PeaksPyramid`, `StarterKits`,
 `KIT_BEST_PRACTICES`) as the data behind screens the prototype fakes. Most of
@@ -75,9 +81,15 @@ but `Shuffle.TREATMENTS` is `reversed / crushed / slapback / washed / punched`:
 
 - `NONE` is not a treatment name — it must be UI-level absence that never calls
   `chain()` (otherwise `IllegalArgumentException: unknown treatment 'NONE'`).
-- `CRUSH` → `crushed` is the only confident mapping. `TAPE` and `DIRT` match no
-  entry; `FxChain` has a `tape` macro but no `tape` treatment. **Needs a
-  designer/code decision, not a guess.**
+- `CRUSH` → `crushed` was the only confident mapping against `Shuffle.TREATMENTS`.
+  **Resolved 2026-08-29:** `synth/Eras.kt` (wave QQ) already models `sp1200`,
+  `mpc60`, `tape` and `phone` as era-faithful chains, so the card maps
+  CRUSH→`sp1200`, TAPE→`tape`, DIRT→`mpc60` instead of authoring anything. It
+  drives `KitBuilder.eraPad`, which — unlike `treatPad` — ages a pad's velocity
+  layers too.
+
+The AMT defect is worse than first reported: the same `require(amount > 0f …)`
+guard sits in **both** `Treatments.kt:20` and `Eras.kt:47`.
 
 ---
 
@@ -111,17 +123,24 @@ readout / BOUNCE; landscape 816×362; the rebake overlay.
 > constructor arg. The Compose readout must multiply by `session.barsPerInterval`
 > or it will lie on any non-4 session.
 
-### 2b. TAKES + BIN — shipped copy is writing a check the code can't cash
+### 2b. ~~TAKES + BIN~~ — CLOSED, it was already built
 
-`Personality.kt:77` already ships `DELETE_SNIP = "EJECTED. THE BIN KEEPS IT 30
-DAYS."` There is no bin. Nothing in `audio cli json kit mpc3 shell synth xpm`
-matches a retention model, a deleted-item store, or a day countdown. The nearest
-things are `TreatCommand --undo` (a one-deep per-pad undo that *calls itself* a
-bin in its help text) and `KitBackup` (whole-kit zip export/restore).
+**Struck 2026-08-29.** The first pass read a stale checkout and reported that
+`Personality.kt:77`'s `"EJECTED. THE BIN KEEPS IT 30 DAYS."` had nothing behind
+it. It does. `shell/KitBuilder.kt` carries the whole X2.3 domain:
 
-X2.3 needs, and none of it exists: a takes archive written on every save
-(`T4…T2` + `NOW`), a bin with per-item `reason` + `27D LEFT` countdown, RESTORE,
-BACK, and EMPTY THE BIN NOW.
+| X2.3 asks for | code |
+|---|---|
+| every save archives a take | `archiveTake()`, called from the save path |
+| the take list, `T4…T2` | `takes(): List<File>`, `TAKES_DIR ".takes"`, `MAX_TAKES 32` |
+| RESTORE an older take | `restoreTake(take): Kit` |
+| every delete goes to the bin | `moveToBin(fileName)`, `BIN_DIR ".bin"` |
+| the `27D LEFT` countdown | `BIN_KEEP_DAYS 30.0`, `purgeBin(olderThanDays, nowMillis)` |
+| BACK, from the bin | `restoreFromBin(originalName)` |
+| EMPTY THE BIN NOW | `emptyBin()` |
+
+What remains is a screen, not a model — and the copy for it is still unwritten
+(§2g).
 
 ### 2c. GROOVE PROG E — A–D map cleanly, E has nowhere to live
 
@@ -139,10 +158,11 @@ type.
 ### 2d. Pad-sheet prefs — `KitPad` covers most of it, misses two
 
 `KitPad` has `level`, `pan`, `tuneCoarse`/`tuneFine`, `muteGroup` (= CHOKE GRP),
-`oneShot`, `source` (the Y1.3 provenance line), `recipe`. Missing: **`ghosts`**
-(W5.3) and **`treat` / `amt`** as persisted UI state — `recipe` stores the
-resulting `FxChain` but not which segment was picked or at what amount, so the
-sheet can't restore its own control positions.
+`oneShot`, `source` (the Y1.3 provenance line), `recipe` — and, since the merge,
+`attack`, `decay`, `cutoff`, `resonance`, `humanize` and `chain`. Still missing:
+**`ghosts`** (W5.3) and **`treat` / `amt`** as persisted UI state — `recipe`
+stores the resulting chain but not which segment was picked or at what amount,
+so the sheet can't restore its own control positions.
 
 *(Verified: the handoff's "hats default choke ON per KIT_BEST_PRACTICES" citation
 is real — `docs/KIT_BEST_PRACTICES.md:68-70`, "Closed hat and open hat share a
