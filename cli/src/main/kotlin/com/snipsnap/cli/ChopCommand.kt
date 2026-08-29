@@ -152,7 +152,18 @@ object ChopCommand {
             else "chopped at ${slices.size} detected hits",
         )
 
-        val classified = slices.map { it to Classifier.classify(it.snip) }
+        // The capture's context, measured once: a phone across a room
+        // rolls off the sub, and a kick judged without knowing that
+        // files as a snare. The profile only changes anything when the
+        // rolloff is provable.
+        val profile = com.snipsnap.audio.CaptureProfile.measure(snip)
+        if (profile.rolledOff) {
+            out.println(
+                "phone capture heard: sub rolled off (%.1f%% of the low band below %d Hz) - kicks judged by shape"
+                    .format(profile.subShare * 100, com.snipsnap.audio.CaptureProfile.SUB_HZ.toInt()),
+            )
+        }
+        val classified = slices.map { it to Classifier.classify(it.snip, profile) }
 
         // The capture can name its own key - a guess from the pitched slices.
         val guess = com.snipsnap.audio.KeyGuess.guess(

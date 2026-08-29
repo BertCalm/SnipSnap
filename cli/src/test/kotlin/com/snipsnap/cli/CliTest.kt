@@ -2766,6 +2766,59 @@ class CliTest {
     }
 
     @Test
+    fun `chop hears a phone capture and puts the gutless kick back on A01`() {
+        val rate = 44_100
+        // A break of realistic hits (the kick carries knock + click, like
+        // a real drum), then the phone treatment: ~24 dB/oct at 150 Hz.
+        fun realisticKick(): FloatArray = FloatArray((0.4f * rate).toInt()) { i ->
+            val t = i.toDouble() / rate
+            (
+                0.9 * Math.sin(2.0 * Math.PI * 55.0 * t) * Math.exp(-9.0 * t) +
+                    0.2 * Math.sin(2.0 * Math.PI * 220.0 * t) * Math.exp(-25.0 * t) +
+                    (if (i < 30) 0.08 * (1.0 - i / 30.0) else 0.0)
+                ).toFloat()
+        }
+        val step = (60f / 100f / 2f * rate).toInt()
+        val total = FloatArray(step * 8 + rate / 2)
+        for ((ix, hit) in listOf(
+            0 to realisticKick(), 1 to DrumSynth.closedHat().samples,
+            2 to DrumSynth.snare().samples, 3 to DrumSynth.closedHat().samples,
+            4 to realisticKick(), 5 to DrumSynth.closedHat().samples,
+            6 to DrumSynth.snare().samples, 7 to DrumSynth.closedHat().samples,
+        )) {
+            val at = ix * step
+            for (i in hit.indices) {
+                if (at + i < total.size) total[at + i] += hit[i] * 0.8f
+            }
+        }
+        var phone = total
+        repeat(4) {
+            val a = Math.exp(-2.0 * Math.PI * 150.0 / rate).toFloat()
+            val res = FloatArray(phone.size)
+            var yPrev = 0f
+            var xPrev = 0f
+            for (i in phone.indices) {
+                val y = a * (yPrev + phone[i] - xPrev)
+                res[i] = y
+                yPrev = y
+                xPrev = phone[i]
+            }
+            phone = res
+        }
+        val src = File(temp, "phone break.wav")
+        WavWriter.write(src, Snip(phone, 1, rate))
+
+        val out = File(temp, "phonechop")
+        val (code, stdout, _) = cli("chop", src.path, "--out", out.path, "--name", "PhoneBreak")
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "phone capture heard")
+        val kit = KitStore.load(File(out, "PhoneBreak"))
+        val kicks = kit.pads.filter { it.drumClass == DrumClass.KICK }
+        assertTrue(kicks.isNotEmpty(), "the gutless kicks came home: ${kit.pads.map { it.drumClass }}")
+        assertTrue(kit.pads.any { it.slot == 1 && it.drumClass == DrumClass.KICK }, "and A01 is a kick again")
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")
