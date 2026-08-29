@@ -2594,6 +2594,11 @@ class CliTest {
         val (plainCode, plainOut, _) = cli("clean", src.path, "--dry")
         assertEquals(0, plainCode, plainOut)
         assertTrue("clipping" !in plainOut, "declip is an explicit opt-in")
+
+        // --deverb is the same kind of opt-in, and names its leg.
+        val (dvCode, dvOut, _) = cli("clean", src.path, "--deverb", "--overwrite")
+        assertEquals(0, dvCode, dvOut)
+        assertContains(dvOut, "room predicted and subtracted")
     }
 
     @Test

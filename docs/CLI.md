@@ -726,6 +726,17 @@ have no sparse structure to infer and earn little — the flat-top
 dictionaries and clipped-samples-only metrics; that upgrade is below
 the line.
 
+**The room leg, `--deverb`:** single-channel WPE de-reverberation —
+late reverb modeled per STFT band as a linear prediction from frames
+at least two back (the direct sound never predicts itself) and
+subtracted, variance-weighted so loud moments don't dominate the fit,
+every bin's suppression capped at −10 dB. An explicit opt-in with no
+detector of its own ("how roomy is too roomy" is taste), honest about
+its speech lineage; on the synthetic room fixture the tail recedes
+while the direct sound holds within a dB and a dry hit passes through
+nearly untouched. Its real-world verdict waits on the phone-mic
+capture in `reference/` — which `checkup` will score the day it lands.
+
 A WAV gets its findings printed and a cleaned twin beside it
 (`<name> Clean.wav`; `--in-place` overwrites, `--out DIR` redirects,
 `--overwrite` replaces an existing twin). A kit dir sends every plain

@@ -377,6 +377,57 @@ class CaptureDoctorTest {
     }
 
     @Test
+    fun `deverb predicts the room and subtracts it - the direct sound keeps its shape`() {
+        // The tail knee's own fixture: a tight hit convolved with a
+        // decaying-noise room IR.
+        val hitLen = (0.25f * rate).toInt()
+        val hit = FloatArray(hitLen) { i ->
+            val t = i.toDouble() / rate
+            (0.8 * Math.sin(2.0 * Math.PI * 180.0 * t) * Math.exp(-40.0 * t)).toFloat()
+        }
+        val rnd = java.util.Random(5)
+        val irLen = (0.5f * rate).toInt()
+        val ir = FloatArray(irLen) { i ->
+            if (i == 0) 1f else ((rnd.nextFloat() * 2f - 1f) * 0.01 * Math.exp(-7.0 * i / rate)).toFloat()
+        }
+        val roomyLen = (12 * rate) / 10
+        val roomy = FloatArray(roomyLen)
+        for (i in 0 until hitLen) {
+            for (j in ir.indices) {
+                val idx = i + j
+                if (idx < roomyLen) roomy[idx] += hit[i] * ir[j]
+            }
+        }
+        val dv = CaptureDoctor.deverb(Snip(roomy, 1, rate))
+
+        fun rmsAt(s: FloatArray, fromSec: Float, toSec: Float): Double {
+            var acc = 0.0
+            var n = 0
+            for (i in (fromSec * rate).toInt() until minOf((toSec * rate).toInt(), s.size)) {
+                acc += s[i] * s[i].toDouble()
+                n++
+            }
+            return Math.sqrt(acc / n.coerceAtLeast(1))
+        }
+        val tailDrop = 20 * Math.log10(rmsAt(dv.samples, 0.35f, 0.7f) / rmsAt(roomy, 0.35f, 0.7f))
+        assertTrue(tailDrop < -2, "the room recedes: $tailDrop dB")
+        val directChange = 20 * Math.log10(rmsAt(dv.samples, 0f, 0.06f) / rmsAt(roomy, 0f, 0.06f))
+        assertTrue(Math.abs(directChange) < 1.5, "the direct sound keeps its shape: $directChange dB")
+
+        // A dry, fast hit passes through nearly untouched.
+        val dry = FloatArray(rate)
+        hit.copyInto(dry)
+        val dryOut = CaptureDoctor.deverb(Snip(dry, 1, rate))
+        val peakBefore = dry.maxOf { Math.abs(it) }
+        val peakAfter = dryOut.samples.maxOf { Math.abs(it) }
+        assertTrue(Math.abs(peakAfter - peakBefore) < 0.05f * peakBefore, "the dry peak survives: $peakBefore -> $peakAfter")
+
+        // The visit names the leg when asked for.
+        val visit = CaptureDoctor.clean(Snip(roomy, 1, rate), deverb = true)
+        assertTrue(visit.deverbed && "room predicted and subtracted" in visit.summary(), visit.summary())
+    }
+
+    @Test
     fun `clean composes the whole visit - findings named, clean audio returned as-is`() {
         // Hum over hiss over the beat, with one click riding the noise — a
         // proper bad capture: every leg of the visit has work to do.

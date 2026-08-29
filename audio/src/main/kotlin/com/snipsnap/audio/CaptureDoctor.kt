@@ -314,13 +314,16 @@ object CaptureDoctor {
         val denoised: Boolean = false,
         /** What the declip leg found and rebuilt, when asked for and needed. */
         val clip: ClipReport? = null,
+        /** True when the WPE leg ran — an opt-in with no detector of its own. */
+        val deverbed: Boolean = false,
     ) {
-        val touched: Boolean get() = hum != null || clicks > 0 || dropouts > 0 || gated || clip != null
+        val touched: Boolean get() = hum != null || clicks > 0 || dropouts > 0 || gated || clip != null || deverbed
 
         /** The one-line diagnosis, every finding named. */
         fun summary(): String {
             val parts = mutableListOf<String>()
             clip?.let { parts += "clipping rebuilt (%.1f%% of samples pinned at %.2f)".format(it.fraction * 100, it.ceiling) }
+            if (deverbed) parts += "room predicted and subtracted (WPE)"
             hum?.let { parts += "%.0f Hz hum notched (%d harmonic(s), %.0f dBFS)".format(it.hz, it.harmonics, it.levelDb) }
             if (clicks > 0) parts += "$clicks click(s) repaired"
             if (dropouts > 0) parts += "$dropouts dropout(s) repaired"
@@ -341,7 +344,7 @@ object CaptureDoctor {
      * the same object, bytes untouched. Throws like [repairClicks]
      * when the capture is distortion, not clicks.
      */
-    fun clean(snip: Snip, denoise: Boolean = false, declip: Boolean = false): CleanReport {
+    fun clean(snip: Snip, denoise: Boolean = false, declip: Boolean = false, deverb: Boolean = false): CleanReport {
         var cur = snip
         // Clipping first when asked: pinned runs corrupt every reading
         // downstream of them.
@@ -356,18 +359,28 @@ object CaptureDoctor {
         if (hum != null) cur = removeHum(cur, hum)
         val repair = repairClicks(cur)
         cur = repair.snip
+        // The room after the repairs, before the floor reads: an opt-in
+        // leg with no detector of its own.
+        var deverbed = false
+        if (deverb) {
+            val dv = deverb(cur)
+            if (dv !== cur) {
+                deverbed = true
+                cur = dv
+            }
+        }
         if (denoise) {
             val deep = denoise(cur)
             return if (deep == null) {
-                CleanReport(hum, repair.clicks, repair.dropouts, measureFloor(cur), gated = false, snip = cur, clip = clip)
+                CleanReport(hum, repair.clicks, repair.dropouts, measureFloor(cur), gated = false, snip = cur, clip = clip, deverbed = deverbed)
             } else {
-                CleanReport(hum, repair.clicks, repair.dropouts, deep.floorDb, gated = true, snip = deep.snip, denoised = true, clip = clip)
+                CleanReport(hum, repair.clicks, repair.dropouts, deep.floorDb, gated = true, snip = deep.snip, denoised = true, clip = clip, deverbed = deverbed)
             }
         }
         val floor = measureFloor(cur)
         val gate = floor != null && floor > CLEAN_FLOOR_DB
         if (gate) cur = expand(cur, floor!!)
-        return CleanReport(hum, repair.clicks, repair.dropouts, floor, gate, cur, clip = clip)
+        return CleanReport(hum, repair.clicks, repair.dropouts, floor, gate, cur, clip = clip, deverbed = deverbed)
     }
 
     // ---- the noise floor (MM3) --------------------------------------------
@@ -954,6 +967,232 @@ object CaptureDoctor {
                 }
             }
         }
+    }
+
+    // ---- deverb (RR2): single-channel WPE ---------------------------------
+
+    /** Prediction starts this many frames back — the direct sound must never predict itself. */
+    const val WPE_DELAY = 2
+
+    /** Prediction order: how many past frames model the room per band. */
+    const val WPE_ORDER = 10
+
+    /** Variance-weighted refinements. */
+    const val WPE_ITERATIONS = 3
+
+    /** Per-bin suppression floor (−10 dB): the room recedes, the music is never eaten whole. */
+    const val WPE_MAX_SUPPRESS = 0.316f
+
+    private const val WPE_FRAME = 1024
+    private const val WPE_HOP = WPE_FRAME / 4
+    private const val WPE_COLA = 1.5f
+
+    /**
+     * Weighted Prediction Error de-reverberation, single channel — an
+     * explicit opt-in, honest about its speech lineage: late reverb is
+     * modeled per STFT band as a linear prediction from frames at
+     * least [WPE_DELAY] back (the direct sound never predicts itself)
+     * and subtracted, with per-frame variance weighting so loud
+     * moments don't dominate the fit, and every bin's suppression
+     * capped at [WPE_MAX_SUPPRESS]. Audio too short to fit the
+     * predictor comes back untouched.
+     */
+    fun deverb(snip: Snip): Snip {
+        val window = FloatArray(WPE_FRAME) { n ->
+            (0.5 - 0.5 * Math.cos(2.0 * Math.PI * n / WPE_FRAME)).toFloat()
+        }
+        val out = FloatArray(snip.samples.size)
+        for (ch in 0 until snip.channels) {
+            val x = FloatArray(snip.frameCount) { f -> snip.samples[f * snip.channels + ch] }
+            val padded = x.size + 2 * WPE_FRAME
+            val frames = (padded - WPE_FRAME) / WPE_HOP + 1
+            if (frames < WPE_DELAY + WPE_ORDER + 8) return snip
+            val bins = WPE_FRAME / 2 + 1
+            val specRe = Array(frames) { FloatArray(bins) }
+            val specIm = Array(frames) { FloatArray(bins) }
+            val re = FloatArray(WPE_FRAME)
+            val im = FloatArray(WPE_FRAME)
+            for (f in 0 until frames) {
+                val at = f * WPE_HOP
+                for (n in 0 until WPE_FRAME) {
+                    val src = at + n - WPE_FRAME
+                    re[n] = (if (src in x.indices) x[src] else 0f) * window[n]
+                    im[n] = 0f
+                }
+                Fft.forward(re, im)
+                for (b in 0 until bins) {
+                    specRe[f][b] = re[b]
+                    specIm[f][b] = im[b]
+                }
+            }
+
+            for (b in 0 until bins) {
+                wpeBand(specRe, specIm, b)
+            }
+
+            val acc = FloatArray(padded)
+            for (f in 0 until frames) {
+                val at = f * WPE_HOP
+                for (n in 0 until WPE_FRAME) {
+                    re[n] = 0f
+                    im[n] = 0f
+                }
+                for (bIdx in 0 until bins) {
+                    re[bIdx] = specRe[f][bIdx]
+                    im[bIdx] = specIm[f][bIdx]
+                    if (bIdx in 1 until WPE_FRAME / 2) {
+                        re[WPE_FRAME - bIdx] = specRe[f][bIdx]
+                        im[WPE_FRAME - bIdx] = -specIm[f][bIdx]
+                    }
+                }
+                im[0] = 0f
+                im[WPE_FRAME / 2] = 0f
+                Fft.inverse(re, im)
+                for (n in 0 until WPE_FRAME) {
+                    acc[at + n] += re[n] * window[n]
+                }
+            }
+            for (f in x.indices) {
+                out[f * snip.channels + ch] = acc[f + WPE_FRAME] / WPE_COLA
+            }
+        }
+        return Snip(out, snip.channels, snip.sampleRate)
+    }
+
+    /** One band's WPE in place: iterate weights → normal equations → subtraction. */
+    private fun wpeBand(specRe: Array<FloatArray>, specIm: Array<FloatArray>, b: Int) {
+        val frames = specRe.size
+        val k = WPE_ORDER
+        val d = WPE_DELAY
+        val xr = FloatArray(frames) { specRe[it][b] }
+        val xi = FloatArray(frames) { specIm[it][b] }
+        var yr = xr.copyOf()
+        var yi = xi.copyOf()
+        repeat(WPE_ITERATIONS) {
+            // Per-frame variance from the current estimate, floored.
+            val lambda = DoubleArray(frames) { f ->
+                (yr[f] * yr[f] + yi[f] * yi[f]).toDouble().coerceAtLeast(1e-8)
+            }
+            // Normal equations G g = r over the delayed taps, complex.
+            val gRe = Array(k) { DoubleArray(k) }
+            val gIm = Array(k) { DoubleArray(k) }
+            val rRe = DoubleArray(k)
+            val rIm = DoubleArray(k)
+            for (f in d + k - 1 until frames) {
+                val w = 1.0 / lambda[f]
+                for (i in 0 until k) {
+                    val ar = xr[f - d - i].toDouble()
+                    val ai = xi[f - d - i].toDouble()
+                    rRe[i] += w * (ar * xr[f] + ai * xi[f])
+                    rIm[i] += w * (ar * xi[f] - ai * xr[f])
+                    for (j in i until k) {
+                        val br = xr[f - d - j].toDouble()
+                        val bi = xi[f - d - j].toDouble()
+                        gRe[i][j] += w * (ar * br + ai * bi)
+                        gIm[i][j] += w * (ar * bi - ai * br)
+                    }
+                }
+            }
+            for (i in 0 until k) {
+                for (j in 0 until i) {
+                    gRe[i][j] = gRe[j][i]
+                    gIm[i][j] = -gIm[j][i]
+                }
+                gRe[i][i] += 1e-6
+            }
+            val g = solveComplex(gRe, gIm, rRe, rIm) ?: return
+            // Subtract the predicted late reverb, capped per frame.
+            for (f in 0 until frames) {
+                if (f < d + k - 1) continue
+                var pr = 0.0
+                var pi = 0.0
+                for (i in 0 until k) {
+                    val ar = xr[f - d - i].toDouble()
+                    val ai = xi[f - d - i].toDouble()
+                    // The normal equations were built from conj(tap)·x,
+                    // so the prediction is the PLAIN product g_i · tap_i.
+                    pr += g[0][i] * ar - g[1][i] * ai
+                    pi += g[0][i] * ai + g[1][i] * ar
+                }
+                var er = xr[f] - pr.toFloat()
+                var ei = xi[f] - pi.toFloat()
+                val magX = Math.hypot(xr[f].toDouble(), xi[f].toDouble())
+                val magE = Math.hypot(er.toDouble(), ei.toDouble())
+                val floor = magX * WPE_MAX_SUPPRESS
+                if (magE < floor && magE > 1e-12) {
+                    val s = (floor / magE).toFloat()
+                    er *= s
+                    ei *= s
+                }
+                yr[f] = er
+                yi[f] = ei
+            }
+        }
+        for (f in 0 until frames) {
+            specRe[f][b] = yr[f]
+            specIm[f][b] = yi[f]
+        }
+    }
+
+    /** Hermitian solve via Gaussian elimination with partial pivoting; null if singular. */
+    private fun solveComplex(
+        aRe: Array<DoubleArray>,
+        aIm: Array<DoubleArray>,
+        bRe: DoubleArray,
+        bIm: DoubleArray,
+    ): Array<DoubleArray>? {
+        val n = bRe.size
+        val ar = Array(n) { aRe[it].copyOf() }
+        val ai = Array(n) { aIm[it].copyOf() }
+        val xr = bRe.copyOf()
+        val xi = bIm.copyOf()
+        for (col in 0 until n) {
+            var pivot = col
+            var best = ar[col][col] * ar[col][col] + ai[col][col] * ai[col][col]
+            for (row in col + 1 until n) {
+                val m = ar[row][col] * ar[row][col] + ai[row][col] * ai[row][col]
+                if (m > best) {
+                    best = m
+                    pivot = row
+                }
+            }
+            if (best < 1e-18) return null
+            if (pivot != col) {
+                val tr = ar[col]; ar[col] = ar[pivot]; ar[pivot] = tr
+                val ti = ai[col]; ai[col] = ai[pivot]; ai[pivot] = ti
+                var t = xr[col]; xr[col] = xr[pivot]; xr[pivot] = t
+                t = xi[col]; xi[col] = xi[pivot]; xi[pivot] = t
+            }
+            val dr = ar[col][col]
+            val di = ai[col][col]
+            val dm = dr * dr + di * di
+            for (row in col + 1 until n) {
+                val fr = (ar[row][col] * dr + ai[row][col] * di) / dm
+                val fi = (ai[row][col] * dr - ar[row][col] * di) / dm
+                for (j in col until n) {
+                    ar[row][j] -= fr * ar[col][j] - fi * ai[col][j]
+                    ai[row][j] -= fr * ai[col][j] + fi * ar[col][j]
+                }
+                xr[row] -= fr * xr[col] - fi * xi[col]
+                xi[row] -= fr * xi[col] + fi * xr[col]
+            }
+        }
+        val outR = DoubleArray(n)
+        val outI = DoubleArray(n)
+        for (row in n - 1 downTo 0) {
+            var sr = xr[row]
+            var si = xi[row]
+            for (j in row + 1 until n) {
+                sr -= ar[row][j] * outR[j] - ai[row][j] * outI[j]
+                si -= ar[row][j] * outI[j] + ai[row][j] * outR[j]
+            }
+            val dr = ar[row][row]
+            val di = ai[row][row]
+            val dm = dr * dr + di * di
+            outR[row] = (sr * dr + si * di) / dm
+            outI[row] = (si * dr - sr * di) / dm
+        }
+        return arrayOf(outR, outI)
     }
 
     /** Goertzel amplitude of [hz] over the first [n] frames. */
