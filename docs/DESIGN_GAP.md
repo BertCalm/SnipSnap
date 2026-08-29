@@ -234,6 +234,16 @@ The older shipped list is in good shape — 10 of 11 present. The one absentee i
 `"SNACK BAR. SHIPPED OUT OF RESPECT."`, which is consistent with SNACK_BAR being
 on the retirement list anyway.
 
+> **Undercount, found 2026-08-29 while implementing.** This sweep only read the
+> handoff's *"Shipped copy adds"* list and its PAD SHEET toasts. Two more shipped
+> lines live inside screen-table rows and were missed: `"EVERY SAVE ARCHIVES A
+> TAKE. EVERY DELETE GOES TO THE BIN FIRST."` (TAKES + BIN) and `"FEATURES ONLY,
+> NEVER AUDIO. NOTHING LEAVES THE PHONE."` (X4.4 teach consent). Nineteen, not
+> seventeen. Both added.
+>
+> Lesson for the next sweep: the handoff carries copy in three places — the
+> Personality section's two lists, and inline in the screen table's row prose.
+
 ---
 
 ## 3. Questions for the designer — still open
