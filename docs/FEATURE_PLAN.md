@@ -1123,10 +1123,10 @@ keys play over them — instead of hoping a clean stretch exists.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| PP1 | The mask engine (`:audio` `Separate`) — HPSS: magnitude spectrogram via `Spectral.forEachFrame`, median filters across time (harmonic) and frequency (percussive), soft Wiener-style masks (power 2) applied as per-bin gains through `Spectral.process`, phases untouched. `harmonic(snip)` / `percussive(snip)` / both-at-once | CORE | M | masks sum to one, so harmonic + percussive reconstructs the input within float tolerance; on a drums+pad synthetic mix the percussive part holds the kick/hat energy (probe) and the harmonic part holds the tone; drums-only input lands overwhelmingly percussive; deterministic (no seeds — it's all measurement) |
-| PP2 | STN (`Separate.stn`) — round one at big frames pulls sines, round two at small frames splits the residual into transients and noise, fuzzy soft masks per the papers; `dissect <kit-dir> <pad>` lands the three parts as a "<Name> Dissected" kit (Sines / Transient / Noise pads, provenance + recipe), the pieces re-mutable like any pads | CORE | M | the three parts sum back to the input within tolerance; a synthetic kick (sine body + click attack + noise air) dissects with each ingredient dominant in its own part (probe per part); a pure tone lands in sines, a click in transients, hiss in noise |
-| PP3 | `split <song.wav>` — HPSS at song scale: "<Song> Drums.wav" + "<Song> Music.wav" beside the source, honest summary of the energy split; the halves then feed any existing verb (`chop` the drums, `keys`/`dig --air` the music) | CORE | S–M | CLI round trip on a synthetic song: the Drums twin carries the percussive probes, the Music twin the tonal ones, the two sum to the source; a drums-only file says so rather than manufacturing a Music half |
-| PP4 | `dig --unearth` — the flagship: the dig scores (and `--chop` chops) the *percussive layer* instead of the raw mix, so a break buried under loud pads is found and extracted; provenance says unearthed; plain dig behavior unchanged without the flag | CORE | M | a synthetic song whose drums are fully overlaid by loud pads: plain `dig --chop` yields a kit whose pads carry heavy tonal bleed, `--unearth` yields pads whose tonal probe sits ≥ 10 dB lower; timestamps still honest; a song with no drums still says "no break heard" |
+| PP1 | ✓ done: `Separate.hpss` — one analysis pass on the `Spectral` door, medians across time (harmonic) and frequency (percussive), Wiener masks with a shared floor summing to exactly one; harmonic + percussive reconstructs the input within float tolerance. One physics lesson recorded: a boomy kick's sub is a *held tone* and rightly leans harmonic — the vertical promise is about attacks and noise, so drums-read-as-drums is asserted on hats/snares/claps | CORE | M | masks sum to one, so harmonic + percussive reconstructs the input within float tolerance; on a drums+pad synthetic mix the percussive part holds the hat energy (probe) and the harmonic part holds the tone; snappy drums land overwhelmingly percussive, a chord overwhelmingly harmonic; deterministic |
+| PP2 | ✓ done: `Separate.stn` — the fuzzy ratio of time-median to the median pair, raised-cosine ramps between named thresholds (sines ≥ 0.8, transients ≤ 0.2), masks still summing to one, single-resolution telling of the papers (two-resolution refinement below the line). `dissect` lands Sines (TONAL) / Transient (PERC) / Air (LOOP) as a "<Name> Dissected" kit, provenance + recipe per pad, energy shares printed | CORE | M | the three parts sum back to the input within tolerance; a held tone lands in sines, broadband bursts carry > 50% of the transient part's energy in their own windows, hiss probes into noise; the CLI round trip checks classes, provenance, recipes, the body singing in Sines and the attack fronting the Transient pad |
+| PP3 | ✓ done: `split <song.wav>` — Drums.wav + Music.wav beside the source, verdicts with measured shares ("mostly drums" at ≥ 65%), both halves always written (even a drums-only song has a body the harmonic telling honestly claims). One boundary lesson: masked halves can locally overshoot full scale even when the song doesn't, and the 24-bit boundary would clip silently — both halves now scale by one stated factor when either overshoots, still summing to the song | CORE | S–M | CLI round trip: the chord probes into Music, the halves sum back to the song through the files; drums alone read "mostly drums" |
+| PP4 | ✓ done: `dig --unearth` — the dig scores and chops the percussive layer, `--air` cuts from the music layer, pads stamped `unearthed`. The test landed the claim in a *stronger* form than planned: on a song whose chord never stops, the plain dig honestly reads "no break heard" — no stretch of the raw mix scores as drums at all — while `--unearth` finds and chops the buried break, its pads carrying ≥ 10 dB less chord than a plain chop of the very same section | CORE | M | a synthetic song with drums fully overlaid by loud pads: plain dig "no break heard", --unearth finds and chops it, tonal bleed ≥ 10 dB down vs a plain chop of the same section; provenance says unearthed |
 
 **Below the line for PP:** KAM (kernel additive modeling — HPSS's
 generalized successor, heavier for modest gain here); using the
@@ -1231,9 +1231,15 @@ CORE wave MM: ✓ all landed (2026-08-28) — the Capture Doctor. Hum
   capture before the first slice. Clean audio comes back the very same
   object, every time.
 
-CORE waves PP → QQ → RR (planned 2026-08-28 from the research sweep):
-  PP the Split (median-filter mask engine: HPSS + STN, split verb,
-  dig --unearth as flagship) → QQ Time Done Right (PGHI, hybrid TSM
+CORE wave PP: ✓ all landed (2026-08-29) — the Split. The median-
+  filter mask engine (HPSS + fuzzy STN, masks summing to one so every
+  separation proves it lost nothing), dissect's anatomy kits, split's
+  song-scale twins with honest verdicts, and dig --unearth - which
+  landed stronger than planned: a break the plain dig cannot hear at
+  all comes out clean from under a chord that never stops.
+
+CORE waves QQ → RR (planned 2026-08-28 from the research sweep):
+  QQ Time Done Right (PGHI, hybrid TSM
   as --fit-tempo --keep-pitch / retime, mutate --morph; RIDES PP) →
   RR the Restoration (SPADE declip, WPE deverb, the reference/
   scorecard; standalone — can run before or after the others).
