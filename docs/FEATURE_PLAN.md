@@ -1196,6 +1196,31 @@ fixtures first); learned room fingerprints shared between takes
 
 ---
 
+## Wave SS — the Hardening (CORE)
+
+The last adversarial passes (BB security, CC robustness, DD parsers)
+predate everything from EE onward. Since then the CLI grew from ~20 to
+44 verbs and :audio grew five DSP engines — and the hostile-file sweep
+still exercises five verbs. Found while scoping: `Pghi.stretch` has no
+output ceiling where `Stretch` and `Granular` cap theirs — a
+`stretch --clear --by 100` on a long file is an OOM, not an error.
+Same house rules as BB/CC: a hostile input earns a named refusal and a
+clean exit, never a stack trace, never a hang, never NaN on disk.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| SS1 | Hostile sweep expansion — BB5's junk corpus (noise, empty, truncated WAV, fake archives) against EVERY file-taking verb added since (clean, checkup, split, dissect, sculpt, stretch, retime, dig, learn, mutate --with, classify), plus a NEW junk-kit corpus (garbage kit.json, kit.json pointing at missing WAVs, junk WAV inside a real kit) against the kit-door verbs (clean, robin, mutate, euclid, sculpt/dissect pad refs, arrange, doctor) | CORE | M | every (verb × hostile) pair exits 0..2 with no throw; the junk-kit corpus likewise; failures named per pair |
+| SS2 | Degenerate-audio invariants — the DD3 property sweep extended over the new engines: {1-sample, tiny, pure silence, pure DC, full-scale square, low-rate, stereo} through Granular, Stretch (both modes), Pghi (invert + stretch), Separate (hpss + stn), Retime, and every CaptureDoctor leg (clean with all flags) — each returns all-finite audio or refuses with a named IllegalArgumentException; no NaN, no Inf, no hang | CORE | M | the full matrix passes: outputs finite and length-honest, refusals named; silence in → silence-or-refusal out, never noise invented |
+| SS3 | Ceilings on the new engines — `Pghi.stretch` gains the same output cap as `Stretch` (MAX_OUT_SEC); audit and align the rest (Separate/deverb/declip memory scale with input — bounded by the reader's own ceilings, verified and documented) | CORE | S | stretch --clear --by 100 on a long fixture caps at the ceiling instead of exhausting memory; the cap is named in the output length, not silent truncation mid-frame |
+| SS4 | Combined-legs round trip — `clean --declip --deverb --denoise` in one visit on a kit pad: one recipe carrying every leg, `--undo` byte-identical; the new recipe shapes (clean/sculpt/dissect/morph) survive a KitStore save/load round trip and an .xpn export/import without loss or crash | CORE | S–M | the all-flags visit stamps one recipe naming every leg and undoes byte-identical; round-tripped kits carry the recipes verbatim; export/import of a sculpted, dissected, morphed, cleaned kit family is lossless where the format allows and named where it does not |
+
+**Below the line for SS:** timing-based fuzz (bounded-runtime property
+harness — wants a budget runner); differential fuzz against the golden
+snapshots (CC3 already guards the exports); a hostile-audio corpus of
+real-world broken captures (grows in reference/ as they appear).
+
+---
+
 ## Sequence
 
 ```
