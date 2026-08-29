@@ -2288,6 +2288,64 @@ class CliTest {
     }
 
     @Test
+    fun `dissect lays a sound's anatomy on three pads`() {
+        val rate = 44_100
+        // A synthetic "kick": held 150 Hz body + broadband attack burst + hiss air.
+        val rnd = java.util.Random(9)
+        val burst = java.util.Random(10)
+        val hit = FloatArray(rate) { i ->
+            val t = i.toDouble() / rate
+            (0.5 * Math.sin(2.0 * Math.PI * 150.0 * t)).toFloat() +
+                (rnd.nextFloat() * 2f - 1f) * 0.04f +
+                (if (i < 120) (burst.nextFloat() * 2f - 1f) * 0.8f else 0f)
+        }
+        val src = File(temp, "anatomy.wav")
+        WavWriter.write(src, Snip(hit, 1, rate))
+        val out = File(temp, "dissectout")
+        val (code, stdout, _) = cli("dissect", src.path, "--out", out.path)
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "Sines")
+        assertContains(stdout, "sum back to the whole")
+
+        val kitDir = File(out, "anatomy Dissected")
+        val kit = KitStore.load(kitDir)
+        assertEquals(3, kit.pads.size)
+        val byName = kit.pads.associateBy { it.displayName }
+        assertEquals(DrumClass.TONAL, byName.getValue("Sines").drumClass)
+        assertEquals(DrumClass.PERC, byName.getValue("Transient").drumClass)
+        assertEquals(DrumClass.LOOP, byName.getValue("Air").drumClass)
+        for (pad in kit.pads) {
+            assertEquals("anatomy.wav", pad.source["dissectedFrom"], "provenance stamped")
+            assertTrue(pad.recipe?.entries?.containsKey("dissect") == true, "recipe stamped")
+        }
+
+        // The body sings in Sines; the attack's energy fronts the Transient pad.
+        fun mono(pad: String): FloatArray {
+            val s = com.snipsnap.audio.WavReader.read(File(kitDir, byName.getValue(pad).sampleFile))
+            return FloatArray(s.frameCount) { f ->
+                (0 until s.channels).sumOf { ch -> s.samples[f * s.channels + ch].toDouble() }.toFloat() / s.channels
+            }
+        }
+        val sines = mono("Sines")
+        val transient = mono("Transient")
+        assertTrue(
+            tone(sines, 150.0, rate) > 5 * tone(transient, 150.0, rate),
+            "the body is sines",
+        )
+        fun headShare(s: FloatArray): Double {
+            var head = 0.0
+            var total = 1e-12
+            for (i in s.indices) {
+                val e = s[i] * s[i].toDouble()
+                if (i < rate / 100) head += e
+                total += e
+            }
+            return head / total
+        }
+        assertTrue(headShare(transient) > 0.5, "the attack fronts the transient pad: ${headShare(transient)}")
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")

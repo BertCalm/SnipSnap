@@ -116,6 +116,12 @@ object Cli {
         |                        renders the full velocity x robin grid - a
         |                        dynamics-graded chain where soft hits play
         |                        quieter, darker takes
+        |  dissect <wav> | <kit-dir> <pad>
+        |                        the anatomy lesson: one sound as three pads
+        |                        - sines (body), transient (attack), air
+        |                        (noise) - fuzzy STN masks that sum back to
+        |                        the whole; each part then mutates, eras or
+        |                        sculpts on its own
         |  sculpt <wav> | <kit-dir> <pad>
         |                        the Sculptor: hits become matter - four
         |                        seeded granular takes as a texture kit of
@@ -311,6 +317,7 @@ object Cli {
                 "sculpt" -> SculptCommand.run(args.drop(1), out)
                 "stretch" -> StretchCommand.run(args.drop(1), out)
                 "euclid" -> EuclidCommand.run(args.drop(1), out)
+                "dissect" -> DissectCommand.run(args.drop(1), out)
                 "art" -> ArtCommand.run(args.drop(1), out)
                 "jcard" -> JCardCommand.run(args.drop(1), out)
                 "notes" -> NotesCommand.run(args.drop(1), out)

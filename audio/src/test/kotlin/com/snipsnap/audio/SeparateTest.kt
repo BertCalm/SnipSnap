@@ -53,6 +53,60 @@ class SeparateTest {
     }
 
     @Test
+    fun `stn dissects the anatomy - tone to sines, clicks to transients, hiss to noise`() {
+        // A held 400 Hz tone, four short broadband bursts, hiss under all.
+        val rnd = java.util.Random(3)
+        val n = 2 * rate
+        val mix = FloatArray(n) { i ->
+            (0.3 * Math.sin(2.0 * Math.PI * 400.0 * i / rate)).toFloat() +
+                (rnd.nextFloat() * 2f - 1f) * 0.05f
+        }
+        val clickAt = listOf(0.4f, 0.8f, 1.2f, 1.6f).map { (it * rate).toInt() }
+        val burst = java.util.Random(4)
+        for (at in clickAt) {
+            for (i in 0 until 90) mix[at + i] += (burst.nextFloat() * 2f - 1f) * 0.8f
+        }
+        val stn = Separate.stn(Snip(mix, 1, rate))
+
+        // Nothing lost: the three parts sum back to the input.
+        var worst = 0f
+        for (i in mix.indices) {
+            val d = Math.abs(stn.sines.samples[i] + stn.transients.samples[i] + stn.noise.samples[i] - mix[i])
+            if (d > worst) worst = d
+        }
+        assertTrue(worst < 2e-4f, "three masks, one whole: worst $worst")
+
+        // The tone lives in sines.
+        assertTrue(
+            probe(stn.sines.samples, 400f) > 5 * probe(stn.transients.samples, 400f) &&
+                probe(stn.sines.samples, 400f) > 5 * probe(stn.noise.samples, 400f),
+            "the held tone is sines",
+        )
+        // The bursts live in transients: most of that part's energy sits
+        // inside the click windows, the only verticals in the fixture.
+        fun energy(s: FloatArray, from: Int, to: Int): Double {
+            var acc = 0.0
+            for (i in from until to) acc += s[i] * s[i].toDouble()
+            return acc
+        }
+        val win = (0.012f * rate).toInt()
+        val inWindows = clickAt.sumOf { energy(stn.transients.samples, it - win / 4, it + win) }
+        val total = energy(stn.transients.samples, 0, n)
+        assertTrue(inWindows > 0.5 * total, "the transients part is made of the bursts: ${inWindows / total}")
+
+        // The hiss lives in noise - probe a top band away from any burst.
+        fun hiBand(s: FloatArray): Float {
+            val seg = s.copyOfRange((0.5f * rate).toInt(), (0.7f * rate).toInt())
+            return CaptureDoctor.goertzel(seg, seg.size, 9000f, rate)
+        }
+        assertTrue(
+            hiBand(stn.noise.samples) > 3 * hiBand(stn.sines.samples) &&
+                hiBand(stn.noise.samples) > 3 * hiBand(stn.transients.samples),
+            "the hiss is noise",
+        )
+    }
+
+    @Test
     fun `notes go harmonic, hits go percussive`() {
         val d = drums()
         val c = chord()
