@@ -2230,6 +2230,20 @@ class CliTest {
         assertContains(fOut, "frozen at")
         assertEquals(2 * rate, com.snipsnap.audio.WavReader.read(File(temp, "stretch src Frozen.wav")).frameCount)
 
+        // --clear: PGHI phases keep the tone a narrow line.
+        val (cCode, cOut, _) = cli("stretch", src.path, "--clear", "--by", "4", "--seed", "3", "--overwrite")
+        assertEquals(0, cCode, cOut)
+        assertContains(cOut, "(clear)")
+        val clear = com.snipsnap.audio.WavReader.read(File(temp, "stretch src Stretched.wav"))
+        val cm = FloatArray(clear.frameCount) { f ->
+            (0 until clear.channels).sumOf { ch -> clear.samples[f * clear.channels + ch].toDouble() }.toFloat() / clear.channels
+        }
+        assertTrue(
+            tone(cm, 440.0, rate) > 20 * (tone(cm, 415.3, rate) + tone(cm, 466.16, rate)),
+            "the clear stretch is a narrow line",
+        )
+        assertEquals(2, cli("stretch", src.path, "--clear", "--freeze").first, "--clear and --freeze contradict")
+
         assertEquals(2, cli("stretch", src.path, "--by", "8", "--freeze").first, "--by and --freeze contradict")
         assertEquals(2, cli("stretch", src.path, "--at", "1").first, "--at rides on --freeze")
         assertEquals(2, cli("stretch", src.path, "--by", "1").first, "factor out of range")

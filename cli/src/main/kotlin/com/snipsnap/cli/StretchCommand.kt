@@ -1,5 +1,6 @@
 package com.snipsnap.cli
 
+import com.snipsnap.audio.Pghi
 import com.snipsnap.audio.Stretch
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
@@ -23,7 +24,7 @@ object StretchCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--by", "--at", "--seconds", "--seed", "--out"),
-            boolean = setOf("--freeze", "--overwrite"),
+            boolean = setOf("--freeze", "--overwrite", "--clear"),
         )
         val input = opts.positional.getOrNull(0)
             ?: throw CliError("stretch wants a source: snipsnap stretch <wav> [--by N | --freeze [--at sec]]")
@@ -32,6 +33,7 @@ object StretchCommand {
         if (!file.isFile) throw CliError("no such file: $input")
 
         val freeze = opts.has("--freeze")
+        if (opts.has("--clear") && freeze) throw CliError("--clear stretches; --freeze holds - pick one")
         if (opts["--by"] != null && freeze) throw CliError("--by and --freeze are different moves - pick one")
         if (opts["--at"] != null && !freeze) throw CliError("--at rides on --freeze - add it")
         if (opts["--seconds"] != null && !freeze) throw CliError("--seconds is for --freeze; a stretch's length is the source x the factor")
@@ -61,11 +63,14 @@ object StretchCommand {
                     ?: throw CliError("--by wants ${Stretch.MIN_FACTOR.toInt()}..${Stretch.MAX_FACTOR.toInt()}, got '$it'")
             } ?: DEFAULT_FACTOR
             val stretched = try {
-                Stretch.stretch(source, factor, seed)
+                // --clear: PGHI phases instead of random ones - a sine
+                // stays a narrow line instead of becoming the wash.
+                if (opts.has("--clear")) Pghi.stretch(source, factor, seed) else Stretch.stretch(source, factor, seed)
             } catch (e: IllegalArgumentException) {
                 throw CliError(e.message ?: "can't stretch that")
             }
-            stretched to "stretched x%.0f: %.2fs -> %.1fs".format(factor, source.durationSeconds, stretched.durationSeconds)
+            val kind = if (opts.has("--clear")) " (clear)" else ""
+            stretched to "stretched x%.0f%s: %.2fs -> %.1fs".format(factor, kind, source.durationSeconds, stretched.durationSeconds)
         }
 
         val suffix = if (freeze) "Frozen" else "Stretched"
