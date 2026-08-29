@@ -61,7 +61,45 @@ object Classifier {
     // Anything longer than this is a phrase, not a hit.
     private const val LOOP_MIN_SECONDS = 1.5f
 
+    // Phone family (TT1): what a kick looks like when the mic ate its sub.
+    // Calibrated against the reference capture's own pads: the kicks'
+    // surviving knock clusters at centroid 350-670 Hz, high band under
+    // 0.4, flatness under 0.06 - well apart from real snares (790+ Hz,
+    // high band 0.5+). The window is conservative on purpose and only
+    // ever promotes a PERC (the no-confidence shelf), never steals from
+    // a class that earned its name.
+    const val PHONE_KICK_MAX_CENTROID_HZ = 700f
+    const val PHONE_KICK_MAX_HIGH_RATIO = 0.45f
+    const val PHONE_KICK_MAX_FLATNESS = 0.15f
+    const val PHONE_KICK_MAX_DECAY_MS = 300f
+    const val PHONE_KICK_MAX_BURSTS = 2
+
     fun classify(snip: Snip): Classification = classify(FeatureExtractor.extract(snip))
+
+    fun classify(snip: Snip, profile: CaptureProfile?): Classification =
+        classify(FeatureExtractor.extract(snip), profile)
+
+    /**
+     * Classification with the capture's context: under a provably
+     * rolled-off profile the kick's usual evidence (its sub) never made
+     * it into the file, so a hit the rules shelved as PERC is re-judged
+     * by what survives the mic — darkness, one attack, a drum's decay —
+     * at honest sub-certain confidence. No profile, or a full-range
+     * one, and the answer is byte-identical to [classify].
+     */
+    fun classify(features: Features, profile: CaptureProfile?): Classification {
+        val base = classify(features)
+        if (profile?.rolledOff != true || base.drumClass != DrumClass.PERC) return base
+        val kickish = features.centroidHz < PHONE_KICK_MAX_CENTROID_HZ &&
+            features.highRatio < PHONE_KICK_MAX_HIGH_RATIO &&
+            features.flatness < PHONE_KICK_MAX_FLATNESS &&
+            features.decayMs < PHONE_KICK_MAX_DECAY_MS &&
+            features.attackBursts <= PHONE_KICK_MAX_BURSTS
+        if (!kickish) return base
+        val darkness = ((PHONE_KICK_MAX_CENTROID_HZ - features.centroidHz) / PHONE_KICK_MAX_CENTROID_HZ)
+            .coerceIn(0f, 1f)
+        return Classification(DrumClass.KICK, 0.5f + 0.2f * darkness, features)
+    }
 
     /**
      * Classify a feature vector alone — the rules never needed the audio,
