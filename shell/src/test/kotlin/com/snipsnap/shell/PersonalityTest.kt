@@ -77,7 +77,7 @@ class PersonalityTest {
             Copy.MELODIC_ON, Copy.KEY_OFF, Copy.TEACHING_ON, Copy.TEACHING_OFF,
             Copy.BANK_B_LIT, Copy.TWINS_REROLLED, Copy.BACK_FROM_BIN, Copy.BIN_EMPTIED,
             Copy.HUMANIZED, Copy.FORKED_TO_E, Copy.BAR_WIPED, Copy.GHOSTS_ON,
-            Copy.TREATED, Copy.INSTRUMENT_MADE, Copy.NO_PITCH,
+            Copy.INSTRUMENT_MADE, Copy.NO_PITCH,
             Copy.TAKES_BIN_RULE, Copy.TEACH_CONSENT,
         )
         for (line in lines) {
@@ -91,5 +91,10 @@ class PersonalityTest {
         assertTrue(Copy.keySet("Am").startsWith("Am SET."), "the key leads its own toast")
         assertTrue(Copy.keySet("Am").endsWith("."), "and still lands on a full stop")
         assertTrue(Copy.takeRestored("T3").startsWith("T3 RESTORED."), "the take leads its own toast")
+        assertTrue(
+            Copy.treated("CRUSH", "A02").startsWith("CRUSH ON A02."),
+            "the treatment and the pad both lead their own toast",
+        )
+        assertTrue(Copy.treated("CRUSH", "A02").endsWith("."), "and still lands on a full stop")
     }
 }

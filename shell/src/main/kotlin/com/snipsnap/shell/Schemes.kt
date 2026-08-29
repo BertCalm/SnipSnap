@@ -109,6 +109,12 @@ object Schemes {
         title1 = 0x0A0A0C, title2 = 0x2C3038, titleInk = 0x7ADFE4,
         desk1 = 0x101215, desk2 = 0x14171B,
         lcd = 0x0A0C0E, lcdInk = 0x7ADFE4, amber = 0xFFB000, field = 0x1B1E22,
+        // title2 (0x2C3038, luma 47) is one luma step from gray (0x2E3136,
+        // luma 48) — the default accent/winFrame would put the selected
+        // menu item's fill and the 3px selected-row bar right on top of the
+        // chrome behind them. titleInk is METAL's only saturated colour
+        // (luma 193, 145 clear of gray), so pin selection to it instead.
+        accent = 0x7ADFE4, winFrame = 0x7ADFE4,
     )
 
     val OILSLICK = Scheme(

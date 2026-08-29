@@ -113,7 +113,7 @@ object Shuffle {
             ArrangedPad(
                 snip = fx.process(pad.snip),
                 drumClass = pad.drumClass,
-                recipe = PadRecipe(fx = fx, treatment = treatment).toJsonValue(),
+                recipe = PadRecipe(fx = fx, treatment = treatment, amount = 1f).toJsonValue(),
                 level = pad.level,
             )
         }

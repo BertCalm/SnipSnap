@@ -111,7 +111,7 @@ object Copy {
 
     // ---- PAD SHEET ----
     const val GHOSTS_ON = "GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
-    const val TREATED = "CRUSH ON A02. ORIGINAL SLEEPS IN THE BIN."
+    fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
     const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."
 

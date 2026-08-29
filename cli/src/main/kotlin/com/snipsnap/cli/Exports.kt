@@ -22,7 +22,7 @@ object Exports {
         ExportFormat.EXPANSION to "browsable in the Expansion tab",
         ExportFormat.XPN to "one-file archive",
         ExportFormat.MPC3_TRACK to "MPC 3 native",
-        ExportFormat.MPC3_PROJECT to "whole MPC 3 project",
+        ExportFormat.MPC3_PROJECT to "whole MPC 3 project, kits + grooves",
         ExportFormat.MIDI to "grooves as MIDI files, every DAW",
         ExportFormat.SFZ to "open sampler format, chains cycle for real",
         ExportFormat.DECENT_SAMPLER to "free sampler preset, chains cycle here too",

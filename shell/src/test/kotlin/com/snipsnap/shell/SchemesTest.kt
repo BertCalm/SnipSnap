@@ -138,6 +138,18 @@ class SchemesTest {
     }
 
     @Test
+    fun `selection is visible against the chrome it sits on`() {
+        for (scheme in Schemes.ALL) {
+            val sep = Math.abs(Scheme.luma(scheme.accent) - Scheme.luma(scheme.gray))
+            assertTrue(
+                sep > 40,
+                "${scheme.id}: accent and gray are $sep luma apart - a selected row would " +
+                    "disappear into the chrome behind it",
+            )
+        }
+    }
+
+    @Test
     fun `the handwriting is Rock Salt`() {
         assertEquals("Rock Salt", Type.MARKER)
     }

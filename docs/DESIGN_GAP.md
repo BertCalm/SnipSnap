@@ -44,7 +44,14 @@ That's a call for whoever owns the branch strategy, not one this report makes.
 
 ## 1. Wrong on screen today (in `:shell`, this branch)
 
-### 1a. `Scheme.amber` is one field doing two jobs — GROOVE's needle renders cyan
+> **Note, 2026-08-29: every finding in this section is closed.** See 1a, 1b, 1c below.
+
+### 1a. ~~`Scheme.amber` is one field doing two jobs~~ — CLOSED, `warn` split out
+
+**Struck 2026-08-29.** `Scheme` now carries `warn` as its own field, separate
+from `amber` — OILSLICK's needle reads `warn = 0xFFB000` while `amber` stays
+cyan. `SchemesTest`'s `warn is warm in every scheme` and `OILSLICK separates
+its warn from its amber slot` hold both apart for good.
 
 The new token table splits what the code fuses:
 
@@ -59,7 +66,11 @@ one thing that is **not** cyan. Reading `scheme.amber` for it paints it cyan and
 the needle vanishes into the readouts. This needs a new field on `Scheme`, not a
 rename.
 
-### 1b. Six load-bearing tokens have no field at all
+### 1b. ~~Six load-bearing tokens have no field at all~~ — CLOSED, all six added
+
+**Struck 2026-08-29.** `Scheme` now carries `raised`, `win`, `winFrame`,
+`deskGlow`, `ink3` and `accent`; `SchemesTest`'s `OILSLICK matches the handoff
+token table exactly` pins all six against the handoff's values.
 
 `Scheme` predates the new table. Missing: **`raised`** (button/empty-pad
 gradient), **`win`** (window body), **`win-frame`** (the 3px OILSLICK gradient
@@ -69,7 +80,11 @@ that *replaces* the old bevel highlight/shadow pair), **`desk-glow`**, **`ink3`*
 The `win-frame` one is structural: `Scheme` still carries `grayHi`/`grayEdge`/
 `grayMid`/`grayDark`, which exist to build bevels. OILSLICK doesn't have bevels.
 
-### 1c. `Treatments.chain()` rejects the pad sheet's own default range
+### 1c. ~~`Treatments.chain()` rejects the pad sheet's own default range~~ — CLOSED, AMT=0 no longer throws
+
+**Struck 2026-08-29.** Both guards now read `require(amount in 0f..1f)`, with
+an explicit `amount <= 0f` bypass returning an untreated chain instead of
+throwing — `Treatments.kt` and `Eras.kt:47` both fixed, as the finding asked.
 
 ```kotlin
 require(amount > 0f && amount <= 1f) { "amount is (0, 1], got $amount" }
@@ -155,7 +170,11 @@ Kotlin equivalent. Note that `loop.Step(step, slot, velocity, microOffset)` is
 almost exactly this shape — if `:loop` lands on this branch, E may not need a new
 type.
 
-### 2d. Pad-sheet prefs — `KitPad` covers most of it, misses two
+### 2d. ~~Pad-sheet prefs — `KitPad` covers most of it, misses two~~ — CLOSED, `treat`/`amt` now persist
+
+**Struck 2026-08-29.** `PadRecipe.treatment` and `PadRecipe.amount` persist the
+segment and AMT the section calls "the remaining half"; `Treatments.apply`
+writes both, and `Shuffle.withRemixBank` now does too.
 
 `KitPad` has `level`, `pan`, `tuneCoarse`/`tuneFine`, `muteGroup` (= CHOKE GRP),
 `oneShot`, `source` (the Y1.3 provenance line), `recipe` — and, since the merge,
@@ -178,7 +197,11 @@ work; the amount is the remaining half.
 is real — `docs/KIT_BEST_PRACTICES.md:68-70`, "Closed hat and open hat share a
 mute group (1-32) so triggering one chokes the other.")*
 
-### 2e. BANK B treatment tag isn't renderable from stored state
+### 2e. ~~BANK B treatment tag isn't renderable from stored state~~ — CLOSED, name persisted at remix time
+
+**Struck 2026-08-29.** `Shuffle.withRemixBank` now stores `treatment` on the
+twin's `PadRecipe` instead of discarding it — the cheap, preferred option the
+finding named.
 
 W4.3 wants a *"treatment tag top-right in accent 7px Silkscreen"* on each twin.
 `Shuffle.withRemixBank` throws the name away:
@@ -194,7 +217,11 @@ name → chain (`Treatments.chain`); nothing runs chain → name. So this is not
 preferred) or build an exact-match reverse lookup against `Shuffle.TREATMENTS`
 (fragile — `amount < 1` scales the macros and breaks equality).
 
-### 2f. Schemes — the artboards are ahead of the code, and of the handoff prose
+### 2f. ~~Schemes — the artboards are ahead of the code, and of the handoff prose~~ — CLOSED, all eight authored
+
+**Struck 2026-08-29.** `Schemes.ALL` ships all eight (METAL, OILSLICK, PETROL,
+INFRARED, ACID, SODIUM, ICE, VAPOR) with `DEFAULT = OILSLICK` — both open
+questions below resolved as "ship all eight" and "artboards are authoritative."
 
 **Decided 2026-08-28: CLEAR is cut.** Every light shell goes with it.
 
@@ -233,7 +260,12 @@ Two things to settle before authoring:
 `OILSLICK_SWEEP` already carries the exact 5 conic stops and documents the
 API<33 linear fallback. That one's done.
 
-### 2g. Personality copy — every new line is unwritten
+### 2g. ~~Personality copy — every new line is unwritten~~ — CLOSED, all 19 lines shipped
+
+**Struck 2026-08-29.** Every line named below — plus the two found in the
+undercount note — is in `Personality.kt`'s `Copy` object, including
+`TREATED`, which this wave converted from a hardcoded example into the
+`treated(segment, pad)` function its siblings already were.
 
 All 13 lines under *"Shipped copy adds"* are absent from `Personality.kt`, as are
 4 of the 5 PAD SHEET toasts — 17 missing of the 18 checked, including `"BANK B LIT. YOUR KIT, BUT
@@ -258,14 +290,23 @@ on the retirement list anyway.
 
 ## 3. Questions for the designer — still open
 
+> **Note, 2026-08-29: all three questions below are closed.** See 3.1, 3.2, 3.3.
+
 *(CLEAR: resolved 2026-08-28 — cut. See §2f.)*
 
-1. **Rock Salt or Permanent Marker?** The Type table says Rock Salt 11–15px
+1. ~~**Rock Salt or Permanent Marker?**~~ — **CLOSED 2026-08-29.** `Type.MARKER
+   = "Rock Salt"`; `SchemesTest`'s `the handwriting is Rock Salt` pins it. The
+   Type table's the branch's code follows now; the LOOP block-cell spec is the
+   stale one.
+
+   The Type table says Rock Salt 11–15px
    *"(was Permanent Marker; tweakable)"*, but the LOOP block-cell spec still says
    *"Permanent Marker 11px"*. `Type.MARKER` is a single constant and can't be
    both.
 
-2. **FRESH TAPE roster — 6 vs 6, only 3 overlap.**
+2. ~~**FRESH TAPE roster — 6 vs 6, only 3 overlap.**~~ — **CLOSED 2026-08-29.**
+   `StarterKits.kt:84` wires `"velocity", "VELOCITY"` — the missing entry this
+   question flagged.
 
    | handoff | `StarterKits.ALL` |
    |---|---|
@@ -278,6 +319,10 @@ on the retirement list anyway.
    The design also specs REROLL SEED for all six; only `LUCKY DIP` and
    `LUCKY DIP A/B` are `seeded = true`, so REROLL is a no-op on the other four.
 
-3. **`.XPJ` label.** Y3.3 adds `MPC SESSION (.XPJ) — KITS + GROOVES` to the FORMAT
+3. ~~**`.XPJ` label.**~~ — **CLOSED 2026-08-29.** `ExportFormats.kt:24` now
+   labels `xpj` `"MPC SESSION (.XPJ) — KITS + GROOVES"` (Task 9), and the CLI's
+   own format note in `cli/Exports.kt` was brought into agreement in this wave.
+
+   Y3.3 adds `MPC SESSION (.XPJ) — KITS + GROOVES` to the FORMAT
    cycler. `ExportFormats` already has `xpj` but labels it `MPC 3 PROJECT (.XPJ)`.
    Copy drift, and the design's label promises grooves ride along.
