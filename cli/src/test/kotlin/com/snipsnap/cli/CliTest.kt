@@ -2574,6 +2574,29 @@ class CliTest {
     }
 
     @Test
+    fun `clean --declip names the rebuild and leaves unclipped audio alone`() {
+        val rate = 44_100
+        val hit = FloatArray(rate) { i ->
+            val t = i.toDouble() / rate
+            (Math.sin(2.0 * Math.PI * 90.0 * t * (1 - 0.2 * t)) * Math.exp(-4.0 * t)).toFloat()
+        }
+        val clipped = FloatArray(hit.size) { hit[it].coerceIn(-0.4f, 0.4f) }
+        val src = File(temp, "clipped take.wav")
+        WavWriter.write(src, Snip(clipped, 1, rate))
+
+        val (code, stdout, _) = cli("clean", src.path, "--declip")
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "clipping rebuilt")
+        val twin = com.snipsnap.audio.WavReader.read(File(temp, "clipped take Clean.wav"))
+        assertTrue(twin.samples.maxOf { Math.abs(it) } > 0.45f, "peaks pushed past the ceiling")
+
+        // Without the flag, the same file's flat tops are not touched.
+        val (plainCode, plainOut, _) = cli("clean", src.path, "--dry")
+        assertEquals(0, plainCode, plainOut)
+        assertTrue("clipping" !in plainOut, "declip is an explicit opt-in")
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")

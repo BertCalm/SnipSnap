@@ -709,6 +709,23 @@ a fade capped at −24 dB, never a cut. A dry hit is single-slope by
 construction and is left alone; LOOP pads are skipped by name — a
 texture's tail is content.
 
+**The declip leg, `--declip`:** clipped samples are *missing data
+with a known bound* — the ceiling tells you the truth was at least
+that loud, in that direction. Detection trusts only **flat-top runs**
+(digital clipping repeats the very same value; even a low sine's
+crest bends by orders of magnitude more), and the rebuild is
+SPADE-style consistent sparsity (Kitić et al.): per clipped frame,
+the sparsest spectrum that matches every reliable sample and clears
+the ceiling at every pinned one, sparsity relaxing until it fits.
+Reliable samples come through byte-identical; only the pinned runs
+are rebuilt, and the `repairClicks` distortion refusal now *refers*
+its clipping patients here. Honest expectations, measured: sustained
+tonal material earns ~3 dB and rebuilt peaks; clipped noise slivers
+have no sparse structure to infer and earn little — the flat-top
+*buzz* goes either way. The literature's +10 dB headlines ride Gabor
+dictionaries and clipped-samples-only metrics; that upgrade is below
+the line.
+
 A WAV gets its findings printed and a cleaned twin beside it
 (`<name> Clean.wav`; `--in-place` overwrites, `--out DIR` redirects,
 `--overwrite` replaces an existing twin). A kit dir sends every plain

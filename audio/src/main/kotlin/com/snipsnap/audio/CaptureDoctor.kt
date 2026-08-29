@@ -196,7 +196,8 @@ object CaptureDoctor {
         }
         require(cliffs <= x.size * DAMAGE_CEILING) {
             "$cliffs full-scale jumps in ${x.size} samples - " +
-                "that's distortion, not clicks, and repair would lie"
+                "that's distortion, not clicks, and repair would lie" +
+                " (if it's clipping - flat-topped peaks - `clean --declip` can rebuild it)"
         }
 
         val regions = mutableListOf<IntRange>()
@@ -311,12 +312,15 @@ object CaptureDoctor {
         val snip: Snip,
         /** True when the floor leg was the spectral de-noiser, not the expander. */
         val denoised: Boolean = false,
+        /** What the declip leg found and rebuilt, when asked for and needed. */
+        val clip: ClipReport? = null,
     ) {
-        val touched: Boolean get() = hum != null || clicks > 0 || dropouts > 0 || gated
+        val touched: Boolean get() = hum != null || clicks > 0 || dropouts > 0 || gated || clip != null
 
         /** The one-line diagnosis, every finding named. */
         fun summary(): String {
             val parts = mutableListOf<String>()
+            clip?.let { parts += "clipping rebuilt (%.1f%% of samples pinned at %.2f)".format(it.fraction * 100, it.ceiling) }
             hum?.let { parts += "%.0f Hz hum notched (%d harmonic(s), %.0f dBFS)".format(it.hz, it.harmonics, it.levelDb) }
             if (clicks > 0) parts += "$clicks click(s) repaired"
             if (dropouts > 0) parts += "$dropouts dropout(s) repaired"
@@ -337,8 +341,17 @@ object CaptureDoctor {
      * the same object, bytes untouched. Throws like [repairClicks]
      * when the capture is distortion, not clicks.
      */
-    fun clean(snip: Snip, denoise: Boolean = false): CleanReport {
+    fun clean(snip: Snip, denoise: Boolean = false, declip: Boolean = false): CleanReport {
         var cur = snip
+        // Clipping first when asked: pinned runs corrupt every reading
+        // downstream of them.
+        var clip: ClipReport? = null
+        if (declip) {
+            declip(cur)?.let {
+                clip = it.report
+                cur = it.snip
+            }
+        }
         val hum = detectHum(cur)
         if (hum != null) cur = removeHum(cur, hum)
         val repair = repairClicks(cur)
@@ -346,15 +359,15 @@ object CaptureDoctor {
         if (denoise) {
             val deep = denoise(cur)
             return if (deep == null) {
-                CleanReport(hum, repair.clicks, repair.dropouts, measureFloor(cur), gated = false, snip = cur)
+                CleanReport(hum, repair.clicks, repair.dropouts, measureFloor(cur), gated = false, snip = cur, clip = clip)
             } else {
-                CleanReport(hum, repair.clicks, repair.dropouts, deep.floorDb, gated = true, snip = deep.snip, denoised = true)
+                CleanReport(hum, repair.clicks, repair.dropouts, deep.floorDb, gated = true, snip = deep.snip, denoised = true, clip = clip)
             }
         }
         val floor = measureFloor(cur)
         val gate = floor != null && floor > CLEAN_FLOOR_DB
         if (gate) cur = expand(cur, floor!!)
-        return CleanReport(hum, repair.clicks, repair.dropouts, floor, gate, cur)
+        return CleanReport(hum, repair.clicks, repair.dropouts, floor, gate, cur, clip = clip)
     }
 
     // ---- the noise floor (MM3) --------------------------------------------
@@ -692,6 +705,255 @@ object CaptureDoctor {
             sse += e * e
         }
         return Triple(slope.toFloat(), intercept.toFloat(), sse.toFloat())
+    }
+
+    // ---- declip (RR1) -----------------------------------------------------
+
+    /** Flat-top runs at least this long read as clipping, not as a loud sample. */
+    const val CLIP_RUN_MIN = 3
+
+    /** Samples within this fraction of the ceiling count as pinned. */
+    const val CLIP_LEVEL_FRACTION = 0.995f
+
+    /**
+     * A pinned run must be FLAT to this absolute tolerance — digital
+     * clipping repeats the very same value (a 24-bit quantum apart at
+     * most), while a low sine's crest, even 6 samples "at" its peak,
+     * still bends by orders of magnitude more than this.
+     */
+    const val CLIP_FLATNESS = 1e-6f
+
+    /** A "ceiling" below this is just quiet audio, not clipping. */
+    const val CLIP_MIN_CEILING = 0.3f
+
+    /** Less clipped than this and there is nothing worth rebuilding. */
+    const val CLIP_MIN_FRACTION = 0.001f
+
+    private const val SPADE_FRAME = 1024
+    private const val SPADE_HOP = SPADE_FRAME / 4
+    private const val SPADE_MAX_K = 400
+    private const val SPADE_STEP = 2
+    private const val SPADE_EPS = 1e-3f
+
+    data class ClipReport(val ceiling: Float, val fraction: Float, val runs: Int)
+
+    data class Declip(val report: ClipReport, val snip: Snip)
+
+    /**
+     * Is this capture clipped? The ceiling is the signal's own peak;
+     * only *flat-top runs* pinned at it count (a pure sine touches its
+     * peak one sample at a time — that is loud, not clipped), the
+     * ceiling must be a real level and the damage a real fraction.
+     * Null means honest silence: nothing to rebuild.
+     */
+    fun detectClipping(snip: Snip): ClipReport? {
+        val ceiling = snip.samples.maxOf { Math.abs(it) }
+        if (ceiling < CLIP_MIN_CEILING) return null
+        val mask = clipMask(snip, ceiling)
+        var clipped = 0
+        var runs = 0
+        var inRun = false
+        for (v in mask) {
+            if (v) {
+                clipped++
+                if (!inRun) {
+                    runs++
+                    inRun = true
+                }
+            } else {
+                inRun = false
+            }
+        }
+        val fraction = clipped.toFloat() / mask.size
+        if (fraction < CLIP_MIN_FRACTION) return null
+        return ClipReport(ceiling, fraction, runs)
+    }
+
+    /**
+     * SPADE-style declipping (Kitić et al.): clipped samples are
+     * *missing data with a known bound* — the ceiling tells you the
+     * truth was at least that loud, in that direction. Per clipped
+     * frame, find the sparsest spectrum consistent with the surviving
+     * samples: hard-threshold to the k loudest bins, resynthesize,
+     * pin the reliable samples back and push the clipped ones past the
+     * ceiling, relax k, repeat. Reliable samples in the output are the
+     * input's own, byte-for-byte; only the pinned runs are rebuilt.
+     * Null when [detectClipping] hears nothing.
+     */
+    fun declip(snip: Snip): Declip? {
+        val report = detectClipping(snip) ?: return null
+        val level = report.ceiling * CLIP_LEVEL_FRACTION
+        val out = snip.samples.copyOf()
+        val window = FloatArray(SPADE_FRAME) { n ->
+            (0.5 - 0.5 * Math.cos(2.0 * Math.PI * n / SPADE_FRAME)).toFloat()
+        }
+        for (ch in 0 until snip.channels) {
+            val x = FloatArray(snip.frameCount) { f -> snip.samples[f * snip.channels + ch] }
+            val mask = BooleanArray(x.size)
+            markRuns(x, level, mask)
+            if (mask.none { it }) continue
+            val rebuilt = FloatArray(x.size)
+            val weight = FloatArray(x.size)
+            var at = 0
+            while (at < x.size) {
+                val end = minOf(at + SPADE_FRAME, x.size)
+                var any = false
+                for (i in at until end) if (mask[i]) any = true
+                if (any) {
+                    val frame = FloatArray(SPADE_FRAME) { n -> if (at + n < x.size) x[at + n] else 0f }
+                    val fMask = BooleanArray(SPADE_FRAME) { n -> at + n < x.size && mask[at + n] }
+                    // The sparse hunt runs on the WINDOWED frame - an
+                    // unwindowed chunk's leakage makes nothing sparse.
+                    // The estimate comes back in the windowed domain and
+                    // tight-frame synthesis (Σŷ·w / Σw²) rebuilds it.
+                    val estimate = spadeFrame(frame, fMask, level, window)
+                    for (n in 0 until SPADE_FRAME) {
+                        val i = at + n
+                        if (i < x.size && mask[i]) {
+                            rebuilt[i] += estimate[n] * window[n]
+                            weight[i] += window[n] * window[n]
+                        }
+                    }
+                }
+                at += SPADE_HOP
+            }
+            for (i in x.indices) {
+                if (mask[i] && weight[i] > 1e-6f) {
+                    out[i * snip.channels + ch] = rebuilt[i] / weight[i]
+                }
+            }
+        }
+        return Declip(report, Snip(out, snip.channels, snip.sampleRate))
+    }
+
+    private fun clipMask(snip: Snip, ceiling: Float): BooleanArray {
+        val level = ceiling * CLIP_LEVEL_FRACTION
+        val mask = BooleanArray(snip.samples.size)
+        for (ch in 0 until snip.channels) {
+            val x = FloatArray(snip.frameCount) { f -> snip.samples[f * snip.channels + ch] }
+            val m = BooleanArray(x.size)
+            markRuns(x, level, m)
+            for (i in x.indices) if (m[i]) mask[i * snip.channels + ch] = true
+        }
+        return mask
+    }
+
+    /** Same-sign, [CLIP_FLATNESS]-flat runs of ≥ [CLIP_RUN_MIN] samples pinned at [level]. */
+    private fun markRuns(x: FloatArray, level: Float, mask: BooleanArray) {
+        var i = 0
+        while (i < x.size) {
+            if (Math.abs(x[i]) >= level) {
+                val sign = x[i] > 0
+                var j = i
+                while (j < x.size && Math.abs(x[j]) >= level && (x[j] > 0) == sign &&
+                    Math.abs(x[j] - x[i]) <= CLIP_FLATNESS
+                ) {
+                    j++
+                }
+                if (j - i >= CLIP_RUN_MIN) {
+                    for (k in i until j) mask[k] = true
+                }
+                i = j
+            } else {
+                i++
+            }
+        }
+    }
+
+    /**
+     * One frame of A-SPADE (Kitić's ADMM, ported from a numpy rig that
+     * validated every step): the variable is the *windowed* frame
+     * y = frame·w; the analysis operator is the unitary DFT; a dual
+     * accumulates the gap between the k-sparse model and the
+     * constraint-satisfying signal, so the model is genuinely pulled
+     * toward both. Reliable samples pin y exactly, clipped ones must
+     * clear ±level·w, and k relaxes each iteration until the model
+     * fits within [SPADE_EPS] of the frame's own energy. Returns the
+     * windowed-domain estimate for tight-frame synthesis.
+     */
+    private fun spadeFrame(frame: FloatArray, mask: BooleanArray, level: Float, window: FloatArray): FloatArray {
+        val n = SPADE_FRAME
+        val scale = (1.0 / Math.sqrt(n.toDouble())).toFloat()
+        val y = FloatArray(n) { frame[it] * window[it] }
+        var yNorm = 0.0
+        for (v in y) yNorm += v * v.toDouble()
+        yNorm = Math.sqrt(yNorm)
+        if (yNorm < 1e-9) return y
+
+        val estimate = y.copyOf()
+        val uRe = FloatArray(n)
+        val uIm = FloatArray(n)
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        val zRe = FloatArray(n)
+        val zIm = FloatArray(n)
+        var k = SPADE_STEP
+        while (k <= SPADE_MAX_K) {
+            // Z = A(estimate) + u, in unitary-DFT units.
+            for (i in 0 until n) {
+                re[i] = estimate[i]
+                im[i] = 0f
+            }
+            Fft.forward(re, im)
+            for (i in 0 until n) {
+                zRe[i] = re[i] * scale + uRe[i]
+                zIm[i] = im[i] * scale + uIm[i]
+            }
+            hardThreshold(zRe, zIm, k)
+            // v = A*(z − u): back through the inverse, rescaled.
+            for (i in 0 until n) {
+                re[i] = (zRe[i] - uRe[i]) / scale
+                im[i] = (zIm[i] - uIm[i]) / scale
+            }
+            Fft.inverse(re, im)
+            // Projection onto the constraints.
+            for (i in 0 until n) {
+                val v = re[i]
+                estimate[i] = if (!mask[i]) {
+                    y[i]
+                } else {
+                    val bound = level * window[i]
+                    if (frame[i] > 0) maxOf(v, bound) else minOf(v, -bound)
+                }
+            }
+            // Residual ||A(estimate) − z|| and the dual update.
+            for (i in 0 until n) {
+                re[i] = estimate[i]
+                im[i] = 0f
+            }
+            Fft.forward(re, im)
+            var resid = 0.0
+            for (i in 0 until n) {
+                val dr = re[i] * scale - zRe[i]
+                val di = im[i] * scale - zIm[i]
+                resid += dr * dr + di * di.toDouble()
+                uRe[i] += dr
+                uIm[i] += di
+            }
+            if (Math.sqrt(resid) < SPADE_EPS * yNorm) break
+            k += SPADE_STEP
+        }
+        return estimate
+    }
+
+    /** Keep the [k] loudest conjugate bin pairs, zero the rest. */
+    private fun hardThreshold(re: FloatArray, im: FloatArray, k: Int) {
+        val n = re.size
+        val half = n / 2
+        val mags = FloatArray(half + 1) { b -> re[b] * re[b] + im[b] * im[b] }
+        val order = (0..half).sortedByDescending { mags[it] }
+        val keep = BooleanArray(half + 1)
+        for (i in 0 until minOf(k, order.size)) keep[order[i]] = true
+        for (b in 0..half) {
+            if (!keep[b]) {
+                re[b] = 0f
+                im[b] = 0f
+                if (b in 1 until half) {
+                    re[n - b] = 0f
+                    im[n - b] = 0f
+                }
+            }
+        }
     }
 
     /** Goertzel amplitude of [hz] over the first [n] frames. */

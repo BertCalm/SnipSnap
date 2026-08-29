@@ -27,7 +27,7 @@ object CleanCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--out"),
-            boolean = setOf("--dry", "--in-place", "--undo", "--overwrite", "--denoise", "--deroom"),
+            boolean = setOf("--dry", "--in-place", "--undo", "--overwrite", "--denoise", "--deroom", "--declip"),
         )
         val input = opts.positional.getOrNull(0)
             ?: throw CliError("clean wants a capture or a kit: snipsnap clean <wav-or-kit-dir> [--dry]")
@@ -44,7 +44,7 @@ object CleanCommand {
         if (opts.has("--undo")) throw CliError("--undo is for kits - a WAV's cleaned twin sits beside the original")
         if (opts.has("--deroom")) throw CliError("--deroom is for kits - the knee reads one hit at a time, not a whole capture")
         val report = try {
-            CaptureDoctor.clean(WavReader.read(file), denoise = opts.has("--denoise"))
+            CaptureDoctor.clean(WavReader.read(file), denoise = opts.has("--denoise"), declip = opts.has("--declip"))
         } catch (e: IllegalArgumentException) {
             throw CliError("${file.name}: ${e.message}")
         }
@@ -99,7 +99,11 @@ object CleanCommand {
                 continue
             }
             val report = try {
-                CaptureDoctor.clean(WavReader.read(File(kitDir, pad.sampleFile)), denoise = opts.has("--denoise"))
+                CaptureDoctor.clean(
+                    WavReader.read(File(kitDir, pad.sampleFile)),
+                    denoise = opts.has("--denoise"),
+                    declip = opts.has("--declip"),
+                )
             } catch (e: IllegalArgumentException) {
                 skipped += "$label (${e.message})"
                 continue
@@ -130,6 +134,7 @@ object CleanCommand {
                                 if (report.dropouts > 0) r["dropouts"] = JsonValue.Num(report.dropouts.toDouble())
                                 if (report.gated) r["floorDb"] = JsonValue.Num(report.floorDb!!.toDouble())
                                 if (report.denoised) r["denoised"] = JsonValue.Bool(true)
+                                report.clip?.let { r["declipCeiling"] = JsonValue.Num(it.ceiling.toDouble()) }
                                 trim?.let { r["deroomKneeMs"] = JsonValue.Num(it.kneeSec * 1000.0) }
                             },
                         ),

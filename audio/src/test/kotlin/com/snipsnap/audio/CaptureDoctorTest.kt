@@ -284,6 +284,99 @@ class CaptureDoctorTest {
     }
 
     @Test
+    fun `clipping is detected by its flat tops, rebuilt past the ceiling, and loud audio left alone`() {
+        // Sustained tonal hits over noise bursts, hard-clipped at half:
+        // the honest case where declipping CAN infer the truth. (A
+        // DrumSynth beat's clipped slivers are near-pure noise, and
+        // noise has no sparse structure to rebuild from - it earned
+        // +0.4 dB where this fixture earns +3; that physics is the
+        // finding, not a failure.)
+        val n = 2 * rate
+        val ref = FloatArray(n)
+        for ((at, f0) in listOf(0.1f to 60.0, 0.6f to 180.0, 1.1f to 60.0, 1.6f to 180.0)) {
+            val i0 = (at * rate).toInt()
+            val len = (0.4f * rate).toInt()
+            val dec = if (f0 < 100) 7.0 else 9.0
+            val amp = if (f0 < 100) 1.0 else 0.8
+            for (i in 0 until len) {
+                val t = i.toDouble() / rate
+                if (i0 + i < n) {
+                    ref[i0 + i] += (amp * Math.sin(2.0 * Math.PI * f0 * t * (1 - 0.3 * t)) * Math.exp(-dec * t)).toFloat()
+                }
+            }
+        }
+        val burst = java.util.Random(7)
+        for (at in listOf(0.35f, 0.85f, 1.35f, 1.85f)) {
+            val i0 = (at * rate).toInt()
+            val len = (0.08f * rate).toInt()
+            for (i in 0 until len) {
+                if (i0 + i < n) ref[i0 + i] += (0.5 * burst.nextGaussian() * Math.exp(-40.0 * i / rate)).toFloat()
+            }
+        }
+        val peak = ref.maxOf { Math.abs(it) }
+        for (i in ref.indices) ref[i] /= peak
+        val clipped = FloatArray(ref.size) { ref[it].coerceIn(-0.5f, 0.5f) }
+
+        val report = CaptureDoctor.detectClipping(Snip(clipped, 1, rate))
+        assertTrue(report != null, "the flat tops are heard")
+        assertTrue(Math.abs(report!!.ceiling - 0.5f) < 0.01f, "the ceiling is measured: ${report.ceiling}")
+        assertTrue(report.fraction > 0.001f, "the damage is a real fraction: ${report.fraction}")
+
+        val declip = CaptureDoctor.declip(Snip(clipped, 1, rate))!!
+        val out = declip.snip.samples
+
+        // Reliable samples are the input's own, byte for byte.
+        for (i in out.indices) {
+            if (Math.abs(clipped[i]) < 0.49f) {
+                assertTrue(out[i] == clipped[i], "reliable sample $i untouched")
+            }
+        }
+        // Peaks rebuilt past the ceiling.
+        assertTrue(out.maxOf { Math.abs(it) } > 0.55f, "the truth was louder: ${out.maxOf { Math.abs(it) }}")
+
+        // And measurably closer to the truth (best-gain matched). The
+        // honest bar: consistent-sparsity declipping earns single-digit
+        // dB on broadband drums - the literature's headline numbers ride
+        // Gabor dictionaries and clipped-samples-only metrics.
+        fun snr(x: FloatArray): Double {
+            var dot = 0.0
+            var xx = 0.0
+            for (i in ref.indices) {
+                dot += ref[i] * x[i].toDouble()
+                xx += x[i] * x[i].toDouble()
+            }
+            val g = if (xx > 1e-12) dot / xx else 1.0
+            var se = 0.0
+            var re = 0.0
+            for (i in ref.indices) {
+                val e = ref[i] - g * x[i]
+                se += e * e
+                re += ref[i] * ref[i].toDouble()
+            }
+            return 10 * Math.log10(re / se)
+        }
+        val snrClipped = snr(clipped)
+        val snrDeclipped = snr(out)
+        assertTrue(
+            snrDeclipped - snrClipped >= 2,
+            "the rebuild measurably helps: %.1f -> %.1f dB".format(snrClipped, snrDeclipped),
+        )
+
+        // Loud-but-unclipped audio is left alone: a sine touches its peak
+        // one sample at a time - that's loud, not pinned.
+        val sine = Snip(
+            FloatArray(rate) { i -> (0.9 * Math.sin(2.0 * Math.PI * 220.0 * i / rate)).toFloat() },
+            1, rate,
+        )
+        assertNull(CaptureDoctor.detectClipping(sine), "loud is not clipped")
+        assertNull(CaptureDoctor.detectClipping(Snip(beat(), 1, rate)), "a clean beat is not clipped")
+
+        // And the visit carries it: clean(declip = true) names the rebuild.
+        val visit = CaptureDoctor.clean(Snip(clipped, 1, rate), declip = true)
+        assertTrue(visit.clip != null && "clipping rebuilt" in visit.summary(), visit.summary())
+    }
+
+    @Test
     fun `clean composes the whole visit - findings named, clean audio returned as-is`() {
         // Hum over hiss over the beat, with one click riding the noise — a
         // proper bad capture: every leg of the visit has work to do.
