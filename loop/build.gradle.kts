@@ -44,3 +44,16 @@ tasks.register<JavaExec>("generateDemoSession") {
     classpath = sourceSets["test"].runtimeClasspath
     args(project.findProperty("outDir")?.toString() ?: layout.buildDirectory.dir("demo-session").get().asFile.path)
 }
+
+// Throwaway diagnostic: bounces a session's full cycle offline through
+// Bouncer (the same bake -> mix -> sink path playback uses) and prints
+// per-interval RMS/peak, to prove or disprove numerically whether the engine
+// actually varies material across a cycle. Not part of the app.
+tasks.register<JavaExec>("analyzePhasing") {
+    group = "snipsnap"
+    description = "Bounces a session and prints per-interval RMS/peak to check for real variation."
+    dependsOn("testClasses")
+    mainClass.set("com.snipsnap.loop.AnalyzePhasingKt")
+    classpath = sourceSets["test"].runtimeClasspath
+    args(project.findProperty("sessionDir")?.toString() ?: layout.buildDirectory.dir("demo-session").get().asFile.path)
+}
