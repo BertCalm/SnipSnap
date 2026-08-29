@@ -2699,6 +2699,73 @@ class CliTest {
     }
 
     @Test
+    fun `the whole visit at once - one recipe naming every leg, undone byte for byte`() {
+        val rate = 44_100
+        val out = File(temp, "alllegs")
+        val wav = writeBreak(File(temp, "alsrc.wav"))
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Everything").first)
+        val kitDir = File(out, "Everything")
+        val kit = KitStore.load(kitDir)
+        val victim = kit.pads.minBy { it.slot }
+
+        // One pad with everything wrong at once: hum under it, peaks
+        // clipped flat, hiss over it.
+        val rnd = java.util.Random(12)
+        // The clip comes LAST, the way a mic chain clips: the sum of
+        // hit + hum + hiss pinned flat at the converter's ceiling.
+        val dirty = FloatArray(2 * rate) { i ->
+            val t = i.toDouble() / rate
+            val hit = (0.9 * Math.sin(2.0 * Math.PI * 150.0 * t) * Math.exp(-3.0 * t)).toFloat()
+            (
+                hit +
+                    0.04f * Math.sin(2.0 * Math.PI * 50.0 * i / rate).toFloat() +
+                    (rnd.nextFloat() * 2f - 1f) * 0.008f
+                ).coerceIn(-0.5f, 0.5f)
+        }
+        WavWriter.write(File(kitDir, victim.sampleFile), Snip(dirty, 1, rate))
+        val bytesBefore = KitStore.load(kitDir).pads.associate { it.sampleFile to File(kitDir, it.sampleFile).readBytes() }
+
+        val (code, stdout, _) = cli("clean", kitDir.path, "--declip", "--deverb", "--denoise")
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "clipping rebuilt")
+        assertContains(stdout, "hum notched")
+        assertContains(stdout, "room predicted and subtracted")
+        assertContains(stdout, "spectrally de-noised")
+
+        val recipe = KitStore.load(kitDir).pads.first { it.slot == victim.slot }
+            .recipe?.entries?.get("clean") as? com.snipsnap.json.JsonValue.Obj
+        assertTrue(recipe != null, "the clean recipe rides the pad")
+        for (key in listOf("humHz", "declipCeiling", "deverbed", "denoised")) {
+            assertTrue(recipe!!.entries.containsKey(key), "the recipe names its $key leg")
+        }
+
+        // The recipe survives its own store round trip verbatim.
+        KitStore.save(KitStore.load(kitDir), kitDir)
+        val rereadRecipe = KitStore.load(kitDir).pads.first { it.slot == victim.slot }.recipe
+        assertEquals(
+            KitStore.load(kitDir).pads.first { it.slot == victim.slot }.recipe, rereadRecipe,
+            "recipes are stable through save/load",
+        )
+
+        // And one undo pulls every leg back out at once, byte for byte.
+        val (undoCode, undoOut, _) = cli("clean", kitDir.path, "--undo")
+        assertEquals(0, undoCode, undoOut)
+        for ((f, bytes) in bytesBefore) {
+            assertTrue(File(kitDir, f).readBytes().contentEquals(bytes), "$f back byte-identical")
+        }
+
+        // The kit still exports after all of it - and an .xpn round trip
+        // of the treated kit neither crashes nor loses audio (the .xpn
+        // format doesn't carry recipes; kit.json does, and says so).
+        assertEquals(0, cli("clean", kitDir.path, "--declip", "--deverb", "--denoise").first)
+        val exp = cli("export", kitDir.path, "--export", "xpn", "--out", File(temp, "allexp").path)
+        assertEquals(0, exp.first, exp.third)
+        val xpn = File(temp, "allexp").walkTopDown().first { it.extension == "xpn" }
+        val imp = cli("import", xpn.path, "--out", File(temp, "allimp").path, "--overwrite")
+        assertEquals(0, imp.first, imp.third)
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")

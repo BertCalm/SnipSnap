@@ -141,6 +141,7 @@ object CleanCommand {
                                 if (report.gated) r["floorDb"] = JsonValue.Num(report.floorDb!!.toDouble())
                                 if (report.denoised) r["denoised"] = JsonValue.Bool(true)
                                 report.clip?.let { r["declipCeiling"] = JsonValue.Num(it.ceiling.toDouble()) }
+                                if (report.deverbed) r["deverbed"] = JsonValue.Bool(true)
                                 trim?.let { r["deroomKneeMs"] = JsonValue.Num(it.kneeSec * 1000.0) }
                             },
                         ),
