@@ -1075,6 +1075,36 @@ NN2 inside the app's capture path (rides the app session's auto-clean).
 
 ---
 
+## Wave OO — the Sculptor (CORE)
+
+The Torso S-4 as lodestar: a *sculpting sampler* turns hits into
+**matter** — granular clouds, detuned swarms, endless evolving
+stretches — with generative sequencing underneath. What we can't steal
+is the performance surface (macro knobs and live modulation belong to
+the app session); what we can steal is the engine room. Everything
+before OO turned captures into kits; the Sculptor turns kits back into
+material, and it composes with the whole shop: sculpt a texture, era
+it through tape, roulette picks the grain source, the Answer plays
+under the drone.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| OO1 | The grain engine (`:audio` `Granular`) — one honest primitive: a seeded grain scheduler over any snip. Grain size, density, position (fixed, or crawling start→end), position jitter, per-grain pitch spread (resampled read), Hann window, equal-power stereo spray. Fully deterministic per seed, output level honest against the source's own peak | CORE | M | duration exact; same seed → identical bytes, different seed → different; a cloud pointed at the 220 Hz half of a two-tone source renders 220, pointed at the 2 kHz half renders 2 kHz; a scrub crawls from one to the other; pitch spread measurably widens the spectrum of a pure-tone source; spray 0 → channels identical, spray 1 → not |
+| OO2 | `sculpt <kit-dir> <pad> \| <wav>` — the verb, modes not knobs: **cloud** (dense grains hovering post-attack — a hit becomes weather), **scrub** (position crawls the source — the break as a landscape), **swarm** (cloud with semitone-spread detune — the thickener). Four seeded takes land as a "<Name> Sculpt" texture kit, every pad LOOP by declaration, provenance stamped (`sculptedFrom`), recipe carrying mode/seed so the texture is regenerable; `--seconds`, `--seed` | CORE | M | each mode's kit renders with 4 LOOP pads + provenance + recipe; the same seed rebuilds the same bytes; mode geometry proven by probe (cloud holds its position's spectrum, scrub's first and last pads' openings differ, swarm's spectrum wider than cloud's); preflight passes and the kit exports |
+| OO3 | `stretch <wav>` — paulstretch: big-window (4096) spectral resynthesis with seeded randomized phases, analysis hop = synthesis hop ÷ factor. `--by N` (default 8) for the slow-motion wash; `--freeze [--at sec]` holds one analysis position forever — the S-4's frozen texture, and the Séance's amber for free. Writes "<stem> Stretched.wav" beside the source | CORE | M | duration ≈ source × factor; a tone stays at its own frequency through the stretch; steady input → steady output (level variance bounded — no pulsing); freeze reproduces the spectrum at the frozen instant throughout; seeded determinism |
+| OO4 | `euclid <kit-dir>` — the T-1 half of Torso's DNA: Bjorklund patterns as a groove, `--kick 3,8 --snare 2,8,4 --hat 7,16` (k, n, optional rotation), tempo from the kit or `--bpm`; first-of-group pulses accented, the result saved through the standard groove door so variations, fills and ghosts ride along and the native exports carry the clip | CORE | S–M | E(3,8) and E(5,8) land on the textbook pulses, rotation shifts them; k hits per class per bar, accents on group heads; the groove saves with the standard variations and rides an export; deterministic |
+
+**Below the line for OO:** live macro morphing between sculpt states
+(app-session work — the CLI has no knobs to sweep); the Séance's
+`mutate --morph` and `smear` (a natural small follow-up wave on the
+same spectral door); grain-level filters and the S-4's effect console
+(space/prism — our eras already carry that torch); `sculpt --keys`
+(a texture as a playable drone keygroup via LoopCut — wants care
+around loop points on stochastic audio, so it earns its own item
+rather than riding this one).
+
+---
+
 ## Sequence
 
 ```
