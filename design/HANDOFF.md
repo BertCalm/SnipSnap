@@ -1,7 +1,9 @@
 # TapeOS OILSLICK — Android handoff
 
 Scheme for SnipSnap's TapeOS shell. Prototype: `TapeOS Oilslick.dc.html`.
-Static artboard tokens: `Schemes.dc.html` (`.t-oilslick`), picker row in `TapeProperties.dc.html`.
+Static artboard tokens: `Schemes.dc.html` (`.t-oilslick`, `.t-metal` — light artboards retired with the light schemes), picker row in `TapeProperties.dc.html`. The CLEAR prototype file was deleted; GROOVE and all newer screens live only in `TapeOS Oilslick.dc.html`.
+
+Scheme picker now carries 5 dark/neon schemes only (light shells cut — they didn't land): METAL (TYPE IV), OILSLICK (default), and three Oilslick colorways that swap the full token set but keep the design: PETROL (blue `#2A6AE0` / mint `#40E890` / gold `#F0D040`, navy shell), INFRARED (violet `#9A2AE0` / crimson `#E02A5A` / amber `#FF8A1A`, maroon shell), ACID (chartreuse `#A0E020` / cyan `#20D0E8` / violet `#8A5AF0`, green-black shell). Class colours stay fixed across all schemes.
 
 ## Scheme tokens (drop into the existing TapeOS token table)
 
@@ -37,9 +39,9 @@ Tint (text on dark): mix 55% white. Assigned pad = 2px class border + outer glow
 | LCD | VT323 | 25/21px LCD headers, 22px readouts, 17-18px small |
 | Pixel UI | Silkscreen | 9px (8px status quips), +0.5 tracking |
 | Display | Michroma | 11-12px, +2px tracking, key actions/titles |
-| Handwriting | Permanent Marker | 13-15px, pad + cassette labels |
+| Handwriting | Rock Salt | 11-15px, pad + cassette + loop-block labels (was Permanent Marker; tweakable) |
 
-Android: VT323/Silkscreen/Permanent Marker on Google Fonts; Michroma too. Sizes are dp at 390dp width.
+Android: VT323/Silkscreen/Rock Salt on Google Fonts; Michroma too. Sizes are dp at 390dp width.
 
 ## Layout constants
 
@@ -59,10 +61,62 @@ Phone frame 390×844, outer margin 12. Titlebar 34 (r4). Menu row 26, items pad 
 | ⚙ | TapeProperties.dc.html + Schemes.dc.html | live mini-preview scheme picker |
 | HELP | docs/ANDROID_CAPTURE.md | 3-step onboarding + consent mock |
 | Bubble | Bubble.dc.html | ring = tape fill, tap=snip, drag-down=eject (hot zone bottom, y>660) |
+| PAD SHEET | TapeOS Oilslick.dc.html (`isPadSheet`) | long-press assigned pad on KIT (480 ms) — see PAD SHEET section |
+| FRESH TAPE | TapeOS Oilslick.dc.html (`isFresh`, overlay on MY KITS) | F4.2 starter menu — bottom sheet over the shelf: 6 starters from the `StarterKits` registry (Chip/Thump/Cloud/Melodic/Shuffle/Velocity), row = name (Rock Salt, class colour) + blurb, selected row 1px class-colour border + glow; REROLL SEED ⡆ counter + LOAD TO GRID (oil rim) → lands on KIT bank A |
+| TAKES + BIN | TapeOS Oilslick.dc.html (`isTakes`) | X2.3 — entered from KIT action row. TAKES card (accent-pill header): rows T4…T2, current = NOW tag, older = RESTORE (cyan outline). BIN card (red-pill header `#6A2020`/`#C86050`): class-colour swatch + name + reason + `27D LEFT` countdown (VT323; ≤2 days amber `#FFB000`) + BACK; footer EMPTY THE BIN NOW (red outline). Copy: "EVERY SAVE ARCHIVES A TAKE. EVERY DELETE GOES TO THE BIN FIRST." |
+| BANK B | TapeOS Oilslick.dc.html (KIT header + action row) | W4.3 — EVIL TWINS button fills bank B (twins of assigned bank-A pads, treatment tag top-right in accent 7px Silkscreen, colour-washed fill + 2px dashed class border); button becomes REROLL after first run (reshuffles treatments); BANK A/B label in KIT header is tappable to flip, B empty until twins run; pad sheet is bank-A only |
+| Small adjusts | TapeOS Oilslick.dc.html | X1.3 CLASSIC/MELODIC segmented on CHOP (accent fill = active; strip text swaps to the melodic rule) · F5.3 KEY cycler in KIT action row (—/Am/Cm/F#m/Eb, cyan border when set) · Y3.3 `MPC SESSION (.XPJ) — KITS + GROOVES` added to the FORMAT cycler · X4.4 TEACH THE MACHINE consent row in ⚙ (off by default, green dot when on, copy: "FEATURES ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE.") · W12 mini-waveforms on assigned KIT pads (12 bars, class colour @40%, exp decay — loops decay slower; real app draws from `PeaksPyramid`) |
+| GROOVE | TapeOS Oilslick.dc.html (`isGroove`) · ported to TapeOS Clear.dc.html | needle-roll, PROG A–E, swing, step editor — see GROOVE screen section |
+| LOOP | TapeOS Oilslick.dc.html (`isLoop` / `isLoopLandscape`) | 6-track phasing loop grid — see LOOP screen section |
+
+## LOOP screen (Android Plan 03 · Task 6 — use these, not hardcoded grey)
+
+6 fixed tracks (columns), each an independent chain of 1–8 blocks. Playhead per track = `interval % chain.length`; full cycle = LCM of chain lengths. Cycle readout: `L INT · L*4 BARS · mm:ss` at `bars*4*60/bpm` sec. Demo clock in prototype runs ~2× — real interval = 4 bars at set BPM.
+
+**Track colours** (header border + block name tint):
+DRUMS `#E8542E`/`#F8B09A` · BASS `#8FD424`/`#C6EC8E` · KEYS `#9A6CF0`/`#C8B2F8` · VOX `#E8409F`/`#F8A8D4` · TEX `#40E0E8`/`#8EEEF4` · PERC `#FFC41F`/`#FFE08E`
+Block type tag: LOOP `#40E0E8`, PAT `#E040C8`. Muted track: everything `#40306A`, fills `#100C1A`, border `#221A34`.
+
+**Column header** (tap = mute toggle): h24, r4, engaged = `#0A0714` fill, 1px track-colour border, glow `track@33%` 8px + inset `0 2px 6px #000`; label Silkscreen 9px in tint (muted appends " ✕").
+
+**Block cell**: flex column, grows 30–46px, r5, pad 2×3, fill `linear(180deg, #221A34 → #161020)`, border 1px `#34285A`. Contents stacked centered: type tag (Silkscreen 7px, type colour) over name (Permanent Marker 11px, tint, nowrap+clip). States — *lit* (playhead, playing, engaged): 2px type-colour border, glow 16px + inset `type@27%` 14px, name goes `#FFF`; *selected*: border `#F8A8D4` + inset ring `#E040C8`. Tap = select/inspect; tap again = pull (min 1 block per chain). "+" add slot: h24, dashed 1px `#34285A`, r5, cap 8.
+
+**Transport (portrait 390)**: LCD header 40 (title cyan `#8EEEF4`, INT counter `#C8B2F8`); PLAY/BPM row h44 (BPM ±2 steppers 32×36 on `#221A34`); info strip h28 LCD (`#40E0E8` 15px, VT323); FULL CYCLE LCD + BOUNCE button h52 (oil-rim 2px, dark teal fill `linear(#0C2426 → #081418)`, cyan glow 20px @35%). Landscape 816×362: same parts, transport in top bar h30, cycle strip bottom h36; playback/mute/BPM state shared across rotation.
+
+**Rebake overlay**: `rgba(10,7,20,.72)` scrim over the grid, Silkscreen `#FFE08E` + amber glow — shown while re-fitting after BPM change.
+
+Compose notes: columns = `Row` of 6 equal `weight(1f)` `Column(spacing 4dp)`, blocks `weight(1f).heightIn(30.dp, 46.dp)`. Playhead advance on interval boundary only (blocks never cut mid-play); pull takes effect after current block finishes.
+
+## GROOVE screen
+
+Captured break → four derived programs + one user fork, at fixed 92 BPM · 2 bars · 32 steps (5 lanes: KICK, SNARE, HAT C, HAT O, PERC — class colours as above).
+
+**Programs**: A · AS CAPTURED (per-note humanize offset, reseeds via HUMANIZE) · B · SWUNG (odd steps pushed by swing amount) · C · HALF-TIME · D · SPARSE · E · EDITED (exists only after a fork). B–D are pure functions of A — never stored.
+
+**Needle-roll**: fixed needle at y=96 (amber `warn` in OILSLICK-cyan slot; `#FF9A1A` in CLEAR), notes scroll under it at 20px/step. Note block: lane column ×5, h17 r2, opacity `0.35+0.55*vel`; lit while under needle (<0.7 step): full opacity + 10/18px class glow. Bar ticks left rail: `1.1`-style labels every 4 steps, bar starts in lcd-alt.
+
+**Swing**: 50–75% in ±2 steps, only PROG B listens ("RIDES PROG B").
+
+**EDIT STEPS (fork-to-E)**: tapping EDIT STEPS clones the *current* program's quantized steps into PROG E (`gUser`, `[lane, step, vel][]`), switches to E, opens a full-screen step editor over the groove screen — A–D are never mutated; re-entering edits the same E. Editor = LOOP step editor pattern at 2 bars: header `STEP EDIT — PROG E` + DONE, BAR 1/2 tabs + CLEAR BAR, 5 lanes × 16 cells (cell on = lane colour fill + 8px glow; beat cells slightly lighter; playhead column ring while playing). Tap toggles + auditions the lane voice; new notes land at vel .9 (.6 for HAT C). Footer credits the fork source. Selector shows E only when it exists (A–D cycle otherwise).
+
+**MIDI ▸**: writes `BREAK KIT 92 A–D.MID` (toast mock).
+
+CLEAR mapping: LCDs stay dark (`#101418`, border `#8A96A2`); lcd-hi `#A8ECFF`, readouts `#58C8E8`, needle amber `#FF9A1A`; light raised buttons `#F6F8FB→#E8ECF2` border `#B6C0CC`; editor overlay dark with cells `#161C22`/`#1E262E`, borders `#2E3A44`.
+
+## PAD SHEET (full-screen inspector — wireframe 1d)
+
+Entry: long-press (480 ms) any assigned pad on KIT; tap still triggers the voice (press fires the hit immediately, the timer opens the sheet). Unassigned pads never open it.
+
+Layout top→bottom: header row (◄ KIT 64px · LCD `PAD A02` + class chip in pad colour · ▶ HIT 64px, 2px pad-colour border + glow); waveform LCD h64 (44 bars, exp-decay envelope in pad colour — loops decay slower; W12 draws these from `PeaksPyramid` for real); provenance line (Y1.3 `source`: file @ time · length · bin status); three stepper-sliders LEVEL −24..+6 dB / PAN L50..R50 / TUNE ±12 st (fill bar in pad colour, VT323 readout); toggle row ONE-SHOT · CHOKE GRP 1 · GHOSTS (W5.3 — engaged = pad-colour fill; hats default choke ON per KIT_BEST_PRACTICES); TREATMENT card (Y4.3): NONE/CRUSH/TAPE/DIRT segmented + AMT 0-100 in 5s, picking a treatment auditions the pad; action row RE-TRIM ▸ (→ tape deck) · MAKE INSTRUMENT (W2.3 — enabled styling only on tonal pads, refusal toast otherwise) · EJECT → BIN (X2, red border `#6A2020`/`#C86050`); prev/next pad nav cycling assigned pads only.
+
+Per-pad state is a prefs map keyed by pad id — level/pan/tune/oneShot/choke/ghosts/treat/amt — defaults: −2 dB, C, 0 st, one-shot ON, choke ON for hats, ghosts OFF, NONE @ 35%.
+
+Toasts: "GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER." · "CRUSH ON A02. ORIGINAL SLEEPS IN THE BIN." · "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF." · "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY." · "EJECTED. THE BIN KEEPS IT 30 DAYS."
 
 ## Personality (PERSONALITY.md compliance)
 
 One gag per screen, OFF/MILD/FULL prop. Toasts 2.6s, oil-rim card. Quips rotate 6s in status bar (FULL only).
+Shipped copy adds: "MELODIC. THE PADS BECOME A SCALE, LOW LEFT." · "Am SET. TONAL PADS RETUNE ON ASSIGN — THE KICK IS UNTOUCHED." · "KEY OFF. EVERYTHING LANDS AS CAPTURED." · "TEACHING ON. THE MACHINE LEARNS FROM YOUR CORRECTIONS." · "TEACHING OFF. THE MACHINE STOPS TAKING NOTES." · "BANK B LIT. YOUR KIT, BUT EVIL. RECIPES KEPT." · "TWINS REROLLED. SAME SEED, DIFFERENT SINS." · "T3 RESTORED. THE PAST, REPLAYED." · "BACK FROM THE BIN. NO QUESTIONS ASKED." · "BIN EMPTIED. THE MACHINE FORGETS, AS ASKED." · "HUMANIZED. NOBODY PLAYS LIKE A ROBOT." · "FORKED TO PROG E. A–D STAY UNTOUCHED." · "BAR WIPED. THE MACHINE FORGIVES."
 Shipped copy: "TAPE ROLLING. GO STEAL A SOUND (LEGALLY)." · "TAPED. NO TAKEBACKS." · "IT'S OURS NOW." · "CLEAN CUT. NICE EARS." · "SNIP! LAST 60s KEPT." · "EJECTED. TAPE IS KEPT." · "PENCIL REWIND. OLD SCHOOL." · "DUB DONE. SOUNDS 3% WARMER NOW." · "FRESH TAPE. SMELLS LIKE FERRIC OXIDE." · "RE-CHOPPED. THE MACHINE APOLOGIZES FOR SLICE 3." · "SNACK BAR. SHIPPED OUT OF RESPECT."
 
 ## Motion

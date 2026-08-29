@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&amp;family=Caveat:wght@600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:'Patrick Hand',cursive}
+a{color:#2a78d6}a:hover{color:#1a5aa8}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 15px/1.2 'Patrick Hand',cursive;color:#1a1a1a}
+.dv-sub{font:13px/1.5 'Patrick Hand',cursive;color:rgba(0,0,0,.55);margin:0 0 20px;max-width:780px}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 14px/1.3 'Patrick Hand',cursive;color:rgba(0,0,0,.65)}
+.dv-card{max-width:100%;background:#fff;border:1.5px solid #2b2b2b;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:22px 0 0;font:13px/1.5 'Patrick Hand',cursive;color:rgba(0,0,0,.5)}
+.wf-note{font:13px/1.35 'Caveat',cursive;color:#7a4a00;max-width:300px}
+.wf{padding:10px;display:flex;flex-direction:column;gap:7px}
+.wf-bar{display:flex;align-items:center;gap:6px;font-size:12px;color:#333}
+.wf-chip{border:1.2px solid #555;border-radius:3px;padding:1px 7px;font-size:11px;background:#eee;white-space:nowrap}
+.wf-chip.cls{background:#ffc41f33;border-color:#a8820a}
+.wf-btn{border:1.5px solid #333;background:#f4f4f4;padding:3px 9px;font-size:12px;box-shadow:1.5px 1.5px 0 #999;white-space:nowrap}
+.wf-btn.on{background:#333;color:#fff;box-shadow:none}
+.wf-row{display:flex;gap:6px;align-items:center}
+.wf-lbl{font-size:10px;letter-spacing:.08em;color:#888;width:44px;flex:none}
+.wf-sl{flex:1;height:6px;background:#ddd;border:1px solid #888;position:relative}
+.wf-th{position:absolute;top:-4px;width:9px;height:13px;background:#555}
+.wf-val{font-size:11px;color:#333;width:40px;text-align:right;flex:none}
+.wf-tg{width:26px;height:14px;border:1.3px solid #555;border-radius:8px;position:relative;flex:none}
+.wf-tg i{position:absolute;top:1px;width:10px;height:10px;border-radius:50%;background:#888;left:1px}
+.wf-tg.on{background:#333}.wf-tg.on i{left:13px;background:#fff}
+.wf-wave{height:34px;background:#1c1c1c;border:1.5px solid #444;border-radius:3px;position:relative;overflow:hidden}
+.wf-wave i{position:absolute;bottom:0;width:3px;background:#8fd424}
+.wf-sec{border-top:1.2px dashed #bbb;padding-top:6px;font-size:10px;letter-spacing:.1em;color:#999}
+.wf-dim{position:absolute;inset:0;background:rgba(0,0,0,.35)}
+.sheet{background:#fafafa;border-top:2px solid #333;border-radius:10px 10px 0 0;box-shadow:0 -3px 10px rgba(0,0,0,.25)}
+.grab{width:36px;height:4px;background:#bbb;border-radius:2px;margin:6px auto 2px}
+.phone{width:250px;height:420px;background:#e8e8e8;border:1.5px solid #2b2b2b;border-radius:10px;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.padsq{background:#d8d8d8;border:1px solid #999;border-radius:3px;height:30px}
+</style></helmet>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">The pad sheet — tap a pad on KIT, get its story and its knobs</span></div>
+<p class="dv-sub">Everything shown is already built in the code and waiting for UI: level/pan/tune, one-shot + mute group, GHOSTS (W5.3), treatments (Y4.3), source provenance + the 30-day bin (Y1.3, X2), MAKE INSTRUMENT on tonal pads (W2.3), mini-waveform (W12). Four structures for where it all goes.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>ONE LONG SHEET — everything stacked, scroll if needed</div>
+<div class="dv-card"><div class="phone">
+<div style="flex:1;padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:5px;align-content:start">
+<div class="padsq"></div><div class="padsq" style="border:2px solid #a8820a;background:#ffc41f44"></div><div class="padsq"></div><div class="padsq"></div>
+<div class="padsq"></div><div class="padsq"></div><div class="padsq"></div><div class="padsq"></div>
+</div>
+<div class="wf-dim" style="top:70px"></div>
+<div class="sheet" style="position:absolute;left:0;right:0;bottom:0;top:88px;display:flex;flex-direction:column">
+<div class="grab"></div>
+<div class="wf" style="flex:1;overflow:hidden">
+<div class="wf-bar"><b style="font-size:13px">A02</b><span class="wf-chip cls">SNARE</span><span style="font-size:11px;color:#666">Snare_01.wav</span><span style="margin-left:auto" class="wf-chip">▶</span></div>
+<div class="wf-wave"><i style="left:8%;height:88%"></i><i style="left:12%;height:50%"></i><i style="left:16%;height:30%"></i><i style="left:22%;height:18%"></i><i style="left:30%;height:10%"></i><i style="left:45%;height:6%"></i></div>
+<div class="wf-row"><span class="wf-lbl">LEVEL</span><span class="wf-sl"><span class="wf-th" style="left:70%"></span></span><span class="wf-val">-2 dB</span></div>
+<div class="wf-row"><span class="wf-lbl">PAN</span><span class="wf-sl"><span class="wf-th" style="left:48%"></span></span><span class="wf-val">C</span></div>
+<div class="wf-row"><span class="wf-lbl">TUNE</span><span class="wf-sl"><span class="wf-th" style="left:55%"></span></span><span class="wf-val">+1 st</span></div>
+<div class="wf-row" style="gap:10px"><span style="font-size:11px">ONE-SHOT</span><span class="wf-tg on"><i></i></span><span style="font-size:11px">CHOKE GRP 1</span><span class="wf-tg"><i></i></span><span style="font-size:11px">GHOSTS</span><span class="wf-tg on"><i></i></span></div>
+<div class="wf-sec">TREATMENT</div>
+<div class="wf-row"><span class="wf-btn">NONE</span><span class="wf-btn on">CRUSH</span><span class="wf-btn">TAPE</span><span class="wf-btn">DIRT</span></div>
+<div class="wf-row"><span class="wf-lbl">AMT</span><span class="wf-sl"><span class="wf-th" style="left:35%"></span></span><span class="wf-val">35%</span></div>
+<div class="wf-sec">SOURCE</div>
+<div style="font-size:10px;color:#777">youtube_cap_03.wav @ 1:12 · original in bin 27 days</div>
+<div class="wf-row" style="margin-top:2px"><span class="wf-btn">RE-TRIM ▸</span><span class="wf-btn">EJECT → BIN</span></div>
+</div></div>
+</div></div>
+<div class="wf-note">everything visible, nothing hidden — but it's tall; treatment + source push past the fold on small phones. scroll inside sheet.</div></div>
+
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>TWO TABS — SOUND / STORY split</div>
+<div class="dv-card"><div class="phone">
+<div style="flex:1"></div>
+<div class="wf-dim" style="top:60px"></div>
+<div class="sheet" style="position:absolute;left:0;right:0;bottom:0;top:150px;display:flex;flex-direction:column">
+<div class="grab"></div>
+<div class="wf" style="flex:1">
+<div class="wf-bar"><b style="font-size:13px">A02</b><span class="wf-chip cls">SNARE</span><span style="margin-left:auto" class="wf-chip">▶</span></div>
+<div class="wf-row"><span class="wf-btn on" style="flex:1;text-align:center">SOUND</span><span class="wf-btn" style="flex:1;text-align:center">STORY</span></div>
+<div class="wf-row"><span class="wf-lbl">LEVEL</span><span class="wf-sl"><span class="wf-th" style="left:70%"></span></span><span class="wf-val">-2 dB</span></div>
+<div class="wf-row"><span class="wf-lbl">TUNE</span><span class="wf-sl"><span class="wf-th" style="left:55%"></span></span><span class="wf-val">+1 st</span></div>
+<div class="wf-row" style="gap:10px"><span style="font-size:11px">ONE-SHOT</span><span class="wf-tg on"><i></i></span><span style="font-size:11px">GHOSTS</span><span class="wf-tg on"><i></i></span></div>
+<div class="wf-row"><span class="wf-btn">CRUSH</span><span class="wf-btn">TAPE</span><span class="wf-btn">DIRT</span><span style="font-size:10px;color:#888">amt 35%</span></div>
+<div style="font-size:9.5px;color:#999;border-top:1.2px dashed #bbb;padding-top:5px">STORY tab: waveform · source file + timestamp · takes · bin status · RE-TRIM · EJECT · MAKE INSTRUMENT (tonal)</div>
+</div></div>
+</div></div>
+<div class="wf-note">shorter sheet, knobs land above the thumb. but ghosts/treatments are "sound" and their recipes are "story" — the split gets fuzzy.</div></div>
+
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>TAPE LABEL — compact strip first, MORE unfolds</div>
+<div class="dv-card"><div class="phone">
+<div style="flex:1"></div>
+<div class="wf-dim" style="top:60px"></div>
+<div class="sheet" style="position:absolute;left:0;right:0;bottom:0;top:216px;display:flex;flex-direction:column">
+<div class="grab"></div>
+<div class="wf" style="flex:1">
+<div class="wf-bar"><b style="font-size:13px">A02</b><span class="wf-chip cls">SNARE</span><span style="font-size:10px;color:#888">from youtube_cap_03 @ 1:12</span><span style="margin-left:auto" class="wf-chip">▶</span></div>
+<div class="wf-wave" style="height:26px"><i style="left:8%;height:88%"></i><i style="left:12%;height:50%"></i><i style="left:16%;height:30%"></i><i style="left:24%;height:14%"></i></div>
+<div class="wf-row"><span class="wf-lbl">LEVEL</span><span class="wf-sl"><span class="wf-th" style="left:70%"></span></span><span class="wf-lbl" style="width:30px;text-align:right">TUNE</span><span class="wf-sl"><span class="wf-th" style="left:55%"></span></span></div>
+<div class="wf-row"><span class="wf-btn">CRUSH ▾</span><span class="wf-btn">GHOSTS ✓</span><span class="wf-btn" style="margin-left:auto">MORE ▾</span></div>
+<div style="font-size:9.5px;color:#999;border-top:1.2px dashed #bbb;padding-top:5px">MORE unfolds: pan · one-shot · choke · takes · bin · re-trim · eject · make instrument</div>
+</div></div>
+</div></div>
+<div class="wf-note">smallest interruption — pads stay visible + playable while open. power stuff one fold away. risks burying eject/instrument.</div></div>
+
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>FULL-SCREEN INSPECTOR — the pad as its own screen</div>
+<div class="dv-card"><div class="phone">
+<div class="wf" style="flex:1">
+<div class="wf-bar"><span class="wf-chip">◄ KIT</span><b style="font-size:13px">PAD A02</b><span class="wf-chip cls">SNARE</span><span style="margin-left:auto" class="wf-chip">▶ HIT</span></div>
+<div class="wf-wave" style="height:60px"><i style="left:8%;height:88%"></i><i style="left:11%;height:60%"></i><i style="left:14%;height:38%"></i><i style="left:20%;height:22%"></i><i style="left:28%;height:12%"></i><i style="left:40%;height:7%"></i></div>
+<div style="font-size:10px;color:#777">youtube_cap_03.wav @ 1:12 · 412 ms · original binned 27d</div>
+<div class="wf-row"><span class="wf-lbl">LEVEL</span><span class="wf-sl"><span class="wf-th" style="left:70%"></span></span><span class="wf-val">-2 dB</span></div>
+<div class="wf-row"><span class="wf-lbl">PAN</span><span class="wf-sl"><span class="wf-th" style="left:48%"></span></span><span class="wf-val">C</span></div>
+<div class="wf-row"><span class="wf-lbl">TUNE</span><span class="wf-sl"><span class="wf-th" style="left:55%"></span></span><span class="wf-val">+1 st</span></div>
+<div class="wf-row" style="gap:10px"><span style="font-size:11px">ONE-SHOT</span><span class="wf-tg on"><i></i></span><span style="font-size:11px">CHOKE 1</span><span class="wf-tg"><i></i></span><span style="font-size:11px">GHOSTS</span><span class="wf-tg on"><i></i></span></div>
+<div class="wf-sec">TREATMENT</div>
+<div class="wf-row"><span class="wf-btn">NONE</span><span class="wf-btn on">CRUSH</span><span class="wf-btn">TAPE</span><span class="wf-btn">DIRT</span></div>
+<div class="wf-row"><span class="wf-lbl">AMT</span><span class="wf-sl"><span class="wf-th" style="left:35%"></span></span><span class="wf-val">35%</span></div>
+<div class="wf-row" style="margin-top:auto"><span class="wf-btn">RE-TRIM ▸</span><span class="wf-btn">MAKE INSTRUMENT</span><span class="wf-btn">EJECT</span></div>
+<div class="wf-row"><span class="wf-btn">◄ A01</span><span style="font-size:10px;color:#888;flex:1;text-align:center">swipe = next pad</span><span class="wf-btn">A03 ►</span></div>
+</div>
+</div></div>
+<div class="wf-note">room for everything incl. big waveform + pad-to-pad swipe. but loses sight of the kit — no tapping neighbors to compare.</div></div>
+
+</div>
+<p class="dv-next">Try next: "go with <a class="dv-oid" href="#1a">1a</a> but with <a class="dv-oid" href="#1c">1c</a>'s playable-pads-while-open" · "riff on <a class="dv-oid" href="#1d">1d</a> with swipe-between-pads" · "hi-fi the winner into the Oilslick prototype"</p>
+</section>
+</x-dc>
+</body>
+</html>

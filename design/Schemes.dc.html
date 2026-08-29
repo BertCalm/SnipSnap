@@ -11,12 +11,14 @@
   <style>
     body{margin:0;background:#17191d;}
     a{color:#49e83e;} a:hover{color:#8fd424;}
-    .t-chrome{ --gray:#c3c7cb; --g-hi:#ffffff; --g-e:#e8ebee; --g-mid:#868a8e; --g-dk:#3f4347; --ink:#1c1e20; --ink2:#55595d; --t1:#000082; --t2:#1878c8; --title-ink:#ffffff; --desk1:#0a7a78; --desk2:#0c817f; --lcd:#0c130b; --lcd-ink:#49e83e; --amber:#ffb000; --field:#ffffff; }
-    .t-ferric{ --gray:#d4c8a8; --g-hi:#faf4e4; --g-e:#e6dcc0; --g-mid:#9a8c6a; --g-dk:#463a26; --ink:#2c2214; --ink2:#6a5c42; --t1:#6a3210; --t2:#c87828; --title-ink:#faf4e4; --desk1:#8a5a24; --desk2:#936129; --lcd:#140e06; --lcd-ink:#ffb000; --amber:#ff7a1a; --field:#faf4e4; }
     .t-metal{ --gray:#2e3136; --g-hi:#4a4f56; --g-e:#3a3e44; --g-mid:#17191c; --g-dk:#060708; --ink:#d8dbe0; --ink2:#8a9099; --t1:#0a0a0c; --t2:#2c3038; --title-ink:#7adfe4; --desk1:#101215; --desk2:#14171b; --lcd:#0a0c0e; --lcd-ink:#7adfe4; --amber:#ffb000; --field:#1b1e22; }
     .t-oilslick{ --gray:#221a34; --g-hi:#40306a; --g-e:#2a2044; --g-mid:#120e1a; --g-dk:#060410; --ink:#c8b2f8; --ink2:#7a6aa0; --t1:#5a2ae0; --t2:#e040c8; --title-ink:#ffffff; --desk1:#0c0618; --desk2:#140b24; --lcd:#0a0714; --lcd-ink:#c8b2f8; --amber:#40e0e8; --field:#161020; }
-    .t-clear{ --gray:#e2e6ec; --g-hi:#ffffff; --g-e:#f2f5f9; --g-mid:#9aa4b0; --g-dk:#4a525c; --ink:#242a32; --ink2:#6e7884; --t1:#3888b8; --t2:#78c8e8; --title-ink:#ffffff; --desk1:#b8c8d4; --desk2:#bfceda; --lcd:#101418; --lcd-ink:#9ae8ff; --amber:#ff9a1a; --field:#ffffff; }
-    .t-snackbar{ --gray:#ffd400; --g-hi:#fff0a0; --g-e:#ffe45c; --g-mid:#b89200; --g-dk:#5c4a00; --ink:#241c00; --ink2:#6a5600; --t1:#e81c1c; --t2:#e81c1c; --title-ink:#ffffff; --desk1:#e81c1c; --desk2:#ee2424; --lcd:#1a0404; --lcd-ink:#ffd400; --amber:#ffffff; --field:#fff8d8; }
+    .t-petrol{ --gray:#141a28; --g-hi:#30406a; --g-e:#1a2438; --g-mid:#0c101c; --g-dk:#04060e; --ink:#b2c8f8; --ink2:#6a7ca0; --t1:#2a6ae0; --t2:#40e890; --title-ink:#ffffff; --desk1:#060a18; --desk2:#0b1224; --lcd:#070a14; --lcd-ink:#b2c8f8; --amber:#40e890; --field:#101624; }
+    .t-infrared{ --gray:#221218; --g-hi:#5c3040; --g-e:#2c141a; --g-mid:#12080c; --g-dk:#0a0304; --ink:#f8b2c0; --ink2:#a06a78; --t1:#9a2ae0; --t2:#e02a5a; --title-ink:#ffffff; --desk1:#160408; --desk2:#200a10; --lcd:#120608; --lcd-ink:#f8b2c0; --amber:#ff8a1a; --field:#1a0c12; }
+    .t-acid{ --gray:#161e0e; --g-hi:#4a6030; --g-e:#243218; --g-mid:#0e160a; --g-dk:#060a02; --ink:#d4f0a0; --ink2:#8aa060; --t1:#6ab010; --t2:#20d0e8; --title-ink:#ffffff; --desk1:#0a1204; --desk2:#101a08; --lcd:#0a1004; --lcd-ink:#d4f0a0; --amber:#20d0e8; --field:#121a0a; }
+    .t-sodium{ --gray:#221a0c; --g-hi:#5c4c28; --g-e:#2c2410; --g-mid:#120e06; --g-dk:#080502; --ink:#f0d8a8; --ink2:#a08a58; --t1:#c85a10; --t2:#ffb000; --title-ink:#ffffff; --desk1:#160e02; --desk2:#201606; --lcd:#120c04; --lcd-ink:#ffd25e; --amber:#ff6a2a; --field:#1a140a; }
+    .t-ice{ --gray:#10202e; --g-hi:#305468; --g-e:#16283a; --g-mid:#081420; --g-dk:#030a12; --ink:#b8e2f8; --ink2:#6a92a8; --t1:#1a5ac8; --t2:#58c8ff; --title-ink:#ffffff; --desk1:#04101c; --desk2:#081826; --lcd:#060e16; --lcd-ink:#b8e2f8; --amber:#58c8ff; --field:#0c1a26; }
+    .t-vapor{ --gray:#10201c; --g-hi:#2e5c4a; --g-e:#1a2c26; --g-mid:#081410; --g-dk:#040c08; --ink:#a8f0d8; --ink2:#62a08a; --t1:#10b088; --t2:#40e8c0; --title-ink:#ffffff; --desk1:#061410; --desk2:#0a1c16; --lcd:#06120e; --lcd-ink:#a8f0d8; --amber:#b27af8; --field:#0c1a16; }
     .raised{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-hi),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-e),inset -2px -2px 0 var(--g-mid);}
     .sunken{background:var(--field);box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-e),inset 2px 2px 0 var(--g-dk),inset -2px -2px 0 var(--g-hi);}
     .win{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-e),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-hi),inset -2px -2px 0 var(--g-mid);}
@@ -30,54 +32,12 @@
     .miniinlay{position:absolute;inset:5px;display:flex;align-items:flex-end;justify-content:center;}
   </style>
 </helmet>
-<div style="width:920px;height:640px;background:#17191d;box-sizing:border-box;display:flex;flex-direction:column;padding:18px;gap:12px;">
+<div style="width:1240px;height:660px;background:#17191d;box-sizing:border-box;display:flex;flex-direction:column;padding:18px;gap:12px;">
   <div class="px" style="color:#868a8e;">SCHEMES — SAME TOKENS, SAME BEVELS, DIFFERENT TAPE STOCK. CLASS COLORS NEVER CHANGE: YOUR PADS MATCH YOUR MPC IN EVERY SCHEME.</div>
 
-  <div style="flex:1;display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:12px;">
+  <div style="flex:1;display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:12px;">
 
-    <div class="t-chrome deskbg" style="position:relative;padding:12px;display:flex;flex-direction:column;gap:8px;">
-      <div class="win" style="flex:1;display:flex;flex-direction:column;padding:3px;">
-        <div style="height:22px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;padding:0 8px;"><span class="ui" style="color:var(--title-ink);font-weight:bold;font-size:10px;flex:1;">SNIPSNAP.EXE</span><div class="raised" style="width:16px;height:14px;"></div></div>
-        <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:7px;">
-          <div class="sunken" style="background:var(--lcd);height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;"><span class="lcdf" style="color:var(--lcd-ink);font-size:15px;">KIT 01</span><span class="lcdf" style="color:var(--amber);font-size:14px;">BANK A</span></div>
-          <div class="padgrid">
-            <div class="raised minipad"><div class="miniinlay sunken" style="background:#e8542e;"></div></div>
-            <div class="raised minipad"><div class="miniinlay sunken" style="background:#ffc41f;"></div></div>
-            <div class="raised minipad"><div class="miniinlay sunken" style="background:#1fc6cf;"></div></div>
-            <div class="raised minipad"><div class="miniinlay sunken" style="background:#7adfe4;"></div></div>
-          </div>
-          <div style="flex:1;"></div>
-          <div class="raised" style="height:22px;display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#e83a2e"/></svg><span class="px" style="color:var(--ink);">START SESSION</span></div>
-        </div>
-        <div style="height:16px;display:flex;gap:2px;padding:2px 3px 3px;"><div style="flex:1;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);display:flex;align-items:center;padding:0 6px;"><span class="px" style="color:var(--ink);font-size:7px;">TAPE 60s</span></div></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="px" style="color:#e8ebee;background:#000;padding:3px 8px;">CHROME — TYPE II</span>
-        <span class="px" style="color:#5c6167;">THE DEFAULT. GRAY TOOLS, TEAL DESK, GREEN LCD.</span>
-      </div>
-    </div>
 
-    <div class="t-ferric deskbg" style="position:relative;padding:12px;display:flex;flex-direction:column;gap:8px;">
-      <div class="win" style="flex:1;display:flex;flex-direction:column;padding:3px;">
-        <div style="height:22px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;padding:0 8px;"><span class="ui" style="color:var(--title-ink);font-weight:bold;font-size:10px;flex:1;">SNIPSNAP.EXE</span><div class="raised" style="width:16px;height:14px;"></div></div>
-        <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:7px;">
-          <div class="sunken" style="background:var(--lcd);height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;"><span class="lcdf" style="color:var(--lcd-ink);font-size:15px;">KIT 01</span><span class="lcdf" style="color:var(--amber);font-size:14px;">BANK A</span></div>
-          <div class="padgrid">
-            <div class="raised minipad"><div class="miniinlay sunken" style="background:#e8542e;"></div></div>
-            <div class="raised minipad"><div class="miniinlay sunken" style="background:#ffc41f;"></div></div>
-            <div class="raised minipad"><div class="miniinlay sunken" style="background:#1fc6cf;"></div></div>
-            <div class="raised minipad"><div class="miniinlay sunken" style="background:#7adfe4;"></div></div>
-          </div>
-          <div style="flex:1;"></div>
-          <div class="raised" style="height:22px;display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#e83a2e"/></svg><span class="px" style="color:var(--ink);">START SESSION</span></div>
-        </div>
-        <div style="height:16px;display:flex;gap:2px;padding:2px 3px 3px;"><div style="flex:1;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);display:flex;align-items:center;padding:0 6px;"><span class="px" style="color:var(--ink);font-size:7px;">TAPE 60s</span></div></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="px" style="color:#e8ebee;background:#000;padding:3px 8px;">FERRIC — TYPE I</span>
-        <span class="px" style="color:#5c6167;">70s TAN AND RUST. AMBER LCD. SMELLS LIKE A GLOVEBOX.</span>
-      </div>
-    </div>
 
     <div class="t-metal deskbg" style="position:relative;padding:12px;display:flex;flex-direction:column;gap:8px;">
       <div class="win" style="flex:1;display:flex;flex-direction:column;padding:3px;">
@@ -101,27 +61,6 @@
       </div>
     </div>
 
-    <div class="t-snackbar deskbg" style="position:relative;padding:12px;display:flex;flex-direction:column;gap:8px;">
-      <div class="win" style="flex:1;display:flex;flex-direction:column;padding:3px;">
-        <div style="height:22px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;padding:0 8px;"><span class="ui" style="color:var(--title-ink);font-weight:bold;font-size:10px;flex:1;">SNIPSNAP.EXE</span><div class="raised" style="width:16px;height:14px;"></div></div>
-        <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:7px;">
-          <div class="sunken" style="background:var(--lcd);height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;"><span class="lcdf" style="color:var(--lcd-ink);font-size:15px;">KIT 01</span><span class="lcdf" style="color:var(--amber);font-size:14px;">BANK A</span></div>
-          <div class="padgrid">
-            <div class="raised minipad"><div class="miniinlay sunken" style="background:#e8542e;"></div></div>
-            <div class="raised minipad"><div class="miniinlay sunken" style="background:#ffc41f;"></div></div>
-            <div class="raised minipad"><div class="miniinlay sunken" style="background:#1fc6cf;"></div></div>
-            <div class="raised minipad"><div class="miniinlay sunken" style="background:#7adfe4;"></div></div>
-          </div>
-          <div style="flex:1;"></div>
-          <div class="raised" style="height:22px;display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#e83a2e"/></svg><span class="px" style="color:var(--ink);">START SESSION</span></div>
-        </div>
-        <div style="height:16px;display:flex;gap:2px;padding:2px 3px 3px;"><div style="flex:1;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);display:flex;align-items:center;padding:0 6px;"><span class="px" style="color:var(--ink);font-size:7px;">TAPE 60s</span></div></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="px" style="color:#e8ebee;background:#000;padding:3px 8px;">SNACK BAR</span>
-        <span class="px" style="color:#5c6167;">YES, IT'S THAT ONE. SHIPPED OUT OF RESPECT.</span>
-      </div>
-    </div>
 
     <div class="t-oilslick deskbg" style="position:relative;padding:12px;display:flex;flex-direction:column;gap:8px;">
       <div class="win" style="flex:1;display:flex;flex-direction:column;padding:3px;">
@@ -145,7 +84,7 @@
       </div>
     </div>
 
-    <div class="t-clear deskbg" style="position:relative;padding:12px;display:flex;flex-direction:column;gap:8px;">
+    <div class="t-petrol deskbg" style="position:relative;padding:12px;display:flex;flex-direction:column;gap:8px;">
       <div class="win" style="flex:1;display:flex;flex-direction:column;padding:3px;">
         <div style="height:22px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;padding:0 8px;"><span class="ui" style="color:var(--title-ink);font-weight:bold;font-size:10px;flex:1;">SNIPSNAP.EXE</span><div class="raised" style="width:16px;height:14px;"></div></div>
         <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:7px;">
@@ -162,14 +101,125 @@
         <div style="height:16px;display:flex;gap:2px;padding:2px 3px 3px;"><div style="flex:1;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);display:flex;align-items:center;padding:0 6px;"><span class="px" style="color:var(--ink);font-size:7px;">TAPE 60s</span></div></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
-        <span class="px" style="color:#e8ebee;background:#000;padding:3px 8px;">CLEAR — NO TYPE</span>
-        <span class="px" style="color:#5c6167;">THE SEE-THROUGH SHELL. SILVER DECK, VFD GLOW. DAYLIGHT.</span>
+        <span class="px" style="color:#e8ebee;background:#000;padding:3px 8px;">OILSLICK · PETROL</span>
+        <span class="px" style="color:#5c6167;">BLUE / MINT / GOLD. GAS-STATION PUDDLE.</span>
       </div>
     </div>
+
+    <div class="t-infrared deskbg" style="position:relative;padding:12px;display:flex;flex-direction:column;gap:8px;">
+      <div class="win" style="flex:1;display:flex;flex-direction:column;padding:3px;">
+        <div style="height:22px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;padding:0 8px;"><span class="ui" style="color:var(--title-ink);font-weight:bold;font-size:10px;flex:1;">SNIPSNAP.EXE</span><div class="raised" style="width:16px;height:14px;"></div></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:7px;">
+          <div class="sunken" style="background:var(--lcd);height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;"><span class="lcdf" style="color:var(--lcd-ink);font-size:15px;">KIT 01</span><span class="lcdf" style="color:var(--amber);font-size:14px;">BANK A</span></div>
+          <div class="padgrid">
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#e8542e;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#ffc41f;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#1fc6cf;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#7adfe4;"></div></div>
+          </div>
+          <div style="flex:1;"></div>
+          <div class="raised" style="height:22px;display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#e83a2e"/></svg><span class="px" style="color:var(--ink);">START SESSION</span></div>
+        </div>
+        <div style="height:16px;display:flex;gap:2px;padding:2px 3px 3px;"><div style="flex:1;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);display:flex;align-items:center;padding:0 6px;"><span class="px" style="color:var(--ink);font-size:7px;">TAPE 60s</span></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="px" style="color:#e8ebee;background:#000;padding:3px 8px;">OILSLICK · INFRARED</span>
+        <span class="px" style="color:#5c6167;">CRIMSON / AMBER. RUN HOT.</span>
+      </div>
+    </div>
+
+    <div class="t-acid deskbg" style="position:relative;padding:12px;display:flex;flex-direction:column;gap:8px;">
+      <div class="win" style="flex:1;display:flex;flex-direction:column;padding:3px;">
+        <div style="height:22px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;padding:0 8px;"><span class="ui" style="color:var(--title-ink);font-weight:bold;font-size:10px;flex:1;">SNIPSNAP.EXE</span><div class="raised" style="width:16px;height:14px;"></div></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:7px;">
+          <div class="sunken" style="background:var(--lcd);height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;"><span class="lcdf" style="color:var(--lcd-ink);font-size:15px;">KIT 01</span><span class="lcdf" style="color:var(--amber);font-size:14px;">BANK A</span></div>
+          <div class="padgrid">
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#e8542e;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#ffc41f;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#1fc6cf;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#7adfe4;"></div></div>
+          </div>
+          <div style="flex:1;"></div>
+          <div class="raised" style="height:22px;display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#e83a2e"/></svg><span class="px" style="color:var(--ink);">START SESSION</span></div>
+        </div>
+        <div style="height:16px;display:flex;gap:2px;padding:2px 3px 3px;"><div style="flex:1;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);display:flex;align-items:center;padding:0 6px;"><span class="px" style="color:var(--ink);font-size:7px;">TAPE 60s</span></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="px" style="color:#e8ebee;background:#000;padding:3px 8px;">OILSLICK · ACID</span>
+        <span class="px" style="color:#5c6167;">CHARTREUSE / CYAN. DO NOT DRINK.</span>
+      </div>
+    </div>
+
+    <div class="t-sodium deskbg" style="position:relative;padding:12px;display:flex;flex-direction:column;gap:8px;">
+      <div class="win" style="flex:1;display:flex;flex-direction:column;padding:3px;">
+        <div style="height:22px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;padding:0 8px;"><span class="ui" style="color:var(--title-ink);font-weight:bold;font-size:10px;flex:1;">SNIPSNAP.EXE</span><div class="raised" style="width:16px;height:14px;"></div></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:7px;">
+          <div class="sunken" style="background:var(--lcd);height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;"><span class="lcdf" style="color:var(--lcd-ink);font-size:15px;">KIT 01</span><span class="lcdf" style="color:var(--amber);font-size:14px;">BANK A</span></div>
+          <div class="padgrid">
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#e8542e;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#ffc41f;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#1fc6cf;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#7adfe4;"></div></div>
+          </div>
+          <div style="flex:1;"></div>
+          <div class="raised" style="height:22px;display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#e83a2e"/></svg><span class="px" style="color:var(--ink);">START SESSION</span></div>
+        </div>
+        <div style="height:16px;display:flex;gap:2px;padding:2px 3px 3px;"><div style="flex:1;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);display:flex;align-items:center;padding:0 6px;"><span class="px" style="color:var(--ink);font-size:7px;">TAPE 60s</span></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="px" style="color:#e8ebee;background:#000;padding:3px 8px;">OILSLICK · SODIUM</span>
+        <span class="px" style="color:#5c6167;">AMBER / GOLD. EVERY PARKING LOT, 2AM.</span>
+      </div>
+    </div>
+
+    <div class="t-ice deskbg" style="position:relative;padding:12px;display:flex;flex-direction:column;gap:8px;">
+      <div class="win" style="flex:1;display:flex;flex-direction:column;padding:3px;">
+        <div style="height:22px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;padding:0 8px;"><span class="ui" style="color:var(--title-ink);font-weight:bold;font-size:10px;flex:1;">SNIPSNAP.EXE</span><div class="raised" style="width:16px;height:14px;"></div></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:7px;">
+          <div class="sunken" style="background:var(--lcd);height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;"><span class="lcdf" style="color:var(--lcd-ink);font-size:15px;">KIT 01</span><span class="lcdf" style="color:var(--amber);font-size:14px;">BANK A</span></div>
+          <div class="padgrid">
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#e8542e;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#ffc41f;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#1fc6cf;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#7adfe4;"></div></div>
+          </div>
+          <div style="flex:1;"></div>
+          <div class="raised" style="height:22px;display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#e83a2e"/></svg><span class="px" style="color:var(--ink);">START SESSION</span></div>
+        </div>
+        <div style="height:16px;display:flex;gap:2px;padding:2px 3px 3px;"><div style="flex:1;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);display:flex;align-items:center;padding:0 6px;"><span class="px" style="color:var(--ink);font-size:7px;">TAPE 60s</span></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="px" style="color:#e8ebee;background:#000;padding:3px 8px;">OILSLICK · ICE</span>
+        <span class="px" style="color:#5c6167;">ELECTRIC BLUE. COLD START.</span>
+      </div>
+    </div>
+
+    <div class="t-vapor deskbg" style="position:relative;padding:12px;display:flex;flex-direction:column;gap:8px;">
+      <div class="win" style="flex:1;display:flex;flex-direction:column;padding:3px;">
+        <div style="height:22px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;padding:0 8px;"><span class="ui" style="color:var(--title-ink);font-weight:bold;font-size:10px;flex:1;">SNIPSNAP.EXE</span><div class="raised" style="width:16px;height:14px;"></div></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:7px;">
+          <div class="sunken" style="background:var(--lcd);height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;"><span class="lcdf" style="color:var(--lcd-ink);font-size:15px;">KIT 01</span><span class="lcdf" style="color:var(--amber);font-size:14px;">BANK A</span></div>
+          <div class="padgrid">
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#e8542e;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#ffc41f;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#1fc6cf;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#7adfe4;"></div></div>
+          </div>
+          <div style="flex:1;"></div>
+          <div class="raised" style="height:22px;display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#e83a2e"/></svg><span class="px" style="color:var(--ink);">START SESSION</span></div>
+        </div>
+        <div style="height:16px;display:flex;gap:2px;padding:2px 3px 3px;"><div style="flex:1;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);display:flex;align-items:center;padding:0 6px;"><span class="px" style="color:var(--ink);font-size:7px;">TAPE 60s</span></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="px" style="color:#e8ebee;background:#000;padding:3px 8px;">OILSLICK · VAPOR</span>
+        <span class="px" style="color:#5c6167;">MINT / LILAC. THE MALL IS CLOSED.</span>
+      </div>
+    </div>
+
   </div>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"$preview":{"width":920,"height":640}}'>
+<script data-dc-script data-props='{"$preview":{"width":1240,"height":660}}'>
 class Component extends DCLogic { renderVals(){ return {}; } }
 </script>
 </body>
