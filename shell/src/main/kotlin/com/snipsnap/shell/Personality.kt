@@ -88,6 +88,9 @@ object Copy {
     const val TEACHING_ON = "TEACHING ON. THE MACHINE LEARNS FROM YOUR CORRECTIONS."
     const val TEACHING_OFF = "TEACHING OFF. THE MACHINE STOPS TAKING NOTES."
 
+    // ---- Settings: what TEACH THE MACHINE actually sends (X4.4) ----
+    const val TEACH_CONSENT = "FEATURES ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE."
+
     // ---- BANK B: evil twins (W4.3) ----
     const val BANK_B_LIT = "BANK B LIT. YOUR KIT, BUT EVIL. RECIPES KEPT."
     const val TWINS_REROLLED = "TWINS REROLLED. SAME SEED, DIFFERENT SINS."
@@ -96,6 +99,10 @@ object Copy {
     fun takeRestored(take: String): String = "$take RESTORED. THE PAST, REPLAYED."
     const val BACK_FROM_BIN = "BACK FROM THE BIN. NO QUESTIONS ASKED."
     const val BIN_EMPTIED = "BIN EMPTIED. THE MACHINE FORGETS, AS ASKED."
+
+    // ---- TAKES + BIN: the rule the screen states plainly (X2.3) ----
+    const val TAKES_BIN_RULE =
+        "EVERY SAVE ARCHIVES A TAKE. EVERY DELETE GOES TO THE BIN FIRST."
 
     // ---- GROOVE ----
     const val HUMANIZED = "HUMANIZED. NOBODY PLAYS LIKE A ROBOT."
