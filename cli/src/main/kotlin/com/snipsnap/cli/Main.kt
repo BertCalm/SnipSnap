@@ -137,6 +137,11 @@ object Cli {
         |                        LOOP pads (--mode cloud|scrub|swarm,
         |                        --seconds N, --seed N; same seed, same
         |                        texture; provenance + recipe stamped)
+        |  retime <wav> --to BPM the other tempo move: PGHI time-stretch -
+        |                        tempo changes, pitch does NOT, attacks kept
+        |                        (--from BPM when the material won't say;
+        |                        chop --fit-tempo BPM --keep-pitch does the
+        |                        same to a kit's loops)
         |  stretch <wav>         the slow-motion wash: paulstretch spectral
         |                        resynthesis (--by N, default 8) - a hit
         |                        becomes an evolving texture that still
@@ -328,6 +333,7 @@ object Cli {
                 "euclid" -> EuclidCommand.run(args.drop(1), out)
                 "dissect" -> DissectCommand.run(args.drop(1), out)
                 "split" -> SplitCommand.run(args.drop(1), out)
+                "retime" -> RetimeCommand.run(args.drop(1), out)
                 "art" -> ArtCommand.run(args.drop(1), out)
                 "jcard" -> JCardCommand.run(args.drop(1), out)
                 "notes" -> NotesCommand.run(args.drop(1), out)

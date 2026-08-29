@@ -78,7 +78,7 @@ object Pghi {
      * sine stays a narrow line instead of the paulstretch wash.
      */
     fun stretch(source: Snip, factor: Float, seed: Long = 0): Snip {
-        require(factor in 1f..100f) { "factor wants 1..100, got $factor" }
+        require(factor in 0.25f..100f) { "factor wants 0.25..100, got $factor" }
         val mono = if (source.channels == 1) source else Cleanup.toMono(source)
         require(mono.frameCount > 0) { "the source is empty" }
         val mags = mutableListOf<FloatArray>()

@@ -2488,6 +2488,33 @@ class CliTest {
     }
 
     @Test
+    fun `retime changes the tempo and not the pitch`() {
+        val rate = 44_100
+        // A 100 BPM break with a 440 Hz bed under it.
+        val base = com.snipsnap.audio.WavReader.read(writeBreak(File(temp, "rt base.wav"))).samples
+        val bedded = FloatArray(base.size) { i ->
+            base[i] * 0.7f + (0.12 * Math.sin(2.0 * Math.PI * 440.0 * i / rate)).toFloat()
+        }
+        val src = File(temp, "rt song.wav")
+        WavWriter.write(src, Snip(bedded, 1, rate))
+
+        val (code, stdout, _) = cli("retime", src.path, "--to", "84", "--from", "100")
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "pitch kept")
+        val out = com.snipsnap.audio.WavReader.read(File(temp, "rt song 84bpm.wav"))
+        assertTrue(
+            Math.abs(out.frameCount - (bedded.size * (100.0 / 84.0)).toInt()) <= 1,
+            "the duration is the ratio's: ${out.frameCount}",
+        )
+        assertTrue(
+            tone(out.samples, 440.0, rate) > 5 * tone(out.samples, 440.0 * 84.0 / 100.0, rate),
+            "the bed still sings 440 - no drag",
+        )
+        assertEquals(2, cli("retime", src.path).first, "a target is required")
+        assertEquals(2, cli("chop", src.path, "--keep-pitch").first, "--keep-pitch rides on --fit-tempo")
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")

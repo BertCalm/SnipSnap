@@ -50,7 +50,7 @@ object ChopCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export", "--swing", "--art", "--fit-tempo"),
-            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview", "--no-art", "--break-pad", "--clean", "--denoise"),
+            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview", "--no-art", "--break-pad", "--clean", "--denoise", "--keep-pitch"),
         )
         val input = opts.positional.firstOrNull()
             ?: throw CliError("chop wants an input file: snipsnap chop <input.wav>")
@@ -82,6 +82,9 @@ object ChopCommand {
         val fitTempo = opts["--fit-tempo"]?.let {
             it.toFloatOrNull()?.takeIf { t -> t > 0f && t < 1000f }
                 ?: throw CliError("--fit-tempo wants a BPM, got '$it'")
+        }
+        if (opts.has("--keep-pitch") && fitTempo == null) {
+            throw CliError("--keep-pitch rides on --fit-tempo - add it")
         }
         val swing = opts.int("--swing")
         if (swing != null && !opts.has("--groove")) {
@@ -229,7 +232,12 @@ object ChopCommand {
                 if (pad?.drumClass == com.snipsnap.audio.DrumClass.LOOP) {
                     fitted++
                     try {
-                        pad.copy(snip = com.snipsnap.audio.TempoFit.repitch(pad.snip, tempo.bpm, fitTempo))
+                        if (opts.has("--keep-pitch")) {
+                            // The other tempo move: PGHI time-stretch, no repitch.
+                            pad.copy(snip = com.snipsnap.audio.Retime.retime(pad.snip, tempo.bpm / fitTempo))
+                        } else {
+                            pad.copy(snip = com.snipsnap.audio.TempoFit.repitch(pad.snip, tempo.bpm, fitTempo))
+                        }
                     } catch (e: IllegalArgumentException) {
                         throw CliError(e.message ?: "tempo fit refused")
                     }
@@ -239,6 +247,12 @@ object ChopCommand {
             }
             if (fitted == 0) {
                 out.println("(no LOOP pads - nothing to tempo-fit)")
+            } else if (opts.has("--keep-pitch")) {
+                out.println(
+                    "tempo fit: %d loop(s) time-stretched %s -> %dbpm (pitch kept)".format(
+                        fitted, tempo.label, Math.round(fitTempo),
+                    ),
+                )
             } else {
                 out.println(
                     "tempo fit: %d loop(s) repitched %s -> %dbpm (%+.1f semitones, SP-style)".format(
