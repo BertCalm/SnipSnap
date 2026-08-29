@@ -76,6 +76,38 @@ object Copy {
     const val ODOMETER_OFF = "BACK TO REAL TIME."
     const val DELETE_SNIP = "EJECTED. THE BIN KEEPS IT 30 DAYS."
 
+    // ---- CHOP: the melodic rule (X1.3) ----
+    const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."
+
+    // ---- KIT: the key cycler (F5.3) ----
+    fun keySet(key: String): String =
+        "$key SET. TONAL PADS RETUNE ON ASSIGN — THE KICK IS UNTOUCHED."
+    const val KEY_OFF = "KEY OFF. EVERYTHING LANDS AS CAPTURED."
+
+    // ---- Settings: teach the machine (X4.4) ----
+    const val TEACHING_ON = "TEACHING ON. THE MACHINE LEARNS FROM YOUR CORRECTIONS."
+    const val TEACHING_OFF = "TEACHING OFF. THE MACHINE STOPS TAKING NOTES."
+
+    // ---- BANK B: evil twins (W4.3) ----
+    const val BANK_B_LIT = "BANK B LIT. YOUR KIT, BUT EVIL. RECIPES KEPT."
+    const val TWINS_REROLLED = "TWINS REROLLED. SAME SEED, DIFFERENT SINS."
+
+    // ---- TAKES + BIN (X2.3) ----
+    fun takeRestored(take: String): String = "$take RESTORED. THE PAST, REPLAYED."
+    const val BACK_FROM_BIN = "BACK FROM THE BIN. NO QUESTIONS ASKED."
+    const val BIN_EMPTIED = "BIN EMPTIED. THE MACHINE FORGETS, AS ASKED."
+
+    // ---- GROOVE ----
+    const val HUMANIZED = "HUMANIZED. NOBODY PLAYS LIKE A ROBOT."
+    const val FORKED_TO_E = "FORKED TO PROG E. A–D STAY UNTOUCHED."
+    const val BAR_WIPED = "BAR WIPED. THE MACHINE FORGIVES."
+
+    // ---- PAD SHEET ----
+    const val GHOSTS_ON = "GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
+    const val TREATED = "CRUSH ON A02. ORIGINAL SLEEPS IN THE BIN."
+    const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
+    const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."
+
     // Chop shop.
     const val RECHOPPED = "RE-CHOPPED. THE MACHINE APOLOGIZES FOR SLICE 3."
 
