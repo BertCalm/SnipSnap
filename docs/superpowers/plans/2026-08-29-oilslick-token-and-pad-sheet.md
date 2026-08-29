@@ -117,7 +117,7 @@ In `Schemes.kt`, in the `Scheme` data class, immediately after the `amber` param
     val warn: Int = 0xFFB000,
 ```
 
-`warn` must come after `field` because it has a default and Kotlin requires defaulted params to follow required ones only when callers use positional args — every scheme table here uses named args, but keeping defaults last matches the file's existing shape.
+Append rather than insert: `Scheme` is a data class, so constructor order is also `copy()` and destructuring order. Adding to the end keeps every existing named-arg table compiling untouched.
 
 - [ ] **Step 4: Give the cool-amber schemes an explicit warn**
 
@@ -338,7 +338,9 @@ enum class SchemeId(val displayName: String) {
 }
 ```
 
-Delete the `CHROME`, `FERRIC`, `SNACK_BAR` and `CLEAR` `Scheme` tables. Keep `METAL` and `OILSLICK` as they stand. Add six, transcribed from `design/Schemes.dc.html` — `--gray/--g-hi/--g-e/--g-mid/--g-dk` map to `gray/grayHi/grayEdge/grayMid/grayDark`, `--t1/--t2` to `title1/title2`:
+Delete the `CHROME`, `FERRIC`, `SNACK_BAR` and `CLEAR` `Scheme` tables.
+
+**Leave `METAL` and `OILSLICK` exactly as Tasks 1–2 left them** — in particular OILSLICK's trailing `warn = 0xFFB000, ink3 = 0x584A80, win = 0x1A1424, deskGlow = 0x2A1050,` line. The tables printed below are the six *new* ones only; retyping OILSLICK from an earlier task's snippet would silently revert both pins. Add six, transcribed from `design/Schemes.dc.html` — `--gray/--g-hi/--g-e/--g-mid/--g-dk` map to `gray/grayHi/grayEdge/grayMid/grayDark`, `--t1/--t2` to `title1/title2`:
 
 ```kotlin
     val PETROL = Scheme(
@@ -448,7 +450,7 @@ Using `Schemes.DEFAULT` rather than `Schemes.OILSLICK` means the next default ch
 - [ ] **Step 6: Run the full suite**
 
 Run: `./gradlew :shell:test :cli:test`
-Expected: PASS. `KitArtTest.kt:52` iterates `Schemes.ALL` and now covers eight schemes; if it asserts a fixed count, update the number rather than the loop.
+Expected: PASS. `KitArtTest.kt:52` iterates `Schemes.ALL` inside a nested loop over `KitArt.Style.entries` and asserts nothing about the count, so it needs no edit — it simply renders eight schemes instead of six and takes proportionally longer. No test in `:shell` pins a scheme count as a literal.
 
 - [ ] **Step 7: Commit**
 
@@ -839,7 +841,7 @@ The lookup tries `PAD_SHEET` first, then falls back to `Shuffle.TREATMENTS`, so 
 
 - [ ] **Step 4: Make `apply` bypass cleanly at zero**
 
-`apply` builds `PadRecipe(fx = fx)`, and `PadRecipe`'s `init` requires `patch != null || fx != null` — an empty `FxChain()` is non-null, so it constructs. `FxChain.process` on a bypass chain returns the input through `capTail`, which may copy but must not alter samples. Verify the AMT-0 equality test passes; if `capTail` perturbs the tail, add an early return to `apply`:
+`apply` builds `PadRecipe(fx = fx)`, and `PadRecipe`'s `init` requires `patch != null || fx != null` — an empty `FxChain()` is non-null, so it constructs. Return the input untouched on a bypass rather than routing it through `FxChain.process` and `capTail`: a treatment set to zero should be a no-op by construction, not by the good behaviour of a tail limiter.
 
 ```kotlin
     fun apply(name: String, snip: Snip, amount: Float = 1f): Treated {
