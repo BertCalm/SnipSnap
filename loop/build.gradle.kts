@@ -31,3 +31,16 @@ tasks.test {
         events("passed", "failed", "skipped")
     }
 }
+
+// Throwaway data generator for Task 7's device check -- writes a session with
+// six tracks (chain lengths 2, 3, 2, 1, 4, 2; LCM 12) and their WAVs to
+// build/demo-session (or -PoutDir=<path>). Not part of the app; test-scoped
+// because it's a data generator, not product code.
+tasks.register<JavaExec>("generateDemoSession") {
+    group = "snipsnap"
+    description = "Writes a throwaway six-track demo session for manual device testing."
+    dependsOn("testClasses")
+    mainClass.set("com.snipsnap.loop.GenerateDemoSessionKt")
+    classpath = sourceSets["test"].runtimeClasspath
+    args(project.findProperty("outDir")?.toString() ?: layout.buildDirectory.dir("demo-session").get().asFile.path)
+}

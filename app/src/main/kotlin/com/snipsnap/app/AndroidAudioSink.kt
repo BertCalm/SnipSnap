@@ -64,9 +64,35 @@ class AndroidAudioSink(override val sampleRate: Int) : AudioSink {
     override fun write(block: FloatArray) {
         // Blocking: this call is the transport's pacing. It returns when the
         // device has room, which is exactly when the next interval is due.
+        //
+        // stop() only flips a flag the engine checks BETWEEN intervals — it
+        // never interrupts a write already blocked in here. onDestroy gives
+        // the audio thread a 1s join before calling close(), which drains an
+        // in-flight write in the normal case (the device buffer is ~150ms),
+        // but a timed join is not a guarantee: a stalled device or a route
+        // change can leave this thread still inside track.write() when
+        // close() calls track.release() on another thread. AudioTrack is not
+        // documented as safe for a concurrent write + release, and the
+        // observed failure mode is write() throwing IllegalStateException
+        // out from under a track that vanished mid-call. The AudioSink
+        // contract says write must not throw, so that exception is caught
+        // here and treated exactly like the existing "device gone" path
+        // below: drop this call rather than propagate.
+        //
+        // An interrupt-and-join alternative was considered and rejected:
+        // AudioTrack.write is a native blocking call, not an interruptible
+        // Java one, so Thread.interrupt() does not reliably wake it — it
+        // would not actually shrink the race. A "closing" AtomicBoolean
+        // checked before each write was also considered, but it only
+        // narrows the window (close() can still land between the check and
+        // the call); catching the exception closes it regardless of timing.
         var written = 0
         while (written < block.size) {
-            val n = track.write(block, written, block.size - written, AudioTrack.WRITE_BLOCKING)
+            val n = try {
+                track.write(block, written, block.size - written, AudioTrack.WRITE_BLOCKING)
+            } catch (e: IllegalStateException) {
+                return
+            }
             if (n <= 0) return // device gone or stopped; drop rather than spin
             written += n
         }
@@ -74,7 +100,7 @@ class AndroidAudioSink(override val sampleRate: Int) : AudioSink {
 
     override fun close() {
         runCatching { track.stop() }
-        track.release()
+        runCatching { track.release() }
     }
 
     private companion object {
