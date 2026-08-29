@@ -21,7 +21,7 @@ L ≈ a week-plus of sessions).
 | Acceptance artifacts (`testkit/`) | done — 14 downloadable checks, from the diag kit to the one-file Session project |
 | CLI (`:cli`) | done, tested — `snipsnap.jar`: chop → classify → place → export from any desktop; the classifier's real-audio calibration tool (`docs/CLI.md`) |
 | View-models (`:shell`) | done, tested — scheme tables, peaks pyramid, tape-deck transport physics, voice allocation, chop review, kit builder, export wizard, personality system; `:app` binds Compose to these |
-| **The Android app** | **not started** — the only unbuilt product surface |
+| **The Android app** | **pre-written, uncompiled** — a complete M0 source tree sits in `app/`, written blind by this session; the desktop session's job starts at its first compile (`app/README.md`) |
 | Hardware verification | drums passed; keys, instruments, `.xpn`, tile, Session pending (user) |
 
 The concept doc's "deliberately v2" list (velocity layers, expansions,
@@ -67,6 +67,14 @@ LCD). Navigation shell: the SNIPSNAP.EXE window, menu row, status bar.
 Storage: kit folders under app files via `KitStore` — list, open, create.
 **Exit test:** browse kits on a phone, tap pads, hear WAVs (interim
 `SoundPool` is fine here), flip schemes in Tape Properties.
+
+**Status:** the full M0 tree is pre-written on the branch — scaffold,
+TapeOS theme over `:shell`'s scheme tables, the KITS/KIT/SETUP screens,
+FRESH TAPE over `StarterKits`, fonts committed, `settings.gradle.kts`
+including `:app` only where an SDK exists. Written where no Android
+compiler runs, so it is unverified by definition; the desktop session's
+M0 begins at `./gradlew :app:assembleDebug` and ends at the exit test
+above. Details and first-run checks: `app/README.md`.
 
 ### M1 — Capture · L, the riskiest milestone, do it second on purpose
 
