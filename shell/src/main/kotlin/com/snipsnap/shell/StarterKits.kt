@@ -8,6 +8,7 @@ import com.snipsnap.kit.Names
 import com.snipsnap.synth.Shuffle
 import com.snipsnap.synth.SynthKits
 import com.snipsnap.synth.ThumpKits
+import com.snipsnap.synth.Velocity
 import java.io.File
 
 /**
@@ -79,6 +80,15 @@ object StarterKits {
             "Choirs and grain clouds. Atmosphere, not drums.",
             seeded = false,
         ) { SynthKits.cloud() },
+        Starter(
+            "velocity", "VELOCITY",
+            "The house kit with ghost notes. Soft hits sound soft, not just quiet.",
+            seeded = false,
+        ) {
+            ThumpKits.classic().map { pad ->
+                pad?.copy(softVariants = Velocity.variants(pad.snip, count = 2))
+            }
+        },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
