@@ -1862,17 +1862,79 @@ class CliTest {
 
         // Each command that reads a file, against each hostile file: the run
         // must return a clean exit (never throw, never exit outside 0..2).
-        val invocations: List<(File) -> Triple<Int, String, String>> = listOf(
-            { f -> cli("chop", f.path, "--out", out.path, "--overwrite") },
-            { f -> cli("classify", f.path) },
-            { f -> cli("import", f.path, "--out", out.path, "--overwrite") },
-            { f -> cli("keys", f.path, "--out", out.path) },
-            { f -> cli("diff", f.path, f.path) },
+        // Every file-taking verb the CLI has grown belongs in this list -
+        // a verb that never met the junk corpus is a verb on trust.
+        val invocations: List<Pair<String, (File) -> Triple<Int, String, String>>> = listOf(
+            "chop" to { f -> cli("chop", f.path, "--out", out.path, "--overwrite") },
+            "classify" to { f -> cli("classify", f.path) },
+            "import" to { f -> cli("import", f.path, "--out", out.path, "--overwrite") },
+            "keys" to { f -> cli("keys", f.path, "--out", out.path) },
+            "diff" to { f -> cli("diff", f.path, f.path) },
+            "clean" to { f -> cli("clean", f.path, "--declip", "--deverb", "--denoise") },
+            "split" to { f -> cli("split", f.path, "--overwrite") },
+            "dissect" to { f -> cli("dissect", f.path, "--out", out.path, "--overwrite") },
+            "sculpt" to { f -> cli("sculpt", f.path, "--out", out.path, "--seconds", "1", "--overwrite") },
+            "stretch" to { f -> cli("stretch", f.path, "--by", "2", "--overwrite") },
+            "stretch --clear" to { f -> cli("stretch", f.path, "--clear", "--by", "2", "--overwrite") },
+            "stretch --freeze" to { f -> cli("stretch", f.path, "--freeze", "--seconds", "1", "--overwrite") },
+            "retime" to { f -> cli("retime", f.path, "--to", "100", "--from", "90", "--overwrite") },
+            "dig" to { f -> cli("dig", f.path, "--chop", "--unearth", "--out", out.path, "--overwrite") },
+            "checkup" to { f -> cli("checkup", f.parentFile.path) },
         )
         for (h in hostiles) {
-            for (invoke in invocations) {
+            for ((name, invoke) in invocations) {
                 val (code, _, _) = invoke(h)
-                assertTrue(code in 0..2, "hostile ${h.name}: exit $code out of range")
+                assertTrue(code in 0..2, "hostile ${h.name} x $name: exit $code out of range")
+            }
+        }
+    }
+
+    @Test
+    fun `every kit-door verb survives a corpus of broken kits`() {
+        // Three ways a kit folder goes wrong: garbage where kit.json
+        // should be, a kit.json whose WAVs are missing, and a real kit
+        // whose pad WAV was replaced with junk bytes.
+        val rnd = kotlin.random.Random(43)
+        fun junkKit(name: String): File = File(temp, name).apply {
+            mkdirs()
+            File(this, "kit.json").writeBytes(ByteArray(300) { rnd.nextInt(256).toByte() })
+        }
+        val garbage = junkKit("kit-garbage")
+        val orphaned = File(temp, "kit-orphaned").apply {
+            mkdirs()
+            File(this, "kit.json").writeText(
+                """{"version":1,"name":"Orphaned","pads":[{"slot":1,"sampleFile":"gone.wav","displayName":"Gone"}]}""",
+            )
+        }
+        val wounded = run {
+            val wav = writeBreak(File(temp, "wounded-src.wav"))
+            val out = File(temp, "kit-wounded-out")
+            assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Wounded").first)
+            val kitDir = File(out, "Wounded")
+            val pad = KitStore.load(kitDir).pads.first()
+            File(kitDir, pad.sampleFile).writeBytes(ByteArray(200) { rnd.nextInt(256).toByte() })
+            kitDir
+        }
+        val brokenKits = listOf(garbage, orphaned, wounded)
+
+        val verbs: List<Pair<String, (File) -> Triple<Int, String, String>>> = listOf(
+            "clean" to { k -> cli("clean", k.path, "--declip", "--deverb") },
+            "clean --undo" to { k -> cli("clean", k.path, "--undo") },
+            "doctor" to { k -> cli("doctor", k.path) },
+            "robin" to { k -> cli("robin", k.path, "A01") },
+            "mutate" to { k -> cli("mutate", k.path, "A01", "--with", "A02") },
+            "euclid" to { k -> cli("euclid", k.path) },
+            "sculpt" to { k -> cli("sculpt", k.path, "A01", "--out", File(temp, "bk-out").path, "--seconds", "1", "--overwrite") },
+            "dissect" to { k -> cli("dissect", k.path, "A01", "--out", File(temp, "bk-out").path, "--overwrite") },
+            "arrange" to { k -> cli("arrange", k.path) },
+            "export" to { k -> cli("export", k.path, "--export", "folder", "--out", File(temp, "bk-exp").path) },
+            "lineage" to { k -> cli("lineage", k.path) },
+            "treat" to { k -> cli("treat", k.path, "A01", "warm") },
+        )
+        for (kit in brokenKits) {
+            for ((name, invoke) in verbs) {
+                val (code, _, _) = invoke(kit)
+                assertTrue(code in 0..2, "broken kit ${kit.name} x $name: exit $code out of range")
             }
         }
     }
