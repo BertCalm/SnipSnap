@@ -41,9 +41,13 @@ object Cli {
         |                        name where they live (--top N candidates;
         |                        --chop sends each song's best break through
         |                        the chop pipeline, provenance stamped;
-        |                        --air also cuts the song's most tonal,
-        |                        least percussive stretch into a companion
-        |                        texture kit of LOOP pads)
+        |                        --unearth digs the PERCUSSIVE LAYER - the
+        |                        break pulled out from under the song, found
+        |                        and chopped even where nothing ever plays
+        |                        alone; --air also cuts the song's most
+        |                        tonal, least percussive stretch into a
+        |                        companion texture kit of LOOP pads - from
+        |                        the music layer when unearthing)
         |  beat <song.wav>       the whole ritual as one verb: dig the break
         |                        (+ air), chop with groove/ghosts/break-pad,
         |                        doctor, robin the core drums, the Answer +

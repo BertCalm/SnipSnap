@@ -2398,6 +2398,82 @@ class CliTest {
     }
 
     @Test
+    fun `dig --unearth pulls the break out from under the song`() {
+        val rate = 44_100
+        // The pads never stop: a loud chord runs the WHOLE song, and the
+        // drums play under it in the middle - no clean stretch exists.
+        val n = 20 * rate
+        val buried = FloatArray(n) { i ->
+            var c = 0.0
+            for (hz in doubleArrayOf(220.0, 277.18, 329.63)) c += Math.sin(2.0 * Math.PI * hz * i / rate)
+            (0.18 * c).toFloat()
+        }
+        val beatLen = (60f / 100f * rate).toInt()
+        var t = 6 * rate
+        var count = 0
+        while (t < 14 * rate) {
+            for ((offset, hit, gain) in listOf(
+                Triple(0, DrumSynth.kick(), 0.9f),
+                Triple(if (count % 2 == 1) 0 else -1, DrumSynth.snare(), 0.8f),
+                Triple(0, DrumSynth.closedHat(), 0.5f),
+                Triple(beatLen / 2, DrumSynth.closedHat(), 0.4f),
+            )) {
+                if (offset < 0) continue
+                for (i in hit.samples.indices) {
+                    val idx = t + offset + i
+                    if (idx < n) buried[idx] += hit.samples[i] * gain
+                }
+            }
+            t += beatLen
+            count++
+        }
+        val song = File(temp, "buried.wav")
+        WavWriter.write(song, Snip(buried, 1, rate))
+
+        fun kitBleed(kitDir: File): Double {
+            val kit = KitStore.load(kitDir)
+            return kit.pads.sumOf { pad ->
+                val s = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+                val m = FloatArray(s.frameCount) { f ->
+                    (0 until s.channels).sumOf { ch -> s.samples[f * s.channels + ch].toDouble() }.toFloat() / s.channels
+                }
+                listOf(220.0, 277.18, 329.63).sumOf { tone(m, it, rate) }
+            } / kit.pads.size
+        }
+
+        // The flagship claim, in its strongest form: the plain dig can't
+        // hear the buried break AT ALL - the chord never stops, so no
+        // stretch of the mix reads as drums...
+        val outA = File(temp, "digplain")
+        val plain = cli("dig", song.path, "--chop", "--out", outA.path)
+        assertEquals(0, plain.first, plain.third)
+        assertContains(plain.second, "no break heard")
+
+        // ...while --unearth digs it out from under the song.
+        val outB = File(temp, "digunearth")
+        val unearth = cli("dig", song.path, "--chop", "--unearth", "--out", outB.path)
+        assertEquals(0, unearth.first, unearth.third)
+        val unearthKit = File(outB, "buried Break")
+        assertTrue(unearthKit.isDirectory, "unearth finds the buried break: ${unearth.second}")
+
+        // And the pads it hands back really are drums: against a plain
+        // chop of the same section of the raw mix, the chord bleed drops.
+        val sectionWav = File(temp, "buried section.wav")
+        WavWriter.write(sectionWav, Snip(buried.copyOfRange(6 * rate, 14 * rate), 1, rate))
+        assertEquals(0, cli("chop", sectionWav.path, "--out", outA.path, "--name", "Muddy").first)
+        val bleedA = kitBleed(File(outA, "Muddy"))
+        val bleedB = kitBleed(unearthKit)
+        assertTrue(
+            bleedB < bleedA * 0.32,
+            "the chord bleed drops >= 10 dB when the break is unearthed: $bleedA -> $bleedB",
+        )
+        assertTrue(
+            KitStore.load(unearthKit).pads.all { it.source["unearthed"] == "true" },
+            "provenance says unearthed",
+        )
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")

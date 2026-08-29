@@ -20,7 +20,7 @@ object DigCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--top", "--out", "--slices"),
-            boolean = setOf("--chop", "--overwrite", "--break-pad", "--air", "--groove", "--ghosts", "--clean", "--denoise"),
+            boolean = setOf("--chop", "--overwrite", "--break-pad", "--air", "--groove", "--ghosts", "--clean", "--denoise", "--unearth"),
         )
         val targetArg = opts.positional.getOrNull(0)
             ?: throw CliError("dig wants songs: snipsnap dig <file-or-folder> [--top N] [--chop]")
@@ -44,10 +44,25 @@ object DigCommand {
         var chopped = 0
         var aired = 0
         for (file in files) {
-            val candidates = try {
-                BreakFinder.find(WavReader.read(file))
+            // --unearth: the Split first, then everything downstream reads
+            // the layer it cares about - the dig scores drums that are
+            // actually audible as drums, even buried under the song.
+            val (digAudio, airAudio) = try {
+                val song = WavReader.read(file)
+                if (opts.has("--unearth")) {
+                    val split = com.snipsnap.audio.Separate.hpss(song)
+                    split.percussive to split.harmonic
+                } else {
+                    song to song
+                }
             } catch (e: Exception) {
                 out.println("${file.name}: couldn't read it (${e.message}) - skipped")
+                continue
+            }
+            val candidates = try {
+                BreakFinder.find(digAudio)
+            } catch (e: Exception) {
+                out.println("${file.name}: couldn't dig it (${e.message}) - skipped")
                 continue
             }
             if (candidates.isEmpty()) {
@@ -71,7 +86,7 @@ object DigCommand {
                 // the song's name, so pad provenance reads the real source.
                 val tmpDir = java.nio.file.Files.createTempDirectory("snipsnap-dig").toFile()
                 try {
-                    val song = WavReader.read(file)
+                    val song = digAudio
                     val startFrame = (best.startSec * song.sampleRate).toInt().coerceIn(0, song.frameCount - 1)
                     val endFrame = (best.endSec * song.sampleRate).toInt().coerceIn(startFrame + 1, song.frameCount)
                     val excerpt = com.snipsnap.audio.Snip(
@@ -103,7 +118,10 @@ object DigCommand {
                     KitStore.save(
                         kit.copy(
                             pads = kit.pads.map { p ->
-                                p.copy(source = p.source + mapOf("song" to file.name, "at" to stamp(best.startSec)))
+                                p.copy(
+                                    source = p.source + mapOf("song" to file.name, "at" to stamp(best.startSec)) +
+                                        (if (opts.has("--unearth")) mapOf("unearthed" to "true") else emptyMap()),
+                                )
                             },
                         ),
                         kitDir,
@@ -119,7 +137,7 @@ object DigCommand {
             // percussive stretch becomes a companion texture kit.
             if (opts.has("--air")) {
                 val airSections = try {
-                    BreakFinder.air(WavReader.read(file))
+                    BreakFinder.air(airAudio)
                 } catch (e: Exception) {
                     emptyList()
                 }
@@ -131,7 +149,7 @@ object DigCommand {
                     val outDir = opts["--out"] ?: "snipsnap-out"
                     val tmpDir = java.nio.file.Files.createTempDirectory("snipsnap-air").toFile()
                     try {
-                        val song = WavReader.read(file)
+                        val song = airAudio
                         val startFrame = (best.startSec * song.sampleRate).toInt().coerceIn(0, song.frameCount - 1)
                         val endFrame = (best.endSec * song.sampleRate).toInt().coerceIn(startFrame + 1, song.frameCount)
                         val excerpt = com.snipsnap.audio.Snip(

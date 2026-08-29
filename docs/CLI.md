@@ -70,6 +70,15 @@ timestamp it was dug from (`--break-pad` rides along, so the dug break
 can land tap-through-able on one pad too; `--clean` rides along the
 same way, scrubbing each dug capture before its first slice).
 
+**`--unearth`** is the Split pointed at the crate: the dig scores —
+and `--chop` chops — the song's *percussive layer* instead of the raw
+mix, so a break that never plays alone is found and extracted from
+under the bass and keys (the test's strongest case: a song whose
+chord never stops reads "no break heard" to the plain dig, and
+unearths cleanly). Pads carry `unearthed` provenance, and `--air`
+cuts its textures from the *music* layer instead — every dig yields
+two crates, now genuinely disentangled.
+
 `--air` is the inverse dig — every dig yields two crates. The same
 window scores selected the other way: non-silent, *low* break score
 (≤ 0.30, safely under the break floor) and tonal (flatness ≤ 0.12 —
@@ -82,6 +91,35 @@ declaration with the song/timestamp provenance stamped. A drums-only
 file honestly says "no air heard". A song of pads says "no break heard" rather
 than inventing one; unreadable files are named and skipped, never
 fatal. Deterministic: the same song always yields the same dig.
+
+### `split <song.wav>` — the Split at song scale
+
+Median-filter mask separation (Fitzgerald's HPSS): in a spectrogram,
+notes draw horizontal lines and hits draw vertical ones; a median
+across time keeps the horizontals, a median across frequency keeps
+the verticals, and the two become soft masks that sum to one — so
+"`<Song> Drums.wav`" + "`<Song> Music.wav`" **sum back to the song**,
+separation that can prove it lost nothing. The summary names the
+verdict with measured shares ("drums 78% / music 22% — mostly
+drums"); when a masked half overshoots full scale both halves are
+scaled by one stated factor rather than letting the WAV boundary clip
+silently. One honest physics note: a boomy kick's sub is a *held
+tone* and rightly leans harmonic — the vertical promise is about
+attacks and noise. Chop the drums, `keys` the music, `dig --air` the
+music's calmest stretch.
+
+### `dissect <wav> | <kit-dir> <pad>` — the anatomy lesson
+
+Fuzzy STN (sines / transients / noise, after Fierro & Välimäki, in
+its single-resolution telling): the ratio of the time-median to the
+median pair says what each bin *is* — strongly horizontal is sines,
+strongly vertical is transients, and the in-between is noise, with
+raised-cosine ramps between named thresholds. One sound lands as a
+"`<Name> Dissected`" kit: **Sines** (the body, TONAL), **Transient**
+(the attack, PERC), **Air** (the noise, LOOP) — the three parts sum
+back to the whole, each pad carries `dissectedFrom` provenance and a
+recipe, and each layer then mutates, eras, robins or sculpts on its
+own. The layers of a hit, finally on separate pads.
 
 ### `beat <song.wav>` — the whole ritual as one verb
 
