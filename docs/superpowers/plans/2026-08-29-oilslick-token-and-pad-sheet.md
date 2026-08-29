@@ -1209,52 +1209,41 @@ note that REROLL only means anything on the two seeded ones."
 
 ---
 
-### Task 9: GHOSTS, the AMT that survives a reload, and the .XPJ label
+### Task 9: The AMT that survives a reload, and the .XPJ label
 
-`docs/DESIGN_GAP.md` §2d and §3 Q3 — the last two headless gaps.
+`docs/DESIGN_GAP.md` §2d and §3 Q3 — the last headless gaps.
 
-`KitPad` already carries `level`, `pan`, `tuneCoarse`/`tuneFine`, `muteGroup` (the pad sheet's CHOKE GRP), `oneShot` and `source` (the Y1.3 provenance line). Two of the sheet's controls have nowhere to persist: **GHOSTS** (W5.3) and the treatment **AMT**. Task 7 stored the treatment *name*; the amount is the other half — without it the sheet cannot restore its own slider on reopen.
+> **Re-scoped 2026-08-29, mid-run.** This task was going to add `KitPad.ghosts: Boolean`.
+> **It must not.** GHOSTS is already fully built: `KitBuilder.addGhostLayers(slot, softZones)`
+> at `:204` renders the soft variants and writes them as velocity layers, and
+> `clearGhostLayers(slot)` at `:328` removes them. `ChopCommand.kt:306` already calls it.
+> The state "this pad has ghosts" is therefore `pad.velocityLayers.isNotEmpty()` — a
+> derived fact. A parallel boolean would be a second source of truth for one thing, free
+> to drift out of sync with the layers it claims to describe (ghosts=true with no layers,
+> or layers with ghosts=false). The pad sheet's GHOSTS toggle reads the layers and calls
+> the two existing actions. Nothing to persist, so nothing to add.
+>
+> `docs/DESIGN_GAP.md` §2d was wrong to list ghosts as missing.
+
+What genuinely remains: the treatment **amount**. Task 7 stored the treatment name; the
+amount is the other half, and it is equally unrecoverable — `Treatments.chain` and
+`Eras.process` both scale by it, so the resulting audio cannot be run backwards to say
+what amount produced it. Without it the pad sheet cannot restore its own slider.
 
 And Y3.3 renames the `.XPJ` cycler line, which promises grooves ride along with the kits.
 
 **Files:**
-- Modify: `kit/src/main/kotlin/com/snipsnap/kit/Kit.kt` (`KitPad`, `oneShot` is at `:49`)
-- Modify: `kit/src/main/kotlin/com/snipsnap/kit/KitStore.kt` (save: conditional appends begin `:90`; load: `oneShot` is at `:199`)
 - Modify: `synth/src/main/kotlin/com/snipsnap/synth/PadRecipe.kt`
 - Modify: `kit/src/main/kotlin/com/snipsnap/kit/ExportFormats.kt:24`
-- Test: `kit/src/test/kotlin/com/snipsnap/kit/KitStoreTest.kt`, `synth/src/test/kotlin/com/snipsnap/synth/PadRecipeTest.kt` (from Task 7)
+- Test: `synth/src/test/kotlin/com/snipsnap/synth/PadRecipeTest.kt`, `kit/src/test/kotlin/com/snipsnap/kit/ExportFormatsTest.kt` (create)
 
 **Interfaces:**
 - Consumes: `PadRecipe.treatment` from Task 7.
-- Produces: `KitPad.ghosts: Boolean` (default `false`); `PadRecipe.amount: Float?`; `ExportFormat.MPC3_PROJECT.cyclerLabel == "MPC SESSION (.XPJ) — KITS + GROOVES"`.
+- Produces: `PadRecipe.amount: Float?`; `ExportFormat.MPC3_PROJECT.cyclerLabel == "MPC SESSION (.XPJ) — KITS + GROOVES"`.
 
 - [ ] **Step 1: Write the failing tests**
 
-Add to `kit/src/test/kotlin/com/snipsnap/kit/KitStoreTest.kt`:
-
-```kotlin
-    @Test
-    fun `ghost layers survive a save and load`() {
-        val dir = kotlin.io.path.createTempDirectory("ghosts").toFile()
-        try {
-            val kit = Kit(
-                name = "GHOSTKIT",
-                pads = listOf(
-                    KitPad(slot = 1, sampleFile = "a.wav", ghosts = true),
-                    KitPad(slot = 2, sampleFile = "b.wav"),
-                ),
-            )
-            KitStore.save(kit, dir)
-            val back = KitStore.load(dir)
-            assertEquals(true, back.pads.first { it.slot == 1 }.ghosts, "GHOSTS was switched on and forgot")
-            assertEquals(false, back.pads.first { it.slot == 2 }.ghosts, "and off stays off")
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
-```
-
-Add to `synth/src/test/kotlin/com/snipsnap/synth/PadRecipeTest.kt`:
+Append to `synth/src/test/kotlin/com/snipsnap/synth/PadRecipeTest.kt`:
 
 ```kotlin
     @Test
@@ -1264,64 +1253,63 @@ Add to `synth/src/test/kotlin/com/snipsnap/synth/PadRecipeTest.kt`:
         assertEquals("crushed", back.treatment)
         assertEquals(0.35f, back.amount)
     }
+
+    @Test
+    fun `a recipe written before amount existed still parses`() {
+        val old = """{"recipe":1,"fx":{"fx":1,"reverse":true}}"""
+        assertNull(PadRecipe.fromJsonText(old).amount, "an amount-less recipe is not an error")
+    }
 ```
 
-Add to `kit/src/test/kotlin/com/snipsnap/kit/ExportFormatsTest.kt` (create if absent, with the package line `package com.snipsnap.kit` and `import kotlin.test.Test` / `import kotlin.test.assertEquals`):
+Create `kit/src/test/kotlin/com/snipsnap/kit/ExportFormatsTest.kt`:
 
 ```kotlin
+package com.snipsnap.kit
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class ExportFormatsTest {
+
     @Test
     fun `the XPJ line says what actually rides along`() {
         assertEquals("MPC SESSION (.XPJ) — KITS + GROOVES", ExportFormat.MPC3_PROJECT.cyclerLabel)
         assertEquals("xpj", ExportFormat.MPC3_PROJECT.id, "the CLI word does not move")
     }
+
+    @Test
+    fun `every format's id is unique and lowercase`() {
+        val ids = ExportFormat.entries.map { it.id }
+        assertEquals(ids.size, ids.toSet().size, "two formats share an id")
+        assertEquals(ids.map { it.lowercase() }, ids, "ids are the CLI's words, lowercase")
+    }
+}
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `./gradlew :kit:test :synth:test`
-Expected: FAIL — `Unresolved reference: ghosts`, `No value passed for parameter 'amount'`, and the label assertion reporting `MPC 3 PROJECT (.XPJ)`.
+Run: `./gradlew :synth:test :kit:test`
+Expected: FAIL — `No value passed for parameter 'amount'`, and the label assertion reporting `MPC 3 PROJECT (.XPJ)`.
 
-- [ ] **Step 3: Add `KitPad.ghosts`**
+- [ ] **Step 3: Add `PadRecipe.amount`**
 
-In `Kit.kt`, in the `KitPad` data class, immediately after `oneShot`:
-
-```kotlin
-    val oneShot: Boolean = true,
-    /**
-     * Ghost layers: quiet hits render darker, not merely quieter, from the
-     * pad's soft variants. Off by default — it only means anything on a pad
-     * that has [velocityLayers] to reach for.
-     */
-    val ghosts: Boolean = false,
-```
-
-- [ ] **Step 4: Serialize it**
-
-In `KitStore.kt`'s save block, alongside the other conditional appends that follow the `linkedMapOf` — `p.colorHex?.let` at `:90`, then `attack`/`decay`/`cutoff`/`resonance`/`humanize` at `:93-97`:
-
-```kotlin
-                    if (p.ghosts) entries["ghosts"] = JsonValue.Bool(true)
-```
-
-Written only when true, so existing `kit.json` files don't grow a field that says nothing. In the load block, after `oneShot`:
-
-```kotlin
-                oneShot = p["oneShot"]?.bool() ?: true,
-                ghosts = p["ghosts"]?.bool() ?: false,
-```
-
-- [ ] **Step 5: Add `PadRecipe.amount`**
-
-In `PadRecipe.kt`, after the `treatment` param added in Task 7:
+After the `treatment` param added in Task 7:
 
 ```kotlin
     /**
-     * The AMT the pad sheet was set to when [treatment] was applied, 0..1.
-     * Stored beside the name for the same reason: the scaled chain can't be
-     * run backwards to recover the amount that produced it.
+     * The AMT that produced [fx], 0..1, when a named treatment did.
+     *
+     * Stored beside the name for the same reason: both `Treatments.chain` and
+     * `Eras.process` scale by this, so the resulting chain cannot be run
+     * backwards to recover the amount that made it. The pad sheet restores
+     * its slider from here.
      */
     val amount: Float? = null,
 ```
+
+While you are in this KDoc block, fix an inaccuracy in Task 7's `treatment` doc directly
+above: it says the chain stops matching "as soon as AMT leaves 100", but `amount` is a
+`0f..1f` float, not a percentage. Reword that clause to "as soon as the amount leaves 1.0".
 
 In `toJsonValue`, after the `treatment` line:
 
@@ -1337,9 +1325,9 @@ In `fromJsonValue`:
                 amount = obj["amount"]?.num()?.toFloat(),
 ```
 
-`JsonValue.num()` is public and returns `Double` (`Json.kt:23`).
+`JsonValue.num()` is public and returns `Double` (`json/src/main/kotlin/com/snipsnap/json/Json.kt:23`). `VERSION` stays `1` — another optional key is backward compatible.
 
-- [ ] **Step 6: Relabel the .XPJ format**
+- [ ] **Step 4: Relabel the .XPJ format**
 
 In `ExportFormats.kt`, line 24:
 
@@ -1347,34 +1335,34 @@ In `ExportFormats.kt`, line 24:
     MPC3_PROJECT("xpj", "MPC SESSION (.XPJ) — KITS + GROOVES"),
 ```
 
-The `id` stays `"xpj"` — it is the CLI's `--export` word and changing it would break every script that uses it. Only the wizard's cycler line moves. The enum now has eight entries (`SFZ` and `DECENT_SAMPLER` arrived with the merge); `MPC3_PROJECT` is still the fifth, at line 24. No test in the repo pins the entry count, so adding the label change breaks nothing.
+The `id` stays `"xpj"` — it is the CLI's `--export` word and scripts depend on it. Only the
+wizard's cycler line moves. The em dash is U+2014, matching the handoff.
 
-- [ ] **Step 7: Run tests to verify they pass**
+- [ ] **Step 5: Run tests to verify they pass**
 
-Run: `./gradlew :kit:test :synth:test :shell:test :cli:test`
-Expected: PASS. `:shell` and `:cli` are in the blast radius — `ExportWizard` and the CLI's export help both read `cyclerLabel`, and a test may pin the old string.
+Run: `./gradlew :synth:test :kit:test :shell:test :cli:test`
+Expected: PASS. `:shell` and `:cli` are in the blast radius — `ExportWizard` and the CLI's
+export help both read `cyclerLabel`, and a test may pin the old string.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add kit/src/main/kotlin/com/snipsnap/kit/Kit.kt \
-        kit/src/main/kotlin/com/snipsnap/kit/KitStore.kt \
+git add synth/src/main/kotlin/com/snipsnap/synth/PadRecipe.kt \
         kit/src/main/kotlin/com/snipsnap/kit/ExportFormats.kt \
-        synth/src/main/kotlin/com/snipsnap/synth/PadRecipe.kt \
-        kit/src/test/kotlin/com/snipsnap/kit/KitStoreTest.kt \
-        kit/src/test/kotlin/com/snipsnap/kit/ExportFormatsTest.kt \
-        synth/src/test/kotlin/com/snipsnap/synth/PadRecipeTest.kt
-git commit -m "GHOSTS remembers, AMT remembers, and the XPJ says what it carries
+        synth/src/test/kotlin/com/snipsnap/synth/PadRecipeTest.kt \
+        kit/src/test/kotlin/com/snipsnap/kit/ExportFormatsTest.kt
+git commit -m "The amount is remembered, and the XPJ says what it carries
 
-Two pad-sheet controls had nowhere to live: GHOSTS wasn't on KitPad at all,
-and the treatment amount was thrown away the same way the name was — a
-scaled chain can't be run backwards to recover the amount that made it, so
-reopening the sheet lost the slider.
+A scaled chain cannot be run backwards to recover the amount that scaled it,
+so reopening the pad sheet lost the slider. Stored beside the name, optional,
+version unmoved — recipes written before today still parse.
 
-ghosts only writes to kit.json when true; old kits load as false.
+The .XPJ cycler line now promises grooves as well as kits, per Y3.3. The CLI
+word stays xpj; scripts depend on it.
 
-The .XPJ cycler line now promises grooves as well as kits, per Y3.3. The
-CLI word stays xpj — scripts depend on it."
+GHOSTS is deliberately absent from this commit. addGhostLayers and
+clearGhostLayers already exist, and whether a pad has ghosts is just whether it
+has velocity layers — a second boolean saying so could only ever disagree."
 ```
 
 ---

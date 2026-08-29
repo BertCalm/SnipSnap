@@ -159,10 +159,20 @@ type.
 
 `KitPad` has `level`, `pan`, `tuneCoarse`/`tuneFine`, `muteGroup` (= CHOKE GRP),
 `oneShot`, `source` (the Y1.3 provenance line), `recipe` — and, since the merge,
-`attack`, `decay`, `cutoff`, `resonance`, `humanize` and `chain`. Still missing:
-**`ghosts`** (W5.3) and **`treat` / `amt`** as persisted UI state — `recipe`
-stores the resulting chain but not which segment was picked or at what amount,
-so the sheet can't restore its own control positions.
+`attack`, `decay`, `cutoff`, `resonance`, `humanize` and `chain`.
+
+**Correction, 2026-08-29:** this section originally listed **`ghosts`** (W5.3) as
+missing. It is not. `KitBuilder.addGhostLayers(slot, softZones)` (`:204`) renders
+the soft variants and writes them as velocity layers, `clearGhostLayers(slot)`
+(`:328`) removes them, and `ChopCommand.kt:306` already calls the first. Whether a
+pad has ghosts *is* `pad.velocityLayers.isNotEmpty()` — a derived fact, not a field
+to store. The original finding assumed a boolean was needed and never checked
+whether the capability already existed under a different name.
+
+What is genuinely missing is **`treat` / `amt`** as persisted UI state: `recipe`
+stores the resulting chain but not which segment was picked or at what amount, so
+the sheet can't restore its own control positions. The name landed with the bank-B
+work; the amount is the remaining half.
 
 *(Verified: the handoff's "hats default choke ON per KIT_BEST_PRACTICES" citation
 is real — `docs/KIT_BEST_PRACTICES.md:68-70`, "Closed hat and open hat share a
