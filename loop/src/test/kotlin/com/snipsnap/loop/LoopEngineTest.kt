@@ -110,6 +110,36 @@ class LoopEngineTest {
     }
 
     @Test
+    fun `prefetch for the next interval is submitted before the blocking write`() {
+        // Regression guard for the ordering fix: write() blocks for roughly
+        // one interval, so prefetch(i + 1) has to be submitted before it, not
+        // after -- otherwise the bake pool only gets the device buffer's
+        // drain time (tens of milliseconds) instead of the whole blocking
+        // write to bake the next interval, which is exactly what caused the
+        // audible dropouts this test exists to catch a regression back to.
+        val events = mutableListOf<String>()
+        val recordingExecutor = Executor { task ->
+            events.add("prefetch-submit")
+            task.run()
+        }
+        val sink = object : AudioSink {
+            override val sampleRate = 48_000
+            override val channels = 2
+            override fun write(block: FloatArray) { events.add("write") }
+            override fun close() {}
+        }
+        // Track 0 has two distinct blocks, so prefetching interval 1 actually
+        // has something new to submit rather than finding it already cached.
+        val s = session(2, 1, 1, 1, 1, 1)
+        val residency = Residency(s, LevelSource(s.intervalFrames), recordingExecutor)
+        LoopEngine(residency, sink).runFor(1)
+
+        val submitIndex = events.indexOf("prefetch-submit")
+        val writeIndex = events.indexOf("write")
+        assertTrue(submitIndex in 0 until writeIndex, "prefetch must be submitted before write, was $events")
+    }
+
+    @Test
     fun `stop ends a run`() {
         val s = session(1, 1, 1, 1, 1, 1)
         val (e, sink) = engine(s)
