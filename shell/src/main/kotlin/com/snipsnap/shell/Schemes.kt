@@ -49,10 +49,16 @@ data class Scheme(
     val lcd: Int,
     /** Primary LCD glow ink. */
     val lcdInk: Int,
-    /** The "amber" accent slot (warnings, needle, second LCD colour). */
+    /** The "amber" accent slot (second LCD colour). Cyan in OILSLICK. */
     val amber: Int,
     /** Sunken input/list background. */
     val field: Int,
+    /**
+     * Warnings, the GROOVE needle, onset bars. Always warm, and deliberately
+     * *not* [amber] — OILSLICK spends its amber slot on cyan, so a needle
+     * drawn with [amber] vanishes into the readouts it is supposed to cross.
+     */
+    val warn: Int = 0xFFB000,
 ) {
     /** Rec.601 luma 0..255 — used by the two-surface test and ink fallbacks. */
     companion object {
@@ -119,6 +125,7 @@ object Schemes {
         title1 = 0x5A2AE0, title2 = 0xE040C8, titleInk = 0xFFFFFF,
         desk1 = 0x0C0618, desk2 = 0x140B24,
         lcd = 0x0A0714, lcdInk = 0xC8B2F8, amber = 0x40E0E8, field = 0x161020,
+        warn = 0xFFB000,
     )
 
     val CLEAR = Scheme(

@@ -79,4 +79,24 @@ class SchemesTest {
         assertEquals(5, Schemes.OILSLICK_SWEEP.size)
         assertEquals(Schemes.OILSLICK_SWEEP.first(), Schemes.OILSLICK_SWEEP.last())
     }
+
+    @Test
+    fun `warn is warm in every scheme - the needle is never the LCD colour`() {
+        for (scheme in Schemes.ALL) {
+            val r = (scheme.warn shr 16) and 0xFF
+            val g = (scheme.warn shr 8) and 0xFF
+            val b = scheme.warn and 0xFF
+            assertTrue(
+                r > g && g > b,
+                "${scheme.id}: warn ${"%06x".format(scheme.warn)} is not warm — " +
+                    "the needle and onset bars must read as a warning, not as readout text",
+            )
+        }
+    }
+
+    @Test
+    fun `OILSLICK separates its warn from its amber slot`() {
+        assertEquals(0x40E0E8, Schemes.OILSLICK.amber, "the amber slot is cyan in OILSLICK")
+        assertEquals(0xFFB000, Schemes.OILSLICK.warn, "but the needle stays amber")
+    }
 }
