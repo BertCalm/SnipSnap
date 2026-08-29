@@ -129,6 +129,12 @@ object Cli {
         |                        holds one instant (default: the loudest)
         |                        forever instead; seeded, stereo, honest
         |                        about level
+        |  euclid <kit-dir>      Bjorklund patterns as a groove: --kick 3,8
+        |                        --snare 2,8,2 --hat 7,16 (k,n[,rotation]) -
+        |                        k hits spread evenly across n steps of one
+        |                        bar on the kit's own pads, structural
+        |                        accents, saved through the standard groove
+        |                        door so variations and exports carry it
         |  shape <kit-dir> <pad> pad shape as metadata: --attack/--decay/
         |                        --cutoff/--res (0..1) land in the exported
         |                        programs' own fields - the HARDWARE renders
@@ -304,6 +310,7 @@ object Cli {
                 "clean" -> CleanCommand.run(args.drop(1), out)
                 "sculpt" -> SculptCommand.run(args.drop(1), out)
                 "stretch" -> StretchCommand.run(args.drop(1), out)
+                "euclid" -> EuclidCommand.run(args.drop(1), out)
                 "art" -> ArtCommand.run(args.drop(1), out)
                 "jcard" -> JCardCommand.run(args.drop(1), out)
                 "notes" -> NotesCommand.run(args.drop(1), out)

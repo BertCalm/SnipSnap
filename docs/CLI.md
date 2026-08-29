@@ -260,6 +260,22 @@ takes a pocket; `pack` ships pockets already. A rendered swing
 survives the round trip: the off-8ths come back leaning by the same
 push that was played.
 
+### `euclid <kit-dir>` — Bjorklund patterns as a groove
+
+The T-1 half of Torso's DNA: `--kick 3,8 --snare 2,8,2 --hat 7,16` —
+each spec is k,n with an optional rotation, and k hits are spread as
+evenly as the integers allow across n steps of one bar (Toussaint's
+telling of Bjorklund: E(3,8) is the tresillo `x..x..x.`, E(5,8) the
+cinquillo `x.xx.xx.` — textbook forms, onset first). No spec at all
+plays the house pattern: tresillo kick, backbeat snare, driving
+16th-grid hats. Hits land on the kit's own pads through the Ear's
+stand-in map (a clap covers a missing snare); a kit with nothing to
+play a class names the skip. Accents are structural, not random — the
+downbeat leads, quarter-anchored onsets sit just under it, the rest
+speak — and the clip goes through the standard groove door, so
+tight/half/sparse variations ride along and the native exports carry
+it. Deterministic: the same spec always writes the same groove.
+
 ### `feel <kit-dir> --from <donor>` — steal the feel, not the notes
 
 Groove transfer, the MPC's own legendary feature. The donor — another

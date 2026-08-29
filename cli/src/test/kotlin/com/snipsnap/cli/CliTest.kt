@@ -2236,6 +2236,58 @@ class CliTest {
     }
 
     @Test
+    fun `euclid lands the textbook pulses on the kit's own pads`() {
+        val out = File(temp, "euclidkit")
+        val wav = writeBreak(File(temp, "eusrc.wav"))
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Pulse").first)
+        val kitDir = File(out, "Pulse")
+        val kit = KitStore.load(kitDir)
+        val kickNote = 35 + kit.pads.first { it.drumClass == DrumClass.KICK }.slot
+        val snareNote = 35 + kit.pads.first { it.drumClass == DrumClass.SNARE }.slot
+
+        val (code, stdout, _) = cli("euclid", kitDir.path)
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "kick E(3,8): x..x..x.")
+        assertContains(stdout, "snare E(2,8)+2: ..x...x.")
+
+        val clips = GrooveStore.load(kitDir)
+        assertTrue(clips.size >= 4, "the standard variations ride along: ${clips.size}")
+        val base = clips.first { "Euclid" in it.name }
+        val bar = 3840L
+        val kicks = base.notes.filter { it.note == kickNote }.map { it.timePulses }
+        assertEquals(listOf(0L, bar * 3 / 8, bar * 6 / 8), kicks, "the tresillo, onset first")
+        val snares = base.notes.filter { it.note == snareNote }.map { it.timePulses }
+        assertEquals(listOf(bar / 4, bar * 3 / 4), snares, "the backbeat on 2 and 4")
+
+        // Accents are structural: downbeat leads, quarters anchor, rest speak.
+        assertEquals(0.95f, base.notes.first { it.timePulses == 0L && it.note == kickNote }.velocity)
+        assertEquals(0.85f, base.notes.first { it.timePulses == bar / 4 }.velocity)
+        assertEquals(0.7f, base.notes.first { it.timePulses == bar * 3 / 8 }.velocity)
+
+        // The cinquillo, and rotation moving the tresillo.
+        val (c2, out2, _) = cli("euclid", kitDir.path, "--kick", "5,8")
+        assertEquals(0, c2, out2)
+        assertContains(out2, "E(5,8): x.xx.xx.")
+        val (c3, out3, _) = cli("euclid", kitDir.path, "--kick", "3,8,1")
+        assertEquals(0, c3, out3)
+        assertContains(out3, "E(3,8)+1: .x..x..x")
+
+        // The groove rides the native export like any captured one.
+        val exp = cli("export", kitDir.path, "--export", "xtd", "--out", File(temp, "euclidexp").path)
+        assertEquals(0, exp.first, exp.third)
+
+        // A kit of textures has no drums to play it: named, not invented.
+        WavWriter.write(
+            File(temp, "eutone.wav"),
+            Snip(FloatArray(44_100) { i -> (0.4 * Math.sin(2.0 * Math.PI * 500.0 * i / 44_100)).toFloat() }, 1, 44_100),
+        )
+        assertEquals(0, cli("sculpt", File(temp, "eutone.wav").path, "--out", out.path, "--name", "NoDrums", "--seconds", "2").first)
+        val (noCode, _, noErr) = cli("euclid", File(out, "NoDrums").path)
+        assertEquals(2, noCode)
+        assertContains(noErr, "no pad plays it")
+    }
+
+    @Test
     fun `usage errors come back as exit 2 with a message`() {
         assertEquals(2, cli().first)
         val (code, _, stderr) = cli("chop")
