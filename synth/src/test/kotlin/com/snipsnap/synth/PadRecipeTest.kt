@@ -9,6 +9,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PadRecipeTest {
@@ -111,6 +112,39 @@ class PadRecipeTest {
                 // Every stored recipe must parse through the typed layer.
                 PadRecipe.fromJsonValue(pad.recipe!!)
             }
+        }
+    }
+
+    @Test
+    fun `a treatment name survives a round trip`() {
+        // "crushed" is one of Shuffle.TREATMENTS's five bank-B characters.
+        // TAPE/CRUSH/DIRT are a separate vocabulary - pad-sheet segments
+        // over Eras - and Treatments.chain only knows the bank-B names.
+        val r = PadRecipe(fx = Treatments.chain("crushed"), treatment = "crushed")
+        val back = PadRecipe.fromJsonText(r.toJsonText())
+        assertEquals("crushed", back.treatment)
+        assertEquals(r.fx, back.fx)
+    }
+
+    @Test
+    fun `recipes written before the tag existed still parse`() {
+        val old = """{"recipe":1,"fx":{"fx":1,"reverse":true}}"""
+        assertNull(PadRecipe.fromJsonText(old).treatment, "an untagged recipe is not an error")
+    }
+
+    @Test
+    fun `every remixed bank-B pad names its treatment`() {
+        val bankA = Shuffle.kit(seed = 7).take(16)
+        val both = Shuffle.withRemixBank(bankA, seed = 7)
+        val bankB = both.drop(16).filterNotNull()
+        assertEquals(bankA.filterNotNull().size, bankB.size, "every assigned pad gets a twin")
+        for (pad in bankB) {
+            val recipe = PadRecipe.fromJsonValue(pad.recipe!!)
+            assertEquals(
+                true,
+                recipe.treatment in Shuffle.TREATMENTS.map { it.first },
+                "a twin with no treatment tag can't be labelled: ${recipe.treatment}",
+            )
         }
     }
 }
