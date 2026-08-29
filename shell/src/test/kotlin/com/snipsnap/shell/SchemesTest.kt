@@ -140,11 +140,17 @@ class SchemesTest {
     @Test
     fun `selection is visible against the chrome it sits on`() {
         for (scheme in Schemes.ALL) {
-            val sep = Math.abs(Scheme.luma(scheme.accent) - Scheme.luma(scheme.gray))
+            val accentSep = Math.abs(Scheme.luma(scheme.accent) - Scheme.luma(scheme.gray))
             assertTrue(
-                sep > 40,
-                "${scheme.id}: accent and gray are $sep luma apart - a selected row would " +
+                accentSep > 40,
+                "${scheme.id}: accent and gray are $accentSep luma apart - a selected row would " +
                     "disappear into the chrome behind it",
+            )
+            val winFrameSep = Math.abs(Scheme.luma(scheme.winFrame) - Scheme.luma(scheme.gray))
+            assertTrue(
+                winFrameSep > 40,
+                "${scheme.id}: winFrame and gray are $winFrameSep luma apart - the window frame " +
+                    "would disappear into the chrome behind it",
             )
         }
     }

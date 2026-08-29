@@ -253,6 +253,28 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `eraPad at amount 0 is a no-op and leaves the bin empty`() {
+        val dir = File(temp, "EraNoop")
+        val m = KitBuilderModel.create("EraNoop", dir)
+        val pad = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        val before = File(dir, pad.sampleFile).readBytes()
+
+        val untouched = m.eraPad(1, "sp1200", amount = 0f)
+        assertEquals(pad, untouched, "amount 0 leaves the pad exactly as it was")
+        assertNull(m.pad(1)!!.recipe, "no recipe recorded for a no-op")
+        assertTrue(
+            File(dir, pad.sampleFile).readBytes().contentEquals(before),
+            "the file was never rewritten",
+        )
+        assertEquals(0, m.binContents().size, "nothing moved to the bin")
+
+        val agedNone = m.eraKit("sp1200", amount = 0f)
+        assertEquals(0, agedNone, "amount 0 ages nothing")
+        assertEquals(0, m.binContents().size, "still nothing in the bin")
+    }
+
+    @Test
     fun `a torn take from a killed archive is skipped, not surfaced`() {
         val dir = File(temp, "TornTakes")
         val m = KitBuilderModel.create("TornTakes", dir)

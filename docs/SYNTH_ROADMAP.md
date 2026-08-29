@@ -181,7 +181,7 @@ What follows from it:
 - UI is a TapeOS control panel: sunken LCD scope showing the rendered
   waveform, chunky sliders, preset list in a sunken listbox. Peak-1996
   plausible — parameter synths in software are exactly the ReBirth-era move.
-  Engine panels are where SNACK BAR scheme users get what they deserve.
+  Engine panels are where the loudest scheme's users get what they deserve.
 
 ## Phasing
 

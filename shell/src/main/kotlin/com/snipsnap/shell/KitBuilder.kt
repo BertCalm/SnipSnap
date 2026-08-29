@@ -235,7 +235,7 @@ class KitBuilderModel private constructor(
     fun treatPad(slot: Int, treatment: String, amount: Float = 1f): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.velocityLayers.isEmpty()) {
-            "pad $slot is velocity-layered - clear the layers before treating"
+            "pad $slot is velocity-layered - `clearGhostLayers($slot)` before treating"
         }
         requireNotChained(pad, "treating")
         val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
@@ -278,6 +278,7 @@ class KitBuilderModel private constructor(
      */
     fun eraPad(slot: Int, era: String, amount: Float = 1f): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        if (amount <= 0f) return pad
         requireNotChained(pad, "aging")
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
         var recipe: com.snipsnap.json.JsonValue.Obj? = null
@@ -298,6 +299,7 @@ class KitBuilderModel private constructor(
     fun eraKit(era: String, amount: Float = 1f, slots: List<Int>? = null): Int {
         val targets = kit.pads.map { it.slot }.filter { slots == null || it in slots }
         require(targets.isNotEmpty()) { "no pads to age" }
+        if (amount <= 0f) return 0
         targets.forEach { eraPad(it, era, amount) }
         return targets.size
     }

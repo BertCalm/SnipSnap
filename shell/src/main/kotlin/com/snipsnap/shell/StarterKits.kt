@@ -19,9 +19,11 @@ import java.io.File
  * This is the cold-start answer: the app is useful in the first thirty
  * seconds, before anything has been captured, and the empty grid never
  * looks empty. Every starter renders offline through the same pipeline as
- * captured audio (and carries per-pad recipes, so a starter kit remains
- * editable and regenerable forever). Seeded starters reroll; fixed ones
- * always land the same beloved kit.
+ * captured audio (and carries per-pad recipes, so a starter kit's main
+ * samples remain editable and regenerable forever - VELOCITY is the one
+ * exception, where a pad's recipe rebuilds only the main hit, not the
+ * soft velocity layers that define that kit). Seeded starters reroll;
+ * fixed ones always land the same beloved kit.
  */
 object StarterKits {
 

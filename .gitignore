@@ -6,3 +6,7 @@ local.properties
 .DS_Store
 .kotlin/
 reference-out/
+
+# local agent state - worktrees and scratch, not project source
+.claude/
+.superpowers/
