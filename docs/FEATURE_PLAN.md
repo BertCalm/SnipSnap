@@ -1183,9 +1183,9 @@ waits on the phone-mic reference capture.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| RR1 | Declip (`CaptureDoctor.declip`) — detection first (flat-top runs at a measured ceiling, clipped fraction reported; the `repairClicks` distortion refusal now *refers*: "that's clipping - `clean --declip`"), then A-SPADE per frame: reliable samples pinned, clipped samples constrained past the ceiling in their own sign, sparsity relaxing per iteration; wired as `clean --declip`, gated by its own detector like every leg | CORE | M–L | a beat clipped at −6 dB: SNR against the unclipped original improves ≥ 10 dB over the clipped input, peaks rebuilt past the ceiling; unclipped audio comes back byte-identical and told so; the referral fires from repairClicks on the old distortion fixture |
-| RR2 | De-reverb (`CaptureDoctor.deverb`, single-channel WPE) — per-band delayed linear prediction (delay ~2 frames so the direct sound never predicts itself, order ~10), normal equations per band, 2–3 iterations; explicit `clean --deverb` opt-in (no auto-detector — "how roomy is too roomy" is taste), honest about being speech-lineage math | CORE | M–L | the NN3 fixture (hit convolved with a decaying-noise IR): direct-to-tail energy ratio measurably improves and the tail knee finds a *later, quieter* knee after treatment; a dry hit passes through within tolerance; composes with the tail knee rather than replacing it |
-| RR3 | The scorecard (`reference/` eval harness) — a small `bench` runner that takes any capture dropped into `reference/`, runs the whole Capture Doctor (hum/clicks/floor/denoise/declip/deverb, each gated), and prints one measured before/after card per file — so the awaited phone-mic capture becomes an instant verdict on RR2 and the tail knee the day it lands | CORE | S | on the synthetic fixtures the card's numbers match the individual tests' measurements; on an empty `reference/` it says what it's waiting for rather than inventing a corpus |
+| RR1 | ✓ done: `detectClipping` trusts only **flat-top runs** (digital clipping repeats the very same value; even a low sine's crest — six samples "at" its peak — bends by orders of magnitude more than [CLIP_FLATNESS]); `declip` is Kitić's A-SPADE ADMM ported from a numpy rig that validated every step — windowed frames, unitary-DFT analysis, a dual pulling the k-sparse model toward the constraints, tight-frame synthesis rebuilding only the pinned runs. `clean --declip` runs first; the `repairClicks` refusal refers its clipping patients here. **Recalibrated honestly:** consistent sparsity earns ~3 dB + rebuilt peaks on sustained tonal material and almost nothing on clipped noise slivers (noise has no sparse structure to infer); the plan's 10 dB bar rode headline metrics and Gabor dictionaries — that upgrade is below the line. Also caught: a dual-free consistency test converges to sparse-consistent wrong answers, and per-sample de-windowing explodes at window edges | CORE | M–L | tonal-hits fixture clipped at −6 dB: ≥ 2 dB SNR gain (best-gain matched), peaks past the ceiling, reliable samples byte-identical; loud-not-clipped sine and clean beat read null; the visit names the rebuild |
+| RR2 | ✓ done: `deverb` — single-channel WPE, per-band delayed linear prediction (delay 2, order 10, three variance-weighted refinements, complex normal equations solved with partial pivoting), per-bin suppression capped at −10 dB, too-short audio untouched; `clean --deverb`, an opt-in with no detector ("how roomy is too roomy" is taste). One conjugation lesson caught by the test: with normal equations built from conj(tap)·x the prediction is the PLAIN product — the conjugated form flipped subtraction into addition and made the room 6 dB LOUDER | CORE | M–L | the tail knee's convolved fixture: the tail recedes > 2 dB while the direct sound holds within 1.5 dB; a dry fast hit keeps its peak within 5%; the visit names the leg. Real-world verdict still waits on reference/ |
+| RR3 | ✓ done: `checkup [dir]` — one measured card per capture (hum, flat-tops, clicks/dropouts or the named refusal, floor + verdict, the room knee with both slopes, WPE-predictable energy share), every number from the detectors `clean` trusts, read-only; an empty reference/ says what it's waiting for | CORE | S | empty-folder honesty; the hummy capture's 50 Hz and the clipped one's ceiling appear on the card; nothing written |
 
 **Below the line for RR:** bandwidth extension for lo-fi captures
 (spectral band replication-style — fun, but the eras deliberately go
@@ -1231,6 +1231,13 @@ CORE wave MM: ✓ all landed (2026-08-28) — the Capture Doctor. Hum
   capture before the first slice. Clean audio comes back the very same
   object, every time.
 
+CORE wave RR: ✓ all landed (2026-08-29) — the Restoration. Flat-top
+  clip detection + A-SPADE declipping (ported from a numpy rig,
+  recalibrated honestly: ~3 dB on tonal material, nothing to infer
+  from clipped noise), WPE deverb as a capped opt-in (the conjugation
+  lesson recorded), and the checkup scorecard turning reference/ into
+  an instant verdict the day the phone-mic capture lands.
+
 CORE wave QQ: ✓ all landed (2026-08-29) — Time, Done Right. PGHI
   (coefficients calibrated on a known-phase rig, not guessed), the
   clear stretch beside the wash, retime / --keep-pitch (the Driedger
@@ -1244,9 +1251,6 @@ CORE wave PP: ✓ all landed (2026-08-29) — the Split. The median-
   song-scale twins with honest verdicts, and dig --unearth - which
   landed stronger than planned: a break the plain dig cannot hear at
   all comes out clean from under a chord that never stops.
-
-CORE wave RR (planned 2026-08-28 from the research sweep, next up):
-  SPADE declip, WPE deverb, the reference/ scorecard.
 
 CORE wave OO: ✓ all landed (2026-08-28) — the Sculptor: the Torso
   S-4's engine room, minus the knobs. The grain engine (seeded,
