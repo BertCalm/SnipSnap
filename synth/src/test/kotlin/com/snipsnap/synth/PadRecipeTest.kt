@@ -147,4 +147,18 @@ class PadRecipeTest {
             )
         }
     }
+
+    @Test
+    fun `the treatment amount round-trips with its name`() {
+        val r = PadRecipe(fx = Treatments.chain("crushed", 0.35f), treatment = "crushed", amount = 0.35f)
+        val back = PadRecipe.fromJsonText(r.toJsonText())
+        assertEquals("crushed", back.treatment)
+        assertEquals(0.35f, back.amount)
+    }
+
+    @Test
+    fun `a recipe written before amount existed still parses`() {
+        val old = """{"recipe":1,"fx":{"fx":1,"reverse":true}}"""
+        assertNull(PadRecipe.fromJsonText(old).amount, "an amount-less recipe is not an error")
+    }
 }

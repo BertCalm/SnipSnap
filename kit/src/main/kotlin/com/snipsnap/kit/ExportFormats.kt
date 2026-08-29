@@ -21,7 +21,7 @@ enum class ExportFormat(
     EXPANSION("expansion", "EXPANSION (BROWSER TILE)"),
     XPN("xpn", "XPN ARCHIVE (ONE FILE)"),
     MPC3_TRACK("xtd", "MPC 3 NATIVE (.XTD)"),
-    MPC3_PROJECT("xpj", "MPC 3 PROJECT (.XPJ)"),
+    MPC3_PROJECT("xpj", "MPC SESSION (.XPJ) — KITS + GROOVES"),
     MIDI("mid", "MIDI GROOVES (EVERY DAW)"),
     SFZ("sfz", "SFZ (EVERY SAMPLER)"),
     DECENT_SAMPLER("ds", "DECENTSAMPLER (FREE, EVERYWHERE)"),
