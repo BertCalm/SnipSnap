@@ -400,6 +400,7 @@ private fun ChopContent(
                         model = fresh
                         onToast(Copy.RECHOPPED)
                     } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
                         onToast("RE-CHOP FAILED: ${e.message ?: e.javaClass.simpleName}")
                     } finally {
                         rechopBusy = false
@@ -440,6 +441,7 @@ private fun ChopContent(
                             onToast(Copy.sentToGrid(send.sliceCount, send.chokeSet))
                             onSentToGrid(newEntry)
                         } catch (e: Exception) {
+                            if (e is kotlinx.coroutines.CancellationException) throw e
                             onToast("SEND FAILED: ${e.message ?: e.javaClass.simpleName}")
                         } finally {
                             sendBusy = false
