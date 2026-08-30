@@ -232,14 +232,24 @@ fun PadSheetScreen(
     LaunchedEffect(model, pendingMetadataSave) {
         if (pendingMetadataSave == 0) return@LaunchedEffect
         delay(METADATA_SAVE_DEBOUNCE_MS)
+        // An audio-rewriting op is already mid-flight (or about to save) —
+        // its own save() will flush this pending edit too, since `dirty`
+        // covers everything outstanding, not just what triggered it.
+        // Skipping here, rather than racing it for the busy flag, is what
+        // keeps two coroutines from mutating `KitBuilderModel.kit` (a plain
+        // var) and archiving two takes at once.
+        if (busy) return@LaunchedEffect
         val m = model ?: return@LaunchedEffect
-        if (!m.dirty) return@LaunchedEffect // something else (a treatment, an eject) already flushed it
+        if (!m.dirty) return@LaunchedEffect
+        busy = true
         try {
             withContext(Dispatchers.IO) { m.save() }
             onKitUpdated(m.kit)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             failure("SAVE", e)
+        } finally {
+            busy = false
         }
     }
 
@@ -268,12 +278,16 @@ fun PadSheetScreen(
      * TREATMENT: picking a segment or moving AMT. `eraPad` always reads the
      * *current on-disk* audio, ages it, and bins whatever was there — so
      * re-applying onto an already-treated pad (moving AMT, or switching
-     * segments) would stack onto the aged audio rather than replacing it,
-     * and the bin's original would no longer be *the* original. When the
-     * pad already carries an era recipe, undo back to it first (when the
-     * bin still holds it — `runCatching` covers a purged/emptied bin,
-     * which falls back to aging whatever's on disk now) and only then
-     * apply the new era+amount, so TREATMENT always reads as "pick one."
+     * segments) would stack onto the aged audio rather than replacing it.
+     * When the pad already carries an era recipe, undo back to it first —
+     * but only when the bin can restore *every* file the pad currently
+     * references (main sample and any GHOSTS velocity layers). A layer
+     * built by `addGhostLayers` *after* a treatment was derived from the
+     * already-aged main sample and never earned its own bin entry, so a
+     * partial undo there would leave the main sample and its layers aged
+     * by a different number of passes — the exact "untreated underside"
+     * `PadSheet.kt`'s KDoc says routing through `eraPad` (not `treatPad`)
+     * exists to avoid. Refusing honestly in that case beats a silent skew.
      */
     fun applyTreatment(segment: String, amount: Float) {
         if (busy) return
@@ -286,7 +300,16 @@ fun PadSheetScreen(
             busy = true
             try {
                 withContext(Dispatchers.IO) {
-                    if (hadPriorTreatment) runCatching { m.unEraPad(slot) }
+                    if (hadPriorTreatment) {
+                        val files = (listOf(p.sampleFile) + p.velocityLayers.map { it.sampleFile }).distinct()
+                        val binned = m.binContents().map { it.originalName }.toSet()
+                        check(files.all { it in binned }) {
+                            "pad $slot can't cleanly re-treat - its ghost layers postdate the last " +
+                                "treatment (or the bin's since emptied) - clear GHOSTS, or accept the " +
+                                "current sound, before treating again"
+                        }
+                        m.unEraPad(slot)
+                    }
                     m.eraPad(slot, era, amount)
                     m.save()
                 }
