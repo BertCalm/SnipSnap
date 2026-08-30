@@ -75,8 +75,16 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/**
+ * How long a LEVEL/PAN/TUNE/ONE-SHOT/CHOKE edit waits, quiet, before it's
+ * actually written to `kit.json` — see `editPadMetadata`'s KDoc for why
+ * this exists at all (every `KitBuilderModel.save()` archives a take).
+ */
+private const val METADATA_SAVE_DEBOUNCE_MS = 1000L
 
 /**
  * PAD SHEET: the long-press pad inspector, wireframe 1d ("full-screen
@@ -124,15 +132,15 @@ fun PadSheetScreen(
     if (pad == null || model == null) {
         // Still opening the model, the open failed, or (mid-EJECT) this
         // slot just emptied — the header's own back arrow is the one piece
-        // of chrome that must work regardless, so it renders alone.
+        // of chrome that must work regardless, so it renders alone. A load
+        // failure reuses EMPTY_SHELF rather than a one-off sentence, the
+        // same "nothing to show here" line ChopScreen's own EmptyChop
+        // reuses for its unreadable-source case — zero copy literals.
         Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp)) {
             HeaderChip("◄ KIT", scheme, Modifier.align(Alignment.TopStart).width(64.dp)) { onBack() }
-            TapeText(
-                if (loadFailed) "COULD NOT OPEN THE KIT." else "…",
-                TapeType.lcdSmall,
-                scheme.lcdInk.tape,
-                Modifier.align(Alignment.Center),
-            )
+            if (loadFailed) {
+                TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.align(Alignment.Center), maxLines = 3)
+            }
         }
         return
     }
@@ -194,12 +202,49 @@ fun PadSheetScreen(
         v.start(0)
     }
 
-    fun failure(e: Exception) {
-        onToast("PAD SHEET: ${e.message ?: e.javaClass.simpleName}")
+    fun failure(action: String, e: Exception) {
+        onToast("$action FAILED: ${e.message ?: e.javaClass.simpleName}")
     }
 
-    /** Every LEVEL/PAN/TUNE/ONE-SHOT/CHOKE/GHOSTS/EJECT write: mutate + save on IO, busy-guarded. */
-    fun commitPadEdit(onSuccess: (() -> Unit)? = null, mutate: (KitBuilderModel) -> Unit) {
+    // `save()` is deliberately NOT called per stepper nudge: see
+    // `editPadMetadata`'s KDoc just below for why, and this counter for
+    // how the actual disk write gets debounced instead.
+    var pendingMetadataSave by remember(model) { mutableIntStateOf(0) }
+
+    /**
+     * Metadata edits — LEVEL/PAN/TUNE/ONE-SHOT/CHOKE — never touch a WAV,
+     * so they mutate [KitBuilderModel.kit] in memory only, right here,
+     * synchronously. `save()` is deliberately NOT called per nudge:
+     * `KitBuilderModel.save()` unconditionally archives a take whenever
+     * the model is dirty, capped at 32 — one save per stepper tick would
+     * rotate the kit's real rollback points out of history inside a
+     * single pad's worth of dragging. [pendingMetadataSave] debounces
+     * the actual disk write instead.
+     */
+    fun editPadMetadata(mutate: (KitBuilderModel) -> Unit) {
+        if (busy) return
+        val m = model ?: return
+        mutate(m)
+        revision++
+        pendingMetadataSave++
+    }
+
+    LaunchedEffect(model, pendingMetadataSave) {
+        if (pendingMetadataSave == 0) return@LaunchedEffect
+        delay(METADATA_SAVE_DEBOUNCE_MS)
+        val m = model ?: return@LaunchedEffect
+        if (!m.dirty) return@LaunchedEffect // something else (a treatment, an eject) already flushed it
+        try {
+            withContext(Dispatchers.IO) { m.save() }
+            onKitUpdated(m.kit)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            failure("SAVE", e)
+        }
+    }
+
+    /** Audio-rewriting ops — TREATMENT/GHOSTS/EJECT — always earn a real save+take: the WAV already changed on disk. */
+    fun commitPadEditNow(action: String, onSuccess: (() -> Unit)? = null, mutate: (KitBuilderModel) -> Unit) {
         if (busy) return
         val m = model ?: return
         scope.launch {
@@ -212,24 +257,39 @@ fun PadSheetScreen(
                 onSuccess?.invoke()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                failure(e)
+                failure(action, e)
             } finally {
                 busy = false
             }
         }
     }
 
-    /** TREATMENT: picking a segment or moving AMT — applies via `eraPad`, then auditions. */
+    /**
+     * TREATMENT: picking a segment or moving AMT. `eraPad` always reads the
+     * *current on-disk* audio, ages it, and bins whatever was there — so
+     * re-applying onto an already-treated pad (moving AMT, or switching
+     * segments) would stack onto the aged audio rather than replacing it,
+     * and the bin's original would no longer be *the* original. When the
+     * pad already carries an era recipe, undo back to it first (when the
+     * bin still holds it — `runCatching` covers a purged/emptied bin,
+     * which falls back to aging whatever's on disk now) and only then
+     * apply the new era+amount, so TREATMENT always reads as "pick one."
+     */
     fun applyTreatment(segment: String, amount: Float) {
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
         val era = PadSheet.eraFor(segment) ?: return
         val padName = p.displayName
+        val hadPriorTreatment = readEraRecipe(p.recipe) != null
         scope.launch {
             busy = true
             try {
-                withContext(Dispatchers.IO) { m.eraPad(slot, era, amount); m.save() }
+                withContext(Dispatchers.IO) {
+                    if (hadPriorTreatment) runCatching { m.unEraPad(slot) }
+                    m.eraPad(slot, era, amount)
+                    m.save()
+                }
                 revision++
                 onKitUpdated(m.kit)
                 refreshPadAudio(m)
@@ -237,7 +297,7 @@ fun PadSheetScreen(
                 onToast(Copy.treated(segment, padName))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                failure(e)
+                failure("TREATMENT", e)
             } finally {
                 busy = false
             }
@@ -249,13 +309,13 @@ fun PadSheetScreen(
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
         val enabling = p.velocityLayers.isEmpty()
-        commitPadEdit(onSuccess = { if (enabling) onToast(Copy.GHOSTS_ON) }) { mm ->
+        commitPadEditNow("GHOSTS", onSuccess = { if (enabling) onToast(Copy.GHOSTS_ON) }) { mm ->
             if (enabling) mm.addGhostLayers(slot) else mm.clearGhostLayers(slot)
         }
     }
 
     fun onEject() {
-        commitPadEdit(onSuccess = { onToast(Copy.DELETE_SNIP); onBack() }) { mm -> mm.clear(slot) }
+        commitPadEditNow("EJECT", onSuccess = { onToast(Copy.DELETE_SNIP); onBack() }) { mm -> mm.clear(slot) }
     }
 
     fun onMakeInstrument() {
@@ -275,10 +335,39 @@ fun PadSheetScreen(
                 onToast(Copy.INSTRUMENT_MADE)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                if (e is IllegalArgumentException) onToast(Copy.NO_PITCH) else failure(e)
+                if (e is IllegalArgumentException) onToast(Copy.NO_PITCH) else failure("INSTRUMENT", e)
             } finally {
                 busy = false
             }
+        }
+    }
+
+    /**
+     * The header's ◄ KIT and the composable's own teardown both need a
+     * pending metadata edit flushed before the model disappears — a
+     * debounce timer tied to this composable's scope is cancelled the
+     * instant it leaves composition, same as any other coroutine here.
+     * Awaiting the save before calling the real [onBack] keeps the
+     * composable (and its scope) alive until the write actually lands.
+     */
+    fun requestBack() {
+        val m = model
+        if (m == null || !m.dirty || busy) {
+            if (!busy) onBack()
+            return
+        }
+        scope.launch {
+            busy = true
+            try {
+                withContext(Dispatchers.IO) { m.save() }
+                onKitUpdated(m.kit)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("SAVE", e)
+            } finally {
+                busy = false
+            }
+            onBack()
         }
     }
 
@@ -312,7 +401,7 @@ fun PadSheetScreen(
             pad = pad,
             classColor = classColor,
             scheme = scheme,
-            onBack = onBack,
+            onBack = ::requestBack,
             onHit = { snip?.let { audition(it, pad.level) } },
         )
 
@@ -338,7 +427,7 @@ fun PadSheetScreen(
                 enabled = !busy,
                 onFractionChange = { f -> pendingDb = LEVEL_DB_MIN + f * (LEVEL_DB_MAX - LEVEL_DB_MIN) },
                 onFractionCommit = {
-                    commitPadEdit { m -> m.update(slot) { p -> p.copy(level = dbToLevel(pendingDb)) } }
+                    editPadMetadata { m -> m.update(slot) { p -> p.copy(level = dbToLevel(pendingDb)) } }
                 },
             )
             StepperSlider(
@@ -350,7 +439,7 @@ fun PadSheetScreen(
                 enabled = !busy,
                 onFractionChange = { f -> pendingPan = f },
                 onFractionCommit = {
-                    commitPadEdit { m -> m.update(slot) { p -> p.copy(pan = pendingPan) } }
+                    editPadMetadata { m -> m.update(slot) { p -> p.copy(pan = pendingPan) } }
                 },
             )
             StepperSlider(
@@ -362,13 +451,13 @@ fun PadSheetScreen(
                 enabled = !busy,
                 onFractionChange = { f -> pendingTuneSemis = ((f * 24f) - 12f).roundToInt().coerceIn(-12, 12) },
                 onFractionCommit = {
-                    commitPadEdit { m -> m.update(slot) { p -> p.copy(tuneCoarse = pendingTuneSemis) } }
+                    editPadMetadata { m -> m.update(slot) { p -> p.copy(tuneCoarse = pendingTuneSemis) } }
                 },
             )
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ToggleChip("ONE-SHOT", pad.oneShot, classColor, scheme, enabled = !busy, modifier = Modifier.weight(1f)) {
-                    commitPadEdit { m -> m.update(slot) { p -> p.copy(oneShot = !p.oneShot) } }
+                    editPadMetadata { m -> m.update(slot) { p -> p.copy(oneShot = !p.oneShot) } }
                 }
                 ToggleChip(
                     "CHOKE GRP",
@@ -378,7 +467,7 @@ fun PadSheetScreen(
                     enabled = !busy,
                     modifier = Modifier.weight(1f),
                 ) {
-                    commitPadEdit { m ->
+                    editPadMetadata { m ->
                         m.update(slot) { p ->
                             val newGroup = if (p.muteGroup != 0) {
                                 0
@@ -436,7 +525,11 @@ fun PadSheetScreen(
                 enabled = prevSlot != null,
                 onClick = { prevSlot?.let(onSlotChange) },
             )
-            TapeText("SWIPE = NEXT PAD", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            // No swipe gesture is wired here — the buttons on either side are
+            // the only way to move — so the middle cell says where you are
+            // rather than promising a gesture that doesn't exist (law 3).
+            val position = (idx + 1).takeIf { idx >= 0 }?.let { "$it OF ${assignedSlots.size}" } ?: ""
+            TapeText(position, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton(
                 nextSlot?.let { "${padTag(it)} ►" } ?: "►",
                 scheme,
