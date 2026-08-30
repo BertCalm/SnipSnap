@@ -70,23 +70,37 @@ object GrooveEdit {
 
     /**
      * Clone [source]'s notes, snapped to the 16th grid — the fork's core
-     * transform, pure and file-free so it's independently testable. Ties
-     * round the same way [GrooveVariations.quantize] does; the last
-     * partial step never overflows the clip. Snapping the time is what
-     * drops the source's feel (swing push, humanize jitter) by
-     * construction — there's no separate offset field to strip.
+     * transform, pure and file-free so it's independently testable.
+     * Snapping the time is what drops the source's feel (swing push,
+     * humanize jitter) by construction — there's no separate offset field
+     * to strip.
+     *
+     * These clips loop, so a note that rounds past the last step doesn't
+     * clamp to the tail (that would produce an off-grid ghost no step
+     * address can reach — clamping `limit-1` in a 240-pulse grid is never
+     * itself a multiple of 240). It WRAPS to the downbeat of the next
+     * pass: snap to the step INDEX first, then take that index modulo the
+     * clip's step count. A capture's last 120 pulses, or a swing push at
+     * the high end (percent 75 can shove a step-31 hit straight past the
+     * loop point), both land here.
+     *
+     * Wrapping — or even plain snapping, for two off-grid hits a half-step
+     * apart — can put two source notes on the same (note, step) address.
+     * One note per address survives: the louder one.
      */
     fun quantized(source: Mpc3Clip, name: String): Mpc3Clip {
         val grid = STEP_PULSES
-        val limit = source.bars * Mpc3Clip.PULSES_PER_BAR
-        return Mpc3Clip(
-            name = name,
-            bars = source.bars,
-            notes = source.notes.map { n ->
-                val snapped = ((n.timePulses + grid / 2) / grid * grid).coerceIn(0L, limit - 1)
-                n.copy(timePulses = snapped)
-            },
-        )
+        val stepsInClip = source.bars * Mpc3Clip.PULSES_PER_BAR / grid
+        val snapped = source.notes.map { n ->
+            val step = ((n.timePulses + grid / 2) / grid) % stepsInClip
+            n.copy(timePulses = step * grid)
+        }
+        val deduped = snapped
+            .groupBy { it.note to it.timePulses }
+            .values
+            .map { collision -> collision.maxBy { it.velocity } }
+            .sortedBy { it.timePulses }
+        return Mpc3Clip(name = name, bars = source.bars, notes = deduped)
     }
 
     /** PROG E from a kit dir, or null when no fork has happened yet. */

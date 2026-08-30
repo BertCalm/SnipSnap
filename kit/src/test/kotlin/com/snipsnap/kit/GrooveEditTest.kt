@@ -162,6 +162,71 @@ class GrooveEditTest {
     }
 
     @Test
+    fun `a source note at the clip's last pulse forks to step 0, not an off-grid tail`() {
+        val dir = dirWith(base)
+        val tail = base.copy(notes = listOf(Mpc3Note(36, 7679, 0.7f)))
+        val e = GrooveEdit.fork(dir, tail)
+        assertEquals(listOf(0L), e.notes.map { it.timePulses }, "7679 wraps to the downbeat of the next pass")
+    }
+
+    @Test
+    fun `the wrap window's exact bottom wraps forward, one pulse earlier snaps back`() {
+        val dir = dirWith(base)
+        val edge = base.copy(notes = listOf(Mpc3Note(36, 7560, 0.7f), Mpc3Note(38, 7559, 0.7f)))
+        val e = GrooveEdit.fork(dir, edge)
+        val byNote = e.notes.associateBy { it.note }
+        assertEquals(0L, byNote.getValue(36).timePulses, "7560 is the window's bottom - it wraps to step 0")
+        assertEquals(7440L, byNote.getValue(38).timePulses, "7559 snaps DOWN to step 31 instead")
+    }
+
+    @Test
+    fun `a wrap collision keeps the louder note, not both`() {
+        val dir = dirWith(base)
+        val collide = base.copy(notes = listOf(Mpc3Note(36, 5, 0.4f), Mpc3Note(36, 7675, 0.9f)))
+        val e = GrooveEdit.fork(dir, collide)
+        assertEquals(1, e.notes.size, "both source notes land on the same (note, step) address")
+        assertEquals(0L, e.notes.single().timePulses)
+        assertEquals(0.9f, e.notes.single().velocity, "the louder hit survives the collision")
+    }
+
+    @Test
+    fun `every note in a forked clip sits on the grid, even through a swing-75 push past the loop point`() {
+        val dir = dirWith(base)
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        val step31 = Mpc3Clip(
+            "Step31 Groove", 2,
+            listOf(
+                Mpc3Note(36, 0, 0.9f),
+                Mpc3Note(38, 1920, 0.85f),
+                Mpc3Note(42, 31 * s16, 0.5f), // step 31 - swing(75) pushes this straight past the loop point
+            ),
+        )
+        val swung = GrooveVariations.swing(step31, 75) // push = (75-50)*240/50 = 120, exactly the report's repro
+
+        val e = GrooveEdit.fork(dir, swung)
+
+        assertTrue(e.notes.isNotEmpty())
+        e.notes.forEach { n ->
+            assertEquals(0L, n.timePulses % s16, "every forked note sits on a 16th: ${n.timePulses}")
+        }
+        assertTrue(
+            e.notes.any { it.note == 42 && it.timePulses == 0L },
+            "the step-31 hit wrapped to the downbeat instead of clamping to an unreachable tail",
+        )
+    }
+
+    @Test
+    fun `toggleStep removes a wrapped note by the step address it actually landed on`() {
+        val dir = dirWith(base)
+        val tail = base.copy(notes = listOf(Mpc3Note(GrooveEdit.noteFor(GrooveEdit.Lane.KICK), 7679, 0.7f)))
+        val e = GrooveEdit.fork(dir, tail)
+        assertEquals(listOf(0L), e.notes.map { it.timePulses }, "the wrapped note landed on step 0")
+
+        val toggledOff = GrooveEdit.toggleStep(e, GrooveEdit.Lane.KICK, 0)
+        assertTrue(toggledOff.notes.isEmpty(), "(lane, 0) addresses the wrapped note - toggling it off removes it")
+    }
+
+    @Test
     fun `PROG E flows through the MIDI export path like A through D`() {
         val standard = GrooveVariations.standard(base) // A, B(Tight), C(Half), D(Sparse)
         val dir = dirWith(base)
