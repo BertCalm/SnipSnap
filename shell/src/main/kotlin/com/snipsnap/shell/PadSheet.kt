@@ -47,4 +47,17 @@ object PadSheet {
         }
         return ERA_FOR[segment]
     }
+
+    /**
+     * The inverse of [eraFor]: which segment lights up for a pad aged by
+     * [era], or null when no segment draws it.
+     *
+     * Null is a real answer, not a gap to fill in later — "phone" (and any
+     * era a future Time Machine adds without a card segment) is aged
+     * material the PAD SHEET can show but not select: THE PHONE RULING is
+     * that an unmapped era lights *no* segment on the TREATMENT card and
+     * lets the provenance line say what actually happened ("AGED: PHONE")
+     * instead of lying with NONE, which would claim the pad is untreated.
+     */
+    fun segmentFor(era: String): String? = ERA_FOR.entries.firstOrNull { it.value == era }?.key
 }

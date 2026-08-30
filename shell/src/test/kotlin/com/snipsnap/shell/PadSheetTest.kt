@@ -39,4 +39,17 @@ class PadSheetTest {
     fun `the sheet opens at NONE, 35 percent`() {
         assertEquals(0.35f, PadSheet.DEFAULT_AMOUNT)
     }
+
+    @Test
+    fun `segmentFor is eraFor's inverse for every real segment`() {
+        for (segment in PadSheet.SEGMENTS - PadSheet.NONE) {
+            val era = PadSheet.eraFor(segment)!!
+            assertEquals(segment, PadSheet.segmentFor(era))
+        }
+    }
+
+    @Test
+    fun `an era with no segment - the phone ruling - answers null, not NONE`() {
+        assertNull(PadSheet.segmentFor("phone"))
+    }
 }

@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,11 +16,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.PadPlayer
@@ -33,6 +36,7 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Schemes
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -43,7 +47,7 @@ import kotlinx.coroutines.launch
 private val GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 
 @Composable
-fun KitScreen(entry: KitShelf.Entry?) {
+fun KitScreen(entry: KitShelf.Entry?, onLongPress: (Int) -> Unit) {
     val scheme = LocalScheme.current
 
     if (entry == null) {
@@ -60,10 +64,14 @@ fun KitScreen(entry: KitShelf.Entry?) {
     }
 
     val player = remember(entry.dir) { PadPlayer() }
-    DisposableEffect(entry.dir) {
-        player.load(entry)
-        onDispose { player.release() }
-    }
+    DisposableEffect(entry.dir) { onDispose { player.release() } }
+    // PAD SHEET can rewrite a pad's level/pan/audio while this screen isn't
+    // showing it; the SoundPool cache doesn't know that on its own, so a
+    // fresh `kit` reference (its identity changes on every real edit —
+    // see PadSheetScreen's `onKitUpdated`) reloads it. Keyed separately
+    // from the dir-scoped effect above so this also covers the very first
+    // composition, without a redundant load from that one.
+    LaunchedEffect(entry.kit) { player.load(entry) }
 
     val kit = entry.kit
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -107,6 +115,7 @@ fun KitScreen(entry: KitShelf.Entry?) {
                             slot = slot,
                             pad = kit.pad(slot),
                             onTap = player::play,
+                            onLongPress = onLongPress,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -125,11 +134,15 @@ private fun classTint(rgb: Int): Color {
     return Color(0xFF shl 24 or (up(r) shl 16) or (up(g) shl 8) or up(b))
 }
 
+/** A long press that opens PAD SHEET, timed from the design's own 480ms. */
+private const val LONG_PRESS_MS = 480L
+
 @Composable
 private fun PadCell(
     slot: Int,
     pad: KitPad?,
     onTap: (Int) -> Unit,
+    onLongPress: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scheme = LocalScheme.current
@@ -159,11 +172,32 @@ private fun PadCell(
             .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
             .border(2.dp, cls.tape, shape)
             .background(cls.tape.copy(alpha = 0.35f * glow.value), shape)
-            .tapeClick {
-                onTap(slot)
-                scope.launch {
-                    glow.snapTo(1f)
-                    glow.animateTo(0f, tween(Motion.PAD_GLOW_MS))
+            // The press fires the hit immediately — a pad that waited for
+            // release to sound would already be wrong as a drum pad. The
+            // 480ms hold on top of that (still down) opens PAD SHEET; a
+            // quick tap never reaches it. `PointerInputScope` isn't itself
+            // a `CoroutineScope` (only `Density`), so the delay timer rides
+            // the same `rememberCoroutineScope()` the glow animation uses.
+            .pointerInput(slot) {
+                while (true) {
+                    val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
+                    onTap(slot)
+                    scope.launch {
+                        glow.snapTo(1f)
+                        glow.animateTo(0f, tween(Motion.PAD_GLOW_MS))
+                    }
+                    val longPressJob = scope.launch {
+                        delay(LONG_PRESS_MS)
+                        onLongPress(slot)
+                    }
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!change.pressed) break
+                        }
+                    }
+                    longPressJob.cancel()
                 }
             }
             .padding(5.dp),

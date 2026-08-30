@@ -29,6 +29,7 @@ import com.snipsnap.app.ui.HelpScreen
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.MenuRow
+import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.StatusBar
 import com.snipsnap.app.ui.StubScreen
@@ -97,6 +98,11 @@ fun App(shelf: KitShelf) {
     var toast by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf<String?>(null) }
     var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
+    // PAD SHEET: the long-press pad inspector, full-screen over KIT. Not an
+    // AppScreen of its own — MenuRow's nine items are fixed and this isn't
+    // one of them; it's KIT-scoped overlay state instead, cleared whenever
+    // the user navigates to another tab (see `MenuRow`'s `onSelect` below).
+    var padSheetSlot by remember { mutableStateOf<Int?>(null) }
     // X4.4 TEACH THE MACHINE: off by default. The consent row itself lives
     // in PropertiesScreen (⚙), which is out of scope for this pass — this
     // is the plain boolean the brief calls for, wired for CHOP to read,
@@ -155,7 +161,16 @@ fun App(shelf: KitShelf) {
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 TitleBar()
-                MenuRow(current = screen, onSelect = { screen = it })
+                MenuRow(
+                    current = screen,
+                    onSelect = {
+                        screen = it
+                        // Leaving KIT for another tab must not leave the
+                        // sheet armed to reopen on the same slot next time
+                        // KIT comes back into view.
+                        padSheetSlot = null
+                    },
+                )
                 Box(Modifier.weight(1f)) {
                     when (screen) {
                         AppScreen.KITS -> KitsScreen(
@@ -164,7 +179,37 @@ fun App(shelf: KitShelf) {
                             onOpen = { open = it; screen = AppScreen.KIT },
                             onFresh = ::fresh,
                         )
-                        AppScreen.KIT -> KitScreen(open)
+                        AppScreen.KIT -> {
+                            val sheetSlot = padSheetSlot
+                            val sheetEntry = open
+                            if (sheetSlot != null && sheetEntry != null) {
+                                PadSheetScreen(
+                                    entry = sheetEntry,
+                                    slot = sheetSlot,
+                                    onSlotChange = { padSheetSlot = it },
+                                    onBack = { padSheetSlot = null },
+                                    onToast = { toast = it },
+                                    onNavigateTape = {
+                                        // TAPE has no notion of "open on this
+                                        // pad's WAV" (it always scrubs the
+                                        // open kit's longest sample, same as
+                                        // ChopScreen's own fallback) — RE-TRIM
+                                        // is honest about that gap: it opens
+                                        // TAPE, not necessarily on this pad.
+                                        padSheetSlot = null
+                                        screen = AppScreen.TAPE
+                                    },
+                                    onKitUpdated = { updatedKit ->
+                                        open = open?.copy(kit = updatedKit)
+                                        scope.launch {
+                                            kits = withContext(Dispatchers.IO) { shelf.list() }
+                                        }
+                                    },
+                                )
+                            } else {
+                                KitScreen(open, onLongPress = { slot -> padSheetSlot = slot })
+                            }
+                        }
                         AppScreen.TAPE -> TapeScreen(
                             entry = open,
                             onToast = { toast = it },
