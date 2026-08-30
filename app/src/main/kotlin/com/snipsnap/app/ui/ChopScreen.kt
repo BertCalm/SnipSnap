@@ -531,9 +531,11 @@ private fun MiniWaveform(snip: Snip, scheme: Scheme, modifier: Modifier = Modifi
     val peaks = remember(snip) { PeaksPyramid.fromSnip(snip) }
     Canvas(modifier) {
         if (snip.frameCount <= 0) return@Canvas
+        // dp-first, converted at draw time — see TapeScreen.kt's WaveformLcd.
+        val barStep = 3.dp.toPx()
+        val barWidth = 2.dp.toPx()
         val h = size.height
         val halfH = h / 2f
-        val barStep = 3f
         val count = max(1, (size.width / barStep).toInt())
         val columns = peaks.columns(0, snip.frameCount, count)
         for ((i, col) in columns.withIndex()) {
@@ -543,7 +545,7 @@ private fun MiniWaveform(snip: Snip, scheme: Scheme, modifier: Modifier = Modifi
             drawRect(
                 color = scheme.ink2.tape,
                 topLeft = Offset(x, top),
-                size = Size(2f, (bottom - top).coerceAtLeast(1f)),
+                size = Size(barWidth, (bottom - top).coerceAtLeast(1f)),
             )
         }
     }

@@ -63,16 +63,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-/**
- * `Copy.COMMIT_LINES[2]` is `"CLEAN CUT. NICE EARS."` — the exact toast the
- * brief and `design/HANDOFF.md` specify for a coast dying onto an onset.
- * There's no dedicated constant for it (`COMMIT_LINES` exists for the
- * COMMIT button's own rotation); reusing that index keeps this screen
- * honest to "copy constants, never string literals" without adding a
- * `:shell` constant for a single reuse elsewhere.
- */
-private const val SNAP_TOAST_INDEX = 2
-
 /** How long a reel has to be held before it counts as the pencil-rewind long-press. */
 private const val PENCIL_LONG_PRESS_MS = 500L
 
@@ -230,7 +220,7 @@ private fun TapeDeckContent(
                     for (event in model.step(frames)) {
                         when (event) {
                             is TapeDeckModel.Event.SnappingToOnset ->
-                                onToast(Copy.COMMIT_LINES[SNAP_TOAST_INDEX])
+                                onToast(Copy.SNAPPED)
                             TapeDeckModel.Event.HitEnd -> voice.stop()
                             TapeDeckModel.Event.PencilDone -> onToast(Copy.PENCIL_DONE)
                         }
@@ -261,7 +251,7 @@ private fun TapeDeckContent(
             tapeData.peaks,
             scheme,
             ::stopVoice,
-            onSnapToast = { onToast(Copy.COMMIT_LINES[SNAP_TOAST_INDEX]) },
+            onSnapToast = { onToast(Copy.SNAPPED) },
             // Absorbs whatever room the fixed-height rows above and below
             // it don't need, rather than a hardcoded height that clips
             // COMMIT off-screen on a short viewport (landscape, split

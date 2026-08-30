@@ -69,6 +69,8 @@ object Copy {
         "SHELF +1. LABEL IT LATER.",
     )
     const val COMMIT_NEEDS_SELECTION = "SET IN + OUT FIRST"
+    /** The deck glided onto an onset after a coast. */
+    const val SNAPPED = "SNAPPED TO THE HIT. THE MACHINE HAS EARS."
     const val PENCIL_STARTED = "PENCIL REWIND. OLD SCHOOL."
     const val PENCIL_DONE = "REWOUND. YOU'RE WELCOME."
     const val PENCIL_AT_TOP = "ALREADY AT THE TOP."
