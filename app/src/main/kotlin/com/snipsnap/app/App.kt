@@ -25,6 +25,7 @@ import com.snipsnap.app.theme.rememberDeskBrush
 import com.snipsnap.app.theme.windowFrame
 import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ChopScreen
+import com.snipsnap.app.ui.ExportScreen
 import com.snipsnap.app.ui.HelpScreen
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KitsScreen
@@ -258,6 +259,10 @@ fun App(shelf: KitShelf) {
                                     kits = withContext(Dispatchers.IO) { shelf.list() }
                                 }
                             },
+                        )
+                        AppScreen.EXPORT -> ExportScreen(
+                            entry = open,
+                            onToast = { toast = it },
                         )
                         AppScreen.HELP -> HelpScreen()
                         else -> StubScreen(screen)
