@@ -37,8 +37,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.TapeCommit
 import com.snipsnap.app.TapeVoice
@@ -49,6 +52,8 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Cleanup
+import com.snipsnap.audio.PitchEstimate
+import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.ChopReviewModel
@@ -61,6 +66,7 @@ import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.TeachLog
 import java.io.File
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -207,6 +213,10 @@ private fun modeLabel(mode: ChopReviewModel.ChopMode): String = when (mode) {
     is ChopReviewModel.ChopMode.Grid -> "GRID ×${mode.parts}"
 }
 
+/** "A2", "C#4" — what a detected pitch reads as on a MELODIC row. */
+private fun pitchLabel(estimate: PitchEstimate): String =
+    Scales.nameOf(Scales.hzToMidi(estimate.hz).roundToInt())
+
 /** Pad-numbered like the real 4×4 (A13–A16 top row, A01 bottom-left) — see KitScreen. */
 private val CHOP_GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 
@@ -238,8 +248,11 @@ private fun ChopContent(
     var melodic by remember(model) { mutableStateOf(false) }
     // MELODIC's placement runs pitch detection over every row on first
     // touch — real DSP, so it's computed off the main thread rather than
-    // inline during composition.
+    // inline during composition. Row pitch labels ride along with it
+    // (same lazily-cached `pitchByRow` the engine already pays for).
     var melodicPlaced by remember(model) { mutableStateOf<List<ChopReviewModel.Row?>?>(null) }
+    var pitchLabels by remember(model) { mutableStateOf<List<String?>?>(null) }
+    var melodicBusy by remember(model) { mutableStateOf(false) }
 
     var rechopBusy by remember { mutableStateOf(false) }
     var sendBusy by remember { mutableStateOf(false) }
@@ -249,20 +262,40 @@ private fun ChopContent(
         onDispose { voice?.release() }
     }
 
+    // Backgrounding mid-audition must not keep streaming: a track playing
+    // when the app leaves the foreground has to stop there, not whenever
+    // the composable next happens to leave composition.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                voice?.release()
+                voice = null
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     fun audition(row: ChopReviewModel.Row) {
-        // `TapeVoice.release()` joins its streaming thread (up to 200ms) —
-        // fine on a screen exit, not fine inside a tap handler on a list a
-        // user might tap down quickly. Swap first, release the old voice
-        // off the main thread.
-        val old = voice
+        // `TapeVoice.release()` is a bounded join on its own streaming
+        // thread (~200ms worst case, usually instant) — doing it here,
+        // synchronously at the swap site, is what guarantees the previous
+        // voice actually stops even if the user taps once and immediately
+        // navigates away. A composition-scoped coroutine can't make that
+        // guarantee: it's cancelled the instant this composable leaves.
+        voice?.release()
         val v = TapeVoice(row.slice.snip.samples, row.slice.snip.sampleRate)
         voice = v
         v.start(0)
-        if (old != null) scope.launch { withContext(Dispatchers.IO) { old.release() } }
     }
 
     val placed = if (melodic) (melodicPlaced ?: emptyList()) else model.placementPreview()
-    val stripText = if (melodic) Copy.MELODIC_ON else model.placementSummary()
+    val stripText = when {
+        melodic && melodicBusy -> "…"
+        melodic -> Copy.MELODIC_ON
+        else -> model.placementSummary()
+    }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(
@@ -288,8 +321,20 @@ private fun ChopContent(
                 melodic = true
                 onToast(Copy.MELODIC_ON)
                 if (melodicPlaced == null) {
+                    melodicBusy = true
+                    val current = model
                     scope.launch {
-                        melodicPlaced = withContext(Dispatchers.IO) { model.melodicPreview() }
+                        try {
+                            val (placedList, labels) = withContext(Dispatchers.IO) {
+                                val p = current.melodicPreview()
+                                val l = current.rows.indices.map { i -> current.pitchOf(i)?.let(::pitchLabel) }
+                                p to l
+                            }
+                            melodicPlaced = placedList
+                            pitchLabels = labels
+                        } finally {
+                            melodicBusy = false
+                        }
                     }
                 }
             }
@@ -306,6 +351,7 @@ private fun ChopContent(
             items(model.rows, key = { it.n }) { row ->
                 SliceRow(
                     row = row,
+                    pitchLabel = if (melodic) pitchLabels?.getOrNull(row.n - 1) else null,
                     onTapChip = {
                         model.cycleLabel(row.n - 1)
                         revision++
@@ -336,15 +382,28 @@ private fun ChopContent(
             SecondaryButton(
                 if (rechopBusy) "…" else "RE-CHOP",
                 modifier = Modifier.weight(1f).height(Layout.PRIMARY_ACTION_H.dp),
+                // Symmetric with SEND's own guard below — RE-CHOP swapping
+                // `model` out from under an in-flight SEND would re-key the
+                // arrangement the write is reading.
+                enabled = !rechopBusy && !sendBusy,
             ) {
-                if (rechopBusy) return@SecondaryButton
+                if (rechopBusy || sendBusy) return@SecondaryButton
                 rechopBusy = true
                 val current = model
                 scope.launch {
-                    val fresh = withContext(Dispatchers.IO) { current.rechop() }
-                    model = fresh
-                    rechopBusy = false
-                    onToast(Copy.RECHOPPED)
+                    // Match `App.fresh()`'s own pattern: real disk/CPU work
+                    // in a try, the busy flag cleared in a finally so a
+                    // failure can't leave the button permanently disabled
+                    // and silent — it says exactly what happened instead.
+                    try {
+                        val fresh = withContext(Dispatchers.IO) { current.rechop() }
+                        model = fresh
+                        onToast(Copy.RECHOPPED)
+                    } catch (e: Exception) {
+                        onToast("RE-CHOP FAILED: ${e.message ?: e.javaClass.simpleName}")
+                    } finally {
+                        rechopBusy = false
+                    }
                 }
             }
             Box(Modifier.weight(2f)) {
@@ -354,31 +413,37 @@ private fun ChopContent(
                 ) {
                     if (sendBusy || rechopBusy) return@PrimaryAction
                     sendBusy = true
-                    val oldVoice = voice
+                    // Synchronous, not a composition-scoped launch — see
+                    // `audition()`'s comment on why that matters.
+                    voice?.release()
                     voice = null
-                    if (oldVoice != null) scope.launch { withContext(Dispatchers.IO) { oldVoice.release() } }
                     val current = model
                     val isMelodic = melodic
                     val base = "${sourceFile.nameWithoutExtension} CHOP"
                     scope.launch {
-                        val send = withContext(Dispatchers.IO) {
-                            if (isMelodic) current.sendToGridMelodic() else current.sendToGrid()
-                        }
-                        val newEntry = withContext(Dispatchers.IO) {
-                            val kitName = shelf.freshName(base)
-                            val kitDir = File(entry.dir.parentFile ?: entry.dir, kitName)
-                            val builder = KitBuilderModel.fromChop(kitName, send.arranged, kitDir)
-                            if (teachEnabled) {
-                                val examples = current.labeledOverrides()
-                                if (examples.isNotEmpty()) {
-                                    TeachLog.append(File(kitDir, TeachLog.FILE_NAME), examples)
-                                }
+                        try {
+                            val send = withContext(Dispatchers.IO) {
+                                if (isMelodic) current.sendToGridMelodic() else current.sendToGrid()
                             }
-                            KitShelf.Entry(kitDir, builder.kit)
+                            val newEntry = withContext(Dispatchers.IO) {
+                                val kitName = shelf.freshName(base)
+                                val kitDir = File(entry.dir.parentFile ?: entry.dir, kitName)
+                                val builder = KitBuilderModel.fromChop(kitName, send.arranged, kitDir)
+                                if (teachEnabled) {
+                                    val examples = current.labeledOverrides()
+                                    if (examples.isNotEmpty()) {
+                                        TeachLog.append(File(kitDir, TeachLog.FILE_NAME), examples)
+                                    }
+                                }
+                                KitShelf.Entry(kitDir, builder.kit)
+                            }
+                            onToast(Copy.sentToGrid(send.sliceCount, send.chokeSet))
+                            onSentToGrid(newEntry)
+                        } catch (e: Exception) {
+                            onToast("SEND FAILED: ${e.message ?: e.javaClass.simpleName}")
+                        } finally {
+                            sendBusy = false
                         }
-                        sendBusy = false
-                        onToast(Copy.sentToGrid(send.sliceCount, send.chokeSet))
-                        onSentToGrid(newEntry)
                     }
                 }
             }
@@ -389,6 +454,7 @@ private fun ChopContent(
 @Composable
 private fun SliceRow(
     row: ChopReviewModel.Row,
+    pitchLabel: String?,
     onTapChip: () -> Unit,
     onLongPressChip: () -> Unit,
     onTapRow: () -> Unit,
@@ -433,6 +499,12 @@ private fun SliceRow(
                 TapeType.marker,
                 if (row.unsure) scheme.ink2.tape else Schemes.padLabelInk(scheme, row.effectiveClass).tape,
             )
+        }
+
+        // MELODIC's whole point is the note review — the pitch that landed
+        // each row where it did.
+        if (pitchLabel != null) {
+            TapeText(pitchLabel, TapeType.pixelSmall, scheme.ink2.tape)
         }
 
         Spacer(Modifier.weight(1f))
@@ -519,17 +591,18 @@ private fun SegmentButton(
 private fun SecondaryButton(
     label: String,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     Box(
         modifier
             .raisedBevel(scheme)
-            .tapeClick(onClick)
+            .let { if (enabled) it.tapeClick(onClick) else it }
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, scheme.ink.tape)
+        TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink2.tape)
     }
 }
 
