@@ -24,6 +24,7 @@ include(":audio")
 include(":kit")
 include(":mpc3")
 include(":synth")
+include(":loop")
 include(":cli")
 include(":shell")
 

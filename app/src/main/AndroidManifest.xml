@@ -19,6 +19,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- The six-track phasing loop grid (plan-03). No launcher filter:
+             one front door. Reachable in dev via
+             adb shell am start -n com.snipsnap.app/.LoopActivity -->
+        <activity
+            android:name=".LoopActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
     </application>
 
 </manifest>

@@ -57,6 +57,8 @@ dependencies {
     implementation(project(":mpc3"))
     implementation(project(":synth"))
     implementation(project(":shell"))
+    // The loop engine — plan-03's six-track phasing grid, merged forward.
+    implementation(project(":loop"))
 
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
@@ -66,5 +68,9 @@ dependencies {
     // TapeOS is fully custom-drawn: foundation only, no Material — the
     // design system's bevels and LCDs owe nothing to any stock theme.
     implementation("androidx.compose.foundation:foundation")
+    // LoopGrid (plan-03) draws with material3 Text and a lifecycle scope;
+    // the TapeOS screens stay foundation-only.
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 }
