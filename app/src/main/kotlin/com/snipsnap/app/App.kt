@@ -24,6 +24,7 @@ import com.snipsnap.app.theme.TapeTheme
 import com.snipsnap.app.theme.rememberDeskBrush
 import com.snipsnap.app.theme.windowFrame
 import com.snipsnap.app.ui.AppScreen
+import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.HelpScreen
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KitsScreen
@@ -34,6 +35,7 @@ import com.snipsnap.app.ui.StubScreen
 import com.snipsnap.app.ui.TapeScreen
 import com.snipsnap.app.ui.TitleBar
 import com.snipsnap.app.ui.ToastOverlay
+import com.snipsnap.app.ui.longestSampleFile
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
@@ -41,6 +43,7 @@ import com.snipsnap.shell.Personality
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.StarterKits
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -50,6 +53,16 @@ import kotlin.random.Random
 private const val PREFS = "tapeos"
 private const val PREF_SCHEME = "scheme"
 private const val PREF_PERSONALITY = "personality"
+
+/**
+ * TAPE's COMMIT sets this; CHOP reads it. [sourceFile] is the WAV TAPE was
+ * actually scrubbing (the open kit's longest sample at the moment of
+ * commit — [range]'s frames only mean something against that specific
+ * file). Recorded here in `App`, not `TapeScreen`, because the user can
+ * switch to a different kit before ever opening CHOP, and `open` alone
+ * wouldn't tell CHOP which file the commit was cut from.
+ */
+data class TapeCommit(val sourceFile: File, val range: IntRange)
 
 /**
  * The whole M0 app: the SNIPSNAP.EXE window on its desk, the menu row,
@@ -83,8 +96,12 @@ fun App(shelf: KitShelf) {
     var open by remember { mutableStateOf<KitShelf.Entry?>(null) }
     var toast by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf<String?>(null) }
-    // TAPE's COMMIT sets this; CHOP (a later milestone) reads it.
-    var lastCommit by remember { mutableStateOf<IntRange?>(null) }
+    var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
+    // X4.4 TEACH THE MACHINE: off by default. The consent row itself lives
+    // in PropertiesScreen (⚙), which is out of scope for this pass — this
+    // is the plain boolean the brief calls for, wired for CHOP to read,
+    // with no UI to flip it yet. See the CHOP report for this deviation.
+    var teachEnabled by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -151,7 +168,18 @@ fun App(shelf: KitShelf) {
                         AppScreen.TAPE -> TapeScreen(
                             entry = open,
                             onToast = { toast = it },
-                            onCommit = { lastCommit = it },
+                            onCommit = { range ->
+                                // The file is derived, not asked of TapeScreen (see
+                                // `TapeCommit`) — `open` here is the same kit entry
+                                // TapeScreen was scrubbing when COMMIT fired.
+                                val source = open
+                                if (source != null) {
+                                    scope.launch {
+                                        val file = withContext(Dispatchers.IO) { longestSampleFile(source) }
+                                        if (file != null) lastCommit = TapeCommit(file, range)
+                                    }
+                                }
+                            },
                         )
                         AppScreen.PROPERTIES -> PropertiesScreen(
                             currentScheme = schemeId,
@@ -163,6 +191,20 @@ fun App(shelf: KitShelf) {
                             onPersonality = {
                                 personality = it
                                 prefs.edit().putString(PREF_PERSONALITY, it.name).apply()
+                            },
+                        )
+                        AppScreen.CHOP -> ChopScreen(
+                            entry = open,
+                            lastCommit = lastCommit,
+                            shelf = shelf,
+                            teachEnabled = teachEnabled,
+                            onToast = { toast = it },
+                            onSentToGrid = { newEntry ->
+                                open = newEntry
+                                screen = AppScreen.KIT
+                                scope.launch {
+                                    kits = withContext(Dispatchers.IO) { shelf.list() }
+                                }
                             },
                         )
                         AppScreen.HELP -> HelpScreen()

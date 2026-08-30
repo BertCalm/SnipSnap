@@ -122,6 +122,13 @@ object Copy {
     fun sentToGrid(sliceCount: Int, chokeSet: Boolean): String =
         "$sliceCount SLICES ON THE GRID." + if (chokeSet) " CHOKE GROUP SET." else ""
 
+    // ---- CHOP: the chip itself (HANDOFF.md — "chip tap = cycle class label, 'YOU ✓'") ----
+    /** A chip under the confidence threshold, in its own words. */
+    const val CHIP_NOT_SURE = "NOT SURE"
+
+    /** The override marker on a corrected chip. */
+    const val CHIP_OVERRIDDEN = "YOU ✓"
+
     // Export.
     const val EXPORT_DONE = "DUBBED. GO MAKE SOMETHING."
     const val DUB_DONE = "DUB DONE. SOUNDS 3% WARMER NOW."
