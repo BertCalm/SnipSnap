@@ -48,61 +48,81 @@ class TapeVoice(private val tape: FloatArray, sampleRate: Int) {
     /**
      * Begin streaming from [frame]. Safe to call while already running — the
      * cursor jumps, the thread keeps going.
+     *
+     * If a previous stream thread is still winding down from a very recent
+     * [stop] this briefly joins it (in practice almost always an instant
+     * no-op — the thread has usually already exited) so two threads can
+     * never end up writing the same `AudioTrack` at once. That join is not
+     * on [stop]'s own path — a drag gesture only ever calls [stop], never
+     * this — so the screen's primary gesture never blocks on it.
      */
     fun start(frame: Int) {
         cursor.set(frame.coerceIn(0, tape.size))
         if (running.compareAndSet(false, true)) {
+            streamThread?.join(50)
             runCatching { track.play() }
             streamThread = thread(name = "TapeVoice", isDaemon = true) { runLoop() }
         }
     }
 
-    /** Stop streaming. Idempotent — a stopped voice stopping again is a no-op. */
+    /**
+     * Signal the stream thread to stop. Non-blocking: the thread settles the
+     * `AudioTrack` (pause + flush) itself as it exits — see `runLoop`'s
+     * `finally` — so a caller on the UI thread (a drag gesture starting,
+     * most often) never waits on it.
+     */
     fun stop() {
-        if (running.compareAndSet(true, false)) {
-            streamThread?.join(200)
-            streamThread = null
-            runCatching { track.pause() }
-            runCatching { track.flush() }
-        }
+        running.set(false)
     }
 
     /** Release the track for good — call once, from the screen's exit. */
     fun release() {
-        stop()
+        running.set(false)
+        streamThread?.join(200)
+        streamThread = null
         runCatching { track.stop() }
         runCatching { track.release() }
     }
 
     private fun runLoop() {
         val block = FloatArray(BLOCK_FRAMES)
-        while (running.get()) {
-            val at = cursor.get()
-            if (at >= tape.size) {
-                running.set(false)
-                break
-            }
-            val n = minOf(BLOCK_FRAMES, tape.size - at)
-            System.arraycopy(tape, at, block, 0, n)
-            var written = 0
-            while (written < n) {
-                if (!running.get()) return
-                val w = try {
-                    track.write(block, written, n - written, AudioTrack.WRITE_BLOCKING)
-                } catch (e: IllegalStateException) {
-                    // The track vanished under us (screen exit racing this write) —
-                    // drop the rest of this block rather than propagate, matching
-                    // AndroidAudioSink's contract for the same race.
+        try {
+            while (running.get()) {
+                val at = cursor.get()
+                if (at >= tape.size) {
                     running.set(false)
                     return
                 }
-                if (w <= 0) {
-                    running.set(false)
-                    return
+                val n = minOf(BLOCK_FRAMES, tape.size - at)
+                System.arraycopy(tape, at, block, 0, n)
+                var written = 0
+                while (written < n) {
+                    if (!running.get()) return
+                    val w = try {
+                        track.write(block, written, n - written, AudioTrack.WRITE_BLOCKING)
+                    } catch (e: IllegalStateException) {
+                        // The track vanished under us (screen exit racing this write) —
+                        // drop the rest of this block rather than propagate, matching
+                        // AndroidAudioSink's contract for the same race.
+                        running.set(false)
+                        return
+                    }
+                    if (w <= 0) {
+                        running.set(false)
+                        return
+                    }
+                    written += w
                 }
-                written += w
+                cursor.addAndGet(n)
             }
-            cursor.addAndGet(n)
+        } finally {
+            // Both exit paths — a signaled stop() and running off the end of
+            // the tape alike — land here, so the track is always settled
+            // from the thread that owns it: paused (never left PLAYING and
+            // underrunning after the last real block) and flushed (so the
+            // next start() doesn't play stale buffered frames).
+            runCatching { track.pause() }
+            runCatching { track.flush() }
         }
     }
 

@@ -35,6 +35,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
@@ -72,6 +75,21 @@ private const val SNAP_TOAST_INDEX = 2
 
 /** How long a reel has to be held before it counts as the pencil-rewind long-press. */
 private const val PENCIL_LONG_PRESS_MS = 500L
+
+/**
+ * Ceiling on one step-loop tick's elapsed time, in nanoseconds (~100ms).
+ * `withFrameNanos`'s delta goes stale across any gap in frame delivery —
+ * backgrounding the app is the big one (the clock's `lastNanos` doesn't
+ * move while the composition is stopped), but a debugger pause or a janky
+ * frame have the same shape. Capping the converted frame count here means
+ * a stale clock can never fast-forward the tape, regardless of why the gap
+ * happened — belt to the lifecycle observer's suspenders below, which stops
+ * playback outright on backgrounding.
+ */
+private const val MAX_STEP_NANOS = 100_000_000L
+
+/** The waveform LCD's floor when it's sharing a short viewport with everything else below it. */
+private const val WAVEFORM_MIN_H = 96
 
 /** Everything the deck needs once a WAV is on it. */
 private class LoadedTape(
@@ -171,6 +189,23 @@ private fun TapeDeckContent(
         onDispose { voice.release() }
     }
 
+    // Home-during-play would otherwise leave the voice's thread writing to
+    // an AudioTrack nobody can hear forever (no media session, no way for
+    // the system to stop it) — ON_STOP is the app losing the foreground,
+    // which is exactly when a tape deck should stop rolling. Deliberately
+    // does NOT resume on ON_START/ON_RESUME: the user presses PLAY again.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, model, voice) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                if (model.playing) model.togglePlay()
+                voice.stop()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     var tick by remember(model) { mutableStateOf(0) }
     var commitIndex by remember(model) { mutableStateOf(0) }
 
@@ -186,7 +221,7 @@ private fun TapeDeckContent(
         var carryFrames = 0.0
         while (isActive) {
             withFrameNanos { now ->
-                val dtNanos = (now - lastNanos).coerceAtLeast(0)
+                val dtNanos = (now - lastNanos).coerceIn(0, MAX_STEP_NANOS)
                 lastNanos = now
                 val exact = dtNanos.toDouble() * model.sampleRate / 1_000_000_000.0 + carryFrames
                 val frames = exact.toInt()
@@ -220,9 +255,19 @@ private fun TapeDeckContent(
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         CassetteRow(entry, model, frameTick, onToast, ::stopVoice)
-        WaveformLcd(model, tapeData.onsets, tapeData.peaks, scheme, ::stopVoice) {
-            onToast(Copy.COMMIT_LINES[SNAP_TOAST_INDEX])
-        }
+        WaveformLcd(
+            model,
+            tapeData.onsets,
+            tapeData.peaks,
+            scheme,
+            ::stopVoice,
+            onSnapToast = { onToast(Copy.COMMIT_LINES[SNAP_TOAST_INDEX]) },
+            // Absorbs whatever room the fixed-height rows above and below
+            // it don't need, rather than a hardcoded height that clips
+            // COMMIT off-screen on a short viewport (landscape, split
+            // screen) — WAVEFORM_MIN_H keeps it from collapsing to nothing.
+            modifier = Modifier.weight(1f, fill = true).heightIn(min = WAVEFORM_MIN_H.dp),
+        )
         ReadoutRow(model, onToast)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             DeckButton("IN", Modifier.weight(1f)) { model.setIn() }
@@ -410,16 +455,17 @@ private fun CassetteRow(
 @Composable
 private fun Reel(fraction: Float, angle: Float, scheme: Scheme, modifier: Modifier = Modifier) {
     Canvas(modifier) {
+        val strokeWidth = 2.dp.toPx()
         val c = Offset(size.width / 2f, size.height / 2f)
         val radius = size.minDimension / 2f
         val hubRadius = radius * 0.45f
         val woundRadius = radius * (0.5f + 0.5f * fraction.coerceIn(0f, 1f))
         drawCircle(color = scheme.grayDark.tape.copy(alpha = 0.6f), radius = woundRadius, center = c)
-        drawCircle(color = scheme.ink2.tape, radius = hubRadius, center = c, style = Stroke(width = 2f))
+        drawCircle(color = scheme.ink2.tape, radius = hubRadius, center = c, style = Stroke(width = strokeWidth))
         rotate(degrees = angle, pivot = c) {
             val spoke = hubRadius * 0.9f
-            drawLine(scheme.ink2.tape, Offset(c.x - spoke, c.y), Offset(c.x + spoke, c.y), strokeWidth = 2f)
-            drawLine(scheme.ink2.tape, Offset(c.x, c.y - spoke), Offset(c.x, c.y + spoke), strokeWidth = 2f)
+            drawLine(scheme.ink2.tape, Offset(c.x - spoke, c.y), Offset(c.x + spoke, c.y), strokeWidth = strokeWidth)
+            drawLine(scheme.ink2.tape, Offset(c.x, c.y - spoke), Offset(c.x, c.y + spoke), strokeWidth = strokeWidth)
         }
     }
 }
@@ -440,11 +486,11 @@ private fun WaveformLcd(
     scheme: Scheme,
     onScrubStart: () -> Unit,
     onSnapToast: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Box(
-        Modifier
+        modifier
             .fillMaxWidth()
-            .height(180.dp)
             .lcdPanel(scheme)
             .pointerInput(model) {
                 awaitEachGesture {
@@ -496,6 +542,16 @@ private fun WaveformLcd(
             },
     ) {
         Canvas(Modifier.fillMaxSize()) {
+            // dp-first, converted at draw time — see Bevel.kt's `3.dp.toPx()`
+            // — so these read at their intended weight on real (non-1x)
+            // phones instead of at a third of it. Dp-sizing barStep also
+            // means fewer, wider columns at high density: 3x density used
+            // to mean 3x the `peaks.columns` work for the same visual bar.
+            val strokeWidth = 2.dp.toPx()
+            val barStep = 3.dp.toPx()
+            val barWidth = 2.dp.toPx()
+            val tickLength = 8.dp.toPx()
+            val tickInset = 2.dp.toPx()
             val w = size.width
             val h = size.height
             val centerX = w / 2f
@@ -520,12 +576,11 @@ private fun WaveformLcd(
                     topLeft = Offset(x0.toFloat(), 0f),
                     size = Size((x1 - x0).toFloat().coerceAtLeast(0f), h),
                 )
-                drawLine(scheme.accent.tape, Offset(x0.toFloat(), 0f), Offset(x0.toFloat(), h), strokeWidth = 2f)
-                drawLine(scheme.accent.tape, Offset(x1.toFloat(), 0f), Offset(x1.toFloat(), h), strokeWidth = 2f)
+                drawLine(scheme.accent.tape, Offset(x0.toFloat(), 0f), Offset(x0.toFloat(), h), strokeWidth = strokeWidth)
+                drawLine(scheme.accent.tape, Offset(x1.toFloat(), 0f), Offset(x1.toFloat(), h), strokeWidth = strokeWidth)
             }
 
             if (clampedEnd > clampedStart) {
-                val barStep = 3f
                 val xStart = (centerX + (clampedStart - model.position) / framesPerPixel).toFloat()
                 val columnCount = max(1, (((clampedEnd - clampedStart) / framesPerPixel) / barStep).toInt())
                 val columns = peaks.columns(clampedStart.toInt(), clampedEnd.toInt(), columnCount)
@@ -537,7 +592,7 @@ private fun WaveformLcd(
                     drawRect(
                         color = scheme.lcdInk.tape,
                         topLeft = Offset(x, top),
-                        size = Size(2f, (bottom - top).coerceAtLeast(1f)),
+                        size = Size(barWidth, (bottom - top).coerceAtLeast(1f)),
                     )
                 }
             }
@@ -545,10 +600,11 @@ private fun WaveformLcd(
             for (onset in onsets) {
                 val x = (centerX + (onset - model.position) / framesPerPixel).toFloat()
                 if (x < -4f || x > w + 4f) continue
-                drawLine(scheme.warn.tape, Offset(x, h - 10f), Offset(x, h - 2f), strokeWidth = 2f)
+                val tickBottom = h - tickInset
+                drawLine(scheme.warn.tape, Offset(x, tickBottom - tickLength), Offset(x, tickBottom), strokeWidth = strokeWidth)
             }
 
-            drawLine(scheme.warn.tape, Offset(centerX, 0f), Offset(centerX, h), strokeWidth = 2f)
+            drawLine(scheme.warn.tape, Offset(centerX, 0f), Offset(centerX, h), strokeWidth = strokeWidth)
         }
     }
 }
