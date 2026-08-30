@@ -74,6 +74,7 @@ import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -98,6 +99,15 @@ private const val METADATA_SAVE_DEBOUNCE_MS = 1000L
  * [onKitUpdated] so `App`'s copy — and the shelf list — stay in step.
  * `entry.dir` never changes while the sheet is open (only its `kit`
  * does), so the model opens once and edits mutate that one instance.
+ *
+ * [appScope] is `App()`'s own `rememberCoroutineScope()` — the one
+ * `fresh()` launches into — which outlives this composable's own scope
+ * across every kind of exit, not just [onBack]. The debounced metadata
+ * save (see `editPadMetadata`) is scoped to *this* composable and would
+ * be cancelled mid-flight by any exit that isn't [requestBack]'s own
+ * synchronous flush (a MenuRow tab switch, RE-TRIM); the teardown
+ * `DisposableEffect` below hands a still-pending save to [appScope]
+ * instead of letting it die with the screen.
  */
 @Composable
 fun PadSheetScreen(
@@ -108,6 +118,7 @@ fun PadSheetScreen(
     onToast: (String) -> Unit,
     onNavigateTape: () -> Unit,
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
+    appScope: CoroutineScope,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -320,7 +331,11 @@ fun PadSheetScreen(
                 onToast(Copy.treated(segment, padName))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                failure("TREATMENT", e)
+                // The ghosts-postdate-treatment refusal above is expected,
+                // in-voice user copy, not a diagnostic — the check()'s own
+                // message stays in logs (via `e`/a debugger) but the toast
+                // says what Copy says, not raw exception prose.
+                if (e is IllegalStateException) onToast(Copy.RETREAT_REFUSED) else failure("TREATMENT", e)
             } finally {
                 busy = false
             }
@@ -366,12 +381,14 @@ fun PadSheetScreen(
     }
 
     /**
-     * The header's ◄ KIT and the composable's own teardown both need a
-     * pending metadata edit flushed before the model disappears — a
-     * debounce timer tied to this composable's scope is cancelled the
-     * instant it leaves composition, same as any other coroutine here.
-     * Awaiting the save before calling the real [onBack] keeps the
-     * composable (and its scope) alive until the write actually lands.
+     * The header's own ◄ KIT path: flush a pending metadata save (if any)
+     * *before* calling the real [onBack], on this composable's own scope —
+     * so the common exit gets immediate consistency (the save is done, not
+     * just handed off, by the time KIT re-renders) rather than waiting on
+     * the teardown safety net below. Every *other* way to leave this
+     * screen (a MenuRow tab switch, RE-TRIM) calls [onBack] — or, for
+     * RE-TRIM, [onNavigateTape] — directly, bypassing this; the teardown
+     * `DisposableEffect` is what covers those.
      */
     fun requestBack() {
         val m = model
@@ -391,6 +408,34 @@ fun PadSheetScreen(
                 busy = false
             }
             onBack()
+        }
+    }
+
+    /**
+     * The safety net every exit shares, present and future: whatever's
+     * still dirty when this composable leaves composition — a debounced
+     * metadata edit that hadn't fired yet, most likely — gets one save,
+     * launched into [appScope] rather than this composable's own
+     * (about-to-be-cancelled) one. `onDispose` can't suspend, so launching
+     * into a scope that outlives the dispose call is the whole point;
+     * [onKitUpdated] and [onToast] are plain callbacks into `App`, which
+     * is still alive and still owns them regardless of which child
+     * composable is being torn down.
+     */
+    DisposableEffect(model) {
+        onDispose {
+            val m = model
+            if (m != null && m.dirty) {
+                appScope.launch {
+                    try {
+                        withContext(Dispatchers.IO) { m.save() }
+                        onKitUpdated(m.kit)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        failure("SAVE", e)
+                    }
+                }
+            }
         }
     }
 
@@ -424,6 +469,7 @@ fun PadSheetScreen(
             pad = pad,
             classColor = classColor,
             scheme = scheme,
+            busy = busy,
             onBack = ::requestBack,
             onHit = { snip?.let { audition(it, pad.level) } },
         )
@@ -648,6 +694,7 @@ private fun PadSheetHeader(
     pad: KitPad,
     classColor: Color,
     scheme: Scheme,
+    busy: Boolean,
     onBack: () -> Unit,
     onHit: () -> Unit,
 ) {
@@ -661,7 +708,10 @@ private fun PadSheetHeader(
             .padding(horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        HeaderChip("◄ KIT", scheme, Modifier.width(64.dp), onBack)
+        // `onBack` (`requestBack`) silently no-ops while busy rather than
+        // interrupting an in-flight save — dimmed + untappable here says
+        // so instead of the tap doing nothing with no feedback at all.
+        HeaderChip("◄ KIT", scheme, Modifier.width(64.dp), enabled = !busy, onClick = onBack)
         Spacer(Modifier.weight(1f))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             TapeText("PAD ${padTag(slot)}", TapeType.lcdHeader, scheme.lcdInk.tape)
@@ -673,21 +723,27 @@ private fun PadSheetHeader(
             }
         }
         Spacer(Modifier.weight(1f))
-        HeaderChip("▶ HIT", scheme, Modifier.width(64.dp), onHit)
+        HeaderChip("▶ HIT", scheme, Modifier.width(64.dp), onClick = onHit)
     }
 }
 
 @Composable
-private fun HeaderChip(label: String, scheme: Scheme, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun HeaderChip(
+    label: String,
+    scheme: Scheme,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .tapeClick(onClick)
+            .let { if (enabled) it.tapeClick(onClick) else it }
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, scheme.ink.tape)
+        TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink3.tape)
     }
 }
 

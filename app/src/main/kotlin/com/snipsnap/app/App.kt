@@ -205,6 +205,13 @@ fun App(shelf: KitShelf) {
                                             kits = withContext(Dispatchers.IO) { shelf.list() }
                                         }
                                     },
+                                    // App()'s own scope — the same one fresh()
+                                    // launches into — outlives PadSheetScreen's
+                                    // composition, so a pending debounced save
+                                    // handed to it at teardown actually
+                                    // completes instead of being cancelled by
+                                    // the very navigation that triggers it.
+                                    appScope = scope,
                                 )
                             } else {
                                 KitScreen(open, onLongPress = { slot -> padSheetSlot = slot })
