@@ -31,6 +31,7 @@ import com.snipsnap.app.ui.MenuRow
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.StatusBar
 import com.snipsnap.app.ui.StubScreen
+import com.snipsnap.app.ui.TapeScreen
 import com.snipsnap.app.ui.TitleBar
 import com.snipsnap.app.ui.ToastOverlay
 import com.snipsnap.shell.Copy
@@ -82,6 +83,8 @@ fun App(shelf: KitShelf) {
     var open by remember { mutableStateOf<KitShelf.Entry?>(null) }
     var toast by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf<String?>(null) }
+    // TAPE's COMMIT sets this; CHOP (a later milestone) reads it.
+    var lastCommit by remember { mutableStateOf<IntRange?>(null) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -145,6 +148,11 @@ fun App(shelf: KitShelf) {
                             onFresh = ::fresh,
                         )
                         AppScreen.KIT -> KitScreen(open)
+                        AppScreen.TAPE -> TapeScreen(
+                            entry = open,
+                            onToast = { toast = it },
+                            onCommit = { lastCommit = it },
+                        )
                         AppScreen.PROPERTIES -> PropertiesScreen(
                             currentScheme = schemeId,
                             onScheme = {
