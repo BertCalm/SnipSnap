@@ -421,22 +421,37 @@ class KitBuilderModel private constructor(
      * rather than resetting it — so `take.lastModified()` is a faithful T,
      * not an artifact of the rename. (Verified: APFS gives sub-millisecond
      * resolution in dev; every POSIX target this ships to does likewise or
-     * better.)
+     * better.) [AtomicFile]'s non-atomic fallback (some filesystems throw
+     * `AtomicMoveNotSupportedException`, and it falls back to a plain
+     * move) isn't guaranteed to carry the same mtime, so T could in theory
+     * drift by a millisecond or two there — [archiveTake]'s own
+     * monotonicity guard (below) neutralizes most of that risk anyway,
+     * since it re-pins T relative to the bin regardless of which move
+     * path wrote the file.
      *
      * For each file a restored pad references: the bin already timestamps
      * every rewrite it archives ([BinEntry.binnedAtMillis], via
      * [moveToBin]), so the bin doubles as that file's own history. Any
      * entry binned at-or-after T is audio that displaced what was live at
      * T; the OLDEST such entry is the one that WAS live at T (anything
-     * newer is a later displacement the take doesn't want either). That
-     * entry's bytes are COPIED onto the live file — not consumed the way
-     * [restoreFromBin] normally deletes on restore — because jumping
-     * between takes must stay non-destructive: an even-older take restored
-     * later may need that exact same entry, and a take-restore reads
-     * history, it doesn't spend it. Before the copy lands, whatever is
-     * currently live is itself binned first, so the audio this restore
-     * displaces isn't lost either — restoring a take is itself undoable by
-     * pulling that fresh bin entry back out ([restoreFromBin]).
+     * newer is a later displacement the take doesn't want either). The
+     * selection is deliberately inclusive (`>=`, not `>`): with
+     * [archiveTake]'s monotonicity guard in place, a bin entry timestamped
+     * exactly T can only be a *post*-archive displacement (nothing already
+     * in the bin at archive time can share T), so including it is always
+     * correct — a treat's own moveToBin landing in the same millisecond as
+     * the very next save can no longer masquerade as that entry's earlier
+     * self. That entry's bytes are COPIED onto the live file — not
+     * consumed the way [restoreFromBin] normally deletes on restore —
+     * because jumping between takes must stay non-destructive: an
+     * even-older take restored later may need that exact same entry, and a
+     * take-restore reads history, it doesn't spend it. Before the copy
+     * lands, whatever is currently live is itself binned first (unless
+     * it's already byte-identical to the candidate — restoring the same
+     * take twice must not bin a redundant copy of audio that's already
+     * correct), so the audio this restore displaces isn't lost either —
+     * restoring a take is itself undoable by pulling that fresh bin entry
+     * back out ([restoreFromBin]).
      *
      * If nothing was binned since T, the live file was never rewritten and
      * is already the right audio — left untouched, now correct by argument
@@ -476,6 +491,11 @@ class KitBuilderModel private constructor(
             .filter { it.originalName == fileName && it.binnedAtMillis >= archivedAtMillis }
             .minByOrNull { it.binnedAtMillis }
         if (candidate != null) {
+            val live = File(kitDir, fileName)
+            // Already true: a second restore of the same take (or of two
+            // takes that share this file's history) must not keep binning
+            // identical bytes forever - compare before touching anything.
+            if (live.isFile && live.readBytes().contentEquals(candidate.file.readBytes())) return
             moveToBin(fileName) // what's live now becomes history too - a no-op if the file is missing
             candidate.file.copyTo(File(kitDir, fileName), overwrite = true) // copy, not consume - see restoreTake KDoc
             return
@@ -489,7 +509,16 @@ class KitBuilderModel private constructor(
         if (!current.isFile || !dirty) return
         val takesDir = File(kitDir, TAKES_DIR).apply { mkdirs() }
         val next = (takes().lastOrNull()?.let { TAKE_NAME.find(it.name)!!.groupValues[1].toInt() } ?: 0) + 1
-        com.snipsnap.kit.AtomicFile.writeBytes(File(takesDir, "take_%03d.json".format(next)), current.readBytes())
+        val takeFile = File(takesDir, "take_%03d.json".format(next))
+        com.snipsnap.kit.AtomicFile.writeBytes(takeFile, current.readBytes())
+        // A take's T must be strictly later than every bin event that
+        // produced the state it snapshots; same-millisecond flash writes
+        // otherwise make the tie ambiguous in both directions (see
+        // restoreTake's KDoc on the >= selection).
+        val newestBinned = binContents().maxOfOrNull { it.binnedAtMillis }
+        if (newestBinned != null && takeFile.lastModified() <= newestBinned) {
+            takeFile.setLastModified(newestBinned + 1)
+        }
         // Rotate: the cap outlasts any honest session; oldest go first.
         takes().dropLast(MAX_TAKES).forEach { it.delete() }
     }

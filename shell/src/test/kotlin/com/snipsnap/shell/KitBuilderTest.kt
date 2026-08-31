@@ -228,12 +228,14 @@ class KitBuilderTest {
         val pad = m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
         m.save()
 
+        // No sleeps: archiveTake's own T-monotonicity guard (KitBuilder.kt)
+        // is what keeps this deterministic now, not artificial spacing -
+        // a treat's moveToBin landing in the same millisecond as the save
+        // right after it is exactly the boundary that guard exists for.
         m.treatPad(2, "crushed") // bins the pristine original; CRUSHED (T1) becomes live
-        Thread.sleep(5)
         val crushedBytes = File(dir, pad.sampleFile).readBytes()
         m.save() // archives a take whose live audio, right now, IS the crushed copy
         val take = m.takes().last()
-        Thread.sleep(5)
 
         m.treatPad(2, "washed", amount = 0.6f) // bins CRUSHED (a second copy); WASHED (T2) becomes live
         val washedBytes = File(dir, pad.sampleFile).readBytes()
@@ -283,12 +285,11 @@ class KitBuilderTest {
         val pad = m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
         m.save()
 
+        // No sleeps here either - see the fidelity test above for why.
         m.treatPad(2, "crushed") // bins the pristine original; CRUSHED (T1) becomes live
-        Thread.sleep(5)
         val crushedBytes = File(dir, pad.sampleFile).readBytes()
         m.save() // archives a take whose live audio, right now, IS the crushed copy
         val take = m.takes().last()
-        Thread.sleep(5)
 
         m.treatPad(2, "washed", amount = 0.6f) // bins CRUSHED (a second copy); WASHED (T2) becomes live
         val washedBytes = File(dir, pad.sampleFile).readBytes()
@@ -304,6 +305,83 @@ class KitBuilderTest {
         assertTrue(
             restoredBack != null && restoredBack.readBytes().contentEquals(washedBytes),
             "restore-then-restore-back round-trips to the audio the take-restore displaced",
+        )
+    }
+
+    @Test
+    fun `archiveTake keeps its T strictly after every existing bin entry, so a millisecond tie can't fool restoreTake`() {
+        val dir = File(temp, "TakeTMonotonic")
+        val m = KitBuilderModel.create("TakeTMonotonic", dir)
+        val pad = m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+
+        m.treatPad(2, "crushed") // bins the pristine ORIGINAL; CRUSHED becomes live
+        val crushedBytes = File(dir, pad.sampleFile).readBytes()
+
+        // Construct the collision by hand rather than trust real clock
+        // timing to reproduce it: retime the just-binned ORIGINAL entry to
+        // land a hair ahead of "now" - the same-millisecond race a fast
+        // filesystem can hit for real when a treat's moveToBin and the
+        // very next save land in the same tick (F1). A single AtomicFile
+        // flush can't reliably outrun even 1ms on its own, so without the
+        // monotonicity guard the archive below lands at-or-before this
+        // instant.
+        val originalEntry = m.binContents().single()
+        val raceInstant = System.currentTimeMillis() + 1
+        val collided = File(originalEntry.file.parentFile, "${raceInstant}_${originalEntry.originalName}")
+        assertTrue(originalEntry.file.renameTo(collided), "test setup: rename must succeed")
+
+        m.save() // archives a take whose live audio, right now, IS crushed
+        val take = m.takes().last()
+
+        assertTrue(
+            take.lastModified() > raceInstant,
+            "the guard must push the take's own T strictly past every bin entry that already existed at archive time",
+        )
+
+        m.treatPad(2, "washed", amount = 0.6f) // bins CRUSHED (a second copy); WASHED becomes live
+        // Pin this displacement's own bin timestamp explicitly past T too,
+        // rather than trust it landed later than the forced race instant
+        // above by luck - the point of this test is the guard's guarantee,
+        // not how long the DSP work happens to take on this machine.
+        val crushedDisplacedByWashed = m.binContents().single { it.originalName == pad.sampleFile && it.file != collided }
+        val pinned = File(
+            crushedDisplacedByWashed.file.parentFile,
+            "${take.lastModified() + 1}_${crushedDisplacedByWashed.originalName}",
+        )
+        assertTrue(crushedDisplacedByWashed.file.renameTo(pinned), "test setup: rename must succeed")
+
+        m.restoreTake(take)
+
+        val restored = File(dir, m.pad(2)!!.sampleFile).readBytes()
+        assertTrue(
+            restored.contentEquals(crushedBytes),
+            "even with the pre-treat entry forced to tie/overlap the archive instant, restore reattaches CRUSHED, not the pre-treat ORIGINAL",
+        )
+    }
+
+    @Test
+    fun `restoring the same take twice does not grow the bin`() {
+        val dir = File(temp, "RestoreIdempotent")
+        val m = KitBuilderModel.create("RestoreIdempotent", dir)
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+
+        m.treatPad(2, "crushed") // bins the pristine original; CRUSHED becomes live
+        m.save() // archives a take whose live audio, right now, IS crushed
+        val take = m.takes().last()
+        m.treatPad(2, "washed", amount = 0.6f) // bins CRUSHED; WASHED becomes live
+
+        m.restoreTake(take)
+        val binAfterFirst = m.binContents().size
+
+        m.restoreTake(take) // same take, again - the audio is already correct
+        val binAfterSecond = m.binContents().size
+
+        assertEquals(
+            binAfterFirst,
+            binAfterSecond,
+            "a repeat restore of an already-restored take is a no-op on the bin, not another bin entry",
         )
     }
 
