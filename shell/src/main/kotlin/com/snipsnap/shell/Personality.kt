@@ -51,6 +51,8 @@ object Copy {
     // Empty states.
     const val EMPTY_SHELF = "NOTHING TAPED YET. GO STEAL A SOUND (LEGALLY)."
     const val EMPTY_KIT = "16 EMPTY PADS. TERRIFYING."
+    /** A kit folder that won't parse (torn `kit.json`, missing file, etc.) — distinct from EMPTY_SHELF, which claims no kit exists at all. */
+    const val KIT_WONT_OPEN = "THIS KIT WON'T OPEN. THE TAPE MAY BE CHEWED."
 
     // Capture.
     const val SESSION_ARMED = "TAPE ROLLING. GO STEAL A SOUND (LEGALLY)."

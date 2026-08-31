@@ -39,7 +39,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import java.io.File
-import kotlin.math.roundToInt
+import kotlin.math.ceil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -150,13 +150,22 @@ fun TakesBinScreen(
         }
     }
 
-    fun doRestoreFromBin(originalName: String) {
+    /**
+     * The entry-keyed overload, not the name-keyed one — `treatPad`/`eraPad`
+     * can bin several copies of the same `originalName` (each treat-then-
+     * rewrite cycle bins the previous version under that same filename), and
+     * this row's own [KitBuilderModel.BinEntry] is a specific one of those,
+     * distinguished on screen by its own countdown. The name-keyed overload
+     * always resolves to the newest, which is not necessarily the row that
+     * was tapped.
+     */
+    fun doRestoreFromBin(entry: KitBuilderModel.BinEntry) {
         if (busy) return
         val m = model ?: return
         scope.launch {
             busy = true
             try {
-                val restoredFile = withContext(Dispatchers.IO) { m.restoreFromBin(originalName) }
+                val restoredFile = withContext(Dispatchers.IO) { m.restoreFromBin(entry) }
                 if (restoredFile != null) {
                     refreshLists(m)
                     onToast(Copy.BACK_FROM_BIN)
@@ -208,12 +217,14 @@ fun TakesBinScreen(
     if (model == null) {
         // Still opening, or the folder wouldn't parse — the header's own
         // back arrow is the one piece of chrome that must work regardless
-        // (mirrors PAD SHEET's own load-failure shell, including reusing
-        // EMPTY_SHELF rather than a one-off sentence).
+        // (mirrors PAD SHEET's own load-failure shell). Uses KIT_WONT_OPEN,
+        // not EMPTY_SHELF: EMPTY_SHELF claims no kit exists on the shelf at
+        // all, which is false here — a specific, already-open kit's folder
+        // just wouldn't parse.
         Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp)) {
             HeaderChip("◄ KIT", scheme, Modifier.align(Alignment.TopStart).width(64.dp)) { onBack() }
             if (loadFailed) {
-                TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.align(Alignment.Center), maxLines = 3)
+                TapeText(Copy.KIT_WONT_OPEN, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.align(Alignment.Center), maxLines = 3)
             }
         }
         return
@@ -233,7 +244,10 @@ fun TakesBinScreen(
         val now = System.currentTimeMillis()
         binEntries.map { be ->
             val daysSince = (now - be.binnedAtMillis) / 86_400_000.0
-            val daysLeft = (KitBuilderModel.BIN_KEEP_DAYS - daysSince).let { left -> if (left <= 0) 0 else left.roundToInt() }
+            // Ceil, not round-to-nearest — "0D LEFT" must mean genuinely
+            // purge-eligible (matches purgeBin's own `< cutoff` check), not
+            // "rounded down from up to ~12h still standing."
+            val daysLeft = (KitBuilderModel.BIN_KEEP_DAYS - daysSince).let { left -> if (left <= 0) 0 else ceil(left).toInt() }
             // "Recoverable from the kit": a currently-assigned pad whose
             // sample (main or a GHOSTS layer) shares this bin entry's
             // original name. In practice this rarely matches — a file only
@@ -364,7 +378,7 @@ private fun TakeRowLine(row: TakeRow, scheme: Scheme, busy: Boolean, onRestore: 
 }
 
 @Composable
-private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (String) -> Unit) {
+private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (KitBuilderModel.BinEntry) -> Unit) {
     // ≤2 days left renders in `scheme.warn` (the handoff's "≤2 days amber");
     // everything else stays in the LCD's second colour, same as the artboard.
     val dayColor = if (row.daysLeft <= 2) scheme.warn.tape else scheme.amber.tape
@@ -390,7 +404,7 @@ private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (S
             Modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                .let { if (!busy) it.tapeClick { onRestore(row.entry.originalName) } else it }
+                .let { if (!busy) it.tapeClick { onRestore(row.entry) } else it }
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {

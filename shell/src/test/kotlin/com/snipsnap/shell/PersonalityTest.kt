@@ -79,6 +79,7 @@ class PersonalityTest {
             Copy.HUMANIZED, Copy.FORKED_TO_E, Copy.BAR_WIPED, Copy.GHOSTS_ON,
             Copy.INSTRUMENT_MADE, Copy.NO_PITCH, Copy.RETREAT_REFUSED,
             Copy.TAKES_BIN_RULE, Copy.TEACH_CONSENT, Copy.SNAPPED,
+            Copy.TAKES_EMPTY, Copy.BIN_EMPTY_STATE, Copy.BIN_ITEM_GONE, Copy.KIT_WONT_OPEN,
         )
         for (line in lines) {
             assertEquals(line.uppercase(), line, "TapeOS shouts: '$line'")

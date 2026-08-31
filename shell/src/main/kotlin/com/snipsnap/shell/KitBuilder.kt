@@ -453,14 +453,27 @@ class KitBuilderModel private constructor(
             }
             ?.sortedByDescending { it.binnedAtMillis } ?: emptyList()
 
-    /** The newest binned copy of [originalName] back into the kit, or null. */
-    fun restoreFromBin(originalName: String): File? {
-        val entry = binContents().firstOrNull { it.originalName == originalName } ?: return null
-        val dest = File(kitDir, originalName)
+    /**
+     * A specific bin entry back into the kit, or null if it's already gone
+     * (restored or purged by something else since the caller listed it).
+     * The entry-keyed overload exists because [originalName] alone is
+     * ambiguous: `treatPad`/`eraPad` can bin several copies of the same
+     * filename (each treat-then-rewrite cycle bins the previous version
+     * under that same name), and a caller holding a specific [BinEntry] —
+     * e.g. a screen listing bin rows, each with its own countdown — means
+     * *that* one, not "whichever is newest."
+     */
+    fun restoreFromBin(entry: BinEntry): File? {
+        if (!entry.file.isFile) return null
+        val dest = File(kitDir, entry.originalName)
         entry.file.copyTo(dest, overwrite = true)
         entry.file.delete()
         return dest
     }
+
+    /** The newest binned copy of [originalName] back into the kit, or null. */
+    fun restoreFromBin(originalName: String): File? =
+        binContents().firstOrNull { it.originalName == originalName }?.let(::restoreFromBin)
 
     /** THE BIN KEEPS IT 30 DAYS — this is the keeping-side of that promise. */
     fun purgeBin(olderThanDays: Double = BIN_KEEP_DAYS, nowMillis: Long = System.currentTimeMillis()): Int {

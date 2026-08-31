@@ -325,6 +325,45 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `restoreFromBin by entry restores the tapped copy, not just the newest`() {
+        val dir = File(temp, "BinDup")
+        val m = KitBuilderModel.create("BinDup", dir)
+        val pad = m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        val original = File(dir, pad.sampleFile).readBytes()
+
+        // Two treat cycles on the same pad bin two different copies under
+        // the SAME originalName (pad.sampleFile never changes) - moveToBin
+        // keys bin filenames off System.currentTimeMillis(), so a short
+        // sleep guarantees the two entries don't collide on that key.
+        m.treatPad(2, "crushed") // bins the ORIGINAL audio
+        Thread.sleep(5)
+        val crushedBytes = File(dir, pad.sampleFile).readBytes()
+        m.treatPad(2, "washed", amount = 0.6f) // bins the CRUSHED audio
+
+        val bin = m.binContents()
+        assertEquals(2, bin.size, "two entries share pad.sampleFile as their originalName")
+        assertTrue(bin.all { it.originalName == pad.sampleFile })
+        val newer = bin.first() // binContents() is newest-first
+        val older = bin.last()
+        assertTrue(newer.file.readBytes().contentEquals(crushedBytes), "newer entry holds the crushed copy")
+        assertTrue(older.file.readBytes().contentEquals(original), "older entry holds the original")
+
+        // restoreFromBin(String) would always pick `newer` (see its own
+        // KDoc); the entry-keyed overload restores exactly the one handed
+        // to it - the older entry, deeper in the bin, the row a user would
+        // have tapped by its own distinct countdown.
+        val restored = m.restoreFromBin(older)
+        assertTrue(restored != null && restored.readBytes().contentEquals(original), "the tapped (older) entry's own content came back")
+        assertEquals(1, m.binContents().size, "only the tapped entry left the bin")
+        assertEquals(newer.file, m.binContents().single().file, "the newer entry is untouched, still in the bin")
+
+        // A stale entry - already restored, or purged out from under the
+        // caller - is a null, not a crash.
+        assertNull(m.restoreFromBin(older))
+    }
+
+    @Test
     fun `treatments re-render one pad, stack, and undo out of the bin`() {
         val dir = File(temp, "Treat")
         val m = KitBuilderModel.create("Treat", dir)
