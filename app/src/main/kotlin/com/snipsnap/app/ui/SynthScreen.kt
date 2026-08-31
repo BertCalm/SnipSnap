@@ -48,6 +48,7 @@ import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
+import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
@@ -102,10 +103,11 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * matching line and the brief says not to invent one this wave:
  * - SCRAMBLE has no toast (the prototype's `SCRAMBLE_LINES` are prototype-
  *   only flavour, never ported to `Copy`).
- * - SEND TO PAD's success toast is a plain inline sentence — `Copy.treated`
- *   and `Copy.INSTRUMENT_MADE` both exist but neither is semantically a
- *   "replaced this pad's audio" line, so nothing in the TREATED/INSTRUMENT
- *   family fits.
+ * - SEND TO PAD's success toast is a plain inline sentence, for both of its
+ *   branches (REPLACE an assigned pad's audio, or ADD to an empty slot) —
+ *   `Copy.treated` and `Copy.INSTRUMENT_MADE` both exist but neither is
+ *   semantically a "a synth patch landed on this pad" line, so nothing in
+ *   the TREATED/INSTRUMENT family fits either shape.
  */
 @Composable
 fun SynthScreen(
@@ -160,11 +162,15 @@ fun SynthScreen(
     }
 
     fun audition(target: Snip) {
-        // Release synchronously at the swap site, same reasoning as
-        // PadSheetScreen/ChopScreen's own `audition()` — a composition-
-        // scoped coroutine can't guarantee the previous voice actually
-        // stopped before this one starts.
-        voicePlayer?.release()
+        // Signal-only at the swap site: `stop()` is a non-blocking flag flip
+        // — the old voice's own stream thread releases its own AudioTrack on
+        // its way out (TapeVoice's per-thread-owns-its-track contract) — so
+        // this never blocks the render loop on a 200ms join during a drag or
+        // a rapid macro-change cycle. Reassigning `voicePlayer` to the new
+        // instance below is what drops the old reference; full `release()`
+        // (which does join, bounded) is reserved for ON_STOP and teardown,
+        // where a one-time bounded wait is the documented intent.
+        voicePlayer?.stop()
         val mono = Cleanup.toMono(target)
         val v = TapeVoice(mono.samples, mono.sampleRate)
         voicePlayer = v
@@ -210,23 +216,56 @@ fun SynthScreen(
                 // failure toasts honestly instead of crashing the screen.
                 val patch = ThumpPatch(patchDisplayName(voice), voice, macros)
                 val recipe = PadRecipe(patch = patch).toJsonValue()
-                val updatedKit = withContext(Dispatchers.IO) {
+                val name = patchDisplayName(voice)
+                val (existed, updatedKit) = withContext(Dispatchers.IO) {
                     val model = KitBuilderModel.open(e.dir)
-                    model.replaceAudio(slot, recipe) { _ -> patch.render() }
+                    val rendered = patch.render()
+                    val alreadyThere = model.pad(slot) != null
+                    if (alreadyThere) {
+                        // REPLACE: `replaceAudio` only rewrites the sample +
+                        // recipe of a pad that already exists — it leaves
+                        // displayName/drumClass/colorHex/muteGroup exactly as
+                        // they were, so without this follow-up `update` the
+                        // pad's identity would still say (and choke-group
+                        // with) whatever it was before, while sounding like
+                        // the new voice.
+                        model.replaceAudio(slot, recipe) { _ -> rendered }
+                        model.update(slot) { p ->
+                            p.copy(
+                                displayName = name,
+                                drumClass = voice.drumClass,
+                                colorHex = AutoPlace.colorFor(voice.drumClass),
+                                muteGroup = AutoPlace.muteGroupFor(voice.drumClass),
+                            )
+                        }
+                    } else {
+                        // ADD: `assign` places new audio on an empty slot —
+                        // it derives displayName/colorHex/muteGroup itself,
+                        // but has no notion of a synth recipe, so the recipe
+                        // rides a follow-up `update` (its guards permit a
+                        // recipe-only edit; slot/sampleFile stay put).
+                        model.assign(slot, rendered, voice.drumClass, name)
+                        model.update(slot) { p -> p.copy(recipe = recipe) }
+                    }
                     model.save()
-                    model.kit
+                    alreadyThere to model.kit
                 }
                 showChooser = false
                 onKitUpdated(updatedKit)
-                // No Copy line fits a synth patch replacing a pad's audio
-                // (see the file KDoc's carve-out) — the simplest honest
-                // sentence, said plainly. `replaceAudio` bins the displaced
-                // WAV (`KitBuilderModel.replaceAudio`'s own `moveToBin`),
-                // same fact `Copy.treated`'s "ORIGINAL SLEEPS IN THE BIN"
-                // states for the analogous TREATMENT case — said here too.
+                // No Copy line fits a synth patch landing on a pad (see the
+                // file KDoc's carve-out) — the simplest honest sentence,
+                // said plainly. Only the REPLACE branch bins anything —
+                // `replaceAudio` moves the displaced WAV to the bin
+                // (`moveToBin`), the same fact `Copy.treated`'s "ORIGINAL
+                // SLEEPS IN THE BIN" states for TREATMENT — `assign`'s own
+                // `deleteIfUnreferenced` is a no-op on an empty slot (there
+                // was no original), so the ADD branch doesn't claim it.
                 onToast(
-                    "PAD ${padTag(slot)} REPLACED WITH ${patchDisplayName(voice).uppercase()}. " +
-                        "ORIGINAL SLEEPS IN THE BIN.",
+                    if (existed) {
+                        "PAD ${padTag(slot)} REPLACED WITH ${name.uppercase()}. ORIGINAL SLEEPS IN THE BIN."
+                    } else {
+                        "PAD ${padTag(slot)} ADDED: ${name.uppercase()}."
+                    },
                 )
             } catch (ex: Exception) {
                 if (ex is CancellationException) throw ex
@@ -316,6 +355,7 @@ fun SynthScreen(
         if (showChooser) {
             SlotChooserOverlay(
                 kit = kit,
+                previewColor = classColor,
                 scheme = scheme,
                 busy = sendBusy,
                 onPick = ::sendToSlot,
@@ -524,6 +564,7 @@ private val SLOT_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 @Composable
 private fun SlotChooserOverlay(
     kit: Kit?,
+    previewColor: Color,
     scheme: Scheme,
     busy: Boolean,
     onPick: (Int) -> Unit,
@@ -561,6 +602,7 @@ private fun SlotChooserOverlay(
                             SlotCell(
                                 slot = slot,
                                 pad = kit?.pad(slot),
+                                previewColor = previewColor,
                                 enabled = !busy,
                                 scheme = scheme,
                                 onTap = { onPick(slot) },
@@ -575,16 +617,20 @@ private fun SlotChooserOverlay(
 }
 
 /**
- * One chooser cell. `replaceAudio` refuses a slot with no pad on it
- * (`KitBuilderModel.replaceAudio`'s own `IllegalArgumentException`), so —
- * unlike `KitScreen`'s `PadCell`, which lets an empty pad start a new
- * assignment — an empty slot here shows its tag only and never accepts a
- * tap; only an assigned pad, in its class colour, is REPLACES-able.
+ * One chooser cell. An empty slot is offerable (`KitBuilderModel.assign`
+ * lands new audio there — `replaceAudio` alone would refuse it, but
+ * `sendToSlot` branches to `assign` for exactly this case), and previews in
+ * [previewColor] — the CURRENT voice's class colour — so the cell shows the
+ * sound about to land, not a "nothing here" dead zone. A velocity-layered or
+ * chained pad refuses `replaceAudio` outright (its own guards), so those are
+ * grayed out and non-tappable here instead of letting the tap arrive at a
+ * refusal toast.
  */
 @Composable
 private fun SlotCell(
     slot: Int,
     pad: KitPad?,
+    previewColor: Color,
     enabled: Boolean,
     scheme: Scheme,
     onTap: () -> Unit,
@@ -595,24 +641,38 @@ private fun SlotCell(
 
     if (pad == null) {
         Box(
-            modifier.height(Layout.PAD_H.dp).raisedBevel(scheme, Layout.PAD_RADIUS.dp),
+            modifier
+                .height(Layout.PAD_H.dp)
+                .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
+                .border(2.dp, previewColor.copy(alpha = 0.55f), shape)
+                .let { if (enabled) it.tapeClick(onTap) else it }
+                .padding(5.dp),
             contentAlignment = Alignment.TopEnd,
         ) {
-            TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.6f), Modifier.padding(4.dp))
+            TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f))
         }
         return
     }
 
+    val locked = pad.velocityLayers.isNotEmpty() || pad.chain != null
+    val tappable = enabled && !locked
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(pad.drumClass)
+    val fade = if (locked) 0.35f else 1f
     Box(
         modifier
             .height(Layout.PAD_H.dp)
             .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-            .border(2.dp, cls.tape, shape)
-            .let { if (enabled) it.tapeClick(onTap) else it }
+            .border(2.dp, cls.tape.copy(alpha = fade), shape)
+            .let { if (tappable) it.tapeClick(onTap) else it }
             .padding(5.dp),
     ) {
-        TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f), Modifier.align(Alignment.TopEnd))
-        TapeText(pad.displayName, TapeType.marker, cls.tape, Modifier.align(Alignment.BottomStart), maxLines = 2)
+        TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f * fade), Modifier.align(Alignment.TopEnd))
+        TapeText(
+            pad.displayName,
+            TapeType.marker,
+            cls.tape.copy(alpha = fade),
+            Modifier.align(Alignment.BottomStart),
+            maxLines = 2,
+        )
     }
 }
