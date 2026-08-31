@@ -59,10 +59,26 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
+import com.snipsnap.synth.Patch
 import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.Pluck
+import com.snipsnap.synth.PluckPatch
+import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpPatch
 import com.snipsnap.synth.ThumpVoice
+import com.snipsnap.synth.Tines
+import com.snipsnap.synth.TinesPatch
+import com.snipsnap.synth.TinesVoice
+import com.snipsnap.synth.Tonewheel
+import com.snipsnap.synth.TonewheelPatch
+import com.snipsnap.synth.TonewheelVoice
+import com.snipsnap.synth.Velvet
+import com.snipsnap.synth.VelvetPatch
+import com.snipsnap.synth.VelvetVoice
+import com.snipsnap.synth.Vox
+import com.snipsnap.synth.VoxPatch
+import com.snipsnap.synth.VoxVoice
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -81,23 +97,26 @@ private const val MACRO_DEBOUNCE_MS = 100L
 
 /**
  * How long a render has to still be running before the SCOPE shows a busy
- * shimmer. Most THUMP renders finish well under this — a raced delayed
- * reveal means the common case never flashes it.
+ * shimmer. Most renders finish well under this — a raced delayed reveal
+ * means the common case never flashes it.
  */
 private const val RENDER_SHIMMER_DELAY_MS = 150L
 
 /**
- * SYNTH — the THUMP drum-synthesis lab: pick a voice, shape it with macro
- * sliders, SCRAMBLE it, watch the scope, audition it, and land it on a pad.
- * `synth/Thump.kt` is the tested engine; this is the Compose surface plus
- * the SEND TO PAD action.
+ * SYNTH — the six-engine drum/tonal-synthesis lab: pick an engine, pick a
+ * voice, shape it with macro sliders, SCRAMBLE it, watch the scope, audition
+ * it, and land it on a pad. `synth/` is the tested engine layer; this is the
+ * Compose surface plus the SEND TO PAD action, multiplexed over all six
+ * registered engines via the file-private [Engine] adapter below.
  *
  * `prototype/thumplab.html` is the interaction truth this ports: every
  * macro/voice/SCRAMBLE change re-renders and retrigger-plays the audition
  * voice (its own on-screen label says so — "EVERY MOVE RE-RENDERS +
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
- * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era; the engine
- * (`ThumpVoice`) has eight, and reality wins: all eight ship here.
+ * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
+ * only; reality wins: THUMP alone ships eight voices, and five more engines
+ * (TINES, VELVET, VOX, PLUCK, TONEWHEEL) join it here. GRAINS is out of
+ * scope — it has no voice enum, a different shape entirely.
  *
  * Two copy carve-outs, both because `Personality.kt`'s `Copy` object has no
  * matching line and the brief says not to invent one this wave:
@@ -118,28 +137,35 @@ fun SynthScreen(
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
 
-    var voice by remember { mutableStateOf(ThumpVoice.KICK) }
-    // Per-voice macro state, seeded with factory defaults and kept for the
-    // life of the screen: switching voices (or coming back to one) restores
-    // whatever was last touched on it, same as the prototype's `state.macros`
-    // map — not a fresh set of defaults every time.
+    var engine by remember { mutableStateOf(Engine.THUMP) }
+    var voice by remember { mutableStateOf<Enum<*>>(ThumpVoice.KICK) }
+    // Per-(engine, voice) macro state, seeded with factory defaults and kept
+    // for the life of the screen: switching engine or voice (or coming back
+    // to one) restores whatever was last touched on it, same as the
+    // prototype's `state.macros` map — not a fresh set of defaults every
+    // time. Populated eagerly for every (engine, voice) pair up front, same
+    // idiom the THUMP-only screen used for its own eight voices — cheap
+    // (27 entries total across all six engines) and means no read site ever
+    // has to defend against a missing key.
     val macrosByVoice = remember {
-        mutableStateMapOf<ThumpVoice, Map<String, Float>>().apply {
-            ThumpVoice.entries.forEach { put(it, Thump.defaults(it)) }
+        mutableStateMapOf<Pair<Engine, Enum<*>>, Map<String, Float>>().apply {
+            for (e in Engine.entries) {
+                for (v in e.voices()) put(e to v, e.defaults(v))
+            }
         }
     }
-    val macros = macrosByVoice.getValue(voice)
+    val macros = macrosByVoice.getValue(engine to voice)
     // The prototype gates its very first sound behind a "TAP TO POWER ON"
     // veil — a Web Audio autoplay-policy workaround, not part of the actual
     // interaction — and only *after* that makes every move retrigger. This
     // is the Android equivalent: the scope still renders and draws the
     // instant the screen opens, but nothing is heard until the first real
-    // touch (a slider drag, a voice pick, SCRAMBLE), so landing on SYNTH
-    // never plays a kick unasked.
+    // touch (a slider drag, a voice pick, an engine cycle, SCRAMBLE), so
+    // landing on SYNTH never plays a kick unasked.
     var touched by remember { mutableStateOf(false) }
     fun updateMacro(name: String, value: Float) {
         touched = true
-        macrosByVoice[voice] = macrosByVoice.getValue(voice) + (name to value)
+        macrosByVoice[engine to voice] = macrosByVoice.getValue(engine to voice) + (name to value)
     }
 
     var snip by remember { mutableStateOf<Snip?>(null) }
@@ -180,12 +206,14 @@ fun SynthScreen(
     // The debounced re-render + retrigger loop: LaunchedEffect's own key
     // change cancels whatever render was in flight and restarts the delay,
     // which is exactly the trailing-edge debounce `touched()` does by hand
-    // with clearTimeout/setTimeout in the prototype.
-    LaunchedEffect(voice, macros) {
+    // with clearTimeout/setTimeout in the prototype. Keyed on `engine` too
+    // now — switching engines must cancel an in-flight render exactly like
+    // switching voices always has.
+    LaunchedEffect(engine, voice, macros) {
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
-            val rendered = withContext(Dispatchers.Default) { Thump.render(voice, macros) }
+            val rendered = withContext(Dispatchers.Default) { engine.render(voice, macros) }
             snip = rendered
             if (touched) audition(rendered)
         } catch (e: CancellationException) {
@@ -209,14 +237,15 @@ fun SynthScreen(
         sendBusy = true
         scope.launch {
             try {
-                // ThumpPatch's own init validates its macros (Patches.
+                // The patch's own init validates its macros (Patches.
                 // validateMacros) — practically unreachable given every
                 // value here already came from a 0..1 slider or SCRAMBLE,
                 // but constructing it inside the try means an unexpected
                 // failure toasts honestly instead of crashing the screen.
-                val patch = ThumpPatch(patchDisplayName(voice), voice, macros)
+                val name = engine.patchDisplayName(voice)
+                val patch = engine.buildPatch(name, voice, macros)
                 val recipe = PadRecipe(patch = patch).toJsonValue()
-                val name = patchDisplayName(voice)
+                val cls = engine.drumClass(voice)
                 val (existed, updatedKit) = withContext(Dispatchers.IO) {
                     val model = KitBuilderModel.open(e.dir)
                     val rendered = patch.render()
@@ -233,9 +262,9 @@ fun SynthScreen(
                         model.update(slot) { p ->
                             p.copy(
                                 displayName = name,
-                                drumClass = voice.drumClass,
-                                colorHex = AutoPlace.colorFor(voice.drumClass),
-                                muteGroup = AutoPlace.muteGroupFor(voice.drumClass),
+                                drumClass = cls,
+                                colorHex = AutoPlace.colorFor(cls),
+                                muteGroup = AutoPlace.muteGroupFor(cls),
                             )
                         }
                     } else {
@@ -244,7 +273,7 @@ fun SynthScreen(
                         // but has no notion of a synth recipe, so the recipe
                         // rides a follow-up `update` (its guards permit a
                         // recipe-only edit; slot/sampleFile stay put).
-                        model.assign(slot, rendered, voice.drumClass, name)
+                        model.assign(slot, rendered, cls, name)
                         model.update(slot) { p -> p.copy(recipe = recipe) }
                     }
                     model.save()
@@ -280,21 +309,47 @@ fun SynthScreen(
         }
     }
 
-    val classColor = Schemes.classColor(voice.drumClass).tape
+    val classColor = Schemes.classColor(engine.drumClass(voice)).tape
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .height(Layout.LCD_HEADER_H.dp)
+                    // `Layout.LCD_HEADER_H` (40dp) is less than
+                    // `Layout.MIN_HIT_TARGET` (44dp) — every other header in
+                    // the app can get away with that because nothing in it
+                    // is tappable. This one now has a cycler in it, and the
+                    // brief is explicit that the cycler keeps the standing
+                    // hit-target rule, so this screen's own header grows to
+                    // whichever constant is taller rather than clipping the
+                    // cycler's touch target to a shared constant this file
+                    // isn't allowed to change. Local, minimal, and it only
+                    // affects SYNTH's own header row.
+                    .height(max(Layout.LCD_HEADER_H, Layout.MIN_HIT_TARGET).dp)
                     .lcdPanel(scheme)
                     .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                TapeText("THUMP", TapeType.lcdHeader, scheme.lcdInk.tape)
-                TapeText(chipLabel(voice), TapeType.lcdSmall, scheme.amber.tape)
+                // ENGINE cycler — the EXPORT screen's FormatCyclerRow idiom
+                // (tap advances to the next entry, wrapping) ported onto the
+                // LCD header's title in place of a static "THUMP" label.
+                // Long-press is not used, per the brief.
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .tapeClick {
+                            touched = true
+                            val next = engine.next()
+                            engine = next
+                            voice = next.voices().first()
+                        },
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    TapeText("${engine.name} ▸", TapeType.lcdHeader, scheme.lcdInk.tape)
+                }
+                TapeText(chipLabel(engine, voice), TapeType.lcdSmall, scheme.amber.tape)
             }
 
             Column(
@@ -303,9 +358,9 @@ fun SynthScreen(
             ) {
                 ScopeLcd(snip, rendering, scheme, Modifier.fillMaxWidth().height(104.dp))
 
-                VoicePicker(voice, scheme, onSelect = { touched = true; voice = it })
+                VoicePicker(engine, voice, scheme, onSelect = { touched = true; voice = it })
 
-                val macroSpecs = remember(voice) { Thump.macrosFor(voice) }
+                val macroSpecs = remember(engine, voice) { engine.macrosFor(voice) }
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     for (spec in macroSpecs) {
                         MacroSlider(
@@ -326,7 +381,7 @@ fun SynthScreen(
                         modifier = Modifier.weight(1f),
                     ) {
                         touched = true
-                        macrosByVoice[voice] = Thump.scramble(voice, Random(System.nanoTime()))
+                        macrosByVoice[engine to voice] = engine.scramble(voice, Random(System.nanoTime()))
                     }
                     LabButton(
                         if (sendBusy) "…" else "SEND TO PAD ▸",
@@ -365,9 +420,123 @@ fun SynthScreen(
     }
 }
 
-// ---------- voice ↔ drum class ----------
+// ---------- the engine adapter ----------
 
-/** COWBELL/RIM have no dedicated drum class — they read as PERC, same as the KIT screen's own AutoPlace mapping. */
+/**
+ * The screen's own multi-engine adapter — file-private, per the brief ("the
+ * engine abstraction stays file-private to the screen — :synth is not to
+ * change"). All six registered engines already converge on one shape (an
+ * `<X>Voice` enum, `macrosFor`/`defaults`/`scramble`/`render`, and an
+ * `<X>Patch(name, voice, macros)` constructor registered in Patches.kt) —
+ * this just gives the screen one dispatch point instead of six near-
+ * identical call sites, adapting to that convergence rather than the other
+ * way around. Voices are held as `Enum<*>` (not each engine's own sealed
+ * voice type) because the screen keeps "the current voice" as a single piece
+ * of state that survives an engine switch; every `when (this)` branch below
+ * casts back to the one concrete voice type that engine is ever paired
+ * with — safe by construction, since [voices] is the only place a voice for
+ * a given engine ever comes from.
+ */
+private enum class Engine {
+    THUMP, TINES, VELVET, VOX, PLUCK, TONEWHEEL;
+
+    /** THUMP → TINES → VELVET → VOX → PLUCK → TONEWHEEL → THUMP, per the brief. */
+    fun next(): Engine = entries[(ordinal + 1) % entries.size]
+
+    fun voices(): List<Enum<*>> = when (this) {
+        THUMP -> ThumpVoice.entries
+        TINES -> TinesVoice.entries
+        VELVET -> VelvetVoice.entries
+        VOX -> VoxVoice.entries
+        PLUCK -> PluckVoice.entries
+        TONEWHEEL -> TonewheelVoice.entries
+    }
+
+    fun macrosFor(voice: Enum<*>) = when (this) {
+        THUMP -> Thump.macrosFor(voice as ThumpVoice)
+        TINES -> Tines.macrosFor(voice as TinesVoice)
+        VELVET -> Velvet.macrosFor(voice as VelvetVoice)
+        VOX -> Vox.macrosFor(voice as VoxVoice)
+        PLUCK -> Pluck.macrosFor(voice as PluckVoice)
+        TONEWHEEL -> Tonewheel.macrosFor(voice as TonewheelVoice)
+    }
+
+    fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
+        THUMP -> Thump.defaults(voice as ThumpVoice)
+        TINES -> Tines.defaults(voice as TinesVoice)
+        VELVET -> Velvet.defaults(voice as VelvetVoice)
+        VOX -> Vox.defaults(voice as VoxVoice)
+        PLUCK -> Pluck.defaults(voice as PluckVoice)
+        TONEWHEEL -> Tonewheel.defaults(voice as TonewheelVoice)
+    }
+
+    fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
+        THUMP -> Thump.scramble(voice as ThumpVoice, random)
+        TINES -> Tines.scramble(voice as TinesVoice, random)
+        VELVET -> Velvet.scramble(voice as VelvetVoice, random)
+        VOX -> Vox.scramble(voice as VoxVoice, random)
+        PLUCK -> Pluck.scramble(voice as PluckVoice, random)
+        TONEWHEEL -> Tonewheel.scramble(voice as TonewheelVoice, random)
+    }
+
+    // Every engine's `render(voice, macros)` takes exactly those two
+    // params with the rest defaulted — TONEWHEEL alone also carries a
+    // `gateSeconds` param (its stab-vs-sustain knob for the not-yet-built
+    // key-patch side), but its default already produces the one-shot stab
+    // this screen wants, so the uniform two-arg call reaches it fine.
+    fun render(voice: Enum<*>, macros: Map<String, Float>): Snip = when (this) {
+        THUMP -> Thump.render(voice as ThumpVoice, macros)
+        TINES -> Tines.render(voice as TinesVoice, macros)
+        VELVET -> Velvet.render(voice as VelvetVoice, macros)
+        VOX -> Vox.render(voice as VoxVoice, macros)
+        PLUCK -> Pluck.render(voice as PluckVoice, macros)
+        TONEWHEEL -> Tonewheel.render(voice as TonewheelVoice, macros)
+    }
+
+    fun drumClass(voice: Enum<*>): DrumClass = when (this) {
+        THUMP -> (voice as ThumpVoice).drumClass
+        TINES -> (voice as TinesVoice).drumClass
+        VELVET -> (voice as VelvetVoice).drumClass
+        VOX -> (voice as VoxVoice).drumClass
+        PLUCK -> (voice as PluckVoice).drumClass
+        TONEWHEEL -> (voice as TonewheelVoice).drumClass
+    }
+
+    fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
+        THUMP -> ThumpPatch(name, voice as ThumpVoice, macros)
+        TINES -> TinesPatch(name, voice as TinesVoice, macros)
+        VELVET -> VelvetPatch(name, voice as VelvetVoice, macros)
+        VOX -> VoxPatch(name, voice as VoxVoice, macros)
+        PLUCK -> PluckPatch(name, voice as PluckVoice, macros)
+        TONEWHEEL -> TonewheelPatch(name, voice as TonewheelVoice, macros)
+    }
+
+    /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
+    fun patchDisplayName(voice: Enum<*>): String {
+        val voiceName = voice.name.split('_').joinToString(" ") { w -> w.lowercase().replaceFirstChar { it.uppercase() } }
+        val engineName = name.lowercase().replaceFirstChar { it.uppercase() }
+        return "$voiceName $engineName"
+    }
+}
+
+// ---------- voice ↔ drum class ----------
+//
+// One mapping per engine, all named in this one place, per the brief.
+// THUMP's is unchanged (COWBELL/RIM have no dedicated class — they read as
+// PERC, same as the KIT screen's own AutoPlace mapping). TINES splits by how
+// ThumpKits.classic() itself already classifies these same voices when it
+// borrows TINES for its own top row (BELL/CHIME -> TONAL, BLOCK/ZAP ->
+// PERC) plus the brief's own explicit call for TOY -> PERC (the cheap-
+// keyboard laser/game hit reads as a percussive one-shot, not a pitched
+// note). VELVET/VOX/PLUCK/TONEWHEEL are silent in SynthKits.kt about most of
+// their own voices — but every voice from these four engines SynthKits DOES
+// render (VELVET's CHIP, VOX's CHOIR/ROBOT/GHOST, PLUCK's NYLON/KALIMBA/
+// HARP, TONEWHEEL's SOUL/STAB/FULL) is classified TONAL there, and every
+// remaining voice in these four engines is likewise a pitched note (VELVET's
+// BASS/BRASS/SQUELCH, PLUCK's KOTO) — so per the brief's fallback rule
+// ("tonal-pitched voices -> TONAL, percussive -> PERC"), all four engines
+// are TONAL across the board.
+
 private val ThumpVoice.drumClass: DrumClass
     get() = when (this) {
         ThumpVoice.KICK -> DrumClass.KICK
@@ -380,8 +549,28 @@ private val ThumpVoice.drumClass: DrumClass
         ThumpVoice.RIM -> DrumClass.PERC
     }
 
-/** Chip/header label, verbatim from the prototype's voice picker text. */
-private fun chipLabel(voice: ThumpVoice): String = when (voice) {
+private val TinesVoice.drumClass: DrumClass
+    get() = when (this) {
+        TinesVoice.BELL, TinesVoice.CHIME -> DrumClass.TONAL
+        TinesVoice.BLOCK, TinesVoice.ZAP, TinesVoice.TOY -> DrumClass.PERC
+    }
+
+private val VelvetVoice.drumClass: DrumClass get() = DrumClass.TONAL
+private val VoxVoice.drumClass: DrumClass get() = DrumClass.TONAL
+private val PluckVoice.drumClass: DrumClass get() = DrumClass.TONAL
+private val TonewheelVoice.drumClass: DrumClass get() = DrumClass.TONAL
+
+/**
+ * Chip/header label. THUMP keeps its prototype-verbatim abbreviations
+ * (`HAT_CLOSED` → "HAT CL", `HAT_OPEN` → "HAT OP" — the rest are already
+ * short enough as-is); every other engine's voice names are already one
+ * short word (BELL, SQUELCH, KALIMBA, …) with no underscore to break up, so
+ * the raw enum name reads fine unmodified.
+ */
+private fun chipLabel(engine: Engine, voice: Enum<*>): String =
+    if (engine == Engine.THUMP) thumpChipLabel(voice as ThumpVoice) else voice.name
+
+private fun thumpChipLabel(voice: ThumpVoice): String = when (voice) {
     ThumpVoice.KICK -> "KICK"
     ThumpVoice.SNARE -> "SNARE"
     ThumpVoice.HAT_CLOSED -> "HAT CL"
@@ -392,24 +581,28 @@ private fun chipLabel(voice: ThumpVoice): String = when (voice) {
     ThumpVoice.RIM -> "RIM"
 }
 
-/** A saved patch's human name — "Hat Closed", not the enum's `HAT_CLOSED`. */
-private fun patchDisplayName(voice: ThumpVoice): String =
-    voice.name.split('_').joinToString(" ") { word -> word.lowercase().replaceFirstChar { it.uppercase() } }
-
 private fun padTag(slot: Int): String = "A%02d".format(slot)
 
 // ---------- voice picker ----------
 
 @Composable
-private fun VoicePicker(current: ThumpVoice, scheme: Scheme, onSelect: (ThumpVoice) -> Unit) {
-    val voices = ThumpVoice.entries
-    val half = (voices.size + 1) / 2
+private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSelect: (Enum<*>) -> Unit) {
+    val voices = engine.voices()
+    // THUMP's eight voices split into two even rows of four, same as
+    // before; every other engine has four or fewer, so one row fits them
+    // all without inventing a lonely single-chip second row.
+    val rows = if (voices.size <= 4) {
+        listOf(voices)
+    } else {
+        val half = (voices.size + 1) / 2
+        listOf(voices.subList(0, half), voices.subList(half, voices.size))
+    }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        for (row in listOf(voices.subList(0, half), voices.subList(half, voices.size))) {
+        for (row in rows) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (v in row) {
                     val selected = v == current
-                    val color = Schemes.classColor(v.drumClass).tape
+                    val color = Schemes.classColor(engine.drumClass(v)).tape
                     Box(
                         Modifier
                             .weight(1f)
@@ -420,7 +613,7 @@ private fun VoicePicker(current: ThumpVoice, scheme: Scheme, onSelect: (ThumpVoi
                         contentAlignment = Alignment.Center,
                     ) {
                         TapeText(
-                            chipLabel(v),
+                            chipLabel(engine, v),
                             TapeType.pixelSmall,
                             if (selected) scheme.titleInk.tape else scheme.ink2.tape,
                             maxLines = 1,
