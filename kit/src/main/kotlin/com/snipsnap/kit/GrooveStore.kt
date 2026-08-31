@@ -15,6 +15,13 @@ import java.io.File
  * Holds a *list* of clips because the native container does (commercial
  * kits ship four: Chorus / Verse / Intro / Bridge — corpus-verified);
  * pattern variations land in the same file.
+ *
+ * This store is a clip shelf, not the GROOVE screen's program cache: the
+ * screen's A–D are pure functions of the captured clip, recomputed live and
+ * never written here (design/HANDOFF.md). What lands in `groove.json` is
+ * whatever CLI verbs (Chop/Import/Learn/Euclid/Feel) deliberately choose to
+ * persist as artifacts, plus PROG E via [GrooveEdit] — both are correct,
+ * independently, at once.
  */
 object GrooveStore {
 

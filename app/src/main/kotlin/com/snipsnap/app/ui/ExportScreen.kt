@@ -48,7 +48,6 @@ import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
-import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.ExportOutcome
 import com.snipsnap.kit.Finding
 import com.snipsnap.kit.Kit
@@ -240,28 +239,19 @@ private fun ExportContent(
                     // the composable body.
                     val root = context.getExternalFilesDir("exports")
                         ?: throw IOException("external storage unavailable")
-                    // PROGRAM_FOLDER (kit/.../KitExporter.kt:44 — writes to
-                    // `File(destRoot, kit.name)`) and EXPANSION
-                    // (kit/.../ExpansionWriter.kt:109 — writes under
-                    // `File(File(driveRoot, "Expansions"), title)`) both
-                    // nest the kit's own name inside `destRoot` themselves.
-                    // Handing either of them our own kit-name subfolder as
-                    // `destRoot` would double- or triple-nest it
-                    // (`exports/<kit>/<kit>/…` or
-                    // `exports/<kit>/Expansions/<kit>/Programs/…`) — so
-                    // those two get the exports root directly. Every other
-                    // format writes flat files or its own suffixed
-                    // directory straight under `destRoot` with no such
-                    // self-nesting, and needs the per-kit subfolder so two
-                    // different kits' exports can't collide on disk.
-                    val destRoot = when (model.format) {
-                        ExportFormat.PROGRAM_FOLDER, ExportFormat.EXPANSION -> root
+                    // A self-nesting format (see ExportFormat.selfNesting's
+                    // KDoc) already nests the kit's own name inside
+                    // `destRoot` itself; handing it our own kit-name
+                    // subfolder on top would double- or triple-nest it.
+                    val destRoot = if (model.format.selfNesting) {
+                        root
+                    } else {
                         // Sanitized, not the raw kit name — GrooveScreen's
                         // own MIDI export dir already does this (a kit name
                         // free-typed by a user can carry a path separator or
                         // other filesystem-hostile character); this and
                         // that one agree now.
-                        else -> File(root, Names.sanitizeStem(kit.name))
+                        File(root, Names.sanitizeStem(kit.name))
                     }
                     model.write(destRoot, overwrite = true)
                 }

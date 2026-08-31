@@ -2,6 +2,7 @@ package com.snipsnap.app
 
 import android.media.AudioAttributes
 import android.media.SoundPool
+import com.snipsnap.xpm.WavInfo
 import java.io.File
 
 /**
@@ -37,11 +38,18 @@ class PadPlayer {
 
     private val soundBySlot = mutableMapOf<Int, Int>()
     private val gainBySlot = mutableMapOf<Int, Pair<Float, Float>>()
+    private val durationMsBySlot = mutableMapOf<Int, Long>()
 
     /**
      * Queue every pad's WAV for decoding. Loading is asynchronous; a tap
      * that beats the decoder plays nothing (SoundPool's contract), which
      * on a 16-pad kit resolves within a moment of the screen opening.
+     *
+     * Also reads each WAV's header via [WavInfo] for its real duration —
+     * cheap (a header walk, not a decode) and lets callers (PlayScreen's
+     * reap timer) size a per-voice timeout instead of guessing. A pad
+     * whose header can't be read just has no entry in [durationMsBySlot];
+     * [durationMs] returns null and callers fall back to their own default.
      */
     fun load(entry: KitShelf.Entry) {
         for (pad in entry.kit.pads) {
@@ -51,8 +59,16 @@ class PadPlayer {
             val left = pad.level * (2f * (1f - pad.pan)).coerceAtMost(1f)
             val right = pad.level * (2f * pad.pan).coerceAtMost(1f)
             gainBySlot[pad.slot] = left to right
+            runCatching { WavInfo.read(f) }.getOrNull()?.let { info ->
+                if (info.sampleRate > 0) {
+                    durationMsBySlot[pad.slot] = info.frameCount * 1000L / info.sampleRate
+                }
+            }
         }
     }
+
+    /** The loaded pad's sample duration in milliseconds, or null if unknown (header unread/unreadable). */
+    fun durationMs(slot: Int): Long? = durationMsBySlot[slot]
 
     /**
      * Play [slot] at [velocity] (0..1, default 1 = the old fixed-gain
@@ -76,6 +92,7 @@ class PadPlayer {
         pool.release()
         soundBySlot.clear()
         gainBySlot.clear()
+        durationMsBySlot.clear()
     }
 
     companion object {

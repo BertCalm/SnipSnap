@@ -96,32 +96,29 @@ private fun velocityFromY(y: Float, height: Float): Float {
  * mute-group re-triggers, and reaping lazily (only when *something else*
  * is triggered) would leave a pad's own voice-count contribution stuck
  * until another pad happens to be hit, which is wrong far more often than
- * a fixed timer is. 6s covers every one-shot this app currently generates
- * (`Tonewheel`'s gate+release tops out around 8.1s at the high end, but
- * that's a sustained gate pad — PLAY calls `noteOff` for those on release
- * rather than waiting on this timer; genuinely long *one-shot* content,
- * e.g. a multi-second captured loop pad, can outlive this window and get
- * reaped from the allocator's bookkeeping while still audibly playing —
- * it keeps playing (this only forgets the id, it never stops the stream),
- * but a same-group re-trigger after that point won't choke it. Exact
- * per-sample duration would need decoding each WAV up front; out of scope
- * for PadPlayer's "small, app-local" growth this screen asked for.
+ * a fixed timer is.
  *
- * Fix round 1 (F3, Important, deferred): concretely, a reaped voice is
- * gone from `VoiceAllocator`'s internal `active` map — `noteOn`'s
- * `muteGroup` filter (`active.values.filter { it.muteGroup == muteGroup }`)
- * can no longer find it, so it cannot be included in the next hit's
+ * Fix round 2 (H1): the reap delay is now per-voice — [PadPlayer.durationMs]
+ * reads each pad's real WAV duration (frame count / sample rate, from the
+ * header, no decode) at load time, and [reap] schedules for that duration
+ * plus [REAP_TAIL_MS] instead of a flat window. [REAP_DELAY_MS_FALLBACK]
+ * only applies when a pad's duration is unknown (unreadable header, or a
+ * sample that failed to load at all).
+ *
+ * Fix round 1 (F3, Important) history: concretely, a reaped voice is gone
+ * from `VoiceAllocator`'s internal `active` map — `noteOn`'s `muteGroup`
+ * filter (`active.values.filter { it.muteGroup == muteGroup }`) can no
+ * longer find it, so it cannot be included in the next hit's
  * `Allocation.choked` list. The sample itself is unaffected (this never
  * calls `stopStream`) and keeps sounding; only its *chokeability* is what
- * silently expires early. Narrow in practice — only one-shot pads whose
- * actual playback exceeds [REAP_DELAY_MS] are affected, and gate pads
- * never reach this path at all — but real, and worth listening for
- * specifically during on-device testing with any long one-shot content.
- * Ledgered as a follow-up rather than fixed here: the honest fix needs
- * per-sample duration awareness (e.g. decoding each WAV's frame count up
- * front), which nothing in `PadPlayer`/`KitPad` loads today.
+ * silently expires early. With H1's duration-aware timer this only
+ * remains a blind spot for pads whose duration couldn't be read — real,
+ * still worth listening for during on-device testing with such content.
  */
-private const val REAP_DELAY_MS = 6000L
+private const val REAP_DELAY_MS_FALLBACK = 6000L
+
+/** Grace period added on top of a known sample duration before reaping — covers scheduling jitter and SoundPool's own playback latency. */
+private const val REAP_TAIL_MS = 250L
 
 /** Bank-aware pad tag ("A01".."A16", "B01".."B16") — the format the export/CLI side already uses for slot 17+. */
 private fun padTag(slot: Int): String = "%c%02d".format('A' + (slot - 1) / 16, (slot - 1) % 16 + 1)
@@ -188,8 +185,9 @@ fun PlayScreen(entry: KitShelf.Entry?) {
     }
 
     fun reap(voice: VoiceAllocator.Voice) {
+        val delayMs = player.durationMs(voice.padSlot)?.plus(REAP_TAIL_MS) ?: REAP_DELAY_MS_FALLBACK
         scope.launch {
-            delay(REAP_DELAY_MS)
+            delay(delayMs)
             streamIds.remove(voice.id)
             allocator.voiceEnded(voice.id)
             voiceCount = allocator.activeCount

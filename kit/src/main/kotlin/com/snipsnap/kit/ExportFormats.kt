@@ -16,9 +16,13 @@ enum class ExportFormat(
     val id: String,
     /** The export wizard's format-cycler line. */
     val cyclerLabel: String,
+    /** Whether this format nests the kit's own name inside `destRoot` itself, so a caller must not add another per-kit subfolder on top. */
+    val selfNesting: Boolean = false,
 ) {
-    PROGRAM_FOLDER("folder", "MPC 2 FOLDER (EVERY GENERATION)"),
-    EXPANSION("expansion", "EXPANSION (BROWSER TILE)"),
+    // Writes to `File(destRoot, kit.name)` — see KitExporter.kt:44.
+    PROGRAM_FOLDER("folder", "MPC 2 FOLDER (EVERY GENERATION)", selfNesting = true),
+    // Writes under `File(File(driveRoot, "Expansions"), title)` — see ExpansionWriter.kt:109.
+    EXPANSION("expansion", "EXPANSION (BROWSER TILE)", selfNesting = true),
     XPN("xpn", "XPN ARCHIVE (ONE FILE)"),
     MPC3_TRACK("xtd", "MPC 3 NATIVE (.XTD)"),
     MPC3_PROJECT("xpj", "MPC SESSION (.XPJ) — KITS + GROOVES"),
@@ -87,9 +91,23 @@ object Exporters {
         }
         ExportFormat.MPC3_TRACK -> {
             // The call-site clip wins; the kit's remembered grooves back it
-            // up — all of them, up to the container's four slots.
-            val effectiveClips = clip?.let { listOf(it) }
-                ?: GrooveStore.load(kitDir).take(Mpc3TrackWriter.MAX_CLIPS)
+            // up — all of them, up to the container's four slots. Selection
+            // order here (NOT GrooveStore's own stored order, which six
+            // other call sites' firstOrNull() depend on staying base-first
+            // — see GrooveEdit.kt's KDoc) puts the base first and PROG E
+            // right behind it: GrooveEdit.save() appends E last in the
+            // sidecar, so a plain .take(MAX_CLIPS) on a kit with >=4 prior
+            // clips would silently drop the user's own edited program. E
+            // now survives the cap, displacing a derived variant instead.
+            val effectiveClips = clip?.let { listOf(it) } ?: run {
+                val stored = GrooveStore.load(kitDir)
+                val base = stored.firstOrNull()
+                val e = stored.firstOrNull { GrooveEdit.isProgE(it) }
+                val prioritized = listOfNotNull(base) +
+                    listOfNotNull(e.takeIf { it != base }) +
+                    stored.filter { it != base && it != e }
+                prioritized.take(Mpc3TrackWriter.MAX_CLIPS)
+            }
             val r = Mpc3Exporter.exportTrack(kit, kitDir, destRoot, overwrite, clips = effectiveClips, mpc2Twin = dualGeneration)
             ExportOutcome(
                 format, r.program,
