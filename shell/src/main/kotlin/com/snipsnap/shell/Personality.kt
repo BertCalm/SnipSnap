@@ -101,6 +101,12 @@ object Copy {
     fun takeRestored(take: String): String = "$take RESTORED. THE PAST, REPLAYED."
     const val BACK_FROM_BIN = "BACK FROM THE BIN. NO QUESTIONS ASKED."
     const val BIN_EMPTIED = "BIN EMPTIED. THE MACHINE FORGETS, AS ASKED."
+    /** No archived takes yet — the TAKES card holds only the current (NOW) state. */
+    const val TAKES_EMPTY = "NOTHING TO ROLL BACK TO YET."
+    /** The bin's own empty state (the artboard's literal copy — `binEmpty` in `TapeOS Oilslick.dc.html`). */
+    const val BIN_EMPTY_STATE = "THE BIN IS EMPTY. NOTHING TO REGRET."
+    /** `restoreFromBin` returned null: the row was stale by the time BACK was tapped (already pulled, or purged). */
+    const val BIN_ITEM_GONE = "ALREADY GONE. SOMEONE BEAT YOU TO IT."
 
     // ---- TAKES + BIN: the rule the screen states plainly (X2.3) ----
     const val TAKES_BIN_RULE =

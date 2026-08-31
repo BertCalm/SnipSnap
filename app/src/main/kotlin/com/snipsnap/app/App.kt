@@ -36,6 +36,7 @@ import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.StatusBar
 import com.snipsnap.app.ui.StubScreen
+import com.snipsnap.app.ui.TakesBinScreen
 import com.snipsnap.app.ui.TapeScreen
 import com.snipsnap.app.ui.TitleBar
 import com.snipsnap.app.ui.ToastOverlay
@@ -106,6 +107,10 @@ fun App(shelf: KitShelf) {
     // one of them; it's KIT-scoped overlay state instead, cleared whenever
     // the user navigates to another tab (see `MenuRow`'s `onSelect` below).
     var padSheetSlot by remember { mutableStateOf<Int?>(null) }
+    // TAKES + BIN (X2.3): same shape as PAD SHEET above — reachable only
+    // from the KIT action row, not one of MenuRow's fixed ten, so it's
+    // KIT-scoped overlay state rather than its own AppScreen entry.
+    var takesBinOpen by remember { mutableStateOf(false) }
     // X4.4 TEACH THE MACHINE: off by default. The consent row itself lives
     // in PropertiesScreen (⚙), which is out of scope for this pass — this
     // is the plain boolean the brief calls for, wired for CHOP to read,
@@ -179,6 +184,7 @@ fun App(shelf: KitShelf) {
                         // sheet armed to reopen on the same slot next time
                         // KIT comes back into view.
                         padSheetSlot = null
+                        takesBinOpen = false
                     },
                 )
                 Box(Modifier.weight(1f)) {
@@ -192,8 +198,8 @@ fun App(shelf: KitShelf) {
                         AppScreen.KIT -> {
                             val sheetSlot = padSheetSlot
                             val sheetEntry = open
-                            if (sheetSlot != null && sheetEntry != null) {
-                                PadSheetScreen(
+                            when {
+                                sheetSlot != null && sheetEntry != null -> PadSheetScreen(
                                     entry = sheetEntry,
                                     slot = sheetSlot,
                                     onSlotChange = { padSheetSlot = it },
@@ -223,8 +229,29 @@ fun App(shelf: KitShelf) {
                                     // the very navigation that triggers it.
                                     appScope = scope,
                                 )
-                            } else {
-                                KitScreen(open, onLongPress = { slot -> padSheetSlot = slot })
+                                takesBinOpen && sheetEntry != null -> TakesBinScreen(
+                                    entry = sheetEntry,
+                                    onBack = { takesBinOpen = false },
+                                    onToast = { toast = it },
+                                    onKitUpdated = { updatedKit ->
+                                        // Same shape as PAD SHEET's own
+                                        // onKitUpdated above: bumping
+                                        // `open.kit`'s identity is what
+                                        // makes KIT's PadPlayer reload
+                                        // (`LaunchedEffect(entry.kit)`),
+                                        // so a restored sample is heard,
+                                        // not the stale cached one.
+                                        open = open?.copy(kit = updatedKit)
+                                        scope.launch {
+                                            kits = withContext(Dispatchers.IO) { shelf.list() }
+                                        }
+                                    },
+                                )
+                                else -> KitScreen(
+                                    open,
+                                    onLongPress = { slot -> padSheetSlot = slot },
+                                    onTakesBin = { takesBinOpen = true },
+                                )
                             }
                         }
                         AppScreen.TAPE -> TapeScreen(

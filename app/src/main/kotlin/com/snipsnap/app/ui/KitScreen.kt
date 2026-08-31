@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -47,7 +48,7 @@ import kotlinx.coroutines.launch
 private val GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 
 @Composable
-fun KitScreen(entry: KitShelf.Entry?, onLongPress: (Int) -> Unit) {
+fun KitScreen(entry: KitShelf.Entry?, onLongPress: (Int) -> Unit, onTakesBin: () -> Unit) {
     val scheme = LocalScheme.current
 
     if (entry == null) {
@@ -120,6 +121,25 @@ fun KitScreen(entry: KitShelf.Entry?, onLongPress: (Int) -> Unit) {
                         )
                     }
                 }
+            }
+        }
+
+        // X2.3 KIT action row: the artboard (`isKit` in `TapeOS Oilslick.dc.html`)
+        // packs EVIL TWINS (W4.3) and the KEY cycler (F5.3) in here alongside
+        // TAKES + BIN, but neither of those exist in this app yet — they're
+        // separate, unbuilt milestones. Rather than stub cells for features
+        // that aren't real, this row carries TAKES + BIN alone.
+        Row(Modifier.fillMaxWidth()) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .raisedBevel(scheme)
+                    .tapeClick(onTakesBin)
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText("TAKES + BIN ▸", TapeType.pixel, scheme.ink2.tape)
             }
         }
     }
