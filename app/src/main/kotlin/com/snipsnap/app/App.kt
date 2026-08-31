@@ -33,6 +33,7 @@ import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.MenuRow
 import com.snipsnap.app.ui.PadSheetScreen
+import com.snipsnap.app.ui.PlayScreen
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.StatusBar
 import com.snipsnap.app.ui.StubScreen
@@ -307,6 +308,7 @@ fun App(shelf: KitShelf) {
                             appScope = scope,
                             onToast = { toast = it },
                         )
+                        AppScreen.PLAY -> PlayScreen(entry = open)
                         AppScreen.HELP -> HelpScreen()
                         AppScreen.GROOVE -> GrooveScreen(
                             entry = open,
