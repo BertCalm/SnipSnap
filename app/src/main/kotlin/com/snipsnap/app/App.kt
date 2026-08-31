@@ -27,6 +27,7 @@ import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.ExportScreen
 import com.snipsnap.app.ui.ExportSession
+import com.snipsnap.app.ui.GrooveScreen
 import com.snipsnap.app.ui.HelpScreen
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KitsScreen
@@ -280,6 +281,15 @@ fun App(shelf: KitShelf) {
                             onToast = { toast = it },
                         )
                         AppScreen.HELP -> HelpScreen()
+                        AppScreen.GROOVE -> GrooveScreen(
+                            entry = open,
+                            // App's own scope — the same one PadSheetScreen's
+                            // teardown save and ExportScreen's dub write use —
+                            // so a pending debounced E save survives a MenuRow
+                            // tab switch instead of being cancelled by it.
+                            appScope = scope,
+                            onToast = { toast = it },
+                        )
                         else -> StubScreen(screen)
                     }
                 }

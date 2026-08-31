@@ -119,10 +119,10 @@ class GrooveEditTest {
         val twoBar = Mpc3Clip(
             "Two Bar E", 2,
             listOf(
-                Mpc3Note(36, 0, 0.9f),               // bar 0, KICK lane
-                Mpc3Note(99, 4 * s16, 0.5f),          // bar 0, not a lane note at all
-                Mpc3Note(37, ppb, 0.9f),              // bar 1
-                Mpc3Note(99, ppb + 4 * s16, 0.5f),    // bar 1
+                Mpc3Note(36, 0, 0.9f),                                        // bar 0, KICK lane
+                Mpc3Note(GrooveEdit.noteFor(GrooveEdit.Lane.PERC), 4 * s16, 0.5f), // bar 0, PERC lane
+                Mpc3Note(37, ppb, 0.9f),                                      // bar 1, SNARE lane
+                Mpc3Note(GrooveEdit.noteFor(GrooveEdit.Lane.HAT_OPEN), ppb + 4 * s16, 0.5f), // bar 1
             ),
         )
 
@@ -131,6 +131,23 @@ class GrooveEditTest {
 
         val clearedOther = GrooveEdit.clearBar(twoBar, 1)
         assertEquals(listOf(0L, 4 * s16), clearedOther.notes.map { it.timePulses })
+    }
+
+    @Test
+    fun `off-lane notes survive a bar wipe`() {
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        val clip = Mpc3Clip(
+            "Off Lane E", 1,
+            listOf(
+                Mpc3Note(36, 0, 0.9f),      // KICK lane - wiped
+                Mpc3Note(99, 4 * s16, 0.5f), // not one of the editor's five lane notes - survives
+            ),
+        )
+
+        val cleared = GrooveEdit.clearBar(clip, 0)
+
+        assertEquals(listOf(4 * s16), cleared.notes.map { it.timePulses }, "the lane note is gone, the off-lane note stands")
+        assertEquals(99, cleared.notes.single().note)
     }
 
     @Test

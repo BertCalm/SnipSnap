@@ -174,14 +174,17 @@ object GrooveEdit {
     }
 
     /**
-     * Wipes every note in [bar] (0-based), all lanes — CLEAR BAR is a
-     * whole-bar action in the editor, not a per-lane one. Other bars are
-     * untouched, provably.
+     * Wipes [bar] (0-based) across all five editor lanes — CLEAR BAR is a
+     * whole-bar action, not a per-lane one, but it's scoped to the five
+     * lanes the step editor actually draws: a note that rides some other
+     * MIDI note number (never placed by this editor, and unreachable by any
+     * of its cells) survives the wipe untouched, same as every other bar.
      */
     fun clearBar(clip: Mpc3Clip, bar: Int): Mpc3Clip {
         require(bar in 0 until clip.bars) { "bar out of range for a ${clip.bars}-bar clip: $bar" }
         val from = bar * Mpc3Clip.PULSES_PER_BAR
         val until = from + Mpc3Clip.PULSES_PER_BAR
-        return clip.copy(notes = clip.notes.filterNot { it.timePulses in from until until })
+        val laneNotes = Lane.entries.mapTo(HashSet()) { noteFor(it) }
+        return clip.copy(notes = clip.notes.filterNot { it.timePulses in from until until && it.note in laneNotes })
     }
 }
