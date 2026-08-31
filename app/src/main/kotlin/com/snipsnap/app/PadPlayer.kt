@@ -26,7 +26,7 @@ import java.io.File
 class PadPlayer {
 
     private val pool = SoundPool.Builder()
-        .setMaxStreams(16)
+        .setMaxStreams(MAX_STREAMS)
         .setAudioAttributes(
             AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -76,5 +76,19 @@ class PadPlayer {
         pool.release()
         soundBySlot.clear()
         gainBySlot.clear()
+    }
+
+    companion object {
+        /**
+         * SoundPool's real concurrent-voice ceiling — past this it silently
+         * reclaims its own oldest stream, independent of anything a caller's
+         * voice-count bookkeeping thinks is still active. PLAY's
+         * `VoiceAllocator` must be configured at this same number (not its
+         * own 32 default), or the allocator counts voices SoundPool has
+         * already reused out from under it — see PlayScreen.kt's allocator
+         * construction and status line, both of which read this constant
+         * instead of duplicating the literal.
+         */
+        const val MAX_STREAMS = 16
     }
 }

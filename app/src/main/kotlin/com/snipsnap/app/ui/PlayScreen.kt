@@ -106,6 +106,20 @@ private fun velocityFromY(y: Float, height: Float): Float {
  * but a same-group re-trigger after that point won't choke it. Exact
  * per-sample duration would need decoding each WAV up front; out of scope
  * for PadPlayer's "small, app-local" growth this screen asked for.
+ *
+ * Fix round 1 (F3, Important, deferred): concretely, a reaped voice is
+ * gone from `VoiceAllocator`'s internal `active` map — `noteOn`'s
+ * `muteGroup` filter (`active.values.filter { it.muteGroup == muteGroup }`)
+ * can no longer find it, so it cannot be included in the next hit's
+ * `Allocation.choked` list. The sample itself is unaffected (this never
+ * calls `stopStream`) and keeps sounding; only its *chokeability* is what
+ * silently expires early. Narrow in practice — only one-shot pads whose
+ * actual playback exceeds [REAP_DELAY_MS] are affected, and gate pads
+ * never reach this path at all — but real, and worth listening for
+ * specifically during on-device testing with any long one-shot content.
+ * Ledgered as a follow-up rather than fixed here: the honest fix needs
+ * per-sample duration awareness (e.g. decoding each WAV's frame count up
+ * front), which nothing in `PadPlayer`/`KitPad` loads today.
  */
 private const val REAP_DELAY_MS = 6000L
 
@@ -143,7 +157,14 @@ fun PlayScreen(entry: KitShelf.Entry?) {
     LaunchedEffect(entry.kit) { player.load(entry) }
 
     val kit = entry.kit
-    val allocator = remember(entry.dir) { VoiceAllocator() }
+    // Fix round 1 (F2, Important): VoiceAllocator's own default (32) outran
+    // PadPlayer's real SoundPool budget (16) — past 16 concurrent streams
+    // SoundPool silently reclaims its own oldest one, independent of what
+    // this allocator still thinks is active, so the status line lied and a
+    // later stopStream could target an id SoundPool had already reused.
+    // Constructed at PadPlayer.MAX_STREAMS (the real ceiling) instead — the
+    // status line below reads the same constant, so the two can't drift.
+    val allocator = remember(entry.dir) { VoiceAllocator(maxVoices = PadPlayer.MAX_STREAMS) }
     // voiceId -> SoundPool streamId, so a choked/stolen/released voice can
     // actually be stopped — the whole reason PadPlayer grew a return value.
     val streamIds = remember(entry.dir) { mutableStateMapOf<Int, Int>() }
@@ -247,11 +268,25 @@ fun PlayScreen(entry: KitShelf.Entry?) {
     // exists.
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
-    DisposableEffect(fullscreen, activity) {
-        if (fullscreen) activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        onDispose {
-            if (fullscreen) activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+    // Fix round 1 (F1, CRITICAL): the prior version gated the *restore* on
+    // `if (fullscreen)` inside onDispose, but onDispose for this key runs
+    // precisely because `fullscreen` just flipped to false and the read
+    // inside it is live — so the restore never fired on any exit path, and
+    // the app stuck landscape app-wide (MainActivity is only portrait-
+    // locked by these very requestedOrientation writes) until process
+    // death. Now: an effect that unconditionally sets the orientation to
+    // match the current `fullscreen` value on every change, plus a
+    // teardown-only DisposableEffect(Unit) that unconditionally restores
+    // portrait — covering leaving PLAY entirely while still fullscreen.
+    LaunchedEffect(fullscreen, activity) {
+        activity?.requestedOrientation = if (fullscreen) {
+            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
+    }
+    DisposableEffect(Unit) {
+        onDispose { activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -266,7 +301,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
         ) {
             TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             TapeText(
-                "VOICES $voiceCount/${VoiceAllocator.DEFAULT_MAX_VOICES}",
+                "VOICES $voiceCount/${PadPlayer.MAX_STREAMS}",
                 TapeType.lcdReadout,
                 scheme.amber.tape,
                 Modifier.padding(horizontal = 8.dp),
@@ -379,7 +414,7 @@ private fun FullscreenPlayGrid(
         ) {
             TapeText(kit.name, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             TapeText(
-                "VOICES $voiceCount/${VoiceAllocator.DEFAULT_MAX_VOICES}",
+                "VOICES $voiceCount/${PadPlayer.MAX_STREAMS}",
                 TapeType.lcdSmall,
                 scheme.amber.tape,
                 Modifier.padding(horizontal = 8.dp),
