@@ -222,6 +222,92 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `restoreTake reattaches the audio that was live when the take was archived, not newer audio squatting on the filename`() {
+        val dir = File(temp, "RestoreFidelity")
+        val m = KitBuilderModel.create("RestoreFidelity", dir)
+        val pad = m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+
+        m.treatPad(2, "crushed") // bins the pristine original; CRUSHED (T1) becomes live
+        Thread.sleep(5)
+        val crushedBytes = File(dir, pad.sampleFile).readBytes()
+        m.save() // archives a take whose live audio, right now, IS the crushed copy
+        val take = m.takes().last()
+        Thread.sleep(5)
+
+        m.treatPad(2, "washed", amount = 0.6f) // bins CRUSHED (a second copy); WASHED (T2) becomes live
+        val washedBytes = File(dir, pad.sampleFile).readBytes()
+        assertFalse(crushedBytes.contentEquals(washedBytes), "washed must differ from crushed for this test to mean anything")
+
+        m.restoreTake(take)
+
+        val restored = File(dir, m.pad(2)!!.sampleFile).readBytes()
+        assertTrue(
+            restored.contentEquals(crushedBytes),
+            "restore reattaches the audio live when the take was archived (crushed), not the washed treatment applied afterward",
+        )
+        assertFalse(restored.contentEquals(washedBytes))
+
+        // Copy, don't consume: the entry that funded the restore is still in the bin.
+        assertTrue(
+            m.binContents().any { it.file.readBytes().contentEquals(crushedBytes) },
+            "restoring a take must not spend the bin history a later take-restore might also need",
+        )
+    }
+
+    @Test
+    fun `restoreTake leaves a file untouched when nothing was binned since the take was archived`() {
+        val dir = File(temp, "RestoreUntouched")
+        val m = KitBuilderModel.create("RestoreUntouched", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        val pad2 = m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save() // take_001 = the empty original
+        m.assign(3, DrumSynth.tom(), DrumClass.TOM)
+        m.save() // take_002 = pad1 + pad2 - references pad2's file, which is never rewritten
+
+        val before = File(dir, pad2.sampleFile).readBytes()
+        val take = m.takes().last()
+
+        m.restoreTake(take)
+
+        val live = File(dir, pad2.sampleFile)
+        assertTrue(live.isFile, "the file was never rewritten - it's already the right audio")
+        assertTrue(live.readBytes().contentEquals(before), "untouched: no bin history postdates the take for this file")
+        assertEquals(0, m.binContents().size, "nothing should be binned when restoring a file that was never rewritten")
+    }
+
+    @Test
+    fun `restoreTake bins the audio it displaces, so the restore is itself undoable`() {
+        val dir = File(temp, "RestoreUndo")
+        val m = KitBuilderModel.create("RestoreUndo", dir)
+        val pad = m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+
+        m.treatPad(2, "crushed") // bins the pristine original; CRUSHED (T1) becomes live
+        Thread.sleep(5)
+        val crushedBytes = File(dir, pad.sampleFile).readBytes()
+        m.save() // archives a take whose live audio, right now, IS the crushed copy
+        val take = m.takes().last()
+        Thread.sleep(5)
+
+        m.treatPad(2, "washed", amount = 0.6f) // bins CRUSHED (a second copy); WASHED (T2) becomes live
+        val washedBytes = File(dir, pad.sampleFile).readBytes()
+
+        m.restoreTake(take)
+        assertTrue(
+            File(dir, m.pad(2)!!.sampleFile).readBytes().contentEquals(crushedBytes),
+            "restore brings the archived-at-T audio (crushed) back",
+        )
+
+        // The washed audio the restore displaced wasn't lost - it's the newest bin entry now.
+        val restoredBack = m.restoreFromBin(m.pad(2)!!.sampleFile)
+        assertTrue(
+            restoredBack != null && restoredBack.readBytes().contentEquals(washedBytes),
+            "restore-then-restore-back round-trips to the audio the take-restore displaced",
+        )
+    }
+
+    @Test
     fun `an era ages the whole kit, layers included, and undo restores it`() {
         val dir = File(temp, "EraKit")
         val m = KitBuilderModel.create("EraKit", dir)
@@ -311,12 +397,20 @@ class KitBuilderTest {
         m.restoreTake(m.takes().last())
         assertEquals(DrumClass.KICK, m.pad(1)?.drumClass)
         assertTrue(File(dir, pad.sampleFile).isFile, "the take brought its sample home")
-        assertEquals(0, m.binContents().size)
+        assertEquals(
+            1,
+            m.binContents().size,
+            "restoreTake copies the entry back, it doesn't consume it - the bin still holds it",
+        )
 
         // Purge honours the 30-day promise; a fresh delete survives it.
         m.clear(1)
         assertEquals(0, m.purgeBin(nowMillis = System.currentTimeMillis()), "nothing is 30 days old yet")
-        assertEquals(1, m.purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000))
+        assertEquals(
+            2,
+            m.purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000),
+            "the un-consumed restore entry plus the fresh re-clear entry",
+        )
         assertEquals(0, m.binContents().size)
 
         m.assign(2, DrumSynth.snare(), DrumClass.SNARE)

@@ -411,21 +411,76 @@ class KitBuilderModel private constructor(
             } ?: emptyList()
 
     /**
-     * Roll back to an archived take. Samples the take references that were
-     * since binned come back out of the bin — takes and the bin are one
-     * promise. The restored state is unsaved ([dirty]) until [save].
+     * Roll back to an archived take. This restores `kit.json` *and* the
+     * actual audio that was live when the take was archived — not
+     * whatever happens to be sitting on the filename now. A take file's
+     * `lastModified()` is used as its archive time T: [AtomicFile] writes
+     * every take through a temp file (fsynced) and then an atomic rename
+     * over the destination, and on every filesystem this project targets
+     * that rename carries the temp file's own fresh-write mtime forward
+     * rather than resetting it — so `take.lastModified()` is a faithful T,
+     * not an artifact of the rename. (Verified: APFS gives sub-millisecond
+     * resolution in dev; every POSIX target this ships to does likewise or
+     * better.)
+     *
+     * For each file a restored pad references: the bin already timestamps
+     * every rewrite it archives ([BinEntry.binnedAtMillis], via
+     * [moveToBin]), so the bin doubles as that file's own history. Any
+     * entry binned at-or-after T is audio that displaced what was live at
+     * T; the OLDEST such entry is the one that WAS live at T (anything
+     * newer is a later displacement the take doesn't want either). That
+     * entry's bytes are COPIED onto the live file — not consumed the way
+     * [restoreFromBin] normally deletes on restore — because jumping
+     * between takes must stay non-destructive: an even-older take restored
+     * later may need that exact same entry, and a take-restore reads
+     * history, it doesn't spend it. Before the copy lands, whatever is
+     * currently live is itself binned first, so the audio this restore
+     * displaces isn't lost either — restoring a take is itself undoable by
+     * pulling that fresh bin entry back out ([restoreFromBin]).
+     *
+     * If nothing was binned since T, the live file was never rewritten and
+     * is already the right audio — left untouched, now correct by argument
+     * instead of by accident. If the file is missing entirely and no
+     * post-T entry exists, the old newest-first fallback
+     * ([restoreFromBin] by name) still applies.
+     *
+     * Honesty about the bin's own limit: it only keeps history
+     * [BIN_KEEP_DAYS] days ([purgeBin]). A take older than that horizon may
+     * find its history already purged for some of its files — those pads
+     * restore with whatever audio is currently live, the same honest
+     * degradation as the missing-file fallback, not a crash or a lie.
      */
     fun restoreTake(take: File): Kit {
         val restored = KitStore.read(take)
+        val archivedAtMillis = take.lastModified()
         for (pad in restored.pads) {
             val files = listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }
             for (f in files) {
-                if (!File(kitDir, f).isFile) restoreFromBin(f)
+                restoreLiveAudioAsOf(f, archivedAtMillis)
             }
         }
         kit = restored
         dirty = true
         return restored
+    }
+
+    /**
+     * The audio-fidelity core of [restoreTake] for one file: find the bin
+     * entry that was live at [archivedAtMillis] and copy it onto the live
+     * file (binning whatever's live first, so that's undoable too). See
+     * [restoreTake]'s KDoc for the full reasoning — copy-don't-consume in
+     * particular.
+     */
+    private fun restoreLiveAudioAsOf(fileName: String, archivedAtMillis: Long) {
+        val candidate = binContents()
+            .filter { it.originalName == fileName && it.binnedAtMillis >= archivedAtMillis }
+            .minByOrNull { it.binnedAtMillis }
+        if (candidate != null) {
+            moveToBin(fileName) // what's live now becomes history too - a no-op if the file is missing
+            candidate.file.copyTo(File(kitDir, fileName), overwrite = true) // copy, not consume - see restoreTake KDoc
+            return
+        }
+        if (!File(kitDir, fileName).isFile) restoreFromBin(fileName)
     }
 
     private fun archiveTake() {
