@@ -37,6 +37,7 @@ import com.snipsnap.app.ui.PlayScreen
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.StatusBar
 import com.snipsnap.app.ui.StubScreen
+import com.snipsnap.app.ui.SynthScreen
 import com.snipsnap.app.ui.TakesBinScreen
 import com.snipsnap.app.ui.TapeScreen
 import com.snipsnap.app.ui.TitleBar
@@ -307,6 +308,20 @@ fun App(shelf: KitShelf) {
                             // switch instead of being cancelled by it.
                             appScope = scope,
                             onToast = { toast = it },
+                        )
+                        AppScreen.SYNTH -> SynthScreen(
+                            entry = open,
+                            onToast = { toast = it },
+                            onKitUpdated = { updatedKit ->
+                                // Same shape as PAD SHEET/CHOP's own
+                                // onKitUpdated: bump `open.kit`'s identity so
+                                // KIT's PadPlayer reloads the pad SEND TO PAD
+                                // just replaced, not a stale cached sample.
+                                open = open?.copy(kit = updatedKit)
+                                scope.launch {
+                                    kits = withContext(Dispatchers.IO) { shelf.list() }
+                                }
+                            },
                         )
                         AppScreen.PLAY -> PlayScreen(entry = open)
                         AppScreen.HELP -> HelpScreen()
