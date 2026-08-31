@@ -26,6 +26,7 @@ import com.snipsnap.app.theme.windowFrame
 import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.ExportScreen
+import com.snipsnap.app.ui.ExportSession
 import com.snipsnap.app.ui.HelpScreen
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KitsScreen
@@ -109,6 +110,13 @@ fun App(shelf: KitShelf) {
     // is the plain boolean the brief calls for, wired for CHOP to read,
     // with no UI to flip it yet. See the CHOP report for this deviation.
     var teachEnabled by remember { mutableStateOf(false) }
+    // EXPORT: hoisted here, not local to ExportScreen's own composition —
+    // its write runs on `scope` below (App's own, handed down as
+    // `appScope`) so it survives a MenuRow tab switch; the session object
+    // is what lets a remounted ExportScreen reconnect to a write already
+    // in flight instead of racing a second one against the same kit's
+    // files. See ExportSession's own KDoc.
+    var exportSession by remember { mutableStateOf<ExportSession?>(null) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -262,6 +270,13 @@ fun App(shelf: KitShelf) {
                         )
                         AppScreen.EXPORT -> ExportScreen(
                             entry = open,
+                            session = exportSession,
+                            onSessionChange = { exportSession = it },
+                            // App's own scope — the same one `fresh()`
+                            // launches into and `PadSheetScreen`'s teardown
+                            // save uses — so a dub survives a MenuRow tab
+                            // switch instead of being cancelled by it.
+                            appScope = scope,
                             onToast = { toast = it },
                         )
                         AppScreen.HELP -> HelpScreen()
