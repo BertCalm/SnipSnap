@@ -142,7 +142,13 @@ private val LANE_DRUM_CLASS: Map<GrooveEdit.Lane, DrumClass> = mapOf(
     GrooveEdit.Lane.PERC to DrumClass.PERC,
 )
 
-/** The inverse of [GrooveEdit.LANE_SLOT]'s note mapping — what the needle-roll needs to bucket a clip's raw notes into lane columns. */
+/**
+ * The inverse of [GrooveEdit.LANE_SLOT]'s note mapping — what the
+ * needle-roll's RENDERER needs to bucket a clip's raw notes into the five
+ * drawn lane columns (the design). Playback does NOT gate on this map: a
+ * note whose pad sits outside the five lanes (a CLAP, a TOM) still plays —
+ * see the playback clock's own comment — it just isn't drawn as a block.
+ */
 private val NOTE_TO_LANE: Map<Int, GrooveEdit.Lane> = GrooveEdit.Lane.entries.associateBy { GrooveEdit.noteFor(it) }
 
 /**
@@ -232,24 +238,34 @@ fun GrooveScreen(
     val currentClip = remember(progIndex, loadedBase, swingPercent, seed, eClip) {
         computeProgram(progIndex, loadedBase, swingPercent, seed, eClip)
     }
+    // Playback and MIDI export cover every note; the roll only draws the
+    // five lane columns (the design) — this is the honesty line that says
+    // so whenever the on-screen program actually has notes the roll can't
+    // place.
+    val offLaneCount = currentClip?.notes?.count { it.note !in NOTE_TO_LANE } ?: 0
 
     fun failure(action: String, e: Exception) {
         onToast("$action FAILED: ${e.message ?: e.javaClass.simpleName}")
     }
 
     /** Writes whatever's dirty in [eClip] right now, on [target] — shared by DONE's immediate flush and the teardown/ON_STOP safety nets. */
-    fun flushEditorSave(target: CoroutineScope) {
+    /** The actual write, awaited — DONE's own flush needs to know when this is done, not just that it started. */
+    suspend fun saveEditorNow() {
         if (!editorDirty) return
         val c = eClip ?: return
-        target.launch {
-            try {
-                withContext(Dispatchers.IO) { GrooveEdit.save(kitDir, c) }
-                editorDirty = false
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                failure("SAVE", e)
-            }
+        try {
+            withContext(Dispatchers.IO) { GrooveEdit.save(kitDir, c) }
+            editorDirty = false
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            failure("SAVE", e)
         }
+    }
+
+    /** Fire-and-forget flush for the safety nets (teardown, ON_STOP) — nothing downstream needs to wait on these. */
+    fun flushEditorSave(target: CoroutineScope) {
+        if (!editorDirty) return
+        target.launch { saveEditorNow() }
     }
 
     // The debounced write itself: every toggle/clear bumps the tick and
@@ -288,6 +304,14 @@ fun GrooveScreen(
     // tick via `computeProgram`, not a value captured when the loop
     // started, so switching programs mid-play changes what's triggered on
     // the very next tick — matching the artboard's own `gToggle`.
+    //
+    // Every note triggers here, not just the five lane notes the roll
+    // draws (see [NOTE_TO_LANE]'s own KDoc) — a groove with a CLAP or TOM
+    // hit should still be heard, same as it's still written by MIDI ▸.
+    // `noteFor(lane) = 35 + slot` is the writer's whole chromatic map, not
+    // a fact specific to the five lanes, so `note - 35` recovers the pad
+    // slot for any note; `PadPlayer.play` no-ops safely on a slot with
+    // nothing loaded.
     LaunchedEffect(playing, kitDir) {
         if (!playing) return@LaunchedEffect
         var lastNanos = withFrameNanos { it }
@@ -304,11 +328,10 @@ fun GrooveScreen(
                     val inc = (dtNanos / 1_000_000_000.0 * stepsPerSecond).toFloat()
                     var np = lastPos + inc
                     for (n in clip.notes) {
-                        val lane = NOTE_TO_LANE[n.note] ?: continue
                         val p = n.timePulses.toFloat() / GrooveEdit.STEP_PULSES.toFloat()
                         val crossed = (p > lastPos && p <= np) ||
                             (np >= totalSteps && p + totalSteps > lastPos && p + totalSteps <= np)
-                        if (crossed) padPlayer.play(GrooveEdit.LANE_SLOT.getValue(lane))
+                        if (crossed) padPlayer.play(n.note - 35)
                     }
                     if (np >= totalSteps) np -= totalSteps
                     lastPos = np
@@ -363,9 +386,25 @@ fun GrooveScreen(
         onToast(Copy.BAR_WIPED)
     }
 
+    /**
+     * DONE's own flush is awaited, not fire-and-forget: EDIT STEPS re-forks
+     * by re-reading the sidecar from disk (`GrooveEdit.fork`'s early-return
+     * path just hands back whatever's stored), so a fresh fork racing an
+     * in-flight save could read a stale copy and rewind `eClip` to it.
+     * `busy` (which already gates EDIT STEPS/HUMANIZE) closes that window —
+     * no mutex needed if the button simply can't fire while this runs.
+     */
     fun closeEditor() {
         isEditing = false
-        flushEditorSave(scope)
+        if (!editorDirty) return
+        busy = true
+        scope.launch {
+            try {
+                saveEditorNow()
+            } finally {
+                busy = false
+            }
+        }
     }
 
     var midiBusy by remember(kitDir) { mutableStateOf(false) }
@@ -477,6 +516,9 @@ fun GrooveScreen(
                 Modifier.fillMaxWidth(),
                 maxLines = 2,
             )
+            if (offLaneCount > 0) {
+                TapeText(Copy.offLane(offLaneCount), TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
+            }
         }
 
         if (isEditing) {

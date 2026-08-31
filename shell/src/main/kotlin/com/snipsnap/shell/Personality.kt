@@ -111,6 +111,9 @@ object Copy {
     const val FORKED_TO_E = "FORKED TO PROG E. A–D STAY UNTOUCHED."
     const val BAR_WIPED = "BAR WIPED. THE MACHINE FORGIVES."
 
+    /** The needle-roll only draws five lanes; a note on any other pad still plays and still exports — this says so. */
+    fun offLane(n: Int): String = "+$n OFF-LANE — HEARD AND EXPORTED, NOT DRAWN"
+
     // ---- PAD SHEET ----
     const val GHOSTS_ON = "GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
     fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."

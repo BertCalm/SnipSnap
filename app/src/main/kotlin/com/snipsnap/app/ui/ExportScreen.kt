@@ -53,6 +53,7 @@ import com.snipsnap.kit.ExportOutcome
 import com.snipsnap.kit.Finding
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.Names
 import com.snipsnap.kit.Severity
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.ExportWizardModel
@@ -255,7 +256,12 @@ private fun ExportContent(
                     // different kits' exports can't collide on disk.
                     val destRoot = when (model.format) {
                         ExportFormat.PROGRAM_FOLDER, ExportFormat.EXPANSION -> root
-                        else -> File(root, kit.name)
+                        // Sanitized, not the raw kit name — GrooveScreen's
+                        // own MIDI export dir already does this (a kit name
+                        // free-typed by a user can carry a path separator or
+                        // other filesystem-hostile character); this and
+                        // that one agree now.
+                        else -> File(root, Names.sanitizeStem(kit.name))
                     }
                     model.write(destRoot, overwrite = true)
                 }
