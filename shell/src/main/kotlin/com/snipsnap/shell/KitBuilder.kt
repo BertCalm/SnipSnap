@@ -451,7 +451,12 @@ class KitBuilderModel private constructor(
      * take twice must not bin a redundant copy of audio that's already
      * correct), so the audio this restore displaces isn't lost either —
      * restoring a take is itself undoable by pulling that fresh bin entry
-     * back out ([restoreFromBin]).
+     * back out ([restoreFromBin]). The candidate's bytes are read into
+     * memory before that pre-overwrite bin happens, not copied by path
+     * afterward: [moveToBin] is now collision-proof on its own (see its
+     * KDoc), but reading first means this function's correctness never
+     * again depends on that — nothing it does afterward can change what
+     * gets written back.
      *
      * If nothing was binned since T, the live file was never rewritten and
      * is already the right audio — left untouched, now correct by argument
@@ -491,13 +496,21 @@ class KitBuilderModel private constructor(
             .filter { it.originalName == fileName && it.binnedAtMillis >= archivedAtMillis }
             .minByOrNull { it.binnedAtMillis }
         if (candidate != null) {
+            // Read the candidate's bytes into memory BEFORE touching
+            // anything else on disk. [moveToBin] below is itself now
+            // collision-proof (never overwrites an existing bin file), but
+            // reading first removes any dependency on that guarantee here
+            // too: nothing this function does afterward can change what
+            // gets written back, even if some other path someday binned
+            // under this exact name at this exact millisecond.
+            val candidateBytes = candidate.file.readBytes()
             val live = File(kitDir, fileName)
             // Already true: a second restore of the same take (or of two
             // takes that share this file's history) must not keep binning
             // identical bytes forever - compare before touching anything.
-            if (live.isFile && live.readBytes().contentEquals(candidate.file.readBytes())) return
+            if (live.isFile && live.readBytes().contentEquals(candidateBytes)) return
             moveToBin(fileName) // what's live now becomes history too - a no-op if the file is missing
-            candidate.file.copyTo(File(kitDir, fileName), overwrite = true) // copy, not consume - see restoreTake KDoc
+            live.writeBytes(candidateBytes) // copy, not consume - see restoreTake KDoc
             return
         }
         if (!File(kitDir, fileName).isFile) restoreFromBin(fileName)
@@ -609,12 +622,33 @@ class KitBuilderModel private constructor(
         }
     }
 
-    /** EJECTED. THE BIN KEEPS IT 30 DAYS — deletes are recoverable, not gone. */
+    /**
+     * EJECTED. THE BIN KEEPS IT 30 DAYS — deletes are recoverable, not gone.
+     *
+     * Bin filenames are only `"<millis>_<name>"` ([BIN_NAME]) — two calls
+     * that bin the SAME [fileName] inside the same real millisecond (a
+     * treat-then-rewrite followed immediately by another one, or a
+     * take-restore binning the file it's about to overwrite right after
+     * that same file was itself just binned by something else) would
+     * otherwise collide on that exact filename, and `copyTo(overwrite =
+     * true)` would silently clobber whichever entry got there first with
+     * the second call's bytes — a real, observed failure mode (root-caused
+     * via instrumented repro, not theorized), not a rounding artifact.
+     * Walking the millisecond forward until the name is free keeps
+     * `binnedAtMillis` meaningful (still real-clock-based, only nudged
+     * past a genuine same-instant tie) instead of losing one entry's
+     * content outright.
+     */
     private fun moveToBin(fileName: String) {
         val src = File(kitDir, fileName)
         if (!src.isFile) return
         val binDir = File(kitDir, BIN_DIR).apply { mkdirs() }
-        val dest = File(binDir, "${System.currentTimeMillis()}_$fileName")
+        var stamp = System.currentTimeMillis()
+        var dest = File(binDir, "${stamp}_$fileName")
+        while (dest.exists()) {
+            stamp++
+            dest = File(binDir, "${stamp}_$fileName")
+        }
         src.copyTo(dest, overwrite = true)
         src.delete()
     }
