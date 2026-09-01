@@ -113,13 +113,21 @@ decode) and one screen.
 6. *(follow-up, separate)* compressed decode via `MediaExtractor` against
    `DecodeContract`, with the device instrumentation test it specifies.
 
-## Open questions for the user
-- **Where does IMPORT live?** Its own menu screen, or an action on the
-  KITS shelf ("FRESH TAPE" has a sibling: "IMPORT")? The shelf reads more
-  naturally as "how kits begin", but a screen has room for the review list.
-- **Loops: chop or keep whole?** Proposal above sends loops to CHOP. The
-  alternative is importing a loop as one pad (a LOOP-class pad, playable
-  whole). Both are defensible; the design's own LOOP-class pads suggest
-  keeping whole should at least be *offered*.
-- **Does import ever overwrite?** Proposal: never — only empty pads, or a
-  brand-new kit. Overwriting is what the PAD SHEET is for.
+## Answered (user, 2026-08-31)
+
+- **Where:** on the FRESH TAPE menu — IMPORT is a starter, the seventh
+  entry alongside the six generated ones. A kit begins either by the
+  machine inventing sound or by the user bringing it; the shelf is where
+  both belong. The review list therefore lives in a full-screen flow
+  launched *from* that menu, not in the sheet itself.
+- **Loops:** offer BOTH. A detected loop presents two actions — CHOP IT
+  (hands the loop to the existing chop flow) or KEEP IT WHOLE (imports as
+  one LOOP-class pad, which the design already has: LOOP `#3F8CF0`, and
+  W12's mini-waveforms already decay slower for loops). Default the
+  highlight to CHOP IT, since slicing is what a sampler is for, but never
+  decide for the user.
+- **Overwriting:** never. Import writes to empty pads or a brand-new kit,
+  full stop. If a target kit has no room, say so plainly and offer a new
+  kit instead. Replacing a pad's sound is the PAD SHEET's job and stays
+  there — an importer that can silently overwrite is an importer nobody
+  trusts with a thousand-file folder.
