@@ -76,8 +76,7 @@ class ChopReviewModel private constructor(
      * classes, whole banks so nothing is dropped. Index i = pad i+1.
      */
     fun placementPreview(): List<Row?> {
-        val padCount = (((rows.size + 15) / 16) * 16).coerceAtMost(128)
-        return AutoPlace.arrange(rows, padCount) { it.effectiveClass }
+        return AutoPlace.arrange(rows, bankAlignedPadCount(rows.size)) { it.effectiveClass }
     }
 
     /**
@@ -164,7 +163,7 @@ class ChopReviewModel private constructor(
         val pitched = rows.filter { it in pitchByRow }.sortedBy { pitchByRow.getValue(it).hz }
         val unpitched = rows.filter { it !in pitchByRow }
         val ordered = pitched + unpitched
-        val padCount = (((ordered.size + 15) / 16) * 16).coerceAtMost(128)
+        val padCount = bankAlignedPadCount(ordered.size)
         return ordered.take(padCount) + List(padCount - ordered.size.coerceAtMost(padCount)) { null }
     }
 
@@ -209,6 +208,15 @@ class ChopReviewModel private constructor(
     }
 
     companion object {
+        /**
+         * Whole banks of 16, rounded up, so nothing is dropped — but never
+         * zero. A chop that found no slices still describes an empty
+         * 16-pad grid: `AutoPlace.arrange` refuses `padCount == 0`, and
+         * "no hits detected" is not the same thing as "no grid to show."
+         */
+        internal fun bankAlignedPadCount(rowCount: Int): Int =
+            (((rowCount + 15) / 16).coerceAtLeast(1) * 16).coerceAtMost(128)
+
         /** Below this the chip goes dashed — same threshold as the CLI's `?`. */
         const val NOT_SURE_BELOW = 0.5f
 

@@ -176,6 +176,40 @@ class ChopReviewTest {
     }
 
     @Test
+    fun `a chop that found no slices previews an empty grid instead of crashing`() {
+        // Digital silence: Transients.detect returns emptyList() for it (see
+        // its own doc comment), so Chopper.byTransients yields zero slices —
+        // the genuine "chop found nothing" case, not a contrived empty list.
+        val silence = Snip(FloatArray(rate * 2), 1, rate)
+        val model = ChopReviewModel.chop(silence, ChopReviewModel.ChopMode.ByHits())
+        assertEquals(0, model.sliceCount)
+
+        val placed = model.placementPreview()
+        assertEquals(16, placed.size)
+        assertTrue(placed.all { it == null })
+
+        assertEquals("AUTO-PLACE: FILL IN ORDER", model.placementSummary())
+
+        val sent = model.sendToGrid()
+        assertEquals(0, sent.sliceCount)
+        assertFalse(sent.chokeSet)
+        assertEquals(16, sent.arranged.size)
+        assertTrue(sent.arranged.all { it == null })
+
+        val melodicPlaced = model.melodicPreview()
+        assertEquals(16, melodicPlaced.size)
+        assertTrue(melodicPlaced.all { it == null })
+
+        val sentMelodic = model.sendToGridMelodic()
+        assertEquals(0, sentMelodic.sliceCount)
+        assertFalse(sentMelodic.chokeSet)
+        assertEquals(16, sentMelodic.arranged.size)
+        assertTrue(sentMelodic.arranged.all { it == null })
+
+        assertEquals(null, model.grooveClip("Empty"))
+    }
+
+    @Test
     fun `unsure rows exist as a concept and chips name every class`() {
         // A near-silent blip classifies with low confidence somewhere.
         val quiet = Snip(FloatArray(rate) { if (it < 200) 0.02f else 0f }, 1, rate)

@@ -290,11 +290,36 @@ private fun ChopContent(
         v.start(0)
     }
 
-    val placed = if (melodic) (melodicPlaced ?: emptyList()) else model.placementPreview()
+    // `placementPreview()`/`placementSummary()` are real DSP-adjacent
+    // derivations over `model` — normally total, but a single guarded call
+    // here is the seam that stops any exception from either one killing
+    // the app mid-recomposition. On failure this reuses `ChopScreen`'s own
+    // empty-state face and toast path rather than inventing new UI; the
+    // toast fires from a `LaunchedEffect` (composition itself must stay a
+    // pure read of state, not a place to trigger side effects directly).
+    var classicError by remember(model) { mutableStateOf<String?>(null) }
+    val classicPlacement = if (melodic) null else try {
+        (model.placementPreview() to model.placementSummary()).also { classicError = null }
+    } catch (e: Exception) {
+        classicError = e.message ?: e.javaClass.simpleName
+        null
+    }
+    val classicFailed = !melodic && classicPlacement == null
+
+    LaunchedEffect(classicFailed) {
+        if (classicFailed) onToast("CHOP FAILED: ${classicError ?: "couldn't lay out the slices"}")
+    }
+
+    if (!melodic && classicFailed) {
+        EmptyChop(scheme)
+        return
+    }
+
+    val placed = if (melodic) (melodicPlaced ?: emptyList()) else classicPlacement!!.first
     val stripText = when {
         melodic && melodicBusy -> "…"
         melodic -> Copy.MELODIC_ON
-        else -> model.placementSummary()
+        else -> classicPlacement!!.second
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
