@@ -87,13 +87,48 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) {
         streamThread = null
     }
 
+    /**
+     * Writes silence into [track] until [alreadyWritten] plus the padding
+     * reaches the track's own buffer capacity (a no-op once [alreadyWritten]
+     * already meets or exceeds it — the normal case for any clip longer than
+     * the buffer). Returns how many silent frames were actually accepted, so
+     * the caller's frames-written tally — and therefore the drain wait's
+     * target — includes them.
+     */
+    private fun padToFillBuffer(track: AudioTrack, alreadyWritten: Int, myGeneration: Int): Int {
+        val remaining = track.bufferSizeInFrames - alreadyWritten
+        if (remaining <= 0) return 0
+        val silence = FloatArray(minOf(remaining, BLOCK_FRAMES))
+        var padded = 0
+        while (padded < remaining) {
+            if (generation.get() != myGeneration) break
+            val chunk = minOf(silence.size, remaining - padded)
+            val w = try {
+                track.write(silence, 0, chunk, AudioTrack.WRITE_BLOCKING)
+            } catch (e: IllegalStateException) {
+                break
+            }
+            if (w <= 0) break
+            padded += w
+        }
+        return padded
+    }
+
     private fun runLoop(myGeneration: Int) {
         // Construction cost lives here, off the UI thread that calls start()
         // — this is a MODE_STREAM track (no asset to decode or buffer to
         // prefill up front, unlike AndroidAudioSink's long-lived track,
         // which is built once for the process and kept), so building one
         // per stream is cheap relative to the write loop it's about to run.
-        val track = buildTrack(sampleRate)
+        val track = buildTrack(sampleRate, tape.size)
+        // Set once the loop exits because the tape genuinely ran out (as
+        // opposed to a signaled stop(), a superseding start(), a vanished
+        // track, or a short write) — the one case where the *last* buffer's
+        // worth of already-written-but-not-yet-rendered audio should be
+        // allowed to finish playing rather than being cut off. See the
+        // drain comment in the `finally` block below for why this matters.
+        var ranToCompletion = false
+        var framesWritten = 0
         try {
             runCatching { track.play() }
             val block = FloatArray(BLOCK_FRAMES)
@@ -101,6 +136,20 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) {
                 val at = cursor.get()
                 if (at >= tape.size) {
                     running.set(false)
+                    ranToCompletion = true
+                    // Even a buffer capped to the clip's own size (see
+                    // bufferBytes()'s KDoc) can't shrink below the device's
+                    // own AudioTrack.getMinBufferSize() floor — measured on
+                    // this device, that floor is bigger than some one-shots
+                    // (RIM's 3208 frames vs. a 5304-frame minimum), which
+                    // leaves the buffer under-filled and the HAL never
+                    // starts outputting at all. Padding with silence up to
+                    // the buffer's actual size is threshold-agnostic
+                    // regardless of *why* the buffer came up short — it
+                    // reaches 100% fill either way. Silence is inaudible,
+                    // so this is safe even when the cap in bufferBytes()
+                    // already made padding unnecessary (remaining <= 0).
+                    framesWritten += padToFillBuffer(track, framesWritten, myGeneration)
                     return
                 }
                 val n = minOf(BLOCK_FRAMES, tape.size - at)
@@ -120,14 +169,62 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) {
                     written += w
                 }
                 cursor.addAndGet(n)
+                framesWritten += n
             }
         } finally {
             // Every exit path lands here — a signaled stop(), a superseding
-            // start(), and running off the end of the tape alike — and every
-            // one of them settles and releases only the track this thread
-            // itself built. Nothing else can ever be holding it.
-            runCatching { track.pause() }
-            runCatching { track.flush() }
+            // start(), a vanished track, and running off the end of the tape
+            // alike — and every one of them settles and releases only the
+            // track this thread itself built. Nothing else can ever be
+            // holding it.
+            //
+            // But they don't all want the same settle: `write(WRITE_
+            // BLOCKING)` only blocks until data is *accepted* into the
+            // track's internal buffer, not until it's actually rendered —
+            // for a one-shot short enough to fit in a single buffer (most
+            // of THUMP/TINES' percussive voices — RIM and BLOCK both land
+            // here), the writes return almost immediately and the tape
+            // "finishes" before a single frame has left the speaker.
+            // `pause()` + `flush()` — the correct, deliberate choice for
+            // every *interrupted* exit below — is "for an immediate stop"
+            // per AudioTrack's own docs, and discards exactly that unplayed
+            // tail. MODE_STREAM's documented alternative is `stop()`
+            // ("audio will stop playing after the last buffer that was
+            // written has been played") — measured on this device, that
+            // documented behavior doesn't hold: calling `stop()` here
+            // flips `playState` straight to STOPPED with `playback
+            // HeadPosition` frozen at whatever it already was, same as
+            // `pause()`+`flush()` would. So the ranToCompletion path
+            // doesn't call `stop()` at all — it leaves the track in the
+            // PLAYING state `play()` already put it in, and just waits
+            // (bounded, and abortable the same way the write loop above
+            // is) for `playbackHeadPosition` to catch up to what was
+            // written on its own. A superseding start() or an explicit
+            // stop() during that wait still wants the immediate cutoff, so
+            // an aborted or timed-out drain falls through to the same
+            // pause()+flush() the interrupted paths use, rather than to
+            // release() directly.
+            if (ranToCompletion) {
+                val drainTimeoutNanos = (framesWritten * 1_000_000_000L / sampleRate) + DRAIN_MARGIN_NANOS
+                val deadline = System.nanoTime() + drainTimeoutNanos
+                var drained = false
+                while (System.nanoTime() < deadline) {
+                    if (generation.get() != myGeneration) break
+                    val played = runCatching { track.playbackHeadPosition }.getOrDefault(framesWritten)
+                    if (played >= framesWritten) {
+                        drained = true
+                        break
+                    }
+                    Thread.sleep(DRAIN_POLL_MILLIS)
+                }
+                if (!drained) {
+                    runCatching { track.pause() }
+                    runCatching { track.flush() }
+                }
+            } else {
+                runCatching { track.pause() }
+                runCatching { track.flush() }
+            }
             runCatching { track.release() }
         }
     }
@@ -137,7 +234,20 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) {
         const val BYTES_PER_FLOAT = 4
         const val BUFFER_MILLIS = 150
 
-        fun buildTrack(sampleRate: Int): AudioTrack = AudioTrack.Builder()
+        // Extra slack on top of the linear playback-time estimate, before
+        // giving up on the drain wait and falling back to an immediate
+        // cutoff. Measured on-device: a short one-shot's `playbackHead
+        // Position` doesn't start advancing the instant the drain wait
+        // begins — there's HAL/mixer startup latency on top of the
+        // straight-line duration (a real BLOCK hit took ~550ms wall clock
+        // to fully drain against a ~360ms linear estimate, a ~190ms gap) —
+        // so the margin is generous rather than the couple-buffers'-worth
+        // a fixed device might need; a one-shot is short regardless, so
+        // the worst case here is still well under a second.
+        const val DRAIN_MARGIN_NANOS = 300_000_000L
+        const val DRAIN_POLL_MILLIS = 5L
+
+        fun buildTrack(sampleRate: Int, tapeFrames: Int): AudioTrack = AudioTrack.Builder()
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -151,18 +261,34 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) {
                     .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                     .build(),
             )
-            .setBufferSizeInBytes(bufferBytes(sampleRate))
+            .setBufferSizeInBytes(bufferBytes(sampleRate, tapeFrames))
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
 
-        fun bufferBytes(sampleRate: Int): Int {
+        /**
+         * A one-shot shorter than [BUFFER_MILLIS] can never fill a
+         * streaming buffer sized for the full 150ms — measured on-device,
+         * some HALs never start actual output until the buffer is filled
+         * to capacity (a 3208-frame RIM hit in a 6615-frame buffer sat at
+         * `playbackHeadPosition == 0` for 800ms despite `playState ==
+         * PLAYING`, while a 10577-frame COWBELL hit — which fills the same
+         * buffer to capacity and beyond — drained correctly). So the
+         * buffer is capped to the clip's own length whenever that's
+         * shorter than the streaming default: writing the whole clip then
+         * fills it to exactly 100%, which is threshold-agnostic by
+         * construction. Longer clips keep the original streaming-sized
+         * buffer untouched.
+         */
+        fun bufferBytes(sampleRate: Int, tapeFrames: Int): Int {
             val wanted = sampleRate * BUFFER_MILLIS / 1000 * BYTES_PER_FLOAT
+            val tapeBytes = tapeFrames * BYTES_PER_FLOAT
+            val capped = if (tapeBytes in 1 until wanted) tapeBytes else wanted
             val minimum = AudioTrack.getMinBufferSize(
                 sampleRate,
                 AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_FLOAT,
             )
-            return maxOf(wanted, minimum)
+            return maxOf(capped, minimum)
         }
     }
 }
