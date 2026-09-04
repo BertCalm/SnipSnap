@@ -1,5 +1,7 @@
 package com.snipsnap.app.ui
 
+import android.os.SystemClock
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -7,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,15 +19,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -34,8 +41,11 @@ import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.StarterKits
+import kotlin.math.sqrt
+import kotlinx.coroutines.delay
 
 /**
  * The tape shelf: every kit folder on the device, plus the FRESH TAPE
@@ -222,30 +232,110 @@ private fun ArmControl(armed: Boolean, onArm: () -> Unit, onSnip: () -> Unit, on
         PrimaryAction(label = "ARM TAPE", enabled = true, onClick = onArm)
         return
     }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(
-            Modifier
-                .weight(2f)
-                .height(Layout.PRIMARY_ACTION_H.dp)
-                .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
-                .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(6.dp))
-                .tapeClick(onEject),
-            contentAlignment = Alignment.Center,
-        ) {
-            TapeText("EJECT", TapeType.displayBig, BIN_RED_GLOW)
-        }
-        Box(
-            Modifier
-                .weight(1f)
-                .height(Layout.PRIMARY_ACTION_H.dp)
-                .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
-                .border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-                .tapeClick(onSnip),
-            contentAlignment = Alignment.Center,
-        ) {
-            TapeText("SNIP", TapeType.displayBig, scheme.amber.tape)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        RecordingIndicator()
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(
+                Modifier
+                    .weight(2f)
+                    .height(Layout.PRIMARY_ACTION_H.dp)
+                    .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
+                    .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(6.dp))
+                    .tapeClick(onEject),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText("EJECT", TapeType.displayBig, BIN_RED_GLOW)
+            }
+            Box(
+                Modifier
+                    .weight(1f)
+                    .height(Layout.PRIMARY_ACTION_H.dp)
+                    .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
+                    .border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
+                    .tapeClick(onSnip),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText("SNIP", TapeType.displayBig, scheme.amber.tape)
+            }
         }
     }
+}
+
+/**
+ * The armed session's liveness readout — a live input-level bar paired
+ * with a wall-clock elapsed counter, so a silent room can't be misread as
+ * a dead indicator: "ARMED" alone doesn't say whether anything is still
+ * happening, but "flat meter + a ticking counter" reads unmistakably as
+ * *recording, hearing nothing*, which is exactly the diagnostic a truly
+ * silent mic should produce.
+ *
+ * [MicSessionService.level] is collected right here, not hoisted up into
+ * [ArmControl] — it updates at ~21 Hz (`READ_BLOCK_FRAMES` @ 44.1kHz), so
+ * this is the smallest composable scope that should recompose on every
+ * tick.
+ */
+@Composable
+private fun RecordingIndicator() {
+    val scheme = LocalScheme.current
+    val level by MicSessionService.level.collectAsState()
+
+    // The counter anchors to MicSessionService.armedAtElapsedRealtime (a
+    // SystemClock timestamp set once, at ARM) rather than counting its own
+    // ticks — a locally-counted "start at 0, ++ each second" would reset
+    // to 00:00 every time this composable remounts (navigate off the
+    // shelf and back while still armed), which reads as a lie about a
+    // session that's actually still rolling. Recomputed once up front so a
+    // remount shows the true elapsed time immediately, not after the
+    // first second-long delay.
+    var elapsedSeconds by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val anchor = MicSessionService.armedAtElapsedRealtime
+            // anchor == 0L means nothing has set it in this process — the
+            // service's own default, not a real arm time. Reading a real
+            // elapsedRealtime() against that default would read as device
+            // uptime (hours), not session time, so treat it as "unknown,
+            // show zero" instead of doing that subtraction.
+            elapsedSeconds = if (anchor == 0L) {
+                0
+            } else {
+                ((SystemClock.elapsedRealtime() - anchor) / 1000L).toInt().coerceAtLeast(0)
+            }
+            delay(1000)
+        }
+    }
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(20.dp)
+            .sunkenField(scheme)
+            .padding(horizontal = 6.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        LevelBar(level, scheme, Modifier.weight(1f).fillMaxHeight())
+        TapeText(formatElapsed(elapsedSeconds), TapeType.pixelSmall, scheme.amber.tape)
+    }
+}
+
+/** [level] is the raw 0f..1f peak; drawn with a sqrt gamma, which reads better than raw linear peak at low levels. */
+@Composable
+private fun LevelBar(level: Float, scheme: Scheme, modifier: Modifier = Modifier) {
+    val filled = sqrt(level.coerceIn(0f, 1f))
+    Canvas(modifier) {
+        drawRect(color = scheme.field.tape, size = size)
+        if (filled > 0f) {
+            drawRect(color = scheme.amber.tape, size = Size(size.width * filled, size.height))
+        }
+    }
+}
+
+/** mm:ss, uncapped past 59 minutes (RING_SECONDS is 60s; a session runs far longer than the ring holds). */
+private fun formatElapsed(totalSeconds: Int): String {
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%02d:%02d".format(minutes, seconds)
 }
 
 // Duplicated, not hoisted — TakesBinScreen.kt's own BIN_RED_BORDER/GLOW

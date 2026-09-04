@@ -14,11 +14,13 @@ import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import com.snipsnap.audio.CaptureRing
 import com.snipsnap.shell.Copy
 import java.io.File
 import kotlin.concurrent.thread
+import kotlin.math.abs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -195,10 +197,28 @@ class MicSessionService : Service() {
                     break
                 }
                 if (n <= 0) break // record died or was stopped out from under us
+                // Published for the ARM screen's live level meter (and, as
+                // the mic-alive diagnostic, its liveness reading) — one
+                // float store per block into a conflated StateFlow. This is
+                // a plain blocking-read loop, not a realtime audio
+                // callback, so the allocation-free-loop discipline that
+                // governs CaptureRing.write doesn't apply to publishing
+                // here; the peak scan itself allocates nothing either way.
+                var peak = 0f
+                for (i in 0 until n) {
+                    val a = abs(block[i])
+                    if (a > peak) peak = a
+                }
+                _level.value = peak
                 newRing.write(block, n)
             }
         }
         attachBubbleIfAllowed()
+        // SystemClock.elapsedRealtime(), not System.currentTimeMillis() —
+        // immune to a wall-clock adjustment mid-session, and the anchor a
+        // UI-side elapsed-time readout diffs against so it survives that
+        // UI remounting (ArmControl recomposing doesn't reset the timer).
+        armedAtElapsedRealtime = SystemClock.elapsedRealtime()
         _armed.value = true
     }
 
@@ -273,6 +293,7 @@ class MicSessionService : Service() {
         ring = null
         BubbleOverlay.detach()
         _armed.value = false
+        _level.value = 0f
     }
 
     private fun ensureChannel() {
@@ -325,6 +346,34 @@ class MicSessionService : Service() {
 
         private val _lastSnipFile = MutableStateFlow<File?>(null)
         val lastSnipFile: StateFlow<File?> = _lastSnipFile.asStateFlow()
+
+        /**
+         * The reader loop's per-block peak, `0f..1f` — the live input level
+         * for the ARM screen's recording indicator, and also the mic-alive
+         * diagnostic: a session that's truly armed but hearing silence
+         * holds this at (or near) zero, which is exactly what a dead mic
+         * looks like too. Paired in the UI with a wall-clock elapsed
+         * readout ([armedAtElapsedRealtime]) so the two together can tell
+         * "recording, hearing nothing" apart from "not actually recording."
+         * Conflated, so publishing at ~21 Hz (READ_BLOCK_FRAMES @ 44.1k)
+         * from the reader thread is cheap — one float store per block, no
+         * allocation.
+         */
+        private val _level = MutableStateFlow(0f)
+        val level: StateFlow<Float> = _level.asStateFlow()
+
+        /**
+         * [SystemClock.elapsedRealtime] at the moment this session actually
+         * armed (not the re-entry path in [handleArm] that only refreshes
+         * the foreground notification) — the anchor a UI-side elapsed-time
+         * readout diffs against, so the counter survives the UI remounting
+         * (ArmControl recomposing, navigating away and back) without
+         * resetting to zero on a session that's still rolling. Wall-clock,
+         * not audio-driven, by design: see [_level]'s KDoc for why the two
+         * signals are paired.
+         */
+        var armedAtElapsedRealtime: Long = 0L
+            private set
 
         /**
          * The seam `SnipStore` fills in, reassigned by
