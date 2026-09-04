@@ -79,6 +79,19 @@ class MicSessionService : Service() {
             // calls arm() again on return): attachBubbleIfAllowed() is a
             // no-op if a bubble is already up, and doesn't touch the
             // AudioRecord either way.
+            //
+            // But this path is still a fresh startForegroundService()
+            // dispatch (App.arm() always calls it), and Android 12+
+            // requires startForeground() satisfied on EACH dispatch, not
+            // just the one that originally armed the session — skipping
+            // it here risks ForegroundServiceDidNotStartInTimeException.
+            // Re-posting the same NOTIFICATION_ID is an update, not a
+            // second notification.
+            startForeground(
+                NOTIFICATION_ID,
+                buildNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE,
+            )
             attachBubbleIfAllowed()
             return
         }

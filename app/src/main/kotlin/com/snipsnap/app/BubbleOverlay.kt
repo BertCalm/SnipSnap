@@ -50,9 +50,11 @@ import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Schemes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -104,6 +106,7 @@ object BubbleOverlay {
      * permission can attach the bubble without restarting the
      * `AudioRecord`) relies on that.
      */
+    @OptIn(FlowPreview::class) // debounce — accepted; see FOREGROUND_DEBOUNCE_MS's KDoc.
     fun attachIfAllowed(service: Service, ringProvider: () -> CaptureRing?) {
         if (hostView != null) return
         if (!Settings.canDrawOverlays(service)) return
@@ -163,7 +166,24 @@ object BubbleOverlay {
             )
         }
 
-        wm.addView(view, lp)
+        // addView on TYPE_APPLICATION_OVERLAY can throw even after
+        // canDrawOverlays() returned true — OEM overlay policies
+        // (MIUI/Knox restrictions) and the plain check-then-call TOCTOU
+        // (permission revoked between the check above and this call) both
+        // do it, typically a SecurityException or WindowManager's
+        // BadTokenException. This runs on the service's main thread with
+        // nothing above it to catch an escape, so an unguarded throw here
+        // would take the whole process down — killing an armed capture
+        // session because the *optional* overlay failed, exactly the
+        // inversion this feature exists to prevent. A blocked overlay
+        // degrades to "no bubble," never to "no app": on failure, tear
+        // down the owner for hygiene and leave the session running
+        // exactly as if the permission had never been granted.
+        val added = runCatching { wm.addView(view, lp) }
+        if (added.isFailure) {
+            owner.onDestroy()
+            return
+        }
         hostView = view
         bubbleOwner = owner
         windowManager = wm
@@ -189,8 +209,17 @@ object BubbleOverlay {
         // Foreground-hide: SnipSnap's own in-app controls own the surface
         // whenever any of this app's Activities is started; toggling
         // visibility (not add/remove) keeps the dragged-to position.
+        // Debounced, not applied on every raw emission — an Activity
+        // recreated across a config change LoopActivity/MainActivity
+        // don't declare (rotation, some density/uiMode changes) produces
+        // a transient started-count dip (destroy-then-recreate), and
+        // without the debounce that dip's GONE->VISIBLE round trip lands
+        // as one real frame of the bubble flashing over the shelf.
+        // debounce collapses a dip that recovers inside the window to
+        // nothing — only a value that's still current after the delay
+        // reaches the view.
         scope.launch {
-            SnipSnapApplication.appForeground.collect { foreground ->
+            SnipSnapApplication.appForeground.debounce(FOREGROUND_DEBOUNCE_MS).collect { foreground ->
                 view.visibility = if (foreground) View.GONE else View.VISIBLE
             }
         }
@@ -218,6 +247,10 @@ object BubbleOverlay {
         params = null
         dragRemainderX = 0f
         dragRemainderY = 0f
+        // Otherwise the next session's bubble is born showing whatever
+        // fraction the previous session's ring last read, for the one
+        // tick before the new ring-fill coroutine overwrites it.
+        fillFraction.floatValue = 0f
     }
 
     // Sub-pixel remainder from moveBy's float->Int truncation each frame;
@@ -273,6 +306,15 @@ object BubbleOverlay {
     private const val INITIAL_Y_DP = 160
 
     private const val RING_TICK_MS = 1000L
+
+    /**
+     * How long a foreground dip has to hold before it reaches the bubble.
+     * A config-change Activity recreation dips the started count to 0 and
+     * back within one to a few frames; a real backgrounding stays down.
+     * 150ms clears the former, costs the latter nothing anyone will
+     * notice.
+     */
+    private const val FOREGROUND_DEBOUNCE_MS = 150L
 
     /**
      * The artboard's bottom hot zone (`design/Bubble.dc.html`,
