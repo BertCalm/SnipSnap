@@ -14,6 +14,7 @@ import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.IBinder
+import android.util.Log
 import com.snipsnap.audio.CaptureRing
 import com.snipsnap.shell.Copy
 import java.io.File
@@ -73,6 +74,19 @@ class MicSessionService : Service() {
     private fun handleArm() {
         if (ring != null) return // one session at a time; already armed
 
+        // startForeground() runs FIRST, before the AudioRecord (or the
+        // 10.6 MB ring) is ever built: on the Android 14+ FGS-type model,
+        // opening a mic AudioRecord before the service has reached the
+        // mic-eligible foreground state can silently yield zeros — no
+        // exception, nothing to catch, just dead air. This also trivially
+        // satisfies the ~5s startForeground() window, since nothing else
+        // runs before it.
+        startForeground(
+            NOTIFICATION_ID,
+            buildNotification(),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE,
+        )
+
         val unprocessedSupported = getSystemService(AudioManager::class.java)
             ?.getProperty(AudioManager.PROPERTY_SUPPORT_AUDIO_SOURCE_UNPROCESSED) == "true"
         val source = if (unprocessedSupported) {
@@ -89,7 +103,15 @@ class MicSessionService : Service() {
             AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_FLOAT,
         )
-        if (minBuffer <= 0) return // device rejects the format outright
+        if (minBuffer <= 0) {
+            // One-time arm-path branch, not the realtime loop: logged so a
+            // dead ARM is diagnosable from logcat/a bug report instead of
+            // silently doing nothing. The ARM button UI (Task 4) owns any
+            // user-facing message.
+            Log.w(TAG, "arm: getMinBufferSize rejected the format outright ($minBuffer)")
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            return
+        }
 
         val format = AudioFormat.Builder()
             .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
@@ -108,41 +130,48 @@ class MicSessionService : Service() {
             // from the ARM button, which is responsible for holding the
             // permission first — this is the defensive floor, not the
             // permission flow itself.
+            Log.w(TAG, "arm: RECORD_AUDIO not granted", e)
+            stopForeground(STOP_FOREGROUND_REMOVE)
             return
         } catch (e: UnsupportedOperationException) {
-            return // params the device won't accept
+            Log.w(TAG, "arm: device rejected the AudioRecord params", e)
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            return
         }
 
         if (newRecord.state != AudioRecord.STATE_INITIALIZED) {
+            Log.w(TAG, "arm: AudioRecord built but left STATE_UNINITIALIZED")
             newRecord.release()
+            stopForeground(STOP_FOREGROUND_REMOVE)
             return
         }
-
-        val newRing = CaptureRing(RING_SECONDS * SAMPLE_RATE)
-
-        startForeground(
-            NOTIFICATION_ID,
-            buildNotification(),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE,
-        )
 
         val started = runCatching { newRecord.startRecording() }.isSuccess &&
             newRecord.recordingState == AudioRecord.RECORDSTATE_RECORDING
         if (!started) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            Log.w(TAG, "arm: startRecording() never reached RECORDSTATE_RECORDING")
             newRecord.release()
+            stopForeground(STOP_FOREGROUND_REMOVE)
             return
         }
 
+        val newRing = CaptureRing(RING_SECONDS * SAMPLE_RATE)
         record = newRecord
         ring = newRing
         reading = true
         readerThread = thread(name = "MicSession") {
             // The realtime loop: preallocated once, nothing else in here —
-            // no allocation, no locks, no logging per iteration.
+            // no allocation, no locks, no logging per iteration. read() is
+            // caught, not left to throw, because this runs on a plain
+            // thread{} where an uncaught exception kills the process — see
+            // stopReaderAndRecord's KDoc for the shutdown race this guards.
             val block = FloatArray(READ_BLOCK_FRAMES)
             while (reading) {
-                val n = newRecord.read(block, 0, block.size, AudioRecord.READ_BLOCKING)
+                val n = try {
+                    newRecord.read(block, 0, block.size, AudioRecord.READ_BLOCKING)
+                } catch (e: IllegalStateException) {
+                    break
+                }
                 if (n <= 0) break // record died or was stopped out from under us
                 newRing.write(block, n)
             }
@@ -162,20 +191,29 @@ class MicSessionService : Service() {
     private fun handleEject() {
         stopReaderAndRecord()
         stopForeground(STOP_FOREGROUND_REMOVE)
-        _armed.value = false
     }
 
     /**
-     * Stops the reader loop, releases the [AudioRecord], and drops the ring
-     * reference — the privacy spine: disarm drops the ring, so nothing the
-     * user did not snip survives past this call.
+     * Stops the reader loop, releases the [AudioRecord], drops the ring
+     * reference, and publishes `armed = false` — the privacy spine: disarm
+     * drops the ring, so nothing the user did not snip survives past this
+     * call. This is the one funnel both [ACTION_EJECT] and [onDestroy] go
+     * through, so `armed` cannot go stale on a teardown path that isn't a
+     * user-initiated eject (FGS reclaim, task swipe, an external
+     * `stopService`) — every route to "this session is over" clears it
+     * here, not just the explicit-eject one.
      *
      * Order matters: [reading] flips false and [AudioRecord.stop] is called
      * first, which unblocks a reader thread parked in a blocking `read()`;
-     * only after joining that thread (bounded, so a wedged read can't hang
-     * shutdown forever) is the record released. Releasing while a read is
-     * still in flight is the same class of race [AndroidAudioSink] avoids
-     * on the playback side.
+     * only after a bounded join is the record released, so a wedged HAL
+     * can't hang shutdown forever. That join is a timeout, not a guarantee,
+     * though — if it expires while the reader thread is still inside
+     * `read()`, [release] proceeds anyway and races that in-flight call,
+     * the same class of race [AndroidAudioSink.write] has on the playback
+     * side. The reader loop's `read()` call is wrapped in the matching
+     * catch for the same reason `AndroidAudioSink.write` catches around its
+     * blocking call: this runs on a plain `thread{}`, where an exception
+     * that escapes the loop kills the process, not just this session.
      */
     private fun stopReaderAndRecord() {
         reading = false
@@ -188,6 +226,7 @@ class MicSessionService : Service() {
         readerThread = null
         record = null
         ring = null
+        _armed.value = false
     }
 
     private fun ensureChannel() {
@@ -228,6 +267,7 @@ class MicSessionService : Service() {
         const val ACTION_EJECT = "com.snipsnap.app.EJECT"
         const val RING_SECONDS = 60
 
+        private const val TAG = "MicSessionService"
         private const val SAMPLE_RATE = 44_100
         private const val READ_BLOCK_FRAMES = 2048
         private const val READER_JOIN_TIMEOUT_MS = 1_000L
