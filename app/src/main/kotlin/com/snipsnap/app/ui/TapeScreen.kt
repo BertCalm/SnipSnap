@@ -102,10 +102,12 @@ private class LoadedTape(
 )
 
 /**
- * The TAPE screen: drag-under-a-fixed-needle scrubbing over the open kit's
- * longest sample, with the coast/snap/pencil-rewind physics driven entirely
- * by `:shell`'s tested [TapeDeckModel]. This file only renders it and
- * forwards gestures, plus a minimal unity-speed [TapeVoice] for playback.
+ * The TAPE screen: drag-under-a-fixed-needle scrubbing over the newest snip,
+ * else the last COMMIT's source, else (only with a kit open) the open kit's
+ * longest sample — see [loadLongestTape]'s KDoc for the full priority order
+ * — with the coast/snap/pencil-rewind physics driven entirely by `:shell`'s
+ * tested [TapeDeckModel]. This file only renders it and forwards gestures,
+ * plus a minimal unity-speed [TapeVoice] for playback.
  */
 @Composable
 fun TapeScreen(
@@ -117,26 +119,46 @@ fun TapeScreen(
     val scheme = LocalScheme.current
     val context = LocalContext.current
 
-    if (entry == null) {
-        EmptyDeck(scheme)
-        return
-    }
+    // entry is nullable on purpose: ARM/SNIP live on the shelf (KitsScreen),
+    // where no kit is open, so a snip taken there must still be able to
+    // reach TAPE. loadLongestTape's snip and lastCommitSource branches are
+    // already kit-independent — only its kit-fallback branch needs `entry`,
+    // and it's skipped when `entry == null`. An early return here (the old
+    // bug) would have blocked those kit-independent branches from ever
+    // running when the shelf has no kit open.
+    var loaded by remember(entry?.dir) { mutableStateOf<LoadedTape?>(null) }
+    var failed by remember(entry?.dir) { mutableStateOf(false) }
+    // Bumped by TapeDeckContent's idle-reload watcher, or by the
+    // empty-state watcher just below, to force a fresh call to
+    // loadLongestTape without changing `entry.dir` (the only other trigger
+    // below) — see each watcher's own comment for what bumps it and why.
+    var reloadToken by remember(entry?.dir) { mutableStateOf(0) }
 
-    var loaded by remember(entry.dir) { mutableStateOf<LoadedTape?>(null) }
-    var failed by remember(entry.dir) { mutableStateOf(false) }
-    // Bumped by TapeDeckContent's idle-reload watcher to force a fresh
-    // call to loadLongestTape without changing `entry.dir` (the only other
-    // trigger below) — see that watcher's own KDoc for what bumps it and
-    // why it's gated on the deck being idle.
-    var reloadToken by remember(entry.dir) { mutableStateOf(0) }
-
-    LaunchedEffect(entry.dir, reloadToken) {
+    LaunchedEffect(entry?.dir, reloadToken) {
         loaded = null
         failed = false
         val result = withContext(Dispatchers.IO) {
             loadLongestTape(entry, context.filesDir, lastCommitSource)
         }
         if (result == null) failed = true else loaded = result
+    }
+
+    // Empty-state reload: TapeDeckContent's own lastSnipFile watcher only
+    // exists once a tape has loaded, so it can't catch the first snip taken
+    // while TAPE is showing the empty deck (the exact shelf-with-no-kit
+    // case this screen exists to fix). This one covers exactly that gap and
+    // nothing else — it reads `loaded` live via the property delegate
+    // above, so it always sees the current load state, not a value frozen
+    // at launch.
+    LaunchedEffect(Unit) {
+        MicSessionService.lastSnipFile.collect { file ->
+            // Only act in the empty state; once a tape is loaded,
+            // TapeDeckContent's idle-gated watcher owns reloads (it must
+            // not interrupt an active scrub), and this condition goes
+            // false and stays false until the next empty state — so this
+            // cannot loop against a loaded tape.
+            if (file != null && loaded == null) reloadToken++
+        }
     }
 
     val tapeData = loaded
@@ -176,11 +198,15 @@ private fun EmptyDeck(scheme: Scheme) {
  * exactly like any other WAV: [WavReader] + [Cleanup.toMono] is the same
  * path for all three sources.
  */
-private fun loadLongestTape(entry: KitShelf.Entry, filesDir: File, lastCommitSource: File?): LoadedTape? {
+private fun loadLongestTape(entry: KitShelf.Entry?, filesDir: File, lastCommitSource: File?): LoadedTape? {
     for (file in listOfNotNull(SnipStore.newest(filesDir), lastCommitSource)) {
         val mono = readMono(file) ?: continue
         return buildLoadedTape(file, mono)
     }
+    // The kit fallback is the only branch that needs a kit — skip it
+    // outright when none is open (the shelf, with a session armed there)
+    // rather than let it run on a null entry.
+    if (entry == null) return null
     val (file, mono) = loadLongestFromKit(entry) ?: return null
     return buildLoadedTape(file, mono)
 }
@@ -218,7 +244,7 @@ private fun buildLoadedTape(file: File, chosen: Snip): LoadedTape {
 
 @Composable
 private fun TapeDeckContent(
-    entry: KitShelf.Entry,
+    entry: KitShelf.Entry?,
     tapeData: LoadedTape,
     onToast: (String) -> Unit,
     onCommit: (File, IntRange) -> Unit,
@@ -452,10 +478,15 @@ private fun WindButton(
     }
 }
 
-/** The cassette: kit name, two reels, and the pencil-rewind gag on the left one. */
+/**
+ * The cassette: kit name, two reels, and the pencil-rewind gag on the left
+ * one. `entry` is null when the tape loaded from a snip or last-commit
+ * source with no kit open (a shelf-armed capture) — the label falls back
+ * to a bare "TAPE" rather than a kit name that doesn't exist yet.
+ */
 @Composable
 private fun CassetteRow(
-    entry: KitShelf.Entry,
+    entry: KitShelf.Entry?,
     model: TapeDeckModel,
     @Suppress("UNUSED_PARAMETER") frameTick: Int,
     onToast: (String) -> Unit,
@@ -508,7 +539,7 @@ private fun CassetteRow(
                 },
         )
         TapeText(
-            entry.kit.name,
+            entry?.kit?.name ?: "TAPE",
             TapeType.marker,
             scheme.lcdInk.tape,
             Modifier.weight(1f),
