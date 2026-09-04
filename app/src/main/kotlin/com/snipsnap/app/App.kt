@@ -76,12 +76,14 @@ private const val PREF_SCHEME = "scheme"
 private const val PREF_PERSONALITY = "personality"
 
 /**
- * TAPE's COMMIT sets this; CHOP reads it. [sourceFile] is the WAV TAPE was
- * actually scrubbing (the open kit's longest sample at the moment of
- * commit — [range]'s frames only mean something against that specific
- * file). Recorded here in `App`, not `TapeScreen`, because the user can
- * switch to a different kit before ever opening CHOP, and `open` alone
- * wouldn't tell CHOP which file the commit was cut from.
+ * TAPE's COMMIT sets this; CHOP reads it. [sourceFile] is the exact WAV
+ * TAPE had loaded and was scrubbing when COMMIT fired — under
+ * `TapeScreen.loadLongestTape`'s source-priority chain (newest snip →
+ * last commit's own source → open kit's longest pad) that's frequently a
+ * snip, not a pad sample. [range]'s frames only mean something against
+ * that specific file. Recorded here in `App`, not `TapeScreen`, because
+ * the user can switch to a different kit before ever opening CHOP, and
+ * `open` alone wouldn't tell CHOP which file the commit was cut from.
  */
 data class TapeCommit(val sourceFile: File, val range: IntRange)
 
@@ -272,9 +274,12 @@ fun App(shelf: KitShelf) {
                                     onToast = { toast = it },
                                     onNavigateTape = {
                                         // TAPE has no notion of "open on this
-                                        // pad's WAV" (it always scrubs the
-                                        // open kit's longest sample, same as
-                                        // ChopScreen's own fallback) — RE-TRIM
+                                        // pad's WAV" — it loads whatever
+                                        // `TapeScreen.loadLongestTape`'s
+                                        // source-priority chain resolves
+                                        // (newest snip → last commit's own
+                                        // source → open kit's longest pad),
+                                        // not necessarily this pad — RE-TRIM
                                         // is honest about that gap: it opens
                                         // TAPE, not necessarily on this pad.
                                         padSheetSlot = null
