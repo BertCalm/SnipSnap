@@ -189,7 +189,9 @@ class MicSessionService : Service() {
             // snip. CaptureDoctor.clean legitimately refuses (throws) on a
             // capture it judges distorted rather than clicky; that must
             // cost this one SNIP, not the whole armed session.
-            val file = runCatching { commitSnip(samples, SAMPLE_RATE) }.getOrNull()
+            val file = runCatching { commitSnip(samples, SAMPLE_RATE) }
+                .onFailure { Log.w(TAG, "snip: commit failed", it) }
+                .getOrNull()
             if (file != null) _lastSnipFile.value = file
         }
     }

@@ -57,6 +57,15 @@ class SnipStoreTest {
         try {
             val f = SnipStore.commit(FloatArray(44_100), 44_100, root, 3_000L)
             assertTrue(f.isFile)
+            // Small, not the whole silent minute: a real armed session
+            // rings 60s, and writing that out as literal zeros every quiet
+            // SNIP would be dishonest with "commits small" and wasteful of
+            // flash either way.
+            val back = com.snipsnap.audio.WavReader.read(f)
+            assertTrue(
+                back.frameCount in 1 until 44_100 / 4,
+                "expected a short fallback slice, got ${back.frameCount} frames",
+            )
         } finally { root.deleteRecursively() }
     }
 }

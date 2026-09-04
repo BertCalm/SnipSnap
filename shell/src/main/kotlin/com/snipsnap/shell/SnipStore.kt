@@ -18,6 +18,15 @@ import java.io.File
 object SnipStore {
     const val DIR = "snips"
 
+    /**
+     * How much of a dead-air capture the all-silence fallback keeps. A
+     * short, genuinely small file — not the full, possibly minutes-long,
+     * ring snapshot written out as literal zeros. 200ms is long enough to
+     * be a valid, loadable one-shot and short enough that a quiet room
+     * never costs meaningful flash.
+     */
+    private const val SILENT_FALLBACK_MS = 200f
+
     private val NAME = Regex("""snip_(\d+)\.wav""")
 
     /**
@@ -30,9 +39,11 @@ object SnipStore {
      *
      * A quiet room trims to nothing under [Cleanup] — that is not an error.
      * Rather than hand an empty buffer to the doctor (or throw), this falls
-     * back to the untrimmed original with DC-removal and normalisation still
-     * applied, so a silent minute still commits a small, honest file instead
-     * of crashing a foreground service.
+     * back to a short (see [SILENT_FALLBACK_MS]) head slice of the
+     * untrimmed original with DC-removal and normalisation still applied,
+     * so a silent minute still commits a small, honest file instead of
+     * crashing a foreground service — or writing the whole ring's worth of
+     * literal zeros to disk.
      */
     fun commit(samples: FloatArray, sampleRate: Int, root: File, nowMillis: Long): File {
         val original = Snip(samples, channels = 1, sampleRate = sampleRate)
@@ -42,9 +53,14 @@ object SnipStore {
             CaptureDoctor.clean(cleaned).snip
         } else {
             // All-silence trim: skip the doctor entirely (nothing to
-            // diagnose in dead air) and fall back to the untrimmed original,
-            // still DC-corrected and normalised.
-            Cleanup.process(original, CleanupConfig(trimSilence = false))
+            // diagnose in dead air) and fall back to a short slice of the
+            // untrimmed original, still DC-corrected and normalised.
+            val untrimmed = Cleanup.process(original, CleanupConfig(trimSilence = false))
+            val keepFrames = minOf(
+                untrimmed.frameCount,
+                (SILENT_FALLBACK_MS / 1000f * sampleRate).toInt(),
+            )
+            untrimmed.copy(samples = untrimmed.samples.copyOf(keepFrames * untrimmed.channels))
         }
 
         val dir = File(root, DIR).apply { mkdirs() }
