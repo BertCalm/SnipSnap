@@ -280,6 +280,16 @@ object Layout {
     const val PAD_H = 76
     const val PAD_RADIUS = 6
     const val PRIMARY_ACTION_H = 52
+
+    /**
+     * `heightIn(min = MIN_HIT_TARGET.dp)` is a floor, not a size — inside an
+     * unbounded-height parent (an unbounded scrolling column, say), a child
+     * further down the tree that calls `fillMaxHeight()` with no content of
+     * its own measures against that same unboundedness and collapses to
+     * zero, not to the floor. Fixed twice on exactly that pattern — SYNTH's
+     * `MacroSlider` and PADS SHEET's `StepperSlider` — by giving the track a
+     * bounded `.height(MIN_HIT_TARGET.dp)` instead.
+     */
     const val MIN_HIT_TARGET = 44
 
     /** LCD headers run 40–44 depending on whether they carry a counter. */

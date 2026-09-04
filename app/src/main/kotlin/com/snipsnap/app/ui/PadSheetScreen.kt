@@ -807,7 +807,7 @@ private fun StepperSlider(
         Box(
             Modifier
                 .weight(1f)
-                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .height(Layout.MIN_HIT_TARGET.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .sunkenField(scheme)
                 .let { base ->
