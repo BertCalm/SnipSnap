@@ -147,17 +147,30 @@ fun TapeScreen(
     // exists once a tape has loaded, so it can't catch the first snip taken
     // while TAPE is showing the empty deck (the exact shelf-with-no-kit
     // case this screen exists to fix). This one covers exactly that gap and
-    // nothing else — it reads `loaded` live via the property delegate
-    // above, so it always sees the current load state, not a value frozen
-    // at launch.
-    LaunchedEffect(Unit) {
+    // nothing else — it reads `loaded`/`failed` live via the property
+    // delegates above, so it always sees the current load state, not a
+    // value frozen at launch. Keyed on `entry?.dir`, matching the state it
+    // reads/writes, so it's torn down and relaunched in lockstep with those
+    // `remember(entry?.dir)` slots rather than outliving them.
+    LaunchedEffect(entry?.dir) {
         MicSessionService.lastSnipFile.collect { file ->
-            // Only act in the empty state; once a tape is loaded,
-            // TapeDeckContent's idle-gated watcher owns reloads (it must
-            // not interrupt an active scrub), and this condition goes
-            // false and stays false until the next empty state — so this
-            // cannot loop against a loaded tape.
-            if (file != null && loaded == null) reloadToken++
+            // Gated on `failed` (settled empty), not `loaded == null`
+            // (which is also true while a load is still in flight).
+            // `lastSnipFile` is a StateFlow — a fresh collector replays its
+            // current value immediately — so on the ordinary arm → snip →
+            // open TAPE flow, the in-flight load effect is still running
+            // (failed=false) when this replay lands; gating on `loaded ==
+            // null` would bump reloadToken right then and cancel/restart
+            // that in-flight load for no reason (a double decode + a
+            // second blank-LCD flash). Waiting for `failed` means this only
+            // nudges a reload once the deck has genuinely settled on
+            // nothing — at which point the in-flight load has already
+            // picked up the replayed snip on its own, or a later, truly
+            // new snip arrives. Once a tape is loaded, TapeDeckContent's
+            // idle-gated watcher owns reloads (it must not interrupt an
+            // active scrub), and `failed` goes false the moment a load
+            // resolves — so this cannot loop against a loaded tape either.
+            if (file != null && failed) reloadToken++
         }
     }
 

@@ -212,6 +212,16 @@ class MicSessionService : Service() {
                 _level.value = peak
                 newRing.write(block, n)
             }
+            // Covers every way this loop ends — the normal `reading =
+            // false` teardown (stopReaderAndRecord already zeroes this
+            // too, so it's a harmless redundant write there), the
+            // IllegalStateException catch's `break`, and the `n <= 0`
+            // break on a dead/stopped record. Without this, a HAL failure
+            // mid-session would freeze the meter at its last non-zero
+            // reading while the wall-clock elapsed timer keeps ticking —
+            // reading as "recording fine" for exactly the case (a dead
+            // mic) this indicator exists to catch.
+            _level.value = 0f
         }
         attachBubbleIfAllowed()
         // SystemClock.elapsedRealtime(), not System.currentTimeMillis() —
