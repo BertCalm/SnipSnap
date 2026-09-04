@@ -18,6 +18,10 @@ package com.snipsnap.audio
  */
 class CaptureRing(val capacityFrames: Int) {
 
+    init {
+        require(capacityFrames > 0) { "capacityFrames must be positive, was $capacityFrames" }
+    }
+
     private val buf = FloatArray(capacityFrames)
 
     @Volatile
@@ -38,6 +42,7 @@ class CaptureRing(val capacityFrames: Int) {
     }
 
     fun snapshot(frames: Int): FloatArray {
+        require(frames >= 0) { "frames must not be negative, was $frames" }
         val total = framesWritten                  // one volatile read; consistent basis
         val n = minOf(frames.toLong(), minOf(total, capacityFrames.toLong())).toInt()
         val out = FloatArray(n)
