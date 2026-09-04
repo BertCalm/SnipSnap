@@ -361,6 +361,15 @@ private fun TapeDeckContent(
     LaunchedEffect(model, voice) {
         var lastNanos = withFrameNanos { it }
         var carryFrames = 0.0
+        // Tracks the IDLE/at-rest transition so a GLIDE lock-on, a COAST
+        // friction stop, or a PLAY→STOP spin-down each get exactly one
+        // extra `touch()` the instant motion actually ends — POS is shown
+        // to hundredths (`%05.2f`, finer than the ~10 Hz `readoutPos`
+        // throttle), so without this the LCD can settle on a value that's
+        // up to a decisecond stale. `positionState` (written unconditionally
+        // below) already holds the exact resting position by then, so this
+        // costs nothing beyond the one bump.
+        var wasSettled = model.mode == TapeDeckModel.Mode.IDLE && model.speed == 0.0
         while (isActive) {
             withFrameNanos { now ->
                 val dtNanos = (now - lastNanos).coerceIn(0, MAX_STEP_NANOS)
@@ -382,6 +391,9 @@ private fun TapeDeckContent(
                     // any button tap — without this, "■ STOP" would keep
                     // showing after playback runs off the end of the tape.
                     if (events.isNotEmpty()) touch()
+                    val settledNow = model.mode == TapeDeckModel.Mode.IDLE && model.speed == 0.0
+                    if (settledNow && !wasSettled) touch()
+                    wasSettled = settledNow
                 }
                 positionState.doubleValue = model.position
             }
@@ -412,13 +424,29 @@ private fun TapeDeckContent(
             ::stopVoice,
             onSnapToast = { onToast(Copy.SNAPPED) },
             onTouch = ::touch,
+            // Strong skipping (on by default, Kotlin 2.0.21 + Compose
+            // compiler plugin, no stability override) skips a child whose
+            // parameter INSTANCES are unchanged even when the parent
+            // recomposed — `model`/`peaks`/`scheme`/`position` are all the
+            // same references across a `uiGeneration`-only recompose of
+            // TapeDeckContent. Passing the live Int value here (not a
+            // State, a plain value that differs from the prior call) is
+            // what defeats that skip and forces this composable's body —
+            // and therefore its `Canvas` draw lambda — to re-run the
+            // instant a non-position model field (the selection) changes.
+            uiGen = uiGeneration,
             // Absorbs whatever room the fixed-height rows above and below
             // it don't need, rather than a hardcoded height that clips
             // COMMIT off-screen on a short viewport (landscape, split
             // screen) — WAVEFORM_MIN_H keeps it from collapsing to nothing.
             modifier = Modifier.weight(1f, fill = true).heightIn(min = WAVEFORM_MIN_H.dp),
         )
-        ReadoutRow(model, readoutPos, onToast)
+        // Same strong-skipping reasoning as WaveformLcd's `uiGen` above:
+        // `model`/`readoutPos`/`onToast` are all instance-equal across a
+        // `uiGeneration`-only recompose, so ReadoutRow would otherwise be
+        // skipped and the selection-length ("LEN") text would go stale
+        // after IN/OUT/COMMIT while stopped.
+        ReadoutRow(model, readoutPos, onToast, uiGen = uiGeneration)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             DeckButton("IN", Modifier.weight(1f)) { model.setIn(); touch() }
             DeckButton("OUT", Modifier.weight(1f)) { model.setOut(); touch() }
@@ -455,18 +483,26 @@ private fun TapeDeckContent(
 }
 
 @Composable
-private fun ReadoutRow(model: TapeDeckModel, readoutPos: State<Long>, onToast: (String) -> Unit) {
+private fun ReadoutRow(model: TapeDeckModel, readoutPos: State<Long>, onToast: (String) -> Unit, uiGen: Int) {
     val scheme = LocalScheme.current
     // Reading `readoutPos` here — not at TapeDeckContent's top scope —
-    // scopes its ~10 Hz recomposition to just this Row: `model` is an
-    // unstable type, so any composable reading it is unskippable, and a
-    // read one level up would drag the whole subtree along for the ride.
+    // scopes its ~10 Hz recomposition to just this Row rather than the
+    // whole subtree above it.
     @Suppress("UNUSED_VARIABLE") val snappedTenth = readoutPos.value
+    // `uiGen` is TapeDeckContent's `uiGeneration`, threaded in explicitly.
+    // Strong skipping (on by default here — Kotlin 2.0.21 + the Compose
+    // compiler plugin, no stability config override) compares unstable
+    // parameters like `model` by instance, not by forcing a recompose —
+    // `model`/`readoutPos`/`onToast` are the same references on a
+    // `uiGeneration`-only recompose of TapeDeckContent, so without this,
+    // this whole Row would be SKIPPED and "LEN --.--" would never refresh
+    // after IN/OUT/COMMIT while the deck is stopped. A plain `Int` that
+    // differs from its prior value can't be skipped past.
+    @Suppress("UNUSED_VARIABLE") val genRead = uiGen
     // The odometer toggle changes `positionReadout`'s format immediately
     // on tap — it can't wait for the next throttled tick, so it gets its
-    // own tiny local trigger rather than borrowing the outer `uiGeneration`
-    // (which would recompose more than this Row for a change that's local
-    // to it).
+    // own tiny local trigger rather than borrowing `uiGen` (which would
+    // recompose more than this Row for a change that's local to it).
     var localGen by remember { mutableStateOf(0) }
     // A `val` initializer is always evaluated (unlike a bare expression
     // statement, which some compiler paths could fold away as dead), so
@@ -560,6 +596,13 @@ private fun WindButton(
  * one. `entry` is null when the tape loaded from a snip or last-commit
  * source with no kit open (a shelf-armed capture) — the label falls back
  * to a bare "TAPE" rather than a kit name that doesn't exist yet.
+ *
+ * Deliberately takes no `uiGen`: everything this composable and [Reel]
+ * draw is either `entry` (stable, unrelated to `model`) or driven through
+ * the deferred `position` lambda inside a draw/layer lambda (`fraction`,
+ * `rotation`) — no composition- or draw-scope code here reads a mutable
+ * `model` field directly, so there's nothing for a strong-skipped call to
+ * leave stale.
  */
 @Composable
 private fun CassetteRow(
@@ -687,6 +730,18 @@ private fun WaveformLcd(
     onScrubStart: () -> Unit,
     onSnapToast: () -> Unit,
     onTouch: () -> Unit,
+    // TapeDeckContent's `uiGeneration`, threaded in explicitly. The
+    // selection rectangle below is read straight off `model` — a plain,
+    // unobserved var — inside this composable's `Canvas` draw lambda, so
+    // it only gets fresh values when this composable's body re-runs
+    // (which re-invokes `Canvas` with a new draw lambda). Under strong
+    // skipping (default here), `model`/`peaks`/`scheme`/`position` are all
+    // instance-equal across a `uiGeneration`-only recompose of
+    // TapeDeckContent, so without an explicit, differently-valued `Int`
+    // parameter, this whole composable — and therefore the selection
+    // rectangle — would be skipped and never redraw while the deck sits
+    // stopped after IN/OUT/COMMIT.
+    uiGen: Int,
     modifier: Modifier = Modifier,
 ) {
     // A scratch buffer for the draw phase's per-frame `peaks` query, so the
@@ -763,6 +818,15 @@ private fun WaveformLcd(
             // (a plain, unobserved var that draw-phase invalidation can't
             // subscribe to at all).
             val pos = position()
+            // Not a State read — `uiGen` is just the Int this draw lambda
+            // was captured with, which is only ever a fresh one when this
+            // composable's body actually re-ran (see the `uiGen` param's
+            // KDoc: that's what a `uiGeneration` bump now forces, past
+            // strong skipping). Reading it here documents that this draw
+            // pass — including the selection rectangle below, which reads
+            // `model.hasSelection`/`inFrame`/`outFrame` directly — is only
+            // ever current as of the last `touch()`, not live-subscribed.
+            @Suppress("UNUSED_VARIABLE") val gen = uiGen
             // dp-first, converted at draw time — see Bevel.kt's `3.dp.toPx()`
             // — so these read at their intended weight on real (non-1x)
             // phones instead of at a third of it. Dp-sizing barStep also
