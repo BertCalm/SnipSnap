@@ -183,7 +183,13 @@ class MicSessionService : Service() {
         val activeRing = ring ?: return // SNIP with nothing armed: no-op
         thread(name = "MicSessionSnip") {
             val samples = activeRing.snapshot(RING_SECONDS * SAMPLE_RATE)
-            val file = commitSnip(samples, SAMPLE_RATE)
+            // commitSnip runs the cleanup/doctor DSP chain on this bare
+            // thread{} — same risk the reader loop above guards against:
+            // an uncaught exception here kills the process, not just this
+            // snip. CaptureDoctor.clean legitimately refuses (throws) on a
+            // capture it judges distorted rather than clicky; that must
+            // cost this one SNIP, not the whole armed session.
+            val file = runCatching { commitSnip(samples, SAMPLE_RATE) }.getOrNull()
             if (file != null) _lastSnipFile.value = file
         }
     }
@@ -281,11 +287,15 @@ class MicSessionService : Service() {
         val lastSnipFile: StateFlow<File?> = _lastSnipFile.asStateFlow()
 
         /**
-         * The seam Task 3's `SnipStore` fills in. Until it exists, SNIP
-         * still exercises the real read path — a real ring snapshot on
-         * every press — it just has nowhere durable to put it yet, so the
-         * default hands back null and nothing is written to disk. Task 3
-         * reassigns this to a function backed by `SnipStore.commit(...)`.
+         * The seam `SnipStore` fills in, reassigned by
+         * [SnipSnapApplication.onCreate] — not `MainActivity` — so a
+         * process the OS restarts to deliver a SNIP intent re-wires this
+         * before any component runs, [MainActivity] included. The default
+         * below only ever runs in a context nothing rewired it (a stray
+         * unit test), where SNIP still exercises the real read path — a
+         * real ring snapshot on every press — it just has nowhere durable
+         * to put it, so the default hands back null and nothing is written
+         * to disk.
          */
         var commitSnip: (samples: FloatArray, sampleRate: Int) -> File? = { _, _ -> null }
 
