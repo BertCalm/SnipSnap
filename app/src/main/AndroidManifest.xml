@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- M0 needs no permissions: SoundPool + app-private files only.
-         Capture (M1) adds its foreground-service and overlay entries. -->
+    <!-- Capture (M1) landed: MicSessionService below is the armed session. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:label="SnipSnap"
@@ -27,6 +30,14 @@
             android:name=".LoopActivity"
             android:exported="true"
             android:screenOrientation="landscape" />
+
+        <!-- The always-listening ring's foreground session (retroactive-snip
+             plan, Task 2). Never exported: only this app's own ARM button
+             (and its own notification action) ever start it. -->
+        <service
+            android:name=".MicSessionService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
     </application>
 
 </manifest>
