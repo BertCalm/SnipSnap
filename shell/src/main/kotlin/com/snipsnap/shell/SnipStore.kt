@@ -5,6 +5,8 @@ import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.CleanupConfig
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.kit.AtomicFile
+import java.io.ByteArrayOutputStream
 import java.io.File
 
 /**
@@ -21,9 +23,9 @@ object SnipStore {
     /**
      * How much of a dead-air capture the all-silence fallback keeps. A
      * short, genuinely small file — not the full, possibly minutes-long,
-     * ring snapshot written out as literal zeros. 200ms is long enough to
-     * be a valid, loadable one-shot and short enough that a quiet room
-     * never costs meaningful flash.
+     * ring snapshot written to disk. 200ms is long enough to be a valid,
+     * loadable one-shot and short enough that a quiet room never costs
+     * meaningful flash.
      */
     private const val SILENT_FALLBACK_MS = 200f
 
@@ -35,15 +37,25 @@ object SnipStore {
      * as load-bearing), then [CaptureDoctor]'s default visit (no denoise, no
      * declip, no deverb — those repairs stay opt-in for a later screen; only
      * the diagnosis rides along, unused here), then writes the result to
-     * `root/snips/snip_<nowMillis>.wav`.
+     * `root/snips/snip_<nowMillis>.wav` via [AtomicFile] — a write-then-
+     * rename, so a process killed mid-write (a foreground mic service
+     * holding an 8MB ring buffer is exactly the kind of thing Android kills)
+     * never leaves a torn WAV for [list]/[newest] to surface and
+     * [com.snipsnap.audio.WavReader] to choke on.
      *
      * A quiet room trims to nothing under [Cleanup] — that is not an error.
-     * Rather than hand an empty buffer to the doctor (or throw), this falls
-     * back to a short (see [SILENT_FALLBACK_MS]) head slice of the
-     * untrimmed original with DC-removal and normalisation still applied,
-     * so a silent minute still commits a small, honest file instead of
-     * crashing a foreground service — or writing the whole ring's worth of
-     * literal zeros to disk.
+     * Rather than hand an empty buffer to the doctor (or throw), this takes
+     * a short (see [SILENT_FALLBACK_MS]) head slice of the *untrimmed*
+     * original and DC-corrects it, but does **not** normalise it: a buffer
+     * that trimmed to nothing is, by construction, entirely below
+     * [CleanupConfig.silenceThresholdDb] — its peak is near the noise
+     * floor, not silence's true zero. [Cleanup.normalize] computes
+     * `gain = target / peak` with no floor on `peak`, so normalising a
+     * floor-level buffer toward -0.3 dBFS is a several-thousand-x gain that
+     * `coerceIn(-1, 1)` turns into a hard-clipped square wave — the
+     * quietest possible input producing the loudest, harshest file the app
+     * writes. Leaving the level alone is the honest choice: there is
+     * nothing in a sub-floor buffer worth normalising toward.
      */
     fun commit(samples: FloatArray, sampleRate: Int, root: File, nowMillis: Long): File {
         val original = Snip(samples, channels = 1, sampleRate = sampleRate)
@@ -53,19 +65,26 @@ object SnipStore {
             CaptureDoctor.clean(cleaned).snip
         } else {
             // All-silence trim: skip the doctor entirely (nothing to
-            // diagnose in dead air) and fall back to a short slice of the
-            // untrimmed original, still DC-corrected and normalised.
-            val untrimmed = Cleanup.process(original, CleanupConfig(trimSilence = false))
+            // diagnose in dead air) and fall back to a short, DC-corrected,
+            // UN-normalised slice of the original — see the normalise
+            // warning above for why normalize must stay off here.
             val keepFrames = minOf(
-                untrimmed.frameCount,
+                original.frameCount,
                 (SILENT_FALLBACK_MS / 1000f * sampleRate).toInt(),
             )
-            untrimmed.copy(samples = untrimmed.samples.copyOf(keepFrames * untrimmed.channels))
+            val window = original.copy(samples = original.samples.copyOf(keepFrames * original.channels))
+            Cleanup.process(window, CleanupConfig(trimSilence = false, normalize = false))
+        }
+
+        require(toWrite.sampleRate == WavWriter.MPC_SAMPLE_RATE) {
+            "sample rate ${toWrite.sampleRate} is not MPC-native (${WavWriter.MPC_SAMPLE_RATE}); " +
+                "capture at 44.1 kHz"
         }
 
         val dir = File(root, DIR).apply { mkdirs() }
         val file = File(dir, "snip_$nowMillis.wav")
-        WavWriter.write(file, toWrite)
+        val bytes = ByteArrayOutputStream().apply { WavWriter.write(this, toWrite) }.toByteArray()
+        AtomicFile.writeBytes(file, bytes)
         return file
     }
 

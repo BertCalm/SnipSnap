@@ -68,4 +68,30 @@ class SnipStoreTest {
             )
         } finally { root.deleteRecursively() }
     }
+
+    @Test
+    fun `a quiet room does not get normalised into a screech`() {
+        // Below Cleanup's default -60dB threshold (linear ~0.001) but NOT
+        // exact zero, unlike the all-silence test above — this is the
+        // buffer shape that actually exercises the fallback's normalize
+        // step: real noise-floor hiss, not a clean no-op on true silence.
+        val root = kotlin.io.path.createTempDirectory("snips").toFile()
+        try {
+            val rand = kotlin.random.Random(42)
+            val noise = FloatArray(44_100) { (rand.nextFloat() * 2f - 1f) * 0.0003f }
+            var inputPeak = 0f
+            for (s in noise) inputPeak = maxOf(inputPeak, kotlin.math.abs(s))
+
+            val f = SnipStore.commit(noise, 44_100, root, 4_000L)
+            val back = com.snipsnap.audio.WavReader.read(f)
+            var outputPeak = 0f
+            for (s in back.samples) outputPeak = maxOf(outputPeak, kotlin.math.abs(s))
+
+            assertTrue(
+                outputPeak <= inputPeak * 4f,
+                "quiet noise should stay quiet, not get normalised toward full scale: " +
+                    "input peak $inputPeak, output peak $outputPeak",
+            )
+        } finally { root.deleteRecursively() }
+    }
 }
