@@ -2,7 +2,10 @@ package com.snipsnap.app
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -74,6 +77,8 @@ import kotlin.random.Random
 private const val PREFS = "tapeos"
 private const val PREF_SCHEME = "scheme"
 private const val PREF_PERSONALITY = "personality"
+/** The Bubble's overlay-permission offer (Task 5) — asked once, ever. */
+private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
 
 /**
  * TAPE's COMMIT sets this; CHOP reads it. [sourceFile] is the exact WAV
@@ -151,6 +156,22 @@ fun App(shelf: KitShelf) {
     val armed by MicSessionService.armed.collectAsState()
     var captureBlocked by remember { mutableStateOf(false) }
 
+    // The Bubble's overlay permission (Task 5): SYSTEM_ALERT_WINDOW is
+    // optional — it has no runtime-permission dialog, only a Settings
+    // screen (ACTION_MANAGE_OVERLAY_PERMISSION). Whatever the user does
+    // there (grant, deny, or just back out), this fires once and
+    // PREF_OVERLAY_ASKED below makes sure it's never asked again. If the
+    // grant lands while a session is already armed, re-running arm() is
+    // how MicSessionService.handleArm's re-entry path (ring != null) picks
+    // it up and attaches the bubble without touching the AudioRecord.
+    val overlayPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        if (Settings.canDrawOverlays(context) && MicSessionService.armed.value) {
+            MicSessionService.arm(context)
+        }
+    }
+
     // RequestMultiplePermissions rather than a single-permission launcher:
     // POST_NOTIFICATIONS only exists on 33+ and is requested alongside
     // RECORD_AUDIO in one system dialog rather than chained one-after-
@@ -170,6 +191,17 @@ fun App(shelf: KitShelf) {
             // requirement without a separate checkSelfPermission branch.
             MicSessionService.arm(context)
             toast = Copy.SESSION_ARMED
+            // The Bubble's one-time offer — arming must never wait on it,
+            // so this runs after arm() is already underway, not before.
+            if (!prefs.getBoolean(PREF_OVERLAY_ASKED, false) && !Settings.canDrawOverlays(context)) {
+                prefs.edit().putBoolean(PREF_OVERLAY_ASKED, true).apply()
+                overlayPermissionLauncher.launch(
+                    Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:${context.packageName}"),
+                    ),
+                )
+            }
         } else {
             captureBlocked = true
         }

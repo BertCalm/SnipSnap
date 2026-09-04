@@ -72,7 +72,16 @@ class MicSessionService : Service() {
     }
 
     private fun handleArm() {
-        if (ring != null) return // one session at a time; already armed
+        if (ring != null) {
+            // One session at a time; already armed. Still worth a call —
+            // this is also the re-entry path for a just-granted overlay
+            // permission (App's ACTION_MANAGE_OVERLAY_PERMISSION result
+            // calls arm() again on return): attachBubbleIfAllowed() is a
+            // no-op if a bubble is already up, and doesn't touch the
+            // AudioRecord either way.
+            attachBubbleIfAllowed()
+            return
+        }
 
         // startForeground() runs FIRST, before the AudioRecord (or the
         // 10.6 MB ring) is ever built: on the Android 14+ FGS-type model,
@@ -176,7 +185,18 @@ class MicSessionService : Service() {
                 newRing.write(block, n)
             }
         }
+        attachBubbleIfAllowed()
         _armed.value = true
+    }
+
+    /**
+     * The bubble rides with the session — attached here (a no-op if the
+     * overlay permission isn't granted; the notification stays the whole
+     * story), detached in [stopReaderAndRecord], the session's own one
+     * teardown funnel.
+     */
+    private fun attachBubbleIfAllowed() {
+        BubbleOverlay.attachIfAllowed(this) { ring }
     }
 
     private fun handleSnip() {
@@ -222,6 +242,10 @@ class MicSessionService : Service() {
      * catch for the same reason `AndroidAudioSink.write` catches around its
      * blocking call: this runs on a plain `thread{}`, where an exception
      * that escapes the loop kills the process, not just this session.
+     *
+     * The bubble rides with the session the same way: [BubbleOverlay.detach]
+     * runs here too, so every route to "this session is over" takes it
+     * down, not just an explicit drag-to-eject.
      */
     private fun stopReaderAndRecord() {
         reading = false
@@ -234,6 +258,7 @@ class MicSessionService : Service() {
         readerThread = null
         record = null
         ring = null
+        BubbleOverlay.detach()
         _armed.value = false
     }
 

@@ -6,6 +6,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The Bubble (Task 5): optional. Granted via
+         ACTION_MANAGE_OVERLAY_PERMISSION, offered once from the ARM flow —
+         never required, the notification's own SNIP action is the whole
+         story when this isn't granted. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:name=".SnipSnapApplication"
