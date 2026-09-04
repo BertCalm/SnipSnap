@@ -1,27 +1,39 @@
 package com.snipsnap.app
 
+import android.Manifest
 import android.content.Context
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeTheme
+import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.rememberDeskBrush
+import com.snipsnap.app.theme.tape
 import com.snipsnap.app.theme.windowFrame
 import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ChopScreen
@@ -34,15 +46,17 @@ import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.MenuRow
 import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.PlayScreen
+import com.snipsnap.app.ui.PrimaryAction
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.StatusBar
 import com.snipsnap.app.ui.StubScreen
 import com.snipsnap.app.ui.SynthScreen
 import com.snipsnap.app.ui.TakesBinScreen
 import com.snipsnap.app.ui.TapeScreen
+import com.snipsnap.app.ui.TapeText
 import com.snipsnap.app.ui.TitleBar
 import com.snipsnap.app.ui.ToastOverlay
-import com.snipsnap.app.ui.longestSampleFile
+import com.snipsnap.app.ui.tapeClick
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
@@ -127,6 +141,48 @@ fun App(shelf: KitShelf) {
     var exportSession by remember { mutableStateOf<ExportSession?>(null) }
     val scope = rememberCoroutineScope()
 
+    // The armed mic session (retroactive-snip Task 4): `armed` is the
+    // service companion's own StateFlow, so this reflects the live session
+    // regardless of which screen changed it (the ARM/EJECT buttons here,
+    // or the notification's own SNIP action never touches this at all —
+    // only ARM/EJECT flip it).
+    val armed by MicSessionService.armed.collectAsState()
+    var captureBlocked by remember { mutableStateOf(false) }
+
+    // RequestMultiplePermissions rather than a single-permission launcher:
+    // POST_NOTIFICATIONS only exists on 33+ and is requested alongside
+    // RECORD_AUDIO in one system dialog rather than chained one-after-
+    // another. The callback below branches on RECORD_AUDIO alone —
+    // POST_NOTIFICATIONS only gates the notification's own SNIP shortcut,
+    // not whether a session can arm at all, so a lone notification denial
+    // must not trip CAPTURE_BLOCKED.
+    val capturePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { results ->
+        if (results[Manifest.permission.RECORD_AUDIO] == true) {
+            // This callback runs with the Activity resumed (foreground) —
+            // true whether the system dialog actually showed or the
+            // permission was already granted and the contract
+            // short-circuited straight here — so this satisfies
+            // MicSessionService.arm's "call from a foreground context"
+            // requirement without a separate checkSelfPermission branch.
+            MicSessionService.arm(context)
+            toast = Copy.SESSION_ARMED
+        } else {
+            captureBlocked = true
+        }
+    }
+
+    fun requestArm() {
+        val permissions = buildList {
+            add(Manifest.permission.RECORD_AUDIO)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        capturePermissionLauncher.launch(permissions.toTypedArray())
+    }
+
     LaunchedEffect(Unit) {
         kits = withContext(Dispatchers.IO) { shelf.list() }
     }
@@ -194,8 +250,15 @@ fun App(shelf: KitShelf) {
                         AppScreen.KITS -> KitsScreen(
                             kits = kits,
                             busy = busy != null,
+                            armed = armed,
                             onOpen = { open = it; screen = AppScreen.KIT },
                             onFresh = ::fresh,
+                            onArm = ::requestArm,
+                            onSnip = {
+                                MicSessionService.snip(context)
+                                toast = Copy.SNIPPED
+                            },
+                            onEject = { MicSessionService.eject(context) },
                         )
                         AppScreen.KIT -> {
                             val sheetSlot = padSheetSlot
@@ -258,19 +321,23 @@ fun App(shelf: KitShelf) {
                         }
                         AppScreen.TAPE -> TapeScreen(
                             entry = open,
+                            // TAPE's source-priority fallback below
+                            // SnipStore.newest — the file COMMIT last cut
+                            // from, so returning to TAPE after a trim
+                            // resumes where the user left off rather than
+                            // re-resolving the open kit's longest sample.
+                            lastCommitSource = lastCommit?.sourceFile,
                             onToast = { toast = it },
-                            onCommit = { range ->
-                                // The file is derived, not asked of TapeScreen (see
-                                // `TapeCommit`) — `open` here is the same kit entry
-                                // TapeScreen was scrubbing when COMMIT fired.
-                                val source = open
-                                if (source != null) {
-                                    scope.launch {
-                                        val file = withContext(Dispatchers.IO) { longestSampleFile(source) }
-                                        if (file != null) lastCommit = TapeCommit(file, range)
-                                    }
-                                }
-                            },
+                            // TapeScreen now hands back the exact file it was
+                            // scrubbing (a snip, the prior commit's source, or
+                            // the open kit's longest sample — whichever the
+                            // source priority picked) alongside the range, so
+                            // this no longer re-derives it via
+                            // `longestSampleFile(open)`: under the new
+                            // priority that call frequently returns the wrong
+                            // file (a pad WAV) for a commit actually cut from
+                            // a snip. Synchronous now — no IO re-read needed.
+                            onCommit = { file, range -> lastCommit = TapeCommit(file, range) },
                         )
                         AppScreen.PROPERTIES -> PropertiesScreen(
                             currentScheme = schemeId,
@@ -344,6 +411,41 @@ fun App(shelf: KitShelf) {
                 )
             }
             ToastOverlay(toast)
+            if (captureBlocked) {
+                CaptureBlockedDialog(onDismiss = { captureBlocked = false })
+            }
+        }
+    }
+}
+
+/**
+ * RECORD_AUDIO denied: the house modal shape (`KitsScreen`'s own
+ * `StarterMenu` — scrim `Box` + `raisedBevel` `Column`, an inner
+ * `tapeClick {}` swallowing taps so the scrim's dismiss doesn't fire
+ * through) rather than a Material `AlertDialog`; TapeOS never uses
+ * Material's own chrome (see `Chrome.kt`'s `TapeText` KDoc).
+ */
+@Composable
+private fun CaptureBlockedDialog(onDismiss: () -> Unit) {
+    val scheme = LocalScheme.current
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            .tapeClick(onDismiss),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                .tapeClick { }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText(Copy.CAPTURE_BLOCKED, TapeType.lcdSmall, scheme.ink.tape, maxLines = 4)
+            PrimaryAction(label = Copy.CAPTURE_BLOCKED_BUTTON, enabled = true, onClick = onDismiss)
         }
     }
 }

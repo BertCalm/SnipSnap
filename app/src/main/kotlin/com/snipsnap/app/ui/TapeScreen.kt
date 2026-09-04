@@ -34,11 +34,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -54,6 +56,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
+import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.TapeDeckModel
 import java.io.File
 import kotlin.math.abs
@@ -87,6 +90,15 @@ private class LoadedTape(
     val sampleRate: Int,
     val onsets: IntArray,
     val peaks: PeaksPyramid,
+    /**
+     * The file this tape actually came from. Compared against
+     * [MicSessionService.lastSnipFile] by [TapeDeckContent]'s idle-reload
+     * watcher to tell a genuinely new snip from the one already loaded —
+     * without it, every emission of an already-loaded snip (including the
+     * StateFlow replay a fresh collector gets on launch) would look like
+     * a reason to reload.
+     */
+    val sourceFile: File,
 )
 
 /**
@@ -98,36 +110,47 @@ private class LoadedTape(
 @Composable
 fun TapeScreen(
     entry: KitShelf.Entry?,
+    lastCommitSource: File?,
     onToast: (String) -> Unit,
-    onCommit: (IntRange) -> Unit,
+    onCommit: (File, IntRange) -> Unit,
 ) {
     val scheme = LocalScheme.current
+    val context = LocalContext.current
 
-    if (entry == null || entry.kit.pads.isEmpty()) {
+    if (entry == null) {
         EmptyDeck(scheme)
         return
     }
 
     var loaded by remember(entry.dir) { mutableStateOf<LoadedTape?>(null) }
     var failed by remember(entry.dir) { mutableStateOf(false) }
+    // Bumped by TapeDeckContent's idle-reload watcher to force a fresh
+    // call to loadLongestTape without changing `entry.dir` (the only other
+    // trigger below) — see that watcher's own KDoc for what bumps it and
+    // why it's gated on the deck being idle.
+    var reloadToken by remember(entry.dir) { mutableStateOf(0) }
 
-    LaunchedEffect(entry.dir) {
+    LaunchedEffect(entry.dir, reloadToken) {
         loaded = null
         failed = false
-        val result = withContext(Dispatchers.IO) { loadLongestTape(entry) }
+        val result = withContext(Dispatchers.IO) {
+            loadLongestTape(entry, context.filesDir, lastCommitSource)
+        }
         if (result == null) failed = true else loaded = result
     }
 
     val tapeData = loaded
     if (tapeData == null) {
-        // Either still decoding, or nothing on the kit was a readable WAV —
-        // the empty-shelf face covers both; a blank LCD for the moment it
-        // takes to read a file is the honest state to show in between.
+        // Either still decoding, or nothing resolved — no snip, no
+        // last-commit source, and nothing on the (possibly empty) kit was
+        // a readable WAV — the empty-shelf face covers both; a blank LCD
+        // for the moment it takes to read a file is the honest state to
+        // show in between.
         if (failed) EmptyDeck(scheme) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
         return
     }
 
-    TapeDeckContent(entry, tapeData, onToast, onCommit)
+    TapeDeckContent(entry, tapeData, onToast, onCommit, onIdleReload = { reloadToken++ })
 }
 
 @Composable
@@ -143,23 +166,54 @@ private fun EmptyDeck(scheme: Scheme) {
     }
 }
 
-/** Reads every pad's WAV and keeps the longest, mixed to mono. */
-private fun loadLongestTape(entry: KitShelf.Entry): LoadedTape? {
+/**
+ * TAPE's load-source priority, retroactive-snip Task 4: the newest snip
+ * anywhere on the phone if one exists — a fresh capture always wins, since
+ * surfacing it without a manual re-open is the entire point of the mic
+ * spine — else the file the last COMMIT actually scrubbed (so returning to
+ * TAPE after a trim resumes where the user left off), else the open kit's
+ * longest sample (TAPE's original, pre-capture fallback). A snip loads
+ * exactly like any other WAV: [WavReader] + [Cleanup.toMono] is the same
+ * path for all three sources.
+ */
+private fun loadLongestTape(entry: KitShelf.Entry, filesDir: File, lastCommitSource: File?): LoadedTape? {
+    for (file in listOfNotNull(SnipStore.newest(filesDir), lastCommitSource)) {
+        val mono = readMono(file) ?: continue
+        return buildLoadedTape(file, mono)
+    }
+    val (file, mono) = loadLongestFromKit(entry) ?: return null
+    return buildLoadedTape(file, mono)
+}
+
+private fun readMono(file: File): Snip? {
+    if (!file.isFile) return null
+    return try {
+        Cleanup.toMono(WavReader.read(file))
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/** Every pad's WAV, mixed to mono, keeping the longest — TAPE's fallback when neither a snip nor a last-commit source resolves. */
+private fun loadLongestFromKit(entry: KitShelf.Entry): Pair<File, Snip>? {
+    var longestFile: File? = null
     var longest: Snip? = null
     for (pad in entry.kit.pads) {
         val file = File(entry.dir, pad.sampleFile)
-        if (!file.isFile) continue
-        val mono = try {
-            Cleanup.toMono(WavReader.read(file))
-        } catch (e: Exception) {
-            continue
+        val mono = readMono(file) ?: continue
+        if (longest == null || mono.frameCount > longest.frameCount) {
+            longest = mono
+            longestFile = file
         }
-        if (longest == null || mono.frameCount > longest.frameCount) longest = mono
     }
-    val chosen = longest ?: return null
+    val file = longestFile ?: return null
+    return file to (longest ?: return null)
+}
+
+private fun buildLoadedTape(file: File, chosen: Snip): LoadedTape {
     val onsets = Transients.detect(chosen).map { it.frame }.sorted().toIntArray()
     val peaks = PeaksPyramid.fromSnip(chosen)
-    return LoadedTape(chosen.samples, chosen.sampleRate, onsets, peaks)
+    return LoadedTape(chosen.samples, chosen.sampleRate, onsets, peaks, file)
 }
 
 @Composable
@@ -167,7 +221,8 @@ private fun TapeDeckContent(
     entry: KitShelf.Entry,
     tapeData: LoadedTape,
     onToast: (String) -> Unit,
-    onCommit: (IntRange) -> Unit,
+    onCommit: (File, IntRange) -> Unit,
+    onIdleReload: () -> Unit,
 ) {
     val scheme = LocalScheme.current
 
@@ -177,6 +232,28 @@ private fun TapeDeckContent(
     val voice = remember(tapeData) { TapeVoice(tapeData.samples, tapeData.sampleRate) }
     DisposableEffect(voice) {
         onDispose { voice.release() }
+    }
+
+    // Retroactive-snip Task 4: a fresh SNIP anywhere in the app should
+    // surface here without forcing the user to back out of TAPE and back
+    // in — but NEVER mid-edit. If a new snip lands while the deck is
+    // playing or holding an IN/OUT selection, this is a no-op: nothing
+    // re-triggers the watcher on its own (`lastSnipFile` only changes on
+    // the NEXT snip), so leaving TAPE and returning — or stopping playback
+    // / clearing the selection while still here — is what actually picks
+    // it up. `file != tapeData.sourceFile` is what stops this from firing
+    // on the file already loaded, including the StateFlow replay a fresh
+    // collector gets immediately on launch. Keyed on `model` (not `Unit`)
+    // so a reload — which swaps `tapeData`, and therefore `model`, via the
+    // `remember(tapeData)` above — restarts this collector against the
+    // live model instead of leaving it closed over a stale, already-
+    // replaced one.
+    LaunchedEffect(model) {
+        MicSessionService.lastSnipFile.collect { file ->
+            if (file != null && file != tapeData.sourceFile && !model.playing && !model.hasSelection) {
+                onIdleReload()
+            }
+        }
     }
 
     // Home-during-play would otherwise leave the voice's thread writing to
@@ -278,7 +355,12 @@ private fun TapeDeckContent(
         ) {
             val range = model.commitSelection()
             if (range != null) {
-                onCommit(range)
+                // tapeData.sourceFile, not a re-derived "open kit's longest
+                // sample" — TapeCommit's own contract is that `range`'s
+                // frames only mean something against the exact file TAPE
+                // was scrubbing when COMMIT fired, and under the new
+                // source priority that's frequently a snip, not a pad WAV.
+                onCommit(tapeData.sourceFile, range)
                 onToast(Copy.rotating(Copy.COMMIT_LINES, commitIndex))
                 commitIndex++
             } else {

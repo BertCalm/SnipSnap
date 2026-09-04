@@ -177,11 +177,18 @@ private fun loadLongestSample(entry: KitShelf.Entry): Pair<File, Snip>? {
 }
 
 /**
- * The file among [entry]'s pads with the most decoded frames — the exact
- * rule `TapeScreen.loadLongestTape` uses to pick the tape. Exposed
- * (not private) so `App`'s COMMIT handler can record which file a TAPE
- * trim actually came from, without `ChopScreen` needing to touch
- * `TapeScreen.kt` to learn it.
+ * The file among [entry]'s pads with the most decoded frames —
+ * [loadLongestSample]'s own fallback source, and this file's only caller.
+ * Retroactive-snip Task 4 gave `TapeScreen.loadLongestTape` a
+ * higher-priority source list ahead of this exact rule (the newest snip,
+ * then the last commit's own file, both checked before TAPE's own private
+ * per-pad fallback) — so this is no longer "the exact rule TapeScreen
+ * uses to pick the tape" the way an earlier version of this KDoc claimed;
+ * TapeScreen keeps its own private copy of the per-pad fallback now
+ * (`loadLongestFromKit`) rather than calling this one. Also no longer
+ * used by `App`'s COMMIT handler — TAPE hands COMMIT the exact file it
+ * was scrubbing directly, since re-deriving it via this function would
+ * pick the wrong file whenever the commit came from a snip.
  */
 internal fun longestSampleFile(entry: KitShelf.Entry): File? {
     var longest: File? = null

@@ -46,8 +46,12 @@ import com.snipsnap.shell.StarterKits
 fun KitsScreen(
     kits: List<KitShelf.Entry>,
     busy: Boolean,
+    armed: Boolean,
     onOpen: (KitShelf.Entry) -> Unit,
     onFresh: (StarterKits.Starter) -> Unit,
+    onArm: () -> Unit,
+    onSnip: () -> Unit,
+    onEject: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     var menuOpen by remember { mutableStateOf(false) }
@@ -96,6 +100,7 @@ fun KitsScreen(
                 enabled = !busy,
                 onClick = { menuOpen = true },
             )
+            ArmControl(armed = armed, onArm = onArm, onSnip = onSnip, onEject = onEject)
         }
 
         if (menuOpen) {
@@ -200,3 +205,53 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
         }
     }
 }
+
+/**
+ * The mic session's entry point — the shelf's third way a kit begins,
+ * alongside FRESH TAPE (machine-invented) and IMPORT (brought in): a
+ * capture. Idle: one primary-styled ARM TAPE button. Armed: EJECT in the
+ * bin-red pair ([BIN_RED_BORDER]/[BIN_RED_GLOW], `TakesBinScreen`'s own
+ * convention — a session-ending action reads as "red" even in a scheme
+ * with no red anywhere else) beside a small in-app SNIP; the notification
+ * action is the out-of-app path, this is the in-app one.
+ */
+@Composable
+private fun ArmControl(armed: Boolean, onArm: () -> Unit, onSnip: () -> Unit, onEject: () -> Unit) {
+    val scheme = LocalScheme.current
+    if (!armed) {
+        PrimaryAction(label = "ARM TAPE", enabled = true, onClick = onArm)
+        return
+    }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(
+            Modifier
+                .weight(2f)
+                .height(Layout.PRIMARY_ACTION_H.dp)
+                .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
+                .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(6.dp))
+                .tapeClick(onEject),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText("EJECT", TapeType.displayBig, BIN_RED_GLOW)
+        }
+        Box(
+            Modifier
+                .weight(1f)
+                .height(Layout.PRIMARY_ACTION_H.dp)
+                .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
+                .border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
+                .tapeClick(onSnip),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText("SNIP", TapeType.displayBig, scheme.amber.tape)
+        }
+    }
+}
+
+// Duplicated, not hoisted — TakesBinScreen.kt's own BIN_RED_BORDER/GLOW
+// comment states the house convention explicitly: do it if a clean
+// one-liner, else duplicate with a comment. BIN red is deliberately
+// constant across every scheme so a session-ending action (EJECT here,
+// EMPTY THE BIN there) reads as "red" regardless of the active scheme.
+private val BIN_RED_BORDER = Color(0xFF6A2020)
+private val BIN_RED_GLOW = Color(0xFFC86050)
