@@ -2,7 +2,6 @@ package com.snipsnap.app.ui
 
 import android.os.SystemClock
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -126,7 +124,13 @@ fun PadCaptureScreen(
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(Layout.LCD_HEADER_H.dp)
+                // heightIn, not a fixed height — Layout.LCD_HEADER_H (40dp) is
+                // shorter than Layout.MIN_HIT_TARGET (44dp), and this header
+                // (unlike KitsScreen's own, which holds no tappable chip)
+                // holds the ◄ KIT back chip; a fixed parent height would clip
+                // that chip's min hit target. Same fix PadSheetScreen's own
+                // header already applies.
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .lcdPanel(scheme)
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -148,7 +152,7 @@ fun PadCaptureScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (armed) {
-                    CaptureLevelIndicator()
+                    CaptureLevelIndicator(level)
                     TapeText(
                         "HIT SOMETHING, THEN GRAB IT.",
                         TapeType.lcdSmall,
@@ -205,11 +209,18 @@ private fun HeaderChip(
  * one-liner, else duplicate with a comment"). Extracting three private
  * symbols out of `KitsScreen.kt` into a third shared file was worse than
  * a small, faithful duplicate here.
+ *
+ * Unlike `RecordingIndicator` (which self-collects `MicSessionService.level`
+ * as the smallest composable scope that should tick at ~21 Hz), [level] is
+ * threaded in as a parameter here — `App.kt` already collects it once for
+ * `PadCaptureScreen`'s own required signature, and self-collecting it again
+ * in a private child would just add a second redundant collector without
+ * shrinking the recomposition scope any further (this composable, not the
+ * caller above it, is already the leaf).
  */
 @Composable
-private fun CaptureLevelIndicator() {
+private fun CaptureLevelIndicator(level: Float) {
     val scheme = LocalScheme.current
-    val level by MicSessionService.level.collectAsState()
 
     var elapsedSeconds by remember { mutableStateOf(0) }
     LaunchedEffect(Unit) {
