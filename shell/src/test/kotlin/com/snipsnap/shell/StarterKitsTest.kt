@@ -26,11 +26,18 @@ class StarterKitsTest {
         for (starter in StarterKits.ALL) {
             val dir = File(temp, starter.id)
             val kit = starter.render("Starter ${starter.id}", dir, seed = 1)
-            assertTrue(kit.pads.isNotEmpty(), starter.id)
-            assertFalse(Preflight.check(kit, dir).blocked(), "${starter.id} failed preflight")
-            // Regenerable where the engine records how: most starter pads
-            // carry recipes (not all — some treatments are render-only).
-            assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
+            if (starter.id == "blank") {
+                // The empty grid is the point: no pads to assign yet, and
+                // preflight correctly refuses to export nothing.
+                assertTrue(kit.pads.isEmpty(), "blank is the empty grid")
+                assertTrue(Preflight.check(kit, dir).blocked(), "blank should block export until captured into")
+            } else {
+                assertTrue(kit.pads.isNotEmpty(), starter.id)
+                assertFalse(Preflight.check(kit, dir).blocked(), "${starter.id} failed preflight")
+                // Regenerable where the engine records how: most starter pads
+                // carry recipes (not all — some treatments are render-only).
+                assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
+            }
             assertEquals(starter, StarterKits.byId(starter.id))
         }
         assertEquals(null, StarterKits.byId("nope"))
@@ -54,9 +61,9 @@ class StarterKitsTest {
     }
 
     @Test
-    fun `seven starters, and velocity is one of them`() {
+    fun `eight starters, and blank leads them`() {
         assertEquals(
-            listOf("factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "velocity"),
             StarterKits.ALL.map { it.id },
         )
     }
