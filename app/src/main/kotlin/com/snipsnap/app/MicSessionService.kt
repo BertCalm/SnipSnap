@@ -32,8 +32,10 @@ import kotlinx.coroutines.flow.asStateFlow
  * **Privacy contract: memory only until SNIP; disarm drops the ring.** No
  * byte the ring holds touches disk unless the user presses SNIP while it
  * is still in the ring; the moment the session ends — [ACTION_EJECT] or
- * this service dying — the ring reference is dropped and that audio is
- * gone. Nothing the user did not snip ever survives past disarm.
+ * this service dying — every ring reference (the instance field and the
+ * companion's `activeRing`, kept for on-demand pad-grab snapshots) is
+ * dropped and that audio is gone. Nothing the user did not snip ever
+ * survives past disarm.
  *
  * The service does three things and nothing else:
  * - [ACTION_ARM] opens an [AudioRecord] and starts one plain reader thread
@@ -182,6 +184,7 @@ class MicSessionService : Service() {
         val newRing = CaptureRing(RING_SECONDS * SAMPLE_RATE)
         record = newRecord
         ring = newRing
+        activeRing = newRing
         reading = true
         readerThread = thread(name = "MicSession") {
             // The realtime loop: preallocated once, nothing else in here —
@@ -243,9 +246,9 @@ class MicSessionService : Service() {
     }
 
     private fun handleSnip() {
-        val activeRing = ring ?: return // SNIP with nothing armed: no-op
+        val snapRing = ring ?: return // SNIP with nothing armed: no-op
         thread(name = "MicSessionSnip") {
-            val samples = activeRing.snapshot(RING_SECONDS * SAMPLE_RATE)
+            val samples = snapRing.snapshot(RING_SECONDS * SAMPLE_RATE)
             // commitSnip runs the cleanup/doctor DSP chain on this bare
             // thread{} — same risk the reader loop above guards against:
             // an uncaught exception here kills the process, not just this
@@ -301,6 +304,7 @@ class MicSessionService : Service() {
         readerThread = null
         record = null
         ring = null
+        activeRing = null
         BubbleOverlay.detach()
         _armed.value = false
         _level.value = 0f
@@ -345,7 +349,13 @@ class MicSessionService : Service() {
         const val RING_SECONDS = 60
 
         private const val TAG = "MicSessionService"
-        private const val SAMPLE_RATE = 44_100
+
+        /**
+         * Widened from `private` so other `:app` code can build a Snip at
+         * the session's real sample rate (Task 5's pad-grab path) — the
+         * value itself is unchanged (44_100).
+         */
+        internal const val SAMPLE_RATE = 44_100
         private const val READ_BLOCK_FRAMES = 2048
         private const val READER_JOIN_TIMEOUT_MS = 1_000L
         private const val CHANNEL_ID = "capture"
@@ -353,6 +363,25 @@ class MicSessionService : Service() {
 
         private val _armed = MutableStateFlow(false)
         val armed: StateFlow<Boolean> = _armed.asStateFlow()
+
+        // The reader session's ring, exposed so an in-app capture surface can pull
+        // the last N frames on demand (GRAB to a pad) without committing a 60s snip
+        // file. Set on the service's main thread when the reader starts (handleArm),
+        // cleared on disarm (stopReaderAndRecord) — cleared, so no static reference to
+        // un-snipped mic audio outlives the session's teardown. Volatile: a future
+        // GRAB path is expected to call snapshotTail() off the main thread (mirroring
+        // handleSnip's own snapshot-on-a-thread pattern), so this field is written on
+        // one thread and read on another. CaptureRing.snapshot is single-consumer-safe
+        // (documented tearing only at the oldest edge).
+        @Volatile private var activeRing: CaptureRing? = null
+
+        /** Newest [frames] mono samples from the live session, or null if not armed. */
+        fun snapshotTail(frames: Int): FloatArray? {
+            val ring = activeRing ?: return null
+            if (frames <= 0) return null
+            val out = ring.snapshot(frames)
+            return if (out.isEmpty()) null else out
+        }
 
         private val _lastSnipFile = MutableStateFlow<File?>(null)
         val lastSnipFile: StateFlow<File?> = _lastSnipFile.asStateFlow()
