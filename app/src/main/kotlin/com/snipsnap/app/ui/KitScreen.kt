@@ -48,7 +48,13 @@ import kotlinx.coroutines.launch
 private val GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 
 @Composable
-fun KitScreen(entry: KitShelf.Entry?, onLongPress: (Int) -> Unit, onTakesBin: () -> Unit) {
+fun KitScreen(
+    entry: KitShelf.Entry?,
+    onLongPress: (Int) -> Unit,
+    onTakesBin: () -> Unit,
+    onEmptyLongPress: (Int) -> Unit = {},
+    onEmptyTapHint: (Int) -> Unit = {},
+) {
     val scheme = LocalScheme.current
 
     if (entry == null) {
@@ -117,6 +123,8 @@ fun KitScreen(entry: KitShelf.Entry?, onLongPress: (Int) -> Unit, onTakesBin: ()
                             pad = kit.pad(slot),
                             onTap = player::play,
                             onLongPress = onLongPress,
+                            onEmptyLongPress = onEmptyLongPress,
+                            onEmptyTapHint = onEmptyTapHint,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -163,17 +171,44 @@ private fun PadCell(
     pad: KitPad?,
     onTap: (Int) -> Unit,
     onLongPress: (Int) -> Unit,
+    onEmptyLongPress: (Int) -> Unit,
+    onEmptyTapHint: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scheme = LocalScheme.current
     val shape = RoundedCornerShape(Layout.PAD_RADIUS.dp)
     val tag = "A%02d".format(slot)
+    val scope = rememberCoroutineScope()
 
     if (pad == null) {
         Box(
             modifier
                 .height(Layout.PAD_H.dp)
-                .raisedBevel(scheme, Layout.PAD_RADIUS.dp),
+                .raisedBevel(scheme, Layout.PAD_RADIUS.dp)
+                // Same long-press timing as the filled path below, but a
+                // blank slot has nothing to preview-play on down — only
+                // the long-press (capture) and the released-early tap
+                // (discoverability hint) do anything.
+                .pointerInput(slot) {
+                    while (true) {
+                        val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
+                        val longPress = scope.launch {
+                            delay(LONG_PRESS_MS)
+                            onEmptyLongPress(slot)
+                        }
+                        awaitPointerEventScope {
+                            while (true) {
+                                val e = awaitPointerEvent()
+                                val c = e.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!c.pressed) break
+                            }
+                        }
+                        if (longPress.isActive) {
+                            longPress.cancel()
+                            onEmptyTapHint(slot)
+                        }
+                    }
+                },
             contentAlignment = Alignment.TopEnd,
         ) {
             TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.6f), Modifier.padding(4.dp))
@@ -184,7 +219,6 @@ private fun PadCell(
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16)
         ?: Schemes.classColor(pad.drumClass)
     val glow = remember(slot) { Animatable(0f) }
-    val scope = rememberCoroutineScope()
 
     Box(
         modifier
