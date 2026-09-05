@@ -29,8 +29,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -448,8 +450,8 @@ private fun TapeDeckContent(
         // after IN/OUT/COMMIT while stopped.
         ReadoutRow(model, readoutPos, onToast, uiGen = uiGeneration)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            DeckButton("IN", Modifier.weight(1f)) { model.setIn(); touch() }
-            DeckButton("OUT", Modifier.weight(1f)) { model.setOut(); touch() }
+            DeckButton("IN", Modifier.weight(1f), engaged = model.inFrame >= 0) { model.setIn(); touch() }
+            DeckButton("OUT", Modifier.weight(1f), engaged = model.outFrame >= 0) { model.setOut(); touch() }
             DeckButton(model.zoomLabel, Modifier.weight(1f)) { model.cycleZoom(); touch() }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -542,18 +544,39 @@ private fun DeckButton(
     label: String,
     modifier: Modifier = Modifier,
     active: Boolean = true,
+    // Orthogonal to `active` — `active` only dims/brightens the label
+    // (an enabled-ish axis); `engaged` is "this control is currently set,"
+    // a separate latched/lit look (accent fill + inverted ink), wired only
+    // for IN/OUT (`model.inFrame`/`outFrame >= 0`). Every other DeckButton
+    // call leaves this at the default and renders exactly as before.
+    engaged: Boolean = false,
     onClick: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .raisedBevel(scheme)
+            // `raisedBevel`'s own `fill` param swaps just the background
+            // color, keeping the bevel border/shape identical either way —
+            // this is what makes `engaged` a strict overlay on the normal
+            // look rather than a different component.
+            .raisedBevel(scheme, fill = if (engaged) scheme.accent.tape else null)
             .tapeClick(onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (active) scheme.ink.tape else scheme.ink2.tape)
+        TapeText(
+            label,
+            TapeType.pixel,
+            when {
+                // `scheme.lcd` — "dark in every scheme" per Schemes.kt — is
+                // the same dark-on-accent ink the selection markers' flag
+                // labels use below, so "lit" reads the same everywhere.
+                engaged -> scheme.lcd.tape
+                active -> scheme.ink.tape
+                else -> scheme.ink2.tape
+            },
+        )
     }
 }
 
@@ -750,6 +773,16 @@ private fun WaveformLcd(
     // Grown, never shrunk; `remember` alone can't do that (the holder's
     // array reference has to be reassignable), hence the tiny class.
     val columnBuffer = remember { ColumnBuffer() }
+    // One shared, reused Paint for the IN/OUT flag labels — created once,
+    // not per draw; only `.textSize`/`.color` (plain field assignments, no
+    // allocation) are refreshed per draw pass to track the scheme.
+    val markerLabelPaint = remember {
+        android.graphics.Paint().apply {
+            isAntiAlias = true
+            textAlign = android.graphics.Paint.Align.CENTER
+            typeface = android.graphics.Typeface.MONOSPACE
+        }
+    }
     Box(
         modifier
             .fillMaxWidth()
@@ -837,6 +870,14 @@ private fun WaveformLcd(
             val barWidth = 2.dp.toPx()
             val tickLength = 8.dp.toPx()
             val tickInset = 2.dp.toPx()
+            // IN/OUT markers: thicker than the onset ticks/center needle
+            // (which stay `strokeWidth` in `scheme.warn` — accent already
+            // distinguishes selection from those, so they're untouched)
+            // and topped with a small flag so which edge is which reads at
+            // a glance.
+            val selectionStrokeWidth = 2.5.dp.toPx()
+            val flagWidth = 14.dp.toPx()
+            val flagHeight = 10.dp.toPx()
             val w = size.width
             val h = size.height
             val centerX = w / 2f
@@ -853,16 +894,64 @@ private fun WaveformLcd(
             val clampedStart = visibleStart.coerceAtLeast(0.0)
             val clampedEnd = visibleEnd.coerceAtMost(model.lengthFrames.toDouble())
 
+            // IN and OUT each draw the moment they're individually set —
+            // `model.hasSelection` requires BOTH (`inFrame >= 0 &&
+            // outFrame > inFrame`, TapeDeck.kt), so gating the markers on
+            // it too would leave tapping IN alone invisible until OUT
+            // followed (half of every selection gesture). Only the filled
+            // band below stays gated on `hasSelection`; the boundary lines
+            // + flags react to each frame independently. `xIn`/`xOut` are
+            // computed unconditionally (cheap arithmetic, no allocation)
+            // and only used where their `hasIn`/`hasOut`/`hasSelection`
+            // guard passes.
+            val hasIn = model.inFrame >= 0
+            val hasOut = model.outFrame >= 0
+            val xIn = (centerX + (model.inFrame - pos) / framesPerPixel).toFloat()
+            val xOut = (centerX + (model.outFrame - pos) / framesPerPixel).toFloat()
             if (model.hasSelection) {
-                val x0 = centerX + (model.inFrame - pos) / framesPerPixel
-                val x1 = centerX + (model.outFrame - pos) / framesPerPixel
                 drawRect(
-                    color = scheme.accent.tape.copy(alpha = 0.27f),
-                    topLeft = Offset(x0.toFloat(), 0f),
-                    size = Size((x1 - x0).toFloat().coerceAtLeast(0f), h),
+                    color = scheme.accent.tape.copy(alpha = 0.40f),
+                    topLeft = Offset(xIn, 0f),
+                    size = Size((xOut - xIn).coerceAtLeast(0f), h),
                 )
-                drawLine(scheme.accent.tape, Offset(x0.toFloat(), 0f), Offset(x0.toFloat(), h), strokeWidth = strokeWidth)
-                drawLine(scheme.accent.tape, Offset(x1.toFloat(), 0f), Offset(x1.toFloat(), h), strokeWidth = strokeWidth)
+            }
+            if (hasIn || hasOut) {
+                // Field assignments only (no allocation) — refreshed per
+                // draw so the flags track the live scheme.
+                markerLabelPaint.textSize = flagHeight * 0.62f
+                markerLabelPaint.color = (0xFF shl 24) or scheme.lcd
+            }
+            if (hasIn) {
+                // Flag to the RIGHT of the IN line: it reads into the
+                // selection rather than overhanging off the start of it.
+                drawSelectionMarker(
+                    x = xIn,
+                    canvasWidth = w,
+                    h = h,
+                    flagOnRight = true,
+                    label = "IN",
+                    scheme = scheme,
+                    labelPaint = markerLabelPaint,
+                    strokeWidth = selectionStrokeWidth,
+                    flagWidth = flagWidth,
+                    flagHeight = flagHeight,
+                )
+            }
+            if (hasOut) {
+                // Flag to the LEFT of the OUT line — same reasoning,
+                // mirrored.
+                drawSelectionMarker(
+                    x = xOut,
+                    canvasWidth = w,
+                    h = h,
+                    flagOnRight = false,
+                    label = "OUT",
+                    scheme = scheme,
+                    labelPaint = markerLabelPaint,
+                    strokeWidth = selectionStrokeWidth,
+                    flagWidth = flagWidth,
+                    flagHeight = flagHeight,
+                )
             }
 
             if (clampedEnd > clampedStart) {
@@ -893,6 +982,38 @@ private fun WaveformLcd(
             drawLine(scheme.warn.tape, Offset(centerX, 0f), Offset(centerX, h), strokeWidth = strokeWidth)
         }
     }
+}
+
+/**
+ * One IN/OUT boundary: a pronounced accent line spanning the full canvas
+ * height, plus a small flag at the top labelled [label] so which edge is
+ * which reads at a glance. [flagOnRight] puts the flag to the right of
+ * the line (IN) or the left (OUT) so it always points into the selection
+ * rather than overhanging off it. [labelPaint]'s size/color are set by
+ * the caller (once per draw pass, not per marker) — this only positions
+ * and draws it. Off-screen guarded like the onset-tick loop, widened by
+ * the flag's own width so a flag just past either edge doesn't smear.
+ */
+private fun DrawScope.drawSelectionMarker(
+    x: Float,
+    canvasWidth: Float,
+    h: Float,
+    flagOnRight: Boolean,
+    label: String,
+    scheme: Scheme,
+    labelPaint: android.graphics.Paint,
+    strokeWidth: Float,
+    flagWidth: Float,
+    flagHeight: Float,
+) {
+    if (x < -flagWidth || x > canvasWidth + flagWidth) return
+    drawLine(scheme.accent.tape, Offset(x, 0f), Offset(x, h), strokeWidth = strokeWidth)
+    val flagLeft = if (flagOnRight) x else x - flagWidth
+    drawRect(color = scheme.accent.tape, topLeft = Offset(flagLeft, 0f), size = Size(flagWidth, flagHeight))
+    // Standard Paint vertical-centering formula: the midpoint between
+    // ascent (negative) and descent, offset from the flag's own center.
+    val baseline = flagHeight / 2f - (labelPaint.descent() + labelPaint.ascent()) / 2f
+    drawContext.canvas.nativeCanvas.drawText(label, flagLeft + flagWidth / 2f, baseline, labelPaint)
 }
 
 /**
