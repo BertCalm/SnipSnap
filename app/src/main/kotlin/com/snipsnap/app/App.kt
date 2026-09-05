@@ -47,6 +47,7 @@ import com.snipsnap.app.ui.HelpScreen
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.MenuRow
+import com.snipsnap.app.ui.PadCaptureScreen
 import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.PlayScreen
 import com.snipsnap.app.ui.PrimaryAction
@@ -134,6 +135,10 @@ fun App(shelf: KitShelf) {
     // from the KIT action row, not one of MenuRow's fixed ten, so it's
     // KIT-scoped overlay state rather than its own AppScreen entry.
     var takesBinOpen by remember { mutableStateOf(false) }
+    // PAD CAPTURE (capture-to-pad): same shape as PAD SHEET/TAKES+BIN — a
+    // long-press on an *empty* pad opens this instead, so it's KIT-scoped
+    // overlay state too, not one of MenuRow's fixed ten.
+    var padCaptureSlot by remember { mutableStateOf<Int?>(null) }
     // X4.4 TEACH THE MACHINE: off by default. The consent row itself lives
     // in PropertiesScreen (⚙), which is out of scope for this pass — this
     // is the plain boolean the brief calls for, wired for CHOP to read,
@@ -277,6 +282,7 @@ fun App(shelf: KitShelf) {
                         // KIT comes back into view.
                         padSheetSlot = null
                         takesBinOpen = false
+                        padCaptureSlot = null
                     },
                 )
                 Box(Modifier.weight(1f)) {
@@ -349,10 +355,41 @@ fun App(shelf: KitShelf) {
                                         }
                                     },
                                 )
+                                padCaptureSlot != null && sheetEntry != null -> {
+                                    val captureArmed by MicSessionService.armed.collectAsState()
+                                    val captureLevel by MicSessionService.level.collectAsState()
+                                    PadCaptureScreen(
+                                        entry = sheetEntry,
+                                        slot = padCaptureSlot!!,
+                                        armed = captureArmed,
+                                        level = captureLevel,
+                                        onRequestArm = ::requestArm,
+                                        onBack = { padCaptureSlot = null },
+                                        onToast = { toast = it },
+                                        onKitUpdated = { updatedKit ->
+                                            // Same shape as PAD SHEET/TAKES+BIN's own
+                                            // onKitUpdated: bump `open.kit`'s identity
+                                            // so KIT's PadPlayer reloads the pad GRAB
+                                            // just filled, not a stale cached (empty)
+                                            // sample.
+                                            open = open?.copy(kit = updatedKit)
+                                            scope.launch {
+                                                kits = withContext(Dispatchers.IO) { shelf.list() }
+                                            }
+                                        },
+                                        // App()'s own scope — same reasoning as
+                                        // PadSheetScreen's own appScope above: the
+                                        // GRAB write must survive a MenuRow tab
+                                        // switch mid-write, not be cancelled by it.
+                                        appScope = scope,
+                                    )
+                                }
                                 else -> KitScreen(
                                     open,
                                     onLongPress = { slot -> padSheetSlot = slot },
                                     onTakesBin = { takesBinOpen = true },
+                                    onEmptyLongPress = { slot -> padCaptureSlot = slot },
+                                    onEmptyTapHint = { toast = "LONG-PRESS TO CAPTURE" },
                                 )
                             }
                         }
