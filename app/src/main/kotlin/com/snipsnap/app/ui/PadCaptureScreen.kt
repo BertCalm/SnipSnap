@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +46,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /** GRAB looks back this far into the ring for the last hit — PadCapture.grabOneShot trims it down from there. */
@@ -52,6 +55,21 @@ private const val GRAB_SECONDS = 2
 private val GRAB_FRAMES get() = GRAB_SECONDS * MicSessionService.SAMPLE_RATE
 
 private fun padTag(slot: Int): String = "A%02d".format(slot)
+
+/**
+ * Serializes the open→assign→save sequence across every [PadCaptureScreen]
+ * instance — module-level (not `remember`ed), so it survives navigation.
+ * A GRAB's save is launched into `appScope` and deliberately outlives this
+ * composable (see the class KDoc), which means a user can tab away mid-save,
+ * come back to the still-shows-empty pad (the first save hasn't landed in
+ * `open.kit` yet), and long-press the same slot again. Without this lock,
+ * two [KitBuilderModel] instances would open the same folder concurrently,
+ * `nextStem` could pick the same filename for both, and whichever `save()`
+ * lands second would silently overwrite `kit.json` — one grab's audio lost
+ * with no toast, no crash. Only the mutation itself is behind the lock; the
+ * snapshot/DSP/classify work above it is read-only and stays concurrent.
+ */
+private val captureWriteMutex = Mutex()
 
 /**
  * The capture surface: what a long-press on an empty [KitScreen] pad opens.
@@ -70,7 +88,6 @@ fun PadCaptureScreen(
     entry: KitShelf.Entry,
     slot: Int,
     armed: Boolean,
-    level: Float,
     onRequestArm: () -> Unit,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
@@ -90,10 +107,12 @@ fun PadCaptureScreen(
                     val snip: Snip = PadCapture.grabOneShot(raw, MicSessionService.SAMPLE_RATE)
                         ?: return@withContext null
                     val cls = Classifier.classify(snip).drumClass
-                    val model = KitBuilderModel.open(entry.dir)
-                    model.assign(slot, snip, cls, "%s".format(cls))
-                    model.save()
-                    model.kit
+                    captureWriteMutex.withLock {
+                        val model = KitBuilderModel.open(entry.dir)
+                        model.assign(slot, snip, cls, "%s".format(cls))
+                        model.save()
+                        model.kit
+                    }
                 }
                 if (updated == null) {
                     // Distinguish the two null paths live, not off the
@@ -152,7 +171,7 @@ fun PadCaptureScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (armed) {
-                    CaptureLevelIndicator(level)
+                    CaptureLevelIndicator()
                     TapeText(
                         "HIT SOMETHING, THEN GRAB IT.",
                         TapeType.lcdSmall,
@@ -210,17 +229,17 @@ private fun HeaderChip(
  * symbols out of `KitsScreen.kt` into a third shared file was worse than
  * a small, faithful duplicate here.
  *
- * Unlike `RecordingIndicator` (which self-collects `MicSessionService.level`
- * as the smallest composable scope that should tick at ~21 Hz), [level] is
- * threaded in as a parameter here — `App.kt` already collects it once for
- * `PadCaptureScreen`'s own required signature, and self-collecting it again
- * in a private child would just add a second redundant collector without
- * shrinking the recomposition scope any further (this composable, not the
- * caller above it, is already the leaf).
+ * Self-collects `MicSessionService.level`, same as `RecordingIndicator`
+ * does — the smallest composable scope that should recompose at ~21 Hz.
+ * `App.kt` collects `armed` (which changes rarely) for `PadCaptureScreen`'s
+ * signature, but does NOT collect `level`: doing so up there would make the
+ * 21Hz tick recompose the whole surface (header + GRAB button included)
+ * instead of just this leaf.
  */
 @Composable
-private fun CaptureLevelIndicator(level: Float) {
+private fun CaptureLevelIndicator() {
     val scheme = LocalScheme.current
+    val level by MicSessionService.level.collectAsState()
 
     var elapsedSeconds by remember { mutableStateOf(0) }
     LaunchedEffect(Unit) {

@@ -356,13 +356,17 @@ fun App(shelf: KitShelf) {
                                     },
                                 )
                                 padCaptureSlot != null && sheetEntry != null -> {
+                                    // Only `armed` is collected here — it changes
+                                    // rarely. `level` is deliberately NOT collected
+                                    // at this scope; PadCaptureScreen's own leaf
+                                    // meter composable collects it, so the ~21Hz
+                                    // tick recomposes just that leaf, not this
+                                    // whole `when` branch (header + GRAB button).
                                     val captureArmed by MicSessionService.armed.collectAsState()
-                                    val captureLevel by MicSessionService.level.collectAsState()
                                     PadCaptureScreen(
                                         entry = sheetEntry,
                                         slot = padCaptureSlot!!,
                                         armed = captureArmed,
-                                        level = captureLevel,
                                         onRequestArm = ::requestArm,
                                         onBack = { padCaptureSlot = null },
                                         onToast = { toast = it },
