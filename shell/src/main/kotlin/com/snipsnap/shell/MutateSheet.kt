@@ -5,8 +5,6 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import java.io.File
-import kotlin.math.ln
-import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
@@ -30,9 +28,6 @@ object MutateSheet {
         Mutate.Mode.values().firstOrNull { it.name == name }
             ?: throw IllegalArgumentException("unknown mutate move '$name' - the card draws: ${MODES.joinToString(", ")}")
 
-    /** The one knob a move has: its plain-word label, the verb's own range, and how the stepper maps onto it. */
-    data class Knob(val label: String, val lo: Float, val hi: Float, val default: Float, val exponential: Boolean)
-
     private val KNOBS: Map<Mutate.Mode, Knob> = mapOf(
         Mutate.Mode.SPLICE to Knob("AT", 5f, 2000f, Mutate.DEFAULT_SPLICE_MS.toFloat(), exponential = true),
         Mutate.Mode.SPLIT to Knob("HZ", 40f, 8000f, Mutate.DEFAULT_CROSSOVER_HZ, exponential = true),
@@ -43,16 +38,10 @@ object MutateSheet {
     fun knobFor(mode: Mutate.Mode): Knob? = KNOBS[mode]
 
     /** Stepper fraction 0..1 → the knob's value. */
-    fun value(knob: Knob, fraction: Float): Float {
-        val f = fraction.coerceIn(0f, 1f)
-        return if (knob.exponential) knob.lo * (knob.hi / knob.lo).pow(f) else knob.lo + (knob.hi - knob.lo) * f
-    }
+    fun value(knob: Knob, fraction: Float): Float = knob.value(fraction)
 
     /** The knob's value → stepper fraction; the inverse of [value]. */
-    fun fraction(knob: Knob, value: Float): Float {
-        val v = value.coerceIn(knob.lo, knob.hi)
-        return if (knob.exponential) (ln(v / knob.lo) / ln(knob.hi / knob.lo)).toFloat() else (v - knob.lo) / (knob.hi - knob.lo)
-    }
+    fun fraction(knob: Knob, value: Float): Float = knob.fraction(value)
 
     /** What the value column reads: "40 ms", "200 Hz" / "1.2k", "50%". */
     fun label(knob: Knob, value: Float): String = when (knob.label) {

@@ -383,6 +383,11 @@ a cloud of a quiet sound is a quiet cloud. `--seconds N` (default 8),
 kit: it previews, exports, eras, and resamples like any other — sculpt
 a texture, age it through tape, put the Answer under it.
 
+On the phone, SCULPT lives on the KIT screen's TEXTURE panel: pick a
+pad, a mode (CLOUD · SCRUB · SWARM) and a LENGTH, and the four takes
+land as a new tape on the shelf, which opens — the same
+`TextureKits` door, the same folder.
+
 ### `stretch <wav>` — the slow-motion wash
 
 Paulstretch, the honest way: big Hann windows (93 ms) analyzed along
@@ -404,6 +409,13 @@ Lands beside the source as "`<stem> Stretched.wav`" /
 "`<stem> Frozen.wav`" (`--out`, `--overwrite`). A kit pad is a WAV in
 a folder — point stretch straight at it, then `sculpt` or `chop` the
 result: the Sculptor's verbs compose.
+
+On the phone, STRETCH is the KIT screen's other TEXTURE door and lands
+a *kit*, not a twin WAV: SLOW grows four seeded takes of the pad slowed
+BY a factor (the whole hit, slowed as far as a minute allows — the
+recipe records the factor actually used); FREEZE holds four instants
+(the loudest moment, then a quarter, half and three quarters in) for
+HOLD seconds. Every take is a LOOP pad with provenance and a recipe.
 
 ### `shape <kit-dir> <pad>` — pad shape as metadata
 
