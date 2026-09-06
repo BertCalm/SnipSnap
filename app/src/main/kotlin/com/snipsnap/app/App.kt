@@ -67,6 +67,7 @@ import com.snipsnap.shell.Personality
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.StarterKits
+import com.snipsnap.shell.TextureKits
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -247,6 +248,40 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * SCULPT / STRETCH / FREEZE from the KIT screen: one pad of the open kit
+     * becomes a texture kit of its own on the shelf, which then opens —
+     * the same DUBBING… shape as [fresh], because it's the same thing: a
+     * new tape rendered offline over a few seconds.
+     */
+    fun texture(slot: Int, spec: TextureKits.Spec) {
+        val source = open ?: return
+        if (busy != null) return
+        busy = when (spec) {
+            is TextureKits.Spec.Sculpt -> "SCULPTING…"
+            is TextureKits.Spec.Stretch -> "STRETCHING…"
+            is TextureKits.Spec.Freeze -> "FREEZING…"
+        }
+        scope.launch {
+            val entry = try {
+                withContext(Dispatchers.IO) { shelf.texture(source, slot, spec) }
+            } catch (e: Exception) {
+                busy = null
+                // Law 3: when it breaks, say exactly what happened.
+                toast = "${spec.verb} FAILED: ${e.message ?: e.javaClass.simpleName}"
+                return@launch
+            }
+            kits = withContext(Dispatchers.IO) { shelf.list() }
+            busy = null
+            toast = when (spec) {
+                is TextureKits.Spec.Sculpt -> Copy.SCULPTED
+                is TextureKits.Spec.Stretch -> Copy.STRETCHED
+                is TextureKits.Spec.Freeze -> Copy.FROZEN
+            }
+            open = entry
+        }
+    }
+
     TapeTheme(scheme, personality) {
         Box(
             Modifier
@@ -351,8 +386,10 @@ fun App(shelf: KitShelf) {
                                 )
                                 else -> KitScreen(
                                     open,
+                                    busy = busy != null,
                                     onLongPress = { slot -> padSheetSlot = slot },
                                     onTakesBin = { takesBinOpen = true },
+                                    onTexture = ::texture,
                                 )
                             }
                         }

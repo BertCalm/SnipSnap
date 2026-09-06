@@ -1,13 +1,10 @@
 package com.snipsnap.cli
 
-import com.snipsnap.audio.DrumClass
-import com.snipsnap.audio.Granular
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
-import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
-import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.shell.TextureKits
 import java.io.File
 import java.io.PrintStream
 
@@ -23,24 +20,9 @@ import java.io.PrintStream
  */
 object SculptCommand {
 
-    const val TAKES = 4
+    const val TAKES = TextureKits.TAKES
     const val DEFAULT_SECONDS = 8f
     const val MAX_SECONDS = 60f
-
-    private val MODES: Map<String, Granular.Params> = mapOf(
-        "cloud" to Granular.Params(
-            sizeSec = 0.09f, density = 40f, positionStart = 0.35f,
-            jitter = 0.05f, pitchSpreadSemis = 0.3f, spray = 0.6f,
-        ),
-        "scrub" to Granular.Params(
-            sizeSec = 0.12f, density = 30f, positionStart = 0f, positionEnd = 1f,
-            jitter = 0.02f, pitchSpreadSemis = 0.2f, spray = 0.5f,
-        ),
-        "swarm" to Granular.Params(
-            sizeSec = 0.09f, density = 55f, positionStart = 0.35f,
-            jitter = 0.05f, pitchSpreadSemis = 7f, spray = 0.8f,
-        ),
-    )
 
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(
@@ -49,8 +31,11 @@ object SculptCommand {
             boolean = setOf("--overwrite"),
         )
         val mode = (opts["--mode"] ?: "cloud").lowercase()
-        val params = MODES[mode]
-            ?: throw CliError("unknown mode '$mode' - sculpt speaks ${MODES.keys.joinToString(", ")}")
+        try {
+            TextureKits.sculptParams(mode)
+        } catch (e: IllegalArgumentException) {
+            throw CliError(e.message ?: "unknown mode '$mode'")
+        }
         val seconds = opts["--seconds"]?.let {
             it.toFloatOrNull()?.takeIf { s -> s >= 1f && s <= MAX_SECONDS }
                 ?: throw CliError("--seconds wants 1..${MAX_SECONDS.toInt()}, got '$it'")
@@ -73,34 +58,7 @@ object SculptCommand {
         outRoot.mkdirs()
 
         out.println("sculpting $mode from $sourceLabel - $TAKES takes of %.0fs".format(seconds))
-        val model = KitBuilderModel.create(name, kitDir)
-        for (i in 0 until TAKES) {
-            val takeSeed = seed + i
-            val texture = Granular.render(source, seconds, takeSeed, params)
-            val slot = i + 1
-            model.assign(
-                slot, texture, DrumClass.LOOP,
-                displayName = "${mode.replaceFirstChar { it.uppercase() }} ${i + 1}",
-            )
-            model.update(slot) {
-                it.copy(
-                    source = mapOf("sculptedFrom" to sourceLabel, "mode" to mode, "seed" to takeSeed.toString()),
-                    recipe = JsonValue.Obj(
-                        linkedMapOf<String, JsonValue>(
-                            "sculpt" to JsonValue.Obj(
-                                linkedMapOf(
-                                    "mode" to JsonValue.Str(mode),
-                                    "seed" to JsonValue.Num(takeSeed.toDouble()),
-                                    "seconds" to JsonValue.Num(seconds.toDouble()),
-                                ),
-                            ),
-                        ),
-                    ),
-                )
-            }
-            out.println("  A%02d %s %d: seed %d".format(slot, mode, i + 1, takeSeed))
-        }
-        model.save()
+        TextureKits.render(name, kitDir, source, sourceLabel, TextureKits.Spec.Sculpt(mode, seconds, seed)) { out.println(it) }
         out.println("-> ${kitDir.path} ($TAKES LOOP pads, provenance stamped; same seed, same texture)")
         return 0
     }

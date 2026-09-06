@@ -796,6 +796,8 @@ private fun provenanceOrigin(source: Map<String, String>): String? = when {
     source["resampledFrom"] != null -> "resampled from ${source.getValue("resampledFrom")}"
     source["importedFrom"] != null -> "imported from ${source.getValue("importedFrom")}"
     source["sculptedFrom"] != null -> "sculpted from ${source.getValue("sculptedFrom")}"
+    source["stretchedFrom"] != null ->
+        "${if (source["mode"] == "freeze") "frozen" else "stretched"} from ${source.getValue("stretchedFrom")}"
     source["dissectedFrom"] != null -> "dissected from ${source.getValue("dissectedFrom")}"
     source["mergedFrom"] != null -> "merged from ${source.getValue("mergedFrom")}"
     source["origin"] == "chop" -> "chopped from tape"
@@ -946,7 +948,7 @@ private fun WaveformLcd(snip: Snip?, drumClass: DrumClass, color: Color, scheme:
 // ---------- stepper-slider ----------
 
 @Composable
-private fun StepperSlider(
+internal fun StepperSlider(
     label: String,
     fraction: Float,
     valueText: String,
@@ -1256,7 +1258,7 @@ private fun MutateCard(
 // ---------- action row ----------
 
 @Composable
-private fun ActionButton(
+internal fun ActionButton(
     label: String,
     scheme: Scheme,
     enabled: Boolean,

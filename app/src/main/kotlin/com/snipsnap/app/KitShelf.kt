@@ -3,7 +3,10 @@ package com.snipsnap.app
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
+import com.snipsnap.audio.WavReader
+import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.StarterKits
+import com.snipsnap.shell.TextureKits
 import java.io.File
 
 /**
@@ -58,6 +61,23 @@ class KitShelf(private val root: File) {
         val name = freshName(starter.displayName)
         val dir = File(root, name)
         val kit = starter.render(name, dir, seed)
+        return Entry(dir, kit)
+    }
+
+    /**
+     * Grow a texture kit from one pad of [source] onto the shelf — the KIT
+     * screen's SCULPT / STRETCH panel. Same shape as [render]: seconds-long,
+     * the caller shows a busy line; the new kit is a tape of its own, named
+     * "<Pad> Sculpt" (or Stretched / Frozen), provenance pointing back at
+     * `Kit:A03`, through the same `TextureKits` door the CLI verbs use.
+     */
+    fun texture(source: Entry, slot: Int, spec: TextureKits.Spec): Entry {
+        val pad = source.kit.pad(slot) ?: throw IllegalArgumentException("no pad on ${MutateSheet.padTag(slot)}")
+        val snip = WavReader.read(File(source.dir, pad.sampleFile))
+        root.mkdirs()
+        val name = freshName(TextureKits.kitName(pad.displayName, spec))
+        val dir = File(root, name)
+        val kit = TextureKits.render(name, dir, snip, "${source.kit.name}:${MutateSheet.padTag(slot)}", spec)
         return Entry(dir, kit)
     }
 }
