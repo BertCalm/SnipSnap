@@ -562,7 +562,9 @@ fun PadSheetScreen(
     }
     var pendingAmt by remember(slot, amount) { mutableFloatStateOf(amount) }
     // SHAPE's four: null on the pad means "the format's own default", drawn
-    // at the position that default sounds like (no ramp, full length, open, no ring).
+    // at the position that default sounds like (no ramp, full length, open,
+    // no ring) — and a knob committed *at* that position writes null back,
+    // so resting a stepper never turns a pad "shaped".
     var pendingAttack by remember(slot, pad.attack) { mutableFloatStateOf(pad.attack ?: 0f) }
     var pendingDecay by remember(slot, pad.decay) { mutableFloatStateOf(pad.decay ?: 1f) }
     var pendingCutoff by remember(slot, pad.cutoff) { mutableFloatStateOf(pad.cutoff ?: 1f) }
@@ -686,28 +688,28 @@ fun PadSheetScreen(
                         fraction = pendingAttack,
                         valueText = if (pad.attack == null) "OFF" else "%.0f ms".format(PadShape.attackSeconds(pendingAttack) * 1000f),
                         onChange = { f -> pendingAttack = (f * 20f).roundToInt() / 20f },
-                        onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(attack = pendingAttack) } } },
+                        onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(attack = pendingAttack.takeIf { it > 0f }) } } },
                     ),
                     ShapeKnob(
                         label = "DECAY",
                         fraction = pendingDecay,
                         valueText = if (pad.decay == null) "FULL" else "${(pendingDecay * 100).roundToInt()}%",
                         onChange = { f -> pendingDecay = ((f * 20f).roundToInt() / 20f).coerceAtLeast(0.05f) },
-                        onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(decay = pendingDecay) } } },
+                        onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(decay = pendingDecay.takeIf { it < 1f }) } } },
                     ),
                     ShapeKnob(
                         label = "CUTOFF",
                         fraction = pendingCutoff,
                         valueText = if (pad.cutoff == null) "OPEN" else cutoffLabel(pendingCutoff),
                         onChange = { f -> pendingCutoff = (f * 20f).roundToInt() / 20f },
-                        onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(cutoff = pendingCutoff) } } },
+                        onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(cutoff = pendingCutoff.takeIf { it < 1f }) } } },
                     ),
                     ShapeKnob(
                         label = "RES",
                         fraction = pendingRes,
                         valueText = if (pad.resonance == null) "OFF" else "%.0f dB".format(PadShape.resonanceDb(pendingRes)),
                         onChange = { f -> pendingRes = (f * 20f).roundToInt() / 20f },
-                        onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(resonance = pendingRes) } } },
+                        onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(resonance = pendingRes.takeIf { it > 0f }) } } },
                     ),
                 ),
                 shaped = isShaped,

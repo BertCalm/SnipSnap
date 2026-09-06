@@ -120,17 +120,16 @@ object Separate {
             for (b in 0 until Spectral.BINS) gains[b] = 1f - amount * mask[b]
             gains
         }
-        val inPeak = peak(snip.samples)
-        val outPeak = peak(out.samples)
+        // Snip.peak() reads only the finite samples, the same reading every
+        // normalizer in the shop uses; `out` is this call's own array, so
+        // the makeup scales it in place.
+        val inPeak = snip.peak()
+        val outPeak = out.peak()
         if (inPeak <= 0f || outPeak <= 0f) return out
         val makeup = (inPeak / outPeak).coerceAtMost(SMEAR_MAKEUP_MAX)
-        return Snip(FloatArray(out.samples.size) { out.samples[it] * makeup }, out.channels, out.sampleRate)
-    }
-
-    private fun peak(samples: FloatArray): Float {
-        var p = 0f
-        for (v in samples) { val a = if (v < 0) -v else v; if (a > p) p = a }
-        return p
+        val samples = out.samples
+        for (i in samples.indices) samples[i] *= makeup
+        return out
     }
 
     /** The three fuzzy masks, per channel, per frame, per bin — they sum to one. */
