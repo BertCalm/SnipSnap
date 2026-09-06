@@ -2,7 +2,10 @@ package com.snipsnap.app.ui
 
 import android.os.SystemClock
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,12 +29,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
+import com.snipsnap.app.theme.oilslickSweep
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Classifier
@@ -40,6 +45,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.SchemeId
 import kotlin.math.sqrt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -53,6 +59,9 @@ import kotlinx.coroutines.withContext
 /** GRAB looks back this far into the ring for the last hit — PadCapture.grabOneShot trims it down from there. */
 private const val GRAB_SECONDS = 2
 private val GRAB_FRAMES get() = GRAB_SECONDS * MicSessionService.SAMPLE_RATE
+
+/** Shorter than this ⇒ treat as an accidental tap, not a HOLD — toast a hint instead of committing a sliver. */
+private const val MIN_HOLD_MS = 150L
 
 private fun padTag(slot: Int): String = "A%02d".format(slot)
 
@@ -96,16 +105,28 @@ fun PadCaptureScreen(
 ) {
     val scheme = LocalScheme.current
     var grabbing by remember { mutableStateOf(false) }
+    var holding by remember { mutableStateOf(false) }
+    var holdStart by remember { mutableStateOf(0L) }
 
-    fun grab() {
+    // GRAB and HOLD are two producers of the same commit: classify → the
+    // mutex-serialized open/assign/save → the same success/null/error
+    // reporting. `grabbing` is the ONE guard both share, so a GRAB press
+    // mid-HOLD-commit (or vice versa) is a no-op, not a second write racing
+    // the first — see captureWriteMutex's own KDoc for what a second writer
+    // would otherwise clobber. `producer` runs on the IO dispatcher, same as
+    // the snapshot/DSP work it replaces.
+    fun commitToPad(
+        successLabel: String,
+        nothingLabel: String,
+        failurePrefix: String,
+        producer: suspend () -> Snip?,
+    ) {
         if (!armed || grabbing) return
         grabbing = true
         appScope.launch {
             try {
                 val updated: Kit? = withContext(Dispatchers.IO) {
-                    val raw = MicSessionService.snapshotTail(GRAB_FRAMES) ?: return@withContext null
-                    val snip: Snip = PadCapture.grabOneShot(raw, MicSessionService.SAMPLE_RATE)
-                        ?: return@withContext null
+                    val snip = producer() ?: return@withContext null
                     val cls = Classifier.classify(snip).drumClass
                     captureWriteMutex.withLock {
                         val model = KitBuilderModel.open(entry.dir)
@@ -117,22 +138,62 @@ fun PadCaptureScreen(
                 if (updated == null) {
                     // Distinguish the two null paths live, not off the
                     // composition's `armed` param — a session can eject
-                    // mid-grab (EJECT from the notification, most likely),
+                    // mid-commit (EJECT from the notification, most likely),
                     // and this read is what keeps the toast honest about
                     // which of the two actually happened.
-                    onToast(if (!MicSessionService.armed.value) "NOT LISTENING YET" else "NOTHING TO GRAB YET")
+                    onToast(if (!MicSessionService.armed.value) "NOT LISTENING YET" else nothingLabel)
                 } else {
                     onKitUpdated(updated)
-                    onToast("GRABBED → PAD $slot")
+                    onToast(successLabel)
                     onBack()
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                onToast("GRAB FAILED: ${e.message ?: e.javaClass.simpleName}")
+                onToast("$failurePrefix: ${e.message ?: e.javaClass.simpleName}")
             } finally {
                 grabbing = false
             }
+        }
+    }
+
+    fun grab() {
+        commitToPad(
+            successLabel = "GRABBED → PAD $slot",
+            nothingLabel = "NOTHING TO GRAB YET",
+            failurePrefix = "GRAB FAILED",
+        ) {
+            val raw = MicSessionService.snapshotTail(GRAB_FRAMES) ?: return@commitToPad null
+            PadCapture.grabOneShot(raw, MicSessionService.SAMPLE_RATE)
+        }
+    }
+
+    fun startHold() {
+        holdStart = SystemClock.elapsedRealtime()
+        holding = true
+    }
+
+    fun endHold() {
+        holding = false
+        val heldMs = SystemClock.elapsedRealtime() - holdStart
+        if (heldMs < MIN_HOLD_MS) {
+            onToast("HOLD TO RECORD")
+            return
+        }
+        // The ring was recording the whole time this control was held down —
+        // no recorder starts or stops here, only a slice of it. `heldMs` →
+        // frames, capped to PadCapture.MAX_HOLD_FRAMES so an absurdly long
+        // hold still resolves to a bounded snapshot (the ring itself holds
+        // MicSessionService.RING_SECONDS, comfortably more than the cap).
+        val frames = (heldMs * MicSessionService.SAMPLE_RATE / 1000L)
+            .toInt()
+            .coerceIn(1, PadCapture.MAX_HOLD_FRAMES)
+        commitToPad(
+            successLabel = "RECORDED → PAD $slot",
+            nothingLabel = "NOTHING RECORDED",
+            failurePrefix = "RECORD FAILED",
+        ) {
+            MicSessionService.snapshotTail(frames)?.let { PadCapture.holdClip(it, MicSessionService.SAMPLE_RATE) }
         }
     }
 
@@ -173,7 +234,7 @@ fun PadCaptureScreen(
                 if (armed) {
                     CaptureLevelIndicator()
                     TapeText(
-                        "HIT SOMETHING, THEN GRAB IT.",
+                        "GRAB the sound that just happened, or HOLD to record.",
                         TapeType.lcdSmall,
                         scheme.lcdInk.tape,
                         maxLines = 2,
@@ -197,6 +258,16 @@ fun PadCaptureScreen(
             enabled = armed && !grabbing,
             onClick = ::grab,
         )
+        HoldRecordAction(
+            label = when {
+                holding -> "RECORDING…"
+                grabbing -> "GRABBING…"
+                else -> "HOLD TO REC"
+            },
+            enabled = armed && !grabbing,
+            onPress = ::startHold,
+            onRelease = ::endHold,
+        )
     }
 }
 
@@ -216,6 +287,60 @@ private fun HeaderChip(
         contentAlignment = Alignment.Center,
     ) {
         TapeText(label, TapeType.pixel, scheme.ink.tape)
+    }
+}
+
+/**
+ * HOLD's control — same visual family as `PrimaryAction` (52dp, rimmed, dark
+ * fill; see `KitsScreen.kt`) but press/release semantics instead of a tap.
+ * A `tapeClick` only fires once, on tap-up, with no way to observe how long
+ * the tap was held — HOLD's whole gesture is the duration of the press, so
+ * it needs the raw down/up events instead.
+ */
+@Composable
+private fun HoldRecordAction(label: String, enabled: Boolean, onPress: () -> Unit, onRelease: () -> Unit) {
+    val scheme = LocalScheme.current
+    val rim =
+        if (scheme.id == SchemeId.OILSLICK) {
+            Modifier.border(2.dp, oilslickSweep(), RoundedCornerShape(6.dp))
+        } else {
+            Modifier.border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
+        }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(Layout.PRIMARY_ACTION_H.dp)
+            .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
+            .then(rim)
+            .then(
+                if (!enabled) {
+                    Modifier
+                } else {
+                    Modifier.pointerInput(Unit) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            onPress()
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) {
+                                    change.consume()
+                                    break
+                                }
+                                change.consume()
+                            }
+                            onRelease()
+                        }
+                    }
+                },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        TapeText(
+            label,
+            TapeType.displayBig,
+            if (enabled) scheme.lcdInk.tape else scheme.lcdInk.tape.copy(alpha = 0.5f),
+        )
     }
 }
 
