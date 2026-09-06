@@ -67,4 +67,29 @@ class PadCaptureTest {
         // Only the last hit's worth of audio, far shorter than 2.5s of lead-in.
         assertTrue(snip.frameCount < 22_050, "should grab the last hit, not from the first")
     }
+
+    @Test
+    fun `holdClip keeps the whole held window, not just the last hit`() {
+        // Two hits inside one held window — both must survive (unlike grabOneShot).
+        val total = 88_200                       // 2s hold
+        val raw = FloatArray(total)
+        for ((at) in listOf(intArrayOf(11_025), intArrayOf(55_125))) {
+            for (i in 0 until 4_410) {
+                val idx = at + i; if (idx >= total) break
+                val w = 0.5f * (1f - kotlin.math.cos(2.0 * Math.PI * i / 4_410).toFloat())
+                raw[idx] = 0.8f * w * kotlin.math.sin(2.0 * Math.PI * 180.0 * i / 44_100.0).toFloat()
+            }
+        }
+        val snip = PadCapture.holdClip(raw, 44_100)
+        assertNotNull(snip)
+        // Both hits span ~0.25s..1.35s of audio — the clip must be long enough to contain both,
+        // i.e. much longer than one hit (grabOneShot on this input would be far shorter).
+        assertTrue(snip.frameCount > 44_100, "held clip must keep both hits, got ${snip.frameCount} frames")
+        assertTrue(snip.peak() > 0.9f)
+    }
+
+    @Test
+    fun `holdClip on silence yields null`() {
+        assertNull(PadCapture.holdClip(FloatArray(88_200), 44_100))
+    }
 }
