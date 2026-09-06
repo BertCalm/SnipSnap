@@ -55,18 +55,20 @@ import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
-import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.PadShape
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.ShapeAudition
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.exp
@@ -202,13 +204,21 @@ fun PadSheetScreen(
 
     LaunchedEffect(model, slot) { refreshPadAudio(builtModel) }
 
-    fun audition(target: Snip, level: Float) {
+    /**
+     * HIT. [shape] is the pad whose SHAPE the audition honours — the WAV
+     * on disk is pristine (the hardware renders attack/decay/cutoff/res
+     * from metadata), so an unshaped pad plays its bytes and a shaped one
+     * plays `ShapeAudition`'s approximation, the same one `KitPreview`
+     * renders; a preview must not claim the card will sound like the file.
+     */
+    fun audition(target: Snip, level: Float, shape: KitPad? = null) {
         // Release synchronously at the swap site — a composition-scoped
         // coroutine can't guarantee the previous voice actually stopped
         // before this one starts (ChopScreen's `audition()` comment).
         voice?.release()
-        val gained = if (level == 1f) target.samples else FloatArray(target.samples.size) { target.samples[it] * level }
-        val v = TapeVoice(gained, target.sampleRate)
+        val rendered = shape?.let { ShapeAudition.render(target, it) } ?: target
+        val gained = if (level == 1f) rendered.samples else FloatArray(rendered.samples.size) { rendered.samples[it] * level }
+        val v = TapeVoice(gained, rendered.sampleRate)
         voice = v
         v.start(0)
     }
@@ -223,7 +233,7 @@ fun PadSheetScreen(
     var pendingMetadataSave by remember(model) { mutableIntStateOf(0) }
 
     /**
-     * Metadata edits — LEVEL/PAN/TUNE/ONE-SHOT/CHOKE — never touch a WAV,
+     * Metadata edits — LEVEL/PAN/TUNE/ONE-SHOT/CHOKE/SHAPE — never touch a WAV,
      * so they mutate [KitBuilderModel.kit] in memory only, right here,
      * synchronously. `save()` is deliberately NOT called per nudge:
      * `KitBuilderModel.save()` unconditionally archives a take whenever
@@ -286,27 +296,33 @@ fun PadSheetScreen(
     }
 
     /**
-     * TREATMENT: picking a segment or moving AMT. `eraPad` always reads the
-     * *current on-disk* audio, ages it, and bins whatever was there — so
+     * TREATMENT: picking a segment on either row, or moving AMT. Both
+     * whole-pad doors (`eraPad`, `characterPad`) always read the *current
+     * on-disk* audio, rewrite it, and bin whatever was there — so
      * re-applying onto an already-treated pad (moving AMT, or switching
-     * segments) would stack onto the aged audio rather than replacing it.
-     * When the pad already carries an era recipe, undo back to it first —
-     * but only when the bin can restore *every* file the pad currently
-     * references (main sample and any GHOSTS velocity layers). A layer
-     * built by `addGhostLayers` *after* a treatment was derived from the
-     * already-aged main sample and never earned its own bin entry, so a
-     * partial undo there would leave the main sample and its layers aged
-     * by a different number of passes — the exact "untreated underside"
-     * `PadSheet.kt`'s KDoc says routing through `eraPad` (not `treatPad`)
-     * exists to avoid. Refusing honestly in that case beats a silent skew.
+     * segments) would stack onto the treated audio rather than replacing
+     * it. When the pad already carries a card recipe *and the bin holds
+     * its main sample*, undo back to it first — but only when the bin can
+     * restore *every* file the pad currently references (main sample and
+     * any GHOSTS velocity layers). A layer built by `addGhostLayers`
+     * *after* a treatment was derived from the already-treated main sample
+     * and never earned its own bin entry, so a partial undo there would
+     * leave the main sample and its layers treated by a different number
+     * of passes — the exact "untreated underside" `PadSheet.kt`'s KDoc
+     * says routing through the whole-pad doors exists to avoid. Refusing
+     * honestly in that case beats a silent skew.
+     *
+     * A recipe with nothing in the bin behind it (a bank-B twin, a CLI
+     * `treat`, a bin since emptied) is a sound the sheet can name but not
+     * undo: the new treatment stacks on it, the way `treat` always has.
      */
     fun applyTreatment(segment: String, amount: Float) {
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
-        val era = PadSheet.eraFor(segment) ?: return
+        val treatment = PadSheet.treatmentFor(segment) ?: return
         val padName = p.displayName
-        val hadPriorTreatment = readEraRecipe(p.recipe) != null
+        val hadPriorTreatment = PadSheet.read(p.recipe) != null
         scope.launch {
             busy = true
             try {
@@ -314,20 +330,24 @@ fun PadSheetScreen(
                     if (hadPriorTreatment) {
                         val files = (listOf(p.sampleFile) + p.velocityLayers.map { it.sampleFile }).distinct()
                         val binned = m.binContents().map { it.originalName }.toSet()
-                        check(files.all { it in binned }) {
-                            "pad $slot can't cleanly re-treat - its ghost layers postdate the last " +
-                                "treatment (or the bin's since emptied) - clear GHOSTS, or accept the " +
-                                "current sound, before treating again"
+                        if (p.sampleFile in binned) {
+                            check(files.all { it in binned }) {
+                                "pad $slot can't cleanly re-treat - its ghost layers postdate the last " +
+                                    "treatment - clear GHOSTS, or accept the current sound, before treating again"
+                            }
+                            m.unEraPad(slot)
                         }
-                        m.unEraPad(slot)
                     }
-                    m.eraPad(slot, era, amount)
+                    when (treatment) {
+                        is PadSheet.Treatment.Era -> m.eraPad(slot, treatment.name, amount)
+                        is PadSheet.Treatment.Character -> m.characterPad(slot, treatment.name, amount)
+                    }
                     m.save()
                 }
                 revision++
                 onKitUpdated(m.kit)
                 refreshPadAudio(m)
-                snip?.let { audition(it, m.kit.pad(slot)?.level ?: 1f) }
+                m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
                 onToast(Copy.treated(segment, padName))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -354,6 +374,78 @@ fun PadSheetScreen(
 
     fun onEject() {
         commitPadEditNow("EJECT", onSuccess = { onToast(Copy.DELETE_SNIP); onBack() }) { mm -> mm.clear(slot) }
+    }
+
+    // ---- MUTATE: one hit from two parents (MutateSheet over Mutate) ----
+    var mutateMode by remember(slot) { mutableStateOf(MutateSheet.MODES.first()) }
+    var partner by remember(slot) { mutableStateOf<MutateSheet.Partner?>(null) }
+    // Each ROULETTE tap is a new seed, so every spin is a new deal and each one reproducible.
+    var spins by remember(slot) { mutableIntStateOf(0) }
+    val mutateKnob = MutateSheet.knobFor(MutateSheet.modeFor(mutateMode))
+    var pendingMutateKnob by remember(slot, mutateMode) {
+        mutableFloatStateOf(mutateKnob?.let { MutateSheet.fraction(it, it.default) } ?: 0f)
+    }
+
+    /**
+     * MUTATE. The verb refuses layered and chained pads itself; the GHOSTS
+     * case gets its own line first because it's the one a thumb causes.
+     */
+    fun onMutate() {
+        if (busy) return
+        val m = model ?: return
+        val who = partner ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (p.velocityLayers.isNotEmpty()) {
+            onToast(Copy.MUTATE_NEEDS_ONE)
+            return
+        }
+        val padName = p.displayName
+        val move = MutateSheet.modeFor(mutateMode)
+        val fraction = pendingMutateKnob
+        scope.launch {
+            busy = true
+            try {
+                withContext(Dispatchers.IO) {
+                    MutateSheet.apply(m, slot, who, move, fraction)
+                    m.save()
+                }
+                revision++
+                onKitUpdated(m.kit)
+                refreshPadAudio(m)
+                m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
+                onToast(Copy.mutated(mutateMode, padName, MutateSheet.name(who)))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("MUTATE", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    fun onUnmutate() {
+        commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNMUTATED) }) { mm -> MutateSheet.undo(mm, slot) }
+    }
+
+    /** ROULETTE: the shelf (the kit folder's parent) is the crate; the deal becomes the partner. */
+    fun onRoulette() {
+        if (busy) return
+        val m = model ?: return
+        val root = entry.dir.parentFile ?: entry.dir
+        val seed = spins
+        scope.launch {
+            busy = true
+            try {
+                val deal = withContext(Dispatchers.IO) { MutateSheet.deal(m, slot, root, seed) }
+                spins = seed + 1
+                partner = deal
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (e is IllegalArgumentException) onToast(Copy.CRATE_EMPTY) else failure("ROULETTE", e)
+            } finally {
+                busy = false
+            }
+        }
     }
 
     fun onMakeInstrument() {
@@ -442,11 +534,18 @@ fun PadSheetScreen(
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(pad.drumClass)
     val classColor = cls.tape
 
-    val recipeEra = readEraRecipe(pad.recipe)
-    val activeSegment = recipeEra?.let { PadSheet.segmentFor(it.first) }
-    val isNoneState = recipeEra == null
-    val unmappedEraName = if (recipeEra != null && activeSegment == null) recipeEra.first else null
-    val amount = recipeEra?.second ?: PadSheet.DEFAULT_AMOUNT
+    val applied = PadSheet.read(pad.recipe)
+    val activeSegment = applied?.segment
+    val isNoneState = applied == null
+    // The phone ruling, both rows: a treatment no segment draws is named
+    // on the provenance line, never shown as NONE.
+    val unmappedLabel = applied?.takeIf { it.segment == null }?.let { a ->
+        when (a.treatment) {
+            is PadSheet.Treatment.Era -> "AGED: ${a.treatment.name.uppercase()}"
+            is PadSheet.Treatment.Character -> "TREATED: ${a.treatment.name.uppercase()}"
+        }
+    }
+    val amount = applied?.amount ?: PadSheet.DEFAULT_AMOUNT
 
     val assignedSlots = kit.pads.map { it.slot }.sorted()
     val idx = assignedSlots.indexOf(slot)
@@ -462,6 +561,15 @@ fun PadSheetScreen(
         mutableIntStateOf(pad.tuneCoarse.coerceIn(-12, 12))
     }
     var pendingAmt by remember(slot, amount) { mutableFloatStateOf(amount) }
+    // SHAPE's four: null on the pad means "the format's own default", drawn
+    // at the position that default sounds like (no ramp, full length, open,
+    // no ring) — and a knob committed *at* that position writes null back,
+    // so resting a stepper never turns a pad "shaped".
+    var pendingAttack by remember(slot, pad.attack) { mutableFloatStateOf(pad.attack ?: 0f) }
+    var pendingDecay by remember(slot, pad.decay) { mutableFloatStateOf(pad.decay ?: 1f) }
+    var pendingCutoff by remember(slot, pad.cutoff) { mutableFloatStateOf(pad.cutoff ?: 1f) }
+    var pendingRes by remember(slot, pad.resonance) { mutableFloatStateOf(pad.resonance ?: 0f) }
+    val isShaped = pad.attack != null || pad.decay != null || pad.cutoff != null || pad.resonance != null
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PadSheetHeader(
@@ -471,7 +579,7 @@ fun PadSheetScreen(
             scheme = scheme,
             busy = busy,
             onBack = ::requestBack,
-            onHit = { snip?.let { audition(it, pad.level) } },
+            onHit = { snip?.let { audition(it, pad.level, pad) } },
         )
 
         Column(
@@ -481,7 +589,7 @@ fun PadSheetScreen(
             WaveformLcd(snip, pad.drumClass, classColor, scheme, Modifier.padding(top = 4.dp))
 
             TapeText(
-                provenanceLine(pad, snip, binDaysLeft) + (unmappedEraName?.let { " · AGED: ${it.uppercase()}" } ?: ""),
+                provenanceLine(pad, snip, binDaysLeft) + (unmappedLabel?.let { " · $it" } ?: ""),
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 maxLines = 2,
@@ -559,7 +667,7 @@ fun PadSheetScreen(
             }
 
             TreatmentCard(
-                segments = PadSheet.SEGMENTS,
+                rows = PadSheet.ROWS,
                 noneSegment = PadSheet.NONE,
                 activeSegment = activeSegment,
                 isNoneState = isNoneState,
@@ -571,6 +679,69 @@ fun PadSheetScreen(
                 onSegmentTap = { seg -> applyTreatment(seg, pendingAmt) },
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
                 onAmountCommit = { activeSegment?.let { seg -> applyTreatment(seg, pendingAmt) } },
+            )
+
+            ShapeCard(
+                knobs = listOf(
+                    ShapeKnob(
+                        label = "ATTACK",
+                        fraction = pendingAttack,
+                        valueText = if (pad.attack == null) "OFF" else "%.0f ms".format(PadShape.attackSeconds(pendingAttack) * 1000f),
+                        onChange = { f -> pendingAttack = (f * 20f).roundToInt() / 20f },
+                        onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(attack = pendingAttack.takeIf { it > 0f }) } } },
+                    ),
+                    ShapeKnob(
+                        label = "DECAY",
+                        fraction = pendingDecay,
+                        valueText = if (pad.decay == null) "FULL" else "${(pendingDecay * 100).roundToInt()}%",
+                        onChange = { f -> pendingDecay = ((f * 20f).roundToInt() / 20f).coerceAtLeast(0.05f) },
+                        onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(decay = pendingDecay.takeIf { it < 1f }) } } },
+                    ),
+                    ShapeKnob(
+                        label = "CUTOFF",
+                        fraction = pendingCutoff,
+                        valueText = if (pad.cutoff == null) "OPEN" else cutoffLabel(pendingCutoff),
+                        onChange = { f -> pendingCutoff = (f * 20f).roundToInt() / 20f },
+                        onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(cutoff = pendingCutoff.takeIf { it < 1f }) } } },
+                    ),
+                    ShapeKnob(
+                        label = "RES",
+                        fraction = pendingRes,
+                        valueText = if (pad.resonance == null) "OFF" else "%.0f dB".format(PadShape.resonanceDb(pendingRes)),
+                        onChange = { f -> pendingRes = (f * 20f).roundToInt() / 20f },
+                        onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(resonance = pendingRes.takeIf { it > 0f }) } } },
+                    ),
+                ),
+                shaped = isShaped,
+                padColor = classColor,
+                scheme = scheme,
+                busy = busy,
+                onReset = {
+                    editPadMetadata { m ->
+                        m.update(slot) { p -> p.copy(attack = null, decay = null, cutoff = null, resonance = null) }
+                    }
+                },
+            )
+
+            MutateCard(
+                modes = MutateSheet.MODES,
+                mode = mutateMode,
+                onMode = { mutateMode = it },
+                partners = MutateSheet.partners(kit, slot).map { it.slot },
+                partner = partner,
+                onPartner = { partner = MutateSheet.Partner.Pad(it) },
+                onRoulette = ::onRoulette,
+                knobLabel = mutateKnob?.label,
+                knobFraction = pendingMutateKnob,
+                knobText = mutateKnob?.let { MutateSheet.label(it, MutateSheet.value(it, pendingMutateKnob)) } ?: "",
+                onKnobChange = { f -> pendingMutateKnob = (f * 40f).roundToInt() / 40f },
+                mutated = MutateSheet.read(pad.recipe),
+                canUndo = binDaysLeft != null,
+                onMutate = ::onMutate,
+                onUndo = ::onUnmutate,
+                padColor = classColor,
+                scheme = scheme,
+                busy = busy,
             )
         }
 
@@ -638,19 +809,6 @@ private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String 
     return parts.joinToString(" · ")
 }
 
-/**
- * A pad aged via `eraPad` carries `{"era": name, "amount": x}` — read
- * defensively, since [KitPad.recipe] may just as well be a synth patch or
- * an fx-chain recipe from a different door (`treatPad`, `replaceAudio`),
- * neither of which uses these keys. Anything else here reads as untreated.
- */
-private fun readEraRecipe(recipe: JsonValue.Obj?): Pair<String, Float>? {
-    if (recipe == null) return null
-    val era = (recipe.entries["era"] as? JsonValue.Str)?.value ?: return null
-    val amount = (recipe.entries["amount"] as? JsonValue.Num)?.value?.toFloat() ?: return null
-    return era to amount
-}
-
 // ---------- level <-> dB ----------
 
 /** KitPad's own unity reference — see `SfzWriter.db()`/`DecentSamplerWriter.db()`, which this mirrors. */
@@ -685,6 +843,12 @@ private fun tuneLabel(semis: Int): String = when {
 }
 
 private fun padTag(slot: Int): String = "A%02d".format(slot)
+
+/** 632 Hz / 12.6k — six characters at most, the value column's width. */
+private fun cutoffLabel(cutoff: Float): String {
+    val hz = PadShape.cutoffHz(cutoff)
+    return if (hz >= 1000f) "%.1fk".format(hz / 1000f) else "%.0f Hz".format(hz)
+}
 
 // ---------- header ----------
 
@@ -872,7 +1036,7 @@ private fun ToggleChip(
 
 @Composable
 private fun TreatmentCard(
-    segments: List<String>,
+    rows: List<List<String>>,
     noneSegment: String,
     activeSegment: String?,
     isNoneState: Boolean,
@@ -887,23 +1051,27 @@ private fun TreatmentCard(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TapeText("TREATMENT", TapeType.pixelSmall, scheme.ink3.tape)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            for (seg in segments) {
-                val selected = if (seg == noneSegment) isNoneState else seg == activeSegment
-                // NONE is display-only here — this card has no "un-treat"
-                // action, so it never accepts a tap (see the file's report
-                // for why that's a deliberate scope line, not an oversight).
-                val tappable = !busy && seg != noneSegment
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                        .let { if (tappable) it.tapeClick { onSegmentTap(seg) } else it }
-                        .padding(horizontal = 4.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText(seg, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+        // Row one is the eras, row two the rack's characters (PadSheet.ROWS);
+        // one segment lights across both rows, since a pad carries one recipe.
+        for (row in rows) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (seg in row) {
+                    val selected = if (seg == noneSegment) isNoneState else seg == activeSegment
+                    // NONE is display-only here — this card has no "un-treat"
+                    // action, so it never accepts a tap (see the file's report
+                    // for why that's a deliberate scope line, not an oversight).
+                    val tappable = !busy && seg != noneSegment
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                            .let { if (tappable) it.tapeClick { onSegmentTap(seg) } else it }
+                            .padding(horizontal = 4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(seg, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                    }
                 }
             }
         }
@@ -916,6 +1084,171 @@ private fun TreatmentCard(
             enabled = !busy && activeSegment != null,
             onFractionChange = onAmountChange,
             onFractionCommit = onAmountCommit,
+        )
+    }
+}
+
+// ---------- shape card ----------
+
+/** One SHAPE stepper: its label, where it sits, what it reads, and the two callbacks StepperSlider wants. */
+private class ShapeKnob(
+    val label: String,
+    val fraction: Float,
+    val valueText: String,
+    val onChange: (Float) -> Unit,
+    val onCommit: () -> Unit,
+)
+
+/**
+ * SHAPE: attack, decay, cutoff and resonance as *metadata* — the audio on
+ * disk never changes; the exported programs' own fields carry the shape
+ * and the hardware renders it (GG1). The value column says OFF / FULL /
+ * OPEN while a field is still the format's own default, and RESET puts
+ * all four back there. HIT auditions the approximation, so a tighten is
+ * heard before the card.
+ */
+@Composable
+private fun ShapeCard(
+    knobs: List<ShapeKnob>,
+    shaped: Boolean,
+    padColor: Color,
+    scheme: Scheme,
+    busy: Boolean,
+    onReset: () -> Unit,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TapeText("SHAPE · CARD RENDERS IT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            ActionButton("RESET", scheme, enabled = !busy && shaped, onClick = onReset)
+        }
+        for (knob in knobs) {
+            StepperSlider(
+                label = knob.label,
+                fraction = knob.fraction,
+                valueText = knob.valueText,
+                fillColor = padColor,
+                scheme = scheme,
+                enabled = !busy,
+                onFractionChange = knob.onChange,
+                onFractionCommit = knob.onCommit,
+            )
+        }
+    }
+}
+
+// ---------- mutate card ----------
+
+/**
+ * MUTATE: one hit from two parents. A move (STACK · SPLICE · SPLIT ·
+ * MORPH), a partner — a pad on this kit from the mini grid, or the deal
+ * ROULETTE spins off the shelf — the move's one knob when it has one,
+ * then MUTATE. The line under the title says what the pad already is
+ * ("SPLICE: Kit:A02") so a mutated pad never reads as an original; UNDO
+ * pulls the pre-mutation sound back out of the bin. Everything behind it
+ * is `MutateSheet` over the CLI's own `Mutate` — same recipe, same
+ * provenance, same bin.
+ */
+@Composable
+private fun MutateCard(
+    modes: List<String>,
+    mode: String,
+    onMode: (String) -> Unit,
+    partners: List<Int>,
+    partner: MutateSheet.Partner?,
+    onPartner: (Int) -> Unit,
+    onRoulette: () -> Unit,
+    knobLabel: String?,
+    knobFraction: Float,
+    knobText: String,
+    onKnobChange: (Float) -> Unit,
+    mutated: MutateSheet.Applied?,
+    canUndo: Boolean,
+    onMutate: () -> Unit,
+    onUndo: () -> Unit,
+    padColor: Color,
+    scheme: Scheme,
+    busy: Boolean,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TapeText("MUTATE · ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            ActionButton("UNDO", scheme, enabled = !busy && mutated != null && canUndo, onClick = onUndo)
+        }
+        TapeText(
+            mutated?.let { "${it.mode}: ${it.parents.joinToString(", ")}" } ?: "PICK A MOVE AND A PARENT",
+            TapeType.pixelSmall,
+            scheme.ink2.tape,
+            maxLines = 1,
+        )
+
+        // The move.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (m in modes) {
+                val selected = m == mode
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                        .let { if (!busy) it.tapeClick { onMode(m) } else it }
+                        .padding(horizontal = 4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(m, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                }
+            }
+        }
+
+        // The partner: this kit's other pads, four to a row, then the crate.
+        val chosenSlot = (partner as? MutateSheet.Partner.Pad)?.slot
+        for (row in partners.chunked(4)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (p in row) {
+                    val selected = p == chosenSlot
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                            .let { if (!busy) it.tapeClick { onPartner(p) } else it }
+                            .padding(horizontal = 4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(MutateSheet.padTag(p), TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                    }
+                }
+                // A short last row keeps the same chip width as a full one.
+                repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+        val deal = partner as? MutateSheet.Partner.Deal
+        ActionButton(
+            deal?.let { "ROULETTE ▸ ${it.label}" } ?: "ROULETTE ▸ LET THE CRATE DEAL",
+            scheme,
+            enabled = !busy,
+            dimmed = deal == null,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onRoulette,
+        )
+
+        // The move's knob, when it has one; STACK's row stays so the card never jumps.
+        StepperSlider(
+            label = knobLabel ?: "—",
+            fraction = if (knobLabel == null) 0f else knobFraction,
+            valueText = knobText,
+            fillColor = padColor,
+            scheme = scheme,
+            enabled = !busy && knobLabel != null,
+            onFractionChange = onKnobChange,
+            onFractionCommit = {},
+        )
+
+        ActionButton(
+            "MUTATE ▸",
+            scheme,
+            enabled = !busy && partner != null,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onMutate,
         )
     }
 }

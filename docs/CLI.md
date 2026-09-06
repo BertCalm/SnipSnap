@@ -332,6 +332,19 @@ so a saved-then-applied pocket moves a kit the same way its donor
 would have). `pack` ships each groove-carrying kit's pocket under
 `[Pockets]/` automatically — the feel travels with the kit.
 
+### `treat <kit-dir> <pad> <character>` — the FX rack pointed at one pad
+
+One of the rack's named characters over one pad, bin-backed: `reversed`,
+`crushed`, `slapback`, `washed`, `punched` (bank B's five) and `smeared`
+— the Séance's trick, the attack taken out and the wash kept (`Separate.
+smear` on the STN transient mask, peak-matched so the tail is *heard*,
+not merely left). `--amount 0..1` scales the character's macros; the
+fx-only recipe (name + amount) rides the pad so the sound stays
+regenerable; `--undo` restores the previous audio byte-identical. On the
+phone the same characters sit on the PAD SHEET's TREATMENT card, second
+row (SMEAR · SLAP · WASH · PUNCH), where they change every file the pad
+references, velocity layers included.
+
 ### `era <kit-dir> <machine>` — the Time Machine
 
 The whole kit rendered through the specific math of a specific machine —
@@ -459,6 +472,11 @@ spins across the whole crate instead. Never the pad itself, named in
 the output, the spin recorded in the recipe beside the parent it
 dealt. Deterministic per (crate, seed); combines with `--splice` and
 `--split` like any parent.
+
+On the phone the same verb is the PAD SHEET's MUTATE card: the four
+moves, a partner tapped off the kit's own grid or dealt by ROULETTE
+from the shelf, the move's one knob (AT · HZ · MIX), MUTATE and UNDO —
+the same recipe, provenance and bin as the terminal.
 
 ### `retime <wav> --to BPM` — the other tempo move
 

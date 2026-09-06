@@ -417,6 +417,49 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `a character treats the whole pad, layers included, and unEraPad restores it`() {
+        val dir = File(temp, "CharKit")
+        val m = KitBuilderModel.create("CharKit", dir)
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.addGhostLayers(2) // a layered pad: every zone must change
+        m.save()
+        val files = (listOf(m.pad(2)!!.sampleFile) + m.pad(2)!!.velocityLayers.map { it.sampleFile }).distinct()
+        assertTrue(files.size > 1, "the fixture is layered")
+        val originals = files.associateWith { File(dir, it).readBytes() }
+
+        val treated = m.characterPad(2, "smeared", 0.6f)
+        m.save()
+        for ((f, bytes) in originals) {
+            assertFalse(File(dir, f).readBytes().contentEquals(bytes), "$f re-rendered")
+        }
+        val applied = PadSheet.read(treated.recipe)
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Character("smeared"), 0.6f, "SMEAR"), applied)
+        assertTrue(files.all { f -> m.binContents().any { it.originalName == f } }, "every file is in the bin")
+
+        m.unEraPad(2)
+        m.save()
+        assertNull(m.pad(2)!!.recipe, "recipe cleared on undo")
+        for ((f, bytes) in originals) {
+            assertTrue(File(dir, f).readBytes().contentEquals(bytes), "$f back byte-identical")
+        }
+    }
+
+    @Test
+    fun `characterPad refuses a typo before it looks at the amount, and AMT 0 is a no-op`() {
+        val dir = File(temp, "CharNoop")
+        val m = KitBuilderModel.create("CharNoop", dir)
+        val pad = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        val before = File(dir, pad.sampleFile).readBytes()
+
+        assertFailsWith<IllegalArgumentException> { m.characterPad(1, "sparkled", 0f) }
+        val untouched = m.characterPad(1, "punched", 0f)
+        assertEquals(pad, untouched)
+        assertTrue(File(dir, pad.sampleFile).readBytes().contentEquals(before), "never rewritten")
+        assertEquals(0, m.binContents().size, "nothing binned")
+    }
+
+    @Test
     fun `eraPad at amount 0 is a no-op and leaves the bin empty`() {
         val dir = File(temp, "EraNoop")
         val m = KitBuilderModel.create("EraNoop", dir)

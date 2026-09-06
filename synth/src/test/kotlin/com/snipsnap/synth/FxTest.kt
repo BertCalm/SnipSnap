@@ -237,4 +237,36 @@ class FxTest {
             FxChain.fromJsonText(ThumpPatch("K", ThumpVoice.KICK, emptyMap()).toJsonText())
         }
     }
+
+    // ---------- SMEAR ----------
+
+    @Test
+    fun `SMEAR sits after REVERSE and before EQ, and an absent section keeps old recipes byte-stable`() {
+        val without = FxChain(eq = mapOf("BASS" to 0.6f))
+        assertTrue(!without.toJsonText().contains("smear"), "no smear key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(without.toJsonText()))
+
+        val with = FxChain(reverse = true, smear = mapOf("AMOUNT" to 0.6f), eq = mapOf("BASS" to 0.6f))
+        val text = with.toJsonText()
+        assertTrue(text.indexOf("\"reverse\"") < text.indexOf("\"smear\"") && text.indexOf("\"smear\"") < text.indexOf("\"eq\""), text)
+        assertEquals(with, FxChain.fromJsonText(text))
+        assertTrue(!FxChain(smear = mapOf("AMOUNT" to 0.2f)).isBypass)
+    }
+
+    @Test
+    fun `SMEAR refuses a macro it does not know`() {
+        assertFailsWith<IllegalArgumentException> { FxChain(smear = mapOf("WASH" to 0.5f)) }
+    }
+
+    @Test
+    fun `SMEAR at zero is transparent and at full strength keeps the kick's length and level`() {
+        assertTrue(Smear.process(kick, mapOf("AMOUNT" to 0f)) === kick)
+        val smeared = Smear.process(kick, mapOf("AMOUNT" to 1f))
+        assertEquals(kick.frameCount, smeared.frameCount)
+        var inPeak = 0f
+        var outPeak = 0f
+        for (v in kick.samples) inPeak = maxOf(inPeak, abs(v))
+        for (v in smeared.samples) outPeak = maxOf(outPeak, abs(v))
+        assertTrue(outPeak > 0.5f * inPeak && outPeak <= inPeak * 1.001f, "peak matched, never above: $inPeak -> $outPeak")
+    }
 }

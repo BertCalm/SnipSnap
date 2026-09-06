@@ -70,8 +70,8 @@ object SfzWriter {
                 sb.append("group=").append(p.muteGroup).append('\n')
                 sb.append("off_by=").append(p.muteGroup).append('\n')
             }
-            // The preview's own shape approximations, in SFZ's units.
-            p.attack?.let { sb.append("ampeg_attack=").append(num(it * 0.4f)).append('\n') }
+            // The preview's own shape approximations (PadShape), in SFZ's units.
+            p.attack?.let { sb.append("ampeg_attack=").append(num(PadShape.attackSeconds(it))).append('\n') }
             p.decay?.let {
                 val seconds = it * pad.frameCount / 44_100f
                 sb.append("ampeg_decay=").append(num(seconds)).append('\n')
@@ -79,9 +79,9 @@ object SfzWriter {
             }
             p.cutoff?.let {
                 sb.append("fil_type=lpf_2p\n")
-                sb.append("cutoff=").append(num(20f * Math.pow(10.0, 3.0 * it).toFloat())).append('\n')
+                sb.append("cutoff=").append(num(PadShape.cutoffHz(it))).append('\n')
             }
-            p.resonance?.let { sb.append("resonance=").append(num(it * 12f)).append('\n') }
+            p.resonance?.let { sb.append("resonance=").append(num(PadShape.resonanceDb(it))).append('\n') }
             p.humanize?.let {
                 sb.append("pitch_random=").append(num(it * 5f)).append('\n')
                 sb.append("amp_random=").append(num(it * 1.5f)).append('\n')

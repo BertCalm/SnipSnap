@@ -1,6 +1,7 @@
 package com.snipsnap.audio
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class SeparateTest {
@@ -151,5 +152,121 @@ class SeparateTest {
             energy(cOnly.harmonic.samples) > 8 * energy(cOnly.percussive.samples),
             "a chord reads as music",
         )
+    }
+
+    // ---- the smear --------------------------------------------------------
+
+    /** The STN fixture again: a held 400 Hz tone, four broadband bursts, hiss under all. */
+    private fun toneClicksHiss(): Pair<Snip, List<Int>> {
+        val rnd = java.util.Random(3)
+        val n = 2 * rate
+        val mix = FloatArray(n) { i ->
+            (0.3 * Math.sin(2.0 * Math.PI * 400.0 * i / rate)).toFloat() +
+                (rnd.nextFloat() * 2f - 1f) * 0.05f
+        }
+        val clickAt = listOf(0.4f, 0.8f, 1.2f, 1.6f).map { (it * rate).toInt() }
+        val burst = java.util.Random(4)
+        for (at in clickAt) {
+            for (i in 0 until 90) mix[at + i] += (burst.nextFloat() * 2f - 1f) * 0.8f
+        }
+        return Snip(mix, 1, rate) to clickAt
+    }
+
+    private fun energy(s: FloatArray, from: Int, to: Int): Double {
+        var acc = 0.0
+        for (i in from until to) acc += s[i] * s[i].toDouble()
+        return acc
+    }
+
+    /**
+     * How much louder the click windows are than the same-length windows
+     * 100 ms later, where only the tone and the hiss play: 1 = no click
+     * left to hear, larger = the bursts still stand out.
+     */
+    private fun clickProminence(s: FloatArray, clickAt: List<Int>): Double {
+        val win = (0.012f * rate).toInt()
+        val later = (0.1f * rate).toInt()
+        val inWindows = clickAt.sumOf { energy(s, it - win / 4, it + win) }
+        val control = clickAt.sumOf { energy(s, it + later - win / 4, it + later + win) }
+        return inWindows / control
+    }
+
+    @Test
+    fun `smear at zero is the input itself, not a copy`() {
+        val (mix, _) = toneClicksHiss()
+        assertTrue(Separate.smear(mix, 0f) === mix, "amount 0 hands back the very same object")
+    }
+
+    @Test
+    fun `smear takes the clicks out and keeps the tone and the hiss`() {
+        val (mix, clickAt) = toneClicksHiss()
+        val smeared = Separate.smear(mix, 1f)
+        assertEquals(mix.frameCount, smeared.frameCount, "length is untouched")
+
+        // The bursts were the only verticals: they stop standing out of the wash.
+        val before = clickProminence(mix.samples, clickAt)
+        val after = clickProminence(smeared.samples, clickAt)
+        assertTrue(before > 1.5, "the fixture's clicks are audible to begin with: $before")
+        assertTrue(after - 1.0 < 0.25 * (before - 1.0), "the clicks are gone: prominence $before -> $after")
+
+        // The tone survives, within the makeup's reach.
+        val toneIn = probe(mix.samples, 400f)
+        val toneOut = probe(smeared.samples, 400f)
+        assertTrue(toneOut > 0.5f * toneIn && toneOut < 4.5f * toneIn, "the held tone is the wash: $toneIn -> $toneOut")
+
+        // So does the hiss - probed in a top band away from any burst.
+        fun hiBand(s: FloatArray): Float {
+            val seg = s.copyOfRange((0.5f * rate).toInt(), (0.7f * rate).toInt())
+            return CaptureDoctor.goertzel(seg, seg.size, 9000f, rate)
+        }
+        assertTrue(hiBand(smeared.samples) > 0.5f * hiBand(mix.samples), "the hiss is kept")
+    }
+
+    @Test
+    fun `smear is graded - half the amount leaves more of the attack`() {
+        val (mix, clickAt) = toneClicksHiss()
+        val half = clickProminence(Separate.smear(mix, 0.5f).samples, clickAt)
+        val full = clickProminence(Separate.smear(mix, 1f).samples, clickAt)
+        val none = clickProminence(mix.samples, clickAt)
+        assertTrue(full < half && half < none, "monotonic in amount: $none > $half > $full")
+    }
+
+    @Test
+    fun `a steady tone has no attack to lose - the smear leaves it alone`() {
+        val n = 2 * rate
+        val tone = Snip(FloatArray(n) { i -> (0.4 * Math.sin(2.0 * Math.PI * 330.0 * i / rate)).toFloat() }, 1, rate)
+        val smeared = Separate.smear(tone, 1f)
+        // Judge the steady middle: the STFT's own edges are the only verticals here.
+        var worst = 0f
+        for (i in (0.1f * rate).toInt() until (1.9f * rate).toInt()) {
+            val d = Math.abs(smeared.samples[i] - tone.samples[i])
+            if (d > worst) worst = d
+        }
+        assertTrue(worst < 0.04f, "a held tone passes through: worst diff $worst of a 0.4 peak")
+    }
+
+    @Test
+    fun `the makeup is capped - a bare click does not become full-scale residue`() {
+        val n = rate / 2
+        val click = FloatArray(n)
+        val burst = java.util.Random(9)
+        for (i in 0 until 60) click[n / 3 + i] = (burst.nextFloat() * 2f - 1f) * 0.9f
+        val smeared = Separate.smear(Snip(click, 1, rate), 1f)
+        var peak = 0f
+        for (v in smeared.samples) if (Math.abs(v) > peak) peak = Math.abs(v)
+        assertTrue(peak < 0.9f, "an attack with no wash behind it is not shouted back up: peak $peak")
+    }
+
+    @Test
+    fun `the smear is deterministic and stereo-safe`() {
+        val (mono, _) = toneClicksHiss()
+        val stereo = Snip(FloatArray(mono.samples.size * 2) { mono.samples[it / 2] }, 2, rate)
+        val a = Separate.smear(stereo, 0.8f)
+        val b = Separate.smear(stereo, 0.8f)
+        assertTrue(a.samples.contentEquals(b.samples), "same input, same bytes")
+        assertEquals(2, a.channels)
+        for (f in 0 until a.frameCount step 997) {
+            assertEquals(a.samples[f * 2], a.samples[f * 2 + 1], 1e-6f, "identical channels smear identically")
+        }
     }
 }
