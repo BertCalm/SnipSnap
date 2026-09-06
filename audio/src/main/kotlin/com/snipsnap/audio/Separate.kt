@@ -79,6 +79,68 @@ object Separate {
      * sum back to the input.
      */
     fun stn(snip: Snip): Stn {
+        val masks = stnMasks(snip)
+        return Stn(
+            sines = Spectral.process(snip) { ch, f, _ -> masks.sines[ch][f] },
+            transients = Spectral.process(snip) { ch, f, _ -> masks.transients[ch][f] },
+            noise = Spectral.process(snip) { ch, f, _ -> masks.noise[ch][f] },
+        )
+    }
+
+    // ---- the Séance's smear ----------------------------------------------
+
+    /** Most makeup the smear may apply after the attack is gone, as a linear gain (+12 dB). */
+    const val SMEAR_MAKEUP_MAX = 4f
+
+    /**
+     * The smear: the transient taken out, the wash kept. A hit is an
+     * attack and everything the attack excited; this keeps the second
+     * half — the ring, the room, the hiss — and erases the first, by
+     * [amount] (0 = the input itself, 1 = every vertical gone). One
+     * analysis, one synthesis: the per-bin gain is `1 − amount·t`, with
+     * `t` the STN transient mask [stn] already computes, so what stays
+     * is exactly `sines + noise + (1 − amount)·transients`.
+     *
+     * The attack carried the peak, so the result is matched back to the
+     * source's own peak — keeping the wash means *hearing* the wash, and
+     * the spectral edit's own ringing never lands above the ceiling the
+     * source respected. The makeup is capped at [SMEAR_MAKEUP_MAX]: a
+     * hit that was all attack has no wash to keep, and its residue is
+     * not shouted to full scale. Deterministic; the same hit smears the
+     * same way every time.
+     */
+    fun smear(snip: Snip, amount: Float = 1f): Snip {
+        require(amount in 0f..1f) { "smear amount is 0..1, got $amount" }
+        require(snip.frameCount > 0) { "the source is empty" }
+        if (amount <= 0f) return snip
+        val t = stnMasks(snip).transients
+        val gains = FloatArray(Spectral.BINS)
+        val out = Spectral.process(snip) { ch, f, _ ->
+            val mask = t[ch][f]
+            for (b in 0 until Spectral.BINS) gains[b] = 1f - amount * mask[b]
+            gains
+        }
+        val inPeak = peak(snip.samples)
+        val outPeak = peak(out.samples)
+        if (inPeak <= 0f || outPeak <= 0f) return out
+        val makeup = (inPeak / outPeak).coerceAtMost(SMEAR_MAKEUP_MAX)
+        return Snip(FloatArray(out.samples.size) { out.samples[it] * makeup }, out.channels, out.sampleRate)
+    }
+
+    private fun peak(samples: FloatArray): Float {
+        var p = 0f
+        for (v in samples) { val a = if (v < 0) -v else v; if (a > p) p = a }
+        return p
+    }
+
+    /** The three fuzzy masks, per channel, per frame, per bin — they sum to one. */
+    private class StnMasks(
+        val sines: Array<Array<FloatArray>>,
+        val transients: Array<Array<FloatArray>>,
+        val noise: Array<Array<FloatArray>>,
+    )
+
+    private fun stnMasks(snip: Snip): StnMasks {
         require(snip.frameCount > 0) { "the source is empty" }
         val mags = Array(snip.channels) { mutableListOf<FloatArray>() }
         Spectral.forEachFrame(snip) { ch, _, m -> mags[ch].add(m.copyOf()) }
@@ -100,11 +162,7 @@ object Separate {
                 }
             }
         }
-        return Stn(
-            sines = Spectral.process(snip) { ch, f, _ -> sMask[ch][f] },
-            transients = Spectral.process(snip) { ch, f, _ -> tMask[ch][f] },
-            noise = Spectral.process(snip) { ch, f, _ -> nMask[ch][f] },
-        )
+        return StnMasks(sMask, tMask, nMask)
     }
 
     /** 0 below [lo], 1 above [hi], a raised cosine between. */

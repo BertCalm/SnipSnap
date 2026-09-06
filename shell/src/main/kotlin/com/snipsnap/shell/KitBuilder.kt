@@ -279,17 +279,49 @@ class KitBuilderModel private constructor(
     fun eraPad(slot: Int, era: String, amount: Float = 1f): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         if (amount <= 0f) return pad
-        requireNotChained(pad, "aging")
+        return rewriteEveryFile(pad, "aging") { original ->
+            val aged = com.snipsnap.synth.Eras.apply(era, original, amount)
+            aged.snip to aged.recipe
+        }
+    }
+
+    /**
+     * One of the rack's named characters (`Treatments.names`) over every
+     * file the pad references — the pad sheet's second row. The same door
+     * shape as [eraPad]: layers included, originals binned, the fx-only
+     * recipe (name + AMT) riding the pad — where [treatPad] rewrites one
+     * sample and refuses layers, this is whole-pad character. AMT 0 is a
+     * no-op that touches neither the file nor the bin. Undo is
+     * [unEraPad], the same "every file back out of the bin" either row needs.
+     */
+    fun characterPad(slot: Int, character: String, amount: Float = 1f): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        // Validate the name before the AMT-0 exit: a typo must not read as "no treatment".
+        com.snipsnap.synth.Treatments.chain(character, amount)
+        if (amount <= 0f) return pad
+        return rewriteEveryFile(pad, "treating") { original ->
+            val treated = com.snipsnap.synth.Treatments.apply(character, original, amount)
+            treated.snip to treated.recipe
+        }
+    }
+
+    /** The whole-pad rewrite both [eraPad] and [characterPad] share: every referenced file, bin-backed, one recipe. */
+    private fun rewriteEveryFile(
+        pad: KitPad,
+        doing: String,
+        transform: (Snip) -> Pair<Snip, com.snipsnap.json.JsonValue.Obj>,
+    ): KitPad {
+        requireNotChained(pad, doing)
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
         var recipe: com.snipsnap.json.JsonValue.Obj? = null
         for (f in files) {
             val original = com.snipsnap.audio.WavReader.read(File(kitDir, f))
-            val aged = com.snipsnap.synth.Eras.apply(era, original, amount)
+            val (rewritten, r) = transform(original)
             moveToBin(f)
-            WavWriter.write(File(kitDir, f), aged.snip)
-            recipe = aged.recipe
+            WavWriter.write(File(kitDir, f), rewritten)
+            recipe = r
         }
-        return update(slot) { it.copy(recipe = recipe) }
+        return update(pad.slot) { it.copy(recipe = recipe) }
     }
 
     /**
@@ -304,7 +336,7 @@ class KitBuilderModel private constructor(
         return targets.size
     }
 
-    /** Undo an era on one pad: every file it references comes back out of the bin. */
+    /** Undo an era or a character on one pad: every file it references comes back out of the bin. */
     fun unEraPad(slot: Int): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         requireNotChained(pad, "un-aging")

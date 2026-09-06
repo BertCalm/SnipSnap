@@ -6,7 +6,6 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import java.io.File
-import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -120,12 +119,12 @@ object KitPreview {
             val left = sqrt(1.0 - v.pan.toDouble()).toFloat() * v.gain
             val right = sqrt(v.pan.toDouble()).toFloat() * v.gain
             // The pad shape, approximated so a tighten is audible before
-            // the card: attack ramps in over up to 0.4s; a decay of d fades
-            // the voice out by d x its own length. The hardware's exact
+            // the card - PadShape's reading, the same one the SFZ writer
+            // and the phone's HIT audition use. The hardware's exact
             // envelope curves are its own; this render is honest about
             // being a preview.
-            val attackFrames = v.attack?.let { (it * 0.4f * RATE).toInt() } ?: 0
-            val decayEnd = v.decay?.let { max(1, (it * v.samples.frameCount).toInt()) } ?: Int.MAX_VALUE
+            val attackFrames = PadShape.attackFrames(v.attack, RATE)
+            val decayEnd = PadShape.decayEnd(v.decay, v.samples.frameCount)
             for (i in 0 until frames) {
                 val at = v.start + i
                 if (at >= totalFrames) break
@@ -135,12 +134,8 @@ object KitPreview {
                 } else {
                     1f
                 }
-                if (i < attackFrames) fade *= i.toFloat() / attackFrames
                 if (i >= decayEnd) break
-                if (decayEnd != Int.MAX_VALUE) {
-                    // Linear fade across the shaped length - dies at decayEnd.
-                    fade *= 1f - i.toFloat() / decayEnd
-                }
+                fade *= PadShape.gainAt(i, attackFrames, decayEnd)
                 val s = sampleMono(v.samples, i) * fade
                 out[at * 2] += s * left
                 out[at * 2 + 1] += s * right

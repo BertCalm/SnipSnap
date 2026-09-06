@@ -1,6 +1,9 @@
 package com.snipsnap.shell
 
+import com.snipsnap.json.JsonValue
 import com.snipsnap.synth.Eras
+import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.Treatments
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -51,5 +54,58 @@ class PadSheetTest {
     @Test
     fun `an era with no segment - the phone ruling - answers null, not NONE`() {
         assertNull(PadSheet.segmentFor("phone"))
+    }
+
+    // ---- row two: the characters ----
+
+    @Test
+    fun `row two draws four characters and both rows read in order`() {
+        assertEquals(listOf("SMEAR", "SLAP", "WASH", "PUNCH"), PadSheet.CHARACTER_SEGMENTS)
+        assertEquals(listOf(PadSheet.SEGMENTS, PadSheet.CHARACTER_SEGMENTS), PadSheet.ROWS)
+        assertTrue(PadSheet.SEGMENTS.none { it in PadSheet.CHARACTER_SEGMENTS }, "no word on both rows")
+    }
+
+    @Test
+    fun `every character segment names a real rack character`() {
+        for (segment in PadSheet.CHARACTER_SEGMENTS) {
+            val t = PadSheet.treatmentFor(segment)
+            assertTrue(t is PadSheet.Treatment.Character, "$segment is a character")
+            assertTrue(t!!.name in Treatments.names, "$segment maps to '${t.name}', which Treatments does not know")
+            assertEquals(segment, PadSheet.segmentFor(t), "segmentFor is treatmentFor's inverse")
+        }
+    }
+
+    @Test
+    fun `treatmentFor speaks both rows, NONE is null, and eraFor still refuses row two`() {
+        assertEquals(PadSheet.Treatment.Era("sp1200"), PadSheet.treatmentFor("CRUSH"))
+        assertEquals(PadSheet.Treatment.Character("smeared"), PadSheet.treatmentFor("SMEAR"))
+        assertNull(PadSheet.treatmentFor(PadSheet.NONE))
+        assertFailsWith<IllegalArgumentException> { PadSheet.treatmentFor("WOBBLE") }
+        assertFailsWith<IllegalArgumentException> { PadSheet.eraFor("SMEAR") }
+    }
+
+    @Test
+    fun `the phone ruling on row two - reversed and crushed light no segment`() {
+        assertNull(PadSheet.segmentForCharacter("reversed"))
+        assertNull(PadSheet.segmentForCharacter("crushed"))
+    }
+
+    @Test
+    fun `read lights the right segment for either recipe shape, and nothing for the rest`() {
+        val era = JsonValue.Obj(linkedMapOf<String, JsonValue>("era" to JsonValue.Str("tape"), "amount" to JsonValue.Num(0.5)))
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Era("tape"), 0.5f, "TAPE"), PadSheet.read(era))
+
+        val phone = JsonValue.Obj(linkedMapOf<String, JsonValue>("era" to JsonValue.Str("phone"), "amount" to JsonValue.Num(1.0)))
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Era("phone"), 1f, null), PadSheet.read(phone))
+
+        val smeared = PadRecipe(fx = Treatments.chain("smeared", 0.4f), treatment = "smeared", amount = 0.4f).toJsonValue()
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Character("smeared"), 0.4f, "SMEAR"), PadSheet.read(smeared))
+
+        val twin = PadRecipe(fx = Treatments.chain("crushed"), treatment = "crushed", amount = 1f).toJsonValue()
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Character("crushed"), 1f, null), PadSheet.read(twin))
+
+        val fxOnly = PadRecipe(fx = Treatments.chain("washed")).toJsonValue()
+        assertNull(PadSheet.read(fxOnly), "a chain with no name claims no segment")
+        assertNull(PadSheet.read(null))
     }
 }

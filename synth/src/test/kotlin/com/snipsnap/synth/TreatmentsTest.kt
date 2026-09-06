@@ -20,8 +20,45 @@ class TreatmentsTest {
     fun `bank B's five treatments, in the order the seeded shuffle depends on`() {
         assertEquals(
             listOf("reversed", "crushed", "slapback", "washed", "punched"),
+            Shuffle.TREATMENTS.map { it.first },
+        )
+    }
+
+    @Test
+    fun `the named characters are the bank's five and then the extras, smeared among them`() {
+        assertEquals(
+            listOf("reversed", "crushed", "slapback", "washed", "punched", "smeared"),
             Treatments.names,
         )
+        assertTrue(Treatments.EXTRA.none { it.first in Shuffle.TREATMENTS.map { t -> t.first } }, "an extra never shadows a bank name")
+    }
+
+    @Test
+    fun `smeared takes the attack out of a snare and records a smear-only recipe`() {
+        val snare = Thump.render(ThumpVoice.SNARE)
+        fun headShare(s: Snip): Double {
+            val head = (0.02f * s.sampleRate).toInt() * s.channels
+            var h = 0.0
+            var all = 0.0
+            for (i in s.samples.indices) {
+                val e = s.samples[i] * s.samples[i].toDouble()
+                if (i < head) h += e
+                all += e
+            }
+            return h / all
+        }
+        val treated = Treatments.apply("smeared", snare, 1f)
+        assertTrue(headShare(treated.snip) < headShare(snare), "less of the energy sits in the first 20 ms")
+        val recipe = PadRecipe.fromJsonValue(treated.recipe)
+        assertEquals("smeared", recipe.treatment)
+        assertEquals(1f, recipe.amount)
+        assertEquals(mapOf("AMOUNT" to 0.85f), recipe.fx!!.smear)
+        assertTrue(recipe.fx.eq == null && recipe.fx.spring == null, "a smear-only chain")
+    }
+
+    @Test
+    fun `AMT scales the smear like every other section`() {
+        assertEquals(0.85f * 0.5f, Treatments.chain("smeared", 0.5f).smear!!.getValue("AMOUNT"), 1e-6f)
     }
 
     @Test

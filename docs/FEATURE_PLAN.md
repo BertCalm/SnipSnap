@@ -366,7 +366,7 @@ the bin.
 |---|---|---|---|---|
 | Y4.1 | ✓ done: `KitBuilderModel.treatPad(slot, treatment, amount, seed)` — the Shuffle treatment table exposed singly + amount-scaled; original WAV binned, recipe recorded; `untreatPad` restores | CORE | S | treat → audibly different, recipe present; untreat → original bytes back from the bin |
 | Y4.2 | ✓ done: CLI `treat <kit-dir> <pad> <treatment> [--amount] [--seed]` | CORE | S | crush A02 from the terminal |
-| Y4.3 | App: treatment row on the pad sheet (after M3) | APP | S | one tap per character |
+| Y4.3 | ✓ done (wave UU): the PAD SHEET TREATMENT card's second row — SMEAR · SLAP · WASH · PUNCH over `KitBuilderModel.characterPad` (whole-pad, layers included, bin-backed) | APP | S | one tap per character |
 
 ## Y5 — The preview renderer: every kit listenable before loadable
 
@@ -1250,6 +1250,36 @@ pockets.
 
 ---
 
+## Wave UU — Sound design, both directions (CORE + APP)
+
+The review that started this wave found the shop's sound design living
+almost entirely in the CLI — 45 verbs of tested DSP the phone never
+reached — while the phone's own pad sheet drew four era segments and
+nothing else. Two lanes, run together: **new DSP in the core** (the
+Séance's smear, the plan's own oldest below-the-line item) and **the
+phone catching up** (the rack's characters and the pad shape, both of
+which existed for months as terminal-only doors). Every core item
+lands with its exit test on the JVM; the app items ride existing
+Compose patterns over tested `:shell` state.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| UU1 | ✓ done: `Separate.smear(snip, amount)` — the STN transient mask (`stnMasks`, now computed once and shared with `stn`) taken away per bin by `amount`, one analysis and one synthesis; the result peak-matched to the source (capped at +12 dB of makeup, so a bare click is not shouted back up); amount 0 is the input object itself; deterministic | CORE | S–M | on the tone+clicks+hiss fixture the clicks stop standing out of the wash (prominence over a control window collapses) while the tone and the hiss survive; graded in amount; a held tone passes through; a bare click's residue stays under the source's peak; stereo channels smear identically |
+| UU2 | ✓ done: `Smear` as a rack section — `FxChain.smear` (AMOUNT), order reverse → **smear** → eq → …, JSON section absent unless set so every old recipe is byte-stable; `Treatments.EXTRA` holds `smeared` (and any future character) *outside* `Shuffle.TREATMENTS`, whose index order every saved bank-B seed depends on | CORE | S | round-trip through JSON; old recipes unchanged; unknown macro refused; a smeared snare carries less of its energy in the first 20 ms and records a smear-only recipe; `treat <kit> A02 smeared` works unchanged |
+| UU3 | ✓ done: `KitBuilderModel.characterPad(slot, name, amount)` — the whole-pad door `eraPad` already was, generalized (`rewriteEveryFile`): every referenced file, layers included, binned, one fx-only recipe (name + AMT); `unEraPad` undoes either row; AMT 0 a no-op that validates the name first | CORE | S | a layered snare's every zone re-renders and every file lands in the bin; `PadSheet.read` names the segment; undo restores every file byte-identical; a typo is refused even at AMT 0 |
+| UU4 | ✓ done: the PAD SHEET's second TREATMENT row — `PadSheet.CHARACTER_SEGMENTS` (SMEAR · SLAP · WASH · PUNCH → `smeared` / `slapback` / `washed` / `punched`), `treatmentFor` speaking both rows, `read(recipe)` lighting the right segment for either recipe shape; the phone ruling extended (a `reversed` twin or a CLI `crushed` reads "TREATED: CRUSHED" on the provenance line, never NONE); `applyTreatment` undoes-then-reapplies through the bin for both rows and *stacks* on a recipe the bin cannot restore (a twin, a CLI treat) instead of refusing with the ghosts toast | APP | S–M | shell: both rows map to real names, inverse mappings hold, `read` on era / character / unmapped / fx-only / null; app: one tap per character, AMT re-applies, the toast names the segment |
+| UU5 | ✓ done: `PadShape` (`:kit`) — the shape's one reading (attack ramp ≤ 0.4 s, decay fade over d × length, cutoff 20 Hz..20 kHz exponential, resonance 0..12 dB) shared by `KitPreview`, `SfzWriter` and the phone; `PadFilter` (`:synth`) renders the filter half through the TPT SVF, peak-held; `ShapeAudition` (`:shell`) composes both for a single HIT | CORE | S | envelope: no shape is the same object, attack silent-then-full, decay trims at the shaped length, mappings match the SFZ writer's figures; audition: cutoff 0.5 keeps 110 Hz and kills 6 kHz, resonance lifts the cutoff tone without exceeding the source's peak, decay + filter compose; SFZ and preview output unchanged (their suites) |
+| UU6 | ✓ done: the SHAPE card on the PAD SHEET — ATTACK / DECAY / CUTOFF / RES steppers writing `KitPad.attack/decay/cutoff/resonance` as metadata through the debounced `editPadMetadata` door (no WAV touched, no take per nudge), value column reading OFF / FULL / OPEN while a field is the format's default, RESET clearing all four; HIT auditions `ShapeAudition`, so a tighten is heard before the card | APP | S | shaped pad exports through both generations' fields (GG1's suite, unchanged); HIT plays the approximation; RESET returns the pad to byte-identical `kit.json` |
+
+**Below the line for UU:** MUTATE on the phone (needs a partner picker
+over the grid — its own card); SCULPT / STRETCH as pad-sheet actions
+(they make *new* kits, so they belong on the KIT screen, not the
+sheet); formant-preserving pitch shift and `sculpt --keys` (still the
+Séance's next two core items); the remix bank rolling `smeared` (would
+change every saved seed — a versioned table if ever).
+
+---
+
 ## Sequence
 
 ```
@@ -1467,6 +1497,14 @@ APP (in milestone order; feature items slot in where their parent lands):
   M4 (F1.4)
   M5 (F1.5 + F4.3) → +F6.3 share flow
   bench: W12 pad waveforms whenever polish is the mood
+
+CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
+  directions. The smear (STN transient mask, peak-matched) as a rack
+  section and the `smeared` character; the pad sheet's second
+  TREATMENT row over the new whole-pad `characterPad` door; the pad
+  shape's one reading (PadShape) shared by preview, SFZ and the phone,
+  and a SHAPE card whose HIT honestly auditions it. Below the line:
+  mutate on the phone, sculpt/stretch on the KIT screen.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
