@@ -8,6 +8,7 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.Names
 import java.io.File
+import java.util.Locale
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -30,6 +31,9 @@ object TextureKits {
 
     /** The longest any texture pad gets, on the phone or the terminal — a minute of one hit is plenty. */
     const val MAX_TEXTURE_SEC = 60f
+
+    /** The longest source SLOW accepts: even the gentlest slowdown must fit the minute. */
+    const val MAX_SLOW_SOURCE_SEC = MAX_TEXTURE_SEC / Stretch.MIN_FACTOR
 
     val SCULPT_MODES: List<String> = listOf("cloud", "scrub", "swarm")
 
@@ -68,7 +72,12 @@ object TextureKits {
             override val suffix get() = "Sculpt"
         }
 
-        /** The source slowed by [factor] — clamped so no take outruns [MAX_TEXTURE_SEC], the whole hit slowed as far as fits. */
+        /**
+         * The source slowed by [factor] — clamped so no take outruns
+         * [MAX_TEXTURE_SEC], the whole hit slowed as far as fits. A source
+         * too long to slow even by [Stretch.MIN_FACTOR] inside that minute
+         * (longer than [MAX_SLOW_SOURCE_SEC]) is refused, not cut.
+         */
         data class Stretch(val factor: Float = 8f, val seed: Long = 7L) : Spec {
             override val verb get() = "STRETCH"
             override val suffix get() = "Stretched"
@@ -166,11 +175,17 @@ object TextureKits {
         }
         is Spec.Stretch -> {
             val seed = spec.seed + i
-            // The whole hit, slowed as far as a minute allows.
+            // The whole hit, slowed as far as a minute allows - and a hit
+            // too long for even x2 to fit is refused rather than cut short.
+            require(source.durationSeconds <= MAX_SLOW_SOURCE_SEC) {
+                "a %.0f s sound can't slow inside a minute - stretch something under %.0f s".format(
+                    Locale.ROOT, source.durationSeconds, MAX_SLOW_SOURCE_SEC,
+                )
+            }
             val factor = min(spec.factor, MAX_TEXTURE_SEC / source.durationSeconds).coerceAtLeast(Stretch.MIN_FACTOR)
             Take(
                 Stretch.stretch(source, factor, seed),
-                { label -> mapOf("stretchedFrom" to label, "mode" to "stretch", "factor" to "%.2f".format(factor), "seed" to seed.toString()) },
+                { label -> mapOf("stretchedFrom" to label, "mode" to "stretch", "factor" to "%.2f".format(Locale.ROOT, factor), "seed" to seed.toString()) },
                 obj(
                     "stretch" to obj(
                         "factor" to JsonValue.Num(factor.toDouble()),
@@ -186,7 +201,7 @@ object TextureKits {
             val at = if (i == 0) Stretch.loudestSec(source) else source.durationSeconds * (i / 4f)
             Take(
                 Stretch.freeze(source, seconds, seed, at),
-                { label -> mapOf("stretchedFrom" to label, "mode" to "freeze", "at" to "%.3f".format(at), "seed" to seed.toString()) },
+                { label -> mapOf("stretchedFrom" to label, "mode" to "freeze", "at" to "%.3f".format(Locale.ROOT, at), "seed" to seed.toString()) },
                 obj(
                     "stretch" to obj(
                         "freeze" to JsonValue.Bool(true),

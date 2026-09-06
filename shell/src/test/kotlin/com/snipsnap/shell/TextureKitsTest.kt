@@ -90,6 +90,13 @@ class TextureKitsTest {
         assertEquals(TextureKits.MAX_TEXTURE_SEC, snip.durationSeconds, 0.1f)
         val recipe = (longKit.pads.first().recipe!!.entries["stretch"] as JsonValue.Obj).entries
         assertEquals(15.0, (recipe["factor"] as JsonValue.Num).value, 1e-3, "the effective factor is what the recipe records")
+        assertEquals("15.00", longKit.pads.first().source["factor"], "provenance reads the same in every locale")
+
+        // A source too long for even x2 to fit the minute is refused, never cut.
+        assertFailsWith<IllegalArgumentException> {
+            TextureKits.render("TooLong", File(temp, "TooLong"), hit(31f), "Kit:A03", TextureKits.Spec.Stretch(8f, 1L))
+        }
+        assertEquals(30f, TextureKits.MAX_SLOW_SOURCE_SEC)
     }
 
     @Test
@@ -99,6 +106,7 @@ class TextureKitsTest {
         val takes = kit.pads.sortedBy { it.slot }
         val ats = takes.map { ((it.recipe!!.entries["stretch"] as JsonValue.Obj).entries["at"] as JsonValue.Num).value }
         assertEquals(listOf(0.25, 0.5, 0.75), ats.drop(1).map { Math.round(it * 100) / 100.0 })
+        assertEquals(listOf("0.250", "0.500", "0.750"), takes.drop(1).map { it.source["at"] }, "provenance reads the same in every locale")
         for ((i, pad) in takes.withIndex()) {
             assertEquals("Frozen ${i + 1}", pad.displayName)
             assertEquals("freeze", pad.source["mode"])
