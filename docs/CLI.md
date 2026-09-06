@@ -473,6 +473,11 @@ the output, the spin recorded in the recipe beside the parent it
 dealt. Deterministic per (crate, seed); combines with `--splice` and
 `--split` like any parent.
 
+On the phone the same verb is the PAD SHEET's MUTATE card: the four
+moves, a partner tapped off the kit's own grid or dealt by ROULETTE
+from the shelf, the move's one knob (AT · HZ · MIX), MUTATE and UNDO —
+the same recipe, provenance and bin as the terminal.
+
 ### `retime <wav> --to BPM` — the other tempo move
 
 Where `--fit-tempo` repitches SP-style (the revered lo-fi trade),

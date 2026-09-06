@@ -63,6 +63,7 @@ import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
@@ -375,6 +376,78 @@ fun PadSheetScreen(
         commitPadEditNow("EJECT", onSuccess = { onToast(Copy.DELETE_SNIP); onBack() }) { mm -> mm.clear(slot) }
     }
 
+    // ---- MUTATE: one hit from two parents (MutateSheet over Mutate) ----
+    var mutateMode by remember(slot) { mutableStateOf(MutateSheet.MODES.first()) }
+    var partner by remember(slot) { mutableStateOf<MutateSheet.Partner?>(null) }
+    // Each ROULETTE tap is a new seed, so every spin is a new deal and each one reproducible.
+    var spins by remember(slot) { mutableIntStateOf(0) }
+    val mutateKnob = MutateSheet.knobFor(MutateSheet.modeFor(mutateMode))
+    var pendingMutateKnob by remember(slot, mutateMode) {
+        mutableFloatStateOf(mutateKnob?.let { MutateSheet.fraction(it, it.default) } ?: 0f)
+    }
+
+    /**
+     * MUTATE. The verb refuses layered and chained pads itself; the GHOSTS
+     * case gets its own line first because it's the one a thumb causes.
+     */
+    fun onMutate() {
+        if (busy) return
+        val m = model ?: return
+        val who = partner ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (p.velocityLayers.isNotEmpty()) {
+            onToast(Copy.MUTATE_NEEDS_ONE)
+            return
+        }
+        val padName = p.displayName
+        val move = MutateSheet.modeFor(mutateMode)
+        val fraction = pendingMutateKnob
+        scope.launch {
+            busy = true
+            try {
+                withContext(Dispatchers.IO) {
+                    MutateSheet.apply(m, slot, who, move, fraction)
+                    m.save()
+                }
+                revision++
+                onKitUpdated(m.kit)
+                refreshPadAudio(m)
+                m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
+                onToast(Copy.mutated(mutateMode, padName, MutateSheet.name(who)))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("MUTATE", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    fun onUnmutate() {
+        commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNMUTATED) }) { mm -> MutateSheet.undo(mm, slot) }
+    }
+
+    /** ROULETTE: the shelf (the kit folder's parent) is the crate; the deal becomes the partner. */
+    fun onRoulette() {
+        if (busy) return
+        val m = model ?: return
+        val root = entry.dir.parentFile ?: entry.dir
+        val seed = spins
+        scope.launch {
+            busy = true
+            try {
+                val deal = withContext(Dispatchers.IO) { MutateSheet.deal(m, slot, root, seed) }
+                spins = seed + 1
+                partner = deal
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (e is IllegalArgumentException) onToast(Copy.CRATE_EMPTY) else failure("ROULETTE", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
     fun onMakeInstrument() {
         if (busy) return
         val m = model
@@ -646,6 +719,27 @@ fun PadSheetScreen(
                         m.update(slot) { p -> p.copy(attack = null, decay = null, cutoff = null, resonance = null) }
                     }
                 },
+            )
+
+            MutateCard(
+                modes = MutateSheet.MODES,
+                mode = mutateMode,
+                onMode = { mutateMode = it },
+                partners = MutateSheet.partners(kit, slot).map { it.slot },
+                partner = partner,
+                onPartner = { partner = MutateSheet.Partner.Pad(it) },
+                onRoulette = ::onRoulette,
+                knobLabel = mutateKnob?.label,
+                knobFraction = pendingMutateKnob,
+                knobText = mutateKnob?.let { MutateSheet.label(it, MutateSheet.value(it, pendingMutateKnob)) } ?: "",
+                onKnobChange = { f -> pendingMutateKnob = (f * 40f).roundToInt() / 40f },
+                mutated = MutateSheet.read(pad.recipe),
+                canUndo = binDaysLeft != null,
+                onMutate = ::onMutate,
+                onUndo = ::onUnmutate,
+                padColor = classColor,
+                scheme = scheme,
+                busy = busy,
             )
         }
 
@@ -1037,6 +1131,123 @@ private fun ShapeCard(
                 onFractionCommit = knob.onCommit,
             )
         }
+    }
+}
+
+// ---------- mutate card ----------
+
+/**
+ * MUTATE: one hit from two parents. A move (STACK · SPLICE · SPLIT ·
+ * MORPH), a partner — a pad on this kit from the mini grid, or the deal
+ * ROULETTE spins off the shelf — the move's one knob when it has one,
+ * then MUTATE. The line under the title says what the pad already is
+ * ("SPLICE: Kit:A02") so a mutated pad never reads as an original; UNDO
+ * pulls the pre-mutation sound back out of the bin. Everything behind it
+ * is `MutateSheet` over the CLI's own `Mutate` — same recipe, same
+ * provenance, same bin.
+ */
+@Composable
+private fun MutateCard(
+    modes: List<String>,
+    mode: String,
+    onMode: (String) -> Unit,
+    partners: List<Int>,
+    partner: MutateSheet.Partner?,
+    onPartner: (Int) -> Unit,
+    onRoulette: () -> Unit,
+    knobLabel: String?,
+    knobFraction: Float,
+    knobText: String,
+    onKnobChange: (Float) -> Unit,
+    mutated: MutateSheet.Applied?,
+    canUndo: Boolean,
+    onMutate: () -> Unit,
+    onUndo: () -> Unit,
+    padColor: Color,
+    scheme: Scheme,
+    busy: Boolean,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TapeText("MUTATE · ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            ActionButton("UNDO", scheme, enabled = !busy && mutated != null && canUndo, onClick = onUndo)
+        }
+        TapeText(
+            mutated?.let { "${it.mode}: ${it.parents.joinToString(", ")}" } ?: "PICK A MOVE AND A PARENT",
+            TapeType.pixelSmall,
+            scheme.ink2.tape,
+            maxLines = 1,
+        )
+
+        // The move.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (m in modes) {
+                val selected = m == mode
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                        .let { if (!busy) it.tapeClick { onMode(m) } else it }
+                        .padding(horizontal = 4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(m, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                }
+            }
+        }
+
+        // The partner: this kit's other pads, four to a row, then the crate.
+        val chosenSlot = (partner as? MutateSheet.Partner.Pad)?.slot
+        for (row in partners.chunked(4)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (p in row) {
+                    val selected = p == chosenSlot
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                            .let { if (!busy) it.tapeClick { onPartner(p) } else it }
+                            .padding(horizontal = 4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(MutateSheet.padTag(p), TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                    }
+                }
+                // A short last row keeps the same chip width as a full one.
+                repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+        val deal = partner as? MutateSheet.Partner.Deal
+        ActionButton(
+            deal?.let { "ROULETTE ▸ ${it.label}" } ?: "ROULETTE ▸ LET THE CRATE DEAL",
+            scheme,
+            enabled = !busy,
+            dimmed = deal == null,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onRoulette,
+        )
+
+        // The move's knob, when it has one; STACK's row stays so the card never jumps.
+        StepperSlider(
+            label = knobLabel ?: "—",
+            fraction = if (knobLabel == null) 0f else knobFraction,
+            valueText = knobText,
+            fillColor = padColor,
+            scheme = scheme,
+            enabled = !busy && knobLabel != null,
+            onFractionChange = onKnobChange,
+            onFractionCommit = {},
+        )
+
+        ActionButton(
+            "MUTATE ▸",
+            scheme,
+            enabled = !busy && partner != null,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onMutate,
+        )
     }
 }
 

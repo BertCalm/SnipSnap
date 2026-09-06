@@ -80,6 +80,7 @@ class PersonalityTest {
             Copy.INSTRUMENT_MADE, Copy.NO_PITCH, Copy.RETREAT_REFUSED,
             Copy.TAKES_BIN_RULE, Copy.TEACH_CONSENT, Copy.SNAPPED,
             Copy.TAKES_EMPTY, Copy.BIN_EMPTY_STATE, Copy.BIN_ITEM_GONE, Copy.KIT_WONT_OPEN,
+            Copy.UNMUTATED, Copy.MUTATE_NEEDS_ONE, Copy.CRATE_EMPTY,
         )
         for (line in lines) {
             assertEquals(line.uppercase(), line, "TapeOS shouts: '$line'")
@@ -97,6 +98,11 @@ class PersonalityTest {
             "the treatment and the pad both lead their own toast",
         )
         assertTrue(Copy.treated("CRUSH", "A02").endsWith("."), "and still lands on a full stop")
+        assertTrue(
+            Copy.mutated("SPLICE", "A01", "A03").startsWith("SPLICE: A01 × A03."),
+            "the move and both parents lead their own toast",
+        )
+        assertTrue(Copy.mutated("SPLICE", "A01", "A03").endsWith("."), "and still lands on a full stop")
         assertEquals("+3 OFF-LANE — HEARD AND EXPORTED, NOT DRAWN", Copy.offLane(3), "the count leads its own line")
         assertTrue(Copy.offLane(1).uppercase() == Copy.offLane(1), "TapeOS shouts here too")
     }
