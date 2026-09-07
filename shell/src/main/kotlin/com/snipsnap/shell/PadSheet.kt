@@ -9,15 +9,15 @@ import com.snipsnap.synth.Treatments
  *
  * Four rows. The first is the design's four segments, whose DSP is the
  * Time Machine's eras; the rest are the rack's named characters — the FX
- * chains `treat` and bank B already speak — reachable one tap at a time,
- * and row four ends on TUNE, the spectral retune, the one treatment that
- * reads the kit's key.
+ * chains `treat` and bank B already speak — reachable one tap at a time;
+ * row four ends on TUNE and row five is the keyed family (`Keyed`), the
+ * treatments that read the kit's own key.
  * Every row is a vocabulary mapping and nothing more: the words
  * are the app's, not the engine's, so [Eras] and [Treatments] never
  * learn what a "segment" is.
  *
  * The card drives the whole-pad doors — [KitBuilderModel.eraPad],
- * [KitBuilderModel.characterPad] and [KitBuilderModel.retunePad], never
+ * [KitBuilderModel.characterPad] and [KitBuilderModel.keyedPad], never
  * `treatPad` — because a pad
  * treatment is whole-pad character: every file the pad references
  * (velocity layers included) changes together, so a layered snare
@@ -40,11 +40,14 @@ object PadSheet {
     /** Row four — the room, the tape's last two, and the key. */
     val EXTRA_SEGMENTS: List<String> = listOf("SKIM", "DUB", "SWELL", "TUNE")
 
-    /** Row four's last word: the spectral retune, the one treatment that reads the kit's key. */
+    /** Row five — the treatments that read the kit itself: its key, its tempo. */
+    val KEYED_SEGMENTS: List<String> = listOf("BODY")
+
+    /** Row four's last word: the spectral retune, the first treatment that reads the kit's key. */
     const val TUNE = "TUNE"
 
     /** All rows, in drawing order. */
-    val ROWS: List<List<String>> = listOf(SEGMENTS, CHARACTER_SEGMENTS, MORE_SEGMENTS, EXTRA_SEGMENTS)
+    val ROWS: List<List<String>> = listOf(SEGMENTS, CHARACTER_SEGMENTS, MORE_SEGMENTS, EXTRA_SEGMENTS, KEYED_SEGMENTS)
 
     /** Every segment on any row. */
     val ALL_SEGMENTS: List<String> get() = ROWS.flatten()
@@ -62,11 +65,8 @@ object PadSheet {
         /** A rack character — `Treatments.names`. */
         data class Character(override val name: String) : Treatment
 
-        /** The spectral retune — `KitBuilderModel.retunePad`, every partial into the kit's key. */
-        object Retune : Treatment {
-            override val name: String get() = "retuned"
-            override fun toString(): String = "Retune"
-        }
+        /** A keyed treatment — `KitBuilderModel.keyedPad`, one of `Keyed.NAMES`: it reads the kit's key. */
+        data class Keyed(override val name: String) : Treatment
     }
 
     /** What the card found on a pad: the treatment, its AMT, and the segment that draws it (null = none does). */
@@ -109,6 +109,13 @@ object PadSheet {
         // era. It remains reachable from `treat`.
     )
 
+    private val KEYED_FOR: Map<String, String> = mapOf(
+        // Every partial talked into the key.
+        "TUNE" to "retuned",
+        // A bank of resonators tuned to the key, struck by the hit.
+        "BODY" to "bodied",
+    )
+
     /**
      * The era behind a row-one segment, or null for [NONE]. Throws on a
      * segment row one does not draw — a typo should not silently become
@@ -131,7 +138,7 @@ object PadSheet {
         }
         ERA_FOR[segment]?.let { return Treatment.Era(it) }
         CHARACTER_FOR[segment]?.let { return Treatment.Character(it) }
-        if (segment == TUNE) return Treatment.Retune
+        KEYED_FOR[segment]?.let { return Treatment.Keyed(it) }
         return null
     }
 
@@ -152,18 +159,21 @@ object PadSheet {
     fun segmentForCharacter(character: String): String? =
         CHARACTER_FOR.entries.firstOrNull { it.value == character }?.key
 
-    /** [segmentFor] or [segmentForCharacter], whichever row [treatment] belongs to. */
+    /** The phone ruling for the keyed family too: a keyed name no segment draws lights nothing. */
+    fun segmentForKeyed(name: String): String? = KEYED_FOR.entries.firstOrNull { it.value == name }?.key
+
+    /** [segmentFor], [segmentForCharacter] or [segmentForKeyed], whichever row [treatment] belongs to. */
     fun segmentFor(treatment: Treatment): String? = when (treatment) {
         is Treatment.Era -> segmentFor(treatment.name)
         is Treatment.Character -> segmentForCharacter(treatment.name)
-        Treatment.Retune -> TUNE
+        is Treatment.Keyed -> segmentForKeyed(treatment.name)
     }
 
     /**
      * What the card should light for a pad's recipe, read defensively:
      * `eraPad` leaves `{"era", "amount"}`, `characterPad` (and `treatPad`,
      * and bank B's twins) leave a `PadRecipe` carrying `treatment` +
-     * `amount`, `retunePad` leaves `{"retune", "amount", "seed"}`. A synth patch or an fx-only recipe from any other door
+     * `amount`, `keyedPad` leaves `{"keyed", "key", "amount", "seed"}`. A synth patch or an fx-only recipe from any other door
      * (`replaceAudio`, `mutate`) names neither and reads as untreated —
      * the audio is what it is, but nothing here can claim a segment for it.
      */
@@ -178,8 +188,9 @@ object PadSheet {
             val t = Treatment.Character(name)
             return Applied(t, amount ?: return null, segmentFor(t))
         }
-        if (recipe.entries["retune"] is JsonValue.Str) {
-            return Applied(Treatment.Retune, amount ?: return null, TUNE)
+        (recipe.entries["keyed"] as? JsonValue.Str)?.value?.let { name ->
+            val t = Treatment.Keyed(name)
+            return Applied(t, amount ?: return null, segmentFor(t))
         }
         return null
     }

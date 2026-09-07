@@ -343,10 +343,11 @@ fun PadSheetScreen(
                     when (treatment) {
                         is PadSheet.Treatment.Era -> m.eraPad(slot, treatment.name, amount)
                         is PadSheet.Treatment.Character -> m.characterPad(slot, treatment.name, amount)
-                        // TUNE reads the kit's key (or snaps to semitones without
-                        // one) and reinvents phases from a fresh seed per press.
-                        PadSheet.Treatment.Retune ->
-                            m.retunePad(slot, amount, kotlin.random.Random.nextLong(0L, 1_000_000L))
+                        // Row five (and TUNE) reads the kit's key, or does without
+                        // its own way; the retune's phases come from a fresh seed
+                        // per press.
+                        is PadSheet.Treatment.Keyed ->
+                            m.keyedPad(slot, treatment.name, amount, kotlin.random.Random.nextLong(0L, 1_000_000L))
                     }
                     m.save()
                 }
@@ -355,7 +356,7 @@ fun PadSheetScreen(
                 refreshPadAudio(m)
                 m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
                 onToast(
-                    if (treatment == PadSheet.Treatment.Retune) Copy.retuned(padName, m.retuneKeyLabel())
+                    if (treatment is PadSheet.Treatment.Keyed) Copy.keyed(segment, padName, m.lastKeyLabel)
                     else Copy.treated(segment, padName),
                 )
             } catch (e: Exception) {
@@ -602,7 +603,7 @@ fun PadSheetScreen(
         when (a.treatment) {
             is PadSheet.Treatment.Era -> "AGED: ${a.treatment.name.uppercase()}"
             is PadSheet.Treatment.Character -> "TREATED: ${a.treatment.name.uppercase()}"
-            PadSheet.Treatment.Retune -> "RETUNED"
+            is PadSheet.Treatment.Keyed -> "IN KEY: ${a.treatment.name.uppercase()}"
         }
     }
     val amount = applied?.amount ?: PadSheet.DEFAULT_AMOUNT

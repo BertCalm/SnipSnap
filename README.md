@@ -66,6 +66,8 @@ The capture and conditioning core.
   the key through the `Spectral` door with phases reinvented by `Pghi`, so an
   inharmonic clang lands in the scale instead of merely moving as a block.
   A drum is refused as unpitched, in words.
+- **`Body`** — a bank of tuned resonators struck by the hit: the key's chord
+  tones over three octaves, the root loudest, DECAY their ring.
 - **`Loudness`** — perceived level (peaks aren't loudness), feeding kit-wide
   balance.
 

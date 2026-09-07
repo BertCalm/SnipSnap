@@ -63,15 +63,23 @@ class PadSheetTest {
         assertEquals(listOf("SMEAR", "SLAP", "WASH", "PUNCH"), PadSheet.CHARACTER_SEGMENTS)
         assertEquals(listOf("GHOST", "STOP", "START", "FLIP"), PadSheet.MORE_SEGMENTS)
         assertEquals(listOf("SKIM", "DUB", "SWELL", "TUNE"), PadSheet.EXTRA_SEGMENTS)
-        assertEquals(listOf(PadSheet.SEGMENTS, PadSheet.CHARACTER_SEGMENTS, PadSheet.MORE_SEGMENTS, PadSheet.EXTRA_SEGMENTS), PadSheet.ROWS)
+        assertEquals(listOf("BODY"), PadSheet.KEYED_SEGMENTS)
+        assertEquals(listOf(PadSheet.SEGMENTS, PadSheet.CHARACTER_SEGMENTS, PadSheet.MORE_SEGMENTS, PadSheet.EXTRA_SEGMENTS, PadSheet.KEYED_SEGMENTS), PadSheet.ROWS)
         assertEquals(PadSheet.ALL_SEGMENTS.size, PadSheet.ALL_SEGMENTS.toSet().size, "no word on two rows")
     }
 
     @Test
-    fun `every character segment names a real rack character, and TUNE is the retune`() {
-        assertEquals(PadSheet.Treatment.Retune, PadSheet.treatmentFor(PadSheet.TUNE))
-        assertEquals(PadSheet.TUNE, PadSheet.segmentFor(PadSheet.Treatment.Retune))
-        for (segment in PadSheet.ROWS.drop(1).flatten()) {
+    fun `every character segment names a real rack character, and the keyed segments a real keyed treatment`() {
+        assertEquals(PadSheet.Treatment.Keyed("retuned"), PadSheet.treatmentFor(PadSheet.TUNE))
+        assertEquals(PadSheet.TUNE, PadSheet.segmentFor(PadSheet.Treatment.Keyed("retuned")))
+        for (segment in listOf(PadSheet.TUNE) + PadSheet.KEYED_SEGMENTS) {
+            val t = PadSheet.treatmentFor(segment)
+            assertTrue(t is PadSheet.Treatment.Keyed, "$segment is keyed")
+            assertTrue(t!!.name in Keyed.NAMES, "$segment maps to '${t.name}', which Keyed does not know")
+            assertEquals(segment, PadSheet.segmentFor(t))
+        }
+        assertNull(PadSheet.segmentForKeyed("wobbled"), "a keyed name no segment draws lights nothing")
+        for (segment in PadSheet.ROWS.drop(1).dropLast(1).flatten()) {
             if (segment == PadSheet.TUNE) continue
             val t = PadSheet.treatmentFor(segment)
             assertTrue(t is PadSheet.Treatment.Character, "$segment is a character")
@@ -113,7 +121,9 @@ class PadSheetTest {
         assertNull(PadSheet.read(fxOnly), "a chain with no name claims no segment")
         assertNull(PadSheet.read(null))
 
-        val retuned = JsonValue.Obj(linkedMapOf<String, JsonValue>("retune" to JsonValue.Str("C MAJOR"), "amount" to JsonValue.Num(1.0), "seed" to JsonValue.Num(7.0)))
-        assertEquals(PadSheet.Applied(PadSheet.Treatment.Retune, 1f, "TUNE"), PadSheet.read(retuned))
+        val retuned = JsonValue.Obj(linkedMapOf<String, JsonValue>("keyed" to JsonValue.Str("retuned"), "key" to JsonValue.Str("C MAJOR"), "amount" to JsonValue.Num(1.0), "seed" to JsonValue.Num(7.0)))
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("retuned"), 1f, "TUNE"), PadSheet.read(retuned))
+        val bodied = JsonValue.Obj(linkedMapOf<String, JsonValue>("keyed" to JsonValue.Str("bodied"), "key" to JsonValue.Str("C"), "amount" to JsonValue.Num(0.5)))
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("bodied"), 0.5f, "BODY"), PadSheet.read(bodied))
     }
 }

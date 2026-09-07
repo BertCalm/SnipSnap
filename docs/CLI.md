@@ -643,7 +643,23 @@ whose energy lives between its peaks rather than in them (a hat, hiss)
 has nothing to snap. Bin-backed through the same door as every
 treatment; `--undo` restores byte-identical; the recipe (key, amount,
 seed) rides the pad. On the phone it is TUNE, the last word on the PAD
-SHEET's TREATMENT card, AMT how far.
+SHEET's fourth TREATMENT row, AMT how far.
+
+### `body <kit-dir> <pad>` — a bank of tuned resonators
+
+Modal synthesis in its plainest form: each mode is a two-pole
+resonator (a sine that rings out at one frequency with one decay), the
+pad is the mallet, and the modes are the kit's key's chord tones —
+root, fifth, third — over three octaves from C2, the root loudest, so
+a click through BODY rings at the root. `--decay` is the modes' T60
+(0.05..4 s, default 0.6); `--amount` crosses the dry hit into the
+ringing body; the result runs the hit's length plus the decay, peak
+matched. `--key Am` sets the kit's key first; with no key the body
+rings at the hit's own note when it has one, else at C — never a
+refusal, since a drum with a body is the point. Bin-backed, `--undo`
+byte-identical, the recipe (key, amount, decay) riding the pad. On the
+phone it is BODY on the PAD SHEET's fifth TREATMENT row, the keyed
+family: the treatments that read the kit's own key.
 
 ### `arrange <kit-dir>` — songs, not loops
 

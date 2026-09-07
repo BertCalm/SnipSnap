@@ -1234,6 +1234,29 @@ class CliTest {
     }
 
     @Test
+    fun `body gives one pad a ringing body in the key from the terminal, and undoes`() {
+        val wav = writeBreak(File(temp, "bd.wav"))
+        val out = File(temp, "bd-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "BD", "--slices", "8").first)
+        val kitDir = File(out, "BD")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(1)!!.sampleFile)
+        val before = padFile.readBytes()
+        val framesBefore = com.snipsnap.audio.WavReader.read(padFile).frameCount
+
+        val (code, stdout, stderr) = cli("body", kitDir.path, "A01", "--key", "Am", "--decay", "0.5")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "a body in a minor, ringing 0.50 s")
+        assertContains(stdout, "modes: A2 C3 E3")
+        assertTrue(com.snipsnap.audio.WavReader.read(padFile).frameCount > framesBefore, "rings past the hit")
+
+        assertEquals(0, cli("body", kitDir.path, "A01", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        val (badCode, _, badErr) = cli("body", kitDir.path, "A01", "--decay", "9")
+        assertTrue(badCode != 0 && "--decay wants" in badErr, badErr)
+    }
+
+    @Test
     fun `retune talks one pad into a key from the terminal, refuses a drum, and undoes`() {
         val wav = writeBreak(File(temp, "rt.wav"))
         val out = File(temp, "rt-out")

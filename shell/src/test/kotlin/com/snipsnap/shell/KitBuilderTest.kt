@@ -477,7 +477,8 @@ class KitBuilderTest {
         val tuned = m.retunePad(2, 1f, seed = 3)
         m.save()
         assertFalse(File(dir, bell.sampleFile).readBytes().contentEquals(before), "re-rendered")
-        assertEquals(PadSheet.Applied(PadSheet.Treatment.Retune, 1f, PadSheet.TUNE), PadSheet.read(tuned.recipe))
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("retuned"), 1f, PadSheet.TUNE), PadSheet.read(tuned.recipe))
+        assertEquals("C MAJOR", m.lastKeyLabel)
         val landed = com.snipsnap.audio.Retune.analyze(
             com.snipsnap.audio.WavReader.read(File(dir, bell.sampleFile)),
             com.snipsnap.audio.KeySpec(0, com.snipsnap.audio.Scale.CHROMATIC),
@@ -494,6 +495,17 @@ class KitBuilderTest {
         m.save()
         assertNull(m.pad(2)!!.recipe)
         assertTrue(File(dir, bell.sampleFile).readBytes().contentEquals(before), "back byte-identical")
+
+        // BODY never refuses: the kick gets a body in the kit's key, and rings past its own length.
+        val kickBefore = File(dir, kick.sampleFile).readBytes()
+        val bodied = m.keyedPad(1, "bodied", 1f, decay = 0.4f)
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("bodied"), 1f, "BODY"), PadSheet.read(bodied.recipe))
+        assertEquals("C MAJOR", m.lastKeyLabel)
+        val rung = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile))
+        assertTrue(rung.frameCount > DrumSynth.kick().frameCount, "the body rings past the hit")
+        assertFailsWith<IllegalArgumentException> { m.keyedPad(1, "wobbled", 1f) }
+        m.unEraPad(1)
+        assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(kickBefore), "the kick came back")
     }
 
     @Test
