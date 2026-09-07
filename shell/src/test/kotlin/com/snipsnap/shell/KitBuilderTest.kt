@@ -572,6 +572,30 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `with a key set, a tonal pad retunes on assign and the kick is untouched`() {
+        val m = KitBuilderModel.create("OnAssign", File(temp, "OnAssign"))
+        val rate = 44_100
+        // 227 Hz: 54 cents under A3, a semitone-and-a-bit off G#3.
+        val note = com.snipsnap.audio.Snip(FloatArray(rate / 2) { (0.5 * Math.sin(2 * Math.PI * 227.0 * it / rate)).toFloat() }, 1, rate)
+        val before = m.assign(1, note, DrumClass.TONAL)
+        assertEquals(0, before.tuneCoarse)
+        assertEquals(0, before.tuneFine, "no key: as captured")
+
+        m.setKey(com.snipsnap.audio.KeySpec.parse("C"))
+        val inKey = m.assign(2, note, DrumClass.TONAL)
+        val expected = com.snipsnap.audio.Tuner.inKey(note, 0, com.snipsnap.audio.Scale.MAJOR)!!
+        assertEquals(expected.tuneCoarse, inKey.tuneCoarse)
+        assertEquals(expected.tuneFine, inKey.tuneFine)
+        assertTrue(inKey.tuneCoarse != 0 || inKey.tuneFine != 0, "227 Hz moved onto A3: ${inKey.tuneCoarse} st ${inKey.tuneFine} c")
+        assertEquals("A3", expected.targetName)
+
+        val kick = m.assign(3, DrumSynth.kick(), DrumClass.KICK)
+        assertEquals(0, kick.tuneCoarse)
+        assertEquals(0, kick.tuneFine, "the kick is untouched")
+        assertEquals(listOf("A02 · TONAL 02 · " + "%+d ST %+d¢".format(java.util.Locale.ROOT, expected.tuneCoarse, expected.tuneFine).replace("-", "−")).first(), KeyPicker.readouts(m.kit)[1])
+    }
+
+    @Test
     fun `characterPad refuses a typo before it looks at the amount, and AMT 0 is a no-op`() {
         val dir = File(temp, "CharNoop")
         val m = KitBuilderModel.create("CharNoop", dir)

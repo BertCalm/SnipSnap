@@ -633,7 +633,8 @@ carry, each one's ratio to its nearest in-key note becomes a plateau
 on the frequency axis, every STFT frame is resampled through that map,
 and PGHI reinvents the phases — a bell whose overtones never agreed on
 a key gets every one of them talked into the scale. The kit's key is
-the target; `--key Am` sets it first; with neither, every partial goes
+the target (the phone sets it on the KIT screen's KEY panel, or on the CLI
+`--key`); `--key Am` sets it first; with neither, every partial goes
 to its nearest semitone. `--amount 0..1` is how far toward the note;
 `--seed` picks the phases. The partial moves are printed (`227.0 Hz
 -54¢ -> A3`). A drum is refused as unpitched, in words: the classifier's

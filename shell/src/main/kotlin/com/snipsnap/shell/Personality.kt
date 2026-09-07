@@ -87,6 +87,10 @@ object Copy {
     fun keySet(key: String): String =
         "$key SET. TONAL PADS RETUNE ON ASSIGN — THE KICK IS UNTOUCHED."
     const val KEY_OFF = "KEY OFF. EVERYTHING LANDS AS CAPTURED."
+    /** IN KEY: [n] tonal pads moved into [key] by their tune fields. */
+    fun inKey(n: Int, key: String): String = "$n ${if (n == 1) "PAD" else "PADS"} RETUNED INTO $key. THE KICK IS UNTOUCHED."
+    const val IN_KEY_NONE = "NOTHING MOVED. NO TONAL PAD HOLDS A NOTE THE TUNER IS SURE OF."
+    const val IN_KEY_NEEDS_KEY = "SET A KEY FIRST."
 
     // ---- Settings: teach the machine (X4.4) ----
     const val TEACHING_ON = "TEACHING ON. THE MACHINE LEARNS FROM YOUR CORRECTIONS."

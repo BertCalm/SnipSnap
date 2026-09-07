@@ -82,6 +82,7 @@ class PersonalityTest {
             Copy.TAKES_EMPTY, Copy.BIN_EMPTY_STATE, Copy.BIN_ITEM_GONE, Copy.KIT_WONT_OPEN,
             Copy.UNMUTATED, Copy.MUTATE_NEEDS_ONE, Copy.CRATE_EMPTY,
             Copy.SCULPTED, Copy.STRETCHED, Copy.FROZEN, Copy.PAD_MADE, Copy.PAD_TOO_SHORT, Copy.PAD_TOO_LONG,
+            Copy.IN_KEY_NONE, Copy.IN_KEY_NEEDS_KEY,
         )
         for (line in lines) {
             assertEquals(line.uppercase(), line, "TapeOS shouts: '$line'")
@@ -93,6 +94,8 @@ class PersonalityTest {
     fun `the interpolated lines name what they acted on`() {
         assertTrue(Copy.keySet("Am").startsWith("Am SET."), "the key leads its own toast")
         assertTrue(Copy.keySet("Am").endsWith("."), "and still lands on a full stop")
+        assertEquals("1 PAD RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(1, "A MINOR"))
+        assertEquals("3 PADS RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(3, "A MINOR"))
         assertTrue(Copy.takeRestored("T3").startsWith("T3 RESTORED."), "the take leads its own toast")
         assertTrue(
             Copy.treated("CRUSH", "A02").startsWith("CRUSH ON A02."),
