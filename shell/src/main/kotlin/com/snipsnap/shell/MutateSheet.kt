@@ -105,13 +105,17 @@ object MutateSheet {
     /**
      * The other kits on the shelf under [shelfRoot], by name, never
      * [thisKitDir] itself - the picker's candidates. A folder whose
-     * `kit.json` is broken is skipped, not fatal.
+     * `kit.json` is broken is skipped, not fatal. The two folders are told
+     * apart by their normalised absolute paths, which never touch the disk
+     * (a canonical path would, and could throw).
      */
-    fun otherKits(shelfRoot: File, thisKitDir: File): List<OtherKit> =
-        KitStore.list(shelfRoot)
-            .filter { it.canonicalFile != thisKitDir.canonicalFile }
+    fun otherKits(shelfRoot: File, thisKitDir: File): List<OtherKit> {
+        val here = thisKitDir.absoluteFile.normalize()
+        return KitStore.list(shelfRoot)
+            .filter { it.absoluteFile.normalize() != here }
             .mapNotNull { dir -> runCatching { OtherKit(KitStore.load(dir).name, dir) }.getOrNull() }
             .sortedBy { it.name.lowercase(java.util.Locale.ROOT) }
+    }
 
     /** The assigned pads of another kit, slot order - the picker's second row. */
     fun padsOf(kit: OtherKit): List<KitPad> = KitStore.load(kit.dir).pads.sortedBy { it.slot }
