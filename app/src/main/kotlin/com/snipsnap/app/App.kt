@@ -145,6 +145,11 @@ fun App(shelf: KitShelf) {
     // The honest little message box (wave FFF): what a landing, a backup
     // or a refusal has to say beyond a toast's one line. Stays until read.
     var note by remember { mutableStateOf<LandingNote.Note?>(null) }
+    /** The box in place of the toast, never beside it: opening one puts any toast down. */
+    fun openNote(n: LandingNote.Note) {
+        toast = null
+        note = n
+    }
     var busy by remember { mutableStateOf<String?>(null) }
     var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
     // PAD SHEET: the long-press pad inspector, full-screen over KIT. Not an
@@ -384,7 +389,7 @@ fun App(shelf: KitShelf) {
                 // A clean landing keeps its toast; one with skips opens the
                 // box, which names each skipped kit and the door's reason.
                 val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped)
-                if (boxed != null) note = boxed else toast = Copy.landed(entries.size, skipped.size)
+                if (boxed != null) openNote(boxed) else toast = Copy.landed(entries.size, skipped.size)
                 entries.firstOrNull()?.let { first ->
                     open = first
                     padSheetSlot = null
@@ -417,7 +422,7 @@ fun App(shelf: KitShelf) {
             // must not depend on the phone's language.
             // In the box, not a toast: a refusal is read at the reader's pace.
             val reason = e.message?.takeIf { it.isNotBlank() } ?: Copy.IMPORT_NOT_AUDIO
-            note = LandingNote.refused(sharedName, reason)
+            openNote(LandingNote.refused(sharedName, reason))
         } finally {
             if (ownsBusy) busy = null
         }
@@ -726,7 +731,7 @@ fun App(shelf: KitShelf) {
                     // naming each and why - it waits behind the chooser and is
                     // read on the way back.
                     val boxed = LandingNote.backedUp(result.packed, result.skipped)
-                    if (boxed != null) note = boxed else toast = Copy.backedUp(result.packed.size, result.skipped.size)
+                    if (boxed != null) openNote(boxed) else toast = Copy.backedUp(result.packed.size, result.skipped.size)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -1066,7 +1071,9 @@ fun App(shelf: KitShelf) {
                     busy = busy,
                 )
             }
-            ToastOverlay(toast)
+            // A toast raised while the box is up (a share landing behind it)
+            // is not drawn beside it; its dwell runs out unseen.
+            ToastOverlay(if (note == null) toast else null)
             note?.let { n -> MessageBox(n, onDismiss = { note = null }) }
             if (captureBlocked) {
                 CaptureBlockedDialog(onDismiss = { captureBlocked = false })

@@ -40,6 +40,8 @@ class LandingNoteTest {
         assertEquals(listOf("HOLIDAY.MP4", "NOTHING TO HEAR IN THAT"), n.lines.map { it.text })
         assertEquals(listOf(false, true), n.lines.map { it.trouble })
         assertEquals("THE SHARE", LandingNote.refused("  ", "x").lines.first().text, "a nameless share still has a line")
+        assertEquals("NAME", LandingNote.shout(" name . "), "no space left where the full stop was")
+        assertEquals("A. B", LandingNote.shout("a. b..."), "only the trailing stops go")
         assertEquals("IT SAID NO", LandingNote.refused("a.zip", "").lines.last().text, "a reasonless refusal still has one")
     }
 

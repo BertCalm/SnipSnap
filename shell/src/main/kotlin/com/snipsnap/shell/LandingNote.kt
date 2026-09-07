@@ -51,8 +51,8 @@ object LandingNote {
             listOf(Line(shout(displayName.ifBlank { "the share" })), Line(shout(reason.ifBlank { "it said no" }), trouble = true)),
         )
 
-    /** The house casing: uppercase in Locale.ROOT (never the phone's language), no trailing full stop. */
-    fun shout(s: String): String = s.trim().uppercase(java.util.Locale.ROOT).trimEnd('.')
+    /** The house casing: uppercase in Locale.ROOT (never the phone's language), no trailing full stop, no space left where it was. */
+    fun shout(s: String): String = s.uppercase(java.util.Locale.ROOT).trim().trimEnd('.').trimEnd()
 
     private fun fold(lines: List<Line>): List<Line> {
         if (lines.size <= MAX_LINES) return lines
