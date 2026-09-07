@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Capture (M1) landed: MicSessionService below is the armed session. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The Bubble (Task 5): optional. Granted via
+         ACTION_MANAGE_OVERLAY_PERMISSION, offered once from the ARM flow —
+         never required, the notification's own SNIP action is the whole
+         story when this isn't granted. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <application
+        android:name=".SnipSnapApplication"
+        android:label="SnipSnap"
+        android:allowBackup="true"
+        android:theme="@android:style/Theme.Material.NoActionBar">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- The six-track phasing loop grid (plan-03). No launcher filter:
+             one front door. Reachable in dev via
+             adb shell am start -n com.snipsnap.app/.LoopActivity -->
+        <activity
+            android:name=".LoopActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <!-- The always-listening ring's foreground session (retroactive-snip
+             plan, Task 2). Never exported: only this app's own ARM button
+             (and its own notification action) ever start it. -->
+        <service
+            android:name=".MicSessionService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+    </application>
+
+</manifest>

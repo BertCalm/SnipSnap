@@ -20,6 +20,106 @@ class GrooveVariationsTest {
     )
 
     @Test
+    fun `the fill owns the turn of every fourth bar and nothing else`() {
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        val ppb = Mpc3Clip.PULSES_PER_BAR
+        // Four bars of a steady pattern: kick 1 and 3, snare 2 and 4, hats 8ths.
+        val notes = mutableListOf<Mpc3Note>()
+        for (bar in 0 until 4) {
+            val b = bar * ppb
+            notes += Mpc3Note(36, b, 0.9f)
+            notes += Mpc3Note(36, b + 8 * s16, 0.85f)
+            notes += Mpc3Note(38, b + 4 * s16, 0.85f)
+            notes += Mpc3Note(38, b + 12 * s16, 0.9f)
+            for (e in 0 until 8) notes += Mpc3Note(42, b + e * 2L * s16, 0.4f)
+        }
+        val fourBars = Mpc3Clip("Break Groove", 4, notes)
+        val kit = Kit(
+            "Fill Kit",
+            listOf(
+                KitPad(1, "A01_Kick_01.wav", drumClass = com.snipsnap.audio.DrumClass.KICK),
+                KitPad(2, "A02_Snare_01.wav", drumClass = com.snipsnap.audio.DrumClass.SNARE),
+                KitPad(3, "A03_HatClosed_01.wav", drumClass = com.snipsnap.audio.DrumClass.HAT_CLOSED),
+            ),
+        )
+        val fill = GrooveVariations.fill(fourBars, kit, seed = 5)
+        assertEquals("Break Fill", fill.name)
+
+        fun inRange(clip: Mpc3Clip, from: Long, until: Long) =
+            clip.notes.filter { it.timePulses in from until until }
+                .sortedWith(compareBy({ it.timePulses }, { it.note }))
+
+        // Bars 1-3 and the fill bar's first half are byte-equal to the base.
+        assertEquals(inRange(fourBars, 0, 3 * ppb), inRange(fill, 0, 3 * ppb), "non-fill bars untouched")
+        assertEquals(
+            inRange(fourBars, 3 * ppb, 3 * ppb + 8 * s16),
+            inRange(fill, 3 * ppb, 3 * ppb + 8 * s16),
+            "the fill bar's first half stays as played",
+        )
+
+        // The turn is denser than it was, rolls on the kit's snare, and ramps.
+        val turnBase = inRange(fourBars, 3 * ppb + 8 * s16, 4 * ppb)
+        val turnFill = inRange(fill, 3 * ppb + 8 * s16, 4 * ppb)
+        assertTrue(turnFill.size > turnBase.size, "the turn densifies: ${turnBase.size} -> ${turnFill.size}")
+        val roll = turnFill.filter { it.note == 35 + 2 }
+        assertTrue(roll.size >= 12, "16ths on beat 3, 32nds on beat 4: ${roll.size} snare hits")
+        val beat4 = roll.filter { it.timePulses >= 3 * ppb + 12 * s16 }
+        assertEquals(8, beat4.size, "beat 4 rolls 32nds")
+        assertTrue(
+            beat4.last().velocity > beat4.first().velocity,
+            "the roll ramps into the turn: ${beat4.first().velocity} -> ${beat4.last().velocity}",
+        )
+        assertTrue(turnFill.all { it.note - 35 in setOf(1, 2, 3) }, "only pads the kit has")
+
+        assertEquals(fill, GrooveVariations.fill(fourBars, kit, seed = 5), "same seed, same fill")
+        assertTrue(fill != GrooveVariations.fill(fourBars, kit, seed = 6), "a new seed rerolls the jitter")
+
+        // A one-bar groove fills its only bar; a kit with nothing to roll on refuses.
+        val oneBar = GrooveVariations.fill(base, kit)
+        assertTrue(oneBar.notes.any { it.timePulses >= 12 * s16 && it.note == 35 + 2 })
+        kotlin.test.assertFailsWith<IllegalArgumentException> {
+            GrooveVariations.fill(base, Kit("K", listOf(KitPad(1, "a.wav", drumClass = com.snipsnap.audio.DrumClass.KICK))))
+        }
+    }
+
+    @Test
+    fun `ghosts whisper around the backbeats and never pile on`() {
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        val kit = Kit(
+            "Ghost Kit",
+            listOf(
+                KitPad(1, "A01_Kick_01.wav", drumClass = com.snipsnap.audio.DrumClass.KICK),
+                KitPad(2, "A02_Snare_01.wav", drumClass = com.snipsnap.audio.DrumClass.SNARE),
+            ),
+        )
+        // Step 3 (the e of 2) is already occupied - a ghost must not land there.
+        val withE = base.copy(notes = base.notes + Mpc3Note(42, 3 * s16, 0.5f))
+        val ghosted = GrooveVariations.ghosted(withE, kit, seed = 4)
+        assertEquals("Break Ghosted", ghosted.name)
+
+        val backbone = withE.notes.sortedWith(compareBy({ it.timePulses }, { it.note }))
+        val kept = ghosted.notes.filter { it in withE.notes }.sortedWith(compareBy({ it.timePulses }, { it.note }))
+        assertEquals(backbone, kept, "the backbone is untouched")
+
+        val ghosts = ghosted.notes.filter { it !in withE.notes }
+        assertTrue(ghosts.isNotEmpty(), "the grammar found room to whisper")
+        for (g in ghosts) {
+            val step = (g.timePulses / s16).toInt() % 16
+            assertTrue(step in setOf(3, 5, 11, 13), "ghosts live on the e/a around 2 and 4, got step $step")
+            assertTrue(step != 3, "an occupied candidate is left alone")
+            assertTrue(
+                g.velocity <= GrooveVariations.GHOST_VELOCITY_CEILING && g.velocity >= 0.15f,
+                "a ghost is a whisper: ${g.velocity}",
+            )
+            assertEquals(35 + 2, g.note, "ghosts whisper on the snare")
+        }
+        assertEquals(ghosted, GrooveVariations.ghosted(withE, kit, seed = 4), "same seed, same ghosts")
+        kotlin.test.assertFailsWith<IllegalArgumentException> {
+            GrooveVariations.ghosted(base, Kit("K", listOf(KitPad(1, "a.wav", drumClass = com.snipsnap.audio.DrumClass.KICK))))
+        }
+    }
+
+    @Test
     fun `the standard four derive provably from the base`() {
         val four = GrooveVariations.standard(base)
         assertEquals(4, four.size)

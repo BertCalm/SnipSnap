@@ -25,7 +25,7 @@ object KitStore {
         dir.mkdirs()
         require(dir.isDirectory) { "not a directory: $dir" }
         val file = File(dir, FILE_NAME)
-        file.writeText(Json.write(toJson(kit)) + "\n", Charsets.UTF_8)
+        AtomicFile.writeText(file, Json.write(toJson(kit)) + "\n")
         return file
     }
 
@@ -63,6 +63,16 @@ object KitStore {
                 )
             }
             kit.tempoBpm?.let { root["tempoBpm"] = JsonValue.Num(it.toDouble()) }
+            kit.wear?.let {
+                // The ledger only - w is derived from it, never stored.
+                root["wear"] = JsonValue.Obj(
+                    linkedMapOf(
+                        "mileage" to JsonValue.Num(it.mileage),
+                        "enabled" to JsonValue.Bool(it.enabled),
+                        "k" to JsonValue.Num(it.k),
+                    ),
+                )
+            }
             root["pads"] = JsonValue.Arr(
                 kit.pads.sortedBy { it.slot }.map { p ->
                     val entries = linkedMapOf<String, JsonValue>(
@@ -78,6 +88,34 @@ object KitStore {
                         "oneShot" to JsonValue.Bool(p.oneShot),
                     )
                     p.colorHex?.let { entries["colorHex"] = JsonValue.Str(it) }
+                    // The shape rides only when set - null means "the
+                    // format's default", and defaults are never written down.
+                    p.attack?.let { entries["attack"] = JsonValue.Num(it.toDouble()) }
+                    p.decay?.let { entries["decay"] = JsonValue.Num(it.toDouble()) }
+                    p.cutoff?.let { entries["cutoff"] = JsonValue.Num(it.toDouble()) }
+                    p.resonance?.let { entries["resonance"] = JsonValue.Num(it.toDouble()) }
+                    p.humanize?.let { entries["humanize"] = JsonValue.Num(it.toDouble()) }
+                    p.chain?.let { c ->
+                        val chain = linkedMapOf<String, JsonValue>(
+                            "cycle" to JsonValue.Num(c.cycle.toDouble()),
+                            "boundaries" to JsonValue.Arr(c.boundaries.map { JsonValue.Num(it.toDouble()) }),
+                        )
+                        c.zones?.let { zs ->
+                            chain["zones"] = JsonValue.Arr(
+                                zs.map { z ->
+                                    JsonValue.Obj(
+                                        linkedMapOf(
+                                            "velStart" to JsonValue.Num(z.velStart.toDouble()),
+                                            "velEnd" to JsonValue.Num(z.velEnd.toDouble()),
+                                            "baseSlice" to JsonValue.Num(z.baseSlice.toDouble()),
+                                            "cycle" to JsonValue.Num(z.cycle.toDouble()),
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+                        entries["chain"] = JsonValue.Obj(chain)
+                    }
                     if (p.source.isNotEmpty()) {
                         entries["source"] = JsonValue.Obj(
                             p.source.entries.associateTo(LinkedHashMap()) { (k, v) ->
@@ -132,6 +170,27 @@ object KitStore {
                     DrumClass.entries.firstOrNull { it.name == cls } ?: DrumClass.UNKNOWN
                 } ?: DrumClass.UNKNOWN,
                 colorHex = (p["colorHex"] as? JsonValue.Str)?.value,
+                attack = p["attack"]?.num()?.toFloat(),
+                decay = p["decay"]?.num()?.toFloat(),
+                cutoff = p["cutoff"]?.num()?.toFloat(),
+                resonance = p["resonance"]?.num()?.toFloat(),
+                humanize = p["humanize"]?.num()?.toFloat(),
+                chain = (p["chain"] as? JsonValue.Obj)?.let { c ->
+                    ChainInfo(
+                        boundaries = ((c.entries["boundaries"] as? JsonValue.Arr)?.items.orEmpty())
+                            .map { (it as JsonValue.Num).value.toLong() },
+                        cycle = c.entries["cycle"]?.int() ?: 2,
+                        zones = (c.entries["zones"] as? JsonValue.Arr)?.items?.map { zoneJson ->
+                            val z = zoneJson.obj()
+                            ChainZone(
+                                velStart = z["velStart"]?.int() ?: throw JsonException("zone has no velStart"),
+                                velEnd = z["velEnd"]?.int() ?: throw JsonException("zone has no velEnd"),
+                                baseSlice = z["baseSlice"]?.int() ?: throw JsonException("zone has no baseSlice"),
+                                cycle = z["cycle"]?.int() ?: throw JsonException("zone has no cycle"),
+                            )
+                        },
+                    )
+                },
                 level = p["level"]?.num()?.toFloat() ?: 0.707946f,
                 pan = p["pan"]?.num()?.toFloat() ?: 0.5f,
                 tuneCoarse = p["tuneCoarse"]?.int() ?: 0,
@@ -155,6 +214,13 @@ object KitStore {
                 },
             )
         }
-        return Kit(name, pads, key, tempoBpm = obj["tempoBpm"]?.num()?.toFloat())
+        val wear = (obj["wear"] as? JsonValue.Obj)?.let { w ->
+            WearLedger(
+                mileage = w.entries["mileage"]?.num() ?: 0.0,
+                enabled = w.entries["enabled"]?.bool() ?: true,
+                k = w.entries["k"]?.num() ?: WearLedger.DEFAULT_K,
+            )
+        }
+        return Kit(name, pads, key, tempoBpm = obj["tempoBpm"]?.num()?.toFloat(), wear = wear)
     }
 }

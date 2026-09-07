@@ -9,10 +9,11 @@ import java.io.File
 import java.io.PrintStream
 
 /**
- * `snipsnap import <file>` — the receive half of kit sharing, both
- * directions: an `.xpn` archive, or a native MPC 3 drum track (`.xtd` +
- * its `_[TrackData]/` beside it). Dispatch is by content, never by
- * extension — the MPC's own rule, and ours.
+ * `snipsnap import <file>` — the receive half of kit sharing, every
+ * direction: an `.xpn` archive, a native MPC 3 drum track (`.xtd` +
+ * its `_[TrackData]/` beside it), a whole `.xpj`, or an `.sfz`
+ * instrument coming home from the open-sampler world. Dispatch is by
+ * content, never by extension — the MPC's own rule, and ours.
  */
 object ImportCommand {
 
@@ -36,6 +37,15 @@ object ImportCommand {
         }
 
         val (kit: Kit, directory: File, what: String) = when {
+            isSfz(file) -> {
+                val r = try {
+                    com.snipsnap.kit.SfzImporter.import(file, destRoot, overwrite)
+                } catch (e: java.io.IOException) {
+                    throw CliError(e.message ?: "couldn't import ${file.name}")
+                }
+                r.skipped.forEach { (name, why) -> out.println("  ! skipped '$name' - $why") }
+                Triple(r.kit, r.directory, "'${r.kit.name}' (.sfz instrument)")
+            }
             MpcFormats.detect(file) == MpcFormat.MPC3_ACVS -> {
                 val project = com.snipsnap.mpc3.Mpc3Project.read(file)
                 if (project.isProject) {
@@ -53,11 +63,29 @@ object ImportCommand {
                 Triple(r.kit, r.directory, "track '${r.trackName}' (MPC 3 native)")
             }
             isZip(file) -> {
-                val r = XpnImporter.import(file, destRoot, overwrite)
+                val all = XpnImporter.importAll(file, destRoot, overwrite)
+                if (all.kits.isEmpty()) {
+                    throw CliError(
+                        "nothing imported from ${file.name}: " +
+                            all.skipped.joinToString("; ") { "'${it.first}' - ${it.second}" },
+                    )
+                }
+                if (all.kits.size > 1 || all.skipped.isNotEmpty()) {
+                    // A multi-program pack: every drum program lands.
+                    out.println("imported ${all.kits.size} kit(s) from pack ${file.name}:")
+                    all.kits.forEach {
+                        out.println("  + '${it.kit.name}' -> ${it.directory.path} (${it.kit.pads.size} pads)")
+                    }
+                    all.skipped.forEach { (name, why) -> out.println("  ! skipped '$name' - $why") }
+                    out.println("(edit them, or re-export: snipsnap export <kit-dir> --export ...)")
+                    return 0
+                }
+                val r = all.kits.firstOrNull()
+                    ?: throw CliError("nothing imported from ${file.name}")
                 Triple(r.kit, r.directory, "'${r.programEntry}' (.xpn archive)")
             }
             else -> throw CliError(
-                "can't tell what ${file.name} is - import takes an .xpn archive, a native .xtd, or a whole .xpj",
+                "can't tell what ${file.name} is - import takes an .xpn archive, a native .xtd, a whole .xpj, or an .sfz",
             )
         }
 
@@ -97,6 +125,16 @@ object ImportCommand {
         val head = ByteArray(4)
         file.inputStream().use { if (it.read(head) < 4) return false }
         return head.toString(Charsets.US_ASCII) == "MThd"
+    }
+
+    /** Content sniff: a text file whose headers speak sfz. */
+    private fun isSfz(file: File): Boolean {
+        val head = ByteArray(65_536)
+        val n = file.inputStream().use { it.read(head) }
+        if (n <= 0) return false
+        val text = String(head, 0, n, Charsets.UTF_8)
+        if ('\u0000' in text) return false // binary, not an instrument text
+        return "<region>" in text || ("<group>" in text && "sample=" in text)
     }
 
     private fun isZip(file: File): Boolean {

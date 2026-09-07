@@ -9,6 +9,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PadRecipeTest {
@@ -112,5 +113,61 @@ class PadRecipeTest {
                 PadRecipe.fromJsonValue(pad.recipe!!)
             }
         }
+    }
+
+    @Test
+    fun `a treatment name survives a round trip`() {
+        // "crushed" is one of Shuffle.TREATMENTS's five bank-B characters.
+        // TAPE/CRUSH/DIRT are a separate vocabulary - pad-sheet segments
+        // over Eras - and Treatments.chain only knows the bank-B names.
+        val r = PadRecipe(fx = Treatments.chain("crushed"), treatment = "crushed")
+        val back = PadRecipe.fromJsonText(r.toJsonText())
+        assertEquals("crushed", back.treatment)
+        assertEquals(r.fx, back.fx)
+    }
+
+    @Test
+    fun `recipes written before the tag existed still parse`() {
+        val old = """{"recipe":1,"fx":{"fx":1,"reverse":true}}"""
+        assertNull(PadRecipe.fromJsonText(old).treatment, "an untagged recipe is not an error")
+    }
+
+    @Test
+    fun `every remixed bank-B pad names its treatment`() {
+        val bankA = Shuffle.kit(seed = 7).take(16)
+        val both = Shuffle.withRemixBank(bankA, seed = 7)
+        val bankB = both.drop(16).filterNotNull()
+        assertEquals(bankA.filterNotNull().size, bankB.size, "every assigned pad gets a twin")
+        for (pad in bankB) {
+            val recipe = PadRecipe.fromJsonValue(pad.recipe!!)
+            assertEquals(
+                true,
+                recipe.treatment in Shuffle.TREATMENTS.map { it.first },
+                "a twin with no treatment tag can't be labelled: ${recipe.treatment}",
+            )
+        }
+    }
+
+    @Test
+    fun `the treatment amount round-trips with its name`() {
+        val r = PadRecipe(fx = Treatments.chain("crushed", 0.35f), treatment = "crushed", amount = 0.35f)
+        val back = PadRecipe.fromJsonText(r.toJsonText())
+        assertEquals("crushed", back.treatment)
+        assertEquals(0.35f, back.amount)
+    }
+
+    @Test
+    fun `a recipe written before amount existed still parses`() {
+        val old = """{"recipe":1,"fx":{"fx":1,"reverse":true}}"""
+        assertNull(PadRecipe.fromJsonText(old).amount, "an amount-less recipe is not an error")
+    }
+
+    @Test
+    fun `Treatments-apply records both the name and the amount it used`() {
+        val snip = Thump.render(ThumpVoice.SNARE)
+        val treated = Treatments.apply("crushed", snip, 0.4f)
+        val recipe = PadRecipe.fromJsonValue(treated.recipe)
+        assertEquals("crushed", recipe.treatment)
+        assertEquals(0.4f, recipe.amount)
     }
 }

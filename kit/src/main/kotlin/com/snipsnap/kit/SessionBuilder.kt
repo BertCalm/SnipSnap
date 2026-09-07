@@ -17,11 +17,12 @@ import java.io.IOException
  *
  * Every kit's samples land in the shared flat `_[ProjectData]/` with a
  * per-kit stem prefix, so two chopped kits' `A01_Kick_01`s can't collide.
- * The first kit's first groove rides the sequence — the project plays
- * something the moment it opens. (The corpus rule for projects: hoisted
- * tracks carry no embedded clips, the timeline does — so the other kits'
- * grooves stay in their folders, riding their standalone exports.)
- * Tempo comes from the first kit that remembers one.
+ * Every kit's grooves become the project's **sequences** — sequence k
+ * plays each kit's k-th pattern, so a chopped kit's four variations
+ * arrive as four sequences and the hardware's sequence switcher is the
+ * pattern flip. (The corpus rule for projects still holds: hoisted
+ * tracks carry no embedded clips, the timeline does.) Tempo comes from
+ * the first kit that remembers one.
  */
 object SessionBuilder {
 
@@ -31,6 +32,8 @@ object SessionBuilder {
         val kitTracks: List<String>,
         val instrumentTracks: List<String>,
         val tempoBpm: Float?,
+        /** Answer basslines that joined the session, one track name per kit that had one. */
+        val answerTracks: List<String> = emptyList(),
     )
 
     fun build(
@@ -66,10 +69,31 @@ object SessionBuilder {
             val grooves = GrooveStore.load(kitDir)
             tracks += Mpc3ProjectTrack.Drum(
                 DrumProgram(kit.name, slots),
-                clip = grooves.firstOrNull(),
+                clips = grooves.take(Mpc3ProjectWriter.MAX_SEQUENCES),
             )
             kitTracks += kit.name
             if (tempo == null) tempo = kit.tempoBpm
+        }
+
+        // A kit that has an answer brings it along: the stored bass note
+        // rebuilds its keygroup program deterministically via OneNote, and
+        // the bassline clip rides the keys track into the sequences.
+        val answerTracks = mutableListOf<String>()
+        for (kitDir in kitDirs) {
+            val answer = AnswerStore.load(kitDir) ?: continue
+            val members = listOf(Triple(answer.name, answer.sampleFile, answer.clip)) +
+                answer.band.map { Triple(it.name, it.sampleFile, it.clip) }
+            for ((name, sampleFile, memberClip) in members) {
+                val wav = File(kitDir, sampleFile)
+                if (!wav.isFile) {
+                    throw IOException("answer.json in $kitDir points at a missing sample: $sampleFile")
+                }
+                val one = OneNote.program(name, com.snipsnap.audio.WavReader.read(wav))
+                val dest = File(dataDir, "${one.sampleStem}.wav")
+                if (!dest.exists()) WavWriter.write(dest, one.sample)
+                tracks += Mpc3ProjectTrack.Keys(one.program, clips = listOf(memberClip))
+                answerTracks += name
+            }
         }
 
         val instrumentTracks = mutableListOf<String>()
@@ -88,8 +112,11 @@ object SessionBuilder {
         }
 
         val writer = Mpc3ProjectWriter()
-        val file = tempo?.let { writer.writeTo(destRoot, name, tracks, it) }
-            ?: writer.writeTo(destRoot, name, tracks)
-        return Result(file, dataDir, kitTracks, instrumentTracks, tempo)
+        // Song slot 1 wears the session's name (safe plumbing; the step
+        // list waits on the GG3.2 bench capture).
+        val song = com.snipsnap.mpc3.Mpc3Song(name)
+        val file = tempo?.let { writer.writeTo(destRoot, name, tracks, it, song = song) }
+            ?: writer.writeTo(destRoot, name, tracks, song = song)
+        return Result(file, dataDir, kitTracks, instrumentTracks, tempo, answerTracks)
     }
 }

@@ -63,9 +63,11 @@ object KitArt {
         kit: Kit,
         kitDir: File,
         style: Style,
-        scheme: Scheme = Schemes.CHROME,
+        scheme: Scheme = Schemes.DEFAULT,
         seed: Int = 0,
         size: Int = DEFAULT_SIZE,
+        /** The tile's caption — a pack tile carries the pack's title, not one kit's. */
+        label: String = kit.name,
     ): BufferedImage {
         require(size in 64..2048) { "size wants 64..2048, got $size" }
         val img = BufferedImage(size, size, BufferedImage.TYPE_INT_RGB)
@@ -87,10 +89,10 @@ object KitArt {
             }
 
             // The name, pixel type, centred in the bottom band.
-            val label = kit.name.uppercase()
+            val caption = label.uppercase()
             val bandTop = size - m - nameBand + (nameBand * 0.25f).toInt()
             PixelType.draw(
-                g, label, size / 2, bandTop, nameBand / 2, rgb(scheme.lcdInk),
+                g, caption, size / 2, bandTop, nameBand / 2, rgb(scheme.lcdInk),
                 centered = true, maxWidthPx = size - 2 * m,
             )
 
@@ -108,18 +110,19 @@ object KitArt {
         kit: Kit,
         kitDir: File,
         style: Style,
-        scheme: Scheme = Schemes.CHROME,
+        scheme: Scheme = Schemes.DEFAULT,
         seed: Int = 0,
         size: Int = DEFAULT_SIZE,
+        label: String = kit.name,
     ): ByteArray {
         val out = ByteArrayOutputStream()
-        ImageIO.write(render(kit, kitDir, style, scheme, seed, size), "png", out)
+        ImageIO.write(render(kit, kitDir, style, scheme, seed, size, label), "png", out)
         return out.toByteArray()
     }
 
     // ---- styles ------------------------------------------------------------
 
-    private data class Box(val x: Int, val y: Int, val w: Int, val h: Int)
+    internal data class Box(val x: Int, val y: Int, val w: Int, val h: Int)
 
     /** A pad's audio and looks, loaded once per render. */
     private data class Voice(val mono: FloatArray, val color: Color, val peak: Float)
@@ -138,7 +141,7 @@ object KitArt {
             Voice(mono, rgb(Schemes.classColor(pad.drumClass)), peak)
         }
 
-    private fun waveform(g: Graphics2D, box: Box, kit: Kit, kitDir: File) {
+    internal fun waveform(g: Graphics2D, box: Box, kit: Kit, kitDir: File) {
         val vs = voices(kit, kitDir)
         if (vs.isEmpty()) return
         val total = vs.sumOf { it.mono.size }

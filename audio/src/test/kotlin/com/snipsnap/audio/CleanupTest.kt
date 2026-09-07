@@ -130,6 +130,22 @@ class CleanupTest {
     }
 
     @Test
+    fun `peak ignores a non-finite sample, so one NaN cannot silence the rest`() {
+        // Normalization scales by target/peak; if peak() returned NaN, every
+        // sample would go NaN and the whole snip would silence on export.
+        // peak() must see through a poisoned sample to the real loudest one.
+        val poisoned = Snip(floatArrayOf(0.4f, Float.NaN, Float.POSITIVE_INFINITY, -0.4f), 1, 44_100)
+        // The loudest *finite* sample, not Inf and not NaN.
+        assertClose(0.4f, poisoned.peak(), tolerance = 1e-6f)
+
+        // With a finite peak, normalization turns the real audio up instead of
+        // dividing the whole snip to silence (which a peak of Inf would force).
+        val normalized = Cleanup.normalize(poisoned, targetPeakDb = -0.3f)
+        assertTrue(normalized.samples[0].isFinite() && normalized.samples[3].isFinite())
+        assertTrue(kotlin.math.abs(normalized.samples[0]) > 0.4f, "the real audio was turned up, not silenced")
+    }
+
+    @Test
     fun `normalized output never clips`() {
         val s = tone(1000, amplitude = 0.9f)
         val normalized = Cleanup.normalize(s, targetPeakDb = 0f)

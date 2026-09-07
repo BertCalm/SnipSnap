@@ -36,7 +36,15 @@ object TeachLog {
         examples.joinToString("") { Json.write(toJson(it)) .replace("\n", "").replace("    ", "") + "\n" }
 
     fun fromJsonl(text: String): List<Example> =
-        text.lineSequence().filter { it.isNotBlank() }.map { fromJson(Json.parse(it)) }.toList()
+        text.lineSequence().filter { it.isNotBlank() }.mapNotNull { line ->
+            // A process killed mid-append leaves a torn last line; one bad
+            // line must not lose the whole training log, so skip it.
+            try {
+                fromJson(Json.parse(line))
+            } catch (e: Exception) {
+                null
+            }
+        }.toList()
 
     fun append(file: File, examples: List<Example>) {
         if (examples.isEmpty()) return

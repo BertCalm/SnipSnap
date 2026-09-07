@@ -91,6 +91,33 @@ class MidiGrooveTest {
     }
 
     @Test
+    fun `a file with an absurd note count is refused, not accumulated`() {
+        // A track that is nothing but note-on/note-off pairs, more than the
+        // cap - the shape a hostile file would carry to eat the heap.
+        fun varLen(v: Int) = if (v < 0x80) byteArrayOf(v.toByte())
+        else byteArrayOf((0x80 or (v shr 7)).toByte(), (v and 0x7F).toByte())
+
+        val track = ByteArrayOutputStream().apply {
+            repeat(MidiGroove.MAX_NOTES + 50) {
+                write(varLen(0)); write(byteArrayOf(0x99.toByte(), 36, 100)) // on, ch 10
+                write(varLen(1)); write(byteArrayOf(0x89.toByte(), 36, 0))   // off
+            }
+            write(varLen(0)); write(byteArrayOf(0xFF.toByte(), 0x2F, 0))
+        }.toByteArray()
+        val file = ByteArrayOutputStream().apply {
+            write("MThd".toByteArray(Charsets.US_ASCII))
+            write(byteArrayOf(0, 0, 0, 6, 0, 0, 0, 1, (960 shr 8).toByte(), (960 and 0xFF).toByte()))
+            write("MTrk".toByteArray(Charsets.US_ASCII))
+            val len = track.size
+            write(byteArrayOf((len ushr 24).toByte(), (len ushr 16).toByte(), (len ushr 8).toByte(), len.toByte()))
+            write(track)
+        }.toByteArray()
+
+        val err = assertFailsWith<IllegalArgumentException> { MidiGroove.read(file, "bomb") }
+        assertTrue("${MidiGroove.MAX_NOTES}" in err.message!!, err.message!!)
+    }
+
+    @Test
     fun `whatever is not midi is refused with a reason`() {
         assertFailsWith<IllegalArgumentException> {
             MidiGroove.read(byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8), "junk")

@@ -1,0 +1,1242 @@
+package com.snipsnap.audio
+
+/**
+ * The Capture Doctor (wave MM) — `doctor`'s sibling with a different
+ * patient. The mix doctor treats what the *mix* does wrong (masking,
+ * levels, DC); this treats what the *capture* arrived with: the phone
+ * mic in a room. Mains hum, clicks and dropouts, the noise floor.
+ *
+ * House rules, same as everywhere: measure first, act only on what
+ * measurably exists, and leave clean audio untouched — the detectors
+ * gate the treatments, so "nothing found" means bytes unchanged, not
+ * "processed gently".
+ */
+object CaptureDoctor {
+
+    // ---- hum (MM1) --------------------------------------------------------
+
+    /** What the probe heard: which mains, how loud, how many harmonics stand out. */
+    data class HumReport(
+        val hz: Float,
+        /** The fundamental's level, dBFS. */
+        val levelDb: Float,
+        /** Harmonics (fundamental included) that stand out — all get notched. */
+        val harmonics: Int,
+    )
+
+    /** The two mains the world runs on. */
+    val MAINS_HZ = listOf(50f, 60f)
+
+    /** A hum must beat its spectral neighbors by this amplitude ratio to be real. */
+    const val HUM_STANDOUT = 4f
+
+    /** Below this amplitude (~ −80 dBFS) a hum isn't worth a filter. */
+    const val HUM_FLOOR = 1e-4f
+
+    /** Narrow — a notch takes the hum, not the kick. */
+    const val NOTCH_Q = 30f
+
+    const val MAX_HARMONICS = 4
+
+    /** The probe listens to at most this much audio — plenty for a steady hum. */
+    private const val PROBE_SEC = 4f
+
+    /**
+     * Is there mains hum in this capture? A tone probe at 50 and 60 Hz,
+     * each judged against its own spectral neighborhood (±4 Hz) — a hum
+     * is a *steady narrow* peak; a kick sweeping through 50 Hz smears.
+     * Null when nothing stands out.
+     */
+    fun detectHum(snip: Snip): HumReport? {
+        val mono = if (snip.channels == 1) snip else Cleanup.toMono(snip)
+        val n = minOf(mono.frameCount, (PROBE_SEC * mono.sampleRate).toInt())
+        if (n < mono.sampleRate / 5) return null
+
+        fun amp(hz: Float) = goertzel(mono.samples, n, hz, mono.sampleRate)
+        var best: HumReport? = null
+        for (f0 in MAINS_HZ) {
+            val a = amp(f0)
+            val base = maxOf(amp(f0 - 4f), amp(f0 + 4f), 1e-9f)
+            if (a < HUM_FLOOR || a < HUM_STANDOUT * base) continue
+            var harmonics = 1
+            for (h in 2..MAX_HARMONICS) {
+                val hf = f0 * h
+                if (hf >= mono.sampleRate / 2f) break
+                val ha = amp(hf)
+                if (ha >= HUM_FLOOR && ha >= 2f * maxOf(amp(hf - 4f), amp(hf + 4f), 1e-9f)) {
+                    harmonics = h
+                }
+            }
+            val report = HumReport(f0, 20f * Math.log10(a.toDouble()).toFloat(), harmonics)
+            if (best == null || report.levelDb > best.levelDb) best = report
+        }
+        return best
+    }
+
+    /**
+     * Take the reported hum out: a narrow biquad notch at the fundamental
+     * and each standing harmonic, per channel. Callers gate on
+     * [detectHum] — this always filters what it's told to.
+     */
+    fun removeHum(snip: Snip, report: HumReport): Snip {
+        val out = snip.samples.copyOf()
+        for (h in 1..report.harmonics) {
+            val hz = report.hz * h
+            if (hz >= snip.sampleRate / 2f) break
+            for (ch in 0 until snip.channels) {
+                notchInPlace(out, snip.channels, ch, hz, snip.sampleRate)
+            }
+        }
+        return Snip(out, snip.channels, snip.sampleRate)
+    }
+
+    // ---- clicks and dropouts (MM2) ----------------------------------------
+
+    /** What the repair pass did — zeros throughout when nothing needed doing. */
+    data class Repair(val snip: Snip, val clicks: Int, val dropouts: Int, val repairedFrames: Int) {
+        val touched: Boolean get() = repairedFrames > 0
+    }
+
+    /** Wider than ~2ms isn't a click, it's music — left alone. */
+    const val MAX_CLICK_FRAMES = 96
+
+    /** A click's derivative stands this many sigmas over its block's. */
+    const val CLICK_SIGMA = 8f
+
+    /** ...and at least this far in absolute terms, so silence can't flag noise. */
+    const val CLICK_FLOOR = 0.05f
+
+    /** More than this fraction of full-scale jumps is distortion — refused. */
+    const val DAMAGE_CEILING = 0.01f
+
+    /** A single-sample jump past this is a cliff no sane capture makes often. */
+    const val DAMAGE_CLIFF = 1.0f
+
+    /** A digital dropout: at least this many exact zeros in living audio. */
+    const val MIN_DROPOUT_FRAMES = 8
+
+    /** ...and at most ~20ms — longer is intentional silence. */
+    const val MAX_DROPOUT_FRAMES = 900
+
+    /** An onset's energy persists past it; a click's dies. The follow test. */
+    private const val GUARD_FRAMES = 240
+
+    /**
+     * Find and repair clicks (derivative outliers with the transient
+     * guard) and dropouts (runs of exact zeros inside living audio),
+     * per channel, interpolating across each region. When nothing needs
+     * repair the input comes back **unchanged**. A capture where more
+     * than [DAMAGE_CEILING] of the frames flag as clicks refuses: that
+     * is distortion, and pretending to fix it would be a lie.
+     */
+    fun repairClicks(snip: Snip): Repair {
+        val out = snip.samples.copyOf()
+        var clicks = 0
+        var dropouts = 0
+        var repaired = 0
+
+        for (ch in 0 until snip.channels) {
+            val x = FloatArray(snip.frameCount) { f -> snip.samples[f * snip.channels + ch] }
+            // Dropouts first: their edges are derivative cliffs, and the
+            // click hunt must see the mended signal, not the hole's walls.
+            val drops = dropoutRegions(x)
+            for (r in drops) {
+                interpolate(x, 1, 0, r.first, r.last)
+                dropouts++
+                repaired += r.last - r.first + 1
+            }
+            val regions = clickRegions(x)
+            for (r in regions) {
+                interpolate(x, 1, 0, r.first, r.last)
+                clicks++
+                repaired += r.last - r.first + 1
+            }
+            if (drops.isNotEmpty() || regions.isNotEmpty()) {
+                for (f in 0 until snip.frameCount) out[f * snip.channels + ch] = x[f]
+            }
+        }
+        return if (repaired == 0) {
+            Repair(snip, 0, 0, 0)
+        } else {
+            Repair(Snip(out, snip.channels, snip.sampleRate), clicks, dropouts, repaired)
+        }
+    }
+
+    /** Click candidates as frame ranges, transient-guarded. */
+    private fun clickRegions(x: FloatArray): List<IntRange> {
+        if (x.size < 3) return emptyList()
+        val flagged = BooleanArray(x.size)
+        val block = 4096
+        var b = 1
+        while (b < x.size) {
+            val end = minOf(b + block, x.size)
+            var acc = 0.0
+            var n = 0
+            for (i in b until end) {
+                val d = x[i] - x[i - 1]
+                acc += d * d
+                n++
+            }
+            val sigma = Math.sqrt(acc / n.coerceAtLeast(1)).toFloat()
+            val bar = maxOf(CLICK_SIGMA * sigma, CLICK_FLOOR)
+            for (i in b until end) {
+                if (Math.abs(x[i] - x[i - 1]) > bar) flagged[i] = true
+            }
+            b = end
+        }
+
+        // The damage ceiling can't lean on the sigma flags - wall-to-wall
+        // distortion raises its own sigma until nothing "stands out". It
+        // reads an absolute cliff instead: full-scale single-sample jumps,
+        // which sane audio essentially never makes and clipping makes
+        // constantly. Too many and repair would lie.
+        var cliffs = 0
+        for (i in 1 until x.size) {
+            if (Math.abs(x[i] - x[i - 1]) > DAMAGE_CLIFF) cliffs++
+        }
+        require(cliffs <= x.size * DAMAGE_CEILING) {
+            "$cliffs full-scale jumps in ${x.size} samples - " +
+                "that's distortion, not clicks, and repair would lie" +
+                " (if it's clipping - flat-topped peaks - `clean --declip` can rebuild it)"
+        }
+
+        val regions = mutableListOf<IntRange>()
+        var i = 0
+        while (i < x.size) {
+            if (!flagged[i]) {
+                i++
+                continue
+            }
+            var j = i
+            var gap = 0
+            var k = i
+            while (k < x.size && gap <= 8) {
+                if (flagged[k]) {
+                    j = k
+                    gap = 0
+                } else {
+                    gap++
+                }
+                k++
+            }
+            val width = j - i + 1
+            if (width <= MAX_CLICK_FRAMES && isClickNotOnset(x, i, j) && isIsolated(x, i, j)) {
+                regions += i..j
+            }
+            i = j + 1
+        }
+        return regions
+    }
+
+    /**
+     * A click's jump dwarfs its immediate surroundings; noise (a hat, a
+     * snare body) jumps everywhere at once. The region's peak derivative
+     * must stand 4× over the biggest derivative just outside it.
+     */
+    private fun isIsolated(x: FloatArray, start: Int, end: Int): Boolean {
+        var peak = 0f
+        for (i in maxOf(1, start)..minOf(end, x.size - 1)) {
+            val d = Math.abs(x[i] - x[i - 1])
+            if (d > peak) peak = d
+        }
+        var surround = 0f
+        for (i in maxOf(1, start - 64) until maxOf(1, start - 1)) {
+            val d = Math.abs(x[i] - x[i - 1])
+            if (d > surround) surround = d
+        }
+        for (i in minOf(end + 2, x.size) until minOf(end + 64, x.size)) {
+            val d = Math.abs(x[i] - x[i - 1])
+            if (d > surround) surround = d
+        }
+        return surround < peak / 4f
+    }
+
+    /** The follow test: a drum onset's energy persists after the jump; a click's dies. */
+    private fun isClickNotOnset(x: FloatArray, start: Int, end: Int): Boolean {
+        val pre = rms(x, maxOf(0, start - GUARD_FRAMES), maxOf(0, start - 8))
+        val post = rms(x, minOf(x.size, end + 8), minOf(x.size, end + GUARD_FRAMES))
+        return post <= 3f * pre + 1e-4f
+    }
+
+    /** Runs of exact zeros inside living audio — the digital dropout. */
+    private fun dropoutRegions(x: FloatArray): List<IntRange> {
+        val regions = mutableListOf<IntRange>()
+        var i = 0
+        while (i < x.size) {
+            if (x[i] != 0f) {
+                i++
+                continue
+            }
+            var j = i
+            while (j + 1 < x.size && x[j + 1] == 0f) j++
+            val width = j - i + 1
+            val leftAlive = i > 0 && Math.abs(x[i - 1]) > 0.005f
+            val rightAlive = j + 1 < x.size && Math.abs(x[j + 1]) > 0.005f
+            if (width in MIN_DROPOUT_FRAMES..MAX_DROPOUT_FRAMES && leftAlive && rightAlive) {
+                regions += i..j
+            }
+            i = j + 1
+        }
+        return regions
+    }
+
+    private fun interpolate(samples: FloatArray, channels: Int, ch: Int, startFrame: Int, endFrame: Int) {
+        val fromFrame = startFrame - 1
+        val toFrame = endFrame + 1
+        val from = if (fromFrame >= 0) samples[fromFrame * channels + ch] else 0f
+        val to = if (toFrame * channels + ch < samples.size) samples[toFrame * channels + ch] else 0f
+        val span = (toFrame - fromFrame).coerceAtLeast(1)
+        for (f in startFrame..endFrame) {
+            val t = (f - fromFrame).toFloat() / span
+            samples[f * channels + ch] = from + (to - from) * t
+        }
+    }
+
+    private fun rms(x: FloatArray, from: Int, to: Int): Float {
+        if (to <= from) return 0f
+        var acc = 0.0
+        for (i in from until to) acc += x[i] * x[i].toDouble()
+        return Math.sqrt(acc / (to - from)).toFloat()
+    }
+
+    // ---- the whole visit (MM4) --------------------------------------------
+
+    /** Everything one pass found and did. [snip] is the input itself when untouched. */
+    data class CleanReport(
+        val hum: HumReport?,
+        val clicks: Int,
+        val dropouts: Int,
+        /** The floor as measured after repairs, dBFS; null on very short audio. */
+        val floorDb: Float?,
+        val gated: Boolean,
+        val snip: Snip,
+        /** True when the floor leg was the spectral de-noiser, not the expander. */
+        val denoised: Boolean = false,
+        /** What the declip leg found and rebuilt, when asked for and needed. */
+        val clip: ClipReport? = null,
+        /** True when the WPE leg ran — an opt-in with no detector of its own. */
+        val deverbed: Boolean = false,
+    ) {
+        val touched: Boolean get() = hum != null || clicks > 0 || dropouts > 0 || gated || clip != null || deverbed
+
+        /** The one-line diagnosis, every finding named. */
+        fun summary(): String {
+            val parts = mutableListOf<String>()
+            clip?.let { parts += "clipping rebuilt (%.1f%% of samples pinned at %.2f)".format(it.fraction * 100, it.ceiling) }
+            if (deverbed) parts += "room predicted and subtracted (WPE)"
+            hum?.let { parts += "%.0f Hz hum notched (%d harmonic(s), %.0f dBFS)".format(it.hz, it.harmonics, it.levelDb) }
+            if (clicks > 0) parts += "$clicks click(s) repaired"
+            if (dropouts > 0) parts += "$dropouts dropout(s) repaired"
+            if (gated) {
+                parts += (if (denoised) "floor %.0f dBFS, spectrally de-noised" else "floor %.0f dBFS, gently gated")
+                    .format(floorDb)
+            }
+            return if (parts.isEmpty()) "clean - nothing done" else parts.joinToString("; ")
+        }
+    }
+
+    /**
+     * The full visit, every treatment gated by its own detector: hum
+     * first (a hum lifts the floor reading), then clicks and dropouts,
+     * then the floor leg — the gentle expander, or with [denoise] the
+     * spectral de-noiser instead (never both: they'd double-dip on the
+     * same hiss). Nothing found means the input comes back **as-is** —
+     * the same object, bytes untouched. Throws like [repairClicks]
+     * when the capture is distortion, not clicks.
+     */
+    fun clean(snip: Snip, denoise: Boolean = false, declip: Boolean = false, deverb: Boolean = false): CleanReport {
+        var cur = snip
+        // Clipping first when asked: pinned runs corrupt every reading
+        // downstream of them.
+        var clip: ClipReport? = null
+        if (declip) {
+            declip(cur)?.let {
+                clip = it.report
+                cur = it.snip
+            }
+        }
+        val hum = detectHum(cur)
+        if (hum != null) cur = removeHum(cur, hum)
+        val repair = repairClicks(cur)
+        cur = repair.snip
+        // The room after the repairs, before the floor reads: an opt-in
+        // leg with no detector of its own.
+        var deverbed = false
+        if (deverb) {
+            val dv = deverb(cur)
+            if (dv !== cur) {
+                deverbed = true
+                cur = dv
+            }
+        }
+        if (denoise) {
+            val deep = denoise(cur)
+            return if (deep == null) {
+                CleanReport(hum, repair.clicks, repair.dropouts, measureFloor(cur), gated = false, snip = cur, clip = clip, deverbed = deverbed)
+            } else {
+                CleanReport(hum, repair.clicks, repair.dropouts, deep.floorDb, gated = true, snip = deep.snip, denoised = true, clip = clip, deverbed = deverbed)
+            }
+        }
+        val floor = measureFloor(cur)
+        val gate = floor != null && floor > CLEAN_FLOOR_DB
+        if (gate) cur = expand(cur, floor!!)
+        return CleanReport(hum, repair.clicks, repair.dropouts, floor, gate, cur, clip = clip, deverbed = deverbed)
+    }
+
+    // ---- the noise floor (MM3) --------------------------------------------
+
+    /** Below this floor the capture is clean and the gate stays out of it. */
+    const val CLEAN_FLOOR_DB = -60f
+
+    /** The expander eases in below floor + this margin. */
+    const val EXPAND_MARGIN_DB = 12f
+
+    /** 2:1 downward — quiet gets quieter, never gone. */
+    const val EXPAND_RATIO = 2f
+
+    /** The depth cap: a gentle gate, not a mute. */
+    const val MAX_ATTEN_DB = 12f
+
+    private const val FLOOR_WINDOW_SEC = 0.05f
+    private const val RELEASE_SEC = 0.08f
+
+    /**
+     * The capture's noise floor in dBFS, read from its quietest tenth of
+     * [FLOOR_WINDOW_SEC] windows. Null when the audio is too short to
+     * say. A floor under [CLEAN_FLOOR_DB] means a clean capture —
+     * callers leave those alone.
+     */
+    fun measureFloor(snip: Snip): Float? {
+        val mono = if (snip.channels == 1) snip else Cleanup.toMono(snip)
+        val win = (FLOOR_WINDOW_SEC * mono.sampleRate).toInt()
+        val hop = win / 2
+        if (mono.frameCount < win * 4) return null
+        val rmses = mutableListOf<Float>()
+        var at = 0
+        while (at + win <= mono.frameCount) {
+            rmses += rms(mono.samples, at, at + win)
+            at += hop
+        }
+        rmses.sort()
+        val floor = rmses[(rmses.size / 10).coerceIn(0, rmses.size - 1)]
+        return 20f * Math.log10(floor.toDouble().coerceAtLeast(1e-7)).toFloat()
+    }
+
+    /**
+     * The gentle gate: a downward expander below `floor + margin`,
+     * [EXPAND_RATIO]:1 in dB with the depth capped at [MAX_ATTEN_DB] —
+     * hiss recedes, tails breathe, nothing slams shut. The envelope
+     * opens instantly (a transient must never be clipped by its own
+     * gate) and releases over [RELEASE_SEC]. Channels move together.
+     */
+    fun expand(snip: Snip, floorDb: Float): Snip {
+        val thresholdLin = Math.pow(10.0, (floorDb + EXPAND_MARGIN_DB) / 20.0).toFloat()
+        val release = Math.exp(-1.0 / (RELEASE_SEC * snip.sampleRate)).toFloat()
+        val out = FloatArray(snip.samples.size)
+        var env = 0f
+        for (f in 0 until snip.frameCount) {
+            var level = 0f
+            for (ch in 0 until snip.channels) {
+                val v = Math.abs(snip.samples[f * snip.channels + ch])
+                if (v > level) level = v
+            }
+            env = if (level > env) level else level + release * (env - level)
+            val gainDb = if (env >= thresholdLin) {
+                0f
+            } else {
+                val envDb = 20f * Math.log10(env.toDouble().coerceAtLeast(1e-7)).toFloat()
+                ((envDb - (floorDb + EXPAND_MARGIN_DB)) * (EXPAND_RATIO - 1f))
+                    .coerceAtLeast(-MAX_ATTEN_DB)
+            }
+            val g = Math.pow(10.0, gainDb / 20.0).toFloat()
+            for (ch in 0 until snip.channels) {
+                out[f * snip.channels + ch] = snip.samples[f * snip.channels + ch] * g
+            }
+        }
+        return Snip(out, snip.channels, snip.sampleRate)
+    }
+
+    // ---- spectral de-noise (NN2) ------------------------------------------
+
+    /**
+     * Gate a bin only when it sits within this factor of the profile
+     * (+9.5 dB). High on purpose: noise magnitudes are Rayleigh-spread,
+     * and at 2× a noise peak pops the instant-open gate ~4% of frames —
+     * each opening then eases shut, lifting the average gain well off
+     * the floor. At 3× a pure-noise bin opens ~0.1% of the time, so
+     * noise actually reaches the cap while drums still clear the bar
+     * by tens of dB.
+     */
+    const val DENOISE_MARGIN = 3f
+
+    /** The attenuation cap, −12 dB as a gain: noise recedes, never vanishes into warble. */
+    const val DENOISE_FLOOR_GAIN = 0.25f
+
+    /** The quietest tenth of frames teaches the fingerprint. */
+    private const val QUIET_FRACTION = 0.1f
+
+    /** Fewer quiet frames than this is nothing to learn from. */
+    private const val MIN_PROFILE_FRAMES = 8
+
+    /** Per-bin gain release, one pole per frame; opening is instant. */
+    private const val GAIN_RELEASE = 0.6f
+
+    /** Gains move with their neighbors: ±2 bins averaged, no lone flickers. */
+    private const val FREQ_SMOOTH_BINS = 2
+
+    /** What the deep clean learned and did. */
+    data class DenoiseReport(val floorDb: Float, val profileFrames: Int, val snip: Snip)
+
+    /**
+     * Spectral de-noise — the frequency-domain answer to [expand]'s
+     * time-domain gate. The expander can only duck the gaps *between*
+     * hits; hiss lives in different bins than the drums, so this pulls
+     * it out from **underneath** them.
+     *
+     * The noise fingerprint is the average spectrum of the capture's
+     * quietest tenth of frames — its own gaps, nobody else's room. Each
+     * frame's bins then gate downward against `profile ×`[DENOISE_MARGIN]:
+     * a bin at hiss level recedes toward [DENOISE_FLOOR_GAIN], a bin
+     * carrying a drum passes untouched. Three defenses against the
+     * classic musical-noise warble: the attenuation cap (noise reduced,
+     * never zeroed), frequency smoothing (neighbors move together), and
+     * an instant-open / eased-shut gain envelope per bin — the same
+     * attack philosophy as [expand], for the same reason.
+     *
+     * Null when there is nothing to do or nothing to learn from: a
+     * floor already under [CLEAN_FLOOR_DB], audio too short to measure,
+     * or too few quiet frames to make an honest fingerprint.
+     */
+    fun denoise(snip: Snip): DenoiseReport? {
+        val floorDb = measureFloor(snip) ?: return null
+        if (floorDb <= CLEAN_FLOOR_DB) return null
+
+        // Pass one: every frame's spectrum, per channel.
+        val allMags = Array(snip.channels) { mutableListOf<FloatArray>() }
+        Spectral.forEachFrame(snip) { ch, _, mags -> allMags[ch].add(mags.copyOf()) }
+        val frameCount = allMags[0].size
+        val quietCount = Math.max(MIN_PROFILE_FRAMES, Math.ceil(frameCount * QUIET_FRACTION.toDouble()).toInt())
+        if (frameCount < quietCount * 2) return null
+
+        // The fingerprint: the quietest frames' average spectrum.
+        val profiles = Array(snip.channels) { ch ->
+            val byEnergy = allMags[ch].sortedBy { mags -> mags.sumOf { (it * it).toDouble() } }
+            val profile = FloatArray(Spectral.BINS)
+            for (i in 0 until quietCount) {
+                val m = byEnergy[i]
+                for (b in profile.indices) profile[b] += m[b] / quietCount
+            }
+            profile
+        }
+
+        // Pass two: gate each bin against the fingerprint, smoothed.
+        val prev = Array(snip.channels) { FloatArray(Spectral.BINS) { 1f } }
+        val target = FloatArray(Spectral.BINS)
+        val cleaned = Spectral.process(snip) { ch, _, mags ->
+            val profile = profiles[ch]
+            for (b in target.indices) {
+                target[b] = if (mags[b] < profile[b] * DENOISE_MARGIN) DENOISE_FLOOR_GAIN else 1f
+            }
+            val gains = FloatArray(Spectral.BINS)
+            for (b in gains.indices) {
+                var acc = 0f
+                var n = 0
+                for (k in b - FREQ_SMOOTH_BINS..b + FREQ_SMOOTH_BINS) {
+                    if (k in target.indices) {
+                        acc += target[k]
+                        n++
+                    }
+                }
+                val smoothed = acc / n
+                val p = prev[ch][b]
+                gains[b] = (if (smoothed > p) smoothed else smoothed + GAIN_RELEASE * (p - smoothed))
+                    .coerceIn(DENOISE_FLOOR_GAIN, 1f)
+                prev[ch][b] = gains[b]
+            }
+            gains
+        }
+        return DenoiseReport(floorDb, quietCount, cleaned)
+    }
+
+    // ---- the tail knee (NN3) ----------------------------------------------
+
+    /** Envelope resolution for the knee hunt — 10 ms smooths a noise tail's wiggle without hiding the knee. */
+    private const val TAIL_WINDOW_SEC = 0.01f
+
+    /** Each side of a candidate knee needs this much line to fit. */
+    private const val KNEE_MIN_SEG_SEC = 0.05f
+
+    /** The handoff must sit at least this far under the hit's peak. */
+    const val KNEE_DEPTH_DB = -18f
+
+    /** The hit's decay must be at least this many times steeper than the tail's. */
+    const val KNEE_SLOPE_RATIO = 2f
+
+    /** A tail flatter than this isn't a room decaying — it's a floor, and the de-noiser's job. */
+    const val TAIL_MIN_SLOPE_DB_PER_SEC = -3f
+
+    /**
+     * Two segments must still beat one line by this much — a coarse
+     * sanity floor, not the discriminator: a real noise tail's wiggle
+     * is shared error both fits pay, so the ratio never gets far below
+     * one, while dry hits are rejected earlier by the validity gauntlet
+     * (depth, slopes, ratio, live tail) with no valid candidate at all.
+     */
+    private const val KNEE_FIT_GAIN = 0.8f
+
+    /** The fade's depth cap: gentle, never a cut. */
+    const val FADE_FLOOR_DB = 24f
+
+    private const val ENV_FLOOR_DB = -80f
+
+    /** Where the hit handed off to the room, and the trimmed result. */
+    data class RoomTail(
+        /** Seconds from the hit's peak to the handoff. */
+        val kneeSec: Float,
+        val hitSlopeDbPerSec: Float,
+        val tailSlopeDbPerSec: Float,
+        val snip: Snip,
+    )
+
+    /**
+     * De-reverb's honest first step, for one-shots: not the room
+     * undone (blind deconvolution — a research project), but the room's
+     * *tail* found and faded. The post-peak envelope is fit as two
+     * lines hunting the knee where the hit's steep decay hands off to
+     * a measurably shallower, still-decaying room tail — valid only
+     * when the knee sits well under the peak ([KNEE_DEPTH_DB]), the
+     * hit's slope is at least [KNEE_SLOPE_RATIO]× steeper, the tail
+     * still decays (flatter than [TAIL_MIN_SLOPE_DB_PER_SEC] is a
+     * noise floor, a different doctor's patient), and two segments
+     * genuinely beat one. From the knee the hit's own slope continues
+     * as a gain ramp — a fade capped at [FADE_FLOOR_DB], never a cut.
+     * A dry hit is single-slope by construction and comes back null.
+     */
+    fun trimRoomTail(snip: Snip): RoomTail? {
+        val mono = if (snip.channels == 1) snip else Cleanup.toMono(snip)
+        val win = (TAIL_WINDOW_SEC * mono.sampleRate).toInt()
+        if (win == 0 || mono.frameCount < win) return null
+        val windows = mono.frameCount / win
+        val env = FloatArray(windows) { w ->
+            val r = rms(mono.samples, w * win, (w + 1) * win)
+            (20f * Math.log10(r.toDouble().coerceAtLeast(1e-7)).toFloat()).coerceAtLeast(ENV_FLOOR_DB)
+        }
+        val peak = env.indices.maxBy { env[it] }
+        val minSeg = Math.max(2, (KNEE_MIN_SEG_SEC / TAIL_WINDOW_SEC).toInt())
+        // The fit runs to the last *live* window: the silence after the
+        // tail dies is nobody's decay, and letting it into the tail
+        // segment flattens every slope it touches.
+        val last = (windows - 1 downTo peak).firstOrNull { env[it] > ENV_FLOOR_DB + 6f }
+            ?: return null
+        if (last - peak < 2 * minSeg) return null
+
+        // One line as the baseline, two lines hunting the knee — the best
+        // *valid* knee, because a real envelope can have three regimes
+        // (hit → room tail → silence floor) and the raw SSE optimum may
+        // sit on the tail-to-floor corner, which is nobody's handoff.
+        val (_, _, sseOne) = fitLine(env, peak, last)
+        val perSec = 1f / TAIL_WINDOW_SEC
+        var bestK = -1
+        var bestSse = Float.MAX_VALUE
+        var bestS1 = 0f
+        var bestS2 = 0f
+        for (k in peak + minSeg..last - minSeg) {
+            val (s1, _, e1) = fitLine(env, peak, k)
+            val (s2, _, e2) = fitLine(env, k, last)
+            if (e1 + e2 >= bestSse) continue
+            val hit = s1 * perSec
+            val tail = s2 * perSec
+            // The tail must be a live, decaying room — mostly above the
+            // envelope floor (silence is dry, not roomy), still falling,
+            // measurably shallower than the hit, and well under the peak.
+            var alive = 0
+            for (i in k..last) if (env[i] > ENV_FLOOR_DB + 6f) alive++
+            val valid = env[k] - env[peak] <= KNEE_DEPTH_DB &&
+                hit < 0f && tail < TAIL_MIN_SLOPE_DB_PER_SEC &&
+                hit <= tail * KNEE_SLOPE_RATIO &&
+                alive * 2 >= last - k + 1
+            if (valid) {
+                bestSse = e1 + e2
+                bestK = k
+                bestS1 = s1
+                bestS2 = s2
+            }
+        }
+        if (bestK < 0 || bestSse >= KNEE_FIT_GAIN * sseOne) return null
+        val hitSlope = bestS1 * perSec
+        val tailSlope = bestS2 * perSec
+
+        // The fade: the hit's own slope carries on from the knee.
+        val out = FloatArray(snip.samples.size)
+        val kneeFrame = bestK * win
+        val gainDb = FloatArray(windows) { w ->
+            if (w < bestK) 0f
+            else {
+                val target = env[bestK] + bestS1 * (w - bestK)
+                (target - env[w]).coerceIn(-FADE_FLOOR_DB, 0f)
+            }
+        }
+        for (f in 0 until snip.frameCount) {
+            val w = (f / win).coerceAtMost(windows - 1)
+            val next = (w + 1).coerceAtMost(windows - 1)
+            val frac = (f - w * win).toFloat() / win
+            val db = gainDb[w] + (gainDb[next] - gainDb[w]) * frac
+            val g = Math.pow(10.0, db / 20.0).toFloat()
+            for (ch in 0 until snip.channels) {
+                out[f * snip.channels + ch] = snip.samples[f * snip.channels + ch] * g
+            }
+        }
+        return RoomTail(
+            kneeSec = (kneeFrame - peak * win).toFloat() / mono.sampleRate,
+            hitSlopeDbPerSec = hitSlope,
+            tailSlopeDbPerSec = tailSlope,
+            snip = Snip(out, snip.channels, snip.sampleRate),
+        )
+    }
+
+    /** Least-squares line over env[from..to]: (slope per window, intercept, SSE). */
+    private fun fitLine(env: FloatArray, from: Int, to: Int): Triple<Float, Float, Float> {
+        val n = to - from + 1
+        var sx = 0.0
+        var sy = 0.0
+        var sxx = 0.0
+        var sxy = 0.0
+        for (i in from..to) {
+            val x = (i - from).toDouble()
+            val y = env[i].toDouble()
+            sx += x
+            sy += y
+            sxx += x * x
+            sxy += x * y
+        }
+        val denom = n * sxx - sx * sx
+        val slope = if (denom == 0.0) 0.0 else (n * sxy - sx * sy) / denom
+        val intercept = (sy - slope * sx) / n
+        var sse = 0.0
+        for (i in from..to) {
+            val e = env[i] - (intercept + slope * (i - from))
+            sse += e * e
+        }
+        return Triple(slope.toFloat(), intercept.toFloat(), sse.toFloat())
+    }
+
+    // ---- declip (RR1) -----------------------------------------------------
+
+    /** Flat-top runs at least this long read as clipping, not as a loud sample. */
+    const val CLIP_RUN_MIN = 3
+
+    /** Samples within this fraction of the ceiling count as pinned. */
+    const val CLIP_LEVEL_FRACTION = 0.995f
+
+    /**
+     * A pinned run must be FLAT to this absolute tolerance — digital
+     * clipping repeats the very same value (a 24-bit quantum apart at
+     * most), while a low sine's crest, even 6 samples "at" its peak,
+     * still bends by orders of magnitude more than this.
+     */
+    const val CLIP_FLATNESS = 1e-6f
+
+    /** A "ceiling" below this is just quiet audio, not clipping. */
+    const val CLIP_MIN_CEILING = 0.3f
+
+    /** Less clipped than this and there is nothing worth rebuilding. */
+    const val CLIP_MIN_FRACTION = 0.001f
+
+    private const val SPADE_FRAME = 1024
+    private const val SPADE_HOP = SPADE_FRAME / 4
+    private const val SPADE_MAX_K = 400
+    private const val SPADE_STEP = 2
+    private const val SPADE_EPS = 1e-3f
+
+    data class ClipReport(val ceiling: Float, val fraction: Float, val runs: Int)
+
+    data class Declip(val report: ClipReport, val snip: Snip)
+
+    /**
+     * Is this capture clipped? The ceiling is the signal's own peak;
+     * only *flat-top runs* pinned at it count (a pure sine touches its
+     * peak one sample at a time — that is loud, not clipped), the
+     * ceiling must be a real level and the damage a real fraction.
+     * Null means honest silence: nothing to rebuild.
+     */
+    fun detectClipping(snip: Snip): ClipReport? {
+        val ceiling = snip.samples.maxOf { Math.abs(it) }
+        if (ceiling < CLIP_MIN_CEILING) return null
+        val mask = clipMask(snip, ceiling)
+        var clipped = 0
+        var runs = 0
+        var inRun = false
+        for (v in mask) {
+            if (v) {
+                clipped++
+                if (!inRun) {
+                    runs++
+                    inRun = true
+                }
+            } else {
+                inRun = false
+            }
+        }
+        val fraction = clipped.toFloat() / mask.size
+        if (fraction < CLIP_MIN_FRACTION) return null
+        return ClipReport(ceiling, fraction, runs)
+    }
+
+    /**
+     * SPADE-style declipping (Kitić et al.): clipped samples are
+     * *missing data with a known bound* — the ceiling tells you the
+     * truth was at least that loud, in that direction. Per clipped
+     * frame, find the sparsest spectrum consistent with the surviving
+     * samples: hard-threshold to the k loudest bins, resynthesize,
+     * pin the reliable samples back and push the clipped ones past the
+     * ceiling, relax k, repeat. Reliable samples in the output are the
+     * input's own, byte-for-byte; only the pinned runs are rebuilt.
+     * Null when [detectClipping] hears nothing.
+     */
+    fun declip(snip: Snip): Declip? {
+        val report = detectClipping(snip) ?: return null
+        val level = report.ceiling * CLIP_LEVEL_FRACTION
+        val out = snip.samples.copyOf()
+        val window = FloatArray(SPADE_FRAME) { n ->
+            (0.5 - 0.5 * Math.cos(2.0 * Math.PI * n / SPADE_FRAME)).toFloat()
+        }
+        for (ch in 0 until snip.channels) {
+            val x = FloatArray(snip.frameCount) { f -> snip.samples[f * snip.channels + ch] }
+            val mask = BooleanArray(x.size)
+            markRuns(x, level, mask)
+            if (mask.none { it }) continue
+            val rebuilt = FloatArray(x.size)
+            val weight = FloatArray(x.size)
+            var at = 0
+            while (at < x.size) {
+                val end = minOf(at + SPADE_FRAME, x.size)
+                var any = false
+                for (i in at until end) if (mask[i]) any = true
+                if (any) {
+                    val frame = FloatArray(SPADE_FRAME) { n -> if (at + n < x.size) x[at + n] else 0f }
+                    val fMask = BooleanArray(SPADE_FRAME) { n -> at + n < x.size && mask[at + n] }
+                    // The sparse hunt runs on the WINDOWED frame - an
+                    // unwindowed chunk's leakage makes nothing sparse.
+                    // The estimate comes back in the windowed domain and
+                    // tight-frame synthesis (Σŷ·w / Σw²) rebuilds it.
+                    val estimate = spadeFrame(frame, fMask, level, window)
+                    for (n in 0 until SPADE_FRAME) {
+                        val i = at + n
+                        if (i < x.size && mask[i]) {
+                            rebuilt[i] += estimate[n] * window[n]
+                            weight[i] += window[n] * window[n]
+                        }
+                    }
+                }
+                at += SPADE_HOP
+            }
+            for (i in x.indices) {
+                if (mask[i] && weight[i] > 1e-6f) {
+                    out[i * snip.channels + ch] = rebuilt[i] / weight[i]
+                }
+            }
+        }
+        return Declip(report, Snip(out, snip.channels, snip.sampleRate))
+    }
+
+    private fun clipMask(snip: Snip, ceiling: Float): BooleanArray {
+        val level = ceiling * CLIP_LEVEL_FRACTION
+        val mask = BooleanArray(snip.samples.size)
+        for (ch in 0 until snip.channels) {
+            val x = FloatArray(snip.frameCount) { f -> snip.samples[f * snip.channels + ch] }
+            val m = BooleanArray(x.size)
+            markRuns(x, level, m)
+            for (i in x.indices) if (m[i]) mask[i * snip.channels + ch] = true
+        }
+        return mask
+    }
+
+    /** Same-sign, [CLIP_FLATNESS]-flat runs of ≥ [CLIP_RUN_MIN] samples pinned at [level]. */
+    private fun markRuns(x: FloatArray, level: Float, mask: BooleanArray) {
+        var i = 0
+        while (i < x.size) {
+            if (Math.abs(x[i]) >= level) {
+                val sign = x[i] > 0
+                var j = i
+                while (j < x.size && Math.abs(x[j]) >= level && (x[j] > 0) == sign &&
+                    Math.abs(x[j] - x[i]) <= CLIP_FLATNESS
+                ) {
+                    j++
+                }
+                if (j - i >= CLIP_RUN_MIN) {
+                    for (k in i until j) mask[k] = true
+                }
+                i = j
+            } else {
+                i++
+            }
+        }
+    }
+
+    /**
+     * One frame of A-SPADE (Kitić's ADMM, ported from a numpy rig that
+     * validated every step): the variable is the *windowed* frame
+     * y = frame·w; the analysis operator is the unitary DFT; a dual
+     * accumulates the gap between the k-sparse model and the
+     * constraint-satisfying signal, so the model is genuinely pulled
+     * toward both. Reliable samples pin y exactly, clipped ones must
+     * clear ±level·w, and k relaxes each iteration until the model
+     * fits within [SPADE_EPS] of the frame's own energy. Returns the
+     * windowed-domain estimate for tight-frame synthesis.
+     */
+    private fun spadeFrame(frame: FloatArray, mask: BooleanArray, level: Float, window: FloatArray): FloatArray {
+        val n = SPADE_FRAME
+        val scale = (1.0 / Math.sqrt(n.toDouble())).toFloat()
+        val y = FloatArray(n) { frame[it] * window[it] }
+        var yNorm = 0.0
+        for (v in y) yNorm += v * v.toDouble()
+        yNorm = Math.sqrt(yNorm)
+        if (yNorm < 1e-9) return y
+
+        val estimate = y.copyOf()
+        val uRe = FloatArray(n)
+        val uIm = FloatArray(n)
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        val zRe = FloatArray(n)
+        val zIm = FloatArray(n)
+        var k = SPADE_STEP
+        while (k <= SPADE_MAX_K) {
+            // Z = A(estimate) + u, in unitary-DFT units.
+            for (i in 0 until n) {
+                re[i] = estimate[i]
+                im[i] = 0f
+            }
+            Fft.forward(re, im)
+            for (i in 0 until n) {
+                zRe[i] = re[i] * scale + uRe[i]
+                zIm[i] = im[i] * scale + uIm[i]
+            }
+            hardThreshold(zRe, zIm, k)
+            // v = A*(z − u): back through the inverse, rescaled.
+            for (i in 0 until n) {
+                re[i] = (zRe[i] - uRe[i]) / scale
+                im[i] = (zIm[i] - uIm[i]) / scale
+            }
+            Fft.inverse(re, im)
+            // Projection onto the constraints.
+            for (i in 0 until n) {
+                val v = re[i]
+                estimate[i] = if (!mask[i]) {
+                    y[i]
+                } else {
+                    val bound = level * window[i]
+                    if (frame[i] > 0) maxOf(v, bound) else minOf(v, -bound)
+                }
+            }
+            // Residual ||A(estimate) − z|| and the dual update.
+            for (i in 0 until n) {
+                re[i] = estimate[i]
+                im[i] = 0f
+            }
+            Fft.forward(re, im)
+            var resid = 0.0
+            for (i in 0 until n) {
+                val dr = re[i] * scale - zRe[i]
+                val di = im[i] * scale - zIm[i]
+                resid += dr * dr + di * di.toDouble()
+                uRe[i] += dr
+                uIm[i] += di
+            }
+            if (Math.sqrt(resid) < SPADE_EPS * yNorm) break
+            k += SPADE_STEP
+        }
+        return estimate
+    }
+
+    /** Keep the [k] loudest conjugate bin pairs, zero the rest. */
+    private fun hardThreshold(re: FloatArray, im: FloatArray, k: Int) {
+        val n = re.size
+        val half = n / 2
+        val mags = FloatArray(half + 1) { b -> re[b] * re[b] + im[b] * im[b] }
+        val order = (0..half).sortedByDescending { mags[it] }
+        val keep = BooleanArray(half + 1)
+        for (i in 0 until minOf(k, order.size)) keep[order[i]] = true
+        for (b in 0..half) {
+            if (!keep[b]) {
+                re[b] = 0f
+                im[b] = 0f
+                if (b in 1 until half) {
+                    re[n - b] = 0f
+                    im[n - b] = 0f
+                }
+            }
+        }
+    }
+
+    // ---- deverb (RR2): single-channel WPE ---------------------------------
+
+    /** Prediction starts this many frames back — the direct sound must never predict itself. */
+    const val WPE_DELAY = 2
+
+    /** Prediction order: how many past frames model the room per band. */
+    const val WPE_ORDER = 10
+
+    /** Variance-weighted refinements. */
+    const val WPE_ITERATIONS = 3
+
+    /** Per-bin suppression floor (−10 dB): the room recedes, the music is never eaten whole. */
+    const val WPE_MAX_SUPPRESS = 0.316f
+
+    private const val WPE_FRAME = 1024
+    private const val WPE_HOP = WPE_FRAME / 4
+    private const val WPE_COLA = 1.5f
+
+    /**
+     * Weighted Prediction Error de-reverberation, single channel — an
+     * explicit opt-in, honest about its speech lineage: late reverb is
+     * modeled per STFT band as a linear prediction from frames at
+     * least [WPE_DELAY] back (the direct sound never predicts itself)
+     * and subtracted, with per-frame variance weighting so loud
+     * moments don't dominate the fit, and every bin's suppression
+     * capped at [WPE_MAX_SUPPRESS]. Audio too short to fit the
+     * predictor comes back untouched.
+     */
+    fun deverb(snip: Snip): Snip {
+        val window = FloatArray(WPE_FRAME) { n ->
+            (0.5 - 0.5 * Math.cos(2.0 * Math.PI * n / WPE_FRAME)).toFloat()
+        }
+        val out = FloatArray(snip.samples.size)
+        for (ch in 0 until snip.channels) {
+            val x = FloatArray(snip.frameCount) { f -> snip.samples[f * snip.channels + ch] }
+            val padded = x.size + 2 * WPE_FRAME
+            val frames = (padded - WPE_FRAME) / WPE_HOP + 1
+            if (frames < WPE_DELAY + WPE_ORDER + 8) return snip
+            val bins = WPE_FRAME / 2 + 1
+            val specRe = Array(frames) { FloatArray(bins) }
+            val specIm = Array(frames) { FloatArray(bins) }
+            val re = FloatArray(WPE_FRAME)
+            val im = FloatArray(WPE_FRAME)
+            for (f in 0 until frames) {
+                val at = f * WPE_HOP
+                for (n in 0 until WPE_FRAME) {
+                    val src = at + n - WPE_FRAME
+                    re[n] = (if (src in x.indices) x[src] else 0f) * window[n]
+                    im[n] = 0f
+                }
+                Fft.forward(re, im)
+                for (b in 0 until bins) {
+                    specRe[f][b] = re[b]
+                    specIm[f][b] = im[b]
+                }
+            }
+
+            for (b in 0 until bins) {
+                wpeBand(specRe, specIm, b)
+            }
+
+            val acc = FloatArray(padded)
+            for (f in 0 until frames) {
+                val at = f * WPE_HOP
+                for (n in 0 until WPE_FRAME) {
+                    re[n] = 0f
+                    im[n] = 0f
+                }
+                for (bIdx in 0 until bins) {
+                    re[bIdx] = specRe[f][bIdx]
+                    im[bIdx] = specIm[f][bIdx]
+                    if (bIdx in 1 until WPE_FRAME / 2) {
+                        re[WPE_FRAME - bIdx] = specRe[f][bIdx]
+                        im[WPE_FRAME - bIdx] = -specIm[f][bIdx]
+                    }
+                }
+                im[0] = 0f
+                im[WPE_FRAME / 2] = 0f
+                Fft.inverse(re, im)
+                for (n in 0 until WPE_FRAME) {
+                    acc[at + n] += re[n] * window[n]
+                }
+            }
+            for (f in x.indices) {
+                out[f * snip.channels + ch] = acc[f + WPE_FRAME] / WPE_COLA
+            }
+        }
+        return Snip(out, snip.channels, snip.sampleRate)
+    }
+
+    /** One band's WPE in place: iterate weights → normal equations → subtraction. */
+    private fun wpeBand(specRe: Array<FloatArray>, specIm: Array<FloatArray>, b: Int) {
+        val frames = specRe.size
+        val k = WPE_ORDER
+        val d = WPE_DELAY
+        val xr = FloatArray(frames) { specRe[it][b] }
+        val xi = FloatArray(frames) { specIm[it][b] }
+        var yr = xr.copyOf()
+        var yi = xi.copyOf()
+        repeat(WPE_ITERATIONS) {
+            // Per-frame variance from the current estimate, floored.
+            val lambda = DoubleArray(frames) { f ->
+                (yr[f] * yr[f] + yi[f] * yi[f]).toDouble().coerceAtLeast(1e-8)
+            }
+            // Normal equations G g = r over the delayed taps, complex.
+            val gRe = Array(k) { DoubleArray(k) }
+            val gIm = Array(k) { DoubleArray(k) }
+            val rRe = DoubleArray(k)
+            val rIm = DoubleArray(k)
+            for (f in d + k - 1 until frames) {
+                val w = 1.0 / lambda[f]
+                for (i in 0 until k) {
+                    val ar = xr[f - d - i].toDouble()
+                    val ai = xi[f - d - i].toDouble()
+                    rRe[i] += w * (ar * xr[f] + ai * xi[f])
+                    rIm[i] += w * (ar * xi[f] - ai * xr[f])
+                    for (j in i until k) {
+                        val br = xr[f - d - j].toDouble()
+                        val bi = xi[f - d - j].toDouble()
+                        gRe[i][j] += w * (ar * br + ai * bi)
+                        gIm[i][j] += w * (ar * bi - ai * br)
+                    }
+                }
+            }
+            for (i in 0 until k) {
+                for (j in 0 until i) {
+                    gRe[i][j] = gRe[j][i]
+                    gIm[i][j] = -gIm[j][i]
+                }
+                gRe[i][i] += 1e-6
+            }
+            val g = solveComplex(gRe, gIm, rRe, rIm) ?: return
+            // Subtract the predicted late reverb, capped per frame.
+            for (f in 0 until frames) {
+                if (f < d + k - 1) continue
+                var pr = 0.0
+                var pi = 0.0
+                for (i in 0 until k) {
+                    val ar = xr[f - d - i].toDouble()
+                    val ai = xi[f - d - i].toDouble()
+                    // The normal equations were built from conj(tap)·x,
+                    // so the prediction is the PLAIN product g_i · tap_i.
+                    pr += g[0][i] * ar - g[1][i] * ai
+                    pi += g[0][i] * ai + g[1][i] * ar
+                }
+                var er = xr[f] - pr.toFloat()
+                var ei = xi[f] - pi.toFloat()
+                val magX = Math.hypot(xr[f].toDouble(), xi[f].toDouble())
+                val magE = Math.hypot(er.toDouble(), ei.toDouble())
+                val floor = magX * WPE_MAX_SUPPRESS
+                if (magE < floor && magE > 1e-12) {
+                    val s = (floor / magE).toFloat()
+                    er *= s
+                    ei *= s
+                }
+                yr[f] = er
+                yi[f] = ei
+            }
+        }
+        for (f in 0 until frames) {
+            specRe[f][b] = yr[f]
+            specIm[f][b] = yi[f]
+        }
+    }
+
+    /** Hermitian solve via Gaussian elimination with partial pivoting; null if singular. */
+    private fun solveComplex(
+        aRe: Array<DoubleArray>,
+        aIm: Array<DoubleArray>,
+        bRe: DoubleArray,
+        bIm: DoubleArray,
+    ): Array<DoubleArray>? {
+        val n = bRe.size
+        val ar = Array(n) { aRe[it].copyOf() }
+        val ai = Array(n) { aIm[it].copyOf() }
+        val xr = bRe.copyOf()
+        val xi = bIm.copyOf()
+        for (col in 0 until n) {
+            var pivot = col
+            var best = ar[col][col] * ar[col][col] + ai[col][col] * ai[col][col]
+            for (row in col + 1 until n) {
+                val m = ar[row][col] * ar[row][col] + ai[row][col] * ai[row][col]
+                if (m > best) {
+                    best = m
+                    pivot = row
+                }
+            }
+            if (best < 1e-18) return null
+            if (pivot != col) {
+                val tr = ar[col]; ar[col] = ar[pivot]; ar[pivot] = tr
+                val ti = ai[col]; ai[col] = ai[pivot]; ai[pivot] = ti
+                var t = xr[col]; xr[col] = xr[pivot]; xr[pivot] = t
+                t = xi[col]; xi[col] = xi[pivot]; xi[pivot] = t
+            }
+            val dr = ar[col][col]
+            val di = ai[col][col]
+            val dm = dr * dr + di * di
+            for (row in col + 1 until n) {
+                val fr = (ar[row][col] * dr + ai[row][col] * di) / dm
+                val fi = (ai[row][col] * dr - ar[row][col] * di) / dm
+                for (j in col until n) {
+                    ar[row][j] -= fr * ar[col][j] - fi * ai[col][j]
+                    ai[row][j] -= fr * ai[col][j] + fi * ar[col][j]
+                }
+                xr[row] -= fr * xr[col] - fi * xi[col]
+                xi[row] -= fr * xi[col] + fi * xr[col]
+            }
+        }
+        val outR = DoubleArray(n)
+        val outI = DoubleArray(n)
+        for (row in n - 1 downTo 0) {
+            var sr = xr[row]
+            var si = xi[row]
+            for (j in row + 1 until n) {
+                sr -= ar[row][j] * outR[j] - ai[row][j] * outI[j]
+                si -= ar[row][j] * outI[j] + ai[row][j] * outR[j]
+            }
+            val dr = ar[row][row]
+            val di = ai[row][row]
+            val dm = dr * dr + di * di
+            outR[row] = (sr * dr + si * di) / dm
+            outI[row] = (si * dr - sr * di) / dm
+        }
+        return arrayOf(outR, outI)
+    }
+
+    /** Goertzel amplitude of [hz] over the first [n] frames. */
+    internal fun goertzel(samples: FloatArray, n: Int, hz: Float, rate: Int): Float {
+        val w = 2.0 * Math.PI * hz / rate
+        val coeff = 2.0 * Math.cos(w)
+        var s0: Double
+        var s1 = 0.0
+        var s2 = 0.0
+        for (i in 0 until n) {
+            s0 = samples[i] + coeff * s1 - s2
+            s2 = s1
+            s1 = s0
+        }
+        val power = s1 * s1 + s2 * s2 - coeff * s1 * s2
+        return (2.0 * Math.sqrt(power.coerceAtLeast(0.0)) / n).toFloat()
+    }
+
+    /** RBJ cookbook notch, direct form 1, one channel of an interleaved buffer. */
+    private fun notchInPlace(samples: FloatArray, channels: Int, ch: Int, hz: Float, rate: Int) {
+        val w0 = 2.0 * Math.PI * hz / rate
+        val cw = Math.cos(w0)
+        val alpha = Math.sin(w0) / (2.0 * NOTCH_Q)
+        val a0 = 1.0 + alpha
+        val b0 = 1.0 / a0
+        val b1 = -2.0 * cw / a0
+        val b2 = 1.0 / a0
+        val a1 = -2.0 * cw / a0
+        val a2 = (1.0 - alpha) / a0
+
+        var x1 = 0.0
+        var x2 = 0.0
+        var y1 = 0.0
+        var y2 = 0.0
+        var i = ch
+        while (i < samples.size) {
+            val x = samples[i].toDouble()
+            val y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+            samples[i] = y.toFloat()
+            x2 = x1
+            x1 = x
+            y2 = y1
+            y1 = y
+            i += channels
+        }
+    }
+}

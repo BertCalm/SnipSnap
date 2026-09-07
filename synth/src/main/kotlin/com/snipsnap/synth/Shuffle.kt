@@ -109,11 +109,11 @@ object Shuffle {
         val bankA = arranged + List(16 - arranged.size) { null }
         val bankB = bankA.map { pad ->
             if (pad == null) return@map null
-            val (_, fx) = TREATMENTS[random.nextInt(TREATMENTS.size)]
+            val (treatment, fx) = TREATMENTS[random.nextInt(TREATMENTS.size)]
             ArrangedPad(
                 snip = fx.process(pad.snip),
                 drumClass = pad.drumClass,
-                recipe = PadRecipe(fx = fx).toJsonValue(),
+                recipe = PadRecipe(fx = fx, treatment = treatment, amount = 1f).toJsonValue(),
                 level = pad.level,
             )
         }

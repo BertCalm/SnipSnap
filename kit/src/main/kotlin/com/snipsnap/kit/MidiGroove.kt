@@ -25,6 +25,9 @@ object MidiGroove {
     const val DIVISION = 960
     const val DRUM_CHANNEL = 9
 
+    /** A groove is a few bars; past this a file is hostile or nonsense. */
+    const val MAX_NOTES = 100_000
+
     /** What a `.mid` carried: the clip, and the file's tempo when it had one. */
     data class Imported(val clip: Mpc3Clip, val bpm: Float?)
 
@@ -115,7 +118,11 @@ object MidiGroove {
         repeat(tracks) {
             require(r.ascii(4) == "MTrk") { "malformed MIDI file (missing MTrk)" }
             val length = r.int32()
-            val end = r.at + length
+            // The declared track length is untrusted: negative or absurd would
+            // send `end` (and later r.at) out of the array. Clamp to what is
+            // actually present - a truncated track reads what it can.
+            require(length >= 0) { "MIDI track length is negative: $length" }
+            val end = minOf(bytes.size.toLong(), r.at.toLong() + length).toInt()
             val open = mutableListOf<Open>()
             var tick = 0L
             var status = 0
@@ -127,6 +134,9 @@ object MidiGroove {
                 val start = o.startTick * DIVISION / division
                 val len = (atTick * DIVISION / division - start).coerceAtLeast(1)
                 done += Mpc3Note(note, start, o.velocity, len)
+                // A groove is a bar or a few; a file with millions of notes is
+                // hostile or nonsense - refuse before the list eats the heap.
+                require(done.size <= MAX_NOTES) { "MIDI file has more than $MAX_NOTES notes" }
             }
 
             while (r.at < end) {
@@ -207,7 +217,9 @@ object MidiGroove {
         }
 
         fun take(n: Int): ByteArray {
-            require(at + n <= bytes.size) { "truncated MIDI file" }
+            // Long arithmetic and a sign check: a mutated length must never
+            // make copyOfRange run off either end of the array.
+            require(n >= 0 && at >= 0 && at.toLong() + n <= bytes.size) { "truncated MIDI file" }
             return bytes.copyOfRange(at, at + n).also { at += n }
         }
 

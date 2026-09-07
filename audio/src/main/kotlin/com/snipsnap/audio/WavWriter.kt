@@ -88,13 +88,21 @@ object WavWriter {
      * positive value instead of wrapping to the largest negative one.
      */
     private fun toPcm16(sample: Float): Int =
-        (sample.coerceIn(-1f, 1f) * 32767f).roundToInt().coerceIn(-32768, 32767)
+        (finite(sample).coerceIn(-1f, 1f) * 32767f).roundToInt().coerceIn(-32768, 32767)
 
     private fun toPcm24(sample: Float): Int =
-        (sample.coerceIn(-1f, 1f).toDouble() * 8_388_607.0)
+        (finite(sample).coerceIn(-1f, 1f).toDouble() * 8_388_607.0)
             .roundToLong()
             .coerceIn(-8_388_608L, 8_388_607L)
             .toInt()
+
+    /**
+     * A non-finite sample becomes silence before it reaches the encoder.
+     * `roundToInt()` throws on NaN, and an export must never crash or emit
+     * garbage over one poisoned value a DSP bug slipped through - the reader
+     * scrubs non-finite on the way in, this scrubs on the way out.
+     */
+    private fun finite(sample: Float): Float = if (sample.isFinite()) sample else 0f
 
     private fun OutputStream.writeTag(tag: String) = write(tag.toByteArray(Charsets.US_ASCII))
 

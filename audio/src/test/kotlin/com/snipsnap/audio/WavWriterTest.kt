@@ -24,6 +24,20 @@ class WavWriterTest {
         Snip(FloatArray(frames * channels) { value }, channels, 44_100)
 
     @Test
+    fun `a non-finite sample never crashes the writer or lands in the file`() {
+        // roundToInt throws on NaN; a DSP bug that slips a NaN through must
+        // not crash the export or write garbage - it becomes silence.
+        val poisoned = Snip(floatArrayOf(0.5f, Float.NaN, Float.POSITIVE_INFINITY, -0.25f, Float.NEGATIVE_INFINITY), 1, 44_100)
+        for (depth in WavWriter.BitDepth.entries) {
+            val file = WavWriter.write(File(temp, "poison_$depth.wav"), poisoned, depth)
+            val back = WavReader.read(file)
+            assertTrue(back.samples.all { it.isFinite() }, "$depth: output is all finite")
+            assertTrue(kotlin.math.abs(back.samples[1]) < 1e-3f, "$depth: the NaN became silence")
+            assertTrue(kotlin.math.abs(back.samples[2]) < 1e-3f, "$depth: the +Inf became silence")
+        }
+    }
+
+    @Test
     fun `round-trips through the reader the exporter uses`() {
         // The writer and the reader have to agree, or SliceEnd comes out wrong
         // and every pad in the kit is truncated.

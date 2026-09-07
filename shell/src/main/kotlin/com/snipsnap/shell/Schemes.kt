@@ -5,8 +5,8 @@ import com.snipsnap.audio.DrumClass
 
 /**
  * The TapeOS scheme system as data — the single Kotlin source for what
- * `design/Main.dc.html` keeps as CSS custom properties (`.t-chrome` …
- * `.t-clear`) and what the two working prototypes render live.
+ * `design/Schemes.dc.html` keeps as CSS custom properties (`.t-metal` …
+ * `.t-vapor`) and what the two working prototypes render live.
  *
  * The app's theme object reads these tables; the design files remain the
  * visual reference, but a colour that exists only in a design file cannot
@@ -14,9 +14,8 @@ import com.snipsnap.audio.DrumClass
  *
  * **The two-surface rule** — the one TapeOS invariant every scheme obeys:
  * gray bevelled chrome is where you *work* (buttons, windows, pads), the
- * dark LCD is where sound *lives* (readouts, waveforms, play mode). Light
- * schemes lighten the chrome; the LCD stays dark in all six, and
- * `SchemesTest` enforces it.
+ * dark LCD is where sound *lives* (readouts, waveforms, play mode). Every
+ * scheme is dark now, and `SchemesTest` enforces it.
  */
 data class Scheme(
     val id: SchemeId,
@@ -49,10 +48,35 @@ data class Scheme(
     val lcd: Int,
     /** Primary LCD glow ink. */
     val lcdInk: Int,
-    /** The "amber" accent slot (warnings, needle, second LCD colour). */
+    /** The "amber" accent slot (second LCD colour). Cyan in OILSLICK. */
     val amber: Int,
     /** Sunken input/list background. */
     val field: Int,
+    /**
+     * Warnings, the GROOVE needle, onset bars. Always warm, and deliberately
+     * *not* [amber] — OILSLICK spends its amber slot on cyan, so a needle
+     * drawn with [amber] vanishes into the readouts it is supposed to cross.
+     */
+    val warn: Int = 0xFFB000,
+    /**
+     * Third text tier, below [ink2]. OILSLICK uses it for the dimmest
+     * chrome labels; schemes that never needed a third tier reuse [ink2].
+     */
+    val ink3: Int = ink2,
+    /** Selection: the chosen menu item, the 3px inset bar on a selected row. */
+    val accent: Int = title2,
+    /** Raised-surface gradient start (buttons, empty pads). Ends at [field]. */
+    val raised: Int = gray,
+    /** Window-body gradient start. Ends at [grayMid]. */
+    val win: Int = grayMid,
+    /**
+     * Window frame, 3px. Replaces the bevel highlight/shadow pair for
+     * schemes that don't bevel — OILSLICK draws [Schemes.OILSLICK_SWEEP]
+     * here instead of a flat colour.
+     */
+    val winFrame: Int = title2,
+    /** Centre of the radial glow behind the desk; fades to [desk1]. */
+    val deskGlow: Int = desk2,
 ) {
     /** Rec.601 luma 0..255 — used by the two-surface test and ink fallbacks. */
     companion object {
@@ -66,33 +90,17 @@ data class Scheme(
 }
 
 enum class SchemeId(val displayName: String) {
-    CHROME("CHROME"),
-    FERRIC("FERRIC"),
     METAL("METAL"),
-    SNACK_BAR("SNACK BAR"),
     OILSLICK("OILSLICK"),
-    CLEAR("CLEAR"),
+    PETROL("PETROL"),
+    INFRARED("INFRARED"),
+    ACID("ACID"),
+    SODIUM("SODIUM"),
+    ICE("ICE"),
+    VAPOR("VAPOR"),
 }
 
 object Schemes {
-
-    val CHROME = Scheme(
-        SchemeId.CHROME, "t-chrome",
-        gray = 0xC3C7CB, grayHi = 0xFFFFFF, grayEdge = 0xE8EBEE, grayMid = 0x868A8E, grayDark = 0x3F4347,
-        ink = 0x1C1E20, ink2 = 0x55595D,
-        title1 = 0x000082, title2 = 0x1878C8, titleInk = 0xFFFFFF,
-        desk1 = 0x0A7A78, desk2 = 0x0C817F,
-        lcd = 0x0C130B, lcdInk = 0x49E83E, amber = 0xFFB000, field = 0xFFFFFF,
-    )
-
-    val FERRIC = Scheme(
-        SchemeId.FERRIC, "t-ferric",
-        gray = 0xD4C8A8, grayHi = 0xFAF4E4, grayEdge = 0xE6DCC0, grayMid = 0x9A8C6A, grayDark = 0x463A26,
-        ink = 0x2C2214, ink2 = 0x6A5C42,
-        title1 = 0x6A3210, title2 = 0xC87828, titleInk = 0xFAF4E4,
-        desk1 = 0x8A5A24, desk2 = 0x936129,
-        lcd = 0x140E06, lcdInk = 0xFFB000, amber = 0xFF7A1A, field = 0xFAF4E4,
-    )
 
     val METAL = Scheme(
         SchemeId.METAL, "t-metal",
@@ -101,15 +109,12 @@ object Schemes {
         title1 = 0x0A0A0C, title2 = 0x2C3038, titleInk = 0x7ADFE4,
         desk1 = 0x101215, desk2 = 0x14171B,
         lcd = 0x0A0C0E, lcdInk = 0x7ADFE4, amber = 0xFFB000, field = 0x1B1E22,
-    )
-
-    val SNACK_BAR = Scheme(
-        SchemeId.SNACK_BAR, "t-snackbar",
-        gray = 0xFFD400, grayHi = 0xFFF0A0, grayEdge = 0xFFE45C, grayMid = 0xB89200, grayDark = 0x5C4A00,
-        ink = 0x241C00, ink2 = 0x6A5600,
-        title1 = 0xE81C1C, title2 = 0xE81C1C, titleInk = 0xFFFFFF,
-        desk1 = 0xE81C1C, desk2 = 0xEE2424,
-        lcd = 0x1A0404, lcdInk = 0xFFD400, amber = 0xFFFFFF, field = 0xFFF8D8,
+        // title2 (0x2C3038, luma 47) is one luma step from gray (0x2E3136,
+        // luma 48) — the default accent/winFrame would put the selected
+        // menu item's fill and the 3px selected-row bar right on top of the
+        // chrome behind them. titleInk is METAL's only saturated colour
+        // (luma 193, 145 clear of gray), so pin selection to it instead.
+        accent = 0x7ADFE4, winFrame = 0x7ADFE4,
     )
 
     val OILSLICK = Scheme(
@@ -119,21 +124,69 @@ object Schemes {
         title1 = 0x5A2AE0, title2 = 0xE040C8, titleInk = 0xFFFFFF,
         desk1 = 0x0C0618, desk2 = 0x140B24,
         lcd = 0x0A0714, lcdInk = 0xC8B2F8, amber = 0x40E0E8, field = 0x161020,
+        warn = 0xFFB000, ink3 = 0x584A80, win = 0x1A1424, deskGlow = 0x2A1050,
     )
 
-    val CLEAR = Scheme(
-        SchemeId.CLEAR, "t-clear",
-        gray = 0xE2E6EC, grayHi = 0xFFFFFF, grayEdge = 0xF2F5F9, grayMid = 0x9AA4B0, grayDark = 0x4A525C,
-        ink = 0x242A32, ink2 = 0x6E7884,
-        title1 = 0x3888B8, title2 = 0x78C8E8, titleInk = 0xFFFFFF,
-        desk1 = 0xB8C8D4, desk2 = 0xBFCEDA,
-        lcd = 0x101418, lcdInk = 0x9AE8FF, amber = 0xFF9A1A, field = 0xFFFFFF,
+    val PETROL = Scheme(
+        SchemeId.PETROL, "t-petrol",
+        gray = 0x141A28, grayHi = 0x30406A, grayEdge = 0x1A2438, grayMid = 0x0C101C, grayDark = 0x04060E,
+        ink = 0xB2C8F8, ink2 = 0x6A7CA0,
+        title1 = 0x2A6AE0, title2 = 0x40E890, titleInk = 0xFFFFFF,
+        desk1 = 0x060A18, desk2 = 0x0B1224,
+        lcd = 0x070A14, lcdInk = 0xB2C8F8, amber = 0x40E890, field = 0x101624,
+    )
+
+    val INFRARED = Scheme(
+        SchemeId.INFRARED, "t-infrared",
+        gray = 0x221218, grayHi = 0x5C3040, grayEdge = 0x2C141A, grayMid = 0x12080C, grayDark = 0x0A0304,
+        ink = 0xF8B2C0, ink2 = 0xA06A78,
+        title1 = 0x9A2AE0, title2 = 0xE02A5A, titleInk = 0xFFFFFF,
+        desk1 = 0x160408, desk2 = 0x200A10,
+        lcd = 0x120608, lcdInk = 0xF8B2C0, amber = 0xFF8A1A, field = 0x1A0C12,
+        warn = 0xFF8A1A,
+    )
+
+    val ACID = Scheme(
+        SchemeId.ACID, "t-acid",
+        gray = 0x161E0E, grayHi = 0x4A6030, grayEdge = 0x243218, grayMid = 0x0E160A, grayDark = 0x060A02,
+        ink = 0xD4F0A0, ink2 = 0x8AA060,
+        title1 = 0x6AB010, title2 = 0x20D0E8, titleInk = 0xFFFFFF,
+        desk1 = 0x0A1204, desk2 = 0x101A08,
+        lcd = 0x0A1004, lcdInk = 0xD4F0A0, amber = 0x20D0E8, field = 0x121A0A,
+    )
+
+    val SODIUM = Scheme(
+        SchemeId.SODIUM, "t-sodium",
+        gray = 0x221A0C, grayHi = 0x5C4C28, grayEdge = 0x2C2410, grayMid = 0x120E06, grayDark = 0x080502,
+        ink = 0xF0D8A8, ink2 = 0xA08A58,
+        title1 = 0xC85A10, title2 = 0xFFB000, titleInk = 0xFFFFFF,
+        desk1 = 0x160E02, desk2 = 0x201606,
+        lcd = 0x120C04, lcdInk = 0xFFD25E, amber = 0xFF6A2A, field = 0x1A140A,
+        warn = 0xFF6A2A,
+    )
+
+    val ICE = Scheme(
+        SchemeId.ICE, "t-ice",
+        gray = 0x10202E, grayHi = 0x305468, grayEdge = 0x16283A, grayMid = 0x081420, grayDark = 0x030A12,
+        ink = 0xB8E2F8, ink2 = 0x6A92A8,
+        title1 = 0x1A5AC8, title2 = 0x58C8FF, titleInk = 0xFFFFFF,
+        desk1 = 0x04101C, desk2 = 0x081826,
+        lcd = 0x060E16, lcdInk = 0xB8E2F8, amber = 0x58C8FF, field = 0x0C1A26,
+    )
+
+    val VAPOR = Scheme(
+        SchemeId.VAPOR, "t-vapor",
+        gray = 0x10201C, grayHi = 0x2E5C4A, grayEdge = 0x1A2C26, grayMid = 0x081410, grayDark = 0x040C08,
+        ink = 0xA8F0D8, ink2 = 0x62A08A,
+        title1 = 0x10B088, title2 = 0x40E8C0, titleInk = 0xFFFFFF,
+        desk1 = 0x061410, desk2 = 0x0A1C16,
+        lcd = 0x06120E, lcdInk = 0xA8F0D8, amber = 0xB27AF8, field = 0x0C1A16,
     )
 
     /** Picker order — the order the design system tells its story in. */
-    val ALL: List<Scheme> = listOf(CHROME, FERRIC, METAL, SNACK_BAR, OILSLICK, CLEAR)
+    val ALL: List<Scheme> = listOf(METAL, OILSLICK, PETROL, INFRARED, ACID, SODIUM, ICE, VAPOR)
 
-    val DEFAULT: Scheme = CHROME
+    val DEFAULT: Scheme = OILSLICK
 
     operator fun get(id: SchemeId): Scheme = ALL.first { it.id == id }
 
@@ -156,16 +209,13 @@ object Schemes {
     /**
      * Ink for a handwritten pad label sitting **on** a class-coloured pad.
      *
-     * Dark schemes use near-black class-tinted inks; CLEAR (a light scheme)
-     * needs stronger, saturated darks to stay legible on the same colours —
-     * both tables verbatim from the working prototypes. A class colour not
-     * in the table (TONAL, UNKNOWN) falls back to darkening the class
-     * colour itself, biased by how dark the tables run.
+     * Near-black class-tinted inks, verbatim from the working prototypes. A
+     * class colour not in the table (TONAL, UNKNOWN) falls back to darkening
+     * the class colour itself.
      */
     fun padLabelInk(scheme: Scheme, drumClass: DrumClass): Int {
         val c = classColor(drumClass)
-        val table = if (scheme.id == SchemeId.CLEAR) CLEAR_PAD_INK else DARK_PAD_INK
-        return table[c] ?: darken(c, if (scheme.id == SchemeId.CLEAR) 0.35f else 0.75f)
+        return DARK_PAD_INK[c] ?: darken(c, 0.75f)
     }
 
     private val DARK_PAD_INK: Map<Int, Int> = mapOf(
@@ -177,17 +227,6 @@ object Schemes {
         0x9A6CF0 to 0x241040, // tom
         0x8FD424 to 0x1E3006, // perc
         0x3F8CF0 to 0x0C1C3A, // loop
-    )
-
-    private val CLEAR_PAD_INK: Map<Int, Int> = mapOf(
-        0xE8542E to 0xC73A12,
-        0xFFC41F to 0xA87800,
-        0x1FC6CF to 0x0E6870,
-        0x7ADFE4 to 0x1A8A94,
-        0xE8409F to 0xC0207A,
-        0x9A6CF0 to 0x6A3EC0,
-        0x8FD424 to 0x4A7A10,
-        0x3F8CF0 to 0x2C5EA8,
     )
 
     /** Each channel scaled toward black by [amount] (0 = unchanged, 1 = black). */
@@ -214,8 +253,18 @@ object Type {
     /** Michroma — display headers and key actions. 11–12dp, +2 tracking. */
     const val DISPLAY = "Michroma"
 
-    /** Permanent Marker — handwriting on pads and cassette labels. 13–15dp. */
-    const val MARKER = "Permanent Marker"
+    /**
+     * Rock Salt — handwriting on pads, cassette labels and loop blocks.
+     * 11–15dp. Replaced Permanent Marker.
+     *
+     * The prototype drives this through a `--marker` CSS variable whose
+     * "Look" control offers four faces and defaults to Rock Salt; the
+     * `'Permanent Marker'` seen in the artboards is that variable's CSS
+     * fallback, not the choice. `:app` vendors the matching TTF and pins
+     * `TapeFonts.Marker` to it — Compose needs an `R.font` resource and
+     * cannot read this string, so the two are kept in step by hand.
+     */
+    const val MARKER = "Rock Salt"
 }
 
 /** Layout constants from the handoff, dp at the 390dp design width. */
@@ -231,7 +280,38 @@ object Layout {
     const val PAD_H = 76
     const val PAD_RADIUS = 6
     const val PRIMARY_ACTION_H = 52
+
+    /**
+     * `heightIn(min = MIN_HIT_TARGET.dp)` is a floor, not a size — inside an
+     * unbounded-height parent (an unbounded scrolling column, say), a child
+     * further down the tree that calls `fillMaxHeight()` with no content of
+     * its own measures against that same unboundedness and collapses to
+     * zero, not to the floor. Fixed twice on exactly that pattern — SYNTH's
+     * `MacroSlider` and PADS SHEET's `StepperSlider` — by giving the track a
+     * bounded `.height(MIN_HIT_TARGET.dp)` instead.
+     */
     const val MIN_HIT_TARGET = 44
+
+    /** LCD headers run 40–44 depending on whether they carry a counter. */
+    const val LCD_HEADER_MAX_H = 44
+
+    // LOOP — the six-column phasing grid.
+    /** Track column header; tap toggles mute. */
+    const val TRACK_HEADER_H = 24
+    /** A block cell grows between these bounds to fill its column. */
+    const val BLOCK_MIN_H = 30
+    const val BLOCK_MAX_H = 46
+    /** Landscape LOOP frame — transport moves to a top bar, cycle strip to the bottom. */
+    const val LANDSCAPE_W = 816
+    const val LANDSCAPE_H = 362
+
+    // GROOVE — the needle-roll.
+    /** The needle is fixed; the notes scroll under it. */
+    const val NEEDLE_Y = 96
+    /** Horizontal distance one step travels. */
+    const val STEP_W = 20
+    /** Note block height in a lane. */
+    const val NOTE_H = 17
 }
 
 /**
@@ -251,4 +331,6 @@ object Motion {
     const val DUB_FILE_MS = 180
     /** Status-bar quip rotation, ms. */
     const val QUIP_ROTATE_MS = 6000
+    /** The bubble swells while dragged, so the eject gesture reads as physical. */
+    const val BUBBLE_DRAG_SCALE = 1.08f
 }

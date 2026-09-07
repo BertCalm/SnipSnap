@@ -70,4 +70,41 @@ class PersonalityTest {
         assertEquals("READY.", Copy.BOOT_LINES.last())
         assertTrue(Copy.STATUS_QUIPS.isNotEmpty())
     }
+
+    @Test
+    fun `every new toast shouts and stops`() {
+        val lines = listOf(
+            Copy.MELODIC_ON, Copy.KEY_OFF, Copy.TEACHING_ON, Copy.TEACHING_OFF,
+            Copy.BANK_B_LIT, Copy.TWINS_REROLLED, Copy.BACK_FROM_BIN, Copy.BIN_EMPTIED,
+            Copy.HUMANIZED, Copy.FORKED_TO_E, Copy.BAR_WIPED, Copy.GHOSTS_ON,
+            Copy.INSTRUMENT_MADE, Copy.NO_PITCH, Copy.RETREAT_REFUSED,
+            Copy.TAKES_BIN_RULE, Copy.TEACH_CONSENT, Copy.SNAPPED,
+            Copy.TAKES_EMPTY, Copy.BIN_EMPTY_STATE, Copy.BIN_ITEM_GONE, Copy.KIT_WONT_OPEN,
+            Copy.UNMUTATED, Copy.MUTATE_NEEDS_ONE, Copy.CRATE_EMPTY,
+            Copy.SCULPTED, Copy.STRETCHED, Copy.FROZEN,
+        )
+        for (line in lines) {
+            assertEquals(line.uppercase(), line, "TapeOS shouts: '$line'")
+            assertTrue(line.endsWith("."), "every line lands on a full stop: '$line'")
+        }
+    }
+
+    @Test
+    fun `the interpolated lines name what they acted on`() {
+        assertTrue(Copy.keySet("Am").startsWith("Am SET."), "the key leads its own toast")
+        assertTrue(Copy.keySet("Am").endsWith("."), "and still lands on a full stop")
+        assertTrue(Copy.takeRestored("T3").startsWith("T3 RESTORED."), "the take leads its own toast")
+        assertTrue(
+            Copy.treated("CRUSH", "A02").startsWith("CRUSH ON A02."),
+            "the treatment and the pad both lead their own toast",
+        )
+        assertTrue(Copy.treated("CRUSH", "A02").endsWith("."), "and still lands on a full stop")
+        assertTrue(
+            Copy.mutated("SPLICE", "A01", "A03").startsWith("SPLICE: A01 × A03."),
+            "the move and both parents lead their own toast",
+        )
+        assertTrue(Copy.mutated("SPLICE", "A01", "A03").endsWith("."), "and still lands on a full stop")
+        assertEquals("+3 OFF-LANE — HEARD AND EXPORTED, NOT DRAWN", Copy.offLane(3), "the count leads its own line")
+        assertTrue(Copy.offLane(1).uppercase() == Copy.offLane(1), "TapeOS shouts here too")
+    }
 }

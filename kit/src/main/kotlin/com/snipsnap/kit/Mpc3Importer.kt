@@ -121,7 +121,18 @@ object Mpc3Importer {
             val tuneFine: Int,
             val muteGroup: Int,
             val oneShot: Boolean,
+            /** Shape fields, default-collapsed to null so re-exports stay byte-identical. */
+            val attack: Float?,
+            val decay: Float?,
+            val cutoff: Float?,
+            val resonance: Float?,
+            val humanize: Float?,
         )
+
+        fun shapeOrNull(v: Double?, default: Double): Float? {
+            if (v == null || kotlin.math.abs(v - default) < 1e-4) return null
+            return v.toFloat().coerceIn(0f, 1f)
+        }
 
         val parsed = instruments.mapIndexedNotNull { index, instJson ->
             val inst = (instJson as? JsonValue.Obj)?.entries ?: return@mapIndexedNotNull null
@@ -135,9 +146,10 @@ object Mpc3Importer {
                             ?.takeIf { it.isNotBlank() }?.plus(".wav")
                         ?: return@mapNotNull null
                     Triple(
-                        // Bare names are the rule, but strip a path if a
-                        // nonconforming file carries one anyway.
-                        File(file.replace('\\', '/')).name,
+                        // Bare names are the rule; a nonconforming file's
+                        // legit subpath is flattened, but a traversal is
+                        // refused (see SafePath.basename) - untrusted input.
+                        SafePath.basename(file),
                         (layer["velocityStart"] as? JsonValue.Num)?.value?.toInt() ?: 0,
                         (layer["velocityEnd"] as? JsonValue.Num)?.value?.toInt() ?: 127,
                     )
@@ -162,12 +174,25 @@ object Mpc3Importer {
                     .coerceIn(0, 32),
                 // 0 = One Shot; 1 (note-off) and 2 (note-on) both gate.
                 oneShot = ((inst["triggerMode"] as? JsonValue.Num)?.value?.toInt() ?: 0) == 0,
+                attack = shapeOrNull(ampField(inst, "Attack"), default = 0.0),
+                decay = shapeOrNull(ampField(inst, "Decay"), default = 1.0),
+                cutoff = shapeOrNull(filterField(inst, "filterCutoff"), default = 1.0),
+                resonance = shapeOrNull(filterField(inst, "filterResonance"), default = 0.0),
+                // humanize writes VolumeRandom = h * 0.2 on every layer;
+                // the first filled layer's value inverts back to h.
+                humanize = shapeOrNull(
+                    (((inst["layersv"] as? JsonValue.Arr)?.items?.firstOrNull() as? JsonValue.Obj)
+                        ?.entries?.get("VolumeRandom") as? JsonValue.Num)?.value?.let { it / 0.2 },
+                    default = 0.0,
+                ),
             )
         }
         require(parsed.isNotEmpty()) { "'$trackName' has no pads with samples" }
 
+        // Sample names were made safe basenames at parse time; SafePath.child
+        // is the enforced invariant that reads and writes stay in their folder.
         val referenced = parsed.flatMap { it.layers.map { l -> l.first } }.distinct()
-        val missing = referenced.filter { !File(dataDir, it).isFile }
+        val missing = referenced.filter { !SafePath.child(dataDir, it).isFile }
         require(missing.isEmpty()) {
             "samples missing from ${dataDir.name}/: " + missing.joinToString(", ")
         }
@@ -181,7 +206,7 @@ object Mpc3Importer {
         }
         destDir.mkdirs()
         for (file in referenced) {
-            File(dataDir, file).copyTo(File(destDir, file), overwrite = true)
+            SafePath.child(dataDir, file).copyTo(SafePath.child(destDir, file), overwrite = true)
         }
 
         val pads = parsed.map { p ->
@@ -198,6 +223,11 @@ object Mpc3Importer {
                 tuneFine = p.tuneFine,
                 muteGroup = p.muteGroup,
                 oneShot = p.oneShot,
+                attack = p.attack,
+                decay = p.decay,
+                cutoff = p.cutoff,
+                resonance = p.resonance,
+                humanize = p.humanize,
                 source = mapOf("importedFrom" to sourceName),
                 velocityLayers = if (p.layers.size < 2) emptyList() else {
                     p.layers.map { (file, velStart, velEnd) -> KitLayer(file, velStart, velEnd) }
@@ -251,6 +281,22 @@ object Mpc3Importer {
         }
 
     /** Slot-indexed (0-based) colour hex strings, or nulls when uncoloured. */
+    /** `synthSection.ampEnvelope.<name>.value0` on one instrument, or null. */
+    private fun ampField(inst: Map<String, JsonValue>, name: String): Double? {
+        val synth = (inst["synthSection"] as? JsonValue.Obj)?.entries ?: return null
+        val env = (synth["ampEnvelope"] as? JsonValue.Obj)?.entries ?: return null
+        val holder = (env[name] as? JsonValue.Obj)?.entries ?: return null
+        return (holder["value0"] as? JsonValue.Num)?.value
+    }
+
+    /** `synthSection.filterData.value0.<name>` on one instrument, or null. */
+    private fun filterField(inst: Map<String, JsonValue>, name: String): Double? {
+        val synth = (inst["synthSection"] as? JsonValue.Obj)?.entries ?: return null
+        val data = (synth["filterData"] as? JsonValue.Obj)?.entries ?: return null
+        val slot = (data["value0"] as? JsonValue.Obj)?.entries ?: return null
+        return (slot[name] as? JsonValue.Num)?.value
+    }
+
     private fun padColours(program: Map<String, JsonValue>): List<String?> {
         val pp = (program["programPads"] as? JsonValue.Obj)?.entries ?: return List(128) { null }
         val universal = ((pp["Universal"] as? JsonValue.Obj)?.entries?.get("value0")

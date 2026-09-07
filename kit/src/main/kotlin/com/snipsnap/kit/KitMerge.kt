@@ -43,8 +43,10 @@ object KitMerge {
 
         destDir.mkdirs()
 
-        // Kit A's pads (minus a replaced bank B) come over verbatim.
+        // Kit A's pads (minus a replaced bank B) come over verbatim - plus
+        // a provenance stamp naming the parent, so the lineage can walk it.
         val kept = a.pads.filter { it.slot !in (BANK_OFFSET + 1)..(2 * BANK_OFFSET) }
+            .map { it.copy(source = it.source + mapOf("mergedFrom" to a.name)) }
         for (pad in kept) {
             copySample(aDir, destDir, pad.sampleFile)
             pad.velocityLayers.forEach { copySample(aDir, destDir, it.sampleFile) }
@@ -69,6 +71,7 @@ object KitMerge {
                 sampleFile = newFile,
                 displayName = newFile.substringBeforeLast('.'),
                 velocityLayers = layers,
+                source = pad.source + mapOf("mergedFrom" to b.name),
             )
         }
 

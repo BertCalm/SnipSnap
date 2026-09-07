@@ -1,6 +1,7 @@
 package com.snipsnap.cli
 
 import com.snipsnap.audio.AutoPlace
+import com.snipsnap.audio.CaptureDoctor
 import com.snipsnap.audio.Chopper
 import com.snipsnap.audio.Classification
 import com.snipsnap.audio.Classifier
@@ -48,8 +49,8 @@ object ChopCommand {
     fun chop(args: List<String>, out: PrintStream): Result {
         val opts = Options.parse(
             args,
-            valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export", "--swing", "--art"),
-            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview", "--no-art"),
+            valued = setOf("--name", "--out", "--slices", "--grid", "--key", "--export", "--swing", "--art", "--fit-tempo"),
+            boolean = setOf("--balance", "--overwrite", "--place", "--no-place", "--groove", "--ghosts", "--melodic", "--preview", "--no-art", "--break-pad", "--clean", "--denoise", "--keep-pitch"),
         )
         val input = opts.positional.firstOrNull()
             ?: throw CliError("chop wants an input file: snipsnap chop <input.wav>")
@@ -70,12 +71,20 @@ object ChopCommand {
             throw CliError("--art and --no-art contradict each other")
         }
         val artStyle = Exports.parseArtStyle(opts["--art"])
-        val key = opts["--key"]?.let {
+        val autoKey = opts["--key"]?.lowercase() == "auto"
+        val explicitKey = opts["--key"]?.takeUnless { autoKey }?.let {
             try {
                 KeySpec.parse(it)
             } catch (e: IllegalArgumentException) {
                 throw CliError(e.message ?: "can't read key '$it'")
             }
+        }
+        val fitTempo = opts["--fit-tempo"]?.let {
+            it.toFloatOrNull()?.takeIf { t -> t > 0f && t < 1000f }
+                ?: throw CliError("--fit-tempo wants a BPM, got '$it'")
+        }
+        if (opts.has("--keep-pitch") && fitTempo == null) {
+            throw CliError("--keep-pitch rides on --fit-tempo - add it")
         }
         val swing = opts.int("--swing")
         if (swing != null && !opts.has("--groove")) {
@@ -107,6 +116,22 @@ object ChopCommand {
             snip = Resampler.resample(snip, TARGET_RATE)
             out.println("resampled to $TARGET_RATE Hz")
         }
+        if (opts.has("--denoise") && !opts.has("--clean")) {
+            throw CliError("--denoise rides on --clean - add it")
+        }
+        if (opts.has("--clean")) {
+            val report = try {
+                CaptureDoctor.clean(snip, denoise = opts.has("--denoise"))
+            } catch (e: IllegalArgumentException) {
+                throw CliError("--clean: ${e.message}")
+            }
+            if (report.touched) {
+                snip = report.snip
+                out.println("clean: ${report.summary()}")
+            } else {
+                out.println("clean: capture already clean")
+            }
+        }
 
         val tempo = Tempo.estimate(snip)?.takeIf { it.confidence >= 0.3f }
         tempo?.let { out.println("tempo: ~%s (confidence %.2f)".format(it.label, it.confidence)) }
@@ -127,7 +152,43 @@ object ChopCommand {
             else "chopped at ${slices.size} detected hits",
         )
 
-        val classified = slices.map { it to Classifier.classify(it.snip) }
+        // The capture's context, measured once: a phone across a room
+        // rolls off the sub, and a kick judged without knowing that
+        // files as a snare. The profile only changes anything when the
+        // rolloff is provable.
+        val profile = com.snipsnap.audio.CaptureProfile.measure(snip)
+        if (profile.rolledOff) {
+            out.println(
+                "phone capture heard: sub rolled off (%.1f%% of the low band below %d Hz) - kicks judged by shape"
+                    .format(profile.subShare * 100, com.snipsnap.audio.CaptureProfile.SUB_HZ.toInt()),
+            )
+        }
+        val classified = slices.map { it to Classifier.classify(it.snip, profile) }
+
+        // The capture can name its own key - a guess from the pitched slices.
+        val guess = com.snipsnap.audio.KeyGuess.guess(
+            classified.mapNotNull { (slice, _) ->
+                com.snipsnap.audio.Pitch.detect(slice.snip)?.takeIf { it.confidence >= 0.5f }?.hz
+            },
+        )
+        val key = when {
+            explicitKey != null -> explicitKey
+            autoKey -> {
+                val sure = guess?.takeIf { it.confidence >= com.snipsnap.audio.KeyGuess.SURE_CONFIDENCE }
+                    ?: throw CliError(
+                        "couldn't hear a key in this material - name one (--key Am) or drop --key",
+                    )
+                out.println("key: sounds like ${sure.key.label} (confidence %.2f)".format(sure.confidence))
+                sure.key
+            }
+            else -> null
+        }
+        // No key asked for: a confident guess still gets remembered (metadata
+        // only - retuning uninvited would be a different kit than captured).
+        val stampedKey = key ?: guess
+            ?.takeIf { it.confidence >= com.snipsnap.audio.KeyGuess.SURE_CONFIDENCE }
+            ?.key
+            ?.also { out.println("key: sounds like ${it.label} - remembered in kit.json (retune with --key auto)") }
 
         // Following hits usually means a break, where the playable layout is
         // the point; a grid usually means bars or a chromatic run, where the
@@ -172,6 +233,46 @@ object ChopCommand {
                 )
             }
         }
+        // Fit before balance: repitched audio is what the levels should sit on.
+        if (fitTempo != null) {
+            if (tempo == null) {
+                throw CliError("--fit-tempo needs a confident source tempo - none was heard in this material")
+            }
+            var fitted = 0
+            arranged = arranged.map { pad ->
+                if (pad?.drumClass == com.snipsnap.audio.DrumClass.LOOP) {
+                    fitted++
+                    try {
+                        if (opts.has("--keep-pitch")) {
+                            // The other tempo move: PGHI time-stretch, no repitch.
+                            pad.copy(snip = com.snipsnap.audio.Retime.retime(pad.snip, tempo.bpm / fitTempo))
+                        } else {
+                            pad.copy(snip = com.snipsnap.audio.TempoFit.repitch(pad.snip, tempo.bpm, fitTempo))
+                        }
+                    } catch (e: IllegalArgumentException) {
+                        throw CliError(e.message ?: "tempo fit refused")
+                    }
+                } else {
+                    pad
+                }
+            }
+            if (fitted == 0) {
+                out.println("(no LOOP pads - nothing to tempo-fit)")
+            } else if (opts.has("--keep-pitch")) {
+                out.println(
+                    "tempo fit: %d loop(s) time-stretched %s -> %dbpm (pitch kept)".format(
+                        fitted, tempo.label, Math.round(fitTempo),
+                    ),
+                )
+            } else {
+                out.println(
+                    "tempo fit: %d loop(s) repitched %s -> %dbpm (%+.1f semitones, SP-style)".format(
+                        fitted, tempo.label, Math.round(fitTempo),
+                        com.snipsnap.audio.TempoFit.semitones(tempo.bpm, fitTempo),
+                    ),
+                )
+            }
+        }
         if (opts.has("--balance")) {
             arranged = Balance.apply(arranged)
             out.println("balanced pad levels")
@@ -184,7 +285,7 @@ object ChopCommand {
         // The default name carries what detection learned: "break 92bpm".
         val name = opts["--name"] ?: buildString {
             append(Names.sanitizeStem(file.nameWithoutExtension))
-            tempo?.let { append(' ').append(it.label) }
+            (fitTempo ?: tempo?.bpm)?.let { append(' ').append("${Math.round(it)}bpm") }
         }
         if (!Names.isMpcSafe(name)) throw CliError("kit name isn't MPC-safe: '$name'")
         val outRoot = File(opts["--out"] ?: "snipsnap-out")
@@ -193,7 +294,9 @@ object ChopCommand {
             throw CliError("kit already exists: $kitDir (pass --overwrite to replace it)")
         }
 
-        var kit = KitAssembler.assembleArranged(name, arranged, kitDir, key, tempo?.bpm)
+        // A fitted kit *is* at the target tempo now - stems and metadata agree.
+        val kitBpm = fitTempo ?: tempo?.bpm
+        var kit = KitAssembler.assembleArranged(name, arranged, kitDir, stampedKey, kitBpm)
 
         if (opts.has("--ghosts")) {
             val model = com.snipsnap.shell.KitBuilderModel.open(kitDir)
@@ -207,6 +310,49 @@ object ChopCommand {
             model.save()
             kit = model.kit
             out.println("ghost notes: $layered pads gained darker soft zones")
+        }
+
+        // --break-pad: one extra pad carrying the whole break as a chain
+        // whose slices ARE the chop's boundaries - tap through the break
+        // on one pad, the workflow MPC users build by hand in Sample Edit.
+        if (opts.has("--break-pad")) {
+            val first = slices.first().sourceFrame
+            val boundaries = slices.map { (it.sourceFrame - first).toLong() }.distinct()
+            when {
+                boundaries.size < 2 -> out.println("(fewer than 2 slices - no break pad to tap through)")
+                kit.highestSlot >= 128 -> out.println("(no free pad slot left for the break pad)")
+                else -> {
+                    // The pad's WAV starts at the first hit, so slice one
+                    // begins at frame 0 the way ChainInfo (and the ear) expect.
+                    val breakSnip = com.snipsnap.audio.Snip(
+                        snip.samples.copyOfRange(first * snip.channels, snip.samples.size),
+                        snip.channels, snip.sampleRate,
+                    )
+                    val slot = kit.highestSlot + 1
+                    val stem = Names.sanitizeStem("${PadNoteMap.labelForPad(slot)}_Break")
+                    com.snipsnap.audio.WavWriter.write(File(kitDir, "$stem.wav"), breakSnip)
+                    kit = kit.copy(
+                        pads = kit.pads + com.snipsnap.kit.KitPad(
+                            slot = slot,
+                            sampleFile = "$stem.wav",
+                            displayName = "Break",
+                            drumClass = com.snipsnap.audio.DrumClass.LOOP,
+                            colorHex = AutoPlace.colorFor(com.snipsnap.audio.DrumClass.LOOP),
+                            source = mapOf(
+                                "file" to file.name,
+                                "sourceFrame" to first.toString(),
+                                "lengthFrames" to breakSnip.frameCount.toString(),
+                            ),
+                            chain = com.snipsnap.kit.ChainInfo(boundaries, cycle = boundaries.size),
+                        ),
+                    )
+                    com.snipsnap.kit.KitStore.save(kit, kitDir)
+                    out.println(
+                        "break pad: ${PadNoteMap.labelForPad(slot)} carries the whole break as a " +
+                            "chain of ${boundaries.size} slices - tap through it in order",
+                    )
+                }
+            }
         }
 
         out.println()
@@ -254,11 +400,29 @@ object ChopCommand {
                 // as the standard four variations, so exporting tomorrow
                 // still carries today's rhythm - four ways.
                 val variations = com.snipsnap.kit.GrooveVariations.standard(clip, swingPercent = swing)
+                    .toMutableList()
+                // A fifth pattern when the kit can roll one: the fill. It
+                // rides the .xpj's sequences; the .xtd keeps its four-slot
+                // budget with the original four.
+                val hasFill = try {
+                    variations += com.snipsnap.kit.GrooveVariations.fill(clip, kit)
+                    true
+                } catch (e: IllegalArgumentException) {
+                    false
+                }
+                // And a sixth: the ghost-note grammar, when the kit can whisper.
+                val hasGhosts = try {
+                    variations += com.snipsnap.kit.GrooveVariations.ghosted(clip, kit)
+                    true
+                } catch (e: IllegalArgumentException) {
+                    false
+                }
                 com.snipsnap.kit.GrooveStore.save(kitDir, variations)
                 val second = if (swing != null) "swing $swing" else "tight"
                 out.println(
                     "groove: \"${clip.name}\" - ${clip.notes.size} notes over ${clip.bars} bar(s), " +
-                        "saved as ${variations.size} patterns (captured/$second/half/sparse)",
+                        "saved as ${variations.size} patterns (captured/$second/half/sparse" +
+                        (if (hasFill) "/fill" else "") + (if (hasGhosts) "/ghosted" else "") + ")",
                 )
             }
         }
@@ -279,7 +443,7 @@ object ChopCommand {
             // native exports through Exporters' own fallback.
             Exports.write(
                 kit, kitDir, File(outRoot, "card"), exportFormats, opts.has("--overwrite"), out,
-                tempoBpm = tempo?.bpm, preview = preview, artworkPng = artwork,
+                tempoBpm = kitBpm, preview = preview, artworkPng = artwork,
             )
         } else {
             out.println("(no --export given - kit folder only; formats: ${Exports.FORMATS.joinToString(",")})")

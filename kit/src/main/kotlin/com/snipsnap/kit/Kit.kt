@@ -63,9 +63,30 @@ data class KitPad(
      * zone's file (so single-sample consumers still hear the right thing).
      */
     val velocityLayers: List<KitLayer> = emptyList(),
+    /**
+     * Pad shape as metadata — the hardware renders it, the audio on disk
+     * stays pristine, and undo is setting it back to null (the format's
+     * own default). All 0..1: [attack]/[decay] on the volume envelope,
+     * [cutoff]/[resonance] on the pad's filter.
+     */
+    val attack: Float? = null,
+    val decay: Float? = null,
+    val cutoff: Float? = null,
+    val resonance: Float? = null,
+    /**
+     * Per-hit randomization 0..1 — subtle pitch/volume/pan variation the
+     * MPC 3 renders on every hit (no two alike). MPC 2 exports have no
+     * such fields and honestly ignore it.
+     */
+    val humanize: Float? = null,
+    /** Chain playback (see [ChainInfo]); null = the ordinary pad. */
+    val chain: ChainInfo? = null,
 ) {
     init {
         require(slot in 1..128) { "slot out of range: $slot" }
+        if (chain != null) {
+            require(velocityLayers.isEmpty()) { "a chain pad is single-zone (velocity x round-robin grids come later)" }
+        }
         require(sampleFile.isNotBlank()) { "sampleFile must not be blank" }
         require('/' !in sampleFile && '\\' !in sampleFile) {
             "sampleFile must be a bare filename inside the kit folder: $sampleFile"
@@ -78,6 +99,12 @@ data class KitPad(
         require(muteGroup in 0..32) { "muteGroup out of range: $muteGroup" }
         colorHex?.let {
             require(Regex("^#[0-9a-fA-F]{6}$").matches(it)) { "colorHex must be #rrggbb: $it" }
+        }
+        for ((name, v) in listOf(
+            "attack" to attack, "decay" to decay, "cutoff" to cutoff,
+            "resonance" to resonance, "humanize" to humanize,
+        )) {
+            v?.let { require(it in 0f..1f) { "$name out of range: $it" } }
         }
         if (velocityLayers.isNotEmpty()) {
             require(velocityLayers.size in 1..4) { "a pad has 1..4 velocity layers" }
@@ -94,6 +121,136 @@ data class KitPad(
 
     /** Filename without extension — what the MPC program refers to. */
     val sampleStem: String get() = sampleFile.substringBeforeLast('.')
+}
+
+/**
+ * One velocity zone of a chain grid: which velocities tap in at which
+ * slice, and how many takes cycle from that anchor. The PSK convention:
+ * the chain is dynamics-graded soft→hard, so soft zones anchor at low
+ * slices and the anchor rises with velocity.
+ */
+data class ChainZone(
+    val velStart: Int,
+    val velEnd: Int,
+    /** The zone's anchor take — the first slice its hits cycle from. */
+    val baseSlice: Int,
+    /** Takes cycled from the anchor, `[baseSlice, baseSlice + cycle)`. */
+    val cycle: Int,
+) {
+    init {
+        require(velStart in 0..127 && velEnd in 0..127 && velStart <= velEnd) {
+            "bad velocity window $velStart..$velEnd"
+        }
+        require(baseSlice >= 0) { "baseSlice must not be negative: $baseSlice" }
+        require(cycle >= 1) { "a zone cycles at least 1 take, got $cycle" }
+    }
+}
+
+/**
+ * A chain pad (MPC 3 "Slice Motion"): the pad's WAV is a chain of takes
+ * and each hit steps to the next slice. [boundaries] are the slice start
+ * frames, ascending from 0 — WE build the chains, so the boundaries are
+ * ours; slice i runs from `boundaries[i]` to the next start (the last to
+ * the end of the sample). [cycle] slices are cycled per hit. The MPC 2
+ * generation has no Slice Motion; its export windows to slice 0.
+ *
+ * [zones] is the full velocity × round-robin grid (the PSK scheme):
+ * 2..4 zones, soft first, tiling 0..127, each anchoring at its own
+ * [ChainZone.baseSlice] with its own cycle. Null = the single-zone
+ * chain, where [cycle] alone rules; with zones set, each zone's own
+ * cycle is authoritative and [cycle] is just the single-zone fallback.
+ * Capped at 4 (the format allows 8) so every zone stays representable
+ * on the MPC 2's four layer slots too.
+ */
+data class ChainInfo(
+    val boundaries: List<Long>,
+    val cycle: Int,
+    val zones: List<ChainZone>? = null,
+) {
+    init {
+        require(boundaries.size >= 2) { "a chain has at least 2 slices, got ${boundaries.size}" }
+        require(boundaries.first() == 0L) { "the first slice starts at frame 0" }
+        for (i in 1 until boundaries.size) {
+            require(boundaries[i] > boundaries[i - 1]) { "slice boundaries must ascend" }
+        }
+        require(cycle in 2..boundaries.size) { "cycle is 2..${boundaries.size}, got $cycle" }
+        zones?.let { zs ->
+            require(zs.size in 2..4) { "a grid has 2..4 zones, got ${zs.size}" }
+            require(zs.first().velStart == 0 && zs.last().velEnd == 127) {
+                "zones tile 0..127 - got ${zs.first().velStart}..${zs.last().velEnd}"
+            }
+            for (i in 1 until zs.size) {
+                require(zs[i].velStart == zs[i - 1].velEnd + 1) {
+                    "zones must be contiguous soft-first: ${zs[i - 1].velEnd} then ${zs[i].velStart}"
+                }
+            }
+            for (z in zs) {
+                require(z.baseSlice + z.cycle <= boundaries.size) {
+                    "zone ${z.velStart}..${z.velEnd} cycles ${z.baseSlice} until ${z.baseSlice + z.cycle} " +
+                        "but the chain has $sliceCount slices"
+                }
+            }
+        }
+    }
+
+    val sliceCount: Int get() = boundaries.size
+
+    /** Slice [i]'s window; the last slice runs to [sampleFrames]. */
+    fun window(i: Int, sampleFrames: Long): LongRange {
+        require(i in boundaries.indices) { "slice $i of $sliceCount" }
+        val end = if (i + 1 < boundaries.size) boundaries[i + 1] else sampleFrames
+        return boundaries[i] until end
+    }
+
+    /** The zone [velocity] taps into, or null on a single-zone chain. */
+    fun zoneFor(velocity: Int): ChainZone? =
+        zones?.firstOrNull { velocity in it.velStart..it.velEnd } ?: zones?.last()
+
+    /**
+     * The per-program projection, frame windows resolved — the one place
+     * every exporter builds its [com.snipsnap.xpm.ChainPlay] from.
+     */
+    fun toPlay(sampleFrames: Long): com.snipsnap.xpm.ChainPlay =
+        com.snipsnap.xpm.ChainPlay(
+            firstSliceEnd = boundaries[1],
+            cycle = cycle,
+            zones = zones?.map { z ->
+                val w = window(z.baseSlice, sampleFrames)
+                com.snipsnap.xpm.ChainZonePlay(
+                    velStart = z.velStart, velEnd = z.velEnd,
+                    baseSlice = z.baseSlice, cycle = z.cycle,
+                    windowStart = w.first, windowEnd = w.last + 1,
+                )
+            },
+        )
+}
+
+/**
+ * The wear ledger — the kit as a living tape. Plays and saves accrue
+ * [mileage], and the kit's *rendered* sound ages by it. The curve is
+ * patina physics: `w = 1 − exp(−mileage/K)` — fast at first, asymptotic
+ * at well-worn, never ruined. Only the ledger is stored; [w] is derived,
+ * never written down. And because wear is a render-time recipe over
+ * pristine WAVs (no audio is ever rewritten), wiping the ledger *is* a
+ * new tape.
+ */
+data class WearLedger(
+    val mileage: Double = 0.0,
+    val enabled: Boolean = true,
+    /** Mileage at which the tape is ~63% worn. */
+    val k: Double = DEFAULT_K,
+) {
+    init {
+        require(mileage.isFinite() && mileage >= 0.0) { "mileage out of range: $mileage" }
+        require(k.isFinite() && k > 0.0) { "K must be positive: $k" }
+    }
+
+    /** Earned wear in [0, 1) — the curve saturates, it never arrives. */
+    val w: Float get() = (1.0 - Math.exp(-mileage / k)).toFloat().coerceIn(0f, 1f)
+
+    companion object {
+        const val DEFAULT_K = 250.0
+    }
 }
 
 /**
@@ -117,6 +274,12 @@ data class Kit(
      * free, since the MPC stretches correctly when the metadata is right.
      */
     val tempoBpm: Float? = null,
+    /**
+     * The tape's wear ledger, when the kit has opted into aging. Null
+     * means a kit that doesn't wear — the default, and every kit made
+     * before the ledger existed.
+     */
+    val wear: WearLedger? = null,
 ) {
     init {
         tempoBpm?.let { require(it > 0f && it < 1000f) { "tempoBpm out of range: $it" } }
@@ -137,15 +300,22 @@ data class Kit(
     fun toDrumProgram(frameCountOf: (KitPad) -> Long): DrumProgram {
         val slots = arrayOfNulls<Pad>(highestSlot)
         for (p in pads) {
+            val frames = frameCountOf(p)
             slots[p.slot - 1] = Pad(
                 sampleName = p.sampleStem,
-                frameCount = frameCountOf(p),
+                frameCount = frames,
                 level = p.level,
                 pan = p.pan,
                 tuneCoarse = p.tuneCoarse,
                 tuneFine = p.tuneFine,
                 muteGroup = p.muteGroup,
                 oneShot = p.oneShot,
+                attack = p.attack,
+                decay = p.decay,
+                cutoff = p.cutoff,
+                resonance = p.resonance,
+                humanize = p.humanize,
+                chain = p.chain?.toPlay(frames),
             )
         }
         return DrumProgram(name, slots.toList())

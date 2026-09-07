@@ -16,8 +16,8 @@ object ExportCommand {
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(
             args,
-            valued = setOf("--export", "--out", "--art"),
-            boolean = setOf("--overwrite", "--preview", "--no-art"),
+            valued = setOf("--export", "--out", "--art", "--wear"),
+            boolean = setOf("--overwrite", "--preview", "--no-art", "--no-wear"),
         )
         if (opts.has("--no-art") && opts["--art"] != null) {
             throw CliError("--art and --no-art contradict each other")
@@ -44,18 +44,48 @@ object ExportCommand {
             opts["--export"] ?: throw CliError("say which formats: --export ${Exports.FORMATS.joinToString(",")}"),
         )
         val cardDir = File(opts["--out"] ?: "snipsnap-out", "card")
+
+        // The tape's wear: earned from the ledger, or a deliberate --wear
+        // override (which may push past the earned ceiling); --no-wear
+        // renders the pristine kit regardless.
+        val wearOverride = opts["--wear"]?.let {
+            it.toFloatOrNull()?.takeIf { v ->
+                v > 0f && v <= com.snipsnap.synth.TapeWear.MAX_OVERRIDE_W
+            } ?: throw CliError(
+                "--wear wants a number in (0, ${com.snipsnap.synth.TapeWear.MAX_OVERRIDE_W}], got '$it'",
+            )
+        }
+        if (opts.has("--no-wear") && wearOverride != null) {
+            throw CliError("--wear and --no-wear contradict each other")
+        }
+        val wearW = if (opts.has("--no-wear")) null else wearOverride ?: com.snipsnap.shell.Wear.earnedW(kit)
+
         val preview = if (opts.has("--preview")) {
-            com.snipsnap.kit.KitPreview.render(kit, kitDir).also {
+            com.snipsnap.shell.Wear.render(kit, com.snipsnap.kit.KitPreview.render(kit, kitDir), wearW).also {
                 out.println("preview: rendered the kit playing its own beat (%.1fs)".format(it.durationSeconds))
             }
         } else {
             null
         }
         val artwork = Exports.renderArtwork(kit, kitDir, formats, artStyle, opts.has("--no-art"), out)
-        Exports.write(
-            kit, kitDir, cardDir, formats, opts.has("--overwrite"), out,
-            preview = preview, artworkPng = artwork,
-        )
+        val wornStage = wearW?.let {
+            java.nio.file.Files.createTempDirectory("snipsnap-worn").toFile()
+        }
+        try {
+            val srcDir = wornStage?.let { com.snipsnap.shell.Wear.stageWorn(kit, kitDir, it, wearW) } ?: kitDir
+            if (wornStage != null) {
+                out.println(
+                    "wear: samples rendered at %.1f%% worn - the kit's own files stay pristine (--no-wear skips)"
+                        .format(wearW * 100),
+                )
+            }
+            Exports.write(
+                kit, srcDir, cardDir, formats, opts.has("--overwrite"), out,
+                preview = preview, artworkPng = artwork,
+            )
+        } finally {
+            wornStage?.deleteRecursively()
+        }
         return 0
     }
 }

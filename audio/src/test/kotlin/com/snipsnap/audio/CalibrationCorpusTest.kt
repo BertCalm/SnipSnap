@@ -44,6 +44,78 @@ class CalibrationCorpusTest {
         "loop" to DrumClass.LOOP,
     )
 
+    /**
+     * TT3: the harness no longer idles — a permanent phone-sim corpus,
+     * labeled by construction. Every synthetic render goes through the
+     * phone treatment (~24 dB/oct at 150 Hz, the rolloff the reference
+     * capture measured at a thousandth of its sub) and must classify to
+     * its own label under a rolled-off [CaptureProfile] — the kick by
+     * the gutless rule, everything else exactly as before.
+     */
+    @Test
+    fun `the phone-sim corpus classifies to its labels under the profile`() {
+        fun phoneSim(snip: Snip): Snip {
+            var out = snip.samples.copyOf()
+            repeat(4) {
+                val a = Math.exp(-2.0 * Math.PI * 150.0 / snip.sampleRate).toFloat()
+                val res = FloatArray(out.size)
+                var yPrev = 0f
+                var xPrev = 0f
+                for (i in out.indices) {
+                    val y = a * (yPrev + out[i] - xPrev)
+                    res[i] = y
+                    yPrev = y
+                    xPrev = out[i]
+                }
+                out = res
+            }
+            return Snip(out, snip.channels, snip.sampleRate)
+        }
+        // A kick like the real ones: sub + knock + click - a pure-sub
+        // render can't lose its sub to a highpass, only its level.
+        val kick = Snip(
+            FloatArray((0.4f * 44_100).toInt()) { i ->
+                val t = i.toDouble() / 44_100
+                (
+                    0.9 * Math.sin(2.0 * Math.PI * 55.0 * t) * Math.exp(-9.0 * t) +
+                        0.2 * Math.sin(2.0 * Math.PI * 220.0 * t) * Math.exp(-25.0 * t) +
+                        (if (i < 30) 0.08 * (1.0 - i / 30.0) else 0.0)
+                    ).toFloat()
+            },
+            1, 44_100,
+        )
+        val corpus = listOf(
+            DrumClass.KICK to kick,
+            DrumClass.SNARE to DrumSynth.snare(),
+            DrumClass.CLAP to DrumSynth.clap(),
+            DrumClass.HAT_CLOSED to DrumSynth.closedHat(),
+            DrumClass.HAT_OPEN to DrumSynth.openHat(),
+            DrumClass.TONAL to DrumSynth.tonal(),
+        )
+        // The profile the corpus lives under, measured from a phone-simmed
+        // DRUM mix - the profile's real patient is a beat capture. (A
+        // sustained low note held for seconds keeps enough sub through
+        // any realistic rolloff to read full-range; that's honest, and
+        // it's why the profile is measured, never assumed.)
+        val mix = FloatArray(3 * 44_100)
+        for ((i, hit) in listOf(kick, DrumSynth.snare(), DrumSynth.closedHat(), kick, DrumSynth.snare()).withIndex()) {
+            val start = i * 44_100 / 2
+            for (j in hit.samples.indices) {
+                if (start + j < mix.size) mix[start + j] += hit.samples[j] * 0.7f
+            }
+        }
+        val profile = CaptureProfile.measure(phoneSim(Snip(mix, 1, 44_100)))
+        assertTrue(profile.rolledOff, "the corpus's drum mix reads rolled off: ${profile.subShare}")
+
+        for ((expected, render) in corpus) {
+            val got = Classifier.classify(phoneSim(render), profile)
+            kotlin.test.assertEquals(
+                expected, got.drumClass,
+                "phone-simmed $expected classified as ${got.drumClass} (conf ${got.confidence})",
+            )
+        }
+    }
+
     @Test
     fun `every labeled capture is classified and reported`() {
         val wavs = corpusDir.listFiles { f: File -> f.extension.equals("wav", true) }
