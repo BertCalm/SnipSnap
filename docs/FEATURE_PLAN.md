@@ -34,7 +34,7 @@ already done and hardware-verified for drums.
 | F1.2 | M1 capture — **in part**: the always-listening mic ring is real (`MicSessionService`, a foreground microphone session with ARM / SNIP / EJECT, `BubbleOverlay`, the TAPE screen's retroactive snip). **Still missing:** MediaProjection (another app's audio from inside it), silence detection for opt-out apps, the quick-settings tile — the manifest carries no tile and no projection | L | snip YouTube from inside YouTube; snip the room (✓); share a video in (F3.2) |
 | F1.3 | ✓ done: M2 tape deck — `TapeScreen` over `TapeDeckModel` and `PeaksPyramid`, `TapeVoice` for audition, a snip handed to CHOP | M | a YouTube snip becomes a clean one-shot, cut on the hit |
 | F1.4 | ✓ done: M4 play mode — `PlayScreen` over `VoiceAllocator`, `PadPlayer` on SoundPool (Oboe deliberately not wired — `PadPlayer`'s own note: effort on a component the pads don't need yet). The exit test is a bench row: USER | M | finger drumming feels tight on a mid-range phone (bench) |
-| F1.5 | ✓ done: M5 export wizard — `ExportScreen` over `ExportWizardModel`, the format cycler (kit, expansion, MPC SESSION (.XPJ)), SAF create-document through `MainActivity`; "the Live III plays it" stays a bench row | M | the card writes (✓); the Live III plays it (bench) |
+| F1.5 | ✓ done: M5 export wizard — `ExportScreen` over `ExportWizardModel`, the format cycler (kit, expansion, MPC SESSION (`.xpj`)), SAF create-document through `MainActivity`; "the Live III plays it" stays a bench row | M | the card writes (✓); the Live III plays it (bench) |
 
 M3 is feature F2 below. Risks and their standing: APP_PLAN's table.
 
@@ -67,7 +67,7 @@ on desktop today. The risk table's opt-out mitigation depends on this.
 | F3.1 | Intent filters + receive activity → trim screen. **Open:** the manifest carries only MAIN; nothing shared into the app lands anywhere | APP | S | shared audio file lands in the tape deck |
 | F3.2 | Video demux — `MediaExtractor`/Media3 → float PCM → `Snip` → `Resampler`. **Open:** no decoder in the app yet; F3.3's fixtures wait for it | APP | M | shared MP4's audio lands in the tape deck |
 | F3.3 | ✓ done: demux conformance fixtures — tiny known-content WAV fixtures + a contract test the app's decode output must pass (rate, channels, sample accuracy) | CORE | S | app-side decode verified against ground truth without an SDK |
-| F3.4 | Onboarding copy for opt-out apps (silence detection → screen-recorder path) — copy exists in `Copy`; wire it. **Open**, and it waits on F1.2's silence detection | APP | S | blocked capture shows the honest fallback, in voice |
+| F3.4 | Onboarding copy for opt-out apps (silence detection → screen-recorder path) — copy exists in `Copy`; wire it. **Open:** waits on F1.2's silence detection | APP | S | blocked capture shows the honest fallback, in voice |
 
 ## F4 — Synth starter kits
 
@@ -207,7 +207,7 @@ free: the MPC warps loops itself when the tempo metadata is right.
 | W9 takes + the 30-day bin | ✓ done (CORE wave 3, `TakesBinScreen` on the phone as X2.3) | CORE + APP | S | trust feature; model in `:shell` |
 | W10 teach-the-machine | ✓ done in core (wave 3: `TeachLog`, the harness ingests it) and wired into CHOP behind a boolean; the consent switch's UI is X4.4, still open | CORE + APP | S+S | ordinary use becomes classifier training data; needs a consent switch |
 | W11 one-file backup | ✓ done (CORE wave 3: `KitBackup`, CLI `backup`); the phone's share/backup action is X3.3, open | CORE | S | retention insurance |
-| W12 pad mini-waveforms | `PeaksPyramid` makes them free to draw. **Open:** the PAD SHEET, TAPE, CHOP and SYNTH draw peaks; the KIT grid's cells do not | APP | S | perceived-polish per effort champion |
+| W12 pad mini-waveforms | `PeaksPyramid` makes them free to draw. **Open:** the PAD SHEET, TAPE, CHOP and SYNTH draw peaks already; the KIT grid's cells draw none yet | APP | S | perceived-polish per effort champion |
 
 **Rejected, with reasons:** stem separation (heavy ML, off-brand for an
 honest tool); our own time-stretch (the MPC warps better — W6 ships the
@@ -353,7 +353,7 @@ tracks with their grooves, instruments beside them, mixer wired.
 |---|---|---|---|---|
 | Y3.1 | ✓ done: `SessionBuilder` (`:kit`) — stage kit folders + `.xty` instrument packages into `_[ProjectData]/`, hand `Mpc3ProjectWriter` the track list; grooves from `groove.json` ride onto the sequence | CORE | S–M | two kits + an instrument → one `.xpj` our reader accepts with the right track types |
 | Y3.2 | ✓ done: CLI `project <kit-dir>... [--keys pkg...] [--name]` | CORE | S | one command, whole session on the card |
-| Y3.3 | ✓ done: the export wizard's format cycler carries MPC SESSION (.XPJ) — KITS + GROOVES | APP | S | the wizard's biggest format, one tap |
+| Y3.3 | ✓ done: the export wizard's format cycler carries MPC SESSION (`.xpj`) — KITS + GROOVES | APP | S | the wizard's biggest format, one tap |
 
 ## Y4 — Pad treatments: the FX rack pointed at one pad
 
