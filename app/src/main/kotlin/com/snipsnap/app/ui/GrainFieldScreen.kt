@@ -47,6 +47,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -166,8 +167,16 @@ fun GrainFieldScreen(
     // start() exactly once per voice instance — LaunchedEffect only
     // relaunches when `voice`'s identity changes, and GrainVoice.start()
     // itself is idempotent (a compareAndSet guard), so this can't double-arm
-    // the render thread even under a fast recomposition.
-    LaunchedEffect(voice) { voice?.start() }
+    // the render thread even under a fast recomposition. `start()`'s own KDoc
+    // documents that `buildTrack` can throw if the platform rejects the
+    // format — a caught, retryable condition for a caller, not a silent dead
+    // screen or an uncaught crash on the class of device that triggers it.
+    LaunchedEffect(voice) {
+        runCatching { voice?.start() }.onFailure {
+            onToast("THE FIELD LOST ITS VOICE")
+            onBack()
+        }
+    }
 
     val projector = current?.second?.projector
     var duetOn by remember { mutableStateOf(false) }
@@ -204,35 +213,66 @@ fun GrainFieldScreen(
             var prevX = 0.5f
             var prevY = 0.5f
             while (true) {
-                if (!touching.value) {
-                    val level = MicSessionService.level.value
-                    if (level < DUET_SILENCE_LEVEL) {
-                        v.gate(false)
-                    } else {
-                        // CaptureRing.snapshot returns fewer than the
-                        // requested frames (not null) when the ring hasn't
-                        // filled that far yet — the earliest ticks right
-                        // after ARM, most likely. A short/empty window analyzes
-                        // fine (FeatureExtractor/Fft both tolerate it) but
-                        // its projection is meaningless, so it's skipped
-                        // here rather than smoothed into the cursor's path.
-                        val raw = MicSessionService.snapshotTail(GrainField.GRAIN_FRAMES)
-                        if (raw != null && raw.size >= GrainField.GRAIN_FRAMES) {
-                            val projected = runCatching {
-                                withContext(Dispatchers.Default) {
-                                    val snip = Snip(raw, channels = 1, sampleRate = MicSessionService.SAMPLE_RATE)
-                                    p.project(Similar.vector(FeatureExtractor.extract(snip)))
+                // The whole tick body, not just the extraction/project step
+                // below — any uncaught exception here (level/snapshotTail
+                // reads included) would otherwise silently kill this loop
+                // while the DUET chip stays lit, looking engaged while doing
+                // nothing. One stumble turns DUET back off, with a toast, so
+                // the chip's state matches reality again.
+                try {
+                    if (!v.alive) {
+                        // The render thread died on its own (route change,
+                        // device hiccup) — GrainVoice.alive is exactly the
+                        // signal that used to have no public accessor; keep
+                        // polling a dead voice's setTarget/gate forever is
+                        // the silent-failure shape this closes.
+                        onToast("DUET STUMBLED — OFF")
+                        duetOn = false
+                        break
+                    }
+                    if (!touching.value) {
+                        val level = MicSessionService.level.value
+                        if (level < DUET_SILENCE_LEVEL) {
+                            v.gate(false)
+                        } else {
+                            // CaptureRing.snapshot returns fewer than the
+                            // requested frames (not null) when the ring hasn't
+                            // filled that far yet — the earliest ticks right
+                            // after ARM, most likely. A short/empty window analyzes
+                            // fine (FeatureExtractor/Fft both tolerate it) but
+                            // its projection is meaningless, so it's skipped
+                            // here rather than smoothed into the cursor's path.
+                            val raw = MicSessionService.snapshotTail(GrainField.GRAIN_FRAMES)
+                            if (raw != null && raw.size >= GrainField.GRAIN_FRAMES) {
+                                val projected = runCatching {
+                                    withContext(Dispatchers.Default) {
+                                        val snip = Snip(raw, channels = 1, sampleRate = MicSessionService.SAMPLE_RATE)
+                                        p.project(Similar.vector(FeatureExtractor.extract(snip)))
+                                    }
+                                }.getOrNull()
+                                // Re-read `touching` LIVE here, after the suspend
+                                // above returns — the gate at the top of this
+                                // `if` was checked before that (real, non-trivial)
+                                // dispatcher switch, so a finger landing mid-
+                                // projection would otherwise still get clobbered
+                                // by this stale, pre-touch target once execution
+                                // resumes (the "re-read live state after
+                                // suspension" rule).
+                                if (projected != null && !touching.value) {
+                                    prevX += (projected.first - prevX) * DUET_SMOOTHING
+                                    prevY += (projected.second - prevY) * DUET_SMOOTHING
+                                    autoPos.value = Offset(prevX, prevY)
+                                    v.setTarget(prevX, prevY)
+                                    v.gate(true)
                                 }
-                            }.getOrNull()
-                            if (projected != null) {
-                                prevX += (projected.first - prevX) * DUET_SMOOTHING
-                                prevY += (projected.second - prevY) * DUET_SMOOTHING
-                                autoPos.value = Offset(prevX, prevY)
-                                v.setTarget(prevX, prevY)
-                                v.gate(true)
                             }
                         }
                     }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    onToast("DUET STUMBLED — OFF")
+                    duetOn = false
+                    break
                 }
                 delay(DUET_TICK_MS)
             }

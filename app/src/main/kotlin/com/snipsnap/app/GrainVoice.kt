@@ -128,6 +128,16 @@ class GrainVoice(
     }
 
     /**
+     * True from a successful [start] until [release] or a self-terminated
+     * render loop (see [runLoop]'s own two death paths — a caught
+     * `IllegalStateException` on `track.write`, or the `n <= 0` "device gone"
+     * branch — both of which set [running] false specifically so this
+     * becomes observable). A caller that keeps calling [setTarget]/[gate]
+     * into a voice that died on its own has no other way to notice.
+     */
+    val alive: Boolean get() = running.get()
+
+    /**
      * Terminal: stop the render thread and release [track]. Safe to call
      * more than once — only the first call does anything.
      *

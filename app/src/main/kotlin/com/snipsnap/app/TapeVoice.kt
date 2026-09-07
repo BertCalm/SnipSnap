@@ -3,6 +3,7 @@ package com.snipsnap.app
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.util.Log
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
@@ -120,7 +121,25 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) {
         // prefill up front, unlike AndroidAudioSink's long-lived track,
         // which is built once for the process and kept), so building one
         // per stream is cheap relative to the write loop it's about to run.
-        val track = buildTrack(sampleRate, tape.size)
+        //
+        // This runs on a bare `thread{}` with no uncaught-exception handler
+        // installed anywhere in the app, so `AudioTrack.Builder` rejecting
+        // the format on this device (the same "some devices reject the
+        // format" case GrainVoice.start()'s own KDoc documents) would
+        // otherwise be a hard process crash — TapeScreen/PadSheetScreen both
+        // call `start()` unguarded, so there is no caller anywhere that
+        // could catch it. Caught here instead: log it, leave [running]
+        // false, and exit this thread quietly. Silence, not a crash — the
+        // residual (this exit is not itself reported to the UI) is a
+        // deliberate, narrower fix than plumbing a toast out of a class that
+        // has none of the callback machinery for one.
+        val track = try {
+            buildTrack(sampleRate, tape.size)
+        } catch (e: Exception) {
+            Log.w(TAG, "TapeVoice: buildTrack rejected the format, staying silent", e)
+            running.set(false)
+            return
+        }
         // Set once the loop exits because the tape genuinely ran out (as
         // opposed to a signaled stop(), a superseding start(), a vanished
         // track, or a short write) — the one case where the *last* buffer's
@@ -230,6 +249,7 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) {
     }
 
     private companion object {
+        const val TAG = "TapeVoice"
         const val BLOCK_FRAMES = 2048
         const val BYTES_PER_FLOAT = 4
         const val BUFFER_MILLIS = 150
