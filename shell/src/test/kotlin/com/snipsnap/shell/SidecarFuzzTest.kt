@@ -334,6 +334,45 @@ class SidecarFuzzTest {
     }
 
     @Test
+    fun `the pad sheets read any recipe without throwing`() {
+        // The sheet readers are the phone's own defensive walk over a pad's
+        // recipe: a shape they do not know is "nothing applied", never a
+        // crash on the KIT screen. So the bar here is no throwable at all.
+        val valid = Json.parse(
+            """
+            {"recipe":1,"era":"1993","amount":0.5,"treatment":"crushed","keyed":"in key",
+             "mutate":{"mode":"morph","with":["Kit:A03","Other:B02"],"drift":true,
+                       "outside":{"move":"hop","lagMs":23,"confidence":0.87,"inverted":true}},
+             "outside":{"move":"lean","lagMs":12,"confidence":0.4,"inverted":false}}
+            """.trimIndent(),
+        )
+        val rnd = Random(38)
+        for (i in 0 until ROUNDS) {
+            val mutant = mutateTree(valid, rnd)
+            val recipe = mutant as? JsonValue.Obj
+            try {
+                PadSheet.read(recipe)
+                MutateSheet.read(recipe)
+                OutsideSheet.read(recipe)
+            } catch (t: Throwable) {
+                fail("sheet readers round $i: threw ${t::class.simpleName}: ${t.message}\n${Json.write(mutant)}")
+            }
+        }
+    }
+
+    @Test
+    fun `the label survives mutation`() {
+        val root = File(temp, "label").also { it.mkdirs() }
+        Label.init(root, "Seed Label", "SL")
+        val f = File(root, Label.FILE_NAME)
+        val valid = f.readText()
+        fuzz("Label.load", valid, seed = 39) { text ->
+            f.writeText(text)
+            Label.load(root)
+        }
+    }
+
+    @Test
     fun `the parser refuses a nesting attack in words`() {
         // Deep enough to blow a default JVM stack if the parser recursed
         // unguarded; the depth ceiling must turn it into a JsonException.
