@@ -1361,6 +1361,23 @@ without correlating — unnecessary while `align` finds it every time).
 
 ---
 
+## Wave ZZ — the phone reads (APP)
+
+The import door (F3) made the core's listening verbs reachable from the
+phone; this wave puts three of them on the TAPE deck, each a different
+reading of the same tape. Nothing new in the core: the Ear (LL3), the
+pocket (LL4) and the dig (FF1) already exist and are tested; the wave is
+the `:shell` seams that wrap them for the phone, and the buttons.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| ZZ1 | ✓ done: READ AS GROOVE — `ReadGroove.read` (`:shell`, tested): the selection (or the whole deck) heard by the Ear at its own tempo, sure hits mapped onto the open kit's pads (kindred stand-ins: a snare for a clap, an open hat for a closed one), landed as the captured base with the standard variations rewritten and an existing PROG E riding along untouched; GROOVE opens on it. Refusals in the Ear's own words: no confident tempo, no beat heard, nothing that maps; no kit open | APP | S | a two-bar synthetic beat reads onto kick/snare/hat pads at ~100 bpm and lands as the base with E intact; a tone refuses |
+| ZZ2 | ✓ done: DIG — `Dig.best` (`:shell`, tested): `BreakFinder`'s best candidate as the deck's own frames; the TAPE button sets IN and OUT to it and parks the head at IN, so INSTANT KIT is the next tap; no break heard is said, never an empty selection | APP | S | a pad–break–pad song digs to the break's frames; silence digs to nothing |
+| ZZ3 | ✓ done: STEAL THE FEEL — `ReadGroove.feel` (`:shell`, tested): the tape's timing and accent per 16th (`GrooveFeel.extract` over the Ear's hits) poured over the kit's captured base and landed as PROG E (an explicit re-fork), the pocket kept under `Pockets/` on the shelf, fresh-named on collision; refuses with no pattern to pour on or too few positions played | APP | S | the feel of a beat lands as E over a straight base; the pocket file round-trips; no base refuses |
+
+Bench (phone): beatbox a bar into ARM TAPE, SNIP, READ AS GROOVE — the kit
+plays it back; share a whole song in, DIG, INSTANT KIT — the break is a kit.
+
 ## Sequence
 
 ```
@@ -1585,6 +1602,7 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ M5 (F1.5 + F4.3) · ✓ Y3.3 SESSION export · ✓ F6.3 share flow · ✓ X3.3
     share/backup action
   ✓ W12 pad waveforms on the KIT grid
+  ✓ wave ZZ (the phone reads): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE
 
 CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   directions. The smear (STN transient mask, peak-matched) as a rack
