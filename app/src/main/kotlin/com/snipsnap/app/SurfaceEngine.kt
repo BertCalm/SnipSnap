@@ -37,6 +37,10 @@ class SurfaceEngine(preferredSampleRate: Int) {
         if (open) NativeSurface.stop(handle)
     }
 
+    /** The device refused an exclusive stream and the shared fallback is playing (a mixer stage more latency). */
+    @Synchronized
+    fun isShared(): Boolean = open && NativeSurface.isShared(handle)
+
     /** A route change closed the stream; the caller reopens with [start]. */
     @Synchronized
     fun needsRestart(): Boolean = open && NativeSurface.needsRestart(handle)

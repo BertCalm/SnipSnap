@@ -47,6 +47,8 @@ SurfaceEngine::~SurfaceEngine() {
 bool SurfaceEngine::start() {
     stop();
     restartNeeded_.store(false, std::memory_order_release);
+    // A failed open must not leave last time's answer standing.
+    sharedMode_.store(false, std::memory_order_release);
 
     oboe::AudioStreamBuilder builder;
     builder.setDirection(oboe::Direction::Output)
@@ -61,12 +63,23 @@ bool SurfaceEngine::start() {
         ->setDataCallback(this)
         ->setErrorCallback(this);
 
-    const oboe::Result opened = builder.openStream(stream_);
+    // Exclusive first (the lowest latency the device has), then Shared: a
+    // device that refuses exclusive access - another app holds it, or the
+    // HAL never offered it - still plays, one mixer stage later. Oboe may
+    // also downgrade on its own; the fallback is for the outright refusal.
+    oboe::Result opened = builder.openStream(stream_);
+    if (opened != oboe::Result::OK) {
+        LOGW("exclusive openStream failed: %s - trying shared", oboe::convertToText(opened));
+        stream_.reset();
+        builder.setSharingMode(oboe::SharingMode::Shared);
+        opened = builder.openStream(stream_);
+    }
     if (opened != oboe::Result::OK) {
         LOGW("openStream failed: %s", oboe::convertToText(opened));
         stream_.reset();
         return false;
     }
+    sharedMode_.store(stream_->getSharingMode() == oboe::SharingMode::Shared, std::memory_order_release);
     sampleRate_ = stream_->getSampleRate();
 
     // Two bursts is the usual low-latency sweet spot: one in flight, one

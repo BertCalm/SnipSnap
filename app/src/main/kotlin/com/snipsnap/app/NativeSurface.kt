@@ -18,6 +18,7 @@ object NativeSurface {
     external fun stop(handle: Long)
     external fun sampleRate(handle: Long): Int
     external fun needsRestart(handle: Long): Boolean
+    external fun isShared(handle: Long): Boolean
     external fun loadSample(handle: Long, mono: FloatArray, sourceRate: Int)
     external fun control(
         handle: Long, mode: Int,

@@ -36,7 +36,9 @@ import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.WavReader
+import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.SnipStore
+import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.TouchSurface
 import com.snipsnap.shell.TouchSurface.Mode
 import com.snipsnap.shell.TouchSurface.Reading
@@ -57,6 +59,11 @@ import kotlinx.coroutines.withContext
  *  - XYZ: a second finger's distance is Z (drive); the roll of the
  *    phone is resonance.
  *  - MORPH: the puck weights four corner states, A B C D.
+ *
+ * PAD ◄ ► picks which of the kit's pads the surface plays; SET A..D
+ * captures the sound under the last touch as a morph corner. Both live
+ * in `surface.json` beside the kit (`SurfaceStore`), so a morph you set
+ * up is there when you come back.
  *
  * Polling: every pointer event updates the *target* reading; a frame
  * loop steps a screen-rate smoother toward it, paints the puck from the
@@ -80,12 +87,20 @@ fun SurfaceScreen(
     var target by remember { mutableStateOf(Reading.REST) }
     var painted by remember { mutableStateOf(Reading.REST) }
     var padName by remember { mutableStateOf<String?>(null) }
+    var padSlot by remember { mutableStateOf<Int?>(null) }
+    var settings by remember { mutableStateOf(SurfaceStore.Settings.DEFAULT) }
+    var lastHeld by remember { mutableStateOf<Reading?>(null) }
     var printing by remember { mutableStateOf(false) }
     var engineUp by remember { mutableStateOf(false) }
 
+    fun started(up: Boolean) {
+        engineUp = up
+        if (!up) onToast("NO LOW-LATENCY STREAM. THE SURFACE IS SILENT.")
+        else if (engine.isShared()) onToast("SHARED STREAM. A LITTLE MORE LATENCY.")
+    }
+
     DisposableEffect(engine) {
-        engineUp = engine.start()
-        if (!engineUp) onToast("NO LOW-LATENCY STREAM. THE SURFACE IS SILENT.")
+        started(engine.start())
         tilt.start()
         onDispose {
             tilt.stop()
@@ -93,15 +108,10 @@ fun SurfaceScreen(
         }
     }
 
-    // The voice: the open kit's lowest pad, read off the shelf, folded to mono in the engine.
-    LaunchedEffect(entry) {
-        val pad = entry?.kit?.pads?.minByOrNull { it.slot }
-        if (entry == null || pad == null) {
-            padName = null
-            return@LaunchedEffect
-        }
+    // The voice: one of the kit's pads, read off the shelf, folded to mono in the engine.
+    suspend fun loadPad(dir: File, pad: KitPad) {
         val snip = withContext(Dispatchers.IO) {
-            runCatching { WavReader.read(File(entry.dir, pad.sampleFile)) }.getOrNull()
+            runCatching { WavReader.read(File(dir, pad.sampleFile)) }.getOrNull()
         }
         if (snip == null) {
             padName = null
@@ -109,7 +119,73 @@ fun SurfaceScreen(
         } else {
             engine.load(snip)
             padName = pad.displayName
+            padSlot = pad.slot
         }
+    }
+
+    fun pushCorners(corners: List<SurfaceStore.Corner>) {
+        corners.forEachIndexed { i, c -> engine.setCorner(i, c.pitch, c.cutoff, c.resonance, c.drive) }
+    }
+
+    fun persist(dir: File, next: SurfaceStore.Settings) {
+        settings = next
+        scope.launch {
+            withContext(Dispatchers.IO) { runCatching { SurfaceStore.save(dir, next) } }
+                .onFailure { onToast("SURFACE SETTINGS NOT SAVED: ${(it.message ?: "UNREADABLE").uppercase()}.") }
+        }
+    }
+
+    LaunchedEffect(entry) {
+        if (entry == null) {
+            padName = null
+            padSlot = null
+            return@LaunchedEffect
+        }
+        // The kit's surface settings first (a torn file is the defaults,
+        // said aloud), then the pad they name, or the kit's lowest.
+        val loaded = withContext(Dispatchers.IO) { runCatching { SurfaceStore.load(entry.dir) } }
+        settings = loaded.getOrElse {
+            onToast("SURFACE SETTINGS UNREADABLE. USING THE DEFAULTS.")
+            SurfaceStore.Settings.DEFAULT
+        }
+        pushCorners(settings.corners)
+        val pads = entry.kit.pads.sortedBy { it.slot }
+        val pad = pads.firstOrNull { it.slot == settings.padSlot } ?: pads.firstOrNull()
+        if (pad == null) {
+            padName = null
+            padSlot = null
+        } else {
+            loadPad(entry.dir, pad)
+        }
+    }
+
+    // PAD ◄ ►: the next pad by slot, wrapping; remembered in surface.json.
+    // The position steps from the *chosen* slot (settings, updated the
+    // moment a tap lands), not the loaded one (padSlot, updated when the
+    // WAV has been read), so a run of quick taps advances once per tap.
+    fun stepPad(delta: Int) {
+        val dir = entry?.dir ?: return
+        val pads = entry.kit.pads.sortedBy { it.slot }
+        if (pads.isEmpty()) return
+        val chosen = settings.padSlot ?: padSlot
+        val at = pads.indexOfFirst { it.slot == chosen }.let { if (it < 0) 0 else it }
+        val pad = pads[((at + delta) % pads.size + pads.size) % pads.size]
+        persist(dir, settings.copy(padSlot = pad.slot))
+        scope.launch { loadPad(dir, pad) }
+    }
+
+    // SET A..D: the sound under the last touch becomes a morph corner.
+    fun setCorner(index: Int) {
+        val dir = entry?.dir ?: return
+        val held = lastHeld ?: run {
+            onToast("TOUCH THE PAD FIRST. SET KEEPS WHAT WAS UNDER THE FINGER.")
+            return
+        }
+        val corner = SurfaceStore.Corner.from(mode, held, tilt.tilt, settings.corners)
+        val corners = settings.corners.toMutableList().also { it[index] = corner }
+        pushCorners(corners)
+        persist(dir, settings.copy(corners = corners))
+        onToast("CORNER ${'A' + index} SET.")
     }
 
     // The print's landing, once: `finishing` guards the frame loop from
@@ -157,8 +233,9 @@ fun SurfaceScreen(
             }
             val smooth = smoother.step(target)
             painted = smooth
+            if (target.touching) lastHeld = smooth
             engine.control(mode, smooth, tilt.tilt, gate = target.touching && padName != null)
-            if (engine.needsRestart()) engineUp = engine.start()
+            if (engine.needsRestart()) started(engine.start())
             if (printing && !finishing && engine.printState() == SurfaceEngine.PrintState.DONE) finishPrint()
         }
     }
@@ -191,6 +268,34 @@ fun SurfaceScreen(
                 } else {
                     onToast("STILL LANDING THE LAST PRINT.")
                 }
+            }
+        }
+
+        Spacer(Modifier.height(6.dp))
+
+        // PAD ◄ name ► and the four corner captures.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            ActionButton("◄ PAD", scheme, enabled = padName != null) { stepPad(-1) }
+            TapeText(
+                padName?.let { "${padLabel(padSlot)} ${it.uppercase()}" } ?: "NO PAD",
+                TapeType.pixel,
+                scheme.ink.tape,
+                Modifier.weight(1f).padding(horizontal = 4.dp),
+            )
+            ActionButton("PAD ►", scheme, enabled = padName != null) { stepPad(+1) }
+        }
+
+        Spacer(Modifier.height(6.dp))
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            for (i in 0 until 4) {
+                ActionButton(
+                    "SET ${'A' + i}",
+                    scheme,
+                    enabled = padName != null,
+                    dimmed = mode != Mode.MORPH,
+                    modifier = Modifier.weight(1f),
+                ) { setCorner(i) }
             }
         }
 
@@ -290,4 +395,12 @@ fun SurfaceScreen(
         }
         TapeText(readout, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.fillMaxWidth())
     }
+}
+
+/** A slot as the MPC names it: 1..16 is bank A, 17..32 bank B, and so on. */
+private fun padLabel(slot: Int?): String {
+    if (slot == null) return ""
+    val bank = 'A' + (slot - 1) / 16
+    val n = (slot - 1) % 16 + 1
+    return "%c%02d".format(bank, n)
 }
