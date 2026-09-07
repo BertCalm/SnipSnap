@@ -233,5 +233,21 @@ class ShelfImportTest {
         ShelfImport.unzipSafely(zip, roomy, maxBytes = 6_000)
         assertEquals(3_000L, File(roomy, "a/one.bin").length())
         assertEquals(3_000L, File(roomy, "a/two.bin").length())
+
+        // A ZIP made on Windows separates with backslashes: the folder is kept, not flattened into the name.
+        val windows = File(temp, "windows.zip")
+        ZipOutputStream(windows.outputStream()).use { z ->
+            z.putNextEntry(ZipEntry("b\\three.bin"))
+            z.write(ByteArray(10))
+            z.closeEntry()
+            z.putNextEntry(ZipEntry("b\\..\\four.bin"))
+            z.write(ByteArray(10))
+            z.closeEntry()
+        }
+        val win = File(temp, "win").apply { mkdirs() }
+        val esc = assertFailsWith<IllegalArgumentException> { ShelfImport.unzipSafely(windows, win, maxBytes = 1_000) }
+        assertTrue(esc.message!!.contains("escapes"), esc.message)
+        assertEquals(10L, File(win, "b/three.bin").length(), "b\\three.bin landed as b/three.bin")
+        assertTrue(!File(win, "b\\three.bin").exists() && !File(temp, "four.bin").exists() && !File(win, "four.bin").exists())
     }
 }

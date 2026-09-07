@@ -240,13 +240,19 @@ object ShelfImport {
             // a time, never held whole, and the byte budget ends it early.
             for (entry in z.entries().asSequence()) {
                 if (entry.isDirectory) continue
-                val name = entry.name
-                val segments = name.split('/', '\\')
-                require(!name.contains('\u0000') && !name.startsWith("/") && !name.startsWith("\\") && segments.none { it == ".." }) {
-                    "unsafe entry escapes the ZIP: '$name'"
+                val raw = entry.name
+                // A ZIP made on Windows may separate with backslashes; here a
+                // backslash is an ordinary filename character, so normalize
+                // before checking and before writing, or "a\\one.wav" lands as
+                // one flat file and the track loses its folder. The raw name is
+                // kept only for the messages.
+                val name = raw.replace('\\', '/')
+                val segments = name.split('/')
+                require(!name.contains('\u0000') && !name.startsWith("/") && segments.none { it == ".." }) {
+                    "unsafe entry escapes the ZIP: '$raw'"
                 }
                 val out = File(dest, name)
-                require(out.canonicalPath.startsWith(root.path + File.separator)) { "entry escapes the ZIP: '$name'" }
+                require(out.canonicalPath.startsWith(root.path + File.separator)) { "entry escapes the ZIP: '$raw'" }
                 out.parentFile?.mkdirs()
                 try {
                     z.getInputStream(entry).use { src ->
