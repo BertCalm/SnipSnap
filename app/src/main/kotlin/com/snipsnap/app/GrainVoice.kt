@@ -184,7 +184,12 @@ class GrainVoice(
         val nearWeight = FloatArray(NEAREST_K)
 
         val rng = Random(RNG_SEED)
-        val grainGain = 1f / MAX_OVERLAP
+        // Steady-state overlap is ~8 grains (GRAIN_FRAMES / TRIGGER_HOP), not
+        // the 16-slot worst case — gain-for-worst-case left the voice ~12dB
+        // under source peak. Scale for the steady state instead; the
+        // transient all-slots pileup (voice stealing) is what the [-1,1]
+        // clamp below exists for.
+        val grainGain = 2f / MAX_OVERLAP
 
         runCatching { track.play() }
         while (running.get() && generation.get() == myGeneration) {
