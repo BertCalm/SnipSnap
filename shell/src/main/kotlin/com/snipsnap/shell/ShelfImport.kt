@@ -244,9 +244,10 @@ object ShelfImport {
         val root = dest.canonicalFile
         var total = 0L
         var count = 0
-        // Every normalized name seen, so a second entry under one name is
-        // refused instead of quietly replacing the first; bounded by
-        // [maxEntries], so the set is never the archive's to grow.
+        // Every landing path seen - canonical, so "a//one.wav", "a/./one.wav"
+        // and "a/one.wav" are one path and the second is refused instead of
+        // quietly replacing the first; bounded by [maxEntries], so the set is
+        // never the archive's to grow.
         val seen = HashSet<String>()
         ZipFile(zip).use { z ->
             // Lazily: an archive declaring millions of entries is walked one at
@@ -266,9 +267,10 @@ object ShelfImport {
                 require(!name.contains('\u0000') && !name.startsWith("/") && segments.none { it == ".." }) {
                     "unsafe entry escapes the ZIP: '$raw'"
                 }
-                require(seen.add(name)) { "the ZIP holds '$raw' twice - refused" }
                 val out = File(dest, name)
-                require(out.canonicalPath.startsWith(root.path + File.separator)) { "entry escapes the ZIP: '$raw'" }
+                val canonical = out.canonicalPath
+                require(canonical.startsWith(root.path + File.separator)) { "entry escapes the ZIP: '$raw'" }
+                require(seen.add(canonical)) { "the ZIP holds '$raw' twice - refused" }
                 out.parentFile?.mkdirs()
                 try {
                     z.getInputStream(entry).use { src ->

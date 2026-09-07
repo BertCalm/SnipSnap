@@ -286,9 +286,10 @@ class ShelfImportTest {
         assertEquals(3_000L, File(roomy, "a/one.bin").length())
         assertEquals(3_000L, File(roomy, "a/two.bin").length())
 
-        // One name twice, from a hand-written archive: refused, never the second over the first.
+        // One path twice, from a hand-written archive - spelled differently the second time,
+        // since "a//one.bin" and "a/./one.bin" land where "a/one.bin" does: refused, never the second over the first.
         val twice = File(temp, "twice.zip")
-        rawZip(twice, listOf("a/one.bin" to ByteArray(5) { 1 }, "a/one.bin" to ByteArray(5) { 2 }))
+        rawZip(twice, listOf("a/one.bin" to ByteArray(5) { 1 }, "a//one.bin" to ByteArray(5) { 2 }, "a/./one.bin" to ByteArray(5) { 3 }))
         val dupDest = File(temp, "dup").apply { mkdirs() }
         val dup = assertFailsWith<IllegalArgumentException> { ShelfImport.unzipSafely(twice, dupDest) }
         assertTrue(dup.message!!.contains("twice"), dup.message)
