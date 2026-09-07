@@ -50,6 +50,9 @@ object PadNoteMap {
         require(padNumber in 1..PAD_COUNT) { "pad number out of range: $padNumber" }
         val bank = 'A' + (padNumber - 1) / BANK_SIZE
         val within = (padNumber - 1) % BANK_SIZE + 1
-        return "%s%02d".format(bank, within)
+        // Locale.ROOT, not the default: `%d` localizes digits, and a pad
+        // label whose "01" arrives as "٠١" becomes a filename no MPC will
+        // browse. Every label here is an ASCII identifier, not display text.
+        return String.format(java.util.Locale.ROOT, "%s%02d", bank, within)
     }
 }

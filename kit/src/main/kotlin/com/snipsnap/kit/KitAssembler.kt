@@ -7,6 +7,7 @@ import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.JsonValue
 import com.snipsnap.xpm.PadNoteMap
 import java.io.File
+import java.util.Locale
 
 /**
  * One slot of input for [KitAssembler.assemble]: the rendered audio, the
@@ -82,12 +83,16 @@ object KitAssembler {
             val label = PadNoteMap.labelForPad(slot)
             val className = AutoPlace.nameFor(pad.drumClass)
             // A loop's tempo is the fact you browse for; it rides in the stem.
+            // Locale.ROOT on both: `%d` follows the default locale, so on an
+            // ar-EG or fa-IR device the tempo and the counter would arrive as
+            // Eastern-Arabic digits and the filename would stop being
+            // MPC-safe. The bpm stem is a new path onto the same rake.
             val stemClass = if (pad.drumClass == DrumClass.LOOP && tempoBpm != null) {
-                "%s_%dbpm".format(className, Math.round(tempoBpm))
+                String.format(Locale.ROOT, "%s_%dbpm", className, Math.round(tempoBpm))
             } else {
                 className
             }
-            val stem = "%s_%s_%02d".format(label, stemClass, n)
+            val stem = String.format(Locale.ROOT, "%s_%s_%02d", label, stemClass, n)
 
             WavWriter.write(File(dir, "$stem.wav"), pad.snip)
 
@@ -115,7 +120,7 @@ object KitAssembler {
             pads += KitPad(
                 slot = slot,
                 sampleFile = "$stem.wav",
-                displayName = "%s %02d".format(className, n),
+                displayName = String.format(Locale.ROOT, "%s %02d", className, n),
                 drumClass = pad.drumClass,
                 colorHex = AutoPlace.colorFor(pad.drumClass),
                 level = pad.level ?: 0.707946f,

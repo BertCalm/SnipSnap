@@ -160,6 +160,9 @@ object Copy {
     // Kits.
     const val FRESH_TAPE = "FRESH TAPE. SMELLS LIKE FERRIC OXIDE."
 
+    /** Shown when a kit could not be created, at every personality level. */
+    const val CREATE_FAILED = "COULDN'T MAKE THAT TAPE."
+
     /** Status-bar deck mutterings, rotated slowly (FULL only). */
     val STATUS_QUIPS = listOf(
         "NO DOLBY. WE LIKE HISS.",

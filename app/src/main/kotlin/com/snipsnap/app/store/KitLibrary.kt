@@ -1,0 +1,114 @@
+package com.snipsnap.app.store
+
+import com.snipsnap.kit.KitAssembler
+import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.Names
+import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.synth.ThumpKits
+import java.io.File
+
+/** One tape on the shelf: the folder, its name, and how full it is. */
+data class KitEntry(
+    val dir: File,
+    val name: String,
+    val padCount: Int,
+)
+
+/** A kit folder the shelf could not read, and why. */
+data class UnreadableKit(
+    val dir: File,
+    val reason: String,
+)
+
+/**
+ * One reading of the shelf: what was on it, and what could not be read.
+ *
+ * Returned as a value rather than left on the library as mutable state.
+ * A side-channel property cannot distinguish "checked, all clean" from
+ * "never checked" — both read as an empty list — and callers here fetch
+ * the shelf across an `await`, which is exactly where a stale read hides.
+ */
+data class ShelfListing(
+    val entries: List<KitEntry>,
+    val unreadable: List<UnreadableKit>,
+)
+
+/**
+ * The shelf: kit folders under one root.
+ *
+ * Takes a [File], never a `Context` — the Activity resolves
+ * `filesDir/kits` and hands it over, which is what lets the whole shelf be
+ * tested on a temp directory with no emulator in sight.
+ */
+class KitLibrary(val root: File) {
+
+    /**
+     * The shelf: readable tapes, plus whatever could not be read.
+     *
+     * `KitStore.load` throws on a malformed `kit.json` and *deliberately*
+     * refuses one written by a newer build — which is the right call for a
+     * single kit and the wrong one for the whole shelf. Letting that
+     * propagate means one bad folder crashes the app on launch, with no
+     * way back in to delete it. A tape that cannot be read is hidden, not
+     * fatal.
+     *
+     * M0 does not yet show [ShelfListing.unreadable] anywhere; it is
+     * returned so the information exists rather than being swallowed, and
+     * so surfacing it later is a UI change and not an archaeology project.
+     */
+    fun list(): ShelfListing {
+        val skipped = mutableListOf<UnreadableKit>()
+        val kits = KitStore.list(root).mapNotNull { dir ->
+            try {
+                val kit = KitStore.load(dir)
+                KitEntry(dir = dir, name = kit.name, padCount = kit.pads.size)
+            } catch (e: Exception) {
+                skipped += UnreadableKit(dir, e.message ?: e.javaClass.simpleName)
+                null
+            }
+        }.sortedBy { it.name.lowercase() }
+        return ShelfListing(kits, skipped)
+    }
+
+    fun open(entry: KitEntry): KitBuilderModel = KitBuilderModel.open(entry.dir)
+
+    /** FRESH TAPE. Rejects a name the MPC's browser could not show. */
+    fun create(name: String): KitBuilderModel {
+        require(Names.isMpcSafe(name)) { "kit name isn't MPC-safe: '$name'" }
+        val dir = File(root, Names.sanitizeStem(name))
+        // Validate the *folder*, not just the name. sanitizeStem collapses
+        // underscore runs, so "A_B" and "A__B" are two different MPC-safe
+        // names that land on one directory — and creating into an occupied
+        // folder overwrites someone else's kit.json without a word.
+        require(!dir.exists()) { "a kit folder named '${dir.name}' already exists" }
+        return KitBuilderModel.create(name, dir)
+    }
+
+    /**
+     * First run: render the factory kit rather than ship WAVs. Sixteen pads
+     * of synthesized audio cost a second of CPU, weigh nothing in the APK,
+     * and prove the engines run on the device. Returns false — and touches
+     * nothing — if the shelf already has tapes on it.
+     *
+     * The "already has tapes" check is [KitStore.list], not [list]'s
+     * readable [ShelfListing.entries] — deliberately. Seeding only when
+     * *readable* entries are empty would seed straight into a folder the
+     * shelf merely failed to parse, silently clobbering whatever that
+     * folder held. Refusing over *any* existing kit folder, readable or
+     * not, is the safe default; it costs a user whose only kit is corrupt
+     * an explanation they don't currently get (M0 does not surface
+     * [ShelfListing.unreadable] anywhere), but that is a UI gap, not data
+     * loss.
+     */
+    fun seedIfEmpty(): Boolean {
+        root.mkdirs()
+        if (KitStore.list(root).isNotEmpty()) return false
+        val dir = File(root, Names.sanitizeStem(SEED_NAME))
+        KitAssembler.assembleArranged(SEED_NAME, ThumpKits.classic(), dir)
+        return true
+    }
+
+    companion object {
+        const val SEED_NAME = "SNIPSNAP KIT 01"
+    }
+}
