@@ -94,7 +94,7 @@ Shipping today as the CLI's `--key`.
 |---|---|---|---|---|
 | F5.1 | ✓ done: key grammar promoted — `KeySpec` (Am / F#m / "Eb major" / Dminpent parsing) moved from `:cli` into `:audio`, beside `Scales` where it belongs; CLI delegates | CORE | S | one parser, two consumers, same tests |
 | F5.2 | ✓ done: kit key field — optional `key` on `Kit`/`kit.json` so the choice persists with the folder | CORE | S | round-trips through `KitStore`; absent = no key, old kits unaffected |
-| F5.3 | Key picker + pad tune readout — kit-level key in the kit screen; IN KEY as a kit action; optional retune-on-assign for TONAL pads | APP | S | set Am, drop a captured bass note, it lands in key; the kick is untouched |
+| F5.3 | ✓ done: Key picker + pad tune readout — the KIT screen's KEY door beside the texture doors: twelve root chips and five scale chips set the key at once (`KeyPicker`, `:shell`; metadata in `kit.json`), OFF clears it, IN KEY moves every tonal pad's tune fields (`retuneTonalPads`), the tonal pads' tune readout under it, the key in the LCD header; retune-on-assign: `KitBuilderModel.assign` tunes a TONAL pad into the kit's key through the pad's own tune fields when one is set — audio untouched, the kick untouched, an unpitched hit never corrected. The keyed treatments (TUNE, BODY) now read a key set on the phone | APP | S | set C, assign a 227 Hz note: it lands on A3 by its tune fields; the kick assigned after it carries no tune; every chip pair is a real key and the label round-trips; the readout names each tonal pad in slot order |
 
 ## F6 — One-file kit sharing (.xpn)
 
@@ -1548,7 +1548,7 @@ APP (in milestone order; feature items slot in where their parent lands):
   M0 (F1.1) → +F4.2 new-kit menu · +W3.3 open-.xtd
   M1 (F1.2) → +F3.1/F3.2/F3.4 import
   M2 (F1.3)
-  M3 (F2.1) → +F2.2 one-tap · +F5.3 key picker · +W2.3/W4.3/W5.3 pad actions
+  M3 (F2.1) → +F2.2 one-tap · ✓ F5.3 key picker (landed 2026-09-07) · +W2.3/W4.3/W5.3 pad actions
   M4 (F1.4)
   M5 (F1.5 + F4.3) → +F6.3 share flow
   bench: W12 pad waveforms whenever polish is the mood

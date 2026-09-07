@@ -40,6 +40,7 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.KeyPicker
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
@@ -63,6 +64,8 @@ fun KitScreen(
     onLongPress: (Int) -> Unit,
     onTakesBin: () -> Unit,
     onTexture: (slot: Int, spec: TextureKits.Spec) -> Unit,
+    onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
+    onInKey: () -> Unit,
 ) {
     val scheme = LocalScheme.current
 
@@ -102,7 +105,8 @@ fun KitScreen(
         ) {
             TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(it) } ?: ""
-            TapeText("$tempo${kit.pads.size} PADS", TapeType.lcdSmall, scheme.amber.tape)
+            val keyed = kit.key?.let { "${KeyPicker.label(it)}  " } ?: ""
+            TapeText("$keyed$tempo${kit.pads.size} PADS", TapeType.lcdSmall, scheme.amber.tape)
         }
 
         if (kit.pads.isEmpty()) {
@@ -140,20 +144,20 @@ fun KitScreen(
         }
 
         // ---- TEXTURE: SCULPT / STRETCH, a pad becoming a tape of its own ----
+        // panelKind is a texture kind, KEY_PANEL for the key picker, or null.
         var panelKind by remember(entry.dir) { mutableStateOf<String?>(null) }
         val sources = kit.pads.map { it.slot }.sorted()
         var sourceSlot by remember(entry.dir, sources.firstOrNull()) { mutableStateOf(sources.firstOrNull()) }
-        var mode by remember(panelKind) { mutableStateOf(panelKind?.let { TextureKits.modesFor(it).first() } ?: "") }
-        val knob = panelKind?.let { TextureKits.knobFor(it, mode) }
+        var mode by remember(panelKind) { mutableStateOf(panelKind?.takeIf { it != KEY_PANEL }?.let { TextureKits.modesFor(it).first() } ?: "") }
+        val knob = panelKind?.takeIf { it != KEY_PANEL }?.let { TextureKits.knobFor(it, mode) }
         var fraction by remember(panelKind, mode) { mutableFloatStateOf(knob?.defaultFraction ?: 0f) }
 
         // X2.3 KIT action row: the artboard (`isKit` in `TapeOS Oilslick.dc.html`)
         // packs EVIL TWINS (W4.3) and the KEY cycler (F5.3) in here alongside
-        // TAKES + BIN, but neither of those exist in this app yet — they're
-        // separate, unbuilt milestones. Rather than stub cells for features
-        // that aren't real, this row carries TAKES + BIN and the two
-        // texture doors, which are real. The panel below it scrolls, so a
-        // short screen never pushes the grid.
+        // TAKES + BIN. KEY is real now (the panel below); EVIL TWINS is still
+        // a separate, unbuilt milestone, so no stub cell for it. The row
+        // carries TAKES + BIN, the two texture doors and KEY; the panel
+        // below it scrolls, so a short screen never pushes the grid.
         Column(
             Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -174,6 +178,29 @@ fun KitScreen(
                         TapeText("$kind ▸", TapeType.pixel, if (open) scheme.titleInk.tape else scheme.ink2.tape)
                     }
                 }
+                // KEY: the kit's key, IN KEY, and the tonal pads' tune readout.
+                val keyOpen = panelKind == KEY_PANEL
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme, fill = if (keyOpen) scheme.amber.tape.copy(alpha = 0.85f) else null)
+                        .let { if (!busy) it.tapeClick { panelKind = if (keyOpen) null else KEY_PANEL } else it }
+                        .padding(horizontal = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText("KEY ▸", TapeType.pixel, if (keyOpen) scheme.titleInk.tape else scheme.ink2.tape)
+                }
+            }
+
+            if (panelKind == KEY_PANEL) {
+                KeyPanel(
+                    key = kit.key,
+                    readouts = KeyPicker.readouts(kit),
+                    busy = busy,
+                    onSetKey = onSetKey,
+                    onInKey = onInKey,
+                )
             }
 
             val kind = panelKind
@@ -200,6 +227,78 @@ fun KitScreen(
                     },
                 )
             }
+        }
+    }
+}
+
+/** The action row's fourth door, beside the texture kinds. */
+private const val KEY_PANEL = "KEY"
+
+/**
+ * The KEY panel (F5.3): twelve root chips, five scale chips, OFF, IN KEY,
+ * and the tune readout of every tonal pad. Tapping a root or a scale sets
+ * the key at once (metadata only); IN KEY moves the tonal pads' tune
+ * fields into it; a tonal pad assigned while the key is set lands in key
+ * on its own. The kick is never touched.
+ */
+@Composable
+private fun KeyPanel(
+    key: com.snipsnap.audio.KeySpec?,
+    readouts: List<String>,
+    busy: Boolean,
+    onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
+    onInKey: () -> Unit,
+) {
+    val scheme = LocalScheme.current
+    val root = key?.rootSemitone ?: KeyPicker.DEFAULT_ROOT
+    val scaleLabel = key?.let { KeyPicker.scaleLabel(it.scale) } ?: KeyPicker.DEFAULT_SCALE
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        TapeText("KEY · ${KeyPicker.label(key)}", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+
+        for (row in KeyPicker.ROOTS.indices.chunked(6)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (r in row) {
+                    val selected = key != null && r == root
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
+                            .let { if (!busy) it.tapeClick { onSetKey(KeyPicker.key(r, scaleLabel)) } else it }
+                            .padding(horizontal = 2.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(KeyPicker.ROOTS[r], TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                    }
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (s in KeyPicker.SCALES) {
+                val selected = key != null && s == scaleLabel
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
+                        .let { if (!busy) it.tapeClick { onSetKey(KeyPicker.key(root, s)) } else it }
+                        .padding(horizontal = 2.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(s, TapeType.pixelSmall, if (selected) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 2)
+                }
+            }
+        }
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ActionButton("OFF", scheme, enabled = !busy && key != null, modifier = Modifier.weight(1f), onClick = { onSetKey(null) })
+            ActionButton("IN KEY ▸ RETUNE TONAL PADS", scheme, enabled = !busy && key != null, modifier = Modifier.weight(2f), onClick = onInKey)
+        }
+
+        if (readouts.isEmpty()) {
+            TapeText("NO TONAL PADS. DRUMS LAND AS CAPTURED.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        } else {
+            for (line in readouts) TapeText(line, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         }
     }
 }

@@ -65,6 +65,28 @@ class KitShelf(private val root: File) {
     }
 
     /**
+     * KEY: set or clear [source]'s key - metadata in `kit.json`, nothing
+     * retuned by itself - and hand back the entry with the kit re-read.
+     */
+    fun setKey(source: Entry, key: com.snipsnap.audio.KeySpec?): Entry {
+        val model = com.snipsnap.shell.KitBuilderModel.open(source.dir)
+        model.setKey(key)
+        model.save()
+        return Entry(source.dir, model.kit)
+    }
+
+    /**
+     * IN KEY: every tonal pad of [source] retuned into its key through the
+     * tune fields, the slots that moved returned with the re-read entry.
+     */
+    fun inKey(source: Entry): Pair<Entry, List<Int>> {
+        val model = com.snipsnap.shell.KitBuilderModel.open(source.dir)
+        val moved = model.retuneTonalPads()
+        if (moved.isNotEmpty()) model.save()
+        return Entry(source.dir, model.kit) to moved
+    }
+
+    /**
      * Grow a texture kit from one pad of [source] onto the shelf — the KIT
      * screen's SCULPT / STRETCH panel. Same shape as [render]: seconds-long,
      * the caller shows a busy line; the new kit is a tape of its own, named

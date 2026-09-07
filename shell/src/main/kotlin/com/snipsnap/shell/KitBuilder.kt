@@ -68,6 +68,12 @@ class KitBuilderModel private constructor(
         val stem = nextStem(slot, drumClass)
         WavWriter.write(File(kitDir, "$stem.wav"), snip)
 
+        // Retune on assign (F5.3): with a key set, a tonal pad lands in it
+        // through the tune fields the MPC pad already has - audio
+        // untouched, the kick untouched, an unpitched hit never corrected.
+        val tune = kit.key?.takeIf { drumClass == DrumClass.TONAL }?.let { key ->
+            com.snipsnap.audio.Tuner.inKey(snip, key.rootSemitone, key.scale)
+        }
         val previous = kit.pad(slot)
         val pad = KitPad(
             slot = slot,
@@ -77,6 +83,8 @@ class KitBuilderModel private constructor(
             drumClass = drumClass,
             colorHex = AutoPlace.colorFor(drumClass),
             muteGroup = AutoPlace.muteGroupFor(drumClass),
+            tuneCoarse = tune?.tuneCoarse ?: 0,
+            tuneFine = tune?.tuneFine ?: 0,
         )
         kit = kit.copy(pads = kit.pads.filter { it.slot != slot } + pad)
         previous?.let { deleteIfUnreferenced(it) }

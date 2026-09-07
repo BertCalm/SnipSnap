@@ -282,6 +282,49 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * KEY, from the KIT screen's panel: the kit's key set or cleared,
+     * metadata only - nothing retunes until IN KEY, or a tonal pad is
+     * assigned with the key already set.
+     */
+    fun setKey(key: com.snipsnap.audio.KeySpec?) {
+        val source = open ?: return
+        if (busy != null) return
+        scope.launch {
+            val entry = try {
+                withContext(Dispatchers.IO) { shelf.setKey(source, key) }
+            } catch (e: Exception) {
+                toast = "KEY FAILED: ${e.message ?: e.javaClass.simpleName}"
+                return@launch
+            }
+            open = entry
+            kits = withContext(Dispatchers.IO) { shelf.list() }
+            toast = key?.let { Copy.keySet(com.snipsnap.shell.KeyPicker.label(it)) } ?: Copy.KEY_OFF
+        }
+    }
+
+    /** IN KEY: every tonal pad into the kit's key by its tune fields; the toast counts what moved. */
+    fun inKey() {
+        val source = open ?: return
+        if (busy != null) return
+        val key = source.kit.key
+        if (key == null) {
+            toast = Copy.IN_KEY_NEEDS_KEY
+            return
+        }
+        scope.launch {
+            val (entry, moved) = try {
+                withContext(Dispatchers.IO) { shelf.inKey(source) }
+            } catch (e: Exception) {
+                toast = "IN KEY FAILED: ${e.message ?: e.javaClass.simpleName}"
+                return@launch
+            }
+            open = entry
+            kits = withContext(Dispatchers.IO) { shelf.list() }
+            toast = if (moved.isEmpty()) Copy.IN_KEY_NONE else Copy.inKey(moved.size, com.snipsnap.shell.KeyPicker.label(key))
+        }
+    }
+
     TapeTheme(scheme, personality) {
         Box(
             Modifier
@@ -390,6 +433,8 @@ fun App(shelf: KitShelf) {
                                     onLongPress = { slot -> padSheetSlot = slot },
                                     onTakesBin = { takesBinOpen = true },
                                     onTexture = ::texture,
+                            onSetKey = ::setKey,
+                            onInKey = ::inKey,
                                 )
                             }
                         }
