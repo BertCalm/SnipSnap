@@ -1037,6 +1037,14 @@ fun App(shelf: KitShelf) {
                             // A print is a snip on the shelf: the same reload
                             // request a share-sheet import raises.
                             onPrinted = { importCount++ },
+                            // A print on a pad: bump `open.kit`'s identity so
+                            // KIT's PadPlayer and the surface reload it.
+                            onKitUpdated = { updatedKit ->
+                                open = open?.copy(kit = updatedKit)
+                                scope.launch {
+                                    kits = withContext(Dispatchers.IO) { shelf.list() }
+                                }
+                            },
                         )
                         AppScreen.PLAY -> PlayScreen(entry = open)
                         AppScreen.HELP -> HelpScreen()

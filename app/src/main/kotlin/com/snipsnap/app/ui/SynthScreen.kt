@@ -755,7 +755,7 @@ private fun LabButton(
 private val SLOT_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 
 @Composable
-private fun SlotChooserOverlay(
+internal fun SlotChooserOverlay(
     kit: Kit?,
     previewColor: Color,
     scheme: Scheme,
