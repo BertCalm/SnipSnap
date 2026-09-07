@@ -145,7 +145,9 @@ object ShelfImport {
 
     /** What a ZIP is by its entries, then the matching importer into [staging]. */
     private fun landZip(file: File, displayName: String, staging: File): Pair<List<File>, List<String>> {
-        val names = ZipFile(file).use { zip -> zip.entries().toList().filter { !it.isDirectory }.map { it.name } }
+        val names = ZipFile(file).use { zip ->
+            zip.entries().asSequence().filter { !it.isDirectory }.map { it.name }.toList()
+        }
         fun has(ext: String) = names.any { it.endsWith(ext, ignoreCase = true) }
         return when {
             has(".xpn") -> KitBackup.restore(file, staging).map { it.directory } to emptyList()
@@ -161,15 +163,20 @@ object ShelfImport {
                 val containers = unpacked.walkTopDown().filter { f ->
                     f.isFile && (f.extension.equals("xtd", true) || f.extension.equals("xpj", true))
                 }.sortedBy { it.path }.toList()
-                for (c in containers) {
+                // Each container into a staging folder of its own: two tracks
+                // that sanitize to the same kit name must not collide here, where
+                // the importer refuses an existing folder - the shelf's own
+                // naming ("NATIVE", "NATIVE 2") keeps both once they land.
+                for ((i, c) in containers.withIndex()) {
+                    val into = File(staging, "c$i").apply { mkdirs() }
                     try {
                         val project = Mpc3Project.read(c)
                         if (project.isProject) {
-                            val r = Mpc3Importer.importProject(c, staging)
+                            val r = Mpc3Importer.importProject(c, into)
                             dirs += r.kits.map { it.directory }
                             skipped += r.skipped.map { "${it.key}: ${it.value}" }
                         } else {
-                            dirs += Mpc3Importer.import(c, staging).directory
+                            dirs += Mpc3Importer.import(c, into).directory
                         }
                     } catch (e: IllegalArgumentException) {
                         skipped += "${c.name}: ${e.message ?: "refused"}"
@@ -196,7 +203,9 @@ object ShelfImport {
         val root = dest.canonicalFile
         var total = 0L
         ZipFile(zip).use { z ->
-            for (entry in z.entries().toList()) {
+            // Lazily: an archive declaring millions of entries is walked one at
+            // a time, never held whole, and the byte budget ends it early.
+            for (entry in z.entries().asSequence()) {
                 if (entry.isDirectory) continue
                 val name = entry.name
                 val segments = name.split('/', '\\')
@@ -238,7 +247,13 @@ object ShelfImport {
         }
         val dest = File(shelfRoot, name)
         if (!kitDir.renameTo(dest)) {
-            kitDir.copyRecursively(dest, overwrite = false)
+            // A copy that did not finish is not a landed kit: nothing half of
+            // it stays on the shelf, and the staging folder (the caller
+            // deletes it) still holds the whole.
+            if (!kitDir.copyRecursively(dest, overwrite = false)) {
+                dest.deleteRecursively()
+                throw IllegalStateException("could not move '$name' onto the shelf - nothing landed")
+            }
             kitDir.deleteRecursively()
         }
         if (name != kit.name) KitStore.save(kit.copy(name = name), dest)

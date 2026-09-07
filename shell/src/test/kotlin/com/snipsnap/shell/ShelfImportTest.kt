@@ -165,6 +165,24 @@ class ShelfImportTest {
     }
 
     @Test
+    fun `two tracks of the same name in one ZIP both land, the second under its own name`() {
+        val source = File(temp, "src6")
+        val kitDir = makeKit(source, "NATIVE")
+        val kit = KitStore.load(kitDir)
+        val twice = File(temp, "twice")
+        Mpc3Exporter.exportTrack(kit, kitDir, File(twice, "take1"))
+        Mpc3Exporter.exportTrack(kit, kitDir, File(twice, "take2"))
+
+        val zipped = File(temp, "twice.zip")
+        zipDir(twice, zipped)
+        val shelf = File(temp, "shelf6")
+        val landed = ShelfImport.land(zipped, "twice.zip", shelf)
+        assertEquals(listOf("NATIVE", "NATIVE 2"), landed.kits.map { it.first }, "neither track aborted the other")
+        assertTrue(landed.skipped.isEmpty(), landed.skipped.joinToString())
+        assertEquals(listOf("NATIVE", "NATIVE 2"), KitStore.list(shelf).map { it.name })
+    }
+
+    @Test
     fun `the unzip budget is one for the whole ZIP, and the refusal comes before the entry lands`() {
         val zip = File(temp, "two.zip")
         ZipOutputStream(zip.outputStream()).use { z ->

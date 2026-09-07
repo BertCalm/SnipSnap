@@ -80,8 +80,12 @@ object ShareInbox {
     fun copyToCache(context: Context, uri: Uri, displayName: String, maxBytes: Long): File {
         val dir = File(context.cacheDir, "landing").apply { mkdirs() }
         val bare = displayName.substringAfterLast('/').substringAfterLast('\\')
-        val safe = bare.replace(Regex("[^A-Za-z0-9._ \\-\\[\\]]"), "_").ifBlank { "shared" }
+        val safe = bare.replace(Regex("[^A-Za-z0-9._ \\-\\[\\]]"), "_")
+            .let { if (it.isBlank() || it.all { c -> c == '.' }) "shared" else it }
         val out = File(dir, safe)
+        // "." or ".." would have named the folder or its parent; the fallback
+        // above catches those, and this proves the file sits in the landing dir.
+        require(out.canonicalPath.startsWith(dir.canonicalPath + File.separator)) { "the shared file's name escapes the cache" }
         val stream = context.contentResolver.openInputStream(uri)
             ?: throw IllegalArgumentException("the shared file could not be opened")
         try {
