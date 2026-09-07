@@ -66,6 +66,7 @@ fun KitScreen(
     onTexture: (slot: Int, spec: TextureKits.Spec) -> Unit,
     onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
     onInKey: () -> Unit,
+    onTwins: () -> Unit,
 ) {
     val scheme = LocalScheme.current
 
@@ -106,7 +107,8 @@ fun KitScreen(
             TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(it) } ?: ""
             val keyed = kit.key?.let { "${KeyPicker.label(it)}  " } ?: ""
-            TapeText("$keyed$tempo${kit.pads.size} PADS", TapeType.lcdSmall, scheme.amber.tape)
+            val banks = if (kit.pads.any { it.slot > 16 }) "A+B  " else ""
+            TapeText("$keyed$tempo$banks${kit.pads.size} PADS", TapeType.lcdSmall, scheme.amber.tape)
         }
 
         if (kit.pads.isEmpty()) {
@@ -152,18 +154,41 @@ fun KitScreen(
         val knob = panelKind?.takeIf { it != KEY_PANEL }?.let { TextureKits.knobFor(it, mode) }
         var fraction by remember(panelKind, mode) { mutableFloatStateOf(knob?.defaultFraction ?: 0f) }
 
-        // X2.3 KIT action row: the artboard (`isKit` in `TapeOS Oilslick.dc.html`)
+        // X2.3 KIT action rows: the artboard (`isKit` in `TapeOS Oilslick.dc.html`)
         // packs EVIL TWINS (W4.3) and the KEY cycler (F5.3) in here alongside
-        // TAKES + BIN. KEY is real now (the panel below); EVIL TWINS is still
-        // a separate, unbuilt milestone, so no stub cell for it. The row
-        // carries TAKES + BIN, the two texture doors and KEY; the panel
-        // below it scrolls, so a short screen never pushes the grid.
+        // TAKES + BIN, and both are real now. Two rows so every word fits:
+        // TAKES + BIN · EVIL TWINS · KEY, then the two texture doors; the
+        // panel below them scrolls, so a short screen never pushes the grid.
         Column(
             Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("TAKES + BIN ▸", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onTakesBin)
+                // EVIL TWINS: bank B lit with seeded re-treatments of bank A; a second press rerolls.
+                val twinned = kit.pads.any { it.slot > 16 }
+                ActionButton(
+                    if (twinned) "EVIL TWINS ▸ REROLL" else "EVIL TWINS ▸",
+                    scheme,
+                    enabled = !busy && kit.pads.any { it.slot in 1..16 },
+                    modifier = Modifier.weight(1f),
+                    onClick = onTwins,
+                )
+                // KEY: the kit's key, IN KEY, and the tonal pads' tune readout.
+                val keyOpen = panelKind == KEY_PANEL
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme, fill = if (keyOpen) scheme.amber.tape.copy(alpha = 0.85f) else null)
+                        .let { if (!busy) it.tapeClick { panelKind = if (keyOpen) null else KEY_PANEL } else it }
+                        .padding(horizontal = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText("KEY ▸", TapeType.pixel, if (keyOpen) scheme.titleInk.tape else scheme.ink2.tape)
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (kind in TextureKits.KINDS) {
                     val open = panelKind == kind
                     Box(
@@ -177,19 +202,6 @@ fun KitScreen(
                     ) {
                         TapeText("$kind ▸", TapeType.pixel, if (open) scheme.titleInk.tape else scheme.ink2.tape)
                     }
-                }
-                // KEY: the kit's key, IN KEY, and the tonal pads' tune readout.
-                val keyOpen = panelKind == KEY_PANEL
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .raisedBevel(scheme, fill = if (keyOpen) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                        .let { if (!busy) it.tapeClick { panelKind = if (keyOpen) null else KEY_PANEL } else it }
-                        .padding(horizontal = 8.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText("KEY ▸", TapeType.pixel, if (keyOpen) scheme.titleInk.tape else scheme.ink2.tape)
                 }
             }
 
@@ -248,6 +260,7 @@ private fun KeyPanel(
     busy: Boolean,
     onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
     onInKey: () -> Unit,
+    onTwins: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     val root = key?.rootSemitone ?: KeyPicker.DEFAULT_ROOT

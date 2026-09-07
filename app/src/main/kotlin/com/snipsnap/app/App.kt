@@ -310,6 +310,31 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * EVIL TWINS (W4.3): bank B lit with seeded re-treatments of bank A, a
+     * new seed every press so the second press rerolls. The same DUBBING…
+     * shape as a fresh tape: every twin renders offline over a few seconds.
+     */
+    fun evilTwins() {
+        val source = open ?: return
+        if (busy != null) return
+        val hadTwins = source.kit.pads.any { it.slot > 16 }
+        busy = "TWINNING…"
+        scope.launch {
+            val (entry, lit) = try {
+                withContext(Dispatchers.IO) { shelf.evilTwins(source, Random.nextInt()) }
+            } catch (e: Exception) {
+                busy = null
+                toast = "TWINS FAILED: ${e.message ?: e.javaClass.simpleName}"
+                return@launch
+            }
+            open = entry
+            kits = withContext(Dispatchers.IO) { shelf.list() }
+            busy = null
+            toast = if (hadTwins) Copy.TWINS_REROLLED else Copy.BANK_B_LIT
+        }
+    }
+
     /** IN KEY: every tonal pad into the kit's key by its tune fields; the toast counts what moved. */
     fun inKey() {
         val source = open ?: return
@@ -442,8 +467,9 @@ fun App(shelf: KitShelf) {
                                     onLongPress = { slot -> padSheetSlot = slot },
                                     onTakesBin = { takesBinOpen = true },
                                     onTexture = ::texture,
-                            onSetKey = ::setKey,
-                            onInKey = ::inKey,
+                                    onSetKey = ::setKey,
+                                    onInKey = ::inKey,
+                                    onTwins = ::evilTwins,
                                 )
                             }
                         }

@@ -174,7 +174,7 @@ One action: bank B becomes your kit's evil twins.
 |---|---|---|---|---|
 | W4.1 | ✓ done: `KitBuilderModel.remixBankB(seed)` — bank A read back as arranged pads, `withRemixBank`, twins written to slots 17–32 with recipes; reroll replaces | CORE | S | any kit gains a bank B; same seed reproduces; recipes recorded |
 | W4.2 | ✓ done: CLI `remix <kit-dir> [--seed N]` | CORE | S | works on a chopped kit |
-| W4.3 | App action — EVIL TWINS in the kit menu. **Open:** `KitBuilderModel.remixBankB` is the whole door, tested; the KIT screen's action row has no button for it yet (the row now carries TAKES + BIN, SCULPT, STRETCH, KEY) | APP | S | one tap, bank B lights up |
+| W4.3 | ✓ done: App action — EVIL TWINS on the KIT screen's action row (beside TAKES + BIN and KEY; the texture doors moved to a second row): one tap lights bank B with seeded re-treatments of bank A through `KitBuilderModel.remixBankB` via `KitShelf.evilTwins`, a fresh seed every press so the second press rerolls (the button says so, the header says A+B), the toasts the copy already had | APP | S | one tap, bank B lights up |
 
 ## W5 — Ghost notes from one capture
 
@@ -1552,7 +1552,7 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ M2 (F1.3)
   ✓ M3 (F2.1) · ✓ F5.3 key picker · ✓ W2.3 MAKE INSTRUMENT · ✓ W5.3 GHOSTS
     · ✓ X1.3 MELODIC · ✓ X2.3 TAKES + BIN · ✓ KEYS (the phone plays the
-    instruments it makes) · open: F2.2 one-tap, W4.3 EVIL TWINS button,
+    instruments it makes) · ✓ W4.3 EVIL TWINS button · open: F2.2 one-tap,
     X4.4 consent row
   ✓ M4 (F1.4, SoundPool not Oboe)
   ✓ M5 (F1.5 + F4.3) · ✓ Y3.3 SESSION export · open: F6.3 share flow, X3.3
