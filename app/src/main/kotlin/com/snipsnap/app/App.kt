@@ -58,6 +58,7 @@ import com.snipsnap.app.ui.PrimaryAction
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.StatusBar
 import com.snipsnap.app.ui.StubScreen
+import com.snipsnap.app.ui.SurfaceScreen
 import com.snipsnap.app.ui.SynthScreen
 import com.snipsnap.app.ui.TakesBinScreen
 import com.snipsnap.app.ui.TapeScreen
@@ -947,6 +948,13 @@ fun App(shelf: KitShelf) {
                                     kits = withContext(Dispatchers.IO) { shelf.list() }
                                 }
                             },
+                        )
+                        AppScreen.SURFACE -> SurfaceScreen(
+                            entry = open,
+                            onToast = { toast = it },
+                            // A print is a snip on the shelf: the same reload
+                            // request a share-sheet import raises.
+                            onPrinted = { importCount++ },
                         )
                         AppScreen.PLAY -> PlayScreen(entry = open)
                         AppScreen.HELP -> HelpScreen()
