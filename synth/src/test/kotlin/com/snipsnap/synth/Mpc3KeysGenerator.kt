@@ -46,7 +46,7 @@ object Mpc3KeysGenerator {
             WavWriter.write(File(dataDir, "$softStem.wav"), soft)
 
             val low = if (s == 0) (midi - 9) else midi - 1
-            val high = if (s == Velvet.TUNE_SEMITONES) (midi + 9) else midi + 1
+            val high = if (s + 3 > Velvet.TUNE_SEMITONES) (midi + 9) else midi + 1
             keygroups += Keygroup(
                 lowNote = low.coerceIn(0, 127),
                 highNote = high.coerceIn(0, 127),

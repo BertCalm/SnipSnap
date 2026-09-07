@@ -38,6 +38,7 @@ object Patches {
             PluckPatch.ENGINE -> PluckPatch.fromJsonValue(value)
             TonewheelPatch.ENGINE -> TonewheelPatch.fromJsonValue(value)
             VelvetPatch.ENGINE -> VelvetPatch.fromJsonValue(value)
+            FathomPatch.ENGINE -> FathomPatch.fromJsonValue(value)
             VoxPatch.ENGINE -> VoxPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
@@ -155,6 +156,30 @@ data class VelvetPatch(
         fun fromJsonValue(value: JsonValue): Patch =
             Patches.decode(value, ENGINE, { n -> VelvetVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
                 VelvetPatch(name, voice, macros)
+            }
+        fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
+    }
+}
+
+/** A saved FATHOM sound. */
+data class FathomPatch(
+    override val name: String,
+    val voice: FathomVoice,
+    override val macros: Map<String, Float>,
+) : Patch {
+    init {
+        Patches.validateMacros(this, Fathom.macrosFor(voice))
+    }
+
+    override val engine get() = ENGINE
+    override val voiceName get() = voice.name
+    override fun render() = Fathom.render(voice, macros)
+
+    companion object {
+        const val ENGINE = "FATHOM"
+        fun fromJsonValue(value: JsonValue): Patch =
+            Patches.decode(value, ENGINE, { n -> FathomVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+                FathomPatch(name, voice, macros)
             }
         fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
     }
