@@ -21,8 +21,23 @@ import java.io.File
  */
 class KitShelf(private val root: File) {
 
+    companion object {
+        /** The instruments' folder name beside the kits — the PAD SHEET's export doors write here. */
+        const val INSTRUMENTS_DIR = "Instruments"
+    }
+
     /** A kit and the folder it lives in. */
     data class Entry(val dir: File, val kit: Kit)
+
+    /** An instrument the shop made: its sidecar and what it says. */
+    data class InstrumentEntry(val sidecar: File, val instrument: com.snipsnap.kit.InstrumentStore.Instrument)
+
+    /** Where MAKE INSTRUMENT and MAKE PAD write: beside the kits. */
+    val instrumentsDir: File get() = File(root, INSTRUMENTS_DIR)
+
+    /** Every readable instrument on the shelf, by name. */
+    fun instruments(): List<InstrumentEntry> =
+        com.snipsnap.kit.InstrumentStore.list(instrumentsDir).map { (f, i) -> InstrumentEntry(f, i) }
 
     /**
      * Every readable kit on the shelf. A folder whose `kit.json` is broken

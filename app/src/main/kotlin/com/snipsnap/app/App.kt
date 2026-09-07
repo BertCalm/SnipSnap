@@ -45,6 +45,7 @@ import com.snipsnap.app.ui.ExportSession
 import com.snipsnap.app.ui.GrooveScreen
 import com.snipsnap.app.ui.HelpScreen
 import com.snipsnap.app.ui.KitScreen
+import com.snipsnap.app.ui.KeysScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.MenuRow
 import com.snipsnap.app.ui.PadSheetScreen
@@ -131,6 +132,12 @@ fun App(shelf: KitShelf) {
     // one of them; it's KIT-scoped overlay state instead, cleared whenever
     // the user navigates to another tab (see `MenuRow`'s `onSelect` below).
     var padSheetSlot by remember { mutableStateOf<Int?>(null) }
+    // KEYS: the instrument open on the grid, from the shelf's INSTRUMENTS list.
+    var openInstrument by remember { mutableStateOf<KitShelf.InstrumentEntry?>(null) }
+    var instruments by remember { mutableStateOf<List<KitShelf.InstrumentEntry>>(emptyList()) }
+    LaunchedEffect(kits, screen) {
+        if (screen == AppScreen.KITS) instruments = withContext(Dispatchers.IO) { shelf.instruments() }
+    }
     // TAKES + BIN (X2.3): same shape as PAD SHEET above — reachable only
     // from the KIT action row, not one of MenuRow's fixed ten, so it's
     // KIT-scoped overlay state rather than its own AppScreen entry.
@@ -361,9 +368,11 @@ fun App(shelf: KitShelf) {
                     when (screen) {
                         AppScreen.KITS -> KitsScreen(
                             kits = kits,
+                            instruments = instruments,
                             busy = busy != null,
                             armed = armed,
                             onOpen = { open = it; screen = AppScreen.KIT },
+                            onOpenInstrument = { openInstrument = it; screen = AppScreen.KEYS },
                             onFresh = ::fresh,
                             onArm = ::requestArm,
                             onSnip = {
@@ -520,6 +529,18 @@ fun App(shelf: KitShelf) {
                             appScope = scope,
                             onToast = { toast = it },
                         )
+                        AppScreen.KEYS -> {
+                            val inst = openInstrument
+                            if (inst == null) {
+                                screen = AppScreen.KITS
+                            } else {
+                                KeysScreen(
+                                    sidecar = inst.sidecar,
+                                    instrument = inst.instrument,
+                                    onBack = { openInstrument = null; screen = AppScreen.KITS },
+                                )
+                            }
+                        }
                         else -> StubScreen(screen)
                     }
                 }

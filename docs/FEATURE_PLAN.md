@@ -146,7 +146,7 @@ chromatically. Near-zero new code; in-key capture's payoff squared.
 |---|---|---|---|---|
 | W2.1 | ✓ done: `OneNote` builder — snip → detected root → one-zone `KeygroupProgram` (full key range), refused with a reason when no confident pitch | CORE | S | known-pitch tone → program with right root; noise → clear refusal |
 | W2.2 | ✓ done: CLI `keys <note.wav>` — one-note instrument to `.xty` + `.xpm` twins | CORE | S | artifacts land, detected root printed |
-| W2.3 | ✓ done: App action — MAKE INSTRUMENT on the PAD SHEET (and MAKE PAD beside it), the instrument written to `Instruments/` beside the kits. The phone cannot yet *play* a keygroup instrument — that is the open half, queued next | APP | S | long-press a tonal pad → instrument on the shelf |
+| W2.3 | ✓ done: App action — MAKE INSTRUMENT on the PAD SHEET (and MAKE PAD beside it), the instrument written to `Instruments/` beside the kits — and, since 2026-09-07, *played*: every keygroup package gets a sidecar (`InstrumentStore`, `:kit`) the phone reads, the shelf lists INSTRUMENTS, and KEYS plays one on the 4×4 (`InstrumentEngine` in `:shell`: zones, loops held while the finger is down, the release on let-go, eight voices; `KeysLayout` for root-on-A01, chromatic or scale, octaves) | APP | S | long-press a tonal pad → instrument on the shelf → KEYS plays it |
 | W2.4 | Bench — plays in tune chromatically from one sample | USER | S | ears |
 
 ## W3 — The reverse loop: MPC → phone → MPC
@@ -1551,8 +1551,9 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
     detection, the QS tile · open: F3.1/F3.2/F3.4 import
   ✓ M2 (F1.3)
   ✓ M3 (F2.1) · ✓ F5.3 key picker · ✓ W2.3 MAKE INSTRUMENT · ✓ W5.3 GHOSTS
-    · ✓ X1.3 MELODIC · ✓ X2.3 TAKES + BIN · open: F2.2 one-tap, W4.3 EVIL
-    TWINS button, X4.4 consent row, the phone playing keygroup instruments
+    · ✓ X1.3 MELODIC · ✓ X2.3 TAKES + BIN · ✓ KEYS (the phone plays the
+    instruments it makes) · open: F2.2 one-tap, W4.3 EVIL TWINS button,
+    X4.4 consent row
   ✓ M4 (F1.4, SoundPool not Oboe)
   ✓ M5 (F1.5 + F4.3) · ✓ Y3.3 SESSION export · open: F6.3 share flow, X3.3
     share/backup action

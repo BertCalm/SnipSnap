@@ -45,9 +45,11 @@ import com.snipsnap.shell.StarterKits
 @Composable
 fun KitsScreen(
     kits: List<KitShelf.Entry>,
+    instruments: List<KitShelf.InstrumentEntry>,
     busy: Boolean,
     armed: Boolean,
     onOpen: (KitShelf.Entry) -> Unit,
+    onOpenInstrument: (KitShelf.InstrumentEntry) -> Unit,
     onFresh: (StarterKits.Starter) -> Unit,
     onArm: () -> Unit,
     onSnip: () -> Unit,
@@ -69,7 +71,7 @@ fun KitsScreen(
                 TapeText("THE SHELF", TapeType.lcdHeader, scheme.lcdInk.tape)
             }
 
-            if (kits.isEmpty()) {
+            if (kits.isEmpty() && instruments.isEmpty()) {
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -92,6 +94,15 @@ fun KitsScreen(
                     items(kits, key = { it.dir.name }) { entry ->
                         KitRow(entry, onOpen)
                     }
+                    // INSTRUMENTS: what MAKE INSTRUMENT and MAKE PAD left beside the kits, playable on KEYS.
+                    if (instruments.isNotEmpty()) {
+                        item(key = "instruments-header") {
+                            TapeText("INSTRUMENTS · PLAY THEM ON KEYS", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                        }
+                        items(instruments, key = { "instrument:" + it.sidecar.name }) { entry ->
+                            InstrumentRow(entry, onOpenInstrument)
+                        }
+                    }
                 }
             }
 
@@ -109,6 +120,27 @@ fun KitsScreen(
                 onDismiss = { menuOpen = false },
             )
         }
+    }
+}
+
+@Composable
+private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.InstrumentEntry) -> Unit) {
+    val scheme = LocalScheme.current
+    val i = entry.instrument
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .raisedBevel(scheme)
+            .tapeClick { onOpen(entry) }
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            TapeText(i.name, TapeType.markerBig, scheme.ink.tape)
+            val looped = if (i.zones.any { it.loopStartFrame > 0 }) "  ·  HOLDS" else ""
+            TapeText("${i.zones.size} ${if (i.zones.size == 1) "ZONE" else "ZONES"}  ·  ROOT ${com.snipsnap.shell.KeysLayout.label(i.rootNote)}$looped", TapeType.pixelSmall, scheme.ink2.tape)
+        }
+        TapeText("KEYS ▸", TapeType.pixelSmall, scheme.ink2.tape)
     }
 }
 

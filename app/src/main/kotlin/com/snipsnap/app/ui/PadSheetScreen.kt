@@ -516,7 +516,7 @@ fun PadSheetScreen(
         scope.launch {
             busy = true
             try {
-                val destRoot = File(entry.dir.parentFile ?: entry.dir, "Instruments")
+                val destRoot = File(entry.dir.parentFile ?: entry.dir, KitShelf.INSTRUMENTS_DIR)
                 withContext(Dispatchers.IO) {
                     OneNote.export(instrumentName, currentSnip, destRoot, overwrite = true)
                 }
@@ -561,7 +561,7 @@ fun PadSheetScreen(
         scope.launch {
             busy = true
             try {
-                val destRoot = File(entry.dir.parentFile ?: entry.dir, "Instruments")
+                val destRoot = File(entry.dir.parentFile ?: entry.dir, KitShelf.INSTRUMENTS_DIR)
                 withContext(Dispatchers.IO) {
                     PadFromAnything.export(padName, currentSnip, destRoot, spec, overwrite = true)
                 }
