@@ -74,6 +74,15 @@ shelf useful before capture (M1) exists.
   while the bare `.xtd` alone refuses in words. If the chooser never
   appears, check the `FileProvider` authority (`<applicationId>.files`)
   against `res/xml/share_paths.xml`.
+- **The landing's message box**: share in a ZIP holding one good `.xpn`
+  and one folder with a broken `kit.json`. No toast: a message box opens,
+  titled "1 KIT LANDED ON THE SHELF. 1 SKIPPED.", with the skipped folder
+  and the door's reason in the warn colour first and "LANDED · <NAME>"
+  after; FINE (or the scrim) closes it. Share in a text file: the box
+  reads "NOTHING LANDED.", the file's name, then the refusal in words.
+  Break one kit's WAV and BACKUP: after the chooser closes, the box names
+  that kit with preflight's reason and lists the packed ones. A clean
+  landing and a full backup still get their two-second toast.
 - **PLAY (native, M4)**: open a kit, tap PLAY. Pads should feel tight
   enough to drum on — that is the milestone's exit test. VOICES should
   count down as one-shots end (the engine reports endings; nothing is

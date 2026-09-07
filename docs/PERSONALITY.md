@@ -33,6 +33,7 @@ terse, a little smug, never cutesy-apologetic.
 | Empty shelf | `NOTHING TAPED YET. GO STEAL A SOUND (LEGALLY).` |
 | Empty kit | `16 EMPTY PADS. TERRIFYING.` |
 | Capture blocked | message box: `TAPE JAM — SPOTIFY BLOCKS THE TAPE. USE THE SCREEN RECORDER, I'LL PULL THE AUDIO OUT.` + [FINE] |
+| Landing trouble | message box: the toast's line as title (`1 KIT LANDED ON THE SHELF. 1 SKIPPED.` / `NOTHING LANDED.`), then `SKIPPED · BROKEN: NO KIT.JSON` lines in warn, `LANDED · FUNK` after + [FINE]. A clean landing keeps its toast. |
 | Export done | `DUBBED. GO MAKE SOMETHING.` |
 | Commit | rotates: `TAPED. NO TAKEBACKS.` · `IT'S OURS NOW.` · `CLEAN CUT. NICE EARS.` |
 | Delete snip | `EJECTED. THE BIN KEEPS IT 30 DAYS.` |

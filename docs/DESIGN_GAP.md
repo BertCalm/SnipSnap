@@ -24,9 +24,10 @@ Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 > [`design/pad-sheet-v2/`](../design/pad-sheet-v2/README.md), which now
 > supersedes §PAD SHEET here. `UI_DESIGN.md` records the settled rules.
 >
-> **Still undrawn**, in value order: the share landing (today a busy line and a
-> toast; the language's "honest little message box" may suit a refusal
-> better); the SHARE / BACKUP chooser hand-off; the TEXTURE panel and the KIT
+> **Still undrawn**, in value order: the SHARE / BACKUP chooser hand-off (the
+> landing itself is settled: wave FFF put its trouble - skipped kits, a
+> refusal - in the language's honest little message box, `MessageBox`, and
+> left a clean landing its toast); the TEXTURE panel and the KIT
 > action row, which has grown past the artboard's; GRAIN FIELD and SURFACE,
 > which arrived from another branch with no boards at all. A fresh handoff
 > export from the design canvas would close these in one go.

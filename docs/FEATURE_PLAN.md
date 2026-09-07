@@ -1387,6 +1387,28 @@ EMPTY THE BIN NOW is per kit).
 
 ---
 
+## Wave FFF — the landing reads back (CORE + APP)
+
+DESIGN_GAP's first undrawn item: the share door's landing was a busy
+line and a two-second toast, and the toast held counts only - which kit
+was skipped, and why, went nowhere. SHARE and BACKUP hand off to the
+chooser the same way, a backup's refused kits named only inside the
+file's own report. The language already had the answer: the honest
+little message box (TAPE JAM + [FINE]). The rule: the toast stays the
+one-line voice for a clean landing; the box appears when there is more
+to read than a line holds, and stays until read.
+
+| Item | Status |
+|---|---|
+| FFF1 | ✓ done: the box as data — `LandingNote` (`:shell`, tested): `landed` (null when nothing was skipped - the toast suffices; else the toast's line as the title, SKIPPED lines first in the warn colour with the door's own reason, LANDED lines after), `backedUp` (the same for preflight's refusals, PACKED lines after), `refused` (the file's name and the refuser's words, kept until read), lines folded past `MAX_LINES` into "+N MORE" (trouble if any folded line was), the house casing (`shout`: Locale.ROOT, no trailing stop). `Copy.NOTHING_LANDED`. |
+| FFF2 | ✓ done: the phone (blind for CI's compiler) — `MessageBox` (`:app`): the capture-blocked dialog generalised - scrim, raised bevel, the title in LCD type, the lines in a sunken field (trouble in `warn`), [FINE]; the scrim and the button dismiss, the box swallows the tap. `App` shows it for a landing with skips, a backup preflight refused part of (behind the chooser, read on the way back), and every import refusal - in place of the toast, never beside it. A clean landing and a full backup keep their toasts. |
+
+**Below the line for FFF:** the SHARE hand-off itself (the chooser is the
+system's - nothing of ours to draw); a box line that opens the skipped
+kit's folder; the same box for EXPORT's preflight, which has its own card.
+
+---
+
 ## Wave ZZ — the phone reads (APP)
 
 The import door (F3) made the core's listening verbs reachable from the
@@ -1804,6 +1826,13 @@ CORE+APP wave DDD: ✓ all landed (2026-09-07) — the pad sheet folds.
   row (DDD5); then the last parent kind the CLI verb takes and the phone
   lacked, a file off the phone through the system picker, held as a WAV
   and labelled with its own name (DDD6). Blind for CI's compiler.
+
+CORE+APP wave FFF: ✓ all landed (2026-09-07) — the landing reads back.
+  The share door's trouble no longer dies in a toast: a kit file that
+  landed with skips, a backup preflight refused part of, and every import
+  refusal open the language's honest little message box (`LandingNote`,
+  tested; `MessageBox`, blind) - skipped first, in the warn colour, with
+  the door's own reason, [FINE] to close. A clean landing keeps its toast.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
