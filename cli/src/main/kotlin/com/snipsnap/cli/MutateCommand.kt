@@ -57,9 +57,12 @@ object MutateCommand {
         if (opts["--amount"] != null && mode != Mutate.Mode.MORPH && mode != Mutate.Mode.ROOM) {
             throw CliError("--amount rides on --morph or --room - add one")
         }
-        val morphAmount = opts["--amount"]?.let {
+        // One flag, two meanings: --amount is MORPH's blend and ROOM's wet mix.
+        val amount = opts["--amount"]?.let {
             it.toFloatOrNull()?.takeIf { a -> a in 0f..1f } ?: throw CliError("--amount wants 0..1, got '$it'")
         } ?: 0.5f
+        val morphAmount = if (mode == Mutate.Mode.MORPH) amount else 0.5f
+        val roomMix = if (mode == Mutate.Mode.ROOM) amount else 0.5f
         if (opts.has("--roulette") && opts["--with"] != null) {
             throw CliError("--roulette lets the crate pick the parent - drop --with, or spin without it")
         }
@@ -96,7 +99,7 @@ object MutateCommand {
             spliceAtMs = opts.int("--at") ?: Mutate.DEFAULT_SPLICE_MS,
             crossoverHz = opts.int("--hz")?.toFloat() ?: Mutate.DEFAULT_CROSSOVER_HZ,
             morphAmount = morphAmount,
-            roomMix = morphAmount,
+            roomMix = roomMix,
             extraRecipe = extraRecipe,
         )
         model.save()
@@ -106,7 +109,7 @@ object MutateCommand {
             Mutate.Mode.SPLICE -> "spliced into"
             Mutate.Mode.SPLIT -> "split against"
             Mutate.Mode.MORPH -> "morphed %.0f%% toward".format(morphAmount * 100)
-            Mutate.Mode.ROOM -> "placed %.0f%% into the room of".format(morphAmount * 100)
+            Mutate.Mode.ROOM -> "placed %.0f%% into the room of".format(roomMix * 100)
         }
         out.println("pad $padArg $what ${sources.joinToString(", ") { it.label }} - one hit, ${sources.size + 1} parents")
         outcome.flipped.forEach { out.println("  polarity: flipped '$it' - it was cancelling the pad") }

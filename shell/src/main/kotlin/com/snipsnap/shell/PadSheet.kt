@@ -10,7 +10,7 @@ import com.snipsnap.synth.Treatments
  * Three rows. The first is the design's four segments, whose DSP is the
  * Time Machine's eras; the second and third are the rack's named
  * characters — the FX chains `treat` and bank B already speak — reachable
- * one tap at a time. Both rows are vocabulary mappings and nothing more: the words
+ * one tap at a time. All three rows are vocabulary mappings and nothing more: the words
  * are the app's, not the engine's, so [Eras] and [Treatments] never
  * learn what a "segment" is.
  *
