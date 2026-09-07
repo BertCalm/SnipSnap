@@ -645,8 +645,10 @@ fun PadSheetScreen(
             return
         }
         val root = entry.dir.parentFile ?: entry.dir
+        // Busy before the launch, not inside it: a second tap in the gap
+        // before the coroutine starts must not keep the same room twice.
+        busy = true
         scope.launch {
-            busy = true
             try {
                 val kept = withContext(Dispatchers.IO) { OutsideSheet.keep(root, o, m.kit.name) }
                 measuredRoom = null

@@ -98,7 +98,8 @@ class RoomsTest {
         val shelf = File(temp, "shelf3")
         val e = assertFailsWith<IllegalArgumentException> { Rooms.keep(shelf, Snip(FloatArray(4410), 1, rate), "FUNK", 0f, 0f, "FUNK:A01") }
         assertTrue(e.message!!.contains("nothing"), e.message)
-        assertTrue(Rooms.list(shelf).isEmpty() && !Rooms.dir(shelf).exists() || Rooms.list(shelf).isEmpty())
+        assertTrue(Rooms.list(shelf).isEmpty())
+        assertTrue(!Rooms.dir(shelf).exists(), "refused before the folder is even made")
     }
 
     @Test
