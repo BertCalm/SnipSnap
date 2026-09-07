@@ -74,7 +74,7 @@ class ContainerFuzzTest {
 
     private fun describe(m: Any?): String = when (m) {
         is String -> m.take(2_000)
-        is ByteArray -> "${m.size} bytes"
+        is ByteArray -> "${m.size} bytes: " + String(m, Charsets.ISO_8859_1).take(2_000)
         else -> m.toString().take(2_000)
     }
 
@@ -101,32 +101,37 @@ class ContainerFuzzTest {
 
     private val JUNK_WORDS = listOf(
         "", " ", "-1", "0", "1e300", "2147483648", "9223372036854775808", "0.5", "NaN", "Infinity",
-        "../../escaped", "/etc/passwd", "<", "&amp;", "\"", "999999999999", "True", "null",
+        "../../escaped", "/etc/passwd", "<", "&amp;", "&lt;", "&#x0;", "\"", "999999999999", "True", "null",
     )
 
     /**
      * Text-level damage for line formats (sfz, XML): a line dropped, a line
-     * doubled, a token swapped for a junk word, or the bytes torn.
+     * doubled, a token swapped for a junk word - or the bytes torn. Returns
+     * bytes, not a String: a torn byte run has to reach the reader as the
+     * malformed UTF-8 it is, and a decode-then-re-encode would launder it
+     * into replacement characters first.
      */
-    private fun mutateText(valid: String, rnd: Random): String {
+    private fun mutateText(valid: String, rnd: Random): ByteArray {
         val lines = valid.lines().toMutableList()
         when (rnd.nextInt(5)) {
             0 -> if (lines.isNotEmpty()) lines.removeAt(rnd.nextInt(lines.size))
             1 -> if (lines.isNotEmpty()) { val i = rnd.nextInt(lines.size); lines.add(i, lines[i]) }
             2, 3 -> {
                 // Replace one token: a value after '=' or a text node between tags.
-                if (lines.isEmpty()) return valid
-                val i = rnd.nextInt(lines.size)
-                val line = lines[i]
-                val tokens = Regex("=([^\\s<>]*)|>([^<]+)<").findAll(line).toList()
-                if (tokens.isEmpty()) return valid
-                val t = tokens[rnd.nextInt(tokens.size)]
-                val g = t.groups[1] ?: t.groups[2]!!
-                lines[i] = line.replaceRange(g.range, JUNK_WORDS[rnd.nextInt(JUNK_WORDS.size)])
+                if (lines.isNotEmpty()) {
+                    val i = rnd.nextInt(lines.size)
+                    val line = lines[i]
+                    val tokens = Regex("=([^\\s<>]*)|>([^<]+)<").findAll(line).toList()
+                    if (tokens.isNotEmpty()) {
+                        val t = tokens[rnd.nextInt(tokens.size)]
+                        val g = t.groups[1] ?: t.groups[2]!!
+                        lines[i] = line.replaceRange(g.range, JUNK_WORDS[rnd.nextInt(JUNK_WORDS.size)])
+                    }
+                }
             }
-            else -> return String(mutateBytes(valid.toByteArray(Charsets.UTF_8), rnd), Charsets.UTF_8)
+            else -> return mutateBytes(valid.toByteArray(Charsets.UTF_8), rnd)
         }
-        return lines.joinToString("\n")
+        return lines.joinToString("\n").toByteArray(Charsets.UTF_8)
     }
 
     private fun junk(rnd: Random): JsonValue = when (rnd.nextInt(10)) {
@@ -234,9 +239,9 @@ class ContainerFuzzTest {
         </MPCVObject>
     """.trimIndent()
 
-    private fun xpnWith(xml: String, kitDir: File, out: File): File {
+    private fun xpnWith(xml: ByteArray, kitDir: File, out: File): File {
         ZipOutputStream(out.outputStream()).use { zip ->
-            zip.putNextEntry(ZipEntry("Seed.xpm")); zip.write(xml.toByteArray(Charsets.UTF_8)); zip.closeEntry()
+            zip.putNextEntry(ZipEntry("Seed.xpm")); zip.write(xml); zip.closeEntry()
             for (n in listOf("kick", "snare_soft", "snare")) {
                 zip.putNextEntry(ZipEntry("$n.wav")); zip.write(File(kitDir, "$n.wav").readBytes()); zip.closeEntry()
             }
@@ -253,7 +258,7 @@ class ContainerFuzzTest {
         val xpn = File(temp, "fuzz.xpn")
         val dest = File(temp, "xpn-out")
         // The seed itself must import, or the batch proves nothing.
-        XpnImporter.import(xpnWith(valid, kitDir, xpn), dest, overwrite = true)
+        XpnImporter.import(xpnWith(valid.toByteArray(Charsets.UTF_8), kitDir, xpn), dest, overwrite = true)
         batch("XpnImporter (xpm inside)", rounds = 400, seed = 41, make = { rnd, _ -> mutateText(valid, rnd) }) { xml ->
             XpnImporter.import(xpnWith(xml, kitDir, xpn), dest, overwrite = true)
         }
@@ -267,8 +272,8 @@ class ContainerFuzzTest {
         val valid = sfz.readText()
         val dest = File(temp, "sfz-in")
         SfzImporter.import(sfz, dest, overwrite = true)
-        batch("SfzImporter", rounds = 600, seed = 42, make = { rnd, _ -> mutateText(valid, rnd) }) { text ->
-            sfz.writeText(text)
+        batch("SfzImporter", rounds = 600, seed = 42, make = { rnd, _ -> mutateText(valid, rnd) }) { bytes ->
+            sfz.writeBytes(bytes)
             SfzImporter.import(sfz, dest, overwrite = true)
         }
         assertTrue(temp.walkTopDown().none { it.name.startsWith("escaped") }, "a mutated sample path climbed out")
@@ -306,6 +311,7 @@ class ContainerFuzzTest {
             zip.writeBytes(bytes)
             KitBackup.restore(zip, dest, overwrite = true)
         }
+        assertTrue(temp.walkTopDown().none { it.name.startsWith("escaped") }, "a mutated entry name climbed out")
     }
 
     @Test
