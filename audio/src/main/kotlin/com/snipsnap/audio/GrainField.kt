@@ -39,7 +39,47 @@ object GrainField {
     private const val DEGENERATE_EPSILON = 1e-9f
 
     data class Grain(val startFrame: Int, val x: Float, val y: Float)
-    data class GrainMap(val grains: List<Grain>, val grainFrames: Int = GRAIN_FRAMES)
+    data class GrainMap(
+        val grains: List<Grain>,
+        val grainFrames: Int = GRAIN_FRAMES,
+        val projector: Projector? = null,
+    )
+
+    /**
+     * Captures the PCA basis [analyze] fit to one sample's grains so it can
+     * be reapplied to NEW audio — projecting foreign material into an
+     * existing timbre map instead of building a brand-new one.
+     *
+     * Must reproduce EXACTLY the normalization the original grains got:
+     * mean-center, dot with each stored axis, then min-max normalize with
+     * the SAME min/max the grains were fit against. A degenerate axis (the
+     * grains got index-spread instead, since there is no meaningful
+     * variance to normalize) always returns 0.5 for new audio — the
+     * index-spread fallback has no equivalent for a single incoming vector.
+     */
+    class Projector internal constructor(
+        internal val means: FloatArray,
+        internal val axis1: FloatArray,
+        internal val axis2: FloatArray,
+        internal val min1: Float, internal val max1: Float,
+        internal val min2: Float, internal val max2: Float,
+        internal val degenerate1: Boolean, internal val degenerate2: Boolean,
+    ) {
+        /** Projects a [Similar.vector]-style 9-dim vector into the map's 0..1 space. */
+        fun project(vector: FloatArray): Pair<Float, Float> {
+            val centered = FloatArray(vector.size) { i -> vector[i] - means[i] }
+            val x = axisCoordinate(dot(centered, axis1), min1, max1, degenerate1)
+            val y = axisCoordinate(dot(centered, axis2), min2, max2, degenerate2)
+            return x to y
+        }
+
+        private fun axisCoordinate(value: Float, minV: Float, maxV: Float, degenerate: Boolean): Float {
+            if (degenerate) return 0.5f
+            val range = maxV - minV
+            val normalized = (value - minV) / range
+            return normalized.coerceIn(0f, 1f)
+        }
+    }
 
     fun analyze(snip: Snip): GrainMap? {
         val mono = if (snip.channels == 1) snip.samples else Cleanup.toMono(snip).samples
@@ -63,7 +103,8 @@ object GrainField {
         }
 
         // Step 4: PCA by hand.
-        val centered = centerColumns(matrix)
+        val means = columnMeans(matrix)
+        val centered = centerColumns(matrix, means)
         val covariance = covarianceOf(centered)
         val (v1, lambda1) = powerIteration(covariance)
         val deflated = deflate(covariance, v1, lambda1)
@@ -73,15 +114,27 @@ object GrainField {
         val pc2 = FloatArray(centered.size) { i -> dot(centered[i], v2) }
 
         // Step 5: min-max normalize each axis, spreading degenerate axes by index.
-        val xs = normalizeAxis(pc1)
-        val ys = normalizeAxis(pc2)
+        val axis1Range = axisRange(pc1)
+        val axis2Range = axisRange(pc2)
+        val xs = normalizeAxis(pc1, axis1Range)
+        val ys = normalizeAxis(pc2, axis2Range)
 
         // Step 6: already built in ascending startFrame order; sort defensively.
         val grains = starts.indices
             .map { i -> Grain(starts[i], xs[i], ys[i]) }
             .sortedBy { it.startFrame }
 
-        return GrainMap(grains)
+        val projector = Projector(
+            means = means,
+            axis1 = v1,
+            axis2 = v2,
+            min1 = axis1Range.min, max1 = axis1Range.max,
+            min2 = axis2Range.min, max2 = axis2Range.max,
+            degenerate1 = axis1Range.degenerate,
+            degenerate2 = axis2Range.degenerate,
+        )
+
+        return GrainMap(grains, projector = projector)
     }
 
     private fun peakOf(mono: FloatArray, start: Int, len: Int): Float {
@@ -95,13 +148,18 @@ object GrainField {
         return peak
     }
 
-    private fun centerColumns(matrix: Array<FloatArray>): Array<FloatArray> {
+    private fun columnMeans(matrix: Array<FloatArray>): FloatArray {
         val n = matrix.size
         val dims = Similar.DIMENSIONS
         val means = FloatArray(dims)
         for (row in matrix) for (j in 0 until dims) means[j] += row[j]
         for (j in 0 until dims) means[j] /= n
-        return Array(n) { i -> FloatArray(dims) { j -> matrix[i][j] - means[j] } }
+        return means
+    }
+
+    private fun centerColumns(matrix: Array<FloatArray>, means: FloatArray): Array<FloatArray> {
+        val dims = Similar.DIMENSIONS
+        return Array(matrix.size) { i -> FloatArray(dims) { j -> matrix[i][j] - means[j] } }
     }
 
     private fun covarianceOf(centered: Array<FloatArray>): Array<FloatArray> {
@@ -151,18 +209,25 @@ object GrainField {
         return sum
     }
 
+    /** Min/max of an axis's raw (pre-normalization) values plus whether it's degenerate. */
+    private class AxisRange(val min: Float, val max: Float, val degenerate: Boolean)
+
+    private fun axisRange(values: FloatArray): AxisRange {
+        val minV = values.min()
+        val maxV = values.max()
+        return AxisRange(minV, maxV, (maxV - minV) <= DEGENERATE_EPSILON)
+    }
+
     /**
      * Min-max normalize to 0..1. A degenerate axis (near-identical grains,
      * range below [DEGENERATE_EPSILON]) is spread by grain index instead so
      * the field never collapses every point onto a single spot.
      */
-    private fun normalizeAxis(values: FloatArray): FloatArray {
+    private fun normalizeAxis(values: FloatArray, range: AxisRange): FloatArray {
         val n = values.size
-        val minV = values.min()
-        val maxV = values.max()
-        val range = maxV - minV
-        return if (range > DEGENERATE_EPSILON) {
-            FloatArray(n) { (values[it] - minV) / range }
+        return if (!range.degenerate) {
+            val span = range.max - range.min
+            FloatArray(n) { (values[it] - range.min) / span }
         } else {
             FloatArray(n) { if (n > 1) it / (n - 1).toFloat() else 0f }
         }

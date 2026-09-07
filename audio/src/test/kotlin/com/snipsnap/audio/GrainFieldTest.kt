@@ -61,4 +61,73 @@ class GrainFieldTest {
         val xs = map.grains.map { it.x }
         assertTrue((xs.max() - xs.min()) > 0.5f, "degenerate axis must spread by index, got range ${xs.max() - xs.min()}")
     }
+
+    @Test
+    fun `projector puts a grain's own vector back on its map position`() {
+        val snip = toneThenNoise()
+        val map = GrainField.analyze(snip)!!
+        val projector = map.projector
+        assertNotNull(projector)
+        // Re-extract the first grain's vector by hand and project it: must land
+        // (within clamp/rounding) on that grain's stored coordinates.
+        val g = map.grains.first()
+        val mono = Cleanup.toMono(snip)
+        val window = Snip(mono.samples.copyOfRange(g.startFrame, g.startFrame + GrainField.GRAIN_FRAMES), 1, 44_100)
+        val v = Similar.vector(FeatureExtractor.extract(window))
+        val (x, y) = projector.project(v)
+        assertTrue(kotlin.math.abs(x - g.x) < 1e-3f && kotlin.math.abs(y - g.y) < 1e-3f,
+            "round-trip drifted: ($x,$y) vs (${g.x},${g.y})")
+    }
+
+    @Test
+    fun `foreign audio projects to the matching territory`() {
+        val map = GrainField.analyze(toneThenNoise())!!
+        val projector = map.projector!!
+        // A FRESH tone (different phase/freq-ish but tonal) must land nearer the tone
+        // cluster's centroid than the noise cluster's.
+        val n = GrainField.GRAIN_FRAMES
+        val tone = FloatArray(n) { (0.6 * kotlin.math.sin(2.0 * Math.PI * 233.0 * it / 44_100.0)).toFloat() }
+        val v = Similar.vector(FeatureExtractor.extract(Snip(tone, 1, 44_100)))
+        val (x, y) = projector.project(v)
+        val half = 44_100
+        fun centroid(g: List<GrainField.Grain>) = Pair(g.map { it.x }.average(), g.map { it.y }.average())
+        val ct = centroid(map.grains.filter { it.startFrame + GrainField.GRAIN_FRAMES <= half })
+        val cn = centroid(map.grains.filter { it.startFrame >= half })
+        val dTone = kotlin.math.hypot(x - ct.first, y - ct.second)
+        val dNoise = kotlin.math.hypot(x - cn.first, y - cn.second)
+        assertTrue(dTone < dNoise, "a foreign tone landed in noise territory (dTone=$dTone dNoise=$dNoise)")
+    }
+
+    @Test
+    fun `projection clamps out-of-range audio into the field`() {
+        val map = GrainField.analyze(toneThenNoise())!!
+        val loudClick = FloatArray(GrainField.GRAIN_FRAMES).also { it[0] = 1f }
+        val v = Similar.vector(FeatureExtractor.extract(Snip(loudClick, 1, 44_100)))
+        val (x, y) = map.projector!!.project(v)
+        assertTrue(x in 0f..1f && y in 0f..1f)
+    }
+
+    @Test
+    fun `degenerate axis projects new audio to the 0_5 midpoint, not the grains' index-spread`() {
+        // Tile a single HOP_FRAMES-long block bit-for-bit (not by re-evaluating a sinusoid
+        // at ever-larger indices, which drifts under floating point argument reduction):
+        // every grain window (2x HOP_FRAMES long) is then a repeat of the exact same two
+        // blocks, so both PCA axes collapse to EXACTLY zero variance across grains.
+        val block = FloatArray(GrainField.HOP_FRAMES) { (0.5 * kotlin.math.sin(2.0 * Math.PI * 3.0 * it / GrainField.HOP_FRAMES)).toFloat() }
+        val out = FloatArray(block.size * 20) { block[it % block.size] }
+        val map = GrainField.analyze(Snip(out, 1, 44_100))
+        assertNotNull(map)
+        val projector = map.projector!!
+        assertTrue(projector.degenerate1, "fixture failed to reach the degenerate branch on axis 1")
+        assertTrue(projector.degenerate2, "fixture failed to reach the degenerate branch on axis 2")
+        // The grains themselves still spread by index (never collapse onto one spot)...
+        val xs = map.grains.map { it.x }
+        assertTrue((xs.max() - xs.min()) > 0.5f)
+        // ...but projecting a freshly re-extracted vector for that same identical audio
+        // must land on 0.5, since there is no per-grain index to fall back on.
+        val window = out.copyOfRange(0, GrainField.GRAIN_FRAMES)
+        val v = Similar.vector(FeatureExtractor.extract(Snip(window, 1, 44_100)))
+        val (x, y) = projector.project(v)
+        assertTrue(x == 0.5f && y == 0.5f, "degenerate axis must project to the midpoint, got ($x,$y)")
+    }
 }
