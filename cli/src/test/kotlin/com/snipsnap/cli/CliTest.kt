@@ -2850,6 +2850,44 @@ class CliTest {
         assertContains(stdout, "chop")
         assertContains(stdout, "classify")
     }
+
+    @Test
+    fun `pad makes a held instrument from a note or a hit, both generations`() {
+        val rate = 44_100
+        val note = File(temp, "pad note.wav")
+        WavWriter.write(
+            note,
+            Snip(
+                FloatArray(rate) { i ->
+                    val t = i.toDouble() / rate
+                    ((0.5 * Math.sin(2 * Math.PI * 220.0 * t) + 0.15 * Math.sin(2 * Math.PI * 440.0 * t)) * Math.exp(-2.0 * t)).toFloat()
+                },
+                1, rate,
+            ),
+        )
+        val out = File(temp, "padout")
+        val (code, stdout, _) = cli("pad", note.path, "--out", out.path, "--depth", "20")
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "A3")
+        assertContains(stdout, "the clear stretch x20.0")
+        assertContains(stdout, "sings forever")
+        assertTrue(File(out, "card/pad note Pad.xty").isFile, "the MPC 3 instrument")
+        assertTrue(File(out, "card/pad note Pad_[TrackData]/pad note Pad.xpm").isFile, "the MPC 2 twin")
+
+        // A hit with no note in it is a drone, not a refusal.
+        val hit = File(temp, "pad hit.wav")
+        val rnd = java.util.Random(3)
+        WavWriter.write(hit, Snip(FloatArray(rate / 4) { i -> ((rnd.nextFloat() * 2f - 1f) * 0.8 * Math.exp(-i / (0.06 * rate))).toFloat() }, 1, rate))
+        val (droneCode, droneOut, _) = cli("pad", hit.path, "--out", out.path)
+        assertEquals(0, droneCode, droneOut)
+        assertContains(droneOut, "a drone at C3")
+
+        // The knobs are bounded, and the source must be a sound.
+        val (badCode, _, badErr) = cli("pad", note.path, "--out", out.path, "--depth", "3")
+        assertTrue(badCode != 0 && "--depth wants" in badErr, badErr)
+        val (dupCode, _, dupErr) = cli("pad", note.path, "--out", out.path)
+        assertTrue(dupCode != 0 && "already exists" in dupErr, "overwrite discipline: $dupErr")
+    }
 }
 
 // KeySpec's own tests live in :audio beside the parser (KeySpecTest);

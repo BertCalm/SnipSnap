@@ -1316,7 +1316,7 @@ over the spectral door, each with a real exit test.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| WW1 | PAD FROM ANYTHING — stretch far (the clear stretch for a pitched source, the wash for an unpitched one), cut a seamless loop out of the middle with `LoopCut`, hand it to the instrument maker as a keygroup with loop points and a slow release; DEPTH (×8..×100) and BLOOM (attack) the two knobs; unpitched sources land as a drone at the root rather than being refused | CORE + APP | M | the loop seam has no click; a held note sustains past the source's length; a 220 Hz source plays 220 Hz at its root; a drum source is accepted as a drone |
+| WW1 | ✓ done: PAD FROM ANYTHING — `PadFromAnything` (`:kit`): stretch far (the clear stretch for a pitched source so its note stays a line, the wash for an unpitched one), the sample = the wash's first second (the arrival) + four seconds (the body) with the seam baked as a 0.75 s crossfade into the material before the loop start, written through the one-note package writer as a keygroup with loop points and a 0.6 release, both generations; DEPTH (×8..×100, giving where a minute or the loop demand it, the depth used reported) and BLOOM (0..1 s arrival ramp); an unpitched source is a drone at C3, never refused; CLI `pad <wav> \| <kit> <pad> [--depth] [--bloom]`; the pad sheet's PAD FROM ANYTHING card (`PadMaker` knobs, MAKE PAD ▸ INSTRUMENT beside MAKE INSTRUMENT's own door) | CORE + APP | M | the last frame equals the frame before the loop start and the level agrees across the wrap; the body of a 220 Hz source still detects 220 Hz; A3 at the root; a burst is a drone at C3 at the pad's ceiling; depth gives (8 s at ×40 → ×7.5, 50 ms → ×100), blips and 31 s sources refused; export lands `.xty` + `_[TrackData]/` with the loop in the `.xpm`; same seed same bytes |
 | WW2 | SPECTRAL RETUNE — every partial snapped to the nearest note of the kit's key, phases by PGHI | CORE | M–L | an off-key clang's peaks land on scale notes; a drum is refused as unpitched |
 | WW3 | TRANSPLANT — A's attack wearing B's long-term spectral envelope (a one-knob vocoder: BANDS) | CORE | M | the result's onset correlates with A, its band envelope with B |
 | WW4 | BODY — a bank of tuned resonators struck by the hit, tuned to the kit's key | CORE | M | a click through BODY rings at the root; decay follows the knob |
@@ -1570,7 +1570,13 @@ CORE+APP wave VV: ✓ all landed (2026-09-07) — the room and the tape.
   knob, the crate can deal the room); GHOST, MOTION (tape stop /
   start), DUB (generation loss) and SWELL as rack sections and
   characters; the smear's FLOOR; the pad sheet's third and fourth
-  rows. Next: WW, PAD FROM ANYTHING first.
+  rows.
+
+CORE+APP wave WW (in progress, 2026-09-07) — in key. WW1 landed:
+  PAD FROM ANYTHING, one hit held forever in every note, the clear
+  stretch keeping a note's line and the wash carrying a drum as a
+  drone, the seam baked, both generations, the pad sheet's card and
+  the `pad` verb. Next: SPECTRAL RETUNE.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

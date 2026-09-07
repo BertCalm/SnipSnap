@@ -594,6 +594,23 @@ whole-period loop found in each note's sustain (crossfaded when the raw
 seam isn't clean), trimmed to the loop-to-end idiom both formats share —
 held pads sing forever. A note with no honest sustain plays unlooped.
 
+### `pad <wav> | <kit-dir> <pad>` — pad from anything
+
+One hit becomes a pad that holds while you hold it and plays in every
+note. The sound is stretched far — the *clear* stretch for a pitched
+source, so its note stays a narrow line; the paulstretch wash for an
+unpitched one, so a drum becomes weather — then the wash's first second
+is the arrival and the next four seconds the body, with the seam baked
+as a crossfade into the material just before the loop start, so the
+wrap is inaudible on a stationary wash. Written as a keygroup
+instrument with loop points and a slow release, both generations, the
+`keys` layout. `--depth` (×8..×100, default 40) gives where a minute
+would be outrun or the wash would fall short of a loop, and the depth
+used is printed; `--bloom` (0..1, default 0.3) is how long the arrival
+ramps in. A pitched source is rooted where it sounds; an unpitched one
+lands as a drone at C3 rather than being refused. On the phone it is
+the PAD SHEET's PAD FROM ANYTHING card, two steppers and MAKE PAD.
+
 ### `arrange <kit-dir>` — songs, not loops
 
 The Arranger's structure grammar lays the kit's **own** variations into

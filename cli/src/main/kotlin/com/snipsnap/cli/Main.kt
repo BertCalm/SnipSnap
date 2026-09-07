@@ -70,6 +70,7 @@ object Cli {
         |                        needs --into <kit-dir> and becomes that
         |                        kit's groove
         |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
+        |  pad <wav|kit pad>    one hit -> a pad held forever in every note
         |                        (--loop cuts sustain loops: held pads sing forever)
         |  resample <kit-dir>    the ritual: bounce the kit playing its own
         |                        groove (wear and eras in the sound) and chop
@@ -314,6 +315,7 @@ object Cli {
                 "export" -> ExportCommand.run(args.drop(1), out)
                 "import" -> ImportCommand.run(args.drop(1), out)
                 "keys" -> KeysCommand.run(args.drop(1), out)
+                "pad" -> PadCommand.run(args.drop(1), out)
                 "remix" -> RemixCommand.run(args.drop(1), out)
                 "resample" -> ResampleCommand.run(args.drop(1), out)
                 "merge" -> MergeCommand.run(args.drop(1), out)

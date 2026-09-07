@@ -59,11 +59,13 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.PadShape
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
+import com.snipsnap.kit.PadFromAnything
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.MutateSheet
+import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
@@ -472,6 +474,41 @@ fun PadSheetScreen(
         }
     }
 
+    // ---- PAD FROM ANYTHING: one hit, a pad forever (PadMaker over PadFromAnything) ----
+    var pendingDepth by remember(slot) { mutableFloatStateOf(PadMaker.DEPTH.defaultFraction) }
+    var pendingBloom by remember(slot) { mutableFloatStateOf(PadMaker.BLOOM.defaultFraction) }
+
+    /**
+     * MAKE PAD: the same door as MAKE INSTRUMENT (an instrument beside the
+     * kits), but any pad qualifies — a drum lands as a drone. Seconds of
+     * stretching, so it runs on IO under the busy flag; a fresh seed every
+     * press, like every other door that renders.
+     */
+    fun onMakePad() {
+        if (busy) return
+        val m = model
+        val currentSnip = snip
+        if (m == null || currentSnip == null) return
+        val p = m.kit.pad(slot) ?: return
+        val padName = Names.sanitizeStem("${m.kit.name}_${p.displayName}_Pad")
+        val spec = PadMaker.spec(pendingDepth, pendingBloom, kotlin.random.Random.nextLong(0L, 1_000_000L))
+        scope.launch {
+            busy = true
+            try {
+                val destRoot = File(entry.dir.parentFile ?: entry.dir, "Instruments")
+                withContext(Dispatchers.IO) {
+                    PadFromAnything.export(padName, currentSnip, destRoot, spec, overwrite = true)
+                }
+                onToast(Copy.PAD_MADE)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (e is IllegalArgumentException) onToast(Copy.PAD_TOO_SHORT) else failure("PAD", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
     /**
      * The header's own ◄ KIT path: flush a pending metadata save (if any)
      * *before* calling the real [onBack], on this composable's own scope —
@@ -742,6 +779,37 @@ fun PadSheetScreen(
                 padColor = classColor,
                 scheme = scheme,
                 busy = busy,
+            )
+        }
+
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            TapeText("PAD FROM ANYTHING · HOLD IT FOREVER", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            StepperSlider(
+                label = "DEPTH",
+                fraction = pendingDepth,
+                valueText = PadMaker.depthLabel(PadMaker.DEPTH.value(pendingDepth)),
+                fillColor = classColor,
+                scheme = scheme,
+                enabled = !busy,
+                onFractionChange = { f -> pendingDepth = (f * 40f).roundToInt() / 40f },
+                onFractionCommit = {},
+            )
+            StepperSlider(
+                label = "BLOOM",
+                fraction = pendingBloom,
+                valueText = PadMaker.bloomLabel(PadMaker.BLOOM.value(pendingBloom)),
+                fillColor = classColor,
+                scheme = scheme,
+                enabled = !busy,
+                onFractionChange = { f -> pendingBloom = (f * 20f).roundToInt() / 20f },
+                onFractionCommit = {},
+            )
+            ActionButton(
+                if (busy) "DUBBING…" else "MAKE PAD ▸ INSTRUMENT",
+                scheme,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = ::onMakePad,
             )
         }
 
