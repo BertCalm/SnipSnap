@@ -86,6 +86,11 @@ class RoomsTest {
         assertEquals(29, binned.daysLeft(10_000L + 24L * 60 * 60 * 1000), "a whole day on, a whole day fewer")
         assertEquals(0, binned.daysLeft(10_000L + 40L * 24 * 60 * 60 * 1000))
         assertEquals(10f, Rooms.binned(shelf).single().room.lagMs, "the measurement rides into the bin")
+        // The sidecar moved with the WAV: frames and rate are still written down, and a field this
+        // version never heard of survives the trip both ways.
+        val binSide = File(Rooms.binDir(shelf), "FUNK ROOM.json")
+        assertTrue(binSide.isFile && binSide.readText().contains("\"frames\"") && binSide.readText().contains("\"binnedAt\""), binSide.readText())
+        binSide.writeText(binSide.readText().replaceFirst("{", "{\"stranger\": \"kept\", "))
 
         // 29 days on, the sweep leaves it; 31 days on, it is gone for good.
         assertEquals(0, Rooms.sweepBin(shelf, nowMillis = 10_000L + 29L * 24 * 60 * 60 * 1000))
@@ -95,6 +100,9 @@ class RoomsTest {
         assertEquals("FUNK ROOM", back.name)
         assertEquals(listOf("FUNK ROOM 2", "FUNK ROOM"), Rooms.list(shelf).map { it.name })
         assertTrue(Rooms.binned(shelf).isEmpty())
+        val shelfSide = File(Rooms.dir(shelf), "FUNK ROOM.json").readText()
+        assertTrue("\"frames\"" in shelfSide && "\"stranger\"" in shelfSide && "binnedAt" !in shelfSide, shelfSide)
+        assertEquals(10f, back.lagMs)
         // And forgotten again, then left past the bin's days, the sweep takes it.
         Rooms.forget(shelf, back, nowMillis = 20_000L)
         assertEquals(1, Rooms.sweepBin(shelf, nowMillis = 20_000L + 31L * 24 * 60 * 60 * 1000))

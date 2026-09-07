@@ -91,22 +91,24 @@ object Rooms {
         return room
     }
 
-    /** The sidecar's contents for [room]; [binnedAt] only in the bin. */
+    /**
+     * The sidecar's contents for [room]: whatever the sidecar beside
+     * [Room.file] already holds (so a field this version does not know
+     * survives a move), the known fields written over it, [binnedAt] set
+     * only in the bin and cleared everywhere else.
+     */
     private fun meta(room: Room, frames: Int? = null, sampleRate: Int? = null, binnedAt: Long? = null): JsonValue.Obj {
-        val prior = readMeta(room.file)
-        val f = frames?.toDouble() ?: (prior?.get("frames") as? JsonValue.Num)?.value
-        val r = sampleRate?.toDouble() ?: (prior?.get("sampleRate") as? JsonValue.Num)?.value
-        val m = linkedMapOf<String, JsonValue>(
-            "version" to JsonValue.Num(VERSION.toDouble()),
-            "name" to JsonValue.Str(room.name),
-        )
-        if (f != null) m["frames"] = JsonValue.Num(f)
-        if (r != null) m["sampleRate"] = JsonValue.Num(r)
+        val m = linkedMapOf<String, JsonValue>()
+        readMeta(room.file)?.let { m.putAll(it) }
+        m["version"] = JsonValue.Num(VERSION.toDouble())
+        m["name"] = JsonValue.Str(room.name)
+        if (frames != null) m["frames"] = JsonValue.Num(frames.toDouble())
+        if (sampleRate != null) m["sampleRate"] = JsonValue.Num(sampleRate.toDouble())
         m["lagMs"] = JsonValue.Num(room.lagMs.toDouble())
         m["confidence"] = JsonValue.Num(room.confidence.toDouble())
         m["from"] = JsonValue.Str(room.from)
         m["measuredAt"] = JsonValue.Num(room.measuredAt.toDouble())
-        if (binnedAt != null) m["binnedAt"] = JsonValue.Num(binnedAt.toDouble())
+        if (binnedAt != null) m["binnedAt"] = JsonValue.Num(binnedAt.toDouble()) else m.remove("binnedAt")
         return JsonValue.Obj(m)
     }
 
@@ -166,10 +168,12 @@ object Rooms {
         val bin = binDir(shelfRoot).apply { mkdirs() }
         val name = freshName(bin, room.name)
         val wav = File(bin, "$name.wav")
-        move(room.file, wav)
-        sidecar(room.file).delete()
-        AtomicFile.writeText(sidecar(wav), Json.write(meta(room.copy(name = name, file = wav), binnedAt = nowMillis)))
-        return Binned(room.copy(name = name, file = wav), nowMillis)
+        // The WAV and its sidecar move together; the stamp is written over
+        // the moved sidecar, so every field it held rides along.
+        moveWithSidecar(room.file, wav)
+        val moved = room.copy(name = name, file = wav)
+        AtomicFile.writeText(sidecar(wav), Json.write(meta(moved, binnedAt = nowMillis)))
+        return Binned(moved, nowMillis)
     }
 
     /** Every room in the bin, the most recently forgotten first. */
@@ -190,9 +194,9 @@ object Rooms {
         val dir = dir(shelfRoot).apply { mkdirs() }
         val name = freshName(dir, binned.room.name)
         val wav = File(dir, "$name.wav")
-        move(binned.room.file, wav)
-        sidecar(binned.room.file).delete()
+        moveWithSidecar(binned.room.file, wav)
         val room = binned.room.copy(name = name, file = wav)
+        // Rewritten from the moved sidecar: the stamp comes off, the rest stays.
         AtomicFile.writeText(sidecar(wav), Json.write(meta(room)))
         return room
     }
@@ -208,6 +212,13 @@ object Rooms {
             }
         }
         return gone
+    }
+
+    /** [from] and its sidecar to [to] and its sidecar, together. */
+    private fun moveWithSidecar(from: File, to: File) {
+        move(from, to)
+        val side = sidecar(from)
+        if (side.isFile) move(side, sidecar(to))
     }
 
     private fun move(from: File, to: File) {
