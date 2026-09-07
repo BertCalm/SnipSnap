@@ -127,10 +127,16 @@ object WavReader {
                 // A non-finite sample poisons every downstream sum, peak and
                 // normalization, so it becomes silence right here at the door.
                 format == FORMAT_FLOAT -> Float.fromBits(leInt(bytes, at)).let { if (it.isFinite()) it else 0f }
-                bits == 8 -> ((bytes[at].toInt() and 0xFF) - 128) / 128f
-                bits == 16 -> leShort(bytes, at).toShort() / 32768f
-                bits == 24 -> le24(bytes, at) / 8_388_608f
-                else -> leInt(bytes, at) / 2_147_483_648f
+                // Integer PCM divides by the largest POSITIVE code - the same
+                // scale the writer multiplies by - so a write then a read is
+                // the identity on every code the writer can emit, and a file
+                // that goes through the bin and back is the same file. The one
+                // code the writer never emits (the most negative) clamps to -1.
+                bits == 8 -> (((bytes[at].toInt() and 0xFF) - 128) / 127f).coerceAtLeast(-1f)
+                bits == 16 -> (leShort(bytes, at).toShort() / 32767f).coerceAtLeast(-1f)
+                bits == 24 -> (le24(bytes, at) / 8_388_607f).coerceAtLeast(-1f)
+                // 2^31 - 1 is not a Float, so this one divides in Double first.
+                else -> (leInt(bytes, at) / 2_147_483_647.0).toFloat().coerceAtLeast(-1f)
             }
         }
         return Snip(out, channels, sampleRate)
