@@ -106,7 +106,7 @@ waiting.
 |---|---|---|---|---|
 | F6.1 | Hardware import check — does the Live III's expansion import accept `SnipSnap_Factory.xpn`? (Part 2 queue, item 4) | USER | S | yes/no + exact error text if no |
 | F6.2 | ✓ done: `XpnImporter` — read an `.xpn` back into a kit folder (unzip, parse the program, resolve bare sample names); free CLI `import` command; the receive half of sharing | CORE | S | pack → import → re-export round-trips; a foreign commercial `.xpn` imports |
-| F6.3 | Share/receive flow — ACTION_SEND a kit as `.xpn`; intent-filter receives one → `XpnImporter` → the shelf. **Open:** neither half exists in the app (no ACTION_SEND, no receive filter); the CLI `pack` / `import` pair is the whole loop on desktop | APP | S | kit → messenger → friend's phone → their shelf → their MPC |
+| F6.3 | ✓ done: the kit leaves and comes back — SHARE on the KIT screen packs the open kit as one `.xpn` (`XpnPackager`, preflight's refusal in words) into the share cache and hands it to the chooser through a `FileProvider` (`ShareOut`); the share door's filters now take ZIPs and octet-streams too, and `ShelfImport` (`:shell`, tested) reads the *bytes* to tell a `.xpn` (any ZIP with `.xpm` programs → `XpnImporter.importAll`), a backup (a ZIP of `.xpn`s → `KitBackup.restore`) and an MPC container apart, lands every kit through a hidden staging folder, and moves each onto the shelf under a name nothing there holds ("FUNK 2", `kit.json` renamed to match) — an import never overwrites a kit. **Written blind for CI's compiler** | APP | S | a packed kit lands beside its original as "FUNK 2" with every sample; a backup lands both kits; the chooser opens on SHARE |
 
 F6.2 doesn't wait on F6.1: importing serves the app-to-app share loop even
 if the hardware importer says no (folders remain the hardware path).
@@ -161,7 +161,7 @@ either wave: it doubles what the product is.
 |---|---|---|---|---|
 | W3.1 | ✓ done: `Mpc3Importer` — standalone drum `.xtd` + data folder → kit folder (levels, pans, tunes, mute groups, velocity layers, colours where present); missing samples refused by name; keygroup tracks refused with a reason | CORE | M | our export → import round-trips; a commercial `.xtd` from `reference/golden/` parses (sample-missing errors listed, not crashed) |
 | W3.2 | ✓ done: CLI `import` learns `.xtd` — dispatch by magic bytes, not extension | CORE | S | both archive kinds import through one command |
-| W3.3 | App receive/browse — open a `.xtd` from storage onto the shelf. **Open:** no open-document path in the app; `Mpc3Importer` waits behind it | APP | S | MPC-saved kit editable on the phone |
+| W3.3 | ✓ done: an MPC track through the same share door — `ShelfImport` reads a gzip head as an MPC 3 container (`Mpc3Importer.import`, or `importProject` when `Mpc3Project.isProject`), and a ZIP holding `.xtd`/`.xpj` is unpacked (every entry checked to stay inside, bounded against a zip bomb) so the `_[TrackData]/` folder arrives beside the track. A bare `.xtd` shared alone carries no samples and is refused by name — the honest answer, since one shared file cannot bring a folder | APP | S | a track exported by `Mpc3Exporter`, zipped with its folder, lands with its pad; the bare container is refused in words; a `../` entry is refused before anything is written |
 | W3.4 | The Live III firmware save (Part 2 item 6) becomes this feature's fixture as well as the corpus's | USER | S | the round-trip claim tested against firmware's own output |
 
 ## W4 — Evil-twin bank
@@ -256,7 +256,7 @@ through `XpnImporter`. Retention insurance and the "new phone" story.
 |---|---|---|---|---|
 | X3.1 | ✓ done: `KitBackup` (`:kit`) — backup(kitsRoot) → one zip of per-kit `.xpn`s (preflight-blocked kits skipped and named); restore(zip) → kit folders | CORE | S | backup → wipe → restore round-trips every clean kit |
 | X3.2 | ✓ done: CLI `backup` / `restore` | CORE | S | works on a folder of chopped kits |
-| X3.3 | App share/backup action. **Open:** `KitBackup` is the door; no button or share intent on the phone (pairs with F6.3) | APP | S | one file leaves the phone with everything on it |
+| X3.3 | ✓ done: BACKUP on the KITS screen — `KitBackup.backup` into the share cache as "SnipSnap Shelf <date>.zip", handed to the chooser like SHARE; the toast counts what packed and what preflight skipped; the same file shared back in restores every kit through `ShelfImport` | APP | S | one file leaves the phone with everything on it; shared back, every kit lands |
 
 ## X4 — Teach the machine, data path (was W10's CORE half)
 
@@ -1572,17 +1572,17 @@ CORE wave 6: ✓ all landed (2026-08-25) — multi-sequence projects
 
 APP (reconciled against the app 2026-09-07 — the milestones landed
   without their rows being ticked; this is the honest remainder):
-  ✓ M0 (F1.1) · ✓ F4.2 new-kit menu · open: W3.3 open-.xtd
+  ✓ M0 (F1.1) · ✓ F4.2 new-kit menu · ✓ W3.3 open-.xtd (through the share door)
   ✓ M1 (F1.2): the mic ring, ARM INSIDE over MediaProjection, dead-air
     detection, the QS tile · ✓ F3.4 TAPE JAM on a blocked source
-    · open: F3.1/F3.2 import
+    · ✓ F3.1/F3.2 import (the share door, the on-phone decode)
   ✓ M2 (F1.3)
   ✓ M3 (F2.1) · ✓ F5.3 key picker · ✓ W2.3 MAKE INSTRUMENT · ✓ W5.3 GHOSTS
     · ✓ X1.3 MELODIC · ✓ X2.3 TAKES + BIN · ✓ KEYS (the phone plays the
     instruments it makes) · ✓ W4.3 EVIL TWINS button · ✓ X4.4 consent row
     · ✓ F2.2 INSTANT KIT
   ✓ M4 (F1.4, SoundPool not Oboe)
-  ✓ M5 (F1.5 + F4.3) · ✓ Y3.3 SESSION export · open: F6.3 share flow, X3.3
+  ✓ M5 (F1.5 + F4.3) · ✓ Y3.3 SESSION export · ✓ F6.3 share flow · ✓ X3.3
     share/backup action
   bench: W12 pad waveforms whenever polish is the mood
 
@@ -1627,6 +1627,14 @@ CORE+APP wave XX: ✓ all landed (2026-09-07) — the crate as an
   crossed by a seeded coin into an audited child kit. XX3 landed:
   DE-SAMPLE, the nearest THUMP patch to a capture off a pre-rendered
   grid, the distance always told. Wave XX complete.
+
+APP F6.3 / X3.3 / W3.3 (2026-09-07): the kit leaves and comes back,
+  blind for CI - SHARE packs the open kit as one .xpn and BACKUP the
+  whole shelf, both out the chooser through a FileProvider; the share
+  door reads kit files by their bytes and `ShelfImport` (tested) lands
+  .xpn packs, backups and zipped MPC tracks on the shelf under names
+  nothing there holds. Every APP row in the plan is now ticked; what
+  remains is the bench.
 
 APP F3 (2026-09-07): share-sheet import landed blind — F3.1's intent
   filters, `ShareInbox` and the `singleTask` door, `SnipStore.import`

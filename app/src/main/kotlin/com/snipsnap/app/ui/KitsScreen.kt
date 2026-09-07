@@ -55,6 +55,8 @@ fun KitsScreen(
     onArmInside: () -> Unit,
     onSnip: () -> Unit,
     onEject: () -> Unit,
+    /** BACKUP (X3.3): every kit on one file, handed to the chooser. */
+    onBackup: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     var menuOpen by remember { mutableStateOf(false) }
@@ -111,6 +113,16 @@ fun KitsScreen(
                 label = if (busy) "DUBBING…" else "FRESH TAPE",
                 enabled = !busy,
                 onClick = { menuOpen = true },
+            )
+            // BACKUP: the whole shelf as one file, out the share sheet -
+            // the "new phone" story; the same file shared back in lands
+            // every kit again.
+            ActionButton(
+                "BACKUP ▸ EVERY KIT, ONE FILE",
+                scheme,
+                enabled = !busy && kits.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onBackup,
             )
             ArmControl(
                 armed = armed,

@@ -67,6 +67,8 @@ fun KitScreen(
     onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
     onInKey: () -> Unit,
     onTwins: () -> Unit,
+    /** SHARE (F6.3): this kit packed as one `.xpn` and handed to the chooser. */
+    onShare: () -> Unit,
 ) {
     val scheme = LocalScheme.current
 
@@ -204,6 +206,17 @@ fun KitScreen(
                     }
                 }
             }
+
+            // SHARE: one file out the share sheet - a messenger, Drive, a
+            // cable - the kit's own .xpn, which the receiving phone's
+            // SnipSnap (or an MPC) reads back.
+            ActionButton(
+                "SHARE ▸ THIS KIT AS ONE FILE",
+                scheme,
+                enabled = !busy && kit.pads.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onShare,
+            )
 
             if (panelKind == KEY_PANEL) {
                 KeyPanel(
