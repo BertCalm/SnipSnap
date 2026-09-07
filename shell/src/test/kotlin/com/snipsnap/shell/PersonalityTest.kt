@@ -51,6 +51,8 @@ class PersonalityTest {
         // A session the phone ended names the two ways that happens.
         assertTrue("LOCK SCREEN" in Copy.PHONE_STOPPED_TAPE)
         assertTrue("STOP CHIP" in Copy.PHONE_STOPPED_TAPE)
+        // A refused consent must not claim anything is armed.
+        assertTrue("NOTHING ARMED" in Copy.INSIDE_REFUSED)
         // Send-to-grid reports the real slice count.
         assertEquals("7 SLICES ON THE GRID. CHOKE GROUP SET.", Copy.sentToGrid(7, chokeSet = true))
         assertEquals("3 SLICES ON THE GRID.", Copy.sentToGrid(3, chokeSet = false))

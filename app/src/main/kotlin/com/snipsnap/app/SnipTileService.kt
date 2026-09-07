@@ -8,6 +8,7 @@ import android.service.quicksettings.TileService
 import com.snipsnap.shell.Copy
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
@@ -24,16 +25,19 @@ import kotlinx.coroutines.launch
  * start: explicitly unresolved".
  *
  * State follows [MicSessionService.armed] while the tile is visible; the
- * collector is cancelled the moment it isn't.
+ * collector is cancelled the moment it isn't. One scope for the life of
+ * the service (cancelled in [onDestroy]), one child job per visibility
+ * cycle — a fresh scope per cycle would leave its parent job behind.
  */
 class SnipTileService : TileService() {
 
+    private val scope = MainScope()
     private var watching: Job? = null
 
     override fun onStartListening() {
         super.onStartListening()
         watching?.cancel()
-        watching = MainScope().launch {
+        watching = scope.launch {
             MicSessionService.armed.collect { render(it) }
         }
     }
@@ -42,6 +46,11 @@ class SnipTileService : TileService() {
         watching?.cancel()
         watching = null
         super.onStopListening()
+    }
+
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
     }
 
     override fun onClick() {

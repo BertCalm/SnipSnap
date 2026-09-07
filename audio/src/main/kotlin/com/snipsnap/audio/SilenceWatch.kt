@@ -47,6 +47,8 @@ class SilenceWatch(
      * is over.
      */
     fun feed(block: FloatArray, count: Int): Boolean {
+        // A branch, not an allocation: the message is only built on failure.
+        require(count >= 0) { "count must not be negative, was $count" }
         val n = minOf(count, block.size)
         var i = 0
         while (i < n) {

@@ -58,6 +58,14 @@ class SilenceWatchTest {
     }
 
     @Test
+    fun `a negative count is refused, not subtracted from the run`() {
+        val watch = SilenceWatch(holdFrames = 150)
+        watch.feed(zeros, 100)
+        assertFailsWith<IllegalArgumentException> { watch.feed(zeros, -1) }
+        assertEquals(100L, watch.silentFrames, "the run is untouched by the refused call")
+    }
+
+    @Test
     fun `reset forgets a run in progress`() {
         val watch = SilenceWatch(holdFrames = 150)
         watch.feed(zeros, 100)
