@@ -1501,6 +1501,7 @@ been heard on a phone; then it follows in one small PR.
 | EEE3 | ✓ done: PLAY over it — `PadEngine.kt` (bank read off the main thread through `WavReader`, hits through `PadHit`, `@Synchronized`, `close` idempotent); the reap timer and its two constants gone, replaced by a frame loop that drains the endings ring into `VoiceAllocator.voiceEnded`; the allocator built at `MAX_VOICES` so the status line and the engine cannot drift; a hit nothing loaded for is handed back to the allocator at once; ON_STOP still panics | APP | S | bench: finger drumming feels tight enough that you'd play it (the milestone's own exit test); VOICES counts down as one-shots end; a closed hat cuts an open one with no click |
 | EEE4 | KIT's grid onto the native engine — swap `PadPlayer` for `PadEngine` on the KIT screen once EEE3 has been heard | APP | S | bench: KIT's pads sound the same as PLAY's |
 | EEE5 | ✓ done: the engines under test — `app/src/main/cpp/test`, a host-built target (no NDK, no device; Oboe headers only, its two linked entry points stubbed) that drives both callbacks by hand: the ring keeps order and drops when full; the smoother glides, settles and snaps; the print buffer fills to its ceiling, refuses a re-arm while the callback may write, and lands Done on the callback; the pad engine plays the window at its gains, repitches by the ratio, reads stereo as stereo, fades a choke and an all-off, reports every ending, silences and reports every voice on a bank swap, never plays a stale command by index, waits for the retiree before a second swap, steals the oldest at the cap and says so; the Surface is silent until gated, prints the mono bus, and morphs between its corners. A third CI job (`native-tests`) runs it | CORE | S | 17 cases green on the host and in CI; every bug Copilot found in the native code now has a case that would have caught it |
+| EEE6 | ✓ done: KEYS on the native engine — `KeyHit` (`:shell`, tested): the zone that covers the note, the speed from the root, the zone's loop (an empty loop plays once, the JVM engine's rule), the gain at `VOICE_LEVEL`, the release as milliseconds; `PadEngine` learns a loop (`loopStart` on the command; the voice wraps from its last frame back, a note-off is a Stop with the release as its fade; a native case proves the wrap and the release); `InstrumentPlayer` rewritten over `NativePads` (the bank read off the main thread, eight voices the oldest stolen, a route change reopened on the next key); KEYS loads it in a `LaunchedEffect` on IO. The AudioTrack thread the app owned for keys is gone; `InstrumentEngine` stays the JVM reference the map is checked against | CORE + APP | S–M | bench: a held note sustains through its loop and lets go over the release; a chord of eight; OCT ± mid-note is silence, not a stuck note |
 
 ## Sequence
 
@@ -1746,6 +1747,9 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
     bench: tight enough to play; then EEE4 moves KIT's grid across
   ✓ EEE5 (the engines under test): both native callbacks driven by hand
     on the host, 17 cases, a third CI job
+  ✓ EEE6 (KEYS on the native engine): KeyHit on the JVM, a looping
+    voice in PadEngine, InstrumentPlayer over NativePads; the last audio
+    thread the app owned retired
 
 CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   directions. The smear (STN transient mask, peak-matched) as a rack

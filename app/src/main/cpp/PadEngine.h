@@ -40,6 +40,8 @@ struct PadCommand {
     int32_t sample = -1;
     int64_t start = 0;
     int64_t end = 0;
+    /** -1 plays once to `end`; otherwise the frame the read wraps back to when it reaches `end` (a keygroup's sustain). */
+    int64_t loopStart = -1;
     float gainL = 0.0f, gainR = 0.0f;
     double pitch = 1.0;
     /** Stop / AllOff: the fade, so a choke is a short fade and not a cut. */
@@ -49,9 +51,11 @@ struct PadCommand {
 };
 
 /**
- * The pads' voice: M4's latency milestone. Up to [kMaxVoices] sample
- * players, each a windowed, repitched, linearly interpolated read of one
- * bank sample, mixed to stereo under Oboe's callback. The UI keys every
+ * The pads' voice (M4) and the keys' (a looping voice is a keygroup's
+ * sustain; a note-off is a Stop with the instrument's release as its
+ * fade). Up to [kMaxVoices] sample players, each a windowed, repitched,
+ * linearly interpolated read of one bank sample, mixed to stereo under
+ * Oboe's callback. The UI keys every
  * voice by the id the tested VoiceAllocator gave it; the engine reports
  * each voice's end back on a second ring, so the allocator learns of an
  * ending exactly when it happens instead of guessing from a timer.
@@ -108,6 +112,7 @@ private:
         int32_t sample = -1;
         double pos = 0.0;
         int64_t end = 0;
+        int64_t loopStart = -1;
         double inc = 1.0;
         float gainL = 0.0f, gainR = 0.0f;
         float fade = 1.0f;

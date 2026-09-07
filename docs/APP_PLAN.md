@@ -153,7 +153,7 @@ confidence threshold), tap-to-cycle overrides, `AutoPlace` preview, SEND
 TO GRID. `Balance` and `InKey` as kit actions. **Exit test:** one captured
 bar becomes a playable, sensibly-laid-out kit in under a minute.
 
-### M4 — Play mode · M — PLAY on the native engine ✓ (wave EEE); KIT's grid follows once heard
+### M4 — Play mode · M — PLAY and KEYS on the native engine ✓ (wave EEE); KIT's grid follows once heard
 
 The latency milestone: Oboe/AAudio (the one new native dependency),
 pre-loaded pad buffers, choke groups honoured, velocity from touch. Full-

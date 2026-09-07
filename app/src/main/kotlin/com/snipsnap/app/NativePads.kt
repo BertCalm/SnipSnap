@@ -24,7 +24,7 @@ object NativePads {
     external fun commitBank(handle: Long)
     external fun noteOn(
         handle: Long, voiceId: Int, sample: Int,
-        startFrame: Long, endFrame: Long, gainL: Float, gainR: Float, pitch: Double,
+        startFrame: Long, endFrame: Long, loopStart: Long, gainL: Float, gainR: Float, pitch: Double,
     ): Boolean
     external fun stopVoice(handle: Long, voiceId: Int, fadeMs: Float)
     external fun allOff(handle: Long, fadeMs: Float)

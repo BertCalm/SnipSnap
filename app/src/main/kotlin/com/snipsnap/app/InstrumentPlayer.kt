@@ -1,107 +1,131 @@
 package com.snipsnap.app
 
 import android.content.Context
-import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.shell.InstrumentEngine
+import com.snipsnap.shell.KeyHit
 import java.io.File
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.concurrent.thread
 
 /**
- * The KEYS screen's voice: `:shell`'s tested [InstrumentEngine] pulled
- * block by block into an [AndroidAudioSink] on its own thread, the way
- * the loop engine and the tape voice pace themselves — the blocking
- * write is the clock. Notes come in from the UI thread; the engine is
- * touched under one lock, block by block, so a tap never waits on more
- * than a few milliseconds of audio.
+ * The KEYS screen's voice on the native engine: the same `NativePads`
+ * the pads play through, a keygroup being a looping voice with the
+ * instrument's release as its fade. What a key press *means* is resolved
+ * on the JVM by `KeyHit` (the zone, the loop, the speed from the root,
+ * the gain), the map `:shell`'s tested [InstrumentEngine] defines; the
+ * engine only ever hears "this sample, looping back to there, at this
+ * gain and speed".
  *
- * Samples are read once at [open] (mono-folded, at their own rate; the
- * engine handles the ratio to the device's).
+ * Polyphony is the instrument's own [InstrumentEngine.MAX_VOICES], the
+ * oldest stolen, kept here rather than in the engine (which can hold
+ * more) so a released tail never counts against a fresh note.
  *
- * **Thread ownership**, the `TapeVoice` lesson: every audio thread builds,
- * writes to and releases its **own** sink, and runs only while its
- * [generation] is the current one. [open] and [close] bump the generation,
- * so a thread stuck in a blocking write (a stalled device, a route change)
- * winds down on its own and never shares a sink with its successor; the
- * worst case is one buffer's worth (~150 ms) of overlap on the device.
- * [close] still joins, for a full second, so the common case leaves no
- * thread behind the screen that owned the samples.
+ * Any thread but the audio thread; calls are serialised. [open] reads
+ * WAVs and belongs on an IO dispatcher. [close] is idempotent.
  */
 class InstrumentPlayer(context: Context) {
 
-    private val outRate = deviceSampleRate(context)
-    private val running = AtomicBoolean(false)
-    private val generation = AtomicInteger(0)
-    private var engine: InstrumentEngine? = null
-    private val lock = Any()
-    private var audioThread: Thread? = null
+    private var handle: Long = NativePads.create(deviceSampleRate(context))
+    private val open get() = handle != 0L
+    private var running = false
 
-    /** Load the instrument the sidecar describes and start the audio thread. */
-    fun open(sidecar: File, instrument: InstrumentStore.Instrument) {
-        close()
-        val dir = sidecar.parentFile ?: File(".")
-        val samples = instrument.zones.map { zone ->
-            val f = File(dir, zone.sample)
-            runCatching { WavReader.read(f) }.getOrNull()?.let { s ->
-                if (s.channels == 1) s.samples else Cleanup.toMono(s).samples
-            } ?: FloatArray(0)
-        }
-        val rate = instrument.zones.firstOrNull()?.let { zone ->
-            runCatching { com.snipsnap.xpm.WavInfo.read(File(dir, zone.sample)).sampleRate }.getOrNull()
-        } ?: 44_100
-        val loaded = InstrumentEngine.Loaded(instrument, rate, samples)
-        synchronized(lock) { engine = InstrumentEngine(loaded, outRate) }
-        running.set(true)
-        val myGeneration = generation.incrementAndGet()
-        audioThread = thread(name = "InstrumentPlayer", isDaemon = true) { runLoop(myGeneration) }
-    }
+    private var instrument: InstrumentStore.Instrument? = null
+    private var sampleIndex: Map<String, Int> = emptyMap()
+    private var framesOf: Map<String, Long> = emptyMap()
 
-    fun noteOn(note: Int, velocity: Float = 1f) {
-        synchronized(lock) { engine?.noteOn(note, velocity) }
-    }
-
-    fun noteOff(note: Int) {
-        synchronized(lock) { engine?.noteOff(note) }
-    }
-
-    fun allOff() {
-        synchronized(lock) { engine?.allOff() }
-    }
+    /** Sounding voices by id, in the order they started - the oldest first. */
+    private val voices = LinkedHashMap<Int, Int>() // voice id -> note
+    private var nextVoice = 1
 
     /**
-     * Stop the thread and release its sink; safe to call twice. The
-     * generation moves on first, so even a thread that outlives the join
-     * exits at its next block and never touches a successor's sink.
+     * Load the instrument the sidecar describes: every zone's WAV read
+     * once (a file that will not read leaves its zone silent) and handed
+     * to the engine as one bank. Blocking disk IO: call from IO.
      */
-    fun close() {
-        running.set(false)
-        generation.incrementAndGet()
-        audioThread?.join(1000)
-        audioThread = null
-        synchronized(lock) { engine = null }
-    }
-
-    private fun runLoop(myGeneration: Int) {
-        val sink = AndroidAudioSink(outRate)
-        val block = FloatArray(BLOCK_FRAMES * 2)
-        try {
-            while (running.get() && generation.get() == myGeneration) {
-                synchronized(lock) {
-                    val e = engine
-                    if (e == null) java.util.Arrays.fill(block, 0f) else e.render(block, BLOCK_FRAMES)
-                }
-                sink.write(block)
+    fun open(sidecar: File, instrument: InstrumentStore.Instrument) {
+        val dir = sidecar.parentFile ?: File(".")
+        val index = HashMap<String, Int>()
+        val frames = HashMap<String, Long>()
+        synchronized(this) {
+            if (!open) return
+            if (!running) running = NativePads.start(handle)
+            NativePads.beginBank(handle)
+        }
+        for (zone in instrument.zones) {
+            if (zone.sample in index) continue
+            val snip = runCatching { WavReader.read(File(dir, zone.sample)) }.getOrNull() ?: continue
+            val i = synchronized(this) {
+                if (!open) return
+                NativePads.addSample(handle, snip.samples, snip.channels, snip.sampleRate)
             }
-        } finally {
-            sink.close()
+            index[zone.sample] = i
+            frames[zone.sample] = snip.frameCount.toLong()
+        }
+        synchronized(this) {
+            if (!open) return
+            NativePads.commitBank(handle)
+            this.instrument = instrument
+            sampleIndex = index
+            framesOf = frames
+            voices.clear()
         }
     }
 
-    private companion object {
-        /** ~5 ms at 48 kHz: a tap lands inside the next block, the sink's own buffer smooths the rest. */
-        const val BLOCK_FRAMES = 256
+    /** Start [note] at [velocity] 0..1; false when no zone covers it, nothing loaded, or no stream. */
+    @Synchronized
+    fun noteOn(note: Int, velocity: Float = 1f): Boolean {
+        if (!open) return false
+        // A route change closed the stream: the next key reopens it (KEYS
+        // has no frame loop to do it sooner).
+        if (NativePads.needsRestart(handle)) running = NativePads.start(handle)
+        if (!running) return false
+        reap()
+        val inst = instrument ?: return false
+        val hit = KeyHit.resolve(inst, note, velocity.coerceIn(0f, 1f)) { framesOf[it] } ?: return false
+        val sample = sampleIndex[hit.sampleFile] ?: return false
+        while (voices.size >= InstrumentEngine.MAX_VOICES) {
+            val oldest = voices.keys.first()
+            NativePads.stopVoice(handle, oldest, PadEngine.CHOKE_FADE_MS)
+            voices.remove(oldest)
+        }
+        val id = nextVoice++
+        val queued = NativePads.noteOn(
+            handle, id, sample,
+            0L, hit.frames, hit.loopStartFrame, hit.gain, hit.gain, hit.pitchRatio,
+        )
+        if (queued) voices[id] = note
+        return queued
+    }
+
+    /** Let [note] go: its voices fade over the instrument's release. */
+    @Synchronized
+    fun noteOff(note: Int) {
+        if (!open) return
+        val release = instrument?.let { KeyHit.releaseMs(it) } ?: 1f
+        for (id in voices.filterValues { it == note }.keys.toList()) {
+            NativePads.stopVoice(handle, id, release)
+            voices.remove(id)
+        }
+    }
+
+    @Synchronized
+    fun allOff() {
+        if (!open) return
+        NativePads.allOff(handle, instrument?.let { KeyHit.releaseMs(it) } ?: 1f)
+        voices.clear()
+    }
+
+    /** Voices the engine reports ended (an unlooped zone playing out) leave the count. */
+    private fun reap() {
+        for (id in NativePads.drainEnded(handle)) voices.remove(id)
+    }
+
+    @Synchronized
+    fun close() {
+        if (!open) return
+        running = false
+        NativePads.stop(handle)
+        NativePads.destroy(handle)
+        handle = 0L
     }
 }
