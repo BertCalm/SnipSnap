@@ -76,7 +76,11 @@ object StarterKits {
             "Plucks and organ stabs in A minor pentatonic. Runs, not just hits.",
             seeded = false,
             key = KeySpec.parse("Aminpent"),
-        ) { SynthKits.melodic() },
+        ) {
+            // Tonal content gates: PLAY holds the note while the pad is
+            // pressed, so runs sustain instead of firing as drum-style hits.
+            SynthKits.melodic().map { pad -> pad?.copy(oneShot = false) }
+        },
         Starter(
             "chip", "CHIP",
             "Everything through a ~9-bit converter. 1987 in a kit.",

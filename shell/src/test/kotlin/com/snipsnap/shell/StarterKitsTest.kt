@@ -94,4 +94,19 @@ class StarterKitsTest {
         val melodic = StarterKits.byId("melodic")!!.render("Melodic", File(temp, "mel"), seed = 0)
         assertEquals(KeySpec.parse("Aminpent"), melodic.key, "melodic content declares its key")
     }
+
+    @Test
+    fun `melodic pads gate while factory pads stay one-shot`() {
+        val melodic = StarterKits.byId("melodic")!!.render("Melodic Gate", File(temp, "mel-gate"), seed = 0)
+        assertTrue(melodic.pads.isNotEmpty(), "melodic should have pads")
+        for (pad in melodic.pads) {
+            assertFalse(pad.oneShot, "${pad.displayName}: melodic pads should sustain while held")
+        }
+
+        val factory = StarterKits.byId("factory")!!.render("Factory OneShot", File(temp, "factory-oneshot"), seed = 0)
+        assertTrue(factory.pads.isNotEmpty(), "factory should have pads")
+        for (pad in factory.pads) {
+            assertTrue(pad.oneShot, "${pad.displayName}: factory pads should remain one-shot")
+        }
+    }
 }
