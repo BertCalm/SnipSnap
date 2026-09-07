@@ -108,6 +108,10 @@ shelf useful before capture (M1) exists.
   length. Hold a row: it presses and shows FORGET → BIN; tap it and the
   toast says the bin keeps it 30 days; the row is gone from the shelf and
   `Rooms/.bin/` holds the pair. Tap the room's name again to let go.
+  Under the live rooms an IN THE BIN list appears with the forgotten room,
+  its days left on an LCD (the last two days in the warn colour), and
+  RESTORE; tap it and the room is back among the live rows with the toast
+  "…IS BACK ON THE SHELF", and the bin list shrinks or disappears.
 - **KEEP ROOM (pad sheet)**: after a ROOM trip the OUTSIDE card's KEEP
   ROOM button lights; tap it and the toast names the room ("FUNK ROOM IS
   ON THE SHELF…"), a `Rooms/FUNK ROOM.wav` + `.json` pair appears beside

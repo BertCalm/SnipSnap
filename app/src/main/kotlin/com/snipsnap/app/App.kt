@@ -152,11 +152,13 @@ fun App(shelf: KitShelf) {
     var instruments by remember { mutableStateOf<List<KitShelf.InstrumentEntry>>(emptyList()) }
     // ROOMS (YY5): kept rooms beside the instruments; the revision bumps after a forget.
     var rooms by remember { mutableStateOf<List<Rooms.Room>>(emptyList()) }
+    var binnedRooms by remember { mutableStateOf<List<Rooms.Binned>>(emptyList()) }
     var roomsRevision by remember { mutableStateOf(0) }
     LaunchedEffect(kits, screen, roomsRevision) {
         if (screen == AppScreen.KITS) {
             instruments = withContext(Dispatchers.IO) { shelf.instruments() }
             rooms = withContext(Dispatchers.IO) { runCatching { shelf.rooms() }.getOrDefault(emptyList()) }
+            binnedRooms = withContext(Dispatchers.IO) { runCatching { shelf.binnedRooms() }.getOrDefault(emptyList()) }
         }
     }
     // Pad Sheet v2: the open workshop box, remembered per kit so the next
@@ -655,6 +657,10 @@ fun App(shelf: KitShelf) {
      */
     /** FORGET → BIN on a held room: into the bin for 30 days, the toast says so. */
     fun forgetRoom(room: Rooms.Room) {
+        // Under the app's one busy lock, like every other file move: a second
+        // tap, or another job in flight, must not race the bin.
+        if (busy != null) return
+        busy = Copy.ROOM_FORGET_BUSY
         scope.launch {
             try {
                 // The bin may freshen the name ("FUNK ROOM 2") - the toast says the name it went in under.
@@ -665,6 +671,27 @@ fun App(shelf: KitShelf) {
                 throw e
             } catch (e: Exception) {
                 toast = "FORGET FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
+            }
+        }
+    }
+
+    /** RESTORE on a binned room: back onto the shelf, the toast names it. */
+    fun restoreRoom(binned: Rooms.Binned) {
+        if (busy != null) return
+        busy = Copy.ROOM_RESTORE_BUSY
+        scope.launch {
+            try {
+                val room = withContext(Dispatchers.IO) { shelf.restoreRoom(binned) }
+                roomsRevision++
+                toast = Copy.roomRestored(room.name)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                toast = "RESTORE FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
             }
         }
     }
@@ -771,6 +798,8 @@ fun App(shelf: KitShelf) {
                             onBackup = ::backupShelf,
                             rooms = rooms,
                             onForgetRoom = ::forgetRoom,
+                            binnedRooms = binnedRooms,
+                            onRestoreRoom = ::restoreRoom,
                         )
                         AppScreen.KIT -> {
                             val sheetSlot = padSheetSlot

@@ -53,6 +53,12 @@ class KitShelf(private val root: File) {
     /** Empty the rooms' bin of what has slept past its days; returns how many went. */
     fun sweepRooms(): Int = Rooms.sweepBin(root)
 
+    /** The rooms in the bin, the most recently forgotten first, with their days left. */
+    fun binnedRooms(): List<Rooms.Binned> = Rooms.binned(root)
+
+    /** RESTORE: a binned room back onto the shelf under a name nothing there holds. */
+    fun restoreRoom(binned: Rooms.Binned): Rooms.Room = Rooms.unforget(root, binned)
+
     /**
      * Every readable kit on the shelf. A folder whose `kit.json` is broken
      * is skipped, not fatal — one damaged kit must never blank the shelf.
