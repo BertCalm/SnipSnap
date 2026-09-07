@@ -1,5 +1,9 @@
+// The Android shell — M0 walking skeleton. Pre-written in the cloud
+// session (which cannot build it: no Android SDK reachable); the desktop
+// session owns compiling, running, and fixing what the compiler finds.
+// See app/README.md for the build steps and the verification status.
 plugins {
-    id("com.android.application") version "8.13.2"
+    id("com.android.application") version "8.7.3"
     kotlin("android") version "2.0.21"
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
 }
@@ -37,7 +41,6 @@ android {
     }
 }
 
-// Java 17 bytecode, matching the eight modules this app is a shell over.
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
@@ -45,50 +48,29 @@ kotlin {
 }
 
 dependencies {
-    // :shell uses `implementation`, so none of these arrive transitively —
-    // the app declares every module it touches.
+    // The brain: every module is pure Kotlin/JVM at Java 17 exactly so
+    // this app can consume them directly. No algorithm lives up here.
     implementation(project(":json"))
     implementation(project(":xpm"))
     implementation(project(":audio"))
     implementation(project(":kit"))
+    implementation(project(":mpc3"))
     implementation(project(":synth"))
     implementation(project(":shell"))
+    // The loop engine — plan-03's six-track phasing grid, merged forward.
+    implementation(project(":loop"))
 
-    // Foundation only. TapeOS is a complete design system; Material would
-    // fight it at every surface.
-    implementation(platform("androidx.compose:compose-bom:2024.12.01"))
+    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    implementation(composeBom)
+    implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
+    // TapeOS is fully custom-drawn: foundation only, no Material — the
+    // design system's bevels and LCDs owe nothing to any stock theme.
     implementation("androidx.compose.foundation:foundation")
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.core:core-ktx:1.15.0")
+    // LoopGrid (plan-03) draws with material3 Text and a lifecycle scope;
+    // the TapeOS screens stay foundation-only.
+    implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-
-    // MainActivity imports Dispatchers and withContext directly. Both
-    // arrive transitively through lifecycle and Compose today, but a
-    // library you import by name should be one you declare — a future BOM
-    // bump could drop the transitive without warning. Pinned to the
-    // version already resolving, so this changes nothing at runtime.
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-
-    // Deliberately absent: androidx.compose.ui:ui-tooling and
-    // ui-tooling-preview. They exist to serve @Preview in Android Studio,
-    // M0 writes no @Preview, and ui-tooling drags
-    // androidx.compose.material onto the debug classpath — which the
-    // no-Material constraint forbids. A later milestone that actually
-    // wants previews can add them back with an
-    // `exclude(group = "androidx.compose.material")`.
-
-    // JUnit 5, as in every other module. Named explicitly rather than via
-    // kotlin("test") so the platform launcher is on the runtime classpath.
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.0.21")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-}
-
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
-    testLogging {
-        events("passed", "failed", "skipped")
-    }
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 }

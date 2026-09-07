@@ -12,7 +12,6 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
 import com.snipsnap.xpm.PadNoteMap
 import java.io.File
-import java.util.Locale
 
 /**
  * The KIT screen: the 4×4 grid over a kit folder, every edit non-
@@ -70,7 +69,7 @@ class KitBuilderModel private constructor(
             slot = slot,
             sampleFile = "$stem.wav",
             displayName = displayName
-                ?: String.format(Locale.ROOT, "%s %02d", AutoPlace.nameFor(drumClass), classCount(drumClass) + 1),
+                ?: "%s %02d".format(AutoPlace.nameFor(drumClass), classCount(drumClass) + 1),
             drumClass = drumClass,
             colorHex = AutoPlace.colorFor(drumClass),
             muteGroup = AutoPlace.muteGroupFor(drumClass),
@@ -227,6 +226,138 @@ class KitBuilderModel private constructor(
         return update(slot) { it.copy(velocityLayers = layers) }
     }
 
+    /**
+     * The FX rack pointed at one pad: re-render its sample through a named
+     * treatment (reversed / crushed / slapback / washed / punched), the
+     * original safely in the bin, the fx-only recipe recorded. Treatments
+     * stack; [untreatPad] pops the most recent one.
+     */
+    fun treatPad(slot: Int, treatment: String, amount: Float = 1f): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.velocityLayers.isEmpty()) {
+            "pad $slot is velocity-layered - `clearGhostLayers($slot)` before treating"
+        }
+        requireNotChained(pad, "treating")
+        val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        val treated = com.snipsnap.synth.Treatments.apply(treatment, original, amount)
+
+        moveToBin(pad.sampleFile)
+        WavWriter.write(File(kitDir, pad.sampleFile), treated.snip)
+        return update(slot) { it.copy(recipe = treated.recipe) }
+    }
+
+    /**
+     * Rewrite one pad's audio through [transform], bin-backed like every
+     * treatment — the mix doctor's fixes and future processors all use
+     * this one door. Layered pads are refused: a transform tuned on the
+     * loud zone would lie on the soft ones.
+     */
+    fun replaceAudio(
+        slot: Int,
+        recipe: com.snipsnap.json.JsonValue.Obj?,
+        transform: (Snip) -> Snip,
+    ): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.velocityLayers.isEmpty()) {
+            "pad $slot is velocity-layered - clear the layers before rewriting its audio"
+        }
+        requireNotChained(pad, "rewriting")
+        val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        val processed = transform(original)
+        require(processed.frameCount > 0) { "a rewrite must leave audio behind" }
+        moveToBin(pad.sampleFile)
+        WavWriter.write(File(kitDir, pad.sampleFile), processed)
+        return update(slot) { it.copy(recipe = recipe ?: it.recipe) }
+    }
+
+    /**
+     * Age one pad through a Time Machine era — every file it references
+     * (velocity layers included, unlike single-sample treatments: an era is
+     * whole-kit character, so a layered snare ages in all its zones).
+     * Originals go to the bin; the era recipe rides the pad.
+     */
+    fun eraPad(slot: Int, era: String, amount: Float = 1f): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        if (amount <= 0f) return pad
+        return rewriteEveryFile(pad, "aging") { original ->
+            val aged = com.snipsnap.synth.Eras.apply(era, original, amount)
+            aged.snip to aged.recipe
+        }
+    }
+
+    /**
+     * One of the rack's named characters (`Treatments.names`) over every
+     * file the pad references — the pad sheet's second row. The same door
+     * shape as [eraPad]: layers included, originals binned, the fx-only
+     * recipe (name + AMT) riding the pad — where [treatPad] rewrites one
+     * sample and refuses layers, this is whole-pad character. AMT 0 is a
+     * no-op that touches neither the file nor the bin. Undo is
+     * [unEraPad], the same "every file back out of the bin" either row needs.
+     */
+    fun characterPad(slot: Int, character: String, amount: Float = 1f): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        // Validate the name before the AMT-0 exit: a typo must not read as "no treatment".
+        com.snipsnap.synth.Treatments.chain(character, amount)
+        if (amount <= 0f) return pad
+        return rewriteEveryFile(pad, "treating") { original ->
+            val treated = com.snipsnap.synth.Treatments.apply(character, original, amount)
+            treated.snip to treated.recipe
+        }
+    }
+
+    /** The whole-pad rewrite both [eraPad] and [characterPad] share: every referenced file, bin-backed, one recipe. */
+    private fun rewriteEveryFile(
+        pad: KitPad,
+        doing: String,
+        transform: (Snip) -> Pair<Snip, com.snipsnap.json.JsonValue.Obj>,
+    ): KitPad {
+        requireNotChained(pad, doing)
+        val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
+        var recipe: com.snipsnap.json.JsonValue.Obj? = null
+        for (f in files) {
+            val original = com.snipsnap.audio.WavReader.read(File(kitDir, f))
+            val (rewritten, r) = transform(original)
+            moveToBin(f)
+            WavWriter.write(File(kitDir, f), rewritten)
+            recipe = r
+        }
+        return update(pad.slot) { it.copy(recipe = recipe) }
+    }
+
+    /**
+     * The whole kit through one era — the Time Machine's main gesture.
+     * Returns how many pads aged. [slots] narrows it; null means every pad.
+     */
+    fun eraKit(era: String, amount: Float = 1f, slots: List<Int>? = null): Int {
+        val targets = kit.pads.map { it.slot }.filter { slots == null || it in slots }
+        require(targets.isNotEmpty()) { "no pads to age" }
+        if (amount <= 0f) return 0
+        targets.forEach { eraPad(it, era, amount) }
+        return targets.size
+    }
+
+    /** Undo an era or a character on one pad: every file it references comes back out of the bin. */
+    fun unEraPad(slot: Int): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        requireNotChained(pad, "un-aging")
+        val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
+        var restoredAny = false
+        for (f in files) {
+            if (restoreFromBin(f) != null) restoredAny = true
+        }
+        require(restoredAny) { "nothing to restore for pad $slot - the bin holds no earlier take of it" }
+        return update(slot) { it.copy(recipe = null) }
+    }
+
+    /** Undo the last treatment: the previous audio comes back out of the bin. */
+    fun untreatPad(slot: Int): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        requireNotChained(pad, "un-treating")
+        restoreFromBin(pad.sampleFile)
+            ?: throw IllegalArgumentException("nothing to restore for pad $slot - the bin holds no earlier take of it")
+        return update(slot) { it.copy(recipe = null) }
+    }
+
     /** Back to a single-sample pad; the soft renders are deleted. */
     fun clearGhostLayers(slot: Int): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
@@ -236,12 +367,57 @@ class KitBuilderModel private constructor(
         return cleared
     }
 
+    // ---------- the wear ledger ----------
+
+    /**
+     * Opt the kit into aging. An existing ledger keeps its mileage — the
+     * tape remembers even while the deck was off. [k] retunes the curve
+     * when given; null keeps what the ledger has.
+     */
+    fun enableWear(k: Double? = null) {
+        kit = kit.copy(
+            wear = kit.wear?.copy(enabled = true, k = k ?: kit.wear!!.k)
+                ?: com.snipsnap.kit.WearLedger(k = k ?: com.snipsnap.kit.WearLedger.DEFAULT_K),
+        )
+        dirty = true
+    }
+
+    /** Aging off; the ledger (and its mileage) is kept, just not applied. */
+    fun disableWear() {
+        val wear = kit.wear ?: return
+        kit = kit.copy(wear = wear.copy(enabled = false))
+        dirty = true
+    }
+
+    /** Wipe the mileage — and because wear never rewrites audio, that IS a new tape. */
+    fun resetWear() {
+        val wear = kit.wear ?: return
+        kit = kit.copy(wear = wear.copy(mileage = 0.0))
+        dirty = true
+    }
+
+    /** The app's play hook: every pad hit or preview spin logs mileage. */
+    fun recordPlays(count: Int = 1) {
+        require(count > 0) { "plays must be positive, got $count" }
+        val wear = kit.wear?.takeIf { it.enabled } ?: return
+        kit = kit.copy(wear = wear.copy(mileage = wear.mileage + count))
+        dirty = true
+    }
+
     /**
      * Write `kit.json`. The moment the folder and the model agree again.
      * The outgoing `kit.json` is archived as a take first — every save is
-     * a point you can roll back to.
+     * a point you can roll back to. A save that persists real edits is a
+     * pass of the tape too: when the ledger is on, it accrues a mile.
+     * [accrueWear] false is for ledger management itself — resetting the
+     * mileage must not put the first mile straight back on.
      */
-    fun save(): File {
+    fun save(accrueWear: Boolean = true): File {
+        if (accrueWear && dirty) {
+            kit.wear?.takeIf { it.enabled }?.let {
+                kit = kit.copy(wear = it.copy(mileage = it.mileage + 1))
+            }
+        }
         archiveTake()
         val file = KitStore.save(kit, kitDir)
         dirty = false
@@ -250,27 +426,126 @@ class KitBuilderModel private constructor(
 
     // ---------- takes ----------
 
-    /** Archived takes, oldest first. */
+    /**
+     * Archived takes, oldest first. A take that won't parse — a process
+     * killed mid-archive leaves exactly that — is skipped, not surfaced: a
+     * torn entry must never break the history or a rollback.
+     */
     fun takes(): List<File> =
         File(kitDir, TAKES_DIR).listFiles { f: File -> TAKE_NAME.matches(f.name) }
-            ?.sortedBy { it.name } ?: emptyList()
+            ?.sortedBy { it.name }
+            ?.filter {
+                try {
+                    KitStore.read(it); true
+                } catch (e: Exception) {
+                    false
+                }
+            } ?: emptyList()
 
     /**
-     * Roll back to an archived take. Samples the take references that were
-     * since binned come back out of the bin — takes and the bin are one
-     * promise. The restored state is unsaved ([dirty]) until [save].
+     * Roll back to an archived take. This restores `kit.json` *and* the
+     * actual audio that was live when the take was archived — not
+     * whatever happens to be sitting on the filename now. A take file's
+     * `lastModified()` is used as its archive time T: [AtomicFile] writes
+     * every take through a temp file (fsynced) and then an atomic rename
+     * over the destination, and on every filesystem this project targets
+     * that rename carries the temp file's own fresh-write mtime forward
+     * rather than resetting it — so `take.lastModified()` is a faithful T,
+     * not an artifact of the rename. (Verified: APFS gives sub-millisecond
+     * resolution in dev; every POSIX target this ships to does likewise or
+     * better.) [AtomicFile]'s non-atomic fallback (some filesystems throw
+     * `AtomicMoveNotSupportedException`, and it falls back to a plain
+     * move) isn't guaranteed to carry the same mtime, so T could in theory
+     * drift by a millisecond or two there — [archiveTake]'s own
+     * monotonicity guard (below) neutralizes most of that risk anyway,
+     * since it re-pins T relative to the bin regardless of which move
+     * path wrote the file.
+     *
+     * For each file a restored pad references: the bin already timestamps
+     * every rewrite it archives ([BinEntry.binnedAtMillis], via
+     * [moveToBin]), so the bin doubles as that file's own history. Any
+     * entry binned at-or-after T is audio that displaced what was live at
+     * T; the OLDEST such entry is the one that WAS live at T (anything
+     * newer is a later displacement the take doesn't want either). The
+     * selection is deliberately inclusive (`>=`, not `>`): with
+     * [archiveTake]'s monotonicity guard in place, a bin entry timestamped
+     * exactly T can only be a *post*-archive displacement (nothing already
+     * in the bin at archive time can share T), so including it is always
+     * correct — a treat's own moveToBin landing in the same millisecond as
+     * the very next save can no longer masquerade as that entry's earlier
+     * self. That entry's bytes are COPIED onto the live file — not
+     * consumed the way [restoreFromBin] normally deletes on restore —
+     * because jumping between takes must stay non-destructive: an
+     * even-older take restored later may need that exact same entry, and a
+     * take-restore reads history, it doesn't spend it. Before the copy
+     * lands, whatever is currently live is itself binned first (unless
+     * it's already byte-identical to the candidate — restoring the same
+     * take twice must not bin a redundant copy of audio that's already
+     * correct), so the audio this restore displaces isn't lost either —
+     * restoring a take is itself undoable by pulling that fresh bin entry
+     * back out ([restoreFromBin]). The candidate's bytes are read into
+     * memory before that pre-overwrite bin happens, not copied by path
+     * afterward: [moveToBin] is now collision-proof on its own (see its
+     * KDoc), but reading first means this function's correctness never
+     * again depends on that — nothing it does afterward can change what
+     * gets written back.
+     *
+     * If nothing was binned since T, the live file was never rewritten and
+     * is already the right audio — left untouched, now correct by argument
+     * instead of by accident. If the file is missing entirely and no
+     * post-T entry exists, the old newest-first fallback
+     * ([restoreFromBin] by name) still applies.
+     *
+     * Honesty about the bin's own limit: it only keeps history
+     * [BIN_KEEP_DAYS] days ([purgeBin]). A take older than that horizon may
+     * find its history already purged for some of its files — those pads
+     * restore with whatever audio is currently live, the same honest
+     * degradation as the missing-file fallback, not a crash or a lie.
      */
     fun restoreTake(take: File): Kit {
         val restored = KitStore.read(take)
+        val archivedAtMillis = take.lastModified()
         for (pad in restored.pads) {
             val files = listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }
             for (f in files) {
-                if (!File(kitDir, f).isFile) restoreFromBin(f)
+                restoreLiveAudioAsOf(f, archivedAtMillis)
             }
         }
         kit = restored
         dirty = true
         return restored
+    }
+
+    /**
+     * The audio-fidelity core of [restoreTake] for one file: find the bin
+     * entry that was live at [archivedAtMillis] and copy it onto the live
+     * file (binning whatever's live first, so that's undoable too). See
+     * [restoreTake]'s KDoc for the full reasoning — copy-don't-consume in
+     * particular.
+     */
+    private fun restoreLiveAudioAsOf(fileName: String, archivedAtMillis: Long) {
+        val candidate = binContents()
+            .filter { it.originalName == fileName && it.binnedAtMillis >= archivedAtMillis }
+            .minByOrNull { it.binnedAtMillis }
+        if (candidate != null) {
+            // Read the candidate's bytes into memory BEFORE touching
+            // anything else on disk. [moveToBin] below is itself now
+            // collision-proof (never overwrites an existing bin file), but
+            // reading first removes any dependency on that guarantee here
+            // too: nothing this function does afterward can change what
+            // gets written back, even if some other path someday binned
+            // under this exact name at this exact millisecond.
+            val candidateBytes = candidate.file.readBytes()
+            val live = File(kitDir, fileName)
+            // Already true: a second restore of the same take (or of two
+            // takes that share this file's history) must not keep binning
+            // identical bytes forever - compare before touching anything.
+            if (live.isFile && live.readBytes().contentEquals(candidateBytes)) return
+            moveToBin(fileName) // what's live now becomes history too - a no-op if the file is missing
+            live.writeBytes(candidateBytes) // copy, not consume - see restoreTake KDoc
+            return
+        }
+        if (!File(kitDir, fileName).isFile) restoreFromBin(fileName)
     }
 
     private fun archiveTake() {
@@ -279,11 +554,16 @@ class KitBuilderModel private constructor(
         if (!current.isFile || !dirty) return
         val takesDir = File(kitDir, TAKES_DIR).apply { mkdirs() }
         val next = (takes().lastOrNull()?.let { TAKE_NAME.find(it.name)!!.groupValues[1].toInt() } ?: 0) + 1
-        // Locale.ROOT: this name is parsed back by TAKE_NAME, whose \d is
-        // ASCII-only. An unlocalised %03d writes take_٠٠١.json on an ar-EG
-        // device, the regex then misses, and the !! on the line above throws
-        // the next time a take is archived.
-        current.copyTo(File(takesDir, String.format(Locale.ROOT, "take_%03d.json", next)))
+        val takeFile = File(takesDir, "take_%03d.json".format(next))
+        com.snipsnap.kit.AtomicFile.writeBytes(takeFile, current.readBytes())
+        // A take's T must be strictly later than every bin event that
+        // produced the state it snapshots; same-millisecond flash writes
+        // otherwise make the tie ambiguous in both directions (see
+        // restoreTake's KDoc on the >= selection).
+        val newestBinned = binContents().maxOfOrNull { it.binnedAtMillis }
+        if (newestBinned != null && takeFile.lastModified() <= newestBinned) {
+            takeFile.setLastModified(newestBinned + 1)
+        }
         // Rotate: the cap outlasts any honest session; oldest go first.
         takes().dropLast(MAX_TAKES).forEach { it.delete() }
     }
@@ -302,14 +582,27 @@ class KitBuilderModel private constructor(
             }
             ?.sortedByDescending { it.binnedAtMillis } ?: emptyList()
 
-    /** The newest binned copy of [originalName] back into the kit, or null. */
-    fun restoreFromBin(originalName: String): File? {
-        val entry = binContents().firstOrNull { it.originalName == originalName } ?: return null
-        val dest = File(kitDir, originalName)
+    /**
+     * A specific bin entry back into the kit, or null if it's already gone
+     * (restored or purged by something else since the caller listed it).
+     * The entry-keyed overload exists because [originalName] alone is
+     * ambiguous: `treatPad`/`eraPad` can bin several copies of the same
+     * filename (each treat-then-rewrite cycle bins the previous version
+     * under that same name), and a caller holding a specific [BinEntry] —
+     * e.g. a screen listing bin rows, each with its own countdown — means
+     * *that* one, not "whichever is newest."
+     */
+    fun restoreFromBin(entry: BinEntry): File? {
+        if (!entry.file.isFile) return null
+        val dest = File(kitDir, entry.originalName)
         entry.file.copyTo(dest, overwrite = true)
         entry.file.delete()
         return dest
     }
+
+    /** The newest binned copy of [originalName] back into the kit, or null. */
+    fun restoreFromBin(originalName: String): File? =
+        binContents().firstOrNull { it.originalName == originalName }?.let(::restoreFromBin)
 
     /** THE BIN KEEPS IT 30 DAYS — this is the keeping-side of that promise. */
     fun purgeBin(olderThanDays: Double = BIN_KEEP_DAYS, nowMillis: Long = System.currentTimeMillis()): Int {
@@ -328,27 +621,29 @@ class KitBuilderModel private constructor(
     /** The kit-name easter egg, for the rename dialog to surface. */
     fun nameResponse(proposed: String): String? = Copy.kitNameResponse(proposed)
 
+    /**
+     * A chain pad's slice boundaries index into its WAV frame-for-frame;
+     * any rewrite (or restore) that isn't the robin's own would orphan
+     * them. One gate for every audio door.
+     */
+    private fun requireNotChained(pad: KitPad, doing: String) {
+        require(pad.chain == null) {
+            "pad ${pad.slot} is a round-robin chain - `robin --undo` before $doing it"
+        }
+    }
+
     private fun classCount(dc: DrumClass): Int = kit.pads.count { it.drumClass == dc }
 
     private fun nextStem(slot: Int, dc: DrumClass): String {
         val base = "%s_%s".format(PadNoteMap.labelForPad(slot), AutoPlace.nameFor(dc))
-        // Bounded, not `while (true)`: the loop only terminates because the
-        // formatted counter varies from n to n, an invariant Locale.ROOT
-        // restores today but does not itself guarantee. A kit holds 128
-        // pads, so 999 candidates is ample headroom; if every one of them
-        // still collides — the invariant broken again, or genuinely 999
-        // takers of one stem — this fails loudly instead of hanging the
-        // caller (an onClick, in production) forever.
-        for (n in 1..MAX_STEM_ATTEMPTS) {
-            val stem = Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, n))
+        var n = 1
+        while (true) {
+            val stem = Names.sanitizeStem("%s_%02d".format(base, n))
             val taken = kit.pads.any { it.sampleFile.equals("$stem.wav", ignoreCase = true) } ||
                 File(kitDir, "$stem.wav").exists()
             if (!taken) return stem
+            n++
         }
-        throw IllegalStateException(
-            "couldn't find a free stem for '$base' after $MAX_STEM_ATTEMPTS attempts " +
-                "(kept producing '${Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, MAX_STEM_ATTEMPTS))}')",
-        )
     }
 
     private fun deleteIfUnreferenced(pad: KitPad) {
@@ -359,12 +654,33 @@ class KitBuilderModel private constructor(
         }
     }
 
-    /** EJECTED. THE BIN KEEPS IT 30 DAYS — deletes are recoverable, not gone. */
+    /**
+     * EJECTED. THE BIN KEEPS IT 30 DAYS — deletes are recoverable, not gone.
+     *
+     * Bin filenames are only `"<millis>_<name>"` ([BIN_NAME]) — two calls
+     * that bin the SAME [fileName] inside the same real millisecond (a
+     * treat-then-rewrite followed immediately by another one, or a
+     * take-restore binning the file it's about to overwrite right after
+     * that same file was itself just binned by something else) would
+     * otherwise collide on that exact filename, and `copyTo(overwrite =
+     * true)` would silently clobber whichever entry got there first with
+     * the second call's bytes — a real, observed failure mode (root-caused
+     * via instrumented repro, not theorized), not a rounding artifact.
+     * Walking the millisecond forward until the name is free keeps
+     * `binnedAtMillis` meaningful (still real-clock-based, only nudged
+     * past a genuine same-instant tie) instead of losing one entry's
+     * content outright.
+     */
     private fun moveToBin(fileName: String) {
         val src = File(kitDir, fileName)
         if (!src.isFile) return
         val binDir = File(kitDir, BIN_DIR).apply { mkdirs() }
-        val dest = File(binDir, "${System.currentTimeMillis()}_$fileName")
+        var stamp = System.currentTimeMillis()
+        var dest = File(binDir, "${stamp}_$fileName")
+        while (dest.exists()) {
+            stamp++
+            dest = File(binDir, "${stamp}_$fileName")
+        }
         src.copyTo(dest, overwrite = true)
         src.delete()
     }
@@ -406,8 +722,5 @@ class KitBuilderModel private constructor(
             val kit = KitAssembler.assembleArranged(name, arranged, kitDir)
             return KitBuilderModel(kitDir, kit)
         }
-
-        /** [nextStem]'s bound. A kit holds 128 pads, so this is ample headroom. */
-        private const val MAX_STEM_ATTEMPTS = 999
     }
 }
