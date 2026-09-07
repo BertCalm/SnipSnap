@@ -576,6 +576,41 @@ fun PadSheetScreen(
     }
 
     /**
+     * DE-SAMPLE: the pad becomes the nearest THUMP patch's own render, the
+     * patch riding it as a recipe. A far match is named, not taken.
+     */
+    fun onDesample() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (p.velocityLayers.isNotEmpty()) {
+            onToast(Copy.MUTATE_NEEDS_ONE)
+            return
+        }
+        val padName = p.displayName
+        scope.launch {
+            busy = true
+            try {
+                val match = withContext(Dispatchers.IO) {
+                    val found = m.desamplePad(slot)
+                    m.save()
+                    found
+                }
+                revision++
+                onKitUpdated(m.kit)
+                refreshPadAudio(m)
+                m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
+                onToast(Copy.desampled(padName, match.patch.voice.name, match.distance))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (e is KitBuilderModel.Far) onToast(Copy.desampleFar(e.match.patch.voice.name, e.match.distance)) else failure("DE-SAMPLE", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    /**
      * The header's own ◄ KIT path: flush a pending metadata save (if any)
      * *before* calling the real [onBack], on this composable's own scope —
      * so the common exit gets immediate consistency (the save is done, not
@@ -878,6 +913,25 @@ fun PadSheetScreen(
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = ::onMakePad,
+            )
+        }
+
+        // DE-SAMPLE: the capture as a recipe - the nearest patch, distance told.
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            TapeText("DE-SAMPLE · THE NEAREST PATCH", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            val away = pad.source["desampled"]
+            TapeText(
+                if (away != null) "A PATCH NOW, $away AWAY" else "THE HIT MEASURED AGAINST EVERY THUMP",
+                TapeType.pixelSmall,
+                scheme.ink2.tape,
+                maxLines = 1,
+            )
+            ActionButton(
+                if (busy) "MEASURING…" else "DE-SAMPLE ▸",
+                scheme,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = ::onDesample,
             )
         }
 

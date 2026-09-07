@@ -537,6 +537,41 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `desamplePad swaps a capture for the nearest patch's render, refuses a stranger, and undoes`() {
+        val dir = File(temp, "Desample")
+        val m = KitBuilderModel.create("Desample", dir)
+        val kick = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        val rnd = java.util.Random(4)
+        val hiss = m.assign(2, com.snipsnap.audio.Snip(FloatArray(44_100) { (rnd.nextFloat() * 2f - 1f) * 0.5f }, 1, 44_100), DrumClass.UNKNOWN)
+        m.save()
+        val before = File(dir, kick.sampleFile).readBytes()
+
+        val match = m.desamplePad(1)
+        assertEquals(com.snipsnap.synth.ThumpVoice.KICK, match.patch.voice, "a kick's search starts on kicks")
+        assertTrue(!match.far)
+        val pad = m.pad(1)!!
+        val recipe = com.snipsnap.synth.PadRecipe.fromJsonValue(pad.recipe!!)
+        assertEquals(match.patch, recipe.patch, "the patch rides the pad")
+        assertTrue(File(dir, kick.sampleFile).readBytes().let { !it.contentEquals(before) }, "the render replaced the capture")
+        val onDisk = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile)).samples
+        val render = match.patch.render().samples
+        assertEquals(render.size, onDisk.size, "the pad is the patch's own render")
+        for (i in onDisk.indices) assertEquals(render[i], onDisk[i], 1e-5f, "sample $i, to the WAV's precision")
+        assertTrue(pad.source["desampled"]!!.toFloat() < com.snipsnap.synth.Desample.FAR)
+
+        val far = assertFailsWith<KitBuilderModel.Far> { m.desamplePad(2) }
+        assertTrue(far.match.far && "no patch is near" in far.message!!)
+        assertNull(m.pad(2)!!.recipe, "a refusal touches nothing")
+        val forced = m.desamplePad(2, evenIfFar = true)
+        assertTrue(forced.far)
+        assertTrue(m.pad(2)!!.recipe != null)
+
+        m.untreatPad(1)
+        assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(before), "back byte-identical")
+        assertNull(m.pad(1)!!.recipe)
+    }
+
+    @Test
     fun `characterPad refuses a typo before it looks at the amount, and AMT 0 is a no-op`() {
         val dir = File(temp, "CharNoop")
         val m = KitBuilderModel.create("CharNoop", dir)

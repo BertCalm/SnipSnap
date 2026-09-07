@@ -1363,6 +1363,36 @@ class CliTest {
     }
 
     @Test
+    fun `desample names the nearest patch for a wav and makes a pad into one`() {
+        val kickWav = File(temp, "ds kick.wav")
+        WavWriter.write(kickWav, com.snipsnap.synth.Thump.render(com.snipsnap.synth.ThumpVoice.KICK, mapOf("TUNE" to 0.5f, "SWEEP" to 0.85f, "DECAY" to 0.15f, "CLICK" to 0.5f, "DRIVE" to 0.5f)))
+        val patchOut = File(temp, "ds.json")
+        val (code, stdout, stderr) = cli("desample", kickWav.path, "--out", patchOut.path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "nearest patch is kick at distance 0.00")
+        assertContains(stdout, "SWEEP=0.85")
+        val patch = com.snipsnap.synth.Patches.fromJsonText(patchOut.readText())
+        assertEquals("THUMP", patch.engine)
+
+        val wav = writeBreak(File(temp, "ds.wav"))
+        val out = File(temp, "ds-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "DS", "--slices", "8").first)
+        val kitDir = File(out, "DS")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(1)!!.sampleFile)
+        val before = padFile.readBytes()
+        val (padCode, padOut, padErr) = cli("desample", kitDir.path, "A01")
+        assertEquals(0, padCode, "stderr: $padErr")
+        assertContains(padOut, "is a kick patch now")
+        assertTrue(!before.contentEquals(padFile.readBytes()))
+        assertTrue(KitStore.load(kitDir).pad(1)!!.recipe != null, "the patch rides the pad")
+        assertEquals(0, cli("desample", kitDir.path, "A01", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        val (badCode, _, badErr) = cli("desample", File(temp, "nowhere").path)
+        assertTrue(badCode != 0 && "not a wav or a kit folder" in badErr, badErr)
+    }
+
+    @Test
     fun `retune talks one pad into a key from the terminal, refuses a drum, and undoes`() {
         val wav = writeBreak(File(temp, "rt.wav"))
         val out = File(temp, "rt-out")

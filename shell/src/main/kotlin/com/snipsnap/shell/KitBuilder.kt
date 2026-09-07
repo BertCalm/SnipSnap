@@ -281,6 +281,33 @@ class KitBuilderModel private constructor(
         return update(slot) { it.copy(recipe = recipe ?: it.recipe) }
     }
 
+    /** DE-SAMPLE's honest refusal: the nearest patch is a stranger; the match says how far. */
+    class Far(val match: com.snipsnap.synth.Desample.Match) :
+        IllegalArgumentException("no patch is near: the nearest is ${match.patch.voice.name.lowercase()} at distance %.2f".format(java.util.Locale.ROOT, match.distance))
+
+    /**
+     * DE-SAMPLE: the pad replaced by the nearest THUMP patch's own render,
+     * the patch riding the pad as its recipe so the sound is a synth pad
+     * from here on - bin-backed like every rewrite. The search starts on
+     * the voices kindred to the pad's class. A far match ([Far]) is
+     * refused unless [evenIfFar]; the match is returned either way it
+     * goes ahead.
+     */
+    fun desamplePad(slot: Int, evenIfFar: Boolean = false): com.snipsnap.synth.Desample.Match {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        val match = com.snipsnap.synth.Desample.nearest(
+            original,
+            voices = com.snipsnap.synth.Desample.voicesFor(pad.drumClass),
+            name = pad.displayName,
+        )
+        if (match.far && !evenIfFar) throw Far(match)
+        val recipe = com.snipsnap.synth.PadRecipe(patch = match.patch).toJsonValue()
+        replaceAudio(slot, recipe) { match.patch.render() }
+        update(slot) { it.copy(source = it.source + mapOf("desampled" to "%.2f".format(java.util.Locale.ROOT, match.distance))) }
+        return match
+    }
+
     /**
      * Age one pad through a Time Machine era — every file it references
      * (velocity layers included, unlike single-sample treatments: an era is

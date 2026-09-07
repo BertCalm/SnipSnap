@@ -119,6 +119,10 @@ object Cli {
         |                        blends toward it (--amount, --seed, --root)
         |  breed <kit-a> <kit-b> two kits' recipes crossed into a child kit,
         |                        classifier-audited (--out, --name, --seed)
+        |  desample <wav|kit pad>
+        |                        the nearest THUMP patch to a captured hit: a
+        |                        wav prints it (--out patch.json), a pad becomes
+        |                        it (--force past a far match, --undo)
         |  mutate <kit-dir> <pad> --with <src>[,<src>..]
         |                        one hit from many parents: transient-aligned
         |                        stack (with a polarity check), --splice (the
@@ -344,6 +348,7 @@ object Cli {
                 "eternal" -> EternalCommand.run(args.drop(1), out)
                 "drift" -> DriftCommand.run(args.drop(1), out)
                 "breed" -> BreedCommand.run(args.drop(1), out)
+                "desample" -> DesampleCommand.run(args.drop(1), out)
                 "robin" -> RobinCommand.run(args.drop(1), out)
                 "mutate" -> MutateCommand.run(args.drop(1), out)
                 "shape" -> ShapeCommand.run(args.drop(1), out)

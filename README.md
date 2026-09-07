@@ -70,6 +70,9 @@ The capture and conditioning core.
   tones over three octaves, the root loudest, DECAY their ring.
 - **`Eternal`** — the attack kept bit for bit, the tail slowed hyperbolically
   toward a frozen instant with `Pghi` phases, TAIL the knob.
+- **`Desample`** (`:synth`) — the nearest THUMP patch to a captured hit, off a
+  pre-rendered macro grid by `Similar`'s distance, the distance always told
+  (`docs/DESAMPLE.md`).
 - **`Loudness`** — perceived level (peaks aren't loudness), feeding kit-wide
   balance.
 

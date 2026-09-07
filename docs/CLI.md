@@ -719,6 +719,20 @@ default beside A as `<A>_x_<B>`; `--name`), both parents untouched,
 A's key and tempo carried, every pad stamped `bredFrom` for `lineage`.
 Deterministic: same parents, same `--seed`, same kit.
 
+### `desample <wav> | <kit-dir> <pad>` — the nearest synth patch
+
+Rendering run the other way, approximately: every THUMP voice's macro
+space is walked on a coarse grid, each point rendered once and measured
+by the classifier's own extractor, and the hit's measurement picks the
+nearest by `Similar`'s distance, then a coordinate descent refines the
+macros. A `.wav` prints the patch (`--out patch.json` writes it); a kit
+pad becomes the patch's own render with the patch as its recipe — a
+synth pad from here on, editable and breedable — bin-backed, `--undo`
+byte-identical, the search starting on the voices kindred to the pad's
+class. The distance is always told; past 0.45 the nearest is a stranger
+and the pad is refused unless `--force`. The spec: `docs/DESAMPLE.md`.
+On the phone it is the PAD SHEET's DE-SAMPLE card.
+
 ### `arrange <kit-dir>` — songs, not loops
 
 The Arranger's structure grammar lays the kit's **own** variations into
