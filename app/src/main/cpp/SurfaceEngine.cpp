@@ -1,5 +1,7 @@
 #include "SurfaceEngine.h"
 
+#include "OboeOutput.h"
+
 #include <android/log.h>
 
 #include <algorithm>
@@ -47,44 +49,12 @@ SurfaceEngine::~SurfaceEngine() {
 bool SurfaceEngine::start() {
     stop();
     restartNeeded_.store(false, std::memory_order_release);
-    // A failed open must not leave last time's answer standing.
     sharedMode_.store(false, std::memory_order_release);
 
-    oboe::AudioStreamBuilder builder;
-    builder.setDirection(oboe::Direction::Output)
-        ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
-        ->setSharingMode(oboe::SharingMode::Exclusive)
-        ->setFormat(oboe::AudioFormat::Float)
-        ->setChannelCount(oboe::ChannelCount::Stereo)
-        ->setSampleRate(preferredRate_)
-        ->setSampleRateConversionQuality(oboe::SampleRateConversionQuality::Medium)
-        ->setUsage(oboe::Usage::Media)
-        ->setContentType(oboe::ContentType::Music)
-        ->setDataCallback(this)
-        ->setErrorCallback(this);
-
-    // Exclusive first (the lowest latency the device has), then Shared: a
-    // device that refuses exclusive access - another app holds it, or the
-    // HAL never offered it - still plays, one mixer stage later. Oboe may
-    // also downgrade on its own; the fallback is for the outright refusal.
-    oboe::Result opened = builder.openStream(stream_);
-    if (opened != oboe::Result::OK) {
-        LOGW("exclusive openStream failed: %s - trying shared", oboe::convertToText(opened));
-        stream_.reset();
-        builder.setSharingMode(oboe::SharingMode::Shared);
-        opened = builder.openStream(stream_);
-    }
-    if (opened != oboe::Result::OK) {
-        LOGW("openStream failed: %s", oboe::convertToText(opened));
-        stream_.reset();
-        return false;
-    }
-    sharedMode_.store(stream_->getSharingMode() == oboe::SharingMode::Shared, std::memory_order_release);
-    sampleRate_ = stream_->getSampleRate();
-
-    // Two bursts is the usual low-latency sweet spot: one in flight, one
-    // being filled. Oboe clamps to what the device allows.
-    stream_->setBufferSizeInFrames(stream_->getFramesPerBurst() * 2);
+    const OpenedOutput opened = openStereoFloatOutput(preferredRate_, this, this, stream_, LOG_TAG);
+    if (!opened.ok) return false;
+    sampleRate_ = opened.sampleRate;
+    sharedMode_.store(opened.shared, std::memory_order_release);
 
     // ~15 ms glides for the macros, ~3 ms for the gate so a finger-down is a
     // click-free attack rather than a slow swell. Recomputed here because the

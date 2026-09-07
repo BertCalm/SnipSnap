@@ -43,7 +43,7 @@ shelf useful before capture (M1) exists.
 | Window | `ui/Chrome.kt` — SNIPSNAP.EXE titlebar, 9-item menu row, 3-cell status bar with `Copy` quips, toast overlay |
 | Screens | KITS (shelf + FRESH TAPE), KIT (4×4 bank A, MPC geometry: A13 top-left, A01 bottom-left), SETUP (live scheme picker + PERSONALITY), HELP, honest stubs naming M2–M5 |
 | Data | `KitShelf` over `KitStore` (kits under app files/Kits); `PadPlayer` (SoundPool interim — choke/velocity belong to M4's Oboe allocator) |
-| Native | `src/main/cpp/` — the SURFACE engine: Oboe (prefab, `com.google.oboe:oboe`) under a C++17 callback, a lock-free SPSC ring for control frames, per-sample `ParameterSmoother`s, the `PrintBuffer` resample tap; `NativeSurface`/`SurfaceEngine.kt` own it from Kotlin. The one native library; the NDK is pinned in `build.gradle.kts` and AGP fetches it |
+| Native | `src/main/cpp/` — one library, two engines under Oboe (prefab, `com.google.oboe:oboe`, C++17): the SURFACE engine (a control ring, per-sample `ParameterSmoother`s, the `PrintBuffer` resample tap) and M4's `PadEngine` (32 sample voices, a command ring in and an endings ring out, the kit's bank adopted whole). `OboeOutput.h` opens every stream (Exclusive, then Shared). `NativeSurface`/`SurfaceEngine.kt` and `NativePads`/`PadEngine.kt` own them from Kotlin. The NDK is pinned in `build.gradle.kts` and AGP fetches it |
 | Fonts | `res/font/` — VT323, Silkscreen, Michroma, Permanent Marker, committed |
 
 ## Things to verify on first run (beyond "does it compile")
@@ -74,6 +74,15 @@ shelf useful before capture (M1) exists.
   while the bare `.xtd` alone refuses in words. If the chooser never
   appears, check the `FileProvider` authority (`<applicationId>.files`)
   against `res/xml/share_paths.xml`.
+- **PLAY (native, M4)**: open a kit, tap PLAY. Pads should feel tight
+  enough to drum on — that is the milestone's exit test. VOICES should
+  count down as one-shots end (the engine reports endings; nothing is
+  timed), a closed hat should cut an open one with no click, a gate pad
+  should stop on release, PANIC should fade everything in 20 ms, and
+  swapping kits mid-roll should go silent rather than crash. "NO STREAM"
+  in the header means the device refused every open; check logcat's
+  `PadEngine` line. KIT's own grid still plays through SoundPool until
+  this has been heard (EEE4 moves it).
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound

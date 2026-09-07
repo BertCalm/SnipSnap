@@ -1459,6 +1459,25 @@ The Android side is written blind for CI's compiler, as :app always is.
 | CCC6 | ✓ done: the corners are yours — `SurfaceStore` (`:shell`, tested, fuzzed): `surface.json` beside the kit with the pad the surface plays and four `Corner`s (pitch, cutoff, resonance, drive, each 0..1, refused in words); `Corner.from(mode, reading, tilt, corners)` is the engine's own macro map (XY / XYZ / the MORPH blend), so SET A..D on the screen captures the sound under the last touch as a corner, pushes it to the engine and saves; defaults are the engine's; a torn file reads as the defaults, said aloud | CORE + APP | S | round-trip byte-stable; a corner at A is A; the centre is the average; refusals named; the fuzz batch holds; bench: set four corners, leave, come back, morph between them |
 | CCC7 | ✓ done: PAD ◄ ► — the surface plays any of the kit's pads, by slot, wrapping, the choice remembered in `surface.json`; the readout names it MPC-style (A01..) | APP | S | bench: step through the kit; reopen, the same pad is under the finger |
 
+## Wave EEE — M4, the pads on the native engine (APP + CORE)
+
+The latency milestone the app plan named first and shipped last: PLAY's
+pads leave SoundPool for the native engine the Surface brought. Every
+pad semantic stays on the JVM under test — which layer a velocity taps,
+which slice a chain steps to, level and pan as the MPC means them, tune
+as a ratio — and the native voice only ever hears "this sample, these
+frames, these gains, this speed". The engine reports each voice's end,
+so the allocator learns of an ending when it happens instead of from a
+timer. KIT's grid keeps the SoundPool player until the native voice has
+been heard on a phone; then it follows in one small PR.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| EEE1 | ✓ done: `PadHit` (`:shell`) — `resolve(pad, velocity, hitIndex, framesOf)`: the layer whose range holds the MIDI velocity (the loudest as fallback), the chain slice for the hit (a zone's own base and cycle, the last slice to the end), left/right gains as the SoundPool player mapped them so a kit sounds as it did, tune as `2^((coarse + fine/100)/12)`; a sample the engine never loaded is no hit, refusals in words | CORE | S | whole pad, pan/velocity, tune, layers and the gap fallback, single-zone chain stepping, the zone grid, the null and the refusals |
+| EEE2 | ✓ done: `PadEngine` (`app/src/main/cpp`) — 32 voices, each a windowed, repitched, linearly interpolated read of a bank sample (mono or stereo), a 5 ms choke fade and a 20 ms panic fade, the quietest fading voice stolen first and the oldest after; the bank built on the UI thread and adopted whole by the callback (every voice silenced and reported), the same pointer handshake as the Surface; commands and endings on two lock-free rings; `OboeOutput.h` the one way both engines open a stream (Exclusive, then Shared) | APP | M | bench: no dropouts through a roll on a mid-range phone; a choke is a fade, not a click; a bank swap mid-roll is silence, not a crash |
+| EEE3 | ✓ done: PLAY over it — `PadEngine.kt` (bank read off the main thread through `WavReader`, hits through `PadHit`, `@Synchronized`, `close` idempotent); the reap timer and its two constants gone, replaced by a frame loop that drains the endings ring into `VoiceAllocator.voiceEnded`; the allocator built at `MAX_VOICES` so the status line and the engine cannot drift; a hit nothing loaded for is handed back to the allocator at once; ON_STOP still panics | APP | S | bench: finger drumming feels tight enough that you'd play it (the milestone's own exit test); VOICES counts down as one-shots end; a closed hat cuts an open one with no click |
+| EEE4 | KIT's grid onto the native engine — swap `PadPlayer` for `PadEngine` on the KIT screen once EEE3 has been heard | APP | S | bench: KIT's pads sound the same as PLAY's |
+
 ## Sequence
 
 ```
@@ -1697,6 +1716,9 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
     the roll of the phone, PRINT to resample the gesture onto TAPE; then
     the shared fallback, SET A..D corners in surface.json, PAD ◄ ► ·
     bench: dropouts, the route change, the print heard back
+  ✓ wave EEE (M4, the pads on the native engine): PadHit on the JVM,
+    PadEngine under Oboe, PLAY over it with endings reported, not timed ·
+    bench: tight enough to play; then EEE4 moves KIT's grid across
 
 CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   directions. The smear (STN transient mask, peak-matched) as a rack

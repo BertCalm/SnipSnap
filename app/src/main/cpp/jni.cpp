@@ -124,3 +124,113 @@ Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv* env, jobject, jlong handle
 }
 
 }  // extern "C"
+
+// ---- NativePads: the pads' voice (M4) -----------------------------------------
+
+#include "PadEngine.h"
+
+using snipsnap::PadCommand;
+using snipsnap::PadEngine;
+
+namespace {
+inline PadEngine* pads(jlong handle) { return reinterpret_cast<PadEngine*>(handle); }
+}  // namespace
+
+extern "C" {
+
+JNIEXPORT jlong JNICALL
+Java_com_snipsnap_app_NativePads_create(JNIEnv*, jobject, jint preferredSampleRate) {
+    return reinterpret_cast<jlong>(new PadEngine(preferredSampleRate));
+}
+
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativePads_destroy(JNIEnv*, jobject, jlong handle) {
+    delete pads(handle);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_start(JNIEnv*, jobject, jlong handle) {
+    return pads(handle)->start() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativePads_stop(JNIEnv*, jobject, jlong handle) {
+    pads(handle)->stop();
+}
+
+JNIEXPORT jint JNICALL
+Java_com_snipsnap_app_NativePads_sampleRate(JNIEnv*, jobject, jlong handle) {
+    return pads(handle)->sampleRate();
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_needsRestart(JNIEnv*, jobject, jlong handle) {
+    return pads(handle)->needsRestart() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_isShared(JNIEnv*, jobject, jlong handle) {
+    return pads(handle)->isShared() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativePads_beginBank(JNIEnv*, jobject, jlong handle) {
+    pads(handle)->beginBank();
+}
+
+JNIEXPORT jint JNICALL
+Java_com_snipsnap_app_NativePads_addSample(JNIEnv* env, jobject, jlong handle, jfloatArray interleaved, jint channels, jint rate) {
+    const jsize n = env->GetArrayLength(interleaved);
+    std::vector<float> frames(static_cast<size_t>(n));
+    env->GetFloatArrayRegion(interleaved, 0, n, frames.data());
+    return pads(handle)->addSample(std::move(frames), channels, rate);
+}
+
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativePads_commitBank(JNIEnv*, jobject, jlong handle) {
+    pads(handle)->commitBank();
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_noteOn(
+    JNIEnv*, jobject, jlong handle, jint voiceId, jint sample,
+    jlong startFrame, jlong endFrame, jfloat gainL, jfloat gainR, jdouble pitch) {
+    PadCommand c;
+    c.type = PadCommand::Type::NoteOn;
+    c.voiceId = voiceId;
+    c.sample = sample;
+    c.start = startFrame;
+    c.end = endFrame;
+    c.gainL = gainL;
+    c.gainR = gainR;
+    c.pitch = pitch;
+    return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativePads_stopVoice(JNIEnv*, jobject, jlong handle, jint voiceId, jfloat fadeMs) {
+    PadCommand c;
+    c.type = PadCommand::Type::Stop;
+    c.voiceId = voiceId;
+    c.fadeMs = fadeMs;
+    pads(handle)->pushCommand(c);
+}
+
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativePads_allOff(JNIEnv*, jobject, jlong handle, jfloat fadeMs) {
+    PadCommand c;
+    c.type = PadCommand::Type::AllOff;
+    c.fadeMs = fadeMs;
+    pads(handle)->pushCommand(c);
+}
+
+JNIEXPORT jintArray JNICALL
+Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv* env, jobject, jlong handle) {
+    int32_t buf[256];
+    const size_t n = pads(handle)->drainEnded(buf, 256);
+    jintArray out = env->NewIntArray(static_cast<jsize>(n));
+    if (n > 0) env->SetIntArrayRegion(out, 0, static_cast<jsize>(n), reinterpret_cast<const jint*>(buf));
+    return out;
+}
+
+}  // extern "C"

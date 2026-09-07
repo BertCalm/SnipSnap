@@ -90,7 +90,9 @@ test-first.
   disk IO on the main thread; the obvious fix — wrapping the load loop
   in `Dispatchers.IO` — silently breaks the guard that stops `SoundPool`
   from cross-wiring pads between kits. `check(Looper…)` fails loudly
-  instead. M4 replaces the whole class with Oboe.
+  instead. M4 replaces the whole class with Oboe — done for PLAY
+  (`PadEngine`, native, reads WAVs off the main thread); KIT's grid stays
+  on `PadPlayer` until the native voice has been heard on a phone.
 - **`ui-tooling` is deliberately absent** — it drags
   `androidx.compose.material` onto the debug classpath. A milestone that
   wants `@Preview` should re-add it with an `exclude`.
@@ -151,7 +153,7 @@ confidence threshold), tap-to-cycle overrides, `AutoPlace` preview, SEND
 TO GRID. `Balance` and `InKey` as kit actions. **Exit test:** one captured
 bar becomes a playable, sensibly-laid-out kit in under a minute.
 
-### M4 — Play mode · M
+### M4 — Play mode · M — PLAY on the native engine ✓ (wave EEE); KIT's grid follows once heard
 
 The latency milestone: Oboe/AAudio (the one new native dependency),
 pre-loaded pad buffers, choke groups honoured, velocity from touch. Full-
