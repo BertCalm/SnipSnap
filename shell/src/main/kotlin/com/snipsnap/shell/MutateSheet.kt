@@ -18,7 +18,8 @@ import kotlin.math.roundToInt
  * none, SPLICE has AT (where the pad's transient hands over), SPLIT has
  * HZ (the crossover), MORPH has MIX, ROOM has WET, TRANSPLANT has BANDS.
  * The knob's range is the verb's own, mapped exponentially where the ear
- * hears ratios.
+ * hears ratios. DRIFT is the card's one-tap move: the crate deals and
+ * MORPH blends, MIX how far ([drift]).
  */
 object MutateSheet {
 
@@ -85,8 +86,11 @@ object MutateSheet {
         is Partner.Deal -> partner.label
     }
 
-    /** What a mutated pad carries: the move and the parents' labels, read from the `mutate` recipe. */
-    data class Applied(val mode: String, val parents: List<String>)
+    /** What a mutated pad carries: the move and the parents' labels, read from the `mutate` recipe; DRIFT reads as its own word. */
+    data class Applied(val mode: String, val parents: List<String>, val drifted: Boolean = false) {
+        /** "DRIFT" for a drift, else the move. */
+        val word: String get() = if (drifted) "DRIFT" else mode
+    }
 
     /**
      * Read defensively: `Mutate.apply` leaves `{"mutate": {"mode", "with", …}}`;
@@ -96,7 +100,19 @@ object MutateSheet {
         val m = recipe?.entries?.get("mutate") as? JsonValue.Obj ?: return null
         val mode = (m.entries["mode"] as? JsonValue.Str)?.value ?: return null
         val with = (m.entries["with"] as? JsonValue.Arr)?.items?.mapNotNull { (it as? JsonValue.Str)?.value } ?: emptyList()
-        return Applied(mode.uppercase(), with)
+        val drifted = (m.entries["drift"] as? JsonValue.Bool)?.value == true
+        return Applied(mode.uppercase(), with, drifted)
+    }
+
+    /**
+     * DRIFT: one tap — the crate under [root] deals the neighbour and MORPH
+     * blends [fraction] of the MIX knob toward it, through [Mutate.drift] so
+     * the recipe records the spin and the drift. A new [seed] is a new
+     * neighbour. Throws [IllegalArgumentException] when the crate is empty.
+     */
+    fun drift(model: KitBuilderModel, slot: Int, root: File, seed: Int, fraction: Float): Mutate.Drifted {
+        val mix = knobFor(Mutate.Mode.MORPH)!!
+        return Mutate.drift(model, slot, root, seed, value(mix, fraction))
     }
 
     /**

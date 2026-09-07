@@ -23,7 +23,9 @@ import java.io.File
  *   snare's room"), MIX the dry/wet;
  * - **transplant** — the pad's attack wearing the parent's long-term
  *   spectral envelope (a one-knob vocoder, BANDS its resolution): the
- *   pad's time, the parent's tone.
+ *   pad's time, the parent's tone;
+ * - **drift** — one knob: the crate's roulette finds the neighbour and
+ *   morph blends toward it ([drift]).
  *
  * Bin-backed through the same door as every treatment; the recipe
  * (mode, parents, split, flips) rides the pad so the sound stays
@@ -172,6 +174,35 @@ object Mutate {
             it.copy(source = it.source + mapOf("mutatedWith" to sources.joinToString(", ") { s -> s.label }))
         }
         return Outcome(mutated, flipped)
+    }
+
+    /** What DRIFT did: the deal the crate made and the morph toward it. */
+    data class Drifted(val pick: Pick, val outcome: Outcome)
+
+    /**
+     * DRIFT TOWARD THE CRATE (XX1) — one knob: [roulette] finds the
+     * neighbour (guided, never wild, never the pad itself), [Mode.MORPH]
+     * blends [amount] of the way toward it. Exactly a roulette then a
+     * morph, so the recipe is the morph's with the spin recorded beside
+     * it and a `drift` flag; deterministic per (crate, seed).
+     */
+    fun drift(model: KitBuilderModel, slot: Int, root: File, seed: Int = 0, amount: Float = 0.5f): Drifted {
+        require(amount in 0f..1f) { "--amount wants 0..1, got $amount" }
+        val pick = roulette(model, slot, root, seed = seed, wild = false)
+        val outcome = apply(
+            model, slot, listOf(Source(pick.label, com.snipsnap.audio.WavReader.read(pick.file))), Mode.MORPH,
+            morphAmount = amount,
+            extraRecipe = mapOf(
+                "roulette" to JsonValue.Obj(
+                    linkedMapOf<String, JsonValue>(
+                        "seed" to JsonValue.Num(seed.toDouble()),
+                        "wild" to JsonValue.Bool(false),
+                    ),
+                ),
+                "drift" to JsonValue.Bool(true),
+            ),
+        )
+        return Drifted(pick, outcome)
     }
 
     /** The parents back out of the bin; recipe and parent stamp cleared. */

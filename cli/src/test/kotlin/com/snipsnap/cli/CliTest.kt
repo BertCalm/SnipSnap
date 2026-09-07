@@ -1308,6 +1308,33 @@ class CliTest {
     }
 
     @Test
+    fun `drift lets the crate deal and morphs toward the deal in one verb`() {
+        val wav = writeBreak(File(temp, "df.wav"))
+        val out = File(temp, "df-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "DF", "--slices", "8").first)
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "DF2", "--slices", "8").first)
+        val kitDir = File(out, "DF")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(2)!!.sampleFile)
+        val before = padFile.readBytes()
+
+        val (code, stdout, stderr) = cli("drift", kitDir.path, "A02", "--amount", "0.4", "--seed", "2", "--root", out.path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "drifted 40% toward")
+        assertContains(stdout, "seed 2")
+        assertTrue(!before.contentEquals(padFile.readBytes()))
+        val recipe = (KitStore.load(kitDir).pad(2)!!.recipe!!.entries["mutate"] as com.snipsnap.json.JsonValue.Obj).entries
+        assertEquals("morph", (recipe["mode"] as com.snipsnap.json.JsonValue.Str).value)
+        assertTrue(recipe.containsKey("drift") && recipe.containsKey("roulette"))
+
+        assertEquals(0, cli("drift", kitDir.path, "A02", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        val empty = File(temp, "df-empty").apply { mkdirs() }
+        val (emptyCode, _, emptyErr) = cli("drift", kitDir.path, "A02", "--root", empty.path)
+        assertTrue(emptyCode != 0 && "nothing to spin" in emptyErr, emptyErr)
+    }
+
+    @Test
     fun `retune talks one pad into a key from the terminal, refuses a drum, and undoes`() {
         val wav = writeBreak(File(temp, "rt.wav"))
         val out = File(temp, "rt-out")

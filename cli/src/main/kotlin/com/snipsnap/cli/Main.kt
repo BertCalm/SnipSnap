@@ -115,6 +115,8 @@ object Cli {
         |  eternal <kit-dir> <pad>
         |                        the attack kept bit for bit, the tail slowed
         |                        toward forever (--tail s, --knee ms, --undo)
+        |  drift <kit-dir> <pad> one knob: the crate deals the neighbour, morph
+        |                        blends toward it (--amount, --seed, --root)
         |  mutate <kit-dir> <pad> --with <src>[,<src>..]
         |                        one hit from many parents: transient-aligned
         |                        stack (with a polarity check), --splice (the
@@ -338,6 +340,7 @@ object Cli {
                 "body" -> BodyCommand.run(args.drop(1), out)
                 "wobble" -> WobbleCommand.run(args.drop(1), out)
                 "eternal" -> EternalCommand.run(args.drop(1), out)
+                "drift" -> DriftCommand.run(args.drop(1), out)
                 "robin" -> RobinCommand.run(args.drop(1), out)
                 "mutate" -> MutateCommand.run(args.drop(1), out)
                 "shape" -> ShapeCommand.run(args.drop(1), out)

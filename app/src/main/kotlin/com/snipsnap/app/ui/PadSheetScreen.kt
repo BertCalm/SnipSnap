@@ -64,6 +64,7 @@ import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.Mutate
 import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
@@ -463,6 +464,48 @@ fun PadSheetScreen(
         }
     }
 
+    /**
+     * DRIFT: one tap — the shelf deals the neighbour and MORPH blends toward
+     * it, MIX how far. The card flips to MORPH so the knob it read is the
+     * knob on screen; each tap is a new seed, like ROULETTE.
+     */
+    fun onDrift() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (p.velocityLayers.isNotEmpty()) {
+            onToast(Copy.MUTATE_NEEDS_ONE)
+            return
+        }
+        val root = entry.dir.parentFile ?: entry.dir
+        val seed = spins
+        val padName = p.displayName
+        if (mutateMode != Mutate.Mode.MORPH.name) mutateMode = Mutate.Mode.MORPH.name
+        val fraction = pendingMutateKnob
+        scope.launch {
+            busy = true
+            try {
+                val drifted = withContext(Dispatchers.IO) {
+                    val d = MutateSheet.drift(m, slot, root, seed, fraction)
+                    m.save()
+                    d
+                }
+                spins = seed + 1
+                partner = MutateSheet.Partner.Deal(drifted.pick.label, drifted.pick.file, seed)
+                revision++
+                onKitUpdated(m.kit)
+                refreshPadAudio(m)
+                m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
+                onToast(Copy.drifted(padName, drifted.pick.label))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (e is IllegalArgumentException) onToast(Copy.CRATE_EMPTY) else failure("DRIFT", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
     fun onMakeInstrument() {
         if (busy) return
         val m = model
@@ -792,6 +835,7 @@ fun PadSheetScreen(
                 partner = partner,
                 onPartner = { partner = MutateSheet.Partner.Pad(it) },
                 onRoulette = ::onRoulette,
+                onDrift = ::onDrift,
                 knobLabel = mutateKnob?.label,
                 knobFraction = pendingMutateKnob,
                 knobText = mutateKnob?.let { MutateSheet.label(it, MutateSheet.value(it, pendingMutateKnob)) } ?: "",
@@ -1254,6 +1298,7 @@ private fun MutateCard(
     partner: MutateSheet.Partner?,
     onPartner: (Int) -> Unit,
     onRoulette: () -> Unit,
+    onDrift: () -> Unit,
     knobLabel: String?,
     knobFraction: Float,
     knobText: String,
@@ -1272,7 +1317,7 @@ private fun MutateCard(
             ActionButton("UNDO", scheme, enabled = !busy && mutated != null && canUndo, onClick = onUndo)
         }
         TapeText(
-            mutated?.let { "${it.mode}: ${it.parents.joinToString(", ")}" } ?: "PICK A MOVE AND A PARENT",
+            mutated?.let { "${it.word}: ${it.parents.joinToString(", ")}" } ?: "PICK A MOVE AND A PARENT",
             TapeType.pixelSmall,
             scheme.ink2.tape,
             maxLines = 1,
@@ -1322,14 +1367,18 @@ private fun MutateCard(
             }
         }
         val deal = partner as? MutateSheet.Partner.Deal
-        ActionButton(
-            deal?.let { "ROULETTE ▸ ${it.label}" } ?: "ROULETTE ▸ LET THE CRATE DEAL",
-            scheme,
-            enabled = !busy,
-            dimmed = deal == null,
-            modifier = Modifier.fillMaxWidth(),
-            onClick = onRoulette,
-        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            ActionButton(
+                deal?.let { "ROULETTE ▸ ${it.label}" } ?: "ROULETTE ▸ LET THE CRATE DEAL",
+                scheme,
+                enabled = !busy,
+                dimmed = deal == null,
+                modifier = Modifier.weight(2f),
+                onClick = onRoulette,
+            )
+            // DRIFT: the deal and the morph in one tap, MIX how far.
+            ActionButton("DRIFT ▸", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onDrift)
+        }
 
         // The move's knob, when it has one; STACK's row stays so the card never jumps.
         StepperSlider(

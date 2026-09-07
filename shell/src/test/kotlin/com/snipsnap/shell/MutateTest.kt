@@ -159,6 +159,30 @@ class MutateTest {
     }
 
     @Test
+    fun `drift - exactly a roulette then a morph, deterministic per seed`() {
+        val m = model("Drift")
+        model("Drift2")
+        val drifted = Mutate.drift(m, 1, root = temp, seed = 4, amount = 0.6f)
+        val byDrift = WavReader.read(File(m.kitDir, drifted.outcome.pad.sampleFile)).samples
+        val recipe = (drifted.outcome.pad.recipe!!.entries["mutate"] as com.snipsnap.json.JsonValue.Obj).entries
+        assertEquals("morph", (recipe["mode"] as com.snipsnap.json.JsonValue.Str).value)
+        assertEquals(true, (recipe["drift"] as com.snipsnap.json.JsonValue.Bool).value)
+        assertEquals(4.0, ((recipe["roulette"] as com.snipsnap.json.JsonValue.Obj).entries["seed"] as com.snipsnap.json.JsonValue.Num).value)
+        Mutate.undo(m, 1)
+
+        // The long way round lands on the same bytes.
+        val pick = Mutate.roulette(m, 1, root = temp, seed = 4)
+        assertEquals(pick, drifted.pick)
+        val byHand = Mutate.apply(m, 1, listOf(Mutate.Source(pick.label, WavReader.read(pick.file))), Mutate.Mode.MORPH, morphAmount = 0.6f)
+        assertTrue(WavReader.read(File(m.kitDir, byHand.pad.sampleFile)).samples.contentEquals(byDrift), "drift = roulette then morph")
+        Mutate.undo(m, 1)
+
+        val again = Mutate.drift(m, 1, root = temp, seed = 4, amount = 0.6f)
+        assertTrue(WavReader.read(File(m.kitDir, again.outcome.pad.sampleFile)).samples.contentEquals(byDrift), "same seed, same drift")
+        assertFailsWith<IllegalArgumentException> { Mutate.drift(m, 1, root = temp, seed = 4, amount = 2f) }
+    }
+
+    @Test
     fun `guards hold - chained pads refused, splice takes one parent`() {
         val m = model("Guards")
         Robin.apply(m, 2, takes = 2)

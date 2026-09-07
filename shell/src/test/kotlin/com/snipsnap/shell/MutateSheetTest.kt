@@ -128,6 +128,24 @@ class MutateSheetTest {
     }
 
     @Test
+    fun `drift is one tap - the deal and the morph, MIX how far, read back as DRIFT`() {
+        val m = model("Drft")
+        model("Drft2")
+        val d = MutateSheet.drift(m, 1, root = temp, seed = 2, fraction = 0.25f)
+        val applied = MutateSheet.read(d.outcome.pad.recipe)!!
+        assertTrue(applied.drifted)
+        assertEquals("DRIFT", applied.word)
+        assertEquals("MORPH", applied.mode)
+        assertEquals(listOf(d.pick.label), applied.parents)
+        val recipe = (d.outcome.pad.recipe!!.entries["mutate"] as com.snipsnap.json.JsonValue.Obj).entries
+        assertEquals(0.25, (recipe["amount"] as com.snipsnap.json.JsonValue.Num).value, 1e-6)
+        MutateSheet.undo(m, 1)
+        assertNull(m.pad(1)!!.recipe)
+        val empty = File(temp, "empty-drift").apply { mkdirs() }
+        assertFailsWith<IllegalArgumentException> { MutateSheet.drift(m, 1, root = empty, seed = 0, fraction = 0.5f) }
+    }
+
+    @Test
     fun `read ignores every other recipe shape`() {
         val m = model("Other")
         m.eraPad(1, "tape", 0.5f)

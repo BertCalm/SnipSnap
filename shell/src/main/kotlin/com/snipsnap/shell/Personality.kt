@@ -133,6 +133,8 @@ object Copy {
     /** The keyed family's honest refusal, [reason] in the treatment's own words ("a kick is a drum, not a note"). */
     fun notANote(reason: String): String = "NOT A NOTE: ${reason.uppercase().trimEnd('.')}."
     fun mutated(move: String, pad: String, parent: String): String = "$move: $pad × $parent. ONE HIT, TWO PARENTS."
+    /** DRIFT: the pad drifted toward what the crate dealt. */
+    fun drifted(pad: String, toward: String): String = "$pad DRIFTED TOWARD $toward. ORIGINAL SLEEPS IN THE BIN."
     const val UNMUTATED = "PARENTS SEPARATED. THE ORIGINAL IS BACK FROM THE BIN."
     const val MUTATE_NEEDS_ONE = "GHOSTS ON. MUTATE WANTS ONE SAMPLE - CLEAR THEM FIRST."
     const val CRATE_EMPTY = "THE CRATE HAS NOTHING TO DEAL. ONLY YOU ON THE SHELF."

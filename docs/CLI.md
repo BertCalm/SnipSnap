@@ -690,6 +690,18 @@ phases; bin-backed, `--undo` byte-identical, the recipe (tail, knee,
 seed) riding the pad. On the phone it is ETERNAL on the PAD SHEET's
 fifth row, AMT the tail (half a second to thirty, exponentially).
 
+### `drift <kit-dir> <pad>` — drift toward the crate
+
+One knob. The crate's roulette finds the neighbour — Similar's nearest
+few under `--root` (default: the kit's parent folder), never the pad
+itself, `--seed` choosing among them — and `mutate --morph` blends
+`--amount` of the way toward it (default half): exactly a roulette
+then a morph, the morph's recipe recording the spin and a `drift`
+flag, so `lineage` shows where the pad went. Deterministic per (crate,
+seed); `--undo` restores byte-identical. On the phone it is the MUTATE
+card's DRIFT button beside ROULETTE — the card flips to MORPH so MIX is
+the knob it read, and every tap is a new deal.
+
 ### `arrange <kit-dir>` — songs, not loops
 
 The Arranger's structure grammar lays the kit's **own** variations into

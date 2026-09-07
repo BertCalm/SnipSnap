@@ -1329,7 +1329,7 @@ over the spectral door, each with a real exit test.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| XX1 | DRIFT TOWARD THE CRATE — one knob: roulette finds the neighbour, morph blends toward it | CORE + APP | S | equals roulette then morph; deterministic per seed |
+| XX1 | ✓ done: DRIFT TOWARD THE CRATE — `Mutate.drift`: the guided roulette finds the neighbour, MORPH blends AMOUNT of the way toward it, the morph's recipe carrying the spin and a `drift` flag; CLI `drift <kit> <pad> [--amount] [--seed] [--root] [--undo]`; the MUTATE card's DRIFT button beside ROULETTE (the card flips to MORPH so MIX is the knob it read), a drifted pad reading as DRIFT | CORE + APP | S | drift's bytes equal roulette then morph by hand; same seed same bytes; the sheet's one tap records the MIX amount and reads back as DRIFT; the verb round-trips through the bin and refuses an empty crate |
 | XX2 | BREEDING — two kits' recipes crossed (macros swapped and averaged), classifier-audited | CORE | M | every child pad keeps its parent class; same seed same kit |
 | XX3 | DE-SAMPLE — the nearest synth patch to a captured hit, from a pre-rendered macro grid and `Similar`; its own spec | CORE + APP | L | a rendered THUMP kick returns its own patch; a capture returns a patch within a distance bound |
 
@@ -1586,8 +1586,11 @@ CORE+APP wave WW: ✓ all landed (2026-09-07) — in key. WW1 landed:
   landed: WOBBLE, a filter sweep synced to a note division at the
   kit's tempo, the family's third. WW6 landed: ATTACK KEPT, TAIL
   ETERNAL, the first 30 ms bit for bit and the tail slowed toward a
-  frozen instant. Wave WW complete. Next: wave XX, DRIFT TOWARD THE
-  CRATE.
+  frozen instant. Wave WW complete.
+
+CORE+APP wave XX (in progress, 2026-09-07) — the crate as an
+  instrument. XX1 landed: DRIFT TOWARD THE CRATE, roulette then morph
+  as one verb and one button. Next: BREEDING.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
