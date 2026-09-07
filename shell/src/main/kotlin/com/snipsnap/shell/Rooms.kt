@@ -32,6 +32,12 @@ object Rooms {
     /** A room's label as a MUTATE parent, in the recipe and the lineage: `room:FUNK ROOM`. */
     const val LABEL_PREFIX = "room:"
 
+    /** The bin's folder under the rooms: a forgotten room sleeps here, like every other delete, before it is gone. */
+    const val BIN_DIR = ".bin"
+
+    /** How long the bin keeps a forgotten room. */
+    const val BIN_DAYS = 30
+
     private const val VERSION = 1
 
     /** A kept room: its name, its impulse on disk, and how it was measured. */
@@ -80,20 +86,35 @@ object Rooms {
         // never vouches for a room that is not there.
         val bytes = java.io.ByteArrayOutputStream().also { WavWriter.write(it, impulse) }.toByteArray()
         AtomicFile.writeBytes(wav, bytes)
-        val meta = JsonValue.Obj(
-            linkedMapOf<String, JsonValue>(
-                "version" to JsonValue.Num(VERSION.toDouble()),
-                "name" to JsonValue.Str(name),
-                "frames" to JsonValue.Num(impulse.frameCount.toDouble()),
-                "sampleRate" to JsonValue.Num(impulse.sampleRate.toDouble()),
-                "lagMs" to JsonValue.Num(lagMs.toDouble()),
-                "confidence" to JsonValue.Num(confidence.toDouble()),
-                "from" to JsonValue.Str(from),
-                "measuredAt" to JsonValue.Num(nowMillis.toDouble()),
-            ),
-        )
-        AtomicFile.writeText(sidecar(wav), Json.write(meta))
-        return Room(name, wav, impulse.frameCount.toFloat() / impulse.sampleRate, lagMs, confidence, from, nowMillis)
+        val room = Room(name, wav, impulse.frameCount.toFloat() / impulse.sampleRate, lagMs, confidence, from, nowMillis)
+        AtomicFile.writeText(sidecar(wav), Json.write(meta(room, frames = impulse.frameCount, sampleRate = impulse.sampleRate)))
+        return room
+    }
+
+    /**
+     * The sidecar's contents for [room]: whatever the sidecar beside
+     * [Room.file] already holds (so a field this version does not know
+     * survives a move), the known fields written over it, [binnedAt] set
+     * only in the bin and cleared everywhere else.
+     */
+    private fun meta(room: Room, frames: Int? = null, sampleRate: Int? = null, binnedAt: Long? = null): JsonValue.Obj {
+        val m = linkedMapOf<String, JsonValue>()
+        readMeta(room.file)?.let { m.putAll(it) }
+        m["version"] = JsonValue.Num(VERSION.toDouble())
+        m["name"] = JsonValue.Str(room.name)
+        if (frames != null) m["frames"] = JsonValue.Num(frames.toDouble())
+        if (sampleRate != null) m["sampleRate"] = JsonValue.Num(sampleRate.toDouble())
+        m["lagMs"] = JsonValue.Num(room.lagMs.toDouble())
+        m["confidence"] = JsonValue.Num(room.confidence.toDouble())
+        m["from"] = JsonValue.Str(room.from)
+        m["measuredAt"] = JsonValue.Num(room.measuredAt.toDouble())
+        if (binnedAt != null) m["binnedAt"] = JsonValue.Num(binnedAt.toDouble()) else m.remove("binnedAt")
+        return JsonValue.Obj(m)
+    }
+
+    private fun readMeta(wav: File): Map<String, JsonValue>? {
+        val side = sidecar(wav)
+        return if (side.isFile) runCatching { Json.parse(side.readText()).obj() }.getOrNull() else null
     }
 
     /**
@@ -126,10 +147,94 @@ object Rooms {
     /** The room named [name], or null. */
     fun find(shelfRoot: File, name: String): Room? = list(shelfRoot).firstOrNull { it.name == name }
 
-    /** Forget [room]: its WAV and sidecar gone. */
-    fun forget(room: Room) {
-        room.file.delete()
-        sidecar(room.file).delete()
+    /** A room in the bin, and when it went there. */
+    data class Binned(val room: Room, val binnedAt: Long) {
+        /**
+         * Days left before [sweepBin] takes it, rounded up so the readout
+         * agrees with the sweep: a partial day left still reads 1, and 0
+         * only at the boundary where the sweep goes. Never below zero.
+         */
+        fun daysLeft(nowMillis: Long, keepDays: Int = BIN_DAYS): Int {
+            val left = (binnedAt + keepDays * DAY_MS - nowMillis).coerceAtLeast(0L)
+            return ((left + DAY_MS - 1) / DAY_MS).toInt()
+        }
+    }
+
+    private const val DAY_MS = 24L * 60 * 60 * 1000
+
+    /** Where forgotten rooms sleep under [shelfRoot]. */
+    fun binDir(shelfRoot: File): File = File(dir(shelfRoot), BIN_DIR)
+
+    /**
+     * Forget [room]: into the bin, not gone - the app's one rule for a
+     * delete. Its WAV and sidecar move under `Rooms/.bin/` (a fresh name
+     * there if the bin already holds one), the sidecar stamped with when.
+     */
+    fun forget(shelfRoot: File, room: Room, nowMillis: Long = System.currentTimeMillis()): Binned {
+        val bin = binDir(shelfRoot).apply { mkdirs() }
+        val name = freshName(bin, room.name)
+        val wav = File(bin, "$name.wav")
+        // The WAV and its sidecar move together; the stamp is written over
+        // the moved sidecar, so every field it held rides along.
+        moveWithSidecar(room.file, wav)
+        val moved = room.copy(name = name, file = wav)
+        AtomicFile.writeText(sidecar(wav), Json.write(meta(moved, binnedAt = nowMillis)))
+        return Binned(moved, nowMillis)
+    }
+
+    /** Every room in the bin, the most recently forgotten first. */
+    fun binned(shelfRoot: File): List<Binned> {
+        val bin = binDir(shelfRoot)
+        val wavs = bin.listFiles { f: File -> f.isFile && f.extension.equals("wav", ignoreCase = true) } ?: return emptyList()
+        return wavs.filter { isWav(it) }.mapNotNull { wav ->
+            runCatching {
+                val room = read(wav)
+                val at = (readMeta(wav)?.get("binnedAt") as? JsonValue.Num)?.value?.toLong() ?: wav.lastModified()
+                Binned(room, at)
+            }.getOrNull()
+        }.sortedByDescending { it.binnedAt }
+    }
+
+    /** Back out of the bin onto the shelf, under a name nothing there holds. */
+    fun unforget(shelfRoot: File, binned: Binned): Room {
+        val dir = dir(shelfRoot).apply { mkdirs() }
+        val name = freshName(dir, binned.room.name)
+        val wav = File(dir, "$name.wav")
+        moveWithSidecar(binned.room.file, wav)
+        val room = binned.room.copy(name = name, file = wav)
+        // Rewritten from the moved sidecar: the stamp comes off, the rest stays.
+        AtomicFile.writeText(sidecar(wav), Json.write(meta(room)))
+        return room
+    }
+
+    /** Empty the bin of rooms forgotten more than [keepDays] ago; returns how many went. */
+    fun sweepBin(shelfRoot: File, nowMillis: Long = System.currentTimeMillis(), keepDays: Int = BIN_DAYS): Int {
+        var gone = 0
+        for (b in binned(shelfRoot)) {
+            // At the boundary the room goes: daysLeft reads 0 and the sweep agrees.
+            if (nowMillis - b.binnedAt >= keepDays * DAY_MS) {
+                b.room.file.delete()
+                sidecar(b.room.file).delete()
+                gone++
+            }
+        }
+        return gone
+    }
+
+    /** [from] and its sidecar to [to] and its sidecar, together. */
+    private fun moveWithSidecar(from: File, to: File) {
+        move(from, to)
+        val side = sidecar(from)
+        if (side.isFile) move(side, sidecar(to))
+    }
+
+    private fun move(from: File, to: File) {
+        try {
+            java.nio.file.Files.move(from.toPath(), to.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        } catch (e: java.io.IOException) {
+            from.copyTo(to, overwrite = true)
+            from.delete()
+        }
     }
 
     /** [room] as the MUTATE card's parent. */
@@ -138,8 +243,7 @@ object Rooms {
     private fun sidecar(wav: File): File = File(wav.parentFile, wav.nameWithoutExtension + ".json")
 
     private fun read(wav: File): Room {
-        val side = sidecar(wav)
-        val meta = if (side.isFile) runCatching { Json.parse(side.readText()).obj() }.getOrNull() else null
+        val meta = readMeta(wav)
         val frames = (meta?.get("frames") as? JsonValue.Num)?.value
         val rate = (meta?.get("sampleRate") as? JsonValue.Num)?.value
         val seconds = if (frames != null && rate != null && rate > 0) (frames / rate).toFloat() else {

@@ -43,6 +43,7 @@ shelf useful before capture (M1) exists.
 | Window | `ui/Chrome.kt` — SNIPSNAP.EXE titlebar, 9-item menu row, 3-cell status bar with `Copy` quips, toast overlay |
 | Screens | KITS (shelf + FRESH TAPE), KIT (4×4 bank A, MPC geometry: A13 top-left, A01 bottom-left), SETUP (live scheme picker + PERSONALITY), HELP, honest stubs naming M2–M5 |
 | Data | `KitShelf` over `KitStore` (kits under app files/Kits); `PadPlayer` (SoundPool interim — choke/velocity belong to M4's Oboe allocator) |
+| Native | `src/main/cpp/` — the SURFACE engine: Oboe (prefab, `com.google.oboe:oboe`) under a C++17 callback, a lock-free SPSC ring for control frames, per-sample `ParameterSmoother`s, the `PrintBuffer` resample tap; `NativeSurface`/`SurfaceEngine.kt` own it from Kotlin. The one native library; the NDK is pinned in `build.gradle.kts` and AGP fetches it |
 | Fonts | `res/font/` — VT323, Silkscreen, Michroma, Permanent Marker, committed |
 
 ## Things to verify on first run (beyond "does it compile")
@@ -73,6 +74,18 @@ shelf useful before capture (M1) exists.
   while the bare `.xtd` alone refuses in words. If the chooser never
   appears, check the `FileProvider` authority (`<applicationId>.files`)
   against `res/xml/share_paths.xml`.
+- **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
+  the first pad with pitch across and filter up; XYZ's second finger
+  should open the drive with the pinch; MORPH's corners should sound
+  like four different pads. PRINT, play, STOP PRINT: the toast names
+  the length and TAPE has the print. Then the two native checks — pull
+  the headphones mid-gesture (the stream should come back on its own),
+  and watch logcat's `SurfaceEngine` line: "exclusive openStream
+  failed - trying shared" means the device refused the exclusive
+  path and the shared fallback is playing (the toast says so too).
+  Then PAD ◄ ► through the kit, find a sound in XYZ, SET A, three more,
+  switch to MORPH and morph; leave the screen and come back - the
+  corners and the pad are in `surface.json` beside the kit.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad
@@ -82,6 +95,31 @@ shelf useful before capture (M1) exists.
   remove exactly the send). If the return is silent, check that ARM has
   granted RECORD_AUDIO and that no armed session holds the mic — the
   card refuses both in words before playing.
+- **Pad Sheet v2 (the boxes)**: open a pad's sheet — below GHOSTS sit
+  five group boxes (TREATMENT, SHAPE, MUTATE, OUTSIDE, MAKE), all closed,
+  each strip reading what the pad carries or UNTOUCHED; the whole sheet
+  fits one screen. Tap a strip: it opens, the others stay closed, EJECT
+  scrolls away but ◄ ► stay pinned at the bottom. Press A03 ►: the same
+  box is open on the next pad. Open OUTSIDE and SEND a ROOM trip: the
+  box's strip turns cyan and two reels turn on an LCD strip beside
+  LISTENING…, then SENDING…; SEND reads the stage dimmed.
+- **ROOMS on the shelf**: after KEEP ROOM, THE SHELF grows a ROOMS
+  section under INSTRUMENTS, one row per room with its measurement and
+  length. Hold a row: it presses and shows FORGET → BIN; tap it and the
+  toast says the bin keeps it 30 days; the row is gone from the shelf and
+  `Rooms/.bin/` holds the pair. Tap the room's name again to let go.
+  Under the live rooms an IN THE BIN list appears with the forgotten room,
+  its days left on an LCD (the last two days in the warn colour), and
+  RESTORE; tap it and the room is back among the live rows with the toast
+  "…IS BACK ON THE SHELF", and the bin list shrinks or disappears.
+- **ANOTHER KIT (MUTATE)**: with two kits on the shelf, open a pad on
+  one and the MUTATE card grows an ANOTHER KIT · PICK ITS PAD row under
+  ROOMS: one chip per other kit, none for this one. Tap a kit and its
+  pads appear as A01…-style chips, four to a row; tap one and the partner
+  line reads "SOUL A03". MUTATE ▸ MORPH: the child's lineage names the
+  other kit's pad the way a deal would ("Soul:A03") and the recipe carries
+  the other kit's name. A kit whose folder no longer loads is simply not
+  offered. UNDO puts the parent back byte for byte.
 - **KEEP ROOM (pad sheet)**: after a ROOM trip the OUTSIDE card's KEEP
   ROOM button lights; tap it and the toast names the room ("FUNK ROOM IS
   ON THE SHELF…"), a `Rooms/FUNK ROOM.wav` + `.json` pair appears beside

@@ -59,6 +59,8 @@ enum class AppScreen(val label: String) {
     PLAY("PLAY"),
     GROOVE("GROOVE"),
     SYNTH("SYNTH"),
+    /** The tactile pad: macros under a finger, PRINT to resample the gesture onto TAPE. */
+    SURFACE("SURFACE"),
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),
@@ -127,6 +129,7 @@ val MENU_ITEMS = listOf(
     MenuItem("PLAY", AppScreen.PLAY),
     MenuItem("GROOVE", AppScreen.GROOVE),
     MenuItem("SYNTH", AppScreen.SYNTH),
+    MenuItem("SURFACE", AppScreen.SURFACE),
     MenuItem("EXPORT", AppScreen.EXPORT),
     MenuItem("SETUP", AppScreen.PROPERTIES),
     MenuItem("HELP", AppScreen.HELP),

@@ -78,6 +78,7 @@ import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.OutsideSheet
 import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
+import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.Scheme
@@ -136,6 +137,9 @@ fun PadSheetScreen(
     onGrainField: (Int) -> Unit,
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
     appScope: CoroutineScope,
+    /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name), remembered per kit by the caller. */
+    openBox: String? = null,
+    onOpenBox: (String?) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -502,12 +506,38 @@ fun PadSheetScreen(
     // third kind of parent. Read off the shelf once per sheet and again
     // after a keep; the shelf is the kit folder's parent, as ROULETTE has it.
     var rooms by remember { mutableStateOf<List<Rooms.Room>>(emptyList()) }
+    // The other kits on the shelf, for the picker (the crate with intent);
+    // the picked kit's pads load when one is picked.
+    var otherKits by remember { mutableStateOf<List<MutateSheet.OtherKit>>(emptyList()) }
+    var pickedKit by remember(slot) { mutableStateOf<MutateSheet.OtherKit?>(null) }
+    var otherPads by remember { mutableStateOf<List<Int>>(emptyList()) }
+    LaunchedEffect(pickedKit) {
+        val k = pickedKit
+        otherPads = if (k == null) emptyList() else withContext(Dispatchers.IO) {
+            try {
+                MutateSheet.padsOf(k).map { it.slot }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+    }
     var roomsRevision by remember { mutableIntStateOf(0) }
     LaunchedEffect(entry.dir, roomsRevision) {
         val root = entry.dir.parentFile ?: entry.dir
         rooms = withContext(Dispatchers.IO) {
             try {
                 Rooms.list(root)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+        otherKits = withContext(Dispatchers.IO) {
+            try {
+                MutateSheet.otherKits(root, entry.dir)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -950,6 +980,15 @@ fun PadSheetScreen(
     var pendingRes by remember(slot, pad.resonance) { mutableFloatStateOf(pad.resonance ?: 0f) }
     val isShaped = pad.attack != null || pad.decay != null || pad.cutoff != null || pad.resonance != null
 
+    // Pad Sheet v2 (Direction A): the everyday controls stay put; every
+    // workshop card is a group box, closed by default, its strip reading
+    // what the pad carries (PadSheetBoxes). One box open at a time, the
+    // open one remembered per kit by the caller so the next pad opens on
+    // the same bench. The pad nav is pinned under the scroll.
+    val boxes = PadSheetBoxes.summaries(pad, outsideStage)
+    val openBoxKind = openBox?.let { PadSheetBoxes.boxFor(it) }
+    fun tapBox(box: PadSheetBoxes.Box) = onOpenBox(PadSheetBoxes.toggle(openBoxKind, box)?.name)
+
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PadSheetHeader(
             slot = slot,
@@ -1045,6 +1084,13 @@ fun PadSheetScreen(
                 )
             }
 
+            GroupBox(
+                legend = PadSheetBoxes.Box.TREATMENT.legend,
+                summary = boxes.getValue(PadSheetBoxes.Box.TREATMENT),
+                open = openBoxKind == PadSheetBoxes.Box.TREATMENT,
+                onToggle = { tapBox(PadSheetBoxes.Box.TREATMENT) },
+                scheme = scheme,
+            ) {
             TreatmentCard(
                 rows = PadSheet.ROWS,
                 noneSegment = PadSheet.NONE,
@@ -1059,7 +1105,15 @@ fun PadSheetScreen(
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
                 onAmountCommit = { activeSegment?.let { seg -> applyTreatment(seg, pendingAmt) } },
             )
+            }
 
+            GroupBox(
+                legend = PadSheetBoxes.Box.SHAPE.legend,
+                summary = boxes.getValue(PadSheetBoxes.Box.SHAPE),
+                open = openBoxKind == PadSheetBoxes.Box.SHAPE,
+                onToggle = { tapBox(PadSheetBoxes.Box.SHAPE) },
+                scheme = scheme,
+            ) {
             ShapeCard(
                 knobs = listOf(
                     ShapeKnob(
@@ -1101,7 +1155,15 @@ fun PadSheetScreen(
                     }
                 },
             )
+            }
 
+            GroupBox(
+                legend = PadSheetBoxes.Box.MUTATE.legend,
+                summary = boxes.getValue(PadSheetBoxes.Box.MUTATE),
+                open = openBoxKind == PadSheetBoxes.Box.MUTATE,
+                onToggle = { tapBox(PadSheetBoxes.Box.MUTATE) },
+                scheme = scheme,
+            ) {
             MutateCard(
                 modes = MutateSheet.MODES,
                 mode = mutateMode,
@@ -1111,6 +1173,11 @@ fun PadSheetScreen(
                 onPartner = { partner = MutateSheet.Partner.Pad(it) },
                 rooms = rooms.map { it.name },
                 onRoom = { name -> rooms.firstOrNull { it.name == name }?.let { partner = Rooms.partner(it) } },
+                otherKits = otherKits.map { it.name },
+                pickedKit = pickedKit?.name,
+                onPickKit = { name -> pickedKit = if (pickedKit?.name == name) null else otherKits.firstOrNull { it.name == name } },
+                otherPads = otherPads,
+                onOtherPad = { s -> pickedKit?.let { k -> partner = MutateSheet.Partner.Other(k.name, k.dir, s) } },
                 onRoulette = ::onRoulette,
                 onDrift = ::onDrift,
                 knobLabel = mutateKnob?.label,
@@ -1125,8 +1192,17 @@ fun PadSheetScreen(
                 scheme = scheme,
                 busy = busy,
             )
-        }
+            }
 
+            GroupBox(
+                legend = PadSheetBoxes.Box.OUTSIDE.legend,
+                summary = boxes.getValue(PadSheetBoxes.Box.OUTSIDE),
+                open = openBoxKind == PadSheetBoxes.Box.OUTSIDE,
+                onToggle = { tapBox(PadSheetBoxes.Box.OUTSIDE) },
+                scheme = scheme,
+                // The trip out: the strip goes lcd-alt while the reels turn.
+                summaryColor = if (outsideStage != null) scheme.amber.tape else scheme.ink2.tape,
+            ) {
         OutsideCard(
             moves = OutsideSheet.MOVES,
             move = outsideMove,
@@ -1146,7 +1222,15 @@ fun PadSheetScreen(
             scheme = scheme,
             busy = busy,
         )
+            }
 
+            GroupBox(
+                legend = PadSheetBoxes.Box.MAKE.legend,
+                summary = boxes.getValue(PadSheetBoxes.Box.MAKE),
+                open = openBoxKind == PadSheetBoxes.Box.MAKE,
+                onToggle = { tapBox(PadSheetBoxes.Box.MAKE) },
+                scheme = scheme,
+            ) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             TapeText("PAD FROM ANYTHING · HOLD IT FOREVER", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
             StepperSlider(
@@ -1197,8 +1281,6 @@ fun PadSheetScreen(
             )
         }
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onNavigateTape)
             ActionButton(
                 "GRAIN ▸",
                 scheme,
@@ -1211,12 +1293,17 @@ fun PadSheetScreen(
                 scheme,
                 enabled = !busy,
                 dimmed = pad.drumClass != DrumClass.TONAL,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 onClick = ::onMakeInstrument,
             )
+            }
+            ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = onNavigateTape)
+            EjectButton(scheme, enabled = !busy, onClick = ::onEject)
         }
-        EjectButton(scheme, enabled = !busy, onClick = ::onEject)
 
+        // Pinned under the scroll: a 2dp rule, then the pad nav, so the
+        // next pad is always one tap away whatever box is open.
+        Box(Modifier.fillMaxWidth().height(2.dp).background(scheme.grayEdge.tape))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             ActionButton(
                 prevSlot?.let { "◄ ${padTag(it)}" } ?: "◄",
@@ -1637,6 +1724,11 @@ private fun MutateCard(
     onPartner: (Int) -> Unit,
     rooms: List<String>,
     onRoom: (String) -> Unit,
+    otherKits: List<String>,
+    pickedKit: String?,
+    onPickKit: (String) -> Unit,
+    otherPads: List<Int>,
+    onOtherPad: (Int) -> Unit,
     onRoulette: () -> Unit,
     onDrift: () -> Unit,
     knobLabel: String?,
@@ -1731,6 +1823,53 @@ private fun MutateCard(
                 }
             }
         }
+        // Another kit, picked: its name among the shelf's kits (two to a row),
+        // then its pads (four to a row) - the crate with intent, where
+        // ROULETTE below is the crate by chance. Absent on a one-kit shelf.
+        if (otherKits.isNotEmpty()) {
+            TapeText("ANOTHER KIT · PICK ITS PAD", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            for (row in otherKits.chunked(2)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    for (k in row) {
+                        val selected = k == pickedKit
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                                .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                                .let { if (!busy) it.tapeClick { onPickKit(k) } else it }
+                                .padding(horizontal = 4.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TapeText(k, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 1)
+                        }
+                    }
+                    repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+            if (pickedKit != null) {
+                val other = partner as? MutateSheet.Partner.Other
+                for (row in otherPads.chunked(4)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        for (p in row) {
+                            val selected = other != null && other.kitName == pickedKit && other.slot == p
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                                    .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                                    .let { if (!busy) it.tapeClick { onOtherPad(p) } else it }
+                                    .padding(horizontal = 4.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                TapeText(MutateSheet.padTag(p), TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                            }
+                        }
+                        repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+            }
+        }
         val deal = partner as? MutateSheet.Partner.Deal
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             ActionButton(
@@ -1803,13 +1942,19 @@ private fun OutsideCard(
             TapeText("OUTSIDE · THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton("UNDO", scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
         }
-        TapeText(
-            applied?.let { OutsideSheet.statusLine(it) }
-                ?: if (move == OutsideSheet.Move.ROOM.name) "A SWEEP GOES OUT, THE ROOM COMES BACK AS THE PAD'S ROOM" else "THE PAD GOES OUT THE JACK, WHAT COMES BACK IS THE PAD",
-            TapeType.pixelSmall,
-            scheme.ink2.tape,
-            maxLines = 1,
-        )
+        if (stage != null) {
+            // The trip is out: the reels turn on an LCD strip beside the
+            // stage, so the wait is alive rather than a dead button.
+            ReelsStrip(stage, scheme)
+        } else {
+            TapeText(
+                applied?.let { OutsideSheet.statusLine(it) }
+                    ?: if (move == OutsideSheet.Move.ROOM.name) "A SWEEP GOES OUT, THE ROOM COMES BACK AS THE PAD'S ROOM" else "THE PAD GOES OUT THE JACK, WHAT COMES BACK IS THE PAD",
+                TapeType.pixelSmall,
+                scheme.ink2.tape,
+                maxLines = 1,
+            )
+        }
 
         // The move: two chips, half the width each.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {

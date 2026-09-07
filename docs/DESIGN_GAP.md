@@ -9,6 +9,28 @@ Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 > `synth/Eras.kt` supplies the treatments rather than new hand-written chains).
 > Everything else re-checked and still stands.
 
+> **Re-verified 2026-09-07 (wave DDD).** Everything below still stands as
+> history; what changed is scope. Since the handoff synced, the app grew a
+> workshop the handoff never drew: the pad sheet's SHAPE, MUTATE (with
+> ROULETTE, DRIFT and rooms as partners), OUTSIDE (REAMP, ROOM, KEEP ROOM),
+> PAD FROM ANYTHING, DE-SAMPLE, TUNE, BODY, WOBBLE; SCULPT / STRETCH / TEXTURE
+> and IN KEY on KIT; SHARE, BACKUP and the share door's landing; INSTRUMENTS
+> and ROOMS on the shelf; GRAIN FIELD and the SURFACE. All of it was written
+> blind against the existing vocabulary. The pad sheet outgrew the handoff's
+> §PAD SHEET (wireframe 1d) — ten steppers and six cards in one scroll — so a
+> design pass drew three directions on the *Pad Sheet v2 and Rooms* canvas and
+> **Direction A** (group boxes with pixel legends, one open at a time, the
+> nav pinned) was chosen and built; its boards and spec live under
+> [`design/pad-sheet-v2/`](../design/pad-sheet-v2/README.md), which now
+> supersedes §PAD SHEET here. `UI_DESIGN.md` records the settled rules.
+>
+> **Still undrawn**, in value order: the share landing (today a busy line and a
+> toast; the language's "honest little message box" may suit a refusal
+> better); the SHARE / BACKUP chooser hand-off; the TEXTURE panel and the KIT
+> action row, which has grown past the artboard's; GRAIN FIELD and SURFACE,
+> which arrived from another branch with no boards at all. A fresh handoff
+> export from the design canvas would close these in one go.
+
 The handoff is unusually implementable — it states tokens in the form Compose
 consumes and names repo symbols (`PeaksPyramid`, `StarterKits`,
 `KIT_BEST_PRACTICES`) as the data behind screens the prototype fakes. Most of
