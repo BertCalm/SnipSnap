@@ -208,6 +208,22 @@ fun App(shelf: KitShelf) {
     LaunchedEffect(blocked) {
         if (blocked) captureBlocked = true
     }
+    // SNIP's own toast below (`onSnip`) fires optimistically, before
+    // MicSessionService.handleSnip's commit has even started — this is the
+    // correction if that promise doesn't hold. Baselined by attempt id, the
+    // same way `phoneStops` below baselines by count: whatever failure (if
+    // any) is already sitting in `lastSnipError` at the moment this
+    // composition mounts must NOT immediately re-toast — only a NEW attempt
+    // id failing after that point does.
+    val lastSnipError by MicSessionService.lastSnipError.collectAsState()
+    var lastSnipErrorSeen by remember { mutableStateOf(MicSessionService.lastSnipError.value?.first) }
+    LaunchedEffect(lastSnipError) {
+        val (attempt, message) = lastSnipError ?: return@LaunchedEffect
+        if (attempt != lastSnipErrorSeen) {
+            lastSnipErrorSeen = attempt
+            toast = message
+        }
+    }
     // Sessions the phone ended (lock screen, the status-bar stop chip):
     // a routine end, toasted once per tick. The count seen at first
     // composition is the baseline, so an Activity recreated mid-session
@@ -808,6 +824,10 @@ fun App(shelf: KitShelf) {
                             onArmInside = ::requestArmInside,
                             onSnip = {
                                 MicSessionService.snip(context)
+                                // Optimistic — the real commit hasn't started yet,
+                                // let alone resolved. Immediate feedback is good UX,
+                                // but it's a promise: the `lastSnipError` collector
+                                // above corrects this toast if that commit fails.
                                 toast = Copy.SNIPPED
                             },
                             onEject = { MicSessionService.eject(context) },

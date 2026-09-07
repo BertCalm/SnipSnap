@@ -5,11 +5,34 @@ package com.snipsnap.audio
  * the LAST hit — the "GRAB" gesture's DSP. Pure and deterministic.
  */
 object PadCapture {
-    /** Shorter than this after trimming ⇒ treat as silence / no real hit. */
-    const val MIN_ONESHOT_FRAMES = 1_764   // 40ms @ 44.1k
+    /** Shorter than this after trimming ⇒ treat as silence / no real hit — a rate-honest ms, not a baked frame count. */
+    const val MIN_ONESHOT_MS = 40
 
-    /** Frames cap for a single HOLD — far beyond any one-shot, half the ring. */
-    const val MAX_HOLD_FRAMES = 30 * 44_100
+    /** Seconds cap for a single HOLD — far beyond any one-shot, half the ring. */
+    const val MAX_HOLD_SECONDS = 30
+
+    /**
+     * Deprecated 44.1kHz-baked alias of [MIN_ONESHOT_MS] — kept only because
+     * `PadCaptureTest` asserts a frame-count range against it directly. New
+     * code should derive the gate from [MIN_ONESHOT_MS] at the sample rate
+     * actually in play (`MIN_ONESHOT_MS * sampleRate / 1000`) instead of
+     * comparing against this fixed-rate constant.
+     */
+    @Deprecated("frame-rate-specific; derive from MIN_ONESHOT_MS at the actual sample rate instead")
+    const val MIN_ONESHOT_FRAMES = MIN_ONESHOT_MS * 44_100 / 1000
+
+    /**
+     * Deprecated 44.1kHz-baked alias of [MAX_HOLD_SECONDS] — kept because
+     * `PadCaptureScreen`'s HOLD-length UI cap only ever runs at the app's
+     * fixed [com.snipsnap.app] mic rate (44.1kHz today); computing it here
+     * once, at the same constant that rate has always been, is simpler than
+     * threading a sample rate into a screen that has none to offer.
+     */
+    @Deprecated("frame-rate-specific; compute against the live sample rate where one is available")
+    const val MAX_HOLD_FRAMES = MAX_HOLD_SECONDS * 44_100
+
+    /** [MIN_ONESHOT_MS] at [sampleRate] — the honest, rate-aware form of [MIN_ONESHOT_FRAMES]. */
+    private fun minOneshotFrames(sampleRate: Int): Int = (MIN_ONESHOT_MS.toLong() * sampleRate / 1000).toInt()
 
     fun grabOneShot(raw: FloatArray, sampleRate: Int): Snip? {
         if (raw.isEmpty()) return null
@@ -26,7 +49,7 @@ object PadCapture {
 
         // Commit-time chain: DC-offset → trim silence → normalize → fades.
         val cleaned = Cleanup.process(Snip(sliced, channels = 1, sampleRate = sampleRate))
-        return if (cleaned.frameCount < MIN_ONESHOT_FRAMES) null else cleaned
+        return if (cleaned.frameCount < minOneshotFrames(sampleRate)) null else cleaned
     }
 
     /**
@@ -37,6 +60,6 @@ object PadCapture {
     fun holdClip(raw: FloatArray, sampleRate: Int): Snip? {
         if (raw.isEmpty()) return null
         val cleaned = Cleanup.process(Snip(raw, channels = 1, sampleRate = sampleRate))
-        return if (cleaned.frameCount < MIN_ONESHOT_FRAMES) null else cleaned
+        return if (cleaned.frameCount < minOneshotFrames(sampleRate)) null else cleaned
     }
 }

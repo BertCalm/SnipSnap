@@ -28,6 +28,7 @@ import com.snipsnap.audio.CaptureRing
 import com.snipsnap.audio.SilenceWatch
 import com.snipsnap.shell.Copy
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.math.abs
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -442,6 +443,11 @@ class MicSessionService : Service() {
 
     private fun handleSnip() {
         val snapRing = ring ?: return // SNIP with nothing armed: no-op
+        // Own id per attempt (see [_lastSnipError]'s KDoc for why): lets a
+        // collector baseline "already reported" by id, the same discipline
+        // [phoneStops] uses, instead of nulling this out and racing a UI
+        // that might read it in between.
+        val attempt = snipAttemptSeq.incrementAndGet()
         thread(name = "MicSessionSnip") {
             val samples = snapRing.snapshot(RING_SECONDS * SAMPLE_RATE)
             // commitSnip runs the cleanup/doctor DSP chain on this bare
@@ -453,7 +459,14 @@ class MicSessionService : Service() {
             val file = runCatching { commitSnip(samples, SAMPLE_RATE) }
                 .onFailure { Log.w(TAG, "snip: commit failed", it) }
                 .getOrNull()
-            if (file != null) _lastSnipFile.value = file
+            if (file != null) {
+                _lastSnipFile.value = file
+            } else {
+                // Either the runCatching above caught something, or
+                // commitSnip returned null cleanly — both are a miss the
+                // optimistic in-app toast already claimed as a success.
+                _lastSnipError.value = attempt to "SNIP FAILED — COULDN'T KEEP THAT ONE"
+            }
         }
     }
 
@@ -611,6 +624,30 @@ class MicSessionService : Service() {
 
         private val _lastSnipFile = MutableStateFlow<File?>(null)
         val lastSnipFile: StateFlow<File?> = _lastSnipFile.asStateFlow()
+
+        /** Bumped once per [handleSnip] attempt — see [_lastSnipError]'s KDoc. */
+        private val snipAttemptSeq = AtomicInteger(0)
+
+        /**
+         * Paired with [lastSnipFile]: the in-app SNIP button (`App.kt`'s
+         * `onSnip`) toasts `Copy.SNIPPED` optimistically, before
+         * [handleSnip]'s commit has even started — immediate feedback is
+         * good UX, but it means that toast is a promise, not a report. If
+         * the commit then fails or [commitSnip] returns null (a capture
+         * `CaptureDoctor.clean` legitimately refuses, most likely), this is
+         * the correction: a short, honest string a collector can toast to
+         * retract the lie.
+         *
+         * The `Int` half is [handleSnip]'s own per-attempt id, not a value
+         * to clear between attempts: a collector baselines "already
+         * reported" against the id it last saw (the same discipline
+         * [phoneStops] uses), so a fresh `App()` composition never replays
+         * an old failure just because this still holds one, and two
+         * consecutive failures with the identical message still read as two
+         * distinct events (different ids), not a same-value no-op.
+         */
+        private val _lastSnipError = MutableStateFlow<Pair<Int, String>?>(null)
+        val lastSnipError: StateFlow<Pair<Int, String>?> = _lastSnipError.asStateFlow()
 
         /**
          * The reader loop's per-block peak, `0f..1f` — the live input level

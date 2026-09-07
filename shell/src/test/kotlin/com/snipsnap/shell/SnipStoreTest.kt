@@ -97,6 +97,64 @@ class SnipStoreTest {
     }
 
     @Test
+    fun `concurrent commits at the identical millisecond never collide, even under a hard race`() {
+        // The sequential test above (two calls, one thread) can't exercise the
+        // actual defect: two REAL threads racing `freshFile`'s claim for the
+        // same `nowMillis`, the shape a fast double-press of SNIP (or the
+        // notification action firing alongside the in-app button) produces.
+        // A plain `file.exists()` check-then-write has a window where both
+        // threads observe "nothing here yet" for the same candidate name and
+        // one silently clobbers the other; `File.createNewFile()`'s
+        // create-if-absent is what closes it.
+        val root = kotlin.io.path.createTempDirectory("snips").toFile()
+        try {
+            val threadCount = 8
+            val barrier = java.util.concurrent.CyclicBarrier(threadCount)
+            val results = java.util.concurrent.ConcurrentLinkedQueue<Pair<Int, java.io.File>>()
+            val errors = java.util.concurrent.ConcurrentLinkedQueue<Throwable>()
+            val threads = (0 until threadCount).map { i ->
+                Thread {
+                    try {
+                        barrier.await()
+                        // A distinct, recognizable duration per thread - a
+                        // collision surfaces as one file reading back with
+                        // ANOTHER thread's frame count, not just a missing file.
+                        val seconds = 0.3f + i * 0.15f
+                        val file = SnipStore.commit(tone(seconds), 44_100, root, nowMillis = 42_000L)
+                        results.add(i to file)
+                    } catch (e: Throwable) {
+                        errors.add(e)
+                    }
+                }
+            }
+            threads.forEach { it.start() }
+            threads.forEach { it.join(10_000) }
+
+            assertTrue(errors.isEmpty(), "no thread should throw: $errors")
+            assertEquals(threadCount, results.size, "every thread must finish and report a file")
+
+            val files = results.map { it.second }
+            assertEquals(files.toSet().size, files.size, "no two threads may land on the same path")
+            files.forEach { assertTrue(it.isFile, "every claimed path must actually hold a file: $it") }
+
+            // Each file's own payload survives at its own path, intact -
+            // the actual failure mode this guards against is a same-millis
+            // race silently overwriting one thread's bytes with another's.
+            results.forEach { (i, file) ->
+                val expectedSeconds = 0.3f + i * 0.15f
+                val expectedFrames = (expectedSeconds * 44_100).toInt()
+                val back = com.snipsnap.audio.WavReader.read(file)
+                assertTrue(
+                    back.frameCount in (expectedFrames - 3_000)..(expectedFrames + 500),
+                    "thread $i's file (${file.name}) should hold ~$expectedSeconds s of ITS OWN tone, " +
+                        "got ${back.frameCount} frames - a same-millis collision shows up here as another " +
+                        "thread's duration or a truncated/torn read",
+                )
+            }
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
     fun `list is newest first and newest agrees`() {
         val root = kotlin.io.path.createTempDirectory("snips").toFile()
         try {

@@ -84,7 +84,7 @@ object SnipStore {
 
         val file = freshFile(root, nowMillis)
         val bytes = ByteArrayOutputStream().apply { WavWriter.write(this, toWrite) }.toByteArray()
-        AtomicFile.writeBytes(file, bytes)
+        writeClaimedFile(file, bytes)
         return file
     }
 
@@ -94,16 +94,27 @@ object SnipStore {
      * phone, a test) must never share a path, or the second silently
      * overwrites the first and [newest] loses one. The bump keeps the
      * name's own ordering honest — later is later.
+     *
+     * The claim itself is atomic: [File.createNewFile] is an OS-level
+     * create-if-absent (`open(O_CREAT|O_EXCL)` underneath), so two threads
+     * racing this call — a fast double-press of SNIP, most concretely —
+     * can't both observe "nothing here yet" for the same candidate name the
+     * way a plain `file.exists()` check-then-write would. Exactly one
+     * thread's `createNewFile()` returns true for any given millis; the
+     * loser bumps and retries against the next candidate instead of
+     * silently overwriting the winner's file once both go on to write it.
+     * The caller ([commit]/[import]) then writes the real bytes onto this
+     * already-claimed (empty) file via [com.snipsnap.kit.AtomicFile], which
+     * replaces it same as it would any other existing file.
      */
     private fun freshFile(root: File, nowMillis: Long): File {
         val dir = File(root, DIR).apply { mkdirs() }
         var millis = nowMillis
-        var file = File(dir, "snip_$millis.wav")
-        while (file.exists()) {
+        while (true) {
+            val file = File(dir, "snip_$millis.wav")
+            if (file.createNewFile()) return file
             millis++
-            file = File(dir, "snip_$millis.wav")
         }
-        return file
     }
 
     /**
@@ -140,15 +151,44 @@ object SnipStore {
 
         val file = freshFile(root, nowMillis)
         val bytes = ByteArrayOutputStream().apply { WavWriter.write(this, kept) }.toByteArray()
-        AtomicFile.writeBytes(file, bytes)
+        writeClaimedFile(file, bytes)
         return Imported(file, kept.durationSeconds, truncated)
     }
 
-    /** The dir's `snip_*.wav` files, newest first by the timestamp in the name. */
+    /**
+     * Writes [bytes] onto [file] — a name [freshFile] already claimed via
+     * `createNewFile()`, so it exists but is empty going in. If
+     * [AtomicFile.writeBytes] itself throws (a recoverable I/O failure —
+     * disk full is the live one, since [DIR] is never pruned), the empty
+     * claim is removed rather than left behind: an empty `snip_*.wav` would
+     * otherwise sit there passing [NAME]'s own filename match forever, ready
+     * for [list]/[newest] to hand a reader a file with nothing in it. This
+     * can't defend against the process being killed outright between the
+     * claim and this call (no exception to catch there) — [list] filters
+     * empty files too, as the second layer for exactly that path.
+     */
+    private fun writeClaimedFile(file: File, bytes: ByteArray) {
+        try {
+            AtomicFile.writeBytes(file, bytes)
+        } catch (e: Exception) {
+            file.delete()
+            throw e
+        }
+    }
+
+    /**
+     * The dir's `snip_*.wav` files, newest first by the timestamp in the
+     * name. Zero-length files are skipped: `freshFile`'s claim
+     * (`createNewFile()`) creates the file before any bytes land, so a
+     * process kill between the claim and [writeClaimedFile] can leave an
+     * empty file with a perfectly matching name — not a snip yet, and not
+     * one [com.snipsnap.audio.WavReader] could read regardless.
+     */
     fun list(root: File): List<File> {
         val dir = File(root, DIR)
         val files = dir.listFiles() ?: return emptyList()
         return files
+            .filter { it.length() > 0L }
             .mapNotNull { f -> NAME.matchEntire(f.name)?.groupValues?.get(1)?.toLongOrNull()?.let { f to it } }
             .sortedByDescending { (_, ts) -> ts }
             .map { (f, _) -> f }
