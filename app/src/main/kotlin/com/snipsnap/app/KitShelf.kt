@@ -91,6 +91,18 @@ class KitShelf(private val root: File) {
     }
 
     /**
+     * EVIL TWINS: bank B of [source] becomes seeded FX re-treatments of bank A
+     * (`KitBuilderModel.remixBankB`), the slots lit returned with the re-read
+     * entry. Seconds-long (every twin renders); the caller shows a busy line.
+     */
+    fun evilTwins(source: Entry, seed: Int): Pair<Entry, List<Int>> {
+        val model = com.snipsnap.shell.KitBuilderModel.open(source.dir)
+        val lit = model.remixBankB(seed)
+        model.save()
+        return Entry(source.dir, model.kit) to lit
+    }
+
+    /**
      * IN KEY: every tonal pad of [source] retuned into its key through the
      * tune fields, the slots that moved returned with the re-read entry.
      */

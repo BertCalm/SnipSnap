@@ -174,7 +174,7 @@ One action: bank B becomes your kit's evil twins.
 |---|---|---|---|---|
 | W4.1 | ✓ done: `KitBuilderModel.remixBankB(seed)` — bank A read back as arranged pads, `withRemixBank`, twins written to slots 17–32 with recipes; reroll replaces | CORE | S | any kit gains a bank B; same seed reproduces; recipes recorded |
 | W4.2 | ✓ done: CLI `remix <kit-dir> [--seed N]` | CORE | S | works on a chopped kit |
-| W4.3 | App action — EVIL TWINS in the kit menu. **Open:** `KitBuilderModel.remixBankB` is the whole door, tested; the KIT screen's action row has no button for it yet (the row now carries TAKES + BIN, SCULPT, STRETCH, KEY) | APP | S | one tap, bank B lights up |
+| W4.3 | ✓ done: App action — EVIL TWINS on the KIT screen's action row (beside TAKES + BIN and KEY; the texture doors moved to a second row): one tap lights bank B with seeded re-treatments of bank A through `KitBuilderModel.remixBankB` via `KitShelf.evilTwins`, a fresh seed every press so the second press rerolls (the button says so, the header says A+B), the toasts the copy already had | APP | S | one tap, bank B lights up |
 
 ## W5 — Ghost notes from one capture
 
@@ -205,7 +205,7 @@ free: the MPC warps loops itself when the tempo metadata is right.
 | W7 seamless sustain loops | ✓ done (CORE wave 3): `LoopCut` — whole-period loop search after the attack, a baked crossfade when the raw seam isn't clean, honest refusals | CORE | M | hold a captured string, it sings forever |
 | W8 melodic chop | ✓ done (CORE wave 3; the CHOP screen's MELODIC toggle is X1.3) | CORE | S–M | a vocal run becomes an instrument-ish kit |
 | W9 takes + the 30-day bin | ✓ done (CORE wave 3, `TakesBinScreen` on the phone as X2.3) | CORE + APP | S | trust feature; model in `:shell` |
-| W10 teach-the-machine | ✓ done in core (wave 3: `TeachLog`, the harness ingests it) and wired into CHOP behind a boolean; the consent switch's UI is X4.4, still open | CORE + APP | S+S | ordinary use becomes classifier training data; needs a consent switch |
+| W10 teach-the-machine | ✓ done in core (wave 3: `TeachLog`, the harness ingests it), wired into CHOP behind the consent switch SETUP draws (X4.4) | CORE + APP | S+S | ordinary use becomes classifier training data; needs a consent switch |
 | W11 one-file backup | ✓ done (CORE wave 3: `KitBackup`, CLI `backup`); the phone's share/backup action is X3.3, open | CORE | S | retention insurance |
 | W12 pad mini-waveforms | `PeaksPyramid` makes them free to draw. **Open:** the PAD SHEET, TAPE, CHOP and SYNTH draw peaks already; the KIT grid's cells draw none yet | APP | S | perceived-polish per effort champion |
 
@@ -269,7 +269,7 @@ calibration harness eat them.
 | X4.1 | ✓ done: split `Classifier` — `classify(Features)` beside `classify(Snip)`, so a feature vector is testable without its audio | CORE | S | both paths agree on every corpus render |
 | X4.2 | ✓ done: `TeachLog` (`:shell`) — jsonl of {features, label} from `ChopReviewModel`'s overridden rows; reader for the harness side | CORE | S | overrides round-trip; a log line re-classifies |
 | X4.3 | ✓ done: harness ingestion — overrides.jsonl in `reference/calibration/` scored alongside the WAVs | CORE | S | logged corrections show up in the confusion report |
-| X4.4 | Consent switch + wiring in the app. **Half done:** the boolean lives in `App` (off by default) and CHOP reads it; the consent row in TAPE PROPERTIES is not drawn, so nothing can flip it yet | APP | S | off by default; nothing leaves the device either way |
+| X4.4 | ✓ done: Consent switch + wiring in the app — SETUP's TEACH THE MACHINE row (OFF / ON, off by default, remembered like the scheme), the consent line under it in the copy's own words plus what ON actually logs; CHOP reads the boolean, the toasts are TEACHING ON / OFF | APP | S | off by default; nothing leaves the device either way |
 
 ## X5 — Multisample keys (new)
 
@@ -1552,8 +1552,8 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ M2 (F1.3)
   ✓ M3 (F2.1) · ✓ F5.3 key picker · ✓ W2.3 MAKE INSTRUMENT · ✓ W5.3 GHOSTS
     · ✓ X1.3 MELODIC · ✓ X2.3 TAKES + BIN · ✓ KEYS (the phone plays the
-    instruments it makes) · open: F2.2 one-tap, W4.3 EVIL TWINS button,
-    X4.4 consent row
+    instruments it makes) · ✓ W4.3 EVIL TWINS button · ✓ X4.4 consent row
+    · open: F2.2 one-tap
   ✓ M4 (F1.4, SoundPool not Oboe)
   ✓ M5 (F1.5 + F4.3) · ✓ Y3.3 SESSION export · open: F6.3 share flow, X3.3
     share/backup action

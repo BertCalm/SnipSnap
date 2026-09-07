@@ -79,6 +79,7 @@ import kotlin.random.Random
 private const val PREFS = "tapeos"
 private const val PREF_SCHEME = "scheme"
 private const val PREF_PERSONALITY = "personality"
+private const val PREF_TEACH = "teach"
 /** The Bubble's overlay-permission offer (Task 5) — asked once, ever. */
 private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
 
@@ -142,11 +143,11 @@ fun App(shelf: KitShelf) {
     // from the KIT action row, not one of MenuRow's fixed ten, so it's
     // KIT-scoped overlay state rather than its own AppScreen entry.
     var takesBinOpen by remember { mutableStateOf(false) }
-    // X4.4 TEACH THE MACHINE: off by default. The consent row itself lives
-    // in PropertiesScreen (⚙), which is out of scope for this pass — this
-    // is the plain boolean the brief calls for, wired for CHOP to read,
-    // with no UI to flip it yet. See the CHOP report for this deviation.
-    var teachEnabled by remember { mutableStateOf(false) }
+    // X4.4 TEACH THE MACHINE: off by default, flipped on SETUP's consent
+    // row, remembered like the scheme. CHOP reads it; what it gates is
+    // feature vectors and labels into the kit's own folder, never audio,
+    // and nothing leaves the phone either way (Copy.TEACH_CONSENT).
+    var teachEnabled by remember { mutableStateOf(prefs.getBoolean(PREF_TEACH, false)) }
     // EXPORT: hoisted here, not local to ExportScreen's own composition —
     // its write runs on `scope` below (App's own, handed down as
     // `appScope`) so it survives a MenuRow tab switch; the session object
@@ -310,6 +311,31 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * EVIL TWINS (W4.3): bank B lit with seeded re-treatments of bank A, a
+     * new seed every press so the second press rerolls. The same DUBBING…
+     * shape as a fresh tape: every twin renders offline over a few seconds.
+     */
+    fun evilTwins() {
+        val source = open ?: return
+        if (busy != null) return
+        val hadTwins = source.kit.pads.any { it.slot > 16 }
+        busy = "TWINNING…"
+        scope.launch {
+            val (entry, _) = try {
+                withContext(Dispatchers.IO) { shelf.evilTwins(source, Random.nextInt()) }
+            } catch (e: Exception) {
+                busy = null
+                toast = "TWINS FAILED: ${e.message ?: e.javaClass.simpleName}"
+                return@launch
+            }
+            open = entry
+            kits = withContext(Dispatchers.IO) { shelf.list() }
+            busy = null
+            toast = if (hadTwins) Copy.TWINS_REROLLED else Copy.BANK_B_LIT
+        }
+    }
+
     /** IN KEY: every tonal pad into the kit's key by its tune fields; the toast counts what moved. */
     fun inKey() {
         val source = open ?: return
@@ -442,8 +468,9 @@ fun App(shelf: KitShelf) {
                                     onLongPress = { slot -> padSheetSlot = slot },
                                     onTakesBin = { takesBinOpen = true },
                                     onTexture = ::texture,
-                            onSetKey = ::setKey,
-                            onInKey = ::inKey,
+                                    onSetKey = ::setKey,
+                                    onInKey = ::inKey,
+                                    onTwins = ::evilTwins,
                                 )
                             }
                         }
@@ -477,6 +504,12 @@ fun App(shelf: KitShelf) {
                             onPersonality = {
                                 personality = it
                                 prefs.edit().putString(PREF_PERSONALITY, it.name).apply()
+                            },
+                            teachEnabled = teachEnabled,
+                            onTeach = { on ->
+                                teachEnabled = on
+                                prefs.edit().putBoolean(PREF_TEACH, on).apply()
+                                toast = if (on) Copy.TEACHING_ON else Copy.TEACHING_OFF
                             },
                         )
                         AppScreen.CHOP -> ChopScreen(
