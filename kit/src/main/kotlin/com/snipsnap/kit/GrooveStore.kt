@@ -1,6 +1,7 @@
 package com.snipsnap.kit
 
 import com.snipsnap.json.Json
+import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
@@ -53,10 +54,12 @@ object GrooveStore {
     )
 
     private fun fromJson(root: JsonValue): List<Mpc3Clip> {
-        val obj = (root as JsonValue.Obj).entries
-        val version = (obj["version"] as? JsonValue.Num)?.value?.toInt()
-        require(version == VERSION) { "groove.json version $version is not supported (this build reads $VERSION)" }
-        return ((obj["clips"] as? JsonValue.Arr)?.items.orEmpty()).map { clipFromJson(it) }
+        val obj = root.obj()
+        val version = obj["version"]?.int() ?: throw JsonException("groove.json has no version")
+        if (version != VERSION) {
+            throw JsonException("groove.json version $version is not supported (this build reads $VERSION)")
+        }
+        return obj["clips"]?.arr().orEmpty().map { clipFromJson(it) }
     }
 
     /** The clip codec, shared with every other sidecar that persists one. */
@@ -79,18 +82,23 @@ object GrooveStore {
         ),
     )
 
+    /**
+     * Typed accessors throughout: a clip written by another tool, or torn
+     * mid-write, refuses as a [JsonException] in words - never a cast that
+     * fails or a null that is not there (the hardening contract, BBB4).
+     */
     internal fun clipFromJson(clipJson: JsonValue): Mpc3Clip {
-        val c = (clipJson as JsonValue.Obj).entries
+        val c = clipJson.obj()
         return Mpc3Clip(
-            name = (c["name"] as JsonValue.Str).value,
-            bars = (c["bars"] as JsonValue.Num).value.toInt(),
-            notes = ((c["notes"] as? JsonValue.Arr)?.items.orEmpty()).map { noteJson ->
-                val n = (noteJson as JsonValue.Obj).entries
+            name = c["name"]?.str() ?: throw JsonException("clip has no name"),
+            bars = c["bars"]?.int() ?: throw JsonException("clip has no bars"),
+            notes = c["notes"]?.arr().orEmpty().map { noteJson ->
+                val n = noteJson.obj()
                 Mpc3Note(
-                    note = (n["note"] as JsonValue.Num).value.toInt(),
-                    timePulses = (n["timePulses"] as JsonValue.Num).value.toLong(),
-                    velocity = (n["velocity"] as JsonValue.Num).value.toFloat(),
-                    lengthPulses = (n["lengthPulses"] as JsonValue.Num).value.toLong(),
+                    note = n["note"]?.int() ?: throw JsonException("note has no note"),
+                    timePulses = n["timePulses"]?.num()?.toLong() ?: throw JsonException("note has no timePulses"),
+                    velocity = n["velocity"]?.num()?.toFloat() ?: throw JsonException("note has no velocity"),
+                    lengthPulses = n["lengthPulses"]?.num()?.toLong() ?: throw JsonException("note has no lengthPulses"),
                 )
             },
         )

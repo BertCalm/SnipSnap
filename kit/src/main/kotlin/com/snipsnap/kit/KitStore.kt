@@ -178,7 +178,7 @@ object KitStore {
                 chain = (p["chain"] as? JsonValue.Obj)?.let { c ->
                     ChainInfo(
                         boundaries = ((c.entries["boundaries"] as? JsonValue.Arr)?.items.orEmpty())
-                            .map { (it as JsonValue.Num).value.toLong() },
+                            .map { it.num().toLong() },
                         cycle = c.entries["cycle"]?.int() ?: 2,
                         zones = (c.entries["zones"] as? JsonValue.Arr)?.items?.map { zoneJson ->
                             val z = zoneJson.obj()
