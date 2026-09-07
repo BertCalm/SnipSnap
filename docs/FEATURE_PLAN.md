@@ -64,10 +64,10 @@ on desktop today. The risk table's opt-out mitigation depends on this.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| F3.1 | Intent filters + receive activity → trim screen. **Open:** the manifest carries only MAIN; nothing shared into the app lands anywhere | APP | S | shared audio file lands in the tape deck |
-| F3.2 | Video demux — `MediaExtractor`/Media3 → float PCM → `Snip` → `Resampler`. **Open:** no decoder in the app yet; F3.3's fixtures wait for it | APP | M | shared MP4's audio lands in the tape deck |
+| F3.1 | ✓ done: SEND and VIEW filters for `audio/*` and `video/*` on `MainActivity` (singleTask, so a share into a running app reaches `onNewIntent`); the Uri rides a flow into `App.importUri`, which decodes off the main thread, lands the result in the snip store as a capture would, and opens TAPE on it — with or without a kit open (TAPE no longer needs one for a snip) | APP | S | shared audio file lands in the tape deck |
+| F3.2 | ✓ done: `MediaImport` — a small WAV through the app's own `WavReader`; everything else through `MediaExtractor` + the platform decoder for the first audio track (`audio/raw` read straight), 16-bit or float PCM into one growing buffer via `Pcm` (:audio, tested), stopping at `SnipStore.IMPORT_MAX_SECONDS` (3 min) so an album never sits in memory as floats. `SnipStore.importDecoded` (tested) cuts, folds to mono, resamples to 44.1 k and commits; the toast says when the head was kept. Bench: F3.3's fixtures encoded as M4A/MP3 through the real share path, verified with `DecodeContract.verify` | APP | M | shared MP4's audio lands in the tape deck |
 | F3.3 | ✓ done: demux conformance fixtures — tiny known-content WAV fixtures + a contract test the app's decode output must pass (rate, channels, sample accuracy) | CORE | S | app-side decode verified against ground truth without an SDK |
-| F3.4 | ✓ done: the TAPE JAM box (`Copy.CAPTURE_BLOCKED`) now fires from F1.2's silence detection, once per verdict, as well as from a denied RECORD_AUDIO. The screen-recorder path it points at still needs F3.2's demux to land the recording | APP | S | blocked capture shows the honest fallback, in voice |
+| F3.4 | ✓ done: the TAPE JAM box (`Copy.CAPTURE_BLOCKED`) now fires from F1.2's silence detection, once per verdict, as well as from a denied RECORD_AUDIO. The screen-recorder path it points at is F3.1/F3.2: share the recording in and its audio lands on TAPE | APP | S | blocked capture shows the honest fallback, in voice |
 
 ## F4 — Synth starter kits
 
@@ -1575,7 +1575,7 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ M0 (F1.1) · ✓ F4.2 new-kit menu · open: W3.3 open-.xtd
   ✓ M1 (F1.2): the mic ring, ARM INSIDE over MediaProjection, dead-air
     detection, the QS tile · ✓ F3.4 TAPE JAM on a blocked source
-    · open: F3.1/F3.2 import
+    · ✓ F3.1/F3.2 share a file in, audio or video, onto TAPE
   ✓ M2 (F1.3)
   ✓ M3 (F2.1) · ✓ F5.3 key picker · ✓ W2.3 MAKE INSTRUMENT · ✓ W5.3 GHOSTS
     · ✓ X1.3 MELODIC · ✓ X2.3 TAKES + BIN · ✓ KEYS (the phone plays the

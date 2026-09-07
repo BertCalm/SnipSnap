@@ -6,6 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
+import androidx.compose.runtime.mutableIntStateOf
+import com.snipsnap.shell.SnipStore
+import kotlinx.coroutines.flow.MutableStateFlow
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -105,7 +108,7 @@ data class TapeCommit(val sourceFile: File, val range: IntRange)
  * later milestones bind to them; M0's state is navigation and a shelf.
  */
 @Composable
-fun App(shelf: KitShelf) {
+fun App(shelf: KitShelf, imports: MutableStateFlow<Uri?>) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
 
@@ -130,6 +133,8 @@ fun App(shelf: KitShelf) {
     var open by remember { mutableStateOf<KitShelf.Entry?>(null) }
     var toast by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf<String?>(null) }
+    // Bumped when an import lands so a TAPE already on screen reloads to it.
+    var tapeReload by remember { mutableIntStateOf(0) }
     var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
     // PAD SHEET: the long-press pad inspector, full-screen over KIT. Not an
     // AppScreen of its own — MenuRow's nine items are fixed and this isn't
@@ -432,6 +437,54 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * IMPORT (F3.1/F3.2): a file shared or opened into the app. Decoded off
+     * the main thread, landed in the snip store exactly as a capture is,
+     * then TAPE — which reads the newest snip first — opens on it, with or
+     * without a kit open. No audio track, or nothing decodable, is a
+     * refusal in words; anything else that breaks says what happened.
+     */
+    fun importUri(uri: Uri) {
+        if (busy != null) return
+        busy = Copy.IMPORT_BUSY
+        scope.launch {
+            try {
+                val landed = withContext(Dispatchers.IO) {
+                    val decoded = MediaImport.decode(context, uri)
+                    if (decoded == null || decoded.frameCount == 0) {
+                        null
+                    } else {
+                        SnipStore.importDecoded(decoded, context.filesDir, System.currentTimeMillis())
+                    }
+                }
+                if (landed == null) {
+                    toast = Copy.IMPORT_NO_AUDIO
+                } else {
+                    toast = if (landed.truncated) Copy.importKept(SnipStore.IMPORT_MAX_SECONDS) else Copy.IMPORT_LANDED
+                    tapeReload++
+                    screen = AppScreen.TAPE
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Law 3: when it breaks, say exactly what happened.
+                toast = "IMPORT FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
+            }
+        }
+    }
+
+    // The receive door: MainActivity posts the shared file's Uri here on
+    // launch or onNewIntent; taking it clears the flow so a recomposition
+    // never imports the same file twice.
+    val pendingImport by imports.collectAsState()
+    LaunchedEffect(pendingImport) {
+        val uri = pendingImport ?: return@LaunchedEffect
+        imports.value = null
+        importUri(uri)
+    }
+
     /** IN KEY: every tonal pad into the kit's key by its tune fields; the toast counts what moved. */
     fun inKey() {
         val source = open ?: return
@@ -573,6 +626,7 @@ fun App(shelf: KitShelf) {
                         }
                         AppScreen.TAPE -> TapeScreen(
                             entry = open,
+                            reloadKey = tapeReload,
                             // TAPE's source-priority fallback below
                             // SnipStore.newest — the file COMMIT last cut
                             // from, so returning to TAPE after a trim

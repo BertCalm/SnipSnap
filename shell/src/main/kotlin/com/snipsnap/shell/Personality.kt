@@ -67,6 +67,16 @@ object Copy {
     const val INSIDE_REFUSED = "NO NOD, NO TAPE. NOTHING ARMED. ARM TAPE STILL WORKS."
     /** The platform ended the session — the lock screen or the status-bar stop chip, never us. */
     const val PHONE_STOPPED_TAPE = "THE PHONE STOPPED THE TAPE. LOCK SCREEN OR THE STOP CHIP. ARM AGAIN."
+    // Import: a file shared or opened into the app (F3.1/F3.2).
+    const val IMPORT_BUSY = "PULLING THE AUDIO OUT…"
+    const val IMPORT_LANDED = "PULLED THE AUDIO OUT. IT'S ON THE TAPE."
+    const val IMPORT_NO_AUDIO = "NO AUDIO IN THAT. NOTHING TO PULL OUT."
+    /** A long source cut to the deck's cap: says exactly how much survived. */
+    fun importKept(seconds: Int): String {
+        val minutes = seconds / 60
+        val unit = if (minutes == 1) "MINUTE" else "MINUTES"
+        return "LONG ONE. KEPT THE FIRST $minutes $unit. IT'S ON THE TAPE."
+    }
     // The quick-settings tile.
     const val TILE_LABEL = "SNIPSNAP"
     const val TILE_IDLE = "TAP TO ARM"

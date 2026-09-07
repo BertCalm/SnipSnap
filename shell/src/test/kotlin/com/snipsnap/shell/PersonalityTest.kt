@@ -53,6 +53,9 @@ class PersonalityTest {
         assertTrue("STOP CHIP" in Copy.PHONE_STOPPED_TAPE)
         // A refused consent must not claim anything is armed.
         assertTrue("NOTHING ARMED" in Copy.INSIDE_REFUSED)
+        // A cut import says how much was kept.
+        assertEquals("LONG ONE. KEPT THE FIRST 3 MINUTES. IT'S ON THE TAPE.", Copy.importKept(180))
+        assertEquals("LONG ONE. KEPT THE FIRST 1 MINUTE. IT'S ON THE TAPE.", Copy.importKept(60))
         // Send-to-grid reports the real slice count.
         assertEquals("7 SLICES ON THE GRID. CHOKE GROUP SET.", Copy.sentToGrid(7, chokeSet = true))
         assertEquals("3 SLICES ON THE GRID.", Copy.sentToGrid(3, chokeSet = false))

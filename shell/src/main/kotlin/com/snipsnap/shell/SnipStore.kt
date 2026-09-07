@@ -3,6 +3,7 @@ package com.snipsnap.shell
 import com.snipsnap.audio.CaptureDoctor
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.CleanupConfig
+import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.AtomicFile
@@ -86,6 +87,39 @@ object SnipStore {
         val bytes = ByteArrayOutputStream().apply { WavWriter.write(this, toWrite) }.toByteArray()
         AtomicFile.writeBytes(file, bytes)
         return file
+    }
+
+    /**
+     * The longest import the tape keeps, in seconds of the source. A whole
+     * shared song is more than the deck (or the phone's memory, as float
+     * samples) wants; the head of it is what a sampler reaches for anyway,
+     * and the toast says exactly how much survived.
+     */
+    const val IMPORT_MAX_SECONDS = 180
+
+    /** What an import landed as: the snip on disk, and whether the source was cut to [IMPORT_MAX_SECONDS]. */
+    data class Import(val file: File, val truncated: Boolean)
+
+    /**
+     * The import path (F3.1/F3.2): a decoded file — any rate, mono or
+     * stereo, straight from the platform decoder — becomes a snip exactly
+     * as a ring snapshot does. Cut to [IMPORT_MAX_SECONDS] first (memory
+     * and honesty both), folded to mono, resampled to the MPC's 44.1 kHz,
+     * then handed to [commit] so the same cleanup and doctor visit apply.
+     * A decode with no frames is a refusal in words: nothing to pull out.
+     */
+    fun importDecoded(decoded: Snip, root: File, nowMillis: Long): Import {
+        require(decoded.frameCount > 0) { "no audio in that - nothing to pull out" }
+        val maxFrames = IMPORT_MAX_SECONDS * decoded.sampleRate
+        val truncated = decoded.frameCount > maxFrames
+        val head = if (truncated) {
+            decoded.copy(samples = decoded.samples.copyOf(maxFrames * decoded.channels))
+        } else {
+            decoded
+        }
+        val mono = Cleanup.toMono(head)
+        val native = Resampler.resample(mono, WavWriter.MPC_SAMPLE_RATE)
+        return Import(commit(native.samples, native.sampleRate, root, nowMillis), truncated)
     }
 
     /** The dir's `snip_*.wav` files, newest first by the timestamp in the name. */

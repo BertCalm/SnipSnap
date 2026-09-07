@@ -22,14 +22,34 @@
         android:allowBackup="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
+        <!-- singleTask: a file shared into a running app reaches the one
+             Activity's onNewIntent instead of stacking a second copy. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- F3.1: the receive door. Audio and video alike — a screen
+                 recording's MP4 is the documented way past an app that
+                 blocks capture, and its audio is what gets pulled out. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="video/*" />
             </intent-filter>
         </activity>
 

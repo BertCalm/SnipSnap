@@ -39,6 +39,59 @@ class SnipStoreTest {
     }
 
     @Test
+    fun `an import folds to mono, lands at 44100, and keeps its length`() {
+        val root = kotlin.io.path.createTempDirectory("snips").toFile()
+        try {
+            val rate = 48_000
+            val n = 2 * rate
+            val stereo = FloatArray(n * 2)
+            for (f in 0 until n) {
+                val t = f.toDouble() / rate
+                stereo[2 * f] = (0.4 * sin(2.0 * Math.PI * 440.0 * t)).toFloat()
+                stereo[2 * f + 1] = (0.4 * sin(2.0 * Math.PI * 554.0 * t)).toFloat()
+            }
+            val decoded = com.snipsnap.audio.Snip(stereo, channels = 2, sampleRate = rate)
+            val landed = SnipStore.importDecoded(decoded, root, 3_000L)
+            assertTrue(!landed.truncated)
+            assertEquals(landed.file, SnipStore.newest(root), "an import is the newest snip, like any capture")
+            val back = com.snipsnap.audio.WavReader.read(landed.file)
+            assertEquals(1, back.channels)
+            assertEquals(44_100, back.sampleRate)
+            val expected = 2 * 44_100
+            assertTrue(
+                kotlin.math.abs(back.frameCount - expected) < 2_205,
+                "2 s at 48 k should land near 2 s at 44.1 k, got ${back.frameCount}",
+            )
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
+    fun `an import longer than the cap keeps the head and says so`() {
+        val root = kotlin.io.path.createTempDirectory("snips").toFile()
+        try {
+            val rate = 8_000
+            val long = tone((SnipStore.IMPORT_MAX_SECONDS + 5).toFloat(), rate)
+            val landed = SnipStore.importDecoded(com.snipsnap.audio.Snip(long, 1, rate), root, 4_000L)
+            assertTrue(landed.truncated)
+            val back = com.snipsnap.audio.WavReader.read(landed.file)
+            val cap = SnipStore.IMPORT_MAX_SECONDS * 44_100
+            assertTrue(back.frameCount <= cap, "nothing past the cap survives: ${back.frameCount} > $cap")
+            assertTrue(back.frameCount > cap - 44_100, "but the whole head does: ${back.frameCount}")
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
+    fun `an empty decode is refused in words`() {
+        val root = kotlin.io.path.createTempDirectory("snips").toFile()
+        try {
+            val e = kotlin.test.assertFailsWith<IllegalArgumentException> {
+                SnipStore.importDecoded(com.snipsnap.audio.Snip(FloatArray(0), 1, 44_100), root, 5_000L)
+            }
+            assertTrue("nothing to pull out" in e.message!!)
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
     fun `list is newest first and newest agrees`() {
         val root = kotlin.io.path.createTempDirectory("snips").toFile()
         try {
