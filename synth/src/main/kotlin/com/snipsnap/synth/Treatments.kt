@@ -32,6 +32,12 @@ object Treatments {
         "stopped" to FxChain(motion = mapOf("STOP" to 0.6f)),
         // The reel spins up into the sound.
         "started" to FxChain(motion = mapOf("START" to 0.5f)),
+        // The banded smear: the click goes, the thump stays.
+        "skimmed" to FxChain(smear = mapOf("AMOUNT" to 0.9f, "FLOOR" to 0.6f)),
+        // A dub of a dub of a dub.
+        "dubbed" to FxChain(dub = mapOf("GENERATIONS" to 0.6f)),
+        // The sound arrives before it strikes.
+        "swelled" to FxChain(swell = mapOf("RISE" to 0.6f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA
@@ -54,6 +60,8 @@ object Treatments {
             smear = scale(base.smear),
             ghost = scale(base.ghost),
             motion = scale(base.motion),
+            dub = scale(base.dub),
+            swell = scale(base.swell),
             eq = scale(base.eq),
             squash = scale(base.squash),
             crunch = scale(base.crunch),

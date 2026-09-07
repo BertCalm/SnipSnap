@@ -7,10 +7,10 @@ import com.snipsnap.synth.Treatments
 /**
  * The PAD SHEET's TREATMENT card, as data.
  *
- * Three rows. The first is the design's four segments, whose DSP is the
- * Time Machine's eras; the second and third are the rack's named
- * characters — the FX chains `treat` and bank B already speak — reachable
- * one tap at a time. All three rows are vocabulary mappings and nothing more: the words
+ * Four rows. The first is the design's four segments, whose DSP is the
+ * Time Machine's eras; the rest are the rack's named characters — the FX
+ * chains `treat` and bank B already speak — reachable one tap at a time.
+ * Every row is a vocabulary mapping and nothing more: the words
  * are the app's, not the engine's, so [Eras] and [Treatments] never
  * learn what a "segment" is.
  *
@@ -34,8 +34,11 @@ object PadSheet {
     /** Row three — the anatomy and the transport. */
     val MORE_SEGMENTS: List<String> = listOf("GHOST", "STOP", "START", "FLIP")
 
+    /** Row four — the room and the tape's last three. */
+    val EXTRA_SEGMENTS: List<String> = listOf("SKIM", "DUB", "SWELL")
+
     /** All rows, in drawing order. */
-    val ROWS: List<List<String>> = listOf(SEGMENTS, CHARACTER_SEGMENTS, MORE_SEGMENTS)
+    val ROWS: List<List<String>> = listOf(SEGMENTS, CHARACTER_SEGMENTS, MORE_SEGMENTS, EXTRA_SEGMENTS)
 
     /** Every segment on any row. */
     val ALL_SEGMENTS: List<String> get() = ROWS.flatten()
@@ -84,6 +87,12 @@ object PadSheet {
         "START" to "started",
         // The flip is a structural switch: AMT grades only its spring tail.
         "FLIP" to "reversed",
+        // The banded smear: the click goes, the thump stays.
+        "SKIM" to "skimmed",
+        // A dub of a dub of a dub.
+        "DUB" to "dubbed",
+        // The sound arrives before it strikes.
+        "SWELL" to "swelled",
         // "crushed" stays off the card: CRUSH already draws the crunchier
         // era. It remains reachable from `treat`.
     )

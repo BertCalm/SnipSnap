@@ -2,6 +2,7 @@ package com.snipsnap.audio
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class SeparateTest {
@@ -298,5 +299,18 @@ class SeparateTest {
         var peak = 0f
         for (v in ghost.samples) peak = maxOf(peak, Math.abs(v))
         assertTrue(peak <= mix.peak() * 1.001f, "never above the source's own peak")
+    }
+
+    @Test
+    fun `the banded smear leaves everything under the floor alone`() {
+        val (mix, clickAt) = toneClicksHiss()
+        // A floor at 1 kHz: the 400 Hz tone's bins are untouched, the broadband clicks above it still go.
+        val skimmed = Separate.smear(mix, 1f, aboveHz = 1000f)
+        val full = Separate.smear(mix, 1f)
+        val toneIn = probe(mix.samples, 400f)
+        assertEquals(toneIn, probe(skimmed.samples, 400f), toneIn * 0.05f, "the tone under the floor is as it was")
+        assertTrue(clickProminence(skimmed.samples, clickAt) < clickProminence(mix.samples, clickAt), "the clicks above the floor still go")
+        assertTrue(!skimmed.samples.contentEquals(full.samples), "a floor is not the full smear")
+        assertFailsWith<IllegalArgumentException> { Separate.smear(mix, 1f, aboveHz = -1f) }
     }
 }

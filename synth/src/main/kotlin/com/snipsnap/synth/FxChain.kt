@@ -8,12 +8,14 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    REVERSE → SMEAR → GHOST → EQ → SQUASH → CRUNCH → TAPE → ECHO → SPRING → MOTION
+ *    SWELL → REVERSE → SMEAR → GHOST → EQ → SQUASH → CRUNCH → DUB → TAPE → ECHO → SPRING → MOTION
  *
- * Reverse first because you effect the flipped sample, not flip the
- * effected one (the sampling-era way); smear and ghost next because they
- * decide what the hit *is* before anything decides how it sounds
- * (anatomy before tone); dynamics before character before time, space
+ * Swell before everything, so the rack sees the arrival and the hit as
+ * one sound; reverse next because you effect the flipped sample, not
+ * flip the effected one (the sampling-era way); smear and ghost after
+ * that because they decide what the hit *is* before anything decides
+ * how it sounds (anatomy before tone); dynamics before character (dub
+ * beside crunch: both are the converter's own damage) before time, space
  * always last — echoes belong *in* the room — and motion after even
  * that, because the tape stops with the reverb still on it. A fixed order is
  * a playability rule wearing an architecture hat: no routing screen, no
@@ -34,12 +36,16 @@ data class FxChain(
     val smear: Map<String, Float>? = null,
     val ghost: Map<String, Float>? = null,
     val motion: Map<String, Float>? = null,
+    val dub: Map<String, Float>? = null,
+    val swell: Map<String, Float>? = null,
 ) {
     init {
         for ((name, macros, known) in listOf(
             Triple("smear", smear, Smear.MACROS),
             Triple("ghost", ghost, Ghost.MACROS),
             Triple("motion", motion, Motion.MACROS),
+            Triple("dub", dub, Dub.MACROS),
+            Triple("swell", swell, Swell.MACROS),
             Triple("eq", eq, Eq.MACROS),
             Triple("squash", squash, Squash.MACROS),
             Triple("crunch", crunch, Crunch.MACROS),
@@ -57,10 +63,16 @@ data class FxChain(
     }
 
     val isBypass: Boolean
-        get() = !reverse && smear == null && ghost == null && eq == null && squash == null && crunch == null &&
-            tape == null && echo == null && spring == null && motion == null
+        get() = !reverse && swell == null && smear == null && ghost == null && eq == null && squash == null &&
+            crunch == null && dub == null && tape == null && echo == null && spring == null && motion == null
 
     fun process(snip: Snip): Snip {
+        // The swell is an arrival, not a tail: the tail budget is measured from the swelled sound.
+        val swelled = swell?.let { Swell.process(snip, it) } ?: snip
+        return capTail(swelled, processRest(swelled))
+    }
+
+    private fun processRest(snip: Snip): Snip {
         var s = snip
         if (reverse) s = reversed(s)
         smear?.let { s = Smear.process(s, it) }
@@ -68,11 +80,12 @@ data class FxChain(
         eq?.let { s = Eq.process(s, it) }
         squash?.let { s = Squash.process(s, it) }
         crunch?.let { s = Crunch.process(s, it) }
+        dub?.let { s = Dub.process(s, it) }
         tape?.let { s = Tape.process(s, it) }
         echo?.let { s = Echo.process(s, it) }
         spring?.let { s = Spring.process(s, it) }
         motion?.let { s = Motion.process(s, it) }
-        return capTail(snip, s)
+        return s
     }
 
     /**
@@ -109,8 +122,8 @@ data class FxChain(
         obj["fx"] = JsonValue.Num(VERSION.toDouble())
         obj["reverse"] = JsonValue.Bool(reverse)
         for ((name, macros) in listOf(
-            "smear" to smear, "ghost" to ghost, "eq" to eq, "squash" to squash, "crunch" to crunch,
-            "tape" to tape, "echo" to echo, "spring" to spring, "motion" to motion,
+            "swell" to swell, "smear" to smear, "ghost" to ghost, "eq" to eq, "squash" to squash, "crunch" to crunch,
+            "dub" to dub, "tape" to tape, "echo" to echo, "spring" to spring, "motion" to motion,
         )) {
             if (macros != null) {
                 obj[name] = JsonValue.Obj(
@@ -146,6 +159,8 @@ data class FxChain(
                 smear = section("smear"),
                 ghost = section("ghost"),
                 motion = section("motion"),
+                dub = section("dub"),
+                swell = section("swell"),
             )
         }
 

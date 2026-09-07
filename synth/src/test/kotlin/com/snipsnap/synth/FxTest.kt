@@ -337,4 +337,80 @@ class FxTest {
         assertTrue(peak <= kick.peak() * 1.001f)
         assertTrue(Classifier.classify(ghosted).drumClass != DrumClass.KICK, "what's left of a kick is not a kick")
     }
+
+    // ---------- DUB + SWELL + the smear's FLOOR ----------
+
+    /** How much of the source survives, 0..1: the normalized correlation of the two, mono-folded, at zero lag. */
+    private fun likeness(a: Snip, b: Snip): Double {
+        val n = minOf(a.frameCount, b.frameCount)
+        var dot = 0.0
+        var ea = 0.0
+        var eb = 0.0
+        for (f in 0 until n) {
+            var x = 0f
+            var y = 0f
+            for (c in 0 until a.channels) x += a.samples[f * a.channels + c]
+            for (c in 0 until b.channels) y += b.samples[f * b.channels + c]
+            dot += x * y.toDouble()
+            ea += x * x.toDouble()
+            eb += y * y.toDouble()
+        }
+        return dot / Math.sqrt(ea * eb)
+    }
+
+    @Test
+    fun `DUB drifts further from the source every generation, zero is transparent, peak held`() {
+        val bright = Thump.render(ThumpVoice.HAT_CLOSED)
+        assertTrue(Dub.process(bright, mapOf("GENERATIONS" to 0f)) === bright)
+        assertEquals(6, Dub.generations(0.5f))
+        assertEquals(12, Dub.generations(1f))
+        val g3 = Dub.process(bright, mapOf("GENERATIONS" to 0.25f))
+        val g12 = Dub.process(bright, mapOf("GENERATIONS" to 1f))
+        val like3 = likeness(bright, g3)
+        val like12 = likeness(bright, g12)
+        assertTrue(like3 < 0.999 && like12 < like3, "a dub of a dub drifts further: 1 > $like3 > $like12")
+        // Identity, the rack's own way: the default depth leaves a kick a kick.
+        assertEquals(DrumClass.KICK, Classifier.classify(Dub.process(kick)).drumClass, "a dubbed kick is still a kick")
+        assertTrue(g12.peak() <= bright.peak() * 1.001f, "a dozen saturating passes never read as loudness")
+        assertTrue(Dub.process(bright, mapOf("GENERATIONS" to 1f)).samples.contentEquals(g12.samples), "deterministic")
+    }
+
+    @Test
+    fun `SWELL arrives before the strike and leaves the strike itself untouched`() {
+        val swelled = Swell.process(snare, mapOf("RISE" to 0.5f)) // a 0.75 s rise
+        val rise = Swell.riseFrames(0.5f, snare.sampleRate)
+        assertEquals(snare.frameCount + rise, swelled.frameCount, "the rise, then the whole hit")
+        // The hit is on the downbeat, bit for bit.
+        val ch = snare.channels
+        assertTrue(
+            swelled.samples.copyOfRange(rise * ch, swelled.samples.size).contentEquals(snare.samples),
+            "the strike is the original",
+        )
+        // The arrival rises: the last quarter of the swell is louder than the first.
+        fun rmsFrames(from: Int, to: Int): Double {
+            var acc = 0.0
+            for (i in from * ch until to * ch) acc += swelled.samples[i] * swelled.samples[i].toDouble()
+            return sqrt(acc / ((to - from) * ch))
+        }
+        val first = rmsFrames(0, rise / 4)
+        val last = rmsFrames(rise * 3 / 4, rise)
+        assertTrue(last > 3 * first, "energy rises into the hit: $first -> $last")
+        assertTrue(Snip(swelled.samples.copyOfRange(0, rise * ch), ch, snare.sampleRate).peak() <= snare.peak() * Swell.SWELL_LEVEL * 1.001f, "the swell sits under the hit")
+        assertTrue(Swell.process(snare, mapOf("RISE" to 0f)) === snare, "no rise, no swell")
+        assertTrue(Swell.process(snare, mapOf("RISE" to 0.02f)) === snare, "a rise too short to stretch is honest silence, not a click")
+    }
+
+    @Test
+    fun `the whole rack with a swell keeps its tail budget from the swelled sound, and old recipes stay byte-stable`() {
+        val chain = FxChain(swell = mapOf("RISE" to 1f), spring = mapOf("SIZE" to 0.7f, "MIX" to 0.5f))
+        val out = chain.process(kick)
+        val rise = Swell.riseFrames(1f, kick.sampleRate)
+        assertTrue(out.frameCount >= kick.frameCount + rise, "the swell is an arrival, not a tail to be cut: ${out.frameCount} vs ${kick.frameCount + rise}")
+        assertEquals(chain, FxChain.fromJsonText(chain.toJsonText()))
+        val text = FxChain(dub = mapOf("GENERATIONS" to 0.3f), swell = mapOf("RISE" to 0.2f)).toJsonText()
+        assertTrue(text.indexOf("\"swell\"") < text.indexOf("\"dub\""), "the file reads in rack order")
+        assertTrue(!FxChain(eq = mapOf("BASS" to 0.6f)).toJsonText().contains("swell"))
+        assertEquals(0f, Smear.floorHz(0f))
+        assertEquals(Smear.FLOOR_HI, Smear.floorHz(1f), 1f)
+    }
 }

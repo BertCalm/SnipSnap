@@ -15,16 +15,25 @@ import com.snipsnap.audio.Snip
  * away from every bin, the result brought back to the source's own
  * peak (capped) so what remains is heard rather than merely left.
  *
- * One macro, 0..1, all-zeros transparent, same discipline as every
- * other section. It sits right after REVERSE in [FxChain] — anatomy
- * before tone — so the smeared body is what EQ, SQUASH and the rest
- * shape.
+ * AMOUNT 0..1, all-zeros transparent, same discipline as every other
+ * section; FLOOR makes it the *banded* smear — only above a crossover,
+ * so a kick loses its click and keeps its thump. It sits right after
+ * REVERSE in [FxChain] — anatomy before tone — so the smeared body is
+ * what EQ, SQUASH and the rest shape.
  */
 object Smear {
 
     val MACROS: List<MacroSpec> = listOf(
         MacroSpec("AMOUNT", 0.75f),  // how much of the attack goes: none to all
+        MacroSpec("FLOOR", 0f),      // the banded smear: 0 = the whole band, else only above FLOOR_LO..FLOOR_HI Hz
     )
+
+    /** FLOOR just above 0 starts here; FLOOR 1 is here. */
+    const val FLOOR_LO = 80f
+    const val FLOOR_HI = 6_000f
+
+    /** The crossover a FLOOR macro names, or 0 for the whole band. */
+    fun floorHz(floor: Float): Float = if (floor <= 0f) 0f else Dsp.expMap(floor, FLOOR_LO, FLOOR_HI)
 
     fun defaults(): Map<String, Float> = MACROS.associate { it.name to it.default }
 
@@ -36,6 +45,6 @@ object Smear {
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
         val amount = m.getValue("AMOUNT")
         if (amount <= 0f) return snip
-        return Separate.smear(snip, amount)
+        return Separate.smear(snip, amount, floorHz(m.getValue("FLOOR")))
     }
 }
