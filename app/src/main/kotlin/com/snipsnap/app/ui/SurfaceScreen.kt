@@ -274,9 +274,18 @@ fun SurfaceScreen(
                 )
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
-                // A layered or chained pad refuses in words; the print is not lost.
+            } catch (e: IllegalArgumentException) {
+                // The chooser already dims a layered or chained pad (SYNTH's
+                // rule), so this is the rarer refusal: the kit changed under
+                // the chooser. In words, the print kept.
                 onToast("${(e.message ?: "PAD REFUSED").uppercase()}. PICK ANOTHER PAD.")
+            } catch (e: IllegalStateException) {
+                onToast("${(e.message ?: "PAD REFUSED").uppercase()}. PICK ANOTHER PAD.")
+            } catch (e: Exception) {
+                // Disk or decode trouble - not a pad problem, so no "pick
+                // another"; the print is still pending and TAPE is one
+                // CANCEL away.
+                onToast("LANDING FAILED: ${(e.message ?: e.javaClass.simpleName).uppercase()}. THE PRINT IS STILL HERE.")
             } finally {
                 landing = false
             }
