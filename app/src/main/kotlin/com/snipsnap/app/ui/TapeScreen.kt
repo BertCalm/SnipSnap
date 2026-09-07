@@ -440,9 +440,7 @@ private fun TapeDeckContent(
                     if (found == null) {
                         onToast(Copy.NO_BREAK)
                     } else {
-                        model.inFrame = found.startFrame
-                        model.outFrame = found.endFrame
-                        model.seekTo(found.startFrame)
+                        model.select(found.startFrame, found.endFrame)
                         onToast(Copy.dug(Dig.stamp(found.startSec), Dig.stamp(found.endSec)))
                     }
                 }
