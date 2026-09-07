@@ -118,6 +118,7 @@ fun PadSheetScreen(
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onNavigateTape: () -> Unit,
+    onGrainField: (Int) -> Unit,
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
     appScope: CoroutineScope,
 ) {
@@ -669,6 +670,13 @@ fun PadSheetScreen(
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onNavigateTape)
+            ActionButton(
+                "GRAIN ▸",
+                scheme,
+                enabled = !busy,
+                modifier = Modifier.weight(1f),
+                onClick = { onGrainField(slot) },
+            )
             ActionButton(
                 "MAKE INSTRUMENT",
                 scheme,

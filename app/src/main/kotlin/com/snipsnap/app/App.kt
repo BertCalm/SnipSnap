@@ -42,6 +42,7 @@ import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.ExportScreen
 import com.snipsnap.app.ui.ExportSession
+import com.snipsnap.app.ui.GrainFieldScreen
 import com.snipsnap.app.ui.GrooveScreen
 import com.snipsnap.app.ui.HelpScreen
 import com.snipsnap.app.ui.KitScreen
@@ -139,6 +140,12 @@ fun App(shelf: KitShelf) {
     // long-press on an *empty* pad opens this instead, so it's KIT-scoped
     // overlay state too, not one of MenuRow's fixed ten.
     var padCaptureSlot by remember { mutableStateOf<Int?>(null) }
+    // GRAIN FIELD: same shape as PAD SHEET/TAKES+BIN/PAD CAPTURE above — only
+    // reachable from PAD SHEET's own action row, not one of MenuRow's fixed
+    // ten, so it's KIT-scoped overlay state too. Opening it closes PAD SHEET
+    // (PadSheetScreen's own onGrainField clears padSheetSlot first) so the
+    // two overlays are never both non-null for the same KIT composition.
+    var grainFieldSlot by remember { mutableStateOf<Int?>(null) }
     // X4.4 TEACH THE MACHINE: off by default. The consent row itself lives
     // in PropertiesScreen (⚙), which is out of scope for this pass — this
     // is the plain boolean the brief calls for, wired for CHOP to read,
@@ -283,6 +290,7 @@ fun App(shelf: KitShelf) {
                         padSheetSlot = null
                         takesBinOpen = false
                         padCaptureSlot = null
+                        grainFieldSlot = null
                     },
                 )
                 Box(Modifier.weight(1f)) {
@@ -303,7 +311,21 @@ fun App(shelf: KitShelf) {
                         AppScreen.KIT -> {
                             val sheetSlot = padSheetSlot
                             val sheetEntry = open
+                            val fieldSlot = grainFieldSlot
                             when {
+                                // Checked before the PAD SHEET branch below:
+                                // opening GRAIN clears `padSheetSlot` at the
+                                // same time it sets `grainFieldSlot` (see
+                                // onGrainField below), so in practice the two
+                                // conditions are already mutually exclusive —
+                                // this ordering is belt-and-suspenders should
+                                // that ever not hold.
+                                fieldSlot != null && sheetEntry != null -> GrainFieldScreen(
+                                    entry = sheetEntry,
+                                    slot = fieldSlot,
+                                    onBack = { grainFieldSlot = null },
+                                    onToast = { toast = it },
+                                )
                                 sheetSlot != null && sheetEntry != null -> PadSheetScreen(
                                     entry = sheetEntry,
                                     slot = sheetSlot,
@@ -322,6 +344,14 @@ fun App(shelf: KitShelf) {
                                         // TAPE, not necessarily on this pad.
                                         padSheetSlot = null
                                         screen = AppScreen.TAPE
+                                    },
+                                    onGrainField = { slot ->
+                                        // GRAIN closes PAD SHEET on the way
+                                        // in — the two overlays never render
+                                        // at once (see the `when` ordering
+                                        // comment above).
+                                        padSheetSlot = null
+                                        grainFieldSlot = slot
                                     },
                                     onKitUpdated = { updatedKit ->
                                         open = open?.copy(kit = updatedKit)
