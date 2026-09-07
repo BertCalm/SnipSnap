@@ -223,6 +223,8 @@ object Copy {
     fun roomForgotten(name: String): String = "$name IS IN THE BIN. ${Rooms.BIN_DAYS} DAYS TO CHANGE YOUR MIND."
     /** RESTORE on a binned room: back on the shelf under [name]. */
     fun roomRestored(name: String): String = "$name IS BACK ON THE SHELF. AS IF NOTHING HAPPENED."
+    const val ROOM_FORGET_BUSY = "FORGETTING…"
+    const val ROOM_RESTORE_BUSY = "RESTORING…"
 
     // ---- PAD SHEET: pad from anything ----
     const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."

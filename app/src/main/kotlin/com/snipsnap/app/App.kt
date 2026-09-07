@@ -657,6 +657,10 @@ fun App(shelf: KitShelf) {
      */
     /** FORGET → BIN on a held room: into the bin for 30 days, the toast says so. */
     fun forgetRoom(room: Rooms.Room) {
+        // Under the app's one busy lock, like every other file move: a second
+        // tap, or another job in flight, must not race the bin.
+        if (busy != null) return
+        busy = Copy.ROOM_FORGET_BUSY
         scope.launch {
             try {
                 // The bin may freshen the name ("FUNK ROOM 2") - the toast says the name it went in under.
@@ -667,12 +671,16 @@ fun App(shelf: KitShelf) {
                 throw e
             } catch (e: Exception) {
                 toast = "FORGET FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
             }
         }
     }
 
     /** RESTORE on a binned room: back onto the shelf, the toast names it. */
     fun restoreRoom(binned: Rooms.Binned) {
+        if (busy != null) return
+        busy = Copy.ROOM_RESTORE_BUSY
         scope.launch {
             try {
                 val room = withContext(Dispatchers.IO) { shelf.restoreRoom(binned) }
@@ -682,6 +690,8 @@ fun App(shelf: KitShelf) {
                 throw e
             } catch (e: Exception) {
                 toast = "RESTORE FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
             }
         }
     }

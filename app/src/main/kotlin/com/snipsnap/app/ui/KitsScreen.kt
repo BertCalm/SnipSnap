@@ -136,7 +136,7 @@ fun KitsScreen(
                             TapeText("ROOMS · OUTSIDE MEASURED THEM. ANY PAD PLAYS IN ONE.", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
                         }
                         items(rooms, key = { "room:" + it.file.name }) { room ->
-                            RoomRow(room, onForgetRoom)
+                            RoomRow(room, busy, onForgetRoom)
                         }
                         if (rooms.isNotEmpty()) {
                             item(key = "rooms-note") {
@@ -219,7 +219,7 @@ private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.Ins
  * over the button.
  */
 @Composable
-private fun RoomRow(room: Rooms.Room, onForget: (Rooms.Room) -> Unit) {
+private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> Unit) {
     val scheme = LocalScheme.current
     var armed by remember(room.file) { mutableStateOf(false) }
     val ageDays = ((System.currentTimeMillis() - room.measuredAt) / (24L * 60 * 60 * 1000)).toInt()
@@ -266,10 +266,10 @@ private fun RoomRow(room: Rooms.Room, onForget: (Rooms.Room) -> Unit) {
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
                     .border(2.dp, Brush.linearGradient(listOf(BIN_RED_GLOW, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
-                    .tapeClick { onForget(room) },
+                    .let { if (!busy) it.tapeClick { onForget(room) } else it },
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText("FORGET → BIN", TapeType.pixel, BIN_RED_GLOW)
+                TapeText("FORGET → BIN", TapeType.pixel, if (busy) scheme.ink3.tape else BIN_RED_GLOW)
             }
         } else {
             Box(Modifier.height(30.dp).lcdPanel(scheme).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
