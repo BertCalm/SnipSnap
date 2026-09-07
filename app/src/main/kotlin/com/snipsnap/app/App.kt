@@ -301,10 +301,10 @@ fun App(shelf: KitShelf) {
     // WAV straight through the reader, anything else through the
     // platform's codec), landed as a snip (SnipStore.import: mono, the
     // MPC rate, capped), then TAPE - which finds the newest snip first
-    // by its own source priority. The deck needs a kit to sit in; with
-    // none open the first on the shelf is opened, and with an empty
-    // shelf the file stays on the doorstep of the next FRESH TAPE and
-    // the toast says so. `importCount` is TAPE's reload request, for a
+    // by its own source priority. With no kit open the first on the
+    // shelf is opened for the deck's cassette label and fallback; with an
+    // empty shelf the deck plays the snip on its own — TAPE no longer
+    // needs a kit for one. `importCount` is TAPE's reload request, for a
     // share that arrives while TAPE is already on screen.
     val shared by ShareInbox.pending.collectAsState()
     var importCount by remember { mutableStateOf(0) }
@@ -323,12 +323,7 @@ fun App(shelf: KitShelf) {
             }
             ShareInbox.consume()
             if (open == null) {
-                val first = withContext(Dispatchers.IO) { shelf.list() }.firstOrNull()
-                if (first == null) {
-                    toast = Copy.IMPORT_NO_TAPE
-                    return@LaunchedEffect
-                }
-                open = first
+                open = withContext(Dispatchers.IO) { shelf.list() }.firstOrNull()
             }
             toast = Copy.imported(landed.seconds, landed.truncated)
             importCount++

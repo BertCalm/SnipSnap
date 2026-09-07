@@ -74,7 +74,6 @@ object Copy {
         return if (truncated) "TAPED FROM OUTSIDE. FIRST $length KEPT - THE TAPE IS ONLY SO LONG." else "TAPED FROM OUTSIDE. $length ON THE DECK."
     }
     const val IMPORT_BUSY = "IMPORTING…"
-    const val IMPORT_NO_TAPE = "TAPED FROM OUTSIDE. MAKE A FRESH TAPE AND IT'S ON THE DECK."
     const val IMPORT_NOT_AUDIO = "NOTHING TO HEAR IN THAT. SHARE AUDIO OR A VIDEO WITH SOUND."
     // The quick-settings tile.
     const val TILE_LABEL = "SNIPSNAP"

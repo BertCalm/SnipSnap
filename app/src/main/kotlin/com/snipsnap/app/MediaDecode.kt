@@ -6,12 +6,12 @@ import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
+import com.snipsnap.audio.Pcm
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 /**
  * A shared file's audio as a [Snip] (F3.2): the app-side half of the
@@ -152,6 +152,7 @@ object MediaDecode {
         var channels = trackFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
         var floatPcm = false
         val out = FloatList()
+        val scratch = Scratch()
         var inputDone = false
         var outputDone = false
         var capped = false
@@ -186,7 +187,7 @@ object MediaDecode {
                         buffer.position(info.offset)
                         buffer.limit(info.offset + info.size)
                         val room = MAX_FRAMES * channels - out.size
-                        capped = appendPcm(buffer, floatPcm, out, room)
+                        capped = appendPcm(buffer, info.size, floatPcm, out, room, scratch)
                     }
                     codec.releaseOutputBuffer(outIndex, false)
                     // The cap is the end of the decode, not just of the
@@ -205,19 +206,51 @@ object MediaDecode {
         return Snip(if (samples.size == frames * channels) samples else samples.copyOf(frames * channels), channels, rate)
     }
 
-    /** Appends [buffer]'s PCM as floats, up to [room] samples; true when the cap was hit. */
-    private fun appendPcm(buffer: ByteBuffer, floatPcm: Boolean, out: FloatList, room: Int): Boolean {
-        val b = buffer.order(ByteOrder.nativeOrder())
-        if (floatPcm) {
-            val fb = b.asFloatBuffer()
-            val n = minOf(fb.remaining(), room)
-            for (i in 0 until n) out.add(fb.get())
-            return fb.remaining() > 0
+    /**
+     * Appends [size] bytes of [buffer]'s PCM as floats, up to [room]
+     * samples; true when the cap was hit. The bytes go through [Pcm]
+     * (`:audio`, tested) rather than a buffer view: the same symmetric
+     * 16-bit scale [WavReader] reads with, so a decoded MP3 and a WAV of
+     * the same signal land at the same level, and a NaN a float decoder
+     * emits becomes silence instead of poisoning the deck.
+     */
+    private fun appendPcm(
+        buffer: ByteBuffer,
+        size: Int,
+        floatPcm: Boolean,
+        out: FloatList,
+        room: Int,
+        scratch: Scratch,
+    ): Boolean {
+        val bytesPerSample = if (floatPcm) 4 else 2
+        val available = size / bytesPerSample
+        val n = minOf(available, room)
+        val bytes = scratch.bytes(n * bytesPerSample)
+        buffer.get(bytes, 0, n * bytesPerSample)
+        val floats = scratch.floats(n)
+        val written = if (floatPcm) {
+            Pcm.floatToFloat(bytes, 0, n * bytesPerSample, floats, 0)
+        } else {
+            Pcm.int16ToFloat(bytes, 0, n * bytesPerSample, floats, 0)
         }
-        val sb = b.asShortBuffer()
-        val n = minOf(sb.remaining(), room)
-        for (i in 0 until n) out.add(sb.get() / 32768f)
-        return sb.remaining() > 0
+        out.addAll(floats, written)
+        return available > n
+    }
+
+    /** Two reusable arrays for the copy out of the codec's buffer — grown to the largest block seen, never per block. */
+    private class Scratch {
+        private var byteBuf = ByteArray(1 shl 16)
+        private var floatBuf = FloatArray(1 shl 15)
+
+        fun bytes(size: Int): ByteArray {
+            if (size > byteBuf.size) byteBuf = ByteArray(size)
+            return byteBuf
+        }
+
+        fun floats(size: Int): FloatArray {
+            if (size > floatBuf.size) floatBuf = FloatArray(size)
+            return floatBuf
+        }
     }
 
     /** A growable float array — the decode's length is not known up front. */
@@ -226,9 +259,14 @@ object MediaDecode {
         var size = 0
             private set
 
-        fun add(v: Float) {
-            if (size == data.size) data = data.copyOf(data.size * 2)
-            data[size++] = v
+        fun addAll(src: FloatArray, count: Int) {
+            if (size + count > data.size) {
+                var grown = data.size
+                while (size + count > grown) grown *= 2
+                data = data.copyOf(grown)
+            }
+            System.arraycopy(src, 0, data, size, count)
+            size += count
         }
 
         fun toArray(): FloatArray = data.copyOf(size)

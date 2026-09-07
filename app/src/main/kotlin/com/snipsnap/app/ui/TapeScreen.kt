@@ -126,20 +126,20 @@ fun TapeScreen(
     val scheme = LocalScheme.current
     val context = LocalContext.current
 
-    if (entry == null) {
-        EmptyDeck(scheme)
-        return
-    }
-
-    var loaded by remember(entry.dir) { mutableStateOf<LoadedTape?>(null) }
-    var failed by remember(entry.dir) { mutableStateOf(false) }
+    // No open kit is not an empty deck: a snip — a capture, or a file
+    // shared in — plays here without one. Only the kit's-longest-sample
+    // fallback needs an entry, so a share into an empty shelf still lands.
+    val kitDir = entry?.dir
+    var loaded by remember(kitDir) { mutableStateOf<LoadedTape?>(null) }
+    var failed by remember(kitDir) { mutableStateOf(false) }
     // Bumped by TapeDeckContent's idle-reload watcher to force a fresh
-    // call to loadLongestTape without changing `entry.dir` (the only other
-    // trigger below) — see that watcher's own KDoc for what bumps it and
-    // why it's gated on the deck being idle.
-    var reloadToken by remember(entry.dir) { mutableStateOf(0) }
+    // call to loadLongestTape without changing `kitDir` (the other
+    // triggers below being the app's own reloadRequest) — see that
+    // watcher's own KDoc for what bumps it and why it's gated on the deck
+    // being idle.
+    var reloadToken by remember(kitDir) { mutableStateOf(0) }
 
-    LaunchedEffect(entry.dir, reloadToken, reloadRequest) {
+    LaunchedEffect(kitDir, reloadToken, reloadRequest) {
         loaded = null
         failed = false
         val result = withContext(Dispatchers.IO) {
@@ -185,11 +185,12 @@ private fun EmptyDeck(scheme: Scheme) {
  * exactly like any other WAV: [WavReader] + [Cleanup.toMono] is the same
  * path for all three sources.
  */
-private fun loadLongestTape(entry: KitShelf.Entry, filesDir: File, lastCommitSource: File?): LoadedTape? {
+private fun loadLongestTape(entry: KitShelf.Entry?, filesDir: File, lastCommitSource: File?): LoadedTape? {
     for (file in listOfNotNull(SnipStore.newest(filesDir), lastCommitSource)) {
         val mono = readMono(file) ?: continue
         return buildLoadedTape(file, mono)
     }
+    if (entry == null) return null
     val (file, mono) = loadLongestFromKit(entry) ?: return null
     return buildLoadedTape(file, mono)
 }
@@ -227,7 +228,7 @@ private fun buildLoadedTape(file: File, chosen: Snip): LoadedTape {
 
 @Composable
 private fun TapeDeckContent(
-    entry: KitShelf.Entry,
+    entry: KitShelf.Entry?,
     tapeData: LoadedTape,
     onToast: (String) -> Unit,
     onCommit: (File, IntRange) -> Unit,
@@ -484,7 +485,7 @@ private fun WindButton(
 /** The cassette: kit name, two reels, and the pencil-rewind gag on the left one. */
 @Composable
 private fun CassetteRow(
-    entry: KitShelf.Entry,
+    entry: KitShelf.Entry?,
     model: TapeDeckModel,
     @Suppress("UNUSED_PARAMETER") frameTick: Int,
     onToast: (String) -> Unit,
@@ -537,7 +538,7 @@ private fun CassetteRow(
                 },
         )
         TapeText(
-            entry.kit.name,
+            entry?.kit?.name ?: "TAPE",
             TapeType.marker,
             scheme.lcdInk.tape,
             Modifier.weight(1f),
