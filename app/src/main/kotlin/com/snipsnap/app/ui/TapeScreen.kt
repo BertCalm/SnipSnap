@@ -63,6 +63,7 @@ import com.snipsnap.shell.TapeDeckModel
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.max
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -430,18 +431,23 @@ private fun TapeDeckContent(
                 digging = true
                 onToast(Copy.DIG_BUSY)
                 digScope.launch {
-                    val found = try {
-                        withContext(Dispatchers.IO) {
+                    try {
+                        val found = withContext(Dispatchers.IO) {
                             Dig.best(Snip(tapeData.samples, 1, tapeData.sampleRate))
                         }
+                        if (found == null) {
+                            onToast(Copy.NO_BREAK)
+                        } else {
+                            model.select(found.startFrame, found.endFrame)
+                            onToast(Copy.dug(Dig.stamp(found.startSec), Dig.stamp(found.endSec)))
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        // Law 3: when it breaks, say exactly what happened.
+                        onToast("DIG FAILED: ${e.message ?: e.javaClass.simpleName}")
                     } finally {
                         digging = false
-                    }
-                    if (found == null) {
-                        onToast(Copy.NO_BREAK)
-                    } else {
-                        model.select(found.startFrame, found.endFrame)
-                        onToast(Copy.dug(Dig.stamp(found.startSec), Dig.stamp(found.endSec)))
                     }
                 }
             }
