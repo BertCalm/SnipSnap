@@ -95,6 +95,8 @@ object OutsideSheet {
         val confidence: Float,
         /** The return came back upside down (REAMP restores it). */
         val inverted: Boolean,
+        /** ROOM only: the room as measured, the impulse ROOM OF ITSELF was handed - what [keep] puts on the shelf. */
+        val impulse: Snip? = null,
     )
 
     /**
@@ -152,9 +154,22 @@ object OutsideSheet {
                     extraRecipe = mapOf("outside" to outsideBlock("room", lagMs, confidence, false, "wet", amount)),
                 )
                 val stamped = model.update(slot) { it.copy(source = it.source + mapOf("outside" to Move.ROOM.name)) }
-                Outcome(stamped.copy(recipe = outcome.pad.recipe), move, lagMs, confidence, false)
+                Outcome(stamped.copy(recipe = outcome.pad.recipe), move, lagMs, confidence, false, impulse.snip)
             }
         }
+    }
+
+    /**
+     * KEEP: the room a ROOM trip measured, onto the shelf under [shelfRoot]
+     * as a reusable parent ([Rooms]), named after [kitName]. Refuses in
+     * words an [outcome] with no room in it - only a ROOM trip measures one.
+     */
+    fun keep(shelfRoot: File, outcome: Outcome, kitName: String, nowMillis: Long = System.currentTimeMillis()): Rooms.Room {
+        val impulse = outcome.impulse ?: throw IllegalArgumentException("only a ROOM trip measures a room - REAMP has none to keep")
+        return Rooms.keep(
+            shelfRoot, impulse, kitName, outcome.lagMs, outcome.confidence,
+            from = "$kitName:${MutateSheet.padTag(outcome.pad.slot)}", nowMillis = nowMillis,
+        )
     }
 
     private fun outsideBlock(move: String, lagMs: Float, confidence: Float, inverted: Boolean, knob: String, amount: Float) =

@@ -5,6 +5,8 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
 import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.MutateSheet
+import com.snipsnap.shell.OutsideSheet
+import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.shell.TextureKits
 import java.io.File
@@ -38,6 +40,12 @@ class KitShelf(private val root: File) {
     /** Every readable instrument on the shelf, by name. */
     fun instruments(): List<InstrumentEntry> =
         com.snipsnap.kit.InstrumentStore.list(instrumentsDir).map { (f, i) -> InstrumentEntry(f, i) }
+
+    /** Every room OUTSIDE measured and kept on the shelf, the latest first — MUTATE's third kind of parent. */
+    fun rooms(): List<Rooms.Room> = Rooms.list(root)
+
+    /** KEEP ROOM: the room a ROOM trip measured, onto the shelf named after [kitName]. */
+    fun keepRoom(outcome: OutsideSheet.Outcome, kitName: String): Rooms.Room = OutsideSheet.keep(root, outcome, kitName)
 
     /**
      * Every readable kit on the shelf. A folder whose `kit.json` is broken

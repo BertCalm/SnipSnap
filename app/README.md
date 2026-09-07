@@ -82,6 +82,12 @@ shelf useful before capture (M1) exists.
   remove exactly the send). If the return is silent, check that ARM has
   granted RECORD_AUDIO and that no armed session holds the mic — the
   card refuses both in words before playing.
+- **KEEP ROOM (pad sheet)**: after a ROOM trip the OUTSIDE card's KEEP
+  ROOM button lights; tap it and the toast names the room ("FUNK ROOM IS
+  ON THE SHELF…"), a `Rooms/FUNK ROOM.wav` + `.json` pair appears beside
+  the kits, and the MUTATE card grows a ROOMS row with that room already
+  the partner. Open another kit's pad, pick the room, MUTATE ▸ ROOM: the
+  pad plays inside it with no trip. A REAMP trip leaves KEEP ROOM dim.
 
 ## Fonts / licensing
 

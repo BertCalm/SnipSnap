@@ -11,10 +11,12 @@ import kotlin.math.roundToInt
  * The PAD SHEET's MUTATE card, as data — the phone's door onto [Mutate].
  *
  * The CLI verb takes parents as pad refs, other kits' pads, WAV paths and
- * a roulette; the card keeps the two a thumb can reach: **a pad on this
- * kit** (tap it on the mini grid) or **the crate's deal** (ROULETTE spins
+ * a roulette; the card keeps the three a thumb can reach: **a pad on this
+ * kit** (tap it on the mini grid), **the crate's deal** (ROULETTE spins
  * the shelf, seeded by the tap count so every spin is a different deal
- * and each is reproducible). One parent, one move, one knob: STACK has
+ * and each is reproducible), or **a room on the shelf** (one OUTSIDE
+ * measured and kept, [Rooms]; ROOM plays the pad inside it). One parent,
+ * one move, one knob: STACK has
  * none, SPLICE has AT (where the pad's transient hands over), SPLIT has
  * HZ (the crossover), MORPH has MIX, ROOM has WET, TRANSPLANT has BANDS.
  * The knob's range is the verb's own, mapped exponentially where the ear
@@ -78,12 +80,16 @@ object MutateSheet {
 
         /** What ROULETTE dealt off the shelf: the crate's own name for it, its file, and the seed that dealt it. */
         data class Deal(val label: String, val file: File, val seed: Int) : Partner
+
+        /** A room kept on the shelf ([Rooms]): its name and its impulse. */
+        data class Room(val name: String, val file: File) : Partner
     }
 
-    /** The card's own name for a partner: the pad tag, or the crate's label. */
+    /** The card's own name for a partner: the pad tag, the crate's label, or the room's name. */
     fun name(partner: Partner): String = when (partner) {
         is Partner.Pad -> padTag(partner.slot)
         is Partner.Deal -> partner.label
+        is Partner.Room -> partner.name
     }
 
     /** What a mutated pad carries: the move and the parents' labels, read from the `mutate` recipe; DRIFT reads as its own word. */
@@ -133,6 +139,7 @@ object MutateSheet {
             Mutate.Source("${model.kit.name}:${padTag(partner.slot)}", WavReader.read(File(model.kitDir, pad.sampleFile)))
         }
         is Partner.Deal -> Mutate.Source(partner.label, WavReader.read(partner.file))
+        is Partner.Room -> Mutate.Source(Rooms.LABEL_PREFIX + partner.name, WavReader.read(partner.file))
     }
 
     /**
@@ -154,6 +161,7 @@ object MutateSheet {
                     ),
                 ),
             )
+            is Partner.Room -> mapOf("room" to JsonValue.Str(partner.name))
             is Partner.Pad -> emptyMap()
         }
         return Mutate.apply(

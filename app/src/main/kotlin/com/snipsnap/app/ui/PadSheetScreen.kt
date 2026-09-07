@@ -77,6 +77,7 @@ import com.snipsnap.shell.OutsideSheet
 import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PeaksPyramid
+import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.ShapeAudition
@@ -406,6 +407,23 @@ fun PadSheetScreen(
     var partner by remember(slot) { mutableStateOf<MutateSheet.Partner?>(null) }
     // Each ROULETTE tap is a new seed, so every spin is a new deal and each one reproducible.
     var spins by remember(slot) { mutableIntStateOf(0) }
+    // The rooms on the shelf (OUTSIDE measured, KEEP ROOM kept): the card's
+    // third kind of parent. Read off the shelf once per sheet and again
+    // after a keep; the shelf is the kit folder's parent, as ROULETTE has it.
+    var rooms by remember { mutableStateOf<List<Rooms.Room>>(emptyList()) }
+    var roomsRevision by remember { mutableIntStateOf(0) }
+    LaunchedEffect(entry.dir, roomsRevision) {
+        val root = entry.dir.parentFile ?: entry.dir
+        rooms = withContext(Dispatchers.IO) {
+            try {
+                Rooms.list(root)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+    }
     val mutateKnob = MutateSheet.knobFor(MutateSheet.modeFor(mutateMode))
     var pendingMutateKnob by remember(slot, mutateMode) {
         mutableFloatStateOf(mutateKnob?.let { MutateSheet.fraction(it, it.default) } ?: 0f)
@@ -546,6 +564,9 @@ fun PadSheetScreen(
     // What the trip is doing right now — LISTENING…, SENDING… — for the
     // SEND button's own label; null when nothing is out.
     var outsideStage by remember(slot) { mutableStateOf<String?>(null) }
+    // The last ROOM trip's outcome, the room as measured riding it, until
+    // KEEP ROOM puts it on the shelf; a REAMP measures none.
+    var measuredRoom by remember(slot) { mutableStateOf<OutsideSheet.Outcome?>(null) }
     // The armed mic session holds the mic; OUTSIDE wants it to itself.
     val tapeArmed by MicSessionService.armed.collectAsState()
 
@@ -599,6 +620,9 @@ fun PadSheetScreen(
                 revision++
                 onKitUpdated(m.kit)
                 refreshPadAudio(m)
+                // The last trip's room, or none: a REAMP measures no room, so
+                // KEEP ROOM dims until the next ROOM trip.
+                measuredRoom = outcome.takeIf { it.impulse != null }
                 m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
                 onToast(Copy.outside(outsideMove, padName, outcome.lagMs, outcome.confidence))
             } catch (e: Exception) {
@@ -613,6 +637,41 @@ fun PadSheetScreen(
 
     fun onOutsideUndo() {
         commitPadEditNow("UNDO", onSuccess = { onToast(Copy.OUTSIDE_UNDONE) }) { mm -> OutsideSheet.undo(mm, slot) }
+    }
+
+    /**
+     * KEEP ROOM: the room the last ROOM trip measured goes onto the shelf
+     * as a reusable parent (`Rooms`, beside the kits), named after the kit,
+     * and becomes this card's MUTATE partner at once - so the next pad can
+     * take it without a trip. Kept once: the button dims until the next
+     * ROOM trip measures another.
+     */
+    fun onKeepRoom() {
+        if (busy) return
+        val m = model ?: return
+        val o = measuredRoom
+        if (o == null) {
+            onToast(Copy.ROOM_NONE_TO_KEEP)
+            return
+        }
+        val root = entry.dir.parentFile ?: entry.dir
+        // Busy before the launch, not inside it: a second tap in the gap
+        // before the coroutine starts must not keep the same room twice.
+        busy = true
+        scope.launch {
+            try {
+                val kept = withContext(Dispatchers.IO) { OutsideSheet.keep(root, o, m.kit.name) }
+                measuredRoom = null
+                roomsRevision++
+                partner = Rooms.partner(kept)
+                onToast(Copy.roomKept(kept.name))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("KEEP ROOM", e)
+            } finally {
+                busy = false
+            }
+        }
     }
 
     // ---- PAD FROM ANYTHING: one hit, a pad forever (PadMaker over PadFromAnything) ----
@@ -954,6 +1013,8 @@ fun PadSheetScreen(
                 partners = MutateSheet.partners(kit, slot).map { it.slot },
                 partner = partner,
                 onPartner = { partner = MutateSheet.Partner.Pad(it) },
+                rooms = rooms.map { it.name },
+                onRoom = { name -> rooms.firstOrNull { it.name == name }?.let { partner = Rooms.partner(it) } },
                 onRoulette = ::onRoulette,
                 onDrift = ::onDrift,
                 knobLabel = mutateKnob?.label,
@@ -981,7 +1042,9 @@ fun PadSheetScreen(
             applied = OutsideSheet.read(pad.recipe),
             stage = outsideStage,
             canUndo = binDaysLeft != null,
+            canKeep = measuredRoom != null,
             onSend = ::onOutside,
+            onKeep = ::onKeepRoom,
             onUndo = ::onOutsideUndo,
             padColor = classColor,
             scheme = scheme,
@@ -1454,6 +1517,8 @@ private fun MutateCard(
     partners: List<Int>,
     partner: MutateSheet.Partner?,
     onPartner: (Int) -> Unit,
+    rooms: List<String>,
+    onRoom: (String) -> Unit,
     onRoulette: () -> Unit,
     onDrift: () -> Unit,
     knobLabel: String?,
@@ -1523,6 +1588,31 @@ private fun MutateCard(
                 repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
+        // The rooms on the shelf, two to a row (their names are words, not
+        // tags); the row is absent until OUTSIDE has kept one.
+        if (rooms.isNotEmpty()) {
+            TapeText("ROOMS ON THE SHELF · ROOM PLAYS THE PAD INSIDE ONE", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            val chosenRoom = (partner as? MutateSheet.Partner.Room)?.name
+            for (row in rooms.chunked(2)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    for (r in row) {
+                        val selected = r == chosenRoom
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                                .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                                .let { if (!busy) it.tapeClick { onRoom(r) } else it }
+                                .padding(horizontal = 4.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TapeText(r, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 1)
+                        }
+                    }
+                    repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
         val deal = partner as? MutateSheet.Partner.Deal
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             ActionButton(
@@ -1567,7 +1657,8 @@ private fun MutateCard(
  * pad carries (the move, how late it came back, how surely it was found,
  * a polarity flip if there was one), and SEND — whose label is the trip's
  * own stage while one is out, so the button says LISTENING… and SENDING…
- * rather than going dead.
+ * rather than going dead. KEEP ROOM puts the last ROOM trip's measured
+ * room on the shelf for any pad; it dims until a ROOM trip has measured one.
  */
 @Composable
 private fun OutsideCard(
@@ -1581,7 +1672,9 @@ private fun OutsideCard(
     applied: OutsideSheet.Applied?,
     stage: String?,
     canUndo: Boolean,
+    canKeep: Boolean,
     onSend: () -> Unit,
+    onKeep: () -> Unit,
     onUndo: () -> Unit,
     padColor: Color,
     scheme: Scheme,
@@ -1635,6 +1728,16 @@ private fun OutsideCard(
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
             onClick = onSend,
+        )
+        // The room the last ROOM trip measured, onto the shelf for any pad.
+        // The row stays, dimmed, so the card never jumps when a room lands.
+        ActionButton(
+            "KEEP ROOM ▸ ON THE SHELF, FOR ANY PAD",
+            scheme,
+            enabled = !busy && canKeep,
+            dimmed = !canKeep,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onKeep,
         )
     }
 }

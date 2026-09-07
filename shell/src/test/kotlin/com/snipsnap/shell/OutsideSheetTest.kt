@@ -127,6 +127,8 @@ class OutsideSheetTest {
         assertEquals(trip * 1000f / rate, outcome.lagMs, 0.1f, "the trip, not the wait")
         assertTrue(outcome.confidence > 0.9f)
         assertTrue(!outcome.inverted)
+        assertNull(outcome.impulse, "REAMP measures no room")
+        assertFailsWith<IllegalArgumentException> { OutsideSheet.keep(temp, outcome, "Reamp") }
 
         val now = WavReader.read(padFile)
         // The head before the echo lands: the return, lined up on the hit.
@@ -186,6 +188,24 @@ class OutsideSheetTest {
         assertEquals("ROOM", asMutate.mode)
         assertEquals(listOf(OutsideSheet.ROOM_LABEL), asMutate.parents)
         assertEquals("ROOM", m.pad(1)!!.source["outside"])
+
+        // The room as measured rides the outcome, so KEEP can put it on the shelf...
+        val impulse = outcome.impulse!!
+        assertTrue(impulse.frameCount > echoAt, "the impulse holds the echo: ${impulse.frameCount}")
+        val shelf = m.kitDir.parentFile!!
+        val kept = OutsideSheet.keep(shelf, outcome, m.kit.name, nowMillis = 77L)
+        assertEquals("ROOM ROOM", kept.name, "the kit is called Room; its room is ROOM ROOM")
+        assertEquals(outcome.lagMs, kept.lagMs, 1e-3f)
+        assertEquals(outcome.confidence, kept.confidence, 1e-3f)
+        assertEquals("Room:A01", kept.from)
+        assertEquals(impulse.frameCount, WavReader.read(kept.file).frameCount)
+        // ...where another pad takes it as a MUTATE parent, no trip needed.
+        val otherFile = File(m.kitDir, m.pad(2)!!.sampleFile)
+        val otherBefore = WavReader.read(otherFile)
+        MutateSheet.apply(m, 2, Rooms.partner(kept), Mutate.Mode.ROOM, fraction = 1f)
+        m.save()
+        assertTrue(WavReader.read(otherFile).frameCount >= otherBefore.frameCount + echoAt, "pad 2 plays in the kept room")
+        assertEquals(listOf("room:ROOM ROOM"), MutateSheet.read(m.pad(2)!!.recipe)!!.parents)
 
         OutsideSheet.undo(m, 1)
         m.save()
