@@ -129,6 +129,13 @@ shelf useful before capture (M1) exists.
   other kit's pad the way a deal would ("Soul:A03") and the recipe carries
   the other kit's name. A kit whose folder no longer loads is simply not
   offered. UNDO puts the parent back byte for byte.
+- **A FILE (MUTATE)**: on the MUTATE card, under ANOTHER KIT, A FILE ▸
+  PICK ONE OFF THE PHONE opens the system picker on audio. Pick a WAV or
+  an MP3: the button reads "A FILE ▸ CLAP.WAV" and it is the partner;
+  MUTATE ▸ STACK and the child's lineage names "clap.wav", as the CLI's
+  `--with clap.wav` would. Cancel the picker and nothing changes. Pick a
+  silent file or one too big for the tape and the toast reads NOT A
+  PARENT with the reason. UNDO puts the parent back byte for byte.
 - **KEEP ROOM (pad sheet)**: after a ROOM trip the OUTSIDE card's KEEP
   ROOM button lights; tap it and the toast names the room ("FUNK ROOM IS
   ON THE SHELF…"), a `Rooms/FUNK ROOM.wav` + `.json` pair appears beside

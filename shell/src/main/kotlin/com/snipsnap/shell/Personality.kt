@@ -200,6 +200,8 @@ object Copy {
     const val UNMUTATED = "PARENTS SEPARATED. THE ORIGINAL IS BACK FROM THE BIN."
     const val MUTATE_NEEDS_ONE = "GHOSTS ON. MUTATE WANTS ONE SAMPLE - CLEAR THEM FIRST."
     const val CRATE_EMPTY = "THE CRATE HAS NOTHING TO DEAL. ONLY YOU ON THE SHELF."
+    /** A FILE: the picked file cannot be a parent; [reason] the decoder's or the holder's own words. */
+    fun fileRefused(reason: String): String = "NOT A PARENT: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
 
     // ---- KIT: textures ----
     const val SCULPTED = "SCULPTED. THE HIT IS WEATHER NOW. NEW TAPE ON THE SHELF."

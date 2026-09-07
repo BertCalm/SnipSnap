@@ -2,6 +2,7 @@ package com.snipsnap.shell
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavReader
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -144,6 +145,40 @@ class MutateSheetTest {
         MutateSheet.undo(mine, 1)
         mine.save()
         assertTrue(File(mine.kitDir, mine.pad(1)!!.sampleFile).readBytes().contentEquals(before), "undo is the original")
+    }
+
+    @Test
+    fun `a file off the phone is a partner - held as a WAV under its own name, one at a time, the CLI's label, undo`() {
+        val m = model("Picker")
+        val hold = File(temp, "parents")
+        val first = MutateSheet.hold(hold, "downloads/old take.mp3", tone(700.0, 0.4f))
+        assertEquals("old take.mp3", first.label, "the name the file came with, extension and all")
+        assertEquals("wav", first.file.extension)
+        assertEquals(hold, first.file.parentFile)
+        assertTrue(first.file.isFile, "held as a real WAV")
+        assertEquals((0.4f * rate).toInt(), WavReader.read(first.file).frameCount)
+
+        val clap = MutateSheet.hold(hold, "clap.wav", tone(1500.0, 0.3f))
+        assertTrue(!first.file.exists(), "one is held at a time - the earlier pick's file goes")
+        assertTrue(clap.file.isFile)
+        assertEquals("clap.wav", MutateSheet.name(clap))
+
+        val before = File(m.kitDir, m.pad(1)!!.sampleFile).readBytes()
+        val outcome = MutateSheet.apply(m, 1, clap, Mutate.Mode.STACK, 0f)
+        m.save()
+        val applied = MutateSheet.read(outcome.pad.recipe)!!
+        assertEquals("STACK", applied.mode)
+        assertEquals(listOf("clap.wav"), applied.parents, "the file's own name in the lineage, as the CLI writes it")
+        assertTrue(!File(m.kitDir, m.pad(1)!!.sampleFile).readBytes().contentEquals(before), "the hit changed")
+
+        val e = assertFailsWith<IllegalArgumentException> {
+            MutateSheet.hold(hold, "quiet.wav", Snip(FloatArray(rate / 10), 1, rate))
+        }
+        assertTrue(e.message!!.contains("silent"), e.message)
+
+        MutateSheet.undo(m, 1)
+        m.save()
+        assertTrue(File(m.kitDir, m.pad(1)!!.sampleFile).readBytes().contentEquals(before), "undo is the original")
     }
 
     @Test
