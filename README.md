@@ -196,12 +196,13 @@ cassette the whole app is dressed as: wow/flutter via a modulated
 fractional delay, hysteresis-flavored drive, head-wear HF loss — a
 physics-lite nod to ChowDSP's AnalogTapeModel), ECHO (one delay line and
 one filter, repeats darkening as they fade), SPRING (a Schroeder network,
-1962), REVERSE, and SMEAR (the attack taken out, the wash kept: the STN
+1962), REVERSE, SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
-becomes the room it was struck in). `FxChain` fixes the order — reverse →
-smear → eq → squash → crunch → tape → echo → spring — owns the total tail
-budget so stacked reverbs can't turn a hit into a phrase, and serializes
-per-pad next to the WAV.
+becomes the room it was struck in), GHOST (the tone gone too, the breath
+alone) and MOTION (the tape stop and the tape start, baked). `FxChain`
+fixes the order — reverse → smear → ghost → eq → squash → crunch → tape →
+echo → spring → motion — owns the total tail budget so stacked reverbs
+can't turn a hit into a phrase, and serializes per-pad next to the WAV.
 Identity is tested: a kick through the whole default rack still classifies
 KICK.
 

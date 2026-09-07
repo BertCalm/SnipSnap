@@ -17,7 +17,10 @@ import java.io.File
  * - **splice** — the classic mash: the pad's own transient crossfaded
  *   into a parent's body at the split;
  * - **split** — the pad below a crossover, the parent above ("sub from
- *   this kick, crack from that snare").
+ *   this kick, crack from that snare");
+ * - **room** — the pad played *inside* the parent: the parent's tail as
+ *   the impulse response the pad is convolved with ("kick in the
+ *   snare's room"), MIX the dry/wet.
  *
  * Bin-backed through the same door as every treatment; the recipe
  * (mode, parents, split, flips) rides the pad so the sound stays
@@ -27,7 +30,7 @@ import java.io.File
  */
 object Mutate {
 
-    enum class Mode { STACK, SPLICE, SPLIT, MORPH }
+    enum class Mode { STACK, SPLICE, SPLIT, MORPH, ROOM }
 
     /** A parent sound: where it came from (for the recipe) and its audio. */
     data class Source(val label: String, val snip: Snip)
@@ -106,6 +109,8 @@ object Mutate {
         crossoverHz: Float = DEFAULT_CROSSOVER_HZ,
         /** MORPH only: 0 = all pad, 1 = all parent. */
         morphAmount: Float = 0.5f,
+        /** ROOM only: 0 = dry, 1 = the room alone. */
+        roomMix: Float = 0.5f,
         /** Extra recipe fields — how the roulette records its spin. */
         extraRecipe: Map<String, JsonValue> = emptyMap(),
     ): Outcome {
@@ -116,6 +121,7 @@ object Mutate {
         require(spliceAtMs in 5..2000) { "--at wants 5..2000 ms, got $spliceAtMs" }
         require(crossoverHz in 40f..8000f) { "--hz wants 40..8000, got $crossoverHz" }
         require(morphAmount in 0f..1f) { "--amount wants 0..1, got $morphAmount" }
+        require(roomMix in 0f..1f) { "--amount wants 0..1, got $roomMix" }
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
 
         val base = com.snipsnap.audio.WavReader.read(File(model.kitDir, pad.sampleFile))
@@ -129,6 +135,7 @@ object Mutate {
             Mode.SPLICE -> splice(baseAligned, parents.single().snip, spliceAtMs, rate)
             Mode.SPLIT -> split(baseAligned, parents.single().snip, crossoverHz, rate)
             Mode.MORPH -> morph(baseAligned, parents.single().snip, morphAmount, rate)
+            Mode.ROOM -> room(baseAligned, parents.single().snip, roomMix, rate)
         }
 
         val recipe = JsonValue.Obj(
@@ -141,6 +148,7 @@ object Mutate {
                         if (mode == Mode.SPLICE) r["at"] = JsonValue.Num(spliceAtMs.toDouble())
                         if (mode == Mode.SPLIT) r["hz"] = JsonValue.Num(crossoverHz.toDouble())
                         if (mode == Mode.MORPH) r["amount"] = JsonValue.Num(morphAmount.toDouble())
+                        if (mode == Mode.ROOM) r["mix"] = JsonValue.Num(roomMix.toDouble())
                         if (flipped.isNotEmpty()) {
                             r["flipped"] = JsonValue.Arr(flipped.map { JsonValue.Str(it) })
                         }
@@ -254,6 +262,59 @@ object Mutate {
             out[f * 2 + 1] = morphed.samples[f]
         }
         normalizeTo(out, target)
+        return Snip(out, 2, rate)
+    }
+
+    /**
+     * ROOM OF ITSELF: the parent as an impulse response. Convolution is a
+     * multiplication of spectra, so both go through the classifier's own
+     * FFT at a power-of-two length that holds the whole result; the parent
+     * is mono-folded and scaled to unit energy so the room's loudness comes
+     * from the pad, not the size of the file. The wet signal is brought to
+     * the pad's own peak, then MIX crossfades dry to wet. The result runs
+     * the pad's length plus the room's tail.
+     */
+    private fun room(base: Snip, impulse: Snip, mix: Float, rate: Int): Snip {
+        val n = base.frameCount + impulse.frameCount - 1
+        var size = 1
+        while (size < n) size = size shl 1
+
+        // The impulse: mono, unit energy.
+        val irRe = FloatArray(size)
+        val irIm = FloatArray(size)
+        var energy = 0.0
+        for (f in 0 until impulse.frameCount) {
+            val v = (impulse.samples[f * 2] + impulse.samples[f * 2 + 1]) * 0.5f
+            irRe[f] = v
+            energy += v * v.toDouble()
+        }
+        if (energy <= 1e-12) return base
+        val k = (1.0 / Math.sqrt(energy)).toFloat()
+        for (f in 0 until impulse.frameCount) irRe[f] *= k
+        com.snipsnap.audio.Fft.forward(irRe, irIm)
+
+        val wet = FloatArray(n * 2)
+        for (ch in 0 until 2) {
+            val re = FloatArray(size)
+            val im = FloatArray(size)
+            for (f in 0 until base.frameCount) re[f] = base.samples[f * 2 + ch]
+            com.snipsnap.audio.Fft.forward(re, im)
+            for (b in 0 until size) {
+                val r = re[b] * irRe[b] - im[b] * irIm[b]
+                val i = re[b] * irIm[b] + im[b] * irRe[b]
+                re[b] = r
+                im[b] = i
+            }
+            com.snipsnap.audio.Fft.inverse(re, im)
+            for (f in 0 until n) wet[f * 2 + ch] = re[f]
+        }
+        normalizeTo(wet, peak(base.samples))
+
+        val out = FloatArray(n * 2)
+        for (i in out.indices) {
+            val dry = if (i < base.samples.size) base.samples[i] else 0f
+            out[i] = dry * (1f - mix) + wet[i] * mix
+        }
         return Snip(out, 2, rate)
     }
 

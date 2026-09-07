@@ -16,7 +16,7 @@ import kotlin.math.roundToInt
  * the shelf, seeded by the tap count so every spin is a different deal
  * and each is reproducible). One parent, one move, one knob: STACK has
  * none, SPLICE has AT (where the pad's transient hands over), SPLIT has
- * HZ (the crossover), MORPH has MIX. The knob's range is the verb's own,
+ * HZ (the crossover), MORPH has MIX, ROOM has WET. The knob's range is the verb's own,
  * mapped exponentially where the ear hears ratios.
  */
 object MutateSheet {
@@ -32,6 +32,7 @@ object MutateSheet {
         Mutate.Mode.SPLICE to Knob("AT", 5f, 2000f, Mutate.DEFAULT_SPLICE_MS.toFloat(), exponential = true),
         Mutate.Mode.SPLIT to Knob("HZ", 40f, 8000f, Mutate.DEFAULT_CROSSOVER_HZ, exponential = true),
         Mutate.Mode.MORPH to Knob("MIX", 0f, 1f, 0.5f, exponential = false),
+        Mutate.Mode.ROOM to Knob("WET", 0f, 1f, 0.5f, exponential = false),
     )
 
     /** STACK has no knob: layering is transient-aligned, nothing to dial. */
@@ -135,6 +136,7 @@ object MutateSheet {
             spliceAtMs = if (mode == Mutate.Mode.SPLICE) v!!.roundToInt() else Mutate.DEFAULT_SPLICE_MS,
             crossoverHz = if (mode == Mutate.Mode.SPLIT) v!! else Mutate.DEFAULT_CROSSOVER_HZ,
             morphAmount = if (mode == Mutate.Mode.MORPH) v!! else 0.5f,
+            roomMix = if (mode == Mutate.Mode.ROOM) v!! else 0.5f,
             extraRecipe = extra,
         )
     }

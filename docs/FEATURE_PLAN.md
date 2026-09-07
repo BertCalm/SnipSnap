@@ -1284,6 +1284,56 @@ change every saved seed — a versioned table if ever).
 
 ---
 
+## Wave VV — the room and the tape (CORE + APP)
+
+Sound design that is *composition*, not new theory: every item here is
+a few existing passes in a new order, landing as a named character on
+the pad sheet (rows two and three) or a MUTATE move. The point of the
+wave is six new sounds in a week and the one UI change the later waves
+also need — the card growing past one row of characters.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| VV1 | ✓ done: ROOM OF ITSELF — `mutate --room [--amount]`: the pad convolved with a partner's tail (FFT convolution on the classifier's own `Fft`), MIX 0..1 dry/wet, peak matched to the pad; the fifth MUTATE move, so the phone's card gets it with a MIX knob and ROULETTE can deal the room | CORE + APP | M | a click through an exponentially decaying noise tail decays with that tail's time constant; MIX 0 is the pad; the recipe records the room's label and mix; undo byte-identical |
+| VV2 | ✓ done: GHOST — `Separate.ghost` (the noise layer alone: `1 − amount·(s + t)` on the STN masks, peak matched with the smear's capped makeup), a `Ghost` rack section after SMEAR, the `ghosted` character | CORE | S | tone and clicks vanish, hiss survives and is brought up; a ghosted kick is not a kick; never above the source's peak |
+| VV3 | ✓ done: TAPE STOP and TAPE START — `Motion`, last in the rack: a variable-speed head with a linear-interpolated read, STOP the capstan letting go over up to 2 s (pitch and level fall to silence, length kept), START the reel spinning up over up to 1.5 s (the sound arrives late); the `stopped` and `started` characters | CORE | S | STOP: crossings fall by half and the end is silent; START: crossings and level climb; both zero is the input object |
+| VV4 | ✓ done: the pad sheet's third row — GHOST · STOP · START · FLIP over `characterPad`; `reversed` now lights FLIP (AMT grades its spring tail) | APP | S | every segment names a real character; the inverse mappings hold |
+| VV5 | GENERATION LOSS — N bounces through an era chain (tape → sampler → tape), N the knob; deterministic, N=0 bit-identical | CORE | S | bit depth and bandwidth fall monotonically with N |
+| VV6 | BANDED SMEAR — the smear above a crossover only, the thump below untouched | CORE | S | clicks vanish above the crossover, the low band is bit-identical |
+| VV7 | SWELL — a reversed, stretched copy crossfaded into the hit, so the sound arrives before it strikes | CORE | S | energy rises before the onset; the onset itself is preserved |
+
+**Below the line for VV:** the capture-room variant of ROOM (the
+capture doctor's measured tail as the impulse — wants the phone-mic
+reference capture first).
+
+---
+
+## Wave WW — in key (CORE + APP)
+
+The on-thesis wave: sound design that knows the kit's key. Harder DSP
+over the spectral door, each with a real exit test.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| WW1 | PAD FROM ANYTHING — stretch far (the clear stretch for a pitched source, the wash for an unpitched one), cut a seamless loop out of the middle with `LoopCut`, hand it to the instrument maker as a keygroup with loop points and a slow release; DEPTH (×8..×100) and BLOOM (attack) the two knobs; unpitched sources land as a drone at the root rather than being refused | CORE + APP | M | the loop seam has no click; a held note sustains past the source's length; a 220 Hz source plays 220 Hz at its root; a drum source is accepted as a drone |
+| WW2 | SPECTRAL RETUNE — every partial snapped to the nearest note of the kit's key, phases by PGHI | CORE | M–L | an off-key clang's peaks land on scale notes; a drum is refused as unpitched |
+| WW3 | TRANSPLANT — A's attack wearing B's long-term spectral envelope (a one-knob vocoder: BANDS) | CORE | M | the result's onset correlates with A, its band envelope with B |
+| WW4 | BODY — a bank of tuned resonators struck by the hit, tuned to the kit's key | CORE | M | a click through BODY rings at the root; decay follows the knob |
+| WW5 | WOBBLE — a tempo-synced filter sweep baked onto a captured hit, RATE snapped to note divisions at the kit's BPM | CORE | S | sweep period equals the division at the kit's BPM |
+| WW6 | ATTACK KEPT, TAIL ETERNAL — a non-linear time map: the first 30 ms at speed, then the tail slowing toward infinity; KNEE the knob | CORE | S | the first 30 ms bit-identical; tail length equals the knob |
+
+---
+
+## Wave XX — the crate as an instrument (CORE + APP)
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| XX1 | DRIFT TOWARD THE CRATE — one knob: roulette finds the neighbour, morph blends toward it | CORE + APP | S | equals roulette then morph; deterministic per seed |
+| XX2 | BREEDING — two kits' recipes crossed (macros swapped and averaged), classifier-audited | CORE | M | every child pad keeps its parent class; same seed same kit |
+| XX3 | DE-SAMPLE — the nearest synth patch to a captured hit, from a pre-rendered macro grid and `Similar`; its own spec | CORE + APP | L | a rendered THUMP kick returns its own patch; a capture returns a patch within a distance bound |
+
+---
+
 ## Sequence
 
 ```
@@ -1513,6 +1563,12 @@ CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   one door (TextureKits) for the CLI verb and the phone's TEXTURE
   panel, a pad becoming a tape of its own. Below the line: other-kit
   parents on the phone, the clear stretch.
+
+CORE+APP wave VV (in progress, 2026-09-06) — the room and the tape.
+  VV1–VV4 landed: ROOM OF ITSELF as the fifth MUTATE move (FFT
+  convolution, a MIX knob, the crate can deal the room), GHOST and
+  MOTION (tape stop / start) as rack sections and characters, the pad
+  sheet's third row. VV5–VV7 next. Then WW, PAD FROM ANYTHING first.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

@@ -27,7 +27,7 @@ class TreatmentsTest {
     @Test
     fun `the named characters are the bank's five and then the extras, smeared among them`() {
         assertEquals(
-            listOf("reversed", "crushed", "slapback", "washed", "punched", "smeared"),
+            listOf("reversed", "crushed", "slapback", "washed", "punched", "smeared", "ghosted", "stopped", "started"),
             Treatments.names,
         )
         assertTrue(Treatments.EXTRA.none { it.first in Shuffle.TREATMENTS.map { t -> t.first } }, "an extra never shadows a bank name")
@@ -76,5 +76,16 @@ class TreatmentsTest {
     @Test
     fun `an unknown treatment is refused even at AMT zero`() {
         assertFailsWith<IllegalArgumentException> { Treatments.chain("wobbel", 0f) }
+    }
+
+    @Test
+    fun `ghosted, stopped and started each record a one-section recipe`() {
+        val snare = Thump.render(ThumpVoice.SNARE)
+        val ghosted = PadRecipe.fromJsonValue(Treatments.apply("ghosted", snare, 1f).recipe)
+        assertEquals(mapOf("AMOUNT" to 0.9f), ghosted.fx!!.ghost)
+        val stopped = PadRecipe.fromJsonValue(Treatments.apply("stopped", snare, 0.5f).recipe)
+        assertEquals(0.3f, stopped.fx!!.motion!!.getValue("STOP"), 1e-6f)
+        val started = PadRecipe.fromJsonValue(Treatments.apply("started", snare, 1f).recipe)
+        assertEquals(mapOf("START" to 0.5f), started.fx!!.motion)
     }
 }

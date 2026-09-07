@@ -7,10 +7,10 @@ import com.snipsnap.synth.Treatments
 /**
  * The PAD SHEET's TREATMENT card, as data.
  *
- * Two rows. The first is the design's four segments, whose DSP is the
- * Time Machine's eras; the second is the rack's named characters — the
- * FX chains `treat` and bank B already speak — reachable one tap at a
- * time. Both rows are vocabulary mappings and nothing more: the words
+ * Three rows. The first is the design's four segments, whose DSP is the
+ * Time Machine's eras; the second and third are the rack's named
+ * characters — the FX chains `treat` and bank B already speak — reachable
+ * one tap at a time. All three rows are vocabulary mappings and nothing more: the words
  * are the app's, not the engine's, so [Eras] and [Treatments] never
  * learn what a "segment" is.
  *
@@ -31,8 +31,14 @@ object PadSheet {
     /** Row two — the rack's characters. */
     val CHARACTER_SEGMENTS: List<String> = listOf("SMEAR", "SLAP", "WASH", "PUNCH")
 
-    /** Both rows, in drawing order. */
-    val ROWS: List<List<String>> = listOf(SEGMENTS, CHARACTER_SEGMENTS)
+    /** Row three — the anatomy and the transport. */
+    val MORE_SEGMENTS: List<String> = listOf("GHOST", "STOP", "START", "FLIP")
+
+    /** All rows, in drawing order. */
+    val ROWS: List<List<String>> = listOf(SEGMENTS, CHARACTER_SEGMENTS, MORE_SEGMENTS)
+
+    /** Every segment on any row. */
+    val ALL_SEGMENTS: List<String> get() = ROWS.flatten()
 
     /** Where the AMT stepper sits when a pad has never been treated. */
     const val DEFAULT_AMOUNT = 0.35f
@@ -71,9 +77,15 @@ object PadSheet {
         "WASH" to "washed",
         // Squash into crunch: the transient pops.
         "PUNCH" to "punched",
-        // "reversed" and "crushed" stay off the card: CRUSH already
-        // draws the crunchier era, and a flip is a structural switch
-        // AMT cannot grade — both remain reachable from `treat`.
+        // The tone and the attack gone, the breath kept.
+        "GHOST" to "ghosted",
+        // The capstan lets go; the reel spins up.
+        "STOP" to "stopped",
+        "START" to "started",
+        // The flip is a structural switch: AMT grades only its spring tail.
+        "FLIP" to "reversed",
+        // "crushed" stays off the card: CRUSH already draws the crunchier
+        // era. It remains reachable from `treat`.
     )
 
     /**
@@ -93,8 +105,8 @@ object PadSheet {
      * Throws on a segment the card does not draw.
      */
     fun treatmentFor(segment: String): Treatment? {
-        require(segment in SEGMENTS || segment in CHARACTER_SEGMENTS) {
-            "unknown pad-sheet segment '$segment' - the card draws: ${ROWS.flatten().joinToString(", ")}"
+        require(segment in ALL_SEGMENTS) {
+            "unknown pad-sheet segment '$segment' - the card draws: ${ALL_SEGMENTS.joinToString(", ")}"
         }
         ERA_FOR[segment]?.let { return Treatment.Era(it) }
         CHARACTER_FOR[segment]?.let { return Treatment.Character(it) }
@@ -114,7 +126,7 @@ object PadSheet {
      */
     fun segmentFor(era: String): String? = ERA_FOR.entries.firstOrNull { it.value == era }?.key
 
-    /** The phone ruling, row two: "reversed" and "crushed" light no segment; the provenance line says so. */
+    /** The phone ruling, rows two and three: "crushed" lights no segment; the provenance line says so. */
     fun segmentForCharacter(character: String): String? =
         CHARACTER_FOR.entries.firstOrNull { it.value == character }?.key
 

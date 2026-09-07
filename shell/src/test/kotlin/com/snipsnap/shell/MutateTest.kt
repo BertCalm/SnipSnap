@@ -171,4 +171,33 @@ class MutateTest {
             Mutate.apply(m, 1, emptyList())
         }
     }
+
+    @Test
+    fun `room - the pad played inside the parent's tail`() {
+        val m = KitBuilderModel.create("Room", File(temp, "Room"))
+        // A bare click, and a room: noise decaying with a 100 ms time constant.
+        val click = FloatArray(rate / 4).also { it[0] = 0.9f; it[1] = -0.6f }
+        m.assign(1, Snip(click, 1, rate), DrumClass.PERC)
+        val rnd = java.util.Random(1)
+        val tail = FloatArray(rate / 2) { i -> ((rnd.nextFloat() * 2f - 1f) * 0.5 * Math.exp(-i / (0.1 * rate))).toFloat() }
+        m.save()
+        val room = Mutate.Source("hall", Snip(tail, 1, rate))
+
+        val dry = Mutate.apply(m, 1, listOf(room), Mutate.Mode.ROOM, roomMix = 0f)
+        val drySnip = WavReader.read(File(m.kitDir, dry.pad.sampleFile))
+        assertTrue(rms(drySnip.samples, (0.2f * rate).toInt() * 2, (0.25f * rate).toInt() * 2) < 1e-4, "mix 0 is the pad: nothing rings")
+        Mutate.undo(m, 1)
+
+        val wet = Mutate.apply(m, 1, listOf(room), Mutate.Mode.ROOM, roomMix = 1f)
+        val out = WavReader.read(File(m.kitDir, wet.pad.sampleFile))
+        assertTrue(out.frameCount >= click.size + tail.size - 1, "the pad's length plus the room's tail")
+        val early = rms(out.samples, (0.10f * rate).toInt() * 2, (0.15f * rate).toInt() * 2)
+        val late = rms(out.samples, (0.30f * rate).toInt() * 2, (0.35f * rate).toInt() * 2)
+        assertTrue(early > 0.01, "the click excites the room: $early")
+        assertTrue(late < 0.3 * early && late > 0.001, "and it decays with the room's own time constant: $early -> $late")
+        val recipe = (wet.pad.recipe!!.entries["mutate"] as com.snipsnap.json.JsonValue.Obj).entries
+        assertEquals("room", (recipe["mode"] as com.snipsnap.json.JsonValue.Str).value)
+        assertEquals(1.0, (recipe["mix"] as com.snipsnap.json.JsonValue.Num).value)
+        assertFailsWith<IllegalArgumentException> { Mutate.apply(m, 1, listOf(room, room), Mutate.Mode.ROOM) }
+    }
 }

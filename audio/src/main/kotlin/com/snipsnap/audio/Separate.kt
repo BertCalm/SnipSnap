@@ -120,10 +120,36 @@ object Separate {
             for (b in 0 until Spectral.BINS) gains[b] = 1f - amount * mask[b]
             gains
         }
-        // Snip.peak() reads only the finite samples, the same reading every
-        // normalizer in the shop uses; `out` is this call's own array, so
-        // the makeup scales it in place.
-        val inPeak = snip.peak()
+        return matchPeak(snip, out)
+    }
+
+    /**
+     * The ghost: the tone and the attack taken out, the breath kept. What
+     * the anatomy lesson calls noise — everything neither a held line nor
+     * a broadband instant — is what remains of a hit once you remove the
+     * two things you'd name it by. A kick becomes a puff of air, a snare
+     * becomes rain. Per bin the gain is `1 − amount·(s + t)`, [amount] 0
+     * the input itself, 1 the noise layer alone; peak-matched like
+     * [smear], with the same capped makeup. Deterministic.
+     */
+    fun ghost(snip: Snip, amount: Float = 1f): Snip {
+        require(amount in 0f..1f) { "ghost amount is 0..1, got $amount" }
+        require(snip.frameCount > 0) { "the source is empty" }
+        if (amount <= 0f) return snip
+        val masks = stnMasks(snip)
+        val gains = FloatArray(Spectral.BINS)
+        val out = Spectral.process(snip) { ch, f, _ ->
+            val s = masks.sines[ch][f]
+            val t = masks.transients[ch][f]
+            for (b in 0 until Spectral.BINS) gains[b] = 1f - amount * (s[b] + t[b])
+            gains
+        }
+        return matchPeak(snip, out)
+    }
+
+    /** The result brought to the source's own peak, makeup capped at [SMEAR_MAKEUP_MAX]; scales [out]'s own array in place. */
+    private fun matchPeak(source: Snip, out: Snip): Snip {
+        val inPeak = source.peak()
         val outPeak = out.peak()
         if (inPeak <= 0f || outPeak <= 0f) return out
         val makeup = (inPeak / outPeak).coerceAtMost(SMEAR_MAKEUP_MAX)
