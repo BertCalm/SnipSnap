@@ -55,6 +55,15 @@ shelf useful before capture (M1) exists.
   means a colour got captured outside the composition local.
 - **First FRESH TAPE dub time** on a real phone (the synth render is
   seconds on desktop JVM; status bar shows DUBBING… meanwhile).
+- **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
+  a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
+  pad's rate. Verify on a phone: the speaker into the room reamps a pad
+  with the room on it and the toast names the trip in ms; a wired jack
+  into a pedal and back reamps through the pedal; the mic route stays
+  UNPROCESSED/VOICE_RECOGNITION (a source with echo cancellation would
+  remove exactly the send). If the return is silent, check that ARM has
+  granted RECORD_AUDIO and that no armed session holds the mic — the
+  card refuses both in words before playing.
 
 ## Fonts / licensing
 

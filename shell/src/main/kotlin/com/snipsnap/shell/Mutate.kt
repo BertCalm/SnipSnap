@@ -361,10 +361,29 @@ object Mutate {
 
     // ---- helpers ----------------------------------------------------------
 
-    /** Leading room before the hit is trimmed, so layers meet at the attack. */
+    /** Before the first onset, this loud (relative to the peak) is not room — the sound was already hot. */
+    private const val HOT_OPEN_RATIO = 0.1f
+
+    /**
+     * Leading room before the hit is trimmed, so layers meet at the attack.
+     *
+     * Unless there is no room to trim: the onset detector credits nothing
+     * to its first analysis frame, so a sound that starts *on* its hit (a
+     * chopped break, a captured room's impulse response with the direct
+     * arrival at the top) reports its *second* event as the first onset —
+     * and trimming to that would throw the hit away and keep the echo.
+     * A head that is already within [HOT_OPEN_RATIO] of the peak before
+     * the "first" onset is the hit itself, and stays.
+     */
     private fun alignToOnset(snip: Snip): Snip {
         val onset = Transients.detect(snip).firstOrNull()?.frame ?: return snip
         if (onset <= 0) return snip
+        var headPeak = 0f
+        for (i in 0 until onset * 2) {
+            val a = if (snip.samples[i] < 0) -snip.samples[i] else snip.samples[i]
+            if (a > headPeak) headPeak = a
+        }
+        if (headPeak >= HOT_OPEN_RATIO * peak(snip.samples)) return snip
         return Snip(snip.samples.copyOfRange(onset * 2, snip.samples.size), 2, snip.sampleRate)
     }
 

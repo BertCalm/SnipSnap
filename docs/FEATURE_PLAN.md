@@ -1335,6 +1335,32 @@ over the spectral door, each with a real exit test.
 
 ---
 
+## Wave YY — outside (CORE + APP)
+
+The Outsidify idea, SnipSnap's way: the phone plays a sound out — its
+speaker into the room, or the headphone jack or a USB interface into a
+pedal, an amp, a spring tank — listens to what comes back, finds *when*
+it came back, and bakes the return as the pad. No live loop, no
+feedback mode (the app renders offline; a feedback loop is a
+performance surface, below the line): two moves, both bin-backed
+rewrites with the recipe riding the pad.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| YY1 | ✓ done: the trip measured — `Outside` (`:audio`): `align` cross-correlates the return against the send by FFT and reads the lag of the strongest match as the latency, polarity allowed to flip and reported, confidence the normalized correlation, standout the match's height over the correlation's own RMS; `reamp` cuts the return at the arrival, keeps the tail while it still sounds (the floor measured off the room *before* the arrival — what the pre-roll is for — a 0.6 s hold bridging a delay pedal's repeats, the cut landing where the quiet began), restores polarity, peak matches to the pad, MIX dry to wet; refusals in words for a clipped return, a silent room, an arrival that doesn't stand out | CORE | M | a copy 1234 frames late is found to the frame at confidence over 0.9, upside down is reported; a 48 kHz stereo return with an echo still lands on the direct arrival within two frames; silence, a clip and a stranger are refused and named; the cut keeps an echo past the hit and closes when it dies; MIX 0 is the pad; the same trip is the same bytes |
+| YY2 | ✓ done: the room as a room — `Outside.probe` (a two-second exponential sine sweep at half scale, faded) and `Outside.impulse` (Farina's inverse filter, the sweep reversed with a 6 dB/octave tilt, convolved with the return; a wire deconvolves to a unit impulse so the room's gain reads true; the response cut from 2 ms before its peak while the tail sounds) | CORE | M | a direct path at 0.4 and an echo at 0.2 come back at 0.4 and 0.2 within 0.03, the latency to within two frames, the floor between the taps under 0.04; a wire is 1.0; silence is refused |
+| YY3 | ✓ done: the card as data — `OutsideSheet` (`:shell`): REAMP (MIX opens wet) and ROOM (WET opens at ROOM OF ITSELF's half); `send` (the pad's own audio, or the sweep at its rate), `preRollFrames` / `listenFrames` (0.25 s of room first, then the send, then three seconds of tail and a second's latency allowance); `apply` — REAMP through `replaceAudio` with an `outside` recipe (the trip's lag past the pre-roll, confidence, the flip, MIX), ROOM through `Mutate.apply`'s ROOM with the deconvolved impulse as the one parent `outside:room` and the `outside` block riding inside the mutate recipe, so the MUTATE card reads it as a ROOM whose parent is the room; `read`, `statusLine`, `undo` (the original out of the bin, both stamps cleared). Found and fixed on the way: `Mutate.alignToOnset` trimmed a parent that starts *on* its hit to its second event (the detector credits nothing to frame zero) — a head already within a tenth of the peak before the "first" onset now stays | CORE | M | REAMP: the pad is the return on the hit, the echo kept, peak matched, the recipe says 20 ms late, undo byte-identical; ROOM: the pad plus the echo, the direct path the pad itself 2 ms in, the recipe a mutate ROOM with `outside:room`, undo byte-identical; a silent room refuses in words and never reaches the bin; a two-tap parent through Mutate's ROOM keeps its direct path |
+| YY4 | the phone — `OutsideSession` (`:app`): one blocking trip on IO, an `AudioRecord` (UNPROCESSED where offered — a source with echo cancellation would remove exactly the send) filling the return, a `MODE_STATIC` `AudioTrack` playing the send once the pre-roll is in, out of whatever the output route is; the pad sheet's OUTSIDE card (two chips, the knob, the status line off the recipe, SEND whose label is the trip's stage — LISTENING…, SENDING… — and UNDO); refusals first and in words: GHOSTS on, the mic not granted (ARM on KITS grants it), the tape rolling. **Written blind in the cloud session; the desktop session compiles and runs it** | APP | M | on a phone: SEND on the speaker in a room reamps a kick with the room on it, the toast names the trip in ms; ROOM on the same pad convolves it with that room; the jack into a pedal and back reamps through the pedal; a silent input refuses in words and the pad is untouched |
+
+**Below the line for YY:** FEEDBACK (Outsidify's third mode — a live
+send/return loop with gain; performance territory, not a render);
+saving a measured room to the shelf as a reusable parent for any pad
+(today the room lives only in the pad it was measured for); a
+calibration trip (a click out, the latency stored, so SEND can pre-cut
+without correlating — unnecessary while `align` finds it every time).
+
+---
+
 ## Sequence
 
 ```
@@ -1600,6 +1626,17 @@ CORE+APP wave XX: ✓ all landed (2026-09-07) — the crate as an
   crossed by a seeded coin into an audited child kit. XX3 landed:
   DE-SAMPLE, the nearest THUMP patch to a capture off a pre-rendered
   grid, the distance always told. Wave XX complete.
+
+CORE+APP wave YY: CORE landed (2026-09-07) — outside, the Outsidify
+  idea. YY1: the trip measured, `Outside.align` and `reamp` — the
+  return found by cross-correlation wherever the audio stack put it,
+  polarity restored, the tail kept while it sounds against the room's
+  own floor. YY2: the room as a room, a sweep out and Farina's inverse
+  back, the impulse response ROOM OF ITSELF wants. YY3: the OUTSIDE
+  card as data, REAMP and ROOM through the same bin-backed doors as
+  every treatment; Mutate's hot-open parent bug found and fixed on the
+  way. YY4 written blind for the desktop session: `OutsideSession` and
+  the pad sheet's OUTSIDE card.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

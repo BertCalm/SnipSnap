@@ -33,7 +33,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 1085 tests across nine modules
+./gradlew test    # 1171 tests across nine modules
 ```
 
 ### `:audio`
@@ -75,6 +75,15 @@ The capture and conditioning core.
   (`docs/DESAMPLE.md`).
 - **`Loudness`** — perceived level (peaks aren't loudness), feeding kit-wide
   balance.
+- **`Outside`** — the world as an effect (the Outsidify idea): the phone
+  plays a pad or a sweep out of its speaker or jack and listens to what
+  comes back; `align` finds *when* it came back by FFT cross-correlation
+  (polarity flips reported), `reamp` cuts the return at the arrival and
+  keeps the tail while it sounds, `impulse` deconvolves a sweep's return
+  into the room's impulse response for ROOM OF ITSELF. The trip's latency
+  is measured, never assumed. The pad sheet's OUTSIDE card (`OutsideSheet`
+  in `:shell`) is the door; refusals — a clipped return, a silent room —
+  come in words.
 
 ```kotlin
 val buffer = RingBuffer.ofSeconds(60f)          // running in the capture service
