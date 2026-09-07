@@ -95,6 +95,8 @@ class PersonalityTest {
         assertTrue(Copy.keySet("Am").startsWith("Am SET."), "the key leads its own toast")
         assertTrue(Copy.keySet("Am").endsWith("."), "and still lands on a full stop")
         assertEquals("1 PAD RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(1, "A MINOR"))
+        assertEquals("ONE TAP. 8 SLICES ON THE GRID. CHOKE GROUP SET.", Copy.instantKit(8, true))
+        assertEquals("ONE TAP. 5 SLICES ON THE GRID.", Copy.instantKit(5, false))
         assertEquals("3 PADS RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(3, "A MINOR"))
         assertTrue(Copy.takeRestored("T3").startsWith("T3 RESTORED."), "the take leads its own toast")
         assertTrue(

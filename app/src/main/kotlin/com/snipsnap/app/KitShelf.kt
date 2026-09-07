@@ -91,6 +91,20 @@ class KitShelf(private val root: File) {
     }
 
     /**
+     * INSTANT KIT: [range] of [file] (a snip, or whatever TAPE was scrubbing)
+     * chopped with the defaults and landed on the shelf as a kit named after
+     * the file — CHOP's own result with nothing touched. Seconds-long; the
+     * caller shows a busy line.
+     */
+    fun instantKit(file: File, range: IntRange): Pair<Entry, com.snipsnap.shell.InstantKit.Result> {
+        val snip = com.snipsnap.shell.InstantKit.slice(WavReader.read(file), range)
+        root.mkdirs()
+        val name = freshName("${file.nameWithoutExtension} KIT")
+        val result = com.snipsnap.shell.InstantKit.build(snip, name, File(root, name))
+        return Entry(result.kitDir, result.kit) to result
+    }
+
+    /**
      * EVIL TWINS: bank B of [source] becomes seeded FX re-treatments of bank A
      * (`KitBuilderModel.remixBankB`), the slots lit returned with the re-read
      * entry. Seconds-long (every twin renders); the caller shows a busy line.

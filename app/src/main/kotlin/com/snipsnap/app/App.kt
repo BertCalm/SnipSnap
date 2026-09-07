@@ -70,6 +70,7 @@ import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.shell.TextureKits
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -336,6 +337,37 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * INSTANT KIT (F2.2): the one tap on TAPE — the selection (or the whole
+     * deck) chopped with the defaults and landed on the grid without the
+     * review, the same DUBBING… shape as a fresh tape. CHOP can still open
+     * the result later to argue with the chips.
+     */
+    fun instantKit(file: File, range: IntRange) {
+        if (busy != null) return
+        busy = "CHOPPING…"
+        scope.launch {
+            // `finally` owns the busy overlay: whichever way this leaves
+            // (built, refused, or the scope cancelled underneath it), the
+            // screen never stays stuck on CHOPPING….
+            try {
+                val (entry, result) = withContext(Dispatchers.IO) { shelf.instantKit(file, range) }
+                kits = withContext(Dispatchers.IO) { shelf.list() }
+                toast = Copy.instantKit(result.sliceCount, result.chokeSet)
+                open = entry
+                screen = AppScreen.KIT
+            } catch (e: CancellationException) {
+                // Leaving the screen is not a failure; let the scope have it.
+                throw e
+            } catch (e: Exception) {
+                // Law 3: when it breaks, say exactly what happened.
+                toast = "INSTANT KIT FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
+            }
+        }
+    }
+
     /** IN KEY: every tonal pad into the kit's key by its tune fields; the toast counts what moved. */
     fun inKey() {
         val source = open ?: return
@@ -493,6 +525,7 @@ fun App(shelf: KitShelf) {
                             // file (a pad WAV) for a commit actually cut from
                             // a snip. Synchronous now — no IO re-read needed.
                             onCommit = { file, range -> lastCommit = TapeCommit(file, range) },
+                            onInstantKit = ::instantKit,
                         )
                         AppScreen.PROPERTIES -> PropertiesScreen(
                             currentScheme = schemeId,
