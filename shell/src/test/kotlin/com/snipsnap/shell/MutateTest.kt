@@ -1,6 +1,7 @@
 package com.snipsnap.shell
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
@@ -9,6 +10,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class MutateTest {
@@ -170,6 +172,46 @@ class MutateTest {
         assertFailsWith<IllegalArgumentException>("no parents, no mutation") {
             Mutate.apply(m, 1, emptyList())
         }
+    }
+
+    @Test
+    fun `transplant - the pad's attack wearing the parent's tone`() {
+        val m = KitBuilderModel.create("Wear", File(temp, "Wear"))
+        val snare = DrumSynth.snare()
+        m.assign(1, snare, DrumClass.SNARE)
+        m.save()
+        // The donor: a dark hum, a second long.
+        val hum = Snip(
+            FloatArray(rate) { i ->
+                val t = i.toDouble() / rate
+                var v = 0.0
+                for (n in 1..30) v += Math.sin(2 * Math.PI * 110.0 * n * t) / n
+                (0.25 * v).toFloat()
+            },
+            1, rate,
+        )
+        val donor = Mutate.Source("hum", hum)
+
+        val worn = Mutate.apply(m, 1, listOf(donor), Mutate.Mode.TRANSPLANT, bands = 12)
+        val out = WavReader.read(File(m.kitDir, worn.pad.sampleFile))
+        assertEquals(2, out.channels, "mutate widens")
+        assertTrue(kotlin.math.abs(out.frameCount - snare.frameCount) <= 1, "the pad's own length: ${out.frameCount} vs ${snare.frameCount}")
+        // Its long-term tone is the hum's: the top bands fall away like the hum's do, unlike the snare's.
+        val outLevels = com.snipsnap.audio.Transplant.bandLevels(out, 12)
+        val humLevels = com.snipsnap.audio.Transplant.bandLevels(hum, 12)
+        val snareLevels = com.snipsnap.audio.Transplant.bandLevels(snare, 12)
+        val outTilt = outLevels[11] - outLevels[2]
+        val humTilt = humLevels[11] - humLevels[2]
+        val snareTilt = snareLevels[11] - snareLevels[2]
+        // The hum is ~50 dB darker than the snare up top; the ±24 dB cap takes the pad most of the way, never past it.
+        assertTrue(outTilt < snareTilt - 18f && outTilt > humTilt, "tilt $outTilt: from the snare's $snareTilt toward the hum's $humTilt")
+        val recipe = (worn.pad.recipe!!.entries["mutate"] as com.snipsnap.json.JsonValue.Obj).entries
+        assertEquals("transplant", (recipe["mode"] as com.snipsnap.json.JsonValue.Str).value)
+        assertEquals(12.0, (recipe["bands"] as com.snipsnap.json.JsonValue.Num).value)
+        assertEquals("hum", m.pad(1)!!.source["mutatedWith"])
+        assertFailsWith<IllegalArgumentException> { Mutate.apply(m, 1, listOf(donor), Mutate.Mode.TRANSPLANT, bands = 2) }
+        Mutate.undo(m, 1)
+        assertNull(m.pad(1)!!.recipe)
     }
 
     @Test

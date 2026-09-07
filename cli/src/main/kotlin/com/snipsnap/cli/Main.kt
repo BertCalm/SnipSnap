@@ -112,9 +112,12 @@ object Cli {
         |                        stack (with a polarity check), --splice (the
         |                        pad's attack onto the parent's body, --at ms),
         |                        --split (pad lows + parent highs, --hz N),
-        |                        or --morph [--amount 0..1] (the sound BETWEEN
+        |                        --morph [--amount 0..1] (the sound BETWEEN
         |                        the parents: interpolated spectra, PGHI
-        |                        phases - one onset, both voices);
+        |                        phases - one onset, both voices), --room
+        |                        [--amount] (the pad inside the parent's
+        |                        tail), or --transplant [--bands N] (the
+        |                        pad's attack wearing the parent's tone);
         |                        parents are pad refs, kit:pad, or .wav files
         |                        (--undo restores); --roulette lets the crate
         |                        deal the parent instead: Similar's nearest

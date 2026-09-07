@@ -16,8 +16,9 @@ import kotlin.math.roundToInt
  * the shelf, seeded by the tap count so every spin is a different deal
  * and each is reproducible). One parent, one move, one knob: STACK has
  * none, SPLICE has AT (where the pad's transient hands over), SPLIT has
- * HZ (the crossover), MORPH has MIX, ROOM has WET. The knob's range is the verb's own,
- * mapped exponentially where the ear hears ratios.
+ * HZ (the crossover), MORPH has MIX, ROOM has WET, TRANSPLANT has BANDS.
+ * The knob's range is the verb's own, mapped exponentially where the ear
+ * hears ratios.
  */
 object MutateSheet {
 
@@ -33,6 +34,13 @@ object MutateSheet {
         Mutate.Mode.SPLIT to Knob("HZ", 40f, 8000f, Mutate.DEFAULT_CROSSOVER_HZ, exponential = true),
         Mutate.Mode.MORPH to Knob("MIX", 0f, 1f, 0.5f, exponential = false),
         Mutate.Mode.ROOM to Knob("WET", 0f, 1f, 0.5f, exponential = false),
+        Mutate.Mode.TRANSPLANT to Knob(
+            "BANDS",
+            com.snipsnap.audio.Transplant.MIN_BANDS.toFloat(),
+            com.snipsnap.audio.Transplant.MAX_BANDS.toFloat(),
+            com.snipsnap.audio.Transplant.DEFAULT_BANDS.toFloat(),
+            exponential = true,
+        ),
     )
 
     /** STACK has no knob: layering is transient-aligned, nothing to dial. */
@@ -44,10 +52,11 @@ object MutateSheet {
     /** The knob's value → stepper fraction; the inverse of [value]. */
     fun fraction(knob: Knob, value: Float): Float = knob.fraction(value)
 
-    /** What the value column reads: "40 ms", "200 Hz" / "1.2k", "50%". */
+    /** What the value column reads: "40 ms", "200 Hz" / "1.2k", "50%", "16 bands". */
     fun label(knob: Knob, value: Float): String = when (knob.label) {
         "AT" -> "${value.roundToInt()} ms"
         "HZ" -> if (value >= 1000f) "%.1fk".format(value / 1000f) else "${value.roundToInt()} Hz"
+        "BANDS" -> "${value.roundToInt()} bands"
         else -> "${(value * 100).roundToInt()}%"
     }
 
@@ -137,6 +146,7 @@ object MutateSheet {
             crossoverHz = if (mode == Mutate.Mode.SPLIT) v!! else Mutate.DEFAULT_CROSSOVER_HZ,
             morphAmount = if (mode == Mutate.Mode.MORPH) v!! else 0.5f,
             roomMix = if (mode == Mutate.Mode.ROOM) v!! else 0.5f,
+            bands = if (mode == Mutate.Mode.TRANSPLANT) v!!.roundToInt() else com.snipsnap.audio.Transplant.DEFAULT_BANDS,
             extraRecipe = extra,
         )
     }

@@ -1277,21 +1277,24 @@ private fun MutateCard(
             maxLines = 1,
         )
 
-        // The move.
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            for (m in modes) {
-                val selected = m == mode
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                        .let { if (!busy) it.tapeClick { onMode(m) } else it }
-                        .padding(horizontal = 4.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText(m, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+        // The move: three to a row, so TRANSPLANT gets the width its word needs.
+        for (row in modes.chunked(3)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (m in row) {
+                    val selected = m == mode
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                            .let { if (!busy) it.tapeClick { onMode(m) } else it }
+                            .padding(horizontal = 4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(m, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                    }
                 }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
 

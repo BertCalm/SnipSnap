@@ -20,7 +20,10 @@ import java.io.File
  *   this kick, crack from that snare");
  * - **room** — the pad played *inside* the parent: the parent's tail as
  *   the impulse response the pad is convolved with ("kick in the
- *   snare's room"), MIX the dry/wet.
+ *   snare's room"), MIX the dry/wet;
+ * - **transplant** — the pad's attack wearing the parent's long-term
+ *   spectral envelope (a one-knob vocoder, BANDS its resolution): the
+ *   pad's time, the parent's tone.
  *
  * Bin-backed through the same door as every treatment; the recipe
  * (mode, parents, split, flips) rides the pad so the sound stays
@@ -30,7 +33,7 @@ import java.io.File
  */
 object Mutate {
 
-    enum class Mode { STACK, SPLICE, SPLIT, MORPH, ROOM }
+    enum class Mode { STACK, SPLICE, SPLIT, MORPH, ROOM, TRANSPLANT }
 
     /** A parent sound: where it came from (for the recipe) and its audio. */
     data class Source(val label: String, val snip: Snip)
@@ -111,6 +114,8 @@ object Mutate {
         morphAmount: Float = 0.5f,
         /** ROOM only: 0 = dry, 1 = the room alone. */
         roomMix: Float = 0.5f,
+        /** TRANSPLANT only: how finely the parent's tone is read. */
+        bands: Int = com.snipsnap.audio.Transplant.DEFAULT_BANDS,
         /** Extra recipe fields — how the roulette records its spin. */
         extraRecipe: Map<String, JsonValue> = emptyMap(),
     ): Outcome {
@@ -122,6 +127,9 @@ object Mutate {
         require(crossoverHz in 40f..8000f) { "--hz wants 40..8000, got $crossoverHz" }
         require(morphAmount in 0f..1f) { "--amount wants 0..1, got $morphAmount" }
         require(roomMix in 0f..1f) { "--amount wants 0..1, got $roomMix" }
+        require(bands in com.snipsnap.audio.Transplant.MIN_BANDS..com.snipsnap.audio.Transplant.MAX_BANDS) {
+            "--bands wants ${com.snipsnap.audio.Transplant.MIN_BANDS}..${com.snipsnap.audio.Transplant.MAX_BANDS}, got $bands"
+        }
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
 
         val base = com.snipsnap.audio.WavReader.read(File(model.kitDir, pad.sampleFile))
@@ -136,6 +144,7 @@ object Mutate {
             Mode.SPLIT -> split(baseAligned, parents.single().snip, crossoverHz, rate)
             Mode.MORPH -> morph(baseAligned, parents.single().snip, morphAmount, rate)
             Mode.ROOM -> room(baseAligned, parents.single().snip, roomMix, rate)
+            Mode.TRANSPLANT -> com.snipsnap.audio.Transplant.apply(baseAligned, parents.single().snip, bands)
         }
 
         val recipe = JsonValue.Obj(
@@ -149,6 +158,7 @@ object Mutate {
                         if (mode == Mode.SPLIT) r["hz"] = JsonValue.Num(crossoverHz.toDouble())
                         if (mode == Mode.MORPH) r["amount"] = JsonValue.Num(morphAmount.toDouble())
                         if (mode == Mode.ROOM) r["mix"] = JsonValue.Num(roomMix.toDouble())
+                        if (mode == Mode.TRANSPLANT) r["bands"] = JsonValue.Num(bands.toDouble())
                         if (flipped.isNotEmpty()) {
                             r["flipped"] = JsonValue.Arr(flipped.map { JsonValue.Str(it) })
                         }

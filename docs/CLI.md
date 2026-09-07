@@ -459,6 +459,18 @@ amount the dry/wet mix, the wet brought to the pad's own peak. On the
 phone it is the MUTATE card's fifth chip with a WET knob, and ROULETTE
 can deal the room.
 
+**`--transplant [--bands N]`** is the sixth move, TRANSPLANT: the pad's
+attack wearing the parent's long-term spectral envelope — a one-knob
+vocoder. The parent's whole life is folded into one energy-weighted
+spectrum and read in N log-spaced bands (4..64, default 16); so is the
+pad's; the band-by-band difference becomes one fixed set of per-bin
+gains through the spectral door, so nothing moves in time — the pad's
+onset, decay and length are exactly its own and only its tone is the
+parent's. Four bands is a tilt, sixty-four is the parent's formants;
+gains are capped at ±24 dB so a band the pad never had is not conjured
+out of the floor; peak-matched to the pad. On the phone it is the
+MUTATE card's sixth chip with a BANDS knob.
+
 **`--morph [--amount 0..1]`** is the fourth move, the Séance's:
 both parents' magnitude spectrograms, transient-aligned, interpolated
 bin by bin at the given amount, with PGHI re-inventing the phases — a

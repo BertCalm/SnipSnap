@@ -1202,6 +1202,38 @@ class CliTest {
     }
 
     @Test
+    fun `mutate --transplant dresses the pad in the parent's tone, --bands its resolution`() {
+        val wav = writeBreak(File(temp, "tp.wav"))
+        val out = File(temp, "tp-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "TP", "--slices", "8").first)
+        val kitDir = File(out, "TP")
+        val rate = 44_100
+        val hum = File(temp, "hum.wav")
+        WavWriter.write(
+            hum,
+            Snip(FloatArray(rate) { i -> (0.4 * Math.sin(2 * Math.PI * 110.0 * i / rate)).toFloat() }, 1, rate),
+        )
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(2)!!.sampleFile)
+        val before = padFile.readBytes()
+
+        val (code, stdout, stderr) = cli("mutate", kitDir.path, "A02", "--with", hum.path, "--transplant", "--bands", "8")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "dressed in 8 bands of the tone of hum.wav")
+        assertTrue(!before.contentEquals(padFile.readBytes()))
+        val recipe = (KitStore.load(kitDir).pad(2)!!.recipe!!.entries["mutate"] as com.snipsnap.json.JsonValue.Obj).entries
+        assertEquals("transplant", (recipe["mode"] as com.snipsnap.json.JsonValue.Str).value)
+        assertEquals(8.0, (recipe["bands"] as com.snipsnap.json.JsonValue.Num).value)
+
+        assertEquals(0, cli("mutate", kitDir.path, "A02", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        val (badCode, _, badErr) = cli("mutate", kitDir.path, "A02", "--with", hum.path, "--bands", "8")
+        assertTrue(badCode != 0 && "--bands rides on --transplant" in badErr, badErr)
+        val (rangeCode, _, rangeErr) = cli("mutate", kitDir.path, "A02", "--with", hum.path, "--transplant", "--bands", "99")
+        assertTrue(rangeCode != 0 && "--bands wants" in rangeErr, rangeErr)
+    }
+
+    @Test
     fun `retune talks one pad into a key from the terminal, refuses a drum, and undoes`() {
         val wav = writeBreak(File(temp, "rt.wav"))
         val out = File(temp, "rt-out")
