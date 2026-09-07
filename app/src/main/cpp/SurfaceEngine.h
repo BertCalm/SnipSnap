@@ -56,6 +56,8 @@ public:
     void stop();
     int32_t sampleRate() const { return sampleRate_; }
     bool needsRestart() const { return restartNeeded_.load(std::memory_order_acquire); }
+    /** True when the device refused an exclusive stream and the shared fallback is playing. */
+    bool isShared() const { return sharedMode_.load(std::memory_order_acquire); }
 
     /** UI thread. `mono` is copied; `sourceRate` is the file's own rate (the engine repitches). */
     void loadSample(const float* mono, size_t frames, int32_t sourceRate);
@@ -93,6 +95,7 @@ private:
     int32_t preferredRate_;
     int32_t sampleRate_ = 48000;
     std::atomic<bool> restartNeeded_{false};
+    std::atomic<bool> sharedMode_{false};
 
     // The sample handshake.
     std::atomic<Sample*> pending_{nullptr};

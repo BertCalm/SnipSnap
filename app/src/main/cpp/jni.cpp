@@ -53,6 +53,11 @@ Java_com_snipsnap_app_NativeSurface_needsRestart(JNIEnv*, jobject, jlong handle)
     return engine(handle)->needsRestart() ? JNI_TRUE : JNI_FALSE;
 }
 
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativeSurface_isShared(JNIEnv*, jobject, jlong handle) {
+    return engine(handle)->isShared() ? JNI_TRUE : JNI_FALSE;
+}
+
 JNIEXPORT void JNICALL
 Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv* env, jobject, jlong handle, jfloatArray mono, jint sourceRate) {
     const jsize n = env->GetArrayLength(mono);

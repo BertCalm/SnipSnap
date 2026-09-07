@@ -80,9 +80,12 @@ shelf useful before capture (M1) exists.
   like four different pads. PRINT, play, STOP PRINT: the toast names
   the length and TAPE has the print. Then the two native checks — pull
   the headphones mid-gesture (the stream should come back on its own),
-  and watch logcat's `SurfaceEngine` line for a failed open, which
-  means the device refused an exclusive low-latency stream and the
-  builder needs `SharingMode::Shared` as a fallback.
+  and watch logcat's `SurfaceEngine` line: "exclusive openStream
+  failed - trying shared" means the device refused the exclusive
+  path and the shared fallback is playing (the toast says so too).
+  Then PAD ◄ ► through the kit, find a sound in XYZ, SET A, three more,
+  switch to MORPH and morph; leave the screen and come back - the
+  corners and the pad are in `surface.json` beside the kit.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad

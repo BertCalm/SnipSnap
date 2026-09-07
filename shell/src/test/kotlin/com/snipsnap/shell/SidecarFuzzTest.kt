@@ -373,6 +373,18 @@ class SidecarFuzzTest {
     }
 
     @Test
+    fun `the surface settings survive mutation`() {
+        val dir = File(temp, "surface").also { it.mkdirs() }
+        SurfaceStore.save(dir, SurfaceStore.Settings(padSlot = 3))
+        val f = File(dir, SurfaceStore.FILE_NAME)
+        val valid = f.readText()
+        fuzz("SurfaceStore.load", valid, seed = 40) { text ->
+            f.writeText(text)
+            SurfaceStore.load(dir)
+        }
+    }
+
+    @Test
     fun `the parser refuses a nesting attack in words`() {
         // Deep enough to blow a default JVM stack if the parser recursed
         // unguarded; the depth ceiling must turn it into a JsonException.
