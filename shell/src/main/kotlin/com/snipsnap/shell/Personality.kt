@@ -151,6 +151,25 @@ object Copy {
 
     // ---- GROOVE ----
     const val HUMANIZED = "HUMANIZED. NOBODY PLAYS LIKE A ROBOT."
+    // The phone reads (wave ZZ): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE.
+    const val READ_GROOVE_BUSY = "LISTENING…"
+    const val READ_GROOVE_NEEDS_KIT = "OPEN A KIT FIRST. THE EAR NEEDS PADS TO PLAY ON."
+    /** The reading landed: how much was heard, and where it plays. */
+    fun grooveRead(hits: Int, bars: Int, bpm: Int): String {
+        val barWord = if (bars == 1) "BAR" else "BARS"
+        return "HEARD $hits HITS OVER $bars $barWord AT ~$bpm BPM. THEY PLAY ON YOUR PADS NOW."
+    }
+    /** The Ear's refusal, [reason] in its own words ("no confident tempo - the ear needs a grid"). */
+    fun grooveRefused(reason: String): String = "NO GROOVE: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
+    const val DIG_BUSY = "DIGGING…"
+    /** The break found, IN and OUT set to it. */
+    fun dug(from: String, to: String): String = "BREAK FOUND AT $from-$to. IN AND OUT ARE SET. INSTANT KIT IS ONE TAP AWAY."
+    const val NO_BREAK = "NO BREAK HEARD IN THAT. DIG BY HAND WITH IN AND OUT."
+    const val FEEL_BUSY = "STEALING THE FEEL…"
+    /** The feel poured over the kit's pattern as PROG E; [covered] of 16 positions the record actually played. */
+    fun feelStolen(covered: Int): String = "FEEL STOLEN: $covered OF 16 POSITIONS. IT'S ON PROG E. A–D STAY UNTOUCHED."
+    /** STEAL THE FEEL's refusal, [reason] in its own words. */
+    fun feelRefused(reason: String): String = "NO FEEL: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
     const val FORKED_TO_E = "FORKED TO PROG E. A–D STAY UNTOUCHED."
     const val BAR_WIPED = "BAR WIPED. THE MACHINE FORGIVES."
 

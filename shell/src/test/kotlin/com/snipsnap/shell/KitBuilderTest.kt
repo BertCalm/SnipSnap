@@ -433,7 +433,7 @@ class KitBuilderTest {
             assertFalse(File(dir, f).readBytes().contentEquals(bytes), "$f re-rendered")
         }
         val applied = PadSheet.read(treated.recipe)
-        assertEquals(PadSheet.Applied(PadSheet.Treatment.Character("smeared"), 0.6f, "SMEAR"), applied)
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Character("smeared"), 0.6f, "TAIL"), applied)
         assertTrue(files.all { f -> m.binContents().any { it.originalName == f } }, "every file is in the bin")
 
         m.unEraPad(2)

@@ -26,6 +26,13 @@ sealed class JsonValue {
         if (i.toDouble() != d) throw JsonException("expected an integer, got $d")
         i
     }
+    /** A whole number inside Long's range: fractions, infinities and anything past 2^63 refuse rather than truncate or clamp. */
+    fun long(): Long = num().let { d ->
+        if (d.isNaN() || d != Math.floor(d) || d < Long.MIN_VALUE.toDouble() || d >= Long.MAX_VALUE.toDouble()) {
+            throw JsonException("expected a whole number in range, got $d")
+        }
+        d.toLong()
+    }
     fun bool(): Boolean = (this as? Bool)?.value ?: bad("boolean")
 
     private fun bad(wanted: String): Nothing =

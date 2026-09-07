@@ -44,18 +44,21 @@ import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.ExportScreen
 import com.snipsnap.app.ui.ExportSession
+import com.snipsnap.app.ui.GrainFieldScreen
 import com.snipsnap.app.ui.GrooveScreen
 import com.snipsnap.app.ui.HelpScreen
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KeysScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.MenuRow
+import com.snipsnap.app.ui.PadCaptureScreen
 import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.PlayScreen
 import com.snipsnap.app.ui.PrimaryAction
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.StatusBar
 import com.snipsnap.app.ui.StubScreen
+import com.snipsnap.app.ui.SurfaceScreen
 import com.snipsnap.app.ui.SynthScreen
 import com.snipsnap.app.ui.TakesBinScreen
 import com.snipsnap.app.ui.TapeScreen
@@ -63,10 +66,13 @@ import com.snipsnap.app.ui.TapeText
 import com.snipsnap.app.ui.TitleBar
 import com.snipsnap.app.ui.ToastOverlay
 import com.snipsnap.app.ui.tapeClick
+import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.InstantKit
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Personality
+import com.snipsnap.shell.ReadGroove
 import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.Schemes
@@ -160,6 +166,16 @@ fun App(shelf: KitShelf) {
     // from the KIT action row, not one of MenuRow's fixed ten, so it's
     // KIT-scoped overlay state rather than its own AppScreen entry.
     var takesBinOpen by remember { mutableStateOf(false) }
+    // PAD CAPTURE (capture-to-pad): same shape as PAD SHEET/TAKES+BIN — a
+    // long-press on an *empty* pad opens this instead, so it's KIT-scoped
+    // overlay state too, not one of MenuRow's fixed ten.
+    var padCaptureSlot by remember { mutableStateOf<Int?>(null) }
+    // GRAIN FIELD: same shape as PAD SHEET/TAKES+BIN/PAD CAPTURE above — only
+    // reachable from PAD SHEET's own action row, not one of MenuRow's fixed
+    // ten, so it's KIT-scoped overlay state too. Opening it closes PAD SHEET
+    // (PadSheetScreen's own onGrainField clears padSheetSlot first) so the
+    // two overlays are never both non-null for the same KIT composition.
+    var grainFieldSlot by remember { mutableStateOf<Int?>(null) }
     // X4.4 TEACH THE MACHINE: off by default, flipped on SETUP's consent
     // row, remembered like the scheme. CHOP reads it; what it gates is
     // feature vectors and labels into the kit's own folder, never audio,
@@ -323,6 +339,9 @@ fun App(shelf: KitShelf) {
     // share that arrives while TAPE is already on screen.
     val shared by ShareInbox.pending.collectAsState()
     var importCount by remember { mutableStateOf(0) }
+    // GROOVE's reload request: bumped when TAPE rewrites the open kit's
+    // groove (READ AS GROOVE, STEAL THE FEEL) so a GROOVE already up reloads.
+    var grooveReload by remember { mutableStateOf(0) }
     LaunchedEffect(shared) {
         val uri = shared ?: return@LaunchedEffect
         // The status line is borrowed only when nothing else holds it: a
@@ -502,6 +521,80 @@ fun App(shelf: KitShelf) {
      * review, the same DUBBING… shape as a fresh tape. CHOP can still open
      * the result later to argue with the chips.
      */
+    /**
+     * READ AS GROOVE (wave ZZ): the tape read as a rhythm instead of a
+     * sound. The Ear hears the selection (or the whole deck), the open
+     * kit's own pads play it, and GROOVE opens on it. Refusals are the
+     * Ear's own words; no kit open is one too.
+     */
+    fun readGroove(file: File, range: IntRange) {
+        val target = open
+        if (target == null) {
+            toast = Copy.READ_GROOVE_NEEDS_KIT
+            return
+        }
+        if (busy != null) return
+        busy = Copy.READ_GROOVE_BUSY
+        scope.launch {
+            try {
+                val reading = withContext(Dispatchers.IO) {
+                    val snip = InstantKit.slice(WavReader.read(file), range)
+                    val r = ReadGroove.read(snip, target.kit, file.nameWithoutExtension)
+                    ReadGroove.land(target.dir, r)
+                    r
+                }
+                toast = Copy.grooveRead(reading.hits, reading.bars, Math.round(reading.bpm))
+                grooveReload++
+                screen = AppScreen.GROOVE
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IllegalArgumentException) {
+                toast = Copy.grooveRefused(e.message ?: "the ear refused")
+            } catch (e: Exception) {
+                // Law 3: when it breaks, say exactly what happened.
+                toast = "READ FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
+            }
+        }
+    }
+
+    /**
+     * STEAL THE FEEL (wave ZZ): the same reading kept as timing and
+     * accent alone, bottled on the shelf's own rack and poured over the
+     * open kit's pattern as PROG E, so A–D stay untouched.
+     */
+    fun stealFeel(file: File, range: IntRange) {
+        val target = open
+        if (target == null) {
+            toast = Copy.READ_GROOVE_NEEDS_KIT
+            return
+        }
+        if (busy != null) return
+        busy = Copy.FEEL_BUSY
+        scope.launch {
+            try {
+                val felt = withContext(Dispatchers.IO) {
+                    val snip = InstantKit.slice(WavReader.read(file), range)
+                    val f = ReadGroove.feel(snip, target.dir, file.nameWithoutExtension)
+                    ReadGroove.keepPocket(f.pocket, context.filesDir)
+                    f
+                }
+                toast = Copy.feelStolen(felt.covered)
+                grooveReload++
+                screen = AppScreen.GROOVE
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IllegalArgumentException) {
+                toast = Copy.feelRefused(e.message ?: "the ear refused")
+            } catch (e: Exception) {
+                toast = "FEEL FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
+            }
+        }
+    }
+
     fun instantKit(file: File, range: IntRange) {
         if (busy != null) return
         busy = "CHOPPING…"
@@ -564,9 +657,10 @@ fun App(shelf: KitShelf) {
     fun forgetRoom(room: Rooms.Room) {
         scope.launch {
             try {
-                withContext(Dispatchers.IO) { shelf.forgetRoom(room) }
+                // The bin may freshen the name ("FUNK ROOM 2") - the toast says the name it went in under.
+                val binned = withContext(Dispatchers.IO) { shelf.forgetRoom(room) }
                 roomsRevision++
-                toast = Copy.roomForgotten(room.name)
+                toast = Copy.roomForgotten(binned.room.name)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -653,6 +747,8 @@ fun App(shelf: KitShelf) {
                         // KIT comes back into view.
                         padSheetSlot = null
                         takesBinOpen = false
+                        padCaptureSlot = null
+                        grainFieldSlot = null
                     },
                 )
                 Box(Modifier.weight(1f)) {
@@ -679,7 +775,22 @@ fun App(shelf: KitShelf) {
                         AppScreen.KIT -> {
                             val sheetSlot = padSheetSlot
                             val sheetEntry = open
+                            val fieldSlot = grainFieldSlot
                             when {
+                                // Checked before the PAD SHEET branch below:
+                                // opening GRAIN clears `padSheetSlot` at the
+                                // same time it sets `grainFieldSlot` (see
+                                // onGrainField below), so in practice the two
+                                // conditions are already mutually exclusive —
+                                // this ordering is belt-and-suspenders should
+                                // that ever not hold.
+                                fieldSlot != null && sheetEntry != null -> GrainFieldScreen(
+                                    entry = sheetEntry,
+                                    slot = fieldSlot,
+                                    onBack = { grainFieldSlot = null },
+                                    onToast = { toast = it },
+                                    onRequestArm = ::requestArm,
+                                )
                                 sheetSlot != null && sheetEntry != null -> PadSheetScreen(
                                     entry = sheetEntry,
                                     slot = sheetSlot,
@@ -700,6 +811,14 @@ fun App(shelf: KitShelf) {
                                         // TAPE, not necessarily on this pad.
                                         padSheetSlot = null
                                         screen = AppScreen.TAPE
+                                    },
+                                    onGrainField = { slot ->
+                                        // GRAIN closes PAD SHEET on the way
+                                        // in — the two overlays never render
+                                        // at once (see the `when` ordering
+                                        // comment above).
+                                        padSheetSlot = null
+                                        grainFieldSlot = slot
                                     },
                                     onKitUpdated = { updatedKit ->
                                         open = open?.copy(kit = updatedKit)
@@ -733,6 +852,39 @@ fun App(shelf: KitShelf) {
                                         }
                                     },
                                 )
+                                padCaptureSlot != null && sheetEntry != null -> {
+                                    // Only `armed` is collected here — it changes
+                                    // rarely. `level` is deliberately NOT collected
+                                    // at this scope; PadCaptureScreen's own leaf
+                                    // meter composable collects it, so the ~21Hz
+                                    // tick recomposes just that leaf, not this
+                                    // whole `when` branch (header + GRAB button).
+                                    val captureArmed by MicSessionService.armed.collectAsState()
+                                    PadCaptureScreen(
+                                        entry = sheetEntry,
+                                        slot = padCaptureSlot!!,
+                                        armed = captureArmed,
+                                        onRequestArm = ::requestArm,
+                                        onBack = { padCaptureSlot = null },
+                                        onToast = { toast = it },
+                                        onKitUpdated = { updatedKit ->
+                                            // Same shape as PAD SHEET/TAKES+BIN's own
+                                            // onKitUpdated: bump `open.kit`'s identity
+                                            // so KIT's PadPlayer reloads the pad GRAB
+                                            // just filled, not a stale cached (empty)
+                                            // sample.
+                                            open = open?.copy(kit = updatedKit)
+                                            scope.launch {
+                                                kits = withContext(Dispatchers.IO) { shelf.list() }
+                                            }
+                                        },
+                                        // App()'s own scope — same reasoning as
+                                        // PadSheetScreen's own appScope above: the
+                                        // GRAB write must survive a MenuRow tab
+                                        // switch mid-write, not be cancelled by it.
+                                        appScope = scope,
+                                    )
+                                }
                                 else -> KitScreen(
                                     open,
                                     busy = busy != null,
@@ -743,6 +895,8 @@ fun App(shelf: KitShelf) {
                                     onInKey = ::inKey,
                                     onTwins = ::evilTwins,
                                     onShare = ::shareKit,
+                                    onEmptyLongPress = { slot -> padCaptureSlot = slot },
+                                    onEmptyTapHint = { toast = "LONG-PRESS TO CAPTURE" },
                                 )
                             }
                         }
@@ -766,6 +920,8 @@ fun App(shelf: KitShelf) {
                             // a snip. Synchronous now — no IO re-read needed.
                             onCommit = { file, range -> lastCommit = TapeCommit(file, range) },
                             onInstantKit = ::instantKit,
+                            onReadGroove = ::readGroove,
+                            onStealFeel = ::stealFeel,
                             reloadRequest = importCount,
                         )
                         AppScreen.PROPERTIES -> PropertiesScreen(
@@ -825,6 +981,13 @@ fun App(shelf: KitShelf) {
                                 }
                             },
                         )
+                        AppScreen.SURFACE -> SurfaceScreen(
+                            entry = open,
+                            onToast = { toast = it },
+                            // A print is a snip on the shelf: the same reload
+                            // request a share-sheet import raises.
+                            onPrinted = { importCount++ },
+                        )
                         AppScreen.PLAY -> PlayScreen(entry = open)
                         AppScreen.HELP -> HelpScreen()
                         AppScreen.GROOVE -> GrooveScreen(
@@ -835,6 +998,7 @@ fun App(shelf: KitShelf) {
                             // tab switch instead of being cancelled by it.
                             appScope = scope,
                             onToast = { toast = it },
+                            reloadRequest = grooveReload,
                         )
                         AppScreen.KEYS -> {
                             val inst = openInstrument

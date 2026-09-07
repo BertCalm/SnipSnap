@@ -22,6 +22,8 @@ data class ArrangedPad(
     val level: Float? = null,
     val tuneCoarse: Int = 0,
     val tuneFine: Int = 0,
+    /** false = gate: PLAY holds the note while pressed, instead of one-shot. */
+    val oneShot: Boolean = true,
     /**
      * Softer renderings of the same hit, softest first, [snip] being the
      * hardest. Up to three; each becomes a velocity zone under the main
@@ -126,6 +128,7 @@ object KitAssembler {
                 level = pad.level ?: 0.707946f,
                 tuneCoarse = pad.tuneCoarse,
                 tuneFine = pad.tuneFine,
+                oneShot = pad.oneShot,
                 muteGroup = AutoPlace.muteGroupFor(pad.drumClass),
                 source = pad.source,
                 recipe = pad.recipe,

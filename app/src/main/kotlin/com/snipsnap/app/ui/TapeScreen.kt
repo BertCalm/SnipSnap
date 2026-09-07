@@ -1,10 +1,5 @@
 package com.snipsnap.app.ui
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -22,17 +17,23 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -52,6 +53,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.Transients
 import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.Dig
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.PeaksPyramid
@@ -61,8 +63,10 @@ import com.snipsnap.shell.TapeDeckModel
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.max
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -102,10 +106,12 @@ private class LoadedTape(
 )
 
 /**
- * The TAPE screen: drag-under-a-fixed-needle scrubbing over the open kit's
- * longest sample, with the coast/snap/pencil-rewind physics driven entirely
- * by `:shell`'s tested [TapeDeckModel]. This file only renders it and
- * forwards gestures, plus a minimal unity-speed [TapeVoice] for playback.
+ * The TAPE screen: drag-under-a-fixed-needle scrubbing over the newest snip,
+ * else the last COMMIT's source, else (only with a kit open) the open kit's
+ * longest sample — see [loadLongestTape]'s KDoc for the full priority order
+ * — with the coast/snap/pencil-rewind physics driven entirely by `:shell`'s
+ * tested [TapeDeckModel]. This file only renders it and forwards gestures,
+ * plus a minimal unity-speed [TapeVoice] for playback.
  */
 @Composable
 fun TapeScreen(
@@ -114,6 +120,10 @@ fun TapeScreen(
     onToast: (String) -> Unit,
     onCommit: (File, IntRange) -> Unit,
     onInstantKit: (File, IntRange) -> Unit,
+    /** READ AS GROOVE (wave ZZ): the selection, or the whole deck, read as a rhythm onto the open kit. */
+    onReadGroove: (File, IntRange) -> Unit,
+    /** STEAL THE FEEL (wave ZZ): the same reading kept as timing and accent, poured over the kit's pattern. */
+    onStealFeel: (File, IntRange) -> Unit,
     /**
      * Bumped by App when something outside this screen put a new snip on
      * the shelf while TAPE may already be showing — a share-sheet import
@@ -126,17 +136,21 @@ fun TapeScreen(
     val scheme = LocalScheme.current
     val context = LocalContext.current
 
-    // No open kit is not an empty deck: a snip — a capture, or a file
-    // shared in — plays here without one. Only the kit's-longest-sample
-    // fallback needs an entry, so a share into an empty shelf still lands.
+    // entry is nullable on purpose: ARM/SNIP live on the shelf (KitsScreen),
+    // where no kit is open, so a snip taken there must still be able to
+    // reach TAPE. loadLongestTape's snip and lastCommitSource branches are
+    // already kit-independent — only its kit-fallback branch needs `entry`,
+    // and it's skipped when `entry == null`. An early return here (the old
+    // bug) would have blocked those kit-independent branches from ever
+    // running when the shelf has no kit open.
     val kitDir = entry?.dir
     var loaded by remember(kitDir) { mutableStateOf<LoadedTape?>(null) }
     var failed by remember(kitDir) { mutableStateOf(false) }
-    // Bumped by TapeDeckContent's idle-reload watcher to force a fresh
-    // call to loadLongestTape without changing `kitDir` (the other
-    // triggers below being the app's own reloadRequest) — see that
-    // watcher's own KDoc for what bumps it and why it's gated on the deck
-    // being idle.
+    // Bumped by TapeDeckContent's idle-reload watcher, or by the
+    // empty-state watcher just below, to force a fresh call to
+    // loadLongestTape without changing `kitDir` (the other triggers below
+    // being the app's own reloadRequest) — see each watcher's own comment
+    // for what bumps it and why.
     var reloadToken by remember(kitDir) { mutableStateOf(0) }
 
     LaunchedEffect(kitDir, reloadToken, reloadRequest) {
@@ -146,6 +160,37 @@ fun TapeScreen(
             loadLongestTape(entry, context.filesDir, lastCommitSource)
         }
         if (result == null) failed = true else loaded = result
+    }
+
+    // Empty-state reload: TapeDeckContent's own lastSnipFile watcher only
+    // exists once a tape has loaded, so it can't catch the first snip taken
+    // while TAPE is showing the empty deck (the exact shelf-with-no-kit
+    // case this screen exists to fix). This one covers exactly that gap and
+    // nothing else — it reads `loaded`/`failed` live via the property
+    // delegates above, so it always sees the current load state, not a
+    // value frozen at launch. Keyed on `kitDir`, matching the state it
+    // reads/writes, so it's torn down and relaunched in lockstep with those
+    // `remember(kitDir)` slots rather than outliving them.
+    LaunchedEffect(kitDir) {
+        MicSessionService.lastSnipFile.collect { file ->
+            // Gated on `failed` (settled empty), not `loaded == null`
+            // (which is also true while a load is still in flight).
+            // `lastSnipFile` is a StateFlow — a fresh collector replays its
+            // current value immediately — so on the ordinary arm → snip →
+            // open TAPE flow, the in-flight load effect is still running
+            // (failed=false) when this replay lands; gating on `loaded ==
+            // null` would bump reloadToken right then and cancel/restart
+            // that in-flight load for no reason (a double decode + a
+            // second blank-LCD flash). Waiting for `failed` means this only
+            // nudges a reload once the deck has genuinely settled on
+            // nothing — at which point the in-flight load has already
+            // picked up the replayed snip on its own, or a later, truly
+            // new snip arrives. Once a tape is loaded, TapeDeckContent's
+            // idle-gated watcher owns reloads (it must not interrupt an
+            // active scrub), and `failed` goes false the moment a load
+            // resolves — so this cannot loop against a loaded tape either.
+            if (file != null && failed) reloadToken++
+        }
     }
 
     val tapeData = loaded
@@ -159,7 +204,16 @@ fun TapeScreen(
         return
     }
 
-    TapeDeckContent(entry, tapeData, onToast, onCommit, onInstantKit, onIdleReload = { reloadToken++ })
+    TapeDeckContent(
+        entry,
+        tapeData,
+        onToast,
+        onCommit,
+        onInstantKit,
+        onReadGroove,
+        onStealFeel,
+        onIdleReload = { reloadToken++ },
+    )
 }
 
 @Composable
@@ -190,6 +244,9 @@ private fun loadLongestTape(entry: KitShelf.Entry?, filesDir: File, lastCommitSo
         val mono = readMono(file) ?: continue
         return buildLoadedTape(file, mono)
     }
+    // The kit fallback is the only branch that needs a kit — skip it
+    // outright when none is open (the shelf, with a session armed there)
+    // rather than let it run on a null entry.
     if (entry == null) return null
     val (file, mono) = loadLongestFromKit(entry) ?: return null
     return buildLoadedTape(file, mono)
@@ -233,9 +290,14 @@ private fun TapeDeckContent(
     onToast: (String) -> Unit,
     onCommit: (File, IntRange) -> Unit,
     onInstantKit: (File, IntRange) -> Unit,
+    onReadGroove: (File, IntRange) -> Unit,
+    onStealFeel: (File, IntRange) -> Unit,
     onIdleReload: () -> Unit,
 ) {
     val scheme = LocalScheme.current
+    val digScope = rememberCoroutineScope()
+    // DIG runs on this screen: it only moves the deck's own IN and OUT.
+    var digging by remember(tapeData) { mutableStateOf(false) }
 
     val model = remember(tapeData) {
         TapeDeckModel(tapeData.samples, tapeData.sampleRate, tapeData.onsets)
@@ -267,6 +329,26 @@ private fun TapeDeckContent(
         }
     }
 
+    // Everything the model exposes OTHER than position (button labels,
+    // the selection, zoom, odometer mode) is a plain, unobserved var — it
+    // only reaches the screen when something recomposes this composable
+    // and its (structurally unstable, hence unskippable) children re-read
+    // it. `uiGeneration` is that trigger, but — unlike the old `tick` —
+    // it's bumped only from discrete UI events (`touch()`), never from the
+    // per-frame loop, so it doesn't reintroduce 60×/sec recomposition.
+    // Declared before the lifecycle effect below (and everything else that
+    // closes over `touch`) so those closures see a fully-initialized `touch`.
+    var uiGeneration by remember(model) { mutableStateOf(0) }
+    fun touch() {
+        uiGeneration++
+    }
+    // The composition-scope read that actually subscribes this composable
+    // (and its unstable-param, hence unskippable, children) to
+    // `uiGeneration` bumps — mirrors the old `val frameTick = tick`, but
+    // the thing driving it is now event-driven `touch()` calls, not the
+    // 60 Hz frame loop.
+    @Suppress("UNUSED_VARIABLE") val uiGen = uiGeneration
+
     // Home-during-play would otherwise leave the voice's thread writing to
     // an AudioTrack nobody can hear forever (no media session, no way for
     // the system to stop it) — ON_STOP is the app losing the foreground,
@@ -276,7 +358,13 @@ private fun TapeDeckContent(
     DisposableEffect(lifecycleOwner, model, voice) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
-                if (model.playing) model.togglePlay()
+                if (model.playing) {
+                    model.togglePlay()
+                    // `playing` just flipped outside any button tap — the
+                    // PLAY/STOP label needs the same nudge HitEnd gets
+                    // below, or it reads "■ STOP" after the app resumes.
+                    touch()
+                }
                 voice.stop()
             }
         }
@@ -284,19 +372,40 @@ private fun TapeDeckContent(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    var tick by remember(model) { mutableStateOf(0) }
     var commitIndex by remember(model) { mutableStateOf(0) }
 
     // The model advances outside Compose's snapshot system (it's plain
-    // Kotlin, tested on its own), so this is what keeps the LCDs, reels and
-    // waveform in step with it: a `withFrameNanos` clock converts elapsed
-    // wall time to elapsed audio frames (carrying the fractional remainder
-    // so the conversion doesn't drift) and calls `model.step()`, then bumps
-    // `tick` so the rest of this composable — which reads it below —
-    // recomposes every animation frame.
+    // Kotlin, tested on its own) — `positionState` is the bridge into it.
+    // A `withFrameNanos` clock converts elapsed wall time to elapsed audio
+    // frames (carrying the fractional remainder so the conversion doesn't
+    // drift) and calls `model.step()`, then republishes `model.position`
+    // into this snapshot State every frame. Leaves (the waveform Canvas,
+    // the reels' graphicsLayer) read it inside their draw/layer lambdas,
+    // which subscribes only *that* phase — a position change repaints or
+    // re-layers without recomposing this composable or its children.
+    val positionState = remember(model) { mutableDoubleStateOf(model.position) }
+
+    // A ~10 Hz snap of the live position, for the LCD text: recomposing a
+    // Text 60×/sec is both unreadable and (via `String.format` in the
+    // readouts) wasted work. Consumed inside ReadoutRow's own body, not
+    // read here — reading it at this top scope would recompose this
+    // entire composable, and everything under it, 10×/sec instead of 60.
+    val readoutPos = remember(model) {
+        derivedStateOf { (positionState.doubleValue / (model.sampleRate / 10.0)).toLong() }
+    }
+
     LaunchedEffect(model, voice) {
         var lastNanos = withFrameNanos { it }
         var carryFrames = 0.0
+        // Tracks the IDLE/at-rest transition so a GLIDE lock-on, a COAST
+        // friction stop, or a PLAY→STOP spin-down each get exactly one
+        // extra `touch()` the instant motion actually ends — POS is shown
+        // to hundredths (`%05.2f`, finer than the ~10 Hz `readoutPos`
+        // throttle), so without this the LCD can settle on a value that's
+        // up to a decisecond stale. `positionState` (written unconditionally
+        // below) already holds the exact resting position by then, so this
+        // costs nothing beyond the one bump.
+        var wasSettled = model.mode == TapeDeckModel.Mode.IDLE && model.speed == 0.0
         while (isActive) {
             withFrameNanos { now ->
                 val dtNanos = (now - lastNanos).coerceIn(0, MAX_STEP_NANOS)
@@ -305,7 +414,8 @@ private fun TapeDeckContent(
                 val frames = exact.toInt()
                 carryFrames = exact - frames
                 if (frames > 0) {
-                    for (event in model.step(frames)) {
+                    val events = model.step(frames)
+                    for (event in events) {
                         when (event) {
                             is TapeDeckModel.Event.SnappingToOnset ->
                                 onToast(Copy.SNAPPED)
@@ -313,14 +423,21 @@ private fun TapeDeckContent(
                             TapeDeckModel.Event.PencilDone -> onToast(Copy.PENCIL_DONE)
                         }
                     }
+                    // HitEnd (at least) flips `model.playing` off outside
+                    // any button tap — without this, "■ STOP" would keep
+                    // showing after playback runs off the end of the tape.
+                    if (events.isNotEmpty()) touch()
+                    val settledNow = model.mode == TapeDeckModel.Mode.IDLE && model.speed == 0.0
+                    if (settledNow && !wasSettled) touch()
+                    wasSettled = settledNow
                 }
-                tick++
+                positionState.doubleValue = model.position
             }
         }
     }
-    // Establishes this composable's read of `tick` so it recomposes on
-    // every frame bumped above.
-    val frameTick = tick
+    // The deferred read every leaf visual invokes from its own draw/layer
+    // phase — see `positionState`'s comment above.
+    val position: () -> Double = { positionState.doubleValue }
 
     fun stopVoice() {
         voice.stop()
@@ -328,34 +445,53 @@ private fun TapeDeckContent(
 
     fun onPlayStop() {
         model.togglePlay()
+        touch()
         if (model.playing) voice.start(model.position.toInt()) else voice.stop()
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        CassetteRow(entry, model, frameTick, onToast, ::stopVoice)
+        CassetteRow(entry, model, position, onToast, ::stopVoice, ::touch)
         WaveformLcd(
             model,
             tapeData.onsets,
             tapeData.peaks,
             scheme,
+            position,
             ::stopVoice,
             onSnapToast = { onToast(Copy.SNAPPED) },
+            onTouch = ::touch,
+            // Strong skipping (on by default, Kotlin 2.0.21 + Compose
+            // compiler plugin, no stability override) skips a child whose
+            // parameter INSTANCES are unchanged even when the parent
+            // recomposed — `model`/`peaks`/`scheme`/`position` are all the
+            // same references across a `uiGeneration`-only recompose of
+            // TapeDeckContent. Passing the live Int value here (not a
+            // State, a plain value that differs from the prior call) is
+            // what defeats that skip and forces this composable's body —
+            // and therefore its `Canvas` draw lambda — to re-run the
+            // instant a non-position model field (the selection) changes.
+            uiGen = uiGeneration,
             // Absorbs whatever room the fixed-height rows above and below
             // it don't need, rather than a hardcoded height that clips
             // COMMIT off-screen on a short viewport (landscape, split
             // screen) — WAVEFORM_MIN_H keeps it from collapsing to nothing.
             modifier = Modifier.weight(1f, fill = true).heightIn(min = WAVEFORM_MIN_H.dp),
         )
-        ReadoutRow(model, onToast)
+        // Same strong-skipping reasoning as WaveformLcd's `uiGen` above:
+        // `model`/`readoutPos`/`onToast` are all instance-equal across a
+        // `uiGeneration`-only recompose, so ReadoutRow would otherwise be
+        // skipped and the selection-length ("LEN") text would go stale
+        // after IN/OUT/COMMIT while stopped.
+        ReadoutRow(model, readoutPos, onToast, uiGen = uiGeneration)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            DeckButton("IN", Modifier.weight(1f)) { model.setIn() }
-            DeckButton("OUT", Modifier.weight(1f)) { model.setOut() }
-            DeckButton(model.zoomLabel, Modifier.weight(1f)) { model.cycleZoom() }
+            DeckButton("IN", Modifier.weight(1f), engaged = model.inFrame >= 0) { model.setIn(); touch() }
+            DeckButton("OUT", Modifier.weight(1f), engaged = model.outFrame >= 0) { model.setOut(); touch() }
+            DeckButton(model.zoomLabel, Modifier.weight(1f)) { model.cycleZoom(); touch() }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            WindButton("◄◄", Modifier.weight(1f), -1, model, ::stopVoice)
+            WindButton("◄◄", Modifier.weight(1f), -1, model, ::stopVoice, ::touch)
             DeckButton(if (model.playing) "■ STOP" else "▶ PLAY", Modifier.weight(1f)) { onPlayStop() }
-            WindButton("▶▶", Modifier.weight(1f), 1, model, ::stopVoice)
+            WindButton("▶▶", Modifier.weight(1f), 1, model, ::stopVoice, ::touch)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             DeckButton(
@@ -366,6 +502,7 @@ private fun TapeDeckContent(
                 active = model.hasSelection,
             ) {
                 val range = model.commitSelection()
+                touch()
                 if (range != null) {
                     // tapeData.sourceFile, not a re-derived "open kit's longest
                     // sample" — TapeCommit's own contract is that `range`'s
@@ -394,15 +531,96 @@ private fun TapeDeckContent(
                 if (model.playing) model.togglePlay()
                 stopVoice()
                 val range = if (model.hasSelection) model.commitSelection() else null
+                // togglePlay and commitSelection both change what the
+                // PLAY/STOP label and the IN/OUT engaged state should read —
+                // same reasoning as onPlayStop/the COMMIT button above.
+                touch()
                 onInstantKit(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
+            }
+        }
+        // Wave ZZ, the phone reads: three more readings of the same tape.
+        // DIG finds the break and sets IN and OUT to it, so INSTANT KIT is
+        // the next tap; READ AS GROOVE hears the tape as a rhythm for the
+        // open kit's pads; STEAL THE FEEL keeps only its timing and accent.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            DeckButton("DIG ▸", Modifier.weight(1f), active = !digging) {
+                if (digging) return@DeckButton
+                if (model.playing) model.togglePlay()
+                stopVoice()
+                touch()
+                digging = true
+                onToast(Copy.DIG_BUSY)
+                digScope.launch {
+                    try {
+                        val found = withContext(Dispatchers.IO) {
+                            Dig.best(Snip(tapeData.samples, 1, tapeData.sampleRate))
+                        }
+                        if (found == null) {
+                            onToast(Copy.NO_BREAK)
+                        } else {
+                            model.select(found.startFrame, found.endFrame)
+                            // IN/OUT just moved off the model, outside any
+                            // DeckButton tap — same reasoning as every other
+                            // direct `model` mutation in this file: the
+                            // IN/OUT engaged state and LEN readout only see
+                            // it once this composable recomposes.
+                            touch()
+                            onToast(Copy.dug(Dig.stamp(found.startSec), Dig.stamp(found.endSec)))
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        // Law 3: when it breaks, say exactly what happened.
+                        onToast("DIG FAILED: ${e.message ?: e.javaClass.simpleName}")
+                    } finally {
+                        digging = false
+                    }
+                }
+            }
+            DeckButton("READ AS GROOVE ▸", Modifier.weight(1.4f)) {
+                if (model.playing) model.togglePlay()
+                stopVoice()
+                val range = if (model.hasSelection) model.commitSelection() else null
+                touch()
+                onReadGroove(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
+            }
+            DeckButton("STEAL THE FEEL ▸", Modifier.weight(1.4f)) {
+                if (model.playing) model.togglePlay()
+                stopVoice()
+                val range = if (model.hasSelection) model.commitSelection() else null
+                touch()
+                onStealFeel(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
             }
         }
     }
 }
 
 @Composable
-private fun ReadoutRow(model: TapeDeckModel, onToast: (String) -> Unit) {
+private fun ReadoutRow(model: TapeDeckModel, readoutPos: State<Long>, onToast: (String) -> Unit, uiGen: Int) {
     val scheme = LocalScheme.current
+    // Reading `readoutPos` here — not at TapeDeckContent's top scope —
+    // scopes its ~10 Hz recomposition to just this Row rather than the
+    // whole subtree above it.
+    @Suppress("UNUSED_VARIABLE") val snappedTenth = readoutPos.value
+    // `uiGen` is TapeDeckContent's `uiGeneration`, threaded in explicitly.
+    // Strong skipping (on by default here — Kotlin 2.0.21 + the Compose
+    // compiler plugin, no stability config override) compares unstable
+    // parameters like `model` by instance, not by forcing a recompose —
+    // `model`/`readoutPos`/`onToast` are the same references on a
+    // `uiGeneration`-only recompose of TapeDeckContent, so without this,
+    // this whole Row would be SKIPPED and "LEN --.--" would never refresh
+    // after IN/OUT/COMMIT while the deck is stopped. A plain `Int` that
+    // differs from its prior value can't be skipped past.
+    @Suppress("UNUSED_VARIABLE") val genRead = uiGen
+    // The odometer toggle changes `positionReadout`'s format immediately
+    // on tap — it can't wait for the next throttled tick, so it gets its
+    // own tiny local trigger rather than borrowing `uiGen` (which would
+    // recompose more than this Row for a change that's local to it).
+    var localGen by remember { mutableStateOf(0) }
+    // A `val` initializer is always evaluated (unlike a bare expression
+    // statement, which some compiler paths could fold away as dead), so
+    // this is the unambiguous way to establish the read.
+    @Suppress("UNUSED_VARIABLE") val localTick = localGen
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(
             Modifier
@@ -411,6 +629,7 @@ private fun ReadoutRow(model: TapeDeckModel, onToast: (String) -> Unit) {
                 .lcdPanel(scheme)
                 .tapeClick {
                     model.toggleOdometer()
+                    localGen++
                     onToast(if (model.odometer) Copy.ODOMETER_ON else Copy.ODOMETER_OFF)
                 }
                 .padding(horizontal = 10.dp),
@@ -436,18 +655,39 @@ private fun DeckButton(
     label: String,
     modifier: Modifier = Modifier,
     active: Boolean = true,
+    // Orthogonal to `active` — `active` only dims/brightens the label
+    // (an enabled-ish axis); `engaged` is "this control is currently set,"
+    // a separate latched/lit look (accent fill + inverted ink), wired only
+    // for IN/OUT (`model.inFrame`/`outFrame >= 0`). Every other DeckButton
+    // call leaves this at the default and renders exactly as before.
+    engaged: Boolean = false,
     onClick: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .raisedBevel(scheme)
+            // `raisedBevel`'s own `fill` param swaps just the background
+            // color, keeping the bevel border/shape identical either way —
+            // this is what makes `engaged` a strict overlay on the normal
+            // look rather than a different component.
+            .raisedBevel(scheme, fill = if (engaged) scheme.accent.tape else null)
             .tapeClick(onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (active) scheme.ink.tape else scheme.ink2.tape)
+        TapeText(
+            label,
+            TapeType.pixel,
+            when {
+                // `scheme.lcd` — "dark in every scheme" per Schemes.kt — is
+                // the same dark-on-accent ink the selection markers' flag
+                // labels use below, so "lit" reads the same everywhere.
+                engaged -> scheme.lcd.tape
+                active -> scheme.ink.tape
+                else -> scheme.ink2.tape
+            },
+        )
     }
 }
 
@@ -459,6 +699,7 @@ private fun WindButton(
     direction: Int,
     model: TapeDeckModel,
     onStop: () -> Unit,
+    onTouch: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     Box(
@@ -470,8 +711,10 @@ private fun WindButton(
                     onPress = {
                         onStop()
                         model.windStart(direction)
+                        onTouch()
                         tryAwaitRelease()
                         model.windStop(direction)
+                        onTouch()
                     },
                 )
             }
@@ -482,30 +725,29 @@ private fun WindButton(
     }
 }
 
-/** The cassette: kit name, two reels, and the pencil-rewind gag on the left one. */
+/**
+ * The cassette: kit name, two reels, and the pencil-rewind gag on the left
+ * one. `entry` is null when the tape loaded from a snip or last-commit
+ * source with no kit open (a shelf-armed capture) — the label falls back
+ * to a bare "TAPE" rather than a kit name that doesn't exist yet.
+ *
+ * Deliberately takes no `uiGen`: everything this composable and [Reel]
+ * draw is either `entry` (stable, unrelated to `model`) or driven through
+ * the deferred `position` lambda inside a draw/layer lambda (`fraction`,
+ * `rotation`) — no composition- or draw-scope code here reads a mutable
+ * `model` field directly, so there's nothing for a strong-skipped call to
+ * leave stale.
+ */
 @Composable
 private fun CassetteRow(
     entry: KitShelf.Entry?,
     model: TapeDeckModel,
-    @Suppress("UNUSED_PARAMETER") frameTick: Int,
+    position: () -> Double,
     onToast: (String) -> Unit,
     onScrubStart: () -> Unit,
+    onTouch: () -> Unit,
 ) {
     val scheme = LocalScheme.current
-    val infiniteTransition = rememberInfiniteTransition(label = "reels")
-    val cycleAngle by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(Motion.REEL_SPIN_MS, easing = LinearEasing)),
-        label = "reelAngle",
-    )
-    // Mirrors the running transition while playing; freezes — doesn't
-    // reset — the instant playback stops, so the reels look static rather
-    // than snapping back to zero.
-    var frozenAngle by remember { mutableStateOf(0f) }
-    if (model.playing) frozenAngle = cycleAngle
-
-    val fraction = (model.position / model.lengthFrames.coerceAtLeast(1)).toFloat().coerceIn(0f, 1f)
 
     Row(
         Modifier
@@ -517,8 +759,8 @@ private fun CassetteRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Reel(
-            fraction = 1f - fraction,
-            angle = frozenAngle,
+            fraction = { 1f - windFraction(position(), model.lengthFrames) },
+            rotation = { rotationForPosition(position(), model.sampleRate) },
             scheme = scheme,
             modifier = Modifier
                 .size(Layout.MIN_HIT_TARGET.dp)
@@ -528,10 +770,12 @@ private fun CassetteRow(
                             val releasedEarly = withTimeoutOrNull(PENCIL_LONG_PRESS_MS) { tryAwaitRelease() }
                             if (releasedEarly == null) {
                                 onScrubStart()
+                                onTouch()
                                 val started = model.pencilRewind()
                                 onToast(if (started) Copy.PENCIL_STARTED else Copy.PENCIL_AT_TOP)
                                 tryAwaitRelease()
                                 model.pencilOff()
+                                onTouch()
                             }
                         },
                     )
@@ -545,30 +789,60 @@ private fun CassetteRow(
             maxLines = 1,
         )
         Reel(
-            fraction = fraction,
-            angle = frozenAngle,
+            fraction = { windFraction(position(), model.lengthFrames) },
+            rotation = { rotationForPosition(position(), model.sampleRate) },
             scheme = scheme,
             modifier = Modifier.size(Layout.MIN_HIT_TARGET.dp),
         )
     }
 }
 
-/** One reel: a wound-tape disc sized to [fraction], spinning at [angle]. */
+/** How much of the tape (0..1) is wound onto a reel at [position]. */
+private fun windFraction(position: Double, lengthFrames: Int): Float =
+    (position / lengthFrames.coerceAtLeast(1)).toFloat().coerceIn(0f, 1f)
+
+/**
+ * Reel angle for [position]: one full turn every [Motion.REEL_SPIN_MS] of
+ * tape motion. Under the unity-speed playback [TapeVoice] actually runs,
+ * this is exactly the same visual rate the old wall-clock
+ * `infiniteRepeatable` animation produced during ordinary PLAY — but
+ * because it's driven by position instead of elapsed real time, the reels
+ * now also turn (and freeze) correctly under drag, wind and coast, and
+ * during pause, instead of only spinning while `model.playing` was true.
+ */
+private fun rotationForPosition(position: Double, sampleRate: Int): Float {
+    val ms = position / sampleRate * 1000.0
+    val cycleMs = Motion.REEL_SPIN_MS.toDouble()
+    val phase = ms % cycleMs
+    val nonNegativePhase = if (phase < 0) phase + cycleMs else phase
+    return (nonNegativePhase / cycleMs * 360.0).toFloat()
+}
+
+/**
+ * One reel: a wound-tape disc sized by [fraction], spinning by [rotation]
+ * — both deferred reads. [fraction] is invoked inside the `Canvas` draw
+ * lambda (draw phase: a change repaints only this reel), and [rotation] is
+ * applied via `graphicsLayer` (layer phase: a change re-layers this reel's
+ * draw output without re-running the draw lambda, let alone recomposing).
+ * Neither ever triggers recomposition of this composable or its caller.
+ */
 @Composable
-private fun Reel(fraction: Float, angle: Float, scheme: Scheme, modifier: Modifier = Modifier) {
-    Canvas(modifier) {
+private fun Reel(fraction: () -> Float, rotation: () -> Float, scheme: Scheme, modifier: Modifier = Modifier) {
+    Canvas(
+        modifier.graphicsLayer {
+            rotationZ = rotation()
+        },
+    ) {
         val strokeWidth = 2.dp.toPx()
         val c = Offset(size.width / 2f, size.height / 2f)
         val radius = size.minDimension / 2f
         val hubRadius = radius * 0.45f
-        val woundRadius = radius * (0.5f + 0.5f * fraction.coerceIn(0f, 1f))
+        val woundRadius = radius * (0.5f + 0.5f * fraction().coerceIn(0f, 1f))
         drawCircle(color = scheme.grayDark.tape.copy(alpha = 0.6f), radius = woundRadius, center = c)
         drawCircle(color = scheme.ink2.tape, radius = hubRadius, center = c, style = Stroke(width = strokeWidth))
-        rotate(degrees = angle, pivot = c) {
-            val spoke = hubRadius * 0.9f
-            drawLine(scheme.ink2.tape, Offset(c.x - spoke, c.y), Offset(c.x + spoke, c.y), strokeWidth = strokeWidth)
-            drawLine(scheme.ink2.tape, Offset(c.x, c.y - spoke), Offset(c.x, c.y + spoke), strokeWidth = strokeWidth)
-        }
+        val spoke = hubRadius * 0.9f
+        drawLine(scheme.ink2.tape, Offset(c.x - spoke, c.y), Offset(c.x + spoke, c.y), strokeWidth = strokeWidth)
+        drawLine(scheme.ink2.tape, Offset(c.x, c.y - spoke), Offset(c.x, c.y + spoke), strokeWidth = strokeWidth)
     }
 }
 
@@ -586,10 +860,40 @@ private fun WaveformLcd(
     onsets: IntArray,
     peaks: PeaksPyramid,
     scheme: Scheme,
+    position: () -> Double,
     onScrubStart: () -> Unit,
     onSnapToast: () -> Unit,
+    onTouch: () -> Unit,
+    // TapeDeckContent's `uiGeneration`, threaded in explicitly. The
+    // selection rectangle below is read straight off `model` — a plain,
+    // unobserved var — inside this composable's `Canvas` draw lambda, so
+    // it only gets fresh values when this composable's body re-runs
+    // (which re-invokes `Canvas` with a new draw lambda). Under strong
+    // skipping (default here), `model`/`peaks`/`scheme`/`position` are all
+    // instance-equal across a `uiGeneration`-only recompose of
+    // TapeDeckContent, so without an explicit, differently-valued `Int`
+    // parameter, this whole composable — and therefore the selection
+    // rectangle — would be skipped and never redraw while the deck sits
+    // stopped after IN/OUT/COMMIT.
+    uiGen: Int,
     modifier: Modifier = Modifier,
 ) {
+    // A scratch buffer for the draw phase's per-frame `peaks` query, so the
+    // steady-state playback path (position moving every frame) doesn't
+    // allocate a fresh boxed `List<Column>` — see `PeaksPyramid.columnsInto`.
+    // Grown, never shrunk; `remember` alone can't do that (the holder's
+    // array reference has to be reassignable), hence the tiny class.
+    val columnBuffer = remember { ColumnBuffer() }
+    // One shared, reused Paint for the IN/OUT flag labels — created once,
+    // not per draw; only `.textSize`/`.color` (plain field assignments, no
+    // allocation) are refreshed per draw pass to track the scheme.
+    val markerLabelPaint = remember {
+        android.graphics.Paint().apply {
+            isAntiAlias = true
+            textAlign = android.graphics.Paint.Align.CENTER
+            typeface = android.graphics.Typeface.MONOSPACE
+        }
+    }
     Box(
         modifier
             .fillMaxWidth()
@@ -613,16 +917,22 @@ private fun WaveformLcd(
                         val event = awaitPointerEvent()
                         val change = event.changes.firstOrNull { it.id == pointerId }
                         if (change == null) {
-                            if (dragging) model.dragEnd()
+                            if (dragging) {
+                                model.dragEnd()
+                                onTouch()
+                            }
                             break
                         }
                         if (!change.pressed) {
                             if (dragging) {
-                                if (model.dragEnd() != null) onSnapToast()
+                                val snapped = model.dragEnd()
+                                onTouch()
+                                if (snapped != null) onSnapToast()
                             } else {
                                 onScrubStart()
                                 val frame = frameAtX(change.position.x, widthPx, model)
                                 model.seekTo(model.snapPoint(frame))
+                                onTouch()
                             }
                             change.consume()
                             break
@@ -634,6 +944,7 @@ private fun WaveformLcd(
                             dragging = true
                             onScrubStart()
                             model.dragStart()
+                            onTouch()
                         }
                         if (dragging) model.dragBy(dx.toDouble(), dtMs)
                         change.consume()
@@ -644,6 +955,22 @@ private fun WaveformLcd(
             },
     ) {
         Canvas(Modifier.fillMaxSize()) {
+            // The single deferred position read for this whole draw pass —
+            // invoked here, inside the draw lambda, so it subscribes only
+            // this Canvas's draw phase, not composition. Everything below
+            // uses this local snapshot rather than re-reading `model.position`
+            // (a plain, unobserved var that draw-phase invalidation can't
+            // subscribe to at all).
+            val pos = position()
+            // Not a State read — `uiGen` is just the Int this draw lambda
+            // was captured with, which is only ever a fresh one when this
+            // composable's body actually re-ran (see the `uiGen` param's
+            // KDoc: that's what a `uiGeneration` bump now forces, past
+            // strong skipping). Reading it here documents that this draw
+            // pass — including the selection rectangle below, which reads
+            // `model.hasSelection`/`inFrame`/`outFrame` directly — is only
+            // ever current as of the last `touch()`, not live-subscribed.
+            @Suppress("UNUSED_VARIABLE") val gen = uiGen
             // dp-first, converted at draw time — see Bevel.kt's `3.dp.toPx()`
             // — so these read at their intended weight on real (non-1x)
             // phones instead of at a third of it. Dp-sizing barStep also
@@ -654,6 +981,14 @@ private fun WaveformLcd(
             val barWidth = 2.dp.toPx()
             val tickLength = 8.dp.toPx()
             val tickInset = 2.dp.toPx()
+            // IN/OUT markers: thicker than the onset ticks/center needle
+            // (which stay `strokeWidth` in `scheme.warn` — accent already
+            // distinguishes selection from those, so they're untouched)
+            // and topped with a small flag so which edge is which reads at
+            // a glance.
+            val selectionStrokeWidth = 2.5.dp.toPx()
+            val flagWidth = 14.dp.toPx()
+            val flagHeight = 10.dp.toPx()
             val w = size.width
             val h = size.height
             val centerX = w / 2f
@@ -665,32 +1000,81 @@ private fun WaveformLcd(
             // stretching a clamped range to the full canvas width) is what
             // keeps the waveform bars aligned with them near either end,
             // including the deck's own opening position (0).
-            val visibleStart = model.position - centerX * framesPerPixel
-            val visibleEnd = model.position + (w - centerX) * framesPerPixel
+            val visibleStart = pos - centerX * framesPerPixel
+            val visibleEnd = pos + (w - centerX) * framesPerPixel
             val clampedStart = visibleStart.coerceAtLeast(0.0)
             val clampedEnd = visibleEnd.coerceAtMost(model.lengthFrames.toDouble())
 
+            // IN and OUT each draw the moment they're individually set —
+            // `model.hasSelection` requires BOTH (`inFrame >= 0 &&
+            // outFrame > inFrame`, TapeDeck.kt), so gating the markers on
+            // it too would leave tapping IN alone invisible until OUT
+            // followed (half of every selection gesture). Only the filled
+            // band below stays gated on `hasSelection`; the boundary lines
+            // + flags react to each frame independently. `xIn`/`xOut` are
+            // computed unconditionally (cheap arithmetic, no allocation)
+            // and only used where their `hasIn`/`hasOut`/`hasSelection`
+            // guard passes.
+            val hasIn = model.inFrame >= 0
+            val hasOut = model.outFrame >= 0
+            val xIn = (centerX + (model.inFrame - pos) / framesPerPixel).toFloat()
+            val xOut = (centerX + (model.outFrame - pos) / framesPerPixel).toFloat()
             if (model.hasSelection) {
-                val x0 = centerX + (model.inFrame - model.position) / framesPerPixel
-                val x1 = centerX + (model.outFrame - model.position) / framesPerPixel
                 drawRect(
-                    color = scheme.accent.tape.copy(alpha = 0.27f),
-                    topLeft = Offset(x0.toFloat(), 0f),
-                    size = Size((x1 - x0).toFloat().coerceAtLeast(0f), h),
+                    color = scheme.accent.tape.copy(alpha = 0.40f),
+                    topLeft = Offset(xIn, 0f),
+                    size = Size((xOut - xIn).coerceAtLeast(0f), h),
                 )
-                drawLine(scheme.accent.tape, Offset(x0.toFloat(), 0f), Offset(x0.toFloat(), h), strokeWidth = strokeWidth)
-                drawLine(scheme.accent.tape, Offset(x1.toFloat(), 0f), Offset(x1.toFloat(), h), strokeWidth = strokeWidth)
+            }
+            if (hasIn || hasOut) {
+                // Field assignments only (no allocation) — refreshed per
+                // draw so the flags track the live scheme.
+                markerLabelPaint.textSize = flagHeight * 0.62f
+                markerLabelPaint.color = (0xFF shl 24) or scheme.lcd
+            }
+            if (hasIn) {
+                // Flag to the RIGHT of the IN line: it reads into the
+                // selection rather than overhanging off the start of it.
+                drawSelectionMarker(
+                    x = xIn,
+                    canvasWidth = w,
+                    h = h,
+                    flagOnRight = true,
+                    label = "IN",
+                    scheme = scheme,
+                    labelPaint = markerLabelPaint,
+                    strokeWidth = selectionStrokeWidth,
+                    flagWidth = flagWidth,
+                    flagHeight = flagHeight,
+                )
+            }
+            if (hasOut) {
+                // Flag to the LEFT of the OUT line — same reasoning,
+                // mirrored.
+                drawSelectionMarker(
+                    x = xOut,
+                    canvasWidth = w,
+                    h = h,
+                    flagOnRight = false,
+                    label = "OUT",
+                    scheme = scheme,
+                    labelPaint = markerLabelPaint,
+                    strokeWidth = selectionStrokeWidth,
+                    flagWidth = flagWidth,
+                    flagHeight = flagHeight,
+                )
             }
 
             if (clampedEnd > clampedStart) {
-                val xStart = (centerX + (clampedStart - model.position) / framesPerPixel).toFloat()
+                val xStart = (centerX + (clampedStart - pos) / framesPerPixel).toFloat()
                 val columnCount = max(1, (((clampedEnd - clampedStart) / framesPerPixel) / barStep).toInt())
-                val columns = peaks.columns(clampedStart.toInt(), clampedEnd.toInt(), columnCount)
+                val buf = columnBuffer.ensure(columnCount * 2)
+                peaks.columnsInto(clampedStart.toInt(), clampedEnd.toInt(), columnCount, buf)
                 val halfHeight = h / 2f
-                for ((i, col) in columns.withIndex()) {
+                for (i in 0 until columnCount) {
                     val x = xStart + i * barStep
-                    val top = (centerY - col.max * halfHeight).coerceIn(0f, h)
-                    val bottom = (centerY - col.min * halfHeight).coerceIn(0f, h)
+                    val top = (centerY - buf[i * 2 + 1] * halfHeight).coerceIn(0f, h)
+                    val bottom = (centerY - buf[i * 2] * halfHeight).coerceIn(0f, h)
                     drawRect(
                         color = scheme.lcdInk.tape,
                         topLeft = Offset(x, top),
@@ -700,7 +1084,7 @@ private fun WaveformLcd(
             }
 
             for (onset in onsets) {
-                val x = (centerX + (onset - model.position) / framesPerPixel).toFloat()
+                val x = (centerX + (onset - pos) / framesPerPixel).toFloat()
                 if (x < -4f || x > w + 4f) continue
                 val tickBottom = h - tickInset
                 drawLine(scheme.warn.tape, Offset(x, tickBottom - tickLength), Offset(x, tickBottom), strokeWidth = strokeWidth)
@@ -708,6 +1092,52 @@ private fun WaveformLcd(
 
             drawLine(scheme.warn.tape, Offset(centerX, 0f), Offset(centerX, h), strokeWidth = strokeWidth)
         }
+    }
+}
+
+/**
+ * One IN/OUT boundary: a pronounced accent line spanning the full canvas
+ * height, plus a small flag at the top labelled [label] so which edge is
+ * which reads at a glance. [flagOnRight] puts the flag to the right of
+ * the line (IN) or the left (OUT) so it always points into the selection
+ * rather than overhanging off it. [labelPaint]'s size/color are set by
+ * the caller (once per draw pass, not per marker) — this only positions
+ * and draws it. Off-screen guarded like the onset-tick loop, widened by
+ * the flag's own width so a flag just past either edge doesn't smear.
+ */
+private fun DrawScope.drawSelectionMarker(
+    x: Float,
+    canvasWidth: Float,
+    h: Float,
+    flagOnRight: Boolean,
+    label: String,
+    scheme: Scheme,
+    labelPaint: android.graphics.Paint,
+    strokeWidth: Float,
+    flagWidth: Float,
+    flagHeight: Float,
+) {
+    if (x < -flagWidth || x > canvasWidth + flagWidth) return
+    drawLine(scheme.accent.tape, Offset(x, 0f), Offset(x, h), strokeWidth = strokeWidth)
+    val flagLeft = if (flagOnRight) x else x - flagWidth
+    drawRect(color = scheme.accent.tape, topLeft = Offset(flagLeft, 0f), size = Size(flagWidth, flagHeight))
+    // Standard Paint vertical-centering formula: the midpoint between
+    // ascent (negative) and descent, offset from the flag's own center.
+    val baseline = flagHeight / 2f - (labelPaint.descent() + labelPaint.ascent()) / 2f
+    drawContext.canvas.nativeCanvas.drawText(label, flagLeft + flagWidth / 2f, baseline, labelPaint)
+}
+
+/**
+ * A growable scratch [FloatArray] for [WaveformLcd]'s per-frame
+ * [PeaksPyramid.columnsInto] call — reused across draws instead of letting
+ * `remember` hand back an immutable reference, since the required size
+ * (`columnCount * 2`) changes with the canvas width and zoom level.
+ */
+private class ColumnBuffer {
+    private var array = FloatArray(256)
+    fun ensure(size: Int): FloatArray {
+        if (array.size < size) array = FloatArray(size)
+        return array
     }
 }
 

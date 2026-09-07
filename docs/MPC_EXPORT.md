@@ -240,6 +240,17 @@ remains a useful desktop conformance check — see
 Anything else gets converted by the MPC on load, or fails. We normalise on
 capture so export never has to convert.
 
+**The sampler sheet.** Our WAVs carry no metadata chunks — except the
+`smpl` chunk a pitched or looped sample asks for (`WavWriter.write(…, smpl =
+SmplChunk(root, loop))`). Every zone a one-note or multisample package
+writes carries its root note and, when the zone loops, its sustain loop,
+read back from the program itself; the program file stays the source of
+truth when the sample loads *inside* the program, and the sheet is there
+for the day it is loaded on its own, from the card's browser, outside any
+program. A write without a sheet is byte-identical to before. Whether the
+Live III honours the sheet on a standalone load is a bench row (wave AAA);
+the chunk follows the RIFF sampler spec every other sampler reads.
+
 ## XPM anatomy
 
 XML. Broad shape:

@@ -97,6 +97,29 @@ class PeaksPyramid private constructor(
         }
     }
 
+    /**
+     * Same answer as [columns], written into [out] as interleaved
+     * `[min0, max0, min1, max1, ...]` pairs instead of a boxed
+     * `List<Column>` — for hot per-frame draw paths (TAPE's waveform
+     * Canvas redraws on every position change during playback/scrub) where
+     * a fresh `List` + lambda + boxed `Column` per call is real per-frame
+     * GC churn. [out] must be at least `count * 2` floats; the caller owns
+     * (and grows, if needed) that buffer.
+     */
+    fun columnsInto(startFrame: Int, endFrame: Int, count: Int, out: FloatArray) {
+        require(count > 0) { "count must be positive: $count" }
+        require(endFrame >= startFrame) { "endFrame $endFrame before startFrame $startFrame" }
+        require(out.size >= count * 2) { "out must hold at least ${count * 2} floats, has ${out.size}" }
+        val span = (endFrame - startFrame).toDouble()
+        for (c in 0 until count) {
+            val from = startFrame + (span * c / count).toInt()
+            val to = startFrame + (span * (c + 1) / count).toInt()
+            val col = rangeMinMax(max(0, from), min(samples.size, to))
+            out[c * 2] = col.min
+            out[c * 2 + 1] = col.max
+        }
+    }
+
     /** Exact min/max over `[from, to)`; (0,0) when the range is empty. */
     fun rangeMinMax(from: Int, to: Int): Column {
         if (to <= from || samples.isEmpty()) return Column(0f, 0f)

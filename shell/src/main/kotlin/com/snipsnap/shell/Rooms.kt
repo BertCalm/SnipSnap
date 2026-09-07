@@ -205,7 +205,8 @@ object Rooms {
     fun sweepBin(shelfRoot: File, nowMillis: Long = System.currentTimeMillis(), keepDays: Int = BIN_DAYS): Int {
         var gone = 0
         for (b in binned(shelfRoot)) {
-            if (nowMillis - b.binnedAt > keepDays * DAY_MS) {
+            // At the boundary the room goes: daysLeft reads 0 and the sweep agrees.
+            if (nowMillis - b.binnedAt >= keepDays * DAY_MS) {
                 b.room.file.delete()
                 sidecar(b.room.file).delete()
                 gone++

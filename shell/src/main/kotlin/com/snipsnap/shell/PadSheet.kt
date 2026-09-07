@@ -7,32 +7,52 @@ import com.snipsnap.synth.Treatments
 /**
  * The PAD SHEET's TREATMENT card, as data.
  *
- * Four rows. The first is the design's four segments, whose DSP is the
- * Time Machine's eras; the rest are the rack's named characters — the FX
- * chains `treat` and bank B already speak — reachable one tap at a time;
- * row four ends on TUNE and row five is the keyed family (`Keyed`), the
+ * Five rows. Row one draws five segments: four of them are the design's
+ * Time Machine eras, and [SMEAR] — a fifth, deliberately not an era (see
+ * below). The rest are the rack's named characters — the FX chains
+ * `treat` and bank B already speak — reachable one tap at a time; row
+ * four ends on TUNE and row five is the keyed family ([Keyed]), the
  * treatments that read the kit's own key.
- * Every row is a vocabulary mapping and nothing more: the words
- * are the app's, not the engine's, so [Eras] and [Treatments] never
- * learn what a "segment" is.
+ * Every row is a vocabulary mapping and nothing more: the words are the
+ * app's, not the engine's, so [Eras] and [Treatments] never learn what a
+ * "segment" is.
  *
  * The card drives the whole-pad doors — [KitBuilderModel.eraPad],
  * [KitBuilderModel.characterPad] and [KitBuilderModel.keyedPad], never
- * `treatPad` — because a pad
- * treatment is whole-pad character: every file the pad references
- * (velocity layers included) changes together, so a layered snare
- * never grows an untreated underside.
+ * `treatPad` — because a pad treatment is whole-pad character: every file
+ * the pad references (velocity layers included) changes together, so a
+ * layered snare never grows an untreated underside.
+ *
+ * [SMEAR] is the one row-one segment that is not an era — it isn't in
+ * [ERA_FOR] and never will be. It drives `com.snipsnap.audio.Smear.process`
+ * through `KitBuilderModel.replaceAudio`, the same generic door
+ * `Mutate.morph` uses, with its own ad-hoc recipe shape
+ * (`{"verb":"smear","amount":x}`) instead of an era's `{"era","amount"}`.
+ * [eraFor] and [segmentFor] (era overload) stay scoped to the era four;
+ * the screen reads SMEAR's own recipe shape back separately, ahead of the
+ * generic [treatmentFor] dispatch — which is also why the rack's
+ * transient-removal character (`"smeared"`, `com.snipsnap.synth.Smear`)
+ * carries the card label [TAIL] rather than SMEAR: same-sounding name,
+ * unrelated DSP (row one bakes a destructive HPSS stretch; row two is a
+ * non-destructive FX-chain transient pull), and a card cannot draw the
+ * same label on two rows with two meanings.
  */
 object PadSheet {
 
     /** The leftmost segment: no treatment at all. */
     const val NONE = "NONE"
 
-    /** Row one, left to right, as the card draws it — the eras. */
-    val SEGMENTS: List<String> = listOf(NONE, "CRUSH", "TAPE", "DIRT")
+    /** The fifth chip: HPSS + phase-locked stretch, not a Time Machine era. */
+    const val SMEAR = "SMEAR"
+
+    /** Row one, left to right, as the card draws it — the eras, plus SMEAR. */
+    val SEGMENTS: List<String> = listOf(NONE, "CRUSH", "TAPE", "DIRT", SMEAR)
+
+    /** Row two, first chip: the rack's transient-removal character (`"smeared"`) — see the object KDoc for why it isn't named SMEAR. */
+    const val TAIL = "TAIL"
 
     /** Row two — the rack's characters. */
-    val CHARACTER_SEGMENTS: List<String> = listOf("SMEAR", "SLAP", "WASH", "PUNCH")
+    val CHARACTER_SEGMENTS: List<String> = listOf(TAIL, "SLAP", "WASH", "PUNCH")
 
     /** Row three — the anatomy and the transport. */
     val MORE_SEGMENTS: List<String> = listOf("GHOST", "STOP", "START", "FLIP")
@@ -85,7 +105,9 @@ object PadSheet {
 
     private val CHARACTER_FOR: Map<String, String> = mapOf(
         // The attack gone, the wash kept: the hit played as its own tail.
-        "SMEAR" to "smeared",
+        // Labeled TAIL, not SMEAR — row one's SMEAR is a different,
+        // unrelated destructive treatment; see the object KDoc.
+        TAIL to "smeared",
         // One tape-delay repeat.
         "SLAP" to "slapback",
         // The spring, generously.

@@ -190,7 +190,7 @@ scroll. While an OUTSIDE trip is out, the reels turn on an LCD strip —
 the motion rule above — and SEND reads the stage dimmed, never dead. The
 label budget for a strip is about 44 pixel-face characters; strips and
 button labels ellipsize, never wrap. Decided on the *Pad Sheet v2 and
-Rooms* canvas (2026-09-07), directions B (a selector) and C (a second
+Rooms* canvas (2026-09-07, wave DDD), directions B (a selector) and C (a second
 screen) kept there for the record.
 
 ## Still open

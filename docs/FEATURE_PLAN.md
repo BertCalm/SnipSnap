@@ -366,7 +366,7 @@ the bin.
 |---|---|---|---|---|
 | Y4.1 | ✓ done: `KitBuilderModel.treatPad(slot, treatment, amount, seed)` — the Shuffle treatment table exposed singly + amount-scaled; original WAV binned, recipe recorded; `untreatPad` restores | CORE | S | treat → audibly different, recipe present; untreat → original bytes back from the bin |
 | Y4.2 | ✓ done: CLI `treat <kit-dir> <pad> <treatment> [--amount] [--seed]` | CORE | S | crush A02 from the terminal |
-| Y4.3 | ✓ done (wave UU): the PAD SHEET TREATMENT card's second row — SMEAR · SLAP · WASH · PUNCH over `KitBuilderModel.characterPad` (whole-pad, layers included, bin-backed) | APP | S | one tap per character |
+| Y4.3 | ✓ done (wave UU): the PAD SHEET TREATMENT card's second row — TAIL · SLAP · WASH · PUNCH over `KitBuilderModel.characterPad` (whole-pad, layers included, bin-backed) | APP | S | one tap per character |
 
 ## Y5 — The preview renderer: every kit listenable before loadable
 
@@ -1267,7 +1267,7 @@ Compose patterns over tested `:shell` state.
 | UU1 | ✓ done: `Separate.smear(snip, amount)` — the STN transient mask (`stnMasks`, now computed once and shared with `stn`) taken away per bin by `amount`, one analysis and one synthesis; the result peak-matched to the source (capped at +12 dB of makeup, so a bare click is not shouted back up); amount 0 is the input object itself; deterministic | CORE | S–M | on the tone+clicks+hiss fixture the clicks stop standing out of the wash (prominence over a control window collapses) while the tone and the hiss survive; graded in amount; a held tone passes through; a bare click's residue stays under the source's peak; stereo channels smear identically |
 | UU2 | ✓ done: `Smear` as a rack section — `FxChain.smear` (AMOUNT), order reverse → **smear** → eq → …, JSON section absent unless set so every old recipe is byte-stable; `Treatments.EXTRA` holds `smeared` (and any future character) *outside* `Shuffle.TREATMENTS`, whose index order every saved bank-B seed depends on | CORE | S | round-trip through JSON; old recipes unchanged; unknown macro refused; a smeared snare carries less of its energy in the first 20 ms and records a smear-only recipe; `treat <kit> A02 smeared` works unchanged |
 | UU3 | ✓ done: `KitBuilderModel.characterPad(slot, name, amount)` — the whole-pad door `eraPad` already was, generalized (`rewriteEveryFile`): every referenced file, layers included, binned, one fx-only recipe (name + AMT); `unEraPad` undoes either row; AMT 0 a no-op that validates the name first | CORE | S | a layered snare's every zone re-renders and every file lands in the bin; `PadSheet.read` names the segment; undo restores every file byte-identical; a typo is refused even at AMT 0 |
-| UU4 | ✓ done: the PAD SHEET's second TREATMENT row — `PadSheet.CHARACTER_SEGMENTS` (SMEAR · SLAP · WASH · PUNCH → `smeared` / `slapback` / `washed` / `punched`), `treatmentFor` speaking both rows, `read(recipe)` lighting the right segment for either recipe shape; the phone ruling extended (a `reversed` twin or a CLI `crushed` reads "TREATED: CRUSHED" on the provenance line, never NONE); `applyTreatment` undoes-then-reapplies through the bin for both rows and *stacks* on a recipe the bin cannot restore (a twin, a CLI treat) instead of refusing with the ghosts toast | APP | S–M | shell: both rows map to real names, inverse mappings hold, `read` on era / character / unmapped / fx-only / null; app: one tap per character, AMT re-applies, the toast names the segment |
+| UU4 | ✓ done: the PAD SHEET's second TREATMENT row — `PadSheet.CHARACTER_SEGMENTS` (TAIL · SLAP · WASH · PUNCH → `smeared` / `slapback` / `washed` / `punched`), `treatmentFor` speaking both rows, `read(recipe)` lighting the right segment for either recipe shape; the phone ruling extended (a `reversed` twin or a CLI `crushed` reads "TREATED: CRUSHED" on the provenance line, never NONE); `applyTreatment` undoes-then-reapplies through the bin for both rows and *stacks* on a recipe the bin cannot restore (a twin, a CLI treat) instead of refusing with the ghosts toast | APP | S–M | shell: both rows map to real names, inverse mappings hold, `read` on era / character / unmapped / fx-only / null; app: one tap per character, AMT re-applies, the toast names the segment |
 | UU5 | ✓ done: `PadShape` (`:kit`) — the shape's one reading (attack ramp ≤ 0.4 s, decay fade over d × length, cutoff 20 Hz..20 kHz exponential, resonance 0..12 dB) shared by `KitPreview`, `SfzWriter` and the phone; `PadFilter` (`:synth`) renders the filter half through the TPT SVF, peak-held; `ShapeAudition` (`:shell`) composes both for a single HIT | CORE | S | envelope: no shape is the same object, attack silent-then-full, decay trims at the shaped length, mappings match the SFZ writer's figures; audition: cutoff 0.5 keeps 110 Hz and kills 6 kHz, resonance lifts the cutoff tone without exceeding the source's peak, decay + filter compose; SFZ and preview output unchanged (their suites) |
 | UU8 | ✓ done: SCULPT and STRETCH on the KIT screen — `TextureKits` (`:shell`) is the one door both verbs come through (the CLI `sculpt` now calls it; its output and folders are unchanged): four seeded takes as a texture kit of its own, LOOP pads, provenance and recipes; `Spec.Sculpt` (cloud/scrub/swarm), `Spec.Stretch` (the whole hit slowed BY a factor, clamped so no take outruns a minute, the effective factor recorded), `Spec.Freeze` (four instants: the loudest, then ¼ ½ ¾ in); the panel's data (kinds, modes, one `Knob` each — LENGTH / BY / HOLD, exponential); `KitShelf.texture` names the tape "<Pad> Sculpt / Stretched / Frozen" and `App.texture` renders it like FRESH TAPE and opens it | CORE + APP | M | shell: sculpt takes are LOOP with provenance/recipe and same-seed bytes; stretch takes run source × factor and clamp to a minute with the real factor in the recipe; freeze takes sit at the named instants (a quarter in is the low tone, three quarters the high); the panel's knobs open at their defaults; CLI sculpt tests unchanged. App: SCULPT ▸ / STRETCH ▸ on the KIT action row open the panel; GO lands and opens the new tape |
 | UU7 | ✓ done: MUTATE on the PAD SHEET — `MutateSheet` (`:shell`): the four moves in the verb's order, one knob per move (AT 5..2000 ms and HZ 40..8000 exponential, MIX linear; STACK none), partners = this kit's other pads or ROULETTE's deal off the shelf (guided, seeded by the tap count, seed recorded like `--roulette`), `read(recipe)` naming the move and parents; the card draws the moves, a mini grid of partner tags four to a row, the ROULETTE line, the knob, MUTATE and UNDO; GHOSTS pads refused with their own line before the verb's own refusal | CORE + APP | M | shell: knobs round-trip their defaults and read in plain units, halfway on HZ is the geometric middle, partners never include the pad, a pad partner mutates with the CLI's own `Kit:A02` label and undoes byte-identical, a deal is seeded and its seed lands in the recipe, other recipes read as unmutated; app: pick a move and a pad, MUTATE, the line says what the pad now is |
@@ -1360,7 +1360,7 @@ without correlating — unnecessary while `align` finds it every time).
 
 ---
 
-## Wave ZZ — the pad sheet folds (CORE + APP)
+## Wave DDD — the pad sheet folds (CORE + APP)
 
 The design pass over the app's recent features (canvas: *Pad Sheet v2
 and Rooms*, 2026-09-07) found the PAD SHEET had outgrown its wireframe:
@@ -1373,16 +1373,85 @@ on the shelf (a forgotten room goes to the bin, like every delete).
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| ZZ1 | ✓ done: the boxes as data — `PadSheetBoxes` (`:shell`, tested): five boxes in order (TREATMENT, SHAPE, MUTATE, OUTSIDE, MAKE), `toggle` (one open at a time, the open one tapped closes), and the closed strip's one-line summary read from what the pad already carries — `PadSheet.read` ("CRUSH · 35%"), the shape fields it sets ("ATK 200 MS · CUT 632 HZ"), `MutateSheet.read` ("ROOM × FUNK ROOM"), `OutsideSheet.read` or the trip's stage while one is out, MAKE's doors or what DE-SAMPLE made; `UNTOUCHED` when nothing does; `SUMMARY_CHARS` (44) the label budget every strip and stage fits | CORE | S | ORDER and legends; toggle opens, switches, closes; an untouched pad reads UNTOUCHED on four benches; each recipe reads as its strip, shouting, inside the budget; the stage wins while a trip is out |
-| ZZ2 | ✓ done: the phone (blind for CI's compiler) — `GroupBox` (`:app`): an etched box (`Modifier.etchedBox`, the window's own colour with the sunken edge) with the pixel legend on the line, a 44dp strip reading the summary with a drawn chevron, content only while open; `PadSheetScreen` puts every card below the everyday controls inside one, hoists the open box to `App` (remembered per kit, so A03 ► keeps the bench), moves OUTSIDE / MAKE / EJECT *into* the scroll where they belonged, and pins the pad nav under a 2dp rule; `ReelsStrip` turns two drawn reels on an LCD strip beside the trip's stage while OUTSIDE is out, the box's strip in lcd-alt | APP | M | closed, the sheet fits one screen; one box open, the nav stays put; a ROOM trip shows the reels and the strip reads LISTENING…; the open box survives ◄ ► |
-| ZZ3 | ✓ done: rooms go to the bin — `Rooms.forget` moves a room's WAV and sidecar under `Rooms/.bin/` stamped with when, `binned` lists them with the days left, `unforget` brings one back under a fresh name, `sweepBin` empties what slept past `BIN_DAYS` (30); the KITS screen's ROOMS section (blind): a row per kept room — Rock Salt name, the measurement, its length on an LCD — held to press and reveal FORGET → BIN in the bin's red; `App` sweeps the bin at start | CORE + APP | S | forgotten is binned not gone, 29 days on the sweep leaves it, 31 days on it goes; unforget lands beside the newer room; the bin folder is never a room; the copy shouts |
+| DDD1 | ✓ done: the boxes as data — `PadSheetBoxes` (`:shell`, tested): five boxes in order (TREATMENT, SHAPE, MUTATE, OUTSIDE, MAKE), `toggle` (one open at a time, the open one tapped closes), and the closed strip's one-line summary read from what the pad already carries — `PadSheet.read` ("CRUSH · 35%"), the shape fields it sets ("ATK 200 MS · CUT 632 HZ"), `MutateSheet.read` ("ROOM × FUNK ROOM"), `OutsideSheet.read` or the trip's stage while one is out, MAKE's doors or what DE-SAMPLE made; `UNTOUCHED` when nothing does; `SUMMARY_CHARS` (44) the label budget every strip and stage fits | CORE | S | ORDER and legends; toggle opens, switches, closes; an untouched pad reads UNTOUCHED on four benches; each recipe reads as its strip, shouting, inside the budget; the stage wins while a trip is out |
+| DDD2 | ✓ done: the phone (blind for CI's compiler) — `GroupBox` (`:app`): an etched box (`Modifier.etchedBox`, the window's own colour with the sunken edge) with the pixel legend on the line, a 44dp strip reading the summary with a drawn chevron, content only while open; `PadSheetScreen` puts every card below the everyday controls inside one, hoists the open box to `App` (remembered per kit, so A03 ► keeps the bench), moves OUTSIDE / MAKE / EJECT *into* the scroll where they belonged, and pins the pad nav under a 2dp rule; `ReelsStrip` turns two drawn reels on an LCD strip beside the trip's stage while OUTSIDE is out, the box's strip in lcd-alt | APP | M | closed, the sheet fits one screen; one box open, the nav stays put; a ROOM trip shows the reels and the strip reads LISTENING…; the open box survives ◄ ► |
+| DDD3 | ✓ done: rooms go to the bin — `Rooms.forget` moves a room's WAV and sidecar under `Rooms/.bin/` stamped with when, `binned` lists them with the days left, `unforget` brings one back under a fresh name, `sweepBin` empties what slept past `BIN_DAYS` (30); the KITS screen's ROOMS section (blind): a row per kept room — Rock Salt name, the measurement, its length on an LCD — held to press and reveal FORGET → BIN in the bin's red; `App` sweeps the bin at start | CORE + APP | S | forgotten is binned not gone, 29 days on the sweep leaves it, 31 days on it goes; unforget lands beside the newer room; the bin folder is never a room; the copy shouts |
 
-**Below the line for ZZ:** restoring a room from the bin on the phone
+**Below the line for DDD:** restoring a room from the bin on the phone
 (the TAKES + BIN screen is per kit; rooms are the shelf's — a shelf bin
 view is its own row); a swipe between pads on the sheet (today the
 buttons are the only way, and the middle cell says so).
 
 ---
+
+## Wave ZZ — the phone reads (APP)
+
+The import door (F3) made the core's listening verbs reachable from the
+phone; this wave puts three of them on the TAPE deck, each a different
+reading of the same tape. Nothing new in the core: the Ear (LL3), the
+pocket (LL4) and the dig (FF1) already exist and are tested; the wave is
+the `:shell` seams that wrap them for the phone, and the buttons.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| ZZ1 | ✓ done: READ AS GROOVE — `ReadGroove.read` (`:shell`, tested): the selection (or the whole deck) heard by the Ear at its own tempo, sure hits mapped onto the open kit's pads (kindred stand-ins: a snare for a clap, an open hat for a closed one), landed as the captured base with the standard variations rewritten and an existing PROG E riding along untouched; GROOVE opens on it. Refusals in the Ear's own words: no confident tempo, no beat heard, nothing that maps; no kit open | APP | S | a two-bar synthetic beat reads onto kick/snare/hat pads at ~100 bpm and lands as the base with E intact; a tone refuses |
+| ZZ2 | ✓ done: DIG — `Dig.best` (`:shell`, tested): `BreakFinder`'s best candidate as the deck's own frames; the TAPE button sets IN and OUT to it and parks the head at IN, so INSTANT KIT is the next tap; no break heard is said, never an empty selection | APP | S | a pad–break–pad song digs to the break's frames; silence digs to nothing |
+| ZZ3 | ✓ done: STEAL THE FEEL — `ReadGroove.feel` (`:shell`, tested): the tape's timing and accent per 16th (`GrooveFeel.extract` over the Ear's hits) poured over the kit's captured base and landed as PROG E (an explicit re-fork), the pocket kept under `Pockets/` on the shelf, fresh-named on collision; refuses with no pattern to pour on or too few positions played | APP | S | the feel of a beat lands as E over a straight base; the pocket file round-trips; no base refuses |
+
+Bench (phone): beatbox a bar into ARM TAPE, SNIP, READ AS GROOVE — the kit
+plays it back; share a whole song in, DIG, INSTANT KIT — the break is a kit.
+
+## Wave AAA — the sample carries its own sheet (CORE)
+
+MPC compatibility, the one enhancement that waits on no bench: a pitched
+or looped WAV carries its root note and sustain loop inside itself, so
+loaded on its own at the MPC — from the card's browser, outside any
+program — it arrives tuned and looping instead of at C3 and one-shot.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| AAA1 | ✓ done: `SmplChunk` (`:audio`, tested) — the RIFF `smpl` chunk's root note and one forward loop (frames, exclusive end; the chunk's inclusive end converted both ways); `WavWriter.write(…, smpl =)` opt-in, the chunk between `fmt` and `data`, the RIFF size honest, a write without one byte-identical to before; `WavReader.readSmpl` reads it back or null, a malformed sheet never a wrong one. `OneNote.writePackage` writes every zone's sheet from the program (root per keygroup, loop per layer), so one-note, multisample and PAD FROM ANYTHING packages all carry it | CORE | S | root and loop round-trip; audio untouched; RIFF size counts the chunk; refusals for a root off the keyboard and a loop past the sample; a looped zone's WAV reads back its root and loop, a pluck's the root alone |
+| AAA2 | Bench: load a zone WAV from `Held Keys_[TrackData]/` on the Live III on its own (not the program) — does it play at its root and loop? Note either way; if the MPC ignores the sheet, the sheet still costs nothing | USER | S | yes/no on hardware |
+
+## Wave BBB — the Hardening, round two (CORE)
+
+Every door the phone grew after the SS waves — the import store, the
+Ear and the dig on the deck, INSTANT KIT, the pad peaks, the silence
+watch, the PCM conversion, the sampler sheet — meets the same hostile
+inputs and degenerate shapes the older verbs had to. Same house rules:
+a valid result or a named refusal, no other throwable, silence never
+invents, nothing climbs out of a folder. All three harnesses held on
+the first run, sharpened corpus included; they are guarded invariants
+now, each pairing named on failure.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| BBB1 | ✓ done: the degenerate matrix, round two — `DegenerateDoorsTest` (`:shell`): {one sample, tiny, silence, DC, full-scale square, low rate, stereo, white noise} × {`ReadGroove.read`, `ReadGroove.feel`, `Dig.best`, `SnipStore.import`, `InstantKit.build`, `SilenceWatch.feed`}: a valid result (a reading with a tempo, a find inside the tape, a readable snip, a kit with pads) or an `IllegalArgumentException` in words; silence never becomes a beat, a break or a kit; `PadPeaks` shrugs at junk, truncated, empty and missing pad files; `Pcm` turns any bytes into finite samples inside the rails | CORE | S | every pairing passes; failures named per pairing |
+| BBB2 | ✓ done: the sampler sheet under mutation — `FuzzTest` runs `WavReader.readSmpl` and `read` over thousands of seeded mutations of a sheet-bearing WAV: a typed refusal or a valid result, and a returned loop always inside the audio the file holds | CORE | S | no untyped throwable in the batch, inside the hang bound; no loop past the audio |
+| BBB3 | ✓ done: the CLI hostile sweep extended — `learn`, `beat`, `pad` and `restore` join the file-taking verbs, and the corpus gains a zero-channel WAV, a three-channel WAV, a RIFF size past the moon, a sheet whose loop runs past the audio, and a backup zip whose entries climb with `../`; every verb exits 0..2 and nothing lands outside its folder (`KitBackup.restore` flattens entry names, `XpnImporter` runs through `SafePath`) | CORE | S | every (verb × hostile) pair exits cleanly; no escaped file anywhere |
+| BBB4 | ✓ done: the sidecars under mutation, round three — `SidecarFuzzTest` (`:shell`) reads the kit, the grooves, the instrument, the pocket, the teach log, the pad recipe and the fx chain back under two kinds of damage: torn bytes (flips, truncation, zero and 0xFF runs) and rewritten trees (a random node swapped for null / a string / a huge, negative or fractional number / an empty array or object / a boolean, or a key dropped); a valid parse or a typed refusal, the teach log never throwing at all, and the parser refusing a nesting attack in words. Found and fixed: `GrooveStore` trusted its casts (a torn `lengthPulses` was an NPE, a string `bars` a `ClassCastException`); `KitStore` cast chain boundaries. Both read through the typed accessors now | CORE | S | no untyped throwable in any batch, inside the hang bound |
+| BBB5 | ✓ done: the containers under mutation, round four — `ContainerFuzzTest` (`:kit`) damages *inside* the wrapper so the mutation reaches the reader that matters: the `.xpm` program XML inside a sound `.xpn` (round one tore the zip, and the XML parser never saw a bad byte), the JSON payload inside a sound ACVS container, the `.sfz` text (lines dropped, doubled, tokens swapped for `1e300` / `../../escaped` / empty), the backup zip, the answer sidecar, the WAV header walker, and the two name parsers over any string; `SidecarFuzzTest` adds the three pad-sheet readers (never throw at all) and the label. Found and fixed: `AnswerStore` trusted its casts (a dropped `seed` was an NPE) — typed accessors now. Nothing climbs out: every batch checks no `escaped.*` landed anywhere | CORE | S | no untyped throwable in any batch, inside the hang bound; no escaped file |
+
+## Wave CCC — the Surface (APP + CORE)
+
+A pad you *play the sound of*, not the sound: the open kit's first pad
+loops under a finger and where the finger is drives pitch, filter and
+drive — two axes, three with a pinch, four as a vector morph between
+corner states — with the phone's roll riding along. PRINT is the SP-404
+move: the master bus is copied into RAM while you play and lands on
+TAPE as one plain sample, so the performance costs nothing to play back
+later. The arithmetic (axes, pinch depth, corner weights, the one-pole
+smoother) is pure JVM and tested; the engine is the repo's one native
+library — Oboe under a C++ callback, because a finger wants its sound
+under 10 ms and AudioTrack's blocking-write clock is the opposite trade.
+The Android side is written blind for CI's compiler, as :app always is.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| CCC1 | ✓ done: `TouchSurface` (`:shell`) — `read(mode, touches, w, h, previous)`: X across, Y up, both on the rails; XYZ takes Z as the first two fingers' distance over the pad's diagonal and *holds* it when the pinch finger lifts (letting go of a knob is not turning it to zero); MORPH weights the puck bilinearly over A (top-left) B C D, each corner exactly 1 at its corner, the centre a quarter each, always summing to 1; `Smoother` the one-pole `y += k(x−y)` with `coefficient(cutoffHz, rateHz)`; `SmoothedReading` for the painted puck | CORE | S | corners, centre, rails, the held Z, the sum-to-one sweep, the coefficient at one time constant, a zero-size pad refused in words |
+| CCC2 | ✓ done: the engine — `app/src/main/cpp`: `SurfaceEngine` on Oboe (LowLatency, Exclusive, float stereo, two bursts); a `SpscRing<ControlFrame, 64>` from the UI thread to the callback (a full ring drops the frame, the next is milliseconds away), corner states as atomics, a sample swap by pointer handshake (the audio thread frees nothing); `ParameterSmoother` per macro at ~10 Hz and the gate at 50 Hz, per sample; one looping voice with linear interpolation repitched by file rate over stream rate times ±1 octave, a soft clip with its make-up baked in, a trapezoidal SVF whose trig runs every 32 samples; `PrintBuffer` armed on the UI thread to a frame ceiling, written by the callback while Recording, the callback always making the last write (Stopping → Done), read on the UI thread only after Done | APP | M | bench: no dropouts through a fast gesture on a mid-range phone; a route change restarts the stream (needsRestart); the print reads back as what was heard |
+| CCC3 | ✓ done: the bridge — `NativeSurface` (JNI, `libsnipsnap_surface`), `SurfaceEngine.kt` the owner (start/stop/close idempotent, stereo folded to mono on load, `armPrint`/`stopPrint` as a `Snip` at the device rate), `TiltSource` (gravity along X: flat 0.5, a quarter turn 0 or 1); Gradle: NDK pinned, CMake 3.22.1, prefab, `com.google.oboe:oboe:1.9.0` — the only native dependency | APP | S | the app assembles in CI with the native library; a print lands via `SnipStore.import` |
+| CCC4 | ✓ done: SURFACE on the menu — `SurfaceScreen`: XY / XYZ / MORPH segments, PRINT / STOP PRINT, the LCD pad (grid, crosshair, puck, the pinch ring in XYZ, a weight bar per corner in MORPH), fingers in press order so a second finger never steals the puck, a frame loop that smooths at screen rate, paints from the smoothed value and sends the same value to the engine; a print lands on TAPE with "PRINTED n S TO TAPE." and TAPE re-reads (`importCount`); no kit → "OPEN A KIT. THE SURFACE PLAYS ITS FIRST PAD." | APP | M | bench: play, print, find the print on TAPE and chop it; MORPH corners audibly distinct; the roll of the phone moves resonance |
 
 ## Sequence
 
@@ -1608,6 +1677,19 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ M5 (F1.5 + F4.3) · ✓ Y3.3 SESSION export · ✓ F6.3 share flow · ✓ X3.3
     share/backup action
   ✓ W12 pad waveforms on the KIT grid
+  ✓ wave ZZ (the phone reads): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE
+  ✓ wave AAA1 (the sample carries its own sheet): smpl root + loop in
+    every instrument zone WAV · bench: AAA2 standalone load on the Live III
+  ✓ wave BBB (the Hardening, round two): the new doors under the
+    degenerate matrix, the sheet under fuzz, four more verbs in the sweep
+  ✓ BBB4 (the Hardening, round three): every JSON sidecar under torn
+    bytes and rewritten trees; the groove reader's casts made typed
+  ✓ BBB5 (the Hardening, round four): the containers damaged inside the
+    wrapper (xpm in xpn, payload in ACVS, sfz, backup zip, answer, WAV
+    header, name parsers, pad sheets, label); the answer reader made typed
+  ✓ wave CCC (the Surface): the tactile pad over Oboe — XY / XYZ / MORPH,
+    the roll of the phone, PRINT to resample the gesture onto TAPE ·
+    bench: dropouts, the route change, the print heard back
 
 CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   directions. The smear (STN transient mask, peak-matched) as a rack
@@ -1679,7 +1761,7 @@ CORE+APP wave YY: CORE landed (2026-09-07) — outside, the Outsidify
   parent for any pad on any kit; KEEP ROOM on the OUTSIDE card and the
   rooms as chips on the MUTATE card, blind for CI.
 
-CORE+APP wave ZZ: ✓ all landed (2026-09-07) — the pad sheet folds.
+CORE+APP wave DDD: ✓ all landed (2026-09-07) — the pad sheet folds.
   Direction A off the design canvas: five group boxes with pixel legends
   under the everyday controls, closed strips reading what the pad
   carries (`PadSheetBoxes`, tested), one open at a time and remembered

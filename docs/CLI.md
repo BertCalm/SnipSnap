@@ -347,7 +347,7 @@ the last stretch), `started` (the reel spinning up into the sound),
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the
 phone the same characters sit on the PAD SHEET's TREATMENT card, rows
-two to four (SMEAR · SLAP · WASH · PUNCH, GHOST · STOP · START · FLIP,
+two to four (TAIL · SLAP · WASH · PUNCH, GHOST · STOP · START · FLIP,
 SKIM · DUB · SWELL · TUNE — the last being `retune`, below), where they
 change every file the pad references, velocity layers included.
 

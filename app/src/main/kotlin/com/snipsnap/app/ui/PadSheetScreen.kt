@@ -60,8 +60,10 @@ import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Outside
+import com.snipsnap.audio.Smear
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
+import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.PadShape
 import com.snipsnap.kit.Names
@@ -132,6 +134,7 @@ fun PadSheetScreen(
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onNavigateTape: () -> Unit,
+    onGrainField: (Int) -> Unit,
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
     appScope: CoroutineScope,
     /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name), remembered per kit by the caller. */
@@ -313,8 +316,92 @@ fun PadSheetScreen(
     }
 
     /**
-     * TREATMENT: picking a segment on either row, or moving AMT. Both
-     * whole-pad doors (`eraPad`, `characterPad`) always read the *current
+     * SMEAR: not an era, so it doesn't route through `eraPad` — it's
+     * `com.snipsnap.audio.Smear.process` through the generic
+     * [KitBuilderModel.replaceAudio] door, exactly like `Mutate.morph`'s
+     * recipe idiom. `replaceAudio` always reads the *current on-disk*
+     * audio (same as `eraPad`), so re-applying onto an already-smeared pad
+     * (moving AMT again) would stack the stretch onto the already-stretched
+     * body rather than replacing it — restore first when this pad's own
+     * SMEAR recipe is riding it, same shape as the era branch below.
+     * Unlike eras, `replaceAudio` refuses velocity-layered pads outright
+     * (a transform tuned on the loud zone would lie on the soft ones), so
+     * that's checked up front, *before* any restore runs — un-doing a
+     * prior SMEAR and then hitting the refusal on the way back in would
+     * leave the main sample restored, the (untouched, still-smeared)
+     * ghost layers stale, and the recipe cleared: the exact "untreated
+     * underside" skew the era branch's own `check()` exists to prevent,
+     * just via a different file shape (one file vs. many).
+     *
+     * `Smear.process` folds to mono internally and always returns a mono
+     * [Snip] (Pghi/HPSS's contract, like `Retime`) — unlike `Eras.apply`,
+     * which preserves `snip.channels` throughout. A stereo pad handed to
+     * `Smear.process` untouched would silently lose its width, so a
+     * stereo source gets its mono result duplicated back across both
+     * channels, the same convention `Mutate.morph` uses for its own
+     * mono-PGHI result.
+     *
+     * amount 0 is a no-op — `Smear.process` returns the input unchanged,
+     * so the rewrite is skipped entirely rather than binning a take that's
+     * byte-for-byte the same, matching `eraPad`'s own `amount <= 0f`
+     * early-return. `save()` still runs unconditionally afterward, same
+     * as the era branch: a segment tap or AMT commit is always a real
+     * user action worth a rollback point, treated or not.
+     */
+    fun applySmear(m: KitBuilderModel, p: KitPad, amount: Float, padName: String) {
+        val hadPriorSmear = readSmearRecipe(p.recipe) != null
+        scope.launch {
+            busy = true
+            try {
+                withContext(Dispatchers.IO) {
+                    check(p.velocityLayers.isEmpty()) {
+                        "pad $slot is velocity-layered - clear GHOSTS before smearing"
+                    }
+                    if (hadPriorSmear) m.untreatPad(slot)
+                    if (amount > 0f) {
+                        val recipe = JsonValue.Obj(
+                            mapOf(
+                                "verb" to JsonValue.Str("smear"),
+                                "amount" to JsonValue.Num(amount.toDouble()),
+                            ),
+                        )
+                        m.replaceAudio(slot, recipe) { snip ->
+                            val smeared = Smear.process(snip, amount)
+                            if (snip.channels == 2 && smeared.channels == 1) {
+                                val stereo = FloatArray(smeared.frameCount * 2)
+                                for (i in 0 until smeared.frameCount) {
+                                    stereo[i * 2] = smeared.samples[i]
+                                    stereo[i * 2 + 1] = smeared.samples[i]
+                                }
+                                Snip(stereo, 2, smeared.sampleRate)
+                            } else {
+                                smeared
+                            }
+                        }
+                    }
+                    m.save()
+                }
+                revision++
+                onKitUpdated(m.kit)
+                refreshPadAudio(m)
+                snip?.let { audition(it, m.kit.pad(slot)?.level ?: 1f) }
+                onToast(Copy.treated(PadSheet.SMEAR, padName))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                // Same in-voice-copy split as the era branch: the
+                // ghosts-before-smearing refusal above is expected user
+                // copy, not a diagnostic.
+                if (e is IllegalStateException) onToast(Copy.RETREAT_REFUSED) else failure("TREATMENT", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    /**
+     * TREATMENT: picking a segment on either row, or moving AMT (SMEAR is
+     * handled separately — see [applySmear] above). Both whole-pad doors
+     * (`eraPad`, `characterPad`, `keyedPad`) always read the *current
      * on-disk* audio, rewrite it, and bin whatever was there — so
      * re-applying onto an already-treated pad (moving AMT, or switching
      * segments) would stack onto the treated audio rather than replacing
@@ -337,8 +424,12 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
-        val treatment = PadSheet.treatmentFor(segment) ?: return
         val padName = p.displayName
+        if (segment == PadSheet.SMEAR) {
+            applySmear(m, p, amount, padName)
+            return
+        }
+        val treatment = PadSheet.treatmentFor(segment) ?: return
         val hadPriorTreatment = PadSheet.read(p.recipe) != null
         scope.launch {
             busy = true
@@ -820,9 +911,14 @@ fun PadSheetScreen(
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(pad.drumClass)
     val classColor = cls.tape
 
-    val applied = PadSheet.read(pad.recipe)
-    val activeSegment = applied?.segment
-    val isNoneState = applied == null
+    // SMEAR never rides PadSheet.read's recipe shapes (era/treatment/keyed)
+    // - its own ad-hoc `{"verb":"smear","amount":x}` is read separately,
+    // and checked first: it always draws its own row-one segment, so it
+    // never needs the phone-ruling fallback below.
+    val smearAmount = readSmearRecipe(pad.recipe)
+    val applied = if (smearAmount != null) null else PadSheet.read(pad.recipe)
+    val activeSegment = if (smearAmount != null) PadSheet.SMEAR else applied?.segment
+    val isNoneState = smearAmount == null && applied == null
     // The phone ruling, both rows: a treatment no segment draws is named
     // on the provenance line, never shown as NONE.
     val unmappedLabel = applied?.takeIf { it.segment == null }?.let { a ->
@@ -832,7 +928,7 @@ fun PadSheetScreen(
             is PadSheet.Treatment.Keyed -> "IN KEY: ${a.treatment.name.uppercase()}"
         }
     }
-    val amount = applied?.amount ?: PadSheet.DEFAULT_AMOUNT
+    val amount = smearAmount ?: applied?.amount ?: PadSheet.DEFAULT_AMOUNT
 
     val assignedSlots = kit.pads.map { it.slot }.sorted()
     val idx = assignedSlots.indexOf(slot)
@@ -1155,6 +1251,13 @@ fun PadSheetScreen(
         }
 
             ActionButton(
+                "GRAIN ▸",
+                scheme,
+                enabled = !busy,
+                modifier = Modifier.weight(1f),
+                onClick = { onGrainField(slot) },
+            )
+            ActionButton(
                 "MAKE INSTRUMENT",
                 scheme,
                 enabled = !busy,
@@ -1221,6 +1324,21 @@ private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String 
     snip?.let { parts += "%.0f ms".format(it.durationSeconds * 1000f) }
     binDaysLeft?.let { parts += "original in bin, ${it}d left" }
     return parts.joinToString(" · ")
+}
+
+/**
+ * SMEAR's own recipe shape, `{"verb": "smear", "amount": x}` — the
+ * `Mutate.morph` idiom, not [PadSheet.read]'s `{"era"/"treatment"/"keyed",
+ * "amount"}` shapes. Same defensive contract: anything else (an era, a
+ * Treatments FX chain, a Mutate recipe) reads as no SMEAR active. Read
+ * ahead of [PadSheet.read] wherever both are consulted, since SMEAR is
+ * the one row-one segment [PadSheet.read] cannot see.
+ */
+private fun readSmearRecipe(recipe: JsonValue.Obj?): Float? {
+    if (recipe == null) return null
+    val verb = (recipe.entries["verb"] as? JsonValue.Str)?.value ?: return null
+    if (verb != "smear") return null
+    return (recipe.entries["amount"] as? JsonValue.Num)?.value?.toFloat()
 }
 
 // ---------- level <-> dB ----------

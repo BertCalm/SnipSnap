@@ -105,7 +105,8 @@ class RoomsTest {
         assertEquals(10f, back.lagMs)
         // And forgotten again, then left past the bin's days, the sweep takes it.
         Rooms.forget(shelf, back, nowMillis = 20_000L)
-        assertEquals(1, Rooms.sweepBin(shelf, nowMillis = 20_000L + 31L * 24 * 60 * 60 * 1000))
+        assertEquals(0, Rooms.sweepBin(shelf, nowMillis = 20_000L + 30L * 24 * 60 * 60 * 1000 - 1), "a moment before the boundary it stays")
+        assertEquals(1, Rooms.sweepBin(shelf, nowMillis = 20_000L + 30L * 24 * 60 * 60 * 1000), "at the boundary it goes, as daysLeft reads 0")
         assertTrue(Rooms.binned(shelf).isEmpty())
         assertEquals(listOf("FUNK ROOM 2"), Rooms.list(shelf).map { it.name }, "the bin folder is never a room")
 

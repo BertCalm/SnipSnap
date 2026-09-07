@@ -13,13 +13,13 @@ import kotlin.test.assertTrue
 class PadSheetTest {
 
     @Test
-    fun `the four segments the design draws, NONE first`() {
-        assertEquals(listOf("NONE", "CRUSH", "TAPE", "DIRT"), PadSheet.SEGMENTS)
+    fun `the five segments the design draws, NONE first, SMEAR last`() {
+        assertEquals(listOf("NONE", "CRUSH", "TAPE", "DIRT", "SMEAR"), PadSheet.SEGMENTS)
     }
 
     @Test
-    fun `every segment but NONE names a real era`() {
-        for (segment in PadSheet.SEGMENTS - PadSheet.NONE) {
+    fun `every era segment names a real era`() {
+        for (segment in PadSheet.SEGMENTS - PadSheet.NONE - PadSheet.SMEAR) {
             val era = PadSheet.eraFor(segment)
             assertTrue(
                 era in Eras.names,
@@ -34,6 +34,11 @@ class PadSheetTest {
     }
 
     @Test
+    fun `SMEAR names no era - it isn't one, and never will be`() {
+        assertNull(PadSheet.eraFor(PadSheet.SMEAR))
+    }
+
+    @Test
     fun `an unknown segment is refused, not silently ignored`() {
         assertFailsWith<IllegalArgumentException> { PadSheet.eraFor("WOBBLE") }
     }
@@ -44,8 +49,8 @@ class PadSheetTest {
     }
 
     @Test
-    fun `segmentFor is eraFor's inverse for every real segment`() {
-        for (segment in PadSheet.SEGMENTS - PadSheet.NONE) {
+    fun `segmentFor is eraFor's inverse for every era segment`() {
+        for (segment in PadSheet.SEGMENTS - PadSheet.NONE - PadSheet.SMEAR) {
             val era = PadSheet.eraFor(segment)!!
             assertEquals(segment, PadSheet.segmentFor(era))
         }
@@ -60,7 +65,7 @@ class PadSheetTest {
 
     @Test
     fun `rows two and three draw four characters each and all rows read in order`() {
-        assertEquals(listOf("SMEAR", "SLAP", "WASH", "PUNCH"), PadSheet.CHARACTER_SEGMENTS)
+        assertEquals(listOf("TAIL", "SLAP", "WASH", "PUNCH"), PadSheet.CHARACTER_SEGMENTS)
         assertEquals(listOf("GHOST", "STOP", "START", "FLIP"), PadSheet.MORE_SEGMENTS)
         assertEquals(listOf("SKIM", "DUB", "SWELL", "TUNE"), PadSheet.EXTRA_SEGMENTS)
         assertEquals(listOf("BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
@@ -91,10 +96,13 @@ class PadSheetTest {
     @Test
     fun `treatmentFor speaks both rows, NONE is null, and eraFor still refuses row two`() {
         assertEquals(PadSheet.Treatment.Era("sp1200"), PadSheet.treatmentFor("CRUSH"))
-        assertEquals(PadSheet.Treatment.Character("smeared"), PadSheet.treatmentFor("SMEAR"))
+        assertEquals(PadSheet.Treatment.Character("smeared"), PadSheet.treatmentFor("TAIL"))
         assertNull(PadSheet.treatmentFor(PadSheet.NONE))
         assertFailsWith<IllegalArgumentException> { PadSheet.treatmentFor("SPARKLE") }
-        assertFailsWith<IllegalArgumentException> { PadSheet.eraFor("SMEAR") }
+        // eraFor refuses row two (TAIL is not in SEGMENTS); SMEAR itself
+        // *is* in SEGMENTS (row one) and legitimately answers null - see
+        // the dedicated test above.
+        assertFailsWith<IllegalArgumentException> { PadSheet.eraFor("SLAP") }
     }
 
     @Test
@@ -112,7 +120,7 @@ class PadSheetTest {
         assertEquals(PadSheet.Applied(PadSheet.Treatment.Era("phone"), 1f, null), PadSheet.read(phone))
 
         val smeared = PadRecipe(fx = Treatments.chain("smeared", 0.4f), treatment = "smeared", amount = 0.4f).toJsonValue()
-        assertEquals(PadSheet.Applied(PadSheet.Treatment.Character("smeared"), 0.4f, "SMEAR"), PadSheet.read(smeared))
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Character("smeared"), 0.4f, "TAIL"), PadSheet.read(smeared))
 
         val twin = PadRecipe(fx = Treatments.chain("crushed"), treatment = "crushed", amount = 1f).toJsonValue()
         assertEquals(PadSheet.Applied(PadSheet.Treatment.Character("crushed"), 1f, null), PadSheet.read(twin))

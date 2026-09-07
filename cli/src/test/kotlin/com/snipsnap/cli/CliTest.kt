@@ -2095,11 +2095,48 @@ class CliTest {
         }
         val fakeGzip = File(temp, "fake.xtd").apply { writeBytes(byteArrayOf(0x1f, 0x8b.toByte()) + ByteArray(200) { 0 }) }
         val fakeZip = File(temp, "fake.xpn").apply { writeBytes("PK".toByteArray() + ByteArray(200) { 0x7F }) }
+        // Wave BBB's sharper shapes: WAV headers that lie (no channels,
+        // three channels, a RIFF size past the moon), a sampler sheet whose
+        // loop runs past the audio, and a backup whose entry tries to climb
+        // out of its folder.
+        fun patched(name: String, at: Int, vararg bytes: Int): File = File(temp, name).apply {
+            val b = realWav.readBytes().copyOf()
+            for ((i, v) in bytes.withIndex()) b[at + i] = v.toByte()
+            writeBytes(b)
+        }
+        val zeroChannels = patched("zero-ch.wav", 22, 0, 0)
+        val threeChannels = patched("three-ch.wav", 22, 3, 0)
+        val hugeRiff = patched("huge-riff.wav", 4, 0xFF, 0xFF, 0xFF, 0x7F)
+        val loopPastAudio = File(temp, "loop-past.wav").apply {
+            val snip = com.snipsnap.audio.WavReader.read(realWav)
+            val bytes = java.io.ByteArrayOutputStream().apply {
+                com.snipsnap.audio.WavWriter.write(
+                    this, snip, smpl = com.snipsnap.audio.SmplChunk(60, com.snipsnap.audio.SmplChunk.Loop(0, snip.frameCount.toLong())),
+                )
+            }.toByteArray()
+            // The chunk's inclusive loop end sits 48 bytes into the smpl body;
+            // find the chunk by its tag rather than trusting an offset.
+            val tag = "smpl".toByteArray(Charsets.US_ASCII)
+            val at = (0..bytes.size - 4).first { i -> (0 until 4).all { bytes[i + it] == tag[it] } }
+            val end = at + 8 + 48
+            val loopEnd = (0 until 4).sumOf { (bytes[end + it].toLong() and 0xFF) shl (8 * it) }
+            check(loopEnd == snip.frameCount - 1L) { "not the loop end field: read $loopEnd, wanted ${snip.frameCount - 1}" }
+            bytes[end] = 0xFF.toByte(); bytes[end + 1] = 0xFF.toByte(); bytes[end + 2] = 0xFF.toByte(); bytes[end + 3] = 0x7F
+            check(com.snipsnap.audio.WavReader.readSmpl(bytes) == null) { "the fixture must read as no sheet" }
+            writeBytes(bytes)
+        }
+        val climbingZip = File(temp, "climb.zip").apply {
+            java.util.zip.ZipOutputStream(outputStream()).use { zip ->
+                zip.putNextEntry(java.util.zip.ZipEntry("../escaped.xpn")); zip.write(ByteArray(10)); zip.closeEntry()
+                zip.putNextEntry(java.util.zip.ZipEntry("Kits/../../escaped.wav")); zip.write(ByteArray(10)); zip.closeEntry()
+            }
+        }
         val hostiles = listOf(
             junk("noise.bin", 500), junk("noise.xpn", 500), junk("noise.xtd", 500),
             junk("noise.mid", 300), junk("noise.wav", 300),
             File(temp, "empty.bin").apply { writeBytes(ByteArray(0)) },
             truncatedWav, fakeGzip, fakeZip,
+            zeroChannels, threeChannels, hugeRiff, loopPastAudio, climbingZip,
         )
         val out = File(temp, "hostile-out")
 
@@ -2123,6 +2160,11 @@ class CliTest {
             "retime" to { f -> cli("retime", f.path, "--to", "100", "--from", "90", "--overwrite") },
             "dig" to { f -> cli("dig", f.path, "--chop", "--unearth", "--out", out.path, "--overwrite") },
             "checkup" to { f -> cli("checkup", f.parentFile.path) },
+            // The verbs grown since SS1 that take a file (wave BBB).
+            "learn" to { f -> cli("learn", f.path, "--pocket", File(out, "hostile.pocket").path) },
+            "beat" to { f -> cli("beat", f.path, "--out", out.path, "--overwrite") },
+            "pad" to { f -> cli("pad", f.path, "--out", out.path, "--overwrite") },
+            "restore" to { f -> cli("restore", f.path, "--out", out.path) },
         )
         for (h in hostiles) {
             for ((name, invoke) in invocations) {
@@ -2130,6 +2172,9 @@ class CliTest {
                 assertTrue(code in 0..2, "hostile ${h.name} x $name: exit $code out of range")
             }
         }
+        // Nothing climbed out of the output folder, whatever a zip entry said.
+        assertTrue(!File(temp, "escaped.xpn").exists() && !File(temp, "escaped.wav").exists(), "a zip entry escaped its folder")
+        assertTrue(!File(temp.parentFile, "escaped.xpn").exists() && !File(temp.parentFile, "escaped.wav").exists(), "a zip entry escaped the temp root")
     }
 
     @Test
