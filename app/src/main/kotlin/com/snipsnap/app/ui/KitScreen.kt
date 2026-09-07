@@ -260,7 +260,6 @@ private fun KeyPanel(
     busy: Boolean,
     onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
     onInKey: () -> Unit,
-    onTwins: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     val root = key?.rootSemitone ?: KeyPicker.DEFAULT_ROOT

@@ -322,7 +322,7 @@ fun App(shelf: KitShelf) {
         val hadTwins = source.kit.pads.any { it.slot > 16 }
         busy = "TWINNING…"
         scope.launch {
-            val (entry, lit) = try {
+            val (entry, _) = try {
                 withContext(Dispatchers.IO) { shelf.evilTwins(source, Random.nextInt()) }
             } catch (e: Exception) {
                 busy = null
