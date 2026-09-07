@@ -1,0 +1,115 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Pad Sheet v2"
+    },
+    {
+      "id": "page-2",
+      "name": "Directions explored"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Pad Sheet v2 \u00b7 closed",
+      "page": "page-1"
+    },
+    {
+      "file": "MutateOpen.dc.html",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Pad Sheet v2 \u00b7 MUTATE open",
+      "page": "page-1"
+    },
+    {
+      "file": "OutsideOpen.dc.html",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Pad Sheet v2 \u00b7 OUTSIDE, trip out",
+      "page": "page-1"
+    },
+    {
+      "file": "Rooms.dc.html",
+      "x": 1540,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "ROOMS on the shelf",
+      "page": "page-1"
+    },
+    {
+      "file": "DirectionB.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "B \u00b7 Workshop selector",
+      "page": "page-2"
+    },
+    {
+      "file": "DirectionC.dc.html",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "C \u00b7 Two screens: the sheet",
+      "page": "page-2"
+    },
+    {
+      "file": "WorkshopScreen.dc.html",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "C \u00b7 Two screens: the workshop",
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "spec",
+      "x": 0,
+      "y": -300,
+      "w": 1350,
+      "page": "page-1",
+      "text": "PAD SHEET V2 \u00b7 THE SPEC (Direction A, chosen)\n1. The everyday top never changes: header, waveform, provenance, LEVEL / PAN / TUNE, ONE-SHOT / CHOKE / GHOSTS.\n2. Every workshop card is a group box with a pixel legend (TREATMENT, SHAPE, MUTATE, OUTSIDE, MAKE), 44 px tap strip, closed by default. Closed, the whole sheet fits one screen.\n3. The closed strip reads what the pad carries, from the recipe the code already has: MutateSheet.read, OutsideSheet.read, PadSheet's treatment and shape. \"UNTOUCHED\" in ink3 when nothing does.\n4. One box open at a time. The open box is remembered per kit, not per pad, so A03 \u25ba keeps the same bench open - one job across the whole kit.\n5. The pad navigation row is pinned under the scroll area (2 px grayEdge rule above it). EJECT and RE-TRIM scroll with the content.\n6. OUTSIDE while a trip is out: the box's summary turns lcd-alt cyan, an LCD strip shows turning reels (the one motion rule: reels spin whenever audio moves), SEND reads the stage dimmed, WET and KEEP ROOM dim, the nav dims. Nothing goes dead.\n7. KEEP ROOM lights in lcd-alt only after a ROOM trip; a REAMP dims it. The row always exists, so the box never jumps.\n8. Labels: a box strip's summary ellipsizes; a button label ellipsizes; no label may wrap. Budget at 390: about 44 characters in the 8 px pixel face across a full row (6.4 px a glyph beside the chevron), 12 in a three-chip row, 9 in a four-chip row. The shape strip lists only the fields the pad sets."
+    },
+    {
+      "id": "note-rooms",
+      "x": 1540,
+      "y": -230,
+      "w": 400,
+      "page": "page-1",
+      "text": "ROOMS ON THE SHELF (decided)\nA third section beside INSTRUMENTS, one row per kept room: Rock Salt name, how it was measured (trip, sureness, the pad, the age), its length on an LCD. Tapping a row does nothing; hold to reveal FORGET \u2192 BIN. A forgotten room goes to the bin for 30 days like every other delete - the app's one rule for deletes, kept."
+    },
+    {
+      "id": "note-b",
+      "x": 0,
+      "y": -190,
+      "w": 400,
+      "page": "page-2",
+      "text": "DIRECTION B \u00b7 WORKSHOP SELECTOR (not chosen)\nOne segmented row, five benches, one panel.\nFor: the sheet never grows past one screen.\nAgainst: what the pad carries on the other benches is invisible until you switch; five chips in 366 px is tight - TREATMENT has to become TREAT, and OUTSIDE only just fits."
+    },
+    {
+      "id": "note-c",
+      "x": 480,
+      "y": -190,
+      "w": 860,
+      "page": "page-2",
+      "text": "DIRECTION C \u00b7 TWO SCREENS (not chosen; two ideas kept)\nThe sheet keeps only the everyday controls plus an LCD of what the pad carries; WORKSHOP \u25b8 opens a second screen.\nKept for A: \"same bench, next pad\" (the open box persists across pads) and the in-flight OUTSIDE strip with turning reels.\nAgainst: two screens deep from the grid; HIT and the waveform repeated on the workshop."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

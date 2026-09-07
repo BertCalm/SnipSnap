@@ -78,6 +78,9 @@ fun KitsScreen(
     /** ROOMS (YY5): what OUTSIDE measured and kept, beside the instruments; hold one to forget it into the bin. */
     rooms: List<Rooms.Room> = emptyList(),
     onForgetRoom: (Rooms.Room) -> Unit = {},
+    /** The rooms in the bin, each with its days left; RESTORE brings one back. */
+    binnedRooms: List<Rooms.Binned> = emptyList(),
+    onRestoreRoom: (Rooms.Binned) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     var menuOpen by remember { mutableStateOf(false) }
@@ -95,7 +98,7 @@ fun KitsScreen(
                 TapeText("THE SHELF", TapeType.lcdHeader, scheme.lcdInk.tape)
             }
 
-            if (kits.isEmpty() && instruments.isEmpty() && rooms.isEmpty()) {
+            if (kits.isEmpty() && instruments.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty()) {
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -128,15 +131,27 @@ fun KitsScreen(
                         }
                     }
                     // ROOMS: what OUTSIDE measured and KEEP ROOM kept - any pad plays inside one through MUTATE ▸ ROOM.
-                    if (rooms.isNotEmpty()) {
+                    if (rooms.isNotEmpty() || binnedRooms.isNotEmpty()) {
                         item(key = "rooms-header") {
                             TapeText("ROOMS · OUTSIDE MEASURED THEM. ANY PAD PLAYS IN ONE.", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
                         }
                         items(rooms, key = { "room:" + it.file.name }) { room ->
                             RoomRow(room, onForgetRoom)
                         }
-                        item(key = "rooms-note") {
-                            TapeText("HOLD A ROOM TO FORGET IT · THE BIN KEEPS IT ${Rooms.BIN_DAYS} DAYS", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                        if (rooms.isNotEmpty()) {
+                            item(key = "rooms-note") {
+                                TapeText("HOLD A ROOM TO FORGET IT · THE BIN KEEPS IT ${Rooms.BIN_DAYS} DAYS", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                            }
+                        }
+                        // The bin's door on the phone: every forgotten room, its days
+                        // left, and RESTORE - the same row TAKES + BIN draws for a pad.
+                        if (binnedRooms.isNotEmpty()) {
+                            item(key = "rooms-bin-header") {
+                                TapeText("IN THE BIN · RESTORE BEFORE THE DAYS RUN OUT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                            }
+                            items(binnedRooms, key = { "binned:" + it.room.file.name }) { binned ->
+                                BinnedRoomRow(binned, busy, onRestoreRoom)
+                            }
                         }
                     }
                 }
@@ -260,6 +275,42 @@ private fun RoomRow(room: Rooms.Room, onForget: (Rooms.Room) -> Unit) {
             Box(Modifier.height(30.dp).lcdPanel(scheme).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
                 TapeText("%.1f s".format(Locale.ROOT, room.seconds), TapeType.lcdSmall, scheme.amber.tape)
             }
+        }
+    }
+}
+
+/**
+ * A room in the bin: its name, the days it has left (the last two in
+ * `warn`, as TAKES + BIN counts a pad down), and RESTORE in the LCD's
+ * second colour. The row is the bin's own - LCD-dark, one line - so a
+ * forgotten room never reads as one still on the shelf.
+ */
+@Composable
+private fun BinnedRoomRow(binned: Rooms.Binned, busy: Boolean, onRestore: (Rooms.Binned) -> Unit) {
+    val scheme = LocalScheme.current
+    val daysLeft = binned.daysLeft(System.currentTimeMillis())
+    val dayColor = if (daysLeft <= 2) scheme.warn.tape else scheme.amber.tape
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
+            .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(5.dp))
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        TapeText(binned.room.name, TapeType.marker, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
+        TapeText("${daysLeft}D LEFT", TapeType.lcdSmall, dayColor)
+        Box(
+            Modifier
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
+                .let { if (!busy) it.tapeClick { onRestore(binned) } else it }
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText("RESTORE", TapeType.pixelSmall, if (busy) scheme.ink3.tape else scheme.amber.tape)
         }
     }
 }

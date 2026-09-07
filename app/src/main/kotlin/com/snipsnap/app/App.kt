@@ -152,11 +152,13 @@ fun App(shelf: KitShelf) {
     var instruments by remember { mutableStateOf<List<KitShelf.InstrumentEntry>>(emptyList()) }
     // ROOMS (YY5): kept rooms beside the instruments; the revision bumps after a forget.
     var rooms by remember { mutableStateOf<List<Rooms.Room>>(emptyList()) }
+    var binnedRooms by remember { mutableStateOf<List<Rooms.Binned>>(emptyList()) }
     var roomsRevision by remember { mutableStateOf(0) }
     LaunchedEffect(kits, screen, roomsRevision) {
         if (screen == AppScreen.KITS) {
             instruments = withContext(Dispatchers.IO) { shelf.instruments() }
             rooms = withContext(Dispatchers.IO) { runCatching { shelf.rooms() }.getOrDefault(emptyList()) }
+            binnedRooms = withContext(Dispatchers.IO) { runCatching { shelf.binnedRooms() }.getOrDefault(emptyList()) }
         }
     }
     // Pad Sheet v2: the open workshop box, remembered per kit so the next
@@ -669,6 +671,21 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /** RESTORE on a binned room: back onto the shelf, the toast names it. */
+    fun restoreRoom(binned: Rooms.Binned) {
+        scope.launch {
+            try {
+                val room = withContext(Dispatchers.IO) { shelf.restoreRoom(binned) }
+                roomsRevision++
+                toast = Copy.roomRestored(room.name)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                toast = "RESTORE FAILED: ${e.message ?: e.javaClass.simpleName}"
+            }
+        }
+    }
+
     fun backupShelf() {
         if (busy != null) return
         if (kits.isEmpty()) {
@@ -771,6 +788,8 @@ fun App(shelf: KitShelf) {
                             onBackup = ::backupShelf,
                             rooms = rooms,
                             onForgetRoom = ::forgetRoom,
+                            binnedRooms = binnedRooms,
+                            onRestoreRoom = ::restoreRoom,
                         )
                         AppScreen.KIT -> {
                             val sheetSlot = padSheetSlot

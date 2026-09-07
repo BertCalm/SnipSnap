@@ -1376,11 +1376,12 @@ on the shelf (a forgotten room goes to the bin, like every delete).
 | DDD1 | ✓ done: the boxes as data — `PadSheetBoxes` (`:shell`, tested): five boxes in order (TREATMENT, SHAPE, MUTATE, OUTSIDE, MAKE), `toggle` (one open at a time, the open one tapped closes), and the closed strip's one-line summary read from what the pad already carries — `PadSheet.read` ("CRUSH · 35%"), the shape fields it sets ("ATK 200 MS · CUT 632 HZ"), `MutateSheet.read` ("ROOM × FUNK ROOM"), `OutsideSheet.read` or the trip's stage while one is out, MAKE's doors or what DE-SAMPLE made; `UNTOUCHED` when nothing does; `SUMMARY_CHARS` (44) the label budget every strip and stage fits | CORE | S | ORDER and legends; toggle opens, switches, closes; an untouched pad reads UNTOUCHED on four benches; each recipe reads as its strip, shouting, inside the budget; the stage wins while a trip is out |
 | DDD2 | ✓ done: the phone (blind for CI's compiler) — `GroupBox` (`:app`): an etched box (`Modifier.etchedBox`, the window's own colour with the sunken edge) with the pixel legend on the line, a 44dp strip reading the summary with a drawn chevron, content only while open; `PadSheetScreen` puts every card below the everyday controls inside one, hoists the open box to `App` (remembered per kit, so A03 ► keeps the bench), moves OUTSIDE / MAKE / EJECT *into* the scroll where they belonged, and pins the pad nav under a 2dp rule; `ReelsStrip` turns two drawn reels on an LCD strip beside the trip's stage while OUTSIDE is out, the box's strip in lcd-alt | APP | M | closed, the sheet fits one screen; one box open, the nav stays put; a ROOM trip shows the reels and the strip reads LISTENING…; the open box survives ◄ ► |
 | DDD3 | ✓ done: rooms go to the bin — `Rooms.forget` moves a room's WAV and sidecar under `Rooms/.bin/` stamped with when, `binned` lists them with the days left, `unforget` brings one back under a fresh name, `sweepBin` empties what slept past `BIN_DAYS` (30); the KITS screen's ROOMS section (blind): a row per kept room — Rock Salt name, the measurement, its length on an LCD — held to press and reveal FORGET → BIN in the bin's red; `App` sweeps the bin at start | CORE + APP | S | forgotten is binned not gone, 29 days on the sweep leaves it, 31 days on it goes; unforget lands beside the newer room; the bin folder is never a room; the copy shouts |
+| DDD4 | ✓ done: the bin's door on the phone (blind) — THE SHELF's ROOMS section grows an IN THE BIN list: a row per forgotten room in the bin's own LCD-dark line, `daysLeft` counting down (the last two in `warn`, as TAKES + BIN counts a pad), RESTORE in lcd-alt through `Rooms.unforget`, the toast naming the room back on the shelf; `KitShelf.binnedRooms` / `restoreRoom`. The design boards that decided the wave land under `design/pad-sheet-v2/` with a README, and `DESIGN_GAP.md` gets a dated refresh naming what the old handoff no longer covers | APP | S | a forgotten room shows under IN THE BIN with its days; RESTORE puts it back beside the live rooms and the toast says so; the copy shouts |
 
-**Below the line for DDD:** restoring a room from the bin on the phone
-(the TAKES + BIN screen is per kit; rooms are the shelf's — a shelf bin
-view is its own row); a swipe between pads on the sheet (today the
-buttons are the only way, and the middle cell says so).
+**Below the line for DDD:** a swipe between pads on the sheet (today the
+buttons are the only way, and the middle cell says so); emptying the
+rooms' bin by hand (the sweep at start is the only door; TAKES + BIN's
+EMPTY THE BIN NOW is per kit).
 
 ---
 
@@ -1771,7 +1772,10 @@ CORE+APP wave DDD: ✓ all landed (2026-09-07) — the pad sheet folds.
   carries (`PadSheetBoxes`, tested), one open at a time and remembered
   per kit, the pad nav pinned, the trip's reels turning on an LCD strip;
   and a forgotten room goes to the bin for 30 days like every delete,
-  from a ROOMS section on the shelf. Blind for CI's compiler.
+  from a ROOMS section on the shelf - and comes back from it: IN THE BIN
+  rows with the days left and RESTORE (DDD4). The canvas's boards live
+  under design/pad-sheet-v2/ and DESIGN_GAP.md says what the old handoff
+  no longer covers. Blind for CI's compiler.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

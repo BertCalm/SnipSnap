@@ -176,5 +176,8 @@ class RoomsTest {
         val gone = Copy.roomForgotten("FUNK ROOM")
         assertEquals(gone.uppercase(), gone)
         assertTrue("BIN" in gone && "30 DAYS" in gone, gone)
+        val back = Copy.roomRestored("FUNK ROOM")
+        assertEquals(back.uppercase(), back)
+        assertTrue(back.startsWith("FUNK ROOM ") && "SHELF" in back, back)
     }
 }
