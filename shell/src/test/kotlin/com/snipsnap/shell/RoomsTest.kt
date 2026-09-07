@@ -87,8 +87,9 @@ class RoomsTest {
         assertEquals(impulse().frameCount.toFloat() / rate, bare.seconds, 1e-4f)
         assertEquals(0f, bare.lagMs)
 
-        // A file nothing can read is skipped, not fatal.
+        // A file that is not a WAV is skipped, not fatal - even with a sidecar vouching for it.
         File(Rooms.dir(shelf), "junk.wav").writeText("not a wav")
+        File(Rooms.dir(shelf), "junk.json").writeText("""{"version":1,"name":"junk","frames":4410,"sampleRate":44100,"measuredAt":9}""")
         assertEquals(listOf("FUNK ROOM 2"), Rooms.list(shelf).map { it.name })
         assertTrue(Rooms.list(File(temp, "nowhere")).isEmpty(), "no folder, no rooms")
     }

@@ -612,7 +612,9 @@ fun PadSheetScreen(
                 revision++
                 onKitUpdated(m.kit)
                 refreshPadAudio(m)
-                if (outcome.impulse != null) measuredRoom = outcome
+                // The last trip's room, or none: a REAMP measures no room, so
+                // KEEP ROOM dims until the next ROOM trip.
+                measuredRoom = outcome.takeIf { it.impulse != null }
                 m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
                 onToast(Copy.outside(outsideMove, padName, outcome.lagMs, outcome.confidence))
             } catch (e: Exception) {

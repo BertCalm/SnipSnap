@@ -94,15 +94,29 @@ object Rooms {
     /**
      * Every room on the shelf, the latest measured first. A WAV whose
      * sidecar is missing or broken still lists — its length read off the
-     * file, the measurement unknown — and a file nothing can read is
-     * skipped, never fatal.
+     * file, the measurement unknown — and a file that is not a WAV is
+     * skipped whatever its sidecar says, never fatal.
      */
     fun list(shelfRoot: File): List<Room> {
         val dir = dir(shelfRoot)
         val wavs = dir.listFiles { f: File -> f.isFile && f.extension.equals("wav", ignoreCase = true) } ?: return emptyList()
-        return wavs.mapNotNull { wav -> runCatching { read(wav) }.getOrNull() }
-            .sortedWith(compareByDescending<Room> { it.measuredAt }.thenBy { it.name.lowercase() })
+        return wavs.filter { isWav(it) }.mapNotNull { wav -> runCatching { read(wav) }.getOrNull() }
+            .sortedWith(compareByDescending<Room> { it.measuredAt }.thenBy { it.name.lowercase(java.util.Locale.ROOT) })
     }
+
+    /** The file's first twelve bytes say RIFF…WAVE — a sidecar is not allowed to vouch for a file that is not one. */
+    private fun isWav(file: File): Boolean = runCatching {
+        file.inputStream().use { s ->
+            val head = ByteArray(12)
+            var n = 0
+            while (n < head.size) {
+                val r = s.read(head, n, head.size - n)
+                if (r < 0) break
+                n += r
+            }
+            n == 12 && String(head, 0, 4, Charsets.ISO_8859_1) == "RIFF" && String(head, 8, 4, Charsets.ISO_8859_1) == "WAVE"
+        }
+    }.getOrDefault(false)
 
     /** The room named [name], or null. */
     fun find(shelfRoot: File, name: String): Room? = list(shelfRoot).firstOrNull { it.name == name }
