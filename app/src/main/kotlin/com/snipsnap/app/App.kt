@@ -79,6 +79,7 @@ import kotlin.random.Random
 private const val PREFS = "tapeos"
 private const val PREF_SCHEME = "scheme"
 private const val PREF_PERSONALITY = "personality"
+private const val PREF_TEACH = "teach"
 /** The Bubble's overlay-permission offer (Task 5) — asked once, ever. */
 private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
 
@@ -142,11 +143,11 @@ fun App(shelf: KitShelf) {
     // from the KIT action row, not one of MenuRow's fixed ten, so it's
     // KIT-scoped overlay state rather than its own AppScreen entry.
     var takesBinOpen by remember { mutableStateOf(false) }
-    // X4.4 TEACH THE MACHINE: off by default. The consent row itself lives
-    // in PropertiesScreen (⚙), which is out of scope for this pass — this
-    // is the plain boolean the brief calls for, wired for CHOP to read,
-    // with no UI to flip it yet. See the CHOP report for this deviation.
-    var teachEnabled by remember { mutableStateOf(false) }
+    // X4.4 TEACH THE MACHINE: off by default, flipped on SETUP's consent
+    // row, remembered like the scheme. CHOP reads it; what it gates is
+    // feature vectors and labels into the kit's own folder, never audio,
+    // and nothing leaves the phone either way (Copy.TEACH_CONSENT).
+    var teachEnabled by remember { mutableStateOf(prefs.getBoolean(PREF_TEACH, false)) }
     // EXPORT: hoisted here, not local to ExportScreen's own composition —
     // its write runs on `scope` below (App's own, handed down as
     // `appScope`) so it survives a MenuRow tab switch; the session object
@@ -503,6 +504,12 @@ fun App(shelf: KitShelf) {
                             onPersonality = {
                                 personality = it
                                 prefs.edit().putString(PREF_PERSONALITY, it.name).apply()
+                            },
+                            teachEnabled = teachEnabled,
+                            onTeach = { on ->
+                                teachEnabled = on
+                                prefs.edit().putBoolean(PREF_TEACH, on).apply()
+                                toast = if (on) Copy.TEACHING_ON else Copy.TEACHING_OFF
                             },
                         )
                         AppScreen.CHOP -> ChopScreen(
