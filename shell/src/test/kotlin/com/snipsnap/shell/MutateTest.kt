@@ -239,6 +239,24 @@ class MutateTest {
     }
 
     @Test
+    fun `a parent that starts on its hit keeps its head - the second event is not the first onset`() {
+        val m = KitBuilderModel.create("Hot", File(temp, "Hot"))
+        val click = FloatArray(rate / 4).also { it[0] = 0.9f; it[1] = -0.6f }
+        m.assign(1, Snip(click, 1, rate), DrumClass.PERC)
+        m.save()
+        // A room whose direct arrival is at the very top, and an echo 90 ms later at half strength.
+        val ir = FloatArray(rate / 2).also { it[2] = 0.4f; it[2 + 4000] = 0.2f }
+        val out = Mutate.apply(m, 1, listOf(Mutate.Source("room", Snip(ir, 1, rate))), Mutate.Mode.ROOM, roomMix = 1f)
+        val snip = WavReader.read(File(m.kitDir, out.pad.sampleFile))
+        // Fully wet through a two-tap room, the pad is itself then itself again 4000 frames later, half as loud.
+        assertTrue(snip.frameCount >= click.size + 4000, "the echo made it: ${snip.frameCount}")
+        val direct = Math.abs(snip.samples[2 * 2].toDouble())
+        val echo = Math.abs(snip.samples[(2 + 4000) * 2].toDouble())
+        assertTrue(direct > 0.5, "the direct path is the pad's own click: $direct")
+        assertEquals(0.5, echo / direct, 0.05, "and the echo is half of it - the head was kept, not trimmed to the echo")
+    }
+
+    @Test
     fun `room - the pad played inside the parent's tail`() {
         val m = KitBuilderModel.create("Room", File(temp, "Room"))
         // A bare click, and a room: noise decaying with a 100 ms time constant.

@@ -1,5 +1,7 @@
 package com.snipsnap.app.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -38,11 +41,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.MicSessionService
+import com.snipsnap.app.OutsideSession
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -53,6 +59,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Outside
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.KitPad
@@ -66,6 +73,7 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Mutate
 import com.snipsnap.shell.MutateSheet
+import com.snipsnap.shell.OutsideSheet
 import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PeaksPyramid
@@ -127,6 +135,7 @@ fun PadSheetScreen(
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     var model by remember(entry.dir) { mutableStateOf<KitBuilderModel?>(null) }
     var loadFailed by remember(entry.dir) { mutableStateOf(false) }
@@ -530,6 +539,80 @@ fun PadSheetScreen(
         }
     }
 
+    // ---- OUTSIDE: the world as an effect (OutsideSheet over Outside) ----
+    var outsideMove by remember(slot) { mutableStateOf(OutsideSheet.MOVES.first()) }
+    val outsideKnob = OutsideSheet.knobFor(OutsideSheet.moveFor(outsideMove))
+    var pendingOutsideKnob by remember(slot, outsideMove) { mutableFloatStateOf(outsideKnob.defaultFraction) }
+    // What the trip is doing right now — LISTENING…, SENDING… — for the
+    // SEND button's own label; null when nothing is out.
+    var outsideStage by remember(slot) { mutableStateOf<String?>(null) }
+    // The armed mic session holds the mic; OUTSIDE wants it to itself.
+    val tapeArmed by MicSessionService.armed.collectAsState()
+
+    /**
+     * SEND: the phone listens, plays the send (the pad for REAMP, the
+     * sweep for ROOM) out of its current output route, keeps listening,
+     * and the return becomes the pad through `OutsideSheet.apply` — bin,
+     * recipe, provenance exactly as any treatment. Refusals come first
+     * and in words: GHOSTS on, the mic not granted (ARM on KITS grants
+     * it), the tape rolling. The audition is silenced before the trip so
+     * the mic never hears the pad twice.
+     */
+    fun onOutside() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (p.velocityLayers.isNotEmpty()) {
+            onToast(Copy.OUTSIDE_NEEDS_ONE)
+            return
+        }
+        if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            onToast(Copy.OUTSIDE_NEEDS_MIC)
+            return
+        }
+        if (tapeArmed) {
+            onToast(Copy.OUTSIDE_TAPE_ROLLING)
+            return
+        }
+        val move = OutsideSheet.moveFor(outsideMove)
+        val fraction = pendingOutsideKnob
+        val padName = p.displayName
+        voice?.release()
+        voice = null
+        scope.launch {
+            busy = true
+            outsideStage = Copy.OUTSIDE_LISTENING
+            try {
+                val outcome = withContext(Dispatchers.IO) {
+                    val send = OutsideSheet.send(m, slot, move)
+                    val preRoll = OutsideSheet.preRollFrames(send.sampleRate)
+                    val returned = OutsideSession.run(context, send, preRoll, OutsideSheet.listenFrames(send)) {
+                        outsideStage = Copy.OUTSIDE_SENDING
+                    }
+                    outsideStage = null
+                    val o = OutsideSheet.apply(m, slot, move, returned, fraction, preRoll)
+                    m.save()
+                    o
+                }
+                revision++
+                onKitUpdated(m.kit)
+                refreshPadAudio(m)
+                m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
+                onToast(Copy.outside(outsideMove, padName, outcome.lagMs, outcome.confidence))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (e is Outside.Refused) onToast(Copy.outsideRefused(e.message ?: "the room said no")) else failure("OUTSIDE", e)
+            } finally {
+                outsideStage = null
+                busy = false
+            }
+        }
+    }
+
+    fun onOutsideUndo() {
+        commitPadEditNow("UNDO", onSuccess = { onToast(Copy.OUTSIDE_UNDONE) }) { mm -> OutsideSheet.undo(mm, slot) }
+    }
+
     // ---- PAD FROM ANYTHING: one hit, a pad forever (PadMaker over PadFromAnything) ----
     var pendingDepth by remember(slot) { mutableFloatStateOf(PadMaker.DEPTH.defaultFraction) }
     var pendingBloom by remember(slot) { mutableFloatStateOf(PadMaker.BLOOM.defaultFraction) }
@@ -884,6 +967,24 @@ fun PadSheetScreen(
                 busy = busy,
             )
         }
+
+        OutsideCard(
+            moves = OutsideSheet.MOVES,
+            move = outsideMove,
+            onMove = { outsideMove = it },
+            knobLabel = outsideKnob.label,
+            knobFraction = pendingOutsideKnob,
+            knobText = OutsideSheet.label(outsideKnob, OutsideSheet.value(outsideKnob, pendingOutsideKnob)),
+            onKnobChange = { f -> pendingOutsideKnob = (f * 40f).roundToInt() / 40f },
+            applied = OutsideSheet.read(pad.recipe),
+            stage = outsideStage,
+            canUndo = binDaysLeft != null,
+            onSend = ::onOutside,
+            onUndo = ::onOutsideUndo,
+            padColor = classColor,
+            scheme = scheme,
+            busy = busy,
+        )
 
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             TapeText("PAD FROM ANYTHING · HOLD IT FOREVER", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
@@ -1452,6 +1553,86 @@ private fun MutateCard(
             enabled = !busy && partner != null,
             modifier = Modifier.fillMaxWidth(),
             onClick = onMutate,
+        )
+    }
+}
+
+// ---------- outside card ----------
+
+/**
+ * OUTSIDE: the world as an effect. Two moves (REAMP sends the pad, ROOM
+ * sends the sweep), the move's one knob, a status line reading what the
+ * pad carries (the move, how late it came back, how surely it was found,
+ * a polarity flip if there was one), and SEND — whose label is the trip's
+ * own stage while one is out, so the button says LISTENING… and SENDING…
+ * rather than going dead.
+ */
+@Composable
+private fun OutsideCard(
+    moves: List<String>,
+    move: String,
+    onMove: (String) -> Unit,
+    knobLabel: String,
+    knobFraction: Float,
+    knobText: String,
+    onKnobChange: (Float) -> Unit,
+    applied: OutsideSheet.Applied?,
+    stage: String?,
+    canUndo: Boolean,
+    onSend: () -> Unit,
+    onUndo: () -> Unit,
+    padColor: Color,
+    scheme: Scheme,
+    busy: Boolean,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TapeText("OUTSIDE · THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            ActionButton("UNDO", scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
+        }
+        TapeText(
+            applied?.let { OutsideSheet.statusLine(it) }
+                ?: if (move == OutsideSheet.Move.ROOM.name) "A SWEEP GOES OUT, THE ROOM COMES BACK AS THE PAD'S ROOM" else "THE PAD GOES OUT THE JACK, WHAT COMES BACK IS THE PAD",
+            TapeType.pixelSmall,
+            scheme.ink2.tape,
+            maxLines = 1,
+        )
+
+        // The move: two chips, half the width each.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (m in moves) {
+                val selected = m == move
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                        .let { if (!busy) it.tapeClick { onMove(m) } else it }
+                        .padding(horizontal = 4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(m, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                }
+            }
+        }
+
+        StepperSlider(
+            label = knobLabel,
+            fraction = knobFraction,
+            valueText = knobText,
+            fillColor = padColor,
+            scheme = scheme,
+            enabled = !busy,
+            onFractionChange = onKnobChange,
+            onFractionCommit = {},
+        )
+
+        ActionButton(
+            stage ?: "SEND ▸",
+            scheme,
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onSend,
         )
     }
 }

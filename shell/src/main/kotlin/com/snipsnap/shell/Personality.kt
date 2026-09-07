@@ -154,6 +154,19 @@ object Copy {
     const val STRETCHED = "STRETCHED. A BLINK BECAME A LANDSCAPE. NEW TAPE ON THE SHELF."
     const val FROZEN = "FROZEN. ONE INSTANT, HELD. NEW TAPE ON THE SHELF."
 
+    // ---- PAD SHEET: outside ----
+    /** OUTSIDE: the pad went out the jack and came back; [lagMs] the trip, [confidence] how surely the return was found. */
+    fun outside(move: String, pad: String, lagMs: Float, confidence: Float): String =
+        "$move: $pad WENT OUT AND CAME BACK ${Math.round(lagMs)} MS LATER, ${Math.round(confidence * 100)}% SURE. ORIGINAL SLEEPS IN THE BIN."
+    /** OUTSIDE's honest refusal, [reason] in the verb's own words ("the room said nothing back"). */
+    fun outsideRefused(reason: String): String = "OUTSIDE REFUSED: ${reason.uppercase().trimEnd('.')}."
+    const val OUTSIDE_UNDONE = "BACK INSIDE. THE ORIGINAL IS BACK FROM THE BIN."
+    const val OUTSIDE_NEEDS_MIC = "OUTSIDE NEEDS THE MIC. ARM THE TAPE ONCE ON KITS TO GRANT IT."
+    const val OUTSIDE_TAPE_ROLLING = "THE TAPE IS ROLLING. EJECT IT FIRST - OUTSIDE WANTS THE MIC TO ITSELF."
+    const val OUTSIDE_NEEDS_ONE = "GHOSTS ON. OUTSIDE WANTS ONE SAMPLE - CLEAR THEM FIRST."
+    const val OUTSIDE_SENDING = "SENDING… TURN IT UP."
+    const val OUTSIDE_LISTENING = "LISTENING FOR THE ROOM…"
+
     // ---- PAD SHEET: pad from anything ----
     const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."
     const val PAD_TOO_SHORT = "TOO SHORT TO STRETCH INTO A PAD. FEED IT MORE THAN A BLINK."
