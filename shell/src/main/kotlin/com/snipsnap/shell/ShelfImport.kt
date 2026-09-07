@@ -309,7 +309,7 @@ object ShelfImport {
             // deletes it) still holds the whole.
             if (!kitDir.copyRecursively(dest, overwrite = false)) {
                 dest.deleteRecursively()
-                throw IllegalStateException("could not move '$name' onto the shelf - nothing landed")
+                throw IllegalArgumentException("could not move '$name' onto the shelf - nothing landed")
             }
             kitDir.deleteRecursively()
         }
