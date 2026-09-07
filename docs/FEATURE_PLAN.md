@@ -207,7 +207,7 @@ free: the MPC warps loops itself when the tempo metadata is right.
 | W9 takes + the 30-day bin | ✓ done (CORE wave 3, `TakesBinScreen` on the phone as X2.3) | CORE + APP | S | trust feature; model in `:shell` |
 | W10 teach-the-machine | ✓ done in core (wave 3: `TeachLog`, the harness ingests it), wired into CHOP behind the consent switch SETUP draws (X4.4) | CORE + APP | S+S | ordinary use becomes classifier training data; needs a consent switch |
 | W11 one-file backup | ✓ done (CORE wave 3: `KitBackup`, CLI `backup`); the phone's share/backup action is X3.3, open | CORE | S | retention insurance |
-| W12 pad mini-waveforms | `PeaksPyramid` makes them free to draw. **Open:** the PAD SHEET, TAPE, CHOP and SYNTH draw peaks already; the KIT grid's cells draw none yet | APP | S | perceived-polish per effort champion |
+| W12 pad mini-waveforms | ✓ done: `PadPeaks` (`:shell`, tested) reads every pad once per kit edit off the main thread and keeps 44 peak columns per slot, nothing more; `KitScreen`'s cells draw them centred in the pad's class colour under the name, a missing or unreadable file drawing nothing and breaking nothing | APP | S | perceived-polish per effort champion |
 
 **Rejected, with reasons:** stem separation (heavy ML, off-brand for an
 honest tool); our own time-stretch (the MPC warps better — W6 ships the
@@ -1383,7 +1383,7 @@ CORE wave 4: ✓ all six landed (2026-08-25) — total recall, pattern
 CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   auto slice-count, chop-all, kit merge, MIDI bridge, and the art
   wire-through (Z6.2 verdict: waveform default, rings runner-up).
-  Remaining on the bench: W12 pad waveforms (APP-only polish) ·
+  Remaining on the bench: ✓ W12 pad waveforms landed ·
   the Live III showing the tile (rides the next card session)
 
 CORE wave MM: ✓ all landed (2026-08-28) — the Capture Doctor. Hum
@@ -1584,7 +1584,7 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ M4 (F1.4, SoundPool not Oboe)
   ✓ M5 (F1.5 + F4.3) · ✓ Y3.3 SESSION export · open: F6.3 share flow, X3.3
     share/backup action
-  bench: W12 pad waveforms whenever polish is the mood
+  ✓ W12 pad waveforms on the KIT grid
 
 CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   directions. The smear (STN transient mask, peak-matched) as a rack
