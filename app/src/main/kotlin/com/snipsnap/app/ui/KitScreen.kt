@@ -101,10 +101,12 @@ fun KitScreen(
     LaunchedEffect(entry.kit) { player.load(entry) }
     // W12: every pad's mini-waveform, read off the main thread once per
     // kit edit (the same `kit` identity the SoundPool reload keys on) and
-    // kept as columns only. Empty until the read lands, so a fresh kit
-    // draws its names first and its shapes a blink later.
+    // kept as columns only. Cleared first, so neither a fresh kit nor an
+    // edited one ever shows a shape that isn't its own: names first, the
+    // shapes a blink later.
     var padPeaks by remember(entry.dir) { mutableStateOf<Map<Int, List<PeaksPyramid.Column>>>(emptyMap()) }
     LaunchedEffect(entry.kit) {
+        padPeaks = emptyMap()
         padPeaks = withContext(Dispatchers.IO) { PadPeaks.forKit(entry.kit, entry.dir) }
     }
 
@@ -499,10 +501,10 @@ private fun PadCell(
 
 /**
  * The mini-waveform behind a pad's name (W12): [PadPeaks.COLUMNS] bars
- * of real min/max magnitude across the cell, centred, using the middle
- * 60% of the height so the tag above and the name below stay clear.
- * Sized in fractions of the cell, not dp, so the shape scales with the
- * grid on any width.
+ * of real min/max magnitude across the cell, each bar centred in its
+ * own step and the whole band centred on the middle 60% of the height so
+ * the tag above and the name below stay clear. Sized in fractions of the
+ * cell, not dp, so the shape scales with the grid on any width.
  */
 @Composable
 private fun PadWaveform(peaks: List<PeaksPyramid.Column>, color: Color, modifier: Modifier = Modifier) {
@@ -510,7 +512,8 @@ private fun PadWaveform(peaks: List<PeaksPyramid.Column>, color: Color, modifier
         val n = peaks.size
         if (n == 0 || size.width <= 0f || size.height <= 0f) return@Canvas
         val step = size.width / n
-        val barWidth = (step * 0.6f).coerceAtLeast(1f)
+        val barWidth = (step * 0.6f).coerceIn(1f, step)
+        val inset = (step - barWidth) / 2f
         val mid = size.height * 0.5f
         val amp = size.height * 0.30f
         for ((i, col) in peaks.withIndex()) {
@@ -518,7 +521,7 @@ private fun PadWaveform(peaks: List<PeaksPyramid.Column>, color: Color, modifier
             val bottom = mid - col.min.coerceIn(-1f, 1f) * amp
             drawRect(
                 color = color,
-                topLeft = Offset(i * step, top),
+                topLeft = Offset(i * step + inset, top),
                 size = Size(barWidth, (bottom - top).coerceAtLeast(1f)),
             )
         }
