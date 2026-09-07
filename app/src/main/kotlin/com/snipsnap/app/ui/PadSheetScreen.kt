@@ -490,6 +490,16 @@ fun PadSheetScreen(
         val currentSnip = snip
         if (m == null || currentSnip == null) return
         val p = m.kit.pad(slot) ?: return
+        // The two refusals a thumb can cause get their own lines, before any work starts;
+        // anything else the builder refuses says exactly why, law 3.
+        if (currentSnip.durationSeconds < PadFromAnything.MIN_SOURCE_SEC) {
+            onToast(Copy.PAD_TOO_SHORT)
+            return
+        }
+        if (currentSnip.durationSeconds > PadFromAnything.MAX_SOURCE_SEC) {
+            onToast(Copy.PAD_TOO_LONG)
+            return
+        }
         val padName = Names.sanitizeStem("${m.kit.name}_${p.displayName}_Pad")
         val spec = PadMaker.spec(pendingDepth, pendingBloom, kotlin.random.Random.nextLong(0L, 1_000_000L))
         scope.launch {
@@ -502,7 +512,7 @@ fun PadSheetScreen(
                 onToast(Copy.PAD_MADE)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                if (e is IllegalArgumentException) onToast(Copy.PAD_TOO_SHORT) else failure("PAD", e)
+                failure("PAD", e)
             } finally {
                 busy = false
             }
