@@ -224,7 +224,23 @@ object OneNote {
         }
         dataDir.deleteRecursively()
         dataDir.mkdirs()
-        for ((stem, snip) in samples) WavWriter.write(File(dataDir, "$stem.wav"), snip)
+        // Every zone's WAV carries its own sampler sheet - the root the
+        // program plays it at and its sustain loop, if it has one - so the
+        // sample loaded on its own at the MPC, outside this program, arrives
+        // tuned and looping. Read back from the program, the one source of
+        // truth for both.
+        val sheet = program.keygroups.flatMap { kg ->
+            kg.layers.map { layer -> layer.sampleName to (kg.rootNote to layer.loopStartFrame) }
+        }.toMap()
+        for ((stem, snip) in samples) {
+            val smpl = sheet[stem]?.let { (root, loopStart) ->
+                com.snipsnap.audio.SmplChunk(
+                    root,
+                    if (loopStart > 0L) com.snipsnap.audio.SmplChunk.Loop(loopStart, snip.frameCount.toLong()) else null,
+                )
+            }
+            WavWriter.write(File(dataDir, "$stem.wav"), snip, smpl = smpl)
+        }
         Mpc3TrackWriter().writeKeygroupTo(destRoot, program)
         KeygroupWriter().writeTo(dataDir, program)
         // The phone's own reading of the package, beside the hardware's.

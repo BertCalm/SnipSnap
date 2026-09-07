@@ -1378,6 +1378,18 @@ the `:shell` seams that wrap them for the phone, and the buttons.
 Bench (phone): beatbox a bar into ARM TAPE, SNIP, READ AS GROOVE — the kit
 plays it back; share a whole song in, DIG, INSTANT KIT — the break is a kit.
 
+## Wave AAA — the sample carries its own sheet (CORE)
+
+MPC compatibility, the one enhancement that waits on no bench: a pitched
+or looped WAV carries its root note and sustain loop inside itself, so
+loaded on its own at the MPC — from the card's browser, outside any
+program — it arrives tuned and looping instead of at C3 and one-shot.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| AAA1 | ✓ done: `SmplChunk` (`:audio`, tested) — the RIFF `smpl` chunk's root note and one forward loop (frames, exclusive end; the chunk's inclusive end converted both ways); `WavWriter.write(…, smpl =)` opt-in, the chunk between `fmt` and `data`, the RIFF size honest, a write without one byte-identical to before; `WavReader.readSmpl` reads it back or null, a malformed sheet never a wrong one. `OneNote.writePackage` writes every zone's sheet from the program (root per keygroup, loop per layer), so one-note, multisample and PAD FROM ANYTHING packages all carry it | CORE | S | root and loop round-trip; audio untouched; RIFF size counts the chunk; refusals for a root off the keyboard and a loop past the sample; a looped zone's WAV reads back its root and loop, a pluck's the root alone |
+| AAA2 | Bench: load a zone WAV from `Held Keys_[TrackData]/` on the Live III on its own (not the program) — does it play at its root and loop? Note either way; if the MPC ignores the sheet, the sheet still costs nothing | USER | S | yes/no on hardware |
+
 ## Sequence
 
 ```
@@ -1603,6 +1615,8 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
     share/backup action
   ✓ W12 pad waveforms on the KIT grid
   ✓ wave ZZ (the phone reads): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE
+  ✓ wave AAA1 (the sample carries its own sheet): smpl root + loop in
+    every instrument zone WAV · bench: AAA2 standalone load on the Live III
 
 CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   directions. The smear (STN transient mask, peak-matched) as a rack
