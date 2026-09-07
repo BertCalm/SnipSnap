@@ -17,7 +17,7 @@ browser with `support.js` beside it, or seed them back onto a canvas.
 | `Rooms.dc.html` | THE SHELF with a ROOMS section; a held row revealing FORGET → BIN |
 | `DirectionB.dc.html` | *Not chosen* — a five-chip workshop selector |
 | `DirectionC.dc.html`, `WorkshopScreen.dc.html` | *Not chosen* — a short sheet plus a second screen; two ideas kept for A |
-| `TripIdle` · `TripListening` · `TripSending` · `TripBack` · `TripRefused` | **OUTSIDE, state by state** (page three): the box alone through a trip — idle, the mic open, the sweep out, back and measured, refused. Drawn from the code after wave DDD; the note names two small gaps for the code to close (the measured line on an LCD; KEEP ROOM lit in lcd-alt) |
+| `TripIdle.dc.html`, `TripListening.dc.html`, `TripSending.dc.html`, `TripBack.dc.html`, `TripRefused.dc.html` | **OUTSIDE, state by state** (page three): the box alone through a trip — idle, the mic open, the sweep out, back and measured, refused. Drawn from the code after wave DDD; the note names two small gaps for the code to close (the measured line on an LCD; KEEP ROOM lit in lcd-alt) |
 | `LandingSkips.dc.html`, `LandingRefused.dc.html` | **The landing's message box** (page four, wave FFF): a kit file with one skip; a share the shelf refused. Built blind, drawn here to check it — the refusal's long line moved the box's line cap from two to three |
 
 The spec note on `canvas.json` (page one, `spec`) is the handoff for Compose:
