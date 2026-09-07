@@ -311,6 +311,7 @@ class SeparateTest {
         assertEquals(toneIn, probe(skimmed.samples, 400f), toneIn * 0.05f, "the tone under the floor is as it was")
         assertTrue(clickProminence(skimmed.samples, clickAt) < clickProminence(mix.samples, clickAt), "the clicks above the floor still go")
         assertTrue(!skimmed.samples.contentEquals(full.samples), "a floor is not the full smear")
+        assertTrue(Separate.smear(mix, 1f, aboveHz = rate.toFloat()) === mix, "a floor above Nyquist is the input itself")
         assertFailsWith<IllegalArgumentException> { Separate.smear(mix, 1f, aboveHz = -1f) }
     }
 }

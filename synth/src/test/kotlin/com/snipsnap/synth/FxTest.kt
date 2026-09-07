@@ -398,6 +398,8 @@ class FxTest {
         assertTrue(Snip(swelled.samples.copyOfRange(0, rise * ch), ch, snare.sampleRate).peak() <= snare.peak() * Swell.SWELL_LEVEL * 1.001f, "the swell sits under the hit")
         assertTrue(Swell.process(snare, mapOf("RISE" to 0f)) === snare, "no rise, no swell")
         assertTrue(Swell.process(snare, mapOf("RISE" to 0.02f)) === snare, "a rise too short to stretch is honest silence, not a click")
+        val blip = Snip(FloatArray(20) { if (it < 2) 0.5f else 0f }, 1, 44_100)
+        assertTrue(Swell.process(blip, mapOf("RISE" to 1f)) === blip, "a head too short for any stretch is transparent, never a throw")
     }
 
     @Test

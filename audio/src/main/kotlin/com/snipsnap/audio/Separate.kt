@@ -124,6 +124,8 @@ object Separate {
         val t = stnMasks(snip).transients
         val gains = FloatArray(Spectral.BINS)
         val firstBin = (0 until Spectral.BINS).firstOrNull { Spectral.binHz(it, snip.sampleRate) >= aboveHz } ?: Spectral.BINS
+        // A floor above the top bin leaves nothing to smear: transparent means the input itself, not a round trip.
+        if (firstBin >= Spectral.BINS) return snip
         val out = Spectral.process(snip) { ch, f, _ ->
             val mask = t[ch][f]
             for (b in 0 until firstBin) gains[b] = 1f

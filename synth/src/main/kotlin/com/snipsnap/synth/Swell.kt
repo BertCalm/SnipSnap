@@ -50,6 +50,8 @@ object Swell {
             .coerceAtLeast(1)
         val head = Snip(snip.samples.copyOfRange(0, headFrames * snip.channels), snip.channels, snip.sampleRate)
         val factor = (rise.toFloat() / headFrames).coerceIn(Stretch.MIN_FACTOR, Stretch.MAX_FACTOR)
+        // A head so short that even the deepest stretch can't fill one window has no swell in it: transparent, never a throw.
+        if (headFrames * factor <= Stretch.WINDOW) return snip
         val wash = Stretch.stretch(head, factor, SEED).let { if (snip.channels == 1) Cleanup.toMono(it) else it }
         val ch = snip.channels
         val swell = FloatArray(rise * ch)
