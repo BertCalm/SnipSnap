@@ -65,6 +65,9 @@ private const val MIN_HOLD_MS = 150L
 
 private fun padTag(slot: Int): String = "A%02d".format(slot)
 
+/** Which gesture's commit is in flight, if any — drives the busy label on each control. */
+private enum class Gesture { GRAB, HOLD }
+
 /**
  * Serializes the open→assign→save sequence across every [PadCaptureScreen]
  * instance — module-level (not `remember`ed), so it survives navigation.
@@ -104,25 +107,28 @@ fun PadCaptureScreen(
     appScope: CoroutineScope,
 ) {
     val scheme = LocalScheme.current
-    var grabbing by remember { mutableStateOf(false) }
+    var committing by remember { mutableStateOf<Gesture?>(null) }
     var holding by remember { mutableStateOf(false) }
     var holdStart by remember { mutableStateOf(0L) }
 
     // GRAB and HOLD are two producers of the same commit: classify → the
     // mutex-serialized open/assign/save → the same success/null/error
-    // reporting. `grabbing` is the ONE guard both share, so a GRAB press
+    // reporting. `committing` is the ONE guard both share, so a GRAB press
     // mid-HOLD-commit (or vice versa) is a no-op, not a second write racing
     // the first — see captureWriteMutex's own KDoc for what a second writer
     // would otherwise clobber. `producer` runs on the IO dispatcher, same as
-    // the snapshot/DSP work it replaces.
+    // the snapshot/DSP work it replaces. Which [Gesture] is stashed only
+    // changes which control's busy label lights up — the guard/disable/
+    // finally-clear semantics are identical to the old shared boolean.
     fun commitToPad(
+        gesture: Gesture,
         successLabel: String,
         nothingLabel: String,
         failurePrefix: String,
         producer: suspend () -> Snip?,
     ) {
-        if (!armed || grabbing) return
-        grabbing = true
+        if (!armed || committing != null) return
+        committing = gesture
         appScope.launch {
             try {
                 val updated: Kit? = withContext(Dispatchers.IO) {
@@ -130,7 +136,7 @@ fun PadCaptureScreen(
                     val cls = Classifier.classify(snip).drumClass
                     captureWriteMutex.withLock {
                         val model = KitBuilderModel.open(entry.dir)
-                        model.assign(slot, snip, cls, "%s".format(cls))
+                        model.assign(slot, snip, cls, cls.name.replace('_', ' '))
                         model.save()
                         model.kit
                     }
@@ -152,14 +158,15 @@ fun PadCaptureScreen(
             } catch (e: Exception) {
                 onToast("$failurePrefix: ${e.message ?: e.javaClass.simpleName}")
             } finally {
-                grabbing = false
+                committing = null
             }
         }
     }
 
     fun grab() {
         commitToPad(
-            successLabel = "GRABBED → PAD $slot",
+            gesture = Gesture.GRAB,
+            successLabel = "GRABBED → PAD ${padTag(slot)}",
             nothingLabel = "NOTHING TO GRAB YET",
             failurePrefix = "GRAB FAILED",
         ) {
@@ -189,7 +196,8 @@ fun PadCaptureScreen(
             .toInt()
             .coerceIn(1, PadCapture.MAX_HOLD_FRAMES)
         commitToPad(
-            successLabel = "RECORDED → PAD $slot",
+            gesture = Gesture.HOLD,
+            successLabel = "RECORDED → PAD ${padTag(slot)}",
             nothingLabel = "NOTHING RECORDED",
             failurePrefix = "RECORD FAILED",
         ) {
@@ -254,17 +262,17 @@ fun PadCaptureScreen(
             PrimaryAction(label = "START MIC", enabled = true, onClick = onRequestArm)
         }
         PrimaryAction(
-            label = if (grabbing) "GRABBING…" else "GRAB",
-            enabled = armed && !grabbing,
+            label = if (committing == Gesture.GRAB) "GRABBING…" else "GRAB",
+            enabled = armed && committing == null,
             onClick = ::grab,
         )
         HoldRecordAction(
             label = when {
                 holding -> "RECORDING…"
-                grabbing -> "GRABBING…"
+                committing == Gesture.HOLD -> "PLACING…"
                 else -> "HOLD TO REC"
             },
-            enabled = armed && !grabbing,
+            enabled = armed && committing == null,
             onPress = ::startHold,
             onRelease = ::endHold,
         )
