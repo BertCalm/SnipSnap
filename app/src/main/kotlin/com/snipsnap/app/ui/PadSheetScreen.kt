@@ -587,9 +587,11 @@ fun PadSheetScreen(
                     val send = OutsideSheet.send(m, slot, move)
                     val preRoll = OutsideSheet.preRollFrames(send.sampleRate)
                     val returned = OutsideSession.run(context, send, preRoll, OutsideSheet.listenFrames(send)) {
-                        outsideStage = Copy.OUTSIDE_SENDING
+                        // onSending fires on the IO thread; the stage is
+                        // Compose state, so the write hops back to the
+                        // composition's own (main) scope.
+                        scope.launch { outsideStage = Copy.OUTSIDE_SENDING }
                     }
-                    outsideStage = null
                     val o = OutsideSheet.apply(m, slot, move, returned, fraction, preRoll)
                     m.save()
                     o

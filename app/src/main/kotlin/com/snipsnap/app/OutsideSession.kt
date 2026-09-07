@@ -49,8 +49,9 @@ object OutsideSession {
      * [preRollFrames] are in; [onSending] fires on this thread as play
      * starts, for the status line. Returns the mono return. Throws
      * [IllegalStateException] when the device refuses the record or the
-     * track — the card shows the message, in the same shape every other
-     * failure takes.
+     * track, or a read fails partway — never a zero-padded return that
+     * would pass for a quiet room. The card shows the message, in the
+     * same shape every other failure takes.
      */
     fun run(
         context: Context,
@@ -79,12 +80,16 @@ object OutsideSession {
             var sending = false
             while (filled < listenFrames) {
                 val want = min(block.size, listenFrames - filled)
+                // A read that fails is a failed trip, never a quiet one: a
+                // zero-padded return would read as a room that went silent
+                // and skew the alignment and the tail cut. Fail fast, and
+                // say where it stopped.
                 val n = try {
                     record.read(block, 0, want, AudioRecord.READ_BLOCKING)
                 } catch (e: IllegalStateException) {
-                    break
+                    throw IllegalStateException("the mic died at $filled of $listenFrames frames", e)
                 }
-                if (n <= 0) break
+                check(n > 0) { "the mic stopped at $filled of $listenFrames frames (read returned $n)" }
                 System.arraycopy(block, 0, out, filled, n)
                 filled += n
                 if (!sending && filled >= preRollFrames) {
@@ -93,7 +98,6 @@ object OutsideSession {
                     track.play()
                 }
             }
-            check(filled >= preRollFrames + mono.size) { "the mic stopped early: $filled of $listenFrames frames" }
         } finally {
             runCatching { record.stop() }
             runCatching { record.release() }
