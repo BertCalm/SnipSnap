@@ -380,6 +380,9 @@ private fun TapeDeckContent(
                     .height(Layout.PRIMARY_ACTION_H.dp),
                 active = true,
             ) {
+                // Stop the transport as well as the voice: the deck would
+                // otherwise keep rolling silently under the busy overlay.
+                if (model.playing) model.togglePlay()
                 stopVoice()
                 val range = if (model.hasSelection) model.commitSelection() else null
                 onInstantKit(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))

@@ -70,6 +70,7 @@ import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.shell.TextureKits
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -346,18 +347,24 @@ fun App(shelf: KitShelf) {
         if (busy != null) return
         busy = "CHOPPING…"
         scope.launch {
-            val (entry, result) = try {
-                withContext(Dispatchers.IO) { shelf.instantKit(file, range) }
+            // `finally` owns the busy overlay: whichever way this leaves
+            // (built, refused, or the scope cancelled underneath it), the
+            // screen never stays stuck on CHOPPING….
+            try {
+                val (entry, result) = withContext(Dispatchers.IO) { shelf.instantKit(file, range) }
+                kits = withContext(Dispatchers.IO) { shelf.list() }
+                toast = Copy.instantKit(result.sliceCount, result.chokeSet)
+                open = entry
+                screen = AppScreen.KIT
+            } catch (e: CancellationException) {
+                // Leaving the screen is not a failure; let the scope have it.
+                throw e
             } catch (e: Exception) {
-                busy = null
+                // Law 3: when it breaks, say exactly what happened.
                 toast = "INSTANT KIT FAILED: ${e.message ?: e.javaClass.simpleName}"
-                return@launch
+            } finally {
+                busy = null
             }
-            kits = withContext(Dispatchers.IO) { shelf.list() }
-            busy = null
-            toast = Copy.instantKit(result.sliceCount, result.chokeSet)
-            open = entry
-            screen = AppScreen.KIT
         }
     }
 
