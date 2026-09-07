@@ -209,7 +209,18 @@ private fun RoomRow(room: Rooms.Room, onForget: (Rooms.Room) -> Unit) {
     var armed by remember(room.file) { mutableStateOf(false) }
     val ageDays = ((System.currentTimeMillis() - room.measuredAt) / (24L * 60 * 60 * 1000)).toInt()
     val age = if (ageDays <= 0) "TODAY" else "$ageDays D AGO"
-    val meta = "${room.lagMs.roundToInt()} MS · ${(room.confidence * 100).roundToInt()}% SURE · ${room.from.replace(':', ' ').uppercase(Locale.ROOT)} · $age"
+    // Built from the parts the sidecar actually held: a room whose sidecar
+    // was lost reads UNMEASURED and its age, never "0 MS · 0% SURE ·  ·".
+    val meta = buildList {
+        if (room.lagMs > 0f || room.confidence > 0f) {
+            add("${room.lagMs.roundToInt()} MS")
+            add("${(room.confidence * 100).roundToInt()}% SURE")
+        } else {
+            add("UNMEASURED")
+        }
+        if (room.from.isNotBlank()) add(room.from.replace(':', ' ').uppercase(Locale.ROOT))
+        add(age)
+    }.joinToString(" · ")
     Row(
         Modifier
             .fillMaxWidth()

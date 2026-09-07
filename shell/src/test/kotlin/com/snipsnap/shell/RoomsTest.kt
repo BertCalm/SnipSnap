@@ -91,8 +91,10 @@ class RoomsTest {
         // The sidecar moved with the WAV: frames and rate are still written down, and a field this
         // version never heard of survives the trip both ways.
         val binSide = File(Rooms.binDir(shelf), "FUNK ROOM.json")
-        assertTrue(binSide.isFile && binSide.readText().contains("\"frames\"") && binSide.readText().contains("\"binnedAt\""), binSide.readText())
-        binSide.writeText(binSide.readText().replaceFirst("{", "{\"stranger\": \"kept\", "))
+        assertTrue(binSide.isFile, "the sidecar moved into the bin")
+        val binText = binSide.readText()
+        assertTrue("\"frames\"" in binText && "\"binnedAt\"" in binText, binText)
+        binSide.writeText(binText.replaceFirst("{", "{\"stranger\": \"kept\", "))
 
         // 29 days on, the sweep leaves it; 31 days on, it is gone for good.
         assertEquals(0, Rooms.sweepBin(shelf, nowMillis = 10_000L + 29L * 24 * 60 * 60 * 1000))
