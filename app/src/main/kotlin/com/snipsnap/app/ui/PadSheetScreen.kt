@@ -414,7 +414,15 @@ fun PadSheetScreen(
     var roomsRevision by remember { mutableIntStateOf(0) }
     LaunchedEffect(entry.dir, roomsRevision) {
         val root = entry.dir.parentFile ?: entry.dir
-        rooms = withContext(Dispatchers.IO) { runCatching { Rooms.list(root) }.getOrDefault(emptyList()) }
+        rooms = withContext(Dispatchers.IO) {
+            try {
+                Rooms.list(root)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
     }
     val mutateKnob = MutateSheet.knobFor(MutateSheet.modeFor(mutateMode))
     var pendingMutateKnob by remember(slot, mutateMode) {

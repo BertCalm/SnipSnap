@@ -74,7 +74,12 @@ object Rooms {
         val stem = Names.sanitizeStem(baseName.uppercase(java.util.Locale.ROOT)).let { if (it.endsWith(" ROOM")) it else "$it ROOM" }
         val name = freshName(dir, stem)
         val wav = File(dir, "$name.wav")
-        WavWriter.write(wav, impulse)
+        // Rendered whole, then landed by write-then-rename: a process killed
+        // mid-write must not leave a truncated file that still reads RIFF…WAVE
+        // and lists as a room. The WAV lands before its sidecar, so a sidecar
+        // never vouches for a room that is not there.
+        val bytes = java.io.ByteArrayOutputStream().also { WavWriter.write(it, impulse) }.toByteArray()
+        AtomicFile.writeBytes(wav, bytes)
         val meta = JsonValue.Obj(
             linkedMapOf<String, JsonValue>(
                 "version" to JsonValue.Num(VERSION.toDouble()),
