@@ -76,17 +76,19 @@ object KitBackup {
             ZipFile(backupFile).use { zip ->
                 // One lazy pass keeping only the .xpn names, never every entry
                 // the archive declares: a backup may come from a stranger.
-                val names = mutableListOf<String>()
+                val names = LinkedHashSet<String>()
                 val all = zip.entries()
                 while (all.hasMoreElements()) {
                     val e = all.nextElement()
                     if (e.isDirectory || !e.name.endsWith(".xpn", ignoreCase = true)) continue
-                    names += e.name
+                    // A name twice is a crafted archive, not a backup: which of
+                    // the two would be the kit? Refuse rather than guess.
+                    require(names.add(e.name)) { "$backupFile holds '${e.name}' twice - refused" }
                     require(names.size <= MAX_KITS) { "$backupFile declares more than $MAX_KITS kits - refused" }
                 }
                 require(names.isNotEmpty()) { "no .xpn kits inside $backupFile - not a SnipSnap backup?" }
                 for (name in names.sorted()) {
-                    val entry = zip.getEntry(name)
+                    val entry = zip.getEntry(name) ?: throw IllegalArgumentException("$backupFile lost '$name' between listing and reading")
                     val xpn = File(temp, File(entry.name).name)
                     zip.getInputStream(entry).use { src ->
                         xpn.outputStream().use {

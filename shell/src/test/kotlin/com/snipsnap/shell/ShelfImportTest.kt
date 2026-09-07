@@ -43,6 +43,36 @@ class ShelfImportTest {
         return dir
     }
 
+    /**
+     * A ZIP written by hand - stored entries, no compression - because
+     * [ZipOutputStream] refuses to write one name twice, and a crafted
+     * archive from a stranger would not.
+     */
+    private fun rawZip(out: File, entries: List<Pair<String, ByteArray>>) {
+        val body = java.io.ByteArrayOutputStream()
+        val central = java.io.ByteArrayOutputStream()
+        fun java.io.ByteArrayOutputStream.u16(v: Int) { write(v and 0xff); write((v ushr 8) and 0xff) }
+        fun java.io.ByteArrayOutputStream.u32(v: Long) { for (i in 0 until 4) write(((v ushr (8 * i)) and 0xff).toInt()) }
+        for ((name, data) in entries) {
+            val crc = java.util.zip.CRC32().apply { update(data) }.value
+            val nameBytes = name.toByteArray(Charsets.UTF_8)
+            val offset = body.size().toLong()
+            body.u32(0x04034b50); body.u16(20); body.u16(0); body.u16(0); body.u16(0); body.u16(0)
+            body.u32(crc); body.u32(data.size.toLong()); body.u32(data.size.toLong())
+            body.u16(nameBytes.size); body.u16(0); body.write(nameBytes); body.write(data)
+            central.u32(0x02014b50); central.u16(20); central.u16(20); central.u16(0); central.u16(0); central.u16(0); central.u16(0)
+            central.u32(crc); central.u32(data.size.toLong()); central.u32(data.size.toLong())
+            central.u16(nameBytes.size); central.u16(0); central.u16(0); central.u16(0); central.u16(0); central.u32(0)
+            central.u32(offset); central.write(nameBytes)
+        }
+        val cdOffset = body.size().toLong()
+        val cd = central.toByteArray()
+        body.write(cd)
+        body.u32(0x06054b50); body.u16(0); body.u16(0); body.u16(entries.size); body.u16(entries.size)
+        body.u32(cd.size.toLong()); body.u32(cdOffset); body.u16(0)
+        out.writeBytes(body.toByteArray())
+    }
+
     private fun zipDir(dir: File, out: File) {
         ZipOutputStream(out.outputStream()).use { zip ->
             dir.walkTopDown().filter { it.isFile }.sortedBy { it.path }.forEach { f ->
@@ -91,6 +121,28 @@ class ShelfImportTest {
         assertEquals("FUNK 2", KitStore.load(again.kits.single().second).name, "kit.json follows the folder")
         assertEquals(listOf("FUNK", "FUNK 2"), KitStore.list(shelf).map { it.name })
         assertTrue(shelf.listFiles()!!.none { it.name.startsWith(ShelfImport.STAGING_DIR) }, "staging is gone")
+    }
+
+    @Test
+    fun `a backup that holds one kit twice is refused, not imported twice`() {
+        val source = File(temp, "src7")
+        val kitDir = makeKit(source, "TWIN")
+        val kit = KitStore.load(kitDir)
+        val xpn = File(temp, "TWIN.xpn")
+        XpnPackager.write(kit, kitDir, xpn, Exporters.defaultMeta(kit))
+        val bytes = xpn.readBytes()
+
+        val crafted = File(temp, "crafted-backup.zip")
+        rawZip(crafted, listOf("TWIN.xpn" to bytes, "TWIN.xpn" to bytes))
+        val shelf = File(temp, "shelf7")
+        val e = assertFailsWith<IllegalArgumentException> { ShelfImport.land(crafted, "crafted-backup.zip", shelf) }
+        assertTrue(e.message!!.contains("twice"), e.message)
+        assertTrue(KitStore.list(shelf).isEmpty(), "nothing landed")
+
+        // The same archive with the name once is an honest backup and lands.
+        val honest = File(temp, "honest-backup.zip")
+        rawZip(honest, listOf("TWIN.xpn" to bytes))
+        assertEquals(listOf("TWIN"), ShelfImport.land(honest, "honest-backup.zip", shelf).kits.map { it.first })
     }
 
     @Test
@@ -233,6 +285,14 @@ class ShelfImportTest {
         ShelfImport.unzipSafely(zip, roomy, maxBytes = 6_000)
         assertEquals(3_000L, File(roomy, "a/one.bin").length())
         assertEquals(3_000L, File(roomy, "a/two.bin").length())
+
+        // One name twice, from a hand-written archive: refused, never the second over the first.
+        val twice = File(temp, "twice.zip")
+        rawZip(twice, listOf("a/one.bin" to ByteArray(5) { 1 }, "a/one.bin" to ByteArray(5) { 2 }))
+        val dupDest = File(temp, "dup").apply { mkdirs() }
+        val dup = assertFailsWith<IllegalArgumentException> { ShelfImport.unzipSafely(twice, dupDest) }
+        assertTrue(dup.message!!.contains("twice"), dup.message)
+        assertTrue(File(dupDest, "a/one.bin").readBytes().all { it == 1.toByte() }, "the first landed, the second never replaced it")
 
         // Two entries under a ceiling of one: refused by count, whatever the bytes.
         val crowded = File(temp, "crowded").apply { mkdirs() }
