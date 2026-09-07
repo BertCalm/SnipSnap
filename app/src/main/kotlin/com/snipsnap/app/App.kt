@@ -876,6 +876,13 @@ fun App(shelf: KitShelf) {
                                 }
                             },
                         )
+                        AppScreen.SURFACE -> SurfaceScreen(
+                            entry = open,
+                            onToast = { toast = it },
+                            // A print is a snip on the shelf: the same reload
+                            // request a share-sheet import raises.
+                            onPrinted = { importCount++ },
+                        )
                         AppScreen.PLAY -> PlayScreen(entry = open)
                         AppScreen.HELP -> HelpScreen()
                         AppScreen.GROOVE -> GrooveScreen(

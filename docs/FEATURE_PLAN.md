@@ -1410,6 +1410,27 @@ now, each pairing named on failure.
 | BBB4 | ✓ done: the sidecars under mutation, round three — `SidecarFuzzTest` (`:shell`) reads the kit, the grooves, the instrument, the pocket, the teach log, the pad recipe and the fx chain back under two kinds of damage: torn bytes (flips, truncation, zero and 0xFF runs) and rewritten trees (a random node swapped for null / a string / a huge, negative or fractional number / an empty array or object / a boolean, or a key dropped); a valid parse or a typed refusal, the teach log never throwing at all, and the parser refusing a nesting attack in words. Found and fixed: `GrooveStore` trusted its casts (a torn `lengthPulses` was an NPE, a string `bars` a `ClassCastException`); `KitStore` cast chain boundaries. Both read through the typed accessors now | CORE | S | no untyped throwable in any batch, inside the hang bound |
 | BBB5 | ✓ done: the containers under mutation, round four — `ContainerFuzzTest` (`:kit`) damages *inside* the wrapper so the mutation reaches the reader that matters: the `.xpm` program XML inside a sound `.xpn` (round one tore the zip, and the XML parser never saw a bad byte), the JSON payload inside a sound ACVS container, the `.sfz` text (lines dropped, doubled, tokens swapped for `1e300` / `../../escaped` / empty), the backup zip, the answer sidecar, the WAV header walker, and the two name parsers over any string; `SidecarFuzzTest` adds the three pad-sheet readers (never throw at all) and the label. Found and fixed: `AnswerStore` trusted its casts (a dropped `seed` was an NPE) — typed accessors now. Nothing climbs out: every batch checks no `escaped.*` landed anywhere | CORE | S | no untyped throwable in any batch, inside the hang bound; no escaped file |
 
+## Wave CCC — the Surface (APP + CORE)
+
+A pad you *play the sound of*, not the sound: the open kit's first pad
+loops under a finger and where the finger is drives pitch, filter and
+drive — two axes, three with a pinch, four as a vector morph between
+corner states — with the phone's roll riding along. PRINT is the SP-404
+move: the master bus is copied into RAM while you play and lands on
+TAPE as one plain sample, so the performance costs nothing to play back
+later. The arithmetic (axes, pinch depth, corner weights, the one-pole
+smoother) is pure JVM and tested; the engine is the repo's one native
+library — Oboe under a C++ callback, because a finger wants its sound
+under 10 ms and AudioTrack's blocking-write clock is the opposite trade.
+The Android side is written blind for CI's compiler, as :app always is.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| CCC1 | ✓ done: `TouchSurface` (`:shell`) — `read(mode, touches, w, h, previous)`: X across, Y up, both on the rails; XYZ takes Z as the first two fingers' distance over the pad's diagonal and *holds* it when the pinch finger lifts (letting go of a knob is not turning it to zero); MORPH weights the puck bilinearly over A (top-left) B C D, each corner exactly 1 at its corner, the centre a quarter each, always summing to 1; `Smoother` the one-pole `y += k(x−y)` with `coefficient(cutoffHz, rateHz)`; `SmoothedReading` for the painted puck | CORE | S | corners, centre, rails, the held Z, the sum-to-one sweep, the coefficient at one time constant, a zero-size pad refused in words |
+| CCC2 | ✓ done: the engine — `app/src/main/cpp`: `SurfaceEngine` on Oboe (LowLatency, Exclusive, float stereo, two bursts); a `SpscRing<ControlFrame, 64>` from the UI thread to the callback (a full ring drops the frame, the next is milliseconds away), corner states as atomics, a sample swap by pointer handshake (the audio thread frees nothing); `ParameterSmoother` per macro at ~10 Hz and the gate at 50 Hz, per sample; one looping voice with linear interpolation repitched by file rate over stream rate times ±1 octave, a soft clip with its make-up baked in, a trapezoidal SVF whose trig runs every 32 samples; `PrintBuffer` armed on the UI thread to a frame ceiling, written by the callback while Recording, the callback always making the last write (Stopping → Done), read on the UI thread only after Done | APP | M | bench: no dropouts through a fast gesture on a mid-range phone; a route change restarts the stream (needsRestart); the print reads back as what was heard |
+| CCC3 | ✓ done: the bridge — `NativeSurface` (JNI, `libsnipsnap_surface`), `SurfaceEngine.kt` the owner (start/stop/close idempotent, stereo folded to mono on load, `armPrint`/`stopPrint` as a `Snip` at the device rate), `TiltSource` (gravity along X: flat 0.5, a quarter turn 0 or 1); Gradle: NDK pinned, CMake 3.22.1, prefab, `com.google.oboe:oboe:1.9.0` — the only native dependency | APP | S | the app assembles in CI with the native library; a print lands via `SnipStore.import` |
+| CCC4 | ✓ done: SURFACE on the menu — `SurfaceScreen`: XY / XYZ / MORPH segments, PRINT / STOP PRINT, the LCD pad (grid, crosshair, puck, the pinch ring in XYZ, a weight bar per corner in MORPH), fingers in press order so a second finger never steals the puck, a frame loop that smooths at screen rate, paints from the smoothed value and sends the same value to the engine; a print lands on TAPE with "PRINTED n S TO TAPE." and TAPE re-reads (`importCount`); no kit → "OPEN A KIT. THE SURFACE PLAYS ITS FIRST PAD." | APP | M | bench: play, print, find the print on TAPE and chop it; MORPH corners audibly distinct; the roll of the phone moves resonance |
+
 ## Sequence
 
 ```
@@ -1644,6 +1665,9 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ BBB5 (the Hardening, round four): the containers damaged inside the
     wrapper (xpm in xpn, payload in ACVS, sfz, backup zip, answer, WAV
     header, name parsers, pad sheets, label); the answer reader made typed
+  ✓ wave CCC (the Surface): the tactile pad over Oboe — XY / XYZ / MORPH,
+    the roll of the phone, PRINT to resample the gesture onto TAPE ·
+    bench: dropouts, the route change, the print heard back
 
 CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   directions. The smear (STN transient mask, peak-matched) as a rack
