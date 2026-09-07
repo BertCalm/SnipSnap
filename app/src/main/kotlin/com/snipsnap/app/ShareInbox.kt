@@ -1,8 +1,11 @@
 package com.snipsnap.app
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.provider.OpenableColumns
+import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +41,55 @@ object ShareInbox {
     /** The import is done (or refused): nothing waits any more. */
     fun consume() {
         _pending.value = null
+    }
+
+    /** The file's own name as the sharing app knows it, else the URI's last segment, else a stand-in. */
+    fun displayName(context: Context, uri: Uri): String {
+        val fromProvider = runCatching {
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                val col = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (col >= 0 && c.moveToFirst()) c.getString(col) else null
+            }
+        }.getOrNull()
+        return fromProvider?.takeIf { it.isNotBlank() }
+            ?: uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+            ?: "shared"
+    }
+
+    /** The first [count] bytes of the share, fewer when the file is shorter, for sniffing its kind. */
+    fun head(context: Context, uri: Uri, count: Int): ByteArray {
+        val stream = context.contentResolver.openInputStream(uri)
+            ?: throw IllegalArgumentException("the shared file could not be opened")
+        return stream.use { s ->
+            val b = ByteArray(count)
+            var n = 0
+            while (n < count) {
+                val r = s.read(b, n, count - n)
+                if (r < 0) break
+                n += r
+            }
+            b.copyOf(n)
+        }
+    }
+
+    /**
+     * A local copy of the share under `cacheDir/landing/`, named after the
+     * file (flattened to a bare, plain name), bounded at [maxBytes] - the
+     * shelf's importers want a real file, and a content URI is not one.
+     */
+    fun copyToCache(context: Context, uri: Uri, displayName: String, maxBytes: Long): File {
+        val dir = File(context.cacheDir, "landing").apply { mkdirs() }
+        val bare = displayName.substringAfterLast('/').substringAfterLast('\\')
+        val safe = bare.replace(Regex("[^A-Za-z0-9._ \\-\\[\\]]"), "_").ifBlank { "shared" }
+        val out = File(dir, safe)
+        val stream = context.contentResolver.openInputStream(uri)
+            ?: throw IllegalArgumentException("the shared file could not be opened")
+        stream.use { src ->
+            out.outputStream().use { dst ->
+                com.snipsnap.mpc3.LimitedRead.copy(src, dst, limit = maxBytes, what = "the shared file")
+            }
+        }
+        return out
     }
 
     private fun uriOf(intent: Intent?): Uri? {

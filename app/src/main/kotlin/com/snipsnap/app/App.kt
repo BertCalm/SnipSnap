@@ -69,6 +69,7 @@ import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Personality
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.ShelfImport
 import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.shell.TextureKits
@@ -86,6 +87,8 @@ private const val PREF_PERSONALITY = "personality"
 private const val PREF_TEACH = "teach"
 /** The Bubble's overlay-permission offer (Task 5) — asked once, ever. */
 private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
+/** The most a shared kit file may be before it is copied for the shelf: a whole backup fits, a video never needs to. */
+private const val LANDING_MAX_BYTES = 512L * 1024 * 1024
 
 /**
  * TAPE's COMMIT sets this; CHOP reads it. [sourceFile] is the exact WAV
@@ -317,6 +320,33 @@ fun App(shelf: KitShelf) {
         val ownsBusy = busy == null
         if (ownsBusy) busy = Copy.IMPORT_BUSY
         try {
+            // The bytes decide what the share is: a kit file (a .xpn, a
+            // backup, an MPC track zipped with its folder) lands on the
+            // shelf through ShelfImport; everything else is a sound for
+            // the deck. The MIME a messenger attaches is not consulted.
+            val name = withContext(Dispatchers.IO) { ShareInbox.displayName(context, uri) }
+            val kind = withContext(Dispatchers.IO) { ShelfImport.sniff(ShareInbox.head(context, uri, ShelfImport.SNIFF_BYTES)) }
+            if (ShelfImport.isKit(kind)) {
+                if (ownsBusy) busy = Copy.LANDING_BUSY
+                val (entries, skipped) = withContext(Dispatchers.IO) {
+                    val local = ShareInbox.copyToCache(context, uri, name, LANDING_MAX_BYTES)
+                    try {
+                        shelf.land(local, name)
+                    } finally {
+                        local.delete()
+                    }
+                }
+                ShareInbox.consume()
+                kits = withContext(Dispatchers.IO) { shelf.list() }
+                toast = Copy.landed(entries.size, skipped.size)
+                entries.firstOrNull()?.let { first ->
+                    open = first
+                    padSheetSlot = null
+                    takesBinOpen = false
+                    screen = AppScreen.KIT
+                }
+                return@LaunchedEffect
+            }
             val landed = withContext(Dispatchers.IO) {
                 val snip = MediaDecode.decode(context, uri)
                 SnipStore.import(snip, context.filesDir, System.currentTimeMillis())
@@ -488,6 +518,65 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * SHARE (F6.3): the open kit packed as one `.xpn` into the share cache
+     * and handed to the chooser. Preflight's refusal (a broken kit) comes
+     * back in words, like EXPORT's.
+     */
+    fun shareKit() {
+        val source = open ?: return
+        if (busy != null) return
+        busy = Copy.PACKING_BUSY
+        scope.launch {
+            try {
+                val file = withContext(Dispatchers.IO) { shelf.pack(source, ShareOut.shareDir(context)) }
+                busy = null
+                toast = if (ShareOut.send(context, file, ShareOut.ZIP_MIME, source.kit.name)) {
+                    Copy.kitPacked(source.kit.name)
+                } else {
+                    Copy.SHARE_NOWHERE
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                toast = "SHARE FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
+            }
+        }
+    }
+
+    /**
+     * BACKUP (X3.3): every kit on the shelf as one file, handed to the
+     * chooser - Drive, a cable, a messenger to yourself. The same file
+     * shared back in lands every kit again through the shelf's door.
+     */
+    fun backupShelf() {
+        if (busy != null) return
+        if (kits.isEmpty()) {
+            toast = Copy.BACKUP_EMPTY
+            return
+        }
+        busy = Copy.PACKING_BUSY
+        scope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) { shelf.backup(ShareOut.shareDir(context), System.currentTimeMillis()) }
+                busy = null
+                toast = if (ShareOut.send(context, result.file, ShareOut.ZIP_MIME, result.file.nameWithoutExtension)) {
+                    Copy.backedUp(result.packed.size, result.skipped.size)
+                } else {
+                    Copy.SHARE_NOWHERE
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                toast = "BACKUP FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
+            }
+        }
+    }
+
     /** IN KEY: every tonal pad into the kit's key by its tune fields; the toast counts what moved. */
     fun inKey() {
         val source = open ?: return
@@ -559,6 +648,7 @@ fun App(shelf: KitShelf) {
                                 toast = Copy.SNIPPED
                             },
                             onEject = { MicSessionService.eject(context) },
+                            onBackup = ::backupShelf,
                         )
                         AppScreen.KIT -> {
                             val sheetSlot = padSheetSlot
@@ -624,6 +714,7 @@ fun App(shelf: KitShelf) {
                                     onSetKey = ::setKey,
                                     onInKey = ::inKey,
                                     onTwins = ::evilTwins,
+                                    onShare = ::shareKit,
                                 )
                             }
                         }

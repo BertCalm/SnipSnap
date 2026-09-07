@@ -1,0 +1,235 @@
+package com.snipsnap.shell
+
+import com.snipsnap.kit.Kit
+import com.snipsnap.kit.KitBackup
+import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.Mpc3Importer
+import com.snipsnap.kit.XpnImporter
+import com.snipsnap.mpc3.LimitedRead
+import com.snipsnap.mpc3.Mpc3Project
+import java.io.File
+import java.util.zip.ZipFile
+
+/**
+ * The shelf's receiving door (F6.3, W3.3, X3.3's other half): a file
+ * shared into the app that is a *kit* rather than a sound lands on the
+ * shelf as one or more kit folders.
+ *
+ * What it reads, told apart by the bytes and not the name (a share sheet
+ * hands over MIME types that are wrong as often as right):
+ *
+ * - a **`.xpn`** — any ZIP holding an `.xpm` program — through
+ *   [XpnImporter.importAll], so a multi-kit pack lands every kit;
+ * - a **backup** — a ZIP of `.xpn`s, what BACKUP writes — through
+ *   [KitBackup.restore];
+ * - an **MPC 3 track or project** (`.xtd` / `.xpj`, gzip + ACVS) through
+ *   [Mpc3Importer]. A bare `.xtd` carries no samples — they live in the
+ *   `_[TrackData]/` folder beside it, which a single shared file cannot
+ *   bring — so the importer refuses it by name unless the track was
+ *   shared **zipped with its folder**, which this unpacks and imports.
+ *
+ * Landing is staged: every importer writes into a hidden staging folder
+ * under the shelf first, then each kit is moved onto the shelf under a
+ * name nothing there holds yet ("FUNK", then "FUNK 2"), with `kit.json`
+ * renamed to match — so an import can never overwrite a kit the user
+ * already has, and a half-failed import leaves nothing behind. Sounds
+ * ([Kind.AUDIO]) are not this door's business: the caller sends them to
+ * the tape deck.
+ */
+object ShelfImport {
+
+    enum class Kind {
+        /** A ZIP: a `.xpn` expansion, a backup of `.xpn`s, or an MPC track zipped with its folder — [land] looks inside. */
+        XPN,
+        /** A bare MPC 3 container (gzip + ACVS): a track or a project. */
+        MPC3,
+        /** A sound: WAV or a compressed file — the tape deck's, not the shelf's. */
+        AUDIO,
+        UNKNOWN,
+    }
+
+    /** What landed: each kit's name and folder, and what was skipped with the reason. */
+    data class Landed(val kits: List<Pair<String, File>>, val skipped: List<String>)
+
+    /** The staging folder's name under the shelf — hidden from the shelf's own listing (no `kit.json` at its top). */
+    const val STAGING_DIR = ".landing"
+
+    /** The most one ZIP may inflate to across all its entries. */
+    private const val MAX_UNZIP_BYTES = 512L * 1024 * 1024
+
+    /** How many bytes of a file's head decide its kind. */
+    const val SNIFF_BYTES = 12
+
+    /**
+     * What [head] (the file's first bytes, [SNIFF_BYTES] or fewer) is.
+     * ZIPs are opened to look inside only by [land]; here a ZIP is a ZIP.
+     */
+    fun sniff(head: ByteArray): Kind = when {
+        head.size >= 4 && head[0] == 'P'.code.toByte() && head[1] == 'K'.code.toByte() &&
+            head[2] == 3.toByte() && head[3] == 4.toByte() -> Kind.XPN
+        head.size >= 2 && head[0] == 0x1f.toByte() && head[1] == 0x8b.toByte() -> Kind.MPC3
+        head.size >= 12 && head[0] == 'R'.code.toByte() && head[1] == 'I'.code.toByte() &&
+            head[2] == 'F'.code.toByte() && head[3] == 'F'.code.toByte() &&
+            head[8] == 'W'.code.toByte() && head[9] == 'A'.code.toByte() &&
+            head[10] == 'V'.code.toByte() && head[11] == 'E'.code.toByte() -> Kind.AUDIO
+        head.size >= 3 && head[0] == 'I'.code.toByte() && head[1] == 'D'.code.toByte() && head[2] == '3'.code.toByte() -> Kind.AUDIO
+        head.size >= 2 && head[0] == 0xff.toByte() && (head[1].toInt() and 0xe0) == 0xe0 -> Kind.AUDIO
+        head.size >= 8 && head[4] == 'f'.code.toByte() && head[5] == 't'.code.toByte() &&
+            head[6] == 'y'.code.toByte() && head[7] == 'p'.code.toByte() -> Kind.AUDIO
+        else -> Kind.UNKNOWN
+    }
+
+    /** True when [kind] is the shelf's to land; false sends it to the deck or refuses it. */
+    fun isKit(kind: Kind): Boolean = kind == Kind.XPN || kind == Kind.MPC3
+
+    /**
+     * Land [file] (a local copy of what was shared, named [displayName]
+     * for the messages) on the shelf under [shelfRoot]. Throws
+     * [IllegalArgumentException] in words when nothing on the shelf can
+     * read it, or when it read as a kit but held none.
+     */
+    fun land(file: File, displayName: String, shelfRoot: File): Landed {
+        require(file.isFile) { "no such file: $file" }
+        val head = file.inputStream().use { s ->
+            val b = ByteArray(SNIFF_BYTES)
+            var n = 0
+            while (n < b.size) {
+                val r = s.read(b, n, b.size - n)
+                if (r < 0) break
+                n += r
+            }
+            b.copyOf(n)
+        }
+        shelfRoot.mkdirs()
+        val staging = File(shelfRoot, "$STAGING_DIR-${System.nanoTime()}")
+        staging.mkdirs()
+        try {
+            val kitDirs: List<File>
+            val skipped = mutableListOf<String>()
+            when (sniff(head)) {
+                Kind.XPN -> {
+                    val (dirs, why) = landZip(file, displayName, staging)
+                    kitDirs = dirs
+                    skipped += why
+                }
+                Kind.MPC3 -> {
+                    val project = Mpc3Project.read(file)
+                    if (project.isProject) {
+                        val r = Mpc3Importer.importProject(file, staging)
+                        kitDirs = r.kits.map { it.directory }
+                        skipped += r.skipped.map { "${it.key}: ${it.value}" }
+                    } else {
+                        kitDirs = listOf(Mpc3Importer.import(file, staging).directory)
+                    }
+                }
+                Kind.AUDIO -> throw IllegalArgumentException("'$displayName' is a sound, not a kit - the tape deck takes it")
+                else -> throw IllegalArgumentException(
+                    "nothing on the shelf can read '$displayName' - share a .xpn, a backup, or an MPC .xtd zipped with its folder",
+                )
+            }
+            require(kitDirs.isNotEmpty()) {
+                "'$displayName' held no kit" + if (skipped.isNotEmpty()) ": " + skipped.joinToString("; ") else ""
+            }
+            val landed = kitDirs.map { moveOntoShelf(it, shelfRoot) }
+            return Landed(landed, skipped)
+        } finally {
+            staging.deleteRecursively()
+        }
+    }
+
+    /** What a ZIP is by its entries, then the matching importer into [staging]. */
+    private fun landZip(file: File, displayName: String, staging: File): Pair<List<File>, List<String>> {
+        val names = ZipFile(file).use { zip -> zip.entries().toList().filter { !it.isDirectory }.map { it.name } }
+        fun has(ext: String) = names.any { it.endsWith(ext, ignoreCase = true) }
+        return when {
+            has(".xpn") -> KitBackup.restore(file, staging).map { it.directory } to emptyList()
+            has(".xpm") -> {
+                val r = XpnImporter.importAll(file, staging)
+                r.kits.map { it.directory } to r.skipped.map { "${it.first}: ${it.second}" }
+            }
+            has(".xtd") || has(".xpj") -> {
+                val unpacked = File(staging, "unpacked").apply { mkdirs() }
+                unzipSafely(file, unpacked)
+                val dirs = mutableListOf<File>()
+                val skipped = mutableListOf<String>()
+                val containers = unpacked.walkTopDown().filter { f ->
+                    f.isFile && (f.extension.equals("xtd", true) || f.extension.equals("xpj", true))
+                }.sortedBy { it.path }.toList()
+                for (c in containers) {
+                    try {
+                        val project = Mpc3Project.read(c)
+                        if (project.isProject) {
+                            val r = Mpc3Importer.importProject(c, staging)
+                            dirs += r.kits.map { it.directory }
+                            skipped += r.skipped.map { "${it.key}: ${it.value}" }
+                        } else {
+                            dirs += Mpc3Importer.import(c, staging).directory
+                        }
+                    } catch (e: IllegalArgumentException) {
+                        skipped += "${c.name}: ${e.message ?: "refused"}"
+                    }
+                }
+                dirs to skipped
+            }
+            else -> throw IllegalArgumentException(
+                "'$displayName' is a ZIP with no kit inside - no .xpn, no .xpm program, no .xtd",
+            )
+        }
+    }
+
+    /**
+     * Every entry of [zip] under [dest], each path checked to stay inside
+     * it (a `..` or an absolute name is an attack, not a layout), each
+     * entry and the whole bounded so an archive cannot fill the disk.
+     */
+    private fun unzipSafely(zip: File, dest: File) {
+        val root = dest.canonicalFile
+        var total = 0L
+        ZipFile(zip).use { z ->
+            for (entry in z.entries().toList()) {
+                if (entry.isDirectory) continue
+                val name = entry.name
+                val segments = name.split('/', '\\')
+                require(!name.contains('\u0000') && !name.startsWith("/") && !name.startsWith("\\") && segments.none { it == ".." }) {
+                    "unsafe entry escapes the ZIP: '$name'"
+                }
+                val out = File(dest, name)
+                require(out.canonicalPath.startsWith(root.path + File.separator)) { "entry escapes the ZIP: '$name'" }
+                out.parentFile?.mkdirs()
+                z.getInputStream(entry).use { src ->
+                    out.outputStream().use { dst ->
+                        LimitedRead.copy(src, dst, what = "ZIP entry $name")
+                    }
+                }
+                total += out.length()
+                require(total <= MAX_UNZIP_BYTES) { "the ZIP inflates past ${MAX_UNZIP_BYTES / (1024 * 1024)} MB - refused" }
+            }
+        }
+    }
+
+    /**
+     * [kitDir] out of staging onto the shelf under a name nothing there
+     * holds: the kit's own, else "NAME 2", "NAME 3"…; `kit.json`'s name
+     * follows the folder so the two never disagree.
+     */
+    private fun moveOntoShelf(kitDir: File, shelfRoot: File): Pair<String, File> {
+        val kit = KitStore.load(kitDir)
+        val base = kit.name.ifBlank { kitDir.name }
+        var name = base
+        var n = 2
+        while (File(shelfRoot, name).exists()) {
+            name = "$base $n"
+            n++
+        }
+        val dest = File(shelfRoot, name)
+        if (!kitDir.renameTo(dest)) {
+            kitDir.copyRecursively(dest, overwrite = false)
+            kitDir.deleteRecursively()
+        }
+        if (name != kit.name) KitStore.save(kit.copy(name = name), dest)
+        return name to dest
+    }
+
+    /** The kit a landed folder holds — for the caller's shelf refresh. */
+    fun kitOf(dir: File): Kit = KitStore.load(dir)
+}

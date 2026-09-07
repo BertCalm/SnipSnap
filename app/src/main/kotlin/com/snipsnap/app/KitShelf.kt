@@ -128,6 +128,41 @@ class KitShelf(private val root: File) {
     }
 
     /**
+     * SHARE: [source] packed as one `.xpn` under [outDir] (the share
+     * cache), ready for the chooser. Preflight refuses a broken kit in
+     * words, the same way EXPORT would.
+     */
+    fun pack(source: Entry, outDir: File): File {
+        val kit = KitStore.load(source.dir)
+        outDir.mkdirs()
+        return com.snipsnap.kit.XpnPackager.write(
+            kit, source.dir, File(outDir, "${kit.name}.xpn"), com.snipsnap.kit.Exporters.defaultMeta(kit), overwrite = true,
+        )
+    }
+
+    /**
+     * BACKUP: every kit on the shelf as one file under [outDir], each its
+     * own `.xpn` inside; kits preflight refuses are skipped and named.
+     */
+    fun backup(outDir: File, nowMillis: Long): com.snipsnap.kit.KitBackup.BackupResult {
+        outDir.mkdirs()
+        val stamp = java.text.SimpleDateFormat("yyyy-MM-dd HHmm", java.util.Locale.ROOT).format(java.util.Date(nowMillis))
+        return com.snipsnap.kit.KitBackup.backup(root, File(outDir, "SnipSnap Shelf $stamp.zip"), overwrite = true)
+    }
+
+    /**
+     * A kit file shared in - a `.xpn`, a backup, an MPC track zipped with
+     * its folder - landed on the shelf under names nothing here holds,
+     * through `ShelfImport`'s staged door; the entries for what landed,
+     * and what was skipped with the reason.
+     */
+    fun land(file: File, displayName: String): Pair<List<Entry>, List<String>> {
+        root.mkdirs()
+        val landed = com.snipsnap.shell.ShelfImport.land(file, displayName, root)
+        return landed.kits.map { (_, dir) -> Entry(dir, KitStore.load(dir)) } to landed.skipped
+    }
+
+    /**
      * Grow a texture kit from one pad of [source] onto the shelf — the KIT
      * screen's SCULPT / STRETCH panel. Same shape as [render]: seconds-long,
      * the caller shows a busy line; the new kit is a tape of its own, named

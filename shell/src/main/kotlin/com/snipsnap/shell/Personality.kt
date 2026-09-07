@@ -76,6 +76,19 @@ object Copy {
     const val IMPORT_BUSY = "IMPORTING…"
     const val IMPORT_NO_TAPE = "TAPED FROM OUTSIDE. MAKE A FRESH TAPE AND IT'S ON THE DECK."
     const val IMPORT_NOT_AUDIO = "NOTHING TO HEAR IN THAT. SHARE AUDIO OR A VIDEO WITH SOUND."
+    // SHARE, BACKUP, and kits landing on the shelf (F6.3, X3.3, W3.3).
+    const val PACKING_BUSY = "PACKING…"
+    const val LANDING_BUSY = "UNPACKING…"
+    /** SHARE: the kit is one file now and the chooser is up. */
+    fun kitPacked(kit: String): String = "$kit PACKED AS ONE FILE. PICK WHERE IT GOES."
+    /** BACKUP: every kit on one file; [skipped] the ones preflight refused, named in the file's own report. */
+    fun backedUp(packed: Int, skipped: Int): String =
+        "$packed ${if (packed == 1) "KIT" else "KITS"} ON ONE FILE." + (if (skipped > 0) " $skipped SKIPPED." else "") + " PICK WHERE IT GOES."
+    const val BACKUP_EMPTY = "NOTHING TO BACK UP. THE SHELF IS BARE."
+    const val SHARE_NOWHERE = "NOWHERE TO SEND IT. NO APP ON THIS PHONE TAKES A FILE."
+    /** A kit file landed: [landed] kits on the shelf, [skipped] refused and named in the toast's own words. */
+    fun landed(landed: Int, skipped: Int): String =
+        "$landed ${if (landed == 1) "KIT" else "KITS"} LANDED ON THE SHELF." + if (skipped > 0) " $skipped SKIPPED." else ""
     // The quick-settings tile.
     const val TILE_LABEL = "SNIPSNAP"
     const val TILE_IDLE = "TAP TO ARM"

@@ -64,6 +64,15 @@ shelf useful before capture (M1) exists.
   in an instrumentation test and assert `DecodeContract.verify` passes
   for all six — that is F3.3's exit test, and the first proof the codec
   loop reads the output format correctly on this phone.
+- **SHARE / BACKUP / a kit landing**: on KIT, SHARE should open the
+  chooser with `<Kit>.xpn`; on KITS, BACKUP with `SnipSnap Shelf <date>
+  .zip`. Send either to yourself (Drive, a messenger) and share it back
+  into SnipSnap: the kit lands beside the original as "NAME 2" (a backup
+  lands every kit) and KIT opens on it. Then zip an MPC-saved `.xtd`
+  with its `_[TrackData]` folder and share that in: it should land too,
+  while the bare `.xtd` alone refuses in words. If the chooser never
+  appears, check the `FileProvider` authority (`<applicationId>.files`)
+  against `res/xml/share_paths.xml`.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad
