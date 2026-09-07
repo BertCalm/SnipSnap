@@ -1477,6 +1477,7 @@ been heard on a phone; then it follows in one small PR.
 | EEE2 | ✓ done: `PadEngine` (`app/src/main/cpp`) — 32 voices, each a windowed, repitched, linearly interpolated read of a bank sample (mono or stereo), a 5 ms choke fade and a 20 ms panic fade, the quietest fading voice stolen first and the oldest after; the bank built on the UI thread and adopted whole by the callback (every voice silenced and reported), the same pointer handshake as the Surface; commands and endings on two lock-free rings; `OboeOutput.h` the one way both engines open a stream (Exclusive, then Shared) | APP | M | bench: no dropouts through a roll on a mid-range phone; a choke is a fade, not a click; a bank swap mid-roll is silence, not a crash |
 | EEE3 | ✓ done: PLAY over it — `PadEngine.kt` (bank read off the main thread through `WavReader`, hits through `PadHit`, `@Synchronized`, `close` idempotent); the reap timer and its two constants gone, replaced by a frame loop that drains the endings ring into `VoiceAllocator.voiceEnded`; the allocator built at `MAX_VOICES` so the status line and the engine cannot drift; a hit nothing loaded for is handed back to the allocator at once; ON_STOP still panics | APP | S | bench: finger drumming feels tight enough that you'd play it (the milestone's own exit test); VOICES counts down as one-shots end; a closed hat cuts an open one with no click |
 | EEE4 | KIT's grid onto the native engine — swap `PadPlayer` for `PadEngine` on the KIT screen once EEE3 has been heard | APP | S | bench: KIT's pads sound the same as PLAY's |
+| EEE5 | ✓ done: the engines under test — `app/src/main/cpp/test`, a host-built target (no NDK, no device; Oboe headers only, its two linked entry points stubbed) that drives both callbacks by hand: the ring keeps order and drops when full; the smoother glides, settles and snaps; the print buffer fills to its ceiling, refuses a re-arm while the callback may write, and lands Done on the callback; the pad engine plays the window at its gains, repitches by the ratio, reads stereo as stereo, fades a choke and an all-off, reports every ending, silences and reports every voice on a bank swap, never plays a stale command by index, waits for the retiree before a second swap, steals the oldest at the cap and says so; the Surface is silent until gated, prints the mono bus, and morphs between its corners. A third CI job (`native-tests`) runs it | CORE | S | 17 cases green on the host and in CI; every bug Copilot found in the native code now has a case that would have caught it |
 
 ## Sequence
 
@@ -1719,6 +1720,8 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ wave EEE (M4, the pads on the native engine): PadHit on the JVM,
     PadEngine under Oboe, PLAY over it with endings reported, not timed ·
     bench: tight enough to play; then EEE4 moves KIT's grid across
+  ✓ EEE5 (the engines under test): both native callbacks driven by hand
+    on the host, 17 cases, a third CI job
 
 CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   directions. The smear (STN transient mask, peak-matched) as a rack
