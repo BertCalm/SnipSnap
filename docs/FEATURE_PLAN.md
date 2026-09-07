@@ -1317,7 +1317,7 @@ over the spectral door, each with a real exit test.
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
 | WW1 | ✓ done: PAD FROM ANYTHING — `PadFromAnything` (`:kit`): stretch far (the clear stretch for a pitched source so its note stays a line, the wash for an unpitched one), the sample = the wash's first second (the arrival) + four seconds (the body) with the seam baked as a 0.75 s crossfade into the material before the loop start, written through the one-note package writer as a keygroup with loop points and a 0.6 release, both generations; DEPTH (×8..×100, giving where a minute or the loop demand it, the depth used reported) and BLOOM (0..1 s arrival ramp); an unpitched source is a drone at C3, never refused; CLI `pad <wav> \| <kit> <pad> [--depth] [--bloom]`; the pad sheet's PAD FROM ANYTHING card (`PadMaker` knobs, MAKE PAD ▸ INSTRUMENT beside MAKE INSTRUMENT's own door) | CORE + APP | M | the last frame equals the frame before the loop start and the level agrees across the wrap; the body of a 220 Hz source still detects 220 Hz; A3 at the root; a burst is a drone at C3 at the pad's ceiling; depth gives (8 s at ×40 → ×7.5, 50 ms → ×100), blips and 31 s sources refused; export lands `.xty` + `_[TrackData]/` with the loop in the `.xpm`; same seed same bytes |
-| WW2 | SPECTRAL RETUNE — every partial snapped to the nearest note of the kit's key, phases by PGHI | CORE | M–L | an off-key clang's peaks land on scale notes; a drum is refused as unpitched |
+| WW2 | ✓ done: SPECTRAL RETUNE — `Retune` (`:audio`): one long, fine FFT over the body finds the partials (local maxima 12 dB above their neighbourhood, within 40 dB of the loudest) and the tonalness (their share of the band's energy); each partial's ratio to its nearest in-key note is a plateau on the frequency axis joined by straight lines; every `Spectral` frame is resampled through the map in the log domain (a lobe keeps its parabolic shape, so the phase integration reads the moved peak), one correction pass trims each ratio by where the partial actually landed, and `Pghi` reinvents the phases; AMOUNT how far, peak matched, per-seed; refused in words when the classifier hears a kick/snare/clap/hat or the tonalness is under 0.5; CLI `retune <kit> <pad> [--key] [--amount] [--seed] [--undo]`; `KitBuilderModel.retunePad` (the kit's key, or the nearest semitones without one); the pad sheet's TUNE segment, row four | CORE + APP | M–L | four partials 38..70¢ off C major land within 5¢ of A3/C5/E6/C7, the bell still decays, peak matched; kick, snare, hat, clap refused and named, a tom and hiss judged on their own; AMT 0 the same object, AMT ½ halfway, in key untouched; stereo stays stereo, same seed same bytes; D minor pentatonic sends 1290 Hz up to F6 |
 | WW3 | TRANSPLANT — A's attack wearing B's long-term spectral envelope (a one-knob vocoder: BANDS) | CORE | M | the result's onset correlates with A, its band envelope with B |
 | WW4 | BODY — a bank of tuned resonators struck by the hit, tuned to the kit's key | CORE | M | a click through BODY rings at the root; decay follows the knob |
 | WW5 | WOBBLE — a tempo-synced filter sweep baked onto a captured hit, RATE snapped to note divisions at the kit's BPM | CORE | S | sweep period equals the division at the kit's BPM |
@@ -1576,7 +1576,9 @@ CORE+APP wave WW (in progress, 2026-09-07) — in key. WW1 landed:
   PAD FROM ANYTHING, one hit held forever in every note, the clear
   stretch keeping a note's line and the wash carrying a drum as a
   drone, the seam baked, both generations, the pad sheet's card and
-  the `pad` verb. Next: SPECTRAL RETUNE.
+  the `pad` verb. WW2 landed: SPECTRAL RETUNE, every partial talked
+  into the kit's key through the spectral door with PGHI phases, the
+  `retune` verb and the pad sheet's TUNE segment. Next: TRANSPLANT.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

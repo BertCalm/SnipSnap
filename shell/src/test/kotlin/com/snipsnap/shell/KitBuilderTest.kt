@@ -444,6 +444,58 @@ class KitBuilderTest {
         }
     }
 
+    /** An off-key bell: three inharmonic partials, none on a C major note. */
+    private fun clang(): com.snipsnap.audio.Snip {
+        val rate = 44_100
+        return com.snipsnap.audio.Snip(
+            FloatArray(rate / 2) { i ->
+                val t = i.toDouble() / rate
+                (
+                    0.5 * Math.sin(2 * Math.PI * 227.0 * t) * Math.exp(-2 * t) +
+                        0.3 * Math.sin(2 * Math.PI * 545.0 * t) * Math.exp(-3 * t) +
+                        0.15 * Math.sin(2 * Math.PI * 1290.0 * t) * Math.exp(-4 * t)
+                    ).toFloat()
+            },
+            1, rate,
+        )
+    }
+
+    @Test
+    fun `retunePad talks a clang into the kit's key, refuses a kick, and undoes out of the bin`() {
+        val dir = File(temp, "Tune")
+        val m = KitBuilderModel.create("Tune", dir)
+        val bell = m.assign(2, clang(), DrumClass.PERC)
+        val kick = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        val before = File(dir, bell.sampleFile).readBytes()
+
+        // No key set: the nearest semitones.
+        assertEquals(KitBuilderModel.NO_KEY_LABEL, m.retuneKeyLabel())
+        m.setKey(com.snipsnap.audio.KeySpec.parse("C"))
+        assertEquals("C MAJOR", m.retuneKeyLabel())
+
+        val tuned = m.retunePad(2, 1f, seed = 3)
+        m.save()
+        assertFalse(File(dir, bell.sampleFile).readBytes().contentEquals(before), "re-rendered")
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Retune, 1f, PadSheet.TUNE), PadSheet.read(tuned.recipe))
+        val landed = com.snipsnap.audio.Retune.analyze(
+            com.snipsnap.audio.WavReader.read(File(dir, bell.sampleFile)),
+            com.snipsnap.audio.KeySpec(0, com.snipsnap.audio.Scale.CHROMATIC),
+        ).partials
+        assertTrue(landed.all { kotlin.math.abs(it.cents) < 6f }, "every partial on a semitone now: ${landed.map { it.cents }}")
+        assertEquals(listOf("A3", "C5", "E6"), landed.map { it.targetName })
+
+        val refused = assertFailsWith<KitBuilderModel.Unpitched> { m.retunePad(1, 1f) }
+        assertTrue("drum" in refused.message!!, refused.message)
+        assertTrue(File(dir, kick.sampleFile).readBytes().isNotEmpty() && m.pad(1)!!.recipe == null, "the kick is untouched")
+
+        assertEquals(bell.copy(recipe = tuned.recipe), m.retunePad(2, 0f), "AMT 0 leaves the pad as it is")
+        m.unEraPad(2)
+        m.save()
+        assertNull(m.pad(2)!!.recipe)
+        assertTrue(File(dir, bell.sampleFile).readBytes().contentEquals(before), "back byte-identical")
+    }
+
     @Test
     fun `characterPad refuses a typo before it looks at the amount, and AMT 0 is a no-op`() {
         val dir = File(temp, "CharNoop")

@@ -128,6 +128,10 @@ object Copy {
     const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."
     const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."
+    /** TUNE: [key] is the kit's key label, or the no-key fallback ("THE NEAREST SEMITONES"). */
+    fun retuned(pad: String, key: String): String = "$pad TALKED INTO $key. ORIGINAL SLEEPS IN THE BIN."
+    /** TUNE's honest refusal, [reason] in the retune's own words ("a kick is a drum, not a note"). */
+    fun notANote(reason: String): String = "NOT A NOTE: ${reason.uppercase().trimEnd('.')}."
     fun mutated(move: String, pad: String, parent: String): String = "$move: $pad × $parent. ONE HIT, TWO PARENTS."
     const val UNMUTATED = "PARENTS SEPARATED. THE ORIGINAL IS BACK FROM THE BIN."
     const val MUTATE_NEEDS_ONE = "GHOSTS ON. MUTATE WANTS ONE SAMPLE - CLEAR THEM FIRST."

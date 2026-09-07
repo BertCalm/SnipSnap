@@ -62,6 +62,10 @@ The capture and conditioning core.
   detection, key/scale note grids (root on A01), and the retune that lands a
   captured tonal snip on the nearest in-key note using the tune fields an
   MPC pad already has. Unpitched material is never "corrected".
+- **`Retune`** — the spectral retune: every partial on its own, talked into
+  the key through the `Spectral` door with phases reinvented by `Pghi`, so an
+  inharmonic clang lands in the scale instead of merely moving as a block.
+  A drum is refused as unpitched, in words.
 - **`Loudness`** — perceived level (peaks aren't loudness), feeding kit-wide
   balance.
 

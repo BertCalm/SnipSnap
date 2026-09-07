@@ -348,8 +348,8 @@ fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the
 phone the same characters sit on the PAD SHEET's TREATMENT card, rows
 two to four (SMEAR · SLAP · WASH · PUNCH, GHOST · STOP · START · FLIP,
-SKIM · DUB · SWELL), where they change every file the pad references,
-velocity layers included.
+SKIM · DUB · SWELL · TUNE — the last being `retune`, below), where they
+change every file the pad references, velocity layers included.
 
 ### `era <kit-dir> <machine>` — the Time Machine
 
@@ -610,6 +610,28 @@ used is printed; `--bloom` (0..1, default 0.3) is how long the arrival
 ramps in. A pitched source is rooted where it sounds; an unpitched one
 lands as a drone at C3 rather than being refused. On the phone it is
 the PAD SHEET's PAD FROM ANYTHING card, two steppers and MAKE PAD.
+
+### `retune <kit-dir> <pad>` — the spectral retune
+
+Where `--key` on `chop` moves a whole pad by one coarse/fine offset (so
+an inharmonic clang stays exactly as out of tune with *itself* as it
+was), `retune` moves every partial on its own: one long, fine FFT over
+the body finds the partials and how much of the sound's energy they
+carry, each one's ratio to its nearest in-key note becomes a plateau
+on the frequency axis, every STFT frame is resampled through that map,
+and PGHI reinvents the phases — a bell whose overtones never agreed on
+a key gets every one of them talked into the scale. The kit's key is
+the target; `--key Am` sets it first; with neither, every partial goes
+to its nearest semitone. `--amount 0..1` is how far toward the note;
+`--seed` picks the phases. The partial moves are printed (`227.0 Hz
+-54¢ -> A3`). A drum is refused as unpitched, in words: the classifier's
+kick, snare, clap and hat families are never "corrected" (the same line
+IN KEY draws — tune an 808 with the pad's own tune field), and a sound
+whose energy lives between its peaks rather than in them (a hat, hiss)
+has nothing to snap. Bin-backed through the same door as every
+treatment; `--undo` restores byte-identical; the recipe (key, amount,
+seed) rides the pad. On the phone it is TUNE, the last word on the PAD
+SHEET's TREATMENT card, AMT how far.
 
 ### `arrange <kit-dir>` — songs, not loops
 

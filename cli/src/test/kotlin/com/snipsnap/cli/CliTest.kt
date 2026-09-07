@@ -1202,6 +1202,46 @@ class CliTest {
     }
 
     @Test
+    fun `retune talks one pad into a key from the terminal, refuses a drum, and undoes`() {
+        val wav = writeBreak(File(temp, "rt.wav"))
+        val out = File(temp, "rt-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "RT", "--slices", "8").first)
+        val kitDir = File(out, "RT")
+        // Put an off-key bell on A02 in place of the chop's own hit.
+        val rate = 44_100
+        val bellFile = File(kitDir, KitStore.load(kitDir).pad(2)!!.sampleFile)
+        WavWriter.write(
+            bellFile,
+            Snip(
+                FloatArray(rate / 2) { i ->
+                    val t = i.toDouble() / rate
+                    (0.5 * Math.sin(2 * Math.PI * 227.0 * t) * Math.exp(-2 * t) + 0.3 * Math.sin(2 * Math.PI * 545.0 * t) * Math.exp(-3 * t)).toFloat()
+                },
+                1, rate,
+            ),
+        )
+        val before = bellFile.readBytes()
+
+        val (code, stdout, stderr) = cli("retune", kitDir.path, "A02", "--key", "C")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "retuned into C major")
+        assertContains(stdout, "-> A3")
+        assertContains(stdout, "-> C5")
+        assertTrue(!before.contentEquals(bellFile.readBytes()))
+        assertEquals("C MAJOR", KitStore.load(kitDir).key!!.label.uppercase(), "--key set the kit's key")
+
+        val (drumCode, _, drumErr) = cli("retune", kitDir.path, "A01")
+        assertTrue(drumCode != 0)
+        assertContains(drumErr, "not a note")
+
+        assertEquals(0, cli("retune", kitDir.path, "A02", "--undo").first)
+        assertTrue(before.contentEquals(bellFile.readBytes()))
+
+        val (badCode, _, badErr) = cli("retune", kitDir.path, "A02", "--amount", "2")
+        assertTrue(badCode != 0 && "--amount wants" in badErr, badErr)
+    }
+
+    @Test
     fun `break-pad adds one chain pad whose slices are the chop's own cuts`() {
         val wav = writeBreak(File(temp, "bp.wav"))
         val out = File(temp, "bp-out")

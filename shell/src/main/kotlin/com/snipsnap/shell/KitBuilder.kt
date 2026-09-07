@@ -309,6 +309,45 @@ class KitBuilderModel private constructor(
         }
     }
 
+    /** The retune's honest refusal: the pad is a drum or noise, not a note. */
+    class Unpitched(message: String) : IllegalArgumentException(message)
+
+    /** What TUNE snaps to: the kit's key, or every semitone when none is set. */
+    fun retuneKey(): com.snipsnap.audio.KeySpec =
+        kit.key ?: com.snipsnap.audio.KeySpec(0, com.snipsnap.audio.Scale.CHROMATIC)
+
+    /** "C MAJOR", or "THE NEAREST SEMITONES" when no key is set — for the toast and the recipe. */
+    fun retuneKeyLabel(): String = kit.key?.label?.uppercase() ?: NO_KEY_LABEL
+
+    /**
+     * TUNE: every partial of the pad talked into the kit's key (or onto
+     * the nearest semitone when no key is set), phases reinvented —
+     * `Retune` over every file the pad references, bin-backed like every
+     * treatment. AMT is how far toward the note; 0 leaves the pad as it
+     * is. A drum, or a sound whose energy lives between its peaks, is
+     * refused with [Unpitched] before anything is touched.
+     */
+    fun retunePad(slot: Int, amount: Float = 1f, seed: Long = 0): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(amount in 0f..1f) { "amount is 0..1, got $amount" }
+        if (amount <= 0f) return pad
+        val key = retuneKey()
+        val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        com.snipsnap.audio.Retune.analyze(main, key).refusal?.let { throw Unpitched(it) }
+        val recipe = com.snipsnap.json.JsonValue.Obj(
+            linkedMapOf<String, com.snipsnap.json.JsonValue>(
+                "retune" to com.snipsnap.json.JsonValue.Str(retuneKeyLabel()),
+                "amount" to com.snipsnap.json.JsonValue.Num(amount.toDouble()),
+                "seed" to com.snipsnap.json.JsonValue.Num(seed.toDouble()),
+            ),
+        )
+        return rewriteEveryFile(pad, "retuning") { original ->
+            val tuned = com.snipsnap.audio.Retune.retune(original, key, amount, seed)
+                ?: throw Unpitched(com.snipsnap.audio.Retune.analyze(original, key).refusal ?: "not a note")
+            tuned.snip to recipe
+        }
+    }
+
     /** The whole-pad rewrite both [eraPad] and [characterPad] share: every referenced file, bin-backed, one recipe. */
     private fun rewriteEveryFile(
         pad: KitPad,
@@ -706,6 +745,9 @@ class KitBuilderModel private constructor(
 
         /** Where deletes wait out their 30 days. */
         const val BIN_DIR = ".bin"
+
+        /** The retune's target when the kit has no key. */
+        const val NO_KEY_LABEL = "THE NEAREST SEMITONES"
 
         const val MAX_TAKES = 32
         const val BIN_KEEP_DAYS = 30.0

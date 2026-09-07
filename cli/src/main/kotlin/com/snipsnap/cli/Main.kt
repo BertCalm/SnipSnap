@@ -104,6 +104,9 @@ object Cli {
         |                        as a tradeable file instead
         |  treat <kit-dir> <pad> <character>
         |                        crush/reverse/wash one pad (--undo restores)
+        |  retune <kit-dir> <pad>
+        |                        every partial talked into the kit's key
+        |                        (--key overrides, --amount how far, --undo)
         |  mutate <kit-dir> <pad> --with <src>[,<src>..]
         |                        one hit from many parents: transient-aligned
         |                        stack (with a polarity check), --splice (the
@@ -320,6 +323,7 @@ object Cli {
                 "resample" -> ResampleCommand.run(args.drop(1), out)
                 "merge" -> MergeCommand.run(args.drop(1), out)
                 "treat" -> TreatCommand.run(args.drop(1), out)
+                "retune" -> RetuneCommand.run(args.drop(1), out)
                 "robin" -> RobinCommand.run(args.drop(1), out)
                 "mutate" -> MutateCommand.run(args.drop(1), out)
                 "shape" -> ShapeCommand.run(args.drop(1), out)

@@ -343,6 +343,10 @@ fun PadSheetScreen(
                     when (treatment) {
                         is PadSheet.Treatment.Era -> m.eraPad(slot, treatment.name, amount)
                         is PadSheet.Treatment.Character -> m.characterPad(slot, treatment.name, amount)
+                        // TUNE reads the kit's key (or snaps to semitones without
+                        // one) and reinvents phases from a fresh seed per press.
+                        PadSheet.Treatment.Retune ->
+                            m.retunePad(slot, amount, kotlin.random.Random.nextLong(0L, 1_000_000L))
                     }
                     m.save()
                 }
@@ -350,14 +354,22 @@ fun PadSheetScreen(
                 onKitUpdated(m.kit)
                 refreshPadAudio(m)
                 m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
-                onToast(Copy.treated(segment, padName))
+                onToast(
+                    if (treatment == PadSheet.Treatment.Retune) Copy.retuned(padName, m.retuneKeyLabel())
+                    else Copy.treated(segment, padName),
+                )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // The ghosts-postdate-treatment refusal above is expected,
                 // in-voice user copy, not a diagnostic — the check()'s own
                 // message stays in logs (via `e`/a debugger) but the toast
-                // says what Copy says, not raw exception prose.
-                if (e is IllegalStateException) onToast(Copy.RETREAT_REFUSED) else failure("TREATMENT", e)
+                // says what Copy says, not raw exception prose. The retune's
+                // refusal is the same kind of line: the pad is a drum, said so.
+                when {
+                    e is IllegalStateException -> onToast(Copy.RETREAT_REFUSED)
+                    e is KitBuilderModel.Unpitched -> onToast(Copy.notANote(e.message ?: "not a note"))
+                    else -> failure("TREATMENT", e)
+                }
             } finally {
                 busy = false
             }
@@ -590,6 +602,7 @@ fun PadSheetScreen(
         when (a.treatment) {
             is PadSheet.Treatment.Era -> "AGED: ${a.treatment.name.uppercase()}"
             is PadSheet.Treatment.Character -> "TREATED: ${a.treatment.name.uppercase()}"
+            PadSheet.Treatment.Retune -> "RETUNED"
         }
     }
     val amount = applied?.amount ?: PadSheet.DEFAULT_AMOUNT
