@@ -1,6 +1,7 @@
 package com.snipsnap.kit
 
 import com.snipsnap.json.Json
+import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.mpc3.Mpc3Clip
 import java.io.File
@@ -78,26 +79,30 @@ object AnswerStore {
         return file
     }
 
-    /** The kit's answer, or null when it has none. */
+    /**
+     * The kit's answer, or null when it has none. Typed accessors throughout:
+     * a torn or hand-edited file refuses as a [JsonException] naming the
+     * field, never a cast that fails (the hardening contract, BBB5).
+     */
     fun load(kitDir: File): StoredAnswer? {
         val file = File(kitDir, FILE_NAME)
         if (!file.isFile) return null
-        val obj = (Json.parse(file.readText(Charsets.UTF_8)) as JsonValue.Obj).entries
-        val version = (obj["version"] as? JsonValue.Num)?.value?.toInt()
-        require(version == VERSION) {
-            "answer.json version $version is not supported (this build reads $VERSION)"
+        val obj = Json.parse(file.readText(Charsets.UTF_8)).obj()
+        val version = obj["version"]?.int() ?: throw JsonException("answer.json has no version")
+        if (version != VERSION) {
+            throw JsonException("answer.json version $version is not supported (this build reads $VERSION)")
         }
         return StoredAnswer(
-            seed = (obj["seed"] as JsonValue.Num).value.toInt(),
-            name = (obj["name"] as JsonValue.Str).value,
-            sampleFile = (obj["sample"] as JsonValue.Str).value,
-            clip = GrooveStore.clipFromJson(obj["clip"] ?: throw IllegalArgumentException("answer.json has no clip")),
-            band = (obj["band"] as? JsonValue.Arr)?.items.orEmpty().map { memberJson ->
-                val m = (memberJson as JsonValue.Obj).entries
+            seed = obj["seed"]?.int() ?: throw JsonException("answer.json has no seed"),
+            name = obj["name"]?.str() ?: throw JsonException("answer.json has no name"),
+            sampleFile = obj["sample"]?.str() ?: throw JsonException("answer.json has no sample"),
+            clip = GrooveStore.clipFromJson(obj["clip"] ?: throw JsonException("answer.json has no clip")),
+            band = obj["band"]?.arr().orEmpty().map { memberJson ->
+                val m = memberJson.obj()
                 BandMember(
-                    name = (m["name"] as JsonValue.Str).value,
-                    sampleFile = (m["sample"] as JsonValue.Str).value,
-                    clip = GrooveStore.clipFromJson(m["clip"] ?: throw IllegalArgumentException("band member has no clip")),
+                    name = m["name"]?.str() ?: throw JsonException("band member has no name"),
+                    sampleFile = m["sample"]?.str() ?: throw JsonException("band member has no sample"),
+                    clip = GrooveStore.clipFromJson(m["clip"] ?: throw JsonException("band member has no clip")),
                 )
             },
         )
