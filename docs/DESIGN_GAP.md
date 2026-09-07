@@ -27,7 +27,10 @@ Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 > **Still undrawn**, in value order: the SHARE / BACKUP chooser hand-off (the
 > landing itself is settled: wave FFF put its trouble - skipped kits, a
 > refusal - in the language's honest little message box, `MessageBox`, and
-> left a clean landing its toast); the TEXTURE panel and the KIT
+> left a clean landing its toast; the box and OUTSIDE's trip are now drawn
+> state by state on the canvas's pages three and four, with two small gaps
+> for the code noted there - the measured line on an LCD, KEEP ROOM lit in
+> lcd-alt); the TEXTURE panel and the KIT
 > action row, which has grown past the artboard's; GRAIN FIELD and SURFACE,
 > which arrived from another branch with no boards at all. A fresh handoff
 > export from the design canvas would close these in one go.

@@ -52,7 +52,8 @@ fun MessageBox(note: LandingNote.Note, onDismiss: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     for (line in note.lines) {
-                        TapeText(line.text, TapeType.pixelSmall, if (line.trouble) scheme.warn.tape else scheme.ink2.tape, maxLines = 2)
+                        // Three lines: the shelf's own refusal ("nothing on the shelf can read…") needs them at 390.
+                        TapeText(line.text, TapeType.pixelSmall, if (line.trouble) scheme.warn.tape else scheme.ink2.tape, maxLines = 3)
                     }
                 }
             }
