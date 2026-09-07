@@ -1458,6 +1458,7 @@ The Android side is written blind for CI's compiler, as :app always is.
 | CCC5 | ✓ done: the shared fallback — `SurfaceEngine::start` opens Exclusive first and, on an outright refusal, Shared (one mixer stage more latency, still playing); `isShared()` crosses the bridge and the screen says "SHARED STREAM. A LITTLE MORE LATENCY." | APP | S | bench: a device with the exclusive path held by another app still plays |
 | CCC6 | ✓ done: the corners are yours — `SurfaceStore` (`:shell`, tested, fuzzed): `surface.json` beside the kit with the pad the surface plays and four `Corner`s (pitch, cutoff, resonance, drive, each 0..1, refused in words); `Corner.from(mode, reading, tilt, corners)` is the engine's own macro map (XY / XYZ / the MORPH blend), so SET A..D on the screen captures the sound under the last touch as a corner, pushes it to the engine and saves; defaults are the engine's; a torn file reads as the defaults, said aloud | CORE + APP | S | round-trip byte-stable; a corner at A is A; the centre is the average; refusals named; the fuzz batch holds; bench: set four corners, leave, come back, morph between them |
 | CCC7 | ✓ done: PAD ◄ ► — the surface plays any of the kit's pads, by slot, wrapping, the choice remembered in `surface.json`; the readout names it MPC-style (A01..) | APP | S | bench: step through the kit; reopen, the same pad is under the finger |
+| CCC8 | ✓ done: PRINT → PAD — the print's destination toggles → TAPE / → PAD; → PAD opens SYNTH's own slot chooser (now shared) and the print lands through `KitBuilderModel`: `assign` on an empty slot ("Surface Print", unclassed), `replaceAudio` on a taken one (the original in the bin), a layered or chained pad refused in words with the print kept; cancelling the chooser sends the print to TAPE rather than losing it; the kit's identity bumps so KIT and the surface reload | APP | S | bench: print to an empty pad, hear it on KIT; print over a taken pad, find the original in the bin; cancel, find the print on TAPE |
 
 ## Wave EEE — M4, the pads on the native engine (APP + CORE)
 
@@ -1715,8 +1716,9 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
     header, name parsers, pad sheets, label); the answer reader made typed
   ✓ wave CCC (the Surface): the tactile pad over Oboe — XY / XYZ / MORPH,
     the roll of the phone, PRINT to resample the gesture onto TAPE; then
-    the shared fallback, SET A..D corners in surface.json, PAD ◄ ► ·
-    bench: dropouts, the route change, the print heard back
+    the shared fallback, SET A..D corners in surface.json, PAD ◄ ►,
+    PRINT → PAD through SYNTH's door · bench: dropouts, the route
+    change, the print heard back, a print on a pad
   ✓ wave EEE (M4, the pads on the native engine): PadHit on the JVM,
     PadEngine under Oboe, PLAY over it with endings reported, not timed ·
     bench: tight enough to play; then EEE4 moves KIT's grid across

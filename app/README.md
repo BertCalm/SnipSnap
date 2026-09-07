@@ -94,7 +94,10 @@ shelf useful before capture (M1) exists.
   path and the shared fallback is playing (the toast says so too).
   Then PAD ◄ ► through the kit, find a sound in XYZ, SET A, three more,
   switch to MORPH and morph; leave the screen and come back - the
-  corners and the pad are in `surface.json` beside the kit.
+  corners and the pad are in `surface.json` beside the kit. Then flip
+  the print destination to → PAD: STOP PRINT opens the slot chooser;
+  an empty pad gets the print, a taken pad is replaced with the
+  original in the bin, CANCEL sends the print to TAPE instead.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad
