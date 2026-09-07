@@ -2119,7 +2119,8 @@ class CliTest {
             val tag = "smpl".toByteArray(Charsets.US_ASCII)
             val at = (0..bytes.size - 4).first { i -> (0 until 4).all { bytes[i + it] == tag[it] } }
             val end = at + 8 + 48
-            check(bytes[end].toInt() and 0xFF == ((snip.frameCount - 1) and 0xFF)) { "not the loop end field" }
+            val loopEnd = (0 until 4).sumOf { (bytes[end + it].toLong() and 0xFF) shl (8 * it) }
+            check(loopEnd == snip.frameCount - 1L) { "not the loop end field: read $loopEnd, wanted ${snip.frameCount - 1}" }
             bytes[end] = 0xFF.toByte(); bytes[end + 1] = 0xFF.toByte(); bytes[end + 2] = 0xFF.toByte(); bytes[end + 3] = 0x7F
             check(com.snipsnap.audio.WavReader.readSmpl(bytes) == null) { "the fixture must read as no sheet" }
             writeBytes(bytes)

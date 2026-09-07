@@ -96,9 +96,9 @@ object GrooveStore {
                 val n = noteJson.obj()
                 Mpc3Note(
                     note = n["note"]?.int() ?: throw JsonException("note has no note"),
-                    timePulses = n["timePulses"]?.num()?.toLong() ?: throw JsonException("note has no timePulses"),
+                    timePulses = n["timePulses"]?.long() ?: throw JsonException("note has no timePulses"),
                     velocity = n["velocity"]?.num()?.toFloat() ?: throw JsonException("note has no velocity"),
-                    lengthPulses = n["lengthPulses"]?.num()?.toLong() ?: throw JsonException("note has no lengthPulses"),
+                    lengthPulses = n["lengthPulses"]?.long() ?: throw JsonException("note has no lengthPulses"),
                 )
             },
         )

@@ -48,6 +48,18 @@ class JsonTest {
     }
 
     @Test
+    fun `long reads whole numbers past Int and refuses fractions, infinities and anything past 2^63`() {
+        assertEquals(2147483648L, Json.parse("2147483648").long())
+        assertEquals(-5L, Json.parse("-5").long())
+        assertEquals(0L, Json.parse("0").long())
+        assertFailsWith<JsonException> { Json.parse("1.5").long() }
+        // Double.toLong() would clamp these to Long.MAX_VALUE; the accessor refuses instead.
+        assertFailsWith<JsonException> { Json.parse("1e300").long() }
+        assertFailsWith<JsonException> { Json.parse("9223372036854775808").long() }
+        assertFailsWith<JsonException> { Json.parse("\"7\"").long() }
+    }
+
+    @Test
     fun `rejects malformed input`() {
         for (bad in listOf(
             "", "{", "[1,", "{\"a\":}", "\"unterminated", "{\"a\":1,}", "tru",

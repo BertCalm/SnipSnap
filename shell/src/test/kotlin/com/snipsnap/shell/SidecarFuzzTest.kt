@@ -263,7 +263,9 @@ class SidecarFuzzTest {
         val f = File(temp, "kit.json")
         fuzz("KitStore.read", kitJson(), seed = 31) { text ->
             f.writeText(text)
-            KitStore.read(f)
+            for (b in KitStore.read(f).pads.mapNotNull { it.chain }.flatMap { it.boundaries }) {
+                assertTrue(b != Long.MAX_VALUE, "a clamped chain boundary read as valid")
+            }
         }
     }
 
@@ -273,7 +275,11 @@ class SidecarFuzzTest {
         val f = File(dir, GrooveStore.FILE_NAME)
         fuzz("GrooveStore.load", grooveJson(), seed = 32) { text ->
             f.writeText(text)
-            GrooveStore.load(dir)
+            // A number past 2^63 must refuse, never clamp to Long.MAX_VALUE and
+            // hand the sequencer a note at the end of time.
+            for (n in GrooveStore.load(dir).flatMap { it.notes }) {
+                assertTrue(n.timePulses != Long.MAX_VALUE && n.lengthPulses != Long.MAX_VALUE, "a clamped pulse count read as valid")
+            }
         }
     }
 
