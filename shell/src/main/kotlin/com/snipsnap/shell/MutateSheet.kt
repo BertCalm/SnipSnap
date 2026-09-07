@@ -4,6 +4,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.KitStore
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -11,11 +12,13 @@ import kotlin.math.roundToInt
  * The PAD SHEET's MUTATE card, as data — the phone's door onto [Mutate].
  *
  * The CLI verb takes parents as pad refs, other kits' pads, WAV paths and
- * a roulette; the card keeps the three a thumb can reach: **a pad on this
+ * a roulette; the card keeps the four a thumb can reach: **a pad on this
  * kit** (tap it on the mini grid), **the crate's deal** (ROULETTE spins
  * the shelf, seeded by the tap count so every spin is a different deal
- * and each is reproducible), or **a room on the shelf** (one OUTSIDE
- * measured and kept, [Rooms]; ROOM plays the pad inside it). One parent,
+ * and each is reproducible), **a room on the shelf** (one OUTSIDE
+ * measured and kept, [Rooms]; ROOM plays the pad inside it), or **a pad
+ * picked on another kit** ([otherKits], then [padsOf] - the crate with
+ * intent, where ROULETTE is the crate by chance). One parent,
  * one move, one knob: STACK has
  * none, SPLICE has AT (where the pad's transient hands over), SPLIT has
  * HZ (the crossover), MORPH has MIX, ROOM has WET, TRANSPLANT has BANDS.
@@ -83,14 +86,35 @@ object MutateSheet {
 
         /** A room kept on the shelf ([Rooms]): its name and its impulse. */
         data class Room(val name: String, val file: File) : Partner
+
+        /** A pad picked on another kit of the shelf: the kit's name and folder, and the pad's slot there. */
+        data class Other(val kitName: String, val kitDir: File, val slot: Int) : Partner
     }
 
-    /** The card's own name for a partner: the pad tag, the crate's label, or the room's name. */
+    /** The card's own name for a partner: the pad tag, the crate's label, the room's name, or "SOUL A03". */
     fun name(partner: Partner): String = when (partner) {
         is Partner.Pad -> padTag(partner.slot)
         is Partner.Deal -> partner.label
         is Partner.Room -> partner.name
+        is Partner.Other -> "${partner.kitName} ${padTag(partner.slot)}"
     }
+
+    /** Another kit on the shelf, for the picker: its name and folder. */
+    data class OtherKit(val name: String, val dir: File)
+
+    /**
+     * The other kits on the shelf under [shelfRoot], by name, never
+     * [thisKitDir] itself - the picker's candidates. A folder whose
+     * `kit.json` is broken is skipped, not fatal.
+     */
+    fun otherKits(shelfRoot: File, thisKitDir: File): List<OtherKit> =
+        KitStore.list(shelfRoot)
+            .filter { it.canonicalFile != thisKitDir.canonicalFile }
+            .mapNotNull { dir -> runCatching { OtherKit(KitStore.load(dir).name, dir) }.getOrNull() }
+            .sortedBy { it.name.lowercase(java.util.Locale.ROOT) }
+
+    /** The assigned pads of another kit, slot order - the picker's second row. */
+    fun padsOf(kit: OtherKit): List<KitPad> = KitStore.load(kit.dir).pads.sortedBy { it.slot }
 
     /** What a mutated pad carries: the move and the parents' labels, read from the `mutate` recipe; DRIFT reads as its own word. */
     data class Applied(val mode: String, val parents: List<String>, val drifted: Boolean = false) {
@@ -140,6 +164,13 @@ object MutateSheet {
         }
         is Partner.Deal -> Mutate.Source(partner.label, WavReader.read(partner.file))
         is Partner.Room -> Mutate.Source(Rooms.LABEL_PREFIX + partner.name, WavReader.read(partner.file))
+        is Partner.Other -> {
+            val kit = KitStore.load(partner.kitDir)
+            val pad = kit.pads.firstOrNull { it.slot == partner.slot }
+                ?: throw IllegalArgumentException("no pad on ${partner.kitName} ${padTag(partner.slot)}")
+            // The CLI's own Kit:Pad label, so the lineage reads the same as a roulette deal's.
+            Mutate.Source("${kit.name}:${padTag(partner.slot)}", WavReader.read(File(partner.kitDir, pad.sampleFile)))
+        }
     }
 
     /**
@@ -162,6 +193,7 @@ object MutateSheet {
                 ),
             )
             is Partner.Room -> mapOf("room" to JsonValue.Str(partner.name))
+            is Partner.Other -> mapOf("otherKit" to JsonValue.Str(partner.kitName))
             is Partner.Pad -> emptyMap()
         }
         return Mutate.apply(

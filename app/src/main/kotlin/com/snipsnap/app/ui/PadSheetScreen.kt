@@ -506,12 +506,38 @@ fun PadSheetScreen(
     // third kind of parent. Read off the shelf once per sheet and again
     // after a keep; the shelf is the kit folder's parent, as ROULETTE has it.
     var rooms by remember { mutableStateOf<List<Rooms.Room>>(emptyList()) }
+    // The other kits on the shelf, for the picker (the crate with intent);
+    // the picked kit's pads load when one is picked.
+    var otherKits by remember { mutableStateOf<List<MutateSheet.OtherKit>>(emptyList()) }
+    var pickedKit by remember(slot) { mutableStateOf<MutateSheet.OtherKit?>(null) }
+    var otherPads by remember { mutableStateOf<List<Int>>(emptyList()) }
+    LaunchedEffect(pickedKit) {
+        val k = pickedKit
+        otherPads = if (k == null) emptyList() else withContext(Dispatchers.IO) {
+            try {
+                MutateSheet.padsOf(k).map { it.slot }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+    }
     var roomsRevision by remember { mutableIntStateOf(0) }
     LaunchedEffect(entry.dir, roomsRevision) {
         val root = entry.dir.parentFile ?: entry.dir
         rooms = withContext(Dispatchers.IO) {
             try {
                 Rooms.list(root)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+        otherKits = withContext(Dispatchers.IO) {
+            try {
+                MutateSheet.otherKits(root, entry.dir)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -1147,6 +1173,11 @@ fun PadSheetScreen(
                 onPartner = { partner = MutateSheet.Partner.Pad(it) },
                 rooms = rooms.map { it.name },
                 onRoom = { name -> rooms.firstOrNull { it.name == name }?.let { partner = Rooms.partner(it) } },
+                otherKits = otherKits.map { it.name },
+                pickedKit = pickedKit?.name,
+                onPickKit = { name -> pickedKit = if (pickedKit?.name == name) null else otherKits.firstOrNull { it.name == name } },
+                otherPads = otherPads,
+                onOtherPad = { s -> pickedKit?.let { k -> partner = MutateSheet.Partner.Other(k.name, k.dir, s) } },
                 onRoulette = ::onRoulette,
                 onDrift = ::onDrift,
                 knobLabel = mutateKnob?.label,
@@ -1693,6 +1724,11 @@ private fun MutateCard(
     onPartner: (Int) -> Unit,
     rooms: List<String>,
     onRoom: (String) -> Unit,
+    otherKits: List<String>,
+    pickedKit: String?,
+    onPickKit: (String) -> Unit,
+    otherPads: List<Int>,
+    onOtherPad: (Int) -> Unit,
     onRoulette: () -> Unit,
     onDrift: () -> Unit,
     knobLabel: String?,
@@ -1784,6 +1820,53 @@ private fun MutateCard(
                         }
                     }
                     repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
+        // Another kit, picked: its name among the shelf's kits (two to a row),
+        // then its pads (four to a row) - the crate with intent, where
+        // ROULETTE below is the crate by chance. Absent on a one-kit shelf.
+        if (otherKits.isNotEmpty()) {
+            TapeText("ANOTHER KIT · PICK ITS PAD", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            for (row in otherKits.chunked(2)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    for (k in row) {
+                        val selected = k == pickedKit
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                                .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                                .let { if (!busy) it.tapeClick { onPickKit(k) } else it }
+                                .padding(horizontal = 4.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TapeText(k, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 1)
+                        }
+                    }
+                    repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+            if (pickedKit != null) {
+                val other = partner as? MutateSheet.Partner.Other
+                for (row in otherPads.chunked(4)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        for (p in row) {
+                            val selected = other != null && other.kitName == pickedKit && other.slot == p
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                                    .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                                    .let { if (!busy) it.tapeClick { onOtherPad(p) } else it }
+                                    .padding(horizontal = 4.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                TapeText(MutateSheet.padTag(p), TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                            }
+                        }
+                        repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
                 }
             }
         }

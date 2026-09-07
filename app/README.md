@@ -112,6 +112,14 @@ shelf useful before capture (M1) exists.
   its days left on an LCD (the last two days in the warn colour), and
   RESTORE; tap it and the room is back among the live rows with the toast
   "…IS BACK ON THE SHELF", and the bin list shrinks or disappears.
+- **ANOTHER KIT (MUTATE)**: with two kits on the shelf, open a pad on
+  one and the MUTATE card grows an ANOTHER KIT · PICK ITS PAD row under
+  ROOMS: one chip per other kit, none for this one. Tap a kit and its
+  pads appear as A01…-style chips, four to a row; tap one and the partner
+  line reads "SOUL A03". MUTATE ▸ MORPH: the child's lineage names the
+  other kit's pad the way a deal would ("Soul:A03") and the recipe carries
+  the other kit's name. A kit whose folder no longer loads is simply not
+  offered. UNDO puts the parent back byte for byte.
 - **KEEP ROOM (pad sheet)**: after a ROOM trip the OUTSIDE card's KEEP
   ROOM button lights; tap it and the toast names the room ("FUNK ROOM IS
   ON THE SHELF…"), a `Rooms/FUNK ROOM.wav` + `.json` pair appears beside

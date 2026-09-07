@@ -109,6 +109,44 @@ class MutateSheetTest {
     }
 
     @Test
+    fun `a pad picked on another kit is a partner - the shelf minus this kit, its pads, the CLI's label, undo`() {
+        val shelf = File(temp, "shelf-other").apply { mkdirs() }
+        val mine = KitBuilderModel.create("Mine", File(shelf, "Mine"))
+        mine.assign(1, tone(100.0, 0.5f), DrumClass.KICK)
+        mine.save()
+        val soul = KitBuilderModel.create("Soul", File(shelf, "Soul"))
+        soul.assign(3, tone(2000.0, 0.4f), DrumClass.SNARE)
+        soul.assign(7, tone(500.0, 0.6f), DrumClass.PERC)
+        soul.save()
+        File(shelf, "Broken").mkdirs().also { File(shelf, "Broken/kit.json").writeText("{ not json") }
+
+        val others = MutateSheet.otherKits(shelf, mine.kitDir)
+        assertEquals(listOf("Soul"), others.map { it.name }, "the shelf minus this kit, the broken folder skipped")
+        assertEquals(listOf(3, 7), MutateSheet.padsOf(others.single()).map { it.slot })
+
+        val partner = MutateSheet.Partner.Other("Soul", others.single().dir, 3)
+        assertEquals("Soul A03", MutateSheet.name(partner))
+        val before = File(mine.kitDir, mine.pad(1)!!.sampleFile).readBytes()
+        val outcome = MutateSheet.apply(mine, 1, partner, Mutate.Mode.MORPH, 0.5f)
+        mine.save()
+        val applied = MutateSheet.read(outcome.pad.recipe)!!
+        assertEquals("MORPH", applied.mode)
+        assertEquals(listOf("Soul:A03"), applied.parents, "the CLI's own Kit:Pad label, as a deal's would read")
+        val mutate = outcome.pad.recipe!!.entries["mutate"] as com.snipsnap.json.JsonValue.Obj
+        assertEquals("Soul", (mutate.entries["otherKit"] as com.snipsnap.json.JsonValue.Str).value)
+        assertTrue(!File(mine.kitDir, mine.pad(1)!!.sampleFile).readBytes().contentEquals(before), "the hit changed")
+
+        val e = assertFailsWith<IllegalArgumentException> {
+            MutateSheet.apply(mine, 1, MutateSheet.Partner.Other("Soul", others.single().dir, 9), Mutate.Mode.STACK, 0f)
+        }
+        assertTrue(e.message!!.contains("Soul A09"), e.message)
+
+        MutateSheet.undo(mine, 1)
+        mine.save()
+        assertTrue(File(mine.kitDir, mine.pad(1)!!.sampleFile).readBytes().contentEquals(before), "undo is the original")
+    }
+
+    @Test
     fun `roulette deals off the shelf, seeded, and records its seed`() {
         val m = model("Spin")
         model("Spin2")
