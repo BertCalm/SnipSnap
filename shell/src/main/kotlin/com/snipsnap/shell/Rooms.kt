@@ -149,9 +149,15 @@ object Rooms {
 
     /** A room in the bin, and when it went there. */
     data class Binned(val room: Room, val binnedAt: Long) {
-        /** Whole days left before [sweepBin] takes it, never below zero. */
-        fun daysLeft(nowMillis: Long): Int =
-            ((binnedAt + BIN_DAYS * DAY_MS - nowMillis).coerceAtLeast(0L) / DAY_MS).toInt()
+        /**
+         * Days left before [sweepBin] takes it, rounded up so the readout
+         * agrees with the sweep: a partial day left still reads 1, and 0
+         * only at the boundary where the sweep goes. Never below zero.
+         */
+        fun daysLeft(nowMillis: Long, keepDays: Int = BIN_DAYS): Int {
+            val left = (binnedAt + keepDays * DAY_MS - nowMillis).coerceAtLeast(0L)
+            return ((left + DAY_MS - 1) / DAY_MS).toInt()
+        }
     }
 
     private const val DAY_MS = 24L * 60 * 60 * 1000

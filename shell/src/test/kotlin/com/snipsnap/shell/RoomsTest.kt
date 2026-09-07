@@ -84,6 +84,8 @@ class RoomsTest {
         assertEquals(10_000L, Rooms.binned(shelf).single().binnedAt)
         assertEquals(30, binned.daysLeft(10_000L))
         assertEquals(29, binned.daysLeft(10_000L + 24L * 60 * 60 * 1000), "a whole day on, a whole day fewer")
+        assertEquals(1, binned.daysLeft(10_000L + 30L * 24 * 60 * 60 * 1000 - 1), "a moment before the boundary still reads a day, as the sweep still keeps it")
+        assertEquals(0, binned.daysLeft(10_000L + 30L * 24 * 60 * 60 * 1000), "at the boundary it reads 0, as the sweep goes")
         assertEquals(0, binned.daysLeft(10_000L + 40L * 24 * 60 * 60 * 1000))
         assertEquals(10f, Rooms.binned(shelf).single().room.lagMs, "the measurement rides into the bin")
         // The sidecar moved with the WAV: frames and rate are still written down, and a field this

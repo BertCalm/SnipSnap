@@ -199,8 +199,9 @@ private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.Ins
 /**
  * A kept room: its name, how it was measured, its length on an LCD.
  * Tapping does nothing - a room is not opened, it is used from a pad's
- * MUTATE card. Holding presses the row and reveals FORGET → BIN in the
- * bin's red; a tap anywhere lets go.
+ * MUTATE card. Holding the words presses the row and reveals FORGET → BIN
+ * in the bin's red; a tap on the words lets go. The gesture never sits
+ * over the button.
  */
 @Composable
 private fun RoomRow(room: Rooms.Room, onForget: (Rooms.Room) -> Unit) {
