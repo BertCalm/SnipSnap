@@ -27,7 +27,10 @@ class TreatmentsTest {
     @Test
     fun `the named characters are the bank's five and then the extras, smeared among them`() {
         assertEquals(
-            listOf("reversed", "crushed", "slapback", "washed", "punched", "smeared", "ghosted", "stopped", "started"),
+            listOf(
+                "reversed", "crushed", "slapback", "washed", "punched",
+                "smeared", "ghosted", "stopped", "started", "skimmed", "dubbed", "swelled",
+            ),
             Treatments.names,
         )
         assertTrue(Treatments.EXTRA.none { it.first in Shuffle.TREATMENTS.map { t -> t.first } }, "an extra never shadows a bank name")

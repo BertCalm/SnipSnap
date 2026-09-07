@@ -62,13 +62,14 @@ class PadSheetTest {
     fun `rows two and three draw four characters each and all rows read in order`() {
         assertEquals(listOf("SMEAR", "SLAP", "WASH", "PUNCH"), PadSheet.CHARACTER_SEGMENTS)
         assertEquals(listOf("GHOST", "STOP", "START", "FLIP"), PadSheet.MORE_SEGMENTS)
-        assertEquals(listOf(PadSheet.SEGMENTS, PadSheet.CHARACTER_SEGMENTS, PadSheet.MORE_SEGMENTS), PadSheet.ROWS)
+        assertEquals(listOf("SKIM", "DUB", "SWELL"), PadSheet.EXTRA_SEGMENTS)
+        assertEquals(listOf(PadSheet.SEGMENTS, PadSheet.CHARACTER_SEGMENTS, PadSheet.MORE_SEGMENTS, PadSheet.EXTRA_SEGMENTS), PadSheet.ROWS)
         assertEquals(PadSheet.ALL_SEGMENTS.size, PadSheet.ALL_SEGMENTS.toSet().size, "no word on two rows")
     }
 
     @Test
     fun `every character segment names a real rack character`() {
-        for (segment in PadSheet.CHARACTER_SEGMENTS + PadSheet.MORE_SEGMENTS) {
+        for (segment in PadSheet.ROWS.drop(1).flatten()) {
             val t = PadSheet.treatmentFor(segment)
             assertTrue(t is PadSheet.Treatment.Character, "$segment is a character")
             assertTrue(t!!.name in Treatments.names, "$segment maps to '${t.name}', which Treatments does not know")

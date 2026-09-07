@@ -1053,8 +1053,9 @@ private fun TreatmentCard(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TapeText("TREATMENT", TapeType.pixelSmall, scheme.ink3.tape)
-        // Row one is the eras, row two the rack's characters (PadSheet.ROWS);
-        // one segment lights across both rows, since a pad carries one recipe.
+        // Row one is the eras, the rest the rack's characters (PadSheet.ROWS);
+        // one segment lights across every row, since a pad carries one recipe.
+        val widest = rows.maxOf { it.size }
         for (row in rows) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (seg in row) {
@@ -1075,6 +1076,8 @@ private fun TreatmentCard(
                         TapeText(seg, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
                     }
                 }
+                // A short row keeps the same chip width as a full one.
+                repeat(widest - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
         StepperSlider(

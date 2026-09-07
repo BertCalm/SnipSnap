@@ -12,6 +12,10 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
 import com.snipsnap.xpm.PadNoteMap
 import java.io.File
+import java.util.Locale
+
+/** [KitBuilderModel.nextStem]'s bound. A kit holds 128 pads, so this is ample headroom. */
+private const val MAX_STEM_ATTEMPTS = 999
 
 /**
  * The KIT screen: the 4×4 grid over a kit folder, every edit non-
@@ -69,7 +73,7 @@ class KitBuilderModel private constructor(
             slot = slot,
             sampleFile = "$stem.wav",
             displayName = displayName
-                ?: "%s %02d".format(AutoPlace.nameFor(drumClass), classCount(drumClass) + 1),
+                ?: String.format(Locale.ROOT, "%s %02d", AutoPlace.nameFor(drumClass), classCount(drumClass) + 1),
             drumClass = drumClass,
             colorHex = AutoPlace.colorFor(drumClass),
             muteGroup = AutoPlace.muteGroupFor(drumClass),
@@ -554,7 +558,8 @@ class KitBuilderModel private constructor(
         if (!current.isFile || !dirty) return
         val takesDir = File(kitDir, TAKES_DIR).apply { mkdirs() }
         val next = (takes().lastOrNull()?.let { TAKE_NAME.find(it.name)!!.groupValues[1].toInt() } ?: 0) + 1
-        val takeFile = File(takesDir, "take_%03d.json".format(next))
+        // Locale.ROOT: this name is parsed back by TAKE_NAME, whose \d expects ASCII digits.
+        val takeFile = File(takesDir, String.format(Locale.ROOT, "take_%03d.json", next))
         com.snipsnap.kit.AtomicFile.writeBytes(takeFile, current.readBytes())
         // A take's T must be strictly later than every bin event that
         // produced the state it snapshots; same-millisecond flash writes
@@ -636,14 +641,23 @@ class KitBuilderModel private constructor(
 
     private fun nextStem(slot: Int, dc: DrumClass): String {
         val base = "%s_%s".format(PadNoteMap.labelForPad(slot), AutoPlace.nameFor(dc))
-        var n = 1
-        while (true) {
-            val stem = Names.sanitizeStem("%s_%02d".format(base, n))
+        // Bounded, not `while (true)`: the loop only terminates because the
+        // formatted counter varies from n to n, an invariant Locale.ROOT
+        // restores today but does not itself guarantee. A kit holds 128
+        // pads, so 999 candidates is ample headroom; if every one of them
+        // still collides — the invariant broken again, or genuinely 999
+        // takers of one stem — this fails loudly instead of hanging the
+        // caller (an onClick, in production) forever.
+        for (n in 1..MAX_STEM_ATTEMPTS) {
+            val stem = Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, n))
             val taken = kit.pads.any { it.sampleFile.equals("$stem.wav", ignoreCase = true) } ||
                 File(kitDir, "$stem.wav").exists()
             if (!taken) return stem
-            n++
         }
+        throw IllegalStateException(
+            "couldn't find a free stem for '$base' after $MAX_STEM_ATTEMPTS attempts " +
+                "(kept producing '${Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, MAX_STEM_ATTEMPTS))}')",
+        )
     }
 
     private fun deleteIfUnreferenced(pad: KitPad) {

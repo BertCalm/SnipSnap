@@ -340,13 +340,16 @@ One of the rack's named characters over one pad, bin-backed: `reversed`,
 smear` on the STN transient mask, peak-matched so the tail is *heard*,
 not merely left) — `ghosted` (the tone and the attack taken out too, the
 breath alone), `stopped` (the tape stop: pitch and level fall away over
-the last stretch) and `started` (the reel spinning up into the sound). `--amount 0..1` scales the character's macros; the
+the last stretch), `started` (the reel spinning up into the sound),
+`skimmed` (the banded smear: the click goes, the thump stays), `dubbed`
+(generation loss: a dub of a dub of a dub, twelve deep at most) and
+`swelled` (the sound arrives before it strikes). `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the
 phone the same characters sit on the PAD SHEET's TREATMENT card, rows
-two and three (SMEAR · SLAP · WASH · PUNCH, GHOST · STOP · START · FLIP),
-where they change every file the pad references, velocity layers
-included.
+two to four (SMEAR · SLAP · WASH · PUNCH, GHOST · STOP · START · FLIP,
+SKIM · DUB · SWELL), where they change every file the pad references,
+velocity layers included.
 
 ### `era <kit-dir> <machine>` — the Time Machine
 

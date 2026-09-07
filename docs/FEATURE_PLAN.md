@@ -1298,9 +1298,10 @@ also need — the card growing past one row of characters.
 | VV2 | ✓ done: GHOST — `Separate.ghost` (the noise layer alone: `1 − amount·(s + t)` on the STN masks, peak matched with the smear's capped makeup), a `Ghost` rack section after SMEAR, the `ghosted` character | CORE | S | tone and clicks vanish, hiss survives and is brought up; a ghosted kick is not a kick; never above the source's peak |
 | VV3 | ✓ done: TAPE STOP and TAPE START — `Motion`, last in the rack: a variable-speed head with a linear-interpolated read, STOP the capstan letting go over up to 2 s (pitch and level fall to silence, length kept), START the reel spinning up over up to 1.5 s (the sound arrives late); the `stopped` and `started` characters | CORE | S | STOP: crossings fall by half and the end is silent; START: crossings and level climb; both zero is the input object |
 | VV4 | ✓ done: the pad sheet's third row — GHOST · STOP · START · FLIP over `characterPad`; `reversed` now lights FLIP (AMT grades its spring tail) | APP | S | every segment names a real character; the inverse mappings hold |
-| VV5 | GENERATION LOSS — N bounces through an era chain (tape → sampler → tape), N the knob; deterministic, N=0 bit-identical | CORE | S | bit depth and bandwidth fall monotonically with N |
-| VV6 | BANDED SMEAR — the smear above a crossover only, the thump below untouched | CORE | S | clicks vanish above the crossover, the low band is bit-identical |
-| VV7 | SWELL — a reversed, stretched copy crossfaded into the hit, so the sound arrives before it strikes | CORE | S | energy rises before the onset; the onset itself is preserved |
+| VV5 | ✓ done: GENERATION LOSS — `Dub`, a rack section beside CRUNCH: GENERATIONS (0..12) bounces through the `tape` and `mpc60` eras at half strength, peak matched at the end; the `dubbed` character | CORE | S | the copy's likeness to the source (zero-lag correlation) falls with every generation; a kick dubbed at the default depth is still a kick; zero is the input object; a dozen passes never exceed the source's peak; deterministic |
+| VV6 | ✓ done: BANDED SMEAR — `Separate.smear(aboveHz)` leaves every bin under the floor at unity; SMEAR gains a FLOOR macro (0 = the whole band, else 80 Hz..6 kHz exponential); the `skimmed` character | CORE | S | the tone under the floor keeps its level within 5 %; the clicks above it still go; a negative floor is refused |
+| VV7 | ✓ done: SWELL — `Swell`, first in the rack: the hit's own head stretched to RISE (0..1.5 s) through the wash, backwards, faded in, under the hit's peak, then the hit itself bit for bit; the tail budget is measured from the swelled sound so a swell is never cut as a tail; the `swelled` character | CORE | S | output = rise + the untouched hit; the arrival's last quarter is louder than its first; RISE 0 and a rise under one window are the input object |
+| VV8 | ✓ done: the pad sheet's fourth row — SKIM · DUB · SWELL; short rows keep the chip width | APP | S | every segment names a real character |
 
 **Below the line for VV:** the capture-room variant of ROOM (the
 capture doctor's measured tail as the impulse — wants the phone-mic
@@ -1564,11 +1565,12 @@ CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   panel, a pad becoming a tape of its own. Below the line: other-kit
   parents on the phone, the clear stretch.
 
-CORE+APP wave VV (in progress, 2026-09-06) — the room and the tape.
-  VV1–VV4 landed: ROOM OF ITSELF as the fifth MUTATE move (FFT
-  convolution, a MIX knob, the crate can deal the room), GHOST and
-  MOTION (tape stop / start) as rack sections and characters, the pad
-  sheet's third row. VV5–VV7 next. Then WW, PAD FROM ANYTHING first.
+CORE+APP wave VV: ✓ all landed (2026-09-07) — the room and the tape.
+  ROOM OF ITSELF as the fifth MUTATE move (FFT convolution, a WET
+  knob, the crate can deal the room); GHOST, MOTION (tape stop /
+  start), DUB (generation loss) and SWELL as rack sections and
+  characters; the smear's FLOOR; the pad sheet's third and fourth
+  rows. Next: WW, PAD FROM ANYTHING first.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

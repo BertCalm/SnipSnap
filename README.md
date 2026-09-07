@@ -208,11 +208,14 @@ physics-lite nod to ChowDSP's AnalogTapeModel), ECHO (one delay line and
 one filter, repeats darkening as they fade), SPRING (a Schroeder network,
 1962), REVERSE, SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
-becomes the room it was struck in), GHOST (the tone gone too, the breath
-alone) and MOTION (the tape stop and the tape start, baked). `FxChain`
-fixes the order — reverse → smear → ghost → eq → squash → crunch → tape →
-echo → spring → motion — owns the total tail budget so stacked reverbs
-can't turn a hit into a phrase, and serializes per-pad next to the WAV.
+becomes the room it was struck in; a FLOOR makes it banded, so a kick
+loses its click and keeps its thump), GHOST (the tone gone too, the
+breath alone), DUB (generation loss: a dub of a dub, twelve deep), SWELL
+(the sound arrives before it strikes) and MOTION (the tape stop and the
+tape start, baked). `FxChain` fixes the order — swell → reverse → smear →
+ghost → eq → squash → crunch → dub → tape → echo → spring → motion — owns
+the total tail budget so stacked reverbs can't turn a hit into a phrase,
+and serializes per-pad next to the WAV.
 Identity is tested: a kick through the whole default rack still classifies
 KICK.
 

@@ -108,19 +108,31 @@ object Separate {
      * hit that was all attack has no wash to keep, and its residue is
      * not shouted to full scale. Deterministic; the same hit smears the
      * same way every time.
+     *
+     * [aboveHz] is the banded smear: bins below it keep their attack
+     * untouched, so a kick can lose its click and keep its thump. 0 (the
+     * default) smears the whole band. A banded smear gets no makeup: the
+     * untouched band still carries the sound's level, and lifting it to
+     * cover for the missing clicks would change the very thing the floor
+     * promised to leave alone.
      */
-    fun smear(snip: Snip, amount: Float = 1f): Snip {
+    fun smear(snip: Snip, amount: Float = 1f, aboveHz: Float = 0f): Snip {
         require(amount in 0f..1f) { "smear amount is 0..1, got $amount" }
+        require(aboveHz >= 0f) { "the smear's floor is a frequency, got $aboveHz" }
         require(snip.frameCount > 0) { "the source is empty" }
         if (amount <= 0f) return snip
         val t = stnMasks(snip).transients
         val gains = FloatArray(Spectral.BINS)
+        val firstBin = (0 until Spectral.BINS).firstOrNull { Spectral.binHz(it, snip.sampleRate) >= aboveHz } ?: Spectral.BINS
+        // A floor above the top bin leaves nothing to smear: transparent means the input itself, not a round trip.
+        if (firstBin >= Spectral.BINS) return snip
         val out = Spectral.process(snip) { ch, f, _ ->
             val mask = t[ch][f]
-            for (b in 0 until Spectral.BINS) gains[b] = 1f - amount * mask[b]
+            for (b in 0 until firstBin) gains[b] = 1f
+            for (b in firstBin until Spectral.BINS) gains[b] = 1f - amount * mask[b]
             gains
         }
-        return matchPeak(snip, out)
+        return if (firstBin == 0) matchPeak(snip, out) else out
     }
 
     /**
