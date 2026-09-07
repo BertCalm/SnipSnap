@@ -59,6 +59,31 @@ class WavReaderTest {
     }
 
     @Test
+    fun `the most negative code - the one the writer never emits - clamps to -1 rather than overshooting`() {
+        // 16-bit: -32768, +32767, 0.
+        val pcm16 = WavReader.read(wav(1, 16, 1, 44_100, byteArrayOf(0x00, 0x80.toByte(), 0xFF.toByte(), 0x7F, 0, 0)))
+        assertEquals(-1f, pcm16.samples[0], "-32768 is -1.0, not -1.00003")
+        assertEquals(1f, pcm16.samples[1])
+        assertEquals(0f, pcm16.samples[2])
+        // 24-bit: -8388608, +8388607.
+        val pcm24 = WavReader.read(wav(1, 24, 1, 44_100, byteArrayOf(0x00, 0x00, 0x80.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0x7F)))
+        assertEquals(-1f, pcm24.samples[0], "-8388608 is -1.0")
+        assertEquals(1f, pcm24.samples[1])
+        // 32-bit: -2147483648, +2147483647, and a non-dyadic code divided in Double.
+        val pcm32 = WavReader.read(
+            wav(1, 32, 1, 44_100, byteArrayOf(0, 0, 0, 0x80.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0x7F, 0x01, 0, 0, 0x40)),
+        )
+        assertEquals(-1f, pcm32.samples[0], "-2^31 is -1.0")
+        assertEquals(1f, pcm32.samples[1])
+        assertEquals((0x40000001 / 2_147_483_647.0).toFloat(), pcm32.samples[2])
+        // 8-bit: 0 (the most negative), 255, 128 (silence).
+        val pcm8 = WavReader.read(wav(1, 8, 1, 44_100, byteArrayOf(0, 0xFF.toByte(), 0x80.toByte())))
+        assertEquals(-1f, pcm8.samples[0])
+        assertEquals(1f, pcm8.samples[1])
+        assertEquals(0f, pcm8.samples[2])
+    }
+
+    @Test
     fun `reads back a 16 bit mono wav`() {
         val original = ramp(512)
         val decoded = roundTrip(original, WavWriter.BitDepth.PCM_16)

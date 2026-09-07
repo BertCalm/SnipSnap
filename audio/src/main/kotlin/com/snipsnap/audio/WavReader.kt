@@ -135,7 +135,8 @@ object WavReader {
                 bits == 8 -> (((bytes[at].toInt() and 0xFF) - 128) / 127f).coerceAtLeast(-1f)
                 bits == 16 -> (leShort(bytes, at).toShort() / 32767f).coerceAtLeast(-1f)
                 bits == 24 -> (le24(bytes, at) / 8_388_607f).coerceAtLeast(-1f)
-                else -> (leInt(bytes, at) / 2_147_483_647f).coerceAtLeast(-1f)
+                // 2^31 - 1 is not a Float, so this one divides in Double first.
+                else -> (leInt(bytes, at) / 2_147_483_647.0).toFloat().coerceAtLeast(-1f)
             }
         }
         return Snip(out, channels, sampleRate)
