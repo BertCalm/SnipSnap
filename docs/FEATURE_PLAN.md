@@ -26,15 +26,15 @@ flow (`ExportWizardModel` over the shared `Exporters`), pad voices
 gates — all tested. Capture buffer, cleanup DSP, and every writer were
 already done and hardware-verified for drums.
 
-**Remaining (all APP; = APP_PLAN M0–M5):**
+**The milestones (= APP_PLAN M0–M5), reconciled against the app on 2026-09-07 — the ticks below name what exists and where:**
 
 | # | Work | Size | Exit test |
 |---|---|---|---|
-| F1.1 | M0 walking skeleton — theme, nav, `KitStore` shelf | M | browse kits, tap pads, hear WAVs, flip schemes |
-| F1.2 | M1 capture — service, MediaProjection, bubble, mic, silence detection, QS tile | L | snip YouTube from inside YouTube; snip the room; share a video in |
-| F1.3 | M2 tape deck — bind Compose to `TapeDeckModel`/`PeaksPyramid` | M | a YouTube snip becomes a clean one-shot, cut on the hit |
-| F1.4 | M4 play mode — Oboe, bind `VoiceAllocator` | M | finger drumming feels tight on a mid-range phone |
-| F1.5 | M5 export wizard — SAF, bind `ExportWizardModel` | M | the card writes; the Live III plays it |
+| F1.1 | ✓ done: M0 walking skeleton — `TapeTheme` + the ten-tab `MenuRow`, `KitsScreen` (the shelf over `KitShelf`/`KitStore`), `KitScreen` (the 4×4 grid over `PadPlayer`), `PropertiesScreen` (the live scheme picker) | M | browse kits, tap pads, hear WAVs, flip schemes |
+| F1.2 | M1 capture — **in part**: the always-listening mic ring is real (`MicSessionService`, a foreground microphone session with ARM / SNIP / EJECT, `BubbleOverlay`, the TAPE screen's retroactive snip). **Still missing:** MediaProjection (another app's audio from inside it), silence detection for opt-out apps, the quick-settings tile — the manifest carries no tile and no projection | L | snip YouTube from inside YouTube; snip the room (✓); share a video in (F3.2) |
+| F1.3 | ✓ done: M2 tape deck — `TapeScreen` over `TapeDeckModel` and `PeaksPyramid`, `TapeVoice` for audition, a snip handed to CHOP | M | a YouTube snip becomes a clean one-shot, cut on the hit |
+| F1.4 | ✓ done: M4 play mode — `PlayScreen` over `VoiceAllocator`, `PadPlayer` on SoundPool (Oboe deliberately not wired — `PadPlayer`'s own note: effort on a component the pads don't need yet). The exit test is a bench row: USER | M | finger drumming feels tight on a mid-range phone (bench) |
+| F1.5 | ✓ done: M5 export wizard — `ExportScreen` over `ExportWizardModel`, the format cycler (kit, expansion, MPC SESSION (`.xpj`)), SAF create-document through `MainActivity`; "the Live III plays it" stays a bench row | M | the card writes (✓); the Live III plays it (bench) |
 
 M3 is feature F2 below. Risks and their standing: APP_PLAN's table.
 
@@ -48,8 +48,8 @@ groove: kick→A01, hats choking, 92 BPM detected).
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| F2.1 | CHOP screen — bind Compose to `ChopReviewModel`, defrag-grid progress gag (= APP_PLAN M3) | APP | M | one captured bar → playable, sensibly-laid-out kit in under a minute |
-| F2.2 | The one tap — INSTANT KIT action on a fresh capture: chop with defaults straight into review | APP | S | capture 8 s of a break, tap once, play the kit |
+| F2.1 | ✓ done: CHOP screen — `ChopScreen` over `ChopReviewModel` (tap-to-cycle chips, NOT SURE, placement preview, SEND TO GRID, the MELODIC toggle, the teach path). Not drawn: the defrag-grid progress gag — polish, bench | APP | M | one captured bar → playable, sensibly-laid-out kit in under a minute |
+| F2.2 | The one tap — INSTANT KIT action on a fresh capture: chop with defaults straight into review. **Open:** today a snip goes TAPE → CHOP and the review is a screen of its own; no single action runs the defaults and lands on the grid | APP | S | capture 8 s of a break, tap once, play the kit |
 | F2.3 | ✓ done: calibration harness — a labeled-corpus test: WAVs + expected classes under `reference/calibration/`, a report of confusion + per-threshold sensitivity; tune `Classifier` against it | CORE | S | thresholds justified by real captures, not synthetic renders |
 | F2.4 | Calibration corpus — a dozen real captured hits (phone captures, not renders), labeled by ear | USER | S | F2.3 has something true to chew on |
 
@@ -64,10 +64,10 @@ on desktop today. The risk table's opt-out mitigation depends on this.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| F3.1 | Intent filters + receive activity → trim screen | APP | S | shared audio file lands in the tape deck |
-| F3.2 | Video demux — `MediaExtractor`/Media3 → float PCM → `Snip` → `Resampler` | APP | M | shared MP4's audio lands in the tape deck |
+| F3.1 | Intent filters + receive activity → trim screen. **Open:** the manifest carries only MAIN; nothing shared into the app lands anywhere | APP | S | shared audio file lands in the tape deck |
+| F3.2 | Video demux — `MediaExtractor`/Media3 → float PCM → `Snip` → `Resampler`. **Open:** no decoder in the app yet; F3.3's fixtures wait for it | APP | M | shared MP4's audio lands in the tape deck |
 | F3.3 | ✓ done: demux conformance fixtures — tiny known-content WAV fixtures + a contract test the app's decode output must pass (rate, channels, sample accuracy) | CORE | S | app-side decode verified against ground truth without an SDK |
-| F3.4 | Onboarding copy for opt-out apps (silence detection → screen-recorder path) — copy exists in `Copy`; wire it | APP | S | blocked capture shows the honest fallback, in voice |
+| F3.4 | Onboarding copy for opt-out apps (silence detection → screen-recorder path) — copy exists in `Copy`; wire it. **Open:** waits on F1.2's silence detection | APP | S | blocked capture shows the honest fallback, in voice |
 
 ## F4 — Synth starter kits
 
@@ -79,8 +79,8 @@ bounded macro rolls, and two generated kits are hardware-verified.
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
 | F4.1 | ✓ done: starter-kit registry — `StarterKits` in `:shell`: name → builder → blurb → seed policy, wrapping the main-source builders so the FRESH TAPE menu is data-driven | CORE | S | registry renders every kit through assemble→preflight in a test |
-| F4.2 | NEW KIT menu — pick a starter, reroll seed, land on the grid (needs M0 only) | APP | S | first-run user has a playable kit in 30 s, empty grid never shows |
-| F4.3 | SYNTH screen — macro panels over `Patches`, SCRAMBLE, RENDER TO PAD (= the M5 synth half) | APP | M | prototype's Thump Lab behaviour, on device |
+| F4.2 | ✓ done: NEW KIT menu — `KitsScreen`'s FRESH TAPE menu over `StarterKits`, seeded starters badged REROLLS, a fresh seed per pick, lands on KIT | APP | S | first-run user has a playable kit in 30 s, empty grid never shows |
+| F4.3 | ✓ done: SYNTH screen — `SynthScreen`: macro panels over `Patches`, SCRAMBLE, SEND TO PAD (the recipe riding the pad) | APP | M | prototype's Thump Lab behaviour, on device |
 
 Also yields rights-clean Play Store demo content for free.
 
@@ -106,7 +106,7 @@ waiting.
 |---|---|---|---|---|
 | F6.1 | Hardware import check — does the Live III's expansion import accept `SnipSnap_Factory.xpn`? (Part 2 queue, item 4) | USER | S | yes/no + exact error text if no |
 | F6.2 | ✓ done: `XpnImporter` — read an `.xpn` back into a kit folder (unzip, parse the program, resolve bare sample names); free CLI `import` command; the receive half of sharing | CORE | S | pack → import → re-export round-trips; a foreign commercial `.xpn` imports |
-| F6.3 | Share/receive flow — ACTION_SEND a kit as `.xpn`; intent-filter receives one → `XpnImporter` → the shelf | APP | S | kit → messenger → friend's phone → their shelf → their MPC |
+| F6.3 | Share/receive flow — ACTION_SEND a kit as `.xpn`; intent-filter receives one → `XpnImporter` → the shelf. **Open:** neither half exists in the app (no ACTION_SEND, no receive filter); the CLI `pack` / `import` pair is the whole loop on desktop | APP | S | kit → messenger → friend's phone → their shelf → their MPC |
 
 F6.2 doesn't wait on F6.1: importing serves the app-to-app share loop even
 if the hardware importer says no (folders remain the hardware path).
@@ -146,7 +146,7 @@ chromatically. Near-zero new code; in-key capture's payoff squared.
 |---|---|---|---|---|
 | W2.1 | ✓ done: `OneNote` builder — snip → detected root → one-zone `KeygroupProgram` (full key range), refused with a reason when no confident pitch | CORE | S | known-pitch tone → program with right root; noise → clear refusal |
 | W2.2 | ✓ done: CLI `keys <note.wav>` — one-note instrument to `.xty` + `.xpm` twins | CORE | S | artifacts land, detected root printed |
-| W2.3 | App action — MAKE INSTRUMENT on a tonal pad (after M3) | APP | S | long-press a tonal pad → instrument on the shelf |
+| W2.3 | ✓ done: App action — MAKE INSTRUMENT on the PAD SHEET (and MAKE PAD beside it), the instrument written to `Instruments/` beside the kits. The phone cannot yet *play* a keygroup instrument — that is the open half, queued next | APP | S | long-press a tonal pad → instrument on the shelf |
 | W2.4 | Bench — plays in tune chromatically from one sample | USER | S | ears |
 
 ## W3 — The reverse loop: MPC → phone → MPC
@@ -161,7 +161,7 @@ either wave: it doubles what the product is.
 |---|---|---|---|---|
 | W3.1 | ✓ done: `Mpc3Importer` — standalone drum `.xtd` + data folder → kit folder (levels, pans, tunes, mute groups, velocity layers, colours where present); missing samples refused by name; keygroup tracks refused with a reason | CORE | M | our export → import round-trips; a commercial `.xtd` from `reference/golden/` parses (sample-missing errors listed, not crashed) |
 | W3.2 | ✓ done: CLI `import` learns `.xtd` — dispatch by magic bytes, not extension | CORE | S | both archive kinds import through one command |
-| W3.3 | App receive/browse — open a `.xtd` from storage onto the shelf (after M0) | APP | S | MPC-saved kit editable on the phone |
+| W3.3 | App receive/browse — open a `.xtd` from storage onto the shelf. **Open:** no open-document path in the app; `Mpc3Importer` waits behind it | APP | S | MPC-saved kit editable on the phone |
 | W3.4 | The Live III firmware save (Part 2 item 6) becomes this feature's fixture as well as the corpus's | USER | S | the round-trip claim tested against firmware's own output |
 
 ## W4 — Evil-twin bank
@@ -174,7 +174,7 @@ One action: bank B becomes your kit's evil twins.
 |---|---|---|---|---|
 | W4.1 | ✓ done: `KitBuilderModel.remixBankB(seed)` — bank A read back as arranged pads, `withRemixBank`, twins written to slots 17–32 with recipes; reroll replaces | CORE | S | any kit gains a bank B; same seed reproduces; recipes recorded |
 | W4.2 | ✓ done: CLI `remix <kit-dir> [--seed N]` | CORE | S | works on a chopped kit |
-| W4.3 | App action — EVIL TWINS in the kit menu (after M3) | APP | S | one tap, bank B lights up |
+| W4.3 | App action — EVIL TWINS in the kit menu. **Open:** `KitBuilderModel.remixBankB` is the whole door, tested; the KIT screen's action row has no button for it yet (the row now carries TAKES + BIN, SCULPT, STRETCH, KEY) | APP | S | one tap, bank B lights up |
 
 ## W5 — Ghost notes from one capture
 
@@ -186,7 +186,7 @@ one-shots get real ghost notes, not just quieter ones.
 |---|---|---|---|---|
 | W5.1 | ✓ done: `KitBuilderModel.addGhostLayers(slot)` — soften into 1–2 soft zones under the main sample; reversible (clear layers) | CORE | S | zones valid, soft renders measure darker (centroid), pad reverts cleanly |
 | W5.2 | ✓ done: CLI `chop --ghosts` — layers on every one-shot pad | CORE | S | chopped kit exports with velocity zones |
-| W5.3 | App toggle on the pad sheet (after M3) | APP | S | quiet hits sound soft on hardware |
+| W5.3 | ✓ done: App toggle on the pad sheet — GHOSTS on the PAD SHEET over `addGhostLayers` / `clearGhostLayers` | APP | S | quiet hits sound soft on hardware (bench) |
 
 ## W6 — BPM + key metadata everywhere
 
@@ -202,12 +202,12 @@ free: the MPC warps loops itself when the tempo metadata is right.
 
 | Item | What | Owner | Size | Note |
 |---|---|---|---|---|
-| W7 seamless sustain loops | the organ's whole-period loop cut generalized to captured notes — needs crossfade loops for vibrato/noise | CORE | M | hold a captured string, it sings forever; hardest DSP of the wave, do last |
-| W8 melodic chop | grid-chop a phrase, `Pitch` each slice, lay out low→high on the SCALE layout | CORE | S–M | a vocal run becomes an instrument-ish kit |
-| W9 takes + the 30-day bin | numbered `kit.json` takes on save; cleared samples to a bin ("THE BIN KEEPS IT 30 DAYS" is already in the copy) | CORE + APP | S | trust feature; model in `:shell` |
-| W10 teach-the-machine | chip overrides logged as **feature vectors + labels only** (never audio — rights-clean); calibration harness ingests them | CORE + APP | S+S | ordinary use becomes classifier training data; needs a consent switch |
-| W11 one-file backup | every kit as `.xpn` in one archive; restore via `XpnImporter` | CORE | S | retention insurance |
-| W12 pad mini-waveforms | `PeaksPyramid` makes them free to draw | APP | S | perceived-polish per effort champion |
+| W7 seamless sustain loops | ✓ done (CORE wave 3): `LoopCut` — whole-period loop search after the attack, a baked crossfade when the raw seam isn't clean, honest refusals | CORE | M | hold a captured string, it sings forever |
+| W8 melodic chop | ✓ done (CORE wave 3; the CHOP screen's MELODIC toggle is X1.3) | CORE | S–M | a vocal run becomes an instrument-ish kit |
+| W9 takes + the 30-day bin | ✓ done (CORE wave 3, `TakesBinScreen` on the phone as X2.3) | CORE + APP | S | trust feature; model in `:shell` |
+| W10 teach-the-machine | ✓ done in core (wave 3: `TeachLog`, the harness ingests it) and wired into CHOP behind a boolean; the consent switch's UI is X4.4, still open | CORE + APP | S+S | ordinary use becomes classifier training data; needs a consent switch |
+| W11 one-file backup | ✓ done (CORE wave 3: `KitBackup`, CLI `backup`); the phone's share/backup action is X3.3, open | CORE | S | retention insurance |
+| W12 pad mini-waveforms | `PeaksPyramid` makes them free to draw. **Open:** the PAD SHEET, TAPE, CHOP and SYNTH draw peaks already; the KIT grid's cells draw none yet | APP | S | perceived-polish per effort champion |
 
 **Rejected, with reasons:** stem separation (heavy ML, off-brand for an
 honest tool); our own time-stretch (the MPC warps better — W6 ships the
@@ -232,7 +232,7 @@ something you can perform.
 |---|---|---|---|---|
 | X1.1 | ✓ done: melodic placement in `ChopReviewModel` — pitched slices sorted ascending onto the pads, unpitched appended in capture order; per-row pitch cached | CORE | S | out-of-order tones land in ascending pad order |
 | X1.2 | ✓ done: CLI `chop --melodic` | CORE | S | a scrambled scale chops into a playable run |
-| X1.3 | App toggle on the chop screen (after M3) | APP | S | MELODIC next to the classic layout |
+| X1.3 | ✓ done: the CHOP screen's MELODIC toggle beside the classic layout | APP | S | MELODIC next to the classic layout |
 
 ## X2 — Takes + the 30-day bin (was W9)
 
@@ -245,7 +245,7 @@ day one — now it's true).
 |---|---|---|---|---|
 | X2.1 | ✓ done: takes — `save()` archives the outgoing `kit.json` under `.takes/`, capped and rotated; `takes()` lists, `restoreTake(n)` rolls back | CORE | S | edit → save → restore → the earlier kit is back |
 | X2.2 | ✓ done: the bin — deletes move to `.bin/` stamped with when; `binContents()`, `purgeBin(olderThanDays = 30)`, `emptyBin()` | CORE | S | a cleared pad's WAV is recoverable for 30 days |
-| X2.3 | Takes/bin UI (after M0) | APP | S | the copy's promise, visible |
+| X2.3 | ✓ done: `TakesBinScreen` — TAKES + BIN off the KIT action row, restore and the 30-day countdown | APP | S | the copy's promise, visible |
 
 ## X3 — One-file backup (was W11)
 
@@ -256,7 +256,7 @@ through `XpnImporter`. Retention insurance and the "new phone" story.
 |---|---|---|---|---|
 | X3.1 | ✓ done: `KitBackup` (`:kit`) — backup(kitsRoot) → one zip of per-kit `.xpn`s (preflight-blocked kits skipped and named); restore(zip) → kit folders | CORE | S | backup → wipe → restore round-trips every clean kit |
 | X3.2 | ✓ done: CLI `backup` / `restore` | CORE | S | works on a folder of chopped kits |
-| X3.3 | App share/backup action (after M0) | APP | S | one file leaves the phone with everything on it |
+| X3.3 | App share/backup action. **Open:** `KitBackup` is the door; no button or share intent on the phone (pairs with F6.3) | APP | S | one file leaves the phone with everything on it |
 
 ## X4 — Teach the machine, data path (was W10's CORE half)
 
@@ -269,7 +269,7 @@ calibration harness eat them.
 | X4.1 | ✓ done: split `Classifier` — `classify(Features)` beside `classify(Snip)`, so a feature vector is testable without its audio | CORE | S | both paths agree on every corpus render |
 | X4.2 | ✓ done: `TeachLog` (`:shell`) — jsonl of {features, label} from `ChopReviewModel`'s overridden rows; reader for the harness side | CORE | S | overrides round-trip; a log line re-classifies |
 | X4.3 | ✓ done: harness ingestion — overrides.jsonl in `reference/calibration/` scored alongside the WAVs | CORE | S | logged corrections show up in the confusion report |
-| X4.4 | Consent switch + wiring in the app (after M3) | APP | S | off by default; nothing leaves the device either way |
+| X4.4 | Consent switch + wiring in the app. **Half done:** the boolean lives in `App` (off by default) and CHOP reads it; the consent row in TAPE PROPERTIES is not drawn, so nothing can flip it yet | APP | S | off by default; nothing leaves the device either way |
 
 ## X5 — Multisample keys (new)
 
@@ -353,7 +353,7 @@ tracks with their grooves, instruments beside them, mixer wired.
 |---|---|---|---|---|
 | Y3.1 | ✓ done: `SessionBuilder` (`:kit`) — stage kit folders + `.xty` instrument packages into `_[ProjectData]/`, hand `Mpc3ProjectWriter` the track list; grooves from `groove.json` ride onto the sequence | CORE | S–M | two kits + an instrument → one `.xpj` our reader accepts with the right track types |
 | Y3.2 | ✓ done: CLI `project <kit-dir>... [--keys pkg...] [--name]` | CORE | S | one command, whole session on the card |
-| Y3.3 | App: SESSION export in the wizard (after M5's SAF) | APP | S | the wizard's biggest format, one tap |
+| Y3.3 | ✓ done: the export wizard's format cycler carries MPC SESSION (`.xpj`) — KITS + GROOVES | APP | S | the wizard's biggest format, one tap |
 
 ## Y4 — Pad treatments: the FX rack pointed at one pad
 
@@ -1544,13 +1544,18 @@ CORE wave 6: ✓ all landed (2026-08-25) — multi-sequence projects
   builder + whole-pack import. Bench row open: AA1.3 sequence flip
   on the Live III (rides the next card session).
 
-APP (in milestone order; feature items slot in where their parent lands):
-  M0 (F1.1) → +F4.2 new-kit menu · +W3.3 open-.xtd
-  M1 (F1.2) → +F3.1/F3.2/F3.4 import
-  M2 (F1.3)
-  M3 (F2.1) → +F2.2 one-tap · ✓ F5.3 key picker (landed 2026-09-07) · +W2.3/W4.3/W5.3 pad actions
-  M4 (F1.4)
-  M5 (F1.5 + F4.3) → +F6.3 share flow
+APP (reconciled against the app 2026-09-07 — the milestones landed
+  without their rows being ticked; this is the honest remainder):
+  ✓ M0 (F1.1) · ✓ F4.2 new-kit menu · open: W3.3 open-.xtd
+  M1 (F1.2) half: the mic ring is real; open: MediaProjection, silence
+    detection, the QS tile · open: F3.1/F3.2/F3.4 import
+  ✓ M2 (F1.3)
+  ✓ M3 (F2.1) · ✓ F5.3 key picker · ✓ W2.3 MAKE INSTRUMENT · ✓ W5.3 GHOSTS
+    · ✓ X1.3 MELODIC · ✓ X2.3 TAKES + BIN · open: F2.2 one-tap, W4.3 EVIL
+    TWINS button, X4.4 consent row, the phone playing keygroup instruments
+  ✓ M4 (F1.4, SoundPool not Oboe)
+  ✓ M5 (F1.5 + F4.3) · ✓ Y3.3 SESSION export · open: F6.3 share flow, X3.3
+    share/backup action
   bench: W12 pad waveforms whenever polish is the mood
 
 CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
