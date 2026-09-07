@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.KitWrites
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -83,9 +84,11 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -133,6 +136,13 @@ fun SynthScreen(
     entry: KitShelf.Entry?,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
+    // App()'s own scope — the same one PadSheetScreen/PadCaptureScreen
+    // receive as their own `appScope` — so a SEND TO PAD write in flight
+    // survives a MenuRow tab switch instead of being cancelled by it (see
+    // state-findings.md #3: this screen used to take its own locally-scoped
+    // `rememberCoroutineScope()` for exactly this write, unlike every
+    // sibling overlay).
+    appScope: CoroutineScope,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -235,7 +245,7 @@ fun SynthScreen(
         val e = entry ?: return
         if (sendBusy) return
         sendBusy = true
-        scope.launch {
+        appScope.launch {
             try {
                 // The patch's own init validates its macros (Patches.
                 // validateMacros) — practically unreachable given every
@@ -247,37 +257,39 @@ fun SynthScreen(
                 val recipe = PadRecipe(patch = patch).toJsonValue()
                 val cls = engine.drumClass(voice)
                 val (existed, updatedKit) = withContext(Dispatchers.IO) {
-                    val model = KitBuilderModel.open(e.dir)
-                    val rendered = patch.render()
-                    val alreadyThere = model.pad(slot) != null
-                    if (alreadyThere) {
-                        // REPLACE: `replaceAudio` only rewrites the sample +
-                        // recipe of a pad that already exists — it leaves
-                        // displayName/drumClass/colorHex/muteGroup exactly as
-                        // they were, so without this follow-up `update` the
-                        // pad's identity would still say (and choke-group
-                        // with) whatever it was before, while sounding like
-                        // the new voice.
-                        model.replaceAudio(slot, recipe) { _ -> rendered }
-                        model.update(slot) { p ->
-                            p.copy(
-                                displayName = name,
-                                drumClass = cls,
-                                colorHex = AutoPlace.colorFor(cls),
-                                muteGroup = AutoPlace.muteGroupFor(cls),
-                            )
+                    KitWrites.mutex.withLock {
+                        val model = KitBuilderModel.open(e.dir)
+                        val rendered = patch.render()
+                        val alreadyThere = model.pad(slot) != null
+                        if (alreadyThere) {
+                            // REPLACE: `replaceAudio` only rewrites the sample +
+                            // recipe of a pad that already exists — it leaves
+                            // displayName/drumClass/colorHex/muteGroup exactly as
+                            // they were, so without this follow-up `update` the
+                            // pad's identity would still say (and choke-group
+                            // with) whatever it was before, while sounding like
+                            // the new voice.
+                            model.replaceAudio(slot, recipe) { _ -> rendered }
+                            model.update(slot) { p ->
+                                p.copy(
+                                    displayName = name,
+                                    drumClass = cls,
+                                    colorHex = AutoPlace.colorFor(cls),
+                                    muteGroup = AutoPlace.muteGroupFor(cls),
+                                )
+                            }
+                        } else {
+                            // ADD: `assign` places new audio on an empty slot —
+                            // it derives displayName/colorHex/muteGroup itself,
+                            // but has no notion of a synth recipe, so the recipe
+                            // rides a follow-up `update` (its guards permit a
+                            // recipe-only edit; slot/sampleFile stay put).
+                            model.assign(slot, rendered, cls, name)
+                            model.update(slot) { p -> p.copy(recipe = recipe) }
                         }
-                    } else {
-                        // ADD: `assign` places new audio on an empty slot —
-                        // it derives displayName/colorHex/muteGroup itself,
-                        // but has no notion of a synth recipe, so the recipe
-                        // rides a follow-up `update` (its guards permit a
-                        // recipe-only edit; slot/sampleFile stay put).
-                        model.assign(slot, rendered, cls, name)
-                        model.update(slot) { p -> p.copy(recipe = recipe) }
+                        model.save()
+                        alreadyThere to model.kit
                     }
-                    model.save()
-                    alreadyThere to model.kit
                 }
                 showChooser = false
                 onKitUpdated(updatedKit)

@@ -32,6 +32,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.KitWrites
 import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -52,7 +53,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
@@ -68,20 +68,14 @@ private fun padTag(slot: Int): String = "A%02d".format(slot)
 /** Which gesture's commit is in flight, if any — drives the busy label on each control. */
 private enum class Gesture { GRAB, HOLD }
 
-/**
- * Serializes the open→assign→save sequence across every [PadCaptureScreen]
- * instance — module-level (not `remember`ed), so it survives navigation.
- * A GRAB's save is launched into `appScope` and deliberately outlives this
- * composable (see the class KDoc), which means a user can tab away mid-save,
- * come back to the still-shows-empty pad (the first save hasn't landed in
- * `open.kit` yet), and long-press the same slot again. Without this lock,
- * two [KitBuilderModel] instances would open the same folder concurrently,
- * `nextStem` could pick the same filename for both, and whichever `save()`
- * lands second would silently overwrite `kit.json` — one grab's audio lost
- * with no toast, no crash. Only the mutation itself is behind the lock; the
- * snapshot/DSP/classify work above it is read-only and stays concurrent.
- */
-private val captureWriteMutex = Mutex()
+// The open→assign→save sequence below is serialized through
+// `KitWrites.mutex`, not a screen-local lock — PadSheetScreen, SynthScreen,
+// and TakesBinScreen all write the same `kit.json` and race this screen's
+// GRAB/HOLD commit exactly the way two GRABs would race each other. See
+// `KitWrites`'s own KDoc for the full "one grab's audio lost with no toast,
+// no crash" scenario a screen-local mutex here used to leave open. Only the
+// mutation itself is behind the lock; the snapshot/DSP/classify work above
+// it is read-only and stays concurrent.
 
 /**
  * The capture surface: what a long-press on an empty [KitScreen] pad opens.
@@ -112,10 +106,10 @@ fun PadCaptureScreen(
     var holdStart by remember { mutableStateOf(0L) }
 
     // GRAB and HOLD are two producers of the same commit: classify → the
-    // mutex-serialized open/assign/save → the same success/null/error
-    // reporting. `committing` is the ONE guard both share, so a GRAB press
-    // mid-HOLD-commit (or vice versa) is a no-op, not a second write racing
-    // the first — see captureWriteMutex's own KDoc for what a second writer
+    // KitWrites-mutex-serialized open/assign/save → the same success/null/
+    // error reporting. `committing` is the ONE guard both share, so a GRAB
+    // press mid-HOLD-commit (or vice versa) is a no-op, not a second write
+    // racing the first — see `KitWrites`'s own KDoc for what a second writer
     // would otherwise clobber. `producer` runs on the IO dispatcher, same as
     // the snapshot/DSP work it replaces. Which [Gesture] is stashed only
     // changes which control's busy label lights up — the guard/disable/
@@ -134,7 +128,7 @@ fun PadCaptureScreen(
                 val updated: Kit? = withContext(Dispatchers.IO) {
                     val snip = producer() ?: return@withContext null
                     val cls = Classifier.classify(snip).drumClass
-                    captureWriteMutex.withLock {
+                    KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(entry.dir)
                         model.assign(slot, snip, cls, cls.name.replace('_', ' '))
                         model.save()

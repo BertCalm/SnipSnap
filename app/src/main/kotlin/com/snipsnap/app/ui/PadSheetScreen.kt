@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.KitWrites
 import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.OutsideSession
 import com.snipsnap.app.TapeVoice
@@ -95,6 +96,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -284,7 +286,7 @@ fun PadSheetScreen(
         if (!m.dirty) return@LaunchedEffect
         busy = true
         try {
-            withContext(Dispatchers.IO) { m.save() }
+            withContext(Dispatchers.IO) { KitWrites.mutex.withLock { m.save() } }
             onKitUpdated(m.kit)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -301,7 +303,7 @@ fun PadSheetScreen(
         scope.launch {
             busy = true
             try {
-                withContext(Dispatchers.IO) { mutate(m); m.save() }
+                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { mutate(m); m.save() } }
                 revision++
                 onKitUpdated(m.kit)
                 refreshPadAudio(m)
@@ -357,29 +359,31 @@ fun PadSheetScreen(
                     check(p.velocityLayers.isEmpty()) {
                         "pad $slot is velocity-layered - clear GHOSTS before smearing"
                     }
-                    if (hadPriorSmear) m.untreatPad(slot)
-                    if (amount > 0f) {
-                        val recipe = JsonValue.Obj(
-                            mapOf(
-                                "verb" to JsonValue.Str("smear"),
-                                "amount" to JsonValue.Num(amount.toDouble()),
-                            ),
-                        )
-                        m.replaceAudio(slot, recipe) { snip ->
-                            val smeared = Smear.process(snip, amount)
-                            if (snip.channels == 2 && smeared.channels == 1) {
-                                val stereo = FloatArray(smeared.frameCount * 2)
-                                for (i in 0 until smeared.frameCount) {
-                                    stereo[i * 2] = smeared.samples[i]
-                                    stereo[i * 2 + 1] = smeared.samples[i]
+                    KitWrites.mutex.withLock {
+                        if (hadPriorSmear) m.untreatPad(slot)
+                        if (amount > 0f) {
+                            val recipe = JsonValue.Obj(
+                                mapOf(
+                                    "verb" to JsonValue.Str("smear"),
+                                    "amount" to JsonValue.Num(amount.toDouble()),
+                                ),
+                            )
+                            m.replaceAudio(slot, recipe) { snip ->
+                                val smeared = Smear.process(snip, amount)
+                                if (snip.channels == 2 && smeared.channels == 1) {
+                                    val stereo = FloatArray(smeared.frameCount * 2)
+                                    for (i in 0 until smeared.frameCount) {
+                                        stereo[i * 2] = smeared.samples[i]
+                                        stereo[i * 2 + 1] = smeared.samples[i]
+                                    }
+                                    Snip(stereo, 2, smeared.sampleRate)
+                                } else {
+                                    smeared
                                 }
-                                Snip(stereo, 2, smeared.sampleRate)
-                            } else {
-                                smeared
                             }
                         }
+                        m.save()
                     }
-                    m.save()
                 }
                 revision++
                 onKitUpdated(m.kit)
@@ -435,27 +439,29 @@ fun PadSheetScreen(
             busy = true
             try {
                 withContext(Dispatchers.IO) {
-                    if (hadPriorTreatment) {
-                        val files = (listOf(p.sampleFile) + p.velocityLayers.map { it.sampleFile }).distinct()
-                        val binned = m.binContents().map { it.originalName }.toSet()
-                        if (p.sampleFile in binned) {
-                            check(files.all { it in binned }) {
-                                "pad $slot can't cleanly re-treat - its ghost layers postdate the last " +
-                                    "treatment - clear GHOSTS, or accept the current sound, before treating again"
+                    KitWrites.mutex.withLock {
+                        if (hadPriorTreatment) {
+                            val files = (listOf(p.sampleFile) + p.velocityLayers.map { it.sampleFile }).distinct()
+                            val binned = m.binContents().map { it.originalName }.toSet()
+                            if (p.sampleFile in binned) {
+                                check(files.all { it in binned }) {
+                                    "pad $slot can't cleanly re-treat - its ghost layers postdate the last " +
+                                        "treatment - clear GHOSTS, or accept the current sound, before treating again"
+                                }
+                                m.unEraPad(slot)
                             }
-                            m.unEraPad(slot)
                         }
+                        when (treatment) {
+                            is PadSheet.Treatment.Era -> m.eraPad(slot, treatment.name, amount)
+                            is PadSheet.Treatment.Character -> m.characterPad(slot, treatment.name, amount)
+                            // Row five (and TUNE) reads the kit's key, or does without
+                            // its own way; the retune's phases come from a fresh seed
+                            // per press.
+                            is PadSheet.Treatment.Keyed ->
+                                m.keyedPad(slot, treatment.name, amount, kotlin.random.Random.nextLong(0L, 1_000_000L))
+                        }
+                        m.save()
                     }
-                    when (treatment) {
-                        is PadSheet.Treatment.Era -> m.eraPad(slot, treatment.name, amount)
-                        is PadSheet.Treatment.Character -> m.characterPad(slot, treatment.name, amount)
-                        // Row five (and TUNE) reads the kit's key, or does without
-                        // its own way; the retune's phases come from a fresh seed
-                        // per press.
-                        is PadSheet.Treatment.Keyed ->
-                            m.keyedPad(slot, treatment.name, amount, kotlin.random.Random.nextLong(0L, 1_000_000L))
-                    }
-                    m.save()
                 }
                 revision++
                 onKitUpdated(m.kit)
@@ -570,8 +576,10 @@ fun PadSheetScreen(
             busy = true
             try {
                 withContext(Dispatchers.IO) {
-                    MutateSheet.apply(m, slot, who, move, fraction)
-                    m.save()
+                    KitWrites.mutex.withLock {
+                        MutateSheet.apply(m, slot, who, move, fraction)
+                        m.save()
+                    }
                 }
                 revision++
                 onKitUpdated(m.kit)
@@ -634,9 +642,11 @@ fun PadSheetScreen(
             busy = true
             try {
                 val drifted = withContext(Dispatchers.IO) {
-                    val d = MutateSheet.drift(m, slot, root, seed, fraction)
-                    m.save()
-                    d
+                    KitWrites.mutex.withLock {
+                        val d = MutateSheet.drift(m, slot, root, seed, fraction)
+                        m.save()
+                        d
+                    }
                 }
                 spins = seed + 1
                 partner = MutateSheet.Partner.Deal(drifted.pick.label, drifted.pick.file, seed)
@@ -734,9 +744,11 @@ fun PadSheetScreen(
                         // composition's own (main) scope.
                         scope.launch { outsideStage = Copy.OUTSIDE_SENDING }
                     }
-                    val o = OutsideSheet.apply(m, slot, move, returned, fraction, preRoll)
-                    m.save()
-                    o
+                    KitWrites.mutex.withLock {
+                        val o = OutsideSheet.apply(m, slot, move, returned, fraction, preRoll)
+                        m.save()
+                        o
+                    }
                 }
                 revision++
                 onKitUpdated(m.kit)
@@ -857,9 +869,11 @@ fun PadSheetScreen(
             busy = true
             try {
                 val match = withContext(Dispatchers.IO) {
-                    val found = m.desamplePad(slot)
-                    m.save()
-                    found
+                    KitWrites.mutex.withLock {
+                        val found = m.desamplePad(slot)
+                        m.save()
+                        found
+                    }
                 }
                 revision++
                 onKitUpdated(m.kit)
@@ -894,7 +908,7 @@ fun PadSheetScreen(
         scope.launch {
             busy = true
             try {
-                withContext(Dispatchers.IO) { m.save() }
+                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { m.save() } }
                 onKitUpdated(m.kit)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -923,7 +937,7 @@ fun PadSheetScreen(
             if (m != null && m.dirty) {
                 appScope.launch {
                     try {
-                        withContext(Dispatchers.IO) { m.save() }
+                        withContext(Dispatchers.IO) { KitWrites.mutex.withLock { m.save() } }
                         onKitUpdated(m.kit)
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e

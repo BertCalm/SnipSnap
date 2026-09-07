@@ -85,6 +85,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
@@ -481,12 +482,19 @@ fun App(shelf: KitShelf) {
         if (busy != null) return
         scope.launch {
             val entry = try {
-                withContext(Dispatchers.IO) { shelf.setKey(source, key) }
+                // KitShelf.setKey is its own open→mutate→save on this kit's
+                // kit.json — the same file PAD SHEET/PAD CAPTURE/SYNTH/TAKES+BIN
+                // write, so it goes through the same KitWrites lock they do.
+                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.setKey(source, key) } }
             } catch (e: Exception) {
                 toast = "KEY FAILED: ${e.message ?: e.javaClass.simpleName}"
                 return@launch
             }
-            open = entry
+            // Same identity guard as the KIT branch's onKitUpdated closures
+            // above: this write ran against `source.dir`, not necessarily
+            // whichever kit is open by the time it lands (setKey sets no
+            // `busy`, so nothing here stops a tab-away-and-reopen mid-write).
+            if (open?.dir == source.dir) open = entry
             kits = withContext(Dispatchers.IO) { shelf.list() }
             toast = key?.let { Copy.keySet(com.snipsnap.shell.KeyPicker.label(it)) } ?: Copy.KEY_OFF
         }
@@ -504,13 +512,17 @@ fun App(shelf: KitShelf) {
         busy = "TWINNING…"
         scope.launch {
             val (entry, _) = try {
-                withContext(Dispatchers.IO) { shelf.evilTwins(source, Random.nextInt()) }
+                // Same reasoning as setKey above: evilTwins is an
+                // open→mutate→save on kit.json.
+                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.evilTwins(source, Random.nextInt()) } }
             } catch (e: Exception) {
                 busy = null
                 toast = "TWINS FAILED: ${e.message ?: e.javaClass.simpleName}"
                 return@launch
             }
-            open = entry
+            // Same identity guard as setKey above — `busy` blocks a second
+            // EVIL TWINS tap, not a MenuRow tab-away-and-reopen mid-write.
+            if (open?.dir == source.dir) open = entry
             kits = withContext(Dispatchers.IO) { shelf.list() }
             busy = null
             toast = if (hadTwins) Copy.TWINS_REROLLED else Copy.BANK_B_LIT
@@ -733,12 +745,16 @@ fun App(shelf: KitShelf) {
         }
         scope.launch {
             val (entry, moved) = try {
-                withContext(Dispatchers.IO) { shelf.inKey(source) }
+                // Same reasoning as setKey above: inKey is an
+                // open→mutate→save on kit.json.
+                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.inKey(source) } }
             } catch (e: Exception) {
                 toast = "IN KEY FAILED: ${e.message ?: e.javaClass.simpleName}"
                 return@launch
             }
-            open = entry
+            // Same identity guard as setKey above — inKey sets no `busy`
+            // either, so nothing stops a tab-away-and-reopen mid-write.
+            if (open?.dir == source.dir) open = entry
             kits = withContext(Dispatchers.IO) { shelf.list() }
             toast = if (moved.isEmpty()) Copy.IN_KEY_NONE else Copy.inKey(moved.size, com.snipsnap.shell.KeyPicker.label(key))
         }
@@ -850,7 +866,14 @@ fun App(shelf: KitShelf) {
                                         grainFieldSlot = slot
                                     },
                                     onKitUpdated = { updatedKit ->
-                                        open = open?.copy(kit = updatedKit)
+                                        // A write that outlived its screen must not be welded
+                                        // onto whichever kit is open NOW (QA: the "Frankenstein
+                                        // entry" — late GRAB on kit A landing after kit B was
+                                        // opened produced Entry(dir=B, kit=A)). `sheetEntry` was
+                                        // captured above at this composition, not re-read live.
+                                        if (open?.dir == sheetEntry.dir) open = open?.copy(kit = updatedKit)
+                                        // The shelf refresh stays unconditional — the write
+                                        // happened on disk regardless of what's open now.
                                         scope.launch {
                                             kits = withContext(Dispatchers.IO) { shelf.list() }
                                         }
@@ -874,8 +897,12 @@ fun App(shelf: KitShelf) {
                                         // makes KIT's PadPlayer reload
                                         // (`LaunchedEffect(entry.kit)`),
                                         // so a restored sample is heard,
-                                        // not the stale cached one.
-                                        open = open?.copy(kit = updatedKit)
+                                        // not the stale cached one — but only
+                                        // onto the kit this restore actually
+                                        // ran against (see the identity guard
+                                        // comment on PAD SHEET's own
+                                        // onKitUpdated above).
+                                        if (open?.dir == sheetEntry.dir) open = open?.copy(kit = updatedKit)
                                         scope.launch {
                                             kits = withContext(Dispatchers.IO) { shelf.list() }
                                         }
@@ -901,8 +928,10 @@ fun App(shelf: KitShelf) {
                                             // onKitUpdated: bump `open.kit`'s identity
                                             // so KIT's PadPlayer reloads the pad GRAB
                                             // just filled, not a stale cached (empty)
-                                            // sample.
-                                            open = open?.copy(kit = updatedKit)
+                                            // sample — guarded the same way, against
+                                            // `sheetEntry` captured at this
+                                            // composition, not whatever `open` is now.
+                                            if (open?.dir == sheetEntry.dir) open = open?.copy(kit = updatedKit)
                                             scope.launch {
                                                 kits = withContext(Dispatchers.IO) { shelf.list() }
                                             }
@@ -996,20 +1025,31 @@ fun App(shelf: KitShelf) {
                             appScope = scope,
                             onToast = { toast = it },
                         )
-                        AppScreen.SYNTH -> SynthScreen(
-                            entry = open,
-                            onToast = { toast = it },
-                            onKitUpdated = { updatedKit ->
-                                // Same shape as PAD SHEET/CHOP's own
-                                // onKitUpdated: bump `open.kit`'s identity so
-                                // KIT's PadPlayer reloads the pad SEND TO PAD
-                                // just replaced, not a stale cached sample.
-                                open = open?.copy(kit = updatedKit)
-                                scope.launch {
-                                    kits = withContext(Dispatchers.IO) { shelf.list() }
-                                }
-                            },
-                        )
+                        AppScreen.SYNTH -> {
+                            // Captured here, at this composition, so a SEND TO PAD write that
+                            // outlives this screen (appScope, below) can't weld its result onto
+                            // whichever kit is open by the time it lands — same identity guard
+                            // as the KIT branch's own onKitUpdated closures above.
+                            val synthEntry = open
+                            SynthScreen(
+                                entry = synthEntry,
+                                onToast = { toast = it },
+                                onKitUpdated = { updatedKit ->
+                                    // Same shape as PAD SHEET/CHOP's own
+                                    // onKitUpdated: bump `open.kit`'s identity so
+                                    // KIT's PadPlayer reloads the pad SEND TO PAD
+                                    // just replaced, not a stale cached sample.
+                                    if (open?.dir == synthEntry?.dir) open = open?.copy(kit = updatedKit)
+                                    scope.launch {
+                                        kits = withContext(Dispatchers.IO) { shelf.list() }
+                                    }
+                                },
+                                // App()'s own scope — same reasoning as PAD SHEET/PAD
+                                // CAPTURE's own appScope: SEND TO PAD's write must survive
+                                // a MenuRow tab switch, not be cancelled by it.
+                                appScope = scope,
+                            )
+                        }
                         AppScreen.SURFACE -> SurfaceScreen(
                             entry = open,
                             onToast = { toast = it },

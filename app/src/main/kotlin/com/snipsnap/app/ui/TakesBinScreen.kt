@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.KitWrites
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -44,6 +45,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /** How long a first tap on EMPTY THE BIN NOW stays armed before it disarms itself. */
@@ -134,9 +136,11 @@ fun TakesBinScreen(
             busy = true
             try {
                 val restored = withContext(Dispatchers.IO) {
-                    m.restoreTake(take)
-                    m.save()
-                    m.kit
+                    KitWrites.mutex.withLock {
+                        m.restoreTake(take)
+                        m.save()
+                        m.kit
+                    }
                 }
                 onKitUpdated(restored)
                 refreshLists(m)
