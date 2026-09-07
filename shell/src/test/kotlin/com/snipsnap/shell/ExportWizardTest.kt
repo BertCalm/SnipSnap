@@ -55,7 +55,7 @@ class ExportWizardTest {
     }
 
     @Test
-    fun `the format cycler walks all five and each writes for real`() {
+    fun `the format cycler walks every format and each writes for real`() {
         val (kit, dir) = makeKit("Cycler")
         val w = ExportWizardModel(kit, dir)
         assertEquals(ExportFormat.PROGRAM_FOLDER, w.format)

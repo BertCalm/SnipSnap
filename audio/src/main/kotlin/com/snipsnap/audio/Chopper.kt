@@ -23,6 +23,55 @@ data class Slice(
  */
 object Chopper {
 
+    /** Auto slice-count never exceeds this — two banks of pads. */
+    const val AUTO_MAX = 64
+
+    /** A drop past this ratio in the sorted peak curve reads as the knee. */
+    const val KNEE_RATIO = 0.5f
+
+    /** How much audio after an onset votes for its loudness, seconds. */
+    const val KNEE_WINDOW_SEC = 0.05f
+
+    /**
+     * How many slices this audio *wants* — so nobody has to guess `16`.
+     *
+     * Detect everything, rank each onset by the peak level in the 50 ms
+     * behind it (the dB novelty in [Onset.strength] swings ±10 dB with
+     * whatever floor a hit rises from; the peak is what the ear ranks by),
+     * and cut at the knee: the steepest drop in the sorted curve, where
+     * the real hits end and the detector's table scraps begin. No drop
+     * past [KNEE_RATIO] means the hits are all of a kind — keep them all,
+     * bounded to [AUTO_MAX]. Fewer than three onsets are simply the answer.
+     */
+    fun autoSliceCount(snip: Snip, config: Transients.Config = Transients.Config()): Int {
+        val onsets = Transients.detect(snip, config)
+        if (onsets.size <= 2) return onsets.size
+
+        val window = (snip.sampleRate * KNEE_WINDOW_SEC).toInt()
+        val peaks = onsets.map { o ->
+            var p = 0f
+            val from = o.frame * snip.channels
+            val to = min(snip.samples.size, (o.frame + window) * snip.channels)
+            for (i in from until to) {
+                val a = if (snip.samples[i] < 0) -snip.samples[i] else snip.samples[i]
+                if (a > p) p = a
+            }
+            p
+        }.sortedDescending()
+
+        val limit = min(peaks.size, AUTO_MAX)
+        var knee = limit
+        var steepest = KNEE_RATIO
+        for (i in 2 until limit) {
+            val ratio = peaks[i] / max(1e-9f, peaks[i - 1])
+            if (ratio < steepest) {
+                steepest = ratio
+                knee = i
+            }
+        }
+        return knee
+    }
+
     /**
      * Chop at detected hits.
      *

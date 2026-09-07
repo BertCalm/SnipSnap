@@ -54,6 +54,32 @@ class StarterKitsTest {
     }
 
     @Test
+    fun `seven starters, and velocity is one of them`() {
+        assertEquals(
+            listOf("factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "velocity"),
+            StarterKits.ALL.map { it.id },
+        )
+    }
+
+    @Test
+    fun `the velocity starter gives every pad soft layers`() {
+        val dir = kotlin.io.path.createTempDirectory("velocity").toFile()
+        try {
+            val kit = StarterKits.byId("velocity")!!.render("VELOCITY", dir)
+            val assigned = kit.pads.filter { it.sampleFile.isNotBlank() }
+            assertTrue(assigned.isNotEmpty(), "the starter rendered an empty kit")
+            for (pad in assigned) {
+                assertEquals(
+                    3, pad.velocityLayers.size,
+                    "${pad.displayName}: two soft zones plus the main sample on top",
+                )
+            }
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `the A-B starter fills bank B and melodic remembers its key`() {
         val ab = StarterKits.byId("lucky-dip-ab")!!.render("DipAB", File(temp, "ab"), seed = 3)
         assertTrue(ab.pads.any { it.slot > 16 }, "bank B should be populated")

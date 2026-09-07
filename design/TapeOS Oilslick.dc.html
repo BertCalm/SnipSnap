@@ -8,17 +8,18 @@
 <body>
 <x-dc>
 <helmet>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen:wght@400;700&family=Permanent+Marker&family=Michroma&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen:wght@400;700&family=Permanent+Marker&family=Gochi+Hand&family=Caveat:wght@600;700&family=Rock+Salt&family=Michroma&display=swap">
 <style>
 body{margin:0;background:#08040e;display:flex;justify-content:center;align-items:flex-start;height:100vh;overflow:hidden}
-a{color:#c8b2f8}a:hover{color:#e040c8}
+a{color:var(--ink,#c8b2f8)}a:hover{color:var(--acc,#e040c8)}
 .px{font-family:'Silkscreen',Verdana,sans-serif;font-size:9px;letter-spacing:.5px}
-.marker{font-family:'Permanent Marker',cursive}
+.marker{font-family:var(--marker,'Permanent Marker'),cursive}
+svg text[font-family="Permanent Marker, cursive"]{font-family:var(--marker,'Permanent Marker'),cursive}
 .lcdf{font-family:'VT323',monospace}
 .mch{font-family:'Michroma',sans-serif}
-.oil{background:conic-gradient(from 210deg at 50% 40%,#5a2ae0,#e040c8 25%,#40e0e8 50%,#8a5af0 75%,#5a2ae0)}
+.oil{background:var(--rim,conic-gradient(from 210deg at 50% 40%,#5a2ae0,#e040c8 25%,#40e0e8 44%,#f060d8 56%,#e879e0 78%,#8a5af0 88%,#5a2ae0))}
 .cyl{box-shadow:inset 0 3px 3px rgba(255,255,255,.55),inset 0 -4px 5px rgba(0,0,0,.55),inset 0 -1px 0 rgba(255,255,255,.15)}
-.oil-h{background:linear-gradient(90deg,#5a2ae0,#e040c8 32%,#40e0e8 68%,#8a5af0)}
+.oil-h{background:var(--title,linear-gradient(90deg,#5a2ae0,#e040c8 32%,#40e0e8 68%,#8a5af0))}
 @keyframes reelspin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes toastup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes screenin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
@@ -28,11 +29,11 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
 .screen{animation:screenin .18s ease-out}
 </style>
 </helmet>
-<div style="width:390px;height:844px;background:radial-gradient(120% 80% at 50% 110%,#2a1050 0%,#0c0618 60%),#0c0618;position:relative;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;user-select:none;-webkit-user-select:none;transform:{{fitScale}};transform-origin:top center;">
-  <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(224,64,200,.08) 0 1px,transparent 1px 22px),repeating-linear-gradient(90deg,rgba(90,42,224,.12) 0 1px,transparent 1px 22px);pointer-events:none;"></div>
+<div style="--marker:{{markerFF}};{{schemeVars}}width:390px;height:844px;background:radial-gradient(120% 80% at 50% 110%,var(--dglow,#2a1050) 0%,var(--desk1,#0c0618) 60%),var(--desk1,#0c0618);position:relative;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;user-select:none;-webkit-user-select:none;transform:{{fitScale}};transform-origin:top center;">
+  <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,var(--grid1,rgba(224,64,200,.08)) 0 1px,transparent 1px 22px),repeating-linear-gradient(90deg,var(--grid2,rgba(90,42,224,.12)) 0 1px,transparent 1px 22px);pointer-events:none;"></div>
 
   <sc-if value="{{isBoot}}" hint-placeholder-val="{{false}}">
-    <div onClick="{{skipBoot}}" style="position:absolute;inset:0;background:#0a0714;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;cursor:pointer;">
+    <div onClick="{{skipBoot}}" style="position:absolute;inset:0;background:var(--lcd,#0a0714);z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;cursor:pointer;">
       <svg width="120" height="84" viewBox="0 0 100 70">
         <rect x="1" y="1" width="98" height="62" rx="8" fill="#1a1424" stroke="#e040c8" stroke-width="2"/>
         <rect x="8" y="6" width="84" height="18" rx="3" fill="#120e1a" stroke="#40306a"/>
@@ -41,85 +42,140 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
         <circle cx="38" cy="41" r="6.5" fill="none" stroke="#c8b2f8" stroke-width="2"/>
         <circle cx="62" cy="41" r="6.5" fill="none" stroke="#c8b2f8" stroke-width="2"/>
       </svg>
-      <div class="mch" style="font-size:14px;letter-spacing:3px;color:#c8b2f8;text-shadow:0 0 12px rgba(154,108,240,.8);">TapeOS</div>
-      <div class="lcdf" style="color:#40e0e8;font-size:19px;text-shadow:0 0 8px rgba(64,224,232,.7);">{{bootLine}}</div>
-      <div style="width:200px;height:10px;background:#161020;border:1px solid #34285a;border-radius:999px;overflow:hidden;">
+      <div class="mch" style="font-size:14px;letter-spacing:3px;color:var(--ink,#c8b2f8);text-shadow:0 0 12px rgba(154,108,240,.8);">TapeOS</div>
+      <div class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:19px;text-shadow:0 0 8px rgba(64,224,232,.7);">{{bootLine}}</div>
+      <div style="width:200px;height:10px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:999px;overflow:hidden;">
         <div class="oil-h cyl" style="height:100%;border-radius:999px;animation:bootbar 2.2s linear forwards;"></div>
       </div>
-      <div class="px" style="color:#584a80;animation:bootblink 1.2s step-end infinite;">TAP TO SKIP</div>
+      <div class="px" style="color:var(--ink3,#584a80);animation:bootblink 1.2s step-end infinite;">TAP TO SKIP</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isLoopLandscape}}" hint-placeholder-val="{{false}}">
+    <div style="position:absolute;inset:0;background:var(--lcd,#0a0714);z-index:5;">
+      <div style="position:absolute;left:50%;top:50%;width:816px;height:362px;transform:translate(-50%,-50%) rotate(90deg);display:flex;flex-direction:column;gap:8px;overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex:none;">
+          <span class="lcdf" style="color:var(--lcdhi,#8eeef4);font-size:24px;text-shadow:0 0 12px var(--glowA,rgba(64,224,232,.9));white-space:nowrap;">LOOP PLAYER — LANDSCAPE</span>
+          <div style="display:flex;align-items:center;gap:10px;flex:none;">
+            <span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:20px;">{{loopIntText}}</span>
+            <div onClick="{{loopToggle}}" style="height:30px;padding:0 12px;display:flex;align-items:center;justify-content:center;border:1px solid var(--alt,#40e0e8);border-radius:4px;cursor:pointer;background:{{loopPlayBg}};"><span class="px" style="color:var(--lcdhi,#8eeef4);">{{loopPlayLabel}}</span></div>
+            <div style="display:flex;align-items:center;gap:4px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:4px;height:30px;padding:0 3px;box-sizing:border-box;">
+              <div onClick="{{loopBpmDown}}" style="width:26px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:3px;background:var(--raised,#221a34);"><span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:16px;">−</span></div>
+              <span class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:18px;">{{loopBpmText}}</span>
+              <div onClick="{{loopBpmUp}}" style="width:26px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:3px;background:var(--raised,#221a34);"><span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:16px;">+</span></div>
+            </div>
+            <div onClick="{{rotate}}" style="width:34px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--alt,#40e0e8);border-radius:4px;cursor:pointer;"><span class="lcdf" style="color:var(--lcdhi,#8eeef4);font-size:18px;">⟳</span></div>
+          </div>
+        </div>
+        <div style="flex:1;display:flex;gap:8px;min-height:0;position:relative;">
+          <sc-for list="{{loopCols}}" as="col" hint-placeholder-count="6">
+            <div style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0;">
+              <div onClick="{{col.toggle}}" style="{{col.headStyle}}"><span class="px" style="font-size:8px;color:{{col.headInk}};pointer-events:none;">{{col.name}}</span></div>
+              <sc-for list="{{col.blocks}}" as="b" hint-placeholder-count="2">
+                <div onClick="{{b.pick}}" style="{{b.style}}">
+                  <div style="position:absolute;inset:2px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;overflow:hidden;pointer-events:none;"><span class="px" style="font-size:7px;color:{{b.typeC}};pointer-events:none;line-height:1;">{{b.type}}</span><span class="marker" style="font-size:11px;color:{{b.tint}};pointer-events:none;text-align:center;line-height:1;max-width:100%;overflow:hidden;white-space:nowrap;">{{b.name}}</span></div>
+                </div>
+              </sc-for>
+              <sc-if value="{{col.canAdd}}" hint-placeholder-val="{{false}}">
+                <div onClick="{{col.add}}" style="height:22px;border:1px dashed var(--bdr,#34285a);border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;"><span class="lcdf" style="color:var(--ink3,#584a80);font-size:15px;">+</span></div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{loopRebake}}" hint-placeholder-val="{{false}}">
+            <div style="position:absolute;inset:0;background:rgba(10,7,20,.72);display:flex;align-items:center;justify-content:center;border-radius:6px;">
+              <span class="px" style="color:#ffe08e;text-shadow:0 0 10px rgba(255,176,0,.8);">REBAKING 12 BUFFERS…</span>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex:none;gap:10px;">
+          <span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:17px;white-space:nowrap;">FULL CYCLE — {{loopCycleText}}</span>
+          <span class="px" style="color:var(--ink3,#584a80);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">EVERY TRACK WRAPS ON ITS OWN — THE PHASING IS THE SONG.</span>
+          <div class="oil" onClick="{{loopBounce}}" style="height:36px;border-radius:6px;padding:2px;cursor:pointer;box-sizing:border-box;">
+            <div style="height:100%;border-radius:4px;background:linear-gradient(180deg,#0c2426,#081418);display:flex;align-items:center;justify-content:center;padding:0 14px;"><span class="mch" style="font-size:10px;letter-spacing:1.5px;color:var(--lcdhi,#8eeef4);">BOUNCE CYCLE</span></div>
+          </div>
+        </div>
+      </div>
     </div>
   </sc-if>
 
   <sc-if value="{{isLandscape}}" hint-placeholder-val="{{false}}">
-    <div style="position:absolute;inset:0;background:#0a0714;z-index:5;">
+    <div style="position:absolute;inset:0;background:var(--lcd,#0a0714);z-index:5;">
       <div style="position:absolute;left:50%;top:50%;width:816px;height:362px;transform:translate(-50%,-50%) rotate(90deg);display:flex;flex-direction:column;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <span class="lcdf" style="color:#c8b2f8;font-size:24px;text-shadow:0 0 12px rgba(154,108,240,.9);">PLAY KIT 01 — LANDSCAPE</span>
+          <span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:24px;text-shadow:0 0 12px var(--glowC,rgba(154,108,240,.9));">PLAY KIT 01 — LANDSCAPE</span>
           <div style="display:flex;align-items:center;gap:10px;">
-            <span class="lcdf" style="color:#40e0e8;font-size:22px;">{{bpmText}}</span>
-            <div onClick="{{rotate}}" style="width:34px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid #40e0e8;border-radius:4px;cursor:pointer;"><span class="lcdf" style="color:#8eeef4;font-size:18px;">⟳</span></div>
+            <span class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:22px;">{{bpmText}}</span>
+            <div onClick="{{rotate}}" style="width:34px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--alt,#40e0e8);border-radius:4px;cursor:pointer;"><span class="lcdf" style="color:var(--lcdhi,#8eeef4);font-size:18px;">⟳</span></div>
           </div>
         </div>
         <div style="flex:1;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:10px;">
           <sc-for list="{{pads}}" as="p" hint-placeholder-count="16">
             <div style="{{p.playStyle}}" onPointerDown="{{p.trigger}}">
-              <span class="px" style="position:absolute;top:6px;left:8px;color:#584a80;pointer-events:none;">{{p.id}}</span>
+              <span class="px" style="position:absolute;top:6px;left:8px;color:var(--ink3,#584a80);pointer-events:none;">{{p.id}}</span>
               <span class="marker" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:14px;pointer-events:none;color:{{p.tint}};">{{p.label}}</span>
             </div>
           </sc-for>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:10px;">
-          <span class="px" style="color:#584a80;">LATENCY: LOW · MULTI-TOUCH OK</span>
-          <span class="px" style="color:#584a80;">HAT CL CHOKES HAT OP</span>
+          <span class="px" style="color:var(--ink3,#584a80);">LATENCY: LOW · MULTI-TOUCH OK</span>
+          <span class="px" style="color:var(--ink3,#584a80);">HAT CL CHOKES HAT OP</span>
         </div>
       </div>
     </div>
   </sc-if>
 
-  <div class="oil" style="flex:1;padding:3px;border-radius:6px;box-shadow:0 14px 40px rgba(0,0,0,.8),0 0 34px rgba(138,90,240,.4);display:flex;position:relative;">
-  <div style="flex:1;background:linear-gradient(180deg,#1a1424,#120e1a);border-radius:4px;display:flex;flex-direction:column;padding:4px;min-height:0;">
+  <div class="oil" style="flex:1;padding:3px;border-radius:6px;box-shadow:0 14px 40px rgba(0,0,0,.8),0 0 34px rgba(138,90,240,.4);display:flex;position:relative;min-width:0;box-sizing:border-box;">
+  <div style="flex:1;background:linear-gradient(180deg,var(--win,#1a1424),var(--win2,#120e1a));border-radius:4px;display:flex;flex-direction:column;padding:4px;min-height:0;min-width:0;overflow:hidden;">
 
     <div class="oil" style="height:34px;border-radius:4px;display:flex;align-items:center;gap:8px;padding:0 6px 0 10px;flex:none;">
       <svg width="20" height="14" viewBox="0 0 20 14"><rect x="0.5" y="0.5" width="19" height="13" rx="2" fill="#120e1a"/><circle cx="6" cy="7" r="2.6" fill="none" stroke="#40e0e8"/><circle cx="14" cy="7" r="2.6" fill="none" stroke="#e040c8"/></svg>
       <span class="mch" style="color:#fff;font-size:11px;letter-spacing:2px;flex:1;text-shadow:0 1px 3px rgba(20,0,60,.8);">{{titleText}}</span>
       <div style="display:flex;gap:3px;">
-        <div style="width:24px;height:22px;background:#1e1830;border:1px solid #40306a;display:flex;align-items:center;justify-content:center;border-radius:3px;"><svg width="12" height="12"><rect x="2" y="9" width="8" height="2" fill="#c8b2f8"/></svg></div>
-        <div style="width:24px;height:22px;background:#1e1830;border:1px solid #40306a;display:flex;align-items:center;justify-content:center;border-radius:3px;"><svg width="12" height="12"><path d="M2.5 2.5 L9.5 9.5 M9.5 2.5 L2.5 9.5" stroke="#e040c8" stroke-width="1.8"/></svg></div>
+        <div style="width:24px;height:22px;background:#1e1830;border:1px solid var(--mut,#40306a);display:flex;align-items:center;justify-content:center;border-radius:3px;"><svg width="12" height="12"><rect x="2" y="9" width="8" height="2" fill="#c8b2f8"/></svg></div>
+        <div style="width:24px;height:22px;background:#1e1830;border:1px solid var(--mut,#40306a);display:flex;align-items:center;justify-content:center;border-radius:3px;"><svg width="12" height="12"><path d="M2.5 2.5 L9.5 9.5 M9.5 2.5 L2.5 9.5" stroke="#e040c8" stroke-width="1.8"/></svg></div>
       </div>
     </div>
 
-    <div class="px" style="height:26px;display:flex;align-items:center;gap:2px;padding:0 4px;color:#7a6aa0;flex:none;">
-      <span onClick="{{goKits}}" style="padding:3px 4px;cursor:pointer;color:{{kitsMenuColor}};">KITS</span>
-      <span onClick="{{goKit}}" style="padding:3px 4px;cursor:pointer;color:{{kitMenuColor}};">KIT</span>
-      <span onClick="{{goDeck}}" style="padding:3px 4px;cursor:pointer;color:{{deckMenuColor}};">TAPE</span>
-      <span onClick="{{goChop}}" style="padding:3px 4px;cursor:pointer;color:{{chopMenuColor}};">CHOP</span>
-      <span onClick="{{goPlay}}" style="padding:3px 4px;cursor:pointer;color:{{playMenuColor}};">PLAY</span>
-      <span onClick="{{goSynth}}" style="padding:3px 4px;cursor:pointer;color:{{synthMenuColor}};">SYNTH</span>
-      <span onClick="{{goExport}}" style="padding:3px 4px;cursor:pointer;color:{{exportMenuColor}};">EXPORT</span>
-      <span onClick="{{goProps}}" style="padding:3px 4px;cursor:pointer;color:{{propsMenuColor}};">⚙</span>
-      <span onClick="{{goOnboard}}" style="padding:3px 4px;cursor:pointer;color:{{helpMenuColor}};">HELP</span>
+    <div class="px" style="height:26px;display:flex;align-items:center;gap:2px;padding:0 4px;color:var(--ink2,#7a6aa0);flex:none;">
+      <span onClick="{{goKits}}" style="padding:3px 3px;cursor:pointer;color:{{kitsMenuColor}};">KITS</span>
+      <span onClick="{{goKit}}" style="padding:3px 3px;cursor:pointer;color:{{kitMenuColor}};">KIT</span>
+      <span onClick="{{goDeck}}" style="padding:3px 3px;cursor:pointer;color:{{deckMenuColor}};">TAPE</span>
+      <span onClick="{{goChop}}" style="padding:3px 3px;cursor:pointer;color:{{chopMenuColor}};">CHOP</span>
+      <span onClick="{{goPlay}}" style="padding:3px 3px;cursor:pointer;color:{{playMenuColor}};">PLAY</span>
+      <span onClick="{{goLoop}}" style="padding:3px 3px;cursor:pointer;color:{{loopMenuColor}};">LOOP</span>
+      <span onClick="{{goGroove}}" style="padding:3px 3px;cursor:pointer;color:{{grooveMenuColor}};">GRV</span>
+      <span onClick="{{goSynth}}" style="padding:3px 3px;cursor:pointer;color:{{synthMenuColor}};">SYNTH</span>
+      <span onClick="{{goExport}}" style="padding:3px 3px;cursor:pointer;color:{{exportMenuColor}};">EXP</span>
+      <span onClick="{{goProps}}" style="padding:3px 3px;cursor:pointer;color:{{propsMenuColor}};">⚙</span>
+      <span onClick="{{goOnboard}}" style="padding:3px 3px;cursor:pointer;color:{{helpMenuColor}};">HELP</span>
     </div>
 
     <sc-if value="{{isKit}}" hint-placeholder-val="{{true}}">
       <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;">
-        <div style="background:#0a0714;border:1px solid #000;box-shadow:inset 0 2px 8px #000,0 0 16px rgba(224,64,200,.25);height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
-          <span class="lcdf" style="color:#c8b2f8;font-size:25px;text-shadow:0 0 12px rgba(154,108,240,.9);">SNIPSNAP KIT 01</span>
-          <span class="lcdf" style="color:#40e0e8;font-size:21px;text-shadow:0 0 12px rgba(64,224,232,.8);">BANK A</span>
+        <div style="background:var(--lcd,#0a0714);border:1px solid #000;box-shadow:inset 0 2px 8px #000,0 0 16px rgba(224,64,200,.25);height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
+          <span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:25px;text-shadow:0 0 12px var(--glowC,rgba(154,108,240,.9));">SNIPSNAP KIT 01</span>
+          <span onClick="{{bankFlip}}" class="lcdf" style="color:{{bankColor}};font-size:21px;text-shadow:0 0 12px var(--glowB,rgba(64,224,232,.8));cursor:pointer;">{{bankLabel}}</span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;flex:none;">
           <sc-for list="{{pads}}" as="p" hint-placeholder-count="16">
-            <div style="{{p.kitStyle}}" onPointerDown="{{p.trigger}}">
+            <div style="{{p.kitStyle}}" onPointerDown="{{p.press}}" onPointerUp="{{p.release}}" onPointerLeave="{{p.release}}">
               <span class="px" style="position:absolute;top:5px;left:7px;pointer-events:none;color:{{p.idColor}};">{{p.id}}</span>
-              <span class="marker" style="position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:13px;pointer-events:none;color:{{p.tint}};">{{p.label}}</span>
+              <span class="px" style="position:absolute;top:5px;right:7px;pointer-events:none;font-size:7px;color:{{p.fxColor}};">{{p.fx}}</span>
+              <div style="position:absolute;left:10px;right:10px;top:28px;height:16px;display:flex;align-items:center;gap:2px;pointer-events:none;">
+                <sc-for list="{{p.mini}}" as="mw" hint-placeholder-count="0">
+                  <div style="{{mw.style}}"></div>
+                </sc-for>
+              </div>
+              <span class="marker" style="position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:{{p.labelSize}};pointer-events:none;color:{{p.tint}};white-space:nowrap;overflow:hidden;">{{p.label}}</span>
             </div>
           </sc-for>
         </div>
-        <div style="position:relative;border:1px solid #34285a;border-radius:6px;padding:16px 10px 10px;background:#161020;flex:none;">
-          <span class="px" style="position:absolute;top:-6px;left:12px;background:#1e1830;border:1px solid #e040c8;border-radius:999px;padding:1px 8px;color:#f8a8d4;">SNIP SHELF — {{shelfCount}}</span>
+        <div style="position:relative;border:1px solid var(--bdr,#34285a);border-radius:6px;padding:16px 10px 10px;background:var(--field,#161020);flex:none;">
+          <span class="px" style="position:absolute;top:-6px;left:12px;background:#1e1830;border:1px solid var(--acc,#e040c8);border-radius:999px;padding:1px 8px;color:var(--accHi,#f8a8d4);">SNIP SHELF — {{shelfCount}}</span>
           <sc-if value="{{shelfEmpty}}" hint-placeholder-val="{{false}}">
-            <div style="height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1px dashed #34285a;border-radius:6px;">
-              <span class="px" style="color:#584a80;">NOTHING ON THE SHELF YET.</span>
-              <span class="px" style="color:#40306a;">ARM A SESSION AND GO FIND A SOUND WORTH KEEPING.</span>
+            <div style="height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1px dashed var(--bdr,#34285a);border-radius:6px;">
+              <span class="px" style="color:var(--ink3,#584a80);">NOTHING ON THE SHELF YET.</span>
+              <span class="px" style="color:var(--mut,#40306a);">ARM A SESSION AND GO FIND A SOUND WORTH KEEPING.</span>
             </div>
           </sc-if>
           <sc-if value="{{shelfFull}}" hint-placeholder-val="{{true}}">
@@ -131,6 +187,11 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
           </div>
           </sc-if>
         </div>
+        <div style="display:flex;gap:6px;flex:none;">
+          <div onClick="{{evilTwins}}" style="flex:1.2;height:34px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;"><span class="px" style="color:var(--ink2,#7a6aa0);pointer-events:none;">{{evilLabel}}</span></div>
+          <div onClick="{{goTakes}}" style="flex:1;height:34px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--ink2,#7a6aa0);pointer-events:none;">TAKES + BIN ▸</span></div>
+          <div onClick="{{keyCycle}}" style="flex:0.7;height:34px;background:var(--field,#161020);border:1px solid {{keyBorder}};border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:{{keyInk}};pointer-events:none;">{{keyLabel}}</span></div>
+        </div>
         <div style="flex:1;"></div>
         <div class="oil" onClick="{{toggleArm}}" style="height:58px;border-radius:999px;padding:2px;box-shadow:0 0 24px rgba(232,64,200,.4);cursor:pointer;flex:none;">
           <div style="height:100%;border-radius:999px;background:{{armBg}};display:flex;align-items:center;justify-content:center;gap:12px;">
@@ -140,6 +201,69 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
               <div class="px" style="color:#8a5a78;">{{armSub}}</div>
             </div>
           </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isPadSheet}}" hint-placeholder-val="{{false}}">
+      <div class="screen" data-screen-label="Pad Sheet" style="flex:1;display:flex;flex-direction:column;gap:8px;padding:6px 6px 4px;min-height:0;min-width:0;">
+        <div style="display:flex;gap:6px;flex:none;align-items:stretch;">
+          <div onClick="{{psBack}}" style="width:64px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--ink2,#7a6aa0);pointer-events:none;">◄ KIT</span></div>
+          <div style="flex:1;background:var(--lcd,#0a0714);border:1px solid #000;box-shadow:inset 0 2px 8px #000;border-radius:6px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;height:44px;box-sizing:border-box;">
+            <span class="lcdf" style="color:var(--lcdhi,#8eeef4);font-size:22px;text-shadow:0 0 12px var(--glowA,rgba(64,224,232,.9));">PAD {{psId}}</span>
+            <span class="px" style="font-size:9px;color:{{psTint}};border:1px solid {{psColor}};border-radius:3px;padding:2px 7px;">{{psClass}}</span>
+          </div>
+          <div onClick="{{psHit}}" style="width:64px;background:{{psHitBg}};border:2px solid {{psColor}};border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 12px {{psColor}}55;"><span class="px" style="color:{{psTint}};pointer-events:none;">▶ HIT</span></div>
+        </div>
+        <div style="height:64px;background:var(--lcd,#0a0714);border:1px solid #000;box-shadow:inset 0 2px 8px #000;border-radius:6px;position:relative;overflow:hidden;flex:none;display:flex;align-items:flex-end;gap:2px;padding:4px 6px;box-sizing:border-box;">
+          <sc-for list="{{psWave}}" as="wb" hint-placeholder-count="40">
+            <div style="{{wb.style}}"></div>
+          </sc-for>
+        </div>
+        <div class="px" style="color:var(--ink3,#584a80);flex:none;">{{psSource}}</div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex:none;">
+          <sc-for list="{{psSliders}}" as="sl" hint-placeholder-count="3">
+            <div style="display:flex;gap:6px;align-items:center;height:36px;">
+              <span class="px" style="width:40px;flex:none;color:var(--ink2,#7a6aa0);">{{sl.name}}</span>
+              <div onClick="{{sl.dec}}" style="width:34px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;background:linear-gradient(180deg,var(--raised,#221a34),var(--field,#161020));border:1px solid var(--bdr,#34285a);"><span class="lcdf" style="color:var(--ink,#c8b2f8);font-size:19px;pointer-events:none;">−</span></div>
+              <div style="flex:1;height:14px;background:var(--sunk,#100c1a);border:1px solid var(--bdr,#34285a);border-radius:3px;position:relative;overflow:hidden;">
+                <div style="{{sl.fill}}"></div>
+              </div>
+              <div onClick="{{sl.inc}}" style="width:34px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;background:linear-gradient(180deg,var(--raised,#221a34),var(--field,#161020));border:1px solid var(--bdr,#34285a);"><span class="lcdf" style="color:var(--ink,#c8b2f8);font-size:19px;pointer-events:none;">+</span></div>
+              <span class="lcdf" style="width:58px;flex:none;text-align:right;color:var(--lcdalt,#40e0e8);font-size:17px;">{{sl.val}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:6px;flex:none;">
+          <sc-for list="{{psToggles}}" as="tg" hint-placeholder-count="3">
+            <div onClick="{{tg.flip}}" style="{{tg.style}}"><span class="px" style="font-size:8px;color:{{tg.ink}};pointer-events:none;">{{tg.name}}</span></div>
+          </sc-for>
+        </div>
+        <div style="position:relative;border:1px solid var(--bdr,#34285a);border-radius:6px;padding:14px 8px 8px;background:var(--field,#161020);flex:none;display:flex;flex-direction:column;gap:7px;">
+          <span class="px" style="position:absolute;top:-6px;left:12px;background:var(--field2,#1c1428);border:1px solid var(--acc,#e040c8);border-radius:999px;padding:1px 8px;color:var(--accHi,#f8a8d4);">TREATMENT</span>
+          <div style="display:flex;gap:6px;">
+            <sc-for list="{{psTreats}}" as="tr" hint-placeholder-count="4">
+              <div onClick="{{tr.pick}}" style="{{tr.style}}"><span class="px" style="font-size:8px;color:{{tr.ink}};pointer-events:none;">{{tr.name}}</span></div>
+            </sc-for>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span class="px" style="width:26px;flex:none;color:var(--ink3,#584a80);">AMT</span>
+            <div onClick="{{psAmtDec}}" style="width:30px;height:26px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;background:var(--raised,#221a34);border:1px solid var(--bdr,#34285a);"><span class="lcdf" style="color:var(--ink,#c8b2f8);font-size:16px;pointer-events:none;">−</span></div>
+            <div style="flex:1;height:10px;background:var(--sunk,#100c1a);border:1px solid var(--bdr,#34285a);border-radius:3px;overflow:hidden;"><div style="{{psAmtFill}}"></div></div>
+            <div onClick="{{psAmtInc}}" style="width:30px;height:26px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;background:var(--raised,#221a34);border:1px solid var(--bdr,#34285a);"><span class="lcdf" style="color:var(--ink,#c8b2f8);font-size:16px;pointer-events:none;">+</span></div>
+            <span class="lcdf" style="width:44px;flex:none;text-align:right;color:var(--lcdalt,#40e0e8);font-size:16px;">{{psAmt}}%</span>
+          </div>
+        </div>
+        <div style="flex:1;"></div>
+        <div style="display:flex;gap:6px;flex:none;">
+          <div onClick="{{psRetrim}}" style="flex:1;height:44px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--ink2,#7a6aa0);pointer-events:none;">RE-TRIM ▸</span></div>
+          <div onClick="{{psInstrument}}" style="flex:1.3;height:44px;background:var(--field,#161020);border:1px solid {{psInstBorder}};border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:{{psInstInk}};pointer-events:none;">MAKE INSTRUMENT</span></div>
+          <div onClick="{{psEject}}" style="flex:1;height:44px;background:var(--field,#161020);border:1px solid #6a2020;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#c86050;pointer-events:none;">EJECT → BIN</span></div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex:none;">
+          <div onClick="{{psPrev}}" style="width:64px;height:32px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--ink2,#7a6aa0);pointer-events:none;">◄ {{psPrevId}}</span></div>
+          <span class="px" style="flex:1;text-align:center;color:var(--ink3,#584a80);">LONG-PRESS ANY PAD ON KIT TO GET HERE</span>
+          <div onClick="{{psNext}}" style="width:64px;height:32px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--ink2,#7a6aa0);pointer-events:none;">{{psNextId}} ►</span></div>
         </div>
       </div>
     </sc-if>
@@ -156,9 +280,9 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
             <g style="{{reelSpin}}" transform-origin="142 82"><circle cx="142" cy="82" r="17" fill="#120e1a" stroke="#c8b2f8" stroke-width="2"/><path d="M142 65 v10 M142 89 v10 M125 82 h10 M149 82 h10" stroke="#c8b2f8" stroke-width="2"/></g>
             <circle cx="110" cy="118" r="4" fill="#40e0e8"/>
           </svg>
-          <span class="px" style="position:absolute;bottom:-2px;left:0;right:0;text-align:center;color:#584a80;">TAP CASSETTE TO REWIND</span>
+          <span class="px" style="position:absolute;bottom:-2px;left:0;right:0;text-align:center;color:var(--ink3,#584a80);">TAP CASSETTE TO REWIND</span>
         </div>
-        <div style="background:#0a0714;border:1px solid #000;border-radius:4px;box-shadow:inset 0 2px 8px #000;padding:8px 0;position:relative;overflow:hidden;touch-action:none;flex:none;min-width:0;max-width:100%;box-sizing:border-box;"
+        <div style="background:var(--lcd,#0a0714);border:1px solid #000;border-radius:4px;box-shadow:inset 0 2px 8px #000;padding:8px 0;position:relative;overflow:hidden;touch-action:none;flex:none;min-width:0;max-width:100%;box-sizing:border-box;"
              onPointerDown="{{dragStart}}" onPointerMove="{{dragMove}}" onPointerUp="{{dragEnd}}" onPointerCancel="{{dragEnd}}" onPointerLeave="{{dragEnd}}">
           <div style="height:110px;"></div>
           <div style="position:absolute;top:8px;left:0;height:110px;display:flex;align-items:center;gap:1px;transform:{{waveTransform}};will-change:transform;">
@@ -171,32 +295,32 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
           <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.3) 0 1px,transparent 1px 3px);pointer-events:none;"></div>
         </div>
         <div style="display:flex;justify-content:space-between;padding:0 4px;flex:none;">
-          <span class="lcdf" style="color:#c8b2f8;font-size:22px;">POS {{posText}}</span>
-          <span class="lcdf" style="color:#40e0e8;font-size:22px;">IN {{inText}}</span>
-          <span class="lcdf" style="color:#e040c8;font-size:22px;">OUT {{outText}}</span>
+          <span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:22px;">POS {{posText}}</span>
+          <span class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:22px;">IN {{inText}}</span>
+          <span class="lcdf" style="color:var(--acc,#e040c8);font-size:22px;">OUT {{outText}}</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;flex:none;">
-          <div onClick="{{togglePlayback}}" style="height:48px;background:linear-gradient(180deg,#221a34,#161020);border:1px solid #40e0e8;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 10px rgba(64,224,232,.3);"><span class="px" style="color:#40e0e8;">{{playLabel}}</span></div>
-          <div onClick="{{setIn}}" style="height:48px;background:linear-gradient(180deg,#221a34,#161020);border:1px solid #34285a;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#c8b2f8;">SET IN</span></div>
-          <div onClick="{{setOut}}" style="height:48px;background:linear-gradient(180deg,#221a34,#161020);border:1px solid #34285a;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#f8a8d4;">SET OUT</span></div>
+          <div onClick="{{togglePlayback}}" style="height:48px;background:linear-gradient(180deg,var(--raised,#221a34),var(--field,#161020));border:1px solid var(--alt,#40e0e8);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 10px rgba(64,224,232,.3);"><span class="px" style="color:var(--alt,#40e0e8);">{{playLabel}}</span></div>
+          <div onClick="{{setIn}}" style="height:48px;background:linear-gradient(180deg,var(--raised,#221a34),var(--field,#161020));border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--ink,#c8b2f8);">SET IN</span></div>
+          <div onClick="{{setOut}}" style="height:48px;background:linear-gradient(180deg,var(--raised,#221a34),var(--field,#161020));border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--accHi,#f8a8d4);">SET OUT</span></div>
         </div>
         <div style="display:flex;gap:8px;flex:none;">
-          <div style="flex:1;height:40px;background:#161020;border:1px solid #34285a;border-radius:6px;display:flex;align-items:center;justify-content:space-between;padding:0 4px;box-sizing:border-box;">
-            <div onClick="{{zoomOut}}" style="width:36px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;background:#221a34;"><span class="lcdf" style="color:#c8b2f8;font-size:20px;">−</span></div>
-            <span class="px" style="color:#7a6aa0;">ZOOM {{zoomText}}</span>
-            <div onClick="{{zoomIn}}" style="width:36px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;background:#221a34;"><span class="lcdf" style="color:#c8b2f8;font-size:20px;">+</span></div>
+          <div style="flex:1;height:40px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:space-between;padding:0 4px;box-sizing:border-box;">
+            <div onClick="{{zoomOut}}" style="width:36px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;background:var(--raised,#221a34);"><span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:20px;">−</span></div>
+            <span class="px" style="color:var(--ink2,#7a6aa0);">ZOOM {{zoomText}}</span>
+            <div onClick="{{zoomIn}}" style="width:36px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;background:var(--raised,#221a34);"><span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:20px;">+</span></div>
           </div>
           <div onClick="{{toggleSnap}}" style="flex:1;height:40px;background:{{snapBg}};border:1px solid {{snapBorder}};border-radius:6px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;">
             <div style="width:10px;height:10px;border-radius:50%;background:{{snapDot}};box-shadow:0 0 8px {{snapDot}};"></div>
             <span class="px" style="color:{{snapInk}};">SNAP TO ONSET</span>
           </div>
         </div>
-        <div class="px" style="color:#584a80;text-align:center;flex:none;">{{snapHint}}</div>
+        <div class="px" style="color:var(--ink3,#584a80);text-align:center;flex:none;">{{snapHint}}</div>
         <div style="flex:1;"></div>
-        <div class="oil" onClick="{{commitSnip}}" style="height:58px;border-radius:6px;padding:2px;box-shadow:0 0 24px rgba(64,224,232,.35);cursor:pointer;flex:none;">
+        <div class="oil" onClick="{{commitSnip}}" style="height:58px;border-radius:6px;padding:2px;box-shadow:0 0 24px var(--glowD,rgba(64,224,232,.35));cursor:pointer;flex:none;">
           <div style="height:100%;border-radius:4px;background:linear-gradient(180deg,#0c2426,#081418);display:flex;align-items:center;justify-content:center;gap:10px;">
             <svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 3 L15 15 M15 3 L3 15" stroke="#40e0e8" stroke-width="2.5"/><circle cx="4" cy="4" r="3" fill="none" stroke="#40e0e8" stroke-width="1.5"/><circle cx="4" cy="14" r="3" fill="none" stroke="#40e0e8" stroke-width="1.5"/></svg>
-            <span class="mch" style="font-size:12px;letter-spacing:2px;color:#8eeef4;text-shadow:0 0 10px rgba(64,224,232,.8);">COMMIT SNIP</span>
+            <span class="mch" style="font-size:12px;letter-spacing:2px;color:var(--lcdhi,#8eeef4);text-shadow:0 0 10px var(--glowB,rgba(64,224,232,.8));">COMMIT SNIP</span>
           </div>
         </div>
       </div>
@@ -204,9 +328,9 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
 
     <sc-if value="{{isProps}}" hint-placeholder-val="{{false}}">
       <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;min-width:0;">
-        <div style="background:#0a0714;border:1px solid #000;box-shadow:inset 0 2px 8px #000;height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
-          <span class="lcdf" style="color:#c8b2f8;font-size:23px;text-shadow:0 0 12px rgba(154,108,240,.9);">TAPE PROPERTIES</span>
-          <span class="px" style="color:#584a80;">SCHEME</span>
+        <div style="background:var(--lcd,#0a0714);border:1px solid #000;box-shadow:inset 0 2px 8px #000;height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
+          <span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:23px;text-shadow:0 0 12px var(--glowC,rgba(154,108,240,.9));">TAPE PROPERTIES</span>
+          <span class="px" style="color:var(--ink3,#584a80);">SCHEME</span>
         </div>
         <div style="align-self:center;flex:none;position:relative;width:242px;height:150px;">
           <svg viewBox="0 0 230 143" width="242" height="150">
@@ -227,58 +351,69 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
             </div>
           </div>
         </div>
-        <div style="flex:1;overflow-y:auto;border:1px solid #34285a;border-radius:6px;background:#161020;min-height:0;">
+        <div style="flex:1;overflow-y:auto;border:1px solid var(--bdr,#34285a);border-radius:6px;background:var(--field,#161020);min-height:0;">
           <sc-for list="{{schemes}}" as="sch" hint-placeholder-count="5">
             <div onClick="{{sch.pick}}" style="{{sch.rowStyle}}">
-              <div style="display:flex;width:34px;height:14px;border:1px solid #0a0714;flex:none;">
+              <div style="display:flex;width:34px;height:14px;border:1px solid var(--lcd,#0a0714);flex:none;">
                 <div style="flex:1;background:{{sch.s1}};"></div><div style="flex:1;background:{{sch.s2}};"></div><div style="flex:1;background:{{sch.s3}};"></div>
               </div>
               <span class="px" style="color:{{sch.ink}};">{{sch.name}}</span>
-              <span class="px" style="color:#584a80;margin-left:auto;">{{sch.note}}</span>
+              <span class="px" style="color:var(--ink3,#584a80);margin-left:auto;">{{sch.note}}</span>
             </div>
           </sc-for>
         </div>
-        <div style="display:flex;gap:8px;flex:none;">
-          <div onClick="{{saveAs}}" style="flex:1;height:44px;background:#161020;border:1px solid #34285a;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#c8b2f8;">SAVE AS…</span></div>
-          <div style="flex:1;height:44px;background:#161020;border:1px solid #221a34;border-radius:6px;display:flex;align-items:center;justify-content:center;"><span class="px" style="color:#40306a;">DELETE</span></div>
+        <div onClick="{{consentFlip}}" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--bdr,#34285a);border-radius:6px;background:var(--field,#161020);cursor:pointer;flex:none;">
+          <div style="{{consentDot}}"></div>
+          <div style="flex:1;min-width:0;">
+            <div class="px" style="color:var(--ink,#c8b2f8);">TEACH THE MACHINE — {{consentState}}</div>
+            <div class="px" style="color:var(--ink3,#584a80);margin-top:2px;">YOUR LABEL FIXES TRAIN THE CLASSIFIER. FEATURES ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE.</div>
+          </div>
         </div>
-        <div class="px" style="color:#584a80;line-height:1.7;flex:none;">PAD CLASS COLORS NEVER CHANGE — YOUR PADS MATCH YOUR MPC IN EVERY SCHEME.</div>
+        <div style="display:flex;gap:8px;flex:none;">
+          <div onClick="{{saveAs}}" style="flex:1;height:44px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--ink,#c8b2f8);">SAVE AS…</span></div>
+          <div style="flex:1;height:44px;background:var(--field,#161020);border:1px solid var(--raised,#221a34);border-radius:6px;display:flex;align-items:center;justify-content:center;"><span class="px" style="color:var(--mut,#40306a);">DELETE</span></div>
+        </div>
+        <div class="px" style="color:var(--ink3,#584a80);line-height:1.7;flex:none;">PAD CLASS COLORS NEVER CHANGE — YOUR PADS MATCH YOUR MPC IN EVERY SCHEME.</div>
       </div>
     </sc-if>
 
     <sc-if value="{{isChop}}" hint-placeholder-val="{{false}}">
       <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:9px;padding:6px 6px 4px;min-height:0;min-width:0;">
-        <div style="background:#0a0714;border:1px solid #000;box-shadow:inset 0 2px 8px #000;height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
-          <span class="lcdf" style="color:#f8a8d4;font-size:23px;text-shadow:0 0 12px rgba(224,64,200,.9);">CHOP SHOP</span>
-          <span class="lcdf" style="color:#40e0e8;font-size:19px;">SNIP_014</span>
+        <div style="background:var(--lcd,#0a0714);border:1px solid #000;box-shadow:inset 0 2px 8px #000;height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
+          <span class="lcdf" style="color:var(--accHi,#f8a8d4);font-size:23px;text-shadow:0 0 12px rgba(224,64,200,.9);">CHOP SHOP</span>
+          <span class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:19px;">SNIP_014</span>
         </div>
-        <div style="background:#0a0714;border:1px solid #34285a;border-radius:4px;height:80px;position:relative;overflow:hidden;flex:none;">
+        <div style="background:var(--lcd,#0a0714);border:1px solid var(--bdr,#34285a);border-radius:4px;height:80px;position:relative;overflow:hidden;flex:none;">
           <svg viewBox="0 0 350 84" width="100%" height="100%" preserveAspectRatio="none">
             <g fill="#c8b2f8"><rect x="4" y="14" width="5" height="58"/><rect x="12" y="30" width="5" height="26"/><rect x="20" y="38" width="5" height="12"/><rect x="28" y="34" width="5" height="18"/><rect x="40" y="10" width="5" height="66"/><rect x="48" y="26" width="5" height="34"/><rect x="56" y="36" width="5" height="14"/><rect x="68" y="16" width="5" height="54"/><rect x="76" y="30" width="5" height="26"/><rect x="88" y="12" width="5" height="62"/><rect x="96" y="28" width="5" height="30"/><rect x="104" y="36" width="5" height="14"/><rect x="118" y="18" width="5" height="50"/><rect x="126" y="32" width="5" height="22"/><rect x="140" y="10" width="5" height="66"/><rect x="148" y="24" width="5" height="38"/><rect x="156" y="34" width="5" height="18"/><rect x="170" y="16" width="5" height="54"/><rect x="178" y="30" width="5" height="26"/><rect x="192" y="12" width="5" height="62"/><rect x="200" y="26" width="5" height="34"/><rect x="212" y="36" width="5" height="14"/><rect x="224" y="14" width="5" height="58"/><rect x="232" y="28" width="5" height="30"/><rect x="246" y="10" width="5" height="66"/><rect x="254" y="24" width="5" height="38"/><rect x="266" y="34" width="5" height="18"/><rect x="278" y="16" width="5" height="54"/><rect x="286" y="30" width="5" height="26"/><rect x="300" y="12" width="5" height="62"/><rect x="308" y="28" width="5" height="30"/><rect x="320" y="36" width="5" height="14"/><rect x="332" y="20" width="5" height="46"/><rect x="340" y="32" width="5" height="22"/></g>
             <g stroke="#40e0e8" stroke-width="2"><line x1="4" y1="0" x2="4" y2="84"/><line x1="40" y1="0" x2="40" y2="84"/><line x1="68" y1="0" x2="68" y2="84"/><line x1="88" y1="0" x2="88" y2="84"/><line x1="140" y1="0" x2="140" y2="84"/><line x1="170" y1="0" x2="170" y2="84"/><line x1="246" y1="0" x2="246" y2="84"/><line x1="300" y1="0" x2="300" y2="84"/></g>
           </svg>
           <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.3) 0 1px,transparent 1px 3px);pointer-events:none;"></div>
         </div>
-        <div class="px" style="text-align:center;color:#584a80;flex:none;">8 SLICES FOUND — TAP A LABEL TO CORRECT IT</div>
-        <div style="flex:1;overflow-y:auto;border:1px solid #34285a;border-radius:6px;background:#161020;min-height:0;">
+        <div class="px" style="text-align:center;color:var(--ink3,#584a80);flex:none;">8 SLICES FOUND — TAP A LABEL TO CORRECT IT</div>
+        <div style="flex:1;overflow-y:auto;border:1px solid var(--bdr,#34285a);border-radius:6px;background:var(--field,#161020);min-height:0;">
           <sc-for list="{{slices}}" as="s" hint-placeholder-count="7">
-            <div style="display:flex;align-items:center;gap:10px;height:48px;padding:0 10px;border-bottom:1px solid #221a34;">
-              <span class="lcdf" style="font-size:19px;color:#584a80;width:16px;flex:none;">{{s.n}}</span>
-              <div style="flex:1;height:18px;background:#0a0714;border-radius:3px;position:relative;overflow:hidden;"><div style="position:absolute;left:0;top:3px;bottom:3px;width:{{s.w}};background:linear-gradient(90deg,{{s.c}},transparent);opacity:.7;border-radius:2px;"></div></div>
+            <div style="display:flex;align-items:center;gap:10px;height:48px;padding:0 10px;border-bottom:1px solid var(--raised,#221a34);">
+              <span class="lcdf" style="font-size:19px;color:var(--ink3,#584a80);width:16px;flex:none;">{{s.n}}</span>
+              <div style="flex:1;height:18px;background:var(--lcd,#0a0714);border-radius:3px;position:relative;overflow:hidden;"><div style="position:absolute;left:0;top:3px;bottom:3px;width:{{s.w}};background:linear-gradient(90deg,{{s.c}},transparent);opacity:.7;border-radius:2px;"></div></div>
               <span onClick="{{s.cycle}}" class="marker" style="{{s.chipStyle}}">{{s.label}}</span>
               <span class="px" style="color:{{s.confColor}};width:52px;text-align:right;flex:none;">{{s.conf}}</span>
             </div>
           </sc-for>
         </div>
-        <div style="background:#0a0714;border:1px solid #34285a;border-radius:4px;height:30px;display:flex;align-items:center;padding:0 10px;flex:none;overflow:hidden;min-width:0;max-width:100%;box-sizing:border-box;">
-          <span class="lcdf" style="color:#40e0e8;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">AUTO-PLACE: KICK→A01 SNARE→A02 HAT→A03 + CHOKE</span>
+        <div style="display:flex;gap:6px;flex:none;">
+          <div onClick="{{layoutClassic}}" style="{{layoutClassicStyle}}"><span class="px" style="font-size:8px;color:{{layoutClassicInk}};pointer-events:none;">CLASSIC</span></div>
+          <div onClick="{{layoutMelodic}}" style="{{layoutMelodicStyle}}"><span class="px" style="font-size:8px;color:{{layoutMelodicInk}};pointer-events:none;">MELODIC ♪</span></div>
+        </div>
+        <div style="background:var(--lcd,#0a0714);border:1px solid var(--bdr,#34285a);border-radius:4px;height:30px;display:flex;align-items:center;padding:0 10px;flex:none;overflow:hidden;min-width:0;max-width:100%;box-sizing:border-box;">
+          <span class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{placeText}}</span>
         </div>
         <div style="display:flex;gap:8px;flex:none;">
-          <div onClick="{{rechop}}" style="flex:1;height:52px;background:#161020;border:1px solid #34285a;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#c8b2f8;">RE-CHOP…</span></div>
+          <div onClick="{{rechop}}" style="flex:1;height:52px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--ink,#c8b2f8);">RE-CHOP…</span></div>
           <div class="oil" onClick="{{sendToGrid}}" style="flex:2;height:52px;border-radius:6px;padding:2px;box-shadow:0 0 20px rgba(224,64,200,.35);cursor:pointer;box-sizing:border-box;">
             <div style="height:100%;border-radius:4px;background:linear-gradient(180deg,#241030,#160a1e);display:flex;align-items:center;justify-content:center;gap:10px;">
               <svg width="18" height="18" viewBox="0 0 18 18"><g fill="none" stroke="#f8a8d4" stroke-width="1.8"><rect x="2" y="2" width="5.5" height="5.5"/><rect x="10.5" y="2" width="5.5" height="5.5"/><rect x="2" y="10.5" width="5.5" height="5.5"/><rect x="10.5" y="10.5" width="5.5" height="5.5"/></g></svg>
-              <span class="mch" style="font-size:11px;letter-spacing:2px;color:#f8a8d4;">SEND TO GRID</span>
+              <span class="mch" style="font-size:11px;letter-spacing:2px;color:var(--accHi,#f8a8d4);">SEND TO GRID</span>
             </div>
           </div>
         </div>
@@ -287,65 +422,229 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
 
     <sc-if value="{{isPlay}}" hint-placeholder-val="{{false}}">
       <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;">
-        <div style="background:#0a0714;border:1px solid #000;box-shadow:inset 0 2px 8px #000;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
-          <span class="lcdf" style="color:#c8b2f8;font-size:25px;text-shadow:0 0 12px rgba(154,108,240,.9);">PLAY KIT 01</span>
+        <div style="background:var(--lcd,#0a0714);border:1px solid #000;box-shadow:inset 0 2px 8px #000;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
+          <span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:25px;text-shadow:0 0 12px var(--glowC,rgba(154,108,240,.9));">PLAY KIT 01</span>
           <div style="display:flex;align-items:center;gap:10px;">
-            <span class="lcdf" style="color:#40e0e8;font-size:21px;text-shadow:0 0 12px rgba(64,224,232,.8);">{{bpmText}}</span>
-            <div onClick="{{rotate}}" style="width:32px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid #40e0e8;border-radius:4px;cursor:pointer;"><span class="lcdf" style="color:#8eeef4;font-size:17px;">⟳</span></div>
+            <span class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:21px;text-shadow:0 0 12px var(--glowB,rgba(64,224,232,.8));">{{bpmText}}</span>
+            <div onClick="{{rotate}}" style="width:32px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--alt,#40e0e8);border-radius:4px;cursor:pointer;"><span class="lcdf" style="color:var(--lcdhi,#8eeef4);font-size:17px;">⟳</span></div>
           </div>
         </div>
         <div style="flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));gap:10px;min-height:0;">
           <sc-for list="{{pads}}" as="p" hint-placeholder-count="16">
             <div style="{{p.playStyle}}" onPointerDown="{{p.trigger}}">
-              <span class="px" style="position:absolute;top:6px;left:8px;color:#584a80;pointer-events:none;">{{p.id}}</span>
+              <span class="px" style="position:absolute;top:6px;left:8px;color:var(--ink3,#584a80);pointer-events:none;">{{p.id}}</span>
               <span class="marker" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:14px;pointer-events:none;color:{{p.tint}};">{{p.label}}</span>
             </div>
           </sc-for>
         </div>
         <div style="display:flex;justify-content:space-between;flex:none;padding-bottom:2px;">
-          <span class="px" style="color:#584a80;">LATENCY: LOW · MULTI-TOUCH OK</span>
-          <span class="px" style="color:#584a80;">HAT CL CHOKES HAT OP</span>
+          <span class="px" style="color:var(--ink3,#584a80);">LATENCY: LOW · MULTI-TOUCH OK</span>
+          <span class="px" style="color:var(--ink3,#584a80);">HAT CL CHOKES HAT OP</span>
         </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isLoop}}" hint-placeholder-val="{{false}}">
+      <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:9px;padding:6px 6px 4px;min-height:0;min-width:0;position:relative;">
+        <div style="background:var(--lcd,#0a0714);border:1px solid #000;box-shadow:inset 0 2px 8px #000;height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
+          <span class="lcdf" style="color:var(--lcdhi,#8eeef4);font-size:23px;text-shadow:0 0 12px var(--glowA,rgba(64,224,232,.9));">LOOP PLAYER</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:19px;">{{loopIntText}}</span>
+            <div onClick="{{rotate}}" style="width:32px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--alt,#40e0e8);border-radius:4px;cursor:pointer;"><span class="lcdf" style="color:var(--lcdhi,#8eeef4);font-size:17px;">⟳</span></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex:none;">
+          <div onClick="{{loopToggle}}" style="flex:1.1;height:44px;background:{{loopPlayBg}};border:1px solid var(--alt,#40e0e8);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 10px rgba(64,224,232,.3);"><span class="px" style="color:var(--lcdhi,#8eeef4);">{{loopPlayLabel}}</span></div>
+          <div style="flex:1.6;height:44px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:space-between;padding:0 3px;box-sizing:border-box;">
+            <div onClick="{{loopBpmDown}}" style="width:32px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;background:var(--raised,#221a34);"><span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:19px;">−</span></div>
+            <span class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:20px;">{{loopBpmText}}</span>
+            <div onClick="{{loopBpmUp}}" style="width:32px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;background:var(--raised,#221a34);"><span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:19px;">+</span></div>
+          </div>
+          <div style="flex:1;height:44px;background:var(--field,#161020);border:1px solid var(--raised,#221a34);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
+            <span class="px" style="color:var(--ink2,#7a6aa0);">4 BARS/INT</span>
+            <span class="px" style="color:var(--mut,#40306a);font-size:8px;">FIXED AT CREATE</span>
+          </div>
+        </div>
+        <div style="flex:1;display:flex;gap:5px;min-height:0;position:relative;">
+          <sc-for list="{{loopCols}}" as="col" hint-placeholder-count="6">
+            <div style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0;">
+              <div onClick="{{col.toggle}}" style="{{col.headStyle}}"><span class="px" style="font-size:8px;color:{{col.headInk}};pointer-events:none;">{{col.name}}</span></div>
+              <sc-for list="{{col.blocks}}" as="b" hint-placeholder-count="2">
+                <div onClick="{{b.pick}}" style="{{b.style}}">
+                  <div style="position:absolute;inset:2px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;overflow:hidden;pointer-events:none;"><span class="px" style="font-size:7px;color:{{b.typeC}};pointer-events:none;line-height:1;">{{b.type}}</span><span class="marker" style="font-size:11px;color:{{b.tint}};pointer-events:none;text-align:center;line-height:1;max-width:100%;overflow:hidden;white-space:nowrap;">{{b.name}}</span></div>
+                </div>
+              </sc-for>
+              <sc-if value="{{col.canAdd}}" hint-placeholder-val="{{false}}">
+                <div onClick="{{col.add}}" style="height:24px;border:1px dashed var(--bdr,#34285a);border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;"><span class="lcdf" style="color:var(--ink3,#584a80);font-size:16px;">+</span></div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{loopRebake}}" hint-placeholder-val="{{false}}">
+            <div style="position:absolute;inset:0;background:rgba(10,7,20,.72);display:flex;align-items:center;justify-content:center;border-radius:6px;">
+              <span class="px" style="color:#ffe08e;text-shadow:0 0 10px rgba(255,176,0,.8);">REBAKING 12 BUFFERS…</span>
+            </div>
+          </sc-if>
+        </div>
+        <div style="background:var(--lcd,#0a0714);border:1px solid var(--bdr,#34285a);border-radius:4px;height:28px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px 0 10px;flex:none;overflow:hidden;min-width:0;max-width:100%;box-sizing:border-box;">
+          <span class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{loopInfo}}</span>
+          <sc-if value="{{loopCanEdit}}" hint-placeholder-val="{{false}}">
+            <div onClick="{{openPatEdit}}" style="height:22px;padding:0 8px;display:flex;align-items:center;justify-content:center;border:1px solid var(--acc,#e040c8);border-radius:3px;cursor:pointer;flex:none;background:var(--raised,#221a34);"><span class="px" style="font-size:8px;color:var(--accHi,#f8a8d4);pointer-events:none;">EDIT ▸</span></div>
+          </sc-if>
+        </div>
+        <div style="display:flex;gap:8px;flex:none;">
+          <div style="flex:1.5;background:var(--lcd,#0a0714);border:1px solid #000;box-shadow:inset 0 2px 8px #000;border-radius:6px;display:flex;flex-direction:column;justify-content:center;padding:0 10px;height:52px;box-sizing:border-box;min-width:0;">
+            <span class="px" style="color:var(--ink3,#584a80);font-size:8px;">FULL CYCLE</span>
+            <span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:16px;white-space:nowrap;overflow:hidden;">{{loopCycleText}}</span>
+          </div>
+          <div class="oil" onClick="{{loopBounce}}" style="flex:1;height:52px;border-radius:6px;padding:2px;box-shadow:0 0 20px var(--glowD,rgba(64,224,232,.35));cursor:pointer;box-sizing:border-box;">
+            <div style="height:100%;border-radius:4px;background:linear-gradient(180deg,#0c2426,#081418);display:flex;align-items:center;justify-content:center;gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="#8eeef4" stroke-width="1.5"/><path d="M8 4.5 v3.5 l2.5 2" stroke="#8eeef4" stroke-width="1.5" fill="none"/></svg>
+              <span class="mch" style="font-size:10px;letter-spacing:1.5px;color:var(--lcdhi,#8eeef4);">BOUNCE CYCLE</span>
+            </div>
+          </div>
+        </div>
+        <div class="px" style="color:var(--ink3,#584a80);text-align:center;flex:none;">EVERY TRACK WRAPS ON ITS OWN — THE PHASING IS THE SONG.</div>
+        <sc-if value="{{isPatEdit}}" hint-placeholder-val="{{false}}">
+          <div style="position:absolute;inset:0;background:var(--lcd,#0a0714);z-index:6;display:flex;flex-direction:column;gap:8px;padding:8px;box-sizing:border-box;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none;">
+              <span class="lcdf" style="color:var(--lcdhi,#8eeef4);font-size:20px;text-shadow:0 0 12px var(--glowA,rgba(64,224,232,.9));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">STEP EDIT — {{patTitle}}</span>
+              <div onClick="{{patClose}}" style="height:30px;padding:0 12px;display:flex;align-items:center;justify-content:center;border:1px solid var(--alt,#40e0e8);border-radius:4px;cursor:pointer;flex:none;"><span class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:16px;pointer-events:none;">DONE</span></div>
+            </div>
+            <div style="display:flex;gap:6px;flex:none;">
+              <sc-for list="{{patBars}}" as="pb" hint-placeholder-count="4">
+                <div onClick="{{pb.go}}" style="{{pb.style}}"><span class="px" style="font-size:8px;color:{{pb.ink}};pointer-events:none;">{{pb.label}}</span></div>
+              </sc-for>
+              <div onClick="{{patClear}}" style="flex:none;height:26px;padding:0 10px;display:flex;align-items:center;justify-content:center;border:1px solid var(--bdr,#34285a);border-radius:4px;cursor:pointer;background:var(--field,#161020);"><span class="px" style="font-size:8px;color:var(--ink2,#7a6aa0);pointer-events:none;">CLEAR BAR</span></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:3px;min-height:0;">
+              <sc-for list="{{patLanes}}" as="ln" hint-placeholder-count="8">
+                <div style="flex:1;display:flex;gap:3px;min-height:0;align-items:stretch;">
+                  <div style="width:46px;flex:none;display:flex;align-items:center;background:var(--sunk,#100c1a);border:1px solid var(--raised,#221a34);border-radius:3px;padding:0 4px;box-sizing:border-box;"><span class="px" style="font-size:7px;color:{{ln.tint}};pointer-events:none;">{{ln.name}}</span></div>
+                  <sc-for list="{{ln.cells}}" as="c" hint-placeholder-count="16">
+                    <div onClick="{{c.tap}}" style="{{c.style}}"></div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+            <div class="px" style="color:var(--ink3,#584a80);text-align:center;flex:none;">64 STEPS · SOUNDS FROM KIT 01 · TAP TO TOGGLE</div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isGroove}}" hint-placeholder-val="{{false}}">
+      <div class="screen" data-screen-label="Groove" style="flex:1;display:flex;flex-direction:column;gap:9px;padding:6px 6px 4px;min-height:0;min-width:0;position:relative;">
+        <div style="background:var(--lcd,#0a0714);border:1px solid #000;box-shadow:inset 0 2px 8px #000;height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
+          <span class="lcdf" style="color:var(--lcdhi,#8eeef4);font-size:23px;text-shadow:0 0 12px var(--glowA,rgba(64,224,232,.9));">GROOVE</span>
+          <span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:18px;">92.0 BPM · 2 BARS · {{gNoteCount}} NOTES</span>
+        </div>
+        <div style="display:flex;gap:6px;flex:none;align-items:stretch;">
+          <div onClick="{{gPrev}}" style="width:44px;background:var(--raised,#221a34);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:19px;pointer-events:none;">◄</span></div>
+          <div style="flex:1;background:var(--lcd,#0a0714);border:1px solid #000;box-shadow:inset 0 2px 8px #000;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:5px 0;">
+            <span class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:19px;text-shadow:0 0 10px var(--glowB,rgba(64,224,232,.8));">{{gVarName}}</span>
+            <span class="px" style="color:var(--ink3,#584a80);font-size:8px;">{{gVarSub}}</span>
+          </div>
+          <div onClick="{{gNext}}" style="width:44px;background:var(--raised,#221a34);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:19px;pointer-events:none;">►</span></div>
+        </div>
+        <div style="flex:1;position:relative;background:var(--lcd,#0a0714);border:1px solid #000;box-shadow:inset 0 2px 8px #000;border-radius:4px;overflow:hidden;min-height:0;">
+          <div style="{{gInnerStyle}}">
+            <sc-for list="{{gTicks}}" as="tk" hint-placeholder-count="8">
+              <span class="px" style="{{tk.style}}">{{tk.label}}</span>
+            </sc-for>
+            <sc-for list="{{gNotes}}" as="n" hint-placeholder-count="12">
+              <div style="{{n.style}}"></div>
+            </sc-for>
+          </div>
+          <div style="position:absolute;left:0;right:0;top:96px;height:2px;background:var(--lcdalt,#40e0e8);box-shadow:0 0 12px var(--glowB,rgba(64,224,232,.8));z-index:2;pointer-events:none;"></div>
+          <span class="px" style="position:absolute;left:8px;top:101px;font-size:8px;color:var(--lcdalt,#40e0e8);z-index:2;pointer-events:none;">▶ {{gNowText}}</span>
+          <div style="position:absolute;left:0;right:0;bottom:0;display:flex;gap:6px;justify-content:center;padding:5px 0;background:linear-gradient(0deg,var(--lcd,#0a0714) 55%,transparent);z-index:2;pointer-events:none;">
+            <sc-for list="{{gLanes}}" as="gl" hint-placeholder-count="5">
+              <span class="px" style="{{gl.style}}">{{gl.name}}</span>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex:none;">
+          <div onClick="{{gToggle}}" style="flex:1.2;height:44px;background:{{gPlayBg}};border:1px solid var(--alt,#40e0e8);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 10px rgba(64,224,232,.3);"><span class="px" style="color:var(--lcdhi,#8eeef4);pointer-events:none;">{{gPlayLabel}}</span></div>
+          <div style="flex:1.6;height:44px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:space-between;padding:0 3px;box-sizing:border-box;">
+            <div onClick="{{swingDown}}" style="width:32px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;background:var(--raised,#221a34);"><span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:19px;pointer-events:none;">−</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;">
+              <span class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:19px;line-height:1;">SWING {{swingText}}</span>
+              <span class="px" style="color:var(--mut,#40306a);font-size:7px;">RIDES PROG B</span>
+            </div>
+            <div onClick="{{swingUp}}" style="width:32px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;background:var(--raised,#221a34);"><span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:19px;pointer-events:none;">+</span></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex:none;">
+          <div onClick="{{gHumanize}}" style="flex:1;height:36px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--ink2,#7a6aa0);pointer-events:none;">HUMANIZE ⚄</span></div>
+          <div onClick="{{gEdit}}" style="flex:1;height:36px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--ink2,#7a6aa0);pointer-events:none;">EDIT STEPS</span></div>
+          <div onClick="{{gMidi}}" style="flex:1;height:36px;background:var(--field,#161020);border:1px solid var(--acc,#e040c8);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--accHi,#f8a8d4);pointer-events:none;">MIDI ▸</span></div>
+        </div>
+        <div class="px" style="color:var(--ink3,#584a80);text-align:center;flex:none;">SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.</div>
+        <sc-if value="{{isGEdit}}" hint-placeholder-val="{{false}}">
+          <div style="position:absolute;inset:0;background:var(--lcd,#0a0714);z-index:6;display:flex;flex-direction:column;gap:8px;padding:8px;box-sizing:border-box;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none;">
+              <span class="lcdf" style="color:var(--lcdhi,#8eeef4);font-size:20px;text-shadow:0 0 12px var(--glowA,rgba(64,224,232,.9));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">STEP EDIT — PROG E</span>
+              <div onClick="{{geClose}}" style="height:30px;padding:0 12px;display:flex;align-items:center;justify-content:center;border:1px solid var(--alt,#40e0e8);border-radius:4px;cursor:pointer;flex:none;"><span class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:16px;pointer-events:none;">DONE</span></div>
+            </div>
+            <div style="display:flex;gap:6px;flex:none;">
+              <sc-for list="{{geBars}}" as="gb" hint-placeholder-count="2">
+                <div onClick="{{gb.go}}" style="{{gb.style}}"><span class="px" style="font-size:8px;color:{{gb.ink}};pointer-events:none;">{{gb.label}}</span></div>
+              </sc-for>
+              <div onClick="{{geClear}}" style="flex:none;height:26px;padding:0 10px;display:flex;align-items:center;justify-content:center;border:1px solid var(--bdr,#34285a);border-radius:4px;cursor:pointer;background:var(--field,#161020);"><span class="px" style="font-size:8px;color:var(--ink2,#7a6aa0);pointer-events:none;">CLEAR BAR</span></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:3px;min-height:0;">
+              <sc-for list="{{geLanes}}" as="gln" hint-placeholder-count="5">
+                <div style="flex:1;display:flex;gap:3px;min-height:0;align-items:stretch;">
+                  <div style="width:46px;flex:none;display:flex;align-items:center;background:var(--sunk,#100c1a);border:1px solid var(--raised,#221a34);border-radius:3px;padding:0 4px;box-sizing:border-box;"><span class="px" style="font-size:7px;color:{{gln.tint}};pointer-events:none;">{{gln.name}}</span></div>
+                  <sc-for list="{{gln.cells}}" as="gc" hint-placeholder-count="16">
+                    <div onClick="{{gc.tap}}" style="{{gc.style}}"></div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+            <div class="px" style="color:var(--ink3,#584a80);text-align:center;flex:none;">32 STEPS · {{geSource}} · TAP TO TOGGLE — B–D STAY DERIVED FROM A</div>
+          </div>
+        </sc-if>
       </div>
     </sc-if>
 
     <sc-if value="{{isSynth}}" hint-placeholder-val="{{false}}">
       <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;">
-        <div style="background:#0a0714;border:1px solid #000;box-shadow:inset 0 2px 8px #000;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
+        <div style="background:var(--lcd,#0a0714);border:1px solid #000;box-shadow:inset 0 2px 8px #000;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
           <span class="lcdf" style="color:#f8b09a;font-size:25px;text-shadow:0 0 12px rgba(232,84,46,.9);flex:none;">THUMP</span>
-          <span class="px" style="color:#584a80;font-size:8px;text-align:right;line-height:1.5;">ANALOG-STYLE DRUM VOICES<br/>RENDERS TO PAD</span>
+          <span class="px" style="color:var(--ink3,#584a80);font-size:8px;text-align:right;line-height:1.5;">ANALOG-STYLE DRUM VOICES<br/>RENDERS TO PAD</span>
         </div>
         <div style="display:flex;gap:6px;flex:none;">
           <sc-for list="{{voices}}" as="v" hint-placeholder-count="5">
             <div onClick="{{v.pick}}" style="{{v.tabStyle}}"><span class="px" style="color:{{v.labelColor}};">{{v.name}}</span></div>
           </sc-for>
         </div>
-        <div style="background:#0a0714;border:1px solid #34285a;border-radius:6px;height:88px;position:relative;overflow:hidden;flex:none;">
+        <div style="background:var(--lcd,#0a0714);border:1px solid var(--bdr,#34285a);border-radius:6px;height:88px;position:relative;overflow:hidden;flex:none;">
           <svg width="100%" height="100%" viewBox="0 0 340 88" preserveAspectRatio="none">
-            <path d="{{scopePath}}" fill="none" stroke="#40e0e8" stroke-width="1.5" style="filter:drop-shadow(0 0 4px rgba(64,224,232,.9));"></path>
+            <path d="{{scopePath}}" fill="none" stroke="#40e0e8" stroke-width="1.5" style="filter:drop-shadow(0 0 4px var(--glowA,rgba(64,224,232,.9)));"></path>
           </svg>
-          <span class="px" style="position:absolute;top:5px;left:8px;color:#584a80;">SCOPE — RENDERED ONE-SHOT</span>
+          <span class="px" style="position:absolute;top:5px;left:8px;color:var(--ink3,#584a80);">SCOPE — RENDERED ONE-SHOT</span>
           <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.3) 0 1px,transparent 1px 3px);pointer-events:none;"></div>
         </div>
         <div style="flex:1;display:flex;flex-direction:column;gap:9px;min-height:0;overflow-y:auto;">
           <sc-for list="{{macros}}" as="m" hint-placeholder-count="5">
             <div style="display:flex;align-items:center;gap:10px;">
-              <span class="px" style="width:52px;color:#c8b2f8;flex:none;">{{m.name}}</span>
-              <div style="flex:1;height:26px;background:#0a0714;border:1px solid #34285a;border-radius:999px;position:relative;touch-action:none;cursor:pointer;"
+              <span class="px" style="width:52px;color:var(--ink,#c8b2f8);flex:none;">{{m.name}}</span>
+              <div style="flex:1;height:26px;background:var(--lcd,#0a0714);border:1px solid var(--bdr,#34285a);border-radius:999px;position:relative;touch-action:none;cursor:pointer;"
                    onPointerDown="{{m.down}}" onPointerMove="{{m.move}}" onPointerUp="{{m.up}}" onPointerCancel="{{m.up}}">
                 <div class="oil-h cyl" style="position:absolute;left:2px;top:2px;bottom:2px;border-radius:999px;width:{{m.pct}};pointer-events:none;"></div>
-                <div style="position:absolute;top:-3px;bottom:-3px;left:{{m.knobLeft}};width:14px;border-radius:999px;background:linear-gradient(180deg,#efe8ff,#b8a8e0);border:1px solid #584a80;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.6);"></div>
+                <div style="position:absolute;top:-3px;bottom:-3px;left:{{m.knobLeft}};width:14px;border-radius:999px;background:linear-gradient(180deg,#efe8ff,#b8a8e0);border:1px solid var(--ink3,#584a80);pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.6);"></div>
               </div>
-              <span class="lcdf" style="width:34px;color:#40e0e8;font-size:18px;text-align:right;flex:none;">{{m.val}}</span>
+              <span class="lcdf" style="width:34px;color:var(--alt,#40e0e8);font-size:18px;text-align:right;flex:none;">{{m.val}}</span>
             </div>
           </sc-for>
         </div>
         <div style="display:flex;gap:8px;flex:none;">
-          <div onClick="{{scramble}}" style="flex:1;height:48px;background:#161020;border:1px solid #e040c8;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-shadow:0 0 10px rgba(224,64,200,.3);">
-            <span class="lcdf" style="color:#f8a8d4;font-size:20px;">⚄</span><span class="px" style="color:#f8a8d4;">SCRAMBLE</span>
+          <div onClick="{{scramble}}" style="flex:1;height:48px;background:var(--field,#161020);border:1px solid var(--acc,#e040c8);border-radius:6px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-shadow:0 0 10px rgba(224,64,200,.3);">
+            <span class="lcdf" style="color:var(--accHi,#f8a8d4);font-size:20px;">⚄</span><span class="px" style="color:var(--accHi,#f8a8d4);">SCRAMBLE</span>
           </div>
-          <div onClick="{{audition}}" style="flex:1;height:48px;background:#161020;border:1px solid #40e0e8;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 10px rgba(64,224,232,.3);">
-            <span class="px" style="color:#8eeef4;">► AUDITION</span>
+          <div onClick="{{audition}}" style="flex:1;height:48px;background:var(--field,#161020);border:1px solid var(--alt,#40e0e8);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 10px rgba(64,224,232,.3);">
+            <span class="px" style="color:var(--lcdhi,#8eeef4);">► AUDITION</span>
           </div>
         </div>
         <div class="oil" onClick="{{renderToPad}}" style="height:52px;border-radius:6px;padding:2px;box-shadow:0 0 20px rgba(232,84,46,.35);cursor:pointer;flex:none;">
@@ -357,10 +656,10 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
     </sc-if>
 
     <sc-if value="{{isKits}}" hint-placeholder-val="{{false}}">
-      <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;">
-        <div style="background:#0a0714;border:1px solid #000;box-shadow:inset 0 2px 8px #000;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
-          <span class="lcdf" style="color:#c8b2f8;font-size:25px;text-shadow:0 0 12px rgba(154,108,240,.9);">MY KITS</span>
-          <span class="lcdf" style="color:#40e0e8;font-size:21px;text-shadow:0 0 12px rgba(64,224,232,.8);">{{kitCount}} TAPES</span>
+      <div class="screen" data-screen-label="My Kits" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;position:relative;">
+        <div style="background:var(--lcd,#0a0714);border:1px solid #000;box-shadow:inset 0 2px 8px #000;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:4px;flex:none;">
+          <span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:25px;text-shadow:0 0 12px var(--glowC,rgba(154,108,240,.9));">MY KITS</span>
+          <span class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:21px;text-shadow:0 0 12px var(--glowB,rgba(64,224,232,.8));">{{kitCount}} TAPES</span>
         </div>
         <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:0;">
           <sc-for list="{{kits}}" as="k" hint-placeholder-count="4">
@@ -368,21 +667,89 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
               <svg viewBox="0 0 100 64" width="72" height="46" style="flex:none;"><rect x="1" y="1" width="98" height="62" rx="6" fill="#120e1a" stroke="{{k.c}}" stroke-width="2"/><rect x="8" y="6" width="84" height="18" rx="2" fill="#0a0714" stroke="{{k.c}}"/><text x="50" y="19" font-family="Permanent Marker, cursive" font-size="11" text-anchor="middle" fill="{{k.tint}}">{{k.name}}</text><rect x="24" y="30" width="52" height="22" rx="11" fill="#0a0714" stroke="{{k.c}}"/><circle cx="38" cy="41" r="6.5" fill="none" stroke="{{k.c}}"/><circle cx="62" cy="41" r="6.5" fill="none" stroke="{{k.c}}"/></svg>
               <div style="flex:1;min-width:0;">
                 <div class="marker" style="font-size:15px;color:{{k.tint}};">{{k.name}}</div>
-                <div class="px" style="color:#584a80;margin-top:3px;">{{k.meta}}</div>
+                <div class="px" style="color:var(--ink3,#584a80);margin-top:3px;">{{k.meta}}</div>
               </div>
               <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none;">
                 <span class="px" style="color:{{k.statusColor}};">{{k.status}}</span>
-                <span class="lcdf" style="color:#7a6aa0;font-size:16px;">{{k.date}}</span>
+                <span class="lcdf" style="color:var(--ink2,#7a6aa0);font-size:16px;">{{k.date}}</span>
               </div>
             </div>
           </sc-for>
         </div>
         <div class="oil" onClick="{{newKit}}" style="height:52px;border-radius:6px;padding:2px;box-shadow:0 0 20px rgba(154,108,240,.35);cursor:pointer;flex:none;">
           <div style="height:100%;border-radius:4px;background:linear-gradient(180deg,#1c1430,#120e1e);display:flex;align-items:center;justify-content:center;gap:10px;">
-            <span class="lcdf" style="color:#c8b2f8;font-size:24px;">+</span>
-            <span class="mch" style="font-size:11px;letter-spacing:2px;color:#c8b2f8;">NEW BLANK TAPE</span>
+            <span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:24px;">+</span>
+            <span class="mch" style="font-size:11px;letter-spacing:2px;color:var(--ink,#c8b2f8);">FRESH TAPE</span>
           </div>
         </div>
+        <sc-if value="{{isFresh}}" hint-placeholder-val="{{false}}">
+          <div style="position:absolute;inset:0;background:rgba(6,3,12,.8);z-index:8;display:flex;align-items:flex-end;">
+            <div style="width:100%;background:var(--win2,#120e1a);border-top:2px solid var(--acc,#e040c8);border-radius:10px 10px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.7);padding:10px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;max-height:78%;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span class="mch" style="font-size:11px;letter-spacing:2px;color:var(--accHi,#f8a8d4);">FRESH TAPE — PICK A STARTER</span>
+                <div onClick="{{freshClose}}" style="width:30px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid var(--bdr,#34285a);border-radius:4px;cursor:pointer;"><span class="px" style="color:var(--ink2,#7a6aa0);pointer-events:none;">✕</span></div>
+              </div>
+              <div style="overflow-y:auto;display:flex;flex-direction:column;gap:6px;min-height:0;">
+                <sc-for list="{{starters}}" as="st" hint-placeholder-count="6">
+                  <div onClick="{{st.pick}}" style="{{st.style}}">
+                    <span class="marker" style="font-size:14px;color:{{st.tint}};flex:none;width:86px;">{{st.name}}</span>
+                    <span class="px" style="flex:1;color:var(--ink3,#584a80);">{{st.blurb}}</span>
+                    <sc-if value="{{st.sel}}" hint-placeholder-val="{{false}}"><span class="px" style="color:var(--lcdalt,#40e0e8);flex:none;">✓</span></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:6px;flex:none;">
+                <div onClick="{{freshReroll}}" style="flex:1;height:44px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--ink2,#7a6aa0);pointer-events:none;">REROLL SEED ⚄ {{freshSeed}}</span></div>
+                <div class="oil" onClick="{{freshLoad}}" style="flex:1.4;height:44px;border-radius:6px;padding:2px;cursor:pointer;box-sizing:border-box;">
+                  <div style="height:100%;border-radius:4px;background:linear-gradient(180deg,#1c1430,#120e1e);display:flex;align-items:center;justify-content:center;"><span class="mch" style="font-size:10px;letter-spacing:2px;color:var(--ink,#c8b2f8);pointer-events:none;">LOAD TO GRID</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isTakes}}" hint-placeholder-val="{{false}}">
+      <div class="screen" data-screen-label="Takes and Bin" style="flex:1;display:flex;flex-direction:column;gap:8px;padding:6px 6px 4px;min-height:0;">
+        <div style="display:flex;gap:6px;flex:none;align-items:stretch;">
+          <div onClick="{{goKit}}" style="width:64px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--ink2,#7a6aa0);pointer-events:none;">◄ KIT</span></div>
+          <div style="flex:1;background:var(--lcd,#0a0714);border:1px solid #000;box-shadow:inset 0 2px 8px #000;border-radius:6px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;height:44px;box-sizing:border-box;">
+            <span class="lcdf" style="color:var(--lcdhi,#8eeef4);font-size:22px;text-shadow:0 0 12px var(--glowA,rgba(64,224,232,.9));">TAKES + THE BIN</span>
+            <span class="lcdf" style="color:var(--lcdalt,#40e0e8);font-size:17px;">KIT 01</span>
+          </div>
+        </div>
+        <div style="position:relative;border:1px solid var(--bdr,#34285a);border-radius:6px;padding:14px 8px 8px;background:var(--field,#161020);flex:none;display:flex;flex-direction:column;gap:5px;">
+          <span class="px" style="position:absolute;top:-6px;left:12px;background:var(--field2,#1c1428);border:1px solid var(--acc,#e040c8);border-radius:999px;padding:1px 8px;color:var(--accHi,#f8a8d4);">TAKES — EVERY SAVE REMEMBERED</span>
+          <sc-for list="{{takes}}" as="tk" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:8px;height:34px;background:{{tk.bg}};border:1px solid var(--bdr,#34285a);border-radius:5px;padding:0 8px;box-sizing:border-box;">
+              <span class="lcdf" style="color:var(--lcdink,#c8b2f8);font-size:17px;flex:none;">{{tk.n}}</span>
+              <span class="px" style="flex:1;color:var(--ink3,#584a80);">{{tk.what}}</span>
+              <span class="px" style="color:var(--ink3,#584a80);flex:none;">{{tk.when}}</span>
+              <sc-if value="{{tk.current}}" hint-placeholder-val="{{false}}"><span class="px" style="color:var(--lcdalt,#40e0e8);flex:none;">NOW</span></sc-if>
+              <sc-if value="{{tk.restorable}}" hint-placeholder-val="{{true}}"><div onClick="{{tk.restore}}" style="height:24px;padding:0 8px;display:flex;align-items:center;border:1px solid var(--alt,#40e0e8);border-radius:4px;cursor:pointer;flex:none;"><span class="px" style="font-size:8px;color:var(--lcdhi,#8eeef4);pointer-events:none;">RESTORE</span></div></sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <div style="position:relative;border:1px solid var(--bdr,#34285a);border-radius:6px;padding:14px 8px 8px;background:var(--field,#161020);flex:1;display:flex;flex-direction:column;gap:5px;min-height:0;">
+          <span class="px" style="position:absolute;top:-6px;left:12px;background:var(--field2,#1c1428);border:1px solid #6a2020;border-radius:999px;padding:1px 8px;color:#c86050;">THE BIN — KEPT 30 DAYS</span>
+          <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:5px;min-height:0;">
+            <sc-for list="{{binItems}}" as="bi" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:8px;height:34px;background:var(--sunk,#100c1a);border:1px solid var(--raised,#221a34);border-radius:5px;padding:0 8px;box-sizing:border-box;">
+                <span style="width:8px;height:8px;border-radius:2px;background:{{bi.c}};flex:none;"></span>
+                <span class="marker" style="font-size:12px;color:{{bi.tint}};flex:none;">{{bi.name}}</span>
+                <span class="px" style="flex:1;color:var(--ink3,#584a80);">{{bi.why}}</span>
+                <span class="lcdf" style="color:{{bi.dayColor}};font-size:15px;flex:none;">{{bi.days}}D LEFT</span>
+                <div onClick="{{bi.restore}}" style="height:24px;padding:0 8px;display:flex;align-items:center;border:1px solid var(--alt,#40e0e8);border-radius:4px;cursor:pointer;flex:none;"><span class="px" style="font-size:8px;color:var(--lcdhi,#8eeef4);pointer-events:none;">BACK</span></div>
+              </div>
+            </sc-for>
+            <sc-if value="{{binEmpty}}" hint-placeholder-val="{{false}}">
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;"><span class="px" style="color:var(--mut,#40306a);">THE BIN IS EMPTY. NOTHING TO REGRET.</span></div>
+            </sc-if>
+          </div>
+          <div onClick="{{binEmptyNow}}" style="height:32px;display:flex;align-items:center;justify-content:center;border:1px solid #6a2020;border-radius:5px;cursor:pointer;flex:none;"><span class="px" style="color:#c86050;pointer-events:none;">EMPTY THE BIN NOW — NO TAKEBACKS</span></div>
+        </div>
+        <div class="px" style="color:var(--ink3,#584a80);text-align:center;flex:none;">EVERY SAVE ARCHIVES A TAKE. EVERY DELETE GOES TO THE BIN FIRST.</div>
       </div>
     </sc-if>
 
@@ -392,48 +759,48 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
           <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
             <svg viewBox="0 0 100 64" width="150" height="96"><rect x="1" y="1" width="98" height="62" rx="6" fill="#1a1424" stroke="#e040c8" stroke-width="2"/><rect x="8" y="6" width="84" height="18" rx="2" fill="#120e1a" stroke="#40306a"/><text x="50" y="19" font-family="Permanent Marker, cursive" font-size="11" text-anchor="middle" fill="#f8a8d4">your first tape</text><rect x="24" y="30" width="52" height="22" rx="11" fill="#0a0714" stroke="#40306a"/><circle cx="38" cy="41" r="6.5" fill="none" stroke="#c8b2f8"/><circle cx="62" cy="41" r="6.5" fill="none" stroke="#c8b2f8"/></svg>
             <div style="text-align:center;">
-              <div class="mch" style="font-size:14px;letter-spacing:2px;color:#c8b2f8;">HEAR IT. SNIP IT. PLAY IT.</div>
-              <div class="px" style="color:#7a6aa0;margin-top:8px;line-height:1.8;">SNIPSNAP RECORDS WHAT YOUR PHONE IS PLAYING<br/>ONTO A ROLLING 60s TAPE LOOP.<br/>ONE TAP KEEPS THE LAST MINUTE. FOREVER.</div>
+              <div class="mch" style="font-size:14px;letter-spacing:2px;color:var(--ink,#c8b2f8);">HEAR IT. SNIP IT. PLAY IT.</div>
+              <div class="px" style="color:var(--ink2,#7a6aa0);margin-top:8px;line-height:1.8;">SNIPSNAP RECORDS WHAT YOUR PHONE IS PLAYING<br/>ONTO A ROLLING 60s TAPE LOOP.<br/>ONE TAP KEEPS THE LAST MINUTE. FOREVER.</div>
             </div>
           </div>
         </sc-if>
         <sc-if value="{{ob1}}" hint-placeholder-val="{{false}}">
           <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-height:0;">
-            <div class="mch" style="font-size:12px;letter-spacing:1.5px;color:#c8b2f8;flex:none;">WHAT CAN BE TAPED?</div>
-            <div class="px" style="color:#7a6aa0;line-height:1.7;flex:none;">APPS DECIDE IF THEY CAN BE RECORDED. WE CHECK AT RUNTIME —<br/>THIS LIST IS A HINT, NOT A PROMISE. IT DRIFTS BETWEEN APP VERSIONS.</div>
-            <div style="border:1px solid #34285a;border-radius:6px;background:#161020;flex:none;">
-              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-bottom:1px solid #221a34;"><span class="px" style="color:#c6ec8e;width:64px;flex:none;">USUALLY ✓</span><span class="px" style="color:#8a7ab0;">YOUTUBE · MOST GAMES · MOST PLAYERS</span></div>
-              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-bottom:1px solid #221a34;"><span class="px" style="color:#f8b09a;width:64px;flex:none;">BLOCKS ✕</span><span class="px" style="color:#8a7ab0;">SPOTIFY · CHROME (HISTORICALLY)</span></div>
-              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;"><span class="px" style="color:#8eeef4;width:64px;flex:none;">SILENCE?</span><span class="px" style="color:#8a7ab0;">WE DETECT IT AND TELL YOU — NO EMPTY WAVEFORMS</span></div>
+            <div class="mch" style="font-size:12px;letter-spacing:1.5px;color:var(--ink,#c8b2f8);flex:none;">WHAT CAN BE TAPED?</div>
+            <div class="px" style="color:var(--ink2,#7a6aa0);line-height:1.7;flex:none;">APPS DECIDE IF THEY CAN BE RECORDED. WE CHECK AT RUNTIME —<br/>THIS LIST IS A HINT, NOT A PROMISE. IT DRIFTS BETWEEN APP VERSIONS.</div>
+            <div style="border:1px solid var(--bdr,#34285a);border-radius:6px;background:var(--field,#161020);flex:none;">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-bottom:1px solid var(--raised,#221a34);"><span class="px" style="color:#c6ec8e;width:64px;flex:none;">USUALLY ✓</span><span class="px" style="color:#8a7ab0;">YOUTUBE · MOST GAMES · MOST PLAYERS</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-bottom:1px solid var(--raised,#221a34);"><span class="px" style="color:#f8b09a;width:64px;flex:none;">BLOCKS ✕</span><span class="px" style="color:#8a7ab0;">SPOTIFY · CHROME (HISTORICALLY)</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;"><span class="px" style="color:var(--lcdhi,#8eeef4);width:64px;flex:none;">SILENCE?</span><span class="px" style="color:#8a7ab0;">WE DETECT IT AND TELL YOU — NO EMPTY WAVEFORMS</span></div>
             </div>
-            <div style="position:relative;border:1px solid #40e0e8;border-radius:6px;padding:16px 10px 10px;background:#0c1c1e;flex:none;">
-              <span class="px" style="position:absolute;top:-6px;left:12px;background:#1e1830;border:1px solid #40e0e8;border-radius:999px;padding:1px 8px;color:#8eeef4;">THE ESCAPE HATCH</span>
-              <div class="px" style="color:#8eeef4;line-height:1.8;">APP BLOCKS US? USE ANDROID'S SCREEN RECORDER,<br/>THEN SHARE THE VIDEO INTO SNIPSNAP.<br/>WE PULL THE AUDIO OUT. WORKS EVERYWHERE.</div>
+            <div style="position:relative;border:1px solid var(--alt,#40e0e8);border-radius:6px;padding:16px 10px 10px;background:#0c1c1e;flex:none;">
+              <span class="px" style="position:absolute;top:-6px;left:12px;background:#1e1830;border:1px solid var(--alt,#40e0e8);border-radius:999px;padding:1px 8px;color:var(--lcdhi,#8eeef4);">THE ESCAPE HATCH</span>
+              <div class="px" style="color:var(--lcdhi,#8eeef4);line-height:1.8;">APP BLOCKS US? USE ANDROID'S SCREEN RECORDER,<br/>THEN SHARE THE VIDEO INTO SNIPSNAP.<br/>WE PULL THE AUDIO OUT. WORKS EVERYWHERE.</div>
             </div>
-            <div class="px" style="color:#584a80;flex:none;">YOUR SOURCES. YOUR PHONE. NOTHING LEAVES IT.</div>
+            <div class="px" style="color:var(--ink3,#584a80);flex:none;">YOUR SOURCES. YOUR PHONE. NOTHING LEAVES IT.</div>
           </div>
         </sc-if>
         <sc-if value="{{ob2}}" hint-placeholder-val="{{false}}">
           <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-height:0;">
-            <div class="mch" style="font-size:12px;letter-spacing:1.5px;color:#c8b2f8;flex:none;">ONE DIALOG. ONE SESSION. MANY SNIPS.</div>
-            <div class="px" style="color:#7a6aa0;line-height:1.7;flex:none;">ANDROID ASKS FRESH CONSENT EVERY SESSION. SO WE ASK ONCE,<br/>THEN THE BUBBLE RIDES ALONG WHILE YOU LISTEN.</div>
-            <div style="flex:1;border:1px solid #34285a;border-radius:6px;background:#161020;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:0;">
-              <div style="width:250px;background:#1e1830;border:1px solid #40306a;border-radius:8px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.6);">
-                <div class="px" style="color:#c8b2f8;">⬤ ANDROID SYSTEM</div>
+            <div class="mch" style="font-size:12px;letter-spacing:1.5px;color:var(--ink,#c8b2f8);flex:none;">ONE DIALOG. ONE SESSION. MANY SNIPS.</div>
+            <div class="px" style="color:var(--ink2,#7a6aa0);line-height:1.7;flex:none;">ANDROID ASKS FRESH CONSENT EVERY SESSION. SO WE ASK ONCE,<br/>THEN THE BUBBLE RIDES ALONG WHILE YOU LISTEN.</div>
+            <div style="flex:1;border:1px solid var(--bdr,#34285a);border-radius:6px;background:var(--field,#161020);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:0;">
+              <div style="width:250px;background:#1e1830;border:1px solid var(--mut,#40306a);border-radius:8px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.6);">
+                <div class="px" style="color:var(--ink,#c8b2f8);">⬤ ANDROID SYSTEM</div>
                 <div class="px" style="color:#8a7ab0;margin-top:8px;line-height:1.7;">START RECORDING OR CASTING<br/>WITH SNIPSNAP?</div>
                 <div style="display:flex;justify-content:flex-end;gap:14px;margin-top:12px;">
-                  <span class="px" style="color:#584a80;">CANCEL</span>
-                  <span onClick="{{consentOk}}" class="px" style="color:#40e0e8;cursor:pointer;border:1px solid #40e0e8;border-radius:4px;padding:4px 10px;">START NOW</span>
+                  <span class="px" style="color:var(--ink3,#584a80);">CANCEL</span>
+                  <span onClick="{{consentOk}}" class="px" style="color:var(--alt,#40e0e8);cursor:pointer;border:1px solid var(--alt,#40e0e8);border-radius:4px;padding:4px 10px;">START NOW</span>
                 </div>
               </div>
-              <div class="px" style="color:#584a80;text-align:center;line-height:1.8;">↑ THE ONLY PERMISSION MOMENT.<br/>A QUIET NOTIFICATION HOLDS THE SESSION OPEN.</div>
+              <div class="px" style="color:var(--ink3,#584a80);text-align:center;line-height:1.8;">↑ THE ONLY PERMISSION MOMENT.<br/>A QUIET NOTIFICATION HOLDS THE SESSION OPEN.</div>
             </div>
           </div>
         </sc-if>
         <div style="display:flex;gap:8px;flex:none;">
-          <div onClick="{{obSkip}}" style="flex:1;height:48px;background:#161020;border:1px solid #34285a;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#7a6aa0;">{{obSkipLabel}}</span></div>
+          <div onClick="{{obSkip}}" style="flex:1;height:48px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--ink2,#7a6aa0);">{{obSkipLabel}}</span></div>
           <div class="oil" onClick="{{obNext}}" style="flex:2;height:48px;border-radius:6px;padding:2px;cursor:pointer;box-sizing:border-box;">
-            <div style="height:100%;border-radius:4px;background:linear-gradient(180deg,#1c1430,#120e1e);display:flex;align-items:center;justify-content:center;"><span class="mch" style="font-size:11px;letter-spacing:2px;color:#c8b2f8;">{{obNextLabel}}</span></div>
+            <div style="height:100%;border-radius:4px;background:linear-gradient(180deg,#1c1430,#120e1e);display:flex;align-items:center;justify-content:center;"><span class="mch" style="font-size:11px;letter-spacing:2px;color:var(--ink,#c8b2f8);">{{obNextLabel}}</span></div>
           </div>
         </div>
         <div style="display:flex;justify-content:center;gap:6px;flex:none;padding-bottom:2px;">
@@ -447,19 +814,19 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
     <sc-if value="{{isExport}}" hint-placeholder-val="{{false}}">
       <div class="screen" style="flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 6px 4px;min-height:0;">
         <div>
-          <div class="mch" style="font-size:12px;letter-spacing:1.5px;color:#c8b2f8;">EXPORT KIT WIZARD</div>
-          <div class="px" style="color:#7a6aa0;margin-top:3px;">STEP 3 OF 3 — PREFLIGHT AND WRITE. NOT A SINGLE BYTE HITS THE CARD UNCHECKED.</div>
+          <div class="mch" style="font-size:12px;letter-spacing:1.5px;color:var(--ink,#c8b2f8);">EXPORT KIT WIZARD</div>
+          <div class="px" style="color:var(--ink2,#7a6aa0);margin-top:3px;">STEP 3 OF 3 — PREFLIGHT AND WRITE. NOT A SINGLE BYTE HITS THE CARD UNCHECKED.</div>
         </div>
-        <div style="border:1px solid #34285a;border-radius:6px;background:#161020;padding:2px;flex:none;">
-          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid #221a34;">
+        <div style="border:1px solid var(--bdr,#34285a);border-radius:6px;background:var(--field,#161020);padding:2px;flex:none;">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--raised,#221a34);">
             <svg width="16" height="16"><circle cx="8" cy="8" r="7" fill="none" stroke="#8fd424" stroke-width="1.5"/><path d="M4.5 8.5 L7 11 L11.5 5.5" fill="none" stroke="#8fd424" stroke-width="2"/></svg>
             <span class="px" style="color:#c6ec8e;">{{shelfCount}} PADS ASSIGNED</span>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid #221a34;">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--raised,#221a34);">
             <svg width="16" height="16"><circle cx="8" cy="8" r="7" fill="none" stroke="#8fd424" stroke-width="1.5"/><path d="M4.5 8.5 L7 11 L11.5 5.5" fill="none" stroke="#8fd424" stroke-width="2"/></svg>
             <span class="px" style="color:#c6ec8e;">ALL WAVS 44.1 KHZ / 24-BIT</span>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid #221a34;">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--raised,#221a34);">
             <svg width="17" height="16" viewBox="0 0 17 16"><path d="M8.5 1 L16 14.5 L1 14.5 Z" fill="none" stroke="#ffc41f" stroke-width="1.5"/><rect x="7.7" y="5.5" width="1.8" height="5" fill="#ffc41f"/><rect x="7.7" y="11.6" width="1.8" height="1.8" fill="#ffc41f"/></svg>
             <span class="px" style="color:#ffe08e;">A07 EMPTY — WILL BE SKIPPED</span>
           </div>
@@ -470,27 +837,27 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;flex:none;">
           <div style="display:flex;align-items:center;gap:8px;">
-            <span class="px" style="width:58px;color:#7a6aa0;flex:none;">FORMAT</span>
-            <div onClick="{{cycleFormat}}" style="flex:1;height:30px;background:#0a0714;border:1px solid #34285a;border-radius:4px;display:flex;align-items:center;padding:0 10px;justify-content:space-between;cursor:pointer;min-width:0;">
-              <span class="px" style="color:#c8b2f8;overflow:hidden;white-space:nowrap;">{{formatLabel}}</span>
-              <span class="px" style="color:#e040c8;">▼</span>
+            <span class="px" style="width:58px;color:var(--ink2,#7a6aa0);flex:none;">FORMAT</span>
+            <div onClick="{{cycleFormat}}" style="flex:1;height:30px;background:var(--lcd,#0a0714);border:1px solid var(--bdr,#34285a);border-radius:4px;display:flex;align-items:center;padding:0 10px;justify-content:space-between;cursor:pointer;min-width:0;">
+              <span class="px" style="color:var(--ink,#c8b2f8);overflow:hidden;white-space:nowrap;">{{formatLabel}}</span>
+              <span class="px" style="color:var(--acc,#e040c8);">▼</span>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
-            <span class="px" style="width:58px;color:#7a6aa0;flex:none;">WRITE TO</span>
-            <div style="flex:1;height:30px;background:#0a0714;border:1px solid #34285a;border-radius:4px;display:flex;align-items:center;padding:0 10px;justify-content:space-between;min-width:0;">
-              <span class="px" style="color:#c8b2f8;overflow:hidden;white-space:nowrap;">SD CARD (E:) — 28.4 GB FREE</span>
-              <span class="px" style="color:#e040c8;">▼</span>
+            <span class="px" style="width:58px;color:var(--ink2,#7a6aa0);flex:none;">WRITE TO</span>
+            <div style="flex:1;height:30px;background:var(--lcd,#0a0714);border:1px solid var(--bdr,#34285a);border-radius:4px;display:flex;align-items:center;padding:0 10px;justify-content:space-between;min-width:0;">
+              <span class="px" style="color:var(--ink,#c8b2f8);overflow:hidden;white-space:nowrap;">SD CARD (E:) — 28.4 GB FREE</span>
+              <span class="px" style="color:var(--acc,#e040c8);">▼</span>
             </div>
           </div>
         </div>
-        <div style="position:relative;border:1px solid #34285a;border-radius:6px;padding:16px 10px 10px;background:#161020;flex:none;">
-          <span class="px" style="position:absolute;top:-6px;left:12px;background:#1e1830;border:1px solid #40e0e8;border-radius:999px;padding:1px 8px;color:#8eeef4;">{{dubLabel}}</span>
-          <div style="height:18px;background:#0a0714;border-radius:999px;border:1px solid #000;padding:2px;box-sizing:border-box;overflow:hidden;">
+        <div style="position:relative;border:1px solid var(--bdr,#34285a);border-radius:6px;padding:16px 10px 10px;background:var(--field,#161020);flex:none;">
+          <span class="px" style="position:absolute;top:-6px;left:12px;background:#1e1830;border:1px solid var(--alt,#40e0e8);border-radius:999px;padding:1px 8px;color:var(--lcdhi,#8eeef4);">{{dubLabel}}</span>
+          <div style="height:18px;background:var(--lcd,#0a0714);border-radius:999px;border:1px solid #000;padding:2px;box-sizing:border-box;overflow:hidden;">
             <div class="oil-h cyl" style="height:100%;border-radius:999px;width:{{dubPct}};transition:width .12s linear;"></div>
           </div>
-          <div class="lcdf" style="margin-top:8px;font-size:18px;background:#0a0714;color:#c8b2f8;padding:3px 8px;border-radius:3px;text-shadow:0 0 8px rgba(154,108,240,.7);overflow:hidden;white-space:nowrap;">E:\Expansions\SNIPSNAP KIT 01\</div>
-          <div class="px" style="margin-top:6px;color:#584a80;">{{dubFiles}}</div>
+          <div class="lcdf" style="margin-top:8px;font-size:18px;background:var(--lcd,#0a0714);color:var(--ink,#c8b2f8);padding:3px 8px;border-radius:3px;text-shadow:0 0 8px rgba(154,108,240,.7);overflow:hidden;white-space:nowrap;">E:\Expansions\SNIPSNAP KIT 01\</div>
+          <div class="px" style="margin-top:6px;color:var(--ink3,#584a80);">{{dubFiles}}</div>
         </div>
         <div style="flex:1;"></div>
         <div class="oil" onClick="{{writeKit}}" style="height:58px;border-radius:6px;padding:2px;box-shadow:0 0 24px rgba(143,212,36,.3);cursor:pointer;flex:none;">
@@ -503,9 +870,9 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
     </sc-if>
 
     <div style="height:26px;display:flex;gap:3px;padding:2px 4px 4px;flex:none;">
-      <div style="flex:none;display:flex;align-items:center;padding:0 6px;background:#0a0714;border-radius:3px;"><span class="px" style="color:#c8b2f8;">{{tapeCell}}</span></div>
-      <div style="flex:none;display:flex;align-items:center;padding:0 6px;background:#0a0714;border-radius:3px;"><span class="px" style="color:#e040c8;">{{snipCell}}</span></div>
-      <div style="flex:1;display:flex;align-items:center;padding:0 6px;background:#0a0714;border-radius:3px;overflow:hidden;white-space:nowrap;"><span class="px" style="color:#40e0e8;font-size:8px;">{{quip}}</span></div>
+      <div style="flex:none;display:flex;align-items:center;padding:0 6px;background:var(--lcd,#0a0714);border-radius:3px;"><span class="px" style="color:var(--lcdink,#c8b2f8);">{{tapeCell}}</span></div>
+      <div style="flex:none;display:flex;align-items:center;padding:0 6px;background:var(--lcd,#0a0714);border-radius:3px;"><span class="px" style="color:var(--lcdacc,#e040c8);">{{snipCell}}</span></div>
+      <div style="flex:1;display:flex;align-items:center;padding:0 6px;background:var(--lcd,#0a0714);border-radius:3px;overflow:hidden;white-space:nowrap;"><span class="px" style="color:var(--lcdalt,#40e0e8);font-size:8px;">{{quip}}</span></div>
     </div>
   </div>
   </div>
@@ -513,21 +880,21 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
   <sc-if value="{{silenceAlert}}" hint-placeholder-val="{{false}}">
     <div style="position:absolute;inset:0;background:rgba(6,3,12,.75);z-index:25;display:flex;align-items:center;justify-content:center;padding:26px;box-sizing:border-box;">
       <div class="oil" style="padding:2px;border-radius:8px;box-shadow:0 16px 50px rgba(0,0,0,.8);width:100%;">
-        <div style="background:#120e1a;border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:12px;">
+        <div style="background:var(--win2,#120e1a);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:12px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <svg width="20" height="19" viewBox="0 0 17 16"><path d="M8.5 1 L16 14.5 L1 14.5 Z" fill="none" stroke="#ffb000" stroke-width="1.5"/><rect x="7.7" y="5.5" width="1.8" height="5" fill="#ffb000"/><rect x="7.7" y="11.6" width="1.8" height="1.8" fill="#ffb000"/></svg>
             <span class="mch" style="font-size:12px;letter-spacing:1.5px;color:#ffe08e;">DIGITAL SILENCE</span>
           </div>
-          <div style="background:#0a0714;border:1px solid #34285a;border-radius:4px;height:34px;display:flex;align-items:center;padding:0 10px;gap:2px;overflow:hidden;">
-            <div style="flex:1;height:2px;background:#34285a;"></div>
+          <div style="background:var(--lcd,#0a0714);border:1px solid var(--bdr,#34285a);border-radius:4px;height:34px;display:flex;align-items:center;padding:0 10px;gap:2px;overflow:hidden;">
+            <div style="flex:1;height:2px;background:var(--bdr,#34285a);"></div>
           </div>
           <div class="px" style="color:#8a7ab0;line-height:1.8;">AUDIO IS PLAYING, BUT THIS APP BLOCKS CAPTURE.<br/>WE'D RATHER TELL YOU THAN HAND YOU AN EMPTY WAVEFORM.</div>
-          <div style="border:1px solid #40e0e8;border-radius:6px;padding:10px;background:#0c1c1e;">
-            <div class="px" style="color:#8eeef4;line-height:1.8;">THE ESCAPE HATCH: RECORD WITH ANDROID'S SCREEN RECORDER, SHARE THE VIDEO INTO SNIPSNAP. WORKS EVERYWHERE.</div>
+          <div style="border:1px solid var(--alt,#40e0e8);border-radius:6px;padding:10px;background:#0c1c1e;">
+            <div class="px" style="color:var(--lcdhi,#8eeef4);line-height:1.8;">THE ESCAPE HATCH: RECORD WITH ANDROID'S SCREEN RECORDER, SHARE THE VIDEO INTO SNIPSNAP. WORKS EVERYWHERE.</div>
           </div>
           <div style="display:flex;gap:8px;">
-            <div onClick="{{dismissSilence}}" style="flex:1;height:44px;background:#161020;border:1px solid #34285a;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#7a6aa0;">KEEP LISTENING</span></div>
-            <div onClick="{{dismissSilence}}" style="flex:1;height:44px;background:#0c1c1e;border:1px solid #40e0e8;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:#8eeef4;">HOW-TO</span></div>
+            <div onClick="{{dismissSilence}}" style="flex:1;height:44px;background:var(--field,#161020);border:1px solid var(--bdr,#34285a);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--ink2,#7a6aa0);">KEEP LISTENING</span></div>
+            <div onClick="{{dismissSilence}}" style="flex:1;height:44px;background:#0c1c1e;border:1px solid var(--alt,#40e0e8);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span class="px" style="color:var(--lcdhi,#8eeef4);">HOW-TO</span></div>
           </div>
         </div>
       </div>
@@ -545,7 +912,7 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
           <circle cx="36" cy="48" r="3" fill="#c8b2f8"/><circle cx="60" cy="48" r="3" fill="#c8b2f8"/>
           <rect x="36" y="62" width="24" height="7" rx="2" fill="#e040c8"/>
           <circle cx="48" cy="48" r="41" fill="none" stroke="#34285a" stroke-width="4"/>
-          <circle cx="48" cy="48" r="41" fill="none" stroke="#40e0e8" stroke-width="4" stroke-linecap="round" stroke-dasharray="{{ringDash}}" transform="rotate(-90 48 48)" style="filter:drop-shadow(0 0 6px rgba(64,224,232,.9));"></circle>
+          <circle cx="48" cy="48" r="41" fill="none" stroke="#40e0e8" stroke-width="4" stroke-linecap="round" stroke-dasharray="{{ringDash}}" transform="rotate(-90 48 48)" style="filter:drop-shadow(0 0 6px var(--glowA,rgba(64,224,232,.9)));"></circle>
         </svg>
         <sc-if value="{{hasBadge}}" hint-placeholder-val="{{false}}">
           <div style="position:absolute;top:-4px;right:-4px;width:26px;height:26px;border-radius:50%;background:#e83a2e;border:2px solid #ff8ac4;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(232,58,46,.8);"><span class="lcdf" style="color:#fff;font-size:17px;">{{badgeN}}</span></div>
@@ -554,50 +921,76 @@ a{color:#c8b2f8}a:hover{color:#e040c8}
       <div class="px" style="text-align:center;color:#8a7ab0;margin-top:2px;">{{bubbleHint}}</div>
     </div>
     <sc-if value="{{ejectHot}}" hint-placeholder-val="{{false}}">
-      <div style="position:absolute;left:60px;right:60px;bottom:8px;height:52px;z-index:19;border:2px dashed #e040c8;border-radius:10px;background:rgba(224,64,200,.12);display:flex;align-items:center;justify-content:center;"><span class="px" style="color:#f8a8d4;">RELEASE TO EJECT — TAPE IS KEPT</span></div>
+      <div style="position:absolute;left:60px;right:60px;bottom:8px;height:52px;z-index:19;border:2px dashed var(--acc,#e040c8);border-radius:10px;background:rgba(224,64,200,.12);display:flex;align-items:center;justify-content:center;"><span class="px" style="color:var(--accHi,#f8a8d4);">RELEASE TO EJECT — TAPE IS KEPT</span></div>
     </sc-if>
   </sc-if>
 
   <sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
     <div style="position:absolute;left:30px;right:30px;bottom:96px;z-index:9;animation:toastup .25s ease-out;pointer-events:none;">
       <div class="oil" style="padding:2px;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.7);">
-        <div style="background:#120e1a;border-radius:4px;padding:10px 14px;text-align:center;"><span class="px" style="color:#f8a8d4;font-size:11px;">{{toast}}</span></div>
+        <div style="background:var(--win2,#120e1a);border-radius:4px;padding:10px 14px;text-align:center;"><span class="px" style="color:var(--accHi,#f8a8d4);font-size:11px;">{{toast}}</span></div>
       </div>
     </div>
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;personality&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;OFF&quot;,&quot;MILD&quot;,&quot;FULL&quot;],&quot;default&quot;:&quot;FULL&quot;,&quot;section&quot;:&quot;Personality&quot;},&quot;glow&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1.2,&quot;min&quot;:0,&quot;max&quot;:2,&quot;step&quot;:0.1,&quot;section&quot;:&quot;Look&quot;},&quot;scanlines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;section&quot;:&quot;Look&quot;},&quot;simulateBlocked&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;section&quot;:&quot;States&quot;},&quot;emptyShelf&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;section&quot;:&quot;States&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;personality&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;OFF&quot;,&quot;MILD&quot;,&quot;FULL&quot;],&quot;default&quot;:&quot;FULL&quot;,&quot;section&quot;:&quot;Personality&quot;},&quot;markerFont&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Permanent Marker&quot;,&quot;Gochi Hand&quot;,&quot;Caveat&quot;,&quot;Rock Salt&quot;],&quot;default&quot;:&quot;Rock Salt&quot;,&quot;section&quot;:&quot;Look&quot;},&quot;glow&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1.2,&quot;min&quot;:0,&quot;max&quot;:2,&quot;step&quot;:0.1,&quot;section&quot;:&quot;Look&quot;},&quot;scanlines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;section&quot;:&quot;Look&quot;},&quot;simulateBlocked&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;section&quot;:&quot;States&quot;},&quot;emptyShelf&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;section&quot;:&quot;States&quot;}}">
 class Component extends DCLogic {
   state = { screen: 'kit', boot: true, bootLine: 'CHECKING HEADS…', konami: 0, armed: false, lit: {}, shelf: 12, offset: 0, inPt: 1.8, outPt: 3.2, playing: false, toast: null, quipIx: 0, commitIx: 0,
     bubX: 292, bubY: 120, bubDragging: false, tapeSec: 0, sessionSnips: 0, formatIx: 0, dub: -1, obStep: 0,
-    schemeIx: 4, sliceLabels: null, zoom: 1, snap: true, landscape: false, voiceIx: 0, params: {KICK:[50,60,45,30,20], SNARE:[50,55,40,50], HATS:[60,30,70], CLAP:[40,45,50], TOM:[50,50,55]} };
+    gVar: 0, gPlay: false, gPos: 0, swing: 62, gSeed: 1, gUser: null, gEdit: false, gEditBar: 0, gForkFrom: 0,
+    padIx: 12, padPrefs: {},
+    viewBank: 'A', twinsMade: false, twinSeed: 1, freshOpen: false, freshSel: 0, freshSeed: 1, binRestored: {}, takeRestored: false,
+    chopMelodic: false, keyIx: 0, consent: false,
+    schemeIx: 1, sliceLabels: null, zoom: 1, snap: true, landscape: false, voiceIx: 0,
+    lInt: 0, lPlay: false, lBpm: 92, lSel: null, lRebake: false, lEngaged: [true,true,true,true,true,true],
+    lEdit: null, lBar: 0, lStep: 0,
+    lChains: [
+      [{t:'PAT',n:'Boom A'},{t:'PAT',n:'Boom B'}],
+      [{t:'LOOP',n:'Rubber'},{t:'LOOP',n:'Rubber 2'},{t:'PAT',n:'Sub hits'}],
+      [{t:'LOOP',n:'EP chop'},{t:'LOOP',n:'EP hold'}],
+      [{t:'LOOP',n:'Ooh 92'}],
+      [{t:'LOOP',n:'Hiss'},{t:'LOOP',n:'Vinyl'},{t:'LOOP',n:'Rain'},{t:'PAT',n:'Blips'}],
+      [{t:'PAT',n:'Shake'},{t:'PAT',n:'Clave'}]
+    ], params: {KICK:[50,60,45,30,20], SNARE:[50,55,40,50], HATS:[60,30,70], CLAP:[40,45,50], TOM:[50,50,55]} };
   VOICES = [
     {name:'KICK', c:'#e8542e', tint:'#f8b09a', macros:['TUNE','SWEEP','DECAY','CLICK','DRIVE']},
     {name:'SNARE', c:'#ffc41f', tint:'#ffe08e', macros:['TUNE','SNAP','DECAY','TONE']},
-    {name:'HATS', c:'#1fc6cf', tint:'#8eeef4', macros:['TUNE','DECAY','METAL']},
-    {name:'CLAP', c:'#e8409f', tint:'#f8a8d4', macros:['SPREAD','DECAY','TONE']},
-    {name:'TOM', c:'#9a6cf0', tint:'#c8b2f8', macros:['TUNE','SWEEP','DECAY']}
+    {name:'HATS', c:'#1fc6cf', tint:'var(--lcdhi,#8eeef4)', macros:['TUNE','DECAY','METAL']},
+    {name:'CLAP', c:'#e8409f', tint:'var(--accHi,#f8a8d4)', macros:['SPREAD','DECAY','TONE']},
+    {name:'TOM', c:'#9a6cf0', tint:'var(--ink,#c8b2f8)', macros:['TUNE','SWEEP','DECAY']}
   ];
   KITS = [
-    {name:'KIT 01', c:'#e040c8', tint:'#f8a8d4', meta:'12 SNIPS · MOSTLY DRUMS', status:'ON CARD ✓', sc:'#c6ec8e', date:'08-22'},
+    {name:'KIT 01', c:'var(--acc,#e040c8)', tint:'var(--accHi,#f8a8d4)', meta:'12 SNIPS · MOSTLY DRUMS', status:'ON CARD ✓', sc:'#c6ec8e', date:'08-22'},
     {name:'NIGHT BUS', c:'#3f8cf0', tint:'#9ec2f8', meta:'16 SNIPS · PADS + VOX', status:'DRAFT', sc:'#ffe08e', date:'08-19'},
     {name:'ARCADE RIP', c:'#8fd424', tint:'#c6ec8e', meta:'9 SNIPS · GAME SFX', status:'ON CARD ✓', sc:'#c6ec8e', date:'08-14'},
     {name:'TAPE HISS 4', c:'#ffc41f', tint:'#ffe08e', meta:'4 SNIPS · TEXTURES', status:'DRAFT', sc:'#ffe08e', date:'08-02'}
   ];
-  FORMATS = ['MPC 2 FOLDER (ONE · LIVE II · III)', 'SP-404 MKII BANK', 'WAV FOLDER + KIT.JSON', 'ABLETON DRUM RACK (.ADG)'];
+  FORMATS = ['MPC 2 FOLDER (ONE · LIVE II · III)', 'MPC SESSION (.XPJ) — KITS + GROOVES', 'SP-404 MKII BANK', 'WAV FOLDER + KIT.JSON', 'ABLETON DRUM RACK (.ADG)'];
+  KEYS = ['KEY —','KEY Am','KEY Cm','KEY F#m','KEY Eb'];
   PADS = [
     {id:'A13'},{id:'A14'},{id:'A15'},{id:'A16',label:'Loop 92',c:'#3f8cf0',tint:'#9ec2f8',syn:'loop'},
-    {id:'A09',label:'Tom lo',c:'#9a6cf0',tint:'#c8b2f8',syn:'tom'},{id:'A10'},{id:'A11'},{id:'A12',label:'Shaker',c:'#8fd424',tint:'#c6ec8e',syn:'perc'},
-    {id:'A05'},{id:'A06',label:'Clap',c:'#e8409f',tint:'#f8a8d4',syn:'clap'},{id:'A07'},{id:'A08'},
-    {id:'A01',label:'Kick 01',c:'#e8542e',tint:'#f8b09a',syn:'kick'},{id:'A02',label:'Snare 01',c:'#ffc41f',tint:'#ffe08e',syn:'snare'},{id:'A03',label:'Hat cl',c:'#1fc6cf',tint:'#8eeef4',syn:'hatc'},{id:'A04',label:'Hat op',c:'#7adfe4',tint:'#bef2f6',syn:'hato'}
+    {id:'A09',label:'Tom lo',c:'#9a6cf0',tint:'var(--ink,#c8b2f8)',syn:'tom'},{id:'A10'},{id:'A11'},{id:'A12',label:'Shaker',c:'#8fd424',tint:'#c6ec8e',syn:'perc'},
+    {id:'A05'},{id:'A06',label:'Clap',c:'#e8409f',tint:'var(--accHi,#f8a8d4)',syn:'clap'},{id:'A07'},{id:'A08'},
+    {id:'A01',label:'Kick 01',c:'#e8542e',tint:'#f8b09a',syn:'kick'},{id:'A02',label:'Snare 01',c:'#ffc41f',tint:'#ffe08e',syn:'snare'},{id:'A03',label:'Hat cl',c:'#1fc6cf',tint:'var(--lcdhi,#8eeef4)',syn:'hatc'},{id:'A04',label:'Hat op',c:'#7adfe4',tint:'#bef2f6',syn:'hato'}
   ];
   SCHEMES = [
-    {name:'CHROME (TYPE II)', note:'THE DEFAULT', s1:'#c3c7cb', s2:'#0a7a78', s3:'#49e83e', desk:'repeating-conic-gradient(#0a7a78 0% 25%,#0c817f 0% 50%) 0 0/3px 3px', win:'#c3c7cb', border:'#868a8e', title:'linear-gradient(90deg,#000082,#1878c8)', lcd:'#0c130b', ink:'#49e83e', accent:'#49e83e'},
-    {name:'FERRIC (TYPE I)', note:'70s GLOVEBOX', s1:'#d4c8a8', s2:'#8a5a24', s3:'#ffb000', desk:'repeating-conic-gradient(#8a5a24 0% 25%,#936129 0% 50%) 0 0/3px 3px', win:'#d4c8a8', border:'#9a8c6a', title:'linear-gradient(90deg,#6a3210,#c87828)', lcd:'#140e06', ink:'#ffb000', accent:'#ffb000'},
-    {name:'METAL (TYPE IV)', note:'THE 2AM ONE', s1:'#2e3136', s2:'#101215', s3:'#7adfe4', desk:'repeating-conic-gradient(#101215 0% 25%,#14171b 0% 50%) 0 0/3px 3px', win:'#2e3136', border:'#17191c', title:'linear-gradient(90deg,#0a0a0c,#2c3038)', lcd:'#0a0c0e', ink:'#7adfe4', accent:'#7adfe4'},
-    {name:'SNACK BAR', note:'YES, THAT ONE', s1:'#ffd400', s2:'#e81c1c', s3:'#ffd400', desk:'repeating-conic-gradient(#e81c1c 0% 25%,#ee2424 0% 50%) 0 0/3px 3px', win:'#ffd400', border:'#b89200', title:'linear-gradient(90deg,#e81c1c,#e81c1c)', lcd:'#1a0404', ink:'#ffd400', accent:'#ffd400'},
-    {name:'OILSLICK (TYPE ∞)', note:'YOU ARE HERE', s1:'#221a34', s2:'#5a2ae0', s3:'#c8b2f8', desk:'repeating-conic-gradient(#0c0618 0% 25%,#140b24 0% 50%) 0 0/3px 3px', win:'#1a1424', border:'#34285a', title:'linear-gradient(90deg,#5a2ae0,#e040c8)', lcd:'#0a0714', ink:'#c8b2f8', accent:'#e040c8'}
+    {name:'METAL (TYPE IV)', note:'THE 2AM ONE', s1:'#2e3136', s2:'#101215', s3:'#7adfe4', desk:'repeating-conic-gradient(#101215 0% 25%,#14171b 0% 50%) 0 0/3px 3px', win:'#2e3136', border:'#17191c', title:'linear-gradient(90deg,#0a0a0c,#2c3038)', lcd:'#0a0c0e', ink:'#7adfe4', accent:'#7adfe4',
+     v:{lcdacc:'#7adfe4', dglow:'#1a1d22', desk1:'#101215', desk2:'#14171b', win:'#2e3136', win2:'#26292d', bdr:'#17191c', field:'#202329', field2:'#262a30', raised:'#3a3e44', sunk:'#191b1f', lcd:'#0a0c0e', ink:'#d8dbe0', ink2:'#8a9099', ink3:'#5c6269', mut:'#4a5056', lcdink:'#7adfe4', lcdalt:'#ffb000', lcdhi:'#b8f0f4', alt:'#4a4f56', acc:'#7adfe4', accHi:'#b8f0f4', title:'linear-gradient(90deg,#0a0a0c,#2c3038)', rim:'linear-gradient(135deg,#0a0a0c,#3a3e44)', grid1:'rgba(255,255,255,.03)', grid2:'rgba(0,0,0,.2)', glowA:'rgba(184,240,244,.9)', glowB:'rgba(184,240,244,.8)', glowC:'rgba(122,223,228,.9)', glowD:'rgba(122,223,228,.35)', glowE:'rgba(122,223,228,.5)'}},
+    {name:'OILSLICK (TYPE ∞)', note:'YOU ARE HERE', s1:'#221a34', s2:'#5a2ae0', s3:'#c8b2f8', desk:'repeating-conic-gradient(#0c0618 0% 25%,#140b24 0% 50%) 0 0/3px 3px', win:'#1a1424', border:'#34285a', title:'linear-gradient(90deg,#5a2ae0,#e040c8)', lcd:'#0a0714', ink:'#c8b2f8', accent:'#e040c8',
+     v:{lcdacc:'#e040c8', dglow:'#2a1050', desk1:'#0c0618', desk2:'#140b24', win:'#1a1424', win2:'#120e1a', bdr:'#34285a', field:'#161020', field2:'#1c1428', raised:'#221a34', sunk:'#100c1a', lcd:'#0a0714', ink:'#c8b2f8', ink2:'#7a6aa0', ink3:'#584a80', mut:'#40306a', lcdink:'#c8b2f8', lcdalt:'#40e0e8', lcdhi:'#8eeef4', alt:'#40e0e8', acc:'#e040c8', accHi:'#f8a8d4', title:'linear-gradient(90deg,#5a2ae0,#e040c8 32%,#40e0e8 68%,#8a5af0)', rim:'conic-gradient(from 210deg at 50% 40%,#5a2ae0,#e040c8 25%,#40e0e8 44%,#f060d8 56%,#e879e0 78%,#8a5af0 88%,#5a2ae0)', grid1:'rgba(224,64,200,.08)', grid2:'rgba(90,42,224,.12)', glowA:'rgba(64,224,232,.9)', glowB:'rgba(64,224,232,.8)', glowC:'rgba(154,108,240,.9)', glowD:'rgba(64,224,232,.35)', glowE:'rgba(64,224,232,.5)'}},
+    {name:'OILSLICK · PETROL', note:'SAME SLICK, GAS-STATION PUDDLE', s1:'#1a2438', s2:'#2a6ae0', s3:'#b2c8f8', desk:'repeating-conic-gradient(#060a18 0% 25%,#0b1224 0% 50%) 0 0/3px 3px', win:'#141a28', border:'#28345a', title:'linear-gradient(90deg,#2a6ae0,#40e890)', lcd:'#070a14', ink:'#b2c8f8', accent:'#f0d040',
+     v:{lcdacc:'#f0d040', dglow:'#102a50', desk1:'#060a18', desk2:'#0b1224', win:'#141a28', win2:'#0e121c', bdr:'#28345a', field:'#101624', field2:'#141c2c', raised:'#1a2438', sunk:'#0c101c', lcd:'#070a14', ink:'#b2c8f8', ink2:'#6a7ca0', ink3:'#4a5c80', mut:'#30406a', lcdink:'#b2c8f8', lcdalt:'#40e890', lcdhi:'#a0f8d0', alt:'#40e890', acc:'#f0d040', accHi:'#f8e08e', title:'linear-gradient(90deg,#2a6ae0,#40e890 32%,#f0d040 68%,#5a8af0)', rim:'conic-gradient(from 210deg at 50% 40%,#2a6ae0,#40e890 25%,#f0d040 44%,#78e8b8 56%,#5ee0a8 78%,#5a8af0 88%,#2a6ae0)', grid1:'rgba(64,232,144,.07)', grid2:'rgba(42,106,224,.12)', glowA:'rgba(160,248,208,.9)', glowB:'rgba(64,232,144,.8)', glowC:'rgba(90,138,240,.9)', glowD:'rgba(64,232,144,.35)', glowE:'rgba(240,208,64,.5)'}},
+    {name:'OILSLICK · INFRARED', note:'SAME SLICK, RUN HOT', s1:'#2c141a', s2:'#e02a5a', s3:'#f8b2c0', desk:'repeating-conic-gradient(#160408 0% 25%,#200a10 0% 50%) 0 0/3px 3px', win:'#221218', border:'#54283a', title:'linear-gradient(90deg,#9a2ae0,#e02a5a)', lcd:'#120608', ink:'#f8b2c0', accent:'#ff8a1a',
+     v:{lcdacc:'#ff8a1a', dglow:'#4a0e20', desk1:'#160408', desk2:'#200a10', win:'#221218', win2:'#180c10', bdr:'#54283a', field:'#1a0c12', field2:'#221016', raised:'#2c141a', sunk:'#12080c', lcd:'#120608', ink:'#f8b2c0', ink2:'#a06a78', ink3:'#7c4a5a', mut:'#5c3040', lcdink:'#f8b2c0', lcdalt:'#ff8a1a', lcdhi:'#ffc890', alt:'#ff8a1a', acc:'#e02a5a', accHi:'#f8a0b4', title:'linear-gradient(90deg,#9a2ae0,#e02a5a 32%,#ff8a1a 68%,#c04ae0)', rim:'conic-gradient(from 210deg at 50% 40%,#9a2ae0,#e02a5a 25%,#ff8a1a 44%,#ff5a8a 56%,#ff70a0 78%,#c04ae0 88%,#9a2ae0)', grid1:'rgba(224,42,90,.08)', grid2:'rgba(154,42,224,.10)', glowA:'rgba(255,200,144,.9)', glowB:'rgba(255,138,26,.8)', glowC:'rgba(192,74,224,.9)', glowD:'rgba(255,138,26,.35)', glowE:'rgba(224,42,90,.5)'}},
+    {name:'OILSLICK · ACID', note:'SAME SLICK, DO NOT DRINK', s1:'#243218', s2:'#a0e020', s3:'#d4f0a0', desk:'repeating-conic-gradient(#0a1204 0% 25%,#101a08 0% 50%) 0 0/3px 3px', win:'#161e0e', border:'#3a5224', title:'linear-gradient(90deg,#6ab010,#20d0e8)', lcd:'#0a1004', ink:'#d4f0a0', accent:'#a0e020',
+     v:{lcdacc:'#a0e020', dglow:'#2a4a10', desk1:'#0a1204', desk2:'#101a08', win:'#161e0e', win2:'#101608', bdr:'#3a5224', field:'#121a0a', field2:'#182210', raised:'#243218', sunk:'#0e160a', lcd:'#0a1004', ink:'#d4f0a0', ink2:'#8aa060', ink3:'#647a44', mut:'#4a6030', lcdink:'#d4f0a0', lcdalt:'#20d0e8', lcdhi:'#8ef0f8', alt:'#20d0e8', acc:'#a0e020', accHi:'#d4f88e', title:'linear-gradient(90deg,#6ab010,#20d0e8 32%,#a0e020 68%,#8a5af0)', rim:'conic-gradient(from 210deg at 50% 40%,#6ab010,#20d0e8 25%,#a0e020 44%,#c8f040 56%,#b8ec38 78%,#8a5af0 88%,#6ab010)', grid1:'rgba(160,224,32,.07)', grid2:'rgba(32,208,232,.09)', glowA:'rgba(142,240,248,.9)', glowB:'rgba(32,208,232,.8)', glowC:'rgba(160,224,32,.9)', glowD:'rgba(32,208,232,.35)', glowE:'rgba(160,224,32,.5)'}},
+    {name:'OILSLICK · SODIUM', note:'SAME SLICK, STREETLIGHT', s1:'#2c2410', s2:'#ffb000', s3:'#ffd25e', desk:'repeating-conic-gradient(#160e02 0% 25%,#201606 0% 50%) 0 0/3px 3px', win:'#221a0c', border:'#54421c', title:'linear-gradient(90deg,#c85a10,#ffb000)', lcd:'#120c04', ink:'#ffd25e', accent:'#ffb000',
+     v:{lcdacc:'#ffb000', dglow:'#4a3208', desk1:'#160e02', desk2:'#201606', win:'#221a0c', win2:'#181206', bdr:'#54421c', field:'#1a140a', field2:'#221b0e', raised:'#2c2410', sunk:'#120e06', lcd:'#120c04', ink:'#f0d8a8', ink2:'#a08a58', ink3:'#7c6a40', mut:'#5c4c28', lcdink:'#ffd25e', lcdalt:'#ff6a2a', lcdhi:'#ffe8a0', alt:'#ff6a2a', acc:'#ffb000', accHi:'#ffe08e', title:'linear-gradient(90deg,#c85a10,#ffb000 32%,#ffe040 68%,#ff6a2a)', rim:'conic-gradient(from 210deg at 50% 40%,#c85a10,#ffb000 25%,#ffe040 44%,#ffc858 56%,#ffb838 78%,#ff6a2a 88%,#c85a10)', grid1:'rgba(255,176,0,.07)', grid2:'rgba(255,106,42,.08)', glowA:'rgba(255,232,160,.9)', glowB:'rgba(255,210,94,.8)', glowC:'rgba(255,106,42,.9)', glowD:'rgba(255,176,0,.35)', glowE:'rgba(255,176,0,.5)'}},
+    {name:'OILSLICK · ICE', note:'SAME SLICK, COLD START', s1:'#16283a', s2:'#2a9af0', s3:'#b8e2f8', desk:'repeating-conic-gradient(#04101c 0% 25%,#081826 0% 50%) 0 0/3px 3px', win:'#10202e', border:'#22485e', title:'linear-gradient(90deg,#1a5ac8,#58c8ff)', lcd:'#060e16', ink:'#b8e2f8', accent:'#2a9af0',
+     v:{lcdacc:'#2a9af0', dglow:'#0e3a5a', desk1:'#04101c', desk2:'#081826', win:'#10202e', win2:'#0a1620', bdr:'#22485e', field:'#0c1a26', field2:'#10222e', raised:'#16283a', sunk:'#081420', lcd:'#060e16', ink:'#b8e2f8', ink2:'#6a92a8', ink3:'#4a7088', mut:'#305468', lcdink:'#b8e2f8', lcdalt:'#58c8ff', lcdhi:'#d8f2ff', alt:'#58c8ff', acc:'#2a9af0', accHi:'#a8d8f8', title:'linear-gradient(90deg,#1a5ac8,#58c8ff 32%,#a0e0ff 68%,#2a9af0)', rim:'conic-gradient(from 210deg at 50% 40%,#1a5ac8,#58c8ff 25%,#a0e0ff 44%,#78d0ff 56%,#58c8ff 78%,#2a9af0 88%,#1a5ac8)', grid1:'rgba(88,200,255,.07)', grid2:'rgba(42,154,240,.10)', glowA:'rgba(216,242,255,.9)', glowB:'rgba(88,200,255,.8)', glowC:'rgba(42,154,240,.9)', glowD:'rgba(88,200,255,.35)', glowE:'rgba(42,154,240,.5)'}},
+    {name:'OILSLICK · VAPOR', note:'SAME SLICK, MALL AT NIGHT', s1:'#1a2c26', s2:'#40e8c0', s3:'#a8f0d8', desk:'repeating-conic-gradient(#061410 0% 25%,#0a1c16 0% 50%) 0 0/3px 3px', win:'#10201c', border:'#2a5448', title:'linear-gradient(90deg,#10b088,#40e8c0)', lcd:'#06120e', ink:'#a8f0d8', accent:'#b27af8',
+     v:{lcdacc:'#b27af8', dglow:'#104038', desk1:'#061410', desk2:'#0a1c16', win:'#10201c', win2:'#0a1612', bdr:'#2a5448', field:'#0c1a16', field2:'#10221c', raised:'#1a2c26', sunk:'#081410', lcd:'#06120e', ink:'#a8f0d8', ink2:'#62a08a', ink3:'#447a66', mut:'#2e5c4a', lcdink:'#a8f0d8', lcdalt:'#40e8c0', lcdhi:'#a8f8e4', alt:'#40e8c0', acc:'#b27af8', accHi:'#d8c2ff', title:'linear-gradient(90deg,#10b088,#40e8c0 32%,#b27af8 68%,#28c8a0)', rim:'conic-gradient(from 210deg at 50% 40%,#10b088,#40e8c0 25%,#b27af8 44%,#68f0d0 56%,#50e8c4 78%,#28c8a0 88%,#10b088)', grid1:'rgba(64,232,192,.07)', grid2:'rgba(178,122,248,.09)', glowA:'rgba(168,248,228,.9)', glowB:'rgba(64,232,192,.8)', glowC:'rgba(178,122,248,.9)', glowD:'rgba(64,232,192,.35)', glowE:'rgba(178,122,248,.5)'}}
   ];
   CLASSES = [
     {label:'Kick', c:'#e8542e', ink:'#3a1005'}, {label:'Snare', c:'#ffc41f', ink:'#3a2c02'},
@@ -609,6 +1002,27 @@ class Component extends DCLogic {
     {n:3, ci:4, conf:'NOT SURE', unsure:true, w:'30%'}, {n:4, ci:2, conf:'81%', w:'55%'},
     {n:5, ci:0, conf:'90%', w:'80%'}, {n:6, ci:3, conf:'74%', w:'45%'}, {n:7, ci:2, conf:'85%', w:'35%'}
   ];
+  LTRACKS = [
+    {name:'DRUMS', c:'#e8542e', tint:'#f8b09a'}, {name:'BASS', c:'#8fd424', tint:'#c6ec8e'},
+    {name:'KEYS', c:'#9a6cf0', tint:'#c8b2f8'}, {name:'VOX', c:'#e8409f', tint:'#f8a8d4'},
+    {name:'TEX', c:'#40e0e8', tint:'#8eeef4'}, {name:'PERC', c:'#ffc41f', tint:'#ffe08e'}
+  ];
+  PLANES = [
+    {n:'KICK', c:'#e8542e'}, {n:'SNARE', c:'#ffc41f'}, {n:'HAT CL', c:'#1fc6cf'}, {n:'HAT OP', c:'#7adfe4'},
+    {n:'CLAP', c:'#e8409f'}, {n:'PERC', c:'#8fd424'}, {n:'TOM', c:'#9a6cf0'}, {n:'LOOP', c:'#3f8cf0'}
+  ];
+  seedPat(seed){
+    let x = (seed*2654435761) % 4294967296;
+    const rnd = () => (x = (x*1664525+1013904223) % 4294967296) / 4294967296;
+    return this.PLANES.map((_,li) => Array.from({length:64}, (_,st) => {
+      const q = st % 16;
+      if(li===0) return q%8===0 || (q===10 && rnd()<.5);
+      if(li===1) return q===4 || q===12;
+      if(li===2) return q%2===0 && rnd()<.85;
+      if(li===3) return q===14 && rnd()<.7;
+      return rnd() < .06;
+    }));
+  }
   QUIPS = ['NO DOLBY. WE LIKE HISS.','REWIND IS FREE.','CHROME BIAS: ON','SD (E:) READY','OIL SLICK LOOKS EXPENSIVE.'];
   COMMITS = ['TAPED. NO TAKEBACKS.',"IT'S OURS NOW.",'CLEAN CUT. NICE EARS.'];
   componentDidMount(){
@@ -629,7 +1043,106 @@ class Component extends DCLogic {
       this._bars.push({h, onset});
     }
   }
-  componentWillUnmount(){ clearInterval(this._qt); clearInterval(this._pt); clearInterval(this._bt); clearInterval(this._dt); clearTimeout(this._boot); clearInterval(this._rw); window.removeEventListener('resize', this._fit); }
+  GLANES = [['KICK','#e8542e'],['SNARE','#ffc41f'],['HAT C','#1fc6cf'],['HAT O','#7adfe4'],['PERC','#8fd424']];
+  GKINDS = ['kick','snare','hatc','hato','perc'];
+  TREATS = ['NONE','CRUSH','TAPE','DIRT'];
+  STARTERS = [
+    {name:'Chip Kit', c:'#8fd424', tint:'#c6ec8e', syn:'perc', blurb:'BLEEPS, CRUNCH, 8-BIT BONES'},
+    {name:'Thump Kit', c:'#e8542e', tint:'#f8b09a', syn:'kick', blurb:'ANALOG-STYLE DRUMS, HEAVY FLOOR'},
+    {name:'Cloud Kit', c:'#40e0e8', tint:'#8eeef4', syn:'hato', blurb:'AIRY PADS AND SOFT HITS'},
+    {name:'Melodic Kit', c:'#9a6cf0', tint:'#c8b2f8', syn:'tom', blurb:'PITCHED HITS, LOW TO HIGH'},
+    {name:'Shuffle Kit', c:'#e8409f', tint:'#f8a8d4', syn:'clap', blurb:'A KNOWN KIT, RE-TREATED BY SEED'},
+    {name:'Velocity Kit', c:'#ffc41f', tint:'#ffe08e', syn:'snare', blurb:'SOFT-TO-HARD LAYERS PER PAD'}
+  ];
+  PADSRC = {A01:'youtube_cap_03.wav @ 0:41 · 380 ms', A02:'youtube_cap_03.wav @ 1:12 · 412 ms · ORIGINAL IN BIN 27D', A03:'youtube_cap_03.wav @ 1:12 · 96 ms', A04:'youtube_cap_03.wav @ 1:14 · 240 ms', A06:'room_take_02.wav @ 0:08 · 180 ms', A09:'room_take_02.wav @ 0:31 · 520 ms', A12:'shared_video.mp4 @ 2:03 · 150 ms', A16:'youtube_cap_03.wav @ 1:10 · 2 BARS · 92 BPM'};
+  padPref(S, id){ return S.padPrefs[id] || {level: -2, pan: 0, tune: 0, oneShot: true, choke: /Hat/.test((this.PADS.find(p=>p.id===id)||{}).label||''), ghosts: false, treat: 0, amt: 35}; }
+  setPref(id, k, v){ this.setState(s => ({padPrefs: {...s.padPrefs, [id]: {...this.padPref(s, id), [k]: v}}})); }
+  padSheetVals(S, per){
+    if(S.screen !== 'pad') return {isPadSheet: false};
+    const p = this.PADS[S.padIx], pref = this.padPref(S, p.id);
+    const assigned = this.PADS.map((q,i)=>q.label?i:-1).filter(i=>i>=0);
+    const pos = assigned.indexOf(S.padIx);
+    const prevIx = assigned[(pos+assigned.length-1)%assigned.length], nextIx = assigned[(pos+1)%assigned.length];
+    const rnd = (i) => { const x = Math.sin(i*93.7 + S.padIx*57.3)*43758.5453; return x - Math.floor(x); };
+    const tonal = /Tom|Loop|Vox/.test(p.label);
+    const mkSlider = (name, key, min, max, step, fmt) => ({
+      name, val: fmt(pref[key]),
+      fill: `position:absolute;left:0;top:0;bottom:0;width:${((pref[key]-min)/(max-min)*100).toFixed(1)}%;background:linear-gradient(90deg,${p.c}66,${p.c});`,
+      dec: () => this.setPref(p.id, key, Math.max(min, this.padPref(this.state, p.id)[key]-step)),
+      inc: () => this.setPref(p.id, key, Math.min(max, this.padPref(this.state, p.id)[key]+step))
+    });
+    const tgl = (name, key, quip) => ({
+      name: name + (pref[key] ? ' ✓' : ''),
+      ink: pref[key] ? 'var(--lcd,#0a0714)' : 'var(--ink2,#7a6aa0)',
+      style: 'flex:1;height:34px;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;box-sizing:border-box;' + (pref[key] ? `background:${p.c};border:1px solid ${p.c};box-shadow:0 0 10px ${p.c}66;` : 'background:var(--field,#161020);border:1px solid var(--bdr,#34285a);'),
+      flip: () => { const nv = !this.padPref(this.state, p.id)[key]; this.setPref(p.id, key, nv); if(nv && quip && per!=='OFF') this.showToast(quip); }
+    });
+    return {
+      isPadSheet: true,
+      psId: p.id, psClass: (p.label||'').toUpperCase(), psColor: p.c, psTint: p.tint,
+      psHitBg: S.lit[p.id] ? p.c + '44' : 'var(--lcd,#0a0714)',
+      psHit: () => this.hit(p),
+      psBack: () => this.setState({screen:'kit'}),
+      psWave: Array.from({length:44}, (_,i) => {
+        const env = Math.max(0.04, Math.exp(-i/(p.syn==='loop' ? 40 : 9)) * (0.5 + rnd(i)*0.5));
+        return {style: `flex:1;height:${(env*100).toFixed(0)}%;background:${p.c};opacity:${(0.45+env*0.55).toFixed(2)};border-radius:1px;`};
+      }),
+      psSource: 'FROM ' + (this.PADSRC[p.id] || 'synth render · THUMP'),
+      psSliders: [
+        mkSlider('LEVEL','level',-24,6,1, v => (v>0?'+':'')+v+' dB'),
+        mkSlider('PAN','pan',-50,50,5, v => v===0?'C':(v<0?'L'+(-v):'R'+v)),
+        mkSlider('TUNE','tune',-12,12,1, v => (v>0?'+':'')+v+' st')
+      ],
+      psToggles: [tgl('ONE-SHOT','oneShot'), tgl('CHOKE GRP 1','choke'), tgl('GHOSTS','ghosts','GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER.')],
+      psTreats: this.TREATS.map((t,i) => ({
+        name: t, ink: pref.treat===i ? 'var(--lcd,#0a0714)' : 'var(--ink2,#7a6aa0)',
+        style: 'flex:1;height:30px;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;box-sizing:border-box;' + (pref.treat===i ? 'background:var(--acc,#e040c8);border:1px solid var(--acc,#e040c8);box-shadow:0 0 10px var(--glowE,rgba(224,64,200,.5));' : 'background:var(--field2,#1c1428);border:1px solid var(--bdr,#34285a);'),
+        pick: () => { this.setPref(p.id, 'treat', i); this.synth(p.syn); if(i>0 && per!=='OFF') this.showToast(t + ' ON ' + p.id + '. ORIGINAL SLEEPS IN THE BIN.'); }
+      })),
+      psAmt: pref.amt,
+      psAmtFill: `height:100%;width:${pref.amt}%;background:linear-gradient(90deg,var(--acc,#e040c8)66,var(--acc,#e040c8));`,
+      psAmtDec: () => this.setPref(p.id, 'amt', Math.max(0, this.padPref(this.state, p.id).amt-5)),
+      psAmtInc: () => this.setPref(p.id, 'amt', Math.min(100, this.padPref(this.state, p.id).amt+5)),
+      psRetrim: () => this.setState({screen:'deck'}),
+      psInstBorder: tonal ? 'var(--alt,#40e0e8)' : 'var(--bdr,#34285a)',
+      psInstInk: tonal ? 'var(--lcdhi,#8eeef4)' : 'var(--mut,#40306a)',
+      psInstrument: () => { if(per!=='OFF') this.showToast(tonal ? 'ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF.' : 'NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY.'); },
+      psEject: () => { if(per!=='OFF') this.showToast('EJECTED. THE BIN KEEPS IT 30 DAYS.'); this.setState({screen:'kit'}); },
+      psPrevId: this.PADS[prevIx].id, psNextId: this.PADS[nextIx].id,
+      psPrev: () => this.setState({padIx: prevIx}),
+      psNext: () => this.setState({padIx: nextIx})
+    };
+  }
+  GVARNAMES = ['PROG A · AS CAPTURED','PROG B · SWUNG','PROG C · HALF-TIME','PROG D · SPARSE','PROG E · EDITED'];
+  GVARSUBS = ['THE BREAK, AS PLAYED','ON THE GRID, PUSHED LATE','ROOM TO BREATHE','THE SKELETON','FORKED — YOUR STEPS'];
+  GBASE = [[0,0,1],[0,7,.8],[0,10,.9],[0,16,1],[0,23,.8],[0,26,.9],[1,4,1],[1,12,.9],[1,20,1],[1,28,.9],[1,30,.5],[2,0,.7],[2,2,.6],[2,4,.7],[2,6,.6],[2,8,.7],[2,10,.6],[2,12,.7],[2,14,.6],[2,16,.7],[2,18,.6],[2,20,.7],[2,24,.7],[2,26,.6],[2,28,.7],[3,15,.7],[3,22,.6],[3,31,.7],[4,5,.6],[4,13,.7],[4,21,.6],[4,29,.7]];
+  GHALF = [[0,0,1],[0,16,1],[1,8,1],[1,24,1],[2,0,.6],[2,4,.6],[2,8,.6],[2,12,.6],[2,16,.6],[2,20,.6],[2,24,.6],[2,28,.6],[3,14,.7],[3,30,.7],[4,20,.6]];
+  GSPARSE = [[0,0,1],[0,16,1],[0,23,.8],[1,8,1],[1,24,1],[3,15,.7]];
+  gNotes(v, swing, seed){
+    const rnd = (i) => { const x = Math.sin(i*127.1 + seed*311.7)*43758.5453; return x - Math.floor(x); };
+    if(v===0) return this.GBASE.map((n,i) => ({lane:n[0], step:n[1], vel:n[2], off:(rnd(i)-0.5)*0.5}));
+    if(v===1) return this.GBASE.map(n => ({lane:n[0], step:n[1], vel:n[2], off: n[1]%2===1 ? (swing/100*2-1) : 0}));
+    if(v===4) return (this.state.gUser||[]).map(n => ({lane:n[0], step:n[1], vel:n[2], off:0}));
+    return (v===2 ? this.GHALF : this.GSPARSE).map(n => ({lane:n[0], step:n[1], vel:n[2], off:0}));
+  }
+  lcm(){ const g=(a,b)=>b?g(b,a%b):a; return this.state.lChains.reduce((m,ch)=>m*ch.length/g(m,ch.length),1); }
+  loopClock(on){
+    clearInterval(this._lt);
+    if(!on) return;
+    // demo clock: real interval is 4 bars (~10s at 92) — sped up so the phasing reads
+    this._lt = setInterval(() => { this.synth('hatc'); this.setState(s => ({lInt: s.lInt+1})); }, Math.round(240000/this.state.lBpm/2));
+  }
+  loopBpm(d){
+    const per = this.props.personality ?? 'FULL';
+    const bpm = Math.max(60, Math.min(180, this.state.lBpm + d));
+    if(bpm === this.state.lBpm) return;
+    // spec §7: BPM is live but costs a re-bake pause — shown, not hidden
+    this.setState({lBpm: bpm, lRebake: true});
+    clearTimeout(this._rbt);
+    this._rbt = setTimeout(() => { this.setState({lRebake:false}); if(this.state.lPlay) this.loopClock(true); }, 550);
+    if(per==='FULL' && !this._bpmToasted){ this._bpmToasted = true; this.showToast('SAME BARS, NEW SPEED. EVERYTHING RE-BAKES ONCE.'); }
+  }
+  componentWillUnmount(){ clearInterval(this._qt); clearInterval(this._pt); clearInterval(this._bt); clearInterval(this._dt); clearTimeout(this._boot); clearInterval(this._rw); clearInterval(this._lt); clearInterval(this._gt); clearTimeout(this._rbt); clearInterval(this._st); window.removeEventListener('resize', this._fit); }
   ctx(){ if(!this._ac) this._ac = new (window.AudioContext||window.webkitAudioContext)(); if(this._ac.state==='suspended') this._ac.resume(); return this._ac; }
   synth(kind){
     const ac = this.ctx(), t = ac.currentTime, out = ac.destination;
@@ -693,16 +1206,33 @@ class Component extends DCLogic {
   renderVals(){
     const S = this.state, glow = this.props.glow ?? 1, scan = this.props.scanlines ?? true;
     const per = this.props.personality ?? 'FULL';
-    const pads = this.PADS.map(p => {
+    const bankB = S.viewBank==='B';
+    const twinFx = ['CRUSH','TAPE','DIRT','RING','GRIT','WARP'];
+    const padsSrc = bankB ? this.PADS.map((p,i) => (p.label && S.twinsMade) ? {...p, id: 'B'+p.id.slice(1), fx: twinFx[(i+S.twinSeed)%6], twin: true} : {id: 'B'+p.id.slice(1)}) : this.PADS;
+    const pads = padsSrc.map(p => {
       const lit = S.lit[p.id];
       const base = 'position:relative;border-radius:6px;cursor:pointer;touch-action:none;';
-      const empty = 'background:linear-gradient(180deg,#221a34,#161020);border:1px solid #34285a;';
-      const full = p.c ? `background:linear-gradient(180deg,#221a34,#161020);border:2px solid ${p.c};box-shadow:0 0 ${lit?26*glow+8:14*glow}px ${p.c}${lit?'':'99'}${lit?`,inset 0 0 20px ${p.c}66`:''};` : empty;
+      const empty = 'background:linear-gradient(180deg,var(--raised,#221a34),var(--field,#161020));border:1px solid var(--bdr,#34285a);';
+      const full = p.c ? `background:linear-gradient(180deg,var(--raised,#221a34),var(--field,#161020));border:2px solid ${p.c};box-shadow:0 0 ${lit?26*glow+8:14*glow}px ${p.c}${lit?'':'99'}${lit?`,inset 0 0 20px ${p.c}66`:''};` : empty;
+      const fullT = p.twin ? `background:linear-gradient(160deg,${p.c}38,var(--sunk,#100c1a) 60%),var(--sunk,#100c1a);border:2px dashed ${p.c};box-shadow:0 0 ${lit?26*glow+8:10*glow}px ${p.c}${lit?'':'66'},inset 0 0 18px ${p.c}22;` : full;
+      const wrnd = (i) => { const x = Math.sin(i*71.3 + (p.id.charCodeAt(1)*16 + p.id.charCodeAt(2))*13.7)*43758.5453; return x - Math.floor(x); };
       return {
-        id: p.id, label: p.label || '', tint: p.tint || '#584a80', idColor: p.c ? p.tint : '#584a80',
-        kitStyle: base + 'height:76px;' + full,
-        playStyle: base + (p.c ? full : 'background:#100c1a;border:1px solid #221a34;') + (lit ? 'transform:scale(0.97);' : ''),
-        trigger: () => this.hit(p)
+        mini: p.label ? Array.from({length:12}, (_,i) => {
+          const env = Math.max(0.1, Math.exp(-i/(p.syn==='loop' ? 11 : 3.2)) * (0.55 + wrnd(i)*0.45));
+          return {style: `flex:1;height:${(env*100).toFixed(0)}%;background:${p.c};opacity:.4;border-radius:1px;`};
+        }) : [],
+        fx: p.fx || '', fxColor: p.twin ? 'var(--accHi,#f8a8d4)' : 'transparent', labelSize: '13px',
+        id: p.id, label: p.label || '', tint: p.tint ? (this.SCHEMES[S.schemeIx].v.light ? p.c : p.tint) : 'var(--ink3,#584a80)', idColor: p.c ? (this.SCHEMES[S.schemeIx].v.light ? p.c : p.tint) : 'var(--ink3,#584a80)',
+        kitStyle: base + 'height:76px;' + fullT,
+        playStyle: base + (p.c ? full : 'background:var(--sunk,#100c1a);border:1px solid var(--raised,#221a34);') + (lit ? 'transform:scale(0.97);' : ''),
+        trigger: () => this.hit(p),
+        press: () => {
+          this.hit(p);
+          clearTimeout(this._lp);
+          const ix = this.PADS.indexOf(p);
+          if(p.label && ix >= 0){ this._lp = setTimeout(() => this.setState({screen:'pad', padIx: ix}), 480); }
+        },
+        release: () => clearTimeout(this._lp)
       };
     });
     const px = 60;
@@ -713,10 +1243,10 @@ class Component extends DCLogic {
       bootLine: S.bootLine,
       skipBoot: () => { clearTimeout(this._boot); this.setState({boot:false}); },
       isKit: S.screen==='kit', isDeck: S.screen==='deck', isPlay: S.screen==='play' && !S.landscape,
-      playMenuColor: S.screen==='play' ? '#e040c8' : '#7a6aa0',
+      playMenuColor: S.screen==='play' ? 'var(--acc,#e040c8)' : 'var(--ink2,#7a6aa0)',
       titleText: S.screen==='deck' ? 'TAPE DECK' : 'SNIPSNAP.EXE',
-      kitMenuColor: S.screen==='kit' ? '#e040c8' : '#7a6aa0',
-      deckMenuColor: S.screen==='deck' ? '#e040c8' : '#7a6aa0',
+      kitMenuColor: S.screen==='kit' ? 'var(--acc,#e040c8)' : 'var(--ink2,#7a6aa0)',
+      deckMenuColor: S.screen==='deck' ? 'var(--acc,#e040c8)' : 'var(--ink2,#7a6aa0)',
       goKit: () => this.setState({screen:'kit'}),
       goDeck: () => this.setState({screen:'deck'}),
       goPlay: () => this.setState({screen:'play'}),
@@ -737,7 +1267,7 @@ class Component extends DCLogic {
       },
       reelSpin: S.playing ? {animation:'reelspin 1.2s linear infinite'} : (S.rewinding ? {animation:'reelspin .5s linear infinite reverse'} : {}),
       waveTransform: `translateX(${195 - S.offset*px*S.zoom}px) scaleX(${S.zoom})`,
-      bars: (this._bars||[]).map(b => ({h: b.h+'px', color: b.onset ? '#ffb000' : '#c8b2f8'})),
+      bars: (this._bars||[]).map(b => ({h: b.h+'px', color: b.onset ? '#ffb000' : 'var(--ink,#c8b2f8)'})),
       posText: this.fmt(S.offset), inText: this.fmt(S.inPt), outText: this.fmt(S.outPt),
       playLabel: S.playing ? '■ STOP' : '► PLAY',
       dragStart: (e) => { this._drag = {x: e.clientX, o: S.offset}; e.currentTarget.setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId); },
@@ -759,10 +1289,10 @@ class Component extends DCLogic {
       zoomIn: () => this.setState(s => ({zoom: Math.min(4, s.zoom*2)})),
       zoomOut: () => this.setState(s => ({zoom: Math.max(1, s.zoom/2)})),
       toggleSnap: () => this.setState(s => ({snap: !s.snap})),
-      snapBg: S.snap ? 'linear-gradient(180deg,#0c2426,#081418)' : '#161020',
-      snapBorder: S.snap ? '#40e0e8' : '#34285a',
-      snapDot: S.snap ? '#40e0e8' : '#34285a',
-      snapInk: S.snap ? '#8eeef4' : '#584a80',
+      snapBg: S.snap ? 'linear-gradient(180deg,#0c2426,#081418)' : 'var(--field,#161020)',
+      snapBorder: S.snap ? 'var(--alt,#40e0e8)' : 'var(--bdr,#34285a)',
+      snapDot: S.snap ? 'var(--alt,#40e0e8)' : 'var(--bdr,#34285a)',
+      snapInk: S.snap ? 'var(--lcdhi,#8eeef4)' : 'var(--ink3,#584a80)',
       snapHint: S.snap ? 'IN/OUT LAND ON DETECTED HITS — NO MID-TRANSIENT CUTS' : 'FREEHAND — CUT WHEREVER THE NEEDLE SITS',
       pencilRewind: () => {
         if(S.rewinding) return;
@@ -788,7 +1318,7 @@ class Component extends DCLogic {
       },
       // Tape Properties
       isProps: S.screen==='props',
-      propsMenuColor: S.screen==='props' ? '#e040c8' : '#7a6aa0',
+      propsMenuColor: S.screen==='props' ? 'var(--acc,#e040c8)' : 'var(--ink2,#7a6aa0)',
       goProps: () => this.setState({screen:'props'}),
       schemeAccent: this.SCHEMES[S.schemeIx].accent,
       miniDesk: this.SCHEMES[S.schemeIx].desk,
@@ -797,16 +1327,17 @@ class Component extends DCLogic {
       miniTitle: this.SCHEMES[S.schemeIx].title,
       miniLcd: this.SCHEMES[S.schemeIx].lcd,
       miniInk: this.SCHEMES[S.schemeIx].ink,
+      schemeVars: Object.entries(this.SCHEMES[S.schemeIx].v).map(([k,x]) => '--'+k+':'+x).join(';') + ';',
       schemes: this.SCHEMES.map((sc,i) => ({
         ...sc,
-        ink: i===S.schemeIx ? '#f8a8d4' : '#8a7ab0',
-        rowStyle: 'display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;border-bottom:1px solid #221a34;cursor:pointer;' + (i===S.schemeIx ? 'background:linear-gradient(90deg,#241030,#161020);box-shadow:inset 3px 0 0 #e040c8;' : ''),
-        pick: () => { this.setState({schemeIx:i}); if(per==='FULL' && i!==4) this.showToast(i===3 ? 'SNACK BAR. SHIPPED OUT OF RESPECT.' : 'PREVIEWING — THE PROTOTYPE STAYS OILSLICK.'); }
+        ink: i===S.schemeIx ? 'var(--accHi,#f8a8d4)' : '#8a7ab0',
+        rowStyle: 'display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;border-bottom:1px solid var(--raised,#221a34);cursor:pointer;' + (i===S.schemeIx ? 'background:linear-gradient(90deg,#241030,var(--field,#161020));box-shadow:inset 3px 0 0 #e040c8;' : ''),
+        pick: () => { this.setState({schemeIx:i}); if(per==='FULL') this.showToast(i===1 ? 'BACK TO OILSLICK. WELCOME HOME.' : i===2 ? 'PETROL. SMELLS LIKE A ROAD TRIP.' : i===3 ? 'INFRARED. RUNNING HOT.' : i===4 ? 'ACID. DO NOT DRINK.' : i===5 ? 'SODIUM. EVERY PARKING LOT, 2AM.' : i===6 ? 'ICE. WEAR GLOVES.' : i===7 ? 'VAPOR. THE MALL IS CLOSED.' : 'APPLIED. WHOLE DECK RE-SKINNED.'); }
       })),
       saveAs: () => { if(per!=='OFF') this.showToast('SAVED AS "MY OILSLICK 2". IT\'S YOURS NOW.'); },
       // Chop Shop
       isChop: S.screen==='chop',
-      chopMenuColor: S.screen==='chop' ? '#e040c8' : '#7a6aa0',
+      chopMenuColor: S.screen==='chop' ? 'var(--acc,#e040c8)' : 'var(--ink2,#7a6aa0)',
       goChop: () => this.setState({screen:'chop'}),
       slices: this.SLICES.map((sl,i) => {
         const ci = (S.sliceLabels && S.sliceLabels[i] != null) ? S.sliceLabels[i] : sl.ci;
@@ -815,21 +1346,195 @@ class Component extends DCLogic {
         return {
           n: sl.n, w: sl.w, c: cl.c, label: cl.label,
           conf: overridden ? 'YOU ✓' : sl.conf,
-          confColor: overridden ? '#8eeef4' : (sl.unsure ? '#ffb000' : '#584a80'),
-          chipStyle: `flex:none;font-size:13px;padding:4px 12px;border-radius:999px;cursor:pointer;background:${cl.c};color:${cl.ink};` + (sl.unsure && !overridden ? 'border:1px dashed #0a0714;opacity:.75;' : ''),
+          confColor: overridden ? 'var(--lcdhi,#8eeef4)' : (sl.unsure ? '#ffb000' : 'var(--ink3,#584a80)'),
+          chipStyle: `flex:none;font-size:13px;padding:4px 12px;border-radius:999px;cursor:pointer;background:${cl.c};color:${cl.ink};` + (sl.unsure && !overridden ? 'border:1px dashed var(--lcd,#0a0714);opacity:.75;' : ''),
           cycle: () => this.setState(s => { const L = s.sliceLabels ? [...s.sliceLabels] : this.SLICES.map(()=>null); L[i] = ((L[i] ?? sl.ci) + 1) % this.CLASSES.length; return {sliceLabels: L}; })
         };
       }),
       rechop: () => { this.setState({sliceLabels: null}); if(per==='FULL') this.showToast('RE-CHOPPED. THE MACHINE APOLOGIZES FOR SLICE 3.'); },
+      placeText: S.chopMelodic ? 'MELODIC: PITCHED SLICES LOW→HIGH · UNPITCHED KEEP CAPTURE ORDER' : 'AUTO-PLACE: KICK→A01 SNARE→A02 HAT→A03 + CHOKE',
+      layoutClassicStyle: 'flex:1;height:28px;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;box-sizing:border-box;' + (!S.chopMelodic ? 'background:var(--acc,#e040c8);border:1px solid var(--acc,#e040c8);' : 'background:var(--field,#161020);border:1px solid var(--bdr,#34285a);'),
+      layoutMelodicStyle: 'flex:1;height:28px;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;box-sizing:border-box;' + (S.chopMelodic ? 'background:var(--acc,#e040c8);border:1px solid var(--acc,#e040c8);' : 'background:var(--field,#161020);border:1px solid var(--bdr,#34285a);'),
+      layoutClassicInk: !S.chopMelodic ? 'var(--lcd,#0a0714)' : 'var(--ink2,#7a6aa0)',
+      layoutMelodicInk: S.chopMelodic ? 'var(--lcd,#0a0714)' : 'var(--ink2,#7a6aa0)',
+      layoutClassic: () => this.setState({chopMelodic: false}),
+      layoutMelodic: () => { this.setState({chopMelodic: true}); if(per!=='OFF' && !this.state.chopMelodic) this.showToast('MELODIC. THE PADS BECOME A SCALE, LOW LEFT.'); },
       sendToGrid: () => { this.synth('snare'); this.setState({screen:'kit'}); if(per!=='OFF') this.showToast('7 SLICES ON THE GRID. CHOKE GROUP SET.'); },
+      // Loop Player
+      isLoop: S.screen==='loop' && !S.landscape,
+      isLoopLandscape: S.screen==='loop' && S.landscape,
+      loopMenuColor: S.screen==='loop' ? 'var(--acc,#e040c8)' : 'var(--ink2,#7a6aa0)',
+      goLoop: () => this.setState({screen:'loop'}),
+      loopIntText: (() => { const L = this.lcm(); return 'INT ' + ((S.lInt % L) + 1) + '/' + L; })(),
+      loopPlayLabel: S.lPlay ? '■ STOP' : '► PLAY',
+      loopPlayBg: S.lPlay ? 'linear-gradient(180deg,#0c2426,#081418)' : 'var(--lcd,#161020)',
+      loopToggle: () => { const on = !S.lPlay; this.loopClock(on); this.setState({lPlay:on, lInt: on ? 0 : S.lInt}); if(on && per!=='OFF') this.showToast('ALL SIX START TOGETHER. THEY WON\'T STAY TOGETHER.'); },
+      loopBpmText: 'BPM ' + S.lBpm,
+      loopBpmDown: () => this.loopBpm(-2),
+      loopBpmUp: () => this.loopBpm(2),
+      loopRebake: S.lRebake,
+      loopCols: this.LTRACKS.map((tr,ti) => {
+        const chain = S.lChains[ti], eng = S.lEngaged[ti], playIx = S.lInt % chain.length;
+        return {
+          name: tr.name + (eng ? '' : ' ✕'),
+          headInk: eng ? tr.tint : 'var(--ink3,#584a80)',
+          headStyle: 'height:24px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;' + (eng ? `background:var(--lcd,#0a0714);border:1px solid ${tr.c};box-shadow:0 0 8px ${tr.c}55,inset 0 2px 6px #000;` : 'background:var(--sunk,#100c1a);border:1px solid var(--raised,#221a34);'),
+          toggle: () => this.setState(s => { const E = [...s.lEngaged]; E[ti] = !E[ti]; return {lEngaged:E}; }),
+          canAdd: chain.length < 8,
+          add: () => this.setState(s => { const C = s.lChains.map(c=>[...c]); C[ti].push({t:'LOOP', n:'Blk ' + (C[ti].length+1)}); return {lChains:C}; }),
+          blocks: chain.map((b,bi) => {
+            const lit = eng && S.lPlay && bi === playIx && !S.lRebake;
+            const sel = S.lSel && S.lSel.t===ti && S.lSel.b===bi;
+            const tc = b.t==='LOOP' ? 'var(--alt,#40e0e8)' : 'var(--acc,#e040c8)';
+            return {
+              type: b.t, typeC: eng ? tc : 'var(--mut,#40306a)', name: b.n,
+              tint: eng ? (lit ? (this.SCHEMES[S.schemeIx].v.light ? '#101418' : '#fff') : (this.SCHEMES[S.schemeIx].v.light ? tr.c : tr.tint)) : 'var(--mut,#40306a)',
+              style: 'position:relative;flex:1 1 42px;min-height:30px;max-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border-radius:5px;cursor:pointer;box-sizing:border-box;overflow:hidden;padding:2px 3px;' +
+                (eng ? `background:linear-gradient(180deg,var(--raised,#221a34),var(--field,#161020));border:${lit ? '2px solid '+tc+';box-shadow:0 0 16px '+tc+',inset 0 0 14px '+tc+'44' : '1px solid ' + (sel ? 'var(--accHi,#f8a8d4)' : 'var(--bdr,#34285a)') + (sel ? ';box-shadow:inset 0 0 0 1px #e040c8' : '')};` : 'background:var(--sunk,#100c1a);border:1px solid var(--raised,#221a34);'),
+              pick: () => {
+                if(sel){
+                  if(chain.length <= 1){ if(per!=='OFF') this.showToast('A TRACK KEEPS AT LEAST ONE BLOCK.'); return; }
+                  this.setState(s => { const C = s.lChains.map(c=>[...c]); C[ti].splice(bi,1); return {lChains:C, lSel:null}; });
+                  if(per!=='OFF') this.showToast('PULLED. CURRENT BLOCK FINISHES, THEN THE CHAIN WRAPS SHORTER.');
+                } else this.setState({lSel:{t:ti,b:bi}});
+              }
+            };
+          })
+        };
+      }),
+      loopInfo: (() => {
+        if(!S.lSel) return 'TAP A BLOCK TO INSPECT — TAP IT AGAIN TO PULL IT';
+        const tr = this.LTRACKS[S.lSel.t], ch = S.lChains[S.lSel.t]; if(!ch[S.lSel.b]) return '';
+        const b = ch[S.lSel.b];
+        return `${tr.name} · BLK ${S.lSel.b+1}/${ch.length} · ${b.n.toUpperCase()} · ` + (b.t==='LOOP' ? 'FIT: SLICE+RETRIG' : '64 STEPS FROM KIT 01');
+      })(),
+      loopCycleText: (() => { const L = this.lcm(), bars = L*4, sec = bars*4*60/S.lBpm; return `${L} INT · ${bars} BARS · ${Math.floor(sec/60)}:${String(Math.round(sec%60)).padStart(2,'0')}`; })(),
+      loopBounce: () => { const L = this.lcm(); this.synth('perc'); if(per!=='OFF') this.showToast(`BOUNCING ${L} INTERVALS (${L*4} BARS) TO WAV — IT RE-ENTERS THE CHOP SHOP AS SOURCE.`); },
+      markerFF: "'" + (this.props.markerFont ?? 'Permanent Marker') + "'",
+      loopCanEdit: !!(S.lSel && (S.lChains[S.lSel.t]||[])[S.lSel.b] && S.lChains[S.lSel.t][S.lSel.b].t==='PAT'),
+      openPatEdit: () => {
+        const sel = this.state.lSel; if(!sel) return;
+        const b = (this.state.lChains[sel.t]||[])[sel.b]; if(!b || b.t!=='PAT') return;
+        if(!b.p) b.p = this.seedPat(sel.t*8+sel.b+1);
+        clearInterval(this._st);
+        this._st = setInterval(() => this.setState(s => s.lPlay && s.lEdit ? {lStep:(s.lStep+1)%64} : null), Math.round(60000/this.state.lBpm/4));
+        this.setState({lEdit:{t:sel.t,b:sel.b}, lBar:0, lStep:0});
+      },
+      isPatEdit: !!S.lEdit,
+      patTitle: (() => { if(!S.lEdit) return ''; const tr = this.LTRACKS[S.lEdit.t], b = (S.lChains[S.lEdit.t]||[])[S.lEdit.b]; return b ? tr.name + ' · ' + b.n.toUpperCase() : ''; })(),
+      patBars: [0,1,2,3].map(i => ({
+        label: 'BAR ' + (i+1), ink: i===S.lBar ? 'var(--lcd,#0a0714)' : 'var(--ink2,#7a6aa0)',
+        style: 'flex:1;height:26px;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;box-sizing:border-box;' + (i===S.lBar ? 'background:var(--alt,#40e0e8);border:1px solid var(--alt,#40e0e8);box-shadow:0 0 10px var(--glowE,rgba(64,224,232,.5));' : 'background:var(--field,#161020);border:1px solid var(--bdr,#34285a);'),
+        go: () => this.setState({lBar:i})
+      })),
+      patLanes: (() => {
+        if(!S.lEdit) return [];
+        const b = (S.lChains[S.lEdit.t]||[])[S.lEdit.b]; if(!b || !b.p) return [];
+        const bar = S.lBar, phCol = (S.lPlay && !S.lRebake && Math.floor(S.lStep/16)===bar) ? S.lStep%16 : -1;
+        return this.PLANES.map((ln,li) => ({
+          name: ln.n, tint: ln.c,
+          cells: Array.from({length:16}, (_,q) => {
+            const st = bar*16+q, on = b.p[li][st], ph = q===phCol;
+            return {
+              style: 'flex:1;min-width:0;border-radius:3px;cursor:pointer;box-sizing:border-box;' +
+                (on ? `background:${ln.c};border:1px solid ${ln.c};box-shadow:0 0 8px ${ln.c}88${ph ? ',0 0 14px #fff' : ''};`
+                    : `background:${q%4===0 ? 'var(--field2,#1c1428)' : 'var(--field,#161020)'};border:1px solid ${ph ? 'var(--lcdhi,#8eeef4)' : 'var(--bdr,#34285a)'};`),
+              tap: () => { b.p[li][st] = !b.p[li][st]; if(!on) this.synth('hatc'); this.forceUpdate(); }
+            };
+          })
+        }));
+      })(),
+      patClear: () => { const E = this.state.lEdit; if(!E) return; const b = (this.state.lChains[E.t]||[])[E.b]; if(!b || !b.p) return; const bar = this.state.lBar; b.p.forEach(l => { for(let q=0;q<16;q++) l[bar*16+q] = false; }); this.forceUpdate(); if(per!=='OFF') this.showToast('BAR WIPED. THE MACHINE FORGIVES.'); },
+      patClose: () => { clearInterval(this._st); this.setState({lEdit:null}); },
+      // Pad sheet
+      ...this.padSheetVals(S, per),
+      // Groove
+      isGroove: S.screen==='groove',
+      grooveMenuColor: S.screen==='groove' ? 'var(--acc,#e040c8)' : 'var(--ink2,#7a6aa0)',
+      goGroove: () => this.setState({screen:'groove'}),
+      gVarName: this.GVARNAMES[S.gVar],
+      gVarSub: this.GVARSUBS[S.gVar],
+      gNoteCount: this.gNotes(S.gVar, S.swing, S.gSeed).length,
+      gPrev: () => this.setState(s => { const n = s.gUser ? 5 : 4; return {gVar: (s.gVar+n-1)%n}; }),
+      gNext: () => this.setState(s => { const n = s.gUser ? 5 : 4; return {gVar: (s.gVar+1)%n}; }),
+      gInnerStyle: `position:absolute;left:0;right:0;top:0;height:640px;transform:translateY(${96 - S.gPos*20}px);background:repeating-linear-gradient(180deg,rgba(255,255,255,.06) 0 1px,transparent 1px 80px),repeating-linear-gradient(180deg,rgba(255,255,255,.022) 0 1px,transparent 1px 20px);`,
+      gTicks: Array.from({length:32}, (_, r) => ({
+        label: r%4===0 ? `${1+Math.floor(r/16)}.${1+Math.floor((r%16)/4)}` : '·',
+        style: `position:absolute;left:7px;top:${r*20+5}px;font-size:8px;color:${r%16===0 ? 'var(--lcdalt,#40e0e8)' : 'var(--ink3,#584a80)'};pointer-events:none;`
+      })),
+      gNotes: this.gNotes(S.gVar, S.swing, S.gSeed).map(n => {
+        const c = this.GLANES[n.lane][1], p = n.step + n.off;
+        const hot = S.gPlay && p <= S.gPos && S.gPos - p < 0.7;
+        return {style: `position:absolute;left:calc(38px + (100% - 46px)*${n.lane*0.2});width:calc((100% - 46px)*0.185);top:${p*20+1}px;height:17px;border-radius:2px;background:${c};opacity:${hot ? 1 : 0.35+0.55*n.vel};${hot ? `box-shadow:0 0 10px ${c},0 0 18px ${c};` : ''}`};
+      }),
+      gNowText: `BAR ${1+(Math.floor(S.gPos)>>4)}.${1+((Math.floor(S.gPos)%16)>>2)}`,
+      gLanes: this.GLANES.map(l => ({name:l[0], style:`font-size:7px;color:${l[1]};border:1px solid ${l[1]}66;border-radius:3px;padding:1px 5px;background:var(--lcd,#0a0714);`})),
+      gPlayLabel: S.gPlay ? '■ STOP' : '► PLAY',
+      gPlayBg: S.gPlay ? 'linear-gradient(180deg,#0c2426,#081418)' : 'var(--lcd,#161020)',
+      gToggle: () => {
+        if(this.state.gPlay){ clearInterval(this._gt); this.setState({gPlay:false}); return; }
+        this.setState({gPlay:true});
+        this._gLast = this.state.gPos;
+        this._gt = setInterval(() => {
+          const inc = 92/60*4*0.05;
+          let np = this._gLast + inc;
+          const notes = this.gNotes(this.state.gVar, this.state.swing, this.state.gSeed);
+          notes.forEach(n => { const p = n.step + n.off; if((p > this._gLast && p <= np) || (np >= 32 && p+32 > this._gLast && p+32 <= np)) this.synth(this.GKINDS[n.lane]); });
+          if(np >= 32) np -= 32;
+          this._gLast = np;
+          this.setState({gPos: np});
+        }, 50);
+      },
+      swingText: `${S.swing}%`,
+      swingDown: () => this.setState(s => ({swing: Math.max(50, s.swing-2)})),
+      swingUp: () => this.setState(s => ({swing: Math.min(75, s.swing+2)})),
+      gHumanize: () => { this.setState(s => ({gSeed: s.gSeed+1, gVar: 0})); if(per!=='OFF') this.showToast('HUMANIZED. NOBODY PLAYS LIKE A ROBOT.'); },
+      gEdit: () => {
+        this.setState(s => {
+          const src = s.gVar > 3 ? s.gForkFrom : s.gVar;
+          const gUser = s.gUser || (() => { const seen = {}; return this.gNotes(src, s.swing, s.gSeed).map(n => [n.lane, Math.round(n.step + n.off + 32) % 32, n.vel]).filter(n => { const k = n[0]+'-'+n[1]; if(seen[k]) return false; seen[k] = 1; return true; }); })();
+          return {gUser, gVar: 4, gEdit: true, gEditBar: 0, gForkFrom: src};
+        });
+        if(per!=='OFF' && !this.state.gUser) this.showToast('FORKED TO PROG E. A–D STAY UNTOUCHED.');
+      },
+      isGEdit: S.gEdit,
+      geSource: 'FORKED FROM ' + ['PROG A','PROG B','PROG C','PROG D'][S.gForkFrom],
+      geBars: [0,1].map(i => ({
+        label: 'BAR ' + (i+1), ink: i===S.gEditBar ? 'var(--lcd,#0a0714)' : 'var(--ink2,#7a6aa0)',
+        style: 'flex:1;height:26px;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;box-sizing:border-box;' + (i===S.gEditBar ? 'background:var(--alt,#40e0e8);border:1px solid var(--alt,#40e0e8);box-shadow:0 0 10px var(--glowE,rgba(64,224,232,.5));' : 'background:var(--field,#161020);border:1px solid var(--bdr,#34285a);'),
+        go: () => this.setState({gEditBar:i})
+      })),
+      geLanes: (() => {
+        if(!S.gEdit || !S.gUser) return [];
+        const bar = S.gEditBar, phCol = (S.gPlay && Math.floor(S.gPos/16)===bar) ? Math.floor(S.gPos)%16 : -1;
+        return this.GLANES.map((ln,li) => ({
+          name: ln[0], tint: ln[1],
+          cells: Array.from({length:16}, (_,q) => {
+            const st = bar*16+q, ix = S.gUser.findIndex(n => n[0]===li && n[1]===st), on = ix >= 0, ph = q===phCol;
+            return {
+              style: 'flex:1;min-width:0;border-radius:3px;cursor:pointer;box-sizing:border-box;' +
+                (on ? `background:${ln[1]};border:1px solid ${ln[1]};box-shadow:0 0 8px ${ln[1]}88${ph ? ',0 0 14px #fff' : ''};`
+                    : `background:${q%4===0 ? 'var(--field2,#1c1428)' : 'var(--field,#161020)'};border:1px solid ${ph ? 'var(--lcdhi,#8eeef4)' : 'var(--bdr,#34285a)'};`),
+              tap: () => this.setState(s => {
+                const u = s.gUser.slice(); const j = u.findIndex(n => n[0]===li && n[1]===st);
+                if(j >= 0) u.splice(j,1); else { u.push([li, st, li===2 ? 0.6 : 0.9]); this.synth(this.GKINDS[li]); }
+                return {gUser: u};
+              })
+            };
+          })
+        }));
+      })(),
+      geClear: () => { this.setState(s => ({gUser: s.gUser.filter(n => Math.floor(n[1]/16)!==s.gEditBar)})); if(per!=='OFF') this.showToast('BAR WIPED. THE MACHINE FORGIVES.'); },
+      geClose: () => this.setState({gEdit:false}),
+      gMidi: () => { this.synth('perc'); if(per!=='OFF') this.showToast('BREAK KIT 92 A–D.MID WRITTEN — ANY DAW OPENS THE RHYTHM. THE MPC PLAYS IT TOO.'); },
       // THUMP synth
       isSynth: S.screen==='synth',
-      synthMenuColor: S.screen==='synth' ? '#e040c8' : '#7a6aa0',
+      synthMenuColor: S.screen==='synth' ? 'var(--acc,#e040c8)' : 'var(--ink2,#7a6aa0)',
       goSynth: () => this.setState({screen:'synth'}),
       voices: this.VOICES.map((v,i) => ({
         name: v.name,
-        labelColor: i===S.voiceIx ? v.tint : '#584a80',
-        tabStyle: `flex:1;height:34px;display:flex;align-items:center;justify-content:center;border-radius:5px;cursor:pointer;background:linear-gradient(180deg,#221a34,#161020);border:${i===S.voiceIx ? '2px solid '+v.c+';box-shadow:0 0 12px '+v.c+'66' : '1px solid #34285a'};`,
+        labelColor: i===S.voiceIx ? v.tint : 'var(--ink3,#584a80)',
+        tabStyle: `flex:1;height:34px;display:flex;align-items:center;justify-content:center;border-radius:5px;cursor:pointer;background:linear-gradient(180deg,var(--raised,#221a34),var(--field,#161020));border:${i===S.voiceIx ? '2px solid '+v.c+';box-shadow:0 0 12px '+v.c+'66' : '1px solid var(--bdr,#34285a)'};`,
         pick: () => this.setState({voiceIx:i})
       })),
       scopePath: (() => {
@@ -863,23 +1568,76 @@ class Component extends DCLogic {
       renderToPad: () => { this.thump(); this.setState({screen:'kit'}); if(per!=='OFF') this.showToast('RENDERED. IT KEEPS ITS RECIPE.'); },
       // My Kits
       isKits: S.screen==='kits',
-      kitsMenuColor: S.screen==='kits' ? '#e040c8' : '#7a6aa0',
+      kitsMenuColor: S.screen==='kits' ? 'var(--acc,#e040c8)' : 'var(--ink2,#7a6aa0)',
       goKits: () => this.setState({screen:'kits'}),
       kitCount: this.KITS.length,
       kits: this.KITS.map((k,i) => ({
-        ...k, statusColor: k.sc,
-        rowStyle: 'display:flex;align-items:center;gap:10px;padding:8px 10px;background:linear-gradient(180deg,#1c1430,#161020);border:1px solid ' + (i===0 ? k.c : '#34285a') + ';border-radius:6px;cursor:pointer;' + (i===0 ? `box-shadow:0 0 12px ${k.c}55;` : ''),
+        ...k, statusColor: k.sc, tint: this.SCHEMES[S.schemeIx].v.light ? k.c : k.tint,
+        rowStyle: 'display:flex;align-items:center;gap:10px;padding:8px 10px;background:linear-gradient(180deg,var(--field2,#1c1430),var(--field,#161020));border:1px solid ' + (i===0 ? k.c : 'var(--bdr,#34285a)') + ';border-radius:6px;cursor:pointer;' + (i===0 ? `box-shadow:0 0 12px ${k.c}55;` : ''),
         open: () => { this.setState({screen:'kit'}); if(per==='FULL' && i===0) this.showToast('KIT 01. THE HITS.'); }
       })),
-      newKit: () => { if(per!=='OFF') this.showToast('FRESH TAPE. SMELLS LIKE FERRIC OXIDE.'); },
+      newKit: () => this.setState({freshOpen: true}),
+      isFresh: S.freshOpen,
+      freshClose: () => this.setState({freshOpen: false}),
+      freshSeed: S.freshSeed,
+      freshReroll: () => { this.setState(s => ({freshSeed: s.freshSeed+1})); this.synth('perc'); },
+      starters: this.STARTERS.map((st,i) => ({
+        name: st.name, blurb: st.blurb, tint: st.tint, sel: S.freshSel===i,
+        style: 'display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:5px;cursor:pointer;box-sizing:border-box;' + (S.freshSel===i ? `background:var(--field2,#1c1428);border:1px solid ${st.c};box-shadow:0 0 10px ${st.c}44;` : 'background:var(--sunk,#100c1a);border:1px solid var(--raised,#221a34);'),
+        pick: () => { this.setState({freshSel: i}); this.synth(st.syn); }
+      })),
+      freshLoad: () => {
+        const st = this.STARTERS[this.state.freshSel];
+        this.setState({freshOpen: false, screen: 'kit', viewBank: 'A'});
+        if(per!=='OFF') this.showToast(st.name.toUpperCase() + ' · SEED ' + this.state.freshSeed + '. FRESH TAPE. SMELLS LIKE FERRIC OXIDE.');
+      },
+      // Bank B / evil twins
+      bankLabel: S.viewBank==='B' ? (S.twinsMade ? 'BANK B — EVIL TWINS' : 'BANK B — EMPTY') : 'BANK A',
+      bankColor: S.viewBank==='B' ? 'var(--accHi,#f8a8d4)' : 'var(--lcdalt,#40e0e8)',
+      bankFlip: () => this.setState(s => ({viewBank: s.viewBank==='A' ? 'B' : 'A'})),
+      evilLabel: S.twinsMade ? 'EVIL TWINS ⚄ REROLL' : 'EVIL TWINS ▸ BANK B',
+      evilTwins: () => {
+        const had = this.state.twinsMade;
+        this.setState(s => ({twinsMade: true, viewBank: 'B', twinSeed: s.twinSeed + (had ? 1 : 0)}));
+        this.synth('clap');
+        if(per!=='OFF') this.showToast(had ? 'TWINS REROLLED. SAME SEED, DIFFERENT SINS.' : 'BANK B LIT. YOUR KIT, BUT EVIL. RECIPES KEPT.');
+      },
+      // Kit key (F5.3)
+      keyLabel: this.KEYS[S.keyIx],
+      keyBorder: S.keyIx > 0 ? 'var(--alt,#40e0e8)' : 'var(--bdr,#34285a)',
+      keyInk: S.keyIx > 0 ? 'var(--lcdhi,#8eeef4)' : 'var(--ink2,#7a6aa0)',
+      keyCycle: () => {
+        const ix = (this.state.keyIx+1)%this.KEYS.length;
+        this.setState({keyIx: ix});
+        if(per!=='OFF') this.showToast(ix===0 ? 'KEY OFF. EVERYTHING LANDS AS CAPTURED.' : this.KEYS[ix].slice(4) + ' SET. TONAL PADS RETUNE ON ASSIGN — THE KICK IS UNTOUCHED.');
+      },
+      // Consent (X4.4)
+      consentState: S.consent ? 'ON' : 'OFF',
+      consentDot: 'width:12px;height:12px;border-radius:50%;flex:none;' + (S.consent ? 'background:#8fd424;box-shadow:0 0 10px rgba(143,212,36,.8);' : 'background:var(--sunk,#100c1a);border:1px solid var(--bdr,#34285a);'),
+      consentFlip: () => { const nv = !this.state.consent; this.setState({consent: nv}); if(per!=='OFF') this.showToast(nv ? 'TEACHING ON. THE MACHINE LEARNS FROM YOUR CORRECTIONS.' : 'TEACHING OFF. THE MACHINE STOPS TAKING NOTES.'); },
+      // Takes + bin
+      isTakes: S.screen==='takes',
+      goTakes: () => this.setState({screen:'takes'}),
+      takes: [
+        {n:'T4', what:'RE-CHOPPED SLICE 3 · CRUSH ON A02', when:'2 MIN AGO', current:true, restorable:false, bg:'var(--field2,#1c1428)'},
+        {n:'T3', what:'GHOST LAYERS ON A01 A02', when:'1 HR AGO', current:false, restorable:true, bg:'var(--sunk,#100c1a)', restore: () => { if(per!=='OFF') this.showToast('T3 RESTORED. THE PAST, REPLAYED.'); }},
+        {n:'T2', what:'FIRST FULL 8 PADS', when:'YESTERDAY', current:false, restorable:true, bg:'var(--sunk,#100c1a)', restore: () => { if(per!=='OFF') this.showToast('T2 RESTORED. THE PAST, REPLAYED.'); }}
+      ],
+      binItems: S.binGone ? [] : [
+        {name:'Snare 01', c:'#ffc41f', tint:'#ffe08e', why:'REPLACED BY CRUSH TREATMENT', days: 27, dayColor:'var(--lcdalt,#40e0e8)', restore: () => { if(per!=='OFF') this.showToast('BACK FROM THE BIN. NO QUESTIONS ASKED.'); }},
+        {name:'Vox chop', c:'#e8409f', tint:'#f8a8d4', why:'EJECTED FROM A07', days: 12, dayColor:'var(--lcdalt,#40e0e8)', restore: () => { if(per!=='OFF') this.showToast('BACK FROM THE BIN. NO QUESTIONS ASKED.'); }},
+        {name:'Hat op OLD', c:'#7adfe4', tint:'#bef2f6', why:'RE-TRIMMED · OLD CUT', days: 2, dayColor:'#ffb000', restore: () => { if(per!=='OFF') this.showToast('BACK FROM THE BIN. NO QUESTIONS ASKED.'); }}
+      ],
+      binEmpty: !!S.binGone,
+      binEmptyNow: () => { this.setState({binGone: true}); if(per!=='OFF') this.showToast('BIN EMPTIED. THE MACHINE FORGETS, AS ASKED.'); },
       // Onboarding
       isOnboard: S.screen==='onboard',
-      helpMenuColor: S.screen==='onboard' ? '#e040c8' : '#7a6aa0',
+      helpMenuColor: S.screen==='onboard' ? 'var(--acc,#e040c8)' : 'var(--ink2,#7a6aa0)',
       goOnboard: () => this.setState({screen:'onboard', obStep:0}),
       ob0: S.obStep===0, ob1: S.obStep===1, ob2: S.obStep===2,
-      obDot0: S.obStep===0 ? '#e040c8' : '#34285a',
-      obDot1: S.obStep===1 ? '#e040c8' : '#34285a',
-      obDot2: S.obStep===2 ? '#e040c8' : '#34285a',
+      obDot0: S.obStep===0 ? 'var(--acc,#e040c8)' : 'var(--bdr,#34285a)',
+      obDot1: S.obStep===1 ? 'var(--acc,#e040c8)' : 'var(--bdr,#34285a)',
+      obDot2: S.obStep===2 ? 'var(--acc,#e040c8)' : 'var(--bdr,#34285a)',
       obSkipLabel: S.obStep===2 ? 'BACK' : 'SKIP',
       obNextLabel: S.obStep===2 ? 'GOT IT — TAKE ME IN' : 'NEXT',
       obSkip: () => S.obStep===2 ? this.setState({obStep:1}) : this.setState({screen:'kit', obStep:0}),
@@ -887,7 +1645,7 @@ class Component extends DCLogic {
       consentOk: () => { this.setState({screen:'kit', obStep:0, armed:true, tapeSec:0, sessionSnips:0}); clearInterval(this._bt); this._bt = setInterval(() => this.setState(s => ({tapeSec: Math.min(60, s.tapeSec + 0.5)})), 500); if(per!=='OFF') this.showToast('TAPE ROLLING. GO STEAL A SOUND (LEGALLY).'); },
       // Export wizard
       isExport: S.screen==='export',
-      exportMenuColor: S.screen==='export' ? '#e040c8' : '#7a6aa0',
+      exportMenuColor: S.screen==='export' ? 'var(--acc,#e040c8)' : 'var(--ink2,#7a6aa0)',
       goExport: () => this.setState({screen:'export'}),
       formatLabel: this.FORMATS[S.formatIx],
       cycleFormat: () => this.setState(s => ({formatIx: (s.formatIx+1)%this.FORMATS.length})),

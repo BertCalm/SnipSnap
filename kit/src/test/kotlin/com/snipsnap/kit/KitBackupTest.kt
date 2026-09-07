@@ -32,6 +32,32 @@ class KitBackupTest {
         )
     }
 
+    /** Entries in the system temp dir whose name starts with one of our prefixes. */
+    private fun tempResidue(): Set<String> {
+        val sys = File(System.getProperty("java.io.tmpdir"))
+        return sys.list()?.filter {
+            it.startsWith("kitbackup") || it.startsWith("kitrestore") || it.startsWith("preview")
+        }?.toSet() ?: emptySet()
+    }
+
+    @Test
+    fun `a failed backup or restore leaves no temp residue behind`() {
+        val before = tempResidue()
+
+        // Restore of a non-zip throws after the temp dir is created; the
+        // finally must still clean it up.
+        val notZip = File(temp, "garbage.zip").apply { writeBytes(byteArrayOf(1, 2, 3, 4)) }
+        kotlin.test.assertFails { KitBackup.restore(notZip, File(temp, "r1")) }
+
+        // Backup where every kit is blocked throws after temp work; same.
+        val root = File(temp, "allbroken")
+        makeKit(root, "Broken")
+        File(root, "Broken/A01_Kick_01.wav").delete()
+        kotlin.test.assertFails { KitBackup.backup(root, File(temp, "b1.zip")) }
+
+        assertEquals(before, tempResidue(), "a failed operation left a temp dir behind")
+    }
+
     @Test
     fun `backup then restore round-trips every clean kit and names the broken one`() {
         val root = File(temp, "kits")

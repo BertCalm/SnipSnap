@@ -21,6 +21,26 @@ import com.snipsnap.json.JsonValue
 data class PadRecipe(
     val patch: Patch? = null,
     val fx: FxChain? = null,
+    /**
+     * Which named treatment produced [fx], when one did.
+     *
+     * Stored rather than derived: [Treatments.chain] scales a chain's macros
+     * by AMT, so a treated pad's chain stops equalling the table entry it
+     * came from as soon as the amount leaves 1.0. Bank B's treatment tag and
+     * the pad sheet's selected segment both read this.
+     */
+    val treatment: String? = null,
+    /**
+     * The AMT that produced [fx], 0..1, when a named treatment did.
+     *
+     * Stored beside the name for the same reason: both `Treatments.chain` and
+     * `Eras.process` scale by this, so the resulting chain cannot be run
+     * backwards to recover the amount that made it. This field serves the
+     * `Treatments` path (`treatPad`, and bank-B twins) — the pad sheet's
+     * TREATMENT card goes through `Eras`, which keeps its own `{"era",
+     * "amount"}` recipe.
+     */
+    val amount: Float? = null,
 ) {
     init {
         require(patch != null || fx != null) { "an empty recipe records nothing" }
@@ -41,6 +61,8 @@ data class PadRecipe(
         obj["recipe"] = JsonValue.Num(VERSION.toDouble())
         patch?.let { obj["patch"] = it.toJsonValue() }
         fx?.let { obj["fx"] = it.toJsonValue() }
+        treatment?.let { obj["treatment"] = JsonValue.Str(it) }
+        amount?.let { obj["amount"] = JsonValue.Num(it.toDouble()) }
         return JsonValue.Obj(obj)
     }
 
@@ -56,6 +78,8 @@ data class PadRecipe(
             return PadRecipe(
                 patch = obj["patch"]?.let { Patches.fromJsonValue(it) },
                 fx = obj["fx"]?.let { FxChain.fromJsonValue(it) },
+                treatment = obj["treatment"]?.str(),
+                amount = obj["amount"]?.num()?.toFloat(),
             )
         }
 

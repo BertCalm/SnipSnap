@@ -81,6 +81,12 @@ class ExportWizardModel(
      * the CLI — and moves the stage machine. Never throws for a preflight
      * block; that comes back as [WriteResult.Blocked] with the checklist.
      */
+    /**
+     * The browser tile for expansion/`.xpn` writes — the Z6.2 prototyping
+     * verdict made waveform the default; null skips artwork entirely.
+     */
+    var artStyle: KitArt.Style? = KitArt.Style.WAVEFORM
+
     fun write(destRoot: File, overwrite: Boolean = true): WriteResult {
         check(stage == Stage.READY) { "write() only from READY, stage is $stage" }
         runPreflight()
@@ -88,7 +94,10 @@ class ExportWizardModel(
 
         stage = Stage.WRITING
         return try {
-            val outcome = Exporters.export(format, kit, kitDir, destRoot, overwrite)
+            val artwork = artStyle
+                ?.takeIf { format == ExportFormat.EXPANSION || format == ExportFormat.XPN }
+                ?.let { KitArt.png(kit, kitDir, it) }
+            val outcome = Exporters.export(format, kit, kitDir, destRoot, overwrite, artworkPng = artwork)
             stage = Stage.COMPLETE
             WriteResult.Done(outcome)
         } catch (e: ExportBlockedException) {

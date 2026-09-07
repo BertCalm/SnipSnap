@@ -16,12 +16,19 @@ enum class ExportFormat(
     val id: String,
     /** The export wizard's format-cycler line. */
     val cyclerLabel: String,
+    /** Whether this format nests the kit's own name inside `destRoot` itself, so a caller must not add another per-kit subfolder on top. */
+    val selfNesting: Boolean = false,
 ) {
-    PROGRAM_FOLDER("folder", "MPC 2 FOLDER (EVERY GENERATION)"),
-    EXPANSION("expansion", "EXPANSION (BROWSER TILE)"),
+    // Writes to `File(destRoot, kit.name)` — see KitExporter.kt:44.
+    PROGRAM_FOLDER("folder", "MPC 2 FOLDER (EVERY GENERATION)", selfNesting = true),
+    // Writes under `File(File(driveRoot, "Expansions"), title)` — see ExpansionWriter.kt:109.
+    EXPANSION("expansion", "EXPANSION (BROWSER TILE)", selfNesting = true),
     XPN("xpn", "XPN ARCHIVE (ONE FILE)"),
     MPC3_TRACK("xtd", "MPC 3 NATIVE (.XTD)"),
-    MPC3_PROJECT("xpj", "MPC 3 PROJECT (.XPJ)"),
+    MPC3_PROJECT("xpj", "MPC SESSION (.XPJ) — KITS + GROOVES"),
+    MIDI("mid", "MIDI GROOVES (EVERY DAW)"),
+    SFZ("sfz", "SFZ (EVERY SAMPLER)"),
+    DECENT_SAMPLER("ds", "DECENTSAMPLER (FREE, EVERYWHERE)"),
     ;
 
     companion object {
@@ -59,25 +66,74 @@ object Exporters {
         clip: com.snipsnap.mpc3.Mpc3Clip? = null,
         /** MPC3_PROJECT only: the project tempo; null keeps the writer's default. */
         tempoBpm: Float? = null,
+        /** EXPANSION/XPN only: preview audio (see `KitPreview.render`). */
+        preview: com.snipsnap.audio.Snip? = null,
+        /** EXPANSION/XPN only: the browser tile (see `KitArt` in `:shell`). */
+        artworkPng: ByteArray? = null,
     ): ExportOutcome = when (format) {
         ExportFormat.PROGRAM_FOLDER -> {
             val r = KitExporter.exportProgramFolder(kit, kitDir, destRoot, overwrite)
             ExportOutcome(format, r.program, null, r.findings)
         }
         ExportFormat.EXPANSION -> {
-            val r = ExpansionWriter.write(kit, kitDir, destRoot, meta, overwrite = overwrite)
+            val r = ExpansionWriter.write(
+                kit, kitDir, destRoot, meta,
+                artworkPng = artworkPng, preview = preview, overwrite = overwrite,
+            )
             ExportOutcome(format, r.directory, null, findings(kit, kitDir))
         }
         ExportFormat.XPN -> {
-            val f = XpnPackager.write(kit, kitDir, File(destRoot, "${kit.name}.xpn"), meta, overwrite = overwrite)
+            val f = XpnPackager.write(
+                kit, kitDir, File(destRoot, "${kit.name}.xpn"), meta,
+                artworkPng = artworkPng, preview = preview, overwrite = overwrite,
+            )
             ExportOutcome(format, f, null, findings(kit, kitDir))
         }
         ExportFormat.MPC3_TRACK -> {
-            val r = Mpc3Exporter.exportTrack(kit, kitDir, destRoot, overwrite, clip = clip, mpc2Twin = dualGeneration)
+            // The call-site clip wins; the kit's remembered grooves back it
+            // up — all of them, up to the container's four slots. Selection
+            // order here (NOT GrooveStore's own stored order, which six
+            // other call sites' firstOrNull() depend on staying base-first
+            // — see GrooveEdit.kt's KDoc) puts the base first and PROG E
+            // right behind it: GrooveEdit.save() appends E last in the
+            // sidecar, so a plain .take(MAX_CLIPS) on a kit with >=4 prior
+            // clips would silently drop the user's own edited program. E
+            // now survives the cap, displacing a derived variant instead.
+            val effectiveClips = clip?.let { listOf(it) } ?: run {
+                val stored = GrooveStore.load(kitDir)
+                val base = stored.firstOrNull()
+                val e = stored.firstOrNull { GrooveEdit.isProgE(it) }
+                val prioritized = listOfNotNull(base) +
+                    listOfNotNull(e.takeIf { it != base }) +
+                    stored.filter { it != base && it != e }
+                prioritized.take(Mpc3TrackWriter.MAX_CLIPS)
+            }
+            val r = Mpc3Exporter.exportTrack(kit, kitDir, destRoot, overwrite, clips = effectiveClips, mpc2Twin = dualGeneration)
             ExportOutcome(
                 format, r.program,
                 File(destRoot, Mpc3TrackWriter.trackDataDirName(kit.name)), r.findings,
             )
+        }
+        ExportFormat.MIDI -> {
+            // The kit's grooves as .mid files, one per pattern; a kit with
+            // no groove exports its honest default beat, same as preview.
+            val clips = clip?.let { listOf(it) }
+                ?: GrooveStore.load(kitDir).ifEmpty { listOf(KitPreview.defaultPattern(kit)) }
+            val bpm = tempoBpm ?: kit.tempoBpm ?: KitPreview.DEFAULT_BPM
+            val files = clips.map { c ->
+                MidiGroove.writeTo(
+                    File(destRoot, "${Names.sanitizeStem(c.name)}.mid"), c, bpm, overwrite,
+                )
+            }
+            ExportOutcome(format, files.first(), null, findings(kit, kitDir))
+        }
+        ExportFormat.SFZ -> {
+            val f = SfzWriter.write(kit, kitDir, destRoot, overwrite)
+            ExportOutcome(format, f, File(f.parentFile, "Samples"), findings(kit, kitDir))
+        }
+        ExportFormat.DECENT_SAMPLER -> {
+            val f = DecentSamplerWriter.write(kit, kitDir, destRoot, overwrite)
+            ExportOutcome(format, f, File(f.parentFile, "Samples"), findings(kit, kitDir))
         }
         ExportFormat.MPC3_PROJECT -> {
             val dataDir = File(destRoot, Mpc3ProjectWriter.projectDataDirName(kit.name))
@@ -90,13 +146,20 @@ object Exporters {
             dataDir.deleteRecursively()
             val program = Mpc3Exporter.stageTrack(kit, kitDir, dataDir)
             val writer = Mpc3ProjectWriter()
-            val tracks = listOf(Mpc3ProjectTrack.Drum(program, clip = clip))
+            // The call-site clip wins; otherwise every stored groove becomes
+            // its own sequence — the pattern flip on the hardware's switcher.
+            val effectiveClips = clip?.let { listOf(it) }
+                ?: GrooveStore.load(kitDir).take(Mpc3ProjectWriter.MAX_SEQUENCES)
+            val tracks = listOf(Mpc3ProjectTrack.Drum(program, clips = effectiveClips))
             // The call-site tempo wins; the kit's remembered tempo backs it up.
             val effectiveTempo = tempoBpm ?: kit.tempoBpm
+            // Song slot 1 wears the kit's name (GG3.1 plumbing; steps wait
+            // on the bench capture).
+            val song = com.snipsnap.mpc3.Mpc3Song(kit.name)
             val file = if (effectiveTempo != null) {
-                writer.writeTo(destRoot, kit.name, tracks, effectiveTempo)
+                writer.writeTo(destRoot, kit.name, tracks, effectiveTempo, song = song)
             } else {
-                writer.writeTo(destRoot, kit.name, tracks)
+                writer.writeTo(destRoot, kit.name, tracks, song = song)
             }
             ExportOutcome(format, file, dataDir, findings(kit, kitDir))
         }

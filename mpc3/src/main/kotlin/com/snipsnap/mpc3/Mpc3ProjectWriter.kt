@@ -13,12 +13,45 @@ sealed interface Mpc3ProjectTrack {
         val program: DrumProgram,
         val colour: Int = Mpc3TrackWriter.DEFAULT_TRACK_COLOUR,
         val clip: Mpc3Clip? = null,
-    ) : Mpc3ProjectTrack
+        /**
+         * The track's grooves, one per project sequence — sequence k plays
+         * this track's k-th clip. Empty falls back to [clip] alone.
+         */
+        val clips: List<Mpc3Clip> = emptyList(),
+    ) : Mpc3ProjectTrack {
+        val effectiveClips: List<Mpc3Clip> get() = clips.ifEmpty { listOfNotNull(clip) }
+    }
 
     data class Keys(
         val program: KeygroupProgram,
         val colour: Int = Mpc3TrackWriter.DEFAULT_TRACK_COLOUR,
+        /**
+         * Pitched grooves, one per project sequence — same idiom as a drum
+         * track's: sequence k plays this track's k-th clip. The clip map in
+         * a sequence is keyed by track name and byte-shaped identically for
+         * every track kind, so a keygroup track carries notes the same way.
+         */
+        val clips: List<Mpc3Clip> = emptyList(),
     ) : Mpc3ProjectTrack
+}
+
+/**
+ * Song slot 1 of a project. The corpus's 32 song slots all carry
+ * `{"name": "(unnamed)", "ignoreTempo": false, "items": []}` — the *step*
+ * schema (which sequence, how many repeats) has never been captured, so
+ * this type expresses the intent while the writer refuses non-empty
+ * [items] until a Live III capture with a saved song lands in
+ * `reference/` (FEATURE_PLAN GG3.2). Naming the slot is safe today: the
+ * output differs from the corpus by exactly that string.
+ */
+data class Mpc3Song(
+    val name: String,
+    /** GG3.2: `(sequenceKey, repeats)` steps — refused until corpus-verified. */
+    val items: List<Pair<Int, Int>> = emptyList(),
+) {
+    init {
+        require(name.isNotBlank()) { "song name must not be blank" }
+    }
 }
 
 /**
@@ -52,21 +85,37 @@ class Mpc3ProjectWriter(
 
     private val trackWriter = Mpc3TrackWriter(firmware, platform)
 
-    fun write(name: String, tracks: List<Mpc3ProjectTrack>, tempoBpm: Float = 92f): ByteArray =
+    fun write(
+        name: String,
+        tracks: List<Mpc3ProjectTrack>,
+        tempoBpm: Float = 92f,
+        song: Mpc3Song? = null,
+    ): ByteArray =
         Acvs.write(
             AcvsHeader(firmware, Mpc3Project.PROJECT_OBJECT_TYPE, AcvsHeader.ENCODING_JSON, platform),
-            payloadText(name, tracks, tempoBpm),
+            payloadText(name, tracks, tempoBpm, song),
         )
 
     /** Write `<name>.xpj` into [directory]; WAVs go in the sibling `_[ProjectData]/`. */
-    fun writeTo(directory: File, name: String, tracks: List<Mpc3ProjectTrack>, tempoBpm: Float = 92f): File {
+    fun writeTo(
+        directory: File,
+        name: String,
+        tracks: List<Mpc3ProjectTrack>,
+        tempoBpm: Float = 92f,
+        song: Mpc3Song? = null,
+    ): File {
         require(directory.isDirectory) { "not a directory: $directory" }
         val file = File(directory, "$name.xpj")
-        file.writeBytes(write(name, tracks, tempoBpm))
+        file.writeBytes(write(name, tracks, tempoBpm, song))
         return file
     }
 
-    fun payloadText(name: String, tracks: List<Mpc3ProjectTrack>, tempoBpm: Float = 92f): String {
+    fun payloadText(
+        name: String,
+        tracks: List<Mpc3ProjectTrack>,
+        tempoBpm: Float = 92f,
+        song: Mpc3Song? = null,
+    ): String {
         require(tracks.isNotEmpty()) { "a project needs at least one content track" }
         require(tempoBpm in 30f..300f) { "tempo out of range: $tempoBpm" }
 
@@ -105,10 +154,19 @@ class Mpc3ProjectWriter(
             },
         )
 
-        // The first drum clip becomes the project sequence, its notes in
-        // trackClipMaps keyed by the track's name — where DD1 keeps its own.
-        val firstClip = tracks.filterIsInstance<Mpc3ProjectTrack.Drum>().firstNotNullOfOrNull { drum ->
-            drum.clip?.let { drum.program.name to it }
+        // Clips become the project sequences — sequence k holds every
+        // track's k-th groove, notes in trackClipMaps keyed by track name,
+        // where DD1 keeps its own. `sequences` is the corpus's keyed list
+        // (key 0.., `currentSequence` picks by key), scaled past one entry.
+        val clipLists = tracks.map {
+            when (it) {
+                is Mpc3ProjectTrack.Drum -> it.program.name to it.effectiveClips
+                is Mpc3ProjectTrack.Keys -> it.program.name to it.clips
+            }
+        }
+        val seqCount = (clipLists.maxOfOrNull { it.second.size } ?: 0).coerceAtLeast(1)
+        require(seqCount <= MAX_SEQUENCES) {
+            "a project carries at most $MAX_SEQUENCES sequences, got $seqCount"
         }
         val allTrackNames = tracks.map {
             when (it) {
@@ -116,24 +174,48 @@ class Mpc3ProjectWriter(
                 is Mpc3ProjectTrack.Keys -> it.program.name
             }
         } + listOf("Submix 1", "Out 1/2", "Out 3/4")
-        val sequences = J.A(listOf(sequence(allTrackNames, firstClip, tempoBpm)))
+        val sequences = J.A(
+            (0 until seqCount).map { k ->
+                val clipsAt = clipLists.mapNotNull { (track, clips) ->
+                    clips.getOrNull(k)?.let { track to it }
+                }.toMap()
+                sequence(k, allTrackNames, clipsAt, tempoBpm)
+            },
+        )
 
         var text = skeleton
         text = text.replace("@TRACKS@", renderAt(J.A(trackObjs), SPLICE_INDENT).trimStart())
         text = text.replace("@SAMPLES@", renderAt(samples, SPLICE_INDENT).trimStart())
         text = text.replace("@SEQUENCES@", renderAt(sequences, SPLICE_INDENT).trimStart())
         text = text.replace("@MASTER_TEMPO@", tempoBpm.toDouble().toString())
+        if (song != null) {
+            require(song.items.isEmpty()) {
+                "song steps need a corpus capture first - save a 2-step song on the " +
+                    "Live III and drop the .xpj in reference/ (FEATURE_PLAN GG3.2)"
+            }
+            // Song slot 1 takes the session's name - the one edit whose
+            // output differs from the corpus by exactly that string. The
+            // 32 slots are the corpus's own empty songs; naming the first
+            // is what the hardware does when you title a song.
+            text = text.replaceFirst(
+                "\"name\": \"(unnamed)\"",
+                "\"name\": \"" + escapeJson(song.name) + "\"",
+            )
+        }
         return text
     }
 
-    private fun sequence(trackNames: List<String>, clipByTrack: Pair<String, Mpc3Clip>?, tempoBpm: Float): J {
-        val bars = clipByTrack?.second?.bars ?: 2
+    private fun escapeJson(s: String): String =
+        s.replace("\\", "\\\\").replace("\"", "\\\"")
+
+    private fun sequence(key: Int, trackNames: List<String>, clipByTrack: Map<String, Mpc3Clip>, tempoBpm: Float): J {
+        val bars = clipByTrack.values.maxOfOrNull { it.bars } ?: 2
         val pulses = bars * Mpc3Clip.PULSES_PER_BAR
         return obj(
-            "key" to i(0),
+            "key" to i(key.toLong()),
             "value" to obj(
                 "version" to i(5),
-                "name" to s(clipByTrack?.second?.name ?: "Sequence 01"),
+                "name" to s(clipByTrack.values.firstOrNull()?.name ?: "Sequence %02d".format(key + 1)),
                 "bpm" to d(tempoBpm.toDouble()),
                 "lengthBars" to i(bars.toLong()),
                 "loopStartBar" to i(0),
@@ -155,7 +237,7 @@ class Mpc3ProjectWriter(
                     listOf(
                         J.A(
                             trackNames.map { trackName ->
-                                val clip = clipByTrack?.takeIf { it.first == trackName }?.second
+                                val clip = clipByTrack[trackName]
                                     ?: Mpc3Clip(trackName, bars, emptyList())
                                 obj("key" to s(trackName), "value" to trackWriter.clipValue(clip, includeMidiBank = false))
                             },
@@ -188,6 +270,12 @@ class Mpc3ProjectWriter(
     }
 
     companion object {
+        /**
+         * Sequence-count ceiling — well under the hardware's 128, far over
+         * the four groove variations a kit ships.
+         */
+        const val MAX_SEQUENCES = 32
+
         /** Sibling folder name for a project's WAVs, per the corpus convention. */
         fun projectDataDirName(projectName: String): String = "${projectName}_[ProjectData]"
 

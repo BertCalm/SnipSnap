@@ -80,6 +80,11 @@ object KitExporter {
         kit: Kit,
         kitDir: File,
         samplesDir: File,
+        /**
+         * Prepended to every stem — how several kits share one flat
+         * `_[ProjectData]/` without their `A01_Kick_01`s colliding.
+         */
+        stemPrefix: String = "",
     ): Pair<List<Pad?>, List<File>> {
         samplesDir.mkdirs()
 
@@ -90,7 +95,7 @@ object KitExporter {
         val used = HashSet<String>()
 
         fun copySample(file: String): Pair<String, Long> {
-            val stem = Names.sanitizeStem(file.substringBeforeLast('.'))
+            val stem = Names.sanitizeStem(stemPrefix + file.substringBeforeLast('.'))
             check(used.add(stem.lowercase())) { "preflight let a name collision through: $stem" }
             val dst = File(samplesDir, "$stem.wav")
             File(kitDir, file).copyTo(dst, overwrite = true)
@@ -129,6 +134,12 @@ object KitExporter {
                 oneShot = p.oneShot,
                 velocityLayers = layersBySlot[p.slot],
                 color = p.packedColor(),
+                attack = p.attack,
+                decay = p.decay,
+                cutoff = p.cutoff,
+                resonance = p.resonance,
+                humanize = p.humanize,
+                chain = p.chain?.toPlay(frameCountBySlot.getValue(p.slot)),
             )
         }
         return slots.toList() to written

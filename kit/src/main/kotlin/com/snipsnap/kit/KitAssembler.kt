@@ -28,6 +28,12 @@ data class ArrangedPad(
      * sample, so soft pad hits *sound* soft on the hardware.
      */
     val softVariants: List<Snip> = emptyList(),
+    /**
+     * Provenance, carried through to [KitPad.source]: where this hit came
+     * from ("file", "sourceFrame", "lengthFrames", …). A chopped kit
+     * should remember its origins.
+     */
+    val source: Map<String, String> = emptyMap(),
 ) {
     init {
         require(softVariants.size <= 3) { "at most 3 soft variants (4 zones total)" }
@@ -121,6 +127,7 @@ object KitAssembler {
                 tuneCoarse = pad.tuneCoarse,
                 tuneFine = pad.tuneFine,
                 muteGroup = AutoPlace.muteGroupFor(pad.drumClass),
+                source = pad.source,
                 recipe = pad.recipe,
                 velocityLayers = layers,
             )

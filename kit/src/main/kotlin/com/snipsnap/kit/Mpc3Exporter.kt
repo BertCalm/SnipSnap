@@ -29,6 +29,11 @@ object Mpc3Exporter {
         /** Optional embedded pattern — the kit arrives with a groove to play. */
         clip: Mpc3Clip? = null,
         /**
+         * Or several (≤4, the container's slot count) — pattern variations
+         * the browser flips between. Wins over [clip] when non-empty.
+         */
+        clips: List<Mpc3Clip> = emptyList(),
+        /**
          * Dual-generation export — the Timeless Glow layout the instrument
          * suite already ships: the MPC 2 `.xpm` twin is written *inside*
          * `_[TrackData]/`, beside the samples it references. MPC 3 opens
@@ -49,7 +54,8 @@ object Mpc3Exporter {
         dataDir.deleteRecursively()
 
         val (slots, written) = KitExporter.buildSlots(kit, kitDir, samplesDir = dataDir)
-        val program = Mpc3TrackWriter().writeTo(destRoot, DrumProgram(kit.name, slots), trackColour, clip)
+        val effectiveClips = clips.ifEmpty { listOfNotNull(clip) }
+        val program = Mpc3TrackWriter().writeTo(destRoot, DrumProgram(kit.name, slots), trackColour, effectiveClips)
         if (mpc2Twin) XpmWriter().writeTo(dataDir, DrumProgram(kit.name, slots))
         return ExportResult(destRoot, program, written, findings)
     }

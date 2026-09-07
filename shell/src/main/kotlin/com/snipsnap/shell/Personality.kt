@@ -51,6 +51,8 @@ object Copy {
     // Empty states.
     const val EMPTY_SHELF = "NOTHING TAPED YET. GO STEAL A SOUND (LEGALLY)."
     const val EMPTY_KIT = "16 EMPTY PADS. TERRIFYING."
+    /** A kit folder that won't parse (torn `kit.json`, missing file, etc.) — distinct from EMPTY_SHELF, which claims no kit exists at all. */
+    const val KIT_WONT_OPEN = "THIS KIT WON'T OPEN. THE TAPE MAY BE CHEWED."
 
     // Capture.
     const val SESSION_ARMED = "TAPE ROLLING. GO STEAL A SOUND (LEGALLY)."
@@ -69,6 +71,8 @@ object Copy {
         "SHELF +1. LABEL IT LATER.",
     )
     const val COMMIT_NEEDS_SELECTION = "SET IN + OUT FIRST"
+    /** The deck glided onto an onset after a coast. */
+    const val SNAPPED = "SNAPPED TO THE HIT. THE MACHINE HAS EARS."
     const val PENCIL_STARTED = "PENCIL REWIND. OLD SCHOOL."
     const val PENCIL_DONE = "REWOUND. YOU'RE WELCOME."
     const val PENCIL_AT_TOP = "ALREADY AT THE TOP."
@@ -76,12 +80,77 @@ object Copy {
     const val ODOMETER_OFF = "BACK TO REAL TIME."
     const val DELETE_SNIP = "EJECTED. THE BIN KEEPS IT 30 DAYS."
 
+    // ---- CHOP: the melodic rule (X1.3) ----
+    const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."
+
+    // ---- KIT: the key cycler (F5.3) ----
+    fun keySet(key: String): String =
+        "$key SET. TONAL PADS RETUNE ON ASSIGN — THE KICK IS UNTOUCHED."
+    const val KEY_OFF = "KEY OFF. EVERYTHING LANDS AS CAPTURED."
+
+    // ---- Settings: teach the machine (X4.4) ----
+    const val TEACHING_ON = "TEACHING ON. THE MACHINE LEARNS FROM YOUR CORRECTIONS."
+    const val TEACHING_OFF = "TEACHING OFF. THE MACHINE STOPS TAKING NOTES."
+
+    // ---- Settings: what TEACH THE MACHINE actually sends (X4.4) ----
+    const val TEACH_CONSENT = "FEATURES ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE."
+
+    // ---- BANK B: evil twins (W4.3) ----
+    const val BANK_B_LIT = "BANK B LIT. YOUR KIT, BUT EVIL. RECIPES KEPT."
+    const val TWINS_REROLLED = "TWINS REROLLED. SAME SEED, DIFFERENT SINS."
+
+    // ---- TAKES + BIN (X2.3) ----
+    fun takeRestored(take: String): String = "$take RESTORED. THE PAST, REPLAYED."
+    const val BACK_FROM_BIN = "BACK FROM THE BIN. NO QUESTIONS ASKED."
+    const val BIN_EMPTIED = "BIN EMPTIED. THE MACHINE FORGETS, AS ASKED."
+    /** No archived takes yet — the TAKES card holds only the current (NOW) state. */
+    const val TAKES_EMPTY = "NOTHING TO ROLL BACK TO YET."
+    /** The bin's own empty state (the artboard's literal copy — `binEmpty` in `TapeOS Oilslick.dc.html`). */
+    const val BIN_EMPTY_STATE = "THE BIN IS EMPTY. NOTHING TO REGRET."
+    /** `restoreFromBin` returned null: the row was stale by the time BACK was tapped (already pulled, or purged). */
+    const val BIN_ITEM_GONE = "ALREADY GONE. SOMEONE BEAT YOU TO IT."
+
+    // ---- TAKES + BIN: the rule the screen states plainly (X2.3) ----
+    const val TAKES_BIN_RULE =
+        "EVERY SAVE ARCHIVES A TAKE. EVERY DELETE GOES TO THE BIN FIRST."
+
+    // ---- GROOVE ----
+    const val HUMANIZED = "HUMANIZED. NOBODY PLAYS LIKE A ROBOT."
+    const val FORKED_TO_E = "FORKED TO PROG E. A–D STAY UNTOUCHED."
+    const val BAR_WIPED = "BAR WIPED. THE MACHINE FORGIVES."
+
+    /** The needle-roll only draws five lanes; a note on any other pad still plays and still exports — this says so. */
+    fun offLane(n: Int): String = "+$n OFF-LANE — HEARD AND EXPORTED, NOT DRAWN"
+
+    // ---- PAD SHEET ----
+    const val GHOSTS_ON = "GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
+    fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
+    const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
+    const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."
+    const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."
+    fun mutated(move: String, pad: String, parent: String): String = "$move: $pad × $parent. ONE HIT, TWO PARENTS."
+    const val UNMUTATED = "PARENTS SEPARATED. THE ORIGINAL IS BACK FROM THE BIN."
+    const val MUTATE_NEEDS_ONE = "GHOSTS ON. MUTATE WANTS ONE SAMPLE - CLEAR THEM FIRST."
+    const val CRATE_EMPTY = "THE CRATE HAS NOTHING TO DEAL. ONLY YOU ON THE SHELF."
+
+    // ---- KIT: textures ----
+    const val SCULPTED = "SCULPTED. THE HIT IS WEATHER NOW. NEW TAPE ON THE SHELF."
+    const val STRETCHED = "STRETCHED. A BLINK BECAME A LANDSCAPE. NEW TAPE ON THE SHELF."
+    const val FROZEN = "FROZEN. ONE INSTANT, HELD. NEW TAPE ON THE SHELF."
+
     // Chop shop.
     const val RECHOPPED = "RE-CHOPPED. THE MACHINE APOLOGIZES FOR SLICE 3."
 
     /** "N SLICES ON THE GRID. CHOKE GROUP SET." — the send-to-grid toast. */
     fun sentToGrid(sliceCount: Int, chokeSet: Boolean): String =
         "$sliceCount SLICES ON THE GRID." + if (chokeSet) " CHOKE GROUP SET." else ""
+
+    // ---- CHOP: the chip itself (HANDOFF.md — "chip tap = cycle class label, 'YOU ✓'") ----
+    /** A chip under the confidence threshold, in its own words. */
+    const val CHIP_NOT_SURE = "NOT SURE"
+
+    /** The override marker on a corrected chip. */
+    const val CHIP_OVERRIDDEN = "YOU ✓"
 
     // Export.
     const val EXPORT_DONE = "DUBBED. GO MAKE SOMETHING."

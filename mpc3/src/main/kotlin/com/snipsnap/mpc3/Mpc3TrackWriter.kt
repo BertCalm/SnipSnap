@@ -3,6 +3,8 @@ package com.snipsnap.mpc3
 import com.snipsnap.xpm.DrumProgram
 import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
+import com.snipsnap.xpm.ChainPlay
+import com.snipsnap.xpm.ChainZonePlay
 import com.snipsnap.xpm.Pad
 import com.snipsnap.xpm.VelocityLayer
 import java.io.File
@@ -100,9 +102,17 @@ class Mpc3TrackWriter(
 
     /** The `.xtd` container bytes. [clip] embeds a pattern the kit carries along. */
     fun write(program: DrumProgram, trackColour: Int = DEFAULT_TRACK_COLOUR, clip: Mpc3Clip? = null): ByteArray =
+        write(program, trackColour, listOfNotNull(clip))
+
+    /**
+     * The `.xtd` container bytes with up to [MAX_CLIPS] embedded patterns —
+     * the clip *list* is the container's own shape (commercial kits ship
+     * four named clips; the browser flips between them).
+     */
+    fun write(program: DrumProgram, trackColour: Int = DEFAULT_TRACK_COLOUR, clips: List<Mpc3Clip>): ByteArray =
         Acvs.write(
             AcvsHeader(firmware, Mpc3Project.TRACK_OBJECT_TYPE, AcvsHeader.ENCODING_JSON, platform),
-            payloadText(program, trackColour, clip),
+            payloadText(program, trackColour, clips),
         )
 
     /**
@@ -115,16 +125,28 @@ class Mpc3TrackWriter(
         program: DrumProgram,
         trackColour: Int = DEFAULT_TRACK_COLOUR,
         clip: Mpc3Clip? = null,
+    ): File = writeTo(directory, program, trackColour, listOfNotNull(clip))
+
+    /** [writeTo] with the clip list. */
+    fun writeTo(
+        directory: File,
+        program: DrumProgram,
+        trackColour: Int = DEFAULT_TRACK_COLOUR,
+        clips: List<Mpc3Clip>,
     ): File {
         require(directory.isDirectory) { "not a directory: $directory" }
         val file = File(directory, "${program.name}.xtd")
-        file.writeBytes(write(program, trackColour, clip))
+        file.writeBytes(write(program, trackColour, clips))
         return file
     }
 
     /** The uncompressed JSON payload, for tests and diffing. */
     fun payloadText(program: DrumProgram, trackColour: Int = DEFAULT_TRACK_COLOUR, clip: Mpc3Clip? = null): String =
-        render(payload(program, trackColour, clip))
+        payloadText(program, trackColour, listOfNotNull(clip))
+
+    /** [payloadText] with the clip list. */
+    fun payloadText(program: DrumProgram, trackColour: Int = DEFAULT_TRACK_COLOUR, clips: List<Mpc3Clip>): String =
+        render(payload(program, trackColour, clips))
 
     /** The `.xty` container bytes for a keygroup (instrument) track. */
     fun writeKeygroup(program: KeygroupProgram, trackColour: Int = DEFAULT_TRACK_COLOUR): ByteArray =
@@ -146,6 +168,9 @@ class Mpc3TrackWriter(
         render(keygroupPayload(program, trackColour))
 
     companion object {
+        /** The container's clip slots — commercial kits ship exactly four. */
+        const val MAX_CLIPS = 4
+
         /** Sibling folder name for the WAVs, per the corpus convention. */
         fun trackDataDirName(programName: String): String = "${programName}_[TrackData]"
 
@@ -166,10 +191,10 @@ class Mpc3TrackWriter(
     // ---- project-facing builders ------------------------------------------
 
     internal fun drumTrackObject(program: DrumProgram, trackColour: Int, clip: Mpc3Clip?, includeSolo: Boolean): J =
-        trackObject(program.name, drumSampleNames(program), programObj(program), trackColour, clip, includeSolo)
+        trackObject(program.name, drumSampleNames(program), programObj(program), trackColour, listOfNotNull(clip), includeSolo)
 
     internal fun keygroupTrackObject(program: KeygroupProgram, trackColour: Int, includeSolo: Boolean): J =
-        trackObject(program.name, keygroupSampleNames(program), keygroupProgramObj(program), trackColour, null, includeSolo)
+        trackObject(program.name, keygroupSampleNames(program), keygroupProgramObj(program), trackColour, emptyList(), includeSolo)
 
     /**
      * The mixer-infrastructure tracks every harvested project carries beside
@@ -187,20 +212,22 @@ class Mpc3TrackWriter(
                 drum = null, keygroup = null,
             ),
             trackColour = 0,
-            clip = null,
+            clips = emptyList(),
             includeSolo = false,
         )
 
     // ---- payload assembly -------------------------------------------------
 
-    private fun payload(program: DrumProgram, trackColour: Int, clip: Mpc3Clip?): J =
-        trackData(
+    private fun payload(program: DrumProgram, trackColour: Int, clips: List<Mpc3Clip>): J {
+        require(clips.size <= MAX_CLIPS) { "at most $MAX_CLIPS clips per track, got ${clips.size}" }
+        return trackData(
             name = program.name,
             sampleNames = drumSampleNames(program),
             programObj = programObj(program),
             trackColour = trackColour,
-            clip = clip,
+            clips = clips,
         )
+    }
 
     private fun keygroupPayload(program: KeygroupProgram, trackColour: Int): J =
         trackData(
@@ -208,7 +235,7 @@ class Mpc3TrackWriter(
             sampleNames = keygroupSampleNames(program),
             programObj = keygroupProgramObj(program),
             trackColour = trackColour,
-            clip = null,
+            clips = emptyList(),
         )
 
     private fun trackData(
@@ -216,8 +243,8 @@ class Mpc3TrackWriter(
         sampleNames: List<String>,
         programObj: J,
         trackColour: Int,
-        clip: Mpc3Clip?,
-    ): J = obj("data" to trackObject(name, sampleNames, programObj, trackColour, clip, includeSolo = true))
+        clips: List<Mpc3Clip>,
+    ): J = obj("data" to trackObject(name, sampleNames, programObj, trackColour, clips, includeSolo = true))
 
     /**
      * One element of a project's `tracks[]` — identical to a standalone
@@ -230,7 +257,7 @@ class Mpc3TrackWriter(
         sampleNames: List<String>,
         programObj: J,
         trackColour: Int,
-        clip: Mpc3Clip?,
+        clips: List<Mpc3Clip>,
         includeSolo: Boolean,
     ): J = J.O(
         buildList {
@@ -256,7 +283,9 @@ class Mpc3TrackWriter(
             add("lengthFollowsSequenceLength" to b(true))
             add("midiEventsFilter" to midiEventsFilter())
             add("arrangementClipMap" to arrangementClips(name))
-            add("sharedClipMap" to (clip?.let { J.A(listOf(clipEntry(it))) } ?: J.A(emptyList())))
+            add(
+                "sharedClipMap" to J.A(clips.mapIndexed { index, c -> clipEntry(c, key = index + 1) }),
+            )
             add("recordArm" to b(true))
             add(
                 "midiBankAndProgramNumber" to obj(
@@ -528,7 +557,15 @@ class Mpc3TrackWriter(
     private fun instrument(pad: Pad?): J {
         val filled = pad != null
         // MPC 3 layers descend from loudest at index 0; ours ascend soft-first.
-        val zones = pad?.let { zonesOf(it).asReversed() } ?: emptyList()
+        // A chain grid's zones become the layers: every one references the
+        // same chain WAV, differing only in velocity window and slice anchor.
+        val gridZones = pad?.chain?.zones?.asReversed()
+        val zones = when {
+            gridZones != null && pad != null ->
+                gridZones.map { z -> VelocityLayer(pad.sampleName, pad.frameCount, z.velStart, z.velEnd) }
+            pad != null -> zonesOf(pad).asReversed()
+            else -> emptyList()
+        }
         return instrumentShell(
             coarseTune = pad?.tuneCoarse ?: 0,
             fineTune = pad?.tuneFine ?: 0,
@@ -536,11 +573,17 @@ class Mpc3TrackWriter(
             lowNote = 0,
             highNote = 127,
             whichMuteGroup = pad?.muteGroup ?: 0,
-            synthSection = synthSection(filled, version = 15),
+            synthSection = synthSection(filled, version = 15, shape = pad),
             // 0 = One Shot (the whole sample fires), 2 = Note On (sustains
             // while held) — a per-pad musical choice in real kits.
             triggerMode = if (pad?.oneShot != false) 0 else 2,
-            layers = (0 until 8).map { slot -> layer(zones.getOrNull(slot), filledInstrument = filled, rootNote = 0) },
+            layers = (0 until 8).map { slot ->
+                layer(
+                    zones.getOrNull(slot), filledInstrument = filled, rootNote = 0,
+                    humanize = pad?.humanize, chain = pad?.chain,
+                    gridZone = gridZones?.getOrNull(slot),
+                )
+            },
             keygroupExtras = false,
             level = pad?.level?.toDouble() ?: MPC_LEVEL_EMPTY,
             pan = pad?.pan?.toDouble() ?: 0.5,
@@ -623,7 +666,35 @@ class Mpc3TrackWriter(
         },
     )
 
-    private fun layer(zone: VelocityLayer?, filledInstrument: Boolean, rootNote: Int): J = obj(
+    private fun layer(
+        zone: VelocityLayer?,
+        filledInstrument: Boolean,
+        rootNote: Int,
+        /**
+         * Per-hit randomization 0..1 (GG4). These random fields are the
+         * format's "no two hits alike" mechanism, present (all zero) on
+         * every commercial layer - distinct from round robin, which is
+         * chain-based Slice Motion (see [chain] below). Scaling is
+         * conservative and bench-bound: pitch x0.05, volume x0.2,
+         * pan x0.1 of the macro.
+         */
+        humanize: Float? = null,
+        /**
+         * Chain playback (MPC 3 Slice Motion, decoded from the corpus's
+         * PSK kit): base slice 0, step 1 per hit, cycling [ChainPlay.cycle]
+         * slices. The slice *boundaries* live in the chain WAV itself
+         * (HH1.4, bench-blocked); until that chunk is written, sliceInfo
+         * windows slice 0 so hardware without the map plays take one.
+         */
+        chain: ChainPlay? = null,
+        /**
+         * This layer's zone of the velocity × round-robin grid (II2):
+         * the PSK scheme, one layer per zone, base [ChainZonePlay.baseSlice]
+         * with the zone's own cycle, sliceInfo windowing the anchor take
+         * so map-less firmware degrades to honest velocity switching.
+         */
+        gridZone: ChainZonePlay? = null,
+    ): J = obj(
         "active" to b(true),
         "volume" to obj("gainCoefficient" to d(1.0), "controlValue" to d(1.0), "law" to i(0)),
         "pan" to d(0.5),
@@ -649,12 +720,19 @@ class Mpc3TrackWriter(
         "keyTrackEnable" to b(false),
         "sampleName" to s(zone?.sampleName ?: ""),
         "sampleFile" to s(zone?.let { "${it.sampleName}.wav" } ?: ""),
-        "sliceIndex" to i(if (zone != null) 0 else 128),
+        "sliceIndex" to i(if (zone != null) (gridZone?.baseSlice ?: 0).toLong() else 128),
         "direction" to i(0),
         "offset" to i(0),
         "sliceInfo" to obj(
-            "Start" to i(0),
-            "End" to i(zone?.frameCount ?: 0L),
+            "Start" to i(if (zone != null) gridZone?.windowStart ?: 0L else 0L),
+            "End" to i(
+                when {
+                    zone == null -> 0L
+                    gridZone != null -> gridZone.windowEnd
+                    chain != null -> chain.firstSliceEnd
+                    else -> zone.frameCount
+                },
+            ),
             // The sustain loop as PSK's rolls write it: LoopMode 1 +
             // LoopStart, looping to End.
             "LoopStart" to i(zone?.loopStartFrame ?: 0L),
@@ -667,12 +745,15 @@ class Mpc3TrackWriter(
             "NumLoopRepeats" to i(0),
         ),
         "version" to i(7),
-        "pitchRandom" to d(0.0),
-        "VolumeRandom" to d(0.0),
-        "PanRandom" to d(0.0),
+        // Empty layer slots keep the corpus's zeros even on a humanized pad.
+        "pitchRandom" to d(if (zone != null) ((humanize ?: 0f) * 0.05f).toDouble() else 0.0),
+        "VolumeRandom" to d(if (zone != null) ((humanize ?: 0f) * 0.2f).toDouble() else 0.0),
+        "PanRandom" to d(if (zone != null) ((humanize ?: 0f) * 0.1f).toDouble() else 0.0),
         "OffsetRandom" to d(0.0),
-        "sliceIncrement" to i(0),
-        "sliceCycleLength" to i(1),
+        "sliceIncrement" to i(if (zone != null && chain != null) 1 else 0),
+        "sliceCycleLength" to i(
+            if (zone != null && chain != null) (gridZone?.cycle ?: chain.cycle).toLong() else 1,
+        ),
         "sliceIncrementRngSeed" to i(RNG_SEED),
         "oscillatorMode" to b(false),
         "oscillatorType" to i(0),
@@ -689,10 +770,16 @@ class Mpc3TrackWriter(
         version: Int,
         sustained: Boolean = false,
         release: Double = 0.0,
+        /** Pad shape overrides (attack/decay/cutoff/resonance); null fields keep the defaults. */
+        shape: Pad? = null,
     ): J = obj(
         "version" to i(version.toLong()),
         "filterData" to obj(
-            "value0" to filterSlot(filterType = 2, version = version),
+            "value0" to filterSlot(
+                filterType = 2, version = version,
+                cutoff = shape?.cutoff?.toDouble() ?: 1.0,
+                resonance = shape?.resonance?.toDouble() ?: 0.0,
+            ),
             "value1" to filterSlot(filterType = 0, version = version),
         ),
         "filterSerialRouting" to b(false),
@@ -713,8 +800,9 @@ class Mpc3TrackWriter(
             envelope(decay = 1.0, decayFromEnd = true, sustain = 1.0, releaseTime = release, oneShot = false)
         } else {
             envelope(
-                decay = if (filled) 1.0 else SHORT_DECAY_EMPTY,
+                decay = shape?.decay?.toDouble() ?: if (filled) 1.0 else SHORT_DECAY_EMPTY,
                 decayFromEnd = !filled,
+                attack = shape?.attack?.toDouble() ?: 0.0,
             )
         },
         "pitchEnvelope" to envelope(
@@ -734,12 +822,17 @@ class Mpc3TrackWriter(
         "velocityToPan" to d(0.0),
     )
 
-    private fun filterSlot(filterType: Int, version: Int = 15): J = obj(
+    private fun filterSlot(
+        filterType: Int,
+        version: Int = 15,
+        cutoff: Double = 1.0,
+        resonance: Double = 0.0,
+    ): J = obj(
         "version" to i(version.toLong()),
         "filterKeytrack" to d(0.0),
         "filterType" to i(filterType.toLong()),
-        "filterCutoff" to d(1.0),
-        "filterResonance" to d(0.0),
+        "filterCutoff" to d(cutoff),
+        "filterResonance" to d(resonance),
         "filterEnvelopeAmount" to d(0.0),
         "afterTouchToFilter" to d(0.0),
         "filterVelocity" to d(0.0),
@@ -775,9 +868,10 @@ class Mpc3TrackWriter(
         sustain: Double = 1.0,
         releaseTime: Double = 0.0,
         oneShot: Boolean = true,
+        attack: Double = 0.0,
     ): J = obj(
         "version" to i(2),
-        "Attack" to v0(d(0.0)),
+        "Attack" to v0(d(attack)),
         "VelocityToAttack" to v0(d(0.0)),
         "Decay" to v0(d(decay)),
         "Sustain" to v0(d(sustain)),
@@ -854,8 +948,8 @@ class Mpc3TrackWriter(
      * `type: 3`, with the modifier block and the one place the enum wrapper
      * genuinely appears in program-adjacent data.
      */
-    private fun clipEntry(clip: Mpc3Clip): J = obj(
-        "key" to i(1),
+    private fun clipEntry(clip: Mpc3Clip, key: Int): J = obj(
+        "key" to i(key.toLong()),
         "value" to clipValue(clip),
     )
 

@@ -61,12 +61,22 @@ object Acvs {
 
     fun read(file: File): AcvsContainer = read(file.readBytes())
 
-    fun read(bytes: ByteArray): AcvsContainer {
+    fun read(bytes: ByteArray, inflateLimit: Long = LimitedRead.DEFAULT_LIMIT): AcvsContainer {
         if (!isGzip(bytes)) {
             throw AcvsException("not an MPC 3 container: missing gzip magic (found ${preview(bytes)})")
         }
-        val text = GZIPInputStream(bytes.inputStream()).use {
-            it.readBytes().toString(Charsets.UTF_8)
+        // Untrusted gzip: inflate through a ceiling, never unbounded - a few
+        // KB of hostile input can otherwise inflate to gigabytes.
+        val text = try {
+            GZIPInputStream(bytes.inputStream()).use {
+                LimitedRead.bytes(it, inflateLimit, "ACVS container").toString(Charsets.UTF_8)
+            }
+        } catch (e: LimitedRead.TooLargeException) {
+            throw AcvsException(e.message ?: "ACVS container too large")
+        } catch (e: java.util.zip.ZipException) {
+            throw AcvsException("corrupt gzip in ACVS container: ${e.message}")
+        } catch (e: java.io.EOFException) {
+            throw AcvsException("truncated gzip in ACVS container")
         }
         val parts = text.split("\n", limit = 6)
         if (parts.size < 6) throw AcvsException("truncated ACVS header: ${parts.size - 1} of 5 lines")
