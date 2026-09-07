@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -48,7 +49,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.KitShelf
-import com.snipsnap.app.PadPlayer
+import com.snipsnap.app.PadEngine
+import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -61,8 +63,9 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.VoiceAllocator
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * PLAY: performance mode over `:shell`'s tested [VoiceAllocator] — real
@@ -73,7 +76,7 @@ import kotlinx.coroutines.launch
  * without exporting it, and the brief's pad states — a resting "assigned"
  * glow, a scale-down on hit — aren't what KIT's own cell draws). ⟳ opens a
  * fullscreen landscape 8×2-per-bank view of both banks at once, sharing
- * this same [VoiceAllocator] and [PadPlayer] instance — see the KDoc on
+ * this same [VoiceAllocator] and [PadEngine] instance — see the KDoc on
  * the fullscreen toggle below for why that's an in-app [Popup], not a
  * second Activity.
  */
@@ -89,36 +92,11 @@ private fun velocityFromY(y: Float, height: Float): Float {
     return MIN_VELOCITY + (1f - MIN_VELOCITY) * t
 }
 
-/**
- * SoundPool has no "voice finished" callback, so there is no exact moment
- * to call [VoiceAllocator.voiceEnded] — reaping happens on a conservative
- * timer instead of "the next noteOn": PLAY's whole point is chokes and
- * mute-group re-triggers, and reaping lazily (only when *something else*
- * is triggered) would leave a pad's own voice-count contribution stuck
- * until another pad happens to be hit, which is wrong far more often than
- * a fixed timer is.
- *
- * Fix round 2 (H1): the reap delay is now per-voice — [PadPlayer.durationMs]
- * reads each pad's real WAV duration (frame count / sample rate, from the
- * header, no decode) at load time, and [reap] schedules for that duration
- * plus [REAP_TAIL_MS] instead of a flat window. [REAP_DELAY_MS_FALLBACK]
- * only applies when a pad's duration is unknown (unreadable header, or a
- * sample that failed to load at all).
- *
- * Fix round 1 (F3, Important) history: concretely, a reaped voice is gone
- * from `VoiceAllocator`'s internal `active` map — `noteOn`'s `muteGroup`
- * filter (`active.values.filter { it.muteGroup == muteGroup }`) can no
- * longer find it, so it cannot be included in the next hit's
- * `Allocation.choked` list. The sample itself is unaffected (this never
- * calls `stopStream`) and keeps sounding; only its *chokeability* is what
- * silently expires early. With H1's duration-aware timer this only
- * remains a blind spot for pads whose duration couldn't be read — real,
- * still worth listening for during on-device testing with such content.
- */
-private const val REAP_DELAY_MS_FALLBACK = 6000L
-
-/** Grace period added on top of a known sample duration before reaping — covers scheduling jitter and SoundPool's own playback latency. */
-private const val REAP_TAIL_MS = 250L
+// M4: the pads play on the native engine (PadEngine over Oboe). Every
+// voice is keyed by the allocator's own id, and the engine reports each
+// voice's end on a ring the screen drains every frame - so a one-shot
+// leaves the allocator the moment its sample ends, a choke lands on the
+// voice it was meant for, and nothing here guesses from a timer any more.
 
 /** Bank-aware pad tag ("A01".."A16", "B01".."B16") — the format the export/CLI side already uses for slot 17+. */
 private fun padTag(slot: Int): String = "%c%02d".format('A' + (slot - 1) / 16, (slot - 1) % 16 + 1)
@@ -149,22 +127,25 @@ fun PlayScreen(entry: KitShelf.Entry?) {
         return
     }
 
-    val player = remember(entry.dir) { PadPlayer() }
-    DisposableEffect(entry.dir) { onDispose { player.release() } }
-    LaunchedEffect(entry.kit) { player.load(entry) }
+    val engineContext = LocalContext.current
+    val player = remember(entry.dir) { PadEngine(deviceSampleRate(engineContext)) }
+    var engineUp by remember(entry.dir) { mutableStateOf(false) }
+    DisposableEffect(entry.dir) {
+        engineUp = player.start()
+        onDispose { player.close() }
+    }
+    // The bank: every WAV read off the main thread, then adopted whole by
+    // the callback. Until it lands a hit resolves to nothing and plays
+    // nothing - honest silence, never a stale kit's sample.
+    LaunchedEffect(entry.kit) {
+        withContext(Dispatchers.IO) { player.load(entry) }
+    }
 
     val kit = entry.kit
-    // Fix round 1 (F2, Important): VoiceAllocator's own default (32) outran
-    // PadPlayer's real SoundPool budget (16) — past 16 concurrent streams
-    // SoundPool silently reclaims its own oldest one, independent of what
-    // this allocator still thinks is active, so the status line lied and a
-    // later stopStream could target an id SoundPool had already reused.
-    // Constructed at PadPlayer.MAX_STREAMS (the real ceiling) instead — the
-    // status line below reads the same constant, so the two can't drift.
-    val allocator = remember(entry.dir) { VoiceAllocator(maxVoices = PadPlayer.MAX_STREAMS) }
-    // voiceId -> SoundPool streamId, so a choked/stolen/released voice can
-    // actually be stopped — the whole reason PadPlayer grew a return value.
-    val streamIds = remember(entry.dir) { mutableStateMapOf<Int, Int>() }
+    // Built at the engine's own polyphony so the status line and the
+    // engine cannot drift: at the cap the engine steals exactly the voice
+    // the allocator said it would.
+    val allocator = remember(entry.dir) { VoiceAllocator(maxVoices = PadEngine.MAX_VOICES) }
     var voiceCount by remember(entry.dir) { mutableIntStateOf(0) }
     val glow = remember(kit) {
         kit.pads.associate { it.slot to Animatable(0f) }
@@ -184,56 +165,57 @@ fun PlayScreen(entry: KitShelf.Entry?) {
         scope.launch { anim.snapTo(0f) }
     }
 
-    fun reap(voice: VoiceAllocator.Voice) {
-        val delayMs = player.durationMs(voice.padSlot)?.plus(REAP_TAIL_MS) ?: REAP_DELAY_MS_FALLBACK
-        scope.launch {
-            delay(delayMs)
-            streamIds.remove(voice.id)
-            allocator.voiceEnded(voice.id)
-            voiceCount = allocator.activeCount
+    // The endings ring, drained at screen rate; a route change reopens the
+    // stream from here too.
+    LaunchedEffect(player) {
+        while (true) {
+            withFrameNanos { }
+            val ended = player.drainEnded()
+            if (ended.isNotEmpty()) {
+                for (id in ended) allocator.voiceEnded(id)
+                voiceCount = allocator.activeCount
+            }
+            if (player.needsRestart()) engineUp = player.start()
         }
     }
 
     fun hit(slot: Int, velocity: Float) {
         val pad = kit.pad(slot) ?: return
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, pad.oneShot)
-        val streamId = player.play(slot, velocity)
-        streamIds[allocation.started.id] = streamId
-
         for (voice in allocation.choked + allocation.stolen) {
-            streamIds.remove(voice.id)?.let(player::stopStream)
+            player.stop(voice.id)
             // A pad in its own mute group re-triggering itself shows up
-            // here with padSlot == slot — `flash` below already restarts
+            // here with padSlot == slot - `flash` below already restarts
             // that same Animatable at 1f, so extinguishing it first would
             // just be two competing mutations on one Animatable racing to
             // decide the pad's opening glow value.
             if (voice.padSlot != slot) extinguish(voice.padSlot)
         }
+        if (!player.hit(pad, velocity, allocation.started.id)) {
+            // Nothing loaded for this pad (or nothing yet): the allocator
+            // must not count a voice that never sounded.
+            allocator.voiceEnded(allocation.started.id)
+        }
         voiceCount = allocator.activeCount
         flash(slot)
-        if (pad.oneShot) reap(allocation.started)
     }
 
     fun release(slot: Int) {
         val stopped = allocator.noteOff(slot)
         if (stopped.isEmpty()) return
-        for (voice in stopped) {
-            streamIds.remove(voice.id)?.let(player::stopStream)
-        }
+        for (voice in stopped) player.stop(voice.id)
         voiceCount = allocator.activeCount
         extinguish(slot)
     }
 
     fun panic() {
-        val stopped = allocator.allOff()
-        for (voice in stopped) {
-            streamIds.remove(voice.id)?.let(player::stopStream)
-        }
+        allocator.allOff()
+        player.allOff()
         voiceCount = allocator.activeCount
         for (slot in glow.keys) extinguish(slot)
     }
 
-    // Lessons: ON_STOP means allOff() + stop every stream — a backgrounded
+    // Lessons: ON_STOP means allOff() + stop every voice — a backgrounded
     // phone should not keep a choke group ringing.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, entry.dir) {
@@ -252,11 +234,11 @@ fun PlayScreen(entry: KitShelf.Entry?) {
     // because LOOP owns a wholly disk-backed session and its own
     // audio-thread engine that has no reason to live inside App()'s
     // composition; PLAY's whole state — this VoiceAllocator, this
-    // PadPlayer, every in-flight choke — already lives in App()'s
+    // PadEngine, every in-flight choke — already lives in App()'s
     // composition, and "playback/state shared across the rotation" is the
     // brief's explicit requirement. A second Activity would mean either a
     // process-wide singleton to smuggle that live state across an Activity
-    // boundary, or rebuilding it (a fresh SoundPool losing every loaded
+    // boundary, or rebuilding it (a fresh engine losing every loaded
     // sample, a fresh allocator losing every active choke) — both worse
     // than staying in one composition. MainActivity already declares
     // `configChanges="orientation|screenSize|keyboardHidden"` in the
@@ -299,7 +281,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
         ) {
             TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             TapeText(
-                "VOICES $voiceCount/${PadPlayer.MAX_STREAMS}",
+                if (engineUp) "VOICES $voiceCount/${PadEngine.MAX_VOICES}" else "NO STREAM",
                 TapeType.lcdReadout,
                 scheme.amber.tape,
                 Modifier.padding(horizontal = 8.dp),
@@ -412,7 +394,7 @@ private fun FullscreenPlayGrid(
         ) {
             TapeText(kit.name, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             TapeText(
-                "VOICES $voiceCount/${PadPlayer.MAX_STREAMS}",
+                "VOICES $voiceCount/${PadEngine.MAX_VOICES}",
                 TapeType.lcdSmall,
                 scheme.amber.tape,
                 Modifier.padding(horizontal = 8.dp),

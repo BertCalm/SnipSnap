@@ -11,6 +11,7 @@ find_package(oboe REQUIRED CONFIG)
 
 add_library(snipsnap_surface SHARED
     SurfaceEngine.cpp
+    PadEngine.cpp
     jni.cpp
 )
 
