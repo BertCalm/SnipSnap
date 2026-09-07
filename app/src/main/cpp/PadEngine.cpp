@@ -73,6 +73,11 @@ int32_t PadEngine::addSample(std::vector<float>&& interleaved, int32_t channels,
 
 void PadEngine::commitBank() {
     if (!building_) return;
+    // The generation moves before the bank is parked: from here every
+    // command the UI pushes is for this bank, and the callback drops (and
+    // reports) any it still finds stamped with the old one.
+    building_->generation = uiGeneration_.load(std::memory_order_acquire) + 1;
+    uiGeneration_.store(building_->generation, std::memory_order_release);
     // A bank the callback never got round to adopting is ours to free,
     // and so is the one it retired last time.
     delete pending_.exchange(building_.release(), std::memory_order_acq_rel);
@@ -132,6 +137,15 @@ PadEngine::Voice& PadEngine::freeVoice() {
 }
 
 void PadEngine::apply(const PadCommand& c) {
+    // A command for another bank (queued across a kit swap) is honest
+    // silence: a NoteOn is reported ended so the allocator lets it go, a
+    // Stop is moot (the swap silenced every voice), AllOff always applies.
+    const bool stale = c.type != PadCommand::Type::AllOff &&
+        (!current_ || c.generation != current_->generation);
+    if (stale) {
+        if (c.type == PadCommand::Type::NoteOn) ended_.push(c.voiceId);
+        return;
+    }
     switch (c.type) {
         case PadCommand::Type::NoteOn: {
             if (!current_ || c.sample < 0 || c.sample >= static_cast<int32_t>(current_->samples.size())) {

@@ -181,6 +181,9 @@ fun PlayScreen(entry: KitShelf.Entry?) {
 
     fun hit(slot: Int, velocity: Float) {
         val pad = kit.pad(slot) ?: return
+        // No stream, no voice: with no callback running nothing would ever
+        // report an ending, and VOICES would climb and stick.
+        if (!engineUp) return
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, pad.oneShot)
         for (voice in allocation.choked + allocation.stolen) {
             player.stop(voice.id)

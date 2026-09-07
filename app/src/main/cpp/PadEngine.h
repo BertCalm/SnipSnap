@@ -23,6 +23,8 @@ struct BankSample {
 /** A kit's samples, built on the UI thread and adopted whole by the callback. */
 struct Bank {
     std::vector<BankSample> samples;
+    /** Which commit built it; a command stamped with another generation is not for this bank. */
+    uint32_t generation = 0;
 };
 
 /**
@@ -42,6 +44,8 @@ struct PadCommand {
     double pitch = 1.0;
     /** Stop / AllOff: the fade, so a choke is a short fade and not a cut. */
     float fadeMs = 5.0f;
+    /** Stamped by pushCommand: the bank the sample index belongs to. */
+    uint32_t generation = 0;
 };
 
 /**
@@ -80,8 +84,16 @@ public:
     int32_t addSample(std::vector<float>&& interleaved, int32_t channels, int32_t rate);
     void commitBank();
 
-    /** UI thread. Never blocks; a full ring drops the command (256 deep - a burst of hits is dozens). */
-    bool pushCommand(const PadCommand& c) { return commands_.push(c); }
+    /**
+     * UI thread. Never blocks; a full ring drops the command (256 deep - a
+     * burst of hits is dozens). Stamped with the bank generation the caller
+     * is playing against, so a hit queued before a kit swap never reaches
+     * the new bank's samples by index.
+     */
+    bool pushCommand(PadCommand c) {
+        c.generation = uiGeneration_.load(std::memory_order_acquire);
+        return commands_.push(c);
+    }
 
     /** UI thread: the ids of voices that ended since the last drain. */
     size_t drainEnded(int32_t* out, size_t max);
@@ -116,6 +128,7 @@ private:
     std::atomic<bool> sharedMode_{false};
 
     std::unique_ptr<Bank> building_;  // UI thread only
+    std::atomic<uint32_t> uiGeneration_{0};  // the last committed bank's generation
     std::atomic<Bank*> pending_{nullptr};
     std::atomic<Bank*> retired_{nullptr};
     Bank* current_ = nullptr;  // audio thread only
