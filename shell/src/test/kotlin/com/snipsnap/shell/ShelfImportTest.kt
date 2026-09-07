@@ -56,6 +56,9 @@ class ShelfImportTest {
     @Test
     fun `sniff tells a ZIP, a container, a sound, and nothing apart`() {
         assertEquals(ShelfImport.Kind.XPN, ShelfImport.sniff(byteArrayOf('P'.code.toByte(), 'K'.code.toByte(), 3, 4, 0, 0)))
+        assertEquals(ShelfImport.Kind.XPN, ShelfImport.sniff(byteArrayOf('P'.code.toByte(), 'K'.code.toByte(), 5, 6)), "an empty ZIP is a ZIP")
+        assertEquals(ShelfImport.Kind.XPN, ShelfImport.sniff(byteArrayOf('P'.code.toByte(), 'K'.code.toByte(), 7, 8)), "a spanned ZIP is a ZIP")
+        assertEquals(ShelfImport.Kind.UNKNOWN, ShelfImport.sniff(byteArrayOf('P'.code.toByte(), 'K'.code.toByte(), 1, 2)), "PK alone is not")
         assertEquals(ShelfImport.Kind.MPC3, ShelfImport.sniff(byteArrayOf(0x1f, 0x8b.toByte(), 8)))
         assertEquals(ShelfImport.Kind.AUDIO, ShelfImport.sniff("RIFF\u0000\u0000\u0000\u0000WAVE".toByteArray(Charsets.ISO_8859_1)))
         assertEquals(ShelfImport.Kind.AUDIO, ShelfImport.sniff("ID3\u0004".toByteArray(Charsets.ISO_8859_1)))

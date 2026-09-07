@@ -65,8 +65,14 @@ object ShelfImport {
      * ZIPs are opened to look inside only by [land]; here a ZIP is a ZIP.
      */
     fun sniff(head: ByteArray): Kind = when {
+        // Any of the ZIP signatures a file may open with: a local file header,
+        // the end-of-central-directory record alone (an empty archive), or a
+        // spanned-archive marker. All three are ZIPs to [land], which is where
+        // an empty one earns its "no kit inside" refusal rather than a decode.
         head.size >= 4 && head[0] == 'P'.code.toByte() && head[1] == 'K'.code.toByte() &&
-            head[2] == 3.toByte() && head[3] == 4.toByte() -> Kind.XPN
+            ((head[2] == 3.toByte() && head[3] == 4.toByte()) ||
+                (head[2] == 5.toByte() && head[3] == 6.toByte()) ||
+                (head[2] == 7.toByte() && head[3] == 8.toByte())) -> Kind.XPN
         head.size >= 2 && head[0] == 0x1f.toByte() && head[1] == 0x8b.toByte() -> Kind.MPC3
         head.size >= 12 && head[0] == 'R'.code.toByte() && head[1] == 'I'.code.toByte() &&
             head[2] == 'F'.code.toByte() && head[3] == 'F'.code.toByte() &&

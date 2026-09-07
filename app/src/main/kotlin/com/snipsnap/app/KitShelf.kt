@@ -130,13 +130,17 @@ class KitShelf(private val root: File) {
     /**
      * SHARE: [source] packed as one `.xpn` under [outDir] (the share
      * cache), ready for the chooser. Preflight refuses a broken kit in
-     * words, the same way EXPORT would.
+     * words, the same way EXPORT would. The file is named through
+     * `Names.sanitizeStem`, so a kit name that preflight would refuse
+     * anyway can never become a path - the file stays a bare name inside
+     * the share cache whatever the name holds.
      */
     fun pack(source: Entry, outDir: File): File {
         val kit = KitStore.load(source.dir)
         outDir.mkdirs()
+        val stem = com.snipsnap.kit.Names.sanitizeStem(kit.name)
         return com.snipsnap.kit.XpnPackager.write(
-            kit, source.dir, File(outDir, "${kit.name}.xpn"), com.snipsnap.kit.Exporters.defaultMeta(kit), overwrite = true,
+            kit, source.dir, File(outDir, "$stem.xpn"), com.snipsnap.kit.Exporters.defaultMeta(kit), overwrite = true,
         )
     }
 

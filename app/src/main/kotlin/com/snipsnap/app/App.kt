@@ -313,10 +313,12 @@ fun App(shelf: KitShelf) {
     var importCount by remember { mutableStateOf(0) }
     LaunchedEffect(shared) {
         val uri = shared ?: return@LaunchedEffect
-        // The status line is borrowed only when nothing else holds it: an
-        // import writes to the snips dir, never to a kit, so it runs
-        // beside a dub without racing it, and must not wipe that dub's
-        // own DUBBING… line on its way out.
+        // The status line is borrowed only when nothing else holds it: a
+        // sound import writes to the snips dir, and a kit file lands as
+        // *new* folders on the shelf under names nothing there holds -
+        // neither touches the open kit a dub in flight is writing, so an
+        // import runs beside that dub without racing it, and must not wipe
+        // the dub's own DUBBING… line on its way out.
         val ownsBusy = busy == null
         if (ownsBusy) busy = Copy.IMPORT_BUSY
         try {
