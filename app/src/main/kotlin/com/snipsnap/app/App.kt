@@ -56,6 +56,7 @@ import com.snipsnap.app.ui.PrimaryAction
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.StatusBar
 import com.snipsnap.app.ui.StubScreen
+import com.snipsnap.app.ui.SurfaceScreen
 import com.snipsnap.app.ui.SynthScreen
 import com.snipsnap.app.ui.TakesBinScreen
 import com.snipsnap.app.ui.TapeScreen
