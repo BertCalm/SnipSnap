@@ -47,6 +47,8 @@ SurfaceEngine::~SurfaceEngine() {
 bool SurfaceEngine::start() {
     stop();
     restartNeeded_.store(false, std::memory_order_release);
+    // A failed open must not leave last time's answer standing.
+    sharedMode_.store(false, std::memory_order_release);
 
     oboe::AudioStreamBuilder builder;
     builder.setDirection(oboe::Direction::Output)

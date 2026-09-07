@@ -160,11 +160,15 @@ fun SurfaceScreen(
     }
 
     // PAD ◄ ►: the next pad by slot, wrapping; remembered in surface.json.
+    // The position steps from the *chosen* slot (settings, updated the
+    // moment a tap lands), not the loaded one (padSlot, updated when the
+    // WAV has been read), so a run of quick taps advances once per tap.
     fun stepPad(delta: Int) {
         val dir = entry?.dir ?: return
         val pads = entry.kit.pads.sortedBy { it.slot }
         if (pads.isEmpty()) return
-        val at = pads.indexOfFirst { it.slot == padSlot }.let { if (it < 0) 0 else it }
+        val chosen = settings.padSlot ?: padSlot
+        val at = pads.indexOfFirst { it.slot == chosen }.let { if (it < 0) 0 else it }
         val pad = pads[((at + delta) % pads.size + pads.size) % pads.size]
         persist(dir, settings.copy(padSlot = pad.slot))
         scope.launch { loadPad(dir, pad) }
