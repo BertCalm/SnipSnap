@@ -1378,12 +1378,12 @@ on the shelf (a forgotten room goes to the bin, like every delete).
 | DDD3 | ✓ done: rooms go to the bin — `Rooms.forget` moves a room's WAV and sidecar under `Rooms/.bin/` stamped with when, `binned` lists them with the days left, `unforget` brings one back under a fresh name, `sweepBin` empties what slept past `BIN_DAYS` (30); the KITS screen's ROOMS section (blind): a row per kept room — Rock Salt name, the measurement, its length on an LCD — held to press and reveal FORGET → BIN in the bin's red; `App` sweeps the bin at start | CORE + APP | S | forgotten is binned not gone, 29 days on the sweep leaves it, 31 days on it goes; unforget lands beside the newer room; the bin folder is never a room; the copy shouts |
 | DDD4 | ✓ done: the bin's door on the phone (blind) — THE SHELF's ROOMS section grows an IN THE BIN list: a row per forgotten room in the bin's own LCD-dark line, `daysLeft` counting down (the last two in `warn`, as TAKES + BIN counts a pad), RESTORE in lcd-alt through `Rooms.unforget`, the toast naming the room back on the shelf; `KitShelf.binnedRooms` / `restoreRoom`. The design boards that decided the wave land under `design/pad-sheet-v2/` with a README, and `DESIGN_GAP.md` gets a dated refresh naming what the old handoff no longer covers | APP | S | a forgotten room shows under IN THE BIN with its days; RESTORE puts it back beside the live rooms and the toast says so; the copy shouts |
 | DDD5 | ✓ done: the crate with intent — `MutateSheet.Partner.Other` (`:shell`, tested): a pad picked on another kit of the shelf as the MUTATE parent, the CLI's own `Kit:A03` label in the lineage so it reads as a deal would, an `otherKit` block in the recipe; `otherKits` (the shelf minus this kit, a broken folder skipped) and `padsOf` for the picker. Phone (blind): under the ROOMS chips on the MUTATE card, ANOTHER KIT · PICK ITS PAD — the shelf's other kits two to a row, the picked kit's pads four to a row; absent on a one-kit shelf | CORE + APP | S | the other kits list without this one; a picked pad morphs through the verb's door with `Soul:A03` in the lineage and the recipe naming the kit; an empty slot refuses in words; undo is the original |
+| DDD6 | ✓ done: the last parent kind — `MutateSheet.Partner.Wav` (`:shell`, tested): a file picked off the phone as the MUTATE parent, `hold` writing its audio under the cache as a WAV (write-then-rename, one held at a time, a silent file refused in words) and labelling it with the name the file came with, exactly what `snipsnap mutate --with hit.wav` puts in the lineage; the recipe records nothing beyond that, as the CLI does. Phone (blind): an A FILE button on the MUTATE card opens the system picker on any audio, the pick decoded the way a share is (`MediaDecode`), the button then reading the file's name; a refusal reads NOT A PARENT in the decoder's words. `Copy.fileRefused`. Every parent kind the CLI verb takes is now a thumb's reach. |
 
 **Below the line for DDD:** a swipe between pads on the sheet (today the
 buttons are the only way, and the middle cell says so); emptying the
 rooms' bin by hand (the sweep at start is the only door; TAKES + BIN's
-EMPTY THE BIN NOW is per kit); a WAV parent from a file picker (the last
-of the CLI verb's parent kinds the phone lacks).
+EMPTY THE BIN NOW is per kit).
 
 ---
 
@@ -1779,7 +1779,9 @@ CORE+APP wave DDD: ✓ all landed (2026-09-07) — the pad sheet folds.
   under design/pad-sheet-v2/ and DESIGN_GAP.md says what the old handoff
   no longer covers. And the crate gains intent: a pad picked on another
   kit of the shelf is a MUTATE partner, ANOTHER KIT chips under the ROOMS
-  row (DDD5). Blind for CI's compiler.
+  row (DDD5); then the last parent kind the CLI verb takes and the phone
+  lacked, a file off the phone through the system picker, held as a WAV
+  and labelled with its own name (DDD6). Blind for CI's compiler.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
