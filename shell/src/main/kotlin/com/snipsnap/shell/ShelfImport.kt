@@ -57,6 +57,13 @@ object ShelfImport {
     /** The most one ZIP may inflate to across all its entries. */
     private const val MAX_UNZIP_BYTES = 512L * 1024 * 1024
 
+    /**
+     * The most entries one ZIP may hold: a track's folder is a few hundred
+     * WAVs at most, and a million empty entries stay under the byte budget
+     * forever while they eat the file system's bookkeeping.
+     */
+    const val MAX_UNZIP_ENTRIES = 10_000
+
     /** How many bytes of a file's head decide its kind. */
     const val SNIFF_BYTES = 12
 
@@ -230,15 +237,19 @@ object ShelfImport {
      * entry is copied with only the room the budget has left, so the
      * refusal comes mid-stream, not after a huge entry already landed.
      * One budget for the whole, not a ceiling per entry - a track's sample
-     * folder may hold one big WAV and still be honest.
+     * folder may hold one big WAV and still be honest. [maxEntries] ends
+     * an archive of countless empty entries the byte budget never would.
      */
-    internal fun unzipSafely(zip: File, dest: File, maxBytes: Long = MAX_UNZIP_BYTES) {
+    internal fun unzipSafely(zip: File, dest: File, maxBytes: Long = MAX_UNZIP_BYTES, maxEntries: Int = MAX_UNZIP_ENTRIES) {
         val root = dest.canonicalFile
         var total = 0L
+        var count = 0
         ZipFile(zip).use { z ->
             // Lazily: an archive declaring millions of entries is walked one at
-            // a time, never held whole, and the byte budget ends it early.
+            // a time, never held whole, and the ceilings end it early.
             for (entry in z.entries().asSequence()) {
+                count++
+                require(count <= maxEntries) { "the ZIP holds more than $maxEntries entries - refused" }
                 if (entry.isDirectory) continue
                 val raw = entry.name
                 // A ZIP made on Windows may separate with backslashes; here a

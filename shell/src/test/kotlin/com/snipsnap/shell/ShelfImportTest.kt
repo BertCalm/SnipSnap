@@ -234,6 +234,11 @@ class ShelfImportTest {
         assertEquals(3_000L, File(roomy, "a/one.bin").length())
         assertEquals(3_000L, File(roomy, "a/two.bin").length())
 
+        // Two entries under a ceiling of one: refused by count, whatever the bytes.
+        val crowded = File(temp, "crowded").apply { mkdirs() }
+        val many = assertFailsWith<IllegalArgumentException> { ShelfImport.unzipSafely(zip, crowded, maxBytes = 6_000, maxEntries = 1) }
+        assertTrue(many.message!!.contains("more than 1 entries"), many.message)
+
         // A ZIP made on Windows separates with backslashes: the folder is kept, not flattened into the name.
         val windows = File(temp, "windows.zip")
         ZipOutputStream(windows.outputStream()).use { z ->
