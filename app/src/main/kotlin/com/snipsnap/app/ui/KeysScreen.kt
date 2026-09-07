@@ -55,8 +55,9 @@ fun KeysScreen(
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
-    val player = remember(sidecar) { InstrumentPlayer(context).also { it.open(sidecar, instrument) } }
-    DisposableEffect(sidecar) { onDispose { player.close() } }
+    // Keyed on both: a re-read sidecar (same file, new contents) reloads the player.
+    val player = remember(sidecar, instrument) { InstrumentPlayer(context).also { it.open(sidecar, instrument) } }
+    DisposableEffect(player) { onDispose { player.close() } }
 
     var layout by remember(sidecar) { mutableStateOf(KeysLayout.DEFAULT_LAYOUT) }
     var octave by remember(sidecar) { mutableIntStateOf(0) }

@@ -75,13 +75,13 @@ object InstrumentStore {
         AtomicFile.writeText(sidecar(destRoot, name), Json.write(obj))
     }
 
-    /** Read a sidecar; throws [JsonException] on a shape it does not know. */
+    /** Read a sidecar; throws [JsonException] on a shape it does not know - every v1 field is required, so a half-written file never reaches the shelf. */
     fun read(file: File): Instrument {
         val obj = Json.parse(file.readText()).obj()
         val version = obj["version"]?.int() ?: throw JsonException("instrument has no version")
         if (version != VERSION) throw JsonException("unsupported instrument version $version")
         val name = obj["name"]?.str() ?: throw JsonException("instrument has no name")
-        val release = obj["release"]?.num()?.toFloat() ?: 0.5f
+        val release = obj["release"]?.num()?.toFloat() ?: throw JsonException("instrument has no release")
         val zones = (obj["zones"] as? JsonValue.Arr)?.items?.map { z ->
             val o = z.obj()
             Zone(
@@ -89,8 +89,8 @@ object InstrumentStore {
                 highNote = o["high"]?.int() ?: throw JsonException("zone has no high note"),
                 rootNote = o["root"]?.int() ?: throw JsonException("zone has no root"),
                 sample = o["sample"]?.str() ?: throw JsonException("zone has no sample"),
-                frameCount = o["frames"]?.num()?.toLong() ?: 0L,
-                loopStartFrame = o["loopStart"]?.num()?.toLong() ?: 0L,
+                frameCount = o["frames"]?.num()?.toLong() ?: throw JsonException("zone has no frame count"),
+                loopStartFrame = o["loopStart"]?.num()?.toLong() ?: throw JsonException("zone has no loop start"),
             )
         } ?: throw JsonException("instrument has no zones")
         if (zones.isEmpty()) throw JsonException("instrument has no zones")

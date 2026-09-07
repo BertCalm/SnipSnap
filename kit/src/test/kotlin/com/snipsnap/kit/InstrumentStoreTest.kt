@@ -58,6 +58,13 @@ class InstrumentStoreTest {
         assertFailsWith<JsonException> { InstrumentStore.read(File(root, "Bad$SUFFIX")) }
         File(root, "Old$SUFFIX").writeText("""{"version": 9, "name": "Old", "zones": []}""")
         assertFailsWith<JsonException> { InstrumentStore.read(File(root, "Old$SUFFIX")) }
+        // Every v1 field is required: a half-written sidecar is refused, not defaulted onto the shelf.
+        File(root, "NoRelease$SUFFIX").writeText("""{"version": 1, "name": "NoRelease", "zones": [{"low": 0, "high": 127, "root": 60, "sample": "x.wav", "frames": 10, "loopStart": 0}]}""")
+        assertFailsWith<JsonException> { InstrumentStore.read(File(root, "NoRelease$SUFFIX")) }
+        File(root, "NoFrames$SUFFIX").writeText("""{"version": 1, "name": "NoFrames", "release": 0.5, "zones": [{"low": 0, "high": 127, "root": 60, "sample": "x.wav", "loopStart": 0}]}""")
+        assertFailsWith<JsonException> { InstrumentStore.read(File(root, "NoFrames$SUFFIX")) }
+        File(root, "NoLoop$SUFFIX").writeText("""{"version": 1, "name": "NoLoop", "release": 0.5, "zones": [{"low": 0, "high": 127, "root": 60, "sample": "x.wav", "frames": 10}]}""")
+        assertFailsWith<JsonException> { InstrumentStore.read(File(root, "NoLoop$SUFFIX")) }
         assertEquals(emptyList(), InstrumentStore.list(root))
         assertNull(InstrumentStore.Instrument("X", 0.5f, listOf(InstrumentStore.Zone(40, 50, 45, "x.wav", 10, 0))).zoneFor(60))
     }
