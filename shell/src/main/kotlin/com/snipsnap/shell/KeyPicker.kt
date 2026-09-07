@@ -55,7 +55,8 @@ object KeyPicker {
         } else {
             "%+d ST %+d¢".format(java.util.Locale.ROOT, pad.tuneCoarse, pad.tuneFine).replace("-", "−")
         }
-        return "${MutateSheet.padTag(pad.slot)} · ${pad.displayName.uppercase()} · $tune"
+        // Kotlin's uppercase() is already invariant-locale; Locale.ROOT makes that visible.
+        return "${MutateSheet.padTag(pad.slot)} · ${pad.displayName.uppercase(java.util.Locale.ROOT)} · $tune"
     }
 
     /** The readouts for every tonal pad, slot order — the pads IN KEY may move; empty when the kit has none. */
