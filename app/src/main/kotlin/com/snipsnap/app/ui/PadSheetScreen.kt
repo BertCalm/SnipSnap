@@ -381,7 +381,7 @@ fun PadSheetScreen(
                 onKitUpdated(m.kit)
                 refreshPadAudio(m)
                 snip?.let { audition(it, m.kit.pad(slot)?.level ?: 1f) }
-                onToast(Copy.treated(PadSheet.SMEAR, padName))
+                onToast(Copy.treated(PadSheet.displayLabel(PadSheet.SMEAR), padName))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // Same in-voice-copy split as the era branch: the
@@ -458,8 +458,8 @@ fun PadSheetScreen(
                 refreshPadAudio(m)
                 m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
                 onToast(
-                    if (treatment is PadSheet.Treatment.Keyed) Copy.keyed(segment, padName, m.lastKeyLabel)
-                    else Copy.treated(segment, padName),
+                    if (treatment is PadSheet.Treatment.Keyed) Copy.keyed(PadSheet.displayLabel(segment), padName, m.lastKeyLabel)
+                    else Copy.treated(PadSheet.displayLabel(segment), padName),
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -484,7 +484,7 @@ fun PadSheetScreen(
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
         val enabling = p.velocityLayers.isEmpty()
-        commitPadEditNow("GHOSTS", onSuccess = { if (enabling) onToast(Copy.GHOSTS_ON) }) { mm ->
+        commitPadEditNow("SOFT HITS", onSuccess = { if (enabling) onToast(Copy.GHOSTS_ON) }) { mm ->
             if (enabling) mm.addGhostLayers(slot) else mm.clearGhostLayers(slot)
         }
     }
@@ -838,7 +838,7 @@ fun PadSheetScreen(
                 onToast(Copy.desampled(padName, match.patch.voice.name, match.distance))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                if (e is KitBuilderModel.Far) onToast(Copy.desampleFar(e.match.patch.voice.name, e.match.distance)) else failure("DE-SAMPLE", e)
+                if (e is KitBuilderModel.Far) onToast(Copy.desampleFar(e.match.patch.voice.name, e.match.distance)) else failure("MAKE SYNTH", e)
             } finally {
                 busy = false
             }

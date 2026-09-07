@@ -134,4 +134,21 @@ class PadSheetTest {
         val bodied = JsonValue.Obj(linkedMapOf<String, JsonValue>("keyed" to JsonValue.Str("bodied"), "key" to JsonValue.Str("C"), "amount" to JsonValue.Num(0.5)))
         assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("bodied"), 0.5f, "BODY"), PadSheet.read(bodied))
     }
+
+    @Test
+    fun `displayLabel speaks the card's renamed chips, and every id it doesn't rename unchanged`() {
+        // The seven chips the language pass renamed - the card's own word,
+        // not the segment id every other door (onSegmentTap, treatmentFor,
+        // read's Applied.segment) still reads and writes.
+        assertEquals("IN KEY", PadSheet.displayLabel("TUNE"))
+        assertEquals("SPIN DOWN", PadSheet.displayLabel("STOP"))
+        assertEquals("SPIN UP", PadSheet.displayLabel("START"))
+        assertEquals("ECHO", PadSheet.displayLabel("SLAP"))
+        assertEquals("DRONE", PadSheet.displayLabel("ETERNAL"))
+        assertEquals("SMOOTH", PadSheet.displayLabel("SKIM"))
+        // Every other segment on the card draws its own id unchanged.
+        for (segment in PadSheet.ALL_SEGMENTS - setOf("TUNE", "STOP", "START", "SLAP", "ETERNAL", "SKIM")) {
+            assertEquals(segment, PadSheet.displayLabel(segment), "$segment wasn't renamed - it should draw itself")
+        }
+    }
 }

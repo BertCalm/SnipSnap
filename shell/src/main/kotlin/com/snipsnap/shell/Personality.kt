@@ -63,10 +63,10 @@ object Copy {
     const val CAPTURE_BLOCKED_BUTTON = "FINE"
     // INSIDE: another app's audio, from inside it (M1's second source).
     const val INSIDE_ARMED = "TAPE ROLLING ON THE INSIDE. GO PLAY THE THING."
-    /** The projection consent dialog was dismissed: nothing armed, nothing lost; ARM TAPE is still there. */
-    const val INSIDE_REFUSED = "NO NOD, NO TAPE. NOTHING ARMED. ARM TAPE STILL WORKS."
+    /** The projection consent dialog was dismissed: nothing armed, nothing lost; LISTEN is still there. */
+    const val INSIDE_REFUSED = "NO NOD, NO TAPE. NOTHING ARMED. LISTEN STILL WORKS."
     /** The platform ended the session — the lock screen or the status-bar stop chip, never us. */
-    const val PHONE_STOPPED_TAPE = "THE PHONE STOPPED THE TAPE. LOCK SCREEN OR THE STOP CHIP. ARM AGAIN."
+    const val PHONE_STOPPED_TAPE = "THE PHONE STOPPED THE TAPE. LOCK SCREEN OR THE STOP CHIP. PRESS LISTEN AGAIN."
     // IMPORT: a file shared in from another app (F3).
     /** A shared file landed as a snip; [seconds] how much, [truncated] whether the cap cut its tail. */
     fun imported(seconds: Float, truncated: Boolean): String {
@@ -213,7 +213,7 @@ object Copy {
     /** OUTSIDE's honest refusal, [reason] in the verb's own words ("the room said nothing back"). */
     fun outsideRefused(reason: String): String = "OUTSIDE REFUSED: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
     const val OUTSIDE_UNDONE = "BACK INSIDE. THE ORIGINAL IS BACK FROM THE BIN."
-    const val OUTSIDE_NEEDS_MIC = "OUTSIDE NEEDS THE MIC. ARM THE TAPE ONCE ON KITS TO GRANT IT."
+    const val OUTSIDE_NEEDS_MIC = "OUTSIDE NEEDS THE MIC. PRESS LISTEN ONCE ON KITS TO GRANT IT."
     const val OUTSIDE_TAPE_ROLLING = "THE TAPE IS ROLLING. EJECT IT FIRST - OUTSIDE WANTS THE MIC TO ITSELF."
     const val OUTSIDE_NEEDS_ONE = "GHOSTS ON. OUTSIDE WANTS ONE SAMPLE - CLEAR THEM FIRST."
     const val OUTSIDE_SENDING = "SENDING… TURN IT UP."
