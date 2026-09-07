@@ -23,12 +23,30 @@ class PadEngine(preferredSampleRate: Int) {
     private var handle: Long = NativePads.create(preferredSampleRate)
     private val open get() = handle != 0L
 
+    /** True between a successful [start] and [close]. See [isUp] for whether a callback is actually running. */
+    @Volatile
+    var running: Boolean = false
+        private set
+
+    /**
+     * A callback is running right now: started, not closed, and the native
+     * side has not flagged a dead stream. The flag flips on the audio
+     * thread's own error callback, so this is the truth even in the window
+     * before the screen's frame loop gets round to the restart - a hit in
+     * that window is refused rather than counted by nothing.
+     */
+    @Synchronized
+    fun isUp(): Boolean = open && running && !NativePads.needsRestart(handle)
+
     private var sampleIndex: Map<String, Int> = emptyMap()
     private var framesOf: Map<String, Long> = emptyMap()
     private val hits = HashMap<Int, Int>()
 
     @Synchronized
-    fun start(): Boolean = open && NativePads.start(handle)
+    fun start(): Boolean {
+        running = open && NativePads.start(handle)
+        return running
+    }
 
     @Synchronized
     fun needsRestart(): Boolean = open && NativePads.needsRestart(handle)
@@ -78,13 +96,14 @@ class PadEngine(preferredSampleRate: Int) {
     fun frames(sampleFile: String): Long? = framesOf[sampleFile]
 
     /**
-     * Play [pad] at [velocity] as voice [voiceId]. False when the pad has
-     * nothing loaded to play (or the command ring was full), so the caller
-     * can tell its allocator the voice never sounded.
+     * Play [pad] at [velocity] as voice [voiceId]. False when no stream is
+     * running, the pad has nothing loaded to play, or the command ring was
+     * full - so the caller can tell its allocator the voice never sounded
+     * and nothing counts a voice that no callback will ever end.
      */
     @Synchronized
     fun hit(pad: KitPad, velocity: Float, voiceId: Int): Boolean {
-        if (!open) return false
+        if (!isUp()) return false
         val n = hits[pad.slot] ?: 0
         hits[pad.slot] = n + 1
         val hit = PadHit.resolve(pad, velocity, n) { framesOf[it] } ?: return false
@@ -114,6 +133,7 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun close() {
         if (!open) return
+        running = false
         NativePads.stop(handle)
         NativePads.destroy(handle)
         handle = 0L
