@@ -1407,6 +1407,7 @@ now, each pairing named on failure.
 | BBB1 | ✓ done: the degenerate matrix, round two — `DegenerateDoorsTest` (`:shell`): {one sample, tiny, silence, DC, full-scale square, low rate, stereo, white noise} × {`ReadGroove.read`, `ReadGroove.feel`, `Dig.best`, `SnipStore.import`, `InstantKit.build`, `SilenceWatch.feed`}: a valid result (a reading with a tempo, a find inside the tape, a readable snip, a kit with pads) or an `IllegalArgumentException` in words; silence never becomes a beat, a break or a kit; `PadPeaks` shrugs at junk, truncated, empty and missing pad files; `Pcm` turns any bytes into finite samples inside the rails | CORE | S | every pairing passes; failures named per pairing |
 | BBB2 | ✓ done: the sampler sheet under mutation — `FuzzTest` runs `WavReader.readSmpl` and `read` over thousands of seeded mutations of a sheet-bearing WAV: a typed refusal or a valid result, and a returned loop always inside the audio the file holds | CORE | S | no untyped throwable in the batch, inside the hang bound; no loop past the audio |
 | BBB3 | ✓ done: the CLI hostile sweep extended — `learn`, `beat`, `pad` and `restore` join the file-taking verbs, and the corpus gains a zero-channel WAV, a three-channel WAV, a RIFF size past the moon, a sheet whose loop runs past the audio, and a backup zip whose entries climb with `../`; every verb exits 0..2 and nothing lands outside its folder (`KitBackup.restore` flattens entry names, `XpnImporter` runs through `SafePath`) | CORE | S | every (verb × hostile) pair exits cleanly; no escaped file anywhere |
+| BBB4 | ✓ done: the sidecars under mutation, round three — `SidecarFuzzTest` (`:shell`) reads the kit, the grooves, the instrument, the pocket, the teach log, the pad recipe and the fx chain back under two kinds of damage: torn bytes (flips, truncation, zero and 0xFF runs) and rewritten trees (a random node swapped for null / a string / a huge, negative or fractional number / an empty array or object / a boolean, or a key dropped); a valid parse or a typed refusal, the teach log never throwing at all, and the parser refusing a nesting attack in words. Found and fixed: `GrooveStore` trusted its casts (a torn `lengthPulses` was an NPE, a string `bars` a `ClassCastException`); `KitStore` cast chain boundaries. Both read through the typed accessors now | CORE | S | no untyped throwable in any batch, inside the hang bound |
 
 ## Sequence
 
@@ -1637,6 +1638,8 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
     every instrument zone WAV · bench: AAA2 standalone load on the Live III
   ✓ wave BBB (the Hardening, round two): the new doors under the
     degenerate matrix, the sheet under fuzz, four more verbs in the sweep
+  ✓ BBB4 (the Hardening, round three): every JSON sidecar under torn
+    bytes and rewritten trees; the groove reader's casts made typed
 
 CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   directions. The smear (STN transient mask, peak-matched) as a rack

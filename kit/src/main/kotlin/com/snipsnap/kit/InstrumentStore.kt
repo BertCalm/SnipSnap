@@ -89,8 +89,8 @@ object InstrumentStore {
                 highNote = o["high"]?.int() ?: throw JsonException("zone has no high note"),
                 rootNote = o["root"]?.int() ?: throw JsonException("zone has no root"),
                 sample = o["sample"]?.str() ?: throw JsonException("zone has no sample"),
-                frameCount = o["frames"]?.num()?.toLong() ?: throw JsonException("zone has no frame count"),
-                loopStartFrame = o["loopStart"]?.num()?.toLong() ?: throw JsonException("zone has no loop start"),
+                frameCount = o["frames"]?.long() ?: throw JsonException("zone has no frame count"),
+                loopStartFrame = o["loopStart"]?.long() ?: throw JsonException("zone has no loop start"),
             )
         } ?: throw JsonException("instrument has no zones")
         if (zones.isEmpty()) throw JsonException("instrument has no zones")

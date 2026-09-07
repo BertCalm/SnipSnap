@@ -161,19 +161,13 @@ class FuzzTest {
             }
         }
 
-        fun wavWithSheet(): ByteArray {
-            val tmp = File.createTempFile("valid-sheet", ".wav")
-            try {
-                WavWriter.write(
-                    tmp,
-                    Snip(FloatArray(2_000) { (it % 100) / 100f }, 1, 44_100),
-                    smpl = com.snipsnap.audio.SmplChunk(60, com.snipsnap.audio.SmplChunk.Loop(500, 2_000)),
-                )
-                return tmp.readBytes()
-            } finally {
-                tmp.delete()
-            }
-        }
+        fun wavWithSheet(): ByteArray = java.io.ByteArrayOutputStream().apply {
+            WavWriter.write(
+                this,
+                Snip(FloatArray(2_000) { (it % 100) / 100f }, 1, 44_100),
+                smpl = com.snipsnap.audio.SmplChunk(60, com.snipsnap.audio.SmplChunk.Loop(500, 2_000)),
+            )
+        }.toByteArray()
 
         fun acvs(): ByteArray = Acvs.write(
             com.snipsnap.mpc3.AcvsHeader("1.0.0.0", "SerialisableTrackData", "json", "Linux"),
