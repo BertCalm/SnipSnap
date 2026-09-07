@@ -2114,8 +2114,14 @@ class CliTest {
                     this, snip, smpl = com.snipsnap.audio.SmplChunk(60, com.snipsnap.audio.SmplChunk.Loop(0, snip.frameCount.toLong())),
                 )
             }.toByteArray()
-            // The chunk's inclusive loop end sits 48 bytes into the smpl body, which starts at 44 + 8.
-            bytes[52 + 48] = 0xFF.toByte(); bytes[52 + 49] = 0xFF.toByte(); bytes[52 + 50] = 0xFF.toByte(); bytes[52 + 51] = 0x7F
+            // The chunk's inclusive loop end sits 48 bytes into the smpl body;
+            // find the chunk by its tag rather than trusting an offset.
+            val tag = "smpl".toByteArray(Charsets.US_ASCII)
+            val at = (0..bytes.size - 4).first { i -> (0 until 4).all { bytes[i + it] == tag[it] } }
+            val end = at + 8 + 48
+            check(bytes[end].toInt() and 0xFF == ((snip.frameCount - 1) and 0xFF)) { "not the loop end field" }
+            bytes[end] = 0xFF.toByte(); bytes[end + 1] = 0xFF.toByte(); bytes[end + 2] = 0xFF.toByte(); bytes[end + 3] = 0x7F
+            check(com.snipsnap.audio.WavReader.readSmpl(bytes) == null) { "the fixture must read as no sheet" }
             writeBytes(bytes)
         }
         val climbingZip = File(temp, "climb.zip").apply {
