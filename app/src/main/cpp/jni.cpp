@@ -194,13 +194,14 @@ Java_com_snipsnap_app_NativePads_commitBank(JNIEnv*, jobject, jlong handle) {
 JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativePads_noteOn(
     JNIEnv*, jobject, jlong handle, jint voiceId, jint sample,
-    jlong startFrame, jlong endFrame, jfloat gainL, jfloat gainR, jdouble pitch) {
+    jlong startFrame, jlong endFrame, jlong loopStart, jfloat gainL, jfloat gainR, jdouble pitch) {
     PadCommand c;
     c.type = PadCommand::Type::NoteOn;
     c.voiceId = voiceId;
     c.sample = sample;
     c.start = startFrame;
     c.end = endFrame;
+    c.loopStart = loopStart;
     c.gainL = gainL;
     c.gainR = gainR;
     c.pitch = pitch;

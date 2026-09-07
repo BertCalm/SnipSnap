@@ -92,6 +92,12 @@ shelf useful before capture (M1) exists.
   in the header means the device refused every open; check logcat's
   `PadEngine` line. KIT's own grid still plays through SoundPool until
   this has been heard (EEE4 moves it).
+- **KEYS (native)**: open an instrument from the shelf. A held note
+  should sustain through its loop and let go over the instrument's
+  release; eight notes at once, a ninth steals the oldest; OCT ± and a
+  layout change mid-note should go silent, never stick. The zones load
+  off the main thread, so the first key after opening may be silent for
+  a moment on a big instrument.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound

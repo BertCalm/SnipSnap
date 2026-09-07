@@ -166,6 +166,9 @@ void PadEngine::apply(const PadCommand& c) {
             v.sample = c.sample;
             v.pos = static_cast<double>(start);
             v.end = end;
+            // A loop wraps from the last frame back to loopStart; a loop that
+            // would be empty (start at or past end - 1) plays once instead.
+            v.loopStart = (c.loopStart >= 0 && c.loopStart < end - 1) ? c.loopStart : -1;
             v.inc = (static_cast<double>(s.rate) / static_cast<double>(sampleRate_)) * c.pitch;
             v.gainL = c.gainL;
             v.gainR = c.gainR;
@@ -196,6 +199,11 @@ void PadEngine::render(float* out, int32_t numFrames) {
         const float* f = s.frames.data();
         const int64_t last = v.end - 1;
         for (int32_t i = 0; i < numFrames; ++i) {
+            // A fast voice over a short loop can cross the end more than
+            // once in one frame: wrap until the read is back inside.
+            while (v.loopStart >= 0 && v.pos >= static_cast<double>(last)) {
+                v.pos -= static_cast<double>(last - v.loopStart);
+            }
             const int64_t i0 = static_cast<int64_t>(v.pos);
             if (i0 >= v.end) {
                 endVoice(v);

@@ -61,6 +61,12 @@ PadCommand noteOn(int32_t id, int32_t sample, int64_t start, int64_t end, float 
     return c;
 }
 
+PadCommand looping(int32_t id, int32_t sample, int64_t end, int64_t loopStart) {
+    PadCommand c = noteOn(id, sample, 0, end);
+    c.loopStart = loopStart;
+    return c;
+}
+
 PadCommand stop(int32_t id, float fadeMs) {
     PadCommand c;
     c.type = PadCommand::Type::Stop;
@@ -298,6 +304,35 @@ TEST(pad_engine_refuses_a_bad_index_or_empty_window_by_reporting_the_voice) {
     auto ids = ended(e);
     std::sort(ids.begin(), ids.end());
     CHECK_EQ(static_cast<int>(ids.size()), 3);
+}
+
+TEST(pad_engine_a_looping_voice_sustains_and_wraps_to_its_loop_start) {
+    PadEngine& e = seeded();
+    // The ramp's first 10 frames, looping from frame 9 back to 4: 0..8, 4..8, 4..8 ...
+    e.pushCommand(looping(60, 0, 10, 4));
+    auto out = callback(e, 20);
+    CHECK_NEAR(out[2 * 8], 0.008f, 1e-6);
+    CHECK_NEAR(out[2 * 9], 0.004f, 1e-6);   // wrapped
+    CHECK_NEAR(out[2 * 13], 0.008f, 1e-6);
+    CHECK_NEAR(out[2 * 14], 0.004f, 1e-6);  // and again
+    CHECK_EQ(static_cast<int>(ended(e).size()), 0);  // still sounding
+    // A release is a Stop with the instrument's release as its fade.
+    e.pushCommand(stop(60, 1.0f));
+    callback(e, 64);
+    const auto ids = ended(e);
+    CHECK_EQ(static_cast<int>(ids.size()), 1);
+    // A loop that would be empty plays once and ends.
+    e.pushCommand(looping(61, 0, 10, 9));
+    callback(e, 20);
+    CHECK_EQ(static_cast<int>(ended(e).size()), 1);
+    // A fast voice over a two-frame loop (frames 8..9, 4x speed) crosses the
+    // end more than once per frame and must keep sustaining, never end.
+    PadCommand fast = looping(62, 0, 10, 8);
+    fast.pitch = 4.0;
+    e.pushCommand(fast);
+    auto held = callback(e, 64);
+    CHECK(peak(held) > 0.0f);
+    CHECK_EQ(static_cast<int>(ended(e).size()), 0);
 }
 
 // ---- SurfaceEngine -------------------------------------------------------------

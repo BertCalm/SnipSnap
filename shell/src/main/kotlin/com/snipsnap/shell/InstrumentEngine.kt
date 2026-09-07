@@ -4,10 +4,12 @@ import com.snipsnap.kit.InstrumentStore
 import kotlin.math.pow
 
 /**
- * The phone's keygroup voice: a small sample-playback engine for the
- * instruments the shop makes (MAKE INSTRUMENT, MAKE PAD, `keys`, `pad`),
- * pure JVM so it is tested here and merely wrapped in an `AudioTrack` on
- * the device.
+ * The keygroup voice, pure JVM: a small sample-playback engine for the
+ * instruments the shop makes (MAKE INSTRUMENT, MAKE PAD, `keys`, `pad`).
+ * The phone now plays keys through the native engine (`InstrumentPlayer`
+ * over `NativePads`), but the *map* - which zone, what speed, which loop,
+ * what release - is this engine's, lifted into [KeyHit] and tested
+ * against both; this class stays the reference rendering.
  *
  * A note picks the zone that covers it, reads the zone's sample at the
  * ratio between the note and the zone's root (times the sample rate
