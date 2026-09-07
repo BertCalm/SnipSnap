@@ -112,7 +112,10 @@ shelf useful before capture (M1) exists.
   corners and the pad are in `surface.json` beside the kit. Then flip
   the print destination to → PAD: STOP PRINT opens the slot chooser;
   an empty pad gets the print, a taken pad is replaced with the
-  original in the bin, CANCEL sends the print to TAPE instead.
+  original in the bin, CANCEL sends the print to TAPE instead. LATCH,
+  lift: the loop should hold where the finger left it. With a kit that
+  has a tempo, BARS to 2 and PRINT: the print should stop itself on the
+  bar (5.2 s at 92 BPM) and the toast should say so.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad

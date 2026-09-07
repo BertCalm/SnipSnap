@@ -41,6 +41,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.shell.PrintLength
 import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.TouchSurface
@@ -69,6 +70,10 @@ import kotlinx.coroutines.withContext
  * captures the sound under the last touch as a morph corner. Both live
  * in `surface.json` beside the kit (`SurfaceStore`), so a morph you set
  * up is there when you come back.
+ *
+ * LATCH keeps the loop sounding where the finger left it, so one hand can
+ * set corners while the other is free; BARS locks a print to a whole
+ * number of bars at the kit's tempo, so it drops onto the groove grid.
  *
  * A print goes → TAPE (the deck's shelf) or → PAD: the SP-404 move
  * proper, the performance landing on a pad of the kit you are holding
@@ -104,6 +109,9 @@ fun SurfaceScreen(
     var lastHeld by remember { mutableStateOf<Reading?>(null) }
     var printing by remember { mutableStateOf(false) }
     var printToPad by remember { mutableStateOf(false) }
+    var latched by remember { mutableStateOf(false) }
+    /** Index into PrintLength.BARS; 0 = FREE. */
+    var barsIndex by remember { mutableStateOf(0) }
     /** A finished print waiting for a pad to be chosen; the chooser shows while it is set. */
     var pendingPrint by remember { mutableStateOf<Snip?>(null) }
     var landing by remember { mutableStateOf(false) }
@@ -305,9 +313,13 @@ fun SurfaceScreen(
                 lastMode = mode
             }
             val smooth = smoother.step(target)
-            painted = smooth
             if (target.touching) lastHeld = smooth
-            engine.control(mode, smooth, tilt.tilt, gate = target.touching && padName != null)
+            // Latched with no finger down: the sound stays where the finger
+            // left it, and so does the puck.
+            val held = lastHeld
+            val play = if (latched && !target.touching && held != null) held else smooth
+            painted = play
+            engine.control(mode, play, tilt.tilt, gate = (target.touching || latched) && padName != null)
             if (engine.needsRestart()) started(engine.start())
             if (printing && !finishing && engine.printState() == SurfaceEngine.PrintState.DONE) finishPrint()
         }
@@ -343,11 +355,23 @@ fun SurfaceScreen(
                 ) {
                     if (printing) {
                         finishPrint()
-                    } else if (engine.armPrint(SurfaceEngine.MAX_PRINT_SECONDS)) {
-                        printing = true
-                        onToast("PRINTING. PLAY THE SURFACE.")
                     } else {
-                        onToast("STILL LANDING THE LAST PRINT.")
+                        val bars = PrintLength.BARS[barsIndex]
+                        val bpm = entry?.kit?.tempoBpm
+                        val seconds = if (bars > 0 && bpm != null) {
+                            PrintLength.seconds(bars, bpm).coerceAtMost(SurfaceEngine.MAX_PRINT_SECONDS)
+                        } else {
+                            SurfaceEngine.MAX_PRINT_SECONDS
+                        }
+                        if (engine.armPrint(seconds)) {
+                            printing = true
+                            onToast(
+                                if (bars > 0 && bpm != null) "PRINTING ${PrintLength.label(bars)} AT ${bpm.toInt()} BPM."
+                                else "PRINTING. PLAY THE SURFACE.",
+                            )
+                        } else {
+                            onToast("STILL LANDING THE LAST PRINT.")
+                        }
                     }
                 }
             }
@@ -364,6 +388,15 @@ fun SurfaceScreen(
                     Modifier.weight(1f).padding(horizontal = 4.dp),
                 )
                 ActionButton("PAD ►", scheme, enabled = padName != null) { stepPad(+1) }
+                ActionButton("LATCH", scheme, enabled = padName != null, dimmed = !latched) { latched = !latched }
+                // BARS needs a tempo; a kit without one prints free.
+                val bpm = entry?.kit?.tempoBpm
+                ActionButton(
+                    if (bpm == null) "NO TEMPO" else PrintLength.label(PrintLength.BARS[barsIndex]),
+                    scheme,
+                    enabled = bpm != null && !printing,
+                    dimmed = barsIndex == 0,
+                ) { barsIndex = (barsIndex + 1) % PrintLength.BARS.size }
             }
 
             Spacer(Modifier.height(6.dp))
