@@ -342,7 +342,7 @@ class KitBuilderModel private constructor(
         if (amount <= 0f) return pad
         val context = keyedContext()
         val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
-        Keyed.refusal(name, main, context)?.let { throw Unpitched(it) }
+        Keyed.refusal(name, main, context, amount, dials)?.let { throw Unpitched(it) }
         var label = ""
         val rewritten = rewriteEveryFile(pad, "keyed treatment") { original ->
             val done = try {
@@ -359,6 +359,8 @@ class KitBuilderModel private constructor(
                     "seed" to com.snipsnap.json.JsonValue.Num(seed.toDouble()),
                     "decay" to com.snipsnap.json.JsonValue.Num(dials.decay.toDouble()),
                     "division" to com.snipsnap.json.JsonValue.Str(dials.division),
+                    "tail" to com.snipsnap.json.JsonValue.Num((dials.tail ?: com.snipsnap.audio.Eternal.tailFor(amount)).toDouble()),
+                    "knee" to com.snipsnap.json.JsonValue.Num(dials.knee.toDouble()),
                 ),
             )
         }

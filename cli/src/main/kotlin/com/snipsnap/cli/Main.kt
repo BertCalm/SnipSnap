@@ -112,6 +112,9 @@ object Cli {
         |  wobble <kit-dir> <pad>
         |                        a filter sweep synced to a note division at
         |                        the kit's tempo (--rate 1/8, --bpm, --amount)
+        |  eternal <kit-dir> <pad>
+        |                        the attack kept bit for bit, the tail slowed
+        |                        toward forever (--tail s, --knee ms, --undo)
         |  mutate <kit-dir> <pad> --with <src>[,<src>..]
         |                        one hit from many parents: transient-aligned
         |                        stack (with a polarity check), --splice (the
@@ -334,6 +337,7 @@ object Cli {
                 "retune" -> RetuneCommand.run(args.drop(1), out)
                 "body" -> BodyCommand.run(args.drop(1), out)
                 "wobble" -> WobbleCommand.run(args.drop(1), out)
+                "eternal" -> EternalCommand.run(args.drop(1), out)
                 "robin" -> RobinCommand.run(args.drop(1), out)
                 "mutate" -> MutateCommand.run(args.drop(1), out)
                 "shape" -> ShapeCommand.run(args.drop(1), out)

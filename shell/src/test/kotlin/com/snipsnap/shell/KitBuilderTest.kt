@@ -503,7 +503,7 @@ class KitBuilderTest {
         assertEquals("C MAJOR", m.lastKeyLabel)
         val rung = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile))
         assertTrue(rung.frameCount > DrumSynth.kick().frameCount, "the body rings past the hit")
-        assertFailsWith<IllegalArgumentException> { m.keyedPad(1, "eternal", 1f) }
+        assertFailsWith<IllegalArgumentException> { m.keyedPad(1, "frozen", 1f) }
         m.unEraPad(1)
         assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(kickBefore), "the kick came back")
 
@@ -514,6 +514,26 @@ class KitBuilderTest {
         assertEquals("1/16", (wobbled.recipe!!.entries["division"] as com.snipsnap.json.JsonValue.Str).value)
         m.unEraPad(1)
         assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(kickBefore), "and back again")
+
+        // ETERNAL keeps the attack bit for bit and takes its tail from AMT unless the CLI says seconds.
+        // Against the pad as it sits on disk: the WAV round trip already quantized the synth's floats.
+        val kickSnip = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile))
+        val eternal = m.keyedPad(1, "eternal", 0.5f)
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("eternal"), 0.5f, "ETERNAL"), PadSheet.read(eternal.recipe))
+        val held = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile))
+        val knee = (com.snipsnap.audio.Eternal.KNEE_DEFAULT_SEC * 44_100).toInt()
+        assertEquals(knee + (com.snipsnap.audio.Eternal.tailFor(0.5f) * 44_100).toInt(), held.frameCount)
+        // Bit-identical in memory (EternalTest); on disk, to the WAV's own precision.
+        for (i in 0 until knee) assertEquals(kickSnip.samples[i], held.samples[i], 1e-6f, "the attack is the kick's own")
+        assertTrue(m.lastKeyLabel.endsWith("S TAIL"), m.lastKeyLabel)
+        m.unEraPad(1)
+        // A second-long tone has more tail than half a second: refused before anything is touched.
+        val tone = m.assign(3, com.snipsnap.audio.Snip(FloatArray(44_100) { (0.4 * Math.sin(2 * Math.PI * 220.0 * it / 44_100)).toFloat() }, 1, 44_100), DrumClass.TONAL)
+        m.save()
+        val toneBefore = File(dir, tone.sampleFile).readBytes()
+        val tooShort = assertFailsWith<KitBuilderModel.Unpitched> { m.keyedPad(3, "eternal", 1f, dials = Keyed.Dials(tail = 0.5f)) }
+        assertTrue("already" in tooShort.message!!, tooShort.message)
+        assertTrue(File(dir, tone.sampleFile).readBytes().contentEquals(toneBefore), "refused before anything was touched")
     }
 
     @Test

@@ -1279,6 +1279,35 @@ class CliTest {
     }
 
     @Test
+    fun `eternal keeps the attack and slows the tail from the terminal, refuses honestly, and undoes`() {
+        val wav = writeBreak(File(temp, "et.wav"))
+        val out = File(temp, "et-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "ET", "--slices", "8").first)
+        val kitDir = File(out, "ET")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(1)!!.sampleFile)
+        val before = padFile.readBytes()
+        val src = com.snipsnap.audio.WavReader.read(padFile)
+
+        val (code, stdout, stderr) = cli("eternal", kitDir.path, "A01", "--tail", "2", "--knee", "20")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "the first 20 ms kept bit for bit, the tail slowed into 2.0 s")
+        val held = com.snipsnap.audio.WavReader.read(padFile)
+        val knee = (0.02f * src.sampleRate).toInt()
+        assertEquals(knee + 2 * src.sampleRate, held.frameCount)
+        for (i in 0 until knee * src.channels) assertEquals(src.samples[i], held.samples[i], 1e-6f, "the attack, to the WAV's precision")
+
+        assertEquals(0, cli("eternal", kitDir.path, "A01", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        // A knee longer than the slice leaves nothing to slow: refused in words, nothing touched.
+        val (shortCode, _, shortErr) = cli("eternal", kitDir.path, "A01", "--tail", "2", "--knee", "500")
+        assertTrue(shortCode != 0 && "refused" in shortErr && "inside the knee" in shortErr, shortErr)
+        assertTrue(before.contentEquals(padFile.readBytes()), "a refusal touches nothing")
+        val (badCode, _, badErr) = cli("eternal", kitDir.path, "A01", "--tail", "99")
+        assertTrue(badCode != 0 && "--tail wants" in badErr, badErr)
+    }
+
+    @Test
     fun `retune talks one pad into a key from the terminal, refuses a drum, and undoes`() {
         val wav = writeBreak(File(temp, "rt.wav"))
         val out = File(temp, "rt-out")

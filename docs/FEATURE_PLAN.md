@@ -1321,7 +1321,7 @@ over the spectral door, each with a real exit test.
 | WW3 | ✓ done: TRANSPLANT — `Transplant` (`:audio`): both sounds folded into one energy-weighted long-term spectrum read in BANDS log-spaced bands (4..64, default 16), the band-by-band difference one fixed set of per-bin gains through `Spectral` (nothing moves in time), capped ±24 dB, peak matched, all measurement; the sixth `Mutate` move (`--transplant [--bands N]`, recipe `bands`), the MUTATE card's sixth chip with a BANDS knob (the chips now three to a row) | CORE + APP | M | a snare through a hum: the 10 ms envelope correlates > 0.95 with the snare and less with the hum, the 16-band shape correlates > 0.85 with the hum and more than with the snare, length and peak the snare's; 64 bands fit the hum's formant closer than 4; stereo stays stereo, same bytes twice; bounds refused |
 | WW4 | ✓ done: BODY — `Body` (`:audio`): two-pole resonators at the key's chord tones (root 1.0, fifth 0.5, third 0.3) over three octaves from C2, each octave softer, the hit the mallet; DECAY the T60 (0.05..4 s), AMOUNT dry→body, the result the hit plus the decay, peak matched, no seed; no key → the hit's own note or C, never refused; the keyed family (`Keyed`, `KitBuilderModel.keyedPad`, recipe `{"keyed", "key", "amount", "seed", "decay"}`) now holds TUNE and BODY; CLI `body <kit> <pad> [--key] [--decay] [--amount] [--undo]`; the pad sheet's fifth row | CORE + APP | M | a click through BODY in A minor detects A and its loudest partial is an A; T60 measured 0.3 s and 1.2 s at those knobs; the modes are root/third/fifth in order, root loudest, no key → root and fifth; AMT 0 the same object; stereo stays stereo, same bytes |
 | WW5 | ✓ done: WOBBLE — `Wobble` (`:synth`): the TPT state-variable low-pass swept by a cosine that opens on the onset and closes half a division later, the division a note value (1/1..1/16, default 1/8) at the kit's tempo; AMOUNT the depth over 120 Hz..6 kHz, peak matched, no seed; the keyed family's third member (`--rate`, `--bpm` on the CLI, the kit's tempo or the preview's 92 on the phone); CLI `wobble <kit> <pad>`; the pad sheet's fifth row | CORE + APP | S | quarters at 120 sweep every 0.50 s and eighths every 0.25 s by the brightness swing of white noise, quarters at 90 every 0.67 s; bright at the onset, dark half a division in; RATE snaps to divisions; AMT 0 the same object; stereo stays stereo, same bytes |
-| WW6 | ATTACK KEPT, TAIL ETERNAL — a non-linear time map: the first 30 ms at speed, then the tail slowing toward infinity; KNEE the knob | CORE | S | the first 30 ms bit-identical; tail length equals the knob |
+| WW6 | ✓ done: ATTACK KEPT, TAIL ETERNAL — `Eternal` (`:audio`): the first KNEE (30 ms) copied bit for bit, the tail's spectrogram resampled through a hyperbolic map (speed 1 at the knee, `τ₀·ln(1 + τ/τ₀)` after, τ₀ solved so the source's end lands on the knob) and reinvented by `Pghi`, a 5 ms seam into the resynthesis, the tail at the real tail's peak; TAIL the knob (0.5..30 s, AMT exponential on the phone), a longer tail refused rather than sped up; the keyed family's fourth (it reads nothing of the kit but escapes the rack's tail budget); CLI `eternal <kit> <pad> [--tail] [--knee] [--seed] [--undo]`; ETERNAL closes the pad sheet's fifth row | CORE + APP | S | the first 30 ms sample-equal and the length knee + knob; a chirp's pitch reads the map: at speed just past the knee, most of the way through at half the tail, on the top at the end, monotone; refusals in words; AMT ↔ seconds at both ends; stereo stays stereo; same seed same bytes |
 
 ---
 
@@ -1572,7 +1572,7 @@ CORE+APP wave VV: ✓ all landed (2026-09-07) — the room and the tape.
   characters; the smear's FLOOR; the pad sheet's third and fourth
   rows.
 
-CORE+APP wave WW (in progress, 2026-09-07) — in key. WW1 landed:
+CORE+APP wave WW: ✓ all landed (2026-09-07) — in key. WW1 landed:
   PAD FROM ANYTHING, one hit held forever in every note, the clear
   stretch keeping a note's line and the wash carrying a drum as a
   drone, the seam baked, both generations, the pad sheet's card and
@@ -1584,7 +1584,10 @@ CORE+APP wave WW (in progress, 2026-09-07) — in key. WW1 landed:
   bank of resonators tuned to the key and struck by the hit, the
   keyed family's second member and the pad sheet's fifth row. WW5
   landed: WOBBLE, a filter sweep synced to a note division at the
-  kit's tempo, the family's third. Next: ATTACK KEPT, TAIL ETERNAL.
+  kit's tempo, the family's third. WW6 landed: ATTACK KEPT, TAIL
+  ETERNAL, the first 30 ms bit for bit and the tail slowed toward a
+  frozen instant. Wave WW complete. Next: wave XX, DRIFT TOWARD THE
+  CRATE.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

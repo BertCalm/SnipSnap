@@ -674,6 +674,22 @@ hit's own length. Bin-backed, `--undo` byte-identical, the recipe
 (division, tempo, amount) riding the pad. On the phone it is WOBBLE on
 the PAD SHEET's fifth row, at `1/8` of the kit's tempo, AMT the depth.
 
+### `eternal <kit-dir> <pad>` — attack kept, tail eternal
+
+A non-linear time map. The first `--knee` ms of the hit (default 30)
+pass untouched, bit for bit — the attack is the identity of a drum and
+no stretch may blur it. Past the knee the tail slows hyperbolically,
+speed one at the knee and ever slower after, so the decay keeps
+decaying at first and then crawls toward a frozen instant, `--tail`
+seconds long in all (0.5..30, default 8), PGHI reinventing the phases
+of the slowed magnitudes so a note stays a line and a wash stays a
+wash; a 5 ms seam crosses the real audio into the resynthesis. A tail
+already longer than the knob is refused rather than sped up, and a hit
+that ends inside the knee has nothing to slow. `--seed` picks the
+phases; bin-backed, `--undo` byte-identical, the recipe (tail, knee,
+seed) riding the pad. On the phone it is ETERNAL on the PAD SHEET's
+fifth row, AMT the tail (half a second to thirty, exponentially).
+
 ### `arrange <kit-dir>` — songs, not loops
 
 The Arranger's structure grammar lays the kit's **own** variations into

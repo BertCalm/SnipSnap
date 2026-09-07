@@ -1,6 +1,7 @@
 package com.snipsnap.shell
 
 import com.snipsnap.audio.Body
+import com.snipsnap.audio.Eternal
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Retune
@@ -21,14 +22,17 @@ import java.util.Locale
  * - **bodied** — a bank of resonators tuned to the key, struck by the
  *   hit ([Body]); with no key, the hit's own note or C, never refused;
  * - **wobbled** — a filter sweep synced to a note division at the kit's
- *   tempo ([Wobble]).
+ *   tempo ([Wobble]);
+ * - **eternal** — the attack kept bit for bit, the tail slowed toward a
+ *   frozen instant ([Eternal]): reads nothing of the kit, but lives here
+ *   because its tail is the point and the rack's tail budget would cut it.
  *
  * Each is `Snip → Snip` with AMOUNT how far, peak matched, and its own
  * honest refusal in words.
  */
 object Keyed {
 
-    val NAMES: List<String> = listOf("retuned", "bodied", "wobbled")
+    val NAMES: List<String> = listOf("retuned", "bodied", "wobbled", "eternal")
 
     /** The honest refusal: the sound is not what the treatment wants. */
     class Refused(message: String) : IllegalArgumentException(message)
@@ -42,6 +46,10 @@ object Keyed {
         val decay: Float = Body.DECAY_DEFAULT,
         /** WOBBLE: the note division the sweep is synced to. */
         val division: String = Wobble.DEFAULT_DIVISION,
+        /** ETERNAL: the tail in seconds; null takes it from AMOUNT ([Eternal.tailFor]). */
+        val tail: Float? = null,
+        /** ETERNAL: how much of the attack passes untouched, seconds. */
+        val knee: Float = Eternal.KNEE_DEFAULT_SEC,
     )
 
     /** What the treatment did: the sound, and the key or tempo it read, in the toast's words. */
@@ -61,10 +69,11 @@ object Keyed {
      * Why [name] would refuse [snip] in [context], in words, or null when
      * it will go ahead — asked before anything is touched.
      */
-    fun refusal(name: String, snip: Snip, context: Context): String? {
+    fun refusal(name: String, snip: Snip, context: Context, amount: Float = 1f, dials: Dials = Dials()): String? {
         require(name)
         return when (name) {
             "retuned" -> Retune.analyze(snip, context.key ?: NO_KEY).refusal
+            "eternal" -> if (amount <= 0f) null else Eternal.refusal(snip, dials.tail ?: Eternal.tailFor(amount), dials.knee)
             else -> null
         }
     }
@@ -91,6 +100,12 @@ object Keyed {
                 Wobble.sweep(snip, context.bpm, dials.division, amount),
                 "%s AT %d BPM".format(Locale.ROOT, dials.division, Math.round(context.bpm)),
             )
+            "eternal" -> {
+                if (amount <= 0f) return Result(snip, "")
+                val tail = dials.tail ?: Eternal.tailFor(amount)
+                Eternal.refusal(snip, tail, dials.knee)?.let { throw Refused(it) }
+                Result(Eternal.stretch(snip, tail, dials.knee, seed), "A %.1f S TAIL".format(Locale.ROOT, tail))
+            }
             else -> throw IllegalStateException(name)
         }
     }

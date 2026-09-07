@@ -68,6 +68,8 @@ The capture and conditioning core.
   A drum is refused as unpitched, in words.
 - **`Body`** — a bank of tuned resonators struck by the hit: the key's chord
   tones over three octaves, the root loudest, DECAY their ring.
+- **`Eternal`** — the attack kept bit for bit, the tail slowed hyperbolically
+  toward a frozen instant with `Pghi` phases, TAIL the knob.
 - **`Loudness`** — perceived level (peaks aren't loudness), feeding kit-wide
   balance.
 
