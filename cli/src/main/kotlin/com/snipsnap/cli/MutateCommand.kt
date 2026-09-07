@@ -13,7 +13,8 @@ import java.io.PrintStream
  * transient-aligned **stack**; `--splice [--at ms]` mashes the pad's
  * attack onto the parent's body; `--split [--hz N]` takes the pad's
  * lows and the parent's highs; `--room [--amount]` plays the pad inside
- * the parent's tail. Parents are pad refs (`A03`,
+ * the parent's tail; `--transplant [--bands N]` dresses the pad's attack
+ * in the parent's long-term tone. Parents are pad refs (`A03`,
  * `other/kit:B02`) or `.wav` files. `--undo` restores the single
  * original byte-identical.
  */
@@ -22,8 +23,8 @@ object MutateCommand {
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(
             args,
-            valued = setOf("--with", "--at", "--hz", "--seed", "--root", "--amount"),
-            boolean = setOf("--splice", "--split", "--morph", "--room", "--undo", "--roulette", "--wild"),
+            valued = setOf("--with", "--at", "--hz", "--seed", "--root", "--amount", "--bands"),
+            boolean = setOf("--splice", "--split", "--morph", "--room", "--transplant", "--undo", "--roulette", "--wild"),
         )
         val dirArg = opts.positional.getOrNull(0)
             ?: throw CliError(
@@ -44,16 +45,24 @@ object MutateCommand {
             return 0
         }
 
-        if (listOf("--splice", "--split", "--morph", "--room").count { opts.has(it) } > 1) {
-            throw CliError("--splice, --split, --morph and --room are different moves - pick one")
+        if (listOf("--splice", "--split", "--morph", "--room", "--transplant").count { opts.has(it) } > 1) {
+            throw CliError("--splice, --split, --morph, --room and --transplant are different moves - pick one")
         }
         val mode = when {
             opts.has("--splice") -> Mutate.Mode.SPLICE
             opts.has("--split") -> Mutate.Mode.SPLIT
             opts.has("--morph") -> Mutate.Mode.MORPH
             opts.has("--room") -> Mutate.Mode.ROOM
+            opts.has("--transplant") -> Mutate.Mode.TRANSPLANT
             else -> Mutate.Mode.STACK
         }
+        if (opts["--bands"] != null && mode != Mutate.Mode.TRANSPLANT) {
+            throw CliError("--bands rides on --transplant - add it")
+        }
+        val bands = opts["--bands"]?.let {
+            it.toIntOrNull()?.takeIf { n -> n in com.snipsnap.audio.Transplant.MIN_BANDS..com.snipsnap.audio.Transplant.MAX_BANDS }
+                ?: throw CliError("--bands wants ${com.snipsnap.audio.Transplant.MIN_BANDS}..${com.snipsnap.audio.Transplant.MAX_BANDS}, got '$it'")
+        } ?: com.snipsnap.audio.Transplant.DEFAULT_BANDS
         if (opts["--amount"] != null && mode != Mutate.Mode.MORPH && mode != Mutate.Mode.ROOM) {
             throw CliError("--amount rides on --morph or --room - add one")
         }
@@ -100,6 +109,7 @@ object MutateCommand {
             crossoverHz = opts.int("--hz")?.toFloat() ?: Mutate.DEFAULT_CROSSOVER_HZ,
             morphAmount = morphAmount,
             roomMix = roomMix,
+            bands = bands,
             extraRecipe = extraRecipe,
         )
         model.save()
@@ -110,6 +120,7 @@ object MutateCommand {
             Mutate.Mode.SPLIT -> "split against"
             Mutate.Mode.MORPH -> "morphed %.0f%% toward".format(morphAmount * 100)
             Mutate.Mode.ROOM -> "placed %.0f%% into the room of".format(roomMix * 100)
+            Mutate.Mode.TRANSPLANT -> "dressed in $bands bands of the tone of"
         }
         out.println("pad $padArg $what ${sources.joinToString(", ") { it.label }} - one hit, ${sources.size + 1} parents")
         outcome.flipped.forEach { out.println("  polarity: flipped '$it' - it was cancelling the pad") }

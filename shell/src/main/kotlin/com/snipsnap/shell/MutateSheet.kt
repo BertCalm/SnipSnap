@@ -16,8 +16,10 @@ import kotlin.math.roundToInt
  * the shelf, seeded by the tap count so every spin is a different deal
  * and each is reproducible). One parent, one move, one knob: STACK has
  * none, SPLICE has AT (where the pad's transient hands over), SPLIT has
- * HZ (the crossover), MORPH has MIX, ROOM has WET. The knob's range is the verb's own,
- * mapped exponentially where the ear hears ratios.
+ * HZ (the crossover), MORPH has MIX, ROOM has WET, TRANSPLANT has BANDS.
+ * The knob's range is the verb's own, mapped exponentially where the ear
+ * hears ratios. DRIFT is the card's one-tap move: the crate deals and
+ * MORPH blends, MIX how far ([drift]).
  */
 object MutateSheet {
 
@@ -33,6 +35,13 @@ object MutateSheet {
         Mutate.Mode.SPLIT to Knob("HZ", 40f, 8000f, Mutate.DEFAULT_CROSSOVER_HZ, exponential = true),
         Mutate.Mode.MORPH to Knob("MIX", 0f, 1f, 0.5f, exponential = false),
         Mutate.Mode.ROOM to Knob("WET", 0f, 1f, 0.5f, exponential = false),
+        Mutate.Mode.TRANSPLANT to Knob(
+            "BANDS",
+            com.snipsnap.audio.Transplant.MIN_BANDS.toFloat(),
+            com.snipsnap.audio.Transplant.MAX_BANDS.toFloat(),
+            com.snipsnap.audio.Transplant.DEFAULT_BANDS.toFloat(),
+            exponential = true,
+        ),
     )
 
     /** STACK has no knob: layering is transient-aligned, nothing to dial. */
@@ -44,10 +53,11 @@ object MutateSheet {
     /** The knob's value → stepper fraction; the inverse of [value]. */
     fun fraction(knob: Knob, value: Float): Float = knob.fraction(value)
 
-    /** What the value column reads: "40 ms", "200 Hz" / "1.2k", "50%". */
+    /** What the value column reads: "40 ms", "200 Hz" / "1.2k", "50%", "16 bands". */
     fun label(knob: Knob, value: Float): String = when (knob.label) {
         "AT" -> "${value.roundToInt()} ms"
         "HZ" -> if (value >= 1000f) "%.1fk".format(value / 1000f) else "${value.roundToInt()} Hz"
+        "BANDS" -> "${value.roundToInt()} bands"
         else -> "${(value * 100).roundToInt()}%"
     }
 
@@ -76,8 +86,11 @@ object MutateSheet {
         is Partner.Deal -> partner.label
     }
 
-    /** What a mutated pad carries: the move and the parents' labels, read from the `mutate` recipe. */
-    data class Applied(val mode: String, val parents: List<String>)
+    /** What a mutated pad carries: the move and the parents' labels, read from the `mutate` recipe; DRIFT reads as its own word. */
+    data class Applied(val mode: String, val parents: List<String>, val drifted: Boolean = false) {
+        /** "DRIFT" for a drift, else the move. */
+        val word: String get() = if (drifted) "DRIFT" else mode
+    }
 
     /**
      * Read defensively: `Mutate.apply` leaves `{"mutate": {"mode", "with", …}}`;
@@ -87,7 +100,19 @@ object MutateSheet {
         val m = recipe?.entries?.get("mutate") as? JsonValue.Obj ?: return null
         val mode = (m.entries["mode"] as? JsonValue.Str)?.value ?: return null
         val with = (m.entries["with"] as? JsonValue.Arr)?.items?.mapNotNull { (it as? JsonValue.Str)?.value } ?: emptyList()
-        return Applied(mode.uppercase(), with)
+        val drifted = (m.entries["drift"] as? JsonValue.Bool)?.value == true
+        return Applied(mode.uppercase(), with, drifted)
+    }
+
+    /**
+     * DRIFT: one tap — the crate under [root] deals the neighbour and MORPH
+     * blends [fraction] of the MIX knob toward it, through [Mutate.drift] so
+     * the recipe records the spin and the drift. A new [seed] is a new
+     * neighbour. Throws [IllegalArgumentException] when the crate is empty.
+     */
+    fun drift(model: KitBuilderModel, slot: Int, root: File, seed: Int, fraction: Float): Mutate.Drifted {
+        val mix = knobFor(Mutate.Mode.MORPH)!!
+        return Mutate.drift(model, slot, root, seed, value(mix, fraction))
     }
 
     /**
@@ -137,6 +162,7 @@ object MutateSheet {
             crossoverHz = if (mode == Mutate.Mode.SPLIT) v!! else Mutate.DEFAULT_CROSSOVER_HZ,
             morphAmount = if (mode == Mutate.Mode.MORPH) v!! else 0.5f,
             roomMix = if (mode == Mutate.Mode.ROOM) v!! else 0.5f,
+            bands = if (mode == Mutate.Mode.TRANSPLANT) v!!.roundToInt() else com.snipsnap.audio.Transplant.DEFAULT_BANDS,
             extraRecipe = extra,
         )
     }

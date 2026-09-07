@@ -70,6 +70,7 @@ object Cli {
         |                        needs --into <kit-dir> and becomes that
         |                        kit's groove
         |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
+        |  pad <wav|kit pad>    one hit -> a pad held forever in every note
         |                        (--loop cuts sustain loops: held pads sing forever)
         |  resample <kit-dir>    the ritual: bounce the kit playing its own
         |                        groove (wear and eras in the sound) and chop
@@ -103,14 +104,36 @@ object Cli {
         |                        as a tradeable file instead
         |  treat <kit-dir> <pad> <character>
         |                        crush/reverse/wash one pad (--undo restores)
+        |  retune <kit-dir> <pad>
+        |                        every partial talked into the kit's key
+        |                        (--key overrides, --amount how far, --undo)
+        |  body <kit-dir> <pad>  a bank of resonators tuned to the kit's key,
+        |                        struck by the pad (--decay s, --amount, --undo)
+        |  wobble <kit-dir> <pad>
+        |                        a filter sweep synced to a note division at
+        |                        the kit's tempo (--rate 1/8, --bpm, --amount)
+        |  eternal <kit-dir> <pad>
+        |                        the attack kept bit for bit, the tail slowed
+        |                        toward forever (--tail s, --knee ms, --undo)
+        |  drift <kit-dir> <pad> one knob: the crate deals the neighbour, morph
+        |                        blends toward it (--amount, --seed, --root)
+        |  breed <kit-a> <kit-b> two kits' recipes crossed into a child kit,
+        |                        classifier-audited (--out, --name, --seed)
+        |  desample <wav|kit pad>
+        |                        the nearest THUMP patch to a captured hit: a
+        |                        wav prints it (--out patch.json), a pad becomes
+        |                        it (--force past a far match, --undo)
         |  mutate <kit-dir> <pad> --with <src>[,<src>..]
         |                        one hit from many parents: transient-aligned
         |                        stack (with a polarity check), --splice (the
         |                        pad's attack onto the parent's body, --at ms),
         |                        --split (pad lows + parent highs, --hz N),
-        |                        or --morph [--amount 0..1] (the sound BETWEEN
+        |                        --morph [--amount 0..1] (the sound BETWEEN
         |                        the parents: interpolated spectra, PGHI
-        |                        phases - one onset, both voices);
+        |                        phases - one onset, both voices), --room
+        |                        [--amount] (the pad inside the parent's
+        |                        tail), or --transplant [--bands N] (the
+        |                        pad's attack wearing the parent's tone);
         |                        parents are pad refs, kit:pad, or .wav files
         |                        (--undo restores); --roulette lets the crate
         |                        deal the parent instead: Similar's nearest
@@ -314,10 +337,18 @@ object Cli {
                 "export" -> ExportCommand.run(args.drop(1), out)
                 "import" -> ImportCommand.run(args.drop(1), out)
                 "keys" -> KeysCommand.run(args.drop(1), out)
+                "pad" -> PadCommand.run(args.drop(1), out)
                 "remix" -> RemixCommand.run(args.drop(1), out)
                 "resample" -> ResampleCommand.run(args.drop(1), out)
                 "merge" -> MergeCommand.run(args.drop(1), out)
                 "treat" -> TreatCommand.run(args.drop(1), out)
+                "retune" -> RetuneCommand.run(args.drop(1), out)
+                "body" -> BodyCommand.run(args.drop(1), out)
+                "wobble" -> WobbleCommand.run(args.drop(1), out)
+                "eternal" -> EternalCommand.run(args.drop(1), out)
+                "drift" -> DriftCommand.run(args.drop(1), out)
+                "breed" -> BreedCommand.run(args.drop(1), out)
+                "desample" -> DesampleCommand.run(args.drop(1), out)
                 "robin" -> RobinCommand.run(args.drop(1), out)
                 "mutate" -> MutateCommand.run(args.drop(1), out)
                 "shape" -> ShapeCommand.run(args.drop(1), out)

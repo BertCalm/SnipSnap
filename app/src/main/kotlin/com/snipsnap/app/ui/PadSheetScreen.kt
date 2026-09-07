@@ -59,11 +59,14 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.PadShape
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
+import com.snipsnap.kit.PadFromAnything
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.Mutate
 import com.snipsnap.shell.MutateSheet
+import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
@@ -341,6 +344,11 @@ fun PadSheetScreen(
                     when (treatment) {
                         is PadSheet.Treatment.Era -> m.eraPad(slot, treatment.name, amount)
                         is PadSheet.Treatment.Character -> m.characterPad(slot, treatment.name, amount)
+                        // Row five (and TUNE) reads the kit's key, or does without
+                        // its own way; the retune's phases come from a fresh seed
+                        // per press.
+                        is PadSheet.Treatment.Keyed ->
+                            m.keyedPad(slot, treatment.name, amount, kotlin.random.Random.nextLong(0L, 1_000_000L))
                     }
                     m.save()
                 }
@@ -348,14 +356,22 @@ fun PadSheetScreen(
                 onKitUpdated(m.kit)
                 refreshPadAudio(m)
                 m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
-                onToast(Copy.treated(segment, padName))
+                onToast(
+                    if (treatment is PadSheet.Treatment.Keyed) Copy.keyed(segment, padName, m.lastKeyLabel)
+                    else Copy.treated(segment, padName),
+                )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // The ghosts-postdate-treatment refusal above is expected,
                 // in-voice user copy, not a diagnostic — the check()'s own
                 // message stays in logs (via `e`/a debugger) but the toast
-                // says what Copy says, not raw exception prose.
-                if (e is IllegalStateException) onToast(Copy.RETREAT_REFUSED) else failure("TREATMENT", e)
+                // says what Copy says, not raw exception prose. The retune's
+                // refusal is the same kind of line: the pad is a drum, said so.
+                when {
+                    e is IllegalStateException -> onToast(Copy.RETREAT_REFUSED)
+                    e is KitBuilderModel.Unpitched -> onToast(Copy.notANote(e.message ?: "not a note"))
+                    else -> failure("TREATMENT", e)
+                }
             } finally {
                 busy = false
             }
@@ -448,6 +464,48 @@ fun PadSheetScreen(
         }
     }
 
+    /**
+     * DRIFT: one tap — the shelf deals the neighbour and MORPH blends toward
+     * it, MIX how far. The card flips to MORPH so the knob it read is the
+     * knob on screen; each tap is a new seed, like ROULETTE.
+     */
+    fun onDrift() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (p.velocityLayers.isNotEmpty()) {
+            onToast(Copy.MUTATE_NEEDS_ONE)
+            return
+        }
+        val root = entry.dir.parentFile ?: entry.dir
+        val seed = spins
+        val padName = p.displayName
+        if (mutateMode != Mutate.Mode.MORPH.name) mutateMode = Mutate.Mode.MORPH.name
+        val fraction = pendingMutateKnob
+        scope.launch {
+            busy = true
+            try {
+                val drifted = withContext(Dispatchers.IO) {
+                    val d = MutateSheet.drift(m, slot, root, seed, fraction)
+                    m.save()
+                    d
+                }
+                spins = seed + 1
+                partner = MutateSheet.Partner.Deal(drifted.pick.label, drifted.pick.file, seed)
+                revision++
+                onKitUpdated(m.kit)
+                refreshPadAudio(m)
+                m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
+                onToast(Copy.drifted(padName, drifted.pick.label))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (e is IllegalArgumentException) onToast(Copy.CRATE_EMPTY) else failure("DRIFT", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
     fun onMakeInstrument() {
         if (busy) return
         val m = model
@@ -466,6 +524,86 @@ fun PadSheetScreen(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 if (e is IllegalArgumentException) onToast(Copy.NO_PITCH) else failure("INSTRUMENT", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    // ---- PAD FROM ANYTHING: one hit, a pad forever (PadMaker over PadFromAnything) ----
+    var pendingDepth by remember(slot) { mutableFloatStateOf(PadMaker.DEPTH.defaultFraction) }
+    var pendingBloom by remember(slot) { mutableFloatStateOf(PadMaker.BLOOM.defaultFraction) }
+
+    /**
+     * MAKE PAD: the same door as MAKE INSTRUMENT (an instrument beside the
+     * kits), but any pad qualifies — a drum lands as a drone. Seconds of
+     * stretching, so it runs on IO under the busy flag; a fresh seed every
+     * press, like every other door that renders.
+     */
+    fun onMakePad() {
+        if (busy) return
+        val m = model
+        val currentSnip = snip
+        if (m == null || currentSnip == null) return
+        val p = m.kit.pad(slot) ?: return
+        // The two refusals a thumb can cause get their own lines, before any work starts;
+        // anything else the builder refuses says exactly why, law 3.
+        if (currentSnip.durationSeconds < PadFromAnything.MIN_SOURCE_SEC) {
+            onToast(Copy.PAD_TOO_SHORT)
+            return
+        }
+        if (currentSnip.durationSeconds > PadFromAnything.MAX_SOURCE_SEC) {
+            onToast(Copy.PAD_TOO_LONG)
+            return
+        }
+        val padName = Names.sanitizeStem("${m.kit.name}_${p.displayName}_Pad")
+        val spec = PadMaker.spec(pendingDepth, pendingBloom, kotlin.random.Random.nextLong(0L, 1_000_000L))
+        scope.launch {
+            busy = true
+            try {
+                val destRoot = File(entry.dir.parentFile ?: entry.dir, "Instruments")
+                withContext(Dispatchers.IO) {
+                    PadFromAnything.export(padName, currentSnip, destRoot, spec, overwrite = true)
+                }
+                onToast(Copy.PAD_MADE)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("PAD", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    /**
+     * DE-SAMPLE: the pad becomes the nearest THUMP patch's own render, the
+     * patch riding it as a recipe. A far match is named, not taken.
+     */
+    fun onDesample() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (p.velocityLayers.isNotEmpty()) {
+            onToast(Copy.MUTATE_NEEDS_ONE)
+            return
+        }
+        val padName = p.displayName
+        scope.launch {
+            busy = true
+            try {
+                val match = withContext(Dispatchers.IO) {
+                    val found = m.desamplePad(slot)
+                    m.save()
+                    found
+                }
+                revision++
+                onKitUpdated(m.kit)
+                refreshPadAudio(m)
+                m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
+                onToast(Copy.desampled(padName, match.patch.voice.name, match.distance))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (e is KitBuilderModel.Far) onToast(Copy.desampleFar(e.match.patch.voice.name, e.match.distance)) else failure("DE-SAMPLE", e)
             } finally {
                 busy = false
             }
@@ -543,6 +681,7 @@ fun PadSheetScreen(
         when (a.treatment) {
             is PadSheet.Treatment.Era -> "AGED: ${a.treatment.name.uppercase()}"
             is PadSheet.Treatment.Character -> "TREATED: ${a.treatment.name.uppercase()}"
+            is PadSheet.Treatment.Keyed -> "IN KEY: ${a.treatment.name.uppercase()}"
         }
     }
     val amount = applied?.amount ?: PadSheet.DEFAULT_AMOUNT
@@ -731,6 +870,7 @@ fun PadSheetScreen(
                 partner = partner,
                 onPartner = { partner = MutateSheet.Partner.Pad(it) },
                 onRoulette = ::onRoulette,
+                onDrift = ::onDrift,
                 knobLabel = mutateKnob?.label,
                 knobFraction = pendingMutateKnob,
                 knobText = mutateKnob?.let { MutateSheet.label(it, MutateSheet.value(it, pendingMutateKnob)) } ?: "",
@@ -742,6 +882,56 @@ fun PadSheetScreen(
                 padColor = classColor,
                 scheme = scheme,
                 busy = busy,
+            )
+        }
+
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            TapeText("PAD FROM ANYTHING · HOLD IT FOREVER", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            StepperSlider(
+                label = "DEPTH",
+                fraction = pendingDepth,
+                valueText = PadMaker.depthLabel(PadMaker.DEPTH.value(pendingDepth)),
+                fillColor = classColor,
+                scheme = scheme,
+                enabled = !busy,
+                onFractionChange = { f -> pendingDepth = (f * 40f).roundToInt() / 40f },
+                onFractionCommit = {},
+            )
+            StepperSlider(
+                label = "BLOOM",
+                fraction = pendingBloom,
+                valueText = PadMaker.bloomLabel(PadMaker.BLOOM.value(pendingBloom)),
+                fillColor = classColor,
+                scheme = scheme,
+                enabled = !busy,
+                onFractionChange = { f -> pendingBloom = (f * 20f).roundToInt() / 20f },
+                onFractionCommit = {},
+            )
+            ActionButton(
+                if (busy) "DUBBING…" else "MAKE PAD ▸ INSTRUMENT",
+                scheme,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = ::onMakePad,
+            )
+        }
+
+        // DE-SAMPLE: the capture as a recipe - the nearest patch, distance told.
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            TapeText("DE-SAMPLE · THE NEAREST PATCH", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            val away = pad.source["desampled"]
+            TapeText(
+                if (away != null) "A PATCH NOW, $away AWAY" else "THE HIT MEASURED AGAINST EVERY THUMP",
+                TapeType.pixelSmall,
+                scheme.ink2.tape,
+                maxLines = 1,
+            )
+            ActionButton(
+                if (busy) "MEASURING…" else "DE-SAMPLE ▸",
+                scheme,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = ::onDesample,
             )
         }
 
@@ -1162,6 +1352,7 @@ private fun MutateCard(
     partner: MutateSheet.Partner?,
     onPartner: (Int) -> Unit,
     onRoulette: () -> Unit,
+    onDrift: () -> Unit,
     knobLabel: String?,
     knobFraction: Float,
     knobText: String,
@@ -1180,27 +1371,30 @@ private fun MutateCard(
             ActionButton("UNDO", scheme, enabled = !busy && mutated != null && canUndo, onClick = onUndo)
         }
         TapeText(
-            mutated?.let { "${it.mode}: ${it.parents.joinToString(", ")}" } ?: "PICK A MOVE AND A PARENT",
+            mutated?.let { "${it.word}: ${it.parents.joinToString(", ")}" } ?: "PICK A MOVE AND A PARENT",
             TapeType.pixelSmall,
             scheme.ink2.tape,
             maxLines = 1,
         )
 
-        // The move.
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            for (m in modes) {
-                val selected = m == mode
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                        .let { if (!busy) it.tapeClick { onMode(m) } else it }
-                        .padding(horizontal = 4.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText(m, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+        // The move: three to a row, so TRANSPLANT gets the width its word needs.
+        for (row in modes.chunked(3)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (m in row) {
+                    val selected = m == mode
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                            .let { if (!busy) it.tapeClick { onMode(m) } else it }
+                            .padding(horizontal = 4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(m, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                    }
                 }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
 
@@ -1227,14 +1421,18 @@ private fun MutateCard(
             }
         }
         val deal = partner as? MutateSheet.Partner.Deal
-        ActionButton(
-            deal?.let { "ROULETTE ▸ ${it.label}" } ?: "ROULETTE ▸ LET THE CRATE DEAL",
-            scheme,
-            enabled = !busy,
-            dimmed = deal == null,
-            modifier = Modifier.fillMaxWidth(),
-            onClick = onRoulette,
-        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            ActionButton(
+                deal?.let { "ROULETTE ▸ ${it.label}" } ?: "ROULETTE ▸ LET THE CRATE DEAL",
+                scheme,
+                enabled = !busy,
+                dimmed = deal == null,
+                modifier = Modifier.weight(2f),
+                onClick = onRoulette,
+            )
+            // DRIFT: the deal and the morph in one tap, MIX how far.
+            ActionButton("DRIFT ▸", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onDrift)
+        }
 
         // The move's knob, when it has one; STACK's row stays so the card never jumps.
         StepperSlider(

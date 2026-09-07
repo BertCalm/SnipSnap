@@ -209,7 +209,7 @@ object OneNote {
         return result
     }
 
-    private fun writePackage(
+    internal fun writePackage(
         name: String,
         program: KeygroupProgram,
         samples: Map<String, Snip>,

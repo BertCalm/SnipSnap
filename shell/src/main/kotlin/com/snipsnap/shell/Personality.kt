@@ -128,7 +128,19 @@ object Copy {
     const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."
     const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."
+    /** Row five and TUNE: [key] is the kit's key label, or what the treatment did without one ("THE NEAREST SEMITONES", "A, THE HIT'S OWN NOTE"). */
+    fun keyed(segment: String, pad: String, key: String): String = "$segment ON $pad, IN $key. ORIGINAL SLEEPS IN THE BIN."
+    /** The keyed family's honest refusal, [reason] in the treatment's own words ("a kick is a drum, not a note"). */
+    fun notANote(reason: String): String = "NOT A NOTE: ${reason.uppercase().trimEnd('.')}."
     fun mutated(move: String, pad: String, parent: String): String = "$move: $pad × $parent. ONE HIT, TWO PARENTS."
+    /** DE-SAMPLE: the pad is a patch now; [voice] the engine's own word, [distance] the honest number. */
+    fun desampled(pad: String, voice: String, distance: Float): String =
+        "$pad IS A ${voice.uppercase().replace('_', ' ')} PATCH NOW, %.2f AWAY. ORIGINAL SLEEPS IN THE BIN.".format(java.util.Locale.ROOT, distance)
+    /** DE-SAMPLE's refusal: no patch near enough. */
+    fun desampleFar(voice: String, distance: Float): String =
+        "NO PATCH IS NEAR. THE CLOSEST IS A ${voice.uppercase().replace('_', ' ')}, %.2f AWAY.".format(java.util.Locale.ROOT, distance)
+    /** DRIFT: the pad drifted toward what the crate dealt. */
+    fun drifted(pad: String, toward: String): String = "$pad DRIFTED TOWARD $toward. ORIGINAL SLEEPS IN THE BIN."
     const val UNMUTATED = "PARENTS SEPARATED. THE ORIGINAL IS BACK FROM THE BIN."
     const val MUTATE_NEEDS_ONE = "GHOSTS ON. MUTATE WANTS ONE SAMPLE - CLEAR THEM FIRST."
     const val CRATE_EMPTY = "THE CRATE HAS NOTHING TO DEAL. ONLY YOU ON THE SHELF."
@@ -137,6 +149,11 @@ object Copy {
     const val SCULPTED = "SCULPTED. THE HIT IS WEATHER NOW. NEW TAPE ON THE SHELF."
     const val STRETCHED = "STRETCHED. A BLINK BECAME A LANDSCAPE. NEW TAPE ON THE SHELF."
     const val FROZEN = "FROZEN. ONE INSTANT, HELD. NEW TAPE ON THE SHELF."
+
+    // ---- PAD SHEET: pad from anything ----
+    const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."
+    const val PAD_TOO_SHORT = "TOO SHORT TO STRETCH INTO A PAD. FEED IT MORE THAN A BLINK."
+    const val PAD_TOO_LONG = "TOO LONG TO SLOW INSIDE A MINUTE. TRIM IT UNDER THIRTY SECONDS."
 
     // Chop shop.
     const val RECHOPPED = "RE-CHOPPED. THE MACHINE APOLOGIZES FOR SLICE 3."

@@ -1316,12 +1316,12 @@ over the spectral door, each with a real exit test.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| WW1 | PAD FROM ANYTHING — stretch far (the clear stretch for a pitched source, the wash for an unpitched one), cut a seamless loop out of the middle with `LoopCut`, hand it to the instrument maker as a keygroup with loop points and a slow release; DEPTH (×8..×100) and BLOOM (attack) the two knobs; unpitched sources land as a drone at the root rather than being refused | CORE + APP | M | the loop seam has no click; a held note sustains past the source's length; a 220 Hz source plays 220 Hz at its root; a drum source is accepted as a drone |
-| WW2 | SPECTRAL RETUNE — every partial snapped to the nearest note of the kit's key, phases by PGHI | CORE | M–L | an off-key clang's peaks land on scale notes; a drum is refused as unpitched |
-| WW3 | TRANSPLANT — A's attack wearing B's long-term spectral envelope (a one-knob vocoder: BANDS) | CORE | M | the result's onset correlates with A, its band envelope with B |
-| WW4 | BODY — a bank of tuned resonators struck by the hit, tuned to the kit's key | CORE | M | a click through BODY rings at the root; decay follows the knob |
-| WW5 | WOBBLE — a tempo-synced filter sweep baked onto a captured hit, RATE snapped to note divisions at the kit's BPM | CORE | S | sweep period equals the division at the kit's BPM |
-| WW6 | ATTACK KEPT, TAIL ETERNAL — a non-linear time map: the first 30 ms at speed, then the tail slowing toward infinity; KNEE the knob | CORE | S | the first 30 ms bit-identical; tail length equals the knob |
+| WW1 | ✓ done: PAD FROM ANYTHING — `PadFromAnything` (`:kit`): stretch far (the clear stretch for a pitched source so its note stays a line, the wash for an unpitched one), the sample = the wash's first second (the arrival) + four seconds (the body) with the seam baked as a 0.75 s crossfade into the material before the loop start, written through the one-note package writer as a keygroup with loop points and a 0.6 release, both generations; DEPTH (×8..×100, giving where a minute or the loop demand it, the depth used reported) and BLOOM (0..1 s arrival ramp); an unpitched source is a drone at C3, never refused; CLI `pad <wav> \| <kit> <pad> [--depth] [--bloom]`; the pad sheet's PAD FROM ANYTHING card (`PadMaker` knobs, MAKE PAD ▸ INSTRUMENT beside MAKE INSTRUMENT's own door) | CORE + APP | M | the last frame equals the frame before the loop start and the level agrees across the wrap; the body of a 220 Hz source still detects 220 Hz; A3 at the root; a burst is a drone at C3 at the pad's ceiling; depth gives (8 s at ×40 → ×7.5, 50 ms → ×100), blips and 31 s sources refused; export lands `.xty` + `_[TrackData]/` with the loop in the `.xpm`; same seed same bytes |
+| WW2 | ✓ done: SPECTRAL RETUNE — `Retune` (`:audio`): one long, fine FFT over the body finds the partials (local maxima 12 dB above their neighbourhood, within 40 dB of the loudest) and the tonalness (their share of the band's energy); each partial's ratio to its nearest in-key note is a plateau on the frequency axis joined by straight lines; every `Spectral` frame is resampled through the map in the log domain (a lobe keeps its parabolic shape, so the phase integration reads the moved peak), one correction pass trims each ratio by where the partial actually landed, and `Pghi` reinvents the phases; AMOUNT how far, peak matched, per-seed; refused in words when the classifier hears a kick/snare/clap/hat or the tonalness is under 0.5; CLI `retune <kit> <pad> [--key] [--amount] [--seed] [--undo]`; `KitBuilderModel.retunePad` (the kit's key, or the nearest semitones without one); the pad sheet's TUNE segment, row four | CORE + APP | M–L | four partials 38..70¢ off C major land within 5¢ of A3/C5/E6/C7, the bell still decays, peak matched; kick, snare, hat, clap refused and named, a tom and hiss judged on their own; AMT 0 the same object, AMT ½ halfway, in key untouched; stereo stays stereo, same seed same bytes; D minor pentatonic sends 1290 Hz up to F6 |
+| WW3 | ✓ done: TRANSPLANT — `Transplant` (`:audio`): both sounds folded into one energy-weighted long-term spectrum read in BANDS log-spaced bands (4..64, default 16), the band-by-band difference one fixed set of per-bin gains through `Spectral` (nothing moves in time), capped ±24 dB, peak matched, all measurement; the sixth `Mutate` move (`--transplant [--bands N]`, recipe `bands`), the MUTATE card's sixth chip with a BANDS knob (the chips now three to a row) | CORE + APP | M | a snare through a hum: the 10 ms envelope correlates > 0.95 with the snare and less with the hum, the 16-band shape correlates > 0.85 with the hum and more than with the snare, length and peak the snare's; 64 bands fit the hum's formant closer than 4; stereo stays stereo, same bytes twice; bounds refused |
+| WW4 | ✓ done: BODY — `Body` (`:audio`): two-pole resonators at the key's chord tones (root 1.0, fifth 0.5, third 0.3) over three octaves from C2, each octave softer, the hit the mallet; DECAY the T60 (0.05..4 s), AMOUNT dry→body, the result the hit plus the decay, peak matched, no seed; no key → the hit's own note or C, never refused; the keyed family (`Keyed`, `KitBuilderModel.keyedPad`, recipe `{"keyed", "key", "amount", "seed", "decay"}`) now holds TUNE and BODY; CLI `body <kit> <pad> [--key] [--decay] [--amount] [--undo]`; the pad sheet's fifth row | CORE + APP | M | a click through BODY in A minor detects A and its loudest partial is an A; T60 measured 0.3 s and 1.2 s at those knobs; the modes are root/third/fifth in order, root loudest, no key → root and fifth; AMT 0 the same object; stereo stays stereo, same bytes |
+| WW5 | ✓ done: WOBBLE — `Wobble` (`:synth`): the TPT state-variable low-pass swept by a cosine that opens on the onset and closes half a division later, the division a note value (1/1..1/16, default 1/8) at the kit's tempo; AMOUNT the depth over 120 Hz..6 kHz, peak matched, no seed; the keyed family's third member (`--rate`, `--bpm` on the CLI, the kit's tempo or the preview's 92 on the phone); CLI `wobble <kit> <pad>`; the pad sheet's fifth row | CORE + APP | S | quarters at 120 sweep every 0.50 s and eighths every 0.25 s by the brightness swing of white noise, quarters at 90 every 0.67 s; bright at the onset, dark half a division in; RATE snaps to divisions; AMT 0 the same object; stereo stays stereo, same bytes |
+| WW6 | ✓ done: ATTACK KEPT, TAIL ETERNAL — `Eternal` (`:audio`): the first KNEE (30 ms) copied bit for bit, the tail's spectrogram resampled through a hyperbolic map (speed 1 at the knee, `τ₀·ln(1 + τ/τ₀)` after, τ₀ solved so the source's end lands on the knob) and reinvented by `Pghi`, a 5 ms seam into the resynthesis, the tail at the real tail's peak; TAIL the knob (0.5..30 s, AMT exponential on the phone), a longer tail refused rather than sped up; the keyed family's fourth (it reads nothing of the kit but escapes the rack's tail budget); CLI `eternal <kit> <pad> [--tail] [--knee] [--seed] [--undo]`; ETERNAL closes the pad sheet's fifth row | CORE + APP | S | the first 30 ms sample-equal and the length knee + knob; a chirp's pitch reads the map: at speed just past the knee, most of the way through at half the tail, on the top at the end, monotone; refusals in words; AMT ↔ seconds at both ends; stereo stays stereo; same seed same bytes |
 
 ---
 
@@ -1329,9 +1329,9 @@ over the spectral door, each with a real exit test.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| XX1 | DRIFT TOWARD THE CRATE — one knob: roulette finds the neighbour, morph blends toward it | CORE + APP | S | equals roulette then morph; deterministic per seed |
-| XX2 | BREEDING — two kits' recipes crossed (macros swapped and averaged), classifier-audited | CORE | M | every child pad keeps its parent class; same seed same kit |
-| XX3 | DE-SAMPLE — the nearest synth patch to a captured hit, from a pre-rendered macro grid and `Similar`; its own spec | CORE + APP | L | a rendered THUMP kick returns its own patch; a capture returns a patch within a distance bound |
+| XX1 | ✓ done: DRIFT TOWARD THE CRATE — `Mutate.drift`: the guided roulette finds the neighbour, MORPH blends AMOUNT of the way toward it, the morph's recipe carrying the spin and a `drift` flag; CLI `drift <kit> <pad> [--amount] [--seed] [--root] [--undo]`; the MUTATE card's DRIFT button beside ROULETTE (the card flips to MORPH so MIX is the knob it read), a drifted pad reading as DRIFT | CORE + APP | S | drift's bytes equal roulette then morph by hand; same seed same bytes; the sheet's one tap records the MIX amount and reads back as DRIFT; the verb round-trips through the bin and refuses an empty crate |
+| XX2 | ✓ done: BREEDING — `Breed` (`:shell`): pad by pad, A's pad meets B's on the same slot (or B's first of the class); every synth macro (engines agreeing) and rack macro is A's, B's or the average by a seeded coin, a one-sided rack section comes along half the time; synth pads re-render, captured pads run through the crossed rack, the rest come over verbatim; the audit re-throws the coin up to six times until the child classifies as its parent's audio does, else keeps A's pad and says so; a new folder, parents untouched, `bredFrom` stamped; CLI `breed <a> <b> [--out] [--name] [--seed]` | CORE | M | factory × lucky-dip: every child pad classifies as its mother's does, crossed pads differ from her, same seed same bytes, another seed another kit; a captured kit against a rackless kit is all kept and both parents stay byte-identical; a taken destination and an unsafe name refused |
+| XX3 | ✓ done: DE-SAMPLE — `Desample` (`:synth`): every THUMP voice's macro space on a three-level grid, rendered once and measured by the classifier's extractor, the hit's nearest by `Similar`'s distance, a coordinate descent refining the macros; the distance always told, past 0.45 named far; `KitBuilderModel.desamplePad` (kindred voices first, the patch riding the pad, refused when far unless forced); CLI `desample <wav> \| <kit> <pad>`; the pad sheet's DE-SAMPLE card; the spec `docs/DESAMPLE.md` | CORE + APP | L | a grid-point THUMP kick returns its own macros at distance 0 and renders back the same bytes; an off-grid snare refines under 0.08 and never loses to the grid; kick, snare and hat captures land within the bound on kindred voices; hiss is named far; the builder swaps a kick for a kick patch's render and refuses hiss unless forced; the verb prints and writes a patch |
 
 ---
 
@@ -1570,7 +1570,30 @@ CORE+APP wave VV: ✓ all landed (2026-09-07) — the room and the tape.
   knob, the crate can deal the room); GHOST, MOTION (tape stop /
   start), DUB (generation loss) and SWELL as rack sections and
   characters; the smear's FLOOR; the pad sheet's third and fourth
-  rows. Next: WW, PAD FROM ANYTHING first.
+  rows.
+
+CORE+APP wave WW: ✓ all landed (2026-09-07) — in key. WW1 landed:
+  PAD FROM ANYTHING, one hit held forever in every note, the clear
+  stretch keeping a note's line and the wash carrying a drum as a
+  drone, the seam baked, both generations, the pad sheet's card and
+  the `pad` verb. WW2 landed: SPECTRAL RETUNE, every partial talked
+  into the kit's key through the spectral door with PGHI phases, the
+  `retune` verb and the pad sheet's TUNE segment. WW3 landed:
+  TRANSPLANT, the pad's attack wearing the parent's long-term tone as
+  the sixth mutate move, BANDS its resolution. WW4 landed: BODY, a
+  bank of resonators tuned to the key and struck by the hit, the
+  keyed family's second member and the pad sheet's fifth row. WW5
+  landed: WOBBLE, a filter sweep synced to a note division at the
+  kit's tempo, the family's third. WW6 landed: ATTACK KEPT, TAIL
+  ETERNAL, the first 30 ms bit for bit and the tail slowed toward a
+  frozen instant. Wave WW complete.
+
+CORE+APP wave XX: ✓ all landed (2026-09-07) — the crate as an
+  instrument. XX1 landed: DRIFT TOWARD THE CRATE, roulette then morph
+  as one verb and one button. XX2 landed: BREEDING, two kits' recipes
+  crossed by a seeded coin into an audited child kit. XX3 landed:
+  DE-SAMPLE, the nearest THUMP patch to a capture off a pre-rendered
+  grid, the distance always told. Wave XX complete.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

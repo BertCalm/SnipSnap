@@ -132,6 +132,13 @@ class KitBuilderModel private constructor(
         dirty = true
     }
 
+    /** Set or clear the kit's tempo — what the preview, the arranger and WOBBLE read. */
+    fun setTempo(bpm: Float?) {
+        if (kit.tempoBpm == bpm) return
+        kit = kit.copy(tempoBpm = bpm)
+        dirty = true
+    }
+
     /**
      * IN KEY: retune every TONAL pad onto the nearest note of the kit's
      * key, via the tune fields the MPC pad already has — audio untouched,
@@ -274,6 +281,33 @@ class KitBuilderModel private constructor(
         return update(slot) { it.copy(recipe = recipe ?: it.recipe) }
     }
 
+    /** DE-SAMPLE's honest refusal: the nearest patch is a stranger; the match says how far. */
+    class Far(val match: com.snipsnap.synth.Desample.Match) :
+        IllegalArgumentException("no patch is near: the nearest is ${match.patch.voice.name.lowercase()} at distance %.2f".format(java.util.Locale.ROOT, match.distance))
+
+    /**
+     * DE-SAMPLE: the pad replaced by the nearest THUMP patch's own render,
+     * the patch riding the pad as its recipe so the sound is a synth pad
+     * from here on - bin-backed like every rewrite. The search starts on
+     * the voices kindred to the pad's class. A far match ([Far]) is
+     * refused unless [evenIfFar]; the match is returned either way it
+     * goes ahead.
+     */
+    fun desamplePad(slot: Int, evenIfFar: Boolean = false): com.snipsnap.synth.Desample.Match {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        val match = com.snipsnap.synth.Desample.nearest(
+            original,
+            voices = com.snipsnap.synth.Desample.voicesFor(pad.drumClass),
+            name = pad.displayName,
+        )
+        if (match.far && !evenIfFar) throw Far(match)
+        val recipe = com.snipsnap.synth.PadRecipe(patch = match.patch).toJsonValue()
+        replaceAudio(slot, recipe) { match.patch.render() }
+        update(slot) { it.copy(source = it.source + mapOf("desampled" to "%.2f".format(java.util.Locale.ROOT, match.distance))) }
+        return match
+    }
+
     /**
      * Age one pad through a Time Machine era — every file it references
      * (velocity layers included, unlike single-sample treatments: an era is
@@ -308,6 +342,65 @@ class KitBuilderModel private constructor(
             treated.snip to treated.recipe
         }
     }
+
+    /** The keyed family's honest refusal: the pad is a drum or noise, not a note. */
+    class Unpitched(message: String) : IllegalArgumentException(message)
+
+    /** What TUNE snaps to: the kit's key, or every semitone when none is set. */
+    fun retuneKey(): com.snipsnap.audio.KeySpec = kit.key ?: Keyed.NO_KEY
+
+    /** "C MAJOR", or "THE NEAREST SEMITONES" when no key is set — for the toast and the recipe. */
+    fun retuneKeyLabel(): String = kit.key?.label?.uppercase() ?: Keyed.NO_KEY_LABEL
+
+    /** TUNE: [keyedPad] with the retune. */
+    fun retunePad(slot: Int, amount: Float = 1f, seed: Long = 0): KitPad = keyedPad(slot, "retuned", amount, seed)
+
+    /**
+     * The keyed family ([Keyed.NAMES]) over one pad: the treatment reads
+     * the kit's key (or does without, its own way) and rewrites every
+     * file the pad references, bin-backed like every treatment. AMT is
+     * how far; 0 leaves the pad as it is. A refusal ([Unpitched], in the
+     * treatment's own words) comes before anything is touched.
+     */
+    fun keyedPad(slot: Int, name: String, amount: Float = 1f, seed: Long = 0, dials: Keyed.Dials = Keyed.Dials()): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        Keyed.require(name)
+        require(amount in 0f..1f) { "amount is 0..1, got $amount" }
+        if (amount <= 0f) return pad
+        val context = keyedContext()
+        val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        Keyed.refusal(name, main, context, amount, dials)?.let { throw Unpitched(it) }
+        var label = ""
+        val rewritten = rewriteEveryFile(pad, "keyed treatment") { original ->
+            val done = try {
+                Keyed.apply(name, original, context, amount, seed, dials)
+            } catch (e: Keyed.Refused) {
+                throw Unpitched(e.message ?: "not a note")
+            }
+            label = done.keyLabel
+            done.snip to com.snipsnap.json.JsonValue.Obj(
+                linkedMapOf<String, com.snipsnap.json.JsonValue>(
+                    "keyed" to com.snipsnap.json.JsonValue.Str(name),
+                    "key" to com.snipsnap.json.JsonValue.Str(label),
+                    "amount" to com.snipsnap.json.JsonValue.Num(amount.toDouble()),
+                    "seed" to com.snipsnap.json.JsonValue.Num(seed.toDouble()),
+                    "decay" to com.snipsnap.json.JsonValue.Num(dials.decay.toDouble()),
+                    "division" to com.snipsnap.json.JsonValue.Str(dials.division),
+                    "tail" to com.snipsnap.json.JsonValue.Num((dials.tail ?: com.snipsnap.audio.Eternal.tailFor(amount)).toDouble()),
+                    "knee" to com.snipsnap.json.JsonValue.Num(dials.knee.toDouble()),
+                ),
+            )
+        }
+        lastKeyLabel = label
+        return rewritten
+    }
+
+    /** What the keyed family reads off this kit: its key (maybe none) and its tempo (the preview's default without one). */
+    fun keyedContext(): Keyed.Context = Keyed.Context(kit.key, kit.tempoBpm ?: com.snipsnap.kit.KitPreview.DEFAULT_BPM)
+
+    /** The key label the last [keyedPad] read — what its toast names. */
+    var lastKeyLabel: String = ""
+        private set
 
     /** The whole-pad rewrite both [eraPad] and [characterPad] share: every referenced file, bin-backed, one recipe. */
     private fun rewriteEveryFile(
@@ -706,6 +799,9 @@ class KitBuilderModel private constructor(
 
         /** Where deletes wait out their 30 days. */
         const val BIN_DIR = ".bin"
+
+        /** The retune's target when the kit has no key. */
+        const val NO_KEY_LABEL = Keyed.NO_KEY_LABEL
 
         const val MAX_TAKES = 32
         const val BIN_KEEP_DAYS = 30.0

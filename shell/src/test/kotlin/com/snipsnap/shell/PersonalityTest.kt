@@ -81,7 +81,7 @@ class PersonalityTest {
             Copy.TAKES_BIN_RULE, Copy.TEACH_CONSENT, Copy.SNAPPED,
             Copy.TAKES_EMPTY, Copy.BIN_EMPTY_STATE, Copy.BIN_ITEM_GONE, Copy.KIT_WONT_OPEN,
             Copy.UNMUTATED, Copy.MUTATE_NEEDS_ONE, Copy.CRATE_EMPTY,
-            Copy.SCULPTED, Copy.STRETCHED, Copy.FROZEN,
+            Copy.SCULPTED, Copy.STRETCHED, Copy.FROZEN, Copy.PAD_MADE, Copy.PAD_TOO_SHORT, Copy.PAD_TOO_LONG,
         )
         for (line in lines) {
             assertEquals(line.uppercase(), line, "TapeOS shouts: '$line'")
@@ -99,6 +99,11 @@ class PersonalityTest {
             "the treatment and the pad both lead their own toast",
         )
         assertTrue(Copy.treated("CRUSH", "A02").endsWith("."), "and still lands on a full stop")
+        assertEquals("TUNE ON A02, IN C MAJOR. ORIGINAL SLEEPS IN THE BIN.", Copy.keyed("TUNE", "A02", "C MAJOR"))
+        assertEquals("A02 DRIFTED TOWARD Other:B03. ORIGINAL SLEEPS IN THE BIN.", Copy.drifted("A02", "Other:B03"))
+        assertEquals("A03 IS A HAT CLOSED PATCH NOW, 0.12 AWAY. ORIGINAL SLEEPS IN THE BIN.", Copy.desampled("A03", "HAT_CLOSED", 0.123f))
+        assertEquals("NO PATCH IS NEAR. THE CLOSEST IS A SNARE, 0.61 AWAY.", Copy.desampleFar("SNARE", 0.61f))
+        assertEquals("NOT A NOTE: A KICK IS A DRUM, NOT A NOTE.", Copy.notANote("a kick is a drum, not a note"))
         assertTrue(
             Copy.mutated("SPLICE", "A01", "A03").startsWith("SPLICE: A01 × A03."),
             "the move and both parents lead their own toast",

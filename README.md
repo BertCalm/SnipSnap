@@ -62,6 +62,17 @@ The capture and conditioning core.
   detection, key/scale note grids (root on A01), and the retune that lands a
   captured tonal snip on the nearest in-key note using the tune fields an
   MPC pad already has. Unpitched material is never "corrected".
+- **`Retune`** — the spectral retune: every partial on its own, talked into
+  the key through the `Spectral` door with phases reinvented by `Pghi`, so an
+  inharmonic clang lands in the scale instead of merely moving as a block.
+  A drum is refused as unpitched, in words.
+- **`Body`** — a bank of tuned resonators struck by the hit: the key's chord
+  tones over three octaves, the root loudest, DECAY their ring.
+- **`Eternal`** — the attack kept bit for bit, the tail slowed hyperbolically
+  toward a frozen instant with `Pghi` phases, TAIL the knob.
+- **`Desample`** (`:synth`) — the nearest THUMP patch to a captured hit, off a
+  pre-rendered macro grid by `Similar`'s distance, the distance always told
+  (`docs/DESAMPLE.md`).
 - **`Loudness`** — perceived level (peaks aren't loudness), feeding kit-wide
   balance.
 
@@ -212,7 +223,8 @@ becomes the room it was struck in; a FLOOR makes it banded, so a kick
 loses its click and keeps its thump), GHOST (the tone gone too, the
 breath alone), DUB (generation loss: a dub of a dub, twelve deep), SWELL
 (the sound arrives before it strikes) and MOTION (the tape stop and the
-tape start, baked). `FxChain` fixes the order — swell → reverse → smear →
+tape start, baked); beside the rack, WOBBLE sweeps the same filter on
+the kit's own grid, a note division at its tempo. `FxChain` fixes the order — swell → reverse → smear →
 ghost → eq → squash → crunch → dub → tape → echo → spring → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.

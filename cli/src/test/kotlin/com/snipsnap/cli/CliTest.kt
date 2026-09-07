@@ -1202,6 +1202,237 @@ class CliTest {
     }
 
     @Test
+    fun `mutate --transplant dresses the pad in the parent's tone, --bands its resolution`() {
+        val wav = writeBreak(File(temp, "tp.wav"))
+        val out = File(temp, "tp-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "TP", "--slices", "8").first)
+        val kitDir = File(out, "TP")
+        val rate = 44_100
+        val hum = File(temp, "hum.wav")
+        WavWriter.write(
+            hum,
+            Snip(FloatArray(rate) { i -> (0.4 * Math.sin(2 * Math.PI * 110.0 * i / rate)).toFloat() }, 1, rate),
+        )
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(2)!!.sampleFile)
+        val before = padFile.readBytes()
+
+        val (code, stdout, stderr) = cli("mutate", kitDir.path, "A02", "--with", hum.path, "--transplant", "--bands", "8")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "dressed in 8 bands of the tone of hum.wav")
+        assertTrue(!before.contentEquals(padFile.readBytes()))
+        val recipe = (KitStore.load(kitDir).pad(2)!!.recipe!!.entries["mutate"] as com.snipsnap.json.JsonValue.Obj).entries
+        assertEquals("transplant", (recipe["mode"] as com.snipsnap.json.JsonValue.Str).value)
+        assertEquals(8.0, (recipe["bands"] as com.snipsnap.json.JsonValue.Num).value)
+
+        assertEquals(0, cli("mutate", kitDir.path, "A02", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        val (badCode, _, badErr) = cli("mutate", kitDir.path, "A02", "--with", hum.path, "--bands", "8")
+        assertTrue(badCode != 0 && "--bands rides on --transplant" in badErr, badErr)
+        val (rangeCode, _, rangeErr) = cli("mutate", kitDir.path, "A02", "--with", hum.path, "--transplant", "--bands", "99")
+        assertTrue(rangeCode != 0 && "--bands wants" in rangeErr, rangeErr)
+    }
+
+    @Test
+    fun `body gives one pad a ringing body in the key from the terminal, and undoes`() {
+        val wav = writeBreak(File(temp, "bd.wav"))
+        val out = File(temp, "bd-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "BD", "--slices", "8").first)
+        val kitDir = File(out, "BD")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(1)!!.sampleFile)
+        val before = padFile.readBytes()
+        val framesBefore = com.snipsnap.audio.WavReader.read(padFile).frameCount
+
+        val (code, stdout, stderr) = cli("body", kitDir.path, "A01", "--key", "Am", "--decay", "0.5")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "a body in a minor, ringing 0.50 s")
+        assertContains(stdout, "modes: A2 C3 E3")
+        assertTrue(com.snipsnap.audio.WavReader.read(padFile).frameCount > framesBefore, "rings past the hit")
+
+        assertEquals(0, cli("body", kitDir.path, "A01", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        val (badCode, _, badErr) = cli("body", kitDir.path, "A01", "--decay", "9")
+        assertTrue(badCode != 0 && "--decay wants" in badErr, badErr)
+    }
+
+    @Test
+    fun `wobble sweeps one pad on the kit's grid from the terminal, and undoes`() {
+        val wav = writeBreak(File(temp, "wb.wav"))
+        val out = File(temp, "wb-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "WB", "--slices", "8").first)
+        val kitDir = File(out, "WB")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(2)!!.sampleFile)
+        val before = padFile.readBytes()
+
+        val (code, stdout, stderr) = cli("wobble", kitDir.path, "A02", "--rate", "1/4", "--bpm", "120")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "wobbled at 1/4 at 120 bpm (500 ms a sweep)")
+        assertTrue(!before.contentEquals(padFile.readBytes()))
+        assertEquals(120f, KitStore.load(kitDir).tempoBpm, "--bpm set the kit's tempo")
+
+        assertEquals(0, cli("wobble", kitDir.path, "A02", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        val (badCode, _, badErr) = cli("wobble", kitDir.path, "A02", "--rate", "1/3")
+        assertTrue(badCode != 0 && "--rate wants" in badErr, badErr)
+    }
+
+    @Test
+    fun `eternal keeps the attack and slows the tail from the terminal, refuses honestly, and undoes`() {
+        val wav = writeBreak(File(temp, "et.wav"))
+        val out = File(temp, "et-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "ET", "--slices", "8").first)
+        val kitDir = File(out, "ET")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(1)!!.sampleFile)
+        val before = padFile.readBytes()
+        val src = com.snipsnap.audio.WavReader.read(padFile)
+
+        val (code, stdout, stderr) = cli("eternal", kitDir.path, "A01", "--tail", "2", "--knee", "20")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "the first 20 ms kept bit for bit, the tail slowed into 2.0 s")
+        val held = com.snipsnap.audio.WavReader.read(padFile)
+        val knee = (0.02f * src.sampleRate).toInt()
+        assertEquals(knee + 2 * src.sampleRate, held.frameCount)
+        for (i in 0 until knee * src.channels) assertEquals(src.samples[i], held.samples[i], 1e-6f, "the attack, to the WAV's precision")
+
+        assertEquals(0, cli("eternal", kitDir.path, "A01", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        // A knee longer than the slice leaves nothing to slow: refused in words, nothing touched.
+        val (shortCode, _, shortErr) = cli("eternal", kitDir.path, "A01", "--tail", "2", "--knee", "500")
+        assertTrue(shortCode != 0 && "refused" in shortErr && "inside the knee" in shortErr, shortErr)
+        assertTrue(before.contentEquals(padFile.readBytes()), "a refusal touches nothing")
+        val (badCode, _, badErr) = cli("eternal", kitDir.path, "A01", "--tail", "99")
+        assertTrue(badCode != 0 && "--tail wants" in badErr, badErr)
+    }
+
+    @Test
+    fun `drift lets the crate deal and morphs toward the deal in one verb`() {
+        val wav = writeBreak(File(temp, "df.wav"))
+        val out = File(temp, "df-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "DF", "--slices", "8").first)
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "DF2", "--slices", "8").first)
+        val kitDir = File(out, "DF")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(2)!!.sampleFile)
+        val before = padFile.readBytes()
+
+        val (code, stdout, stderr) = cli("drift", kitDir.path, "A02", "--amount", "0.4", "--seed", "2", "--root", out.path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "drifted 40% toward")
+        assertContains(stdout, "seed 2")
+        assertTrue(!before.contentEquals(padFile.readBytes()))
+        val recipe = (KitStore.load(kitDir).pad(2)!!.recipe!!.entries["mutate"] as com.snipsnap.json.JsonValue.Obj).entries
+        assertEquals("morph", (recipe["mode"] as com.snipsnap.json.JsonValue.Str).value)
+        assertTrue(recipe.containsKey("drift") && recipe.containsKey("roulette"))
+
+        assertEquals(0, cli("drift", kitDir.path, "A02", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        val empty = File(temp, "df-empty").apply { mkdirs() }
+        val (emptyCode, _, emptyErr) = cli("drift", kitDir.path, "A02", "--root", empty.path)
+        assertTrue(emptyCode != 0 && "nothing to spin" in emptyErr, emptyErr)
+    }
+
+    @Test
+    fun `breed crosses two starter kits into a child that keeps every class`() {
+        val a = File(temp, "BreedA")
+        val b = File(temp, "BreedB")
+        com.snipsnap.shell.StarterKits.byId("factory")!!.render("BreedA", a, 0)
+        com.snipsnap.shell.StarterKits.byId("lucky-dip")!!.render("BreedB", b, 5)
+        val out = File(temp, "BreedChild")
+
+        val (code, stdout, stderr) = cli("breed", a.path, b.path, "--out", out.path, "--name", "Child", "--seed", "2")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "bred 'Child' from BreedA x BreedB (seed 2)")
+        assertContains(stdout, "pads crossed")
+        val child = KitStore.load(out)
+        val mother = KitStore.load(a)
+        assertEquals(mother.pads.size, child.pads.size)
+        for (pad in child.pads) {
+            val parent = mother.pad(pad.slot)!!
+            val pc = com.snipsnap.audio.Classifier.classify(com.snipsnap.audio.WavReader.read(File(a, parent.sampleFile))).drumClass
+            val cc = com.snipsnap.audio.Classifier.classify(com.snipsnap.audio.WavReader.read(File(out, pad.sampleFile))).drumClass
+            assertEquals(pc, cc, "slot ${pad.slot} keeps its class")
+        }
+
+        val (dupCode, _, dupErr) = cli("breed", a.path, b.path, "--out", out.path, "--name", "Child")
+        assertTrue(dupCode != 0 && "already a kit" in dupErr, dupErr)
+        val (badCode, _, badErr) = cli("breed", a.path, File(temp, "nowhere").path)
+        assertTrue(badCode != 0 && "not a kit folder" in badErr, badErr)
+    }
+
+    @Test
+    fun `desample names the nearest patch for a wav and makes a pad into one`() {
+        val kickWav = File(temp, "ds kick.wav")
+        WavWriter.write(kickWav, com.snipsnap.synth.Thump.render(com.snipsnap.synth.ThumpVoice.KICK, mapOf("TUNE" to 0.5f, "SWEEP" to 0.85f, "DECAY" to 0.15f, "CLICK" to 0.5f, "DRIVE" to 0.5f)))
+        val patchOut = File(temp, "ds.json")
+        val (code, stdout, stderr) = cli("desample", kickWav.path, "--out", patchOut.path)
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "nearest patch is kick at distance 0.00")
+        assertContains(stdout, "SWEEP=0.85")
+        val patch = com.snipsnap.synth.Patches.fromJsonText(patchOut.readText())
+        assertEquals("THUMP", patch.engine)
+
+        val wav = writeBreak(File(temp, "ds.wav"))
+        val out = File(temp, "ds-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "DS", "--slices", "8").first)
+        val kitDir = File(out, "DS")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(1)!!.sampleFile)
+        val before = padFile.readBytes()
+        val (padCode, padOut, padErr) = cli("desample", kitDir.path, "A01")
+        assertEquals(0, padCode, "stderr: $padErr")
+        assertContains(padOut, "is a kick patch now")
+        assertTrue(!before.contentEquals(padFile.readBytes()))
+        assertTrue(KitStore.load(kitDir).pad(1)!!.recipe != null, "the patch rides the pad")
+        assertEquals(0, cli("desample", kitDir.path, "A01", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        val (badCode, _, badErr) = cli("desample", File(temp, "nowhere").path)
+        assertTrue(badCode != 0 && "not a wav or a kit folder" in badErr, badErr)
+    }
+
+    @Test
+    fun `retune talks one pad into a key from the terminal, refuses a drum, and undoes`() {
+        val wav = writeBreak(File(temp, "rt.wav"))
+        val out = File(temp, "rt-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "RT", "--slices", "8").first)
+        val kitDir = File(out, "RT")
+        // Put an off-key bell on A02 in place of the chop's own hit.
+        val rate = 44_100
+        val bellFile = File(kitDir, KitStore.load(kitDir).pad(2)!!.sampleFile)
+        WavWriter.write(
+            bellFile,
+            Snip(
+                FloatArray(rate / 2) { i ->
+                    val t = i.toDouble() / rate
+                    (0.5 * Math.sin(2 * Math.PI * 227.0 * t) * Math.exp(-2 * t) + 0.3 * Math.sin(2 * Math.PI * 545.0 * t) * Math.exp(-3 * t)).toFloat()
+                },
+                1, rate,
+            ),
+        )
+        val before = bellFile.readBytes()
+
+        val (code, stdout, stderr) = cli("retune", kitDir.path, "A02", "--key", "C")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "retuned into C major")
+        assertContains(stdout, "-> A3")
+        assertContains(stdout, "-> C5")
+        assertTrue(!before.contentEquals(bellFile.readBytes()))
+        assertEquals("C MAJOR", KitStore.load(kitDir).key!!.label.uppercase(), "--key set the kit's key")
+
+        val (drumCode, _, drumErr) = cli("retune", kitDir.path, "A01")
+        assertTrue(drumCode != 0)
+        assertContains(drumErr, "not a note")
+
+        assertEquals(0, cli("retune", kitDir.path, "A02", "--undo").first)
+        assertTrue(before.contentEquals(bellFile.readBytes()))
+
+        val (badCode, _, badErr) = cli("retune", kitDir.path, "A02", "--amount", "2")
+        assertTrue(badCode != 0 && "--amount wants" in badErr, badErr)
+    }
+
+    @Test
     fun `break-pad adds one chain pad whose slices are the chop's own cuts`() {
         val wav = writeBreak(File(temp, "bp.wav"))
         val out = File(temp, "bp-out")
@@ -2849,6 +3080,44 @@ class CliTest {
         assertEquals(0, code)
         assertContains(stdout, "chop")
         assertContains(stdout, "classify")
+    }
+
+    @Test
+    fun `pad makes a held instrument from a note or a hit, both generations`() {
+        val rate = 44_100
+        val note = File(temp, "pad note.wav")
+        WavWriter.write(
+            note,
+            Snip(
+                FloatArray(rate) { i ->
+                    val t = i.toDouble() / rate
+                    ((0.5 * Math.sin(2 * Math.PI * 220.0 * t) + 0.15 * Math.sin(2 * Math.PI * 440.0 * t)) * Math.exp(-2.0 * t)).toFloat()
+                },
+                1, rate,
+            ),
+        )
+        val out = File(temp, "padout")
+        val (code, stdout, _) = cli("pad", note.path, "--out", out.path, "--depth", "20")
+        assertEquals(0, code, stdout)
+        assertContains(stdout, "A3")
+        assertContains(stdout, "the clear stretch x20.0")
+        assertContains(stdout, "sings forever")
+        assertTrue(File(out, "card/pad note Pad.xty").isFile, "the MPC 3 instrument")
+        assertTrue(File(out, "card/pad note Pad_[TrackData]/pad note Pad.xpm").isFile, "the MPC 2 twin")
+
+        // A hit with no note in it is a drone, not a refusal.
+        val hit = File(temp, "pad hit.wav")
+        val rnd = java.util.Random(3)
+        WavWriter.write(hit, Snip(FloatArray(rate / 4) { i -> ((rnd.nextFloat() * 2f - 1f) * 0.8 * Math.exp(-i / (0.06 * rate))).toFloat() }, 1, rate))
+        val (droneCode, droneOut, _) = cli("pad", hit.path, "--out", out.path)
+        assertEquals(0, droneCode, droneOut)
+        assertContains(droneOut, "a drone at C3")
+
+        // The knobs are bounded, and the source must be a sound.
+        val (badCode, _, badErr) = cli("pad", note.path, "--out", out.path, "--depth", "3")
+        assertTrue(badCode != 0 && "--depth wants" in badErr, badErr)
+        val (dupCode, _, dupErr) = cli("pad", note.path, "--out", out.path)
+        assertTrue(dupCode != 0 && "already exists" in dupErr, "overwrite discipline: $dupErr")
     }
 }
 

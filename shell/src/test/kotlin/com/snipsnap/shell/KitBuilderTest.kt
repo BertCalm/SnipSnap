@@ -444,6 +444,133 @@ class KitBuilderTest {
         }
     }
 
+    /** An off-key bell: three inharmonic partials, none on a C major note. */
+    private fun clang(): com.snipsnap.audio.Snip {
+        val rate = 44_100
+        return com.snipsnap.audio.Snip(
+            FloatArray(rate / 2) { i ->
+                val t = i.toDouble() / rate
+                (
+                    0.5 * Math.sin(2 * Math.PI * 227.0 * t) * Math.exp(-2 * t) +
+                        0.3 * Math.sin(2 * Math.PI * 545.0 * t) * Math.exp(-3 * t) +
+                        0.15 * Math.sin(2 * Math.PI * 1290.0 * t) * Math.exp(-4 * t)
+                    ).toFloat()
+            },
+            1, rate,
+        )
+    }
+
+    @Test
+    fun `retunePad talks a clang into the kit's key, refuses a kick, and undoes out of the bin`() {
+        val dir = File(temp, "Tune")
+        val m = KitBuilderModel.create("Tune", dir)
+        val bell = m.assign(2, clang(), DrumClass.PERC)
+        val kick = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        val before = File(dir, bell.sampleFile).readBytes()
+
+        // No key set: the nearest semitones.
+        assertEquals(KitBuilderModel.NO_KEY_LABEL, m.retuneKeyLabel())
+        m.setKey(com.snipsnap.audio.KeySpec.parse("C"))
+        assertEquals("C MAJOR", m.retuneKeyLabel())
+
+        val tuned = m.retunePad(2, 1f, seed = 3)
+        m.save()
+        assertFalse(File(dir, bell.sampleFile).readBytes().contentEquals(before), "re-rendered")
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("retuned"), 1f, PadSheet.TUNE), PadSheet.read(tuned.recipe))
+        assertEquals("C MAJOR", m.lastKeyLabel)
+        val landed = com.snipsnap.audio.Retune.analyze(
+            com.snipsnap.audio.WavReader.read(File(dir, bell.sampleFile)),
+            com.snipsnap.audio.KeySpec(0, com.snipsnap.audio.Scale.CHROMATIC),
+        ).partials
+        assertTrue(landed.all { kotlin.math.abs(it.cents) < 6f }, "every partial on a semitone now: ${landed.map { it.cents }}")
+        assertEquals(listOf("A3", "C5", "E6"), landed.map { it.targetName })
+
+        val refused = assertFailsWith<KitBuilderModel.Unpitched> { m.retunePad(1, 1f) }
+        assertTrue("drum" in refused.message!!, refused.message)
+        assertTrue(File(dir, kick.sampleFile).readBytes().isNotEmpty() && m.pad(1)!!.recipe == null, "the kick is untouched")
+
+        assertEquals(bell.copy(recipe = tuned.recipe), m.retunePad(2, 0f), "AMT 0 leaves the pad as it is")
+        m.unEraPad(2)
+        m.save()
+        assertNull(m.pad(2)!!.recipe)
+        assertTrue(File(dir, bell.sampleFile).readBytes().contentEquals(before), "back byte-identical")
+
+        // BODY never refuses: the kick gets a body in the kit's key, and rings past its own length.
+        val kickBefore = File(dir, kick.sampleFile).readBytes()
+        val bodied = m.keyedPad(1, "bodied", 1f, dials = Keyed.Dials(decay = 0.4f))
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("bodied"), 1f, "BODY"), PadSheet.read(bodied.recipe))
+        assertEquals("C MAJOR", m.lastKeyLabel)
+        val rung = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile))
+        assertTrue(rung.frameCount > DrumSynth.kick().frameCount, "the body rings past the hit")
+        assertFailsWith<IllegalArgumentException> { m.keyedPad(1, "frozen", 1f) }
+        m.unEraPad(1)
+        assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(kickBefore), "the kick came back")
+
+        // WOBBLE reads the tempo: none set, the preview's default; the division rides the recipe.
+        val wobbled = m.keyedPad(1, "wobbled", 1f, dials = Keyed.Dials(division = "1/16"))
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("wobbled"), 1f, "WOBBLE"), PadSheet.read(wobbled.recipe))
+        assertEquals("1/16 AT 92 BPM", m.lastKeyLabel)
+        assertEquals("1/16", (wobbled.recipe!!.entries["division"] as com.snipsnap.json.JsonValue.Str).value)
+        m.unEraPad(1)
+        assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(kickBefore), "and back again")
+
+        // ETERNAL keeps the attack bit for bit and takes its tail from AMT unless the CLI says seconds.
+        // Against the pad as it sits on disk: the WAV round trip already quantized the synth's floats.
+        val kickSnip = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile))
+        val eternal = m.keyedPad(1, "eternal", 0.5f)
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("eternal"), 0.5f, "ETERNAL"), PadSheet.read(eternal.recipe))
+        val held = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile))
+        val knee = (com.snipsnap.audio.Eternal.KNEE_DEFAULT_SEC * 44_100).toInt()
+        assertEquals(knee + (com.snipsnap.audio.Eternal.tailFor(0.5f) * 44_100).toInt(), held.frameCount)
+        // Bit-identical in memory (EternalTest); on disk, to the WAV's own precision.
+        for (i in 0 until knee) assertEquals(kickSnip.samples[i], held.samples[i], 1e-6f, "the attack is the kick's own")
+        assertTrue(m.lastKeyLabel.endsWith("S TAIL"), m.lastKeyLabel)
+        m.unEraPad(1)
+        // A second-long tone has more tail than half a second: refused before anything is touched.
+        val tone = m.assign(3, com.snipsnap.audio.Snip(FloatArray(44_100) { (0.4 * Math.sin(2 * Math.PI * 220.0 * it / 44_100)).toFloat() }, 1, 44_100), DrumClass.TONAL)
+        m.save()
+        val toneBefore = File(dir, tone.sampleFile).readBytes()
+        val tooShort = assertFailsWith<KitBuilderModel.Unpitched> { m.keyedPad(3, "eternal", 1f, dials = Keyed.Dials(tail = 0.5f)) }
+        assertTrue("already" in tooShort.message!!, tooShort.message)
+        assertTrue(File(dir, tone.sampleFile).readBytes().contentEquals(toneBefore), "refused before anything was touched")
+    }
+
+    @Test
+    fun `desamplePad swaps a capture for the nearest patch's render, refuses a stranger, and undoes`() {
+        val dir = File(temp, "Desample")
+        val m = KitBuilderModel.create("Desample", dir)
+        val kick = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        val rnd = java.util.Random(4)
+        val hiss = m.assign(2, com.snipsnap.audio.Snip(FloatArray(44_100) { (rnd.nextFloat() * 2f - 1f) * 0.5f }, 1, 44_100), DrumClass.UNKNOWN)
+        m.save()
+        val before = File(dir, kick.sampleFile).readBytes()
+
+        val match = m.desamplePad(1)
+        assertEquals(com.snipsnap.synth.ThumpVoice.KICK, match.patch.voice, "a kick's search starts on kicks")
+        assertTrue(!match.far)
+        val pad = m.pad(1)!!
+        val recipe = com.snipsnap.synth.PadRecipe.fromJsonValue(pad.recipe!!)
+        assertEquals(match.patch, recipe.patch, "the patch rides the pad")
+        assertTrue(File(dir, kick.sampleFile).readBytes().let { !it.contentEquals(before) }, "the render replaced the capture")
+        val onDisk = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile)).samples
+        val render = match.patch.render().samples
+        assertEquals(render.size, onDisk.size, "the pad is the patch's own render")
+        for (i in onDisk.indices) assertEquals(render[i], onDisk[i], 1e-5f, "sample $i, to the WAV's precision")
+        assertTrue(pad.source["desampled"]!!.toFloat() < com.snipsnap.synth.Desample.FAR)
+
+        val far = assertFailsWith<KitBuilderModel.Far> { m.desamplePad(2) }
+        assertTrue(far.match.far && "no patch is near" in far.message!!)
+        assertNull(m.pad(2)!!.recipe, "a refusal touches nothing")
+        val forced = m.desamplePad(2, evenIfFar = true)
+        assertTrue(forced.far)
+        assertTrue(m.pad(2)!!.recipe != null)
+
+        m.untreatPad(1)
+        assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(before), "back byte-identical")
+        assertNull(m.pad(1)!!.recipe)
+    }
+
     @Test
     fun `characterPad refuses a typo before it looks at the amount, and AMT 0 is a no-op`() {
         val dir = File(temp, "CharNoop")
