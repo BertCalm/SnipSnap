@@ -1481,6 +1481,7 @@ The Android side is written blind for CI's compiler, as :app always is.
 | CCC6 | ✓ done: the corners are yours — `SurfaceStore` (`:shell`, tested, fuzzed): `surface.json` beside the kit with the pad the surface plays and four `Corner`s (pitch, cutoff, resonance, drive, each 0..1, refused in words); `Corner.from(mode, reading, tilt, corners)` is the engine's own macro map (XY / XYZ / the MORPH blend), so SET A..D on the screen captures the sound under the last touch as a corner, pushes it to the engine and saves; defaults are the engine's; a torn file reads as the defaults, said aloud | CORE + APP | S | round-trip byte-stable; a corner at A is A; the centre is the average; refusals named; the fuzz batch holds; bench: set four corners, leave, come back, morph between them |
 | CCC7 | ✓ done: PAD ◄ ► — the surface plays any of the kit's pads, by slot, wrapping, the choice remembered in `surface.json`; the readout names it MPC-style (A01..) | APP | S | bench: step through the kit; reopen, the same pad is under the finger |
 | CCC8 | ✓ done: PRINT → PAD — the print's destination toggles → TAPE / → PAD; → PAD opens SYNTH's own slot chooser (now shared) and the print lands through `KitBuilderModel`: `assign` on an empty slot ("Surface Print", unclassed), `replaceAudio` on a taken one (the original in the bin); a layered or chained pad is dimmed in the chooser (SYNTH's own rule) and a refusal the model still raises (the kit changed under the chooser) is said in words with the print kept, a disk failure named as such with the print still pending; cancelling the chooser sends the print to TAPE rather than losing it; the kit's identity bumps so KIT and the surface reload | APP | S | bench: print to an empty pad, hear it on KIT; print over a taken pad, find the original in the bin; cancel, find the print on TAPE |
+| CCC9 | ✓ done: LATCH and BARS — LATCH keeps the loop sounding where the finger left it (the last held reading is what the engine and the puck get), so one hand sets corners while the other is free; BARS cycles FREE / 1 / 2 / 4 / 8 bars at the kit's tempo (`PrintLength`, `:shell`, tested), the print armed to exactly that length so it stops itself on the bar and drops onto the groove grid; a kit without a tempo prints free and the button says NO TEMPO | CORE + APP | S | bench: latch, lift, the loop holds; 2 BARS at 92 BPM prints 5.2 s and lands trimmed to the bar |
 
 ## Wave EEE — M4, the pads on the native engine (APP + CORE)
 
@@ -1740,8 +1741,9 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ wave CCC (the Surface): the tactile pad over Oboe — XY / XYZ / MORPH,
     the roll of the phone, PRINT to resample the gesture onto TAPE; then
     the shared fallback, SET A..D corners in surface.json, PAD ◄ ►,
-    PRINT → PAD through SYNTH's door · bench: dropouts, the route
-    change, the print heard back, a print on a pad
+    PRINT → PAD through SYNTH's door, LATCH and BARS · bench: dropouts,
+    the route change, the print heard back, a print on a pad, a bar-locked
+    print on the grid
   ✓ wave EEE (M4, the pads on the native engine): PadHit on the JVM,
     PadEngine under Oboe, PLAY over it with endings reported, not timed ·
     bench: tight enough to play; then EEE4 moves KIT's grid across
