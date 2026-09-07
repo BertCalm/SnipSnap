@@ -477,10 +477,13 @@ fun App(shelf: KitShelf, imports: MutableStateFlow<Uri?>) {
 
     // The receive door: MainActivity posts the shared file's Uri here on
     // launch or onNewIntent; taking it clears the flow so a recomposition
-    // never imports the same file twice.
+    // never imports the same file twice. Keyed on `busy` as well: a share
+    // that lands mid-DUB waits in the flow until the overlay clears, then
+    // this re-runs and takes it — deferred, never dropped.
     val pendingImport by imports.collectAsState()
-    LaunchedEffect(pendingImport) {
+    LaunchedEffect(pendingImport, busy) {
         val uri = pendingImport ?: return@LaunchedEffect
+        if (busy != null) return@LaunchedEffect
         imports.value = null
         importUri(uri)
     }

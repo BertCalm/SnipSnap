@@ -34,6 +34,14 @@ object MediaImport {
 
     /** A WAV bigger than this is read through the extractor with the cap, not slurped whole. */
     private const val WAV_DIRECT_MAX_BYTES = 64L * 1024 * 1024
+
+    /**
+     * The largest single sample the raw path will buffer. A real PCM
+     * container hands out chunks of a few hundred KB at most; a header
+     * claiming more is a broken or hostile file, refused in words rather
+     * than allocated.
+     */
+    private const val RAW_SAMPLE_MAX_BYTES = 16L * 1024 * 1024
     private const val DEQUEUE_TIMEOUT_US = 10_000L
 
     fun decode(context: Context, uri: Uri): Snip? {
@@ -102,6 +110,9 @@ object MediaImport {
         while (!sink.full) {
             val size = extractor.sampleSize
             if (size < 0) break
+            require(size <= RAW_SAMPLE_MAX_BYTES) {
+                "a $size-byte sample - not a file the tape can read"
+            }
             if (size > buffer.capacity()) buffer = ByteBuffer.allocate(size.toInt())
             buffer.clear()
             val n = extractor.readSampleData(buffer, 0)
