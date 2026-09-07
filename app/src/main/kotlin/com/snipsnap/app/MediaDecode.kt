@@ -8,6 +8,8 @@ import android.media.MediaFormat
 import android.net.Uri
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -27,9 +29,10 @@ import java.nio.ByteOrder
  * delay and its gentle loss are the codec's business, not ours.
  *
  * The codec's output is 16-bit PCM unless it says float; both are read.
- * The decode is capped at [MAX_FRAMES] so a shared album side never
- * becomes a gigabyte of floats — `SnipStore.import` caps shorter still,
- * and says so in words.
+ * The decode stops at [MAX_FRAMES] so a shared album side never becomes
+ * a gigabyte of floats or a minute of decoding — `SnipStore.import` caps
+ * shorter still, and says so in words. A WAV is bounded the same way by
+ * [MAX_WAV_BYTES], as a refusal, since the reader takes the whole file.
  *
  * Refusals are [IllegalArgumentException]s in plain words: the toast
  * shows them as they are.
@@ -39,6 +42,14 @@ object MediaDecode {
     /** Ten minutes at 48 k, stereo: more than any import keeps, little enough to hold. */
     private const val MAX_FRAMES = 48_000 * 60 * 10
 
+    /**
+     * The most WAV the reader is handed, in bytes: 96 MB is three minutes
+     * of 96 k / 24-bit stereo, well past `SnipStore.import`'s own cap.
+     * [WavReader] wants the whole file in memory, so a bigger share is
+     * refused in words rather than read toward an out-of-memory.
+     */
+    private const val MAX_WAV_BYTES = 96 * 1024 * 1024
+
     private const val TIMEOUT_US = 10_000L
 
     /** How many bytes of the head decide "this is a WAV" — RIFF….WAVE. */
@@ -47,28 +58,53 @@ object MediaDecode {
     fun decode(context: Context, uri: Uri): Snip {
         val resolver = context.contentResolver
         val mime = resolver.getType(uri) ?: ""
-        val head = resolver.openInputStream(uri)?.use { s ->
-            val b = ByteArray(SNIFF_BYTES)
-            val n = s.read(b)
-            if (n == SNIFF_BYTES) b else null
-        } ?: throw IllegalArgumentException("the shared file could not be opened")
+        // A short head is not a failure to open: a stream may hand back
+        // fewer bytes than asked, and a file shorter than twelve bytes is
+        // simply not a WAV. Only a stream that will not open at all is.
+        val head = resolver.openInputStream(uri)?.use { s -> readUpTo(s, SNIFF_BYTES) }
+            ?: throw IllegalArgumentException("the shared file could not be opened")
 
         if (isWav(head) || mime == "audio/wav" || mime == "audio/x-wav" || mime == "audio/wave") {
-            val bytes = resolver.openInputStream(uri)?.use { it.readBytes() }
+            val bytes = resolver.openInputStream(uri)?.use { s -> readUpTo(s, MAX_WAV_BYTES + 1) }
                 ?: throw IllegalArgumentException("the shared file could not be opened")
+            require(bytes.size <= MAX_WAV_BYTES) {
+                "that WAV is over ${MAX_WAV_BYTES / (1024 * 1024)} MB - the tape takes three minutes, trim it first"
+            }
             return WavReader.read(bytes)
         }
         return decodeCompressed(context, uri)
     }
 
+    /** Up to [max] bytes of [stream], looping over short reads; the result is exactly what was there, up to [max]. */
+    private fun readUpTo(stream: InputStream, max: Int): ByteArray {
+        val out = ByteArrayOutputStream()
+        val chunk = ByteArray(minOf(max, 64 * 1024))
+        var total = 0
+        while (total < max) {
+            val n = stream.read(chunk, 0, minOf(chunk.size, max - total))
+            if (n < 0) break
+            out.write(chunk, 0, n)
+            total += n
+        }
+        return out.toByteArray()
+    }
+
     private fun isWav(head: ByteArray): Boolean =
-        head[0] == 'R'.code.toByte() && head[1] == 'I'.code.toByte() && head[2] == 'F'.code.toByte() && head[3] == 'F'.code.toByte() &&
+        head.size >= SNIFF_BYTES &&
+            head[0] == 'R'.code.toByte() && head[1] == 'I'.code.toByte() && head[2] == 'F'.code.toByte() && head[3] == 'F'.code.toByte() &&
             head[8] == 'W'.code.toByte() && head[9] == 'A'.code.toByte() && head[10] == 'V'.code.toByte() && head[11] == 'E'.code.toByte()
 
     private fun decodeCompressed(context: Context, uri: Uri): Snip {
         val extractor = MediaExtractor()
         try {
-            extractor.setDataSource(context, uri, null)
+            // setDataSource throws IO, Security and IllegalArgument
+            // exceptions alike; every one is a refusal in words here, so
+            // the toast carries the reason instead of a generic line.
+            try {
+                extractor.setDataSource(context, uri, null)
+            } catch (e: Exception) {
+                throw IllegalArgumentException("the shared file could not be opened: ${e.message ?: e.javaClass.simpleName}", e)
+            }
             var track = -1
             var format: MediaFormat? = null
             for (i in 0 until extractor.trackCount) {
@@ -145,7 +181,7 @@ object MediaDecode {
                         f.getInteger(MediaFormat.KEY_PCM_ENCODING) == AudioFormat.ENCODING_PCM_FLOAT
                 }
                 outIndex >= 0 -> {
-                    if (info.size > 0 && !capped) {
+                    if (info.size > 0) {
                         val buffer = codec.getOutputBuffer(outIndex)!!
                         buffer.position(info.offset)
                         buffer.limit(info.offset + info.size)
@@ -153,7 +189,11 @@ object MediaDecode {
                         capped = appendPcm(buffer, floatPcm, out, room)
                     }
                     codec.releaseOutputBuffer(outIndex, false)
-                    if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) outputDone = true
+                    // The cap is the end of the decode, not just of the
+                    // keeping: an album side past ten minutes is not
+                    // decoded to be thrown away. The codec is stopped and
+                    // released by the caller's finally either way.
+                    if (capped || (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) outputDone = true
                 }
             }
         }

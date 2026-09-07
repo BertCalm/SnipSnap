@@ -340,10 +340,12 @@ fun App(shelf: KitShelf) {
         } catch (e: Exception) {
             ShareInbox.consume()
             // Law 3: when it breaks, say exactly what happened - the
-            // decoder's own words when it has them, the house line when
-            // the file simply carried nothing to hear.
-            val reason = e.message
-            toast = if (e is IllegalArgumentException && reason != null) "IMPORT REFUSED: ${reason.uppercase().trimEnd('.')}." else Copy.IMPORT_NOT_AUDIO
+            // decoder's own words when it has them (a refusal, an IO
+            // error, a permission the provider withdrew), the house line
+            // only when there are none. Locale.ROOT: a toast's casing
+            // must not depend on the phone's language.
+            val reason = e.message?.takeIf { it.isNotBlank() }
+            toast = if (reason != null) "IMPORT REFUSED: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}." else Copy.IMPORT_NOT_AUDIO
         } finally {
             if (ownsBusy) busy = null
         }

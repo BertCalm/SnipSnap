@@ -84,6 +84,19 @@ class SnipStoreTest {
     }
 
     @Test
+    fun `two snips in one millisecond land on two paths, the later one newest`() {
+        val root = kotlin.io.path.createTempDirectory("snips").toFile()
+        try {
+            val a = SnipStore.commit(tone(0.2f), 44_100, root, 9_000L)
+            val b = SnipStore.import(com.snipsnap.audio.Snip(tone(0.3f), 1, 44_100), root, 9_000L).file
+            assertTrue(a != b, "the second never overwrites the first")
+            assertTrue(a.isFile && b.isFile)
+            assertEquals(b, SnipStore.newest(root), "the later arrival is the newer name")
+            assertEquals(listOf(b, a), SnipStore.list(root))
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
     fun `list is newest first and newest agrees`() {
         val root = kotlin.io.path.createTempDirectory("snips").toFile()
         try {

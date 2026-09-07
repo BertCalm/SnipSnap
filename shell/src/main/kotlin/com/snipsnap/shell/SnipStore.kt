@@ -82,10 +82,27 @@ object SnipStore {
                 "capture at 44.1 kHz"
         }
 
-        val dir = File(root, DIR).apply { mkdirs() }
-        val file = File(dir, "snip_$nowMillis.wav")
+        val file = freshFile(root, nowMillis)
         val bytes = ByteArrayOutputStream().apply { WavWriter.write(this, toWrite) }.toByteArray()
         AtomicFile.writeBytes(file, bytes)
+        return file
+    }
+
+    /**
+     * `root/snips/snip_<millis>.wav`, at [nowMillis] or the first later
+     * millisecond nothing sits on: two snips in one millisecond (a fast
+     * phone, a test) must never share a path, or the second silently
+     * overwrites the first and [newest] loses one. The bump keeps the
+     * name's own ordering honest — later is later.
+     */
+    private fun freshFile(root: File, nowMillis: Long): File {
+        val dir = File(root, DIR).apply { mkdirs() }
+        var millis = nowMillis
+        var file = File(dir, "snip_$millis.wav")
+        while (file.exists()) {
+            millis++
+            file = File(dir, "snip_$millis.wav")
+        }
         return file
     }
 
@@ -121,8 +138,7 @@ object SnipStore {
         val truncated = atRate.frameCount > maxFrames
         val kept = if (truncated) Snip(atRate.samples.copyOf(maxFrames), 1, atRate.sampleRate) else atRate
 
-        val dir = File(root, DIR).apply { mkdirs() }
-        val file = File(dir, "snip_$nowMillis.wav")
+        val file = freshFile(root, nowMillis)
         val bytes = ByteArrayOutputStream().apply { WavWriter.write(this, kept) }.toByteArray()
         AtomicFile.writeBytes(file, bytes)
         return Imported(file, kept.durationSeconds, truncated)

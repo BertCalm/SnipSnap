@@ -178,7 +178,7 @@ object Copy {
     fun outside(move: String, pad: String, lagMs: Float, confidence: Float): String =
         "$move: $pad WENT OUT AND CAME BACK ${Math.round(lagMs)} MS LATER, ${Math.round(confidence * 100)}% SURE. ORIGINAL SLEEPS IN THE BIN."
     /** OUTSIDE's honest refusal, [reason] in the verb's own words ("the room said nothing back"). */
-    fun outsideRefused(reason: String): String = "OUTSIDE REFUSED: ${reason.uppercase().trimEnd('.')}."
+    fun outsideRefused(reason: String): String = "OUTSIDE REFUSED: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
     const val OUTSIDE_UNDONE = "BACK INSIDE. THE ORIGINAL IS BACK FROM THE BIN."
     const val OUTSIDE_NEEDS_MIC = "OUTSIDE NEEDS THE MIC. ARM THE TAPE ONCE ON KITS TO GRANT IT."
     const val OUTSIDE_TAPE_ROLLING = "THE TAPE IS ROLLING. EJECT IT FIRST - OUTSIDE WANTS THE MIC TO ITSELF."
