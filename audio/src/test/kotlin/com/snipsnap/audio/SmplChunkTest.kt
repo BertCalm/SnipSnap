@@ -67,5 +67,22 @@ class SmplChunkTest {
         bad[44 + 13] = 0xFF.toByte()
         assertNull(WavReader.readSmpl(bad))
         assertNull(WavReader.readSmpl(ByteArray(3)))
+        // A loop that runs past the audio the file holds: the chunk's
+        // inclusive end at offset 48 pushed past the last frame.
+        val past = out.copyOf()
+        past[44 + 48] = 0x2C // 300 = 0x012C: an inclusive end of 300 means 301 frames
+        past[44 + 49] = 0x01
+        assertNull(WavReader.readSmpl(past), "a loop past the sample is not a loop")
+    }
+
+    @Test
+    fun `the RIFF size counts the pad byte an odd 24-bit data chunk needs`() {
+        val odd = tone(301) // 24-bit mono, odd frame count: 903 data bytes plus one pad
+        val plain = bytes(odd, null)
+        assertEquals(0, plain.size % 2, "the file itself is word-aligned")
+        assertEquals(plain.size - 8L, leInt(plain, 4))
+        val sheeted = bytes(odd, SmplChunk(60, SmplChunk.Loop(0, 301)))
+        assertEquals(sheeted.size - 8L, leInt(sheeted, 4))
+        assertEquals(301, WavReader.read(plain).frameCount)
     }
 }

@@ -59,11 +59,15 @@ object WavWriter {
         val dataBytes = snip.samples.size.toLong() * bytesPerSample
         val byteRate = snip.sampleRate.toLong() * blockAlign
         val smplBytes = if (smpl != null) 8L + smpl.byteSize else 0L
+        // RIFF chunks are word-aligned: an odd data size (24-bit mono with an
+        // odd frame count) is followed by one pad byte, and the RIFF size
+        // counts it - it is everything after the first eight bytes.
+        val dataPad = dataBytes % 2
 
-        require(dataBytes + 36 + smplBytes <= 0xFFFFFFFFL) { "audio too large for a RIFF file" }
+        require(dataBytes + dataPad + 36 + smplBytes <= 0xFFFFFFFFL) { "audio too large for a RIFF file" }
 
         out.writeTag("RIFF")
-        out.writeLeInt(36 + smplBytes + dataBytes)
+        out.writeLeInt(36 + smplBytes + dataBytes + dataPad)
         out.writeTag("WAVE")
 
         out.writeTag("fmt ")
@@ -88,9 +92,8 @@ object WavWriter {
             BitDepth.PCM_24 -> for (s in snip.samples) out.writeLe24(toPcm24(s))
         }
 
-        // RIFF chunks are word-aligned. An odd data size needs a pad byte, which
-        // only happens at 24-bit with an odd sample count.
-        if (dataBytes % 2 == 1L) out.write(0)
+        // The pad byte the RIFF size above already counted.
+        if (dataPad == 1L) out.write(0)
     }
 
     /**
