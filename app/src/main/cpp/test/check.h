@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace check {
@@ -57,8 +58,18 @@ inline int runAll() {
 #define CHECK(expr) \
     do { if (!(expr)) check::fail(#expr, __FILE__, __LINE__, ""); } while (0)
 
+// Each operand is evaluated exactly once, so an expression with a side
+// effect (an `i++`, a pop) reads the same in the check and in the message.
 #define CHECK_EQ(a, b) \
-    do { if (!((a) == (b))) check::fail(#a " == " #b, __FILE__, __LINE__, "got " + std::to_string(a) + " vs " + std::to_string(b)); } while (0)
+    do { \
+        const auto checkA_ = (a); \
+        const auto checkB_ = (b); \
+        if (!(checkA_ == checkB_)) check::fail(#a " == " #b, __FILE__, __LINE__, "got " + std::to_string(checkA_) + " vs " + std::to_string(checkB_)); \
+    } while (0)
 
 #define CHECK_NEAR(a, b, eps) \
-    do { if (std::fabs(double(a) - double(b)) > (eps)) check::fail(#a " ~ " #b, __FILE__, __LINE__, "got " + std::to_string(a) + " vs " + std::to_string(b)); } while (0)
+    do { \
+        const double checkA_ = static_cast<double>(a); \
+        const double checkB_ = static_cast<double>(b); \
+        if (std::fabs(checkA_ - checkB_) > (eps)) check::fail(#a " ~ " #b, __FILE__, __LINE__, "got " + std::to_string(checkA_) + " vs " + std::to_string(checkB_)); \
+    } while (0)

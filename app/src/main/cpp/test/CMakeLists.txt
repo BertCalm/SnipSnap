@@ -52,7 +52,8 @@ target_include_directories(engine_tests PRIVATE
 # One Oboe header uses memset without <cstring>; the NDK pulls it in
 # transitively, a host libstdc++ does not.
 target_compile_options(engine_tests PRIVATE -Wall -Wextra -include cstring)
-target_link_libraries(engine_tests PRIVATE pthread)
+find_package(Threads REQUIRED)
+target_link_libraries(engine_tests PRIVATE Threads::Threads)
 
 enable_testing()
 add_test(NAME engine_tests COMMAND engine_tests)
