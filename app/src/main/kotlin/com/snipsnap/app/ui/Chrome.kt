@@ -62,6 +62,8 @@ enum class AppScreen(val label: String) {
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),
+    /** Not one of MenuRow's ten: reached from the shelf's INSTRUMENTS list, left by its own ◄ SHELF. */
+    KEYS("KEYS"),
 }
 
 /** Single-line themed text; TapeOS never relies on Material's Text. */

@@ -237,4 +237,182 @@ class FxTest {
             FxChain.fromJsonText(ThumpPatch("K", ThumpVoice.KICK, emptyMap()).toJsonText())
         }
     }
+
+    // ---------- SMEAR ----------
+
+    @Test
+    fun `SMEAR sits after REVERSE and before EQ, and an absent section keeps old recipes byte-stable`() {
+        val without = FxChain(eq = mapOf("BASS" to 0.6f))
+        assertTrue(!without.toJsonText().contains("smear"), "no smear key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(without.toJsonText()))
+
+        val with = FxChain(reverse = true, smear = mapOf("AMOUNT" to 0.6f), eq = mapOf("BASS" to 0.6f))
+        val text = with.toJsonText()
+        assertTrue(text.indexOf("\"reverse\"") < text.indexOf("\"smear\"") && text.indexOf("\"smear\"") < text.indexOf("\"eq\""), text)
+        assertEquals(with, FxChain.fromJsonText(text))
+        assertTrue(!FxChain(smear = mapOf("AMOUNT" to 0.2f)).isBypass)
+    }
+
+    @Test
+    fun `SMEAR refuses a macro it does not know`() {
+        assertFailsWith<IllegalArgumentException> { FxChain(smear = mapOf("WASH" to 0.5f)) }
+    }
+
+    @Test
+    fun `SMEAR at zero is transparent and at full strength keeps the kick's length and level`() {
+        assertTrue(Smear.process(kick, mapOf("AMOUNT" to 0f)) === kick)
+        val smeared = Smear.process(kick, mapOf("AMOUNT" to 1f))
+        assertEquals(kick.frameCount, smeared.frameCount)
+        var inPeak = 0f
+        var outPeak = 0f
+        for (v in kick.samples) inPeak = maxOf(inPeak, abs(v))
+        for (v in smeared.samples) outPeak = maxOf(outPeak, abs(v))
+        assertTrue(outPeak > 0.5f * inPeak && outPeak <= inPeak * 1.001f, "peak matched, never above: $inPeak -> $outPeak")
+    }
+
+    // ---------- GHOST + MOTION ----------
+
+    /** Zero-crossing rate over a window: a cheap pitch reading for a tone. */
+    private fun crossings(s: Snip, fromSec: Float, toSec: Float): Int {
+        var n = 0
+        val from = (fromSec * s.sampleRate).toInt().coerceIn(1, s.frameCount - 1)
+        val to = (toSec * s.sampleRate).toInt().coerceIn(from, s.frameCount)
+        for (f in from until to) {
+            val a = s.samples[(f - 1) * s.channels]
+            val b = s.samples[f * s.channels]
+            if ((a < 0f) != (b < 0f)) n++
+        }
+        return n
+    }
+
+    private fun peakIn(s: Snip, fromSec: Float, toSec: Float): Float {
+        var p = 0f
+        val from = (fromSec * s.sampleRate).toInt().coerceIn(0, s.frameCount)
+        val to = (toSec * s.sampleRate).toInt().coerceIn(from, s.frameCount)
+        for (i in from * s.channels until to * s.channels) p = maxOf(p, abs(s.samples[i]))
+        return p
+    }
+
+    private val tone = Snip(FloatArray(44_100) { i -> (0.5 * Math.sin(2.0 * Math.PI * 440.0 * i / 44_100)).toFloat() }, 1, 44_100)
+
+    @Test
+    fun `GHOST and MOTION serialize as sections and an absent one keeps old recipes byte-stable`() {
+        val chain = FxChain(ghost = mapOf("AMOUNT" to 0.5f), motion = mapOf("STOP" to 0.3f, "START" to 0.1f))
+        assertEquals(chain, FxChain.fromJsonText(chain.toJsonText()))
+        val text = chain.toJsonText()
+        assertTrue(text.indexOf("\"ghost\"") < text.indexOf("\"motion\""), "ghost before motion in the file, like the rack")
+        assertTrue(!FxChain(eq = mapOf("BASS" to 0.6f)).toJsonText().contains("ghost"))
+        assertFailsWith<IllegalArgumentException> { FxChain(motion = mapOf("SPEED" to 0.5f)) }
+        assertTrue(Motion.process(tone, mapOf("STOP" to 0f, "START" to 0f)) === tone)
+        assertTrue(Ghost.process(tone, mapOf("AMOUNT" to 0f)) === tone)
+    }
+
+    @Test
+    fun `STOP lets the pitch and the level fall away to nothing, keeping the length`() {
+        val stopped = Motion.process(tone, mapOf("STOP" to 0.5f)) // a one-second glide over a one-second tone
+        assertEquals(tone.frameCount, stopped.frameCount)
+        val early = crossings(stopped, 0.02f, 0.12f)
+        val late = crossings(stopped, 0.80f, 0.90f)
+        assertTrue(late < early / 2, "the pitch has fallen: $early crossings -> $late")
+        assertTrue(peakIn(stopped, 0.95f, 1f) < 0.15f, "stopped tape is silent, not a held sample")
+        assertTrue(peakIn(stopped, 0f, 0.05f) > 0.45f, "the start is untouched")
+    }
+
+    @Test
+    fun `START spins up into the sound - pitch and level climb, the sound arrives late`() {
+        val started = Motion.process(tone, mapOf("START" to 1f)) // a 1.5 s spin-up
+        assertTrue(started.frameCount > tone.frameCount, "the spin-up delays the rest")
+        val early = crossings(started, 0.05f, 0.15f)
+        val late = crossings(started, 1.6f, 1.7f)
+        assertTrue(early < late / 2, "the pitch climbs: $early crossings -> $late")
+        assertTrue(peakIn(started, 0f, 0.05f) < peakIn(started, 1.6f, 1.7f) * 0.5f, "and so does the level")
+    }
+
+    @Test
+    fun `a ghosted kick is no longer a kick, and stays finite and peak-bounded`() {
+        val ghosted = Ghost.process(kick, mapOf("AMOUNT" to 1f))
+        assertEquals(kick.frameCount, ghosted.frameCount)
+        var peak = 0f
+        for (v in ghosted.samples) { assertTrue(v.isFinite()); peak = maxOf(peak, abs(v)) }
+        assertTrue(peak <= kick.peak() * 1.001f)
+        assertTrue(Classifier.classify(ghosted).drumClass != DrumClass.KICK, "what's left of a kick is not a kick")
+    }
+
+    // ---------- DUB + SWELL + the smear's FLOOR ----------
+
+    /** How much of the source survives, 0..1: the normalized correlation of the two, mono-folded, at zero lag. */
+    private fun likeness(a: Snip, b: Snip): Double {
+        val n = minOf(a.frameCount, b.frameCount)
+        var dot = 0.0
+        var ea = 0.0
+        var eb = 0.0
+        for (f in 0 until n) {
+            var x = 0f
+            var y = 0f
+            for (c in 0 until a.channels) x += a.samples[f * a.channels + c]
+            for (c in 0 until b.channels) y += b.samples[f * b.channels + c]
+            dot += x * y.toDouble()
+            ea += x * x.toDouble()
+            eb += y * y.toDouble()
+        }
+        return dot / Math.sqrt(ea * eb)
+    }
+
+    @Test
+    fun `DUB drifts further from the source every generation, zero is transparent, peak held`() {
+        val bright = Thump.render(ThumpVoice.HAT_CLOSED)
+        assertTrue(Dub.process(bright, mapOf("GENERATIONS" to 0f)) === bright)
+        assertEquals(6, Dub.generations(0.5f))
+        assertEquals(12, Dub.generations(1f))
+        val g3 = Dub.process(bright, mapOf("GENERATIONS" to 0.25f))
+        val g12 = Dub.process(bright, mapOf("GENERATIONS" to 1f))
+        val like3 = likeness(bright, g3)
+        val like12 = likeness(bright, g12)
+        assertTrue(like3 < 0.999 && like12 < like3, "a dub of a dub drifts further: 1 > $like3 > $like12")
+        // Identity, the rack's own way: the default depth leaves a kick a kick.
+        assertEquals(DrumClass.KICK, Classifier.classify(Dub.process(kick)).drumClass, "a dubbed kick is still a kick")
+        assertTrue(g12.peak() <= bright.peak() * 1.001f, "a dozen saturating passes never read as loudness")
+        assertTrue(Dub.process(bright, mapOf("GENERATIONS" to 1f)).samples.contentEquals(g12.samples), "deterministic")
+    }
+
+    @Test
+    fun `SWELL arrives before the strike and leaves the strike itself untouched`() {
+        val swelled = Swell.process(snare, mapOf("RISE" to 0.5f)) // a 0.75 s rise
+        val rise = Swell.riseFrames(0.5f, snare.sampleRate)
+        assertEquals(snare.frameCount + rise, swelled.frameCount, "the rise, then the whole hit")
+        // The hit is on the downbeat, bit for bit.
+        val ch = snare.channels
+        assertTrue(
+            swelled.samples.copyOfRange(rise * ch, swelled.samples.size).contentEquals(snare.samples),
+            "the strike is the original",
+        )
+        // The arrival rises: the last quarter of the swell is louder than the first.
+        fun rmsFrames(from: Int, to: Int): Double {
+            var acc = 0.0
+            for (i in from * ch until to * ch) acc += swelled.samples[i] * swelled.samples[i].toDouble()
+            return sqrt(acc / ((to - from) * ch))
+        }
+        val first = rmsFrames(0, rise / 4)
+        val last = rmsFrames(rise * 3 / 4, rise)
+        assertTrue(last > 3 * first, "energy rises into the hit: $first -> $last")
+        assertTrue(Snip(swelled.samples.copyOfRange(0, rise * ch), ch, snare.sampleRate).peak() <= snare.peak() * Swell.SWELL_LEVEL * 1.001f, "the swell sits under the hit")
+        assertTrue(Swell.process(snare, mapOf("RISE" to 0f)) === snare, "no rise, no swell")
+        assertTrue(Swell.process(snare, mapOf("RISE" to 0.02f)) === snare, "a rise too short to stretch is honest silence, not a click")
+        val blip = Snip(FloatArray(20) { if (it < 2) 0.5f else 0f }, 1, 44_100)
+        assertTrue(Swell.process(blip, mapOf("RISE" to 1f)) === blip, "a head too short for any stretch is transparent, never a throw")
+    }
+
+    @Test
+    fun `the whole rack with a swell keeps its tail budget from the swelled sound, and old recipes stay byte-stable`() {
+        val chain = FxChain(swell = mapOf("RISE" to 1f), spring = mapOf("SIZE" to 0.7f, "MIX" to 0.5f))
+        val out = chain.process(kick)
+        val rise = Swell.riseFrames(1f, kick.sampleRate)
+        assertTrue(out.frameCount >= kick.frameCount + rise, "the swell is an arrival, not a tail to be cut: ${out.frameCount} vs ${kick.frameCount + rise}")
+        assertEquals(chain, FxChain.fromJsonText(chain.toJsonText()))
+        val text = FxChain(dub = mapOf("GENERATIONS" to 0.3f), swell = mapOf("RISE" to 0.2f)).toJsonText()
+        assertTrue(text.indexOf("\"swell\"") < text.indexOf("\"dub\""), "the file reads in rack order")
+        assertTrue(!FxChain(eq = mapOf("BASS" to 0.6f)).toJsonText().contains("swell"))
+        assertEquals(0f, Smear.floorHz(0f))
+        assertEquals(Smear.FLOOR_HI, Smear.floorHz(1f), 1f)
+    }
 }

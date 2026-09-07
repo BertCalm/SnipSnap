@@ -26,15 +26,15 @@ flow (`ExportWizardModel` over the shared `Exporters`), pad voices
 gates — all tested. Capture buffer, cleanup DSP, and every writer were
 already done and hardware-verified for drums.
 
-**Remaining (all APP; = APP_PLAN M0–M5):**
+**The milestones (= APP_PLAN M0–M5), reconciled against the app on 2026-09-07 — the ticks below name what exists and where:**
 
 | # | Work | Size | Exit test |
 |---|---|---|---|
-| F1.1 | M0 walking skeleton — theme, nav, `KitStore` shelf | M | browse kits, tap pads, hear WAVs, flip schemes |
-| F1.2 | M1 capture — service, MediaProjection, bubble, mic, silence detection, QS tile | L | snip YouTube from inside YouTube; snip the room; share a video in |
-| F1.3 | M2 tape deck — bind Compose to `TapeDeckModel`/`PeaksPyramid` | M | a YouTube snip becomes a clean one-shot, cut on the hit |
-| F1.4 | M4 play mode — Oboe, bind `VoiceAllocator` | M | finger drumming feels tight on a mid-range phone |
-| F1.5 | M5 export wizard — SAF, bind `ExportWizardModel` | M | the card writes; the Live III plays it |
+| F1.1 | ✓ done: M0 walking skeleton — `TapeTheme` + the ten-tab `MenuRow`, `KitsScreen` (the shelf over `KitShelf`/`KitStore`), `KitScreen` (the 4×4 grid over `PadPlayer`), `PropertiesScreen` (the live scheme picker) | M | browse kits, tap pads, hear WAVs, flip schemes |
+| F1.2 | ✓ done: M1 capture — the always-listening ring (`MicSessionService`, a foreground session with ARM / SNIP / EJECT, `BubbleOverlay`, the TAPE screen's retroactive snip) now reads either source: ARM TAPE (the mic) or ARM INSIDE (another app's audio via MediaProjection consent + `AudioPlaybackCapture`, stereo folded to the mono ring). Dead-air detection (`SilenceWatch`, :audio): three seconds of digital zeros while the phone reports music playing means the app on top opts out, and the TAPE JAM box says so. The platform ending a projection (lock screen, the stop chip) is a routine end with its own toast. The quick-settings tile (`SnipTileService`): SNIP while armed, opens the app to arm otherwise — arming needs a visible Activity (background FGS starts and the consent dialog both), so the tile hands over rather than pretending. Bench: the emulator can't do playback capture; a real phone proves the INSIDE path | L | snip YouTube from inside YouTube (bench); snip the room (✓); share a video in (F3.2) |
+| F1.3 | ✓ done: M2 tape deck — `TapeScreen` over `TapeDeckModel` and `PeaksPyramid`, `TapeVoice` for audition, a snip handed to CHOP | M | a YouTube snip becomes a clean one-shot, cut on the hit |
+| F1.4 | ✓ done: M4 play mode — `PlayScreen` over `VoiceAllocator`, `PadPlayer` on SoundPool (Oboe deliberately not wired — `PadPlayer`'s own note: effort on a component the pads don't need yet). The exit test is a bench row: USER | M | finger drumming feels tight on a mid-range phone (bench) |
+| F1.5 | ✓ done: M5 export wizard — `ExportScreen` over `ExportWizardModel`, the format cycler (kit, expansion, MPC SESSION (`.xpj`)), SAF create-document through `MainActivity`; "the Live III plays it" stays a bench row | M | the card writes (✓); the Live III plays it (bench) |
 
 M3 is feature F2 below. Risks and their standing: APP_PLAN's table.
 
@@ -48,8 +48,8 @@ groove: kick→A01, hats choking, 92 BPM detected).
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| F2.1 | CHOP screen — bind Compose to `ChopReviewModel`, defrag-grid progress gag (= APP_PLAN M3) | APP | M | one captured bar → playable, sensibly-laid-out kit in under a minute |
-| F2.2 | The one tap — INSTANT KIT action on a fresh capture: chop with defaults straight into review | APP | S | capture 8 s of a break, tap once, play the kit |
+| F2.1 | ✓ done: CHOP screen — `ChopScreen` over `ChopReviewModel` (tap-to-cycle chips, NOT SURE, placement preview, SEND TO GRID, the MELODIC toggle, the teach path). Not drawn: the defrag-grid progress gag — polish, bench | APP | M | one captured bar → playable, sensibly-laid-out kit in under a minute |
+| F2.2 | ✓ done: The one tap — INSTANT KIT beside COMMIT on TAPE: the selection (or the whole deck) chopped with the defaults and landed on the grid without the review (`InstantKit`, `:shell`: `ChopReviewModel.chop` by hits → `sendToGrid` → `fromChop`, exactly CHOP's own untouched result; a capture with no hit refused in words); the kit opens on KIT, CHOP can still open it later to argue with the chips | APP | S | capture 8 s of a break, tap once, play the kit — a bar of break lands the kick on A01 with the hats choking, pinned by `InstantKitTest` |
 | F2.3 | ✓ done: calibration harness — a labeled-corpus test: WAVs + expected classes under `reference/calibration/`, a report of confusion + per-threshold sensitivity; tune `Classifier` against it | CORE | S | thresholds justified by real captures, not synthetic renders |
 | F2.4 | Calibration corpus — a dozen real captured hits (phone captures, not renders), labeled by ear | USER | S | F2.3 has something true to chew on |
 
@@ -64,10 +64,10 @@ on desktop today. The risk table's opt-out mitigation depends on this.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| F3.1 | Intent filters + receive activity → trim screen | APP | S | shared audio file lands in the tape deck |
-| F3.2 | Video demux — `MediaExtractor`/Media3 → float PCM → `Snip` → `Resampler` | APP | M | shared MP4's audio lands in the tape deck |
+| F3.1 | ✓ done: the share sheet's door — `SEND` (audio/\*, video/\*) and `VIEW` (content/file, audio/\*, video/\*) intent filters on `MainActivity`, now `singleTask` so a share while the app is open lands in the running instance through `onNewIntent`; `ShareInbox` holds the URI until `App` imports it, and consumes it so a rotation never imports twice; the file lands as a snip through `SnipStore.import` (`:shell`, tested: mono, the MPC rate through the sinc resampler, no trim/normalize/doctor — what was shared is what's on the tape — capped at three minutes with the toast saying so), which TAPE finds first by its own source priority; TAPE re-resolves on a `reloadRequest` when the share arrives with the deck already up; with no kit open the first on the shelf opens, and with an empty shelf the deck plays the snip on its own — TAPE no longer needs a kit for one, only for its longest-sample fallback. **Written blind for CI's compiler; the desktop session runs it** | APP | S | share a WAV from a file manager: it is on the deck, the toast names its length |
+| F3.2 | ✓ done: the decode — `MediaDecode` (`:app`): a WAV (sniffed by its RIFF/WAVE head, or by MIME) goes straight through `WavReader`; anything else through `MediaExtractor` (first audio track) and `MediaCodec` (the synchronous loop, 16-bit or float PCM through `Pcm` (`:audio`, tested — the same symmetric 16-bit scale `WavReader` reads with, non-finite floats scrubbed), the rate and channel count read off the codec's *output* format because the track's claim can differ), capped at ten minutes before `SnipStore.import` caps shorter; refusals in words — no audio track, no decoder on this phone, a file that could not be opened. The app-side half of F3.3's `DecodeContract`; the instrumentation test against the encoded twins in `reference/fixtures/decode/` is the desktop session's to run. **Written blind** | APP | M | share an MP3 and a screen-recorded MP4: both land on the deck; the six encoded twins pass `DecodeContract.verify` |
 | F3.3 | ✓ done: demux conformance fixtures — tiny known-content WAV fixtures + a contract test the app's decode output must pass (rate, channels, sample accuracy) | CORE | S | app-side decode verified against ground truth without an SDK |
-| F3.4 | Onboarding copy for opt-out apps (silence detection → screen-recorder path) — copy exists in `Copy`; wire it | APP | S | blocked capture shows the honest fallback, in voice |
+| F3.4 | ✓ done: the TAPE JAM box (`Copy.CAPTURE_BLOCKED`) now fires from F1.2's silence detection, once per verdict, as well as from a denied RECORD_AUDIO. The screen-recorder path it points at still needs F3.2's demux to land the recording | APP | S | blocked capture shows the honest fallback, in voice |
 
 ## F4 — Synth starter kits
 
@@ -79,8 +79,8 @@ bounded macro rolls, and two generated kits are hardware-verified.
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
 | F4.1 | ✓ done: starter-kit registry — `StarterKits` in `:shell`: name → builder → blurb → seed policy, wrapping the main-source builders so the FRESH TAPE menu is data-driven | CORE | S | registry renders every kit through assemble→preflight in a test |
-| F4.2 | NEW KIT menu — pick a starter, reroll seed, land on the grid (needs M0 only) | APP | S | first-run user has a playable kit in 30 s, empty grid never shows |
-| F4.3 | SYNTH screen — macro panels over `Patches`, SCRAMBLE, RENDER TO PAD (= the M5 synth half) | APP | M | prototype's Thump Lab behaviour, on device |
+| F4.2 | ✓ done: NEW KIT menu — `KitsScreen`'s FRESH TAPE menu over `StarterKits`, seeded starters badged REROLLS, a fresh seed per pick, lands on KIT | APP | S | first-run user has a playable kit in 30 s, empty grid never shows |
+| F4.3 | ✓ done: SYNTH screen — `SynthScreen`: macro panels over `Patches`, SCRAMBLE, SEND TO PAD (the recipe riding the pad) | APP | M | prototype's Thump Lab behaviour, on device |
 
 Also yields rights-clean Play Store demo content for free.
 
@@ -94,7 +94,7 @@ Shipping today as the CLI's `--key`.
 |---|---|---|---|---|
 | F5.1 | ✓ done: key grammar promoted — `KeySpec` (Am / F#m / "Eb major" / Dminpent parsing) moved from `:cli` into `:audio`, beside `Scales` where it belongs; CLI delegates | CORE | S | one parser, two consumers, same tests |
 | F5.2 | ✓ done: kit key field — optional `key` on `Kit`/`kit.json` so the choice persists with the folder | CORE | S | round-trips through `KitStore`; absent = no key, old kits unaffected |
-| F5.3 | Key picker + pad tune readout — kit-level key in the kit screen; IN KEY as a kit action; optional retune-on-assign for TONAL pads | APP | S | set Am, drop a captured bass note, it lands in key; the kick is untouched |
+| F5.3 | ✓ done: Key picker + pad tune readout — the KIT screen's KEY door beside the texture doors: twelve root chips and five scale chips set the key at once (`KeyPicker`, `:shell`; metadata in `kit.json`), OFF clears it, IN KEY moves every tonal pad's tune fields (`retuneTonalPads`), the tonal pads' tune readout under it, the key in the LCD header; retune-on-assign: `KitBuilderModel.assign` tunes a TONAL pad into the kit's key through the pad's own tune fields when one is set — audio untouched, the kick untouched, an unpitched hit never corrected. The keyed treatments (TUNE, BODY) now read a key set on the phone | APP | S | set C, assign a 227 Hz note: it lands on A3 by its tune fields; the kick assigned after it carries no tune; every chip pair is a real key and the label round-trips; the readout names each tonal pad in slot order |
 
 ## F6 — One-file kit sharing (.xpn)
 
@@ -106,7 +106,7 @@ waiting.
 |---|---|---|---|---|
 | F6.1 | Hardware import check — does the Live III's expansion import accept `SnipSnap_Factory.xpn`? (Part 2 queue, item 4) | USER | S | yes/no + exact error text if no |
 | F6.2 | ✓ done: `XpnImporter` — read an `.xpn` back into a kit folder (unzip, parse the program, resolve bare sample names); free CLI `import` command; the receive half of sharing | CORE | S | pack → import → re-export round-trips; a foreign commercial `.xpn` imports |
-| F6.3 | Share/receive flow — ACTION_SEND a kit as `.xpn`; intent-filter receives one → `XpnImporter` → the shelf | APP | S | kit → messenger → friend's phone → their shelf → their MPC |
+| F6.3 | ✓ done: the kit leaves and comes back — SHARE on the KIT screen packs the open kit as one `.xpn` (`XpnPackager`, preflight's refusal in words) into the share cache and hands it to the chooser through a `FileProvider` (`ShareOut`); the share door's filters now take ZIPs and octet-streams too, and `ShelfImport` (`:shell`, tested) reads the *bytes* to tell a `.xpn` (any ZIP with `.xpm` programs → `XpnImporter.importAll`), a backup (a ZIP of `.xpn`s → `KitBackup.restore`) and an MPC container apart, lands every kit through a hidden staging folder, and moves each onto the shelf under a name nothing there holds ("FUNK 2", `kit.json` renamed to match) — an import never overwrites a kit. **Written blind for CI's compiler** | APP | S | a packed kit lands beside its original as "FUNK 2" with every sample; a backup lands both kits; the chooser opens on SHARE |
 
 F6.2 doesn't wait on F6.1: importing serves the app-to-app share loop even
 if the hardware importer says no (folders remain the hardware path).
@@ -146,7 +146,7 @@ chromatically. Near-zero new code; in-key capture's payoff squared.
 |---|---|---|---|---|
 | W2.1 | ✓ done: `OneNote` builder — snip → detected root → one-zone `KeygroupProgram` (full key range), refused with a reason when no confident pitch | CORE | S | known-pitch tone → program with right root; noise → clear refusal |
 | W2.2 | ✓ done: CLI `keys <note.wav>` — one-note instrument to `.xty` + `.xpm` twins | CORE | S | artifacts land, detected root printed |
-| W2.3 | App action — MAKE INSTRUMENT on a tonal pad (after M3) | APP | S | long-press a tonal pad → instrument on the shelf |
+| W2.3 | ✓ done: App action — MAKE INSTRUMENT on the PAD SHEET (and MAKE PAD beside it), the instrument written to `Instruments/` beside the kits — and, since 2026-09-07, *played*: every keygroup package gets a sidecar (`InstrumentStore`, `:kit`) the phone reads, the shelf lists INSTRUMENTS, and KEYS plays one on the 4×4 (`InstrumentEngine` in `:shell`: zones, loops held while the finger is down, the release on let-go, eight voices; `KeysLayout` for root-on-A01, chromatic or scale, octaves) | APP | S | long-press a tonal pad → instrument on the shelf → KEYS plays it |
 | W2.4 | Bench — plays in tune chromatically from one sample | USER | S | ears |
 
 ## W3 — The reverse loop: MPC → phone → MPC
@@ -161,7 +161,7 @@ either wave: it doubles what the product is.
 |---|---|---|---|---|
 | W3.1 | ✓ done: `Mpc3Importer` — standalone drum `.xtd` + data folder → kit folder (levels, pans, tunes, mute groups, velocity layers, colours where present); missing samples refused by name; keygroup tracks refused with a reason | CORE | M | our export → import round-trips; a commercial `.xtd` from `reference/golden/` parses (sample-missing errors listed, not crashed) |
 | W3.2 | ✓ done: CLI `import` learns `.xtd` — dispatch by magic bytes, not extension | CORE | S | both archive kinds import through one command |
-| W3.3 | App receive/browse — open a `.xtd` from storage onto the shelf (after M0) | APP | S | MPC-saved kit editable on the phone |
+| W3.3 | ✓ done: an MPC track through the same share door — `ShelfImport` reads a gzip head as an MPC 3 container (`Mpc3Importer.import`, or `importProject` when `Mpc3Project.isProject`), and a ZIP holding `.xtd`/`.xpj` is unpacked (every entry checked to stay inside, bounded against a zip bomb) so the `_[TrackData]/` folder arrives beside the track. A bare `.xtd` shared alone carries no samples and is refused by name — the honest answer, since one shared file cannot bring a folder | APP | S | a track exported by `Mpc3Exporter`, zipped with its folder, lands with its pad; the bare container is refused in words; a `../` entry is refused before anything is written |
 | W3.4 | The Live III firmware save (Part 2 item 6) becomes this feature's fixture as well as the corpus's | USER | S | the round-trip claim tested against firmware's own output |
 
 ## W4 — Evil-twin bank
@@ -174,7 +174,7 @@ One action: bank B becomes your kit's evil twins.
 |---|---|---|---|---|
 | W4.1 | ✓ done: `KitBuilderModel.remixBankB(seed)` — bank A read back as arranged pads, `withRemixBank`, twins written to slots 17–32 with recipes; reroll replaces | CORE | S | any kit gains a bank B; same seed reproduces; recipes recorded |
 | W4.2 | ✓ done: CLI `remix <kit-dir> [--seed N]` | CORE | S | works on a chopped kit |
-| W4.3 | App action — EVIL TWINS in the kit menu (after M3) | APP | S | one tap, bank B lights up |
+| W4.3 | ✓ done: App action — EVIL TWINS on the KIT screen's action row (beside TAKES + BIN and KEY; the texture doors moved to a second row): one tap lights bank B with seeded re-treatments of bank A through `KitBuilderModel.remixBankB` via `KitShelf.evilTwins`, a fresh seed every press so the second press rerolls (the button says so, the header says A+B), the toasts the copy already had | APP | S | one tap, bank B lights up |
 
 ## W5 — Ghost notes from one capture
 
@@ -186,7 +186,7 @@ one-shots get real ghost notes, not just quieter ones.
 |---|---|---|---|---|
 | W5.1 | ✓ done: `KitBuilderModel.addGhostLayers(slot)` — soften into 1–2 soft zones under the main sample; reversible (clear layers) | CORE | S | zones valid, soft renders measure darker (centroid), pad reverts cleanly |
 | W5.2 | ✓ done: CLI `chop --ghosts` — layers on every one-shot pad | CORE | S | chopped kit exports with velocity zones |
-| W5.3 | App toggle on the pad sheet (after M3) | APP | S | quiet hits sound soft on hardware |
+| W5.3 | ✓ done: App toggle on the pad sheet — GHOSTS on the PAD SHEET over `addGhostLayers` / `clearGhostLayers` | APP | S | quiet hits sound soft on hardware (bench) |
 
 ## W6 — BPM + key metadata everywhere
 
@@ -202,12 +202,12 @@ free: the MPC warps loops itself when the tempo metadata is right.
 
 | Item | What | Owner | Size | Note |
 |---|---|---|---|---|
-| W7 seamless sustain loops | the organ's whole-period loop cut generalized to captured notes — needs crossfade loops for vibrato/noise | CORE | M | hold a captured string, it sings forever; hardest DSP of the wave, do last |
-| W8 melodic chop | grid-chop a phrase, `Pitch` each slice, lay out low→high on the SCALE layout | CORE | S–M | a vocal run becomes an instrument-ish kit |
-| W9 takes + the 30-day bin | numbered `kit.json` takes on save; cleared samples to a bin ("THE BIN KEEPS IT 30 DAYS" is already in the copy) | CORE + APP | S | trust feature; model in `:shell` |
-| W10 teach-the-machine | chip overrides logged as **feature vectors + labels only** (never audio — rights-clean); calibration harness ingests them | CORE + APP | S+S | ordinary use becomes classifier training data; needs a consent switch |
-| W11 one-file backup | every kit as `.xpn` in one archive; restore via `XpnImporter` | CORE | S | retention insurance |
-| W12 pad mini-waveforms | `PeaksPyramid` makes them free to draw | APP | S | perceived-polish per effort champion |
+| W7 seamless sustain loops | ✓ done (CORE wave 3): `LoopCut` — whole-period loop search after the attack, a baked crossfade when the raw seam isn't clean, honest refusals | CORE | M | hold a captured string, it sings forever |
+| W8 melodic chop | ✓ done (CORE wave 3; the CHOP screen's MELODIC toggle is X1.3) | CORE | S–M | a vocal run becomes an instrument-ish kit |
+| W9 takes + the 30-day bin | ✓ done (CORE wave 3, `TakesBinScreen` on the phone as X2.3) | CORE + APP | S | trust feature; model in `:shell` |
+| W10 teach-the-machine | ✓ done in core (wave 3: `TeachLog`, the harness ingests it), wired into CHOP behind the consent switch SETUP draws (X4.4) | CORE + APP | S+S | ordinary use becomes classifier training data; needs a consent switch |
+| W11 one-file backup | ✓ done (CORE wave 3: `KitBackup`, CLI `backup`); the phone's share/backup action is X3.3, open | CORE | S | retention insurance |
+| W12 pad mini-waveforms | ✓ done: `PadPeaks` (`:shell`, tested) reads every pad once per kit edit off the main thread and keeps 44 peak columns per slot, nothing more; `KitScreen`'s cells draw them centred in the pad's class colour under the name, a missing or unreadable file drawing nothing and breaking nothing | APP | S | perceived-polish per effort champion |
 
 **Rejected, with reasons:** stem separation (heavy ML, off-brand for an
 honest tool); our own time-stretch (the MPC warps better — W6 ships the
@@ -232,7 +232,7 @@ something you can perform.
 |---|---|---|---|---|
 | X1.1 | ✓ done: melodic placement in `ChopReviewModel` — pitched slices sorted ascending onto the pads, unpitched appended in capture order; per-row pitch cached | CORE | S | out-of-order tones land in ascending pad order |
 | X1.2 | ✓ done: CLI `chop --melodic` | CORE | S | a scrambled scale chops into a playable run |
-| X1.3 | App toggle on the chop screen (after M3) | APP | S | MELODIC next to the classic layout |
+| X1.3 | ✓ done: the CHOP screen's MELODIC toggle beside the classic layout | APP | S | MELODIC next to the classic layout |
 
 ## X2 — Takes + the 30-day bin (was W9)
 
@@ -245,7 +245,7 @@ day one — now it's true).
 |---|---|---|---|---|
 | X2.1 | ✓ done: takes — `save()` archives the outgoing `kit.json` under `.takes/`, capped and rotated; `takes()` lists, `restoreTake(n)` rolls back | CORE | S | edit → save → restore → the earlier kit is back |
 | X2.2 | ✓ done: the bin — deletes move to `.bin/` stamped with when; `binContents()`, `purgeBin(olderThanDays = 30)`, `emptyBin()` | CORE | S | a cleared pad's WAV is recoverable for 30 days |
-| X2.3 | Takes/bin UI (after M0) | APP | S | the copy's promise, visible |
+| X2.3 | ✓ done: `TakesBinScreen` — TAKES + BIN off the KIT action row, restore and the 30-day countdown | APP | S | the copy's promise, visible |
 
 ## X3 — One-file backup (was W11)
 
@@ -256,7 +256,7 @@ through `XpnImporter`. Retention insurance and the "new phone" story.
 |---|---|---|---|---|
 | X3.1 | ✓ done: `KitBackup` (`:kit`) — backup(kitsRoot) → one zip of per-kit `.xpn`s (preflight-blocked kits skipped and named); restore(zip) → kit folders | CORE | S | backup → wipe → restore round-trips every clean kit |
 | X3.2 | ✓ done: CLI `backup` / `restore` | CORE | S | works on a folder of chopped kits |
-| X3.3 | App share/backup action (after M0) | APP | S | one file leaves the phone with everything on it |
+| X3.3 | ✓ done: BACKUP on the KITS screen — `KitBackup.backup` into the share cache as "SnipSnap Shelf <date>.zip", handed to the chooser like SHARE; the toast counts what packed and what preflight skipped; the same file shared back in restores every kit through `ShelfImport` | APP | S | one file leaves the phone with everything on it; shared back, every kit lands |
 
 ## X4 — Teach the machine, data path (was W10's CORE half)
 
@@ -269,7 +269,7 @@ calibration harness eat them.
 | X4.1 | ✓ done: split `Classifier` — `classify(Features)` beside `classify(Snip)`, so a feature vector is testable without its audio | CORE | S | both paths agree on every corpus render |
 | X4.2 | ✓ done: `TeachLog` (`:shell`) — jsonl of {features, label} from `ChopReviewModel`'s overridden rows; reader for the harness side | CORE | S | overrides round-trip; a log line re-classifies |
 | X4.3 | ✓ done: harness ingestion — overrides.jsonl in `reference/calibration/` scored alongside the WAVs | CORE | S | logged corrections show up in the confusion report |
-| X4.4 | Consent switch + wiring in the app (after M3) | APP | S | off by default; nothing leaves the device either way |
+| X4.4 | ✓ done: Consent switch + wiring in the app — SETUP's TEACH THE MACHINE row (OFF / ON, off by default, remembered like the scheme), the consent line under it in the copy's own words plus what ON actually logs; CHOP reads the boolean, the toasts are TEACHING ON / OFF | APP | S | off by default; nothing leaves the device either way |
 
 ## X5 — Multisample keys (new)
 
@@ -353,7 +353,7 @@ tracks with their grooves, instruments beside them, mixer wired.
 |---|---|---|---|---|
 | Y3.1 | ✓ done: `SessionBuilder` (`:kit`) — stage kit folders + `.xty` instrument packages into `_[ProjectData]/`, hand `Mpc3ProjectWriter` the track list; grooves from `groove.json` ride onto the sequence | CORE | S–M | two kits + an instrument → one `.xpj` our reader accepts with the right track types |
 | Y3.2 | ✓ done: CLI `project <kit-dir>... [--keys pkg...] [--name]` | CORE | S | one command, whole session on the card |
-| Y3.3 | App: SESSION export in the wizard (after M5's SAF) | APP | S | the wizard's biggest format, one tap |
+| Y3.3 | ✓ done: the export wizard's format cycler carries MPC SESSION (`.xpj`) — KITS + GROOVES | APP | S | the wizard's biggest format, one tap |
 
 ## Y4 — Pad treatments: the FX rack pointed at one pad
 
@@ -366,7 +366,7 @@ the bin.
 |---|---|---|---|---|
 | Y4.1 | ✓ done: `KitBuilderModel.treatPad(slot, treatment, amount, seed)` — the Shuffle treatment table exposed singly + amount-scaled; original WAV binned, recipe recorded; `untreatPad` restores | CORE | S | treat → audibly different, recipe present; untreat → original bytes back from the bin |
 | Y4.2 | ✓ done: CLI `treat <kit-dir> <pad> <treatment> [--amount] [--seed]` | CORE | S | crush A02 from the terminal |
-| Y4.3 | App: treatment row on the pad sheet (after M3) | APP | S | one tap per character |
+| Y4.3 | ✓ done (wave UU): the PAD SHEET TREATMENT card's second row — TAIL · SLAP · WASH · PUNCH over `KitBuilderModel.characterPad` (whole-pad, layers included, bin-backed) | APP | S | one tap per character |
 
 ## Y5 — The preview renderer: every kit listenable before loadable
 
@@ -1250,6 +1250,165 @@ pockets.
 
 ---
 
+## Wave UU — Sound design, both directions (CORE + APP)
+
+The review that started this wave found the shop's sound design living
+almost entirely in the CLI — 45 verbs of tested DSP the phone never
+reached — while the phone's own pad sheet drew four era segments and
+nothing else. Two lanes, run together: **new DSP in the core** (the
+Séance's smear, the plan's own oldest below-the-line item) and **the
+phone catching up** (the rack's characters and the pad shape, both of
+which existed for months as terminal-only doors). Every core item
+lands with its exit test on the JVM; the app items ride existing
+Compose patterns over tested `:shell` state.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| UU1 | ✓ done: `Separate.smear(snip, amount)` — the STN transient mask (`stnMasks`, now computed once and shared with `stn`) taken away per bin by `amount`, one analysis and one synthesis; the result peak-matched to the source (capped at +12 dB of makeup, so a bare click is not shouted back up); amount 0 is the input object itself; deterministic | CORE | S–M | on the tone+clicks+hiss fixture the clicks stop standing out of the wash (prominence over a control window collapses) while the tone and the hiss survive; graded in amount; a held tone passes through; a bare click's residue stays under the source's peak; stereo channels smear identically |
+| UU2 | ✓ done: `Smear` as a rack section — `FxChain.smear` (AMOUNT), order reverse → **smear** → eq → …, JSON section absent unless set so every old recipe is byte-stable; `Treatments.EXTRA` holds `smeared` (and any future character) *outside* `Shuffle.TREATMENTS`, whose index order every saved bank-B seed depends on | CORE | S | round-trip through JSON; old recipes unchanged; unknown macro refused; a smeared snare carries less of its energy in the first 20 ms and records a smear-only recipe; `treat <kit> A02 smeared` works unchanged |
+| UU3 | ✓ done: `KitBuilderModel.characterPad(slot, name, amount)` — the whole-pad door `eraPad` already was, generalized (`rewriteEveryFile`): every referenced file, layers included, binned, one fx-only recipe (name + AMT); `unEraPad` undoes either row; AMT 0 a no-op that validates the name first | CORE | S | a layered snare's every zone re-renders and every file lands in the bin; `PadSheet.read` names the segment; undo restores every file byte-identical; a typo is refused even at AMT 0 |
+| UU4 | ✓ done: the PAD SHEET's second TREATMENT row — `PadSheet.CHARACTER_SEGMENTS` (TAIL · SLAP · WASH · PUNCH → `smeared` / `slapback` / `washed` / `punched`), `treatmentFor` speaking both rows, `read(recipe)` lighting the right segment for either recipe shape; the phone ruling extended (a `reversed` twin or a CLI `crushed` reads "TREATED: CRUSHED" on the provenance line, never NONE); `applyTreatment` undoes-then-reapplies through the bin for both rows and *stacks* on a recipe the bin cannot restore (a twin, a CLI treat) instead of refusing with the ghosts toast | APP | S–M | shell: both rows map to real names, inverse mappings hold, `read` on era / character / unmapped / fx-only / null; app: one tap per character, AMT re-applies, the toast names the segment |
+| UU5 | ✓ done: `PadShape` (`:kit`) — the shape's one reading (attack ramp ≤ 0.4 s, decay fade over d × length, cutoff 20 Hz..20 kHz exponential, resonance 0..12 dB) shared by `KitPreview`, `SfzWriter` and the phone; `PadFilter` (`:synth`) renders the filter half through the TPT SVF, peak-held; `ShapeAudition` (`:shell`) composes both for a single HIT | CORE | S | envelope: no shape is the same object, attack silent-then-full, decay trims at the shaped length, mappings match the SFZ writer's figures; audition: cutoff 0.5 keeps 110 Hz and kills 6 kHz, resonance lifts the cutoff tone without exceeding the source's peak, decay + filter compose; SFZ and preview output unchanged (their suites) |
+| UU8 | ✓ done: SCULPT and STRETCH on the KIT screen — `TextureKits` (`:shell`) is the one door both verbs come through (the CLI `sculpt` now calls it; its output and folders are unchanged): four seeded takes as a texture kit of its own, LOOP pads, provenance and recipes; `Spec.Sculpt` (cloud/scrub/swarm), `Spec.Stretch` (the whole hit slowed BY a factor, clamped so no take outruns a minute, the effective factor recorded), `Spec.Freeze` (four instants: the loudest, then ¼ ½ ¾ in); the panel's data (kinds, modes, one `Knob` each — LENGTH / BY / HOLD, exponential); `KitShelf.texture` names the tape "<Pad> Sculpt / Stretched / Frozen" and `App.texture` renders it like FRESH TAPE and opens it | CORE + APP | M | shell: sculpt takes are LOOP with provenance/recipe and same-seed bytes; stretch takes run source × factor and clamp to a minute with the real factor in the recipe; freeze takes sit at the named instants (a quarter in is the low tone, three quarters the high); the panel's knobs open at their defaults; CLI sculpt tests unchanged. App: SCULPT ▸ / STRETCH ▸ on the KIT action row open the panel; GO lands and opens the new tape |
+| UU7 | ✓ done: MUTATE on the PAD SHEET — `MutateSheet` (`:shell`): the four moves in the verb's order, one knob per move (AT 5..2000 ms and HZ 40..8000 exponential, MIX linear; STACK none), partners = this kit's other pads or ROULETTE's deal off the shelf (guided, seeded by the tap count, seed recorded like `--roulette`), `read(recipe)` naming the move and parents; the card draws the moves, a mini grid of partner tags four to a row, the ROULETTE line, the knob, MUTATE and UNDO; GHOSTS pads refused with their own line before the verb's own refusal | CORE + APP | M | shell: knobs round-trip their defaults and read in plain units, halfway on HZ is the geometric middle, partners never include the pad, a pad partner mutates with the CLI's own `Kit:A02` label and undoes byte-identical, a deal is seeded and its seed lands in the recipe, other recipes read as unmutated; app: pick a move and a pad, MUTATE, the line says what the pad now is |
+| UU6 | ✓ done: the SHAPE card on the PAD SHEET — ATTACK / DECAY / CUTOFF / RES steppers writing `KitPad.attack/decay/cutoff/resonance` as metadata through the debounced `editPadMetadata` door (no WAV touched, no take per nudge), value column reading OFF / FULL / OPEN while a field is the format's default, RESET clearing all four; HIT auditions `ShapeAudition`, so a tighten is heard before the card | APP | S | shaped pad exports through both generations' fields (GG1's suite, unchanged); HIT plays the approximation; RESET returns the pad to byte-identical `kit.json` |
+
+**Below the line for UU:** MUTATE's other-kit pads and WAV parents on
+the phone (a kit picker — the shelf's ROULETTE covers the cross-kit
+case for now); the *clear* stretch (PGHI phases) on the phone — the
+wash is the texture people want, the clear one is a CLI flag; SCULPT / STRETCH as pad-sheet actions
+(they make *new* kits, so they belong on the KIT screen, not the
+sheet); formant-preserving pitch shift and `sculpt --keys` (still the
+Séance's next two core items); the remix bank rolling `smeared` (would
+change every saved seed — a versioned table if ever).
+
+---
+
+## Wave VV — the room and the tape (CORE + APP)
+
+Sound design that is *composition*, not new theory: every item here is
+a few existing passes in a new order, landing as a named character on
+the pad sheet (rows two and three) or a MUTATE move. The point of the
+wave is six new sounds in a week and the one UI change the later waves
+also need — the card growing past one row of characters.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| VV1 | ✓ done: ROOM OF ITSELF — `mutate --room [--amount]`: the pad convolved with a partner's tail (FFT convolution on the classifier's own `Fft`), MIX 0..1 dry/wet, peak matched to the pad; the fifth MUTATE move, so the phone's card gets it with a MIX knob and ROULETTE can deal the room | CORE + APP | M | a click through an exponentially decaying noise tail decays with that tail's time constant; MIX 0 is the pad; the recipe records the room's label and mix; undo byte-identical |
+| VV2 | ✓ done: GHOST — `Separate.ghost` (the noise layer alone: `1 − amount·(s + t)` on the STN masks, peak matched with the smear's capped makeup), a `Ghost` rack section after SMEAR, the `ghosted` character | CORE | S | tone and clicks vanish, hiss survives and is brought up; a ghosted kick is not a kick; never above the source's peak |
+| VV3 | ✓ done: TAPE STOP and TAPE START — `Motion`, last in the rack: a variable-speed head with a linear-interpolated read, STOP the capstan letting go over up to 2 s (pitch and level fall to silence, length kept), START the reel spinning up over up to 1.5 s (the sound arrives late); the `stopped` and `started` characters | CORE | S | STOP: crossings fall by half and the end is silent; START: crossings and level climb; both zero is the input object |
+| VV4 | ✓ done: the pad sheet's third row — GHOST · STOP · START · FLIP over `characterPad`; `reversed` now lights FLIP (AMT grades its spring tail) | APP | S | every segment names a real character; the inverse mappings hold |
+| VV5 | ✓ done: GENERATION LOSS — `Dub`, a rack section beside CRUNCH: GENERATIONS (0..12) bounces through the `tape` and `mpc60` eras at half strength, peak matched at the end; the `dubbed` character | CORE | S | the copy's likeness to the source (zero-lag correlation) falls with every generation; a kick dubbed at the default depth is still a kick; zero is the input object; a dozen passes never exceed the source's peak; deterministic |
+| VV6 | ✓ done: BANDED SMEAR — `Separate.smear(aboveHz)` leaves every bin under the floor at unity; SMEAR gains a FLOOR macro (0 = the whole band, else 80 Hz..6 kHz exponential); the `skimmed` character | CORE | S | the tone under the floor keeps its level within 5 %; the clicks above it still go; a negative floor is refused |
+| VV7 | ✓ done: SWELL — `Swell`, first in the rack: the hit's own head stretched to RISE (0..1.5 s) through the wash, backwards, faded in, under the hit's peak, then the hit itself bit for bit; the tail budget is measured from the swelled sound so a swell is never cut as a tail; the `swelled` character | CORE | S | output = rise + the untouched hit; the arrival's last quarter is louder than its first; RISE 0 and a rise under one window are the input object |
+| VV8 | ✓ done: the pad sheet's fourth row — SKIM · DUB · SWELL; short rows keep the chip width | APP | S | every segment names a real character |
+
+**Below the line for VV:** the capture-room variant of ROOM (the
+capture doctor's measured tail as the impulse — wants the phone-mic
+reference capture first).
+
+---
+
+## Wave WW — in key (CORE + APP)
+
+The on-thesis wave: sound design that knows the kit's key. Harder DSP
+over the spectral door, each with a real exit test.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| WW1 | ✓ done: PAD FROM ANYTHING — `PadFromAnything` (`:kit`): stretch far (the clear stretch for a pitched source so its note stays a line, the wash for an unpitched one), the sample = the wash's first second (the arrival) + four seconds (the body) with the seam baked as a 0.75 s crossfade into the material before the loop start, written through the one-note package writer as a keygroup with loop points and a 0.6 release, both generations; DEPTH (×8..×100, giving where a minute or the loop demand it, the depth used reported) and BLOOM (0..1 s arrival ramp); an unpitched source is a drone at C3, never refused; CLI `pad <wav> \| <kit> <pad> [--depth] [--bloom]`; the pad sheet's PAD FROM ANYTHING card (`PadMaker` knobs, MAKE PAD ▸ INSTRUMENT beside MAKE INSTRUMENT's own door) | CORE + APP | M | the last frame equals the frame before the loop start and the level agrees across the wrap; the body of a 220 Hz source still detects 220 Hz; A3 at the root; a burst is a drone at C3 at the pad's ceiling; depth gives (8 s at ×40 → ×7.5, 50 ms → ×100), blips and 31 s sources refused; export lands `.xty` + `_[TrackData]/` with the loop in the `.xpm`; same seed same bytes |
+| WW2 | ✓ done: SPECTRAL RETUNE — `Retune` (`:audio`): one long, fine FFT over the body finds the partials (local maxima 12 dB above their neighbourhood, within 40 dB of the loudest) and the tonalness (their share of the band's energy); each partial's ratio to its nearest in-key note is a plateau on the frequency axis joined by straight lines; every `Spectral` frame is resampled through the map in the log domain (a lobe keeps its parabolic shape, so the phase integration reads the moved peak), one correction pass trims each ratio by where the partial actually landed, and `Pghi` reinvents the phases; AMOUNT how far, peak matched, per-seed; refused in words when the classifier hears a kick/snare/clap/hat or the tonalness is under 0.5; CLI `retune <kit> <pad> [--key] [--amount] [--seed] [--undo]`; `KitBuilderModel.retunePad` (the kit's key, or the nearest semitones without one); the pad sheet's TUNE segment, row four | CORE + APP | M–L | four partials 38..70¢ off C major land within 5¢ of A3/C5/E6/C7, the bell still decays, peak matched; kick, snare, hat, clap refused and named, a tom and hiss judged on their own; AMT 0 the same object, AMT ½ halfway, in key untouched; stereo stays stereo, same seed same bytes; D minor pentatonic sends 1290 Hz up to F6 |
+| WW3 | ✓ done: TRANSPLANT — `Transplant` (`:audio`): both sounds folded into one energy-weighted long-term spectrum read in BANDS log-spaced bands (4..64, default 16), the band-by-band difference one fixed set of per-bin gains through `Spectral` (nothing moves in time), capped ±24 dB, peak matched, all measurement; the sixth `Mutate` move (`--transplant [--bands N]`, recipe `bands`), the MUTATE card's sixth chip with a BANDS knob (the chips now three to a row) | CORE + APP | M | a snare through a hum: the 10 ms envelope correlates > 0.95 with the snare and less with the hum, the 16-band shape correlates > 0.85 with the hum and more than with the snare, length and peak the snare's; 64 bands fit the hum's formant closer than 4; stereo stays stereo, same bytes twice; bounds refused |
+| WW4 | ✓ done: BODY — `Body` (`:audio`): two-pole resonators at the key's chord tones (root 1.0, fifth 0.5, third 0.3) over three octaves from C2, each octave softer, the hit the mallet; DECAY the T60 (0.05..4 s), AMOUNT dry→body, the result the hit plus the decay, peak matched, no seed; no key → the hit's own note or C, never refused; the keyed family (`Keyed`, `KitBuilderModel.keyedPad`, recipe `{"keyed", "key", "amount", "seed", "decay"}`) now holds TUNE and BODY; CLI `body <kit> <pad> [--key] [--decay] [--amount] [--undo]`; the pad sheet's fifth row | CORE + APP | M | a click through BODY in A minor detects A and its loudest partial is an A; T60 measured 0.3 s and 1.2 s at those knobs; the modes are root/third/fifth in order, root loudest, no key → root and fifth; AMT 0 the same object; stereo stays stereo, same bytes |
+| WW5 | ✓ done: WOBBLE — `Wobble` (`:synth`): the TPT state-variable low-pass swept by a cosine that opens on the onset and closes half a division later, the division a note value (1/1..1/16, default 1/8) at the kit's tempo; AMOUNT the depth over 120 Hz..6 kHz, peak matched, no seed; the keyed family's third member (`--rate`, `--bpm` on the CLI, the kit's tempo or the preview's 92 on the phone); CLI `wobble <kit> <pad>`; the pad sheet's fifth row | CORE + APP | S | quarters at 120 sweep every 0.50 s and eighths every 0.25 s by the brightness swing of white noise, quarters at 90 every 0.67 s; bright at the onset, dark half a division in; RATE snaps to divisions; AMT 0 the same object; stereo stays stereo, same bytes |
+| WW6 | ✓ done: ATTACK KEPT, TAIL ETERNAL — `Eternal` (`:audio`): the first KNEE (30 ms) copied bit for bit, the tail's spectrogram resampled through a hyperbolic map (speed 1 at the knee, `τ₀·ln(1 + τ/τ₀)` after, τ₀ solved so the source's end lands on the knob) and reinvented by `Pghi`, a 5 ms seam into the resynthesis, the tail at the real tail's peak; TAIL the knob (0.5..30 s, AMT exponential on the phone), a longer tail refused rather than sped up; the keyed family's fourth (it reads nothing of the kit but escapes the rack's tail budget); CLI `eternal <kit> <pad> [--tail] [--knee] [--seed] [--undo]`; ETERNAL closes the pad sheet's fifth row | CORE + APP | S | the first 30 ms sample-equal and the length knee + knob; a chirp's pitch reads the map: at speed just past the knee, most of the way through at half the tail, on the top at the end, monotone; refusals in words; AMT ↔ seconds at both ends; stereo stays stereo; same seed same bytes |
+
+---
+
+## Wave XX — the crate as an instrument (CORE + APP)
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| XX1 | ✓ done: DRIFT TOWARD THE CRATE — `Mutate.drift`: the guided roulette finds the neighbour, MORPH blends AMOUNT of the way toward it, the morph's recipe carrying the spin and a `drift` flag; CLI `drift <kit> <pad> [--amount] [--seed] [--root] [--undo]`; the MUTATE card's DRIFT button beside ROULETTE (the card flips to MORPH so MIX is the knob it read), a drifted pad reading as DRIFT | CORE + APP | S | drift's bytes equal roulette then morph by hand; same seed same bytes; the sheet's one tap records the MIX amount and reads back as DRIFT; the verb round-trips through the bin and refuses an empty crate |
+| XX2 | ✓ done: BREEDING — `Breed` (`:shell`): pad by pad, A's pad meets B's on the same slot (or B's first of the class); every synth macro (engines agreeing) and rack macro is A's, B's or the average by a seeded coin, a one-sided rack section comes along half the time; synth pads re-render, captured pads run through the crossed rack, the rest come over verbatim; the audit re-throws the coin up to six times until the child classifies as its parent's audio does, else keeps A's pad and says so; a new folder, parents untouched, `bredFrom` stamped; CLI `breed <a> <b> [--out] [--name] [--seed]` | CORE | M | factory × lucky-dip: every child pad classifies as its mother's does, crossed pads differ from her, same seed same bytes, another seed another kit; a captured kit against a rackless kit is all kept and both parents stay byte-identical; a taken destination and an unsafe name refused |
+| XX3 | ✓ done: DE-SAMPLE — `Desample` (`:synth`): every THUMP voice's macro space on a three-level grid, rendered once and measured by the classifier's extractor, the hit's nearest by `Similar`'s distance, a coordinate descent refining the macros; the distance always told, past 0.45 named far; `KitBuilderModel.desamplePad` (kindred voices first, the patch riding the pad, refused when far unless forced); CLI `desample <wav> \| <kit> <pad>`; the pad sheet's DE-SAMPLE card; the spec `docs/DESAMPLE.md` | CORE + APP | L | a grid-point THUMP kick returns its own macros at distance 0 and renders back the same bytes; an off-grid snare refines under 0.08 and never loses to the grid; kick, snare and hat captures land within the bound on kindred voices; hiss is named far; the builder swaps a kick for a kick patch's render and refuses hiss unless forced; the verb prints and writes a patch |
+
+---
+
+## Wave YY — outside (CORE + APP)
+
+The Outsidify idea, SnipSnap's way: the phone plays a sound out — its
+speaker into the room, or the headphone jack or a USB interface into a
+pedal, an amp, a spring tank — listens to what comes back, finds *when*
+it came back, and bakes the return as the pad. No live loop, no
+feedback mode (the app renders offline; a feedback loop is a
+performance surface, below the line): two moves, both bin-backed
+rewrites with the recipe riding the pad.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| YY1 | ✓ done: the trip measured — `Outside` (`:audio`): `align` cross-correlates the return against the send by FFT and reads the lag of the strongest match as the latency, polarity allowed to flip and reported, confidence the normalized correlation, standout the match's height over the correlation's own RMS; `reamp` cuts the return at the arrival, keeps the tail while it still sounds (the floor measured off the room *before* the arrival — what the pre-roll is for — a 0.6 s hold bridging a delay pedal's repeats, the cut landing where the quiet began), restores polarity, peak matches to the pad, MIX dry to wet; refusals in words for a clipped return, a silent room, an arrival that doesn't stand out | CORE | M | a copy 1234 frames late is found to the frame at confidence over 0.9, upside down is reported; a 48 kHz stereo return with an echo still lands on the direct arrival within two frames; silence, a clip and a stranger are refused and named; the cut keeps an echo past the hit and closes when it dies; MIX 0 is the pad; the same trip is the same bytes |
+| YY2 | ✓ done: the room as a room — `Outside.probe` (a two-second exponential sine sweep at half scale, faded) and `Outside.impulse` (Farina's inverse filter, the sweep reversed with a 6 dB/octave tilt, convolved with the return; a wire deconvolves to a unit impulse so the room's gain reads true; the response cut from 2 ms before its peak while the tail sounds) | CORE | M | a direct path at 0.4 and an echo at 0.2 come back at 0.4 and 0.2 within 0.03, the latency to within two frames, the floor between the taps under 0.04; a wire is 1.0; silence is refused |
+| YY3 | ✓ done: the card as data — `OutsideSheet` (`:shell`): REAMP (MIX opens wet) and ROOM (WET opens at ROOM OF ITSELF's half); `send` (the pad's own audio, or the sweep at its rate), `preRollFrames` / `listenFrames` (0.25 s of room first, then the send, then three seconds of tail and a second's latency allowance); `apply` — REAMP through `replaceAudio` with an `outside` recipe (the trip's lag past the pre-roll, confidence, the flip, MIX), ROOM through `Mutate.apply`'s ROOM with the deconvolved impulse as the one parent `outside:room` and the `outside` block riding inside the mutate recipe, so the MUTATE card reads it as a ROOM whose parent is the room; `read`, `statusLine`, `undo` (the original out of the bin, both stamps cleared). Found and fixed on the way: `Mutate.alignToOnset` trimmed a parent that starts *on* its hit to its second event (the detector credits nothing to frame zero) — a head already within a tenth of the peak before the "first" onset now stays | CORE | M | REAMP: the pad is the return on the hit, the echo kept, peak matched, the recipe says 20 ms late, undo byte-identical; ROOM: the pad plus the echo, the direct path the pad itself 2 ms in, the recipe a mutate ROOM with `outside:room`, undo byte-identical; a silent room refuses in words and never reaches the bin; a two-tap parent through Mutate's ROOM keeps its direct path |
+| YY4 | ✓ done (blind for CI's compiler; the desktop session runs it): the phone — `OutsideSession` (`:app`): one blocking trip on IO, an `AudioRecord` (UNPROCESSED where offered — a source with echo cancellation would remove exactly the send) filling the return, a `MODE_STATIC` `AudioTrack` playing the send once the pre-roll is in, out of whatever the output route is; the pad sheet's OUTSIDE card (two chips, the knob, the status line off the recipe, SEND whose label is the trip's stage — LISTENING…, SENDING… — and UNDO); refusals first and in words: GHOSTS on, the mic not granted (ARM on KITS grants it), the tape rolling. **Written blind in the cloud session; the desktop session compiles and runs it** | APP | M | on a phone: SEND on the speaker in a room reamps a kick with the room on it, the toast names the trip in ms; ROOM on the same pad convolves it with that room; the jack into a pedal and back reamps through the pedal; a silent input refuses in words and the pad is untouched |
+| YY5 | ✓ done: the room kept — `Rooms` (`:shell`, tested): a ROOM trip's measured impulse onto the shelf under `Rooms/` beside the kits (no `kit.json`, so never a kit) as a WAV with a sidecar saying how it was measured (the trip, how sure, from which pad, when), named "KIT ROOM" then "KIT ROOM 2"; `MutateSheet.Partner.Room` as the MUTATE card's third kind of parent (`room:NAME` in the lineage, a `room` block in the recipe), so any pad on any kit plays inside a room measured once; `OutsideSheet.Outcome.impulse` rides a ROOM trip and `keep` puts it away. Phone (blind): KEEP ROOM on the OUTSIDE card after a ROOM trip, the rooms as chips on the MUTATE card, the kept room the partner at once | CORE + APP | S | a kept room lists back as measured, fresh names, forgotten is gone, a silent room is refused; another kit's pad through MUTATE ▸ ROOM with the kept room grows by the room's slap and the recipe names `room:FUNK ROOM`; a REAMP has nothing to keep and says so |
+
+**Below the line for YY:** FEEDBACK (Outsidify's third mode — a live
+send/return loop with gain; performance territory, not a render);
+forgetting a kept room from the phone (today only the desktop can, by
+deleting its WAV and sidecar under `Rooms/`); a calibration trip (a
+click out, the latency stored, so SEND can pre-cut without correlating
+— unnecessary while `align` finds it every time).
+
+---
+
+## Wave ZZ — the phone reads (APP)
+
+The import door (F3) made the core's listening verbs reachable from the
+phone; this wave puts three of them on the TAPE deck, each a different
+reading of the same tape. Nothing new in the core: the Ear (LL3), the
+pocket (LL4) and the dig (FF1) already exist and are tested; the wave is
+the `:shell` seams that wrap them for the phone, and the buttons.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| ZZ1 | ✓ done: READ AS GROOVE — `ReadGroove.read` (`:shell`, tested): the selection (or the whole deck) heard by the Ear at its own tempo, sure hits mapped onto the open kit's pads (kindred stand-ins: a snare for a clap, an open hat for a closed one), landed as the captured base with the standard variations rewritten and an existing PROG E riding along untouched; GROOVE opens on it. Refusals in the Ear's own words: no confident tempo, no beat heard, nothing that maps; no kit open | APP | S | a two-bar synthetic beat reads onto kick/snare/hat pads at ~100 bpm and lands as the base with E intact; a tone refuses |
+| ZZ2 | ✓ done: DIG — `Dig.best` (`:shell`, tested): `BreakFinder`'s best candidate as the deck's own frames; the TAPE button sets IN and OUT to it and parks the head at IN, so INSTANT KIT is the next tap; no break heard is said, never an empty selection | APP | S | a pad–break–pad song digs to the break's frames; silence digs to nothing |
+| ZZ3 | ✓ done: STEAL THE FEEL — `ReadGroove.feel` (`:shell`, tested): the tape's timing and accent per 16th (`GrooveFeel.extract` over the Ear's hits) poured over the kit's captured base and landed as PROG E (an explicit re-fork), the pocket kept under `Pockets/` on the shelf, fresh-named on collision; refuses with no pattern to pour on or too few positions played | APP | S | the feel of a beat lands as E over a straight base; the pocket file round-trips; no base refuses |
+
+Bench (phone): beatbox a bar into ARM TAPE, SNIP, READ AS GROOVE — the kit
+plays it back; share a whole song in, DIG, INSTANT KIT — the break is a kit.
+
+## Wave AAA — the sample carries its own sheet (CORE)
+
+MPC compatibility, the one enhancement that waits on no bench: a pitched
+or looped WAV carries its root note and sustain loop inside itself, so
+loaded on its own at the MPC — from the card's browser, outside any
+program — it arrives tuned and looping instead of at C3 and one-shot.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| AAA1 | ✓ done: `SmplChunk` (`:audio`, tested) — the RIFF `smpl` chunk's root note and one forward loop (frames, exclusive end; the chunk's inclusive end converted both ways); `WavWriter.write(…, smpl =)` opt-in, the chunk between `fmt` and `data`, the RIFF size honest, a write without one byte-identical to before; `WavReader.readSmpl` reads it back or null, a malformed sheet never a wrong one. `OneNote.writePackage` writes every zone's sheet from the program (root per keygroup, loop per layer), so one-note, multisample and PAD FROM ANYTHING packages all carry it | CORE | S | root and loop round-trip; audio untouched; RIFF size counts the chunk; refusals for a root off the keyboard and a loop past the sample; a looped zone's WAV reads back its root and loop, a pluck's the root alone |
+| AAA2 | Bench: load a zone WAV from `Held Keys_[TrackData]/` on the Live III on its own (not the program) — does it play at its root and loop? Note either way; if the MPC ignores the sheet, the sheet still costs nothing | USER | S | yes/no on hardware |
+
+## Wave BBB — the Hardening, round two (CORE)
+
+Every door the phone grew after the SS waves — the import store, the
+Ear and the dig on the deck, INSTANT KIT, the pad peaks, the silence
+watch, the PCM conversion, the sampler sheet — meets the same hostile
+inputs and degenerate shapes the older verbs had to. Same house rules:
+a valid result or a named refusal, no other throwable, silence never
+invents, nothing climbs out of a folder. All three harnesses held on
+the first run, sharpened corpus included; they are guarded invariants
+now, each pairing named on failure.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| BBB1 | ✓ done: the degenerate matrix, round two — `DegenerateDoorsTest` (`:shell`): {one sample, tiny, silence, DC, full-scale square, low rate, stereo, white noise} × {`ReadGroove.read`, `ReadGroove.feel`, `Dig.best`, `SnipStore.import`, `InstantKit.build`, `SilenceWatch.feed`}: a valid result (a reading with a tempo, a find inside the tape, a readable snip, a kit with pads) or an `IllegalArgumentException` in words; silence never becomes a beat, a break or a kit; `PadPeaks` shrugs at junk, truncated, empty and missing pad files; `Pcm` turns any bytes into finite samples inside the rails | CORE | S | every pairing passes; failures named per pairing |
+| BBB2 | ✓ done: the sampler sheet under mutation — `FuzzTest` runs `WavReader.readSmpl` and `read` over thousands of seeded mutations of a sheet-bearing WAV: a typed refusal or a valid result, and a returned loop always inside the audio the file holds | CORE | S | no untyped throwable in the batch, inside the hang bound; no loop past the audio |
+| BBB3 | ✓ done: the CLI hostile sweep extended — `learn`, `beat`, `pad` and `restore` join the file-taking verbs, and the corpus gains a zero-channel WAV, a three-channel WAV, a RIFF size past the moon, a sheet whose loop runs past the audio, and a backup zip whose entries climb with `../`; every verb exits 0..2 and nothing lands outside its folder (`KitBackup.restore` flattens entry names, `XpnImporter` runs through `SafePath`) | CORE | S | every (verb × hostile) pair exits cleanly; no escaped file anywhere |
+| BBB4 | ✓ done: the sidecars under mutation, round three — `SidecarFuzzTest` (`:shell`) reads the kit, the grooves, the instrument, the pocket, the teach log, the pad recipe and the fx chain back under two kinds of damage: torn bytes (flips, truncation, zero and 0xFF runs) and rewritten trees (a random node swapped for null / a string / a huge, negative or fractional number / an empty array or object / a boolean, or a key dropped); a valid parse or a typed refusal, the teach log never throwing at all, and the parser refusing a nesting attack in words. Found and fixed: `GrooveStore` trusted its casts (a torn `lengthPulses` was an NPE, a string `bars` a `ClassCastException`); `KitStore` cast chain boundaries. Both read through the typed accessors now | CORE | S | no untyped throwable in any batch, inside the hang bound |
+
 ## Sequence
 
 ```
@@ -1272,7 +1431,7 @@ CORE wave 4: ✓ all six landed (2026-08-25) — total recall, pattern
 CORE wave 5: ✓ all landed (2026-08-25) — art renderer + CLI, swing,
   auto slice-count, chop-all, kit merge, MIDI bridge, and the art
   wire-through (Z6.2 verdict: waveform default, rings runner-up).
-  Remaining on the bench: W12 pad waveforms (APP-only polish) ·
+  Remaining on the bench: ✓ W12 pad waveforms landed ·
   the Live III showing the tile (rides the next card session)
 
 CORE wave MM: ✓ all landed (2026-08-28) — the Capture Doctor. Hum
@@ -1459,14 +1618,98 @@ CORE wave 6: ✓ all landed (2026-08-25) — multi-sequence projects
   builder + whole-pack import. Bench row open: AA1.3 sequence flip
   on the Live III (rides the next card session).
 
-APP (in milestone order; feature items slot in where their parent lands):
-  M0 (F1.1) → +F4.2 new-kit menu · +W3.3 open-.xtd
-  M1 (F1.2) → +F3.1/F3.2/F3.4 import
-  M2 (F1.3)
-  M3 (F2.1) → +F2.2 one-tap · +F5.3 key picker · +W2.3/W4.3/W5.3 pad actions
-  M4 (F1.4)
-  M5 (F1.5 + F4.3) → +F6.3 share flow
-  bench: W12 pad waveforms whenever polish is the mood
+APP (reconciled against the app 2026-09-07 — the milestones landed
+  without their rows being ticked; this is the honest remainder):
+  ✓ M0 (F1.1) · ✓ F4.2 new-kit menu · ✓ W3.3 open-.xtd (through the share door)
+  ✓ M1 (F1.2): the mic ring, ARM INSIDE over MediaProjection, dead-air
+    detection, the QS tile · ✓ F3.4 TAPE JAM on a blocked source
+    · ✓ F3.1/F3.2 import (the share door, the on-phone decode)
+  ✓ M2 (F1.3)
+  ✓ M3 (F2.1) · ✓ F5.3 key picker · ✓ W2.3 MAKE INSTRUMENT · ✓ W5.3 GHOSTS
+    · ✓ X1.3 MELODIC · ✓ X2.3 TAKES + BIN · ✓ KEYS (the phone plays the
+    instruments it makes) · ✓ W4.3 EVIL TWINS button · ✓ X4.4 consent row
+    · ✓ F2.2 INSTANT KIT
+  ✓ M4 (F1.4, SoundPool not Oboe)
+  ✓ M5 (F1.5 + F4.3) · ✓ Y3.3 SESSION export · ✓ F6.3 share flow · ✓ X3.3
+    share/backup action
+  ✓ W12 pad waveforms on the KIT grid
+  ✓ wave ZZ (the phone reads): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE
+  ✓ wave AAA1 (the sample carries its own sheet): smpl root + loop in
+    every instrument zone WAV · bench: AAA2 standalone load on the Live III
+  ✓ wave BBB (the Hardening, round two): the new doors under the
+    degenerate matrix, the sheet under fuzz, four more verbs in the sweep
+  ✓ BBB4 (the Hardening, round three): every JSON sidecar under torn
+    bytes and rewritten trees; the groove reader's casts made typed
+
+CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
+  directions. The smear (STN transient mask, peak-matched) as a rack
+  section and the `smeared` character; the pad sheet's second
+  TREATMENT row over the new whole-pad `characterPad` door; the pad
+  shape's one reading (PadShape) shared by preview, SFZ and the phone,
+  and a SHAPE card whose HIT honestly auditions it; then MUTATE on the
+  pad sheet — the four moves, a partner off the grid or the crate's
+  deal, one knob, undo; then SCULPT and STRETCH on the KIT screen —
+  one door (TextureKits) for the CLI verb and the phone's TEXTURE
+  panel, a pad becoming a tape of its own. Below the line: other-kit
+  parents on the phone, the clear stretch.
+
+CORE+APP wave VV: ✓ all landed (2026-09-07) — the room and the tape.
+  ROOM OF ITSELF as the fifth MUTATE move (FFT convolution, a WET
+  knob, the crate can deal the room); GHOST, MOTION (tape stop /
+  start), DUB (generation loss) and SWELL as rack sections and
+  characters; the smear's FLOOR; the pad sheet's third and fourth
+  rows.
+
+CORE+APP wave WW: ✓ all landed (2026-09-07) — in key. WW1 landed:
+  PAD FROM ANYTHING, one hit held forever in every note, the clear
+  stretch keeping a note's line and the wash carrying a drum as a
+  drone, the seam baked, both generations, the pad sheet's card and
+  the `pad` verb. WW2 landed: SPECTRAL RETUNE, every partial talked
+  into the kit's key through the spectral door with PGHI phases, the
+  `retune` verb and the pad sheet's TUNE segment. WW3 landed:
+  TRANSPLANT, the pad's attack wearing the parent's long-term tone as
+  the sixth mutate move, BANDS its resolution. WW4 landed: BODY, a
+  bank of resonators tuned to the key and struck by the hit, the
+  keyed family's second member and the pad sheet's fifth row. WW5
+  landed: WOBBLE, a filter sweep synced to a note division at the
+  kit's tempo, the family's third. WW6 landed: ATTACK KEPT, TAIL
+  ETERNAL, the first 30 ms bit for bit and the tail slowed toward a
+  frozen instant. Wave WW complete.
+
+CORE+APP wave XX: ✓ all landed (2026-09-07) — the crate as an
+  instrument. XX1 landed: DRIFT TOWARD THE CRATE, roulette then morph
+  as one verb and one button. XX2 landed: BREEDING, two kits' recipes
+  crossed by a seeded coin into an audited child kit. XX3 landed:
+  DE-SAMPLE, the nearest THUMP patch to a capture off a pre-rendered
+  grid, the distance always told. Wave XX complete.
+
+APP F6.3 / X3.3 / W3.3 (2026-09-07): the kit leaves and comes back,
+  blind for CI - SHARE packs the open kit as one .xpn and BACKUP the
+  whole shelf, both out the chooser through a FileProvider; the share
+  door reads kit files by their bytes and `ShelfImport` (tested) lands
+  .xpn packs, backups and zipped MPC tracks on the shelf under names
+  nothing there holds. Every APP row in the plan is now ticked; what
+  remains is the bench.
+
+APP F3 (2026-09-07): share-sheet import landed blind — F3.1's intent
+  filters, `ShareInbox` and the `singleTask` door, `SnipStore.import`
+  (tested) as the landing, TAPE's reload request; F3.2's `MediaDecode`
+  over `MediaExtractor`/`MediaCodec`. The desktop session runs it and
+  the decode-contract twins.
+
+CORE+APP wave YY: CORE landed (2026-09-07) — outside, the Outsidify
+  idea. YY1: the trip measured, `Outside.align` and `reamp` — the
+  return found by cross-correlation wherever the audio stack put it,
+  polarity restored, the tail kept while it sounds against the room's
+  own floor. YY2: the room as a room, a sweep out and Farina's inverse
+  back, the impulse response ROOM OF ITSELF wants. YY3: the OUTSIDE
+  card as data, REAMP and ROOM through the same bin-backed doors as
+  every treatment; Mutate's hot-open parent bug found and fixed on the
+  way. YY4 written blind for the desktop session: `OutsideSession` and
+  the pad sheet's OUTSIDE card. YY5 (2026-09-07): the room kept —
+  `Rooms` on the shelf, a ROOM trip's impulse as a reusable MUTATE
+  parent for any pad on any kit; KEEP ROOM on the OUTSIDE card and the
+  rooms as chips on the MUTATE card, blind for CI.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

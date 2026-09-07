@@ -25,6 +25,7 @@ import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Personality
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.SchemeId
@@ -42,6 +43,8 @@ fun PropertiesScreen(
     onScheme: (SchemeId) -> Unit,
     personality: Personality,
     onPersonality: (Personality) -> Unit,
+    teachEnabled: Boolean,
+    onTeach: (Boolean) -> Unit,
 ) {
     val scheme = LocalScheme.current
     Column(
@@ -83,6 +86,35 @@ fun PropertiesScreen(
                 }
             }
         }
+
+        // X4.4 TEACH THE MACHINE: the consent row. Off by default; what ON
+        // sends is spelled out under it, in the copy's own words.
+        TapeText("TEACH THE MACHINE", TapeType.display, scheme.ink.tape)
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            for (on in listOf(false, true)) {
+                val selected = on == teachEnabled
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                        .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                        .tapeClick { if (!selected) onTeach(on) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(if (on) "ON" else "OFF", TapeType.pixel, if (selected) scheme.ink.tape else scheme.ink2.tape)
+                }
+            }
+        }
+        TapeText(Copy.TEACH_CONSENT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        TapeText(
+            "WITH IT ON, EVERY CHIP YOU CORRECT ON CHOP IS LOGGED AS A FEATURE VECTOR AND A LABEL IN THAT KIT'S FOLDER.",
+            TapeType.pixelSmall,
+            scheme.ink2.tape,
+            maxLines = 3,
+        )
     }
 }
 

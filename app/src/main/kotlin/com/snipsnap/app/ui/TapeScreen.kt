@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -52,6 +53,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.Transients
 import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.Dig
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.PeaksPyramid
@@ -61,8 +63,10 @@ import com.snipsnap.shell.TapeDeckModel
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.max
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -115,6 +119,19 @@ fun TapeScreen(
     lastCommitSource: File?,
     onToast: (String) -> Unit,
     onCommit: (File, IntRange) -> Unit,
+    onInstantKit: (File, IntRange) -> Unit,
+    /** READ AS GROOVE (wave ZZ): the selection, or the whole deck, read as a rhythm onto the open kit. */
+    onReadGroove: (File, IntRange) -> Unit,
+    /** STEAL THE FEEL (wave ZZ): the same reading kept as timing and accent, poured over the kit's pattern. */
+    onStealFeel: (File, IntRange) -> Unit,
+    /**
+     * Bumped by App when something outside this screen put a new snip on
+     * the shelf while TAPE may already be showing — a share-sheet import
+     * (F3.1) — so the deck re-resolves its source instead of keeping the
+     * tape it had. A fresh composition ignores it; `entry.dir` and the
+     * idle-reload watcher stay the other two triggers.
+     */
+    reloadRequest: Int = 0,
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
@@ -126,15 +143,17 @@ fun TapeScreen(
     // and it's skipped when `entry == null`. An early return here (the old
     // bug) would have blocked those kit-independent branches from ever
     // running when the shelf has no kit open.
-    var loaded by remember(entry?.dir) { mutableStateOf<LoadedTape?>(null) }
-    var failed by remember(entry?.dir) { mutableStateOf(false) }
+    val kitDir = entry?.dir
+    var loaded by remember(kitDir) { mutableStateOf<LoadedTape?>(null) }
+    var failed by remember(kitDir) { mutableStateOf(false) }
     // Bumped by TapeDeckContent's idle-reload watcher, or by the
     // empty-state watcher just below, to force a fresh call to
-    // loadLongestTape without changing `entry.dir` (the only other trigger
-    // below) — see each watcher's own comment for what bumps it and why.
-    var reloadToken by remember(entry?.dir) { mutableStateOf(0) }
+    // loadLongestTape without changing `kitDir` (the other triggers below
+    // being the app's own reloadRequest) — see each watcher's own comment
+    // for what bumps it and why.
+    var reloadToken by remember(kitDir) { mutableStateOf(0) }
 
-    LaunchedEffect(entry?.dir, reloadToken) {
+    LaunchedEffect(kitDir, reloadToken, reloadRequest) {
         loaded = null
         failed = false
         val result = withContext(Dispatchers.IO) {
@@ -149,10 +168,10 @@ fun TapeScreen(
     // case this screen exists to fix). This one covers exactly that gap and
     // nothing else — it reads `loaded`/`failed` live via the property
     // delegates above, so it always sees the current load state, not a
-    // value frozen at launch. Keyed on `entry?.dir`, matching the state it
+    // value frozen at launch. Keyed on `kitDir`, matching the state it
     // reads/writes, so it's torn down and relaunched in lockstep with those
-    // `remember(entry?.dir)` slots rather than outliving them.
-    LaunchedEffect(entry?.dir) {
+    // `remember(kitDir)` slots rather than outliving them.
+    LaunchedEffect(kitDir) {
         MicSessionService.lastSnipFile.collect { file ->
             // Gated on `failed` (settled empty), not `loaded == null`
             // (which is also true while a load is still in flight).
@@ -185,7 +204,16 @@ fun TapeScreen(
         return
     }
 
-    TapeDeckContent(entry, tapeData, onToast, onCommit, onIdleReload = { reloadToken++ })
+    TapeDeckContent(
+        entry,
+        tapeData,
+        onToast,
+        onCommit,
+        onInstantKit,
+        onReadGroove,
+        onStealFeel,
+        onIdleReload = { reloadToken++ },
+    )
 }
 
 @Composable
@@ -261,9 +289,15 @@ private fun TapeDeckContent(
     tapeData: LoadedTape,
     onToast: (String) -> Unit,
     onCommit: (File, IntRange) -> Unit,
+    onInstantKit: (File, IntRange) -> Unit,
+    onReadGroove: (File, IntRange) -> Unit,
+    onStealFeel: (File, IntRange) -> Unit,
     onIdleReload: () -> Unit,
 ) {
     val scheme = LocalScheme.current
+    val digScope = rememberCoroutineScope()
+    // DIG runs on this screen: it only moves the deck's own IN and OUT.
+    var digging by remember(tapeData) { mutableStateOf(false) }
 
     val model = remember(tapeData) {
         TapeDeckModel(tapeData.samples, tapeData.sampleRate, tapeData.onsets)
@@ -459,26 +493,103 @@ private fun TapeDeckContent(
             DeckButton(if (model.playing) "■ STOP" else "▶ PLAY", Modifier.weight(1f)) { onPlayStop() }
             WindButton("▶▶", Modifier.weight(1f), 1, model, ::stopVoice, ::touch)
         }
-        DeckButton(
-            "COMMIT",
-            Modifier
-                .fillMaxWidth()
-                .height(Layout.PRIMARY_ACTION_H.dp),
-            active = model.hasSelection,
-        ) {
-            val range = model.commitSelection()
-            touch()
-            if (range != null) {
-                // tapeData.sourceFile, not a re-derived "open kit's longest
-                // sample" — TapeCommit's own contract is that `range`'s
-                // frames only mean something against the exact file TAPE
-                // was scrubbing when COMMIT fired, and under the new
-                // source priority that's frequently a snip, not a pad WAV.
-                onCommit(tapeData.sourceFile, range)
-                onToast(Copy.rotating(Copy.COMMIT_LINES, commitIndex))
-                commitIndex++
-            } else {
-                onToast(Copy.COMMIT_NEEDS_SELECTION)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            DeckButton(
+                "COMMIT",
+                Modifier
+                    .weight(1f)
+                    .height(Layout.PRIMARY_ACTION_H.dp),
+                active = model.hasSelection,
+            ) {
+                val range = model.commitSelection()
+                touch()
+                if (range != null) {
+                    // tapeData.sourceFile, not a re-derived "open kit's longest
+                    // sample" — TapeCommit's own contract is that `range`'s
+                    // frames only mean something against the exact file TAPE
+                    // was scrubbing when COMMIT fired, and under the new
+                    // source priority that's frequently a snip, not a pad WAV.
+                    onCommit(tapeData.sourceFile, range)
+                    onToast(Copy.rotating(Copy.COMMIT_LINES, commitIndex))
+                    commitIndex++
+                } else {
+                    onToast(Copy.COMMIT_NEEDS_SELECTION)
+                }
+            }
+            // INSTANT KIT (F2.2): the one tap. The selection when there is
+            // one, else the whole deck, chopped with the defaults and on the
+            // grid without the review - CHOP's own result, nothing touched.
+            DeckButton(
+                "INSTANT KIT ▸",
+                Modifier
+                    .weight(1f)
+                    .height(Layout.PRIMARY_ACTION_H.dp),
+                active = true,
+            ) {
+                // Stop the transport as well as the voice: the deck would
+                // otherwise keep rolling silently under the busy overlay.
+                if (model.playing) model.togglePlay()
+                stopVoice()
+                val range = if (model.hasSelection) model.commitSelection() else null
+                // togglePlay and commitSelection both change what the
+                // PLAY/STOP label and the IN/OUT engaged state should read —
+                // same reasoning as onPlayStop/the COMMIT button above.
+                touch()
+                onInstantKit(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
+            }
+        }
+        // Wave ZZ, the phone reads: three more readings of the same tape.
+        // DIG finds the break and sets IN and OUT to it, so INSTANT KIT is
+        // the next tap; READ AS GROOVE hears the tape as a rhythm for the
+        // open kit's pads; STEAL THE FEEL keeps only its timing and accent.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            DeckButton("DIG ▸", Modifier.weight(1f), active = !digging) {
+                if (digging) return@DeckButton
+                if (model.playing) model.togglePlay()
+                stopVoice()
+                touch()
+                digging = true
+                onToast(Copy.DIG_BUSY)
+                digScope.launch {
+                    try {
+                        val found = withContext(Dispatchers.IO) {
+                            Dig.best(Snip(tapeData.samples, 1, tapeData.sampleRate))
+                        }
+                        if (found == null) {
+                            onToast(Copy.NO_BREAK)
+                        } else {
+                            model.select(found.startFrame, found.endFrame)
+                            // IN/OUT just moved off the model, outside any
+                            // DeckButton tap — same reasoning as every other
+                            // direct `model` mutation in this file: the
+                            // IN/OUT engaged state and LEN readout only see
+                            // it once this composable recomposes.
+                            touch()
+                            onToast(Copy.dug(Dig.stamp(found.startSec), Dig.stamp(found.endSec)))
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        // Law 3: when it breaks, say exactly what happened.
+                        onToast("DIG FAILED: ${e.message ?: e.javaClass.simpleName}")
+                    } finally {
+                        digging = false
+                    }
+                }
+            }
+            DeckButton("READ AS GROOVE ▸", Modifier.weight(1.4f)) {
+                if (model.playing) model.togglePlay()
+                stopVoice()
+                val range = if (model.hasSelection) model.commitSelection() else null
+                touch()
+                onReadGroove(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
+            }
+            DeckButton("STEAL THE FEEL ▸", Modifier.weight(1.4f)) {
+                if (model.playing) model.togglePlay()
+                stopVoice()
+                val range = if (model.hasSelection) model.commitSelection() else null
+                touch()
+                onStealFeel(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
             }
         }
     }

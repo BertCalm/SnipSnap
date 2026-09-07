@@ -332,6 +332,25 @@ so a saved-then-applied pocket moves a kit the same way its donor
 would have). `pack` ships each groove-carrying kit's pocket under
 `[Pockets]/` automatically — the feel travels with the kit.
 
+### `treat <kit-dir> <pad> <character>` — the FX rack pointed at one pad
+
+One of the rack's named characters over one pad, bin-backed: `reversed`,
+`crushed`, `slapback`, `washed`, `punched` (bank B's five), `smeared`
+— the Séance's trick, the attack taken out and the wash kept (`Separate.
+smear` on the STN transient mask, peak-matched so the tail is *heard*,
+not merely left) — `ghosted` (the tone and the attack taken out too, the
+breath alone), `stopped` (the tape stop: pitch and level fall away over
+the last stretch), `started` (the reel spinning up into the sound),
+`skimmed` (the banded smear: the click goes, the thump stays), `dubbed`
+(generation loss: a dub of a dub of a dub, twelve deep at most) and
+`swelled` (the sound arrives before it strikes). `--amount 0..1` scales the character's macros; the
+fx-only recipe (name + amount) rides the pad so the sound stays
+regenerable; `--undo` restores the previous audio byte-identical. On the
+phone the same characters sit on the PAD SHEET's TREATMENT card, rows
+two to four (TAIL · SLAP · WASH · PUNCH, GHOST · STOP · START · FLIP,
+SKIM · DUB · SWELL · TUNE — the last being `retune`, below), where they
+change every file the pad references, velocity layers included.
+
 ### `era <kit-dir> <machine>` — the Time Machine
 
 The whole kit rendered through the specific math of a specific machine —
@@ -370,6 +389,11 @@ a cloud of a quiet sound is a quiet cloud. `--seconds N` (default 8),
 kit: it previews, exports, eras, and resamples like any other — sculpt
 a texture, age it through tape, put the Answer under it.
 
+On the phone, SCULPT lives on the KIT screen's TEXTURE panel: pick a
+pad, a mode (CLOUD · SCRUB · SWARM) and a LENGTH, and the four takes
+land as a new tape on the shelf, which opens — the same
+`TextureKits` door, the same folder.
+
 ### `stretch <wav>` — the slow-motion wash
 
 Paulstretch, the honest way: big Hann windows (93 ms) analyzed along
@@ -391,6 +415,13 @@ Lands beside the source as "`<stem> Stretched.wav`" /
 "`<stem> Frozen.wav`" (`--out`, `--overwrite`). A kit pad is a WAV in
 a folder — point stretch straight at it, then `sculpt` or `chop` the
 result: the Sculptor's verbs compose.
+
+On the phone, STRETCH is the KIT screen's other TEXTURE door and lands
+a *kit*, not a twin WAV: SLOW grows four seeded takes of the pad slowed
+BY a factor (the whole hit, slowed as far as a minute allows — the
+recipe records the factor actually used); FREEZE holds four instants
+(the loudest moment, then a quarter, half and three quarters in) for
+HOLD seconds. Every take is a LOOP pad with provenance and a recipe.
 
 ### `shape <kit-dir> <pad>` — pad shape as metadata
 
@@ -420,6 +451,25 @@ have no such fields and honestly ignore it. Bench row: humanize 0.5
 on the Live III — audible variation at a sane amount.
 
 ### `mutate <kit-dir> <pad> --with <src>[,<src>…]` — one hit from many parents
+
+**`--room [--amount 0..1]`** is the fifth move, ROOM OF ITSELF: the
+pad played *inside* the parent — the parent's tail is the impulse
+response the pad is convolved with (kick in the snare's room), the
+amount the dry/wet mix, the wet brought to the pad's own peak. On the
+phone it is the MUTATE card's fifth chip with a WET knob, and ROULETTE
+can deal the room.
+
+**`--transplant [--bands N]`** is the sixth move, TRANSPLANT: the pad's
+attack wearing the parent's long-term spectral envelope — a one-knob
+vocoder. The parent's whole life is folded into one energy-weighted
+spectrum and read in N log-spaced bands (4..64, default 16); so is the
+pad's; the band-by-band difference becomes one fixed set of per-bin
+gains through the spectral door, so nothing moves in time — the pad's
+onset, decay and length are exactly its own and only its tone is the
+parent's. Four bands is a tilt, sixty-four is the parent's formants;
+gains are capped at ±24 dB so a band the pad never had is not conjured
+out of the floor; peak-matched to the pad. On the phone it is the
+MUTATE card's sixth chip with a BANDS knob.
 
 **`--morph [--amount 0..1]`** is the fourth move, the Séance's:
 both parents' magnitude spectrograms, transient-aligned, interpolated
@@ -459,6 +509,11 @@ spins across the whole crate instead. Never the pad itself, named in
 the output, the spin recorded in the recipe beside the parent it
 dealt. Deterministic per (crate, seed); combines with `--splice` and
 `--split` like any parent.
+
+On the phone the same verb is the PAD SHEET's MUTATE card: the four
+moves, a partner tapped off the kit's own grid or dealt by ROULETTE
+from the shelf, the move's one knob (AT · HZ · MIX), MUTATE and UNDO —
+the same recipe, provenance and bin as the terminal.
 
 ### `retime <wav> --to BPM` — the other tempo move
 
@@ -550,6 +605,140 @@ names — you pick, it doesn't. `--loop` cuts **sustain loops**: a
 whole-period loop found in each note's sustain (crossfaded when the raw
 seam isn't clean), trimmed to the loop-to-end idiom both formats share —
 held pads sing forever. A note with no honest sustain plays unlooped.
+
+### `pad <wav> | <kit-dir> <pad>` — pad from anything
+
+One hit becomes a pad that holds while you hold it and plays in every
+note. The sound is stretched far — the *clear* stretch for a pitched
+source, so its note stays a narrow line; the paulstretch wash for an
+unpitched one, so a drum becomes weather — then the wash's first second
+is the arrival and the next four seconds the body, with the seam baked
+as a crossfade into the material just before the loop start, so the
+wrap is inaudible on a stationary wash. Written as a keygroup
+instrument with loop points and a slow release, both generations, the
+`keys` layout. `--depth` (×8..×100, default 40) gives where a minute
+would be outrun or the wash would fall short of a loop, and the depth
+used is printed; `--bloom` (0..1, default 0.3) is how long the arrival
+ramps in. A pitched source is rooted where it sounds; an unpitched one
+lands as a drone at C3 rather than being refused. On the phone it is
+the PAD SHEET's PAD FROM ANYTHING card, two steppers and MAKE PAD — and
+the result plays there too: every keygroup package written by this
+verb, `keys`, MAKE INSTRUMENT or MAKE PAD carries a sidecar
+(`<name>.instrument.json`: zones, roots, samples, loop starts, release)
+the phone reads, the shelf lists it under INSTRUMENTS, and KEYS plays
+it on the 4×4 — root on A01, chromatic or a scale, octaves either way,
+a looped pad holding while the finger does.
+
+### `retune <kit-dir> <pad>` — the spectral retune
+
+Where `--key` on `chop` moves a whole pad by one coarse/fine offset (so
+an inharmonic clang stays exactly as out of tune with *itself* as it
+was), `retune` moves every partial on its own: one long, fine FFT over
+the body finds the partials and how much of the sound's energy they
+carry, each one's ratio to its nearest in-key note becomes a plateau
+on the frequency axis, every STFT frame is resampled through that map,
+and PGHI reinvents the phases — a bell whose overtones never agreed on
+a key gets every one of them talked into the scale. The kit's key is
+the target (the phone sets it on the KIT screen's KEY panel, or on the CLI
+`--key`); `--key Am` sets it first; with neither, every partial goes
+to its nearest semitone. `--amount 0..1` is how far toward the note;
+`--seed` picks the phases. The partial moves are printed (`227.0 Hz
+-54¢ -> A3`). A drum is refused as unpitched, in words: the classifier's
+kick, snare, clap and hat families are never "corrected" (the same line
+IN KEY draws — tune an 808 with the pad's own tune field), and a sound
+whose energy lives between its peaks rather than in them (a hat, hiss)
+has nothing to snap. Bin-backed through the same door as every
+treatment; `--undo` restores byte-identical; the recipe (key, amount,
+seed) rides the pad. On the phone it is TUNE, the last word on the PAD
+SHEET's fourth TREATMENT row, AMT how far.
+
+### `body <kit-dir> <pad>` — a bank of tuned resonators
+
+Modal synthesis in its plainest form: each mode is a two-pole
+resonator (a sine that rings out at one frequency with one decay), the
+pad is the mallet, and the modes are the kit's key's chord tones —
+root, fifth, third — over three octaves from C2, the root loudest, so
+a click through BODY rings at the root. `--decay` is the modes' T60
+(0.05..4 s, default 0.6); `--amount` crosses the dry hit into the
+ringing body; the result runs the hit's length plus the decay, peak
+matched. `--key Am` sets the kit's key first; with no key the body
+rings at the hit's own note when it has one, else at C — never a
+refusal, since a drum with a body is the point. Bin-backed, `--undo`
+byte-identical, the recipe (key, amount, decay) riding the pad. On the
+phone it is BODY on the PAD SHEET's fifth TREATMENT row, the keyed
+family: the treatments that read the kit's own key and tempo.
+
+### `wobble <kit-dir> <pad>` — a filter sweep on the kit's grid
+
+One resonant low-pass (the TPT state-variable filter VELVET plays
+through), its cutoff swept by a cosine that opens at the hit's onset
+and closes half a division later, the division a note value at the
+kit's tempo — so the wobble lands on the grid the moment the kit does.
+`--rate` snaps to `1/1`, `1/2`, `1/4`, `1/8` (default), `1/16`;
+`--bpm` sets the kit's tempo first (without one, the preview's 92);
+`--amount` is the sweep's depth over 120 Hz..6 kHz; peak matched, the
+hit's own length. Bin-backed, `--undo` byte-identical, the recipe
+(division, tempo, amount) riding the pad. On the phone it is WOBBLE on
+the PAD SHEET's fifth row, at `1/8` of the kit's tempo, AMT the depth.
+
+### `eternal <kit-dir> <pad>` — attack kept, tail eternal
+
+A non-linear time map. The first `--knee` ms of the hit (default 30)
+pass untouched, bit for bit — the attack is the identity of a drum and
+no stretch may blur it. Past the knee the tail slows hyperbolically,
+speed one at the knee and ever slower after, so the decay keeps
+decaying at first and then crawls toward a frozen instant, `--tail`
+seconds long in all (0.5..30, default 8), PGHI reinventing the phases
+of the slowed magnitudes so a note stays a line and a wash stays a
+wash; a 5 ms seam crosses the real audio into the resynthesis. A tail
+already longer than the knob is refused rather than sped up, and a hit
+that ends inside the knee has nothing to slow. `--seed` picks the
+phases; bin-backed, `--undo` byte-identical, the recipe (tail, knee,
+seed) riding the pad. On the phone it is ETERNAL on the PAD SHEET's
+fifth row, AMT the tail (half a second to thirty, exponentially).
+
+### `drift <kit-dir> <pad>` — drift toward the crate
+
+One knob. The crate's roulette finds the neighbour — Similar's nearest
+few under `--root` (default: the kit's parent folder), never the pad
+itself, `--seed` choosing among them — and `mutate --morph` blends
+`--amount` of the way toward it (default half): exactly a roulette
+then a morph, the morph's recipe recording the spin and a `drift`
+flag, so `lineage` shows where the pad went. Deterministic per (crate,
+seed); `--undo` restores byte-identical. On the phone it is the MUTATE
+card's DRIFT button beside ROULETTE — the card flips to MORPH so MIX is
+the knob it read, and every tap is a new deal.
+
+### `breed <kit-a> <kit-b>` — two kits' recipes crossed
+
+Pad by pad, kit A's pad meets kit B's pad on the same slot (or B's
+first pad of the same class) and their recipes cross: every synth
+macro and every rack macro is, by a seeded coin, A's, B's, or the
+average of both; a rack section only one parent has comes along half
+the time; the reverse flag is one parent's. A synth pad re-renders
+from the crossed patch through the crossed rack; a captured pad is A's
+own audio through the crossed rack; a pad with nothing to cross comes
+over as it is. **Classifier-audited**: a child must classify as its
+parent's own audio does — a kick stays a kick — or the coin is thrown
+again, up to six times, and a child that never passes is A's pad kept
+verbatim, counted in the output. The child is a new folder (`--out`,
+default beside A as `<A>_x_<B>`; `--name`), both parents untouched,
+A's key and tempo carried, every pad stamped `bredFrom` for `lineage`.
+Deterministic: same parents, same `--seed`, same kit.
+
+### `desample <wav> | <kit-dir> <pad>` — the nearest synth patch
+
+Rendering run the other way, approximately: every THUMP voice's macro
+space is walked on a coarse grid, each point rendered once and measured
+by the classifier's own extractor, and the hit's measurement picks the
+nearest by `Similar`'s distance, then a coordinate descent refines the
+macros. A `.wav` prints the patch (`--out patch.json` writes it); a kit
+pad becomes the patch's own render with the patch as its recipe — a
+synth pad from here on, editable and breedable — bin-backed, `--undo`
+byte-identical, the search starting on the voices kindred to the pad's
+class. The distance is always told; past 0.45 the nearest is a stranger
+and the pad is refused unless `--force`. The spec: `docs/DESAMPLE.md`.
+On the phone it is the PAD SHEET's DE-SAMPLE card.
 
 ### `arrange <kit-dir>` — songs, not loops
 

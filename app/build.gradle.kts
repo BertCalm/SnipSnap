@@ -60,6 +60,9 @@ dependencies {
     // The loop engine — plan-03's six-track phasing grid, merged forward.
     implementation(project(":loop"))
 
+    // FileProvider (SHARE / BACKUP hand files out as content URIs).
+    implementation("androidx.core:core-ktx:1.13.1")
+
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
     implementation("androidx.activity:activity-compose:1.9.3")

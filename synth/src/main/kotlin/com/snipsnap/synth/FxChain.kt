@@ -8,11 +8,16 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    REVERSE → EQ → SQUASH → CRUNCH → TAPE → ECHO → SPRING
+ *    SWELL → REVERSE → SMEAR → GHOST → EQ → SQUASH → CRUNCH → DUB → TAPE → ECHO → SPRING → MOTION
  *
- * Reverse first because you effect the flipped sample, not flip the
- * effected one (the sampling-era way); dynamics before character before
- * time, space always last — echoes belong *in* the room. A fixed order is
+ * Swell before everything, so the rack sees the arrival and the hit as
+ * one sound; reverse next because you effect the flipped sample, not
+ * flip the effected one (the sampling-era way); smear and ghost after
+ * that because they decide what the hit *is* before anything decides
+ * how it sounds (anatomy before tone); dynamics before character (dub
+ * beside crunch: both are the converter's own damage) before time, space
+ * always last — echoes belong *in* the room — and motion after even
+ * that, because the tape stops with the reverb still on it. A fixed order is
  * a playability rule wearing an architecture hat: no routing screen, no
  * wrong answers.
  *
@@ -27,9 +32,20 @@ data class FxChain(
     val tape: Map<String, Float>? = null,
     val echo: Map<String, Float>? = null,
     val spring: Map<String, Float>? = null,
+    /** Later in the parameter list (they arrived later) than in the rack: see the order above. */
+    val smear: Map<String, Float>? = null,
+    val ghost: Map<String, Float>? = null,
+    val motion: Map<String, Float>? = null,
+    val dub: Map<String, Float>? = null,
+    val swell: Map<String, Float>? = null,
 ) {
     init {
         for ((name, macros, known) in listOf(
+            Triple("smear", smear, Smear.MACROS),
+            Triple("ghost", ghost, Ghost.MACROS),
+            Triple("motion", motion, Motion.MACROS),
+            Triple("dub", dub, Dub.MACROS),
+            Triple("swell", swell, Swell.MACROS),
             Triple("eq", eq, Eq.MACROS),
             Triple("squash", squash, Squash.MACROS),
             Triple("crunch", crunch, Crunch.MACROS),
@@ -47,18 +63,29 @@ data class FxChain(
     }
 
     val isBypass: Boolean
-        get() = !reverse && eq == null && squash == null && crunch == null && tape == null && echo == null && spring == null
+        get() = !reverse && swell == null && smear == null && ghost == null && eq == null && squash == null &&
+            crunch == null && dub == null && tape == null && echo == null && spring == null && motion == null
 
     fun process(snip: Snip): Snip {
+        // The swell is an arrival, not a tail: the tail budget is measured from the swelled sound.
+        val swelled = swell?.let { Swell.process(snip, it) } ?: snip
+        return capTail(swelled, processRest(swelled))
+    }
+
+    private fun processRest(snip: Snip): Snip {
         var s = snip
         if (reverse) s = reversed(s)
+        smear?.let { s = Smear.process(s, it) }
+        ghost?.let { s = Ghost.process(s, it) }
         eq?.let { s = Eq.process(s, it) }
         squash?.let { s = Squash.process(s, it) }
         crunch?.let { s = Crunch.process(s, it) }
+        dub?.let { s = Dub.process(s, it) }
         tape?.let { s = Tape.process(s, it) }
         echo?.let { s = Echo.process(s, it) }
         spring?.let { s = Spring.process(s, it) }
-        return capTail(snip, s)
+        motion?.let { s = Motion.process(s, it) }
+        return s
     }
 
     /**
@@ -94,7 +121,10 @@ data class FxChain(
         val obj = LinkedHashMap<String, JsonValue>()
         obj["fx"] = JsonValue.Num(VERSION.toDouble())
         obj["reverse"] = JsonValue.Bool(reverse)
-        for ((name, macros) in listOf("eq" to eq, "squash" to squash, "crunch" to crunch, "tape" to tape, "echo" to echo, "spring" to spring)) {
+        for ((name, macros) in listOf(
+            "swell" to swell, "smear" to smear, "ghost" to ghost, "eq" to eq, "squash" to squash, "crunch" to crunch,
+            "dub" to dub, "tape" to tape, "echo" to echo, "spring" to spring, "motion" to motion,
+        )) {
             if (macros != null) {
                 obj[name] = JsonValue.Obj(
                     macros.entries.associateTo(LinkedHashMap()) { (k, v) -> k to JsonValue.Num(v.toDouble()) },
@@ -126,6 +156,11 @@ data class FxChain(
                 tape = section("tape"),
                 echo = section("echo"),
                 spring = section("spring"),
+                smear = section("smear"),
+                ghost = section("ghost"),
+                motion = section("motion"),
+                dub = section("dub"),
+                swell = section("swell"),
             )
         }
 

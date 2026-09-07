@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the FileProvider may serve: only the share cache. Packed kits and
+     backups are written there by ShareOut; the shelf's own folders are
+     never exposed. -->
+<paths>
+    <cache-path name="share" path="share/" />
+</paths>

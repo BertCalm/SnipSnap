@@ -3,7 +3,12 @@ package com.snipsnap.app
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
+import com.snipsnap.audio.WavReader
+import com.snipsnap.shell.MutateSheet
+import com.snipsnap.shell.OutsideSheet
+import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.StarterKits
+import com.snipsnap.shell.TextureKits
 import java.io.File
 
 /**
@@ -18,8 +23,29 @@ import java.io.File
  */
 class KitShelf(private val root: File) {
 
+    companion object {
+        /** The instruments' folder name beside the kits — the PAD SHEET's export doors write here. */
+        const val INSTRUMENTS_DIR = "Instruments"
+    }
+
     /** A kit and the folder it lives in. */
     data class Entry(val dir: File, val kit: Kit)
+
+    /** An instrument the shop made: its sidecar and what it says. */
+    data class InstrumentEntry(val sidecar: File, val instrument: com.snipsnap.kit.InstrumentStore.Instrument)
+
+    /** Where MAKE INSTRUMENT and MAKE PAD write: beside the kits. */
+    val instrumentsDir: File get() = File(root, INSTRUMENTS_DIR)
+
+    /** Every readable instrument on the shelf, by name. */
+    fun instruments(): List<InstrumentEntry> =
+        com.snipsnap.kit.InstrumentStore.list(instrumentsDir).map { (f, i) -> InstrumentEntry(f, i) }
+
+    /** Every room OUTSIDE measured and kept on the shelf, the latest first — MUTATE's third kind of parent. */
+    fun rooms(): List<Rooms.Room> = Rooms.list(root)
+
+    /** KEEP ROOM: the room a ROOM trip measured, onto the shelf named after [kitName]. */
+    fun keepRoom(outcome: OutsideSheet.Outcome, kitName: String): Rooms.Room = OutsideSheet.keep(root, outcome, kitName)
 
     /**
      * Every readable kit on the shelf. A folder whose `kit.json` is broken
@@ -58,6 +84,110 @@ class KitShelf(private val root: File) {
         val name = freshName(starter.displayName)
         val dir = File(root, name)
         val kit = starter.render(name, dir, seed)
+        return Entry(dir, kit)
+    }
+
+    /**
+     * KEY: set or clear [source]'s key - metadata in `kit.json`, nothing
+     * retuned by itself - and hand back the entry with the kit re-read.
+     */
+    fun setKey(source: Entry, key: com.snipsnap.audio.KeySpec?): Entry {
+        val model = com.snipsnap.shell.KitBuilderModel.open(source.dir)
+        model.setKey(key)
+        model.save()
+        return Entry(source.dir, model.kit)
+    }
+
+    /**
+     * INSTANT KIT: [range] of [file] (a snip, or whatever TAPE was scrubbing)
+     * chopped with the defaults and landed on the shelf as a kit named after
+     * the file — CHOP's own result with nothing touched. Seconds-long; the
+     * caller shows a busy line.
+     */
+    fun instantKit(file: File, range: IntRange): Pair<Entry, com.snipsnap.shell.InstantKit.Result> {
+        val snip = com.snipsnap.shell.InstantKit.slice(WavReader.read(file), range)
+        root.mkdirs()
+        val name = freshName("${file.nameWithoutExtension} KIT")
+        val result = com.snipsnap.shell.InstantKit.build(snip, name, File(root, name))
+        return Entry(result.kitDir, result.kit) to result
+    }
+
+    /**
+     * EVIL TWINS: bank B of [source] becomes seeded FX re-treatments of bank A
+     * (`KitBuilderModel.remixBankB`), the slots lit returned with the re-read
+     * entry. Seconds-long (every twin renders); the caller shows a busy line.
+     */
+    fun evilTwins(source: Entry, seed: Int): Pair<Entry, List<Int>> {
+        val model = com.snipsnap.shell.KitBuilderModel.open(source.dir)
+        val lit = model.remixBankB(seed)
+        model.save()
+        return Entry(source.dir, model.kit) to lit
+    }
+
+    /**
+     * IN KEY: every tonal pad of [source] retuned into its key through the
+     * tune fields, the slots that moved returned with the re-read entry.
+     */
+    fun inKey(source: Entry): Pair<Entry, List<Int>> {
+        val model = com.snipsnap.shell.KitBuilderModel.open(source.dir)
+        val moved = model.retuneTonalPads()
+        if (moved.isNotEmpty()) model.save()
+        return Entry(source.dir, model.kit) to moved
+    }
+
+    /**
+     * SHARE: [source] packed as one `.xpn` under [outDir] (the share
+     * cache), ready for the chooser. Preflight refuses a broken kit in
+     * words, the same way EXPORT would. The file is named through
+     * `Names.sanitizeStem`, so a kit name that preflight would refuse
+     * anyway can never become a path - the file stays a bare name inside
+     * the share cache whatever the name holds.
+     */
+    fun pack(source: Entry, outDir: File): File {
+        val kit = KitStore.load(source.dir)
+        outDir.mkdirs()
+        val stem = com.snipsnap.kit.Names.sanitizeStem(kit.name)
+        return com.snipsnap.kit.XpnPackager.write(
+            kit, source.dir, File(outDir, "$stem.xpn"), com.snipsnap.kit.Exporters.defaultMeta(kit), overwrite = true,
+        )
+    }
+
+    /**
+     * BACKUP: every kit on the shelf as one file under [outDir], each its
+     * own `.xpn` inside; kits preflight refuses are skipped and named.
+     */
+    fun backup(outDir: File, nowMillis: Long): com.snipsnap.kit.KitBackup.BackupResult {
+        outDir.mkdirs()
+        val stamp = java.text.SimpleDateFormat("yyyy-MM-dd HHmm", java.util.Locale.ROOT).format(java.util.Date(nowMillis))
+        return com.snipsnap.kit.KitBackup.backup(root, File(outDir, "SnipSnap Shelf $stamp.zip"), overwrite = true)
+    }
+
+    /**
+     * A kit file shared in - a `.xpn`, a backup, an MPC track zipped with
+     * its folder - landed on the shelf under names nothing here holds,
+     * through `ShelfImport`'s staged door; the entries for what landed,
+     * and what was skipped with the reason.
+     */
+    fun land(file: File, displayName: String): Pair<List<Entry>, List<String>> {
+        root.mkdirs()
+        val landed = com.snipsnap.shell.ShelfImport.land(file, displayName, root)
+        return landed.kits.map { (_, dir) -> Entry(dir, KitStore.load(dir)) } to landed.skipped
+    }
+
+    /**
+     * Grow a texture kit from one pad of [source] onto the shelf — the KIT
+     * screen's SCULPT / STRETCH panel. Same shape as [render]: seconds-long,
+     * the caller shows a busy line; the new kit is a tape of its own, named
+     * "<Pad> Sculpt" (or Stretched / Frozen), provenance pointing back at
+     * `Kit:A03`, through the same `TextureKits` door the CLI verbs use.
+     */
+    fun texture(source: Entry, slot: Int, spec: TextureKits.Spec): Entry {
+        val pad = source.kit.pad(slot) ?: throw IllegalArgumentException("no pad on ${MutateSheet.padTag(slot)}")
+        val snip = WavReader.read(File(source.dir, pad.sampleFile))
+        root.mkdirs()
+        val name = freshName(TextureKits.kitName(pad.displayName, spec))
+        val dir = File(root, name)
+        val kit = TextureKits.render(name, dir, snip, "${source.kit.name}:${MutateSheet.padTag(slot)}", spec)
         return Entry(dir, kit)
     }
 }

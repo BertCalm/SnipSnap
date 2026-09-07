@@ -5,6 +5,10 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- INSIDE (M1's second source): AudioPlaybackCapture rides a
+         MediaProjection consent, and Android 14+ requires the session's
+         foreground service to carry the mediaProjection type. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- The Bubble (Task 5): optional. Granted via
          ACTION_MANAGE_OVERLAY_PERMISSION, offered once from the ARM flow —
@@ -18,16 +22,66 @@
         android:allowBackup="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
+        <!-- singleTask: a share while the app is open lands in the running
+             instance through onNewIntent (ShareInbox), never a second copy
+             of the window on top of the first. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Share-sheet import (F3.1): audio, or a video whose sound is
+                 wanted - the screen-recorder path the TAPE JAM box points
+                 at. The file lands in the tape deck as a snip. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="video/*" />
+                <!-- Kits (F6.3 / W3.3): a .xpn, a backup, an MPC kit zipped
+                     with its folder - ZIPs, and the octet-stream a messenger
+                     labels anything it does not recognise. The bytes decide
+                     (ShelfImport.sniff), never the label. -->
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/gzip" />
+                <data android:mimeType="application/x-gzip" />
+            </intent-filter>
+            <!-- "Open with" from a file manager: the same door. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="video/*" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/gzip" />
+                <data android:mimeType="application/x-gzip" />
+            </intent-filter>
         </activity>
+
+        <!-- SHARE and BACKUP (F6.3, X3.3) hand files out through this
+             provider: only the share cache (res/xml/share_paths.xml), as
+             content URIs with a read grant, never a raw path. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/share_paths" />
+        </provider>
 
         <!-- The six-track phasing loop grid (plan-03). No launcher filter:
              one front door. Reachable in dev via
@@ -38,12 +92,27 @@
             android:screenOrientation="landscape" />
 
         <!-- The always-listening ring's foreground session (retroactive-snip
-             plan, Task 2). Never exported: only this app's own ARM button
-             (and its own notification action) ever start it. -->
+             plan, Task 2). Never exported: only this app's own ARM buttons
+             (and its own notification action and tile) ever start it. The
+             type is whichever source is armed: microphone for ARM TAPE,
+             mediaProjection for ARM INSIDE. -->
         <service
             android:name=".MicSessionService"
             android:exported="false"
-            android:foregroundServiceType="microphone" />
+            android:foregroundServiceType="microphone|mediaProjection" />
+
+        <!-- The quick-settings tile (M1): SNIP while a session is armed,
+             opens the app to arm one otherwise. -->
+        <service
+            android:name=".SnipTileService"
+            android:exported="true"
+            android:icon="@android:drawable/ic_btn_speak_now"
+            android:label="SnipSnap"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

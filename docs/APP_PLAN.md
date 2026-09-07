@@ -17,11 +17,11 @@ L ≈ a week-plus of sessions).
 | Kit pipeline (`:kit`) | done, tested — kit folders, preflight, balance, in-key, velocity layers, recipes, every export driver |
 | Formats (`:xpm`, `:mpc3`) | done, tested, corpus-guarded — `.xpm`, keygroups, expansions, `.xpn`, `.xtd`, `.xty`, clips, `.xpj` projects; drums hardware-verified |
 | Synthesis (`:synth`) | done, tested — seven engines, FX rack, recipes, groove, S5 instrument suite with loop points |
-| Design | done — TapeOS system, eight schemes, ten artboards, **two fully working phone-frame prototypes** (Oilslick, Clear) |
+| Design | done — TapeOS system, six schemes, ten artboards, **two fully working phone-frame prototypes** (Oilslick, Clear) |
 | Acceptance artifacts (`testkit/`) | done — 14 downloadable checks, from the diag kit to the one-file Session project |
 | CLI (`:cli`) | done, tested — `snipsnap.jar`: chop → classify → place → export from any desktop; the classifier's real-audio calibration tool (`docs/CLI.md`) |
 | View-models (`:shell`) | done, tested — scheme tables, peaks pyramid, tape-deck transport physics, voice allocation, chop review, kit builder, export wizard, personality system; `:app` binds Compose to these |
-| **The Android app** | **pre-written, uncompiled** — a complete M0 source tree sits in `app/`, written blind by this session; the desktop session's job starts at its first compile (`app/README.md`) |
+| **The Android app** | **M0 done** — `:app` scaffolded on Compose over all six modules; TapeOS theme, window shell, kit shelf, audible pad grid, scheme picker. M1 (capture) is next |
 | Hardware verification | drums passed; keys, instruments, `.xpn`, tile, Session pending (user) |
 
 The concept doc's "deliberately v2" list (velocity layers, expansions,
@@ -57,24 +57,61 @@ with the Android notes (Compose brushes, fonts, dp constants, personality
 copy). Building a screen means porting behaviour that already runs, not
 inventing it.
 
-### M0 — Walking skeleton · M
+### M0 — Walking skeleton · M — ✓ done
 
 Scaffold `:app` (Compose, minSdk 29), depend on all six modules. TapeOS
-theme object: the eight scheme token tables from `design/Schemes.dc.html`
-(`t-metal`…`t-vapor`), the four fonts, bevel modifiers (raised/pressed/
+theme object: the six scheme token tables from `design/Main.dc.html`
+(`t-chrome`…`t-clear`), the four fonts, bevel modifiers (raised/pressed/
 sunken), the two-surface rule as composables (gray window chrome, dark
 LCD). Navigation shell: the SNIPSNAP.EXE window, menu row, status bar.
 Storage: kit folders under app files via `KitStore` — list, open, create.
 **Exit test:** browse kits on a phone, tap pads, hear WAVs (interim
 `SoundPool` is fine here), flip schemes in Tape Properties.
 
-**Status:** the full M0 tree is pre-written on the branch — scaffold,
-TapeOS theme over `:shell`'s scheme tables, the KITS/KIT/SETUP screens,
-FRESH TAPE over `StarterKits`, fonts committed, `settings.gradle.kts`
-including `:app` only where an SDK exists. Written where no Android
-compiler runs, so it is unverified by definition; the desktop session's
-M0 begins at `./gradlew :app:assembleDebug` and ends at the exit test
-above. Details and first-run checks: `app/README.md`.
+#### What M0 settled, and what it hands M1
+
+The architectural bet paid: seven modules of pure-Kotlin DSP, never
+compiled for Android until this milestone, render the whole factory kit
+on-device at first launch. Nothing audio ships in the APK. `:app` holds
+Compose bindings and three Android adapters and no algorithms — the one
+new function in the app layer, the pad-grid coordinate mapping, arrived
+test-first.
+
+**Carried into M1, decided or measured here:**
+
+- **First run is slow, and it is the synth.** Rendering sixteen pads
+  measured ~24s on a memory-pressured emulator against 39ms on a warm
+  desktop JVM — cold ART interpreting tight float loops, and first run
+  is the one time none of it is compiled. Treat that number as an upper
+  bound, not a clean measurement. The shelf now says what it is doing
+  while it happens, which was the urgent half; the fix is a baseline
+  profile or a smaller factory kit, and that is a product call.
+- **`PadPlayer` is main-thread only, and now says so.** `load()` does
+  disk IO on the main thread; the obvious fix — wrapping the load loop
+  in `Dispatchers.IO` — silently breaks the guard that stops `SoundPool`
+  from cross-wiring pads between kits. `check(Looper…)` fails loudly
+  instead. M4 replaces the whole class with Oboe.
+- **`ui-tooling` is deliberately absent** — it drags
+  `androidx.compose.material` onto the debug classpath. A milestone that
+  wants `@Preview` should re-add it with an `exclude`.
+- **Untested by design:** `@Composable` functions and the `SoundPool`
+  adapter. There is no Compose or Robolectric harness; M1 should decide
+  whether to add one rather than inherit the gap silently.
+- **Deferred, with reasons:** the KGP "loaded multiple times" warning
+  (wants a repo-wide version catalog); IME padding in `NewTapeDialog`
+  (latent at the verified screen size); glyph fallback for ▶ ■ ⟳, which
+  no bundled font carries — it is invisible for ⚙ at menu size and will
+  not be at M2/M4 transport size.
+- **`design/HANDOFF.md` contradicts itself** on the menu row: "Menu row
+  26" and "Hit targets ≥44". The rendered target measures 48dp, so this
+  is a source inconsistency to resolve, not a defect to fix.
+
+**The habit worth keeping:** four defects on this branch came from
+looking at the running app and none from the test suite — clipped system
+bars, "1 TAPES", a hard-clipped pad label, and a shelf that claimed to be
+empty while filling itself. `scripts/m0-exit-test.sh` exists to make that
+repeatable; M1's exit test should be written the same way, and run
+before the milestone is called done rather than after.
 
 ### M1 — Capture · L, the riskiest milestone, do it second on purpose
 
@@ -180,7 +217,7 @@ In value order, artifacts already on the branch under `testkit/`:
   ignores it; a pure-Kotlin encoder is not worth it, Android has
   `MediaCodec` when the app exists.
 - **Prototype scheme ports** — `prototype/{thumplab,tapedeck,playmode}`
-  are single-scheme; porting the eight-token system is cosmetic polish.
+  are single-scheme; porting the six-token system is cosmetic polish.
 - **Live III save ingestion** — when item 6 above lands, dissect it and
   diff against all four writers; promote any surprises into the corpus
   guards. (This session's standing job.)

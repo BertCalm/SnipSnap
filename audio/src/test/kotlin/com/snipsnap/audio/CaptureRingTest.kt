@@ -72,20 +72,38 @@ class CaptureRingTest {
         }
         writer.start()
         var checks = 0
-        while (writer.isAlive) {
-            val snap = ring.snapshot(1_000)
-            if (snap.size == 1_000) {
-                val newest = snap.copyOfRange(500, 1_000)
-                for (i in 1 until newest.size) {
-                    val step = newest[i] - newest[i - 1]
-                    check(step == 1f) {
-                        "tear in the newest half at $i: $step"
-                    }
+        fun judge(snap: FloatArray) {
+            val newest = snap.copyOfRange(500, 1_000)
+            for (i in 1 until newest.size) {
+                val step = newest[i] - newest[i - 1]
+                check(step == 1f) {
+                    "tear in the newest half at $i: $step"
                 }
-                checks++
             }
+            checks++
+        }
+        while (writer.isAlive) {
+            // The newest half can only tear if the writer LAPS the ring
+            // while the copy is in flight - a reader preempted for a few
+            // milliseconds on a loaded CI runner, against a writer that
+            // is not paced by anything and fills this one-second ring in
+            // microseconds. That is a scheduling accident the phone never
+            // has (a real-time-paced writer against a sixty-second ring),
+            // not the tear this test exists to catch, so a snapshot taken
+            // across a lap is not judged. framesWritten is monotonic and
+            // volatile: read before and after, and a gap short of the
+            // ring's length minus the snapshot proves no sample the copy
+            // read was overwritten by a lap.
+            val before = ring.framesWritten
+            val snap = ring.snapshot(1_000)
+            val after = ring.framesWritten
+            val lapped = after - before >= ring.capacityFrames - 1_000
+            if (snap.size == 1_000 && !lapped) judge(snap)
         }
         writer.join()
+        // The writer is done: a final snapshot cannot be lapped, so the
+        // contract is proven at least once even on an unlucky schedule.
+        if (checks == 0) judge(ring.snapshot(1_000))
         check(checks > 0) { "reader never got a full snapshot" }
     }
 

@@ -55,6 +55,39 @@ shelf useful before capture (M1) exists.
   means a colour got captured outside the composition local.
 - **First FRESH TAPE dub time** on a real phone (the synth render is
   seconds on desktop JVM; status bar shows DUBBING… meanwhile).
+- **IMPORT (share sheet)**: share a WAV, an MP3 and a screen-recorded
+  MP4 into SnipSnap from another app. Each should land on TAPE with a
+  "TAPED FROM OUTSIDE" toast naming its length; a share while the app is
+  already open must land in the same window (`singleTask` +
+  `onNewIntent`), not a second one. Then run the decode-contract twins
+  (`reference/fixtures/decode/README.md`) through `MediaDecode.decode`
+  in an instrumentation test and assert `DecodeContract.verify` passes
+  for all six — that is F3.3's exit test, and the first proof the codec
+  loop reads the output format correctly on this phone.
+- **SHARE / BACKUP / a kit landing**: on KIT, SHARE should open the
+  chooser with `<Kit>.xpn`; on KITS, BACKUP with `SnipSnap Shelf <date>
+  .zip`. Send either to yourself (Drive, a messenger) and share it back
+  into SnipSnap: the kit lands beside the original as "NAME 2" (a backup
+  lands every kit) and KIT opens on it. Then zip an MPC-saved `.xtd`
+  with its `_[TrackData]` folder and share that in: it should land too,
+  while the bare `.xtd` alone refuses in words. If the chooser never
+  appears, check the `FileProvider` authority (`<applicationId>.files`)
+  against `res/xml/share_paths.xml`.
+- **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
+  a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
+  pad's rate. Verify on a phone: the speaker into the room reamps a pad
+  with the room on it and the toast names the trip in ms; a wired jack
+  into a pedal and back reamps through the pedal; the mic route stays
+  UNPROCESSED/VOICE_RECOGNITION (a source with echo cancellation would
+  remove exactly the send). If the return is silent, check that ARM has
+  granted RECORD_AUDIO and that no armed session holds the mic — the
+  card refuses both in words before playing.
+- **KEEP ROOM (pad sheet)**: after a ROOM trip the OUTSIDE card's KEEP
+  ROOM button lights; tap it and the toast names the room ("FUNK ROOM IS
+  ON THE SHELF…"), a `Rooms/FUNK ROOM.wav` + `.json` pair appears beside
+  the kits, and the MUTATE card grows a ROOMS row with that room already
+  the partner. Open another kit's pad, pick the room, MUTATE ▸ ROOM: the
+  pad plays inside it with no trip. A REAMP trip leaves KEEP ROOM dim.
 
 ## Fonts / licensing
 

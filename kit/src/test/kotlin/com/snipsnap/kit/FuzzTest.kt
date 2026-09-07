@@ -101,6 +101,20 @@ class FuzzTest {
     }
 
     @Test
+    fun `WavReader readSmpl survives mutation and never hands back a loop outside the audio`() {
+        val valid = ByteArrayValid.wavWithSheet()
+        fuzz("WavReader.readSmpl", valid, seed = 6, rounds = ROUNDS) { bytes ->
+            val sheet = WavReader.readSmpl(bytes) ?: return@fuzz
+            val loop = sheet.loop ?: return@fuzz
+            // A sheet that comes back must be one the audio can honour.
+            val frames = runCatching { WavReader.read(bytes).frameCount }.getOrNull() ?: return@fuzz
+            assertTrue(loop.endFrameExclusive <= frames, "readSmpl returned a loop past the audio: $loop vs $frames frames")
+        }
+        // And the audio path is indifferent to the sheet's presence.
+        fuzz("WavReader.read (with sheet)", valid, seed = 7, rounds = ROUNDS) { WavReader.read(it) }
+    }
+
+    @Test
     fun `Acvs survives mutation`() {
         val valid = ByteArrayValid.acvs()
         fuzz("Acvs", valid, seed = 2, rounds = ROUNDS) { Acvs.read(it) }
@@ -146,6 +160,14 @@ class FuzzTest {
                 tmp.delete()
             }
         }
+
+        fun wavWithSheet(): ByteArray = java.io.ByteArrayOutputStream().apply {
+            WavWriter.write(
+                this,
+                Snip(FloatArray(2_000) { (it % 100) / 100f }, 1, 44_100),
+                smpl = com.snipsnap.audio.SmplChunk(60, com.snipsnap.audio.SmplChunk.Loop(500, 2_000)),
+            )
+        }.toByteArray()
 
         fun acvs(): ByteArray = Acvs.write(
             com.snipsnap.mpc3.AcvsHeader("1.0.0.0", "SerialisableTrackData", "json", "Linux"),

@@ -55,13 +55,18 @@ import kotlinx.coroutines.delay
 @Composable
 fun KitsScreen(
     kits: List<KitShelf.Entry>,
+    instruments: List<KitShelf.InstrumentEntry>,
     busy: Boolean,
     armed: Boolean,
     onOpen: (KitShelf.Entry) -> Unit,
+    onOpenInstrument: (KitShelf.InstrumentEntry) -> Unit,
     onFresh: (StarterKits.Starter) -> Unit,
     onArm: () -> Unit,
+    onArmInside: () -> Unit,
     onSnip: () -> Unit,
     onEject: () -> Unit,
+    /** BACKUP (X3.3): every kit on one file, handed to the chooser. */
+    onBackup: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     var menuOpen by remember { mutableStateOf(false) }
@@ -79,7 +84,7 @@ fun KitsScreen(
                 TapeText("THE SHELF", TapeType.lcdHeader, scheme.lcdInk.tape)
             }
 
-            if (kits.isEmpty()) {
+            if (kits.isEmpty() && instruments.isEmpty()) {
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -102,6 +107,15 @@ fun KitsScreen(
                     items(kits, key = { it.dir.name }) { entry ->
                         KitRow(entry, onOpen)
                     }
+                    // INSTRUMENTS: what MAKE INSTRUMENT and MAKE PAD left beside the kits, playable on KEYS.
+                    if (instruments.isNotEmpty()) {
+                        item(key = "instruments-header") {
+                            TapeText("INSTRUMENTS · PLAY THEM ON KEYS", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                        }
+                        items(instruments, key = { "instrument:" + it.sidecar.name }) { entry ->
+                            InstrumentRow(entry, onOpenInstrument)
+                        }
+                    }
                 }
             }
 
@@ -110,7 +124,23 @@ fun KitsScreen(
                 enabled = !busy,
                 onClick = { menuOpen = true },
             )
-            ArmControl(armed = armed, onArm = onArm, onSnip = onSnip, onEject = onEject)
+            // BACKUP: the whole shelf as one file, out the share sheet -
+            // the "new phone" story; the same file shared back in lands
+            // every kit again.
+            ActionButton(
+                "BACKUP ▸ EVERY KIT, ONE FILE",
+                scheme,
+                enabled = !busy && kits.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onBackup,
+            )
+            ArmControl(
+                armed = armed,
+                onArm = onArm,
+                onArmInside = onArmInside,
+                onSnip = onSnip,
+                onEject = onEject,
+            )
         }
 
         if (menuOpen) {
@@ -119,6 +149,27 @@ fun KitsScreen(
                 onDismiss = { menuOpen = false },
             )
         }
+    }
+}
+
+@Composable
+private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.InstrumentEntry) -> Unit) {
+    val scheme = LocalScheme.current
+    val i = entry.instrument
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .raisedBevel(scheme)
+            .tapeClick { onOpen(entry) }
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            TapeText(i.name, TapeType.markerBig, scheme.ink.tape)
+            val looped = if (i.zones.any { it.loopStartFrame > 0 }) "  ·  HOLDS" else ""
+            TapeText("${i.zones.size} ${if (i.zones.size == 1) "ZONE" else "ZONES"}  ·  ROOT ${com.snipsnap.shell.KeysLayout.label(i.rootNote)}$looped", TapeType.pixelSmall, scheme.ink2.tape)
+        }
+        TapeText("KEYS ▸", TapeType.pixelSmall, scheme.ink2.tape)
     }
 }
 
@@ -217,19 +268,34 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
 }
 
 /**
- * The mic session's entry point — the shelf's third way a kit begins,
+ * The capture session's entry point — the shelf's third way a kit begins,
  * alongside FRESH TAPE (machine-invented) and IMPORT (brought in): a
- * capture. Idle: one primary-styled ARM TAPE button. Armed: EJECT in the
+ * capture. Idle: two primary-styled buttons, ARM TAPE (the room, through
+ * the mic) and ARM INSIDE (another app's audio, with the projection
+ * consent). Armed, whichever source: EJECT in the
  * bin-red pair ([BIN_RED_BORDER]/[BIN_RED_GLOW], `TakesBinScreen`'s own
  * convention — a session-ending action reads as "red" even in a scheme
  * with no red anywhere else) beside a small in-app SNIP; the notification
  * action is the out-of-app path, this is the in-app one.
  */
 @Composable
-private fun ArmControl(armed: Boolean, onArm: () -> Unit, onSnip: () -> Unit, onEject: () -> Unit) {
+private fun ArmControl(
+    armed: Boolean,
+    onArm: () -> Unit,
+    onArmInside: () -> Unit,
+    onSnip: () -> Unit,
+    onEject: () -> Unit,
+) {
     val scheme = LocalScheme.current
     if (!armed) {
-        PrimaryAction(label = "ARM TAPE", enabled = true, onClick = onArm)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.weight(1f)) {
+                PrimaryAction(label = "ARM TAPE", enabled = true, onClick = onArm)
+            }
+            Box(Modifier.weight(1f)) {
+                PrimaryAction(label = "ARM INSIDE", enabled = true, onClick = onArmInside)
+            }
+        }
         return
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {

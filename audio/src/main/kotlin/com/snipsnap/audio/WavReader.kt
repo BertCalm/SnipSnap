@@ -127,13 +127,75 @@ object WavReader {
                 // A non-finite sample poisons every downstream sum, peak and
                 // normalization, so it becomes silence right here at the door.
                 format == FORMAT_FLOAT -> Float.fromBits(leInt(bytes, at)).let { if (it.isFinite()) it else 0f }
-                bits == 8 -> ((bytes[at].toInt() and 0xFF) - 128) / 128f
-                bits == 16 -> leShort(bytes, at).toShort() / 32768f
-                bits == 24 -> le24(bytes, at) / 8_388_608f
-                else -> leInt(bytes, at) / 2_147_483_648f
+                // Integer PCM divides by the largest POSITIVE code - the same
+                // scale the writer multiplies by - so a write then a read is
+                // the identity on every code the writer can emit, and a file
+                // that goes through the bin and back is the same file. The one
+                // code the writer never emits (the most negative) clamps to -1.
+                bits == 8 -> (((bytes[at].toInt() and 0xFF) - 128) / 127f).coerceAtLeast(-1f)
+                bits == 16 -> (leShort(bytes, at).toShort() / 32767f).coerceAtLeast(-1f)
+                bits == 24 -> (le24(bytes, at) / 8_388_607f).coerceAtLeast(-1f)
+                // 2^31 - 1 is not a Float, so this one divides in Double first.
+                else -> (leInt(bytes, at) / 2_147_483_647.0).toFloat().coerceAtLeast(-1f)
             }
         }
         return Snip(out, channels, sampleRate)
+    }
+
+    /**
+     * The sampler sheet, if the file carries one: the `smpl` chunk's root
+     * note and first forward loop, or null when there is none or it is
+     * malformed — a missing sheet is the ordinary case for a drum hit, not
+     * an error, and a loop that runs past the audio the file actually
+     * holds is malformed, not a loop. The audio is [read]'s business;
+     * this walks the chunks on its own, reading only the headers it needs
+     * to size the audio, so a caller that only wants the sheet pays only
+     * for the sheet.
+     */
+    fun readSmpl(file: File): SmplChunk? = readSmpl(file.readBytes())
+
+    fun readSmpl(bytes: ByteArray): SmplChunk? {
+        if (bytes.size < 12 || tag(bytes, 0) != "RIFF" || tag(bytes, 8) != "WAVE") return null
+        var sheet: SmplChunk? = null
+        var blockAlign = -1
+        var dataLen = -1L
+        var p = 12
+        while (p + 8 <= bytes.size) {
+            val id = tag(bytes, p)
+            val size = leInt(bytes, p + 4)
+            val body = p + 8
+            if (size < 0) return null
+            if (id == "data") {
+                // A truncated tail (a capture killed mid-write) still holds
+                // the frames that are present; the loop is checked against
+                // those, not the declared size.
+                dataLen = minOf(size.toLong(), (bytes.size - body).toLong())
+            } else if (body.toLong() + size > bytes.size) {
+                return null
+            } else if (id == "fmt " && size >= 16) {
+                blockAlign = leShort(bytes, body + 12)
+            } else if (id == SmplChunk.TAG) {
+                if (size < SmplChunk.HEADER_BYTES) return null
+                val root = leInt(bytes, body + 12)
+                if (root !in 0..127) return null
+                val loops = leInt(bytes, body + 28)
+                val loop = if (loops >= 1 && size >= SmplChunk.HEADER_BYTES + SmplChunk.LOOP_BYTES) {
+                    val start = leInt(bytes, body + 44).toLong() and 0xFFFFFFFFL
+                    val endInclusive = leInt(bytes, body + 48).toLong() and 0xFFFFFFFFL
+                    if (endInclusive >= start) SmplChunk.Loop(start, endInclusive + 1) else null
+                } else {
+                    null
+                }
+                sheet = SmplChunk(root, loop)
+            }
+            if (id == "data" && body.toLong() + size > bytes.size) break
+            p = body + size + (size and 1)
+        }
+        val found = sheet ?: return null
+        val loop = found.loop ?: return found
+        if (blockAlign <= 0 || dataLen < 0) return null
+        val frames = dataLen / blockAlign
+        return if (loop.endFrameExclusive <= frames) found else null
     }
 
     private fun tag(b: ByteArray, at: Int): String = String(b, at, 4, Charsets.US_ASCII)

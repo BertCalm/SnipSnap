@@ -33,7 +33,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 868 tests across eight modules
+./gradlew test    # 1204 tests across nine modules
 ```
 
 ### `:audio`
@@ -62,8 +62,28 @@ The capture and conditioning core.
   detection, key/scale note grids (root on A01), and the retune that lands a
   captured tonal snip on the nearest in-key note using the tune fields an
   MPC pad already has. Unpitched material is never "corrected".
+- **`Retune`** — the spectral retune: every partial on its own, talked into
+  the key through the `Spectral` door with phases reinvented by `Pghi`, so an
+  inharmonic clang lands in the scale instead of merely moving as a block.
+  A drum is refused as unpitched, in words.
+- **`Body`** — a bank of tuned resonators struck by the hit: the key's chord
+  tones over three octaves, the root loudest, DECAY their ring.
+- **`Eternal`** — the attack kept bit for bit, the tail slowed hyperbolically
+  toward a frozen instant with `Pghi` phases, TAIL the knob.
+- **`Desample`** (`:synth`) — the nearest THUMP patch to a captured hit, off a
+  pre-rendered macro grid by `Similar`'s distance, the distance always told
+  (`docs/DESAMPLE.md`).
 - **`Loudness`** — perceived level (peaks aren't loudness), feeding kit-wide
   balance.
+- **`Outside`** — the world as an effect (the Outsidify idea): the phone
+  plays a pad or a sweep out of its speaker or jack and listens to what
+  comes back; `align` finds *when* it came back by FFT cross-correlation
+  (polarity flips reported), `reamp` cuts the return at the arrival and
+  keeps the tail while it sounds, `impulse` deconvolves a sweep's return
+  into the room's impulse response for ROOM OF ITSELF. The trip's latency
+  is measured, never assumed. The pad sheet's OUTSIDE card (`OutsideSheet`
+  in `:shell`) is the door; refusals — a clipped return, a silent room —
+  come in words.
 
 ```kotlin
 val buffer = RingBuffer.ofSeconds(60f)          // running in the capture service
@@ -170,6 +190,16 @@ roadmap's free bonus is cashed: `SynthKits.chip()` renders VELVET squares
 and THUMP/TINES drums through one CRUNCH converter — the chip kit, maximum
 kitsch, zero new DSP.
 
+FATHOM is the bass engine, and it exists for the three things VELVET
+structurally can't do: GLIDE, a pitch envelope travelling between notes and
+available on every voice because a slide is a gesture rather than a timbre;
+GRIND, two saws detuned by SPREAD and left to beat over a long tail, where the
+hollowness *is* the interference; and GLASS, 2-op FM tuned for the bottom with
+RATIO snapped so the knob can't land on a mistuning. DRIVE is owned by the
+engine and sits before the filter — saturation makes harmonics and the filter
+has to be downstream to shape them, which is why bass through an FX rack
+distortion sounds like a blanket.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -196,9 +226,17 @@ cassette the whole app is dressed as: wow/flutter via a modulated
 fractional delay, hysteresis-flavored drive, head-wear HF loss — a
 physics-lite nod to ChowDSP's AnalogTapeModel), ECHO (one delay line and
 one filter, repeats darkening as they fade), SPRING (a Schroeder network,
-1962), and REVERSE. `FxChain` fixes the order — reverse → eq → squash →
-crunch → tape → echo → spring — owns the total tail budget so stacked reverbs
-can't turn a hit into a phrase, and serializes per-pad next to the WAV.
+1962), REVERSE, SMEAR (the attack taken out, the wash kept: the STN
+transient mask from `Separate` scaled by one AMOUNT knob, so a snare
+becomes the room it was struck in; a FLOOR makes it banded, so a kick
+loses its click and keeps its thump), GHOST (the tone gone too, the
+breath alone), DUB (generation loss: a dub of a dub, twelve deep), SWELL
+(the sound arrives before it strikes) and MOTION (the tape stop and the
+tape start, baked); beside the rack, WOBBLE sweeps the same filter on
+the kit's own grid, a note division at its tempo. `FxChain` fixes the order — swell → reverse → smear →
+ghost → eq → squash → crunch → dub → tape → echo → spring → motion — owns
+the total tail budget so stacked reverbs can't turn a hit into a phrase,
+and serializes per-pad next to the WAV.
 Identity is tested: a kick through the whole default rack still classifies
 KICK.
 

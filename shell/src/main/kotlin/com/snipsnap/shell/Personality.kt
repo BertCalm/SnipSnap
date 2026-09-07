@@ -61,6 +61,37 @@ object Copy {
     const val CAPTURE_BLOCKED =
         "TAPE JAM — SPOTIFY BLOCKS THE TAPE. USE THE SCREEN RECORDER, I'LL PULL THE AUDIO OUT."
     const val CAPTURE_BLOCKED_BUTTON = "FINE"
+    // INSIDE: another app's audio, from inside it (M1's second source).
+    const val INSIDE_ARMED = "TAPE ROLLING ON THE INSIDE. GO PLAY THE THING."
+    /** The projection consent dialog was dismissed: nothing armed, nothing lost; ARM TAPE is still there. */
+    const val INSIDE_REFUSED = "NO NOD, NO TAPE. NOTHING ARMED. ARM TAPE STILL WORKS."
+    /** The platform ended the session — the lock screen or the status-bar stop chip, never us. */
+    const val PHONE_STOPPED_TAPE = "THE PHONE STOPPED THE TAPE. LOCK SCREEN OR THE STOP CHIP. ARM AGAIN."
+    // IMPORT: a file shared in from another app (F3).
+    /** A shared file landed as a snip; [seconds] how much, [truncated] whether the cap cut its tail. */
+    fun imported(seconds: Float, truncated: Boolean): String {
+        val length = if (seconds >= 60f) "${Math.round(seconds / 60f)} MIN" else "${Math.round(seconds)}s"
+        return if (truncated) "TAPED FROM OUTSIDE. FIRST $length KEPT - THE TAPE IS ONLY SO LONG." else "TAPED FROM OUTSIDE. $length ON THE DECK."
+    }
+    const val IMPORT_BUSY = "IMPORTING…"
+    const val IMPORT_NOT_AUDIO = "NOTHING TO HEAR IN THAT. SHARE AUDIO OR A VIDEO WITH SOUND."
+    // SHARE, BACKUP, and kits landing on the shelf (F6.3, X3.3, W3.3).
+    const val PACKING_BUSY = "PACKING…"
+    const val LANDING_BUSY = "UNPACKING…"
+    /** SHARE: the kit is one file now and the chooser is up. */
+    fun kitPacked(kit: String): String = "$kit PACKED AS ONE FILE. PICK WHERE IT GOES."
+    /** BACKUP: every kit on one file; [skipped] the ones preflight refused, named in the file's own report. */
+    fun backedUp(packed: Int, skipped: Int): String =
+        "$packed ${if (packed == 1) "KIT" else "KITS"} ON ONE FILE." + (if (skipped > 0) " $skipped SKIPPED." else "") + " PICK WHERE IT GOES."
+    const val BACKUP_EMPTY = "NOTHING TO BACK UP. THE SHELF IS BARE."
+    const val SHARE_NOWHERE = "NOWHERE TO SEND IT. NO APP ON THIS PHONE TAKES A FILE."
+    /** A kit file landed: [landed] kits on the shelf, [skipped] refused and named in the toast's own words. */
+    fun landed(landed: Int, skipped: Int): String =
+        "$landed ${if (landed == 1) "KIT" else "KITS"} LANDED ON THE SHELF." + if (skipped > 0) " $skipped SKIPPED." else ""
+    // The quick-settings tile.
+    const val TILE_LABEL = "SNIPSNAP"
+    const val TILE_IDLE = "TAP TO ARM"
+    const val TILE_ARMED = "TAP TO SNIP"
 
     // Tape deck.
     /** COMMIT toasts, rotated in order per commit. */
@@ -87,6 +118,10 @@ object Copy {
     fun keySet(key: String): String =
         "$key SET. TONAL PADS RETUNE ON ASSIGN — THE KICK IS UNTOUCHED."
     const val KEY_OFF = "KEY OFF. EVERYTHING LANDS AS CAPTURED."
+    /** IN KEY: [n] tonal pads moved into [key] by their tune fields. */
+    fun inKey(n: Int, key: String): String = "$n ${if (n == 1) "PAD" else "PADS"} RETUNED INTO $key. THE KICK IS UNTOUCHED."
+    const val IN_KEY_NONE = "NOTHING MOVED. NO TONAL PAD HOLDS A NOTE THE TUNER IS SURE OF."
+    const val IN_KEY_NEEDS_KEY = "SET A KEY FIRST."
 
     // ---- Settings: teach the machine (X4.4) ----
     const val TEACHING_ON = "TEACHING ON. THE MACHINE LEARNS FROM YOUR CORRECTIONS."
@@ -116,6 +151,25 @@ object Copy {
 
     // ---- GROOVE ----
     const val HUMANIZED = "HUMANIZED. NOBODY PLAYS LIKE A ROBOT."
+    // The phone reads (wave ZZ): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE.
+    const val READ_GROOVE_BUSY = "LISTENING…"
+    const val READ_GROOVE_NEEDS_KIT = "OPEN A KIT FIRST. THE EAR NEEDS PADS TO PLAY ON."
+    /** The reading landed: how much was heard, and where it plays. */
+    fun grooveRead(hits: Int, bars: Int, bpm: Int): String {
+        val barWord = if (bars == 1) "BAR" else "BARS"
+        return "HEARD $hits HITS OVER $bars $barWord AT ~$bpm BPM. THEY PLAY ON YOUR PADS NOW."
+    }
+    /** The Ear's refusal, [reason] in its own words ("no confident tempo - the ear needs a grid"). */
+    fun grooveRefused(reason: String): String = "NO GROOVE: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
+    const val DIG_BUSY = "DIGGING…"
+    /** The break found, IN and OUT set to it. */
+    fun dug(from: String, to: String): String = "BREAK FOUND AT $from-$to. IN AND OUT ARE SET. INSTANT KIT IS ONE TAP AWAY."
+    const val NO_BREAK = "NO BREAK HEARD IN THAT. DIG BY HAND WITH IN AND OUT."
+    const val FEEL_BUSY = "STEALING THE FEEL…"
+    /** The feel poured over the kit's pattern as PROG E; [covered] of 16 positions the record actually played. */
+    fun feelStolen(covered: Int): String = "FEEL STOLEN: $covered OF 16 POSITIONS. IT'S ON PROG E. A–D STAY UNTOUCHED."
+    /** STEAL THE FEEL's refusal, [reason] in its own words. */
+    fun feelRefused(reason: String): String = "NO FEEL: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
     const val FORKED_TO_E = "FORKED TO PROG E. A–D STAY UNTOUCHED."
     const val BAR_WIPED = "BAR WIPED. THE MACHINE FORGIVES."
 
@@ -128,6 +182,48 @@ object Copy {
     const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."
     const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."
+    /** Row five and TUNE: [key] is the kit's key label, or what the treatment did without one ("THE NEAREST SEMITONES", "A, THE HIT'S OWN NOTE"). */
+    fun keyed(segment: String, pad: String, key: String): String = "$segment ON $pad, IN $key. ORIGINAL SLEEPS IN THE BIN."
+    /** The keyed family's honest refusal, [reason] in the treatment's own words ("a kick is a drum, not a note"). */
+    fun notANote(reason: String): String = "NOT A NOTE: ${reason.uppercase().trimEnd('.')}."
+    fun mutated(move: String, pad: String, parent: String): String = "$move: $pad × $parent. ONE HIT, TWO PARENTS."
+    /** DE-SAMPLE: the pad is a patch now; [voice] the engine's own word, [distance] the honest number. */
+    fun desampled(pad: String, voice: String, distance: Float): String =
+        "$pad IS A ${voice.uppercase().replace('_', ' ')} PATCH NOW, %.2f AWAY. ORIGINAL SLEEPS IN THE BIN.".format(java.util.Locale.ROOT, distance)
+    /** DE-SAMPLE's refusal: no patch near enough. */
+    fun desampleFar(voice: String, distance: Float): String =
+        "NO PATCH IS NEAR. THE CLOSEST IS A ${voice.uppercase().replace('_', ' ')}, %.2f AWAY.".format(java.util.Locale.ROOT, distance)
+    /** DRIFT: the pad drifted toward what the crate dealt. */
+    fun drifted(pad: String, toward: String): String = "$pad DRIFTED TOWARD $toward. ORIGINAL SLEEPS IN THE BIN."
+    const val UNMUTATED = "PARENTS SEPARATED. THE ORIGINAL IS BACK FROM THE BIN."
+    const val MUTATE_NEEDS_ONE = "GHOSTS ON. MUTATE WANTS ONE SAMPLE - CLEAR THEM FIRST."
+    const val CRATE_EMPTY = "THE CRATE HAS NOTHING TO DEAL. ONLY YOU ON THE SHELF."
+
+    // ---- KIT: textures ----
+    const val SCULPTED = "SCULPTED. THE HIT IS WEATHER NOW. NEW TAPE ON THE SHELF."
+    const val STRETCHED = "STRETCHED. A BLINK BECAME A LANDSCAPE. NEW TAPE ON THE SHELF."
+    const val FROZEN = "FROZEN. ONE INSTANT, HELD. NEW TAPE ON THE SHELF."
+
+    // ---- PAD SHEET: outside ----
+    /** OUTSIDE: the pad went out the jack and came back; [lagMs] the trip, [confidence] how surely the return was found. */
+    fun outside(move: String, pad: String, lagMs: Float, confidence: Float): String =
+        "$move: $pad WENT OUT AND CAME BACK ${Math.round(lagMs)} MS LATER, ${Math.round(confidence * 100)}% SURE. ORIGINAL SLEEPS IN THE BIN."
+    /** OUTSIDE's honest refusal, [reason] in the verb's own words ("the room said nothing back"). */
+    fun outsideRefused(reason: String): String = "OUTSIDE REFUSED: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
+    const val OUTSIDE_UNDONE = "BACK INSIDE. THE ORIGINAL IS BACK FROM THE BIN."
+    const val OUTSIDE_NEEDS_MIC = "OUTSIDE NEEDS THE MIC. ARM THE TAPE ONCE ON KITS TO GRANT IT."
+    const val OUTSIDE_TAPE_ROLLING = "THE TAPE IS ROLLING. EJECT IT FIRST - OUTSIDE WANTS THE MIC TO ITSELF."
+    const val OUTSIDE_NEEDS_ONE = "GHOSTS ON. OUTSIDE WANTS ONE SAMPLE - CLEAR THEM FIRST."
+    const val OUTSIDE_SENDING = "SENDING… TURN IT UP."
+    const val OUTSIDE_LISTENING = "LISTENING FOR THE ROOM…"
+    /** KEEP ROOM: the measured room is on the shelf under [name], for any pad through MUTATE ▸ ROOM. */
+    fun roomKept(name: String): String = "$name IS ON THE SHELF. ANY PAD CAN PLAY IN IT - MUTATE ▸ ROOM."
+    const val ROOM_NONE_TO_KEEP = "NO ROOM MEASURED YET. SEND A SWEEP OUT FIRST - ROOM ▸ SEND."
+
+    // ---- PAD SHEET: pad from anything ----
+    const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."
+    const val PAD_TOO_SHORT = "TOO SHORT TO STRETCH INTO A PAD. FEED IT MORE THAN A BLINK."
+    const val PAD_TOO_LONG = "TOO LONG TO SLOW INSIDE A MINUTE. TRIM IT UNDER THIRTY SECONDS."
 
     // Chop shop.
     const val RECHOPPED = "RE-CHOPPED. THE MACHINE APOLOGIZES FOR SLICE 3."
@@ -135,6 +231,8 @@ object Copy {
     /** "N SLICES ON THE GRID. CHOKE GROUP SET." — the send-to-grid toast. */
     fun sentToGrid(sliceCount: Int, chokeSet: Boolean): String =
         "$sliceCount SLICES ON THE GRID." + if (chokeSet) " CHOKE GROUP SET." else ""
+    /** INSTANT KIT: the one tap, then the same words SEND TO GRID says. */
+    fun instantKit(sliceCount: Int, chokeSet: Boolean): String = "ONE TAP. " + sentToGrid(sliceCount, chokeSet)
 
     // ---- CHOP: the chip itself (HANDOFF.md — "chip tap = cycle class label, 'YOU ✓'") ----
     /** A chip under the confidence threshold, in its own words. */
@@ -150,6 +248,9 @@ object Copy {
 
     // Kits.
     const val FRESH_TAPE = "FRESH TAPE. SMELLS LIKE FERRIC OXIDE."
+
+    /** Shown when a kit could not be created, at every personality level. */
+    const val CREATE_FAILED = "COULDN'T MAKE THAT TAPE."
 
     /** Status-bar deck mutterings, rotated slowly (FULL only). */
     val STATUS_QUIPS = listOf(

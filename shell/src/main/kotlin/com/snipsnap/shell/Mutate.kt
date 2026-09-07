@@ -17,7 +17,15 @@ import java.io.File
  * - **splice** — the classic mash: the pad's own transient crossfaded
  *   into a parent's body at the split;
  * - **split** — the pad below a crossover, the parent above ("sub from
- *   this kick, crack from that snare").
+ *   this kick, crack from that snare");
+ * - **room** — the pad played *inside* the parent: the parent's tail as
+ *   the impulse response the pad is convolved with ("kick in the
+ *   snare's room"), MIX the dry/wet;
+ * - **transplant** — the pad's attack wearing the parent's long-term
+ *   spectral envelope (a one-knob vocoder, BANDS its resolution): the
+ *   pad's time, the parent's tone;
+ * - **drift** — one knob: the crate's roulette finds the neighbour and
+ *   morph blends toward it ([drift]).
  *
  * Bin-backed through the same door as every treatment; the recipe
  * (mode, parents, split, flips) rides the pad so the sound stays
@@ -27,7 +35,7 @@ import java.io.File
  */
 object Mutate {
 
-    enum class Mode { STACK, SPLICE, SPLIT, MORPH }
+    enum class Mode { STACK, SPLICE, SPLIT, MORPH, ROOM, TRANSPLANT }
 
     /** A parent sound: where it came from (for the recipe) and its audio. */
     data class Source(val label: String, val snip: Snip)
@@ -106,6 +114,10 @@ object Mutate {
         crossoverHz: Float = DEFAULT_CROSSOVER_HZ,
         /** MORPH only: 0 = all pad, 1 = all parent. */
         morphAmount: Float = 0.5f,
+        /** ROOM only: 0 = dry, 1 = the room alone. */
+        roomMix: Float = 0.5f,
+        /** TRANSPLANT only: how finely the parent's tone is read. */
+        bands: Int = com.snipsnap.audio.Transplant.DEFAULT_BANDS,
         /** Extra recipe fields — how the roulette records its spin. */
         extraRecipe: Map<String, JsonValue> = emptyMap(),
     ): Outcome {
@@ -116,6 +128,10 @@ object Mutate {
         require(spliceAtMs in 5..2000) { "--at wants 5..2000 ms, got $spliceAtMs" }
         require(crossoverHz in 40f..8000f) { "--hz wants 40..8000, got $crossoverHz" }
         require(morphAmount in 0f..1f) { "--amount wants 0..1, got $morphAmount" }
+        require(roomMix in 0f..1f) { "--amount wants 0..1, got $roomMix" }
+        require(bands in com.snipsnap.audio.Transplant.MIN_BANDS..com.snipsnap.audio.Transplant.MAX_BANDS) {
+            "--bands wants ${com.snipsnap.audio.Transplant.MIN_BANDS}..${com.snipsnap.audio.Transplant.MAX_BANDS}, got $bands"
+        }
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
 
         val base = com.snipsnap.audio.WavReader.read(File(model.kitDir, pad.sampleFile))
@@ -129,6 +145,8 @@ object Mutate {
             Mode.SPLICE -> splice(baseAligned, parents.single().snip, spliceAtMs, rate)
             Mode.SPLIT -> split(baseAligned, parents.single().snip, crossoverHz, rate)
             Mode.MORPH -> morph(baseAligned, parents.single().snip, morphAmount, rate)
+            Mode.ROOM -> room(baseAligned, parents.single().snip, roomMix, rate)
+            Mode.TRANSPLANT -> com.snipsnap.audio.Transplant.apply(baseAligned, parents.single().snip, bands)
         }
 
         val recipe = JsonValue.Obj(
@@ -141,6 +159,8 @@ object Mutate {
                         if (mode == Mode.SPLICE) r["at"] = JsonValue.Num(spliceAtMs.toDouble())
                         if (mode == Mode.SPLIT) r["hz"] = JsonValue.Num(crossoverHz.toDouble())
                         if (mode == Mode.MORPH) r["amount"] = JsonValue.Num(morphAmount.toDouble())
+                        if (mode == Mode.ROOM) r["mix"] = JsonValue.Num(roomMix.toDouble())
+                        if (mode == Mode.TRANSPLANT) r["bands"] = JsonValue.Num(bands.toDouble())
                         if (flipped.isNotEmpty()) {
                             r["flipped"] = JsonValue.Arr(flipped.map { JsonValue.Str(it) })
                         }
@@ -154,6 +174,35 @@ object Mutate {
             it.copy(source = it.source + mapOf("mutatedWith" to sources.joinToString(", ") { s -> s.label }))
         }
         return Outcome(mutated, flipped)
+    }
+
+    /** What DRIFT did: the deal the crate made and the morph toward it. */
+    data class Drifted(val pick: Pick, val outcome: Outcome)
+
+    /**
+     * DRIFT TOWARD THE CRATE (XX1) — one knob: [roulette] finds the
+     * neighbour (guided, never wild, never the pad itself), [Mode.MORPH]
+     * blends [amount] of the way toward it. Exactly a roulette then a
+     * morph, so the recipe is the morph's with the spin recorded beside
+     * it and a `drift` flag; deterministic per (crate, seed).
+     */
+    fun drift(model: KitBuilderModel, slot: Int, root: File, seed: Int = 0, amount: Float = 0.5f): Drifted {
+        require(amount in 0f..1f) { "--amount wants 0..1, got $amount" }
+        val pick = roulette(model, slot, root, seed = seed, wild = false)
+        val outcome = apply(
+            model, slot, listOf(Source(pick.label, com.snipsnap.audio.WavReader.read(pick.file))), Mode.MORPH,
+            morphAmount = amount,
+            extraRecipe = mapOf(
+                "roulette" to JsonValue.Obj(
+                    linkedMapOf<String, JsonValue>(
+                        "seed" to JsonValue.Num(seed.toDouble()),
+                        "wild" to JsonValue.Bool(false),
+                    ),
+                ),
+                "drift" to JsonValue.Bool(true),
+            ),
+        )
+        return Drifted(pick, outcome)
     }
 
     /** The parents back out of the bin; recipe and parent stamp cleared. */
@@ -257,12 +306,84 @@ object Mutate {
         return Snip(out, 2, rate)
     }
 
+    /**
+     * ROOM OF ITSELF: the parent as an impulse response. Convolution is a
+     * multiplication of spectra, so both go through the classifier's own
+     * FFT at a power-of-two length that holds the whole result; the parent
+     * is mono-folded and scaled to unit energy so the room's loudness comes
+     * from the pad, not the size of the file. The wet signal is brought to
+     * the pad's own peak, then MIX crossfades dry to wet. The result runs
+     * the pad's length plus the room's tail.
+     */
+    private fun room(base: Snip, impulse: Snip, mix: Float, rate: Int): Snip {
+        val n = base.frameCount + impulse.frameCount - 1
+        var size = 1
+        while (size < n) size = size shl 1
+
+        // The impulse: mono, unit energy.
+        val irRe = FloatArray(size)
+        val irIm = FloatArray(size)
+        var energy = 0.0
+        for (f in 0 until impulse.frameCount) {
+            val v = (impulse.samples[f * 2] + impulse.samples[f * 2 + 1]) * 0.5f
+            irRe[f] = v
+            energy += v * v.toDouble()
+        }
+        if (energy <= 1e-12) return base
+        val k = (1.0 / Math.sqrt(energy)).toFloat()
+        for (f in 0 until impulse.frameCount) irRe[f] *= k
+        com.snipsnap.audio.Fft.forward(irRe, irIm)
+
+        val wet = FloatArray(n * 2)
+        for (ch in 0 until 2) {
+            val re = FloatArray(size)
+            val im = FloatArray(size)
+            for (f in 0 until base.frameCount) re[f] = base.samples[f * 2 + ch]
+            com.snipsnap.audio.Fft.forward(re, im)
+            for (b in 0 until size) {
+                val r = re[b] * irRe[b] - im[b] * irIm[b]
+                val i = re[b] * irIm[b] + im[b] * irRe[b]
+                re[b] = r
+                im[b] = i
+            }
+            com.snipsnap.audio.Fft.inverse(re, im)
+            for (f in 0 until n) wet[f * 2 + ch] = re[f]
+        }
+        normalizeTo(wet, peak(base.samples))
+
+        val out = FloatArray(n * 2)
+        for (i in out.indices) {
+            val dry = if (i < base.samples.size) base.samples[i] else 0f
+            out[i] = dry * (1f - mix) + wet[i] * mix
+        }
+        return Snip(out, 2, rate)
+    }
+
     // ---- helpers ----------------------------------------------------------
 
-    /** Leading room before the hit is trimmed, so layers meet at the attack. */
+    /** Before the first onset, this loud (relative to the peak) is not room — the sound was already hot. */
+    private const val HOT_OPEN_RATIO = 0.1f
+
+    /**
+     * Leading room before the hit is trimmed, so layers meet at the attack.
+     *
+     * Unless there is no room to trim: the onset detector credits nothing
+     * to its first analysis frame, so a sound that starts *on* its hit (a
+     * chopped break, a captured room's impulse response with the direct
+     * arrival at the top) reports its *second* event as the first onset —
+     * and trimming to that would throw the hit away and keep the echo.
+     * A head that is already within [HOT_OPEN_RATIO] of the peak before
+     * the "first" onset is the hit itself, and stays.
+     */
     private fun alignToOnset(snip: Snip): Snip {
         val onset = Transients.detect(snip).firstOrNull()?.frame ?: return snip
         if (onset <= 0) return snip
+        var headPeak = 0f
+        for (i in 0 until onset * 2) {
+            val a = if (snip.samples[i] < 0) -snip.samples[i] else snip.samples[i]
+            if (a > headPeak) headPeak = a
+        }
+        if (headPeak >= HOT_OPEN_RATIO * peak(snip.samples)) return snip
         return Snip(snip.samples.copyOfRange(onset * 2, snip.samples.size), 2, snip.sampleRate)
     }
 

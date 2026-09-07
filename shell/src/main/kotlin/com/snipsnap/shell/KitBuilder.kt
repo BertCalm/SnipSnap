@@ -12,6 +12,10 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
 import com.snipsnap.xpm.PadNoteMap
 import java.io.File
+import java.util.Locale
+
+/** [KitBuilderModel.nextStem]'s bound. A kit holds 128 pads, so this is ample headroom. */
+private const val MAX_STEM_ATTEMPTS = 999
 
 /**
  * The KIT screen: the 4×4 grid over a kit folder, every edit non-
@@ -64,15 +68,23 @@ class KitBuilderModel private constructor(
         val stem = nextStem(slot, drumClass)
         WavWriter.write(File(kitDir, "$stem.wav"), snip)
 
+        // Retune on assign (F5.3): with a key set, a tonal pad lands in it
+        // through the tune fields the MPC pad already has - audio
+        // untouched, the kick untouched, an unpitched hit never corrected.
+        val tune = kit.key?.takeIf { drumClass == DrumClass.TONAL }?.let { key ->
+            com.snipsnap.audio.Tuner.inKey(snip, key.rootSemitone, key.scale)
+        }
         val previous = kit.pad(slot)
         val pad = KitPad(
             slot = slot,
             sampleFile = "$stem.wav",
             displayName = displayName
-                ?: "%s %02d".format(AutoPlace.nameFor(drumClass), classCount(drumClass) + 1),
+                ?: String.format(Locale.ROOT, "%s %02d", AutoPlace.nameFor(drumClass), classCount(drumClass) + 1),
             drumClass = drumClass,
             colorHex = AutoPlace.colorFor(drumClass),
             muteGroup = AutoPlace.muteGroupFor(drumClass),
+            tuneCoarse = tune?.tuneCoarse ?: 0,
+            tuneFine = tune?.tuneFine ?: 0,
         )
         kit = kit.copy(pads = kit.pads.filter { it.slot != slot } + pad)
         previous?.let { deleteIfUnreferenced(it) }
@@ -125,6 +137,13 @@ class KitBuilderModel private constructor(
     fun setKey(key: com.snipsnap.audio.KeySpec?) {
         if (kit.key == key) return
         kit = kit.copy(key = key)
+        dirty = true
+    }
+
+    /** Set or clear the kit's tempo — what the preview, the arranger and WOBBLE read. */
+    fun setTempo(bpm: Float?) {
+        if (kit.tempoBpm == bpm) return
+        kit = kit.copy(tempoBpm = bpm)
         dirty = true
     }
 
@@ -270,6 +289,33 @@ class KitBuilderModel private constructor(
         return update(slot) { it.copy(recipe = recipe ?: it.recipe) }
     }
 
+    /** DE-SAMPLE's honest refusal: the nearest patch is a stranger; the match says how far. */
+    class Far(val match: com.snipsnap.synth.Desample.Match) :
+        IllegalArgumentException("no patch is near: the nearest is ${match.patch.voice.name.lowercase()} at distance %.2f".format(java.util.Locale.ROOT, match.distance))
+
+    /**
+     * DE-SAMPLE: the pad replaced by the nearest THUMP patch's own render,
+     * the patch riding the pad as its recipe so the sound is a synth pad
+     * from here on - bin-backed like every rewrite. The search starts on
+     * the voices kindred to the pad's class. A far match ([Far]) is
+     * refused unless [evenIfFar]; the match is returned either way it
+     * goes ahead.
+     */
+    fun desamplePad(slot: Int, evenIfFar: Boolean = false): com.snipsnap.synth.Desample.Match {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        val match = com.snipsnap.synth.Desample.nearest(
+            original,
+            voices = com.snipsnap.synth.Desample.voicesFor(pad.drumClass),
+            name = pad.displayName,
+        )
+        if (match.far && !evenIfFar) throw Far(match)
+        val recipe = com.snipsnap.synth.PadRecipe(patch = match.patch).toJsonValue()
+        replaceAudio(slot, recipe) { match.patch.render() }
+        update(slot) { it.copy(source = it.source + mapOf("desampled" to "%.2f".format(java.util.Locale.ROOT, match.distance))) }
+        return match
+    }
+
     /**
      * Age one pad through a Time Machine era — every file it references
      * (velocity layers included, unlike single-sample treatments: an era is
@@ -279,17 +325,108 @@ class KitBuilderModel private constructor(
     fun eraPad(slot: Int, era: String, amount: Float = 1f): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         if (amount <= 0f) return pad
-        requireNotChained(pad, "aging")
+        return rewriteEveryFile(pad, "aging") { original ->
+            val aged = com.snipsnap.synth.Eras.apply(era, original, amount)
+            aged.snip to aged.recipe
+        }
+    }
+
+    /**
+     * One of the rack's named characters (`Treatments.names`) over every
+     * file the pad references — the pad sheet's second row. The same door
+     * shape as [eraPad]: layers included, originals binned, the fx-only
+     * recipe (name + AMT) riding the pad — where [treatPad] rewrites one
+     * sample and refuses layers, this is whole-pad character. AMT 0 is a
+     * no-op that touches neither the file nor the bin. Undo is
+     * [unEraPad], the same "every file back out of the bin" either row needs.
+     */
+    fun characterPad(slot: Int, character: String, amount: Float = 1f): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        // Validate the name before the AMT-0 exit: a typo must not read as "no treatment".
+        com.snipsnap.synth.Treatments.chain(character, amount)
+        if (amount <= 0f) return pad
+        return rewriteEveryFile(pad, "treating") { original ->
+            val treated = com.snipsnap.synth.Treatments.apply(character, original, amount)
+            treated.snip to treated.recipe
+        }
+    }
+
+    /** The keyed family's honest refusal: the pad is a drum or noise, not a note. */
+    class Unpitched(message: String) : IllegalArgumentException(message)
+
+    /** What TUNE snaps to: the kit's key, or every semitone when none is set. */
+    fun retuneKey(): com.snipsnap.audio.KeySpec = kit.key ?: Keyed.NO_KEY
+
+    /** "C MAJOR", or "THE NEAREST SEMITONES" when no key is set — for the toast and the recipe. */
+    fun retuneKeyLabel(): String = kit.key?.label?.uppercase() ?: Keyed.NO_KEY_LABEL
+
+    /** TUNE: [keyedPad] with the retune. */
+    fun retunePad(slot: Int, amount: Float = 1f, seed: Long = 0): KitPad = keyedPad(slot, "retuned", amount, seed)
+
+    /**
+     * The keyed family ([Keyed.NAMES]) over one pad: the treatment reads
+     * the kit's key (or does without, its own way) and rewrites every
+     * file the pad references, bin-backed like every treatment. AMT is
+     * how far; 0 leaves the pad as it is. A refusal ([Unpitched], in the
+     * treatment's own words) comes before anything is touched.
+     */
+    fun keyedPad(slot: Int, name: String, amount: Float = 1f, seed: Long = 0, dials: Keyed.Dials = Keyed.Dials()): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        Keyed.require(name)
+        require(amount in 0f..1f) { "amount is 0..1, got $amount" }
+        if (amount <= 0f) return pad
+        val context = keyedContext()
+        val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        Keyed.refusal(name, main, context, amount, dials)?.let { throw Unpitched(it) }
+        var label = ""
+        val rewritten = rewriteEveryFile(pad, "keyed treatment") { original ->
+            val done = try {
+                Keyed.apply(name, original, context, amount, seed, dials)
+            } catch (e: Keyed.Refused) {
+                throw Unpitched(e.message ?: "not a note")
+            }
+            label = done.keyLabel
+            done.snip to com.snipsnap.json.JsonValue.Obj(
+                linkedMapOf<String, com.snipsnap.json.JsonValue>(
+                    "keyed" to com.snipsnap.json.JsonValue.Str(name),
+                    "key" to com.snipsnap.json.JsonValue.Str(label),
+                    "amount" to com.snipsnap.json.JsonValue.Num(amount.toDouble()),
+                    "seed" to com.snipsnap.json.JsonValue.Num(seed.toDouble()),
+                    "decay" to com.snipsnap.json.JsonValue.Num(dials.decay.toDouble()),
+                    "division" to com.snipsnap.json.JsonValue.Str(dials.division),
+                    "tail" to com.snipsnap.json.JsonValue.Num((dials.tail ?: com.snipsnap.audio.Eternal.tailFor(amount)).toDouble()),
+                    "knee" to com.snipsnap.json.JsonValue.Num(dials.knee.toDouble()),
+                ),
+            )
+        }
+        lastKeyLabel = label
+        return rewritten
+    }
+
+    /** What the keyed family reads off this kit: its key (maybe none) and its tempo (the preview's default without one). */
+    fun keyedContext(): Keyed.Context = Keyed.Context(kit.key, kit.tempoBpm ?: com.snipsnap.kit.KitPreview.DEFAULT_BPM)
+
+    /** The key label the last [keyedPad] read — what its toast names. */
+    var lastKeyLabel: String = ""
+        private set
+
+    /** The whole-pad rewrite both [eraPad] and [characterPad] share: every referenced file, bin-backed, one recipe. */
+    private fun rewriteEveryFile(
+        pad: KitPad,
+        doing: String,
+        transform: (Snip) -> Pair<Snip, com.snipsnap.json.JsonValue.Obj>,
+    ): KitPad {
+        requireNotChained(pad, doing)
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
         var recipe: com.snipsnap.json.JsonValue.Obj? = null
         for (f in files) {
             val original = com.snipsnap.audio.WavReader.read(File(kitDir, f))
-            val aged = com.snipsnap.synth.Eras.apply(era, original, amount)
+            val (rewritten, r) = transform(original)
             moveToBin(f)
-            WavWriter.write(File(kitDir, f), aged.snip)
-            recipe = aged.recipe
+            WavWriter.write(File(kitDir, f), rewritten)
+            recipe = r
         }
-        return update(slot) { it.copy(recipe = recipe) }
+        return update(pad.slot) { it.copy(recipe = recipe) }
     }
 
     /**
@@ -304,7 +441,7 @@ class KitBuilderModel private constructor(
         return targets.size
     }
 
-    /** Undo an era on one pad: every file it references comes back out of the bin. */
+    /** Undo an era or a character on one pad: every file it references comes back out of the bin. */
     fun unEraPad(slot: Int): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         requireNotChained(pad, "un-aging")
@@ -522,7 +659,8 @@ class KitBuilderModel private constructor(
         if (!current.isFile || !dirty) return
         val takesDir = File(kitDir, TAKES_DIR).apply { mkdirs() }
         val next = (takes().lastOrNull()?.let { TAKE_NAME.find(it.name)!!.groupValues[1].toInt() } ?: 0) + 1
-        val takeFile = File(takesDir, "take_%03d.json".format(next))
+        // Locale.ROOT: this name is parsed back by TAKE_NAME, whose \d expects ASCII digits.
+        val takeFile = File(takesDir, String.format(Locale.ROOT, "take_%03d.json", next))
         com.snipsnap.kit.AtomicFile.writeBytes(takeFile, current.readBytes())
         // A take's T must be strictly later than every bin event that
         // produced the state it snapshots; same-millisecond flash writes
@@ -604,14 +742,23 @@ class KitBuilderModel private constructor(
 
     private fun nextStem(slot: Int, dc: DrumClass): String {
         val base = "%s_%s".format(PadNoteMap.labelForPad(slot), AutoPlace.nameFor(dc))
-        var n = 1
-        while (true) {
-            val stem = Names.sanitizeStem("%s_%02d".format(base, n))
+        // Bounded, not `while (true)`: the loop only terminates because the
+        // formatted counter varies from n to n, an invariant Locale.ROOT
+        // restores today but does not itself guarantee. A kit holds 128
+        // pads, so 999 candidates is ample headroom; if every one of them
+        // still collides — the invariant broken again, or genuinely 999
+        // takers of one stem — this fails loudly instead of hanging the
+        // caller (an onClick, in production) forever.
+        for (n in 1..MAX_STEM_ATTEMPTS) {
+            val stem = Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, n))
             val taken = kit.pads.any { it.sampleFile.equals("$stem.wav", ignoreCase = true) } ||
                 File(kitDir, "$stem.wav").exists()
             if (!taken) return stem
-            n++
         }
+        throw IllegalStateException(
+            "couldn't find a free stem for '$base' after $MAX_STEM_ATTEMPTS attempts " +
+                "(kept producing '${Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, MAX_STEM_ATTEMPTS))}')",
+        )
     }
 
     private fun deleteIfUnreferenced(pad: KitPad) {
@@ -660,6 +807,9 @@ class KitBuilderModel private constructor(
 
         /** Where deletes wait out their 30 days. */
         const val BIN_DIR = ".bin"
+
+        /** The retune's target when the kit has no key. */
+        const val NO_KEY_LABEL = Keyed.NO_KEY_LABEL
 
         const val MAX_TAKES = 32
         const val BIN_KEEP_DAYS = 30.0

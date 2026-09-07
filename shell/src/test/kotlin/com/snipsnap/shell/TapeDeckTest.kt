@@ -101,6 +101,21 @@ class TapeDeckTest {
     }
 
     @Test
+    fun `select hands in a whole range - clamped, ordered, the head at IN, empty clears`() {
+        val m = deck()
+        m.select(m.lengthFrames / 2, 100)
+        assertTrue(m.hasSelection)
+        assertEquals(100, m.inFrame)
+        assertEquals(m.lengthFrames / 2, m.outFrame)
+        assertEquals(100.0, m.position)
+        m.select(-50, m.lengthFrames + 999)
+        assertEquals(0, m.inFrame)
+        assertEquals(m.lengthFrames, m.outFrame)
+        m.select(500, 500)
+        assertTrue(!m.hasSelection, "an empty range is no selection")
+    }
+
+    @Test
     fun `selection set-out before set-in swaps instead of erroring`() {
         val d = deck(onsets = IntArray(0))
         d.snapToZero = false

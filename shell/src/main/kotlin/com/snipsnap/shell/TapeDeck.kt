@@ -369,6 +369,24 @@ class TapeDeckModel(
     }
 
     /**
+     * A selection handed in whole — DIG's found break (wave ZZ) — rather
+     * than marked from the head. Clamped to the tape and ordered; an
+     * empty or off-tape range clears the selection instead of setting an
+     * unplayable one. The head parks at IN so PLAY previews the find.
+     */
+    fun select(from: Int, to: Int) {
+        val a = minOf(from, to).coerceIn(0, lengthFrames)
+        val b = maxOf(from, to).coerceIn(0, lengthFrames)
+        if (b <= a) {
+            clearSelection()
+            return
+        }
+        inFrame = a
+        outFrame = b
+        position = a.toDouble()
+    }
+
+    /**
      * COMMIT: the selection as a frame range, or null when in/out aren't
      * both set (the UI toasts SET IN + OUT FIRST).
      */
