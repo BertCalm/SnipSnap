@@ -36,6 +36,7 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.StarterKits
+import java.util.Locale
 import kotlin.math.roundToInt
 import com.snipsnap.shell.Rooms
 import com.snipsnap.app.theme.pressedBevel
@@ -197,7 +198,7 @@ private fun RoomRow(room: Rooms.Room, onForget: (Rooms.Room) -> Unit) {
     var armed by remember(room.file) { mutableStateOf(false) }
     val ageDays = ((System.currentTimeMillis() - room.measuredAt) / (24L * 60 * 60 * 1000)).toInt()
     val age = if (ageDays <= 0) "TODAY" else "$ageDays D AGO"
-    val meta = "${room.lagMs.roundToInt()} MS · ${(room.confidence * 100).roundToInt()}% SURE · ${room.from.replace(':', ' ').uppercase()} · $age"
+    val meta = "${room.lagMs.roundToInt()} MS · ${(room.confidence * 100).roundToInt()}% SURE · ${room.from.replace(':', ' ').uppercase(Locale.ROOT)} · $age"
     Row(
         Modifier
             .fillMaxWidth()
@@ -227,7 +228,7 @@ private fun RoomRow(room: Rooms.Room, onForget: (Rooms.Room) -> Unit) {
             }
         } else {
             Box(Modifier.height(30.dp).lcdPanel(scheme).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
-                TapeText("%.1f s".format(room.seconds), TapeType.lcdSmall, scheme.amber.tape)
+                TapeText("%.1f s".format(Locale.ROOT, room.seconds), TapeType.lcdSmall, scheme.amber.tape)
             }
         }
     }
