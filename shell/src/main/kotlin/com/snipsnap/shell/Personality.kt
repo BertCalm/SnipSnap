@@ -85,9 +85,11 @@ object Copy {
         "$packed ${if (packed == 1) "KIT" else "KITS"} ON ONE FILE." + (if (skipped > 0) " $skipped SKIPPED." else "") + " PICK WHERE IT GOES."
     const val BACKUP_EMPTY = "NOTHING TO BACK UP. THE SHELF IS BARE."
     const val SHARE_NOWHERE = "NOWHERE TO SEND IT. NO APP ON THIS PHONE TAKES A FILE."
-    /** A kit file landed: [landed] kits on the shelf, [skipped] refused and named in the toast's own words. */
+    /** A kit file landed: [landed] kits on the shelf, [skipped] refused - the box ([LandingNote]) names them when there are any. */
     fun landed(landed: Int, skipped: Int): String =
         "$landed ${if (landed == 1) "KIT" else "KITS"} LANDED ON THE SHELF." + if (skipped > 0) " $skipped SKIPPED." else ""
+    /** The message box's title when a share landed nothing: the file's name and the refuser's words follow. */
+    const val NOTHING_LANDED = "NOTHING LANDED."
     // The quick-settings tile: idle reads LISTEN (opens the app, arms
     // nothing yet), armed reads SNIP (writes the ring's last 60s to disk).
     const val TILE_LABEL_IDLE = "LISTEN"
@@ -200,6 +202,8 @@ object Copy {
     const val UNMUTATED = "PARENTS SEPARATED. THE ORIGINAL IS BACK FROM THE BIN."
     const val MUTATE_NEEDS_ONE = "GHOSTS ON. MUTATE WANTS ONE SAMPLE - CLEAR THEM FIRST."
     const val CRATE_EMPTY = "THE CRATE HAS NOTHING TO DEAL. ONLY YOU ON THE SHELF."
+    /** A FILE: the picked file cannot be a parent; [reason] the decoder's or the holder's own words. */
+    fun fileRefused(reason: String): String = "NOT A PARENT: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
 
     // ---- KIT: textures ----
     const val SCULPTED = "SCULPTED. THE HIT IS WEATHER NOW. NEW TAPE ON THE SHELF."

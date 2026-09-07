@@ -40,3 +40,17 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Assemble the app
         run: ./gradlew --no-daemon :app:assembleDebug
+
+  native-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The native engines on the host: no NDK, no device. The audio callbacks
+      # are driven by hand and the DSP and handshakes asserted; Oboe is headers
+      # only here (fetched from the pinned release by the test's CMake).
+      - name: Configure
+        run: cmake -S app/src/main/cpp/test -B build/native-tests
+      - name: Build
+        run: cmake --build build/native-tests
+      - name: Run the engine tests
+        run: ctest --test-dir build/native-tests --output-on-failure

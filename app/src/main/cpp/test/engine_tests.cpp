@@ -1,0 +1,371 @@
+// The native engines, driven by hand. See CMakeLists.txt.
+#include <algorithm>
+#include <cmath>
+#include <vector>
+
+#include "PadEngine.h"
+#include "ParameterSmoother.h"
+#include "PrintBuffer.h"
+#include "SpscRing.h"
+#include "SurfaceEngine.h"
+#include "check.h"
+
+using namespace snipsnap;
+
+namespace {
+
+constexpr int32_t kRate = 48000;  // both engines default to 48 kHz before start()
+
+/** Run one callback of `frames` and return the interleaved stereo it wrote. */
+std::vector<float> callback(PadEngine& e, int32_t frames) {
+    std::vector<float> out(static_cast<size_t>(frames) * 2, 123.0f);
+    e.onAudioReady(nullptr, out.data(), frames);
+    return out;
+}
+
+std::vector<float> callback(SurfaceEngine& e, int32_t frames) {
+    std::vector<float> out(static_cast<size_t>(frames) * 2, 123.0f);
+    e.onAudioReady(nullptr, out.data(), frames);
+    return out;
+}
+
+float peak(const std::vector<float>& v) {
+    float p = 0.0f;
+    for (float x : v) p = std::max(p, std::fabs(x));
+    return p;
+}
+
+std::vector<int32_t> ended(PadEngine& e) {
+    int32_t buf[256];
+    const size_t n = e.drainEnded(buf, 256);
+    return std::vector<int32_t>(buf, buf + n);
+}
+
+/** A mono ramp i/1000 (inside full scale - the mix clamps at 1), so a frame's value tells you which frame was read. */
+std::vector<float> ramp(int64_t frames) {
+    std::vector<float> v(static_cast<size_t>(frames));
+    for (int64_t i = 0; i < frames; ++i) v[static_cast<size_t>(i)] = static_cast<float>(i) / 1000.0f;
+    return v;
+}
+
+PadCommand noteOn(int32_t id, int32_t sample, int64_t start, int64_t end, float gL = 1.0f, float gR = 1.0f, double pitch = 1.0) {
+    PadCommand c;
+    c.type = PadCommand::Type::NoteOn;
+    c.voiceId = id;
+    c.sample = sample;
+    c.start = start;
+    c.end = end;
+    c.gainL = gL;
+    c.gainR = gR;
+    c.pitch = pitch;
+    return c;
+}
+
+PadCommand stop(int32_t id, float fadeMs) {
+    PadCommand c;
+    c.type = PadCommand::Type::Stop;
+    c.voiceId = id;
+    c.fadeMs = fadeMs;
+    return c;
+}
+
+PadCommand allOff(float fadeMs) {
+    PadCommand c;
+    c.type = PadCommand::Type::AllOff;
+    c.fadeMs = fadeMs;
+    return c;
+}
+
+/** A pad engine with one 1000-frame mono ramp (index 0) and one 100-frame stereo sample (index 1), adopted. */
+PadEngine& seeded() {
+    static PadEngine* e = nullptr;
+    delete e;
+    e = new PadEngine(kRate);
+    e->beginBank();
+    e->addSample(ramp(1000), 1, kRate);
+    std::vector<float> stereo(200);
+    for (int i = 0; i < 100; ++i) { stereo[2 * i] = 0.5f; stereo[2 * i + 1] = -0.25f; }
+    e->addSample(std::move(stereo), 2, kRate);
+    e->commitBank();
+    callback(*e, 8);  // adopt
+    ended(*e);
+    return *e;
+}
+
+}  // namespace
+
+// ---- SpscRing ------------------------------------------------------------------
+
+TEST(ring_keeps_order_and_drops_when_full) {
+    SpscRing<int, 4> ring;  // three usable slots
+    CHECK(ring.push(1));
+    CHECK(ring.push(2));
+    CHECK(ring.push(3));
+    CHECK(!ring.push(4));  // full: dropped, not blocked
+    int v = 0;
+    CHECK(ring.pop(v)); CHECK_EQ(v, 1);
+    CHECK(ring.pop(v)); CHECK_EQ(v, 2);
+    CHECK(ring.push(5));  // room again, and the index wraps
+    CHECK(ring.pop(v)); CHECK_EQ(v, 3);
+    CHECK(ring.pop(v)); CHECK_EQ(v, 5);
+    CHECK(!ring.pop(v));
+}
+
+// ---- ParameterSmoother ---------------------------------------------------------
+
+TEST(smoother_glides_and_settles_and_snaps) {
+    ParameterSmoother s;
+    s.configure(1000.0f, 48000.0f);
+    s.snap(0.0f);
+    s.setTarget(1.0f);
+    const float first = s.next();
+    CHECK(first > 0.0f && first < 1.0f);
+    for (int i = 0; i < 48000; ++i) s.next();
+    CHECK_NEAR(s.value(), 1.0f, 1e-4);
+    s.snap(0.25f);
+    CHECK_NEAR(s.value(), 0.25f, 1e-7);
+    CHECK_NEAR(s.next(), 0.25f, 1e-7);  // target snapped too: no glide
+
+    ParameterSmoother slow, fast;
+    slow.configure(5.0f, 48000.0f);
+    fast.configure(500.0f, 48000.0f);
+    slow.setTarget(1.0f);
+    fast.setTarget(1.0f);
+    CHECK(fast.next() > slow.next());
+}
+
+// ---- PrintBuffer ---------------------------------------------------------------
+
+TEST(print_buffer_records_to_its_ceiling_then_is_done) {
+    PrintBuffer p;
+    CHECK(p.state() == PrintBuffer::State::Idle);
+    CHECK(p.arm(10));
+    CHECK(p.state() == PrintBuffer::State::Recording);
+    float a[6] = {1, 2, 3, 4, 5, 6};
+    CHECK(p.record(a, 6));
+    CHECK(!p.record(a, 6));  // fills at 10 and stops itself
+    CHECK(p.state() == PrintBuffer::State::Done);
+    CHECK_EQ(static_cast<int>(p.framesWritten()), 10);
+    CHECK_NEAR(p.data()[9], 4.0f, 1e-7);
+    p.clear();
+    CHECK(p.state() == PrintBuffer::State::Idle);
+}
+
+TEST(print_buffer_stop_lands_on_the_callback_and_rearm_is_refused_meanwhile) {
+    PrintBuffer p;
+    CHECK(p.arm(100));
+    float a[4] = {1, 1, 1, 1};
+    p.record(a, 4);
+    CHECK(!p.arm(50));  // recording: the callback may be writing
+    p.requestStop();
+    CHECK(p.state() == PrintBuffer::State::Stopping);
+    CHECK(!p.arm(50));  // still the callback's until it says Done
+    CHECK(!p.record(a, 4));  // the callback makes the last move
+    CHECK(p.state() == PrintBuffer::State::Done);
+    CHECK_EQ(static_cast<int>(p.framesWritten()), 4);
+    CHECK(p.arm(5));  // Done: ours again
+    p.clear();
+}
+
+// ---- PadEngine -----------------------------------------------------------------
+
+TEST(pad_engine_plays_the_window_with_its_gains_and_reports_the_end) {
+    PadEngine& e = seeded();
+    CHECK(e.pushCommand(noteOn(7, 0, 100, 104, 0.5f, 0.25f)));
+    auto out = callback(e, 8);
+    // Frames 100..103 of the ramp, left at half, right at a quarter; then silence.
+    CHECK_NEAR(out[0], 0.05f, 1e-6); CHECK_NEAR(out[1], 0.025f, 1e-6);
+    CHECK_NEAR(out[6], 0.0515f, 1e-6); CHECK_NEAR(out[7], 0.02575f, 1e-6);
+    CHECK_NEAR(out[8], 0.0f, 1e-7);
+    const auto ids = ended(e);
+    CHECK_EQ(static_cast<int>(ids.size()), 1);
+    if (!ids.empty()) CHECK_EQ(ids[0], 7);
+}
+
+TEST(pad_engine_repitches_by_the_ratio) {
+    PadEngine& e = seeded();
+    e.pushCommand(noteOn(1, 0, 0, 100, 1.0f, 1.0f, 2.0));
+    auto out = callback(e, 100);
+    CHECK_NEAR(out[2 * 10], 0.020f, 1e-6);  // frame 10 reads sample 20 at double speed
+    CHECK_NEAR(out[2 * 60], 0.0f, 1e-7);   // 100 frames at 2x is over by frame 50
+    CHECK_EQ(static_cast<int>(ended(e).size()), 1);
+}
+
+TEST(pad_engine_reads_stereo_as_stereo) {
+    PadEngine& e = seeded();
+    e.pushCommand(noteOn(2, 1, 0, 100));
+    auto out = callback(e, 4);
+    CHECK_NEAR(out[0], 0.5f, 1e-6);
+    CHECK_NEAR(out[1], -0.25f, 1e-6);
+}
+
+TEST(pad_engine_choke_is_a_fade_not_a_cut) {
+    PadEngine& e = seeded();
+    // A flat region: read the ramp far in with tiny gain so the level is ~constant.
+    e.pushCommand(noteOn(3, 0, 500, 1000, 0.002f, 0.002f));
+    callback(e, 4);
+    e.pushCommand(stop(3, 1.0f));  // 1 ms = 48 frames
+    auto out = callback(e, 64);
+    // Strictly falling over the fade, silent after it, reported once.
+    CHECK(out[0] > out[2 * 20]);
+    CHECK(out[2 * 20] > out[2 * 40]);
+    CHECK_NEAR(out[2 * 60], 0.0f, 1e-7);
+    const auto ids = ended(e);
+    CHECK_EQ(static_cast<int>(ids.size()), 1);
+    if (!ids.empty()) CHECK_EQ(ids[0], 3);
+}
+
+TEST(pad_engine_all_off_fades_every_voice) {
+    PadEngine& e = seeded();
+    for (int32_t id = 10; id < 14; ++id) e.pushCommand(noteOn(id, 0, 500, 1000, 0.001f, 0.001f));
+    callback(e, 4);
+    e.pushCommand(allOff(1.0f));
+    auto out = callback(e, 64);
+    CHECK_NEAR(peak(std::vector<float>(out.begin() + 120, out.end())), 0.0f, 1e-7);
+    auto ids = ended(e);
+    std::sort(ids.begin(), ids.end());
+    CHECK_EQ(static_cast<int>(ids.size()), 4);
+    if (ids.size() == 4) { CHECK_EQ(ids[0], 10); CHECK_EQ(ids[3], 13); }
+}
+
+TEST(pad_engine_a_stale_command_never_plays_by_index) {
+    PadEngine& e = seeded();
+    // Queued against the seeded bank (sample 0 = the ramp) ...
+    e.pushCommand(noteOn(20, 0, 0, 100));
+    // ... then a new bank commits before the callback runs: index 0 is now a loud constant.
+    e.beginBank();
+    e.addSample(std::vector<float>(100, 0.9f), 1, kRate);
+    e.commitBank();
+    auto out = callback(e, 16);
+    CHECK_NEAR(peak(out), 0.0f, 1e-7);  // honest silence
+    const auto ids = ended(e);
+    CHECK_EQ(static_cast<int>(ids.size()), 1);  // and the allocator is told
+    if (!ids.empty()) CHECK_EQ(ids[0], 20);
+    // A command pushed after the commit is for the new bank and plays.
+    e.pushCommand(noteOn(21, 0, 0, 100));
+    out = callback(e, 4);
+    CHECK_NEAR(out[0], 0.9f, 1e-6);
+}
+
+TEST(pad_engine_a_bank_swap_silences_and_reports_every_voice) {
+    PadEngine& e = seeded();
+    e.pushCommand(noteOn(30, 0, 0, 1000));
+    e.pushCommand(noteOn(31, 1, 0, 100));
+    callback(e, 4);
+    CHECK_EQ(static_cast<int>(ended(e).size()), 0);
+    e.beginBank();
+    e.addSample(ramp(10), 1, kRate);
+    e.commitBank();
+    auto out = callback(e, 8);
+    CHECK_NEAR(peak(out), 0.0f, 1e-7);
+    auto ids = ended(e);
+    std::sort(ids.begin(), ids.end());
+    CHECK_EQ(static_cast<int>(ids.size()), 2);
+    if (ids.size() == 2) { CHECK_EQ(ids[0], 30); CHECK_EQ(ids[1], 31); }
+}
+
+TEST(pad_engine_a_second_swap_waits_until_the_retiree_is_collected) {
+    PadEngine& e = seeded();
+    e.beginBank(); e.addSample(std::vector<float>(100, 0.1f), 1, kRate); e.commitBank();
+    callback(e, 4);  // adopts bank B, retires the seeded one (uncollected: no commit since)
+    e.beginBank(); e.addSample(std::vector<float>(100, 0.2f), 1, kRate);
+    // commitBank collects the retiree, then parks C.
+    e.commitBank();
+    e.pushCommand(noteOn(40, 0, 0, 100));
+    auto out = callback(e, 4);
+    CHECK_NEAR(out[0], 0.2f, 1e-6);  // C adopted, the command was stamped for C
+}
+
+TEST(pad_engine_steals_at_the_cap_and_says_so) {
+    PadEngine& e = seeded();
+    for (int32_t id = 100; id < 100 + PadEngine::kMaxVoices; ++id) e.pushCommand(noteOn(id, 0, 0, 1000, 0.001f, 0.001f));
+    callback(e, 4);
+    CHECK_EQ(static_cast<int>(ended(e).size()), 0);
+    e.pushCommand(noteOn(999, 0, 0, 1000, 0.001f, 0.001f));
+    callback(e, 4);
+    const auto ids = ended(e);
+    CHECK_EQ(static_cast<int>(ids.size()), 1);
+    if (!ids.empty()) CHECK_EQ(ids[0], 100);  // the oldest
+}
+
+TEST(pad_engine_refuses_a_bad_index_or_empty_window_by_reporting_the_voice) {
+    PadEngine& e = seeded();
+    e.pushCommand(noteOn(50, 9, 0, 100));   // no such sample
+    e.pushCommand(noteOn(51, 0, 900, 900)); // empty window
+    e.pushCommand(noteOn(52, 0, 990, 5000)); // end past the sample: clamped, plays 10 frames
+    auto out = callback(e, 16);
+    CHECK_NEAR(out[0], 0.990f, 1e-6);
+    auto ids = ended(e);
+    std::sort(ids.begin(), ids.end());
+    CHECK_EQ(static_cast<int>(ids.size()), 3);
+}
+
+// ---- SurfaceEngine -------------------------------------------------------------
+
+TEST(surface_engine_is_silent_until_gated_and_loops_its_sample) {
+    SurfaceEngine e(kRate);
+    std::vector<float> tone(100, 0.5f);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    auto out = callback(e, 64);
+    CHECK_NEAR(peak(out), 0.0f, 1e-7);  // gate closed, nothing loaded until adopted anyway
+    ControlFrame f;
+    f.mode = 0;
+    f.gate = true;
+    e.pushControl(f);
+    float p = 0.0f;
+    for (int i = 0; i < 200; ++i) p = std::max(p, peak(callback(e, 64)));  // the gate glides open
+    CHECK(p > 0.05f);
+    f.gate = false;
+    e.pushControl(f);
+    for (int i = 0; i < 400; ++i) out = callback(e, 64);
+    CHECK(peak(out) < 1e-3f);  // and closed again
+}
+
+TEST(surface_engine_prints_the_mono_bus_and_finishes_on_the_callback) {
+    SurfaceEngine e(kRate);
+    std::vector<float> tone(100, 0.5f);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    ControlFrame f;
+    f.gate = true;
+    e.pushControl(f);
+    for (int i = 0; i < 100; ++i) callback(e, 64);
+    CHECK(e.armPrint(200));
+    CHECK(!e.armPrint(200));  // not while recording
+    callback(e, 64);
+    callback(e, 64);
+    CHECK(e.printState() == PrintBuffer::State::Recording);
+    e.requestStopPrint();
+    callback(e, 64);
+    CHECK(e.printState() == PrintBuffer::State::Done);
+    CHECK_EQ(static_cast<int>(e.printFrames()), 128);
+    // The print is the bus: a mono copy of what went to the left channel.
+    auto out = callback(e, 1);
+    CHECK(std::fabs(e.printData()[127]) > 0.01f);
+    CHECK_NEAR(e.printData()[127], e.printData()[126], 0.05f);
+    (void)out;
+    e.clearPrint();
+    CHECK(e.printState() == PrintBuffer::State::Idle);
+}
+
+TEST(surface_engine_morph_blends_the_corners) {
+    SurfaceEngine e(kRate);
+    // Corner A = full cutoff and no drive, corner D = no cutoff (dark): the
+    // morphed macro at A must sound louder/brighter than at D on a square.
+    e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f});
+    e.setCorner(3, MacroState{0.5f, 0.0f, 0.0f, 0.0f});
+    std::vector<float> square(100);
+    for (int i = 0; i < 100; ++i) square[i] = (i % 10 < 5) ? 0.5f : -0.5f;
+    e.loadSample(square.data(), square.size(), kRate);
+    ControlFrame atA; atA.mode = 2; atA.gate = true; atA.a = 1; atA.b = atA.c = atA.d = 0;
+    e.pushControl(atA);
+    float pa = 0.0f;
+    for (int i = 0; i < 400; ++i) pa = std::max(pa, peak(callback(e, 64)));
+    ControlFrame atD = atA; atD.a = 0; atD.d = 1;
+    e.pushControl(atD);
+    float pd = 0.0f;
+    for (int i = 0; i < 400; ++i) callback(e, 64);  // let the cutoff glide
+    for (int i = 0; i < 100; ++i) pd = std::max(pd, peak(callback(e, 64)));
+    CHECK(pa > pd);
+}
+
+int main() { return check::runAll(); }

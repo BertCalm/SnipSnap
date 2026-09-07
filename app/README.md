@@ -43,7 +43,7 @@ shelf useful before capture (M1) exists.
 | Window | `ui/Chrome.kt` — SNIPSNAP.EXE titlebar, 9-item menu row, 3-cell status bar with `Copy` quips, toast overlay |
 | Screens | KITS (shelf + FRESH TAPE), KIT (4×4 bank A, MPC geometry: A13 top-left, A01 bottom-left), SETUP (live scheme picker + PERSONALITY), HELP, honest stubs naming M2–M5 |
 | Data | `KitShelf` over `KitStore` (kits under app files/Kits); `PadPlayer` (SoundPool interim — choke/velocity belong to M4's Oboe allocator) |
-| Native | `src/main/cpp/` — the SURFACE engine: Oboe (prefab, `com.google.oboe:oboe`) under a C++17 callback, a lock-free SPSC ring for control frames, per-sample `ParameterSmoother`s, the `PrintBuffer` resample tap; `NativeSurface`/`SurfaceEngine.kt` own it from Kotlin. The one native library; the NDK is pinned in `build.gradle.kts` and AGP fetches it |
+| Native | `src/main/cpp/` — one library, two engines under Oboe (prefab, `com.google.oboe:oboe`, C++17): the SURFACE engine (a control ring, per-sample `ParameterSmoother`s, the `PrintBuffer` resample tap) and M4's `PadEngine` (32 sample voices, a command ring in and an endings ring out, the kit's bank adopted whole). `OboeOutput.h` opens every stream (Exclusive, then Shared). `NativeSurface`/`SurfaceEngine.kt` and `NativePads`/`PadEngine.kt` own them from Kotlin. The NDK is pinned in `build.gradle.kts` and AGP fetches it. `src/main/cpp/test/` drives both callbacks by hand on the host (`cmake -S app/src/main/cpp/test -B build/native-tests && cmake --build build/native-tests && ctest --test-dir build/native-tests`); CI's `native-tests` job runs it |
 | Fonts | `res/font/` — VT323, Silkscreen, Michroma, Permanent Marker, committed |
 
 ## Things to verify on first run (beyond "does it compile")
@@ -74,6 +74,24 @@ shelf useful before capture (M1) exists.
   while the bare `.xtd` alone refuses in words. If the chooser never
   appears, check the `FileProvider` authority (`<applicationId>.files`)
   against `res/xml/share_paths.xml`.
+- **The landing's message box**: share in a ZIP holding one good `.xpn`
+  and one folder with a broken `kit.json`. No toast: a message box opens,
+  titled "1 KIT LANDED ON THE SHELF. 1 SKIPPED.", with the skipped folder
+  and the door's reason in the warn colour first and "LANDED · <NAME>"
+  after; FINE (or the scrim) closes it. Share in a text file: the box
+  reads "NOTHING LANDED.", the file's name, then the refusal in words.
+  Break one kit's WAV and BACKUP: after the chooser closes, the box names
+  that kit with preflight's reason and lists the packed ones. A clean
+  landing and a full backup still get their two-second toast.
+- **PLAY (native, M4)**: open a kit, tap PLAY. Pads should feel tight
+  enough to drum on — that is the milestone's exit test. VOICES should
+  count down as one-shots end (the engine reports endings; nothing is
+  timed), a closed hat should cut an open one with no click, a gate pad
+  should stop on release, PANIC should fade everything in 20 ms, and
+  swapping kits mid-roll should go silent rather than crash. "NO STREAM"
+  in the header means the device refused every open; check logcat's
+  `PadEngine` line. KIT's own grid still plays through SoundPool until
+  this has been heard (EEE4 moves it).
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound
@@ -85,7 +103,10 @@ shelf useful before capture (M1) exists.
   path and the shared fallback is playing (the toast says so too).
   Then PAD ◄ ► through the kit, find a sound in XYZ, SET A, three more,
   switch to MORPH and morph; leave the screen and come back - the
-  corners and the pad are in `surface.json` beside the kit.
+  corners and the pad are in `surface.json` beside the kit. Then flip
+  the print destination to → PAD: STOP PRINT opens the slot chooser;
+  an empty pad gets the print, a taken pad is replaced with the
+  original in the bin, CANCEL sends the print to TAPE instead.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad
@@ -120,6 +141,13 @@ shelf useful before capture (M1) exists.
   other kit's pad the way a deal would ("Soul:A03") and the recipe carries
   the other kit's name. A kit whose folder no longer loads is simply not
   offered. UNDO puts the parent back byte for byte.
+- **A FILE (MUTATE)**: on the MUTATE card, under ANOTHER KIT, A FILE ▸
+  PICK ONE OFF THE PHONE opens the system picker on audio. Pick a WAV or
+  an MP3: the button reads "A FILE ▸ CLAP.WAV" and it is the partner;
+  MUTATE ▸ STACK and the child's lineage names "clap.wav", as the CLI's
+  `--with clap.wav` would. Cancel the picker and nothing changes. Pick a
+  silent file or one too big for the tape and the toast reads NOT A
+  PARENT with the reason. UNDO puts the parent back byte for byte.
 - **KEEP ROOM (pad sheet)**: after a ROOM trip the OUTSIDE card's KEEP
   ROOM button lights; tap it and the toast names the room ("FUNK ROOM IS
   ON THE SHELF…"), a `Rooms/FUNK ROOM.wav` + `.json` pair appears beside

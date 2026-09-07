@@ -1378,12 +1378,34 @@ on the shelf (a forgotten room goes to the bin, like every delete).
 | DDD3 | ✓ done: rooms go to the bin — `Rooms.forget` moves a room's WAV and sidecar under `Rooms/.bin/` stamped with when, `binned` lists them with the days left, `unforget` brings one back under a fresh name, `sweepBin` empties what slept past `BIN_DAYS` (30); the KITS screen's ROOMS section (blind): a row per kept room — Rock Salt name, the measurement, its length on an LCD — held to press and reveal FORGET → BIN in the bin's red; `App` sweeps the bin at start | CORE + APP | S | forgotten is binned not gone, 29 days on the sweep leaves it, 31 days on it goes; unforget lands beside the newer room; the bin folder is never a room; the copy shouts |
 | DDD4 | ✓ done: the bin's door on the phone (blind) — THE SHELF's ROOMS section grows an IN THE BIN list: a row per forgotten room in the bin's own LCD-dark line, `daysLeft` counting down (the last two in `warn`, as TAKES + BIN counts a pad), RESTORE in lcd-alt through `Rooms.unforget`, the toast naming the room back on the shelf; `KitShelf.binnedRooms` / `restoreRoom`. The design boards that decided the wave land under `design/pad-sheet-v2/` with a README, and `DESIGN_GAP.md` gets a dated refresh naming what the old handoff no longer covers | APP | S | a forgotten room shows under IN THE BIN with its days; RESTORE puts it back beside the live rooms and the toast says so; the copy shouts |
 | DDD5 | ✓ done: the crate with intent — `MutateSheet.Partner.Other` (`:shell`, tested): a pad picked on another kit of the shelf as the MUTATE parent, the CLI's own `Kit:A03` label in the lineage so it reads as a deal would, an `otherKit` block in the recipe; `otherKits` (the shelf minus this kit, a broken folder skipped) and `padsOf` for the picker. Phone (blind): under the ROOMS chips on the MUTATE card, ANOTHER KIT · PICK ITS PAD — the shelf's other kits two to a row, the picked kit's pads four to a row; absent on a one-kit shelf | CORE + APP | S | the other kits list without this one; a picked pad morphs through the verb's door with `Soul:A03` in the lineage and the recipe naming the kit; an empty slot refuses in words; undo is the original |
+| DDD6 | ✓ done: the last parent kind — `MutateSheet.Partner.Wav` (`:shell`, tested): a file picked off the phone as the MUTATE parent, `hold` writing its audio under the cache as a WAV (write-then-rename, one held at a time, a silent file refused in words) and labelling it with the name the file came with, exactly what `snipsnap mutate --with hit.wav` puts in the lineage; the recipe records nothing beyond that, as the CLI does. Phone (blind): an A FILE button on the MUTATE card opens the system picker on any audio, the pick decoded the way a share is (`MediaDecode`), the button then reading the file's name; a refusal reads NOT A PARENT in the decoder's words. `Copy.fileRefused`. Every parent kind the CLI verb takes is now a thumb's reach. |
 
 **Below the line for DDD:** a swipe between pads on the sheet (today the
 buttons are the only way, and the middle cell says so); emptying the
 rooms' bin by hand (the sweep at start is the only door; TAKES + BIN's
-EMPTY THE BIN NOW is per kit); a WAV parent from a file picker (the last
-of the CLI verb's parent kinds the phone lacks).
+EMPTY THE BIN NOW is per kit).
+
+---
+
+## Wave FFF — the landing reads back (CORE + APP)
+
+DESIGN_GAP's first undrawn item: the share door's landing was a busy
+line and a two-second toast, and the toast held counts only - which kit
+was skipped, and why, went nowhere. SHARE and BACKUP hand off to the
+chooser the same way, a backup's refused kits named only inside the
+file's own report. The language already had the answer: the honest
+little message box (TAPE JAM + [FINE]). The rule: the toast stays the
+one-line voice for a clean landing; the box appears when there is more
+to read than a line holds, and stays until read.
+
+| Item | Status |
+|---|---|
+| FFF1 | ✓ done: the box as data — `LandingNote` (`:shell`, tested): `landed` (null when nothing was skipped - the toast suffices; else the toast's line as the title, SKIPPED lines first in the warn colour with the door's own reason, LANDED lines after), `backedUp` (the same for preflight's refusals, PACKED lines after), `refused` (the file's name and the refuser's words, kept until read), lines folded past `MAX_LINES` into "+N MORE" (trouble if any folded line was), the house casing (`shout`: Locale.ROOT, no trailing stop). `Copy.NOTHING_LANDED`. |
+| FFF2 | ✓ done: the phone (blind for CI's compiler) — `MessageBox` (`:app`): the capture-blocked dialog generalised - scrim, raised bevel, the title in LCD type, the lines in a sunken field (trouble in `warn`, three lines each - the shelf's own refusal needs them, as the board showed), [FINE]; the scrim and the button dismiss, the box swallows the tap. `App` shows it for a landing with skips, a backup preflight refused part of (behind the chooser, read on the way back), and every import refusal - in place of the toast, never beside it. A clean landing and a full backup keep their toasts. |
+
+**Below the line for FFF:** the SHARE hand-off itself (the chooser is the
+system's - nothing of ours to draw); a box line that opens the skipped
+kit's folder; the same box for EXPORT's preflight, which has its own card.
 
 ---
 
@@ -1458,6 +1480,27 @@ The Android side is written blind for CI's compiler, as :app always is.
 | CCC5 | ✓ done: the shared fallback — `SurfaceEngine::start` opens Exclusive first and, on an outright refusal, Shared (one mixer stage more latency, still playing); `isShared()` crosses the bridge and the screen says "SHARED STREAM. A LITTLE MORE LATENCY." | APP | S | bench: a device with the exclusive path held by another app still plays |
 | CCC6 | ✓ done: the corners are yours — `SurfaceStore` (`:shell`, tested, fuzzed): `surface.json` beside the kit with the pad the surface plays and four `Corner`s (pitch, cutoff, resonance, drive, each 0..1, refused in words); `Corner.from(mode, reading, tilt, corners)` is the engine's own macro map (XY / XYZ / the MORPH blend), so SET A..D on the screen captures the sound under the last touch as a corner, pushes it to the engine and saves; defaults are the engine's; a torn file reads as the defaults, said aloud | CORE + APP | S | round-trip byte-stable; a corner at A is A; the centre is the average; refusals named; the fuzz batch holds; bench: set four corners, leave, come back, morph between them |
 | CCC7 | ✓ done: PAD ◄ ► — the surface plays any of the kit's pads, by slot, wrapping, the choice remembered in `surface.json`; the readout names it MPC-style (A01..) | APP | S | bench: step through the kit; reopen, the same pad is under the finger |
+| CCC8 | ✓ done: PRINT → PAD — the print's destination toggles → TAPE / → PAD; → PAD opens SYNTH's own slot chooser (now shared) and the print lands through `KitBuilderModel`: `assign` on an empty slot ("Surface Print", unclassed), `replaceAudio` on a taken one (the original in the bin); a layered or chained pad is dimmed in the chooser (SYNTH's own rule) and a refusal the model still raises (the kit changed under the chooser) is said in words with the print kept, a disk failure named as such with the print still pending; cancelling the chooser sends the print to TAPE rather than losing it; the kit's identity bumps so KIT and the surface reload | APP | S | bench: print to an empty pad, hear it on KIT; print over a taken pad, find the original in the bin; cancel, find the print on TAPE |
+
+## Wave EEE — M4, the pads on the native engine (APP + CORE)
+
+The latency milestone the app plan named first and shipped last: PLAY's
+pads leave SoundPool for the native engine the Surface brought. Every
+pad semantic stays on the JVM under test — which layer a velocity taps,
+which slice a chain steps to, level and pan as the MPC means them, tune
+as a ratio — and the native voice only ever hears "this sample, these
+frames, these gains, this speed". The engine reports each voice's end,
+so the allocator learns of an ending when it happens instead of from a
+timer. KIT's grid keeps the SoundPool player until the native voice has
+been heard on a phone; then it follows in one small PR.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| EEE1 | ✓ done: `PadHit` (`:shell`) — `resolve(pad, velocity, hitIndex, framesOf)`: the layer whose range holds the MIDI velocity (the loudest as fallback), the chain slice for the hit (a zone's own base and cycle, the last slice to the end), left/right gains as the SoundPool player mapped them so a kit sounds as it did, tune as `2^((coarse + fine/100)/12)`; a sample the engine never loaded is no hit, refusals in words | CORE | S | whole pad, pan/velocity, tune, layers and the gap fallback, single-zone chain stepping, the zone grid, the null and the refusals |
+| EEE2 | ✓ done: `PadEngine` (`app/src/main/cpp`) — 32 voices, each a windowed, repitched, linearly interpolated read of a bank sample (mono or stereo), a 5 ms choke fade and a 20 ms panic fade, the quietest fading voice stolen first and the oldest after; the bank built on the UI thread and adopted whole by the callback (every voice silenced and reported), the same pointer handshake as the Surface; commands and endings on two lock-free rings; `OboeOutput.h` the one way both engines open a stream (Exclusive, then Shared) | APP | M | bench: no dropouts through a roll on a mid-range phone; a choke is a fade, not a click; a bank swap mid-roll is silence, not a crash |
+| EEE3 | ✓ done: PLAY over it — `PadEngine.kt` (bank read off the main thread through `WavReader`, hits through `PadHit`, `@Synchronized`, `close` idempotent); the reap timer and its two constants gone, replaced by a frame loop that drains the endings ring into `VoiceAllocator.voiceEnded`; the allocator built at `MAX_VOICES` so the status line and the engine cannot drift; a hit nothing loaded for is handed back to the allocator at once; ON_STOP still panics | APP | S | bench: finger drumming feels tight enough that you'd play it (the milestone's own exit test); VOICES counts down as one-shots end; a closed hat cuts an open one with no click |
+| EEE4 | KIT's grid onto the native engine — swap `PadPlayer` for `PadEngine` on the KIT screen once EEE3 has been heard | APP | S | bench: KIT's pads sound the same as PLAY's |
+| EEE5 | ✓ done: the engines under test — `app/src/main/cpp/test`, a host-built target (no NDK, no device; Oboe headers only, its two linked entry points stubbed) that drives both callbacks by hand: the ring keeps order and drops when full; the smoother glides, settles and snaps; the print buffer fills to its ceiling, refuses a re-arm while the callback may write, and lands Done on the callback; the pad engine plays the window at its gains, repitches by the ratio, reads stereo as stereo, fades a choke and an all-off, reports every ending, silences and reports every voice on a bank swap, never plays a stale command by index, waits for the retiree before a second swap, steals the oldest at the cap and says so; the Surface is silent until gated, prints the mono bus, and morphs between its corners. A third CI job (`native-tests`) runs it | CORE | S | 17 cases green on the host and in CI; every bug Copilot found in the native code now has a case that would have caught it |
 
 ## Sequence
 
@@ -1695,8 +1738,14 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
     header, name parsers, pad sheets, label); the answer reader made typed
   ✓ wave CCC (the Surface): the tactile pad over Oboe — XY / XYZ / MORPH,
     the roll of the phone, PRINT to resample the gesture onto TAPE; then
-    the shared fallback, SET A..D corners in surface.json, PAD ◄ ► ·
-    bench: dropouts, the route change, the print heard back
+    the shared fallback, SET A..D corners in surface.json, PAD ◄ ►,
+    PRINT → PAD through SYNTH's door · bench: dropouts, the route
+    change, the print heard back, a print on a pad
+  ✓ wave EEE (M4, the pads on the native engine): PadHit on the JVM,
+    PadEngine under Oboe, PLAY over it with endings reported, not timed ·
+    bench: tight enough to play; then EEE4 moves KIT's grid across
+  ✓ EEE5 (the engines under test): both native callbacks driven by hand
+    on the host, 17 cases, a third CI job
 
 CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   directions. The smear (STN transient mask, peak-matched) as a rack
@@ -1779,7 +1828,16 @@ CORE+APP wave DDD: ✓ all landed (2026-09-07) — the pad sheet folds.
   under design/pad-sheet-v2/ and DESIGN_GAP.md says what the old handoff
   no longer covers. And the crate gains intent: a pad picked on another
   kit of the shelf is a MUTATE partner, ANOTHER KIT chips under the ROOMS
-  row (DDD5). Blind for CI's compiler.
+  row (DDD5); then the last parent kind the CLI verb takes and the phone
+  lacked, a file off the phone through the system picker, held as a WAV
+  and labelled with its own name (DDD6). Blind for CI's compiler.
+
+CORE+APP wave FFF: ✓ all landed (2026-09-07) — the landing reads back.
+  The share door's trouble no longer dies in a toast: a kit file that
+  landed with skips, a backup preflight refused part of, and every import
+  refusal open the language's honest little message box (`LandingNote`,
+  tested; `MessageBox`, blind) - skipped first, in the warn colour, with
+  the door's own reason, [FINE] to close. A clean landing keeps its toast.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

@@ -1,10 +1,14 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.AtomicFile
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.Names
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -12,14 +16,15 @@ import kotlin.math.roundToInt
  * The PAD SHEET's MUTATE card, as data — the phone's door onto [Mutate].
  *
  * The CLI verb takes parents as pad refs, other kits' pads, WAV paths and
- * a roulette; the card keeps the four a thumb can reach: **a pad on this
- * kit** (tap it on the mini grid), **the crate's deal** (ROULETTE spins
- * the shelf, seeded by the tap count so every spin is a different deal
- * and each is reproducible), **a room on the shelf** (one OUTSIDE
- * measured and kept, [Rooms]; ROOM plays the pad inside it), or **a pad
- * picked on another kit** ([otherKits], then [padsOf] - the crate with
- * intent, where ROULETTE is the crate by chance). One parent,
- * one move, one knob: STACK has
+ * a roulette; the card keeps every one of them a thumb can reach: **a
+ * pad on this kit** (tap it on the mini grid), **the crate's deal**
+ * (ROULETTE spins the shelf, seeded by the tap count so every spin is a
+ * different deal and each is reproducible), **a room on the shelf** (one
+ * OUTSIDE measured and kept, [Rooms]; ROOM plays the pad inside it), **a
+ * pad picked on another kit** ([otherKits], then [padsOf] - the crate
+ * with intent, where ROULETTE is the crate by chance), or **a file off
+ * the phone** ([hold]: the picker's file, held as a WAV, the way the CLI
+ * takes `--with hit.wav`). One parent, one move, one knob: STACK has
  * none, SPLICE has AT (where the pad's transient hands over), SPLIT has
  * HZ (the crossover), MORPH has MIX, ROOM has WET, TRANSPLANT has BANDS.
  * The knob's range is the verb's own, mapped exponentially where the ear
@@ -89,14 +94,42 @@ object MutateSheet {
 
         /** A pad picked on another kit of the shelf: the kit's name and folder, and the pad's slot there. */
         data class Other(val kitName: String, val kitDir: File, val slot: Int) : Partner
+
+        /** A file picked off the phone: the name it came with (the CLI's label for a `.wav` parent) and the held WAV. */
+        data class Wav(val label: String, val file: File) : Partner
     }
 
-    /** The card's own name for a partner: the pad tag, the crate's label, the room's name, or "SOUL A03". */
+    /** The card's own name for a partner: the pad tag, the crate's label, the room's name, "SOUL A03", or the file's name. */
     fun name(partner: Partner): String = when (partner) {
         is Partner.Pad -> padTag(partner.slot)
         is Partner.Deal -> partner.label
         is Partner.Room -> partner.name
         is Partner.Other -> "${partner.kitName} ${padTag(partner.slot)}"
+        is Partner.Wav -> partner.label
+    }
+
+    /** Where the phone holds a picked parent between the pick and the move, under its cache. */
+    const val PARENTS_DIR = "parents"
+
+    /**
+     * A picked file held as a parent: its audio written under [holdDir] as
+     * a WAV named after [displayName] (the stem made safe, the extension
+     * swapped for `.wav`), landed by write-then-rename like a kept room.
+     * The partner's label is the name the file came with, extension and
+     * all - what `snipsnap mutate --with hit.wav` puts in the lineage. One
+     * is held at a time: the last pick's file goes. A silent file refuses
+     * in words, as ROULETTE's empty crate does.
+     */
+    fun hold(holdDir: File, displayName: String, snip: Snip): Partner.Wav {
+        require(snip.frameCount > 0 && snip.peak() > 0f) { "that file is silent - nothing to mutate with" }
+        val bare = displayName.substringAfterLast('/').substringAfterLast('\\').trim().ifBlank { "parent.wav" }
+        val stem = Names.sanitizeStem(if (bare.contains('.')) bare.substringBeforeLast('.') else bare)
+        holdDir.mkdirs()
+        val wav = File(holdDir, "$stem.wav")
+        holdDir.listFiles()?.forEach { if (it.name != wav.name) it.delete() }
+        val bytes = java.io.ByteArrayOutputStream().also { WavWriter.write(it, snip) }.toByteArray()
+        AtomicFile.writeBytes(wav, bytes)
+        return Partner.Wav(bare, wav)
     }
 
     /** Another kit on the shelf, for the picker: its name and folder. */
@@ -175,6 +208,8 @@ object MutateSheet {
             // The CLI's own Kit:Pad label, so the lineage reads the same as a roulette deal's.
             Mutate.Source("${kit.name}:${padTag(partner.slot)}", WavReader.read(File(partner.kitDir, pad.sampleFile)))
         }
+        // The file's own name, as `--with hit.wav` labels it.
+        is Partner.Wav -> Mutate.Source(partner.label, WavReader.read(partner.file))
     }
 
     /**
@@ -198,7 +233,8 @@ object MutateSheet {
             )
             is Partner.Room -> mapOf("room" to JsonValue.Str(partner.name))
             is Partner.Other -> mapOf("otherKit" to JsonValue.Str(partner.kitName))
-            is Partner.Pad -> emptyMap()
+            // Nothing beyond the label, exactly as the CLI records a .wav parent.
+            is Partner.Wav, is Partner.Pad -> emptyMap()
         }
         return Mutate.apply(
             model, slot, listOf(source(model, partner)), mode,

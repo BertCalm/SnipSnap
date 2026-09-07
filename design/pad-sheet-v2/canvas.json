@@ -7,6 +7,14 @@
     {
       "id": "page-2",
       "name": "Directions explored"
+    },
+    {
+      "id": "page-3",
+      "name": "OUTSIDE \u00b7 the trip"
+    },
+    {
+      "id": "page-4",
+      "name": "The landing's box"
     }
   ],
   "artboards": [
@@ -72,6 +80,69 @@
       "h": 844,
       "title": "C \u00b7 Two screens: the workshop",
       "page": "page-2"
+    },
+    {
+      "file": "TripIdle.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 470,
+      "title": "OUTSIDE \u00b7 idle",
+      "page": "page-3"
+    },
+    {
+      "file": "TripListening.dc.html",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 470,
+      "title": "OUTSIDE \u00b7 listening",
+      "page": "page-3"
+    },
+    {
+      "file": "TripSending.dc.html",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 470,
+      "title": "OUTSIDE \u00b7 sending",
+      "page": "page-3"
+    },
+    {
+      "file": "TripBack.dc.html",
+      "x": 1440,
+      "y": 0,
+      "w": 390,
+      "h": 470,
+      "title": "OUTSIDE \u00b7 back",
+      "page": "page-3"
+    },
+    {
+      "file": "TripRefused.dc.html",
+      "x": 1920,
+      "y": 0,
+      "w": 390,
+      "h": 560,
+      "title": "OUTSIDE \u00b7 refused",
+      "page": "page-3"
+    },
+    {
+      "file": "LandingSkips.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Landing \u00b7 1 skipped",
+      "page": "page-4"
+    },
+    {
+      "file": "LandingRefused.dc.html",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Landing \u00b7 refused",
+      "page": "page-4"
     }
   ],
   "annotations": [
@@ -106,10 +177,26 @@
       "w": 860,
       "page": "page-2",
       "text": "DIRECTION C \u00b7 TWO SCREENS (not chosen; two ideas kept)\nThe sheet keeps only the everyday controls plus an LCD of what the pad carries; WORKSHOP \u25b8 opens a second screen.\nKept for A: \"same bench, next pad\" (the open box persists across pads) and the in-flight OUTSIDE strip with turning reels.\nAgainst: two screens deep from the grid; HIT and the waveform repeated on the workshop."
+    },
+    {
+      "id": "note-trip",
+      "x": 0,
+      "y": -260,
+      "w": 1500,
+      "page": "page-3",
+      "text": "OUTSIDE \u00b7 THE TRIP, STATE BY STATE (drawn from the code after wave DDD)\nThe box alone, in order. 1 idle: the status reads what the move will do, in pixel ink; KEEP ROOM dim, UNDO dim. 2 the mic opens before anything plays (LISTENING FOR THE ROOM\u2026): the legend line turns lcd-alt, the reels turn on an LCD strip, SEND reads the stage dimmed, WET dims. 3 the sweep goes out (SENDING\u2026 TURN IT UP.). 4 back: the measured line - move, lag, sureness - on an LCD in lcd ink; KEEP ROOM lit in lcd-alt; UNDO live. X refused: nothing came back; the box returns to idle and a toast says why in the verb's own words.\nTwo gaps between this and the code, both small: (a) OutsideCard draws the measured line in pixel text - the LCD is the language's rule for numbers, so the code should follow; (b) KEEP ROOM un-dims but does not light in lcd-alt - the board keeps the lit state from the earlier trip board."
+    },
+    {
+      "id": "note-landing",
+      "x": 0,
+      "y": -220,
+      "w": 870,
+      "page": "page-4",
+      "text": "THE LANDING'S HONEST LITTLE MESSAGE BOX (wave FFF, built blind; drawn here to check it)\nThe capture-blocked dialog's shape, generalised: scrim, raised bevel, the title in LCD type, the lines in a sunken field - trouble first in warn, what landed after - then FINE. Left: a kit file with one skip; the title is the toast's own line. Right: a share the shelf refused - the file's name, then the refuser's words. The refusal is long: the board lets a line wrap to three; the code capped lines at two and clipped this one, so the cap moves to three with these boards. A clean landing never opens the box - the toast stays the one-line voice."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-1"
+    "page": "page-3"
   }
 }

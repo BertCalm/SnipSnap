@@ -51,6 +51,7 @@ import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KeysScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.MenuRow
+import com.snipsnap.app.ui.MessageBox
 import com.snipsnap.app.ui.PadCaptureScreen
 import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.PlayScreen
@@ -69,6 +70,7 @@ import com.snipsnap.app.ui.tapeClick
 import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.InstantKit
+import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Personality
@@ -141,6 +143,14 @@ fun App(shelf: KitShelf) {
     var kits by remember { mutableStateOf<List<KitShelf.Entry>>(emptyList()) }
     var open by remember { mutableStateOf<KitShelf.Entry?>(null) }
     var toast by remember { mutableStateOf<String?>(null) }
+    // The honest little message box (wave FFF): what a landing, a backup
+    // or a refusal has to say beyond a toast's one line. Stays until read.
+    var note by remember { mutableStateOf<LandingNote.Note?>(null) }
+    /** The box in place of the toast, never beside it: opening one puts any toast down. */
+    fun openNote(n: LandingNote.Note) {
+        toast = null
+        note = n
+    }
     var busy by remember { mutableStateOf<String?>(null) }
     var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
     // PAD SHEET: the long-press pad inspector, full-screen over KIT. Not an
@@ -371,12 +381,15 @@ fun App(shelf: KitShelf) {
         // the dub's own DUBBING… line on its way out.
         val ownsBusy = busy == null
         if (ownsBusy) busy = Copy.IMPORT_BUSY
+        // The share's own name, for the refusal box; blank until the provider answers.
+        var sharedName = ""
         try {
             // The bytes decide what the share is: a kit file (a .xpn, a
             // backup, an MPC track zipped with its folder) lands on the
             // shelf through ShelfImport; everything else is a sound for
             // the deck. The MIME a messenger attaches is not consulted.
             val name = withContext(Dispatchers.IO) { ShareInbox.displayName(context, uri) }
+            sharedName = name
             val kind = withContext(Dispatchers.IO) { ShelfImport.sniff(ShareInbox.head(context, uri, ShelfImport.SNIFF_BYTES)) }
             if (ShelfImport.isKit(kind)) {
                 if (ownsBusy) busy = Copy.LANDING_BUSY
@@ -390,7 +403,10 @@ fun App(shelf: KitShelf) {
                 }
                 ShareInbox.consume()
                 kits = withContext(Dispatchers.IO) { shelf.list() }
-                toast = Copy.landed(entries.size, skipped.size)
+                // A clean landing keeps its toast; one with skips opens the
+                // box, which names each skipped kit and the door's reason.
+                val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped)
+                if (boxed != null) openNote(boxed) else toast = Copy.landed(entries.size, skipped.size)
                 entries.firstOrNull()?.let { first ->
                     open = first
                     padSheetSlot = null
@@ -421,8 +437,9 @@ fun App(shelf: KitShelf) {
             // error, a permission the provider withdrew), the house line
             // only when there are none. Locale.ROOT: a toast's casing
             // must not depend on the phone's language.
-            val reason = e.message?.takeIf { it.isNotBlank() }
-            toast = if (reason != null) "IMPORT REFUSED: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}." else Copy.IMPORT_NOT_AUDIO
+            // In the box, not a toast: a refusal is read at the reader's pace.
+            val reason = e.message?.takeIf { it.isNotBlank() } ?: Copy.IMPORT_NOT_AUDIO
+            openNote(LandingNote.refused(sharedName, reason))
         } finally {
             if (ownsBusy) busy = null
         }
@@ -735,10 +752,14 @@ fun App(shelf: KitShelf) {
             try {
                 val result = withContext(Dispatchers.IO) { shelf.backup(ShareOut.shareDir(context), System.currentTimeMillis()) }
                 busy = null
-                toast = if (ShareOut.send(context, result.file, ShareOut.ZIP_MIME, result.file.nameWithoutExtension)) {
-                    Copy.backedUp(result.packed.size, result.skipped.size)
+                if (!ShareOut.send(context, result.file, ShareOut.ZIP_MIME, result.file.nameWithoutExtension)) {
+                    toast = Copy.SHARE_NOWHERE
                 } else {
-                    Copy.SHARE_NOWHERE
+                    // Every kit in: the toast. Preflight refused some: the box,
+                    // naming each and why - it waits behind the chooser and is
+                    // read on the way back.
+                    val boxed = LandingNote.backedUp(result.packed, result.skipped)
+                    if (boxed != null) openNote(boxed) else toast = Copy.backedUp(result.packed.size, result.skipped.size)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -1076,6 +1097,14 @@ fun App(shelf: KitShelf) {
                             // A print is a snip on the shelf: the same reload
                             // request a share-sheet import raises.
                             onPrinted = { importCount++ },
+                            // A print on a pad: bump `open.kit`'s identity so
+                            // KIT's PadPlayer and the surface reload it.
+                            onKitUpdated = { updatedKit ->
+                                open = open?.copy(kit = updatedKit)
+                                scope.launch {
+                                    kits = withContext(Dispatchers.IO) { shelf.list() }
+                                }
+                            },
                         )
                         AppScreen.PLAY -> PlayScreen(entry = open)
                         AppScreen.HELP -> HelpScreen()
@@ -1110,7 +1139,10 @@ fun App(shelf: KitShelf) {
                     busy = busy,
                 )
             }
-            ToastOverlay(toast)
+            // A toast raised while the box is up (a share landing behind it)
+            // is not drawn beside it; its dwell runs out unseen.
+            ToastOverlay(if (note == null) toast else null)
+            note?.let { n -> MessageBox(n, onDismiss = { note = null }) }
             if (captureBlocked) {
                 CaptureBlockedDialog(onDismiss = { captureBlocked = false })
             }

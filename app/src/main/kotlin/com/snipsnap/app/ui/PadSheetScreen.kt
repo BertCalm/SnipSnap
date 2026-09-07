@@ -2,6 +2,9 @@ package com.snipsnap.app.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -48,8 +51,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
+import com.snipsnap.app.MediaDecode
 import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.OutsideSession
+import com.snipsnap.app.ShareInbox
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -664,6 +669,37 @@ fun PadSheetScreen(
         }
     }
 
+    /**
+     * A FILE: what the picker handed back becomes the partner - decoded
+     * the way a share is (a WAV straight through, anything else by the
+     * platform's codec), held under the cache as a WAV, labelled with the
+     * file's own name. A refusal (silent, too big, not audio) is read out
+     * in the decoder's words; a cancelled picker hands back nothing and
+     * nothing happens.
+     */
+    fun onFilePicked(uri: Uri) {
+        if (busy) return
+        scope.launch {
+            busy = true
+            try {
+                val held = withContext(Dispatchers.IO) {
+                    val name = ShareInbox.displayName(context, uri)
+                    val decoded = MediaDecode.decode(context, uri)
+                    MutateSheet.hold(File(context.cacheDir, MutateSheet.PARENTS_DIR), name, decoded)
+                }
+                partner = held
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (e is IllegalArgumentException) onToast(Copy.fileRefused(e.message ?: "that file said no")) else failure("A FILE", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) onFilePicked(uri)
+    }
+
     fun onMakeInstrument() {
         if (busy) return
         val m = model
@@ -1192,6 +1228,7 @@ fun PadSheetScreen(
                 onPickKit = { name -> pickedKit = if (pickedKit?.name == name) null else otherKits.firstOrNull { it.name == name } },
                 otherPads = otherPads,
                 onOtherPad = { s -> pickedKit?.let { k -> partner = MutateSheet.Partner.Other(k.name, k.dir, s) } },
+                onPickFile = { filePicker.launch(arrayOf("audio/*")) },
                 onRoulette = ::onRoulette,
                 onDrift = ::onDrift,
                 knobLabel = mutateKnob?.label,
@@ -1743,6 +1780,7 @@ private fun MutateCard(
     onPickKit: (String) -> Unit,
     otherPads: List<Int>,
     onOtherPad: (Int) -> Unit,
+    onPickFile: () -> Unit,
     onRoulette: () -> Unit,
     onDrift: () -> Unit,
     knobLabel: String?,
@@ -1884,6 +1922,17 @@ private fun MutateCard(
                 }
             }
         }
+        // A file off the phone, as the CLI takes `--with hit.wav`: the picker
+        // opens on any audio; once one is held the button reads its name.
+        val held = partner as? MutateSheet.Partner.Wav
+        ActionButton(
+            held?.let { "A FILE ▸ ${it.label.uppercase(java.util.Locale.ROOT)}" } ?: "A FILE ▸ PICK ONE OFF THE PHONE",
+            scheme,
+            enabled = !busy,
+            dimmed = held == null,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onPickFile,
+        )
         val deal = partner as? MutateSheet.Partner.Deal
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             ActionButton(
