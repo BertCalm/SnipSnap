@@ -621,7 +621,13 @@ would be outrun or the wash would fall short of a loop, and the depth
 used is printed; `--bloom` (0..1, default 0.3) is how long the arrival
 ramps in. A pitched source is rooted where it sounds; an unpitched one
 lands as a drone at C3 rather than being refused. On the phone it is
-the PAD SHEET's PAD FROM ANYTHING card, two steppers and MAKE PAD.
+the PAD SHEET's PAD FROM ANYTHING card, two steppers and MAKE PAD — and
+the result plays there too: every keygroup package written by this
+verb, `keys`, MAKE INSTRUMENT or MAKE PAD carries a sidecar
+(`<name>.instrument.json`: zones, roots, samples, loop starts, release)
+the phone reads, the shelf lists it under INSTRUMENTS, and KEYS plays
+it on the 4×4 — root on A01, chromatic or a scale, octaves either way,
+a looped pad holding while the finger does.
 
 ### `retune <kit-dir> <pad>` — the spectral retune
 

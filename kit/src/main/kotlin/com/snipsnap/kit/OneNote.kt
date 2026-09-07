@@ -227,5 +227,7 @@ object OneNote {
         for ((stem, snip) in samples) WavWriter.write(File(dataDir, "$stem.wav"), snip)
         Mpc3TrackWriter().writeKeygroupTo(destRoot, program)
         KeygroupWriter().writeTo(dataDir, program)
+        // The phone's own reading of the package, beside the hardware's.
+        InstrumentStore.write(destRoot, name, program, dataDir.name)
     }
 }
