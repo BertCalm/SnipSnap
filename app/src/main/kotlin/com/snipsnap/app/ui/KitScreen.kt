@@ -2,6 +2,7 @@ package com.snipsnap.app.ui
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -28,6 +29,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -44,11 +47,15 @@ import com.snipsnap.shell.KeyPicker
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
+import com.snipsnap.shell.PadPeaks
+import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.TextureKits
 import kotlin.random.Random
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * The KIT screen: bank A as the 4×4 grid, physically laid out — A13–A16
@@ -94,6 +101,16 @@ fun KitScreen(
     // from the dir-scoped effect above so this also covers the very first
     // composition, without a redundant load from that one.
     LaunchedEffect(entry.kit) { player.load(entry) }
+    // W12: every pad's mini-waveform, read off the main thread once per
+    // kit edit (the same `kit` identity the SoundPool reload keys on) and
+    // kept as columns only. Cleared first, so neither a fresh kit nor an
+    // edited one ever shows a shape that isn't its own: names first, the
+    // shapes a blink later.
+    var padPeaks by remember(entry.dir) { mutableStateOf<Map<Int, List<PeaksPyramid.Column>>>(emptyMap()) }
+    LaunchedEffect(entry.kit) {
+        padPeaks = emptyMap()
+        padPeaks = withContext(Dispatchers.IO) { PadPeaks.forKit(entry.kit, entry.dir) }
+    }
 
     val kit = entry.kit
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -138,6 +155,7 @@ fun KitScreen(
                         PadCell(
                             slot = slot,
                             pad = kit.pad(slot),
+                            peaks = padPeaks[slot],
                             onTap = player::play,
                             onLongPress = onLongPress,
                             modifier = Modifier.weight(1f),
@@ -415,6 +433,7 @@ private const val LONG_PRESS_MS = 480L
 private fun PadCell(
     slot: Int,
     pad: KitPad?,
+    peaks: List<PeaksPyramid.Column>?,
     onTap: (Int) -> Unit,
     onLongPress: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -476,6 +495,12 @@ private fun PadCell(
             }
             .padding(5.dp),
     ) {
+        // W12: the pad's own shape, in its class colour under the name —
+        // a kick reads as a kick before it's hit. Drawn first so the tag
+        // and name sit over it.
+        if (peaks != null && peaks.isNotEmpty()) {
+            PadWaveform(peaks, cls.tape.copy(alpha = 0.30f), Modifier.matchParentSize())
+        }
         TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f), Modifier.align(Alignment.TopEnd))
         TapeText(
             pad.displayName,
@@ -484,5 +509,34 @@ private fun PadCell(
             Modifier.align(Alignment.BottomStart),
             maxLines = 2,
         )
+    }
+}
+
+/**
+ * The mini-waveform behind a pad's name (W12): [PadPeaks.COLUMNS] bars
+ * of real min/max magnitude across the cell, each bar centred in its
+ * own step and the whole band centred on the middle 60% of the height so
+ * the tag above and the name below stay clear. Sized in fractions of the
+ * cell, not dp, so the shape scales with the grid on any width.
+ */
+@Composable
+private fun PadWaveform(peaks: List<PeaksPyramid.Column>, color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val n = peaks.size
+        if (n == 0 || size.width <= 0f || size.height <= 0f) return@Canvas
+        val step = size.width / n
+        val barWidth = (step * 0.6f).coerceIn(1f, step)
+        val inset = (step - barWidth) / 2f
+        val mid = size.height * 0.5f
+        val amp = size.height * 0.30f
+        for ((i, col) in peaks.withIndex()) {
+            val top = mid - col.max.coerceIn(-1f, 1f) * amp
+            val bottom = mid - col.min.coerceIn(-1f, 1f) * amp
+            drawRect(
+                color = color,
+                topLeft = Offset(i * step + inset, top),
+                size = Size(barWidth, (bottom - top).coerceAtLeast(1f)),
+            )
+        }
     }
 }
