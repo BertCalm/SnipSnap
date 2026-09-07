@@ -1391,6 +1391,23 @@ program — it arrives tuned and looping instead of at C3 and one-shot.
 | AAA1 | ✓ done: `SmplChunk` (`:audio`, tested) — the RIFF `smpl` chunk's root note and one forward loop (frames, exclusive end; the chunk's inclusive end converted both ways); `WavWriter.write(…, smpl =)` opt-in, the chunk between `fmt` and `data`, the RIFF size honest, a write without one byte-identical to before; `WavReader.readSmpl` reads it back or null, a malformed sheet never a wrong one. `OneNote.writePackage` writes every zone's sheet from the program (root per keygroup, loop per layer), so one-note, multisample and PAD FROM ANYTHING packages all carry it | CORE | S | root and loop round-trip; audio untouched; RIFF size counts the chunk; refusals for a root off the keyboard and a loop past the sample; a looped zone's WAV reads back its root and loop, a pluck's the root alone |
 | AAA2 | Bench: load a zone WAV from `Held Keys_[TrackData]/` on the Live III on its own (not the program) — does it play at its root and loop? Note either way; if the MPC ignores the sheet, the sheet still costs nothing | USER | S | yes/no on hardware |
 
+## Wave BBB — the Hardening, round two (CORE)
+
+Every door the phone grew after the SS waves — the import store, the
+Ear and the dig on the deck, INSTANT KIT, the pad peaks, the silence
+watch, the PCM conversion, the sampler sheet — meets the same hostile
+inputs and degenerate shapes the older verbs had to. Same house rules:
+a valid result or a named refusal, no other throwable, silence never
+invents, nothing climbs out of a folder. All three harnesses held on
+the first run, sharpened corpus included; they are guarded invariants
+now, each pairing named on failure.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| BBB1 | ✓ done: the degenerate matrix, round two — `DegenerateDoorsTest` (`:shell`): {one sample, tiny, silence, DC, full-scale square, low rate, stereo, white noise} × {`ReadGroove.read`, `ReadGroove.feel`, `Dig.best`, `SnipStore.import`, `InstantKit.build`, `SilenceWatch.feed`}: a valid result (a reading with a tempo, a find inside the tape, a readable snip, a kit with pads) or an `IllegalArgumentException` in words; silence never becomes a beat, a break or a kit; `PadPeaks` shrugs at junk, truncated, empty and missing pad files; `Pcm` turns any bytes into finite samples inside the rails | CORE | S | every pairing passes; failures named per pairing |
+| BBB2 | ✓ done: the sampler sheet under mutation — `FuzzTest` runs `WavReader.readSmpl` and `read` over thousands of seeded mutations of a sheet-bearing WAV: a typed refusal or a valid result, and a returned loop always inside the audio the file holds | CORE | S | no untyped throwable in the batch, inside the hang bound; no loop past the audio |
+| BBB3 | ✓ done: the CLI hostile sweep extended — `learn`, `beat`, `pad` and `restore` join the file-taking verbs, and the corpus gains a zero-channel WAV, a three-channel WAV, a RIFF size past the moon, a sheet whose loop runs past the audio, and a backup zip whose entries climb with `../`; every verb exits 0..2 and nothing lands outside its folder (`KitBackup.restore` flattens entry names, `XpnImporter` runs through `SafePath`) | CORE | S | every (verb × hostile) pair exits cleanly; no escaped file anywhere |
+
 ## Sequence
 
 ```
@@ -1618,6 +1635,8 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ wave ZZ (the phone reads): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE
   ✓ wave AAA1 (the sample carries its own sheet): smpl root + loop in
     every instrument zone WAV · bench: AAA2 standalone load on the Live III
+  ✓ wave BBB (the Hardening, round two): the new doors under the
+    degenerate matrix, the sheet under fuzz, four more verbs in the sweep
 
 CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   directions. The smear (STN transient mask, peak-matched) as a rack
