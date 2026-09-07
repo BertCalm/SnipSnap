@@ -495,7 +495,7 @@ private fun TapeDeckContent(
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             DeckButton(
-                "COMMIT",
+                "KEEP",
                 Modifier
                     .weight(1f)
                     .height(Layout.PRIMARY_ACTION_H.dp),
@@ -543,7 +543,7 @@ private fun TapeDeckContent(
         // the next tap; READ AS GROOVE hears the tape as a rhythm for the
         // open kit's pads; STEAL THE FEEL keeps only its timing and accent.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            DeckButton("DIG ▸", Modifier.weight(1f), active = !digging) {
+            DeckButton("FIND BREAK ▸", Modifier.weight(1f), active = !digging) {
                 if (digging) return@DeckButton
                 if (model.playing) model.togglePlay()
                 stopVoice()
@@ -584,7 +584,7 @@ private fun TapeDeckContent(
                 touch()
                 onReadGroove(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
             }
-            DeckButton("STEAL THE FEEL ▸", Modifier.weight(1.4f)) {
+            DeckButton("COPY GROOVE ▸", Modifier.weight(1.4f)) {
                 if (model.playing) model.togglePlay()
                 stopVoice()
                 val range = if (model.hasSelection) model.commitSelection() else null

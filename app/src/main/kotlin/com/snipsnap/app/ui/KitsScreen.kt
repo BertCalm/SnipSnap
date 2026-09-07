@@ -257,7 +257,7 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
                         TapeText(starter.displayName, TapeType.display, scheme.ink.tape)
                         if (starter.seeded) {
                             Spacer(Modifier.width(6.dp))
-                            TapeText("REROLLS", TapeType.pixelSmall, scheme.ink2.tape)
+                            TapeText("TAPS REROLL", TapeType.pixelSmall, scheme.ink2.tape)
                         }
                     }
                     TapeText(starter.blurb, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
@@ -290,10 +290,10 @@ private fun ArmControl(
     if (!armed) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(Modifier.weight(1f)) {
-                PrimaryAction(label = "ARM TAPE", enabled = true, onClick = onArm)
+                PrimaryAction(label = "LISTEN", enabled = true, onClick = onArm)
             }
             Box(Modifier.weight(1f)) {
-                PrimaryAction(label = "ARM INSIDE", enabled = true, onClick = onArmInside)
+                PrimaryAction(label = "LISTEN INSIDE ▸ OTHER APPS' AUDIO", enabled = true, onClick = onArmInside)
             }
         }
         return
@@ -310,7 +310,7 @@ private fun ArmControl(
                     .tapeClick(onEject),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText("EJECT", TapeType.displayBig, BIN_RED_GLOW)
+                TapeText("STOP LISTENING", TapeType.displayBig, BIN_RED_GLOW)
             }
             Box(
                 Modifier
@@ -321,7 +321,7 @@ private fun ArmControl(
                     .tapeClick(onSnip),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText("SNIP", TapeType.displayBig, scheme.amber.tape)
+                TapeText("SNIP ▸ KEEP LAST 60s", TapeType.displayBig, scheme.amber.tape)
             }
         }
     }

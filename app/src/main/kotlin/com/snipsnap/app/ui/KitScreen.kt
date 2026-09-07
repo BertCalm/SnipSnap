@@ -188,11 +188,11 @@ fun KitScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("TAKES + BIN ▸", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onTakesBin)
+                ActionButton("TAKES + BIN ▸ VERSIONS & TRASH", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onTakesBin)
                 // EVIL TWINS: bank B lit with seeded re-treatments of bank A; a second press rerolls.
                 val twinned = kit.pads.any { it.slot > 16 }
                 ActionButton(
-                    if (twinned) "EVIL TWINS ▸ REROLL" else "EVIL TWINS ▸",
+                    if (twinned) "REMIX BANK B ▸ REROLL" else "REMIX BANK B ▸",
                     scheme,
                     enabled = !busy && kit.pads.any { it.slot in 1..16 },
                     modifier = Modifier.weight(1f),
@@ -224,7 +224,12 @@ fun KitScreen(
                             .padding(horizontal = 8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText("$kind ▸", TapeType.pixel, if (open) scheme.titleInk.tape else scheme.ink2.tape)
+                        val doorSubtitle = when (kind) {
+                            "SCULPT" -> "GRANULAR TEXTURES"
+                            "STRETCH" -> "SLOW & FREEZE"
+                            else -> ""
+                        }
+                        TapeText("$kind ▸ $doorSubtitle", TapeType.pixel, if (open) scheme.titleInk.tape else scheme.ink2.tape)
                     }
                 }
             }

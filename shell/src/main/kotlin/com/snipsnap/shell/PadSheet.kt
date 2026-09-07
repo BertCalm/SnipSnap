@@ -75,6 +75,32 @@ object PadSheet {
     /** Where the AMT stepper sits when a pad has never been treated. */
     const val DEFAULT_AMOUNT = 0.35f
 
+    /**
+     * The card's own display words for a segment — a language-only layer on
+     * top of [ALL_SEGMENTS]. The segment string itself stays the id every
+     * other door (`onSegmentTap`, [treatmentFor], [read]'s `Applied.segment`,
+     * and the shell's own tests) reads and writes; only [displayLabel]'s
+     * output is drawn on the chip. A segment absent here draws its own id
+     * unchanged (e.g. CRUSH, TAPE, DIRT, SMEAR, TAIL, GHOST, FLIP, DUB,
+     * SWELL, BODY, WOBBLE — none of those needed a friendlier word).
+     */
+    private val DISPLAY_LABELS: Map<String, String> = mapOf(
+        // Row four's key-snap treatment: the card's own word for "retuned".
+        "TUNE" to "IN KEY",
+        // The capstan release / spin-up pair, not a transport STOP/START.
+        "STOP" to "SPIN DOWN",
+        "START" to "SPIN UP",
+        // One tape-delay repeat.
+        "SLAP" to "ECHO",
+        // The attack kept, the tail stretched toward forever.
+        "ETERNAL" to "DRONE",
+        // The banded smear: click gone, thump kept.
+        "SKIM" to "SMOOTH",
+    )
+
+    /** What the card draws for [segment] — [DISPLAY_LABELS]'s word, or the segment itself. */
+    fun displayLabel(segment: String): String = DISPLAY_LABELS[segment] ?: segment
+
     /** What a segment does when tapped: age the pad, or run it through a chain. */
     sealed interface Treatment {
         val name: String

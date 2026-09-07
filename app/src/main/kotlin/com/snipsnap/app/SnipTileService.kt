@@ -79,8 +79,8 @@ class SnipTileService : TileService() {
     private fun render(armed: Boolean) {
         val tile = qsTile ?: return
         tile.state = if (armed) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-        tile.label = Copy.TILE_LABEL
-        tile.subtitle = if (armed) Copy.TILE_ARMED else Copy.TILE_IDLE
+        tile.label = if (armed) Copy.TILE_LABEL_ARMED else Copy.TILE_LABEL_IDLE
+        tile.subtitle = if (armed) Copy.TILE_SUBTITLE_ARMED else Copy.TILE_SUBTITLE_IDLE
         tile.updateTile()
     }
 }

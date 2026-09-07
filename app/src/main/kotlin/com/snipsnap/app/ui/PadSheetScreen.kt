@@ -1035,7 +1035,7 @@ fun PadSheetScreen(
                     }
                 }
                 ToggleChip(
-                    "GHOSTS",
+                    "SOFT HITS",
                     pad.velocityLayers.isNotEmpty(),
                     classColor,
                     scheme,
@@ -1189,7 +1189,7 @@ fun PadSheetScreen(
                 maxLines = 1,
             )
             ActionButton(
-                if (busy) "MEASURING…" else "DE-SAMPLE ▸",
+                if (busy) "MEASURING…" else "MAKE SYNTH ▸ REPLACES THE WAV",
                 scheme,
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
@@ -1547,7 +1547,7 @@ private fun TreatmentCard(
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(seg, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                        TapeText(PadSheet.displayLabel(seg), TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
                     }
                 }
                 // A short row keeps the same chip width as a full one.
@@ -1742,7 +1742,7 @@ private fun MutateCard(
                 onClick = onRoulette,
             )
             // DRIFT: the deal and the morph in one tap, MIX how far.
-            ActionButton("DRIFT ▸", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onDrift)
+            ActionButton("DRIFT ▸ DEALS & SAVES A BLEND", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onDrift)
         }
 
         // The move's knob, when it has one; STACK's row stays so the card never jumps.
@@ -1841,7 +1841,7 @@ private fun OutsideCard(
         )
 
         ActionButton(
-            stage ?: "SEND ▸",
+            stage ?: "SEND ▸ SPEAKER OUT, MIC BACK IN",
             scheme,
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),

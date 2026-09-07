@@ -88,10 +88,12 @@ object Copy {
     /** A kit file landed: [landed] kits on the shelf, [skipped] refused and named in the toast's own words. */
     fun landed(landed: Int, skipped: Int): String =
         "$landed ${if (landed == 1) "KIT" else "KITS"} LANDED ON THE SHELF." + if (skipped > 0) " $skipped SKIPPED." else ""
-    // The quick-settings tile.
-    const val TILE_LABEL = "SNIPSNAP"
-    const val TILE_IDLE = "TAP TO ARM"
-    const val TILE_ARMED = "TAP TO SNIP"
+    // The quick-settings tile: idle reads LISTEN (opens the app, arms
+    // nothing yet), armed reads SNIP (writes the ring's last 60s to disk).
+    const val TILE_LABEL_IDLE = "LISTEN"
+    const val TILE_LABEL_ARMED = "SNIP"
+    const val TILE_SUBTITLE_IDLE = "OPENS SNIPSNAP"
+    const val TILE_SUBTITLE_ARMED = "KEEPS LAST 60s"
 
     // Tape deck.
     /** COMMIT toasts, rotated in order per commit. */
@@ -131,8 +133,8 @@ object Copy {
     const val TEACH_CONSENT = "FEATURES ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE."
 
     // ---- BANK B: evil twins (W4.3) ----
-    const val BANK_B_LIT = "BANK B LIT. YOUR KIT, BUT EVIL. RECIPES KEPT."
-    const val TWINS_REROLLED = "TWINS REROLLED. SAME SEED, DIFFERENT SINS."
+    const val BANK_B_LIT = "EVIL TWINS DEALT ONTO BANK B. RECIPES KEPT."
+    const val TWINS_REROLLED = "EVIL TWINS REROLLED. SAME SEED, DIFFERENT SINS."
 
     // ---- TAKES + BIN (X2.3) ----
     fun takeRestored(take: String): String = "$take RESTORED. THE PAST, REPLAYED."
