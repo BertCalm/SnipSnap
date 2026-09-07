@@ -53,6 +53,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Smear
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.json.JsonValue
@@ -286,6 +287,89 @@ fun PadSheetScreen(
     }
 
     /**
+     * SMEAR: not an era, so it doesn't route through `eraPad` — it's
+     * `com.snipsnap.audio.Smear.process` through the generic
+     * [KitBuilderModel.replaceAudio] door, exactly like `Mutate.morph`'s
+     * recipe idiom. `replaceAudio` always reads the *current on-disk*
+     * audio (same as `eraPad`), so re-applying onto an already-smeared pad
+     * (moving AMT again) would stack the stretch onto the already-stretched
+     * body rather than replacing it — restore first when this pad's own
+     * SMEAR recipe is riding it, same shape as the era branch below.
+     * Unlike eras, `replaceAudio` refuses velocity-layered pads outright
+     * (a transform tuned on the loud zone would lie on the soft ones), so
+     * that's checked up front, *before* any restore runs — un-doing a
+     * prior SMEAR and then hitting the refusal on the way back in would
+     * leave the main sample restored, the (untouched, still-smeared)
+     * ghost layers stale, and the recipe cleared: the exact "untreated
+     * underside" skew the era branch's own `check()` exists to prevent,
+     * just via a different file shape (one file vs. many).
+     *
+     * `Smear.process` folds to mono internally and always returns a mono
+     * [Snip] (Pghi/HPSS's contract, like `Retime`) — unlike `Eras.apply`,
+     * which preserves `snip.channels` throughout. A stereo pad handed to
+     * `Smear.process` untouched would silently lose its width, so a
+     * stereo source gets its mono result duplicated back across both
+     * channels, the same convention `Mutate.morph` uses for its own
+     * mono-PGHI result.
+     *
+     * amount 0 is a no-op — `Smear.process` returns the input unchanged,
+     * so the rewrite is skipped entirely rather than binning a take that's
+     * byte-for-byte the same, matching `eraPad`'s own `amount <= 0f`
+     * early-return. `save()` still runs unconditionally afterward, same
+     * as the era branch: a segment tap or AMT commit is always a real
+     * user action worth a rollback point, treated or not.
+     */
+    fun applySmear(m: KitBuilderModel, p: KitPad, amount: Float, padName: String) {
+        val hadPriorSmear = readSmearRecipe(p.recipe) != null
+        scope.launch {
+            busy = true
+            try {
+                withContext(Dispatchers.IO) {
+                    check(p.velocityLayers.isEmpty()) {
+                        "pad $slot is velocity-layered - clear GHOSTS before smearing"
+                    }
+                    if (hadPriorSmear) m.untreatPad(slot)
+                    if (amount > 0f) {
+                        val recipe = JsonValue.Obj(
+                            mapOf(
+                                "verb" to JsonValue.Str("smear"),
+                                "amount" to JsonValue.Num(amount.toDouble()),
+                            ),
+                        )
+                        m.replaceAudio(slot, recipe) { snip ->
+                            val smeared = Smear.process(snip, amount)
+                            if (snip.channels == 2 && smeared.channels == 1) {
+                                val stereo = FloatArray(smeared.frameCount * 2)
+                                for (i in 0 until smeared.frameCount) {
+                                    stereo[i * 2] = smeared.samples[i]
+                                    stereo[i * 2 + 1] = smeared.samples[i]
+                                }
+                                Snip(stereo, 2, smeared.sampleRate)
+                            } else {
+                                smeared
+                            }
+                        }
+                    }
+                    m.save()
+                }
+                revision++
+                onKitUpdated(m.kit)
+                refreshPadAudio(m)
+                snip?.let { audition(it, m.kit.pad(slot)?.level ?: 1f) }
+                onToast(Copy.treated(PadSheet.SMEAR, padName))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                // Same in-voice-copy split as the era branch: the
+                // ghosts-before-smearing refusal above is expected user
+                // copy, not a diagnostic.
+                if (e is IllegalStateException) onToast(Copy.RETREAT_REFUSED) else failure("TREATMENT", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    /**
      * TREATMENT: picking a segment or moving AMT. `eraPad` always reads the
      * *current on-disk* audio, ages it, and bins whatever was there — so
      * re-applying onto an already-treated pad (moving AMT, or switching
@@ -304,8 +388,12 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
-        val era = PadSheet.eraFor(segment) ?: return
         val padName = p.displayName
+        if (segment == PadSheet.SMEAR) {
+            applySmear(m, p, amount, padName)
+            return
+        }
+        val era = PadSheet.eraFor(segment) ?: return
         val hadPriorTreatment = readEraRecipe(p.recipe) != null
         scope.launch {
             busy = true
@@ -443,10 +531,15 @@ fun PadSheetScreen(
     val classColor = cls.tape
 
     val recipeEra = readEraRecipe(pad.recipe)
-    val activeSegment = recipeEra?.let { PadSheet.segmentFor(it.first) }
-    val isNoneState = recipeEra == null
+    val smearAmount = readSmearRecipe(pad.recipe)
+    val activeSegment = when {
+        recipeEra != null -> PadSheet.segmentFor(recipeEra.first)
+        smearAmount != null -> PadSheet.SMEAR
+        else -> null
+    }
+    val isNoneState = recipeEra == null && smearAmount == null
     val unmappedEraName = if (recipeEra != null && activeSegment == null) recipeEra.first else null
-    val amount = recipeEra?.second ?: PadSheet.DEFAULT_AMOUNT
+    val amount = recipeEra?.second ?: smearAmount ?: PadSheet.DEFAULT_AMOUNT
 
     val assignedSlots = kit.pads.map { it.slot }.sorted()
     val idx = assignedSlots.indexOf(slot)
@@ -649,6 +742,19 @@ private fun readEraRecipe(recipe: JsonValue.Obj?): Pair<String, Float>? {
     val era = (recipe.entries["era"] as? JsonValue.Str)?.value ?: return null
     val amount = (recipe.entries["amount"] as? JsonValue.Num)?.value?.toFloat() ?: return null
     return era to amount
+}
+
+/**
+ * SMEAR's own recipe shape, `{"verb": "smear", "amount": x}` — the
+ * `Mutate.morph` idiom, not [readEraRecipe]'s `{"era","amount"}`. Same
+ * defensive contract: anything else (an era, a Treatments FX chain, a
+ * Mutate recipe) reads as no SMEAR active.
+ */
+private fun readSmearRecipe(recipe: JsonValue.Obj?): Float? {
+    if (recipe == null) return null
+    val verb = (recipe.entries["verb"] as? JsonValue.Str)?.value ?: return null
+    if (verb != "smear") return null
+    return (recipe.entries["amount"] as? JsonValue.Num)?.value?.toFloat()
 }
 
 // ---------- level <-> dB ----------

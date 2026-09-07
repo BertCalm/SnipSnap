@@ -10,13 +10,13 @@ import kotlin.test.assertTrue
 class PadSheetTest {
 
     @Test
-    fun `the four segments the design draws, NONE first`() {
-        assertEquals(listOf("NONE", "CRUSH", "TAPE", "DIRT"), PadSheet.SEGMENTS)
+    fun `the five segments the design draws, NONE first, SMEAR last`() {
+        assertEquals(listOf("NONE", "CRUSH", "TAPE", "DIRT", "SMEAR"), PadSheet.SEGMENTS)
     }
 
     @Test
-    fun `every segment but NONE names a real era`() {
-        for (segment in PadSheet.SEGMENTS - PadSheet.NONE) {
+    fun `every era segment names a real era`() {
+        for (segment in PadSheet.SEGMENTS - PadSheet.NONE - PadSheet.SMEAR) {
             val era = PadSheet.eraFor(segment)
             assertTrue(
                 era in Eras.names,
@@ -31,6 +31,11 @@ class PadSheetTest {
     }
 
     @Test
+    fun `SMEAR names no era - it isn't one, and never will be`() {
+        assertNull(PadSheet.eraFor(PadSheet.SMEAR))
+    }
+
+    @Test
     fun `an unknown segment is refused, not silently ignored`() {
         assertFailsWith<IllegalArgumentException> { PadSheet.eraFor("WOBBLE") }
     }
@@ -41,8 +46,8 @@ class PadSheetTest {
     }
 
     @Test
-    fun `segmentFor is eraFor's inverse for every real segment`() {
-        for (segment in PadSheet.SEGMENTS - PadSheet.NONE) {
+    fun `segmentFor is eraFor's inverse for every era segment`() {
+        for (segment in PadSheet.SEGMENTS - PadSheet.NONE - PadSheet.SMEAR) {
             val era = PadSheet.eraFor(segment)!!
             assertEquals(segment, PadSheet.segmentFor(era))
         }

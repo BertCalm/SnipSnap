@@ -5,23 +5,34 @@ import com.snipsnap.synth.Eras
 /**
  * The PAD SHEET's TREATMENT card, as data.
  *
- * The design draws four segments; the DSP behind three of them already
- * exists as Time Machine eras, so this is a vocabulary mapping and nothing
- * more. It lives in `:shell` because the words are the app's, not the
- * engine's — [Eras] should never learn what a "segment" is.
+ * The design draws five segments; the DSP behind three of them already
+ * exists as Time Machine eras, so those are a vocabulary mapping and
+ * nothing more. It lives in `:shell` because the words are the app's, not
+ * the engine's — [Eras] should never learn what a "segment" is.
  *
- * The card drives [KitBuilderModel.eraPad], not `treatPad`: an era ages
- * every file a pad references, velocity layers included, so a pad with
- * ghost notes ages in all its zones instead of growing an untreated
+ * Three segments drive [KitBuilderModel.eraPad], not `treatPad`: an era
+ * ages every file a pad references, velocity layers included, so a pad
+ * with ghost notes ages in all its zones instead of growing an untreated
  * underside.
+ *
+ * [SMEAR] is not an era — it isn't in [ERA_FOR] and never will be. It
+ * drives `com.snipsnap.audio.Smear.process` through
+ * `KitBuilderModel.replaceAudio`, the same generic door `Mutate.morph`
+ * uses, with its own ad-hoc recipe shape (`{"verb":"smear","amount":x}`)
+ * instead of an era's `{"era","amount"}`. [eraFor] and [segmentFor] stay
+ * scoped to the era three; the screen reads SMEAR's own recipe shape back
+ * separately.
  */
 object PadSheet {
 
     /** The leftmost segment: no treatment at all. */
     const val NONE = "NONE"
 
+    /** The fourth chip: HPSS + phase-locked stretch, not a Time Machine era. */
+    const val SMEAR = "SMEAR"
+
     /** Segment order, left to right, as the card draws it. */
-    val SEGMENTS: List<String> = listOf(NONE, "CRUSH", "TAPE", "DIRT")
+    val SEGMENTS: List<String> = listOf(NONE, "CRUSH", "TAPE", "DIRT", SMEAR)
 
     /** Where the AMT stepper sits when a pad has never been treated. */
     const val DEFAULT_AMOUNT = 0.35f
