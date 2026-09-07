@@ -1835,8 +1835,8 @@ internal fun ActionButton(
 // THE ONLY NON-SCHEME COLOURS IN THE DESIGN — BIN red is deliberately
 // constant across every scheme (HANDOFF.md X2 / TAKES+BIN), so a delete
 // action reads as "red" even in a scheme with no red anywhere else in it.
-internal val BIN_RED_BORDER = Color(0xFF6A2020)
-internal val BIN_RED_GLOW = Color(0xFFC86050)
+private val BIN_RED_BORDER = Color(0xFF6A2020)
+private val BIN_RED_GLOW = Color(0xFFC86050)
 
 @Composable
 private fun EjectButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) {
