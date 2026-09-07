@@ -132,16 +132,17 @@ void SurfaceEngine::setCorner(int index, const MacroState& state) {
 // ---- audio thread from here down ---------------------------------------------
 
 void SurfaceEngine::adoptPendingSample() {
+    // Only take a pending sample when there is room to retire the current
+    // one. Checking first means nothing is ever handed *back* to pending_ -
+    // a store there could overwrite a newer sample the UI parked meanwhile
+    // and leak it. retired_ only goes null -> non-null on this thread, so
+    // the check-then-store below cannot race the UI, which only ever
+    // exchanges it to null.
+    if (pending_.load(std::memory_order_acquire) == nullptr) return;
+    if (retired_.load(std::memory_order_acquire) != nullptr) return;  // next callback
     Sample* incoming = pending_.exchange(nullptr, std::memory_order_acq_rel);
     if (!incoming) return;
-    // Retire the old one for the UI to free. If the UI has not collected the
-    // previous retiree yet, keep the newer one waiting in pending_ instead of
-    // leaking either - it will be adopted on the next callback.
-    Sample* expected = nullptr;
-    if (!retired_.compare_exchange_strong(expected, current_, std::memory_order_acq_rel)) {
-        pending_.store(incoming, std::memory_order_release);
-        return;
-    }
+    retired_.store(current_, std::memory_order_release);
     current_ = incoming;
     phase_ = 0.0;
 }
@@ -184,7 +185,7 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
     for (int32_t i = 0; i < numFrames; ++i) {
         // Control-rate work: the filter's trig once per 32 samples, the
         // macros themselves glide per sample.
-        if (untilCoefficients_-- <= 0) {
+        if (--untilCoefficients_ <= 0) {
             untilCoefficients_ = kControlInterval;
             const float fc = std::min(cutoffHz(cutoff_.value()), 0.45f * static_cast<float>(sampleRate_));
             const float g = std::tan(kPi * fc / static_cast<float>(sampleRate_));

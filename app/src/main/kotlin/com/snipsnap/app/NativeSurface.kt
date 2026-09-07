@@ -3,8 +3,9 @@ package com.snipsnap.app
 /**
  * The raw JNI surface of `libsnipsnap_surface.so` (`app/src/main/cpp`).
  * Handles are opaque; [SurfaceEngine] is the Kotlin object that owns one.
- * Every call here is UI-thread; the native side moves the values to the
- * audio thread through a lock-free ring and atomics, never a lock.
+ * Every call here comes from a thread that is never the audio thread -
+ * [SurfaceEngine] serialises them; the native side moves the values to
+ * the audio thread through a lock-free ring and atomics, never a lock.
  */
 object NativeSurface {
     init {
@@ -25,7 +26,7 @@ object NativeSurface {
         gate: Boolean,
     )
     external fun setCorner(handle: Long, index: Int, pitch: Float, cutoff: Float, resonance: Float, drive: Float)
-    external fun armPrint(handle: Long, maxFrames: Int)
+    external fun armPrint(handle: Long, maxFrames: Int): Boolean
     external fun printState(handle: Long): Int
     external fun stopPrint(handle: Long): FloatArray?
 }

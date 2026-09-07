@@ -27,11 +27,20 @@ class PrintBuffer {
 public:
     enum class State : int { Idle = 0, Recording = 1, Stopping = 2, Done = 3 };
 
-    /** UI thread: reserve `maxFrames` and start recording from the next callback. */
-    void arm(size_t maxFrames) {
+    /**
+     * UI thread: reserve `maxFrames` and start recording from the next
+     * callback. Refuses (false) while a print is Recording or Stopping -
+     * the callback may still be writing into the old frames, and
+     * reassigning them under it would be a data race. Take or clear the
+     * finished print first.
+     */
+    bool arm(size_t maxFrames) {
+        const State s = state_.load(std::memory_order_acquire);
+        if (s == State::Recording || s == State::Stopping) return false;
         frames_.assign(maxFrames, 0.0f);
         written_ = 0;
         state_.store(State::Recording, std::memory_order_release);
+        return true;
     }
 
     /** UI thread: ask the callback to finish; it flips to Done on its next pass. */

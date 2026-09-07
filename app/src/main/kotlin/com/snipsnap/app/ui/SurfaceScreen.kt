@@ -112,22 +112,33 @@ fun SurfaceScreen(
         }
     }
 
+    // The print's landing, once: `finishing` guards the frame loop from
+    // calling this again while the stop is in flight, and the stop itself
+    // (a bounded wait for the callback's last write) runs off the main
+    // thread so the pad never freezes on STOP PRINT.
+    var finishing by remember { mutableStateOf(false) }
     fun finishPrint() {
-        val snip = engine.stopPrint()
+        if (finishing) return
+        finishing = true
         printing = false
-        if (snip == null || snip.frameCount < engine.sampleRate / 10) {
-            onToast("NOTHING PRINTED. HOLD THE SURFACE WHILE IT PRINTS.")
-            return
-        }
         scope.launch {
-            val landed = withContext(Dispatchers.IO) {
-                runCatching { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
-            }
-            landed.onSuccess {
-                onToast("PRINTED ${"%.1f".format(it.seconds)} S TO TAPE.")
-                onPrinted()
-            }.onFailure {
-                onToast("PRINT LOST: ${(it.message ?: "UNREADABLE").uppercase()}.")
+            try {
+                val snip = withContext(Dispatchers.Default) { engine.stopPrint() }
+                if (snip == null || snip.frameCount < engine.sampleRate / 10) {
+                    onToast("NOTHING PRINTED. HOLD THE SURFACE WHILE IT PRINTS.")
+                    return@launch
+                }
+                val landed = withContext(Dispatchers.IO) {
+                    runCatching { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
+                }
+                landed.onSuccess {
+                    onToast("PRINTED ${"%.1f".format(it.seconds)} S TO TAPE.")
+                    onPrinted()
+                }.onFailure {
+                    onToast("PRINT LOST: ${(it.message ?: "UNREADABLE").uppercase()}.")
+                }
+            } finally {
+                finishing = false
             }
         }
     }
@@ -135,13 +146,20 @@ fun SurfaceScreen(
     // Screen-rate loop: smooth toward the target, paint, feed the engine.
     LaunchedEffect(engine) {
         val smoother = TouchSurface.SmoothedReading(TouchSurface.Smoother.coefficient(cutoffHz = 12f, rateHz = 60f))
+        var lastMode = mode
         while (true) {
             withFrameNanos { }
+            if (mode != lastMode) {
+                // A mode change is a different instrument, not a glide
+                // between two: the painted puck and the engine both jump.
+                smoother.snap(target)
+                lastMode = mode
+            }
             val smooth = smoother.step(target)
             painted = smooth
             engine.control(mode, smooth, tilt.tilt, gate = target.touching && padName != null)
             if (engine.needsRestart()) engineUp = engine.start()
-            if (printing && engine.printState() == SurfaceEngine.PrintState.DONE) finishPrint()
+            if (printing && !finishing && engine.printState() == SurfaceEngine.PrintState.DONE) finishPrint()
         }
     }
 
@@ -156,22 +174,22 @@ fun SurfaceScreen(
                     modifier = Modifier.weight(1f),
                 ) {
                     mode = m
-                    // A mode change is a different instrument, not a glide between two.
-                    target = Reading.REST
+                    target = Reading.REST // the frame loop snaps to it on the mode change
                 }
             }
             ActionButton(
                 label = if (printing) "STOP PRINT" else "PRINT",
                 scheme = scheme,
-                enabled = engineUp && padName != null,
+                enabled = engineUp && padName != null && !finishing,
                 modifier = Modifier.weight(1.4f),
             ) {
                 if (printing) {
                     finishPrint()
-                } else {
-                    engine.armPrint(SurfaceEngine.MAX_PRINT_SECONDS)
+                } else if (engine.armPrint(SurfaceEngine.MAX_PRINT_SECONDS)) {
                     printing = true
                     onToast("PRINTING. PLAY THE SURFACE.")
+                } else {
+                    onToast("STILL LANDING THE LAST PRINT.")
                 }
             }
         }

@@ -67,7 +67,7 @@ public:
     void setCorner(int index, const MacroState& state);
 
     // The resample tap (see PrintBuffer for the ownership rules).
-    void armPrint(size_t maxFrames) { print_.arm(maxFrames); }
+    bool armPrint(size_t maxFrames) { return print_.arm(maxFrames); }
     void requestStopPrint() { print_.requestStop(); }
     PrintBuffer::State printState() const { return print_.state(); }
     size_t printFrames() const { return print_.framesWritten(); }

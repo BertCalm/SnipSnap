@@ -1,5 +1,6 @@
 // The bridge: `NativeSurface` in Kotlin, one handle per engine. Every
-// function here runs on the caller's (UI) thread; the only thing that
+// function here runs on a caller's thread that is never the audio
+// thread (SurfaceEngine.kt serialises them); the only thing that
 // crosses to the audio thread is a ControlFrame through the ring, a
 // corner through its atomics, a sample through the pointer handshake.
 // Nothing in this file is called from the Oboe callback.
@@ -83,9 +84,9 @@ Java_com_snipsnap_app_NativeSurface_setCorner(
     engine(handle)->setCorner(index, MacroState{pitch, cutoff, resonance, drive});
 }
 
-JNIEXPORT void JNICALL
+JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativeSurface_armPrint(JNIEnv*, jobject, jlong handle, jint maxFrames) {
-    engine(handle)->armPrint(maxFrames > 0 ? static_cast<size_t>(maxFrames) : 0);
+    return engine(handle)->armPrint(maxFrames > 0 ? static_cast<size_t>(maxFrames) : 0) ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jint JNICALL
