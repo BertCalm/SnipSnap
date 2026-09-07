@@ -10,9 +10,13 @@ import kotlin.math.roundToLong
  * Writes PCM WAVs the MPC will take without conversion: 16- or 24-bit,
  * 44.1 kHz.
  *
- * Deliberately minimal — no metadata chunks, no cue points. The MPC reads the
- * audio and gets everything else from the program file, and extra chunks are
- * one more thing to get wrong on a device that fails silently.
+ * Deliberately minimal — no metadata chunks, no cue points, unless a caller
+ * hands over a [SmplChunk]. The MPC reads the audio and gets everything
+ * else from the program file, and extra chunks are one more thing to get
+ * wrong on a device that fails silently; the one exception is the sampler
+ * sheet a pitched or looped sample carries for the day it is loaded on
+ * its own, outside any program. A write without one is byte-identical to
+ * what this writer always produced.
  */
 object WavWriter {
 
@@ -37,26 +41,33 @@ object WavWriter {
         snip: Snip,
         depth: BitDepth = BitDepth.PCM_24,
         allowNonMpcRate: Boolean = false,
+        smpl: SmplChunk? = null,
     ): File {
         require(allowNonMpcRate || snip.sampleRate == MPC_SAMPLE_RATE) {
             "sample rate ${snip.sampleRate} is not MPC-native ($MPC_SAMPLE_RATE); " +
                 "capture at 44.1 kHz or pass allowNonMpcRate"
         }
         file.parentFile?.mkdirs()
-        BufferedOutputStream(file.outputStream()).use { write(it, snip, depth) }
+        BufferedOutputStream(file.outputStream()).use { write(it, snip, depth, smpl) }
         return file
     }
 
-    fun write(out: OutputStream, snip: Snip, depth: BitDepth = BitDepth.PCM_24) {
+    fun write(out: OutputStream, snip: Snip, depth: BitDepth = BitDepth.PCM_24, smpl: SmplChunk? = null) {
+        smpl?.requireInside(snip.frameCount)
         val bytesPerSample = depth.bytesPerSample
         val blockAlign = snip.channels * bytesPerSample
         val dataBytes = snip.samples.size.toLong() * bytesPerSample
         val byteRate = snip.sampleRate.toLong() * blockAlign
+        val smplBytes = if (smpl != null) 8L + smpl.byteSize else 0L
+        // RIFF chunks are word-aligned: an odd data size (24-bit mono with an
+        // odd frame count) is followed by one pad byte, and the RIFF size
+        // counts it - it is everything after the first eight bytes.
+        val dataPad = dataBytes % 2
 
-        require(dataBytes + 36 <= 0xFFFFFFFFL) { "audio too large for a RIFF file" }
+        require(dataBytes + dataPad + 36 + smplBytes <= 0xFFFFFFFFL) { "audio too large for a RIFF file" }
 
         out.writeTag("RIFF")
-        out.writeLeInt(36 + dataBytes)
+        out.writeLeInt(36 + smplBytes + dataBytes + dataPad)
         out.writeTag("WAVE")
 
         out.writeTag("fmt ")
@@ -68,6 +79,11 @@ object WavWriter {
         out.writeLeShort(blockAlign)
         out.writeLeShort(depth.bits)
 
+        // The sampler sheet sits between fmt and data, where every reader
+        // that walks chunks finds it and every reader that only wants the
+        // audio skips it.
+        if (smpl != null) out.writeSmpl(smpl, snip.sampleRate)
+
         out.writeTag("data")
         out.writeLeInt(dataBytes)
 
@@ -76,9 +92,8 @@ object WavWriter {
             BitDepth.PCM_24 -> for (s in snip.samples) out.writeLe24(toPcm24(s))
         }
 
-        // RIFF chunks are word-aligned. An odd data size needs a pad byte, which
-        // only happens at 24-bit with an odd sample count.
-        if (dataBytes % 2 == 1L) out.write(0)
+        // The pad byte the RIFF size above already counted.
+        if (dataPad == 1L) out.write(0)
     }
 
     /**
@@ -103,6 +118,34 @@ object WavWriter {
      * scrubs non-finite on the way in, this scrubs on the way out.
      */
     private fun finite(sample: Float): Float = if (sample.isFinite()) sample else 0f
+
+    /**
+     * The `smpl` chunk as the sampler world reads it: manufacturer and
+     * product zero (nobody's), the sample period in nanoseconds, the MIDI
+     * unity note, no pitch fraction, no SMPTE, then one forward loop whose
+     * end is the last frame played (inclusive, so the exclusive end minus
+     * one) and whose play count zero means forever.
+     */
+    private fun OutputStream.writeSmpl(smpl: SmplChunk, sampleRate: Int) {
+        writeTag(SmplChunk.TAG)
+        writeLeInt(smpl.byteSize.toLong())
+        writeLeInt(0) // manufacturer
+        writeLeInt(0) // product
+        writeLeInt(1_000_000_000L / sampleRate) // sample period, ns
+        writeLeInt(smpl.rootNote.toLong()) // MIDI unity note
+        writeLeInt(0) // pitch fraction
+        writeLeInt(0) // SMPTE format
+        writeLeInt(0) // SMPTE offset
+        writeLeInt(if (smpl.loop != null) 1L else 0L) // loop count
+        writeLeInt(0) // sampler-specific data
+        val loop = smpl.loop ?: return
+        writeLeInt(0) // cue point id
+        writeLeInt(0) // type: forward
+        writeLeInt(loop.startFrame)
+        writeLeInt(loop.endFrameExclusive - 1)
+        writeLeInt(0) // fraction
+        writeLeInt(0) // play count: forever
+    }
 
     private fun OutputStream.writeTag(tag: String) = write(tag.toByteArray(Charsets.US_ASCII))
 
