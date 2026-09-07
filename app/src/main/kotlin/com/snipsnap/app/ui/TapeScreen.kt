@@ -25,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -52,6 +53,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.Transients
 import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.Dig
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.PeaksPyramid
@@ -63,6 +65,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -114,6 +117,10 @@ fun TapeScreen(
     onToast: (String) -> Unit,
     onCommit: (File, IntRange) -> Unit,
     onInstantKit: (File, IntRange) -> Unit,
+    /** READ AS GROOVE (wave ZZ): the selection, or the whole deck, read as a rhythm onto the open kit. */
+    onReadGroove: (File, IntRange) -> Unit,
+    /** STEAL THE FEEL (wave ZZ): the same reading kept as timing and accent, poured over the kit's pattern. */
+    onStealFeel: (File, IntRange) -> Unit,
     /**
      * Bumped by App when something outside this screen put a new snip on
      * the shelf while TAPE may already be showing — a share-sheet import
@@ -159,7 +166,16 @@ fun TapeScreen(
         return
     }
 
-    TapeDeckContent(entry, tapeData, onToast, onCommit, onInstantKit, onIdleReload = { reloadToken++ })
+    TapeDeckContent(
+        entry,
+        tapeData,
+        onToast,
+        onCommit,
+        onInstantKit,
+        onReadGroove,
+        onStealFeel,
+        onIdleReload = { reloadToken++ },
+    )
 }
 
 @Composable
@@ -233,9 +249,14 @@ private fun TapeDeckContent(
     onToast: (String) -> Unit,
     onCommit: (File, IntRange) -> Unit,
     onInstantKit: (File, IntRange) -> Unit,
+    onReadGroove: (File, IntRange) -> Unit,
+    onStealFeel: (File, IntRange) -> Unit,
     onIdleReload: () -> Unit,
 ) {
     val scheme = LocalScheme.current
+    val digScope = rememberCoroutineScope()
+    // DIG runs on this screen: it only moves the deck's own IN and OUT.
+    var digging by remember(tapeData) { mutableStateOf(false) }
 
     val model = remember(tapeData) {
         TapeDeckModel(tapeData.samples, tapeData.sampleRate, tapeData.onsets)
@@ -395,6 +416,48 @@ private fun TapeDeckContent(
                 stopVoice()
                 val range = if (model.hasSelection) model.commitSelection() else null
                 onInstantKit(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
+            }
+        }
+        // Wave ZZ, the phone reads: three more readings of the same tape.
+        // DIG finds the break and sets IN and OUT to it, so INSTANT KIT is
+        // the next tap; READ AS GROOVE hears the tape as a rhythm for the
+        // open kit's pads; STEAL THE FEEL keeps only its timing and accent.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            DeckButton("DIG ▸", Modifier.weight(1f), active = !digging) {
+                if (digging) return@DeckButton
+                if (model.playing) model.togglePlay()
+                stopVoice()
+                digging = true
+                onToast(Copy.DIG_BUSY)
+                digScope.launch {
+                    val found = try {
+                        withContext(Dispatchers.IO) {
+                            Dig.best(Snip(tapeData.samples, 1, tapeData.sampleRate))
+                        }
+                    } finally {
+                        digging = false
+                    }
+                    if (found == null) {
+                        onToast(Copy.NO_BREAK)
+                    } else {
+                        model.inFrame = found.startFrame
+                        model.outFrame = found.endFrame
+                        model.seekTo(found.startFrame)
+                        onToast(Copy.dug(Dig.stamp(found.startSec), Dig.stamp(found.endSec)))
+                    }
+                }
+            }
+            DeckButton("READ AS GROOVE ▸", Modifier.weight(1.4f)) {
+                if (model.playing) model.togglePlay()
+                stopVoice()
+                val range = if (model.hasSelection) model.commitSelection() else null
+                onReadGroove(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
+            }
+            DeckButton("STEAL THE FEEL ▸", Modifier.weight(1.4f)) {
+                if (model.playing) model.togglePlay()
+                stopVoice()
+                val range = if (model.hasSelection) model.commitSelection() else null
+                onStealFeel(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
             }
         }
     }

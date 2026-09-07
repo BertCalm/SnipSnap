@@ -170,6 +170,8 @@ fun GrooveScreen(
     entry: KitShelf.Entry?,
     appScope: CoroutineScope,
     onToast: (String) -> Unit,
+    /** Bumped by App when TAPE rewrote the kit's groove (READ AS GROOVE, STEAL THE FEEL) while this screen may be up. */
+    reloadRequest: Int = 0,
 ) {
     val scheme = LocalScheme.current
 
@@ -186,7 +188,7 @@ fun GrooveScreen(
     var base by remember(kitDir) { mutableStateOf<Mpc3Clip?>(null) }
     var eClip by remember(kitDir) { mutableStateOf<Mpc3Clip?>(null) }
     var loading by remember(kitDir) { mutableStateOf(true) }
-    LaunchedEffect(kitDir) {
+    LaunchedEffect(kitDir, reloadRequest) {
         loading = true
         val (b, e) = withContext(Dispatchers.IO) {
             // The captured base is first by convention — six call sites
