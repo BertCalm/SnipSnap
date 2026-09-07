@@ -67,6 +67,7 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Personality
+import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.ShelfImport
@@ -143,9 +144,18 @@ fun App(shelf: KitShelf) {
     // KEYS: the instrument open on the grid, from the shelf's INSTRUMENTS list.
     var openInstrument by remember { mutableStateOf<KitShelf.InstrumentEntry?>(null) }
     var instruments by remember { mutableStateOf<List<KitShelf.InstrumentEntry>>(emptyList()) }
-    LaunchedEffect(kits, screen) {
-        if (screen == AppScreen.KITS) instruments = withContext(Dispatchers.IO) { shelf.instruments() }
+    // ROOMS (YY5): kept rooms beside the instruments; the revision bumps after a forget.
+    var rooms by remember { mutableStateOf<List<Rooms.Room>>(emptyList()) }
+    var roomsRevision by remember { mutableStateOf(0) }
+    LaunchedEffect(kits, screen, roomsRevision) {
+        if (screen == AppScreen.KITS) {
+            instruments = withContext(Dispatchers.IO) { shelf.instruments() }
+            rooms = withContext(Dispatchers.IO) { runCatching { shelf.rooms() }.getOrDefault(emptyList()) }
+        }
     }
+    // Pad Sheet v2: the open workshop box, remembered per kit so the next
+    // pad opens on the same bench; a new kit starts with every box closed.
+    var padSheetBox by remember(open?.dir) { mutableStateOf<String?>(null) }
     // TAKES + BIN (X2.3): same shape as PAD SHEET above — reachable only
     // from the KIT action row, not one of MenuRow's fixed ten, so it's
     // KIT-scoped overlay state rather than its own AppScreen entry.
@@ -297,6 +307,8 @@ fun App(shelf: KitShelf) {
 
     LaunchedEffect(Unit) {
         kits = withContext(Dispatchers.IO) { shelf.list() }
+        // The rooms' bin empties itself of what has slept past its days.
+        withContext(Dispatchers.IO) { runCatching { shelf.sweepRooms() } }
     }
 
     // IMPORT (F3.1/F3.2): a file shared in from another app, waiting on
@@ -548,6 +560,21 @@ fun App(shelf: KitShelf) {
      * chooser - Drive, a cable, a messenger to yourself. The same file
      * shared back in lands every kit again through the shelf's door.
      */
+    /** FORGET → BIN on a held room: into the bin for 30 days, the toast says so. */
+    fun forgetRoom(room: Rooms.Room) {
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) { shelf.forgetRoom(room) }
+                roomsRevision++
+                toast = Copy.roomForgotten(room.name)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                toast = "FORGET FAILED: ${e.message ?: e.javaClass.simpleName}"
+            }
+        }
+    }
+
     fun backupShelf() {
         if (busy != null) return
         if (kits.isEmpty()) {
@@ -646,6 +673,8 @@ fun App(shelf: KitShelf) {
                             },
                             onEject = { MicSessionService.eject(context) },
                             onBackup = ::backupShelf,
+                            rooms = rooms,
+                            onForgetRoom = ::forgetRoom,
                         )
                         AppScreen.KIT -> {
                             val sheetSlot = padSheetSlot
@@ -657,6 +686,8 @@ fun App(shelf: KitShelf) {
                                     onSlotChange = { padSheetSlot = it },
                                     onBack = { padSheetSlot = null },
                                     onToast = { toast = it },
+                                    openBox = padSheetBox,
+                                    onOpenBox = { padSheetBox = it },
                                     onNavigateTape = {
                                         // TAPE has no notion of "open on this
                                         // pad's WAV" — it loads whatever

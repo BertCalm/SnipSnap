@@ -76,9 +76,30 @@ class RoomsTest {
         assertEquals("FUNK ROOM 2", second.name, "ROOM is not doubled, the number is added")
         assertEquals(listOf("FUNK ROOM 2", "FUNK ROOM"), Rooms.list(shelf).map { it.name }, "latest first")
 
-        Rooms.forget(first)
+        // Forgotten is binned, not gone: the shelf no longer lists it, the bin does, with the days it has left.
+        val binned = Rooms.forget(shelf, first, nowMillis = 10_000L)
         assertEquals(listOf("FUNK ROOM 2"), Rooms.list(shelf).map { it.name })
         assertTrue(!File(Rooms.dir(shelf), "FUNK ROOM.wav").exists() && !File(Rooms.dir(shelf), "FUNK ROOM.json").exists())
+        assertEquals(listOf("FUNK ROOM"), Rooms.binned(shelf).map { it.room.name })
+        assertEquals(10_000L, Rooms.binned(shelf).single().binnedAt)
+        assertEquals(30, binned.daysLeft(10_000L))
+        assertEquals(29, binned.daysLeft(10_000L + 24L * 60 * 60 * 1000), "a whole day on, a whole day fewer")
+        assertEquals(0, binned.daysLeft(10_000L + 40L * 24 * 60 * 60 * 1000))
+        assertEquals(10f, Rooms.binned(shelf).single().room.lagMs, "the measurement rides into the bin")
+
+        // 29 days on, the sweep leaves it; 31 days on, it is gone for good.
+        assertEquals(0, Rooms.sweepBin(shelf, nowMillis = 10_000L + 29L * 24 * 60 * 60 * 1000))
+        assertEquals(1, Rooms.binned(shelf).size)
+        // Out of the bin first, to prove the way back: it lands under a fresh name beside FUNK ROOM 2.
+        val back = Rooms.unforget(shelf, Rooms.binned(shelf).single())
+        assertEquals("FUNK ROOM", back.name)
+        assertEquals(listOf("FUNK ROOM 2", "FUNK ROOM"), Rooms.list(shelf).map { it.name })
+        assertTrue(Rooms.binned(shelf).isEmpty())
+        // And forgotten again, then left past the bin's days, the sweep takes it.
+        Rooms.forget(shelf, back, nowMillis = 20_000L)
+        assertEquals(1, Rooms.sweepBin(shelf, nowMillis = 20_000L + 31L * 24 * 60 * 60 * 1000))
+        assertTrue(Rooms.binned(shelf).isEmpty())
+        assertEquals(listOf("FUNK ROOM 2"), Rooms.list(shelf).map { it.name }, "the bin folder is never a room")
 
         // A WAV with no sidecar still lists, its length read off the file.
         File(Rooms.dir(shelf), "FUNK ROOM 2.json").delete()
@@ -139,5 +160,8 @@ class RoomsTest {
         assertEquals(line.uppercase(), line)
         assertTrue(line.startsWith("FUNK ROOM ") && "MUTATE" in line, line)
         assertEquals(Copy.ROOM_NONE_TO_KEEP.uppercase(), Copy.ROOM_NONE_TO_KEEP)
+        val gone = Copy.roomForgotten("FUNK ROOM")
+        assertEquals(gone.uppercase(), gone)
+        assertTrue("BIN" in gone && "30 DAYS" in gone, gone)
     }
 }

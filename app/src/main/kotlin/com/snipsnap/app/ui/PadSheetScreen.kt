@@ -76,6 +76,7 @@ import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.OutsideSheet
 import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
+import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.Scheme
@@ -133,6 +134,9 @@ fun PadSheetScreen(
     onNavigateTape: () -> Unit,
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
     appScope: CoroutineScope,
+    /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name), remembered per kit by the caller. */
+    openBox: String? = null,
+    onOpenBox: (String?) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -854,6 +858,15 @@ fun PadSheetScreen(
     var pendingRes by remember(slot, pad.resonance) { mutableFloatStateOf(pad.resonance ?: 0f) }
     val isShaped = pad.attack != null || pad.decay != null || pad.cutoff != null || pad.resonance != null
 
+    // Pad Sheet v2 (Direction A): the everyday controls stay put; every
+    // workshop card is a group box, closed by default, its strip reading
+    // what the pad carries (PadSheetBoxes). One box open at a time, the
+    // open one remembered per kit by the caller so the next pad opens on
+    // the same bench. The pad nav is pinned under the scroll.
+    val boxes = PadSheetBoxes.summaries(pad, outsideStage)
+    val openBoxKind = openBox?.let { PadSheetBoxes.boxFor(it) }
+    fun tapBox(box: PadSheetBoxes.Box) = onOpenBox(PadSheetBoxes.toggle(openBoxKind, box)?.name)
+
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PadSheetHeader(
             slot = slot,
@@ -949,6 +962,13 @@ fun PadSheetScreen(
                 )
             }
 
+            GroupBox(
+                legend = PadSheetBoxes.Box.TREATMENT.legend,
+                summary = boxes.getValue(PadSheetBoxes.Box.TREATMENT),
+                open = openBoxKind == PadSheetBoxes.Box.TREATMENT,
+                onToggle = { tapBox(PadSheetBoxes.Box.TREATMENT) },
+                scheme = scheme,
+            ) {
             TreatmentCard(
                 rows = PadSheet.ROWS,
                 noneSegment = PadSheet.NONE,
@@ -963,7 +983,15 @@ fun PadSheetScreen(
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
                 onAmountCommit = { activeSegment?.let { seg -> applyTreatment(seg, pendingAmt) } },
             )
+            }
 
+            GroupBox(
+                legend = PadSheetBoxes.Box.SHAPE.legend,
+                summary = boxes.getValue(PadSheetBoxes.Box.SHAPE),
+                open = openBoxKind == PadSheetBoxes.Box.SHAPE,
+                onToggle = { tapBox(PadSheetBoxes.Box.SHAPE) },
+                scheme = scheme,
+            ) {
             ShapeCard(
                 knobs = listOf(
                     ShapeKnob(
@@ -1005,7 +1033,15 @@ fun PadSheetScreen(
                     }
                 },
             )
+            }
 
+            GroupBox(
+                legend = PadSheetBoxes.Box.MUTATE.legend,
+                summary = boxes.getValue(PadSheetBoxes.Box.MUTATE),
+                open = openBoxKind == PadSheetBoxes.Box.MUTATE,
+                onToggle = { tapBox(PadSheetBoxes.Box.MUTATE) },
+                scheme = scheme,
+            ) {
             MutateCard(
                 modes = MutateSheet.MODES,
                 mode = mutateMode,
@@ -1029,8 +1065,17 @@ fun PadSheetScreen(
                 scheme = scheme,
                 busy = busy,
             )
-        }
+            }
 
+            GroupBox(
+                legend = PadSheetBoxes.Box.OUTSIDE.legend,
+                summary = boxes.getValue(PadSheetBoxes.Box.OUTSIDE),
+                open = openBoxKind == PadSheetBoxes.Box.OUTSIDE,
+                onToggle = { tapBox(PadSheetBoxes.Box.OUTSIDE) },
+                scheme = scheme,
+                // The trip out: the strip goes lcd-alt while the reels turn.
+                summaryColor = if (outsideStage != null) scheme.amber.tape else scheme.ink2.tape,
+            ) {
         OutsideCard(
             moves = OutsideSheet.MOVES,
             move = outsideMove,
@@ -1050,7 +1095,15 @@ fun PadSheetScreen(
             scheme = scheme,
             busy = busy,
         )
+            }
 
+            GroupBox(
+                legend = PadSheetBoxes.Box.MAKE.legend,
+                summary = boxes.getValue(PadSheetBoxes.Box.MAKE),
+                open = openBoxKind == PadSheetBoxes.Box.MAKE,
+                onToggle = { tapBox(PadSheetBoxes.Box.MAKE) },
+                scheme = scheme,
+            ) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             TapeText("PAD FROM ANYTHING · HOLD IT FOREVER", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
             StepperSlider(
@@ -1101,19 +1154,22 @@ fun PadSheetScreen(
             )
         }
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onNavigateTape)
             ActionButton(
                 "MAKE INSTRUMENT",
                 scheme,
                 enabled = !busy,
                 dimmed = pad.drumClass != DrumClass.TONAL,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 onClick = ::onMakeInstrument,
             )
+            }
+            ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = onNavigateTape)
+            EjectButton(scheme, enabled = !busy, onClick = ::onEject)
         }
-        EjectButton(scheme, enabled = !busy, onClick = ::onEject)
 
+        // Pinned under the scroll: a 2dp rule, then the pad nav, so the
+        // next pad is always one tap away whatever box is open.
+        Box(Modifier.fillMaxWidth().height(2.dp).background(scheme.grayEdge.tape))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             ActionButton(
                 prevSlot?.let { "◄ ${padTag(it)}" } ?: "◄",
@@ -1685,13 +1741,19 @@ private fun OutsideCard(
             TapeText("OUTSIDE · THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton("UNDO", scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
         }
-        TapeText(
-            applied?.let { OutsideSheet.statusLine(it) }
-                ?: if (move == OutsideSheet.Move.ROOM.name) "A SWEEP GOES OUT, THE ROOM COMES BACK AS THE PAD'S ROOM" else "THE PAD GOES OUT THE JACK, WHAT COMES BACK IS THE PAD",
-            TapeType.pixelSmall,
-            scheme.ink2.tape,
-            maxLines = 1,
-        )
+        if (stage != null) {
+            // The trip is out: the reels turn on an LCD strip beside the
+            // stage, so the wait is alive rather than a dead button.
+            ReelsStrip(stage, scheme)
+        } else {
+            TapeText(
+                applied?.let { OutsideSheet.statusLine(it) }
+                    ?: if (move == OutsideSheet.Move.ROOM.name) "A SWEEP GOES OUT, THE ROOM COMES BACK AS THE PAD'S ROOM" else "THE PAD GOES OUT THE JACK, WHAT COMES BACK IS THE PAD",
+                TapeType.pixelSmall,
+                scheme.ink2.tape,
+                maxLines = 1,
+            )
+        }
 
         // The move: two chips, half the width each.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1773,8 +1835,8 @@ internal fun ActionButton(
 // THE ONLY NON-SCHEME COLOURS IN THE DESIGN — BIN red is deliberately
 // constant across every scheme (HANDOFF.md X2 / TAKES+BIN), so a delete
 // action reads as "red" even in a scheme with no red anywhere else in it.
-private val BIN_RED_BORDER = Color(0xFF6A2020)
-private val BIN_RED_GLOW = Color(0xFFC86050)
+internal val BIN_RED_BORDER = Color(0xFF6A2020)
+internal val BIN_RED_GLOW = Color(0xFFC86050)
 
 @Composable
 private fun EjectButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) {

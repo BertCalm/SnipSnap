@@ -47,6 +47,12 @@ class KitShelf(private val root: File) {
     /** KEEP ROOM: the room a ROOM trip measured, onto the shelf named after [kitName]. */
     fun keepRoom(outcome: OutsideSheet.Outcome, kitName: String): Rooms.Room = OutsideSheet.keep(root, outcome, kitName)
 
+    /** FORGET → BIN: the room into the bin for [Rooms.BIN_DAYS] days, like every other delete. */
+    fun forgetRoom(room: Rooms.Room): Rooms.Binned = Rooms.forget(root, room)
+
+    /** Empty the rooms' bin of what has slept past its days; returns how many went. */
+    fun sweepRooms(): Int = Rooms.sweepBin(root)
+
     /**
      * Every readable kit on the shelf. A folder whose `kit.json` is broken
      * is skipped, not fatal — one damaged kit must never blank the shelf.

@@ -71,6 +71,8 @@ dependencies {
     // TapeOS is fully custom-drawn: foundation only, no Material — the
     // design system's bevels and LCDs owe nothing to any stock theme.
     implementation("androidx.compose.foundation:foundation")
+    // The reels on OUTSIDE's LCD strip turn on an infinite transition.
+    implementation("androidx.compose.animation:animation-core")
     // LoopGrid (plan-03) draws with material3 Text and a lifecycle scope;
     // the TapeOS screens stay foundation-only.
     implementation("androidx.compose.material3:material3")

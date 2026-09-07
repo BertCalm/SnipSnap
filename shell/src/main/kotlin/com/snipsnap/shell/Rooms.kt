@@ -32,6 +32,12 @@ object Rooms {
     /** A room's label as a MUTATE parent, in the recipe and the lineage: `room:FUNK ROOM`. */
     const val LABEL_PREFIX = "room:"
 
+    /** The bin's folder under the rooms: a forgotten room sleeps here, like every other delete, before it is gone. */
+    const val BIN_DIR = ".bin"
+
+    /** How long the bin keeps a forgotten room. */
+    const val BIN_DAYS = 30
+
     private const val VERSION = 1
 
     /** A kept room: its name, its impulse on disk, and how it was measured. */
@@ -80,20 +86,33 @@ object Rooms {
         // never vouches for a room that is not there.
         val bytes = java.io.ByteArrayOutputStream().also { WavWriter.write(it, impulse) }.toByteArray()
         AtomicFile.writeBytes(wav, bytes)
-        val meta = JsonValue.Obj(
-            linkedMapOf<String, JsonValue>(
-                "version" to JsonValue.Num(VERSION.toDouble()),
-                "name" to JsonValue.Str(name),
-                "frames" to JsonValue.Num(impulse.frameCount.toDouble()),
-                "sampleRate" to JsonValue.Num(impulse.sampleRate.toDouble()),
-                "lagMs" to JsonValue.Num(lagMs.toDouble()),
-                "confidence" to JsonValue.Num(confidence.toDouble()),
-                "from" to JsonValue.Str(from),
-                "measuredAt" to JsonValue.Num(nowMillis.toDouble()),
-            ),
+        val room = Room(name, wav, impulse.frameCount.toFloat() / impulse.sampleRate, lagMs, confidence, from, nowMillis)
+        AtomicFile.writeText(sidecar(wav), Json.write(meta(room, frames = impulse.frameCount, sampleRate = impulse.sampleRate)))
+        return room
+    }
+
+    /** The sidecar's contents for [room]; [binnedAt] only in the bin. */
+    private fun meta(room: Room, frames: Int? = null, sampleRate: Int? = null, binnedAt: Long? = null): JsonValue.Obj {
+        val prior = readMeta(room.file)
+        val f = frames?.toDouble() ?: (prior?.get("frames") as? JsonValue.Num)?.value
+        val r = sampleRate?.toDouble() ?: (prior?.get("sampleRate") as? JsonValue.Num)?.value
+        val m = linkedMapOf<String, JsonValue>(
+            "version" to JsonValue.Num(VERSION.toDouble()),
+            "name" to JsonValue.Str(room.name),
         )
-        AtomicFile.writeText(sidecar(wav), Json.write(meta))
-        return Room(name, wav, impulse.frameCount.toFloat() / impulse.sampleRate, lagMs, confidence, from, nowMillis)
+        if (f != null) m["frames"] = JsonValue.Num(f)
+        if (r != null) m["sampleRate"] = JsonValue.Num(r)
+        m["lagMs"] = JsonValue.Num(room.lagMs.toDouble())
+        m["confidence"] = JsonValue.Num(room.confidence.toDouble())
+        m["from"] = JsonValue.Str(room.from)
+        m["measuredAt"] = JsonValue.Num(room.measuredAt.toDouble())
+        if (binnedAt != null) m["binnedAt"] = JsonValue.Num(binnedAt.toDouble())
+        return JsonValue.Obj(m)
+    }
+
+    private fun readMeta(wav: File): Map<String, JsonValue>? {
+        val side = sidecar(wav)
+        return if (side.isFile) runCatching { Json.parse(side.readText()).obj() }.getOrNull() else null
     }
 
     /**
@@ -126,10 +145,78 @@ object Rooms {
     /** The room named [name], or null. */
     fun find(shelfRoot: File, name: String): Room? = list(shelfRoot).firstOrNull { it.name == name }
 
-    /** Forget [room]: its WAV and sidecar gone. */
-    fun forget(room: Room) {
-        room.file.delete()
+    /** A room in the bin, and when it went there. */
+    data class Binned(val room: Room, val binnedAt: Long) {
+        /** Whole days left before [sweepBin] takes it, never below zero. */
+        fun daysLeft(nowMillis: Long): Int =
+            ((binnedAt + BIN_DAYS * DAY_MS - nowMillis).coerceAtLeast(0L) / DAY_MS).toInt()
+    }
+
+    private const val DAY_MS = 24L * 60 * 60 * 1000
+
+    /** Where forgotten rooms sleep under [shelfRoot]. */
+    fun binDir(shelfRoot: File): File = File(dir(shelfRoot), BIN_DIR)
+
+    /**
+     * Forget [room]: into the bin, not gone - the app's one rule for a
+     * delete. Its WAV and sidecar move under `Rooms/.bin/` (a fresh name
+     * there if the bin already holds one), the sidecar stamped with when.
+     */
+    fun forget(shelfRoot: File, room: Room, nowMillis: Long = System.currentTimeMillis()): Binned {
+        val bin = binDir(shelfRoot).apply { mkdirs() }
+        val name = freshName(bin, room.name)
+        val wav = File(bin, "$name.wav")
+        move(room.file, wav)
         sidecar(room.file).delete()
+        AtomicFile.writeText(sidecar(wav), Json.write(meta(room.copy(name = name, file = wav), binnedAt = nowMillis)))
+        return Binned(room.copy(name = name, file = wav), nowMillis)
+    }
+
+    /** Every room in the bin, the most recently forgotten first. */
+    fun binned(shelfRoot: File): List<Binned> {
+        val bin = binDir(shelfRoot)
+        val wavs = bin.listFiles { f: File -> f.isFile && f.extension.equals("wav", ignoreCase = true) } ?: return emptyList()
+        return wavs.filter { isWav(it) }.mapNotNull { wav ->
+            runCatching {
+                val room = read(wav)
+                val at = (readMeta(wav)?.get("binnedAt") as? JsonValue.Num)?.value?.toLong() ?: wav.lastModified()
+                Binned(room, at)
+            }.getOrNull()
+        }.sortedByDescending { it.binnedAt }
+    }
+
+    /** Back out of the bin onto the shelf, under a name nothing there holds. */
+    fun unforget(shelfRoot: File, binned: Binned): Room {
+        val dir = dir(shelfRoot).apply { mkdirs() }
+        val name = freshName(dir, binned.room.name)
+        val wav = File(dir, "$name.wav")
+        move(binned.room.file, wav)
+        sidecar(binned.room.file).delete()
+        val room = binned.room.copy(name = name, file = wav)
+        AtomicFile.writeText(sidecar(wav), Json.write(meta(room)))
+        return room
+    }
+
+    /** Empty the bin of rooms forgotten more than [keepDays] ago; returns how many went. */
+    fun sweepBin(shelfRoot: File, nowMillis: Long = System.currentTimeMillis(), keepDays: Int = BIN_DAYS): Int {
+        var gone = 0
+        for (b in binned(shelfRoot)) {
+            if (nowMillis - b.binnedAt > keepDays * DAY_MS) {
+                b.room.file.delete()
+                sidecar(b.room.file).delete()
+                gone++
+            }
+        }
+        return gone
+    }
+
+    private fun move(from: File, to: File) {
+        try {
+            java.nio.file.Files.move(from.toPath(), to.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        } catch (e: java.io.IOException) {
+            from.copyTo(to, overwrite = true)
+            from.delete()
+        }
     }
 
     /** [room] as the MUTATE card's parent. */
@@ -138,8 +225,7 @@ object Rooms {
     private fun sidecar(wav: File): File = File(wav.parentFile, wav.nameWithoutExtension + ".json")
 
     private fun read(wav: File): Room {
-        val side = sidecar(wav)
-        val meta = if (side.isFile) runCatching { Json.parse(side.readText()).obj() }.getOrNull() else null
+        val meta = readMeta(wav)
         val frames = (meta?.get("frames") as? JsonValue.Num)?.value
         val rate = (meta?.get("sampleRate") as? JsonValue.Num)?.value
         val seconds = if (frames != null && rate != null && rate > 0) (frames / rate).toFloat() else {

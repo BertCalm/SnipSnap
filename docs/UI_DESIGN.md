@@ -177,6 +177,22 @@ exporters now write the class colours straight through: kick red is kick red
 on the hardware pads too, exactly as "shell colour = pad colour = MPC pad
 colour" promised.
 
+## Settled since: the pad sheet folds
+
+The PAD SHEET's workshop — TREATMENT, SHAPE, MUTATE, OUTSIDE, MAKE — is
+five **group boxes with pixel legends** under the everyday controls,
+closed by default. A closed strip reads what the pad already carries
+("CRUSH · 35%", "ROOM × FUNK ROOM", "23 MS LATE · 87% SURE", or
+UNTOUCHED), so a closed sheet fits one screen and tells the pad's story.
+One box open at a time; the open box is remembered **per kit**, so the
+next pad opens on the same bench. The pad nav is pinned under the
+scroll. While an OUTSIDE trip is out, the reels turn on an LCD strip —
+the motion rule above — and SEND reads the stage dimmed, never dead. The
+label budget for a strip is about 44 pixel-face characters; strips and
+button labels ellipsize, never wrap. Decided on the *Pad Sheet v2 and
+Rooms* canvas (2026-09-07), directions B (a selector) and C (a second
+screen) kept there for the record.
+
 ## Still open
 
 - Whether the desktop metaphor extends to a "My Kits" file-manager screen or

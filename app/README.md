@@ -82,6 +82,19 @@ shelf useful before capture (M1) exists.
   remove exactly the send). If the return is silent, check that ARM has
   granted RECORD_AUDIO and that no armed session holds the mic — the
   card refuses both in words before playing.
+- **Pad Sheet v2 (the boxes)**: open a pad's sheet — below GHOSTS sit
+  five group boxes (TREATMENT, SHAPE, MUTATE, OUTSIDE, MAKE), all closed,
+  each strip reading what the pad carries or UNTOUCHED; the whole sheet
+  fits one screen. Tap a strip: it opens, the others stay closed, EJECT
+  scrolls away but ◄ ► stay pinned at the bottom. Press A03 ►: the same
+  box is open on the next pad. Open OUTSIDE and SEND a ROOM trip: the
+  box's strip turns cyan and two reels turn on an LCD strip beside
+  LISTENING…, then SENDING…; SEND reads the stage dimmed.
+- **ROOMS on the shelf**: after KEEP ROOM, THE SHELF grows a ROOMS
+  section under INSTRUMENTS, one row per room with its measurement and
+  length. Hold a row: it presses and shows FORGET → BIN; tap it and the
+  toast says the bin keeps it 30 days; the row is gone from the shelf and
+  `Rooms/.bin/` holds the pair. Tap anywhere else on a held row to let go.
 - **KEEP ROOM (pad sheet)**: after a ROOM trip the OUTSIDE card's KEEP
   ROOM button lights; tap it and the toast names the room ("FUNK ROOM IS
   ON THE SHELF…"), a `Rooms/FUNK ROOM.wav` + `.json` pair appears beside
