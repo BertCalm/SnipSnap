@@ -69,6 +69,7 @@ import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Personality
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.shell.TextureKits
 import java.io.File
@@ -293,6 +294,59 @@ fun App(shelf: KitShelf) {
 
     LaunchedEffect(Unit) {
         kits = withContext(Dispatchers.IO) { shelf.list() }
+    }
+
+    // IMPORT (F3.1/F3.2): a file shared in from another app, waiting on
+    // ShareInbox's doorstep. Decoded off the main thread (MediaDecode: a
+    // WAV straight through the reader, anything else through the
+    // platform's codec), landed as a snip (SnipStore.import: mono, the
+    // MPC rate, capped), then TAPE - which finds the newest snip first
+    // by its own source priority. The deck needs a kit to sit in; with
+    // none open the first on the shelf is opened, and with an empty
+    // shelf the file stays on the doorstep of the next FRESH TAPE and
+    // the toast says so. `importCount` is TAPE's reload request, for a
+    // share that arrives while TAPE is already on screen.
+    val shared by ShareInbox.pending.collectAsState()
+    var importCount by remember { mutableStateOf(0) }
+    LaunchedEffect(shared) {
+        val uri = shared ?: return@LaunchedEffect
+        // The status line is borrowed only when nothing else holds it: an
+        // import writes to the snips dir, never to a kit, so it runs
+        // beside a dub without racing it, and must not wipe that dub's
+        // own DUBBING… line on its way out.
+        val ownsBusy = busy == null
+        if (ownsBusy) busy = Copy.IMPORT_BUSY
+        try {
+            val landed = withContext(Dispatchers.IO) {
+                val snip = MediaDecode.decode(context, uri)
+                SnipStore.import(snip, context.filesDir, System.currentTimeMillis())
+            }
+            ShareInbox.consume()
+            if (open == null) {
+                val first = withContext(Dispatchers.IO) { shelf.list() }.firstOrNull()
+                if (first == null) {
+                    toast = Copy.IMPORT_NO_TAPE
+                    return@LaunchedEffect
+                }
+                open = first
+            }
+            toast = Copy.imported(landed.seconds, landed.truncated)
+            importCount++
+            padSheetSlot = null
+            takesBinOpen = false
+            screen = AppScreen.TAPE
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            ShareInbox.consume()
+            // Law 3: when it breaks, say exactly what happened - the
+            // decoder's own words when it has them, the house line when
+            // the file simply carried nothing to hear.
+            val reason = e.message
+            toast = if (e is IllegalArgumentException && reason != null) "IMPORT REFUSED: ${reason.uppercase().trimEnd('.')}." else Copy.IMPORT_NOT_AUDIO
+        } finally {
+            if (ownsBusy) busy = null
+        }
     }
     LaunchedEffect(toast) {
         if (toast != null) {
@@ -591,6 +645,7 @@ fun App(shelf: KitShelf) {
                             // a snip. Synchronous now — no IO re-read needed.
                             onCommit = { file, range -> lastCommit = TapeCommit(file, range) },
                             onInstantKit = ::instantKit,
+                            reloadRequest = importCount,
                         )
                         AppScreen.PROPERTIES -> PropertiesScreen(
                             currentScheme = schemeId,

@@ -55,6 +55,15 @@ shelf useful before capture (M1) exists.
   means a colour got captured outside the composition local.
 - **First FRESH TAPE dub time** on a real phone (the synth render is
   seconds on desktop JVM; status bar shows DUBBING… meanwhile).
+- **IMPORT (share sheet)**: share a WAV, an MP3 and a screen-recorded
+  MP4 into SnipSnap from another app. Each should land on TAPE with a
+  "TAPED FROM OUTSIDE" toast naming its length; a share while the app is
+  already open must land in the same window (`singleTask` +
+  `onNewIntent`), not a second one. Then run the decode-contract twins
+  (`reference/fixtures/decode/README.md`) through `MediaDecode.decode`
+  in an instrumentation test and assert `DecodeContract.verify` passes
+  for all six — that is F3.3's exit test, and the first proof the codec
+  loop reads the output format correctly on this phone.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad
