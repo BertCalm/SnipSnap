@@ -52,6 +52,7 @@ fun KitsScreen(
     onOpenInstrument: (KitShelf.InstrumentEntry) -> Unit,
     onFresh: (StarterKits.Starter) -> Unit,
     onArm: () -> Unit,
+    onArmInside: () -> Unit,
     onSnip: () -> Unit,
     onEject: () -> Unit,
 ) {
@@ -111,7 +112,13 @@ fun KitsScreen(
                 enabled = !busy,
                 onClick = { menuOpen = true },
             )
-            ArmControl(armed = armed, onArm = onArm, onSnip = onSnip, onEject = onEject)
+            ArmControl(
+                armed = armed,
+                onArm = onArm,
+                onArmInside = onArmInside,
+                onSnip = onSnip,
+                onEject = onEject,
+            )
         }
 
         if (menuOpen) {
@@ -239,19 +246,34 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
 }
 
 /**
- * The mic session's entry point — the shelf's third way a kit begins,
+ * The capture session's entry point — the shelf's third way a kit begins,
  * alongside FRESH TAPE (machine-invented) and IMPORT (brought in): a
- * capture. Idle: one primary-styled ARM TAPE button. Armed: EJECT in the
+ * capture. Idle: two primary-styled buttons, ARM TAPE (the room, through
+ * the mic) and ARM INSIDE (another app's audio, with the projection
+ * consent). Armed, whichever source: EJECT in the
  * bin-red pair ([BIN_RED_BORDER]/[BIN_RED_GLOW], `TakesBinScreen`'s own
  * convention — a session-ending action reads as "red" even in a scheme
  * with no red anywhere else) beside a small in-app SNIP; the notification
  * action is the out-of-app path, this is the in-app one.
  */
 @Composable
-private fun ArmControl(armed: Boolean, onArm: () -> Unit, onSnip: () -> Unit, onEject: () -> Unit) {
+private fun ArmControl(
+    armed: Boolean,
+    onArm: () -> Unit,
+    onArmInside: () -> Unit,
+    onSnip: () -> Unit,
+    onEject: () -> Unit,
+) {
     val scheme = LocalScheme.current
     if (!armed) {
-        PrimaryAction(label = "ARM TAPE", enabled = true, onClick = onArm)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.weight(1f)) {
+                PrimaryAction(label = "ARM TAPE", enabled = true, onClick = onArm)
+            }
+            Box(Modifier.weight(1f)) {
+                PrimaryAction(label = "ARM INSIDE", enabled = true, onClick = onArmInside)
+            }
+        }
         return
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
