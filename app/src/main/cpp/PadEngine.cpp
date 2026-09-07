@@ -199,7 +199,9 @@ void PadEngine::render(float* out, int32_t numFrames) {
         const float* f = s.frames.data();
         const int64_t last = v.end - 1;
         for (int32_t i = 0; i < numFrames; ++i) {
-            if (v.loopStart >= 0 && v.pos >= static_cast<double>(last)) {
+            // A fast voice over a short loop can cross the end more than
+            // once in one frame: wrap until the read is back inside.
+            while (v.loopStart >= 0 && v.pos >= static_cast<double>(last)) {
                 v.pos -= static_cast<double>(last - v.loopStart);
             }
             const int64_t i0 = static_cast<int64_t>(v.pos);

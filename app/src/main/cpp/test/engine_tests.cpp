@@ -325,6 +325,14 @@ TEST(pad_engine_a_looping_voice_sustains_and_wraps_to_its_loop_start) {
     e.pushCommand(looping(61, 0, 10, 9));
     callback(e, 20);
     CHECK_EQ(static_cast<int>(ended(e).size()), 1);
+    // A fast voice over a two-frame loop (frames 8..9, 4x speed) crosses the
+    // end more than once per frame and must keep sustaining, never end.
+    PadCommand fast = looping(62, 0, 10, 8);
+    fast.pitch = 4.0;
+    e.pushCommand(fast);
+    auto held = callback(e, 64);
+    CHECK(peak(held) > 0.0f);
+    CHECK_EQ(static_cast<int>(ended(e).size()), 0);
 }
 
 // ---- SurfaceEngine -------------------------------------------------------------

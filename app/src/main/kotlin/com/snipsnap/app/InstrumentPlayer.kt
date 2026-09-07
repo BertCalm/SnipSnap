@@ -75,9 +75,10 @@ class InstrumentPlayer(context: Context) {
     @Synchronized
     fun noteOn(note: Int, velocity: Float = 1f): Boolean {
         if (!open) return false
-        // A route change closed the stream: the next key reopens it (KEYS
-        // has no frame loop to do it sooner).
-        if (NativePads.needsRestart(handle)) running = NativePads.start(handle)
+        // No stream - a failed open, or a route change that closed it -
+        // and the next key tries again (KEYS has no frame loop to do it
+        // sooner); a refusal now is not a refusal for good.
+        if (!running || NativePads.needsRestart(handle)) running = NativePads.start(handle)
         if (!running) return false
         reap()
         val inst = instrument ?: return false
