@@ -702,6 +702,23 @@ seed); `--undo` restores byte-identical. On the phone it is the MUTATE
 card's DRIFT button beside ROULETTE — the card flips to MORPH so MIX is
 the knob it read, and every tap is a new deal.
 
+### `breed <kit-a> <kit-b>` — two kits' recipes crossed
+
+Pad by pad, kit A's pad meets kit B's pad on the same slot (or B's
+first pad of the same class) and their recipes cross: every synth
+macro and every rack macro is, by a seeded coin, A's, B's, or the
+average of both; a rack section only one parent has comes along half
+the time; the reverse flag is one parent's. A synth pad re-renders
+from the crossed patch through the crossed rack; a captured pad is A's
+own audio through the crossed rack; a pad with nothing to cross comes
+over as it is. **Classifier-audited**: a child must classify as its
+parent's own audio does — a kick stays a kick — or the coin is thrown
+again, up to six times, and a child that never passes is A's pad kept
+verbatim, counted in the output. The child is a new folder (`--out`,
+default beside A as `<A>_x_<B>`; `--name`), both parents untouched,
+A's key and tempo carried, every pad stamped `bredFrom` for `lineage`.
+Deterministic: same parents, same `--seed`, same kit.
+
 ### `arrange <kit-dir>` — songs, not loops
 
 The Arranger's structure grammar lays the kit's **own** variations into

@@ -1330,7 +1330,7 @@ over the spectral door, each with a real exit test.
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
 | XX1 | ✓ done: DRIFT TOWARD THE CRATE — `Mutate.drift`: the guided roulette finds the neighbour, MORPH blends AMOUNT of the way toward it, the morph's recipe carrying the spin and a `drift` flag; CLI `drift <kit> <pad> [--amount] [--seed] [--root] [--undo]`; the MUTATE card's DRIFT button beside ROULETTE (the card flips to MORPH so MIX is the knob it read), a drifted pad reading as DRIFT | CORE + APP | S | drift's bytes equal roulette then morph by hand; same seed same bytes; the sheet's one tap records the MIX amount and reads back as DRIFT; the verb round-trips through the bin and refuses an empty crate |
-| XX2 | BREEDING — two kits' recipes crossed (macros swapped and averaged), classifier-audited | CORE | M | every child pad keeps its parent class; same seed same kit |
+| XX2 | ✓ done: BREEDING — `Breed` (`:shell`): pad by pad, A's pad meets B's on the same slot (or B's first of the class); every synth macro (engines agreeing) and rack macro is A's, B's or the average by a seeded coin, a one-sided rack section comes along half the time; synth pads re-render, captured pads run through the crossed rack, the rest come over verbatim; the audit re-throws the coin up to six times until the child classifies as its parent's audio does, else keeps A's pad and says so; a new folder, parents untouched, `bredFrom` stamped; CLI `breed <a> <b> [--out] [--name] [--seed]` | CORE | M | factory × lucky-dip: every child pad classifies as its mother's does, crossed pads differ from her, same seed same bytes, another seed another kit; a captured kit against a rackless kit is all kept and both parents stay byte-identical; a taken destination and an unsafe name refused |
 | XX3 | DE-SAMPLE — the nearest synth patch to a captured hit, from a pre-rendered macro grid and `Similar`; its own spec | CORE + APP | L | a rendered THUMP kick returns its own patch; a capture returns a patch within a distance bound |
 
 ---
@@ -1590,7 +1590,8 @@ CORE+APP wave WW: ✓ all landed (2026-09-07) — in key. WW1 landed:
 
 CORE+APP wave XX (in progress, 2026-09-07) — the crate as an
   instrument. XX1 landed: DRIFT TOWARD THE CRATE, roulette then morph
-  as one verb and one button. Next: BREEDING.
+  as one verb and one button. XX2 landed: BREEDING, two kits' recipes
+  crossed by a seeded coin into an audited child kit. Next: DE-SAMPLE.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

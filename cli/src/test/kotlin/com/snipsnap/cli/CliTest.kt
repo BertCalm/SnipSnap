@@ -1335,6 +1335,34 @@ class CliTest {
     }
 
     @Test
+    fun `breed crosses two starter kits into a child that keeps every class`() {
+        val a = File(temp, "BreedA")
+        val b = File(temp, "BreedB")
+        com.snipsnap.shell.StarterKits.byId("factory")!!.render("BreedA", a, 0)
+        com.snipsnap.shell.StarterKits.byId("lucky-dip")!!.render("BreedB", b, 5)
+        val out = File(temp, "BreedChild")
+
+        val (code, stdout, stderr) = cli("breed", a.path, b.path, "--out", out.path, "--name", "Child", "--seed", "2")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "bred 'Child' from BreedA x BreedB (seed 2)")
+        assertContains(stdout, "pads crossed")
+        val child = KitStore.load(out)
+        val mother = KitStore.load(a)
+        assertEquals(mother.pads.size, child.pads.size)
+        for (pad in child.pads) {
+            val parent = mother.pad(pad.slot)!!
+            val pc = com.snipsnap.audio.Classifier.classify(com.snipsnap.audio.WavReader.read(File(a, parent.sampleFile))).drumClass
+            val cc = com.snipsnap.audio.Classifier.classify(com.snipsnap.audio.WavReader.read(File(out, pad.sampleFile))).drumClass
+            assertEquals(pc, cc, "slot ${pad.slot} keeps its class")
+        }
+
+        val (dupCode, _, dupErr) = cli("breed", a.path, b.path, "--out", out.path, "--name", "Child")
+        assertTrue(dupCode != 0 && "already a kit" in dupErr, dupErr)
+        val (badCode, _, badErr) = cli("breed", a.path, File(temp, "nowhere").path)
+        assertTrue(badCode != 0 && "not a kit folder" in badErr, badErr)
+    }
+
+    @Test
     fun `retune talks one pad into a key from the terminal, refuses a drum, and undoes`() {
         val wav = writeBreak(File(temp, "rt.wav"))
         val out = File(temp, "rt-out")

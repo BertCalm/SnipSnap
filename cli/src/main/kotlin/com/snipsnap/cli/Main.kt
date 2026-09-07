@@ -117,6 +117,8 @@ object Cli {
         |                        toward forever (--tail s, --knee ms, --undo)
         |  drift <kit-dir> <pad> one knob: the crate deals the neighbour, morph
         |                        blends toward it (--amount, --seed, --root)
+        |  breed <kit-a> <kit-b> two kits' recipes crossed into a child kit,
+        |                        classifier-audited (--out, --name, --seed)
         |  mutate <kit-dir> <pad> --with <src>[,<src>..]
         |                        one hit from many parents: transient-aligned
         |                        stack (with a polarity check), --splice (the
@@ -341,6 +343,7 @@ object Cli {
                 "wobble" -> WobbleCommand.run(args.drop(1), out)
                 "eternal" -> EternalCommand.run(args.drop(1), out)
                 "drift" -> DriftCommand.run(args.drop(1), out)
+                "breed" -> BreedCommand.run(args.drop(1), out)
                 "robin" -> RobinCommand.run(args.drop(1), out)
                 "mutate" -> MutateCommand.run(args.drop(1), out)
                 "shape" -> ShapeCommand.run(args.drop(1), out)
