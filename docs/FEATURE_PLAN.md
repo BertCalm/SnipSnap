@@ -49,7 +49,7 @@ groove: kick→A01, hats choking, 92 BPM detected).
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
 | F2.1 | ✓ done: CHOP screen — `ChopScreen` over `ChopReviewModel` (tap-to-cycle chips, NOT SURE, placement preview, SEND TO GRID, the MELODIC toggle, the teach path). Not drawn: the defrag-grid progress gag — polish, bench | APP | M | one captured bar → playable, sensibly-laid-out kit in under a minute |
-| F2.2 | The one tap — INSTANT KIT action on a fresh capture: chop with defaults straight into review. **Open:** today a snip goes TAPE → CHOP and the review is a screen of its own; no single action runs the defaults and lands on the grid | APP | S | capture 8 s of a break, tap once, play the kit |
+| F2.2 | ✓ done: The one tap — INSTANT KIT beside COMMIT on TAPE: the selection (or the whole deck) chopped with the defaults and landed on the grid without the review (`InstantKit`, `:shell`: `ChopReviewModel.chop` by hits → `sendToGrid` → `fromChop`, exactly CHOP's own untouched result; a capture with no hit refused in words); the kit opens on KIT, CHOP can still open it later to argue with the chips | APP | S | capture 8 s of a break, tap once, play the kit — a bar of break lands the kick on A01 with the hats choking, pinned by `InstantKitTest` |
 | F2.3 | ✓ done: calibration harness — a labeled-corpus test: WAVs + expected classes under `reference/calibration/`, a report of confusion + per-threshold sensitivity; tune `Classifier` against it | CORE | S | thresholds justified by real captures, not synthetic renders |
 | F2.4 | Calibration corpus — a dozen real captured hits (phone captures, not renders), labeled by ear | USER | S | F2.3 has something true to chew on |
 
@@ -1553,7 +1553,7 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ M3 (F2.1) · ✓ F5.3 key picker · ✓ W2.3 MAKE INSTRUMENT · ✓ W5.3 GHOSTS
     · ✓ X1.3 MELODIC · ✓ X2.3 TAKES + BIN · ✓ KEYS (the phone plays the
     instruments it makes) · ✓ W4.3 EVIL TWINS button · ✓ X4.4 consent row
-    · open: F2.2 one-tap
+    · ✓ F2.2 INSTANT KIT
   ✓ M4 (F1.4, SoundPool not Oboe)
   ✓ M5 (F1.5 + F4.3) · ✓ Y3.3 SESSION export · open: F6.3 share flow, X3.3
     share/backup action

@@ -113,6 +113,7 @@ fun TapeScreen(
     lastCommitSource: File?,
     onToast: (String) -> Unit,
     onCommit: (File, IntRange) -> Unit,
+    onInstantKit: (File, IntRange) -> Unit,
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
@@ -150,7 +151,7 @@ fun TapeScreen(
         return
     }
 
-    TapeDeckContent(entry, tapeData, onToast, onCommit, onIdleReload = { reloadToken++ })
+    TapeDeckContent(entry, tapeData, onToast, onCommit, onInstantKit, onIdleReload = { reloadToken++ })
 }
 
 @Composable
@@ -222,6 +223,7 @@ private fun TapeDeckContent(
     tapeData: LoadedTape,
     onToast: (String) -> Unit,
     onCommit: (File, IntRange) -> Unit,
+    onInstantKit: (File, IntRange) -> Unit,
     onIdleReload: () -> Unit,
 ) {
     val scheme = LocalScheme.current
@@ -346,25 +348,41 @@ private fun TapeDeckContent(
             DeckButton(if (model.playing) "■ STOP" else "▶ PLAY", Modifier.weight(1f)) { onPlayStop() }
             WindButton("▶▶", Modifier.weight(1f), 1, model, ::stopVoice)
         }
-        DeckButton(
-            "COMMIT",
-            Modifier
-                .fillMaxWidth()
-                .height(Layout.PRIMARY_ACTION_H.dp),
-            active = model.hasSelection,
-        ) {
-            val range = model.commitSelection()
-            if (range != null) {
-                // tapeData.sourceFile, not a re-derived "open kit's longest
-                // sample" — TapeCommit's own contract is that `range`'s
-                // frames only mean something against the exact file TAPE
-                // was scrubbing when COMMIT fired, and under the new
-                // source priority that's frequently a snip, not a pad WAV.
-                onCommit(tapeData.sourceFile, range)
-                onToast(Copy.rotating(Copy.COMMIT_LINES, commitIndex))
-                commitIndex++
-            } else {
-                onToast(Copy.COMMIT_NEEDS_SELECTION)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            DeckButton(
+                "COMMIT",
+                Modifier
+                    .weight(1f)
+                    .height(Layout.PRIMARY_ACTION_H.dp),
+                active = model.hasSelection,
+            ) {
+                val range = model.commitSelection()
+                if (range != null) {
+                    // tapeData.sourceFile, not a re-derived "open kit's longest
+                    // sample" — TapeCommit's own contract is that `range`'s
+                    // frames only mean something against the exact file TAPE
+                    // was scrubbing when COMMIT fired, and under the new
+                    // source priority that's frequently a snip, not a pad WAV.
+                    onCommit(tapeData.sourceFile, range)
+                    onToast(Copy.rotating(Copy.COMMIT_LINES, commitIndex))
+                    commitIndex++
+                } else {
+                    onToast(Copy.COMMIT_NEEDS_SELECTION)
+                }
+            }
+            // INSTANT KIT (F2.2): the one tap. The selection when there is
+            // one, else the whole deck, chopped with the defaults and on the
+            // grid without the review - CHOP's own result, nothing touched.
+            DeckButton(
+                "INSTANT KIT ▸",
+                Modifier
+                    .weight(1f)
+                    .height(Layout.PRIMARY_ACTION_H.dp),
+                active = true,
+            ) {
+                stopVoice()
+                val range = if (model.hasSelection) model.commitSelection() else null
+                onInstantKit(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
             }
         }
     }

@@ -336,6 +336,31 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * INSTANT KIT (F2.2): the one tap on TAPE — the selection (or the whole
+     * deck) chopped with the defaults and landed on the grid without the
+     * review, the same DUBBING… shape as a fresh tape. CHOP can still open
+     * the result later to argue with the chips.
+     */
+    fun instantKit(file: File, range: IntRange) {
+        if (busy != null) return
+        busy = "CHOPPING…"
+        scope.launch {
+            val (entry, result) = try {
+                withContext(Dispatchers.IO) { shelf.instantKit(file, range) }
+            } catch (e: Exception) {
+                busy = null
+                toast = "INSTANT KIT FAILED: ${e.message ?: e.javaClass.simpleName}"
+                return@launch
+            }
+            kits = withContext(Dispatchers.IO) { shelf.list() }
+            busy = null
+            toast = Copy.instantKit(result.sliceCount, result.chokeSet)
+            open = entry
+            screen = AppScreen.KIT
+        }
+    }
+
     /** IN KEY: every tonal pad into the kit's key by its tune fields; the toast counts what moved. */
     fun inKey() {
         val source = open ?: return
@@ -493,6 +518,7 @@ fun App(shelf: KitShelf) {
                             // file (a pad WAV) for a commit actually cut from
                             // a snip. Synchronous now — no IO re-read needed.
                             onCommit = { file, range -> lastCommit = TapeCommit(file, range) },
+                            onInstantKit = ::instantKit,
                         )
                         AppScreen.PROPERTIES -> PropertiesScreen(
                             currentScheme = schemeId,
