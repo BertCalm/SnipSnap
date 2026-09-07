@@ -325,6 +325,7 @@ fun App(shelf: KitShelf) {
                                     slot = fieldSlot,
                                     onBack = { grainFieldSlot = null },
                                     onToast = { toast = it },
+                                    onRequestArm = ::requestArm,
                                 )
                                 sheetSlot != null && sheetEntry != null -> PadSheetScreen(
                                     entry = sheetEntry,
