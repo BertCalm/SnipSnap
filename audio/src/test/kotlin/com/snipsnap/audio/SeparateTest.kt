@@ -269,4 +269,34 @@ class SeparateTest {
             assertEquals(a.samples[f * 2], a.samples[f * 2 + 1], 1e-6f, "identical channels smear identically")
         }
     }
+
+    // ---- the ghost --------------------------------------------------------
+
+    @Test
+    fun `ghost keeps the hiss and loses both the tone and the clicks`() {
+        val (mix, clickAt) = toneClicksHiss()
+        assertTrue(Separate.ghost(mix, 0f) === mix, "amount 0 hands back the very same object")
+        val ghost = Separate.ghost(mix, 1f)
+        assertEquals(mix.frameCount, ghost.frameCount)
+
+        // The tone is gone: its line is far down relative to the hiss around it.
+        val toneIn = probe(mix.samples, 400f)
+        val toneOut = probe(ghost.samples, 400f)
+        assertTrue(toneOut < 0.1f * toneIn, "the held tone is not a ghost: $toneIn -> $toneOut")
+
+        // The clicks are gone: they stop standing out of the wash.
+        val before = clickProminence(mix.samples, clickAt)
+        val after = clickProminence(ghost.samples, clickAt)
+        assertTrue(after - 1.0 < 0.25 * (before - 1.0), "the clicks are not a ghost: $before -> $after")
+
+        // The hiss is what's left, and it's been brought up to be heard.
+        fun hiBand(s: FloatArray): Float {
+            val seg = s.copyOfRange((0.5f * rate).toInt(), (0.7f * rate).toInt())
+            return CaptureDoctor.goertzel(seg, seg.size, 9000f, rate)
+        }
+        assertTrue(hiBand(ghost.samples) > hiBand(mix.samples), "the breath is kept, and heard")
+        var peak = 0f
+        for (v in ghost.samples) peak = maxOf(peak, Math.abs(v))
+        assertTrue(peak <= mix.peak() * 1.001f, "never above the source's own peak")
+    }
 }

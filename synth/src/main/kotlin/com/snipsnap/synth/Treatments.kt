@@ -26,6 +26,12 @@ object Treatments {
     internal val EXTRA: List<Pair<String, FxChain>> = listOf(
         // The attack gone, the wash kept: a hit played as its own tail.
         "smeared" to FxChain(smear = mapOf("AMOUNT" to 0.85f)),
+        // The tone and the attack gone, the breath kept.
+        "ghosted" to FxChain(ghost = mapOf("AMOUNT" to 0.9f)),
+        // The capstan lets go: pitch and level fall away over the last stretch.
+        "stopped" to FxChain(motion = mapOf("STOP" to 0.6f)),
+        // The reel spins up into the sound.
+        "started" to FxChain(motion = mapOf("START" to 0.5f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA
@@ -46,6 +52,8 @@ object Treatments {
             params?.mapValues { (_, v) -> (v * amount).coerceIn(0f, 1f) }
         return base.copy(
             smear = scale(base.smear),
+            ghost = scale(base.ghost),
+            motion = scale(base.motion),
             eq = scale(base.eq),
             squash = scale(base.squash),
             crunch = scale(base.crunch),

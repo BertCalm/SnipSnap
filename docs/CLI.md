@@ -335,15 +335,18 @@ would have). `pack` ships each groove-carrying kit's pocket under
 ### `treat <kit-dir> <pad> <character>` — the FX rack pointed at one pad
 
 One of the rack's named characters over one pad, bin-backed: `reversed`,
-`crushed`, `slapback`, `washed`, `punched` (bank B's five) and `smeared`
+`crushed`, `slapback`, `washed`, `punched` (bank B's five), `smeared`
 — the Séance's trick, the attack taken out and the wash kept (`Separate.
 smear` on the STN transient mask, peak-matched so the tail is *heard*,
-not merely left). `--amount 0..1` scales the character's macros; the
+not merely left) — `ghosted` (the tone and the attack taken out too, the
+breath alone), `stopped` (the tape stop: pitch and level fall away over
+the last stretch) and `started` (the reel spinning up into the sound). `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the
-phone the same characters sit on the PAD SHEET's TREATMENT card, second
-row (SMEAR · SLAP · WASH · PUNCH), where they change every file the pad
-references, velocity layers included.
+phone the same characters sit on the PAD SHEET's TREATMENT card, rows
+two and three (SMEAR · SLAP · WASH · PUNCH, GHOST · STOP · START · FLIP),
+where they change every file the pad references, velocity layers
+included.
 
 ### `era <kit-dir> <machine>` — the Time Machine
 
@@ -445,6 +448,13 @@ have no such fields and honestly ignore it. Bench row: humanize 0.5
 on the Live III — audible variation at a sane amount.
 
 ### `mutate <kit-dir> <pad> --with <src>[,<src>…]` — one hit from many parents
+
+**`--room [--amount 0..1]`** is the fifth move, ROOM OF ITSELF: the
+pad played *inside* the parent — the parent's tail is the impulse
+response the pad is convolved with (kick in the snare's room), the
+amount the dry/wet mix, the wet brought to the pad's own peak. On the
+phone it is the MUTATE card's fifth chip with a WET knob, and ROULETTE
+can deal the room.
 
 **`--morph [--amount 0..1]`** is the fourth move, the Séance's:
 both parents' magnitude spectrograms, transient-aligned, interpolated

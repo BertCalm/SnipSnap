@@ -12,7 +12,8 @@ import java.io.PrintStream
  * design by recombination: one hit from many parents. Default is the
  * transient-aligned **stack**; `--splice [--at ms]` mashes the pad's
  * attack onto the parent's body; `--split [--hz N]` takes the pad's
- * lows and the parent's highs. Parents are pad refs (`A03`,
+ * lows and the parent's highs; `--room [--amount]` plays the pad inside
+ * the parent's tail. Parents are pad refs (`A03`,
  * `other/kit:B02`) or `.wav` files. `--undo` restores the single
  * original byte-identical.
  */
@@ -22,7 +23,7 @@ object MutateCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--with", "--at", "--hz", "--seed", "--root", "--amount"),
-            boolean = setOf("--splice", "--split", "--morph", "--undo", "--roulette", "--wild"),
+            boolean = setOf("--splice", "--split", "--morph", "--room", "--undo", "--roulette", "--wild"),
         )
         val dirArg = opts.positional.getOrNull(0)
             ?: throw CliError(
@@ -43,17 +44,18 @@ object MutateCommand {
             return 0
         }
 
-        if (listOf("--splice", "--split", "--morph").count { opts.has(it) } > 1) {
-            throw CliError("--splice, --split and --morph are different moves - pick one")
+        if (listOf("--splice", "--split", "--morph", "--room").count { opts.has(it) } > 1) {
+            throw CliError("--splice, --split, --morph and --room are different moves - pick one")
         }
         val mode = when {
             opts.has("--splice") -> Mutate.Mode.SPLICE
             opts.has("--split") -> Mutate.Mode.SPLIT
             opts.has("--morph") -> Mutate.Mode.MORPH
+            opts.has("--room") -> Mutate.Mode.ROOM
             else -> Mutate.Mode.STACK
         }
-        if (opts["--amount"] != null && mode != Mutate.Mode.MORPH) {
-            throw CliError("--amount rides on --morph - add it")
+        if (opts["--amount"] != null && mode != Mutate.Mode.MORPH && mode != Mutate.Mode.ROOM) {
+            throw CliError("--amount rides on --morph or --room - add one")
         }
         val morphAmount = opts["--amount"]?.let {
             it.toFloatOrNull()?.takeIf { a -> a in 0f..1f } ?: throw CliError("--amount wants 0..1, got '$it'")
@@ -94,6 +96,7 @@ object MutateCommand {
             spliceAtMs = opts.int("--at") ?: Mutate.DEFAULT_SPLICE_MS,
             crossoverHz = opts.int("--hz")?.toFloat() ?: Mutate.DEFAULT_CROSSOVER_HZ,
             morphAmount = morphAmount,
+            roomMix = morphAmount,
             extraRecipe = extraRecipe,
         )
         model.save()
@@ -103,6 +106,7 @@ object MutateCommand {
             Mutate.Mode.SPLICE -> "spliced into"
             Mutate.Mode.SPLIT -> "split against"
             Mutate.Mode.MORPH -> "morphed %.0f%% toward".format(morphAmount * 100)
+            Mutate.Mode.ROOM -> "placed %.0f%% into the room of".format(morphAmount * 100)
         }
         out.println("pad $padArg $what ${sources.joinToString(", ") { it.label }} - one hit, ${sources.size + 1} parents")
         outcome.flipped.forEach { out.println("  polarity: flipped '$it' - it was cancelling the pad") }

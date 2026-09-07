@@ -59,15 +59,16 @@ class PadSheetTest {
     // ---- row two: the characters ----
 
     @Test
-    fun `row two draws four characters and both rows read in order`() {
+    fun `rows two and three draw four characters each and all rows read in order`() {
         assertEquals(listOf("SMEAR", "SLAP", "WASH", "PUNCH"), PadSheet.CHARACTER_SEGMENTS)
-        assertEquals(listOf(PadSheet.SEGMENTS, PadSheet.CHARACTER_SEGMENTS), PadSheet.ROWS)
-        assertTrue(PadSheet.SEGMENTS.none { it in PadSheet.CHARACTER_SEGMENTS }, "no word on both rows")
+        assertEquals(listOf("GHOST", "STOP", "START", "FLIP"), PadSheet.MORE_SEGMENTS)
+        assertEquals(listOf(PadSheet.SEGMENTS, PadSheet.CHARACTER_SEGMENTS, PadSheet.MORE_SEGMENTS), PadSheet.ROWS)
+        assertEquals(PadSheet.ALL_SEGMENTS.size, PadSheet.ALL_SEGMENTS.toSet().size, "no word on two rows")
     }
 
     @Test
     fun `every character segment names a real rack character`() {
-        for (segment in PadSheet.CHARACTER_SEGMENTS) {
+        for (segment in PadSheet.CHARACTER_SEGMENTS + PadSheet.MORE_SEGMENTS) {
             val t = PadSheet.treatmentFor(segment)
             assertTrue(t is PadSheet.Treatment.Character, "$segment is a character")
             assertTrue(t!!.name in Treatments.names, "$segment maps to '${t.name}', which Treatments does not know")
@@ -85,8 +86,8 @@ class PadSheetTest {
     }
 
     @Test
-    fun `the phone ruling on row two - reversed and crushed light no segment`() {
-        assertNull(PadSheet.segmentForCharacter("reversed"))
+    fun `the phone ruling on the character rows - crushed lights no segment, reversed lights FLIP`() {
+        assertEquals("FLIP", PadSheet.segmentForCharacter("reversed"))
         assertNull(PadSheet.segmentForCharacter("crushed"))
     }
 

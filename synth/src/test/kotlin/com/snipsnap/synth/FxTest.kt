@@ -269,4 +269,72 @@ class FxTest {
         for (v in smeared.samples) outPeak = maxOf(outPeak, abs(v))
         assertTrue(outPeak > 0.5f * inPeak && outPeak <= inPeak * 1.001f, "peak matched, never above: $inPeak -> $outPeak")
     }
+
+    // ---------- GHOST + MOTION ----------
+
+    /** Zero-crossing rate over a window: a cheap pitch reading for a tone. */
+    private fun crossings(s: Snip, fromSec: Float, toSec: Float): Int {
+        var n = 0
+        val from = (fromSec * s.sampleRate).toInt().coerceIn(1, s.frameCount - 1)
+        val to = (toSec * s.sampleRate).toInt().coerceIn(from, s.frameCount)
+        for (f in from until to) {
+            val a = s.samples[(f - 1) * s.channels]
+            val b = s.samples[f * s.channels]
+            if ((a < 0f) != (b < 0f)) n++
+        }
+        return n
+    }
+
+    private fun peakIn(s: Snip, fromSec: Float, toSec: Float): Float {
+        var p = 0f
+        val from = (fromSec * s.sampleRate).toInt().coerceIn(0, s.frameCount)
+        val to = (toSec * s.sampleRate).toInt().coerceIn(from, s.frameCount)
+        for (i in from * s.channels until to * s.channels) p = maxOf(p, abs(s.samples[i]))
+        return p
+    }
+
+    private val tone = Snip(FloatArray(44_100) { i -> (0.5 * Math.sin(2.0 * Math.PI * 440.0 * i / 44_100)).toFloat() }, 1, 44_100)
+
+    @Test
+    fun `GHOST and MOTION serialize as sections and an absent one keeps old recipes byte-stable`() {
+        val chain = FxChain(ghost = mapOf("AMOUNT" to 0.5f), motion = mapOf("STOP" to 0.3f, "START" to 0.1f))
+        assertEquals(chain, FxChain.fromJsonText(chain.toJsonText()))
+        val text = chain.toJsonText()
+        assertTrue(text.indexOf("\"ghost\"") < text.indexOf("\"motion\""), "ghost before motion in the file, like the rack")
+        assertTrue(!FxChain(eq = mapOf("BASS" to 0.6f)).toJsonText().contains("ghost"))
+        assertFailsWith<IllegalArgumentException> { FxChain(motion = mapOf("SPEED" to 0.5f)) }
+        assertTrue(Motion.process(tone, mapOf("STOP" to 0f, "START" to 0f)) === tone)
+        assertTrue(Ghost.process(tone, mapOf("AMOUNT" to 0f)) === tone)
+    }
+
+    @Test
+    fun `STOP lets the pitch and the level fall away to nothing, keeping the length`() {
+        val stopped = Motion.process(tone, mapOf("STOP" to 0.5f)) // a one-second glide over a one-second tone
+        assertEquals(tone.frameCount, stopped.frameCount)
+        val early = crossings(stopped, 0.02f, 0.12f)
+        val late = crossings(stopped, 0.80f, 0.90f)
+        assertTrue(late < early / 2, "the pitch has fallen: $early crossings -> $late")
+        assertTrue(peakIn(stopped, 0.95f, 1f) < 0.15f, "stopped tape is silent, not a held sample")
+        assertTrue(peakIn(stopped, 0f, 0.05f) > 0.45f, "the start is untouched")
+    }
+
+    @Test
+    fun `START spins up into the sound - pitch and level climb, the sound arrives late`() {
+        val started = Motion.process(tone, mapOf("START" to 1f)) // a 1.5 s spin-up
+        assertTrue(started.frameCount > tone.frameCount, "the spin-up delays the rest")
+        val early = crossings(started, 0.05f, 0.15f)
+        val late = crossings(started, 1.6f, 1.7f)
+        assertTrue(early < late / 2, "the pitch climbs: $early crossings -> $late")
+        assertTrue(peakIn(started, 0f, 0.05f) < peakIn(started, 1.6f, 1.7f) * 0.5f, "and so does the level")
+    }
+
+    @Test
+    fun `a ghosted kick is no longer a kick, and stays finite and peak-bounded`() {
+        val ghosted = Ghost.process(kick, mapOf("AMOUNT" to 1f))
+        assertEquals(kick.frameCount, ghosted.frameCount)
+        var peak = 0f
+        for (v in ghosted.samples) { assertTrue(v.isFinite()); peak = maxOf(peak, abs(v)) }
+        assertTrue(peak <= kick.peak() * 1.001f)
+        assertTrue(Classifier.classify(ghosted).drumClass != DrumClass.KICK, "what's left of a kick is not a kick")
+    }
 }

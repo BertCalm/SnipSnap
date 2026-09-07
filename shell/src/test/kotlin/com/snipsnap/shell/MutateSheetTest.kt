@@ -40,7 +40,8 @@ class MutateSheetTest {
 
     @Test
     fun `the four moves, in the verb's own order, and STACK alone has no knob`() {
-        assertEquals(listOf("STACK", "SPLICE", "SPLIT", "MORPH"), MutateSheet.MODES)
+        assertEquals(listOf("STACK", "SPLICE", "SPLIT", "MORPH", "ROOM"), MutateSheet.MODES)
+        assertEquals("WET", MutateSheet.knobFor(Mutate.Mode.ROOM)!!.label)
         assertNull(MutateSheet.knobFor(Mutate.Mode.STACK))
         assertEquals("AT", MutateSheet.knobFor(Mutate.Mode.SPLICE)!!.label)
         assertEquals("HZ", MutateSheet.knobFor(Mutate.Mode.SPLIT)!!.label)
@@ -50,7 +51,7 @@ class MutateSheetTest {
 
     @Test
     fun `knobs open at the verb's defaults, round-trip, and read in plain units`() {
-        for (mode in listOf(Mutate.Mode.SPLICE, Mutate.Mode.SPLIT, Mutate.Mode.MORPH)) {
+        for (mode in listOf(Mutate.Mode.SPLICE, Mutate.Mode.SPLIT, Mutate.Mode.MORPH, Mutate.Mode.ROOM)) {
             val k = MutateSheet.knobFor(mode)!!
             val f = MutateSheet.fraction(k, k.default)
             assertEquals(k.default, MutateSheet.value(k, f), 1e-2f, "${k.label} round-trips its default")
