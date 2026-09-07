@@ -23,12 +23,20 @@ class PadEngine(preferredSampleRate: Int) {
     private var handle: Long = NativePads.create(preferredSampleRate)
     private val open get() = handle != 0L
 
+    /** True between a successful [start] and [close]; a hit with no stream running is refused. */
+    @Volatile
+    var running: Boolean = false
+        private set
+
     private var sampleIndex: Map<String, Int> = emptyMap()
     private var framesOf: Map<String, Long> = emptyMap()
     private val hits = HashMap<Int, Int>()
 
     @Synchronized
-    fun start(): Boolean = open && NativePads.start(handle)
+    fun start(): Boolean {
+        running = open && NativePads.start(handle)
+        return running
+    }
 
     @Synchronized
     fun needsRestart(): Boolean = open && NativePads.needsRestart(handle)
@@ -78,13 +86,14 @@ class PadEngine(preferredSampleRate: Int) {
     fun frames(sampleFile: String): Long? = framesOf[sampleFile]
 
     /**
-     * Play [pad] at [velocity] as voice [voiceId]. False when the pad has
-     * nothing loaded to play (or the command ring was full), so the caller
-     * can tell its allocator the voice never sounded.
+     * Play [pad] at [velocity] as voice [voiceId]. False when no stream is
+     * running, the pad has nothing loaded to play, or the command ring was
+     * full - so the caller can tell its allocator the voice never sounded
+     * and nothing counts a voice that no callback will ever end.
      */
     @Synchronized
     fun hit(pad: KitPad, velocity: Float, voiceId: Int): Boolean {
-        if (!open) return false
+        if (!open || !running) return false
         val n = hits[pad.slot] ?: 0
         hits[pad.slot] = n + 1
         val hit = PadHit.resolve(pad, velocity, n) { framesOf[it] } ?: return false
@@ -114,6 +123,7 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun close() {
         if (!open) return
+        running = false
         NativePads.stop(handle)
         NativePads.destroy(handle)
         handle = 0L
