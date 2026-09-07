@@ -31,7 +31,7 @@ already done and hardware-verified for drums.
 | # | Work | Size | Exit test |
 |---|---|---|---|
 | F1.1 | ✓ done: M0 walking skeleton — `TapeTheme` + the ten-tab `MenuRow`, `KitsScreen` (the shelf over `KitShelf`/`KitStore`), `KitScreen` (the 4×4 grid over `PadPlayer`), `PropertiesScreen` (the live scheme picker) | M | browse kits, tap pads, hear WAVs, flip schemes |
-| F1.2 | M1 capture — **in part**: the always-listening mic ring is real (`MicSessionService`, a foreground microphone session with ARM / SNIP / EJECT, `BubbleOverlay`, the TAPE screen's retroactive snip). **Still missing:** MediaProjection (another app's audio from inside it), silence detection for opt-out apps, the quick-settings tile — the manifest carries no tile and no projection | L | snip YouTube from inside YouTube; snip the room (✓); share a video in (F3.2) |
+| F1.2 | ✓ done: M1 capture — the always-listening ring (`MicSessionService`, a foreground session with ARM / SNIP / EJECT, `BubbleOverlay`, the TAPE screen's retroactive snip) now reads either source: ARM TAPE (the mic) or ARM INSIDE (another app's audio via MediaProjection consent + `AudioPlaybackCapture`, stereo folded to the mono ring). Dead-air detection (`SilenceWatch`, :audio): three seconds of digital zeros while the phone reports music playing means the app on top opts out, and the TAPE JAM box says so. The platform ending a projection (lock screen, the stop chip) is a routine end with its own toast. The quick-settings tile (`SnipTileService`): SNIP while armed, opens the app to arm otherwise — arming needs a visible Activity (background FGS starts and the consent dialog both), so the tile hands over rather than pretending. Bench: the emulator can't do playback capture; a real phone proves the INSIDE path | L | snip YouTube from inside YouTube (bench); snip the room (✓); share a video in (F3.2) |
 | F1.3 | ✓ done: M2 tape deck — `TapeScreen` over `TapeDeckModel` and `PeaksPyramid`, `TapeVoice` for audition, a snip handed to CHOP | M | a YouTube snip becomes a clean one-shot, cut on the hit |
 | F1.4 | ✓ done: M4 play mode — `PlayScreen` over `VoiceAllocator`, `PadPlayer` on SoundPool (Oboe deliberately not wired — `PadPlayer`'s own note: effort on a component the pads don't need yet). The exit test is a bench row: USER | M | finger drumming feels tight on a mid-range phone (bench) |
 | F1.5 | ✓ done: M5 export wizard — `ExportScreen` over `ExportWizardModel`, the format cycler (kit, expansion, MPC SESSION (`.xpj`)), SAF create-document through `MainActivity`; "the Live III plays it" stays a bench row | M | the card writes (✓); the Live III plays it (bench) |
@@ -67,7 +67,7 @@ on desktop today. The risk table's opt-out mitigation depends on this.
 | F3.1 | Intent filters + receive activity → trim screen. **Open:** the manifest carries only MAIN; nothing shared into the app lands anywhere | APP | S | shared audio file lands in the tape deck |
 | F3.2 | Video demux — `MediaExtractor`/Media3 → float PCM → `Snip` → `Resampler`. **Open:** no decoder in the app yet; F3.3's fixtures wait for it | APP | M | shared MP4's audio lands in the tape deck |
 | F3.3 | ✓ done: demux conformance fixtures — tiny known-content WAV fixtures + a contract test the app's decode output must pass (rate, channels, sample accuracy) | CORE | S | app-side decode verified against ground truth without an SDK |
-| F3.4 | Onboarding copy for opt-out apps (silence detection → screen-recorder path) — copy exists in `Copy`; wire it. **Open:** waits on F1.2's silence detection | APP | S | blocked capture shows the honest fallback, in voice |
+| F3.4 | ✓ done: the TAPE JAM box (`Copy.CAPTURE_BLOCKED`) now fires from F1.2's silence detection, once per verdict, as well as from a denied RECORD_AUDIO. The screen-recorder path it points at still needs F3.2's demux to land the recording | APP | S | blocked capture shows the honest fallback, in voice |
 
 ## F4 — Synth starter kits
 
@@ -1547,8 +1547,9 @@ CORE wave 6: ✓ all landed (2026-08-25) — multi-sequence projects
 APP (reconciled against the app 2026-09-07 — the milestones landed
   without their rows being ticked; this is the honest remainder):
   ✓ M0 (F1.1) · ✓ F4.2 new-kit menu · open: W3.3 open-.xtd
-  M1 (F1.2) half: the mic ring is real; open: MediaProjection, silence
-    detection, the QS tile · open: F3.1/F3.2/F3.4 import
+  ✓ M1 (F1.2): the mic ring, ARM INSIDE over MediaProjection, dead-air
+    detection, the QS tile · ✓ F3.4 TAPE JAM on a blocked source
+    · open: F3.1/F3.2 import
   ✓ M2 (F1.3)
   ✓ M3 (F2.1) · ✓ F5.3 key picker · ✓ W2.3 MAKE INSTRUMENT · ✓ W5.3 GHOSTS
     · ✓ X1.3 MELODIC · ✓ X2.3 TAKES + BIN · ✓ KEYS (the phone plays the

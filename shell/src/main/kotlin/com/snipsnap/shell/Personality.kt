@@ -61,6 +61,16 @@ object Copy {
     const val CAPTURE_BLOCKED =
         "TAPE JAM — SPOTIFY BLOCKS THE TAPE. USE THE SCREEN RECORDER, I'LL PULL THE AUDIO OUT."
     const val CAPTURE_BLOCKED_BUTTON = "FINE"
+    // INSIDE: another app's audio, from inside it (M1's second source).
+    const val INSIDE_ARMED = "TAPE ROLLING ON THE INSIDE. GO PLAY THE THING."
+    /** The projection consent dialog was dismissed: nothing armed, nothing lost. */
+    const val INSIDE_REFUSED = "NO NOD, NO TAPE. THE MIC STILL LISTENS."
+    /** The platform ended the session — the lock screen or the status-bar stop chip, never us. */
+    const val PHONE_STOPPED_TAPE = "THE PHONE STOPPED THE TAPE. LOCK SCREEN OR THE STOP CHIP. ARM AGAIN."
+    // The quick-settings tile.
+    const val TILE_LABEL = "SNIPSNAP"
+    const val TILE_IDLE = "TAP TO ARM"
+    const val TILE_ARMED = "TAP TO SNIP"
 
     // Tape deck.
     /** COMMIT toasts, rotated in order per commit. */

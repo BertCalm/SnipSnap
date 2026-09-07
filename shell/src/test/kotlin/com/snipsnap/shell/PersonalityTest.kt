@@ -48,6 +48,9 @@ class PersonalityTest {
     fun `law 3 - funny copy still says exactly what happened`() {
         // The capture-blocked box names the problem and the way out.
         assertTrue("SCREEN RECORDER" in Copy.CAPTURE_BLOCKED)
+        // A session the phone ended names the two ways that happens.
+        assertTrue("LOCK SCREEN" in Copy.PHONE_STOPPED_TAPE)
+        assertTrue("STOP CHIP" in Copy.PHONE_STOPPED_TAPE)
         // Send-to-grid reports the real slice count.
         assertEquals("7 SLICES ON THE GRID. CHOKE GROUP SET.", Copy.sentToGrid(7, chokeSet = true))
         assertEquals("3 SLICES ON THE GRID.", Copy.sentToGrid(3, chokeSet = false))

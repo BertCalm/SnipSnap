@@ -1,8 +1,10 @@
 package com.snipsnap.app
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -165,6 +167,31 @@ fun App(shelf: KitShelf) {
     // only ARM/EJECT flip it).
     val armed by MicSessionService.armed.collectAsState()
     var captureBlocked by remember { mutableStateOf(false) }
+    // INSIDE's dead-air verdict (F3.4): the service watches the stream
+    // and flips this while an opted-out app is playing into silence; the
+    // TAPE JAM box shows once per verdict, and the verdict clears itself
+    // the moment sound arrives.
+    val blocked by MicSessionService.blocked.collectAsState()
+    LaunchedEffect(blocked) {
+        if (blocked) captureBlocked = true
+    }
+    // Sessions the phone ended (lock screen, the status-bar stop chip):
+    // a routine end, toasted once per tick. The count seen at first
+    // composition is the baseline, so an Activity recreated mid-session
+    // doesn't re-toast a stop it already reported.
+    val phoneStops by MicSessionService.phoneStops.collectAsState()
+    var phoneStopsSeen by remember { mutableStateOf(MicSessionService.phoneStops.value) }
+    LaunchedEffect(phoneStops) {
+        if (phoneStops != phoneStopsSeen) {
+            phoneStopsSeen = phoneStops
+            toast = Copy.PHONE_STOPPED_TAPE
+        }
+    }
+    // ARM INSIDE runs through the same RECORD_AUDIO request as ARM TAPE
+    // (playback capture needs it too); this remembers which button asked,
+    // so the permission callback below knows whether to arm the mic or
+    // go on to the projection consent.
+    var armInsidePending by remember { mutableStateOf(false) }
 
     // The Bubble's overlay permission (Task 5): SYSTEM_ALERT_WINDOW is
     // optional — it has no runtime-permission dialog, only a Settings
@@ -182,6 +209,37 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    // The Bubble's one-time offer, shared by both arms — arming must never
+    // wait on it, so callers run it after arm() is already underway.
+    fun offerBubbleOnce() {
+        if (!prefs.getBoolean(PREF_OVERLAY_ASKED, false) && !Settings.canDrawOverlays(context)) {
+            prefs.edit().putBoolean(PREF_OVERLAY_ASKED, true).apply()
+            overlayPermissionLauncher.launch(
+                Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:${context.packageName}"),
+                ),
+            )
+        }
+    }
+
+    // The projection consent (INSIDE): the system's own dialog, asked
+    // afresh on every ARM INSIDE — Android 14+ honours each consent for
+    // exactly one projection, so the result is never cached. Dismissed
+    // is a refusal in words, not a failure; the mic path stays open.
+    val projectionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        val data = result.data
+        if (result.resultCode == Activity.RESULT_OK && data != null) {
+            MicSessionService.armInside(context, result.resultCode, data)
+            toast = Copy.INSIDE_ARMED
+            offerBubbleOnce()
+        } else {
+            toast = Copy.INSIDE_REFUSED
+        }
+    }
+
     // RequestMultiplePermissions rather than a single-permission launcher:
     // POST_NOTIFICATIONS only exists on 33+ and is requested alongside
     // RECORD_AUDIO in one system dialog rather than chained one-after-
@@ -192,6 +250,8 @@ fun App(shelf: KitShelf) {
     val capturePermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { results ->
+        val inside = armInsidePending
+        armInsidePending = false
         if (results[Manifest.permission.RECORD_AUDIO] == true) {
             // This callback runs with the Activity resumed (foreground) —
             // true whether the system dialog actually showed or the
@@ -199,18 +259,17 @@ fun App(shelf: KitShelf) {
             // short-circuited straight here — so this satisfies
             // MicSessionService.arm's "call from a foreground context"
             // requirement without a separate checkSelfPermission branch.
-            MicSessionService.arm(context)
-            toast = Copy.SESSION_ARMED
-            // The Bubble's one-time offer — arming must never wait on it,
-            // so this runs after arm() is already underway, not before.
-            if (!prefs.getBoolean(PREF_OVERLAY_ASKED, false) && !Settings.canDrawOverlays(context)) {
-                prefs.edit().putBoolean(PREF_OVERLAY_ASKED, true).apply()
-                overlayPermissionLauncher.launch(
-                    Intent(
-                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:${context.packageName}"),
-                    ),
-                )
+            if (inside) {
+                val manager = context.getSystemService(MediaProjectionManager::class.java)
+                if (manager == null) {
+                    toast = Copy.INSIDE_REFUSED
+                } else {
+                    projectionLauncher.launch(manager.createScreenCaptureIntent())
+                }
+            } else {
+                MicSessionService.arm(context)
+                toast = Copy.SESSION_ARMED
+                offerBubbleOnce()
             }
         } else {
             captureBlocked = true
@@ -225,6 +284,11 @@ fun App(shelf: KitShelf) {
             }
         }
         capturePermissionLauncher.launch(permissions.toTypedArray())
+    }
+
+    fun requestArmInside() {
+        armInsidePending = true
+        requestArm()
     }
 
     LaunchedEffect(Unit) {
@@ -433,6 +497,7 @@ fun App(shelf: KitShelf) {
                             onOpenInstrument = { openInstrument = it; screen = AppScreen.KEYS },
                             onFresh = ::fresh,
                             onArm = ::requestArm,
+                            onArmInside = ::requestArmInside,
                             onSnip = {
                                 MicSessionService.snip(context)
                                 toast = Copy.SNIPPED
