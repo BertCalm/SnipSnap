@@ -179,10 +179,14 @@ object ShelfImport {
 
     /**
      * Every entry of [zip] under [dest], each path checked to stay inside
-     * it (a `..` or an absolute name is an attack, not a layout), each
-     * entry and the whole bounded so an archive cannot fill the disk.
+     * it (a `..` or an absolute name is an attack, not a layout), and the
+     * whole bounded at [maxBytes] so an archive cannot fill the disk: each
+     * entry is copied with only the room the budget has left, so the
+     * refusal comes mid-stream, not after a huge entry already landed.
+     * One budget for the whole, not a ceiling per entry - a track's sample
+     * folder may hold one big WAV and still be honest.
      */
-    private fun unzipSafely(zip: File, dest: File) {
+    internal fun unzipSafely(zip: File, dest: File, maxBytes: Long = MAX_UNZIP_BYTES) {
         val root = dest.canonicalFile
         var total = 0L
         ZipFile(zip).use { z ->
@@ -196,13 +200,18 @@ object ShelfImport {
                 val out = File(dest, name)
                 require(out.canonicalPath.startsWith(root.path + File.separator)) { "entry escapes the ZIP: '$name'" }
                 out.parentFile?.mkdirs()
-                z.getInputStream(entry).use { src ->
-                    out.outputStream().use { dst ->
-                        LimitedRead.copy(src, dst, what = "ZIP entry $name")
+                try {
+                    z.getInputStream(entry).use { src ->
+                        out.outputStream().use { dst ->
+                            LimitedRead.copy(src, dst, limit = maxBytes - total, what = "ZIP entry $name")
+                        }
                     }
+                } catch (e: LimitedRead.TooLargeException) {
+                    throw LimitedRead.TooLargeException(
+                        "the ZIP inflates past ${maxBytes / (1024 * 1024)} MB at '$name' - refused",
+                    )
                 }
                 total += out.length()
-                require(total <= MAX_UNZIP_BYTES) { "the ZIP inflates past ${MAX_UNZIP_BYTES / (1024 * 1024)} MB - refused" }
             }
         }
     }

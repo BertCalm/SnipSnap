@@ -84,10 +84,17 @@ object ShareInbox {
         val out = File(dir, safe)
         val stream = context.contentResolver.openInputStream(uri)
             ?: throw IllegalArgumentException("the shared file could not be opened")
-        stream.use { src ->
-            out.outputStream().use { dst ->
-                com.snipsnap.mpc3.LimitedRead.copy(src, dst, limit = maxBytes, what = "the shared file")
+        try {
+            stream.use { src ->
+                out.outputStream().use { dst ->
+                    com.snipsnap.mpc3.LimitedRead.copy(src, dst, limit = maxBytes, what = "the shared file")
+                }
             }
+        } catch (e: Exception) {
+            // A copy that failed part-way (too big, or the provider died mid-stream)
+            // must not leave a half-file behind to confuse the next share of the same name.
+            out.delete()
+            throw e
         }
         return out
     }
