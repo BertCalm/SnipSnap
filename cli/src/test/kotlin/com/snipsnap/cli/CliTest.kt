@@ -1257,6 +1257,28 @@ class CliTest {
     }
 
     @Test
+    fun `wobble sweeps one pad on the kit's grid from the terminal, and undoes`() {
+        val wav = writeBreak(File(temp, "wb.wav"))
+        val out = File(temp, "wb-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "WB", "--slices", "8").first)
+        val kitDir = File(out, "WB")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(2)!!.sampleFile)
+        val before = padFile.readBytes()
+
+        val (code, stdout, stderr) = cli("wobble", kitDir.path, "A02", "--rate", "1/4", "--bpm", "120")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "wobbled at 1/4 at 120 bpm (500 ms a sweep)")
+        assertTrue(!before.contentEquals(padFile.readBytes()))
+        assertEquals(120f, KitStore.load(kitDir).tempoBpm, "--bpm set the kit's tempo")
+
+        assertEquals(0, cli("wobble", kitDir.path, "A02", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        val (badCode, _, badErr) = cli("wobble", kitDir.path, "A02", "--rate", "1/3")
+        assertTrue(badCode != 0 && "--rate wants" in badErr, badErr)
+    }
+
+    @Test
     fun `retune talks one pad into a key from the terminal, refuses a drum, and undoes`() {
         val wav = writeBreak(File(temp, "rt.wav"))
         val out = File(temp, "rt-out")

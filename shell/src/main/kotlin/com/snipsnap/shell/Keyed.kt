@@ -2,31 +2,49 @@ package com.snipsnap.shell
 
 import com.snipsnap.audio.Body
 import com.snipsnap.audio.KeySpec
+import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Retune
 import com.snipsnap.audio.Scale
+import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.Tuner
+import com.snipsnap.synth.Wobble
+import java.util.Locale
 
 /**
- * The keyed family: treatments that read the kit itself — its key today,
- * its tempo next — where the rack's characters read nothing but the
- * sound. One door for the pad sheet's row five and the CLI verbs alike:
+ * The keyed family: treatments that read the kit itself — its key, its
+ * tempo — where the rack's characters read nothing but the sound. One
+ * door for the pad sheet's fifth row and the CLI verbs alike:
  *
  * - **retuned** — every partial talked into the key ([Retune]); a drum
  *   is refused as unpitched;
  * - **bodied** — a bank of resonators tuned to the key, struck by the
- *   hit ([Body]); with no key, the hit's own note or C, never refused.
+ *   hit ([Body]); with no key, the hit's own note or C, never refused;
+ * - **wobbled** — a filter sweep synced to a note division at the kit's
+ *   tempo ([Wobble]).
  *
  * Each is `Snip → Snip` with AMOUNT how far, peak matched, and its own
  * honest refusal in words.
  */
 object Keyed {
 
-    val NAMES: List<String> = listOf("retuned", "bodied")
+    val NAMES: List<String> = listOf("retuned", "bodied", "wobbled")
 
     /** The honest refusal: the sound is not what the treatment wants. */
     class Refused(message: String) : IllegalArgumentException(message)
 
-    /** What the treatment did, in the toast's words: the key it read, and a note. */
+    /** What the kit knows about itself: a key when one was chosen, and its tempo. */
+    data class Context(val key: KeySpec?, val bpm: Float)
+
+    /** The dials the phone does not draw — the CLI's flags, at their defaults on the card. */
+    data class Dials(
+        /** BODY: the modes' T60, seconds. */
+        val decay: Float = Body.DECAY_DEFAULT,
+        /** WOBBLE: the note division the sweep is synced to. */
+        val division: String = Wobble.DEFAULT_DIVISION,
+    )
+
+    /** What the treatment did: the sound, and the key or tempo it read, in the toast's words. */
     data class Result(val snip: Snip, val keyLabel: String)
 
     /** The retune's target when the kit has no key: every semitone. */
@@ -40,24 +58,22 @@ object Keyed {
     }
 
     /**
-     * Why [name] would refuse [snip] under [key], in words, or null when
+     * Why [name] would refuse [snip] in [context], in words, or null when
      * it will go ahead — asked before anything is touched.
      */
-    fun refusal(name: String, snip: Snip, key: KeySpec?): String? {
+    fun refusal(name: String, snip: Snip, context: Context): String? {
         require(name)
         return when (name) {
-            "retuned" -> Retune.analyze(snip, key ?: NO_KEY).refusal
+            "retuned" -> Retune.analyze(snip, context.key ?: NO_KEY).refusal
             else -> null
         }
     }
 
-    /**
-     * [name] over [snip] against [key] (null: the kit has none). [decay]
-     * is BODY's ring, seconds; [seed] the retune's phases.
-     */
-    fun apply(name: String, snip: Snip, key: KeySpec?, amount: Float = 1f, seed: Long = 0, decay: Float = Body.DECAY_DEFAULT): Result {
+    /** [name] over [snip] in [context]; [seed] the retune's phases; [dials] the CLI's extra flags. */
+    fun apply(name: String, snip: Snip, context: Context, amount: Float = 1f, seed: Long = 0, dials: Dials = Dials()): Result {
         require(name)
         require(amount in 0f..1f) { "amount is 0..1, got $amount" }
+        val key = context.key
         return when (name) {
             "retuned" -> {
                 val k = key ?: NO_KEY
@@ -67,19 +83,20 @@ object Keyed {
             }
             "bodied" -> {
                 val root = Body.rootFor(snip, key)
-                val scale = key?.scale ?: Scale.CHROMATIC
-                val label = key?.label?.uppercase() ?: (com.snipsnap.audio.Scales.NOTE_NAMES[root] + (if (Body.rootFor(snip, null) == root && Pitchy.isPitched(snip)) ", THE HIT'S OWN NOTE" else ""))
-                Result(Body.ring(snip, root, scale, amount, decay), label)
+                val label = key?.label?.uppercase()
+                    ?: (Scales.NOTE_NAMES[root] + if (isPitched(snip)) ", THE HIT'S OWN NOTE" else "")
+                Result(Body.ring(snip, root, key?.scale ?: Scale.CHROMATIC, amount, dials.decay), label)
             }
+            "wobbled" -> Result(
+                Wobble.sweep(snip, context.bpm, dials.division, amount),
+                "%s AT %d BPM".format(Locale.ROOT, dials.division, Math.round(context.bpm)),
+            )
             else -> throw IllegalStateException(name)
         }
     }
 
-    /** The toast's word for the key BODY rang at when the kit has none. */
-    private object Pitchy {
-        fun isPitched(snip: Snip): Boolean {
-            val est = com.snipsnap.audio.Pitch.detect(snip) ?: return false
-            return est.confidence >= com.snipsnap.audio.Tuner.MIN_CONFIDENCE
-        }
+    private fun isPitched(snip: Snip): Boolean {
+        val est = Pitch.detect(snip) ?: return false
+        return est.confidence >= Tuner.MIN_CONFIDENCE
     }
 }

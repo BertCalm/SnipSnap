@@ -56,7 +56,7 @@ object BodyCommand {
         val root = Body.rootFor(WavReader.read(File(kitDir, pad.sampleFile)), key)
         val modes = Body.modes(root, key?.scale ?: Scale.CHROMATIC)
 
-        val done = model.keyedPad(slot, "bodied", amount, decay = decay)
+        val done = model.keyedPad(slot, "bodied", amount, dials = com.snipsnap.shell.Keyed.Dials(decay = decay))
         model.save()
         out.println(
             "pad $padArg given a body in %s, ringing %.2f s%s - original in the bin, recipe recorded (undo: --undo)".format(

@@ -63,7 +63,7 @@ class PadSheetTest {
         assertEquals(listOf("SMEAR", "SLAP", "WASH", "PUNCH"), PadSheet.CHARACTER_SEGMENTS)
         assertEquals(listOf("GHOST", "STOP", "START", "FLIP"), PadSheet.MORE_SEGMENTS)
         assertEquals(listOf("SKIM", "DUB", "SWELL", "TUNE"), PadSheet.EXTRA_SEGMENTS)
-        assertEquals(listOf("BODY"), PadSheet.KEYED_SEGMENTS)
+        assertEquals(listOf("BODY", "WOBBLE"), PadSheet.KEYED_SEGMENTS)
         assertEquals(listOf(PadSheet.SEGMENTS, PadSheet.CHARACTER_SEGMENTS, PadSheet.MORE_SEGMENTS, PadSheet.EXTRA_SEGMENTS, PadSheet.KEYED_SEGMENTS), PadSheet.ROWS)
         assertEquals(PadSheet.ALL_SEGMENTS.size, PadSheet.ALL_SEGMENTS.toSet().size, "no word on two rows")
     }
@@ -78,7 +78,7 @@ class PadSheetTest {
             assertTrue(t!!.name in Keyed.NAMES, "$segment maps to '${t.name}', which Keyed does not know")
             assertEquals(segment, PadSheet.segmentFor(t))
         }
-        assertNull(PadSheet.segmentForKeyed("wobbled"), "a keyed name no segment draws lights nothing")
+        assertNull(PadSheet.segmentForKeyed("eternal"), "a keyed name no segment draws lights nothing")
         for (segment in PadSheet.ROWS.drop(1).dropLast(1).flatten()) {
             if (segment == PadSheet.TUNE) continue
             val t = PadSheet.treatmentFor(segment)
@@ -93,7 +93,7 @@ class PadSheetTest {
         assertEquals(PadSheet.Treatment.Era("sp1200"), PadSheet.treatmentFor("CRUSH"))
         assertEquals(PadSheet.Treatment.Character("smeared"), PadSheet.treatmentFor("SMEAR"))
         assertNull(PadSheet.treatmentFor(PadSheet.NONE))
-        assertFailsWith<IllegalArgumentException> { PadSheet.treatmentFor("WOBBLE") }
+        assertFailsWith<IllegalArgumentException> { PadSheet.treatmentFor("SPARKLE") }
         assertFailsWith<IllegalArgumentException> { PadSheet.eraFor("SMEAR") }
     }
 

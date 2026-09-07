@@ -659,7 +659,20 @@ rings at the hit's own note when it has one, else at C — never a
 refusal, since a drum with a body is the point. Bin-backed, `--undo`
 byte-identical, the recipe (key, amount, decay) riding the pad. On the
 phone it is BODY on the PAD SHEET's fifth TREATMENT row, the keyed
-family: the treatments that read the kit's own key.
+family: the treatments that read the kit's own key and tempo.
+
+### `wobble <kit-dir> <pad>` — a filter sweep on the kit's grid
+
+One resonant low-pass (the TPT state-variable filter VELVET plays
+through), its cutoff swept by a cosine that opens at the hit's onset
+and closes half a division later, the division a note value at the
+kit's tempo — so the wobble lands on the grid the moment the kit does.
+`--rate` snaps to `1/1`, `1/2`, `1/4`, `1/8` (default), `1/16`;
+`--bpm` sets the kit's tempo first (without one, the preview's 92);
+`--amount` is the sweep's depth over 120 Hz..6 kHz; peak matched, the
+hit's own length. Bin-backed, `--undo` byte-identical, the recipe
+(division, tempo, amount) riding the pad. On the phone it is WOBBLE on
+the PAD SHEET's fifth row, at `1/8` of the kit's tempo, AMT the depth.
 
 ### `arrange <kit-dir>` — songs, not loops
 

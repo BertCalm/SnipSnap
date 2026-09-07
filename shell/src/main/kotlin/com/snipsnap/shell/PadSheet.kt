@@ -41,7 +41,7 @@ object PadSheet {
     val EXTRA_SEGMENTS: List<String> = listOf("SKIM", "DUB", "SWELL", "TUNE")
 
     /** Row five — the treatments that read the kit itself: its key, its tempo. */
-    val KEYED_SEGMENTS: List<String> = listOf("BODY")
+    val KEYED_SEGMENTS: List<String> = listOf("BODY", "WOBBLE")
 
     /** Row four's last word: the spectral retune, the first treatment that reads the kit's key. */
     const val TUNE = "TUNE"
@@ -114,6 +114,8 @@ object PadSheet {
         "TUNE" to "retuned",
         // A bank of resonators tuned to the key, struck by the hit.
         "BODY" to "bodied",
+        // A filter sweep on the kit's own grid.
+        "WOBBLE" to "wobbled",
     )
 
     /**

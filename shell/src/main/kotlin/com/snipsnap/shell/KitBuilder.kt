@@ -132,6 +132,13 @@ class KitBuilderModel private constructor(
         dirty = true
     }
 
+    /** Set or clear the kit's tempo — what the preview, the arranger and WOBBLE read. */
+    fun setTempo(bpm: Float?) {
+        if (kit.tempoBpm == bpm) return
+        kit = kit.copy(tempoBpm = bpm)
+        dirty = true
+    }
+
     /**
      * IN KEY: retune every TONAL pad onto the nearest note of the kit's
      * key, via the tune fields the MPC pad already has — audio untouched,
@@ -328,18 +335,18 @@ class KitBuilderModel private constructor(
      * how far; 0 leaves the pad as it is. A refusal ([Unpitched], in the
      * treatment's own words) comes before anything is touched.
      */
-    fun keyedPad(slot: Int, name: String, amount: Float = 1f, seed: Long = 0, decay: Float = com.snipsnap.audio.Body.DECAY_DEFAULT): KitPad {
+    fun keyedPad(slot: Int, name: String, amount: Float = 1f, seed: Long = 0, dials: Keyed.Dials = Keyed.Dials()): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         Keyed.require(name)
         require(amount in 0f..1f) { "amount is 0..1, got $amount" }
         if (amount <= 0f) return pad
-        val key = kit.key
+        val context = keyedContext()
         val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
-        Keyed.refusal(name, main, key)?.let { throw Unpitched(it) }
+        Keyed.refusal(name, main, context)?.let { throw Unpitched(it) }
         var label = ""
         val rewritten = rewriteEveryFile(pad, "keyed treatment") { original ->
             val done = try {
-                Keyed.apply(name, original, key, amount, seed, decay)
+                Keyed.apply(name, original, context, amount, seed, dials)
             } catch (e: Keyed.Refused) {
                 throw Unpitched(e.message ?: "not a note")
             }
@@ -350,13 +357,17 @@ class KitBuilderModel private constructor(
                     "key" to com.snipsnap.json.JsonValue.Str(label),
                     "amount" to com.snipsnap.json.JsonValue.Num(amount.toDouble()),
                     "seed" to com.snipsnap.json.JsonValue.Num(seed.toDouble()),
-                    "decay" to com.snipsnap.json.JsonValue.Num(decay.toDouble()),
+                    "decay" to com.snipsnap.json.JsonValue.Num(dials.decay.toDouble()),
+                    "division" to com.snipsnap.json.JsonValue.Str(dials.division),
                 ),
             )
         }
         lastKeyLabel = label
         return rewritten
     }
+
+    /** What the keyed family reads off this kit: its key (maybe none) and its tempo (the preview's default without one). */
+    fun keyedContext(): Keyed.Context = Keyed.Context(kit.key, kit.tempoBpm ?: com.snipsnap.kit.KitPreview.DEFAULT_BPM)
 
     /** The key label the last [keyedPad] read — what its toast names. */
     var lastKeyLabel: String = ""

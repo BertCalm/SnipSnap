@@ -498,14 +498,22 @@ class KitBuilderTest {
 
         // BODY never refuses: the kick gets a body in the kit's key, and rings past its own length.
         val kickBefore = File(dir, kick.sampleFile).readBytes()
-        val bodied = m.keyedPad(1, "bodied", 1f, decay = 0.4f)
+        val bodied = m.keyedPad(1, "bodied", 1f, dials = Keyed.Dials(decay = 0.4f))
         assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("bodied"), 1f, "BODY"), PadSheet.read(bodied.recipe))
         assertEquals("C MAJOR", m.lastKeyLabel)
         val rung = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile))
         assertTrue(rung.frameCount > DrumSynth.kick().frameCount, "the body rings past the hit")
-        assertFailsWith<IllegalArgumentException> { m.keyedPad(1, "wobbled", 1f) }
+        assertFailsWith<IllegalArgumentException> { m.keyedPad(1, "eternal", 1f) }
         m.unEraPad(1)
         assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(kickBefore), "the kick came back")
+
+        // WOBBLE reads the tempo: none set, the preview's default; the division rides the recipe.
+        val wobbled = m.keyedPad(1, "wobbled", 1f, dials = Keyed.Dials(division = "1/16"))
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("wobbled"), 1f, "WOBBLE"), PadSheet.read(wobbled.recipe))
+        assertEquals("1/16 AT 92 BPM", m.lastKeyLabel)
+        assertEquals("1/16", (wobbled.recipe!!.entries["division"] as com.snipsnap.json.JsonValue.Str).value)
+        m.unEraPad(1)
+        assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(kickBefore), "and back again")
     }
 
     @Test

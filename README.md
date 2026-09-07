@@ -218,7 +218,8 @@ becomes the room it was struck in; a FLOOR makes it banded, so a kick
 loses its click and keeps its thump), GHOST (the tone gone too, the
 breath alone), DUB (generation loss: a dub of a dub, twelve deep), SWELL
 (the sound arrives before it strikes) and MOTION (the tape stop and the
-tape start, baked). `FxChain` fixes the order — swell → reverse → smear →
+tape start, baked); beside the rack, WOBBLE sweeps the same filter on
+the kit's own grid, a note division at its tempo. `FxChain` fixes the order — swell → reverse → smear →
 ghost → eq → squash → crunch → dub → tape → echo → spring → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
