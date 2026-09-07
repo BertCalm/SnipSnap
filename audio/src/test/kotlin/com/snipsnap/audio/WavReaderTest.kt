@@ -37,12 +37,26 @@ class WavReaderTest {
     }
 
     // The encoder rounds x * 32767 to the nearest integer PCM code (error
-    // <= 0.5 code), and the decoder divides that code by 32768. So the
-    // decode error is (code - x*32768)/32768 = (code - x*32767 - x)/32768,
-    // bounded by (0.5 + |x|)/32768 — which only equals the naive "one
-    // quantisation step" bound of 1/32768 at |x| == 0.5, and grows to
-    // 1.5/32768 at full scale (|x| == 1.0).
-    private val PCM16_TOLERANCE = 1.5f / 32768f
+    // <= 0.5 code) and the decoder divides that code by the same 32767, so
+    // the decode error is exactly the rounding: at most half a code.
+    private val PCM16_TOLERANCE = 0.5f / 32767f + 1e-7f
+
+    @Test
+    fun `a write then a read is the identity - the file that goes through the bin comes back the same`() {
+        for (depth in listOf(WavWriter.BitDepth.PCM_16, WavWriter.BitDepth.PCM_24)) {
+            val once = roundTrip(ramp(512, channels = 2), depth)
+            val first = ByteArrayOutputStream().also { WavWriter.write(it, once, depth) }.toByteArray()
+            val twice = WavReader.read(first)
+            assertTrue(once.samples.contentEquals(twice.samples), "$depth: reading what was written gives the same floats")
+            val second = ByteArrayOutputStream().also { WavWriter.write(it, twice, depth) }.toByteArray()
+            assertTrue(first.contentEquals(second), "$depth: writing them again gives the same bytes")
+        }
+        // Full scale reads back as full scale, both ways.
+        val rails = roundTrip(Snip(floatArrayOf(1f, -1f, 0f), 1, 44_100), WavWriter.BitDepth.PCM_16)
+        assertEquals(1f, rails.samples[0])
+        assertEquals(-1f, rails.samples[1])
+        assertEquals(0f, rails.samples[2])
+    }
 
     @Test
     fun `reads back a 16 bit mono wav`() {
