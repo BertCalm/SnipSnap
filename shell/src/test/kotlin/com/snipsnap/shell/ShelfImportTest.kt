@@ -183,6 +183,33 @@ class ShelfImportTest {
     }
 
     @Test
+    fun `a container heavier than the ceiling is refused before it is read, bare or zipped`() {
+        val source = File(temp, "src6")
+        val kitDir = makeKit(source, "HEAVY")
+        val card = File(temp, "card6")
+        Mpc3Exporter.exportTrack(KitStore.load(kitDir), kitDir, card)
+        val xtd = File(card, "HEAVY.xtd")
+        val weight = xtd.length()
+        assertTrue(weight > 64, "the fixture must weigh something")
+
+        // Bare: refused in words, with the ceiling named, before the reader takes the file whole.
+        val shelf = File(temp, "shelf6")
+        val bare = assertFailsWith<IllegalArgumentException> { ShelfImport.land(xtd, "HEAVY.xtd", shelf, maxContainerBytes = weight - 1) }
+        assertTrue(bare.message!!.contains("too large"), bare.message)
+        assertTrue(shelf.listFiles()?.none { it.name.startsWith(ShelfImport.STAGING_DIR) } ?: true, "staging is gone")
+
+        // The same ceiling one byte higher lets it through - the check is on the file's weight, nothing else.
+        val ok = ShelfImport.land(xtd, "HEAVY.xtd", shelf, maxContainerBytes = weight)
+        assertEquals(listOf("HEAVY"), ok.kits.map { it.first })
+
+        // Zipped with its folder: the container inside is refused by the same rule, so the ZIP held no kit.
+        val zipped = File(temp, "HEAVY.zip")
+        zipDir(card, zipped)
+        val inZip = assertFailsWith<IllegalArgumentException> { ShelfImport.land(zipped, "HEAVY.zip", File(temp, "shelf6b"), maxContainerBytes = weight - 1) }
+        assertTrue(inZip.message!!.contains("held no kit") && inZip.message!!.contains("too large"), inZip.message)
+    }
+
+    @Test
     fun `the unzip budget is one for the whole ZIP, and the refusal comes before the entry lands`() {
         val zip = File(temp, "two.zip")
         ZipOutputStream(zip.outputStream()).use { z ->

@@ -61,6 +61,15 @@ object ShelfImport {
     const val SNIFF_BYTES = 12
 
     /**
+     * The most an MPC 3 container may weigh before the shelf reads it: the
+     * reader takes the whole file into memory (the container is one gzip
+     * of text), so a shared file the landing cap lets through must still
+     * be refused here before it is read, not after it fills the heap. The
+     * same ceiling the MPC reader puts on the inflated text.
+     */
+    const val MAX_CONTAINER_BYTES: Long = LimitedRead.DEFAULT_LIMIT
+
+    /**
      * What [head] (the file's first bytes, [SNIFF_BYTES] or fewer) is.
      * ZIPs are opened to look inside only by [land]; here a ZIP is a ZIP.
      */
@@ -92,9 +101,10 @@ object ShelfImport {
      * Land [file] (a local copy of what was shared, named [displayName]
      * for the messages) on the shelf under [shelfRoot]. Throws
      * [IllegalArgumentException] in words when nothing on the shelf can
-     * read it, or when it read as a kit but held none.
+     * read it, or when it read as a kit but held none. [maxContainerBytes]
+     * is the size past which an MPC container is refused unread.
      */
-    fun land(file: File, displayName: String, shelfRoot: File): Landed {
+    fun land(file: File, displayName: String, shelfRoot: File, maxContainerBytes: Long = MAX_CONTAINER_BYTES): Landed {
         require(file.isFile) { "no such file: $file" }
         val head = file.inputStream().use { s ->
             val b = ByteArray(SNIFF_BYTES)
@@ -114,11 +124,12 @@ object ShelfImport {
             val skipped = mutableListOf<String>()
             when (sniff(head)) {
                 Kind.XPN -> {
-                    val (dirs, why) = landZip(file, displayName, staging)
+                    val (dirs, why) = landZip(file, displayName, staging, maxContainerBytes)
                     kitDirs = dirs
                     skipped += why
                 }
                 Kind.MPC3 -> {
+                    requireContainerFits(file, displayName, maxContainerBytes)
                     val project = Mpc3Project.read(file)
                     if (project.isProject) {
                         val r = Mpc3Importer.importProject(file, staging)
@@ -143,19 +154,40 @@ object ShelfImport {
         }
     }
 
-    /** What a ZIP is by its entries, then the matching importer into [staging]. */
-    private fun landZip(file: File, displayName: String, staging: File): Pair<List<File>, List<String>> {
-        val names = ZipFile(file).use { zip ->
-            zip.entries().asSequence().filter { !it.isDirectory }.map { it.name }.toList()
+    /** Refuse [file] in words when it weighs more than [maxBytes] - before anything reads it whole. */
+    private fun requireContainerFits(file: File, displayName: String, maxBytes: Long) {
+        require(file.length() <= maxBytes) {
+            "'$displayName' is too large to be an MPC container (${file.length() / (1024 * 1024)} MB, the most is ${maxBytes / (1024 * 1024)} MB) - refused"
         }
-        fun has(ext: String) = names.any { it.endsWith(ext, ignoreCase = true) }
+    }
+
+    /** What a ZIP is by its entries, then the matching importer into [staging]. */
+    private fun landZip(file: File, displayName: String, staging: File, maxContainerBytes: Long): Pair<List<File>, List<String>> {
+        // One pass over the entries, three flags, no list: an archive may
+        // declare any number of entries, and the names are not worth the heap.
+        var xpn = false
+        var xpm = false
+        var mpc = false
+        ZipFile(file).use { zip ->
+            val entries = zip.entries()
+            while (entries.hasMoreElements() && !(xpn && xpm && mpc)) {
+                val e = entries.nextElement()
+                if (e.isDirectory) continue
+                val n = e.name
+                when {
+                    n.endsWith(".xpn", ignoreCase = true) -> xpn = true
+                    n.endsWith(".xpm", ignoreCase = true) -> xpm = true
+                    n.endsWith(".xtd", ignoreCase = true) || n.endsWith(".xpj", ignoreCase = true) -> mpc = true
+                }
+            }
+        }
         return when {
-            has(".xpn") -> KitBackup.restore(file, staging).map { it.directory } to emptyList()
-            has(".xpm") -> {
+            xpn -> KitBackup.restore(file, staging).map { it.directory } to emptyList()
+            xpm -> {
                 val r = XpnImporter.importAll(file, staging)
                 r.kits.map { it.directory } to r.skipped.map { "${it.first}: ${it.second}" }
             }
-            has(".xtd") || has(".xpj") -> {
+            mpc -> {
                 val unpacked = File(staging, "unpacked").apply { mkdirs() }
                 unzipSafely(file, unpacked)
                 val dirs = mutableListOf<File>()
@@ -170,6 +202,7 @@ object ShelfImport {
                 for ((i, c) in containers.withIndex()) {
                     val into = File(staging, "c$i").apply { mkdirs() }
                     try {
+                        requireContainerFits(c, c.name, maxContainerBytes)
                         val project = Mpc3Project.read(c)
                         if (project.isProject) {
                             val r = Mpc3Importer.importProject(c, into)
