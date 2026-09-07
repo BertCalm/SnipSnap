@@ -44,8 +44,16 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.StarterKits
+import java.util.Locale
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import kotlinx.coroutines.delay
+import com.snipsnap.shell.Rooms
+import com.snipsnap.app.theme.pressedBevel
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.gestures.detectTapGestures
 
 /**
  * The tape shelf: every kit folder on the device, plus the FRESH TAPE
@@ -67,6 +75,9 @@ fun KitsScreen(
     onEject: () -> Unit,
     /** BACKUP (X3.3): every kit on one file, handed to the chooser. */
     onBackup: () -> Unit,
+    /** ROOMS (YY5): what OUTSIDE measured and kept, beside the instruments; hold one to forget it into the bin. */
+    rooms: List<Rooms.Room> = emptyList(),
+    onForgetRoom: (Rooms.Room) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     var menuOpen by remember { mutableStateOf(false) }
@@ -84,7 +95,7 @@ fun KitsScreen(
                 TapeText("THE SHELF", TapeType.lcdHeader, scheme.lcdInk.tape)
             }
 
-            if (kits.isEmpty() && instruments.isEmpty()) {
+            if (kits.isEmpty() && instruments.isEmpty() && rooms.isEmpty()) {
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -114,6 +125,18 @@ fun KitsScreen(
                         }
                         items(instruments, key = { "instrument:" + it.sidecar.name }) { entry ->
                             InstrumentRow(entry, onOpenInstrument)
+                        }
+                    }
+                    // ROOMS: what OUTSIDE measured and KEEP ROOM kept - any pad plays inside one through MUTATE ▸ ROOM.
+                    if (rooms.isNotEmpty()) {
+                        item(key = "rooms-header") {
+                            TapeText("ROOMS · OUTSIDE MEASURED THEM. ANY PAD PLAYS IN ONE.", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                        }
+                        items(rooms, key = { "room:" + it.file.name }) { room ->
+                            RoomRow(room, onForgetRoom)
+                        }
+                        item(key = "rooms-note") {
+                            TapeText("HOLD A ROOM TO FORGET IT · THE BIN KEEPS IT ${Rooms.BIN_DAYS} DAYS", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
                         }
                     }
                 }
@@ -170,6 +193,74 @@ private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.Ins
             TapeText("${i.zones.size} ${if (i.zones.size == 1) "ZONE" else "ZONES"}  ·  ROOT ${com.snipsnap.shell.KeysLayout.label(i.rootNote)}$looped", TapeType.pixelSmall, scheme.ink2.tape)
         }
         TapeText("KEYS ▸", TapeType.pixelSmall, scheme.ink2.tape)
+    }
+}
+
+/**
+ * A kept room: its name, how it was measured, its length on an LCD.
+ * Tapping does nothing - a room is not opened, it is used from a pad's
+ * MUTATE card. Holding the words presses the row and reveals FORGET → BIN
+ * in the bin's red; a tap on the words lets go. The gesture never sits
+ * over the button.
+ */
+@Composable
+private fun RoomRow(room: Rooms.Room, onForget: (Rooms.Room) -> Unit) {
+    val scheme = LocalScheme.current
+    var armed by remember(room.file) { mutableStateOf(false) }
+    val ageDays = ((System.currentTimeMillis() - room.measuredAt) / (24L * 60 * 60 * 1000)).toInt()
+    val age = if (ageDays <= 0) "TODAY" else "$ageDays D AGO"
+    // Built from the parts the sidecar actually held: a room whose sidecar
+    // was lost reads UNMEASURED and its age, never "0 MS · 0% SURE ·  ·".
+    val meta = buildList {
+        if (room.lagMs > 0f || room.confidence > 0f) {
+            add("${room.lagMs.roundToInt()} MS")
+            add("${(room.confidence * 100).roundToInt()}% SURE")
+        } else {
+            add("UNMEASURED")
+        }
+        if (room.from.isNotBlank()) add(room.from.replace(':', ' ').uppercase(Locale.ROOT))
+        add(age)
+    }.joinToString(" · ")
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .let { if (armed) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        // The hold (and the tap that lets go) live on the words, so the
+        // FORGET button beside them is never under a gesture that could
+        // swallow its tap.
+        Column(
+            Modifier
+                .weight(1f)
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .pointerInput(room.file) {
+                    detectTapGestures(onLongPress = { armed = true }, onTap = { armed = false })
+                },
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            TapeText(room.name, TapeType.markerBig, scheme.ink.tape)
+            TapeText(meta, TapeType.pixelSmall, scheme.ink2.tape)
+        }
+        if (armed) {
+            Box(
+                Modifier
+                    .width(124.dp)
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .raisedBevel(scheme)
+                    .border(2.dp, Brush.linearGradient(listOf(BIN_RED_GLOW, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
+                    .tapeClick { onForget(room) },
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText("FORGET → BIN", TapeType.pixel, BIN_RED_GLOW)
+            }
+        } else {
+            Box(Modifier.height(30.dp).lcdPanel(scheme).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
+                TapeText("%.1f s".format(Locale.ROOT, room.seconds), TapeType.lcdSmall, scheme.amber.tape)
+            }
+        }
     }
 }
 

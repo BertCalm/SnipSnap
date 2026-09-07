@@ -56,6 +56,18 @@ fun Modifier.pressedBevel(
     .background(Schemes.darken(scheme.gray, 0.10f).tape, RoundedCornerShape(radius))
     .border(2.dp, bevelBrush(scheme, raised = false), RoundedCornerShape(radius))
 
+/**
+ * A group box (Pad Sheet v2): the window's own surface with an etched
+ * 2dp edge - light from the top-left falls into it - so a pixel legend
+ * can sit on the line the way a Win9x group box draws it.
+ */
+fun Modifier.etchedBox(
+    scheme: Scheme,
+    radius: Dp = 4.dp,
+): Modifier = this
+    .background(scheme.win.tape, RoundedCornerShape(radius))
+    .border(2.dp, bevelBrush(scheme, raised = false), RoundedCornerShape(radius))
+
 /** A sunken well: lists, fields, the status-bar cells. */
 fun Modifier.sunkenField(
     scheme: Scheme,
