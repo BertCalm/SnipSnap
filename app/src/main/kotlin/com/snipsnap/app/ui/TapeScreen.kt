@@ -110,29 +110,36 @@ private class LoadedTape(
 @Composable
 fun TapeScreen(
     entry: KitShelf.Entry?,
-    /** Bumped by the app when an import lands, so a deck already on screen reloads to it. */
-    reloadKey: Int,
     lastCommitSource: File?,
     onToast: (String) -> Unit,
     onCommit: (File, IntRange) -> Unit,
     onInstantKit: (File, IntRange) -> Unit,
+    /**
+     * Bumped by App when something outside this screen put a new snip on
+     * the shelf while TAPE may already be showing — a share-sheet import
+     * (F3.1) — so the deck re-resolves its source instead of keeping the
+     * tape it had. A fresh composition ignores it; `entry.dir` and the
+     * idle-reload watcher stay the other two triggers.
+     */
+    reloadRequest: Int = 0,
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
 
-    // No open kit is not an empty deck any more: a snip (a capture, or a
-    // file shared in) plays here without one. Only the kit's-longest-sample
-    // fallback needs an entry.
+    // No open kit is not an empty deck: a snip — a capture, or a file
+    // shared in — plays here without one. Only the kit's-longest-sample
+    // fallback needs an entry, so a share into an empty shelf still lands.
     val kitDir = entry?.dir
     var loaded by remember(kitDir) { mutableStateOf<LoadedTape?>(null) }
     var failed by remember(kitDir) { mutableStateOf(false) }
     // Bumped by TapeDeckContent's idle-reload watcher to force a fresh
     // call to loadLongestTape without changing `kitDir` (the other
-    // triggers below being the app's own reloadKey) — see that watcher's
-    // own KDoc for what bumps it and why it's gated on the deck being idle.
+    // triggers below being the app's own reloadRequest) — see that
+    // watcher's own KDoc for what bumps it and why it's gated on the deck
+    // being idle.
     var reloadToken by remember(kitDir) { mutableStateOf(0) }
 
-    LaunchedEffect(kitDir, reloadKey, reloadToken) {
+    LaunchedEffect(kitDir, reloadToken, reloadRequest) {
         loaded = null
         failed = false
         val result = withContext(Dispatchers.IO) {

@@ -82,44 +82,66 @@ object SnipStore {
                 "capture at 44.1 kHz"
         }
 
-        val dir = File(root, DIR).apply { mkdirs() }
-        val file = File(dir, "snip_$nowMillis.wav")
+        val file = freshFile(root, nowMillis)
         val bytes = ByteArrayOutputStream().apply { WavWriter.write(this, toWrite) }.toByteArray()
         AtomicFile.writeBytes(file, bytes)
         return file
     }
 
     /**
-     * The longest import the tape keeps, in seconds of the source. A whole
-     * shared song is more than the deck (or the phone's memory, as float
-     * samples) wants; the head of it is what a sampler reaches for anyway,
-     * and the toast says exactly how much survived.
+     * `root/snips/snip_<millis>.wav`, at [nowMillis] or the first later
+     * millisecond nothing sits on: two snips in one millisecond (a fast
+     * phone, a test) must never share a path, or the second silently
+     * overwrites the first and [newest] loses one. The bump keeps the
+     * name's own ordering honest — later is later.
      */
-    const val IMPORT_MAX_SECONDS = 180
-
-    /** What an import landed as: the snip on disk, and whether the source was cut to [IMPORT_MAX_SECONDS]. */
-    data class Import(val file: File, val truncated: Boolean)
+    private fun freshFile(root: File, nowMillis: Long): File {
+        val dir = File(root, DIR).apply { mkdirs() }
+        var millis = nowMillis
+        var file = File(dir, "snip_$millis.wav")
+        while (file.exists()) {
+            millis++
+            file = File(dir, "snip_$millis.wav")
+        }
+        return file
+    }
 
     /**
-     * The import path (F3.1/F3.2): a decoded file — any rate, mono or
-     * stereo, straight from the platform decoder — becomes a snip exactly
-     * as a ring snapshot does. Cut to [IMPORT_MAX_SECONDS] first (memory
-     * and honesty both), folded to mono, resampled to the MPC's 44.1 kHz,
-     * then handed to [commit] so the same cleanup and doctor visit apply.
-     * A decode with no frames is a refusal in words: nothing to pull out.
+     * The longest import kept, in seconds. TAPE holds the whole tape in
+     * memory (every peak, every zoom), and the mic ring it was built
+     * around is a minute; three minutes is room for the break in the
+     * middle of a song without a shared album side becoming a
+     * hundred-megabyte deck. Past it the head is kept and the toast says
+     * so — a refusal would lose the part the user wanted.
      */
-    fun importDecoded(decoded: Snip, root: File, nowMillis: Long): Import {
-        require(decoded.frameCount > 0) { "no audio in that - nothing to pull out" }
-        val maxFrames = IMPORT_MAX_SECONDS * decoded.sampleRate
-        val truncated = decoded.frameCount > maxFrames
-        val head = if (truncated) {
-            decoded.copy(samples = decoded.samples.copyOf(maxFrames * decoded.channels))
-        } else {
-            decoded
-        }
-        val mono = Cleanup.toMono(head)
-        val native = Resampler.resample(mono, WavWriter.MPC_SAMPLE_RATE)
-        return Import(commit(native.samples, native.sampleRate, root, nowMillis), truncated)
+    const val IMPORT_MAX_SEC = 180f
+
+    /** What an import left: the file, how long it is, and whether the tail was cut at [IMPORT_MAX_SEC]. */
+    data class Imported(val file: File, val seconds: Float, val truncated: Boolean)
+
+    /**
+     * The import path (F3.1/F3.2): a file shared into the app lands as a
+     * snip, so TAPE finds it exactly as it finds a capture — newest first.
+     * Not the commit chain: what the user shared is what goes on the
+     * tape, so no trim, no normalize, no doctor's visit. Only the two
+     * things the deck needs — mono (the ring is mono; the deck reads
+     * mono) and the MPC rate (a 48 k or 22.05 k file through the sinc
+     * [Resampler]) — and the [IMPORT_MAX_SEC] cap. Written through
+     * [AtomicFile] like a commit, named `snip_<nowMillis>.wav` so
+     * [newest] ranks it by arrival. An empty file is refused in words.
+     */
+    fun import(snip: Snip, root: File, nowMillis: Long): Imported {
+        require(snip.frameCount > 0) { "the shared file holds no audio" }
+        val mono = if (snip.channels == 1) snip else Cleanup.toMono(snip)
+        val atRate = if (mono.sampleRate == WavWriter.MPC_SAMPLE_RATE) mono else Resampler.resample(mono, WavWriter.MPC_SAMPLE_RATE)
+        val maxFrames = (IMPORT_MAX_SEC * atRate.sampleRate).toInt()
+        val truncated = atRate.frameCount > maxFrames
+        val kept = if (truncated) Snip(atRate.samples.copyOf(maxFrames), 1, atRate.sampleRate) else atRate
+
+        val file = freshFile(root, nowMillis)
+        val bytes = ByteArrayOutputStream().apply { WavWriter.write(this, kept) }.toByteArray()
+        AtomicFile.writeBytes(file, bytes)
+        return Imported(file, kept.durationSeconds, truncated)
     }
 
     /** The dir's `snip_*.wav` files, newest first by the timestamp in the name. */

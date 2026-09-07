@@ -6,9 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
-import androidx.compose.runtime.mutableIntStateOf
-import com.snipsnap.shell.SnipStore
-import kotlinx.coroutines.flow.MutableStateFlow
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -72,6 +69,7 @@ import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Personality
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.shell.TextureKits
 import java.io.File
@@ -108,7 +106,7 @@ data class TapeCommit(val sourceFile: File, val range: IntRange)
  * later milestones bind to them; M0's state is navigation and a shelf.
  */
 @Composable
-fun App(shelf: KitShelf, imports: MutableStateFlow<Uri?>) {
+fun App(shelf: KitShelf) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
 
@@ -133,8 +131,6 @@ fun App(shelf: KitShelf, imports: MutableStateFlow<Uri?>) {
     var open by remember { mutableStateOf<KitShelf.Entry?>(null) }
     var toast by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf<String?>(null) }
-    // Bumped when an import lands so a TAPE already on screen reloads to it.
-    var tapeReload by remember { mutableIntStateOf(0) }
     var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
     // PAD SHEET: the long-press pad inspector, full-screen over KIT. Not an
     // AppScreen of its own — MenuRow's nine items are fixed and this isn't
@@ -299,6 +295,56 @@ fun App(shelf: KitShelf, imports: MutableStateFlow<Uri?>) {
     LaunchedEffect(Unit) {
         kits = withContext(Dispatchers.IO) { shelf.list() }
     }
+
+    // IMPORT (F3.1/F3.2): a file shared in from another app, waiting on
+    // ShareInbox's doorstep. Decoded off the main thread (MediaDecode: a
+    // WAV straight through the reader, anything else through the
+    // platform's codec), landed as a snip (SnipStore.import: mono, the
+    // MPC rate, capped), then TAPE - which finds the newest snip first
+    // by its own source priority. With no kit open the first on the
+    // shelf is opened for the deck's cassette label and fallback; with an
+    // empty shelf the deck plays the snip on its own — TAPE no longer
+    // needs a kit for one. `importCount` is TAPE's reload request, for a
+    // share that arrives while TAPE is already on screen.
+    val shared by ShareInbox.pending.collectAsState()
+    var importCount by remember { mutableStateOf(0) }
+    LaunchedEffect(shared) {
+        val uri = shared ?: return@LaunchedEffect
+        // The status line is borrowed only when nothing else holds it: an
+        // import writes to the snips dir, never to a kit, so it runs
+        // beside a dub without racing it, and must not wipe that dub's
+        // own DUBBING… line on its way out.
+        val ownsBusy = busy == null
+        if (ownsBusy) busy = Copy.IMPORT_BUSY
+        try {
+            val landed = withContext(Dispatchers.IO) {
+                val snip = MediaDecode.decode(context, uri)
+                SnipStore.import(snip, context.filesDir, System.currentTimeMillis())
+            }
+            ShareInbox.consume()
+            if (open == null) {
+                open = withContext(Dispatchers.IO) { shelf.list() }.firstOrNull()
+            }
+            toast = Copy.imported(landed.seconds, landed.truncated)
+            importCount++
+            padSheetSlot = null
+            takesBinOpen = false
+            screen = AppScreen.TAPE
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            ShareInbox.consume()
+            // Law 3: when it breaks, say exactly what happened - the
+            // decoder's own words when it has them (a refusal, an IO
+            // error, a permission the provider withdrew), the house line
+            // only when there are none. Locale.ROOT: a toast's casing
+            // must not depend on the phone's language.
+            val reason = e.message?.takeIf { it.isNotBlank() }
+            toast = if (reason != null) "IMPORT REFUSED: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}." else Copy.IMPORT_NOT_AUDIO
+        } finally {
+            if (ownsBusy) busy = null
+        }
+    }
     LaunchedEffect(toast) {
         if (toast != null) {
             delay(Motion.TOAST_DWELL_MS.toLong())
@@ -435,57 +481,6 @@ fun App(shelf: KitShelf, imports: MutableStateFlow<Uri?>) {
                 busy = null
             }
         }
-    }
-
-    /**
-     * IMPORT (F3.1/F3.2): a file shared or opened into the app. Decoded off
-     * the main thread, landed in the snip store exactly as a capture is,
-     * then TAPE — which reads the newest snip first — opens on it, with or
-     * without a kit open. No audio track, or nothing decodable, is a
-     * refusal in words; anything else that breaks says what happened.
-     */
-    fun importUri(uri: Uri) {
-        if (busy != null) return
-        busy = Copy.IMPORT_BUSY
-        scope.launch {
-            try {
-                val landed = withContext(Dispatchers.IO) {
-                    val decoded = MediaImport.decode(context, uri)
-                    if (decoded == null || decoded.frameCount == 0) {
-                        null
-                    } else {
-                        SnipStore.importDecoded(decoded, context.filesDir, System.currentTimeMillis())
-                    }
-                }
-                if (landed == null) {
-                    toast = Copy.IMPORT_NO_AUDIO
-                } else {
-                    toast = if (landed.truncated) Copy.importKept(SnipStore.IMPORT_MAX_SECONDS) else Copy.IMPORT_LANDED
-                    tapeReload++
-                    screen = AppScreen.TAPE
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // Law 3: when it breaks, say exactly what happened.
-                toast = "IMPORT FAILED: ${e.message ?: e.javaClass.simpleName}"
-            } finally {
-                busy = null
-            }
-        }
-    }
-
-    // The receive door: MainActivity posts the shared file's Uri here on
-    // launch or onNewIntent; taking it clears the flow so a recomposition
-    // never imports the same file twice. Keyed on `busy` as well: a share
-    // that lands mid-DUB waits in the flow until the overlay clears, then
-    // this re-runs and takes it — deferred, never dropped.
-    val pendingImport by imports.collectAsState()
-    LaunchedEffect(pendingImport, busy) {
-        val uri = pendingImport ?: return@LaunchedEffect
-        if (busy != null) return@LaunchedEffect
-        imports.value = null
-        importUri(uri)
     }
 
     /** IN KEY: every tonal pad into the kit's key by its tune fields; the toast counts what moved. */
@@ -629,7 +624,6 @@ fun App(shelf: KitShelf, imports: MutableStateFlow<Uri?>) {
                         }
                         AppScreen.TAPE -> TapeScreen(
                             entry = open,
-                            reloadKey = tapeReload,
                             // TAPE's source-priority fallback below
                             // SnipStore.newest — the file COMMIT last cut
                             // from, so returning to TAPE after a trim
@@ -648,6 +642,7 @@ fun App(shelf: KitShelf, imports: MutableStateFlow<Uri?>) {
                             // a snip. Synchronous now — no IO re-read needed.
                             onCommit = { file, range -> lastCommit = TapeCommit(file, range) },
                             onInstantKit = ::instantKit,
+                            reloadRequest = importCount,
                         )
                         AppScreen.PROPERTIES -> PropertiesScreen(
                             currentScheme = schemeId,

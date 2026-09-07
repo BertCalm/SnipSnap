@@ -22,8 +22,9 @@
         android:allowBackup="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
-        <!-- singleTask: a file shared into a running app reaches the one
-             Activity's onNewIntent instead of stacking a second copy. -->
+        <!-- singleTask: a share while the app is open lands in the running
+             instance through onNewIntent (ShareInbox), never a second copy
+             of the window on top of the first. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -34,18 +35,20 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- F3.1: the receive door. Audio and video alike — a screen
-                 recording's MP4 is the documented way past an app that
-                 blocks capture, and its audio is what gets pulled out. -->
+            <!-- Share-sheet import (F3.1): audio, or a video whose sound is
+                 wanted - the screen-recorder path the TAPE JAM box points
+                 at. The file lands in the tape deck as a snip. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="audio/*" />
                 <data android:mimeType="video/*" />
             </intent-filter>
+            <!-- "Open with" from a file manager: the same door. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="content" />
                 <data android:scheme="file" />
                 <data android:mimeType="audio/*" />

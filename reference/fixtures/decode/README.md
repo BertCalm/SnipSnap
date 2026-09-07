@@ -21,7 +21,8 @@ total, at 44.1 k / 48 k / 22.05 k, mono and stereo.
    Commit the twins beside the WAVs.
 
 2. **In the app's instrumentation test**: decode each twin to a `Snip`
-   through the real import path, then
+   through the real import path — `MediaDecode.decode(context, uri)` in
+   `:app`, the same door the share sheet uses — then
 
    ```kotlin
    val report = DecodeContract.verify(decoded, DecodeContract.fixture(rate, channels))

@@ -64,10 +64,10 @@ on desktop today. The risk table's opt-out mitigation depends on this.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| F3.1 | ✓ done: SEND and VIEW filters for `audio/*` and `video/*` on `MainActivity` (singleTask, so a share into a running app reaches `onNewIntent`); the Uri rides a flow into `App.importUri`, which decodes off the main thread, lands the result in the snip store as a capture would, and opens TAPE on it — with or without a kit open (TAPE no longer needs one for a snip) | APP | S | shared audio file lands in the tape deck |
-| F3.2 | ✓ done: `MediaImport` — a small WAV through the app's own `WavReader`; everything else through `MediaExtractor` + the platform decoder for the first audio track (`audio/raw` read straight), 16-bit or float PCM into one growing buffer via `Pcm` (:audio, tested), stopping at `SnipStore.IMPORT_MAX_SECONDS` (3 min) so an album never sits in memory as floats. `SnipStore.importDecoded` (tested) cuts, folds to mono, resamples to 44.1 k and commits; the toast says when the head was kept. Bench: F3.3's fixtures encoded as M4A/MP3 through the real share path, verified with `DecodeContract.verify` | APP | M | shared MP4's audio lands in the tape deck |
+| F3.1 | ✓ done: the share sheet's door — `SEND` (audio/\*, video/\*) and `VIEW` (content/file, audio/\*, video/\*) intent filters on `MainActivity`, now `singleTask` so a share while the app is open lands in the running instance through `onNewIntent`; `ShareInbox` holds the URI until `App` imports it, and consumes it so a rotation never imports twice; the file lands as a snip through `SnipStore.import` (`:shell`, tested: mono, the MPC rate through the sinc resampler, no trim/normalize/doctor — what was shared is what's on the tape — capped at three minutes with the toast saying so), which TAPE finds first by its own source priority; TAPE re-resolves on a `reloadRequest` when the share arrives with the deck already up; with no kit open the first on the shelf opens, and with an empty shelf the deck plays the snip on its own — TAPE no longer needs a kit for one, only for its longest-sample fallback. **Written blind for CI's compiler; the desktop session runs it** | APP | S | share a WAV from a file manager: it is on the deck, the toast names its length |
+| F3.2 | ✓ done: the decode — `MediaDecode` (`:app`): a WAV (sniffed by its RIFF/WAVE head, or by MIME) goes straight through `WavReader`; anything else through `MediaExtractor` (first audio track) and `MediaCodec` (the synchronous loop, 16-bit or float PCM through `Pcm` (`:audio`, tested — the same symmetric 16-bit scale `WavReader` reads with, non-finite floats scrubbed), the rate and channel count read off the codec's *output* format because the track's claim can differ), capped at ten minutes before `SnipStore.import` caps shorter; refusals in words — no audio track, no decoder on this phone, a file that could not be opened. The app-side half of F3.3's `DecodeContract`; the instrumentation test against the encoded twins in `reference/fixtures/decode/` is the desktop session's to run. **Written blind** | APP | M | share an MP3 and a screen-recorded MP4: both land on the deck; the six encoded twins pass `DecodeContract.verify` |
 | F3.3 | ✓ done: demux conformance fixtures — tiny known-content WAV fixtures + a contract test the app's decode output must pass (rate, channels, sample accuracy) | CORE | S | app-side decode verified against ground truth without an SDK |
-| F3.4 | ✓ done: the TAPE JAM box (`Copy.CAPTURE_BLOCKED`) now fires from F1.2's silence detection, once per verdict, as well as from a denied RECORD_AUDIO. The screen-recorder path it points at is F3.1/F3.2: share the recording in and its audio lands on TAPE | APP | S | blocked capture shows the honest fallback, in voice |
+| F3.4 | ✓ done: the TAPE JAM box (`Copy.CAPTURE_BLOCKED`) now fires from F1.2's silence detection, once per verdict, as well as from a denied RECORD_AUDIO. The screen-recorder path it points at still needs F3.2's demux to land the recording | APP | S | blocked capture shows the honest fallback, in voice |
 
 ## F4 — Synth starter kits
 
@@ -1575,7 +1575,7 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ M0 (F1.1) · ✓ F4.2 new-kit menu · open: W3.3 open-.xtd
   ✓ M1 (F1.2): the mic ring, ARM INSIDE over MediaProjection, dead-air
     detection, the QS tile · ✓ F3.4 TAPE JAM on a blocked source
-    · ✓ F3.1/F3.2 share a file in, audio or video, onto TAPE
+    · open: F3.1/F3.2 import
   ✓ M2 (F1.3)
   ✓ M3 (F2.1) · ✓ F5.3 key picker · ✓ W2.3 MAKE INSTRUMENT · ✓ W5.3 GHOSTS
     · ✓ X1.3 MELODIC · ✓ X2.3 TAKES + BIN · ✓ KEYS (the phone plays the
@@ -1627,6 +1627,12 @@ CORE+APP wave XX: ✓ all landed (2026-09-07) — the crate as an
   crossed by a seeded coin into an audited child kit. XX3 landed:
   DE-SAMPLE, the nearest THUMP patch to a capture off a pre-rendered
   grid, the distance always told. Wave XX complete.
+
+APP F3 (2026-09-07): share-sheet import landed blind — F3.1's intent
+  filters, `ShareInbox` and the `singleTask` door, `SnipStore.import`
+  (tested) as the landing, TAPE's reload request; F3.2's `MediaDecode`
+  over `MediaExtractor`/`MediaCodec`. The desktop session runs it and
+  the decode-contract twins.
 
 CORE+APP wave YY: CORE landed (2026-09-07) — outside, the Outsidify
   idea. YY1: the trip measured, `Outside.align` and `reamp` — the
