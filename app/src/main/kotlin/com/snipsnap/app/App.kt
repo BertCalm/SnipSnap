@@ -58,6 +58,7 @@ import com.snipsnap.app.ui.PlayScreen
 import com.snipsnap.app.ui.PrimaryAction
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.SnipsScreen
+import com.snipsnap.app.ui.SplitScreen
 import com.snipsnap.app.ui.StatusBar
 import com.snipsnap.app.ui.StubScreen
 import com.snipsnap.app.ui.SurfaceScreen
@@ -1244,6 +1245,7 @@ fun App(shelf: KitShelf) {
                                     onInKey = ::inKey,
                                     onTwins = ::evilTwins,
                                     onShare = ::shareKit,
+                                    onSplit = { screen = AppScreen.SPLIT },
                                     onEmptyLongPress = { slot ->
                                         // SNIPS → PAD's landing: a pick still
                                         // armed intercepts the press here,
@@ -1374,6 +1376,20 @@ fun App(shelf: KitShelf) {
                                 appScope = scope,
                             )
                         }
+                        // SPLIT: one pad on three faders. Its prints land the
+                        // same two ways SURFACE's do, so the same two hooks.
+                        AppScreen.SPLIT -> SplitScreen(
+                            entry = open,
+                            onToast = { toast = it },
+                            onPrinted = { importCount++ },
+                            onKitUpdated = { updatedKit ->
+                                open = open?.copy(kit = updatedKit)
+                                scope.launch {
+                                    kits = withContext(Dispatchers.IO) { shelf.list() }
+                                }
+                            },
+                            onExit = { screen = AppScreen.KIT },
+                        )
                         AppScreen.SURFACE -> SurfaceScreen(
                             entry = open,
                             onToast = { toast = it },

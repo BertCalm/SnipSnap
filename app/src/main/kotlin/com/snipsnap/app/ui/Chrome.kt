@@ -66,6 +66,14 @@ enum class AppScreen(val label: String) {
     HELP("HELP"),
     /** Not one of MenuRow's ten: reached from the shelf's INSTRUMENTS list, left by its own ◄ SHELF. */
     KEYS("KEYS"),
+
+    /**
+     * Nor is this one: reached from KIT's action row on the pad you want
+     * taken apart, and left by its own ◄ KIT. A menu of twelve fits no
+     * phone, and SPLIT is something you do *to a pad* — which is what KIT
+     * is for.
+     */
+    SPLIT("SPLIT"),
 }
 
 /** Single-line themed text; TapeOS never relies on Material's Text. */
