@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +37,8 @@ import com.snipsnap.shell.KeysLayout
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Schemes
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * KEYS: an instrument the shop made, played on the same 4×4 the drums
@@ -55,9 +58,14 @@ fun KeysScreen(
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
-    // Keyed on both: a re-read sidecar (same file, new contents) reloads the player.
-    val player = remember(sidecar, instrument) { InstrumentPlayer(context).also { it.open(sidecar, instrument) } }
+    // Keyed on both: a re-read sidecar (same file, new contents) reloads the
+    // player. The zones' WAVs are read off the main thread; until they land
+    // a key plays nothing, never a stale instrument.
+    val player = remember(sidecar, instrument) { InstrumentPlayer(context) }
     DisposableEffect(player) { onDispose { player.close() } }
+    LaunchedEffect(player) {
+        withContext(Dispatchers.IO) { player.open(sidecar, instrument) }
+    }
 
     var layout by remember(sidecar) { mutableStateOf(KeysLayout.DEFAULT_LAYOUT) }
     var octave by remember(sidecar) { mutableIntStateOf(0) }

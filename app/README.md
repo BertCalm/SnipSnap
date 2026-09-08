@@ -48,6 +48,12 @@ shelf useful before capture (M1) exists.
 
 ## Things to verify on first run (beyond "does it compile")
 
+For an actual session with the phone in hand, work from
+[`../docs/BENCH.md`](../docs/BENCH.md): it orders everything below
+against the hardware checks and gives each one a line to answer on. The
+list here stays the per-feature detail — what to look at, and which
+logcat tag to grab when something is wrong.
+
 - **SoundPool vs the kit WAVs**: starters render standard PCM WAVs;
   confirm depth/rate decode cleanly. If any pad is silent, check the
   logcat `SoundPool` line first.
@@ -84,7 +90,10 @@ shelf useful before capture (M1) exists.
   that kit with preflight's reason and lists the packed ones. A clean
   landing and a full backup still get their two-second toast.
 - **PLAY (native, M4)**: open a kit, tap PLAY. Pads should feel tight
-  enough to drum on — that is the milestone's exit test. VOICES should
+  enough to drum on — that is the milestone's exit test, and the header
+  now carries the device's own round-trip latency beside VOICES to put a
+  figure next to the judgement (`— MS` = the device declined to measure;
+  a trailing `SHARED` = it refused the exclusive path). VOICES should
   count down as one-shots end (the engine reports endings; nothing is
   timed), a closed hat should cut an open one with no click, a gate pad
   should stop on release, PANIC should fade everything in 20 ms, and
@@ -92,6 +101,12 @@ shelf useful before capture (M1) exists.
   in the header means the device refused every open; check logcat's
   `PadEngine` line. KIT's own grid still plays through SoundPool until
   this has been heard (EEE4 moves it).
+- **KEYS (native)**: open an instrument from the shelf. A held note
+  should sustain through its loop and let go over the instrument's
+  release; eight notes at once, a ninth steals the oldest; OCT ± and a
+  layout change mid-note should go silent, never stick. The zones load
+  off the main thread, so the first key after opening may be silent for
+  a moment on a big instrument.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound
@@ -106,7 +121,10 @@ shelf useful before capture (M1) exists.
   corners and the pad are in `surface.json` beside the kit. Then flip
   the print destination to → PAD: STOP PRINT opens the slot chooser;
   an empty pad gets the print, a taken pad is replaced with the
-  original in the bin, CANCEL sends the print to TAPE instead.
+  original in the bin, CANCEL sends the print to TAPE instead. LATCH,
+  lift: the loop should hold where the finger left it. With a kit that
+  has a tempo, BARS to 2 and PRINT: the print should stop itself on the
+  bar (5.2 s at 92 BPM) and the toast should say so.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad

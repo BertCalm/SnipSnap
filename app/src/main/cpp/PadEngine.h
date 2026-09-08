@@ -40,6 +40,8 @@ struct PadCommand {
     int32_t sample = -1;
     int64_t start = 0;
     int64_t end = 0;
+    /** -1 plays once to `end`; otherwise the frame the read wraps back to when it reaches `end` (a keygroup's sustain). */
+    int64_t loopStart = -1;
     float gainL = 0.0f, gainR = 0.0f;
     double pitch = 1.0;
     /** Stop / AllOff: the fade, so a choke is a short fade and not a cut. */
@@ -49,9 +51,11 @@ struct PadCommand {
 };
 
 /**
- * The pads' voice: M4's latency milestone. Up to [kMaxVoices] sample
- * players, each a windowed, repitched, linearly interpolated read of one
- * bank sample, mixed to stereo under Oboe's callback. The UI keys every
+ * The pads' voice (M4) and the keys' (a looping voice is a keygroup's
+ * sustain; a note-off is a Stop with the instrument's release as its
+ * fade). Up to [kMaxVoices] sample players, each a windowed, repitched,
+ * linearly interpolated read of one bank sample, mixed to stereo under
+ * Oboe's callback. The UI keys every
  * voice by the id the tested VoiceAllocator gave it; the engine reports
  * each voice's end back on a second ring, so the allocator learns of an
  * ending exactly when it happens instead of guessing from a timer.
@@ -69,6 +73,12 @@ struct PadCommand {
 class PadEngine : public oboe::AudioStreamDataCallback, public oboe::AudioStreamErrorCallback {
 public:
     static constexpr int kMaxVoices = 32;
+    /**
+     * The fastest a voice may read, in frames per output frame. Six octaves
+     * up is far past anything a kit asks for; the ceiling is here so a
+     * corrupt tune cannot make the loop wrap in render() spin.
+     */
+    static constexpr double kMaxSpeed = 64.0;
 
     explicit PadEngine(int32_t preferredSampleRate);
     ~PadEngine() override;
@@ -78,6 +88,8 @@ public:
     int32_t sampleRate() const { return sampleRate_; }
     bool needsRestart() const { return restartNeeded_.load(std::memory_order_acquire); }
     bool isShared() const { return sharedMode_.load(std::memory_order_acquire); }
+    /** Round-trip latency in ms, or -1 when unknown. UI thread only (see OboeOutput.h). */
+    double latencyMillis() const;
 
     // The bank, UI thread: begin, add each sample (index returned), commit.
     void beginBank();
@@ -108,6 +120,7 @@ private:
         int32_t sample = -1;
         double pos = 0.0;
         int64_t end = 0;
+        int64_t loopStart = -1;
         double inc = 1.0;
         float gainL = 0.0f, gainR = 0.0f;
         float fade = 1.0f;

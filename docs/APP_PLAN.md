@@ -153,7 +153,7 @@ confidence threshold), tap-to-cycle overrides, `AutoPlace` preview, SEND
 TO GRID. `Balance` and `InKey` as kit actions. **Exit test:** one captured
 bar becomes a playable, sensibly-laid-out kit in under a minute.
 
-### M4 — Play mode · M — PLAY on the native engine ✓ (wave EEE); KIT's grid follows once heard
+### M4 — Play mode · M — PLAY and KEYS on the native engine ✓ (wave EEE); KIT's grid follows once heard
 
 The latency milestone: Oboe/AAudio (the one new native dependency),
 pre-loaded pad buffers, choke groups honoured, velocity from touch. Full-
@@ -188,7 +188,10 @@ trim it → pad it → play it → write the card → it plays on the Live III.
 
 ## Part 2 — Hardware verification queue · user, ~one card session
 
-In value order, artifacts already on the branch under `testkit/`:
+Run this from [`BENCH.md`](BENCH.md) section B, which orders it against
+the phone-only checks and gives each item somewhere to write the answer.
+The queue itself, in value order, artifacts already on the branch under
+`testkit/`:
 
 1. **`SnipSnap Session.xpj`** — the headliner; exercises kit, all four
    instruments, organ sustain loops, and the sequence in one open.

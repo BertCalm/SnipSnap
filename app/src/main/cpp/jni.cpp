@@ -58,6 +58,11 @@ Java_com_snipsnap_app_NativeSurface_isShared(JNIEnv*, jobject, jlong handle) {
     return engine(handle)->isShared() ? JNI_TRUE : JNI_FALSE;
 }
 
+JNIEXPORT jdouble JNICALL
+Java_com_snipsnap_app_NativeSurface_latencyMillis(JNIEnv*, jobject, jlong handle) {
+    return engine(handle)->latencyMillis();
+}
+
 JNIEXPORT void JNICALL
 Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv* env, jobject, jlong handle, jfloatArray mono, jint sourceRate) {
     const jsize n = env->GetArrayLength(mono);
@@ -173,6 +178,11 @@ Java_com_snipsnap_app_NativePads_isShared(JNIEnv*, jobject, jlong handle) {
     return pads(handle)->isShared() ? JNI_TRUE : JNI_FALSE;
 }
 
+JNIEXPORT jdouble JNICALL
+Java_com_snipsnap_app_NativePads_latencyMillis(JNIEnv*, jobject, jlong handle) {
+    return pads(handle)->latencyMillis();
+}
+
 JNIEXPORT void JNICALL
 Java_com_snipsnap_app_NativePads_beginBank(JNIEnv*, jobject, jlong handle) {
     pads(handle)->beginBank();
@@ -194,13 +204,14 @@ Java_com_snipsnap_app_NativePads_commitBank(JNIEnv*, jobject, jlong handle) {
 JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativePads_noteOn(
     JNIEnv*, jobject, jlong handle, jint voiceId, jint sample,
-    jlong startFrame, jlong endFrame, jfloat gainL, jfloat gainR, jdouble pitch) {
+    jlong startFrame, jlong endFrame, jlong loopStart, jfloat gainL, jfloat gainR, jdouble pitch) {
     PadCommand c;
     c.type = PadCommand::Type::NoteOn;
     c.voiceId = voiceId;
     c.sample = sample;
     c.start = startFrame;
     c.end = endFrame;
+    c.loopStart = loopStart;
     c.gainL = gainL;
     c.gainR = gainR;
     c.pitch = pitch;

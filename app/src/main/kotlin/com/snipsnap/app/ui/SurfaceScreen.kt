@@ -41,7 +41,9 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.shell.PrintLength
 import com.snipsnap.shell.SnipStore
+import com.snipsnap.shell.StreamFacts
 import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.TouchSurface
 import com.snipsnap.shell.TouchSurface.Mode
@@ -69,6 +71,10 @@ import kotlinx.coroutines.withContext
  * captures the sound under the last touch as a morph corner. Both live
  * in `surface.json` beside the kit (`SurfaceStore`), so a morph you set
  * up is there when you come back.
+ *
+ * LATCH keeps the loop sounding where the finger left it, so one hand can
+ * set corners while the other is free; BARS locks a print to a whole
+ * number of bars at the kit's tempo, so it drops onto the groove grid.
  *
  * A print goes → TAPE (the deck's shelf) or → PAD: the SP-404 move
  * proper, the performance landing on a pad of the kit you are holding
@@ -104,10 +110,15 @@ fun SurfaceScreen(
     var lastHeld by remember { mutableStateOf<Reading?>(null) }
     var printing by remember { mutableStateOf(false) }
     var printToPad by remember { mutableStateOf(false) }
+    var latched by remember { mutableStateOf(false) }
+    /** Index into PrintLength.BARS; 0 = FREE. */
+    var barsIndex by remember { mutableStateOf(0) }
     /** A finished print waiting for a pad to be chosen; the chooser shows while it is set. */
     var pendingPrint by remember { mutableStateOf<Snip?>(null) }
     var landing by remember { mutableStateOf(false) }
     var engineUp by remember { mutableStateOf(false) }
+    // The bench's one number, polled about once a second (see PlayScreen).
+    var latency by remember { mutableStateOf(StreamFacts.latency(null)) }
 
     fun started(up: Boolean) {
         engineUp = up
@@ -296,8 +307,13 @@ fun SurfaceScreen(
     LaunchedEffect(engine) {
         val smoother = TouchSurface.SmoothedReading(TouchSurface.Smoother.coefficient(cutoffHz = 12f, rateHz = 60f))
         var lastMode = mode
+        var lastLatencyAt = 0L
         while (true) {
-            withFrameNanos { }
+            val now = withFrameNanos { it }
+            if (now - lastLatencyAt >= StreamFacts.POLL_NANOS) {
+                lastLatencyAt = now
+                latency = if (engineUp) StreamFacts.latency(engine.latencyMillis(), engine.isShared()) else StreamFacts.NO_STREAM
+            }
             if (mode != lastMode) {
                 // A mode change is a different instrument, not a glide
                 // between two: the painted puck and the engine both jump.
@@ -305,9 +321,13 @@ fun SurfaceScreen(
                 lastMode = mode
             }
             val smooth = smoother.step(target)
-            painted = smooth
             if (target.touching) lastHeld = smooth
-            engine.control(mode, smooth, tilt.tilt, gate = target.touching && padName != null)
+            // Latched with no finger down: the sound stays where the finger
+            // left it, and so does the puck.
+            val held = lastHeld
+            val play = if (latched && !target.touching && held != null) held else smooth
+            painted = play
+            engine.control(mode, play, tilt.tilt, gate = (target.touching || latched) && padName != null)
             if (engine.needsRestart()) started(engine.start())
             if (printing && !finishing && engine.printState() == SurfaceEngine.PrintState.DONE) finishPrint()
         }
@@ -343,11 +363,23 @@ fun SurfaceScreen(
                 ) {
                     if (printing) {
                         finishPrint()
-                    } else if (engine.armPrint(SurfaceEngine.MAX_PRINT_SECONDS)) {
-                        printing = true
-                        onToast("PRINTING. PLAY THE SURFACE.")
                     } else {
-                        onToast("STILL LANDING THE LAST PRINT.")
+                        val bars = PrintLength.BARS[barsIndex]
+                        val bpm = entry?.kit?.tempoBpm
+                        val seconds = if (bars > 0 && bpm != null) {
+                            PrintLength.seconds(bars, bpm).coerceAtMost(SurfaceEngine.MAX_PRINT_SECONDS)
+                        } else {
+                            SurfaceEngine.MAX_PRINT_SECONDS
+                        }
+                        if (engine.armPrint(seconds)) {
+                            printing = true
+                            onToast(
+                                if (bars > 0 && bpm != null) "PRINTING ${PrintLength.label(bars)} AT ${bpm.toInt()} BPM."
+                                else "PRINTING. PLAY THE SURFACE.",
+                            )
+                        } else {
+                            onToast("STILL LANDING THE LAST PRINT.")
+                        }
                     }
                 }
             }
@@ -364,6 +396,15 @@ fun SurfaceScreen(
                     Modifier.weight(1f).padding(horizontal = 4.dp),
                 )
                 ActionButton("PAD ►", scheme, enabled = padName != null) { stepPad(+1) }
+                ActionButton("LATCH", scheme, enabled = padName != null, dimmed = !latched) { latched = !latched }
+                // BARS needs a tempo; a kit without one prints free.
+                val bpm = entry?.kit?.tempoBpm
+                ActionButton(
+                    if (bpm == null) "NO TEMPO" else PrintLength.label(PrintLength.BARS[barsIndex]),
+                    scheme,
+                    enabled = bpm != null && !printing,
+                    dimmed = barsIndex == 0,
+                ) { barsIndex = (barsIndex + 1) % PrintLength.BARS.size }
             }
 
             Spacer(Modifier.height(6.dp))
@@ -468,13 +509,22 @@ fun SurfaceScreen(
             Spacer(Modifier.height(6.dp))
 
             val readout = buildString {
+                // Latency leads: the line can outrun a narrow screen, and
+                // during a bench it is the part worth keeping.
+                append(latency).append("  ·  ")
                 append("X %.2f  Y %.2f".format(painted.x, painted.y))
                 if (mode == Mode.XYZ) append("  Z %.2f".format(painted.z))
                 if (mode == Mode.MORPH) append("  A %.2f B %.2f C %.2f D %.2f".format(painted.a, painted.b, painted.c, painted.d))
                 if (tilt.available) append("  TILT %.2f".format(tilt.tilt))
                 padName?.let { append("  ·  ").append(it.uppercase()) }
             }
-            TapeText(readout, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.fillMaxWidth())
+            // MORPH's six numbers plus TILT and the pad name run well past
+            // 390dp on one line - a design-canvas board caught it clipping
+            // mid-digit. Latency still leads (see above), so a second line
+            // is spare capacity, not a redesign: it covers every case but
+            // the rare worst one (MORPH + tilt + a shared stream + a long
+            // pad name), which would need a restructure, not a parameter.
+            TapeText(readout, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.fillMaxWidth(), maxLines = 2)
         }
 
         if (pendingPrint != null) {

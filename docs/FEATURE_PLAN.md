@@ -15,6 +15,12 @@ done; the CORE column below is a short list of small items that shrink the
 APP column further, the APP column is M0–M5 wearing feature names, and the
 USER column is one card session.
 
+**Every `USER` row below is collected, in run order, in
+[`BENCH.md`](BENCH.md)** — grouped by what you need in your hands (the
+phone alone, the phone and the Live III, and the one firmware save that
+unblocks the most), with a line to write each answer on. Work from there
+rather than hunting these rows one at a time; results come back here.
+
 ---
 
 ## F1 — The capture-to-export shell (the MVP loop)
@@ -1409,6 +1415,43 @@ kit's folder; the same box for EXPORT's preflight, which has its own card.
 
 ---
 
+## Wave GGG — the trip catches up to its own drawing (APP)
+
+Drawing OUTSIDE's trip state by state on the design canvas (page three,
+built after wave FFF) found the code one step behind its own language in
+two small places, noted on the board for a follow-up. This wave closes
+both.
+
+| Item | Status |
+|---|---|
+| GGG1 | ✓ done: the measured line reads on an LCD, not pixel text — `OutsideCard` (`:app`, blind for CI's compiler): once a trip measures ("ROOM · 23 MS LATE · 87% SURE"), the status sits in the same 28dp LCD strip the reels use at rest, in `lcdInk`; before a trip the guidance line stays plain pixel text, as the board's idle state shows. `OutsideSheet.statusLine` itself is unchanged and already tested. |
+| GGG2 | ✓ done: KEEP ROOM lights — `ActionButton` gains `lit` (`:app`, blind): an amber rim over the ordinary bevel, [PrimaryAction]'s own dress on a working-surface button, shown only while `enabled` too, so a trip in flight or nothing yet measured still reads as the plain dimmed bevel. `OutsideCard` passes `lit = canKeep`. |
+
+Nothing below the line — the board named exactly these two, and both are closed.
+
+---
+
+## Wave HHH — GRAIN FIELD and SURFACE, drawn (APP)
+
+The design canvas's last two screens with no board at all — both arrived
+whole from another branch. GRAIN FIELD held up as built. SURFACE didn't:
+its one-line readout (latency, X/Y, up to four corner weights, TILT, the
+pad name) ran to roughly double the frame's width in MORPH mode and
+clipped mid-digit at 390 - the code's own comment already knew the line
+"can outrun a narrow screen" and ordered latency first for exactly that
+reason, but a lost pad name is still a lost pad name.
+
+| Item | Status |
+|---|---|
+| HHH1 | ✓ done: GRAIN FIELD drawn — four boards on page six (loading, idle, DUET without the mic, DUET armed), from `GrainFieldScreen.kt` as it stands. No defect: every label fits, the scatter and both cursor rings read clearly. |
+| HHH2 | ✓ done: SURFACE drawn, its readout fixed — three boards on page seven (XY, MORPH at the readout's longest, no pad). `SurfaceScreen`'s readout `TapeText` now allows a second line (`maxLines = 2`, `:app`, blind); latency still leads by design, so it and every mid-crowding case survive, and two lines fits every case this app ships except the rare worst one (MORPH + tilt + a shared stream + a long pad name), noted below the line. |
+
+**Below the line for HHH:** a truly lossless SURFACE readout for the rare
+worst case above would need a restructure (a second dedicated line for
+identity, say), not a parameter — left for whoever hits it for real.
+
+---
+
 ## Wave ZZ — the phone reads (APP)
 
 The import door (F3) made the core's listening verbs reachable from the
@@ -1481,6 +1524,7 @@ The Android side is written blind for CI's compiler, as :app always is.
 | CCC6 | ✓ done: the corners are yours — `SurfaceStore` (`:shell`, tested, fuzzed): `surface.json` beside the kit with the pad the surface plays and four `Corner`s (pitch, cutoff, resonance, drive, each 0..1, refused in words); `Corner.from(mode, reading, tilt, corners)` is the engine's own macro map (XY / XYZ / the MORPH blend), so SET A..D on the screen captures the sound under the last touch as a corner, pushes it to the engine and saves; defaults are the engine's; a torn file reads as the defaults, said aloud | CORE + APP | S | round-trip byte-stable; a corner at A is A; the centre is the average; refusals named; the fuzz batch holds; bench: set four corners, leave, come back, morph between them |
 | CCC7 | ✓ done: PAD ◄ ► — the surface plays any of the kit's pads, by slot, wrapping, the choice remembered in `surface.json`; the readout names it MPC-style (A01..) | APP | S | bench: step through the kit; reopen, the same pad is under the finger |
 | CCC8 | ✓ done: PRINT → PAD — the print's destination toggles → TAPE / → PAD; → PAD opens SYNTH's own slot chooser (now shared) and the print lands through `KitBuilderModel`: `assign` on an empty slot ("Surface Print", unclassed), `replaceAudio` on a taken one (the original in the bin); a layered or chained pad is dimmed in the chooser (SYNTH's own rule) and a refusal the model still raises (the kit changed under the chooser) is said in words with the print kept, a disk failure named as such with the print still pending; cancelling the chooser sends the print to TAPE rather than losing it; the kit's identity bumps so KIT and the surface reload | APP | S | bench: print to an empty pad, hear it on KIT; print over a taken pad, find the original in the bin; cancel, find the print on TAPE |
+| CCC9 | ✓ done: LATCH and BARS — LATCH keeps the loop sounding where the finger left it (the last held reading is what the engine and the puck get), so one hand sets corners while the other is free; BARS cycles FREE / 1 / 2 / 4 / 8 bars at the kit's tempo (`PrintLength`, `:shell`, tested), the print armed to exactly that length so it stops itself on the bar and drops onto the groove grid; a kit without a tempo prints free and the button says NO TEMPO | CORE + APP | S | bench: latch, lift, the loop holds; 2 BARS at 92 BPM prints 5.2 s and lands trimmed to the bar |
 
 ## Wave EEE — M4, the pads on the native engine (APP + CORE)
 
@@ -1501,6 +1545,9 @@ been heard on a phone; then it follows in one small PR.
 | EEE3 | ✓ done: PLAY over it — `PadEngine.kt` (bank read off the main thread through `WavReader`, hits through `PadHit`, `@Synchronized`, `close` idempotent); the reap timer and its two constants gone, replaced by a frame loop that drains the endings ring into `VoiceAllocator.voiceEnded`; the allocator built at `MAX_VOICES` so the status line and the engine cannot drift; a hit nothing loaded for is handed back to the allocator at once; ON_STOP still panics | APP | S | bench: finger drumming feels tight enough that you'd play it (the milestone's own exit test); VOICES counts down as one-shots end; a closed hat cuts an open one with no click |
 | EEE4 | KIT's grid onto the native engine — swap `PadPlayer` for `PadEngine` on the KIT screen once EEE3 has been heard | APP | S | bench: KIT's pads sound the same as PLAY's |
 | EEE5 | ✓ done: the engines under test — `app/src/main/cpp/test`, a host-built target (no NDK, no device; Oboe headers only, its two linked entry points stubbed) that drives both callbacks by hand: the ring keeps order and drops when full; the smoother glides, settles and snaps; the print buffer fills to its ceiling, refuses a re-arm while the callback may write, and lands Done on the callback; the pad engine plays the window at its gains, repitches by the ratio, reads stereo as stereo, fades a choke and an all-off, reports every ending, silences and reports every voice on a bank swap, never plays a stale command by index, waits for the retiree before a second swap, steals the oldest at the cap and says so; the Surface is silent until gated, prints the mono bus, and morphs between its corners. A third CI job (`native-tests`) runs it | CORE | S | 17 cases green on the host and in CI; every bug Copilot found in the native code now has a case that would have caught it |
+| EEE6 | ✓ done: KEYS on the native engine — `KeyHit` (`:shell`, tested): the zone that covers the note, the speed from the root, the zone's loop (an empty loop plays once, the JVM engine's rule), the gain at `VOICE_LEVEL`, the release as milliseconds; `PadEngine` learns a loop (`loopStart` on the command; the voice wraps from its last frame back, a note-off is a Stop with the release as its fade; a native case proves the wrap and the release); `InstrumentPlayer` rewritten over `NativePads` (the bank read off the main thread, eight voices the oldest stolen, a route change reopened on the next key); KEYS loads it in a `LaunchedEffect` on IO. The AudioTrack thread the app owned for keys is gone; `InstrumentEngine` stays the JVM reference the map is checked against | CORE + APP | S–M | bench: a held note sustains through its loop and lets go over the release; a chord of eight; OCT ± mid-note is silence, not a stuck note |
+| EEE7 | ✓ done: the bench's one number — both engines answer `latencyMillis()` (Oboe's `calculateLatencyMillis`, shared through `OboeOutput.h`, UI thread only per Oboe's own note about data callbacks; -1 with no stream, a native case); `StreamFacts.latency` (`:shell`, tested) turns it into words, counting a zero or negative reading as no answer rather than a miraculous one and naming the shared path either way; PLAY's header and SURFACE's readout poll it once a second off the frame clock — "VOICES 3/32 · 9 MS", "— MS SHARED", `NO STREAM` | CORE + APP | S | bench: the number is there to write down, and it says which path the stream took |
+| EEE8 | ✓ done: the native engines read in full — four doors the review found and a case for each. A reading that is not a number is now refused at the Surface's door rather than latched for ever: the smoothers and the filter carry state across callbacks, so one NaN (a gravity sensor reporting one, and TILT is resonance in XYZ) killed the surface for the session; `clamp01` passed NaN through, since `NaN < 0` and `NaN > 1` are both false. A pad voice's speed and gains come through a door too — a zero speed froze a voice on one frame for ever and a negative one walked the read off the front of the buffer, which `render` never guarded (the suite segfaults without the fix). `PadEngine::stop` now sweeps: a closed stream takes its voices and its queued commands with it, so a route change does not resume notes mid-sample seconds later or leave the allocator holding ids. `PrintBuffer::clear` refuses a live print on the same terms `arm` has since the first round. `TiltSource` keeps its last reading rather than pass a NaN on | CORE + APP | S | 24 native cases green; each of the three engine fixes has a case that fails (or crashes) without it |
 
 ## Sequence
 
@@ -1739,13 +1786,23 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ wave CCC (the Surface): the tactile pad over Oboe — XY / XYZ / MORPH,
     the roll of the phone, PRINT to resample the gesture onto TAPE; then
     the shared fallback, SET A..D corners in surface.json, PAD ◄ ►,
-    PRINT → PAD through SYNTH's door · bench: dropouts, the route
-    change, the print heard back, a print on a pad
+    PRINT → PAD through SYNTH's door, LATCH and BARS · bench: dropouts,
+    the route change, the print heard back, a print on a pad, a bar-locked
+    print on the grid
   ✓ wave EEE (M4, the pads on the native engine): PadHit on the JVM,
     PadEngine under Oboe, PLAY over it with endings reported, not timed ·
     bench: tight enough to play; then EEE4 moves KIT's grid across
   ✓ EEE5 (the engines under test): both native callbacks driven by hand
     on the host, 17 cases, a third CI job
+  ✓ EEE6 (KEYS on the native engine): KeyHit on the JVM, a looping
+    voice in PadEngine, InstrumentPlayer over NativePads; the last audio
+    thread the app owned retired
+  ✓ EEE7 (the bench's one number): the device's own latency on PLAY and
+    SURFACE, so "does it feel tight" has a figure beside it
+  ✓ EEE8 (the engines read in full): doors on the Surface's control
+    values and on a pad voice's speed and gains, a closed stream that
+    takes its voices with it, a print that cannot be freed under the
+    callback — 24 native cases
 
 CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   directions. The smear (STN transient mask, peak-matched) as a rack
@@ -1838,6 +1895,17 @@ CORE+APP wave FFF: ✓ all landed (2026-09-07) — the landing reads back.
   refusal open the language's honest little message box (`LandingNote`,
   tested; `MessageBox`, blind) - skipped first, in the warn colour, with
   the door's own reason, [FINE] to close. A clean landing keeps its toast.
+
+APP wave GGG: ✓ all landed (2026-09-08) — the trip catches up to its own
+  drawing. The two gaps the OUTSIDE trip boards found: the measured line
+  now reads on an LCD strip like every other readout, and KEEP ROOM
+  lights with an amber rim the instant a trip has something to keep,
+  `ActionButton`'s new `lit` state (blind for CI's compiler).
+
+APP wave HHH: ✓ all landed (2026-09-08) — GRAIN FIELD and SURFACE, drawn.
+  Both arrived from another branch with no board ever. GRAIN FIELD held up
+  as built; SURFACE's readout didn't - MORPH's longest case clipped
+  mid-digit at 390, so `TapeText` now allows it a second line.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

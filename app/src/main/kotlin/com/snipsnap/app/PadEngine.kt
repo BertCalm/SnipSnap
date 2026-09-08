@@ -56,6 +56,15 @@ class PadEngine(preferredSampleRate: Int) {
     fun isShared(): Boolean = open && NativePads.isShared(handle)
 
     /**
+     * The stream's round-trip latency in ms, or null when there is none or
+     * the device will not say. Cheap but not free (it reads a timestamp),
+     * so poll it about once a second, not per frame.
+     */
+    @Synchronized
+    fun latencyMillis(): Double? =
+        if (open && running) NativePads.latencyMillis(handle).takeIf { it > 0.0 } else null
+
+    /**
      * Read every sample the kit's pads and layers name and hand the bank to
      * the engine. Blocking disk IO: call it from an IO dispatcher. A WAV
      * that will not read is left out, and its pad plays nothing (a hit
@@ -110,7 +119,7 @@ class PadEngine(preferredSampleRate: Int) {
         val sample = sampleIndex[hit.sampleFile] ?: return false
         return NativePads.noteOn(
             handle, voiceId, sample,
-            hit.startFrame, hit.endFrameExclusive, hit.gainLeft, hit.gainRight, hit.pitchRatio,
+            hit.startFrame, hit.endFrameExclusive, -1L, hit.gainLeft, hit.gainRight, hit.pitchRatio,
         )
     }
 
