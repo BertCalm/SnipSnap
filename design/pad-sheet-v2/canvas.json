@@ -386,6 +386,33 @@
       "h": 560,
       "title": "SNIPS · delete confirm",
       "page": "page-12"
+    },
+    {
+      "file": "DeletedKitsEmpty.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 320,
+      "title": "DELETED KITS · empty bin",
+      "page": "page-13"
+    },
+    {
+      "file": "DeletedKitsList.dc.html",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 400,
+      "title": "DELETED KITS · list, unarmed",
+      "page": "page-13"
+    },
+    {
+      "file": "DeletedKitsArmed.dc.html",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 400,
+      "title": "DELETED KITS · EMPTY armed",
+      "page": "page-13"
     }
   ],
   "annotations": [
@@ -500,11 +527,19 @@
       "w": 1350,
       "page": "page-12",
       "text": "SNIPS (drawn from SnipsScreen.kt; never had a board - the shelf-level list of every WAV under snips/, reached from KitsScreen's SNIPS ▸ row, never kit-scoped)\nEmpty shelf: the header still reads a real 0 · 0 B count rather than hiding itself, NO SNIPS YET in the LCD panel below. Playing, USED badge: one row mid-playback (■ STOP replacing ▶ PLAY - the same row's own PLAY is how STOP is spelled, a second tap toggles it off), a second row carrying the USED badge (lit only once the cheap anyPadTaggedWithSourceFile gate finds at least one tagged pad on the shelf - no badge renders at all until that resolves, never a guessed 'not used'). → PAD and → TAPE sit on every row regardless of playback state, always enabled - → PAD is never gated on an already-open kit (the fix this screen's own KDoc calls out by name: SNIPS lives on AppScreen.KITS, where `open` is null by definition, so gating on it would permanently disable the button on this screen's own entry path). Delete confirm: DELETE THIS SNIP? CAN'T UNDO. over a dimmed scrim, the same raisedBevel dialog shape App.kt's CaptureBlockedDialog and KitsScreen's StarterMenu already use.\nWhat the drawing found: no defect - the header's count/size readout is short enough at any realistic snip count/size to never approach 390's budget, and DELETE's fixed bin-red border/glow reads identically here as it does in TakesBinScreen and KitScreen, the one deliberately scheme-invariant color pair in the app."
+    },
+    {
+      "id": "note-deletedkits",
+      "x": 0,
+      "y": -230,
+      "w": 1350,
+      "page": "page-13",
+      "text": "DELETED KITS (drawn from DeletedKitsScreen.kt; never had a board - the last screen this archaeology pass found. Closes the gap KitsScreen.kt's and Personality.kt's own prior KDocs used to describe accurately: a deleted kit used to have neither a listing nor a restore, unlike TAKES + BIN and ROOMS's own FORGET → BIN)\nEmpty bin: NOTHING DELETED. in the LCD panel, the plain locked tone SNIPS' own NO SNIPS YET set, not the shelf's usual tape-metaphor quips. List, unarmed: two rows, each name/pad-count/relative-age over a RESTORE chip; days-left reads in warn (amber-orange) at ≤2 days and amber otherwise, the same threshold TAKES + BIN and ROOMS's own binned rows use - a row at 0 days left still shows and still restores, the sweep decides when it's actually gone, not this screen. EMPTY armed: a RESTORE tap disarms it first (the row vanishing shifts everything under the finger, so the very next tap must not read as EMPTY's own second tap), and a real second tap on EMPTY itself swaps the label to TAP AGAIN TO CONFIRM — NO TAKEBACKS, the same three-second self-disarming confirm TakesBinScreen's own EMPTY THE BIN NOW uses, copied verbatim.\nWhat the drawing found: no defect - both EMPTY-button strings are the same ones already proven to fit TakesBinScreen's identical layout, and the fixed bin-red border/glow reads the same scheme-invariant pair SNIPS' own DELETE uses."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-12"
+    "page": "page-13"
   },
   "pages": [
     {
@@ -554,6 +589,10 @@
     {
       "id": "page-12",
       "name": "SNIPS"
+    },
+    {
+      "id": "page-13",
+      "name": "DELETED KITS"
     }
   ]
 }
