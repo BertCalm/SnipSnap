@@ -708,10 +708,8 @@ class MicSessionService : Service() {
         /**
          * Counts sessions that ended because the reader thread died on its
          * own — [AudioRecord.read] returning a persistent error code, an
-         * `IllegalStateException`/`SecurityException` out of `read()` (a
-         * permission pulled mid-session, when it surfaces as an exception
-         * at all rather than as a run of zero-length reads), or the OS
-         * killing this Service outright (`onDestroy` runs
+         * `IllegalStateException`/`SecurityException` out of `read()`, or
+         * the OS killing this Service outright (`onDestroy` runs
          * [stopReaderAndRecord] before the process actually dies, but
          * nothing here posts to this flow from a route that never gets to
          * run at all — a hard kill with no `onDestroy` announces nothing
@@ -726,6 +724,19 @@ class MicSessionService : Service() {
          * The app toasts on each tick, same discipline as [phoneStops]:
          * baseline by count at first composition, so a recreated Activity
          * doesn't replay an old failure.
+         *
+         * **What this does NOT catch, and it is the common case.** A
+         * permission revoked mid-session usually doesn't error at all:
+         * the platform mutes the input and `read()` keeps returning
+         * full-length blocks of zero-VALUED samples. That is a positive
+         * return, no exception, no short read — indistinguishable here
+         * from a genuinely silent room, so none of the checks above fire
+         * and the session stays armed against dead air. Detecting it needs
+         * sample-content inspection, which this service already has in
+         * [SilenceWatch] but currently wires only for [Source.INSIDE]'s
+         * `blocked` verdict. Extending that to plain MIC sessions is the
+         * fix; until then, this flow covers the reader dying loudly, not
+         * the mic going quiet.
          */
         val sessionDied: StateFlow<Int> = _sessionDied.asStateFlow()
 

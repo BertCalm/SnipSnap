@@ -269,8 +269,13 @@ fun PadCaptureScreen(
                     // catch-all reaching further back than it does, and
                     // further back than the mic has even been listening (it
                     // can't reach before LISTEN was pressed at all).
+                    // "UP TO", not "THE LAST" — CaptureRing.snapshot returns a
+                    // SHORT array when the ring holds fewer frames than asked
+                    // for, so in the first couple of seconds after LISTEN a
+                    // GRAB genuinely gets less than this. Same reason SNIP
+                    // says "UP TO 60s" rather than "LAST 60s".
                     TapeText(
-                        "GRAB KEEPS THE LAST ${GRAB_SECONDS}s HEARD. HOLD RECORDS AS LONG AS YOU HOLD IT.",
+                        "GRAB KEEPS UP TO THE LAST ${GRAB_SECONDS}s HEARD. HOLD RECORDS WHILE YOU HOLD.",
                         TapeType.lcdSmall,
                         scheme.lcdInk.tape,
                         maxLines = 3,
@@ -290,7 +295,7 @@ fun PadCaptureScreen(
             PrimaryAction(label = "START MIC", enabled = true, onClick = onRequestArm)
         }
         PrimaryAction(
-            label = if (committing == Gesture.GRAB) "GRABBING…" else "GRAB ▸ LAST ${GRAB_SECONDS}s",
+            label = if (committing == Gesture.GRAB) "GRABBING…" else "GRAB ▸ UP TO ${GRAB_SECONDS}s",
             enabled = armed && committing == null,
             onClick = ::grab,
         )

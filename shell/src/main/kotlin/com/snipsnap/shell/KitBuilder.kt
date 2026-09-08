@@ -791,7 +791,7 @@ class KitBuilderModel private constructor(
     }
 
     /**
-     * EJECTED. THE BIN KEEPS IT 30 DAYS — deletes are recoverable, not gone.
+     * DELETED. THE BIN KEEPS IT 30 DAYS — deletes are recoverable, not gone.
      *
      * Bin filenames are only `"<millis>_<name>"` ([BIN_NAME]) — two calls
      * that bin the SAME [fileName] inside the same real millisecond (a

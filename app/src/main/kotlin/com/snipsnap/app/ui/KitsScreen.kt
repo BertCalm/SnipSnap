@@ -810,27 +810,34 @@ private fun ArmControl(
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         RecordingIndicator()
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // SNIP takes the wider half, STOP the narrower. It used to be the
+            // other way round, which was wrong twice over: SNIP carries the
+            // longer label (it names its own window, STOP names nothing) and
+            // would ellipsize at large font scale in the smaller box, and
+            // SNIP is also the reason the user is on this screen at all —
+            // STOP is the way out. A destructive-styled control being the
+            // easier one to hit was never the intent.
             Box(
                 Modifier
-                    .weight(2f)
+                    .weight(1f)
                     .height(Layout.PRIMARY_ACTION_H.dp)
                     .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                     .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(6.dp))
                     .tapeClick(label = null, onClick = onEject),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText("STOP LISTENING", TapeType.displayBig, BIN_RED_GLOW)
+                TapeText("STOP", TapeType.displayBig, BIN_RED_GLOW)
             }
             Box(
                 Modifier
-                    .weight(1f)
+                    .weight(2f)
                     .height(Layout.PRIMARY_ACTION_H.dp)
                     .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                     .border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
                     .tapeClick(label = null, onClick = onSnip),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText("SNIP ▸ KEEP UP TO 60s", TapeType.displayBig, scheme.amber.tape)
+                TapeText("SNIP ▸ UP TO 60s", TapeType.displayBig, scheme.amber.tape)
             }
         }
     }
