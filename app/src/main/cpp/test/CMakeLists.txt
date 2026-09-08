@@ -40,9 +40,15 @@ set(ENGINE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
 add_executable(engine_tests
     engine_tests.cpp
+    jni_tests.cpp
     oboe_stubs.cpp
     "${ENGINE_DIR}/SurfaceEngine.cpp"
     "${ENGINE_DIR}/PadEngine.cpp"
+    # The bridge, built here against stub/jni.h. It needs a JVM to link in
+    # the app, which is why it went untested for so long; the stub is
+    # enough to run it, and android-build against the NDK's own header is
+    # what keeps the two honest.
+    "${ENGINE_DIR}/jni.cpp"
 )
 target_include_directories(engine_tests PRIVATE
     "${ENGINE_DIR}"

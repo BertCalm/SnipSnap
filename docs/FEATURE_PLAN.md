@@ -1914,14 +1914,23 @@ APP wave HHH: ✓ all landed (2026-09-08) — GRAIN FIELD and SURFACE, drawn.
   as built; SURFACE's readout didn't - MORPH's longest case clipped
   mid-digit at 390, so `TapeText` now allows it a second line.
 
-APP wave III (2026-09-08) — the SHARE/BACKUP chooser hand-off, drawn.
-  DESIGN_GAP.md's last "still undrawn" line: SHARE packing (every door
-  dimmed, PACKING… in the status bar), the system chooser itself
-  (schematic - SnipSnap owns nothing past `Intent.createChooser`), the
-  clean return and the no-receiver return; BACKUP's empty-shelf gate
-  (dimmed before the busy lock, no chooser ever offered) and a partial
-  backup's message box. No code defect: `shareKit`/`backupShelf` already
-  route every branch through the app's two existing answer shapes.
+APP wave III: ✓ all landed (2026-09-08) — the SHARE/BACKUP chooser
+  hand-off, drawn. DESIGN_GAP.md's last "still undrawn" line: SHARE
+  packing (every door dimmed, PACKING… in the status bar), the system
+  chooser itself (schematic - SnipSnap owns nothing past
+  `Intent.createChooser`), the clean return and the no-receiver return;
+  BACKUP's empty-shelf gate (dimmed before the busy lock, no chooser
+  ever offered) and a partial backup's message box. No code defect:
+  `shareKit`/`backupShelf` already route every branch through the app's
+  two existing answer shapes.
+
+APP wave JJJ: ✓ all landed (2026-09-08) — SPLIT, drawn. EEE9 arrived
+  from another branch with no board ever, same as GRAIN FIELD and
+  SURFACE before it: not split (SPLIT lit amber, the desk disabled at
+  rest), working (the spectrogram pass), the desk playing (a fader
+  reversed, another muted, STOP lit), and a hot print's toast on the
+  →TAPE path. Held up as built - the lit/dimmed/enabled vocabulary and
+  the fader's own unity tick and knob already match the code exactly.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

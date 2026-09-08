@@ -26,7 +26,11 @@ import com.snipsnap.audio.Snip
  *    audio thread with all the timing that implies. Live playback still
  *    goes through the native engine; the two agree because reversing a
  *    window frame by frame is exactly what the engine's backwards read
- *    does over the whole window.
+ *    does over the whole window. That last sentence was an assertion
+ *    until the native suite's
+ *    `pad_engine_a_split_mix_is_the_offline_render_sample_for_sample`
+ *    started holding it to account: three layers through the engine,
+ *    checked against this rule for every frame of the window.
  *
  * Nothing here clips or normalises. Above [UNITY] a fader is you asking
  * for more of a part than the sound contained, and the result says so
