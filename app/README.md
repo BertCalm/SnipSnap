@@ -48,6 +48,12 @@ shelf useful before capture (M1) exists.
 
 ## Things to verify on first run (beyond "does it compile")
 
+For an actual session with the phone in hand, work from
+[`../docs/BENCH.md`](../docs/BENCH.md): it orders everything below
+against the hardware checks and gives each one a line to answer on. The
+list here stays the per-feature detail — what to look at, and which
+logcat tag to grab when something is wrong.
+
 - **SoundPool vs the kit WAVs**: starters render standard PCM WAVs;
   confirm depth/rate decode cleanly. If any pad is silent, check the
   logcat `SoundPool` line first.

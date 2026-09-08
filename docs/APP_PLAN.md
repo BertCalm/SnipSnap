@@ -188,7 +188,10 @@ trim it → pad it → play it → write the card → it plays on the Live III.
 
 ## Part 2 — Hardware verification queue · user, ~one card session
 
-In value order, artifacts already on the branch under `testkit/`:
+Run this from [`BENCH.md`](BENCH.md) section B, which orders it against
+the phone-only checks and gives each item somewhere to write the answer.
+The queue itself, in value order, artifacts already on the branch under
+`testkit/`:
 
 1. **`SnipSnap Session.xpj`** — the headliner; exercises kit, all four
    instruments, organ sustain loops, and the sequence in one open.
