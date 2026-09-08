@@ -310,7 +310,7 @@ fun SurfaceScreen(
         var lastLatencyAt = 0L
         while (true) {
             val now = withFrameNanos { it }
-            if (now - lastLatencyAt >= LATENCY_POLL_NANOS) {
+            if (now - lastLatencyAt >= StreamFacts.POLL_NANOS) {
                 lastLatencyAt = now
                 latency = if (engineUp) StreamFacts.latency(engine.latencyMillis(), engine.isShared()) else StreamFacts.NO_STREAM
             }
@@ -539,9 +539,6 @@ fun SurfaceScreen(
         }
     }
 }
-
-/** How often the latency readout asks the device again (see PlayScreen). */
-private const val LATENCY_POLL_NANOS = 1_000_000_000L
 
 /** A slot as the MPC names it: 1..16 is bank A, 17..32 bank B, and so on. */
 private fun padLabel(slot: Int?): String {

@@ -19,6 +19,16 @@ object StreamFacts {
     const val NO_STREAM = "NO STREAM"
 
     /**
+     * How often a screen asks the device again, in nanoseconds. Once a
+     * second is faster than the number moves, and asking costs a
+     * timestamp read - cheap, but not free enough to want a frame.
+     *
+     * It lives here rather than beside each readout so PLAY and SURFACE
+     * cannot come to disagree about how fresh their figures are.
+     */
+    const val POLL_NANOS = 1_000_000_000L
+
+    /**
      * [millis] as the phone reports it, or null when it will not say.
      *
      * A zero or negative reading counts as no answer rather than as a
@@ -33,4 +43,15 @@ object StreamFacts {
         val head = if (known) "${millis!!.roundToInt()} MS" else "— MS"
         return if (shared) "$head SHARED" else head
     }
+
+    /**
+     * PLAY's whole status line: the voice count beside the figure, or
+     * [NO_STREAM] when [up] is false. A stream that is not open has no
+     * voices and no latency, and a count standing at nought reads like a
+     * quiet engine rather than an absent one - so the words for that case
+     * are the same wherever the line is painted, the fullscreen grid
+     * included.
+     */
+    fun playStatus(up: Boolean, voices: Int, maxVoices: Int, latency: String): String =
+        if (up) "VOICES $voices/$maxVoices · $latency" else NO_STREAM
 }

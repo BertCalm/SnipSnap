@@ -85,9 +85,6 @@ private val WINDOW_GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 private val BANK_A_ROWS = listOf(9..16, 1..8)
 private val BANK_B_ROWS = listOf(25..32, 17..24)
 
-/** How often the latency readout asks the device again: once a second is faster than the number moves. */
-private const val LATENCY_POLL_NANOS = 1_000_000_000L
-
 /** Touch-Y velocity: top of the pad is softest, bottom is full velocity. */
 private const val MIN_VELOCITY = 0.35f
 
@@ -155,6 +152,10 @@ fun PlayScreen(entry: KitShelf.Entry?) {
     // Polled about once a second - it reads a timestamp, so it is cheap
     // but not free, and it does not move fast enough to want a frame.
     var latency by remember(entry.dir) { mutableStateOf(StreamFacts.latency(null)) }
+    // One status line for both headers - the fullscreen grid paints the
+    // same words as the normal one, so a dead stream cannot read as a
+    // quiet one just because you went fullscreen.
+    val status = StreamFacts.playStatus(engineUp, voiceCount, PadEngine.MAX_VOICES, latency)
     val glow = remember(kit) {
         kit.pads.associate { it.slot to Animatable(0f) }
     }
@@ -185,7 +186,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
                 voiceCount = allocator.activeCount
             }
             if (player.needsRestart()) engineUp = player.start()
-            if (now - lastLatencyAt >= LATENCY_POLL_NANOS) {
+            if (now - lastLatencyAt >= StreamFacts.POLL_NANOS) {
                 lastLatencyAt = now
                 latency = StreamFacts.latency(player.latencyMillis(), player.isShared())
             }
@@ -299,7 +300,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
         ) {
             TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             TapeText(
-                if (engineUp) "VOICES $voiceCount/${PadEngine.MAX_VOICES} · $latency" else StreamFacts.NO_STREAM,
+                status,
                 TapeType.lcdReadout,
                 scheme.amber.tape,
                 Modifier.padding(horizontal = 8.dp),
@@ -374,8 +375,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
             FullscreenPlayGrid(
                 kit = kit,
                 glow = glow,
-                voiceCount = voiceCount,
-                latency = latency,
+                status = status,
                 onHit = ::hit,
                 onRelease = ::release,
                 onExit = exitFullscreen,
@@ -388,8 +388,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
 private fun FullscreenPlayGrid(
     kit: Kit,
     glow: Map<Int, Animatable<Float, AnimationVector1D>>,
-    voiceCount: Int,
-    latency: String,
+    status: String,
     onHit: (Int, Float) -> Unit,
     onRelease: (Int) -> Unit,
     onExit: () -> Unit,
@@ -414,7 +413,7 @@ private fun FullscreenPlayGrid(
         ) {
             TapeText(kit.name, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             TapeText(
-                "VOICES $voiceCount/${PadEngine.MAX_VOICES} · $latency",
+                status,
                 TapeType.lcdSmall,
                 scheme.amber.tape,
                 Modifier.padding(horizontal = 8.dp),

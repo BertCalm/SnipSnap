@@ -23,6 +23,24 @@ class StreamFactsTest {
     }
 
     @Test
+    fun `a stream that is not up says so, wherever the line is painted`() {
+        assertEquals(
+            "VOICES 3/32 · 9 MS",
+            StreamFacts.playStatus(up = true, voices = 3, maxVoices = 32, latency = StreamFacts.latency(9.0)),
+        )
+        // Not a count of nought and a dash: an absent engine, not a quiet one.
+        assertEquals(
+            StreamFacts.NO_STREAM,
+            StreamFacts.playStatus(up = false, voices = 0, maxVoices = 32, latency = StreamFacts.latency(null)),
+        )
+        // And it stays the refusal even if a stale count is still on hand.
+        assertEquals(
+            StreamFacts.NO_STREAM,
+            StreamFacts.playStatus(up = false, voices = 7, maxVoices = 32, latency = "9 MS"),
+        )
+    }
+
+    @Test
     fun `the shared path is named whether or not the number is`() {
         assertEquals("23 MS SHARED", StreamFacts.latency(23.0, shared = true))
         assertEquals("— MS SHARED", StreamFacts.latency(null, shared = true))
