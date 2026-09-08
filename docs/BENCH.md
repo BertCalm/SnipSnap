@@ -218,7 +218,7 @@ a judgement call:
   sheet that is being ignored does not sound *slightly* off — the pad an
   octave and a half out is the answer.
 - Its loop is the **last quarter-second**, and the tone is a steady saw.
-  Held, a honoured loop sings forever. Ignored, it stops after two
+  Held, an honoured loop sings forever. Ignored, it stops after two
   seconds. There is no in-between to argue about.
 
 Verified in the bytes before it ever reached the card: the `smpl` chunk
@@ -229,6 +229,7 @@ the sheet — never that there was no sheet to ignore.
 Rebuild it any time with:
 
 ```
+./gradlew :cli:snipsnapJar
 java -jar cli/build/libs/snipsnap.jar keys --loop --name AAA2Tone A4-tone.wav
 ```
 
