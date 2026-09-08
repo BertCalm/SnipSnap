@@ -96,6 +96,21 @@ Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 > dimmed scrim, the same dialog shape `CaptureBlockedDialog`/
 > `StarterMenu` already use). Held up as built - no code defect.
 > `DeletedKitsScreen` remains queued.
+>
+> **Closed by wave NNN (2026-09-08), closing the archaeology pass.**
+> `DeletedKitsScreen` — the last screen this pass found - is drawn on
+> the canvas's page thirteen: empty bin (`NOTHING DELETED.`, SNIPS' own
+> plain locked tone), a list unarmed (each row's name/pad-count/
+> relative-age over a RESTORE chip; days-left reads in `warn` at ≤2
+> days and amber otherwise, the same threshold TAKES + BIN and ROOMS's
+> own binned rows use), and EMPTY armed (a real second tap swaps the
+> label to `TAP AGAIN TO CONFIRM — NO TAKEBACKS`, the same
+> self-disarming three-second confirm `TakesBinScreen`'s own EMPTY THE
+> BIN NOW uses, copied verbatim - a RESTORE tap disarms it first so a
+> shifted row's next tap can't read as EMPTY's own second one). Held up
+> as built - no code defect. Every screen in `app/.../ui/` now has a
+> board; the archaeology pass waves KKK through NNN worked through is
+> closed.
 
 The handoff is unusually implementable — it states tokens in the form Compose
 consumes and names repo symbols (`PeaksPyramid`, `StarterKits`,
