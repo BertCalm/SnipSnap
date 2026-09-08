@@ -159,8 +159,15 @@ fun DeletedKitsScreen(
         }
     }
 
-    // Mirrors the header chip's own `enabled = !busy` below.
-    BackHandler(enabled = !busy) { onBack() }
+    // The chip below carries `enabled = !busy`; this must NOT. A disabled
+    // handler unregisters, and this screen is one of App's overlays, so the
+    // root handler already excludes itself whenever `deletedKitsOpen` is set —
+    // between them there would be ZERO enabled callbacks mid-write and the
+    // dispatcher would fall through to Activity.finish(), exiting the app in
+    // the middle of a RESTORE or an EMPTY THE BIN NOW. Registered always,
+    // no-op while busy, matching SplitScreen's `if (!working) onExit()`.
+    // Swallowing isn't a trap: MenuRow stays rendered above this screen.
+    BackHandler { if (!busy) onBack() }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(

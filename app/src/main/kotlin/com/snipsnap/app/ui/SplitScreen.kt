@@ -120,9 +120,14 @@ fun SplitScreen(
 
     // Mirrors the ◄ KIT chip below (`enabled = !working`) exactly: always
     // registered so Back can't fall through to a broader "go to shelf"
-    // policy mid-operation, but a no-op while `working`, the same as the
-    // disabled chip — there is genuinely no way to leave this screen while
-    // the DSP decode or PRINT render is in flight, by design.
+    // policy — or, worse, to Activity.finish() — mid-operation, but a no-op
+    // while `working`, the same as the disabled chip.
+    //
+    // That closes BACK specifically, not the screen: MenuRow renders above
+    // this content unconditionally, so tapping any tab still unmounts SPLIT
+    // mid-render. That's deliberate — swallowing Back must never become a
+    // trap — but it does mean "no way to leave while working" would be false
+    // if said of the screen as a whole.
     BackHandler { if (!working) onExit() }
 
     DisposableEffect(engine) {

@@ -277,7 +277,15 @@ fun TakesBinScreen(
     // Mirrors the header chip's own `enabled = !busy` below — a RESTORE/
     // EMPTY THE BIN write in flight must not be interrupted by Back any
     // more than by the chip itself.
-    BackHandler(enabled = !busy) { onBack() }
+    // Always registered, no-op while busy — NOT `enabled = !busy`. This screen
+    // is one of App's overlays, so the root handler excludes itself whenever
+    // `takesBinOpen` is set; a disabled handler here would leave ZERO enabled
+    // callbacks mid-write and the dispatcher would fall through to
+    // Activity.finish() — Back would exit the app in the middle of a RESTORE.
+    // Swallowing is safe rather than a trap: MenuRow renders above this screen
+    // the whole time, so a tab is always there to leave by. SplitScreen's
+    // `BackHandler { if (!working) onExit() }` is the same shape.
+    BackHandler { if (!busy) onBack() }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
