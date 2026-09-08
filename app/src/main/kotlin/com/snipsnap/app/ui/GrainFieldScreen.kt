@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -164,6 +165,16 @@ fun GrainFieldScreen(
     DisposableEffect(voice) {
         onDispose { voice?.release() }
     }
+
+    // The header's own ◄ KIT path: release the voice, then leave — shared
+    // by the chip below and by system Back, so the two can't diverge on
+    // whether the voice gets released before this screen unmounts.
+    fun requestBack() {
+        voice?.release()
+        onBack()
+    }
+    BackHandler(onBack = ::requestBack)
+
     // start() exactly once per voice instance — LaunchedEffect only
     // relaunches when `voice`'s identity changes, and GrainVoice.start()
     // itself is idempotent (a compareAndSet guard), so this can't double-arm
@@ -294,10 +305,7 @@ fun GrainFieldScreen(
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ KIT", scheme, Modifier.width(64.dp)) {
-                voice?.release()
-                onBack()
-            }
+            HeaderChip("◄ KIT", scheme, Modifier.width(64.dp), onClick = ::requestBack)
             Spacer(Modifier.weight(1f))
             TapeText("PAD ${padTag(slot)}", TapeType.lcdHeader, scheme.lcdInk.tape)
             Spacer(Modifier.weight(1f))

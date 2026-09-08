@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -528,20 +529,24 @@ fun SurfaceScreen(
         }
 
         if (pendingPrint != null) {
+            // Cancelling is not losing the print: it goes to TAPE instead.
+            val cancelChooser = {
+                if (!landing) {
+                    pendingPrint?.let { landOnTape(it) }
+                    pendingPrint = null
+                }
+            }
             SlotChooserOverlay(
                 kit = entry?.kit,
                 previewColor = scheme.amber.tape,
                 scheme = scheme,
                 busy = landing,
                 onPick = ::landOnPad,
-                // Cancelling is not losing the print: it goes to TAPE instead.
-                onCancel = {
-                    if (!landing) {
-                        pendingPrint?.let { landOnTape(it) }
-                        pendingPrint = null
-                    }
-                },
+                onCancel = cancelChooser,
             )
+            // Innermost: same self-guarded cancel as the overlay's own
+            // CANCEL — a landing print in flight makes both no-ops.
+            BackHandler(onBack = cancelChooser)
         }
     }
 }

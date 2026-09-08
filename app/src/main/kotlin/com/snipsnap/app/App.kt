@@ -8,6 +8,7 @@ import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -1003,6 +1004,54 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    // Shared by MenuRow's own tab switch and the system Back fallback below —
+    // one reset, one navigation, so the two can never drift apart on which
+    // overlay/hand-off state a screen change must clear.
+    fun goToScreen(target: AppScreen) {
+        screen = target
+        // Leaving KIT for another tab must not leave the
+        // sheet armed to reopen on the same slot next time
+        // KIT comes back into view.
+        padSheetSlot = null
+        takesBinOpen = false
+        padCaptureSlot = null
+        grainFieldSlot = null
+        // SNIPS is shelf-level, not KIT-scoped, but the same
+        // "leaving must not leave an overlay/hand-off armed"
+        // reasoning applies: a tab switch away from KITS
+        // mid-pick abandons the → PAD hand-off rather than
+        // leaving KitsScreen stuck on "PICK A KIT FOR THIS
+        // SNIP" forever.
+        snipsOpen = false
+        pendingSnipAssign = null
+        tapeOpenOverride = null
+        // DELETED KITS is shelf-level too — same reasoning
+        // as SNIPS above: a tab switch away from KITS must
+        // not leave this overlay armed to reopen on top of
+        // whatever tab comes back into view later.
+        deletedKitsOpen = false
+    }
+
+    // System Back, root policy: with no KIT-scoped or shelf-level overlay
+    // open (every such overlay owns its own BackHandler, mounted only while
+    // it's on screen, which always wins over this one — Compose's back
+    // dispatcher is LIFO and those are registered deeper/later), Back acts
+    // like a tab switch to the shelf. Three exclusions keep this from
+    // overshooting a screen that owns its own one-level back door instead
+    // of MenuRow's fixed tab set: AppScreen.KITS itself (nothing above it —
+    // Back must fall through to the system default, which finishes the
+    // Activity, the normal Android expectation for a root screen), SPLIT
+    // (its own "◄ KIT" chip below, via `onExit`), and KEYS (its own
+    // "◄ SHELF" chip, via `onBack`, which also silences the instrument
+    // before leaving — this generic reset does not).
+    val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || takesBinOpen ||
+        padCaptureSlot != null || snipsOpen || deletedKitsOpen
+    BackHandler(
+        enabled = !anyOverlayOpen && screen != AppScreen.KITS &&
+            screen != AppScreen.SPLIT && screen != AppScreen.KEYS &&
+            note == null && !captureBlocked,
+    ) { goToScreen(AppScreen.KITS) }
+
     TapeTheme(scheme, personality) {
         Box(
             Modifier
@@ -1026,30 +1075,7 @@ fun App(shelf: KitShelf) {
                 TitleBar()
                 MenuRow(
                     current = screen,
-                    onSelect = {
-                        screen = it
-                        // Leaving KIT for another tab must not leave the
-                        // sheet armed to reopen on the same slot next time
-                        // KIT comes back into view.
-                        padSheetSlot = null
-                        takesBinOpen = false
-                        padCaptureSlot = null
-                        grainFieldSlot = null
-                        // SNIPS is shelf-level, not KIT-scoped, but the same
-                        // "leaving must not leave an overlay/hand-off armed"
-                        // reasoning applies: a tab switch away from KITS
-                        // mid-pick abandons the → PAD hand-off rather than
-                        // leaving KitsScreen stuck on "PICK A KIT FOR THIS
-                        // SNIP" forever.
-                        snipsOpen = false
-                        pendingSnipAssign = null
-                        tapeOpenOverride = null
-                        // DELETED KITS is shelf-level too — same reasoning
-                        // as SNIPS above: a tab switch away from KITS must
-                        // not leave this overlay armed to reopen on top of
-                        // whatever tab comes back into view later.
-                        deletedKitsOpen = false
-                    },
+                    onSelect = ::goToScreen,
                 )
                 Box(Modifier.weight(1f)) {
                     when (screen) {
@@ -1484,9 +1510,18 @@ fun App(shelf: KitShelf) {
             // A toast raised while the box is up (a share landing behind it)
             // is not drawn beside it; its dwell runs out unseen.
             ToastOverlay(if (note == null) toast else null)
-            note?.let { n -> MessageBox(n, onDismiss = { note = null }) }
+            note?.let { n ->
+                val dismissNote = { note = null }
+                MessageBox(n, onDismiss = dismissNote)
+                // The topmost thing on screen when it's up — registered
+                // last (after every screen-level handler above), so it
+                // wins Back over all of them, matching what's drawn on top.
+                BackHandler(onBack = dismissNote)
+            }
             if (captureBlocked) {
-                CaptureBlockedDialog(onDismiss = { captureBlocked = false })
+                val dismissBlocked = { captureBlocked = false }
+                CaptureBlockedDialog(onDismiss = dismissBlocked)
+                BackHandler(onBack = dismissBlocked)
             }
         }
     }

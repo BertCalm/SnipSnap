@@ -3,6 +3,7 @@ package com.snipsnap.app.ui
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -176,6 +177,10 @@ fun PadSheetScreen(
         // failure reuses EMPTY_SHELF rather than a one-off sentence, the
         // same "nothing to show here" line ChopScreen's own EmptyChop
         // reuses for its unreadable-source case — zero copy literals.
+        // Still opening/failed/mid-EJECT — nothing dirty to flush yet, so
+        // Back matches the header's own bare `onBack()` here, not the full
+        // `requestBack()` below (which needs a live `model` to check).
+        BackHandler { onBack() }
         Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp)) {
             HeaderChip("◄ KIT", scheme, Modifier.align(Alignment.TopStart).width(64.dp)) { onBack() }
             if (loadFailed) {
@@ -972,6 +977,13 @@ fun PadSheetScreen(
             onBack()
         }
     }
+
+    // System Back mirrors the header's own ◄ KIT chip exactly — same
+    // function, so a debounced metadata edit is flushed here too, not just
+    // on the chip's own tap. `requestBack()` already self-guards on `busy`
+    // (a second press while the save is in flight no-ops), so no extra
+    // `enabled` condition is needed here, same as the chip's own `enabled`.
+    BackHandler(onBack = ::requestBack)
 
     /**
      * The safety net every exit shares, present and future: whatever's

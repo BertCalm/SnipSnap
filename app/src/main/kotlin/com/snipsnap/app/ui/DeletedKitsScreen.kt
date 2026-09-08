@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -157,6 +158,9 @@ fun DeletedKitsScreen(
             }
         }
     }
+
+    // Mirrors the header chip's own `enabled = !busy` below.
+    BackHandler(enabled = !busy) { onBack() }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(

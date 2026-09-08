@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -420,14 +421,18 @@ fun SynthScreen(
         }
 
         if (showChooser) {
+            val cancelChooser = { if (!sendBusy) showChooser = false }
             SlotChooserOverlay(
                 kit = kit,
                 previewColor = classColor,
                 scheme = scheme,
                 busy = sendBusy,
                 onPick = ::sendToSlot,
-                onCancel = { if (!sendBusy) showChooser = false },
+                onCancel = cancelChooser,
             )
+            // Innermost: same self-guarded cancel as the overlay's own
+            // CANCEL — a send in flight (sendBusy) makes both no-ops.
+            BackHandler(onBack = cancelChooser)
         }
     }
 }

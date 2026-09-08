@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -575,6 +576,9 @@ fun GrooveScreen(
         }
 
         if (isEditing) {
+            // Same function as DONE — flushes any pending E save, exactly
+            // like the overlay's own DONE chip.
+            BackHandler(onBack = ::closeEditor)
             val editing = eClip
             if (editing != null) {
                 StepEditorOverlay(

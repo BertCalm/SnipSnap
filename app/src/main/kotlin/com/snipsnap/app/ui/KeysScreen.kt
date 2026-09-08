@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -71,6 +72,14 @@ fun KeysScreen(
     var octave by remember(sidecar) { mutableIntStateOf(0) }
     val root = instrument.rootNote
 
+    // ◄ SHELF's own path — shared by the chip and system Back so both
+    // silence the instrument before leaving.
+    fun requestBack() {
+        player.allOff()
+        onBack()
+    }
+    BackHandler(onBack = ::requestBack)
+
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             Modifier
@@ -86,7 +95,7 @@ fun KeysScreen(
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ActionButton("◄ SHELF", scheme, enabled = true, onClick = { player.allOff(); onBack() })
+            ActionButton("◄ SHELF", scheme, enabled = true, onClick = ::requestBack)
             ActionButton("OCT −", scheme, enabled = octave > KeysLayout.OCTAVE_MIN, modifier = Modifier.weight(1f), onClick = { player.allOff(); octave-- })
             ActionButton("OCT +", scheme, enabled = octave < KeysLayout.OCTAVE_MAX, modifier = Modifier.weight(1f), onClick = { player.allOff(); octave++ })
         }

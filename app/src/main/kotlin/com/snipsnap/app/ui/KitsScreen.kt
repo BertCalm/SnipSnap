@@ -1,6 +1,7 @@
 package com.snipsnap.app.ui
 
 import android.os.SystemClock
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -256,37 +257,46 @@ fun KitsScreen(
         }
 
         if (menuOpen) {
+            val dismissStarter = { menuOpen = false }
             StarterMenu(
-                onPick = { menuOpen = false; onFresh(it) },
-                onDismiss = { menuOpen = false },
+                onPick = { dismissStarter(); onFresh(it) },
+                onDismiss = dismissStarter,
             )
+            BackHandler(onBack = dismissStarter)
         }
 
         confirmDeleteKit?.let { target ->
+            // Cancel, dismiss-by-tapping-outside (KitDeleteConfirmDialog's
+            // scrim is a tapeClick(onCancel)), and now system Back all route
+            // through this one function, so all three disarm the row.
+            val cancelDelete = { confirmDeleteKit = null; armedKitDirs = armedKitDirs - target.dir.path }
             KitDeleteConfirmDialog(
-                // Cancel and dismiss-by-tapping-outside both route through
-                // this same onCancel (KitDeleteConfirmDialog's scrim itself
-                // is a tapeClick(onCancel)), so both disarm the row here.
-                onCancel = { confirmDeleteKit = null; armedKitDirs = armedKitDirs - target.dir.path },
+                onCancel = cancelDelete,
                 // Delete also clears the armed flag: the lifted set outlives
                 // the row (unlike the old per-row remember, which died with
                 // it), so a bin-then-recreate of a same-named kit — or a
                 // fresh import landing on the freed name — must not inherit
                 // a stale armed DELETE/RENAME from the kit that used to
                 // live at this path.
-                onConfirm = { confirmDeleteKit = null; armedKitDirs = armedKitDirs - target.dir.path; onDeleteKit(target) },
+                onConfirm = { cancelDelete(); onDeleteKit(target) },
             )
+            // Innermost: Back cancels exactly like CANCEL, never DELETE.
+            BackHandler(onBack = cancelDelete)
         }
         renameTarget?.let { target ->
+            // Same reasoning as DELETE's cancelDelete above.
+            val cancelRename = { renameTarget = null; armedKitDirs = armedKitDirs - target.dir.path }
             KitRenameDialog(
                 initialName = target.kit.name,
-                onCancel = { renameTarget = null; armedKitDirs = armedKitDirs - target.dir.path },
+                onCancel = cancelRename,
                 // Same reasoning as DELETE's onConfirm above — renaming to
                 // the kit's own current name is a same-dir no-op in
                 // KitShelf.renameKit, which would otherwise leave this row
                 // armed after a confirm.
-                onConfirm = { newName -> renameTarget = null; armedKitDirs = armedKitDirs - target.dir.path; onRenameKit(target, newName) },
+                onConfirm = { newName -> cancelRename(); onRenameKit(target, newName) },
             )
+            // Innermost: Back cancels exactly like CANCEL, never RENAME.
+            BackHandler(onBack = cancelRename)
         }
     }
 }

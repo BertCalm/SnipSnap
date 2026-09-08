@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -178,6 +179,10 @@ fun SnipsScreen(
     }
 
     var confirmDelete by remember { mutableStateOf<SnipStore.Info?>(null) }
+    // Mirrors the header's own ◄ SHELF chip — disabled while the delete
+    // dialog is up so that dialog's own BackHandler below (composed only
+    // while it's showing) is the one Back reaches first.
+    BackHandler(enabled = confirmDelete == null) { onBack() }
     fun doDelete(info: SnipStore.Info) {
         confirmDelete = null
         if (playingFile == info.file) stopPlayback()
@@ -253,10 +258,13 @@ fun SnipsScreen(
         }
 
         confirmDelete?.let { target ->
+            val cancelDelete = { confirmDelete = null }
             DeleteConfirmDialog(
-                onCancel = { confirmDelete = null },
+                onCancel = cancelDelete,
                 onConfirm = { doDelete(target) },
             )
+            // Innermost: Back cancels exactly like CANCEL, never DELETE.
+            BackHandler(onBack = cancelDelete)
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.snipsnap.app.ui
 
 import android.os.SystemClock
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -104,6 +105,11 @@ fun PadCaptureScreen(
     var committing by remember { mutableStateOf<Gesture?>(null) }
     var holding by remember { mutableStateOf(false) }
     var holdStart by remember { mutableStateOf(0L) }
+
+    // Mirrors the header's own ◄ KIT chip, which is unconditionally
+    // enabled here (unlike PAD SHEET's — nothing on this screen debounces
+    // a save to flush, so there's nothing extra for Back to await).
+    BackHandler(onBack = onBack)
 
     // GRAB and HOLD are two producers of the same commit: classify → the
     // KitWrites-mutex-serialized open/assign/save → the same success/null/

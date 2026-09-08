@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -225,6 +226,11 @@ fun TakesBinScreen(
         // not EMPTY_SHELF: EMPTY_SHELF claims no kit exists on the shelf at
         // all, which is false here — a specific, already-open kit's folder
         // just wouldn't parse.
+        // Still opening or the folder wouldn't parse — nothing dirty here
+        // yet, so Back matches this shell's own bare `onBack()`, not the
+        // `enabled = !busy` chip below (there's no `busy` operation to wait
+        // on in this state).
+        BackHandler { onBack() }
         Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp)) {
             HeaderChip("◄ KIT", scheme, Modifier.align(Alignment.TopStart).width(64.dp)) { onBack() }
             if (loadFailed) {
@@ -267,6 +273,11 @@ fun TakesBinScreen(
             BinRow(be, daysLeft, classColor)
         }
     }
+
+    // Mirrors the header chip's own `enabled = !busy` below — a RESTORE/
+    // EMPTY THE BIN write in flight must not be interrupted by Back any
+    // more than by the chip itself.
+    BackHandler(enabled = !busy) { onBack() }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(

@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -116,6 +117,13 @@ fun SplitScreen(
     var printToPad by remember { mutableStateOf(false) }
     var pendingPrint by remember { mutableStateOf<Snip?>(null) }
     var landing by remember { mutableStateOf(false) }
+
+    // Mirrors the ◄ KIT chip below (`enabled = !working`) exactly: always
+    // registered so Back can't fall through to a broader "go to shelf"
+    // policy mid-operation, but a no-op while `working`, the same as the
+    // disabled chip — there is genuinely no way to leave this screen while
+    // the DSP decode or PRINT render is in flight, by design.
+    BackHandler { if (!working) onExit() }
 
     DisposableEffect(engine) {
         engineUp = engine.start()
@@ -454,18 +462,27 @@ fun SplitScreen(
     }
 
     if (pendingPrint != null) {
+        val cancelChooser = {
+            val snip = pendingPrint
+            pendingPrint = null
+            if (snip != null) landOnTape(snip)  // the level was said when it was rendered
+        }
         SlotChooserOverlay(
             kit = entry?.kit,
             previewColor = scheme.amber.tape,
             scheme = scheme,
             busy = landing,
             onPick = ::landOnPad,
-            onCancel = {
-                val snip = pendingPrint
-                pendingPrint = null
-                if (snip != null) landOnTape(snip)  // the level was said when it was rendered
-            },
+            onCancel = cancelChooser,
         )
+        // Unlike SYNTH/SURFACE's own onCancel, this one has no internal
+        // `!landing` guard — the overlay's own CANCEL is only reachable
+        // while idle because SlotChooserOverlay's `busy = landing` disables
+        // its tap target, not because this lambda checks. Back must not
+        // reopen a path the tap itself can't reach: always registered (so a
+        // landing print in flight can't fall through to a broader policy),
+        // but a no-op while `landing`, same as the disabled CANCEL.
+        BackHandler { if (!landing) cancelChooser() }
     }
 }
 
