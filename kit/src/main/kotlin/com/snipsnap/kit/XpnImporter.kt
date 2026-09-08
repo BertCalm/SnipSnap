@@ -40,6 +40,9 @@ object XpnImporter {
      * holds the MPC-track ZIP path to.
      */
     class WriteBudget(val max: Long) {
+        init {
+            require(max >= 0) { "a budget cannot be negative: $max" }
+        }
         private var spent = 0L
         val remaining: Long get() = (max - spent).coerceAtLeast(0L)
 
@@ -259,13 +262,27 @@ object XpnImporter {
 
                 val kit = Kit(kitName, pads)
                 KitStore.save(kit, staging)
-                // Only now, with everything down safely, does destDir change:
-                // the pre-existing-kit check above already confirmed either
-                // nothing is there or overwrite says replacing it is fine.
-                destDir.deleteRecursively()
+                // Only now, with everything down safely, does destDir
+                // change: the pre-existing-kit check above already
+                // confirmed either nothing is there or overwrite says
+                // replacing it is fine. A kit already there is moved aside
+                // rather than deleted outright - if the swap below fails
+                // partway (a full disk, an I/O error), the old kit goes
+                // back rather than being the price of a failed overwrite.
+                val displaced = if (destDir.exists()) {
+                    File(destRoot, ".xpn-replaced-${destDir.name}-${System.nanoTime()}").also { aside ->
+                        if (!destDir.renameTo(aside)) {
+                            throw IOException("could not stage '$kitName' for replacement - nothing landed")
+                        }
+                    }
+                } else {
+                    null
+                }
                 if (!staging.renameTo(destDir) && !staging.copyRecursively(destDir, overwrite = true)) {
+                    displaced?.renameTo(destDir)
                     throw IOException("could not land '$kitName' on the shelf - nothing landed")
                 }
+                displaced?.deleteRecursively()
                 return ImportResult(kit, destDir, programEntry.name)
             } finally {
                 // A no-op once renameTo has moved staging into destDir; the

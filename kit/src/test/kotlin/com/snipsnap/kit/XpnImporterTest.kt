@@ -446,4 +446,32 @@ class XpnImporterTest {
         }
         assertTrue(!File(destRoot, "Round Trip").exists(), "a refused program must leave nothing on the shelf, partial or otherwise")
     }
+
+    @Test
+    fun `overwriting an existing kit replaces it cleanly, no staging litter left beside it`() {
+        val firstDir = File(temp, "swap-src-1")
+        val first = buildKit(firstDir)
+        val firstXpn = File(temp, "Round Trip.xpn")
+        XpnPackager.write(first, firstDir, firstXpn, Exporters.defaultMeta(first))
+        val destRoot = File(temp, "swap-out")
+        XpnImporter.import(firstXpn, destRoot)
+
+        // A second, different kit sharing the first one's name.
+        val secondDir = File(temp, "swap-src-2")
+        secondDir.mkdirs()
+        val differentTone = Cleanup.process(Snip(FloatArray(4410) { i -> (0.5 * Math.sin(i / 3.0)).toFloat() }, 1, 44_100))
+        WavWriter.write(File(secondDir, "A01_Kick_01.wav"), differentTone)
+        val second = Kit("Round Trip", listOf(KitPad(slot = 1, sampleFile = "A01_Kick_01.wav", drumClass = DrumClass.KICK)))
+        KitStore.save(second, secondDir)
+        val secondXpn = File(temp, "Round Trip 2.xpn")
+        XpnPackager.write(second, secondDir, secondXpn, Exporters.defaultMeta(second))
+
+        val result = XpnImporter.import(secondXpn, destRoot, overwrite = true)
+        assertEquals(listOf(1), result.kit.pads.map { it.slot })
+        assertTrue(
+            File(secondDir, "A01_Kick_01.wav").readBytes().contentEquals(File(destRoot, "Round Trip/A01_Kick_01.wav").readBytes()),
+            "the second kit's own sample must be what landed, not the first's",
+        )
+        assertEquals(setOf("Round Trip"), destRoot.list()!!.toSet(), "no .xpn-replaced-* staging litter left beside the kit")
+    }
 }
