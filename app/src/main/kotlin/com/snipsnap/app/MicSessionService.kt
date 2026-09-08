@@ -24,8 +24,8 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import com.snipsnap.audio.BlockWatch
 import com.snipsnap.audio.CaptureRing
-import com.snipsnap.audio.SilenceWatch
 import com.snipsnap.shell.Copy
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
@@ -341,12 +341,12 @@ class MicSessionService : Service() {
      * The one place a session starts, whichever source: the ring, the
      * reader thread, the bubble, `armed`. INSIDE reads stereo and folds
      * to mono in the loop (the ring is mono; a snip is mono), and runs
-     * the [SilenceWatch]. MIC reads mono straight into the ring.
+     * the [BlockWatch]. MIC reads mono straight into the ring.
      */
     private fun beginSession(newRecord: AudioRecord, source: Source, stereo: Boolean) {
         val newRing = CaptureRing(RING_SECONDS * SAMPLE_RATE)
         val watch = if (source == Source.INSIDE) {
-            SilenceWatch.forSeconds(SILENCE_HOLD_SECONDS, SAMPLE_RATE)
+            BlockWatch.forSeconds(SILENCE_HOLD_SECONDS, SAMPLE_RATE)
         } else {
             null
         }
@@ -398,16 +398,15 @@ class MicSessionService : Service() {
                 }
                 _level.value = peak
                 newRing.write(mono, frames)
-                if (watch != null) {
-                    // The watch ticks once per SILENCE_HOLD_SECONDS of dead
-                    // air, so the binder call behind isMusicActive runs a
-                    // few times a minute at worst, never per block. Sound
-                    // resuming clears the flag the same way.
-                    if (watch.feed(mono, frames)) {
-                        if (audioManager?.isMusicActive == true) _blocked.value = true
-                    } else if (!watch.silent && _blocked.value) {
-                        _blocked.value = false
-                    }
+                // The whole verdict is BlockWatch's, and tested there:
+                // it ticks once per SILENCE_HOLD_SECONDS of dead air, so
+                // the binder call behind isMusicActive runs a few times a
+                // minute at worst and never per block - a case counts the
+                // calls, because nothing else would notice that changing.
+                // feed returns true only when the verdict moved, so this
+                // publishes on a change rather than every block.
+                if (watch != null && watch.feed(mono, frames) { audioManager?.isMusicActive == true }) {
+                    _blocked.value = watch.blocked
                 }
             }
             // Covers every way this loop ends — the normal `reading =
