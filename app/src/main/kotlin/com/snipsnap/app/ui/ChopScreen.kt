@@ -90,16 +90,20 @@ fun ChopScreen(
 ) {
     val scheme = LocalScheme.current
 
-    if (entry == null) {
-        EmptyChop(scheme)
-        return
-    }
+    // entry is nullable on purpose, mirroring TapeScreen's own fix: a TAPE
+    // commit is kit-independent (loadChopSource's commit branch needs only
+    // commit.sourceFile), so a blanket entry-null early return here would
+    // block that branch from ever running when the shelf has no kit open —
+    // the exact bug shape TapeScreen already had and fixed. Only
+    // loadChopSource's kit-fallback branch (loadLongestSample) needs
+    // `entry`, and it's skipped when `entry == null`.
+    val kitDir = entry?.dir
 
-    var sourceFile by remember(entry.dir, lastCommit) { mutableStateOf<File?>(null) }
-    var model by remember(entry.dir, lastCommit) { mutableStateOf<ChopReviewModel?>(null) }
-    var failed by remember(entry.dir, lastCommit) { mutableStateOf(false) }
+    var sourceFile by remember(kitDir, lastCommit) { mutableStateOf<File?>(null) }
+    var model by remember(kitDir, lastCommit) { mutableStateOf<ChopReviewModel?>(null) }
+    var failed by remember(kitDir, lastCommit) { mutableStateOf(false) }
 
-    LaunchedEffect(entry.dir, lastCommit) {
+    LaunchedEffect(kitDir, lastCommit) {
         sourceFile = null
         model = null
         failed = false
@@ -210,8 +214,11 @@ internal fun longestSampleFile(entry: KitShelf.Entry): File? {
 }
 
 /** Priority order from the brief: a TAPE commit first, else the open kit's longest sample. */
-private fun loadChopSource(entry: KitShelf.Entry, lastCommit: TapeCommit?): Pair<File, Snip>? {
+private fun loadChopSource(entry: KitShelf.Entry?, lastCommit: TapeCommit?): Pair<File, Snip>? {
     lastCommit?.let { commit -> loadFromCommit(commit)?.let { return commit.sourceFile to it } }
+    // The kit fallback is the only branch that needs a kit — skip it
+    // outright when none is open rather than let it run on a null entry.
+    if (entry == null) return null
     return loadLongestSample(entry)
 }
 
@@ -229,7 +236,7 @@ private val CHOP_GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 
 @Composable
 private fun ChopContent(
-    entry: KitShelf.Entry,
+    entry: KitShelf.Entry?,
     shelf: KitShelf,
     sourceFile: File,
     initialModel: ChopReviewModel,
@@ -460,7 +467,7 @@ private fun ChopContent(
                             }
                             val newEntry = withContext(Dispatchers.IO) {
                                 val kitName = shelf.freshName(base)
-                                val kitDir = File(entry.dir.parentFile ?: entry.dir, kitName)
+                                val kitDir = File(shelf.root, kitName)
                                 val builder = KitBuilderModel.fromChop(kitName, send.arranged, kitDir)
                                 if (teachEnabled) {
                                     val examples = current.labeledOverrides()
