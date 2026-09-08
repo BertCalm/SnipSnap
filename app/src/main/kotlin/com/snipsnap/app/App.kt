@@ -58,6 +58,7 @@ import com.snipsnap.app.ui.PlayScreen
 import com.snipsnap.app.ui.PrimaryAction
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.SnipsScreen
+import com.snipsnap.app.ui.SplitScreen
 import com.snipsnap.app.ui.StatusBar
 import com.snipsnap.app.ui.StubScreen
 import com.snipsnap.app.ui.SurfaceScreen
