@@ -75,6 +75,17 @@ fun KitsScreen(
     onEject: () -> Unit,
     /** BACKUP (X3.3): every kit on one file, handed to the chooser. */
     onBackup: () -> Unit,
+    /** SNIPS (Task 3): every catch on the phone, one list — play, assign to a pad, open in TAPE, or delete. */
+    onSnips: () -> Unit = {},
+    /**
+     * True while a SNIPS row's → PAD is routing the user here to pick a kit
+     * (see `App.kt`'s `pendingSnipAssign`) — swaps the header's own line for
+     * a hint instead of the usual "THE SHELF", and adds a one-line nudge
+     * toward what happens next. Every kit row's `onOpen` stays the same
+     * callback either way; `App` is what decides what opening a kit means
+     * while this is true.
+     */
+    assigningSnip: Boolean = false,
     /** ROOMS (YY5): what OUTSIDE measured and kept, beside the instruments; hold one to forget it into the bin. */
     rooms: List<Rooms.Room> = emptyList(),
     onForgetRoom: (Rooms.Room) -> Unit = {},
@@ -95,7 +106,10 @@ fun KitsScreen(
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                TapeText("THE SHELF", TapeType.lcdHeader, scheme.lcdInk.tape)
+                TapeText(if (assigningSnip) "PICK A KIT FOR THIS SNIP" else "THE SHELF", TapeType.lcdHeader, scheme.lcdInk.tape)
+            }
+            if (assigningSnip) {
+                TapeText("TAP A KIT, THEN LONG-PRESS AN EMPTY PAD.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
             }
 
             if (kits.isEmpty() && instruments.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty()) {
@@ -171,6 +185,16 @@ fun KitsScreen(
                 enabled = !busy && kits.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onBackup,
+            )
+            // SNIPS: always openable, even with zero snips yet (its own
+            // empty state says so) — unlike BACKUP above, this isn't gated
+            // on the shelf holding anything.
+            ActionButton(
+                "SNIPS ▸ EVERY CATCH, ONE LIST",
+                scheme,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onSnips,
             )
             ArmControl(
                 armed = armed,

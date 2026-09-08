@@ -57,6 +57,7 @@ import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.PlayScreen
 import com.snipsnap.app.ui.PrimaryAction
 import com.snipsnap.app.ui.PropertiesScreen
+import com.snipsnap.app.ui.SnipsScreen
 import com.snipsnap.app.ui.StatusBar
 import com.snipsnap.app.ui.StubScreen
 import com.snipsnap.app.ui.SurfaceScreen
@@ -67,6 +68,8 @@ import com.snipsnap.app.ui.TapeText
 import com.snipsnap.app.ui.TitleBar
 import com.snipsnap.app.ui.ToastOverlay
 import com.snipsnap.app.ui.tapeClick
+import com.snipsnap.audio.Classifier
+import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Copy
@@ -191,6 +194,33 @@ fun App(shelf: KitShelf) {
     // (PadSheetScreen's own onGrainField clears padSheetSlot first) so the
     // two overlays are never both non-null for the same KIT composition.
     var grainFieldSlot by remember { mutableStateOf<Int?>(null) }
+    // SNIPS (Task 3): a shelf-level overlay, not KIT-scoped like PAD SHEET/
+    // TAKES+BIN/PAD CAPTURE/GRAIN FIELD above — reachable from KitsScreen at
+    // AppScreen.KITS (the shelf), one level up from those, so it's its own
+    // boolean at this scope rather than sharing theirs.
+    var snipsOpen by remember { mutableStateOf(false) }
+    // SNIPS → PAD's kit-gate fix: the file a SNIPS row's → PAD asked to
+    // place on a pad, stashed here while the user picks a kit. SNIPS is only
+    // ever reached from the shelf, where no kit is open by definition, so
+    // this is what lets → PAD navigate instead of gating on `open` — the
+    // exact TAPE/CHOP kit-gate bug fixed earlier this project, avoided here
+    // by routing through kit-pick → arm-the-next-empty-pad-long-press
+    // instead of disabling the button (see `assignPendingSnip` below, and
+    // the KITS/KIT branches' wiring further down). Cleared the moment the
+    // assign lands, or by the MenuRow tab-switch reset below if the user
+    // gives up on the pick without ever long-pressing a pad.
+    var pendingSnipAssign by remember { mutableStateOf<File?>(null) }
+    // SNIPS → TAPE: the file a SNIPS row's → TAPE asked to open, offered to
+    // TapeScreen's own `lastCommitSource` fallback slot rather than folded
+    // into `lastCommit` — CHOP reads `lastCommit` as the *real* last COMMIT's
+    // source/range, and clobbering it with a mere navigation would corrupt
+    // that history for a later CHOP session. Honest caveat, not a hard
+    // guarantee: `TapeScreen.loadLongestTape`'s own priority always tries
+    // `SnipStore.newest` FIRST, so this only actually wins when the chosen
+    // row's file can't be read as that newest snip — in the common case
+    // (the row a user just captured, sent straight to TAPE) it's usually the
+    // same file regardless.
+    var tapeOpenOverride by remember { mutableStateOf<File?>(null) }
     // X4.4 TEACH THE MACHINE: off by default, flipped on SETUP's consent
     // row, remembered like the scheme. CHOP reads it; what it gates is
     // feature vectors and labels into the kit's own folder, never audio,
@@ -582,6 +612,52 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * SNIPS → PAD's landing (Task 3): fired by the next empty-pad long-press
+     * once a kit is open with [pendingSnipAssign] armed. `KitScreen.kt`
+     * itself is unmodified for this — the KIT branch's own `onEmptyLongPress`
+     * below intercepts before the press ever reaches `padCaptureSlot`/
+     * `PadCaptureScreen`. Same open→classify→assign→save shape as
+     * `PadCaptureScreen.commitToPad`, including the same `KitWrites.mutex` —
+     * this writes the same `kit.json` that screen (and every other kit
+     * mutator in this file) does. `source = mapOf("file" to file.name)` is
+     * exactly the provenance param Task 2's `KitBuilderModel.assign` added;
+     * this is its first live caller.
+     */
+    fun assignPendingSnip(file: File, slot: Int) {
+        val target = open ?: return
+        // Cleared synchronously, before the write even starts — a second
+        // empty-pad long-press elsewhere while this one is mid-flight must
+        // fall through to the normal capture surface, not race this write
+        // for the same pending file.
+        pendingSnipAssign = null
+        scope.launch {
+            try {
+                val updated = withContext(Dispatchers.IO) {
+                    val snip = Cleanup.toMono(WavReader.read(file))
+                    val cls = Classifier.classify(snip).drumClass
+                    KitWrites.mutex.withLock {
+                        val model = KitBuilderModel.open(target.dir)
+                        model.assign(slot, snip, cls, cls.name.replace('_', ' '), source = mapOf("file" to file.name))
+                        model.save()
+                        model.kit
+                    }
+                }
+                // Same identity guard as setKey/evilTwins above: a write
+                // that outlived a tab-away-and-reopen must not weld itself
+                // onto whichever kit is open now.
+                if (open?.dir == target.dir) open = open?.copy(kit = updated)
+                kits = withContext(Dispatchers.IO) { shelf.list() }
+                toast = "SNIP PLACED ON PAD A%02d".format(slot)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Law 3: when it breaks, say exactly what happened.
+                toast = "PLACE FAILED: ${e.message ?: e.javaClass.simpleName}"
+            }
+        }
+    }
+
+    /**
      * INSTANT KIT (F2.2): the one tap on TAPE — the selection (or the whole
      * deck) chopped with the defaults and landed on the grid without the
      * review, the same DUBBING… shape as a fresh tape. CHOP can still open
@@ -848,35 +924,80 @@ fun App(shelf: KitShelf) {
                         takesBinOpen = false
                         padCaptureSlot = null
                         grainFieldSlot = null
+                        // SNIPS is shelf-level, not KIT-scoped, but the same
+                        // "leaving must not leave an overlay/hand-off armed"
+                        // reasoning applies: a tab switch away from KITS
+                        // mid-pick abandons the → PAD hand-off rather than
+                        // leaving KitsScreen stuck on "PICK A KIT FOR THIS
+                        // SNIP" forever.
+                        snipsOpen = false
+                        pendingSnipAssign = null
+                        tapeOpenOverride = null
                     },
                 )
                 Box(Modifier.weight(1f)) {
                     when (screen) {
-                        AppScreen.KITS -> KitsScreen(
-                            kits = kits,
-                            instruments = instruments,
-                            busy = busy != null,
-                            armed = armed,
-                            onOpen = { open = it; screen = AppScreen.KIT },
-                            onOpenInstrument = { openInstrument = it; screen = AppScreen.KEYS },
-                            onFresh = ::fresh,
-                            onArm = ::requestArm,
-                            onArmInside = ::requestArmInside,
-                            onSnip = {
-                                MicSessionService.snip(context)
-                                // Optimistic — the real commit hasn't started yet,
-                                // let alone resolved. Immediate feedback is good UX,
-                                // but it's a promise: the `lastSnipError` collector
-                                // above corrects this toast if that commit fails.
-                                toast = Copy.SNIPPED
-                            },
-                            onEject = { MicSessionService.eject(context) },
-                            onBackup = ::backupShelf,
-                            rooms = rooms,
-                            onForgetRoom = ::forgetRoom,
-                            binnedRooms = binnedRooms,
-                            onRestoreRoom = ::restoreRoom,
-                        )
+                        AppScreen.KITS -> if (snipsOpen) {
+                            SnipsScreen(
+                                shelf = shelf,
+                                onBack = { snipsOpen = false },
+                                onToast = { toast = it },
+                                onOpenInTape = { file ->
+                                    snipsOpen = false
+                                    tapeOpenOverride = file
+                                    screen = AppScreen.TAPE
+                                },
+                                onPickPadFor = { file ->
+                                    // Closes SNIPS and stashes the file — the
+                                    // shelf's own KitsScreen renders next
+                                    // (still AppScreen.KITS, just with
+                                    // `snipsOpen` now false), its header
+                                    // swapped to the pick-a-kit hint by
+                                    // `assigningSnip` below.
+                                    snipsOpen = false
+                                    pendingSnipAssign = file
+                                },
+                            )
+                        } else {
+                            KitsScreen(
+                                kits = kits,
+                                instruments = instruments,
+                                busy = busy != null,
+                                armed = armed,
+                                onOpen = { entry ->
+                                    open = entry
+                                    screen = AppScreen.KIT
+                                    // A kit opened while a SNIPS → PAD pick is
+                                    // still pending: tell the user what the
+                                    // next empty-pad long-press will do,
+                                    // since `KitScreen` itself carries no
+                                    // hint banner of its own for this mode.
+                                    if (pendingSnipAssign != null) {
+                                        toast = "LONG-PRESS AN EMPTY PAD TO PLACE THIS SNIP"
+                                    }
+                                },
+                                onOpenInstrument = { openInstrument = it; screen = AppScreen.KEYS },
+                                onFresh = ::fresh,
+                                onArm = ::requestArm,
+                                onArmInside = ::requestArmInside,
+                                onSnip = {
+                                    MicSessionService.snip(context)
+                                    // Optimistic — the real commit hasn't started yet,
+                                    // let alone resolved. Immediate feedback is good UX,
+                                    // but it's a promise: the `lastSnipError` collector
+                                    // above corrects this toast if that commit fails.
+                                    toast = Copy.SNIPPED
+                                },
+                                onEject = { MicSessionService.eject(context) },
+                                onBackup = ::backupShelf,
+                                onSnips = { snipsOpen = true },
+                                assigningSnip = pendingSnipAssign != null,
+                                rooms = rooms,
+                                onForgetRoom = ::forgetRoom,
+                                binnedRooms = binnedRooms,
+                                onRestoreRoom = ::restoreRoom,
+                            )
+                        }
                         AppScreen.KIT -> {
                             val sheetSlot = padSheetSlot
                             val sheetEntry = open
@@ -1013,8 +1134,26 @@ fun App(shelf: KitShelf) {
                                     onInKey = ::inKey,
                                     onTwins = ::evilTwins,
                                     onShare = ::shareKit,
-                                    onEmptyLongPress = { slot -> padCaptureSlot = slot },
-                                    onEmptyTapHint = { toast = "LONG-PRESS TO CAPTURE" },
+                                    onEmptyLongPress = { slot ->
+                                        // SNIPS → PAD's landing: a pick still
+                                        // armed intercepts the press here,
+                                        // before it ever reaches the normal
+                                        // capture surface below — KitScreen.kt
+                                        // itself needs no changes for this.
+                                        val pending = pendingSnipAssign
+                                        if (pending != null) {
+                                            assignPendingSnip(pending, slot)
+                                        } else {
+                                            padCaptureSlot = slot
+                                        }
+                                    },
+                                    onEmptyTapHint = {
+                                        toast = if (pendingSnipAssign != null) {
+                                            "LONG-PRESS TO PLACE THIS SNIP"
+                                        } else {
+                                            "LONG-PRESS TO CAPTURE"
+                                        }
+                                    },
                                 )
                             }
                         }
@@ -1025,7 +1164,13 @@ fun App(shelf: KitShelf) {
                             // from, so returning to TAPE after a trim
                             // resumes where the user left off rather than
                             // re-resolving the open kit's longest sample.
-                            lastCommitSource = lastCommit?.sourceFile,
+                            // `tapeOpenOverride` (a SNIPS → TAPE request) is
+                            // the more recent user intent whenever both are
+                            // set, so it's offered before a possibly much
+                            // older real commit — see that var's own KDoc
+                            // for the honest limit of what it actually
+                            // guarantees against `SnipStore.newest` above it.
+                            lastCommitSource = tapeOpenOverride ?: lastCommit?.sourceFile,
                             onToast = { toast = it },
                             // TapeScreen now hands back the exact file it was
                             // scrubbing (a snip, the prior commit's source, or
@@ -1036,7 +1181,16 @@ fun App(shelf: KitShelf) {
                             // priority that call frequently returns the wrong
                             // file (a pad WAV) for a commit actually cut from
                             // a snip. Synchronous now — no IO re-read needed.
-                            onCommit = { file, range -> lastCommit = TapeCommit(file, range) },
+                            onCommit = { file, range ->
+                                lastCommit = TapeCommit(file, range)
+                                // A real COMMIT is genuine, fresher intent than
+                                // whatever SNIPS → TAPE request (if any) is
+                                // still sitting in `tapeOpenOverride` — clearing
+                                // it here is what keeps that var from
+                                // permanently shadowing `lastCommit` for the
+                                // rest of the session once it's ever been set.
+                                tapeOpenOverride = null
+                            },
                             onInstantKit = ::instantKit,
                             onReadGroove = ::readGroove,
                             onStealFeel = ::stealFeel,
