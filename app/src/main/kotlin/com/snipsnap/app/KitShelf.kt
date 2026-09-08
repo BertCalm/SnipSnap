@@ -8,6 +8,7 @@ import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.OutsideSheet
 import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.ShelfImport
+import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.shell.TextureKits
 import java.io.File
@@ -278,23 +279,29 @@ class KitShelf(val root: File) {
      * already on the shelf falls back exactly like
      * [ShelfImport.moveOntoShelf]: "NAME 2", "NAME 3"…, and `kit.json`'s own
      * name is rewritten to match whatever name actually landed, so the two
-     * never disagree. Renaming to the name the folder already holds is a
-     * no-op that hands back [entry] unchanged.
+     * never disagree. Renaming to the name [entry.kit] already carries is a
+     * no-op that hands back [entry] unchanged — compared against the kit's
+     * OWN name, not the folder's, since the two can already have diverged
+     * (the same import-collision-fallback naming that can leave a folder as
+     * "NAME 2" while `kit.json` still says "NAME"); comparing against the
+     * folder name here would let a rename dialog seeded from [entry.kit]'s
+     * name silently perform a real directory move when the user believed
+     * they typed back the name they already saw.
      */
     fun renameKit(entry: Entry, newName: String): Entry? {
         if (!Names.isMpcSafe(newName)) return null
         // A kit can't take over one of the shelf's own reserved folders —
-        // `Names.isMpcSafe` alone would wave ".bin"/"Instruments"/"Rooms"
-        // through (only *trailing* dots/spaces are refused), and the
+        // `Names.isMpcSafe` alone would wave ".bin"/"Instruments"/"Rooms"/
+        // "snips" through (only *trailing* dots/spaces are refused), and the
         // collision loop below only bumps a name that already exists, which
         // none of these do on a shelf that's never used them yet.
         if (newName == BIN_DIR || newName == INSTRUMENTS_DIR ||
-            newName == Rooms.ROOMS_DIR || newName.startsWith(ShelfImport.STAGING_DIR)
+            newName == Rooms.ROOMS_DIR || newName == SnipStore.DIR || newName.startsWith(ShelfImport.STAGING_DIR)
         ) {
             return null
         }
         if (!entry.dir.isDirectory) return null
-        if (newName == entry.dir.name) return entry
+        if (newName == entry.kit.name) return entry
         var name = newName
         var n = 2
         while (File(root, name).exists()) {

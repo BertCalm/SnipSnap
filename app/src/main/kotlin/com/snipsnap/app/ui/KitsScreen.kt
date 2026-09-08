@@ -148,6 +148,7 @@ fun KitsScreen(
                         KitRow(
                             entry = entry,
                             busy = busy,
+                            pickModeActive = assigningSnip,
                             onOpen = onOpen,
                             onRequestDelete = { confirmDeleteKit = it },
                             onRequestRename = { renameTarget = it },
@@ -382,11 +383,21 @@ private fun BinnedRoomRow(binned: Rooms.Binned, busy: Boolean, onRestore: (Rooms
  * still win for their own bounds (a descendant's consumed tap never bubbles
  * to this Row's `onTap`) — the same reason a trailing icon button inside a
  * clickable list row never also fires the row's own click.
+ *
+ * [pickModeActive] (SNIPS → PAD's `assigningSnip`, Task 3): long-pressing a
+ * kit row while the user is mid-pick would arm a red DELETE right beside
+ * the very kit they're trying to select — confusing at best, right next to
+ * the header's own "TAP A KIT, THEN LONG-PRESS AN EMPTY PAD" hint that
+ * primes exactly that gesture. While true, this row falls back to its
+ * pre-Task-4 shape entirely: a plain `tapeClick` that only opens the kit,
+ * no `pointerInput`/long-press at all, so DELETE/RENAME are simply
+ * unreachable for the duration of a pick rather than merely hidden.
  */
 @Composable
 private fun KitRow(
     entry: KitShelf.Entry,
     busy: Boolean,
+    pickModeActive: Boolean,
     onOpen: (KitShelf.Entry) -> Unit,
     onRequestDelete: (KitShelf.Entry) -> Unit,
     onRequestRename: (KitShelf.Entry) -> Unit,
@@ -394,16 +405,23 @@ private fun KitRow(
     val scheme = LocalScheme.current
     val kit = entry.kit
     var armed by remember(entry.dir) { mutableStateOf(false) }
+    val revealActions = armed && !pickModeActive
     Row(
         Modifier
             .fillMaxWidth()
-            .let { if (armed) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-            .pointerInput(entry.dir) {
-                detectTapGestures(
-                    onLongPress = { armed = true },
-                    onTap = { if (armed) armed = false else onOpen(entry) },
-                )
-            }
+            .let { if (revealActions) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+            .then(
+                if (pickModeActive) {
+                    Modifier.tapeClick { onOpen(entry) }
+                } else {
+                    Modifier.pointerInput(entry.dir) {
+                        detectTapGestures(
+                            onLongPress = { armed = true },
+                            onTap = { if (armed) armed = false else onOpen(entry) },
+                        )
+                    }
+                },
+            )
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -413,7 +431,7 @@ private fun KitRow(
             val tempo = kit.tempoBpm?.let { "  ·  %.0f BPM".format(it) } ?: ""
             TapeText("${kit.pads.size} PADS$tempo", TapeType.pixelSmall, scheme.ink2.tape)
         }
-        if (armed) {
+        if (revealActions) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(
                     Modifier
@@ -446,11 +464,16 @@ private fun KitRow(
 }
 
 /**
- * "DELETE THIS KIT? IT GOES TO THE BIN FOR 30 DAYS." — this one CAN name the
- * bin, unlike `SnipsScreen.kt`'s own "CAN'T UNDO." (kits get a recoverable
- * 30-day bin; snips don't, by deliberate product decision). Same scrim +
- * raisedBevel + tap-swallowing shape as that file's own `DeleteConfirmDialog`
- * and this file's own `StarterMenu` above — duplicated, not hoisted, per the
+ * "DELETE THIS KIT? OFF THE SHELF NOW, GONE FOR GOOD IN 30 DAYS." —
+ * deliberately does NOT say "the bin": this app's two other bins (TAKES +
+ * BIN, ROOMS's own FORGET → BIN) are both user-restorable and visible
+ * (RESTORE buttons, an "EMPTY THE BIN NOW" action), and a deleted kit's own
+ * `.bin` folder has neither — no restore UI, no listing, no early-empty.
+ * Calling it "the bin" against the rest of the app's own vocabulary would
+ * invite exactly that false expectation (whole-branch review finding); this
+ * says what actually happens instead. Same scrim + raisedBevel +
+ * tap-swallowing shape as `SnipsScreen.kt`'s own `DeleteConfirmDialog` and
+ * this file's own `StarterMenu` above — duplicated, not hoisted, per the
  * house convention stated in `SnipsScreen.kt`'s `HeaderChip`.
  */
 @Composable
@@ -472,7 +495,7 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText("DELETE THIS KIT? IT GOES TO THE BIN FOR 30 DAYS.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            TapeText("DELETE THIS KIT? OFF THE SHELF NOW, GONE FOR GOOD IN 30 DAYS.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
                 Box(

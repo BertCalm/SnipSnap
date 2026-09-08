@@ -232,15 +232,17 @@ object Copy {
     const val ROOM_FORGET_BUSY = "FORGETTING…"
     const val ROOM_RESTORE_BUSY = "RESTORING…"
 
-    // ---- KIT: delete (recoverable, 30-day bin) + rename from the shelf (Task 4) ----
+    // ---- KIT: delete (off the shelf, purged in 30 days) + rename from the shelf (Task 4) ----
     /**
-     * DELETE on a shelf kit. Unlike ROOMS's own FORGET → BIN (which
-     * `unforget`/`BinnedRoomRow`'s RESTORE actually surfaces on the shelf),
-     * a deleted kit's bin has no restore path yet — this says what
-     * happened (the file sleeps 30 days before it's gone for good), not an
-     * action the app can't actually offer.
+     * DELETE on a shelf kit. Deliberately avoids "the bin" as a noun: unlike
+     * ROOMS's own FORGET → BIN (which `unforget`/`BinnedRoomRow`'s RESTORE
+     * actually surfaces on the shelf) or TAKES + BIN (its own visible
+     * RESTORE / "EMPTY THE BIN NOW"), a deleted kit has neither a restore UI
+     * nor a listing — so this says what actually happens (off the shelf now,
+     * purged for good in 30 days), not an action the app can't offer
+     * (whole-branch review finding).
      */
-    fun kitDeleted(name: String): String = "$name IS IN THE BIN. IT SLEEPS THERE 30 DAYS."
+    fun kitDeleted(name: String): String = "$name IS OFF THE SHELF. GONE FOR GOOD IN 30 DAYS."
     const val KIT_DELETE_BUSY = "DELETING…"
     const val KIT_DELETE_FAILED = "DELETE FAILED. THE KIT MAY ALREADY BE GONE."
     /** RENAME on a shelf kit; [name] is what it actually landed under — a collision may have freshened it. */

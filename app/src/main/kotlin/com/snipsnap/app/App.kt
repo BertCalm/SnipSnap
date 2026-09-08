@@ -842,7 +842,13 @@ fun App(shelf: KitShelf) {
     /**
      * DELETE ▸ BIN (Task 4) on a held kit row, confirmed: into the 30-day
      * bin, `KitShelf.deleteKit`'s own promise — the busy lock and
-     * try/catch/finally shape are `forgetRoom`'s above, verbatim.
+     * try/catch/finally shape are `forgetRoom`'s above, verbatim. The move
+     * itself runs under `KitWrites.mutex` (whole-branch review finding):
+     * PadSheet's debounced flush save can outlive its own screen via
+     * `appScope`, so a save still in flight when the user tabs to KITS and
+     * deletes that same kit must not race the directory move — the same
+     * invariant every other open→mutate→save call site in this file
+     * already keeps.
      *
      * Step 4's guard: [entry] IS reachable while it's the currently open
      * kit (`open` persists across a tab switch back to KITS, and `KitRow`
@@ -859,7 +865,7 @@ fun App(shelf: KitShelf) {
         busy = Copy.KIT_DELETE_BUSY
         scope.launch {
             try {
-                val ok = withContext(Dispatchers.IO) { shelf.deleteKit(entry) }
+                val ok = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.deleteKit(entry) } }
                 if (ok) {
                     kits = withContext(Dispatchers.IO) { shelf.list() }
                     toast = Copy.kitDeleted(entry.kit.name)
@@ -905,7 +911,7 @@ fun App(shelf: KitShelf) {
         busy = Copy.KIT_RENAME_BUSY
         scope.launch {
             try {
-                val renamed = withContext(Dispatchers.IO) { shelf.renameKit(entry, newName) }
+                val renamed = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.renameKit(entry, newName) } }
                 if (renamed != null) {
                     kits = withContext(Dispatchers.IO) { shelf.list() }
                     toast = Copy.kitRenamed(renamed.kit.name)
