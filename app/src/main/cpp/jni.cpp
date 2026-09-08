@@ -204,7 +204,8 @@ Java_com_snipsnap_app_NativePads_commitBank(JNIEnv*, jobject, jlong handle) {
 JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativePads_noteOn(
     JNIEnv*, jobject, jlong handle, jint voiceId, jint sample,
-    jlong startFrame, jlong endFrame, jlong loopStart, jfloat gainL, jfloat gainR, jdouble pitch) {
+    jlong startFrame, jlong endFrame, jlong loopStart, jfloat gainL, jfloat gainR, jdouble pitch,
+    jboolean reverse) {
     PadCommand c;
     c.type = PadCommand::Type::NoteOn;
     c.voiceId = voiceId;
@@ -215,7 +216,56 @@ Java_com_snipsnap_app_NativePads_noteOn(
     c.gainL = gainL;
     c.gainR = gainR;
     c.pitch = pitch;
+    c.reverse = reverse == JNI_TRUE;
     return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
+}
+
+/**
+ * The layers of one sample, started together. Window and speed are shared
+ * - they are the same sound read three ways - while the voice id, the
+ * bank sample, the gains and the direction are each layer's own. False
+ * means nothing was queued at all: a group is published whole or not at
+ * all, so a caller that sees false knows no layer is sounding.
+ */
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_noteOnLayers(
+    JNIEnv* env, jobject, jlong handle,
+    jintArray voiceIds, jintArray samples,
+    jlong startFrame, jlong endFrame, jlong loopStart,
+    jfloatArray gainsL, jfloatArray gainsR, jdouble pitch, jbooleanArray reverses) {
+    const jsize n = env->GetArrayLength(voiceIds);
+    if (n <= 0 || n > PadEngine::kMaxVoices) return JNI_FALSE;
+    // Arrays that disagree are not a group; refusing beats reading past one.
+    if (env->GetArrayLength(samples) != n || env->GetArrayLength(gainsL) != n ||
+        env->GetArrayLength(gainsR) != n || env->GetArrayLength(reverses) != n) {
+        return JNI_FALSE;
+    }
+    jint ids[PadEngine::kMaxVoices];
+    jint smp[PadEngine::kMaxVoices];
+    jfloat gl[PadEngine::kMaxVoices];
+    jfloat gr[PadEngine::kMaxVoices];
+    jboolean rev[PadEngine::kMaxVoices];
+    env->GetIntArrayRegion(voiceIds, 0, n, ids);
+    env->GetIntArrayRegion(samples, 0, n, smp);
+    env->GetFloatArrayRegion(gainsL, 0, n, gl);
+    env->GetFloatArrayRegion(gainsR, 0, n, gr);
+    env->GetBooleanArrayRegion(reverses, 0, n, rev);
+
+    PadCommand cs[PadEngine::kMaxVoices];
+    for (jsize i = 0; i < n; ++i) {
+        PadCommand& c = cs[i];
+        c.type = PadCommand::Type::NoteOn;
+        c.voiceId = ids[i];
+        c.sample = smp[i];
+        c.start = startFrame;
+        c.end = endFrame;
+        c.loopStart = loopStart;
+        c.gainL = gl[i];
+        c.gainR = gr[i];
+        c.pitch = pitch;
+        c.reverse = rev[i] == JNI_TRUE;
+    }
+    return pads(handle)->pushCommands(cs, static_cast<size_t>(n)) ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT void JNICALL

@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <thread>
 #include <vector>
 
 #include "PadEngine.h"
@@ -59,6 +60,12 @@ PadCommand noteOn(int32_t id, int32_t sample, int64_t start, int64_t end, float 
     c.gainL = gL;
     c.gainR = gR;
     c.pitch = pitch;
+    return c;
+}
+
+PadCommand reversed(int32_t id, int32_t sample, int64_t start, int64_t end) {
+    PadCommand c = noteOn(id, sample, start, end);
+    c.reverse = true;
     return c;
 }
 
@@ -525,6 +532,131 @@ TEST(print_buffer_refuses_to_be_cleared_under_the_callback) {
     CHECK(p.state() == PrintBuffer::State::Done);
     CHECK(p.clear());
     CHECK(p.state() == PrintBuffer::State::Idle);
+}
+
+// ---- reverse and the group start -----------------------------------------------
+
+TEST(pad_engine_plays_a_window_backwards) {
+    // The ramp is i/1000, so the value read *is* the frame index: a
+    // backwards read of frames 100..200 starts near 0.199 and falls.
+    PadEngine& e = seeded();
+    e.pushCommand(reversed(1, 0, 100, 200));
+    auto out = callback(e, 8);
+    CHECK_NEAR(out[0], 0.199f, 1e-4);   // the last frame of the window, first
+    CHECK_NEAR(out[2], 0.198f, 1e-4);   // then down, one frame at a time
+    CHECK(out[2] < out[0]);
+    // It ends at the window's start rather than running off the front.
+    for (int i = 0; i < 40; ++i) callback(e, 8);
+    auto ids = ended(e);
+    CHECK_EQ(static_cast<int>(ids.size()), 1);
+    CHECK_EQ(ids[0], 1);
+    CHECK_NEAR(peak(callback(e, 8)), 0.0f, 1e-7);
+}
+
+TEST(pad_engine_a_backwards_loop_wraps_the_other_way) {
+    // Forwards a loop falls off the top and returns to loopStart;
+    // backwards it falls off the bottom at loopStart and returns to the
+    // last frame. Either way it never ends.
+    PadEngine& e = seeded();
+    PadCommand c = reversed(2, 0, 0, 200);
+    c.loopStart = 150;
+    e.pushCommand(c);
+    float lowest = 1.0f, highest = 0.0f;
+    for (int i = 0; i < 60; ++i) {
+        for (float v : callback(e, 64)) {
+            if (v > 0.0f) {
+                lowest = std::min(lowest, v);
+                highest = std::max(highest, v);
+            }
+        }
+    }
+    // It stayed inside the loop: never below frame 150, never above 199.
+    CHECK(lowest > 0.149f);
+    CHECK(highest < 0.200f);
+    CHECK(ended(e).empty());  // a sustaining loop reports no ending
+}
+
+TEST(pad_engine_a_group_reaches_the_callback_whole) {
+    // Three layers of one sample must start in the same callback: pushed
+    // one at a time, a callback landing between two of them starts one a
+    // buffer late, which is heard as a flam.
+    PadEngine& e = seeded();
+    PadCommand group[3];
+    for (int i = 0; i < 3; ++i) {
+        group[i] = noteOn(10 + i, 0, 500, 1000, 0.25f, 0.25f);
+    }
+    group[2].reverse = true;  // one layer backwards, the rest forward
+    CHECK(e.pushCommands(group, 3));
+    auto out = callback(e, 4);
+    // Three voices at a quarter each: two forward reads of frame 500 plus
+    // one backward read of frame 999, all in the first frame of one buffer.
+    CHECK_NEAR(out[0], 0.25f * (0.5f + 0.5f + 0.999f), 2e-3);
+    CHECK(ended(e).empty());
+}
+
+TEST(ring_publishes_a_group_whole_or_not_at_all) {
+    SpscRing<int, 8> ring;
+    const int three[3] = {1, 2, 3};
+    CHECK(ring.pushAll(three, 3));
+    int got = 0;
+    for (int expected : three) {
+        CHECK(ring.pop(got));
+        CHECK_EQ(got, expected);
+    }
+    CHECK(!ring.pop(got));
+    // Seven usable slots: six taken, a group of two will not fit, and the
+    // refusal writes nothing rather than half the group.
+    const int six[6] = {1, 2, 3, 4, 5, 6};
+    CHECK(ring.pushAll(six, 6));
+    const int two[2] = {7, 8};
+    CHECK(!ring.pushAll(two, 2));
+    CHECK(ring.push(7));   // one still fits
+    CHECK(!ring.push(8));  // and now it is full
+    for (int i = 1; i <= 7; ++i) {
+        CHECK(ring.pop(got));
+        CHECK_EQ(got, i);  // nothing from the refused group is in here
+    }
+    CHECK(!ring.pop(got));
+}
+
+TEST(ring_never_hands_a_consumer_half_a_group) {
+    // The property the callback actually depends on, and the only one a
+    // single-threaded case cannot see: when the consumer drains everything
+    // available - `while (pop(c))`, exactly what onAudioReady does - it
+    // never stops in the middle of a group. Push one at a time instead and
+    // this fails within a few thousand rounds.
+    constexpr int kGroup = 4;
+    constexpr int kGroups = 20000;
+    SpscRing<int, 64> ring;
+    std::atomic<bool> producerDone{false};
+
+    std::thread producer([&] {
+        for (int g = 0; g < kGroups; ++g) {
+            int items[kGroup];
+            for (int i = 0; i < kGroup; ++i) items[i] = g;
+            while (!ring.pushAll(items, kGroup)) std::this_thread::yield();
+        }
+        producerDone.store(true, std::memory_order_release);
+    });
+
+    long long taken = 0;
+    int split = 0;
+    int value = 0;
+    while (taken < static_cast<long long>(kGroups) * kGroup) {
+        int got = 0;
+        while (ring.pop(got)) {
+            ++taken;
+            value = got;
+        }
+        // The drain ended: whatever the producer had published was whole,
+        // so the running count must sit on a group boundary.
+        if (taken % kGroup != 0) ++split;
+        if (producerDone.load(std::memory_order_acquire) && taken == 0) break;
+    }
+    producer.join();
+    CHECK_EQ(split, 0);
+    CHECK_EQ(static_cast<int>(taken), kGroups * kGroup);
+    CHECK_EQ(value, kGroups - 1);  // and in order, to the last group
 }
 
 int main() { return check::runAll(); }

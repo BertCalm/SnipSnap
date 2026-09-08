@@ -120,8 +120,43 @@ class PadEngine(preferredSampleRate: Int) {
         return NativePads.noteOn(
             handle, voiceId, sample,
             hit.startFrame, hit.endFrameExclusive, -1L, hit.gainLeft, hit.gainRight, hit.pitchRatio,
+            reverse = false,
         )
     }
+
+    /**
+     * Start [layers] of one loaded sample together. Every layer reads the
+     * same window at the same speed - they are one sound taken apart - so
+     * only the gains and the direction differ, and they are published to
+     * the callback as one group: three layers can never start a buffer
+     * apart, which would be heard as a flam and chased for hours.
+     *
+     * False means *nothing* was queued: the caller still owns every id it
+     * was given, and none of them is sounding.
+     */
+    @Synchronized
+    fun hitLayers(layers: List<Layer>, startFrame: Long, endFrame: Long, loopStart: Long, pitch: Double): Boolean {
+        if (!isUp() || layers.isEmpty()) return false
+        return NativePads.noteOnLayers(
+            handle,
+            IntArray(layers.size) { layers[it].voiceId },
+            IntArray(layers.size) { layers[it].sample },
+            startFrame, endFrame, loopStart,
+            FloatArray(layers.size) { layers[it].gainLeft },
+            FloatArray(layers.size) { layers[it].gainRight },
+            pitch,
+            BooleanArray(layers.size) { layers[it].reverse },
+        )
+    }
+
+    /** One voice of a group: which bank sample, at what level, which way round. */
+    data class Layer(
+        val voiceId: Int,
+        val sample: Int,
+        val gainLeft: Float,
+        val gainRight: Float,
+        val reverse: Boolean,
+    )
 
     /** Stop one voice with a short fade: a choke, a steal, a gate's release. */
     @Synchronized

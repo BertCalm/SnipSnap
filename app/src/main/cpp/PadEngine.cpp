@@ -198,8 +198,11 @@ void PadEngine::apply(const PadCommand& c) {
             v.active = true;
             v.id = c.voiceId;
             v.sample = c.sample;
-            v.pos = static_cast<double>(start);
+            v.start = start;
             v.end = end;
+            v.reverse = c.reverse;
+            // Backwards starts at the last frame of the window and walks down.
+            v.pos = c.reverse ? static_cast<double>(end - 1) : static_cast<double>(start);
             // A loop wraps from the last frame back to loopStart; a loop that
             // would be empty (start at or past end - 1) plays once instead.
             v.loopStart = (c.loopStart >= 0 && c.loopStart < end - 1) ? c.loopStart : -1;
@@ -236,10 +239,23 @@ void PadEngine::render(float* out, int32_t numFrames) {
         const float* f = s.frames.data();
         const int64_t last = v.end - 1;
         for (int32_t i = 0; i < numFrames; ++i) {
-            // A fast voice over a short loop can cross the end more than
-            // once in one frame: wrap until the read is back inside.
-            while (v.loopStart >= 0 && v.pos >= static_cast<double>(last)) {
-                v.pos -= static_cast<double>(last - v.loopStart);
+            // A fast voice over a short loop can cross the far end more
+            // than once in one frame: wrap until the read is back inside.
+            // Backwards the loop runs the other way - off the bottom at
+            // loopStart, back up to the last frame - and the window ends
+            // at `start` rather than at `end`.
+            if (v.reverse) {
+                while (v.loopStart >= 0 && v.pos <= static_cast<double>(v.loopStart)) {
+                    v.pos += static_cast<double>(last - v.loopStart);
+                }
+                if (v.pos < static_cast<double>(v.start)) {
+                    endVoice(v);
+                    break;
+                }
+            } else {
+                while (v.loopStart >= 0 && v.pos >= static_cast<double>(last)) {
+                    v.pos -= static_cast<double>(last - v.loopStart);
+                }
             }
             const int64_t i0 = static_cast<int64_t>(v.pos);
             if (i0 >= v.end) {
@@ -267,7 +283,10 @@ void PadEngine::render(float* out, int32_t numFrames) {
             }
             out[2 * i] += l * v.gainL * v.fade;
             out[2 * i + 1] += r * v.gainR * v.fade;
-            v.pos += v.inc;
+            // The interpolation above is positional, not directional: the
+            // pair either side of `pos` is the same pair whichever way the
+            // read is travelling. Only the step changes sign.
+            v.pos += v.reverse ? -v.inc : v.inc;
         }
     }
     // Thirty-two voices at kit levels rarely sum past full scale; when they
