@@ -1431,6 +1431,27 @@ Nothing below the line — the board named exactly these two, and both are close
 
 ---
 
+## Wave HHH — GRAIN FIELD and SURFACE, drawn (APP)
+
+The design canvas's last two screens with no board at all — both arrived
+whole from another branch. GRAIN FIELD held up as built. SURFACE didn't:
+its one-line readout (latency, X/Y, up to four corner weights, TILT, the
+pad name) ran to roughly double the frame's width in MORPH mode and
+clipped mid-digit at 390 - the code's own comment already knew the line
+"can outrun a narrow screen" and ordered latency first for exactly that
+reason, but a lost pad name is still a lost pad name.
+
+| Item | Status |
+|---|---|
+| HHH1 | ✓ done: GRAIN FIELD drawn — four boards on page six (loading, idle, DUET without the mic, DUET armed), from `GrainFieldScreen.kt` as it stands. No defect: every label fits, the scatter and both cursor rings read clearly. |
+| HHH2 | ✓ done: SURFACE drawn, its readout fixed — three boards on page seven (XY, MORPH at the readout's longest, no pad). `SurfaceScreen`'s readout `TapeText` now allows a second line (`maxLines = 2`, `:app`, blind); latency still leads by design, so it and every mid-crowding case survive, and two lines fits every case this app ships except the rare worst one (MORPH + tilt + a shared stream + a long pad name), noted below the line. |
+
+**Below the line for HHH:** a truly lossless SURFACE readout for the rare
+worst case above would need a restructure (a second dedicated line for
+identity, say), not a parameter — left for whoever hits it for real.
+
+---
+
 ## Wave ZZ — the phone reads (APP)
 
 The import door (F3) made the core's listening verbs reachable from the
@@ -1875,6 +1896,11 @@ APP wave GGG: ✓ all landed (2026-09-08) — the trip catches up to its own
   now reads on an LCD strip like every other readout, and KEEP ROOM
   lights with an amber rim the instant a trip has something to keep,
   `ActionButton`'s new `lit` state (blind for CI's compiler).
+
+APP wave HHH: ✓ all landed (2026-09-08) — GRAIN FIELD and SURFACE, drawn.
+  Both arrived from another branch with no board ever. GRAIN FIELD held up
+  as built; SURFACE's readout didn't - MORPH's longest case clipped
+  mid-digit at 390, so `TapeText` now allows it a second line.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

@@ -24,9 +24,8 @@ Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 > [`design/pad-sheet-v2/`](../design/pad-sheet-v2/README.md), which now
 > supersedes §PAD SHEET here. `UI_DESIGN.md` records the settled rules.
 >
-> **Still undrawn**: the SHARE / BACKUP chooser hand-off; GRAIN FIELD and
-> SURFACE, which arrived from another branch with no boards at all. A fresh
-> handoff export from the design canvas would close these in one go.
+> **Still undrawn**: the SHARE / BACKUP chooser hand-off. A fresh handoff
+> export from the design canvas would close it.
 >
 > Everything else this list once carried is closed. The landing (wave FFF
 > put its trouble - skipped kits, a refusal - in the language's honest
@@ -38,6 +37,12 @@ Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 > artboard's single three-item row into six lines, SCULPT/STRETCH/SHARE
 > among them, but no code defect: everything fits and reads at 390, so the
 > six-line density is a candidate for a future `GroupBox` pass, not a fix).
+> GRAIN FIELD and SURFACE (drawn on pages six and seven - both arrived from
+> another branch with no board ever; GRAIN FIELD held up as built, but
+> SURFACE's readout line - latency, position, up to four corner weights,
+> tilt, the pad name, all on one un-wrapped line - clipped mid-digit in
+> MORPH mode at 390, well past what any reordering could fix on one line;
+> `TapeText` now allows a second line).
 
 The handoff is unusually implementable — it states tokens in the form Compose
 consumes and names repo symbols (`PeaksPyramid`, `StarterKits`,

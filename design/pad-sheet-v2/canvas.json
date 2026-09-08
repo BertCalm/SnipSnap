@@ -1,26 +1,4 @@
 {
-  "pages": [
-    {
-      "id": "page-1",
-      "name": "Pad Sheet v2"
-    },
-    {
-      "id": "page-2",
-      "name": "Directions explored"
-    },
-    {
-      "id": "page-3",
-      "name": "OUTSIDE \u00b7 the trip"
-    },
-    {
-      "id": "page-4",
-      "name": "The landing's box"
-    },
-    {
-      "id": "page-5",
-      "name": "KIT \u00b7 the action row + TEXTURE"
-    }
-  ],
   "artboards": [
     {
       "file": "Main.dc.html",
@@ -28,7 +6,7 @@
       "y": 0,
       "w": 390,
       "h": 844,
-      "title": "Pad Sheet v2 \u00b7 closed",
+      "title": "Pad Sheet v2 · closed",
       "page": "page-1"
     },
     {
@@ -37,7 +15,7 @@
       "y": 0,
       "w": 390,
       "h": 844,
-      "title": "Pad Sheet v2 \u00b7 MUTATE open",
+      "title": "Pad Sheet v2 · MUTATE open",
       "page": "page-1"
     },
     {
@@ -46,7 +24,7 @@
       "y": 0,
       "w": 390,
       "h": 844,
-      "title": "Pad Sheet v2 \u00b7 OUTSIDE, trip out",
+      "title": "Pad Sheet v2 · OUTSIDE, trip out",
       "page": "page-1"
     },
     {
@@ -64,7 +42,7 @@
       "y": 0,
       "w": 390,
       "h": 844,
-      "title": "B \u00b7 Workshop selector",
+      "title": "B · Workshop selector",
       "page": "page-2"
     },
     {
@@ -73,7 +51,7 @@
       "y": 0,
       "w": 390,
       "h": 844,
-      "title": "C \u00b7 Two screens: the sheet",
+      "title": "C · Two screens: the sheet",
       "page": "page-2"
     },
     {
@@ -82,7 +60,7 @@
       "y": 0,
       "w": 390,
       "h": 844,
-      "title": "C \u00b7 Two screens: the workshop",
+      "title": "C · Two screens: the workshop",
       "page": "page-2"
     },
     {
@@ -91,7 +69,7 @@
       "y": 0,
       "w": 390,
       "h": 470,
-      "title": "OUTSIDE \u00b7 idle",
+      "title": "OUTSIDE · idle",
       "page": "page-3"
     },
     {
@@ -100,7 +78,7 @@
       "y": 0,
       "w": 390,
       "h": 470,
-      "title": "OUTSIDE \u00b7 listening",
+      "title": "OUTSIDE · listening",
       "page": "page-3"
     },
     {
@@ -109,7 +87,7 @@
       "y": 0,
       "w": 390,
       "h": 470,
-      "title": "OUTSIDE \u00b7 sending",
+      "title": "OUTSIDE · sending",
       "page": "page-3"
     },
     {
@@ -118,7 +96,7 @@
       "y": 0,
       "w": 390,
       "h": 470,
-      "title": "OUTSIDE \u00b7 back",
+      "title": "OUTSIDE · back",
       "page": "page-3"
     },
     {
@@ -127,7 +105,7 @@
       "y": 0,
       "w": 390,
       "h": 560,
-      "title": "OUTSIDE \u00b7 refused",
+      "title": "OUTSIDE · refused",
       "page": "page-3"
     },
     {
@@ -136,7 +114,7 @@
       "y": 0,
       "w": 390,
       "h": 844,
-      "title": "Landing \u00b7 1 skipped",
+      "title": "Landing · 1 skipped",
       "page": "page-4"
     },
     {
@@ -145,7 +123,7 @@
       "y": 0,
       "w": 390,
       "h": 844,
-      "title": "Landing \u00b7 refused",
+      "title": "Landing · refused",
       "page": "page-4"
     },
     {
@@ -154,7 +132,7 @@
       "y": 0,
       "w": 390,
       "h": 340,
-      "title": "KIT \u00b7 action row, closed",
+      "title": "KIT · action row, closed",
       "page": "page-5"
     },
     {
@@ -163,7 +141,7 @@
       "y": 0,
       "w": 390,
       "h": 540,
-      "title": "KIT \u00b7 KEY panel open",
+      "title": "KIT · KEY panel open",
       "page": "page-5"
     },
     {
@@ -172,8 +150,71 @@
       "y": 0,
       "w": 390,
       "h": 510,
-      "title": "KIT \u00b7 TEXTURE (SCULPT) open",
+      "title": "KIT · TEXTURE (SCULPT) open",
       "page": "page-5"
+    },
+    {
+      "file": "GrainLoading.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 300,
+      "title": "GRAIN FIELD · loading",
+      "page": "page-6"
+    },
+    {
+      "file": "GrainIdle.dc.html",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 460,
+      "title": "GRAIN FIELD · idle",
+      "page": "page-6"
+    },
+    {
+      "file": "GrainDuetNeedsMic.dc.html",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 510,
+      "title": "GRAIN FIELD · DUET, no mic",
+      "page": "page-6"
+    },
+    {
+      "file": "GrainDuetArmed.dc.html",
+      "x": 1440,
+      "y": 0,
+      "w": 390,
+      "h": 460,
+      "title": "GRAIN FIELD · DUET, armed",
+      "page": "page-6"
+    },
+    {
+      "file": "SurfaceXY.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 560,
+      "title": "SURFACE · XY",
+      "page": "page-7"
+    },
+    {
+      "file": "SurfaceMorph.dc.html",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 560,
+      "title": "SURFACE · MORPH, longest readout",
+      "page": "page-7"
+    },
+    {
+      "file": "SurfaceEmpty.dc.html",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 560,
+      "title": "SURFACE · no pad",
+      "page": "page-7"
     }
   ],
   "annotations": [
@@ -183,7 +224,7 @@
       "y": -300,
       "w": 1350,
       "page": "page-1",
-      "text": "PAD SHEET V2 \u00b7 THE SPEC (Direction A, chosen)\n1. The everyday top never changes: header, waveform, provenance, LEVEL / PAN / TUNE, ONE-SHOT / CHOKE / GHOSTS.\n2. Every workshop card is a group box with a pixel legend (TREATMENT, SHAPE, MUTATE, OUTSIDE, MAKE), 44 px tap strip, closed by default. Closed, the whole sheet fits one screen.\n3. The closed strip reads what the pad carries, from the recipe the code already has: MutateSheet.read, OutsideSheet.read, PadSheet's treatment and shape. \"UNTOUCHED\" in ink3 when nothing does.\n4. One box open at a time. The open box is remembered per kit, not per pad, so A03 \u25ba keeps the same bench open - one job across the whole kit.\n5. The pad navigation row is pinned under the scroll area (2 px grayEdge rule above it). EJECT and RE-TRIM scroll with the content.\n6. OUTSIDE while a trip is out: the box's summary turns lcd-alt cyan, an LCD strip shows turning reels (the one motion rule: reels spin whenever audio moves), SEND reads the stage dimmed, WET and KEEP ROOM dim, the nav dims. Nothing goes dead.\n7. KEEP ROOM lights in lcd-alt only after a ROOM trip; a REAMP dims it. The row always exists, so the box never jumps.\n8. Labels: a box strip's summary ellipsizes; a button label ellipsizes; no label may wrap. Budget at 390: about 44 characters in the 8 px pixel face across a full row (6.4 px a glyph beside the chevron), 12 in a three-chip row, 9 in a four-chip row. The shape strip lists only the fields the pad sets."
+      "text": "PAD SHEET V2 · THE SPEC (Direction A, chosen)\n1. The everyday top never changes: header, waveform, provenance, LEVEL / PAN / TUNE, ONE-SHOT / CHOKE / GHOSTS.\n2. Every workshop card is a group box with a pixel legend (TREATMENT, SHAPE, MUTATE, OUTSIDE, MAKE), 44 px tap strip, closed by default. Closed, the whole sheet fits one screen.\n3. The closed strip reads what the pad carries, from the recipe the code already has: MutateSheet.read, OutsideSheet.read, PadSheet's treatment and shape. \"UNTOUCHED\" in ink3 when nothing does.\n4. One box open at a time. The open box is remembered per kit, not per pad, so A03 ► keeps the same bench open - one job across the whole kit.\n5. The pad navigation row is pinned under the scroll area (2 px grayEdge rule above it). EJECT and RE-TRIM scroll with the content.\n6. OUTSIDE while a trip is out: the box's summary turns lcd-alt cyan, an LCD strip shows turning reels (the one motion rule: reels spin whenever audio moves), SEND reads the stage dimmed, WET and KEEP ROOM dim, the nav dims. Nothing goes dead.\n7. KEEP ROOM lights in lcd-alt only after a ROOM trip; a REAMP dims it. The row always exists, so the box never jumps.\n8. Labels: a box strip's summary ellipsizes; a button label ellipsizes; no label may wrap. Budget at 390: about 44 characters in the 8 px pixel face across a full row (6.4 px a glyph beside the chevron), 12 in a three-chip row, 9 in a four-chip row. The shape strip lists only the fields the pad sets."
     },
     {
       "id": "note-rooms",
@@ -191,7 +232,7 @@
       "y": -230,
       "w": 400,
       "page": "page-1",
-      "text": "ROOMS ON THE SHELF (decided)\nA third section beside INSTRUMENTS, one row per kept room: Rock Salt name, how it was measured (trip, sureness, the pad, the age), its length on an LCD. Tapping a row does nothing; hold to reveal FORGET \u2192 BIN. A forgotten room goes to the bin for 30 days like every other delete - the app's one rule for deletes, kept."
+      "text": "ROOMS ON THE SHELF (decided)\nA third section beside INSTRUMENTS, one row per kept room: Rock Salt name, how it was measured (trip, sureness, the pad, the age), its length on an LCD. Tapping a row does nothing; hold to reveal FORGET → BIN. A forgotten room goes to the bin for 30 days like every other delete - the app's one rule for deletes, kept."
     },
     {
       "id": "note-b",
@@ -199,7 +240,7 @@
       "y": -190,
       "w": 400,
       "page": "page-2",
-      "text": "DIRECTION B \u00b7 WORKSHOP SELECTOR (not chosen)\nOne segmented row, five benches, one panel.\nFor: the sheet never grows past one screen.\nAgainst: what the pad carries on the other benches is invisible until you switch; five chips in 366 px is tight - TREATMENT has to become TREAT, and OUTSIDE only just fits."
+      "text": "DIRECTION B · WORKSHOP SELECTOR (not chosen)\nOne segmented row, five benches, one panel.\nFor: the sheet never grows past one screen.\nAgainst: what the pad carries on the other benches is invisible until you switch; five chips in 366 px is tight - TREATMENT has to become TREAT, and OUTSIDE only just fits."
     },
     {
       "id": "note-c",
@@ -207,7 +248,7 @@
       "y": -190,
       "w": 860,
       "page": "page-2",
-      "text": "DIRECTION C \u00b7 TWO SCREENS (not chosen; two ideas kept)\nThe sheet keeps only the everyday controls plus an LCD of what the pad carries; WORKSHOP \u25b8 opens a second screen.\nKept for A: \"same bench, next pad\" (the open box persists across pads) and the in-flight OUTSIDE strip with turning reels.\nAgainst: two screens deep from the grid; HIT and the waveform repeated on the workshop."
+      "text": "DIRECTION C · TWO SCREENS (not chosen; two ideas kept)\nThe sheet keeps only the everyday controls plus an LCD of what the pad carries; WORKSHOP ▸ opens a second screen.\nKept for A: \"same bench, next pad\" (the open box persists across pads) and the in-flight OUTSIDE strip with turning reels.\nAgainst: two screens deep from the grid; HIT and the waveform repeated on the workshop."
     },
     {
       "id": "note-trip",
@@ -215,7 +256,7 @@
       "y": -260,
       "w": 1500,
       "page": "page-3",
-      "text": "OUTSIDE \u00b7 THE TRIP, STATE BY STATE (drawn from the code after wave DDD)\nThe box alone, in order. 1 idle: the status reads what the move will do, in pixel ink; KEEP ROOM dim, UNDO dim. 2 the mic opens before anything plays (LISTENING FOR THE ROOM\u2026): the legend line turns lcd-alt, the reels turn on an LCD strip, SEND reads the stage dimmed, WET dims. 3 the sweep goes out (SENDING\u2026 TURN IT UP.). 4 back: the measured line - move, lag, sureness - on an LCD in lcd ink; KEEP ROOM lit in lcd-alt; UNDO live. X refused: nothing came back; the box returns to idle and a toast says why in the verb's own words.\nClosed by wave GGG (2026-09-08): OutsideCard now reads the measured line on an LCD strip like every other readout, and KEEP ROOM lights with an amber rim the instant a trip has something to keep - both boards and code agree."
+      "text": "OUTSIDE · THE TRIP, STATE BY STATE (drawn from the code after wave DDD)\nThe box alone, in order. 1 idle: the status reads what the move will do, in pixel ink; KEEP ROOM dim, UNDO dim. 2 the mic opens before anything plays (LISTENING FOR THE ROOM…): the legend line turns lcd-alt, the reels turn on an LCD strip, SEND reads the stage dimmed, WET dims. 3 the sweep goes out (SENDING… TURN IT UP.). 4 back: the measured line - move, lag, sureness - on an LCD in lcd ink; KEEP ROOM lit in lcd-alt; UNDO live. X refused: nothing came back; the box returns to idle and a toast says why in the verb's own words.\nClosed by wave GGG (2026-09-08): OutsideCard now reads the measured line on an LCD strip like every other readout, and KEEP ROOM lights with an amber rim the instant a trip has something to keep - both boards and code agree."
     },
     {
       "id": "note-landing",
@@ -231,11 +272,57 @@
       "y": -260,
       "w": 1350,
       "page": "page-5",
-      "text": "KIT \u00b7 THE ACTION ROW AND TEXTURE (drawn from the code; DESIGN_GAP's last undrawn pair)\nThe oldest artboard (`design/TapeOS Oilslick.dc.html`, `isKit`) drew one row of three: EVIL TWINS, TAKES + BIN, KEY, above a big ARM button that has since moved to THE SHELF. The code has grown past that: REMIX BANK B (EVIL TWINS renamed), a second row for SCULPT and STRETCH (TEXTURE didn't exist when that board was drawn), and a full-width SHARE below - five doors and a button where the board drew three. Closed (left), the sheet reads TAKES + BIN, REMIX BANK B, KEY, SCULPT, STRETCH, SHARE, six lines the language never checked together. KEY open (middle): the same panel as PAD SHEET's own KEY door, unchanged. TEXTURE open (right, SCULPT): SOURCE steps the kit's own pads, three mode chips, one knob, GO renders four takes.\nWhat the drawing found: nothing wrong with either panel once open - both fit and read clearly. The six-item closed sheet is dense but each label states its own words in full at 390 (measured, no clipping); grouping it as three text buttons + a three-way row (row 1) then two texture doors (row 2) mirrors PAD SHEET's group-box logic (TREATMENT/SHAPE/MUTATE/OUTSIDE/MAKE) closely enough that a GroupBox pass here is the natural next design step, not an emergency fix - noted below the line, not fixed blind."
+      "text": "KIT · THE ACTION ROW AND TEXTURE (drawn from the code; DESIGN_GAP's last undrawn pair)\nThe oldest artboard (`design/TapeOS Oilslick.dc.html`, `isKit`) drew one row of three: EVIL TWINS, TAKES + BIN, KEY, above a big ARM button that has since moved to THE SHELF. The code has grown past that: REMIX BANK B (EVIL TWINS renamed), a second row for SCULPT and STRETCH (TEXTURE didn't exist when that board was drawn), and a full-width SHARE below - five doors and a button where the board drew three. Closed (left), the sheet reads TAKES + BIN, REMIX BANK B, KEY, SCULPT, STRETCH, SHARE, six lines the language never checked together. KEY open (middle): the same panel as PAD SHEET's own KEY door, unchanged. TEXTURE open (right, SCULPT): SOURCE steps the kit's own pads, three mode chips, one knob, GO renders four takes.\nWhat the drawing found: nothing wrong with either panel once open - both fit and read clearly. The six-item closed sheet is dense but each label states its own words in full at 390 (measured, no clipping); grouping it as three text buttons + a three-way row (row 1) then two texture doors (row 2) mirrors PAD SHEET's group-box logic (TREATMENT/SHAPE/MUTATE/OUTSIDE/MAKE) closely enough that a GroupBox pass here is the natural next design step, not an emergency fix - noted below the line, not fixed blind."
+    },
+    {
+      "id": "note-grain",
+      "x": 0,
+      "y": -260,
+      "w": 1830,
+      "page": "page-6",
+      "text": "GRAIN FIELD (drawn from GrainFieldScreen.kt; never had a board - it arrived from another branch)\nLoading: an LCD line while GrainField.analyze runs off-thread. Idle: the scatter (grains near the touch light in accent), the hint line beneath. DUET, no mic: the DUET chip lights, START MIC appears full-width above the hint, which already changes to the headphones warning - the canvas keeps its weight(1f) so the button doesn't crowd it. DUET, armed: the same scatter, an auto-cursor ring at a different radius from the touch ring so the two never read as the same mark (a finger always wins over DUET, per the header chip's own KDoc)."
+    },
+    {
+      "id": "note-surface",
+      "x": 0,
+      "y": -260,
+      "w": 1370,
+      "page": "page-7",
+      "text": "SURFACE (drawn from SurfaceScreen.kt; never had a board - it arrived from another branch)\nXY: mode row (XY/XYZ/MORPH + →TAPE + PRINT), PAD ◄ ► + LATCH + BARS, SET A-D dimmed outside MORPH, the touch grid with crosshair and puck, one LCD readout. MORPH: the corner bars and A/B/C/D labels, SET A-D live, and the readout at its longest - latency, X/Y, all four corner weights, TILT, the pad name. No pad: OPEN A KIT over the grid, the readout's pad segment simply absent.\nFound and fixed: the readout was one un-wrapped LCD line - at MORPH's longest (latency SHARED, X/Y, all four corners, TILT, a named pad) it ran to roughly double the frame's width and clipped mid-digit. TapeText now allows a second line (`maxLines = 2`); every board here draws that fix, not the clipped original. Below the line: the rare worst case (MORPH + tilt + a shared stream + a long pad name) can still lose the pad name even across two lines - latency already leads the line on purpose, by the code's own comment, so that field survives; a truly lossless layout would need a restructure, not a parameter."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-5"
-  }
+    "page": "page-6"
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Pad Sheet v2"
+    },
+    {
+      "id": "page-2",
+      "name": "Directions explored"
+    },
+    {
+      "id": "page-3",
+      "name": "OUTSIDE · the trip"
+    },
+    {
+      "id": "page-4",
+      "name": "The landing's box"
+    },
+    {
+      "id": "page-5",
+      "name": "KIT · the action row + TEXTURE"
+    },
+    {
+      "id": "page-6",
+      "name": "GRAIN FIELD"
+    },
+    {
+      "id": "page-7",
+      "name": "SURFACE"
+    }
+  ]
 }
