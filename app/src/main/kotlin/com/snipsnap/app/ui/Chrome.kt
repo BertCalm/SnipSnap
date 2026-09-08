@@ -269,10 +269,16 @@ private fun StatusCell(text: String, modifier: Modifier = Modifier) {
  * withhold function. A toast is a screen-reader user's only channel for
  * "did DELETE/SHARE/RENAME work" (audit finding 3); OFF silencing that
  * entirely, with no fallback, would cost that user information a sighted
- * user still gets from watching the operation resolve. So the semantics
- * node — [liveRegion] plus [contentDescription] carrying the message — is
- * always present while a message is live, regardless of PERSONALITY;
- * only the drawn bubble beneath it is gated, exactly as before this fix.
+ * user still gets from watching the operation resolve. So the bubble is
+ * always composed while a message is live, carrying [liveRegion]
+ * semantics regardless of PERSONALITY — only its *drawn* alpha is gated
+ * (`t` never animates past 0 at OFF, since the `LaunchedEffect` below
+ * skips it), which keeps the visible result identical to before this fix
+ * for a sighted user. The semantics node lives on the bubble itself, not
+ * a screen-sized wrapper around it — a full-screen node would sit in
+ * TalkBack's touch-exploration path for the whole `TOAST_DWELL_MS`
+ * dwell, intercepting an explore-by-touch anywhere on screen instead of
+ * whatever pad or button is actually under the finger.
  * `Polite` (not `Assertive`) throughout: several of this file's own error
  * strings (`Copy.grooveRefused`, `Copy.KIT_RENAME_FAILED`, ...) don't share
  * a common marker that would let this function tell a failure from a
@@ -290,36 +296,26 @@ fun ToastOverlay(message: String?, modifier: Modifier = Modifier) {
     val t = remember(message) { Animatable(0f) }
     LaunchedEffect(message) { if (visible) t.animateTo(1f, tween(Motion.TOAST_IN_MS)) }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            // mergeDescendants: the bubble's own TapeText would otherwise
-            // register as a second, separately-focusable text node with
-            // the same words — one node per toast, not two, is what
-            // "announced once" (this KDoc's whole point) requires.
-            .semantics(mergeDescendants = true) {
-                liveRegion = LiveRegionMode.Polite
-                contentDescription = message
-            },
-        contentAlignment = Alignment.BottomCenter,
-    ) {
-        if (visible) {
-            Box(
-                modifier = Modifier
-                    .padding(bottom = 44.dp)
-                    .alpha(t.value)
-                    .raisedBevel(scheme, 4.dp)
-                    .let {
-                        if (scheme.id == SchemeId.OILSLICK) {
-                            it.border(2.dp, oilslickSweep(), RoundedCornerShape(4.dp))
-                        } else {
-                            it
-                        }
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        Box(
+            modifier = Modifier
+                .padding(bottom = 44.dp)
+                .alpha(t.value)
+                // mergeDescendants: without it, the TapeText below
+                // registers as a second, separately-focusable node with
+                // the same words — one node per toast, not two.
+                .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
+                .raisedBevel(scheme, 4.dp)
+                .let {
+                    if (scheme.id == SchemeId.OILSLICK) {
+                        it.border(2.dp, oilslickSweep(), RoundedCornerShape(4.dp))
+                    } else {
+                        it
                     }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-            ) {
-                TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 2)
-            }
+                }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 2)
         }
     }
 }

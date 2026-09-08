@@ -170,7 +170,9 @@ private fun KeyPad(
             // below still does, for touch) removed this cell from the
             // accessibility tree entirely, the same "vanishes instead
             // of announcing unavailable" gap as finding 12 elsewhere.
-            .semantics {
+            // mergeDescendants: without it, the label TapeText below is
+            // a second, separately-focusable node.
+            .semantics(mergeDescendants = true) {
                 contentDescription = if (enabled) "KEY $label" else "KEY $label: NOT MAPPED"
                 if (enabled) {
                     onClick(label = "PLAY") { onPress(CENTER_VELOCITY); onRelease(); true }

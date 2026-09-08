@@ -551,7 +551,10 @@ private fun PadCell(
                 // gives the same discoverability hint an early release
                 // would, and the long-click action is what actually
                 // opens PAD CAPTURE.
-                .semantics {
+                // mergeDescendants: without it, the tag TapeText below
+                // stays a second, separately-focusable node — TalkBack
+                // would land on this cell twice.
+                .semantics(mergeDescendants = true) {
                     contentDescription = "PAD $tag: EMPTY"
                     onClick(label = "HINT") { onEmptyTapHint(slot); true }
                     onLongClick(label = "CAPTURE A SAMPLE") { onEmptyLongPress(slot); true }
@@ -605,7 +608,10 @@ private fun PadCell(
             // physical tap produces) and long-click onto onLongPress
             // (opens PAD SHEET), matching the two outcomes the raw
             // gesture below actually distinguishes.
-            .semantics {
+            // mergeDescendants: without it, the tag and name TapeTexts
+            // below stay separate nodes — TalkBack would land on this
+            // one cell three times instead of once.
+            .semantics(mergeDescendants = true) {
                 contentDescription = "PAD $tag: ${pad.displayName}"
                 onClick(label = "PLAY") { onTap(slot); true }
                 onLongClick(label = "OPEN PAD SHEET") { onLongPress(slot); true }

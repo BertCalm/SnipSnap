@@ -726,8 +726,9 @@ private fun WindButton(
             // than a sustained wind, but operable, where the raw
             // pointerInput below (no click action registered) was
             // neither. label (this button's own text, e.g. "◄◄") is the
-            // merged accessible name.
-            .semantics {
+            // merged accessible name — mergeDescendants is what actually
+            // supplies it; without it this action node carries no name.
+            .semantics(mergeDescendants = true) {
                 onClick {
                     onStop(); model.windStart(direction); onTouch()
                     model.windStop(direction); onTouch()

@@ -582,7 +582,9 @@ private fun PlayPad(
             // sustain the way a real press-and-hold would, but this is
             // strictly better than the false affordance a focusable,
             // silently-inert cell was before (audit finding 1).
-            .semantics {
+            // mergeDescendants: without it, the tag and name TapeTexts
+            // below stay separate focus stops from this cell's own.
+            .semantics(mergeDescendants = true) {
                 contentDescription = "PAD $tag: ${pad.displayName}"
                 onClick(label = "PLAY") { onHit(slot, CENTER_VELOCITY); onRelease(slot); true }
             }
