@@ -1005,6 +1005,29 @@ fun PadSheetScreen(
      * `KitStore.load`, which the `catch` below turns into a toast exactly
      * like every other failed write here — closing the ghost-resurrection
      * path for free, not just the revert.
+     *
+     * Two narrower windows are knowingly accepted rather than closed here,
+     * so neither reads later as an oversight:
+     *
+     * 1. The copy is slot-granular, not field-granular: an edited slot has
+     *    all nine of [editPadMetadata]'s fields restamped, even the ones
+     *    this burst didn't touch. If IN KEY ([KitBuilderModel.retuneTonalPads],
+     *    which moves `tuneCoarse` AND `tuneFine` together) lands inside the
+     *    flush window, the stale `tuneCoarse` is restored over its new
+     *    `tuneFine` — a tuning neither writer meant. Adding `tuneFine` to
+     *    the copy list would NOT fix that; it would deliberately clobber IN
+     *    KEY instead. The real fix is a per-slot baseline snapshot taken
+     *    when the slot first goes pending, copying only fields that
+     *    actually differ. Not worth it yet: this window is far narrower
+     *    than the whole-file clobber it replaced.
+     * 2. The guard is `dirty && targetSlots.isNotEmpty()`, where it used to
+     *    be `dirty` alone. Two paths (SMEAR's untreat-then-replace, the era
+     *    branch's unEra-then-era) can leave the model dirty with no pending
+     *    metadata slot if they throw mid-way, and those now flush nothing.
+     *    That is the better failure: the op already failed and already
+     *    toasted, its in-memory state is itself half-baked, and persisting
+     *    a stale whole-file snapshot of it was never clearly better than
+     *    persisting nothing.
      */
     DisposableEffect(model) {
         onDispose {
@@ -1028,16 +1051,29 @@ fun PadSheetScreen(
                                 var appliedAny = false
                                 for ((targetSlot, stalePad) in stalePads) {
                                     val freshPad = fresh.kit.pad(targetSlot)
-                                    if (stalePad == null || freshPad == null) {
+                                    if (stalePad == null || freshPad == null ||
+                                        freshPad.sampleFile != stalePad.sampleFile
+                                    ) {
                                         // The pad this debounced edit
-                                        // belonged to is gone from disk —
-                                        // ejected, or the slot reassigned,
-                                        // by another screen while this
-                                        // flush was pending. Nothing honest
-                                        // to apply; conjuring the pad back
-                                        // would be its own phantom-pad bug,
-                                        // so this one edit is simply
-                                        // dropped — the rest still apply.
+                                        // belonged to is gone from disk, or
+                                        // the slot now holds a DIFFERENT
+                                        // sound — ejected, reassigned (GRAB,
+                                        // SEND TO PAD), moved, or rerolled
+                                        // (EVIL TWINS clears bank B and
+                                        // re-adds fresh twins under new
+                                        // stems) by another screen while
+                                        // this flush was pending. Comparing
+                                        // sampleFile, not just null-ness, is
+                                        // the whole point: a reassigned slot
+                                        // is non-null, and stamping this
+                                        // pad's LEVEL/PAN/TUNE/SHAPE onto
+                                        // somebody else's sample is the same
+                                        // class of silent corruption this
+                                        // flush was rewritten to stop.
+                                        // Conjuring the old pad back would
+                                        // be its own phantom-pad bug, so
+                                        // this one edit is dropped — the
+                                        // rest still apply.
                                         continue
                                     }
                                     fresh.update(targetSlot) { p ->
