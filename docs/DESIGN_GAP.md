@@ -24,8 +24,15 @@ Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 > [`design/pad-sheet-v2/`](../design/pad-sheet-v2/README.md), which now
 > supersedes §PAD SHEET here. `UI_DESIGN.md` records the settled rules.
 >
-> **Still undrawn**: the SHARE / BACKUP chooser hand-off. A fresh handoff
-> export from the design canvas would close it.
+> **Closed by wave III (2026-09-08).** The SHARE / BACKUP chooser hand-off
+> is drawn on the canvas's page eight: SHARE packing (every door dimmed,
+> PACKING… in the status bar), the system chooser itself (schematic —
+> SnipSnap owns nothing past `Intent.createChooser`), the clean return
+> and the no-receiver return, then BACKUP's empty-shelf gate (dimmed
+> before the busy lock, no chooser ever offered) and a partial backup's
+> message box. No code defect: `shareKit`/`backupShelf` already route
+> every branch through the app's two existing answer shapes, the one-line
+> toast and the honest little message box wave FFF gave the landing side.
 >
 > Everything else this list once carried is closed. The landing (wave FFF
 > put its trouble - skipped kits, a refusal - in the language's honest

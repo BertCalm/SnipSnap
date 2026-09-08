@@ -215,6 +215,60 @@
       "h": 560,
       "title": "SURFACE · no pad",
       "page": "page-7"
+    },
+    {
+      "file": "ShareBusy.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "SHARE · packing",
+      "page": "page-8"
+    },
+    {
+      "file": "ShareChooser.dc.html",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "SHARE · the system chooser",
+      "page": "page-8"
+    },
+    {
+      "file": "ShareClean.dc.html",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "SHARE · back, clean",
+      "page": "page-8"
+    },
+    {
+      "file": "ShareNowhere.dc.html",
+      "x": 1440,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "SHARE · nowhere to send it",
+      "page": "page-8"
+    },
+    {
+      "file": "BackupEmpty.dc.html",
+      "x": 0,
+      "y": 964,
+      "w": 390,
+      "h": 844,
+      "title": "BACKUP · empty shelf, gated",
+      "page": "page-8"
+    },
+    {
+      "file": "BackupSkips.dc.html",
+      "x": 480,
+      "y": 964,
+      "w": 390,
+      "h": 844,
+      "title": "BACKUP · one kit skipped",
+      "page": "page-8"
     }
   ],
   "annotations": [
@@ -289,11 +343,19 @@
       "w": 1370,
       "page": "page-7",
       "text": "SURFACE (drawn from SurfaceScreen.kt; never had a board - it arrived from another branch)\nXY: mode row (XY/XYZ/MORPH + →TAPE + PRINT), PAD ◄ ► + LATCH + BARS, SET A-D dimmed outside MORPH, the touch grid with crosshair and puck, one LCD readout. MORPH: the corner bars and A/B/C/D labels, SET A-D live, and the readout at its longest - latency, X/Y, all four corner weights, TILT, the pad name. No pad: OPEN A KIT over the grid, the readout's pad segment simply absent.\nFound and fixed: the readout was one un-wrapped LCD line - at MORPH's longest (latency SHARED, X/Y, all four corners, TILT, a named pad) it ran to roughly double the frame's width and clipped mid-digit. TapeText now allows a second line (`maxLines = 2`); every board here draws that fix, not the clipped original. Below the line: the rare worst case (MORPH + tilt + a shared stream + a long pad name) can still lose the pad name even across two lines - latency already leads the line on purpose, by the code's own comment, so that field survives; a truly lossless layout would need a restructure, not a parameter."
+    },
+    {
+      "id": "note-share",
+      "x": 0,
+      "y": -300,
+      "w": 1830,
+      "page": "page-8",
+      "text": "SHARE / BACKUP · THE CHOOSER HAND-OFF (DESIGN_GAP's last undrawn pair, drawn from ShareOut.kt, App.kt's shareKit/backupShelf, LandingNote.kt)\nSHARE (top row): the kit is packed off-thread while the sheet reads PACKING… in the status bar's tail cell, every door dimmed to ink3 like any other busy screen. The app then hands the file to Intent.createChooser and steps out of the way - the system's own sheet, not ours, drawn schematically here since SnipSnap owns nothing past this point. Two returns: a clean pick closes the toast 'KIT PACKED AS ONE FILE. PICK WHERE IT GOES.'; no receiving app on the phone (ActivityNotFoundException) never opens a chooser at all and answers in the same one-line toast voice instead - 'NOWHERE TO SEND IT.'\nBACKUP (bottom row): the empty shelf never reaches PACKING at all - kits.isEmpty() answers before the busy lock or the chooser, in the toast, BACKUP left visibly dimmed so the gate reads as a rule, not a bug. A backup where preflight skipped a kit answers in the honest little message box instead of the toast, the same shape wave FFF gave the landing side (page four): trouble first in warn, what packed after, FINE.\nWhat the drawing found: no defect - shareKit/backupShelf already route every branch (empty gate, no-receiver, clean, partial) through the app's two existing answer shapes (the one-line toast, the message box) with nothing improvised in between; the only piece with no board before this pass was the chooser hand-off itself, now drawn."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-6"
+    "page": "page-8"
   },
   "pages": [
     {
@@ -323,6 +385,10 @@
     {
       "id": "page-7",
       "name": "SURFACE"
+    },
+    {
+      "id": "page-8",
+      "name": "SHARE / BACKUP · the hand-off"
     }
   ]
 }
