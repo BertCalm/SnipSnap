@@ -99,6 +99,14 @@ fun KitsScreen(
     onDeleteKit: (KitShelf.Entry) -> Unit = {},
     /** RENAME (Task 4): a held kit row's RENAME, confirmed with the typed name — `KitShelf.renameKit`'s collision fallback may freshen it. */
     onRenameKit: (KitShelf.Entry, String) -> Unit = { _, _ -> },
+    /**
+     * DELETED KITS (Task 2 of the bin-restore plan): how many kits
+     * `KitShelf.binnedKits()` currently holds. Gates the `DELETED KITS ▸`
+     * row below — shown only when this is positive, so a user who has never
+     * deleted a kit never sees a door to an empty room.
+     */
+    binnedKitsCount: Int = 0,
+    onDeletedKits: () -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     var menuOpen by remember { mutableStateOf(false) }
@@ -215,6 +223,19 @@ fun KitsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onSnips,
             )
+            // DELETED KITS: gated on the bin actually holding something —
+            // unlike SNIPS/BACKUP above, this is never shown merely dimmed;
+            // a user who has never deleted a kit sees no door to an empty
+            // room at all (locked behavior, Task 2 of the bin-restore plan).
+            if (binnedKitsCount > 0) {
+                ActionButton(
+                    "DELETED KITS ▸ $binnedKitsCount WAITING",
+                    scheme,
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onDeletedKits,
+                )
+            }
             ArmControl(
                 armed = armed,
                 onArm = onArm,
@@ -464,17 +485,17 @@ private fun KitRow(
 }
 
 /**
- * "DELETE THIS KIT? OFF THE SHELF NOW, GONE FOR GOOD IN 30 DAYS." —
- * deliberately does NOT say "the bin": this app's two other bins (TAKES +
- * BIN, ROOMS's own FORGET → BIN) are both user-restorable and visible
- * (RESTORE buttons, an "EMPTY THE BIN NOW" action), and a deleted kit's own
- * `.bin` folder has neither — no restore UI, no listing, no early-empty.
- * Calling it "the bin" against the rest of the app's own vocabulary would
- * invite exactly that false expectation (whole-branch review finding); this
- * says what actually happens instead. Same scrim + raisedBevel +
- * tap-swallowing shape as `SnipsScreen.kt`'s own `DeleteConfirmDialog` and
- * this file's own `StarterMenu` above — duplicated, not hoisted, per the
- * house convention stated in `SnipsScreen.kt`'s `HeaderChip`.
+ * "DELETE THIS KIT? IT WAITS IN DELETED KITS FOR 30 DAYS." — now names the
+ * screen directly, since one exists: DELETED KITS (Task 2 of the bin-restore
+ * plan) gives a deleted kit the same shape TAKES + BIN and ROOMS's own
+ * FORGET → BIN already had — a visible listing, RESTORE, and an early
+ * "EMPTY THE BIN NOW" — so the old refusal to call it "the bin" (this
+ * dialog's own prior wording, and `Copy.kitDeleted`'s) no longer applies;
+ * that refusal was correct only while no restore path existed. Same scrim +
+ * raisedBevel + tap-swallowing shape as `SnipsScreen.kt`'s own
+ * `DeleteConfirmDialog` and this file's own `StarterMenu` above —
+ * duplicated, not hoisted, per the house convention stated in
+ * `SnipsScreen.kt`'s `HeaderChip`.
  */
 @Composable
 private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
@@ -495,7 +516,7 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText("DELETE THIS KIT? OFF THE SHELF NOW, GONE FOR GOOD IN 30 DAYS.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            TapeText("DELETE THIS KIT? IT WAITS IN DELETED KITS FOR 30 DAYS.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
                 Box(

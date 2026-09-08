@@ -232,23 +232,29 @@ object Copy {
     const val ROOM_FORGET_BUSY = "FORGETTING…"
     const val ROOM_RESTORE_BUSY = "RESTORING…"
 
-    // ---- KIT: delete (off the shelf, purged in 30 days) + rename from the shelf (Task 4) ----
+    // ---- KIT: delete (restorable from DELETED KITS for 30 days) + rename from the shelf (Task 4) ----
     /**
-     * DELETE on a shelf kit. Deliberately avoids "the bin" as a noun: unlike
-     * ROOMS's own FORGET → BIN (which `unforget`/`BinnedRoomRow`'s RESTORE
-     * actually surfaces on the shelf) or TAKES + BIN (its own visible
-     * RESTORE / "EMPTY THE BIN NOW"), a deleted kit has neither a restore UI
-     * nor a listing — so this says what actually happens (off the shelf now,
-     * purged for good in 30 days), not an action the app can't offer
-     * (whole-branch review finding).
+     * DELETE on a shelf kit. Now matches ROOMS's own FORGET → BIN (which
+     * `unforget`/`BinnedRoomRow`'s RESTORE surfaces on the shelf) and TAKES +
+     * BIN (its own visible RESTORE / "EMPTY THE BIN NOW"): a deleted kit is
+     * DELETED KITS's own listing now too, with the same RESTORE and early
+     * "EMPTY THE BIN NOW" — so this keeps the softer promise instead of the
+     * old "gone for good" wording, which was only ever true because that
+     * screen didn't exist yet.
      */
-    fun kitDeleted(name: String): String = "$name IS OFF THE SHELF. GONE FOR GOOD IN 30 DAYS."
+    fun kitDeleted(name: String): String = "$name IS OFF THE SHELF. 30 DAYS TO CHANGE YOUR MIND."
     const val KIT_DELETE_BUSY = "DELETING…"
     const val KIT_DELETE_FAILED = "DELETE FAILED. THE KIT MAY ALREADY BE GONE."
     /** RENAME on a shelf kit; [name] is what it actually landed under — a collision may have freshened it. */
     fun kitRenamed(name: String): String = "RENAMED TO $name."
     const val KIT_RENAME_BUSY = "RENAMING…"
     const val KIT_RENAME_FAILED = "COULDN'T RENAME - CHECK THE NAME AND TRY AGAIN."
+
+    // ---- DELETED KITS (Task 2 of the bin-restore plan): restore or empty early ----
+    /** RESTORE on a binned kit; [name] is what it actually landed under — `KitShelf.restoreKit`'s own collision fallback may have freshened it, never the name that was tapped. */
+    fun kitRestored(name: String): String = "$name IS BACK ON THE SHELF. AS IF NOTHING HAPPENED."
+    /** EMPTY THE BIN NOW on DELETED KITS, confirmed: every kit still sleeping there is gone for good. */
+    fun kitBinEmptied(count: Int): String = "$count ${if (count == 1) "KIT" else "KITS"} GONE FOR GOOD. THE BIN IS EMPTY."
 
     // ---- PAD SHEET: pad from anything ----
     const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."

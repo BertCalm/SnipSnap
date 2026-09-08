@@ -42,6 +42,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.app.theme.windowFrame
 import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ChopScreen
+import com.snipsnap.app.ui.DeletedKitsScreen
 import com.snipsnap.app.ui.ExportScreen
 import com.snipsnap.app.ui.ExportSession
 import com.snipsnap.app.ui.GrainFieldScreen
@@ -170,11 +171,21 @@ fun App(shelf: KitShelf) {
     var rooms by remember { mutableStateOf<List<Rooms.Room>>(emptyList()) }
     var binnedRooms by remember { mutableStateOf<List<Rooms.Binned>>(emptyList()) }
     var roomsRevision by remember { mutableStateOf(0) }
-    LaunchedEffect(kits, screen, roomsRevision) {
+    // DELETED KITS (Task 2 of the bin-restore plan): the shelf's own gate
+    // for the `DELETED KITS ▸` row — how many kits `KitShelf.binnedKits()`
+    // holds right now. `deletedKitsOpen` is in this effect's key list, not
+    // just `kits`/`screen`/`roomsRevision`: EMPTY THE BIN NOW changes
+    // nothing else this effect already watches, so without that key,
+    // emptying the bin and returning to the shelf would leave a stale count
+    // (and the row itself) showing after the door behind it is empty.
+    var binnedKitsCount by remember { mutableStateOf(0) }
+    var deletedKitsOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(kits, screen, roomsRevision, deletedKitsOpen) {
         if (screen == AppScreen.KITS) {
             instruments = withContext(Dispatchers.IO) { shelf.instruments() }
             rooms = withContext(Dispatchers.IO) { runCatching { shelf.rooms() }.getOrDefault(emptyList()) }
             binnedRooms = withContext(Dispatchers.IO) { runCatching { shelf.binnedRooms() }.getOrDefault(emptyList()) }
+            binnedKitsCount = withContext(Dispatchers.IO) { runCatching { shelf.binnedKits() }.getOrDefault(emptyList()) }.size
         }
     }
     // Pad Sheet v2: the open workshop box, remembered per kit so the next
@@ -199,6 +210,12 @@ fun App(shelf: KitShelf) {
     // AppScreen.KITS (the shelf), one level up from those, so it's its own
     // boolean at this scope rather than sharing theirs.
     var snipsOpen by remember { mutableStateOf(false) }
+    // DELETED KITS (Task 2 of the bin-restore plan): same shape as
+    // `snipsOpen` above — a shelf-level overlay, not KIT-scoped, reachable
+    // from `KitsScreen`'s own `DELETED KITS ▸` row at `AppScreen.KITS`.
+    // `deletedKitsOpen` itself is declared earlier in this function (with
+    // `binnedKitsCount`, above) since the shelf's refresh effect needs it as
+    // a key; this comment marks where `snipsOpen`'s own sibling lives.
     // SNIPS → PAD's kit-gate fix: the file a SNIPS row's → PAD asked to
     // place on a pad, stashed here while the user picks a kit. SNIPS is only
     // ever reached from the shelf, where no kit is open by definition, so
@@ -1026,6 +1043,11 @@ fun App(shelf: KitShelf) {
                         snipsOpen = false
                         pendingSnipAssign = null
                         tapeOpenOverride = null
+                        // DELETED KITS is shelf-level too — same reasoning
+                        // as SNIPS above: a tab switch away from KITS must
+                        // not leave this overlay armed to reopen on top of
+                        // whatever tab comes back into view later.
+                        deletedKitsOpen = false
                     },
                 )
                 Box(Modifier.weight(1f)) {
@@ -1049,6 +1071,25 @@ fun App(shelf: KitShelf) {
                                     // `assigningSnip` below.
                                     snipsOpen = false
                                     pendingSnipAssign = file
+                                },
+                            )
+                        } else if (deletedKitsOpen) {
+                            DeletedKitsScreen(
+                                shelf = shelf,
+                                onBack = { deletedKitsOpen = false },
+                                onToast = { toast = it },
+                                onRestored = {
+                                    // The screen already owns its own toast
+                                    // and its own list refresh — this only
+                                    // needs to catch the shelf back up, the
+                                    // same reload `deleteKit`/`renameKit`
+                                    // already do after their own move. The
+                                    // `binnedKitsCount` effect above is keyed
+                                    // on `kits`, so this refresh alone is
+                                    // also what re-reads the bin count.
+                                    scope.launch {
+                                        kits = withContext(Dispatchers.IO) { shelf.list() }
+                                    }
                                 },
                             )
                         } else {
@@ -1106,6 +1147,8 @@ fun App(shelf: KitShelf) {
                                 onRestoreRoom = ::restoreRoom,
                                 onDeleteKit = ::deleteKit,
                                 onRenameKit = ::renameKit,
+                                binnedKitsCount = binnedKitsCount,
+                                onDeletedKits = { deletedKitsOpen = true },
                             )
                         }
                         AppScreen.KIT -> {
