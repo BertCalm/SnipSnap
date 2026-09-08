@@ -7,6 +7,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.OutsideSheet
 import com.snipsnap.shell.Rooms
+import com.snipsnap.shell.ShelfImport
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.shell.TextureKits
 import java.io.File
@@ -26,7 +27,26 @@ class KitShelf(val root: File) {
     companion object {
         /** The instruments' folder name beside the kits — the PAD SHEET's export doors write here. */
         const val INSTRUMENTS_DIR = "Instruments"
+
+        /**
+         * The kits' bin, beside the kits — architecturally identical to
+         * [Rooms.ROOMS_DIR]'s own `.bin`: a direct child of [root] with no
+         * `kit.json` of its own directly inside it (the deleted kits sit one
+         * level deeper, at `.bin/<name>-<timestamp>/kit.json`), so
+         * `KitStore.list(root)` never lists it or anything inside it as a
+         * kit on the shelf, the same way `Rooms/` and `.landing-*` already
+         * stay invisible to that scan.
+         */
+        const val BIN_DIR = ".bin"
+
+        /** How long the bin keeps a deleted kit — [deleteKit]'s promise, [sweepDeletedKits]'s job. */
+        const val BIN_DAYS = 30.0
+
+        private const val DAY_MS = 24L * 60 * 60 * 1000
     }
+
+    /** Where deleted kits sleep under [root], mirroring [Rooms.binDir]. */
+    val binDir: File get() = File(root, BIN_DIR)
 
     /** A kit and the folder it lives in. */
     data class Entry(val dir: File, val kit: Kit)
@@ -201,5 +221,104 @@ class KitShelf(val root: File) {
         val dir = File(root, name)
         val kit = TextureKits.render(name, dir, snip, "${source.kit.name}:${MutateSheet.padTag(slot)}", spec)
         return Entry(dir, kit)
+    }
+
+    /**
+     * DELETE ▸ BIN: [entry]'s whole folder moves under `Kits/.bin/`, named
+     * `<its folder name>-<timestamp>` (a counter inserted *before* the
+     * timestamp if the bin somehow already holds that exact pairing) — the
+     * same "into the bin, not gone" rule [Rooms.forget] applies to one WAV,
+     * here applied to a whole kit directory. `false` when [entry]'s
+     * directory is already gone (a stale row, a second delete racing this
+     * one) or the move itself fails; the caller's own busy-lock is what
+     * keeps two deletes of the *same* row from racing each other at all.
+     */
+    fun deleteKit(entry: Entry): Boolean {
+        if (!entry.dir.isDirectory) return false
+        val bin = binDir.apply { mkdirs() }
+        val nowMillis = System.currentTimeMillis()
+        val base = "${entry.dir.name}-$nowMillis"
+        var name = base
+        var n = 2
+        while (File(bin, name).exists()) {
+            name = "${entry.dir.name}-$n-$nowMillis"
+            n++
+        }
+        return moveDir(entry.dir, File(bin, name))
+    }
+
+    /**
+     * Empties [binDir] of whatever has slept there past [keepDays]; returns
+     * how many went — [Rooms.sweepBin]'s own job, for kits. Age is read off
+     * the trailing `-<millis>` [deleteKit] always stamps last in the
+     * folder's name, NOT `File.lastModified()` — unlike `StorageSweep.kt`'s
+     * `.landing-<nanoTime>` (monotonic process time the app deliberately
+     * refuses to read as an age), [deleteKit]'s stamp is wall-clock
+     * `System.currentTimeMillis()`, so parsing it here is exactly as honest
+     * as reading a file's mtime would be. `lastModified()` is only the
+     * fallback for a folder that somehow doesn't parse (hand-edited, or
+     * from a build that named it differently).
+     */
+    fun sweepDeletedKits(keepDays: Double = BIN_DAYS, nowMillis: Long = System.currentTimeMillis()): Int {
+        val dirs = binDir.listFiles { f: File -> f.isDirectory } ?: return 0
+        val keepMs = (keepDays * DAY_MS).toLong()
+        var gone = 0
+        for (dir in dirs) {
+            val binnedAt = dir.name.substringAfterLast('-').toLongOrNull() ?: dir.lastModified()
+            if (nowMillis - binnedAt >= keepMs && dir.deleteRecursively()) gone++
+        }
+        return gone
+    }
+
+    /**
+     * RENAME: [entry] under [newName] on the shelf. `null` immediately when
+     * [newName] isn't [Names.isMpcSafe] — no partial rename is ever
+     * attempted on a name the card couldn't hold — or when [entry]'s
+     * directory is already gone. A genuine collision with another kit
+     * already on the shelf falls back exactly like
+     * [ShelfImport.moveOntoShelf]: "NAME 2", "NAME 3"…, and `kit.json`'s own
+     * name is rewritten to match whatever name actually landed, so the two
+     * never disagree. Renaming to the name the folder already holds is a
+     * no-op that hands back [entry] unchanged.
+     */
+    fun renameKit(entry: Entry, newName: String): Entry? {
+        if (!Names.isMpcSafe(newName)) return null
+        // A kit can't take over one of the shelf's own reserved folders —
+        // `Names.isMpcSafe` alone would wave ".bin"/"Instruments"/"Rooms"
+        // through (only *trailing* dots/spaces are refused), and the
+        // collision loop below only bumps a name that already exists, which
+        // none of these do on a shelf that's never used them yet.
+        if (newName == BIN_DIR || newName == INSTRUMENTS_DIR ||
+            newName == Rooms.ROOMS_DIR || newName.startsWith(ShelfImport.STAGING_DIR)
+        ) {
+            return null
+        }
+        if (!entry.dir.isDirectory) return null
+        if (newName == entry.dir.name) return entry
+        var name = newName
+        var n = 2
+        while (File(root, name).exists()) {
+            name = "$newName $n"
+            n++
+        }
+        val dest = File(root, name)
+        if (!moveDir(entry.dir, dest)) return null
+        val kit = KitStore.load(dest)
+        if (name != kit.name) KitStore.save(kit.copy(name = name), dest)
+        return Entry(dest, KitStore.load(dest))
+    }
+
+    /**
+     * [from] to [to]: a rename, falling back to copy-then-delete when the
+     * rename can't cross filesystems in one step — [ShelfImport.moveOntoShelf]'s
+     * own move, generalized to whole directories rather than one landed kit.
+     */
+    private fun moveDir(from: File, to: File): Boolean {
+        if (from.renameTo(to)) return true
+        if (!from.copyRecursively(to, overwrite = false)) {
+            to.deleteRecursively()
+            return false
+        }
+        return from.deleteRecursively()
     }
 }

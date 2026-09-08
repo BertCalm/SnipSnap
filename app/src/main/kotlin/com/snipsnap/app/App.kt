@@ -386,6 +386,9 @@ fun App(shelf: KitShelf) {
         kits = withContext(Dispatchers.IO) { shelf.list() }
         // The rooms' bin empties itself of what has slept past its days.
         withContext(Dispatchers.IO) { runCatching { shelf.sweepRooms() } }
+        // Same promise, for deleted kits (Task 4): the shelf's own bin
+        // empties itself of whatever DELETE put there more than 30 days ago.
+        withContext(Dispatchers.IO) { runCatching { shelf.sweepDeletedKits() } }
         // Same promise as sweepRooms() above, for pad ejects: BIN_KEEP_DAYS was
         // always the intent (KitBuilder.kt's own docs), but nothing ever called
         // purgeBin() outside the manual "EMPTY THE BIN NOW" button — every ejected
@@ -836,6 +839,90 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * DELETE ▸ BIN (Task 4) on a held kit row, confirmed: into the 30-day
+     * bin, `KitShelf.deleteKit`'s own promise — the busy lock and
+     * try/catch/finally shape are `forgetRoom`'s above, verbatim.
+     *
+     * Step 4's guard: [entry] IS reachable while it's the currently open
+     * kit (`open` persists across a tab switch back to KITS, and `KitRow`
+     * renders on `AppScreen.KITS` regardless of what's open) — so once the
+     * move lands, if `open` was pointing at this exact directory, it no
+     * longer names anything real and must be cleared; if some OTHER screen
+     * was showing it (KIT, or one of its overlays), that screen is forced
+     * back to the shelf, the same overlay-reset `MenuRow`'s own `onSelect`
+     * runs on every ordinary tab switch — this bypasses `onSelect`, so it
+     * repeats that reset by hand rather than leaving one armed.
+     */
+    fun deleteKit(entry: KitShelf.Entry) {
+        if (busy != null) return
+        busy = Copy.KIT_DELETE_BUSY
+        scope.launch {
+            try {
+                val ok = withContext(Dispatchers.IO) { shelf.deleteKit(entry) }
+                if (ok) {
+                    kits = withContext(Dispatchers.IO) { shelf.list() }
+                    toast = Copy.kitDeleted(entry.kit.name)
+                    if (open?.dir == entry.dir) {
+                        open = null
+                        if (screen != AppScreen.KITS) {
+                            screen = AppScreen.KITS
+                            padSheetSlot = null
+                            takesBinOpen = false
+                            padCaptureSlot = null
+                            grainFieldSlot = null
+                        }
+                    }
+                } else {
+                    toast = Copy.KIT_DELETE_FAILED
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                toast = "DELETE FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
+            }
+        }
+    }
+
+    /**
+     * RENAME (Task 4) on a held kit row, confirmed with the typed name:
+     * `KitShelf.renameKit`'s own collision-fallback (`ShelfImport.moveOntoShelf`'s
+     * shape) may freshen the name that lands, so the toast and the identity
+     * guard below both read it off the returned `Entry`, never the typed string.
+     *
+     * Step 4's guard: same reachability as [deleteKit] above — `open` may
+     * be pointing at exactly the directory that just moved to a new path.
+     * `open?.dir == entry.dir` compares against the PRE-rename path
+     * (`entry`, captured before the `await`); a match means `open` must be
+     * repointed at the renamed `Entry`, or it keeps naming a directory that
+     * no longer exists — the same identity-guard discipline every
+     * `onKitUpdated` closure elsewhere in this file already applies.
+     */
+    fun renameKit(entry: KitShelf.Entry, newName: String) {
+        if (busy != null) return
+        busy = Copy.KIT_RENAME_BUSY
+        scope.launch {
+            try {
+                val renamed = withContext(Dispatchers.IO) { shelf.renameKit(entry, newName) }
+                if (renamed != null) {
+                    kits = withContext(Dispatchers.IO) { shelf.list() }
+                    toast = Copy.kitRenamed(renamed.kit.name)
+                    if (open?.dir == entry.dir) open = renamed
+                } else {
+                    toast = Copy.KIT_RENAME_FAILED
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                toast = "RENAME FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
+            }
+        }
+    }
+
     fun backupShelf() {
         if (busy != null) return
         if (kits.isEmpty()) {
@@ -1011,6 +1098,8 @@ fun App(shelf: KitShelf) {
                                 onForgetRoom = ::forgetRoom,
                                 binnedRooms = binnedRooms,
                                 onRestoreRoom = ::restoreRoom,
+                                onDeleteKit = ::deleteKit,
+                                onRenameKit = ::renameKit,
                             )
                         }
                         AppScreen.KIT -> {

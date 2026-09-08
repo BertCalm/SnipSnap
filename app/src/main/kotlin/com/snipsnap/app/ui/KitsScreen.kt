@@ -54,6 +54,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
+import com.snipsnap.kit.Names
 
 /**
  * The tape shelf: every kit folder on the device, plus the FRESH TAPE
@@ -92,9 +95,18 @@ fun KitsScreen(
     /** The rooms in the bin, each with its days left; RESTORE brings one back. */
     binnedRooms: List<Rooms.Binned> = emptyList(),
     onRestoreRoom: (Rooms.Binned) -> Unit = {},
+    /** DELETE (Task 4): a held kit row's DELETE, confirmed — into the 30-day bin, `KitShelf.deleteKit`'s promise. */
+    onDeleteKit: (KitShelf.Entry) -> Unit = {},
+    /** RENAME (Task 4): a held kit row's RENAME, confirmed with the typed name — `KitShelf.renameKit`'s collision fallback may freshen it. */
+    onRenameKit: (KitShelf.Entry, String) -> Unit = { _, _ -> },
 ) {
     val scheme = LocalScheme.current
     var menuOpen by remember { mutableStateOf(false) }
+    // DELETE/RENAME (Task 4): screen-level, not per-row — same shape as
+    // SnipsScreen's own `confirmDelete`, so only one row's dialog is ever
+    // up regardless of how many rows are armed at once.
+    var confirmDeleteKit by remember { mutableStateOf<KitShelf.Entry?>(null) }
+    var renameTarget by remember { mutableStateOf<KitShelf.Entry?>(null) }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -133,7 +145,13 @@ fun KitsScreen(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     items(kits, key = { it.dir.name }) { entry ->
-                        KitRow(entry, onOpen)
+                        KitRow(
+                            entry = entry,
+                            busy = busy,
+                            onOpen = onOpen,
+                            onRequestDelete = { confirmDeleteKit = it },
+                            onRequestRename = { renameTarget = it },
+                        )
                     }
                     // INSTRUMENTS: what MAKE INSTRUMENT and MAKE PAD left beside the kits, playable on KEYS.
                     if (instruments.isNotEmpty()) {
@@ -209,6 +227,20 @@ fun KitsScreen(
             StarterMenu(
                 onPick = { menuOpen = false; onFresh(it) },
                 onDismiss = { menuOpen = false },
+            )
+        }
+
+        confirmDeleteKit?.let { target ->
+            KitDeleteConfirmDialog(
+                onCancel = { confirmDeleteKit = null },
+                onConfirm = { confirmDeleteKit = null; onDeleteKit(target) },
+            )
+        }
+        renameTarget?.let { target ->
+            KitRenameDialog(
+                initialName = target.kit.name,
+                onCancel = { renameTarget = null },
+                onConfirm = { newName -> renameTarget = null; onRenameKit(target, newName) },
             )
         }
     }
@@ -339,26 +371,190 @@ private fun BinnedRoomRow(binned: Rooms.Binned, busy: Boolean, onRestore: (Rooms
     }
 }
 
+/**
+ * A kit on the shelf: tap opens it, holding the row arms DELETE + RENAME in
+ * place of the DRAFT chip — `RoomRow`'s own long-press/tap shape, but the
+ * `pointerInput` sits on the whole Row (not a child `Column` beside a
+ * sibling button, as `RoomRow` can afford since a room row has no `onOpen`
+ * at all): with `onOpen` gone from a plain `tapeClick` and living inside
+ * this same `detectTapGestures`'s `onTap` instead, a tap disarms when armed
+ * and opens the kit otherwise, and DELETE/RENAME's own child `tapeClick`s
+ * still win for their own bounds (a descendant's consumed tap never bubbles
+ * to this Row's `onTap`) — the same reason a trailing icon button inside a
+ * clickable list row never also fires the row's own click.
+ */
 @Composable
-private fun KitRow(entry: KitShelf.Entry, onOpen: (KitShelf.Entry) -> Unit) {
+private fun KitRow(
+    entry: KitShelf.Entry,
+    busy: Boolean,
+    onOpen: (KitShelf.Entry) -> Unit,
+    onRequestDelete: (KitShelf.Entry) -> Unit,
+    onRequestRename: (KitShelf.Entry) -> Unit,
+) {
     val scheme = LocalScheme.current
     val kit = entry.kit
+    var armed by remember(entry.dir) { mutableStateOf(false) }
     Row(
         Modifier
             .fillMaxWidth()
-            .raisedBevel(scheme)
-            .tapeClick { onOpen(entry) }
+            .let { if (armed) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+            .pointerInput(entry.dir) {
+                detectTapGestures(
+                    onLongPress = { armed = true },
+                    onTap = { if (armed) armed = false else onOpen(entry) },
+                )
+            }
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             TapeText(kit.name, TapeType.markerBig, scheme.ink.tape)
             val tempo = kit.tempoBpm?.let { "  ·  %.0f BPM".format(it) } ?: ""
             TapeText("${kit.pads.size} PADS$tempo", TapeType.pixelSmall, scheme.ink2.tape)
         }
-        // Every kit is a DRAFT until the export wizard (M5) records a dub
-        // to the card; ON CARD status arrives with it.
-        TapeText("DRAFT", TapeType.pixelSmall, scheme.ink2.tape)
+        if (armed) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme)
+                        .let { if (!busy) it.tapeClick { onRequestRename(entry) } else it }
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText("RENAME", TapeType.pixel, if (busy) scheme.ink3.tape else scheme.amber.tape)
+                }
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme)
+                        .border(2.dp, Brush.linearGradient(listOf(BIN_RED_GLOW, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
+                        .let { if (!busy) it.tapeClick { onRequestDelete(entry) } else it }
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText("DELETE", TapeType.pixel, if (busy) scheme.ink3.tape else BIN_RED_GLOW)
+                }
+            }
+        } else {
+            // Every kit is a DRAFT until the export wizard (M5) records a dub
+            // to the card; ON CARD status arrives with it.
+            TapeText("DRAFT", TapeType.pixelSmall, scheme.ink2.tape)
+        }
+    }
+}
+
+/**
+ * "DELETE THIS KIT? IT GOES TO THE BIN FOR 30 DAYS." — this one CAN name the
+ * bin, unlike `SnipsScreen.kt`'s own "CAN'T UNDO." (kits get a recoverable
+ * 30-day bin; snips don't, by deliberate product decision). Same scrim +
+ * raisedBevel + tap-swallowing shape as that file's own `DeleteConfirmDialog`
+ * and this file's own `StarterMenu` above — duplicated, not hoisted, per the
+ * house convention stated in `SnipsScreen.kt`'s `HeaderChip`.
+ */
+@Composable
+private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
+    val scheme = LocalScheme.current
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            .tapeClick(onCancel),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                .tapeClick { }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText("DELETE THIS KIT? IT GOES TO THE BIN FOR 30 DAYS.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
+                        .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
+                        .tapeClick(onConfirm)
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText("DELETE", TapeType.pixel, BIN_RED_GLOW)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * A plain single-line rename field — no rename-input pattern exists
+ * elsewhere in the app to copy (FRESH TAPE auto-names through
+ * `KitShelf.freshName`, never asking), so this is `BasicTextField` styled to
+ * the row's own theme rather than Material's `TextField`. A modal dialog
+ * rather than an inline field in the row itself: the row lives inside a
+ * `LazyColumn` under a `Column` with no `imePadding`, so an inline field
+ * risks the keyboard covering it; a centered dialog (this file's own
+ * `StarterMenu`/`KitDeleteConfirmDialog` shape) sidesteps that entirely.
+ * RENAME is disabled while the typed name fails `Names.isMpcSafe` — the
+ * same refusal `KitShelf.renameKit` would give, surfaced before the tap
+ * instead of after.
+ */
+@Composable
+private fun KitRenameDialog(initialName: String, onCancel: () -> Unit, onConfirm: (String) -> Unit) {
+    val scheme = LocalScheme.current
+    var name by remember { mutableStateOf(initialName) }
+    val safe = Names.isMpcSafe(name)
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            .tapeClick(onCancel),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                .tapeClick { }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText("RENAME KIT", TapeType.lcdSmall, scheme.ink.tape)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .sunkenField(scheme)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+            ) {
+                BasicTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    textStyle = TapeType.marker.copy(color = scheme.ink.tape),
+                    cursorBrush = SolidColor(scheme.ink.tape),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (!safe) {
+                TapeText(
+                    "NAMES CAN'T HOLD / \\ : * ? \" < > | OR END IN A DOT/SPACE.",
+                    TapeType.pixelSmall,
+                    scheme.ink2.tape,
+                    maxLines = 2,
+                )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("RENAME", scheme, enabled = safe, modifier = Modifier.weight(1f), onClick = { onConfirm(name) })
+            }
+        }
     }
 }
 

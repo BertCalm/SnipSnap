@@ -232,6 +232,22 @@ object Copy {
     const val ROOM_FORGET_BUSY = "FORGETTING…"
     const val ROOM_RESTORE_BUSY = "RESTORING…"
 
+    // ---- KIT: delete (recoverable, 30-day bin) + rename from the shelf (Task 4) ----
+    /**
+     * DELETE on a shelf kit. Unlike ROOMS's own FORGET → BIN (which
+     * `unforget`/`BinnedRoomRow`'s RESTORE actually surfaces on the shelf),
+     * a deleted kit's bin has no restore path yet — this says what
+     * happened (the file sleeps 30 days before it's gone for good), not an
+     * action the app can't actually offer.
+     */
+    fun kitDeleted(name: String): String = "$name IS IN THE BIN. IT SLEEPS THERE 30 DAYS."
+    const val KIT_DELETE_BUSY = "DELETING…"
+    const val KIT_DELETE_FAILED = "DELETE FAILED. THE KIT MAY ALREADY BE GONE."
+    /** RENAME on a shelf kit; [name] is what it actually landed under — a collision may have freshened it. */
+    fun kitRenamed(name: String): String = "RENAMED TO $name."
+    const val KIT_RENAME_BUSY = "RENAMING…"
+    const val KIT_RENAME_FAILED = "COULDN'T RENAME - CHECK THE NAME AND TRY AGAIN."
+
     // ---- PAD SHEET: pad from anything ----
     const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."
     const val PAD_TOO_SHORT = "TOO SHORT TO STRETCH INTO A PAD. FEED IT MORE THAN A BLINK."
