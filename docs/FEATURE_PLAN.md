@@ -1907,6 +1907,15 @@ APP wave HHH: ✓ all landed (2026-09-08) — GRAIN FIELD and SURFACE, drawn.
   as built; SURFACE's readout didn't - MORPH's longest case clipped
   mid-digit at 390, so `TapeText` now allows it a second line.
 
+APP wave III (2026-09-08) — the SHARE/BACKUP chooser hand-off, drawn.
+  DESIGN_GAP.md's last "still undrawn" line: SHARE packing (every door
+  dimmed, PACKING… in the status bar), the system chooser itself
+  (schematic - SnipSnap owns nothing past `Intent.createChooser`), the
+  clean return and the no-receiver return; BACKUP's empty-shelf gate
+  (dimmed before the busy lock, no chooser ever offered) and a partial
+  backup's message box. No code defect: `shareKit`/`backupShelf` already
+  route every branch through the app's two existing answer shapes.
+
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
   F6.1 .xpn import + expansion tile → velocity/bank B →
