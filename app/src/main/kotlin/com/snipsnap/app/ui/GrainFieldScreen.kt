@@ -28,6 +28,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -384,6 +386,16 @@ private fun GrainFieldCanvas(
     Canvas(
         modifier
             .lcdPanel(scheme)
+            // Canvas-drawn, invisible to the a11y tree by default (audit
+            // finding 4). This composable's own KDoc above explains why
+            // `touch` is deliberately never read at composition scope
+            // (a 60Hz drag would otherwise recompose the whole tree) —
+            // a live stateDescription would reintroduce exactly that, so
+            // this meets finding 4's required floor (a descriptive
+            // label) rather than its "ideally adjustable" ceiling. 2D
+            // scatter position has no single progressBarRangeInfo to
+            // expose either way.
+            .semantics { contentDescription = "GRAIN FIELD" }
             .pointerInput(voice) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)

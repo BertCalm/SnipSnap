@@ -29,6 +29,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.PadEngine
@@ -512,6 +519,7 @@ private fun ChannelStrip(
             TapeText(part.label, TapeType.pixelSmall, scheme.lcdInk.tape)
         }
         Fader(
+            label = part.label,
             level = strip.level,
             enabled = enabled,
             modifier = Modifier.fillMaxWidth().height(FADER_H.dp),
@@ -544,6 +552,7 @@ private fun ChannelStrip(
  */
 @Composable
 private fun Fader(
+    label: String,
     level: Float,
     enabled: Boolean,
     modifier: Modifier = Modifier,
@@ -563,6 +572,21 @@ private fun Fader(
         modifier
             .lcdPanel(scheme)
             .onSizeChanged { heightPx = it.height }
+            // Canvas-drawn, so invisible to the a11y tree by default
+            // (audit finding 4). A vertical fader maps directly onto
+            // Compose's progress-bar semantics: progressBarRangeInfo +
+            // setProgress give TalkBack's two-finger adjust gesture a
+            // real target, not just a label — the "ideally... adjust"
+            // half of finding 4, not merely its label+state floor.
+            .semantics {
+                contentDescription = "$label FADER"
+                if (enabled) {
+                    progressBarRangeInfo = ProgressBarRangeInfo(level, 0f..Layers.MAX_LEVEL)
+                    setProgress { target -> emit(target.coerceIn(0f, Layers.MAX_LEVEL)); true }
+                } else {
+                    disabled()
+                }
+            }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
                 detectVerticalDragGestures { change, dragAmount ->

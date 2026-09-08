@@ -45,6 +45,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
@@ -1725,6 +1732,29 @@ internal fun StepperSlider(
                 .height(Layout.MIN_HIT_TARGET.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .sunkenField(scheme)
+                // Canvas-drawn fill, invisible to the a11y tree by
+                // default (audit finding 4) — this one composable backs
+                // most of PAD SHEET's numeric controls (pitch, gain,
+                // decay, ...), so fixing it here is the single-component
+                // win the audit calls out as the pattern to follow.
+                // progressBarRangeInfo + setProgress give TalkBack's
+                // adjust gesture a real target, the "ideally adjustable"
+                // half of finding 4, not just its label+state floor.
+                .semantics {
+                    contentDescription = label
+                    stateDescription = valueText
+                    if (enabled) {
+                        progressBarRangeInfo = ProgressBarRangeInfo(fraction.coerceIn(0f, 1f), 0f..1f)
+                        setProgress { target ->
+                            val clamped = target.coerceIn(0f, 1f)
+                            currentOnChange(clamped)
+                            currentOnCommit()
+                            true
+                        }
+                    } else {
+                        disabled()
+                    }
+                }
                 .let { base ->
                     if (!enabled) return@let base
                     base.pointerInput(Unit) {

@@ -37,6 +37,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -675,6 +680,17 @@ private fun MacroSlider(
                 .height(Layout.MIN_HIT_TARGET.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .sunkenField(scheme)
+                // Same shape as PadSheetScreen's StepperSlider (this
+                // file's own KDoc explains why that one couldn't be
+                // imported directly) — Canvas-drawn, invisible to the
+                // a11y tree by default (finding 4). progressBarRangeInfo
+                // + setProgress give TalkBack's adjust gesture a real
+                // target.
+                .semantics {
+                    contentDescription = label
+                    progressBarRangeInfo = ProgressBarRangeInfo(value.coerceIn(0f, 1f), 0f..1f)
+                    setProgress { target -> currentOnChange(target.coerceIn(0f, 1f)); true }
+                }
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)

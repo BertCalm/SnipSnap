@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -865,7 +866,18 @@ private fun RecordingIndicator() {
 @Composable
 private fun LevelBar(level: Float, scheme: Scheme, modifier: Modifier = Modifier) {
     val filled = sqrt(level.coerceIn(0f, 1f))
-    Canvas(modifier) {
+    Canvas(
+        // Canvas-drawn, invisible to the a11y tree by default (audit
+        // finding 4). This is a static label rather than a live
+        // stateDescription on purpose: level updates at ~21Hz
+        // (RecordingIndicator's own KDoc), and TalkBack announcing a
+        // number 21 times a second would be noise, not feedback — the
+        // adjacent elapsed-time text is the meter this control's own
+        // KDoc already designed as the slow-changing, screen-reader-
+        // legible proof that the mic is live ("flat meter + a ticking
+        // counter reads unmistakably as recording, hearing nothing").
+        modifier.semantics { contentDescription = "MIC LEVEL METER" },
+    ) {
         drawRect(color = scheme.field.tape, size = size)
         if (filled > 0f) {
             drawRect(color = scheme.amber.tape, size = Size(size.width * filled, size.height))

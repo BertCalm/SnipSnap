@@ -950,6 +950,20 @@ private fun WaveformLcd(
         modifier
             .fillMaxWidth()
             .lcdPanel(scheme)
+            // Canvas-drawn, invisible to the a11y tree by default (audit
+            // finding 4). A live stateDescription is deliberately not
+            // attempted here: this composable's own KDoc above explains
+            // that `position` is read only inside draw/layer-phase
+            // lambdas specifically so steady-state playback doesn't
+            // recompose it every frame — reading `position()` here, at
+            // composition scope, would either fight that discipline (if
+            // wired to recompose) or hand TalkBack a value that's stale
+            // the instant playback resumes (if not). A static label
+            // meets finding 4's required floor without that tradeoff;
+            // the existing tap-to-seek gesture below has no accessible
+            // equivalent because a synthesized click has no X position
+            // to seek to, the same gap velocityFromY has for PLAY's pads.
+            .semantics { contentDescription = "TAPE POSITION" }
             .pointerInput(model) {
                 awaitEachGesture {
                     // Read fresh from AwaitPointerEventScope's own `size`

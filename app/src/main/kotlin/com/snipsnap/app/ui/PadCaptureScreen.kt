@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
@@ -421,7 +422,13 @@ private fun CaptureLevelIndicator() {
 @Composable
 private fun CaptureLevelBar(level: Float, scheme: com.snipsnap.shell.Scheme, modifier: Modifier = Modifier) {
     val filled = sqrt(level.coerceIn(0f, 1f))
-    Canvas(modifier) {
+    Canvas(
+        // Static label, not a live stateDescription — see KitsScreen.kt's
+        // own LevelBar, this composable's duplication source, for why
+        // (level updates at ~21Hz; the adjacent elapsed-time text is the
+        // slow-changing, screen-reader-legible proof of a live signal).
+        modifier.semantics { contentDescription = "MIC LEVEL METER" },
+    ) {
         drawRect(color = scheme.field.tape, size = size)
         if (filled > 0f) {
             drawRect(color = scheme.amber.tape, size = Size(size.width * filled, size.height))

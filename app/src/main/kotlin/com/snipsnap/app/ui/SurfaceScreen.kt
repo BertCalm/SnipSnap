@@ -27,6 +27,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.SurfaceEngine
@@ -429,6 +432,24 @@ fun SurfaceScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .lcdPanel(scheme)
+                    // Canvas-drawn (the puck/crosshair/rings below), so
+                    // invisible to the a11y tree by default (audit
+                    // finding 4). Two/four-dimensional input has no
+                    // single progressBarRangeInfo to map onto the way a
+                    // 1D fader does, so this meets the finding's
+                    // required floor — a descriptive label plus a live
+                    // stateDescription — rather than the "ideally
+                    // adjustable" ceiling; this composable already
+                    // recomposes every frame while dragging (the readout
+                    // TapeText below reads `painted` at composition
+                    // scope), so reading it again here costs nothing new.
+                    .semantics {
+                        contentDescription = "TOUCH SURFACE, $mode MODE"
+                        stateDescription = buildString {
+                            append("X %.2f  Y %.2f".format(painted.x, painted.y))
+                            if (mode == Mode.XYZ) append("  Z %.2f".format(painted.z))
+                        }
+                    }
                     .pointerInput(mode) {
                         // Fingers in press order: the first down owns the puck,
                         // the second is the pinch. LinkedHashMap keeps that order
