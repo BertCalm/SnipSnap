@@ -635,6 +635,86 @@ TEST(pad_engine_a_fader_on_a_voice_that_is_gone_is_ignored) {
     CHECK(ended(e).empty());  // and it is not an ending, either
 }
 
+// ---- SPLIT: the engine and the offline render agree -----------------------------
+
+namespace {
+
+/**
+ * `Layers.render`'s rule, transcribed from the Kotlin doc rather than read
+ * off the engine: every part at its gain, frames reversed where its strip
+ * says so, summed. Written here independently on purpose - if this were
+ * derived from `render()` below it would agree with anything.
+ */
+std::vector<float> deskRender(const std::vector<std::vector<float>>& parts,
+                              const std::vector<float>& gains,
+                              const std::vector<bool>& reverse) {
+    const size_t frames = parts[0].size();
+    std::vector<float> out(frames, 0.0f);
+    for (size_t p = 0; p < parts.size(); ++p) {
+        if (gains[p] <= 0.0f) continue;
+        for (size_t f = 0; f < frames; ++f) {
+            out[f] += parts[p][reverse[p] ? frames - 1 - f : f] * gains[p];
+        }
+    }
+    return out;
+}
+
+}  // namespace
+
+TEST(pad_engine_a_split_mix_is_the_offline_render_sample_for_sample) {
+    // SPLIT's whole promise, and the one thing nothing checked: what the
+    // phone plays and what PRINT writes are the same mix. PRINT is
+    // `Layers.render` on the JVM; playback is three voices here. The
+    // existing group case proves they *start* together by reading one
+    // sample - this reads the whole window, which is where a reversed
+    // read that is off by a frame, or a gain applied to the wrong layer,
+    // actually shows.
+    constexpr int64_t kFrames = 64;
+    std::vector<std::vector<float>> parts(3, std::vector<float>(kFrames));
+    for (int64_t i = 0; i < kFrames; ++i) {
+        const auto f = static_cast<size_t>(i);
+        parts[0][f] = static_cast<float>(i) / 1000.0f;             // a ramp: the value is the frame
+        parts[1][f] = static_cast<float>(i % 7) / 100.0f;          // a short cycle
+        parts[2][f] = static_cast<float>((i * 13) % 11) / 100.0f;  // a longer, coprime one
+    }
+    // A desk somebody would actually set: the body backwards under a
+    // forward transient, the air lifted above unity (Layers allows 2).
+    const std::vector<float> gains = {1.0f, 0.5f, 1.5f};
+    const std::vector<bool> reverse = {true, false, false};
+
+    PadEngine e(kRate);
+    e.beginBank();
+    for (const auto& p : parts) e.addSample(std::vector<float>(p), 1, kRate);
+    e.commitBank();
+    callback(e, 8);  // adopt
+    ended(e);
+
+    PadCommand group[3];
+    for (int i = 0; i < 3; ++i) {
+        group[i] = noteOn(20 + i, i, 0, kFrames, gains[static_cast<size_t>(i)], gains[static_cast<size_t>(i)]);
+        group[i].reverse = reverse[static_cast<size_t>(i)];
+    }
+    CHECK(e.pushCommands(group, 3));
+
+    // Drained in two callbacks, because a buffer boundary is exactly where
+    // a per-callback slip would hide.
+    std::vector<float> heard;
+    for (int c = 0; c < 2; ++c) {
+        auto out = callback(e, static_cast<int32_t>(kFrames / 2));
+        for (size_t i = 0; i < out.size(); i += 2) heard.push_back(out[i]);
+    }
+
+    const std::vector<float> printed = deskRender(parts, gains, reverse);
+    CHECK_EQ(static_cast<int>(heard.size()), static_cast<int>(printed.size()));
+    for (size_t f = 0; f < printed.size(); ++f) CHECK_NEAR(heard[f], printed[f], 1e-6);
+
+    // The window is the window: nothing sounds past it, and all three
+    // layers report their ending rather than leaving ids with the allocator.
+    CHECK_NEAR(peak(callback(e, 16)), 0.0f, 1e-7);
+    auto ids = ended(e);
+    CHECK_EQ(static_cast<int>(ids.size()), 3);
+}
+
 TEST(ring_publishes_a_group_whole_or_not_at_all) {
     SpscRing<int, 8> ring;
     const int three[3] = {1, 2, 3};
