@@ -279,7 +279,18 @@ object XpnImporter {
                     null
                 }
                 if (!staging.renameTo(destDir) && !staging.copyRecursively(destDir, overwrite = true)) {
-                    displaced?.renameTo(destDir)
+                    // copyRecursively gives up on the first failed file but
+                    // does not undo what it already copied, so destDir may
+                    // now hold a half-landed kit under its real name - that
+                    // must not stay visible, and the restore below needs
+                    // the spot cleared to land in either way.
+                    destDir.deleteRecursively()
+                    if (displaced != null && !displaced.renameTo(destDir) && !displaced.copyRecursively(destDir, overwrite = true)) {
+                        throw IOException(
+                            "could not land '$kitName', and could not restore the kit that was there either - " +
+                                "it survives at '${displaced.name}' under $destRoot",
+                        )
+                    }
                     throw IOException("could not land '$kitName' on the shelf - nothing landed")
                 }
                 displaced?.deleteRecursively()
