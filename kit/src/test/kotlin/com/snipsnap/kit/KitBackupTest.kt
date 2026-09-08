@@ -86,4 +86,33 @@ class KitBackupTest {
                 .contentEquals(File(fresh, "Alpha Kit/A01_Kick_01.wav").readBytes()),
         )
     }
+
+    @Test
+    fun `restore shares one write budget across every kit in the backup`() {
+        val root = File(temp, "kits2")
+        for (name in listOf("Alpha", "Beta", "Gamma")) makeKit(root, name)
+        val backup = KitBackup.backup(root, File(temp, "backup2.zip"))
+        val oneKitBytes = File(root, "Alpha/A01_Kick_01.wav").length()
+
+        // Each kit's own import writes at least oneKitBytes of raw sample,
+        // whatever the archive compressed it to - so three kits guarantee
+        // at least 3x oneKitBytes of spend against the shared budget. A
+        // budget of 2x can cover any one kit many times over (kit.json plus
+        // a single small WAV is nowhere near oneKitBytes of overhead) but
+        // cannot possibly cover three - proving the budget is shared across
+        // kits, not reset per kit, without depending on the archive's exact
+        // compression ratio. MAX_KITS alone only bounds entry count.
+        val tight = kotlin.test.assertFailsWith<com.snipsnap.mpc3.LimitedRead.TooLargeException> {
+            KitBackup.restore(
+                backup.file,
+                File(temp, "tight-restore"),
+                budget = XpnImporter.WriteBudget(2 * oneKitBytes),
+            )
+        }
+        assertTrue(tight.message!!.contains("MB", ignoreCase = true), tight.message!!)
+
+        // The same backup, roomy budget: still round-trips every kit.
+        val restored = KitBackup.restore(backup.file, File(temp, "roomy-restore"), budget = XpnImporter.WriteBudget(10 * oneKitBytes))
+        assertEquals(3, restored.size)
+    }
 }

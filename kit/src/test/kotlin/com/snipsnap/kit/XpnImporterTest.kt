@@ -343,4 +343,52 @@ class XpnImporterTest {
         val err = assertFailsWith<IllegalArgumentException> { XpnImporter.import(missing, File(temp, "y")) }
         assertTrue("Ghost" in err.message!!)
     }
+
+    @Test
+    fun `a write budget bounds total samples, not just one entry`() {
+        val kitDir = File(temp, "budget-src")
+        val kit = buildKit(kitDir)
+        val xpn = File(temp, "Round Trip.xpn")
+        XpnPackager.write(kit, kitDir, xpn, Exporters.defaultMeta(kit))
+        val totalSampleBytes = listOf("A01_Kick_01.wav", "A02_Snare_soft.wav", "A02_Snare_01.wav", "A03_Hat_01.wav")
+            .sumOf { File(kitDir, it).length() }
+
+        // Too tight for the kit's four samples combined, even though each
+        // one alone is far under LimitedRead's own per-entry ceiling.
+        val tight = assertFailsWith<com.snipsnap.mpc3.LimitedRead.TooLargeException> {
+            XpnImporter.import(xpn, File(temp, "tight-out"), budget = XpnImporter.WriteBudget(totalSampleBytes - 1))
+        }
+        assertTrue("Round Trip.xpn" in tight.message!!)
+
+        // Comfortably enough: the same archive imports clean.
+        XpnImporter.import(xpn, File(temp, "roomy-out"), budget = XpnImporter.WriteBudget(totalSampleBytes))
+    }
+
+    @Test
+    fun `importAll shares one budget across every program, not one each`() {
+        // Two independent kits packed into one archive - buildKit always
+        // names its kit "Round Trip", so the second copy needs renaming or
+        // the pack would see one name twice.
+        val kitA = File(temp, "multi-a").also { buildKit(it) }
+        val kitB = File(temp, "multi-b").also { dir ->
+            buildKit(dir)
+            KitStore.save(KitStore.load(dir).copy(name = "Round Trip 2"), dir)
+        }
+        val pack = PackBuilder.build(
+            listOf(kitA, kitB),
+            File(temp, "multi-card"),
+            ExpansionMeta(title = "Two Kits", identifier = "app.snipsnap.twokits", description = "d"),
+            asXpn = true,
+        )
+        val archive = pack.xpn!!
+        val oneKitBytes = listOf("A01_Kick_01.wav", "A02_Snare_soft.wav", "A02_Snare_01.wav", "A03_Hat_01.wav")
+            .sumOf { File(kitA, it).length() }
+
+        // Room for one kit's samples, not both: the second program is
+        // skipped for blowing the shared budget, not imported anyway.
+        val result = XpnImporter.importAll(archive, File(temp, "multi-out"), budget = XpnImporter.WriteBudget(oneKitBytes + 1))
+        assertEquals(1, result.kits.size, "only the first program fit the shared budget")
+        assertEquals(1, result.skipped.size)
+        assertTrue(result.skipped[0].second.contains("MB", ignoreCase = true), result.skipped[0].second)
+    }
 }

@@ -27,6 +27,27 @@ import javax.xml.parsers.DocumentBuilderFactory
  */
 object XpnImporter {
 
+    /**
+     * A spend-down budget shared across many sample writes that together
+     * bound the total one untrusted archive may cause to land on disk —
+     * each sample is already capped on its own by [com.snipsnap.mpc3.LimitedRead]'s
+     * per-entry ceiling, but a program with hundreds of pads (or, from
+     * [KitBackup], a backup of many programs) would otherwise multiply that
+     * ceiling by however many samples it declares. One [WriteBudget] shared
+     * across a whole [import]/[importAll] call — or, from [KitBackup], across
+     * a whole restore — bounds the operation itself, the same "one budget
+     * for the whole" rule [com.snipsnap.shell.ShelfImport.unzipSafely] already
+     * holds the MPC-track ZIP path to.
+     */
+    class WriteBudget(val max: Long) {
+        private var spent = 0L
+        val remaining: Long get() = (max - spent).coerceAtLeast(0L)
+        fun spend(n: Long) { spent += n }
+    }
+
+    /** The default cap for one archive's worth of sample writes — [com.snipsnap.shell.ShelfImport]'s own ZIP budget, held here too since `:kit` doesn't depend on `:shell`. */
+    const val DEFAULT_BUDGET_BYTES: Long = 512L * 1024 * 1024
+
     data class ImportResult(
         val kit: Kit,
         val directory: File,
@@ -41,22 +62,35 @@ object XpnImporter {
         val skipped: List<Pair<String, String>>,
     )
 
-    fun import(xpnFile: File, destRoot: File, overwrite: Boolean = false): ImportResult {
+    fun import(
+        xpnFile: File,
+        destRoot: File,
+        overwrite: Boolean = false,
+        budget: WriteBudget = WriteBudget(DEFAULT_BUDGET_BYTES),
+    ): ImportResult {
         require(xpnFile.isFile) { "no such file: $xpnFile" }
         ZipFile(xpnFile).use { zip ->
             val entries = zip.entries().toList().filter { !it.isDirectory }
             val programEntry = programEntries(entries).firstOrNull()
                 ?: throw IllegalArgumentException("no .xpm program inside $xpnFile")
-            return importProgram(zip, entries, programEntry, xpnFile, destRoot, overwrite)
+            return importProgram(zip, entries, programEntry, xpnFile, destRoot, overwrite, budget)
         }
     }
 
     /**
      * Every drum program in the archive becomes its own kit folder — the
      * receive half of a multi-kit pack. Programs that refuse (keygroups,
-     * missing samples) are skipped and named, not fatal.
+     * missing samples) are skipped and named, not fatal. [budget] is one
+     * ceiling shared across every program in the archive, not reset per
+     * program — the point is bounding what the *archive* can cause, not
+     * each program's slice of it.
      */
-    fun importAll(xpnFile: File, destRoot: File, overwrite: Boolean = false): AllResult {
+    fun importAll(
+        xpnFile: File,
+        destRoot: File,
+        overwrite: Boolean = false,
+        budget: WriteBudget = WriteBudget(DEFAULT_BUDGET_BYTES),
+    ): AllResult {
         require(xpnFile.isFile) { "no such file: $xpnFile" }
         ZipFile(xpnFile).use { zip ->
             val entries = zip.entries().toList().filter { !it.isDirectory }
@@ -66,7 +100,7 @@ object XpnImporter {
             val skipped = mutableListOf<Pair<String, String>>()
             for (program in programs) {
                 try {
-                    kits += importProgram(zip, entries, program, xpnFile, destRoot, overwrite)
+                    kits += importProgram(zip, entries, program, xpnFile, destRoot, overwrite, budget)
                 } catch (e: IllegalArgumentException) {
                     skipped += program.name to (e.message ?: "refused")
                 }
@@ -86,6 +120,7 @@ object XpnImporter {
         xpnFile: File,
         destRoot: File,
         overwrite: Boolean,
+        budget: WriteBudget,
     ): ImportResult {
         run {
             val xml = zip.getInputStream(programEntry).use {
@@ -139,11 +174,24 @@ object XpnImporter {
             destDir.mkdirs()
             for (stem in referenced) {
                 val entry = wavByStem.getValue(stem.lowercase())
-                zip.getInputStream(entry).use { src ->
-                    SafePath.child(destDir, "$stem.wav").outputStream().use {
-                        com.snipsnap.mpc3.LimitedRead.copy(src, it, what = "sample $stem.wav")
+                val out = SafePath.child(destDir, "$stem.wav")
+                try {
+                    zip.getInputStream(entry).use { src ->
+                        out.outputStream().use {
+                            // The per-entry ceiling alone caps one sample; a
+                            // program with hundreds of pads (or importAll's
+                            // whole archive) would otherwise multiply it by
+                            // however many samples it declares — [budget]
+                            // bounds the sum instead.
+                            com.snipsnap.mpc3.LimitedRead.copy(src, it, limit = budget.remaining, what = "sample $stem.wav")
+                        }
                     }
+                } catch (e: com.snipsnap.mpc3.LimitedRead.TooLargeException) {
+                    throw com.snipsnap.mpc3.LimitedRead.TooLargeException(
+                        "'${xpnFile.name}' writes past ${budget.max / (1024 * 1024)} MB of samples at '$stem.wav' - refused",
+                    )
                 }
+                budget.spend(out.length())
             }
 
             val pads = instruments.mapNotNull { inst ->
