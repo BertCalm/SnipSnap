@@ -51,11 +51,19 @@ exclusive low-latency path rather than falling back to the shared one —
 that is the number every later latency reading is measured against.
 VOICES counted down as one-shots ended. PANIC clears.
 
-Still open, and A1 stays half-ticked until they are answered: the
-**mid-roll kit swap** (nothing in the kit rings long enough to still be
-sounding when the kit changes — PRINT a few seconds on SURFACE, send
-the print to a pad, then swap kits while that pad plays), the
-**open-hat choke**, and **gate vs one-shot**.
+The **mid-roll kit swap** passed on a second pass, the same day. Nothing
+in a stock kit rings long enough to still be sounding when the bank is
+adopted, so the sound was made first: a few seconds PRINTed on SURFACE
+and sent → PAD. Swapping kits while that pad played gave **silence** —
+not a crash, and not a voice that carried on into the new kit. That is
+the check that matters: the callback silenced and reported every voice
+before the old sample bank was released, which is the one path in the
+native code where getting it wrong is a use-after-free rather than a
+wrong noise.
+
+Still open, and A1 stays part-ticked until they are answered: the
+**open-hat choke** (a closed hat cutting a ringing open one, no click at
+the cut) and **gate vs one-shot**.
 
 ### A2 · KEYS sustains and lets go [EEE6]
 
@@ -90,6 +98,10 @@ Open a kit, tap SURFACE.
 - → PAD, STOP PRINT: the slot chooser opens. An empty pad takes the
   print; a taken pad is replaced and its original is in the bin; CANCEL
   sends the print to TAPE instead of losing it.
+- (2026-09-08, out of A1's kit-swap check: PRINT ran for a few seconds,
+  → PAD landed it on an empty slot, and the pad played the print back
+  on PLAY. The toast wording, the bin behaviour on a taken pad and
+  CANCEL → TAPE are all still unread.)
 - PAD ◄ ►, find a sound in XYZ, SET A, three more, MORPH between them.
   Leave the screen and come back: are the corners and the pad still there?
   (They live in `surface.json` beside the kit.)
