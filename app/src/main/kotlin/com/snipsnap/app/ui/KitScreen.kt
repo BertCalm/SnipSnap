@@ -27,15 +27,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
-import com.snipsnap.app.PadPlayer
+import com.snipsnap.app.PadEngine
+import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -51,6 +54,7 @@ import com.snipsnap.shell.PadPeaks
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.TextureKits
+import com.snipsnap.shell.VoiceAllocator
 import kotlin.random.Random
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -94,17 +98,40 @@ fun KitScreen(
         return
     }
 
-    val player = remember(entry.dir) { PadPlayer() }
-    DisposableEffect(entry.dir) { onDispose { player.release() } }
+    // EEE4: the grid plays on the native engine now, same PadEngine PLAY
+    // and KEYS use — same bank, same door onto the sound, one fewer player
+    // to keep synced with a live edit. A tap has no release, so every hit
+    // is effectively one-shot here regardless of the pad's own gate/oneShot
+    // metadata (as SoundPool's preview always played out fully too); the
+    // allocator still exists so a mute group still chokes on this screen,
+    // and so a stolen or choked voice is stopped rather than left ringing.
+    val engineContext = LocalContext.current
+    val player = remember(entry.dir) { PadEngine(deviceSampleRate(engineContext)) }
+    var engineUp by remember(entry.dir) { mutableStateOf(false) }
+    DisposableEffect(entry.dir) {
+        engineUp = player.start()
+        onDispose { player.close() }
+    }
     // PAD SHEET can rewrite a pad's level/pan/audio while this screen isn't
-    // showing it; the SoundPool cache doesn't know that on its own, so a
+    // showing it; the engine's bank doesn't know that on its own, so a
     // fresh `kit` reference (its identity changes on every real edit —
     // see PadSheetScreen's `onKitUpdated`) reloads it. Keyed separately
     // from the dir-scoped effect above so this also covers the very first
     // composition, without a redundant load from that one.
-    LaunchedEffect(entry.kit) { player.load(entry) }
+    LaunchedEffect(entry.kit) { withContext(Dispatchers.IO) { player.load(entry) } }
+    val allocator = remember(entry.dir) { VoiceAllocator(maxVoices = PadEngine.MAX_VOICES) }
+    // The endings ring, drained at screen rate — same idiom as PLAY's own
+    // frame loop, so the allocator's bookkeeping (who's oldest, who's
+    // still sounding) never drifts from what the engine actually did.
+    LaunchedEffect(player) {
+        while (true) {
+            withFrameNanos { }
+            for (id in player.drainEnded()) allocator.voiceEnded(id)
+            if (player.needsRestart()) engineUp = player.start()
+        }
+    }
     // W12: every pad's mini-waveform, read off the main thread once per
-    // kit edit (the same `kit` identity the SoundPool reload keys on) and
+    // kit edit (the same `kit` identity the engine reload keys on) and
     // kept as columns only. Cleared first, so neither a fresh kit nor an
     // edited one ever shows a shape that isn't its own: names first, the
     // shapes a blink later.
@@ -115,6 +142,15 @@ fun KitScreen(
     }
 
     val kit = entry.kit
+
+    fun hit(slot: Int) {
+        val pad = kit.pad(slot) ?: return
+        if (!engineUp || !player.isUp()) return
+        val allocation = allocator.noteOn(slot, 1f, pad.muteGroup, pad.oneShot)
+        for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
+        if (!player.hit(pad, 1f, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
+    }
+
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             Modifier
@@ -158,7 +194,7 @@ fun KitScreen(
                             slot = slot,
                             pad = kit.pad(slot),
                             peaks = padPeaks[slot],
-                            onTap = player::play,
+                            onTap = ::hit,
                             onLongPress = onLongPress,
                             onEmptyLongPress = onEmptyLongPress,
                             onEmptyTapHint = onEmptyTapHint,
