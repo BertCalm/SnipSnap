@@ -31,6 +31,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
@@ -320,6 +323,20 @@ private fun HoldRecordAction(label: String, enabled: Boolean, onPress: () -> Uni
             .height(Layout.PRIMARY_ACTION_H.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
             .then(rim)
+            // A screen-reader double-tap has no duration to report, so
+            // the accessibility floor here is a full press-then-release
+            // cycle fired back to back — shorter than any real hold, but
+            // operable, where the raw pointerInput below (registering no
+            // click action at all) was previously neither announced nor
+            // operable. label (this button's own visible text) is the
+            // merged accessible name.
+            .then(
+                if (enabled) {
+                    Modifier.semantics { onClick(label = "RECORD") { onPress(); onRelease(); true } }
+                } else {
+                    Modifier.semantics { disabled() }
+                },
+            )
             .then(
                 if (!enabled) {
                     Modifier

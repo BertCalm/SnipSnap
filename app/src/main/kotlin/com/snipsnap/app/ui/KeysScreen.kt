@@ -26,6 +26,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.InstrumentPlayer
 import com.snipsnap.app.theme.LocalScheme
@@ -140,6 +144,9 @@ fun KeysScreen(
 /** Touch-Y velocity, like PLAY's pads: the top of the pad is softest. */
 private const val MIN_VELOCITY = 0.35f
 
+/** The velocity a synthesized TalkBack click uses — see PlayScreen.kt's own CENTER_VELOCITY. */
+private val CENTER_VELOCITY = MIN_VELOCITY + (1f - MIN_VELOCITY) * 0.5f
+
 @Composable
 private fun KeyPad(
     label: String,
@@ -158,6 +165,19 @@ private fun KeyPad(
             .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
             .background(ink.copy(alpha = if (down) 0.45f else if (enabled) 0.12f else 0.03f), shape)
             .border(2.dp, if (enabled) ink else ink.copy(alpha = 0.3f), shape)
+            // Always a semantics node, enabled or not — dropping the
+            // modifier chain when !enabled (the pointerInput branch
+            // below still does, for touch) removed this cell from the
+            // accessibility tree entirely, the same "vanishes instead
+            // of announcing unavailable" gap as finding 12 elsewhere.
+            .semantics {
+                contentDescription = if (enabled) "KEY $label" else "KEY $label: NOT MAPPED"
+                if (enabled) {
+                    onClick(label = "PLAY") { onPress(CENTER_VELOCITY); onRelease(); true }
+                } else {
+                    disabled()
+                }
+            }
             .let { m ->
                 if (!enabled) m else m.pointerInput(label) {
                     while (true) {

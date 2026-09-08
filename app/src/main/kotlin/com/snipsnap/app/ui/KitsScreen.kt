@@ -3,8 +3,11 @@ package com.snipsnap.app.ui
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +33,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.MicSessionService
@@ -51,10 +56,8 @@ import kotlin.math.sqrt
 import kotlinx.coroutines.delay
 import com.snipsnap.shell.Rooms
 import com.snipsnap.app.theme.pressedBevel
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
 import com.snipsnap.kit.Names
@@ -329,6 +332,7 @@ private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.Ins
  * in the bin's red; a tap on the words lets go. The gesture never sits
  * over the button.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> Unit) {
     val scheme = LocalScheme.current
@@ -362,8 +366,21 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
             Modifier
                 .weight(1f)
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .pointerInput(room.file) {
-                    detectTapGestures(onLongPress = { armed = true }, onTap = { armed = false })
+                // A plain tap/long-press gesture with no drag or
+                // position-derived value — combinedClickable registers
+                // real onClick/onLongClick accessibility actions for
+                // free, unlike the raw pointerInput this replaces, which
+                // left this row focusable but inoperable for TalkBack
+                // (audit finding 1).
+                .combinedClickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onLongClickLabel = "REVEAL FORGET",
+                    onLongClick = { armed = true },
+                    onClick = { armed = false },
+                )
+                .semantics {
+                    if (armed) stateDescription = "FORGET BUTTON REVEALED"
                 },
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
@@ -447,6 +464,7 @@ private fun BinnedRoomRow(binned: Rooms.Binned, busy: Boolean, onRestore: (Rooms
  * no `pointerInput`/long-press at all, so DELETE/RENAME are simply
  * unreachable for the duration of a pick rather than merely hidden.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun KitRow(
     entry: KitShelf.Entry,
@@ -470,14 +488,22 @@ private fun KitRow(
                 if (pickModeActive) {
                     Modifier.tapeClick(label = null) { onOpen(entry) }
                 } else {
-                    Modifier.pointerInput(entry.dir) {
-                        detectTapGestures(
-                            onLongPress = { onArm() },
-                            onTap = { if (armed) onDisarm() else onOpen(entry) },
-                        )
-                    }
+                    // A plain tap/long-press pair with no drag — the
+                    // sharpest instance the audit found (finding 1): with
+                    // no accessibility action at all, this was the only
+                    // way to open a kit from the normal shelf flow, and a
+                    // switch-access/TalkBack user couldn't reach it.
+                    // combinedClickable registers both as real actions.
+                    Modifier.combinedClickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onLongClickLabel = "RENAME OR DELETE",
+                        onLongClick = { onArm() },
+                        onClick = { if (armed) onDisarm() else onOpen(entry) },
+                    )
                 },
             )
+            .semantics { if (revealActions) stateDescription = "RENAME AND DELETE REVEALED" }
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),

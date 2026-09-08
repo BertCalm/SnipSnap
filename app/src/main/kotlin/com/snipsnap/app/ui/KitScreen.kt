@@ -35,6 +35,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -535,6 +539,23 @@ private fun PadCell(
             modifier
                 .height(Layout.PAD_H.dp)
                 .raisedBevel(scheme, Layout.PAD_RADIUS.dp)
+                // The raw pointerInput below fires onTap on release
+                // (a hint, not an action) and starts a hand-rolled
+                // long-press timer on down — neither registers a
+                // Compose click/long-click action, so this cell was
+                // reachable by TalkBack focus but silently inert
+                // (accessibility audit finding 1, "worse than
+                // silence"). A synthesized double-tap can't reproduce
+                // the down/hold timing, so it maps onto the two
+                // outcomes that timing already produces: a plain click
+                // gives the same discoverability hint an early release
+                // would, and the long-click action is what actually
+                // opens PAD CAPTURE.
+                .semantics {
+                    contentDescription = "PAD $tag: EMPTY"
+                    onClick(label = "HINT") { onEmptyTapHint(slot); true }
+                    onLongClick(label = "CAPTURE A SAMPLE") { onEmptyLongPress(slot); true }
+                }
                 // Same long-press timing as the filled path below, but a
                 // blank slot has nothing to preview-play on down — only
                 // the long-press (capture) and the released-early tap
@@ -576,6 +597,19 @@ private fun PadCell(
             .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
             .border(2.dp, cls.tape, shape)
             .background(cls.tape.copy(alpha = 0.35f * glow.value), shape)
+            // TalkBack could already focus this cell and read its name
+            // (the pointerInput below registers no click action), but a
+            // double-tap did nothing — a false affordance, arguably
+            // worse than being skipped entirely (audit finding 1). A
+            // synthesized click maps onto onTap (the same hit a quick
+            // physical tap produces) and long-click onto onLongPress
+            // (opens PAD SHEET), matching the two outcomes the raw
+            // gesture below actually distinguishes.
+            .semantics {
+                contentDescription = "PAD $tag: ${pad.displayName}"
+                onClick(label = "PLAY") { onTap(slot); true }
+                onLongClick(label = "OPEN PAD SHEET") { onLongPress(slot); true }
+            }
             // The press fires the hit immediately — a pad that waited for
             // release to sound would already be wrong as a drum pad. The
             // 480ms hold on top of that (still down) opens PAD SHEET; a

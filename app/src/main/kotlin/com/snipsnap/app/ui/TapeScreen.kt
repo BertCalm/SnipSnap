@@ -36,6 +36,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -68,10 +72,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** How long a reel has to be held before it counts as the pencil-rewind long-press. */
 private const val PENCIL_LONG_PRESS_MS = 500L
+
+/**
+ * How long a synthesized TalkBack long-click holds the pencil rewind on
+ * for. A real hold runs for as long as the finger stays down; a
+ * semantics action has no such duration, so this is a fixed, brief
+ * substitute — long enough to be audible as a nudge, short enough not
+ * to run away with the tape unattended.
+ */
+private const val PENCIL_A11Y_NUDGE_MS = 250L
 
 /**
  * Ceiling on one step-loop tick's elapsed time, in nanoseconds (~100ms).
@@ -706,6 +720,20 @@ private fun WindButton(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme)
+            // A screen-reader double-tap has no hold duration, so the
+            // floor here is the same start/stop cycle a quick physical
+            // tap-and-release already produces — a brief nudge rather
+            // than a sustained wind, but operable, where the raw
+            // pointerInput below (no click action registered) was
+            // neither. label (this button's own text, e.g. "◄◄") is the
+            // merged accessible name.
+            .semantics {
+                onClick {
+                    onStop(); model.windStart(direction); onTouch()
+                    model.windStop(direction); onTouch()
+                    true
+                }
+            }
             .pointerInput(model, direction) {
                 detectTapGestures(
                     onPress = {
@@ -748,6 +776,7 @@ private fun CassetteRow(
     onTouch: () -> Unit,
 ) {
     val scheme = LocalScheme.current
+    val scope = rememberCoroutineScope()
 
     Row(
         Modifier
@@ -764,6 +793,29 @@ private fun CassetteRow(
             scheme = scheme,
             modifier = Modifier
                 .size(Layout.MIN_HIT_TARGET.dp)
+                // This reel had zero accessibility affordance at all
+                // (audit finding 1's "no visible affordance either"
+                // twin, finding 8) — no text child, no click action, a
+                // 500ms hold as the *only* way to reach pencil rewind.
+                // A semantics onLongClick can't hold for real, so it
+                // runs the same start/toast/stop sequence for a fixed
+                // PENCIL_A11Y_NUDGE_MS instead of however long a finger
+                // stays down.
+                .semantics {
+                    contentDescription = "REWIND PENCIL"
+                    onLongClick(label = "SPIN BACK BY EAR") {
+                        scope.launch {
+                            onScrubStart()
+                            onTouch()
+                            val started = model.pencilRewind()
+                            onToast(if (started) Copy.PENCIL_STARTED else Copy.PENCIL_AT_TOP)
+                            delay(PENCIL_A11Y_NUDGE_MS)
+                            model.pencilOff()
+                            onTouch()
+                        }
+                        true
+                    }
+                }
                 .pointerInput(model) {
                     detectTapGestures(
                         onPress = {

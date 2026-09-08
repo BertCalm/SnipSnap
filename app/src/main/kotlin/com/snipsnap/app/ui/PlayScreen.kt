@@ -42,6 +42,9 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -92,6 +95,15 @@ private fun velocityFromY(y: Float, height: Float): Float {
     val t = (y / height).coerceIn(0f, 1f)
     return MIN_VELOCITY + (1f - MIN_VELOCITY) * t
 }
+
+/**
+ * The velocity a synthesized TalkBack click uses: `velocityFromY` needs a
+ * real touch Y, which a semantics `onClick` action doesn't have (audit
+ * finding 1's own framing) — this is what a tap at the pad's vertical
+ * center would have produced, i.e. neither the softest nor the hardest
+ * hit available to a sighted finger.
+ */
+private val CENTER_VELOCITY = velocityFromY(0.5f, 1f)
 
 // M4: the pads play on the native engine (PadEngine over Oboe). Every
 // voice is keyed by the allocator's own id, and the engine reports each
@@ -563,6 +575,17 @@ private fun PlayPad(
             // lit: inset wash at class@40%, driven by the trigger/choke glow
             .background(cls.tape.copy(alpha = 0.40f * g), shape)
             .border(2.dp, cls.tape, shape)
+            // No long-press here (see this composable's own KDoc — PLAY
+            // is for playing), so the accessibility floor is a single
+            // click action: fire the hit at CENTER_VELOCITY, then
+            // release immediately. A gated (non-one-shot) pad won't
+            // sustain the way a real press-and-hold would, but this is
+            // strictly better than the false affordance a focusable,
+            // silently-inert cell was before (audit finding 1).
+            .semantics {
+                contentDescription = "PAD $tag: ${pad.displayName}"
+                onClick(label = "PLAY") { onHit(slot, CENTER_VELOCITY); onRelease(slot); true }
+            }
             .pointerInput(slot) {
                 while (true) {
                     val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }

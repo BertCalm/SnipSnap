@@ -30,6 +30,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -397,6 +400,18 @@ private fun BubbleContent(
     Box(
         Modifier
             .size(BUBBLE_WINDOW_DP.dp)
+            // A system-wide overlay window, so this is the only content
+            // TalkBack can reach here at all — no descendant text exists
+            // to merge (the ring below is Canvas-drawn). Only SNIP (the
+            // tap) gets an accessibility action; the drag-to-move/eject
+            // gesture has no equivalent single action to map onto and
+            // stays touch-only, same as the audit's "label plus state is
+            // the required floor" allowance for continuous/gesture-only
+            // controls.
+            .semantics {
+                contentDescription = "SNIP BUBBLE, ${(fraction * 100).toInt()}% FULL"
+                onClick(label = "SNIP") { onTap(); true }
+            }
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = { dragged = false },

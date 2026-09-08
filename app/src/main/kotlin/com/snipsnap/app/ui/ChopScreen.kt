@@ -1,8 +1,10 @@
 package com.snipsnap.app.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,7 +38,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -496,6 +497,7 @@ private fun ChopContent(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SliceRow(
     row: ChopReviewModel.Row,
@@ -530,12 +532,20 @@ private fun SliceRow(
                         it.background(classColor.copy(alpha = 0.85f), RoundedCornerShape(4.dp))
                     }
                 }
-                .pointerInput(row.n) {
-                    detectTapGestures(
-                        onTap = { onTapChip() },
-                        onLongPress = { onLongPressChip() },
-                    )
-                }
+                // A plain tap/long-press pair with no drag — the same
+                // shape RoomRow/KitRow (KitsScreen.kt) had before this
+                // audit pass, and the same fix: combinedClickable
+                // registers real onClick/onLongClick accessibility
+                // actions where the raw pointerInput this replaces
+                // registered none (finding 1). The chip's own class
+                // name (below) is already this node's merged name.
+                .combinedClickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onLongClickLabel = "RECLASSIFY",
+                    onLongClick = { onLongPressChip() },
+                    onClick = { onTapChip() },
+                )
                 .padding(horizontal = 10.dp),
             contentAlignment = Alignment.Center,
         ) {
