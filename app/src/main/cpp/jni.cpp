@@ -7,6 +7,7 @@
 #include <jni.h>
 
 #include <chrono>
+#include <exception>
 #include <thread>
 #include <vector>
 
@@ -68,8 +69,17 @@ Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv* env, jobject, jlong handl
     const jsize n = env->GetArrayLength(mono);
     // A copy on the UI thread, then the engine copies again into its own
     // Sample: two copies of a few seconds of floats is nothing next to a
-    // pinned Java array held across a callback.
-    std::vector<float> frames(static_cast<size_t>(n));
+    // pinned Java array held across a callback. The copy is the one thing
+    // here that can fail, and a C++ exception crossing back into the JVM
+    // is undefined - in practice the process dies with nothing said. A
+    // sample that will not fit is honest silence instead: the surface
+    // keeps whatever it had.
+    std::vector<float> frames;
+    try {
+        frames.resize(static_cast<size_t>(n));
+    } catch (const std::exception&) {
+        return;
+    }
     env->GetFloatArrayRegion(mono, 0, n, frames.data());
     engine(handle)->loadSample(frames.data(), frames.size(), sourceRate);
 }
@@ -121,8 +131,14 @@ Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv* env, jobject, jlong handle
     const size_t frames = e->printFrames();
     jfloatArray out = nullptr;
     if (frames > 0) {
+        // A print is seconds of audio, so this is the allocation here most
+        // likely to fail. Null means the JVM refused it and has an
+        // OutOfMemoryError pending; writing into it would be undefined.
+        // Kotlin already reads null as "nothing was captured".
         out = env->NewFloatArray(static_cast<jsize>(frames));
-        env->SetFloatArrayRegion(out, 0, static_cast<jsize>(frames), e->printData());
+        if (out != nullptr) {
+            env->SetFloatArrayRegion(out, 0, static_cast<jsize>(frames), e->printData());
+        }
     }
     e->clearPrint();
     return out;
@@ -191,7 +207,20 @@ Java_com_snipsnap_app_NativePads_beginBank(JNIEnv*, jobject, jlong handle) {
 JNIEXPORT jint JNICALL
 Java_com_snipsnap_app_NativePads_addSample(JNIEnv* env, jobject, jlong handle, jfloatArray interleaved, jint channels, jint rate) {
     const jsize n = env->GetArrayLength(interleaved);
-    std::vector<float> frames(static_cast<size_t>(n));
+    // As in loadSample: a kit is banked one pad at a time and a big one on
+    // a tired phone is exactly where the copy runs out of room. -1 is the
+    // refusal the rest of the stack already understands - apply() reports
+    // a NoteOn on a negative index as ended, so the pad stays silent and
+    // the allocator lets its voice go. The catch covers a length that is
+    // absurd as well as one that is merely too big: a negative jsize casts
+    // to a size_t past max_size(), which throws before anything is asked
+    // of the allocator. One door, and a case that fails without it.
+    std::vector<float> frames;
+    try {
+        frames.resize(static_cast<size_t>(n));
+    } catch (const std::exception&) {
+        return -1;
+    }
     env->GetFloatArrayRegion(interleaved, 0, n, frames.data());
     return pads(handle)->addSample(std::move(frames), channels, rate);
 }
@@ -303,7 +332,13 @@ Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv* env, jobject, jlong handle) 
     int32_t buf[256];
     const size_t n = pads(handle)->drainEnded(buf, 256);
     jintArray out = env->NewIntArray(static_cast<jsize>(n));
-    if (n > 0) env->SetIntArrayRegion(out, 0, static_cast<jsize>(n), reinterpret_cast<const jint*>(buf));
+    // 256 ints is a small ask, but null is still null: there is nothing to
+    // hand back and nothing to write into. Kotlin reads it as no endings
+    // this drain, which is the safe reading - a voice reported late is a
+    // voice held a moment longer, not one lost.
+    if (out != nullptr && n > 0) {
+        env->SetIntArrayRegion(out, 0, static_cast<jsize>(n), reinterpret_cast<const jint*>(buf));
+    }
     return out;
 }
 

@@ -244,7 +244,7 @@ class PadEngine(preferredSampleRate: Int) {
 
     /** The ids of voices that ended since the last call; drain at screen rate. */
     @Synchronized
-    fun drainEnded(): IntArray = if (open) NativePads.drainEnded(handle) else IntArray(0)
+    fun drainEnded(): IntArray = (if (open) NativePads.drainEnded(handle) else null) ?: IntArray(0)
 
     @Synchronized
     fun close() {

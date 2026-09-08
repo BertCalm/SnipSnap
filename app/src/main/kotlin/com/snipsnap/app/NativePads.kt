@@ -42,5 +42,6 @@ object NativePads {
     external fun setVoiceGain(handle: Long, voiceId: Int, gainL: Float, gainR: Float, glideMs: Float)
     external fun stopVoice(handle: Long, voiceId: Int, fadeMs: Float)
     external fun allOff(handle: Long, fadeMs: Float)
-    external fun drainEnded(handle: Long): IntArray
+    /** Null when the JVM could not allocate the array; see jni.cpp. */
+    external fun drainEnded(handle: Long): IntArray?
 }
