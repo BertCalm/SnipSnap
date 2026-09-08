@@ -42,7 +42,20 @@ object XpnImporter {
     class WriteBudget(val max: Long) {
         private var spent = 0L
         val remaining: Long get() = (max - spent).coerceAtLeast(0L)
-        fun spend(n: Long) { spent += n }
+
+        /**
+         * [n] is always a byte count a caller actually wrote — never
+         * negative — but this is part of a security boundary, so it does
+         * not trust that: a negative [n] would shrink [spent] and hand back
+         * budget that was never earned, and enough additions could in
+         * principle overflow a [Long] the same way. Refuse the first,
+         * saturate at [Long.MAX_VALUE] against the second, so a caller
+         * mistake can only ever make this budget stricter, not looser.
+         */
+        fun spend(n: Long) {
+            require(n >= 0) { "spent a negative byte count: $n" }
+            spent = if (spent > Long.MAX_VALUE - n) Long.MAX_VALUE else spent + n
+        }
     }
 
     /** The default cap for one archive's worth of sample writes — [com.snipsnap.shell.ShelfImport]'s own ZIP budget, held here too since `:kit` doesn't depend on `:shell`. */
@@ -171,70 +184,95 @@ object XpnImporter {
             if (File(destDir, "kit.json").exists() && !overwrite) {
                 throw IOException("kit already exists: $destDir (pass overwrite=true to replace it)")
             }
-            destDir.mkdirs()
-            for (stem in referenced) {
-                val entry = wavByStem.getValue(stem.lowercase())
-                val out = SafePath.child(destDir, "$stem.wav")
-                try {
-                    zip.getInputStream(entry).use { src ->
-                        out.outputStream().use {
-                            // The per-entry ceiling alone caps one sample; a
-                            // program with hundreds of pads (or importAll's
-                            // whole archive) would otherwise multiply it by
-                            // however many samples it declares — [budget]
-                            // bounds the sum instead.
-                            com.snipsnap.mpc3.LimitedRead.copy(src, it, limit = budget.remaining, what = "sample $stem.wav")
+
+            // Every write lands in a fresh staging folder first, moved into
+            // destDir only once the whole program - every sample, kit.json -
+            // is down safely; on any failure (budget, a bad zip entry, a
+            // full disk) the staging folder is simply deleted, never
+            // destDir. A program refused partway used to leave WAVs sitting
+            // in destDir with no kit.json to name them - invisible to the
+            // shelf's own listing, but not to the disk - and importAll
+            // moving on to the next program in the archive meant a refused
+            // one could still leave debris behind.
+            destRoot.mkdirs()
+            val staging = java.nio.file.Files.createTempDirectory(destRoot.toPath(), "xpn-import-").toFile()
+            try {
+                for (stem in referenced) {
+                    val entry = wavByStem.getValue(stem.lowercase())
+                    val out = SafePath.child(staging, "$stem.wav")
+                    try {
+                        zip.getInputStream(entry).use { src ->
+                            out.outputStream().use {
+                                // The per-entry ceiling alone caps one sample; a
+                                // program with hundreds of pads (or importAll's
+                                // whole archive) would otherwise multiply it by
+                                // however many samples it declares — [budget]
+                                // bounds the sum instead.
+                                com.snipsnap.mpc3.LimitedRead.copy(src, it, limit = budget.remaining, what = "sample $stem.wav")
+                            }
                         }
+                    } catch (e: com.snipsnap.mpc3.LimitedRead.TooLargeException) {
+                        // copy() throws before writing the chunk that would
+                        // overrun, but earlier chunks in this same call already
+                        // landed on disk - importAll skips a program that throws
+                        // and moves on to the next, so an unspent partial write
+                        // here would let every remaining program in an archive
+                        // repeat it against the same unchanged budget.remaining,
+                        // multiplying exactly what this budget exists to bound.
+                        val partial = out.length()
+                        out.delete()
+                        budget.spend(partial)
+                        throw com.snipsnap.mpc3.LimitedRead.TooLargeException(
+                            "'${xpnFile.name}' writes past ${budget.max / (1024 * 1024)} MB of samples at '$stem.wav' - refused",
+                        )
                     }
-                } catch (e: com.snipsnap.mpc3.LimitedRead.TooLargeException) {
-                    // copy() throws before writing the chunk that would
-                    // overrun, but earlier chunks in this same call already
-                    // landed on disk - importAll skips a program that throws
-                    // and moves on to the next, so an unspent partial write
-                    // here would let every remaining program in an archive
-                    // repeat it against the same unchanged budget.remaining,
-                    // multiplying exactly what this budget exists to bound.
-                    val partial = out.length()
-                    out.delete()
-                    budget.spend(partial)
-                    throw com.snipsnap.mpc3.LimitedRead.TooLargeException(
-                        "'${xpnFile.name}' writes past ${budget.max / (1024 * 1024)} MB of samples at '$stem.wav' - refused",
+                    budget.spend(out.length())
+                }
+
+                val pads = instruments.mapNotNull { inst ->
+                    val slot = if (zeroBased) inst.number + 1 else inst.number
+                    if (slot !in 1..128) return@mapNotNull null
+                    val ordered = inst.layers.sortedBy { it.velStart }
+                    val main = ordered.last()
+                    KitPad(
+                        slot = slot,
+                        sampleFile = "${main.sampleName}.wav",
+                        displayName = main.sampleName,
+                        drumClass = DrumClass.UNKNOWN,
+                        level = inst.volume.coerceIn(0f, 1f),
+                        pan = inst.pan.coerceIn(0f, 1f),
+                        tuneCoarse = inst.tuneCoarse.coerceIn(-36, 36),
+                        tuneFine = inst.tuneFine.coerceIn(-100, 100),
+                        muteGroup = inst.muteGroup.coerceIn(0, 32),
+                        oneShot = inst.oneShot,
+                        attack = inst.attack,
+                        decay = inst.decay,
+                        cutoff = inst.cutoff,
+                        resonance = inst.resonance,
+                        source = mapOf("importedFrom" to xpnFile.name),
+                        velocityLayers = if (ordered.size < 2) emptyList() else {
+                            ordered.map { KitLayer("${it.sampleName}.wav", it.velStart, it.velEnd) }
+                        },
                     )
                 }
-                budget.spend(out.length())
-            }
+                require(pads.isNotEmpty()) { "no pads landed in the 128-slot range" }
 
-            val pads = instruments.mapNotNull { inst ->
-                val slot = if (zeroBased) inst.number + 1 else inst.number
-                if (slot !in 1..128) return@mapNotNull null
-                val ordered = inst.layers.sortedBy { it.velStart }
-                val main = ordered.last()
-                KitPad(
-                    slot = slot,
-                    sampleFile = "${main.sampleName}.wav",
-                    displayName = main.sampleName,
-                    drumClass = DrumClass.UNKNOWN,
-                    level = inst.volume.coerceIn(0f, 1f),
-                    pan = inst.pan.coerceIn(0f, 1f),
-                    tuneCoarse = inst.tuneCoarse.coerceIn(-36, 36),
-                    tuneFine = inst.tuneFine.coerceIn(-100, 100),
-                    muteGroup = inst.muteGroup.coerceIn(0, 32),
-                    oneShot = inst.oneShot,
-                    attack = inst.attack,
-                    decay = inst.decay,
-                    cutoff = inst.cutoff,
-                    resonance = inst.resonance,
-                    source = mapOf("importedFrom" to xpnFile.name),
-                    velocityLayers = if (ordered.size < 2) emptyList() else {
-                        ordered.map { KitLayer("${it.sampleName}.wav", it.velStart, it.velEnd) }
-                    },
-                )
+                val kit = Kit(kitName, pads)
+                KitStore.save(kit, staging)
+                // Only now, with everything down safely, does destDir change:
+                // the pre-existing-kit check above already confirmed either
+                // nothing is there or overwrite says replacing it is fine.
+                destDir.deleteRecursively()
+                if (!staging.renameTo(destDir) && !staging.copyRecursively(destDir, overwrite = true)) {
+                    throw IOException("could not land '$kitName' on the shelf - nothing landed")
+                }
+                return ImportResult(kit, destDir, programEntry.name)
+            } finally {
+                // A no-op once renameTo has moved staging into destDir; the
+                // one cleanup funnel for every other exit - a refused
+                // sample, a bad program, a full disk.
+                staging.deleteRecursively()
             }
-            require(pads.isNotEmpty()) { "no pads landed in the 128-slot range" }
-
-            val kit = Kit(kitName, pads)
-            KitStore.save(kit, destDir)
-            return ImportResult(kit, destDir, programEntry.name)
         }
     }
 

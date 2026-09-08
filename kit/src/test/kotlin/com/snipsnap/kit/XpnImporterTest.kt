@@ -425,4 +425,25 @@ class XpnImporterTest {
         val onDisk = destRoot.walkTopDown().filter { it.isFile }.sumOf { it.length() }
         assertTrue(onDisk <= budget.max, "five refused programs left $onDisk bytes on disk - more than the ${budget.max}-byte budget ever allowed")
     }
+
+    @Test
+    fun `a program refused partway leaves no kit folder behind at all`() {
+        // Four samples; a budget that lets the first couple through before
+        // the rest blow it. Writes used to land straight in destDir, so a
+        // program refused mid-loop left WAVs on disk with no kit.json to
+        // name them - invisible to the shelf's own listing, not to the
+        // disk. Everything now stages first and only moves into place on
+        // full success, so a refusal must leave no trace of the kit at all.
+        val kitDir = File(temp, "orphan-src")
+        val kit = buildKit(kitDir)
+        val xpn = File(temp, "Round Trip.xpn")
+        XpnPackager.write(kit, kitDir, xpn, Exporters.defaultMeta(kit))
+        val firstSampleBytes = File(kitDir, "A01_Kick_01.wav").length()
+
+        val destRoot = File(temp, "orphan-out")
+        assertFailsWith<com.snipsnap.mpc3.LimitedRead.TooLargeException> {
+            XpnImporter.import(xpn, destRoot, budget = XpnImporter.WriteBudget(firstSampleBytes + 1))
+        }
+        assertTrue(!File(destRoot, "Round Trip").exists(), "a refused program must leave nothing on the shelf, partial or otherwise")
+    }
 }
