@@ -99,7 +99,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
-private const val PREFS = "tapeos"
+internal const val PREFS = "tapeos"
 private const val PREF_SCHEME = "scheme"
 private const val PREF_PERSONALITY = "personality"
 private const val PREF_TEACH = "teach"
