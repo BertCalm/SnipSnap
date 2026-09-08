@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -202,17 +203,28 @@ fun SplitScreen(
                 onToast("THAT PAD HAS NOTHING ON IT.")
                 return
             }
-            val source = withContext(Dispatchers.IO) {
-                runCatching { WavReader.read(File(dir, file)) }.getOrNull()
+            // `runCatching` would take a CancellationException along with the
+            // real failures, and this screen can be left mid-split: the work
+            // would be cancelled and the code would carry on toasting and
+            // banking anyway. Cancellation travels; only failures become words.
+            val source = try {
+                withContext(Dispatchers.IO) { WavReader.read(File(dir, file)) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null
             }
             if (source == null) {
                 onToast("${name.uppercase()} WOULD NOT READ.")
                 return
             }
             // The expensive part: a spectrogram and two median filters.
-            val stn = withContext(Dispatchers.Default) { runCatching { Separate.stn(source) } }
-            val parts = stn.getOrElse {
-                onToast("SPLIT REFUSED: ${(it.message ?: "UNREADABLE").uppercase()}.")
+            val parts = try {
+                withContext(Dispatchers.Default) { Separate.stn(source) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                onToast("SPLIT REFUSED: ${(e.message ?: "UNREADABLE").uppercase()}.")
                 return
             }
             val indices = withContext(Dispatchers.Default) {
@@ -257,16 +269,17 @@ fun SplitScreen(
      */
     fun landOnTape(snip: Snip, hot: Float = 0f) {
         scope.launch {
-            val landed = withContext(Dispatchers.IO) {
-                runCatching { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
+            val landed = try {
+                withContext(Dispatchers.IO) { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
+            } catch (e: CancellationException) {
+                throw e  // leaving the screen is not a lost print to report
+            } catch (e: Exception) {
+                onToast("PRINT LOST: ${(e.message ?: "UNREADABLE").uppercase()}.")
+                return@launch
             }
-            landed.onSuccess {
-                val note = if (hot > 1f) " HOT: PEAK ${"%.2f".format(hot)}." else ""
-                onToast("SPLIT PRINTED ${"%.1f".format(it.seconds)} S TO TAPE.$note")
-                onPrinted()
-            }.onFailure {
-                onToast("PRINT LOST: ${(it.message ?: "UNREADABLE").uppercase()}.")
-            }
+            val note = if (hot > 1f) " HOT: PEAK ${"%.2f".format(hot)}." else ""
+            onToast("SPLIT PRINTED ${"%.1f".format(landed.seconds)} S TO TAPE.$note")
+            onPrinted()
         }
     }
 
@@ -511,6 +524,14 @@ private fun Fader(
 ) {
     val scheme = LocalScheme.current
     var heightPx by remember { mutableIntStateOf(0) }
+    // The gesture block is keyed on `enabled`, so it is started once and
+    // keeps running across recompositions — a plain `level` captured in it
+    // would stay at whatever it was when the drag detector began, and every
+    // delta would be applied to that same stale base. The fader would twitch
+    // and stick instead of following the finger. `rememberUpdatedState` is
+    // what makes the block read the level it is being dragged from now.
+    val liveLevel by rememberUpdatedState(level)
+    val emit by rememberUpdatedState(onLevel)
     Box(
         modifier
             .lcdPanel(scheme)
@@ -521,8 +542,8 @@ private fun Fader(
                     change.consume()
                     val span = if (heightPx > 0) heightPx.toFloat() else 1f
                     // Up is more: the screen counts down, a fader counts up.
-                    val next = level - dragAmount / span * Layers.MAX_LEVEL
-                    onLevel(next.coerceIn(0f, Layers.MAX_LEVEL))
+                    val next = liveLevel - dragAmount / span * Layers.MAX_LEVEL
+                    emit(next.coerceIn(0f, Layers.MAX_LEVEL))
                 }
             },
     ) {

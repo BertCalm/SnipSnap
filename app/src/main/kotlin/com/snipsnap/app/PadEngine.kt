@@ -110,16 +110,31 @@ class PadEngine(preferredSampleRate: Int) {
      * cleared with it: after this the engine plays these snips and nothing
      * else. Copies every sample across the bridge, so keep it off the main
      * thread.
+     *
+     * Locked per native call rather than for the whole run, exactly as
+     * [load] is: a split's three buffers are megabytes, and holding the
+     * monitor across all of them would make a [close] on the main thread —
+     * leaving the screen mid-load — wait for every copy to finish.
      */
-    @Synchronized
     fun loadSnips(snips: List<Snip>): List<Int> {
-        if (!open) return emptyList()
-        NativePads.beginBank(handle)
-        val indices = snips.map { NativePads.addSample(handle, it.samples, it.channels, it.sampleRate) }
-        NativePads.commitBank(handle)
-        sampleIndex = emptyMap()
-        framesOf = emptyMap()
-        hits.clear()
+        synchronized(this) {
+            if (!open) return emptyList()
+            NativePads.beginBank(handle)
+        }
+        val indices = ArrayList<Int>(snips.size)
+        for (snip in snips) {
+            indices += synchronized(this) {
+                if (!open) return emptyList()
+                NativePads.addSample(handle, snip.samples, snip.channels, snip.sampleRate)
+            }
+        }
+        synchronized(this) {
+            if (!open) return emptyList()
+            NativePads.commitBank(handle)
+            sampleIndex = emptyMap()
+            framesOf = emptyMap()
+            hits.clear()
+        }
         return indices
     }
 
