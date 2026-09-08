@@ -22,9 +22,9 @@ somewhere to land.
 
 ## A · The phone alone
 
-The native audio stack is the whole of section A1–A4 and it has never
-made a sound. Five merges rest on it. Do these first, and in this order:
-each one leans on the last.
+The native audio stack is the whole of section A1–A4 and five merges
+rest on it. A1 has now made a sound (2026-09-08); A2–A4 have not. Do
+the rest in this order: each one leans on the last.
 
 ### A1 · PLAY feels like an instrument [EEE3, the M4 exit test]
 
@@ -45,7 +45,17 @@ Open a kit, tap PLAY, drum on it with two thumbs for a minute.
 - Header reads NO STREAM? The device refused every open — grab the
   logcat line tagged `PadEngine`.
 
-→
+→ **2026-09-08, the exit test passes.** Tight enough to play. The header
+read **8–11 MS** with no `SHARED` after it, so the device opened the
+exclusive low-latency path rather than falling back to the shared one —
+that is the number every later latency reading is measured against.
+VOICES counted down as one-shots ended. PANIC clears.
+
+Still open, and A1 stays half-ticked until they are answered: the
+**mid-roll kit swap** (nothing in the kit rings long enough to still be
+sounding when the kit changes — PRINT a few seconds on SURFACE, send
+the print to a pad, then swap kits while that pad plays), the
+**open-hat choke**, and **gate vs one-shot**.
 
 ### A2 · KEYS sustains and lets go [EEE6]
 
