@@ -39,7 +39,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.KitShelf
-import com.snipsnap.app.PadPlayer
+import com.snipsnap.app.PadEngine
+import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -59,6 +60,7 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.VoiceAllocator
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
@@ -200,9 +202,47 @@ fun GrooveScreen(
         loading = false
     }
 
-    val padPlayer = remember(kitDir) { PadPlayer() }
-    DisposableEffect(kitDir) { onDispose { padPlayer.release() } }
-    LaunchedEffect(entry.kit) { padPlayer.load(entry) }
+    // The roll and the editor sound through the same `PadEngine` as PLAY,
+    // KIT and KEYS — the last screen to come off M0's interim SoundPool
+    // player, which is gone with it. A groove tick can cross several notes
+    // in one frame, so the allocator is what keeps a busy bar from
+    // outrunning the engine's voices, and what chokes a hat against its
+    // own mute group here exactly as it would under a finger.
+    val engineContext = LocalContext.current
+    val player = remember(kitDir) { PadEngine(deviceSampleRate(engineContext)) }
+    var engineUp by remember(kitDir) { mutableStateOf(false) }
+    DisposableEffect(kitDir) {
+        engineUp = player.start()
+        onDispose { player.close() }
+    }
+    // Keyed on the kit's identity, not the dir: an edit elsewhere (the pad
+    // sheet, a texture) hands back a fresh `kit`, and the bank has to
+    // follow or the roll plays yesterday's audio.
+    LaunchedEffect(entry.kit) { withContext(Dispatchers.IO) { player.load(entry) } }
+    val allocator = remember(kitDir) { VoiceAllocator(maxVoices = PadEngine.MAX_VOICES) }
+    // Endings drained at screen rate, always — not only while the roll is
+    // running, since a tap in the editor makes a voice too.
+    LaunchedEffect(player) {
+        while (true) {
+            withFrameNanos { }
+            for (id in player.drainEnded()) allocator.voiceEnded(id)
+            if (player.needsRestart()) engineUp = player.start()
+        }
+    }
+
+    /**
+     * One pad, one voice. Forced one-shot: neither the roll nor a cell tap
+     * has a release gesture to end a gate pad with, which is how the
+     * SoundPool preview always played too. A slot with nothing on it is
+     * silence rather than a stuck voice — the allocation is handed back.
+     */
+    fun hit(slot: Int) {
+        val pad = entry.kit.pad(slot) ?: return
+        if (!engineUp || !player.isUp()) return
+        val allocation = allocator.noteOn(slot, 1f, pad.muteGroup, oneShot = true)
+        for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
+        if (!player.hit(pad, 1f, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
+    }
 
     if (loading) {
         Box(Modifier.fillMaxSize().lcdPanel(scheme))
@@ -293,6 +333,12 @@ fun GrooveScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
                 playing = false
+                // PLAY's and KIT's lesson: stopping the transport is not
+                // stopping the sound. A backgrounded phone should not keep
+                // a choke group ringing, nor leave the allocator counting
+                // voices whose endings no frame loop is draining.
+                allocator.allOff()
+                player.allOff()
                 flushEditorSave(appScope)
             }
         }
@@ -312,9 +358,14 @@ fun GrooveScreen(
     // hit should still be heard, same as it's still written by MIDI ▸.
     // `noteFor(lane) = 35 + slot` is the writer's whole chromatic map, not
     // a fact specific to the five lanes, so `note - 35` recovers the pad
-    // slot for any note; `PadPlayer.play` no-ops safely on a slot with
-    // nothing loaded.
-    LaunchedEffect(playing, kitDir) {
+    // slot for any note; `hit` is silence on a slot with nothing loaded.
+    // Keyed on the kit too, not just the transport: an edit that reaches
+    // this screen while the roll is running reloads the engine's bank, and
+    // the loop's own `kit` (its tempo) and `hit` (its pads) have to follow
+    // or the roll triggers yesterday's metadata against today's samples.
+    // Restarting costs nothing — `lastPos` is read from `posSteps`, which
+    // is state, so the needle resumes where it was.
+    LaunchedEffect(playing, kitDir, entry.kit) {
         if (!playing) return@LaunchedEffect
         var lastNanos = withFrameNanos { it }
         var lastPos = posSteps
@@ -333,7 +384,7 @@ fun GrooveScreen(
                         val p = n.timePulses.toFloat() / GrooveEdit.STEP_PULSES.toFloat()
                         val crossed = (p > lastPos && p <= np) ||
                             (np >= totalSteps && p + totalSteps > lastPos && p + totalSteps <= np)
-                        if (crossed) padPlayer.play(n.note - 35)
+                        if (crossed) hit(n.note - 35)
                     }
                     if (np >= totalSteps) np -= totalSteps
                     lastPos = np
@@ -377,7 +428,7 @@ fun GrooveScreen(
         eClip = GrooveEdit.toggleStep(c, lane, step)
         editorDirty = true
         editorSaveTick++
-        if (turningOn) padPlayer.play(GrooveEdit.LANE_SLOT.getValue(lane))
+        if (turningOn) hit(GrooveEdit.LANE_SLOT.getValue(lane))
     }
 
     fun clearEditorBar() {

@@ -1549,6 +1549,7 @@ been heard on a phone; then it follows in one small PR.
 | EEE7 | ✓ done: the bench's one number — both engines answer `latencyMillis()` (Oboe's `calculateLatencyMillis`, shared through `OboeOutput.h`, UI thread only per Oboe's own note about data callbacks; -1 with no stream, a native case); `StreamFacts.latency` (`:shell`, tested) turns it into words, counting a zero or negative reading as no answer rather than a miraculous one and naming the shared path either way; PLAY's header and SURFACE's readout poll it once a second off the frame clock — "VOICES 3/32 · 9 MS", "— MS SHARED", `NO STREAM` | CORE + APP | S | bench: the number is there to write down, and it says which path the stream took |
 | EEE8 | ✓ done: the native engines read in full — four doors the review found and a case for each. A reading that is not a number is now refused at the Surface's door rather than latched for ever: the smoothers and the filter carry state across callbacks, so one NaN (a gravity sensor reporting one, and TILT is resonance in XYZ) killed the surface for the session; `clamp01` passed NaN through, since `NaN < 0` and `NaN > 1` are both false. A pad voice's speed and gains come through a door too — a zero speed froze a voice on one frame for ever and a negative one walked the read off the front of the buffer, which `render` never guarded (the suite segfaults without the fix). `PadEngine::stop` now sweeps: a closed stream takes its voices and its queued commands with it, so a route change does not resume notes mid-sample seconds later or leave the allocator holding ids. `PrintBuffer::clear` refuses a live print on the same terms `arm` has since the first round. `TiltSource` keeps its last reading rather than pass a NaN on | CORE + APP | S | 24 native cases green; each of the three engine fixes has a case that fails (or crashes) without it |
 | EEE9 | ✓ done: SPLIT — one sound on three faders. `Separate.stn` has been in `:audio` since the anatomy lesson and only `snipsnap dissect` could reach it; SPLIT puts it on the phone. `Layers` (`:shell`, tested): three strips, each a level, a REVERSE, a mute and a solo; solo silences the others and mute wins over solo; and an exact offline render. Because the STN masks sum to one, **the desk is transparent at rest** — three faders at unity render the source back sample for sample, and a case says so (a 2% gain error trips two). That is also why PRINT needs no capture at all, unlike SURFACE's: the mix is determined by the three buffers and the desk, so a print is `Layers.render` — deterministic, and provably the sound itself when nothing is touched. The engine side (EEE8's successor): reverse as a direction flag, `hitLayers` publishing the group atomically, `setGain` gliding a sounding voice, `loadSnips` banking audio already in hand. The screen is reached from KIT's action row on the pad you want taken apart — a menu of twelve fits no phone, and SPLIT is something you do *to a pad* | CORE + APP | M | bench: sines backwards under a forward transient; a fader move is a glide, not a click; PRINT at rest is the pad you started with |
+| EEE10 | ✓ done: the interim voice retired — GROOVE's roll and its editor taps move to the same `PadEngine` the other four screens share, with a `VoiceAllocator` beside them (a groove tick can cross several notes in one frame, and a hat should choke against its own mute group on the roll exactly as under a finger); backgrounding now stops the *sound* and not merely the transport. `PadPlayer` — M0's one-SoundPool-per-kit interim, main-thread by necessity — is deleted with its last caller, and the comments and docs that named it now name what is actually there | APP | S | bench: the roll sounds like the grid sounds like PLAY, because it is one engine; a busy bar does not outrun its voices |
 
 ## Sequence
 
@@ -1807,6 +1808,8 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ EEE9 (SPLIT): the anatomy lesson on three faders — Layers on the
     JVM, reverse and atomic group starts and gliding faders in the
     engine, and a print that is a render rather than a recording
+  ✓ EEE10 (the interim voice retired): GROOVE onto PadEngine, and
+    PadPlayer deleted — every screen that makes a sound is native now
 
 CORE+APP wave UU: ✓ all landed (2026-09-06) — sound design, both
   directions. The smear (STN transient mask, peak-matched) as a rack
@@ -1910,6 +1913,15 @@ APP wave HHH: ✓ all landed (2026-09-08) — GRAIN FIELD and SURFACE, drawn.
   Both arrived from another branch with no board ever. GRAIN FIELD held up
   as built; SURFACE's readout didn't - MORPH's longest case clipped
   mid-digit at 390, so `TapeText` now allows it a second line.
+
+APP wave III (2026-09-08) — the SHARE/BACKUP chooser hand-off, drawn.
+  DESIGN_GAP.md's last "still undrawn" line: SHARE packing (every door
+  dimmed, PACKING… in the status bar), the system chooser itself
+  (schematic - SnipSnap owns nothing past `Intent.createChooser`), the
+  clean return and the no-receiver return; BACKUP's empty-shelf gate
+  (dimmed before the busy lock, no chooser ever offered) and a partial
+  backup's message box. No code defect: `shareKit`/`backupShelf` already
+  route every branch through the app's two existing answer shapes.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
