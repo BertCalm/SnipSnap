@@ -73,6 +73,12 @@ struct PadCommand {
 class PadEngine : public oboe::AudioStreamDataCallback, public oboe::AudioStreamErrorCallback {
 public:
     static constexpr int kMaxVoices = 32;
+    /**
+     * The fastest a voice may read, in frames per output frame. Six octaves
+     * up is far past anything a kit asks for; the ceiling is here so a
+     * corrupt tune cannot make the loop wrap in render() spin.
+     */
+    static constexpr double kMaxSpeed = 64.0;
 
     explicit PadEngine(int32_t preferredSampleRate);
     ~PadEngine() override;
