@@ -648,7 +648,16 @@ namespace {
 std::vector<float> deskRender(const std::vector<std::vector<float>>& parts,
                               const std::vector<float>& gains,
                               const std::vector<bool>& reverse) {
+    // A desk is three strips over three parts of one length. Anything else
+    // is a test that has drifted, and it should say so rather than read off
+    // the end of a buffer and take the whole suite down with it.
+    CHECK(!parts.empty());
+    CHECK(gains.size() == parts.size());
+    CHECK(reverse.size() == parts.size());
+    if (parts.empty() || gains.size() != parts.size() || reverse.size() != parts.size()) return {};
     const size_t frames = parts[0].size();
+    for (const auto& p : parts) CHECK(p.size() == frames);
+    for (const auto& p : parts) if (p.size() != frames) return {};
     std::vector<float> out(frames, 0.0f);
     for (size_t p = 0; p < parts.size(); ++p) {
         if (gains[p] <= 0.0f) continue;
@@ -697,16 +706,26 @@ TEST(pad_engine_a_split_mix_is_the_offline_render_sample_for_sample) {
     CHECK(e.pushCommands(group, 3));
 
     // Drained in two callbacks, because a buffer boundary is exactly where
-    // a per-callback slip would hide.
-    std::vector<float> heard;
+    // a per-callback slip would hide. Both channels are kept: SPLIT sends
+    // one level per strip to both, so a gain applied to the left alone -
+    // or an interleave off by one - is a mix nobody asked for, and reading
+    // only `out[2 * f]` would never see it.
+    std::vector<float> heardL, heardR;
     for (int c = 0; c < 2; ++c) {
         auto out = callback(e, static_cast<int32_t>(kFrames / 2));
-        for (size_t i = 0; i < out.size(); i += 2) heard.push_back(out[i]);
+        for (size_t i = 0; i < out.size(); i += 2) {
+            heardL.push_back(out[i]);
+            heardR.push_back(out[i + 1]);
+        }
     }
 
     const std::vector<float> printed = deskRender(parts, gains, reverse);
-    CHECK_EQ(static_cast<int>(heard.size()), static_cast<int>(printed.size()));
-    for (size_t f = 0; f < printed.size(); ++f) CHECK_NEAR(heard[f], printed[f], 1e-6);
+    CHECK_EQ(static_cast<int>(heardL.size()), static_cast<int>(printed.size()));
+    CHECK_EQ(static_cast<int>(heardR.size()), static_cast<int>(printed.size()));
+    for (size_t f = 0; f < printed.size(); ++f) {
+        CHECK_NEAR(heardL[f], printed[f], 1e-6);
+        CHECK_NEAR(heardR[f], printed[f], 1e-6);
+    }
 
     // The window is the window: nothing sounds past it, and all three
     // layers report their ending rather than leaving ids with the allocator.
