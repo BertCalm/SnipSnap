@@ -11,12 +11,17 @@ import java.io.File
  * handed to whatever the user picks — a messenger, Drive, the Files app,
  * a cable to a laptop.
  *
- * Files to share are written under `cacheDir/share/` and served through
- * the manifest's `FileProvider` (authority `<package>.files`, paths in
- * `res/xml/share_paths.xml`): a content URI with a read grant, never a
- * raw path, which Android has refused to hand between apps since 7.
- * The cache is the right home — a packed kit is a copy the system may
- * reclaim, and the shelf's own folders are never exposed.
+ * SHARE and BACKUP pack a fresh copy under `cacheDir/share/` (via
+ * [shareDir]) before calling [send] — a packed kit is a copy the system
+ * may reclaim. EXPORT instead calls [send] straight on the file it already
+ * wrote to `getExternalFilesDir("exports")`: no second copy, and sharing
+ * stays additive to the write rather than a replacement for it. Either
+ * way, [send] serves it through the manifest's `FileProvider` (authority
+ * `<package>.files`, paths in `res/xml/share_paths.xml`, which covers both
+ * roots) as a content URI with a read grant, never a raw path — Android
+ * has refused to hand raw paths between apps since 7, and a URI for a path
+ * outside that XML throws at call time. The shelf's own kit folders are
+ * never exposed either way.
  */
 object ShareOut {
 
@@ -52,4 +57,7 @@ object ShareOut {
 
     /** The MIME an `.xpn` or a backup travels as: a ZIP, which every messenger accepts. */
     const val ZIP_MIME = "application/zip"
+
+    /** The MIME EXPORT's MIDI-groove format travels as. */
+    const val MIDI_MIME = "audio/midi"
 }

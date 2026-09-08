@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- What the FileProvider may serve: only the share cache. Packed kits and
-     backups are written there by ShareOut; the shelf's own folders are
-     never exposed. -->
+<!-- What the FileProvider may serve: the share cache, plus EXPORT's own
+     output folder. Packed kits and backups are written to the share cache
+     by ShareOut; EXPORT writes straight to `getExternalFilesDir("exports")`
+     (`external-files-path` maps to that same root) and shares the file it
+     already wrote in place, rather than copying it into the cache first.
+     The shelf's own kit folders are never exposed either way. -->
 <paths>
     <cache-path name="share" path="share/" />
+    <external-files-path name="exports" path="exports/" />
 </paths>

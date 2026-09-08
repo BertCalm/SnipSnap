@@ -2,6 +2,7 @@ package com.snipsnap.app.ui
 
 import android.content.Context
 import android.os.SystemClock
+import android.util.Log
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -42,12 +43,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.ShareOut
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
+import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.ExportOutcome
 import com.snipsnap.kit.Finding
 import com.snipsnap.kit.Kit
@@ -67,6 +70,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private const val TAG = "ExportScreen"
 
 /**
  * A dub's live state, hoisted to `App()` (see `App.kt`'s `exportSession`)
@@ -97,8 +102,16 @@ class ExportSession(val dir: File, val kit: Kit, val model: ExportWizardModel) {
  * the checklist, forwards taps, paces the dub-progress animation on its
  * own clock (the model exposes labels, not a live byte count — see the
  * model's own KDoc), and writes to `getExternalFilesDir("exports")` — no
- * permissions needed, reachable from the Files app. A share-sheet / SAF
- * picker is a known follow-up, out of scope this pass.
+ * permissions needed. The completion stage always says where that landed
+ * (`Copy.EXPORT_SAVED_TO` plus the raw path — DoneContent below), and,
+ * when the write produced one self-contained file (XPN or MIDI — see
+ * [exportShareMime]'s KDoc), offers SHARE through `ShareOut`, the same
+ * FileProvider-backed chooser SHARE and BACKUP already use (`ShareOut.kt`,
+ * `res/xml/share_paths.xml`'s `exports/` entry). A format that writes a
+ * folder, or a file with a companion (the MPC3/SFZ/DecentSampler
+ * multi-file outputs), has no SHARE button — a single content URI can't
+ * carry more than one file, and this screen doesn't zip one up to force
+ * it.
  *
  * [entry] is read fresh from disk on open (`KitStore.load`), the same
  * "a kit is its folder" rule `PadSheetScreen` follows, rather than
@@ -269,7 +282,11 @@ private fun ExportContent(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                onToast("DUB FAILED: ${e.message ?: e.javaClass.simpleName}")
+                // Law 3 in practice: the user gets what failed and what to
+                // do about it, not a Java exception's `message` — that
+                // detail stays in logcat, where it's actually useful.
+                Log.e(TAG, "startWrite: dub failed", e)
+                onToast(Copy.DUB_FAILED)
             } finally {
                 session.busy = false
                 revision++
@@ -282,6 +299,19 @@ private fun ExportContent(
         model.eject()
         revision++
         onToast(Copy.CARD_EJECTED)
+    }
+
+    // SHARE on the completion stage: the file DUB already wrote, handed to
+    // the system chooser through `ShareOut` — the same FileProvider path
+    // SHARE and BACKUP use (App.kt's `shareKit`/`backupAll`), not a second
+    // sharing implementation. Reads `session.lastOutcome` live rather than
+    // closing over a captured value, same as `eject()` above.
+    fun shareExport() {
+        val outcome = session.lastOutcome ?: return
+        val mime = exportShareMime(outcome.format) ?: return
+        if (outcome.companion != null || !outcome.primary.isFile) return
+        val sent = ShareOut.send(context, outcome.primary, mime, kit.name)
+        onToast(if (sent) Copy.EXPORT_SHARE_SENT else Copy.SHARE_NOWHERE)
     }
 
     val filesShown = when {
@@ -307,11 +337,29 @@ private fun ExportContent(
         }
 
         if (model.stage == ExportWizardModel.Stage.COMPLETE) {
+            val outcome = session.lastOutcome
             DoneContent(
-                destinationPath = session.lastOutcome?.primary?.absolutePath ?: "",
+                destinationPath = outcome?.primary?.absolutePath ?: "",
                 scheme = scheme,
                 modifier = Modifier.weight(1f),
             )
+            // Only when the write landed one self-contained file (XPN,
+            // MIDI — see exportShareMime's KDoc): a folder (PROGRAM_FOLDER,
+            // EXPANSION) or a file with a companion (MPC3/SFZ/DecentSampler)
+            // can't travel as a single content URI, so there's nothing here
+            // for SHARE to offer rather than a disabled button that lies
+            // about what a tap would do.
+            if (outcome != null && exportShareMime(outcome.format) != null &&
+                outcome.companion == null && outcome.primary.isFile
+            ) {
+                ActionButton(
+                    Copy.EXPORT_SHARE_LABEL,
+                    scheme,
+                    enabled = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = ::shareExport,
+                )
+            }
             PrimaryAction(label = model.writeLabel, enabled = true, onClick = ::eject)
         } else {
             Column(
@@ -353,8 +401,28 @@ private fun DoneContent(destinationPath: String, scheme: Scheme, modifier: Modif
     ) {
         TapeText(Copy.EXPORT_DONE, TapeType.lcd(25), scheme.ink.tape, maxLines = 2)
         Spacer(Modifier.height(8.dp))
+        // Where the write actually landed, in plain words — regardless of
+        // whether SHARE is offered below, or ever tapped. No claim about
+        // which file browser can reach it, just the fact of it.
+        TapeText(Copy.EXPORT_SAVED_TO, TapeType.pixelSmall, scheme.ink3.tape)
         TapeText(destinationPath, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
     }
+}
+
+/**
+ * Which MIME a completed export would travel under via SHARE, or null when
+ * the format isn't a single self-contained file. Deliberately derived from
+ * [ExportFormat] alone rather than also checked against the outcome here —
+ * the call sites already gate on `outcome.companion == null &&
+ * outcome.primary.isFile`, which is what actually rules out PROGRAM_FOLDER/
+ * EXPANSION (a directory) and MPC3_TRACK/MPC3_PROJECT/SFZ/DECENT_SAMPLER
+ * (a companion file or folder the chooser's single content URI can't also
+ * carry). XPN and MIDI are the two formats where that check can ever pass.
+ */
+private fun exportShareMime(format: ExportFormat): String? = when (format) {
+    ExportFormat.XPN -> ShareOut.ZIP_MIME
+    ExportFormat.MIDI -> ShareOut.MIDI_MIME
+    else -> null
 }
 
 // ---------- PREFLIGHT ----------

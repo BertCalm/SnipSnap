@@ -70,9 +70,10 @@
             </intent-filter>
         </activity>
 
-        <!-- SHARE and BACKUP (F6.3, X3.3) hand files out through this
-             provider: only the share cache (res/xml/share_paths.xml), as
-             content URIs with a read grant, never a raw path. -->
+        <!-- SHARE, BACKUP, and EXPORT hand files out through this provider
+             (res/xml/share_paths.xml: the share cache, plus EXPORT's own
+             `exports/` folder) as content URIs with a read grant, never a
+             raw path. -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.files"

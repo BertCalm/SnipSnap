@@ -298,7 +298,27 @@ object Copy {
     // Export.
     const val EXPORT_DONE = "DUBBED. GO MAKE SOMETHING."
     const val DUB_DONE = "DUB DONE. SOUNDS 3% WARMER NOW."
-    const val CARD_EJECTED = "CARD EJECTED. HAND IT TO THE MPC."
+    /**
+     * EJECT CARD ✓: resets the wizard to READY for another dub or another
+     * kit. That's the whole effect — the file DUB already wrote stays
+     * exactly where it landed; this button doesn't touch it, so the toast
+     * doesn't claim it moved anywhere.
+     */
+    const val CARD_EJECTED = "RESET. WRITE ANOTHER, OR SWITCH KITS."
+    /** The completion stage's own location line, sitting above the raw path. No claim about which file browser can see it — just that it's on the phone. */
+    const val EXPORT_SAVED_TO = "SAVED ON THIS PHONE:"
+    /** EXPORT's SHARE action label, next to EJECT CARD on the completion stage — offered only when the write produced one self-contained file. */
+    const val EXPORT_SHARE_LABEL = "SHARE ▸ SEND THIS FILE"
+    /** EXPORT's own share toast once the chooser is up — the same tail SHARE and BACKUP use. */
+    const val EXPORT_SHARE_SENT = "PICK WHERE IT GOES."
+    /**
+     * WRITE KIT threw mid-dub — something Preflight's checklist couldn't
+     * have caught (storage pulled, disk full, permission yanked). The
+     * exception's own message goes to logcat, not here: it isn't in voice
+     * and isn't actionable, and law 3 means saying what happened, not
+     * quoting Java at somebody.
+     */
+    const val DUB_FAILED = "DUB FAILED. CHECK YOUR STORAGE AND TRY AGAIN."
 
     // Kits.
     const val FRESH_TAPE = "FRESH TAPE. SMELLS LIKE FERRIC OXIDE."
