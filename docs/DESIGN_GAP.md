@@ -82,6 +82,20 @@ Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 > a commit, GRAB reads GRABBING… and both actions dim together behind
 > the one shared `committing` guard). Held up as built - no code defect.
 > `SnipsScreen` and `DeletedKitsScreen` remain queued.
+>
+> **Closed by wave MMM (2026-09-08).** `SnipsScreen` — the shelf-level
+> list of every WAV under `snips/`, reached from the shelf's own
+> `SNIPS ▸` row and never kit-scoped — is drawn on the canvas's page
+> twelve: an empty shelf (a real `0 · 0 B` count rather than a hidden
+> header), a list with one row mid-playback (■ STOP replacing ▶ PLAY)
+> and a second carrying the USED badge (lit only once the cheap
+> tagged-pad gate resolves - never a guessed "not used" - while → PAD
+> and → TAPE stay enabled on every row regardless of playback state,
+> → PAD never gated on an already-open kit per this screen's own fix),
+> and the delete confirmation ("DELETE THIS SNIP? CAN'T UNDO." over a
+> dimmed scrim, the same dialog shape `CaptureBlockedDialog`/
+> `StarterMenu` already use). Held up as built - no code defect.
+> `DeletedKitsScreen` remains queued.
 
 The handoff is unusually implementable — it states tokens in the form Compose
 consumes and names repo symbols (`PeaksPyramid`, `StarterKits`,
