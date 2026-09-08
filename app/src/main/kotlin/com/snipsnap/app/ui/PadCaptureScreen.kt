@@ -331,11 +331,11 @@ private fun HoldRecordAction(label: String, enabled: Boolean, onPress: () -> Uni
             // click action at all) was previously neither announced nor
             // operable. label (this button's own visible text) is the
             // merged accessible name.
-            // mergeDescendants on both branches: without it, the label
-            // TapeText below stays a second, separately-focusable node,
-            // and the enabled branch's action node would carry no name
-            // at all (this Box has no contentDescription of its own —
-            // label, below, is meant to supply it via the merge).
+            // mergeDescendants(true) on both branches: this Box sets no
+            // contentDescription of its own, so the label TapeText below
+            // is what supplies the accessible name — without the merge
+            // flag it would instead stay a second, separately-focusable
+            // node, leaving the action/disabled node nameless.
             .then(
                 if (enabled) {
                     Modifier.semantics(mergeDescendants = true) { onClick(label = "RECORD") { onPress(); onRelease(); true } }

@@ -380,7 +380,10 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
                     onLongClick = { armed = true },
                     onClick = { armed = false },
                 )
-                .semantics {
+                // mergeDescendants stated explicitly (combinedClickable
+                // above already sets it) so this property lands on the
+                // same merged node regardless of modifier-chain order.
+                .semantics(mergeDescendants = true) {
                     if (armed) stateDescription = "FORGET BUTTON REVEALED"
                 },
             verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -504,7 +507,11 @@ private fun KitRow(
                     )
                 },
             )
-            .semantics { if (revealActions) stateDescription = "RENAME AND DELETE REVEALED" }
+            // mergeDescendants stated explicitly (both branches above —
+            // tapeClick and combinedClickable — already set it) so this
+            // property lands on the same merged node regardless of
+            // modifier-chain order.
+            .semantics(mergeDescendants = true) { if (revealActions) stateDescription = "RENAME AND DELETE REVEALED" }
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
