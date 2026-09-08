@@ -262,8 +262,18 @@ class PersonalityTest {
      * real violation is always uppercase too — a lowercase match here
      * would only ever fire on a KDoc comment, which the source-text half
      * of this test skips.
+     *
+     * The number slot accepts either a literal digit run OR a Kotlin
+     * string-template reference (`$n`, `${n}`, `${length}`) — a templated
+     * toast built inside a `fun ...(): String`, exactly the shape
+     * `Copy.tapeTruncated`/`Copy.imported` already use for their real
+     * numbers, is precisely where a future GRAB-style bug is most likely
+     * to hide, and a regex that only caught a hardcoded literal would miss
+     * it entirely (hardcoded literals in `const val`s are already caught
+     * by the reflective field scan below; this is what makes the
+     * source-text scan worth doing at all).
      */
-    private val ceilingClaim = Regex("""LAST\s+\d+\s*(s\b|MIN\b)""")
+    private val ceilingClaim = Regex("""LAST\s+(?:\d+|\$\{?[A-Za-z_]\w*\}?)\s*(s\b|MIN\b)""")
 
     /**
      * Reviewed Copy field names allowed to match [ceilingClaim] anyway,
@@ -299,6 +309,7 @@ class PersonalityTest {
         // Sanity: prove the regex actually distinguishes the real shapes
         // from history before trusting it against production copy.
         assertTrue(ceilingClaim.containsMatchIn("KEEPS LAST 2s"), "sanity check on the regex itself: it must catch the historical GRAB bug's exact shape, or this law is checking nothing")
+        assertTrue(ceilingClaim.containsMatchIn("\"GRAB! KEEPS LAST \${n}s.\""), "sanity check: it must also catch the same shape written inside a templated toast's string interpolation (\$n / \${n}), not just a hardcoded literal — that's the whole reason the source-text scan exists")
         assertFalse(ceilingClaim.containsMatchIn("FIRST 3 MIN KEPT - THE TAPE IS ONLY SO LONG."), "sanity check: a fact about what a truncation already did (FIRST, not LAST) must never be flagged")
         assertFalse(ceilingClaim.containsMatchIn("SNIP! KEPT WHAT IT'S HEARD SINCE LISTEN, UP TO 60s."), "sanity check: the qualified UP TO form must never be flagged")
 
