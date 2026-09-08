@@ -39,6 +39,22 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun isUp(): Boolean = open && running && !NativePads.needsRestart(handle)
 
+    /**
+     * One bank build at a time. The per-call `synchronized(this)` below
+     * keeps each native call safe on its own, but a *build* is a sequence —
+     * begin, add, add, …, commit — and the native builder is one slot.
+     * Two overlapping builds would have the second `beginBank` throw away
+     * the first's half-filled bank, leaving its sample indices pointing
+     * into the other's, and whichever committed last would win with a
+     * mixture of two kits.
+     *
+     * Deliberately *not* `this`: [close] and the command calls synchronize
+     * on the instance, and holding those across megabytes of copying is
+     * what makes a close on the main thread wait. This lock serialises
+     * builders against each other and nothing else.
+     */
+    private val bankLock = Any()
+
     private var sampleIndex: Map<String, Int> = emptyMap()
     private var framesOf: Map<String, Long> = emptyMap()
     private val hits = HashMap<Int, Int>()
@@ -71,7 +87,9 @@ class PadEngine(preferredSampleRate: Int) {
      * that will not read is left out, and its pad plays nothing (a hit
      * resolves to null) rather than something else.
      */
-    fun load(entry: KitShelf.Entry) {
+    fun load(entry: KitShelf.Entry) = synchronized(bankLock) { loadLocked(entry) }
+
+    private fun loadLocked(entry: KitShelf.Entry) {
         val files = LinkedHashSet<String>()
         for (pad in entry.kit.pads) {
             files += pad.sampleFile
@@ -116,7 +134,9 @@ class PadEngine(preferredSampleRate: Int) {
      * monitor across all of them would make a [close] on the main thread —
      * leaving the screen mid-load — wait for every copy to finish.
      */
-    fun loadSnips(snips: List<Snip>): List<Int> {
+    fun loadSnips(snips: List<Snip>): List<Int> = synchronized(bankLock) { loadSnipsLocked(snips) }
+
+    private fun loadSnipsLocked(snips: List<Snip>): List<Int> {
         synchronized(this) {
             if (!open) return emptyList()
             NativePads.beginBank(handle)

@@ -65,11 +65,11 @@ private const val EMPTY_BIN_ARM_MS = 3_000L
  *
  * Opens its own [KitBuilderModel] on [entry]'s folder, same as PAD SHEET,
  * and reports every successful restore back up via [onKitUpdated] so
- * `App`'s copy of the kit stays in step. KIT's `PadPlayer` cache needs no
+ * `App`'s copy of the kit stays in step. KIT's engine bank needs no
  * special invalidation here: `App` renders this screen *instead of*
  * `KitScreen` (see `App.kt`'s `AppScreen.KIT` branch), so `KitScreen`
  * leaves composition while this screen is up and its `DisposableEffect`
- * releases the old `PadPlayer`; a fresh one loads from `entry.kit` the
+ * closes the old `PadEngine`; a fresh one loads from `entry.kit` the
  * moment KIT recomposes on the way back (`LaunchedEffect(entry.kit)`,
  * keyed on structural equality, not identity — any real content change
  * from a restore reloads it). `restoreFromBin` alone never touches
