@@ -300,6 +300,12 @@ object XpnImporter {
                         displaced.deleteRecursively() // a no-op once renameTo already moved it
                         throw IOException("could not land '$kitName' on the shelf - the kit that was there is back, nothing else changed")
                     }
+                    if (!cleared) {
+                        throw IOException(
+                            "could not land '$kitName' on the shelf, and could not clear the wreckage left behind - " +
+                                "a partial, broken '$kitName' may remain at $destDir",
+                        )
+                    }
                     throw IOException("could not land '$kitName' on the shelf - nothing landed")
                 }
                 displaced?.deleteRecursively()
