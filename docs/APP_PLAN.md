@@ -21,7 +21,7 @@ L ≈ a week-plus of sessions).
 | Acceptance artifacts (`testkit/`) | done — 14 downloadable checks, from the diag kit to the one-file Session project |
 | CLI (`:cli`) | done, tested — `snipsnap.jar`: chop → classify → place → export from any desktop; the classifier's real-audio calibration tool (`docs/CLI.md`) |
 | View-models (`:shell`) | done, tested — scheme tables, peaks pyramid, tape-deck transport physics, voice allocation, chop review, kit builder, export wizard, personality system; `:app` binds Compose to these |
-| **The Android app** | **M0 done** — `:app` scaffolded on Compose over all six modules; TapeOS theme, window shell, kit shelf, audible pad grid, scheme picker. M1 (capture) is next |
+| **The Android app** | **M0–M4 built; M5 all but the card picker** — capture (mic, inside, share-in), the tape deck, the kit and chop flow, PLAY/KEYS/SURFACE/GROOVE/SPLIT on the native engine, SYNTH, and the export wizard over `:shell`'s tested models. What is *unproven* is every milestone's exit test: each needs a phone in a hand and none has been run — `docs/BENCH.md` §A is that list |
 | Hardware verification | drums passed; keys, instruments, `.xpn`, tile, Session pending (user) |
 
 The concept doc's "deliberately v2" list (velocity layers, expansions,
@@ -116,7 +116,7 @@ empty while filling itself. `scripts/m0-exit-test.sh` exists to make that
 repeatable; M1's exit test should be written the same way, and run
 before the milestone is called done rather than after.
 
-### M1 — Capture · L, the riskiest milestone, do it second on purpose
+### M1 — Capture · L, the riskiest milestone, do it second on purpose — built; exit test unrun [BENCH A5]
 
 - Foreground service (`mediaProjection` type) owning a `RingBuffer`;
   `AudioRecord` + `AudioPlaybackCaptureConfiguration` writer thread. The
@@ -137,7 +137,7 @@ before the milestone is called done rather than after.
 **Exit test:** snip YouTube audio from inside YouTube; snip the room from
 the mic; share a video in — all three land as buffers in the kit flow.
 
-### M2 — Tape deck (trim) · M
+### M2 — Tape deck (trim) · M — built; exit test unrun [BENCH A7]
 
 The drag-audio-under-a-fixed-needle editor, live twice already in the
 prototypes with zoom, onset snap and the pencil rewind. Wire to real
@@ -145,7 +145,7 @@ buffers: waveform mips for render, `Transients` for snap targets, loop
 preview, COMMIT → `Cleanup` → WAV in the kit folder. **Exit test:** a
 YouTube snip becomes a clean one-shot on a pad, cut on the hit.
 
-### M3 — Kit builder + chop shop · M
+### M3 — Kit builder + chop shop · M — built; exit test unrun [BENCH A7]
 
 The grid screen against `Kit`/`KitAssembler`: assign from shelf, per-pad
 name/colour/level/pan/tune/mute-group/one-shot, hold-to-preview. The chop
@@ -162,15 +162,20 @@ screen LCD 4×4, landscape 8×2, BPM readout. Keys layouts (CHROMATIC/
 SCALE via `Scales`) ride the same grid. **Exit test:** finger drumming
 feels tight enough that you'd play it, on a mid-range phone.
 
-### M5 — Synth + export wizard · M
+### M5 — Synth + export wizard · M — built bar the card picker; exit test unrun
 
 - SYNTH screen: engine panels straight from the prototype (voice tabs,
   macro sliders, scope, SCRAMBLE, AUDITION, RENDER TO PAD) — the engines,
   recipes and regeneration are all core; the screen is knobs on `Patches`.
-- Export wizard: SAF `ACTION_OPEN_DOCUMENT_TREE` to the card, `Preflight`
-  as the checklist UI, format cycler over the drivers that already exist —
-  program folder / expansion / `.xpn` / native `.xtd` / **Session
-  `.xpj`** — dub progress, exact written path on success.
+- Export wizard: `Preflight` as the checklist UI ✓, format cycler over the
+  drivers that already exist ✓, dub progress ✓, exact written path on
+  success ✓ — all of it over `ExportWizardModel`'s tested stage machine.
+  **The one piece not built:** SAF `ACTION_OPEN_DOCUMENT_TREE` to the
+  card. The wizard writes to `getExternalFilesDir("exports")` instead —
+  no permission needed and reachable from the Files app, but it means the
+  last step of the exit test is a manual copy rather than a write straight
+  to the card. `ExportScreen`'s own KDoc has said so since it was written;
+  this is the plan catching up. It is the only open code row in the app.
 
 **Exit test — the product's definition of done:** hear it → snip it →
 trim it → pad it → play it → write the card → it plays on the Live III.
@@ -233,13 +238,19 @@ The queue itself, in value order, artifacts already on the branch under
 ## Part 4 — Suggested order
 
 ```
-desktop session : M0 → M1 → M2 → M3 → M4 → M5        (the app, in order)
+desktop session : M0 ✓ → M1 ✓ → M2 ✓ → M3 ✓ → M4 ✓ → M5 ✓ bar the picker
 this session    : CLI ✓ · :shell view-models ✓ · core support on demand ·
                   odds-and-ends S items · Live III save ingestion when it
                   arrives
-user            : one card session (Part 2) — ideally before M5, so the
-                  export wizard ships against fully verified formats
+user            : the bench — now the whole remaining critical path. Every
+                  milestone above is built and none has passed its exit
+                  test; the card session (Part 2) is the other half
 ```
+
+The order above is spent. What is left is not the next milestone but the
+first hearing: `docs/BENCH.md` §A on a phone, §B on the card, and §C —
+the one firmware save — which alone unblocks HH1.4 and settles the value
+questions the corpus can only guess at.
 
 The dependency graph is honest: nothing in Part 3 blocks the app; the app
 blocks nothing but itself; the card session sharpens M5 but doesn't gate
