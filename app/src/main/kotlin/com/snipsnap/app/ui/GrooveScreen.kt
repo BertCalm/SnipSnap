@@ -359,7 +359,13 @@ fun GrooveScreen(
     // `noteFor(lane) = 35 + slot` is the writer's whole chromatic map, not
     // a fact specific to the five lanes, so `note - 35` recovers the pad
     // slot for any note; `hit` is silence on a slot with nothing loaded.
-    LaunchedEffect(playing, kitDir) {
+    // Keyed on the kit too, not just the transport: an edit that reaches
+    // this screen while the roll is running reloads the engine's bank, and
+    // the loop's own `kit` (its tempo) and `hit` (its pads) have to follow
+    // or the roll triggers yesterday's metadata against today's samples.
+    // Restarting costs nothing — `lastPos` is read from `posSteps`, which
+    // is state, so the needle resumes where it was.
+    LaunchedEffect(playing, kitDir, entry.kit) {
         if (!playing) return@LaunchedEffect
         var lastNanos = withFrameNanos { it }
         var lastPos = posSteps
