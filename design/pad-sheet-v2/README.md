@@ -4,10 +4,12 @@ The canvas that decided wave DDD (the pad sheet folds), exported here so the
 repo carries the decision beside the code. Live canvas:
 https://claude.ai/code/artifact/4b7284cc-6d6b-420e-9af4-236cafadea74
 
-Every `*.dc.html` is one artboard (390 × 844, OILSLICK, the app's own tokens,
-bevel, type ramp and 44 px hit floor lifted from `Schemes.kt`, `Bevel.kt` and
-`TapeTheme.kt`); `canvas.json` lays them out on two pages. Open a board in a
-browser with `support.js` beside it, or seed them back onto a canvas.
+Every `*.dc.html` is one artboard (390 × 844 unless noted, OILSLICK, the
+app's own tokens, bevel, type ramp and 44 px hit floor lifted from
+`Schemes.kt`, `Bevel.kt` and `TapeTheme.kt`); `canvas.json` lays them out on
+pages, one per screen or flow checked, added to as each pass lands rather
+than fixed in number. Open a board in a browser with `support.js` beside it,
+or seed them back onto a canvas.
 
 | Board | What it shows |
 |---|---|
