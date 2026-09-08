@@ -99,8 +99,14 @@ logcat tag to grab when something is wrong.
   should stop on release, PANIC should fade everything in 20 ms, and
   swapping kits mid-roll should go silent rather than crash. "NO STREAM"
   in the header means the device refused every open; check logcat's
-  `PadEngine` line. KIT's own grid still plays through SoundPool until
-  this has been heard (EEE4 moves it).
+  `PadEngine` line.
+- **KIT's grid (native, EEE4)**: open a kit and tap pads on the 4×4
+  grid — same engine PLAY uses, so it should feel just as tight, not
+  the SoundPool preview's decode lag. A closed hat should still cut a
+  ringing open one (the mute group chokes here too); tapping the same
+  pad rapidly should retrigger cleanly rather than layering forever;
+  editing a pad on PAD SHEET and coming back to KIT should play the
+  edited audio, not a stale cache.
 - **KEYS (native)**: open an instrument from the shelf. A held note
   should sustain through its loop and let go over the instrument's
   release; eight notes at once, a ninth steals the oldest; OCT ± and a
