@@ -1,14 +1,21 @@
 package com.snipsnap.app.ui
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.SystemClock
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -57,6 +64,8 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.Severity
+import com.snipsnap.app.CardWriter
+import com.snipsnap.app.PREFS
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.ExportWizardModel
 import com.snipsnap.shell.Layout
@@ -233,6 +242,66 @@ private fun ExportContent(
     // progress readout correct whenever the screen next recomposes, and
     // `session` (not screen-local state) is what makes it correct even
     // after a full unmount/remount, not just a stop/resume.
+    // The card the user picked, or null for the app's own folder. Held in
+    // the same prefs the scheme uses: a card is picked once and expected
+    // to still be the card next time the app opens, which is why the
+    // permission below is taken *persistably* rather than for this
+    // process only.
+    val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
+    var cardTree by remember {
+        mutableStateOf(prefs.getString(PREF_CARD_TREE, null)?.let { Uri.parse(it) })
+    }
+    /**
+     * Hands a card's grant back. A persistable permission outlives the
+     * process — that is the point of it — so nothing but this ends one:
+     * not forgetting the card, not picking a different one, not even
+     * closing the app. Left alone they pile up, and the platform caps how
+     * many an app may hold at once, so the card picked tenth would be the
+     * one that fails. It also keeps the row honest: a card the app says
+     * it is not using is a card the app can no longer read.
+     *
+     * Best effort — releasing a grant that was never held throws, and a
+     * grant that is already gone is the state we wanted anyway.
+     */
+    fun releaseCard(uri: Uri?) {
+        if (uri == null) return
+        runCatching {
+            context.contentResolver.releasePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+    }
+
+    val cardPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { picked ->
+        if (picked == null) return@rememberLauncherForActivityResult
+        // Without this the grant dies with the process and the next dub
+        // fails with a permission error on a card the user did pick.
+        val granted = runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                picked,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }.isSuccess
+        if (!granted) {
+            onToast(Copy.CARD_REFUSED)
+            return@rememberLauncherForActivityResult
+        }
+        // The old one goes back only once the new one is held: released
+        // first, a picker that then refused would leave the user with
+        // neither, having started with a working card.
+        val previous = cardTree
+        if (previous != null && previous != picked) releaseCard(previous)
+        cardTree = picked
+        prefs.edit().putString(PREF_CARD_TREE, picked.toString()).apply()
+    }
+
+    fun forgetCard() {
+        releaseCard(cardTree)
+        cardTree = null
+        prefs.edit().remove(PREF_CARD_TREE).apply()
+    }
+
     fun startWrite() {
         if (session.busy || model.stage != ExportWizardModel.Stage.READY || model.blocked) return
         session.busy = true
@@ -271,7 +340,25 @@ private fun ExportContent(
                 when (result) {
                     is ExportWizardModel.WriteResult.Done -> {
                         session.lastOutcome = result.outcome
-                        onToast(Copy.DUB_DONE)
+                        val card = cardTree
+                        if (card == null) {
+                            onToast(Copy.DUB_DONE)
+                        } else {
+                            // The drivers wrote a real File tree, byte for
+                            // byte as the tests and the golden fixtures
+                            // cover it; this puts that tree on the card.
+                            // Only the outcome's own items — handing over
+                            // the folder they sit in would carry every
+                            // earlier export along with them.
+                            withContext(Dispatchers.IO) {
+                                CardWriter.copy(
+                                    context,
+                                    card,
+                                    listOfNotNull(result.outcome.primary, result.outcome.companion),
+                                )
+                            }
+                            onToast(Copy.DUB_DONE_CARD)
+                        }
                     }
                     is ExportWizardModel.WriteResult.Blocked -> {
                         // Preflight flipped between render and tap (a file
@@ -367,6 +454,16 @@ private fun ExportContent(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 PreflightCard(model.preflight, scheme)
+                CardRow(
+                    tree = cardTree,
+                    enabled = !session.busy,
+                    scheme = scheme,
+                    onPick = { cardPicker.launch(null) },
+                    onForget = {
+                        forgetCard()
+                        onToast(Copy.CARD_FORGOTTEN)
+                    },
+                )
                 FormatCyclerRow(
                     label = model.formatLabel,
                     // `session.busy` (Compose-tracked) rather than
@@ -431,6 +528,13 @@ private fun exportShareMime(format: ExportFormat): String? = when (format) {
 // constant across every scheme (same convention PadSheetScreen's own
 // EJECT → BIN button uses, HANDOFF.md X2 / TAKES+BIN), so a FAIL reads as
 // "red" even in a scheme with no red anywhere else in it.
+/**
+ * The picked card's tree URI. Stored rather than asked for each dub: a
+ * card is picked once and is still the card next time the app opens,
+ * which is the whole reason the grant is taken persistably.
+ */
+private const val PREF_CARD_TREE = "export_card_tree"
+
 private val BIN_RED_BORDER = Color(0xFF6A2020)
 private val BIN_RED_GLOW = Color(0xFFC86050)
 
@@ -476,6 +580,67 @@ private fun FindingRow(finding: Finding, scheme: Scheme) {
 }
 
 // ---------- FORMAT cycler ----------
+
+/**
+ * Where a dub lands. Tapping opens the system's folder picker; holding
+ * gives the card back and sends dubs to the phone again.
+ *
+ * It shows the destination's own last path segment rather than a name
+ * from the provider: a tree URI carries no display name we can read
+ * without another query, and the segment is what the picker showed the
+ * user when they chose it.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CardRow(
+    tree: Uri?,
+    enabled: Boolean,
+    scheme: Scheme,
+    onPick: () -> Unit,
+    onForget: () -> Unit,
+) {
+    val label = if (tree == null) {
+        Copy.CARD_NONE
+    } else {
+        "${Copy.CARD_PICKED} ${tree.lastPathSegment?.substringAfterLast(':')?.substringAfterLast('/').orEmpty().ifBlank { "CARD" }}"
+    }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        TapeText("DESTINATION", TapeType.pixelSmall, scheme.ink3.tape)
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .raisedBevel(scheme)
+                // combinedClickable, not tapeClick, because this row has a
+                // long press and tapeClick has only the one gesture — the
+                // same pair ChopScreen's class chip uses, and the same
+                // reason: it registers real accessibility actions for both.
+                .let {
+                    if (enabled) {
+                        it.combinedClickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onLongClickLabel = if (tree != null) "FORGET THIS CARD" else null,
+                            onLongClick = if (tree != null) onForget else null,
+                            onClick = onPick,
+                        )
+                    } else {
+                        it
+                    }
+                }
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText(
+                label,
+                TapeType.pixel.copy(textAlign = TextAlign.Center),
+                if (enabled) scheme.ink.tape else scheme.ink3.tape,
+                Modifier.fillMaxWidth(),
+                maxLines = 2,
+            )
+        }
+    }
+}
 
 @Composable
 private fun FormatCyclerRow(label: String, enabled: Boolean, scheme: Scheme, onTap: () -> Unit) {
