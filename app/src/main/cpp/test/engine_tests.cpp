@@ -1,6 +1,7 @@
 // The native engines, driven by hand. See CMakeLists.txt.
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <vector>
 
 #include "PadEngine.h"
@@ -410,6 +411,120 @@ TEST(surface_engine_morph_blends_the_corners) {
     for (int i = 0; i < 400; ++i) callback(e, 64);  // let the cutoff glide
     for (int i = 0; i < 100; ++i) pd = std::max(pd, peak(callback(e, 64)));
     CHECK(pa > pd);
+}
+
+TEST(surface_engine_survives_a_reading_that_is_not_a_number) {
+    // A gravity sensor may report NaN, and TILT is resonance in XYZ. Before
+    // the door, one such frame was permanent: the smoothers latch NaN
+    // (`v += k * (NaN - v)`), the filter's ic1eq_/ic2eq_ go with them, and
+    // the surface plays NaN for the rest of the session even after the
+    // reading comes back.
+    SurfaceEngine e(kRate);
+    std::vector<float> tone(100, 0.5f);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    ControlFrame good;
+    good.mode = 1;
+    good.x = 0.5f; good.y = 1.0f; good.tilt = 0.2f; good.z = 0.0f;
+    good.gate = true;
+    e.pushControl(good);
+    float before = 0.0f;
+    for (int i = 0; i < 300; ++i) before = std::max(before, peak(callback(e, 64)));
+    CHECK(before > 0.05f);
+
+    const float nan = std::nanf("");
+    ControlFrame bad = good;
+    bad.tilt = nan;
+    bad.x = nan;
+    bad.y = std::numeric_limits<float>::infinity();
+    e.pushControl(bad);
+    for (int i = 0; i < 200; ++i) {
+        for (float v : callback(e, 64)) CHECK(std::isfinite(v));
+    }
+
+    // And the good reading still works afterwards: nothing latched.
+    e.pushControl(good);
+    float after = 0.0f;
+    for (int i = 0; i < 300; ++i) after = std::max(after, peak(callback(e, 64)));
+    CHECK(after > 0.05f);
+}
+
+TEST(surface_engine_corner_that_is_not_a_number_falls_back) {
+    // The same door on the corners: a bad one reads as its default rather
+    // than poisoning every morph that touches it.
+    SurfaceEngine e(kRate);
+    std::vector<float> tone(100, 0.5f);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    const float nan = std::nanf("");
+    e.setCorner(0, MacroState{nan, nan, nan, nan});
+    ControlFrame f;
+    f.mode = 2;
+    f.gate = true;
+    f.a = 1.0f; f.b = f.c = f.d = 0.0f;
+    e.pushControl(f);
+    float p = 0.0f;
+    for (int i = 0; i < 400; ++i) {
+        auto out = callback(e, 64);
+        for (float v : out) CHECK(std::isfinite(v));
+        p = std::max(p, peak(out));
+    }
+    CHECK(p > 0.05f);  // cutoff fell back to wide open, not to NaN
+}
+
+TEST(pad_engine_refuses_a_speed_that_is_not_a_speed) {
+    // render() only guards the far end of the read: a zero speed freezes a
+    // voice on one frame for ever and a negative one walks pos off the
+    // front of the buffer. Neither is a note.
+    PadEngine& e = seeded();
+    const double bad[3] = {0.0, -1.0, std::nan("")};
+    int32_t id = 1;
+    for (double p : bad) {
+        e.pushCommand(noteOn(id, 0, 0, 1000, 1.0f, 1.0f, p));
+        auto out = callback(e, 64);
+        CHECK_NEAR(peak(out), 0.0f, 1e-7);
+        auto ids = ended(e);
+        CHECK_EQ(static_cast<int>(ids.size()), 1);
+        CHECK_EQ(ids[0], id);
+        ++id;
+    }
+    // A gain that is not a number would make the whole mix one.
+    e.pushCommand(noteOn(9, 0, 500, 1000, std::nanf(""), std::nanf("")));
+    for (float v : callback(e, 64)) CHECK(std::isfinite(v));
+    // And an honest note still plays.
+    e.pushCommand(noteOn(10, 0, 500, 1000));
+    CHECK(peak(callback(e, 64)) > 0.4f);
+}
+
+TEST(pad_engine_a_closed_stream_takes_its_voices_with_it) {
+    // A route change closes the stream and the UI reopens: without the
+    // sweep in stop(), the reopened callback picks those notes up
+    // mid-sample and fires every command queued while there was no stream.
+    PadEngine& e = seeded();
+    e.pushCommand(noteOn(3, 0, 500, 1000));
+    CHECK(peak(callback(e, 64)) > 0.4f);
+    e.pushCommand(noteOn(4, 0, 0, 1000));  // queued, never rendered
+    e.stop();
+    auto ids = ended(e);
+    CHECK_EQ(static_cast<int>(ids.size()), 2);
+    CHECK(std::find(ids.begin(), ids.end(), 3) != ids.end());  // the voice that was sounding
+    CHECK(std::find(ids.begin(), ids.end(), 4) != ids.end());  // and the one still queued
+    CHECK_NEAR(peak(callback(e, 64)), 0.0f, 1e-7);
+}
+
+TEST(print_buffer_refuses_to_be_cleared_under_the_callback) {
+    // `arm` has refused a live print since the first round; `clear` frees
+    // the same frames, so it refuses on the same terms.
+    PrintBuffer p;
+    std::vector<float> block(32, 0.5f);
+    CHECK(p.arm(1000));
+    CHECK(p.record(block.data(), block.size()));
+    CHECK(!p.clear());
+    CHECK(p.state() == PrintBuffer::State::Recording);
+    CHECK_EQ(static_cast<int>(p.framesWritten()), 32);
+    p.requestStop();
+    CHECK(!p.record(block.data(), block.size()));
+    CHECK(p.state() == PrintBuffer::State::Done);
+    CHECK(p.clear());
+    CHECK(p.state() == PrintBuffer::State::Idle);
 }
 
 int main() { return check::runAll(); }

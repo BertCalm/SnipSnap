@@ -39,6 +39,10 @@ class TiltSource(context: Context) : SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent) {
         val gx = event.values.getOrNull(0) ?: return
+        // A sensor that reports NaN is reporting nothing: keep the last
+        // reading. `coerceIn` would pass it on (NaN fails every comparison),
+        // and TILT is a filter macro at the far end of this.
+        if (!gx.isFinite()) return
         tilt = ((gx / SensorManager.GRAVITY_EARTH).coerceIn(-1f, 1f) * 0.5f + 0.5f)
     }
 

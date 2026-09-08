@@ -74,11 +74,20 @@ public:
     size_t framesWritten() const { return written_; }
     const float* data() const { return frames_.data(); }
 
-    /** UI thread: release the memory and go back to Idle. */
-    void clear() {
+    /**
+     * UI thread: release the memory and go back to Idle. Refuses (false)
+     * while a print is Recording, for the reason `arm` does - the callback
+     * is writing into those frames, and freeing them under it is a
+     * use-after-free. Ask with `requestStop` first and take the print when
+     * it says Done. Clearing from Stopping is safe: the callback makes no
+     * further write once it has seen that state.
+     */
+    bool clear() {
+        if (state_.load(std::memory_order_acquire) == State::Recording) return false;
         std::vector<float>().swap(frames_);
         written_ = 0;
         state_.store(State::Idle, std::memory_order_release);
+        return true;
     }
 
 private:

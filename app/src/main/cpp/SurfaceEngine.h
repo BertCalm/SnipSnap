@@ -76,7 +76,7 @@ public:
     PrintBuffer::State printState() const { return print_.state(); }
     size_t printFrames() const { return print_.framesWritten(); }
     const float* printData() const { return print_.data(); }
-    void clearPrint() { print_.clear(); }
+    bool clearPrint() { return print_.clear(); }
 
     // Oboe callbacks (audio thread).
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream* stream, void* audioData, int32_t numFrames) override;

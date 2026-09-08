@@ -48,10 +48,27 @@ double PadEngine::latencyMillis() const {
 }
 
 void PadEngine::stop() {
-    if (!stream_) return;
-    stream_->stop();
-    stream_->close();
-    stream_.reset();
+    if (stream_) {
+        stream_->stop();
+        stream_->close();
+        stream_.reset();
+    }
+    // The stream is closed, so the audio thread is gone and every slot -
+    // the voices, both ends of both rings - is this thread's alone.
+    //
+    // The voices and the queued commands belonged to the stream that just
+    // ended. `start()` calls this first, so without the sweep a route
+    // change (headphones out, then the UI reopens) would pick those notes
+    // up mid-sample seconds later, and the commands queued while there was
+    // no stream would all fire at once into the new one. Every id is
+    // reported ended, or the VoiceAllocator keeps it busy for ever.
+    for (auto& v : voices_) {
+        if (v.active) endVoice(v);
+    }
+    PadCommand dropped;
+    while (commands_.pop(dropped)) {
+        if (dropped.type == PadCommand::Type::NoteOn) ended_.push(dropped.voiceId);
+    }
 }
 
 void PadEngine::onErrorAfterClose(oboe::AudioStream*, oboe::Result error) {
@@ -164,6 +181,19 @@ void PadEngine::apply(const PadCommand& c) {
                 ended_.push(c.voiceId);
                 return;
             }
+            // The speed and the gains cross JNI as raw numbers, and render()
+            // only ever guards the far end of the read. A speed of zero
+            // freezes the read on one frame for ever - the voice can never
+            // reach `end`, so nothing frees it but a steal - and a negative
+            // one walks `pos` back off the front of the buffer. Neither is a
+            // note, so refuse it the way a bad index is refused; the top is
+            // clamped rather than refused, because an absurd tune is still a
+            // note somebody asked for.
+            const double speed = (static_cast<double>(s.rate) / static_cast<double>(sampleRate_)) * c.pitch;
+            if (!std::isfinite(speed) || speed <= 0.0) {
+                ended_.push(c.voiceId);
+                return;
+            }
             Voice& v = freeVoice();
             v.active = true;
             v.id = c.voiceId;
@@ -173,9 +203,12 @@ void PadEngine::apply(const PadCommand& c) {
             // A loop wraps from the last frame back to loopStart; a loop that
             // would be empty (start at or past end - 1) plays once instead.
             v.loopStart = (c.loopStart >= 0 && c.loopStart < end - 1) ? c.loopStart : -1;
-            v.inc = (static_cast<double>(s.rate) / static_cast<double>(sampleRate_)) * c.pitch;
-            v.gainL = c.gainL;
-            v.gainR = c.gainR;
+            v.inc = std::min(speed, kMaxSpeed);
+            // A gain that is not a number would make the whole mix one: the
+            // clamp at the end of render() misses NaN, because both of its
+            // comparisons are false.
+            v.gainL = std::isfinite(c.gainL) ? c.gainL : 0.0f;
+            v.gainR = std::isfinite(c.gainR) ? c.gainR : 0.0f;
             v.fade = 1.0f;
             v.fadeStep = 0.0f;
             v.serial = ++serial_;
