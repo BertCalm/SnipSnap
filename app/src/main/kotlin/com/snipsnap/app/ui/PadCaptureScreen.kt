@@ -26,6 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +68,22 @@ private val GRAB_FRAMES get() = GRAB_SECONDS * MicSessionService.SAMPLE_RATE
 
 /** Shorter than this ⇒ treat as an accidental tap, not a HOLD — toast a hint instead of committing a sliver. */
 private const val MIN_HOLD_MS = 150L
+
+/**
+ * How long a screen-reader RECORD holds for, in milliseconds. A TalkBack
+ * double-tap reports no duration, so the action has to supply one on a
+ * coroutine — and it must clear [MIN_HOLD_MS] by a real margin, not sit
+ * on it. Firing press and release back to back (which this action used to
+ * do) always measured 0ms, so it landed in the accidental-tap branch
+ * every single time: it toasted "HOLD TO RECORD" and committed nothing,
+ * while still reporting success to the screen reader.
+ *
+ * Half a second is long enough to catch an actual hit rather than a
+ * sliver, and short enough that the action still feels like a tap. A
+ * screen-reader user cannot vary this the way a finger can — it is a
+ * fixed, usable take, not a substitute for the sustained gesture.
+ */
+private const val HOLD_A11Y_MS = 500L
 
 private fun padTag(slot: Int): String = "A%02d".format(slot)
 
@@ -312,6 +329,7 @@ private fun HeaderChip(
 @Composable
 private fun HoldRecordAction(label: String, enabled: Boolean, onPress: () -> Unit, onRelease: () -> Unit) {
     val scheme = LocalScheme.current
+    val scope = rememberCoroutineScope()
     val rim =
         if (scheme.id == SchemeId.OILSLICK) {
             Modifier.border(2.dp, oilslickSweep(), RoundedCornerShape(6.dp))
@@ -325,11 +343,14 @@ private fun HoldRecordAction(label: String, enabled: Boolean, onPress: () -> Uni
             .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
             .then(rim)
             // A screen-reader double-tap has no duration to report, so
-            // the accessibility floor here is a full press-then-release
-            // cycle fired back to back — shorter than any real hold, but
-            // operable, where the raw pointerInput below (registering no
-            // click action at all) was previously neither announced nor
-            // operable. label (this button's own visible text) is the
+            // this action supplies one: HOLD_A11Y_MS of real elapsed time
+            // on a coroutine between press and release. Firing the two
+            // back to back — which this did — always measured 0ms, which
+            // is below MIN_HOLD_MS, so it took the accidental-tap branch
+            // every time: it toasted a hint, committed nothing, and still
+            // told the screen reader it had succeeded. An action that
+            // announces and does nothing is worse than no action at all.
+            // label (this button's own visible text) is the
             // merged accessible name.
             // mergeDescendants(true) on both branches: this Box sets no
             // contentDescription of its own, so the label TapeText below
@@ -338,7 +359,16 @@ private fun HoldRecordAction(label: String, enabled: Boolean, onPress: () -> Uni
             // node, leaving the action/disabled node nameless.
             .then(
                 if (enabled) {
-                    Modifier.semantics(mergeDescendants = true) { onClick(label = "RECORD") { onPress(); onRelease(); true } }
+                    Modifier.semantics(mergeDescendants = true) {
+                        onClick(label = "RECORD") {
+                            scope.launch {
+                                onPress()
+                                delay(HOLD_A11Y_MS)
+                                onRelease()
+                            }
+                            true
+                        }
+                    }
                 } else {
                     Modifier.semantics(mergeDescendants = true) { disabled() }
                 },

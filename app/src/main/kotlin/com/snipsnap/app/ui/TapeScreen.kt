@@ -88,6 +88,18 @@ private const val PENCIL_LONG_PRESS_MS = 500L
 private const val PENCIL_A11Y_NUDGE_MS = 250L
 
 /**
+ * How long a screen-reader WIND lasts, in milliseconds — [WindButton]'s
+ * own [PENCIL_A11Y_NUDGE_MS], and for the same reason. `windStart` only
+ * sets a target speed; the tape is moved by the step loop's per-frame
+ * `step()`, so a start/stop pair with no elapsed time between them resets
+ * the target before a single tick can ever observe it and the tape does
+ * not move at all. The action would announce success and do nothing.
+ * Shorter than the pencil's nudge because winding is much faster per
+ * tick than a rewind-by-ear.
+ */
+private const val WIND_A11Y_NUDGE_MS = 180L
+
+/**
  * Ceiling on one step-loop tick's elapsed time, in nanoseconds (~100ms).
  * `withFrameNanos`'s delta goes stale across any gap in frame delivery —
  * backgrounding the app is the big one (the clock's `lastNanos` doesn't
@@ -716,22 +728,35 @@ private fun WindButton(
     onTouch: () -> Unit,
 ) {
     val scheme = LocalScheme.current
+    val scope = rememberCoroutineScope()
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme)
-            // A screen-reader double-tap has no hold duration, so the
-            // floor here is the same start/stop cycle a quick physical
-            // tap-and-release already produces — a brief nudge rather
-            // than a sustained wind, but operable, where the raw
-            // pointerInput below (no click action registered) was
-            // neither. label (this button's own text, e.g. "◄◄") is the
-            // merged accessible name — mergeDescendants is what actually
-            // supplies it; without it this action node carries no name.
+            // A screen-reader double-tap has no hold duration, so this
+            // gives the wind a real one: WIND_A11Y_NUDGE_MS of elapsed
+            // time on a coroutine, the same shape the pencil-rewind
+            // action above uses, rather than a synchronous start/stop
+            // pair. That pair looked like "a brief nudge" but was not
+            // one — `windStart` only sets a target speed and the tape is
+            // moved by the step loop's per-frame `step()`, so stopping
+            // in the same frame reset the target before any tick could
+            // read it and the tape never moved. The action announced
+            // success and did nothing.
+            //
+            // label (this button's own text, e.g. "◄◄") is the merged
+            // accessible name — mergeDescendants is what supplies it;
+            // without it this action node carries no name.
             .semantics(mergeDescendants = true) {
                 onClick {
-                    onStop(); model.windStart(direction); onTouch()
-                    model.windStop(direction); onTouch()
+                    scope.launch {
+                        onStop()
+                        model.windStart(direction)
+                        onTouch()
+                        delay(WIND_A11Y_NUDGE_MS)
+                        model.windStop(direction)
+                        onTouch()
+                    }
                     true
                 }
             }
