@@ -24,12 +24,33 @@ class SpscRing {
 
 public:
     /** Producer side. Returns false when the ring is full (frame dropped). */
-    bool push(const T& item) {
+    bool push(const T& item) { return pushAll(&item, 1); }
+
+    /**
+     * Producer side, as one publication: the consumer sees every one of
+     * [n] items or none of them. The slots are written first and `head`
+     * moves once, with release, after the last of them - so a consumer
+     * that loads `head` with acquire either has not seen the group at all
+     * or has all of it.
+     *
+     * That is what a group of voices meant to sound *together* needs. Push
+     * them one at a time and the callback can fire between two of them,
+     * starting one layer a buffer (a few milliseconds) after its
+     * neighbours - rare, audible as a flam, and miserable to chase.
+     *
+     * Returns false having written nothing when the ring cannot hold all
+     * [n]: a half-published group would be the very thing this prevents.
+     */
+    bool pushAll(const T* items, size_t n) {
+        if (n == 0) return true;
         const size_t head = head_.load(std::memory_order_relaxed);
-        const size_t next = (head + 1) & kMask;
-        if (next == tail_.load(std::memory_order_acquire)) return false;
-        slots_[head] = item;
-        head_.store(next, std::memory_order_release);
+        const size_t tail = tail_.load(std::memory_order_acquire);
+        // One slot always stays empty, so head == tail can only mean empty:
+        // kMask items fit, not CapacityPow2.
+        const size_t used = (head - tail) & kMask;
+        if (n > kMask - used) return false;
+        for (size_t i = 0; i < n; ++i) slots_[(head + i) & kMask] = items[i];
+        head_.store((head + n) & kMask, std::memory_order_release);
         return true;
     }
 

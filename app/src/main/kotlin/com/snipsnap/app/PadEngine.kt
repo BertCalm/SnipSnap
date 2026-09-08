@@ -1,5 +1,6 @@
 package com.snipsnap.app
 
+import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.PadHit
@@ -100,6 +101,43 @@ class PadEngine(preferredSampleRate: Int) {
         }
     }
 
+    /**
+     * Bank audio already in hand rather than files on the shelf — what
+     * SPLIT has once a separation has run. Returns each snip's bank index
+     * in the order given, or an empty list when there is no engine.
+     *
+     * A bank holds one thing at a time, so the kit index [load] built is
+     * cleared with it: after this the engine plays these snips and nothing
+     * else. Copies every sample across the bridge, so keep it off the main
+     * thread.
+     *
+     * Locked per native call rather than for the whole run, exactly as
+     * [load] is: a split's three buffers are megabytes, and holding the
+     * monitor across all of them would make a [close] on the main thread —
+     * leaving the screen mid-load — wait for every copy to finish.
+     */
+    fun loadSnips(snips: List<Snip>): List<Int> {
+        synchronized(this) {
+            if (!open) return emptyList()
+            NativePads.beginBank(handle)
+        }
+        val indices = ArrayList<Int>(snips.size)
+        for (snip in snips) {
+            indices += synchronized(this) {
+                if (!open) return emptyList()
+                NativePads.addSample(handle, snip.samples, snip.channels, snip.sampleRate)
+            }
+        }
+        synchronized(this) {
+            if (!open) return emptyList()
+            NativePads.commitBank(handle)
+            sampleIndex = emptyMap()
+            framesOf = emptyMap()
+            hits.clear()
+        }
+        return indices
+    }
+
     /** The loaded sample's length in frames, or null when it never loaded. */
     @Synchronized
     fun frames(sampleFile: String): Long? = framesOf[sampleFile]
@@ -120,7 +158,56 @@ class PadEngine(preferredSampleRate: Int) {
         return NativePads.noteOn(
             handle, voiceId, sample,
             hit.startFrame, hit.endFrameExclusive, -1L, hit.gainLeft, hit.gainRight, hit.pitchRatio,
+            reverse = false,
         )
+    }
+
+    /**
+     * Start [layers] of one loaded sample together. Every layer reads the
+     * same window at the same speed - they are one sound taken apart - so
+     * only the gains and the direction differ, and they are published to
+     * the callback as one group: three layers can never start a buffer
+     * apart, which would be heard as a flam and chased for hours.
+     *
+     * False means *nothing* was queued: the caller still owns every id it
+     * was given, and none of them is sounding.
+     */
+    @Synchronized
+    fun hitLayers(layers: List<Layer>, startFrame: Long, endFrame: Long, loopStart: Long, pitch: Double): Boolean {
+        if (!isUp() || layers.isEmpty()) return false
+        // The native side refuses a group larger than the engine has voices;
+        // saying so here means four arrays are never built for it.
+        if (layers.size > MAX_VOICES) return false
+        return NativePads.noteOnLayers(
+            handle,
+            IntArray(layers.size) { layers[it].voiceId },
+            IntArray(layers.size) { layers[it].sample },
+            startFrame, endFrame, loopStart,
+            FloatArray(layers.size) { layers[it].gainLeft },
+            FloatArray(layers.size) { layers[it].gainRight },
+            pitch,
+            BooleanArray(layers.size) { layers[it].reverse },
+        )
+    }
+
+    /** One voice of a group: which bank sample, at what level, which way round. */
+    data class Layer(
+        val voiceId: Int,
+        val sample: Int,
+        val gainLeft: Float,
+        val gainRight: Float,
+        val reverse: Boolean,
+    )
+
+    /**
+     * Move a sounding voice's gains, gliding over [glideMs] rather than
+     * stepping. This is what a fader is: retriggering the note on every
+     * drag frame would be a click per frame, and a step per frame a
+     * zipper. A voice that has already ended simply ignores it.
+     */
+    @Synchronized
+    fun setGain(voiceId: Int, gainLeft: Float, gainRight: Float, glideMs: Float = FADER_GLIDE_MS) {
+        if (open) NativePads.setVoiceGain(handle, voiceId, gainLeft, gainRight, glideMs)
     }
 
     /** Stop one voice with a short fade: a choke, a steal, a gate's release. */
@@ -151,6 +238,12 @@ class PadEngine(preferredSampleRate: Int) {
     companion object {
         /** The engine's polyphony; the VoiceAllocator in PLAY is built at the same number. */
         const val MAX_VOICES = 32
+
+        /**
+         * A fader's glide. Long enough that a drag is smooth, short enough
+         * that letting go feels immediate - about two screen frames.
+         */
+        const val FADER_GLIDE_MS = 30f
 
         /** A choke is a short fade, not a cut: long enough to spare the click, short enough to read as a cut. */
         const val CHOKE_FADE_MS = 5f

@@ -198,8 +198,11 @@ void PadEngine::apply(const PadCommand& c) {
             v.active = true;
             v.id = c.voiceId;
             v.sample = c.sample;
-            v.pos = static_cast<double>(start);
+            v.start = start;
             v.end = end;
+            v.reverse = c.reverse;
+            // Backwards starts at the last frame of the window and walks down.
+            v.pos = c.reverse ? static_cast<double>(end - 1) : static_cast<double>(start);
             // A loop wraps from the last frame back to loopStart; a loop that
             // would be empty (start at or past end - 1) plays once instead.
             v.loopStart = (c.loopStart >= 0 && c.loopStart < end - 1) ? c.loopStart : -1;
@@ -209,9 +212,26 @@ void PadEngine::apply(const PadCommand& c) {
             // comparisons are false.
             v.gainL = std::isfinite(c.gainL) ? c.gainL : 0.0f;
             v.gainR = std::isfinite(c.gainR) ? c.gainR : 0.0f;
+            v.targetL = v.gainL;
+            v.targetR = v.gainR;
+            v.gainRamp = 0;  // a new note starts where it was told, no glide
             v.fade = 1.0f;
             v.fadeStep = 0.0f;
             v.serial = ++serial_;
+            return;
+        }
+        case PadCommand::Type::SetGain: {
+            // A fader move on a voice already sounding. Gliding rather than
+            // jumping, because a drag sends one of these per screen frame
+            // and a step per frame is a zipper.
+            const float glide = std::max(1.0f, c.fadeMs * 0.001f * static_cast<float>(sampleRate_));
+            for (auto& v : voices_) {
+                if (!v.active || v.id != c.voiceId) continue;
+                // A gain that is not a number leaves the fader where it was.
+                v.targetL = std::isfinite(c.gainL) ? c.gainL : v.gainL;
+                v.targetR = std::isfinite(c.gainR) ? c.gainR : v.gainR;
+                v.gainRamp = static_cast<int32_t>(glide);
+            }
             return;
         }
         case PadCommand::Type::Stop:
@@ -236,10 +256,23 @@ void PadEngine::render(float* out, int32_t numFrames) {
         const float* f = s.frames.data();
         const int64_t last = v.end - 1;
         for (int32_t i = 0; i < numFrames; ++i) {
-            // A fast voice over a short loop can cross the end more than
-            // once in one frame: wrap until the read is back inside.
-            while (v.loopStart >= 0 && v.pos >= static_cast<double>(last)) {
-                v.pos -= static_cast<double>(last - v.loopStart);
+            // A fast voice over a short loop can cross the far end more
+            // than once in one frame: wrap until the read is back inside.
+            // Backwards the loop runs the other way - off the bottom at
+            // loopStart, back up to the last frame - and the window ends
+            // at `start` rather than at `end`.
+            if (v.reverse) {
+                while (v.loopStart >= 0 && v.pos <= static_cast<double>(v.loopStart)) {
+                    v.pos += static_cast<double>(last - v.loopStart);
+                }
+                if (v.pos < static_cast<double>(v.start)) {
+                    endVoice(v);
+                    break;
+                }
+            } else {
+                while (v.loopStart >= 0 && v.pos >= static_cast<double>(last)) {
+                    v.pos -= static_cast<double>(last - v.loopStart);
+                }
             }
             const int64_t i0 = static_cast<int64_t>(v.pos);
             if (i0 >= v.end) {
@@ -258,6 +291,14 @@ void PadEngine::render(float* out, int32_t numFrames) {
                 const float m = f[i0] + (f[i1] - f[i0]) * frac;
                 l = r = m;
             }
+            // The glide: an exact linear arrival, because closing 1/n of
+            // what is left with n falling by one each sample *is* a line.
+            if (v.gainRamp > 0) {
+                const float step = 1.0f / static_cast<float>(v.gainRamp);
+                v.gainL += (v.targetL - v.gainL) * step;
+                v.gainR += (v.targetR - v.gainR) * step;
+                --v.gainRamp;
+            }
             if (v.fadeStep > 0.0f) {
                 v.fade -= v.fadeStep;
                 if (v.fade <= 0.0f) {
@@ -267,7 +308,10 @@ void PadEngine::render(float* out, int32_t numFrames) {
             }
             out[2 * i] += l * v.gainL * v.fade;
             out[2 * i + 1] += r * v.gainR * v.fade;
-            v.pos += v.inc;
+            // The interpolation above is positional, not directional: the
+            // pair either side of `pos` is the same pair whichever way the
+            // read is travelling. Only the step changes sign.
+            v.pos += v.reverse ? -v.inc : v.inc;
         }
     }
     // Thirty-two voices at kit levels rarely sum past full scale; when they
