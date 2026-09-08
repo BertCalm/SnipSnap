@@ -268,6 +268,19 @@ Java_com_snipsnap_app_NativePads_noteOnLayers(
     return pads(handle)->pushCommands(cs, static_cast<size_t>(n)) ? JNI_TRUE : JNI_FALSE;
 }
 
+/** A fader on a voice already sounding: glide its gains, never retrigger it. */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativePads_setVoiceGain(
+    JNIEnv*, jobject, jlong handle, jint voiceId, jfloat gainL, jfloat gainR, jfloat glideMs) {
+    PadCommand c;
+    c.type = PadCommand::Type::SetGain;
+    c.voiceId = voiceId;
+    c.gainL = gainL;
+    c.gainR = gainR;
+    c.fadeMs = glideMs;
+    pads(handle)->pushCommand(c);
+}
+
 JNIEXPORT void JNICALL
 Java_com_snipsnap_app_NativePads_stopVoice(JNIEnv*, jobject, jlong handle, jint voiceId, jfloat fadeMs) {
     PadCommand c;

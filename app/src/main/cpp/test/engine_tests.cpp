@@ -594,6 +594,47 @@ TEST(pad_engine_a_group_reaches_the_callback_whole) {
     CHECK(ended(e).empty());
 }
 
+TEST(pad_engine_a_fader_glides_and_arrives_exactly) {
+    // Sample 1 is a flat stereo 0.5 / -0.25, so the output *is* the gain.
+    // A fader sends one of these per screen frame while a finger drags:
+    // stepping would zipper, and retriggering would click.
+    PadEngine& e = seeded();
+    e.pushCommand(noteOn(5, 1, 0, 100, 1.0f, 1.0f));
+    auto out = callback(e, 1);
+    CHECK_NEAR(out[0], 0.5f, 1e-5);
+
+    PadCommand fader;
+    fader.type = PadCommand::Type::SetGain;
+    fader.voiceId = 5;
+    fader.gainL = fader.gainR = 0.2f;
+    fader.fadeMs = 1.0f;  // 48 frames at 48 kHz
+    e.pushCommand(fader);
+
+    // Half way through the glide it is half way there - the arrival is a
+    // straight line, not an ever-slowing curve.
+    out = callback(e, 24);
+    CHECK_NEAR(out[0], 0.5f * (1.0f - 0.8f / 48.0f), 1e-4);  // one sample in
+    CHECK_NEAR(out[2 * 23], 0.5f * 0.6f, 1e-4);              // twenty-four in
+
+    // And it lands on the number asked for, then stays there.
+    out = callback(e, 48);
+    CHECK_NEAR(out[2 * 47], 0.5f * 0.2f, 1e-4);
+    out = callback(e, 8);
+    CHECK_NEAR(out[0], 0.5f * 0.2f, 1e-4);
+    CHECK_NEAR(out[1], -0.25f * 0.2f, 1e-4);
+}
+
+TEST(pad_engine_a_fader_on_a_voice_that_is_gone_is_ignored) {
+    PadEngine& e = seeded();
+    PadCommand fader;
+    fader.type = PadCommand::Type::SetGain;
+    fader.voiceId = 99;  // never started
+    fader.gainL = fader.gainR = 1.0f;
+    e.pushCommand(fader);
+    CHECK_NEAR(peak(callback(e, 32)), 0.0f, 1e-7);
+    CHECK(ended(e).empty());  // and it is not an ending, either
+}
+
 TEST(ring_publishes_a_group_whole_or_not_at_all) {
     SpscRing<int, 8> ring;
     const int three[3] = {1, 2, 3};

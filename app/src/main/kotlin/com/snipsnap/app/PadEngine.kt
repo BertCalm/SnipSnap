@@ -137,6 +137,9 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun hitLayers(layers: List<Layer>, startFrame: Long, endFrame: Long, loopStart: Long, pitch: Double): Boolean {
         if (!isUp() || layers.isEmpty()) return false
+        // The native side refuses a group larger than the engine has voices;
+        // saying so here means four arrays are never built for it.
+        if (layers.size > MAX_VOICES) return false
         return NativePads.noteOnLayers(
             handle,
             IntArray(layers.size) { layers[it].voiceId },
@@ -157,6 +160,17 @@ class PadEngine(preferredSampleRate: Int) {
         val gainRight: Float,
         val reverse: Boolean,
     )
+
+    /**
+     * Move a sounding voice's gains, gliding over [glideMs] rather than
+     * stepping. This is what a fader is: retriggering the note on every
+     * drag frame would be a click per frame, and a step per frame a
+     * zipper. A voice that has already ended simply ignores it.
+     */
+    @Synchronized
+    fun setGain(voiceId: Int, gainLeft: Float, gainRight: Float, glideMs: Float = FADER_GLIDE_MS) {
+        if (open) NativePads.setVoiceGain(handle, voiceId, gainLeft, gainRight, glideMs)
+    }
 
     /** Stop one voice with a short fade: a choke, a steal, a gate's release. */
     @Synchronized
@@ -186,6 +200,12 @@ class PadEngine(preferredSampleRate: Int) {
     companion object {
         /** The engine's polyphony; the VoiceAllocator in PLAY is built at the same number. */
         const val MAX_VOICES = 32
+
+        /**
+         * A fader's glide. Long enough that a drag is smooth, short enough
+         * that letting go feels immediate - about two screen frames.
+         */
+        const val FADER_GLIDE_MS = 30f
 
         /** A choke is a short fade, not a cut: long enough to spare the click, short enough to read as a cut. */
         const val CHOKE_FADE_MS = 5f

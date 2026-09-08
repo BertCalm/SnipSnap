@@ -34,7 +34,7 @@ struct Bank {
  * frames, these gains, this speed".
  */
 struct PadCommand {
-    enum class Type : int32_t { NoteOn = 0, Stop = 1, AllOff = 2 };
+    enum class Type : int32_t { NoteOn = 0, Stop = 1, AllOff = 2, SetGain = 3 };
     Type type = Type::NoteOn;
     int32_t voiceId = 0;
     int32_t sample = -1;
@@ -52,7 +52,7 @@ struct PadCommand {
      * real speed still means what it says.
      */
     bool reverse = false;
-    /** Stop / AllOff: the fade, so a choke is a short fade and not a cut. */
+    /** Stop / AllOff: the fade, so a choke is a short fade and not a cut. SetGain: the glide. */
     float fadeMs = 5.0f;
     /** Stamped by pushCommand: the bank the sample index belongs to. */
     uint32_t generation = 0;
@@ -151,6 +151,11 @@ private:
         int64_t loopStart = -1;
         double inc = 1.0;
         bool reverse = false;
+        // Where the gains are heading and how many frames are left of the
+        // glide. A fader on a sounding voice moves it here rather than
+        // retriggering the note, which would be a click per drag frame.
+        float targetL = 0.0f, targetR = 0.0f;
+        int32_t gainRamp = 0;
         float gainL = 0.0f, gainR = 0.0f;
         float fade = 1.0f;
         float fadeStep = 0.0f;  // > 0 while stopping
