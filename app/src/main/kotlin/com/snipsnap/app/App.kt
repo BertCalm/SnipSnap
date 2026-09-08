@@ -66,6 +66,7 @@ import com.snipsnap.app.ui.StubScreen
 import com.snipsnap.app.ui.SurfaceScreen
 import com.snipsnap.app.ui.SynthScreen
 import com.snipsnap.app.ui.TakesBinScreen
+import com.snipsnap.app.ui.TAPE_LOAD_MAX_SEC
 import com.snipsnap.app.ui.TapeScreen
 import com.snipsnap.app.ui.TapeText
 import com.snipsnap.app.ui.TitleBar
@@ -758,7 +759,14 @@ fun App(shelf: KitShelf) {
         scope.launch {
             try {
                 val reading = withContext(Dispatchers.IO) {
-                    val snip = InstantKit.slice(WavReader.read(file), range)
+                    // `file` is `tapeData.sourceFile` — the same file TAPE
+                    // itself only ever decoded up to TAPE_LOAD_MAX_SEC, and
+                    // `range` is a selection TAPE could only have produced
+                    // against that capped view. Re-decoding with the same
+                    // cap (not the unbounded `WavReader.read`) reproduces
+                    // the identical frame count TAPE showed, so `range`
+                    // stays valid — see TAPE_LOAD_MAX_SEC's own KDoc.
+                    val snip = InstantKit.slice(WavReader.readCapped(file, TAPE_LOAD_MAX_SEC).snip, range)
                     val r = ReadGroove.read(snip, target.kit, file.nameWithoutExtension)
                     ReadGroove.land(target.dir, r)
                     r
@@ -768,6 +776,11 @@ fun App(shelf: KitShelf) {
                 screen = AppScreen.GROOVE
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: OutOfMemoryError) {
+                // TAPE_LOAD_MAX_SEC's own safety net, same as TapeScreen's
+                // readMono: an Error, not an Exception, so it needs its own
+                // catch or the process dies instead of this toast firing.
+                toast = Copy.TAPE_TOO_BIG
             } catch (e: IllegalArgumentException) {
                 toast = Copy.grooveRefused(e.message ?: "the ear refused")
             } catch (e: Exception) {
@@ -795,7 +808,10 @@ fun App(shelf: KitShelf) {
         scope.launch {
             try {
                 val felt = withContext(Dispatchers.IO) {
-                    val snip = InstantKit.slice(WavReader.read(file), range)
+                    // Same cap-preserving re-decode as readGroove above —
+                    // `file` is `tapeData.sourceFile`, `range` only ever
+                    // valid against TAPE's own capped view.
+                    val snip = InstantKit.slice(WavReader.readCapped(file, TAPE_LOAD_MAX_SEC).snip, range)
                     val f = ReadGroove.feel(snip, target.dir, file.nameWithoutExtension)
                     ReadGroove.keepPocket(f.pocket, context.filesDir)
                     f
@@ -805,6 +821,10 @@ fun App(shelf: KitShelf) {
                 screen = AppScreen.GROOVE
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: OutOfMemoryError) {
+                // See readGroove's own catch above: an Error, not an
+                // Exception, so it needs its own catch or the process dies.
+                toast = Copy.TAPE_TOO_BIG
             } catch (e: IllegalArgumentException) {
                 toast = Copy.feelRefused(e.message ?: "the ear refused")
             } catch (e: Exception) {
@@ -831,6 +851,12 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 // Leaving the screen is not a failure; let the scope have it.
                 throw e
+            } catch (e: OutOfMemoryError) {
+                // shelf.instantKit re-decodes `tapeData.sourceFile` through
+                // WavReader.readCapped now (see KitShelf.instantKit), but
+                // this is still an Error, not an Exception, so it needs its
+                // own catch — same as TapeScreen's readMono.
+                toast = Copy.TAPE_TOO_BIG
             } catch (e: Exception) {
                 // Law 3: when it breaks, say exactly what happened.
                 toast = "INSTANT KIT FAILED: ${e.message ?: e.javaClass.simpleName}"

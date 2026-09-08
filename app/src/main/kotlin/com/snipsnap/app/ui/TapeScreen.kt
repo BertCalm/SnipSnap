@@ -144,8 +144,16 @@ private const val WAVEFORM_MIN_H = 96
  * kit, so that branch's transient worst case is a multiple of this
  * number, not this number itself — still a routine improvement over the
  * old unbounded × 16, just not literally bounded at 106 MB.
+ *
+ * `internal`, not `private`: the same cap applies wherever `App.kt`
+ * (`readGroove`, `stealFeel`, `instantKit`) or `ChopScreen.kt`
+ * (`loadFromCommit`) re-decode a file this screen already showed —
+ * `tapeData.sourceFile`, or a `TapeCommit` built from it — since TAPE's
+ * selection ranges are only ever valid against the same capped frame
+ * count. A second copy of `600f` there would be exactly the kind of
+ * drift this comment is trying to prevent.
  */
-private const val TAPE_LOAD_MAX_SEC = 600f
+internal const val TAPE_LOAD_MAX_SEC = 600f
 
 /** What [readMono] decoded: the audio, and whether [TAPE_LOAD_MAX_SEC] cut it short. */
 private class MonoRead(val snip: Snip, val truncated: Boolean)

@@ -116,9 +116,16 @@ fun ChopScreen(
         // The decode (and the classifier's first pass over every slice) are
         // both real work on real audio — off the main thread, matching
         // TapeScreen's own `loadLongestTape`.
-        val loaded = withContext(Dispatchers.IO) {
-            loadChopSource(entry, lastCommit)?.let { (file, snip) -> file to ChopReviewModel.chop(snip) }
+        val (oomEncountered, loaded) = withContext(Dispatchers.IO) {
+            val result = loadChopSource(entry, lastCommit)
+            val built = result.found?.let { (file, snip) -> file to ChopReviewModel.chop(snip) }
+            result.oomEncountered to built
         }
+        // Same courtesy as TapeScreen's own toast: said even when the kit
+        // fallback above went on to load something else, since the commit
+        // file that hit TAPE_LOAD_MAX_SEC's OOM safety net is still real
+        // and still unreadable from CHOP.
+        if (oomEncountered) onToast(Copy.TAPE_TOO_BIG)
         if (loaded == null) {
             emptyReason = if (lastCommit != null) Copy.CHOP_SOURCE_GONE else Copy.EMPTY_SHELF
         } else {
@@ -161,71 +168,104 @@ private fun EmptyChop(scheme: Scheme, message: String) {
     }
 }
 
-/** A commit's file mono-mixed and cropped to its range — the exact cut TAPE made. */
-private fun loadFromCommit(commit: TapeCommit): Snip? {
-    if (!commit.sourceFile.isFile) return null
+/**
+ * A commit's file mono-mixed and cropped to its range — the exact cut TAPE
+ * made. `commit.sourceFile` is `tapeData.sourceFile` from TAPE, so
+ * `commit.range` is only ever valid against the capped view TAPE actually
+ * decoded — reading through [WavReader.readCapped] with the same
+ * [TAPE_LOAD_MAX_SEC] reproduces that exact frame count, instead of
+ * [WavReader.read]'s unbounded whole-file decode re-inviting the same OOM
+ * TAPE_LOAD_MAX_SEC exists to prevent. [OutOfMemoryError] is caught
+ * separately from [Exception] — same reasoning as [WavReader]'s own
+ * `readMono` in `TapeScreen.kt`: it's an [Error], not an [Exception], so a
+ * plain `catch (e: Exception)` would never have caught it.
+ */
+private fun loadFromCommit(commit: TapeCommit): CommitLoad {
+    if (!commit.sourceFile.isFile) return CommitLoad.Unreadable
     val mono = try {
-        Cleanup.toMono(WavReader.read(commit.sourceFile))
+        Cleanup.toMono(WavReader.readCapped(commit.sourceFile, TAPE_LOAD_MAX_SEC).snip)
+    } catch (e: OutOfMemoryError) {
+        return CommitLoad.OutOfMemory
     } catch (e: Exception) {
-        return null
+        return CommitLoad.Unreadable
     }
     val start = commit.range.first.coerceIn(0, mono.frameCount)
     val end = (commit.range.last + 1).coerceIn(start, mono.frameCount)
-    if (end <= start) return null
-    return Snip(mono.samples.copyOfRange(start, end), channels = 1, sampleRate = mono.sampleRate)
+    if (end <= start) return CommitLoad.Unreadable
+    return CommitLoad.Ok(Snip(mono.samples.copyOfRange(start, end), channels = 1, sampleRate = mono.sampleRate))
 }
 
-/** The open kit's longest sample, mono-mixed — TapeScreen's own fallback. */
-private fun loadLongestSample(entry: KitShelf.Entry): Pair<File, Snip>? {
-    val file = longestSampleFile(entry) ?: return null
-    val mono = try {
-        Cleanup.toMono(WavReader.read(file))
-    } catch (e: Exception) {
-        return null
-    }
-    return file to mono
+/** [loadFromCommit]'s answer: the cropped [Snip] on success, an ordinary unreadable-file miss, or [TAPE_LOAD_MAX_SEC]'s own OOM safety net catching what the cap didn't prevent. */
+private sealed class CommitLoad {
+    class Ok(val snip: Snip) : CommitLoad()
+    object Unreadable : CommitLoad()
+    object OutOfMemory : CommitLoad()
 }
+
+/** [loadLongestSample]'s answer: the file+snip it settled on (if any), and whether [TAPE_LOAD_MAX_SEC]'s OOM safety net was hit skipping past a candidate pad along the way — same shape as `TapeScreen.loadLongestFromKit`'s own `KitLongestResult`. */
+private class LongestSampleResult(val found: Pair<File, Snip>?, val oomEncountered: Boolean)
 
 /**
- * The file among [entry]'s pads with the most decoded frames —
- * [loadLongestSample]'s own fallback source, and this file's only caller.
- * Retroactive-snip Task 4 gave `TapeScreen.loadLongestTape` a
- * higher-priority source list ahead of this exact rule (the newest snip,
- * then the last commit's own file, both checked before TAPE's own private
- * per-pad fallback) — so this is no longer "the exact rule TapeScreen
- * uses to pick the tape" the way an earlier version of this KDoc claimed;
- * TapeScreen keeps its own private copy of the per-pad fallback now
- * (`loadLongestFromKit`) rather than calling this one. Also no longer
- * used by `App`'s COMMIT handler — TAPE hands COMMIT the exact file it
- * was scrubbing directly, since re-deriving it via this function would
- * pick the wrong file whenever the commit came from a snip.
+ * The open kit's longest sample, mono-mixed — TapeScreen's own fallback
+ * (`loadLongestFromKit`) for when neither a snip nor a last-commit source
+ * resolves, replicated here for CHOP's own no-commit case. Every pad is a
+ * file MUTATE's arbitrary file picker could have made arbitrarily long, so
+ * this reads through [WavReader.readCapped] with the same
+ * [TAPE_LOAD_MAX_SEC] TapeScreen uses — the same reasoning as
+ * [loadFromCommit] above, just scanning every pad instead of one file.
+ * Two pads both past the cap tie at the same capped frame count; "longest"
+ * becomes first-pad-wins for that tie, which matches
+ * `loadLongestFromKit`'s own post-cap behavior rather than diverging from
+ * it. Decodes each candidate once (kept alongside its file while scanning)
+ * rather than once to measure it and again to return it.
  */
-internal fun longestSampleFile(entry: KitShelf.Entry): File? {
-    var longest: File? = null
-    var longestFrames = -1
+private fun loadLongestSample(entry: KitShelf.Entry): LongestSampleResult {
+    var longestFile: File? = null
+    var longest: Snip? = null
+    var oomEncountered = false
     for (pad in entry.kit.pads) {
         val f = File(entry.dir, pad.sampleFile)
         if (!f.isFile) continue
-        val frames = try {
-            Cleanup.toMono(WavReader.read(f)).frameCount
+        val mono = try {
+            Cleanup.toMono(WavReader.readCapped(f, TAPE_LOAD_MAX_SEC).snip)
+        } catch (e: OutOfMemoryError) {
+            oomEncountered = true
+            continue
         } catch (e: Exception) {
             continue
         }
-        if (frames > longestFrames) {
-            longest = f
-            longestFrames = frames
+        if (longest == null || mono.frameCount > longest!!.frameCount) {
+            longest = mono
+            longestFile = f
         }
     }
-    return longest
+    val file = longestFile
+    val mono = longest
+    return if (file != null && mono != null) {
+        LongestSampleResult(file to mono, oomEncountered)
+    } else {
+        LongestSampleResult(null, oomEncountered)
+    }
 }
 
+/** [loadChopSource]'s answer: the source it settled on (if any), and whether [TAPE_LOAD_MAX_SEC]'s OOM safety net was hit reading the commit along the way. */
+private class ChopSourceResult(val found: Pair<File, Snip>?, val oomEncountered: Boolean)
+
 /** Priority order from the brief: a TAPE commit first, else the open kit's longest sample. */
-private fun loadChopSource(entry: KitShelf.Entry?, lastCommit: TapeCommit?): Pair<File, Snip>? {
-    lastCommit?.let { commit -> loadFromCommit(commit)?.let { return commit.sourceFile to it } }
+private fun loadChopSource(entry: KitShelf.Entry?, lastCommit: TapeCommit?): ChopSourceResult {
+    var oomEncountered = false
+    if (lastCommit != null) {
+        when (val outcome = loadFromCommit(lastCommit)) {
+            is CommitLoad.Ok -> return ChopSourceResult(lastCommit.sourceFile to outcome.snip, oomEncountered)
+            CommitLoad.OutOfMemory -> oomEncountered = true
+            CommitLoad.Unreadable -> {}
+        }
+    }
     // The kit fallback is the only branch that needs a kit — skip it
     // outright when none is open rather than let it run on a null entry.
-    if (entry == null) return null
-    return loadLongestSample(entry)
+    if (entry == null) return ChopSourceResult(null, oomEncountered)
+    val kit = loadLongestSample(entry)
+    return ChopSourceResult(kit.found, oomEncountered || kit.oomEncountered)
 }
 
 private fun modeLabel(mode: ChopReviewModel.ChopMode): String = when (mode) {

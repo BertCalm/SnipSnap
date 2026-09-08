@@ -3,6 +3,7 @@ package com.snipsnap.app
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
+import com.snipsnap.app.ui.TAPE_LOAD_MAX_SEC
 import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.OutsideSheet
@@ -147,9 +148,16 @@ class KitShelf(val root: File) {
      * chopped with the defaults and landed on the shelf as a kit named after
      * the file — CHOP's own result with nothing touched. Seconds-long; the
      * caller shows a busy line.
+     *
+     * [file] is `tapeData.sourceFile` from TAPE, so [range] is only ever
+     * valid against the capped view TAPE actually showed — reading through
+     * [WavReader.readCapped] with the same [TAPE_LOAD_MAX_SEC] reproduces
+     * that exact frame count rather than [WavReader.read]'s unbounded
+     * whole-file decode. Can throw [OutOfMemoryError]; the caller (`App.kt`'s
+     * `instantKit`) catches it separately from `Exception`.
      */
     fun instantKit(file: File, range: IntRange): Pair<Entry, com.snipsnap.shell.InstantKit.Result> {
-        val snip = com.snipsnap.shell.InstantKit.slice(WavReader.read(file), range)
+        val snip = com.snipsnap.shell.InstantKit.slice(WavReader.readCapped(file, TAPE_LOAD_MAX_SEC).snip, range)
         root.mkdirs()
         val name = freshName("${file.nameWithoutExtension} KIT")
         val result = com.snipsnap.shell.InstantKit.build(snip, name, File(root, name))
