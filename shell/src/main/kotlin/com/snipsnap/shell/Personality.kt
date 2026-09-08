@@ -126,6 +126,20 @@ object Copy {
     const val ODOMETER_OFF = "BACK TO REAL TIME."
     const val DELETE_SNIP = "EJECTED. THE BIN KEEPS IT 30 DAYS."
 
+    // ---- KIT: teaching the one gesture that opens PAD SHEET ----
+    /**
+     * Shown on opening a kit, at most a few times, and never again once the
+     * user has actually held a pad. PAD SHEET is reachable ONLY by a long
+     * press on a filled pad — no button, no menu entry — and it holds every
+     * treatment, shape, tune and mutate control in the app. Without this the
+     * gesture is undiscoverable, and a feature nobody can find is a feature
+     * they don't have.
+     *
+     * Says what to do and what it gets, in that order, and names the thing
+     * it opens so the toast and the screen agree.
+     */
+    const val PAD_SHEET_HINT = "HOLD A PAD TO OPEN ITS PAD SHEET — SHAPE, TUNE, TREAT."
+
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."
 

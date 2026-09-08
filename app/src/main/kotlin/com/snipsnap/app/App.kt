@@ -105,6 +105,30 @@ private const val PREF_PERSONALITY = "personality"
 private const val PREF_TEACH = "teach"
 /** The Bubble's overlay-permission offer (Task 5) — asked once, ever. */
 private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
+
+/**
+ * How many times the "hold a pad" hint has been shown, or [PAD_SHEET_FOUND]
+ * once the user has actually opened PAD SHEET.
+ *
+ * PAD SHEET — every treatment, shape, tune and mutate control, plus GRAIN
+ * FIELD below it — has no tap path at all: a 480ms long-press on a filled
+ * pad is the only way in, and nothing on screen says so. The UX audit put
+ * 40-50% of the app's real depth behind that one unhinted gesture, and
+ * both the returning-user and day-3 walkthroughs independently predicted
+ * users plateau without ever finding it.
+ *
+ * The empty-pad branch already teaches its own long-press by toasting on
+ * tap ([KitScreen]'s `onEmptyTapHint`). The filled branch can't copy that
+ * trick — a tap on a filled pad must SOUND, instantly, because it's a drum
+ * pad — so the hint rides kit-open instead, and only while undiscovered.
+ */
+private const val PREF_PAD_SHEET_HINTS = "pad_sheet_hints"
+
+/** Show the hold-a-pad hint at most this many kit-opens before letting it go. */
+private const val PAD_SHEET_HINT_LIMIT = 3
+
+/** Sentinel for [PREF_PAD_SHEET_HINTS]: PAD SHEET has been opened, so never hint again. */
+private const val PAD_SHEET_FOUND = -1
 /** The most a shared kit file may be before it is copied for the shelf: a whole backup fits, a video never needs to. */
 private const val LANDING_MAX_BYTES = 512L * 1024 * 1024
 
@@ -1150,6 +1174,21 @@ fun App(shelf: KitShelf) {
                                         } else {
                                             "THIS KIT IS FULL — PICK ANOTHER"
                                         }
+                                    } else {
+                                        // Teach the one gesture that opens PAD
+                                        // SHEET, while it's still undiscovered.
+                                        // Only worth saying when there's a
+                                        // filled pad to hold, and never once
+                                        // they've found it — see
+                                        // PREF_PAD_SHEET_HINTS. Yields to the
+                                        // pending-snip hint above rather than
+                                        // fighting it for the one toast slot.
+                                        val shown = prefs.getInt(PREF_PAD_SHEET_HINTS, 0)
+                                        val hasFilledPad = (1..16).any { entry.kit.pad(it) != null }
+                                        if (shown != PAD_SHEET_FOUND && shown < PAD_SHEET_HINT_LIMIT && hasFilledPad) {
+                                            toast = Copy.PAD_SHEET_HINT
+                                            prefs.edit().putInt(PREF_PAD_SHEET_HINTS, shown + 1).apply()
+                                        }
                                     }
                                 },
                                 onOpenInstrument = { openInstrument = it; screen = AppScreen.KEYS },
@@ -1307,7 +1346,13 @@ fun App(shelf: KitShelf) {
                                 else -> KitScreen(
                                     open,
                                     busy = busy != null,
-                                    onLongPress = { slot -> padSheetSlot = slot },
+                                    onLongPress = { slot ->
+                                        padSheetSlot = slot
+                                        // Found it — the hint has done its job and
+                                        // retires for good, however many of its
+                                        // PAD_SHEET_HINT_LIMIT showings were left.
+                                        prefs.edit().putInt(PREF_PAD_SHEET_HINTS, PAD_SHEET_FOUND).apply()
+                                    },
                                     onTakesBin = { takesBinOpen = true },
                                     onTexture = ::texture,
                                     onSetKey = ::setKey,
