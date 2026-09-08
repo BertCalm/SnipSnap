@@ -795,4 +795,21 @@ class KitBuilderTest {
         assertEquals("snip_123.wav", reopened.pad(2)!!.source["file"], "the source tag round-trips through kit.json")
         assertEquals(emptyMap(), reopened.pad(1)!!.source, "an untagged pad reopens with no source either")
     }
+
+    @Test
+    fun `save refuses to resurrect a directory that no longer exists`() {
+        val dir = File(temp, "Vanished")
+        val m = KitBuilderModel.create("Vanished", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        assertTrue(dir.deleteRecursively(), "test setup: the kit folder must actually go away")
+
+        // A model holding a snapshot of a kit whose folder was since
+        // renamed or deleted (e.g. a stale dispose-time flush racing a
+        // rename) must not call KitStore.save, which unconditionally
+        // mkdirs() its target and would otherwise resurrect a ghost
+        // directory containing nothing but this kit.json.
+        assertFailsWith<IllegalArgumentException> { m.save() }
+        assertFalse(dir.exists(), "save() must not resurrect the folder it once lived in")
+    }
 }

@@ -526,8 +526,19 @@ class KitBuilderModel private constructor(
      * pass of the tape too: when the ledger is on, it accrues a mile.
      * [accrueWear] false is for ledger management itself — resetting the
      * mileage must not put the first mile straight back on.
+     *
+     * Refuses to write if [kitDir] no longer exists: `KitStore.save`
+     * unconditionally `mkdirs()`s its target, so a caller holding a model
+     * whose folder was renamed or deleted out from under it (a stale
+     * dispose-time flush racing a rename, most concretely — see
+     * `PadSheetScreen`'s teardown `DisposableEffect`) would otherwise
+     * resurrect a ghost directory containing nothing but this `kit.json`.
+     * Every caller that legitimately creates a *new* kit ([create],
+     * [fromChop]) already `mkdirs()`s [kitDir] before its first [save], so
+     * this never fires for them.
      */
     fun save(accrueWear: Boolean = true): File {
+        require(kitDir.isDirectory) { "kit folder no longer exists: $kitDir" }
         if (accrueWear && dirty) {
             kit.wear?.takeIf { it.enabled }?.let {
                 kit = kit.copy(wear = it.copy(mileage = it.mileage + 1))

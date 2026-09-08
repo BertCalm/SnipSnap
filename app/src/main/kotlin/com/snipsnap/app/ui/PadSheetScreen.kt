@@ -259,6 +259,21 @@ fun PadSheetScreen(
     // how the actual disk write gets debounced instead.
     var pendingMetadataSave by remember(model) { mutableIntStateOf(0) }
 
+    // Every pad slot with an edit riding [pendingMetadataSave], not just
+    // the most recent one — a pad-to-pad visit (LEVEL on pad 3, then PAN
+    // on pad 5, all inside one debounce window) leaves more than one slot
+    // dirty at once. Read via `State` (not the [slot] parameter directly)
+    // by the teardown flush below: `DisposableEffect(model)` only
+    // re-installs its `onDispose` when [model] itself changes, not on
+    // pad-to-pad navigation (`onSlotChange` recomposes this same
+    // composable with a new [slot] but the same [model]) — so a plain
+    // `slot` read inside that `onDispose` would close over whatever pad
+    // was open the *first* time this effect was installed, not the pads
+    // the pending edits actually belong to. This `MutableState`, by
+    // contrast, is read live at invocation time no matter which
+    // composition's closure ends up running it.
+    var pendingMetadataSlots by remember(model) { mutableStateOf<Set<Int>>(emptySet()) }
+
     /**
      * Metadata edits — LEVEL/PAN/TUNE/ONE-SHOT/CHOKE/SHAPE — never touch a WAV,
      * so they mutate [KitBuilderModel.kit] in memory only, right here,
@@ -274,6 +289,7 @@ fun PadSheetScreen(
         val m = model ?: return
         mutate(m)
         revision++
+        pendingMetadataSlots = pendingMetadataSlots + slot
         pendingMetadataSave++
     }
 
@@ -293,6 +309,7 @@ fun PadSheetScreen(
         try {
             withContext(Dispatchers.IO) { KitWrites.mutex.withLock { m.save() } }
             onKitUpdated(m.kit)
+            pendingMetadataSlots = emptySet()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             failure("SAVE", e)
@@ -966,15 +983,87 @@ fun PadSheetScreen(
      * [onKitUpdated] and [onToast] are plain callbacks into `App`, which
      * is still alive and still owns them regardless of which child
      * composable is being torn down.
+     *
+     * This flush must NOT save the held [m] directly: by the time it runs,
+     * [appScope] may have outlived a navigation away from this pad, and
+     * [m] is a snapshot from whenever this screen's `KitBuilderModel`
+     * was opened. `KitBuilderModel.save()` is an unconditional whole-file
+     * overwrite with no version check, so saving a stale [m] would silently
+     * revert any edit another screen made to this same kit in the meantime
+     * (SET KEY, EVIL TWINS, IN KEY off the KIT screen — none of them touch
+     * this kit's directory, so `App`'s identity guard doesn't catch it) —
+     * or, if the kit's folder was itself renamed/deleted out from under
+     * this screen, resurrect a ghost directory containing nothing but a
+     * stale `kit.json` (`KitStore.save`'s `dir.mkdirs()`).
+     *
+     * Instead, re-open a FRESH model on the same folder under the lock —
+     * [PadCaptureScreen]'s `commitToPad` and [SynthScreen]'s `sendToSlot`
+     * both already do this for the same reason — and apply only the
+     * fields [editPadMetadata] itself ever touches (LEVEL/PAN/TUNE/
+     * ONE-SHOT/CHOKE/SHAPE) onto the *current* on-disk pad. A fresh
+     * `open()` on a directory that no longer exists throws in
+     * `KitStore.load`, which the `catch` below turns into a toast exactly
+     * like every other failed write here — closing the ghost-resurrection
+     * path for free, not just the revert.
      */
     DisposableEffect(model) {
         onDispose {
             val m = model
-            if (m != null && m.dirty) {
+            val targetSlots = pendingMetadataSlots
+            if (m != null && m.dirty && targetSlots.isNotEmpty()) {
+                // Snapshot now, synchronously — `m` can't change further
+                // once this composable has left composition, so this is
+                // the exact in-memory state the debounce would have saved.
+                // More than one slot here means the user visited several
+                // pads inside one debounce window; every one of them gets
+                // applied to the same freshly-opened model below, under
+                // one lock, before the one save.
+                val stalePads = targetSlots.associateWith { m.kit.pad(it) }
+                val kitDir = m.kitDir
                 appScope.launch {
                     try {
-                        withContext(Dispatchers.IO) { KitWrites.mutex.withLock { m.save() } }
-                        onKitUpdated(m.kit)
+                        val updatedKit = withContext(Dispatchers.IO) {
+                            KitWrites.mutex.withLock {
+                                val fresh = KitBuilderModel.open(kitDir)
+                                var appliedAny = false
+                                for ((targetSlot, stalePad) in stalePads) {
+                                    val freshPad = fresh.kit.pad(targetSlot)
+                                    if (stalePad == null || freshPad == null) {
+                                        // The pad this debounced edit
+                                        // belonged to is gone from disk —
+                                        // ejected, or the slot reassigned,
+                                        // by another screen while this
+                                        // flush was pending. Nothing honest
+                                        // to apply; conjuring the pad back
+                                        // would be its own phantom-pad bug,
+                                        // so this one edit is simply
+                                        // dropped — the rest still apply.
+                                        continue
+                                    }
+                                    fresh.update(targetSlot) { p ->
+                                        p.copy(
+                                            level = stalePad.level,
+                                            pan = stalePad.pan,
+                                            tuneCoarse = stalePad.tuneCoarse,
+                                            oneShot = stalePad.oneShot,
+                                            muteGroup = stalePad.muteGroup,
+                                            attack = stalePad.attack,
+                                            decay = stalePad.decay,
+                                            cutoff = stalePad.cutoff,
+                                            resonance = stalePad.resonance,
+                                        )
+                                    }
+                                    appliedAny = true
+                                }
+                                if (appliedAny) {
+                                    fresh.save()
+                                    fresh.kit
+                                } else {
+                                    null
+                                }
+                            }
+                        }
+                        updatedKit?.let(onKitUpdated)
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         failure("SAVE", e)
