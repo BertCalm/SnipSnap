@@ -171,13 +171,21 @@ fun ExportScreen(
         // below. Only the snapshot read is locked, not the dub itself
         // (`model.write` below): that's seconds-long file-copy IO, exactly
         // what every other KitWrites site keeps outside the lock.
+        //
+        // `withLock` suspends, so it must sit OUTSIDE `runCatching`: a
+        // tab-away/kit-switch cancelling this `LaunchedEffect` while it's
+        // waiting on (or holding) the mutex throws `CancellationException`
+        // through this block, and `runCatching` catches `Throwable` — it
+        // would otherwise swallow the cancellation as an ordinary load
+        // failure (`loadFailed = true`, EMPTY_SHELF on a perfectly good
+        // kit) instead of letting it propagate.
         val loaded = withContext(Dispatchers.IO) {
-            runCatching {
-                KitWrites.mutex.withLock {
+            KitWrites.mutex.withLock {
+                runCatching {
                     val kit = KitStore.load(entry.dir)
                     ExportSession(entry.dir, kit, ExportWizardModel(kit, entry.dir))
-                }
-            }.getOrNull()
+                }.getOrNull()
+            }
         }
         if (loaded == null) loadFailed = true else onSessionChange(loaded)
     }
