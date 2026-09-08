@@ -7,6 +7,14 @@
 // The JNIEnv here is a fake backed by plain vectors (see stub/jni.h), with
 // one switch: `failAllocations` makes NewFloatArray/NewIntArray return
 // null, which is what a real JVM does when it cannot find the room.
+//
+// One way the fake is deliberately simpler than a JVM: a real one also
+// leaves an OutOfMemoryError pending, and a native method returning with
+// one makes the JVM throw at the Kotlin call site rather than hand the
+// caller the null. So what these two cases prove is the half that is
+// ours - that the bridge does not write into a null array before it
+// returns - and not what Kotlin then sees. `jni.cpp` never calls
+// ExceptionCheck, so the stub has no exception machinery to model.
 #include <cstring>
 #include <vector>
 
@@ -302,8 +310,10 @@ TEST(jni_drain_survives_a_jvm_that_cannot_allocate) {
     for (int i = 0; i < 4; ++i) pull(pads, 8);  // it ends, so there is something to drain
 
     failAllocations = true;
-    // Null, not a write into null. Kotlin reads it as no endings this
-    // drain; the voice is reported late rather than the process dying.
+    // Null, not a write into null - which is the undefined behaviour this
+    // guards. The ids drained just before are gone with it; a JVM this
+    // short of room has bigger trouble, and jni.cpp says so where it
+    // happens.
     CHECK(Java_com_snipsnap_app_NativePads_drainEnded(e, nullptr, h) == nullptr);
 
     Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
@@ -312,9 +322,10 @@ TEST(jni_drain_survives_a_jvm_that_cannot_allocate) {
 TEST(jni_a_print_the_jvm_cannot_hold_comes_back_empty_handed) {
     // The largest allocation the bridge ever asks for: seconds of audio in
     // one array. A JVM that refuses returns null with an OutOfMemoryError
-    // pending, and writing into that null is undefined - the crash would
-    // land on whoever pressed STOP PRINT after a long take, which is
-    // exactly when the phone is most likely to be short of room.
+    // pending; writing into that null is undefined, and undefined is a
+    // crash where the pending error is something STOP PRINT can report.
+    // It would land on whoever pressed it after a long take - exactly
+    // when the phone is most likely to be short of room.
     JNIEnv* e = env();
     const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
     auto* surf = reinterpret_cast<SurfaceEngine*>(h);

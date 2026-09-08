@@ -133,8 +133,13 @@ Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv* env, jobject, jlong handle
     if (frames > 0) {
         // A print is seconds of audio, so this is the allocation here most
         // likely to fail. Null means the JVM refused it and has an
-        // OutOfMemoryError pending; writing into it would be undefined.
-        // Kotlin already reads null as "nothing was captured".
+        // OutOfMemoryError pending, and returning with one pending makes
+        // the JVM throw it at the Kotlin call site - so the caller sees
+        // that error, never this null. What the check buys is the step
+        // before: writing into a null array is undefined, and undefined
+        // is a crash where an OutOfMemoryError is a thing STOP PRINT can
+        // report. The exception is deliberately left pending: the phone
+        // really is out of room, and swallowing that would hide it.
         out = env->NewFloatArray(static_cast<jsize>(frames));
         if (out != nullptr) {
             env->SetFloatArrayRegion(out, 0, static_cast<jsize>(frames), e->printData());
@@ -330,12 +335,18 @@ Java_com_snipsnap_app_NativePads_allOff(JNIEnv*, jobject, jlong handle, jfloat f
 JNIEXPORT jintArray JNICALL
 Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv* env, jobject, jlong handle) {
     int32_t buf[256];
+    // Note the order: the ring is drained first, so if the allocation
+    // below fails these ids are already consumed and no later drain will
+    // report them. The voices stay counted until the allocator is reset.
+    // That is survivable and not worth restructuring for - a JVM that
+    // cannot find 256 ints is seconds from the end - but it is not the
+    // "reported late" this comment used to claim, and a reader deserves
+    // the truth about it.
     const size_t n = pads(handle)->drainEnded(buf, 256);
     jintArray out = env->NewIntArray(static_cast<jsize>(n));
-    // 256 ints is a small ask, but null is still null: there is nothing to
-    // hand back and nothing to write into. Kotlin reads it as no endings
-    // this drain, which is the safe reading - a voice reported late is a
-    // voice held a moment longer, not one lost.
+    // As in stopPrint: null carries a pending OutOfMemoryError that the
+    // JVM throws at the call site, so the check is here to stop the
+    // undefined write, not to hand Kotlin a null it will never see.
     if (out != nullptr && n > 0) {
         env->SetIntArrayRegion(out, 0, static_cast<jsize>(n), reinterpret_cast<const jint*>(buf));
     }

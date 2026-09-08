@@ -119,7 +119,7 @@ class InstrumentPlayer(context: Context) {
 
     /** Voices the engine reports ended (an unlooped zone playing out) leave the count. */
     private fun reap() {
-        NativePads.drainEnded(handle)?.forEach { voices.remove(it) }
+        for (id in NativePads.drainEnded(handle)) voices.remove(id)
     }
 
     @Synchronized
