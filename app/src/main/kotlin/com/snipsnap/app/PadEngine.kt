@@ -1,5 +1,6 @@
 package com.snipsnap.app
 
+import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.PadHit
@@ -98,6 +99,28 @@ class PadEngine(preferredSampleRate: Int) {
             framesOf = frames
             hits.clear()
         }
+    }
+
+    /**
+     * Bank audio already in hand rather than files on the shelf — what
+     * SPLIT has once a separation has run. Returns each snip's bank index
+     * in the order given, or an empty list when there is no engine.
+     *
+     * A bank holds one thing at a time, so the kit index [load] built is
+     * cleared with it: after this the engine plays these snips and nothing
+     * else. Copies every sample across the bridge, so keep it off the main
+     * thread.
+     */
+    @Synchronized
+    fun loadSnips(snips: List<Snip>): List<Int> {
+        if (!open) return emptyList()
+        NativePads.beginBank(handle)
+        val indices = snips.map { NativePads.addSample(handle, it.samples, it.channels, it.sampleRate) }
+        NativePads.commitBank(handle)
+        sampleIndex = emptyMap()
+        framesOf = emptyMap()
+        hits.clear()
+        return indices
     }
 
     /** The loaded sample's length in frames, or null when it never loaded. */

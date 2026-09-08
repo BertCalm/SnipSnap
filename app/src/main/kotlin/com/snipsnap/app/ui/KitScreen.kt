@@ -83,6 +83,8 @@ fun KitScreen(
     onTwins: () -> Unit,
     /** SHARE (F6.3): this kit packed as one `.xpn` and handed to the chooser. */
     onShare: () -> Unit,
+    /** SPLIT: a pad taken apart into sines, transient and air, on three faders. */
+    onSplit: () -> Unit,
     onEmptyLongPress: (Int) -> Unit = {},
     onEmptyTapHint: (Int) -> Unit = {},
 ) {
@@ -272,6 +274,19 @@ fun KitScreen(
                 ) {
                     TapeText("KEY ▸", TapeType.pixel, if (keyOpen) scheme.titleInk.tape else scheme.ink2.tape)
                 }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // SPLIT is a screen rather than a panel: three faders, three
+                // REVERSE buttons and a print want more room than a drawer
+                // under the grid, and the loop wants to keep playing while
+                // you work it.
+                ActionButton(
+                    "SPLIT ▸ SINES · TRANSIENT · AIR",
+                    scheme,
+                    enabled = !busy && kit.pads.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onSplit,
+                )
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (kind in TextureKits.KINDS) {
