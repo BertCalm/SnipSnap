@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
+import com.snipsnap.shell.Landing
 import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -79,12 +80,13 @@ object ShareInbox {
      */
     fun copyToCache(context: Context, uri: Uri, displayName: String, maxBytes: Long): File {
         val dir = File(context.cacheDir, "landing").apply { mkdirs() }
-        val bare = displayName.substringAfterLast('/').substringAfterLast('\\')
-        val safe = bare.replace(Regex("[^A-Za-z0-9._ \\-\\[\\]]"), "_")
-            .let { if (it.isBlank() || it.all { c -> c == '.' }) "shared" else it }
-        val out = File(dir, safe)
-        // "." or ".." would have named the folder or its parent; the fallback
-        // above catches those, and this proves the file sits in the landing dir.
+        // The sending app chose this name, so it is a door - and it is
+        // Landing's door now (:shell, tested), not a regex inline here.
+        val out = File(dir, Landing.safeName(displayName))
+        // The second door, kept deliberately: Landing.safeName turns "." and
+        // ".." into a fallback, and this proves the finished path really did
+        // land in the folder we meant - a check on the result, not on the
+        // string, so it holds even if the first door were ever loosened.
         require(out.canonicalPath.startsWith(dir.canonicalPath + File.separator)) { "the shared file's name escapes the cache" }
         val stream = context.contentResolver.openInputStream(uri)
             ?: throw IllegalArgumentException("the shared file could not be opened")

@@ -6,6 +6,7 @@ import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
+import com.snipsnap.audio.DecodeLimits
 import com.snipsnap.audio.Pcm
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
@@ -29,7 +30,7 @@ import java.nio.ByteBuffer
  * delay and its gentle loss are the codec's business, not ours.
  *
  * The codec's output is 16-bit PCM unless it says float; both are read.
- * The decode stops at [MAX_FRAMES] so a shared album side never becomes
+ * The decode stops at [DecodeLimits.MAX_FRAMES] so a shared album side never becomes
  * a gigabyte of floats or a minute of decoding — `SnipStore.import` caps
  * shorter still, and says so in words. A WAV is bounded the same way by
  * [MAX_WAV_BYTES], as a refusal, since the reader takes the whole file.
@@ -38,9 +39,6 @@ import java.nio.ByteBuffer
  * shows them as they are.
  */
 object MediaDecode {
-
-    /** Ten minutes at 48 k, stereo: more than any import keeps, little enough to hold. */
-    private const val MAX_FRAMES = 48_000 * 60 * 10
 
     /**
      * The most WAV the reader is handed, in bytes: 96 MB is three minutes
@@ -141,15 +139,20 @@ object MediaDecode {
     /**
      * The standard synchronous decode loop: feed the extractor's samples
      * in, read PCM buffers out until the end-of-stream flag comes back.
-     * The output format is read when the codec announces it (and from
-     * the first buffer's format when it doesn't — some decoders skip the
-     * announcement), because the rate and channel count the *track*
-     * claims can differ from what the decoder actually emits.
+     * The rate and channel count start as the *track's* claim and are
+     * replaced when the codec announces its own, because the two can
+     * differ. Both are put through [DecodeLimits.checkFormat] the moment
+     * they arrive rather than once at the end: a shape this cannot use
+     * is on the first line of the header, and reading ten minutes of a
+     * file to refuse it afterwards is work nobody asked for — and, until
+     * the cap arithmetic moved to [DecodeLimits], a claimed channel
+     * count reached that arithmetic before anything had checked it.
      */
     private fun drain(extractor: MediaExtractor, codec: MediaCodec, trackFormat: MediaFormat): Snip {
         val info = MediaCodec.BufferInfo()
         var rate = trackFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
         var channels = trackFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+        DecodeLimits.checkFormat(channels, rate)
         var floatPcm = false
         val out = FloatList()
         val scratch = Scratch()
@@ -178,6 +181,8 @@ object MediaDecode {
                     val f = codec.outputFormat
                     rate = f.getInteger(MediaFormat.KEY_SAMPLE_RATE)
                     channels = f.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+                    // The decoder's own word, checked like the track's.
+                    DecodeLimits.checkFormat(channels, rate)
                     floatPcm = f.containsKey(MediaFormat.KEY_PCM_ENCODING) &&
                         f.getInteger(MediaFormat.KEY_PCM_ENCODING) == AudioFormat.ENCODING_PCM_FLOAT
                 }
@@ -186,7 +191,7 @@ object MediaDecode {
                         val buffer = codec.getOutputBuffer(outIndex)!!
                         buffer.position(info.offset)
                         buffer.limit(info.offset + info.size)
-                        val room = MAX_FRAMES * channels - out.size
+                        val room = DecodeLimits.room(channels, out.size)
                         capped = appendPcm(buffer, info.size, floatPcm, out, room, scratch)
                     }
                     codec.releaseOutputBuffer(outIndex, false)
@@ -198,7 +203,6 @@ object MediaDecode {
                 }
             }
         }
-        require(channels in 1..2) { "a $channels-channel file - the deck takes mono or stereo" }
         val samples = out.toArray()
         // A whole number of frames, whatever the last buffer's boundary was.
         val frames = samples.size / channels
