@@ -204,11 +204,50 @@ Intro / Bridge)?
 
 ### B7 · A standalone zone WAV [AAA2]
 
-Load a WAV from `Held Keys_[TrackData]/` on its own — not through the
-program. Does it play at its root note and loop? Note it either way; if
-the MPC ignores the embedded sheet, the sheet still costs nothing.
+The question: a zone WAV carries its own `smpl` sheet — a root note and a
+sustain loop — so loaded **on its own**, from the card's browser and
+outside any program, it should arrive tuned and looping instead of at C3
+and one-shot. Does the Live III read it?
 
-→
+**Use `AAA2Tone` for the answer, then your own `Held Keys` for the
+sanity check.** The tone is built to make both halves audible rather than
+a judgement call:
+
+- Its root is **A4 (MIDI 69)**. The MPC's default for a sheet-less
+  sample is C3 (48). Twenty-one semitones is nearly two octaves, so a
+  sheet that is being ignored does not sound *slightly* off — the pad an
+  octave and a half out is the answer.
+- Its loop is the **last quarter-second**, and the tone is a steady saw.
+  Held, a honoured loop sings forever. Ignored, it stops after two
+  seconds. There is no in-between to argue about.
+
+Verified in the bytes before it ever reached the card: the `smpl` chunk
+sits between `fmt ` and `data`, unity note 69, one forward loop (type 0)
+over frames 76586–87685 inclusive. So a "no" here means the MPC ignores
+the sheet — never that there was no sheet to ignore.
+
+Rebuild it any time with:
+
+```
+java -jar cli/build/libs/snipsnap.jar keys --loop --name AAA2Tone A4-tone.wav
+```
+
+(any steady pitched note works as the input; the detected root is what
+lands in the sheet — the export prints it, so check it says A4 before you
+copy the card)
+
+Copy `AAA2Tone.xty` and `AAA2Tone_[TrackData]/` onto the card. In the
+browser, open the **WAV inside the TrackData folder** — not the `.xty`,
+which would load the program and prove nothing.
+
+→ plays at A4, or an octave and a half out:
+
+→ holds forever, or stops after two seconds:
+
+→ and the same for a real `Held Keys` zone:
+
+Note it either way. If the MPC ignores the sheet, the sheet still costs
+nothing — it is a few dozen bytes and every other sampler reads it.
 
 ---
 
