@@ -52,6 +52,15 @@ class KitShelf(val root: File) {
     /** A kit and the folder it lives in. */
     data class Entry(val dir: File, val kit: Kit)
 
+    /** A kit asleep in the bin: where it lies, what it was called, when it went, when it goes for good. */
+    data class BinnedKit(
+        val dir: File,
+        val name: String,
+        val padCount: Int,
+        val binnedAtMillis: Long,
+        val daysLeft: Int,
+    )
+
     /** An instrument the shop made: its sidecar and what it says. */
     data class InstrumentEntry(val sidecar: File, val instrument: com.snipsnap.kit.InstrumentStore.Instrument)
 
@@ -249,26 +258,99 @@ class KitShelf(val root: File) {
     }
 
     /**
+     * The wall-clock millis [dir] (a directory under [binDir]) was binned,
+     * read off the trailing `-<millis>` [deleteKit] always stamps last in
+     * the folder's name, NOT `File.lastModified()` — unlike
+     * `StorageSweep.kt`'s `.landing-<nanoTime>` (monotonic process time the
+     * app deliberately refuses to read as an age), [deleteKit]'s stamp is
+     * wall-clock `System.currentTimeMillis()`, so parsing it here is
+     * exactly as honest as reading a file's mtime would be. `lastModified()`
+     * is only the fallback for a folder that somehow doesn't parse
+     * (hand-edited, or from a build that named it differently). Both
+     * [sweepDeletedKits] and [binnedKits] read this one helper, so the two
+     * can never disagree about when a kit dies.
+     */
+    private fun binnedAt(dir: File): Long = dir.name.substringAfterLast('-').toLongOrNull() ?: dir.lastModified()
+
+    /**
      * Empties [binDir] of whatever has slept there past [keepDays]; returns
-     * how many went — [Rooms.sweepBin]'s own job, for kits. Age is read off
-     * the trailing `-<millis>` [deleteKit] always stamps last in the
-     * folder's name, NOT `File.lastModified()` — unlike `StorageSweep.kt`'s
-     * `.landing-<nanoTime>` (monotonic process time the app deliberately
-     * refuses to read as an age), [deleteKit]'s stamp is wall-clock
-     * `System.currentTimeMillis()`, so parsing it here is exactly as honest
-     * as reading a file's mtime would be. `lastModified()` is only the
-     * fallback for a folder that somehow doesn't parse (hand-edited, or
-     * from a build that named it differently).
+     * how many went — [Rooms.sweepBin]'s own job, for kits.
      */
     fun sweepDeletedKits(keepDays: Double = BIN_DAYS, nowMillis: Long = System.currentTimeMillis()): Int {
         val dirs = binDir.listFiles { f: File -> f.isDirectory } ?: return 0
         val keepMs = (keepDays * DAY_MS).toLong()
         var gone = 0
         for (dir in dirs) {
-            val binnedAt = dir.name.substringAfterLast('-').toLongOrNull() ?: dir.lastModified()
-            if (nowMillis - binnedAt >= keepMs && dir.deleteRecursively()) gone++
+            if (nowMillis - binnedAt(dir) >= keepMs && dir.deleteRecursively()) gone++
         }
         return gone
+    }
+
+    /**
+     * Every kit asleep in the bin, the most recently binned first. A
+     * directory whose `kit.json` is missing or unreadable is skipped
+     * entirely — not shown with a guessed or placeholder name — the same
+     * honesty rule [list] already follows for the shelf itself; [name] and
+     * [BinnedKit.padCount] always come from that file, NEVER parsed off
+     * the folder's name (which [deleteKit] stamps as `<folder>-<millis>`,
+     * ambiguous for any kit whose own name holds a hyphen, and outright
+     * wrong for the same-millisecond collision form
+     * `<folder>-<n>-<millis>`). [BinnedKit.daysLeft] is [BIN_DAYS] minus
+     * whole days elapsed since [binnedAt], floored at zero.
+     */
+    fun binnedKits(nowMillis: Long = System.currentTimeMillis()): List<BinnedKit> {
+        val dirs = binDir.listFiles { f: File -> f.isDirectory } ?: return emptyList()
+        return dirs.mapNotNull { dir ->
+            val kit = try {
+                KitStore.load(dir)
+            } catch (_: Exception) {
+                return@mapNotNull null
+            }
+            val binnedAtMillis = binnedAt(dir)
+            val elapsedDays = ((nowMillis - binnedAtMillis).coerceAtLeast(0L) / DAY_MS).toInt()
+            val daysLeft = (BIN_DAYS.toInt() - elapsedDays).coerceAtLeast(0)
+            BinnedKit(dir, kit.name, kit.pads.size, binnedAtMillis, daysLeft)
+        }.sortedByDescending { it.binnedAtMillis }
+    }
+
+    /**
+     * RESTORE: [binned] back onto the shelf at `File(root, <name>)`, where
+     * `<name>` is [BinnedKit.name] — read off `kit.json`, never the folder.
+     * [BinnedKit.name] already lived on the shelf once, so it's used
+     * verbatim ([renameKit]'s own posture toward a name it trusts) unless
+     * it somehow isn't [Names.isMpcSafe] (a hand-edited `kit.json`, a name
+     * off some other import path) — only then is it forced sane through
+     * [Names.sanitizeStem], which would otherwise trim a leading `.`/`_`
+     * off a name that was already safe and silently rename it on restore.
+     * A collision with a kit already on the shelf falls back exactly like
+     * [renameKit]: "NAME 2", "NAME 3"…, through the same [freshShelfName]
+     * both share, and `kit.json`'s own name is rewritten to whatever name
+     * actually landed so the two never disagree. `null` when [binned]'s
+     * directory is already gone (a stale row, a second restore racing this
+     * one) or the move itself fails.
+     */
+    fun restoreKit(binned: BinnedKit): Entry? {
+        if (!binned.dir.isDirectory) return null
+        root.mkdirs()
+        val base = if (Names.isMpcSafe(binned.name)) binned.name else Names.sanitizeStem(binned.name)
+        val name = freshShelfName(base)
+        val dest = File(root, name)
+        if (!moveDir(binned.dir, dest)) return null
+        val kit = KitStore.load(dest)
+        if (name != kit.name) KitStore.save(kit.copy(name = name), dest)
+        return Entry(dest, KitStore.load(dest))
+    }
+
+    /**
+     * EMPTY BIN: every child of [binDir] gone now, `deleteRecursively()`
+     * each — an early sweep the user asked for, not [sweepDeletedKits]'s
+     * age check. Returns how many went; 0 without throwing when the bin is
+     * empty or was never created. Reads and deletes only inside [binDir] -
+     * nothing outside it is ever touched.
+     */
+    fun emptyKitBin(): Int {
+        val children = binDir.listFiles() ?: return 0
+        return children.count { it.deleteRecursively() }
     }
 
     /**
@@ -302,17 +384,28 @@ class KitShelf(val root: File) {
         }
         if (!entry.dir.isDirectory) return null
         if (newName == entry.kit.name) return entry
-        var name = newName
-        var n = 2
-        while (File(root, name).exists()) {
-            name = "$newName $n"
-            n++
-        }
+        val name = freshShelfName(newName)
         val dest = File(root, name)
         if (!moveDir(entry.dir, dest)) return null
         val kit = KitStore.load(dest)
         if (name != kit.name) KitStore.save(kit.copy(name = name), dest)
         return Entry(dest, KitStore.load(dest))
+    }
+
+    /**
+     * [base] itself if nothing directly under [root] holds that name yet,
+     * else "[base] 2", "[base] 3"… — the collision fallback [renameKit] and
+     * [restoreKit] both land a moved kit under, kept as one loop so the two
+     * can never disagree about how a collision resolves.
+     */
+    private fun freshShelfName(base: String): String {
+        var name = base
+        var n = 2
+        while (File(root, name).exists()) {
+            name = "$base $n"
+            n++
+        }
+        return name
     }
 
     /**
