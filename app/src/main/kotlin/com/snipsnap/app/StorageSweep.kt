@@ -33,9 +33,9 @@ internal const val ORPHAN_MAX_AGE_MS = 24L * 60 * 60 * 1000 // 1 day — a crash
  */
 internal fun sweepOrphanedStorage(shelfRoot: File, cacheDir: File) {
     val now = System.currentTimeMillis()
-    fun deleteIfStale(dir: File) {
-        if (dir.exists() && now - dir.lastModified() > ORPHAN_MAX_AGE_MS) {
-            dir.deleteRecursively()
+    fun deleteIfStale(entry: File) {
+        if (entry.exists() && now - entry.lastModified() > ORPHAN_MAX_AGE_MS) {
+            entry.deleteRecursively()
         }
     }
     // ShelfImport's crashed-mid-import staging dirs — under the shelf root,

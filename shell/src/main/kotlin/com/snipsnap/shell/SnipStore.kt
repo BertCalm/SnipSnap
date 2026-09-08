@@ -181,18 +181,25 @@ object SnipStore {
         NAME.matchEntire(file.name)?.groupValues?.get(1)?.toLongOrNull()
 
     /**
-     * The dir's `snip_*.wav` files, newest first by the timestamp in the
-     * name. Zero-length files are skipped: `freshFile`'s claim
+     * `root/[DIR]`'s non-empty files — the [list]/[listWithInfo] shared
+     * starting point. Zero-length files are skipped: `freshFile`'s claim
      * (`createNewFile()`) creates the file before any bytes land, so a
      * process kill between the claim and [writeClaimedFile] can leave an
      * empty file with a perfectly matching name — not a snip yet, and not
      * one [com.snipsnap.audio.WavReader] could read regardless.
      */
-    fun list(root: File): List<File> {
+    private fun snipFiles(root: File): List<File> {
         val dir = File(root, DIR)
         val files = dir.listFiles() ?: return emptyList()
-        return files
-            .filter { it.length() > 0L }
+        return files.filter { it.length() > 0L }
+    }
+
+    /**
+     * The dir's `snip_*.wav` files, newest first by the timestamp in the
+     * name.
+     */
+    fun list(root: File): List<File> {
+        return snipFiles(root)
             .mapNotNull { f -> parsedTimestamp(f)?.let { f to it } }
             .sortedByDescending { (_, ts) -> ts }
             .map { (f, _) -> f }
@@ -203,7 +210,7 @@ object SnipStore {
     /** SNIPS delete: a straight [File.delete] — success/failure is the caller's own toast to raise. */
     fun delete(file: File): Boolean = file.delete()
 
-    /** What the SNIPS shelf lists a row from — no decode, unlike duration (see [Info]'s own KDoc). */
+    /** What the SNIPS shelf lists a row from — no decode, unlike duration (see [listWithInfo]'s own KDoc). */
     data class Info(val file: File, val sizeBytes: Long, val capturedAtMillis: Long)
 
     /**
@@ -215,10 +222,7 @@ object SnipStore {
      * for up front — the SNIPS screen computes it lazily per-row instead.
      */
     fun listWithInfo(root: File): List<Info> {
-        val dir = File(root, DIR)
-        val files = dir.listFiles() ?: return emptyList()
-        return files
-            .filter { it.length() > 0L }
+        return snipFiles(root)
             .mapNotNull { f -> parsedTimestamp(f)?.let { ts -> Info(f, f.length(), ts) } }
             .sortedByDescending { it.capturedAtMillis }
     }

@@ -30,13 +30,15 @@ class KitShelf(val root: File) {
         const val INSTRUMENTS_DIR = "Instruments"
 
         /**
-         * The kits' bin, beside the kits — architecturally identical to
-         * [Rooms.ROOMS_DIR]'s own `.bin`: a direct child of [root] with no
+         * The kits' bin, beside the kits: a direct child of [root] with no
          * `kit.json` of its own directly inside it (the deleted kits sit one
          * level deeper, at `.bin/<name>-<timestamp>/kit.json`), so
          * `KitStore.list(root)` never lists it or anything inside it as a
          * kit on the shelf, the same way `Rooms/` and `.landing-*` already
-         * stay invisible to that scan.
+         * stay invisible to that scan. The same bin-under-a-folder mechanism
+         * [Rooms.binDir] uses — but not its architectural sibling: that
+         * `.bin` nests one level deeper, inside [Rooms.ROOMS_DIR] itself, so
+         * this `.bin` sits beside `Rooms/`, not beside Rooms' own bin.
          */
         const val BIN_DIR = ".bin"
 
