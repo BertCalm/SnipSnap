@@ -337,16 +337,17 @@ fun App(shelf: KitShelf) {
     // and this UI both kept claiming ARMED with a flat level meter, which
     // reads exactly like a quiet room. Same baseline-by-count discipline
     // as `phoneStops` so a recreated Activity doesn't replay an old
-    // failure. Reuses PHONE_STOPPED_TAPE's copy rather than inventing a
-    // second string — see MicSessionService.sessionDied's KDoc for the
-    // more accurate wording this would want ("the mic went quiet" /
-    // "permission was pulled") once Personality.kt is free to change.
+    // failure. Says TAPE_STOPPED_ITSELF, not PHONE_STOPPED_TAPE: the
+    // latter names the lock screen and the stop chip, which are the only
+    // two ways a MediaProjection session ends but have nothing to do with
+    // a dead AudioRecord — it would send the user to check the wrong
+    // thing entirely.
     val sessionDied by MicSessionService.sessionDied.collectAsState()
     var sessionDiedSeen by remember { mutableStateOf(MicSessionService.sessionDied.value) }
     LaunchedEffect(sessionDied) {
         if (sessionDied != sessionDiedSeen) {
             sessionDiedSeen = sessionDied
-            toast = Copy.PHONE_STOPPED_TAPE
+            toast = Copy.TAPE_STOPPED_ITSELF
         }
     }
     // ARM INSIDE runs through the same RECORD_AUDIO request as ARM TAPE

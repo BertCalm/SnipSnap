@@ -104,6 +104,21 @@ object Copy {
     const val INSIDE_REFUSED = "NO NOD, NO TAPE. NOTHING ARMED. LISTEN STILL WORKS."
     /** The platform ended the session — the lock screen or the status-bar stop chip, never us. */
     const val PHONE_STOPPED_TAPE = "THE PHONE STOPPED THE TAPE. LOCK SCREEN OR THE STOP CHIP. PRESS LISTEN AGAIN."
+
+    /**
+     * The mic session died on its own — a dead `AudioRecord`, the OS
+     * reclaiming the service, a revoked permission. Distinct from
+     * [PHONE_STOPPED_TAPE], which names the lock screen and the stop chip
+     * because a MediaProjection session genuinely only ends those two ways;
+     * a plain mic session has no such culprit to name, and pointing at the
+     * wrong one sends the user to check something that isn't the problem.
+     *
+     * What matters here is the part the app got wrong for a long time:
+     * the tape had stopped and the UI still said it was rolling, so
+     * whatever the user thought they were capturing was never being
+     * captured. Say that it stopped, and say what gets it back.
+     */
+    const val TAPE_STOPPED_ITSELF = "THE TAPE STOPPED ON ITS OWN. NOTHING SINCE WAS KEPT. PRESS LISTEN AGAIN."
     // IMPORT: a file shared in from another app (F3).
     /** A shared file landed as a snip; [seconds] how much, [truncated] whether the cap cut its tail. */
     fun imported(seconds: Float, truncated: Boolean): String {

@@ -231,7 +231,15 @@ fun KitsScreen(
             // starter kits — most of them pre-composed, only BLANK/START
             // EMPTY genuinely empty. The label now predicts that.
             PrimaryAction(
-                label = if (busy) "DUBBING…" else "NEW KIT ▸ PICK A STARTER",
+                // 18 chars, deliberately: this sits in a single-line
+                // PrimaryAction whose longest proven-safe label is 22
+                // ("WRITING — DO NOT EJECT"), and at 200% font scale a
+                // longer one ellipsizes. "PICK A STARTER" was the honest
+                // subtitle but pushed it to 24 and would have truncated
+                // mid-word; the menu it opens says PICK A STARTER as its
+                // own heading, so the word isn't lost, just moved to where
+                // it always fits.
+                label = if (busy) "DUBBING…" else "NEW KIT ▸ STARTERS",
                 enabled = !busy,
                 onClick = { menuOpen = true },
             )
