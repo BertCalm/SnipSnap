@@ -68,7 +68,20 @@ object KitBackup {
         return BackupResult(outFile, packed, skipped)
     }
 
-    fun restore(backupFile: File, destRoot: File, overwrite: Boolean = false): List<XpnImporter.ImportResult> {
+    fun restore(
+        backupFile: File,
+        destRoot: File,
+        overwrite: Boolean = false,
+        // One budget for the whole restore, not per kit: MAX_KITS alone
+        // bounds entry count, not bytes, and each kit's own sample writes
+        // are only capped individually inside XpnImporter - a backup
+        // declaring many large kits would otherwise multiply that ceiling
+        // by however many it holds. Shared across both the .xpn blobs
+        // pulled out of this ZIP below and the samples each one unpacks.
+        // Overridable for tests, the same way ShelfImport.unzipSafely's
+        // maxBytes is - real callers keep the default.
+        budget: XpnImporter.WriteBudget = XpnImporter.WriteBudget(XpnImporter.DEFAULT_BUDGET_BYTES),
+    ): List<XpnImporter.ImportResult> {
         require(backupFile.isFile) { "no such file: $backupFile" }
         val temp = java.nio.file.Files.createTempDirectory("kitrestore").toFile()
         try {
@@ -83,19 +96,37 @@ object KitBackup {
                     if (e.isDirectory || !e.name.endsWith(".xpn", ignoreCase = true)) continue
                     // A name twice is a crafted archive, not a backup: which of
                     // the two would be the kit? Refuse rather than guess.
-                    require(names.add(e.name)) { "$backupFile holds '${e.name}' twice - refused" }
-                    require(names.size <= MAX_KITS) { "$backupFile declares more than $MAX_KITS kits - refused" }
+                    require(names.add(e.name)) { "${backupFile.name} holds '${e.name}' twice - refused" }
+                    require(names.size <= MAX_KITS) { "${backupFile.name} declares more than $MAX_KITS kits - refused" }
                 }
-                require(names.isNotEmpty()) { "no .xpn kits inside $backupFile - not a SnipSnap backup?" }
+                require(names.isNotEmpty()) { "no .xpn kits inside ${backupFile.name} - not a SnipSnap backup?" }
                 for (name in names.sorted()) {
-                    val entry = zip.getEntry(name) ?: throw IllegalArgumentException("$backupFile lost '$name' between listing and reading")
+                    val entry = zip.getEntry(name) ?: throw IllegalArgumentException("${backupFile.name} lost '$name' between listing and reading")
                     val xpn = File(temp, File(entry.name).name)
-                    zip.getInputStream(entry).use { src ->
-                        xpn.outputStream().use {
-                            com.snipsnap.mpc3.LimitedRead.copy(src, it, what = "backup entry ${entry.name}")
+                    try {
+                        zip.getInputStream(entry).use { src ->
+                            xpn.outputStream().use {
+                                com.snipsnap.mpc3.LimitedRead.copy(src, it, limit = budget.remaining, what = "backup entry ${entry.name}")
+                            }
                         }
+                    } catch (e: com.snipsnap.mpc3.LimitedRead.TooLargeException) {
+                        // copy() throws before writing the chunk that would
+                        // overrun, but earlier chunks already landed - this
+                        // loop currently aborts the whole restore on the
+                        // first such throw, but charging the partial write
+                        // (and not leaving it behind) keeps that true even
+                        // if a future caller ever turns this into a
+                        // skip-and-continue, the way importAll's own per-
+                        // program loop already does.
+                        val partial = xpn.length()
+                        xpn.delete()
+                        budget.spend(partial)
+                        throw com.snipsnap.mpc3.LimitedRead.TooLargeException(
+                            "'${backupFile.name}' writes past ${budget.max / (1024 * 1024)} MB at '${entry.name}' - refused",
+                        )
                     }
-                    results += XpnImporter.import(xpn, destRoot, overwrite)
+                    budget.spend(xpn.length())
+                    results += XpnImporter.import(xpn, destRoot, overwrite, budget)
                 }
             }
             return results
