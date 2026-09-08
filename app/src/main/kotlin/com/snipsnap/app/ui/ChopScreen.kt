@@ -101,12 +101,17 @@ fun ChopScreen(
 
     var sourceFile by remember(kitDir, lastCommit) { mutableStateOf<File?>(null) }
     var model by remember(kitDir, lastCommit) { mutableStateOf<ChopReviewModel?>(null) }
-    var failed by remember(kitDir, lastCommit) { mutableStateOf(false) }
+    // Null while still decoding (or once loaded); set on failure to the
+    // honest reason — distinct copy for "nothing was ever taped" (no
+    // commit at all, [Copy.EMPTY_SHELF]) versus "a commit exists but its
+    // file won't read anymore" ([Copy.CHOP_SOURCE_GONE]), so a user who
+    // made something can tell that apart from a user who hasn't yet.
+    var emptyReason by remember(kitDir, lastCommit) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(kitDir, lastCommit) {
         sourceFile = null
         model = null
-        failed = false
+        emptyReason = null
         // The decode (and the classifier's first pass over every slice) are
         // both real work on real audio — off the main thread, matching
         // TapeScreen's own `loadLongestTape`.
@@ -114,7 +119,7 @@ fun ChopScreen(
             loadChopSource(entry, lastCommit)?.let { (file, snip) -> file to ChopReviewModel.chop(snip) }
         }
         if (loaded == null) {
-            failed = true
+            emptyReason = if (lastCommit != null) Copy.CHOP_SOURCE_GONE else Copy.EMPTY_SHELF
         } else {
             sourceFile = loaded.first
             model = loaded.second
@@ -127,7 +132,8 @@ fun ChopScreen(
         // Either still decoding, or nothing readable was found — the empty
         // face covers both; a blank LCD for the moment it takes to read a
         // file is the honest state to show in between (TapeScreen's call).
-        if (failed) EmptyChop(scheme) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
+        val reason = emptyReason
+        if (reason != null) EmptyChop(scheme, reason) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
         return
     }
 
@@ -142,7 +148,7 @@ fun ChopScreen(
 }
 
 @Composable
-private fun EmptyChop(scheme: Scheme) {
+private fun EmptyChop(scheme: Scheme, message: String) {
     Box(
         Modifier
             .fillMaxSize()
@@ -150,7 +156,7 @@ private fun EmptyChop(scheme: Scheme) {
             .padding(14.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+        TapeText(message, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
     }
 }
 
@@ -323,7 +329,7 @@ private fun ChopContent(
     }
 
     if (!melodic && classicFailed) {
-        EmptyChop(scheme)
+        EmptyChop(scheme, Copy.CHOP_LAYOUT_FAILED)
         return
     }
 

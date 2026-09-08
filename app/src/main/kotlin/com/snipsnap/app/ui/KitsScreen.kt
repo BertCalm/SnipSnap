@@ -115,6 +115,13 @@ fun KitsScreen(
     // up regardless of how many rows are armed at once.
     var confirmDeleteKit by remember { mutableStateOf<KitShelf.Entry?>(null) }
     var renameTarget by remember { mutableStateOf<KitShelf.Entry?>(null) }
+    // Which kit rows are armed (DELETE/RENAME revealed), lifted up here
+    // rather than kept in KitRow's own remember: cancelling (or dismissing
+    // by tapping outside) either dialog below needs to disarm the row that
+    // opened it, which only the screen — the dialog's target is screen
+    // state — can reach. A Set, not a single File?, because more than one
+    // row can be armed at once (see the comment on confirmDeleteKit above).
+    var armedKitDirs by remember { mutableStateOf(setOf<String>()) }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -155,6 +162,9 @@ fun KitsScreen(
                     items(kits, key = { it.dir.name }) { entry ->
                         KitRow(
                             entry = entry,
+                            armed = entry.dir.path in armedKitDirs,
+                            onArm = { armedKitDirs = armedKitDirs + entry.dir.path },
+                            onDisarm = { armedKitDirs = armedKitDirs - entry.dir.path },
                             busy = busy,
                             pickModeActive = assigningSnip,
                             onOpen = onOpen,
@@ -254,15 +264,28 @@ fun KitsScreen(
 
         confirmDeleteKit?.let { target ->
             KitDeleteConfirmDialog(
-                onCancel = { confirmDeleteKit = null },
-                onConfirm = { confirmDeleteKit = null; onDeleteKit(target) },
+                // Cancel and dismiss-by-tapping-outside both route through
+                // this same onCancel (KitDeleteConfirmDialog's scrim itself
+                // is a tapeClick(onCancel)), so both disarm the row here.
+                onCancel = { confirmDeleteKit = null; armedKitDirs = armedKitDirs - target.dir.path },
+                // Delete also clears the armed flag: the lifted set outlives
+                // the row (unlike the old per-row remember, which died with
+                // it), so a bin-then-recreate of a same-named kit — or a
+                // fresh import landing on the freed name — must not inherit
+                // a stale armed DELETE/RENAME from the kit that used to
+                // live at this path.
+                onConfirm = { confirmDeleteKit = null; armedKitDirs = armedKitDirs - target.dir.path; onDeleteKit(target) },
             )
         }
         renameTarget?.let { target ->
             KitRenameDialog(
                 initialName = target.kit.name,
-                onCancel = { renameTarget = null },
-                onConfirm = { newName -> renameTarget = null; onRenameKit(target, newName) },
+                onCancel = { renameTarget = null; armedKitDirs = armedKitDirs - target.dir.path },
+                // Same reasoning as DELETE's onConfirm above — renaming to
+                // the kit's own current name is a same-dir no-op in
+                // KitShelf.renameKit, which would otherwise leave this row
+                // armed after a confirm.
+                onConfirm = { newName -> renameTarget = null; armedKitDirs = armedKitDirs - target.dir.path; onRenameKit(target, newName) },
             )
         }
     }
@@ -417,6 +440,9 @@ private fun BinnedRoomRow(binned: Rooms.Binned, busy: Boolean, onRestore: (Rooms
 @Composable
 private fun KitRow(
     entry: KitShelf.Entry,
+    armed: Boolean,
+    onArm: () -> Unit,
+    onDisarm: () -> Unit,
     busy: Boolean,
     pickModeActive: Boolean,
     onOpen: (KitShelf.Entry) -> Unit,
@@ -425,7 +451,6 @@ private fun KitRow(
 ) {
     val scheme = LocalScheme.current
     val kit = entry.kit
-    var armed by remember(entry.dir) { mutableStateOf(false) }
     val revealActions = armed && !pickModeActive
     Row(
         Modifier
@@ -437,8 +462,8 @@ private fun KitRow(
                 } else {
                     Modifier.pointerInput(entry.dir) {
                         detectTapGestures(
-                            onLongPress = { armed = true },
-                            onTap = { if (armed) armed = false else onOpen(entry) },
+                            onLongPress = { onArm() },
+                            onTap = { if (armed) onDisarm() else onOpen(entry) },
                         )
                     }
                 },
