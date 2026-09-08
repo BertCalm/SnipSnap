@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.KitWrites
 import com.snipsnap.app.ShareOut
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -78,6 +79,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 private const val TAG = "ExportScreen"
@@ -159,11 +161,22 @@ fun ExportScreen(
         // Preflight.check, which opens and reads every pad WAV's header —
         // both belong off the composition thread, so both happen inside
         // this one IO block rather than splitting the load from the model
-        // construction.
+        // construction. This snapshot read goes through KitWrites too: a
+        // read landing mid-write of this exact kit.json/pad WAV (SET KEY,
+        // EVIL TWINS, IN KEY off the KIT screen; any pad's own commit) could
+        // otherwise build the session from a torn file or a WAV header
+        // that's mid-replace. `:shell` (ExportWizardModel/Preflight) can't
+        // see `:app`'s KitWrites, so the lock is taken here, by the caller —
+        // same layering as every KitShelf helper (setKey/evilTwins/inKey)
+        // below. Only the snapshot read is locked, not the dub itself
+        // (`model.write` below): that's seconds-long file-copy IO, exactly
+        // what every other KitWrites site keeps outside the lock.
         val loaded = withContext(Dispatchers.IO) {
             runCatching {
-                val kit = KitStore.load(entry.dir)
-                ExportSession(entry.dir, kit, ExportWizardModel(kit, entry.dir))
+                KitWrites.mutex.withLock {
+                    val kit = KitStore.load(entry.dir)
+                    ExportSession(entry.dir, kit, ExportWizardModel(kit, entry.dir))
+                }
             }.getOrNull()
         }
         if (loaded == null) loadFailed = true else onSessionChange(loaded)

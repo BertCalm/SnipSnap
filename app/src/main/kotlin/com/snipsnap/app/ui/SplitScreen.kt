@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.KitWrites
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
@@ -57,6 +58,7 @@ import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -311,12 +313,19 @@ fun SplitScreen(
         scope.launch {
             try {
                 val (existed, updated) = withContext(Dispatchers.IO) {
-                    val model = KitBuilderModel.open(dir)
-                    val taken = model.pad(slot) != null
-                    if (taken) model.replaceAudio(slot, null) { _ -> snip }
-                    else model.assign(slot, snip, DrumClass.UNKNOWN, "Split Print")
-                    model.save()
-                    taken to model.kit
+                    // KitWrites: this kit.json write must not race SET KEY/
+                    // EVIL TWINS/IN KEY off the KIT screen or another pad's
+                    // own commit — same open→mutate→save-under-one-lock
+                    // shape as PadCaptureScreen's commitToPad/SynthScreen's
+                    // sendToSlot.
+                    KitWrites.mutex.withLock {
+                        val model = KitBuilderModel.open(dir)
+                        val taken = model.pad(slot) != null
+                        if (taken) model.replaceAudio(slot, null) { _ -> snip }
+                        else model.assign(slot, snip, DrumClass.UNKNOWN, "Split Print")
+                        model.save()
+                        taken to model.kit
+                    }
                 }
                 pendingPrint = null
                 onKitUpdated(updated)
