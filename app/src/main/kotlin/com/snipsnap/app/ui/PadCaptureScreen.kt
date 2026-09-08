@@ -262,11 +262,18 @@ fun PadCaptureScreen(
             ) {
                 if (armed) {
                     CaptureLevelIndicator()
+                    // States GRAB's actual window (GRAB_SECONDS, interpolated
+                    // so this can't drift from the real cap) instead of the
+                    // old "the sound that just happened" — which, paired
+                    // with no stated window, read as a retroactive
+                    // catch-all reaching further back than it does, and
+                    // further back than the mic has even been listening (it
+                    // can't reach before LISTEN was pressed at all).
                     TapeText(
-                        "GRAB the sound that just happened, or HOLD to record.",
+                        "GRAB KEEPS THE LAST ${GRAB_SECONDS}s HEARD. HOLD RECORDS AS LONG AS YOU HOLD IT.",
                         TapeType.lcdSmall,
                         scheme.lcdInk.tape,
-                        maxLines = 2,
+                        maxLines = 3,
                     )
                 } else {
                     TapeText(
@@ -283,7 +290,7 @@ fun PadCaptureScreen(
             PrimaryAction(label = "START MIC", enabled = true, onClick = onRequestArm)
         }
         PrimaryAction(
-            label = if (committing == Gesture.GRAB) "GRABBING…" else "GRAB",
+            label = if (committing == Gesture.GRAB) "GRABBING…" else "GRAB ▸ LAST ${GRAB_SECONDS}s",
             enabled = armed && committing == null,
             onClick = ::grab,
         )

@@ -64,9 +64,9 @@ import androidx.compose.ui.graphics.SolidColor
 import com.snipsnap.kit.Names
 
 /**
- * The tape shelf: every kit folder on the device, plus the FRESH TAPE
- * menu (the cold-start answer — the shelf is never uselessly empty when
- * six starters are one tap away).
+ * The tape shelf: every kit folder on the device, plus the NEW KIT ▸ PICK
+ * A STARTER menu (the cold-start answer — the shelf is never uselessly
+ * empty when eight starters are one tap away).
  */
 @Composable
 fun KitsScreen(
@@ -140,7 +140,10 @@ fun KitsScreen(
             ) {
                 TapeText(if (assigningSnip) "PICK A KIT FOR THIS SNIP" else "THE SHELF", TapeType.lcdHeader, scheme.lcdInk.tape)
             }
-            if (assigningSnip) {
+            // The hint below presupposes a kit row to tap — with none on
+            // the shelf yet, the empty-state panel just below carries the
+            // real instruction instead (Copy.EMPTY_SHELF_FOR_ASSIGN).
+            if (assigningSnip && kits.isNotEmpty()) {
                 TapeText("TAP A KIT, THEN LONG-PRESS AN EMPTY PAD.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
             }
 
@@ -153,7 +156,16 @@ fun KitsScreen(
                         .padding(14.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+                    // A user mid SNIPS → PAD hand-off just made the very
+                    // snip they're trying to place — EMPTY_SHELF's "NOTHING
+                    // TAPED YET" would flatly contradict that. This names
+                    // the real blocker (no kit yet) and the real fix.
+                    TapeText(
+                        if (assigningSnip) Copy.EMPTY_SHELF_FOR_ASSIGN else Copy.EMPTY_SHELF,
+                        TapeType.lcdSmall,
+                        scheme.lcdInk.tape,
+                        maxLines = 3,
+                    )
                 }
             } else {
                 LazyColumn(
@@ -213,8 +225,13 @@ fun KitsScreen(
                 }
             }
 
+            // Renamed from "FRESH TAPE": on a cold open this reads as
+            // "start recording" (the persona walkthroughs' single most
+            // costly misread), when what it actually opens is a menu of
+            // starter kits — most of them pre-composed, only BLANK/START
+            // EMPTY genuinely empty. The label now predicts that.
             PrimaryAction(
-                label = if (busy) "DUBBING…" else "FRESH TAPE",
+                label = if (busy) "DUBBING…" else "NEW KIT ▸ PICK A STARTER",
                 enabled = !busy,
                 onClick = { menuOpen = true },
             )
@@ -727,7 +744,7 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
                 .padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            TapeText("FRESH TAPE", TapeType.display, scheme.ink.tape)
+            TapeText("PICK A STARTER", TapeType.display, scheme.ink.tape)
             for (starter in StarterKits.ALL) {
                 Column(
                     Modifier
@@ -805,7 +822,7 @@ private fun ArmControl(
                     .tapeClick(label = null, onClick = onSnip),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText("SNIP ▸ KEEP LAST 60s", TapeType.displayBig, scheme.amber.tape)
+                TapeText("SNIP ▸ KEEP UP TO 60s", TapeType.displayBig, scheme.amber.tape)
             }
         }
     }

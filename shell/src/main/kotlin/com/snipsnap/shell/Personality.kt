@@ -50,6 +50,15 @@ object Copy {
 
     // Empty states.
     const val EMPTY_SHELF = "NOTHING TAPED YET. GO STEAL A SOUND (LEGALLY)."
+    /**
+     * The shelf's empty face during a SNIPS → PAD hand-off (`assigningSnip`
+     * in `KitsScreen`/`App.kt`) when the shelf also has zero kits — distinct
+     * from [EMPTY_SHELF], which would otherwise flatly claim nothing exists
+     * right after the user just captured the very snip they're trying to
+     * place. Names the real blocker (no kit to land on) and the real fix
+     * (NEW KIT, right below this panel) rather than denying the snip exists.
+     */
+    const val EMPTY_SHELF_FOR_ASSIGN = "THIS SNIP NEEDS A KIT TO LAND ON. TAP NEW KIT BELOW TO MAKE ONE."
     const val EMPTY_KIT = "16 EMPTY PADS. TERRIFYING."
     /** A kit folder that won't parse (torn `kit.json`, missing file, etc.) — distinct from EMPTY_SHELF, which claims no kit exists at all. */
     const val KIT_WONT_OPEN = "THIS KIT WON'T OPEN. THE TAPE MAY BE CHEWED."
@@ -67,11 +76,28 @@ object Copy {
 
     // Capture.
     const val SESSION_ARMED = "TAPE ROLLING. GO STEAL A SOUND (LEGALLY)."
-    const val SNIPPED = "SNIP! LAST 60s KEPT."
-    const val BUBBLE_EJECTED = "EJECTED. TAPE IS KEPT."
+    /**
+     * SNIP's own toast — the arm-then-capture promise, stated honestly:
+     * LISTEN is what starts the ring; this only ever holds what's been
+     * heard since then, capped at 60s. Not "the last 60 seconds" as a
+     * standing fact (that's false the instant LISTEN is pressed), but
+     * exactly what was actually heard, up to that cap.
+     */
+    const val SNIPPED = "SNIP! KEPT WHAT IT'S HEARD SINCE LISTEN, UP TO 60s."
+    /** The Bubble's drag-to-hot-zone stop — harmless, distinct from a delete or a reset. */
+    const val BUBBLE_EJECTED = "STOPPED. TAPE IS KEPT."
     const val CAPTURE_BLOCKED =
         "TAPE JAM — SPOTIFY BLOCKS THE TAPE. USE THE SCREEN RECORDER, I'LL PULL THE AUDIO OUT."
     const val CAPTURE_BLOCKED_BUTTON = "FINE"
+    /**
+     * RECORD_AUDIO denied by the user (or the system, permanently) —
+     * distinct from [CAPTURE_BLOCKED], which is the real DRM/dead-air
+     * refusal. A denied permission isn't Spotify's fault and isn't fixed by
+     * the screen recorder; it's fixed in the phone's own permission
+     * settings, so this says that instead.
+     */
+    const val MIC_PERMISSION_DENIED =
+        "SNIPSNAP NEEDS THE MIC TO LISTEN. TURN IT ON IN YOUR PHONE'S SETTINGS, THEN HIT LISTEN AGAIN."
     // INSIDE: another app's audio, from inside it (M1's second source).
     const val INSIDE_ARMED = "TAPE ROLLING ON THE INSIDE. GO PLAY THE THING."
     /** The projection consent dialog was dismissed: nothing armed, nothing lost; LISTEN is still there. */
@@ -102,11 +128,12 @@ object Copy {
     /** The message box's title when a share landed nothing: the file's name and the refuser's words follow. */
     const val NOTHING_LANDED = "NOTHING LANDED."
     // The quick-settings tile: idle reads LISTEN (opens the app, arms
-    // nothing yet), armed reads SNIP (writes the ring's last 60s to disk).
+    // nothing yet), armed reads SNIP (writes what the ring has heard since
+    // LISTEN, up to 60s, to disk).
     const val TILE_LABEL_IDLE = "LISTEN"
     const val TILE_LABEL_ARMED = "SNIP"
     const val TILE_SUBTITLE_IDLE = "OPENS SNIPSNAP"
-    const val TILE_SUBTITLE_ARMED = "KEEPS LAST 60s"
+    const val TILE_SUBTITLE_ARMED = "KEEPS UP TO 60s"
 
     // Tape deck.
     /** COMMIT toasts, rotated in order per commit. */
@@ -124,7 +151,8 @@ object Copy {
     const val PENCIL_AT_TOP = "ALREADY AT THE TOP."
     const val ODOMETER_ON = "TAPE COUNTER. LIKE THE OLD DAYS."
     const val ODOMETER_OFF = "BACK TO REAL TIME."
-    const val DELETE_SNIP = "EJECTED. THE BIN KEEPS IT 30 DAYS."
+    /** PAD SHEET's own DELETE → BIN, on a pad — a real delete, distinct from EJECT (stop listening) or the export wizard's reset. */
+    const val DELETE_SNIP = "DELETED. THE BIN KEEPS IT 30 DAYS."
 
     // ---- KIT: teaching the one gesture that opens PAD SHEET ----
     /**
@@ -243,7 +271,7 @@ object Copy {
     fun outsideRefused(reason: String): String = "OUTSIDE REFUSED: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
     const val OUTSIDE_UNDONE = "BACK INSIDE. THE ORIGINAL IS BACK FROM THE BIN."
     const val OUTSIDE_NEEDS_MIC = "OUTSIDE NEEDS THE MIC. PRESS LISTEN ONCE ON KITS TO GRANT IT."
-    const val OUTSIDE_TAPE_ROLLING = "THE TAPE IS ROLLING. EJECT IT FIRST - OUTSIDE WANTS THE MIC TO ITSELF."
+    const val OUTSIDE_TAPE_ROLLING = "THE TAPE IS ROLLING. STOP LISTENING FIRST - OUTSIDE WANTS THE MIC TO ITSELF."
     const val OUTSIDE_NEEDS_ONE = "GHOSTS ON. OUTSIDE WANTS ONE SAMPLE - CLEAR THEM FIRST."
     const val OUTSIDE_SENDING = "SENDING… TURN IT UP."
     const val OUTSIDE_LISTENING = "LISTENING FOR THE ROOM…"
@@ -313,7 +341,9 @@ object Copy {
     const val EXPORT_DONE = "DUBBED. GO MAKE SOMETHING."
     const val DUB_DONE = "DUB DONE. SOUNDS 3% WARMER NOW."
     /**
-     * EJECT CARD ✓: resets the wizard to READY for another dub or another
+     * WRITE ANOTHER ✓ (`ExportWizardModel.writeLabel`'s COMPLETE-stage
+     * label — no longer "EJECT CARD ✓", which claimed an eject that never
+     * happens): resets the wizard to READY for another dub or another
      * kit. That's the whole effect — the file DUB already wrote stays
      * exactly where it landed; this button doesn't touch it, so the toast
      * doesn't claim it moved anywhere.
@@ -321,7 +351,7 @@ object Copy {
     const val CARD_EJECTED = "RESET. WRITE ANOTHER, OR SWITCH KITS."
     /** The completion stage's own location line, sitting above the raw path. No claim about which file browser can see it — just that it's on the phone. */
     const val EXPORT_SAVED_TO = "SAVED ON THIS PHONE:"
-    /** EXPORT's SHARE action label, next to EJECT CARD on the completion stage — offered only when the write produced one self-contained file. */
+    /** EXPORT's SHARE action label, next to WRITE ANOTHER ✓ on the completion stage — offered only when the write produced one self-contained file. */
     const val EXPORT_SHARE_LABEL = "SHARE ▸ SEND THIS FILE"
     /** EXPORT's own share toast once the chooser is up — the same tail SHARE and BACKUP use. */
     const val EXPORT_SHARE_SENT = "PICK WHERE IT GOES."

@@ -284,7 +284,15 @@ fun App(shelf: KitShelf) {
     // or the notification's own SNIP action never touches this at all —
     // only ARM/EJECT flip it).
     val armed by MicSessionService.armed.collectAsState()
+    // The real DRM/dead-air refusal (INSIDE's SilenceWatch, below) — kept
+    // separate from [micPermissionDenied] so a plain RECORD_AUDIO denial
+    // never surfaces Spotify/DRM language describing a problem the user
+    // doesn't have.
     var captureBlocked by remember { mutableStateOf(false) }
+    // RECORD_AUDIO denied at the system dialog (`capturePermissionLauncher`
+    // below) — its own state and its own honest dialog, never
+    // [captureBlocked]'s DRM copy.
+    var micPermissionDenied by remember { mutableStateOf(false) }
     // INSIDE's dead-air verdict (F3.4): the service watches the stream
     // and flips this while an opted-out app is playing into silence; the
     // TAPE JAM box shows once per verdict, and the verdict clears itself
@@ -400,7 +408,7 @@ fun App(shelf: KitShelf) {
     // another. The callback below branches on RECORD_AUDIO alone —
     // POST_NOTIFICATIONS only gates the notification's own SNIP shortcut,
     // not whether a session can arm at all, so a lone notification denial
-    // must not trip CAPTURE_BLOCKED.
+    // must not trip [micPermissionDenied].
     val capturePermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { results ->
@@ -426,7 +434,10 @@ fun App(shelf: KitShelf) {
                 offerBubbleOnce()
             }
         } else {
-            captureBlocked = true
+            // A denied RECORD_AUDIO is not a DRM/dead-air refusal — see
+            // [micPermissionDenied]'s own comment above for why this must
+            // never fall into [captureBlocked].
+            micPermissionDenied = true
         }
     }
 
@@ -1093,7 +1104,7 @@ fun App(shelf: KitShelf) {
     BackHandler(
         enabled = !anyOverlayOpen && screen != AppScreen.KITS &&
             screen != AppScreen.SPLIT && screen != AppScreen.KEYS &&
-            note == null && !captureBlocked,
+            note == null && !captureBlocked && !micPermissionDenied,
     ) { goToScreen(AppScreen.KITS) }
 
     TapeTheme(scheme, personality) {
@@ -1585,32 +1596,41 @@ fun App(shelf: KitShelf) {
             }
             if (captureBlocked) {
                 val dismissBlocked = { captureBlocked = false }
-                CaptureBlockedDialog(onDismiss = dismissBlocked)
+                BlockedDialog(Copy.CAPTURE_BLOCKED, Copy.CAPTURE_BLOCKED_BUTTON, onDismiss = dismissBlocked)
                 BackHandler(onBack = dismissBlocked)
+            }
+            if (micPermissionDenied) {
+                val dismissDenied = { micPermissionDenied = false }
+                BlockedDialog(Copy.MIC_PERMISSION_DENIED, Copy.CAPTURE_BLOCKED_BUTTON, onDismiss = dismissDenied)
+                BackHandler(onBack = dismissDenied)
             }
         }
     }
 }
 
 /**
- * RECORD_AUDIO denied: the house modal shape (`KitsScreen`'s own
- * `StarterMenu` — scrim `Box` + `raisedBevel` `Column`, an inner
- * `tapeClick {}` swallowing taps so the scrim's dismiss doesn't fire
- * through) rather than a Material `AlertDialog`; TapeOS never uses
- * Material's own chrome (see `Chrome.kt`'s `TapeText` KDoc).
+ * The house modal shape shared by two unrelated capture refusals — a real
+ * DRM/dead-air block ([Copy.CAPTURE_BLOCKED]) and a plain RECORD_AUDIO
+ * denial ([Copy.MIC_PERMISSION_DENIED]) — that must never share the same
+ * *words* (a Spotify/DRM message describing a permission problem is a
+ * law-3 violation) even though they share this presentation: scrim `Box` +
+ * `raisedBevel` `Column`, an inner `tapeClick {}` swallowing taps so the
+ * scrim's dismiss doesn't fire through, rather than a Material
+ * `AlertDialog` (TapeOS never uses Material's own chrome, see `Chrome.kt`'s
+ * `TapeText` KDoc). [message] and [buttonLabel] are the only things that
+ * differ between callers.
  */
 @Composable
-private fun CaptureBlockedDialog(onDismiss: () -> Unit) {
+private fun BlockedDialog(message: String, buttonLabel: String, onDismiss: () -> Unit) {
     val scheme = LocalScheme.current
     Box(
         Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.55f))
             // Labelled with the same word the visible dismiss button
-            // below uses (Copy.CAPTURE_BLOCKED_BUTTON) — the scrim does
-            // exactly what that button does, and has no descendant text
-            // of its own to fall back on.
-            .tapeClick(label = Copy.CAPTURE_BLOCKED_BUTTON, onClick = onDismiss),
+            // below uses — the scrim does exactly what that button does,
+            // and has no descendant text of its own to fall back on.
+            .tapeClick(label = buttonLabel, onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -1622,8 +1642,8 @@ private fun CaptureBlockedDialog(onDismiss: () -> Unit) {
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText(Copy.CAPTURE_BLOCKED, TapeType.lcdSmall, scheme.ink.tape, maxLines = 4)
-            PrimaryAction(label = Copy.CAPTURE_BLOCKED_BUTTON, enabled = true, onClick = onDismiss)
+            TapeText(message, TapeType.lcdSmall, scheme.ink.tape, maxLines = 4)
+            PrimaryAction(label = buttonLabel, enabled = true, onClick = onDismiss)
         }
     }
 }

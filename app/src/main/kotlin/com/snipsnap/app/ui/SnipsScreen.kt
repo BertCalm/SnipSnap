@@ -325,7 +325,7 @@ private fun SnipRow(
 
 /**
  * "DELETE THIS SNIP? CAN'T UNDO." — the exact confirm text the brief locks
- * in. Same scrim + raisedBevel shape as `App.kt`'s own `CaptureBlockedDialog`
+ * in. Same scrim + raisedBevel shape as `App.kt`'s own `BlockedDialog`
  * / `KitsScreen.kt`'s `StarterMenu`: a `Box` scrim that dismisses on tap,
  * a `Column` that swallows its own tap so that dismiss can't fire through it.
  */
