@@ -56,6 +56,19 @@ Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 > states read from the same `ActionButton` vocabulary every other screen
 > uses, and the fader's unity tick and knob match `Fader.kt`'s own drawing
 > code exactly.
+>
+> **Closed by wave KKK (2026-09-08).** A fresh archaeology pass across
+> every screen in `app/.../ui/` (not just what earlier waves happened to
+> reach) turned up four more screens with no board ever: KEYS,
+> `PadCaptureScreen`, `SnipsScreen`, `DeletedKitsScreen`. KEYS is drawn
+> on the canvas's page ten — CHROMATIC idle (root bottom-left, ascending
+> left-to-right and bottom-to-top per `UI_DESIGN.md`'s own rule; an
+> unmapped key dims to ink3 rather than vanishing), a key held (only the
+> box's fill jumps to a 0.45-alpha wash, the label's ink colour untouched
+> — matches `KeyPad`'s code exactly), MAJOR picked (the whole grid
+> relabels to the scale, not merely redecorated — wrong notes are
+> physically impossible in a scale layout). Held up as built - no code
+> defect. The other three remain queued for a future pass.
 
 The handoff is unusually implementable — it states tokens in the form Compose
 consumes and names repo symbols (`PeaksPyramid`, `StarterKits`,

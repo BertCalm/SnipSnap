@@ -27,6 +27,43 @@ import javax.xml.parsers.DocumentBuilderFactory
  */
 object XpnImporter {
 
+    /**
+     * A spend-down budget shared across many sample writes that together
+     * bound the total one untrusted archive may cause to land on disk —
+     * each sample is already capped on its own by [com.snipsnap.mpc3.LimitedRead]'s
+     * per-entry ceiling, but a program with hundreds of pads (or, from
+     * [KitBackup], a backup of many programs) would otherwise multiply that
+     * ceiling by however many samples it declares. One [WriteBudget] shared
+     * across a whole [import]/[importAll] call — or, from [KitBackup], across
+     * a whole restore — bounds the operation itself, the same "one budget
+     * for the whole" rule [com.snipsnap.shell.ShelfImport.unzipSafely] already
+     * holds the MPC-track ZIP path to.
+     */
+    class WriteBudget(val max: Long) {
+        init {
+            require(max >= 0) { "a budget cannot be negative: $max" }
+        }
+        private var spent = 0L
+        val remaining: Long get() = (max - spent).coerceAtLeast(0L)
+
+        /**
+         * [n] is always a byte count a caller actually wrote — never
+         * negative — but this is part of a security boundary, so it does
+         * not trust that: a negative [n] would shrink [spent] and hand back
+         * budget that was never earned, and enough additions could in
+         * principle overflow a [Long] the same way. Refuse the first,
+         * saturate at [Long.MAX_VALUE] against the second, so a caller
+         * mistake can only ever make this budget stricter, not looser.
+         */
+        fun spend(n: Long) {
+            require(n >= 0) { "spent a negative byte count: $n" }
+            spent = if (spent > Long.MAX_VALUE - n) Long.MAX_VALUE else spent + n
+        }
+    }
+
+    /** The default cap for one archive's worth of sample writes — [com.snipsnap.shell.ShelfImport]'s own ZIP budget, held here too since `:kit` doesn't depend on `:shell`. */
+    const val DEFAULT_BUDGET_BYTES: Long = 512L * 1024 * 1024
+
     data class ImportResult(
         val kit: Kit,
         val directory: File,
@@ -41,22 +78,35 @@ object XpnImporter {
         val skipped: List<Pair<String, String>>,
     )
 
-    fun import(xpnFile: File, destRoot: File, overwrite: Boolean = false): ImportResult {
+    fun import(
+        xpnFile: File,
+        destRoot: File,
+        overwrite: Boolean = false,
+        budget: WriteBudget = WriteBudget(DEFAULT_BUDGET_BYTES),
+    ): ImportResult {
         require(xpnFile.isFile) { "no such file: $xpnFile" }
         ZipFile(xpnFile).use { zip ->
             val entries = zip.entries().toList().filter { !it.isDirectory }
             val programEntry = programEntries(entries).firstOrNull()
                 ?: throw IllegalArgumentException("no .xpm program inside $xpnFile")
-            return importProgram(zip, entries, programEntry, xpnFile, destRoot, overwrite)
+            return importProgram(zip, entries, programEntry, xpnFile, destRoot, overwrite, budget)
         }
     }
 
     /**
      * Every drum program in the archive becomes its own kit folder — the
      * receive half of a multi-kit pack. Programs that refuse (keygroups,
-     * missing samples) are skipped and named, not fatal.
+     * missing samples) are skipped and named, not fatal. [budget] is one
+     * ceiling shared across every program in the archive, not reset per
+     * program — the point is bounding what the *archive* can cause, not
+     * each program's slice of it.
      */
-    fun importAll(xpnFile: File, destRoot: File, overwrite: Boolean = false): AllResult {
+    fun importAll(
+        xpnFile: File,
+        destRoot: File,
+        overwrite: Boolean = false,
+        budget: WriteBudget = WriteBudget(DEFAULT_BUDGET_BYTES),
+    ): AllResult {
         require(xpnFile.isFile) { "no such file: $xpnFile" }
         ZipFile(xpnFile).use { zip ->
             val entries = zip.entries().toList().filter { !it.isDirectory }
@@ -66,7 +116,7 @@ object XpnImporter {
             val skipped = mutableListOf<Pair<String, String>>()
             for (program in programs) {
                 try {
-                    kits += importProgram(zip, entries, program, xpnFile, destRoot, overwrite)
+                    kits += importProgram(zip, entries, program, xpnFile, destRoot, overwrite, budget)
                 } catch (e: IllegalArgumentException) {
                     skipped += program.name to (e.message ?: "refused")
                 }
@@ -86,6 +136,7 @@ object XpnImporter {
         xpnFile: File,
         destRoot: File,
         overwrite: Boolean,
+        budget: WriteBudget,
     ): ImportResult {
         run {
             val xml = zip.getInputStream(programEntry).use {
@@ -136,47 +187,135 @@ object XpnImporter {
             if (File(destDir, "kit.json").exists() && !overwrite) {
                 throw IOException("kit already exists: $destDir (pass overwrite=true to replace it)")
             }
-            destDir.mkdirs()
-            for (stem in referenced) {
-                val entry = wavByStem.getValue(stem.lowercase())
-                zip.getInputStream(entry).use { src ->
-                    SafePath.child(destDir, "$stem.wav").outputStream().use {
-                        com.snipsnap.mpc3.LimitedRead.copy(src, it, what = "sample $stem.wav")
+
+            // Every write lands in a fresh staging folder first, moved into
+            // destDir only once the whole program - every sample, kit.json -
+            // is down safely; on any failure (budget, a bad zip entry, a
+            // full disk) the staging folder is simply deleted, never
+            // destDir. A program refused partway used to leave WAVs sitting
+            // in destDir with no kit.json to name them - invisible to the
+            // shelf's own listing, but not to the disk - and importAll
+            // moving on to the next program in the archive meant a refused
+            // one could still leave debris behind.
+            destRoot.mkdirs()
+            val staging = java.nio.file.Files.createTempDirectory(destRoot.toPath(), "xpn-import-").toFile()
+            try {
+                for (stem in referenced) {
+                    val entry = wavByStem.getValue(stem.lowercase())
+                    val out = SafePath.child(staging, "$stem.wav")
+                    try {
+                        zip.getInputStream(entry).use { src ->
+                            out.outputStream().use {
+                                // The per-entry ceiling alone caps one sample; a
+                                // program with hundreds of pads (or importAll's
+                                // whole archive) would otherwise multiply it by
+                                // however many samples it declares — [budget]
+                                // bounds the sum instead.
+                                com.snipsnap.mpc3.LimitedRead.copy(src, it, limit = budget.remaining, what = "sample $stem.wav")
+                            }
+                        }
+                    } catch (e: com.snipsnap.mpc3.LimitedRead.TooLargeException) {
+                        // copy() throws before writing the chunk that would
+                        // overrun, but earlier chunks in this same call already
+                        // landed on disk - importAll skips a program that throws
+                        // and moves on to the next, so an unspent partial write
+                        // here would let every remaining program in an archive
+                        // repeat it against the same unchanged budget.remaining,
+                        // multiplying exactly what this budget exists to bound.
+                        val partial = out.length()
+                        out.delete()
+                        budget.spend(partial)
+                        throw com.snipsnap.mpc3.LimitedRead.TooLargeException(
+                            "'${xpnFile.name}' writes past ${budget.max / (1024 * 1024)} MB of samples at '$stem.wav' - refused",
+                        )
                     }
+                    budget.spend(out.length())
                 }
-            }
 
-            val pads = instruments.mapNotNull { inst ->
-                val slot = if (zeroBased) inst.number + 1 else inst.number
-                if (slot !in 1..128) return@mapNotNull null
-                val ordered = inst.layers.sortedBy { it.velStart }
-                val main = ordered.last()
-                KitPad(
-                    slot = slot,
-                    sampleFile = "${main.sampleName}.wav",
-                    displayName = main.sampleName,
-                    drumClass = DrumClass.UNKNOWN,
-                    level = inst.volume.coerceIn(0f, 1f),
-                    pan = inst.pan.coerceIn(0f, 1f),
-                    tuneCoarse = inst.tuneCoarse.coerceIn(-36, 36),
-                    tuneFine = inst.tuneFine.coerceIn(-100, 100),
-                    muteGroup = inst.muteGroup.coerceIn(0, 32),
-                    oneShot = inst.oneShot,
-                    attack = inst.attack,
-                    decay = inst.decay,
-                    cutoff = inst.cutoff,
-                    resonance = inst.resonance,
-                    source = mapOf("importedFrom" to xpnFile.name),
-                    velocityLayers = if (ordered.size < 2) emptyList() else {
-                        ordered.map { KitLayer("${it.sampleName}.wav", it.velStart, it.velEnd) }
-                    },
-                )
-            }
-            require(pads.isNotEmpty()) { "no pads landed in the 128-slot range" }
+                val pads = instruments.mapNotNull { inst ->
+                    val slot = if (zeroBased) inst.number + 1 else inst.number
+                    if (slot !in 1..128) return@mapNotNull null
+                    val ordered = inst.layers.sortedBy { it.velStart }
+                    val main = ordered.last()
+                    KitPad(
+                        slot = slot,
+                        sampleFile = "${main.sampleName}.wav",
+                        displayName = main.sampleName,
+                        drumClass = DrumClass.UNKNOWN,
+                        level = inst.volume.coerceIn(0f, 1f),
+                        pan = inst.pan.coerceIn(0f, 1f),
+                        tuneCoarse = inst.tuneCoarse.coerceIn(-36, 36),
+                        tuneFine = inst.tuneFine.coerceIn(-100, 100),
+                        muteGroup = inst.muteGroup.coerceIn(0, 32),
+                        oneShot = inst.oneShot,
+                        attack = inst.attack,
+                        decay = inst.decay,
+                        cutoff = inst.cutoff,
+                        resonance = inst.resonance,
+                        source = mapOf("importedFrom" to xpnFile.name),
+                        velocityLayers = if (ordered.size < 2) emptyList() else {
+                            ordered.map { KitLayer("${it.sampleName}.wav", it.velStart, it.velEnd) }
+                        },
+                    )
+                }
+                require(pads.isNotEmpty()) { "no pads landed in the 128-slot range" }
 
-            val kit = Kit(kitName, pads)
-            KitStore.save(kit, destDir)
-            return ImportResult(kit, destDir, programEntry.name)
+                val kit = Kit(kitName, pads)
+                KitStore.save(kit, staging)
+                // Only now, with everything down safely, does destDir
+                // change: the pre-existing-kit check above already
+                // confirmed either nothing is there or overwrite says
+                // replacing it is fine. A kit already there is moved aside
+                // rather than deleted outright - if the swap below fails
+                // partway (a full disk, an I/O error), the old kit goes
+                // back rather than being the price of a failed overwrite.
+                val displaced = if (destDir.exists()) {
+                    File(destRoot, ".xpn-replaced-${destDir.name}-${System.nanoTime()}").also { aside ->
+                        if (!destDir.renameTo(aside)) {
+                            throw IOException("could not stage '$kitName' for replacement - nothing landed")
+                        }
+                    }
+                } else {
+                    null
+                }
+                if (!staging.renameTo(destDir) && !staging.copyRecursively(destDir, overwrite = true)) {
+                    // copyRecursively gives up on the first failed file but
+                    // does not undo what it already copied, so destDir may
+                    // now hold a half-landed kit under its real name - that
+                    // must not stay visible, and the restore below needs
+                    // the spot cleared to land in either way. A clear that
+                    // doesn't fully succeed must not be built on: restoring
+                    // into what's left could merge the old kit's files with
+                    // wreckage from the failed landing into one corrupted
+                    // mix - worse than an honest refusal.
+                    val cleared = destDir.deleteRecursively()
+                    if (displaced != null) {
+                        val restored = cleared && (displaced.renameTo(destDir) || displaced.copyRecursively(destDir, overwrite = true))
+                        if (!restored) {
+                            throw IOException(
+                                "could not land '$kitName', and could not restore the kit that was there either - " +
+                                    "it survives at '${displaced.name}' under $destRoot",
+                            )
+                        }
+                        displaced.deleteRecursively() // a no-op once renameTo already moved it
+                        throw IOException("could not land '$kitName' on the shelf - the kit that was there is back, nothing else changed")
+                    }
+                    if (!cleared) {
+                        throw IOException(
+                            "could not land '$kitName' on the shelf, and could not clear the wreckage left behind - " +
+                                "a partial, broken '$kitName' may remain at $destDir",
+                        )
+                    }
+                    throw IOException("could not land '$kitName' on the shelf - nothing landed")
+                }
+                displaced?.deleteRecursively()
+                return ImportResult(kit, destDir, programEntry.name)
+            } finally {
+                // A no-op once renameTo has moved staging into destDir; the
+                // one cleanup funnel for every other exit - a refused
+                // sample, a bad program, a full disk.
+                staging.deleteRecursively()
+            }
         }
     }
 

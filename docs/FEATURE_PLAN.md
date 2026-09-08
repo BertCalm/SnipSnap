@@ -1932,6 +1932,16 @@ APP wave JJJ: ✓ all landed (2026-09-08) — SPLIT, drawn. EEE9 arrived
   →TAPE path. Held up as built - the lit/dimmed/enabled vocabulary and
   the fader's own unity tick and knob already match the code exactly.
 
+APP wave KKK: ✓ all landed (2026-09-08) — KEYS, drawn. Grown alongside
+  INSTRUMENTS on the shelf with no board ever, same pattern as GRAIN
+  FIELD, SURFACE and SPLIT: CHROMATIC idle (root bottom-left, ascending
+  left-to-right and bottom-to-top; an unmapped key dims to ink3 rather
+  than vanishing), a key held (only the box's fill jumps, the label's
+  ink colour untouched), MAJOR picked (the whole grid relabels to the
+  scale, not merely redecorated). Held up as built - no code fix. Three
+  screens found in the same archaeology pass remain undrawn:
+  `PadCaptureScreen`, `SnipsScreen`, `DeletedKitsScreen`.
+
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
   F6.1 .xpn import + expansion tile → velocity/bank B →

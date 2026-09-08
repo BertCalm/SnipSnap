@@ -343,4 +343,135 @@ class XpnImporterTest {
         val err = assertFailsWith<IllegalArgumentException> { XpnImporter.import(missing, File(temp, "y")) }
         assertTrue("Ghost" in err.message!!)
     }
+
+    @Test
+    fun `a write budget bounds total samples, not just one entry`() {
+        val kitDir = File(temp, "budget-src")
+        val kit = buildKit(kitDir)
+        val xpn = File(temp, "Round Trip.xpn")
+        XpnPackager.write(kit, kitDir, xpn, Exporters.defaultMeta(kit))
+        val totalSampleBytes = listOf("A01_Kick_01.wav", "A02_Snare_soft.wav", "A02_Snare_01.wav", "A03_Hat_01.wav")
+            .sumOf { File(kitDir, it).length() }
+
+        // Too tight for the kit's four samples combined, even though each
+        // one alone is far under LimitedRead's own per-entry ceiling.
+        val tight = assertFailsWith<com.snipsnap.mpc3.LimitedRead.TooLargeException> {
+            XpnImporter.import(xpn, File(temp, "tight-out"), budget = XpnImporter.WriteBudget(totalSampleBytes - 1))
+        }
+        assertTrue("Round Trip.xpn" in tight.message!!)
+
+        // Comfortably enough: the same archive imports clean.
+        XpnImporter.import(xpn, File(temp, "roomy-out"), budget = XpnImporter.WriteBudget(totalSampleBytes))
+    }
+
+    @Test
+    fun `importAll shares one budget across every program, not one each`() {
+        // Two independent kits packed into one archive - buildKit always
+        // names its kit "Round Trip", so the second copy needs renaming or
+        // the pack would see one name twice.
+        val kitA = File(temp, "multi-a").also { buildKit(it) }
+        val kitB = File(temp, "multi-b").also { dir ->
+            buildKit(dir)
+            KitStore.save(KitStore.load(dir).copy(name = "Round Trip 2"), dir)
+        }
+        val pack = PackBuilder.build(
+            listOf(kitA, kitB),
+            File(temp, "multi-card"),
+            ExpansionMeta(title = "Two Kits", identifier = "app.snipsnap.twokits", description = "d"),
+            asXpn = true,
+        )
+        val archive = pack.xpn!!
+        val oneKitBytes = listOf("A01_Kick_01.wav", "A02_Snare_soft.wav", "A02_Snare_01.wav", "A03_Hat_01.wav")
+            .sumOf { File(kitA, it).length() }
+
+        // Room for one kit's samples, not both: the second program is
+        // skipped for blowing the shared budget, not imported anyway.
+        val result = XpnImporter.importAll(archive, File(temp, "multi-out"), budget = XpnImporter.WriteBudget(oneKitBytes + 1))
+        assertEquals(1, result.kits.size, "only the first program fit the shared budget")
+        assertEquals(1, result.skipped.size)
+        assertTrue(result.skipped[0].second.contains("MB", ignoreCase = true), result.skipped[0].second)
+    }
+
+    @Test
+    fun `a program that blows the budget spends its partial write, and leaves nothing behind`() {
+        // Five programs, each with one sample far bigger than the whole
+        // budget on its own: every one refuses. If a refused program's
+        // partial write were never charged against the budget, importAll's
+        // skip-and-continue would hand the next program the same unspent
+        // allowance - five failed attempts could then leave several times
+        // the budget on disk instead of, at most, one budget's worth.
+        val kits = (1..5).map { i ->
+            val dir = File(temp, "leak-$i")
+            dir.mkdirs()
+            val big = Cleanup.process(Snip(FloatArray(100_000) { s -> (0.4 * Math.sin(s / (30.0 + i))).toFloat() }, 1, 44_100))
+            WavWriter.write(File(dir, "A01_Kick_01.wav"), big)
+            KitStore.save(Kit("Leak $i", listOf(KitPad(slot = 1, sampleFile = "A01_Kick_01.wav", drumClass = DrumClass.KICK))), dir)
+            dir
+        }
+        val pack = PackBuilder.build(
+            kits,
+            File(temp, "leak-card"),
+            ExpansionMeta(title = "Leak Pack", identifier = "app.snipsnap.leak", description = "d"),
+            asXpn = true,
+        )
+        val oneSampleBytes = File(kits[0], "A01_Kick_01.wav").length()
+        val budget = XpnImporter.WriteBudget(oneSampleBytes / 4) // too small for even one sample
+
+        val destRoot = File(temp, "leak-out")
+        val result = XpnImporter.importAll(pack.xpn!!, destRoot, budget = budget)
+        assertTrue(result.kits.isEmpty(), "every program's one sample alone exceeds the whole budget")
+        assertEquals(5, result.skipped.size)
+
+        val onDisk = destRoot.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        assertTrue(onDisk <= budget.max, "five refused programs left $onDisk bytes on disk - more than the ${budget.max}-byte budget ever allowed")
+    }
+
+    @Test
+    fun `a program refused partway leaves no kit folder behind at all`() {
+        // Four samples; a budget that lets the first couple through before
+        // the rest blow it. Writes used to land straight in destDir, so a
+        // program refused mid-loop left WAVs on disk with no kit.json to
+        // name them - invisible to the shelf's own listing, not to the
+        // disk. Everything now stages first and only moves into place on
+        // full success, so a refusal must leave no trace of the kit at all.
+        val kitDir = File(temp, "orphan-src")
+        val kit = buildKit(kitDir)
+        val xpn = File(temp, "Round Trip.xpn")
+        XpnPackager.write(kit, kitDir, xpn, Exporters.defaultMeta(kit))
+        val firstSampleBytes = File(kitDir, "A01_Kick_01.wav").length()
+
+        val destRoot = File(temp, "orphan-out")
+        assertFailsWith<com.snipsnap.mpc3.LimitedRead.TooLargeException> {
+            XpnImporter.import(xpn, destRoot, budget = XpnImporter.WriteBudget(firstSampleBytes + 1))
+        }
+        assertTrue(!File(destRoot, "Round Trip").exists(), "a refused program must leave nothing on the shelf, partial or otherwise")
+    }
+
+    @Test
+    fun `overwriting an existing kit replaces it cleanly, no staging litter left beside it`() {
+        val firstDir = File(temp, "swap-src-1")
+        val first = buildKit(firstDir)
+        val firstXpn = File(temp, "Round Trip.xpn")
+        XpnPackager.write(first, firstDir, firstXpn, Exporters.defaultMeta(first))
+        val destRoot = File(temp, "swap-out")
+        XpnImporter.import(firstXpn, destRoot)
+
+        // A second, different kit sharing the first one's name.
+        val secondDir = File(temp, "swap-src-2")
+        secondDir.mkdirs()
+        val differentTone = Cleanup.process(Snip(FloatArray(4410) { i -> (0.5 * Math.sin(i / 3.0)).toFloat() }, 1, 44_100))
+        WavWriter.write(File(secondDir, "A01_Kick_01.wav"), differentTone)
+        val second = Kit("Round Trip", listOf(KitPad(slot = 1, sampleFile = "A01_Kick_01.wav", drumClass = DrumClass.KICK)))
+        KitStore.save(second, secondDir)
+        val secondXpn = File(temp, "Round Trip 2.xpn")
+        XpnPackager.write(second, secondDir, secondXpn, Exporters.defaultMeta(second))
+
+        val result = XpnImporter.import(secondXpn, destRoot, overwrite = true)
+        assertEquals(listOf(1), result.kit.pads.map { it.slot })
+        assertTrue(
+            File(secondDir, "A01_Kick_01.wav").readBytes().contentEquals(File(destRoot, "Round Trip/A01_Kick_01.wav").readBytes()),
+            "the second kit's own sample must be what landed, not the first's",
+        )
+        assertEquals(setOf("Round Trip"), destRoot.list()!!.toSet(), "no .xpn-replaced-* staging litter left beside the kit")
+    }
 }
