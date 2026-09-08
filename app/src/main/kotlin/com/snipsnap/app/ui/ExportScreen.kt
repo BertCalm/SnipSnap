@@ -251,6 +251,28 @@ private fun ExportContent(
     var cardTree by remember {
         mutableStateOf(prefs.getString(PREF_CARD_TREE, null)?.let { Uri.parse(it) })
     }
+    /**
+     * Hands a card's grant back. A persistable permission outlives the
+     * process — that is the point of it — so nothing but this ends one:
+     * not forgetting the card, not picking a different one, not even
+     * closing the app. Left alone they pile up, and the platform caps how
+     * many an app may hold at once, so the card picked tenth would be the
+     * one that fails. It also keeps the row honest: a card the app says
+     * it is not using is a card the app can no longer read.
+     *
+     * Best effort — releasing a grant that was never held throws, and a
+     * grant that is already gone is the state we wanted anyway.
+     */
+    fun releaseCard(uri: Uri?) {
+        if (uri == null) return
+        runCatching {
+            context.contentResolver.releasePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+    }
+
     val cardPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { picked ->
         if (picked == null) return@rememberLauncherForActivityResult
         // Without this the grant dies with the process and the next dub
@@ -265,11 +287,17 @@ private fun ExportContent(
             onToast(Copy.CARD_REFUSED)
             return@rememberLauncherForActivityResult
         }
+        // The old one goes back only once the new one is held: released
+        // first, a picker that then refused would leave the user with
+        // neither, having started with a working card.
+        val previous = cardTree
+        if (previous != null && previous != picked) releaseCard(previous)
         cardTree = picked
         prefs.edit().putString(PREF_CARD_TREE, picked.toString()).apply()
     }
 
     fun forgetCard() {
+        releaseCard(cardTree)
         cardTree = null
         prefs.edit().remove(PREF_CARD_TREE).apply()
     }

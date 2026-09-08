@@ -56,14 +56,37 @@ object CardWriter {
         val made = HashMap<List<String>, Uri>()
         made[emptyList()] = rootDoc
 
+        val plan = CardCopy.plan(items)
+        // Asked to copy something and finding nothing is a failure, not an
+        // empty success: the export's own output has gone between the
+        // write and here (a card pulled, a cache cleared), and reporting
+        // "it's on the card" for a card with nothing on it is the one
+        // outcome worse than saying the dub failed.
+        if (items.isNotEmpty() && plan.isEmpty()) {
+            throw IOException("the export was gone before it reached the card")
+        }
+
+        // One listing per folder rather than one per entry. A kit's sample
+        // folder is a hundred-odd files, and querying the whole folder
+        // again for each of them is a hundred binder round-trips over a
+        // card reader. Safe to snapshot because the plan names each path
+        // once: nothing looks up a name this copy created.
+        val listings = HashMap<String, MutableMap<String, String>>()
+
         var files = 0
         var moved = 0L
-        for (entry in CardCopy.plan(items)) {
+        for (entry in plan) {
             val parent = made[entry.parents]
                 ?: throw IOException("could not put ${entry.name} on the card - its folder is missing")
-            replaceExisting(context, parent, entry.name)
+            replaceExisting(context, parent, entry.name, listings)
             if (entry.isDirectory) {
-                made[entry.segments] = create(resolver, parent, DocumentsContract.Document.MIME_TYPE_DIR, entry.name)
+                val dir = create(resolver, parent, DocumentsContract.Document.MIME_TYPE_DIR, entry.name)
+                made[entry.segments] = dir
+                // A folder this copy just made holds nothing, so listing it
+                // would be a round-trip to learn that. Seeded empty: without
+                // this, a freshly created kit folder still costs one query
+                // per sample in it.
+                listings[DocumentsContract.getDocumentId(dir)] = HashMap()
             } else {
                 val target = create(resolver, parent, CardCopy.mimeFor(entry.name), entry.name)
                 // "w" and not "wt": the document was just created empty,
@@ -95,31 +118,41 @@ object CardWriter {
         ?: throw IOException("the card would not take $name")
 
     /**
-     * Removes a child of [parent] called [name], if there is one. Best
-     * effort by design: a provider that will not list or will not delete
-     * leaves the create below to do whatever it does, which is no worse
-     * than not having tried.
+     * Removes a child of [parent] called [name], if there is one, using
+     * [listings] as a one-per-folder cache of what was there when the
+     * copy started. Best effort by design: a provider that will not list
+     * or will not delete leaves the create to do whatever it does, which
+     * is no worse than not having tried.
      */
-    private fun replaceExisting(context: Context, parent: Uri, name: String) {
+    private fun replaceExisting(
+        context: Context,
+        parent: Uri,
+        name: String,
+        listings: HashMap<String, MutableMap<String, String>>,
+    ) {
         runCatching {
             val parentId = DocumentsContract.getDocumentId(parent)
-            val children = DocumentsContract.buildChildDocumentsUriUsingTree(parent, parentId)
-            context.contentResolver.query(
-                children,
-                arrayOf(
-                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                ),
-                null, null, null,
-            )?.use { c ->
-                while (c.moveToNext()) {
-                    if (c.getString(1) == name) {
-                        val doc = DocumentsContract.buildDocumentUriUsingTree(parent, c.getString(0))
-                        DocumentsContract.deleteDocument(context.contentResolver, doc)
-                        return@use
-                    }
-                }
-            }
+            val existing = listings.getOrPut(parentId) { childNames(context, parent, parentId) }
+            val docId = existing.remove(name) ?: return@runCatching
+            val doc = DocumentsContract.buildDocumentUriUsingTree(parent, docId)
+            DocumentsContract.deleteDocument(context.contentResolver, doc)
         }
+    }
+
+    /** What [parent] held when the copy reached it: display name to document id. */
+    private fun childNames(context: Context, parent: Uri, parentId: String): MutableMap<String, String> {
+        val out = HashMap<String, String>()
+        val children = DocumentsContract.buildChildDocumentsUriUsingTree(parent, parentId)
+        context.contentResolver.query(
+            children,
+            arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            ),
+            null, null, null,
+        )?.use { c ->
+            while (c.moveToNext()) out[c.getString(1)] = c.getString(0)
+        }
+        return out
     }
 }
