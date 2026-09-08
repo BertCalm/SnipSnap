@@ -34,7 +34,7 @@ struct Bank {
  * frames, these gains, this speed".
  */
 struct PadCommand {
-    enum class Type : int32_t { NoteOn = 0, Stop = 1, AllOff = 2 };
+    enum class Type : int32_t { NoteOn = 0, Stop = 1, AllOff = 2, SetGain = 3 };
     Type type = Type::NoteOn;
     int32_t voiceId = 0;
     int32_t sample = -1;
@@ -44,7 +44,15 @@ struct PadCommand {
     int64_t loopStart = -1;
     float gainL = 0.0f, gainR = 0.0f;
     double pitch = 1.0;
-    /** Stop / AllOff: the fade, so a choke is a short fade and not a cut. */
+    /**
+     * Play the window backwards: the read starts at `end - 1` and walks
+     * down to `start`, a loop wrapping from `loopStart` back up to the
+     * last frame. The *speed* stays positive - direction is its own
+     * thing, not a negative pitch, so the guard that keeps `pitch` a
+     * real speed still means what it says.
+     */
+    bool reverse = false;
+    /** Stop / AllOff: the fade, so a choke is a short fade and not a cut. SetGain: the glide. */
     float fadeMs = 5.0f;
     /** Stamped by pushCommand: the bank the sample index belongs to. */
     uint32_t generation = 0;
@@ -107,6 +115,25 @@ public:
         return commands_.push(c);
     }
 
+    /**
+     * UI thread. The same, for voices that must sound *together*: the
+     * whole group reaches the callback in one pass or not at all (see
+     * SpscRing::pushAll), so layers of one sample cannot start a buffer
+     * apart. Refuses a group larger than the engine has voices, and
+     * refuses rather than half-publish when the ring is full.
+     */
+    bool pushCommands(const PadCommand* cs, size_t n) {
+        if (n == 0) return true;
+        if (n > static_cast<size_t>(kMaxVoices)) return false;
+        PadCommand stamped[kMaxVoices];
+        const uint32_t generation = uiGeneration_.load(std::memory_order_acquire);
+        for (size_t i = 0; i < n; ++i) {
+            stamped[i] = cs[i];
+            stamped[i].generation = generation;
+        }
+        return commands_.pushAll(stamped, n);
+    }
+
     /** UI thread: the ids of voices that ended since the last drain. */
     size_t drainEnded(int32_t* out, size_t max);
 
@@ -119,9 +146,16 @@ private:
         int32_t id = 0;
         int32_t sample = -1;
         double pos = 0.0;
+        int64_t start = 0;
         int64_t end = 0;
         int64_t loopStart = -1;
         double inc = 1.0;
+        bool reverse = false;
+        // Where the gains are heading and how many frames are left of the
+        // glide. A fader on a sounding voice moves it here rather than
+        // retriggering the note, which would be a click per drag frame.
+        float targetL = 0.0f, targetR = 0.0f;
+        int32_t gainRamp = 0;
         float gainL = 0.0f, gainR = 0.0f;
         float fade = 1.0f;
         float fadeStep = 0.0f;  // > 0 while stopping

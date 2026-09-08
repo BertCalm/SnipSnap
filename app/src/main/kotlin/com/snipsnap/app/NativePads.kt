@@ -26,7 +26,20 @@ object NativePads {
     external fun noteOn(
         handle: Long, voiceId: Int, sample: Int,
         startFrame: Long, endFrame: Long, loopStart: Long, gainL: Float, gainR: Float, pitch: Double,
+        reverse: Boolean,
     ): Boolean
+
+    /**
+     * The layers of one sample, started together: window and speed are
+     * shared, the id, bank sample, gains and direction are per layer.
+     * False means none of them was queued.
+     */
+    external fun noteOnLayers(
+        handle: Long, voiceIds: IntArray, samples: IntArray,
+        startFrame: Long, endFrame: Long, loopStart: Long,
+        gainsL: FloatArray, gainsR: FloatArray, pitch: Double, reverses: BooleanArray,
+    ): Boolean
+    external fun setVoiceGain(handle: Long, voiceId: Int, gainL: Float, gainR: Float, glideMs: Float)
     external fun stopVoice(handle: Long, voiceId: Int, fadeMs: Float)
     external fun allOff(handle: Long, fadeMs: Float)
     external fun drainEnded(handle: Long): IntArray

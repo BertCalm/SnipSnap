@@ -93,6 +93,7 @@ class InstrumentPlayer(context: Context) {
         val queued = NativePads.noteOn(
             handle, id, sample,
             0L, hit.frames, hit.loopStartFrame, hit.gain, hit.gain, hit.pitchRatio,
+            reverse = false,
         )
         if (queued) voices[id] = note
         return queued
