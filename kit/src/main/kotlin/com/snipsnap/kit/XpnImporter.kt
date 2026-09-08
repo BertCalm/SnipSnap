@@ -283,13 +283,22 @@ object XpnImporter {
                     // does not undo what it already copied, so destDir may
                     // now hold a half-landed kit under its real name - that
                     // must not stay visible, and the restore below needs
-                    // the spot cleared to land in either way.
-                    destDir.deleteRecursively()
-                    if (displaced != null && !displaced.renameTo(destDir) && !displaced.copyRecursively(destDir, overwrite = true)) {
-                        throw IOException(
-                            "could not land '$kitName', and could not restore the kit that was there either - " +
-                                "it survives at '${displaced.name}' under $destRoot",
-                        )
+                    // the spot cleared to land in either way. A clear that
+                    // doesn't fully succeed must not be built on: restoring
+                    // into what's left could merge the old kit's files with
+                    // wreckage from the failed landing into one corrupted
+                    // mix - worse than an honest refusal.
+                    val cleared = destDir.deleteRecursively()
+                    if (displaced != null) {
+                        val restored = cleared && (displaced.renameTo(destDir) || displaced.copyRecursively(destDir, overwrite = true))
+                        if (!restored) {
+                            throw IOException(
+                                "could not land '$kitName', and could not restore the kit that was there either - " +
+                                    "it survives at '${displaced.name}' under $destRoot",
+                            )
+                        }
+                        displaced.deleteRecursively() // a no-op once renameTo already moved it
+                        throw IOException("could not land '$kitName' on the shelf - the kit that was there is back, nothing else changed")
                     }
                     throw IOException("could not land '$kitName' on the shelf - nothing landed")
                 }
