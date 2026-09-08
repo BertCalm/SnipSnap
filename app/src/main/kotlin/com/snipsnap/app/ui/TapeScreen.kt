@@ -114,6 +114,42 @@ private const val MAX_STEP_NANOS = 100_000_000L
 /** The waveform LCD's floor when it's sharing a short viewport with everything else below it. */
 private const val WAVEFORM_MIN_H = 96
 
+/**
+ * TAPE's own ceiling on how much of a source file it will ever decode into
+ * memory, in seconds. Every other ingest path is already capped before its
+ * file reaches this screen — [MicSessionService.RING_SECONDS] (60s) for a
+ * live capture, [SnipStore.IMPORT_MAX_SEC] (180s) for a shared-in import —
+ * but two of TAPE's own load-source branches (see [loadLongestTape]'s KDoc)
+ * hand it a file TAPE never chose the size of: the open kit's own pad
+ * samples, reachable via MUTATE's arbitrary file picker, and the last
+ * COMMIT's source file, which is whatever pad sample or shelf file COMMIT
+ * was last run against. Without a cap here, either one can point at an
+ * hours-long file and OOM the process outright — see [WavReader.readCapped].
+ *
+ * The arithmetic: TAPE decodes to mono float32, 4 bytes/frame, so a mono
+ * source at the MPC-native 44.1 kHz rate costs `4 * 44_100 = 176_400`
+ * bytes/second (176.4 KB/s). At this cap: `600 s * 176_400 B/s ≈ 105.8 MB`
+ * for the sample buffer — [PeaksPyramid] adds only a small, bounded
+ * fraction on top of that: level 0 alone is `N/128` floats (`baseBlock`
+ * 256, min+max per block), and each level above halves, so the levels'
+ * total is `N/128 * 2 = N/64` — ~1.6% of the source, ≈1.7 MB at this cap,
+ * not a second copy of it. A 60-minute file uncapped was ~635 MB and a
+ * near-certain OOM kill on a phone heap; 10 minutes is long enough that a
+ * real jam or a full side of a cassette still loads whole, and short
+ * enough that even a worst-case format (high sample rate, stereo, 32-bit)
+ * stays well inside what an Android app heap can be expected to hold —
+ * for a single file. [loadLongestFromKit]'s pad-by-pad scan can hold up to
+ * three capped buffers live at once (the running-longest candidate, the
+ * next pad's raw slice, and its decode) while comparing an unusually long
+ * kit, so that branch's transient worst case is a multiple of this
+ * number, not this number itself — still a routine improvement over the
+ * old unbounded × 16, just not literally bounded at 106 MB.
+ */
+private const val TAPE_LOAD_MAX_SEC = 600f
+
+/** What [readMono] decoded: the audio, and whether [TAPE_LOAD_MAX_SEC] cut it short. */
+private class MonoRead(val snip: Snip, val truncated: Boolean)
+
 /** Everything the deck needs once a WAV is on it. */
 private class LoadedTape(
     val samples: FloatArray,
@@ -129,6 +165,8 @@ private class LoadedTape(
      * a reason to reload.
      */
     val sourceFile: File,
+    /** Whether [TAPE_LOAD_MAX_SEC] cut this tape's source short — [TapeScreen] toasts once when true. */
+    val truncated: Boolean,
 )
 
 /**
@@ -185,7 +223,20 @@ fun TapeScreen(
         val result = withContext(Dispatchers.IO) {
             loadLongestTape(entry, context.filesDir, lastCommitSource)
         }
-        if (result == null) failed = true else loaded = result
+        // Distinct from an ordinary unreadable file (silent, always was):
+        // this is [TAPE_LOAD_MAX_SEC]'s own safety net catching an
+        // OutOfMemoryError the cap didn't manage to prevent — see
+        // [readMono]'s KDoc. Said even when a later candidate went on to
+        // load successfully, since the file that OOM'd is still real and
+        // still unreadable from TAPE.
+        if (result.oomEncountered) onToast(Copy.TAPE_TOO_BIG)
+        val tape = result.tape
+        if (tape == null) {
+            failed = true
+        } else {
+            loaded = tape
+            if (tape.truncated) onToast(Copy.tapeTruncated(TAPE_LOAD_MAX_SEC))
+        }
     }
 
     // Empty-state reload: TapeDeckContent's own lastSnipFile watcher only
@@ -265,48 +316,101 @@ private fun EmptyDeck(scheme: Scheme) {
  * exactly like any other WAV: [WavReader] + [Cleanup.toMono] is the same
  * path for all three sources.
  */
-private fun loadLongestTape(entry: KitShelf.Entry?, filesDir: File, lastCommitSource: File?): LoadedTape? {
+/** [loadLongestTape]'s answer: the tape it settled on (if any), and whether [readMono] hit [TAPE_LOAD_MAX_SEC]'s OOM safety net along the way. */
+private class TapeLoadResult(val tape: LoadedTape?, val oomEncountered: Boolean)
+
+private fun loadLongestTape(entry: KitShelf.Entry?, filesDir: File, lastCommitSource: File?): TapeLoadResult {
+    var oomEncountered = false
     for (file in listOfNotNull(SnipStore.newest(filesDir), lastCommitSource)) {
-        val mono = readMono(file) ?: continue
-        return buildLoadedTape(file, mono)
+        when (val outcome = readMono(file)) {
+            is MonoOutcome.Ok -> return TapeLoadResult(buildLoadedTape(file, outcome.read), oomEncountered)
+            MonoOutcome.OutOfMemory -> oomEncountered = true
+            MonoOutcome.Unreadable -> {}
+        }
     }
     // The kit fallback is the only branch that needs a kit — skip it
     // outright when none is open (the shelf, with a session armed there)
     // rather than let it run on a null entry.
-    if (entry == null) return null
-    val (file, mono) = loadLongestFromKit(entry) ?: return null
-    return buildLoadedTape(file, mono)
+    if (entry == null) return TapeLoadResult(null, oomEncountered)
+    val kit = loadLongestFromKit(entry)
+    if (kit.oomEncountered) oomEncountered = true
+    val found = kit.found ?: return TapeLoadResult(null, oomEncountered)
+    return TapeLoadResult(buildLoadedTape(found.first, found.second), oomEncountered)
 }
 
-private fun readMono(file: File): Snip? {
-    if (!file.isFile) return null
+/**
+ * What one file's decode produced: the audio (capped to [TAPE_LOAD_MAX_SEC]
+ * and mixed to mono) on success, an ordinary unreadable-file miss (silent,
+ * same as always — a file that isn't a WAV, or isn't one anymore), or an
+ * [OutOfMemoryError] the cap didn't manage to prevent.
+ */
+private sealed class MonoOutcome {
+    class Ok(val read: MonoRead) : MonoOutcome()
+    object Unreadable : MonoOutcome()
+    object OutOfMemory : MonoOutcome()
+}
+
+/**
+ * Decodes [file] through [WavReader.readCapped] — never [WavReader.read]'s
+ * unbounded whole-file load — so neither of TAPE's two uncapped ingest
+ * paths (a kit pad reachable via MUTATE's arbitrary file picker, or the
+ * last COMMIT's source file) can hand this an hours-long file and OOM the
+ * process on the raw decode. [OutOfMemoryError] is caught separately from
+ * [Exception] on purpose: it is a [Error], not an [Exception], so a plain
+ * `catch (e: Exception)` here — the shape every other call site in this
+ * file already used — would never have caught it, and the process would
+ * die instead of this function returning [MonoOutcome.OutOfMemory]. Either
+ * catch leaves no partial state behind: nothing is written anywhere until
+ * a full [MonoRead] comes back successfully.
+ */
+private fun readMono(file: File): MonoOutcome {
+    if (!file.isFile) return MonoOutcome.Unreadable
     return try {
-        Cleanup.toMono(WavReader.read(file))
+        val capped = WavReader.readCapped(file, TAPE_LOAD_MAX_SEC)
+        MonoOutcome.Ok(MonoRead(Cleanup.toMono(capped.snip), capped.truncated))
+    } catch (e: OutOfMemoryError) {
+        MonoOutcome.OutOfMemory
     } catch (e: Exception) {
-        null
+        MonoOutcome.Unreadable
     }
 }
+
+/** [loadLongestFromKit]'s answer: the longest readable pad found (if any), and whether an OOM was swallowed skipping past a pad along the way. */
+private class KitLongestResult(val found: Pair<File, MonoRead>?, val oomEncountered: Boolean)
 
 /** Every pad's WAV, mixed to mono, keeping the longest — TAPE's fallback when neither a snip nor a last-commit source resolves. */
-private fun loadLongestFromKit(entry: KitShelf.Entry): Pair<File, Snip>? {
+private fun loadLongestFromKit(entry: KitShelf.Entry): KitLongestResult {
     var longestFile: File? = null
-    var longest: Snip? = null
+    var longest: MonoRead? = null
+    var oomEncountered = false
     for (pad in entry.kit.pads) {
         val file = File(entry.dir, pad.sampleFile)
-        val mono = readMono(file) ?: continue
-        if (longest == null || mono.frameCount > longest.frameCount) {
-            longest = mono
-            longestFile = file
+        when (val outcome = readMono(file)) {
+            is MonoOutcome.Ok -> {
+                val mono = outcome.read
+                if (longest == null || mono.snip.frameCount > longest!!.snip.frameCount) {
+                    longest = mono
+                    longestFile = file
+                }
+            }
+            MonoOutcome.OutOfMemory -> oomEncountered = true
+            MonoOutcome.Unreadable -> {}
         }
     }
-    val file = longestFile ?: return null
-    return file to (longest ?: return null)
+    val file = longestFile
+    val mono = longest
+    return if (file != null && mono != null) {
+        KitLongestResult(file to mono, oomEncountered)
+    } else {
+        KitLongestResult(null, oomEncountered)
+    }
 }
 
-private fun buildLoadedTape(file: File, chosen: Snip): LoadedTape {
+private fun buildLoadedTape(file: File, mono: MonoRead): LoadedTape {
+    val chosen = mono.snip
     val onsets = Transients.detect(chosen).map { it.frame }.sorted().toIntArray()
     val peaks = PeaksPyramid.fromSnip(chosen)
-    return LoadedTape(chosen.samples, chosen.sampleRate, onsets, peaks, file)
+    return LoadedTape(chosen.samples, chosen.sampleRate, onsets, peaks, file, mono.truncated)
 }
 
 @Composable

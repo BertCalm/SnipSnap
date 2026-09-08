@@ -92,7 +92,7 @@ class PersonalityTest {
             Copy.TAKES_EMPTY, Copy.BIN_EMPTY_STATE, Copy.BIN_ITEM_GONE, Copy.KIT_WONT_OPEN,
             Copy.UNMUTATED, Copy.MUTATE_NEEDS_ONE, Copy.CRATE_EMPTY,
             Copy.SCULPTED, Copy.STRETCHED, Copy.FROZEN, Copy.PAD_MADE, Copy.PAD_TOO_SHORT, Copy.PAD_TOO_LONG,
-            Copy.IN_KEY_NONE, Copy.IN_KEY_NEEDS_KEY,
+            Copy.IN_KEY_NONE, Copy.IN_KEY_NEEDS_KEY, Copy.TAPE_TOO_BIG,
         )
         for (line in lines) {
             assertEquals(line.uppercase(), line, "TapeOS shouts: '$line'")
@@ -126,5 +126,14 @@ class PersonalityTest {
         assertTrue(Copy.mutated("SPLICE", "A01", "A03").endsWith("."), "and still lands on a full stop")
         assertEquals("+3 OFF-LANE — HEARD AND EXPORTED, NOT DRAWN", Copy.offLane(3), "the count leads its own line")
         assertTrue(Copy.offLane(1).uppercase() == Copy.offLane(1), "TapeOS shouts here too")
+    }
+
+    @Test
+    fun `tapeTruncated matches the import cap's own truncation phrasing`() {
+        assertEquals("FIRST 10 MIN KEPT - THE TAPE IS ONLY SO LONG.", Copy.tapeTruncated(600f))
+        assertEquals("FIRST 8s KEPT - THE TAPE IS ONLY SO LONG.", Copy.tapeTruncated(8.2f))
+        // Same tail as SnipStore.import's own truncation line — one voice
+        // for "a cap cut this tape's tail", not two competing ones.
+        assertTrue(Copy.imported(180f, truncated = true).endsWith(Copy.tapeTruncated(180f)))
     }
 }

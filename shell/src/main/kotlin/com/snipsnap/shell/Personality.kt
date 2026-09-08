@@ -168,6 +168,23 @@ object Copy {
     const val ODOMETER_OFF = "BACK TO REAL TIME."
     /** PAD SHEET's own DELETE → BIN, on a pad — a real delete, distinct from EJECT (stop listening) or the export wizard's reset. */
     const val DELETE_SNIP = "DELETED. THE BIN KEEPS IT 30 DAYS."
+    /**
+     * A source file TAPE loaded (a kit pad or the last COMMIT's source —
+     * the two ingest paths with no length cap of their own) ran past
+     * TAPE's own load ceiling and got cut, same shape as [imported]'s own
+     * truncation line and the same reason: the app already tells the
+     * truth about a cut tape rather than staying quiet about it.
+     */
+    fun tapeTruncated(seconds: Float): String {
+        val length = if (seconds >= 60f) "${Math.round(seconds / 60f)} MIN" else "${Math.round(seconds)}s"
+        return "FIRST $length KEPT - THE TAPE IS ONLY SO LONG."
+    }
+    /**
+     * TAPE's own load cap has a safety net (catching an [OutOfMemoryError]
+     * the cap didn't manage to prevent) as well as the cap itself — this is
+     * what that net says instead of the process dying silently.
+     */
+    const val TAPE_TOO_BIG = "THAT TAPE'S TOO BIG TO LOAD. TRY A SHORTER FILE."
 
     // ---- KIT: teaching the one gesture that opens PAD SHEET ----
     /**

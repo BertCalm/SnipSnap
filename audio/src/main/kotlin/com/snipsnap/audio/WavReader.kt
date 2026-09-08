@@ -1,6 +1,7 @@
 package com.snipsnap.audio
 
 import java.io.File
+import java.io.RandomAccessFile
 
 /**
  * Reads PCM and float WAVs back into a [Snip].
@@ -28,6 +29,120 @@ object WavReader {
      * every [IllegalArgumentException] contract of [read] below.
      */
     fun read(file: File): Snip = read(file.readBytes())
+
+    /** What [readCapped] did: the audio it decoded, and whether [file] ran longer than its cap and got cut short. */
+    data class CappedRead(val snip: Snip, val truncated: Boolean)
+
+    /**
+     * Like [read], but never decodes more than [maxDurationSec] of audio —
+     * and, unlike [read], never reads more than that much of [file] off
+     * disk either. [read] always loads the *whole* file via
+     * [File.readBytes] before decoding a single sample, so a caller that
+     * cannot vouch for [file]'s length (an arbitrary user-picked file, not
+     * one this app wrote and already capped) can OOM on the raw byte read
+     * alone, before decode even starts. A cap applied only *after* calling
+     * [read] would be too late for exactly that reason.
+     *
+     * A lightweight scan ([locateAudio]) finds the `fmt ` and `data`
+     * chunks by seeking past everything else — metadata chunks
+     * (LIST/bext/smpl/etc.) are skipped, never read into memory, however
+     * large they are — then only `[dataAt, dataAt + min(actual, cap))` of
+     * the file is read off disk. That slice is handed to [read] exactly
+     * as any other byte array: its `data` chunk header still declares the
+     * file's true (larger) length, so [read]'s own truncated-tail
+     * handling — the same path a capture killed mid-write takes — decodes
+     * precisely the bytes present and no more. No decode logic is
+     * duplicated here; this only ever changes how many bytes reach [read].
+     *
+     * Falls back to the ordinary, unbounded [read] — full memory cost and
+     * all — whenever the scan can't cleanly resolve a fmt+data pair (a
+     * malformed or unusually shaped file) or the file is already within
+     * the cap. Either way [read]'s own decode and error contract apply
+     * completely unchanged; this never rejects a file [read] would accept,
+     * and never accepts one [read] would reject.
+     */
+    fun readCapped(file: File, maxDurationSec: Float): CappedRead {
+        val loc = runCatching { locateAudio(file) }.getOrNull()
+        val stride = if (loc != null) (loc.bits / 8) * loc.channels else 0
+        if (loc == null || stride <= 0 || loc.sampleRate <= 0) {
+            return CappedRead(read(file.readBytes()), truncated = false)
+        }
+        val cappedFrames = (maxDurationSec.toDouble() * loc.sampleRate).toLong().coerceAtLeast(0)
+        val cappedDataBytes = minOf(loc.dataLen, cappedFrames * stride)
+        if (cappedDataBytes >= loc.dataLen) {
+            // The file is already within the cap (or the scan's own
+            // file-clamped dataLen is): no memory saved by slicing, so
+            // just take the ordinary path rather than re-derive it.
+            return CappedRead(read(file.readBytes()), truncated = false)
+        }
+        val sliceLen = loc.dataAt + cappedDataBytes
+        RandomAccessFile(file, "r").use { raf ->
+            val bytes = ByteArray(sliceLen.toInt())
+            raf.seek(0)
+            raf.readFully(bytes)
+            return CappedRead(read(bytes), truncated = true)
+        }
+    }
+
+    /** What [locateAudio] needs from a file to compute a byte-precise cap without decoding it. */
+    private data class AudioLocation(
+        val sampleRate: Int,
+        val channels: Int,
+        val bits: Int,
+        /** Byte offset of the `data` chunk's body — where audio bytes actually begin. */
+        val dataAt: Long,
+        /** The `data` chunk's declared length, clamped to what the file physically holds — same reasoning as [read]'s own truncated-tail handling. */
+        val dataLen: Long,
+    )
+
+    /**
+     * Scans [file]'s chunks by seeking, reading only chunk headers (and
+     * the tiny `fmt ` body) into memory — never a chunk's full content
+     * unless it IS the `fmt ` body. Returns null on anything that doesn't
+     * cleanly resolve to a `fmt `-then-`data` pair (order-independent: a
+     * `data` chunk is only ever recognized once `fmt ` has already been
+     * seen), leaving [readCapped] to fall back to [read]'s own full parse
+     * and error contract for that case.
+     */
+    private fun locateAudio(file: File): AudioLocation? {
+        RandomAccessFile(file, "r").use { raf ->
+            val len = raf.length()
+            if (len < 12) return null
+            val riff = ByteArray(12)
+            raf.readFully(riff)
+            if (tag(riff, 0) != "RIFF" || tag(riff, 8) != "WAVE") return null
+
+            var sampleRate = -1
+            var channels = -1
+            var bits = -1
+            var pos = 12L
+            val header = ByteArray(8)
+            while (pos + 8 <= len) {
+                raf.seek(pos)
+                raf.readFully(header)
+                val id = tag(header, 0)
+                val size = leInt(header, 4)
+                if (size < 0) return null
+                val bodyAt = pos + 8
+                if (id == "data") {
+                    if (sampleRate <= 0 || channels <= 0 || bits <= 0) return null
+                    val declaredLen = minOf(size.toLong(), len - bodyAt).coerceAtLeast(0)
+                    return AudioLocation(sampleRate, channels, bits, bodyAt, declaredLen)
+                }
+                if (id == "fmt " && size >= 16 && bodyAt + 16 <= len) {
+                    val body = ByteArray(16)
+                    raf.seek(bodyAt)
+                    raf.readFully(body)
+                    channels = leShort(body, 2)
+                    sampleRate = leInt(body, 4)
+                    bits = leShort(body, 14)
+                }
+                if (bodyAt + size > len) return null
+                pos = bodyAt + size + (size.toLong() and 1L)
+            }
+            return null
+        }
+    }
 
     /**
      * Decodes [bytes] as a WAV file.

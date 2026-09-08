@@ -1,6 +1,7 @@
 package com.snipsnap.audio
 
 import java.io.ByteArrayOutputStream
+import java.io.File
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -407,5 +408,146 @@ class WavReaderTest {
         val e = assertFailsWith<IllegalArgumentException> { WavReader.read(decoded) }
         assertTrue(e.message!!.contains("channels"), "message should name the problem: ${e.message}")
         assertTrue(e.message!!.contains("0"), "message should name the actual value: ${e.message}")
+    }
+
+    /** Writes [bytes] to a fresh temp file for the [WavReader.readCapped] tests below, which need a real [File]. */
+    private fun tempWav(bytes: ByteArray): File {
+        val file = File.createTempFile("wavreader-capped", ".wav")
+        file.deleteOnExit()
+        file.writeBytes(bytes)
+        return file
+    }
+
+    @Test
+    fun `readCapped leaves a file within the cap byte-for-byte identical to a plain read`() {
+        // 250 mono 16-bit frames at 100 Hz = 2.5s of audio; a 10s cap is
+        // nowhere close, so this must take the untruncated path.
+        val payload = ByteArray(500) { (it * 3 + 1).toByte() }
+        val file = tempWav(wav(1, 16, 1, 100, payload))
+
+        val capped = WavReader.readCapped(file, maxDurationSec = 10f)
+        assertTrue(!capped.truncated, "a file well under the cap is not truncated")
+        val plain = WavReader.read(file)
+        assertEquals(plain.frameCount, capped.snip.frameCount)
+        assertTrue(plain.samples.contentEquals(capped.snip.samples), "same bytes in, same samples out")
+        assertEquals(plain.sampleRate, capped.snip.sampleRate)
+        assertEquals(plain.channels, capped.snip.channels)
+    }
+
+    @Test
+    fun `readCapped keeps a file exactly at the cap untruncated`() {
+        // 100 mono 16-bit frames at 100 Hz is exactly 1.0s; a 1.0s cap must
+        // not falsely report truncation on this boundary.
+        val payload = ByteArray(200) { it.toByte() }
+        val file = tempWav(wav(1, 16, 1, 100, payload))
+
+        val capped = WavReader.readCapped(file, maxDurationSec = 1f)
+        assertTrue(!capped.truncated, "a file exactly at the cap is not truncated")
+        assertEquals(100, capped.snip.frameCount)
+    }
+
+    @Test
+    fun `readCapped truncates a file past the cap to exactly the capped frame count`() {
+        // 250 mono 16-bit frames at 100 Hz = 2.5s; a 1.0s cap must keep
+        // only the first 100 frames, and never read the rest off disk.
+        val payload = ByteArray(500) { (it * 7 + 3).toByte() }
+        val file = tempWav(wav(1, 16, 1, 100, payload))
+
+        val capped = WavReader.readCapped(file, maxDurationSec = 1f)
+        assertTrue(capped.truncated, "a file past the cap must report truncation")
+        assertEquals(100, capped.snip.frameCount)
+
+        val full = WavReader.read(file)
+        assertEquals(250, full.frameCount, "sanity: the untruncated file really is longer than the cap")
+        for (i in capped.snip.samples.indices) {
+            assertEquals(full.samples[i], capped.snip.samples[i], "sample $i")
+        }
+    }
+
+    @Test
+    fun `readCapped truncation matches stereo frame math, not raw byte count`() {
+        // 100 stereo 16-bit frames (4 bytes/frame) at 50 Hz = 2.0s; a 0.5s
+        // cap must keep 25 FRAMES (100 bytes), not 25 bytes' worth of
+        // samples split across channels.
+        val payload = ByteArray(400) { it.toByte() }
+        val file = tempWav(wav(1, 16, 2, 50, payload))
+
+        val capped = WavReader.readCapped(file, maxDurationSec = 0.5f)
+        assertTrue(capped.truncated)
+        assertEquals(25, capped.snip.frameCount)
+        assertEquals(2, capped.snip.channels)
+    }
+
+    @Test
+    fun `readCapped on an already truncated-tail file keeps only what is both present and under the cap`() {
+        // The data chunk declares 250 frames but the file physically holds
+        // only 60 (a capture killed mid-write) — and the cap (0.3s = 30
+        // frames at 100 Hz) is smaller still. The tighter of the two must
+        // win.
+        val fullPayload = ByteArray(500) { it.toByte() } // 250 mono 16-bit frames declared
+        val full = wav(1, 16, 1, 100, fullPayload)
+        val physicallyPresent = full.copyOf(full.size - 380) // only 60 frames' worth of bytes actually on disk
+        val file = tempWav(physicallyPresent)
+
+        val capped = WavReader.readCapped(file, maxDurationSec = 0.3f)
+        assertTrue(capped.truncated)
+        assertEquals(30, capped.snip.frameCount, "the cap is tighter than what's physically present")
+    }
+
+    @Test
+    fun `readCapped falls back to read's own error for a file it can't scan`() {
+        val file = tempWav("this is plainly not audio".toByteArray())
+        val e = assertFailsWith<IllegalArgumentException> { WavReader.readCapped(file, maxDurationSec = 1f) }
+        assertTrue(e.message!!.contains("RIFF"), "same error a plain read would give: ${e.message}")
+    }
+
+    @Test
+    fun `readCapped skips metadata chunks ahead of data without reading their bodies`() {
+        val decoded = WavReader.readCapped(
+            tempWav(wavWithChunkBefore("LIST", "INFOsome tag".toByteArray())),
+            maxDurationSec = 10f,
+        )
+        assertEquals(2, decoded.snip.frameCount)
+        assertEquals(44_100, decoded.snip.sampleRate)
+        assertTrue(!decoded.truncated)
+    }
+
+    @Test
+    fun `readCapped truncates correctly when data does not start at the canonical offset`() {
+        // Every other truncation test above has `data` sitting right after
+        // a bare fmt chunk (offset 44) — this one puts a metadata chunk
+        // ahead of it, so locateAudio's own scan (not an offset a helper
+        // always uses) is what has to find `dataAt` right; a wrong offset
+        // here would slice the wrong bytes and either crash or decode
+        // garbage instead of the first N frames. A 1000 Hz rate (not
+        // 44.1 kHz) keeps the frame-count arithmetic below exact in
+        // Float, rather than resting on a value like 44_100 that only
+        // divides evenly for a few cap choices.
+        val out = ByteArrayOutputStream()
+        fun tag(s: String) = out.write(s.toByteArray(Charsets.US_ASCII))
+        fun le16(v: Int) { out.write(v and 0xFF); out.write((v ushr 8) and 0xFF) }
+        fun le32(v: Int) {
+            out.write(v and 0xFF); out.write((v ushr 8) and 0xFF)
+            out.write((v ushr 16) and 0xFF); out.write((v ushr 24) and 0xFF)
+        }
+        val sampleRate = 1_000
+        val listBody = ByteArray(64)
+        val payload = ByteArray(4_000) { it.toByte() } // 2000 mono 16-bit frames @ 1000 Hz
+        tag("RIFF"); le32(4 + 8 + 16 + 8 + listBody.size + 8 + payload.size); tag("WAVE")
+        tag("fmt "); le32(16)
+        le16(1); le16(1); le32(sampleRate); le32(sampleRate * 2); le16(2); le16(16)
+        tag("LIST"); le32(listBody.size); out.write(listBody)
+        tag("data"); le32(payload.size); out.write(payload)
+        val file = tempWav(out.toByteArray())
+
+        val capped = WavReader.readCapped(file, maxDurationSec = 1f) // 1000 frames at 1000 Hz
+        assertTrue(capped.truncated)
+        assertEquals(1_000, capped.snip.frameCount)
+
+        val full = WavReader.read(file)
+        assertEquals(2_000, full.frameCount, "sanity: the file really is longer than the cap")
+        for (i in capped.snip.samples.indices) {
+            assertEquals(full.samples[i], capped.snip.samples[i], "sample $i")
+        }
     }
 }
