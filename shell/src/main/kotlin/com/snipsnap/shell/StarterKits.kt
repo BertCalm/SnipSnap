@@ -51,8 +51,16 @@ object StarterKits {
     }
 
     val ALL: List<Starter> = listOf(
+        // displayName is "EMPTY GRID", not "BLANK" — the other seven
+        // entries are all pre-composed kits, and a plain "BLANK" reads as
+        // just one more label in that list rather than the one option
+        // that's actually empty. This has to work as both a menu entry
+        // (predicts the effect, matches its own blurb below) and a shelf
+        // row afterward (`KitShelf.render` names the kit after it) — a
+        // noun phrase reads fine as a kit name where an imperative like
+        // "START EMPTY" would not.
         Starter(
-            "blank", "BLANK",
+            "blank", "EMPTY GRID",
             "Empty grid — capture straight onto the pads.",
             seeded = false,
         ) { emptyList() },
