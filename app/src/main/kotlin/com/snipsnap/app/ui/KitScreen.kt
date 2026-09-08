@@ -36,6 +36,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.deviceSampleRate
@@ -101,10 +104,11 @@ fun KitScreen(
     // EEE4: the grid plays on the native engine now, same PadEngine PLAY
     // and KEYS use — same bank, same door onto the sound, one fewer player
     // to keep synced with a live edit. A tap has no release, so every hit
-    // is effectively one-shot here regardless of the pad's own gate/oneShot
-    // metadata (as SoundPool's preview always played out fully too); the
-    // allocator still exists so a mute group still chokes on this screen,
-    // and so a stolen or choked voice is stopped rather than left ringing.
+    // is forced one-shot in the allocator (see `hit` below) regardless of
+    // the pad's own gate metadata, as SoundPool's preview always played
+    // out fully too; the allocator still exists so a mute group still
+    // chokes on this screen, and so a stolen or choked voice is stopped
+    // rather than left ringing.
     val engineContext = LocalContext.current
     val player = remember(entry.dir) { PadEngine(deviceSampleRate(engineContext)) }
     var engineUp by remember(entry.dir) { mutableStateOf(false) }
@@ -146,9 +150,30 @@ fun KitScreen(
     fun hit(slot: Int) {
         val pad = kit.pad(slot) ?: return
         if (!engineUp || !player.isUp()) return
-        val allocation = allocator.noteOn(slot, 1f, pad.muteGroup, pad.oneShot)
+        // oneShot forced true, not read off the pad: this screen has no
+        // release gesture to call noteOff with, so a gate pad's own
+        // metadata would otherwise sit unused - forcing it here says so,
+        // rather than leaving a future release gesture to discover it.
+        val allocation = allocator.noteOn(slot, 1f, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
         if (!player.hit(pad, 1f, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
+    }
+
+    fun panic() {
+        allocator.allOff()
+        player.allOff()
+    }
+    // Lessons from PLAY: ON_STOP means allOff() - a backgrounded phone
+    // should not keep a choke group ringing, or leave the allocator
+    // thinking voices are still active while the frame loop isn't ticking
+    // to drain their endings.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, entry.dir) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) panic()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
