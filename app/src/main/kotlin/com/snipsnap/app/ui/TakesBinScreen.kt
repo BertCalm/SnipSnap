@@ -390,7 +390,7 @@ private fun TakeRowLine(row: TakeRow, scheme: Scheme, busy: Boolean, onRestore: 
                 Modifier
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                    .let { if (!busy) it.tapeClick { onRestore(file, row.label) } else it }
+                    .let { if (!busy) it.tapeClick(label = null) { onRestore(file, row.label) } else it }
                     .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -427,7 +427,7 @@ private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (K
             Modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                .let { if (!busy) it.tapeClick { onRestore(row.entry) } else it }
+                .let { if (!busy) it.tapeClick(label = null) { onRestore(row.entry) } else it }
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -444,7 +444,7 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
             .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(5.dp))
-            .let { if (enabled) it.tapeClick(onClick) else it }
+            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -512,7 +512,7 @@ private fun HeaderChip(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .let { if (enabled) it.tapeClick(onClick) else it }
+            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

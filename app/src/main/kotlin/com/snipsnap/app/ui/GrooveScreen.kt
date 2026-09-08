@@ -534,7 +534,7 @@ fun GrooveScreen(
                         .height(44.dp)
                         .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                         .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-                        .tapeClick { playing = !playing },
+                        .tapeClick(label = null) { playing = !playing },
                     contentAlignment = Alignment.Center,
                 ) {
                     TapeText(if (playing) "■ STOP" else "► PLAY", TapeType.pixel, scheme.lcdInk.tape)
@@ -616,7 +616,7 @@ private fun ProgramSelector(
 ) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(
-            Modifier.width(44.dp).fillMaxHeight().height(46.dp).raisedBevel(scheme, 6.dp).tapeClick(onPrev),
+            Modifier.width(44.dp).fillMaxHeight().height(46.dp).raisedBevel(scheme, 6.dp).tapeClick(label = null, onClick = onPrev),
             contentAlignment = Alignment.Center,
         ) {
             TapeText("◄", TapeType.lcd(19), scheme.ink.tape)
@@ -630,7 +630,7 @@ private fun ProgramSelector(
             TapeText(sub, TapeType.pixelSmall, scheme.ink3.tape)
         }
         Box(
-            Modifier.width(44.dp).height(46.dp).raisedBevel(scheme, 6.dp).tapeClick(onNext),
+            Modifier.width(44.dp).height(46.dp).raisedBevel(scheme, 6.dp).tapeClick(label = null, onClick = onNext),
             contentAlignment = Alignment.Center,
         ) {
             TapeText("►", TapeType.lcd(19), scheme.ink.tape)
@@ -641,7 +641,7 @@ private fun ProgramSelector(
 @Composable
 private fun SwingStepper(label: String, scheme: Scheme, onClick: () -> Unit) {
     Box(
-        Modifier.width(32.dp).height(36.dp).raisedBevel(scheme, 4.dp).tapeClick(onClick),
+        Modifier.width(32.dp).height(36.dp).raisedBevel(scheme, 4.dp).tapeClick(label = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(label, TapeType.lcd(19), scheme.ink.tape)
@@ -662,7 +662,7 @@ private fun GrooveActionButton(
             .height(36.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
             .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(6.dp))
-            .let { if (enabled) it.tapeClick(onClick) else it },
+            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it },
         contentAlignment = Alignment.Center,
     ) {
         TapeText(label, TapeType.pixel, if (accent) scheme.accent.tape else scheme.ink2.tape)
@@ -830,7 +830,7 @@ private fun StepEditorOverlay(
                     Modifier
                         .height(30.dp)
                         .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                        .tapeClick(onDone)
+                        .tapeClick(label = null, onClick = onDone)
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -846,14 +846,14 @@ private fun StepEditorOverlay(
                             .weight(1f)
                             .height(26.dp)
                             .let { if (selected) it.pressedBevel(scheme, 4.dp) else it.sunkenField(scheme, 4.dp) }
-                            .tapeClick { onBarSelect(bar) },
+                            .tapeClick(label = null) { onBarSelect(bar) },
                         contentAlignment = Alignment.Center,
                     ) {
                         TapeText("BAR ${bar + 1}", TapeType.pixelSmall, if (selected) scheme.lcd.tape else scheme.ink2.tape)
                     }
                 }
                 Box(
-                    Modifier.height(26.dp).sunkenField(scheme, 4.dp).tapeClick(onClear).padding(horizontal = 10.dp),
+                    Modifier.height(26.dp).sunkenField(scheme, 4.dp).tapeClick(label = null, onClick = onClear).padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     TapeText("CLEAR BAR", TapeType.pixelSmall, scheme.ink2.tape)
@@ -890,7 +890,7 @@ private fun StepEditorOverlay(
                                         if (isPlayhead) scheme.lcdInk.tape else scheme.grayEdge.tape,
                                         RoundedCornerShape(3.dp),
                                     )
-                                    .tapeClick { onToggle(lane, step) },
+                                    .tapeClick(label = null) { onToggle(lane, step) },
                             )
                         }
                     }

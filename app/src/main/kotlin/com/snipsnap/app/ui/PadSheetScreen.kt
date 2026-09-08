@@ -1654,7 +1654,7 @@ private fun HeaderChip(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .let { if (enabled) it.tapeClick(onClick) else it }
+            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -1775,7 +1775,7 @@ private fun ToggleChip(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme, fill = if (engaged) color.copy(alpha = 0.85f) else null)
-            .let { if (enabled) it.tapeClick(onToggle) else it }
+            .let { if (enabled) it.tapeClick(label = null, onClick = onToggle) else it }
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -1818,7 +1818,7 @@ private fun TreatmentCard(
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                            .let { if (tappable) it.tapeClick { onSegmentTap(seg) } else it }
+                            .let { if (tappable) it.tapeClick(label = null) { onSegmentTap(seg) } else it }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -1954,7 +1954,7 @@ private fun MutateCard(
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                            .let { if (!busy) it.tapeClick { onMode(m) } else it }
+                            .let { if (!busy) it.tapeClick(label = null) { onMode(m) } else it }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -1976,7 +1976,7 @@ private fun MutateCard(
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                            .let { if (!busy) it.tapeClick { onPartner(p) } else it }
+                            .let { if (!busy) it.tapeClick(label = null) { onPartner(p) } else it }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -2001,7 +2001,7 @@ private fun MutateCard(
                                 .weight(1f)
                                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                                 .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                                .let { if (!busy) it.tapeClick { onRoom(r) } else it }
+                                .let { if (!busy) it.tapeClick(label = null) { onRoom(r) } else it }
                                 .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -2026,7 +2026,7 @@ private fun MutateCard(
                                 .weight(1f)
                                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                                 .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                                .let { if (!busy) it.tapeClick { onPickKit(k) } else it }
+                                .let { if (!busy) it.tapeClick(label = null) { onPickKit(k) } else it }
                                 .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -2047,7 +2047,7 @@ private fun MutateCard(
                                     .weight(1f)
                                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                                     .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                                    .let { if (!busy) it.tapeClick { onOtherPad(p) } else it }
+                                    .let { if (!busy) it.tapeClick(label = null) { onOtherPad(p) } else it }
                                     .padding(horizontal = 4.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -2174,7 +2174,7 @@ private fun OutsideCard(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                        .let { if (!busy) it.tapeClick { onMove(m) } else it }
+                        .let { if (!busy) it.tapeClick(label = null) { onMove(m) } else it }
                         .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -2231,6 +2231,14 @@ internal fun ActionButton(
      * Busy, or not yet earned, and the plain bevel and ink3 return.
      */
     lit: Boolean = false,
+    /**
+     * Override for [label] as the accessible name — for the rare button
+     * whose visible glyph is too short/acronym-shaped to trust TalkBack
+     * to read as a word (e.g. SplitScreen's "M"/"S" mute/solo chips).
+     * `null` (the default, and every call site but those two) lets
+     * [label] serve as its own name via `tapeClick`'s merge.
+     */
+    accessibilityLabel: String? = null,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -2240,7 +2248,11 @@ internal fun ActionButton(
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme)
             .let { if (litNow) it.border(2.dp, scheme.amber.tape, RoundedCornerShape(4.dp)) else it }
-            .let { if (enabled) it.tapeClick(onClick) else it }
+            // Always clickable, `enabled` forwarded rather than dropped:
+            // a screen reader is told this control is temporarily
+            // unavailable instead of it silently vanishing from the tree
+            // (accessibility audit finding 12).
+            .tapeClick(label = accessibilityLabel, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -2270,7 +2282,8 @@ private fun EjectButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) {
             // bin-red; the fill still answers to the scheme.
             .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
             .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
-            .let { if (enabled) it.tapeClick(onClick) else it }
+            // enabled forwarded, not dropped — see ActionButton's own note.
+            .tapeClick(label = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {

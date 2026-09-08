@@ -511,7 +511,7 @@ private fun SliceRow(
         Modifier
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .tapeClick(onTapRow)
+            .tapeClick(label = null, onClick = onTapRow)
             .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -627,7 +627,7 @@ private fun SegmentButton(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme, fill = if (active) scheme.accent.tape else null)
-            .tapeClick(onClick),
+            .tapeClick(label = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(label, TapeType.pixel, if (active) scheme.titleInk.tape else scheme.ink2.tape)
@@ -645,7 +645,7 @@ private fun SecondaryButton(
     Box(
         modifier
             .raisedBevel(scheme)
-            .let { if (enabled) it.tapeClick(onClick) else it }
+            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {

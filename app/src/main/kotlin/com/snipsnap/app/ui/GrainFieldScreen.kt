@@ -500,7 +500,7 @@ private fun HeaderChip(
                 },
             )
             .border(1.dp, if (engaged) scheme.accent.tape else scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .tapeClick(onClick)
+            .tapeClick(label = null, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

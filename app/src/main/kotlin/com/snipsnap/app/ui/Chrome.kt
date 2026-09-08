@@ -29,6 +29,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -94,14 +99,38 @@ fun TapeText(
     )
 }
 
-/** Tap with no indication machinery — TapeOS draws its own feedback. */
+/**
+ * Tap with no indication machinery — TapeOS draws its own feedback.
+ *
+ * [label] carries this control's accessible name to TalkBack and has no
+ * default: every call site has to make an explicit choice, so a new
+ * control can't silently ship without one the way all 97 of this app's
+ * pre-existing interactive sites did (see the 2026-09-08 accessibility
+ * audit). Pass `null` when a descendant `TapeText`/`TapeText`-bearing
+ * child already says what the control does — `clickable` merges
+ * descendant semantics into this node automatically, so a real
+ * [label] here would *replace* that text in what TalkBack announces,
+ * not add to it. Reserve an explicit [label] for controls with no
+ * text child (scrim dismissers, glyph-only chips, colour swatches) or
+ * whose visible glyph is itself an accessibility risk (single-letter
+ * chips TalkBack may spell out instead of reading as a word).
+ *
+ * [enabled] mirrors `clickable`'s own flag: a disabled control keeps
+ * its semantics node (and its merged/explicit name) but exposes
+ * Compose's `disabled()` state instead of an actionable one, so a
+ * screen-reader user is told "temporarily unavailable" instead of the
+ * control silently vanishing from the tree (audit finding 12).
+ */
 @Composable
-fun Modifier.tapeClick(onClick: () -> Unit): Modifier =
+fun Modifier.tapeClick(label: String?, enabled: Boolean = true, onClick: () -> Unit): Modifier =
     clickable(
         interactionSource = remember { MutableInteractionSource() },
         indication = null,
+        enabled = enabled,
         onClick = onClick,
-    )
+    ).let { base ->
+        if (label != null) base.semantics { contentDescription = label } else base
+    }
 
 @Composable
 fun TitleBar(modifier: Modifier = Modifier) {
@@ -158,15 +187,21 @@ fun MenuRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         for (item in MENU_ITEMS) {
-            val selected = item.screen == current
+            val isSelected = item.screen == current
             val itemModifier = Modifier
-                .let { if (selected) it.pressedBevel(scheme, 3.dp) else it }
-                .tapeClick { onSelect(item.screen) }
+                .let { if (isSelected) it.pressedBevel(scheme, 3.dp) else it }
+                // The tab's own name (item.label) is the accessible name
+                // via the merged descendant TapeText below; selection is
+                // the one thing that text can't say on its own (audit
+                // finding 7 — selection state had no programmatic
+                // exposure anywhere in the app).
+                .semantics { selected = isSelected }
+                .tapeClick(label = null) { onSelect(item.screen) }
                 .padding(horizontal = 4.dp, vertical = 3.dp)
             TapeText(
                 item.label,
                 TapeType.pixel,
-                if (selected) scheme.ink.tape else scheme.ink2.tape,
+                if (isSelected) scheme.ink.tape else scheme.ink2.tape,
                 itemModifier,
             )
         }
@@ -228,34 +263,63 @@ private fun StatusCell(text: String, modifier: Modifier = Modifier) {
 
 /**
  * The toast: rises 8dp and fades in over 250ms, dwells, and is cleared by
- * the state holder (see `App`). Whether it shows at all is the
- * personality slider's call.
+ * the state holder (see `App`). Whether the *visible* bubble shows at all
+ * is the personality slider's call — but PERSONALITY is a tone preference
+ * (Law 2/3 territory: no quips, no flourish at OFF), not a permission to
+ * withhold function. A toast is a screen-reader user's only channel for
+ * "did DELETE/SHARE/RENAME work" (audit finding 3); OFF silencing that
+ * entirely, with no fallback, would cost that user information a sighted
+ * user still gets from watching the operation resolve. So the semantics
+ * node — [liveRegion] plus [contentDescription] carrying the message — is
+ * always present while a message is live, regardless of PERSONALITY;
+ * only the drawn bubble beneath it is gated, exactly as before this fix.
+ * `Polite` (not `Assertive`) throughout: several of this file's own error
+ * strings (`Copy.grooveRefused`, `Copy.KIT_RENAME_FAILED`, ...) don't share
+ * a common marker that would let this function tell a failure from a
+ * status line without guessing, and a wrong guess (an `Assertive` status
+ * toast interrupting whatever TalkBack was already reading) is worse than
+ * a uniformly polite announcement.
  */
 @Composable
 fun ToastOverlay(message: String?, modifier: Modifier = Modifier) {
     val scheme = LocalScheme.current
     val personality = LocalPersonality.current
-    if (message == null || !Delight.toastsEnabled(personality)) return
+    if (message == null) return
+    val visible = Delight.toastsEnabled(personality)
 
     val t = remember(message) { Animatable(0f) }
-    LaunchedEffect(message) { t.animateTo(1f, tween(Motion.TOAST_IN_MS)) }
+    LaunchedEffect(message) { if (visible) t.animateTo(1f, tween(Motion.TOAST_IN_MS)) }
 
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-        Box(
-            modifier = Modifier
-                .padding(bottom = 44.dp)
-                .alpha(t.value)
-                .raisedBevel(scheme, 4.dp)
-                .let {
-                    if (scheme.id == SchemeId.OILSLICK) {
-                        it.border(2.dp, oilslickSweep(), RoundedCornerShape(4.dp))
-                    } else {
-                        it
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            // mergeDescendants: the bubble's own TapeText would otherwise
+            // register as a second, separately-focusable text node with
+            // the same words — one node per toast, not two, is what
+            // "announced once" (this KDoc's whole point) requires.
+            .semantics(mergeDescendants = true) {
+                liveRegion = LiveRegionMode.Polite
+                contentDescription = message
+            },
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        if (visible) {
+            Box(
+                modifier = Modifier
+                    .padding(bottom = 44.dp)
+                    .alpha(t.value)
+                    .raisedBevel(scheme, 4.dp)
+                    .let {
+                        if (scheme.id == SchemeId.OILSLICK) {
+                            it.border(2.dp, oilslickSweep(), RoundedCornerShape(4.dp))
+                        } else {
+                            it
+                        }
                     }
-                }
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        ) {
-            TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 2)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 2)
+            }
         }
     }
 }

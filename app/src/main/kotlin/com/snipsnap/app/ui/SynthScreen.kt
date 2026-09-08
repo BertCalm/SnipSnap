@@ -352,7 +352,7 @@ fun SynthScreen(
                 Box(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .tapeClick {
+                        .tapeClick(label = null) {
                             touched = true
                             val next = engine.next()
                             engine = next
@@ -412,7 +412,7 @@ fun SynthScreen(
                     .fillMaxWidth()
                     .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
                     .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
-                    .tapeClick { snip?.let { audition(it) } }
+                    .tapeClick(label = null) { snip?.let { audition(it) } }
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -625,7 +625,7 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme, fill = if (selected) color.copy(alpha = 0.85f) else null)
-                            .tapeClick { onSelect(v) }
+                            .tapeClick(label = null) { onSelect(v) }
                             .padding(horizontal = 2.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -758,7 +758,7 @@ private fun LabButton(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme)
-            .let { if (enabled) it.tapeClick(onClick) else it }
+            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -786,7 +786,7 @@ internal fun SlotChooserOverlay(
     // whatever SynthScreen composable sits underneath (SCRAMBLE, SEND TO
     // PAD, the AUDITION pad). `tapeClick {}` makes the backdrop itself the
     // catch-all, same as any other TapeOS surface that means to block input.
-    Box(Modifier.fillMaxSize().background(scheme.lcd.tape).tapeClick {}.padding(10.dp)) {
+    Box(Modifier.fillMaxSize().background(scheme.lcd.tape).tapeClick(label = null) {}.padding(10.dp)) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -798,7 +798,7 @@ internal fun SlotChooserOverlay(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                        .let { if (!busy) it.tapeClick(onCancel) else it }
+                        .let { if (!busy) it.tapeClick(label = null, onClick = onCancel) else it }
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -855,7 +855,7 @@ private fun SlotCell(
                 .height(Layout.PAD_H.dp)
                 .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
                 .border(2.dp, previewColor.copy(alpha = 0.55f), shape)
-                .let { if (enabled) it.tapeClick(onTap) else it }
+                .let { if (enabled) it.tapeClick(label = null, onClick = onTap) else it }
                 .padding(5.dp),
             contentAlignment = Alignment.TopEnd,
         ) {
@@ -873,7 +873,7 @@ private fun SlotCell(
             .height(Layout.PAD_H.dp)
             .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
             .border(2.dp, cls.tape.copy(alpha = fade), shape)
-            .let { if (tappable) it.tapeClick(onTap) else it }
+            .let { if (tappable) it.tapeClick(label = null, onClick = onTap) else it }
             .padding(5.dp),
     ) {
         TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f * fade), Modifier.align(Alignment.TopEnd))

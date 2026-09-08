@@ -1541,7 +1541,11 @@ private fun CaptureBlockedDialog(onDismiss: () -> Unit) {
         Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.55f))
-            .tapeClick(onDismiss),
+            // Labelled with the same word the visible dismiss button
+            // below uses (Copy.CAPTURE_BLOCKED_BUTTON) — the scrim does
+            // exactly what that button does, and has no descendant text
+            // of its own to fall back on.
+            .tapeClick(label = Copy.CAPTURE_BLOCKED_BUTTON, onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -1549,7 +1553,7 @@ private fun CaptureBlockedDialog(onDismiss: () -> Unit) {
                 .fillMaxWidth()
                 .padding(24.dp)
                 .raisedBevel(scheme)
-                .tapeClick { }
+                .tapeClick(label = null) { }
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {

@@ -18,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -79,7 +81,13 @@ fun PropertiesScreen(
                         .weight(1f)
                         .height(44.dp)
                         .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-                        .tapeClick { onPersonality(level) },
+                        // Audit finding 7: selection had no programmatic
+                        // exposure anywhere in the app — the ~1.05:1 fill
+                        // contrast between pressed/raised is nearly
+                        // invisible even to sighted eyes, let alone absent
+                        // for a screen reader.
+                        .semantics { this.selected = selected }
+                        .tapeClick(label = null) { onPersonality(level) },
                     contentAlignment = Alignment.Center,
                 ) {
                     TapeText(level.name, TapeType.pixel, if (selected) scheme.ink.tape else scheme.ink2.tape)
@@ -101,7 +109,8 @@ fun PropertiesScreen(
                         .weight(1f)
                         .height(44.dp)
                         .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-                        .tapeClick { if (!selected) onTeach(on) },
+                        .semantics { this.selected = selected }
+                        .tapeClick(label = null) { if (!selected) onTeach(on) },
                     contentAlignment = Alignment.Center,
                 ) {
                     TapeText(if (on) "ON" else "OFF", TapeType.pixel, if (selected) scheme.ink.tape else scheme.ink2.tape)
@@ -129,7 +138,8 @@ private fun SchemeRow(s: Scheme, selected: Boolean, onPick: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .let { if (selected) it.pressedBevel(host) else it.raisedBevel(host) }
-            .tapeClick(onPick)
+            .semantics { this.selected = selected }
+            .tapeClick(label = null, onClick = onPick)
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),

@@ -69,7 +69,7 @@ fun GroupBox(
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                    .let { if (enabled) it.tapeClick(onToggle) else it }
+                    .let { if (enabled) it.tapeClick(label = null, onClick = onToggle) else it }
                     .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

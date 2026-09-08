@@ -336,7 +336,12 @@ private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
         Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.55f))
-            .tapeClick(onCancel),
+            // The scrim has no descendant text of its own (the dialog
+            // card below is a separate merge boundary, per its own
+            // no-op tapeClick), so it needs an explicit label — reusing
+            // the visible CANCEL button's own word rather than inventing
+            // a second term for the same action.
+            .tapeClick(label = "CANCEL", onClick = onCancel),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -344,7 +349,7 @@ private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
                 .fillMaxWidth()
                 .padding(24.dp)
                 .raisedBevel(scheme)
-                .tapeClick { }
+                .tapeClick(label = null) { }
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -364,7 +369,7 @@ private fun DeleteButton(scheme: Scheme, modifier: Modifier = Modifier, onClick:
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
             .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
-            .tapeClick(onClick)
+            .tapeClick(label = null, onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -384,7 +389,7 @@ private fun HeaderChip(label: String, scheme: Scheme, modifier: Modifier = Modif
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .tapeClick(onClick)
+            .tapeClick(label = null, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

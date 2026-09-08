@@ -627,7 +627,7 @@ private fun ReadoutRow(model: TapeDeckModel, readoutPos: State<Long>, onToast: (
                 .weight(1.3f)
                 .height(Layout.LCD_HEADER_MAX_H.dp)
                 .lcdPanel(scheme)
-                .tapeClick {
+                .tapeClick(label = null) {
                     model.toggleOdometer()
                     localGen++
                     onToast(if (model.odometer) Copy.ODOMETER_ON else Copy.ODOMETER_OFF)
@@ -672,7 +672,7 @@ private fun DeckButton(
             // this is what makes `engaged` a strict overlay on the normal
             // look rather than a different component.
             .raisedBevel(scheme, fill = if (engaged) scheme.accent.tape else null)
-            .tapeClick(onClick)
+            .tapeClick(label = null, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {

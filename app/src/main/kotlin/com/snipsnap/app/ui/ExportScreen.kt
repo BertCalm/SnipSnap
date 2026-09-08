@@ -486,7 +486,7 @@ private fun FormatCyclerRow(label: String, enabled: Boolean, scheme: Scheme, onT
                 .fillMaxWidth()
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .raisedBevel(scheme)
-                .let { if (enabled) it.tapeClick(onTap) else it }
+                .let { if (enabled) it.tapeClick(label = null, onClick = onTap) else it }
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {

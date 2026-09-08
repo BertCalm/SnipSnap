@@ -309,7 +309,7 @@ private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.Ins
         Modifier
             .fillMaxWidth()
             .raisedBevel(scheme)
-            .tapeClick { onOpen(entry) }
+            .tapeClick(label = null) { onOpen(entry) }
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -377,7 +377,7 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
                     .border(2.dp, Brush.linearGradient(listOf(BIN_RED_GLOW, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
-                    .let { if (!busy) it.tapeClick { onForget(room) } else it },
+                    .let { if (!busy) it.tapeClick(label = null) { onForget(room) } else it },
                 contentAlignment = Alignment.Center,
             ) {
                 TapeText("FORGET → BIN", TapeType.pixel, if (busy) scheme.ink3.tape else BIN_RED_GLOW)
@@ -417,7 +417,7 @@ private fun BinnedRoomRow(binned: Rooms.Binned, busy: Boolean, onRestore: (Rooms
             Modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                .let { if (!busy) it.tapeClick { onRestore(binned) } else it }
+                .let { if (!busy) it.tapeClick(label = null) { onRestore(binned) } else it }
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -468,7 +468,7 @@ private fun KitRow(
             .let { if (revealActions) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
             .then(
                 if (pickModeActive) {
-                    Modifier.tapeClick { onOpen(entry) }
+                    Modifier.tapeClick(label = null) { onOpen(entry) }
                 } else {
                     Modifier.pointerInput(entry.dir) {
                         detectTapGestures(
@@ -493,7 +493,7 @@ private fun KitRow(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme)
-                        .let { if (!busy) it.tapeClick { onRequestRename(entry) } else it }
+                        .let { if (!busy) it.tapeClick(label = null) { onRequestRename(entry) } else it }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -504,7 +504,7 @@ private fun KitRow(
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme)
                         .border(2.dp, Brush.linearGradient(listOf(BIN_RED_GLOW, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
-                        .let { if (!busy) it.tapeClick { onRequestDelete(entry) } else it }
+                        .let { if (!busy) it.tapeClick(label = null) { onRequestDelete(entry) } else it }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -539,7 +539,10 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
         Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.55f))
-            .tapeClick(onCancel),
+            // No descendant text of its own (the card is a separate
+            // merge boundary via its own no-op tapeClick below) —
+            // labelled with the same word the visible CANCEL button uses.
+            .tapeClick(label = "CANCEL", onClick = onCancel),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -547,7 +550,7 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
                 .fillMaxWidth()
                 .padding(24.dp)
                 .raisedBevel(scheme)
-                .tapeClick { }
+                .tapeClick(label = null) { }
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -560,7 +563,7 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
                         .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
-                        .tapeClick(onConfirm)
+                        .tapeClick(label = null, onClick = onConfirm)
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -593,7 +596,9 @@ private fun KitRenameDialog(initialName: String, onCancel: () -> Unit, onConfirm
         Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.55f))
-            .tapeClick(onCancel),
+            // No descendant text of its own — labelled with the same
+            // word the visible CANCEL button below uses.
+            .tapeClick(label = "CANCEL", onClick = onCancel),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -601,7 +606,7 @@ private fun KitRenameDialog(initialName: String, onCancel: () -> Unit, onConfirm
                 .fillMaxWidth()
                 .padding(24.dp)
                 .raisedBevel(scheme)
-                .tapeClick { }
+                .tapeClick(label = null) { }
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -653,7 +658,7 @@ fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
             .height(Layout.PRIMARY_ACTION_H.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
             .then(rim)
-            .then(if (enabled) Modifier.tapeClick(onClick) else Modifier),
+            .then(if (enabled) Modifier.tapeClick(label = null, onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(
@@ -671,7 +676,11 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
         Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.55f))
-            .tapeClick(onDismiss),
+            // No CANCEL button exists in this menu at all (picking a
+            // starter or tapping outside are the only ways out), so this
+            // scrim is the only accessible dismiss path — it needs its
+            // own explicit label.
+            .tapeClick(label = "CANCEL", onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -680,7 +689,7 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
                 .padding(12.dp)
                 .raisedBevel(scheme)
                 // Swallow taps so the scrim's dismiss doesn't fire through.
-                .tapeClick { }
+                .tapeClick(label = null) { }
                 .padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -690,7 +699,7 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
                     Modifier
                         .fillMaxWidth()
                         .sunkenField(scheme)
-                        .tapeClick { onPick(starter) }
+                        .tapeClick(label = null) { onPick(starter) }
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
@@ -748,7 +757,7 @@ private fun ArmControl(
                     .height(Layout.PRIMARY_ACTION_H.dp)
                     .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                     .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(6.dp))
-                    .tapeClick(onEject),
+                    .tapeClick(label = null, onClick = onEject),
                 contentAlignment = Alignment.Center,
             ) {
                 TapeText("STOP LISTENING", TapeType.displayBig, BIN_RED_GLOW)
@@ -759,7 +768,7 @@ private fun ArmControl(
                     .height(Layout.PRIMARY_ACTION_H.dp)
                     .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                     .border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-                    .tapeClick(onSnip),
+                    .tapeClick(label = null, onClick = onSnip),
                 contentAlignment = Alignment.Center,
             ) {
                 TapeText("SNIP ▸ KEEP LAST 60s", TapeType.displayBig, scheme.amber.tape)

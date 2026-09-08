@@ -525,8 +525,13 @@ private fun ChannelStrip(
         }
         ActionButton("REV", scheme, enabled = enabled, lit = strip.reverse, modifier = Modifier.fillMaxWidth()) { onReverse() }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            ActionButton("M", scheme, enabled = enabled, lit = strip.muted, modifier = Modifier.weight(1f)) { onMute() }
-            ActionButton("S", scheme, enabled = enabled, lit = strip.soloed, modifier = Modifier.weight(1f)) { onSolo() }
+            // Single-letter glyphs are exactly the shortest, most
+            // acronym-shaped strings TalkBack is documented to sometimes
+            // spell out letter-by-letter instead of reading as a word
+            // (audit finding 13) — an explicit accessibilityLabel sidesteps
+            // that without changing the visible "M"/"S".
+            ActionButton("M", scheme, enabled = enabled, lit = strip.muted, accessibilityLabel = "MUTE", modifier = Modifier.weight(1f)) { onMute() }
+            ActionButton("S", scheme, enabled = enabled, lit = strip.soloed, accessibilityLabel = "SOLO", modifier = Modifier.weight(1f)) { onSolo() }
         }
     }
 }

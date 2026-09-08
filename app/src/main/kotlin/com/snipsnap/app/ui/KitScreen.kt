@@ -268,7 +268,7 @@ fun KitScreen(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme, fill = if (keyOpen) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                        .let { if (!busy) it.tapeClick { panelKind = if (keyOpen) null else KEY_PANEL } else it }
+                        .let { if (!busy) it.tapeClick(label = null) { panelKind = if (keyOpen) null else KEY_PANEL } else it }
                         .padding(horizontal = 8.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -296,7 +296,7 @@ fun KitScreen(
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme, fill = if (open) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                            .let { if (!busy && kit.pads.isNotEmpty()) it.tapeClick { panelKind = if (open) null else kind } else it }
+                            .let { if (!busy && kit.pads.isNotEmpty()) it.tapeClick(label = null) { panelKind = if (open) null else kind } else it }
                             .padding(horizontal = 8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -392,7 +392,7 @@ private fun KeyPanel(
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                            .let { if (!busy) it.tapeClick { onSetKey(KeyPicker.key(r, scaleLabel)) } else it }
+                            .let { if (!busy) it.tapeClick(label = null) { onSetKey(KeyPicker.key(r, scaleLabel)) } else it }
                             .padding(horizontal = 2.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -409,7 +409,7 @@ private fun KeyPanel(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                        .let { if (!busy) it.tapeClick { onSetKey(KeyPicker.key(root, s)) } else it }
+                        .let { if (!busy) it.tapeClick(label = null) { onSetKey(KeyPicker.key(root, s)) } else it }
                         .padding(horizontal = 2.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -472,7 +472,7 @@ private fun TexturePanel(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                        .let { if (!busy) it.tapeClick { onMode(m) } else it }
+                        .let { if (!busy) it.tapeClick(label = null) { onMode(m) } else it }
                         .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {

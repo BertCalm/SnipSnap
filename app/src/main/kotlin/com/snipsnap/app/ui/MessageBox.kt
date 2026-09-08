@@ -33,7 +33,11 @@ fun MessageBox(note: LandingNote.Note, onDismiss: () -> Unit) {
         Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.55f))
-            .tapeClick(onDismiss),
+            // No descendant text of its own (the card below swallows its
+            // own tap, a separate merge boundary) — labelled with the
+            // same word the visible dismiss button below already uses,
+            // since the scrim does exactly what that button does.
+            .tapeClick(label = note.button, onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -41,7 +45,7 @@ fun MessageBox(note: LandingNote.Note, onDismiss: () -> Unit) {
                 .fillMaxWidth()
                 .padding(24.dp)
                 .raisedBevel(scheme)
-                .tapeClick { }
+                .tapeClick(label = null) { }
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
