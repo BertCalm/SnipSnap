@@ -15,6 +15,10 @@
     {
       "id": "page-4",
       "name": "The landing's box"
+    },
+    {
+      "id": "page-5",
+      "name": "KIT \u00b7 the action row + TEXTURE"
     }
   ],
   "artboards": [
@@ -143,6 +147,33 @@
       "h": 844,
       "title": "Landing \u00b7 refused",
       "page": "page-4"
+    },
+    {
+      "file": "KitClosed.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 340,
+      "title": "KIT \u00b7 action row, closed",
+      "page": "page-5"
+    },
+    {
+      "file": "KitKeyOpen.dc.html",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 540,
+      "title": "KIT \u00b7 KEY panel open",
+      "page": "page-5"
+    },
+    {
+      "file": "KitTextureOpen.dc.html",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 510,
+      "title": "KIT \u00b7 TEXTURE (SCULPT) open",
+      "page": "page-5"
     }
   ],
   "annotations": [
@@ -193,10 +224,18 @@
       "w": 870,
       "page": "page-4",
       "text": "THE LANDING'S HONEST LITTLE MESSAGE BOX (wave FFF, built blind; drawn here to check it)\nThe capture-blocked dialog's shape, generalised: scrim, raised bevel, the title in LCD type, the lines in a sunken field - trouble first in warn, what landed after - then FINE. Left: a kit file with one skip; the title is the toast's own line. Right: a share the shelf refused - the file's name, then the refuser's words. The refusal is long: the board lets a line wrap to three; the code capped lines at two and clipped this one, so the cap moves to three with these boards. A clean landing never opens the box - the toast stays the one-line voice."
+    },
+    {
+      "id": "note-kit",
+      "x": 0,
+      "y": -260,
+      "w": 1350,
+      "page": "page-5",
+      "text": "KIT \u00b7 THE ACTION ROW AND TEXTURE (drawn from the code; DESIGN_GAP's last undrawn pair)\nThe oldest artboard (`design/TapeOS Oilslick.dc.html`, `isKit`) drew one row of three: EVIL TWINS, TAKES + BIN, KEY, above a big ARM button that has since moved to THE SHELF. The code has grown past that: REMIX BANK B (EVIL TWINS renamed), a second row for SCULPT and STRETCH (TEXTURE didn't exist when that board was drawn), and a full-width SHARE below - five doors and a button where the board drew three. Closed (left), the sheet reads TAKES + BIN, REMIX BANK B, KEY, SCULPT, STRETCH, SHARE, six lines the language never checked together. KEY open (middle): the same panel as PAD SHEET's own KEY door, unchanged. TEXTURE open (right, SCULPT): SOURCE steps the kit's own pads, three mode chips, one knob, GO renders four takes.\nWhat the drawing found: nothing wrong with either panel once open - both fit and read clearly. The six-item closed sheet is dense but each label states its own words in full at 390 (measured, no clipping); grouping it as three text buttons + a three-way row (row 1) then two texture doors (row 2) mirrors PAD SHEET's group-box logic (TREATMENT/SHAPE/MUTATE/OUTSIDE/MAKE) closely enough that a GroupBox pass here is the natural next design step, not an emergency fix - noted below the line, not fixed blind."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-3"
+    "page": "page-5"
   }
 }
