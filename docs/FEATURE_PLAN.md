@@ -1409,6 +1409,22 @@ kit's folder; the same box for EXPORT's preflight, which has its own card.
 
 ---
 
+## Wave GGG — the trip catches up to its own drawing (APP)
+
+Drawing OUTSIDE's trip state by state on the design canvas (page three,
+built after wave FFF) found the code one step behind its own language in
+two small places, noted on the board for a follow-up. This wave closes
+both.
+
+| Item | Status |
+|---|---|
+| GGG1 | ✓ done: the measured line reads on an LCD, not pixel text — `OutsideCard` (`:app`, blind for CI's compiler): once a trip measures ("ROOM · 23 MS LATE · 87% SURE"), the status sits in the same 28dp LCD strip the reels use at rest, in `lcdInk`; before a trip the guidance line stays plain pixel text, as the board's idle state shows. `OutsideSheet.statusLine` itself is unchanged and already tested. |
+| GGG2 | ✓ done: KEEP ROOM lights — `ActionButton` gains `lit` (`:app`, blind): an amber rim over the ordinary bevel, [PrimaryAction]'s own dress on a working-surface button, shown only while `enabled` too, so a trip in flight or nothing yet measured still reads as the plain dimmed bevel. `OutsideCard` passes `lit = canKeep`. |
+
+Nothing below the line — the board named exactly these two, and both are closed.
+
+---
+
 ## Wave ZZ — the phone reads (APP)
 
 The import door (F3) made the core's listening verbs reachable from the
@@ -1836,6 +1852,12 @@ CORE+APP wave FFF: ✓ all landed (2026-09-07) — the landing reads back.
   refusal open the language's honest little message box (`LandingNote`,
   tested; `MessageBox`, blind) - skipped first, in the warn colour, with
   the door's own reason, [FINE] to close. A clean landing keeps its toast.
+
+APP wave GGG: ✓ all landed (2026-09-08) — the trip catches up to its own
+  drawing. The two gaps the OUTSIDE trip boards found: the measured line
+  now reads on an LCD strip like every other readout, and KEEP ROOM
+  lights with an amber rim the instant a trip has something to keep,
+  `ActionButton`'s new `lit` state (blind for CI's compiler).
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

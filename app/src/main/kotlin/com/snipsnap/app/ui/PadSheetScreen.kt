@@ -1995,10 +1995,19 @@ private fun OutsideCard(
             // The trip is out: the reels turn on an LCD strip beside the
             // stage, so the wait is alive rather than a dead button.
             ReelsStrip(stage, scheme)
+        } else if (applied != null) {
+            // Measured: a number the ear is meant to trust, so it reads on
+            // an LCD like every other readout — the same strip the reels
+            // use, at rest.
+            Box(
+                Modifier.fillMaxWidth().height(28.dp).lcdPanel(scheme).padding(horizontal = 10.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                TapeText(OutsideSheet.statusLine(applied), TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 1)
+            }
         } else {
             TapeText(
-                applied?.let { OutsideSheet.statusLine(it) }
-                    ?: if (move == OutsideSheet.Move.ROOM.name) "A SWEEP GOES OUT, THE ROOM COMES BACK AS THE PAD'S ROOM" else "THE PAD GOES OUT THE JACK, WHAT COMES BACK IS THE PAD",
+                if (move == OutsideSheet.Move.ROOM.name) "A SWEEP GOES OUT, THE ROOM COMES BACK AS THE PAD'S ROOM" else "THE PAD GOES OUT THE JACK, WHAT COMES BACK IS THE PAD",
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 maxLines = 1,
@@ -2048,6 +2057,7 @@ private fun OutsideCard(
             scheme,
             enabled = !busy && canKeep,
             dimmed = !canKeep,
+            lit = canKeep,
             modifier = Modifier.fillMaxWidth(),
             onClick = onKeep,
         )
@@ -2062,13 +2072,23 @@ internal fun ActionButton(
     scheme: Scheme,
     enabled: Boolean,
     dimmed: Boolean = false,
+    /**
+     * Lit in the LCD's second colour when [enabled] too — a state that
+     * has to announce itself (KEEP ROOM the instant a trip measures a
+     * room), not merely stop being dimmed: an amber rim over the ordinary
+     * bevel, [PrimaryAction]'s own dress on a working-surface button.
+     * Busy, or not yet earned, and the plain bevel and ink3 return.
+     */
+    lit: Boolean = false,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val litNow = lit && enabled
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme)
+            .let { if (litNow) it.border(2.dp, scheme.amber.tape, RoundedCornerShape(4.dp)) else it }
             .let { if (enabled) it.tapeClick(onClick) else it }
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
@@ -2076,7 +2096,7 @@ internal fun ActionButton(
         TapeText(
             label,
             TapeType.pixel,
-            if (!enabled) scheme.ink3.tape else if (dimmed) scheme.ink2.tape else scheme.ink.tape,
+            if (!enabled) scheme.ink3.tape else if (litNow) scheme.amber.tape else if (dimmed) scheme.ink2.tape else scheme.ink.tape,
             maxLines = 1,
         )
     }
