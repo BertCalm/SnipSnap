@@ -176,6 +176,10 @@ object SnipStore {
         }
     }
 
+    /** The `snip_<millis>.wav` timestamp [list]/[newest]/[listWithInfo] all sort by — one parse, shared. */
+    private fun parsedTimestamp(file: File): Long? =
+        NAME.matchEntire(file.name)?.groupValues?.get(1)?.toLongOrNull()
+
     /**
      * The dir's `snip_*.wav` files, newest first by the timestamp in the
      * name. Zero-length files are skipped: `freshFile`'s claim
@@ -189,10 +193,33 @@ object SnipStore {
         val files = dir.listFiles() ?: return emptyList()
         return files
             .filter { it.length() > 0L }
-            .mapNotNull { f -> NAME.matchEntire(f.name)?.groupValues?.get(1)?.toLongOrNull()?.let { f to it } }
+            .mapNotNull { f -> parsedTimestamp(f)?.let { f to it } }
             .sortedByDescending { (_, ts) -> ts }
             .map { (f, _) -> f }
     }
 
     fun newest(root: File): File? = list(root).firstOrNull()
+
+    /** SNIPS delete: a straight [File.delete] — success/failure is the caller's own toast to raise. */
+    fun delete(file: File): Boolean = file.delete()
+
+    /** What the SNIPS shelf lists a row from — no decode, unlike duration (see [Info]'s own KDoc). */
+    data class Info(val file: File, val sizeBytes: Long, val capturedAtMillis: Long)
+
+    /**
+     * [list] plus size and the captured timestamp, newest first — cheap:
+     * only [File.length] and the filename parse [parsedTimestamp] already
+     * shares with [list]/[newest], so this and they can never disagree on
+     * ordering. Deliberately missing: duration. That needs a full
+     * [com.snipsnap.audio.WavReader] decode, which this list must not pay
+     * for up front — the SNIPS screen computes it lazily per-row instead.
+     */
+    fun listWithInfo(root: File): List<Info> {
+        val dir = File(root, DIR)
+        val files = dir.listFiles() ?: return emptyList()
+        return files
+            .filter { it.length() > 0L }
+            .mapNotNull { f -> parsedTimestamp(f)?.let { ts -> Info(f, f.length(), ts) } }
+            .sortedByDescending { it.capturedAtMillis }
+    }
 }

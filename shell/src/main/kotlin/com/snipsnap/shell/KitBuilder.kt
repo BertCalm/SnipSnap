@@ -57,12 +57,21 @@ class KitBuilderModel private constructor(
      * by pad and class (`A03_HatClosed_01.wav`), the class brings its
      * colour and mute group, and any previous occupant's file is removed
      * if nothing else references it.
+     *
+     * [source] is provenance, freeform (see [KitPad.source]) — e.g.
+     * `mapOf("file" to sourceFile.name)` when this assign came from an
+     * existing snip file (the SNIPS shelf, not yet built as of this
+     * signature landing), so a later "USED" badge can read it back off the
+     * pad instead of guessing. Defaults to empty: a live capture (GRAB/HOLD
+     * off the mic ring) never touched a snip file and has nothing honest to
+     * tag here.
      */
     fun assign(
         slot: Int,
         snip: Snip,
         drumClass: DrumClass = DrumClass.UNKNOWN,
         displayName: String? = null,
+        source: Map<String, String> = emptyMap(),
     ): KitPad {
         require(snip.frameCount > 0) { "won't assign an empty snip" }
         val stem = nextStem(slot, drumClass)
@@ -85,6 +94,7 @@ class KitBuilderModel private constructor(
             muteGroup = AutoPlace.muteGroupFor(drumClass),
             tuneCoarse = tune?.tuneCoarse ?: 0,
             tuneFine = tune?.tuneFine ?: 0,
+            source = source,
         )
         kit = kit.copy(pads = kit.pads.filter { it.slot != slot } + pad)
         previous?.let { deleteIfUnreferenced(it) }

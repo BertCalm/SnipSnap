@@ -1,8 +1,11 @@
 package com.snipsnap.shell
 
+import java.io.File
+import java.nio.file.Files
 import kotlin.math.sin
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class SnipStoreTest {
@@ -209,5 +212,39 @@ class SnipStoreTest {
                     "input peak $inputPeak, output peak $outputPeak",
             )
         } finally { root.deleteRecursively() }
+    }
+
+    @Test
+    fun `delete removes the file and reports success`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val f = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 1_000L)
+            assertTrue(f.exists())
+            assertTrue(SnipStore.delete(f))
+            assertFalse(f.exists())
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `delete on an already-gone file returns false, not a throw`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val ghost = File(dir, "snip_999.wav")
+            assertFalse(SnipStore.delete(ghost))
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `listWithInfo carries size and the captured timestamp, newest first, agreeing with list`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val a = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 1_000L)
+            val b = SnipStore.commit(FloatArray(8_820) { 0.1f }, 44_100, dir, 2_000L)
+            val info = SnipStore.listWithInfo(dir)
+            assertEquals(listOf(b, a), info.map { it.file })
+            assertTrue(info.all { it.sizeBytes > 0 })
+            assertEquals(2_000L, info.first().capturedAtMillis)
+            assertEquals(SnipStore.list(dir), info.map { it.file }, "listWithInfo must never disagree with list's own order")
+        } finally { dir.deleteRecursively() }
     }
 }

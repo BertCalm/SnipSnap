@@ -776,4 +776,23 @@ class KitBuilderTest {
         assertNull(m.nameResponse("Banks"))
         assertFailsWith<IllegalArgumentException> { KitBuilderModel.create("bad:name", File(temp, "x")) }
     }
+
+    @Test
+    fun `assign carries an optional source tag onto the pad, defaulting to none, and it survives save-reopen`() {
+        val dir = File(temp, "SourceTag")
+        val m = KitBuilderModel.create("SourceTag", dir)
+
+        val untagged = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        assertEquals(emptyMap(), untagged.source, "a plain assign (GRAB/HOLD off the ring) tags nothing")
+
+        val tagged = m.assign(2, DrumSynth.snare(), DrumClass.SNARE, source = mapOf("file" to "snip_123.wav"))
+        assertEquals("snip_123.wav", tagged.source["file"], "an assign from an existing snip file records which one")
+
+        // Task 3's "USED" badge reads this off a reopened kit, not the
+        // in-memory return value - kit.json must actually carry it.
+        m.save()
+        val reopened = KitBuilderModel.open(dir)
+        assertEquals("snip_123.wav", reopened.pad(2)!!.source["file"], "the source tag round-trips through kit.json")
+        assertEquals(emptyMap(), reopened.pad(1)!!.source, "an untagged pad reopens with no source either")
+    }
 }
