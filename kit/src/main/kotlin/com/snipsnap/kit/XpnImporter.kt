@@ -187,6 +187,16 @@ object XpnImporter {
                         }
                     }
                 } catch (e: com.snipsnap.mpc3.LimitedRead.TooLargeException) {
+                    // copy() throws before writing the chunk that would
+                    // overrun, but earlier chunks in this same call already
+                    // landed on disk - importAll skips a program that throws
+                    // and moves on to the next, so an unspent partial write
+                    // here would let every remaining program in an archive
+                    // repeat it against the same unchanged budget.remaining,
+                    // multiplying exactly what this budget exists to bound.
+                    val partial = out.length()
+                    out.delete()
+                    budget.spend(partial)
                     throw com.snipsnap.mpc3.LimitedRead.TooLargeException(
                         "'${xpnFile.name}' writes past ${budget.max / (1024 * 1024)} MB of samples at '$stem.wav' - refused",
                     )

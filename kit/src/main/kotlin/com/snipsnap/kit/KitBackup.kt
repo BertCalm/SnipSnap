@@ -110,6 +110,17 @@ object KitBackup {
                             }
                         }
                     } catch (e: com.snipsnap.mpc3.LimitedRead.TooLargeException) {
+                        // copy() throws before writing the chunk that would
+                        // overrun, but earlier chunks already landed - this
+                        // loop currently aborts the whole restore on the
+                        // first such throw, but charging the partial write
+                        // (and not leaving it behind) keeps that true even
+                        // if a future caller ever turns this into a
+                        // skip-and-continue, the way importAll's own per-
+                        // program loop already does.
+                        val partial = xpn.length()
+                        xpn.delete()
+                        budget.spend(partial)
                         throw com.snipsnap.mpc3.LimitedRead.TooLargeException(
                             "'$backupFile' writes past ${budget.max / (1024 * 1024)} MB at '${entry.name}' - refused",
                         )

@@ -391,4 +391,38 @@ class XpnImporterTest {
         assertEquals(1, result.skipped.size)
         assertTrue(result.skipped[0].second.contains("MB", ignoreCase = true), result.skipped[0].second)
     }
+
+    @Test
+    fun `a program that blows the budget spends its partial write, and leaves nothing behind`() {
+        // Five programs, each with one sample far bigger than the whole
+        // budget on its own: every one refuses. If a refused program's
+        // partial write were never charged against the budget, importAll's
+        // skip-and-continue would hand the next program the same unspent
+        // allowance - five failed attempts could then leave several times
+        // the budget on disk instead of, at most, one budget's worth.
+        val kits = (1..5).map { i ->
+            val dir = File(temp, "leak-$i")
+            dir.mkdirs()
+            val big = Cleanup.process(Snip(FloatArray(100_000) { s -> (0.4 * Math.sin(s / (30.0 + i))).toFloat() }, 1, 44_100))
+            WavWriter.write(File(dir, "A01_Kick_01.wav"), big)
+            KitStore.save(Kit("Leak $i", listOf(KitPad(slot = 1, sampleFile = "A01_Kick_01.wav", drumClass = DrumClass.KICK))), dir)
+            dir
+        }
+        val pack = PackBuilder.build(
+            kits,
+            File(temp, "leak-card"),
+            ExpansionMeta(title = "Leak Pack", identifier = "app.snipsnap.leak", description = "d"),
+            asXpn = true,
+        )
+        val oneSampleBytes = File(kits[0], "A01_Kick_01.wav").length()
+        val budget = XpnImporter.WriteBudget(oneSampleBytes / 4) // too small for even one sample
+
+        val destRoot = File(temp, "leak-out")
+        val result = XpnImporter.importAll(pack.xpn!!, destRoot, budget = budget)
+        assertTrue(result.kits.isEmpty(), "every program's one sample alone exceeds the whole budget")
+        assertEquals(5, result.skipped.size)
+
+        val onDisk = destRoot.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        assertTrue(onDisk <= budget.max, "five refused programs left $onDisk bytes on disk - more than the ${budget.max}-byte budget ever allowed")
+    }
 }
