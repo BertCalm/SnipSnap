@@ -534,7 +534,11 @@ fun PadSheetScreen(
     }
 
     fun onEject() {
-        commitPadEditNow("EJECT", onSuccess = { onToast(Copy.DELETE_SNIP); onBack() }) { mm -> mm.clear(slot) }
+        // "DELETE", not "EJECT" — EJECT means "stop listening" on the
+        // shelf's own ArmControl; this clears the pad into the bin, a
+        // different action entirely, and a failure here must read
+        // "DELETE FAILED", not "EJECT FAILED".
+        commitPadEditNow("DELETE", onSuccess = { onToast(Copy.DELETE_SNIP); onBack() }) { mm -> mm.clear(slot) }
     }
 
     // ---- MUTATE: one hit from two parents (MutateSheet over Mutate) ----
@@ -1493,7 +1497,7 @@ fun PadSheetScreen(
             )
             }
             ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = onNavigateTape)
-            EjectButton(scheme, enabled = !busy, onClick = ::onEject)
+            DeleteButton(scheme, enabled = !busy, onClick = ::onEject)
         }
 
         // Pinned under the scroll: a 2dp rule, then the pad nav, so the
@@ -2301,8 +2305,14 @@ internal fun ActionButton(
 private val BIN_RED_BORDER = Color(0xFF6A2020)
 private val BIN_RED_GLOW = Color(0xFFC86050)
 
+/**
+ * Pad delete → bin. Named DeleteButton, not EjectButton — EJECT already
+ * means "stop listening" on the shelf's ArmControl; this button destroys
+ * (into a 30-day bin) instead, and the app is worse off with one word
+ * covering both.
+ */
 @Composable
-private fun EjectButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) {
+private fun DeleteButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
@@ -2317,6 +2327,6 @@ private fun EjectButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) {
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText("EJECT → BIN", TapeType.pixel, BIN_RED_GLOW)
+        TapeText("DELETE → BIN", TapeType.pixel, BIN_RED_GLOW)
     }
 }

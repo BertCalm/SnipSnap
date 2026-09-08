@@ -429,7 +429,7 @@ private fun exportShareMime(format: ExportFormat): String? = when (format) {
 
 // THE ONLY NON-SCHEME COLOURS IN THIS SCREEN — bin-red is deliberately
 // constant across every scheme (same convention PadSheetScreen's own
-// EJECT → BIN button uses, HANDOFF.md X2 / TAKES+BIN), so a FAIL reads as
+// DELETE → BIN button uses, HANDOFF.md X2 / TAKES+BIN), so a FAIL reads as
 // "red" even in a scheme with no red anywhere else in it.
 private val BIN_RED_BORDER = Color(0xFF6A2020)
 private val BIN_RED_GLOW = Color(0xFFC86050)

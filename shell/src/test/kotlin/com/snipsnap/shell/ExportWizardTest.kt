@@ -44,7 +44,7 @@ class ExportWizardTest {
         val result = w.write(File(temp, "card-stages"))
         assertTrue(result is ExportWizardModel.WriteResult.Done)
         assertEquals(ExportWizardModel.Stage.COMPLETE, w.stage)
-        assertEquals("EJECT CARD ✓", w.writeLabel)
+        assertEquals("WRITE ANOTHER ✓", w.writeLabel)
         assertEquals("DUB COMPLETE", w.dubLabel)
         assertTrue("ALL 4 FILES ON TAPE" in w.dubFilesLine(4))
 

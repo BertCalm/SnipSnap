@@ -13,15 +13,18 @@ import java.io.File
 
 /**
  * The EXPORT screen: preflight as a visible checklist, the format cycler,
- * the dub, the eject — the last screen before somebody's SD card, which
+ * the dub, the reset — the last screen before somebody's SD card, which
  * is why it never writes a kit it knows is broken and never pretends a
  * write went better than it did.
  *
  * Stages: READY (cycle formats, read the checklist) → WRITING (the label
- * says DO NOT EJECT and means it) → COMPLETE (EJECT CARD ✓ resets for the
- * next dub). The dub-progress *animation* is the UI's clock
- * ([Motion.DUB_FILE_MS] × [fileCount]); the write itself is [write], run
- * on a worker, and the truth about what landed is its return value.
+ * says DO NOT EJECT and means it — pulling the real storage mid-write is
+ * the one thing this stage warns against) → COMPLETE (WRITE ANOTHER ✓
+ * resets for the next dub; nothing is actually ejected — the file already
+ * landed and stays exactly where it landed). The dub-progress *animation*
+ * is the UI's clock ([Motion.DUB_FILE_MS] × [fileCount]); the write itself
+ * is [write], run on a worker, and the truth about what landed is its
+ * return value.
  */
 class ExportWizardModel(
     private val kit: Kit,
@@ -104,13 +107,18 @@ class ExportWizardModel(
             stage = Stage.READY
             WriteResult.Blocked(e.findings)
         } catch (e: Exception) {
-            // A half-written card must never show EJECT ✓.
+            // A half-written card must never show WRITE ANOTHER ✓.
             stage = Stage.READY
             throw e
         }
     }
 
-    /** EJECT CARD ✓ — back to READY for the next format or the next kit. */
+    /**
+     * WRITE ANOTHER ✓ — back to READY for the next format or the next kit.
+     * Named `eject` internally (the stage-machine verb predating this
+     * label), but nothing is ejected: the file DUB already wrote stays
+     * exactly where it landed; this only resets the wizard.
+     */
     fun eject() {
         check(stage == Stage.COMPLETE) { "eject() only from COMPLETE" }
         stage = Stage.READY
@@ -122,7 +130,12 @@ class ExportWizardModel(
         get() = when (stage) {
             Stage.READY -> "WRITE KIT"
             Stage.WRITING -> "WRITING — DO NOT EJECT"
-            Stage.COMPLETE -> "EJECT CARD ✓"
+            // Not "EJECT CARD ✓": nothing is ejected here, and EJECT
+            // already means "stop listening" on the shelf's ArmControl
+            // and "delete" on a pad's own DELETE → BIN. This button only
+            // resets the wizard for another write — Copy.CARD_EJECTED
+            // (the toast this fires) says exactly that.
+            Stage.COMPLETE -> "WRITE ANOTHER ✓"
         }
 
     val dubLabel: String
