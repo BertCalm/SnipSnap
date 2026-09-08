@@ -295,8 +295,13 @@ class KitShelf(val root: File) {
      * the folder's name (which [deleteKit] stamps as `<folder>-<millis>`,
      * ambiguous for any kit whose own name holds a hyphen, and outright
      * wrong for the same-millisecond collision form
-     * `<folder>-<n>-<millis>`). [BinnedKit.daysLeft] is [BIN_DAYS] minus
-     * whole days elapsed since [binnedAt], floored at zero.
+     * `<folder>-<n>-<millis>`). [BinnedKit.daysLeft] counts down to
+     * [sweepDeletedKits], rounded UP so the readout agrees with the sweep
+     * that acts on it — a partial day left still reads 1, and 0 only at the
+     * boundary where the kit actually goes. This is [Rooms.Binned.daysLeft]'s
+     * convention on purpose: a floored count would read "0 DAYS LEFT" for a
+     * whole day on a kit you can still restore, and the app's two bins would
+     * disagree about the same moment.
      */
     fun binnedKits(nowMillis: Long = System.currentTimeMillis()): List<BinnedKit> {
         val dirs = binDir.listFiles { f: File -> f.isDirectory } ?: return emptyList()
@@ -307,8 +312,8 @@ class KitShelf(val root: File) {
                 return@mapNotNull null
             }
             val binnedAtMillis = binnedAt(dir)
-            val elapsedDays = ((nowMillis - binnedAtMillis).coerceAtLeast(0L) / DAY_MS).toInt()
-            val daysLeft = (BIN_DAYS.toInt() - elapsedDays).coerceAtLeast(0)
+            val left = (binnedAtMillis + (BIN_DAYS * DAY_MS).toLong() - nowMillis).coerceAtLeast(0L)
+            val daysLeft = ((left + DAY_MS - 1) / DAY_MS).toInt()
             BinnedKit(dir, kit.name, kit.pads.size, binnedAtMillis, daysLeft)
         }.sortedByDescending { it.binnedAtMillis }
     }
