@@ -49,7 +49,13 @@ Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 > SURFACE's readout line - latency, position, up to four corner weights,
 > tilt, the pad name, all on one un-wrapped line - clipped mid-digit in
 > MORPH mode at 390, well past what any reordering could fix on one line;
-> `TapeText` now allows a second line).
+> `TapeText` now allows a second line). SPLIT (drawn on page nine,
+> 2026-09-08 - EEE9, also arrived from another branch with no board ever):
+> not split, working, the desk playing with a fader reversed and another
+> muted, and a hot print's toast. Held up as built - the lit/dimmed/enabled
+> states read from the same `ActionButton` vocabulary every other screen
+> uses, and the fader's unity tick and knob match `Fader.kt`'s own drawing
+> code exactly.
 
 The handoff is unusually implementable — it states tokens in the form Compose
 consumes and names repo symbols (`PeaksPyramid`, `StarterKits`,
