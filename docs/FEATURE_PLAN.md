@@ -1971,10 +1971,10 @@ APP wave NNN: ✓ all landed (2026-09-08) — DELETED KITS, drawn, closing
   a restore, unlike TAKES + BIN and ROOMS): empty bin (`NOTHING
   DELETED.`, SNIPS' own plain locked tone), a list unarmed (days-left
   in `warn` at ≤2 days and amber otherwise, same threshold TAKES + BIN
-  and ROOMS use, each row its own RESTORE chip), EMPTY armed (a second
-  tap swaps the label to TAP AGAIN TO CONFIRM — NO TAKEBACKS, the same
-  self-disarming confirm `TakesBinScreen`'s own EMPTY THE BIN NOW uses
-  verbatim; a RESTORE tap disarms it first so a shifted row can't read
+  and ROOMS use, each row its own `RESTORE` chip), EMPTY armed (a second
+  tap swaps the label to `TAP AGAIN TO CONFIRM — NO TAKEBACKS`, the same
+  self-disarming confirm `TakesBinScreen`'s own `EMPTY THE BIN NOW` uses
+  verbatim; a `RESTORE` tap disarms it first so a shifted row can't read
   as EMPTY's own second tap). Held up as built - no code fix. The
   archaeology pass this wave and KKK/LLL/MMM worked through is closed:
   every screen in `app/.../ui/` now has a board.
