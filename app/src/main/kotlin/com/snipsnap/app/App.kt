@@ -1186,7 +1186,7 @@ fun App(shelf: KitShelf) {
                                         // Same shape as PAD SHEET's own
                                         // onKitUpdated above: bumping
                                         // `open.kit`'s identity is what
-                                        // makes KIT's PadPlayer reload
+                                        // makes KIT's engine reload its bank
                                         // (`LaunchedEffect(entry.kit)`),
                                         // so a restored sample is heard,
                                         // not the stale cached one — but only
@@ -1218,7 +1218,7 @@ fun App(shelf: KitShelf) {
                                         onKitUpdated = { updatedKit ->
                                             // Same shape as PAD SHEET/TAKES+BIN's own
                                             // onKitUpdated: bump `open.kit`'s identity
-                                            // so KIT's PadPlayer reloads the pad GRAB
+                                            // so KIT's engine reloads the pad GRAB
                                             // just filled, not a stale cached (empty)
                                             // sample — guarded the same way, against
                                             // `sheetEntry` captured at this
@@ -1363,7 +1363,7 @@ fun App(shelf: KitShelf) {
                                 onKitUpdated = { updatedKit ->
                                     // Same shape as PAD SHEET/CHOP's own
                                     // onKitUpdated: bump `open.kit`'s identity so
-                                    // KIT's PadPlayer reloads the pad SEND TO PAD
+                                    // KIT's engine reloads the pad SEND TO PAD
                                     // just replaced, not a stale cached sample.
                                     if (open?.dir == synthEntry?.dir) open = open?.copy(kit = updatedKit)
                                     scope.launch {
@@ -1397,7 +1397,7 @@ fun App(shelf: KitShelf) {
                             // request a share-sheet import raises.
                             onPrinted = { importCount++ },
                             // A print on a pad: bump `open.kit`'s identity so
-                            // KIT's PadPlayer and the surface reload it.
+                            // KIT's engine and the surface reload it.
                             onKitUpdated = { updatedKit ->
                                 open = open?.copy(kit = updatedKit)
                                 scope.launch {

@@ -86,13 +86,14 @@ test-first.
   bound, not a clean measurement. The shelf now says what it is doing
   while it happens, which was the urgent half; the fix is a baseline
   profile or a smaller factory kit, and that is a product call.
-- **`PadPlayer` is main-thread only, and now says so.** `load()` does
-  disk IO on the main thread; the obvious fix — wrapping the load loop
-  in `Dispatchers.IO` — silently breaks the guard that stops `SoundPool`
-  from cross-wiring pads between kits. `check(Looper…)` fails loudly
-  instead. M4 replaces the whole class with Oboe — done for PLAY
-  (`PadEngine`, native, reads WAVs off the main thread); KIT's grid stays
-  on `PadPlayer` until the native voice has been heard on a phone.
+- **`PadPlayer` is gone.** It was M0's interim voice: one `SoundPool` per
+  kit, main-thread `load()` with a `check(Looper…)` guard, because the
+  obvious fix of wrapping the load in `Dispatchers.IO` silently broke the
+  guard that stopped `SoundPool` cross-wiring pads between kits. M4
+  replaced it a screen at a time — PLAY, then KEYS, then KIT's grid, and
+  finally GROOVE's roll — and the class was deleted with its last caller.
+  Every screen that makes a sound now goes through the one native
+  `PadEngine`, so none of them can drift from another's idea of a pad.
 - **`ui-tooling` is deliberately absent** — it drags
   `androidx.compose.material` onto the debug classpath. A milestone that
   wants `@Preview` should re-add it with an `exclude`.
