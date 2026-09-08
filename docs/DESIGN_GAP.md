@@ -69,6 +69,19 @@ Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 > relabels to the scale, not merely redecorated — wrong notes are
 > physically impossible in a scale layout). Held up as built - no code
 > defect. The other three remain queued for a future pass.
+>
+> **Closed by wave LLL (2026-09-08).** `PadCaptureScreen` — the
+> long-press-on-an-empty-pad capture surface, opened over
+> `MicSessionService`/`PadCapture`/`Classifier` — is drawn on the
+> canvas's page eleven: not armed (START MIC full-width, GRAB and HOLD
+> TO REC both dimmed to half-opacity labels while their sweep rim stays
+> lit regardless — a pre-existing `PrimaryAction`/`HoldRecordAction`
+> convention, not something this screen invented), armed and idle (the
+> live level meter and MM:SS elapsed counter, both actions fully lit),
+> and committing a GRAB (the meter keeps ticking since `armed` survives
+> a commit, GRAB reads GRABBING… and both actions dim together behind
+> the one shared `committing` guard). Held up as built - no code defect.
+> `SnipsScreen` and `DeletedKitsScreen` remain queued.
 
 The handoff is unusually implementable — it states tokens in the form Compose
 consumes and names repo symbols (`PeaksPyramid`, `StarterKits`,

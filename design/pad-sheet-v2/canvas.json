@@ -332,6 +332,33 @@
       "h": 520,
       "title": "KEYS · MAJOR picked",
       "page": "page-10"
+    },
+    {
+      "file": "PadCaptureNotArmed.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 420,
+      "title": "PAD CAPTURE · not armed",
+      "page": "page-11"
+    },
+    {
+      "file": "PadCaptureArmed.dc.html",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 420,
+      "title": "PAD CAPTURE · armed, idle",
+      "page": "page-11"
+    },
+    {
+      "file": "PadCaptureGrabbing.dc.html",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 420,
+      "title": "PAD CAPTURE · committing a GRAB",
+      "page": "page-11"
     }
   ],
   "annotations": [
@@ -430,11 +457,19 @@
       "w": 1350,
       "page": "page-10",
       "text": "KEYS (drawn from KeysScreen.kt; never had a board - reached from the shelf's INSTRUMENTS row, over InstrumentPlayer/:shell's InstrumentEngine)\nCHROMATIC, idle: the LCD header names the instrument and reads ROOT/OCT; a chip row (CHROMATIC/MAJOR/MINOR/MIN PENT, the active one amber-filled) sits over the 4×4 itself - root bottom-left, ascending left-to-right and bottom-to-top, exactly UI_DESIGN's rule. A key with no zone mapped to its note dims to ink3 with a 0.3-alpha border rather than disappearing - TalkBack still finds it and says NOT MAPPED (the same 'unavailable, not absent' rule KeyPad's own comment cites against finding 12). A key held: the pressed cell's fill jumps to a 0.45-alpha ink wash: the label itself never changes colour on press, only the box - matching KeyPad's code exactly, where TapeText's ink/ink3 choice depends only on `enabled`. MAJOR picked: the whole grid relabels to the seven-note scale rather than merely highlighting different chromatic keys - proof the layout picker changes what note a slot *is*, not just how it's decorated; wrong notes are physically impossible in this mode, the point UI_DESIGN.md makes for scale layouts.\nWhat the drawing found: no defect - the header's instrument-name/ROOT-OCT line safely ellipsizes through the same TapeText(maxLines=1) every other LCD line in the app uses (unlike SURFACE's readout, nothing here is data that can't afford to be cut); the disabled-key semantics and touch-Y velocity already carry the accessibility-audit fixes forward correctly."
+    },
+    {
+      "id": "note-padcapture",
+      "x": 0,
+      "y": -230,
+      "w": 1350,
+      "page": "page-11",
+      "text": "PAD CAPTURE (drawn from PadCaptureScreen.kt; never had a board - opened by a long-press on an empty KIT pad, over MicSessionService/PadCapture/Classifier)\nNot armed: the LCD readout says NOT LISTENING YET, START MIC fills the width, GRAB and HOLD TO REC both present but dimmed to half-opacity labels - their sweep rim stays lit regardless, the same always-on-rim/dim-only-the-label look PrimaryAction and HoldRecordAction share with KitsScreen's own PrimaryAction uses (a pre-existing, deliberate convention, not something this screen invented). Armed, idle: the live level meter and MM:SS elapsed counter read from MicSessionService.level/armedAtElapsedRealtime, GRAB and HOLD TO REC both fully lit. Committing a GRAB: the level meter keeps ticking (armed stays true through a commit - only an EJECT flips it), GRAB reads GRABBING… and both actions dim together, since `committing` is the one guard both share - a HOLD press mid-GRAB-commit is a no-op, not a second write racing the first, per KitWrites's own KDoc.\nWhat the drawing found: no defect - the NOT LISTENING/GRAB hint text's declared maxLines (3 and 2) already covers its longest case at 390 without clipping, unlike SURFACE's readout from an earlier wave; the always-lit rim on a disabled action is shared PrimaryAction/HoldRecordAction behaviour, not a PadCaptureScreen-specific inconsistency."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-10"
+    "page": "page-11"
   },
   "pages": [
     {
@@ -476,6 +511,10 @@
     {
       "id": "page-10",
       "name": "KEYS"
+    },
+    {
+      "id": "page-11",
+      "name": "PAD CAPTURE"
     }
   ]
 }
