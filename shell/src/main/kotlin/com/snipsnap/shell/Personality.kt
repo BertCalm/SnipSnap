@@ -253,8 +253,15 @@ object Copy {
     // ---- DELETED KITS (Task 2 of the bin-restore plan): restore or empty early ----
     /** RESTORE on a binned kit; [name] is what it actually landed under — `KitShelf.restoreKit`'s own collision fallback may have freshened it, never the name that was tapped. */
     fun kitRestored(name: String): String = "$name IS BACK ON THE SHELF. AS IF NOTHING HAPPENED."
-    /** EMPTY THE BIN NOW on DELETED KITS, confirmed: every kit still sleeping there is gone for good. */
-    fun kitBinEmptied(count: Int): String = "$count ${if (count == 1) "KIT" else "KITS"} GONE FOR GOOD. THE BIN IS EMPTY."
+    /**
+     * EMPTY THE BIN NOW on DELETED KITS, confirmed. Deliberately carries no
+     * count: `KitShelf.emptyKitBin` reports every child it removed, but the
+     * list only ever showed the ones whose `kit.json` could be read, so a
+     * bin holding a stray file would have toasted more KITS than the user
+     * ever saw — reading as unexplained data loss. They just looked at the
+     * list; what they need told is that it's empty now, and that it's final.
+     */
+    val kitBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
 
     // ---- PAD SHEET: pad from anything ----
     const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."

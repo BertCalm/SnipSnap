@@ -146,9 +146,9 @@ fun DeletedKitsScreen(
         busy = true
         scope.launch {
             try {
-                val count = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.emptyKitBin() } }
+                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.emptyKitBin() } }
                 binned = emptyList()
-                onToast(Copy.kitBinEmptied(count))
+                onToast(Copy.kitBinEmptied)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 failure("EMPTY BIN", e)
