@@ -138,12 +138,21 @@ private const val WAVEFORM_MIN_H = 96
  * real jam or a full side of a cassette still loads whole, and short
  * enough that even a worst-case format (high sample rate, stereo, 32-bit)
  * stays well inside what an Android app heap can be expected to hold —
- * for a single file. [loadLongestFromKit]'s pad-by-pad scan can hold up to
- * three capped buffers live at once (the running-longest candidate, the
- * next pad's raw slice, and its decode) while comparing an unusually long
- * kit, so that branch's transient worst case is a multiple of this
- * number, not this number itself — still a routine improvement over the
- * old unbounded × 16, just not literally bounded at 106 MB.
+ * for a single file. But seconds alone do not bound memory: this cap
+ * assumes mono 44.1 kHz, and nothing stops a picked file from being
+ * high-rate stereo instead — [WavReader.readCapped]'s own
+ * [WavReader.MAX_DECODE_BYTES] is the byte-precise ceiling that actually
+ * bounds the worst case (a 192 kHz stereo file loads a correspondingly
+ * shorter prefix, not 600 seconds of it). [loadLongestFromKit] measures
+ * every pad's duration via [WavReader.peekSeconds] — a header-only read,
+ * no decode — before decoding anything, then decodes only the longest
+ * one, once. That removes the OLD worst case entirely: no more retained
+ * running-longest candidate held live while the next pad decodes beside
+ * it. The remaining peak — one file's raw slice, its interleaved decode,
+ * and the mono copy made from it, in flight together only briefly — is
+ * the ordinary cost of decoding a single capped file (see
+ * [WavReader.MAX_DECODE_BYTES]'s own KDoc for that shape), now paid once
+ * per kit-fallback load instead of once per pad in the kit.
  *
  * `internal`, not `private`: the same cap applies wherever `App.kt`
  * (`readGroove`, `stealFeel`, `instantKit`) or `ChopScreen.kt`
@@ -243,7 +252,11 @@ fun TapeScreen(
             failed = true
         } else {
             loaded = tape
-            if (tape.truncated) onToast(Copy.tapeTruncated(TAPE_LOAD_MAX_SEC))
+            // The actual kept duration, not the nominal TAPE_LOAD_MAX_SEC:
+            // WavReader.MAX_DECODE_BYTES can bind before the duration cap
+            // does (a high-rate/stereo source), so the true cutoff here can
+            // be well short of 600s — see TAPE_LOAD_MAX_SEC's own KDoc.
+            if (tape.truncated) onToast(Copy.tapeTruncated(tape.samples.size / tape.sampleRate.toFloat()))
         }
     }
 
@@ -386,31 +399,44 @@ private fun readMono(file: File): MonoOutcome {
 /** [loadLongestFromKit]'s answer: the longest readable pad found (if any), and whether an OOM was swallowed skipping past a pad along the way. */
 private class KitLongestResult(val found: Pair<File, MonoRead>?, val oomEncountered: Boolean)
 
-/** Every pad's WAV, mixed to mono, keeping the longest — TAPE's fallback when neither a snip nor a last-commit source resolves. */
+/**
+ * Every pad's WAV, mixed to mono, keeping the longest — TAPE's fallback
+ * when neither a snip nor a last-commit source resolves.
+ *
+ * Finds the longest pad by [WavReader.peekSeconds] alone — a header-only
+ * read that never decodes a sample — then decodes that one winner, once,
+ * through [readMono]. The old shape decoded every pad just to measure it,
+ * so while comparing an unusually long kit it could hold a retained
+ * running-longest candidate's decode live AT THE SAME TIME as the next
+ * pad's raw slice and its own decode — up to three buffers at once, and
+ * that multiple grew with how many long pads the kit had. This holds at
+ * most one pad's worth (its raw slice, its interleaved decode, and the
+ * mono copy made from it — the ordinary cost of decoding a single capped
+ * file) no matter how many pads the kit has, because only the header is
+ * touched until the winner is already chosen. If the header-longest pad
+ * then fails to actually decode (OOM, or a header that resolved but a
+ * body that doesn't), this reports that failure rather than falling back
+ * to the next-longest candidate — a second decode attempt would reintroduce
+ * the multi-buffer cost this fix removes, and a pad whose header parses
+ * but whose body doesn't is already the rare, malformed case.
+ */
 private fun loadLongestFromKit(entry: KitShelf.Entry): KitLongestResult {
     var longestFile: File? = null
-    var longest: MonoRead? = null
-    var oomEncountered = false
+    var longestSeconds = -1f
     for (pad in entry.kit.pads) {
         val file = File(entry.dir, pad.sampleFile)
-        when (val outcome = readMono(file)) {
-            is MonoOutcome.Ok -> {
-                val mono = outcome.read
-                if (longest == null || mono.snip.frameCount > longest!!.snip.frameCount) {
-                    longest = mono
-                    longestFile = file
-                }
-            }
-            MonoOutcome.OutOfMemory -> oomEncountered = true
-            MonoOutcome.Unreadable -> {}
+        if (!file.isFile) continue
+        val seconds = WavReader.peekSeconds(file) ?: continue
+        if (seconds > longestSeconds) {
+            longestSeconds = seconds
+            longestFile = file
         }
     }
-    val file = longestFile
-    val mono = longest
-    return if (file != null && mono != null) {
-        KitLongestResult(file to mono, oomEncountered)
-    } else {
-        KitLongestResult(null, oomEncountered)
+    val file = longestFile ?: return KitLongestResult(null, oomEncountered = false)
+    return when (val outcome = readMono(file)) {
+        is MonoOutcome.Ok -> KitLongestResult(file to outcome.read, oomEncountered = false)
+        MonoOutcome.OutOfMemory -> KitLongestResult(null, oomEncountered = true)
+        MonoOutcome.Unreadable -> KitLongestResult(null, oomEncountered = false)
     }
 }
 

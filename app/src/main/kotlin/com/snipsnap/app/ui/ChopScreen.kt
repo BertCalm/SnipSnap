@@ -209,43 +209,53 @@ private class LongestSampleResult(val found: Pair<File, Snip>?, val oomEncounter
  * The open kit's longest sample, mono-mixed — TapeScreen's own fallback
  * (`loadLongestFromKit`) for when neither a snip nor a last-commit source
  * resolves, replicated here for CHOP's own no-commit case. Every pad is a
- * file MUTATE's arbitrary file picker could have made arbitrarily long, so
- * this reads through [WavReader.readCapped] with the same
- * [TAPE_LOAD_MAX_SEC] TapeScreen uses — the same reasoning as
- * [loadFromCommit] above, just scanning every pad instead of one file.
- * Two pads both past the cap tie at the same capped frame count; "longest"
- * becomes first-pad-wins for that tie, which matches
- * `loadLongestFromKit`'s own post-cap behavior rather than diverging from
- * it. Decodes each candidate once (kept alongside its file while scanning)
- * rather than once to measure it and again to return it.
+ * file MUTATE's arbitrary file picker could have made arbitrarily long.
+ *
+ * Measures every pad via [WavReader.peekSeconds] first — a header-only
+ * read, no decode — and only then decodes the longest one, once, through
+ * [WavReader.readCapped] with the same [TAPE_LOAD_MAX_SEC] TapeScreen
+ * uses (same reasoning as [loadFromCommit] above). An earlier version of
+ * this function decoded each candidate once, on the reasoning that
+ * decoding each pad exactly once (rather than once to measure it and
+ * again to return it) was cheaper — true for CPU, but wrong for memory:
+ * it still held a decode live per pad while scanning, so comparing an
+ * unusually long kit could hold a retained running-longest candidate's
+ * decode live at the same time as the next pad's raw slice and its own
+ * decode. Measuring headers first holds at most one pad's worth (its raw
+ * slice, its interleaved decode, and the mono copy made from it) no
+ * matter how many pads the kit has, since only the header is touched
+ * until the winner is chosen. [WavReader.peekSeconds] reports each pad's
+ * true, uncapped duration — not a capped one — so two pads that would
+ * both have been truncated to the same capped length by the old
+ * decode-to-measure shape no longer tie at all; the one with the longer
+ * header wins outright, matching `loadLongestFromKit`'s own header-first
+ * behavior. If the header-longest pad then fails to actually decode (OOM,
+ * or a header that resolved but a body that doesn't), this reports that
+ * failure rather than falling back to the next-longest candidate — a
+ * second decode attempt would reintroduce the multi-buffer cost this
+ * avoids.
  */
 private fun loadLongestSample(entry: KitShelf.Entry): LongestSampleResult {
     var longestFile: File? = null
-    var longest: Snip? = null
-    var oomEncountered = false
+    var longestSeconds = -1f
     for (pad in entry.kit.pads) {
         val f = File(entry.dir, pad.sampleFile)
         if (!f.isFile) continue
-        val mono = try {
-            Cleanup.toMono(WavReader.readCapped(f, TAPE_LOAD_MAX_SEC).snip)
-        } catch (e: OutOfMemoryError) {
-            oomEncountered = true
-            continue
-        } catch (e: Exception) {
-            continue
-        }
-        if (longest == null || mono.frameCount > longest!!.frameCount) {
-            longest = mono
+        val seconds = WavReader.peekSeconds(f) ?: continue
+        if (seconds > longestSeconds) {
+            longestSeconds = seconds
             longestFile = f
         }
     }
-    val file = longestFile
-    val mono = longest
-    return if (file != null && mono != null) {
-        LongestSampleResult(file to mono, oomEncountered)
-    } else {
-        LongestSampleResult(null, oomEncountered)
+    val file = longestFile ?: return LongestSampleResult(null, oomEncountered = false)
+    val mono = try {
+        Cleanup.toMono(WavReader.readCapped(file, TAPE_LOAD_MAX_SEC).snip)
+    } catch (e: OutOfMemoryError) {
+        return LongestSampleResult(null, oomEncountered = true)
+    } catch (e: Exception) {
+        return LongestSampleResult(null, oomEncountered = false)
     }
+    return LongestSampleResult(file to mono, oomEncountered = false)
 }
 
 /** [loadChopSource]'s answer: the source it settled on (if any), and whether [TAPE_LOAD_MAX_SEC]'s OOM safety net was hit reading the commit along the way. */

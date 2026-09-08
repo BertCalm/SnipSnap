@@ -550,4 +550,174 @@ class WavReaderTest {
             assertEquals(full.samples[i], capped.snip.samples[i], "sample $i")
         }
     }
+
+    // ---- byte-ceiling coverage: seconds alone do not bound memory ----
+
+    @Test
+    fun `readCapped's byte ceiling binds tighter than a generous duration cap for a high-rate stereo file`() {
+        // 200 stereo 16-bit frames (4 bytes/frame) at 100 Hz = 2.0s of
+        // audio. maxDurationSec is generous (100s, nowhere near binding);
+        // a tiny custom byte ceiling must still cut it, and cut it to
+        // exactly the frame count that ceiling implies: decoded size is
+        // frames * channels * 4 (float32), so a 40-byte ceiling at 2
+        // channels allows floor(40 / (2*4)) = 5 frames.
+        val payload = ByteArray(800) { it.toByte() }
+        val file = tempWav(wav(1, 16, 2, 100, payload))
+
+        val capped = WavReader.readCapped(file, maxDurationSec = 100f, maxDecodeBytes = 40L)
+        assertTrue(capped.truncated, "the byte ceiling must cut this even though duration didn't")
+        assertEquals(5, capped.snip.frameCount)
+        assertEquals(2, capped.snip.channels)
+    }
+
+    @Test
+    fun `readCapped's default byte ceiling does not bind an ordinary small file`() {
+        // Sanity check on the production default (128 MiB): nothing in
+        // this suite's small test files should ever be cut by it, only
+        // by an explicit duration cap.
+        val payload = ByteArray(400) { it.toByte() }
+        val file = tempWav(wav(1, 16, 2, 100, payload))
+
+        val capped = WavReader.readCapped(file, maxDurationSec = 100f)
+        assertTrue(!capped.truncated, "128 MiB does not bind a tiny test file")
+        assertEquals(100, capped.snip.frameCount)
+    }
+
+    /** Builds a WAV with `data` written before `fmt` — valid per [WavReader.read] (order-independent), but not per [WavReader]'s internal fast scan (order-dependent, see `locateAudio`'s KDoc). */
+    private fun wavWithDataBeforeFmt(payload: ByteArray): ByteArray {
+        fun tag(out: ByteArrayOutputStream, s: String) = out.write(s.toByteArray(Charsets.US_ASCII))
+        fun le16(out: ByteArrayOutputStream, v: Int) { out.write(v and 0xFF); out.write((v ushr 8) and 0xFF) }
+        fun le32(out: ByteArrayOutputStream, v: Int) {
+            out.write(v and 0xFF); out.write((v ushr 8) and 0xFF)
+            out.write((v ushr 16) and 0xFF); out.write((v ushr 24) and 0xFF)
+        }
+        val body = ByteArrayOutputStream().apply {
+            tag(this, "WAVE")
+            tag(this, "data"); le32(this, payload.size); write(payload)
+            tag(this, "fmt "); le32(this, 16)
+            le16(this, 1) // PCM
+            le16(this, 1) // mono
+            le32(this, 44_100)
+            le32(this, 44_100 * 2) // byte rate, unused by the reader
+            le16(this, 2) // block align
+            le16(this, 16) // bits
+        }.toByteArray()
+        val out = ByteArrayOutputStream()
+        tag(out, "RIFF")
+        le32(out, body.size)
+        out.write(body)
+        return out.toByteArray()
+    }
+
+    @Test
+    fun `a data-before-fmt wav decodes fine through plain read (order independent)`() {
+        // Sanity check underpinning locateAudio's KDoc claim: read() itself
+        // does not require fmt before data.
+        val payload = byteArrayOf(1, 0, 2, 0, 3, 0, 4, 0) // 4 mono 16-bit frames
+        val decoded = WavReader.read(wavWithDataBeforeFmt(payload))
+        assertEquals(4, decoded.frameCount)
+        assertEquals(44_100, decoded.sampleRate)
+    }
+
+    @Test
+    fun `readCapped refuses a RIFF file whose chunks don't resolve when it is over the byte ceiling`() {
+        // data-before-fmt defeats the fast scan (Unresolved), and this
+        // file is deliberately bigger than a tiny byte ceiling — must
+        // refuse honestly (IllegalArgumentException) rather than silently
+        // falling back to an unbounded read.
+        val payload = ByteArray(64) { it.toByte() }
+        val file = tempWav(wavWithDataBeforeFmt(payload))
+        assertTrue(file.length() > 10L, "sanity: file really is bigger than the ceiling below")
+
+        assertFailsWith<IllegalArgumentException> {
+            WavReader.readCapped(file, maxDurationSec = 100f, maxDecodeBytes = 10L)
+        }
+    }
+
+    @Test
+    fun `readCapped falls back to an ordinary read for unresolved chunks within the byte ceiling`() {
+        // Same data-before-fmt shape, but well within the byte ceiling —
+        // must still resolve correctly via the ordinary read() path
+        // rather than refusing.
+        val payload = byteArrayOf(1, 0, 2, 0, 3, 0, 4, 0) // 4 mono 16-bit frames
+        val file = tempWav(wavWithDataBeforeFmt(payload))
+
+        val capped = WavReader.readCapped(file, maxDurationSec = 100f, maxDecodeBytes = 1_000_000L)
+        assertTrue(!capped.truncated, "the unresolved-but-within-ceiling path never reports truncation")
+        assertEquals(4, capped.snip.frameCount)
+        assertEquals(44_100, capped.snip.sampleRate)
+    }
+
+    @Test
+    fun `readCapped's unresolved gate is a quarter of maxDecodeBytes, not the whole of it`() {
+        // Bit depth is unknown when chunks don't resolve, so an 8-bit
+        // source's worst-case 4x expansion is the only safe bound: this
+        // file is under maxDecodeBytes itself (200 bytes) but over a
+        // quarter of it (50 bytes) — a gate that used maxDecodeBytes
+        // directly would wrongly let it through.
+        val payload = ByteArray(40) { it.toByte() } // file is 44 + 40 = 84 bytes
+        val file = tempWav(wavWithDataBeforeFmt(payload))
+        assertTrue(file.length() in 51..200, "sanity: between a quarter of 200 and 200 itself")
+
+        assertFailsWith<IllegalArgumentException> {
+            WavReader.readCapped(file, maxDurationSec = 100f, maxDecodeBytes = 200L)
+        }
+    }
+
+    @Test
+    fun `readCapped refuses a fat leading chunk over the header allowance rather than reading it all in`() {
+        // A LIST chunk ahead of data pushes dataAt well past a tiny
+        // header allowance — locateAudio's scan proves this without
+        // reading the chunk's body, but the read that would follow still
+        // has to start at byte 0, so this must refuse rather than
+        // silently allocating past the allowance.
+        val file = tempWav(wavWithChunkBefore("LIST", ByteArray(50)))
+        val e = assertFailsWith<IllegalArgumentException> {
+            WavReader.readCapped(file, maxDurationSec = 100f, maxHeaderBytes = 100L)
+        }
+        assertTrue(e.message!!.contains("header"), "message should name the problem: ${e.message}")
+    }
+
+    @Test
+    fun `readCapped decodes normally when the leading chunk is within the header allowance`() {
+        val file = tempWav(wavWithChunkBefore("LIST", ByteArray(50)))
+        val capped = WavReader.readCapped(file, maxDurationSec = 100f, maxHeaderBytes = 1_000L)
+        assertEquals(2, capped.snip.frameCount, "the default wavWithChunkBefore payload is 2 mono 16-bit frames")
+        assertTrue(!capped.truncated)
+    }
+
+    // ---- peekSeconds: header-only duration, no decode ----
+
+    @Test
+    fun `peekSeconds reports duration from the header alone`() {
+        val payload = ByteArray(2_000) { it.toByte() } // 1000 mono 16-bit frames @ 500 Hz
+        val file = tempWav(wav(1, 16, 1, 500, payload))
+        val seconds = WavReader.peekSeconds(file)
+        assertEquals(2.0f, seconds)
+    }
+
+    @Test
+    fun `peekSeconds returns null for a non-wav file`() {
+        val file = tempWav("this is plainly not audio".toByteArray())
+        assertEquals(null, WavReader.peekSeconds(file))
+    }
+
+    @Test
+    fun `peekSeconds returns null when chunks don't cleanly resolve`() {
+        val file = tempWav(wavWithDataBeforeFmt(byteArrayOf(1, 0, 2, 0)))
+        assertEquals(null, WavReader.peekSeconds(file))
+    }
+
+    @Test
+    fun `peekSeconds returns null for a fat leading chunk over the header allowance, matching readCapped's own refusal`() {
+        // A pad peekSeconds accepted but readCapped would refuse could win
+        // a "longest pad" scan and then fail to decode at all — the two
+        // must agree on what's resolvable for exactly this reason.
+        val file = tempWav(wavWithChunkBefore("LIST", ByteArray(50)))
+        assertEquals(null, WavReader.peekSeconds(file, maxHeaderBytes = 100L))
+        // Sanity: readCapped refuses the identical file under the same allowance.
+        assertFailsWith<IllegalArgumentException> {
+            WavReader.readCapped(file, maxDurationSec = 100f, maxHeaderBytes = 100L)
+        }
+    }
 }
