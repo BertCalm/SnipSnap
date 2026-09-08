@@ -61,13 +61,38 @@ before the old sample bank was released, which is the one path in the
 native code where getting it wrong is a use-after-free rather than a
 wrong noise.
 
-Still open, and A1 stays part-ticked until they are answered: the
-**open-hat choke** (a closed hat cutting a ringing open one, no click at
-the cut) and **gate vs one-shot**.
+The **open-hat choke** passed the same evening: a closed hat cuts a
+ringing open one, and there is no click at the cut. That is EEE2's
+5 ms choke fade doing its job on hardware — a click there would mean
+the voice was being cut dead rather than faded out, which is the
+difference between a hi-hat and a bug.
+
+Still open, and A1 stays part-ticked until it is answered: **gate vs
+one-shot** — a gate pad should stop when you lift your finger, a
+one-shot should play out regardless.
 
 ### A2 · KEYS sustains and lets go [EEE6]
 
 Open an instrument from the shelf (INSTRUMENTS on THE SHELF).
+
+**A fresh install has none, and the whole INSTRUMENTS section is hidden
+when the list is empty** — so on a new phone the shelf shows kits and
+nothing else, and there is no clue this section exists. Nothing is
+broken; make one first. There are two doors, both on a pad's own sheet
+(open a kit, tap a pad):
+
+- **PAD FROM ANYTHING · HOLD IT FOREVER ▸ MAKE PAD ▸ INSTRUMENT.** Any
+  pad qualifies — a drum lands as a drone. It writes a keygroup with a
+  one-second arrival, a four-second body that loops with a 0.75 s
+  crossfade baked into the wrap, and a 0.6 s release. That is exactly
+  what the first two checks below ask about, so this is the door to use
+  for them. The source must be between 0.05 s and 30 s long.
+- **MAKE INSTRUMENT.** Greyed unless the pad is classed TONAL — the grey
+  is a hint, not a lock, and pressing it on an unpitched pad refuses in
+  words rather than doing something strange. Use it on something pitched
+  and it detects the real root, which is what makes the tuning check
+  below mean anything: a drone from the other door sits at C3 by fiat,
+  so it is in tune with itself and proves nothing.
 
 - Hold a note on a looping zone: does it sustain indefinitely, without a
   seam or a click at the loop point? [X6.3]
