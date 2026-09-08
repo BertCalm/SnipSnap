@@ -64,4 +64,16 @@ inline OpenedOutput openStereoFloatOutput(
     return out;
 }
 
+/**
+ * The stream's own round-trip latency in milliseconds, or -1 when there
+ * is no stream or the device declines to say (not every HAL implements
+ * it). **Call from the UI thread only** - Oboe's own note says not to
+ * call this from a data callback on Android before R.
+ */
+inline double latencyMillisOf(const std::shared_ptr<oboe::AudioStream>& stream) {
+    if (!stream) return -1.0;
+    const oboe::ResultWithValue<double> latency = stream->calculateLatencyMillis();
+    return latency ? latency.value() : -1.0;
+}
+
 }  // namespace snipsnap

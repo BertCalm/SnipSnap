@@ -32,6 +32,10 @@ Open a kit, tap PLAY, drum on it with two thumbs for a minute.
 
 - Is it tight enough that you would actually play it? That is the
   milestone's exit test and the only question that matters here.
+- **Write down the number in the header** next to VOICES — the device's
+  own round-trip latency ("9 MS"). `— MS` means the device declined to
+  measure; the word `SHARED` after it means it refused the exclusive path
+  and this is the slower one by construction.
 - Does VOICES count *down* as one-shots finish? (Endings are reported by
   the engine now, not guessed from a timer, so a stuck count is a bug.)
 - Does a closed hat cut a ringing open one, with no click at the cut?
@@ -63,6 +67,7 @@ Open an instrument from the shelf (INSTRUMENTS on THE SHELF).
 
 Open a kit, tap SURFACE.
 
+- The readout line under the pad opens with the latency; note it here too.
 - XY: a finger loops the pad, pitch across, filter up. Smooth, or stepped?
 - XYZ: a second finger's pinch opens the drive. The roll of the phone
   moves resonance.
@@ -88,7 +93,11 @@ Open a kit, tap SURFACE.
 - Watch logcat for `SurfaceEngine` / `PadEngine`. The line "exclusive
   openStream failed - trying shared" means your device refused the
   low-latency path and the shared fallback took over — the toast says so
-  too. Note it either way: it changes what latency you should expect.
+  too, and so does the readout, which appends `SHARED`. Note it either
+  way: it changes what latency you should expect.
+- Note the latency on both screens. If PLAY and SURFACE disagree by much
+  on the same phone, that is worth telling me — they open streams the
+  same way.
 
 →
 

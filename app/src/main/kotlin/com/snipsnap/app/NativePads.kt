@@ -19,6 +19,7 @@ object NativePads {
     external fun sampleRate(handle: Long): Int
     external fun needsRestart(handle: Long): Boolean
     external fun isShared(handle: Long): Boolean
+    external fun latencyMillis(handle: Long): Double
     external fun beginBank(handle: Long)
     external fun addSample(handle: Long, interleaved: FloatArray, channels: Int, rate: Int): Int
     external fun commitBank(handle: Long)
