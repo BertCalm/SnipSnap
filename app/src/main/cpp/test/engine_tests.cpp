@@ -648,9 +648,13 @@ namespace {
 std::vector<float> deskRender(const std::vector<std::vector<float>>& parts,
                               const std::vector<float>& gains,
                               const std::vector<bool>& reverse) {
-    // A desk is three strips over three parts of one length. Anything else
-    // is a test that has drifted, and it should say so rather than read off
-    // the end of a buffer and take the whole suite down with it.
+    // One strip per part, and every part one length - the shapes this
+    // indexes on. A caller that disagrees has drifted, and should say so
+    // rather than read off the end of a buffer and take the whole suite
+    // down with it. Arity is deliberately not checked: SPLIT's desk is
+    // three (Layers.Part has exactly three entries), but a two-part
+    // variant would be a fair test to write and nothing here would be
+    // unsafe for it.
     CHECK(!parts.empty());
     CHECK(gains.size() == parts.size());
     CHECK(reverse.size() == parts.size());
