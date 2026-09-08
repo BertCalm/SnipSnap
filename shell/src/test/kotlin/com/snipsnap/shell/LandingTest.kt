@@ -11,8 +11,12 @@ class LandingTest {
     fun `an ordinary name comes through as it is`() {
         assertEquals("break.wav", Landing.safeName("break.wav"))
         assertEquals("My Loop 01.mp3", Landing.safeName("My Loop 01.mp3"))
-        // The bracket case this exists to preserve: sanitizeStem would eat these.
+        // A share arrives called what the sender called it: brackets, the
+        // double underscore and a leading dot all survive intact, which is
+        // the whole difference between this and an MPC stem.
         assertEquals("SnipSnap Keys_[TrackData].zip", Landing.safeName("SnipSnap Keys_[TrackData].zip"))
+        assertEquals("My__Loop.wav", Landing.safeName("My__Loop.wav"))
+        assertEquals(".hidden", Landing.safeName(".hidden"))
     }
 
     @Test
