@@ -132,7 +132,6 @@ fun ChopScreen(
     }
 
     ChopContent(
-        entry = entry,
         shelf = shelf,
         sourceFile = file,
         initialModel = loadedModel,
@@ -236,7 +235,6 @@ private val CHOP_GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 
 @Composable
 private fun ChopContent(
-    entry: KitShelf.Entry?,
     shelf: KitShelf,
     sourceFile: File,
     initialModel: ChopReviewModel,
