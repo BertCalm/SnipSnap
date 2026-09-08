@@ -969,11 +969,26 @@ fun App(shelf: KitShelf) {
                                     screen = AppScreen.KIT
                                     // A kit opened while a SNIPS → PAD pick is
                                     // still pending: tell the user what the
-                                    // next empty-pad long-press will do,
-                                    // since `KitScreen` itself carries no
-                                    // hint banner of its own for this mode.
+                                    // next empty-pad long-press will do, since
+                                    // `KitScreen` itself carries no hint banner
+                                    // of its own for this mode. But KitScreen
+                                    // only ever renders bank A (slots 1..16 —
+                                    // see its own GRID_ROWS), so an "empty
+                                    // pad" instruction is only actually
+                                    // followable if bank A has one; a kit
+                                    // that's already full there has nothing
+                                    // for the long-press to catch (the v1
+                                    // "empty pads only" scope this task's
+                                    // brief calls out), so the hint says so
+                                    // instead of pointing at a pad that
+                                    // doesn't exist.
                                     if (pendingSnipAssign != null) {
-                                        toast = "LONG-PRESS AN EMPTY PAD TO PLACE THIS SNIP"
+                                        val hasEmptyPad = (1..16).any { entry.kit.pad(it) == null }
+                                        toast = if (hasEmptyPad) {
+                                            "LONG-PRESS AN EMPTY PAD TO PLACE THIS SNIP"
+                                        } else {
+                                            "THIS KIT IS FULL — PICK ANOTHER"
+                                        }
                                     }
                                 },
                                 onOpenInstrument = { openInstrument = it; screen = AppScreen.KEYS },

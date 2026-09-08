@@ -108,6 +108,23 @@ fun SnipsScreen(
     // row's own PLAY is how STOP is spelled here).
     var voice by remember { mutableStateOf<TapeVoice?>(null) }
     var playingFile by remember { mutableStateOf<File?>(null) }
+    // Bumped by every togglePlay call, whether it starts or stops, and
+    // captured by that call's own coroutine as `myToken` below — the
+    // rapid-double-tap guard. Without it: tap row A (kicks off A's IO
+    // decode), tap row B before A's decode resolves — at tap-B time
+    // `playingFile` is still null (A hasn't set it yet, it's still
+    // decoding), so B's own `stopPlayback()` is a no-op too, and BOTH
+    // coroutines run to completion, each eventually doing
+    // `voice = v; v.start(0)` — whichever resolves second silently
+    // clobbers the `voice` var out from under the first with no `.stop()`
+    // ever reaching it, leaving two snips audibly overlapping and one
+    // `TapeVoice`'s daemon thread invisible to `DisposableEffect`'s
+    // cleanup (which only ever sees whatever `voice` holds last). Checked
+    // right after the decode, before a `TapeVoice` is even built: if a
+    // later call has already claimed the token, this one's result is
+    // simply dropped — nothing was started, so there's nothing to
+    // stop/release.
+    var playToken by remember { mutableStateOf(0) }
     // A manual stop/row-switch only ever needs to signal, not block the UI
     // thread on a join — TapeVoice.stop() is documented as safe for exactly
     // that caller. release() (which does join, briefly) is reserved for the
@@ -124,6 +141,7 @@ fun SnipsScreen(
     DisposableEffect(Unit) { onDispose { voice?.release() } }
 
     fun togglePlay(info: SnipStore.Info) {
+        val myToken = ++playToken
         if (playingFile == info.file) {
             stopPlayback()
             return
@@ -133,6 +151,10 @@ fun SnipsScreen(
             val mono = withContext(Dispatchers.IO) {
                 runCatching { Cleanup.toMono(WavReader.read(info.file)) }.getOrNull()
             }
+            // Superseded by a later togglePlay call (this row again, or a
+            // different one) while the decode was in flight — see
+            // `playToken`'s own KDoc above.
+            if (playToken != myToken) return@launch
             if (mono == null || mono.frameCount <= 0) {
                 onToast("CAN'T PLAY THIS SNIP")
                 return@launch
