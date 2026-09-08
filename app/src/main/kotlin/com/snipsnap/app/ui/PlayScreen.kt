@@ -62,6 +62,7 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.StreamFacts
 import com.snipsnap.shell.VoiceAllocator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -147,6 +148,14 @@ fun PlayScreen(entry: KitShelf.Entry?) {
     // the allocator said it would.
     val allocator = remember(entry.dir) { VoiceAllocator(maxVoices = PadEngine.MAX_VOICES) }
     var voiceCount by remember(entry.dir) { mutableIntStateOf(0) }
+    // The bench's one number: what the device says a round trip costs.
+    // Polled about once a second - it reads a timestamp, so it is cheap
+    // but not free, and it does not move fast enough to want a frame.
+    var latency by remember(entry.dir) { mutableStateOf(StreamFacts.latency(null)) }
+    // One status line for both headers - the fullscreen grid paints the
+    // same words as the normal one, so a dead stream cannot read as a
+    // quiet one just because you went fullscreen.
+    val status = StreamFacts.playStatus(engineUp, voiceCount, PadEngine.MAX_VOICES, latency)
     val glow = remember(kit) {
         kit.pads.associate { it.slot to Animatable(0f) }
     }
@@ -168,14 +177,19 @@ fun PlayScreen(entry: KitShelf.Entry?) {
     // The endings ring, drained at screen rate; a route change reopens the
     // stream from here too.
     LaunchedEffect(player) {
+        var lastLatencyAt = 0L
         while (true) {
-            withFrameNanos { }
+            val now = withFrameNanos { it }
             val ended = player.drainEnded()
             if (ended.isNotEmpty()) {
                 for (id in ended) allocator.voiceEnded(id)
                 voiceCount = allocator.activeCount
             }
             if (player.needsRestart()) engineUp = player.start()
+            if (now - lastLatencyAt >= StreamFacts.POLL_NANOS) {
+                lastLatencyAt = now
+                latency = StreamFacts.latency(player.latencyMillis(), player.isShared())
+            }
         }
     }
 
@@ -286,7 +300,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
         ) {
             TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             TapeText(
-                if (engineUp) "VOICES $voiceCount/${PadEngine.MAX_VOICES}" else "NO STREAM",
+                status,
                 TapeType.lcdReadout,
                 scheme.amber.tape,
                 Modifier.padding(horizontal = 8.dp),
@@ -361,7 +375,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
             FullscreenPlayGrid(
                 kit = kit,
                 glow = glow,
-                voiceCount = voiceCount,
+                status = status,
                 onHit = ::hit,
                 onRelease = ::release,
                 onExit = exitFullscreen,
@@ -374,7 +388,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
 private fun FullscreenPlayGrid(
     kit: Kit,
     glow: Map<Int, Animatable<Float, AnimationVector1D>>,
-    voiceCount: Int,
+    status: String,
     onHit: (Int, Float) -> Unit,
     onRelease: (Int) -> Unit,
     onExit: () -> Unit,
@@ -399,7 +413,7 @@ private fun FullscreenPlayGrid(
         ) {
             TapeText(kit.name, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             TapeText(
-                "VOICES $voiceCount/${PadEngine.MAX_VOICES}",
+                status,
                 TapeType.lcdSmall,
                 scheme.amber.tape,
                 Modifier.padding(horizontal = 8.dp),

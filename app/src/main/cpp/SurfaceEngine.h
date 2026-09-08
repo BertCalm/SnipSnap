@@ -58,6 +58,8 @@ public:
     bool needsRestart() const { return restartNeeded_.load(std::memory_order_acquire); }
     /** True when the device refused an exclusive stream and the shared fallback is playing. */
     bool isShared() const { return sharedMode_.load(std::memory_order_acquire); }
+    /** Round-trip latency in ms, or -1 when unknown. UI thread only (see OboeOutput.h). */
+    double latencyMillis() const;
 
     /** UI thread. `mono` is copied; `sourceRate` is the file's own rate (the engine repitches). */
     void loadSample(const float* mono, size_t frames, int32_t sourceRate);

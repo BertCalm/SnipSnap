@@ -90,7 +90,10 @@ logcat tag to grab when something is wrong.
   that kit with preflight's reason and lists the packed ones. A clean
   landing and a full backup still get their two-second toast.
 - **PLAY (native, M4)**: open a kit, tap PLAY. Pads should feel tight
-  enough to drum on — that is the milestone's exit test. VOICES should
+  enough to drum on — that is the milestone's exit test, and the header
+  now carries the device's own round-trip latency beside VOICES to put a
+  figure next to the judgement (`— MS` = the device declined to measure;
+  a trailing `SHARED` = it refused the exclusive path). VOICES should
   count down as one-shots end (the engine reports endings; nothing is
   timed), a closed hat should cut an open one with no click, a gate pad
   should stop on release, PANIC should fade everything in 20 ms, and

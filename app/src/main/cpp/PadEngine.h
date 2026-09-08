@@ -82,6 +82,8 @@ public:
     int32_t sampleRate() const { return sampleRate_; }
     bool needsRestart() const { return restartNeeded_.load(std::memory_order_acquire); }
     bool isShared() const { return sharedMode_.load(std::memory_order_acquire); }
+    /** Round-trip latency in ms, or -1 when unknown. UI thread only (see OboeOutput.h). */
+    double latencyMillis() const;
 
     // The bank, UI thread: begin, add each sample (index returned), commit.
     void beginBank();

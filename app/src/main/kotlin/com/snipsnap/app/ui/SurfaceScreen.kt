@@ -43,6 +43,7 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PrintLength
 import com.snipsnap.shell.SnipStore
+import com.snipsnap.shell.StreamFacts
 import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.TouchSurface
 import com.snipsnap.shell.TouchSurface.Mode
@@ -116,6 +117,8 @@ fun SurfaceScreen(
     var pendingPrint by remember { mutableStateOf<Snip?>(null) }
     var landing by remember { mutableStateOf(false) }
     var engineUp by remember { mutableStateOf(false) }
+    // The bench's one number, polled about once a second (see PlayScreen).
+    var latency by remember { mutableStateOf(StreamFacts.latency(null)) }
 
     fun started(up: Boolean) {
         engineUp = up
@@ -304,8 +307,13 @@ fun SurfaceScreen(
     LaunchedEffect(engine) {
         val smoother = TouchSurface.SmoothedReading(TouchSurface.Smoother.coefficient(cutoffHz = 12f, rateHz = 60f))
         var lastMode = mode
+        var lastLatencyAt = 0L
         while (true) {
-            withFrameNanos { }
+            val now = withFrameNanos { it }
+            if (now - lastLatencyAt >= StreamFacts.POLL_NANOS) {
+                lastLatencyAt = now
+                latency = if (engineUp) StreamFacts.latency(engine.latencyMillis(), engine.isShared()) else StreamFacts.NO_STREAM
+            }
             if (mode != lastMode) {
                 // A mode change is a different instrument, not a glide
                 // between two: the painted puck and the engine both jump.
@@ -501,6 +509,9 @@ fun SurfaceScreen(
             Spacer(Modifier.height(6.dp))
 
             val readout = buildString {
+                // Latency leads: the line can outrun a narrow screen, and
+                // during a bench it is the part worth keeping.
+                append(latency).append("  ·  ")
                 append("X %.2f  Y %.2f".format(painted.x, painted.y))
                 if (mode == Mode.XYZ) append("  Z %.2f".format(painted.z))
                 if (mode == Mode.MORPH) append("  A %.2f B %.2f C %.2f D %.2f".format(painted.a, painted.b, painted.c, painted.d))

@@ -43,6 +43,10 @@ bool PadEngine::start() {
     return true;
 }
 
+double PadEngine::latencyMillis() const {
+    return latencyMillisOf(stream_);
+}
+
 void PadEngine::stop() {
     if (!stream_) return;
     stream_->stop();

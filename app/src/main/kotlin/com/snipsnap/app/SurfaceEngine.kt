@@ -41,6 +41,15 @@ class SurfaceEngine(preferredSampleRate: Int) {
     @Synchronized
     fun isShared(): Boolean = open && NativeSurface.isShared(handle)
 
+    /**
+     * The stream's round-trip latency in ms, or null when there is none or
+     * the device will not say. Cheap but not free (it reads a timestamp),
+     * so poll it about once a second, not per frame.
+     */
+    @Synchronized
+    fun latencyMillis(): Double? =
+        if (open) NativeSurface.latencyMillis(handle).takeIf { it > 0.0 } else null
+
     /** A route change closed the stream; the caller reopens with [start]. */
     @Synchronized
     fun needsRestart(): Boolean = open && NativeSurface.needsRestart(handle)

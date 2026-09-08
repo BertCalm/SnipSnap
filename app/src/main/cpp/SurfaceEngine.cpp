@@ -79,6 +79,10 @@ bool SurfaceEngine::start() {
     return true;
 }
 
+double SurfaceEngine::latencyMillis() const {
+    return latencyMillisOf(stream_);
+}
+
 void SurfaceEngine::stop() {
     if (!stream_) return;
     stream_->stop();

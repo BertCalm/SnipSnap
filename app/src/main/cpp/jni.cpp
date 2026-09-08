@@ -58,6 +58,11 @@ Java_com_snipsnap_app_NativeSurface_isShared(JNIEnv*, jobject, jlong handle) {
     return engine(handle)->isShared() ? JNI_TRUE : JNI_FALSE;
 }
 
+JNIEXPORT jdouble JNICALL
+Java_com_snipsnap_app_NativeSurface_latencyMillis(JNIEnv*, jobject, jlong handle) {
+    return engine(handle)->latencyMillis();
+}
+
 JNIEXPORT void JNICALL
 Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv* env, jobject, jlong handle, jfloatArray mono, jint sourceRate) {
     const jsize n = env->GetArrayLength(mono);
@@ -171,6 +176,11 @@ Java_com_snipsnap_app_NativePads_needsRestart(JNIEnv*, jobject, jlong handle) {
 JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativePads_isShared(JNIEnv*, jobject, jlong handle) {
     return pads(handle)->isShared() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jdouble JNICALL
+Java_com_snipsnap_app_NativePads_latencyMillis(JNIEnv*, jobject, jlong handle) {
+    return pads(handle)->latencyMillis();
 }
 
 JNIEXPORT void JNICALL

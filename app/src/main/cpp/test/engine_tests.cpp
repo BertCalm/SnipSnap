@@ -335,6 +335,15 @@ TEST(pad_engine_a_looping_voice_sustains_and_wraps_to_its_loop_start) {
     CHECK_EQ(static_cast<int>(ended(e).size()), 0);
 }
 
+TEST(latency_is_minus_one_with_no_stream) {
+    // The readout's "the device would not say" case: no stream open, so
+    // neither engine may dereference one to answer.
+    PadEngine pads(kRate);
+    CHECK(pads.latencyMillis() < 0.0);
+    SurfaceEngine surface(kRate);
+    CHECK(surface.latencyMillis() < 0.0);
+}
+
 // ---- SurfaceEngine -------------------------------------------------------------
 
 TEST(surface_engine_is_silent_until_gated_and_loops_its_sample) {
