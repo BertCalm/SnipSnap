@@ -305,6 +305,33 @@
       "h": 520,
       "title": "SPLIT · printed hot, to TAPE",
       "page": "page-9"
+    },
+    {
+      "file": "KeysGrid.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 520,
+      "title": "KEYS · CHROMATIC, idle",
+      "page": "page-10"
+    },
+    {
+      "file": "KeysPressed.dc.html",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 520,
+      "title": "KEYS · a key held",
+      "page": "page-10"
+    },
+    {
+      "file": "KeysScalePicked.dc.html",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 520,
+      "title": "KEYS · MAJOR picked",
+      "page": "page-10"
     }
   ],
   "annotations": [
@@ -395,11 +422,19 @@
       "w": 1830,
       "page": "page-9",
       "text": "SPLIT (drawn from SplitScreen.kt; EEE9, never had a board - it arrived from another branch)\nNot split: a pad chosen, SPLIT lit amber (its own \"nothing has happened here yet\" cue, the same lit rule KEEP ROOM uses), the desk's three strips visible but disabled at rest (1.00, unity, ink3 knobs) so the shape of what SPLIT does is legible before the maths runs. Working: the spectrogram-and-two-median-filters pass - PAD ◄►, ◄ KIT and the SPLIT button itself all dimmed, the LCD reading WORKING so a slow phone doesn't read as a hang. Desk playing: SINES pushed to 1.35 and reversed (REV lit amber), TRANSIENT at 0.60, AIR pulled to 0.00 and muted (M lit) - three faders, three independent decisions, STOP lit where PLAY was. Printed hot, to TAPE: the desk pushed toward the top of its +6 dB range, the toast carrying the same hot-peak warning PRINT already says aloud rather than quietly turning down - 'SPLIT PRINTED 2.3 S TO TAPE. HOT: PEAK 1.34.'\nWhat the drawing found: no defect - lit, dimmed and enabled states all read from the same ActionButton vocabulary every other screen uses, the fader's own unity tick and amber knob match Fader.kt's drawing exactly, and PRINT's hot-peak warning is said in the same toast voice on both the →TAPE and →PAD paths (the →PAD case is masked by the shared SlotChooserOverlay, out of this page's scope - it already has callers elsewhere and isn't SPLIT's own vocabulary to redraw)."
+    },
+    {
+      "id": "note-keys",
+      "x": 0,
+      "y": -230,
+      "w": 1350,
+      "page": "page-10",
+      "text": "KEYS (drawn from KeysScreen.kt; never had a board - reached from the shelf's INSTRUMENTS row, over InstrumentPlayer/:shell's InstrumentEngine)\nCHROMATIC, idle: the LCD header names the instrument and reads ROOT/OCT; a chip row (CHROMATIC/MAJOR/MINOR/MIN PENT, the active one amber-filled) sits over the 4×4 itself - root bottom-left, ascending left-to-right and bottom-to-top, exactly UI_DESIGN's rule. A key with no zone mapped to its note dims to ink3 with a 0.3-alpha border rather than disappearing - TalkBack still finds it and says NOT MAPPED (the same 'unavailable, not absent' rule KeyPad's own comment cites against finding 12). A key held: the pressed cell's fill jumps to a 0.45-alpha ink wash: the label itself never changes colour on press, only the box - matching KeyPad's code exactly, where TapeText's ink/ink3 choice depends only on `enabled`. MAJOR picked: the whole grid relabels to the seven-note scale rather than merely highlighting different chromatic keys - proof the layout picker changes what note a slot *is*, not just how it's decorated; wrong notes are physically impossible in this mode, the point UI_DESIGN.md makes for scale layouts.\nWhat the drawing found: no defect - the header's instrument-name/ROOT-OCT line safely ellipsizes through the same TapeText(maxLines=1) every other LCD line in the app uses (unlike SURFACE's readout, nothing here is data that can't afford to be cut); the disabled-key semantics and touch-Y velocity already carry the accessibility-audit fixes forward correctly."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-9"
+    "page": "page-10"
   },
   "pages": [
     {
@@ -437,6 +472,10 @@
     {
       "id": "page-9",
       "name": "SPLIT"
+    },
+    {
+      "id": "page-10",
+      "name": "KEYS"
     }
   ]
 }
