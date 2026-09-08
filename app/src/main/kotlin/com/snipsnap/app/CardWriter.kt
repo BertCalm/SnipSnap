@@ -20,12 +20,27 @@ import java.io.IOException
  * dependency for what is three calls, and the app already reaches for
  * `android.provider` directly elsewhere.
  *
+ * Every URI here is built from the **tree** URI the user picked, and only
+ * the `…UsingTree` builders are used. Both points are deliberate. Those
+ * builders document their first argument as a tree URI, and while a
+ * document URI derived from one happens to carry the tree segment that
+ * makes it work, that is an implementation detail to lean on rather than
+ * a contract. And the non-tree `buildDocumentUri` is not the fix it looks
+ * like: what the app holds is a *tree* grant, so a bare document URI
+ * built outside the tree is one it has no permission for.
+ *
  * **Overwrite is a delete, not a truncate.** A document API's "create"
  * with a name that exists hands back a *second* document called
  * `Kit (1).xpm` rather than replacing the first, and a card holding both
  * is worse than one holding neither. So an existing child of the same
- * name is removed first, and the copy is the only thing that ends up
- * there.
+ * name is removed first.
+ *
+ * That removal is best effort, so the honest promise is narrower than
+ * "the copy is the only thing there": a provider that will not list, or
+ * will not delete, leaves the create to do whatever it does — which is
+ * the `Kit (1).xpm` outcome, no worse than not having tried. Failing a
+ * whole dub because a card would not delete would trade a duplicate for
+ * nothing at all.
  */
 object CardWriter {
 
@@ -78,7 +93,7 @@ object CardWriter {
         for (entry in plan) {
             val parent = made[entry.parents]
                 ?: throw IOException("could not put ${entry.name} on the card - its folder is missing")
-            replaceExisting(context, parent, entry.name, listings)
+            replaceExisting(context, treeUri, DocumentsContract.getDocumentId(parent), entry.name, listings)
             if (entry.isDirectory) {
                 val dir = create(resolver, parent, DocumentsContract.Document.MIME_TYPE_DIR, entry.name)
                 made[entry.segments] = dir
@@ -126,23 +141,23 @@ object CardWriter {
      */
     private fun replaceExisting(
         context: Context,
-        parent: Uri,
+        treeUri: Uri,
+        parentId: String,
         name: String,
         listings: HashMap<String, MutableMap<String, String>>,
     ) {
         runCatching {
-            val parentId = DocumentsContract.getDocumentId(parent)
-            val existing = listings.getOrPut(parentId) { childNames(context, parent, parentId) }
+            val existing = listings.getOrPut(parentId) { childNames(context, treeUri, parentId) }
             val docId = existing.remove(name) ?: return@runCatching
-            val doc = DocumentsContract.buildDocumentUriUsingTree(parent, docId)
+            val doc = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
             DocumentsContract.deleteDocument(context.contentResolver, doc)
         }
     }
 
-    /** What [parent] held when the copy reached it: display name to document id. */
-    private fun childNames(context: Context, parent: Uri, parentId: String): MutableMap<String, String> {
+    /** What the folder held when the copy reached it: display name to document id. */
+    private fun childNames(context: Context, treeUri: Uri, parentId: String): MutableMap<String, String> {
         val out = HashMap<String, String>()
-        val children = DocumentsContract.buildChildDocumentsUriUsingTree(parent, parentId)
+        val children = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentId)
         context.contentResolver.query(
             children,
             arrayOf(
