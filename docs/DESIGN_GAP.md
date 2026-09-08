@@ -24,20 +24,20 @@ Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 > [`design/pad-sheet-v2/`](../design/pad-sheet-v2/README.md), which now
 > supersedes §PAD SHEET here. `UI_DESIGN.md` records the settled rules.
 >
-> **Still undrawn**, in value order: the SHARE / BACKUP chooser hand-off (the
-> landing itself is settled: wave FFF put its trouble - skipped kits, a
-> refusal - in the language's honest little message box, `MessageBox`, and
-> left a clean landing its toast; the box and OUTSIDE's trip are now drawn
-> state by state on the canvas's pages three and four, and wave GGG closed
-> the two gaps the trip board found - the measured line now reads on an
-> LCD, KEEP ROOM lights in lcd-alt; the TEXTURE panel and the KIT action
-> row - grown past the oldest artboard's single three-item row into six
-> lines closed, SCULPT/STRETCH/SHARE among them - are now drawn on page
-> five too, and found no code defect: everything fits and reads at 390,
-> so the six-line density is a candidate for a future `GroupBox` pass, not
-> a fix); GRAIN FIELD and SURFACE, which arrived from another branch with
-> no boards at all. A fresh handoff export from the design canvas would
-> close these in one go.
+> **Still undrawn**: the SHARE / BACKUP chooser hand-off; GRAIN FIELD and
+> SURFACE, which arrived from another branch with no boards at all. A fresh
+> handoff export from the design canvas would close these in one go.
+>
+> Everything else this list once carried is closed. The landing (wave FFF
+> put its trouble - skipped kits, a refusal - in the language's honest
+> little message box, `MessageBox`, and left a clean landing its toast).
+> OUTSIDE's trip (drawn state by state on the canvas's pages three and
+> four; wave GGG closed the two gaps the trip board found - the measured
+> line now reads on an LCD, KEEP ROOM lights in lcd-alt). The TEXTURE panel
+> and the KIT action row (drawn on page five - grown past the oldest
+> artboard's single three-item row into six lines, SCULPT/STRETCH/SHARE
+> among them, but no code defect: everything fits and reads at 390, so the
+> six-line density is a candidate for a future `GroupBox` pass, not a fix).
 
 The handoff is unusually implementable — it states tokens in the form Compose
 consumes and names repo symbols (`PeaksPyramid`, `StarterKits`,
