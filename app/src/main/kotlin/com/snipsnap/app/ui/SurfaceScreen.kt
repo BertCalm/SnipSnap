@@ -518,7 +518,13 @@ fun SurfaceScreen(
                 if (tilt.available) append("  TILT %.2f".format(tilt.tilt))
                 padName?.let { append("  ·  ").append(it.uppercase()) }
             }
-            TapeText(readout, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.fillMaxWidth())
+            // MORPH's six numbers plus TILT and the pad name run well past
+            // 390dp on one line - a design-canvas board caught it clipping
+            // mid-digit. Latency still leads (see above), so a second line
+            // is spare capacity, not a redesign: it covers every case but
+            // the rare worst one (MORPH + tilt + a shared stream + a long
+            // pad name), which would need a restructure, not a parameter.
+            TapeText(readout, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.fillMaxWidth(), maxLines = 2)
         }
 
         if (pendingPrint != null) {
