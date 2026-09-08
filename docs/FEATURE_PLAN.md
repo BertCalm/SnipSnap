@@ -15,6 +15,12 @@ done; the CORE column below is a short list of small items that shrink the
 APP column further, the APP column is M0–M5 wearing feature names, and the
 USER column is one card session.
 
+**Every `USER` row below is collected, in run order, in
+[`BENCH.md`](BENCH.md)** — grouped by what you need in your hands (the
+phone alone, the phone and the Live III, and the one firmware save that
+unblocks the most), with a line to write each answer on. Work from there
+rather than hunting these rows one at a time; results come back here.
+
 ---
 
 ## F1 — The capture-to-export shell (the MVP loop)
