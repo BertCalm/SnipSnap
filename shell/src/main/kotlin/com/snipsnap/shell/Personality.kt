@@ -53,7 +53,14 @@ object Copy {
     const val EMPTY_KIT = "16 EMPTY PADS. TERRIFYING."
     /** A kit folder that won't parse (torn `kit.json`, missing file, etc.) — distinct from EMPTY_SHELF, which claims no kit exists at all. */
     const val KIT_WONT_OPEN = "THIS KIT WON'T OPEN. THE TAPE MAY BE CHEWED."
-    /** CHOP SHOP's own empty face when TAPE's last commit exists but its source file can no longer be read and there's no kit to fall back to — distinct from EMPTY_SHELF, which claims there's nothing here to chop at all. */
+    /**
+     * CHOP SHOP's own empty face when TAPE's last commit exists but nothing
+     * readable came back — its source file is gone or won't decode, and the
+     * open kit's fallback sample (if there even is a kit) didn't read
+     * either. Distinct from EMPTY_SHELF, which claims there's nothing here
+     * to chop at all: a user who taped something deserves to know the tape
+     * is unreadable rather than be told they never made one.
+     */
     const val CHOP_SOURCE_GONE = "THAT TAPE WON'T READ. IT MAY BE CHEWED."
     /** CHOP SHOP's empty face when the classic (non-melodic) layout itself fails — agrees with the toast `ChopScreen` fires alongside it, whose own fallback is this same "couldn't lay out the slices". */
     const val CHOP_LAYOUT_FAILED = "CHOP FAILED. COULDN'T LAY OUT THE SLICES."
