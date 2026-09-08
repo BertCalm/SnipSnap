@@ -321,6 +321,26 @@ fun App(shelf: KitShelf) {
             toast = Copy.PHONE_STOPPED_TAPE
         }
     }
+    // Sessions the reader thread itself ended — the mic (or, for ARM
+    // INSIDE, the playback-capture stream) going silent for good, a
+    // permission pulled mid-session, or any other read failure — as
+    // opposed to `phoneStops` above, which is only the platform stopping
+    // a MediaProjection. This used to announce nothing: the notification
+    // and this UI both kept claiming ARMED with a flat level meter, which
+    // reads exactly like a quiet room. Same baseline-by-count discipline
+    // as `phoneStops` so a recreated Activity doesn't replay an old
+    // failure. Reuses PHONE_STOPPED_TAPE's copy rather than inventing a
+    // second string — see MicSessionService.sessionDied's KDoc for the
+    // more accurate wording this would want ("the mic went quiet" /
+    // "permission was pulled") once Personality.kt is free to change.
+    val sessionDied by MicSessionService.sessionDied.collectAsState()
+    var sessionDiedSeen by remember { mutableStateOf(MicSessionService.sessionDied.value) }
+    LaunchedEffect(sessionDied) {
+        if (sessionDied != sessionDiedSeen) {
+            sessionDiedSeen = sessionDied
+            toast = Copy.PHONE_STOPPED_TAPE
+        }
+    }
     // ARM INSIDE runs through the same RECORD_AUDIO request as ARM TAPE
     // (playback capture needs it too); this remembers which button asked,
     // so the permission callback below knows whether to arm the mic or

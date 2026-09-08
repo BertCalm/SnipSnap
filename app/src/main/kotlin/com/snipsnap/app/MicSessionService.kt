@@ -76,6 +76,16 @@ class MicSessionService : Service() {
     private var readerThread: Thread? = null
     private var foregroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
 
+    /**
+     * Where the reader thread posts its own-initiative teardown when it
+     * dies on its own (see the `while (reading)` loop in [beginSession]).
+     * stopReaderAndRecord() must always run on the same thread every other
+     * caller (handleEject, onDestroy, the projection callback) already
+     * uses — the main thread — so a dead-reader teardown can never race a
+     * user-initiated EJECT touching the same fields concurrently.
+     */
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     @Volatile
     private var reading = false
 
@@ -358,19 +368,48 @@ class MicSessionService : Service() {
         readerThread = thread(name = "MicSession") {
             // The realtime loop: preallocated once, nothing else in here —
             // no allocation, no locks, no logging per iteration. read() is
-            // caught, not left to throw, because this runs on a plain
+            // caught, not left to throw — IllegalStateException as before,
+            // SecurityException added because a permission revoked
+            // mid-session can also surface there (when it surfaces as an
+            // exception at all — see the zero-read handling below for the
+            // more common case, where Android just hands back silence or
+            // an error code instead) — because this runs on a plain
             // thread{} where an uncaught exception kills the process — see
             // stopReaderAndRecord's KDoc for the shutdown race this guards.
             val channels = if (stereo) 2 else 1
             val raw = FloatArray(READ_BLOCK_FRAMES * channels)
             val mono = if (stereo) FloatArray(READ_BLOCK_FRAMES) else raw
+            // Rule for telling a dead source from a transient blip:
+            // a negative return is one of AudioRecord's own error codes
+            // (ERROR, ERROR_BAD_VALUE, ERROR_DEAD_OBJECT,
+            // ERROR_INVALID_OPERATION) — unambiguous, so it breaks the
+            // loop immediately, no retry. A positive-but-short read
+            // (got > 0, got < raw.size) is not treated as a problem at
+            // all — frames is just derived from `got`, same as always. A
+            // *zero*-length read is the ambiguous case: READ_BLOCKING is
+            // documented to block until there's data or an error, so a
+            // lone got == 0 is already unusual, but treating any single
+            // one as fatal risks tripping on a benign HAL hiccup (a route
+            // change, a brief reconfigure). Requiring a run of
+            // MAX_CONSECUTIVE_ZERO_READS in a row before calling it death
+            // absorbs that without masking a genuinely silenced source —
+            // real audio, even near-silent room tone, resets the counter
+            // the moment a single sample comes back.
+            var consecutiveZeroReads = 0
             while (reading) {
                 val got = try {
                     newRecord.read(raw, 0, raw.size, AudioRecord.READ_BLOCKING)
                 } catch (e: IllegalStateException) {
                     break
+                } catch (e: SecurityException) {
+                    break
                 }
-                if (got <= 0) break // record died or was stopped out from under us
+                if (got < 0) break // an explicit AudioRecord error code — the source is gone, no retry
+                if (got == 0) {
+                    if (++consecutiveZeroReads >= MAX_CONSECUTIVE_ZERO_READS) break
+                    continue
+                }
+                consecutiveZeroReads = 0
                 val frames = got / channels
                 if (stereo) {
                     var i = 0
@@ -410,16 +449,75 @@ class MicSessionService : Service() {
                     }
                 }
             }
+            // `reading` still true here means the loop broke out on its
+            // own — a negative error code, a caught
+            // IllegalStateException/SecurityException, or
+            // MAX_CONSECUTIVE_ZERO_READS dead reads in a row — rather than
+            // via stopReaderAndRecord() flipping `reading` false first.
+            // That path also unblocks a parked read() (via
+            // AudioRecord.stop()), but it always sets `reading = false`
+            // *before* doing so, so a thread waking up from a
+            // deliberately-triggered stop always sees `reading` already
+            // false here. Only the true case is an unannounced death the
+            // user needs to hear about; every other teardown already runs
+            // through stopReaderAndRecord() from a user EJECT, onDestroy,
+            // or the projection callback.
+            val diedUnexpectedly = reading
             // Covers every way this loop ends — the normal `reading =
             // false` teardown (stopReaderAndRecord already zeroes this
             // too, so it's a harmless redundant write there), the
-            // IllegalStateException catch's `break`, and the `got <= 0`
-            // break on a dead/stopped record. Without this, a HAL failure
+            // IllegalStateException/SecurityException catches' `break`,
+            // and the dead-read breaks above. Without this, a HAL failure
             // mid-session would freeze the meter at its last non-zero
             // reading while the wall-clock elapsed timer keeps ticking —
             // reading as "recording fine" for exactly the case (a dead
             // mic) this indicator exists to catch.
             _level.value = 0f
+            if (diedUnexpectedly) {
+                // The actual teardown (the call that flips `armed` false
+                // and drops the ring) has to run on the main thread, same
+                // as every other stopReaderAndRecord() caller, not here
+                // on the reader thread itself — calling it directly would
+                // both race a concurrent user-initiated EJECT touching
+                // the same fields and self-join (readerThread.join()
+                // from inside readerThread). Rechecking identity —
+                // `record === newRecord`, not just non-null — once the
+                // posted runnable actually runs closes two windows
+                // between this thread noticing `reading` was still true
+                // and the post executing: a user's own EJECT/onDestroy
+                // reaching stopReaderAndRecord() first (this dead session
+                // was ended deliberately after all — `record` is null by
+                // then), and the rarer ABA case where EJECT *and* a fresh
+                // re-ARM both land in that window (`record` is non-null
+                // again, but it's a brand-new AudioRecord for a brand-new
+                // session, not the one this thread was reading). Either
+                // way this skips both the redundant call
+                // (stopReaderAndRecord() is idempotent regardless —
+                // onDestroy already calls it a second time after
+                // handleEject in the ordinary shutdown sequence — so
+                // calling it again would be harmless) and, more
+                // importantly, a false "the mic died" toast or tearing
+                // down a session that isn't this one.
+                //
+                // stopForeground()+stopSelf() alongside it, mirroring
+                // handleEject()/the projection callback exactly: without
+                // these the "TAPE ROLLING" notification (still
+                // setOngoing(true), still offering a SNIP action that
+                // would now hit handleSnip()'s `ring ?: return` and do
+                // nothing) would keep lying even after `_armed` goes
+                // false, and this Service would linger as a started FGS
+                // nothing will ever stop. stopSelf() re-enters onDestroy
+                // -> stopReaderAndRecord(), the same already-idempotent
+                // second call the projection path relies on.
+                mainHandler.post {
+                    if (record === newRecord) {
+                        stopReaderAndRecord()
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        _sessionDied.value = _sessionDied.value + 1
+                        stopSelf()
+                    }
+                }
+            }
         }
         _source.value = source
         attachBubbleIfAllowed()
@@ -578,6 +676,9 @@ class MicSessionService : Service() {
         internal const val SAMPLE_RATE = 44_100
         private const val READ_BLOCK_FRAMES = 2048
         private const val READER_JOIN_TIMEOUT_MS = 1_000L
+
+        /** See the reader loop's own KDoc in [beginSession] for the rule this enforces. */
+        private const val MAX_CONSECUTIVE_ZERO_READS = 3
         private const val CHANNEL_ID = "capture"
         private const val NOTIFICATION_ID = 1
 
@@ -602,6 +703,31 @@ class MicSessionService : Service() {
         private val _phoneStops = MutableStateFlow(0)
         /** Counts sessions the platform ended (lock screen, the stop chip) — the app toasts on each tick. */
         val phoneStops: StateFlow<Int> = _phoneStops.asStateFlow()
+
+        private val _sessionDied = MutableStateFlow(0)
+        /**
+         * Counts sessions that ended because the reader thread died on its
+         * own — [AudioRecord.read] returning a persistent error code, an
+         * `IllegalStateException`/`SecurityException` out of `read()` (a
+         * permission pulled mid-session, when it surfaces as an exception
+         * at all rather than as a run of zero-length reads), or the OS
+         * killing this Service outright (`onDestroy` runs
+         * [stopReaderAndRecord] before the process actually dies, but
+         * nothing here posts to this flow from a route that never gets to
+         * run at all — a hard kill with no `onDestroy` announces nothing
+         * either, same as before this existed).
+         *
+         * The sibling to [phoneStops]: that one is only the
+         * `MediaProjection.Callback.onStop()` path (ARM INSIDE, ended by
+         * the platform); this is a plain ARM (mic) or ARM INSIDE session
+         * whose reader loop itself gave out. A plain mic session dying
+         * used to announce nothing — the user found out by reopening the
+         * app to a UI that had quietly stopped believing it was armed.
+         * The app toasts on each tick, same discipline as [phoneStops]:
+         * baseline by count at first composition, so a recreated Activity
+         * doesn't replay an old failure.
+         */
+        val sessionDied: StateFlow<Int> = _sessionDied.asStateFlow()
 
         // The reader session's ring, exposed so an in-app capture surface can pull
         // the last N frames on demand (GRAB to a pad) without committing a 60s snip
