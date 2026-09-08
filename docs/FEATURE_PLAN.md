@@ -1943,6 +1943,28 @@ APP wave KKK: ✓ all landed (2026-09-08) — KEYS, drawn. Grown alongside
   screens found in the same archaeology pass remain undrawn:
   `PadCaptureScreen`, `SnipsScreen`, `DeletedKitsScreen`.
 
+APP wave LLL: ✓ all landed (2026-09-08) — PAD CAPTURE, drawn. Opened by
+  a long-press on an empty KIT pad, no board ever: not armed (START MIC
+  full-width, GRAB/HOLD TO REC dimmed to half-opacity labels - their
+  sweep rim stays lit either way, `PrimaryAction`/`HoldRecordAction`'s
+  own shared convention, not new here), armed and idle (the live level
+  meter and MM:SS counter, both actions lit), committing a GRAB (the
+  meter keeps ticking - armed survives a commit - GRAB reads GRABBING…
+  and both actions dim together, one shared `committing` guard). Held
+  up as built - no code fix. Two screens remain undrawn: `SnipsScreen`,
+  `DeletedKitsScreen`.
+
+APP wave MMM: ✓ all landed (2026-09-08) — SNIPS, drawn. The shelf-level
+  catch-all for every `snips/` WAV, no board ever: empty shelf (a real
+  `0 · 0 B` count, not a hidden header), playing + USED badge (▶ PLAY
+  swaps to ■ STOP on the sounding row; USED lights only once the cheap
+  tagged-pad gate resolves, never a guess; → PAD and → TAPE stay
+  enabled regardless of playback, → PAD never gated on an already-open
+  kit - the fix this screen's own KDoc names), delete confirm (the same
+  dialog shape `CaptureBlockedDialog`/`StarterMenu` already use). Held
+  up as built - no code fix. One screen remains undrawn:
+  `DeletedKitsScreen`.
+
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
   F6.1 .xpn import + expansion tile → velocity/bank B →
