@@ -21,7 +21,7 @@ import java.io.File
  *
  * All methods do file IO — call them off the main thread.
  */
-class KitShelf(private val root: File) {
+class KitShelf(val root: File) {
 
     companion object {
         /** The instruments' folder name beside the kits — the PAD SHEET's export doors write here. */

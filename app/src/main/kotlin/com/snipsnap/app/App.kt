@@ -68,8 +68,10 @@ import com.snipsnap.app.ui.TitleBar
 import com.snipsnap.app.ui.ToastOverlay
 import com.snipsnap.app.ui.tapeClick
 import com.snipsnap.audio.WavReader
+import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.InstantKit
+import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
@@ -354,6 +356,23 @@ fun App(shelf: KitShelf) {
         kits = withContext(Dispatchers.IO) { shelf.list() }
         // The rooms' bin empties itself of what has slept past its days.
         withContext(Dispatchers.IO) { runCatching { shelf.sweepRooms() } }
+        // Same promise as sweepRooms() above, for pad ejects: BIN_KEEP_DAYS was
+        // always the intent (KitBuilder.kt's own docs), but nothing ever called
+        // purgeBin() outside the manual "EMPTY THE BIN NOW" button — every ejected
+        // pad has been living forever. This is the fix: run it once per launch,
+        // per kit, same as Rooms already does for itself.
+        withContext(Dispatchers.IO) {
+            runCatching {
+                KitStore.list(shelf.root).forEach { kitDir ->
+                    runCatching { KitBuilderModel.open(kitDir).purgeBin() }
+                }
+            }
+        }
+        // Orphaned import-staging left by a crashed/killed import, and
+        // regenerable derived output (share-sheet temp copies) — never a
+        // live kit or snip. Exports are deliberately NOT swept here: see
+        // sweepOrphanedStorage's KDoc.
+        withContext(Dispatchers.IO) { runCatching { sweepOrphanedStorage(shelf.root, context.cacheDir) } }
     }
 
     // IMPORT (F3.1/F3.2): a file shared in from another app, waiting on
