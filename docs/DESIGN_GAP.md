@@ -30,10 +30,14 @@ Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 > left a clean landing its toast; the box and OUTSIDE's trip are now drawn
 > state by state on the canvas's pages three and four, and wave GGG closed
 > the two gaps the trip board found - the measured line now reads on an
-> LCD, KEEP ROOM lights in lcd-alt); the TEXTURE panel and the KIT
-> action row, which has grown past the artboard's; GRAIN FIELD and SURFACE,
-> which arrived from another branch with no boards at all. A fresh handoff
-> export from the design canvas would close these in one go.
+> LCD, KEEP ROOM lights in lcd-alt; the TEXTURE panel and the KIT action
+> row - grown past the oldest artboard's single three-item row into six
+> lines closed, SCULPT/STRETCH/SHARE among them - are now drawn on page
+> five too, and found no code defect: everything fits and reads at 390,
+> so the six-line density is a candidate for a future `GroupBox` pass, not
+> a fix); GRAIN FIELD and SURFACE, which arrived from another branch with
+> no boards at all. A fresh handoff export from the design canvas would
+> close these in one go.
 
 The handoff is unusually implementable — it states tokens in the form Compose
 consumes and names repo symbols (`PeaksPyramid`, `StarterKits`,
