@@ -987,7 +987,7 @@ an arrangement. A structure grammar turns them into a song.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
-| KK1 | ✓ done (the rng draws before deriving, so the stream never depends on what the kit supports): `Arranger` (`:shell`) — the structure grammar: intro (sparse), theme (captured), variation (tight/swing or ghosted), the turn (fill bar), outro (half, fading), section lengths in bars, seeded choices deterministic per seed; honest refusals when the kit has no grooves | CORE | M | deterministic plan per (kit, seed); every section clip is one of the kit's own stored variations; bar totals add up |
+| KK1 | ✓ done (wave OOO retired the coin flip: the variation section now prefers ghosted only when the base groove's own dynamic range - loudest hit over its median - clears a stated threshold, the number and rule kept on `Section.reason`): `Arranger` (`:shell`) — the structure grammar: intro (sparse), theme (captured), variation (tight/swing or ghosted), the turn (fill bar), outro (half, fading), section lengths in bars, seeded choices deterministic per seed; honest refusals when the kit has no grooves | CORE | M | deterministic plan per (kit, seed); every section clip is one of the kit's own stored variations; bar totals add up |
 | KK2 | ✓ done (sequence names carry the order - "01 intro".."06 outro" - so flipping IS performing): `arrange <kit-dir>` — the plan lands as switchable sequences in the `.xpj` (the AA1 multi-sequence writer), song slot named for the arrangement (GG3.1); the printed map shows section order and bars | CORE | S–M | the `.xpj` carries the sections in plan order and the reader accepts it; re-running with the same seed is byte-identical |
 | KK3 | ✓ done (the Answer's root is re-detected from the stored note the OneNote way; tapeStop/pullUp promoted from internal): `arrange --mixdown` — the song as one WAV: sections rendered through KitPreview and stitched with SIDE A's tape-stop/pull-up transitions at the turns, the Answer (and band) riding under sections that want them | CORE | M | mixdown length matches the plan; the fill section is measurably denser; deterministic |
 
@@ -1979,6 +1979,21 @@ APP wave NNN: ✓ all landed (2026-09-08) — DELETED KITS, drawn, closing
   as EMPTY's own second tap). Held up as built - no code fix. The
   archaeology pass this wave and KKK/LLL/MMM worked through is closed:
   every screen in `app/.../ui/` now has a board.
+
+APP wave OOO: ✓ all landed (2026-09-09) — the Arranger surfaced. KK1-KK3
+  built the structure grammar, the `.xpj` export and the mixdown, but
+  none of it ever reached a screen - GROOVE's own SONG ▸ now opens
+  ARRANGE: the kit's intro/theme/variation/the turn/reprise/outro laid
+  out as a tappable list, each section reading its own reason off
+  `Arranger.Section.reason` (new) in the same LCD readout GROOVE uses,
+  PLAY rendering the mixdown once and caching it per plan (`MixVoice`,
+  a stereo sibling of TAPE's own one-shot voice), REROLL drawing a
+  fresh seed. KK1's coin flip is retired on the way: the variation
+  section now prefers the ghosted grammar only when the base groove's
+  own dynamic range - loudest hit over its median, the same median
+  `GrooveVariations.sparse()` already reads - clears a stated 2x
+  threshold, printed as the number that decided it rather than asked
+  to be trusted.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

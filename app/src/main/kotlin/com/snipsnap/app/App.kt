@@ -42,6 +42,7 @@ import com.snipsnap.app.theme.rememberDeskBrush
 import com.snipsnap.app.theme.tape
 import com.snipsnap.app.theme.windowFrame
 import com.snipsnap.app.ui.AppScreen
+import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.DeletedKitsScreen
 import com.snipsnap.app.ui.ExportScreen
@@ -234,6 +235,10 @@ fun App(shelf: KitShelf) {
     // (PadSheetScreen's own onGrainField clears padSheetSlot first) so the
     // two overlays are never both non-null for the same KIT composition.
     var grainFieldSlot by remember { mutableStateOf<Int?>(null) }
+    // ARRANGE: same shape again, but GROOVE-scoped rather than KIT-scoped —
+    // reachable only from GROOVE's own "SONG ▸" button, not one of MenuRow's
+    // fixed ten, so a boolean here rather than its own AppScreen entry.
+    var arrangeOpen by remember { mutableStateOf(false) }
     // SNIPS (Task 3): a shelf-level overlay, not KIT-scoped like PAD SHEET/
     // TAKES+BIN/PAD CAPTURE/GRAIN FIELD above — reachable from KitsScreen at
     // AppScreen.KITS (the shelf), one level up from those, so it's its own
@@ -569,6 +574,7 @@ fun App(shelf: KitShelf) {
                     open = first
                     padSheetSlot = null
                     takesBinOpen = false
+                    arrangeOpen = false
                     screen = AppScreen.KIT
                 }
                 return@LaunchedEffect
@@ -585,6 +591,7 @@ fun App(shelf: KitShelf) {
             importCount++
             padSheetSlot = null
             takesBinOpen = false
+            arrangeOpen = false
             screen = AppScreen.TAPE
         } catch (e: CancellationException) {
             throw e
@@ -1150,6 +1157,7 @@ fun App(shelf: KitShelf) {
                             takesBinOpen = false
                             padCaptureSlot = null
                             grainFieldSlot = null
+                            arrangeOpen = false
                         }
                     }
                 } else {
@@ -1270,6 +1278,7 @@ fun App(shelf: KitShelf) {
         takesBinOpen = false
         padCaptureSlot = null
         grainFieldSlot = null
+        arrangeOpen = false
         // SNIPS is shelf-level, not KIT-scoped, but the same
         // "leaving must not leave an overlay/hand-off armed"
         // reasoning applies: a tab switch away from KITS
@@ -1303,7 +1312,7 @@ fun App(shelf: KitShelf) {
     // "◄ SHELF" chip, via `onBack`, which also silences the instrument
     // before leaving — this generic reset does not).
     val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || takesBinOpen ||
-        padCaptureSlot != null || snipsOpen || deletedKitsOpen
+        padCaptureSlot != null || snipsOpen || deletedKitsOpen || arrangeOpen
     BackHandler(
         enabled = !anyOverlayOpen && screen != AppScreen.KITS &&
             screen != AppScreen.SPLIT && screen != AppScreen.KEYS &&
@@ -1777,16 +1786,28 @@ fun App(shelf: KitShelf) {
                         )
                         AppScreen.PLAY -> PlayScreen(entry = open)
                         AppScreen.HELP -> HelpScreen()
-                        AppScreen.GROOVE -> GrooveScreen(
-                            entry = open,
-                            // App's own scope — the same one PadSheetScreen's
-                            // teardown save and ExportScreen's dub write use —
-                            // so a pending debounced E save survives a MenuRow
-                            // tab switch instead of being cancelled by it.
-                            appScope = scope,
-                            onToast = { toast = it },
-                            reloadRequest = grooveReload,
-                        )
+                        AppScreen.GROOVE -> {
+                            val songEntry = open
+                            if (arrangeOpen && songEntry != null) {
+                                ArrangeScreen(
+                                    entry = songEntry,
+                                    onBack = { arrangeOpen = false },
+                                    onToast = { toast = it },
+                                )
+                            } else {
+                                GrooveScreen(
+                                    entry = open,
+                                    // App's own scope — the same one PadSheetScreen's
+                                    // teardown save and ExportScreen's dub write use —
+                                    // so a pending debounced E save survives a MenuRow
+                                    // tab switch instead of being cancelled by it.
+                                    appScope = scope,
+                                    onToast = { toast = it },
+                                    reloadRequest = grooveReload,
+                                    onArrange = { arrangeOpen = true },
+                                )
+                            }
+                        }
                         AppScreen.KEYS -> {
                             val inst = openInstrument
                             if (inst == null) {
