@@ -367,6 +367,9 @@ object Copy {
     fun roomRestored(name: String): String = "$name IS BACK ON THE SHELF. AS IF NOTHING HAPPENED."
     const val ROOM_FORGET_BUSY = "FORGETTING…"
     const val ROOM_RESTORE_BUSY = "RESTORING…"
+    const val ROOM_BIN_EMPTY_BUSY = "EMPTYING…"
+    /** EMPTY THE BIN NOW on the rooms bin, confirmed — `kitBinEmptied`/`snipBinEmptied`'s own no-count reasoning applies here too: the bin may hold a stray file the list never showed. */
+    val roomBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
     /** SHARE on a room row: the room is one `.snip-room` file now and the chooser is up. */
     fun roomPacked(name: String): String = "$name PACKED AS ONE FILE. PICK WHERE IT GOES."
     /** A `.snip-room` landed through the share door: [name] on the shelf, ready for MUTATE ▸ ROOM. */
@@ -402,6 +405,31 @@ object Copy {
      * list; what they need told is that it's empty now, and that it's final.
      */
     val kitBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
+
+    // ---- SNIPS: rename, delete → bin (name-and-find task) ----
+    /** RENAME on a SNIPS row; [name] is what it actually landed under — a collision refuses instead of guessing, so this is always the typed name verbatim. */
+    fun snipRenamed(name: String): String = "RENAMED TO $name."
+    const val SNIP_RENAME_FAILED = "COULDN'T RENAME - CHECK THE NAME AND TRY AGAIN."
+    /**
+     * DELETE on a SNIPS row, now into the 30-day bin — `SnipStore.delete`'s
+     * own promise, `kitDeleted`'s shape applied to one file. [name] is
+     * `SnipStore.Info.displayName`, so a never-confidently-classified snip
+     * reads "SNIP", never a guess.
+     */
+    fun snipDeleted(name: String): String = "$name IS OFF THE LIST. 30 DAYS TO CHANGE YOUR MIND."
+    const val SNIP_DELETE_FAILED = "DELETE FAILED. THE FILE MAY ALREADY BE GONE."
+
+    // ---- DELETED SNIPS: restore or empty early ----
+    /** RESTORE on a binned snip; [name] is what it actually landed under — `SnipStore.restore`'s own collision fallback may have freshened it, never the name the row showed. */
+    fun snipRestored(name: String): String = "$name IS BACK IN SNIPS. AS IF NOTHING HAPPENED."
+    /** EMPTY THE BIN NOW on DELETED SNIPS, confirmed — `kitBinEmptied`'s own no-count reasoning applies here too. */
+    val snipBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
+
+    // ---- SHELF SORT (name-and-find followups): the KitsScreen header toggle ----
+    /** The shelf's own header chip while sorted `KitShelf.ShelfSort.RECENT` — tapping switches to [SHELF_SORT_ALPHA]. */
+    const val SHELF_SORT_RECENT = "SORT ▸ RECENT"
+    /** The shelf's own header chip while sorted `KitShelf.ShelfSort.ALPHA` — tapping switches back to [SHELF_SORT_RECENT]. */
+    const val SHELF_SORT_ALPHA = "SORT ▸ A–Z"
 
     // ---- PAD SHEET: pad from anything ----
     const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."

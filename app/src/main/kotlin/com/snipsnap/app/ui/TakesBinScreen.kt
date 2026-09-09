@@ -60,6 +60,15 @@ private const val EMPTY_BIN_ARM_MS = 3_000L
  * over engine behaviour that's tested in `KitBuilderTest.kt`, not new rules
  * of its own.
  *
+ * Displayed as "VERSIONS + BIN" now, not "TAKES + BIN" (name-and-find
+ * followups) — the old header let "BIN" read as the whole screen's own
+ * name, wrongly implying the TAKES card's save history shared the bin's
+ * 30-day/deletable rules. The Kotlin symbol name below is unchanged on
+ * purpose (nothing here renames `takes()`/`purgeBin`/`TakesBinScreen`
+ * itself); see [KitBuilderModel.restoreTake]'s own KDoc for why the two
+ * genuinely-different things (JSON save history vs. deleted pad audio)
+ * still have to cohabit one screen regardless of what either is called.
+ *
  * Routed as KIT-scoped overlay state in `App`, the same way PAD SHEET is —
  * not an [AppScreen] entry. MenuRow's items are fixed at ten and TAKES+BIN
  * isn't one of them; it's only reachable from the KIT action row, exactly
@@ -368,7 +377,15 @@ fun TakesBinScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                TapeText("TAKES + THE BIN", TapeType.lcdHeader, scheme.lcdInk.tape)
+                // "VERSIONS + BIN", not "TAKES + BIN" (name-and-find
+                // followups): the old header let "BIN" read as the whole
+                // screen's own name, as if TAKES were bin-flavoured too —
+                // "VERSIONS" says what the TAKES card actually is (roll-
+                // back history, see the card's own title below) without
+                // implying it shares the bin's 30-day/deletable rules. The
+                // Kotlin symbol (`TakesBinScreen`) is unchanged; this is
+                // display text only.
+                TapeText("VERSIONS + BIN", TapeType.lcdHeader, scheme.lcdInk.tape)
                 TapeText(kitSnapshot.name, TapeType.lcdSmall, scheme.amber.tape)
             }
         }
@@ -390,7 +407,11 @@ fun TakesBinScreen(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            PillCard("TAKES — EVERY SAVE REMEMBERED", scheme, scheme.accent.tape, scheme.accent.tape) {
+            // "YOUR VERSION HISTORY" bridges this card's own TAKES/T1..Tn
+            // vocabulary (unchanged below — RESTORE, the row labels) to the
+            // header's new "VERSIONS" word, so the two don't read as two
+            // different features (name-and-find followups).
+            PillCard("TAKES — YOUR VERSION HISTORY, EVERY SAVE", scheme, scheme.accent.tape, scheme.accent.tape) {
                 for (row in takeRows) {
                     TakeRowLine(row, scheme, busy) { file, label, mtime -> doRestoreTake(file, label, mtime) }
                 }
@@ -399,7 +420,12 @@ fun TakesBinScreen(
                 }
             }
 
-            PillCard("THE BIN — KEPT 30 DAYS", scheme, BIN_RED_BORDER, BinRedGlow) {
+            // "DELETED PAD AUDIO" names what's actually in here (name-and-find
+            // followups) — the old title said only how long, never what,
+            // leaving "the bin" to mean whatever a reader assumed (which,
+            // sitting right under a TAKES card, was an easy misread as
+            // "your takes, kept 30 days").
+            PillCard("THE BIN — DELETED PAD AUDIO, KEPT 30 DAYS", scheme, BIN_RED_BORDER, BinRedGlow) {
                 if (binRows.isEmpty()) {
                     TapeText(Copy.BIN_EMPTY_STATE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                 } else {

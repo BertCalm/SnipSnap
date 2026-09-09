@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -27,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.TapeVoice
@@ -37,11 +39,16 @@ import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
+import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Cleanup
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.Names
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
+import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.SnipStore
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -94,14 +101,41 @@ fun SnipsScreen(
         snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(shelf.root) }
     }
 
+    // DELETED SNIPS (name-and-find task): the SNIPS-level equivalent of
+    // KitsScreen's own "DELETED KITS ▸" row — reached from SNIPS, not the
+    // shelf, since snips (not kits) are what it holds. `binnedCount` gates
+    // the button below (shown only when the bin actually holds something,
+    // the same locked behavior `binnedKitsCount` already keeps for kits).
+    // Keyed on `deletedSnipsOpen` itself, not `Unit` — `App.kt`'s own
+    // `binnedKitsCount` effect gives the exact reasoning: EMPTY THE BIN NOW
+    // (or a RESTORE) inside DeletedSnipsScreen changes nothing else this
+    // effect watches, so without that key the row would keep reading a
+    // stale count after the door behind it is empty. The local `+= 1`/`- 1`
+    // nudges in doDelete/onRestored below stay too, for instant feedback
+    // between refreshes.
+    var deletedSnipsOpen by remember { mutableStateOf(false) }
+    var binnedCount by remember { mutableStateOf(0) }
+    LaunchedEffect(deletedSnipsOpen) {
+        binnedCount = withContext(Dispatchers.IO) { SnipStore.binned(shelf.root).size }
+    }
+
     // USED badge: null until the cheap gate below resolves, and the list
     // renders with no badges at all in the meantime — never a guess, per
-    // the honesty rule (see [anyPadTaggedWithSourceFile]'s own KDoc for why
-    // this is cheap even on a shelf with many kits).
-    var usedFileNames by remember { mutableStateOf<Set<String>?>(null) }
-    LaunchedEffect(Unit) {
-        usedFileNames = withContext(Dispatchers.IO) {
-            if (anyPadTaggedWithSourceFile(shelf.root)) usedFileNamesAcrossShelf(shelf.root) else emptySet()
+    // the honesty rule (see [anyPadTaggedWithProvenance]'s own KDoc for why
+    // this is cheap even on a shelf with many kits). Keyed on [snips]
+    // itself, not `Unit`, and matched against those SAME `Info`/`File`
+    // instances — not a second, independent `listWithInfo` call — so a
+    // RENAME (`doRename` below reassigns `snips` to a freshly-listed set
+    // whose `File`s point at the new path) re-triggers this and the badge
+    // set is never compared against stale `File`s from before the rename.
+    // Missing this was almost the same regression this whole task exists
+    // to fix, just moved one layer up: capturedAtMillis makes a pad's OWN
+    // provenance survive a rename, but the badge only reads correctly if
+    // the row it's matched against is refreshed too.
+    var usedSnipFiles by remember { mutableStateOf<Set<File>?>(null) }
+    LaunchedEffect(snips) {
+        usedSnipFiles = withContext(Dispatchers.IO) {
+            if (anyPadTaggedWithProvenance(shelf.root)) usedSnipsAcrossShelf(shelf.root, snips) else emptySet()
         }
     }
 
@@ -182,11 +216,45 @@ fun SnipsScreen(
         }
     }
 
+    if (deletedSnipsOpen) {
+        // Placed here, past `voice`/`playToken`/`stopPlayback`/
+        // `DisposableEffect` above (NOT at the top of the function): an
+        // early return before those hooks would mean a PLAY in flight when
+        // DELETED SNIPS opens is orphaned — the coroutine's captured
+        // `playToken` still matches, so it still assigns a fresh `voice`
+        // into a state slot this branch never composes again, and the
+        // `DisposableEffect` that would have released it was never
+        // registered either. Stopping first closes that window; keeping
+        // the hooks composed either way is the belt this relies on.
+        // Everything BELOW this point (confirmDelete/renameTarget/the main
+        // BackHandler/the dialogs) is still skipped while this shows, so
+        // DELETED SNIPS owns Back entirely on its own with no shared
+        // `enabled =` gate to keep in sync.
+        stopPlayback()
+        DeletedSnipsScreen(
+            shelf = shelf,
+            onBack = { deletedSnipsOpen = false },
+            onToast = onToast,
+            onRestored = {
+                binnedCount = (binnedCount - 1).coerceAtLeast(0)
+                scope.launch {
+                    snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(shelf.root) }
+                }
+            },
+        )
+        return
+    }
+
     var confirmDelete by remember { mutableStateOf<SnipStore.Info?>(null) }
-    // Mirrors the header's own ◄ SHELF chip — disabled while the delete
-    // dialog is up so that dialog's own BackHandler below (composed only
-    // while it's showing) is the one Back reaches first.
-    BackHandler(enabled = confirmDelete == null) { onBack() }
+    var renameTarget by remember { mutableStateOf<SnipStore.Info?>(null) }
+    // Mirrors the header's own ◄ SHELF chip — disabled while either dialog
+    // is up so that dialog's own BackHandler below (composed only while
+    // it's showing) is the one Back reaches first. Paired the same way
+    // ConventionTest.kt's own law documents: while confirmDelete OR
+    // renameTarget is non-null (this one dark), the relevant dialog
+    // composes its own unconditional BackHandler in that exact window, so
+    // Back is never left with zero enabled callbacks.
+    BackHandler(enabled = confirmDelete == null && renameTarget == null) { onBack() }
     fun doDelete(info: SnipStore.Info) {
         confirmDelete = null
         if (playingFile == info.file) stopPlayback()
@@ -194,11 +262,29 @@ fun SnipsScreen(
             val ok = withContext(Dispatchers.IO) { SnipStore.delete(info.file) }
             if (ok) {
                 snips = snips.filter { it.file != info.file }
-                onToast("SNIP DELETED.")
+                binnedCount += 1
+                onToast(Copy.snipDeleted(info.displayName))
             } else {
                 // Law 3: say exactly what happened — a second delete racing
                 // this one, most plausibly, is the only way this fails.
-                onToast("DELETE FAILED. THE FILE MAY ALREADY BE GONE.")
+                onToast(Copy.SNIP_DELETE_FAILED)
+            }
+        }
+    }
+    fun doRename(info: SnipStore.Info, newName: String) {
+        renameTarget = null
+        scope.launch {
+            val renamed = withContext(Dispatchers.IO) { SnipStore.rename(info.file, newName) }
+            if (renamed != null) {
+                snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(shelf.root) }
+                // The name it actually landed under, read straight off the
+                // returned file rather than echoing `newName` — the same
+                // "never trust the typed string, trust the result" posture
+                // `Copy.kitRenamed`'s own call sites keep.
+                onToast(Copy.snipRenamed(SnipStore.displayName(renamed)))
+                if (playingFile == info.file) playingFile = renamed
+            } else {
+                onToast(Copy.SNIP_RENAME_FAILED)
             }
         }
     }
@@ -221,6 +307,20 @@ fun SnipsScreen(
                     "${snips.size} · ${humanSize(snips.sumOf { it.sizeBytes })}",
                     TapeType.lcdSmall,
                     scheme.amber.tape,
+                )
+            }
+
+            // DELETED SNIPS: gated on the bin actually holding something —
+            // KitsScreen's own "DELETED KITS ▸" row, one level down: a user
+            // who has never deleted a snip sees no door to an empty room
+            // at all (locked behavior).
+            if (binnedCount > 0) {
+                ActionButton(
+                    "DELETED SNIPS ▸ $binnedCount WAITING",
+                    scheme,
+                    enabled = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { deletedSnipsOpen = true },
                 )
             }
 
@@ -250,10 +350,11 @@ fun SnipsScreen(
                         SnipRow(
                             info = info,
                             playing = playingFile == info.file,
-                            used = usedFileNames?.contains(info.file.name) == true,
+                            used = usedSnipFiles?.contains(info.file) == true,
                             onTogglePlay = { togglePlay(info) },
                             onPickPad = { onPickPadFor(info.file) },
                             onOpenTape = { onOpenInTape(info.file) },
+                            onRename = { renameTarget = info },
                             onDelete = { confirmDelete = info },
                         )
                     }
@@ -270,8 +371,30 @@ fun SnipsScreen(
             // Innermost: Back cancels exactly like CANCEL, never DELETE.
             BackHandler(onBack = cancelDelete)
         }
+
+        renameTarget?.let { target ->
+            val cancelRename = { renameTarget = null }
+            SnipRenameDialog(
+                initialName = target.displayName,
+                onCancel = cancelRename,
+                onConfirm = { newName -> doRename(target, newName) },
+            )
+            // Innermost: Back cancels exactly like CANCEL, never RENAME.
+            BackHandler(onBack = cancelRename)
+        }
     }
 }
+
+/**
+ * Every [DrumClass] keyed by its own [AutoPlace.nameFor] output — the
+ * reverse of the map that named a confidently-classified snip in the first
+ * place, so a row can colour its name the same way the pad grid colours a
+ * pad ([Schemes.classColor]) without this screen needing to store the
+ * class separately. A name that doesn't match any of these (a legacy or
+ * unclassified snip's "SNIP" fallback, or a user's own free-typed rename)
+ * simply carries no class colour — never a guessed one.
+ */
+private val CLASS_BY_NAME: Map<String, DrumClass> = DrumClass.entries.associateBy { AutoPlace.nameFor(it) }
 
 @Composable
 private fun SnipRow(
@@ -281,9 +404,11 @@ private fun SnipRow(
     onTogglePlay: () -> Unit,
     onPickPad: () -> Unit,
     onOpenTape: () -> Unit,
+    onRename: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val scheme = LocalScheme.current
+    val nameColor = CLASS_BY_NAME[info.name]?.let { Schemes.classColor(it).tape } ?: scheme.ink.tape
     Column(
         Modifier
             .fillMaxWidth()
@@ -297,8 +422,16 @@ private fun SnipRow(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                TapeText(relativeTime(info.capturedAtMillis), TapeType.marker, scheme.ink.tape)
-                TapeText(humanSize(info.sizeBytes), TapeType.pixelSmall, scheme.ink2.tape)
+                // Primary field: the name, class-coloured when the
+                // classifier earned it — the pad grid's own "name + class
+                // colour, legible at a glance" standard. Time and size are
+                // secondary, same as today, just demoted a line.
+                TapeText(info.displayName, TapeType.marker, nameColor, maxLines = 1)
+                TapeText(
+                    "${relativeTime(info.capturedAtMillis)} · ${humanSize(info.sizeBytes)}",
+                    TapeType.pixelSmall,
+                    scheme.ink2.tape,
+                )
             }
             if (used) {
                 Box(
@@ -323,15 +456,24 @@ private fun SnipRow(
             ActionButton("→ PAD", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onPickPad)
             ActionButton("→ TAPE", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onOpenTape)
         }
-        DeleteButton(scheme, Modifier.fillMaxWidth(), onClick = onDelete)
+        // RENAME paired with DELETE — KitsScreen's own KitRow shape for the
+        // same two actions.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ActionButton("RENAME", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onRename)
+            DeleteButton(scheme, Modifier.weight(1f), onClick = onDelete)
+        }
     }
 }
 
 /**
- * "DELETE THIS SNIP? CAN'T UNDO." — the exact confirm text the brief locks
- * in. Same scrim + raisedBevel shape as `App.kt`'s own `BlockedDialog`
- * / `KitsScreen.kt`'s `StarterMenu`: a `Box` scrim that dismisses on tap,
- * a `Column` that swallows its own tap so that dismiss can't fire through it.
+ * "DELETE THIS SNIP? IT WAITS IN DELETED SNIPS FOR 30 DAYS." — replaces the
+ * old "CAN'T UNDO.", which this task's own bin makes false the moment it
+ * ships (a string that lies is exactly what this project's copy laws exist
+ * to catch). `KitsScreen.kt`'s own `KitDeleteConfirmDialog` names its
+ * screen the same way, now that one exists for snips too. Same scrim +
+ * raisedBevel shape as `App.kt`'s own `BlockedDialog` / `KitsScreen.kt`'s
+ * `StarterMenu`: a `Box` scrim that dismisses on tap, a `Column` that
+ * swallows its own tap so that dismiss can't fire through it.
  */
 @Composable
 private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
@@ -357,10 +499,73 @@ private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText("DELETE THIS SNIP? CAN'T UNDO.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            TapeText("DELETE THIS SNIP? IT WAITS IN DELETED SNIPS FOR 30 DAYS.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
                 DeleteButton(scheme, Modifier.weight(1f), onClick = onConfirm)
+            }
+        }
+    }
+}
+
+/**
+ * "RENAME SNIP" — `KitsScreen.kt`'s own `KitRenameDialog`, copied verbatim
+ * (per that file's own house convention: screen-local composables are
+ * duplicated, not hoisted) and pointed at a snip's own filename-encoded
+ * name instead of `kit.json`'s. RENAME is disabled while the typed name
+ * fails [Names.isMpcSafe] — the same refusal `SnipStore.rename` would give,
+ * surfaced before the tap instead of after.
+ */
+@Composable
+private fun SnipRenameDialog(initialName: String, onCancel: () -> Unit, onConfirm: (String) -> Unit) {
+    val scheme = LocalScheme.current
+    var name by remember { mutableStateOf(initialName) }
+    val safe = Names.isMpcSafe(name)
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            // No descendant text of its own — labelled with the same
+            // word the visible CANCEL button below uses.
+            .tapeClick(label = "CANCEL", onClick = onCancel),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                .tapeClick(label = null) { }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText("RENAME SNIP", TapeType.lcdSmall, scheme.ink.tape)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .sunkenField(scheme)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+            ) {
+                BasicTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    textStyle = TapeType.marker.copy(color = scheme.ink.tape),
+                    cursorBrush = SolidColor(scheme.ink.tape),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (!safe) {
+                TapeText(
+                    "NAMES CAN'T HOLD / \\ : * ? \" < > | OR END IN A DOT/SPACE.",
+                    TapeType.pixelSmall,
+                    scheme.ink2.tape,
+                    maxLines = 2,
+                )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("RENAME", scheme, enabled = safe, modifier = Modifier.weight(1f), onClick = { onConfirm(name) })
             }
         }
     }
@@ -443,24 +648,34 @@ private fun humanSize(bytes: Long): String = when {
  * ships, every pad on every kit is untagged (Task 2 only tags going
  * forward), so this still reads every kit.json once — there's no way to
  * know the answer is "no" without checking each — but it stops there,
- * never going on to build the full per-pad name set [usedFileNamesAcrossShelf]
+ * never going on to build the full per-snip match set [usedSnipsAcrossShelf]
  * would, which is the actual work worth skipping for a guaranteed-empty
- * result.
+ * result. Checks both provenance keys [SnipStore.isUsedBy] can match on
+ * (`"file"`, the legacy-only key, and `"capturedAtMillis"`, the durable one
+ * `SnipStore.provenanceTag` adds alongside it) — this gate is a superset of
+ * that match, so it can never say "nothing to build" while the full scan
+ * would go on to find something.
  */
-private fun anyPadTaggedWithSourceFile(root: File): Boolean =
+private fun anyPadTaggedWithProvenance(root: File): Boolean =
     KitStore.list(root).any { dir ->
         runCatching { KitStore.load(dir) }.getOrNull()?.pads?.any { pad ->
-            pad.source["file"]?.isNotBlank() == true
+            pad.source["file"]?.isNotBlank() == true || pad.source["capturedAtMillis"]?.isNotBlank() == true
         } == true
     }
 
-/** Only called once [anyPadTaggedWithSourceFile] says it's worth it: every tagged pad's source file name, across every kit on the shelf. */
-private fun usedFileNamesAcrossShelf(root: File): Set<String> =
-    KitStore.list(root)
+/**
+ * Only called once [anyPadTaggedWithProvenance] says it's worth it: every
+ * snip in [snips] that some pad on some kit under [root] genuinely
+ * references, per [SnipStore.isUsedBy] — the one honesty check, reused
+ * here rather than a second copy of its capturedAtMillis-first/file-
+ * fallback logic that could quietly drift from it.
+ */
+private fun usedSnipsAcrossShelf(root: File, snips: List<SnipStore.Info>): Set<File> {
+    val pads = KitStore.list(root)
         .mapNotNull { dir -> runCatching { KitStore.load(dir) }.getOrNull() }
         .flatMap { it.pads }
-        .mapNotNull { pad -> pad.source["file"]?.takeIf { it.isNotBlank() } }
-        .toSet()
+    return snips.filter { info -> pads.any { pad -> SnipStore.isUsedBy(pad, info.file) } }.map { it.file }.toSet()
+}
 
 // Duplicated, not hoisted (see this file's own `DeleteButton`/`HeaderChip`
 // comments) — BIN red is deliberately constant across every scheme so a

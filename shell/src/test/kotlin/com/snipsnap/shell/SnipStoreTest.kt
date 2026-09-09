@@ -1,11 +1,16 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.Classification
+import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.DrumSynth
+import com.snipsnap.audio.Features
 import java.io.File
 import java.nio.file.Files
 import kotlin.math.sin
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SnipStoreTest {
@@ -14,6 +19,18 @@ class SnipStoreTest {
         val n = (seconds * rate).toInt()
         return FloatArray(n) { (0.4f * sin(2.0 * Math.PI * 220.0 * it / rate)).toFloat() }
     }
+
+    /** A [Classification] at [confidence] — [autoName] only ever reads `drumClass`/`confidence`, so the [Features] payload is inert filler. */
+    private fun classificationAt(confidence: Float, drumClass: DrumClass = DrumClass.KICK): Classification =
+        Classification(
+            drumClass = drumClass,
+            confidence = confidence,
+            features = Features(
+                centroidHz = 0f, rolloffHz = 0f, flatness = 0f, zeroCrossingRate = 0f,
+                lowRatio = 0f, midRatio = 0f, highRatio = 0f, durationSeconds = 0f,
+                decayMs = 0f, peak = 0f,
+            ),
+        )
 
     @Test
     fun `a commit lands one readable WAV in the snips dir`() {
@@ -245,6 +262,261 @@ class SnipStoreTest {
             assertTrue(info.all { it.sizeBytes > 0 })
             assertEquals(2_000L, info.first().capturedAtMillis)
             assertEquals(SnipStore.list(dir), info.map { it.file }, "listWithInfo must never disagree with list's own order")
+        } finally { dir.deleteRecursively() }
+    }
+
+    // ==================== naming: the confident/unconfident split ====================
+
+    @Test
+    fun `autoName trusts a classification at or above the threshold`() {
+        assertEquals("Kick", SnipStore.autoName(classificationAt(0.5f, DrumClass.KICK)))
+        assertEquals("Snare", SnipStore.autoName(classificationAt(0.51f, DrumClass.SNARE)))
+        assertEquals("Loop", SnipStore.autoName(classificationAt(0.9f, DrumClass.LOOP)))
+    }
+
+    @Test
+    fun `autoName refuses to guess below the threshold, including the classifier's own no-confidence shelf`() {
+        // PERC (0.4) and UNKNOWN (0.0) are Classifier's own fixed
+        // no-confidence outputs (see Classifier.kt) - this is what proves
+        // they can never sneak a name onto a file, not just that some
+        // arbitrary low number is refused.
+        assertNull(SnipStore.autoName(classificationAt(0.4f, DrumClass.PERC)))
+        assertNull(SnipStore.autoName(classificationAt(0.0f, DrumClass.UNKNOWN)))
+        assertNull(SnipStore.autoName(classificationAt(0.49f, DrumClass.KICK)))
+    }
+
+    @Test
+    fun `a confidently classified capture is named in the filename, timestamp still parseable`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            // DrumSynth.kick() is tuned to read as an unmistakable kick - the
+            // same fixture ChopReviewTest relies on for a non-"NOT SURE" chip.
+            val kick = DrumSynth.kick()
+            val f = SnipStore.commit(kick.samples, kick.sampleRate, dir, 10_000L)
+            assertEquals("snip_10000_Kick.wav", f.name)
+            assertEquals(f, SnipStore.newest(dir), "the name half must never break newest's own timestamp parse")
+            assertEquals("Kick", SnipStore.listWithInfo(dir).first().displayName)
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `a capture the classifier can't place stays neutral - no name, no guess`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            // All-zero: Classifier reads this as UNKNOWN at confidence 0 -
+            // the least ambiguous "don't know" input there is.
+            val f = SnipStore.commit(FloatArray(44_100), 44_100, dir, 20_000L)
+            assertEquals("snip_20000.wav", f.name, "today's plain shape - never a guessed name")
+            assertEquals("SNIP", SnipStore.listWithInfo(dir).first().displayName)
+        } finally { dir.deleteRecursively() }
+    }
+
+    // ==================== rename ====================
+
+    @Test
+    fun `rename swaps the name half, keeps the capture time, and stays findable`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val f = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 30_000L)
+            val renamed = SnipStore.rename(f, "MY VOICE MEMO")
+            assertEquals("snip_30000_MY VOICE MEMO.wav", renamed?.name)
+            assertEquals(30_000L, SnipStore.listWithInfo(dir).first().capturedAtMillis)
+            assertEquals("MY VOICE MEMO", SnipStore.listWithInfo(dir).first().displayName)
+            assertEquals(renamed, SnipStore.newest(dir))
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `rename refuses an unsafe name and leaves the file untouched`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val f = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 40_000L)
+            assertNull(SnipStore.rename(f, "BAD/NAME"))
+            assertTrue(f.exists(), "an unsafe name must never move the file at all")
+        } finally { dir.deleteRecursively() }
+    }
+
+    // ==================== provenanceTag / isUsedBy: the USED badge's write and read sides ====================
+
+    /** A minimal [KitPad] carrying [source] and nothing else worth asserting on here. */
+    private fun padWithSource(source: Map<String, String>) =
+        com.snipsnap.kit.KitPad(slot = 1, sampleFile = "pad.wav", source = source)
+
+    @Test
+    fun `provenanceTag records both the filename and the parsed capture millis`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val f = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 60_000L)
+            val tag = SnipStore.provenanceTag(f)
+            assertEquals(f.name, tag["file"])
+            assertEquals("60000", tag["capturedAtMillis"], "the same millis parsedTimestamp/listWithInfo agree on")
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `provenanceTag omits capturedAtMillis for a file whose name doesn't parse as a snip`() {
+        val f = File(Files.createTempDirectory("snips").toFile(), "not_a_snip.wav")
+        assertEquals(mapOf("file" to "not_a_snip.wav"), SnipStore.provenanceTag(f))
+    }
+
+    @Test
+    fun `isUsedBy survives a rename via capturedAtMillis - the regression this fixes`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val f = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 70_000L)
+            val pad = padWithSource(SnipStore.provenanceTag(f))
+            assertTrue(SnipStore.isUsedBy(pad, f), "matches before any rename")
+
+            val renamed = SnipStore.rename(f, "Kick One")!!
+            assertTrue(
+                SnipStore.isUsedBy(pad, renamed),
+                "capturedAtMillis is immutable across a rename, so the badge must still resolve",
+            )
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `isUsedBy falls back to filename matching for a legacy pad, but loses it across a rename`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val f = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 80_000L)
+            // Legacy shape: only "file", as every pad assigned before this
+            // task existed - no capturedAtMillis to fall back on.
+            val legacyPad = padWithSource(mapOf("file" to f.name))
+            assertTrue(SnipStore.isUsedBy(legacyPad, f), "a legacy pad still resolves against its unrenamed snip")
+
+            val renamed = SnipStore.rename(f, "Old Name")!!
+            assertFalse(
+                SnipStore.isUsedBy(legacyPad, renamed),
+                "the known, accepted limitation: a legacy (filename-only) pad's badge does not survive a rename " +
+                    "it never recorded a durable key for - it goes quiet, it does not guess",
+            )
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `isUsedBy never matches an unrelated snip`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val a = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 90_000L)
+            val b = SnipStore.commit(FloatArray(4_410) { 0.2f }, 44_100, dir, 91_000L)
+
+            val padForA = padWithSource(SnipStore.provenanceTag(a))
+            assertFalse(SnipStore.isUsedBy(padForA, b), "tagged for A, must not also read as used by B")
+
+            val legacyPadForA = padWithSource(mapOf("file" to a.name))
+            assertFalse(SnipStore.isUsedBy(legacyPadForA, b), "same, for the legacy filename-only shape")
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `isUsedBy never lets a filename match override a capturedAtMillis mismatch`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val a = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 92_000L)
+            val b = SnipStore.commit(FloatArray(4_410) { 0.2f }, 44_100, dir, 93_000L)
+            // A pathological pad: "file" names B, but "capturedAtMillis"
+            // still points at A's own capture time. capturedAtMillis must
+            // decide it outright once present - the filename value is
+            // never even consulted - so this reads as used by A (the
+            // millis match) and NOT by B (the filename match alone would
+            // have said yes, and must not).
+            val mismatched = padWithSource(mapOf("file" to b.name, "capturedAtMillis" to "92000"))
+            assertFalse(
+                SnipStore.isUsedBy(mismatched, b),
+                "a filename match must not win when capturedAtMillis is present and points elsewhere",
+            )
+            assertTrue(
+                SnipStore.isUsedBy(mismatched, a),
+                "capturedAtMillis alone decides the match once present, regardless of what \"file\" says",
+            )
+        } finally { dir.deleteRecursively() }
+    }
+
+    // ==================== the bin: delete -> list -> restore -> correct name ====================
+
+    @Test
+    fun `delete moves a snip into the bin, off the live list, restorable under its own name`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val kick = DrumSynth.kick()
+            val f = SnipStore.commit(kick.samples, kick.sampleRate, dir, 50_000L)
+            assertTrue(SnipStore.delete(f, nowMillis = 99_000L))
+            assertFalse(f.exists(), "gone from its live path")
+            assertTrue(SnipStore.list(dir).isEmpty(), "gone from the live list")
+
+            val binned = SnipStore.binned(dir)
+            assertEquals(1, binned.size)
+            assertEquals(50_000L, binned.first().capturedAtMillis, "the real capture time, not the binning moment")
+            assertEquals("Kick", binned.first().displayName)
+            assertEquals(99_000L, binned.first().binnedAtMillis)
+
+            val restored = SnipStore.restore(dir, binned.first())
+            assertEquals("snip_50000_Kick.wav", restored?.name, "back under its own original name")
+            assertEquals(listOf(restored), SnipStore.list(dir))
+            assertTrue(SnipStore.binned(dir).isEmpty(), "gone from the bin once restored")
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `restore into a name collision lands under a freshened name, never overwriting the live file`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val kick = DrumSynth.kick()
+            val f = SnipStore.commit(kick.samples, kick.sampleRate, dir, 60_000L)
+            assertTrue(SnipStore.delete(f, nowMillis = 61_000L))
+            val binned = SnipStore.binned(dir).first()
+
+            // A live file now sits exactly where the binned snip would
+            // naturally restore to - manufactured collision, the shape a
+            // fixed clock (or a hand-placed file) could produce for real.
+            // Live snips sit under root/[SnipStore.DIR], not root itself.
+            val liveCollision = File(File(dir, SnipStore.DIR), "snip_60000_Kick.wav")
+            liveCollision.writeBytes(byteArrayOf(1, 2, 3))
+
+            val restored = SnipStore.restore(dir, binned)
+            assertEquals("snip_60000_Kick 2.wav", restored?.name, "freshened past the collision, capture time untouched")
+            assertTrue(liveCollision.exists(), "the file already there was never overwritten")
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `sweepBin only takes what has slept past keepDays, emptyBin takes everything now`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val a = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 1_000L)
+            val b = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 2_000L)
+            assertTrue(SnipStore.delete(a, nowMillis = 1_000L))
+            assertTrue(SnipStore.delete(b, nowMillis = 2_000L))
+
+            val dayMs = 24L * 60 * 60 * 1000
+            val keepDays = 30.0
+            // Just past a's own 30 days, well short of b's.
+            val nowMillis = 1_000L + (keepDays * dayMs).toLong() + 1
+            val swept = SnipStore.sweepBin(dir, nowMillis = nowMillis, keepDays = keepDays)
+            assertEquals(1, swept)
+            assertEquals(1, SnipStore.binned(dir).size, "only the older one went")
+
+            val emptied = SnipStore.emptyBin(dir)
+            assertEquals(1, emptied)
+            assertTrue(SnipStore.binned(dir).isEmpty())
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `daysLeft rounds up and floors at zero, agreeing with the sweep it describes`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val f = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 1_000L)
+            assertTrue(SnipStore.delete(f, nowMillis = 5_000L))
+            val binned = SnipStore.binned(dir).first()
+            val dayMs = 24L * 60 * 60 * 1000
+
+            assertEquals(30, binned.daysLeft(nowMillis = 5_000L))
+            // A few ms into day 30 - one partial day left still reads 1, not 0.
+            assertEquals(1, binned.daysLeft(nowMillis = 5_000L + 29L * dayMs + 1))
+            assertEquals(0, binned.daysLeft(nowMillis = 5_000L + 30L * dayMs))
+            assertEquals(0, binned.daysLeft(nowMillis = 5_000L + 31L * dayMs), "never negative")
         } finally { dir.deleteRecursively() }
     }
 }

@@ -65,6 +65,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
 import com.snipsnap.kit.Names
 
+/** How long a first tap on EMPTY THE BIN NOW (rooms bin) stays armed before it disarms itself — `TakesBinScreen.kt`'s own constant, copied verbatim. */
+private const val EMPTY_ROOMS_BIN_ARM_MS = 3_000L
+
 /**
  * The tape shelf: every kit folder on the device, plus the NEW KIT ▸ PICK
  * A STARTER menu (the cold-start answer — the shelf is never uselessly
@@ -117,6 +120,13 @@ fun KitsScreen(
     /** The rooms in the bin, each with its days left; RESTORE brings one back. */
     binnedRooms: List<Rooms.Binned> = emptyList(),
     onRestoreRoom: (Rooms.Binned) -> Unit = {},
+    /**
+     * EMPTY THE BIN NOW on the rooms bin (name-and-find followups): the
+     * same bulk-empty affordance `emptyKitBin`/`KitBuilderModel`'s own EMPTY
+     * THE BIN NOW/`SnipStore.emptyBin` already have — closing the last gap
+     * where a bin only offered individual restore.
+     */
+    onEmptyRoomsBin: () -> Unit = {},
     /** DELETE (Task 4): a held kit row's DELETE, confirmed — into the 30-day bin, `KitShelf.deleteKit`'s promise. */
     onDeleteKit: (KitShelf.Entry) -> Unit = {},
     /** RENAME (Task 4): a held kit row's RENAME, confirmed with the typed name — `KitShelf.renameKit`'s collision fallback may freshen it. */
@@ -131,6 +141,16 @@ fun KitsScreen(
     onDeletedKits: () -> Unit = {},
     /** X-RAY: opens the system picker, then reads whatever comes back — never lands it, never gated on the shelf holding anything. */
     onXRay: () -> Unit = {},
+    /**
+     * SHELF SORT (name-and-find followups): [KitShelf.ShelfSort] the shelf
+     * is currently ordered by — `App`'s own [KitShelf.ShelfSort.RECENT]
+     * default, persisted like the colour scheme. [onToggleSort] flips
+     * between [KitShelf.ShelfSort.RECENT] and [KitShelf.ShelfSort.ALPHA];
+     * `App` owns both the persistence and the re-fetch, this screen only
+     * shows the current state and asks for the flip.
+     */
+    shelfSort: KitShelf.ShelfSort = KitShelf.ShelfSort.RECENT,
+    onToggleSort: () -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     var menuOpen by remember { mutableStateOf(false) }
@@ -146,6 +166,28 @@ fun KitsScreen(
     // state — can reach. A Set, not a single File?, because more than one
     // row can be armed at once (see the comment on confirmDeleteKit above).
     var armedKitDirs by remember { mutableStateOf(setOf<String>()) }
+
+    // EMPTY ROOMS BIN: the two-tap armed confirm `TakesBinScreen.kt`'s own
+    // `EMPTY_BIN_ARM_MS`/`LaunchedEffect(armed)` pattern establishes
+    // (`DeletedKitsScreen.kt`/`DeletedSnipsScreen.kt` copy it verbatim) —
+    // this screen's own copy, since the rooms bin has no screen of its own
+    // to hold that state; it lives inline in this LazyColumn instead.
+    var roomsBinArmed by remember { mutableStateOf(false) }
+    LaunchedEffect(roomsBinArmed) {
+        if (roomsBinArmed) {
+            delay(EMPTY_ROOMS_BIN_ARM_MS)
+            roomsBinArmed = false
+        }
+    }
+    fun doEmptyRoomsBin() {
+        if (busy) return
+        if (!roomsBinArmed) {
+            roomsBinArmed = true
+            return
+        }
+        roomsBinArmed = false
+        onEmptyRoomsBin()
+    }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -166,6 +208,37 @@ fun KitsScreen(
                     TapeType.lcdHeader,
                     scheme.lcdInk.tape,
                 )
+                // SORT toggle (name-and-find followups): RECENT (the
+                // default — most-recently-edited kit.json first, so a
+                // returning user's own last kit is right where they left
+                // it) vs A-Z. Hidden during SNIPS → PAD / BREED's own pick
+                // mode (the header's line is a hint there, not "THE
+                // SHELF") and with fewer than two kits, where an order has
+                // nothing to say.
+                if (!assigningSnip && breedingFrom == null && kits.size > 1) {
+                    Box(
+                        Modifier
+                            .align(Alignment.CenterEnd)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            // null, not an explicit label: the descendant
+                            // TapeText below already says which mode is
+                            // active ("SORT ▸ RECENT"/"SORT ▸ A–Z") — an
+                            // explicit label here would REPLACE that merged
+                            // text for TalkBack (Chrome.kt's own tapeClick
+                            // KDoc), leaving a screen-reader user unable to
+                            // hear which state they're toggling out of.
+                            .tapeClick(label = null, onClick = onToggleSort)
+                            .padding(horizontal = 4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(
+                            if (shelfSort == KitShelf.ShelfSort.RECENT) Copy.SHELF_SORT_RECENT else Copy.SHELF_SORT_ALPHA,
+                            TapeType.pixelSmall,
+                            scheme.amber.tape,
+                            maxLines = 1,
+                        )
+                    }
+                }
             }
             // The hint below presupposes a kit row to tap — with none on
             // the shelf yet, the empty-state panel just below carries the
@@ -247,7 +320,20 @@ fun KitsScreen(
                                 TapeText("IN THE BIN · RESTORE BEFORE THE DAYS RUN OUT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
                             }
                             items(binnedRooms, key = { "binned:" + it.room.file.name }) { binned ->
-                                BinnedRoomRow(binned, busy, onRestoreRoom)
+                                BinnedRoomRow(binned, busy) {
+                                    // A RESTORE tap disarms EMPTY THE BIN NOW —
+                                    // DeletedKitsScreen.kt's own `doRestore`
+                                    // reasoning: the restored row vanishing
+                                    // shifts every row (and this button) up
+                                    // under the finger, so whatever tap lands
+                                    // next must not be read as EMPTY's genuine
+                                    // second tap.
+                                    roomsBinArmed = false
+                                    onRestoreRoom(it)
+                                }
+                            }
+                            item(key = "rooms-bin-empty") {
+                                EmptyRoomsBinButton(scheme, enabled = !busy, armed = roomsBinArmed, onClick = ::doEmptyRoomsBin)
                             }
                         }
                     }
@@ -535,6 +621,39 @@ private fun BinnedRoomRow(binned: Rooms.Binned, busy: Boolean, onRestore: (Rooms
         ) {
             TapeText("RESTORE", TapeType.pixelSmall, if (busy) scheme.ink3.tape else scheme.amber.tape)
         }
+    }
+}
+
+/**
+ * EMPTY THE BIN NOW on the rooms bin — `TakesBinScreen.kt`'s own
+ * `EmptyBinButton` (`DeletedKitsScreen.kt`/`DeletedSnipsScreen.kt`'s own
+ * verbatim copies), duplicated here rather than exported per this
+ * codebase's house convention (every screen-local button stays private to
+ * its own file — see this file's own `HeaderChip`, which the rooms bin has
+ * no need of, so isn't duplicated here too).
+ */
+@Composable
+private fun EmptyRoomsBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
+            .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(5.dp))
+            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
+            .padding(horizontal = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        TapeText(
+            // The armed-label swap, copied verbatim from `TakesBinScreen.kt`'s
+            // own `EmptyBinButton` — no `Copy` constant for this text there
+            // either (see that file's own KDoc: a deliberate deviation from
+            // the artboard, which shows no confirm affordance to match).
+            if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS",
+            TapeType.pixel,
+            if (enabled) BinRedGlow else scheme.ink3.tape,
+            maxLines = 1,
+        )
     }
 }
 

@@ -59,12 +59,14 @@ class KitBuilderModel private constructor(
      * if nothing else references it.
      *
      * [source] is provenance, freeform (see [KitPad.source]) — e.g.
-     * `mapOf("file" to sourceFile.name)` when this assign came from an
-     * existing snip file (the SNIPS shelf, not yet built as of this
-     * signature landing), so a later "USED" badge can read it back off the
-     * pad instead of guessing. Defaults to empty: a live capture (GRAB/HOLD
-     * off the mic ring) never touched a snip file and has nothing honest to
-     * tag here.
+     * [SnipStore.provenanceTag] when this assign came from an existing snip
+     * file (the SNIPS shelf's → PAD), so a later "USED" badge can read it
+     * back off the pad instead of guessing. That helper tags both `"file"`
+     * (display) and `"capturedAtMillis"` (the snip's own immutable capture
+     * time, unaffected by a later rename — [SnipStore.isUsedBy] is the
+     * matching read side). Defaults to empty: a live capture (GRAB/HOLD off
+     * the mic ring) never touched a snip file and has nothing honest to tag
+     * here.
      */
     fun assign(
         slot: Int,
@@ -569,6 +571,28 @@ class KitBuilderModel private constructor(
             } ?: emptyList()
 
     /**
+     * Why TAKES and THE BIN cohabit on one screen (name-and-find
+     * followups) despite being named as two separate things now
+     * (`TakesBinScreen.kt`'s own header/card titles): they are genuinely
+     * different data with different lifecycles — TAKES is `kit.json`'s own
+     * save history, count-capped at [MAX_TAKES] and never time-expired
+     * (nothing is ever deleted to create one, see [archiveTake]); THE BIN
+     * is ejected/displaced pad AUDIO, time-capped at [BIN_KEEP_DAYS] days
+     * and independently deletable early ([emptyBin]) — but a take is JSON,
+     * not audio: it captures pad settings and sample FILENAMES, never
+     * sample BYTES. THE BIN is the app's only other record of what a
+     * filename's bytes actually were at a past moment, which is exactly
+     * what THIS function needs to make "roll back to take T" mean what a
+     * user expects — the pad sounding the way it did then, not merely
+     * carrying the right slot/name/tune settings while silently pointing
+     * at whatever audio happens to occupy that filename NOW (see
+     * [restoreLiveAudioAsOf] below, which reads the bin as its audio
+     * source of truth for exactly this reason). Severing that coupling —
+     * making TAKES restore `kit.json` alone — would silently break audio
+     * rollback while leaving `kit.json` rollback looking like it still
+     * worked; the shared screen and this cross-read are load-bearing, not
+     * an artifact of the two once having had one name.
+     *
      * Roll back to an archived take. This restores `kit.json` *and* the
      * actual audio that was live when the take was archived — not
      * whatever happens to be sitting on the filename now. A take file's
@@ -739,10 +763,21 @@ class KitBuilderModel private constructor(
         return old.size
     }
 
+    /**
+     * EMPTY THE BIN NOW: everything under [BIN_DIR] gone, not just what
+     * [binContents] can parse.
+     *
+     * [binContents] keeps only names matching [BIN_NAME]; anything else in
+     * the folder — a torn write, an aborted move, a stray file — is
+     * invisible to it, and [purgeBin] filters the same way, so emptying by
+     * that listing would strand exactly those entries permanently while the
+     * button claimed NO TAKEBACKS. Emptying a bin has to mean the folder is
+     * empty afterwards. [Rooms.emptyBin], [SnipStore.emptyBin] and
+     * [KitShelf.emptyKitBin] all walk their directory for the same reason.
+     */
     fun emptyBin(): Int {
-        val all = binContents()
-        all.forEach { it.file.delete() }
-        return all.size
+        val children = File(kitDir, BIN_DIR).listFiles() ?: return 0
+        return children.count { it.delete() }
     }
 
     /** The kit-name easter egg, for the rename dialog to surface. */
