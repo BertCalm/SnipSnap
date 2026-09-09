@@ -311,6 +311,15 @@ fun GrooveScreen(
     var recordBars by remember(kitDir) { mutableIntStateOf(2) }
     var take by remember(kitDir) { mutableStateOf<LiveRecord.Take?>(null) }
 
+    // Task 5: the post-take row (FORK TO E / UNDO TAKE). NOT `preTake`'s
+    // own nullness — `preTake == null` is a legitimate snapshot (the
+    // from-scratch case), not "nothing to show". This flag is the row's
+    // whole lifetime: true the instant a take lands, false the instant
+    // it's consumed (UNDO TAKE) or the user does anything else that moves
+    // the program on (PROG prev/next, HUMANIZE, FORK TO E/EDIT STEPS, MIDI
+    // export, SONG ▸, arming another RECORD) — never a persistent control.
+    var justLanded by remember(kitDir) { mutableStateOf(false) }
+
     // The playback clock's own `(nanos, pos)` reading, hoisted out of the
     // clock `LaunchedEffect` below so a hit fired between two frames can
     // read where the needle actually was at the LAST tick and interpolate
@@ -501,6 +510,7 @@ fun GrooveScreen(
     fun forkToE() {
         if (busy) return
         val source = currentClip ?: return
+        justLanded = false
         busy = true
         val sourceLetter = if (progIndex < 4) PROG_LETTERS[progIndex] else editorSourceLabel
         scope.launch {
@@ -568,6 +578,7 @@ fun GrooveScreen(
     fun exportMidi() {
         val exportBase = base ?: return
         if (midiBusy) return
+        justLanded = false
         midiBusy = true
         scope.launch {
             try {
@@ -677,6 +688,7 @@ fun GrooveScreen(
      */
     fun startRecording() {
         if (busy || recording || countingIn) return
+        justLanded = false
         val armedBase = base
         preTake = armedBase
         take = LiveRecord.Take(armedBase?.bars ?: recordBars)
@@ -718,6 +730,10 @@ fun GrooveScreen(
      * `eClip`/local E state is untouched: [LiveRecord.land] re-reads E
      * fresh from disk and rides it along unmodified, so there's nothing
      * here for this function to reconcile.
+     *
+     * A landed take shows `justLanded` (Task 5): the completion this take
+     * currently lacked otherwise — a toast naming what was actually played,
+     * plus the FORK TO E / UNDO TAKE row below.
      */
     fun stopRecording() {
         if (!recording) return
@@ -732,9 +748,57 @@ fun GrooveScreen(
                 val clip = LiveRecord.toClip(t, name, existing = landBase)
                 withContext(Dispatchers.IO) { LiveRecord.land(kitDir, clip) }
                 base = clip
+                justLanded = true
+                onToast(Copy.takeLanded(clip.notes.size, clip.bars))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 failure("RECORD", e)
+            }
+        }
+    }
+
+    /**
+     * UNDO TAKE: single-level, matching Design Question 4 — [preTake] is
+     * the one pre-arm snapshot [startRecording] captured, not a stack.
+     * Delegates the actual restore to [LiveRecord.undo], which already
+     * implements all three branches (existing base restored; from-scratch-
+     * with-E restored to E-only; from-scratch-with-nothing restored to no
+     * `groove.json`) — this function only decides which of the three
+     * honest toasts to show, using the SAME two facts [LiveRecord.undo]
+     * itself branches on: whether [snapshot] is null, and whether an E
+     * exists. `eClip`'s local state needs no update here: none of undo's
+     * three branches ever touches E, so whatever this composable already
+     * holds for it still matches disk after the write.
+     *
+     * `justLanded` doubles as the re-entry guard: the row that calls this
+     * disappears the instant it's tapped once (this function clears it
+     * before the write even starts, matching every other busy-guarded
+     * action here), so a second tap can't reach this function at all — a
+     * missing row, not a caught no-op.
+     */
+    fun undoTake() {
+        if (busy || !justLanded) return
+        justLanded = false
+        val snapshot = preTake
+        val hadE = eClip != null
+        busy = true
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) { LiveRecord.undo(kitDir, snapshot) }
+                base = snapshot
+                progIndex = 0
+                onToast(
+                    when {
+                        snapshot != null -> Copy.TAKE_UNDONE
+                        hadE -> Copy.TAKE_UNDONE_TO_E
+                        else -> Copy.TAKE_UNDONE_EMPTY
+                    },
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("UNDO", e)
+            } finally {
+                busy = false
             }
         }
     }
@@ -820,8 +884,8 @@ fun GrooveScreen(
                     // TIME doubles `bars`) would desync the clock's own
                     // wrap point from `take.bars`, set once at arm time —
                     // see startRecording's own KDoc.
-                    onPrev = { if (!recording && !countingIn) progIndex = (progIndex - 1 + progCount) % progCount },
-                    onNext = { if (!recording && !countingIn) progIndex = (progIndex + 1) % progCount },
+                    onPrev = { if (!recording && !countingIn) { justLanded = false; progIndex = (progIndex - 1 + progCount) % progCount } },
+                    onNext = { if (!recording && !countingIn) { justLanded = false; progIndex = (progIndex + 1) % progCount } },
                     scheme = scheme,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -888,8 +952,25 @@ fun GrooveScreen(
                         }
                     }
 
+                    if (justLanded) {
+                        // The take just landed — a transient, one-shot pair
+                        // of actions (Task 5): FORK TO E is the already-
+                        // shipped "make it grid-perfect" step (`forkToE()`
+                        // itself, unmodified — the just-landed base is
+                        // already `currentClip` at `progIndex == 0`, same
+                        // as EDIT STEPS below would read); UNDO TAKE reaches
+                        // for `preTake`, snapshotted once at arm time. Both
+                        // — and anything else that moves the program on —
+                        // clear this row; see `justLanded`'s own KDoc.
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            GrooveActionButton("FORK TO E ▸", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { forkToE() }
+                            GrooveActionButton("UNDO TAKE", scheme, Modifier.weight(1f), enabled = !busy) { undoTake() }
+                        }
+                    }
+
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         GrooveActionButton("HUMANIZE ⚄", scheme, Modifier.weight(1f), enabled = !busy) {
+                            justLanded = false
                             seed++
                             progIndex = 0
                             onToast(Copy.HUMANIZED)
@@ -900,7 +981,10 @@ fun GrooveScreen(
                     // SONG ▸ — the same four programs laid into a structure, not
                     // just cycled: intro/theme/variation/the turn/reprise/outro,
                     // one tap away from what this screen already has loaded.
-                    GrooveActionButton("SONG ▸", scheme, Modifier.fillMaxWidth(), accent = true, onClick = onArrange)
+                    GrooveActionButton("SONG ▸", scheme, Modifier.fillMaxWidth(), accent = true) {
+                        justLanded = false
+                        onArrange()
+                    }
                     GrooveActionButton("● RECORD", scheme, Modifier.fillMaxWidth(), enabled = !busy && !midiBusy) { startRecording() }
 
                     TapeText(

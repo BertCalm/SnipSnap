@@ -308,6 +308,19 @@ object Copy {
     const val FORKED_TO_E = "FORKED TO PROG E. A–D STAY UNTOUCHED."
     const val BAR_WIPED = "BAR WIPED. THE MACHINE FORGIVES."
 
+    // ---- GROOVE: RECORD landing and UNDO TAKE (live-record plan, Task 5) ----
+    /** RECORD landed a take as the new PROG A; echoes [grooveRead]'s shape, but names what was PLAYED, not what was heard. */
+    fun takeLanded(notes: Int, bars: Int): String {
+        val barWord = if (bars == 1) "BAR" else "BARS"
+        return "TOOK $notes HITS OVER $bars $barWord. PLAYING ON PROG A NOW."
+    }
+    /** UNDO TAKE's existing-base branch: whatever was captured before this take plays again. */
+    const val TAKE_UNDONE = "TAKE UNDONE. BACK TO WHAT WAS THERE BEFORE."
+    /** UNDO TAKE's from-scratch-with-nothing branch: said honestly as a delete, never as a "restore" to a base that never existed. */
+    const val TAKE_UNDONE_EMPTY = "TAKE UNDONE. NO GROOVE LEFT - SAME AS BEFORE RECORD."
+    /** UNDO TAKE's from-scratch-with-E branch: the take is gone, PROG E rides through untouched. */
+    const val TAKE_UNDONE_TO_E = "TAKE UNDONE. PROG E RIDES THROUGH, UNTOUCHED."
+
     /** The needle-roll only draws five lanes; a note on any other pad still plays and still exports — this says so. */
     fun offLane(n: Int): String = "+$n OFF-LANE — HEARD AND EXPORTED, NOT DRAWN"
 
