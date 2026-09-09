@@ -10,6 +10,7 @@ import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.AtomicFile
+import com.snipsnap.kit.Names
 import java.io.ByteArrayOutputStream
 import java.io.File
 
@@ -308,5 +309,33 @@ object SnipStore {
         return snipFiles(root)
             .mapNotNull { f -> parsedTimestamp(f)?.let { ts -> Info(f, f.length(), ts, parsedName(f)) } }
             .sortedByDescending { it.capturedAtMillis }
+    }
+
+    /**
+     * RENAME: [file] under [newName] — `null` immediately when [newName]
+     * isn't [Names.isMpcSafe] (no partial rename is ever attempted on a
+     * name the card couldn't hold, [KitShelf.renameKit]'s own posture) or
+     * when [file] is already gone. A no-op (hands back [file] unchanged)
+     * when [newName] already matches the file's own current name half.
+     * The capture time embedded in the filename never changes — only the
+     * name half does, so [parsedTimestamp] keeps agreeing with reality.
+     * `null` on collision with an already-existing path: a live rename
+     * target can only collide with itself (the capture time in the target
+     * name is [file]'s own, and [freshFile] already guarantees no two live
+     * snips ever share a capture time), so a genuine collision here means
+     * something outside this API's own writes already claimed that exact
+     * path — worth refusing loudly rather than silently freshening past a
+     * name someone else's file is using.
+     */
+    fun rename(file: File, newName: String): File? {
+        if (!Names.isMpcSafe(newName)) return null
+        if (!file.isFile) return null
+        val dir = file.parentFile ?: return null
+        val millis = parsedTimestamp(file) ?: return null
+        if (newName == parsedName(file)) return file
+        val target = File(dir, fileName(millis, newName))
+        if (target == file) return file
+        if (target.exists()) return null
+        return if (file.renameTo(target)) target else null
     }
 }

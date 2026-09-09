@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -27,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.TapeVoice
@@ -37,11 +39,16 @@ import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
+import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Cleanup
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.Names
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
+import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.SnipStore
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -183,10 +190,15 @@ fun SnipsScreen(
     }
 
     var confirmDelete by remember { mutableStateOf<SnipStore.Info?>(null) }
-    // Mirrors the header's own ◄ SHELF chip — disabled while the delete
-    // dialog is up so that dialog's own BackHandler below (composed only
-    // while it's showing) is the one Back reaches first.
-    BackHandler(enabled = confirmDelete == null) { onBack() }
+    var renameTarget by remember { mutableStateOf<SnipStore.Info?>(null) }
+    // Mirrors the header's own ◄ SHELF chip — disabled while either dialog
+    // is up so that dialog's own BackHandler below (composed only while
+    // it's showing) is the one Back reaches first. Paired the same way
+    // ConventionTest.kt's own law documents: while confirmDelete OR
+    // renameTarget is non-null (this one dark), the relevant dialog
+    // composes its own unconditional BackHandler in that exact window, so
+    // Back is never left with zero enabled callbacks.
+    BackHandler(enabled = confirmDelete == null && renameTarget == null) { onBack() }
     fun doDelete(info: SnipStore.Info) {
         confirmDelete = null
         if (playingFile == info.file) stopPlayback()
@@ -199,6 +211,23 @@ fun SnipsScreen(
                 // Law 3: say exactly what happened — a second delete racing
                 // this one, most plausibly, is the only way this fails.
                 onToast("DELETE FAILED. THE FILE MAY ALREADY BE GONE.")
+            }
+        }
+    }
+    fun doRename(info: SnipStore.Info, newName: String) {
+        renameTarget = null
+        scope.launch {
+            val renamed = withContext(Dispatchers.IO) { SnipStore.rename(info.file, newName) }
+            if (renamed != null) {
+                snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(shelf.root) }
+                // The name it actually landed under, read straight off the
+                // returned file rather than echoing `newName` — the same
+                // "never trust the typed string, trust the result" posture
+                // `Copy.kitRenamed`'s own call sites keep.
+                onToast(Copy.snipRenamed(SnipStore.displayName(renamed)))
+                if (playingFile == info.file) playingFile = renamed
+            } else {
+                onToast(Copy.SNIP_RENAME_FAILED)
             }
         }
     }
@@ -254,6 +283,7 @@ fun SnipsScreen(
                             onTogglePlay = { togglePlay(info) },
                             onPickPad = { onPickPadFor(info.file) },
                             onOpenTape = { onOpenInTape(info.file) },
+                            onRename = { renameTarget = info },
                             onDelete = { confirmDelete = info },
                         )
                     }
@@ -270,8 +300,30 @@ fun SnipsScreen(
             // Innermost: Back cancels exactly like CANCEL, never DELETE.
             BackHandler(onBack = cancelDelete)
         }
+
+        renameTarget?.let { target ->
+            val cancelRename = { renameTarget = null }
+            SnipRenameDialog(
+                initialName = target.displayName,
+                onCancel = cancelRename,
+                onConfirm = { newName -> doRename(target, newName) },
+            )
+            // Innermost: Back cancels exactly like CANCEL, never RENAME.
+            BackHandler(onBack = cancelRename)
+        }
     }
 }
+
+/**
+ * Every [DrumClass] keyed by its own [AutoPlace.nameFor] output — the
+ * reverse of the map that named a confidently-classified snip in the first
+ * place, so a row can colour its name the same way the pad grid colours a
+ * pad ([Schemes.classColor]) without this screen needing to store the
+ * class separately. A name that doesn't match any of these (a legacy or
+ * unclassified snip's "SNIP" fallback, or a user's own free-typed rename)
+ * simply carries no class colour — never a guessed one.
+ */
+private val CLASS_BY_NAME: Map<String, DrumClass> = DrumClass.entries.associateBy { AutoPlace.nameFor(it) }
 
 @Composable
 private fun SnipRow(
@@ -281,9 +333,11 @@ private fun SnipRow(
     onTogglePlay: () -> Unit,
     onPickPad: () -> Unit,
     onOpenTape: () -> Unit,
+    onRename: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val scheme = LocalScheme.current
+    val nameColor = CLASS_BY_NAME[info.name]?.let { Schemes.classColor(it).tape } ?: scheme.ink.tape
     Column(
         Modifier
             .fillMaxWidth()
@@ -297,8 +351,16 @@ private fun SnipRow(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                TapeText(relativeTime(info.capturedAtMillis), TapeType.marker, scheme.ink.tape)
-                TapeText(humanSize(info.sizeBytes), TapeType.pixelSmall, scheme.ink2.tape)
+                // Primary field: the name, class-coloured when the
+                // classifier earned it — the pad grid's own "name + class
+                // colour, legible at a glance" standard. Time and size are
+                // secondary, same as today, just demoted a line.
+                TapeText(info.displayName, TapeType.marker, nameColor, maxLines = 1)
+                TapeText(
+                    "${relativeTime(info.capturedAtMillis)} · ${humanSize(info.sizeBytes)}",
+                    TapeType.pixelSmall,
+                    scheme.ink2.tape,
+                )
             }
             if (used) {
                 Box(
@@ -323,7 +385,12 @@ private fun SnipRow(
             ActionButton("→ PAD", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onPickPad)
             ActionButton("→ TAPE", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onOpenTape)
         }
-        DeleteButton(scheme, Modifier.fillMaxWidth(), onClick = onDelete)
+        // RENAME paired with DELETE — KitsScreen's own KitRow shape for the
+        // same two actions.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ActionButton("RENAME", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onRename)
+            DeleteButton(scheme, Modifier.weight(1f), onClick = onDelete)
+        }
     }
 }
 
@@ -361,6 +428,69 @@ private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
                 DeleteButton(scheme, Modifier.weight(1f), onClick = onConfirm)
+            }
+        }
+    }
+}
+
+/**
+ * "RENAME SNIP" — `KitsScreen.kt`'s own `KitRenameDialog`, copied verbatim
+ * (per that file's own house convention: screen-local composables are
+ * duplicated, not hoisted) and pointed at a snip's own filename-encoded
+ * name instead of `kit.json`'s. RENAME is disabled while the typed name
+ * fails [Names.isMpcSafe] — the same refusal `SnipStore.rename` would give,
+ * surfaced before the tap instead of after.
+ */
+@Composable
+private fun SnipRenameDialog(initialName: String, onCancel: () -> Unit, onConfirm: (String) -> Unit) {
+    val scheme = LocalScheme.current
+    var name by remember { mutableStateOf(initialName) }
+    val safe = Names.isMpcSafe(name)
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            // No descendant text of its own — labelled with the same
+            // word the visible CANCEL button below uses.
+            .tapeClick(label = "CANCEL", onClick = onCancel),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                .tapeClick(label = null) { }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText("RENAME SNIP", TapeType.lcdSmall, scheme.ink.tape)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .sunkenField(scheme)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+            ) {
+                BasicTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    textStyle = TapeType.marker.copy(color = scheme.ink.tape),
+                    cursorBrush = SolidColor(scheme.ink.tape),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (!safe) {
+                TapeText(
+                    "NAMES CAN'T HOLD / \\ : * ? \" < > | OR END IN A DOT/SPACE.",
+                    TapeType.pixelSmall,
+                    scheme.ink2.tape,
+                    maxLines = 2,
+                )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("RENAME", scheme, enabled = safe, modifier = Modifier.weight(1f), onClick = { onConfirm(name) })
             }
         }
     }

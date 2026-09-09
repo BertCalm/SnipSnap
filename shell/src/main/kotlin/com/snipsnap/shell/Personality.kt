@@ -394,6 +394,11 @@ object Copy {
      */
     val kitBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
 
+    // ---- SNIPS: rename (name-and-find task) ----
+    /** RENAME on a SNIPS row; [name] is what it actually landed under — a collision refuses instead of guessing, so this is always the typed name verbatim. */
+    fun snipRenamed(name: String): String = "RENAMED TO $name."
+    const val SNIP_RENAME_FAILED = "COULDN'T RENAME - CHECK THE NAME AND TRY AGAIN."
+
     // ---- PAD SHEET: pad from anything ----
     const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."
     const val PAD_TOO_SHORT = "TOO SHORT TO STRETCH INTO A PAD. FEED IT MORE THAN A BLINK."

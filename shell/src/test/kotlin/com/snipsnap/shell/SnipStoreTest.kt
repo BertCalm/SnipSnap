@@ -310,4 +310,29 @@ class SnipStoreTest {
             assertEquals("SNIP", SnipStore.listWithInfo(dir).first().displayName)
         } finally { dir.deleteRecursively() }
     }
+
+    // ==================== rename ====================
+
+    @Test
+    fun `rename swaps the name half, keeps the capture time, and stays findable`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val f = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 30_000L)
+            val renamed = SnipStore.rename(f, "MY VOICE MEMO")
+            assertEquals("snip_30000_MY VOICE MEMO.wav", renamed?.name)
+            assertEquals(30_000L, SnipStore.listWithInfo(dir).first().capturedAtMillis)
+            assertEquals("MY VOICE MEMO", SnipStore.listWithInfo(dir).first().displayName)
+            assertEquals(renamed, SnipStore.newest(dir))
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `rename refuses an unsafe name and leaves the file untouched`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val f = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 40_000L)
+            assertNull(SnipStore.rename(f, "BAD/NAME"))
+            assertTrue(f.exists(), "an unsafe name must never move the file at all")
+        } finally { dir.deleteRecursively() }
+    }
 }

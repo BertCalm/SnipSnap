@@ -202,12 +202,14 @@ class ConventionTest {
         ),
         BackHandlerAllow(
             file = "ui/SnipsScreen.kt",
-            args = normalizeSpan("enabled = confirmDelete == null"),
-            justification = "paired: while confirmDelete != null (this one dark), the confirm dialog composes its " +
-                "own unconditional BackHandler(onBack = cancelDelete) in that exact window (see the innermost " +
-                "BackHandler a few lines further down, inside `confirmDelete?.let { ... }`), so Back is never left " +
-                "with zero enabled callbacks. Verified below by the self-check that this file still contains an " +
-                "unconditional BackHandler.",
+            args = normalizeSpan("enabled = confirmDelete == null && renameTarget == null"),
+            justification = "paired, now for two dialogs: while EITHER confirmDelete or renameTarget is non-null " +
+                "(this one dark), the relevant dialog composes its own unconditional BackHandler " +
+                "(onBack = cancelDelete / onBack = cancelRename) in that exact window (see the innermost " +
+                "BackHandlers further down, inside `confirmDelete?.let { ... }` and `renameTarget?.let { ... }`), " +
+                "so Back is never left with zero enabled callbacks. renameTarget joined confirmDelete here when " +
+                "RENAME shipped (name-and-find task) — same reasoning, same shape. Verified below by the " +
+                "self-check that this file still contains an unconditional BackHandler.",
         ),
     )
 
