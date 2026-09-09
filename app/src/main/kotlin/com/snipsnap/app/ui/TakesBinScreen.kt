@@ -91,7 +91,16 @@ fun TakesBinScreen(
     var loadFailed by remember(entry.dir) { mutableStateOf(false) }
     LaunchedEffect(entry.dir) {
         loadFailed = false
-        val opened = withContext(Dispatchers.IO) { runCatching { KitBuilderModel.open(entry.dir) }.getOrNull() }
+        // Locked, not just opened — same reasoning as PadSheetScreen's own
+        // mount open: KitScreen's pad-grid long-press has no busy gate, so
+        // this mount can race a SET KEY/EVIL TWINS/IN KEY write already in
+        // flight on `entry.dir`. Opening under the same
+        // KitWrites.mutex.withLock every writer already uses means this
+        // snapshot is always taken fully before or fully after that write,
+        // never mid-write — see Law 5 in ConventionTest.kt.
+        val opened = withContext(Dispatchers.IO) {
+            KitWrites.mutex.withLock { runCatching { KitBuilderModel.open(entry.dir) }.getOrNull() }
+        }
         if (opened == null) loadFailed = true else model = opened
     }
 
@@ -101,11 +110,22 @@ fun TakesBinScreen(
     var binEntries by remember(model) { mutableStateOf<List<KitBuilderModel.BinEntry>>(emptyList()) }
     var kitSnapshot by remember(model) { mutableStateOf(entry.kit) }
 
-    suspend fun refreshLists(m: KitBuilderModel) {
+    /**
+     * `m.takes()`/`m.binContents()` are pure directory scans — they read
+     * `kitDir` off disk, never `m.kit` — so they're safe to call on the
+     * long-lived [m] even when [m]'s own in-memory `kit` is stale (this
+     * screen never writes through [m] directly; see [doRestoreTake]).
+     * [kitOverride] exists for exactly that staleness: after a restore
+     * actually lands, the freshly-opened model's [KitBuilderModel.kit] —
+     * not [m]'s — is what [kitSnapshot] (which drives [binRows]' matched-
+     * pad coloring) must show, or a restore would render as if it hadn't
+     * happened.
+     */
+    suspend fun refreshLists(m: KitBuilderModel, kitOverride: com.snipsnap.kit.Kit? = null) {
         val (t, b) = withContext(Dispatchers.IO) { m.takes() to m.binContents() }
         takeFiles = t
         binEntries = b
-        kitSnapshot = m.kit
+        kitSnapshot = kitOverride ?: m.kit
     }
 
     LaunchedEffect(model) { model?.let { refreshLists(it) } }
@@ -129,23 +149,59 @@ fun TakesBinScreen(
      * (see its own KDoc) — this screen is the one door that calls it, so
      * it also owns turning that into a real, persisted `save()`, the same
      * way PAD SHEET's `commitPadEditNow` always pairs a mutate with a save.
+     *
+     * Runs against a FRESH model opened under the lock (see
+     * [withFreshKit]'s KDoc), never the long-lived [model] — mirrors
+     * PadSheetScreen's own Law 5 fix. Unlike PAD SHEET, [model] itself is
+     * NOT swapped afterward: this screen keys `busy`/`armed`/`takeFiles`/
+     * `binEntries`/`kitSnapshot` on [model]'s identity (`remember(model)`),
+     * and `restoreTake` fully replaces `kit` from the take file's own
+     * content regardless of which model instance it runs against — so
+     * [model]'s own in-memory `kit` was never load-bearing for this write
+     * in the first place. Keeping [model] as-is avoids resetting that
+     * bookkeeping for no benefit; [refreshLists] is fed the fresh result
+     * explicitly instead.
+     *
+     * [expectedMtime] is [take]'s own `lastModified()` at the moment this
+     * row was built (`TakeRow.lastModifiedMillis`), not re-read now: a
+     * captured `File` reference alone isn't a safe identity check here.
+     * [KitBuilderModel.archiveTake] rotates — `takes().dropLast(MAX_TAKES)`
+     * deletes the oldest, and the next archive's name is derived from
+     * `takes().lastOrNull()` — so `take_NNN.json` filenames get RECYCLED:
+     * the same path can, in the gap between this row being listed and this
+     * lock being acquired, come to hold a completely different archive.
+     * `take.isFile` alone can't see that (the file is still there, just
+     * not the one this row meant); comparing the mtime this row actually
+     * saw is the identity check `restoreTake` itself relies on (its own
+     * KDoc: `take.lastModified()` IS the T it rolls back to), the same
+     * discipline the pad-edit sites apply via `sampleFile`.
      */
-    fun doRestoreTake(take: File, label: String) {
+    fun doRestoreTake(take: File, label: String, expectedMtime: Long) {
         if (busy) return
         val m = model ?: return
+        val kitDir = m.kitDir
         scope.launch {
             busy = true
             try {
-                val restored = withContext(Dispatchers.IO) {
-                    KitWrites.mutex.withLock {
-                        m.restoreTake(take)
-                        m.save()
-                        m.kit
+                var restoredKit: com.snipsnap.kit.Kit? = null
+                withFreshKit(kitDir) { fresh ->
+                    if (take.isFile && take.lastModified() == expectedMtime && fresh.takes().any { it == take }) {
+                        restoredKit = fresh.restoreTake(take)
                     }
                 }
-                onKitUpdated(restored)
-                refreshLists(m)
-                onToast(Copy.takeRestored(label))
+                val kit = restoredKit
+                if (kit != null) {
+                    onKitUpdated(kit)
+                    refreshLists(m, kit)
+                    onToast(Copy.takeRestored(label))
+                } else {
+                    // The row's own take was rotated out or overwritten
+                    // between the list being built and this lock landing —
+                    // the same "someone beat you to it" shape BIN_ITEM_GONE
+                    // already names for the bin side of this screen.
+                    refreshLists(m)
+                    onToast(Copy.BIN_ITEM_GONE)
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 failure("RESTORE", e)
@@ -243,9 +299,15 @@ fun TakesBinScreen(
     val takeRows = remember(takeFiles) {
         val total = takeFiles.size + 1
         buildList {
-            add(TakeRow(label = "T$total", whenText = null, current = true, file = null))
+            add(TakeRow(label = "T$total", whenText = null, current = true, file = null, lastModifiedMillis = 0L))
             takeFiles.asReversed().forEachIndexed { i, f ->
-                add(TakeRow(label = "T${total - 1 - i}", whenText = agoLabel(f.lastModified()), current = false, file = f))
+                // Read once, kept: this is the row's own identity check for
+                // `doRestoreTake` (see its KDoc) as well as the display text
+                // below, so both read the exact same instant this list was
+                // built rather than re-reading the file's mtime later, after
+                // a rotation may have already changed what's at this path.
+                val mtime = f.lastModified()
+                add(TakeRow(label = "T${total - 1 - i}", whenText = agoLabel(mtime), current = false, file = f, lastModifiedMillis = mtime))
             }
         }
     }
@@ -327,7 +389,7 @@ fun TakesBinScreen(
         ) {
             PillCard("TAKES — EVERY SAVE REMEMBERED", scheme, scheme.accent.tape, scheme.accent.tape) {
                 for (row in takeRows) {
-                    TakeRowLine(row, scheme, busy) { file, label -> doRestoreTake(file, label) }
+                    TakeRowLine(row, scheme, busy) { file, label, mtime -> doRestoreTake(file, label, mtime) }
                 }
                 if (takeRows.size == 1) {
                     TapeText(Copy.TAKES_EMPTY, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
@@ -348,9 +410,37 @@ fun TakesBinScreen(
     }
 }
 
-private data class TakeRow(val label: String, val whenText: String?, val current: Boolean, val file: File?)
+private data class TakeRow(
+    val label: String,
+    val whenText: String?,
+    val current: Boolean,
+    val file: File?,
+    /** [file]'s `lastModified()` as read when this row was built — [doRestoreTake]'s own identity check, see its KDoc. Meaningless (0L) on the `current`/no-`file` row. */
+    val lastModifiedMillis: Long,
+)
 
 private data class BinRow(val entry: KitBuilderModel.BinEntry, val daysLeft: Int, val classColor: Color?)
+
+/**
+ * The one correct shape for a kit mutation issued by a screen whose own
+ * [KitBuilderModel] was opened earlier, outside any lock — mirrors
+ * PadSheetScreen's own `withFreshKit` (same file-local-duplication
+ * convention this file's own [HeaderChip] KDoc already follows, rather
+ * than exporting a cross-screen shared function). Locks, opens a FRESH
+ * model on [kitDir], runs [block] against it, and saves once — but only if
+ * [block] actually left the fresh model [KitBuilderModel.dirty], which is
+ * how a caller's [block] can implement "my target vanished/was reassigned"
+ * by simply mutating nothing, rather than reporting it a second way.
+ */
+private suspend fun withFreshKit(kitDir: File, block: (KitBuilderModel) -> Unit) {
+    withContext(Dispatchers.IO) {
+        KitWrites.mutex.withLock {
+            val fresh = KitBuilderModel.open(kitDir)
+            block(fresh)
+            if (fresh.dirty) fresh.save()
+        }
+    }
+}
 
 /** Coarse relative age off a take's real archive timestamp (its file mtime) — no invented "what changed" text. */
 private fun agoLabel(millis: Long, nowMillis: Long = System.currentTimeMillis()): String {
@@ -368,7 +458,7 @@ private fun agoLabel(millis: Long, nowMillis: Long = System.currentTimeMillis())
 }
 
 @Composable
-private fun TakeRowLine(row: TakeRow, scheme: Scheme, busy: Boolean, onRestore: (File, String) -> Unit) {
+private fun TakeRowLine(row: TakeRow, scheme: Scheme, busy: Boolean, onRestore: (File, String, Long) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -390,7 +480,7 @@ private fun TakeRowLine(row: TakeRow, scheme: Scheme, busy: Boolean, onRestore: 
                 Modifier
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                    .let { if (!busy) it.tapeClick(label = null) { onRestore(file, row.label) } else it }
+                    .let { if (!busy) it.tapeClick(label = null) { onRestore(file, row.label, row.lastModifiedMillis) } else it }
                     .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {

@@ -468,27 +468,18 @@ class ConventionTest {
                 "to KitShelf.kt cannot see, which is exactly why it needs an explicit, reviewed entry instead of " +
                 "being silently correct-by-luck.",
         ),
-        KitWriteAllow(
-            file = "ui/PadSheetScreen.kt",
-            text = "val opened = withContext(Dispatchers.IO) { runCatching { KitBuilderModel.open(entry.dir) }.getOrNull() }",
-            category = KitWriteCategory.KNOWN_STALE_SNAPSHOT,
-            justification = "the screen-mount open (~line 167): opens outside any lock and stores the result as " +
-                "long-lived `model` state, which every debounced metadata flush and mutate/treatment commit " +
-                "later saves (`KitWrites.mutex.withLock { m.save() }` / `{ mutate(m); m.save() }`) elsewhere in " +
-                "this same file — a model opened before the lock, saved under it. This IS a stale-snapshot " +
-                "clobber window (another screen's write between this open and that later save is silently lost " +
-                "under the last-save-wins shape KitWrites' own KDoc describes) — accepted debt awaiting the " +
-                "reopen-and-replay redesign, explicitly NOT a blessing. Do not mistake this for approved.",
-        ),
-        KitWriteAllow(
-            file = "ui/TakesBinScreen.kt",
-            text = "val opened = withContext(Dispatchers.IO) { runCatching { KitBuilderModel.open(entry.dir) }.getOrNull() }",
-            category = KitWriteCategory.KNOWN_STALE_SNAPSHOT,
-            justification = "the screen-mount open (~line 94): same shape and same debt as PadSheetScreen's " +
-                "entry above — opens outside any lock, stores the long-lived `model`, and `doRestoreTake` later " +
-                "saves that same instance inside `KitWrites.mutex.withLock { m.restoreTake(take); m.save() }`. " +
-                "Accepted debt awaiting the reopen-and-replay redesign, explicitly NOT a blessing.",
-        ),
+        // KNOWN_STALE_SNAPSHOT's two entries (ui/PadSheetScreen.kt and
+        // ui/TakesBinScreen.kt's screen-mount opens) are gone: both mounts
+        // now open under KitWrites.mutex.withLock themselves, and every
+        // save downstream of them (commitPadEditNow, applySmear,
+        // requestBack, the debounced metadata flush, and TakesBinScreen's
+        // doRestoreTake) runs against a model opened FRESH under the lock
+        // at save time via each file's own private `withFreshKit`, never
+        // the long-lived mount-time instance. See PadSheetScreen.kt's
+        // `withFreshKit`/`reapplyPendingMetadataFields` KDoc for the full
+        // reasoning. This category constant stays defined for the next
+        // debt that genuinely earns it — do not repopulate it with an
+        // entry that hasn't been reviewed as carefully as these were.
     )
 
     @Test

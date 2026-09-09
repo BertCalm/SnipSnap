@@ -164,7 +164,15 @@ fun PadSheetScreen(
     var loadFailed by remember(entry.dir) { mutableStateOf(false) }
     LaunchedEffect(entry.dir) {
         loadFailed = false
-        val opened = withContext(Dispatchers.IO) { runCatching { KitBuilderModel.open(entry.dir) }.getOrNull() }
+        // Locked, not just opened: KitScreen's pad-grid long-press has no
+        // busy gate, so this mount can race a SET KEY/EVIL TWINS/IN KEY
+        // write already in flight on `entry.dir` from KIT. Opening under
+        // the same KitWrites.mutex.withLock every writer already uses means
+        // this snapshot is always taken either fully before or fully after
+        // that write, never mid-write — see Law 5 in ConventionTest.kt.
+        val opened = withContext(Dispatchers.IO) {
+            KitWrites.mutex.withLock { runCatching { KitBuilderModel.open(entry.dir) }.getOrNull() }
+        }
         if (opened == null) loadFailed = true else model = opened
     }
 
@@ -319,11 +327,18 @@ fun PadSheetScreen(
         // var) and archiving two takes at once.
         if (busy) return@LaunchedEffect
         val m = model ?: return@LaunchedEffect
-        if (!m.dirty) return@LaunchedEffect
+        // `pendingMetadataSlots`, not `m.dirty` — see withFreshKit's KDoc:
+        // this flush no longer saves `m` itself, so `m.dirty` would only
+        // ever get reset by an unrelated unconverted write elsewhere in
+        // this file, making it an unreliable signal here. The slot set is
+        // the true "is there anything this flush owns" answer.
+        if (pendingMetadataSlots.isEmpty()) return@LaunchedEffect
+        val kitDir = m.kitDir
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         busy = true
         try {
-            withContext(Dispatchers.IO) { KitWrites.mutex.withLock { m.save() } }
-            onKitUpdated(m.kit)
+            val (fresh, saved) = withFreshKit(kitDir) { f -> reapplyPendingMetadataFields(f, stalePads) }
+            if (saved) onKitUpdated(fresh.kit)
             pendingMetadataSlots = emptySet()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -333,18 +348,48 @@ fun PadSheetScreen(
         }
     }
 
-    /** Audio-rewriting ops — TREATMENT/GHOSTS/EJECT — always earn a real save+take: the WAV already changed on disk. */
+    /**
+     * Audio-rewriting ops — GHOSTS/EJECT/UNDO — always earn a real
+     * save+take: the WAV already changed on disk. Runs [mutate] against a
+     * FRESH model opened under the lock (see [withFreshKit]'s KDoc), never
+     * the long-lived [model] — so a concurrent SET KEY/EVIL TWINS/IN KEY
+     * from KIT is never clobbered by this screen's stale mount snapshot.
+     * [model] is then swapped to that fresh instance so this screen's own
+     * next read/write starts from what's actually on disk, not from
+     * whatever [entry.dir] looked like at mount.
+     *
+     * Because [model] is swapped, [mutate] is refused — not applied to the
+     * long-lived model as a fallback, which would double-apply a
+     * structural change like `clear`/`addGhostLayers` (real file deletes
+     * and writes, not a value copy) — when [slot]'s sample has changed
+     * identity since this action was requested: another screen (GRAB, SEND
+     * TO PAD, EVIL TWINS' reroll) may have ejected or reassigned it while
+     * this screen was open. Comparing `sampleFile`, the same identity the
+     * teardown flush already checks, not just null-ness, is the point:
+     * a reassigned slot is non-null and would otherwise let this action
+     * land on somebody else's sound.
+     */
     fun commitPadEditNow(action: String, onSuccess: (() -> Unit)? = null, mutate: (KitBuilderModel) -> Unit) {
         if (busy) return
         val m = model ?: return
+        val kitDir = m.kitDir
+        val staleSampleFile = m.kit.pad(slot)?.sampleFile
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         scope.launch {
             busy = true
             try {
-                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { mutate(m); m.save() } }
-                revision++
-                onKitUpdated(m.kit)
-                refreshPadAudio(m)
-                onSuccess?.invoke()
+                var applied = false
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    if (f.kit.pad(slot)?.sampleFile == staleSampleFile) {
+                        mutate(f)
+                        applied = true
+                    }
+                }
+                model = fresh
+                pendingMetadataSlots = emptySet()
+                onKitUpdated(fresh.kit)
+                if (applied) onSuccess?.invoke() else onToast(Copy.BIN_ITEM_GONE)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 failure(action, e)
@@ -386,18 +431,37 @@ fun PadSheetScreen(
      * early-return. `save()` still runs unconditionally afterward, same
      * as the era branch: a segment tap or AMT commit is always a real
      * user action worth a rollback point, treated or not.
+     *
+     * Runs against a FRESH model, same as [commitPadEditNow] and for the
+     * same reason (see its KDoc) — [p] is a snapshot from whenever [m] was
+     * opened, so `p.velocityLayers`/`p.recipe`/[hadPriorSmear] are all
+     * re-read off the *fresh* pad instead, and the whole action is refused
+     * (not silently applied to the wrong sound) if [slot]'s `sampleFile`
+     * has changed since [p] was captured. [model] is swapped to the fresh
+     * instance on completion; this drops this screen's immediate re-
+     * audition of the treated result (`voice` is `remember(model)`-keyed,
+     * so writing to it from this coroutine after the swap would target an
+     * already-orphaned state slot, and the *next* [DisposableEffect] for
+     * the old model would then release a voice the new one never knew
+     * about) — the waveform and any later HIT still refresh correctly via
+     * `LaunchedEffect(model, slot)`, just not instantly.
      */
     fun applySmear(m: KitBuilderModel, p: KitPad, amount: Float, padName: String) {
-        val hadPriorSmear = readSmearRecipe(p.recipe) != null
+        val kitDir = m.kitDir
+        val staleSampleFile = p.sampleFile
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         scope.launch {
             busy = true
             try {
-                withContext(Dispatchers.IO) {
-                    check(p.velocityLayers.isEmpty()) {
-                        "pad $slot is velocity-layered - clear GHOSTS before smearing"
-                    }
-                    KitWrites.mutex.withLock {
-                        if (hadPriorSmear) m.untreatPad(slot)
+                var applied = false
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    val freshPad = f.kit.pad(slot)
+                    if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
+                        check(freshPad.velocityLayers.isEmpty()) {
+                            "pad $slot is velocity-layered - clear GHOSTS before smearing"
+                        }
+                        if (readSmearRecipe(freshPad.recipe) != null) f.untreatPad(slot)
                         if (amount > 0f) {
                             val recipe = JsonValue.Obj(
                                 mapOf(
@@ -405,7 +469,7 @@ fun PadSheetScreen(
                                     "amount" to JsonValue.Num(amount.toDouble()),
                                 ),
                             )
-                            m.replaceAudio(slot, recipe) { snip ->
+                            f.replaceAudio(slot, recipe) { snip ->
                                 val smeared = Smear.process(snip, amount)
                                 if (snip.channels == 2 && smeared.channels == 1) {
                                     val stereo = FloatArray(smeared.frameCount * 2)
@@ -419,14 +483,17 @@ fun PadSheetScreen(
                                 }
                             }
                         }
-                        m.save()
+                        applied = true
                     }
                 }
-                revision++
-                onKitUpdated(m.kit)
-                refreshPadAudio(m)
-                snip?.let { audition(it, m.kit.pad(slot)?.level ?: 1f) }
-                onToast(Copy.treated(PadSheet.displayLabel(PadSheet.SMEAR), padName))
+                model = fresh
+                pendingMetadataSlots = emptySet()
+                onKitUpdated(fresh.kit)
+                if (applied) {
+                    onToast(Copy.treated(PadSheet.displayLabel(PadSheet.SMEAR), padName))
+                } else {
+                    onToast(Copy.BIN_ITEM_GONE)
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // Same in-voice-copy split as the era branch: the
@@ -973,15 +1040,22 @@ fun PadSheetScreen(
      */
     fun requestBack() {
         val m = model
-        if (m == null || !m.dirty || busy) {
+        // `pendingMetadataSlots`, not `m.dirty` — same reasoning as the
+        // debounce effect above: this flush saves a fresh model, not `m`,
+        // so `m.dirty` is no longer a reliable "is there anything this
+        // flush owns" signal.
+        if (m == null || pendingMetadataSlots.isEmpty() || busy) {
             if (!busy) onBack()
             return
         }
+        val kitDir = m.kitDir
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         scope.launch {
             busy = true
             try {
-                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { m.save() } }
-                onKitUpdated(m.kit)
+                val (fresh, saved) = withFreshKit(kitDir) { f -> reapplyPendingMetadataFields(f, stalePads) }
+                if (saved) onKitUpdated(fresh.kit)
+                pendingMetadataSlots = emptySet()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 failure("SAVE", e)
@@ -1030,102 +1104,60 @@ fun PadSheetScreen(
      * `open()` on a directory that no longer exists throws in
      * `KitStore.load`, which the `catch` below turns into a toast exactly
      * like every other failed write here — closing the ghost-resurrection
-     * path for free, not just the revert.
+     * path for free, not just the revert. This exact sequence — lock,
+     * reopen fresh, reapply, save once — is [withFreshKit] below; the
+     * per-slot reapply-with-identity-check is [reapplyPendingMetadataFields].
+     * [requestBack] and the debounced save above share both, so this
+     * pattern is written once, not four times.
      *
-     * Two narrower windows are knowingly accepted rather than closed here,
-     * so neither reads later as an oversight:
+     * The guard is `targetSlots.isNotEmpty()` alone, not `m.dirty` too:
+     * `m.dirty` no longer means "this flush has unsaved work" now that
+     * saves route through a fresh model instead of `m` — the metadata
+     * paths above never call `m.save()` at all any more, and the
+     * structural paths ([commitPadEditNow], [applySmear]) swap [model] to
+     * their own fresh instance on success rather than mutating `m` in
+     * place. Only [applyTreatment]'s still-unconverted era/character/keyed
+     * branch can still leave `m` dirty directly; since that state is never
+     * read here, a mid-throw half-baked `m` from that branch can no longer
+     * leak into this flush's decision either way.
      *
-     * 1. The copy is slot-granular, not field-granular: an edited slot has
-     *    all nine of [editPadMetadata]'s fields restamped, even the ones
-     *    this burst didn't touch. If IN KEY ([KitBuilderModel.retuneTonalPads],
-     *    which moves `tuneCoarse` AND `tuneFine` together) lands inside the
-     *    flush window, the stale `tuneCoarse` is restored over its new
-     *    `tuneFine` — a tuning neither writer meant. Adding `tuneFine` to
-     *    the copy list would NOT fix that; it would deliberately clobber IN
-     *    KEY instead. The real fix is a per-slot baseline snapshot taken
-     *    when the slot first goes pending, copying only fields that
-     *    actually differ. Not worth it yet: this window is far narrower
-     *    than the whole-file clobber it replaced.
-     * 2. The guard is `dirty && targetSlots.isNotEmpty()`, where it used to
-     *    be `dirty` alone. Two paths (SMEAR's untreat-then-replace, the era
-     *    branch's unEra-then-era) can leave the model dirty with no pending
-     *    metadata slot if they throw mid-way, and those now flush nothing.
-     *    That is the better failure: the op already failed and already
-     *    toasted, its in-memory state is itself half-baked, and persisting
-     *    a stale whole-file snapshot of it was never clearly better than
-     *    persisting nothing.
+     * One narrower window is knowingly accepted rather than closed here,
+     * so it doesn't read later as an oversight: the copy is slot-granular,
+     * not field-granular — an edited slot has all nine of
+     * [editPadMetadata]'s fields restamped, even the ones this burst
+     * didn't touch. If IN KEY ([KitBuilderModel.retuneTonalPads], which
+     * moves `tuneCoarse` AND `tuneFine` together) lands inside the flush
+     * window, the stale `tuneCoarse` is restored over its new `tuneFine` —
+     * a tuning neither writer meant. Adding `tuneFine` to the copy list
+     * would NOT fix that; it would deliberately clobber IN KEY instead.
+     * The real fix is a per-slot baseline snapshot taken when the slot
+     * first goes pending, copying only fields that actually differ. Not
+     * worth it yet: this window is far narrower than the whole-file
+     * clobber it replaced.
      */
     DisposableEffect(model) {
         onDispose {
             val m = model
             val targetSlots = pendingMetadataSlots
-            if (m != null && m.dirty && targetSlots.isNotEmpty()) {
+            if (m != null && targetSlots.isNotEmpty()) {
                 // Snapshot now, synchronously — `m` can't change further
                 // once this composable has left composition, so this is
                 // the exact in-memory state the debounce would have saved.
                 // More than one slot here means the user visited several
                 // pads inside one debounce window; every one of them gets
                 // applied to the same freshly-opened model below, under
-                // one lock, before the one save.
+                // one lock, before the one save. (`targetSlots.isNotEmpty()`
+                // alone is the right gate now, not `m.dirty` too —
+                // `reapplyPendingMetadataFields` below already no-ops when
+                // there's nothing to apply, and `m.dirty` can no longer be
+                // read as "this flush has unsaved work": requestBack and
+                // the debounce above never call `m.save()` any more either.)
                 val stalePads = targetSlots.associateWith { m.kit.pad(it) }
                 val kitDir = m.kitDir
                 appScope.launch {
                     try {
-                        val updatedKit = withContext(Dispatchers.IO) {
-                            KitWrites.mutex.withLock {
-                                val fresh = KitBuilderModel.open(kitDir)
-                                var appliedAny = false
-                                for ((targetSlot, stalePad) in stalePads) {
-                                    val freshPad = fresh.kit.pad(targetSlot)
-                                    if (stalePad == null || freshPad == null ||
-                                        freshPad.sampleFile != stalePad.sampleFile
-                                    ) {
-                                        // The pad this debounced edit
-                                        // belonged to is gone from disk, or
-                                        // the slot now holds a DIFFERENT
-                                        // sound — ejected, reassigned (GRAB,
-                                        // SEND TO PAD), moved, or rerolled
-                                        // (EVIL TWINS clears bank B and
-                                        // re-adds fresh twins under new
-                                        // stems) by another screen while
-                                        // this flush was pending. Comparing
-                                        // sampleFile, not just null-ness, is
-                                        // the whole point: a reassigned slot
-                                        // is non-null, and stamping this
-                                        // pad's LEVEL/PAN/TUNE/SHAPE onto
-                                        // somebody else's sample is the same
-                                        // class of silent corruption this
-                                        // flush was rewritten to stop.
-                                        // Conjuring the old pad back would
-                                        // be its own phantom-pad bug, so
-                                        // this one edit is dropped — the
-                                        // rest still apply.
-                                        continue
-                                    }
-                                    fresh.update(targetSlot) { p ->
-                                        p.copy(
-                                            level = stalePad.level,
-                                            pan = stalePad.pan,
-                                            tuneCoarse = stalePad.tuneCoarse,
-                                            oneShot = stalePad.oneShot,
-                                            muteGroup = stalePad.muteGroup,
-                                            attack = stalePad.attack,
-                                            decay = stalePad.decay,
-                                            cutoff = stalePad.cutoff,
-                                            resonance = stalePad.resonance,
-                                        )
-                                    }
-                                    appliedAny = true
-                                }
-                                if (appliedAny) {
-                                    fresh.save()
-                                    fresh.kit
-                                } else {
-                                    null
-                                }
-                            }
-                        }
-                        updatedKit?.let(onKitUpdated)
+                        val (fresh, saved) = withFreshKit(kitDir) { f -> reapplyPendingMetadataFields(f, stalePads) }
+                        if (saved) onKitUpdated(fresh.kit)
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         failure("SAVE", e)
@@ -1523,6 +1555,84 @@ fun PadSheetScreen(
                 scheme,
                 enabled = nextSlot != null,
                 onClick = { nextSlot?.let(onSlotChange) },
+            )
+        }
+    }
+}
+
+// ---------- fresh-kit writes (Law 5) ----------
+
+/**
+ * The one correct shape for a kit mutation issued by a screen whose own
+ * [KitBuilderModel] was opened earlier, outside any lock, and is therefore
+ * a stale snapshot relative to whatever else may have saved since (see
+ * `ConventionTest`'s Law 5 KDoc — this is the fix for the
+ * `KNOWN_STALE_SNAPSHOT` category, not a new pattern). Locks, opens a
+ * FRESH model on [kitDir] — never a long-lived one held by the caller —
+ * runs [block] against it, and saves once, but ONLY if [block] actually
+ * left the fresh model [KitBuilderModel.dirty]. That last part is what
+ * lets a caller's [block] implement "my target vanished/was reassigned
+ * underneath me" by simply mutating nothing: this function reads that as
+ * "nothing to save" on its own, rather than every call site having to
+ * report it a second way.
+ *
+ * Returns the fresh model (so a caller that needs to keep using it — e.g.
+ * to adopt it as the screen's new long-lived model — always gets one back)
+ * paired with whether a save actually happened.
+ */
+private suspend fun withFreshKit(kitDir: File, block: (KitBuilderModel) -> Unit): Pair<KitBuilderModel, Boolean> {
+    return withContext(Dispatchers.IO) {
+        KitWrites.mutex.withLock {
+            val fresh = KitBuilderModel.open(kitDir)
+            block(fresh)
+            val saved = fresh.dirty
+            if (saved) fresh.save()
+            fresh to saved
+        }
+    }
+}
+
+/**
+ * The debounced metadata edit's own reapply, run inside [withFreshKit]'s
+ * [block] by every metadata-flushing site in this file (the teardown
+ * `DisposableEffect`, [requestBack], the debounce `LaunchedEffect`, and —
+ * before their own structural mutation — [commitPadEditNow] and
+ * [applySmear], which would otherwise lose it when they swap `model`).
+ * One copy instead of five hand-written ones is the whole point: see this
+ * file's own comment, and `ConventionTest`'s KDoc, on how a pattern
+ * applied correctly at some sites and not at a sibling is exactly how this
+ * codebase's bugs have shipped before.
+ *
+ * For every ([targetSlot], [stalePad]) pair, restamps [stalePad]'s nine
+ * `editPadMetadata` fields onto [fresh]'s CURRENT pad at that slot — but
+ * only when that pad's `sampleFile` still matches [stalePad]'s. A pad
+ * that's vanished from disk, or whose slot now holds a DIFFERENT sound —
+ * ejected, reassigned (GRAB, SEND TO PAD), moved, or rerolled (EVIL TWINS
+ * clears bank B and re-adds fresh twins under new stems) by another screen
+ * while this edit was pending — is skipped rather than stamped: comparing
+ * `sampleFile`, not just null-ness, is the point, since a reassigned slot
+ * is non-null and stamping this pad's LEVEL/PAN/TUNE/SHAPE onto somebody
+ * else's sample would be the same class of silent corruption one level
+ * down. Conjuring the old pad back would be its own phantom-pad bug, so
+ * that one edit is dropped — the rest still apply.
+ */
+private fun reapplyPendingMetadataFields(fresh: KitBuilderModel, stalePads: Map<Int, KitPad?>) {
+    for ((targetSlot, stalePad) in stalePads) {
+        val freshPad = fresh.kit.pad(targetSlot)
+        if (stalePad == null || freshPad == null || freshPad.sampleFile != stalePad.sampleFile) {
+            continue
+        }
+        fresh.update(targetSlot) { p ->
+            p.copy(
+                level = stalePad.level,
+                pan = stalePad.pan,
+                tuneCoarse = stalePad.tuneCoarse,
+                oneShot = stalePad.oneShot,
+                muteGroup = stalePad.muteGroup,
+                attack = stalePad.attack,
+                decay = stalePad.decay,
+                cutoff = stalePad.cutoff,
+                resonance = stalePad.resonance,
             )
         }
     }
