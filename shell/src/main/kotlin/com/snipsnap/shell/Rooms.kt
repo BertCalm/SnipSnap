@@ -221,6 +221,33 @@ object Rooms {
         return gone
     }
 
+    /**
+     * EMPTY THE BIN NOW: every forgotten room asleep in the bin gone now,
+     * not just what has aged past [BIN_DAYS] — the same early-sweep
+     * relation [KitShelf.emptyKitBin]/[SnipStore.emptyBin] each have to
+     * their own timed sweep. Deliberately NOT `sweepBin(keepDays = 0)`:
+     * that still gates on `nowMillis - b.binnedAt >= 0`, which is false
+     * (leaving a row behind under "NO TAKEBACKS") whenever [binned]'s own
+     * mtime fallback hands back a future timestamp (a hand-placed or
+     * restored file with no sidecar, [binned]'s own `wav.lastModified()`
+     * fallback) or the device clock has been set backward since binning —
+     * both real, both would leave a row on screen the button just claimed
+     * was gone. This walks every [binned] entry unconditionally instead,
+     * the same unconditional-delete shape [KitShelf.emptyKitBin]
+     * (`children.count { it.delete() }`) and [SnipStore.emptyBin] both
+     * already use. Returns how many rooms went; 0 without throwing when
+     * the bin is empty or was never created.
+     */
+    fun emptyBin(shelfRoot: File): Int {
+        var gone = 0
+        for (b in binned(shelfRoot)) {
+            b.room.file.delete()
+            sidecar(b.room.file).delete()
+            gone++
+        }
+        return gone
+    }
+
     /** [from] and its sidecar to [to] and its sidecar, together. */
     private fun moveWithSidecar(from: File, to: File) {
         move(from, to)

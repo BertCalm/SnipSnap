@@ -92,6 +92,9 @@ class KitShelf(val root: File) {
     /** RESTORE: a binned room back onto the shelf under a name nothing there holds. */
     fun restoreRoom(binned: Rooms.Binned): Rooms.Room = Rooms.unforget(root, binned)
 
+    /** EMPTY THE BIN NOW: every forgotten room in the rooms' bin gone now — [Rooms.emptyBin]'s own promise, [emptyKitBin]'s own shape applied to rooms. */
+    fun emptyRoomsBin(): Int = Rooms.emptyBin(root)
+
     /**
      * Every readable kit on the shelf. A folder whose `kit.json` is broken
      * is skipped, not fatal — one damaged kit must never blank the shelf.

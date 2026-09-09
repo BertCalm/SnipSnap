@@ -1117,6 +1117,33 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * EMPTY THE BIN NOW on the rooms bin: every forgotten room gone for
+     * good, closing the gap the other three bins already closed
+     * (`emptyKitBin`, `KitBuilderModel`'s own EMPTY THE BIN NOW, and
+     * `SnipStore.emptyBin`) — `forgetRoom`/`restoreRoom`'s own busy-lock and
+     * try/catch/finally shape, verbatim. The armed two-tap confirm itself
+     * lives in `KitsScreen.kt` (`TakesBinScreen.kt`'s own `EMPTY_BIN_ARM_MS`
+     * pattern) — this only runs once that second tap has already landed.
+     */
+    fun emptyRoomsBin() {
+        if (busy != null) return
+        busy = Copy.ROOM_BIN_EMPTY_BUSY
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) { shelf.emptyRoomsBin() }
+                roomsRevision++
+                toast = Copy.roomBinEmptied
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                toast = "EMPTY BIN FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
+            }
+        }
+    }
+
+    /**
      * DELETE ▸ BIN (Task 4) on a held kit row, confirmed: into the 30-day
      * bin, `KitShelf.deleteKit`'s own promise — the busy lock and
      * try/catch/finally shape are `forgetRoom`'s above, verbatim. The move
@@ -1466,6 +1493,7 @@ fun App(shelf: KitShelf) {
                                 onForgetRoom = ::forgetRoom,
                                 binnedRooms = binnedRooms,
                                 onRestoreRoom = ::restoreRoom,
+                                onEmptyRoomsBin = ::emptyRoomsBin,
                                 onDeleteKit = ::deleteKit,
                                 onRenameKit = ::renameKit,
                                 binnedKitsCount = binnedKitsCount,

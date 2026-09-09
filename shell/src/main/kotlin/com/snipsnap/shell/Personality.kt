@@ -362,6 +362,9 @@ object Copy {
     fun roomRestored(name: String): String = "$name IS BACK ON THE SHELF. AS IF NOTHING HAPPENED."
     const val ROOM_FORGET_BUSY = "FORGETTING…"
     const val ROOM_RESTORE_BUSY = "RESTORING…"
+    const val ROOM_BIN_EMPTY_BUSY = "EMPTYING…"
+    /** EMPTY THE BIN NOW on the rooms bin, confirmed — `kitBinEmptied`/`snipBinEmptied`'s own no-count reasoning applies here too: the bin may hold a stray file the list never showed. */
+    val roomBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
 
     // ---- KIT: delete (restorable from DELETED KITS for 30 days) + rename from the shelf (Task 4) ----
     /**
