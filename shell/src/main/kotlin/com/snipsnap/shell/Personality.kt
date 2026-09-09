@@ -311,6 +311,11 @@ object Copy {
     /** The needle-roll only draws five lanes; a note on any other pad still plays and still exports — this says so. */
     fun offLane(n: Int): String = "+$n OFF-LANE — HEARD AND EXPORTED, NOT DRAWN"
 
+    // ---- ARRANGE ----
+    const val ARRANGE_NEEDS_GROOVE = "NO GROOVE TO ARRANGE. CHOP WITH A GROOVE, OR STEAL ONE, FIRST."
+    const val ARRANGE_MIXING = "MIXING…"
+    const val ARRANGE_REROLLED = "REROLLED. SAME STRUCTURE, A FRESH TAKE ON THE VARIATION."
+
     // ---- PAD SHEET ----
     const val GHOSTS_ON = "GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
     fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
