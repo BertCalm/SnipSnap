@@ -341,6 +341,19 @@ object Copy {
     /** A FILE: the picked file cannot be a parent; [reason] the decoder's or the holder's own words. */
     fun fileRefused(reason: String): String = "NOT A PARENT: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
 
+    // ---- TAPE SPLICE: two takes of one pad, joined at one chosen frame ----
+    const val SPLICE_NEEDS_HISTORY =
+        "SPLICE WANTS AT LEAST ONE PRIOR TAKE. RE-TRIM OR TREAT THIS PAD FIRST - ITS OLD AUDIO WAITS IN THE BIN."
+    const val SPLICE_KIT_GONE = "THIS PAD ISN'T THERE ANY MORE."
+    const val SPLICE_TAKE_UNREADABLE = "ONE OF THOSE TAKES WON'T READ ANY MORE. PICK ANOTHER PAIR."
+    /** COMMIT: [crossfaded] is honest about whether the raw cut needed a declick overlap. */
+    fun spliced(crossfaded: Boolean): String =
+        if (crossfaded) {
+            "SPLICED. THE RAW SEAM WOULD HAVE CLICKED, SO A FEW MS OF TAPE OVERLAP WENT IN."
+        } else {
+            "SPLICED CLEAN. NO OVERLAP NEEDED."
+        }
+
     // ---- KIT: textures ----
     const val SCULPTED = "SCULPTED. THE HIT IS WEATHER NOW. NEW TAPE ON THE SHELF."
     const val STRETCHED = "STRETCHED. A BLINK BECAME A LANDSCAPE. NEW TAPE ON THE SHELF."
