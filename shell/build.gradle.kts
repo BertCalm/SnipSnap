@@ -37,4 +37,21 @@ tasks.test {
     testLogging {
         events("passed", "failed", "skipped")
     }
+
+    // ConventionTest's source-scanning laws (BackHandler registration, the
+    // bounded-decode rule, the kit-write lock rule) read :app's Kotlin
+    // sources as DATA rather than importing them, so Gradle has no way to
+    // know this test depends on them. Without this declaration the test is
+    // UP-TO-DATE after an :app-only change — which is precisely the change
+    // it exists to police. It would go green having never re-run, and a
+    // guardrail that doesn't re-run is worse than none, because the green
+    // is trusted.
+    //
+    // Declaring the directory as an input is not a new dependency or a new
+    // plugin; it just tells Gradle the truth about what this task reads.
+    // `withPropertyName` keeps the build cache key stable, and RELATIVE
+    // path sensitivity means moving the checkout doesn't invalidate it.
+    inputs.dir(layout.projectDirectory.dir("../app/src/main/kotlin"))
+        .withPropertyName("appSourcesScannedByConventionTest")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }
