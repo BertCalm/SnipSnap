@@ -21,7 +21,7 @@ L ≈ a week-plus of sessions).
 | Acceptance artifacts (`testkit/`) | done — 14 downloadable checks, from the diag kit to the one-file Session project |
 | CLI (`:cli`) | done, tested — `snipsnap.jar`: chop → classify → place → export from any desktop; the classifier's real-audio calibration tool (`docs/CLI.md`) |
 | View-models (`:shell`) | done, tested — scheme tables, peaks pyramid, tape-deck transport physics, voice allocation, chop review, kit builder, export wizard, personality system; `:app` binds Compose to these |
-| **The Android app** | **M0–M4 built; M5 all but the card picker** — capture (mic, inside, share-in), the tape deck, the kit and chop flow, PLAY/KEYS/SURFACE/GROOVE/SPLIT on the native engine, SYNTH, and the export wizard over `:shell`'s tested models. What is *unproven* is every milestone's exit test: each needs a phone in a hand and none has been run — `docs/BENCH.md` §A is that list |
+| **The Android app** | **M0–M5 built** — capture (mic, inside, share-in), the tape deck, the kit and chop flow, PLAY/KEYS/SURFACE/GROOVE/SPLIT on the native engine, SYNTH, and the export wizard over `:shell`'s tested models, card write included. What is *unproven* is every milestone's exit test: each needs a phone in a hand and none has been run — `docs/BENCH.md` §A is that list |
 | Hardware verification | drums passed; keys, instruments, `.xpn`, tile, Session pending (user) |
 
 The concept doc's "deliberately v2" list (velocity layers, expansions,
@@ -162,7 +162,7 @@ screen LCD 4×4, landscape 8×2, BPM readout. Keys layouts (CHROMATIC/
 SCALE via `Scales`) ride the same grid. **Exit test:** finger drumming
 feels tight enough that you'd play it, on a mid-range phone.
 
-### M5 — Synth + export wizard · M — built bar the card picker; exit test unrun
+### M5 — Synth + export wizard · M — built; exit test unrun
 
 - SYNTH screen: engine panels straight from the prototype (voice tabs,
   macro sliders, scope, SCRAMBLE, AUDITION, RENDER TO PAD) — the engines,
@@ -170,12 +170,12 @@ feels tight enough that you'd play it, on a mid-range phone.
 - Export wizard: `Preflight` as the checklist UI ✓, format cycler over the
   drivers that already exist ✓, dub progress ✓, exact written path on
   success ✓ — all of it over `ExportWizardModel`'s tested stage machine.
-  **The one piece not built:** SAF `ACTION_OPEN_DOCUMENT_TREE` to the
-  card. The wizard writes to `getExternalFilesDir("exports")` instead —
-  no permission needed and reachable from the Files app, but it means the
-  last step of the exit test is a manual copy rather than a write straight
-  to the card. `ExportScreen`'s own KDoc has said so since it was written;
-  this is the plan catching up. It is the only open code row in the app.
+  The wizard always writes to `getExternalFilesDir("exports")` first (no
+  permission needed, reachable from the Files app), then — when the user
+  has picked a card — copies the export onto it via SAF
+  `ACTION_OPEN_DOCUMENT_TREE`: `ExportScreen`'s `CardRow` (pick/forget,
+  persistable grant) and `CardWriter`'s `DocumentsContract` copy (built
+  2026-09-08, `581ba8f`). No open code row remains in the app.
 
 **Exit test — the product's definition of done:** hear it → snip it →
 trim it → pad it → play it → write the card → it plays on the Live III.
@@ -186,7 +186,7 @@ trim it → pad it → play it → write the card → it plays on the Live III.
 |---|---|
 | Apps opting out of capture | designed for: silence detection + fallback path are specced, `Loudness` is written |
 | Latency on cheap phones | isolated to M4; Oboe is the known cure; everything else tolerates jitter |
-| SAF friction on SD cards | isolated to M5; zip/share fallback specced |
+| SAF friction on SD cards | `CardWriter` refuses in words rather than half-writing (a folder it can't create stops the copy) and treats a delete-before-create as best effort, not a failure; the phone-storage write and SHARE (single-file formats) still stand as fallbacks |
 | Play Store policy | concept doc rules stand: never market against a named service |
 | Format drift | retired — corpus-guarded writers, hardware-verified, golden tests |
 

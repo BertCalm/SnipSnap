@@ -110,8 +110,12 @@ class ExportSession(val dir: File, val kit: Kit, val model: ExportWizardModel) {
  * cycler and the dub write all live in `:shell`/`:kit`; this file renders
  * the checklist, forwards taps, paces the dub-progress animation on its
  * own clock (the model exposes labels, not a live byte count — see the
- * model's own KDoc), and writes to `getExternalFilesDir("exports")` — no
- * permissions needed. The completion stage always says where that landed
+ * model's own KDoc), and always writes to `getExternalFilesDir("exports")`
+ * first — no permission needed. When the user has picked a card (the
+ * `CardRow` below, SAF `ACTION_OPEN_DOCUMENT_TREE`, a persistable grant),
+ * `startWrite` also copies the outcome onto it through [CardWriter] —
+ * `DocumentsContract` calls, not a second write of the export itself. The
+ * completion stage always says where the phone-side copy landed
  * (`Copy.EXPORT_SAVED_TO` plus the raw path — DoneContent below), and,
  * when the write produced one self-contained file (XPN or MIDI — see
  * [exportShareMime]'s KDoc), offers SHARE through `ShareOut`, the same
