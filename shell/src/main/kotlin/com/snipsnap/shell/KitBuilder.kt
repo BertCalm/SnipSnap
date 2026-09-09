@@ -761,10 +761,21 @@ class KitBuilderModel private constructor(
         return old.size
     }
 
+    /**
+     * EMPTY THE BIN NOW: everything under [BIN_DIR] gone, not just what
+     * [binContents] can parse.
+     *
+     * [binContents] keeps only names matching [BIN_NAME]; anything else in
+     * the folder — a torn write, an aborted move, a stray file — is
+     * invisible to it, and [purgeBin] filters the same way, so emptying by
+     * that listing would strand exactly those entries permanently while the
+     * button claimed NO TAKEBACKS. Emptying a bin has to mean the folder is
+     * empty afterwards. [Rooms.emptyBin], [SnipStore.emptyBin] and
+     * [KitShelf.emptyKitBin] all walk their directory for the same reason.
+     */
     fun emptyBin(): Int {
-        val all = binContents()
-        all.forEach { it.file.delete() }
-        return all.size
+        val children = File(kitDir, BIN_DIR).listFiles() ?: return 0
+        return children.count { it.delete() }
     }
 
     /** The kit-name easter egg, for the rename dialog to surface. */

@@ -239,13 +239,17 @@ object Rooms {
      * the bin is empty or was never created.
      */
     fun emptyBin(shelfRoot: File): Int {
-        var gone = 0
-        for (b in binned(shelfRoot)) {
-            b.room.file.delete()
-            sidecar(b.room.file).delete()
-            gone++
-        }
-        return gone
+        // Walks the DIRECTORY, not [binned]'s parsed listing. [binned] drops
+        // anything that isn't a readable WAV — a non-wav file, one that fails
+        // [isWav], one whose [read] throws — so emptying by that list would
+        // leave exactly the entries nobody can see behind, forever: the sweep
+        // filters the same way, so nothing else would ever collect them. A
+        // torn write or an aborted move is enough to produce one, and the
+        // button says NO TAKEBACKS. Emptying a bin means the directory is
+        // empty afterwards, not that everything legible is gone.
+        val bin = binDir(shelfRoot)
+        val children = bin.listFiles() ?: return 0
+        return children.count { it.delete() }
     }
 
     /** [from] and its sidecar to [to] and its sidecar, together. */
