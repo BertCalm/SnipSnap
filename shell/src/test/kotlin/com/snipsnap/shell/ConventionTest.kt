@@ -297,10 +297,10 @@ class ConventionTest {
         val sites = scanWavReaderReadSites()
         assertTrue(
             sites.isNotEmpty(),
-            "found zero WavReader.read( sites under :app (recon counted 1) — either every site was genuinely " +
-                "fixed to use readCapped (great: then also delete the now-stale allowlist entries below, since a " +
-                "stale allowlist entry silently protects nothing) or this scan is broken; a scan finding nothing " +
-                "would otherwise pass by accident, which is worse than no test at all.",
+            "found zero WavReader.read( sites under :app (recon counted 1, MediaDecode.kt's ByteArray overload, " +
+                "which can never use readCapped — see justifiedReads) — if that site's line genuinely changed " +
+                "shape, re-review and update justifiedReads rather than assuming this is progress; a scan " +
+                "finding nothing would otherwise pass by accident, which is worse than no test at all.",
         )
 
         val allowlist = justifiedReads
@@ -341,6 +341,17 @@ class ConventionTest {
      * (`KitWrites`' own KDoc; the bug class fcf37f9/f011778 closed for
      * SPLIT/SURFACE/EXPORT). A model opened only to READ (never `.save()`d,
      * never mutated) does not need the lock at all.
+     *
+     * What [inLock] actually proves is narrower than the invariant above:
+     * it's true when the `open(` call's own index falls inside *some*
+     * `KitWrites.mutex.withLock { ... }` span in the same file — it does
+     * NOT prove the matching mutate+save live in that same span. Two
+     * separate `withLock { open() }` / `withLock { mutate(); save() }`
+     * blocks would each read as guarded here while still racing each
+     * other. Every guarded site in this codebase today keeps open,
+     * mutate, and save together in one block (verified by reading each
+     * one, not assumed from this flag) — but this scan cannot enforce
+     * that shape, only the sites currently on this allowlist.
      */
     private data class KitWriteSite(val file: String, val text: String, val inLock: Boolean)
 
@@ -351,6 +362,18 @@ class ConventionTest {
         while (true) {
             val lockIdx = text.indexOf("KitWrites.mutex.withLock", searchFrom)
             if (lockIdx < 0) break
+            val lockLineStart = text.lastIndexOf('\n', lockIdx) + 1
+            val lockLineEnd = text.indexOf('\n', lockIdx).let { if (it < 0) text.length else it }
+            if (isCommentLine(text.substring(lockLineStart, lockLineEnd))) {
+                // A `withLock` mentioned only in a comment (e.g. "TODO: wrap
+                // this in KitWrites.mutex.withLock {") must not mint a real
+                // span — matchingBrace would run forward to the next
+                // unrelated `}` and silently bless whatever unguarded opens
+                // happen to fall inside it. That false-pass is exactly what
+                // this file's own KDoc calls worse than no test at all.
+                searchFrom = lockIdx + 1
+                continue
+            }
             val braceStart = text.indexOf('{', lockIdx + "KitWrites.mutex.withLock".length)
             if (braceStart < 0) {
                 fail(
