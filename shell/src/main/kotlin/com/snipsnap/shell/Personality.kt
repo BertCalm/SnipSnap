@@ -416,6 +416,12 @@ object Copy {
     /** EMPTY THE BIN NOW on DELETED SNIPS, confirmed — `kitBinEmptied`'s own no-count reasoning applies here too. */
     val snipBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
 
+    // ---- SHELF SORT (name-and-find followups): the KitsScreen header toggle ----
+    /** The shelf's own header chip while sorted `KitShelf.ShelfSort.RECENT` — tapping switches to [SHELF_SORT_ALPHA]. */
+    const val SHELF_SORT_RECENT = "SORT ▸ RECENT"
+    /** The shelf's own header chip while sorted `KitShelf.ShelfSort.ALPHA` — tapping switches back to [SHELF_SORT_RECENT]. */
+    const val SHELF_SORT_ALPHA = "SORT ▸ A–Z"
+
     // ---- PAD SHEET: pad from anything ----
     const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."
     const val PAD_TOO_SHORT = "TOO SHORT TO STRETCH INTO A PAD. FEED IT MORE THAN A BLINK."

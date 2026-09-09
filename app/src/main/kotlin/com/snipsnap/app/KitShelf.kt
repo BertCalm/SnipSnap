@@ -95,15 +95,80 @@ class KitShelf(val root: File) {
     /** EMPTY THE BIN NOW: every forgotten room in the rooms' bin gone now — [Rooms.emptyBin]'s own promise, [emptyKitBin]'s own shape applied to rooms. */
     fun emptyRoomsBin(): Int = Rooms.emptyBin(root)
 
+    /** How [list] orders the shelf. */
+    enum class ShelfSort {
+        /**
+         * Most-recently-edited `kit.json` first (the shelf's own default,
+         * name-and-find followups) — "what was I just working on" beats an
+         * alphabetical wall that carries no memory of the user at all, the
+         * same reasoning [SnipStore.list]'s own newest-first order already
+         * follows for snips.
+         */
+        RECENT,
+
+        /** A-Z by kit name — [KitStore.list]'s own base order, unchanged. */
+        ALPHA,
+    }
+
     /**
-     * Every readable kit on the shelf. A folder whose `kit.json` is broken
-     * is skipped, not fatal — one damaged kit must never blank the shelf.
+     * Every readable kit on the shelf, ordered by [sort]. A folder whose
+     * `kit.json` is broken is skipped, not fatal — one damaged kit must
+     * never blank the shelf.
+     *
+     * [ShelfSort.RECENT] sorts by `kit.json`'s OWN file `lastModified()`,
+     * deliberately not the kit directory's: [KitStore.save] is the ONLY
+     * thing that ever rewrites `kit.json`, and it's an unconditional
+     * whole-file overwrite every time it runs (`KitBuilderModel.save()`
+     * calls it regardless of `dirty`) — so its mtime is a precise "this
+     * exact write happened" signal, not something a filesystem's own
+     * directory-mtime semantics have to be trusted to propagate.
+     *
+     * "Recent" means *edited*, not merely *opened*: every `.save()` call
+     * site in `:app`/`:shell` was read (setKey/evilTwins/inKey in this
+     * file, PAD SHEET's treat/mutate/drift/outside/desample paths, pad
+     * capture, SPLIT/SURFACE/SYNTH, TAKES + BIN's own `doRestoreTake`,
+     * TextureKits/Breed/Crate/StarterKits) and every one sits behind a
+     * genuine user mutation or kit creation — none fires from merely
+     * opening a kit or playing a pad. `KitBuilderModel.open` itself never
+     * calls `.save()`.
+     *
+     * It also survives the launch sweep untouched, which a directory
+     * mtime might not have: `App`'s launch effect runs four sweeps beside
+     * `shelf.list()` — `shelf.sweepRooms()`/`shelf.sweepDeletedKits()`/
+     * `SnipStore.sweepBin()` each touch only `Rooms/`, the shelf's own
+     * top-level `.bin/`, and `snips/.bin/` respectively, none of them a
+     * live kit's own directory; `sweepOrphanedStorage` only touches
+     * `.landing-*` staging dirs that sit BESIDE kit folders (never inside
+     * one) and `cacheDir` subfolders. The one sweep that does open every
+     * kit, `KitBuilderModel.open(kitDir).purgeBin()`, only deletes stale
+     * files under `kitDir/.bin/` — a SUBdirectory, which bumps `.bin`'s
+     * own mtime, never `kitDir`'s or `kit.json`'s — and never calls
+     * `.save()` at all (see `ConventionTest`'s own `READ_ONLY` entry for
+     * that exact call site). Without that guarantee, recency would
+     * scramble on every cold start as the sweep silently re-touched every
+     * kit it happened to purge.
+     *
+     * No second full shelf read either: this is one cheap `lastModified()`
+     * stat per kit alongside the [KitStore.load] parse [list] already does
+     * for each one, not a second pass over the shelf. Ties (two kits saved
+     * in the same millisecond — CHOP ALL, a multi-kit backup import) fall
+     * back to `KitStore.list`'s own A-Z order: `sortedByDescending` is a
+     * stable sort, so entries that compare equal keep their incoming
+     * (already-alphabetical) relative order rather than shuffling.
      */
-    fun list(): List<Entry> = KitStore.list(root).mapNotNull { dir ->
-        try {
-            Entry(dir, KitStore.load(dir))
-        } catch (_: Exception) {
-            null
+    fun list(sort: ShelfSort = ShelfSort.RECENT): List<Entry> {
+        val entries = KitStore.list(root).mapNotNull { dir ->
+            try {
+                Entry(dir, KitStore.load(dir))
+            } catch (_: Exception) {
+                null
+            }
+        }
+        return when (sort) {
+            // KitStore.list's own base order is already A-Z by folder name
+            // — nothing left to do.
+            ShelfSort.ALPHA -> entries
+            ShelfSort.RECENT -> entries.sortedByDescending { File(it.dir, KitStore.FILE_NAME).lastModified() }
         }
     }
 

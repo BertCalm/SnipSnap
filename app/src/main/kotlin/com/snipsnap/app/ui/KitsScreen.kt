@@ -137,6 +137,16 @@ fun KitsScreen(
      */
     binnedKitsCount: Int = 0,
     onDeletedKits: () -> Unit = {},
+    /**
+     * SHELF SORT (name-and-find followups): [KitShelf.ShelfSort] the shelf
+     * is currently ordered by — `App`'s own [KitShelf.ShelfSort.RECENT]
+     * default, persisted like the colour scheme. [onToggleSort] flips
+     * between [KitShelf.ShelfSort.RECENT] and [KitShelf.ShelfSort.ALPHA];
+     * `App` owns both the persistence and the re-fetch, this screen only
+     * shows the current state and asks for the flip.
+     */
+    shelfSort: KitShelf.ShelfSort = KitShelf.ShelfSort.RECENT,
+    onToggleSort: () -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     var menuOpen by remember { mutableStateOf(false) }
@@ -194,6 +204,37 @@ fun KitsScreen(
                     TapeType.lcdHeader,
                     scheme.lcdInk.tape,
                 )
+                // SORT toggle (name-and-find followups): RECENT (the
+                // default — most-recently-edited kit.json first, so a
+                // returning user's own last kit is right where they left
+                // it) vs A-Z. Hidden during SNIPS → PAD / BREED's own pick
+                // mode (the header's line is a hint there, not "THE
+                // SHELF") and with fewer than two kits, where an order has
+                // nothing to say.
+                if (!assigningSnip && breedingFrom == null && kits.size > 1) {
+                    Box(
+                        Modifier
+                            .align(Alignment.CenterEnd)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            // null, not an explicit label: the descendant
+                            // TapeText below already says which mode is
+                            // active ("SORT ▸ RECENT"/"SORT ▸ A–Z") — an
+                            // explicit label here would REPLACE that merged
+                            // text for TalkBack (Chrome.kt's own tapeClick
+                            // KDoc), leaving a screen-reader user unable to
+                            // hear which state they're toggling out of.
+                            .tapeClick(label = null, onClick = onToggleSort)
+                            .padding(horizontal = 4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(
+                            if (shelfSort == KitShelf.ShelfSort.RECENT) Copy.SHELF_SORT_RECENT else Copy.SHELF_SORT_ALPHA,
+                            TapeType.pixelSmall,
+                            scheme.amber.tape,
+                            maxLines = 1,
+                        )
+                    }
+                }
             }
             // The hint below presupposes a kit row to tap — with none on
             // the shelf yet, the empty-state panel just below carries the

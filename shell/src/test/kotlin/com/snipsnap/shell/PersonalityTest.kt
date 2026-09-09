@@ -137,6 +137,7 @@ class PersonalityTest {
         "CHIP_NOT_SURE", "CHIP_OVERRIDDEN",
         "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_NONE", "CARD_PICKED",
         "KONAMI_UNLOCK",
+        "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
     )
 
     /**

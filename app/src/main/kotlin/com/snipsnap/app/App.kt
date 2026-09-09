@@ -104,6 +104,8 @@ internal const val PREFS = "tapeos"
 private const val PREF_SCHEME = "scheme"
 private const val PREF_PERSONALITY = "personality"
 private const val PREF_TEACH = "teach"
+/** The shelf's sort toggle (name-and-find followups) — [KitShelf.ShelfSort], remembered like the scheme. */
+private const val PREF_SHELF_SORT = "shelf_sort"
 /** The Bubble's overlay-permission offer (Task 5) — asked once, ever. */
 private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
 
@@ -173,6 +175,18 @@ fun App(shelf: KitShelf) {
         )
     }
     val scheme = Schemes[schemeId]
+
+    // SHELF SORT (name-and-find followups): RECENT by default — persisted
+    // like scheme/personality above. `setShelfSort` both writes the pref
+    // and re-fetches `kits` under the new order immediately, the same
+    // "flip it, see it" shape STARTER/SCHEME's own toggles already have.
+    var shelfSort by remember {
+        mutableStateOf(
+            prefs.getString(PREF_SHELF_SORT, null)
+                ?.let { saved -> KitShelf.ShelfSort.entries.firstOrNull { it.name == saved } }
+                ?: KitShelf.ShelfSort.RECENT,
+        )
+    }
 
     var screen by remember { mutableStateOf(AppScreen.KITS) }
     var kits by remember { mutableStateOf<List<KitShelf.Entry>>(emptyList()) }
@@ -489,7 +503,7 @@ fun App(shelf: KitShelf) {
     }
 
     LaunchedEffect(Unit) {
-        kits = withContext(Dispatchers.IO) { shelf.list() }
+        kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
         // The rooms' bin empties itself of what has slept past its days.
         withContext(Dispatchers.IO) { runCatching { shelf.sweepRooms() } }
         // Same promise, for deleted kits (Task 4): the shelf's own bin
@@ -516,6 +530,22 @@ fun App(shelf: KitShelf) {
         // live kit or snip. Exports are deliberately NOT swept here: see
         // sweepOrphanedStorage's KDoc.
         withContext(Dispatchers.IO) { runCatching { sweepOrphanedStorage(shelf.root, context.cacheDir) } }
+    }
+
+    /**
+     * The shelf's sort toggle (name-and-find followups): persists the
+     * choice like [PREF_SCHEME]/[PREF_PERSONALITY] above, then re-fetches
+     * [kits] under the new order right away — every OTHER refresh in this
+     * file already passes [shelfSort] into its own `shelf.list` call, so
+     * this is only needed for the toggle's own immediate refresh, not to
+     * keep future refreshes in step.
+     */
+    fun setShelfSort(sort: KitShelf.ShelfSort) {
+        shelfSort = sort
+        prefs.edit().putString(PREF_SHELF_SORT, sort.name).apply()
+        scope.launch {
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+        }
     }
 
     // IMPORT (F3.1/F3.2): a file shared in from another app, waiting on
@@ -564,7 +594,7 @@ fun App(shelf: KitShelf) {
                     }
                 }
                 ShareInbox.consume()
-                kits = withContext(Dispatchers.IO) { shelf.list() }
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                 // A clean landing keeps its toast; one with skips opens the
                 // box, which names each skipped kit and the door's reason.
                 val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped)
@@ -583,7 +613,7 @@ fun App(shelf: KitShelf) {
             }
             ShareInbox.consume()
             if (open == null) {
-                open = withContext(Dispatchers.IO) { shelf.list() }.firstOrNull()
+                open = withContext(Dispatchers.IO) { shelf.list(shelfSort) }.firstOrNull()
             }
             toast = Copy.imported(landed.seconds, landed.truncated)
             importCount++
@@ -625,7 +655,7 @@ fun App(shelf: KitShelf) {
                 toast = "DUB FAILED: ${e.message ?: e.javaClass.simpleName}"
                 return@launch
             }
-            kits = withContext(Dispatchers.IO) { shelf.list() }
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
             busy = null
             toast = Copy.FRESH_TAPE
             open = entry
@@ -656,7 +686,7 @@ fun App(shelf: KitShelf) {
                 toast = "${spec.verb} FAILED: ${e.message ?: e.javaClass.simpleName}"
                 return@launch
             }
-            kits = withContext(Dispatchers.IO) { shelf.list() }
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
             busy = null
             toast = when (spec) {
                 is TextureKits.Spec.Sculpt -> Copy.SCULPTED
@@ -690,7 +720,7 @@ fun App(shelf: KitShelf) {
             // whichever kit is open by the time it lands (setKey sets no
             // `busy`, so nothing here stops a tab-away-and-reopen mid-write).
             if (open?.dir == source.dir) open = entry
-            kits = withContext(Dispatchers.IO) { shelf.list() }
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
             toast = key?.let { Copy.keySet(com.snipsnap.shell.KeyPicker.label(it)) } ?: Copy.KEY_OFF
         }
     }
@@ -718,7 +748,7 @@ fun App(shelf: KitShelf) {
             // Same identity guard as setKey above — `busy` blocks a second
             // EVIL TWINS tap, not a MenuRow tab-away-and-reopen mid-write.
             if (open?.dir == source.dir) open = entry
-            kits = withContext(Dispatchers.IO) { shelf.list() }
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
             busy = null
             toast = if (hadTwins) Copy.TWINS_REROLLED else Copy.BANK_B_LIT
         }
@@ -763,7 +793,7 @@ fun App(shelf: KitShelf) {
                 toast = "BREED FAILED: ${e.message ?: e.javaClass.simpleName}"
                 return@launch
             }
-            kits = withContext(Dispatchers.IO) { shelf.list() }
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
             busy = null
             toast = Copy.bred(entry.kit.name, report.crossed.size, report.audited.size)
             // The freshly bred kit is the whole point of the tap that
@@ -846,7 +876,7 @@ fun App(shelf: KitShelf) {
             } finally {
                 busy = null
             }
-            kits = withContext(Dispatchers.IO) { shelf.list() }
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
             toast = if (wavCount == 0) Copy.CHOP_ALL_NO_WAVS else Copy.choppedAll(made, wavCount, skipped, failed)
         }
     }
@@ -901,7 +931,7 @@ fun App(shelf: KitShelf) {
                 // that outlived a tab-away-and-reopen must not weld itself
                 // onto whichever kit is open now.
                 if (open?.dir == target.dir) open = open?.copy(kit = updated)
-                kits = withContext(Dispatchers.IO) { shelf.list() }
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                 toast = "SNIP PLACED ON PAD A%02d".format(slot)
             } catch (e: CancellationException) {
                 throw e
@@ -1020,7 +1050,7 @@ fun App(shelf: KitShelf) {
             // screen never stays stuck on CHOPPING….
             try {
                 val (entry, result) = withContext(Dispatchers.IO) { shelf.instantKit(file, range) }
-                kits = withContext(Dispatchers.IO) { shelf.list() }
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                 toast = Copy.instantKit(result.sliceCount, result.chokeSet)
                 open = entry
                 screen = AppScreen.KIT
@@ -1171,7 +1201,7 @@ fun App(shelf: KitShelf) {
             try {
                 val ok = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.deleteKit(entry) } }
                 if (ok) {
-                    kits = withContext(Dispatchers.IO) { shelf.list() }
+                    kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                     toast = Copy.kitDeleted(entry.kit.name)
                     if (open?.dir == entry.dir) {
                         open = null
@@ -1217,7 +1247,7 @@ fun App(shelf: KitShelf) {
             try {
                 val renamed = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.renameKit(entry, newName) } }
                 if (renamed != null) {
-                    kits = withContext(Dispatchers.IO) { shelf.list() }
+                    kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                     toast = Copy.kitRenamed(renamed.kit.name)
                     if (open?.dir == entry.dir) open = renamed
                 } else {
@@ -1284,7 +1314,7 @@ fun App(shelf: KitShelf) {
             // Same identity guard as setKey above — inKey sets no `busy`
             // either, so nothing stops a tab-away-and-reopen mid-write.
             if (open?.dir == source.dir) open = entry
-            kits = withContext(Dispatchers.IO) { shelf.list() }
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
             toast = if (moved.isEmpty()) Copy.IN_KEY_NONE else Copy.inKey(moved.size, com.snipsnap.shell.KeyPicker.label(key))
         }
     }
@@ -1404,7 +1434,7 @@ fun App(shelf: KitShelf) {
                                     // on `kits`, so this refresh alone is
                                     // also what re-reads the bin count.
                                     scope.launch {
-                                        kits = withContext(Dispatchers.IO) { shelf.list() }
+                                        kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                     }
                                 },
                             )
@@ -1498,6 +1528,8 @@ fun App(shelf: KitShelf) {
                                 onRenameKit = ::renameKit,
                                 binnedKitsCount = binnedKitsCount,
                                 onDeletedKits = { deletedKitsOpen = true },
+                                shelfSort = shelfSort,
+                                onToggleSort = { setShelfSort(if (shelfSort == KitShelf.ShelfSort.RECENT) KitShelf.ShelfSort.ALPHA else KitShelf.ShelfSort.RECENT) },
                             )
                         }
                         AppScreen.KIT -> {
@@ -1558,7 +1590,7 @@ fun App(shelf: KitShelf) {
                                         // The shelf refresh stays unconditional — the write
                                         // happened on disk regardless of what's open now.
                                         scope.launch {
-                                            kits = withContext(Dispatchers.IO) { shelf.list() }
+                                            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                         }
                                     },
                                     // App()'s own scope — the same one fresh()
@@ -1587,7 +1619,7 @@ fun App(shelf: KitShelf) {
                                         // onKitUpdated above).
                                         if (open?.dir == sheetEntry.dir) open = open?.copy(kit = updatedKit)
                                         scope.launch {
-                                            kits = withContext(Dispatchers.IO) { shelf.list() }
+                                            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                         }
                                     },
                                 )
@@ -1616,7 +1648,7 @@ fun App(shelf: KitShelf) {
                                             // composition, not whatever `open` is now.
                                             if (open?.dir == sheetEntry.dir) open = open?.copy(kit = updatedKit)
                                             scope.launch {
-                                                kits = withContext(Dispatchers.IO) { shelf.list() }
+                                                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                             }
                                         },
                                         // App()'s own scope — same reasoning as
@@ -1738,7 +1770,7 @@ fun App(shelf: KitShelf) {
                                 open = newEntry
                                 screen = AppScreen.KIT
                                 scope.launch {
-                                    kits = withContext(Dispatchers.IO) { shelf.list() }
+                                    kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                 }
                             },
                         )
@@ -1769,7 +1801,7 @@ fun App(shelf: KitShelf) {
                                     // just replaced, not a stale cached sample.
                                     if (open?.dir == synthEntry?.dir) open = open?.copy(kit = updatedKit)
                                     scope.launch {
-                                        kits = withContext(Dispatchers.IO) { shelf.list() }
+                                        kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                     }
                                 },
                                 // App()'s own scope — same reasoning as PAD SHEET/PAD
@@ -1787,7 +1819,7 @@ fun App(shelf: KitShelf) {
                             onKitUpdated = { updatedKit ->
                                 open = open?.copy(kit = updatedKit)
                                 scope.launch {
-                                    kits = withContext(Dispatchers.IO) { shelf.list() }
+                                    kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                 }
                             },
                             onExit = { screen = AppScreen.KIT },
@@ -1803,7 +1835,7 @@ fun App(shelf: KitShelf) {
                             onKitUpdated = { updatedKit ->
                                 open = open?.copy(kit = updatedKit)
                                 scope.launch {
-                                    kits = withContext(Dispatchers.IO) { shelf.list() }
+                                    kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                 }
                             },
                         )
