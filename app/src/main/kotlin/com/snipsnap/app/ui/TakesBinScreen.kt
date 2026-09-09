@@ -115,20 +115,22 @@ fun TakesBinScreen(
      * `kitDir` off disk, never `m.kit` — so they're safe to call on the
      * long-lived [m] even when [m]'s own in-memory `kit` is stale (this
      * screen never writes through [m] directly; see [doRestoreTake]).
-     * [kitOverride] exists for exactly that staleness: after a restore
-     * actually lands, the freshly-opened model's [KitBuilderModel.kit] —
-     * not [m]'s — is what [kitSnapshot] (which drives [binRows]' matched-
-     * pad coloring) must show, or a restore would render as if it hadn't
-     * happened.
+     * [kitOverride] is the ONLY thing that ever writes [kitSnapshot]: [m]'s
+     * own `kit` never changes after mount (this screen never mutates [m]),
+     * so a caller that passes no override — [doRestoreFromBin], [doEmptyBin],
+     * neither of which touch `kit.json` — must leave [kitSnapshot] alone
+     * rather than resetting it back to the stale mount-time snapshot. Only
+     * [doRestoreTake], which DOES change what's live, and the initial load
+     * below, which has nothing to preserve yet, pass one.
      */
     suspend fun refreshLists(m: KitBuilderModel, kitOverride: com.snipsnap.kit.Kit? = null) {
         val (t, b) = withContext(Dispatchers.IO) { m.takes() to m.binContents() }
         takeFiles = t
         binEntries = b
-        kitSnapshot = kitOverride ?: m.kit
+        if (kitOverride != null) kitSnapshot = kitOverride
     }
 
-    LaunchedEffect(model) { model?.let { refreshLists(it) } }
+    LaunchedEffect(model) { model?.let { refreshLists(it, it.kit) } }
 
     // The armed EMPTY THE BIN NOW confirm quietly stands down if the second
     // tap never comes — a stale "tap again" that's still armed a minute
