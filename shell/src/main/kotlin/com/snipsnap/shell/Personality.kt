@@ -142,6 +142,8 @@ object Copy {
     // SHARE, BACKUP, and kits landing on the shelf (F6.3, X3.3, W3.3).
     const val PACKING_BUSY = "PACKING…"
     const val LANDING_BUSY = "UNPACKING…"
+    /** READ BACK's own caveat under the completion-stage card: agreement with our reader is not a hardware guarantee. */
+    const val READ_BACK_CAVEAT = "THE FILE AGREES WITH OUR OWN READER. HARDWARE IS THE ONLY PROOF IT OPENS."
     /** SHARE: the kit is one file now and the chooser is up. */
     fun kitPacked(kit: String): String = "$kit PACKED AS ONE FILE. PICK WHERE IT GOES."
     /** BACKUP: every kit on one file; [skipped] the ones preflight refused, named in the file's own report. */

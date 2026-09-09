@@ -453,6 +453,7 @@ private fun ExportContent(
             val outcome = session.lastOutcome
             DoneContent(
                 destinationPath = outcome?.primary?.absolutePath ?: "",
+                readBack = outcome?.readBack.orEmpty(),
                 scheme = scheme,
                 modifier = Modifier.weight(1f),
             )
@@ -479,7 +480,7 @@ private fun ExportContent(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                PreflightCard(model.preflight, scheme)
+                FindingsCard(model.preflight, scheme)
                 CardRow(
                     tree = cardTree,
                     enabled = !session.busy,
@@ -516,19 +517,34 @@ private fun ExportContent(
 // ---------- DONE stage ----------
 
 @Composable
-private fun DoneContent(destinationPath: String, scheme: Scheme, modifier: Modifier = Modifier) {
+private fun DoneContent(
+    destinationPath: String,
+    /** READ BACK: the written file re-read and diffed against the kit — empty for a format X-Ray can't read. */
+    readBack: List<Finding>,
+    scheme: Scheme,
+    modifier: Modifier = Modifier,
+) {
     Column(
-        modifier.fillMaxWidth().padding(16.dp),
+        modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         TapeText(Copy.EXPORT_DONE, TapeType.lcd(25), scheme.ink.tape, maxLines = 2)
-        Spacer(Modifier.height(8.dp))
         // Where the write actually landed, in plain words — regardless of
         // whether SHARE is offered below, or ever tapped. No claim about
         // which file browser can reach it, just the fact of it.
         TapeText(Copy.EXPORT_SAVED_TO, TapeType.pixelSmall, scheme.ink3.tape)
         TapeText(destinationPath, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
+        if (readBack.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            // The file just written, read back through X-Ray and diffed pad
+            // by pad against what the kit asked for — a check on the writers,
+            // said in the same rows PREFLIGHT uses. The caveat under it is
+            // the honest limit: our reader agreeing is not the Live III
+            // agreeing.
+            FindingsCard(readBack, scheme, title = "READ BACK")
+            TapeText(Copy.READ_BACK_CAVEAT, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth(), maxLines = 3)
+        }
     }
 }
 
@@ -566,10 +582,11 @@ private const val PREF_CARD_TREE = "export_card_tree"
 // duplicated literal; the border half is untouched.
 private val BIN_RED_BORDER = Color(0xFF6A2020)
 
+/** One titled list of [Finding] rows — PREFLIGHT before the write, READ BACK after it, same rows either way. */
 @Composable
-private fun PreflightCard(findings: List<Finding>, scheme: Scheme, modifier: Modifier = Modifier) {
+private fun FindingsCard(findings: List<Finding>, scheme: Scheme, modifier: Modifier = Modifier, title: String = "PREFLIGHT") {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("PREFLIGHT", TapeType.pixelSmall, scheme.ink3.tape)
+        TapeText(title, TapeType.pixelSmall, scheme.ink3.tape)
         Column(
             Modifier.fillMaxWidth().sunkenField(scheme).padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -587,11 +604,15 @@ private fun FindingRow(finding: Finding, scheme: Scheme) {
         Severity.FAIL -> BinRedGlow
         Severity.WARN -> scheme.warn.tape
         Severity.OK -> scheme.ink2.tape
+        // "Not checked" reads quieter than OK on purpose: it's an absence
+        // of a claim, not a pass.
+        Severity.SKIP -> scheme.ink3.tape
     }
     val tag = when (finding.severity) {
         Severity.FAIL -> "FAIL"
         Severity.WARN -> "WARN"
         Severity.OK -> "OK"
+        Severity.SKIP -> "SKIP"
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(

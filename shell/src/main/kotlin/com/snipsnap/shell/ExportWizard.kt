@@ -3,6 +3,7 @@ package com.snipsnap.shell
 import com.snipsnap.kit.ExportBlockedException
 import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.ExportOutcome
+import com.snipsnap.kit.ExportReadBack
 import com.snipsnap.kit.Exporters
 import com.snipsnap.kit.Finding
 import com.snipsnap.kit.Kit
@@ -102,7 +103,7 @@ class ExportWizardModel(
                 ?.let { KitArt.png(kit, kitDir, it) }
             val outcome = Exporters.export(format, kit, kitDir, destRoot, overwrite, artworkPng = artwork)
             stage = Stage.COMPLETE
-            WriteResult.Done(outcome)
+            WriteResult.Done(outcome.copy(readBack = readBack(outcome)))
         } catch (e: ExportBlockedException) {
             stage = Stage.READY
             WriteResult.Blocked(e.findings)
@@ -111,6 +112,19 @@ class ExportWizardModel(
             stage = Stage.READY
             throw e
         }
+    }
+
+    /**
+     * READ BACK, after the write landed: the file re-read through X-Ray
+     * and diffed against the kit ([ExportReadBack.verify]). The file is
+     * already on the card by now, so a checker that itself falls over is
+     * one FAIL row in words — never a throw that would hide a finished
+     * write behind an error.
+     */
+    private fun readBack(outcome: ExportOutcome): List<Finding> = try {
+        ExportReadBack.verify(kit, outcome)
+    } catch (e: Exception) {
+        listOf(Finding(Severity.FAIL, "read back fell over: ${e.message ?: e.javaClass.simpleName}"))
     }
 
     /**
