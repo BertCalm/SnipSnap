@@ -242,7 +242,18 @@ fun GrooveScreen(
     // Keyed on the kit's identity, not the dir: an edit elsewhere (the pad
     // sheet, a texture) hands back a fresh `kit`, and the bank has to
     // follow or the roll plays yesterday's audio.
-    LaunchedEffect(entry.kit) { withContext(Dispatchers.IO) { player.load(entry) } }
+    // `bankReady` (finding D): false until `player.load` commits — before
+    // then `clickSampleIndex == -1` and `PadEngine.clickHit` is a no-op, so
+    // RECORD's own count-in would play four silent beats with no feedback
+    // at all while still arming the take underneath them. Reset to false
+    // whenever the effect restarts (a kit swap mid-load must not read as
+    // still-ready from the PREVIOUS kit).
+    var bankReady by remember(kitDir) { mutableStateOf(false) }
+    LaunchedEffect(entry.kit) {
+        bankReady = false
+        withContext(Dispatchers.IO) { player.load(entry) }
+        bankReady = true
+    }
     val allocator = remember(kitDir) { VoiceAllocator(maxVoices = PadEngine.MAX_VOICES) }
     // Endings drained at screen rate, always — not only while the roll is
     // running, since a tap in the editor makes a voice too.
@@ -454,6 +465,34 @@ fun GrooveScreen(
     // pending E save, same as TAPE stopping its own transport.
     fun silenceGroove() {
         playing = false
+        // Blocker B: an armed take must be DROPPED here, exactly as
+        // leaving GROOVE entirely already drops one (this composable's own
+        // `DisposableEffect(kitDir)` teardown, and Design Question 3's own
+        // "abandoned mid-recording is silently dropped, not landed" call).
+        // ON_STOP (backgrounding, a phone call) and an AudioFocus loss both
+        // route through this function but do NOT leave composition, so
+        // without this, `recording`/`countingIn` would survive: `playing`
+        // above is now false so the clock effect returns immediately and
+        // `clockAnchor` freezes at whatever it last held, and every hit
+        // after the user returns clamps to that same frozen instant —
+        // distinct pads piling into one chord at one pulse, landed over
+        // the base on the next STOP RECORDING.
+        //
+        // No toast: this is the same class of silent abandonment as
+        // leaving the screen mid-take, which has never toasted either —
+        // toasting only THIS path would be inconsistent, not more honest.
+        // A toast fired here would also show while the app is actively
+        // backgrounding (unseen), and one deferred to the return trip is
+        // exactly the noise a user coming back from a phone call doesn't
+        // need for an action (backgrounding the app) nothing warned them
+        // would cost anything to begin with — the take simply isn't there
+        // when they look, same as it wouldn't be after a deliberate tab
+        // switch.
+        if (recording || countingIn) {
+            recording = false
+            countingIn = false
+            take = null
+        }
         // PLAY's and KIT's lesson: stopping the transport is not
         // stopping the sound. A backgrounded phone should not keep
         // a choke group ringing, nor leave the allocator counting
@@ -722,10 +761,24 @@ fun GrooveScreen(
     /**
      * One touch, two effects that can never diverge: [hit] makes the sound
      * (and lights the pad, PLAY's own glow shape), and — only while
-     * [recording] is actually true, not merely [countingIn] — the same
-     * touch is appended to [take]. A hit during count-in still sounds (the
-     * user gets to feel the pad respond) but is never captured; there is
-     * no take running yet to capture it into.
+     * [recording] is true AND [clockAnchor] is actually close to this
+     * touch's own timestamp — the same touch is appended to [take]. Every
+     * touch still sounds (the user gets to feel the pad respond), captured
+     * or not.
+     *
+     * [recording] alone can no longer stand in for "the take proper has
+     * started" (blocker A fix): it now opens the instant RECORD arms, for
+     * the WHOLE from-scratch count-in, not just after it — see
+     * [startRecording]'s own KDoc for why (the anchor for bar 1's downbeat
+     * is valid from that same instant). So capture during a count-in is
+     * additionally gated on being close enough to that anchor to plausibly
+     * BE the downbeat, not an exploratory tap on an earlier count-in beat:
+     * a hit more than [GROOVE_STEP_MAX_NANOS] before the anchor is outside
+     * the clamp window below regardless, so filtering it out here (instead
+     * of letting it fall through to a clamped, identical-every-time
+     * position) avoids piling every early count-in tap onto the same
+     * pulse near the loop end — the same pathology blocker B closes for a
+     * frozen anchor, just from a different cause.
      *
      * [uptimeMillis] is the touch's own hardware timestamp
      * (`PointerInputChange.uptimeMillis`, threaded through from
@@ -748,6 +801,11 @@ fun GrooveScreen(
         val t = take
         if (!recording || t == null) return
         val hitNanos = uptimeMillis * 1_000_000L
+        // Narrows the early-open gate to "a few ms early against the
+        // downbeat," per this fn's own KDoc — a tap on an earlier
+        // count-in beat is more than the clamp window away and is simply
+        // not captured, same as before blocker A's fix.
+        if (countingIn && hitNanos < clockAnchor.nanos - GROOVE_STEP_MAX_NANOS) return
         val dtNanos = (hitNanos - clockAnchor.nanos).coerceIn(-GROOVE_STEP_MAX_NANOS, GROOVE_STEP_MAX_NANOS)
         val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
         val stepsPerSecond = bpm / 60.0 * 4.0
@@ -799,30 +857,97 @@ fun GrooveScreen(
      */
     fun startRecording() {
         if (busy || recording || countingIn) return
+        if (!bankReady) {
+            // Finding D: `player.load` hasn't committed yet
+            // (`clickSampleIndex == -1`), so the count-in would be four
+            // silent clicks with no feedback while still arming the take
+            // underneath them. Telling the user beats gating the button
+            // outright — no extra `enabled=` plumbing needed across this
+            // screen's two RECORD call sites for what resolves itself in
+            // well under a second.
+            onToast(Copy.KIT_STILL_LOADING)
+            return
+        }
         clearJustLanded()
         val armedBase = base
         preTake = armedBase
-        take = LiveRecord.Take(armedBase?.bars ?: recordBars)
+        // Captured by reference, not just read back via `take` later: a
+        // dropped-then-re-armed take (silenceGroove nulls `take`, then a
+        // second RECORD tap mints a NEW Take before the first count-in's
+        // coroutine below wakes up) must be told apart from the CURRENT
+        // arm by identity, not by mere nullness — see that coroutine's own
+        // abort check.
+        val armedTake = LiveRecord.Take(armedBase?.bars ?: recordBars)
+        take = armedTake
         progIndex = 0
         if (armedBase == null) {
+            // Blocker A: `clockAnchor` must be valid the instant RECORD
+            // arms, not 1-2 frames later when the clock effect's own
+            // `withFrameNanos` first resolves (which only happens after
+            // `playing = true`, itself set only once the count-in
+            // finishes). Bar 1's downbeat is exactly
+            // `startNanos + 4 * beatNanos` on THIS same schedule — the one
+            // the click loop below is timed against — so anchoring there
+            // (not at "now") is a unit conversion, not a guess: `pos = 0f`
+            // at that future nanosecond is what the count-in itself
+            // promises. Computed and written synchronously, before
+            // `scope.launch` even schedules the click coroutine, so there
+            // is no window — however small — where a hit could read a
+            // stale anchor.
+            val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
+            val beatNanos = (60_000_000_000.0 / bpm).toLong().coerceAtLeast(1L)
+            val startNanos = System.nanoTime()
+            clockAnchor.nanos = startNanos + 4 * beatNanos
+            clockAnchor.pos = 0f
             countingIn = true
+            // The capture gate opens with the anchor, not after the
+            // count-in completes: `recordHit` gates on `recording`, and
+            // with a valid anchor in place a hit fired a few ms EARLY
+            // (what a human does against a click) now nets a small
+            // NEGATIVE delta instead of being silently discarded —
+            // `LiveRecord.wrapped` already folds that to the loop end,
+            // the musically identical instant. `countingIn` alone still
+            // gates the UI (tap-to-stop stays disabled, "COUNTING IN…"
+            // still shows), so nothing about what the user sees or can do
+            // during the count-in changes.
+            recording = true
             scope.launch {
-                val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
-                val beatNanos = (60_000_000_000.0 / bpm).toLong().coerceAtLeast(1L)
-                val startNanos = System.nanoTime()
                 for (beat in 0 until 4) {
+                    // Blocker B's other half: bail the moment this arm is
+                    // no longer the live one — either `silenceGroove`
+                    // dropped it (`take` nulled, e.g. an AudioFocus blip
+                    // mid-count-in) or a second RECORD tap replaced it with
+                    // a NEWER `Take` before this coroutine woke up (`take`
+                    // non-null but a different instance). Checked by
+                    // identity (`!==`), not nullness, so a re-arm can't
+                    // read as "still mine." Inside the loop too, not just
+                    // after it, so a drop stops the remaining clicks
+                    // instead of clicking through `player.allOff()`.
+                    // `scope` (rememberCoroutineScope) outlives ON_STOP;
+                    // only leaving composition entirely cancels it.
+                    if (take !== armedTake) return@launch
                     player.clickHit(accent = beat == 0)
                     val deadlineNanos = startNanos + (beat + 1) * beatNanos
                     val waitMs = (deadlineNanos - System.nanoTime()) / 1_000_000L
                     if (waitMs > 0) delay(waitMs)
                 }
+                if (take !== armedTake) return@launch
                 countingIn = false
-                recording = true
                 posSteps = 0f
                 playing = true
             }
         } else {
-            if (!playing) posSteps = 0f
+            if (!playing) {
+                // Review fix 2's own gap: resetting `posSteps` without
+                // also resetting `clockAnchor` left the anchor holding the
+                // ABANDONED needle position — a hit in this window landed
+                // in the wrong bar, not merely late. `System.nanoTime()`
+                // here (not a `withFrameNanos` read) matches how every
+                // other synchronous anchor write in this file is done.
+                posSteps = 0f
+                clockAnchor.nanos = System.nanoTime()
+                clockAnchor.pos = 0f
+            }
             recording = true
             playing = true
         }
@@ -928,19 +1053,54 @@ fun GrooveScreen(
             // composable).
             Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp)) {
                 Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        when {
-                            countingIn -> TapeText("COUNTING IN…", TapeType.lcd(19), scheme.amber.tape)
-                            recording -> TapeText("● RECORDING — LAY DOWN BAR 1", TapeType.lcd(19), scheme.amber.tape)
-                            else -> TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+                    when {
+                        countingIn -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            TapeText("COUNTING IN…", TapeType.lcd(19), scheme.amber.tape)
+                        }
+                        // Blocker C: a from-scratch take was played
+                        // completely blind — no needle, no bar/beat
+                        // readout, and no base to hear once the count-in's
+                        // click stops. `NeedleRoll` already null-safes a
+                        // null clip (`totalSteps = (clip?.bars ?: 2) *
+                        // STEPS_PER_BAR`, matching `recordBars`'s own
+                        // default) — `currentClip` is always null here
+                        // (`base` is null throughout this branch), so this
+                        // renders unchanged and gets a moving playhead
+                        // plus "▶ BAR n.b" for free, the only reference the
+                        // user has for where a 2-bar loop wraps. Not shown
+                        // during the count-in itself (above): `posSteps`
+                        // isn't reset to bar 1 until the count-in's own
+                        // coroutine finishes, and `playing` is still false,
+                        // so a needle here would read a stale position.
+                        recording -> NeedleRoll(
+                            clip = currentClip,
+                            posSteps = posSteps,
+                            playing = playing,
+                            scheme = scheme,
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                        )
+                        else -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+                        }
+                    }
+                    if (recording && !countingIn) {
+                        // The explicit "recording" cue the needle roll
+                        // above doesn't itself say — same label the
+                        // original single-Box status line used, kept
+                        // alongside the needle rather than replaced by it.
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            TapeText("● RECORDING — LAY DOWN BAR 1", TapeType.pixel, scheme.amber.tape)
                         }
                     }
                     if (recording || countingIn) {
-                        // Live during the count-in too, not just once
-                        // `recording` flips true: a hit here still sounds
-                        // (the pad responds), it's only the CAPTURE
-                        // (`recordHit`'s own `recording` gate) that waits
-                        // for the click sequence to finish.
+                        // Live during the count-in too: a hit here always
+                        // sounds (the pad responds). Whether it's also
+                        // CAPTURED is `recordHit`'s own call — since
+                        // blocker A, that's not "wait for the click
+                        // sequence to finish" but "close enough to the
+                        // downbeat's own anchor" (see that fn's own KDoc);
+                        // an exploratory tap on an earlier count-in beat
+                        // still sounds here but isn't captured.
                         BankRow(kit, glow, ::recordHit, {}, Modifier.weight(2f).fillMaxWidth())
                     }
                     Box(

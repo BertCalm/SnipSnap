@@ -309,6 +309,8 @@ object Copy {
     /** The post-take FORK TO E row's confirmed-replace branch (live-record plan Task 6 bug fix): an E already existed and the user tapped "REPLACE E?" a second time — says the old steps are gone, never claims a plain "forked" like [FORKED_TO_E] does for a from-nothing fork. */
     const val FORKED_TO_E_REPLACED = "PROG E REPLACED WITH THIS TAKE. THE OLD STEPS ARE GONE."
     const val BAR_WIPED = "BAR WIPED. THE MACHINE FORGIVES."
+    /** RECORD tapped before `PadEngine.load` has committed the bank (`clickSampleIndex == -1` until then, so the count-in clicks would be silent and give no feedback at all) — told instead of armed. */
+    const val KIT_STILL_LOADING = "KIT'S STILL LOADING. GIVE IT A SECOND."
 
     // ---- GROOVE: RECORD landing and UNDO TAKE (live-record plan, Task 5) ----
     /** RECORD landed a take as the new PROG A; echoes [grooveRead]'s shape, but names what was PLAYED, not what was heard. */
