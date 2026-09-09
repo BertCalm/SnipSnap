@@ -119,11 +119,10 @@ class PadEngine(preferredSampleRate: Int) {
         }
         val index = HashMap<String, Int>()
         val frames = HashMap<String, Long>()
-        var engineRate = 44_100
-        synchronized(this) {
+        val engineRate = synchronized(this) {
             if (!open) return
             NativePads.beginBank(handle)
-            engineRate = NativePads.sampleRate(handle)
+            NativePads.sampleRate(handle)
         }
         for (file in files) {
             // `file` is a kit pad sample, produced only by KitBuilderModel.assign
