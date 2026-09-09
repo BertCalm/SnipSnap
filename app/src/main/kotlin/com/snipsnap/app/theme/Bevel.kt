@@ -48,13 +48,33 @@ fun Modifier.raisedBevel(
     .background(fill ?: scheme.gray.tape, RoundedCornerShape(radius))
     .border(2.dp, bevelBrush(scheme, raised = true), RoundedCornerShape(radius))
 
-/** The same surface, pushed in — selected menu items, held buttons. */
+/**
+ * The same surface, pushed in — selected menu items, held buttons.
+ *
+ * Selection state used to be carried by the fill alone: a 10%-darkened
+ * background against [raisedBevel]'s plain [Scheme.gray]. Measured
+ * contrast between the two fills is 1.02-1.07:1 in every scheme —
+ * effectively invisible, and colour-only besides (accessibility audit
+ * finding 7). The border below still inverts the bevel's light direction
+ * (dark-to-hi instead of hi-to-dark) — that inversion is the house
+ * language for "pushed in" and stays — but it's now 3dp instead of 2dp
+ * (a weight change, not just a colour one) and tinted through
+ * [Scheme.accent] instead of the neutral bevel highlight/shadow, so a
+ * selected control reads as a distinctly thicker, distinctly-hued ring
+ * even to someone who can't use the hue at all. See `ContrastTest` for
+ * accent-vs-fill ratios (4.08-11.28:1 across all 8 schemes, clearing the
+ * 3:1 graphical-object threshold everywhere).
+ */
 fun Modifier.pressedBevel(
     scheme: Scheme,
     radius: Dp = 4.dp,
 ): Modifier = this
     .background(Schemes.darken(scheme.gray, 0.10f).tape, RoundedCornerShape(radius))
-    .border(2.dp, bevelBrush(scheme, raised = false), RoundedCornerShape(radius))
+    .border(
+        3.dp,
+        Brush.linearGradient(listOf(Schemes.darken(scheme.accent, 0.55f).tape, scheme.accent.tape)),
+        RoundedCornerShape(radius),
+    )
 
 /**
  * A group box (Pad Sheet v2): the window's own surface with an etched
