@@ -241,12 +241,18 @@ fun GrooveScreen(
      * SoundPool preview always played too. A slot with nothing on it is
      * silence rather than a stuck voice — the allocation is handed back.
      */
-    fun hit(slot: Int) {
+    // `velocity` defaults to the old hardcoded `1f` so both existing
+    // internal callers — the playback loop's own note-trigger and the step
+    // editor's toggle preview, neither of which has a real touch to read a
+    // velocity from — keep sounding exactly as they did before. A future
+    // touch caller (a rendered pad grid, per the live-record plan) supplies
+    // a real value instead.
+    fun hit(slot: Int, velocity: Float = 1f) {
         val pad = entry.kit.pad(slot) ?: return
         if (!engineUp || !player.isUp()) return
-        val allocation = allocator.noteOn(slot, 1f, pad.muteGroup, oneShot = true)
+        val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
-        if (!player.hit(pad, 1f, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
+        if (!player.hit(pad, velocity, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
     }
 
     if (loading) {
