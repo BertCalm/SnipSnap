@@ -97,6 +97,30 @@ class LoopActivity : ComponentActivity() {
         }
     }
 
+    // LOOP is the app's one genuinely continuous transport, and
+    // AndroidAudioSink is the one voice with a real pause/resume (see
+    // AudioFocus's own KDoc). Silencing on backgrounding is the same lesson
+    // PLAY/KIT/GROOVE/KEYS/SPLIT/SURFACE already apply through their own
+    // ON_STOP handling — and here it also closes a gap those Compose
+    // screens don't have: a permanent focus loss (AUDIOFOCUS_LOSS)
+    // abandons AudioFocus's own grant without touching its registry (see
+    // the class KDoc), so the sink stays paused, registered, but un-focused
+    // until something re-acquires. Without this pair, that would mean
+    // forever — the sink's write() blocks the audio thread indefinitely
+    // with no play/pause control anywhere in LoopGrid to unstick it.
+    // onStart re-acquiring on every return to the foreground is what
+    // reclaims focus after exactly that kind of loss, same as the Compose
+    // screens' own ON_START branch.
+    override fun onStop() {
+        super.onStop()
+        sink?.silence()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        sink?.let { AudioFocus.acquire(it) }
+    }
+
     override fun onDestroy() {
         engine?.stop()
         audioThread?.join(1_000)

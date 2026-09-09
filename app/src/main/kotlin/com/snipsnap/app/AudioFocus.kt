@@ -148,8 +148,15 @@ object AudioFocus {
      * starts listening for the noisy broadcast; every acquire after that
      * just adds to the registry and returns. If the request is denied
      * outright — another app already holds exclusive or transient focus —
-     * every registered voice (this one included) is told to [AudioVoice.silence]
-     * immediately: whatever just started should not be heard either.
+     * only [voice] itself, the one that just tried to start, is told to
+     * [AudioVoice.silence]. The rest of the registry is untouched
+     * deliberately: an already-registered voice's state (most concretely,
+     * [AndroidAudioSink] sitting paused after an earlier [AudioFocusAction.PAUSE]
+     * and waiting on its own [AudioVoice.resume]) is governed by *its own*
+     * focus history, not by a sibling's failed, unrelated re-acquire — e.g.
+     * PLAY re-claiming on `ON_START` while a call is still active must not
+     * re-silence LOOP, which was already correctly silenced and is still
+     * legitimately waiting for the `AUDIOFOCUS_GAIN` that ends the call.
      */
     fun acquire(voice: AudioVoice) {
         var denied = false
@@ -157,7 +164,7 @@ object AudioFocus {
             voices.add(voice)
             if (focusRequest == null) denied = !claimLocked()
         }
-        if (denied) silenceAll()
+        if (denied) voice.silence()
     }
 
     /**
