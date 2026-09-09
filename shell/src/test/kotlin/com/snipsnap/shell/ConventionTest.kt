@@ -29,13 +29,13 @@ import kotlin.test.fail
  * which side is wrong — that's the whole point of testing consistency
  * instead of correctness.
  *
- * Both laws below are keyed on file path + the call site's own trimmed
- * text, never line numbers: line numbers drift (a concurrent kit-write-
- * mutex audit is editing several of these exact files right now), and a
- * line-numbered allowlist would start failing for reasons that have
- * nothing to do with the invariant it guards. A text-keyed entry survives
- * drift and still fails loudly the moment the call site's own shape
- * actually changes.
+ * All three laws below are keyed on file path + the call site's own
+ * trimmed text, never line numbers: line numbers drift (a concurrent
+ * kit-write-mutex audit is editing several of these exact files right
+ * now), and a line-numbered allowlist would start failing for reasons
+ * that have nothing to do with the invariant it guards. A text-keyed
+ * entry survives drift and still fails loudly the moment the call
+ * site's own shape actually changes.
  */
 class ConventionTest {
 
@@ -87,6 +87,41 @@ class ConventionTest {
                     i++
                 }
                 ')' -> {
+                    depth--
+                    if (depth == 0) return i
+                    i++
+                }
+                '"' -> {
+                    i++
+                    while (i < text.length && text[i] != '"') {
+                        if (text[i] == '\\') i++
+                        i++
+                    }
+                    i++
+                }
+                else -> i++
+            }
+        }
+        return null
+    }
+
+    /**
+     * Index of the `}` matching the `{` that was just consumed (i.e. the
+     * scan starts one char past that `{`) — [matchingParen]'s twin, for
+     * finding the extent of a `withLock { ... }` trailing-lambda block.
+     * Same depth-counting, same string-literal awareness. Null only on
+     * malformed input, which means the scan itself is broken.
+     */
+    private fun matchingBrace(text: String, afterOpenIndex: Int): Int? {
+        var depth = 1
+        var i = afterOpenIndex
+        while (i < text.length) {
+            when (text[i]) {
+                '{' -> {
+                    depth++
+                    i++
+                }
+                '}' -> {
                     depth--
                     if (depth == 0) return i
                     i++
@@ -291,6 +326,193 @@ class ConventionTest {
                     "in source. Either it was fixed to use readCapped (delete this entry) or the call site changed " +
                     "shape (re-review the new shape before updating the text here — a text edit that merely " +
                     "re-matches a changed line could be laundering a real regression through).",
+            )
+        }
+    }
+
+    // ==================== Law 5: KitBuilderModel.open is always lock-guarded or allowlisted ====================
+
+    /**
+     * A kit MUTATION (anything that later calls `.save()` on the model this
+     * `open` produced, or mutates it) is only safe when the whole
+     * open→mutate→save sequence runs inside `KitWrites.mutex.withLock` AND
+     * the model was opened inside that same lock — a model opened earlier
+     * and saved later under the lock is still a stale-snapshot clobber
+     * (`KitWrites`' own KDoc; the bug class fcf37f9/f011778 closed for
+     * SPLIT/SURFACE/EXPORT). A model opened only to READ (never `.save()`d,
+     * never mutated) does not need the lock at all.
+     */
+    private data class KitWriteSite(val file: String, val text: String, val inLock: Boolean)
+
+    /** Every `KitWrites.mutex.withLock { ... }` brace-span in [text], via [matchingBrace] — a call site's index falling inside one of these means it's guarded, full stop, regardless of how far back the lock call sits. */
+    private fun lockSpans(text: String): List<IntRange> {
+        val spans = mutableListOf<IntRange>()
+        var searchFrom = 0
+        while (true) {
+            val lockIdx = text.indexOf("KitWrites.mutex.withLock", searchFrom)
+            if (lockIdx < 0) break
+            val braceStart = text.indexOf('{', lockIdx + "KitWrites.mutex.withLock".length)
+            if (braceStart < 0) {
+                fail(
+                    "found `KitWrites.mutex.withLock` with no following `{` in source — this is a bug in the " +
+                        "scan (or genuinely malformed Kotlin, which wouldn't compile), not a real finding.",
+                )
+            }
+            val braceEnd = matchingBrace(text, braceStart + 1)
+                ?: fail(
+                    "found `KitWrites.mutex.withLock {` with no matching `}` — this is a bug in the scan (or " +
+                        "genuinely malformed Kotlin, which wouldn't compile), not a real finding.",
+                )
+            spans += braceStart..braceEnd
+            searchFrom = braceEnd + 1
+        }
+        return spans
+    }
+
+    /** Every `KitBuilderModel.open(` call in `:app` (matches both the bare and `com.snipsnap.shell`-qualified forms — both contain this literal substring), with its own trimmed source line and whether its index falls inside a [lockSpans] span in the same file. */
+    private fun scanKitWriteOpenSites(): List<KitWriteSite> {
+        val sites = mutableListOf<KitWriteSite>()
+        for (file in requireAppKotlinFiles()) {
+            val text = file.readText()
+            val spans = lockSpans(text)
+            var searchFrom = 0
+            while (true) {
+                val idx = text.indexOf("KitBuilderModel.open(", searchFrom)
+                if (idx < 0) break
+                searchFrom = idx + 1
+                val lineStart = text.lastIndexOf('\n', idx) + 1
+                val lineEnd = text.indexOf('\n', idx).let { if (it < 0) text.length else it }
+                val line = text.substring(lineStart, lineEnd)
+                if (isCommentLine(line)) continue
+                sites += KitWriteSite(
+                    file.relativeToAppRoot(),
+                    normalizeSpan(line),
+                    spans.any { idx in it },
+                )
+            }
+        }
+        return sites
+    }
+
+    private object KitWriteCategory {
+        /** Never `.save()`d, never mutated — reading a kit's state alone needs no lock. */
+        const val READ_ONLY = "READ_ONLY"
+
+        /** Takes no lock itself, but every existing caller already wraps the *entire* call (open included) in `KitWrites.mutex.withLock` — verified by reading each caller, not assumed. A scan local to this file can't see that, hence the explicit allowlist entry. */
+        const val CALLER_GUARANTEED = "CALLER_GUARANTEED"
+
+        /** Opens outside any lock and later saves that SAME long-lived instance inside `withLock` elsewhere in the file — a real stale-snapshot clobber window. Accepted debt awaiting the reopen-and-replay redesign, NOT a blessing: do not read this category as "reviewed safe." */
+        const val KNOWN_STALE_SNAPSHOT = "KNOWN_STALE_SNAPSHOT"
+    }
+
+    private data class KitWriteAllow(
+        val file: String,
+        val text: String,
+        val category: String,
+        /** How many distinct unguarded sites in [file] share this exact [text] — KitShelf.kt has three byte-identical `open(source.dir)` lines (setKey/evilTwins/inKey), so file+text alone can't tell them apart; this makes a FOURTH one added later fail loudly instead of riding along on this entry. */
+        val count: Int = 1,
+        val justification: String,
+    )
+
+    /**
+     * The audit (fcf37f9/f011778 plus this pass) classified all 12
+     * `KitBuilderModel.open(` sites in `:app`. Six are guarded (open,
+     * mutate, and save all inside one `KitWrites.mutex.withLock`) and need
+     * no entry here — they pass the law automatically. The other six are
+     * listed below, each reviewed and put in its own category; nothing
+     * here is a rubber stamp, and KNOWN_STALE_SNAPSHOT entries are
+     * explicitly the opposite of one.
+     */
+    private val kitWriteAllowlist = listOf(
+        KitWriteAllow(
+            file = "App.kt",
+            text = "runCatching { KitBuilderModel.open(kitDir).purgeBin() }",
+            category = KitWriteCategory.READ_ONLY,
+            justification = "the launch sweep over every kit on the shelf. purgeBin() (KitBuilder.kt) only " +
+                "deletes files already older than BIN_KEEP_DAYS out of the on-disk bin folder — it never calls " +
+                "model.save() or touches kit.json at all, so there is no write for another writer to race.",
+        ),
+        KitWriteAllow(
+            file = "KitShelf.kt",
+            text = "val model = com.snipsnap.shell.KitBuilderModel.open(source.dir)",
+            category = KitWriteCategory.CALLER_GUARANTEED,
+            count = 3,
+            justification = "shared by setKey/evilTwins/inKey (three byte-identical open() lines — see this " +
+                "entry's `count`). None of the three takes a lock itself, but every call site in App.kt " +
+                "(::setKey, ::evilTwins, ::inKey) wraps the ENTIRE shelf call — open, mutate, and save alike — " +
+                "in `KitWrites.mutex.withLock` before ever calling into KitShelf. Verified by reading each " +
+                "caller, not assumed from a naming convention: this is a caller-guarantees pattern a scan local " +
+                "to KitShelf.kt cannot see, which is exactly why it needs an explicit, reviewed entry instead of " +
+                "being silently correct-by-luck.",
+        ),
+        KitWriteAllow(
+            file = "ui/PadSheetScreen.kt",
+            text = "val opened = withContext(Dispatchers.IO) { runCatching { KitBuilderModel.open(entry.dir) }.getOrNull() }",
+            category = KitWriteCategory.KNOWN_STALE_SNAPSHOT,
+            justification = "the screen-mount open (~line 167): opens outside any lock and stores the result as " +
+                "long-lived `model` state, which every debounced metadata flush and mutate/treatment commit " +
+                "later saves (`KitWrites.mutex.withLock { m.save() }` / `{ mutate(m); m.save() }`) elsewhere in " +
+                "this same file — a model opened before the lock, saved under it. This IS a stale-snapshot " +
+                "clobber window (another screen's write between this open and that later save is silently lost " +
+                "under the last-save-wins shape KitWrites' own KDoc describes) — accepted debt awaiting the " +
+                "reopen-and-replay redesign, explicitly NOT a blessing. Do not mistake this for approved.",
+        ),
+        KitWriteAllow(
+            file = "ui/TakesBinScreen.kt",
+            text = "val opened = withContext(Dispatchers.IO) { runCatching { KitBuilderModel.open(entry.dir) }.getOrNull() }",
+            category = KitWriteCategory.KNOWN_STALE_SNAPSHOT,
+            justification = "the screen-mount open (~line 94): same shape and same debt as PadSheetScreen's " +
+                "entry above — opens outside any lock, stores the long-lived `model`, and `doRestoreTake` later " +
+                "saves that same instance inside `KitWrites.mutex.withLock { m.restoreTake(take); m.save() }`. " +
+                "Accepted debt awaiting the reopen-and-replay redesign, explicitly NOT a blessing.",
+        ),
+    )
+
+    @Test
+    fun `law - every KitBuilderModel open runs inside KitWrites mutex withLock or is explicitly allowlisted`() {
+        val sites = scanKitWriteOpenSites()
+        assertTrue(
+            sites.isNotEmpty(),
+            "found zero KitBuilderModel.open( sites under :app (recon counted 12) — the scan is broken; a scan " +
+                "that finds nothing would otherwise pass by accident, which is worse than no test at all.",
+        )
+
+        val unguarded = sites.filterNot { it.inLock }
+        for (site in unguarded) {
+            val allowed = kitWriteAllowlist.any { it.file == site.file && it.text == site.text }
+            assertTrue(
+                allowed,
+                "${site.file}: `${site.text}` opens a KitBuilderModel outside KitWrites.mutex.withLock and isn't " +
+                    "allowlisted. A kit MUTATION is only safe when the whole open→mutate→save sequence runs " +
+                    "inside KitWrites.mutex.withLock AND the model was opened inside that same lock — a model " +
+                    "opened earlier and saved later under the lock is still a stale-snapshot clobber (see " +
+                    "KitWrites.kt's own KDoc and fcf37f9/f011778). A model opened only to READ (never .save()d, " +
+                    "never mutated) does not need the lock. Either move this open inside the same " +
+                    "KitWrites.mutex.withLock block as its mutate+save, or — only after actually reading every " +
+                    "call site — add it to ConventionTest.kitWriteAllowlist under the correct category " +
+                    "(READ_ONLY: truly never saved; CALLER_GUARANTEED: every existing caller already wraps the " +
+                    "whole call in withLock; KNOWN_STALE_SNAPSHOT: accepted debt, not a blessing) with a " +
+                    "reviewed justification, not just to make this pass.",
+            )
+        }
+
+        for (allowed in kitWriteAllowlist) {
+            val matches = unguarded.count { it.file == allowed.file && it.text == allowed.text }
+            assertTrue(
+                matches == allowed.count,
+                "${allowed.file}: expected exactly ${allowed.count} unguarded site(s) matching `${allowed.text}` " +
+                    "(category ${allowed.category}) but found $matches. If this went UP, a new unguarded open " +
+                    "with this exact text joined the ones already reviewed here and is silently riding along on " +
+                    "this entry's blessing — re-review each one before raising `count`. If it went DOWN " +
+                    "(including to zero), one or more were fixed (moved inside a lock) — shrink or delete this " +
+                    "entry rather than leaving it protecting nothing.",
+            )
+            assertTrue(
+                sites.any { it.file == allowed.file && it.text == allowed.text },
+                "${allowed.file}: the allowlisted open `${allowed.text}` no longer matches anything in source at " +
+                    "all. Either every occurrence was rewritten to a different shape (delete this entry after " +
+                    "re-reviewing the new shape — a text edit that merely re-matches a changed line could be " +
+                    "laundering a real regression through) or it was deleted outright (delete this entry too).",
             )
         }
     }
