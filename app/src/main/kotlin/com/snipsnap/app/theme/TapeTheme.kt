@@ -24,6 +24,16 @@ import com.snipsnap.shell.Schemes
 /** A `:shell` packed 0xRRGGBB colour as an opaque Compose colour. */
 val Int.tape: Color get() = Color((0xFF shl 24) or this)
 
+/**
+ * Destructive-action text, bound from `:shell`'s [Schemes.BIN_RED_GLOW] —
+ * the single source of the value (tuned to clear WCAG AA against every
+ * scheme's chrome gray; see that constant's KDoc and `ContrastTest`). Was
+ * duplicated as a private `Color(0xFFC86050)` literal in six screen files;
+ * every one of them now binds this token instead, so the colour — and any
+ * future retune — lives in exactly one place.
+ */
+val BinRedGlow: Color get() = Schemes.BIN_RED_GLOW.tape
+
 val LocalScheme = staticCompositionLocalOf { Schemes.DEFAULT }
 val LocalPersonality = staticCompositionLocalOf { Personality.FULL }
 

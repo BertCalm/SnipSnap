@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.ShareOut
+import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -560,8 +561,10 @@ private fun exportShareMime(format: ExportFormat): String? = when (format) {
  */
 private const val PREF_CARD_TREE = "export_card_tree"
 
+// The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
+// (accessibility audit finding 5) — a single tuned token, not a
+// duplicated literal; the border half is untouched.
 private val BIN_RED_BORDER = Color(0xFF6A2020)
-private val BIN_RED_GLOW = Color(0xFFC86050)
 
 @Composable
 private fun PreflightCard(findings: List<Finding>, scheme: Scheme, modifier: Modifier = Modifier) {
@@ -581,7 +584,7 @@ private fun PreflightCard(findings: List<Finding>, scheme: Scheme, modifier: Mod
 @Composable
 private fun FindingRow(finding: Finding, scheme: Scheme) {
     val color = when (finding.severity) {
-        Severity.FAIL -> BIN_RED_GLOW
+        Severity.FAIL -> BinRedGlow
         Severity.WARN -> scheme.warn.tape
         Severity.OK -> scheme.ink2.tape
     }

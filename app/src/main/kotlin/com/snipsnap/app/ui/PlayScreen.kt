@@ -575,7 +575,12 @@ private fun PlayPad(
                 .raisedBevel(scheme, Layout.PAD_RADIUS.dp),
             contentAlignment = Alignment.TopEnd,
         ) {
-            TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.6f), Modifier.padding(4.dp))
+            // Full-opacity ink2, not a dimmed copy — the alpha reduction
+            // (was 0.6f) put this, the only text naming which of 32 slots
+            // an empty pad is, at 2.09-2.99:1 in every scheme (audit
+            // finding 5). ink2 itself now clears 4.5:1 against gray in all
+            // 8 schemes at full opacity — see Schemes.kt and ContrastTest.
+            TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(4.dp))
         }
         return
     }
@@ -623,7 +628,22 @@ private fun PlayPad(
             }
             .padding(5.dp),
     ) {
-        TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f), Modifier.align(Alignment.TopEnd))
+        // Full-opacity ink2 on its own solid backing chip, not a dimmed
+        // copy drawn straight over the cell (audit finding 5). The chip
+        // matters here specifically: this cell carries a persistent
+        // class-colour wash (`cls.tape.copy(alpha = 0.12f)`, above) under
+        // the tag at all times, not just while lit — so without an opaque
+        // backdrop the tag's real background is class-colour-dependent
+        // and can fall to ~3.9:1 for a bright class like HAT_OPEN even
+        // with ink2 itself fixed — see ContrastTest.
+        Box(
+            Modifier
+                .align(Alignment.TopEnd)
+                .background(Schemes.darken(scheme.gray, 0.30f).tape, RoundedCornerShape(3.dp))
+                .padding(horizontal = 3.dp, vertical = 1.dp),
+        ) {
+            TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape)
+        }
         TapeText(
             pad.displayName,
             TapeType.marker,

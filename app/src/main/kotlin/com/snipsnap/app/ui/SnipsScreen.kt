@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.TapeVoice
+import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -376,7 +377,7 @@ private fun DeleteButton(scheme: Scheme, modifier: Modifier = Modifier, onClick:
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText("DELETE", TapeType.pixel, BIN_RED_GLOW)
+        TapeText("DELETE", TapeType.pixel, BinRedGlow)
     }
 }
 
@@ -464,5 +465,7 @@ private fun usedFileNamesAcrossShelf(root: File): Set<String> =
 // Duplicated, not hoisted (see this file's own `DeleteButton`/`HeaderChip`
 // comments) — BIN red is deliberately constant across every scheme so a
 // delete action reads as "red" even in a scheme with no red anywhere else.
+// The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
+// (accessibility audit finding 5) — a single tuned token, not a duplicated
+// literal.
 private val BIN_RED_BORDER = Color(0xFF6A2020)
-private val BIN_RED_GLOW = Color(0xFFC86050)

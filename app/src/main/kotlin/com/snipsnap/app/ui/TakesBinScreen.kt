@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
+import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -398,7 +399,7 @@ fun TakesBinScreen(
                 }
             }
 
-            PillCard("THE BIN — KEPT 30 DAYS", scheme, BIN_RED_BORDER, BIN_RED_GLOW) {
+            PillCard("THE BIN — KEPT 30 DAYS", scheme, BIN_RED_BORDER, BinRedGlow) {
                 if (binRows.isEmpty()) {
                     TapeText(Copy.BIN_EMPTY_STATE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                 } else {
@@ -546,7 +547,7 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             // than a `Copy` constant for prototype text that doesn't exist.
             if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS",
             TapeType.pixel,
-            if (enabled) BIN_RED_GLOW else scheme.ink3.tape,
+            if (enabled) BinRedGlow else scheme.ink3.tape,
             maxLines = 1,
         )
     }
@@ -614,9 +615,10 @@ private fun HeaderChip(
 
 // Duplicated, not hoisted (brief's own call: "do it if a clean one-liner,
 // else duplicate with a comment") — PadSheetScreen.kt and ExportScreen.kt
-// each already carry this same pair privately; this is the third. BIN red
+// each already carry this same border privately; this is the third. BIN red
 // is deliberately constant across every scheme (HANDOFF.md X2 / TAKES+BIN),
 // so a delete action reads as "red" even in a scheme with no red anywhere
-// else in it.
+// else in it. The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
+// (accessibility audit finding 5) — a single tuned token, not a duplicated
+// literal.
 private val BIN_RED_BORDER = Color(0xFF6A2020)
-private val BIN_RED_GLOW = Color(0xFFC86050)

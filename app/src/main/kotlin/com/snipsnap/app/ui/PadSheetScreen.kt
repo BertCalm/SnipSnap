@@ -64,6 +64,7 @@ import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.OutsideSession
 import com.snipsnap.app.ShareInbox
 import com.snipsnap.app.TapeVoice
+import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -2531,8 +2532,11 @@ internal fun ActionButton(
 // THE ONLY NON-SCHEME COLOURS IN THE DESIGN — BIN red is deliberately
 // constant across every scheme (HANDOFF.md X2 / TAKES+BIN), so a delete
 // action reads as "red" even in a scheme with no red anywhere else in it.
+// The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow — a
+// single tuned token instead of a duplicated literal (accessibility audit
+// finding 5); the border half is untouched (a 3:1, non-text UI element,
+// not the failure that was found).
 private val BIN_RED_BORDER = Color(0xFF6A2020)
-private val BIN_RED_GLOW = Color(0xFFC86050)
 
 /**
  * Pad delete → bin. Named DeleteButton, not EjectButton — EJECT already
@@ -2556,6 +2560,6 @@ private fun DeleteButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) 
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText("DELETE → BIN", TapeType.pixel, BIN_RED_GLOW)
+        TapeText("DELETE → BIN", TapeType.pixel, BinRedGlow)
     }
 }

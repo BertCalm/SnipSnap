@@ -625,7 +625,12 @@ private fun PadCell(
                 },
             contentAlignment = Alignment.TopEnd,
         ) {
-            TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.6f), Modifier.padding(4.dp))
+            // Full-opacity ink2, not a dimmed copy — the alpha reduction
+            // (was 0.6f) put this, the only text naming which of 16 slots
+            // an empty pad is, at 2.09-2.99:1 in every scheme (audit
+            // finding 5). ink2 itself now clears 4.5:1 against gray in all
+            // 8 schemes at full opacity — see Schemes.kt and ContrastTest.
+            TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(4.dp))
         }
         return
     }
@@ -692,7 +697,22 @@ private fun PadCell(
         if (peaks != null && peaks.isNotEmpty()) {
             PadWaveform(peaks, cls.tape.copy(alpha = 0.30f), Modifier.matchParentSize())
         }
-        TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f), Modifier.align(Alignment.TopEnd))
+        // Full-opacity ink2 on its own solid backing chip, not a dimmed
+        // copy drawn straight over the cell (audit finding 5, 2.30-3.59:1
+        // measured). The chip matters here specifically: PadWaveform above
+        // draws class-colour peaks at 30% alpha across the *whole* cell,
+        // so without an opaque backdrop the tag's actual background is
+        // data-dependent (whatever the waveform happens to render at this
+        // corner) and can still fall to ~2.4:1 for a bright class colour
+        // like HAT_OPEN even with ink2 fixed — see ContrastTest.
+        Box(
+            Modifier
+                .align(Alignment.TopEnd)
+                .background(Schemes.darken(scheme.gray, 0.30f).tape, RoundedCornerShape(3.dp))
+                .padding(horizontal = 3.dp, vertical = 1.dp),
+        ) {
+            TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape)
+        }
         TapeText(
             pad.displayName,
             TapeType.marker,

@@ -86,6 +86,40 @@ data class Scheme(
             val b = rgb and 0xFF
             return (299 * r + 587 * g + 114 * b) / 1000
         }
+
+        /**
+         * sRGB channel -> linear-light, per the WCAG 2.x relative-luminance
+         * definition (not the Rec.601 [luma] above, which is a fast
+         * perceptual approximation good enough for the two-surface/ink
+         * checks but not a real contrast ratio).
+         */
+        private fun linearChannel(c: Int): Double {
+            val cs = c / 255.0
+            return if (cs <= 0.04045) cs / 12.92 else Math.pow((cs + 0.055) / 1.055, 2.4)
+        }
+
+        /** WCAG relative luminance, 0..1, of a packed 0xRRGGBB colour. */
+        fun relativeLuminance(rgb: Int): Double {
+            val r = linearChannel((rgb shr 16) and 0xFF)
+            val g = linearChannel((rgb shr 8) and 0xFF)
+            val b = linearChannel(rgb and 0xFF)
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b
+        }
+
+        /**
+         * WCAG contrast ratio between two packed 0xRRGGBB colours:
+         * `(L1+0.05)/(L2+0.05)`, lighter over darker — 1:1 (none) to 21:1
+         * (max). This is the real ratio the WCAG AA thresholds (4.5:1 text,
+         * 3:1 UI components/large text) are defined against; see
+         * `ContrastTest` for the guardrails built on it.
+         */
+        fun contrastRatio(a: Int, b: Int): Double {
+            val la = relativeLuminance(a)
+            val lb = relativeLuminance(b)
+            val lighter = maxOf(la, lb)
+            val darker = minOf(la, lb)
+            return (lighter + 0.05) / (darker + 0.05)
+        }
     }
 }
 
@@ -105,7 +139,10 @@ object Schemes {
     val METAL = Scheme(
         SchemeId.METAL, "t-metal",
         gray = 0x2E3136, grayHi = 0x4A4F56, grayEdge = 0x3A3E44, grayMid = 0x17191C, grayDark = 0x060708,
-        ink = 0xD8DBE0, ink2 = 0x8A9099,
+        // ink2 lightened from 0x8A9099 (4.06:1 against gray, fails AA) to
+        // clear 4.5:1 — same hue/saturation, luminance raised. See
+        // ContrastTest.
+        ink = 0xD8DBE0, ink2 = 0x959AA3,
         title1 = 0x0A0A0C, title2 = 0x2C3038, titleInk = 0x7ADFE4,
         desk1 = 0x101215, desk2 = 0x14171B,
         lcd = 0x0A0C0E, lcdInk = 0x7ADFE4, amber = 0xFFB000, field = 0x1B1E22,
@@ -120,17 +157,30 @@ object Schemes {
     val OILSLICK = Scheme(
         SchemeId.OILSLICK, "t-oilslick",
         gray = 0x221A34, grayHi = 0x40306A, grayEdge = 0x2A2044, grayMid = 0x120E1A, grayDark = 0x060410,
-        ink = 0xC8B2F8, ink2 = 0x7A6AA0,
+        // ink2 lightened from 0x7A6AA0 (3.47:1 against gray, worst of the
+        // 8 schemes and OILSLICK is Schemes.DEFAULT) to clear 4.5:1. Same
+        // hue/saturation, luminance raised. See ContrastTest.
+        ink = 0xC8B2F8, ink2 = 0x8D80AE,
         title1 = 0x5A2AE0, title2 = 0xE040C8, titleInk = 0xFFFFFF,
         desk1 = 0x0C0618, desk2 = 0x140B24,
         lcd = 0x0A0714, lcdInk = 0xC8B2F8, amber = 0x40E0E8, field = 0x161020,
+        // ink3 (2.14:1 against gray) deliberately left below 4.5:1 AA:
+        // it's the third tier below the now-brightened ink2 (4.61:1), and
+        // the minimum lightening that clears 4.5:1 here (measured in
+        // ContrastTest) lands within a few percent of ink2 itself,
+        // erasing the two-tier hierarchy ink3 exists to draw. Left as an
+        // explicit, measured gap rather than a silent one — see
+        // ContrastTest's own note on this scheme/token.
         warn = 0xFFB000, ink3 = 0x584A80, win = 0x1A1424, deskGlow = 0x2A1050,
     )
 
     val PETROL = Scheme(
         SchemeId.PETROL, "t-petrol",
         gray = 0x141A28, grayHi = 0x30406A, grayEdge = 0x1A2438, grayMid = 0x0C101C, grayDark = 0x04060E,
-        ink = 0xB2C8F8, ink2 = 0x6A7CA0,
+        // ink2 lightened from 0x6A7CA0 (4.14:1 against gray, fails AA) to
+        // clear 4.5:1 — same hue/saturation, luminance raised. See
+        // ContrastTest.
+        ink = 0xB2C8F8, ink2 = 0x7384A6,
         title1 = 0x2A6AE0, title2 = 0x40E890, titleInk = 0xFFFFFF,
         desk1 = 0x060A18, desk2 = 0x0B1224,
         lcd = 0x070A14, lcdInk = 0xB2C8F8, amber = 0x40E890, field = 0x101624,
@@ -139,7 +189,10 @@ object Schemes {
     val INFRARED = Scheme(
         SchemeId.INFRARED, "t-infrared",
         gray = 0x221218, grayHi = 0x5C3040, grayEdge = 0x2C141A, grayMid = 0x12080C, grayDark = 0x0A0304,
-        ink = 0xF8B2C0, ink2 = 0xA06A78,
+        // ink2 lightened from 0xA06A78 (4.13:1 against gray, fails AA) to
+        // clear 4.5:1 — same hue/saturation, luminance raised. See
+        // ContrastTest.
+        ink = 0xF8B2C0, ink2 = 0xA67380,
         title1 = 0x9A2AE0, title2 = 0xE02A5A, titleInk = 0xFFFFFF,
         desk1 = 0x160408, desk2 = 0x200A10,
         lcd = 0x120608, lcdInk = 0xF8B2C0, amber = 0xFF8A1A, field = 0x1A0C12,
@@ -197,6 +250,22 @@ object Schemes {
      * gradient over the first three stops.
      */
     val OILSLICK_SWEEP: List<Int> = listOf(0x5A2AE0, 0xE040C8, 0x40E0E8, 0x8A5AF0, 0x5A2AE0)
+
+    /**
+     * Destructive-action text - deliberately scheme-independent (a delete
+     * reads as "red" even in a scheme with no red anywhere else), so it's a
+     * single packed colour here rather than a per-Scheme field. Was
+     * 0xC86050, which fails WCAG AA (4.5:1) against every scheme's `gray`
+     * chrome (3.26-4.49:1 - the actual background this text is read on at
+     * every raisedBevel-backed site; the lcd/field-backed sites were
+     * already passing with more margin). 0xC86050 is the *lighter* of the
+     * two colours in every pairing (luminance 0.212 vs. gray's
+     * 0.008-0.030), so raising the ratio means brightening it, not
+     * darkening it - this value keeps the original hue/saturation and only
+     * raises luminance until the worst-case scheme (METAL, the lightest
+     * gray) clears 4.5:1. See ContrastTest.
+     */
+    const val BIN_RED_GLOW: Int = 0xD6877B
 
     /**
      * Class colour for a drum class — one language across shell pads, app

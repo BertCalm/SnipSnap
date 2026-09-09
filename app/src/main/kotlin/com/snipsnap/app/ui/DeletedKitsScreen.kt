@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
+import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -305,7 +306,7 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             // `TakesBinScreen.kt`'s own armed-label swap, copied verbatim.
             if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS",
             TapeType.pixel,
-            if (enabled) BIN_RED_GLOW else scheme.ink3.tape,
+            if (enabled) BinRedGlow else scheme.ink3.tape,
             maxLines = 1,
         )
     }
@@ -332,8 +333,9 @@ private fun HeaderChip(
     }
 }
 
-// Duplicated, not hoisted — `TakesBinScreen.kt`'s own `BIN_RED_BORDER`/`BIN_RED_GLOW`,
+// Duplicated, not hoisted — `TakesBinScreen.kt`'s own `BIN_RED_BORDER`,
 // deliberately constant across every scheme so a delete/empty action reads
-// as "red" even in a scheme with no red anywhere else in it.
+// as "red" even in a scheme with no red anywhere else in it. The glow half
+// moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow (accessibility audit
+// finding 5) — a single tuned token, not a duplicated literal.
 private val BIN_RED_BORDER = Color(0xFF6A2020)
-private val BIN_RED_GLOW = Color(0xFFC86050)
