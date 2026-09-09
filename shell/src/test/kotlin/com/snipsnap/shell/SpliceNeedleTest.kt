@@ -1,0 +1,82 @@
+package com.snipsnap.shell
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class SpliceNeedleTest {
+
+    private val rate = 44_100
+
+    @Test
+    fun `snaps to the nearer onset within range, from either take`() {
+        val mono = FloatArray(rate)
+        val onsetsA = intArrayOf(1_000, 5_000)
+        val onsetsB = intArrayOf(1_040)
+        // 1_040 (in B) is nearer to 1_030 than either onset in A.
+        val snapped = SpliceNeedle.snap(1_030, rate - 1, mono, onsetsA, mono, onsetsB, rate)
+        assertEquals(1_040, snapped)
+    }
+
+    @Test
+    fun `an onset outside the snap window is ignored`() {
+        val mono = FloatArray(rate)
+        // 0.12s window at 44.1kHz is ~5292 frames; put the only onset well outside it.
+        val onsetsA = intArrayOf(20_000)
+        val snapped = SpliceNeedle.snap(1_000, rate - 1, mono, onsetsA, mono, IntArray(0), rate)
+        // No onset in range: falls through to zero-crossing search, which
+        // finds none in flat silence either, so the frame is untouched.
+        assertEquals(1_000, snapped)
+    }
+
+    @Test
+    fun `an onset beyond the splice range is ignored, even when it is the nearest`() {
+        val mono = FloatArray(rate)
+        // maxFrame is the shorter take's length; the longer take has an
+        // onset just past it, nearer to the needle than anything in range.
+        val maxFrame = 10_000
+        val onsetsA = intArrayOf(9_900)
+        val onsetsB = intArrayOf(10_050)
+        val snapped = SpliceNeedle.snap(10_000, maxFrame, mono, onsetsA, mono, onsetsB, rate)
+        assertEquals(9_900, snapped, "the in-range onset wins; the out-of-range one is not a candidate")
+    }
+
+    @Test
+    fun `with no onset nearby, snaps to the nearest zero crossing in either take`() {
+        val a = FloatArray(rate) { if (it < 1_020) 1f else -1f } // crosses at 1020
+        val b = FloatArray(rate) { -1f } // never crosses
+        val snapped = SpliceNeedle.snap(1_000, rate - 1, a, IntArray(0), b, IntArray(0), rate)
+        assertEquals(1_020, snapped)
+    }
+
+    @Test
+    fun `a zero crossing in the second take wins when it is nearer`() {
+        val a = FloatArray(rate) { -1f } // never crosses
+        val b = FloatArray(rate) { if (it < 1_005) 1f else -1f } // crosses at 1005
+        val snapped = SpliceNeedle.snap(1_000, rate - 1, a, IntArray(0), b, IntArray(0), rate)
+        assertEquals(1_005, snapped)
+    }
+
+    @Test
+    fun `an equally near zero crossing in the head beats one in the tail`() {
+        // Tail crosses 5 frames before the needle, head crosses 5 frames
+        // after: a tie in distance. A single scan by frame index would hand
+        // it to the tail's earlier frame; the documented tie-break is the head.
+        val a = FloatArray(rate) { if (it < 1_005) 1f else -1f } // head crosses at 1005
+        val b = FloatArray(rate) { if (it < 995) 1f else -1f } // tail crosses at 995
+        val snapped = SpliceNeedle.snap(1_000, rate - 1, a, IntArray(0), b, IntArray(0), rate)
+        assertEquals(1_005, snapped, "the head keeps a tie, in the zero-crossing stage too")
+    }
+
+    @Test
+    fun `with nothing to snap to, the clamped frame is returned unchanged`() {
+        val mono = FloatArray(rate) // silence: no crossings, no onsets
+        assertEquals(500, SpliceNeedle.snap(500, rate - 1, mono, IntArray(0), mono, IntArray(0), rate))
+    }
+
+    @Test
+    fun `clamps to the range even when the requested frame is out of bounds`() {
+        val mono = FloatArray(1_000)
+        assertEquals(0, SpliceNeedle.snap(-50, 999, mono, IntArray(0), mono, IntArray(0), rate))
+        assertEquals(999, SpliceNeedle.snap(5_000, 999, mono, IntArray(0), mono, IntArray(0), rate))
+    }
+}

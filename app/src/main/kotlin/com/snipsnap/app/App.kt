@@ -69,6 +69,7 @@ import com.snipsnap.app.ui.SynthScreen
 import com.snipsnap.app.ui.TakesBinScreen
 import com.snipsnap.app.ui.TAPE_LOAD_MAX_SEC
 import com.snipsnap.app.ui.TapeScreen
+import com.snipsnap.app.ui.TapeSpliceScreen
 import com.snipsnap.app.ui.TapeText
 import com.snipsnap.app.ui.TitleBar
 import com.snipsnap.app.ui.ToastOverlay
@@ -254,6 +255,11 @@ fun App(shelf: KitShelf) {
     // (PadSheetScreen's own onGrainField clears padSheetSlot first) so the
     // two overlays are never both non-null for the same KIT composition.
     var grainFieldSlot by remember { mutableStateOf<Int?>(null) }
+    // TAPE SPLICE: same shape as GRAIN FIELD above — only reachable from
+    // PAD SHEET's own action row, not one of MenuRow's fixed ten, so it's
+    // KIT-scoped overlay state too. Opening it closes PAD SHEET the same
+    // way GRAIN FIELD's own onGrainField does below.
+    var spliceSlot by remember { mutableStateOf<Int?>(null) }
     // ARRANGE: same shape again, but GROOVE-scoped rather than KIT-scoped —
     // reachable only from GROOVE's own "SONG ▸" button, not one of MenuRow's
     // fixed ten, so a boolean here rather than its own AppScreen entry.
@@ -1307,6 +1313,7 @@ fun App(shelf: KitShelf) {
                             takesBinOpen = false
                             padCaptureSlot = null
                             grainFieldSlot = null
+                            spliceSlot = null
                             arrangeOpen = false
                         }
                     }
@@ -1428,6 +1435,7 @@ fun App(shelf: KitShelf) {
         takesBinOpen = false
         padCaptureSlot = null
         grainFieldSlot = null
+        spliceSlot = null
         arrangeOpen = false
         // SNIPS is shelf-level, not KIT-scoped, but the same
         // "leaving must not leave an overlay/hand-off armed"
@@ -1463,7 +1471,7 @@ fun App(shelf: KitShelf) {
     // (its own "◄ KIT" chip below, via `onExit`), and KEYS (its own
     // "◄ SHELF" chip, via `onBack`, which also silences the instrument
     // before leaving — this generic reset does not).
-    val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || takesBinOpen ||
+    val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || takesBinOpen ||
         padCaptureSlot != null || snipsOpen || deletedKitsOpen || arrangeOpen || xray != null
     BackHandler(
         enabled = !anyOverlayOpen && screen != AppScreen.KITS &&
@@ -1649,6 +1657,7 @@ fun App(shelf: KitShelf) {
                             val sheetSlot = padSheetSlot
                             val sheetEntry = open
                             val fieldSlot = grainFieldSlot
+                            val spliceSlotState = spliceSlot
                             when {
                                 // Checked before the PAD SHEET branch below:
                                 // opening GRAIN clears `padSheetSlot` at the
@@ -1663,6 +1672,25 @@ fun App(shelf: KitShelf) {
                                     onBack = { grainFieldSlot = null },
                                     onToast = { toast = it },
                                     onRequestArm = ::requestArm,
+                                )
+                                // Checked before PAD SHEET below, same
+                                // reasoning as GRAIN FIELD above: opening
+                                // SPLICE clears `padSheetSlot` at the same
+                                // time it sets `spliceSlot` (see onSplice
+                                // below), so the two are already mutually
+                                // exclusive - this ordering is belt-and-
+                                // suspenders should that ever not hold.
+                                spliceSlotState != null && sheetEntry != null -> TapeSpliceScreen(
+                                    entry = sheetEntry,
+                                    slot = spliceSlotState,
+                                    onBack = { spliceSlot = null },
+                                    onToast = { toast = it },
+                                    onKitUpdated = { updatedKit ->
+                                        if (open?.dir == sheetEntry.dir) open = open?.copy(kit = updatedKit)
+                                        scope.launch {
+                                            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                        }
+                                    },
                                 )
                                 sheetSlot != null && sheetEntry != null -> PadSheetScreen(
                                     entry = sheetEntry,
@@ -1692,6 +1720,12 @@ fun App(shelf: KitShelf) {
                                         // comment above).
                                         padSheetSlot = null
                                         grainFieldSlot = slot
+                                    },
+                                    onSplice = { slot ->
+                                        // SPLICE closes PAD SHEET on the way
+                                        // in, same reasoning as GRAIN above.
+                                        padSheetSlot = null
+                                        spliceSlot = slot
                                     },
                                     onKitUpdated = { updatedKit ->
                                         // A write that outlived its screen must not be welded
