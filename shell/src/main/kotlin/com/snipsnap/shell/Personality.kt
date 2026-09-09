@@ -394,10 +394,24 @@ object Copy {
      */
     val kitBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
 
-    // ---- SNIPS: rename (name-and-find task) ----
+    // ---- SNIPS: rename, delete → bin (name-and-find task) ----
     /** RENAME on a SNIPS row; [name] is what it actually landed under — a collision refuses instead of guessing, so this is always the typed name verbatim. */
     fun snipRenamed(name: String): String = "RENAMED TO $name."
     const val SNIP_RENAME_FAILED = "COULDN'T RENAME - CHECK THE NAME AND TRY AGAIN."
+    /**
+     * DELETE on a SNIPS row, now into the 30-day bin — `SnipStore.delete`'s
+     * own promise, `kitDeleted`'s shape applied to one file. [name] is
+     * `SnipStore.Info.displayName`, so a never-confidently-classified snip
+     * reads "SNIP", never a guess.
+     */
+    fun snipDeleted(name: String): String = "$name IS OFF THE LIST. 30 DAYS TO CHANGE YOUR MIND."
+    const val SNIP_DELETE_FAILED = "DELETE FAILED. THE FILE MAY ALREADY BE GONE."
+
+    // ---- DELETED SNIPS: restore or empty early ----
+    /** RESTORE on a binned snip; [name] is what it actually landed under — `SnipStore.restore`'s own collision fallback may have freshened it, never the name the row showed. */
+    fun snipRestored(name: String): String = "$name IS BACK IN SNIPS. AS IF NOTHING HAPPENED."
+    /** EMPTY THE BIN NOW on DELETED SNIPS, confirmed — `kitBinEmptied`'s own no-count reasoning applies here too. */
+    val snipBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
 
     // ---- PAD SHEET: pad from anything ----
     const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."

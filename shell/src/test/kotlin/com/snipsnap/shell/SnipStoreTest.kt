@@ -335,4 +335,91 @@ class SnipStoreTest {
             assertTrue(f.exists(), "an unsafe name must never move the file at all")
         } finally { dir.deleteRecursively() }
     }
+
+    // ==================== the bin: delete -> list -> restore -> correct name ====================
+
+    @Test
+    fun `delete moves a snip into the bin, off the live list, restorable under its own name`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val kick = DrumSynth.kick()
+            val f = SnipStore.commit(kick.samples, kick.sampleRate, dir, 50_000L)
+            assertTrue(SnipStore.delete(f, nowMillis = 99_000L))
+            assertFalse(f.exists(), "gone from its live path")
+            assertTrue(SnipStore.list(dir).isEmpty(), "gone from the live list")
+
+            val binned = SnipStore.binned(dir)
+            assertEquals(1, binned.size)
+            assertEquals(50_000L, binned.first().capturedAtMillis, "the real capture time, not the binning moment")
+            assertEquals("Kick", binned.first().displayName)
+            assertEquals(99_000L, binned.first().binnedAtMillis)
+
+            val restored = SnipStore.restore(dir, binned.first())
+            assertEquals("snip_50000_Kick.wav", restored?.name, "back under its own original name")
+            assertEquals(listOf(restored), SnipStore.list(dir))
+            assertTrue(SnipStore.binned(dir).isEmpty(), "gone from the bin once restored")
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `restore into a name collision lands under a freshened name, never overwriting the live file`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val kick = DrumSynth.kick()
+            val f = SnipStore.commit(kick.samples, kick.sampleRate, dir, 60_000L)
+            assertTrue(SnipStore.delete(f, nowMillis = 61_000L))
+            val binned = SnipStore.binned(dir).first()
+
+            // A live file now sits exactly where the binned snip would
+            // naturally restore to - manufactured collision, the shape a
+            // fixed clock (or a hand-placed file) could produce for real.
+            // Live snips sit under root/[SnipStore.DIR], not root itself.
+            val liveCollision = File(File(dir, SnipStore.DIR), "snip_60000_Kick.wav")
+            liveCollision.writeBytes(byteArrayOf(1, 2, 3))
+
+            val restored = SnipStore.restore(dir, binned)
+            assertEquals("snip_60000_Kick 2.wav", restored?.name, "freshened past the collision, capture time untouched")
+            assertTrue(liveCollision.exists(), "the file already there was never overwritten")
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `sweepBin only takes what has slept past keepDays, emptyBin takes everything now`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val a = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 1_000L)
+            val b = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 2_000L)
+            assertTrue(SnipStore.delete(a, nowMillis = 1_000L))
+            assertTrue(SnipStore.delete(b, nowMillis = 2_000L))
+
+            val dayMs = 24L * 60 * 60 * 1000
+            val keepDays = 30.0
+            // Just past a's own 30 days, well short of b's.
+            val nowMillis = 1_000L + (keepDays * dayMs).toLong() + 1
+            val swept = SnipStore.sweepBin(dir, nowMillis = nowMillis, keepDays = keepDays)
+            assertEquals(1, swept)
+            assertEquals(1, SnipStore.binned(dir).size, "only the older one went")
+
+            val emptied = SnipStore.emptyBin(dir)
+            assertEquals(1, emptied)
+            assertTrue(SnipStore.binned(dir).isEmpty())
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `daysLeft rounds up and floors at zero, agreeing with the sweep it describes`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val f = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 1_000L)
+            assertTrue(SnipStore.delete(f, nowMillis = 5_000L))
+            val binned = SnipStore.binned(dir).first()
+            val dayMs = 24L * 60 * 60 * 1000
+
+            assertEquals(30, binned.daysLeft(nowMillis = 5_000L))
+            // A few ms into day 30 - one partial day left still reads 1, not 0.
+            assertEquals(1, binned.daysLeft(nowMillis = 5_000L + 29L * dayMs + 1))
+            assertEquals(0, binned.daysLeft(nowMillis = 5_000L + 30L * dayMs))
+            assertEquals(0, binned.daysLeft(nowMillis = 5_000L + 31L * dayMs), "never negative")
+        } finally { dir.deleteRecursively() }
+    }
 }

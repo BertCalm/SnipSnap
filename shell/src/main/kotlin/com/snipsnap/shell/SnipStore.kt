@@ -40,17 +40,18 @@ object SnipStore {
      * optional and additional, never a replacement for the timestamp
      * [parsedTimestamp] (and every caller of it: [list]/[newest]/
      * [listWithInfo]) already sorts and identifies a snip by. `(.+)` rather
-     * than a stricter character class because a future rename only needs to
-     * be gated by filesystem safety, not by whatever this regex alone would
-     * otherwise accept.
+     * than a stricter character class because a user's typed rename is only
+     * gated by [Names.isMpcSafe] (spaces and most punctuation stay legal),
+     * not by whatever this regex alone would otherwise accept.
      */
     private val NAME = Regex("""snip_(\d+)(?:_(.+))?\.wav""")
 
     /**
      * A capture's own filename, given its true capture time and its name
      * half (null for the neutral fallback). The one place that assembles
-     * this shape — today just [freshFile] — so the grammar [NAME] parses
-     * can never drift from what actually gets written.
+     * this shape — [freshFile], [rename], and the bin's [restore] collision
+     * fallback all go through this so the grammar [NAME] parses can never
+     * drift from what actually gets written.
      */
     private fun fileName(capturedAtMillis: Long, name: String?): String =
         if (name.isNullOrBlank()) "snip_$capturedAtMillis.wav" else "snip_${capturedAtMillis}_$name.wav"
@@ -138,7 +139,7 @@ object SnipStore {
     /**
      * The name a fresh capture earns from [classification], or `null` for
      * the neutral fallback (today's plain `snip_<millis>.wav` shape, the
-     * "SNIP" identity [Info.displayName] shows).
+     * "SNIP" identity [Info.displayName]/[BinnedSnip.displayName] show).
      *
      * A snip is not always a drum — a voice memo, rain, a door hinge, a
      * busker all land here too — and a confident-sounding wrong name
@@ -158,7 +159,8 @@ object SnipStore {
      * overwrites the first and [newest] loses one. The bump keeps the
      * name's own ordering honest — later is later. [name] rides along
      * unmodified at every candidate millis — it never changes what breaks
-     * a tie, only [fileName]'s own construction it reuses.
+     * a tie, only [fileName]'s reuse of the same construction [rename] and
+     * the bin's [restore] fallback also go through.
      *
      * The claim itself is atomic: [File.createNewFile] is an OS-level
      * create-if-absent (`open(O_CREAT|O_EXCL)` underneath), so two threads
@@ -203,12 +205,13 @@ object SnipStore {
      * classification either, deliberately: an imported file already came
      * with whatever name it had wherever it came from, and this app has no
      * more evidence about it than [commit]'s own neutral fallback would
-     * give it, so it lands under the plain `snip_<millis>.wav` shape. Only
-     * the two things the deck needs — mono (the ring is mono; the deck
-     * reads mono) and the MPC rate (a 48 k or 22.05 k file through the sinc
-     * [Resampler]) — and the [IMPORT_MAX_SEC] cap. Written through
-     * [AtomicFile] like a commit, named `snip_<nowMillis>.wav` so [newest]
-     * ranks it by arrival. An empty file is refused in words.
+     * give it, so it lands under the plain `snip_<millis>.wav` shape,
+     * renameable later exactly like any other snip. Only the two things
+     * the deck needs — mono (the ring is mono; the deck reads mono) and
+     * the MPC rate (a 48 k or 22.05 k file through the sinc [Resampler])
+     * — and the [IMPORT_MAX_SEC] cap. Written through [AtomicFile] like a
+     * commit, named `snip_<nowMillis>.wav` so [newest] ranks it by
+     * arrival. An empty file is refused in words.
      */
     fun import(snip: Snip, root: File, nowMillis: Long): Imported {
         require(snip.frameCount > 0) { "the shared file holds no audio" }
@@ -253,15 +256,21 @@ object SnipStore {
 
     /**
      * [file]'s own label, read straight off its filename — the classified
-     * name, or the neutral "SNIP" fallback when there is none.
-     * [Info.displayName] already carries this for a row already in hand;
-     * this is for a caller that only has the [File] itself.
+     * or typed name, or the neutral "SNIP" fallback when there is none.
+     * [Info.displayName]/[BinnedSnip.displayName] both already carry this
+     * for a row already in hand; this is for a caller (a rename's own
+     * result, most concretely) that only has the [File] itself.
      */
     fun displayName(file: File): String = parsedName(file) ?: "SNIP"
 
     /**
      * `root/[DIR]`'s non-empty files — the [list]/[listWithInfo] shared
-     * starting point. Zero-length files are skipped: `freshFile`'s claim
+     * starting point. `isFile` excludes [binDir] itself (a subdirectory
+     * living inside `[DIR]`, the same way `Rooms/.bin` sits inside
+     * `Rooms/`) explicitly, rather than relying on [NAME] simply failing to
+     * match its name — a directory that could never look like a snip
+     * either way, but this says so instead of leaving it to a coincidence
+     * of the regex. Zero-length files are skipped too: `freshFile`'s claim
      * (`createNewFile()`) creates the file before any bytes land, so a
      * process kill between the claim and [writeClaimedFile] can leave an
      * empty file with a perfectly matching name — not a snip yet, and not
@@ -270,7 +279,7 @@ object SnipStore {
     private fun snipFiles(root: File): List<File> {
         val dir = File(root, DIR)
         val files = dir.listFiles() ?: return emptyList()
-        return files.filter { it.length() > 0L }
+        return files.filter { it.isFile && it.length() > 0L }
     }
 
     /**
@@ -286,12 +295,161 @@ object SnipStore {
 
     fun newest(root: File): File? = list(root).firstOrNull()
 
-    /** SNIPS delete: a straight [File.delete] — success/failure is the caller's own toast to raise. */
-    fun delete(file: File): Boolean = file.delete()
+    /** The bin's folder under the snips, beside the snips: a deleted snip sleeps here, like every other delete, before it is gone. */
+    const val BIN_DIR = ".bin"
+
+    /** How long the bin keeps a deleted snip — [delete]'s promise, [sweepBin]'s job; [KitShelf.BIN_DAYS]'s own shape, for one file instead of a folder. */
+    const val BIN_DAYS = 30.0
+
+    private const val DAY_MS = 24L * 60 * 60 * 1000
+
+    /** Where deleted snips sleep under [root]. */
+    private fun binDir(root: File): File = File(File(root, DIR), BIN_DIR)
+
+    /**
+     * A bin filename: the binning moment first (purely numeric, so it can
+     * never be mistaken for the start of the original name's own
+     * `snip_...` literal), then an underscore, then the original filename
+     * verbatim — `1755700000000_snip_1755600000000_Kick.wav`. Unambiguous
+     * to parse back apart ([binned]'s own `BIN_NAME`) because the original
+     * half always starts with the fixed literal `snip_`, which a purely
+     * numeric binning stamp never does.
+     */
+    private fun binFileName(binnedAtMillis: Long, originalFileName: String) = "${binnedAtMillis}_$originalFileName"
+
+    private val BIN_NAME = Regex("""(\d+)_(snip_.+)""")
+
+    /**
+     * DELETE: [file] moves into the bin rather than disappearing — the
+     * app's one rule for a delete, [KitShelf.deleteKit]/[Rooms.forget]'s
+     * own promise applied to one snip. `false` when [file] is already gone
+     * (a stale row, a second delete racing this one) or the move itself
+     * fails; the caller's own single-shot dialog is what keeps two deletes
+     * of the *same* row from racing each other at all. The bin filename is
+     * stamped with [nowMillis] as its own binning moment ([binFileName]),
+     * bumped forward on the vanishingly unlikely event two deletes of
+     * files with byte-identical names land in the same millisecond — the
+     * same bump idiom [freshFile] already uses for the live side.
+     */
+    fun delete(file: File, nowMillis: Long = System.currentTimeMillis()): Boolean {
+        if (!file.isFile) return false
+        // file's own parent IS root/[DIR] already (every live snip lives
+        // directly there) — [binDir] takes the app's root, not this, so
+        // the bin sits beside file at File(file.parentFile, BIN_DIR)
+        // rather than through that helper, which would double up DIR.
+        val bin = File(file.parentFile ?: return false, BIN_DIR).apply { mkdirs() }
+        var millis = nowMillis
+        while (true) {
+            val target = File(bin, binFileName(millis, file.name))
+            if (!target.exists()) return moveFile(file, target)
+            millis++
+        }
+    }
+
+    /** A snip asleep in the bin: its own capture time and name (read off the preserved original filename, never guessed), its size, and when it was binned. */
+    data class BinnedSnip(val file: File, val capturedAtMillis: Long, val name: String?, val sizeBytes: Long, val binnedAtMillis: Long) {
+        /** The row's own label — the classified/typed name, or the neutral "SNIP" fallback. Never a guess presented as fact. */
+        val displayName: String get() = name ?: "SNIP"
+
+        /**
+         * Days left before [sweepBin] takes it, rounded UP so the readout
+         * agrees with the sweep that acts on it — a partial day left still
+         * reads 1, and 0 only at the boundary where the snip actually
+         * goes. [KitShelf.BinnedKit.daysLeft]/[Rooms.Binned.daysLeft]'s own
+         * convention, kept so every bin in the app agrees about the same
+         * moment.
+         */
+        fun daysLeft(nowMillis: Long, keepDays: Double = BIN_DAYS): Int {
+            val left = (binnedAtMillis + (keepDays * DAY_MS).toLong() - nowMillis).coerceAtLeast(0L)
+            return ((left + DAY_MS - 1) / DAY_MS).toInt()
+        }
+    }
+
+    /** Every snip asleep in the bin, the most recently binned first. A bin file whose name doesn't parse is skipped, not fatal. */
+    fun binned(root: File): List<BinnedSnip> {
+        val bin = binDir(root)
+        val files = bin.listFiles { f: File -> f.isFile && f.length() > 0L } ?: return emptyList()
+        return files.mapNotNull { f ->
+            val m = BIN_NAME.matchEntire(f.name) ?: return@mapNotNull null
+            val binnedAtMillis = m.groupValues[1].toLongOrNull() ?: return@mapNotNull null
+            val original = File(bin, m.groupValues[2])
+            val capturedAtMillis = parsedTimestamp(original) ?: return@mapNotNull null
+            BinnedSnip(f, capturedAtMillis, parsedName(original), f.length(), binnedAtMillis)
+        }.sortedByDescending { it.binnedAtMillis }
+    }
+
+    /**
+     * RESTORE: [binnedSnip] back into `snips/`, under its own original
+     * name and capture time — never a fresh timestamp, which would lie
+     * about when it was actually caught. A collision at that exact name
+     * (essentially impossible in real use, since [freshFile]'s millis are
+     * globally unique among live snips going forward — but real enough
+     * under a fixed clock, or a hand-placed file, to guard rather than
+     * assume away) freshens only the NAME half, " 2", " 3"… — the same
+     * suffix-bump [KitShelf.restoreKit]'s own `freshShelfName` uses — the
+     * capture time never moves. `null` when [binnedSnip]'s file
+     * is already gone (a stale row, a second restore racing this one) or
+     * the move itself fails.
+     */
+    fun restore(root: File, binnedSnip: BinnedSnip): File? {
+        if (!binnedSnip.file.isFile) return null
+        val dir = File(root, DIR).apply { mkdirs() }
+        val originalName = BIN_NAME.matchEntire(binnedSnip.file.name)?.groupValues?.get(2) ?: return null
+        var target = File(dir, originalName)
+        if (target.exists()) {
+            var n = 2
+            while (true) {
+                val candidate = File(dir, fileName(binnedSnip.capturedAtMillis, "${binnedSnip.name ?: "SNIP"} $n"))
+                if (!candidate.exists()) {
+                    target = candidate
+                    break
+                }
+                n++
+            }
+        }
+        return if (moveFile(binnedSnip.file, target)) target else null
+    }
+
+    /** Empties [root]'s snip bin of whatever has slept there past [keepDays]; returns how many went — [KitShelf.sweepDeletedKits]/[Rooms.sweepBin]'s own job, for snips. */
+    fun sweepBin(root: File, nowMillis: Long = System.currentTimeMillis(), keepDays: Double = BIN_DAYS): Int {
+        var gone = 0
+        val keepMs = (keepDays * DAY_MS).toLong()
+        for (b in binned(root)) {
+            if (nowMillis - b.binnedAtMillis >= keepMs && b.file.delete()) gone++
+        }
+        return gone
+    }
+
+    /** EMPTY THE BIN NOW: every snip asleep in [root]'s bin gone now — an early sweep the user asked for, not [sweepBin]'s age check. Returns how many went; 0 without throwing when the bin is empty or was never created. */
+    fun emptyBin(root: File): Int {
+        val children = binDir(root).listFiles() ?: return 0
+        return children.count { it.delete() }
+    }
+
+    /**
+     * [from] to [to], preferring an atomic rename and falling back to
+     * copy-then-delete when the two paths can't be renamed across in one
+     * step ([Rooms]'s own `move` — both live under the same parent in
+     * every call site today, so the fallback is defense in depth, not an
+     * expected path).
+     */
+    private fun moveFile(from: File, to: File): Boolean {
+        return try {
+            java.nio.file.Files.move(from.toPath(), to.toPath())
+            true
+        } catch (e: java.io.IOException) {
+            try {
+                from.copyTo(to, overwrite = false)
+                from.delete()
+            } catch (e2: Exception) {
+                false
+            }
+        }
+    }
 
     /** What the SNIPS shelf lists a row from — no decode, unlike duration (see [listWithInfo]'s own KDoc). */
     data class Info(val file: File, val sizeBytes: Long, val capturedAtMillis: Long, val name: String?) {
-        /** The row's own label — the classified name, or the neutral "SNIP" fallback. Never a guess presented as fact. */
+        /** The row's own label — the classified/typed name, or the neutral "SNIP" fallback. Never a guess presented as fact. */
         val displayName: String get() = name ?: "SNIP"
     }
 
@@ -319,13 +477,14 @@ object SnipStore {
      * when [newName] already matches the file's own current name half.
      * The capture time embedded in the filename never changes — only the
      * name half does, so [parsedTimestamp] keeps agreeing with reality.
-     * `null` on collision with an already-existing path: a live rename
-     * target can only collide with itself (the capture time in the target
-     * name is [file]'s own, and [freshFile] already guarantees no two live
-     * snips ever share a capture time), so a genuine collision here means
-     * something outside this API's own writes already claimed that exact
-     * path — worth refusing loudly rather than silently freshening past a
-     * name someone else's file is using.
+     * `null` on collision with an already-existing path: unlike the bin's
+     * [restore], a live rename target can only collide with itself (the
+     * capture time in the target name is [file]'s own, and [freshFile]
+     * already guarantees no two live snips ever share a capture time), so
+     * a genuine collision here means something outside this API's own
+     * writes already claimed that exact path — worth refusing loudly
+     * rather than silently freshening past a name someone else's file is
+     * using.
      */
     fun rename(file: File, newName: String): File? {
         if (!Names.isMpcSafe(newName)) return null

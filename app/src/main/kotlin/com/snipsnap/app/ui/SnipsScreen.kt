@@ -101,6 +101,24 @@ fun SnipsScreen(
         snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(shelf.root) }
     }
 
+    // DELETED SNIPS (name-and-find task): the SNIPS-level equivalent of
+    // KitsScreen's own "DELETED KITS ▸" row — reached from SNIPS, not the
+    // shelf, since snips (not kits) are what it holds. `binnedCount` gates
+    // the button below (shown only when the bin actually holds something,
+    // the same locked behavior `binnedKitsCount` already keeps for kits).
+    // Keyed on `deletedSnipsOpen` itself, not `Unit` — `App.kt`'s own
+    // `binnedKitsCount` effect gives the exact reasoning: EMPTY THE BIN NOW
+    // (or a RESTORE) inside DeletedSnipsScreen changes nothing else this
+    // effect watches, so without that key the row would keep reading a
+    // stale count after the door behind it is empty. The local `+= 1`/`- 1`
+    // nudges in doDelete/onRestored below stay too, for instant feedback
+    // between refreshes.
+    var deletedSnipsOpen by remember { mutableStateOf(false) }
+    var binnedCount by remember { mutableStateOf(0) }
+    LaunchedEffect(deletedSnipsOpen) {
+        binnedCount = withContext(Dispatchers.IO) { SnipStore.binned(shelf.root).size }
+    }
+
     // USED badge: null until the cheap gate below resolves, and the list
     // renders with no badges at all in the meantime — never a guess, per
     // the honesty rule (see [anyPadTaggedWithSourceFile]'s own KDoc for why
@@ -189,6 +207,35 @@ fun SnipsScreen(
         }
     }
 
+    if (deletedSnipsOpen) {
+        // Placed here, past `voice`/`playToken`/`stopPlayback`/
+        // `DisposableEffect` above (NOT at the top of the function): an
+        // early return before those hooks would mean a PLAY in flight when
+        // DELETED SNIPS opens is orphaned — the coroutine's captured
+        // `playToken` still matches, so it still assigns a fresh `voice`
+        // into a state slot this branch never composes again, and the
+        // `DisposableEffect` that would have released it was never
+        // registered either. Stopping first closes that window; keeping
+        // the hooks composed either way is the belt this relies on.
+        // Everything BELOW this point (confirmDelete/renameTarget/the main
+        // BackHandler/the dialogs) is still skipped while this shows, so
+        // DELETED SNIPS owns Back entirely on its own with no shared
+        // `enabled =` gate to keep in sync.
+        stopPlayback()
+        DeletedSnipsScreen(
+            shelf = shelf,
+            onBack = { deletedSnipsOpen = false },
+            onToast = onToast,
+            onRestored = {
+                binnedCount = (binnedCount - 1).coerceAtLeast(0)
+                scope.launch {
+                    snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(shelf.root) }
+                }
+            },
+        )
+        return
+    }
+
     var confirmDelete by remember { mutableStateOf<SnipStore.Info?>(null) }
     var renameTarget by remember { mutableStateOf<SnipStore.Info?>(null) }
     // Mirrors the header's own ◄ SHELF chip — disabled while either dialog
@@ -206,11 +253,12 @@ fun SnipsScreen(
             val ok = withContext(Dispatchers.IO) { SnipStore.delete(info.file) }
             if (ok) {
                 snips = snips.filter { it.file != info.file }
-                onToast("SNIP DELETED.")
+                binnedCount += 1
+                onToast(Copy.snipDeleted(info.displayName))
             } else {
                 // Law 3: say exactly what happened — a second delete racing
                 // this one, most plausibly, is the only way this fails.
-                onToast("DELETE FAILED. THE FILE MAY ALREADY BE GONE.")
+                onToast(Copy.SNIP_DELETE_FAILED)
             }
         }
     }
@@ -250,6 +298,20 @@ fun SnipsScreen(
                     "${snips.size} · ${humanSize(snips.sumOf { it.sizeBytes })}",
                     TapeType.lcdSmall,
                     scheme.amber.tape,
+                )
+            }
+
+            // DELETED SNIPS: gated on the bin actually holding something —
+            // KitsScreen's own "DELETED KITS ▸" row, one level down: a user
+            // who has never deleted a snip sees no door to an empty room
+            // at all (locked behavior).
+            if (binnedCount > 0) {
+                ActionButton(
+                    "DELETED SNIPS ▸ $binnedCount WAITING",
+                    scheme,
+                    enabled = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { deletedSnipsOpen = true },
                 )
             }
 
@@ -395,10 +457,14 @@ private fun SnipRow(
 }
 
 /**
- * "DELETE THIS SNIP? CAN'T UNDO." — the exact confirm text the brief locks
- * in. Same scrim + raisedBevel shape as `App.kt`'s own `BlockedDialog`
- * / `KitsScreen.kt`'s `StarterMenu`: a `Box` scrim that dismisses on tap,
- * a `Column` that swallows its own tap so that dismiss can't fire through it.
+ * "DELETE THIS SNIP? IT WAITS IN DELETED SNIPS FOR 30 DAYS." — replaces the
+ * old "CAN'T UNDO.", which this task's own bin makes false the moment it
+ * ships (a string that lies is exactly what this project's copy laws exist
+ * to catch). `KitsScreen.kt`'s own `KitDeleteConfirmDialog` names its
+ * screen the same way, now that one exists for snips too. Same scrim +
+ * raisedBevel shape as `App.kt`'s own `BlockedDialog` / `KitsScreen.kt`'s
+ * `StarterMenu`: a `Box` scrim that dismisses on tap, a `Column` that
+ * swallows its own tap so that dismiss can't fire through it.
  */
 @Composable
 private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
@@ -424,7 +490,7 @@ private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText("DELETE THIS SNIP? CAN'T UNDO.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            TapeText("DELETE THIS SNIP? IT WAITS IN DELETED SNIPS FOR 30 DAYS.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
                 DeleteButton(scheme, Modifier.weight(1f), onClick = onConfirm)
