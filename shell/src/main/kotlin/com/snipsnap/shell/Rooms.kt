@@ -240,7 +240,8 @@ object Rooms {
     /** [room] as the MUTATE card's parent. */
     fun partner(room: Room): MutateSheet.Partner.Room = MutateSheet.Partner.Room(room.name, room.file)
 
-    private fun sidecar(wav: File): File = File(wav.parentFile, wav.nameWithoutExtension + ".json")
+    /** A room's sidecar path from its WAV — `internal`, not `private`: [RoomPackager] (this module) reads it by the same rule rather than re-deriving it. */
+    internal fun sidecar(wav: File): File = File(wav.parentFile, wav.nameWithoutExtension + ".json")
 
     private fun read(wav: File): Room {
         val meta = readMeta(wav)

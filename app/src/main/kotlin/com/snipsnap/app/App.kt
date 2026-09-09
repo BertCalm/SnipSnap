@@ -85,6 +85,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Personality
 import com.snipsnap.shell.ReadGroove
+import com.snipsnap.shell.RoomPackager
 import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.Schemes
@@ -556,28 +557,38 @@ fun App(shelf: KitShelf) {
             val kind = withContext(Dispatchers.IO) { ShelfImport.sniff(ShareInbox.head(context, uri, ShelfImport.SNIFF_BYTES)) }
             if (ShelfImport.isKit(kind)) {
                 if (ownsBusy) busy = Copy.LANDING_BUSY
-                val (entries, skipped) = withContext(Dispatchers.IO) {
-                    val local = ShareInbox.copyToCache(context, uri, name, LANDING_MAX_BYTES)
-                    try {
-                        shelf.land(local, name)
-                    } finally {
-                        local.delete()
+                val local = withContext(Dispatchers.IO) { ShareInbox.copyToCache(context, uri, name, LANDING_MAX_BYTES) }
+                try {
+                    // Any ZIP sniffs the same by its magic bytes alone -
+                    // Kind.MPC3's gzip never does, but a room and a kit
+                    // file both do, and are told apart only by peeking
+                    // inside, which is why this waits for the local copy
+                    // above rather than deciding off the head bytes.
+                    if (kind == ShelfImport.Kind.XPN && withContext(Dispatchers.IO) { RoomPackager.sniff(local) }) {
+                        val room = withContext(Dispatchers.IO) { shelf.landRoom(local, name) }
+                        ShareInbox.consume()
+                        roomsRevision++
+                        toast = Copy.roomLanded(room.name)
+                        return@LaunchedEffect
                     }
+                    val (entries, skipped) = withContext(Dispatchers.IO) { shelf.land(local, name) }
+                    ShareInbox.consume()
+                    kits = withContext(Dispatchers.IO) { shelf.list() }
+                    // A clean landing keeps its toast; one with skips opens the
+                    // box, which names each skipped kit and the door's reason.
+                    val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped)
+                    if (boxed != null) openNote(boxed) else toast = Copy.landed(entries.size, skipped.size)
+                    entries.firstOrNull()?.let { first ->
+                        open = first
+                        padSheetSlot = null
+                        takesBinOpen = false
+                        arrangeOpen = false
+                        screen = AppScreen.KIT
+                    }
+                    return@LaunchedEffect
+                } finally {
+                    local.delete()
                 }
-                ShareInbox.consume()
-                kits = withContext(Dispatchers.IO) { shelf.list() }
-                // A clean landing keeps its toast; one with skips opens the
-                // box, which names each skipped kit and the door's reason.
-                val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped)
-                if (boxed != null) openNote(boxed) else toast = Copy.landed(entries.size, skipped.size)
-                entries.firstOrNull()?.let { first ->
-                    open = first
-                    padSheetSlot = null
-                    takesBinOpen = false
-                    arrangeOpen = false
-                    screen = AppScreen.KIT
-                }
-                return@LaunchedEffect
             }
             val landed = withContext(Dispatchers.IO) {
                 val snip = MediaDecode.decode(context, uri)
@@ -1100,6 +1111,33 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * SHARE on a room row: the room packed as one `.snip-room` and handed
+     * to the chooser - [shareKit]'s own shape, one WAV plus its sidecar
+     * instead of a whole kit.
+     */
+    fun shareRoom(room: Rooms.Room) {
+        if (busy != null) return
+        busy = Copy.PACKING_BUSY
+        scope.launch {
+            try {
+                val file = withContext(Dispatchers.IO) { shelf.packRoom(room, ShareOut.shareDir(context)) }
+                busy = null
+                toast = if (ShareOut.send(context, file, ShareOut.ZIP_MIME, room.name)) {
+                    Copy.roomPacked(room.name)
+                } else {
+                    Copy.SHARE_NOWHERE
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                toast = "SHARE FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
+            }
+        }
+    }
+
     /** RESTORE on a binned room: back onto the shelf, the toast names it. */
     fun restoreRoom(binned: Rooms.Binned) {
         if (busy != null) return
@@ -1469,6 +1507,7 @@ fun App(shelf: KitShelf) {
                                 breedingFrom = pendingBreedWith,
                                 rooms = rooms,
                                 onForgetRoom = ::forgetRoom,
+                                onShareRoom = ::shareRoom,
                                 binnedRooms = binnedRooms,
                                 onRestoreRoom = ::restoreRoom,
                                 onDeleteKit = ::deleteKit,

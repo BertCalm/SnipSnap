@@ -1995,6 +1995,22 @@ APP wave OOO: ✓ all landed (2026-09-09) — the Arranger surfaced. KK1-KK3
   threshold, printed as the number that decided it rather than asked
   to be trusted.
 
+APP+CORE wave PPP: ✓ all landed (2026-09-09) — a room leaves the shelf.
+  A kept room (YY5's `Rooms.keep`) is already a standalone WAV plus
+  sidecar, never attached to any kit - `RoomPackager` (`:shell`, new)
+  packs the two into one `.snip-room` ZIP with fixed entry names,
+  `room.wav`/`room.json`, which is what lets `sniff` answer by a
+  lookup on the ZIP's central directory rather than a decode. SHARE on
+  a room row (always visible, not behind the hold that reveals FORGET)
+  hands the packed file to the chooser, `shareKit`'s own shape.
+  Receiving one is the one real risk the spec named: any ZIP sniffs
+  identically off its magic bytes, so the share door now peeks inside
+  a ZIP-shaped share (a room and an `.xpn` both, never an MPC3 gzip)
+  before assuming it's a kit, and routes a room straight through
+  `Rooms.keep` - reusing its fresh-name collision rule verbatim, so
+  the same room shared twice renumbers rather than colliding, its
+  original measurement time preserved rather than re-stamped.
+
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
   F6.1 .xpn import + expansion tile → velocity/bank B →
