@@ -85,6 +85,16 @@ fun KitScreen(
     onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
     onInKey: () -> Unit,
     onTwins: () -> Unit,
+    /**
+     * BREED (XX2 wired in): arms the pick-a-partner hand-off (`App.kt`'s
+     * `pendingBreedWith`) and sends the user to the shelf to tap kit B —
+     * `:shell`'s tested `Breed.breed` crosses this kit's own recipes with
+     * theirs into a new child kit. [canBreed] (a second kit actually on the
+     * shelf to cross with) gates whether the button even fires.
+     */
+    onBreed: () -> Unit = {},
+    /** Whether the shelf holds a second kit BREED could cross this one with. */
+    canBreed: Boolean = false,
     /** SHARE (F6.3): this kit packed as one `.xpn` and handed to the chooser. */
     onShare: () -> Unit,
     /** SPLIT: a pad taken apart into sines, transient and air, on three faders. */
@@ -290,6 +300,20 @@ fun KitScreen(
                     enabled = !busy && kit.pads.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth(),
                     onClick = onSplit,
+                )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // BREED: this kit's own recipes crossed with a second kit's
+                // into a new child, kept beside this one — the shelf-level
+                // "pick a kit" hand-off (App.kt's pendingBreedWith) runs
+                // next, the same shape SNIPS → PAD already uses to pick a
+                // kit for a snip.
+                ActionButton(
+                    "BREED ▸ CROSS TWO KITS",
+                    scheme,
+                    enabled = !busy && kit.pads.isNotEmpty() && canBreed,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onBreed,
                 )
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

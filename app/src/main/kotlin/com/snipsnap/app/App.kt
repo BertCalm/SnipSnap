@@ -254,6 +254,13 @@ fun App(shelf: KitShelf) {
     // assign lands, or by the MenuRow tab-switch reset below if the user
     // gives up on the pick without ever long-pressing a pad.
     var pendingSnipAssign by remember { mutableStateOf<File?>(null) }
+    // BREED (XX2 wired in): the kit BREED was pressed from, stashed here
+    // while the user picks its cross partner — same shape as
+    // pendingSnipAssign above, just a kit picking a kit instead of a snip
+    // picking a pad. Cleared the moment the breed lands (`breed` below), or
+    // by the MenuRow tab-switch reset below if the user gives up on the
+    // pick without ever tapping a second kit.
+    var pendingBreedWith by remember { mutableStateOf<KitShelf.Entry?>(null) }
     // SNIPS → TAPE: the file a SNIPS row's → TAPE asked to open, offered to
     // TapeScreen's own `lastCommitSource` fallback slot rather than folded
     // into `lastCommit` — CHOP reads `lastCommit` as the *real* last COMMIT's
@@ -691,6 +698,56 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * BREED (XX2 wired in): arms the pick-a-partner hand-off and sends the
+     * user to the shelf — the same "pick a kit" hop SNIPS → PAD already
+     * uses (`pendingSnipAssign`), just a kit picking a kit instead of a
+     * snip picking a pad. Nothing is written here; the cross itself
+     * happens in [finishBreed] once a partner is actually tapped.
+     */
+    fun startBreed() {
+        val source = open ?: return
+        if (busy != null) return
+        pendingBreedWith = source
+        screen = AppScreen.KITS
+    }
+
+    /**
+     * BREED's landing: fired by the shelf's own `onOpen` once a kit is
+     * tapped while [pendingBreedWith] is armed (see the KITS branch's
+     * wiring below). `:shell`'s tested `Breed.breed`, unmodified, crosses
+     * [source]'s own recipes with [partner]'s into a new child kit beside
+     * `source` on the shelf (`KitShelf.breed` picks the destination). The
+     * whole call runs inside `KitWrites.mutex.withLock` — `Breed.breed`'s
+     * own open→mutate→save (via `KitBuilderModel.create`) is exactly the
+     * kind of kit write two concurrent presses must never race, the same
+     * reasoning `setKey`/`evilTwins` above already follow. Same
+     * DUBBING…-shaped busy line as EVIL TWINS: every crossed pad renders
+     * offline.
+     */
+    fun finishBreed(source: KitShelf.Entry, partner: KitShelf.Entry) {
+        pendingBreedWith = null
+        if (busy != null) return
+        busy = Copy.BREEDING_BUSY
+        scope.launch {
+            val (entry, report) = try {
+                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.breed(source, partner, Random.nextInt()) } }
+            } catch (e: Exception) {
+                busy = null
+                toast = "BREED FAILED: ${e.message ?: e.javaClass.simpleName}"
+                return@launch
+            }
+            kits = withContext(Dispatchers.IO) { shelf.list() }
+            busy = null
+            toast = Copy.bred(entry.kit.name, report.crossed.size, report.audited.size)
+            // The freshly bred kit is the whole point of the tap that
+            // landed here — open it, the same instant-gratification
+            // landing EVIL TWINS gets by staying on the kit it just changed.
+            open = entry
+            screen = AppScreen.KIT
+        }
+    }
+
+    /**
      * SNIPS → PAD's landing (Task 3): fired by the next empty-pad long-press
      * once a kit is open with [pendingSnipAssign] armed. `KitScreen.kt`
      * itself is unmodified for this — the KIT branch's own `onEmptyLongPress`
@@ -1109,6 +1166,10 @@ fun App(shelf: KitShelf) {
         // SNIP" forever.
         snipsOpen = false
         pendingSnipAssign = null
+        // BREED's own pick, same reasoning as pendingSnipAssign just above:
+        // a tab switch away from KITS mid-pick abandons the hand-off rather
+        // than leaving KitsScreen stuck naming a cross partner forever.
+        pendingBreedWith = null
         tapeOpenOverride = null
         // DELETED KITS is shelf-level too — same reasoning
         // as SNIPS above: a tab switch away from KITS must
@@ -1211,44 +1272,59 @@ fun App(shelf: KitShelf) {
                                 busy = busy != null,
                                 armed = armed,
                                 onOpen = { entry ->
-                                    open = entry
-                                    screen = AppScreen.KIT
-                                    // A kit opened while a SNIPS → PAD pick is
-                                    // still pending: tell the user what the
-                                    // next empty-pad long-press will do, since
-                                    // `KitScreen` itself carries no hint banner
-                                    // of its own for this mode. But KitScreen
-                                    // only ever renders bank A (slots 1..16 —
-                                    // see its own GRID_ROWS), so an "empty
-                                    // pad" instruction is only actually
-                                    // followable if bank A has one; a kit
-                                    // that's already full there has nothing
-                                    // for the long-press to catch (the v1
-                                    // "empty pads only" scope this task's
-                                    // brief calls out), so the hint says so
-                                    // instead of pointing at a pad that
-                                    // doesn't exist.
-                                    if (pendingSnipAssign != null) {
-                                        val hasEmptyPad = (1..16).any { entry.kit.pad(it) == null }
-                                        toast = if (hasEmptyPad) {
-                                            "LONG-PRESS AN EMPTY PAD TO PLACE THIS SNIP"
+                                    val breedSource = pendingBreedWith
+                                    if (breedSource != null) {
+                                        // BREED's pick, same shelf-level hand-off
+                                        // shape as SNIPS → PAD just below, but this
+                                        // one acts the instant a kit is tapped
+                                        // instead of navigating in — there's
+                                        // nothing else to configure once both
+                                        // kits are chosen.
+                                        if (entry.dir == breedSource.dir) {
+                                            toast = Copy.BREED_SAME_KIT
                                         } else {
-                                            "THIS KIT IS FULL — PICK ANOTHER"
+                                            finishBreed(breedSource, entry)
                                         }
                                     } else {
-                                        // Teach the one gesture that opens PAD
-                                        // SHEET, while it's still undiscovered.
-                                        // Only worth saying when there's a
-                                        // filled pad to hold, and never once
-                                        // they've found it — see
-                                        // PREF_PAD_SHEET_HINTS. Yields to the
-                                        // pending-snip hint above rather than
-                                        // fighting it for the one toast slot.
-                                        val shown = prefs.getInt(PREF_PAD_SHEET_HINTS, 0)
-                                        val hasFilledPad = (1..16).any { entry.kit.pad(it) != null }
-                                        if (shown != PAD_SHEET_FOUND && shown < PAD_SHEET_HINT_LIMIT && hasFilledPad) {
-                                            toast = Copy.PAD_SHEET_HINT
-                                            prefs.edit().putInt(PREF_PAD_SHEET_HINTS, shown + 1).apply()
+                                        open = entry
+                                        screen = AppScreen.KIT
+                                        // A kit opened while a SNIPS → PAD pick is
+                                        // still pending: tell the user what the
+                                        // next empty-pad long-press will do, since
+                                        // `KitScreen` itself carries no hint banner
+                                        // of its own for this mode. But KitScreen
+                                        // only ever renders bank A (slots 1..16 —
+                                        // see its own GRID_ROWS), so an "empty
+                                        // pad" instruction is only actually
+                                        // followable if bank A has one; a kit
+                                        // that's already full there has nothing
+                                        // for the long-press to catch (the v1
+                                        // "empty pads only" scope this task's
+                                        // brief calls out), so the hint says so
+                                        // instead of pointing at a pad that
+                                        // doesn't exist.
+                                        if (pendingSnipAssign != null) {
+                                            val hasEmptyPad = (1..16).any { entry.kit.pad(it) == null }
+                                            toast = if (hasEmptyPad) {
+                                                "LONG-PRESS AN EMPTY PAD TO PLACE THIS SNIP"
+                                            } else {
+                                                "THIS KIT IS FULL — PICK ANOTHER"
+                                            }
+                                        } else {
+                                            // Teach the one gesture that opens PAD
+                                            // SHEET, while it's still undiscovered.
+                                            // Only worth saying when there's a
+                                            // filled pad to hold, and never once
+                                            // they've found it — see
+                                            // PREF_PAD_SHEET_HINTS. Yields to the
+                                            // pending-snip hint above rather than
+                                            // fighting it for the one toast slot.
+                                            val shown = prefs.getInt(PREF_PAD_SHEET_HINTS, 0)
+                                            val hasFilledPad = (1..16).any { entry.kit.pad(it) != null }
+                                            if (shown != PAD_SHEET_FOUND && shown < PAD_SHEET_HINT_LIMIT && hasFilledPad) {
+                                                toast = Copy.PAD_SHEET_HINT
+                                                prefs.edit().putInt(PREF_PAD_SHEET_HINTS, shown + 1).apply()
+                                            }
                                         }
                                     }
                                 },
@@ -1268,6 +1344,7 @@ fun App(shelf: KitShelf) {
                                 onBackup = ::backupShelf,
                                 onSnips = { snipsOpen = true },
                                 assigningSnip = pendingSnipAssign != null,
+                                breedingFrom = pendingBreedWith,
                                 rooms = rooms,
                                 onForgetRoom = ::forgetRoom,
                                 binnedRooms = binnedRooms,
@@ -1419,6 +1496,11 @@ fun App(shelf: KitShelf) {
                                     onSetKey = ::setKey,
                                     onInKey = ::inKey,
                                     onTwins = ::evilTwins,
+                                    onBreed = ::startBreed,
+                                    // A second kit to cross with has to
+                                    // already be on the shelf — BREED can't
+                                    // offer a pick with nothing else there.
+                                    canBreed = kits.size > 1,
                                     onShare = ::shareKit,
                                     onSplit = { screen = AppScreen.SPLIT },
                                     onEmptyLongPress = { slot ->

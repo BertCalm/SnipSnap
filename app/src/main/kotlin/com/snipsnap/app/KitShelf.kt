@@ -177,6 +177,25 @@ class KitShelf(val root: File) {
     }
 
     /**
+     * BREED (XX2 wired in): [a]'s recipes crossed with [b]'s into a brand
+     * new child kit beside [a] on the shelf — `:shell`'s tested
+     * `Breed.breed`, unmodified; this only picks the destination. The
+     * default name `Breed.breed` itself would use (`"${a.name}_x_${b.name}"`,
+     * `BreedCommand`'s own CLI default) run through [freshName] so a second
+     * breed of the same pair never collides with the first (`Breed.breed`
+     * refuses a destination that already holds a `kit.json`). Both parents
+     * stay untouched — `Breed`'s own contract, not this method's. Seconds-
+     * long (every crossed pad renders offline); the caller shows a busy line.
+     */
+    fun breed(a: Entry, b: Entry, seed: Int): Pair<Entry, com.snipsnap.shell.Breed.Report> {
+        root.mkdirs()
+        val name = freshName("${a.kit.name} X ${b.kit.name}")
+        val dir = File(root, name)
+        val report = com.snipsnap.shell.Breed.breed(a.dir, b.dir, dir, name, seed)
+        return Entry(dir, report.kit) to report
+    }
+
+    /**
      * IN KEY: every tonal pad of [source] retuned into its key through the
      * tune fields, the slots that moved returned with the re-read entry.
      */

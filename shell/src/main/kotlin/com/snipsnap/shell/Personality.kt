@@ -223,6 +223,40 @@ object Copy {
     const val BANK_B_LIT = "EVIL TWINS DEALT ONTO BANK B. RECIPES KEPT."
     const val TWINS_REROLLED = "EVIL TWINS REROLLED. SAME SEED, DIFFERENT SINS."
 
+    // ---- BREED: two kits crossed into a child (XX2 wired in) ----
+    /** BREED's busy line while `KitShelf.breed` renders every crossed pad offline — same DUBBING…/TWINNING… shape as EVIL TWINS. */
+    const val BREEDING_BUSY = "BREEDING…"
+    /**
+     * The shelf's header while BREED is mid-pick (`App.kt`'s
+     * `pendingBreedWith`) — names the kit the pick is FOR, the same way
+     * `KitsScreen`'s SNIPS → PAD header names the snip it's placing. A
+     * function, not a reflected field, so the shout/full-stop laws in
+     * `PersonalityTest` don't apply to it (see that test's own KDoc on why
+     * only fields are scanned) — which is exactly right here, since
+     * [sourceName] is a user's own kit name and can't be forced to shout.
+     */
+    fun breedPickHeader(sourceName: String): String = "PICK A KIT TO CROSS WITH $sourceName"
+    /** The hint line under [breedPickHeader] once the shelf actually has a second kit to tap. */
+    const val BREED_PICK_HINT = "TAP A KIT TO CROSS WITH THIS ONE."
+    /** Refused: tapping the very kit BREED was pressed from during the pick — breeding needs two different kits. */
+    const val BREED_SAME_KIT = "THAT'S THE KIT YOU'RE BREEDING FROM — PICK A DIFFERENT ONE."
+    /**
+     * BREED's own toast: the child kit's name, how many pads actually
+     * crossed, and — only when the audit sent one back (`Breed.Report.audited`
+     * is non-empty) — how many, so "0 PADS CROSSED" reads as the audit
+     * doing its job rather than as breeding silently failing. `Breed.breed`'s
+     * own contract — both parents come out untouched — is worth stating
+     * since a first-time breeder has no reason to assume it.
+     */
+    fun bred(childName: String, crossed: Int, audited: Int = 0): String {
+        val auditNote = if (audited > 0) {
+            " ($audited SENT BACK BY THE AUDIT — THE CROSS CHANGED CLASS)"
+        } else {
+            ""
+        }
+        return "'$childName' BRED. $crossed ${if (crossed == 1) "PAD" else "PADS"} CROSSED$auditNote, BOTH PARENTS UNTOUCHED."
+    }
+
     // ---- TAKES + BIN (X2.3) ----
     fun takeRestored(take: String): String = "$take RESTORED. THE PAST, REPLAYED."
     const val BACK_FROM_BIN = "BACK FROM THE BIN. NO QUESTIONS ASKED."

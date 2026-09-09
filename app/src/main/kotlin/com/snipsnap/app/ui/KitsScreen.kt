@@ -94,6 +94,17 @@ fun KitsScreen(
      * while this is true.
      */
     assigningSnip: Boolean = false,
+    /**
+     * BREED (XX2 wired in): the kit BREED was pressed from, non-null while
+     * that press is routing the user here to pick its cross partner (see
+     * `App.kt`'s `pendingBreedWith`) — same hand-off shape as
+     * [assigningSnip] above, just for a second *kit* instead of a pad.
+     * Swaps the header for [Copy.breedPickHeader] (naming this kit) and
+     * shows [Copy.BREED_PICK_HINT] once there's a second kit to tap. Every
+     * kit row's `onOpen` still stays the same callback; `App` decides
+     * whether opening a kit means navigating in or crossing it with this one.
+     */
+    breedingFrom: KitShelf.Entry? = null,
     /** ROOMS (YY5): what OUTSIDE measured and kept, beside the instruments; hold one to forget it into the bin. */
     rooms: List<Rooms.Room> = emptyList(),
     onForgetRoom: (Rooms.Room) -> Unit = {},
@@ -138,13 +149,23 @@ fun KitsScreen(
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                TapeText(if (assigningSnip) "PICK A KIT FOR THIS SNIP" else "THE SHELF", TapeType.lcdHeader, scheme.lcdInk.tape)
+                TapeText(
+                    when {
+                        assigningSnip -> "PICK A KIT FOR THIS SNIP"
+                        breedingFrom != null -> Copy.breedPickHeader(breedingFrom.kit.name)
+                        else -> "THE SHELF"
+                    },
+                    TapeType.lcdHeader,
+                    scheme.lcdInk.tape,
+                )
             }
             // The hint below presupposes a kit row to tap — with none on
             // the shelf yet, the empty-state panel just below carries the
             // real instruction instead (Copy.EMPTY_SHELF_FOR_ASSIGN).
             if (assigningSnip && kits.isNotEmpty()) {
                 TapeText("TAP A KIT, THEN LONG-PRESS AN EMPTY PAD.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            } else if (breedingFrom != null && kits.size > 1) {
+                TapeText(Copy.BREED_PICK_HINT, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
             }
 
             if (kits.isEmpty() && instruments.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty()) {
@@ -183,7 +204,7 @@ fun KitsScreen(
                             onArm = { armedKitDirs = armedKitDirs + entry.dir.path },
                             onDisarm = { armedKitDirs = armedKitDirs - entry.dir.path },
                             busy = busy,
-                            pickModeActive = assigningSnip,
+                            pickModeActive = assigningSnip || breedingFrom != null,
                             onOpen = onOpen,
                             onRequestDelete = { confirmDeleteKit = it },
                             onRequestRename = { renameTarget = it },
