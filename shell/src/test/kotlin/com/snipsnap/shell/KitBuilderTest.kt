@@ -572,6 +572,70 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `priorTakes is empty until a rewrite bins something, then only this pad's own history`() {
+        val dir = File(temp, "PriorTakes")
+        val m = KitBuilderModel.create("PriorTakes", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        assertEquals(0, m.priorTakes(1).size, "nothing rewritten yet")
+
+        m.treatPad(1, "punched")
+        assertEquals(1, m.priorTakes(1).size, "the pre-treatment capture is now recoverable")
+        assertEquals(0, m.priorTakes(2).size, "slot 2's own history is untouched")
+
+        assertFailsWith<IllegalArgumentException> { m.priorTakes(9) }
+    }
+
+    @Test
+    fun `splicePad joins two prior takes, bins whatever was live, and undoes`() {
+        val dir = File(temp, "Splice")
+        val m = KitBuilderModel.create("Splice", dir)
+        val kick = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        val originalCapture = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile))
+
+        // Two rewrites give this pad two recoverable prior takes to splice between.
+        m.treatPad(1, "punched")
+        m.treatPad(1, "washed")
+        val beforeSplice = File(dir, kick.sampleFile).readBytes()
+        val takes = m.priorTakes(1)
+        assertEquals(2, takes.size, "the original capture and the punched take are both recoverable")
+
+        val head = com.snipsnap.audio.WavReader.read(takes[0].file) // newest: the punched take
+        val tail = com.snipsnap.audio.WavReader.read(takes[1].file) // the original capture
+        val spliced = m.splicePad(1, head, head.frameCount / 3, tail, tail.frameCount / 2)
+
+        assertTrue(File(dir, kick.sampleFile).readBytes().let { !it.contentEquals(beforeSplice) }, "the join replaced the live sample")
+        val onDisk = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile)).samples
+        assertEquals(spliced.snip.samples.size, onDisk.size, "the pad is the joined result")
+        for (i in onDisk.indices) assertEquals(spliced.snip.samples[i], onDisk[i], 1e-4f, "sample $i, to the WAV's precision")
+
+        val recipe = m.pad(1)!!.recipe!!
+        val recipeSplice = (recipe as com.snipsnap.json.JsonValue.Obj).entries["splice"] as com.snipsnap.json.JsonValue.Obj
+        assertEquals(spliced.crossfaded, (recipeSplice.entries["crossfaded"] as com.snipsnap.json.JsonValue.Bool).value)
+
+        // Whatever was live before the splice (the washed take) is itself
+        // now the newest bin entry - undoable like any other rewrite.
+        m.untreatPad(1)
+        assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(beforeSplice), "back to the pre-splice audio")
+        assertNull(m.pad(1)!!.recipe)
+
+        // Sanity: the original capture is still exactly what it always was.
+        assertTrue(originalCapture.samples.contentEquals(tail.samples))
+    }
+
+    @Test
+    fun `splicePad refuses a velocity-layered pad, same door as replaceAudio`() {
+        val dir = File(temp, "SpliceLayered")
+        val m = KitBuilderModel.create("SpliceLayered", dir)
+        val pad = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.treatPad(1, "punched")
+        val head = com.snipsnap.audio.WavReader.read(File(dir, pad.sampleFile))
+        m.addGhostLayers(1)
+        assertFailsWith<IllegalArgumentException> { m.splicePad(1, head, head.frameCount / 2, head, head.frameCount / 2) }
+    }
+
+    @Test
     fun `with a key set, a tonal pad retunes on assign and the kick is untouched`() {
         val m = KitBuilderModel.create("OnAssign", File(temp, "OnAssign"))
         val rate = 44_100

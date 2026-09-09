@@ -2027,6 +2027,27 @@ APP+CORE wave QQQ: ✓ all landed (2026-09-09) — X-RAY, a read-only look
   lands a byte anywhere, so there is deliberately no import action on
   this screen at all.
 
+APP+CORE wave RRR: ✓ all landed (2026-09-09) — TAPE SPLICE, joining two
+  prior takes of one pad at a single chosen frame - a cut, not a
+  blend. `TapeSplice.join` (`:audio`, new) butts the head of one take
+  to the tail of another; it only bakes in a few ms of declick
+  crossfade when the raw seam would actually click, scoring the jump
+  the same "score the seam, fade only when it isn't clean" way
+  `LoopCut.sustainLoop` already does for a wrapped loop point.
+  `KitBuilderModel.splicePad` (`:shell`, new) is the bin-backed door -
+  whatever was live gets binned first, so a splice undoes like any
+  other pad rewrite; `priorTakes` lists a pad's own recoverable
+  history for the picker. `TapeSpliceScreen` (`:app`, new), reached
+  from PAD SHEET's SPLICE ▸ (dimmed until a pad has at least one prior
+  take), picks a HEAD and a TAIL from that history - the live sample
+  always counts as a candidate too - then drags a shared needle over
+  both stacked waveforms; `SpliceNeedle` (`:shell`, new) snaps it to
+  an onset or a zero crossing in either take, the same two-stage idea
+  `TapeDeckModel.snapPoint` already uses for a trim boundary. Not the
+  same move as `Mutate.Mode.SPLICE`, which always crossfades one pad's
+  transient into an unrelated crate parent - this one only ever joins
+  two takes of the *same* pad, and only fades when the cut demands it.
+
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
   F6.1 .xpn import + expansion tile → velocity/bank B →

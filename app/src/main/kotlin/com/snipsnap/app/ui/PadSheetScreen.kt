@@ -151,6 +151,8 @@ fun PadSheetScreen(
     onToast: (String) -> Unit,
     onNavigateTape: () -> Unit,
     onGrainField: (Int) -> Unit,
+    /** SPLICE ▸: opens TAPE SPLICE scoped to this pad - unlike [onNavigateTape], which hands off to whatever TAPE's own source priority resolves. */
+    onSplice: (Int) -> Unit,
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
     appScope: CoroutineScope,
     /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name), remembered per kit by the caller. */
@@ -1649,6 +1651,19 @@ fun PadSheetScreen(
             )
             }
             ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = onNavigateTape)
+            // Dimmed, not disabled, when there's no prior take yet - same
+            // "still tappable, the destination explains why" convention as
+            // MAKE INSTRUMENT above. `binDaysLeft` is already exactly "this
+            // pad's file has at least one recoverable prior take," the
+            // same signal `refreshPadAudio` computes for the undo buttons.
+            ActionButton(
+                "SPLICE ▸",
+                scheme,
+                enabled = !busy,
+                dimmed = binDaysLeft == null,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { onSplice(slot) },
+            )
             DeleteButton(scheme, enabled = !busy, onClick = ::onEject)
         }
 

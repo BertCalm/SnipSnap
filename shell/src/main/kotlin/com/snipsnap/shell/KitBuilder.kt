@@ -301,6 +301,41 @@ class KitBuilderModel private constructor(
         return update(slot) { it.copy(recipe = recipe ?: it.recipe) }
     }
 
+    /**
+     * TAPE SPLICE's own candidate list for one pad: every recoverable
+     * prior take of its file, newest first — [binContents] filtered to
+     * just this pad's own history. The live sample itself isn't in this
+     * list; it's always an implicit, always-available candidate the UI
+     * adds on its own.
+     */
+    fun priorTakes(slot: Int): List<BinEntry> {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        return binContents().filter { it.originalName == pad.sampleFile }
+    }
+
+    /**
+     * SPLICE: joins [head]'s first [headFrames] frames to [tail]'s frames
+     * from [tailFrames] onward — [com.snipsnap.audio.TapeSplice.join]'s own
+     * seam-aware crossfade, baked in only when the raw cut would click.
+     * Bin-backed like every rewrite ([replaceAudio]): whatever's live now
+     * is itself binned first, so the splice is undoable from THE BIN like
+     * any other pad rewrite.
+     */
+    fun splicePad(slot: Int, head: Snip, headFrames: Int, tail: Snip, tailFrames: Int): com.snipsnap.audio.TapeSplice.Spliced {
+        val spliced = com.snipsnap.audio.TapeSplice.join(head, headFrames, tail, tailFrames)
+        val recipe = com.snipsnap.json.JsonValue.Obj(
+            linkedMapOf<String, com.snipsnap.json.JsonValue>(
+                "splice" to com.snipsnap.json.JsonValue.Obj(
+                    linkedMapOf<String, com.snipsnap.json.JsonValue>(
+                        "crossfaded" to com.snipsnap.json.JsonValue.Bool(spliced.crossfaded),
+                    ),
+                ),
+            ),
+        )
+        replaceAudio(slot, recipe) { spliced.snip }
+        return spliced
+    }
+
     /** DE-SAMPLE's honest refusal: the nearest patch is a stranger; the match says how far. */
     class Far(val match: com.snipsnap.synth.Desample.Match) :
         IllegalArgumentException("no patch is near: the nearest is ${match.patch.voice.name.lowercase()} at distance %.2f".format(java.util.Locale.ROOT, match.distance))
