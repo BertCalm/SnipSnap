@@ -22,9 +22,10 @@ somewhere to land.
 
 ## A · The phone alone
 
-The native audio stack is the whole of section A1–A4 and five merges
-rest on it. A1 has now made a sound (2026-09-08); A2–A4 have not. Do
-the rest in this order: each one leans on the last.
+The native audio stack is the whole of sections A1–A4 and five merges
+rest on it. **A1 is closed** (2026-09-08) and the engine is proven on
+hardware; A2–A4 have still not been heard. Do the rest in this order:
+each one leans on the last.
 
 ### A1 · PLAY feels like an instrument [EEE3, the M4 exit test]
 
@@ -67,9 +68,15 @@ ringing open one, and there is no click at the cut. That is EEE2's
 the voice was being cut dead rather than faded out, which is the
 difference between a hi-hat and a bug.
 
-Still open, and A1 stays part-ticked until it is answered: **gate vs
-one-shot** — a gate pad should stop when you lift your finger, a
-one-shot should play out regardless.
+**Gate vs one-shot** passed, and with it **A1 is closed**: a gate pad
+stops when the finger lifts, a one-shot plays out regardless. Every
+line of A1 is answered.
+
+What that adds up to: the native pad engine works on hardware. The
+exit test, the latency baseline, the endings ring, the panic fade, the
+bank handshake over a live voice, the choke fade, and the gate. Five
+merges were resting on this and none of it had been heard before
+2026-09-08.
 
 ### A2 · KEYS sustains and lets go [EEE6]
 
