@@ -212,6 +212,57 @@ object Copy {
      */
     const val PAD_SHEET_HINT = "HOLD A PAD TO OPEN ITS PAD SHEET — SHAPE, TUNE, TREAT."
 
+    /**
+     * The permanent legend under KIT's grid.
+     *
+     * The September UAT's findings 4 and 5: the 480 ms hold was PAD SHEET's
+     * only door, and [PAD_SHEET_HINT] — the toast that taught it — stopped
+     * after three showings. Dismiss it three times while learning something
+     * else and half the app's depth was gone for good.
+     *
+     * ROOMS already had the answer on its own list ("HOLD A ROOM TO FORGET
+     * IT · THE BIN KEEPS 30 DAYS"): one line, always on screen, naming the
+     * gesture and what it opens. A legend cannot be dismissed, so the
+     * feature behind it cannot be lost.
+     */
+    const val PAD_SHEET_LEGEND = "HOLD A PAD · SHAPE, TUNE, TREAT, MUTATE, GRAIN"
+
+    // ---- HELP: what the app is, said inside the app ----
+
+    /**
+     * HELP's body, kept here rather than in the Composable that draws it.
+     *
+     * The September UAT's finding 1: HELP was twenty hardcoded lines in
+     * `StubScreen.kt` describing "the M0 skeleton" and promising that
+     * capture "arrives with M1" — months after capture shipped. It was the
+     * only in-app explanation of anything, and every line of it was false.
+     *
+     * It rotted because it lived where nothing could test it. Here it is
+     * ordinary data in a module with tests, and `PersonalityTest` holds it
+     * to the app as built: no milestone tags, and the four steps of the
+     * loop named in order. The next person to move a feature has to walk
+     * past a failing test to leave this stale.
+     */
+    const val HELP_LOOP_HEADER = "THE LOOP:"
+
+    val HELP_LOOP = listOf(
+        "· TAPE — CATCH A SOUND. THE MIC, ANOTHER APP, OR A FILE SHARED IN.",
+        "· CHOP — CUT IT ON THE HITS. THE MACHINE GUESSES; ARGUE WITH IT.",
+        "· KIT — 16 PADS. TAP TO HEAR, HOLD FOR THE PAD SHEET.",
+        "· EXPORT — ONTO THE CARD, EIGHT WAYS. THE MPC IS ONE OF THEM.",
+    )
+
+    const val HELP_MORE_HEADER = "WORTH KNOWING:"
+
+    val HELP_MORE = listOf(
+        "· HOLD A PAD: SHAPE, TUNE, TREAT, MUTATE, LAYERS, TAKES, GRAIN.",
+        "· HOLD A ROW ON THE SHELF TO RENAME IT, OR TO BIN IT.",
+        "· THE BIN KEEPS WHAT YOU THREW OUT FOR ${Rooms.BIN_DAYS} DAYS.",
+        "· PLAY IS THE ONE THAT FEELS LIKE DRUMS. SURFACE IS THE ONE THAT PRINTS.",
+        "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
+        "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
+    )
+
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."
 

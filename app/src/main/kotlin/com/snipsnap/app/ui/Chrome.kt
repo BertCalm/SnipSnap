@@ -150,8 +150,12 @@ fun TitleBar(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
+        // The build tag used to read "M0" here, and still did five milestones
+        // later (September UAT, finding 2). Next to a HELP screen describing a
+        // skeleton it made a finished app look like an abandoned prototype.
+        // Gone rather than corrected: there is no version constant to hang a
+        // true one on, and a hardcoded tag is exactly what went stale before.
         TapeText("SNIPSNAP.EXE", TapeType.displayBig, scheme.titleInk.tape)
-        TapeText("M0", TapeType.pixelSmall, scheme.titleInk.tape.copy(alpha = 0.7f))
     }
 }
 

@@ -262,6 +262,18 @@ fun KitScreen(
             }
         }
 
+        // PAD SHEET's visible door (September UAT, findings 4 and 5). Twenty
+        // treatments plus shape, tune, mutate, layers, takes and GRAIN FIELD
+        // sat behind one 480 ms hold with nothing on screen naming it, taught
+        // only by a toast that stopped after three showings — so a user who
+        // dismissed it three times lost that half of the app for good.
+        //
+        // The same move ROOMS already makes under its own list: one line,
+        // always there. A legend cannot be dismissed, so the gesture cannot
+        // be forgotten. The hold stays exactly as it was — this explains it,
+        // it does not replace it.
+        TapeText(Copy.PAD_SHEET_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+
         // ---- TEXTURE: SCULPT / STRETCH, a pad becoming a tape of its own ----
         // panelKind is a texture kind, KEY_PANEL for the key picker, or null.
         var panelKind by remember(entry.dir) { mutableStateOf<String?>(null) }
