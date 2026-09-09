@@ -6,7 +6,9 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * Synthetic drum sounds — test material and first-run demo content.
+ * Synthetic drum sounds — test material and first-run demo content, plus
+ * [click], which is neither: `PadEngine` synthesizes the live-record
+ * count-in from it on every kit load, a real production path.
  *
  * Not high fidelity, but structurally honest: kicks are low with a pitch drop,
  * hats are high-passed noise, snares are tone plus noise, and decay times are
@@ -129,6 +131,33 @@ object DrumSynth {
             out[i] = (0.7 * env * (sin(2.0 * PI * freq * t) + 0.4 * sin(2.0 * PI * freq * 2 * t))).toFloat()
         }
         return snip(out)
+    }
+
+    /**
+     * A short enveloped sine burst — a timing tick, not an instrument.
+     * [accent] picks the pitch: 1000 Hz true (the downbeat), 800 Hz false
+     * (the other three beats) — a count-in where all four clicks sound
+     * alike can't tell you which one is "1".
+     *
+     * Unlike every other shape here, this one takes [sampleRate] rather
+     * than using the fixed [RATE]: a count-in plays through the pad
+     * engine's own bank at whatever rate that engine actually opened, and
+     * there is no reason to make it resample a click.
+     *
+     * [decay] is steep enough that the burst is inaudible well before
+     * [seconds] is up (at the defaults, the envelope is under 0.3% of its
+     * start by the last sample), so truncating at a fixed length doesn't
+     * itself click.
+     */
+    fun click(sampleRate: Int, accent: Boolean, seconds: Float = 0.03f, decay: Double = 200.0): Snip {
+        val freq = if (accent) 1000.0 else 800.0
+        val n = (seconds * sampleRate).toInt().coerceAtLeast(1)
+        val out = FloatArray(n)
+        for (i in 0 until n) {
+            val t = i.toDouble() / sampleRate
+            out[i] = (0.9 * exp(-decay * t) * sin(2.0 * PI * freq * t)).toFloat()
+        }
+        return Snip(out, 1, sampleRate)
     }
 
     /** Several seconds of mixed material — a captured bar rather than a hit. */

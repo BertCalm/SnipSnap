@@ -1,6 +1,7 @@
 package com.snipsnap.app
 
 import com.snipsnap.app.ui.TAPE_LOAD_MAX_SEC
+import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.KitPad
@@ -60,6 +61,26 @@ class PadEngine(preferredSampleRate: Int) {
     private var framesOf: Map<String, Long> = emptyMap()
     private val hits = HashMap<Int, Int>()
 
+    /**
+     * The count-in click's reserved bank index, valid only after [load];
+     * -1 before then or if the engine has no stream. This is a native bank
+     * index — the same numbering [NativePads.addSample] hands back for
+     * every kit sample — not a [KitPad.slot] (1..128); the two are
+     * different spaces and never compared. [load] appends the click as
+     * the last two samples of the bank it rebuilds every time (accent,
+     * then this one, so this index is always the accent's plus one), and
+     * neither can ever collide with a kit sample's index: every kit file
+     * is indexed first, in file order, before either click is added, so
+     * this index is always past every one of them.
+     */
+    var clickSampleIndex: Int = -1
+        private set
+
+    /** The click's accented (downbeat) sibling — one bank slot before [clickSampleIndex], same reasoning. */
+    private var clickAccentIndex: Int = -1
+    private var clickFrames: Long = 0L
+    private var clickAccentFrames: Long = 0L
+
     @Synchronized
     fun start(): Boolean {
         running = open && NativePads.start(handle)
@@ -98,9 +119,11 @@ class PadEngine(preferredSampleRate: Int) {
         }
         val index = HashMap<String, Int>()
         val frames = HashMap<String, Long>()
+        var engineRate = 44_100
         synchronized(this) {
             if (!open) return
             NativePads.beginBank(handle)
+            engineRate = NativePads.sampleRate(handle)
         }
         for (file in files) {
             // `file` is a kit pad sample, produced only by KitBuilderModel.assign
@@ -114,12 +137,30 @@ class PadEngine(preferredSampleRate: Int) {
             index[file] = i
             frames[file] = snip.frameCount.toLong()
         }
+        // The count-in click, synthesized (never a bundled asset) and
+        // appended last, inside this same bank build — not a second
+        // beginBank/commitBank pair, and never loadSnips, which replaces
+        // the whole bank and would silence every pad just added above.
+        val accentClick = DrumSynth.click(engineRate, accent = true)
+        val regularClick = DrumSynth.click(engineRate, accent = false)
+        val accentIdx = synchronized(this) {
+            if (!open) return
+            NativePads.addSample(handle, accentClick.samples, accentClick.channels, accentClick.sampleRate)
+        }
+        val regularIdx = synchronized(this) {
+            if (!open) return
+            NativePads.addSample(handle, regularClick.samples, regularClick.channels, regularClick.sampleRate)
+        }
         synchronized(this) {
             if (!open) return
             NativePads.commitBank(handle)
             sampleIndex = index
             framesOf = frames
             hits.clear()
+            clickAccentIndex = accentIdx
+            clickSampleIndex = regularIdx
+            clickAccentFrames = accentClick.frameCount.toLong()
+            clickFrames = regularClick.frameCount.toLong()
         }
     }
 
@@ -158,6 +199,15 @@ class PadEngine(preferredSampleRate: Int) {
             sampleIndex = emptyMap()
             framesOf = emptyMap()
             hits.clear()
+            // This bank replaces the one `load` built (see the KDoc above) -
+            // any click indices it recorded now point into a bank that no
+            // longer exists. Clearing them keeps `clickHit`'s -1 guard
+            // truthful instead of leaving a third, undocumented state where
+            // it addresses a stale or wrong sample.
+            clickSampleIndex = -1
+            clickAccentIndex = -1
+            clickFrames = 0L
+            clickAccentFrames = 0L
         }
         return indices
     }
@@ -224,6 +274,42 @@ class PadEngine(preferredSampleRate: Int) {
     )
 
     /**
+     * Play the count-in click at [voiceId], one-shot, full length —
+     * [accent] for the downbeat, false for the other three beats. Goes
+     * through [hitLayers] with a single raw bank index, exactly the
+     * `SplitScreen` precedent for sounding a bank sample with no
+     * [KitPad] involved: this is a timing cue, not a kit sound, so it
+     * never touches a choke group, a pad slot, or `VoiceAllocator` — the
+     * voice id is the caller's to give and own, same as every other
+     * `hitLayers` call.
+     *
+     * False exactly when [hit] would be false: no stream running, or
+     * (here) the click never loaded — [load] hasn't been called yet, or
+     * the bank build never got as far as adding it.
+     *
+     * The caller owns [voiceId] and must supply one outside any
+     * `VoiceAllocator`'s range on the same engine (its own ids start at 1
+     * and only grow, so any id `<= 0` is safe forever): the native side
+     * stamps whatever id it is given onto a voice with no dedup against
+     * ids already sounding, so an id the allocator could also hand out
+     * would let a click's own ending get reported as a pad's, or vice
+     * versa, to whichever side is listening on [drainEnded].
+     */
+    @Synchronized
+    fun clickHit(voiceId: Int, accent: Boolean): Boolean {
+        val sample = if (accent) clickAccentIndex else clickSampleIndex
+        val frames = if (accent) clickAccentFrames else clickFrames
+        if (sample < 0 || frames <= 0L) return false
+        return hitLayers(
+            layers = listOf(Layer(voiceId = voiceId, sample = sample, gainLeft = CLICK_GAIN, gainRight = CLICK_GAIN, reverse = false)),
+            startFrame = 0L,
+            endFrame = frames,
+            loopStart = -1L,
+            pitch = 1.0,
+        )
+    }
+
+    /**
      * Move a sounding voice's gains, gliding over [glideMs] rather than
      * stepping. This is what a fader is: retriggering the note on every
      * drag frame would be a click per frame, and a step per frame a
@@ -272,5 +358,8 @@ class PadEngine(preferredSampleRate: Int) {
         /** A choke is a short fade, not a cut: long enough to spare the click, short enough to read as a cut. */
         const val CHOKE_FADE_MS = 5f
         const val PANIC_FADE_MS = 20f
+
+        /** The count-in click's fixed level — a cue meant to sit under the kit, not a mixed-in sound. */
+        const val CLICK_GAIN = 0.6f
     }
 }
