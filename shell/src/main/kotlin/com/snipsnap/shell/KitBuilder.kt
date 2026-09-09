@@ -569,6 +569,28 @@ class KitBuilderModel private constructor(
             } ?: emptyList()
 
     /**
+     * Why TAKES and THE BIN cohabit on one screen (name-and-find
+     * followups) despite being named as two separate things now
+     * (`TakesBinScreen.kt`'s own header/card titles): they are genuinely
+     * different data with different lifecycles — TAKES is `kit.json`'s own
+     * save history, count-capped at [MAX_TAKES] and never time-expired
+     * (nothing is ever deleted to create one, see [archiveTake]); THE BIN
+     * is ejected/displaced pad AUDIO, time-capped at [BIN_KEEP_DAYS] days
+     * and independently deletable early ([emptyBin]) — but a take is JSON,
+     * not audio: it captures pad settings and sample FILENAMES, never
+     * sample BYTES. THE BIN is the app's only other record of what a
+     * filename's bytes actually were at a past moment, which is exactly
+     * what THIS function needs to make "roll back to take T" mean what a
+     * user expects — the pad sounding the way it did then, not merely
+     * carrying the right slot/name/tune settings while silently pointing
+     * at whatever audio happens to occupy that filename NOW (see
+     * [restoreLiveAudioAsOf] below, which reads the bin as its audio
+     * source of truth for exactly this reason). Severing that coupling —
+     * making TAKES restore `kit.json` alone — would silently break audio
+     * rollback while leaving `kit.json` rollback looking like it still
+     * worked; the shared screen and this cross-read are load-bearing, not
+     * an artifact of the two once having had one name.
+     *
      * Roll back to an archived take. This restores `kit.json` *and* the
      * actual audio that was live when the take was archived — not
      * whatever happens to be sitting on the filename now. A take file's

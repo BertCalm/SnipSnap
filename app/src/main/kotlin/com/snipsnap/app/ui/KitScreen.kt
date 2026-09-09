@@ -281,7 +281,11 @@ fun KitScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("TAKES + BIN ▸ VERSIONS & TRASH", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onTakesBin)
+                // "VERSIONS + BIN", not "TAKES + BIN" (name-and-find
+                // followups) — matches TakesBinScreen.kt's own renamed
+                // header; the destination screen and its Kotlin symbol are
+                // unchanged, only this entry-point label.
+                ActionButton("VERSIONS + BIN ▸ ROLL BACK OR RESTORE", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onTakesBin)
                 // EVIL TWINS: bank B lit with seeded re-treatments of bank A; a second press rerolls.
                 val twinned = kit.pads.any { it.slot > 16 }
                 ActionButton(
