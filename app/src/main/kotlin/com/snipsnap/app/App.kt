@@ -919,9 +919,12 @@ fun App(shelf: KitShelf) {
      * `PadCaptureScreen`. Same open→classify→assign→save shape as
      * `PadCaptureScreen.commitToPad`, including the same `KitWrites.mutex` —
      * this writes the same `kit.json` that screen (and every other kit
-     * mutator in this file) does. `source = mapOf("file" to file.name)` is
-     * exactly the provenance param Task 2's `KitBuilderModel.assign` added;
-     * this is its first live caller.
+     * mutator in this file) does. `source = SnipStore.provenanceTag(file)`
+     * is exactly the provenance param Task 2's `KitBuilderModel.assign`
+     * added; this is its first live caller. `provenanceTag` tags both
+     * `"file"` (display) and, when it parses, `"capturedAtMillis"` (the
+     * SNIPS shelf's USED badge's own durable key, unaffected by a later
+     * rename — see `SnipStore.isUsedBy`'s own KDoc).
      */
     fun assignPendingSnip(file: File, slot: Int) {
         val target = open ?: return
@@ -940,7 +943,7 @@ fun App(shelf: KitShelf) {
                     val cls = Classifier.classify(snip).drumClass
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(target.dir)
-                        model.assign(slot, snip, cls, cls.name.replace('_', ' '), source = mapOf("file" to file.name))
+                        model.assign(slot, snip, cls, cls.name.replace('_', ' '), source = SnipStore.provenanceTag(file))
                         model.save()
                         model.kit
                     }

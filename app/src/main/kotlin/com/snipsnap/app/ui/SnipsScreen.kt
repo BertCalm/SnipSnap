@@ -121,12 +121,21 @@ fun SnipsScreen(
 
     // USED badge: null until the cheap gate below resolves, and the list
     // renders with no badges at all in the meantime — never a guess, per
-    // the honesty rule (see [anyPadTaggedWithSourceFile]'s own KDoc for why
-    // this is cheap even on a shelf with many kits).
-    var usedFileNames by remember { mutableStateOf<Set<String>?>(null) }
-    LaunchedEffect(Unit) {
-        usedFileNames = withContext(Dispatchers.IO) {
-            if (anyPadTaggedWithSourceFile(shelf.root)) usedFileNamesAcrossShelf(shelf.root) else emptySet()
+    // the honesty rule (see [anyPadTaggedWithProvenance]'s own KDoc for why
+    // this is cheap even on a shelf with many kits). Keyed on [snips]
+    // itself, not `Unit`, and matched against those SAME `Info`/`File`
+    // instances — not a second, independent `listWithInfo` call — so a
+    // RENAME (`doRename` below reassigns `snips` to a freshly-listed set
+    // whose `File`s point at the new path) re-triggers this and the badge
+    // set is never compared against stale `File`s from before the rename.
+    // Missing this was almost the same regression this whole task exists
+    // to fix, just moved one layer up: capturedAtMillis makes a pad's OWN
+    // provenance survive a rename, but the badge only reads correctly if
+    // the row it's matched against is refreshed too.
+    var usedSnipFiles by remember { mutableStateOf<Set<File>?>(null) }
+    LaunchedEffect(snips) {
+        usedSnipFiles = withContext(Dispatchers.IO) {
+            if (anyPadTaggedWithProvenance(shelf.root)) usedSnipsAcrossShelf(shelf.root, snips) else emptySet()
         }
     }
 
@@ -341,7 +350,7 @@ fun SnipsScreen(
                         SnipRow(
                             info = info,
                             playing = playingFile == info.file,
-                            used = usedFileNames?.contains(info.file.name) == true,
+                            used = usedSnipFiles?.contains(info.file) == true,
                             onTogglePlay = { togglePlay(info) },
                             onPickPad = { onPickPadFor(info.file) },
                             onOpenTape = { onOpenInTape(info.file) },
@@ -639,24 +648,34 @@ private fun humanSize(bytes: Long): String = when {
  * ships, every pad on every kit is untagged (Task 2 only tags going
  * forward), so this still reads every kit.json once — there's no way to
  * know the answer is "no" without checking each — but it stops there,
- * never going on to build the full per-pad name set [usedFileNamesAcrossShelf]
+ * never going on to build the full per-snip match set [usedSnipsAcrossShelf]
  * would, which is the actual work worth skipping for a guaranteed-empty
- * result.
+ * result. Checks both provenance keys [SnipStore.isUsedBy] can match on
+ * (`"file"`, the legacy-only key, and `"capturedAtMillis"`, the durable one
+ * `SnipStore.provenanceTag` adds alongside it) — this gate is a superset of
+ * that match, so it can never say "nothing to build" while the full scan
+ * would go on to find something.
  */
-private fun anyPadTaggedWithSourceFile(root: File): Boolean =
+private fun anyPadTaggedWithProvenance(root: File): Boolean =
     KitStore.list(root).any { dir ->
         runCatching { KitStore.load(dir) }.getOrNull()?.pads?.any { pad ->
-            pad.source["file"]?.isNotBlank() == true
+            pad.source["file"]?.isNotBlank() == true || pad.source["capturedAtMillis"]?.isNotBlank() == true
         } == true
     }
 
-/** Only called once [anyPadTaggedWithSourceFile] says it's worth it: every tagged pad's source file name, across every kit on the shelf. */
-private fun usedFileNamesAcrossShelf(root: File): Set<String> =
-    KitStore.list(root)
+/**
+ * Only called once [anyPadTaggedWithProvenance] says it's worth it: every
+ * snip in [snips] that some pad on some kit under [root] genuinely
+ * references, per [SnipStore.isUsedBy] — the one honesty check, reused
+ * here rather than a second copy of its capturedAtMillis-first/file-
+ * fallback logic that could quietly drift from it.
+ */
+private fun usedSnipsAcrossShelf(root: File, snips: List<SnipStore.Info>): Set<File> {
+    val pads = KitStore.list(root)
         .mapNotNull { dir -> runCatching { KitStore.load(dir) }.getOrNull() }
         .flatMap { it.pads }
-        .mapNotNull { pad -> pad.source["file"]?.takeIf { it.isNotBlank() } }
-        .toSet()
+    return snips.filter { info -> pads.any { pad -> SnipStore.isUsedBy(pad, info.file) } }.map { it.file }.toSet()
+}
 
 // Duplicated, not hoisted (see this file's own `DeleteButton`/`HeaderChip`
 // comments) — BIN red is deliberately constant across every scheme so a

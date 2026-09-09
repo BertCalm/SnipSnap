@@ -10,6 +10,7 @@ import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.AtomicFile
+import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.Names
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -248,7 +249,14 @@ object SnipStore {
         }
     }
 
-    /** The `snip_<millis>[_name].wav` timestamp [list]/[newest]/[listWithInfo] all sort by — one parse, shared. */
+    /**
+     * The `snip_<millis>[_name].wav` timestamp [list]/[newest]/[listWithInfo]
+     * all sort by — one parse, shared. [provenanceTag] and [isUsedBy] are
+     * its other callers within this object (the USED badge's write and
+     * read sides); neither `:app` caller needs the raw millis directly, so
+     * this stays `private` rather than crossing the module boundary for no
+     * reason.
+     */
     private fun parsedTimestamp(file: File): Long? = NAME.matchEntire(file.name)?.groupValues?.get(1)?.toLongOrNull()
 
     /** The name half of [parsedTimestamp]'s own grammar — `null` for a legacy or never-confidently-classified snip. */
@@ -496,5 +504,56 @@ object SnipStore {
         if (target == file) return file
         if (target.exists()) return null
         return if (file.renameTo(target)) target else null
+    }
+
+    /**
+     * The provenance [com.snipsnap.shell.KitBuilderModel.assign] should
+     * record when a pad is populated straight from an existing snip file:
+     * `"file"` ([snip]'s current name, kept for display — the pad sheet's
+     * own source line, [KitBuilder.kt]'s `assign` KDoc) plus, whenever
+     * [snip]'s own filename actually parses ([parsedTimestamp]),
+     * `"capturedAtMillis"` — [snip]'s immutable capture time, unaffected by
+     * a later [rename]. Both keys land together on every fresh assign;
+     * [isUsedBy] is what makes the second one load-bearing.
+     */
+    fun provenanceTag(snip: File): Map<String, String> {
+        val tag = linkedMapOf("file" to snip.name)
+        parsedTimestamp(snip)?.let { tag["capturedAtMillis"] = it.toString() }
+        return tag
+    }
+
+    /**
+     * The SNIPS shelf's USED badge, per pad per snip: does [pad]'s own
+     * provenance genuinely reference [snip]? `source["capturedAtMillis"]`
+     * decides it whenever present — matched against [snip]'s own immutable
+     * capture time via the shared [parsedTimestamp] parse (never a second,
+     * possibly-drifting parse of the same grammar) — which is what lets an
+     * assign recorded through [provenanceTag] survive a [rename]: the
+     * regression this fixes is that the old `source["file"]`-only check
+     * broke the instant a rename changed the filename out from under it.
+     *
+     * A pad tagged before this key existed (or whose `capturedAtMillis`
+     * simply fails to parse — hand-edited kit.json, say) falls back to
+     * comparing `source["file"]` against [snip]'s CURRENT name: the
+     * pre-existing behaviour, unchanged, so an untouched legacy kit.json
+     * keeps resolving exactly as it always did, and one whose target snip
+     * HAS since been renamed goes back to matching nothing rather than
+     * matching something wrong — a known, accepted limitation of the
+     * legacy fallback, not a bug this function tries to paper over.
+     *
+     * Never the reverse order (a filename match overriding a
+     * `capturedAtMillis` mismatch): a coincidental name collision
+     * producing a false "USED" would be worse than the badge silently
+     * going missing. A collision can't happen between two DIFFERENT
+     * captures either way — [fileName] always embeds the writing file's
+     * own millis, and [freshFile] guarantees those millis are unique among
+     * live snips — so the legacy fallback can only ever go quiet on a
+     * genuine match, never point at a stranger.
+     */
+    fun isUsedBy(pad: KitPad, snip: File): Boolean {
+        val taggedMillis = pad.source["capturedAtMillis"]?.toLongOrNull()
+        if (taggedMillis != null) return taggedMillis == parsedTimestamp(snip)
+        val taggedFile = pad.source["file"]?.takeIf { it.isNotBlank() } ?: return false
+        return taggedFile == snip.name
     }
 }

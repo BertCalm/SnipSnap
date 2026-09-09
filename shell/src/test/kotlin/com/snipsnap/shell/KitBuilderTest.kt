@@ -797,6 +797,31 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `SnipStore provenanceTag's capturedAtMillis round-trips through kit json and keeps the USED badge honest after save-reopen`() {
+        val snipsRoot = File(temp, "SnipsRoot")
+        val snip = SnipStore.commit(DrumSynth.snare().samples, 44_100, snipsRoot, nowMillis = 123_000L)
+
+        val dir = File(temp, "SourceTagMillis")
+        val m = KitBuilderModel.create("SourceTagMillis", dir)
+        val tagged = m.assign(1, DrumSynth.snare(), DrumClass.SNARE, source = SnipStore.provenanceTag(snip))
+        assertEquals(snip.name, tagged.source["file"])
+        assertEquals("123000", tagged.source["capturedAtMillis"])
+
+        m.save()
+        val reopened = KitBuilderModel.open(dir)
+        val pad = reopened.pad(1)!!
+        assertEquals(snip.name, pad.source["file"], "\"file\" round-trips through kit.json")
+        assertEquals("123000", pad.source["capturedAtMillis"], "capturedAtMillis round-trips through kit.json too")
+
+        // The whole point: a reopened pad's badge must still resolve after
+        // the snip that made it is renamed - the exact regression this
+        // task fixes, exercised end-to-end (write -> persist -> reopen ->
+        // rename -> read).
+        val renamed = SnipStore.rename(snip, "Snare One")!!
+        assertTrue(SnipStore.isUsedBy(pad, renamed), "the reopened pad's badge survives a rename of its snip")
+    }
+
+    @Test
     fun `save refuses to resurrect a directory that no longer exists`() {
         val dir = File(temp, "Vanished")
         val m = KitBuilderModel.create("Vanished", dir)

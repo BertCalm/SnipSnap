@@ -59,12 +59,14 @@ class KitBuilderModel private constructor(
      * if nothing else references it.
      *
      * [source] is provenance, freeform (see [KitPad.source]) — e.g.
-     * `mapOf("file" to sourceFile.name)` when this assign came from an
-     * existing snip file (the SNIPS shelf, not yet built as of this
-     * signature landing), so a later "USED" badge can read it back off the
-     * pad instead of guessing. Defaults to empty: a live capture (GRAB/HOLD
-     * off the mic ring) never touched a snip file and has nothing honest to
-     * tag here.
+     * [SnipStore.provenanceTag] when this assign came from an existing snip
+     * file (the SNIPS shelf's → PAD), so a later "USED" badge can read it
+     * back off the pad instead of guessing. That helper tags both `"file"`
+     * (display) and `"capturedAtMillis"` (the snip's own immutable capture
+     * time, unaffected by a later rename — [SnipStore.isUsedBy] is the
+     * matching read side). Defaults to empty: a live capture (GRAB/HOLD off
+     * the mic ring) never touched a snip file and has nothing honest to tag
+     * here.
      */
     fun assign(
         slot: Int,

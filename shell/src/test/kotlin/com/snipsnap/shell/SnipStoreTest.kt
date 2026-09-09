@@ -336,6 +336,103 @@ class SnipStoreTest {
         } finally { dir.deleteRecursively() }
     }
 
+    // ==================== provenanceTag / isUsedBy: the USED badge's write and read sides ====================
+
+    /** A minimal [KitPad] carrying [source] and nothing else worth asserting on here. */
+    private fun padWithSource(source: Map<String, String>) =
+        com.snipsnap.kit.KitPad(slot = 1, sampleFile = "pad.wav", source = source)
+
+    @Test
+    fun `provenanceTag records both the filename and the parsed capture millis`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val f = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 60_000L)
+            val tag = SnipStore.provenanceTag(f)
+            assertEquals(f.name, tag["file"])
+            assertEquals("60000", tag["capturedAtMillis"], "the same millis parsedTimestamp/listWithInfo agree on")
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `provenanceTag omits capturedAtMillis for a file whose name doesn't parse as a snip`() {
+        val f = File(Files.createTempDirectory("snips").toFile(), "not_a_snip.wav")
+        assertEquals(mapOf("file" to "not_a_snip.wav"), SnipStore.provenanceTag(f))
+    }
+
+    @Test
+    fun `isUsedBy survives a rename via capturedAtMillis - the regression this fixes`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val f = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 70_000L)
+            val pad = padWithSource(SnipStore.provenanceTag(f))
+            assertTrue(SnipStore.isUsedBy(pad, f), "matches before any rename")
+
+            val renamed = SnipStore.rename(f, "Kick One")!!
+            assertTrue(
+                SnipStore.isUsedBy(pad, renamed),
+                "capturedAtMillis is immutable across a rename, so the badge must still resolve",
+            )
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `isUsedBy falls back to filename matching for a legacy pad, but loses it across a rename`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val f = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 80_000L)
+            // Legacy shape: only "file", as every pad assigned before this
+            // task existed - no capturedAtMillis to fall back on.
+            val legacyPad = padWithSource(mapOf("file" to f.name))
+            assertTrue(SnipStore.isUsedBy(legacyPad, f), "a legacy pad still resolves against its unrenamed snip")
+
+            val renamed = SnipStore.rename(f, "Old Name")!!
+            assertFalse(
+                SnipStore.isUsedBy(legacyPad, renamed),
+                "the known, accepted limitation: a legacy (filename-only) pad's badge does not survive a rename " +
+                    "it never recorded a durable key for - it goes quiet, it does not guess",
+            )
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `isUsedBy never matches an unrelated snip`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val a = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 90_000L)
+            val b = SnipStore.commit(FloatArray(4_410) { 0.2f }, 44_100, dir, 91_000L)
+
+            val padForA = padWithSource(SnipStore.provenanceTag(a))
+            assertFalse(SnipStore.isUsedBy(padForA, b), "tagged for A, must not also read as used by B")
+
+            val legacyPadForA = padWithSource(mapOf("file" to a.name))
+            assertFalse(SnipStore.isUsedBy(legacyPadForA, b), "same, for the legacy filename-only shape")
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `isUsedBy never lets a filename match override a capturedAtMillis mismatch`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            val a = SnipStore.commit(FloatArray(4_410) { 0.1f }, 44_100, dir, 92_000L)
+            val b = SnipStore.commit(FloatArray(4_410) { 0.2f }, 44_100, dir, 93_000L)
+            // A pathological pad: "file" names B, but "capturedAtMillis"
+            // still points at A's own capture time. capturedAtMillis must
+            // decide it outright once present - the filename value is
+            // never even consulted - so this reads as used by A (the
+            // millis match) and NOT by B (the filename match alone would
+            // have said yes, and must not).
+            val mismatched = padWithSource(mapOf("file" to b.name, "capturedAtMillis" to "92000"))
+            assertFalse(
+                SnipStore.isUsedBy(mismatched, b),
+                "a filename match must not win when capturedAtMillis is present and points elsewhere",
+            )
+            assertTrue(
+                SnipStore.isUsedBy(mismatched, a),
+                "capturedAtMillis alone decides the match once present, regardless of what \"file\" says",
+            )
+        } finally { dir.deleteRecursively() }
+    }
+
     // ==================== the bin: delete -> list -> restore -> correct name ====================
 
     @Test
