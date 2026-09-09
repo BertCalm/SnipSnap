@@ -1,6 +1,7 @@
 package com.snipsnap.app
 
 import android.content.Context
+import com.snipsnap.app.ui.TAPE_LOAD_MAX_SEC
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.shell.InstrumentEngine
@@ -53,7 +54,10 @@ class InstrumentPlayer(context: Context) {
         }
         for (zone in instrument.zones) {
             if (zone.sample in index) continue
-            val snip = runCatching { WavReader.read(File(dir, zone.sample)) }.getOrNull() ?: continue
+            // `zone.sample` is a kit pad sample, produced only by
+            // KitBuilderModel.assign from an already-bounded Snip — readCapped's
+            // 600s ceiling is defense in depth, not expected to ever bind.
+            val snip = runCatching { WavReader.readCapped(File(dir, zone.sample), TAPE_LOAD_MAX_SEC).snip }.getOrNull() ?: continue
             val i = synchronized(this) {
                 if (!open) return
                 NativePads.addSample(handle, snip.samples, snip.channels, snip.sampleRate)

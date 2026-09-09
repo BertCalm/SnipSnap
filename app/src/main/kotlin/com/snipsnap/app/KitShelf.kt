@@ -235,7 +235,10 @@ class KitShelf(val root: File) {
      */
     fun texture(source: Entry, slot: Int, spec: TextureKits.Spec): Entry {
         val pad = source.kit.pad(slot) ?: throw IllegalArgumentException("no pad on ${MutateSheet.padTag(slot)}")
-        val snip = WavReader.read(File(source.dir, pad.sampleFile))
+        // pad.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
+        // from an already-bounded Snip — readCapped's 600s ceiling is defense in
+        // depth, not expected to ever bind.
+        val snip = WavReader.readCapped(File(source.dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip
         root.mkdirs()
         val name = freshName(TextureKits.kitName(pad.displayName, spec))
         val dir = File(root, name)

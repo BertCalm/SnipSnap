@@ -712,7 +712,10 @@ fun App(shelf: KitShelf) {
         scope.launch {
             try {
                 val updated = withContext(Dispatchers.IO) {
-                    val snip = Cleanup.toMono(WavReader.read(file))
+                    // `file` is a SNIP, already bounded by SnipStore.IMPORT_MAX_SEC (180s) or
+                    // real-time mic capture — readCapped's 600s ceiling is pure defense in depth,
+                    // not expected to ever bind (see ConventionTest's Law 4 KDoc).
+                    val snip = Cleanup.toMono(WavReader.readCapped(file, TAPE_LOAD_MAX_SEC).snip)
                     val cls = Classifier.classify(snip).drumClass
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(target.dir)

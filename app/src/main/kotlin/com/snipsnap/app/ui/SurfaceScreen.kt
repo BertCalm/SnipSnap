@@ -144,7 +144,10 @@ fun SurfaceScreen(
     // The voice: one of the kit's pads, read off the shelf, folded to mono in the engine.
     suspend fun loadPad(dir: File, pad: KitPad) {
         val snip = withContext(Dispatchers.IO) {
-            runCatching { WavReader.read(File(dir, pad.sampleFile)) }.getOrNull()
+            // pad.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
+            // from an already-bounded Snip — readCapped's 600s ceiling is defense in
+            // depth, not expected to ever bind.
+            runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
         }
         if (snip == null) {
             padName = null

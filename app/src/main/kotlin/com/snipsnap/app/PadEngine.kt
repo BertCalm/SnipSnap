@@ -1,5 +1,6 @@
 package com.snipsnap.app
 
+import com.snipsnap.app.ui.TAPE_LOAD_MAX_SEC
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.KitPad
@@ -102,7 +103,10 @@ class PadEngine(preferredSampleRate: Int) {
             NativePads.beginBank(handle)
         }
         for (file in files) {
-            val snip = runCatching { WavReader.read(File(entry.dir, file)) }.getOrNull() ?: continue
+            // `file` is a kit pad sample, produced only by KitBuilderModel.assign
+            // from an already-bounded Snip — readCapped's 600s ceiling is defense
+            // in depth, not expected to ever bind.
+            val snip = runCatching { WavReader.readCapped(File(entry.dir, file), TAPE_LOAD_MAX_SEC).snip }.getOrNull() ?: continue
             val i = synchronized(this) {
                 if (!open) return
                 NativePads.addSample(handle, snip.samples, snip.channels, snip.sampleRate)

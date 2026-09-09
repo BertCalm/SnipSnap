@@ -230,7 +230,10 @@ fun SplitScreen(
             // would be cancelled and the code would carry on toasting and
             // banking anyway. Cancellation travels; only failures become words.
             val source = try {
-                withContext(Dispatchers.IO) { WavReader.read(File(dir, file)) }
+                // `file` is a kit pad sample, produced only by KitBuilderModel.assign
+                // from an already-bounded Snip — readCapped's 600s ceiling is defense
+                // in depth, not expected to ever bind.
+                withContext(Dispatchers.IO) { WavReader.readCapped(File(dir, file), TAPE_LOAD_MAX_SEC).snip }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

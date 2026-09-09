@@ -150,7 +150,10 @@ fun SnipsScreen(
         stopPlayback()
         scope.launch {
             val mono = withContext(Dispatchers.IO) {
-                runCatching { Cleanup.toMono(WavReader.read(info.file)) }.getOrNull()
+                // info.file is a SNIP, bounded by SnipStore.IMPORT_MAX_SEC (180s) or
+                // real-time mic capture — readCapped's 600s ceiling is defense in
+                // depth, not expected to ever bind.
+                runCatching { Cleanup.toMono(WavReader.readCapped(info.file, TAPE_LOAD_MAX_SEC).snip) }.getOrNull()
             }
             // Superseded by a later togglePlay call (this row again, or a
             // different one) while the decode was in flight — see

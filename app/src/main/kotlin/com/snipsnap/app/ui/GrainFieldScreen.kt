@@ -125,7 +125,10 @@ fun GrainFieldScreen(
         val pad = entry.kit.pad(slot)
         val snip = pad?.let { p ->
             withContext(Dispatchers.IO) {
-                runCatching { Cleanup.toMono(WavReader.read(File(entry.dir, p.sampleFile))) }.getOrNull()
+                // p.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
+                // from an already-bounded Snip — readCapped's 600s ceiling is defense in
+                // depth, not expected to ever bind.
+                runCatching { Cleanup.toMono(WavReader.readCapped(File(entry.dir, p.sampleFile), TAPE_LOAD_MAX_SEC).snip) }.getOrNull()
             }
         }
         if (snip == null) {

@@ -257,82 +257,18 @@ class ConventionTest {
         ),
     )
 
-    /**
-     * FROZEN — PRE-EXISTING, NOT BLESSED. These nine sites all read a file
-     * `:app` itself already wrote (a kit pad sample or a SNIP) rather than
-     * an arbitrary external file, and every current producer of those
-     * files happens to already be capped today (SnipStore.IMPORT_MAX_SEC,
-     * mic-capture's own real-time duration, TAPE's readCapped since
-     * 4fd6aeb/b73ad49/0f2ff24) — but that guarantee is INDUCTIVE, not
-     * enforced: KitBuilderModel.assign and OneNote.export both accept any
-     * Snip with frameCount > 0, with no cap of their own, so a future
-     * caller that doesn't honor the convention would silently reintroduce
-     * the OOM these commits closed elsewhere. This allowlist exists so the
-     * guardrail can ship without rewriting :app code that's out of scope
-     * for this change (and a concurrent kit-write-mutex audit is editing
-     * several of these exact files right now) — it stops NEW unbounded
-     * reads from joining these nine, it does NOT certify these nine as
-     * reviewed-safe. Flagged as a follow-up in the report accompanying
-     * this guardrail: give each of these WavReader.readCapped(file,
-     * someGenerousCeiling) as defense in depth so the guarantee becomes
-     * enforced instead of conventional.
-     */
-    private val frozenUnblessedReads = listOf(
-        ReadAllow("App.kt", "val snip = Cleanup.toMono(WavReader.read(file))", "assignPendingSnip: `file` is a SNIP"),
-        ReadAllow(
-            "InstrumentPlayer.kt",
-            "val snip = runCatching { WavReader.read(File(dir, zone.sample)) }.getOrNull() ?: continue",
-            "instrument zone sample, only ever produced by OneNote.export from an already-bounded pad Snip",
-        ),
-        ReadAllow(
-            "KitShelf.kt",
-            "val snip = WavReader.read(File(source.dir, pad.sampleFile))",
-            "kit pad sample, written by KitBuilderModel.assign from an already-bounded Snip",
-        ),
-        ReadAllow(
-            "PadEngine.kt",
-            "val snip = runCatching { WavReader.read(File(entry.dir, file)) }.getOrNull() ?: continue",
-            "kit pad sample, same inductive bound as KitShelf.kt",
-        ),
-        ReadAllow(
-            "ui/GrainFieldScreen.kt",
-            "runCatching { Cleanup.toMono(WavReader.read(File(entry.dir, p.sampleFile))) }.getOrNull()",
-            "kit pad sample, same inductive bound",
-        ),
-        ReadAllow(
-            "ui/PadSheetScreen.kt",
-            "val s = runCatching { Cleanup.toMono(WavReader.read(File(entry.dir, p.sampleFile))) }.getOrNull()",
-            "kit pad sample, same inductive bound",
-        ),
-        ReadAllow(
-            "ui/SnipsScreen.kt",
-            "runCatching { Cleanup.toMono(WavReader.read(info.file)) }.getOrNull()",
-            "a SNIP file, bounded by SnipStore's own caps",
-        ),
-        ReadAllow(
-            "ui/SplitScreen.kt",
-            "withContext(Dispatchers.IO) { WavReader.read(File(dir, file)) }",
-            "kit pad sample, same inductive bound",
-        ),
-        ReadAllow(
-            "ui/SurfaceScreen.kt",
-            "runCatching { WavReader.read(File(dir, pad.sampleFile)) }.getOrNull()",
-            "kit pad sample, same inductive bound",
-        ),
-    )
-
     @Test
     fun `law - app code only calls the bounded WavReader readCapped, never the unbounded read`() {
         val sites = scanWavReaderReadSites()
         assertTrue(
             sites.isNotEmpty(),
-            "found zero WavReader.read( sites under :app (recon counted 10) — either every site was genuinely " +
+            "found zero WavReader.read( sites under :app (recon counted 1) — either every site was genuinely " +
                 "fixed to use readCapped (great: then also delete the now-stale allowlist entries below, since a " +
                 "stale allowlist entry silently protects nothing) or this scan is broken; a scan finding nothing " +
                 "would otherwise pass by accident, which is worse than no test at all.",
         )
 
-        val allowlist = justifiedReads + frozenUnblessedReads
+        val allowlist = justifiedReads
         for (site in sites) {
             val allowed = allowlist.any { it.file == site.file && it.line == site.line }
             assertTrue(

@@ -227,7 +227,10 @@ fun PadSheetScreen(
             return
         }
         val (loadedSnip, daysLeft) = withContext(Dispatchers.IO) {
-            val s = runCatching { Cleanup.toMono(WavReader.read(File(entry.dir, p.sampleFile))) }.getOrNull()
+            // p.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
+            // from an already-bounded Snip — readCapped's 600s ceiling is defense in
+            // depth, not expected to ever bind.
+            val s = runCatching { Cleanup.toMono(WavReader.readCapped(File(entry.dir, p.sampleFile), TAPE_LOAD_MAX_SEC).snip) }.getOrNull()
             val binned = m.binContents()
                 .filter { it.originalName == p.sampleFile }
                 .maxByOrNull { it.binnedAtMillis }
