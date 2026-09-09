@@ -72,6 +72,7 @@ import com.snipsnap.app.ui.TapeScreen
 import com.snipsnap.app.ui.TapeText
 import com.snipsnap.app.ui.TitleBar
 import com.snipsnap.app.ui.ToastOverlay
+import com.snipsnap.app.ui.XRayScreen
 import com.snipsnap.app.ui.tapeClick
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.Cleanup
@@ -148,6 +149,9 @@ private const val CHOP_ALL_MAX_FILE_BYTES = 96L * 1024 * 1024
  * `open` alone wouldn't tell CHOP which file the commit was cut from.
  */
 data class TapeCommit(val sourceFile: File, val range: IntRange)
+
+/** X-RAY's own state: the picked file's display name and what [MpcXRay.read] made of it. Non-null IS "the screen is open" — there is no separate boolean to keep in sync with it. */
+data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay.Reading)
 
 /**
  * The whole M0 app: the SNIPSNAP.EXE window on its desk, the menu row,
@@ -245,6 +249,12 @@ fun App(shelf: KitShelf) {
     // AppScreen.KITS (the shelf), one level up from those, so it's its own
     // boolean at this scope rather than sharing theirs.
     var snipsOpen by remember { mutableStateOf(false) }
+    // X-RAY: same shelf-level shape as snipsOpen above, reached from
+    // KitsScreen's own X-RAY ▸ INSPECT A FILE row — but there's no kit
+    // it could belong to even in principle (the file picked is never
+    // landed anywhere), so it carries its own reading rather than a bare
+    // boolean.
+    var xray by remember { mutableStateOf<XRayView?>(null) }
     // DELETED KITS (Task 2 of the bin-restore plan): same shape as
     // `snipsOpen` above — a shelf-level overlay, not KIT-scoped, reachable
     // from `KitsScreen`'s own `DELETED KITS ▸` row at `AppScreen.KITS`.
@@ -878,6 +888,44 @@ fun App(shelf: KitShelf) {
     ) { uris -> chopAll(uris) }
 
     /**
+     * X-RAY ▸ INSPECT A FILE: whatever the picker hands back is read, never
+     * landed anywhere — `MpcXRay.read` doesn't write a byte, so there's no
+     * shelf to refresh and no kit to open on the way out, unlike every
+     * other picker in this file.
+     */
+    fun xray(uri: Uri?) {
+        if (uri == null || busy != null) return
+        busy = Copy.XRAY_BUSY
+        scope.launch {
+            try {
+                val name = withContext(Dispatchers.IO) { ShareInbox.displayName(context, uri) }
+                val reading = withContext(Dispatchers.IO) {
+                    val local = ShareInbox.copyToCache(context, uri, name, com.snipsnap.mpc3.MpcXRay.MAX_FILE_BYTES)
+                    try {
+                        com.snipsnap.mpc3.MpcXRay.read(local)
+                    } finally {
+                        local.delete()
+                    }
+                }
+                xray = XRayView(name, reading)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                toast = Copy.xrayFailed(e.message ?: e.javaClass.simpleName)
+            } finally {
+                busy = null
+            }
+        }
+    }
+    // Any extension, unlike CHOP ALL's own WAV-only filter above: X-RAY
+    // reads .xpm/.xpn/.xtd/.xty/.xpj alike, and MpcXRay.read itself is
+    // what decides whether it recognizes the bytes - a MIME filter here
+    // would only narrow what the chooser offers, never what this can read.
+    val xrayPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> xray(uri) }
+
+    /**
      * SNIPS → PAD's landing (Task 3): fired by the next empty-pad long-press
      * once a kit is open with [pendingSnipAssign] armed. `KitScreen.kt`
      * itself is unmodified for this — the KIT branch's own `onEmptyLongPress`
@@ -1335,6 +1383,8 @@ fun App(shelf: KitShelf) {
         // not leave this overlay armed to reopen on top of
         // whatever tab comes back into view later.
         deletedKitsOpen = false
+        // X-RAY is shelf-level too, same reasoning again.
+        xray = null
     }
 
     // System Back, root policy: with no KIT-scoped or shelf-level overlay
@@ -1350,7 +1400,7 @@ fun App(shelf: KitShelf) {
     // "◄ SHELF" chip, via `onBack`, which also silences the instrument
     // before leaving — this generic reset does not).
     val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || takesBinOpen ||
-        padCaptureSlot != null || snipsOpen || deletedKitsOpen || arrangeOpen
+        padCaptureSlot != null || snipsOpen || deletedKitsOpen || arrangeOpen || xray != null
     BackHandler(
         enabled = !anyOverlayOpen && screen != AppScreen.KITS &&
             screen != AppScreen.SPLIT && screen != AppScreen.KEYS &&
@@ -1383,8 +1433,19 @@ fun App(shelf: KitShelf) {
                     onSelect = ::goToScreen,
                 )
                 Box(Modifier.weight(1f)) {
+                    // Captured once, like `open`'s own `sheetEntry`/`songEntry`
+                    // captures elsewhere in this same `when` — a delegated
+                    // `mutableStateOf` property doesn't smart-cast, so the
+                    // null check below needs a plain local to narrow.
+                    val xrayView = xray
                     when (screen) {
-                        AppScreen.KITS -> if (snipsOpen) {
+                        AppScreen.KITS -> if (xrayView != null) {
+                            XRayScreen(
+                                fileName = xrayView.fileName,
+                                reading = xrayView.reading,
+                                onBack = { xray = null },
+                            )
+                        } else if (snipsOpen) {
                             SnipsScreen(
                                 shelf = shelf,
                                 onBack = { snipsOpen = false },
@@ -1502,6 +1563,7 @@ fun App(shelf: KitShelf) {
                                 onEject = { MicSessionService.eject(context) },
                                 onBackup = ::backupShelf,
                                 onChopAll = { chopAllPickerLauncher.launch(arrayOf("audio/wav", "audio/x-wav")) },
+                                onXRay = { xrayPickerLauncher.launch(arrayOf("*/*")) },
                                 onSnips = { snipsOpen = true },
                                 assigningSnip = pendingSnipAssign != null,
                                 breedingFrom = pendingBreedWith,

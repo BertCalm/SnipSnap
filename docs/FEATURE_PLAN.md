@@ -2011,6 +2011,22 @@ APP+CORE wave PPP: ✓ all landed (2026-09-09) — a room leaves the shelf.
   the same room shared twice renumbers rather than colliding, its
   original measurement time preserved rather than re-stamped.
 
+APP+CORE wave QQQ: ✓ all landed (2026-09-09) — X-RAY, a read-only look
+  inside any MPC file. `MpcXRay` (`:mpc3`, new) answers "what's in
+  here" for `.xpm`/`.xpn`/`.xtd`/`.xty`/`.xpj` alike and never refuses:
+  a keygroup program, an empty slot kept in the count rather than
+  dropped, a file it doesn't recognize at all - every one comes back
+  as a `Reading`, never an exception. The one throw left is a missing
+  file. Two kinds of honesty, side by side: a field read as `null`
+  wasn't there or wasn't shaped as expected, never a guessed zero; and
+  a field this class has no name for is a count at the foot of the
+  screen (`unlabeledFieldCount`, ACVS's own key-name set diffed
+  against what it actually reads), never a guess at what it means.
+  The shelf's own X-RAY ▸ INSPECT A FILE opens the system picker and
+  reads whatever comes back, on-screen (`XRayScreen`) - nothing here
+  lands a byte anywhere, so there is deliberately no import action on
+  this screen at all.
+
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
   F6.1 .xpn import + expansion tile → velocity/bank B →

@@ -129,6 +129,8 @@ fun KitsScreen(
      */
     binnedKitsCount: Int = 0,
     onDeletedKits: () -> Unit = {},
+    /** X-RAY: opens the system picker, then reads whatever comes back — never lands it, never gated on the shelf holding anything. */
+    onXRay: () -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     var menuOpen by remember { mutableStateOf(false) }
@@ -304,6 +306,16 @@ fun KitsScreen(
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onSnips,
+            )
+            // X-RAY: reads any MPC file the system picker hands back — never
+            // gated on the shelf holding anything, same as SNIPS above,
+            // since this never lands what it reads onto the shelf at all.
+            ActionButton(
+                "X-RAY ▸ INSPECT A FILE",
+                scheme,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onXRay,
             )
             // DELETED KITS: gated on the bin actually holding something —
             // unlike SNIPS/BACKUP above, this is never shown merely dimmed;
