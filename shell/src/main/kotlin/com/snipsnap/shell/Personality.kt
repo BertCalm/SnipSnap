@@ -311,6 +311,11 @@ object Copy {
     /** The needle-roll only draws five lanes; a note on any other pad still plays and still exports — this says so. */
     fun offLane(n: Int): String = "+$n OFF-LANE — HEARD AND EXPORTED, NOT DRAWN"
 
+    // ---- ARRANGE ----
+    const val ARRANGE_NEEDS_GROOVE = "NO GROOVE TO ARRANGE. CHOP WITH A GROOVE, OR STEAL ONE, FIRST."
+    const val ARRANGE_MIXING = "MIXING…"
+    const val ARRANGE_REROLLED = "REROLLED. SAME STRUCTURE, A FRESH TAKE ON THE VARIATION."
+
     // ---- PAD SHEET ----
     const val GHOSTS_ON = "GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
     fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
@@ -365,6 +370,10 @@ object Copy {
     const val ROOM_BIN_EMPTY_BUSY = "EMPTYING…"
     /** EMPTY THE BIN NOW on the rooms bin, confirmed — `kitBinEmptied`/`snipBinEmptied`'s own no-count reasoning applies here too: the bin may hold a stray file the list never showed. */
     val roomBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
+    /** SHARE on a room row: the room is one `.snip-room` file now and the chooser is up. */
+    fun roomPacked(name: String): String = "$name PACKED AS ONE FILE. PICK WHERE IT GOES."
+    /** A `.snip-room` landed through the share door: [name] on the shelf, ready for MUTATE ▸ ROOM. */
+    fun roomLanded(name: String): String = "$name LANDED ON THE SHELF. ANY PAD CAN PLAY IN IT - MUTATE ▸ ROOM."
 
     // ---- KIT: delete (restorable from DELETED KITS for 30 days) + rename from the shelf (Task 4) ----
     /**

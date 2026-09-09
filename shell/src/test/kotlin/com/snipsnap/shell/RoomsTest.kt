@@ -180,5 +180,11 @@ class RoomsTest {
         assertEquals(back.uppercase(), back)
         assertTrue(back.startsWith("FUNK ROOM ") && "SHELF" in back, back)
         for (l in listOf(Copy.ROOM_FORGET_BUSY, Copy.ROOM_RESTORE_BUSY)) assertEquals(l.uppercase(), l, "TapeOS shouts: '$l'")
+        val packed = Copy.roomPacked("FUNK ROOM")
+        assertEquals(packed.uppercase(), packed)
+        assertTrue(packed.startsWith("FUNK ROOM ") && packed.endsWith("."), packed)
+        val landed = Copy.roomLanded("FUNK ROOM")
+        assertEquals(landed.uppercase(), landed)
+        assertTrue(landed.startsWith("FUNK ROOM ") && "MUTATE" in landed && landed.endsWith("."), landed)
     }
 }

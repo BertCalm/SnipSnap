@@ -36,13 +36,29 @@ class ArrangerTest {
         )
     }
 
-    private fun model(name: String, withSnare: Boolean = true): KitBuilderModel {
+    /** Same shape as [grooveClip], but one loud hit over five quiet ones — dynamic range 4.5x, well past the ghost threshold. */
+    private fun dynamicGrooveClip(): Mpc3Clip {
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        return Mpc3Clip(
+            "Dynamic Groove", 1,
+            listOf(
+                Mpc3Note(36, 0, 0.9f),
+                Mpc3Note(37, 4 * s16, 0.2f),
+                Mpc3Note(36, 8 * s16, 0.2f),
+                Mpc3Note(37, 12 * s16, 0.2f),
+                Mpc3Note(38, 2 * s16, 0.2f),
+                Mpc3Note(38, 6 * s16, 0.2f),
+            ),
+        )
+    }
+
+    private fun model(name: String, withSnare: Boolean = true, clip: Mpc3Clip = grooveClip()): KitBuilderModel {
         val m = KitBuilderModel.create(name, File(temp, name))
         m.assign(1, DrumSynth.kick(), DrumClass.KICK)
         if (withSnare) m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
         m.assign(3, DrumSynth.closedHat(), DrumClass.HAT_CLOSED)
         m.save()
-        GrooveStore.save(m.kitDir, listOf(grooveClip()))
+        GrooveStore.save(m.kitDir, listOf(clip))
         return m
     }
 
@@ -67,11 +83,40 @@ class ArrangerTest {
         assertTrue(plan.sections[3].clip.name.endsWith("Fill"), plan.sections[3].clip.name)
         assertTrue(plan.sections[5].clip.name.endsWith("Half"), plan.sections[5].clip.name)
 
+        // Every section states why it picked its clip.
+        assertTrue(plan.sections.all { it.reason.isNotBlank() }, "every section explains itself")
+        // The fixture's own dynamic range (0.9 loudest / 0.9 median = 1.0x)
+        // sits under the ghost threshold, so the variation falls back to
+        // tight and says so with the number that decided it.
+        assertEquals(
+            "tight — dynamic range 1.0x < 2x threshold",
+            plan.sections[2].reason,
+        )
+
         // Repeats stretch short clips to section length: 1-bar base, 4-bar body.
         assertEquals(4, plan.sections[1].repeats)
         assertEquals(4, plan.sections[1].bars)
 
         assertEquals(plan, Arranger.arrange(m.kit, m.kitDir, seed = 0), "deterministic per seed")
+    }
+
+    @Test
+    fun `the variation section picks ghosted or tight by the groove's own dynamic range`() {
+        val dynamic = model("Dynamic", clip = dynamicGrooveClip())
+        val plan = Arranger.arrange(dynamic.kit, dynamic.kitDir, seed = 0)
+        assertTrue(plan.sections[2].clip.name.endsWith("Ghosted"), plan.sections[2].clip.name)
+        assertEquals(
+            "ghosted — dynamic range 4.5x ≥ 2x threshold",
+            plan.sections[2].reason,
+        )
+
+        val flat = model("Flat")
+        val flatPlan = Arranger.arrange(flat.kit, flat.kitDir, seed = 0)
+        assertTrue(flatPlan.sections[2].clip.name.endsWith("Tight"), flatPlan.sections[2].clip.name)
+        assertEquals(
+            "tight — dynamic range 1.0x < 2x threshold",
+            flatPlan.sections[2].reason,
+        )
     }
 
     @Test

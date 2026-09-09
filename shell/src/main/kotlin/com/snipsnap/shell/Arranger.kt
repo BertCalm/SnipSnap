@@ -9,7 +9,6 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.mpc3.Mpc3Clip
 import java.io.File
-import java.util.Random
 
 /**
  * The Arranger (KK1): songs, not loops. The kit already owns every
@@ -31,8 +30,12 @@ import java.util.Random
  */
 object Arranger {
 
-    /** One section: a variation clip played [repeats] times through. */
-    data class Section(val name: String, val clip: Mpc3Clip, val repeats: Int) {
+    /**
+     * One section: a variation clip played [repeats] times through, plus
+     * [reason] — the rule that picked this clip, stated in words, so a
+     * screen can show its work instead of asking the player to trust it.
+     */
+    data class Section(val name: String, val clip: Mpc3Clip, val repeats: Int, val reason: String) {
         init {
             require(repeats >= 1) { "a section plays at least once" }
         }
@@ -49,6 +52,15 @@ object Arranger {
     private const val BODY_BARS = 4
     private const val OUTRO_BARS = 2
 
+    /**
+     * How much louder the base groove's loudest hit has to be than its
+     * median-kept one (the same median [GrooveVariations.sparse] already
+     * computes) before the variation section prefers the ghosted grammar
+     * over a plain tight re-quantize. A groove this dynamic has room for a
+     * whisper between its hits; a flatter one would just bury the ghosts.
+     */
+    private const val VARIATION_GHOST_DYNAMIC_RANGE = 2f
+
     fun arrange(kit: Kit, kitDir: File, seed: Int = 0): Arrangement {
         val base = GrooveStore.load(kitDir).firstOrNull()
             ?: throw IllegalArgumentException(
@@ -60,16 +72,29 @@ object Arranger {
         val half = std[2]
         val sparse = std[3]
 
-        // Draw before deriving, so the rng stream never depends on what
-        // the kit happens to support.
-        val rng = Random(seed.toLong())
-        val preferGhosts = rng.nextFloat() < 0.7f
+        // A measured number, not a coin flip: the base groove's own
+        // dynamic range decides whether the variation has room for a
+        // whisper between its hits.
+        val velocities = base.notes.map { it.velocity }.sorted()
+        val median = velocities[velocities.size / 2]
+        val loudest = velocities.last()
+        val dynamicRange = if (median > 0f) loudest / median else 0f
+        val preferGhosts = dynamicRange >= VARIATION_GHOST_DYNAMIC_RANGE
         val ghosted = try {
             GrooveVariations.ghosted(base, kit, seed = seed + 1)
         } catch (e: IllegalArgumentException) {
             null
         }
         val variation = if (preferGhosts && ghosted != null) ghosted else tight
+        val variationReason = when {
+            preferGhosts && ghosted != null ->
+                "ghosted — dynamic range %.1fx ≥ %.0fx threshold".format(dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
+            preferGhosts ->
+                "tight — dynamic range %.1fx ≥ %.0fx threshold, but no snare or clap to whisper on"
+                    .format(dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
+            else ->
+                "tight — dynamic range %.1fx < %.0fx threshold".format(dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
+        }
         val turn = try {
             GrooveVariations.fill(base, kit, seed = seed + 2)
         } catch (e: IllegalArgumentException) {
@@ -78,12 +103,12 @@ object Arranger {
 
         fun repeats(clip: Mpc3Clip, target: Int) = maxOf(1, target / clip.bars)
         val sections = buildList {
-            add(Section("intro", sparse, repeats(sparse, INTRO_BARS)))
-            add(Section("theme", captured, repeats(captured, BODY_BARS)))
-            add(Section("variation", variation, repeats(variation, BODY_BARS)))
-            turn?.let { add(Section("the turn", it, repeats(it, BODY_BARS))) }
-            add(Section("reprise", captured, repeats(captured, BODY_BARS)))
-            add(Section("outro", half, repeats(half, OUTRO_BARS)))
+            add(Section("intro", sparse, repeats(sparse, INTRO_BARS), "sparse — only the hits at or above the base groove's median velocity"))
+            add(Section("theme", captured, repeats(captured, BODY_BARS), "captured — the break exactly as played"))
+            add(Section("variation", variation, repeats(variation, BODY_BARS), variationReason))
+            turn?.let { add(Section("the turn", it, repeats(it, BODY_BARS), "fill — the last bar of every four rolls into the turn")) }
+            add(Section("reprise", captured, repeats(captured, BODY_BARS), "captured — the theme repeats"))
+            add(Section("outro", half, repeats(half, OUTRO_BARS), "half — the same feel, stretched to half time"))
         }
         return Arrangement("${kit.name} Song", seed, sections)
     }

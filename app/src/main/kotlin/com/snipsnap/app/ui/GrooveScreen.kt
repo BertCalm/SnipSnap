@@ -177,6 +177,8 @@ fun GrooveScreen(
     onToast: (String) -> Unit,
     /** Bumped by App when TAPE rewrote the kit's groove (READ AS GROOVE, STEAL THE FEEL) while this screen may be up. */
     reloadRequest: Int = 0,
+    /** SONG ▸ — opens ARRANGE, the same GROOVE-scoped-overlay shape as PAD SHEET's own onGrainField. */
+    onArrange: () -> Unit = {},
 ) {
     val scheme = LocalScheme.current
 
@@ -593,6 +595,10 @@ fun GrooveScreen(
                 GrooveActionButton("EDIT STEPS", scheme, Modifier.weight(1f), enabled = !busy) { forkToE() }
                 GrooveActionButton("MIDI ▸", scheme, Modifier.weight(1f), enabled = !midiBusy, accent = true) { exportMidi() }
             }
+            // SONG ▸ — the same four programs laid into a structure, not
+            // just cycled: intro/theme/variation/the turn/reprise/outro,
+            // one tap away from what this screen already has loaded.
+            GrooveActionButton("SONG ▸", scheme, Modifier.fillMaxWidth(), accent = true, onClick = onArrange)
 
             TapeText(
                 "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
