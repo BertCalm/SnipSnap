@@ -22,7 +22,7 @@ somewhere to land.
 
 ## A · The phone alone
 
-The native audio stack is the whole of section A1–A4 and five merges
+The native audio stack is the whole of sections A1–A4 and five merges
 rest on it. **A1 is closed** (2026-09-08) and the engine is proven on
 hardware; A2–A4 have still not been heard. Do the rest in this order:
 each one leans on the last.
