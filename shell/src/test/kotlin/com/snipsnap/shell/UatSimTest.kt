@@ -1,18 +1,16 @@
 package com.snipsnap.shell
 
-import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.Snip
-import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.Preflight
-import com.snipsnap.kit.blocked
 import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpVoice
 import java.io.File
 import kotlin.math.sin
 import kotlin.random.Random
+import kotlin.test.AfterTest
 import kotlin.test.Test
 
 /**
@@ -43,8 +41,24 @@ class UatSimTest {
         say("      !! $id  $s")
     }
 
+    /**
+     * Every scratch dir this run makes, so [cleanUp] can take them away
+     * again — a journey builds whole kit folders (WAVs and all), and ten
+     * of them per run would otherwise silt up the system temp dir forever.
+     * The transcript is written outside this list and deliberately kept.
+     */
+    private val scratch = mutableListOf<File>()
+
     private fun tmp(name: String): File =
-        File(System.getProperty("java.io.tmpdir"), "uat-$name-${System.nanoTime()}").apply { mkdirs() }
+        File(System.getProperty("java.io.tmpdir"), "uat-$name-${System.nanoTime()}")
+            .apply { mkdirs() }
+            .also { scratch += it }
+
+    @AfterTest
+    fun cleanUp() {
+        scratch.forEach { it.deleteRecursively() }
+        scratch.clear()
+    }
 
     // ---- a stand-in "field recording": four hits with room tone between them ----
     private fun fieldRecording(seconds: Float = 4f, seed: Int = 7): Snip {
@@ -553,7 +567,7 @@ class UatSimTest {
         note("at OFF the toast bubble is still composed for TalkBack but drawn at alpha 0 — sighted users lose every confirmation")
 
         say("")
-        say("  the six schemes a user can pick in SETUP: ${SchemeId.entries.joinToString(", ")}")
+        say("  the ${SchemeId.entries.size} schemes a user can pick in SETUP: ${SchemeId.entries.joinToString(", ")}")
         say("")
         say("  HELP screen, verbatim from StubScreen.kt:")
         note(Copy.BOOT_READY)
