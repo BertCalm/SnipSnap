@@ -519,7 +519,7 @@ private fun ExportContent(
 @Composable
 private fun DoneContent(
     destinationPath: String,
-    /** READ BACK: the written file re-read and diffed against the kit — empty for a format X-Ray can't read. */
+    /** READ BACK: the written file re-read and diffed against the kit. Empty only before it has run; a format X-Ray can't read (MIDI, SFZ, DecentSampler) is one SKIP row, not an empty list. */
     readBack: List<Finding>,
     scheme: Scheme,
     modifier: Modifier = Modifier,

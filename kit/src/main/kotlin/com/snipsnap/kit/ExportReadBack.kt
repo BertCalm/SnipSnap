@@ -24,8 +24,14 @@ import kotlin.math.abs
  */
 object ExportReadBack {
 
-    /** `XpmWriter` prints floats to six places; anything under this is that rounding, not a disagreement. */
-    const val FLOAT_TOLERANCE = 1e-5f
+    /**
+     * `XpmWriter` prints floats to six places, so the file can sit half a
+     * unit in the sixth place (5e-7) from the kit's value, plus a float32
+     * ulp on the way back in through `toFloat()`. Anything under this is
+     * that rounding, not a disagreement; anything over it is real. ACVS
+     * writes the double of the kit's float and reads back exact.
+     */
+    const val FLOAT_TOLERANCE = 1e-6f
 
     /**
      * What each generation's writer puts in a shape field the kit left
@@ -88,13 +94,15 @@ object ExportReadBack {
                 out += Finding(Severity.FAIL, "$label: not in the file at all", p.slot)
                 continue
             }
-            if (p.chain != null) {
-                out += Finding(Severity.SKIP, "$label: a chain pad — its slice zones aren't checked yet", p.slot)
-                continue
-            }
             val problems = mutableListOf<String>()
             if (!read.hasSample) {
                 problems += "no sample"
+            } else if (p.chain != null) {
+                // A chain pad's zones all reference one WAV, differing by
+                // slice anchors the reader doesn't surface — said as a SKIP
+                // row of its own. The pad's numbers below are still checked
+                // like any other pad's.
+                out += Finding(Severity.SKIP, "$label: a chain pad — its slice zones aren't checked yet", p.slot)
             } else {
                 val asked = expectedZones(p)
                 val got = read.layers.filter { it.sampleName != null }
@@ -172,5 +180,6 @@ object ExportReadBack {
         }
     }
 
-    private fun fmt(v: Float): String = String.format(Locale.ROOT, "%.3f", v)
+    /** Six places — the writer's own precision — so a FAIL row never shows two values that print the same. */
+    private fun fmt(v: Float): String = String.format(Locale.ROOT, "%.6f", v)
 }
