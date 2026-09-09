@@ -1101,7 +1101,17 @@ fun GrooveScreen(
                         // downbeat's own anchor" (see that fn's own KDoc);
                         // an exploratory tap on an earlier count-in beat
                         // still sounds here but isn't captured.
-                        BankRow(kit, glow, ::recordHit, {}, Modifier.weight(2f).fillMaxWidth())
+                        // WINDOW_GRID_ROWS (bank A as a 4x4), not BankRow. BankRow is
+                        // PLAY's FULLSCREEN layout — two banks of eight abreast,
+                        // whose own `bankFloor` is 8*MIN_HIT_TARGET + 7*PAD_GAP =
+                        // 440dp for ONE bank. This app is portrait-locked at the
+                        // manifest, so on a ~390dp phone that floor is never met:
+                        // BankRow would always fall to its horizontalScroll branch
+                        // and you cannot scroll a pad strip while both hands are
+                        // playing it. 4x4 is also what KIT's own GRID_ROWS and
+                        // PLAY's windowed view both render, so the grid you record
+                        // on is the grid you already know.
+                        PlayBank(kit, WINDOW_GRID_ROWS, glow, ::recordHit, {}, Modifier.weight(2f).fillMaxWidth())
                     }
                     Box(
                         Modifier
@@ -1183,7 +1193,10 @@ fun GrooveScreen(
                             scheme.amber.tape,
                         )
                     }
-                    BankRow(kit, glow, ::recordHit, {}, Modifier.weight(2f).fillMaxWidth())
+                    // WINDOW_GRID_ROWS, not BankRow — see the from-scratch
+                    // branch above for why the fullscreen two-bank layout
+                    // can't work on a portrait-locked phone.
+                    PlayBank(kit, WINDOW_GRID_ROWS, glow, ::recordHit, {}, Modifier.weight(2f).fillMaxWidth())
                     GrooveActionButton(
                         if (countingIn) "COUNTING IN…" else "■ STOP RECORDING",
                         scheme,
