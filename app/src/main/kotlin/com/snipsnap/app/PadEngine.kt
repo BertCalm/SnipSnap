@@ -81,6 +81,15 @@ class PadEngine(preferredSampleRate: Int) {
     private var clickFrames: Long = 0L
     private var clickAccentFrames: Long = 0L
 
+    /**
+     * [clickHit]'s own voice-id source: starts at 0 and only decreases,
+     * where every `VoiceAllocator` on this engine starts at 1 and only
+     * increases. The two ranges can never meet, so a click's voice can
+     * never be mistaken for a pad's on [drainEnded] — an invariant rather
+     * than a contract a caller has to remember.
+     */
+    private var nextClickVoiceId: Int = 0
+
     @Synchronized
     fun start(): Boolean {
         running = open && NativePads.start(handle)
@@ -286,16 +295,21 @@ class PadEngine(preferredSampleRate: Int) {
      * (here) the click never loaded — [load] hasn't been called yet, or
      * the bank build never got as far as adding it.
      *
-     * The caller owns [voiceId] and must supply one outside any
-     * `VoiceAllocator`'s range on the same engine (its own ids start at 1
-     * and only grow, so any id `<= 0` is safe forever): the native side
-     * stamps whatever id it is given onto a voice with no dedup against
-     * ids already sounding, so an id the allocator could also hand out
-     * would let a click's own ending get reported as a pad's, or vice
-     * versa, to whichever side is listening on [drainEnded].
+     * Voice ids are this function's own, and deliberately not the
+     * caller's: the native side stamps whatever id it is handed onto a
+     * voice with no dedup against ids already sounding, so an id a
+     * `VoiceAllocator` could also hand out would let a click's ending be
+     * reported as a pad's on [drainEnded], or the reverse. That was
+     * expressible as a caller contract ("pass something `<= 0`") and is
+     * expressed instead as an invariant nobody can forget: the counter
+     * below starts at 0 and only decreases, while every `VoiceAllocator`
+     * on this engine starts at 1 and only increases, so the two ranges
+     * cannot meet. It decrements rather than reusing one fixed id so a
+     * click that is still sounding is never stamped twice.
      */
     @Synchronized
-    fun clickHit(voiceId: Int, accent: Boolean): Boolean {
+    fun clickHit(accent: Boolean): Boolean {
+        val voiceId = nextClickVoiceId--
         val sample = if (accent) clickAccentIndex else clickSampleIndex
         val frames = if (accent) clickAccentFrames else clickFrames
         if (sample < 0 || frames <= 0L) return false
