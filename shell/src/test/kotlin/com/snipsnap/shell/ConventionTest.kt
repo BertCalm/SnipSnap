@@ -342,6 +342,21 @@ class ConventionTest {
      * SPLIT/SURFACE/EXPORT). A model opened only to READ (never `.save()`d,
      * never mutated) does not need the lock at all.
      *
+     * This is a two-halved invariant and THIS law enforces only the FIRST
+     * half: that every `open(` itself runs inside a `withLock` span,
+     * somewhere. It does NOT prove the matching mutate+save happen in that
+     * SAME span, nor that whatever eventually gets `.save()`d was opened
+     * inside its own lock rather than carried in from an earlier, already-
+     * released one — that second half (a model opened once and saved
+     * later, safely-inside-*a*-lock but not the one that opened it) is
+     * exactly the shape that shipped live in PadSheetScreen.kt's
+     * `applyTreatment`/`onMutate`/`onDrift`/`onDesample`/`onOutside`
+     * (2026-09-08 audit) while this law stayed green throughout, because
+     * none of those five call `open(` at all — Law 5's scan has nothing to
+     * flag. **Law 6, immediately below this one, enforces that second
+     * half**: every `.save()` must share its own lock span with its own
+     * `open(`.
+     *
      * What [inLock] actually proves is narrower than the invariant above:
      * it's true when the `open(` call's own index falls inside *some*
      * `KitWrites.mutex.withLock { ... }` span in the same file — it does
@@ -351,7 +366,8 @@ class ConventionTest {
      * other. Every guarded site in this codebase today keeps open,
      * mutate, and save together in one block (verified by reading each
      * one, not assumed from this flag) — but this scan cannot enforce
-     * that shape, only the sites currently on this allowlist.
+     * that shape, only the sites currently on this allowlist. Law 6 closes
+     * this exact gap from the save side.
      */
     private data class KitWriteSite(val file: String, val text: String, val inLock: Boolean)
 
@@ -527,6 +543,280 @@ class ConventionTest {
                     "all. Either every occurrence was rewritten to a different shape (delete this entry after " +
                     "re-reviewing the new shape — a text edit that merely re-matches a changed line could be " +
                     "laundering a real regression through) or it was deleted outright (delete this entry too).",
+            )
+        }
+    }
+
+    // ==================== Law 6: KitBuilderModel.save shares its lock span with its own open ====================
+
+    /**
+     * Law 5 above enforces the FIRST half of `KitWrites`' invariant: every
+     * `KitBuilderModel.open(` runs inside SOME `KitWrites.mutex.withLock`
+     * span. It does NOT enforce the second half: that whatever later calls
+     * `.save()` was opened inside THAT SAME span. A model opened once —
+     * itself correctly locked, so Law 5 passes — and then held across a
+     * screen's lifetime while later actions each wrap only their
+     * mutate+save in a FRESH `withLock` is still a stale-snapshot clobber:
+     * the lock there only serializes the WRITE against other writers, it
+     * never refreshes the instance being written. Because none of those
+     * later `.save()` sites call `open(` themselves, Law 5's scan has
+     * nothing to flag and passes green over a live bug — this was exactly
+     * PadSheetScreen.kt's `applyTreatment`/`onMutate`/`onDrift`/
+     * `onDesample`/`onOutside` until this law's own audit (2026-09-08)
+     * named them KNOWN_STALE_SAVE below. A concurrent SET KEY/EVIL
+     * TWINS/IN KEY write landing between the original open and one of
+     * these saves is silently overwritten by whatever that save still
+     * thinks the kit looks like.
+     *
+     * This law closes that gap: every `KitBuilderModel.save()` call in
+     * `:app` must run inside a `KitWrites.mutex.withLock { ... }` span
+     * whose SAME span also contains a `KitBuilderModel.open(` — proof the
+     * instance being saved is the one THIS lock acquisition itself opened,
+     * not a longer-lived one carried in from outside it.
+     */
+    private object KitSaveCategory {
+        /**
+         * No lock at the save site itself, but every existing caller
+         * already wraps the ENTIRE call — open through save — in
+         * `KitWrites.mutex.withLock`; verified by reading each caller.
+         * Mirrors [KitWriteCategory.CALLER_GUARANTEED] one section up.
+         */
+        const val CALLER_GUARANTEED = "CALLER_GUARANTEED"
+
+        /**
+         * `.save()` runs inside a real `KitWrites.mutex.withLock` span —
+         * but that span's own `KitBuilderModel.open(` is missing: the
+         * model being saved was opened earlier (typically at screen
+         * mount, itself under its OWN separate, already-released lock
+         * acquisition — see Law 5) and carried into this lock as a
+         * long-lived reference. Accepted debt awaiting a
+         * `withFreshKit`-shaped conversion — the shape every OTHER write
+         * path in PadSheetScreen.kt already uses; see that file's own
+         * `withFreshKit` KDoc — NOT a blessing: do not read this category
+         * as "reviewed safe."
+         */
+        const val KNOWN_STALE_SAVE = "KNOWN_STALE_SAVE"
+    }
+
+    private data class KitSaveSite(val file: String, val text: String, val guarded: Boolean)
+
+    /**
+     * True when [text] contains [literal] at or after [range]'s own first
+     * index and at or before its last — the same "search starting at the
+     * range's own start" trick [lockSpans] itself relies on to place its
+     * `{`/`}` pairs: a hit strictly before [range] can never be returned,
+     * since the search never looks there.
+     */
+    private fun rangeContainsLiteral(text: String, range: IntRange, literal: String): Boolean {
+        val idx = text.indexOf(literal, range.first)
+        return idx in 0..range.last
+    }
+
+    /**
+     * Every zero-argument `.save()` call in `:app` files that mention
+     * `KitBuilderModel` anywhere in the file. The literal, empty-parens
+     * `.save()` reliably identifies `KitBuilderModel.save(accrueWear:
+     * Boolean = true)` called with its default in this codebase
+     * specifically — verified (2026-09-08 audit) against every OTHER
+     * `.save(` receiver under `:app` (`KitStore.save`, `SurfaceStore.save`,
+     * `GrooveEdit.save`, `PocketStore.save`, `AnswerStore.save`,
+     * `SessionStore.save`): every one of them takes at least one required
+     * argument, so none of them can ever produce a bare `.save()`. Scoping
+     * to files that mention `KitBuilderModel` at all is belt-and-braces on
+     * top of that: an unrelated future zero-arg `.save()` on some other
+     * type can't false-positive here without also mentioning
+     * `KitBuilderModel` somewhere in the same file.
+     *
+     * [guarded] is true only when the call's own index falls inside a
+     * `KitWrites.mutex.withLock` span whose SAME span (via
+     * [rangeContainsLiteral]) also contains a `KitBuilderModel.open(` —
+     * see this law's own KDoc above for why that, and not just "inside
+     * some lock", is the actual invariant.
+     *
+     * [KitSaveSite.text] is keyed on the enclosing lock span's own
+     * (normalized) source text when one exists, not just the `.save()`
+     * line itself: PadSheetScreen's five KNOWN_STALE_SAVE sites all save
+     * via the byte-identical line `m.save()`, so the line alone can't
+     * tell them apart the way file+text needs to (same reasoning as Law
+     * 5's own `count` field, taken one step further here since these
+     * five are otherwise textually indistinguishable, not just repeated).
+     * Falls back to the bare line's own text only when there's no
+     * enclosing span at all (the CALLER_GUARANTEED shape below).
+     */
+    private fun scanKitSaveSites(): List<KitSaveSite> {
+        val sites = mutableListOf<KitSaveSite>()
+        for (file in requireAppKotlinFiles()) {
+            val text = file.readText()
+            if (!text.contains("KitBuilderModel")) continue
+            val spans = lockSpans(text)
+            var searchFrom = 0
+            while (true) {
+                val idx = text.indexOf(".save()", searchFrom)
+                if (idx < 0) break
+                searchFrom = idx + 1
+                val lineStart = text.lastIndexOf('\n', idx) + 1
+                val lineEnd = text.indexOf('\n', idx).let { if (it < 0) text.length else it }
+                val line = text.substring(lineStart, lineEnd)
+                if (isCommentLine(line)) continue
+                val enclosingSpan = spans.firstOrNull { idx in it }
+                val guarded = enclosingSpan != null &&
+                    rangeContainsLiteral(text, enclosingSpan, "KitBuilderModel.open(")
+                val keyText = if (enclosingSpan != null) {
+                    normalizeSpan(text.substring(enclosingSpan.first, enclosingSpan.last + 1))
+                } else {
+                    normalizeSpan(line)
+                }
+                sites += KitSaveSite(file.relativeToAppRoot(), keyText, guarded)
+            }
+        }
+        return sites
+    }
+
+    private data class KitSaveAllow(
+        val file: String,
+        val text: String,
+        val category: String,
+        /** How many distinct unguarded sites in [file] share this exact [text] — KitShelf.kt's setKey and evilTwins both save via the byte-identical line `model.save()`, so file+text alone can't tell them apart; this makes a THIRD one added later fail loudly instead of riding along on this entry. */
+        val count: Int = 1,
+        val justification: String,
+    )
+
+    /**
+     * The 2026-09-08 audit classified every `.save()` site [scanKitSaveSites]
+     * finds. Most are guarded (open, mutate, and save all inside one
+     * `KitWrites.mutex.withLock` span) and need no entry here — they pass
+     * automatically. The rest are listed below, each reviewed and put in
+     * its own category; KNOWN_STALE_SAVE entries are explicitly the
+     * opposite of a blessing — they are the debt this law exists to keep
+     * visible and counted, not clear.
+     */
+    private val kitSaveAllowlist = listOf(
+        KitSaveAllow(
+            file = "KitShelf.kt",
+            text = normalizeSpan("model.save()"),
+            category = KitSaveCategory.CALLER_GUARANTEED,
+            count = 2,
+            justification = "setKey and evilTwins (two byte-identical `model.save()` lines — see this entry's " +
+                "`count`). Neither takes a lock itself, but every call site in App.kt (::setKey, ::evilTwins) " +
+                "wraps the ENTIRE shelf call — open, mutate, and save alike — in `KitWrites.mutex.withLock` " +
+                "before ever calling into KitShelf, the same caller-guarantees shape Law 5 already allowlists " +
+                "these same two opens under.",
+        ),
+        KitSaveAllow(
+            file = "KitShelf.kt",
+            text = normalizeSpan("if (moved.isNotEmpty()) model.save()"),
+            category = KitSaveCategory.CALLER_GUARANTEED,
+            justification = "inKey. Same caller-guarantees shape as setKey/evilTwins above — App.kt's ::inKey " +
+                "wraps the whole shelf call in `KitWrites.mutex.withLock` — it's just its own allowlist entry " +
+                "since the save here is conditional on `moved.isNotEmpty()` where the other two aren't.",
+        ),
+        KitSaveAllow(
+            file = "ui/PadSheetScreen.kt",
+            text = normalizeSpan(
+                """
+                { if (hadPriorTreatment) { val files = (listOf(p.sampleFile) + p.velocityLayers.map { it.sampleFile }).distinct() val binned = m.binContents().map { it.originalName }.toSet() if (p.sampleFile in binned) { check(files.all { it in binned }) { "pad ${'$'}slot can't cleanly re-treat - its ghost layers postdate the last " + "treatment - clear GHOSTS, or accept the current sound, before treating again" } m.unEraPad(slot) } } when (treatment) { is PadSheet.Treatment.Era -> m.eraPad(slot, treatment.name, amount) is PadSheet.Treatment.Character -> m.characterPad(slot, treatment.name, amount) // Row five (and TUNE) reads the kit's key, or does without // its own way; the retune's phases come from a fresh seed // per press. is PadSheet.Treatment.Keyed -> m.keyedPad(slot, treatment.name, amount, kotlin.random.Random.nextLong(0L, 1_000_000L)) } m.save() }
+                """,
+            ),
+            category = KitSaveCategory.KNOWN_STALE_SAVE,
+            justification = "applyTreatment's era/character/keyed branch. `m` is the screen-mount model, opened " +
+                "under its own already-released lock back in the LaunchedEffect at this screen's top, never " +
+                "reopened here — this withLock only serializes the write against other writers, it never " +
+                "refreshes `m` first. Not mechanically convertible to withFreshKit without redesigning the " +
+                "hadPriorTreatment/unEraPad pre-lock check, which reads `p` and `m.binContents()` off the stale " +
+                "mount-time model; awaiting that redesign.",
+        ),
+        KitSaveAllow(
+            file = "ui/PadSheetScreen.kt",
+            text = normalizeSpan("{ MutateSheet.apply(m, slot, who, move, fraction) m.save() }"),
+            category = KitSaveCategory.KNOWN_STALE_SAVE,
+            justification = "onMutate. Same screen-mount `m`, same not-refreshed-by-this-lock shape as " +
+                "applyTreatment above. Not mechanically convertible without redesigning the pre-lock " +
+                "`p.velocityLayers` GHOSTS-refusal check above this block, which reads off the stale mount-time " +
+                "model; awaiting that redesign.",
+        ),
+        KitSaveAllow(
+            file = "ui/PadSheetScreen.kt",
+            text = normalizeSpan("{ val d = MutateSheet.drift(m, slot, root, seed, fraction) m.save() d }"),
+            category = KitSaveCategory.KNOWN_STALE_SAVE,
+            justification = "onDrift. Same screen-mount `m`, same not-refreshed-by-this-lock shape as " +
+                "applyTreatment above. Not mechanically convertible without redesigning the pre-lock " +
+                "`p.velocityLayers` GHOSTS-refusal check above this block, which reads off the stale mount-time " +
+                "model; awaiting that redesign.",
+        ),
+        KitSaveAllow(
+            file = "ui/PadSheetScreen.kt",
+            text = normalizeSpan(
+                "{ val o = OutsideSheet.apply(m, slot, move, returned, fraction, preRoll) m.save() o }",
+            ),
+            category = KitSaveCategory.KNOWN_STALE_SAVE,
+            justification = "onOutside. Same screen-mount `m`, same not-refreshed-by-this-lock shape as " +
+                "applyTreatment above. Additionally can't simply reopen fresh right before this lock the way " +
+                "withFreshKit does: `OutsideSession.run` above it is a multi-second real mic capture that must " +
+                "NOT run while holding KitWrites.mutex (it would block every other kit writer in the app for " +
+                "the length of a live recording) — the fresh-open would have to happen AFTER the capture " +
+                "returns, which still leaves the pre-lock `p.velocityLayers` GHOSTS-refusal and the `send`/" +
+                "`preRoll` derived from the stale pad in need of the same redesign as the other four; awaiting " +
+                "that redesign.",
+        ),
+        KitSaveAllow(
+            file = "ui/PadSheetScreen.kt",
+            text = normalizeSpan("{ val found = m.desamplePad(slot) m.save() found }"),
+            category = KitSaveCategory.KNOWN_STALE_SAVE,
+            justification = "onDesample. Same screen-mount `m`, same not-refreshed-by-this-lock shape as " +
+                "applyTreatment above. Not mechanically convertible without redesigning the pre-lock " +
+                "`p.velocityLayers` GHOSTS-refusal check above this block, which reads off the stale mount-time " +
+                "model; awaiting that redesign.",
+        ),
+    )
+
+    @Test
+    fun `law - every KitBuilderModel save shares its own lock span with its own open, or is explicitly allowlisted`() {
+        val sites = scanKitSaveSites()
+        assertTrue(
+            sites.isNotEmpty(),
+            "found zero KitBuilderModel.save() sites under :app (recon counted 15, 2026-09-08) — the scan is " +
+                "broken; a scan that finds nothing would otherwise pass by accident, which is worse than no test " +
+                "at all.",
+        )
+
+        val unguarded = sites.filterNot { it.guarded }
+        for (site in unguarded) {
+            val allowed = kitSaveAllowlist.any { it.file == site.file && it.text == site.text }
+            assertTrue(
+                allowed,
+                "${site.file}: a `KitBuilderModel.save()` in `${site.text}` does not share a lock span with its " +
+                    "own `KitBuilderModel.open(` — either it isn't inside any KitWrites.mutex.withLock at all, " +
+                    "or it is, but that span's model was opened OUTSIDE it (often a long-lived instance from " +
+                    "screen mount). A kit MUTATION is only safe when the whole open→mutate→save sequence runs " +
+                    "inside ONE KitWrites.mutex.withLock span — a model opened earlier and saved later under a " +
+                    "(different, or no) lock is still a stale-snapshot clobber: a concurrent SET KEY/EVIL " +
+                    "TWINS/IN KEY write landing between the original open and this save is silently overwritten " +
+                    "by whatever this save still thinks the kit looks like. Either move the open (or reopen a " +
+                    "FRESH model — see PadSheetScreen.kt's own withFreshKit) inside this same lock span, or — " +
+                    "only after actually reading the call site — add it to ConventionTest.kitSaveAllowlist under " +
+                    "the correct category (CALLER_GUARANTEED: every existing caller already wraps the whole call " +
+                    "in withLock; KNOWN_STALE_SAVE: accepted debt, not a blessing) with a reviewed justification, " +
+                    "not just to make this pass.",
+            )
+        }
+
+        for (allowed in kitSaveAllowlist) {
+            val matches = unguarded.count { it.file == allowed.file && it.text == allowed.text }
+            assertTrue(
+                matches == allowed.count,
+                "${allowed.file}: expected exactly ${allowed.count} unguarded save site(s) matching " +
+                    "`${allowed.text}` (category ${allowed.category}) but found $matches. If this went UP, a new " +
+                    "unguarded save with this exact text joined the ones already reviewed here and is silently " +
+                    "riding along on this entry's blessing — re-review each one before raising `count`. If it " +
+                    "went DOWN (including to zero), one or more were fixed (its open now shares this save's own " +
+                    "lock span) — shrink or delete this entry rather than leaving it protecting nothing.",
+            )
+            assertTrue(
+                sites.any { it.file == allowed.file && it.text == allowed.text },
+                "${allowed.file}: the allowlisted save `${allowed.text}` no longer matches anything in source at " +
+                    "all. Either it was fixed (delete this entry after re-reviewing the new shape — a text edit " +
+                    "that merely re-matches a changed line could be laundering a real regression through) or it " +
+                    "was deleted outright (delete this entry too).",
             )
         }
     }
