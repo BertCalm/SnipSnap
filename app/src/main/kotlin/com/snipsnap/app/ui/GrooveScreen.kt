@@ -82,18 +82,23 @@ import kotlinx.coroutines.withContext
 /**
  * GROOVE: the needle-roll over a kit's captured break — five derived-or-
  * forked programs (A–E) scrolling under a fixed needle, swing, humanize,
- * the fork-to-E step editor, and MIDI export. See `design/HANDOFF.md`
- * "GROOVE screen" and `TapeOS Oilslick.dc.html`'s `isGroove` state for the
- * source of truth this file renders.
+ * the fork-to-E step editor, MIDI export, and (live-record plan) RECORD —
+ * playing a new take in over the loop, overdub or from scratch. See
+ * `design/HANDOFF.md` "GROOVE screen" and `TapeOS Oilslick.dc.html`'s
+ * `isGroove` state for the source of truth this file renders.
  *
  * A–D are pure functions of the captured base clip ([GrooveVariations]) —
  * recomputed live, never stored. E is the one stateful program: forked
  * once via [GrooveEdit.fork], then mutated in place by the step editor and
- * persisted through [GrooveEdit.save]. Playback is a single
- * `withFrameNanos` clock (dt clamped — TAPE's own lesson, see
- * `TapeScreen.kt`) advancing a step position that both programs read: the
- * needle-roll's own scroll and, while [GrooveEdit] is open, the editor
- * overlay's playhead ring.
+ * persisted through [GrooveEdit.save]. RECORD writes a THIRD kind of
+ * change — landing a whole new base clip via `LiveRecord.land` — but
+ * still only ever writes `base`/E through those same two paths; there is
+ * no fourth persistence route. Playback is a single `withFrameNanos`
+ * clock (dt clamped — TAPE's own lesson, see `TapeScreen.kt`) advancing a
+ * step position that both programs read: the needle-roll's own scroll
+ * and, while [GrooveEdit] is open, the editor overlay's playhead ring;
+ * RECORD reads the same clock to interpolate a touch's own timestamp
+ * against it (see `recordHit`).
  */
 
 /** Ceiling on one clock tick's elapsed time — a stale `withFrameNanos` gap (backgrounding, a debugger pause) must never fast-forward the needle. */
@@ -215,12 +220,18 @@ fun GrooveScreen(
         loading = false
     }
 
-    // The roll and the editor sound through the same `PadEngine` as PLAY,
-    // KIT and KEYS — the last screen to come off M0's interim SoundPool
-    // player, which is gone with it. A groove tick can cross several notes
-    // in one frame, so the allocator is what keeps a busy bar from
-    // outrunning the engine's voices, and what chokes a hat against its
-    // own mute group here exactly as it would under a finger.
+    // The roll and the editor sound through the same `PadEngine` CLASS as
+    // PLAY, KIT and KEYS — the last screens to come off M0's interim
+    // SoundPool player, which is gone with it — NOT a shared instance or a
+    // transport that crosses screens: this line constructs GROOVE's own
+    // `PadEngine`, disposed with this composable below, exactly as
+    // `PlayScreen.kt`'s own instance is disposed with it. There is no
+    // real shared transport in this codebase (see the live-record plan's
+    // own scope note on why); "same class" is as far as the claim goes. A
+    // groove tick can cross several notes in one frame, so the allocator
+    // is what keeps a busy bar from outrunning the engine's voices, and
+    // what chokes a hat against its own mute group here exactly as it
+    // would under a finger.
     val engineContext = LocalContext.current
     val player = remember(kitDir) { PadEngine(deviceSampleRate(engineContext)) }
     var engineUp by remember(kitDir) { mutableStateOf(false) }
