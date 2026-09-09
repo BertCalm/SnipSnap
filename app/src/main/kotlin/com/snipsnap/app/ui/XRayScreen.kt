@@ -65,12 +65,13 @@ fun XRayScreen(fileName: String, reading: MpcXRay.Reading, onBack: () -> Unit) {
             TapeText(reading.kindLabel.uppercase(), TapeType.pixelSmall, scheme.amber.tape, maxLines = 2)
         }
 
+        val unreadable = reading.unreadable
         when {
-            reading.unreadable != null -> Box(
+            unreadable != null -> Box(
                 Modifier.fillMaxSize().weight(1f).lcdPanel(scheme).padding(14.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(reading.unreadable.uppercase(), TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 4)
+                TapeText(unreadable.uppercase(), TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 4)
             }
             reading.programs.isEmpty() -> Box(
                 Modifier.fillMaxSize().weight(1f).lcdPanel(scheme).padding(14.dp),
