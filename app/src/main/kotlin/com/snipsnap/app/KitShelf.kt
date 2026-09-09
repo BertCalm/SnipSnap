@@ -7,6 +7,7 @@ import com.snipsnap.app.ui.TAPE_LOAD_MAX_SEC
 import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.OutsideSheet
+import com.snipsnap.shell.RoomPackager
 import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.ShelfImport
 import com.snipsnap.shell.SnipStore
@@ -91,6 +92,34 @@ class KitShelf(val root: File) {
 
     /** RESTORE: a binned room back onto the shelf under a name nothing there holds. */
     fun restoreRoom(binned: Rooms.Binned): Rooms.Room = Rooms.unforget(root, binned)
+
+    /**
+     * SHARE on a room row: [room] packed as one `.snip-room` under [outDir]
+     * (the share cache), ready for the chooser — [pack]'s own shape, one
+     * WAV plus its sidecar instead of a whole kit.
+     */
+    fun packRoom(room: Rooms.Room, outDir: File): File {
+        outDir.mkdirs()
+        val stem = Names.sanitizeStem(room.name)
+        val out = File(outDir, "$stem.${RoomPackager.EXTENSION}")
+        RoomPackager.write(room, out, overwrite = true)
+        return out
+    }
+
+    /**
+     * A `.snip-room` shared in: unpacked and kept on the shelf through
+     * [Rooms.keep] directly — the same fresh-name collision rule a second
+     * ROOM trip from the same kit already gets, so a room arriving twice
+     * (a re-share, a duplicate send) renumbers rather than colliding.
+     */
+    fun landRoom(file: File, displayName: String): Rooms.Room {
+        val imported = try {
+            RoomPackager.read(file)
+        } catch (e: IllegalArgumentException) {
+            throw IllegalArgumentException("'$displayName' is not a room: ${e.message}")
+        }
+        return Rooms.keep(root, imported.impulse, imported.name, imported.lagMs, imported.confidence, imported.from, imported.measuredAt)
+    }
 
     /**
      * Every readable kit on the shelf. A folder whose `kit.json` is broken

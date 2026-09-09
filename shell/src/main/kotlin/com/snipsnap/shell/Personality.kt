@@ -367,6 +367,10 @@ object Copy {
     fun roomRestored(name: String): String = "$name IS BACK ON THE SHELF. AS IF NOTHING HAPPENED."
     const val ROOM_FORGET_BUSY = "FORGETTING…"
     const val ROOM_RESTORE_BUSY = "RESTORING…"
+    /** SHARE on a room row: the room is one `.snip-room` file now and the chooser is up. */
+    fun roomPacked(name: String): String = "$name PACKED AS ONE FILE. PICK WHERE IT GOES."
+    /** A `.snip-room` landed through the share door: [name] on the shelf, ready for MUTATE ▸ ROOM. */
+    fun roomLanded(name: String): String = "$name LANDED ON THE SHELF. ANY PAD CAN PLAY IN IT - MUTATE ▸ ROOM."
 
     // ---- KIT: delete (restorable from DELETED KITS for 30 days) + rename from the shelf (Task 4) ----
     /**

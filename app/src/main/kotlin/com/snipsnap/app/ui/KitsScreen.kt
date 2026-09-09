@@ -112,6 +112,8 @@ fun KitsScreen(
     /** ROOMS (YY5): what OUTSIDE measured and kept, beside the instruments; hold one to forget it into the bin. */
     rooms: List<Rooms.Room> = emptyList(),
     onForgetRoom: (Rooms.Room) -> Unit = {},
+    /** SHARE on a room row: packed as one `.snip-room` and handed to the chooser. */
+    onShareRoom: (Rooms.Room) -> Unit = {},
     /** The rooms in the bin, each with its days left; RESTORE brings one back. */
     binnedRooms: List<Rooms.Binned> = emptyList(),
     onRestoreRoom: (Rooms.Binned) -> Unit = {},
@@ -229,7 +231,7 @@ fun KitsScreen(
                             TapeText("ROOMS · OUTSIDE MEASURED THEM. ANY PAD PLAYS IN ONE.", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
                         }
                         items(rooms, key = { "room:" + it.file.name }) { room ->
-                            RoomRow(room, busy, onForgetRoom)
+                            RoomRow(room, busy, onForgetRoom, onShareRoom)
                         }
                         if (rooms.isNotEmpty()) {
                             item(key = "rooms-note") {
@@ -396,11 +398,13 @@ private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.Ins
  * Tapping does nothing - a room is not opened, it is used from a pad's
  * MUTATE card. Holding the words presses the row and reveals FORGET → BIN
  * in the bin's red; a tap on the words lets go. The gesture never sits
- * over the button.
+ * over the button. SHARE sits beside that slot, always visible whether
+ * armed or not - packing a room and forgetting it are different
+ * questions, so unlike FORGET, SHARE never needs the hold to reach it.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> Unit) {
+private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> Unit, onShare: (Rooms.Room) -> Unit) {
     val scheme = LocalScheme.current
     var armed by remember(room.file) { mutableStateOf(false) }
     val ageDays = ((System.currentTimeMillis() - room.measuredAt) / (24L * 60 * 60 * 1000)).toInt()
@@ -455,6 +459,16 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
         ) {
             TapeText(room.name, TapeType.markerBig, scheme.ink.tape)
             TapeText(meta, TapeType.pixelSmall, scheme.ink2.tape)
+        }
+        Box(
+            Modifier
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .border(1.dp, scheme.ink2.tape, RoundedCornerShape(4.dp))
+                .let { if (!busy) it.tapeClick(label = null) { onShare(room) } else it }
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText("SHARE", TapeType.pixelSmall, if (busy) scheme.ink3.tape else scheme.ink.tape)
         }
         if (armed) {
             Box(
