@@ -258,7 +258,7 @@ fun App(shelf: KitShelf) {
     // TAPE SPLICE: same shape as GRAIN FIELD above — only reachable from
     // PAD SHEET's own action row, not one of MenuRow's fixed ten, so it's
     // KIT-scoped overlay state too. Opening it closes PAD SHEET the same
-    // way GRAIN FIELD's own onSplice does below.
+    // way GRAIN FIELD's own onGrainField does below.
     var spliceSlot by remember { mutableStateOf<Int?>(null) }
     // ARRANGE: same shape again, but GROOVE-scoped rather than KIT-scoped —
     // reachable only from GROOVE's own "SONG ▸" button, not one of MenuRow's

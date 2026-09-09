@@ -346,6 +346,9 @@ object Copy {
         "SPLICE WANTS AT LEAST ONE PRIOR TAKE. RE-TRIM OR TREAT THIS PAD FIRST - ITS OLD AUDIO WAITS IN THE BIN."
     const val SPLICE_KIT_GONE = "THIS PAD ISN'T THERE ANY MORE."
     const val SPLICE_TAKE_UNREADABLE = "ONE OF THOSE TAKES WON'T READ ANY MORE. PICK ANOTHER PAIR."
+    /** `TapeSplice.join`'s own refusal, said before the needle ever shows: a mutated (stereo) take against its mono original, or two rates. */
+    const val SPLICE_FORMATS_DIFFER =
+        "THOSE TWO TAKES DON'T MATCH - SAMPLE RATE OR CHANNELS. SPLICE WON'T RESAMPLE OR FOLD ONE TO FIT. PICK ANOTHER PAIR."
     /** COMMIT: [crossfaded] is honest about whether the raw cut needed a declick overlap. */
     fun spliced(crossfaded: Boolean): String =
         if (crossfaded) {

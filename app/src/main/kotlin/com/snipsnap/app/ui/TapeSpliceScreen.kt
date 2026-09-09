@@ -28,6 +28,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.TapeVoice
@@ -134,7 +137,10 @@ fun TapeSpliceScreen(
     var tailTake by remember(entry.dir) { mutableStateOf<Take?>(null) }
     var loadedHead by remember(entry.dir) { mutableStateOf<LoadedTake?>(null) }
     var loadedTail by remember(entry.dir) { mutableStateOf<LoadedTake?>(null) }
-    var pairLoadFailed by remember(entry.dir) { mutableStateOf(false) }
+    // Why the pair can't be spliced, in words - null while it can. Said
+    // here, before the needle ever shows, rather than as a thrown refusal
+    // out of TapeSplice.join at PREVIEW or COMMIT.
+    var pairRefusal by remember(entry.dir) { mutableStateOf<String?>(null) }
     var needleFrame by remember(entry.dir) { mutableStateOf(0) }
     var busy by remember(entry.dir) { mutableStateOf(false) }
 
@@ -146,10 +152,18 @@ fun TapeSpliceScreen(
             loadedTail = null
             return@LaunchedEffect
         }
-        pairLoadFailed = false
+        pairRefusal = null
         val (lh, lt) = withContext(Dispatchers.IO) { loadTake(h) to loadTake(t) }
         if (lh == null || lt == null) {
-            pairLoadFailed = true
+            pairRefusal = Copy.SPLICE_TAKE_UNREADABLE
+            loadedHead = null
+            loadedTail = null
+        } else if (lh.original.sampleRate != lt.original.sampleRate || lh.original.channels != lt.original.channels) {
+            // TapeSplice.join's own contract, checked up front: a mutated
+            // take is stereo where its original was mono, and the two
+            // can't be butted together without folding one - refused
+            // here in words instead of thrown at COMMIT.
+            pairRefusal = Copy.SPLICE_FORMATS_DIFFER
             loadedHead = null
             loadedTail = null
         } else {
@@ -170,6 +184,7 @@ fun TapeSpliceScreen(
 
     val lh = loadedHead
     val lt = loadedTail
+    val refusal = pairRefusal
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SpliceHeader(onBack, "SPLICE", scheme)
         if (lh != null && lt != null) {
@@ -211,7 +226,9 @@ fun TapeSpliceScreen(
                                     onToast(Copy.spliced(spliced.crossfaded))
                                     onBack()
                                 } else {
-                                    onToast(Copy.BIN_ITEM_GONE)
+                                    // `result` stays null only when the fresh
+                                    // model no longer has this pad at all.
+                                    onToast(Copy.SPLICE_KIT_GONE)
                                 }
                             } catch (e: Exception) {
                                 if (e is CancellationException) throw e
@@ -222,12 +239,25 @@ fun TapeSpliceScreen(
                         }
                     }
                 },
+                onToast = onToast,
                 scheme = scheme,
                 modifier = Modifier.weight(1f, fill = true),
             )
-        } else if (pairLoadFailed) {
-            Box(Modifier.fillMaxSize().weight(1f).lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
-                TapeText(Copy.SPLICE_TAKE_UNREADABLE, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+        } else if (refusal != null) {
+            Column(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.fillMaxWidth().weight(1f).lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
+                    TapeText(refusal, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 4)
+                }
+                ActionButton(
+                    "◄ CHOOSE DIFFERENT TAKES",
+                    scheme,
+                    enabled = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        headTake = null
+                        tailTake = null
+                    },
+                )
             }
         } else if (headTake != null && tailTake != null) {
             Box(Modifier.fillMaxSize().weight(1f).lcdPanel(scheme))
@@ -306,6 +336,7 @@ private fun NeedleStep(
     busy: Boolean,
     onRepick: () -> Unit,
     onCommit: () -> Unit,
+    onToast: (String) -> Unit,
     scheme: Scheme,
     modifier: Modifier = Modifier,
 ) {
@@ -314,6 +345,17 @@ private fun NeedleStep(
     var voice by remember(head, tail) { mutableStateOf<TapeVoice?>(null) }
     DisposableEffect(head, tail) {
         onDispose { voice?.release() }
+    }
+    // Losing the foreground stops the preview, same as TapeScreen's own
+    // deck: a PREVIEW that outlives Home has no way to be stopped and no
+    // media session to show for it. Deliberately does not resume.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, voice) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) voice?.stop()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -361,7 +403,14 @@ private fun NeedleStep(
                 modifier = Modifier.weight(1f),
                 onClick = {
                     voice?.release()
-                    val samples = previewSamples(head, tail, needleFrame)
+                    // The pair was format-checked at load, so join can't
+                    // refuse here in practice - but a refusal is a toast,
+                    // never a crash, same as COMMIT's own guard.
+                    val samples = runCatching { previewSamples(head, tail, needleFrame) }
+                        .getOrElse { e ->
+                            onToast("PREVIEW FAILED: ${e.message ?: e.javaClass.simpleName}")
+                            return@ActionButton
+                        }
                     val v = TapeVoice(samples, head.original.sampleRate)
                     voice = v
                     v.start(0)

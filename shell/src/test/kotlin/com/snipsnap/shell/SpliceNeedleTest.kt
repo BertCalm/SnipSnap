@@ -29,6 +29,18 @@ class SpliceNeedleTest {
     }
 
     @Test
+    fun `an onset beyond the splice range is ignored, even when it is the nearest`() {
+        val mono = FloatArray(rate)
+        // maxFrame is the shorter take's length; the longer take has an
+        // onset just past it, nearer to the needle than anything in range.
+        val maxFrame = 10_000
+        val onsetsA = intArrayOf(9_900)
+        val onsetsB = intArrayOf(10_050)
+        val snapped = SpliceNeedle.snap(10_000, maxFrame, mono, onsetsA, mono, onsetsB, rate)
+        assertEquals(9_900, snapped, "the in-range onset wins; the out-of-range one is not a candidate")
+    }
+
+    @Test
     fun `with no onset nearby, snaps to the nearest zero crossing in either take`() {
         val a = FloatArray(rate) { if (it < 1_020) 1f else -1f } // crosses at 1020
         val b = FloatArray(rate) { -1f } // never crosses

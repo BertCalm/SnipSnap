@@ -34,14 +34,21 @@ object SpliceNeedle {
         sampleRate: Int,
     ): Int {
         val clamped = frame.coerceIn(0, maxFrame)
-        val onsetSnapped = nearestOnset(clamped, onsetsA, onsetsB, ONSET_SNAP_SEC * sampleRate) ?: clamped
+        val onsetSnapped = nearestOnset(clamped, maxFrame, onsetsA, onsetsB, ONSET_SNAP_SEC * sampleRate) ?: clamped
         return nearestZero(onsetSnapped, monoA, monoB, maxFrame).coerceIn(0, maxFrame)
     }
 
-    private fun nearestOnset(frame: Int, onsetsA: IntArray, onsetsB: IntArray, maxDist: Double): Int? {
+    /**
+     * An onset past [maxFrame] — the longer take's, beyond where the
+     * shorter one runs out — is not a candidate at all: letting it win and
+     * then clamping would park the needle on the edge, not on anything
+     * real in either take.
+     */
+    private fun nearestOnset(frame: Int, maxFrame: Int, onsetsA: IntArray, onsetsB: IntArray, maxDist: Double): Int? {
         var best: Int? = null
         var bestDist = Double.MAX_VALUE
         for (o in onsetsA) {
+            if (o !in 0..maxFrame) continue
             val d = abs(o - frame).toDouble()
             if (d < bestDist) {
                 bestDist = d
@@ -49,6 +56,7 @@ object SpliceNeedle {
             }
         }
         for (o in onsetsB) {
+            if (o !in 0..maxFrame) continue
             val d = abs(o - frame).toDouble()
             if (d < bestDist) {
                 bestDist = d
