@@ -467,6 +467,11 @@ object Copy {
         return "CHOPPED $made OF $wavCount FILES INTO $made ${if (made == 1) "KIT" else "KITS"}$tail."
     }
 
+    // ---- X-RAY: read any MPC file, never import it ----
+    const val XRAY_BUSY = "READING…"
+    /** The picker handed back a file X-Ray's own bytes-in-hand path never opens — a dead content URI, a provider that vanished mid-read. */
+    fun xrayFailed(reason: String): String = "COULDN'T READ THAT: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
+
     // ---- CHOP: the chip itself (HANDOFF.md — "chip tap = cycle class label, 'YOU ✓'") ----
     /** A chip under the confidence threshold, in its own words. */
     const val CHIP_NOT_SURE = "NOT SURE"
