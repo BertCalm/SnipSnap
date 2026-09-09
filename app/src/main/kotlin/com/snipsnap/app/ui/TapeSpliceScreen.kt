@@ -388,17 +388,23 @@ private fun NeedleStep(
                     // once at the top of this block - the same "layout may
                     // not have landed yet" trap TapeScreen.kt's own waveform
                     // gesture handler avoids for the same reason.
-                    fun frameAt(x: Float): Int {
-                        val framesPerPixel = sharedMaxFrames.toFloat() / size.width.toFloat()
+                    // Null while the width is still 0: dividing by it would
+                    // hand `toInt()` an Infinity/NaN and throw the needle to
+                    // an edge on the first touch. Doing nothing is the
+                    // honest answer to a touch before layout.
+                    fun frameAt(x: Float): Int? {
+                        val w = size.width
+                        if (w <= 0) return null
+                        val framesPerPixel = sharedMaxFrames.toFloat() / w.toFloat()
                         return (x * framesPerPixel).toInt().coerceIn(0, spliceMaxFrame)
                     }
                     detectDragGestures(
-                        onDragStart = { offset -> onNeedleChange(frameAt(offset.x)) },
+                        onDragStart = { offset -> frameAt(offset.x)?.let(onNeedleChange) },
                         onDragEnd = { onNeedleSettle() },
                         onDragCancel = { onNeedleSettle() },
                         onDrag = { change, _ ->
                             change.consume()
-                            onNeedleChange(frameAt(change.position.x))
+                            frameAt(change.position.x)?.let(onNeedleChange)
                         },
                     )
                 },
