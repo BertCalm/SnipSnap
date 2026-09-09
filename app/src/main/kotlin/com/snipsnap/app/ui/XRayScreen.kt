@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -90,7 +90,13 @@ fun XRayScreen(fileName: String, reading: MpcXRay.Reading, onBack: () -> Unit) {
             ) {
                 reading.programs.forEachIndexed { pi, program ->
                     item(key = "program-$pi") { ProgramHeader(program) }
-                    items(program.pads, key = { "pad-$pi-${it.slot}" }) { pad -> PadRow(pad) }
+                    // Keyed by list position, not `it.slot`: a real MPC file
+                    // never repeats a slot number within one program, but a
+                    // corrupt or hand-edited one could (a duplicate/missing
+                    // Instrument `number` attribute), and a duplicate key
+                    // would crash LazyColumn - exactly the "never throws on
+                    // content" promise this whole screen exists to keep.
+                    itemsIndexed(program.pads, key = { pj, _ -> "pad-$pi-$pj" }) { _, pad -> PadRow(pad) }
                 }
             }
         }

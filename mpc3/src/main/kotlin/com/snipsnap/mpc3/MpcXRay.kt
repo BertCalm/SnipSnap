@@ -67,7 +67,19 @@ object MpcXRay {
     /** The same ceiling `ShelfImport.MAX_CONTAINER_BYTES` already puts on a shared MPC container — a share-sheet file gets no more trust here than it gets landing on the shelf for real. */
     const val MAX_FILE_BYTES: Long = LimitedRead.DEFAULT_LIMIT
 
-    /** Reads [file] whole. The one throw left is a missing file — everything the *content* can say, however broken (including too large to read at all), comes back as a [Reading]. */
+    /** How many header bytes decide the container kind — [MpcFormats.detect]'s own read size, enough for gzip, the ZIP signature, and an XML declaration behind a BOM alike. */
+    private const val HEAD_BYTES = 16
+
+    /**
+     * Reads [file]'s kind from a small header first — never the whole file
+     * just to answer "which container is this." The one throw left is a
+     * missing file; everything the *content* can say, however broken
+     * (including too large to read at all), comes back as a [Reading].
+     * Only the ACVS/XML/JSON sides read the file whole, because their own
+     * parse needs the whole text regardless; the ZIP side never does —
+     * [readXpn] opens [file] directly, a ZIP's own central directory
+     * being exactly what random access exists for.
+     */
     fun read(file: File): Reading {
         require(file.isFile) { "no such file: $file" }
         if (file.length() > MAX_FILE_BYTES) {
@@ -76,15 +88,24 @@ object MpcXRay {
                 unreadable = "too large to read (${file.length() / (1024 * 1024)} MB, the most is ${MAX_FILE_BYTES / (1024 * 1024)} MB)",
             )
         }
-        val bytes = file.readBytes()
+        val head = file.inputStream().use { s ->
+            val b = ByteArray(HEAD_BYTES)
+            var n = 0
+            while (n < b.size) {
+                val r = s.read(b, n, b.size - n)
+                if (r < 0) break
+                n += r
+            }
+            b.copyOf(n)
+        }
         return when {
-            Acvs.isGzip(bytes) -> readAcvs(bytes)
-            looksLikeZip(bytes) -> readXpn(bytes)
-            looksLikeXml(bytes) -> readXpm(bytes.toString(Charsets.UTF_8), suffix = "")
+            Acvs.isGzip(head) -> readAcvs(file.readBytes())
+            looksLikeZip(head) -> readXpn(file)
+            looksLikeXml(head) -> readXpm(file.readText(), suffix = "")
             else -> {
-                val text = runCatching { bytes.toString(Charsets.UTF_8) }.getOrNull()
-                val head = text?.trimStart()?.firstOrNull()
-                if (text != null && (head == '{' || head == '[')) {
+                val text = runCatching { file.readText() }.getOrNull()
+                val firstChar = text?.trimStart()?.firstOrNull()
+                if (text != null && (firstChar == '{' || firstChar == '[')) {
                     val tree = runCatching { Json.parse(text) }.getOrNull()
                     if (tree != null) Reading("JSON", rawTree = tree)
                     else Reading("not recognized", unreadable = "looks like JSON but won't parse")
@@ -187,43 +208,52 @@ object MpcXRay {
 
     // ---- MPC 2 XML (.xpm) and .xpn (a ZIP of .xpm) --------------------------
 
-    private fun looksLikeXml(bytes: ByteArray): Boolean = MpcFormats.detect(bytes) == MpcFormat.MPC2_XML
+    private fun looksLikeXml(head: ByteArray): Boolean = MpcFormats.detect(head) == MpcFormat.MPC2_XML
 
-    private fun looksLikeZip(bytes: ByteArray): Boolean =
-        bytes.size >= 4 && bytes[0] == 'P'.code.toByte() && bytes[1] == 'K'.code.toByte() &&
-            ((bytes[2] == 3.toByte() && bytes[3] == 4.toByte()) ||
-                (bytes[2] == 5.toByte() && bytes[3] == 6.toByte()) ||
-                (bytes[2] == 7.toByte() && bytes[3] == 8.toByte()))
+    private fun looksLikeZip(head: ByteArray): Boolean =
+        head.size >= 4 && head[0] == 'P'.code.toByte() && head[1] == 'K'.code.toByte() &&
+            ((head[2] == 3.toByte() && head[3] == 4.toByte()) ||
+                (head[2] == 5.toByte() && head[3] == 6.toByte()) ||
+                (head[2] == 7.toByte() && head[3] == 8.toByte()))
 
-    /** Every `.xpm` entry inside a `.xpn` (or any ZIP) — a multi-kit pack reads as one [Reading] with every program it holds, `Programs/` first, [XpnImporter.programEntries]'s own ordering. */
-    private fun readXpn(bytes: ByteArray): Reading {
-        val tmp = File.createTempFile("xray", ".zip")
-        try {
-            tmp.writeBytes(bytes)
-            ZipFile(tmp).use { zip ->
-                val entries = zip.entries().asSequence().filter { !it.isDirectory }
-                    .filter { it.name.endsWith(".xpm", ignoreCase = true) }
-                    .sortedWith(compareBy({ if (it.name.contains("Programs/")) 0 else 1 }, { it.name }))
-                    .toList()
-                if (entries.isEmpty()) {
-                    return Reading("a ZIP (not a .xpn - no .xpm program inside)", unreadable = "no .xpm program inside")
-                }
-                // A bounded read per entry, same reasoning as the whole-file
-                // check in read(): an .xpm is a few KB of XML in every real
-                // pack, so a declared size past the ceiling is a bomb, not
-                // a program - skipped rather than aborting the whole pack,
-                // XpnImporter.importAll's own "one bad program, not the
-                // rest" rule.
-                val programs = entries.flatMap { entry ->
-                    val xmlBytes = runCatching {
-                        zip.getInputStream(entry).use { LimitedRead.bytes(it, MAX_FILE_BYTES, entry.name) }
-                    }.getOrNull() ?: return@flatMap emptyList()
-                    readXpm(xmlBytes.toString(Charsets.UTF_8), suffix = " (${entry.name})").programs
-                }
-                return Reading("MPC 2 (XML, inside a .xpn pack) — ${entries.size} program(s)", programs)
+    /**
+     * Every `.xpm` entry inside a `.xpn` (or any ZIP) — a multi-kit pack
+     * reads as one [Reading] with every program it holds, `Programs/`
+     * first, [XpnImporter.programEntries]'s own ordering. Opens [file]
+     * directly rather than reading it into memory first: a ZIP's central
+     * directory is exactly what random access exists for, and the file
+     * is already on disk - there is nothing a copy of its bytes would add.
+     */
+    private fun readXpn(file: File): Reading {
+        ZipFile(file).use { zip ->
+            val entries = zip.entries().asSequence().filter { !it.isDirectory }
+                .filter { it.name.endsWith(".xpm", ignoreCase = true) }
+                .sortedWith(compareBy({ if (it.name.contains("Programs/")) 0 else 1 }, { it.name }))
+                .toList()
+            if (entries.isEmpty()) {
+                return Reading("a ZIP (not a .xpn - no .xpm program inside)", unreadable = "no .xpm program inside")
             }
-        } finally {
-            tmp.delete()
+            // A bounded read per entry, same reasoning as the whole-file
+            // check in read(): an .xpm is a few KB of XML in every real
+            // pack, so a declared size past the ceiling is a bomb, not
+            // a program - skipped rather than aborting the whole pack,
+            // XpnImporter.importAll's own "one bad program, not the
+            // rest" rule.
+            val programs = entries.flatMap { entry ->
+                val xmlBytes = runCatching {
+                    zip.getInputStream(entry).use { LimitedRead.bytes(it, MAX_FILE_BYTES, entry.name) }
+                }.getOrNull() ?: return@flatMap emptyList()
+                readXpm(xmlBytes.toString(Charsets.UTF_8), suffix = " (${entry.name})").programs
+            }
+            // Programs actually returned, not files scanned - the two
+            // usually agree, but a program whose XML failed to parse
+            // (fewer) or an .xpm carrying more than one <Program> (more)
+            // would otherwise make this header disagree with the list
+            // right below it.
+            return Reading(
+                "MPC 2 (XML, inside a .xpn pack) — ${programs.size} program(s) from ${entries.size} file(s)",
+                programs,
+            )
         }
     }
 
