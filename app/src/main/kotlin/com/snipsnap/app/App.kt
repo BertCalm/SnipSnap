@@ -773,6 +773,14 @@ fun App(shelf: KitShelf) {
      * same cache slot — no batch-wide temp folder needed for that alone.
      */
     fun chopAll(uris: List<Uri>) {
+        // A CHOP ALL tap answers "which files", not "which kit" — any
+        // BREED pick still armed must not survive it. Cleared here, not
+        // only in goToScreen's tab-switch reset, because launching (or
+        // cancelling) the picker never goes through goToScreen at all;
+        // without this, the shelf stays stuck reading "PICK A KIT TO
+        // CROSS WITH X" and every kit row stays in pick mode after this
+        // run finishes, for a hand-off the user has already moved past.
+        pendingBreedWith = null
         if (uris.isEmpty() || busy != null) return
         busy = Copy.CHOP_ALL_BUSY
         scope.launch {
@@ -819,10 +827,13 @@ fun App(shelf: KitShelf) {
     }
 
     // CHOP ALL's own multi-file picker — ACTION_OPEN_DOCUMENT with multiple
-    // selection, filtered to audio up front so the chooser itself is
-    // already the right shape; [chopAll] still checks each name against
-    // `.wav` afterward (ChopAllCommand's own rule), since a picker's MIME
-    // filter is a hint to the chooser, not a guarantee of what it returns.
+    // selection, filtered to WAV up front (audio/* would also surface
+    // .mp3/.m4a/.flac, every one of which [chopAll] can only decode as
+    // "not a .wav" and count as skipped - a chooser full of files that
+    // then all land in the SKIPPED count reads as broken, not honest).
+    // [chopAll] still checks each name against `.wav` afterward
+    // (ChopAllCommand's own rule), since a picker's MIME filter is a hint
+    // to the chooser, not a guarantee of what it returns.
     val chopAllPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments(),
     ) { uris -> chopAll(uris) }
@@ -1422,7 +1433,7 @@ fun App(shelf: KitShelf) {
                                 },
                                 onEject = { MicSessionService.eject(context) },
                                 onBackup = ::backupShelf,
-                                onChopAll = { chopAllPickerLauncher.launch(arrayOf("audio/*")) },
+                                onChopAll = { chopAllPickerLauncher.launch(arrayOf("audio/wav", "audio/x-wav")) },
                                 onSnips = { snipsOpen = true },
                                 assigningSnip = pendingSnipAssign != null,
                                 breedingFrom = pendingBreedWith,
