@@ -710,63 +710,14 @@ class ConventionTest {
                 "wraps the whole shelf call in `KitWrites.mutex.withLock` — it's just its own allowlist entry " +
                 "since the save here is conditional on `moved.isNotEmpty()` where the other two aren't.",
         ),
-        KitSaveAllow(
-            file = "ui/PadSheetScreen.kt",
-            text = normalizeSpan(
-                """
-                { if (hadPriorTreatment) { val files = (listOf(p.sampleFile) + p.velocityLayers.map { it.sampleFile }).distinct() val binned = m.binContents().map { it.originalName }.toSet() if (p.sampleFile in binned) { check(files.all { it in binned }) { "pad ${'$'}slot can't cleanly re-treat - its ghost layers postdate the last " + "treatment - clear GHOSTS, or accept the current sound, before treating again" } m.unEraPad(slot) } } when (treatment) { is PadSheet.Treatment.Era -> m.eraPad(slot, treatment.name, amount) is PadSheet.Treatment.Character -> m.characterPad(slot, treatment.name, amount) // Row five (and TUNE) reads the kit's key, or does without // its own way; the retune's phases come from a fresh seed // per press. is PadSheet.Treatment.Keyed -> m.keyedPad(slot, treatment.name, amount, kotlin.random.Random.nextLong(0L, 1_000_000L)) } m.save() }
-                """,
-            ),
-            category = KitSaveCategory.KNOWN_STALE_SAVE,
-            justification = "applyTreatment's era/character/keyed branch. `m` is the screen-mount model, opened " +
-                "under its own already-released lock back in the LaunchedEffect at this screen's top, never " +
-                "reopened here — this withLock only serializes the write against other writers, it never " +
-                "refreshes `m` first. Not mechanically convertible to withFreshKit without redesigning the " +
-                "hadPriorTreatment/unEraPad pre-lock check, which reads `p` and `m.binContents()` off the stale " +
-                "mount-time model; awaiting that redesign.",
-        ),
-        KitSaveAllow(
-            file = "ui/PadSheetScreen.kt",
-            text = normalizeSpan("{ MutateSheet.apply(m, slot, who, move, fraction) m.save() }"),
-            category = KitSaveCategory.KNOWN_STALE_SAVE,
-            justification = "onMutate. Same screen-mount `m`, same not-refreshed-by-this-lock shape as " +
-                "applyTreatment above. Not mechanically convertible without redesigning the pre-lock " +
-                "`p.velocityLayers` GHOSTS-refusal check above this block, which reads off the stale mount-time " +
-                "model; awaiting that redesign.",
-        ),
-        KitSaveAllow(
-            file = "ui/PadSheetScreen.kt",
-            text = normalizeSpan("{ val d = MutateSheet.drift(m, slot, root, seed, fraction) m.save() d }"),
-            category = KitSaveCategory.KNOWN_STALE_SAVE,
-            justification = "onDrift. Same screen-mount `m`, same not-refreshed-by-this-lock shape as " +
-                "applyTreatment above. Not mechanically convertible without redesigning the pre-lock " +
-                "`p.velocityLayers` GHOSTS-refusal check above this block, which reads off the stale mount-time " +
-                "model; awaiting that redesign.",
-        ),
-        KitSaveAllow(
-            file = "ui/PadSheetScreen.kt",
-            text = normalizeSpan(
-                "{ val o = OutsideSheet.apply(m, slot, move, returned, fraction, preRoll) m.save() o }",
-            ),
-            category = KitSaveCategory.KNOWN_STALE_SAVE,
-            justification = "onOutside. Same screen-mount `m`, same not-refreshed-by-this-lock shape as " +
-                "applyTreatment above. Additionally can't simply reopen fresh right before this lock the way " +
-                "withFreshKit does: `OutsideSession.run` above it is a multi-second real mic capture that must " +
-                "NOT run while holding KitWrites.mutex (it would block every other kit writer in the app for " +
-                "the length of a live recording) — the fresh-open would have to happen AFTER the capture " +
-                "returns, which still leaves the pre-lock `p.velocityLayers` GHOSTS-refusal and the `send`/" +
-                "`preRoll` derived from the stale pad in need of the same redesign as the other four; awaiting " +
-                "that redesign.",
-        ),
-        KitSaveAllow(
-            file = "ui/PadSheetScreen.kt",
-            text = normalizeSpan("{ val found = m.desamplePad(slot) m.save() found }"),
-            category = KitSaveCategory.KNOWN_STALE_SAVE,
-            justification = "onDesample. Same screen-mount `m`, same not-refreshed-by-this-lock shape as " +
-                "applyTreatment above. Not mechanically convertible without redesigning the pre-lock " +
-                "`p.velocityLayers` GHOSTS-refusal check above this block, which reads off the stale mount-time " +
-                "model; awaiting that redesign.",
-        ),
+        // PadSheetScreen.kt's five KNOWN_STALE_SAVE entries (applyTreatment's
+        // era/character/keyed branch, onMutate, onDrift, onOutside,
+        // onDesample) are gone: each now runs its open→mutate→save through
+        // that file's own withFreshKit, the same shape commitPadEditNow and
+        // applySmear already used. onOutside's mic capture (and the send it
+        // reads) still runs fully unlocked, ahead of withFreshKit — only the
+        // rewrite, the open, and the save moved inside the lock span. See
+        // each function's own KDoc for the per-path reasoning.
     )
 
     @Test

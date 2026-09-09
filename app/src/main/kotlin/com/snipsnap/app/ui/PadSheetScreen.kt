@@ -527,6 +527,23 @@ fun PadSheetScreen(
      * A recipe with nothing in the bin behind it (a bank-B twin, a CLI
      * `treat`, a bin since emptied) is a sound the sheet can name but not
      * undo: the new treatment stacks on it, the way `treat` always has.
+     *
+     * Runs against a FRESH model via [withFreshKit] — same shape and same
+     * reason as [commitPadEditNow]/[applySmear] (Law 6: a `.save()` must
+     * share its lock span with its own `open(`, not with the screen-mount
+     * `m`). [hadPriorTreatment]'s recipe-and-bin check moves inside the
+     * lock too, re-read off the fresh pad rather than the stale one — it's
+     * a cheap read (a JSON field and a bin listing), not the kind of
+     * expensive/interactive work that has to stay outside. The whole
+     * era/character/keyed rewrite is refused (not applied to the wrong
+     * sound) if [slot]'s `sampleFile` has changed since [p] was captured.
+     * [model] is swapped to the fresh instance on completion, which is why
+     * this — like [applySmear] — does NOT audition the result immediately
+     * afterward: `voice` is `remember(model)`-keyed, and writing to it from
+     * this coroutine after the swap would target a state slot the next
+     * `DisposableEffect(model)` teardown is about to release out from under
+     * it. The waveform still refreshes via `LaunchedEffect(model, slot)`;
+     * only the auto-preview-on-treat is gone, same trade [applySmear] makes.
      */
     fun applyTreatment(segment: String, amount: Float) {
         if (busy) return
@@ -538,43 +555,53 @@ fun PadSheetScreen(
             return
         }
         val treatment = PadSheet.treatmentFor(segment) ?: return
-        val hadPriorTreatment = PadSheet.read(p.recipe) != null
+        val staleSampleFile = p.sampleFile
+        val kitDir = m.kitDir
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        val keyedSeed = kotlin.random.Random.nextLong(0L, 1_000_000L)
         scope.launch {
             busy = true
             try {
-                withContext(Dispatchers.IO) {
-                    KitWrites.mutex.withLock {
-                        if (hadPriorTreatment) {
-                            val files = (listOf(p.sampleFile) + p.velocityLayers.map { it.sampleFile }).distinct()
-                            val binned = m.binContents().map { it.originalName }.toSet()
-                            if (p.sampleFile in binned) {
+                var applied = false
+                var keyLabel = ""
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    val freshPad = f.kit.pad(slot)
+                    if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
+                        if (PadSheet.read(freshPad.recipe) != null) {
+                            val files = (listOf(freshPad.sampleFile) + freshPad.velocityLayers.map { it.sampleFile }).distinct()
+                            val binned = f.binContents().map { it.originalName }.toSet()
+                            if (freshPad.sampleFile in binned) {
                                 check(files.all { it in binned }) {
                                     "pad $slot can't cleanly re-treat - its ghost layers postdate the last " +
                                         "treatment - clear GHOSTS, or accept the current sound, before treating again"
                                 }
-                                m.unEraPad(slot)
+                                f.unEraPad(slot)
                             }
                         }
                         when (treatment) {
-                            is PadSheet.Treatment.Era -> m.eraPad(slot, treatment.name, amount)
-                            is PadSheet.Treatment.Character -> m.characterPad(slot, treatment.name, amount)
+                            is PadSheet.Treatment.Era -> f.eraPad(slot, treatment.name, amount)
+                            is PadSheet.Treatment.Character -> f.characterPad(slot, treatment.name, amount)
                             // Row five (and TUNE) reads the kit's key, or does without
                             // its own way; the retune's phases come from a fresh seed
                             // per press.
-                            is PadSheet.Treatment.Keyed ->
-                                m.keyedPad(slot, treatment.name, amount, kotlin.random.Random.nextLong(0L, 1_000_000L))
+                            is PadSheet.Treatment.Keyed -> f.keyedPad(slot, treatment.name, amount, keyedSeed)
                         }
-                        m.save()
+                        if (treatment is PadSheet.Treatment.Keyed) keyLabel = f.lastKeyLabel
+                        applied = true
                     }
                 }
-                revision++
-                onKitUpdated(m.kit)
-                refreshPadAudio(m)
-                m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
-                onToast(
-                    if (treatment is PadSheet.Treatment.Keyed) Copy.keyed(PadSheet.displayLabel(segment), padName, m.lastKeyLabel)
-                    else Copy.treated(PadSheet.displayLabel(segment), padName),
-                )
+                model = fresh
+                pendingMetadataSlots = emptySet()
+                onKitUpdated(fresh.kit)
+                if (applied) {
+                    onToast(
+                        if (treatment is PadSheet.Treatment.Keyed) Copy.keyed(PadSheet.displayLabel(segment), padName, keyLabel)
+                        else Copy.treated(PadSheet.displayLabel(segment), padName),
+                    )
+                } else {
+                    onToast(Copy.BIN_ITEM_GONE)
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // The ghosts-postdate-treatment refusal above is expected,
@@ -667,6 +694,17 @@ fun PadSheetScreen(
     /**
      * MUTATE. The verb refuses layered and chained pads itself; the GHOSTS
      * case gets its own line first because it's the one a thumb causes.
+     *
+     * Runs against a FRESH model via [withFreshKit] — the pre-lock GHOSTS
+     * refusal above is a cheap read (no DSP), so it's simply re-checked
+     * against the fresh pad inside the lock too, alongside the sampleFile
+     * identity check every converted sibling uses. [MutateSheet.apply]
+     * itself is the DSP; there's nothing to hoist ahead of the lock the way
+     * [onOutside]'s mic capture is — the transform needs the model it's
+     * writing into. [model] is swapped to the fresh instance on success, so
+     * (like [applySmear]/[applyTreatment]) this does not audition the
+     * result immediately — see [applySmear]'s KDoc for why that write would
+     * target an already-orphaned `remember(model)` state slot.
      */
     fun onMutate() {
         if (busy) return
@@ -678,22 +716,31 @@ fun PadSheetScreen(
             return
         }
         val padName = p.displayName
+        val staleSampleFile = p.sampleFile
         val move = MutateSheet.modeFor(mutateMode)
         val fraction = pendingMutateKnob
+        val kitDir = m.kitDir
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         scope.launch {
             busy = true
             try {
-                withContext(Dispatchers.IO) {
-                    KitWrites.mutex.withLock {
-                        MutateSheet.apply(m, slot, who, move, fraction)
-                        m.save()
+                var applied = false
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    val freshPad = f.kit.pad(slot)
+                    if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
+                        MutateSheet.apply(f, slot, who, move, fraction)
+                        applied = true
                     }
                 }
-                revision++
-                onKitUpdated(m.kit)
-                refreshPadAudio(m)
-                m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
-                onToast(Copy.mutated(mutateMode, padName, MutateSheet.name(who)))
+                model = fresh
+                pendingMetadataSlots = emptySet()
+                onKitUpdated(fresh.kit)
+                if (applied) {
+                    onToast(Copy.mutated(mutateMode, padName, MutateSheet.name(who)))
+                } else {
+                    onToast(Copy.BIN_ITEM_GONE)
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 failure("MUTATE", e)
@@ -732,6 +779,16 @@ fun PadSheetScreen(
      * DRIFT: one tap — the shelf deals the neighbour and MORPH blends toward
      * it, MIX how far. The card flips to MORPH so the knob it read is the
      * knob on screen; each tap is a new seed, like ROULETTE.
+     *
+     * Runs against a FRESH model via [withFreshKit] — same shape as
+     * [onMutate] above, GHOSTS refusal re-checked on the fresh pad, sample
+     * identity re-checked before [MutateSheet.drift] (which deals AND
+     * mutates — both need the model this lock actually opened) ever runs.
+     * A crate-empty [IllegalArgumentException] from the roulette still
+     * escapes [withFreshKit] undirtied and untouched by the identity check
+     * — nothing was applied, nothing to save, same refusal as before. On
+     * success [model] swaps to the fresh instance; no immediate audition,
+     * same trade as [applySmear]/[onMutate] for the same reason.
      */
     fun onDrift() {
         if (busy) return
@@ -744,25 +801,33 @@ fun PadSheetScreen(
         val root = entry.dir.parentFile ?: entry.dir
         val seed = spins
         val padName = p.displayName
+        val staleSampleFile = p.sampleFile
         if (mutateMode != Mutate.Mode.MORPH.name) mutateMode = Mutate.Mode.MORPH.name
         val fraction = pendingMutateKnob
+        val kitDir = m.kitDir
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         scope.launch {
             busy = true
             try {
-                val drifted = withContext(Dispatchers.IO) {
-                    KitWrites.mutex.withLock {
-                        val d = MutateSheet.drift(m, slot, root, seed, fraction)
-                        m.save()
-                        d
+                var drifted: Mutate.Drifted? = null
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    val freshPad = f.kit.pad(slot)
+                    if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
+                        drifted = MutateSheet.drift(f, slot, root, seed, fraction)
                     }
                 }
-                spins = seed + 1
-                partner = MutateSheet.Partner.Deal(drifted.pick.label, drifted.pick.file, seed)
-                revision++
-                onKitUpdated(m.kit)
-                refreshPadAudio(m)
-                m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
-                onToast(Copy.drifted(padName, drifted.pick.label))
+                model = fresh
+                pendingMetadataSlots = emptySet()
+                onKitUpdated(fresh.kit)
+                val d = drifted
+                if (d != null) {
+                    spins = seed + 1
+                    partner = MutateSheet.Partner.Deal(d.pick.label, d.pick.file, seed)
+                    onToast(Copy.drifted(padName, d.pick.label))
+                } else {
+                    onToast(Copy.BIN_ITEM_GONE)
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 if (e is IllegalArgumentException) onToast(Copy.CRATE_EMPTY) else failure("DRIFT", e)
@@ -848,6 +913,21 @@ fun PadSheetScreen(
      * and in words: GHOSTS on, the mic not granted (ARM on KITS grants
      * it), the tape rolling. The audition is silenced before the trip so
      * the mic never hears the pad twice.
+     *
+     * The send and the multi-second [OutsideSession.run] capture run
+     * first, fully OUTSIDE `KitWrites.mutex` — a live mic recording is
+     * exactly the expensive/interactive work that must never sit behind an
+     * app-wide write lock; every other kit-write screen in the app would
+     * freeze for the length of the trip if it did. Only what happens
+     * AFTER the return is in — `OutsideSheet.apply`'s rewrite, plus the
+     * open and the save — runs inside [withFreshKit]'s lock span, same as
+     * the original hand-rolled version already did (this isn't new
+     * lock-held work, just the right model underneath it). [staleSampleFile]
+     * is re-verified against the FRESH pad right before `apply` runs: if
+     * the slot's sound changed while the trip was out recording, the write
+     * is abandoned rather than landing the return on somebody else's pad.
+     * [model] swaps to the fresh instance on success; no immediate
+     * audition, same trade as the other converted siblings.
      */
     fun onOutside() {
         if (busy) return
@@ -868,35 +948,56 @@ fun PadSheetScreen(
         val move = OutsideSheet.moveFor(outsideMove)
         val fraction = pendingOutsideKnob
         val padName = p.displayName
+        val staleSampleFile = p.sampleFile
+        val kitDir = m.kitDir
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         voice?.release()
         voice = null
         scope.launch {
             busy = true
             outsideStage = Copy.OUTSIDE_LISTENING
             try {
-                val outcome = withContext(Dispatchers.IO) {
+                // Unlocked: reading the send off `m` (still the screen-mount
+                // model — fine, this only READS the pad's current audio) and
+                // the mic capture itself, which can run for seconds.
+                val returned = withContext(Dispatchers.IO) {
                     val send = OutsideSheet.send(m, slot, move)
                     val preRoll = OutsideSheet.preRollFrames(send.sampleRate)
-                    val returned = OutsideSession.run(context, send, preRoll, OutsideSheet.listenFrames(send)) {
+                    OutsideSession.run(context, send, preRoll, OutsideSheet.listenFrames(send)) {
                         // onSending fires on the IO thread; the stage is
                         // Compose state, so the write hops back to the
                         // composition's own (main) scope.
                         scope.launch { outsideStage = Copy.OUTSIDE_SENDING }
-                    }
-                    KitWrites.mutex.withLock {
-                        val o = OutsideSheet.apply(m, slot, move, returned, fraction, preRoll)
-                        m.save()
-                        o
+                    } to preRoll
+                }
+                val (returnedSnip, preRoll) = returned
+                var applied = false
+                var outcome: OutsideSheet.Outcome? = null
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    val freshPad = f.kit.pad(slot)
+                    if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
+                        outcome = OutsideSheet.apply(f, slot, move, returnedSnip, fraction, preRoll)
+                        applied = true
                     }
                 }
-                revision++
-                onKitUpdated(m.kit)
-                refreshPadAudio(m)
-                // The last trip's room, or none: a REAMP measures no room, so
-                // KEEP ROOM dims until the next ROOM trip.
-                measuredRoom = outcome.takeIf { it.impulse != null }
-                m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
-                onToast(Copy.outside(outsideMove, padName, outcome.lagMs, outcome.confidence))
+                model = fresh
+                pendingMetadataSlots = emptySet()
+                onKitUpdated(fresh.kit)
+                val o = outcome
+                if (applied && o != null) {
+                    // The last trip's room, or none: a REAMP measures no
+                    // room, so KEEP ROOM dims until the next ROOM trip.
+                    measuredRoom = o.takeIf { it.impulse != null }
+                    onToast(Copy.outside(outsideMove, padName, o.lagMs, o.confidence))
+                } else {
+                    // Not `measuredRoom = null` here: this trip abandoned
+                    // without applying anything, so an earlier ROOM trip's
+                    // still-unkept measurement (measuredRoom is
+                    // remember(slot)-keyed, so it survives this model swap)
+                    // is exactly as keepable as it was before this tap.
+                    onToast(Copy.BIN_ITEM_GONE)
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 if (e is Outside.Refused) onToast(Copy.outsideRefused(e.message ?: "the room said no")) else failure("OUTSIDE", e)
@@ -994,6 +1095,13 @@ fun PadSheetScreen(
     /**
      * DE-SAMPLE: the pad becomes the nearest THUMP patch's own render, the
      * patch riding it as a recipe. A far match is named, not taken.
+     *
+     * Runs against a FRESH model via [withFreshKit] — same shape as
+     * [onMutate]/[onDrift]. A far-match [KitBuilderModel.Far] refusal still
+     * escapes [withFreshKit] undirtied — the search ran (against the fresh
+     * pad's audio) but nothing was written, so there's nothing to save
+     * either way. On success [model] swaps to the fresh instance; no
+     * immediate audition, same trade as the other converted siblings.
      */
     fun onDesample() {
         if (busy) return
@@ -1004,21 +1112,29 @@ fun PadSheetScreen(
             return
         }
         val padName = p.displayName
+        val staleSampleFile = p.sampleFile
+        val kitDir = m.kitDir
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         scope.launch {
             busy = true
             try {
-                val match = withContext(Dispatchers.IO) {
-                    KitWrites.mutex.withLock {
-                        val found = m.desamplePad(slot)
-                        m.save()
-                        found
+                var match: com.snipsnap.synth.Desample.Match? = null
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    val freshPad = f.kit.pad(slot)
+                    if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
+                        match = f.desamplePad(slot)
                     }
                 }
-                revision++
-                onKitUpdated(m.kit)
-                refreshPadAudio(m)
-                m.kit.pad(slot)?.let { now -> snip?.let { audition(it, now.level, now) } }
-                onToast(Copy.desampled(padName, match.patch.voice.name, match.distance))
+                model = fresh
+                pendingMetadataSlots = emptySet()
+                onKitUpdated(fresh.kit)
+                val found = match
+                if (found != null) {
+                    onToast(Copy.desampled(padName, found.patch.voice.name, found.distance))
+                } else {
+                    onToast(Copy.BIN_ITEM_GONE)
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 if (e is KitBuilderModel.Far) onToast(Copy.desampleFar(e.match.patch.voice.name, e.match.distance)) else failure("MAKE SYNTH", e)
