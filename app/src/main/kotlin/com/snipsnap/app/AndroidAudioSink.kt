@@ -36,8 +36,17 @@ fun deviceSampleRate(context: Context): Int {
  *
  * That short buffer is also what keeps the UI honest: the blocking write paces
  * the engine, so the interval counter cannot run ahead of what is audible.
+ *
+ * **Audio focus.** This is the one voice in the app with a genuine
+ * pause/resume: [AudioFocus.acquire] on construction, [AudioFocus.release]
+ * on [close]. [silence] is `track.pause()` (no flush - nothing buffered is
+ * discarded, [write]'s blocking loop just stalls until more room opens up,
+ * which is exactly LOOP's own transport stalling with it), and [resume] is
+ * `track.play()` picking the same position back up. See [AudioFocus]'s KDoc
+ * for why most of this app's other voices leave [resume] as a no-op and
+ * this one doesn't.
  */
-class AndroidAudioSink(override val sampleRate: Int) : AudioSink {
+class AndroidAudioSink(override val sampleRate: Int) : AudioSink, AudioVoice {
 
     override val channels = 2
 
@@ -59,7 +68,18 @@ class AndroidAudioSink(override val sampleRate: Int) : AudioSink {
         .setTransferMode(AudioTrack.MODE_STREAM)
         .build()
 
-    init { track.play() }
+    init {
+        track.play()
+        AudioFocus.acquire(this)
+    }
+
+    override fun silence() {
+        runCatching { track.pause() }
+    }
+
+    override fun resume() {
+        runCatching { track.play() }
+    }
 
     override fun write(block: FloatArray) {
         // Blocking: this call is the transport's pacing. It returns when the
@@ -99,6 +119,7 @@ class AndroidAudioSink(override val sampleRate: Int) : AudioSink {
     }
 
     override fun close() {
+        AudioFocus.release(this)
         runCatching { track.stop() }
         runCatching { track.release() }
     }

@@ -51,6 +51,8 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.snipsnap.app.AudioFocus
+import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.deviceSampleRate
@@ -247,14 +249,30 @@ fun PlayScreen(entry: KitShelf.Entry?) {
     }
 
     // Lessons: ON_STOP means allOff() + stop every voice — a backgrounded
-    // phone should not keep a choke group ringing.
+    // phone should not keep a choke group ringing. A focus loss (a call,
+    // another app's audio) asks for exactly the same silence, so PLAY's
+    // shared AudioFocus registration rides this same effect: acquired the
+    // moment PLAY can make sound, released the moment it stops being able
+    // to — leaving the screen, or the phone itself taking the interruption.
     val lifecycleOwner = LocalLifecycleOwner.current
+    val audioVoice = remember(entry.dir) { object : AudioVoice { override fun silence() = panic() } }
     DisposableEffect(lifecycleOwner, entry.dir) {
+        AudioFocus.acquire(audioVoice)
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) panic()
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    panic()
+                    AudioFocus.release(audioVoice)
+                }
+                Lifecycle.Event.ON_START -> AudioFocus.acquire(audioVoice)
+                else -> {}
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            AudioFocus.release(audioVoice)
+        }
     }
 
     var fullscreen by remember { mutableStateOf(false) }

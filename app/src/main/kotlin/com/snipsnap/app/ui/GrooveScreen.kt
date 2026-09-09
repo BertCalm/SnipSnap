@@ -39,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.snipsnap.app.AudioFocus
+import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.deviceSampleRate
@@ -329,22 +331,46 @@ fun GrooveScreen(
 
     // ON_STOP: backgrounding the app stops playback and flushes any
     // pending E save, same as TAPE stopping its own transport.
+    fun silenceGroove() {
+        playing = false
+        // PLAY's and KIT's lesson: stopping the transport is not
+        // stopping the sound. A backgrounded phone should not keep
+        // a choke group ringing, nor leave the allocator counting
+        // voices whose endings no frame loop is draining.
+        allocator.allOff()
+        player.allOff()
+    }
+    // A focus loss asks for the same silence (plus the same save-flush
+    // safety net) as ON_STOP, so GROOVE's shared AudioFocus registration
+    // rides this same effect - see PlayScreen's own copy of this pattern
+    // for the acquire/release-on-ON_START reasoning.
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, kitDir) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) {
-                playing = false
-                // PLAY's and KIT's lesson: stopping the transport is not
-                // stopping the sound. A backgrounded phone should not keep
-                // a choke group ringing, nor leave the allocator counting
-                // voices whose endings no frame loop is draining.
-                allocator.allOff()
-                player.allOff()
+    val audioVoice = remember(kitDir) {
+        object : AudioVoice {
+            override fun silence() {
+                silenceGroove()
                 flushEditorSave(appScope)
             }
         }
+    }
+    DisposableEffect(lifecycleOwner, kitDir) {
+        AudioFocus.acquire(audioVoice)
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    silenceGroove()
+                    flushEditorSave(appScope)
+                    AudioFocus.release(audioVoice)
+                }
+                Lifecycle.Event.ON_START -> AudioFocus.acquire(audioVoice)
+                else -> {}
+            }
+        }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            AudioFocus.release(audioVoice)
+        }
     }
 
     // The playback clock — a `withFrameNanos` loop converting elapsed wall

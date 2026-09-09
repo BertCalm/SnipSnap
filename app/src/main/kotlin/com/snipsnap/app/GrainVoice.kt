@@ -60,7 +60,18 @@ class GrainVoice(
     private val source: FloatArray,
     private val sampleRate: Int,
     private val map: GrainField.GrainMap,
-) {
+) : AudioVoice {
+
+    /**
+     * [AudioFocus] telling this voice to go quiet: stop triggering new
+     * grains, the same as a finger lifting. Deliberately not [release] — a
+     * focus loss is not the render thread's teardown, and existing grains
+     * already in flight finish their own Hann envelope rather than cutting
+     * off, exactly as a real finger-up would sound. Nothing to [resume]:
+     * grains only ever start from a live [setTarget]/[gate], and this
+     * voice's own gate is already what [silence] just turned off.
+     */
+    override fun silence() = gate(false)
 
     @Volatile private var targetX: Float = 0.5f
     @Volatile private var targetY: Float = 0.5f
@@ -101,10 +112,12 @@ class GrainVoice(
         if (released.get()) return
         if (!running.compareAndSet(false, true)) return
         val myGeneration = generation.incrementAndGet()
+        AudioFocus.acquire(this)
         val t = try {
             buildTrack(sampleRate)
         } catch (e: Exception) {
             running.set(false)
+            AudioFocus.release(this)
             throw e
         }
         track = t
@@ -170,6 +183,7 @@ class GrainVoice(
         renderThread = null
         runCatching { track?.release() }
         track = null
+        AudioFocus.release(this)
     }
 
     private fun runLoop(track: AudioTrack, myGeneration: Int) {

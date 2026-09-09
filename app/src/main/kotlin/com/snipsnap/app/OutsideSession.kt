@@ -39,10 +39,30 @@ import kotlin.math.min
  * Caller's contract: RECORD_AUDIO already granted (the ARM flow on KITS
  * does that), and no other session on the mic (an armed
  * `MicSessionService` holds it — the card refuses first).
+ *
+ * **Audio focus.** [run] registers with [AudioFocus] for its own duration
+ * (acquire before the record/play loop, release in the same `finally` that
+ * already tears down [record] and [track]) so the shared owner's grant
+ * covers this trip like any other playback path. [focusVoice]'s `silence()` is
+ * deliberately a no-op: this whole method is one bounded, synchronous,
+ * user-initiated round trip with no polling loop checking a flag — turning
+ * a mid-trip focus loss into an actual interruption would mean threading a
+ * cancellation check through the blocking `record.read`/`track.write` calls
+ * below, which is a bigger, signal-path-adjacent change than this pass
+ * makes. Registering still matters even with a no-op silence: it tells the
+ * shared owner (and so `AudioManager`) that this app is briefly using
+ * audio, which is what lets a genuinely concurrent interruption (this
+ * trip's own [AudioFocus.acquire] arriving mid-call) come back denied
+ * rather than silently colliding.
  */
 object OutsideSession {
 
     private const val READ_BLOCK_FRAMES = 2048
+
+    /** See the class KDoc's "Audio focus" section for why [silence] is a no-op. */
+    private val focusVoice = object : AudioVoice {
+        override fun silence() {}
+    }
 
     /**
      * Listen for [listenFrames] at [send]'s rate, playing [send] once
@@ -72,6 +92,7 @@ object OutsideSession {
         }
 
         val out = FloatArray(listenFrames)
+        AudioFocus.acquire(focusVoice)
         try {
             record.startRecording()
             check(record.recordingState == AudioRecord.RECORDSTATE_RECORDING) { "the mic never started recording" }
@@ -99,6 +120,7 @@ object OutsideSession {
                 }
             }
         } finally {
+            AudioFocus.release(focusVoice)
             runCatching { record.stop() }
             runCatching { record.release() }
             runCatching { track.stop() }

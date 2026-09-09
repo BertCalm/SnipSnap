@@ -33,6 +33,9 @@ class SnipSnapApplication : Application(), Application.ActivityLifecycleCallback
         MicSessionService.commitSnip = { samples, sampleRate ->
             SnipStore.commit(samples, sampleRate, filesDir, System.currentTimeMillis())
         }
+        // The shared audio-focus owner needs an application Context before
+        // any voice's first acquire() - see AudioFocus's own KDoc.
+        AudioFocus.install(this)
         registerActivityLifecycleCallbacks(this)
     }
 

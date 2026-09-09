@@ -31,6 +31,11 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.snipsnap.app.AudioFocus
+import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.InstrumentPlayer
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -83,6 +88,33 @@ fun KeysScreen(
         onBack()
     }
     BackHandler(onBack = ::requestBack)
+
+    // Audit finding: KEYS was one of two audio-bearing screens with no
+    // ON_STOP handler — PLAY/KIT/GROOVE all silence on backgrounding, but a
+    // held key here kept ringing. Same lesson, same shape: ON_STOP means
+    // allOff(), and a focus loss (a call, another app's audio) asks for the
+    // same silence, so the same AudioFocus registration rides this effect —
+    // see PlayScreen's own copy of this pattern for the full reasoning.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val audioVoice = remember(player) { object : AudioVoice { override fun silence() = player.allOff() } }
+    DisposableEffect(lifecycleOwner, player) {
+        AudioFocus.acquire(audioVoice)
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    player.allOff()
+                    AudioFocus.release(audioVoice)
+                }
+                Lifecycle.Event.ON_START -> AudioFocus.acquire(audioVoice)
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            AudioFocus.release(audioVoice)
+        }
+    }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(

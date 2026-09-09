@@ -31,6 +31,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.snipsnap.app.AudioFocus
+import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.SurfaceEngine
@@ -138,6 +143,42 @@ fun SurfaceScreen(
         onDispose {
             tilt.stop()
             engine.close()
+        }
+    }
+
+    // Audit finding: SURFACE was one of two audio-bearing screens with no
+    // ON_STOP handler — PLAY/KIT/GROOVE all silence on backgrounding, but a
+    // finger left on the pad (or LATCH holding the last position) kept
+    // sounding here. `engine.control(gate = false)` is the same silence
+    // [gate] itself already sends the native side, plus resetting the touch
+    // state so foregrounding again doesn't replay a stale finger position;
+    // a focus loss (a call, another app's audio) asks for the same thing,
+    // so the same AudioFocus registration rides this effect — see
+    // PlayScreen's own copy of this pattern for the full reasoning.
+    fun silenceSurface() {
+        target = Reading.REST
+        lastHeld = null
+        latched = false
+        engine.control(mode, Reading.REST, tilt.tilt, gate = false)
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val audioVoice = remember(engine) { object : AudioVoice { override fun silence() = silenceSurface() } }
+    DisposableEffect(lifecycleOwner, engine) {
+        AudioFocus.acquire(audioVoice)
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    silenceSurface()
+                    AudioFocus.release(audioVoice)
+                }
+                Lifecycle.Event.ON_START -> AudioFocus.acquire(audioVoice)
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            AudioFocus.release(audioVoice)
         }
     }
 

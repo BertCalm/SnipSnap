@@ -40,7 +40,7 @@ import kotlin.concurrent.thread
  * output — self-healing, and a different order of problem than a foreign
  * thread flushing the live stream.
  */
-class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) {
+class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : AudioVoice {
 
     private val running = AtomicBoolean(false)
     private val cursor = AtomicInteger(0)
@@ -48,6 +48,24 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) {
     /** Bumped by every [start]; a stream thread stops once this moves past its own value. */
     private val generation = AtomicInteger(0)
     private var streamThread: Thread? = null
+
+    /**
+     * How many [runLoop] invocations of this instance have called
+     * [AudioFocus.acquire] but not yet reached their own `finally`. A
+     * plain generation check can't answer "was I superseded, or is this the
+     * terminal exit" on its own — [release]'s own `generation.incrementAndGet()`
+     * moves the counter past *every* still-running thread's `myGeneration`,
+     * including the last one, the moment it's called, well before that
+     * thread's `finally` runs. Counting stream ownership independently is
+     * what tells the truth in both cases: the one thread whose `finally`
+     * brings this to zero is always the one that releases focus, whether
+     * it got there by being superseded-and-outliving that check or by being
+     * the terminal exit.
+     */
+    private val focusOwners = AtomicInteger(0)
+
+    /** [AudioFocus] telling this voice to go quiet - the same request [stop] answers to. */
+    override fun silence() = stop()
 
     /**
      * Begin streaming from [frame]. Safe to call while already running — a
@@ -59,6 +77,8 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) {
         cursor.set(frame.coerceIn(0, tape.size))
         running.set(true)
         val myGeneration = generation.incrementAndGet()
+        focusOwners.incrementAndGet()
+        AudioFocus.acquire(this)
         streamThread = thread(name = "TapeVoice", isDaemon = true) { runLoop(myGeneration) }
     }
 
@@ -138,6 +158,7 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) {
         } catch (e: Exception) {
             Log.w(TAG, "TapeVoice: buildTrack rejected the format, staying silent", e)
             running.set(false)
+            if (focusOwners.decrementAndGet() == 0) AudioFocus.release(this)
             return
         }
         // Set once the loop exits because the tape genuinely ran out (as
@@ -245,6 +266,9 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) {
                 runCatching { track.flush() }
             }
             runCatching { track.release() }
+            // See focusOwners' own KDoc for why this counts down independently
+            // of myGeneration rather than comparing against it.
+            if (focusOwners.decrementAndGet() == 0) AudioFocus.release(this)
         }
     }
 

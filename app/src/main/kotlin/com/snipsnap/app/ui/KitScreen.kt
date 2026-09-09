@@ -43,6 +43,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.snipsnap.app.AudioFocus
+import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.deviceSampleRate
@@ -182,14 +184,28 @@ fun KitScreen(
     // Lessons from PLAY: ON_STOP means allOff() - a backgrounded phone
     // should not keep a choke group ringing, or leave the allocator
     // thinking voices are still active while the frame loop isn't ticking
-    // to drain their endings.
+    // to drain their endings. A focus loss asks for the same silence, so
+    // KIT's shared AudioFocus registration rides this same effect - see
+    // PlayScreen's own copy of this pattern for the full reasoning.
     val lifecycleOwner = LocalLifecycleOwner.current
+    val audioVoice = remember(entry.dir) { object : AudioVoice { override fun silence() = panic() } }
     DisposableEffect(lifecycleOwner, entry.dir) {
+        AudioFocus.acquire(audioVoice)
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) panic()
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    panic()
+                    AudioFocus.release(audioVoice)
+                }
+                Lifecycle.Event.ON_START -> AudioFocus.acquire(audioVoice)
+                else -> {}
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            AudioFocus.release(audioVoice)
+        }
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {

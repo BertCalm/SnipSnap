@@ -37,6 +37,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.snipsnap.app.AudioFocus
+import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.PadEngine
@@ -164,6 +169,34 @@ fun SplitScreen(
     fun stopAll() {
         playing = false
         engine.allOff()
+    }
+
+    // Audit correction: SPLIT holds a looping three-voice group (the desk's
+    // PLAY ▸) exactly like PLAY/KIT/GROOVE do, but had no ON_STOP handler —
+    // backgrounding the app left it playing. Same lesson, same shape: ON_STOP
+    // means stopAll(), and a focus loss (a call, another app's audio) asks
+    // for the same silence, so the same AudioFocus registration rides this
+    // effect — see PlayScreen's own copy of this pattern for the full
+    // reasoning.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val audioVoice = remember(engine) { object : AudioVoice { override fun silence() = stopAll() } }
+    DisposableEffect(lifecycleOwner, engine) {
+        AudioFocus.acquire(audioVoice)
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    stopAll()
+                    AudioFocus.release(audioVoice)
+                }
+                Lifecycle.Event.ON_START -> AudioFocus.acquire(audioVoice)
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            AudioFocus.release(audioVoice)
+        }
     }
 
     /**
