@@ -39,7 +39,7 @@ already done and hardware-verified for drums.
 | F1.1 | ✓ done: M0 walking skeleton — `TapeTheme` + the ten-tab `MenuRow`, `KitsScreen` (the shelf over `KitShelf`/`KitStore`), `KitScreen` (the 4×4 grid over `PadPlayer`), `PropertiesScreen` (the live scheme picker) | M | browse kits, tap pads, hear WAVs, flip schemes |
 | F1.2 | ✓ done: M1 capture — the always-listening ring (`MicSessionService`, a foreground session with ARM / SNIP / EJECT, `BubbleOverlay`, the TAPE screen's retroactive snip) now reads either source: ARM TAPE (the mic) or ARM INSIDE (another app's audio via MediaProjection consent + `AudioPlaybackCapture`, stereo folded to the mono ring). Dead-air detection (`SilenceWatch`, :audio): three seconds of digital zeros while the phone reports music playing means the app on top opts out, and the TAPE JAM box says so. The platform ending a projection (lock screen, the stop chip) is a routine end with its own toast. The quick-settings tile (`SnipTileService`): SNIP while armed, opens the app to arm otherwise — arming needs a visible Activity (background FGS starts and the consent dialog both), so the tile hands over rather than pretending. Bench: the emulator can't do playback capture; a real phone proves the INSIDE path | L | snip YouTube from inside YouTube (bench); snip the room (✓); share a video in (F3.2) |
 | F1.3 | ✓ done: M2 tape deck — `TapeScreen` over `TapeDeckModel` and `PeaksPyramid`, `TapeVoice` for audition, a snip handed to CHOP | M | a YouTube snip becomes a clean one-shot, cut on the hit |
-| F1.4 | ✓ done: M4 play mode — `PlayScreen` over `VoiceAllocator`, `PadPlayer` on SoundPool (Oboe deliberately not wired — `PadPlayer`'s own note: effort on a component the pads don't need yet). The exit test is a bench row: USER | M | finger drumming feels tight on a mid-range phone (bench) |
+| F1.4 | ✓ done: M4 play mode — `PlayScreen` over `VoiceAllocator`, `PadPlayer` on SoundPool (Oboe deliberately not wired — `PadPlayer`'s own note: effort on a component the pads don't need yet). The exit test is a bench row: USER | M | finger drumming feels tight on a mid-range phone (✓ bench 2026-09-08, 8–11 ms exclusive) |
 | F1.5 | ✓ done: M5 export wizard — `ExportScreen` over `ExportWizardModel`, the format cycler (kit, expansion, MPC SESSION (`.xpj`)), SAF create-document through `MainActivity`; "the Live III plays it" stays a bench row | M | the card writes (✓); the Live III plays it (bench) |
 
 M3 is feature F2 below. Risks and their standing: APP_PLAN's table.
@@ -1541,8 +1541,8 @@ been heard on a phone; then it follows in one small PR.
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
 | EEE1 | ✓ done: `PadHit` (`:shell`) — `resolve(pad, velocity, hitIndex, framesOf)`: the layer whose range holds the MIDI velocity (the loudest as fallback), the chain slice for the hit (a zone's own base and cycle, the last slice to the end), left/right gains as the SoundPool player mapped them so a kit sounds as it did, tune as `2^((coarse + fine/100)/12)`; a sample the engine never loaded is no hit, refusals in words | CORE | S | whole pad, pan/velocity, tune, layers and the gap fallback, single-zone chain stepping, the zone grid, the null and the refusals |
-| EEE2 | ✓ done: `PadEngine` (`app/src/main/cpp`) — 32 voices, each a windowed, repitched, linearly interpolated read of a bank sample (mono or stereo), a 5 ms choke fade and a 20 ms panic fade, the quietest fading voice stolen first and the oldest after; the bank built on the UI thread and adopted whole by the callback (every voice silenced and reported), the same pointer handshake as the Surface; commands and endings on two lock-free rings; `OboeOutput.h` the one way both engines open a stream (Exclusive, then Shared) | APP | M | bench: no dropouts through a roll on a mid-range phone; a choke is a fade, not a click; a bank swap mid-roll is silence, not a crash |
-| EEE3 | ✓ done: PLAY over it — `PadEngine.kt` (bank read off the main thread through `WavReader`, hits through `PadHit`, `@Synchronized`, `close` idempotent); the reap timer and its two constants gone, replaced by a frame loop that drains the endings ring into `VoiceAllocator.voiceEnded`; the allocator built at `MAX_VOICES` so the status line and the engine cannot drift; a hit nothing loaded for is handed back to the allocator at once; ON_STOP still panics | APP | S | bench: finger drumming feels tight enough that you'd play it (the milestone's own exit test); VOICES counts down as one-shots end; a closed hat cuts an open one with no click |
+| EEE2 | ✓ done: `PadEngine` (`app/src/main/cpp`) — 32 voices, each a windowed, repitched, linearly interpolated read of a bank sample (mono or stereo), a 5 ms choke fade and a 20 ms panic fade, the quietest fading voice stolen first and the oldest after; the bank built on the UI thread and adopted whole by the callback (every voice silenced and reported), the same pointer handshake as the Surface; commands and endings on two lock-free rings; `OboeOutput.h` the one way both engines open a stream (Exclusive, then Shared) | APP | M | bench 2026-09-08: **a bank swap mid-roll is silence, not a crash** — verified against a live voice (a SURFACE print on a pad, since no stock pad rings long enough); no dropouts through a minute of two-thumb rolling; **a choke is a fade, not a click** — a closed hat cuts a ringing open one clean |
+| EEE3 | ✓ done: PLAY over it — `PadEngine.kt` (bank read off the main thread through `WavReader`, hits through `PadHit`, `@Synchronized`, `close` idempotent); the reap timer and its two constants gone, replaced by a frame loop that drains the endings ring into `VoiceAllocator.voiceEnded`; the allocator built at `MAX_VOICES` so the status line and the engine cannot drift; a hit nothing loaded for is handed back to the allocator at once; ON_STOP still panics | APP | S | bench 2026-09-08: **the exit test passed** — tight enough to play, 8–11 ms with no `SHARED` (the exclusive path opened), VOICES counts down as one-shots end, a kit swap over a sounding voice is silence, a closed hat cuts an open one with no click; gate-vs-one-shot still unread |
 | EEE4 | ✓ done: KIT's grid onto the native engine — `KitScreen` swaps `PadPlayer` for the same `PadEngine` PLAY and KEYS share (`:app`, blind for CI's compiler): a tap has no release, so a hit is effectively one-shot regardless of the pad's own gate metadata, exactly as the SoundPool preview always played out fully; a `VoiceAllocator` still exists so a mute group still chokes on this screen and a stolen or choked voice is stopped rather than left ringing | APP | S | bench: KIT's pads sound the same as PLAY's |
 | EEE5 | ✓ done: the engines under test — `app/src/main/cpp/test`, a host-built target (no NDK, no device; Oboe headers only, its two linked entry points stubbed) that drives both callbacks by hand: the ring keeps order and drops when full; the smoother glides, settles and snaps; the print buffer fills to its ceiling, refuses a re-arm while the callback may write, and lands Done on the callback; the pad engine plays the window at its gains, repitches by the ratio, reads stereo as stereo, fades a choke and an all-off, reports every ending, silences and reports every voice on a bank swap, never plays a stale command by index, waits for the retiree before a second swap, steals the oldest at the cap and says so; the Surface is silent until gated, prints the mono bus, and morphs between its corners. A third CI job (`native-tests`) runs it | CORE | S | 17 cases green on the host and in CI; every bug Copilot found in the native code now has a case that would have caught it |
 | EEE6 | ✓ done: KEYS on the native engine — `KeyHit` (`:shell`, tested): the zone that covers the note, the speed from the root, the zone's loop (an empty loop plays once, the JVM engine's rule), the gain at `VOICE_LEVEL`, the release as milliseconds; `PadEngine` learns a loop (`loopStart` on the command; the voice wraps from its last frame back, a note-off is a Stop with the release as its fade; a native case proves the wrap and the release); `InstrumentPlayer` rewritten over `NativePads` (the bank read off the main thread, eight voices the oldest stolen, a route change reopened on the next key); KEYS loads it in a `LaunchedEffect` on IO. The AudioTrack thread the app owned for keys is gone; `InstrumentEngine` stays the JVM reference the map is checked against | CORE + APP | S–M | bench: a held note sustains through its loop and lets go over the release; a chord of eight; OCT ± mid-note is silence, not a stuck note |
@@ -1793,7 +1793,8 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
     print on the grid
   ✓ wave EEE (M4, the pads on the native engine): PadHit on the JVM,
     PadEngine under Oboe, PLAY over it with endings reported, not timed ·
-    bench: tight enough to play; EEE4 moves KIT's grid across too
+    bench 2026-09-08: ✓ tight enough to play, 8–11 ms exclusive;
+    EEE4 moves KIT's grid across too
   ✓ EEE5 (the engines under test): both native callbacks driven by hand
     on the host, 17 cases, a third CI job
   ✓ EEE6 (KEYS on the native engine): KeyHit on the JVM, a looping
@@ -1941,6 +1942,42 @@ APP wave KKK: ✓ all landed (2026-09-08) — KEYS, drawn. Grown alongside
   scale, not merely redecorated). Held up as built - no code fix. Three
   screens found in the same archaeology pass remain undrawn:
   `PadCaptureScreen`, `SnipsScreen`, `DeletedKitsScreen`.
+
+APP wave LLL: ✓ all landed (2026-09-08) — PAD CAPTURE, drawn. Opened by
+  a long-press on an empty KIT pad, no board ever: not armed (START MIC
+  full-width, GRAB/HOLD TO REC dimmed to half-opacity labels - their
+  sweep rim stays lit either way, `PrimaryAction`/`HoldRecordAction`'s
+  own shared convention, not new here), armed and idle (the live level
+  meter and MM:SS counter, both actions lit), committing a GRAB (the
+  meter keeps ticking - armed survives a commit - GRAB reads GRABBING…
+  and both actions dim together, one shared `committing` guard). Held
+  up as built - no code fix. Two screens remain undrawn: `SnipsScreen`,
+  `DeletedKitsScreen`.
+
+APP wave MMM: ✓ all landed (2026-09-08) — SNIPS, drawn. The shelf-level
+  catch-all for every `snips/` WAV, no board ever: empty shelf (a real
+  `0 · 0 B` count, not a hidden header), playing + USED badge (▶ PLAY
+  swaps to ■ STOP on the sounding row; USED lights only once the cheap
+  tagged-pad gate resolves, never a guess; → PAD and → TAPE stay
+  enabled regardless of playback, → PAD never gated on an already-open
+  kit - the fix this screen's own KDoc names), delete confirm (the same
+  dialog shape `CaptureBlockedDialog`/`StarterMenu` already use). Held
+  up as built - no code fix. One screen remains undrawn:
+  `DeletedKitsScreen`.
+
+APP wave NNN: ✓ all landed (2026-09-08) — DELETED KITS, drawn, closing
+  the archaeology pass. Closes the gap `KitsScreen.kt`'s own prior KDoc
+  used to describe accurately (a deleted kit had neither a listing nor
+  a restore, unlike TAKES + BIN and ROOMS): empty bin (`NOTHING
+  DELETED.`, SNIPS' own plain locked tone), a list unarmed (days-left
+  in `warn` at ≤2 days and amber otherwise, same threshold TAKES + BIN
+  and ROOMS use, each row its own `RESTORE` chip), EMPTY armed (a second
+  tap swaps the label to `TAP AGAIN TO CONFIRM — NO TAKEBACKS`, the same
+  self-disarming confirm `TakesBinScreen`'s own `EMPTY THE BIN NOW` uses
+  verbatim; a `RESTORE` tap disarms it first so a shifted row can't read
+  as EMPTY's own second tap). Held up as built - no code fix. The
+  archaeology pass this wave and KKK/LLL/MMM worked through is closed:
+  every screen in `app/.../ui/` now has a board.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

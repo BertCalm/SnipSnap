@@ -40,6 +40,20 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Assemble the app
         run: ./gradlew --no-daemon :app:assembleDebug
+      # The job already builds a working APK and then throws it away with
+      # the runner. Keeping it is the difference between "the app compiles"
+      # and "here is the app" — every green build on every branch becomes
+      # something installable, which is the only way anything here gets
+      # heard until there is a release path.
+      - name: Keep the APK
+        uses: actions/upload-artifact@v4
+        with:
+          # The SHA is in the name because several branches build at once
+          # and a download called `app-debug` tells you nothing about which
+          # one you are holding.
+          name: snipsnap-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
 
   native-tests:
     runs-on: ubuntu-latest

@@ -22,9 +22,9 @@ somewhere to land.
 
 ## A · The phone alone
 
-The native audio stack is the whole of section A1–A4 and it has never
-made a sound. Five merges rest on it. Do these first, and in this order:
-each one leans on the last.
+The native audio stack is the whole of section A1–A4 and five merges
+rest on it. A1 has now made a sound (2026-09-08); A2–A4 have not. Do
+the rest in this order: each one leans on the last.
 
 ### A1 · PLAY feels like an instrument [EEE3, the M4 exit test]
 
@@ -45,11 +45,54 @@ Open a kit, tap PLAY, drum on it with two thumbs for a minute.
 - Header reads NO STREAM? The device refused every open — grab the
   logcat line tagged `PadEngine`.
 
-→
+→ **2026-09-08, the exit test passes.** Tight enough to play. The header
+read **8–11 MS** with no `SHARED` after it, so the device opened the
+exclusive low-latency path rather than falling back to the shared one —
+that is the number every later latency reading is measured against.
+VOICES counted down as one-shots ended. PANIC clears.
+
+The **mid-roll kit swap** passed on a second pass, the same day. Nothing
+in a stock kit rings long enough to still be sounding when the bank is
+adopted, so the sound was made first: a few seconds PRINTed on SURFACE
+and sent → PAD. Swapping kits while that pad played gave **silence** —
+not a crash, and not a voice that carried on into the new kit. That is
+the check that matters: the callback silenced and reported every voice
+before the old sample bank was released, which is the one path in the
+native code where getting it wrong is a use-after-free rather than a
+wrong noise.
+
+The **open-hat choke** passed the same evening: a closed hat cuts a
+ringing open one, and there is no click at the cut. That is EEE2's
+5 ms choke fade doing its job on hardware — a click there would mean
+the voice was being cut dead rather than faded out, which is the
+difference between a hi-hat and a bug.
+
+Still open, and A1 stays part-ticked until it is answered: **gate vs
+one-shot** — a gate pad should stop when you lift your finger, a
+one-shot should play out regardless.
 
 ### A2 · KEYS sustains and lets go [EEE6]
 
 Open an instrument from the shelf (INSTRUMENTS on THE SHELF).
+
+**A fresh install has none, and the whole INSTRUMENTS section is hidden
+when the list is empty** — so on a new phone the shelf shows kits and
+nothing else, and there is no clue this section exists. Nothing is
+broken; make one first. There are two doors, both on a pad's own sheet
+(open a kit, tap a pad):
+
+- **PAD FROM ANYTHING · HOLD IT FOREVER ▸ MAKE PAD ▸ INSTRUMENT.** Any
+  pad qualifies — a drum lands as a drone. It writes a keygroup with a
+  one-second arrival, a four-second body that loops with a 0.75 s
+  crossfade baked into the wrap, and a 0.6 s release. That is exactly
+  what the first two checks below ask about, so this is the door to use
+  for them. The source must be between 0.05 s and 30 s long.
+- **MAKE INSTRUMENT.** Greyed unless the pad is classed TONAL — the grey
+  is a hint, not a lock, and pressing it on an unpitched pad refuses in
+  words rather than doing something strange. Use it on something pitched
+  and it detects the real root, which is what makes the tuning check
+  below mean anything: a drone from the other door sits at C3 by fiat,
+  so it is in tune with itself and proves nothing.
 
 - Hold a note on a looping zone: does it sustain indefinitely, without a
   seam or a click at the loop point? [X6.3]
@@ -80,6 +123,10 @@ Open a kit, tap SURFACE.
 - → PAD, STOP PRINT: the slot chooser opens. An empty pad takes the
   print; a taken pad is replaced and its original is in the bin; CANCEL
   sends the print to TAPE instead of losing it.
+- (2026-09-08, out of A1's kit-swap check: PRINT ran for a few seconds,
+  → PAD landed it on an empty slot, and the pad played the print back
+  on PLAY. The toast wording, the bin behaviour on a taken pad and
+  CANCEL → TAPE are all still unread.)
 - PAD ◄ ►, find a sound in XYZ, SET A, three more, MORPH between them.
   Leave the screen and come back: are the corners and the pad still there?
   (They live in `surface.json` beside the kit.)

@@ -27,24 +27,30 @@ or seed them back onto a canvas.
 | `ShareBusy.dc.html`, `ShareChooser.dc.html`, `ShareClean.dc.html`, `ShareNowhere.dc.html`, `BackupEmpty.dc.html`, `BackupSkips.dc.html` | **SHARE / BACKUP · the chooser hand-off** (page eight, DESIGN_GAP's last undrawn pair): SHARE packing (every door dimmed, PACKING… in the status bar), the system chooser itself drawn schematically (SnipSnap owns nothing past this point), the clean return toast, and the no-receiver toast — then BACKUP's empty-shelf gate (dimmed, no chooser ever offered) and a partial backup's message box (one kit skipped, two packed). Drawn from `ShareOut.kt`, `App.kt`'s `shareKit`/`backupShelf`, and `LandingNote.kt` |
 | `SplitNotSplit.dc.html`, `SplitWorking.dc.html`, `SplitDeskPlaying.dc.html`, `SplitPrintHot.dc.html` | **SPLIT** (page nine): a pad chosen and SPLIT lit amber, the desk visible but disabled at rest; WORKING (the spectrogram pass, every door dimmed); the desk playing — SINES pushed up and reversed, TRANSIENT untouched, AIR pulled down and muted, STOP lit; printed hot to TAPE, the desk pushed toward +6 dB and the toast carrying PRINT's own hot-peak warning. Never had a board — EEE9 arrived from another branch. Drawn from `SplitScreen.kt`, `Layers.kt` and `Fader`'s own drawing code; held up as built, no fix |
 | `KeysGrid.dc.html`, `KeysPressed.dc.html`, `KeysScalePicked.dc.html` | **KEYS** (page ten): CHROMATIC idle, root bottom-left ascending left-to-right and bottom-to-top, an unmapped key dimmed to ink3 rather than vanishing; a key held (only the box's fill jumps to a 0.45-alpha wash, the label's ink colour untouched — matches `KeyPad`'s code exactly); MAJOR picked, the whole grid relabelled to the scale rather than merely redecorated. Never had a board — reached from the shelf's INSTRUMENTS row, over `InstrumentPlayer`/`InstrumentEngine`. Drawn from `KeysScreen.kt`; held up as built, no fix |
+| `PadCaptureNotArmed.dc.html`, `PadCaptureArmed.dc.html`, `PadCaptureGrabbing.dc.html` | **PAD CAPTURE** (page eleven): not armed (START MIC full-width, GRAB/HOLD TO REC both present but dimmed to half-opacity labels — their sweep rim stays lit either way, the shared `PrimaryAction`/`HoldRecordAction` convention, not new here); armed and idle (the live level meter + MM:SS counter, both actions fully lit); committing a GRAB (the meter keeps ticking — `armed` survives a commit, only an EJECT flips it — GRAB reads GRABBING… and both actions dim together, since `committing` is the one guard they share). Never had a board — opened by a long-press on an empty KIT pad. Drawn from `PadCaptureScreen.kt`; held up as built, no fix |
+| `SnipsEmpty.dc.html`, `SnipsList.dc.html`, `SnipsDeleteConfirm.dc.html` | **SNIPS** (page twelve): empty shelf (a real `0 · 0 B` count, not a hidden header); playing + USED badge (one row's ▶ PLAY swapped for ■ STOP, a second row's USED badge lit only once the cheap tagged-pad gate resolves — never a guessed "not used"; → PAD and → TAPE stay enabled on every row regardless of playback, → PAD never gated on an already-open kit); delete confirm ("DELETE THIS SNIP? CAN'T UNDO." over a dimmed scrim, the same dialog shape `CaptureBlockedDialog`/`StarterMenu` already use). Never had a board — the shelf-level list of every `snips/` WAV, never kit-scoped. Drawn from `SnipsScreen.kt`; held up as built, no fix |
+| `DeletedKitsEmpty.dc.html`, `DeletedKitsList.dc.html`, `DeletedKitsArmed.dc.html` | **DELETED KITS** (page thirteen): empty bin (`NOTHING DELETED.`, the plain locked tone SNIPS' own empty state set); a list, unarmed (two rows, days-left in `warn` at ≤2 days and amber otherwise — the same threshold TAKES + BIN/ROOMS use — each with its own RESTORE chip); EMPTY armed (a second real tap swaps the label to `TAP AGAIN TO CONFIRM — NO TAKEBACKS`, the same self-disarming three-second confirm `TakesBinScreen`'s own EMPTY THE BIN NOW uses, copied verbatim — a RESTORE tap disarms it first so a shifted row's next tap can't read as EMPTY's second one). Never had a board — closes the gap `KitsScreen.kt`'s own prior KDoc used to describe accurately: a deleted kit had neither a listing nor a restore. Drawn from `DeletedKitsScreen.kt`; held up as built, no fix |
 
 The spec note on `canvas.json` (page one, `spec`) is the handoff for Compose:
 one box open at a time, remembered per kit; the pad nav pinned; the reels on a
 trip; KEEP ROOM's dim rule; a 44-character label budget. Built in wave DDD;
 `docs/DESIGN_GAP.md` records what the older handoff no longer covers.
 
-Pages three through ten were added after the build, the other way
+Pages three through thirteen were added after the build, the other way
 round: the code came first (OUTSIDE in wave DDD, the message box in wave
 FFF, KIT's action row and TEXTURE grown over several waves, GRAIN FIELD,
 SURFACE and SPLIT arriving whole from another branch, SHARE/BACKUP built
 blind across F6.3 and X3.3, KEYS grown alongside INSTRUMENTS on the
-shelf) and the boards check it. Where board and code differed the note
-on the page said which should move; wave GGG closed the trip's two, and
-SURFACE's readout was fixed in the same pass that drew it. Page five
-found no defect — its note records that outcome too, so a future pass
-doesn't re-ask the question. GRAIN FIELD, SPLIT and SHARE/BACKUP all
-held up the same way: page eight closed `DESIGN_GAP.md`'s last "still
-undrawn" line, page nine checked EEE9, and page ten checks KEYS —
-another screen carried on the shelf's own INSTRUMENTS entry with no
-board of its own before now. `PadCaptureScreen`, `SnipsScreen` and
-`DeletedKitsScreen` remain undrawn past this pass.
+shelf, PAD CAPTURE opened off an empty KIT pad's long-press, SNIPS the
+shelf-level catch-all for every captured WAV, DELETED KITS the Task-2
+bin-restore closing TAKES + BIN's own gap) and the boards check it.
+Where board and code differed the note on the page said which should
+move; wave GGG closed the trip's two, and SURFACE's readout was fixed
+in the same pass that drew it. Page five found no defect — its note
+records that outcome too, so a future pass doesn't re-ask the question.
+GRAIN FIELD, SPLIT, SHARE/BACKUP, KEYS, PAD CAPTURE, SNIPS and DELETED
+KITS all held up the same way: page eight closed `DESIGN_GAP.md`'s last
+"still undrawn" line, page nine checked EEE9, page ten checked KEYS,
+page eleven checked PAD CAPTURE, page twelve checked SNIPS, and page
+thirteen checks DELETED KITS — the last screen an archaeology pass
+across every `app/.../ui/` file turned up with no board of its own.

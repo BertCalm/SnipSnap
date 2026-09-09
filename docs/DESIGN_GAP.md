@@ -69,6 +69,48 @@ Written against the OILSLICK handoff synced on 2026-08-28 (Design Canvas export,
 > relabels to the scale, not merely redecorated — wrong notes are
 > physically impossible in a scale layout). Held up as built - no code
 > defect. The other three remain queued for a future pass.
+>
+> **Closed by wave LLL (2026-09-08).** `PadCaptureScreen` — the
+> long-press-on-an-empty-pad capture surface, opened over
+> `MicSessionService`/`PadCapture`/`Classifier` — is drawn on the
+> canvas's page eleven: not armed (START MIC full-width, GRAB and HOLD
+> TO REC both dimmed to half-opacity labels while their sweep rim stays
+> lit regardless — a pre-existing `PrimaryAction`/`HoldRecordAction`
+> convention, not something this screen invented), armed and idle (the
+> live level meter and MM:SS elapsed counter, both actions fully lit),
+> and committing a GRAB (the meter keeps ticking since `armed` survives
+> a commit, GRAB reads GRABBING… and both actions dim together behind
+> the one shared `committing` guard). Held up as built - no code defect.
+> `SnipsScreen` and `DeletedKitsScreen` remain queued.
+>
+> **Closed by wave MMM (2026-09-08).** `SnipsScreen` — the shelf-level
+> list of every WAV under `snips/`, reached from the shelf's own
+> `SNIPS ▸` row and never kit-scoped — is drawn on the canvas's page
+> twelve: an empty shelf (a real `0 · 0 B` count rather than a hidden
+> header), a list with one row mid-playback (■ STOP replacing ▶ PLAY)
+> and a second carrying the USED badge (lit only once the cheap
+> tagged-pad gate resolves - never a guessed "not used" - while → PAD
+> and → TAPE stay enabled on every row regardless of playback state,
+> → PAD never gated on an already-open kit per this screen's own fix),
+> and the delete confirmation ("DELETE THIS SNIP? CAN'T UNDO." over a
+> dimmed scrim, the same dialog shape `CaptureBlockedDialog`/
+> `StarterMenu` already use). Held up as built - no code defect.
+> `DeletedKitsScreen` remains queued.
+>
+> **Closed by wave NNN (2026-09-08), closing the archaeology pass.**
+> `DeletedKitsScreen` — the last screen this pass found - is drawn on
+> the canvas's page thirteen: empty bin (`NOTHING DELETED.`, SNIPS' own
+> plain locked tone), a list unarmed (each row's name/pad-count/
+> relative-age over a RESTORE chip; days-left reads in `warn` at ≤2
+> days and amber otherwise, the same threshold TAKES + BIN and ROOMS's
+> own binned rows use), and EMPTY armed (a real second tap swaps the
+> label to `TAP AGAIN TO CONFIRM — NO TAKEBACKS`, the same
+> self-disarming three-second confirm `TakesBinScreen`'s own EMPTY THE
+> BIN NOW uses, copied verbatim - a RESTORE tap disarms it first so a
+> shifted row's next tap can't read as EMPTY's own second one). Held up
+> as built - no code defect. Every screen in `app/.../ui/` now has a
+> board; the archaeology pass waves KKK through NNN worked through is
+> closed.
 
 The handoff is unusually implementable — it states tokens in the form Compose
 consumes and names repo symbols (`PeaksPyramid`, `StarterKits`,
