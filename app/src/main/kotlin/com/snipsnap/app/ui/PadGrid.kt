@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.os.SystemClock
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.foundation.background
@@ -48,6 +49,17 @@ import com.snipsnap.shell.Schemes
  * references anything PLAY-specific — no `KitShelf.Entry`, no `PadEngine` —
  * it only takes a [Kit] and hit/release callbacks, so any screen with its
  * own engine and allocator can render from here.
+ *
+ * `onHit` carries a third argument, `uptimeMillis` — the touch's own
+ * hardware timestamp (`PointerInputChange.uptimeMillis`, `SystemClock
+ * .uptimeMillis()`-based, same `CLOCK_MONOTONIC` timebase Compose's frame
+ * clock uses — verified for the live-record plan, not assumed). PLAY
+ * ignores it; GROOVE's live-record path needs it to place a recorded note
+ * at the position it actually sounded, not the position a re-read of the
+ * clock some microseconds after dispatch would imply. One callback shape,
+ * not a second optional one — see `ConventionTest`'s own KDoc for why a
+ * shape that can diverge between call sites is the bug pattern this
+ * codebase specifically tests against.
  */
 internal val WINDOW_GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 internal val BANK_A_ROWS = listOf(9..16, 1..8)
@@ -106,7 +118,7 @@ private fun classTint(rgb: Int): Color {
 internal fun BankRow(
     kit: Kit,
     glow: Map<Int, Animatable<Float, AnimationVector1D>>,
-    onHit: (Int, Float) -> Unit,
+    onHit: (Int, Float, Long) -> Unit,
     onRelease: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -135,7 +147,7 @@ internal fun PlayBank(
     kit: Kit,
     rows: List<IntRange>,
     glow: Map<Int, Animatable<Float, AnimationVector1D>>,
-    onHit: (Int, Float) -> Unit,
+    onHit: (Int, Float, Long) -> Unit,
     onRelease: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -180,7 +192,7 @@ internal fun PlayPad(
     slot: Int,
     pad: KitPad?,
     glow: Animatable<Float, AnimationVector1D>?,
-    onHit: (Int, Float) -> Unit,
+    onHit: (Int, Float, Long) -> Unit,
     onRelease: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -229,13 +241,16 @@ internal fun PlayPad(
             // below stay separate focus stops from this cell's own.
             .semantics(mergeDescendants = true) {
                 contentDescription = "PAD $tag: ${pad.displayName}"
-                onClick(label = "PLAY") { onHit(slot, CENTER_VELOCITY); onRelease(slot); true }
+                // A synthesized TalkBack click has no MotionEvent, hence no
+                // hardware touch time (same reasoning as CENTER_VELOCITY's
+                // own KDoc above) — "now" is the only timestamp available.
+                onClick(label = "PLAY") { onHit(slot, CENTER_VELOCITY, SystemClock.uptimeMillis()); onRelease(slot); true }
             }
             .pointerInput(slot) {
                 while (true) {
                     val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
                     val height = size.height.toFloat().coerceAtLeast(1f)
-                    onHit(slot, velocityFromY(down.position.y, height))
+                    onHit(slot, velocityFromY(down.position.y, height), down.uptimeMillis)
                     awaitPointerEventScope {
                         while (true) {
                             val event = awaitPointerEvent()

@@ -1,6 +1,9 @@
 package com.snipsnap.app.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -56,11 +59,13 @@ import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.GrooveVariations
 import com.snipsnap.kit.KitPreview
+import com.snipsnap.kit.LiveRecord
 import com.snipsnap.kit.MidiGroove
 import com.snipsnap.kit.Names
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.VoiceAllocator
@@ -255,15 +260,30 @@ fun GrooveScreen(
         if (!player.hit(pad, velocity, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
     }
 
+    // RECORD's own pad grid — PLAY's glow shape (PadGrid.kt's own KDoc
+    // flagged this for Task 4): a FULL per-slot map, keyed on the kit's
+    // identity like PlayScreen's (`remember(entry.kit)`, not `kitDir`), so
+    // a kit edited elsewhere (PAD SHEET, a texture) hands back a fresh
+    // `Kit` and the map follows it. A partial map would route a real,
+    // assigned pad's `null` glow lookup to `PlayPad`'s EMPTY-pad branch
+    // (PadGrid.kt's own KDoc) — every slot needs an entry, not just the
+    // ones a lane happens to draw.
+    val glow = remember(entry.kit) { kit.pads.associate { it.slot to Animatable(0f) } }
+    fun flash(slot: Int) {
+        val anim = glow[slot] ?: return
+        scope.launch {
+            anim.snapTo(1f)
+            anim.animateTo(0f, tween(Motion.PAD_GLOW_MS))
+        }
+    }
+
     if (loading) {
         Box(Modifier.fillMaxSize().lcdPanel(scheme))
         return
     }
-    val loadedBase = base
-    if (loadedBase == null) {
-        // No groove stored — a kit made by CHOP's SEND TO GRID may carry
-        // one (the happy path); one that doesn't gets the same shelf
-        // treatment as an empty kit list.
+    if (kit.pads.isEmpty()) {
+        // Nothing to record with, groove or no groove — same shelf
+        // treatment as an empty kit list everywhere else in this app.
         EmptyGroove(scheme)
         return
     }
@@ -274,6 +294,32 @@ fun GrooveScreen(
     var playing by remember(kitDir) { mutableStateOf(false) }
     var posSteps by remember(kitDir) { mutableFloatStateOf(0f) }
     var busy by remember(kitDir) { mutableStateOf(false) }
+
+    // RECORD: playing pads in against the clock. `preTake` is the base
+    // *before* this take (null on a from-scratch kit) — Task 5's undo
+    // snapshot, captured the moment RECORD arms, never touched again until
+    // the next arm. `recordBars` is the from-scratch loop length only —
+    // 2 bars, "the normal case" per `StepEditorOverlay`'s own KDoc further
+    // down this file; an overdub always records against the existing
+    // base's own bar count instead, never this one. `take` is the
+    // in-flight capture — not compose state, since nothing in the UI
+    // needs to recompose when a hit is appended to it, only when
+    // `recording`/`countingIn` themselves flip.
+    var recording by remember(kitDir) { mutableStateOf(false) }
+    var countingIn by remember(kitDir) { mutableStateOf(false) }
+    var preTake by remember(kitDir) { mutableStateOf<Mpc3Clip?>(null) }
+    var recordBars by remember(kitDir) { mutableIntStateOf(2) }
+    var take by remember(kitDir) { mutableStateOf<LiveRecord.Take?>(null) }
+
+    // The playback clock's own `(nanos, pos)` reading, hoisted out of the
+    // clock `LaunchedEffect` below so a hit fired between two frames can
+    // read where the needle actually was at the LAST tick and interpolate
+    // forward from there — not a plain `mutableStateOf`, which would
+    // schedule a recomposition on every one of ~60 writes/sec that nothing
+    // in the UI tree actually reads (`posSteps` is the state the roll
+    // draws from; this is purely the recorder's own reference point).
+    class ClockAnchor { var nanos = 0L; var pos = 0f }
+    val clockAnchor = remember(kitDir) { ClockAnchor() }
 
     val progCount = if (eClip != null) 5 else 4
     if (progIndex >= progCount) progIndex = 0
@@ -288,8 +334,14 @@ fun GrooveScreen(
     var editorDirty by remember(kitDir) { mutableStateOf(false) }
     var editorSaveTick by remember(kitDir) { mutableIntStateOf(0) }
 
-    val currentClip = remember(progIndex, loadedBase, swingPercent, seed, eClip) {
-        computeProgram(progIndex, loadedBase, swingPercent, seed, eClip)
+    // Null exactly when `base` is: a from-scratch kit has nothing to
+    // derive A–D from yet, same as before RECORD existed at all — E alone
+    // (reachable only via [LiveRecord.undo]'s own E-without-a-base branch)
+    // was already unreachable from this screen before this task and stays
+    // that way; RECORD doesn't change what GROOVE can display, only how a
+    // base gets here.
+    val currentClip = remember(progIndex, base, swingPercent, seed, eClip) {
+        base?.let { computeProgram(progIndex, it, swingPercent, seed, eClip) }
     }
     // Playback and MIDI export cover every note; the roll only draws the
     // five lane columns (the design) — this is the honesty line that says
@@ -400,31 +452,48 @@ fun GrooveScreen(
     // or the roll triggers yesterday's metadata against today's samples.
     // Restarting costs nothing — `lastPos` is read from `posSteps`, which
     // is state, so the needle resumes where it was.
+    //
+    // RECORD's own requirement (live-record plan, Task 4): position now
+    // advances UNCONDITIONALLY whenever `playing` is true, not only when
+    // there's a clip with notes to trigger — a from-scratch take has no
+    // `base` yet, so `clip` is null throughout the count-in and the take
+    // itself, but the clock still has to run (against `recordBars`) for
+    // `recordHit` to have anything to interpolate against. Triggering
+    // stays conditional on a real clip; advancing does not. `clockAnchor`
+    // mirrors `lastNanos`/`lastPos` on every tick so `recordHit`, firing
+    // between frames from a pointer callback, reads the SAME reference
+    // point this loop just used — one formula, shared, per the plan's own
+    // Design Question 5.
     LaunchedEffect(playing, kitDir, entry.kit) {
         if (!playing) return@LaunchedEffect
         var lastNanos = withFrameNanos { it }
         var lastPos = posSteps
+        clockAnchor.nanos = lastNanos
+        clockAnchor.pos = lastPos
         while (isActive) {
             withFrameNanos { now ->
                 val dtNanos = (now - lastNanos).coerceIn(0, GROOVE_STEP_MAX_NANOS)
                 lastNanos = now
-                val clip = computeProgram(progIndex, loadedBase, swingPercent, seed, eClip)
+                val currentBase = base
+                val clip = currentBase?.let { computeProgram(progIndex, it, swingPercent, seed, eClip) }
+                val totalSteps = ((clip?.bars ?: recordBars) * GrooveEdit.STEPS_PER_BAR).toFloat()
+                val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
+                val stepsPerSecond = bpm / 60.0 * 4.0
+                val inc = (dtNanos / 1_000_000_000.0 * stepsPerSecond).toFloat()
+                var np = lastPos + inc
                 if (clip != null && clip.notes.isNotEmpty()) {
-                    val totalSteps = (clip.bars * GrooveEdit.STEPS_PER_BAR).toFloat()
-                    val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
-                    val stepsPerSecond = bpm / 60.0 * 4.0
-                    val inc = (dtNanos / 1_000_000_000.0 * stepsPerSecond).toFloat()
-                    var np = lastPos + inc
                     for (n in clip.notes) {
                         val p = n.timePulses.toFloat() / GrooveEdit.STEP_PULSES.toFloat()
                         val crossed = (p > lastPos && p <= np) ||
                             (np >= totalSteps && p + totalSteps > lastPos && p + totalSteps <= np)
                         if (crossed) hit(n.note - 35)
                     }
-                    if (np >= totalSteps) np -= totalSteps
-                    lastPos = np
-                    posSteps = np
                 }
+                if (np >= totalSteps) np -= totalSteps
+                lastPos = np
+                posSteps = np
+                clockAnchor.nanos = now
+                clockAnchor.pos = np
             }
         }
     }
@@ -497,6 +566,7 @@ fun GrooveScreen(
 
     var midiBusy by remember(kitDir) { mutableStateOf(false) }
     fun exportMidi() {
+        val exportBase = base ?: return
         if (midiBusy) return
         midiBusy = true
         scope.launch {
@@ -507,7 +577,7 @@ fun GrooveScreen(
                 // directly rather than going through ExportFormat.MIDI
                 // (which writes one clip per call, not this screen's
                 // "everything, at once" button).
-                val clips = GrooveVariations.standard(loadedBase, swingPercent) + listOfNotNull(eClip)
+                val clips = GrooveVariations.standard(exportBase, swingPercent) + listOfNotNull(eClip)
                 val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
                 val written = withContext(Dispatchers.IO) {
                     val root = context.getExternalFilesDir("exports")
@@ -527,94 +597,323 @@ fun GrooveScreen(
         }
     }
 
+    /**
+     * One touch, two effects that can never diverge: [hit] makes the sound
+     * (and lights the pad, PLAY's own glow shape), and — only while
+     * [recording] is actually true, not merely [countingIn] — the same
+     * touch is appended to [take]. A hit during count-in still sounds (the
+     * user gets to feel the pad respond) but is never captured; there is
+     * no take running yet to capture it into.
+     *
+     * [uptimeMillis] is the touch's own hardware timestamp
+     * (`PointerInputChange.uptimeMillis`, threaded through from
+     * `PadGrid.kt`'s `onHit` — see that file's own KDoc for the timebase
+     * proof), converted to nanoseconds and measured against
+     * [clockAnchor]'s last tick — NOT a fresh clock read taken here, which
+     * would bake in whatever time has passed since dispatch on top of the
+     * hardware's own input latency (ledger Q2). The delta is clamped
+     * symmetrically: unlike the clock loop's own frame-to-frame dt (which
+     * is never negative), a touch can be timestamped slightly BEFORE
+     * [clockAnchor]'s last tick if it lands early in a Choreographer pass,
+     * and that small negative offset is real sub-frame precision, not
+     * staleness — flooring it to zero would throw away exactly what this
+     * task is for. [LiveRecord.wrapped] folds either sign correctly into
+     * the loop.
+     */
+    fun recordHit(slot: Int, velocity: Float, uptimeMillis: Long) {
+        hit(slot, velocity)
+        flash(slot)
+        val t = take
+        if (!recording || t == null) return
+        val hitNanos = uptimeMillis * 1_000_000L
+        val dtNanos = (hitNanos - clockAnchor.nanos).coerceIn(-GROOVE_STEP_MAX_NANOS, GROOVE_STEP_MAX_NANOS)
+        val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
+        val stepsPerSecond = bpm / 60.0 * 4.0
+        val posAtHit = clockAnchor.pos + (dtNanos / 1_000_000_000.0 * stepsPerSecond)
+        // Steps -> the "elapsed seconds" LiveRecord.pulsesFor wants, via
+        // the SAME stepsPerSecond — dividing back out is exact algebra,
+        // not a second, independently-tuned conversion: pulsesFor(s, bpm)
+        // = s * (bpm/60) * 960, and s = posAtHit / stepsPerSecond makes
+        // that resolve to posAtHit * STEP_PULSES, the identical quantity
+        // the needle-roll and playback clock already use for `p`.
+        val elapsedSeconds = posAtHit / stepsPerSecond
+        t.add(slot + 35, elapsedSeconds, bpm, velocity)
+    }
+
+    /**
+     * Arms RECORD. `preTake` is snapshotted here, once, regardless of
+     * which branch follows — Task 5's undo needs to know what was there
+     * BEFORE this take even in the from-scratch case, where that's `null`.
+     * Forces PROG A: recording always plays in against the base's own
+     * humanized read, never a derived program with a different bar count
+     * (HALF-TIME doubles `bars` — [LiveRecord.toClip] requires the take
+     * and the existing base agree on bar count, so this isn't optional).
+     *
+     * From-scratch (`base == null`): one bar of count-in — four
+     * [PadEngine.clickHit]s, accented on the first — because there is no
+     * loop yet to cue the user off of (Design Question 3). Each click is
+     * scheduled against a DEADLINE computed once from a single
+     * `System.nanoTime()` anchor (`startNanos + (beat+1) * beatNanos`),
+     * not four sequential `delay(beatMs)` calls — `delay` is a floor, not
+     * a deadline, so naively re-adding `beatMs` four times in a row
+     * compounds scheduler jitter into real, audible drift between what
+     * the clicks counted and when the clock actually starts. `posSteps`
+     * is reset to 0 right before `playing = true` so the clock's own
+     * downbeat lands where the fourth click implied it would, modulo the
+     * one frame of restart slop `playing = true` itself costs (the same
+     * "restarting costs nothing" cost normal PLAY/STOP toggling already
+     * pays — see the clock effect's own KDoc — bounded and tiny next to
+     * the multi-beat drift this scheduling fixes).
+     *
+     * Against an existing base: no count-in — the loop is already audibly
+     * playing (or `playing = true` starts it here), and playing IS the
+     * cue, matching every other drum machine's "record over what's
+     * already going." If it WASN'T already playing (stopped, needle left
+     * mid-bar), `posSteps` resets to 0 too: Design Question 3's "the loop
+     * is already audibly playing" premise doesn't hold in that sub-case,
+     * and starting the take from wherever the needle happened to be
+     * abandoned would give no downbeat reference at all — the base's own
+     * bar 1 is the only sane default when there's no click to lean on.
+     */
+    fun startRecording() {
+        if (busy || recording || countingIn) return
+        val armedBase = base
+        preTake = armedBase
+        take = LiveRecord.Take(armedBase?.bars ?: recordBars)
+        progIndex = 0
+        if (armedBase == null) {
+            countingIn = true
+            scope.launch {
+                val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
+                val beatNanos = (60_000_000_000.0 / bpm).toLong().coerceAtLeast(1L)
+                val startNanos = System.nanoTime()
+                for (beat in 0 until 4) {
+                    player.clickHit(accent = beat == 0)
+                    val deadlineNanos = startNanos + (beat + 1) * beatNanos
+                    val waitMs = (deadlineNanos - System.nanoTime()) / 1_000_000L
+                    if (waitMs > 0) delay(waitMs)
+                }
+                countingIn = false
+                recording = true
+                posSteps = 0f
+                playing = true
+            }
+        } else {
+            if (!playing) posSteps = 0f
+            recording = true
+            playing = true
+        }
+    }
+
+    /**
+     * Stops RECORD, lands whatever was captured, and updates `base`
+     * directly (Global Constraints: never bump `App.kt`'s `reloadRequest`
+     * on GROOVE's own write — that would re-run this screen's own load
+     * effect mid-take and blank it). A silent take (armed, then stopped
+     * with nothing played) lands nothing — [LiveRecord.land] itself
+     * refuses an empty note list, so this checks first rather than
+     * surfacing that refusal as a failure toast for what's actually a
+     * no-op.
+     *
+     * `eClip`/local E state is untouched: [LiveRecord.land] re-reads E
+     * fresh from disk and rides it along unmodified, so there's nothing
+     * here for this function to reconcile.
+     */
+    fun stopRecording() {
+        if (!recording) return
+        recording = false
+        val t = take
+        take = null
+        if (t == null || t.notes().isEmpty()) return
+        val landBase = base
+        val name = landBase?.name ?: "${kit.name} Take"
+        scope.launch {
+            try {
+                val clip = LiveRecord.toClip(t, name, existing = landBase)
+                withContext(Dispatchers.IO) { LiveRecord.land(kitDir, clip) }
+                base = clip
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("RECORD", e)
+            }
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Box(
-                Modifier.fillMaxWidth().height(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    TapeText("GROOVE", TapeType.lcd(23), scheme.lcdInk.tape)
-                    val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
-                    TapeText(
-                        "%.1f BPM · %d BARS · %d NOTES".format(bpm, currentClip?.bars ?: 0, currentClip?.notes?.size ?: 0),
-                        TapeType.lcdSmall,
-                        scheme.ink.tape,
-                    )
-                }
-            }
-
-            ProgramSelector(
-                name = PROG_NAMES[progIndex],
-                sub = PROG_SUBS[progIndex],
-                onPrev = { progIndex = (progIndex - 1 + progCount) % progCount },
-                onNext = { progIndex = (progIndex + 1) % progCount },
-                scheme = scheme,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            NeedleRoll(
-                clip = currentClip,
-                posSteps = posSteps,
-                playing = playing,
-                scheme = scheme,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-            )
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Box(
-                    Modifier
-                        .weight(1.2f)
-                        .height(Layout.MIN_HIT_TARGET.dp)
-                        .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
-                        .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-                        .tapeClick(label = null) { playing = !playing },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText(if (playing) "■ STOP" else "► PLAY", TapeType.pixel, scheme.lcdInk.tape)
-                }
-                Row(
-                    // Growing this row's own height is safe (NeedleRoll
-                    // above absorbs it via weight(1f)); growing the two
-                    // SwingSteppers' *width* to match is not — see
-                    // SwingStepper's own KDoc for why their width is
-                    // capped below Layout.MIN_HIT_TARGET.
-                    Modifier.weight(1.6f).height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    SwingStepper("−", scheme) { swingPercent = (swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN) }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
-                        TapeText("RIDES PROG B", TapeType.pixelSmall, scheme.ink3.tape)
+        val loadedBase = base
+        if (loadedBase == null) {
+            // From-scratch: no base yet, so none of A–E, swing, HUMANIZE,
+            // EDIT STEPS or MIDI have anything to operate on — EmptyGroove's
+            // own message stays the resting state, RECORD is the only
+            // control, and a take landing here is what turns this into the
+            // full screen below on the very next recomposition (`base`
+            // going non-null is a plain state update, not a re-mount — see
+            // this function's own KDoc on why the early return moved past
+            // the state declarations instead of forking into a second
+            // composable).
+            Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp)) {
+                Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        when {
+                            countingIn -> TapeText("COUNTING IN…", TapeType.lcd(19), scheme.amber.tape)
+                            recording -> TapeText("● RECORDING — LAY DOWN BAR 1", TapeType.lcd(19), scheme.amber.tape)
+                            else -> TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+                        }
                     }
-                    SwingStepper("+", scheme) { swingPercent = (swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX) }
+                    if (recording || countingIn) {
+                        // Live during the count-in too, not just once
+                        // `recording` flips true: a hit here still sounds
+                        // (the pad responds), it's only the CAPTURE
+                        // (`recordHit`'s own `recording` gate) that waits
+                        // for the click sequence to finish.
+                        BankRow(kit, glow, ::recordHit, {}, Modifier.weight(2f).fillMaxWidth())
+                    }
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(Layout.MIN_HIT_TARGET.dp)
+                            .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
+                            .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
+                            .let { m ->
+                                if (countingIn) {
+                                    m
+                                } else {
+                                    m.tapeClick(label = null) { if (recording) stopRecording() else startRecording() }
+                                }
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(
+                            when {
+                                countingIn -> "COUNTING IN…"
+                                recording -> "■ STOP RECORDING"
+                                else -> "● RECORD"
+                            },
+                            TapeType.pixel,
+                            scheme.lcdInk.tape,
+                        )
+                    }
                 }
             }
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                GrooveActionButton("HUMANIZE ⚄", scheme, Modifier.weight(1f), enabled = !busy) {
-                    seed++
-                    progIndex = 0
-                    onToast(Copy.HUMANIZED)
+        } else {
+            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Box(
+                    Modifier.fillMaxWidth().height(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        TapeText("GROOVE", TapeType.lcd(23), scheme.lcdInk.tape)
+                        val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
+                        TapeText(
+                            "%.1f BPM · %d BARS · %d NOTES".format(bpm, currentClip?.bars ?: 0, currentClip?.notes?.size ?: 0),
+                            TapeType.lcdSmall,
+                            scheme.ink.tape,
+                        )
+                    }
                 }
-                GrooveActionButton("EDIT STEPS", scheme, Modifier.weight(1f), enabled = !busy) { forkToE() }
-                GrooveActionButton("MIDI ▸", scheme, Modifier.weight(1f), enabled = !midiBusy, accent = true) { exportMidi() }
-            }
-            // SONG ▸ — the same four programs laid into a structure, not
-            // just cycled: intro/theme/variation/the turn/reprise/outro,
-            // one tap away from what this screen already has loaded.
-            GrooveActionButton("SONG ▸", scheme, Modifier.fillMaxWidth(), accent = true, onClick = onArrange)
 
-            TapeText(
-                "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
-                TapeType.pixelSmall,
-                scheme.ink3.tape,
-                Modifier.fillMaxWidth(),
-                maxLines = 2,
-            )
-            if (offLaneCount > 0) {
-                TapeText(Copy.offLane(offLaneCount), TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
+                ProgramSelector(
+                    name = PROG_NAMES[progIndex],
+                    sub = PROG_SUBS[progIndex],
+                    // Locked to PROG A while RECORD is armed or counting
+                    // in: switching to a derived program mid-take (HALF-
+                    // TIME doubles `bars`) would desync the clock's own
+                    // wrap point from `take.bars`, set once at arm time —
+                    // see startRecording's own KDoc.
+                    onPrev = { if (!recording && !countingIn) progIndex = (progIndex - 1 + progCount) % progCount },
+                    onNext = { if (!recording && !countingIn) progIndex = (progIndex + 1) % progCount },
+                    scheme = scheme,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                NeedleRoll(
+                    clip = currentClip,
+                    posSteps = posSteps,
+                    playing = playing,
+                    scheme = scheme,
+                    modifier = Modifier.weight(if (recording || countingIn) 1f else 1.6f).fillMaxWidth(),
+                )
+
+                if (recording || countingIn) {
+                    // RECORD's own surface, in place of the controls
+                    // below: PLAY/STOP is meaningless here (RECORD already
+                    // implies PLAY, and stopping playback mid-take would
+                    // freeze the clock `recordHit` interpolates against
+                    // without stopping the take), and HUMANIZE/EDIT STEPS/
+                    // MIDI all need a settled base, not one mid-overdub.
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        TapeText(
+                            if (countingIn) "COUNTING IN…" else "● RECORDING — OVERDUBBING ONTO PROG A",
+                            TapeType.pixel,
+                            scheme.amber.tape,
+                        )
+                    }
+                    BankRow(kit, glow, ::recordHit, {}, Modifier.weight(2f).fillMaxWidth())
+                    GrooveActionButton(
+                        if (countingIn) "COUNTING IN…" else "■ STOP RECORDING",
+                        scheme,
+                        Modifier.fillMaxWidth(),
+                        enabled = !countingIn,
+                        accent = true,
+                    ) { stopRecording() }
+                } else {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Box(
+                            Modifier
+                                .weight(1.2f)
+                                .height(Layout.MIN_HIT_TARGET.dp)
+                                .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
+                                .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
+                                .tapeClick(label = null) { playing = !playing },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TapeText(if (playing) "■ STOP" else "► PLAY", TapeType.pixel, scheme.lcdInk.tape)
+                        }
+                        Row(
+                            // Growing this row's own height is safe (NeedleRoll
+                            // above absorbs it via weight(1f)); growing the two
+                            // SwingSteppers' *width* to match is not — see
+                            // SwingStepper's own KDoc for why their width is
+                            // capped below Layout.MIN_HIT_TARGET.
+                            Modifier.weight(1.6f).height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            SwingStepper("−", scheme) { swingPercent = (swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN) }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
+                                TapeText("RIDES PROG B", TapeType.pixelSmall, scheme.ink3.tape)
+                            }
+                            SwingStepper("+", scheme) { swingPercent = (swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX) }
+                        }
+                    }
+
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        GrooveActionButton("HUMANIZE ⚄", scheme, Modifier.weight(1f), enabled = !busy) {
+                            seed++
+                            progIndex = 0
+                            onToast(Copy.HUMANIZED)
+                        }
+                        GrooveActionButton("EDIT STEPS", scheme, Modifier.weight(1f), enabled = !busy) { forkToE() }
+                        GrooveActionButton("MIDI ▸", scheme, Modifier.weight(1f), enabled = !midiBusy, accent = true) { exportMidi() }
+                    }
+                    // SONG ▸ — the same four programs laid into a structure, not
+                    // just cycled: intro/theme/variation/the turn/reprise/outro,
+                    // one tap away from what this screen already has loaded.
+                    GrooveActionButton("SONG ▸", scheme, Modifier.fillMaxWidth(), accent = true, onClick = onArrange)
+                    GrooveActionButton("● RECORD", scheme, Modifier.fillMaxWidth(), enabled = !busy && !midiBusy) { startRecording() }
+
+                    TapeText(
+                        "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
+                        TapeType.pixelSmall,
+                        scheme.ink3.tape,
+                        Modifier.fillMaxWidth(),
+                        maxLines = 2,
+                    )
+                    if (offLaneCount > 0) {
+                        TapeText(Copy.offLane(offLaneCount), TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
+                    }
+                }
             }
         }
 
