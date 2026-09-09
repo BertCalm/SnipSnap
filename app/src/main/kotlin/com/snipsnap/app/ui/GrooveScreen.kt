@@ -63,6 +63,7 @@ import com.snipsnap.kit.LiveRecord
 import com.snipsnap.kit.MidiGroove
 import com.snipsnap.kit.Names
 import com.snipsnap.mpc3.Mpc3Clip
+import com.snipsnap.mpc3.Mpc3Note
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
@@ -1078,6 +1079,12 @@ fun GrooveScreen(
                             playing = playing,
                             scheme = scheme,
                             modifier = Modifier.weight(1f).fillMaxWidth(),
+                            // This is the branch where it matters most:
+                            // from-scratch means `currentClip` is null, so
+                            // without the live take this roll draws nothing
+                            // but its own needle and bar labels — the user
+                            // plays a whole take into a blank grid.
+                            liveNotes = take?.notes().orEmpty(),
                         )
                         else -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                             TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
@@ -1177,6 +1184,10 @@ fun GrooveScreen(
                     playing = playing,
                     scheme = scheme,
                     modifier = Modifier.weight(if (recording || countingIn) 1f else 1.6f).fillMaxWidth(),
+                    // Re-read every frame: `posSteps` advances on each
+                    // withFrameNanos tick, so this composition re-runs and
+                    // picks up whatever the take has accumulated since.
+                    liveNotes = if (recording) take?.notes().orEmpty() else emptyList(),
                 )
 
                 if (recording || countingIn) {
@@ -1333,7 +1344,13 @@ private fun ProgramSelector(
 ) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(
-            Modifier.width(Layout.MIN_HIT_TARGET.dp).fillMaxHeight().height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 6.dp).tapeClick(label = null, onClick = onPrev),
+            // No fillMaxHeight here. A Row sizes to its tallest child, so a
+            // child filling the incoming max height makes this whole Row
+            // claim the Column's remaining space — which starved NeedleRoll's
+            // weight(1.6f) to nothing and pushed the action rows and RECORD
+            // clean off the screen. The ► button never had it, which is why
+            // only ◄ stretched. Both are a plain 48dp square.
+            Modifier.width(Layout.MIN_HIT_TARGET.dp).height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 6.dp).tapeClick(label = null, onClick = onPrev),
             contentAlignment = Alignment.Center,
         ) {
             TapeText("◄", TapeType.lcd(19), scheme.ink.tape)
@@ -1415,6 +1432,20 @@ private fun NeedleRoll(
     playing: Boolean,
     scheme: Scheme,
     modifier: Modifier = Modifier,
+    /**
+     * Notes captured by the take in progress, drawn on top of [clip]'s in
+     * the accent colour.
+     *
+     * Without this the roll shows only what is already SAVED, so a take is
+     * invisible while it is being played: you hit eighteen pads, the pads
+     * flash, and the roll stays exactly as it was until you stop. On a
+     * from-scratch take there is no [clip] at all, so you play into an
+     * empty roll with nothing to tell you anything landed. Drawing the
+     * live take answers the only question that matters mid-take — "is it
+     * getting this?" — and the accent colour answers the second one on an
+     * overdub: which of these did I just play.
+     */
+    liveNotes: List<Mpc3Note> = emptyList(),
 ) {
     val density = LocalDensity.current
     BoxWithConstraints(modifier.lcdPanel(scheme)) {
@@ -1463,6 +1494,26 @@ private fun NeedleRoll(
                 }
                 drawRoundRect(
                     color = color.copy(alpha = alpha),
+                    topLeft = Offset(x, y),
+                    size = Size(noteW, noteH),
+                    cornerRadius = CornerRadius(2.dp.toPx()),
+                )
+            }
+
+            // The take in progress, over the saved clip and in the accent
+            // colour so an overdub reads as "these are the ones I just
+            // played". Same geometry as above deliberately: a note must
+            // sit where it will sit once landed, or the roll would be
+            // lying about what was captured.
+            liveNotes.forEach { n ->
+                val lane = NOTE_TO_LANE[n.note] ?: return@forEach
+                val laneIndex = LANE_ORDER.indexOf(lane)
+                val p = n.timePulses.toFloat() / GrooveEdit.STEP_PULSES.toFloat()
+                val y = needleY + (p - posSteps) * stepW
+                if (y < -noteH || y > size.height) return@forEach
+                val x = laneLeft + laneIndex * columnW + (columnW - noteW) / 2f
+                drawRoundRect(
+                    color = scheme.amber.tape.copy(alpha = 0.45f + 0.55f * n.velocity),
                     topLeft = Offset(x, y),
                     size = Size(noteW, noteH),
                     cornerRadius = CornerRadius(2.dp.toPx()),
