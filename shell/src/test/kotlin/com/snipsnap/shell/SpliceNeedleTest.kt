@@ -57,6 +57,17 @@ class SpliceNeedleTest {
     }
 
     @Test
+    fun `an equally near zero crossing in the head beats one in the tail`() {
+        // Tail crosses 5 frames before the needle, head crosses 5 frames
+        // after: a tie in distance. A single scan by frame index would hand
+        // it to the tail's earlier frame; the documented tie-break is the head.
+        val a = FloatArray(rate) { if (it < 1_005) 1f else -1f } // head crosses at 1005
+        val b = FloatArray(rate) { if (it < 995) 1f else -1f } // tail crosses at 995
+        val snapped = SpliceNeedle.snap(1_000, rate - 1, a, IntArray(0), b, IntArray(0), rate)
+        assertEquals(1_005, snapped, "the head keeps a tie, in the zero-crossing stage too")
+    }
+
+    @Test
     fun `with nothing to snap to, the clamped frame is returned unchanged`() {
         val mono = FloatArray(rate) // silence: no crossings, no onsets
         assertEquals(500, SpliceNeedle.snap(500, rate - 1, mono, IntArray(0), mono, IntArray(0), rate))

@@ -71,20 +71,40 @@ object SpliceNeedle {
     private fun isZeroCrossing(mono: FloatArray, i: Int): Boolean =
         i in 1 until mono.size && (mono[i - 1] < 0) != (mono[i] < 0)
 
+    /**
+     * The nearest zero crossing to [frame] in either take, within
+     * [ZERO_SPAN_FRAMES]. Each take is searched on its own and the head's
+     * candidate keeps a tie — the same order [nearestOnset] scans in, so
+     * the class's "a tie favors the head" contract holds for both stages,
+     * not just the first. Within one take an equidistant pair (one each
+     * side of the needle) resolves to the earlier frame.
+     */
     private fun nearestZero(frame: Int, monoA: FloatArray, monoB: FloatArray, maxFrame: Int): Int {
         val from = (frame - ZERO_SPAN_FRAMES).coerceAtLeast(1)
         val to = (frame + ZERO_SPAN_FRAMES).coerceAtMost(maxFrame)
+        val a = nearestZeroIn(monoA, frame, from, to)
+        val b = nearestZeroIn(monoB, frame, from, to)
+        return when {
+            a < 0 && b < 0 -> frame
+            a < 0 -> b
+            b < 0 -> a
+            abs(b - frame) < abs(a - frame) -> b
+            else -> a
+        }
+    }
+
+    /** Nearest zero crossing to [frame] in one take over `[from, to]`, or -1 when there is none. */
+    private fun nearestZeroIn(mono: FloatArray, frame: Int, from: Int, to: Int): Int {
         var best = -1
         var bestDist = Int.MAX_VALUE
         for (i in from..to) {
-            if (isZeroCrossing(monoA, i) || isZeroCrossing(monoB, i)) {
-                val d = abs(i - frame)
-                if (d < bestDist) {
-                    bestDist = d
-                    best = i
-                }
+            if (!isZeroCrossing(mono, i)) continue
+            val d = abs(i - frame)
+            if (d < bestDist) {
+                bestDist = d
+                best = i
             }
         }
-        return if (best >= 0) best else frame
+        return best
     }
 }
