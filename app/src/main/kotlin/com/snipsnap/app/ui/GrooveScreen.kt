@@ -557,7 +557,7 @@ fun GrooveScreen(
                 Box(
                     Modifier
                         .weight(1.2f)
-                        .height(44.dp)
+                        .height(Layout.MIN_HIT_TARGET.dp)
                         .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                         .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
                         .tapeClick(label = null) { playing = !playing },
@@ -566,7 +566,12 @@ fun GrooveScreen(
                     TapeText(if (playing) "■ STOP" else "► PLAY", TapeType.pixel, scheme.lcdInk.tape)
                 }
                 Row(
-                    Modifier.weight(1.6f).height(44.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
+                    // Growing this row's own height is safe (NeedleRoll
+                    // above absorbs it via weight(1f)); growing the two
+                    // SwingSteppers' *width* to match is not — see
+                    // SwingStepper's own KDoc for why their width is
+                    // capped below Layout.MIN_HIT_TARGET.
+                    Modifier.weight(1.6f).height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
@@ -642,13 +647,13 @@ private fun ProgramSelector(
 ) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(
-            Modifier.width(44.dp).fillMaxHeight().height(46.dp).raisedBevel(scheme, 6.dp).tapeClick(label = null, onClick = onPrev),
+            Modifier.width(Layout.MIN_HIT_TARGET.dp).fillMaxHeight().height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 6.dp).tapeClick(label = null, onClick = onPrev),
             contentAlignment = Alignment.Center,
         ) {
             TapeText("◄", TapeType.lcd(19), scheme.ink.tape)
         }
         Column(
-            Modifier.weight(1f).height(46.dp).lcdPanel(scheme).padding(vertical = 5.dp),
+            Modifier.weight(1f).height(Layout.MIN_HIT_TARGET.dp).lcdPanel(scheme).padding(vertical = 5.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -656,7 +661,7 @@ private fun ProgramSelector(
             TapeText(sub, TapeType.pixelSmall, scheme.ink3.tape)
         }
         Box(
-            Modifier.width(44.dp).height(46.dp).raisedBevel(scheme, 6.dp).tapeClick(label = null, onClick = onNext),
+            Modifier.width(Layout.MIN_HIT_TARGET.dp).height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 6.dp).tapeClick(label = null, onClick = onNext),
             contentAlignment = Alignment.Center,
         ) {
             TapeText("►", TapeType.lcd(19), scheme.ink.tape)
@@ -664,10 +669,24 @@ private fun ProgramSelector(
     }
 }
 
+/**
+ * Height raised to [Layout.MIN_HIT_TARGET] (was 36dp) — free to grow,
+ * since NeedleRoll above absorbs the extra row height. Width only raised
+ * to 40dp (was 32dp), not the full 48: this stepper shares a
+ * `SpaceBetween` row (the swing container in `GrooveScreen`, roughly
+ * 1.6/2.8 of the frame width after margins - about 200dp) with a
+ * two-line text readout ("SWING NN%" / "RIDES PROG B") that has no
+ * `weight()` of its own. Two 48dp-wide steppers (+32dp total over the old
+ * 32dp) leave that readout markedly less room on a narrower-than-390dp
+ * phone; two 40dp steppers (+16dp total) is the width this control
+ * reaches without that risk - under the 48dp floor, but a real
+ * improvement over 32dp, and height (the axis that was actually free to
+ * grow) clears the floor in full.
+ */
 @Composable
 private fun SwingStepper(label: String, scheme: Scheme, onClick: () -> Unit) {
     Box(
-        Modifier.width(32.dp).height(36.dp).raisedBevel(scheme, 4.dp).tapeClick(label = null, onClick = onClick),
+        Modifier.width(40.dp).height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 4.dp).tapeClick(label = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(label, TapeType.lcd(19), scheme.ink.tape)
@@ -685,7 +704,7 @@ private fun GrooveActionButton(
 ) {
     Box(
         modifier
-            .height(36.dp)
+            .height(Layout.MIN_HIT_TARGET.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
             .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(6.dp))
             .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it },
@@ -854,7 +873,7 @@ private fun StepEditorOverlay(
                 TapeText("STEP EDIT — PROG E", TapeType.lcd(20), scheme.lcdInk.tape, Modifier.weight(1f))
                 Box(
                     Modifier
-                        .height(30.dp)
+                        .height(Layout.MIN_HIT_TARGET.dp)
                         .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
                         .tapeClick(label = null, onClick = onDone)
                         .padding(horizontal = 12.dp),
@@ -870,7 +889,7 @@ private fun StepEditorOverlay(
                     Box(
                         Modifier
                             .weight(1f)
-                            .height(26.dp)
+                            .height(Layout.MIN_HIT_TARGET.dp)
                             .let { if (selected) it.pressedBevel(scheme, 4.dp) else it.sunkenField(scheme, 4.dp) }
                             .tapeClick(label = null) { onBarSelect(bar) },
                         contentAlignment = Alignment.Center,
@@ -879,13 +898,28 @@ private fun StepEditorOverlay(
                     }
                 }
                 Box(
-                    Modifier.height(26.dp).sunkenField(scheme, 4.dp).tapeClick(label = null, onClick = onClear).padding(horizontal = 10.dp),
+                    Modifier.height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 4.dp).tapeClick(label = null, onClick = onClear).padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     TapeText("CLEAR BAR", TapeType.pixelSmall, scheme.ink2.tape)
                 }
             }
 
+            // The 16-step grid: hard geometry (16 columns across ~340dp of
+            // remaining width after the lane rail, on a 390dp frame) that
+            // cannot grow visually without breaking the layout the
+            // artboard itself specifies (comment on this composable's own
+            // KDoc). Fixed by expanding the *touch* target instead of the
+            // drawn size (accessibility audit findings 1/9): each lane Row
+            // used to space its 16 cells with `Arrangement.spacedBy(3.dp)`,
+            // which left the 3dp gaps between cells as dead touch space —
+            // nothing was clickable there. Below, the outer per-cell Box
+            // (fillMaxHeight + weight(1f), no gap) is what carries the tap
+            // handler and gets the *full* undivided slot; the visual
+            // fill/border are drawn on an inset 1.5dp padding inside it, so
+            // the painted cell is visually within ~0.2dp of its old size
+            // (imperceptible) while its actual hit rect is ~3dp wider,
+            // reclaiming exactly the gap that used to be unclickable.
             Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 for (lane in LANE_ORDER) {
                     val laneColor = LANE_DRUM_CLASS[lane]?.let { Schemes.classColor(it).tape } ?: scheme.ink.tape
@@ -897,27 +931,30 @@ private fun StepEditorOverlay(
                         ) {
                             TapeText(LANE_LABEL.getValue(lane), TapeType.pixelSmall, laneColor)
                         }
-                        for (col in 0 until GrooveEdit.STEPS_PER_BAR) {
-                            val on = col in laneOnSteps
-                            val isPlayhead = col == playheadCol
-                            val fillColor = when {
-                                on -> laneColor
-                                col % 4 == 0 -> scheme.field.tape
-                                else -> scheme.lcd.tape
+                        Row(Modifier.weight(1f).fillMaxHeight()) {
+                            for (col in 0 until GrooveEdit.STEPS_PER_BAR) {
+                                val on = col in laneOnSteps
+                                val isPlayhead = col == playheadCol
+                                val fillColor = when {
+                                    on -> laneColor
+                                    col % 4 == 0 -> scheme.field.tape
+                                    else -> scheme.lcd.tape
+                                }
+                                val step = editorBar * GrooveEdit.STEPS_PER_BAR + col
+                                Box(
+                                    Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .tapeClick(label = null) { onToggle(lane, step) }
+                                        .padding(1.5.dp)
+                                        .background(fillColor, RoundedCornerShape(3.dp))
+                                        .border(
+                                            1.dp,
+                                            if (isPlayhead) scheme.lcdInk.tape else scheme.grayEdge.tape,
+                                            RoundedCornerShape(3.dp),
+                                        ),
+                                )
                             }
-                            val step = editorBar * GrooveEdit.STEPS_PER_BAR + col
-                            Box(
-                                Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .background(fillColor, RoundedCornerShape(3.dp))
-                                    .border(
-                                        1.dp,
-                                        if (isPlayhead) scheme.lcdInk.tape else scheme.grayEdge.tape,
-                                        RoundedCornerShape(3.dp),
-                                    )
-                                    .tapeClick(label = null) { onToggle(lane, step) },
-                            )
                         }
                     }
                 }

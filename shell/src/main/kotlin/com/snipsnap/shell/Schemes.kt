@@ -358,8 +358,19 @@ object Layout {
      * zero, not to the floor. Fixed twice on exactly that pattern — SYNTH's
      * `MacroSlider` and PADS SHEET's `StepperSlider` — by giving the track a
      * bounded `.height(MIN_HIT_TARGET.dp)` instead.
+     *
+     * Was 44 — 4dp under Android's 48dp accessibility minimum (WCAG 2.5.5 /
+     * Android's own touch-target guidance) — applied consistently via
+     * `heightIn(min = ...)` at ~70 call sites, so every one of them is a
+     * floor, not a fixed size: raising it only ever grows a row, never
+     * shrinks one. Every call site sits in a `fillMaxSize()`/scrollable
+     * column with a flexible sibling absorbing the difference (verified:
+     * KIT's action rows and PAD SHEET's body both scroll under a fixed
+     * header/nav; GROOVE's transport rows sit above a `weight(1f)`
+     * NeedleRoll) — no fixed-pixel frame in this app clips content when a
+     * row grows by 4dp.
      */
-    const val MIN_HIT_TARGET = 44
+    const val MIN_HIT_TARGET = 48
 
     /** LCD headers run 40–44 depending on whether they carry a counter. */
     const val LCD_HEADER_MAX_H = 44
