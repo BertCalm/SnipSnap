@@ -132,6 +132,8 @@ private const val PAD_SHEET_HINT_LIMIT = 3
 private const val PAD_SHEET_FOUND = -1
 /** The most a shared kit file may be before it is copied for the shelf: a whole backup fits, a video never needs to. */
 private const val LANDING_MAX_BYTES = 512L * 1024 * 1024
+/** CHOP ALL's own per-file cache-copy ceiling — sized for one WAV, not a whole kit/backup zip like [LANDING_MAX_BYTES] above (same 96 MB reasoning as MediaDecode's own MAX_WAV_BYTES). */
+private const val CHOP_ALL_MAX_FILE_BYTES = 96L * 1024 * 1024
 
 /**
  * TAPE's COMMIT sets this; CHOP reads it. [sourceFile] is the exact WAV
@@ -748,6 +750,84 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * CHOP ALL (XX3 wired in): every picked `.wav` through the same
+     * auto-chop pipeline INSTANT KIT already uses (`InstantKit.build` —
+     * `ChopReviewModel.chop` → `sendToGrid()` → `KitBuilderModel.fromChop`,
+     * the exact chain SEND TO GRID and INSTANT KIT both already run), one
+     * new kit per file, named after the file. Deliberately NOT
+     * `ChopAllCommand.run`/`ChopCommand.chop` (`:cli`) themselves: that
+     * pipeline decodes with the unbounded `WavReader.read`
+     * (`ChopCommand.kt:109`) and fans out export/artwork files the shelf's
+     * own kit reader never expects — exactly the OOM/scope-creep risk
+     * `ConventionTest`'s Law 4 exists to keep out of `:app`. `InstantKit`
+     * is the tested, already-shipped app-safe equivalent of the same idea;
+     * this only adds the batch shape `ChopAllCommand` has and `InstantKit`
+     * doesn't — one file's failure is named, never fatal, and one summary
+     * toast covers the whole run.
+     *
+     * [uris] come straight off the multi-file picker below — arbitrary
+     * `content://` URIs, not `File`s, so [ShareInbox.copyToCache] (already
+     * tested, already used for the share-sheet's own single-file door)
+     * makes each one real before it's decoded. One file at a time, fully
+     * consumed (decoded, chopped, deleted) before the next copy reuses the
+     * same cache slot — no batch-wide temp folder needed for that alone.
+     */
+    fun chopAll(uris: List<Uri>) {
+        if (uris.isEmpty() || busy != null) return
+        busy = Copy.CHOP_ALL_BUSY
+        scope.launch {
+            var wavCount = 0
+            var made = 0
+            var failed = 0
+            var skipped = 0
+            try {
+                withContext(Dispatchers.IO) {
+                    shelf.root.mkdirs()
+                    for (uri in uris) {
+                        val displayName = ShareInbox.displayName(context, uri)
+                        if (!displayName.endsWith(".wav", ignoreCase = true)) {
+                            skipped++
+                            continue
+                        }
+                        wavCount++
+                        var local: File? = null
+                        try {
+                            local = ShareInbox.copyToCache(context, uri, displayName, CHOP_ALL_MAX_FILE_BYTES)
+                            val snip = Cleanup.toMono(WavReader.readCapped(local, TAPE_LOAD_MAX_SEC).snip)
+                            val kitName = shelf.freshName(local.nameWithoutExtension)
+                            val kitDir = File(shelf.root, kitName)
+                            KitWrites.mutex.withLock { InstantKit.build(snip, kitName, kitDir) }
+                            made++
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // Law 3, and ChopAllCommand's own promise: named,
+                            // never fatal - file forty-one must not stop
+                            // file forty-two.
+                            failed++
+                        } finally {
+                            local?.delete()
+                        }
+                    }
+                }
+            } finally {
+                busy = null
+            }
+            kits = withContext(Dispatchers.IO) { shelf.list() }
+            toast = if (wavCount == 0) Copy.CHOP_ALL_NO_WAVS else Copy.choppedAll(made, wavCount, skipped, failed)
+        }
+    }
+
+    // CHOP ALL's own multi-file picker — ACTION_OPEN_DOCUMENT with multiple
+    // selection, filtered to audio up front so the chooser itself is
+    // already the right shape; [chopAll] still checks each name against
+    // `.wav` afterward (ChopAllCommand's own rule), since a picker's MIME
+    // filter is a hint to the chooser, not a guarantee of what it returns.
+    val chopAllPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris -> chopAll(uris) }
+
+    /**
      * SNIPS → PAD's landing (Task 3): fired by the next empty-pad long-press
      * once a kit is open with [pendingSnipAssign] armed. `KitScreen.kt`
      * itself is unmodified for this — the KIT branch's own `onEmptyLongPress`
@@ -1342,6 +1422,7 @@ fun App(shelf: KitShelf) {
                                 },
                                 onEject = { MicSessionService.eject(context) },
                                 onBackup = ::backupShelf,
+                                onChopAll = { chopAllPickerLauncher.launch(arrayOf("audio/*")) },
                                 onSnips = { snipsOpen = true },
                                 assigningSnip = pendingSnipAssign != null,
                                 breedingFrom = pendingBreedWith,

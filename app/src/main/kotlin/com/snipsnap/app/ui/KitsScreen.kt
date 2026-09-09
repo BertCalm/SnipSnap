@@ -83,6 +83,8 @@ fun KitsScreen(
     onEject: () -> Unit,
     /** BACKUP (X3.3): every kit on one file, handed to the chooser. */
     onBackup: () -> Unit,
+    /** CHOP ALL (XX3 wired in): opens the multi-file picker, one new kit per picked .wav. */
+    onChopAll: () -> Unit = {},
     /** SNIPS (Task 3): every catch on the phone, one list — play, assign to a pad, open in TAPE, or delete. */
     onSnips: () -> Unit = {},
     /**
@@ -273,6 +275,21 @@ fun KitsScreen(
                 enabled = !busy && kits.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onBackup,
+            )
+            // CHOP ALL (XX3 wired in): a multi-file picker's worth of .wav
+            // files, each through the same auto-chop CHOP itself uses with
+            // the defaults, one new kit per file — the crate-digging verb.
+            // Shelf-level, not CHOP's own action row: CHOP SHOP always
+            // works on one already-loaded source (TAPE's last commit, or
+            // the open kit's own fallback sample); this has no such source
+            // and makes many kits, not many pads in one, so it lives beside
+            // BACKUP/SNIPS instead.
+            ActionButton(
+                "CHOP ALL ▸ EVERY FILE, ONE KIT",
+                scheme,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onChopAll,
             )
             // SNIPS: always openable, even with zero snips yet (its own
             // empty state says so) — unlike BACKUP above, this isn't gated

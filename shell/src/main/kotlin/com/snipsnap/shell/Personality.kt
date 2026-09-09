@@ -396,6 +396,28 @@ object Copy {
     /** INSTANT KIT: the one tap, then the same words SEND TO GRID says. */
     fun instantKit(sliceCount: Int, chokeSet: Boolean): String = "ONE TAP. " + sentToGrid(sliceCount, chokeSet)
 
+    // ---- CHOP ALL: the crate-digging verb, wired in ----
+    /** CHOP ALL's busy line while every picked .wav chops in turn — same DUBBING…/BREEDING… shape. */
+    const val CHOP_ALL_BUSY = "CHOPPING…"
+    /** The picker returned files, but none of them were .wav — `ChopAllCommand`'s own refusal, said in words instead of a CLI exit code. */
+    const val CHOP_ALL_NO_WAVS = "NONE OF THAT WAS A .WAV. PICK SOME AND TRY AGAIN."
+    /**
+     * CHOP ALL's own toast: [made] kits actually landed out of [wavCount]
+     * .wav files it tried — the same "chopped N of M files" shape
+     * `ChopAllCommand` itself prints — with [failed] (threw mid-chop; a
+     * bad transient read, silence, whatever) and [skipped] (not a .wav at
+     * all) named only when either is above zero. A file failing never
+     * fails the batch — `ChopAllCommand`'s whole point, carried over here.
+     */
+    fun choppedAll(made: Int, wavCount: Int, skipped: Int, failed: Int): String {
+        val extra = buildList {
+            if (failed > 0) add("$failed FAILED")
+            if (skipped > 0) add("$skipped SKIPPED (NOT .WAV)")
+        }
+        val tail = if (extra.isEmpty()) "" else " — ${extra.joinToString(", ")}"
+        return "CHOPPED $made OF $wavCount FILES INTO $made ${if (made == 1) "KIT" else "KITS"}$tail."
+    }
+
     // ---- CHOP: the chip itself (HANDOFF.md — "chip tap = cycle class label, 'YOU ✓'") ----
     /** A chip under the confidence threshold, in its own words. */
     const val CHIP_NOT_SURE = "NOT SURE"
