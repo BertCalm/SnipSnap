@@ -345,6 +345,8 @@ object Copy {
     const val SPLICE_NEEDS_HISTORY =
         "SPLICE WANTS AT LEAST ONE PRIOR TAKE. RE-TRIM OR TREAT THIS PAD FIRST - ITS OLD AUDIO WAITS IN THE BIN."
     const val SPLICE_KIT_GONE = "THIS PAD ISN'T THERE ANY MORE."
+    /** The slot was reassigned while SPLICE was open: the takes belong to a pad that no longer lives here, so nothing is written. */
+    const val SPLICE_PAD_CHANGED = "THIS SLOT HOLDS A DIFFERENT PAD NOW. NOTHING WAS TOUCHED."
     const val SPLICE_TAKE_UNREADABLE = "ONE OF THOSE TAKES WON'T READ ANY MORE. PICK ANOTHER PAIR."
     /** `TapeSplice.join`'s own refusal, said before the needle ever shows: a mutated (stereo) take against its mono original, or two rates. */
     const val SPLICE_FORMATS_DIFFER =

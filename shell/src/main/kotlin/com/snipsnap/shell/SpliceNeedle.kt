@@ -12,7 +12,7 @@ import kotlin.math.abs
  */
 object SpliceNeedle {
 
-    /** How close an onset has to be to win, in frames — [TapeDeckModel.SNAP_POINT_SEC]'s own window. */
+    /** How close an onset has to be to win, in seconds (converted to frames via the sample rate in [snap]) — [TapeDeckModel.SNAP_POINT_SEC]'s own window. */
     const val ONSET_SNAP_SEC = 0.12
 
     /** How far either side of the onset-snapped frame a zero crossing is searched, in frames. */
@@ -20,9 +20,10 @@ object SpliceNeedle {
 
     /**
      * Where the needle lands from [frame]: the nearer of [onsetsA] and
-     * [onsetsB] within [ONSET_SNAP_SEC] of [sampleRate] wins first; then
-     * the nearest zero crossing in either [monoA] or [monoB] within
-     * [ZERO_SPAN_FRAMES]; clamped to `[0, maxFrame]` throughout.
+     * [onsetsB] within [ONSET_SNAP_SEC] seconds (that is,
+     * `ONSET_SNAP_SEC * sampleRate` frames) wins first; then the nearest
+     * zero crossing in either [monoA] or [monoB] within [ZERO_SPAN_FRAMES]
+     * frames; clamped to `[0, maxFrame]` throughout.
      */
     fun snap(
         frame: Int,

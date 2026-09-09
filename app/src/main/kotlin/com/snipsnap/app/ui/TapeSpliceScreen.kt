@@ -89,6 +89,12 @@ fun TapeSpliceScreen(
     var model by remember(entry.dir) { mutableStateOf<KitBuilderModel?>(null) }
     var loadFailed by remember(entry.dir) { mutableStateOf(false) }
     var candidates by remember(entry.dir) { mutableStateOf<List<Take>>(emptyList()) }
+    // The pad this screen opened on, by its file - COMMIT's identity check.
+    // A slot reassigned underneath an open overlay is exactly the
+    // "Frankenstein entry" PadSheetScreen's onDesample already guards
+    // against; splicing these takes into a stranger's pad would silently
+    // overwrite its audio.
+    var liveSampleFile by remember(entry.dir) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(entry.dir, slot) {
         loadFailed = false
@@ -103,6 +109,7 @@ fun TapeSpliceScreen(
             return@LaunchedEffect
         }
         model = opened
+        liveSampleFile = pad.sampleFile
         val prior = opened.priorTakes(slot)
         candidates = listOf(Take.Live(File(entry.dir, pad.sampleFile))) + prior.map { Take.Prior(it) }
     }
@@ -215,9 +222,17 @@ fun TapeSpliceScreen(
                         scope.launch {
                             try {
                                 var result: TapeSplice.Spliced? = null
+                                var refusal: String? = null
+                                val openedOn = liveSampleFile
                                 val fresh = withFreshKit(entry.dir) { f ->
-                                    if (f.kit.pad(slot) != null) {
-                                        result = f.splicePad(slot, lh.original, needleFrame, lt.original, needleFrame)
+                                    val freshPad = f.kit.pad(slot)
+                                    when {
+                                        freshPad == null -> refusal = Copy.SPLICE_KIT_GONE
+                                        // Same slot, different pad: the takes on
+                                        // screen aren't this pad's history, so
+                                        // nothing is written (see liveSampleFile).
+                                        freshPad.sampleFile != openedOn -> refusal = Copy.SPLICE_PAD_CHANGED
+                                        else -> result = f.splicePad(slot, lh.original, needleFrame, lt.original, needleFrame)
                                     }
                                 }
                                 val spliced = result
@@ -226,9 +241,7 @@ fun TapeSpliceScreen(
                                     onToast(Copy.spliced(spliced.crossfaded))
                                     onBack()
                                 } else {
-                                    // `result` stays null only when the fresh
-                                    // model no longer has this pad at all.
-                                    onToast(Copy.SPLICE_KIT_GONE)
+                                    onToast(refusal ?: Copy.SPLICE_KIT_GONE)
                                 }
                             } catch (e: Exception) {
                                 if (e is CancellationException) throw e
