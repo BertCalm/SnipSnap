@@ -1,6 +1,9 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.CaptureDoctor
+import com.snipsnap.audio.Classification
+import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.CleanupConfig
 import com.snipsnap.audio.Resampler
@@ -30,19 +33,39 @@ object SnipStore {
      */
     private const val SILENT_FALLBACK_MS = 200f
 
-    private val NAME = Regex("""snip_(\d+)\.wav""")
+    /**
+     * `snip_<capturedMillis>.wav` (legacy/neutral) or
+     * `snip_<capturedMillis>_<name>.wav` (named) — the name half is
+     * optional and additional, never a replacement for the timestamp
+     * [parsedTimestamp] (and every caller of it: [list]/[newest]/
+     * [listWithInfo]) already sorts and identifies a snip by. `(.+)` rather
+     * than a stricter character class because a future rename only needs to
+     * be gated by filesystem safety, not by whatever this regex alone would
+     * otherwise accept.
+     */
+    private val NAME = Regex("""snip_(\d+)(?:_(.+))?\.wav""")
+
+    /**
+     * A capture's own filename, given its true capture time and its name
+     * half (null for the neutral fallback). The one place that assembles
+     * this shape — today just [freshFile] — so the grammar [NAME] parses
+     * can never drift from what actually gets written.
+     */
+    private fun fileName(capturedAtMillis: Long, name: String?): String =
+        if (name.isNullOrBlank()) "snip_$capturedAtMillis.wav" else "snip_${capturedAtMillis}_$name.wav"
 
     /**
      * Runs [samples] through the commit-time [Cleanup] chain (DC offset,
      * then trim, then normalise, then fades — the order [Cleanup] documents
      * as load-bearing), then [CaptureDoctor]'s default visit (no denoise, no
      * declip, no deverb — those repairs stay opt-in for a later screen; only
-     * the diagnosis rides along, unused here), then writes the result to
-     * `root/snips/snip_<nowMillis>.wav` via [AtomicFile] — a write-then-
-     * rename, so a process killed mid-write (a foreground mic service
-     * holding an 8MB ring buffer is exactly the kind of thing Android kills)
-     * never leaves a torn WAV for [list]/[newest] to surface and
-     * [com.snipsnap.audio.WavReader] to choke on.
+     * the diagnosis rides along, unused here), then classifies the result
+     * (see [autoName]) and writes it to `root/snips/snip_<nowMillis>.wav`
+     * (or `..._<Name>.wav` when the classifier earned its keep) via
+     * [AtomicFile] — a write-then-rename, so a process killed mid-write (a
+     * foreground mic service holding an 8MB ring buffer is exactly the kind
+     * of thing Android kills) never leaves a torn WAV for [list]/[newest]
+     * to surface and [com.snipsnap.audio.WavReader] to choke on.
      *
      * A quiet room trims to nothing under [Cleanup] — that is not an error.
      * Rather than hand an empty buffer to the doctor (or throw), this takes
@@ -82,18 +105,59 @@ object SnipStore {
                 "capture at 44.1 kHz"
         }
 
-        val file = freshFile(root, nowMillis)
+        // Named here, before the file exists: this is the one point in the
+        // pipeline that already holds a full Snip (not just bytes), which
+        // is what Classifier.classify needs. The all-silence fallback above
+        // still flows through here rather than skipping it — a near-zero
+        // buffer's own peak is at or near 0, which Classifier already reads
+        // as UNKNOWN (confidence 0f), so it naturally falls through to the
+        // neutral name without a special case.
+        val name = autoName(Classifier.classify(toWrite))
+
+        val file = freshFile(root, nowMillis, name)
         val bytes = ByteArrayOutputStream().apply { WavWriter.write(this, toWrite) }.toByteArray()
         writeClaimedFile(file, bytes)
         return file
     }
 
     /**
-     * `root/snips/snip_<millis>.wav`, at [nowMillis] or the first later
-     * millisecond nothing sits on: two snips in one millisecond (a fast
-     * phone, a test) must never share a path, or the second silently
+     * Below this, [Classifier] is shelving its own guess, not standing
+     * behind it — PERC sits at a fixed 0.4 (its own KDoc calls it "the
+     * no-confidence shelf") and UNKNOWN at 0.0, both by construction always
+     * under this line, while every real call (KICK/SNARE/CLAP/the two
+     * hats/TOM/TONAL/LOOP) clears it: [Classification]'s `margin` helper floors at
+     * 0.5, and CLAP/LOOP are fixed at 0.7/0.9. This is not a new number
+     * invented for naming — it is the exact split
+     * [ChopReviewModel.NOT_SURE_BELOW] already draws for CHOP SHOP's own
+     * "NOT SURE" chip, reused so a snip and a chop slice agree on what
+     * "sure enough to print" means.
+     */
+    private const val NAME_CONFIDENCE_THRESHOLD = 0.5f
+
+    /**
+     * The name a fresh capture earns from [classification], or `null` for
+     * the neutral fallback (today's plain `snip_<millis>.wav` shape, the
+     * "SNIP" identity [Info.displayName] shows).
+     *
+     * A snip is not always a drum — a voice memo, rain, a door hinge, a
+     * busker all land here too — and a confident-sounding wrong name
+     * ("TOM" on a voice memo) is worse than an honest blank. So this only
+     * trusts [Classification.confidence] at or above
+     * [NAME_CONFIDENCE_THRESHOLD]; see that constant's own KDoc for why
+     * PERC and UNKNOWN can never cross it and don't need special-casing
+     * here.
+     */
+    internal fun autoName(classification: Classification): String? =
+        if (classification.confidence >= NAME_CONFIDENCE_THRESHOLD) AutoPlace.nameFor(classification.drumClass) else null
+
+    /**
+     * `root/snips/snip_<millis>[_<name>].wav`, at [nowMillis] or the first
+     * later millisecond nothing sits on: two snips in one millisecond (a
+     * fast phone, a test) must never share a path, or the second silently
      * overwrites the first and [newest] loses one. The bump keeps the
-     * name's own ordering honest — later is later.
+     * name's own ordering honest — later is later. [name] rides along
+     * unmodified at every candidate millis — it never changes what breaks
+     * a tie, only [fileName]'s own construction it reuses.
      *
      * The claim itself is atomic: [File.createNewFile] is an OS-level
      * create-if-absent (`open(O_CREAT|O_EXCL)` underneath), so two threads
@@ -107,11 +171,11 @@ object SnipStore {
      * already-claimed (empty) file via [com.snipsnap.kit.AtomicFile], which
      * replaces it same as it would any other existing file.
      */
-    private fun freshFile(root: File, nowMillis: Long): File {
+    private fun freshFile(root: File, nowMillis: Long, name: String? = null): File {
         val dir = File(root, DIR).apply { mkdirs() }
         var millis = nowMillis
         while (true) {
-            val file = File(dir, "snip_$millis.wav")
+            val file = File(dir, fileName(millis, name))
             if (file.createNewFile()) return file
             millis++
         }
@@ -134,12 +198,16 @@ object SnipStore {
      * The import path (F3.1/F3.2): a file shared into the app lands as a
      * snip, so TAPE finds it exactly as it finds a capture — newest first.
      * Not the commit chain: what the user shared is what goes on the
-     * tape, so no trim, no normalize, no doctor's visit. Only the two
-     * things the deck needs — mono (the ring is mono; the deck reads
-     * mono) and the MPC rate (a 48 k or 22.05 k file through the sinc
+     * tape, so no trim, no normalize, no doctor's visit — and no
+     * classification either, deliberately: an imported file already came
+     * with whatever name it had wherever it came from, and this app has no
+     * more evidence about it than [commit]'s own neutral fallback would
+     * give it, so it lands under the plain `snip_<millis>.wav` shape. Only
+     * the two things the deck needs — mono (the ring is mono; the deck
+     * reads mono) and the MPC rate (a 48 k or 22.05 k file through the sinc
      * [Resampler]) — and the [IMPORT_MAX_SEC] cap. Written through
-     * [AtomicFile] like a commit, named `snip_<nowMillis>.wav` so
-     * [newest] ranks it by arrival. An empty file is refused in words.
+     * [AtomicFile] like a commit, named `snip_<nowMillis>.wav` so [newest]
+     * ranks it by arrival. An empty file is refused in words.
      */
     fun import(snip: Snip, root: File, nowMillis: Long): Imported {
         require(snip.frameCount > 0) { "the shared file holds no audio" }
@@ -176,9 +244,19 @@ object SnipStore {
         }
     }
 
-    /** The `snip_<millis>.wav` timestamp [list]/[newest]/[listWithInfo] all sort by — one parse, shared. */
-    private fun parsedTimestamp(file: File): Long? =
-        NAME.matchEntire(file.name)?.groupValues?.get(1)?.toLongOrNull()
+    /** The `snip_<millis>[_name].wav` timestamp [list]/[newest]/[listWithInfo] all sort by — one parse, shared. */
+    private fun parsedTimestamp(file: File): Long? = NAME.matchEntire(file.name)?.groupValues?.get(1)?.toLongOrNull()
+
+    /** The name half of [parsedTimestamp]'s own grammar — `null` for a legacy or never-confidently-classified snip. */
+    private fun parsedName(file: File): String? = NAME.matchEntire(file.name)?.groups?.get(2)?.value
+
+    /**
+     * [file]'s own label, read straight off its filename — the classified
+     * name, or the neutral "SNIP" fallback when there is none.
+     * [Info.displayName] already carries this for a row already in hand;
+     * this is for a caller that only has the [File] itself.
+     */
+    fun displayName(file: File): String = parsedName(file) ?: "SNIP"
 
     /**
      * `root/[DIR]`'s non-empty files — the [list]/[listWithInfo] shared
@@ -211,19 +289,24 @@ object SnipStore {
     fun delete(file: File): Boolean = file.delete()
 
     /** What the SNIPS shelf lists a row from — no decode, unlike duration (see [listWithInfo]'s own KDoc). */
-    data class Info(val file: File, val sizeBytes: Long, val capturedAtMillis: Long)
+    data class Info(val file: File, val sizeBytes: Long, val capturedAtMillis: Long, val name: String?) {
+        /** The row's own label — the classified name, or the neutral "SNIP" fallback. Never a guess presented as fact. */
+        val displayName: String get() = name ?: "SNIP"
+    }
 
     /**
-     * [list] plus size and the captured timestamp, newest first — cheap:
-     * only [File.length] and the filename parse [parsedTimestamp] already
-     * shares with [list]/[newest], so this and they can never disagree on
-     * ordering. Deliberately missing: duration. That needs a full
-     * [com.snipsnap.audio.WavReader] decode, which this list must not pay
-     * for up front — the SNIPS screen computes it lazily per-row instead.
+     * [list] plus size, the captured timestamp, and the name half of the
+     * filename ([Info.displayName]'s "SNIP" fallback when there is none),
+     * newest first — cheap: only [File.length] and the filename parse
+     * [parsedTimestamp]/[parsedName] already share with [list]/[newest],
+     * so this and they can never disagree on ordering. Deliberately
+     * missing: duration. That needs a full [com.snipsnap.audio.WavReader]
+     * decode, which this list must not pay for up front — the SNIPS
+     * screen computes it lazily per-row instead.
      */
     fun listWithInfo(root: File): List<Info> {
         return snipFiles(root)
-            .mapNotNull { f -> parsedTimestamp(f)?.let { ts -> Info(f, f.length(), ts) } }
+            .mapNotNull { f -> parsedTimestamp(f)?.let { ts -> Info(f, f.length(), ts, parsedName(f)) } }
             .sortedByDescending { it.capturedAtMillis }
     }
 }

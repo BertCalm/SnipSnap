@@ -1,11 +1,16 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.Classification
+import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.DrumSynth
+import com.snipsnap.audio.Features
 import java.io.File
 import java.nio.file.Files
 import kotlin.math.sin
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SnipStoreTest {
@@ -14,6 +19,18 @@ class SnipStoreTest {
         val n = (seconds * rate).toInt()
         return FloatArray(n) { (0.4f * sin(2.0 * Math.PI * 220.0 * it / rate)).toFloat() }
     }
+
+    /** A [Classification] at [confidence] — [autoName] only ever reads `drumClass`/`confidence`, so the [Features] payload is inert filler. */
+    private fun classificationAt(confidence: Float, drumClass: DrumClass = DrumClass.KICK): Classification =
+        Classification(
+            drumClass = drumClass,
+            confidence = confidence,
+            features = Features(
+                centroidHz = 0f, rolloffHz = 0f, flatness = 0f, zeroCrossingRate = 0f,
+                lowRatio = 0f, midRatio = 0f, highRatio = 0f, durationSeconds = 0f,
+                decayMs = 0f, peak = 0f,
+            ),
+        )
 
     @Test
     fun `a commit lands one readable WAV in the snips dir`() {
@@ -245,6 +262,52 @@ class SnipStoreTest {
             assertTrue(info.all { it.sizeBytes > 0 })
             assertEquals(2_000L, info.first().capturedAtMillis)
             assertEquals(SnipStore.list(dir), info.map { it.file }, "listWithInfo must never disagree with list's own order")
+        } finally { dir.deleteRecursively() }
+    }
+
+    // ==================== naming: the confident/unconfident split ====================
+
+    @Test
+    fun `autoName trusts a classification at or above the threshold`() {
+        assertEquals("Kick", SnipStore.autoName(classificationAt(0.5f, DrumClass.KICK)))
+        assertEquals("Snare", SnipStore.autoName(classificationAt(0.51f, DrumClass.SNARE)))
+        assertEquals("Loop", SnipStore.autoName(classificationAt(0.9f, DrumClass.LOOP)))
+    }
+
+    @Test
+    fun `autoName refuses to guess below the threshold, including the classifier's own no-confidence shelf`() {
+        // PERC (0.4) and UNKNOWN (0.0) are Classifier's own fixed
+        // no-confidence outputs (see Classifier.kt) - this is what proves
+        // they can never sneak a name onto a file, not just that some
+        // arbitrary low number is refused.
+        assertNull(SnipStore.autoName(classificationAt(0.4f, DrumClass.PERC)))
+        assertNull(SnipStore.autoName(classificationAt(0.0f, DrumClass.UNKNOWN)))
+        assertNull(SnipStore.autoName(classificationAt(0.49f, DrumClass.KICK)))
+    }
+
+    @Test
+    fun `a confidently classified capture is named in the filename, timestamp still parseable`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            // DrumSynth.kick() is tuned to read as an unmistakable kick - the
+            // same fixture ChopReviewTest relies on for a non-"NOT SURE" chip.
+            val kick = DrumSynth.kick()
+            val f = SnipStore.commit(kick.samples, kick.sampleRate, dir, 10_000L)
+            assertEquals("snip_10000_Kick.wav", f.name)
+            assertEquals(f, SnipStore.newest(dir), "the name half must never break newest's own timestamp parse")
+            assertEquals("Kick", SnipStore.listWithInfo(dir).first().displayName)
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
+    fun `a capture the classifier can't place stays neutral - no name, no guess`() {
+        val dir = Files.createTempDirectory("snips").toFile()
+        try {
+            // All-zero: Classifier reads this as UNKNOWN at confidence 0 -
+            // the least ambiguous "don't know" input there is.
+            val f = SnipStore.commit(FloatArray(44_100), 44_100, dir, 20_000L)
+            assertEquals("snip_20000.wav", f.name, "today's plain shape - never a guessed name")
+            assertEquals("SNIP", SnipStore.listWithInfo(dir).first().displayName)
         } finally { dir.deleteRecursively() }
     }
 }
