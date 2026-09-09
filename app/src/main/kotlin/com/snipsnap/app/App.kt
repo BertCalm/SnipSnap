@@ -311,6 +311,27 @@ fun App(shelf: KitShelf) {
     LaunchedEffect(blocked) {
         if (blocked) captureBlocked = true
     }
+    // MIC's mute verdict: sustained exact digital silence on a plain mic
+    // session (MicSessionService.micSilent's own KDoc has the false-
+    // positive-vs-real-mute tradeoff). Toasted once per armed session, not
+    // once per tick — `micSilent` can flip back to true after a real live
+    // block clears it (a HAL blip, then more silence), and a genuinely
+    // dead mic would otherwise re-toast every MIC_SILENCE_HOLD_SECONDS for
+    // as long as the session stays armed. `micSilentToasted` resets on the
+    // next ARM (armed flipping false, the reset in stopReaderAndRecord,
+    // then true again), not on every recomposition, so navigating away and
+    // back mid-session doesn't replay a warning already shown.
+    val micSilent by MicSessionService.micSilent.collectAsState()
+    var micSilentToasted by remember { mutableStateOf(false) }
+    LaunchedEffect(armed) {
+        if (!armed) micSilentToasted = false
+    }
+    LaunchedEffect(micSilent) {
+        if (micSilent && !micSilentToasted) {
+            micSilentToasted = true
+            toast = Copy.MIC_HEARING_NOTHING
+        }
+    }
     // SNIP's own toast below (`onSnip`) fires optimistically, before
     // MicSessionService.handleSnip's commit has even started — this is the
     // correction if that promise doesn't hold. Baselined by attempt id, the

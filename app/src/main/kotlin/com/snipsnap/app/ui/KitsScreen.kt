@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.MicSessionService
 import com.snipsnap.audio.SilenceWatch
-import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -462,11 +461,11 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
                     .width(124.dp)
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
-                    .border(2.dp, Brush.linearGradient(listOf(BinRedGlow, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
+                    .border(2.dp, Brush.linearGradient(listOf(BIN_RED_GLOW, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
                     .let { if (!busy) it.tapeClick(label = null) { onForget(room) } else it },
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText("FORGET → BIN", TapeType.pixel, if (busy) scheme.ink3.tape else BinRedGlow)
+                TapeText("FORGET → BIN", TapeType.pixel, if (busy) scheme.ink3.tape else BIN_RED_GLOW)
             }
         } else {
             Box(Modifier.height(30.dp).lcdPanel(scheme).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
@@ -602,12 +601,12 @@ private fun KitRow(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme)
-                        .border(2.dp, Brush.linearGradient(listOf(BinRedGlow, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
+                        .border(2.dp, Brush.linearGradient(listOf(BIN_RED_GLOW, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
                         .let { if (!busy) it.tapeClick(label = null) { onRequestDelete(entry) } else it }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("DELETE", TapeType.pixel, if (busy) scheme.ink3.tape else BinRedGlow)
+                    TapeText("DELETE", TapeType.pixel, if (busy) scheme.ink3.tape else BIN_RED_GLOW)
                 }
             }
         } else {
@@ -666,7 +665,7 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("DELETE", TapeType.pixel, BinRedGlow)
+                    TapeText("DELETE", TapeType.pixel, BIN_RED_GLOW)
                 }
             }
         }
@@ -822,7 +821,7 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
  * capture. Idle: two primary-styled buttons, ARM TAPE (the room, through
  * the mic) and ARM INSIDE (another app's audio, with the projection
  * consent). Armed, whichever source: EJECT in the
- * bin-red pair ([BIN_RED_BORDER]/[BinRedGlow], `TakesBinScreen`'s own
+ * bin-red pair ([BIN_RED_BORDER]/[BIN_RED_GLOW], `TakesBinScreen`'s own
  * convention — a session-ending action reads as "red" even in a scheme
  * with no red anywhere else) beside a small in-app SNIP; the notification
  * action is the out-of-app path, this is the in-app one.
@@ -866,7 +865,7 @@ private fun ArmControl(
                     .tapeClick(label = null, onClick = onEject),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText("STOP", TapeType.displayBig, BinRedGlow)
+                TapeText("STOP", TapeType.displayBig, BIN_RED_GLOW)
             }
             Box(
                 Modifier
@@ -1011,12 +1010,10 @@ private fun formatElapsed(totalSeconds: Int): String {
     return "%02d:%02d".format(minutes, seconds)
 }
 
-// Duplicated, not hoisted — TakesBinScreen.kt's own BIN_RED_BORDER
+// Duplicated, not hoisted — TakesBinScreen.kt's own BIN_RED_BORDER/GLOW
 // comment states the house convention explicitly: do it if a clean
 // one-liner, else duplicate with a comment. BIN red is deliberately
 // constant across every scheme so a session-ending action (EJECT here,
 // EMPTY THE BIN there) reads as "red" regardless of the active scheme.
-// The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
-// (accessibility audit finding 5) — a single tuned token, not a duplicated
-// literal.
 private val BIN_RED_BORDER = Color(0xFF6A2020)
+private val BIN_RED_GLOW = Color(0xFFC86050)

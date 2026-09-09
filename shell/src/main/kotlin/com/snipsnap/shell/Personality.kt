@@ -119,6 +119,18 @@ object Copy {
      * captured. Say that it stopped, and say what gets it back.
      */
     const val TAPE_STOPPED_ITSELF = "THE TAPE STOPPED ON ITS OWN. NOTHING SINCE WAS KEPT. PRESS LISTEN AGAIN."
+
+    /**
+     * A MIC session has read nothing but exact digital silence for a long
+     * while — the platform likely muted or revoked the mic mid-session.
+     * Deliberately NOT [TAPE_STOPPED_ITSELF]'s language: that toast says
+     * the tape stopped and nothing since was kept, which is only true if
+     * the session actually ended — this one fires while the session is
+     * still armed and the ring is still rolling (possibly on a genuinely
+     * quiet room), so it asks the user to go check rather than claiming
+     * the capture is already lost. A warning, not an obituary.
+     */
+    const val MIC_HEARING_NOTHING = "TAPE ROLLING, HEARING NOTHING. CHECK THE MIC ISN'T MUTED OR COVERED."
     // IMPORT: a file shared in from another app (F3).
     /** A shared file landed as a snip; [seconds] how much, [truncated] whether the cap cut its tail. */
     fun imported(seconds: Float, truncated: Boolean): String {

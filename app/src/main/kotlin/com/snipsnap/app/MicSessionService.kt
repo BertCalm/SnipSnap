@@ -26,6 +26,7 @@ import android.os.SystemClock
 import android.util.Log
 import com.snipsnap.audio.BlockWatch
 import com.snipsnap.audio.CaptureRing
+import com.snipsnap.audio.SilenceWatch
 import com.snipsnap.shell.Copy
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
@@ -52,7 +53,12 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * The service does four things and nothing else:
  * - [ACTION_ARM] opens a microphone [AudioRecord] and starts one plain
- *   reader thread copying it into the ring.
+ *   reader thread copying it into the ring. It also watches the stream
+ *   for sustained exact digital silence — a permission revoked mid-
+ *   session usually doesn't error, it just makes `read()` hand back
+ *   full-length blocks of exact zeros — and publishes that as
+ *   [micSilent], deliberately *not* by tearing the session down (see
+ *   [micSilent]'s own KDoc for why).
  * - [ACTION_ARM_INSIDE] does the same over a playback-capture
  *   [AudioRecord] built on the consent the app just collected, and
  *   watches the stream for dead air: an app that opts out of capture
@@ -351,12 +357,20 @@ class MicSessionService : Service() {
      * The one place a session starts, whichever source: the ring, the
      * reader thread, the bubble, `armed`. INSIDE reads stereo and folds
      * to mono in the loop (the ring is mono; a snip is mono), and runs
-     * the [BlockWatch]. MIC reads mono straight into the ring.
+     * the [BlockWatch]. MIC reads mono straight into the ring, and runs
+     * its own bare [SilenceWatch] (not [BlockWatch] — there is no
+     * platform oracle like `isMusicActive` to gate a MIC verdict on, so
+     * the tick itself is the whole verdict) to publish [micSilent].
      */
     private fun beginSession(newRecord: AudioRecord, source: Source, stereo: Boolean) {
         val newRing = CaptureRing(RING_SECONDS * SAMPLE_RATE)
         val watch = if (source == Source.INSIDE) {
             BlockWatch.forSeconds(SILENCE_HOLD_SECONDS, SAMPLE_RATE)
+        } else {
+            null
+        }
+        val muteWatch = if (source == Source.MIC) {
+            SilenceWatch.forSeconds(MIC_SILENCE_HOLD_SECONDS, SAMPLE_RATE)
         } else {
             null
         }
@@ -446,6 +460,26 @@ class MicSessionService : Service() {
                 // publishes on a change rather than every block.
                 if (watch != null && watch.feed(mono, frames) { audioManager?.isMusicActive == true }) {
                     _blocked.value = watch.blocked
+                }
+                // MIC's mute verdict: no platform oracle to gate on (there
+                // is no "is the mic supposed to be hearing something?"
+                // equivalent to isMusicActive), so the tick alone is the
+                // whole test. This is BlockWatch's own tick/clear shape,
+                // hand-rolled rather than reused, because BlockWatch's
+                // verdict and KDoc are the INSIDE-specific "this app
+                // blocks the tape" concept — see SilenceWatchTest's
+                // "verdict latch" test for why the `!muteWatch.silent`
+                // branch (not just `else`) is required: `feed` zeroes the
+                // run on the tick that returns true, so `silent` also
+                // reads false on that same block, and a plain `else`
+                // here would clear the verdict one block after raising
+                // it.
+                if (muteWatch != null) {
+                    if (muteWatch.feed(mono, frames)) {
+                        _micSilent.value = true
+                    } else if (!muteWatch.silent) {
+                        _micSilent.value = false
+                    }
                 }
             }
             // `reading` still true here means the loop broke out on its
@@ -618,6 +652,7 @@ class MicSessionService : Service() {
         activeRing = null
         BubbleOverlay.detach()
         _blocked.value = false
+        _micSilent.value = false
         _source.value = null
         _armed.value = false
         _level.value = 0f
@@ -684,6 +719,32 @@ class MicSessionService : Service() {
         /** Dead air this long, with music reported playing, is a block — not a rest in the song. */
         private const val SILENCE_HOLD_SECONDS = 3.0
 
+        /**
+         * How long a MIC session's stream must read exact digital silence
+         * before [micSilent] fires — over 3x INSIDE's [SILENCE_HOLD_SECONDS]
+         * on purpose. INSIDE gets a second opinion for free (`isMusicActive`)
+         * before it commits to a verdict; MIC has no such oracle, so the
+         * hold is the only thing standing between a real mute and a false
+         * alarm, and a false alarm here is worse than the one it's guarding
+         * against — the UI response chosen for [micSilent] is a warning, not
+         * a teardown, but a warning that fires on a legitimate quiet room is
+         * still a lie the app told about the user's own recording.
+         *
+         * The dominant real false-positive risk isn't a quiet room — real
+         * air has dither/thermal noise that [SilenceWatch.threshold]
+         * already rejects almost by construction (see
+         * `SilenceWatchTest`'s "a quiet noise floor never does" case). It's
+         * an OEM HAL applying an aggressive noise gate on the processed
+         * audio path (`handleArm`'s `VOICE_RECOGNITION` fallback, used on
+         * devices without `PROPERTY_SUPPORT_AUDIO_SOURCE_UNPROCESSED`) that
+         * can itself hold exact zeros through a real quiet passage. Ten
+         * seconds is chosen to be implausible for even an aggressive gate
+         * to hold unbroken — a gate closing for that long with nothing
+         * before or after it to reopen for is itself indistinguishable
+         * from a dead input as far as the user's purposes go.
+         */
+        private const val MIC_SILENCE_HOLD_SECONDS = 10.0
+
         private val _armed = MutableStateFlow(false)
         val armed: StateFlow<Boolean> = _armed.asStateFlow()
 
@@ -698,6 +759,41 @@ class MicSessionService : Service() {
          * Clears the moment sound arrives, and on disarm.
          */
         val blocked: StateFlow<Boolean> = _blocked.asStateFlow()
+
+        private val _micSilent = MutableStateFlow(false)
+        /**
+         * True while a MIC session's stream has read [MIC_SILENCE_HOLD_SECONDS]
+         * of unbroken exact digital silence — the platform revoking mic
+         * access mid-session (or a hardware/privacy mute) usually doesn't
+         * error, it just makes `AudioRecord.read()` keep returning full-
+         * length blocks of exact zeros, which every check `sessionDied`
+         * covers is blind to. Named for the observation, not a diagnosis:
+         * this says "nothing has arrived in a while", not "the mic died",
+         * because the only sample-content test available (the same
+         * [SilenceWatch] INSIDE uses for [blocked]) genuinely cannot tell
+         * "revoked" apart from "a stretch of true silence held long enough
+         * to look identical at the wire" — nothing can, from inside the
+         * stream alone.
+         *
+         * Deliberately **not** wired through [sessionDied] or any other
+         * path that tears the session down. That distinction is the whole
+         * design call here: a MIC session's ring can hold genuine (if
+         * quiet) audio the user still wants — ending the session drops the
+         * ring (the service's own privacy contract), which would destroy
+         * real captured content on a false alarm. A true mute loses
+         * nothing by staying armed instead: the stream is worthless zeros
+         * either way, and the user can see the warning and eject
+         * themselves. A false alarm on a genuinely quiet recording, by
+         * contrast, costs everything if it tears the session down and
+         * nothing if it doesn't. The costs are asymmetric in one direction
+         * only, so this only ever warns.
+         *
+         * Clears the moment real sound arrives, and on disarm — same
+         * transition shape as [blocked], minus the `isMusicActive` gate
+         * INSIDE has and MIC doesn't (see [MIC_SILENCE_HOLD_SECONDS]'s
+         * KDoc for why the hold does more work here as a result).
+         */
+        val micSilent: StateFlow<Boolean> = _micSilent.asStateFlow()
 
         private val _phoneStops = MutableStateFlow(0)
         /** Counts sessions the platform ended (lock screen, the stop chip) — the app toasts on each tick. */
@@ -724,18 +820,30 @@ class MicSessionService : Service() {
          * baseline by count at first composition, so a recreated Activity
          * doesn't replay an old failure.
          *
-         * **What this does NOT catch, and it is the common case.** A
-         * permission revoked mid-session usually doesn't error at all:
-         * the platform mutes the input and `read()` keeps returning
-         * full-length blocks of zero-VALUED samples. That is a positive
-         * return, no exception, no short read — indistinguishable here
-         * from a genuinely silent room, so none of the checks above fire
-         * and the session stays armed against dead air. Detecting it needs
-         * sample-content inspection, which this service already has in
-         * [SilenceWatch] but currently wires only for [Source.INSIDE]'s
-         * `blocked` verdict. Extending that to plain MIC sessions is the
-         * fix; until then, this flow covers the reader dying loudly, not
-         * the mic going quiet.
+         * **What this does NOT catch.** A permission revoked mid-session
+         * usually doesn't error at all: the platform mutes the input and
+         * `read()` keeps returning full-length blocks of zero-VALUED
+         * samples. That is a positive return, no exception, no short read
+         * — invisible to every check above, which is why none of them are
+         * the fix for it. [micSilent] is: it runs the same sample-content
+         * inspection ([SilenceWatch]) this service already used for
+         * [Source.INSIDE]'s `blocked` verdict, now also wired for plain MIC
+         * sessions, tuned tight enough (see [MIC_SILENCE_HOLD_SECONDS]'s
+         * KDoc) to tell a muted mic from a merely quiet room rather than
+         * conflating them. It's deliberately a separate, non-terminal
+         * signal rather than another tick of *this* flow — see
+         * [micSilent]'s own KDoc for why folding it into `sessionDied`
+         * (and the ejection that implies) would be the wrong call.
+         *
+         * What's still uncovered, and likely to stay that way: a hard
+         * process kill with no `onDestroy` at all announces nothing, same
+         * as before either of these existed — there's no code path left to
+         * run when the process itself is gone. And [micSilent] shares
+         * [SilenceWatch]'s own limit: it detects *exact* digital silence,
+         * so a source that goes near-silent-but-not-quite (a hardware
+         * fault that leaves a hair of noise, rather than a clean mute)
+         * reads as a very quiet room, not a dead one — the same ambiguity
+         * a human listening back would have.
          */
         val sessionDied: StateFlow<Int> = _sessionDied.asStateFlow()
 
@@ -788,14 +896,25 @@ class MicSessionService : Service() {
         /**
          * The reader loop's per-block peak, `0f..1f` — the live input level
          * for the ARM screen's recording indicator, and also the mic-alive
-         * diagnostic: a session that's truly armed but hearing silence
-         * holds this at (or near) zero, which is exactly what a dead mic
-         * looks like too. Paired in the UI with a wall-clock elapsed
-         * readout ([armedAtElapsedRealtime]) so the two together can tell
-         * "recording, hearing nothing" apart from "not actually recording."
-         * Conflated, so publishing at ~21 Hz (READ_BLOCK_FRAMES @ 44.1k)
-         * from the reader thread is cheap — one float store per block, no
-         * allocation.
+         * diagnostic: a session that's truly armed but hearing a quiet
+         * room holds this at *near* zero, which used to be visually
+         * indistinguishable from a dead source. Paired in the UI with a
+         * wall-clock elapsed readout ([armedAtElapsedRealtime]) so the two
+         * together tell "recording, hearing nothing" apart from "not
+         * actually recording."
+         *
+         * It no longer has to carry that ambiguity alone: this value IS the
+         * same per-block peak [SilenceWatch] tests against its threshold,
+         * so a UI that compares it to [SilenceWatch.DEFAULT_THRESHOLD]
+         * directly gets an instantaneous (one block, ~46ms) read on whether
+         * the *current* block is exact silence or a live noise floor —
+         * `KitsScreen.kt`'s `LevelBar` does exactly this to tint the meter.
+         * That's a per-block observation, not a verdict: it can and will
+         * read "exact zero" for one harmless block during ordinary silence
+         * between sounds. [micSilent] is the verdict built on the same
+         * signal held for [MIC_SILENCE_HOLD_SECONDS] — the meter answers
+         * "what is this instant", the toast answers "has this held long
+         * enough to mean something."
          */
         private val _level = MutableStateFlow(0f)
         val level: StateFlow<Float> = _level.asStateFlow()

@@ -1,26 +1,40 @@
 package com.snipsnap.audio
 
 /**
- * The dead-air detector for the INSIDE capture source.
+ * The dead-air detector shared by both capture sources.
  *
- * An app that opts out of playback capture (`ALLOW_CAPTURE_BY_NONE`)
+ * An INSIDE app that opts out of playback capture (`ALLOW_CAPTURE_BY_NONE`)
  * doesn't refuse the session — the platform hands the recorder exact
- * digital zeros instead, and nothing in the API says so. The only honest
- * way to know is to watch the stream: silence that goes on for whole
- * seconds while the phone reports music playing is a block, not a pause
- * (`docs/ANDROID_CAPTURE.md`, "Where it breaks").
+ * digital zeros instead, and nothing in the API says so. A MIC session
+ * that has its permission silently revoked mid-session (or a hardware/
+ * privacy mute) behaves the same way at the wire: `AudioRecord.read()`
+ * keeps returning full-length, positive-count blocks, just full of exact
+ * zeros. Both are the same shape of lie — a stream that looks alive but
+ * carries nothing — and this class is the one place that watches for it.
+ * The only honest way to know is to watch the stream: silence that goes
+ * on for whole seconds is worth telling somebody about, in whatever way
+ * that source's caller decides to say it (`docs/ANDROID_CAPTURE.md`,
+ * "Where it breaks", for INSIDE; `MicSessionService`'s KDoc for MIC).
  *
  * This is the stream half of that test, built for the reader thread:
  * [feed] does one pass over the block and index arithmetic, no
  * allocation, no locks. It returns true once per [holdFrames] of
- * unbroken silence — a periodic tick, not a one-shot — so the caller can
- * ask the platform "is music playing?" on each tick and never has to
- * poll it per block. Any sample above [threshold] resets the run.
+ * unbroken silence — a periodic tick, not a one-shot — so a caller that
+ * needs a second opinion (INSIDE asks the platform "is music playing?")
+ * can do it on each tick and never has to poll per block; a caller with
+ * no such oracle (MIC) can treat the tick itself as the verdict. Any
+ * sample above [threshold] resets the run.
  *
  * "Silence" here means digital zero, or as near as makes no difference:
- * a blocked stream carries exactly 0.0f, while a real quiet passage
- * still has dither and room in it. The default [threshold] sits far
- * below anything a converter produces.
+ * a blocked/muted stream carries exactly 0.0f, while a real quiet
+ * passage — a quiet room on MIC, a paused-but-not-silent app on INSIDE —
+ * still has dither, thermal noise, and room tone in it, so a live block's
+ * peak essentially never lands below [threshold]. The default
+ * [threshold] sits far below anything a converter produces, which is
+ * what makes [holdFrames] a belt-and-suspenders margin rather than the
+ * load-bearing part of the test: the threshold is what tells a muted
+ * source from a quiet one, the hold just guards against a one-block
+ * fluke being over-read as either.
  */
 class SilenceWatch(
     val holdFrames: Int,
