@@ -102,6 +102,9 @@ private const val GROOVE_STEP_MAX_NANOS = 100_000_000L
 /** E's debounced disk write — one save per burst of taps, not one per tap (the PAD SHEET lesson). */
 private const val GROOVE_SAVE_DEBOUNCE_MS = 1000L
 
+/** How long FORK TO E's own armed confirm (replacing an existing PROG E) stays armed before it disarms itself — same window as `TakesBinScreen`'s `EMPTY_BIN_ARM_MS`. */
+private const val GROOVE_FORK_ARM_MS = 3_000L
+
 /**
  * HUMANIZE's jitter amount, passed straight to [GrooveVariations.humanize].
  * The handoff names the control but not a number; 0.5 mirrors the
@@ -320,6 +323,30 @@ fun GrooveScreen(
     // export, SONG ▸, arming another RECORD) — never a persistent control.
     var justLanded by remember(kitDir) { mutableStateOf(false) }
 
+    // FORK TO E's own armed confirm (bug fix, live-record plan Task 6):
+    // [GrooveEdit.fork] silently hands back a pre-existing E when one is
+    // already stored — correct for EDIT STEPS (re-entering the editor is
+    // SUPPOSED to keep editing the same E) but wrong for this row's FORK
+    // TO E, whose whole point is "make my just-landed take grid-perfect."
+    // Landing on a stale E there would leave the fresh take unquantized
+    // with no feedback at all — the same announces-success-does-nothing
+    // failure class this session already fixed twice (HOLD, WIND). So an
+    // existing E arms this flag instead of forking blind: the button's
+    // own label swaps to "REPLACE E?", and only a SECOND tap actually
+    // overwrites. See [forkTakeToE].
+    var forkArmed by remember(kitDir) { mutableStateOf(false) }
+
+    // Quietly stands down if the second tap never comes — a stale
+    // "REPLACE E?" still armed a minute later would be a trap, not a
+    // safety net (same reasoning as TakesBinScreen's own EMPTY_BIN_ARM_MS
+    // effect).
+    LaunchedEffect(forkArmed) {
+        if (forkArmed) {
+            delay(GROOVE_FORK_ARM_MS)
+            forkArmed = false
+        }
+    }
+
     // The playback clock's own `(nanos, pos)` reading, hoisted out of the
     // clock `LaunchedEffect` below so a hit fired between two frames can
     // read where the needle actually was at the LAST tick and interpolate
@@ -360,6 +387,20 @@ fun GrooveScreen(
 
     fun failure(action: String, e: Exception) {
         onToast("$action FAILED: ${e.message ?: e.javaClass.simpleName}")
+    }
+
+    /**
+     * Every place that used to write `justLanded = false` bare now goes
+     * through here, so `forkArmed` can never outlive the row it belongs
+     * to: switching programs, HUMANIZE, EDIT STEPS, MIDI, SONG ▸, or
+     * arming another RECORD must all cancel a pending "REPLACE E?"
+     * confirm exactly as they already cancel the just-landed row itself —
+     * otherwise the NEXT take's row could render already armed, skipping
+     * the first tap its own confirm exists for.
+     */
+    fun clearJustLanded() {
+        justLanded = false
+        forkArmed = false
     }
 
     /** Writes whatever's dirty in [eClip] right now, on [target] — shared by DONE's immediate flush and the teardown/ON_STOP safety nets. */
@@ -507,10 +548,17 @@ fun GrooveScreen(
         }
     }
 
+    /**
+     * EDIT STEPS's own fork: [GrooveEdit.fork]'s early-return (hand back
+     * whatever E is already stored) is exactly right here — re-entering
+     * the editor is SUPPOSED to keep editing the same E, not discard it.
+     * NOT used by the post-take row's FORK TO E — see [forkTakeToE], which
+     * needs the opposite default for the opposite reason.
+     */
     fun forkToE() {
         if (busy) return
         val source = currentClip ?: return
-        justLanded = false
+        clearJustLanded()
         busy = true
         val sourceLetter = if (progIndex < 4) PROG_LETTERS[progIndex] else editorSourceLabel
         scope.launch {
@@ -525,6 +573,58 @@ fun GrooveScreen(
                 progIndex = 4
                 isEditing = true
                 if (!hadE) onToast(Copy.FORKED_TO_E)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("FORK", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    /**
+     * The post-take row's FORK TO E (bug fix, live-record plan Task 6).
+     * [forkToE]'s early-return-the-existing-E default is wrong here: this
+     * offer's whole point is "make my just-landed take grid-perfect," so
+     * silently handing back a stale E would leave the fresh take
+     * unquantized with zero feedback — a control that claims an effect it
+     * doesn't deliver. Neither silently replacing a hand-edited E nor
+     * silently doing nothing is acceptable, so an existing E arms
+     * [forkArmed] instead of forking blind — the button's own label swaps
+     * to "REPLACE E?" — and only a second tap actually overwrites.
+     *
+     * `eClip != null` (not a fresh `GrooveEdit.hasUserProgram(kitDir)` disk
+     * read) decides whether to arm: this is a plain click handler, called
+     * synchronously, so there's no `withContext(Dispatchers.IO)` to hang a
+     * disk read off before deciding. `eClip` is kept current by every path
+     * that writes E ([forkToE] sets it; [undoTake]'s own KDoc states undo
+     * never touches E), so the only way it can disagree with disk is if
+     * something else deleted E in the same instant — which would only make
+     * this arm a confirm that turns out unnecessary (`GrooveEdit.fork`
+     * still re-reads the sidecar itself and writes what's actually there),
+     * never skip a confirm that was needed.
+     */
+    fun forkTakeToE() {
+        if (busy) return
+        val source = currentClip ?: return
+        val existingE = eClip != null
+        if (existingE && !forkArmed) {
+            forkArmed = true
+            return
+        }
+        clearJustLanded()
+        busy = true
+        val sourceLetter = if (progIndex < 4) PROG_LETTERS[progIndex] else editorSourceLabel
+        scope.launch {
+            try {
+                val forked = withContext(Dispatchers.IO) { GrooveEdit.fork(kitDir, source, replace = existingE) }
+                eClip = forked
+                editorSourceLabel = sourceLetter
+                editorBar = 0
+                editorDirty = false
+                progIndex = 4
+                isEditing = true
+                onToast(if (existingE) Copy.FORKED_TO_E_REPLACED else Copy.FORKED_TO_E)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 failure("FORK", e)
@@ -578,7 +678,7 @@ fun GrooveScreen(
     fun exportMidi() {
         val exportBase = base ?: return
         if (midiBusy) return
-        justLanded = false
+        clearJustLanded()
         midiBusy = true
         scope.launch {
             try {
@@ -688,7 +788,7 @@ fun GrooveScreen(
      */
     fun startRecording() {
         if (busy || recording || countingIn) return
-        justLanded = false
+        clearJustLanded()
         val armedBase = base
         preTake = armedBase
         take = LiveRecord.Take(armedBase?.bars ?: recordBars)
@@ -778,7 +878,7 @@ fun GrooveScreen(
      */
     fun undoTake() {
         if (busy || !justLanded) return
-        justLanded = false
+        clearJustLanded()
         val snapshot = preTake
         val hadE = eClip != null
         busy = true
@@ -884,8 +984,8 @@ fun GrooveScreen(
                     // TIME doubles `bars`) would desync the clock's own
                     // wrap point from `take.bars`, set once at arm time —
                     // see startRecording's own KDoc.
-                    onPrev = { if (!recording && !countingIn) { justLanded = false; progIndex = (progIndex - 1 + progCount) % progCount } },
-                    onNext = { if (!recording && !countingIn) { justLanded = false; progIndex = (progIndex + 1) % progCount } },
+                    onPrev = { if (!recording && !countingIn) { clearJustLanded(); progIndex = (progIndex - 1 + progCount) % progCount } },
+                    onNext = { if (!recording && !countingIn) { clearJustLanded(); progIndex = (progIndex + 1) % progCount } },
                     scheme = scheme,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -954,23 +1054,30 @@ fun GrooveScreen(
 
                     if (justLanded) {
                         // The take just landed — a transient, one-shot pair
-                        // of actions (Task 5): FORK TO E is the already-
-                        // shipped "make it grid-perfect" step (`forkToE()`
-                        // itself, unmodified — the just-landed base is
-                        // already `currentClip` at `progIndex == 0`, same
-                        // as EDIT STEPS below would read); UNDO TAKE reaches
+                        // of actions (Task 5): FORK TO E calls [forkTakeToE],
+                        // NOT the plain [forkToE] EDIT STEPS below uses — an
+                        // existing E arms a "REPLACE E?" confirm instead of
+                        // silently handing back stale steps (Task 6 bug fix;
+                        // see [forkTakeToE]'s own KDoc). UNDO TAKE reaches
                         // for `preTake`, snapshotted once at arm time. Both
                         // — and anything else that moves the program on —
-                        // clear this row; see `justLanded`'s own KDoc.
+                        // clear this row (and any pending "REPLACE E?" arm)
+                        // via `clearJustLanded`; see `justLanded`'s own KDoc.
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            GrooveActionButton("FORK TO E ▸", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { forkToE() }
+                            GrooveActionButton(
+                                if (forkArmed) "REPLACE E?" else "FORK TO E ▸",
+                                scheme,
+                                Modifier.weight(1f),
+                                enabled = !busy,
+                                accent = true,
+                            ) { forkTakeToE() }
                             GrooveActionButton("UNDO TAKE", scheme, Modifier.weight(1f), enabled = !busy) { undoTake() }
                         }
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         GrooveActionButton("HUMANIZE ⚄", scheme, Modifier.weight(1f), enabled = !busy) {
-                            justLanded = false
+                            clearJustLanded()
                             seed++
                             progIndex = 0
                             onToast(Copy.HUMANIZED)
@@ -982,7 +1089,7 @@ fun GrooveScreen(
                     // just cycled: intro/theme/variation/the turn/reprise/outro,
                     // one tap away from what this screen already has loaded.
                     GrooveActionButton("SONG ▸", scheme, Modifier.fillMaxWidth(), accent = true) {
-                        justLanded = false
+                        clearJustLanded()
                         onArrange()
                     }
                     GrooveActionButton("● RECORD", scheme, Modifier.fillMaxWidth(), enabled = !busy && !midiBusy) { startRecording() }
