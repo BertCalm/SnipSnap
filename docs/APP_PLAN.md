@@ -174,8 +174,8 @@ feels tight enough that you'd play it, on a mid-range phone.
   permission needed, reachable from the Files app), then — when the user
   has picked a card — copies the export onto it via SAF
   `ACTION_OPEN_DOCUMENT_TREE`: `ExportScreen`'s `CardRow` (pick/forget,
-  persistable grant) and `CardWriter`'s `DocumentsContract` copy (built
-  2026-09-08, `581ba8f`). No open code row remains in the app.
+  persistable grant) and `CardWriter`'s `DocumentsContract` copy. No open
+  code row remains in the app.
 
 **Exit test — the product's definition of done:** hear it → snip it →
 trim it → pad it → play it → write the card → it plays on the Live III.
