@@ -95,13 +95,21 @@ object GrooveEdit {
             val step = ((n.timePulses + grid / 2) / grid) % stepsInClip
             n.copy(timePulses = step * grid)
         }
-        val deduped = snapped
-            .groupBy { it.note to it.timePulses }
-            .values
-            .map { collision -> collision.maxBy { it.velocity } }
-            .sortedBy { it.timePulses }
-        return Mpc3Clip(name = name, bars = source.bars, notes = deduped)
+        return Mpc3Clip(name = name, bars = source.bars, notes = dedupeLouder(snapped))
     }
+
+    /**
+     * One note per (note, timePulses) address survives: the louder one,
+     * time-sorted. The codebase's single collision rule — [quantized]'s own
+     * fork collisions (two off-grid hits snapping onto the same step) and
+     * `LiveRecord`'s overdub collisions (two takes landing on the exact same
+     * pulse) both resolve here, not by a second copy of the rule.
+     */
+    fun dedupeLouder(notes: List<Mpc3Note>): List<Mpc3Note> = notes
+        .groupBy { it.note to it.timePulses }
+        .values
+        .map { collision -> collision.maxBy { it.velocity } }
+        .sortedBy { it.timePulses }
 
     /** PROG E from a kit dir, or null when no fork has happened yet. */
     fun load(kitDir: File): Mpc3Clip? = GrooveStore.load(kitDir).firstOrNull { isProgE(it) }
