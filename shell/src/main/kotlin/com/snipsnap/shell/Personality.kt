@@ -200,12 +200,20 @@ object Copy {
 
     // ---- KIT: teaching the one gesture that opens PAD SHEET ----
     /**
-     * Shown on opening a kit, at most a few times, and never again once the
-     * user has actually held a pad. PAD SHEET is reachable ONLY by a long
-     * press on a filled pad — no button, no menu entry — and it holds every
-     * treatment, shape, tune and mutate control in the app. Without this the
-     * gesture is undiscoverable, and a feature nobody can find is a feature
-     * they don't have.
+     * Shown on opening a kit until the user has actually held a pad, and
+     * never again after that. PAD SHEET is reachable ONLY by a long press on
+     * a filled pad — no button, no menu entry — and it holds every
+     * treatment, shape, tune and mutate control in the app.
+     *
+     * This used to stop after three showings, which meant three dismissals
+     * while busy with something else cost the user that half of the app for
+     * good (September UAT, finding 5). The cap is gone: only opening the
+     * sheet retires the hint, because that is the only event that proves
+     * they found it.
+     *
+     * It is no longer the only teacher either — [PAD_SHEET_LEGEND] sits
+     * under KIT's grid permanently (finding 4), so this is a nudge with a
+     * backstop rather than the single thread the feature hangs from.
      *
      * Says what to do and what it gets, in that order, and names the thing
      * it opens so the toast and the screen agree.
