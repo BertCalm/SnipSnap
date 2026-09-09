@@ -96,14 +96,42 @@ object RoomPackager {
                 .getOrElse { throw IllegalArgumentException("not a room: its sidecar won't parse") }
             val name = (meta["name"] as? JsonValue.Str)?.value?.takeIf { it.isNotBlank() }
                 ?: throw IllegalArgumentException("not a room: its sidecar names none")
+            // Every room [Rooms.keep] ever wrote carries measuredAt - a
+            // missing one means a hand-edited or foreign sidecar, and the
+            // honest answer to that is a refusal, not "now": re-stamping
+            // a provenance field silently is worse than not having one,
+            // the same reasoning [Rooms.keep] itself applies by never
+            // guessing a room's own age.
+            val measuredAt = ((meta["measuredAt"] as? JsonValue.Num)?.value
+                ?: throw IllegalArgumentException("not a room: its sidecar has no measuredAt"))
+                .also { require(it.isFinite()) { "not a room: its sidecar's measuredAt is not a real number" } }
+                .toLong()
+            val lagMs = finiteFloatOrZero(meta["lagMs"], "lagMs")
+            val confidence = finiteFloatOrZero(meta["confidence"], "confidence")
             return Imported(
                 name = name,
                 impulse = WavReader.read(wavBytes),
-                lagMs = (meta["lagMs"] as? JsonValue.Num)?.value?.toFloat() ?: 0f,
-                confidence = (meta["confidence"] as? JsonValue.Num)?.value?.toFloat() ?: 0f,
+                lagMs = lagMs,
+                confidence = confidence,
                 from = (meta["from"] as? JsonValue.Str)?.value ?: "",
-                measuredAt = (meta["measuredAt"] as? JsonValue.Num)?.value?.toLong() ?: System.currentTimeMillis(),
+                measuredAt = measuredAt,
             )
         }
+    }
+
+    /**
+     * [field] as a float, 0f when absent - the same "unmeasured" sentinel
+     * [Rooms]'s own reader falls back to. Present but not a real number
+     * (a hostile sidecar's `1e400`, which [Json]'s own number parser
+     * happily returns as [Double.POSITIVE_INFINITY] rather than
+     * refusing) is refused outright: silently keeping it would let a
+     * shared room re-persist an infinity or a NaN into the very sidecar
+     * format [Json.write] cannot round-trip, corrupting the room on the
+     * receiver's own shelf.
+     */
+    private fun finiteFloatOrZero(field: JsonValue?, fieldName: String): Float {
+        val v = (field as? JsonValue.Num)?.value?.toFloat() ?: return 0f
+        require(v.isFinite()) { "not a room: its sidecar's $fieldName is not a real number" }
+        return v
     }
 }

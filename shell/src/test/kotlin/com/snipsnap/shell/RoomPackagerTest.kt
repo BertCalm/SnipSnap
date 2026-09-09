@@ -131,4 +131,49 @@ class RoomPackagerTest {
         val e = assertFailsWith<IllegalArgumentException> { RoomPackager.read(noName) }
         assertTrue("name" in e.message!!, e.message)
     }
+
+    /** A `.snip-room`-shaped ZIP with [wavSource]'s bytes and a hand-written [json] sidecar - for exercising `read()`'s refusals directly, without going through a real [Rooms.keep]. */
+    private fun handWrittenRoomZip(out: File, wavSource: File, json: String) {
+        ZipOutputStream(out.outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry("room.wav"))
+            wavSource.inputStream().use { it.copyTo(zip) }
+            zip.closeEntry()
+            zip.putNextEntry(ZipEntry("room.json"))
+            zip.write(json.toByteArray())
+            zip.closeEntry()
+        }
+    }
+
+    @Test
+    fun `a sidecar with no measuredAt is refused, never re-stamped to now`() {
+        val shelf = File(temp, "shelf6")
+        val room = Rooms.keep(shelf, impulse(), "Funk", 10f, 0.5f, "FUNK:A01")
+        val noMeasuredAt = File(temp, "no-measured-at.${RoomPackager.EXTENSION}")
+        handWrittenRoomZip(noMeasuredAt, room.file, """{"name":"FUNK ROOM","lagMs":10}""")
+        val e = assertFailsWith<IllegalArgumentException> { RoomPackager.read(noMeasuredAt) }
+        assertTrue("measuredAt" in e.message!!, e.message)
+    }
+
+    @Test
+    fun `a sidecar number that parses to infinity is refused, never persisted onward`() {
+        val shelf = File(temp, "shelf7")
+        val room = Rooms.keep(shelf, impulse(), "Funk", 10f, 0.5f, "FUNK:A01")
+
+        // An exponent past Double's range - Json's own number parser hands
+        // this back as Double.POSITIVE_INFINITY rather than refusing it.
+        val hugeLagMs = File(temp, "huge-lag.${RoomPackager.EXTENSION}")
+        handWrittenRoomZip(hugeLagMs, room.file, """{"name":"FUNK ROOM","lagMs":1e400,"measuredAt":1000}""")
+        val eLag = assertFailsWith<IllegalArgumentException> { RoomPackager.read(hugeLagMs) }
+        assertTrue("lagMs" in eLag.message!!, eLag.message)
+
+        val hugeConfidence = File(temp, "huge-confidence.${RoomPackager.EXTENSION}")
+        handWrittenRoomZip(hugeConfidence, room.file, """{"name":"FUNK ROOM","confidence":-1e400,"measuredAt":1000}""")
+        val eConf = assertFailsWith<IllegalArgumentException> { RoomPackager.read(hugeConfidence) }
+        assertTrue("confidence" in eConf.message!!, eConf.message)
+
+        val hugeMeasuredAt = File(temp, "huge-measured-at.${RoomPackager.EXTENSION}")
+        handWrittenRoomZip(hugeMeasuredAt, room.file, """{"name":"FUNK ROOM","measuredAt":1e400}""")
+        val eAt = assertFailsWith<IllegalArgumentException> { RoomPackager.read(hugeMeasuredAt) }
+        assertTrue("measuredAt" in eAt.message!!, eAt.message)
+    }
 }
