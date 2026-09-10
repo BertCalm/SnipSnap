@@ -146,6 +146,23 @@ class PersonalityTest {
     }
 
     /**
+     * Finding 14's fix: the TREATMENT card has to say it is working, and
+     * say which treatment, or a 1.8-second ETERNAL reads as a dead screen.
+     * The ellipsis is the part that carries "still going" - a header that
+     * merely renamed itself would look finished.
+     */
+    @Test
+    fun `the treatment header names what it is working on`() {
+        val busy = Copy.treatmentBusy("ETERNAL")
+        assertTrue(busy.contains("ETERNAL"), busy)
+        assertTrue(busy.endsWith("…"), "a progress line has to look unfinished: $busy")
+        assertTrue(busy.startsWith("TREATMENT"), "it replaces the card's own header: $busy")
+        // Distinguishable from the idle header, which is the whole point.
+        assertTrue(busy != "TREATMENT", busy)
+        assertTrue(busy.length <= 40, "one line on the card: ${busy.length}")
+    }
+
+    /**
      * The legend that replaced the expiring toast (UAT findings 4 and 5).
      * It has to name the gesture, because it is the only thing on screen
      * that does — the toast it backstops can be dismissed forever.

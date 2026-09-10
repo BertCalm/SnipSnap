@@ -273,6 +273,24 @@ object Copy {
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
 
+    /**
+     * The TREATMENT card's header while a treatment is being applied.
+     *
+     * The September UAT's finding 14: ETERNAL measured 1.77 s on a desktop
+     * JVM (SKIM 480 ms, DUB 247 ms, GHOST 162 ms) and a phone is several
+     * times slower - but while `busy` was true the chips silently stopped
+     * accepting taps with no label change, no dimming and no spinner. The
+     * user taps ETERNAL, nothing happens, taps again, still nothing. An app
+     * that is working should say so; this is the card saying it, and naming
+     * which treatment, so the wait is attributable.
+     *
+     * A function rather than a constant, so it carries the segment's own
+     * name - and so the reflective "every Copy constant shouts and stops"
+     * law, which scans constants, does not need an exemption for a
+     * progress indicator.
+     */
+    fun treatmentBusy(label: String): String = "TREATMENT · $label…"
+
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."
 
