@@ -16,19 +16,58 @@ enum class ExportFormat(
     val id: String,
     /** The export wizard's format-cycler line. */
     val cyclerLabel: String,
+    /**
+     * One line on when you would pick this one over its neighbours.
+     *
+     * The September UAT's finding 8: [cyclerLabel] was the only copy a
+     * format ever got, so nothing in the app said when EXPANSION beats XPN
+     * or SFZ beats DECENTSAMPLER — the user was choosing between eight
+     * names and no reasons.
+     *
+     * Deliberately not defaulted: a ninth format cannot be added without
+     * answering "why would someone pick this one", because the compiler
+     * will not let it.
+     */
+    val why: String,
     /** Whether this format nests the kit's own name inside `destRoot` itself, so a caller must not add another per-kit subfolder on top. */
     val selfNesting: Boolean = false,
 ) {
     // Writes to `File(destRoot, kit.name)` — see KitExporter.kt:44.
-    PROGRAM_FOLDER("folder", "MPC 2 FOLDER (EVERY GENERATION)", selfNesting = true),
+    PROGRAM_FOLDER(
+        "folder", "MPC 2 FOLDER (EVERY GENERATION)",
+        "THE SAFE ONE. A FOLDER OF WAVS ANY MPC CAN OPEN.",
+        selfNesting = true,
+    ),
     // Writes under `File(File(driveRoot, "Expansions"), title)` — see ExpansionWriter.kt:109.
-    EXPANSION("expansion", "EXPANSION (BROWSER TILE)", selfNesting = true),
-    XPN("xpn", "XPN ARCHIVE (ONE FILE)"),
-    MPC3_TRACK("xtd", "MPC 3 NATIVE (.XTD)"),
-    MPC3_PROJECT("xpj", "MPC SESSION (.XPJ) — KITS + GROOVES"),
-    MIDI("mid", "MIDI GROOVES (EVERY DAW)"),
-    SFZ("sfz", "SFZ (EVERY SAMPLER)"),
-    DECENT_SAMPLER("ds", "DECENTSAMPLER (FREE, EVERYWHERE)"),
+    EXPANSION(
+        "expansion", "EXPANSION (BROWSER TILE)",
+        "LANDS AS A TILE IN THE MPC'S OWN BROWSER.",
+        selfNesting = true,
+    ),
+    XPN(
+        "xpn", "XPN ARCHIVE (ONE FILE)",
+        "ONE FILE TO SEND SOMEONE. THE MPC UNPACKS IT.",
+    ),
+    MPC3_TRACK(
+        "xtd", "MPC 3 NATIVE (.XTD)",
+        "MPC 3 FIRMWARE ONLY. KEEPS WHAT MPC 2 CANNOT HOLD.",
+    ),
+    MPC3_PROJECT(
+        "xpj", "MPC SESSION (.XPJ) — KITS + GROOVES",
+        "A WHOLE SESSION AT ONCE, NOT ONE KIT.",
+    ),
+    MIDI(
+        "mid", "MIDI GROOVES (EVERY DAW)",
+        "THE GROOVES ONLY, NO SOUNDS. FOR A DAW.",
+    ),
+    SFZ(
+        "sfz", "SFZ (EVERY SAMPLER)",
+        "PLAIN TEXT. ALMOST ANY SAMPLER READS IT.",
+    ),
+    DECENT_SAMPLER(
+        "ds", "DECENTSAMPLER (FREE, EVERYWHERE)",
+        "FOR THE FREE DECENTSAMPLER PLUGIN, ON ANY DESK.",
+    ),
     ;
 
     companion object {

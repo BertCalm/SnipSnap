@@ -243,6 +243,9 @@ private fun ExportContent(
     var revision by remember(model) { mutableIntStateOf(0) }
     val revisionTick = revision
 
+    /** The format list, open or shut. Shut on arrival: the row says what is picked. */
+    var formatPickerOpen by remember(model) { mutableStateOf(false) }
+
     // Elapsed-time clock, not an incrementing counter: `SystemClock.
     // elapsedRealtime()` is monotonic (unlike a wall clock, which can jump)
     // and, because `filesShown` below is a pure function of "how long has
@@ -274,6 +277,26 @@ private fun ExportContent(
     // permission below is taken *persistably* rather than for this
     // process only.
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
+
+    /**
+     * Start on the format this user actually uses (September UAT, finding
+     * 7): every visit used to begin at index 0 however many times you had
+     * exported `.xtd`.
+     *
+     * Keyed on `model`, so it runs once per wizard rather than on every
+     * recompose, and it deliberately no-ops unless the wizard is still at
+     * its default — a remount mid-session must not undo a pick the user
+     * made a moment ago. An id that no longer exists (a format removed
+     * between releases) simply leaves the default alone.
+     */
+    LaunchedEffect(model) {
+        if (model.formatIx != 0) return@LaunchedEffect
+        val remembered = prefs.getString(PREF_EXPORT_FORMAT, null)?.let { ExportFormat.byId(it) }
+        if (remembered != null && remembered != model.format) {
+            model.setFormat(remembered)
+            revision++
+        }
+    }
     var cardTree by remember {
         mutableStateOf(prefs.getString(PREF_CARD_TREE, null)?.let { Uri.parse(it) })
     }
@@ -491,17 +514,27 @@ private fun ExportContent(
                         onToast(Copy.CARD_FORGOTTEN)
                     },
                 )
-                FormatCyclerRow(
-                    label = model.formatLabel,
+                FormatPickerRow(
+                    current = model.format,
+                    open = formatPickerOpen,
                     // `session.busy` (Compose-tracked) rather than
                     // `model.stage` directly — `stage` flips to WRITING on
                     // the IO thread inside `write()`, so it can lag a tick
-                    // behind `busy` going true; `cycleFormat()` no-ops off
-                    // READY either way, but this keeps the button's own
+                    // behind `busy` going true; `setFormat()` no-ops off
+                    // READY either way, but this keeps the row's own
                     // enabled state from racing the plain var.
                     enabled = !session.busy,
                     scheme = scheme,
-                    onTap = { model.cycleFormat(); revision++ },
+                    onToggle = { formatPickerOpen = !formatPickerOpen },
+                    onPick = { picked ->
+                        model.setFormat(picked)
+                        // Remembered for next time: finding 7's other half.
+                        // Written on the pick rather than on the dub, so a
+                        // change of mind is kept even if nothing is written.
+                        prefs.edit().putString(PREF_EXPORT_FORMAT, picked.id).apply()
+                        formatPickerOpen = false
+                        revision++
+                    },
                 )
                 DubProgressCard(model, filesShown, session.busy, scheme)
             }
@@ -576,6 +609,15 @@ private fun exportShareMime(format: ExportFormat): String? = when (format) {
  * which is the whole reason the grant is taken persistably.
  */
 private const val PREF_CARD_TREE = "export_card_tree"
+
+/**
+ * The format picked last time (an [ExportFormat.id]).
+ *
+ * The September UAT's finding 7: every visit to EXPORT started at index 0,
+ * so someone who exports `.xtd` every day walked the same three taps every
+ * day. A format is a property of how you work, not of this one visit.
+ */
+private const val PREF_EXPORT_FORMAT = "export_format"
 
 // The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
 // (accessibility audit finding 5) — a single tuned token, not a
@@ -691,8 +733,29 @@ private fun CardRow(
     }
 }
 
+/**
+ * FORMAT: what is picked, and — when opened — every format with the reason
+ * you would pick it.
+ *
+ * This was a one-way cycler (September UAT, findings 7 and 8). Eight states,
+ * no back step: DECENTSAMPLER cost seven taps, one tap past your target cost
+ * seven more, and [ExportFormat.cyclerLabel] was the only copy a format ever
+ * got, so nothing said when EXPANSION beats XPN.
+ *
+ * A list, not a dialog: the same inline-panel move KIT's key picker makes,
+ * so it costs no new machinery and cannot strand the user behind a scrim.
+ * The closed row still reads exactly as the cycler did, so nothing is lost
+ * for someone who liked it.
+ */
 @Composable
-private fun FormatCyclerRow(label: String, enabled: Boolean, scheme: Scheme, onTap: () -> Unit) {
+private fun FormatPickerRow(
+    current: ExportFormat,
+    open: Boolean,
+    enabled: Boolean,
+    scheme: Scheme,
+    onToggle: () -> Unit,
+    onPick: (ExportFormat) -> Unit,
+) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TapeText("FORMAT", TapeType.pixelSmall, scheme.ink3.tape)
         Box(
@@ -700,20 +763,47 @@ private fun FormatCyclerRow(label: String, enabled: Boolean, scheme: Scheme, onT
                 .fillMaxWidth()
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .raisedBevel(scheme)
-                .let { if (enabled) it.tapeClick(label = null, onClick = onTap) else it }
+                .let { if (enabled) it.tapeClick(label = null, onClick = onToggle) else it }
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
-            // The cycler's longest label ("MPC SESSION (.XPJ) — KITS +
-            // GROOVES") wraps to a second line here rather than shrinking
-            // below readable size — maxLines=2, fixed 9sp, per the brief.
+            // The longest label ("MPC SESSION (.XPJ) — KITS + GROOVES")
+            // wraps to a second line here rather than shrinking below
+            // readable size — maxLines=2, fixed 9sp, per the brief.
             TapeText(
-                label,
+                if (open) "${current.cyclerLabel} ▴" else "${current.cyclerLabel} ▾",
                 TapeType.pixel.copy(textAlign = TextAlign.Center),
                 if (enabled) scheme.ink.tape else scheme.ink3.tape,
                 Modifier.fillMaxWidth(),
                 maxLines = 2,
             )
+        }
+        if (open && enabled) {
+            Column(
+                Modifier.fillMaxWidth().lcdPanel(scheme).padding(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                for (f in ExportFormat.entries) {
+                    val picked = f == current
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .tapeClick(label = f.cyclerLabel, onClick = { onPick(f) })
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        TapeText(
+                            if (picked) "▸ ${f.cyclerLabel}" else f.cyclerLabel,
+                            TapeType.pixel,
+                            if (picked) scheme.amber.tape else scheme.lcdInk.tape,
+                            maxLines = 2,
+                        )
+                        // Finding 8: the reason, not just the name.
+                        TapeText(f.why, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+                    }
+                }
+            }
         }
     }
 }

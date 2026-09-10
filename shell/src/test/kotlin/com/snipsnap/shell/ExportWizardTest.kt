@@ -142,4 +142,69 @@ class ExportWizardTest {
         val w = ExportWizardModel(layered, dir)
         assertEquals(4, w.fileCount) // kick + two zones + program
     }
+
+    /**
+     * The September UAT's finding 7: the cycler goes one way with no back
+     * step, so the eighth format cost seven taps and one tap past your
+     * target cost seven more. `setFormat` is the picker's door — every
+     * format in exactly one move, from wherever you happen to be.
+     */
+    @Test
+    fun `setFormat reaches any format in one move`() {
+        val (kit, dir) = makeKit("Pick")
+        val w = ExportWizardModel(kit, dir)
+        // From every starting point, to every destination, in one call.
+        for (from in ExportFormat.entries) {
+            for (to in ExportFormat.entries) {
+                val m = ExportWizardModel(kit, dir)
+                while (m.format != from) m.cycleFormat()
+                m.setFormat(to)
+                assertEquals(to, m.format, "$from -> $to should be one move")
+            }
+        }
+        // And it agrees with the cycler about where index 0 is.
+        w.setFormat(ExportFormat.DECENT_SAMPLER)
+        assertEquals(ExportFormat.DECENT_SAMPLER, w.format)
+        w.cycleFormat()
+        assertEquals(ExportFormat.entries.first(), w.format, "picking still leaves the cycler wrapping correctly")
+    }
+
+    /**
+     * `setFormat` is locked off READY for the same reason `cycleFormat` is:
+     * a dub that has already chosen its writer must not have the
+     * destination changed under it.
+     */
+    @Test
+    fun `setFormat is refused once writing has begun`() {
+        val (kit, dir) = makeKit("Locked")
+        val w = ExportWizardModel(kit, dir)
+        w.setFormat(ExportFormat.SFZ)
+        val card = File(temp, "card-locked")
+        assertTrue(w.write(card, overwrite = true) is ExportWizardModel.WriteResult.Done)
+        // COMPLETE, not READY: the wizard is showing what it just wrote.
+        val after = w.format
+        w.setFormat(ExportFormat.MIDI)
+        assertEquals(after, w.format, "the format must not move after a dub")
+        w.cycleFormat()
+        assertEquals(after, w.format, "and the cycler is locked the same way")
+    }
+
+    /**
+     * Finding 8: `cyclerLabel` used to be the only copy a format ever got,
+     * so nothing told the user when EXPANSION beats XPN. Every format now
+     * carries a reason, and these are the ways that could go wrong quietly:
+     * a blank one, a duplicate pasted from its neighbour, one too long for
+     * the row, or one that stops shouting the way the rest of TapeOS does.
+     */
+    @Test
+    fun `every format says why you would pick it`() {
+        val whys = ExportFormat.entries.map { it.why }
+        for (f in ExportFormat.entries) {
+            assertTrue(f.why.isNotBlank(), "${f.id} has no reason")
+            assertTrue(f.why.length <= 52, "${f.id}'s reason is too long for the row (${f.why.length})")
+            assertEquals(f.why.uppercase(), f.why, "${f.id}'s reason should shout like the rest of TapeOS")
+            assertTrue(f.why.endsWith("."), "${f.id}'s reason should land on a full stop")
+        }
+        assertEquals(whys.size, whys.toSet().size, "two formats share a reason - one was pasted from the other")
+    }
 }

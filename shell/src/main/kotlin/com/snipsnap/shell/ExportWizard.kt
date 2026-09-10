@@ -50,6 +50,22 @@ class ExportWizardModel(
         if (stage == Stage.READY) formatIx = (formatIx + 1) % ExportFormat.entries.size
     }
 
+    /**
+     * Pick a format outright, in one move rather than by walking to it.
+     *
+     * The September UAT's finding 7: [cycleFormat] was the only way in, and
+     * it goes one direction with no back step, so DECENT_SAMPLER cost seven
+     * taps and overshooting your target cost seven more. That is a picker's
+     * job, not a cycler's, and the screen has one now.
+     *
+     * Locked off READY exactly as [cycleFormat] is — the destination cannot
+     * change out from under a dub that has already started choosing its
+     * writer.
+     */
+    fun setFormat(f: ExportFormat) {
+        if (stage == Stage.READY) formatIx = ExportFormat.entries.indexOf(f)
+    }
+
     // ---------- preflight ----------
 
     var preflight: List<Finding> = Preflight.check(kit, kitDir)
