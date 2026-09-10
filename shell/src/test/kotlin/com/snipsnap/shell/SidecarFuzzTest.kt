@@ -449,6 +449,58 @@ class SidecarFuzzTest {
     }
 
     @Test
+    fun `a take restores under mutation or refuses - the kit stays readable and nothing leaves the folder`() {
+        // The TAKES screen reads every archived take through KitStore.read
+        // (fuzzed above) to draw its diff; RESTORE is the door that acts on
+        // one. A torn take must refuse before anything moves; a rewritten
+        // one that still parses restores whatever it says - bin-backed, so
+        // undoable - and either way the kit on disk stays a kit and no file
+        // lands outside its folder.
+        val dir = File(temp, "take-fuzz")
+        val m = KitBuilderModel.create("Takes", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        m.treatPad(1, "reversed")
+        m.save()
+        m.treatPad(2, "reversed")
+        m.save()
+        val take = m.takes().last() // the take that carries both pads, not FRESH TAPE's empty kit
+        val valid = take.readText()
+        assertTrue("A01" in valid || m.pad(1)!!.sampleFile in valid, "the seed take carries the pads")
+        val tree = Json.parse(valid)
+        val rnd = Random(71)
+        val start = System.nanoTime()
+        for (i in 0 until ROUNDS / 5) {
+            val (kind, mutant) = if (i % 2 == 0) {
+                "bytes" to String(mutateBytes(valid.toByteArray(Charsets.UTF_8), rnd), Charsets.UTF_8)
+            } else {
+                "tree" to Json.write(mutateTree(tree, rnd))
+            }
+            take.writeText(mutant)
+            val model = KitBuilderModel.open(dir)
+            try {
+                model.restoreTake(take)
+                model.save()
+            } catch (t: Throwable) {
+                if (!isTypedRefusal(t)) fail("restoreTake round $i ($kind): untyped ${t::class.simpleName}: ${t.message}\n$mutant")
+            }
+            val back = try {
+                KitStore.load(dir)
+            } catch (t: Throwable) {
+                fail("restoreTake round $i ($kind): the kit on disk no longer reads: ${t::class.simpleName}: ${t.message}\n$mutant")
+            }
+            assertTrue(back.pads.all { '/' !in it.sampleFile && '\\' !in it.sampleFile }, "round $i: a pad points outside its folder")
+            assertTrue(
+                temp.listFiles()!!.none { it.name.startsWith("escaped") } && File(dir, "..").listFiles()!!.none { it.name.startsWith("escaped") },
+                "round $i ($kind): a file landed outside the kit folder\n$mutant",
+            )
+        }
+        val ms = (System.nanoTime() - start) / 1_000_000
+        assertTrue(ms < 60_000, "restoreTake: ${ROUNDS / 5} rounds took ${ms}ms")
+    }
+
+    @Test
     fun `the label survives mutation`() {
         val root = File(temp, "label").also { it.mkdirs() }
         Label.init(root, "Seed Label", "SL")
