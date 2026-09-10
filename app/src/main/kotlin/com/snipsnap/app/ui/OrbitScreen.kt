@@ -1090,6 +1090,9 @@ private fun StripEditor(
 ) {
     val content = ring.content as? PatternOrbit ?: return
     val rows = ring.pads.reversed()
+    // One index per ring, not one scan per cell: a 64-step bass ring is
+    // rows × steps lookups per recomposition, and that must stay cheap.
+    val hitAt = remember(content) { content.hits.associateBy { it.step to it.slot } }
     val playheadStep = if (playing) OrbitClock.stepAt(set, ring, frame) else -1
     val inkColor = scheme.lcdInk.tape
 
@@ -1115,7 +1118,7 @@ private fun StripEditor(
                     }
                     Row(Modifier.horizontalScroll(scroll), horizontalArrangement = Arrangement.spacedBy(gap)) {
                         for (step in 0 until ring.steps) {
-                            val hit = content.hits.firstOrNull { it.step == step && it.slot == slot }
+                            val hit = hitAt[step to slot]
                             val onBeat = step % 4 == 0
                             val fill = when {
                                 hit != null -> color.copy(alpha = 0.45f + 0.55f * hit.velocity)

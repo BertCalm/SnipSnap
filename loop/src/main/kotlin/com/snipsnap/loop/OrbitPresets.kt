@@ -75,7 +75,7 @@ object OrbitPresets {
      * a pickup into the wrap — five beats that lean into the drums' four.
      */
     fun bassRing(kitFolder: String, tonalSlots: List<Int>): Orbit {
-        require(tonalSlots.size >= 2) { "a bass ring wants at least two tonal pads" }
+        require(tonalSlots.size >= MELODIC_MIN_PADS) { "a bass ring wants at least $MELODIC_MIN_PADS tonal pads: two notes is not a line" }
         fun note(i: Int) = tonalSlots[i.coerceIn(0, tonalSlots.size - 1)]
         val line = listOf(
             OrbitHit(0, note(0), 0.9f),

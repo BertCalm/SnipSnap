@@ -65,6 +65,13 @@ class OrbitPresetsTest {
     }
 
     @Test
+    fun `bassRing itself refuses two pads - the same rule the presets apply`() {
+        val e = runCatching { OrbitPresets.bassRing("kit", listOf(9, 10)) }.exceptionOrNull()
+        assertTrue(e is IllegalArgumentException, "expected a refusal, got $e")
+        assertEquals(listOf(9, 10, 11), OrbitPresets.bassRing("kit", listOf(9, 10, 11)).pads)
+    }
+
+    @Test
     fun `an unclassified one-pad kit still gets a ring on its only pad`() {
         val lone = Kit("Lone", listOf(KitPad(5, "thing.wav")))
         val set = OrbitPresets.fromKit("Lone", lone, 120f, 44_100)
