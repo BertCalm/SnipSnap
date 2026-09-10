@@ -1,5 +1,6 @@
 package com.snipsnap.mpc3
 
+import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
@@ -11,10 +12,14 @@ import javax.xml.parsers.DocumentBuilderFactory
  * three sites here used to set only that one feature inside a try/catch
  * that swallowed failure and stopped — so a JAXP implementation that
  * doesn't recognize that exact feature name would silently parse the file
- * fully unprotected. Each guard below is now tried independently: the
- * three OWASP-listed fallbacks (no external general/parameter entities, no
- * external DTD) still close the door even if `disallow-doctype-decl`
- * itself isn't recognized, and one unsupported name never costs the rest.
+ * fully unprotected. Every guard below is now tried independently, so one
+ * unsupported name never costs the rest: the three OWASP-listed feature
+ * fallbacks (no external general/parameter entities, no external DTD)
+ * close the same door a different way, secure processing caps entity
+ * expansion generally, and the two `ACCESS_EXTERNAL_*` properties are the
+ * belt an implementation that ignores every feature name above still
+ * wears — they block external DTD/schema fetches at a layer feature
+ * toggles don't reach at all.
  */
 object SafeXml {
 
@@ -23,7 +28,15 @@ object SafeXml {
             dbf.setFeature(name, value)
         } catch (_: Exception) {
             // Not every JAXP implementation recognizes every feature name;
-            // the other guards below still hold.
+            // the other guards here still hold.
+        }
+    }
+
+    private fun tryAttribute(dbf: DocumentBuilderFactory, name: String, value: Any) {
+        try {
+            dbf.setAttribute(name, value)
+        } catch (_: Exception) {
+            // Same tolerance as tryFeature, for the property-style guards.
         }
     }
 
@@ -32,6 +45,11 @@ object SafeXml {
         tryFeature(this, "http://xml.org/sax/features/external-general-entities", false)
         tryFeature(this, "http://xml.org/sax/features/external-parameter-entities", false)
         tryFeature(this, "http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+        tryFeature(this, XMLConstants.FEATURE_SECURE_PROCESSING, true)
+        // Empty string is JAXP's own spelling of "no external access
+        // allowed" for these two - not a wildcard, the opposite of one.
+        tryAttribute(this, XMLConstants.ACCESS_EXTERNAL_DTD, "")
+        tryAttribute(this, XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
         isXIncludeAware = false
         isExpandEntityReferences = false
         isNamespaceAware = false
