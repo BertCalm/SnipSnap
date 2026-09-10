@@ -56,6 +56,18 @@ pitch.
 The header shows the rings' lengths against each other, reduced: 16, 20
 and a bar-locked ring read "4 : 5".
 
+## Filling a ring
+
+`OrbitPatterns` is the shortcut past one tap per step. `euclid(k, n)` is
+Bjorklund as Toussaint tells it, onset first — 3 round 8 is the tresillo
+`x..x..x.`, 5 round 8 the cinquillo `x.xx.xx.` — and SPREAD on the screen
+puts k of them on the ring's first pad. CLEAR empties a ring. The dice
+(`scramble`) roll a seeded handful of hits for every pad in the voice,
+soft, normal or accented, and a new seed rolls again. A long-press on a
+strip cell cycles a hit's weight soft → normal → accent, or drops an accent
+on an empty cell. The step count is a picker of the sizes worth a chip
+(`STEP_CHOICES`), not a walk on − and +.
+
 ## The cycle
 
 `OrbitClock.cycleSteps` is the LCM of every free ring's step count with the
@@ -96,6 +108,7 @@ choice, not a surprise.
 | `loop/OrbitBank.kt` | The prepared audio for a set: pads at the device rate, snips fitted to their periods. Immutable; an edit prepares a new one reusing the last |
 | `loop/OrbitEngine.kt` | The transport: fixed 2048-frame blocks, hits scheduled per block, voices mixed, snips wrapped, written to the same `AudioSink` the loop grid uses. `render` is the offline bounce and the test harness |
 | `loop/OrbitStore.kt` | `orbits.json` (version 2; version 1 still loads), a sidecar beside the kit like `groove.json` |
+| `loop/OrbitPatterns.kt` | Euclid, SPREAD, CLEAR, the dice, the weight cycle, the step-size choices |
 | `loop/OrbitPresets.kt` | The starter set from a kit — one ring per instrument the kit has (KICK 16 · SNARE 16 · HATS 12 · PERC 20 · THREE, a locked triplet · BASS 20 over the tonal pads) — and the empty-ring and snip-ring constructors |
 | `app/OrbitSampleSource.kt` | Pads from the kit shelf via `KitSampleSource`, snips from `snips/` |
 | `app/ui/OrbitScreen.kt` | The rings (shortest inside, a 16th-long comet tail, a strike flare, a pulse when they meet), the unrolled strip, the panel, the transport, audition through PLAY's pad engine, solo by long-press. Reached from GROOVE's **ORBIT ▸**, left by **◄ GROOVE** |
@@ -107,8 +120,7 @@ choice, not a surprise.
   the shape the `Mpc3Clip` writer already takes; a WAV bounce is
   `OrbitEngine.render` over the same length. Both are short follow-ups once
   the rings have been heard.
-- **Velocity and swing on a ring.** Hits land at 0.9; `OrbitHit.velocity`
-  is stored and honoured, the screen just has no control for it yet.
+- **Swing on a ring.** Hits carry a weight but no timing offset yet.
 - **Hardware verification** of the Android screen: the cloud session
   cannot compile `:app` (see `app/README.md`), so the screen is reviewed
   Kotlin until CI's `android-build` job or a desktop build has been through

@@ -2,10 +2,13 @@ package com.snipsnap.app.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -65,6 +68,7 @@ import com.snipsnap.loop.OrbitBank
 import com.snipsnap.loop.OrbitClock
 import com.snipsnap.loop.OrbitEngine
 import com.snipsnap.loop.OrbitHit
+import com.snipsnap.loop.OrbitPatterns
 import com.snipsnap.loop.OrbitPresets
 import com.snipsnap.loop.OrbitSet
 import com.snipsnap.loop.OrbitStore
@@ -138,6 +142,12 @@ fun OrbitScreen(
     var snips by remember(kitDir) { mutableStateOf<List<File>>(emptyList()) }
     /** + SNIP RING opens the shelf as a list to pick from — no arrow-cycling through a long shelf. */
     var snipPickerOpen by remember(kitDir) { mutableStateOf(false) }
+    /** Tapping the step count opens a picker of ring sizes: eight taps on + is not a way to reach 24. */
+    var stepsPickerOpen by remember(kitDir) { mutableStateOf(false) }
+    /** SPREAD asks how many hits before it fills the ring. */
+    var spreadOpen by remember(kitDir) { mutableStateOf(false) }
+    /** The dice: every roll a new seed, so a roll can always be rolled again. */
+    var scrambleSeed by remember(kitDir) { mutableIntStateOf(1) }
 
     // The transport: null until PLAY. Bank and engine live across edits;
     // each edit prepares a new bank (reusing the old one's buffers) and
@@ -293,7 +303,33 @@ fun OrbitScreen(
         if (placed) audition(slot)
     }
 
+    /** Long-press on a cell: an existing hit cycles soft → normal → accent; an empty cell takes an accent. */
+    fun cycleHit(index: Int, slot: Int, step: Int) {
+        updateRing(index) { ring ->
+            val content = ring.content as? PatternOrbit ?: return@updateRing ring
+            val existing = content.hits.firstOrNull { it.step == step && it.slot == slot }
+            val hits = if (existing != null) {
+                content.hits - existing + existing.copy(velocity = OrbitPatterns.nextVelocity(existing.velocity))
+            } else {
+                content.hits + OrbitHit(step, slot, OrbitPatterns.ACCENT_VELOCITY)
+            }
+            ring.copy(content = content.copy(hits = hits.sortedWith(compareBy({ it.step }, { it.slot }))))
+        }
+        audition(slot)
+    }
+
+    fun spreadRing(index: Int, k: Int) {
+        spreadOpen = false
+        updateRing(index) { ring -> OrbitPatterns.spread(ring, ring.pads.first(), k) }
+    }
+
+    fun scrambleRing(index: Int) {
+        scrambleSeed += 1
+        updateRing(index) { ring -> OrbitPatterns.scramble(ring, scrambleSeed) }
+    }
+
     fun setSteps(index: Int, steps: Int) {
+        stepsPickerOpen = false
         val clamped = steps.coerceIn(1, Orbit.MAX_STEPS)
         updateRing(index) { ring ->
             // Shrinking a ring drops the hits past its new end rather than
@@ -431,6 +467,7 @@ fun OrbitScreen(
                     playing = playing,
                     scheme = scheme,
                     onToggle = { slot, step -> toggleHit(selected, slot, step) },
+                    onCycle = { slot, step -> cycleHit(selected, slot, step) },
                     onAudition = { slot -> audition(slot) },
                 )
             }
@@ -464,6 +501,34 @@ fun OrbitScreen(
                             }
                         }
                     }
+                } else if (stepsPickerOpen && ring != null) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        TapeText("HOW MANY STEPS ROUND ${ring.name}?", TapeType.pixel, scheme.ink.tape)
+                        SmallChip("CLOSE", scheme) { stepsPickerOpen = false }
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        for (n in OrbitPatterns.STEP_CHOICES) {
+                            SmallChip(n.toString(), scheme, accent = n == ring.steps) { setSteps(selected, n) }
+                        }
+                    }
+                    TapeText("16 IS A BAR · 20 IS FIVE BEATS · 12 IS THREE · ODD NUMBERS DRIFT FURTHEST", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+                } else if (spreadOpen && ring != null) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        TapeText("SPREAD HOW MANY HITS ROUND ${ring.steps} STEPS?", TapeType.pixel, scheme.ink.tape)
+                        SmallChip("CLOSE", scheme) { spreadOpen = false }
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        for (k in 1..minOf(ring.steps, 12)) {
+                            SmallChip(k.toString(), scheme) { spreadRing(selected, k) }
+                        }
+                    }
+                    TapeText("AS EVEN AS THE STEPS ALLOW: 3 ROUND 8 IS THE TRESILLO, 5 ROUND 8 THE CINQUILLO. ON THE RING'S FIRST PAD.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
                 } else if (ring == null) {
                     TapeText("NO RINGS — ADD ONE BELOW", TapeType.pixel, scheme.ink2.tape)
                 } else {
@@ -482,29 +547,39 @@ fun OrbitScreen(
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         SmallChip("−", scheme) { setSteps(selected, ring.steps - 1) }
-                        TapeText(
-                            "${ring.steps} STEPS · ${OrbitClock.lengthLabel(current, ring)}",
-                            TapeType.pixel,
-                            scheme.ink.tape,
-                            Modifier.weight(1f),
-                        )
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .heightIn(min = 36.dp)
+                                .tapeClick(label = "PICK A STEP COUNT") { stepsPickerOpen = true },
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
+                            TapeText(
+                                "${ring.steps} STEPS · ${OrbitClock.lengthLabel(current, ring)} ▾",
+                                TapeType.pixel,
+                                scheme.ink.tape,
+                            )
+                        }
                         SmallChip("+", scheme) { setSteps(selected, ring.steps + 1) }
                         SmallChip("LOCK TO BAR", scheme, accent = ring.lockToBar) {
                             updateRing(selected) { it.copy(lockToBar = !it.lockToBar) }
                         }
                     }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         SmallChip(if (ring.engaged) "ON" else "OFF", scheme, accent = ring.engaged) {
                             updateRing(selected) { it.copy(engaged = !it.engaged) }
                         }
                         SmallChip("SOLO", scheme, accent = solo == selected) { toggleSolo(selected) }
                         SmallChip("DEL", scheme) { deleteRing(selected) }
-                        TapeText(
-                            if (ring.lockToBar) "ONCE A BAR, WHATEVER THE STEPS" else "AS LONG AS ITS STEPS",
-                            TapeType.pixelSmall,
-                            scheme.ink3.tape,
-                            Modifier.weight(1f),
-                        )
+                        if (ring.content is PatternOrbit) {
+                            SmallChip("SPREAD", scheme) { spreadOpen = true }
+                            SmallChip("CLEAR", scheme) { updateRing(selected) { OrbitPatterns.clear(it) } }
+                            SmallChip("⚄ DICE", scheme) { scrambleRing(selected) }
+                        }
                     }
                     when (val content = ring.content) {
                         is PatternOrbit -> {
@@ -544,9 +619,9 @@ fun OrbitScreen(
             }
             TapeText(
                 if (snips.isEmpty()) {
-                    "TAP A RING TO PICK IT · HOLD TO SOLO · TAP THE STRIP TO PLACE A HIT · NO SNIPS ON THE SHELF YET FOR + SNIP."
+                    "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · NO SNIPS ON THE SHELF YET FOR + SNIP."
                 } else {
-                    "TAP A RING TO PICK IT · HOLD TO SOLO · TAP THE STRIP TO PLACE A HIT · SHORTEST RING INSIDE COMES ROUND FIRST."
+                    "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · SHORTEST RING INSIDE COMES ROUND FIRST."
                 },
                 TapeType.pixelSmall,
                 scheme.ink3.tape,
@@ -750,6 +825,7 @@ private fun StripEditor(
     playing: Boolean,
     scheme: Scheme,
     onToggle: (slot: Int, step: Int) -> Unit,
+    onCycle: (slot: Int, step: Int) -> Unit,
     onAudition: (slot: Int) -> Unit,
 ) {
     val content = ring.content as? PatternOrbit ?: return
@@ -786,14 +862,20 @@ private fun StripEditor(
                                 onBeat -> scheme.raised.tape
                                 else -> scheme.field.tape
                             }
-                            val edge = if (step == playheadStep) inkColor else scheme.grayEdge.tape
-                            Box(
-                                Modifier
-                                    .width(cellW)
-                                    .height(CELL_H_DP.dp)
-                                    .background(fill, RoundedCornerShape(3.dp))
-                                    .border(if (step == playheadStep) 2.dp else 1.dp, edge, RoundedCornerShape(3.dp))
-                                    .tapeClick(label = "STEP ${step + 1} PAD ${padLabel(slot)}") { onToggle(slot, step) },
+                            val accent = hit != null && hit.velocity >= OrbitPatterns.ACCENT_VELOCITY
+                            val edge = when {
+                                step == playheadStep -> inkColor
+                                accent -> color
+                                else -> scheme.grayEdge.tape
+                            }
+                            StripCell(
+                                width = cellW,
+                                fill = fill,
+                                edge = edge,
+                                edgeWidth = if (step == playheadStep || accent) 2.dp else 1.dp,
+                                label = "STEP ${step + 1} PAD ${padLabel(slot)}",
+                                onTap = { onToggle(slot, step) },
+                                onLongPress = { onCycle(slot, step) },
                             )
                         }
                     }
@@ -801,6 +883,40 @@ private fun StripEditor(
             }
         }
     }
+}
+
+/**
+ * One strip cell. A tap places or lifts the hit; a long-press cycles its
+ * weight (soft, normal, accent) or places an accent on an empty cell.
+ * `combinedClickable` rather than a raw pointerInput so both gestures are
+ * real accessibility actions, as the CHOP chips do it.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun StripCell(
+    width: androidx.compose.ui.unit.Dp,
+    fill: Color,
+    edge: Color,
+    edgeWidth: androidx.compose.ui.unit.Dp,
+    label: String,
+    onTap: () -> Unit,
+    onLongPress: () -> Unit,
+) {
+    Box(
+        Modifier
+            .width(width)
+            .height(CELL_H_DP.dp)
+            .background(fill, RoundedCornerShape(3.dp))
+            .border(edgeWidth, edge, RoundedCornerShape(3.dp))
+            .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClickLabel = label,
+                onLongClickLabel = "ACCENT",
+                onLongClick = onLongPress,
+                onClick = onTap,
+            ),
+    )
 }
 
 /** A strip cell's least width, in dp: GROOVE's step editor at 16 across, and still a thumb-sized target with a gap. */
