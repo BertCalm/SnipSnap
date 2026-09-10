@@ -81,6 +81,7 @@ import com.snipsnap.app.ui.tapeClick
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.WavReader
+import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.InstantKit
@@ -1990,6 +1991,15 @@ fun App(shelf: KitShelf) {
                                 prefs.edit().putBoolean(PREF_TEACH, on).apply()
                                 toast = if (on) Copy.TEACHING_ON else Copy.TEACHING_OFF
                             },
+                            // Finding 23: three facts the app already kept and
+                            // never showed. Read straight from the same prefs
+                            // EXPORT writes - one owner each, no second copy.
+                            exportFormatLabel = prefs.getString(PREF_EXPORT_FORMAT, null)
+                                ?.let { ExportFormat.byId(it) }?.cyclerLabel,
+                            filesWhere = (context.getExternalFilesDir("exports") ?: context.filesDir).absolutePath,
+                            cardName = prefs.getString(PREF_CARD_TREE, null)
+                                ?.let { Copy.cardName(Uri.parse(it).lastPathSegment) },
+                            onHelp = { screen = AppScreen.HELP },
                         )
                         AppScreen.CHOP -> ChopScreen(
                             entry = open,

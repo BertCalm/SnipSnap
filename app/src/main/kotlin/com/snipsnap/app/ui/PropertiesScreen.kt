@@ -47,6 +47,20 @@ fun PropertiesScreen(
     onPersonality: (Personality) -> Unit,
     teachEnabled: Boolean,
     onTeach: (Boolean) -> Unit,
+    /**
+     * September UAT, finding 23. Three facts the app already knows and never
+     * showed anyone, plus the door to HELP.
+     *
+     * They are **read-only on purpose**. [exportFormatLabel] is a memory of
+     * the last format picked on EXPORT, not a preference owned here — a
+     * second picker would give one setting two owners, and the row says
+     * where to change it instead. [filesWhere] and [cardName] are facts, not
+     * settings at all.
+     */
+    exportFormatLabel: String?,
+    filesWhere: String,
+    cardName: String?,
+    onHelp: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     Column(
@@ -124,6 +138,47 @@ fun PropertiesScreen(
             scheme.ink2.tape,
             maxLines = 3,
         )
+
+        // ---- What the app already knew and never said (finding 23) ----
+
+        TapeText(Copy.SETUP_FORMAT_HEADING, TapeType.display, scheme.ink.tape)
+        TapeText(
+            exportFormatLabel ?: Copy.SETUP_FORMAT_NONE,
+            TapeType.pixel,
+            scheme.ink2.tape,
+            maxLines = 2,
+        )
+        TapeText(Copy.SETUP_FORMAT_NOTE, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+
+        TapeText(Copy.SETUP_WHERE_HEADING, TapeType.display, scheme.ink.tape)
+        // The real path, not a description of it: a user hunting for a file
+        // over a cable needs the actual thing to look for. maxLines is
+        // generous because a private-storage path is long and truncating it
+        // would defeat the only reason to print it.
+        TapeText(Copy.setupWhere(filesWhere), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
+
+        TapeText(Copy.SETUP_CARD_HEADING, TapeType.display, scheme.ink.tape)
+        TapeText(
+            cardName?.let { Copy.setupCardHeld(it) } ?: Copy.SETUP_CARD_NONE,
+            TapeType.pixelSmall,
+            scheme.ink2.tape,
+            maxLines = 2,
+        )
+
+        // HELP has a menu tab, but at 390 dp it sits off the right edge of a
+        // row that scrolls with no cue (September UAT, finding 10, still
+        // open). Until that is fixed this is the only door to HELP a user is
+        // certain to find.
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .raisedBevel(scheme)
+                .tapeClick(label = null, onClick = onHelp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText("HELP ▸", TapeType.pixel, scheme.amber.tape)
+        }
     }
 }
 

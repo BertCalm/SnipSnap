@@ -274,6 +274,54 @@ class PersonalityTest {
     }
 
     /**
+     * Finding 23. SETUP held three settings and answered none of the
+     * questions a user actually arrives with. These are the three the app
+     * can answer from what it already knows — the format EXPORT will open
+     * on, where the files are, whether a card is held — rather than from
+     * settings invented to fill a screen.
+     */
+    @Test
+    fun `SETUP answers its three questions without pretending to own them`() {
+        // The format readout says where it is changed, because SETUP is not
+        // a second picker and must not read like one.
+        assertTrue(Copy.SETUP_FORMAT_NOTE.contains("EXPORT"), Copy.SETUP_FORMAT_NOTE)
+        assertTrue(Copy.SETUP_FORMAT_NOTE.endsWith("."), "a sentence the screen says: ${Copy.SETUP_FORMAT_NOTE}")
+        assertTrue(Copy.SETUP_CARD_NONE.endsWith("."), Copy.SETUP_CARD_NONE)
+
+        // The headings are labels above a readout, so they do not end in a
+        // full stop - the same register as the legends.
+        for (h in listOf(Copy.SETUP_FORMAT_HEADING, Copy.SETUP_WHERE_HEADING, Copy.SETUP_CARD_HEADING)) {
+            assertFalse(h.endsWith("."), "furniture, not a sentence: $h")
+            assertEquals(h.uppercase(Locale.ROOT), h, "TapeOS shouts: $h")
+            assertTrue(h.length <= 24, "a heading on a narrow screen: $h")
+        }
+        // Three different questions must read as three different questions.
+        val headings = listOf(Copy.SETUP_FORMAT_HEADING, Copy.SETUP_WHERE_HEADING, Copy.SETUP_CARD_HEADING)
+        assertEquals(headings.size, headings.toSet().size, "$headings")
+
+        // The path is handed through unchanged: a user hunting on a cable
+        // needs the real thing to look for, not a description of it.
+        assertEquals("/storage/emulated/0/Android/data/x/files/exports", Copy.setupWhere("/storage/emulated/0/Android/data/x/files/exports"))
+
+        // One card, one name. EXPORT's DESTINATION row and SETUP both go
+        // through Copy.cardName, so the two screens cannot name it two ways -
+        // and it is string work on the uri rather than a DocumentFile lookup,
+        // which would mean a dependency and a disk touch for a label.
+        assertEquals("Kits", Copy.cardName("primary:Music/Kits"))
+        assertEquals("Kits", Copy.cardName("Music/Kits"))
+        assertEquals("SDCARD", Copy.cardName("SDCARD"))
+        assertEquals("CARD", Copy.cardName("1A2B-3C4D:"), "a volume root has no folder to name")
+        assertEquals("CARD", Copy.cardName(null), "and neither has a uri with no segment")
+        assertEquals("CARD", Copy.cardName(""))
+
+        // A held card is named, and shouts like everything else.
+        val held = Copy.setupCardHeld("Untitled SD card")
+        assertTrue(held.contains("UNTITLED SD CARD"), held)
+        assertEquals(held.uppercase(Locale.ROOT), held, held)
+        assertTrue(held != Copy.SETUP_CARD_NONE)
+    }
+
+    /**
      * Finding 17. Every creation door auto-names a kit, so RENAME is the only
      * place a name is ever typed — and it sits behind a hold on the row that
      * nothing on screen mentioned. The legend has to name the gesture and the
@@ -340,6 +388,12 @@ class PersonalityTest {
         // a full stop - and every legend must be added here when it is written,
         // or the shouting law will ask it to become a sentence.
         "PAD_SHEET_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER",
+        // SETUP's three section headings and the "nothing picked yet" it
+        // shows in place of a format - labels above a readout, in the same
+        // register as the legends above. SETUP_FORMAT_NOTE and
+        // SETUP_CARD_NONE are NOT here: both are sentences the screen says
+        // to you, and both keep their full stops.
+        "SETUP_FORMAT_HEADING", "SETUP_WHERE_HEADING", "SETUP_CARD_HEADING", "SETUP_FORMAT_NONE",
     )
 
     /**

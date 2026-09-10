@@ -706,8 +706,12 @@ internal const val PREF_CARD_TREE = "export_card_tree"
  * The September UAT's finding 7: every visit to EXPORT started at index 0,
  * so someone who exports `.xtd` every day walked the same three taps every
  * day. A format is a property of how you work, not of this one visit.
+ *
+ * `internal` for the same reason [PREF_CARD_TREE] is: SETUP reads it to show
+ * what EXPORT will open on (September UAT, finding 23). One key, two readers,
+ * one owner — SETUP only ever reads it.
  */
-private const val PREF_EXPORT_FORMAT = "export_format"
+internal const val PREF_EXPORT_FORMAT = "export_format"
 
 // The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
 // (accessibility audit finding 5) — a single tuned token, not a
@@ -783,7 +787,7 @@ private fun CardRow(
     val label = if (tree == null) {
         Copy.CARD_NONE
     } else {
-        "${Copy.CARD_PICKED} ${tree.lastPathSegment?.substringAfterLast(':')?.substringAfterLast('/').orEmpty().ifBlank { "CARD" }}"
+        "${Copy.CARD_PICKED} ${Copy.cardName(tree.lastPathSegment)}"
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TapeText("DESTINATION", TapeType.pixelSmall, scheme.ink3.tape)
