@@ -167,7 +167,7 @@ private fun PadRow(pad: MpcXRay.Pad) {
 }
 
 /** A field this class read as null wasn't there, or wasn't shaped as expected — an em dash, never a guessed zero. */
-private fun fmt(v: Float?): String = v?.let { "%.2f".format(it) } ?: "—"
+private fun fmt(v: Float?): String = v?.let { "%.2f".format(java.util.Locale.ROOT, it) } ?: "—"
 private fun fmtInt(v: Int?): String = v?.toString() ?: "—"
 
 /** Duplicated, not hoisted — see `SnipsScreen.kt`'s own copy and its comment on the house convention for screen-local buttons. */

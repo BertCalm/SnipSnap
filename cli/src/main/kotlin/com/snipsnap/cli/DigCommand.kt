@@ -38,7 +38,7 @@ object DigCommand {
 
         fun stamp(sec: Float): String {
             val s = sec.toInt()
-            return "%d:%02d".format(s / 60, s % 60)
+            return "%d:%02d".format(java.util.Locale.ROOT, s / 60, s % 60)
         }
 
         var chopped = 0
@@ -72,7 +72,7 @@ object DigCommand {
             out.println("${file.name}:")
             candidates.take(top).forEachIndexed { i, c ->
                 out.println(
-                    "  %d. %s-%s  (%.0fs, score %.2f)".format(
+                    "  %d. %s-%s  (%.0fs, score %.2f)".format(java.util.Locale.ROOT, 
                         i + 1, stamp(c.startSec), stamp(c.endSec), c.durationSec, c.score,
                     ),
                 )

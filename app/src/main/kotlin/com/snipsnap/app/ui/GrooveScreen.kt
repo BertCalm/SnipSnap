@@ -1214,7 +1214,7 @@ fun GrooveScreen(
                         TapeText("GROOVE", TapeType.lcd(23), scheme.lcdInk.tape)
                         val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
                         TapeText(
-                            "%.1f BPM · %d BARS · %d NOTES".format(bpm, currentClip?.bars ?: 0, currentClip?.notes?.size ?: 0),
+                            "%.1f BPM · %d BARS · %d NOTES".format(java.util.Locale.ROOT, bpm, currentClip?.bars ?: 0, currentClip?.notes?.size ?: 0),
                             TapeType.lcdSmall,
                             scheme.ink.tape,
                         )

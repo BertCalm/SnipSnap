@@ -56,9 +56,9 @@ object ResampleCommand {
         // The bounce: the kit playing its own groove, worn per its ledger.
         val render = Wear.render(kit, KitPreview.render(kit, kitDir), wearW)
         out.println(
-            "bounced: ${kit.name} playing itself (%.1fs%s)".format(
+            "bounced: ${kit.name} playing itself (%.1fs%s)".format(java.util.Locale.ROOT, 
                 render.durationSeconds,
-                if (wearW != null) " at %.1f%% worn".format(wearW * 100) else "",
+                if (wearW != null) " at %.1f%% worn".format(java.util.Locale.ROOT, wearW * 100) else "",
             ),
         )
 

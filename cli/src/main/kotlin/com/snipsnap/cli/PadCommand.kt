@@ -47,17 +47,17 @@ object PadCommand {
         }
         out.println(
             if (result.pitched) {
-                "pad from $sourceLabel: %s (%.1f Hz), the clear stretch x%.1f - rooted there, playable 0..127".format(
+                "pad from $sourceLabel: %s (%.1f Hz), the clear stretch x%.1f - rooted there, playable 0..127".format(java.util.Locale.ROOT, 
                     result.rootName, result.detectedHz, result.depthUsed,
                 )
             } else {
-                "pad from $sourceLabel: no note in it, the wash x%.1f - a drone at %s, playable 0..127".format(
+                "pad from $sourceLabel: no note in it, the wash x%.1f - a drone at %s, playable 0..127".format(java.util.Locale.ROOT, 
                     result.depthUsed, result.rootName,
                 )
             },
         )
         out.println(
-            "  loop: %.1fs head, %.1fs body, seam baked - hold the key and it sings forever".format(
+            "  loop: %.1fs head, %.1fs body, seam baked - hold the key and it sings forever".format(java.util.Locale.ROOT, 
                 result.loopStartFrame.toFloat() / result.sample.sampleRate,
                 (result.sample.frameCount - result.loopStartFrame).toFloat() / result.sample.sampleRate,
             ),

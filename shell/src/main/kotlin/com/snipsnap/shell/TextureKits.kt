@@ -149,7 +149,7 @@ object TextureKits {
             model.update(slot) {
                 it.copy(source = take.provenance(sourceLabel), recipe = take.recipe)
             }
-            log("  A%02d %s".format(slot, take.line))
+            log("  A%02d %s".format(java.util.Locale.ROOT, slot, take.line))
         }
         model.save()
         return model.kit
@@ -192,7 +192,7 @@ object TextureKits {
                         "seed" to JsonValue.Num(seed.toDouble()),
                     ),
                 ),
-                "stretch ${i + 1}: ×%.1f, seed %d".format(factor, seed),
+                "stretch ${i + 1}: ×%.1f, seed %d".format(java.util.Locale.ROOT, factor, seed),
             )
         }
         is Spec.Freeze -> {
@@ -210,7 +210,7 @@ object TextureKits {
                         "seed" to JsonValue.Num(seed.toDouble()),
                     ),
                 ),
-                "frozen ${i + 1}: at %.2fs for %.0fs, seed %d".format(at, seconds, seed),
+                "frozen ${i + 1}: at %.2fs for %.0fs, seed %d".format(java.util.Locale.ROOT, at, seconds, seed),
             )
         }
     }

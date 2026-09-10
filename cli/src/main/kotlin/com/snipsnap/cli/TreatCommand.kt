@@ -43,7 +43,7 @@ object TreatCommand {
         model.save()
         out.println(
             "pad $padArg ${treatment}%s - original in the bin, recipe recorded (undo: --undo)".format(
-                if (amount < 1f) " at %.2f".format(amount) else "",
+                if (amount < 1f) " at %.2f".format(java.util.Locale.ROOT, amount) else "",
             ),
         )
         out.println("  ${pad.sampleFile} re-rendered in place; re-export to hear it on the card")

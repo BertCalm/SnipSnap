@@ -146,5 +146,5 @@ object SfzWriter {
     }
 
     private fun padLabel(slot: Int): String =
-        "%c%02d".format('A' + (slot - 1) / 16, (slot - 1) % 16 + 1)
+        "%c%02d".format(java.util.Locale.ROOT, 'A' + (slot - 1) / 16, (slot - 1) % 16 + 1)
 }

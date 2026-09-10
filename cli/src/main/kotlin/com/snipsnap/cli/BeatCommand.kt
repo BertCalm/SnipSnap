@@ -75,7 +75,7 @@ object BeatCommand {
                 skipped += "robin: no plain ${dc.name.lowercase()} pad to take"
                 continue
             }
-            val label = "%c%02d".format('A' + (pad.slot - 1) / 16, (pad.slot - 1) % 16 + 1)
+            val label = "%c%02d".format(java.util.Locale.ROOT, 'A' + (pad.slot - 1) / 16, (pad.slot - 1) % 16 + 1)
             runCatching { RobinCommand.run(listOf(kitDir.path, label, "--seed", seed.toString()), out) }
                 .onSuccess { robins++ }
                 .onFailure { skipped += "robin $label: ${it.message}" }

@@ -85,7 +85,7 @@ object MutateCommand {
             } catch (e: IllegalArgumentException) {
                 throw CliError(e.message ?: "the roulette refused")
             }
-            val how = if (opts.has("--wild")) "wild" else "distance %.2f".format(pick.distance)
+            val how = if (opts.has("--wild")) "wild" else "distance %.2f".format(java.util.Locale.ROOT, pick.distance)
             out.println("roulette: the crate dealt ${pick.label} ($how, seed $seed)")
             extraRecipe = mapOf(
                 "roulette" to com.snipsnap.json.JsonValue.Obj(
@@ -118,8 +118,8 @@ object MutateCommand {
             Mutate.Mode.STACK -> "stacked with"
             Mutate.Mode.SPLICE -> "spliced into"
             Mutate.Mode.SPLIT -> "split against"
-            Mutate.Mode.MORPH -> "morphed %.0f%% toward".format(morphAmount * 100)
-            Mutate.Mode.ROOM -> "placed %.0f%% into the room of".format(roomMix * 100)
+            Mutate.Mode.MORPH -> "morphed %.0f%% toward".format(java.util.Locale.ROOT, morphAmount * 100)
+            Mutate.Mode.ROOM -> "placed %.0f%% into the room of".format(java.util.Locale.ROOT, roomMix * 100)
             Mutate.Mode.TRANSPLANT -> "dressed in $bands bands of the tone of"
         }
         out.println("pad $padArg $what ${sources.joinToString(", ") { it.label }} - one hit, ${sources.size + 1} parents")

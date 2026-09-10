@@ -114,10 +114,10 @@ object PadFromAnything {
         require(source.frameCount > 0) { "empty snip" }
         val seconds = source.durationSeconds
         require(seconds >= MIN_SOURCE_SEC) {
-            "%.0f ms is too short to stretch into a pad - it wants at least %.0f ms".format(seconds * 1000f, MIN_SOURCE_SEC * 1000f)
+            "%.0f ms is too short to stretch into a pad - it wants at least %.0f ms".format(java.util.Locale.ROOT, seconds * 1000f, MIN_SOURCE_SEC * 1000f)
         }
         require(seconds <= MAX_SOURCE_SEC) {
-            "%.1f s is too long to slow inside a minute - a pad wants a sound under %.0f s".format(seconds, MAX_SOURCE_SEC)
+            "%.1f s is too long to slow inside a minute - a pad wants a sound under %.0f s".format(java.util.Locale.ROOT, seconds, MAX_SOURCE_SEC)
         }
         val rate = source.sampleRate
 

@@ -92,7 +92,7 @@ object ProjectCommand {
                 val mix = com.snipsnap.kit.SessionMixdown.render(effectiveDirs, result.tempoBpm)
                 val wav = File(cardDir, "$name.wav")
                 com.snipsnap.audio.WavWriter.write(wav, mix)
-                out.println("  mixdown: ${wav.path} (%.1fs - the session playing itself)".format(mix.durationSeconds))
+                out.println("  mixdown: ${wav.path} (%.1fs - the session playing itself)".format(java.util.Locale.ROOT, mix.durationSeconds))
             }
         } finally {
             wornStages.forEach { it.deleteRecursively() }

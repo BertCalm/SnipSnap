@@ -82,7 +82,7 @@ object AlbumCommand {
         for ((side, sideTracks) in sides) {
             val sideDir = File(dest, side).apply { mkdirs() }
             sideTracks.forEachIndexed { i, t ->
-                WavWriter.write(File(sideDir, "%02d %s.wav".format(i + 1, t.song)), t.mix)
+                WavWriter.write(File(sideDir, "%02d %s.wav".format(java.util.Locale.ROOT, i + 1, t.song)), t.mix)
             }
             // The side as one continuous tape, leader gaps between tracks.
             val gap = (GAP_SEC * KitPreview.RATE).toInt()
@@ -107,7 +107,7 @@ object AlbumCommand {
                 sideTracks.forEachIndexed { i, t ->
                     val num = t.catalog?.let { "$it  " } ?: ""
                     appendLine(
-                        "  %s%d  %s%s  (%d:%02d)".format(
+                        "  %s%d  %s%s  (%d:%02d)".format(java.util.Locale.ROOT, 
                             side.last(), i + 1, num, t.song,
                             t.mix.frameCount / KitPreview.RATE / 60,
                             t.mix.frameCount / KitPreview.RATE % 60,

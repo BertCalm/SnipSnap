@@ -143,7 +143,7 @@ object JCard {
             val num = (pad.slot - 1) % 16 + 1
             val source = pad.source["title"] ?: pad.source["app"]
             val text = buildString {
-                append("%s%02d %s".format(bank, num, pad.displayName.uppercase()))
+                append("%s%02d %s".format(java.util.Locale.ROOT, bank, num, pad.displayName.uppercase()))
                 if (source != null) append("  ${source.uppercase()}")
             }
             PixelType.draw(
@@ -185,13 +185,13 @@ object JCard {
     private fun keyTempoLine(kit: Kit): String {
         val parts = mutableListOf<String>()
         kit.key?.let { parts += it.label.uppercase() }
-        kit.tempoBpm?.let { parts += "%.0f BPM".format(it) }
+        kit.tempoBpm?.let { parts += "%.0f BPM".format(java.util.Locale.ROOT, it) }
         return if (parts.isEmpty()) "UNMAPPED TAPE" else parts.joinToString(" - ")
     }
 
     private fun mileageLine(kit: Kit): String {
         val wear = kit.wear ?: return "NEW TAPE"
-        return "%.0f MILES".format(wear.mileage)
+        return "%.0f MILES".format(java.util.Locale.ROOT, wear.mileage)
     }
 
     /** Max velocity per 16th, the whole pattern folded to one bar — the notation row's data. */

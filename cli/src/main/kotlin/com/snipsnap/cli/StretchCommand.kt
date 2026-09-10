@@ -56,7 +56,7 @@ object StretchCommand {
             } catch (e: IllegalArgumentException) {
                 throw CliError(e.message ?: "can't freeze that")
             }
-            frozen to "frozen at %.2fs for %.0fs".format(chosen, seconds)
+            frozen to "frozen at %.2fs for %.0fs".format(java.util.Locale.ROOT, chosen, seconds)
         } else {
             val factor = opts["--by"]?.let {
                 it.toFloatOrNull()?.takeIf { f -> f in Stretch.MIN_FACTOR..Stretch.MAX_FACTOR }
@@ -70,7 +70,7 @@ object StretchCommand {
                 throw CliError(e.message ?: "can't stretch that")
             }
             val kind = if (opts.has("--clear")) " (clear)" else ""
-            stretched to "stretched x%.0f%s: %.2fs -> %.1fs".format(factor, kind, source.durationSeconds, stretched.durationSeconds)
+            stretched to "stretched x%.0f%s: %.2fs -> %.1fs".format(java.util.Locale.ROOT, factor, kind, source.durationSeconds, stretched.durationSeconds)
         }
 
         val suffix = if (freeze) "Frozen" else "Stretched"

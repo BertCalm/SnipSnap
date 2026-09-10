@@ -1037,7 +1037,7 @@ fun App(shelf: KitShelf) {
                 // onto whichever kit is open now.
                 if (open?.dir == target.dir) open = open?.copy(kit = updated)
                 kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                toast = "SNIP PLACED ON PAD A%02d".format(slot)
+                toast = "SNIP PLACED ON PAD A%02d".format(java.util.Locale.ROOT, slot)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

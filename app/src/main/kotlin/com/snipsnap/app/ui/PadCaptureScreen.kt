@@ -490,5 +490,5 @@ private fun CaptureLevelBar(level: Float, scheme: com.snipsnap.shell.Scheme, mod
 private fun formatCaptureElapsed(totalSeconds: Int): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return "%02d:%02d".format(minutes, seconds)
+    return "%02d:%02d".format(java.util.Locale.ROOT, minutes, seconds)
 }

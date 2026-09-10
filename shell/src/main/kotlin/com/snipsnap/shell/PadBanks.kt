@@ -42,7 +42,11 @@ object PadBanks {
     /** "A01", "B16" - the tag the CLI, the lineage and the export side all use. */
     fun tag(slot: Int): String {
         val n = (slot - 1) % SIZE + 1
-        return "%c%02d".format(letter(bankOf(slot)), n)
+        // Locale.ROOT: this is an identifier, now the ONE place every
+        // screen's pad tag comes from - PadNoteMap.labelForPad's own KDoc
+        // explains why (%02d localizes its digits under the default
+        // locale; a tag reaching a filename or an MPC card must not).
+        return "%c%02d".format(java.util.Locale.ROOT, letter(bankOf(slot)), n)
     }
 
     /**

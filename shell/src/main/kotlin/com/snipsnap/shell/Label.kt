@@ -34,7 +34,7 @@ object Label {
             require(Regex("^[A-Z0-9]{2,5}$").matches(prefix)) { "prefix is 2..5 A-Z/0-9, got '$prefix'" }
         }
 
-        fun numberFor(kitName: String): String? = catalog[kitName]?.let { "%s-%03d".format(prefix, it) }
+        fun numberFor(kitName: String): String? = catalog[kitName]?.let { "%s-%03d".format(java.util.Locale.ROOT, prefix, it) }
     }
 
     /** Found a label at [root]? Null when the root isn't one. */
@@ -145,7 +145,7 @@ object Label {
         appendLine("=".repeat(maxOf(info.name.length, 8)))
         for ((kitName, n) in info.catalog.entries.sortedBy { it.value }) {
             appendLine(
-                "%s-%03d  %s%s".format(info.prefix, n, kitName, if (kitName in present) "" else "  (gone)"),
+                "%s-%03d  %s%s".format(java.util.Locale.ROOT, info.prefix, n, kitName, if (kitName in present) "" else "  (gone)"),
             )
         }
     }

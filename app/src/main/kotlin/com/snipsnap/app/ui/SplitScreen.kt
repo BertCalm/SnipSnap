@@ -336,8 +336,8 @@ fun SplitScreen(
                 onToast("PRINT LOST: ${(e.message ?: "UNREADABLE").uppercase()}.")
                 return@launch
             }
-            val note = if (hot > 1f) " HOT: PEAK ${"%.2f".format(hot)}." else ""
-            onToast("SPLIT PRINTED ${"%.1f".format(landed.seconds)} S TO TAPE.$note")
+            val note = if (hot > 1f) " HOT: PEAK ${"%.2f".format(java.util.Locale.ROOT, hot)}." else ""
+            onToast("SPLIT PRINTED ${"%.1f".format(java.util.Locale.ROOT, landed.seconds)} S TO TAPE.$note")
             onPrinted()
         }
     }
@@ -404,7 +404,7 @@ fun SplitScreen(
                 if (printToPad && entry != null) {
                     // The chooser is about to take over and says nothing of
                     // its own, so a warning here survives to be read.
-                    if (peak > 1f) onToast("THE MIX IS HOT: PEAK ${"%.2f".format(peak)}. PICK A PAD, OR PULL A FADER DOWN.")
+                    if (peak > 1f) onToast("THE MIX IS HOT: PEAK ${"%.2f".format(java.util.Locale.ROOT, peak)}. PICK A PAD, OR PULL A FADER DOWN.")
                     pendingPrint = mixed
                 } else {
                     landOnTape(mixed, peak)
@@ -440,7 +440,7 @@ fun SplitScreen(
                     working -> "WORKING"
                     split == null -> "NOT SPLIT"
                     playing -> "PLAYING"
-                    else -> "SPLIT · ${"%.1f".format(splitSeconds)} S"
+                    else -> "SPLIT · ${"%.1f".format(java.util.Locale.ROOT, splitSeconds)} S"
                 },
                 TapeType.lcdSmall,
                 scheme.amber.tape,
@@ -575,7 +575,7 @@ private fun ChannelStrip(
             Modifier.fillMaxWidth().height(18.dp),
             contentAlignment = Alignment.Center,
         ) {
-            TapeText("%.2f".format(strip.level), TapeType.pixelSmall, scheme.ink3.tape)
+            TapeText("%.2f".format(java.util.Locale.ROOT, strip.level), TapeType.pixelSmall, scheme.ink3.tape)
         }
         ActionButton("REV", scheme, enabled = enabled, lit = strip.reverse, modifier = Modifier.fillMaxWidth()) { onReverse() }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {

@@ -62,7 +62,7 @@ object DissectCommand {
                     ),
                 )
             }
-            out.println("  A%02d %-9s %2.0f%% of the energy".format(slot, partName, 100.0 * energy(snip) / total))
+            out.println("  A%02d %-9s %2.0f%% of the energy".format(java.util.Locale.ROOT, slot, partName, 100.0 * energy(snip) / total))
         }
         model.save()
         out.println("-> ${kitDir.path} (the parts sum back to the whole; provenance stamped)")

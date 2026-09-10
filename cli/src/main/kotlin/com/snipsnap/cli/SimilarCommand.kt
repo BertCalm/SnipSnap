@@ -80,12 +80,12 @@ object SimilarCommand {
 
         out.println("more like $targetLabel:")
         ranked.take(top).forEachIndexed { i, (c, d) ->
-            out.println("  %d. %-40s %-11s distance %.3f".format(i + 1, c.label, c.drumClass, d))
+            out.println("  %d. %-40s %-11s distance %.3f".format(java.util.Locale.ROOT, i + 1, c.label, c.drumClass, d))
         }
         return 0
     }
 
-    private fun padLabel(slot: Int): String = "%s%02d".format('A' + (slot - 1) / 16, (slot - 1) % 16 + 1)
+    private fun padLabel(slot: Int): String = "%s%02d".format(java.util.Locale.ROOT, 'A' + (slot - 1) / 16, (slot - 1) % 16 + 1)
 
     /** "A03" → 3, "B01" → 17, "7" → 7. */
     private fun parsePad(arg: String): Int {

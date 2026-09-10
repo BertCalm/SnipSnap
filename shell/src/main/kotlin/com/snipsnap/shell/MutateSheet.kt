@@ -66,7 +66,7 @@ object MutateSheet {
     /** What the value column reads: "40 ms", "200 Hz" / "1.2k", "50%", "16 bands". */
     fun label(knob: Knob, value: Float): String = when (knob.label) {
         "AT" -> "${value.roundToInt()} ms"
-        "HZ" -> if (value >= 1000f) "%.1fk".format(value / 1000f) else "${value.roundToInt()} Hz"
+        "HZ" -> if (value >= 1000f) "%.1fk".format(java.util.Locale.ROOT, value / 1000f) else "${value.roundToInt()} Hz"
         "BANDS" -> "${value.roundToInt()} bands"
         else -> "${(value * 100).roundToInt()}%"
     }

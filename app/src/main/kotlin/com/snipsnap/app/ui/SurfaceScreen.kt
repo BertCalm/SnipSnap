@@ -277,7 +277,7 @@ fun SurfaceScreen(
                 runCatching { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
             }
             landed.onSuccess {
-                onToast("PRINTED ${"%.1f".format(it.seconds)} S TO TAPE.")
+                onToast("PRINTED ${"%.1f".format(java.util.Locale.ROOT, it.seconds)} S TO TAPE.")
                 onPrinted()
             }.onFailure {
                 onToast("PRINT LOST: ${(it.message ?: "UNREADABLE").uppercase()}.")
@@ -500,8 +500,8 @@ fun SurfaceScreen(
                     .semantics {
                         contentDescription = "TOUCH SURFACE, $mode MODE"
                         stateDescription = buildString {
-                            append("X %.2f  Y %.2f".format(painted.x, painted.y))
-                            if (mode == Mode.XYZ) append("  Z %.2f".format(painted.z))
+                            append("X %.2f  Y %.2f".format(java.util.Locale.ROOT, painted.x, painted.y))
+                            if (mode == Mode.XYZ) append("  Z %.2f".format(java.util.Locale.ROOT, painted.z))
                         }
                     }
                     .pointerInput(mode) {
@@ -588,10 +588,10 @@ fun SurfaceScreen(
                 // Latency leads: the line can outrun a narrow screen, and
                 // during a bench it is the part worth keeping.
                 append(latency).append("  ·  ")
-                append("X %.2f  Y %.2f".format(painted.x, painted.y))
-                if (mode == Mode.XYZ) append("  Z %.2f".format(painted.z))
-                if (mode == Mode.MORPH) append("  A %.2f B %.2f C %.2f D %.2f".format(painted.a, painted.b, painted.c, painted.d))
-                if (tilt.available) append("  TILT %.2f".format(tilt.tilt))
+                append("X %.2f  Y %.2f".format(java.util.Locale.ROOT, painted.x, painted.y))
+                if (mode == Mode.XYZ) append("  Z %.2f".format(java.util.Locale.ROOT, painted.z))
+                if (mode == Mode.MORPH) append("  A %.2f B %.2f C %.2f D %.2f".format(java.util.Locale.ROOT, painted.a, painted.b, painted.c, painted.d))
+                if (tilt.available) append("  TILT %.2f".format(java.util.Locale.ROOT, tilt.tilt))
                 padName?.let { append("  ·  ").append(it.uppercase()) }
             }
             // MORPH's six numbers plus TILT and the pad name run well past
