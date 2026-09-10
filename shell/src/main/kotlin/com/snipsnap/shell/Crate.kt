@@ -46,7 +46,9 @@ object Crate {
         val confidence: Float,
         val vector: List<Float>,
     ) {
-        val label: String get() = "%s%02d".format('A' + (slot - 1) / 16, (slot - 1) % 16 + 1)
+        // Locale.ROOT: this is an identifier, and `%d` under the default
+        // locale can localize the digits (PadNoteMap.labelForPad's own note).
+        val label: String get() = String.format(java.util.Locale.ROOT, "%s%02d", 'A' + (slot - 1) / 16, (slot - 1) % 16 + 1)
     }
 
     data class Index(
@@ -172,10 +174,27 @@ object Crate {
 
     // ---- internals ---------------------------------------------------------
 
+    /**
+     * A cached vector the extractor could have written: [Similar.DIMENSIONS]
+     * numbers, each inside 0..1 (NaN fails the range test). A hand-edited
+     * or foreign index with a short vector would otherwise read as "the
+     * same sound" as everything - [distance] over a shorter vector only
+     * walks the shorter one's dimensions - so such an entry is dropped
+     * here and the pad simply gets measured again.
+     */
+    private fun plausible(vector: List<Float>): Boolean =
+        vector.size == Similar.DIMENSIONS && vector.all { it in 0f..1f }
+
+    /**
+     * Euclidean distance; +∞ for vectors of different lengths, which are
+     * not the same kind of measurement and so are never "close" - and
+     * the same answer whichever way round they are asked.
+     */
     internal fun distance(a: List<Float>, b: List<Float>): Float {
+        if (a.size != b.size) return Float.POSITIVE_INFINITY
         var acc = 0f
         for (i in a.indices) {
-            val d = a[i] - (b.getOrNull(i) ?: 0f)
+            val d = a[i] - b[i]
             acc += d * d
         }
         return sqrt(acc)
@@ -206,7 +225,7 @@ object Crate {
                     vector = ((m["vector"] as JsonValue.Arr).items).map {
                         (it as JsonValue.Num).value.toFloat()
                     },
-                )
+                ).takeIf { plausible(it.vector) } // anything else re-measures
             }
         } catch (e: Exception) {
             emptyList() // a torn index rebuilds; it is a cache, not a record
