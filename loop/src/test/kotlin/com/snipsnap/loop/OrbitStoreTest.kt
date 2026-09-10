@@ -58,10 +58,9 @@ class OrbitStoreTest {
 
     @Test
     fun `every bar offered round-trips`() {
+        val dir = tempDir()
         for (lap in OrbitSet.BAR_CHOICES) {
-            val dir = tempDir()
-            val s = sample.copy(lapSteps = lap)
-            OrbitStore.save(s, dir)
+            OrbitStore.save(sample.copy(lapSteps = lap), dir)
             assertEquals(lap, OrbitStore.load(dir).lapSteps)
         }
     }

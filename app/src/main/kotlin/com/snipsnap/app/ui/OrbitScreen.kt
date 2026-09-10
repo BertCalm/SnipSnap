@@ -571,8 +571,11 @@ fun OrbitScreen(
                 // The readout is THE SET's door: tap it for the bar. Past the
                 // clip's 64-bar ceiling the cycle line turns warn-coloured,
                 // so OUT's refusal is never the first anyone hears of it.
+                // No label of its own: a label here would replace the two
+                // lines' text for a screen reader, and the readout's values
+                // are the point. The footer names the tap.
                 Column(
-                    Modifier.tapeClick(label = "THE SET — TAP TO CHANGE THE BAR") {
+                    Modifier.tapeClick(label = null) {
                         setPanelOpen = !setPanelOpen
                         snipPickerOpen = false
                         outOpen = false
