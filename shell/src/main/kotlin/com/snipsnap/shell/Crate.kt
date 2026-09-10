@@ -56,7 +56,13 @@ object Crate {
         val fromCache: Int,
     )
 
-    /** Build (or refresh) the index for every kit under [root]. */
+    /**
+     * Build (or refresh) the index for every kit under [root]. A kit under
+     * a hidden folder — the shelf's `.bin/` (DELETED KITS keeps a whole
+     * copy of a kit there) or a `.landing-*` staging dir — is not part of
+     * the library and is skipped: a binned kit is the likeliest double of
+     * its live self, and the roulette should not deal a deleted pad either.
+     */
     fun index(root: File): Index {
         require(root.isDirectory) { "no such folder: $root" }
         val cached = loadIndex(File(root, INDEX_NAME)).associateBy { it.file }
@@ -65,6 +71,7 @@ object Crate {
         var fromCache = 0
 
         val kitDirs = root.walkTopDown()
+            .onEnter { dir -> dir == root || !dir.name.startsWith(".") }
             .filter { it.isDirectory && File(it, KitStore.FILE_NAME).isFile }
             .sortedBy { it.path.lowercase() }
         for (dir in kitDirs) {

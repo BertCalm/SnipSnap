@@ -141,6 +141,8 @@ fun KitsScreen(
     onDeletedKits: () -> Unit = {},
     /** X-RAY: opens the system picker, then reads whatever comes back — never lands it, never gated on the shelf holding anything. */
     onXRay: () -> Unit = {},
+    /** DOUBLES: pads across the shelf's kits inside a "same sound" distance, the number on every row — read-only, X-RAY's own posture turned on the library. */
+    onDoubles: () -> Unit = {},
     /**
      * SHELF SORT (name-and-find followups): [KitShelf.ShelfSort] the shelf
      * is currently ordered by — `App`'s own [KitShelf.ShelfSort.RECENT]
@@ -402,6 +404,16 @@ fun KitsScreen(
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onXRay,
+            )
+            // DOUBLES: the same read-only posture as X-RAY, pointed at the
+            // shelf itself. Never gated on the shelf holding anything - an
+            // empty shelf's screen says NO DOUBLES in words, not a dead row.
+            ActionButton(
+                "DOUBLES ▸ SAME SOUND, ANY KIT",
+                scheme,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onDoubles,
             )
             // DELETED KITS: gated on the bin actually holding something —
             // unlike SNIPS/BACKUP above, this is never shown merely dimmed;

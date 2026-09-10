@@ -55,6 +55,16 @@ class CrateTest {
     }
 
     @Test
+    fun `a kit under a hidden folder is not in the library`() {
+        val root = library()
+        File(root, "Crate A").copyRecursively(File(root, ".bin/Crate A-1"))
+        File(root, "Crate B").copyRecursively(File(root, ".landing-42/Crate B"))
+        val index = Crate.index(root)
+        assertEquals(6, index.entries.size, "the two live kits only: ${index.entries.map { it.file }}")
+        assertTrue(index.entries.none { it.file.startsWith(".") }, "nothing under .bin/ or .landing-*")
+    }
+
+    @Test
     fun `dupes finds the planted twin and picks rank a class`() {
         val root = library()
         val index = Crate.index(root)

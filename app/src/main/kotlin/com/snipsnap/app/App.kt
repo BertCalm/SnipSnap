@@ -45,6 +45,7 @@ import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.DeletedKitsScreen
+import com.snipsnap.app.ui.DoublesScreen
 import com.snipsnap.app.ui.ExportScreen
 import com.snipsnap.app.ui.ExportSession
 import com.snipsnap.app.ui.GrainFieldScreen
@@ -282,6 +283,10 @@ fun App(shelf: KitShelf) {
     // landed anywhere), so it carries its own reading rather than a bare
     // boolean.
     var xray by remember { mutableStateOf<XRayView?>(null) }
+    // DOUBLES: shelf-level too, same shape as X-RAY — reachable from
+    // KitsScreen's own DOUBLES ▸ row, a bare boolean since the screen
+    // measures the shelf itself on mount.
+    var doublesOpen by remember { mutableStateOf(false) }
     // DELETED KITS (Task 2 of the bin-restore plan): same shape as
     // `snipsOpen` above — a shelf-level overlay, not KIT-scoped, reachable
     // from `KitsScreen`'s own `DELETED KITS ▸` row at `AppScreen.KITS`.
@@ -1476,6 +1481,8 @@ fun App(shelf: KitShelf) {
         deletedKitsOpen = false
         // X-RAY is shelf-level too, same reasoning again.
         xray = null
+        // DOUBLES likewise.
+        doublesOpen = false
     }
 
     // System Back, root policy: with no KIT-scoped or shelf-level overlay
@@ -1491,7 +1498,7 @@ fun App(shelf: KitShelf) {
     // "◄ SHELF" chip, via `onBack`, which also silences the instrument
     // before leaving — this generic reset does not).
     val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || stackSlot != null || takesBinOpen ||
-        padCaptureSlot != null || snipsOpen || deletedKitsOpen || arrangeOpen || orbitOpen || xray != null
+        padCaptureSlot != null || snipsOpen || deletedKitsOpen || doublesOpen || arrangeOpen || orbitOpen || xray != null
     BackHandler(
         enabled = !anyOverlayOpen && screen != AppScreen.KITS &&
             screen != AppScreen.SPLIT && screen != AppScreen.KEYS &&
@@ -1574,6 +1581,21 @@ fun App(shelf: KitShelf) {
                                     scope.launch {
                                         kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                     }
+                                },
+                            )
+                        } else if (doublesOpen) {
+                            DoublesScreen(
+                                shelf = shelf,
+                                onBack = { doublesOpen = false },
+                                onToast = { toast = it },
+                                onGoTo = { entry, slot ->
+                                    // The shelf's own onOpen, plus the pad:
+                                    // land on that kit with its PAD SHEET
+                                    // already up on the double in question.
+                                    doublesOpen = false
+                                    open = entry
+                                    screen = AppScreen.KIT
+                                    padSheetSlot = slot
                                 },
                             )
                         } else {
@@ -1663,6 +1685,7 @@ fun App(shelf: KitShelf) {
                                 onBackup = ::backupShelf,
                                 onChopAll = { chopAllPickerLauncher.launch(arrayOf("audio/wav", "audio/x-wav")) },
                                 onXRay = { xrayPickerLauncher.launch(arrayOf("*/*")) },
+                                onDoubles = { doublesOpen = true },
                                 onSnips = { snipsOpen = true },
                                 assigningSnip = pendingSnipAssign != null,
                                 breedingFrom = pendingBreedWith,
