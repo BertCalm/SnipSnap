@@ -24,19 +24,25 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
-      # dependencyCheckAggregate configures :app to see its Android/AndroxX
+      # dependencyCheckAggregate configures :app to see its Android/AndroidX
       # dependencies too - same reason jvm-tests needs this in tests.yml.
       - uses: android-actions/setup-android@v3
       # The plugin downloads and caches the NVD/CISA-KEV feeds under the
       # Gradle user home; without this every run re-fetches gigabytes of
       # CVE data from scratch instead of just the delta since last week.
+      # Keyed on the build files rather than the run id - a run id is
+      # unique to itself, so using one as the cache key would never hit on
+      # a later run and would force a fresh upload every single time. This
+      # way an ordinary week (no build file changed) reuses last week's
+      # cache outright; the plugin's own incremental update still refreshes
+      # the CVE data against NVD from whatever base the cache restores.
       - name: Cache the vulnerability database
         uses: actions/cache@v4
         with:
           path: ~/.gradle/dependency-check-data
-          key: dependency-check-data-${{ github.run_id }}
+          key: ${{ runner.os }}-dependency-check-data-${{ hashFiles('**/build.gradle.kts', '**/settings.gradle.kts') }}
           restore-keys: |
-            dependency-check-data-
+            ${{ runner.os }}-dependency-check-data-
       - name: Scan every module's dependencies for known vulnerabilities
         # NVD_API_KEY is optional (build.gradle.kts treats an unset or
         # blank secret as no key at all) but strongly recommended: NVD
