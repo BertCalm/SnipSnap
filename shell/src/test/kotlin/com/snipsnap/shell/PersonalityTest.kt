@@ -117,6 +117,47 @@ class PersonalityTest {
     }
 
     /**
+     * HELP's one job is to be true, and the September UAT caught it being
+     * false: twenty hardcoded lines in `StubScreen.kt` calling the app "the
+     * M0 skeleton" and promising capture "arrives with M1", long after it
+     * shipped. It had no test because it lived in a Composable, so nothing
+     * failed as the app grew past it.
+     *
+     * These are the two ways it went wrong, now nailed down: a milestone
+     * tag anywhere in the text, and the loop not naming the four screens a
+     * user actually walks through. Moving or renaming one of those screens
+     * now breaks a test rather than quietly making HELP lie.
+     */
+    @Test
+    fun `help describes the app rather than a milestone`() {
+        val all = (Copy.HELP_LOOP + Copy.HELP_MORE + Copy.HELP_LOOP_HEADER + Copy.HELP_MORE_HEADER)
+            .joinToString(" ")
+        for (tag in listOf("M0", "M1", "M2", "M3", "M4", "M5", "SKELETON", "ARRIVES WITH", "NOT RECORDED")) {
+            assertFalse(all.contains(tag), "HELP still talks about the build, not the app: found \"$tag\"")
+        }
+        // The loop, in the order a user walks it.
+        val steps = Copy.HELP_LOOP.map { it.removePrefix("· ").substringBefore(" ") }
+        assertEquals(listOf("TAPE", "CHOP", "KIT", "EXPORT"), steps)
+        // Every line is a line, not a paragraph: HELP renders on a phone.
+        for (line in Copy.HELP_LOOP + Copy.HELP_MORE) {
+            assertTrue(line.startsWith("· "), "HELP lines are bulleted: $line")
+            assertTrue(line.length <= 72, "HELP line is too long for the panel (${line.length}): $line")
+        }
+    }
+
+    /**
+     * The legend that replaced the expiring toast (UAT findings 4 and 5).
+     * It has to name the gesture, because it is the only thing on screen
+     * that does — the toast it backstops can be dismissed forever.
+     */
+    @Test
+    fun `the pad sheet legend names the gesture`() {
+        assertTrue(Copy.PAD_SHEET_LEGEND.contains("HOLD"), Copy.PAD_SHEET_LEGEND)
+        assertTrue(Copy.PAD_SHEET_LEGEND.contains("PAD"), Copy.PAD_SHEET_LEGEND)
+        assertTrue(Copy.PAD_SHEET_LEGEND.length <= 52, "one line under the grid: ${Copy.PAD_SHEET_LEGEND.length}")
+    }
+
+    /**
      * `Copy` constants that are legitimately not full-stop toasts — button
      * labels, tile subtitles, chip text, "…BUSY" progress indicators, and
      * one hidden-egg unlock name — so the "every line lands on a full
@@ -139,6 +180,12 @@ class PersonalityTest {
         "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_NONE", "CARD_PICKED",
         "KONAMI_UNLOCK",
         "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
+        // Permanent on-screen furniture, not toasts: the legend that sits under
+        // KIT's grid for as long as the screen is open, and HELP's two section
+        // headings. ROOMS' own legend ("HOLD A ROOM TO FORGET IT · THE BIN KEEPS
+        // 30 DAYS") reads without a full stop for the same reason - it is a label
+        // on the furniture, not a line the app says to you once and takes away.
+        "PAD_SHEET_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER",
     )
 
     /**

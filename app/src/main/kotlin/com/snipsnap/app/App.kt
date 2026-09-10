@@ -115,14 +115,17 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
 
 /**
  * How many times the "hold a pad" hint has been shown, or [PAD_SHEET_FOUND]
- * once the user has actually opened PAD SHEET.
+ * once the user has actually opened PAD SHEET. The count is kept as a
+ * record of how often the app has said it; nothing caps it any more.
  *
  * PAD SHEET — every treatment, shape, tune and mutate control, plus GRAIN
  * FIELD below it — has no tap path at all: a 480ms long-press on a filled
- * pad is the only way in, and nothing on screen says so. The UX audit put
- * 40-50% of the app's real depth behind that one unhinted gesture, and
- * both the returning-user and day-3 walkthroughs independently predicted
- * users plateau without ever finding it.
+ * pad is the only way in. The UX audit put 40-50% of the app's real depth
+ * behind that one gesture, and both the returning-user and day-3
+ * walkthroughs independently predicted users plateau without ever finding
+ * it. KIT now carries a permanent legend naming the hold (September UAT,
+ * finding 4), so the gesture is no longer unhinted and this toast is a
+ * nudge rather than the only teacher it used to be.
  *
  * The empty-pad branch already teaches its own long-press by toasting on
  * tap ([KitScreen]'s `onEmptyTapHint`). The filled branch can't copy that
@@ -130,9 +133,6 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  * pad — so the hint rides kit-open instead, and only while undiscovered.
  */
 private const val PREF_PAD_SHEET_HINTS = "pad_sheet_hints"
-
-/** Show the hold-a-pad hint at most this many kit-opens before letting it go. */
-private const val PAD_SHEET_HINT_LIMIT = 3
 
 /** Sentinel for [PREF_PAD_SHEET_HINTS]: PAD SHEET has been opened, so never hint again. */
 private const val PAD_SHEET_FOUND = -1
@@ -1613,7 +1613,15 @@ fun App(shelf: KitShelf) {
                                             // fighting it for the one toast slot.
                                             val shown = prefs.getInt(PREF_PAD_SHEET_HINTS, 0)
                                             val hasFilledPad = (1..16).any { entry.kit.pad(it) != null }
-                                            if (shown != PAD_SHEET_FOUND && shown < PAD_SHEET_HINT_LIMIT && hasFilledPad) {
+                                            // No showing limit any more (September UAT,
+                                            // finding 5): it used to stop after three, so
+                                            // three dismissals while busy with something
+                                            // else cost the user PAD SHEET permanently.
+                                            // It now runs until they actually open the
+                                            // sheet, which is the only event that means
+                                            // they found it. KIT's legend is the real
+                                            // backstop; this is just the nudge.
+                                            if (shown != PAD_SHEET_FOUND && hasFilledPad) {
                                                 toast = Copy.PAD_SHEET_HINT
                                                 prefs.edit().putInt(PREF_PAD_SHEET_HINTS, shown + 1).apply()
                                             }
@@ -1811,8 +1819,9 @@ fun App(shelf: KitShelf) {
                                     onLongPress = { slot ->
                                         padSheetSlot = slot
                                         // Found it — the hint has done its job and
-                                        // retires for good, however many of its
-                                        // PAD_SHEET_HINT_LIMIT showings were left.
+                                        // retires for good. This is the only event
+                                        // that proves discovery, which is why it is
+                                        // now the only thing that stops the nudge.
                                         prefs.edit().putInt(PREF_PAD_SHEET_HINTS, PAD_SHEET_FOUND).apply()
                                     },
                                     onTakesBin = { takesBinOpen = true },
