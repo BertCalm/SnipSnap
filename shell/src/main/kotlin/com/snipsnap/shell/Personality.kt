@@ -252,6 +252,56 @@ object Copy {
      */
     const val SHELF_LEGEND = "HOLD A KIT TO RENAME OR DELETE IT"
 
+    // ---- SETUP's answers (September UAT, finding 23) ----
+
+    /**
+     * SETUP held three settings and answered none of the questions a user
+     * actually arrives with. These are the three the app can answer from
+     * what it already knows, rather than from settings invented to fill a
+     * screen.
+     *
+     * Headings, not toasts: no full stops.
+     */
+    const val SETUP_FORMAT_HEADING = "EXPORT OPENS ON"
+    const val SETUP_WHERE_HEADING = "WHERE YOUR FILES LIVE"
+    const val SETUP_CARD_HEADING = "THE CARD"
+
+    /**
+     * Under the format readout: this is a memory of the last format picked,
+     * not a preference set here, so it says where it is changed rather than
+     * pretending to be a second picker.
+     */
+    const val SETUP_FORMAT_NOTE = "THE LAST ONE YOU PICKED. CHANGE IT ON EXPORT."
+
+    /** No format has ever been picked, so EXPORT will open on its own first entry. */
+    const val SETUP_FORMAT_NONE = "NOTHING PICKED YET"
+
+    /** No card has been granted, or the grant was forgotten. */
+    const val SETUP_CARD_NONE = "NO CARD PICKED. EXPORT ASKS FOR ONE."
+
+    /**
+     * The exports folder, said plainly. [where] is the real path, because a
+     * user hunting for a file on a cable needs the actual thing to look for
+     * and "your app's private storage" is not it.
+     */
+    fun setupWhere(where: String): String = where
+
+    /** A card is held: [name] is what [cardName] made of its tree uri. */
+    fun setupCardHeld(name: String): String = "HOLDING: ${name.uppercase(java.util.Locale.ROOT)}"
+
+    /**
+     * A readable name for a picked card, from its SAF tree uri's last path
+     * segment — `primary:Music/Kits` becomes `Kits`, `1A2B-3C4D:` becomes the
+     * fallback.
+     *
+     * String work rather than `DocumentFile.fromTreeUri`, which would mean a
+     * dependency and a disk touch for a label. EXPORT's DESTINATION row was
+     * already doing exactly this inline; SETUP needs the same answer, and two
+     * screens naming one card two ways would be its own small lie.
+     */
+    fun cardName(lastPathSegment: String?): String =
+        lastPathSegment?.substringAfterLast(':')?.substringAfterLast('/').orEmpty().ifBlank { "CARD" }
+
     /**
      * The kit row's status chip (September UAT, finding 15). Three words for
      * the three states [DubStamp.Status] can honestly tell apart:

@@ -60,6 +60,8 @@ import com.snipsnap.app.ui.OrbitScreen
 import com.snipsnap.app.ui.PadCaptureScreen
 import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.PlayScreen
+import com.snipsnap.app.ui.PREF_CARD_TREE
+import com.snipsnap.app.ui.PREF_EXPORT_FORMAT
 import com.snipsnap.app.ui.PrimaryAction
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.SnipsScreen
@@ -81,6 +83,7 @@ import com.snipsnap.app.ui.tapeClick
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.WavReader
+import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.InstantKit
@@ -170,6 +173,20 @@ data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay
 fun App(shelf: KitShelf) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
+
+    // SETUP's WHERE YOUR FILES LIVE row (September UAT, finding 23).
+    // getExternalFilesDir does real filesystem work - it creates the
+    // directory if it is absent, and returns null when external storage is
+    // not mounted - so it is resolved on IO exactly once, the same rule
+    // ExportScreen's own write path states in so many words. Reading it in
+    // the composable branch that draws the row would touch the disk on the
+    // main thread on every recomposition of that screen.
+    var exportsWhere by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        exportsWhere = withContext(Dispatchers.IO) {
+            (context.getExternalFilesDir("exports") ?: context.filesDir).absolutePath
+        }
+    }
 
     var schemeId by remember {
         mutableStateOf(
@@ -1990,6 +2007,15 @@ fun App(shelf: KitShelf) {
                                 prefs.edit().putBoolean(PREF_TEACH, on).apply()
                                 toast = if (on) Copy.TEACHING_ON else Copy.TEACHING_OFF
                             },
+                            // Finding 23: three facts the app already kept and
+                            // never showed. Read straight from the same prefs
+                            // EXPORT writes - one owner each, no second copy.
+                            exportFormatLabel = prefs.getString(PREF_EXPORT_FORMAT, null)
+                                ?.let { ExportFormat.byId(it) }?.cyclerLabel,
+                            filesWhere = exportsWhere,
+                            cardName = prefs.getString(PREF_CARD_TREE, null)
+                                ?.let { Copy.cardName(Uri.parse(it).lastPathSegment) },
+                            onHelp = { screen = AppScreen.HELP },
                         )
                         AppScreen.CHOP -> ChopScreen(
                             entry = open,
