@@ -1554,6 +1554,69 @@ been heard on a phone; then it follows in one small PR.
 | EEE9 | ✓ done: SPLIT — one sound on three faders. `Separate.stn` has been in `:audio` since the anatomy lesson and only `snipsnap dissect` could reach it; SPLIT puts it on the phone. `Layers` (`:shell`, tested): three strips, each a level, a REVERSE, a mute and a solo; solo silences the others and mute wins over solo; and an exact offline render. Because the STN masks sum to one, **the desk is transparent at rest** — three faders at unity render the source back sample for sample, and a case says so (a 2% gain error trips two). That is also why PRINT needs no capture at all, unlike SURFACE's: the mix is determined by the three buffers and the desk, so a print is `Layers.render` — deterministic, and provably the sound itself when nothing is touched. The engine side (EEE8's successor): reverse as a direction flag, `hitLayers` publishing the group atomically, `setGain` gliding a sounding voice, `loadSnips` banking audio already in hand. The screen is reached from KIT's action row on the pad you want taken apart — a menu of twelve fits no phone, and SPLIT is something you do *to a pad* | CORE + APP | M | bench: sines backwards under a forward transient; a fader move is a glide, not a click; PRINT at rest is the pad you started with |
 | EEE10 | ✓ done: the interim voice retired — GROOVE's roll and its editor taps move to the same `PadEngine` the other four screens share, with a `VoiceAllocator` beside them (a groove tick can cross several notes in one frame, and a hat should choke against its own mute group on the roll exactly as under a finger); backgrounding now stops the *sound* and not merely the transport. `PadPlayer` — M0's one-SoundPool-per-kit interim, main-thread by necessity — is deleted with its last caller, and the comments and docs that named it now name what is actually there | APP | S | bench: the roll sounds like the grid sounds like PLAY, because it is one engine; a busy bar does not outrun its voices |
 
+## Wave YYY — the three sequencers (CORE + APP)
+
+SnipSnap sequences in three places and they have drifted apart. The loop
+grid (`Session`/`Track`/`Step`, `:loop`) chains blocks against an
+interval; ORBIT (`OrbitSet`/`Orbit`/`OrbitHit`, `:loop`) turns rings
+against one shared needle; grooves (`Mpc3Clip`/`Mpc3Note`, `:kit`/`:mpc3`)
+are the note lists every export writes. Three models of "a hit at a time
+with a velocity", four separate step-to-frame conversions
+(`CapturedGroove.kt:61`, `LiveRecord.kt:33`, `OrbitClock.stepFrames`,
+`KitPreview.kt:51`), and exactly one bridge between them — `OrbitClip`,
+which runs rings → clip and never the other way.
+
+The drift shows up first as four things that are simply wrong: a crash
+reachable from the screen, a note collapse, a silent drop, and a choke
+rule ORBIT alone doesn't honour. Underneath them is the feel gap. It is
+narrower than it was — the circular-sequencer wave gave `OrbitSet` a
+set-level `swing` (50–75, the MPC's own ladder) that `OrbitClock.stepOffset`
+folds in, so a swung ring now rides to the export intact. What is still
+missing is *per-hit* time: `OrbitHit` is `(step, slot, velocity)`, so
+there is nowhere to put the seeded jitter `GrooveVariations.humanize`
+applies, nowhere to put the sixteen distinct per-position offsets a
+`GrooveFeel` template carries, and no swing at all on a ring whose step
+is not a 16th — which is exactly the spanned, polyrhythmic ring ORBIT
+exists for.
+
+Build order: YYY1 → YYY2 → YYY3 → YYY4 (the correctness pass, about a
+day, all JVM-testable) → YYY5 → YYY6 (the unlock, in that order —
+importing a captured break into rings is only worth doing once a ring
+can hold the break's pocket) → the rest by appetite, except YYY10,
+which is gated on its own corpus probe exactly as AA1 was.
+
+Every row below was verified by running it, not by reading it, against
+`a2ced3c`: the crash, the collapse, the silent drop, the fabricated note
+length, the swing that does reach the export and the meter that does not
+each have a recorded reproduction. Two caveats stated once rather than
+per row — `:app` has no JVM test source set, so the UI-reachability
+claims in YYY1 and YYY3 rest on reading `OrbitScreen.kt` and
+`GrooveScreen.kt`; and every CORE row here is testable in the cloud
+session, so only YYY4's and YYY7's bench lines want hardware.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| YYY1 | Empty-clip refusal — `GrooveVariations.sparse` reads `clip.notes.map { it.velocity }.sorted()[clip.notes.size / 2]` (`GrooveVariations.kt:105`), which throws a raw `IndexOutOfBoundsException` on a note-less clip; `standard()` calls it. `Mpc3Clip` permits zero notes, and the path is reachable: `OrbitClip.refusal()` checks only the 64-bar ceiling, so `OrbitScreen`'s SAVE (`OrbitScreen.kt:536-539`) writes a 0-note ORBIT clip into `groove.json`; when the kit had no other groove that clip is `GrooveStore.load(dir).firstOrNull()` — the base — and GROOVE's program D is `sparse(base)` (`GrooveScreen.kt:185`). `Arranger.kt:69` and `:78` fail the same way. Breaks the BB/SS contract this repo states outright: any input, a typed refusal or a valid result, never a raw stack trace | CORE | S | a note-less clip through `sparse`, `standard` and `Arranger.arrange` raises a named bad-input refusal, not an `IndexOutOfBoundsException`; CLI `arrange` on such a kit exits 1 with one honest line |
+| YYY2 | `OrbitClip.refusal()` names an empty export — the same door widened. A set with no engaged pattern ring (snip rings only, or everything disengaged) passes `refusal()` today and exports a valid, named, empty clip — verified: a snip-only set yields `refusal = null` and a 0-note clip called `ORBIT 1`, which is also what feeds YYY1. Snip rings carry audio and have no notes, which is correct and documented; being silent about it is not | CORE | S | a snip-only set refuses with a reason naming snip rings; a mixed set exports its pattern rings and says how many rings were left behind; the SAVE path surfaces it the way it already surfaces the bar ceiling |
+| YYY3 | Cross-kit collapse — `OrbitClip.clip()` maps every firing through `noteFor(slot) = 35 + slot` (`OrbitClip.kt:79`) with no reference to the ring's kit, then `GrooveEdit.dedupeLouder` groups by `(note, timePulses)`. Verified: `kitA` slot 1 on steps {0,4} against `kitB` slot 1 on {0,8} exports **3** notes, not 4 — step 0 silently merged two different samples. `PatternOrbit` carries a per-ring `kit`, `OrbitStore` round-trips it and `OrbitBank` keys pads by `(kit, slot)`, so the model supports multi-kit sets whatever the screen currently builds. One MPC track carries one program, so this is a decision, not a patch: a track per kit, or a refusal that names both | CORE | S | a two-kit set either exports every hit or refuses naming both kits; the single-kit path stays byte-identical |
+| YYY4 | Choke in `OrbitEngine` — `KitPreview.render` honours `pad.muteGroup` with a 128-frame fade (`KitPreview.kt:102-107`); `OrbitEngine` has no reference to `muteGroup` anywhere, and `OrbitBank.pad()` hands back a bare `Snip` with no pad metadata, so choke is structurally absent. An open hat rings through a closed hat in ORBIT and chokes correctly in the preview, in the mixdown and on the hardware — one pattern, three different sounds | CORE + APP | S | an offline `OrbitEngine.render` of two hits in one mute group matches `KitPreview`'s render of the same two hits; bench: ORBIT's hats choke under a finger |
+| YYY5 | Per-hit time on `OrbitHit` — the set-level `swing` added with the circular sequencer works and reaches the export (verified: swing 66 moves the odd 16ths of a 16-step ring from 240 to 317 pulses, `(pct−50)/50` of a step, the same arithmetic `GrooveVariations.swing` uses). Three things it cannot do, because one number is not sixteen. `GrooveVariations.humanize`'s seeded jitter has nowhere to live. A `GrooveFeel` template is sixteen distinct per-position offsets — verified, a real donor extracts to `[0, 7, 14, 21, 28, 4, 11, 18, 25, 1, 8, 15, 22, 29, 5, 12]` — so templates still cannot reach rings at all. And `OrbitClock.swingFrames` gates on `stepIsSixteenth`, so a spanned ring whose step is not a 16th gets no swing whatever — exactly the polyrhythmic ring ORBIT exists for. An offset field on the hit closes all three and lets the feel stack compose across all three sequencers instead of living on one side of the bridge | CORE | M | `GrooveFeel.apply` onto a ring set reproduces the donor's sixteen offsets in the exported clip; a humanized ring re-renders identically for one seed; a 3-step ring spanning a bar can be given a pocket; `orbits.json` bumps a version and every older file still loads |
+| YYY6 | Grooves → rings, the missing direction — `OrbitClip` runs one way, so a captured break, an imported `.mid` and PROG E can none of them be played by the live engine, and the chop pipeline's best material is invisible to ORBIT. Pulses → steps is arithmetic; the real decision is how one clip becomes several rings, and per-pad is both the obvious rule and exactly what `OrbitPresets` already builds. This is the single change that would make the three sequencers feel like one instrument | CORE | M | a captured groove → rings → `OrbitClip.clip()` round-trips every note's pad, step and velocity within a 16th; a `.mid` imported into a kit opens in ORBIT as rings; a clip that won't fit `MAX_STEPS`/`MAX_ORBITS` refuses with a reason rather than truncating |
+| YYY7 | Probability, conditionals and ratchets — `OrbitHit` carries velocity and nothing else. Per-hit trigger probability, every-N-laps conditionals and ratchets are the three staples of every modern step sequencer, and rings are an unusually good home for them: hits already drift against each other, so probability compounds with the polymeter instead of merely adding noise. The roll arithmetic already exists in `GrooveVariations.fill` | CORE + APP | S | a seeded set renders identically twice and differently across laps; a 1-in-4 hit fires on the laps its seed names; a ratcheted hit exports as its sub-16th notes; every new field round-trips through `orbits.json` |
+| YYY8 | Note length — `OrbitHit` has none, so `OrbitClip.clip()` takes `Mpc3Note`'s 240-pulse default: verified, **every** exported note is exactly a 16th. Meanwhile `OrbitEngine.schedule` starts a voice that plays its sample to completion with no gate, so live playback sustains and the export truncates. Invisible on drums; on the BASS ring `OrbitPresets.bassRing` builds over tonal pads it means every exported bass note is a 16th staccato regardless of what was heard | CORE | S–M | a held ring note exports with its own length; the offline render and the export agree on where a note stops; drum-ring exports are unchanged |
+| YYY9 | ORBIT sections — a set loops forever. The grid has `Arrangement` (chains advancing per interval, an LCM cycle), the groove side has `BeatTape.arrange` and `SessionBuilder`'s four named sequences; rings have neither, so there is no way to say "these rings for eight bars, then those". `OrbitClip` already computes the full cycle, so sections extend what is there rather than adding machinery | CORE + APP | M–L | a two-section set renders each section for its length and repeats; the export carries the sections as the sequences the hardware's switcher flips; a one-section set exports byte-identically to today |
+| YYY10 | Meter — `Mpc3Clip` hardcodes 4/4 (`PULSES_PER_BAR = 3840`) and `GrooveFeel.POSITIONS = 16` folds every donor modulo a 4/4 bar, while `OrbitSet.lapSteps` offers 12/16/20/24/32. Verified: a 3/4 set (`lapSteps = 12`) with hits on steps 0/3/6/9 exports at pulses 0/720/1440/2160 — the absolute timing is right and nothing records that it was 3/4, so the MPC reads 4/4 with hits on an odd grid. `countsDifferently()` discloses this on screen, which is honest but is not a fix. Corpus first, exactly as AA1 did | CORE | M | probe notes + the key paths recorded in docs/MPC3_FORMAT.md before any writer code; then either a meter that round-trips through our own reader, or a recorded finding that the format cannot carry one |
+
+**Below the line (not scheduled):** unifying the three note models.
+`Mpc3Note`, `OrbitHit` and `Step` are three shapes of one idea, and
+`LiveRecord`'s own comment already records the duplication ("960.0 is
+960 PPQ, not a fresh constant … no shared 'pulses per quarter' constant
+exists to reuse"). Each model earns its shape — a file format, a ring,
+an interval — and a unification would touch everything for nothing the
+user could hear. The cheap 80% is one shared PPQ constant and one
+conversion helper, worth folding into whichever row above lands first.
+
+
 ## Sequence
 
 ```
