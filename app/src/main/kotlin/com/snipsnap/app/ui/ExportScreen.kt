@@ -392,6 +392,24 @@ private fun ExportContent(
         prefs.edit().remove(PREF_CARD_TREE).apply()
     }
 
+    /**
+     * Record the dub for the shelf's chip — and never let that recording turn
+     * a successful dub into a failure.
+     *
+     * The files are already written when this runs. A sidecar is ancillary:
+     * losing it costs a chip that reads DRAFT until the next dub, which is
+     * the same under-claim [DubStamp.read] already makes for an unreadable
+     * stamp. Letting an IOException here escape into `startWrite`'s catch
+     * would show DUB FAILED over a card that actually has the kit on it —
+     * a worse lie than the one finding 15 set out to fix.
+     */
+    suspend fun stampDub(kitDir: File, card: String?) {
+        withContext(Dispatchers.IO) {
+            runCatching { DubStamp.write(kitDir, DubStamp.Stamp(System.currentTimeMillis(), cardTree = card)) }
+                .onFailure { Log.w(TAG, "stampDub: the dub landed but its stamp did not", it) }
+        }
+    }
+
     fun startWrite() {
         if (session.busy || model.stage != ExportWizardModel.Stage.READY || model.blocked) return
         session.busy = true
@@ -448,9 +466,7 @@ private fun ExportContent(
                         // finding 15). Written before the card copy is
                         // attempted and again after it lands, so a copy that
                         // fails leaves DUBBED rather than a false ON CARD.
-                        withContext(Dispatchers.IO) {
-                            DubStamp.write(session.dir, DubStamp.Stamp(System.currentTimeMillis(), cardTree = null))
-                        }
+                        stampDub(session.dir, card = null)
                         if (card == null) {
                             onToast(Copy.DUB_DONE)
                         } else {
@@ -469,12 +485,7 @@ private fun ExportContent(
                             }
                             // Only now is it really on the card, so only now
                             // does the stamp name one.
-                            withContext(Dispatchers.IO) {
-                                DubStamp.write(
-                                    session.dir,
-                                    DubStamp.Stamp(System.currentTimeMillis(), cardTree = card.toString()),
-                                )
-                            }
+                            stampDub(session.dir, card = card.toString())
                             onToast(Copy.DUB_DONE_CARD)
                         }
                     }

@@ -1,6 +1,7 @@
 package com.snipsnap.shell
 
 import java.io.File
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -13,6 +14,11 @@ import kotlin.test.assertTrue
 class DubStampTest {
 
     private val temp: File = java.nio.file.Files.createTempDirectory("dubstamp").toFile()
+
+    @AfterTest
+    fun cleanUp() {
+        temp.deleteRecursively()
+    }
 
     private fun kitDir(name: String) = File(temp, name).apply { mkdirs() }
 
@@ -95,6 +101,25 @@ class DubStampTest {
         // A blank card uri is not a card.
         File(dir, DubStamp.FILE).writeText("""{"version":1,"atMillis":5,"cardTree":"  "}""")
         assertEquals(DubStamp.Stamp(5L, null), DubStamp.read(dir))
+    }
+
+    /**
+     * A schema this build does not know may put anything in these fields.
+     * Half-reading one would let a stranger's file decide what the shelf
+     * claims about a card, so the version is checked rather than merely
+     * written - `Crate.loadIndex`'s own rule.
+     */
+    @Test
+    fun `a stamp from a schema this build does not know is no stamp`() {
+        val dir = kitDir("Versions")
+        File(dir, DubStamp.FILE).writeText("""{"version":2,"atMillis":5,"cardTree":"content://card/A"}""")
+        assertNull(DubStamp.read(dir), "a future version")
+
+        File(dir, DubStamp.FILE).writeText("""{"atMillis":5,"cardTree":"content://card/A"}""")
+        assertNull(DubStamp.read(dir), "no version at all - nothing this app writes lacks one")
+
+        File(dir, DubStamp.FILE).writeText("""{"version":"1","atMillis":5}""")
+        assertNull(DubStamp.read(dir), "a version of the wrong type")
     }
 
     @Test

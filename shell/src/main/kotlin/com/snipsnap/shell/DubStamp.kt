@@ -81,6 +81,13 @@ object DubStamp {
         // A torn write, a hand-edit, a future version: a stamp that cannot be
         // read is no stamp. The kit reads DRAFT, which under-claims rather
         // than throwing on a screen that is only trying to draw a list.
+        //
+        // The version is checked, not merely written - `Crate.loadIndex`'s own
+        // rule. A schema this build does not know may put anything in these
+        // fields, and half-reading it would let a stranger's file decide what
+        // the shelf claims about a card. A missing version is a mismatch too:
+        // nothing this app writes lacks one.
+        if ((obj.entries["version"] as? JsonValue.Num)?.value?.toInt() != VERSION) return null
         val at = (obj.entries["atMillis"] as? JsonValue.Num)?.value?.toLong() ?: return null
         val card = (obj.entries["cardTree"] as? JsonValue.Str)?.value
         return Stamp(at, card?.takeIf { it.isNotBlank() })
