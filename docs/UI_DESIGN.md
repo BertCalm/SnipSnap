@@ -152,7 +152,7 @@ Mockups: the **Schemes** artboard shows all eight side by side; **Tape
 Properties** is the picker — the Display-Properties-style dialog with the CRT
 preview monitor, scheme list with swatch chips, Save As…/Apply. The **Main**
 artboard carries a live `Scheme` tweak on the canvas, so the real screen can be
-flipped between all six.
+flipped between all eight.
 
 In the app this is a Compose theme object holding the token table; scheme
 choice persists per user, and the system theme maps onto schemes for free:
