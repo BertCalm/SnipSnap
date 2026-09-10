@@ -108,18 +108,31 @@ choice, not a surprise.
 | `loop/OrbitBank.kt` | The prepared audio for a set: pads at the device rate, snips fitted to their periods. Immutable; an edit prepares a new one reusing the last |
 | `loop/OrbitEngine.kt` | The transport: fixed 2048-frame blocks, hits scheduled per block, voices mixed, snips wrapped, written to the same `AudioSink` the loop grid uses. `render` is the offline bounce and the test harness |
 | `loop/OrbitStore.kt` | `orbits.json` (version 2; version 1 still loads), a sidecar beside the kit like `groove.json` |
+| `loop/OrbitClip.kt` | One cycle as an MPC clip in `groove.json`, and the 64-bar refusal both outputs share |
 | `loop/OrbitPatterns.kt` | Euclid, SPREAD, CLEAR, the dice, the weight cycle, the step-size choices |
 | `loop/OrbitPresets.kt` | The starter set from a kit — one ring per instrument the kit has (KICK 16 · SNARE 16 · HATS 12 · PERC 20 · THREE, a locked triplet · BASS 20 over the tonal pads) — and the empty-ring and snip-ring constructors |
 | `app/OrbitSampleSource.kt` | Pads from the kit shelf via `KitSampleSource`, snips from `snips/` |
 | `app/ui/OrbitScreen.kt` | The rings (shortest inside, a 16th-long comet tail, a strike flare, a pulse when they meet), the unrolled strip, the panel, the transport, audition through PLAY's pad engine, solo by long-press. Reached from GROOVE's **ORBIT ▸**, left by **◄ GROOVE** |
 
+## Out the door
+
+Two ways a set leaves the screen, both one cycle long and both refused in
+words when the cycle passes 64 bars (`OrbitClip.refusal`):
+
+- **BOUNCE ▸ TAPE** renders one cycle of what is heard (`OrbitEngine.render`
+  over `cycleFrames`; a solo bounces alone) and drops it on the TAPE shelf
+  through `SnipStore.import`, so rings feed the app's own loop: tape, chop,
+  kit, MPC.
+- **CLIP ▸ KIT** flattens one cycle of every engaged pattern ring's firings
+  onto the 960-PPQ grid (`OrbitClip.clip`: pad A0N plays note 35+N, the
+  writer's chromatic map) and writes it into the kit's `groove.json` as
+  "ORBIT 4:5", replacing the last ORBIT clip and leaving the captured base,
+  the variations and PROG E untouched — so the native export embeds it and
+  it rides to the MPC with the kit. A kit with no groove yet gets the ORBIT
+  clip as its first, which is what GROOVE then shows.
+
 ## Not yet
 
-- **Export.** Rings are phone-side only. Flattening a set to an MPC clip is
-  `OrbitClock.firings` over one `cycleFrames`, converted to pulses, which is
-  the shape the `Mpc3Clip` writer already takes; a WAV bounce is
-  `OrbitEngine.render` over the same length. Both are short follow-ups once
-  the rings have been heard.
 - **Swing on a ring.** Hits carry a weight but no timing offset yet.
 - **Hardware verification** of the Android screen: the cloud session
   cannot compile `:app` (see `app/README.md`), so the screen is reviewed

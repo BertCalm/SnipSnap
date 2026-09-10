@@ -65,6 +65,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.Kit
 import com.snipsnap.loop.Orbit
 import com.snipsnap.loop.OrbitBank
+import com.snipsnap.loop.OrbitClip
 import com.snipsnap.loop.OrbitClock
 import com.snipsnap.loop.OrbitEngine
 import com.snipsnap.loop.OrbitHit
@@ -148,6 +149,9 @@ fun OrbitScreen(
     var spreadOpen by remember(kitDir) { mutableStateOf(false) }
     /** The dice: every roll a new seed, so a roll can always be rolled again. */
     var scrambleSeed by remember(kitDir) { mutableIntStateOf(1) }
+    /** OUT ▸ swaps the panel for the two ways a set leaves the screen: onto TAPE, or into the kit as a clip. */
+    var outOpen by remember(kitDir) { mutableStateOf(false) }
+    var bouncing by remember(kitDir) { mutableStateOf(false) }
 
     // The transport: null until PLAY. Bank and engine live across edits;
     // each edit prepares a new bank (reusing the old one's buffers) and
@@ -395,6 +399,48 @@ fun OrbitScreen(
         commit(s.copy(bpm = bpm.coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM)))
     }
 
+    /**
+     * One full cycle of what is heard, rendered offline and dropped on the
+     * TAPE shelf as a snip — so rings feed the app's own loop: tape, chop,
+     * kit, MPC. What is heard: a solo bounces alone, a muted ring stays out.
+     */
+    fun bounceToTape() {
+        val s = set ?: return
+        OrbitClip.refusal(s)?.let { onToast(it); return }
+        if (bouncing) return
+        bouncing = true
+        outOpen = false
+        val what = heard(s)
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val prepared = OrbitBank.prepare(what, source, previous = bank)
+                    val frames = OrbitClock.cycleFrames(what).toInt()
+                    val rendered = OrbitEngine.render(what, prepared, frames)
+                    SnipStore.import(rendered, filesDir, System.currentTimeMillis())
+                }
+            }
+            bouncing = false
+            result.onSuccess { imported ->
+                snips = SnipStore.list(filesDir)
+                onToast("ON TAPE: ${cycleLabel(what)}. TRIM IT, CHOP IT, KIT IT.")
+            }.onFailure { e -> onToast("BOUNCE FAILED: ${e.message ?: e.javaClass.simpleName}") }
+        }
+    }
+
+    /** One cycle as a clip in the kit's grooves, so it rides to the MPC with the kit. */
+    fun clipIntoKit() {
+        val s = set ?: return
+        OrbitClip.refusal(s)?.let { onToast(it); return }
+        outOpen = false
+        scope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { OrbitClip.save(kitDir, s) } }
+            result.onSuccess { clip ->
+                onToast("${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC.")
+            }.onFailure { e -> onToast("CLIP FAILED: ${e.message ?: e.javaClass.simpleName}") }
+        }
+    }
+
     BackHandler { stopPlayback(); onBack() }
 
     val current = set
@@ -500,6 +546,27 @@ fun OrbitScreen(
                                 TapeText(SnipStore.displayName(file).uppercase(), TapeType.pixel, scheme.amber.tape)
                             }
                         }
+                    }
+                } else if (outOpen) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        TapeText("ONE CYCLE OUT — ${cycleLabel(current)}", TapeType.pixel, scheme.ink.tape)
+                        SmallChip("CLOSE", scheme) { outOpen = false }
+                    }
+                    val refusal = OrbitClip.refusal(current)
+                    if (refusal != null) {
+                        TapeText(refusal, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2)
+                    } else {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            ActionButton(if (bouncing) "BOUNCING…" else "BOUNCE ▸ TAPE", scheme, Modifier.weight(1f), enabled = !bouncing, accent = true) { bounceToTape() }
+                            ActionButton("CLIP ▸ KIT", scheme, Modifier.weight(1f), accent = true) { clipIntoKit() }
+                        }
+                        TapeText(
+                            "TAPE: WHAT YOU HEAR, AS A SNIP ON THE SHELF — TRIM IT, CHOP IT, MAKE A KIT OF IT. KIT: THE PATTERN AS A CLIP IN THE KIT'S GROOVES, SO IT RIDES TO THE MPC.",
+                            TapeType.pixelSmall,
+                            scheme.ink3.tape,
+                            Modifier.fillMaxWidth(),
+                            maxLines = 3,
+                        )
                     }
                 } else if (stepsPickerOpen && ring != null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -608,13 +675,18 @@ fun OrbitScreen(
             }
 
             // One row: the tempo and the ring shelf. PLAY is in the header.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("↺ TOP", scheme, Modifier.weight(1f), enabled = playing) { engine?.rewind() }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                ActionButton("↺", scheme, Modifier.weight(0.7f), enabled = playing) { engine?.rewind() }
                 ActionButton("BPM −", scheme, Modifier.weight(1f)) { setBpm(current.bpm - 2f) }
                 ActionButton("BPM +", scheme, Modifier.weight(1f)) { setBpm(current.bpm + 2f) }
                 ActionButton("+ PAD", scheme, Modifier.weight(1f)) { addPatternRing() }
                 ActionButton("+ SNIP", scheme, Modifier.weight(1f), enabled = snips.isNotEmpty(), accent = snipPickerOpen) {
                     snipPickerOpen = !snipPickerOpen
+                    outOpen = false
+                }
+                ActionButton("OUT ▸", scheme, Modifier.weight(1f), accent = outOpen) {
+                    outOpen = !outOpen
+                    snipPickerOpen = false
                 }
             }
             TapeText(
