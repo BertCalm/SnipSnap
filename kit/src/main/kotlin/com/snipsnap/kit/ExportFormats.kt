@@ -44,6 +44,12 @@ data class ExportOutcome(
     /** The side-by-side data folder, where the format has one. */
     val companion: File?,
     val findings: List<Finding>,
+    /**
+     * READ BACK ([ExportReadBack.verify]) — the written file re-read and
+     * diffed against the kit. Empty until a caller runs it (the export
+     * wizard does; the drivers themselves only write).
+     */
+    val readBack: List<Finding> = emptyList(),
 )
 
 /**

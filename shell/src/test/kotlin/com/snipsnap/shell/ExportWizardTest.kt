@@ -44,6 +44,13 @@ class ExportWizardTest {
         val result = w.write(File(temp, "card-stages"))
         assertTrue(result is ExportWizardModel.WriteResult.Done)
         assertEquals(ExportWizardModel.Stage.COMPLETE, w.stage)
+        // READ BACK ran on the file that landed, and the writer agreed with the reader.
+        val readBack = result.outcome.readBack
+        assertTrue(readBack.isNotEmpty(), "READ BACK ran")
+        assertTrue(
+            readBack.none { it.severity == com.snipsnap.kit.Severity.FAIL },
+            readBack.joinToString(" | ") { it.message },
+        )
         assertEquals("WRITE ANOTHER ✓", w.writeLabel)
         assertEquals("DUB COMPLETE", w.dubLabel)
         assertTrue("ALL 4 FILES ON TAPE" in w.dubFilesLine(4))

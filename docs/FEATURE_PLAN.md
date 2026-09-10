@@ -2048,6 +2048,27 @@ APP+CORE wave RRR: ✓ all landed (2026-09-09) — TAPE SPLICE, joining two
   transient into an unrelated crate parent - this one only ever joins
   two takes of the *same* pad, and only fades when the cut demands it.
 
+APP+CORE wave SSS: ✓ all landed (2026-09-09) — READ BACK, X-RAY turned
+  inward on the app's own writers. `ExportReadBack.verify` (`:kit`, new)
+  re-reads the file DUB just wrote through `MpcXRay` and diffs it pad by
+  pad against what the kit asked for - sample stems and velocity
+  zones, level, pan, both tunes, mute group, the four shape fields -
+  with expected values built the way the writers build them (stems
+  through `Names.sanitizeStem`, decay 0.047244 on the XML side and 1.0
+  on ACVS when the kit left it null, X-Ray's 0-based XML instrument
+  numbers), so a disagreement is a real one. Preflight checked the kit
+  *before* the write; nothing checked the file *after* it until this.
+  `Severity.SKIP` (new) is "not checked" said out loud - a field X-Ray
+  has no name for (colour, one-shot, humanize), a chain pad's zones, a
+  format that isn't an MPC program at all - never counted as OK, never
+  blocking. The wizard runs it after every write (`ExportOutcome.readBack`)
+  and the completion stage shows it as a READ BACK card in PREFLIGHT's
+  own rows, with one caveat under it: the file agreeing with our reader
+  is not the Live III agreeing - a writer and a reader can share one
+  misunderstanding, and hardware stays the only proof it opens.
+  `RoundTripFuzzTest` was the test-time version of this idea; this is
+  the one the user sees, on every format X-Ray can read.
+
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
   F6.1 .xpn import + expansion tile → velocity/bank B →
