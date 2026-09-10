@@ -2169,6 +2169,30 @@ APP+CORE wave WWW: ✓ all landed (2026-09-10) — DOUBLES, pads across the
   4096 samples are what's measured, so two trims of one hit may not
   land this close.
 
+APP+CORE wave XXX: ✓ all landed (2026-09-10) — THE CHART, a groove as
+  a monospace drum chart: one row per pad the clip plays, one column
+  per 16th, `X` / `x` / `o` by velocity (≥ .75 / ≥ .40 / softer), bars
+  numbered over a beat ruler, four bars to a system with the labels
+  repeated. `Chart.render` (`:shell`, new) draws exactly what is
+  stored: a hit off the 16th grid is drawn in its nearest cell as `>`
+  (late) or `<` (early) and footnoted with its bar, step and pulse
+  offset ("OFF-GRID 1: A02 BAR 1 STEP 5, +31 PULSES LATE (x)"), a hit
+  whose nearest cell is past the loop's end says "ACROSS THE LOOP'S
+  END", and a cell two hits share says so — never the quiet quantize
+  the J-card's step thumbnail does for a picture. The header names the
+  program on screen, the tempo (and that it's a stand-in when the kit
+  has none), bars and notes; the swing line is measured, not asserted:
+  the even 16ths' median lean in pulses and the panel percent it reads
+  back to through `GrooveVariations.swing`'s own arithmetic ("EVEN
+  16THS +57 PULSES, ≈ SWING 62%"), "STRAIGHT" on the grid, and an early
+  lean named as not a swing. A second `render(arrangement)` stacks a
+  SONG's sections, each under its name, length, repeat count and the
+  reason that picked it. Door: CHART ▸ on GROOVE (the SONG ▸ / ORBIT ▸
+  row, under MIDI ▸) writes `<exports>/<kit>/chart/<clip>.txt` from the
+  same `currentClip` the roll plays — PROG E's edits and the live swing
+  included — and hands it to the system chooser as text/plain; when no
+  app takes it the toast says where the file was kept.
+
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
   F6.1 .xpn import + expansion tile → velocity/bank B →

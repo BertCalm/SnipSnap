@@ -395,6 +395,22 @@ object Copy {
     /** The needle-roll only draws five lanes; a note on any other pad still plays and still exports — this says so. */
     fun offLane(n: Int): String = "+$n OFF-LANE — HEARD AND EXPORTED, NOT DRAWN"
 
+    // ---- GROOVE: CHART ▸ (wave XXX) — the program on screen as a text drum chart ----
+    const val CHART_BUSY = "CHARTING…"
+    const val CHART_NEEDS_GROOVE = "NO GROOVE TO CHART. CHOP WITH A GROOVE, RECORD ONE, OR STEAL ONE FIRST."
+    /** The chart is written and the chooser is up; [offGrid] hits were drawn in their nearest cell and footnoted, never moved. */
+    fun chartWritten(notes: Int, offGrid: Int): String {
+        val noteWord = if (notes == 1) "NOTE" else "NOTES"
+        val grid = when (offGrid) {
+            0 -> "ALL ON THE GRID"
+            1 -> "1 OFF THE GRID - DRAWN, NOT MOVED"
+            else -> "$offGrid OFF THE GRID - DRAWN, NOT MOVED"
+        }
+        return "CHART WRITTEN: $notes $noteWord, $grid. PICK WHERE IT GOES."
+    }
+    /** The chart is written but no app took it; [where] is the path under the app's own files, so it isn't lost. */
+    fun chartKept(where: String): String = "CHART KEPT AT $where. $SHARE_NOWHERE"
+
     // ---- ARRANGE ----
     const val ARRANGE_NEEDS_GROOVE = "NO GROOVE TO ARRANGE. CHOP WITH A GROOVE, OR STEAL ONE, FIRST."
     const val ARRANGE_MIXING = "MIXING…"

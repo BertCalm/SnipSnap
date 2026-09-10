@@ -46,6 +46,7 @@ import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.PadEngine
+import com.snipsnap.app.ShareOut
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -64,6 +65,7 @@ import com.snipsnap.kit.MidiGroove
 import com.snipsnap.kit.Names
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
+import com.snipsnap.shell.Chart
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
@@ -761,6 +763,60 @@ fun GrooveScreen(
         }
     }
 
+    // CHART ▸ — the program on screen as a monospace drum chart, one text
+    // file handed to the system chooser. It reads the same `currentClip`
+    // the roll plays and MIDI ▸ writes, so what the chart shows is what
+    // this screen is playing right now — including PROG E's edits and the
+    // live swing percent. Off-grid hits are drawn in their nearest cell and
+    // named in footnotes, never snapped: the J-card's step thumbnail
+    // quantizes quietly for a picture, but a chart is a document, and this
+    // one draws exactly what is stored.
+    var chartBusy by remember(kitDir) { mutableStateOf(false) }
+    fun exportChart() {
+        val clip = currentClip
+        if (clip == null) {
+            onToast(Copy.CHART_NEEDS_GROOVE)
+            return
+        }
+        if (chartBusy) return
+        clearJustLanded()
+        chartBusy = true
+        scope.launch {
+            try {
+                val tempo = kit.tempoBpm
+                val program = PROG_NAMES[progIndex].substringBefore(" ·")
+                val text = Chart.render(
+                    clip, kit,
+                    bpm = tempo ?: KitPreview.DEFAULT_BPM,
+                    bpmIsDefault = tempo == null,
+                    program = program,
+                )
+                val relative = "exports/${Names.sanitizeStem(kit.name)}/chart/${Names.sanitizeStem(clip.name)}.txt"
+                val file = withContext(Dispatchers.IO) {
+                    val root = context.getExternalFilesDir("exports")
+                        ?: throw IOException("external storage unavailable")
+                    val out = File(File(File(root, Names.sanitizeStem(kit.name)), "chart"), "${Names.sanitizeStem(clip.name)}.txt")
+                    out.parentFile?.mkdirs()
+                    out.writeText(text)
+                    out
+                }
+                val summary = Chart.summary(clip)
+                onToast(
+                    if (ShareOut.send(context, file, "text/plain", kit.name)) {
+                        Copy.chartWritten(summary.notes, summary.offGrid)
+                    } else {
+                        Copy.chartKept(relative)
+                    },
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("CHART", e)
+            } finally {
+                chartBusy = false
+            }
+        }
+    }
+
     /**
      * One touch, two effects that can never diverge: [hit] makes the sound
      * (and lights the pad, PLAY's own glow shape), and — only while
@@ -1297,6 +1353,15 @@ fun GrooveScreen(
                             clearJustLanded()
                             onOrbit()
                         }
+                        // CHART ▸ — the program on screen as a text drum chart,
+                        // beside MIDI ▸'s row: the same clip, read instead of played.
+                        GrooveActionButton(
+                            if (chartBusy) Copy.CHART_BUSY else "CHART ▸",
+                            scheme,
+                            Modifier.weight(1f),
+                            enabled = !chartBusy,
+                            accent = true,
+                        ) { exportChart() }
                     }
                     GrooveActionButton("● RECORD", scheme, Modifier.fillMaxWidth(), enabled = !busy && !midiBusy) { startRecording() }
 
