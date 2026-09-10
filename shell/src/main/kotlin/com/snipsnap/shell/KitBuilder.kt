@@ -412,7 +412,20 @@ class KitBuilderModel private constructor(
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.velocityLayers.isEmpty()) { "pad $slot is velocity-layered - `clearGhostLayers($slot)` before smearing" }
         requireNotChained(pad, "smearing")
-        val current = if (PadSheet.readSmear(pad.recipe) != null) untreatPad(slot) else pad
+        // The mirror of the era branch's own guard, and the other half of
+        // September UAT finding 20: this used to ask `readSmear` alone, so
+        // smearing an *aged* pad stacked the stretch onto the aged audio and
+        // then wrote SMEAR's recipe over the era's - the card naming one
+        // treatment while the file carried two. `unTreatState` reads both
+        // shapes. Layers are already refused above, so `untreatPad`'s
+        // single-file restore is the whole pad here.
+        val current = when (PadSheet.unTreatState(pad, binContents().map { it.originalName }.toSet())) {
+            PadSheet.UnTreat.READY -> untreatPad(slot)
+            // Nothing to undo, or nothing in the bin behind what the pad
+            // names: smear what is there, the way `treat` always has.
+            // GHOSTS_POSTDATE cannot arrive - a layered pad was refused above.
+            else -> pad
+        }
         if (amount <= 0f) return current
         val recipe = com.snipsnap.json.JsonValue.Obj(
             linkedMapOf<String, com.snipsnap.json.JsonValue>(

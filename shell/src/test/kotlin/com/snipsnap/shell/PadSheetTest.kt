@@ -41,6 +41,45 @@ class PadSheetTest {
         assertNull(PadSheet.eraFor(PadSheet.SMEAR))
     }
 
+    /**
+     * Finding 20: SMEAR (row one) and the rack character named `"smeared"`
+     * (row two, drawn as TAIL) are unrelated DSP with near-identical names —
+     * row one bakes a destructive HPSS stretch, row two pulls transients
+     * through a non-destructive FX chain. The card resolved that by drawing
+     * the character as TAIL, but nothing stopped the two from being wired
+     * back together by someone reading only the names.
+     *
+     * The engine name cannot be changed to break the tie: `"smeared"` is
+     * written into recipes on disk, so renaming it would orphan every kit
+     * that carries one. So the separation is pinned instead.
+     */
+    @Test
+    fun `SMEAR and the smeared character stay apart, whatever their names suggest`() {
+        // The character belongs to TAIL and to nothing else.
+        assertEquals("TAIL", PadSheet.segmentForCharacter("smeared"))
+        assertEquals(PadSheet.Treatment.Character("smeared"), PadSheet.treatmentFor(PadSheet.TAIL))
+
+        // SMEAR is neither an era nor that character - it has no Treatment at
+        // all, because it rides its own door.
+        assertNull(PadSheet.eraFor(PadSheet.SMEAR))
+        assertNull(
+            PadSheet.treatmentFor(PadSheet.SMEAR),
+            "SMEAR must never dispatch through the era/character/keyed doors",
+        )
+
+        // They sit on different rows, and only one of them is on row one.
+        assertTrue(PadSheet.SMEAR in PadSheet.SEGMENTS, "SMEAR is row one")
+        assertTrue(PadSheet.TAIL in PadSheet.CHARACTER_SEGMENTS, "TAIL is row two")
+        assertFalse(PadSheet.TAIL in PadSheet.SEGMENTS)
+        assertFalse(PadSheet.SMEAR in PadSheet.CHARACTER_SEGMENTS)
+
+        // And the card never draws one word for both.
+        assertTrue(
+            PadSheet.displayLabel(PadSheet.SMEAR) != PadSheet.displayLabel(PadSheet.TAIL),
+            "two chips on one card cannot share a label",
+        )
+    }
+
     @Test
     fun `an unknown segment is refused, not silently ignored`() {
         assertFailsWith<IllegalArgumentException> { PadSheet.eraFor("WOBBLE") }
