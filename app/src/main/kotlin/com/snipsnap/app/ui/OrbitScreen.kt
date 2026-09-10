@@ -6,6 +6,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -32,6 +33,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -45,6 +47,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -120,6 +126,10 @@ import kotlin.math.sin
  * (as is, trimmed, padded, sliced) rather than leaving the ear to guess.
  * A snip that knows its tempo offers it to the set once, when it lands.
  *
+ * Every edit is one step of undo away (UNDO in the panel, [UNDO_DEPTH]
+ * deep), BPM runs while held, and the rings and every cell describe
+ * themselves to a screen reader.
+ *
  * Interaction, in full: tap a ring to pick it, long-press a ring to solo
  * it. The picked ring unrolls into the strip below — the tape untaped —
  * with one row per pad in its voice, so a bass ring is a small piano roll
@@ -164,6 +174,8 @@ fun OrbitScreen(
     /** BPM taps settle before the snips refit: the job that fires the commit after a quiet [BPM_SETTLE_MS]. */
     var bpmJob by remember(kitDir) { mutableStateOf<Job?>(null) }
     var bpmPending by remember(kitDir) { mutableStateOf(false) }
+    /** The sets before each edit, newest last: one UNDO steps back one edit. Not saved; a screen's worth. */
+    var history by remember(kitDir) { mutableStateOf<List<OrbitSet>>(emptyList()) }
 
     // The transport: null until PLAY. Bank and engine live across edits;
     // each edit prepares a new bank (reusing the old one's buffers) and
@@ -254,8 +266,15 @@ fun OrbitScreen(
         return s.copy(orbits = s.orbits.mapIndexed { i, o -> o.copy(engaged = i == only && o.engaged) })
     }
 
-    /** Persist and, if the transport is up, hand the edit to the engine at the next block. */
-    fun commit(next: OrbitSet) {
+    /**
+     * Persist and, if the transport is up, hand the edit to the engine at
+     * the next block. Every edit is recorded for UNDO unless [record] says
+     * not to (UNDO itself, and the settled end of a BPM run, which was
+     * recorded once when the run began).
+     */
+    fun commit(next: OrbitSet, record: Boolean = true) {
+        val before = set
+        if (record && before != null && before != next) history = (history + before).takeLast(UNDO_DEPTH)
         set = next
         scope.launch {
             preparing = true
@@ -412,6 +431,19 @@ fun OrbitScreen(
         }
     }
 
+    /** Step back one edit: the set before it, saved and handed to the engine like any other change. */
+    fun undo() {
+        val previous = history.lastOrNull() ?: run { onToast("NOTHING TO UNDO"); return }
+        history = history.dropLast(1)
+        bpmJob?.cancel()
+        bpmPending = false
+        tempoOffer = null
+        val soloed = solo
+        if (soloed != null && soloed >= previous.orbits.size) solo = null
+        selected = selected.coerceIn(0, (previous.orbits.size - 1).coerceAtLeast(0))
+        commit(previous, record = false)
+    }
+
     /** Take the snip's tempo: the set moves to it and the snip's ring is re-sized to its natural length there. */
     fun acceptTempo(offer: TempoOffer) {
         tempoOffer = null
@@ -445,6 +477,9 @@ fun OrbitScreen(
     fun setBpm(bpm: Float) {
         val s = set ?: return
         val next = s.copy(bpm = bpm.coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM))
+        if (next == s) return
+        // One UNDO steps back the whole run of taps, not one tap of it.
+        if (!bpmPending) history = (history + s).takeLast(UNDO_DEPTH)
         set = next
         val b = bank
         if (b != null && next.orbits.none { it.content is SnipOrbit }) {
@@ -455,7 +490,7 @@ fun OrbitScreen(
         bpmJob = scope.launch {
             delay(BPM_SETTLE_MS)
             bpmPending = false
-            set?.let { commit(it) }
+            set?.let { commit(it, record = false) }
         }
     }
 
@@ -513,7 +548,7 @@ fun OrbitScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                HeaderChip("◄ GRV", scheme, Modifier.width(56.dp)) { stopPlayback(); onBack() }
+                HeaderChip("◄ GRV", scheme, Modifier.width(56.dp), description = "BACK TO GROOVE") { stopPlayback(); onBack() }
                 // The transport lives in the header so it never scrolls away
                 // under a tall strip: PLAY is the first thing this screen is for.
                 HeaderChip(
@@ -683,7 +718,10 @@ fun OrbitScreen(
                     }
                     TapeText("AS EVEN AS THE STEPS ALLOW: 3 ROUND 8 IS THE TRESILLO, 5 ROUND 8 THE CINQUILLO. ON THE RING'S FIRST PAD.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
                 } else if (ring == null) {
-                    TapeText("NO RINGS — ADD ONE BELOW", TapeType.pixel, scheme.ink2.tape)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        TapeText("NO RINGS — ADD ONE BELOW", TapeType.pixel, scheme.ink2.tape)
+                        SmallChip("UNDO", scheme, enabled = history.isNotEmpty(), description = "UNDO THE LAST EDIT") { undo() }
+                    }
                 } else {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         TapeText(ring.name, TapeType.display, scheme.ink.tape)
@@ -699,7 +737,7 @@ fun OrbitScreen(
                         )
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        SmallChip("−", scheme) { setSteps(selected, ring.steps - 1) }
+                        SmallChip("−", scheme, description = "ONE STEP FEWER") { setSteps(selected, ring.steps - 1) }
                         Box(
                             Modifier
                                 .weight(1f)
@@ -713,7 +751,7 @@ fun OrbitScreen(
                                 scheme.ink.tape,
                             )
                         }
-                        SmallChip("+", scheme) { setSteps(selected, ring.steps + 1) }
+                        SmallChip("+", scheme, description = "ONE STEP MORE") { setSteps(selected, ring.steps + 1) }
                         SmallChip("LOCK TO BAR", scheme, accent = ring.lockToBar) {
                             updateRing(selected) { it.copy(lockToBar = !it.lockToBar) }
                         }
@@ -723,7 +761,8 @@ fun OrbitScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        SmallChip(if (ring.engaged) "ON" else "OFF", scheme, accent = ring.engaged) {
+                        SmallChip("UNDO", scheme, enabled = history.isNotEmpty(), description = "UNDO THE LAST EDIT") { undo() }
+                        SmallChip(if (ring.engaged) "ON" else "OFF", scheme, accent = ring.engaged, description = if (ring.engaged) "RING ON — TAP TO MUTE" else "RING OFF — TAP TO HEAR") {
                             updateRing(selected) { it.copy(engaged = !it.engaged) }
                         }
                         SmallChip("SOLO", scheme, accent = solo == selected) { toggleSolo(selected) }
@@ -731,7 +770,7 @@ fun OrbitScreen(
                         if (ring.content is PatternOrbit) {
                             SmallChip("SPREAD", scheme) { spreadOpen = true }
                             SmallChip("CLEAR", scheme) { updateRing(selected) { OrbitPatterns.clear(it) } }
-                            SmallChip("⚄ DICE", scheme) { scrambleRing(selected) }
+                            SmallChip("⚄ DICE", scheme, description = "ROLL THE DICE") { scrambleRing(selected) }
                         }
                     }
                     when (val content = ring.content) {
@@ -776,9 +815,10 @@ fun OrbitScreen(
 
             // One row: the tempo and the ring shelf. PLAY is in the header.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                ActionButton("↺", scheme, Modifier.weight(0.7f), enabled = playing) { engine?.rewind() }
-                ActionButton("BPM −", scheme, Modifier.weight(1f)) { setBpm(current.bpm - 2f) }
-                ActionButton("BPM +", scheme, Modifier.weight(1f)) { setBpm(current.bpm + 2f) }
+                ActionButton("↺", scheme, Modifier.weight(0.7f), enabled = playing, description = "BACK TO THE TOP") { engine?.rewind() }
+                // Hold to run: forty taps is not a way to get from 92 to 172.
+                RepeatButton("BPM −", "SLOWER", scheme, Modifier.weight(1f)) { set?.let { setBpm(it.bpm - 2f) } }
+                RepeatButton("BPM +", "FASTER", scheme, Modifier.weight(1f)) { set?.let { setBpm(it.bpm + 2f) } }
                 ActionButton("+ PAD", scheme, Modifier.weight(1f)) { addPatternRing() }
                 ActionButton("+ SNIP", scheme, Modifier.weight(1f), enabled = snips.isNotEmpty(), accent = snipPickerOpen) {
                     snipPickerOpen = !snipPickerOpen
@@ -793,12 +833,12 @@ fun OrbitScreen(
                 if (snips.isEmpty()) {
                     "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · NO SNIPS ON THE SHELF YET FOR + SNIP."
                 } else {
-                    "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · SHORTEST RING INSIDE COMES ROUND FIRST."
+                    "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · HOLD BPM TO RUN IT · SHORTEST RING INSIDE COMES ROUND FIRST."
                 },
                 TapeType.pixelSmall,
                 scheme.ink3.tape,
                 Modifier.fillMaxWidth(),
-                maxLines = 2,
+                maxLines = 3,
             )
         }
     }
@@ -875,7 +915,22 @@ private fun RingsCanvas(
         )
     }
 
-    Box(modifier.lcdPanel(scheme)) {
+    // The picture in words, for a screen reader: every ring in display
+    // order, its length, and whether it is picked, muted or soloed.
+    val description = remember(set, selected, solo) {
+        val rings = order.joinToString(", ") { i ->
+            val ring = set.orbits[i]
+            val state = listOfNotNull(
+                if (i == selected) "PICKED" else null,
+                if (!ring.engaged) "MUTED" else null,
+                if (solo == i) "SOLOED" else null,
+            ).joinToString(" ")
+            "${ring.name}, ${OrbitClock.lengthLabel(set, ring)}${if (state.isEmpty()) "" else ", $state"}"
+        }
+        if (set.orbits.isEmpty()) "RINGS: NONE" else "RINGS, SHORTEST INSIDE: $rings. THEY MEET EVERY ${cycleLabel(set)}."
+    }
+
+    Box(modifier.lcdPanel(scheme).semantics { contentDescription = description }) {
         Canvas(
             Modifier
                 .fillMaxSize()
@@ -1079,6 +1134,12 @@ private fun StripEditor(
                                 edge = edge,
                                 edgeWidth = if (step == playheadStep || accent) 2.dp else 1.dp,
                                 label = "STEP ${step + 1} PAD ${padLabel(slot)}",
+                                state = when {
+                                    hit == null -> "EMPTY"
+                                    accent -> "ACCENT"
+                                    hit.velocity < OrbitPatterns.HIT_VELOCITY -> "SOFT HIT"
+                                    else -> "HIT"
+                                },
                                 onTap = { onToggle(slot, step) },
                                 onLongPress = { onCycle(slot, step) },
                             )
@@ -1104,6 +1165,7 @@ private fun StripCell(
     edge: Color,
     edgeWidth: androidx.compose.ui.unit.Dp,
     label: String,
+    state: String,
     onTap: () -> Unit,
     onLongPress: () -> Unit,
 ) {
@@ -1113,6 +1175,7 @@ private fun StripCell(
             .height(CELL_H_DP.dp)
             .background(fill, RoundedCornerShape(3.dp))
             .border(edgeWidth, edge, RoundedCornerShape(3.dp))
+            .semantics { stateDescription = state }
             .combinedClickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -1144,6 +1207,13 @@ private const val WAVE_BUCKETS = 120
 
 /** Half-height of the loudest waveform bar, across the ring's stroke. */
 private const val WAVE_AMP_DP = 9f
+
+/** How many edits UNDO can step back through. */
+private const val UNDO_DEPTH = 40
+
+/** A held BPM button waits this long before it runs, then steps every [REPEAT_EVERY_MS]. */
+private const val REPEAT_AFTER_MS = 400L
+private const val REPEAT_EVERY_MS = 90L
 
 /** Quiet after the last BPM tap before the set saves and its snips refit. */
 private const val BPM_SETTLE_MS = 400L
@@ -1196,6 +1266,7 @@ private fun HeaderChip(
     modifier: Modifier = Modifier,
     accent: Boolean = false,
     enabled: Boolean = true,
+    description: String? = null,
     onClick: () -> Unit,
 ) {
     val ink = if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink.tape
@@ -1203,7 +1274,7 @@ private fun HeaderChip(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, if (accent && enabled) scheme.accent.tape else scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .tapeClick(label = if (label == "▶") "PLAY" else if (label == "■") "STOP" else null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = description ?: if (label == "▶") "PLAY" else if (label == "■") "STOP" else null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -1212,17 +1283,25 @@ private fun HeaderChip(
 }
 
 @Composable
-private fun SmallChip(label: String, scheme: Scheme, accent: Boolean = false, onClick: () -> Unit) {
+private fun SmallChip(
+    label: String,
+    scheme: Scheme,
+    accent: Boolean = false,
+    enabled: Boolean = true,
+    /** What a screen reader says for it, when the label alone would not do ("−", "⚄ DICE"). */
+    description: String? = null,
+    onClick: () -> Unit,
+) {
     Box(
         Modifier
             .heightIn(min = 36.dp)
             .background(scheme.field.tape, RoundedCornerShape(4.dp))
-            .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
-            .tapeClick(label = label, onClick = onClick)
+            .border(1.dp, if (accent && enabled) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+            .tapeClick(label = description ?: label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (accent) scheme.accent.tape else scheme.ink2.tape)
+        TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape)
     }
 }
 
@@ -1248,6 +1327,7 @@ private fun ActionButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     accent: Boolean = false,
+    description: String? = null,
     onClick: () -> Unit,
 ) {
     Box(
@@ -1255,9 +1335,63 @@ private fun ActionButton(
             .height(Layout.MIN_HIT_TARGET.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
             .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(6.dp))
-            .tapeClick(label = null, enabled = enabled, onClick = onClick),
+            .tapeClick(label = description, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape)
+    }
+}
+
+/**
+ * An [ActionButton] that steps once on touch and keeps stepping while
+ * held — [REPEAT_AFTER_MS] before the run starts, then every
+ * [REPEAT_EVERY_MS] — the way a hardware tempo button runs. The pointer
+ * loop is KIT's own press-and-hold shape; for a screen reader the button
+ * is a plain click that steps once, under [description].
+ */
+@Composable
+private fun RepeatButton(
+    label: String,
+    description: String,
+    scheme: Scheme,
+    modifier: Modifier = Modifier,
+    onStep: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    // The pointer loop is keyed once; the latest step reaches it through this.
+    val step by rememberUpdatedState(onStep)
+    Box(
+        modifier
+            .height(Layout.MIN_HIT_TARGET.dp)
+            .background(scheme.field.tape, RoundedCornerShape(6.dp))
+            .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(6.dp))
+            .semantics {
+                contentDescription = description
+                onClick { step(); true }
+            }
+            .pointerInput(Unit) {
+                while (true) {
+                    val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
+                    step()
+                    val run = scope.launch {
+                        delay(REPEAT_AFTER_MS)
+                        while (isActive) {
+                            step()
+                            delay(REPEAT_EVERY_MS)
+                        }
+                    }
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!change.pressed) break
+                        }
+                    }
+                    run.cancel()
+                }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        TapeText(label, TapeType.pixel, scheme.ink2.tape)
     }
 }
