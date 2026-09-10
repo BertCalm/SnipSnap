@@ -102,7 +102,7 @@ class OrbitStoreTest {
         assertEquals(listOf(1, 2), loaded.orbits[0].pads)
         assertEquals(listOf(4), loaded.orbits[1].pads)
         assertTrue(loaded.orbits[2].pads.isEmpty())
-        // Saved again, it is a version 2 file with the voice written out.
+        // Saved again, it is a current-version file with the voice written out.
         val text = OrbitStore.save(loaded, dir).readText()
         assertTrue(text.contains("\"version\":3") || text.contains("\"version\": 3"), text.take(80))
         assertTrue(text.contains("\"voice\""))

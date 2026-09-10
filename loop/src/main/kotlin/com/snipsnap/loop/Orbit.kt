@@ -86,7 +86,7 @@ enum class OrbitSpan(
  *    16ths per second on every free ring, so a bigger ring takes longer to
  *    come round — 16 against 20 is 4/4 against 5/4, a *polymeter*, meeting
  *    again only after 80 steps, five bars.
- *  - A spanned ring is a whole number of laps long (½, 1, 2 or 4 bars)
+ *  - A spanned ring is a set number of laps long (½, 1, 2 or 4 bars)
  *    whatever its steps, so a 3-step ring spanning one bar plays a triplet
  *    against a 4-step ring's quarters — 3-against-4 inside one bar, a
  *    *polyrhythm* — and a 3-step ring spanning two bars is three hits

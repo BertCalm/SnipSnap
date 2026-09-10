@@ -268,7 +268,7 @@ class OrbitSpanTest {
     }
 
     @Test
-    fun `lap ticks - whole laps for two and four, none for free, half or one`() {
+    fun `spanned laps count whole laps - one, two or four - and none for a free or half-bar ring`() {
         assertEquals(0, OrbitClock.spannedLaps(ring(3, OrbitSpan.FREE)))
         assertEquals(0, OrbitClock.spannedLaps(ring(3, OrbitSpan.HALF)))
         assertEquals(1, OrbitClock.spannedLaps(ring(3, OrbitSpan.ONE)))

@@ -723,7 +723,7 @@ fun OrbitScreen(
                             }
                         }
                     }
-                    TapeText("FREE IS AS LONG AS ITS STEPS. A SPAN IS A WHOLE NUMBER OF BARS WHATEVER THE STEPS: 3 STEPS ACROSS 2 BARS IS THREE HITS IN EIGHT BEATS.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3)
+                    TapeText("FREE IS AS LONG AS ITS STEPS. A SPAN IS ½, 1, 2 OR 4 BARS WHATEVER THE STEPS: 3 STEPS ACROSS 2 BARS IS THREE HITS IN EIGHT BEATS.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3)
                 } else if (spreadOpen && ring != null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         TapeText("SPREAD HOW MANY HITS ROUND ${ring.steps} STEPS?", TapeType.pixel, scheme.ink.tape)
