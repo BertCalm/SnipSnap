@@ -37,6 +37,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.Schemes
 
 /**
@@ -83,18 +84,16 @@ internal fun velocityFromY(y: Float, height: Float): Float {
 private val CENTER_VELOCITY = velocityFromY(0.5f, 1f)
 
 /**
- * Bank-aware pad tag ("A01".."A16", "B01".."B16") — the format the
- * export/CLI side already uses for slot 17+. Kept file-private rather than
- * `internal`: several other screens (`GrainFieldScreen.kt`,
- * `PadCaptureScreen.kt`, `PadSheetScreen.kt`, `SynthScreen.kt`) already
- * declare their own single-bank `padTag(slot) = "A%02d".format(slot)` —
- * a different formula for a different (single-bank) context. Widening
- * this one to `internal` collides with those (overload-ambiguity compile
- * errors), and reconciling four unrelated screens' pad-tag formatting is
- * outside this task's scope. Nothing in this task needs `padTag` visible
- * outside this file: `PlayPad` below is its only caller.
+ * Bank-aware pad tag ("A01".."A16", "B01".."B16"), over [PadBanks].
+ *
+ * This comment used to explain that four other screens declared their own
+ * single-bank `padTag(slot) = "A%02d".format(slot)` for "a different
+ * (single-bank) context", and that reconciling them was outside that
+ * task's scope. The September UAT's finding 11 ended the single-bank
+ * context: bank B pads are editable now, so those four were about to
+ * start titling slot 17 "A17". They all read the one rule.
  */
-private fun padTag(slot: Int): String = "%c%02d".format('A' + (slot - 1) / 16, (slot - 1) % 16 + 1)
+private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
 /** HANDOFF: tint for text on dark = the class colour mixed 55% to white. */
 private fun classTint(rgb: Int): Color {

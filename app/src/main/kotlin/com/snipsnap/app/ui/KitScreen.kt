@@ -23,6 +23,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -52,6 +53,7 @@ import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
+import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Copy
@@ -59,6 +61,7 @@ import com.snipsnap.shell.KeyPicker
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadPeaks
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Schemes
@@ -76,6 +79,21 @@ import kotlinx.coroutines.withContext
  * the geometry `Copy.KONAMI_PADS` assumes).
  */
 private val GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
+
+/**
+ * [GRID_ROWS] moved onto one bank: bank 0 is the grid as written, bank 1
+ * the same sixteen positions starting at slot 17.
+ *
+ * Until the September UAT's finding 11 this screen only ever drew bank A,
+ * which meant EVIL TWINS' sixteen pads on slots 17..32 were playable on
+ * PLAY and exported correctly but could not be inspected, treated, tuned,
+ * renamed or cleared - ever. PAD SHEET opens from this grid and nowhere
+ * else, so a pad this grid could not draw was a pad with no door.
+ */
+private fun gridRows(bank: Int): List<IntRange> {
+    val base = PadBanks.slots(bank).first - 1
+    return GRID_ROWS.map { (it.first + base)..(it.last + base) }
+}
 
 @Composable
 fun KitScreen(
@@ -208,6 +226,17 @@ fun KitScreen(
         }
     }
 
+    /** Which bank the grid is drawing, 0-based. Bank A until asked otherwise. */
+    var bank by remember(entry.dir) { mutableIntStateOf(0) }
+    val bankCount = PadBanks.banksUsed(kit.pads.map { it.slot })
+    // A kit can lose its upper bank while this screen is open - clearing the
+    // twins, or an UNDO. Fall back rather than draw sixteen empty pads the
+    // user cannot fill from here.
+    LaunchedEffect(bankCount) {
+        if (bank >= bankCount) bank = 0
+    }
+    val showing = bank.coerceAtMost(bankCount - 1)
+
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             Modifier
@@ -221,7 +250,7 @@ fun KitScreen(
             TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(it) } ?: ""
             val keyed = kit.key?.let { "${KeyPicker.label(it)}  " } ?: ""
-            val banks = if (kit.pads.any { it.slot > 16 }) "A+B  " else ""
+            val banks = if (bankCount > 1) "${PadBanks.letter(showing)}  " else ""
             TapeText("$keyed$tempo$banks${kit.pads.size} PADS", TapeType.lcdSmall, scheme.amber.tape)
         }
 
@@ -237,11 +266,42 @@ fun KitScreen(
             }
         }
 
+        // The door onto bank B (September UAT, finding 11). Only drawn when
+        // there is a second bank to reach: nothing here fills one, so an
+        // always-present B would be a switch to sixteen pads the user has no
+        // way to put anything on. EVIL TWINS is what makes bank B exist.
+        if (bankCount > 1) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                for (b in 0 until bankCount) {
+                    val here = b == showing
+                    val filled = kit.pads.count { it.slot in PadBanks.slots(b) }
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .let { if (here) it.raisedBevel(scheme) else it.sunkenField(scheme) }
+                            .tapeClick(label = null, onClick = { bank = b }),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(
+                            "BANK ${PadBanks.letter(b)} · $filled",
+                            TapeType.pixel,
+                            if (here) scheme.titleInk.tape else scheme.ink2.tape,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+        }
+
         Column(
             Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp),
         ) {
-            for (row in GRID_ROWS) {
+            for (row in gridRows(showing)) {
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp),
@@ -587,7 +647,10 @@ private fun PadCell(
 ) {
     val scheme = LocalScheme.current
     val shape = RoundedCornerShape(Layout.PAD_RADIUS.dp)
-    val tag = "A%02d".format(slot)
+    // The pad's own name. This said "A%02d".format(slot), which was true
+    // only while this grid could not show slot 17 - see the bank switch
+    // above (September UAT, finding 11).
+    val tag = PadBanks.tag(slot)
     val scope = rememberCoroutineScope()
 
     if (pad == null) {

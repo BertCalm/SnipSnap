@@ -91,6 +91,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Mutate
 import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.OutsideSheet
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PadSheetBoxes
@@ -1863,7 +1864,10 @@ private fun tuneLabel(semis: Int): String = when {
     else -> "$semis st"
 }
 
-private fun padTag(slot: Int): String = "A%02d".format(slot)
+// One rule, one home ([PadBanks]): this said "A%02d".format(slot) until
+// the September UAT's finding 11 made bank B reachable, at which point a
+// pad on slot 17 would have been titled A17 on this screen.
+private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
 /** 632 Hz / 12.6k — six characters at most, the value column's width. */
 private fun cutoffLabel(cutoff: Float): String {

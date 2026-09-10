@@ -1596,12 +1596,13 @@ fun App(shelf: KitShelf) {
                                         // still pending: tell the user what the
                                         // next empty-pad long-press will do, since
                                         // `KitScreen` itself carries no hint banner
-                                        // of its own for this mode. But KitScreen
-                                        // only ever renders bank A (slots 1..16 —
-                                        // see its own GRID_ROWS), so an "empty
-                                        // pad" instruction is only actually
-                                        // followable if bank A has one; a kit
-                                        // that's already full there has nothing
+                                        // of its own for this mode. KitScreen can
+                                        // show bank B now (September UAT, finding
+                                        // 11) but always opens on bank A, and
+                                        // nothing here fills an upper bank anyway,
+                                        // so an "empty pad" instruction is only
+                                        // actually followable if bank A has one; a
+                                        // kit that's already full there has nothing
                                         // for the long-press to catch (the v1
                                         // "empty pads only" scope this task's
                                         // brief calls out), so the hint says so
