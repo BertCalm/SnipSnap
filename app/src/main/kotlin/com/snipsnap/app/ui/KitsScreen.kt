@@ -185,14 +185,14 @@ fun KitsScreen(
                 .getString(PREF_CARD_TREE, null)
             val now = System.currentTimeMillis()
             kits.associate {
-                it.dir.path to Pair(
+                it.dir.path to Pair<DubStamp.Status, String?>(
                     DubStamp.status(DubStamp.read(it.dir), card),
-                    Ages.ago(File(it.dir, KitStore.FILE_NAME).lastModified(), now),
+                    Ages.agoOrNull(File(it.dir, KitStore.FILE_NAME).lastModified(), now),
                 )
             }
         }
         dubStatuses = read.mapValues { it.value.first }
-        editedAges = read.mapValues { it.value.second }
+        editedAges = read.mapNotNull { (k, v) -> v.second?.let { k to it } }.toMap()
     }
     // DELETE/RENAME (Task 4): screen-level, not per-row — same shape as
     // SnipsScreen's own `confirmDelete`, so only one row's dialog is ever

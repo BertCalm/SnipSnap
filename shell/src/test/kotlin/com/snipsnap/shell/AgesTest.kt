@@ -2,6 +2,7 @@ package com.snipsnap.shell
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -39,6 +40,20 @@ class AgesTest {
     fun `a timestamp from the future reads TODAY, never a negative count`() {
         assertEquals("TODAY", Ages.ago(now + day, now))
         assertEquals("TODAY", Ages.ago(now + 400 * day, now))
+    }
+
+    /**
+     * `File.lastModified()` answers 0L for a file it cannot read, and 1970 is
+     * a perfectly good instant - so a kit whose `kit.json` went missing would
+     * otherwise wear a confident "2853 W AGO". A row that says nothing is
+     * right; a row that says something false is not.
+     */
+    @Test
+    fun `an absent timestamp has no age, rather than an age from 1970`() {
+        assertNull(Ages.agoOrNull(0L, now), "the lastModified() sentinel")
+        assertNull(Ages.agoOrNull(-1L, now))
+        assertEquals("TODAY", Ages.agoOrNull(now, now), "a real timestamp still answers")
+        assertEquals(Ages.ago(now - 3 * day, now), Ages.agoOrNull(now - 3 * day, now))
     }
 
     @Test

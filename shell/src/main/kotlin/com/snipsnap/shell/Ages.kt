@@ -22,17 +22,37 @@ object Ages {
      *
      * Whole days, floored: something four hours old on either side of
      * midnight is still TODAY, because the alternative is a shelf whose ages
-     * change while nothing about the kits does. A future timestamp — a
-     * clock that moved, a file copied from a machine ahead of this one —
-     * reads TODAY rather than a negative count.
+     * change while nothing about the kits does. The elapsed time is clamped
+     * at zero before it is divided rather than letting a negative day count
+     * fall through a branch, so a future timestamp — a clock that moved, a
+     * file copied from a machine ahead of this one — is TODAY by
+     * construction instead of by coincidence.
+     *
+     * A caller with no timestamp should pass none: see [agoOrNull], which
+     * exists because `File.lastModified()` answers `0L` for a file it cannot
+     * read, and 0L is a real instant this would faithfully report as some
+     * thousands of weeks ago.
      */
     fun ago(thenMillis: Long, nowMillis: Long): String {
-        val days = ((nowMillis - thenMillis) / DAY_MS).toInt()
+        val elapsed = (nowMillis - thenMillis).coerceAtLeast(0L)
+        val days = (elapsed / DAY_MS).toInt()
         return when {
-            days <= 0 -> "TODAY"
+            days == 0 -> "TODAY"
             days == 1 -> "YESTERDAY"
             days < 14 -> "$days D AGO"
             else -> "${days / 7} W AGO"
         }
     }
+
+    /**
+     * [ago], or null when [thenMillis] is not a timestamp anyone recorded.
+     *
+     * `File.lastModified()` returns `0L` for a file that does not exist or
+     * cannot be read, and 1970 is a perfectly good instant — so a kit whose
+     * `kit.json` went missing would otherwise wear a confident "2853 W AGO".
+     * A row that says nothing is right; a row that says something false is
+     * not.
+     */
+    fun agoOrNull(thenMillis: Long, nowMillis: Long): String? =
+        if (thenMillis <= 0L) null else ago(thenMillis, nowMillis)
 }
