@@ -603,6 +603,36 @@ fun GrooveScreen(
     }
 
     /**
+     * STEPS with nothing recorded: an empty one-bar base lands the way a
+     * take does, an empty E is forked from it, and the step editor opens on
+     * the blank bar — so GROOVE can start from a grid, not only from a
+     * performance. One bar, as the MPC gives you; the editor takes it from
+     * there.
+     */
+    fun startSteps() {
+        if (busy || base != null) return
+        clearJustLanded()
+        busy = true
+        scope.launch {
+            try {
+                val (b, e) = withContext(Dispatchers.IO) { GrooveEdit.startEmpty(kitDir, kit.name) }
+                base = b
+                eClip = e
+                editorSourceLabel = PROG_LETTERS[0]
+                editorBar = 0
+                editorDirty = false
+                progIndex = 4
+                isEditing = true
+            } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
+                failure("STEPS", ex)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    /**
      * EDIT STEPS's own fork: [GrooveEdit.fork]'s early-return (hand back
      * whatever E is already stored) is exactly right here — re-entering
      * the editor is SUPPOSED to keep editing the same E, not discard it.
@@ -1144,7 +1174,7 @@ fun GrooveScreen(
                             liveNotes = take?.notes().orEmpty(),
                         )
                         else -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+                            TapeText(Copy.EMPTY_GROOVE, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
                         }
                     }
                     if (recording && !countingIn) {
@@ -1177,30 +1207,30 @@ fun GrooveScreen(
                         // on is the grid you already know.
                         PlayBank(kit, WINDOW_GRID_ROWS, glow, ::recordHit, {}, Modifier.weight(2f).fillMaxWidth())
                     }
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(Layout.MIN_HIT_TARGET.dp)
-                            .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
-                            .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-                            .let { m ->
-                                if (countingIn) {
-                                    m
-                                } else {
-                                    m.tapeClick(label = null) { if (recording) stopRecording() else startRecording() }
-                                }
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        TapeText(
-                            when {
-                                countingIn -> "COUNTING IN…"
-                                recording -> "■ STOP RECORDING"
-                                else -> "● RECORD"
-                            },
-                            TapeType.pixel,
-                            scheme.lcdInk.tape,
-                        )
+                    if (countingIn || recording) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(Layout.MIN_HIT_TARGET.dp)
+                                .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
+                                .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
+                                .let { m -> if (countingIn) m else m.tapeClick(label = null) { stopRecording() } },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TapeText(if (countingIn) "COUNTING IN…" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape)
+                        }
+                    } else {
+                        // Three ways in, side by side: play it, tap it, or ring it.
+                        // ORBIT needs no groove at all, so it belongs here as much
+                        // as on the full screen's action row.
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            GrooveActionButton("● RECORD", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startRecording() }
+                            GrooveActionButton("STEPS", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startSteps() }
+                            GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+                                clearJustLanded()
+                                onOrbit()
+                            }
+                        }
                     }
                 }
             }
@@ -1404,7 +1434,7 @@ fun GrooveScreen(
 @Composable
 private fun EmptyGroove(scheme: Scheme) {
     Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
-        TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+        TapeText(Copy.READ_GROOVE_NEEDS_KIT, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
     }
 }
 

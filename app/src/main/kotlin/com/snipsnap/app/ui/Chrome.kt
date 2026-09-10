@@ -63,6 +63,8 @@ enum class AppScreen(val label: String) {
     CHOP("CHOP"),
     PLAY("PLAY"),
     GROOVE("GROOVE"),
+    /** The circular sequencer: the kit on rings of different lengths. Its own menu entry, since a sequencer is a peer of GROOVE, not a corner of it. */
+    ORBIT("ORBIT"),
     SYNTH("SYNTH"),
     /** The tactile pad: macros under a finger, PRINT to resample the gesture onto TAPE. */
     SURFACE("SURFACE"),
@@ -169,6 +171,7 @@ val MENU_ITEMS = listOf(
     MenuItem("CHOP", AppScreen.CHOP),
     MenuItem("PLAY", AppScreen.PLAY),
     MenuItem("GROOVE", AppScreen.GROOVE),
+    MenuItem("ORBIT", AppScreen.ORBIT),
     MenuItem("SYNTH", AppScreen.SYNTH),
     MenuItem("SURFACE", AppScreen.SURFACE),
     MenuItem("EXPORT", AppScreen.EXPORT),
