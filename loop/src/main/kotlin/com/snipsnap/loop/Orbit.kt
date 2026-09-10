@@ -153,9 +153,12 @@ data class Orbit(
 /**
  * The whole set of rings and the one clock they share.
  *
- * [lapSteps] is the reference bar: the circumference every bar-locked ring
- * squeezes its steps into, and the unit the cycle length is reported in.
- * Sixteen — one 4/4 bar of 16ths — matches every other grid in the app.
+ * [lapSteps] is the reference bar: the lap every spanned ring is measured
+ * in, and the unit the cycle length is reported in. Sixteen — one 4/4 bar
+ * of 16ths — matches every other grid in the app; 12 is 3/4, 20 is 5/4.
+ * Change the bar and every spanned ring re-periods together, which is the
+ * "4/4 × 2 = 8/4" observation: a change to the reference, not to a ring.
+ * Free rings do not care.
  */
 data class OrbitSet(
     val orbits: List<Orbit>,
@@ -173,6 +176,12 @@ data class OrbitSet(
     companion object {
         const val MAX_ORBITS = 8
         const val DEFAULT_LAP_STEPS = 16
+
+        /** The bars worth a chip: the common meters, all even so a half-bar span stays whole. */
+        val BAR_CHOICES: List<Int> = listOf(12, 16, 20, 24, 32)
+
+        /** A bar length as a meter — 12 is "3/4", 16 "4/4", 32 "8/4"; anything not in quarters says its 16ths. */
+        fun meterLabel(lapSteps: Int): String = if (lapSteps % 4 == 0) "${lapSteps / 4}/4" else "$lapSteps/16"
         const val MIN_BPM = 40f
         const val MAX_BPM = 220f
     }

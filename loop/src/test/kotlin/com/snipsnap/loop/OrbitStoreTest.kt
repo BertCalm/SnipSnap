@@ -57,6 +57,15 @@ class OrbitStoreTest {
     }
 
     @Test
+    fun `every bar offered round-trips`() {
+        val dir = tempDir()
+        for (lap in OrbitSet.BAR_CHOICES) {
+            OrbitStore.save(sample.copy(lapSteps = lap), dir)
+            assertEquals(lap, OrbitStore.load(dir).lapSteps)
+        }
+    }
+
+    @Test
     fun `a version 2 file still loads - lockToBar becomes a one-bar span`() {
         val dir = tempDir()
         File(dir, OrbitStore.FILE_NAME).writeText(

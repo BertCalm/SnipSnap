@@ -105,8 +105,16 @@
       "title": "ORBIT — a snip ring picked, its tempo offered"
     },
     {
-      "file": "OrbitModes.dc.html",
+      "file": "OrbitSet.dc.html",
       "x": 1410,
+      "y": 1750,
+      "w": 390,
+      "h": 844,
+      "title": "ORBIT — THE SET, the bar as chips"
+    },
+    {
+      "file": "OrbitModes.dc.html",
+      "x": 1880,
       "y": 1750,
       "w": 1080,
       "h": 580,
