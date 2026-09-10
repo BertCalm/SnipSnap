@@ -585,7 +585,6 @@ private fun ChopContent(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 /**
  * Every class a slice can be, under the slice that asked.
  *
@@ -665,6 +664,7 @@ private fun ClassPicker(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SliceRow(
     row: ChopReviewModel.Row,
