@@ -148,7 +148,7 @@ class ConventionTest {
     private fun scanBackHandlerSites(): List<BackHandlerSite> {
         val sites = mutableListOf<BackHandlerSite>()
         for (file in requireAppKotlinFiles()) {
-            val text = file.readText()
+            val text = file.readText(Charsets.UTF_8)
             var searchFrom = 0
             while (true) {
                 val idx = text.indexOf("BackHandler(", searchFrom)
@@ -414,7 +414,7 @@ class ConventionTest {
     private fun scanKitWriteOpenSites(): List<KitWriteSite> {
         val sites = mutableListOf<KitWriteSite>()
         for (file in requireAppKotlinFiles()) {
-            val text = file.readText()
+            val text = file.readText(Charsets.UTF_8)
             val spans = lockSpans(text)
             var searchFrom = 0
             while (true) {
@@ -648,7 +648,7 @@ class ConventionTest {
     private fun scanKitSaveSites(): List<KitSaveSite> {
         val sites = mutableListOf<KitSaveSite>()
         for (file in requireAppKotlinFiles()) {
-            val text = file.readText()
+            val text = file.readText(Charsets.UTF_8)
             if (!text.contains("KitBuilderModel")) continue
             val spans = lockSpans(text)
             var searchFrom = 0
@@ -850,7 +850,7 @@ class ConventionTest {
 
         val stranded = mutableListOf<String>()
         for (file in files) {
-            val lines = file.readText().split("\n")
+            val lines = file.readText(Charsets.UTF_8).split("\n")
             val blocks = docBlocks(lines)
             // `drop(1)`: the file's first doc-comment is the file-overview
             // idiom and is exempt — see this law's KDoc.
@@ -872,6 +872,108 @@ class ConventionTest {
                 "\nMove each block down to sit directly above the declaration it describes, or delete " +
                 "it if a newer doc on that declaration has already superseded it. Do not silence this " +
                 "by merging two unrelated blocks into one.",
+        )
+    }
+
+    // ---- Law: prose never states a stale count for a roster the code owns ----
+
+    /**
+     * The rosters this law polices, and where the true count comes from.
+     * A roster earns an entry here when it is small, named in prose, and
+     * grown by editing one list — the conditions under which a written count
+     * silently goes wrong.
+     */
+    private val rosterCounts: Map<String, Int>
+        get() = mapOf(
+            "scheme" to SchemeId.entries.size,
+            "starter" to StarterKits.ALL.size,
+        )
+
+    /** Number words this law can read; anything larger is written as digits in this codebase. */
+    private val numberWords = mapOf(
+        "one" to 1, "two" to 2, "three" to 3, "four" to 4, "five" to 5, "six" to 6,
+        "seven" to 7, "eight" to 8, "nine" to 9, "ten" to 10, "eleven" to 11, "twelve" to 12,
+    )
+
+    /**
+     * A word between the number and the noun that means the number is not a
+     * count of the roster at all — "4.5:1 in every scheme" is a contrast
+     * ratio, "the other seven entries" counts something else.
+     */
+    private val notACount = setOf("every", "each", "all", "any", "other", "per")
+
+    /**
+     * Prose that names how many schemes or starters there are must be right.
+     *
+     * September UAT, finding 22: `SchemeId` had grown to eight while the
+     * README still called them "the six TapeOS scheme token tables". Chasing
+     * that number down found worse — `docs/UI_DESIGN.md` named six schemes of
+     * which only two still exist, and `app/README.md` was a starter count out
+     * — because nothing anywhere connected the written number to the list.
+     * This connects them.
+     *
+     * Scope is the two READMEs plus `:shell` and `:app` sources: the places a
+     * developer or a new contributor reads as current fact. `docs/` is
+     * deliberately out, and that was tested rather than assumed — running this
+     * scan across every Markdown file directly under `docs/` finds three real
+     * drifts (fixed by hand in the same change) and two things it must not
+     * touch:
+     *
+     * - `docs/FEATURE_PLAN.md` says "the real MPC 3 scheme". That is a product
+     *   name, not a count, and no reasonable widening of the shape rules below
+     *   tells it apart from one. A law that cries wolf gets weakened or
+     *   deleted, which is worse than a narrow law that is always right.
+     * - `docs/APP_PLAN.md`'s finished-milestone entries record what M0 did
+     *   when there were six modules and six schemes. That is history; editing
+     *   it to satisfy a scan would falsify the record.
+     *
+     * So prose in `docs/` stays a human's job. Copilot caught one there that
+     * this law cannot see (`docs/UI_DESIGN.md`'s "flipped between all six"),
+     * which is the honest cost of the narrower scope.
+     */
+    @Test
+    fun `prose never states a stale count for a roster the code owns`() {
+        val readmes = listOf(File("../README.md"), File("../app/README.md"))
+        val missing = readmes.filterNot { it.isFile }
+        require(missing.isEmpty()) {
+            "expected these READMEs to exist but they don't: " + missing.joinToString { it.absolutePath } +
+                ". Fix the paths rather than deleting the check — a scan that reads nothing passes by accident."
+        }
+        val sources = listOf(File("../shell/src/main/kotlin"), File("../app/src/main/kotlin"))
+            .flatMap { it.walkTopDown().filter { f -> f.isFile && f.extension == "kt" } }
+        require(sources.size > 50) { "found only ${sources.size} .kt files — the scan is broken, not the tree." }
+
+        val counts = rosterCounts
+        val nouns = counts.keys.joinToString("|")
+        val numbers = (numberWords.keys + """\d+""").joinToString("|")
+        // The number must be a number (not a word that merely precedes one),
+        // may sit up to two words from the noun, and must not be part of a
+        // decimal or a ratio - hence the lookbehind.
+        val pattern = Regex("""(?<![\d:.])\b($numbers)\s+((?:[A-Za-z]+\s+){0,2}?)($nouns)s?\b""", RegexOption.IGNORE_CASE)
+
+        val wrong = mutableListOf<String>()
+        for (file in readmes + sources) {
+            file.readText(Charsets.UTF_8).lineSequence().forEachIndexed { i, line ->
+                for (m in pattern.findAll(line)) {
+                    val token = m.groupValues[1].lowercase()
+                    val stated = numberWords[token] ?: token.toIntOrNull() ?: continue
+                    if (m.groupValues[2].lowercase().split(" ").any { it in notACount }) continue
+                    val noun = m.groupValues[3].lowercase()
+                    val actual = counts.getValue(noun)
+                    if (stated != actual) {
+                        wrong += "${file.path.replace('\\', '/')}:${i + 1} says \"${m.value.trim()}\" " +
+                            "but there are $actual"
+                    }
+                }
+            }
+        }
+
+        assertTrue(
+            wrong.isEmpty(),
+            "prose states a count that the code disagrees with:\n  " + wrong.joinToString("\n  ") +
+                "\nEither the sentence is stale (fix the number) or the roster genuinely changed and the " +
+                "surrounding prose needs rewriting too — finding 22 was a count that was wrong AND a list " +
+                "of names that no longer existed. Check the names, not just the number.",
         )
     }
 }
