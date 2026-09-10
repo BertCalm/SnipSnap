@@ -857,7 +857,7 @@ fun OrbitScreen(
                             Modifier
                                 .weight(1f)
                                 .heightIn(min = 36.dp)
-                                .tapeClick(label = "PICK A STEP COUNT") { stepsPickerOpen = true },
+                                .tapeClick(label = null) { stepsPickerOpen = true },
                             contentAlignment = Alignment.CenterStart,
                         ) {
                             TapeText(
@@ -898,11 +898,13 @@ fun OrbitScreen(
                         }
                     }
                     // The ring's place in the mix: level in tenths, pan in quarters.
-                    // Tap the readout to put it back — 100, or centre.
+                    // Tap the readout to put it back — 100, or centre. The readouts
+                    // are unlabelled so a screen reader hears their values, not a
+                    // label in place of them; the − + ◀ ▶ chips carry the names.
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         SmallChip("−", scheme, description = "QUIETER") { updateRing(selected) { it.copy(level = (it.level - LEVEL_STEP).coerceAtLeast(0f)) } }
                         Box(
-                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "LEVEL ${(ring.level * 100).roundToInt()} — TAP FOR 100") {
+                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = null) {
                                 updateRing(selected) { it.copy(level = 1f) }
                             },
                             contentAlignment = Alignment.Center,
@@ -912,7 +914,7 @@ fun OrbitScreen(
                         SmallChip("+", scheme, description = "LOUDER") { updateRing(selected) { it.copy(level = (it.level + LEVEL_STEP).coerceAtMost(MAX_LEVEL)) } }
                         SmallChip("◀", scheme, description = "PAN LEFT") { updateRing(selected) { it.copy(pan = (it.pan - PAN_STEP).coerceAtLeast(-1f)) } }
                         Box(
-                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "PAN ${panLabel(ring.pan)} — TAP FOR CENTRE") {
+                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = null) {
                                 updateRing(selected) { it.copy(pan = 0f) }
                             },
                             contentAlignment = Alignment.Center,
