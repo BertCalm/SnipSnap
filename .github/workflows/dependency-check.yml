@@ -1,0 +1,57 @@
+name: dependency-check
+
+# Weekly and on-demand, not on every push or PR — see tests.yml's own
+# header for why this repo's CI minutes are metered. The difference here:
+# a CVE disclosure doesn't move between two commits ten minutes apart the
+# way a code change does, so this job's real cadence is "at least once a
+# week", not "every push". A finding blocks nothing automatically; it
+# lands in the uploaded report for a person to read.
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Monday 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      # dependencyCheckAggregate configures :app to see its Android/AndroxX
+      # dependencies too - same reason jvm-tests needs this in tests.yml.
+      - uses: android-actions/setup-android@v3
+      # The plugin downloads and caches the NVD/CISA-KEV feeds under the
+      # Gradle user home; without this every run re-fetches gigabytes of
+      # CVE data from scratch instead of just the delta since last week.
+      - name: Cache the vulnerability database
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/dependency-check-data
+          key: dependency-check-data-${{ github.run_id }}
+          restore-keys: |
+            dependency-check-data-
+      - name: Scan every module's dependencies for known vulnerabilities
+        # NVD_API_KEY is optional (build.gradle.kts treats an unset or
+        # blank secret as no key at all) but strongly recommended: NVD
+        # rate-limits unauthenticated requests hard enough to make a
+        # from-scratch database build unreliable. A free key comes from
+        # https://nvd.nist.gov/developers/request-an-api-key - set it as
+        # the NVD_API_KEY repository secret to use one.
+        run: ./gradlew --no-daemon dependencyCheckAggregate
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: build/reports/dependency-check-report.*
+          if-no-files-found: warn
+          retention-days: 30

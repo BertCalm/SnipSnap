@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Documented false positives only - never a way to silence a real finding.
+
+  Every suppression below must carry a <notes> explaining WHY the match is
+  wrong (a name collision, a vendored copy the scanner double-counts, a CVE
+  that names a feature this build never uses) and, where the plugin
+  supports it, an <until> date so a suppression added for a good reason
+  today doesn't quietly outlive it. An empty file here means every finding
+  dependencyCheckAggregate reports is real until someone reads it and adds
+  an entry with a reason.
+-->
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+</suppressions>
