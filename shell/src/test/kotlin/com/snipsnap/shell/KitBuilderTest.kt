@@ -984,16 +984,22 @@ class KitBuilderTest {
         val liveBefore = File(dir, m.pad(1)!!.sampleFile).readBytes()
         val binBefore = m.binContents().map { it.file.name }.toSet()
 
+        // An absolute-path climb, scoped to this test's own temp dir rather
+        // than a real global path - a hard-coded /tmp/escaped.wav would be
+        // flaky wherever that file already exists (a parallel run, a stray
+        // leftover) or /tmp is unwritable, and would leak outside this
+        // test's own cleanup if the refusal somehow failed.
+        val absoluteEscape = File(temp, "escaped.wav").absolutePath
         // The backslash is JSON-escaped in the take text, the way a writer would
         // carry it, so the pad type - not the JSON parser - is what refuses it.
-        for (climb in listOf("../escaped.wav", "..\\\\escaped.wav", "/tmp/escaped.wav", "sub/escaped.wav")) {
+        for (climb in listOf("../escaped.wav", "..\\\\escaped.wav", absoluteEscape, "sub/escaped.wav")) {
             take.writeText(take.readText().replace(m.pad(1)!!.sampleFile, climb))
             val e = assertFailsWith<IllegalArgumentException> { KitBuilderModel.open(dir).restoreTake(take) }
             assertTrue("bare filename" in (e.message ?: ""), "refused in the pad's own words: ${e.message}")
             assertTrue(kitBefore.contentEquals(File(dir, "kit.json").readBytes()), "kit.json untouched after '$climb'")
             assertTrue(liveBefore.contentEquals(File(dir, m.pad(1)!!.sampleFile).readBytes()), "live audio untouched after '$climb'")
             assertEquals(binBefore, m.binContents().map { it.file.name }.toSet(), "the bin untouched after '$climb'")
-            assertFalse(File(dir.parentFile, "escaped.wav").exists() || File("/tmp/escaped.wav").exists(), "nothing landed outside after '$climb'")
+            assertFalse(File(dir.parentFile, "escaped.wav").exists() || File(absoluteEscape).exists(), "nothing landed outside after '$climb'")
             take.writeText(take.readText().replace(climb, m.pad(1)!!.sampleFile))
         }
         // ".." has no separator, so the pad type lets it through; the restore

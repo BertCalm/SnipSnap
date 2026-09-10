@@ -87,7 +87,7 @@ object Crate {
                 dir == root || (!dir.name.startsWith(".") && !java.nio.file.Files.isSymbolicLink(dir.toPath()))
             }
             .filter { it.isDirectory && File(it, KitStore.FILE_NAME).isFile }
-            .sortedBy { it.path.lowercase() }
+            .sortedBy { it.path.lowercase(java.util.Locale.ROOT) }
         for (dir in kitDirs) {
             val kit = try {
                 KitStore.load(dir)
