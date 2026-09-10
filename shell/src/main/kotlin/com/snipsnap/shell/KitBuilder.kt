@@ -412,7 +412,26 @@ class KitBuilderModel private constructor(
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.velocityLayers.isEmpty()) { "pad $slot is velocity-layered - `clearGhostLayers($slot)` before smearing" }
         requireNotChained(pad, "smearing")
-        val current = if (PadSheet.readSmear(pad.recipe) != null) untreatPad(slot) else pad
+        // The mirror of the era branch's own guard, and the other half of
+        // September UAT finding 20: this used to ask `readSmear` alone, so
+        // smearing an *aged* pad stacked the stretch onto the aged audio and
+        // then wrote SMEAR's recipe over the era's - the card naming one
+        // treatment while the file carried two. `unTreatState` reads both
+        // shapes. Layers are already refused above, so `untreatPad`'s
+        // single-file restore is the whole pad here.
+        //
+        // `amount > 0f || smearedNow` is what keeps AMT 0 from becoming
+        // destructive outside this family. At 0 nothing is being smeared, so
+        // there is nothing for a restore to make room for: an era or a
+        // character must be left exactly as it is. A pad that IS smeared
+        // still comes back at 0 - that is what "no smear" has always meant
+        // here, and it predates the widened guard. NONE is the explicit way
+        // to take any treatment off (finding 13); a slider must not do it
+        // silently on the way past zero.
+        val smearedNow = PadSheet.readSmear(pad.recipe) != null
+        val restorable =
+            PadSheet.unTreatState(pad, binContents().map { it.originalName }.toSet()) == PadSheet.UnTreat.READY
+        val current = if (restorable && (amount > 0f || smearedNow)) untreatPad(slot) else pad
         if (amount <= 0f) return current
         val recipe = com.snipsnap.json.JsonValue.Obj(
             linkedMapOf<String, com.snipsnap.json.JsonValue>(

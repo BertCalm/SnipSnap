@@ -483,6 +483,149 @@ class KitBuilderTest {
         )
     }
 
+    // ---- finding 20: the two families compose, they do not stack ----
+
+    /**
+     * SMEAR is special-cased - its own recipe shape, its own door - and that
+     * special-casing used to leak. `smearPad`'s restore-first guard asked
+     * `readSmear` alone, so an *aged* pad was smeared on top of the ageing
+     * and then had SMEAR's recipe written over the era's: the card naming one
+     * treatment while the file carried two.
+     *
+     * The proof is byte-stable rather than "it changed": smearing an aged pad
+     * must produce exactly what smearing the original produces.
+     */
+    @Test
+    fun `smearing an aged pad restores it first, instead of stacking on the ageing`() {
+        // The reference: the same source, smeared once, never aged.
+        val refDir = File(temp, "SmearRef")
+        val ref = KitBuilderModel.create("SmearRef", refDir)
+        ref.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        ref.save()
+        ref.smearPad(1, 0.5f)
+        ref.save()
+        val reference = File(refDir, ref.pad(1)!!.sampleFile).readBytes()
+
+        // The same source, aged first, then smeared.
+        val dir = File(temp, "SmearOverEra")
+        val m = KitBuilderModel.create("SmearOverEra", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        val original = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        m.eraPad(1, "tape", 1f)
+        m.save()
+        assertFalse(File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(original), "the fixture really aged")
+
+        m.smearPad(1, 0.5f)
+        m.save()
+        assertTrue(
+            File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(reference),
+            "SMEAR must land on the restored original, not on the aged audio",
+        )
+        // And the recipe says SMEAR alone, which is now the truth.
+        assertEquals(0.5f, PadSheet.readSmear(m.pad(1)!!.recipe))
+        assertNull(PadSheet.read(m.pad(1)!!.recipe), "the era's recipe is gone, not merely overwritten")
+    }
+
+    /**
+     * AMT 0 must not be destructive outside SMEAR's own family. The pad
+     * sheet's AMT slider reaches 0, and `applySmear` hands whatever it reads
+     * straight to this door — so an aged pad, AMT dragged to zero, SMEAR
+     * tapped would otherwise have its era silently undone with nothing
+     * smeared in its place. NONE is the way to take a treatment off; a
+     * slider passing through zero is not.
+     */
+    @Test
+    fun `AMT 0 leaves an era alone instead of quietly undoing it`() {
+        val dir = File(temp, "SmearZeroOverEra")
+        val m = KitBuilderModel.create("SmearZeroOverEra", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        m.eraPad(1, "tape", 1f)
+        m.save()
+        val aged = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        val recipe = m.pad(1)!!.recipe
+
+        m.smearPad(1, 0f)
+        m.save()
+        assertTrue(
+            File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(aged),
+            "AMT 0 is a no-op: the aged audio must still be there",
+        )
+        assertEquals(recipe, m.pad(1)!!.recipe, "and the era's recipe must still be riding the pad")
+    }
+
+    /**
+     * The prior behaviour this must not disturb: AMT 0 on a pad that is
+     * already smeared still takes the smear off, which is what "no smear"
+     * has always meant at this door.
+     */
+    @Test
+    fun `AMT 0 on an already-smeared pad still takes the smear off`() {
+        val dir = File(temp, "SmearZeroOverSmear")
+        val m = KitBuilderModel.create("SmearZeroOverSmear", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        val original = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        m.smearPad(1, 0.5f)
+        m.save()
+        assertFalse(File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(original), "the fixture really smeared")
+
+        m.smearPad(1, 0f)
+        m.save()
+        assertTrue(
+            File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(original),
+            "back to the original, byte-identical",
+        )
+        assertNull(m.pad(1)!!.recipe, "and the SMEAR recipe comes off with it")
+    }
+
+    /**
+     * The other direction, and the one the pad sheet drives: re-smearing an
+     * already-smeared pad was always restore-first. That must stay true now
+     * the guard asks a broader question.
+     */
+    @Test
+    fun `re-smearing still restores first`() {
+        val dir = File(temp, "ReSmear")
+        val m = KitBuilderModel.create("ReSmear", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        m.smearPad(1, 0.5f)
+        m.save()
+        val once = File(dir, m.pad(1)!!.sampleFile).readBytes()
+
+        m.smearPad(1, 0.5f)
+        m.save()
+        assertTrue(
+            File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(once),
+            "the same AMT twice is the same sound, not the stretch applied twice",
+        )
+    }
+
+    /**
+     * A pad whose recipe the bin cannot undo - a bank-B twin, a CLI treat -
+     * still stacks, because there is nothing to restore. Refusing outright
+     * would take away a sound the user can still legitimately reach for.
+     */
+    @Test
+    fun `a recipe with nothing in the bin behind it still smears on top`() {
+        val dir = File(temp, "SmearUnbinned")
+        val m = KitBuilderModel.create("SmearUnbinned", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        m.eraPad(1, "tape", 1f)
+        m.save()
+        m.emptyBin()
+        val aged = File(dir, m.pad(1)!!.sampleFile).readBytes()
+
+        m.smearPad(1, 0.5f)
+        m.save()
+        val after = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        assertFalse(after.contentEquals(aged), "it still smeared something")
+        assertEquals(0.5f, PadSheet.readSmear(m.pad(1)!!.recipe))
+    }
+
     @Test
     fun `a character treats the whole pad, layers included, and unEraPad restores it`() {
         val dir = File(temp, "CharKit")

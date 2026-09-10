@@ -570,16 +570,26 @@ fun PadSheetScreen(
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
-                        if (PadSheet.read(freshPad.recipe) != null) {
-                            val files = (listOf(freshPad.sampleFile) + freshPad.velocityLayers.map { it.sampleFile }).distinct()
-                            val binned = f.binContents().map { it.originalName }.toSet()
-                            if (freshPad.sampleFile in binned) {
-                                check(files.all { it in binned }) {
-                                    "pad $slot can't cleanly re-treat - its ghost layers postdate the last " +
-                                        "treatment - clear GHOSTS, or accept the current sound, before treating again"
-                                }
-                                f.unEraPad(slot)
-                            }
+                        // One question, both recipe shapes (September UAT,
+                        // finding 20). This used to ask `PadSheet.read` alone,
+                        // which cannot see SMEAR by design - so tapping CRUSH
+                        // on a smeared pad skipped the restore and baked the
+                        // era onto the stretched audio, then lit CRUSH alone.
+                        // The card claimed one treatment while the sound
+                        // carried two. `unTreatState` reads both shapes and
+                        // answers the bin question at the same time.
+                        when (PadSheet.unTreatState(freshPad, f.binContents().map { it.originalName }.toSet())) {
+                            PadSheet.UnTreat.READY -> f.unEraPad(slot)
+                            PadSheet.UnTreat.GHOSTS_POSTDATE -> error(
+                                "pad $slot can't cleanly re-treat - its ghost layers postdate the last " +
+                                    "treatment - clear GHOSTS, or accept the current sound, before treating again",
+                            )
+                            // A recipe with nothing in the bin behind it (a
+                            // bank-B twin, a CLI treat, a bin since emptied)
+                            // is a sound the sheet can name but not undo: the
+                            // new treatment stacks, the way `treat` always has.
+                            PadSheet.UnTreat.NOT_BINNED -> Unit
+                            PadSheet.UnTreat.NOTHING -> Unit
                         }
                         when (treatment) {
                             is PadSheet.Treatment.Era -> f.eraPad(slot, treatment.name, amount)
