@@ -85,7 +85,7 @@ class SafePathTest {
         // Spelling it out as \u0000 here, never a raw byte, is what
         // actually proves the check exists and does its job.
         val withNul = "evil\u0000.wav"
-        assertTrue(!SafePath.isSafe(withNul))
+        assertTrue(!SafePath.isSafe(withNul), "isSafe should reject a NUL byte")
         assertFailsWith<BadPathException> { SafePath.child(temp, withNul) }
         assertFailsWith<BadPathException> { SafePath.basename("dir/evil\u0000.wav") }
     }
