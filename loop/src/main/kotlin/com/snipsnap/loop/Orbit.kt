@@ -217,6 +217,18 @@ object OrbitClock {
 
     data class Firing(val hit: OrbitHit, val frame: Long)
 
+    /**
+     * Frames since [orbit]'s [hit] last fired, at or before [frame] — what
+     * the screen's strike flare fades on. Never negative: a hit the needle
+     * has not reached yet this lap counts from its firing on the lap before,
+     * which at frame 0 means "a whole lap ago" rather than "about to fire".
+     */
+    fun framesSinceFiring(set: OrbitSet, orbit: Orbit, hit: OrbitHit, frame: Long): Long {
+        val period = periodFrames(set, orbit)
+        val offset = stepOffset(set, orbit, hit.step)
+        return Math.floorMod(frame - offset, period)
+    }
+
     private fun lcm(a: Long, b: Long): Long = a / gcd(a, b) * b
 
     private tailrec fun gcd(a: Long, b: Long): Long = if (b == 0L) a else gcd(b, a % b)

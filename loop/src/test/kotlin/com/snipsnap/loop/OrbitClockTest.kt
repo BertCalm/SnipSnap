@@ -148,6 +148,20 @@ class OrbitClockTest {
     }
 
     @Test
+    fun `frames since firing counts up from the hit and wraps at the period`() {
+        val s = set()
+        val ring = pattern(16, hits = listOf(8))
+        val hit = (ring.content as PatternOrbit).hits[0]
+        val at = 8L * step
+        assertEquals(0L, OrbitClock.framesSinceFiring(s, ring, hit, at))
+        assertEquals(100L, OrbitClock.framesSinceFiring(s, ring, hit, at + 100))
+        // Just before it fires this lap, the last firing was a lap ago.
+        assertEquals(16L * step - 1, OrbitClock.framesSinceFiring(s, ring, hit, at - 1))
+        // Frame 0, before the needle has ever reached step 8: still "a lap ago", never negative.
+        assertEquals(8L * step, OrbitClock.framesSinceFiring(s, ring, hit, 0))
+    }
+
+    @Test
     fun `firings - a snip ring fires nothing`() {
         val s = set()
         val ring = Orbit("s", 16, SnipOrbit("a.wav"))
