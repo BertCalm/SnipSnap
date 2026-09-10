@@ -4,7 +4,6 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import java.io.File
 import java.io.StringReader
-import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.math.abs
 import kotlin.math.max
 import org.xml.sax.InputSource
@@ -187,16 +186,8 @@ object MpcDiff {
     // ---- MPC 2 XML as a tree -----------------------------------------------
 
     private fun xmlTree(text: String): JsonValue {
-        val dbf = DocumentBuilderFactory.newInstance().apply {
-            // The files are machine-written; a doctype would be an attack.
-            try {
-                setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-            } catch (_: Exception) {
-            }
-            isExpandEntityReferences = false
-            isNamespaceAware = false
-        }
-        val doc = dbf.newDocumentBuilder().parse(InputSource(StringReader(text)))
+        // The files are machine-written; a doctype would be an attack.
+        val doc = SafeXml.newFactory().newDocumentBuilder().parse(InputSource(StringReader(text)))
         val root = doc.documentElement
         return JsonValue.Obj(mapOf(root.tagName to element(root)))
     }
