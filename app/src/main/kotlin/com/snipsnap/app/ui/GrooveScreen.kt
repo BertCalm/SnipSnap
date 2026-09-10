@@ -193,6 +193,8 @@ fun GrooveScreen(
     reloadRequest: Int = 0,
     /** SONG ▸ — opens ARRANGE, the same GROOVE-scoped-overlay shape as PAD SHEET's own onGrainField. */
     onArrange: () -> Unit = {},
+    /** ORBIT ▸ — opens the circular sequencer, the same overlay shape as ARRANGE. */
+    onOrbit: () -> Unit = {},
 ) {
     val scheme = LocalScheme.current
 
@@ -1283,9 +1285,18 @@ fun GrooveScreen(
                     // SONG ▸ — the same four programs laid into a structure, not
                     // just cycled: intro/theme/variation/the turn/reprise/outro,
                     // one tap away from what this screen already has loaded.
-                    GrooveActionButton("SONG ▸", scheme, Modifier.fillMaxWidth(), accent = true) {
-                        clearJustLanded()
-                        onArrange()
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
+                            clearJustLanded()
+                            onArrange()
+                        }
+                        // ORBIT ▸ — the kit on rings of different lengths, one
+                        // needle speed: polymeter and polyrhythm from the same
+                        // pads this screen already has loaded.
+                        GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+                            clearJustLanded()
+                            onOrbit()
+                        }
                     }
                     GrooveActionButton("● RECORD", scheme, Modifier.fillMaxWidth(), enabled = !busy && !midiBusy) { startRecording() }
 

@@ -352,6 +352,21 @@ UI layer. What lives here:
   data: the four laws gate for real (OFF silences everything; deck sounds
   hard-mute while capture is armed), all shipped copy, and the eggs.
 
+### `:loop` — ORBIT
+
+The circular sequencer ([`docs/ORBITS.md`](docs/ORBITS.md)): a bar taped
+end to end into a ring, a longer snip taped into a bigger ring around it,
+one needle speed driving them all so the inner ring comes round first. Each
+ring is a pad pattern or a snip from the shelf, any length from 1 to 64
+steps, with a per-ring toggle between **SPEED** (same needle speed — a
+16-step ring against a 20-step ring is 4/4 against 5/4, meeting every five
+bars) and **LAP** (once a bar whatever the steps — three even hits against
+four). `OrbitClock` is the arithmetic, every position a function of one
+frame count; `OrbitEngine` plays it through the same `AudioSink` the loop
+grid uses; `OrbitStore` keeps `orbits.json` beside the kit. Reached from
+GROOVE's **ORBIT ▸**. Phone-side only for now — export is a listed
+follow-up.
+
 ## Docs
 
 - [`docs/CONCEPT.md`](docs/CONCEPT.md) — product shape, MVP cut, architecture
@@ -359,6 +374,7 @@ UI layer. What lives here:
 - [`docs/FEATURE_PLAN.md`](docs/FEATURE_PLAN.md) — the six product features ranked by ROI, each planned to done with owners and exit tests
 - [`docs/ANDROID_CAPTURE.md`](docs/ANDROID_CAPTURE.md) — how capture actually works and where it breaks
 - [`docs/CLI.md`](docs/CLI.md) — the SnipSnap CLI: chop a file into a kit from any desktop
+- [`docs/ORBITS.md`](docs/ORBITS.md) — ORBIT, the circular sequencer: polymeter and polyrhythm as rings of different lengths
 - [`docs/MPC_EXPORT.md`](docs/MPC_EXPORT.md) — folder layouts and export paths
 - [`docs/MPC3_FORMAT.md`](docs/MPC3_FORMAT.md) — the MPC 3 container, drum and keygroup schemas, verified against real Akai content
 - [`docs/XPM_STRUCTURE.md`](docs/XPM_STRUCTURE.md) — the MPC 2 format, its provenance, and what's still unverified
