@@ -275,8 +275,13 @@ class KitBuilderModel private constructor(
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered - `clearGhostLayers($slot)` before stacking" }
         requireNotChained(pad, "stacking")
+        // The entries must be THIS kit's bin's: `originalName` alone is a
+        // label anyone could forge, and copying a file from anywhere else
+        // into the kit folder is not what "a prior take" means.
+        val binDir = File(kitDir, BIN_DIR).canonicalFile
         for (t in softTakes) {
             require(t.originalName == pad.sampleFile) { "${t.file.name} is a take of ${t.originalName}, not of pad $slot's ${pad.sampleFile}" }
+            require(t.file.canonicalFile.parentFile == binDir) { "${t.file.name} isn't in this kit's bin" }
             require(t.file.isFile) { "${t.file.name} isn't in the bin any more" }
         }
         val windows = StackTakes.windows(softTakes.size)

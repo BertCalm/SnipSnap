@@ -248,6 +248,10 @@ class KitBuilderTest {
         assertFailsWith<IllegalArgumentException> { m.stackTakes(1, listOf(ofPad1, ofPad1)) } // same take twice
         assertFailsWith<IllegalArgumentException> { m.stackTakes(1, listOf(ofPad2)) } // another pad's history
         assertFailsWith<IllegalArgumentException> { m.stackTakes(9, listOf(ofPad1)) } // no pad there
+        // A forged entry: the right originalName, but a file that isn't in this kit's bin.
+        val stranger = File(temp, "stranger.wav").apply { writeBytes(File(dir, m.pad(1)!!.sampleFile).readBytes()) }
+        val forged = KitBuilderModel.BinEntry(ofPad1.originalName, ofPad1.binnedAtMillis, stranger)
+        assertFailsWith<IllegalArgumentException> { m.stackTakes(1, listOf(forged)) }
         assertTrue(m.pad(1)!!.velocityLayers.isEmpty(), "a refusal touches nothing")
 
         // A stale `_v1` render left on disk is not overwritten: STACK takes `_v2`.

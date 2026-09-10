@@ -263,7 +263,7 @@ fun StackTakesScreen(
         ) {
             TapeText("LIVE", TapeType.pixelSmall, scheme.amber.tape, Modifier.width(52.dp), maxLines = 1)
             TapeText(liveRow.factsText(), TapeType.pixelSmall, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
-            ActionButton("▶", scheme, enabled = !busy && liveRow.facts != null, modifier = Modifier.width(48.dp), onClick = { preview(liveRow) })
+            ActionButton("▶", scheme, enabled = !busy && liveRow.facts != null, accessibilityLabel = "PREVIEW LIVE", modifier = Modifier.width(48.dp), onClick = { preview(liveRow) })
         }
         LazyColumn(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             items(candidates, key = { it.file.absolutePath }) { c ->
@@ -279,8 +279,8 @@ fun StackTakesScreen(
                         TapeText(c.ageLabel(), TapeType.pixelSmall, scheme.ink.tape, maxLines = 1)
                         TapeText(c.factsText(), TapeType.pixelSmall, if (c.facts == null) scheme.warn.tape else scheme.ink3.tape, maxLines = 1)
                     }
-                    ActionButton("▶", scheme, enabled = !busy && c.facts != null, modifier = Modifier.width(48.dp), onClick = { preview(c) })
-                    ActionButton("▲", scheme, enabled = !busy && index > 0, dimmed = index <= 0, modifier = Modifier.width(48.dp), onClick = { moveEarlier(c) })
+                    ActionButton("▶", scheme, enabled = !busy && c.facts != null, accessibilityLabel = "PREVIEW THIS TAKE", modifier = Modifier.width(48.dp), onClick = { preview(c) })
+                    ActionButton("▲", scheme, enabled = !busy && index > 0, dimmed = index <= 0, accessibilityLabel = "MOVE SOFTER", modifier = Modifier.width(48.dp), onClick = { moveEarlier(c) })
                     ActionButton(chip, scheme, enabled = !busy, lit = index >= 0, dimmed = c.facts == null, modifier = Modifier.width(72.dp), onClick = { togglePick(c) })
                 }
             }
