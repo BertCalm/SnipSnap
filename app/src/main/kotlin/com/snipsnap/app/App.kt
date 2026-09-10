@@ -89,6 +89,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Personality
 import com.snipsnap.shell.ReadGroove
+import com.snipsnap.shell.RecipeReplay
 import com.snipsnap.shell.RoomPackager
 import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.SchemeId
@@ -305,6 +306,12 @@ fun App(shelf: KitShelf) {
     // by the MenuRow tab-switch reset below if the user gives up on the
     // pick without ever tapping a second kit.
     var pendingBreedWith by remember { mutableStateOf<KitShelf.Entry?>(null) }
+    // DO IT AGAIN: what COPY LAST TREATMENT last lifted off a pad. A
+    // clipboard, not a hand-off — deliberately NOT cleared by the tab-
+    // switch reset below: pasting onto a pad in ANOTHER kit means going
+    // through the shelf, and a clipboard that empties on the way there
+    // would make the cross-kit case impossible. Replaced by the next COPY.
+    var recipeClip by remember { mutableStateOf<RecipeReplay.Clip?>(null) }
     // SNIPS → TAPE: the file a SNIPS row's → TAPE asked to open, offered to
     // TapeScreen's own `lastCommitSource` fallback slot rather than folded
     // into `lastCommit` — CHOP reads `lastCommit` as the *real* last COMMIT's
@@ -1767,6 +1774,8 @@ fun App(shelf: KitShelf) {
                                         padSheetSlot = null
                                         stackSlot = slot
                                     },
+                                    clipboard = recipeClip,
+                                    onRecipeCopied = { recipeClip = it },
                                     onKitUpdated = { updatedKit ->
                                         // A write that outlived its screen must not be welded
                                         // onto whichever kit is open NOW (QA: the "Frankenstein
