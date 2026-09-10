@@ -252,6 +252,27 @@ object Copy {
      */
     const val SHELF_LEGEND = "HOLD A KIT TO RENAME OR DELETE IT"
 
+    /**
+     * The kit row's status chip (September UAT, finding 15). Three words for
+     * the three states [DubStamp.Status] can honestly tell apart:
+     *
+     * - DRAFT — nothing was ever written out.
+     * - DUBBED — written out, but not to the card in this phone right now.
+     * - ON CARD — written to the card this phone is holding.
+     *
+     * DUBBED exists so the middle case is not forced to lie in either
+     * direction. Calling it DRAFT would deny work the user did; calling it ON
+     * CARD would promise a card that is not there.
+     *
+     * Chips, not toasts: no full stop, like every other label on the
+     * furniture.
+     */
+    fun dubChip(status: DubStamp.Status): String = when (status) {
+        DubStamp.Status.DRAFT -> "DRAFT"
+        DubStamp.Status.DUBBED -> "DUBBED"
+        DubStamp.Status.ON_CARD -> "ON CARD"
+    }
+
     // ---- HELP: what the app is, said inside the app ----
 
     /**

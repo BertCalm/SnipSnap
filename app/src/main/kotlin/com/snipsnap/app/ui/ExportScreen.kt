@@ -69,6 +69,7 @@ import com.snipsnap.kit.Severity
 import com.snipsnap.app.CardWriter
 import com.snipsnap.app.PREFS
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.DubStamp
 import com.snipsnap.shell.ExportWizardModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
@@ -391,6 +392,24 @@ private fun ExportContent(
         prefs.edit().remove(PREF_CARD_TREE).apply()
     }
 
+    /**
+     * Record the dub for the shelf's chip — and never let that recording turn
+     * a successful dub into a failure.
+     *
+     * The files are already written when this runs. A sidecar is ancillary:
+     * losing it costs a chip that reads DRAFT until the next dub, which is
+     * the same under-claim [DubStamp.read] already makes for an unreadable
+     * stamp. Letting an IOException here escape into `startWrite`'s catch
+     * would show DUB FAILED over a card that actually has the kit on it —
+     * a worse lie than the one finding 15 set out to fix.
+     */
+    suspend fun stampDub(kitDir: File, card: String?) {
+        withContext(Dispatchers.IO) {
+            runCatching { DubStamp.write(kitDir, DubStamp.Stamp(System.currentTimeMillis(), cardTree = card)) }
+                .onFailure { Log.w(TAG, "stampDub: the dub landed but its stamp did not", it) }
+        }
+    }
+
     fun startWrite() {
         if (session.busy || model.stage != ExportWizardModel.Stage.READY || model.blocked) return
         session.busy = true
@@ -442,6 +461,12 @@ private fun ExportContent(
                         session.overwriting = null
                         session.lastOutcome = result.outcome
                         val card = cardTree
+                        // The shelf's chip, recorded here because this is the
+                        // only place that knows a dub happened (September UAT,
+                        // finding 15). Written before the card copy is
+                        // attempted and again after it lands, so a copy that
+                        // fails leaves DUBBED rather than a false ON CARD.
+                        stampDub(session.dir, card = null)
                         if (card == null) {
                             onToast(Copy.DUB_DONE)
                         } else {
@@ -458,6 +483,9 @@ private fun ExportContent(
                                     listOfNotNull(result.outcome.primary, result.outcome.companion),
                                 )
                             }
+                            // Only now is it really on the card, so only now
+                            // does the stamp name one.
+                            stampDub(session.dir, card = card.toString())
                             onToast(Copy.DUB_DONE_CARD)
                         }
                     }
@@ -664,8 +692,13 @@ private fun exportShareMime(format: ExportFormat): String? = when (format) {
  * The picked card's tree URI. Stored rather than asked for each dub: a
  * card is picked once and is still the card next time the app opens,
  * which is the whole reason the grant is taken persistably.
+ *
+ * `internal`, not file-private: the kit shelf reads the same key to decide
+ * whether a kit's dub stamp may honestly say ON CARD (September UAT, finding
+ * 15). One key with two readers - if it ever gains a second definition, the
+ * chip and the wizard will disagree about which card is in the phone.
  */
-private const val PREF_CARD_TREE = "export_card_tree"
+internal const val PREF_CARD_TREE = "export_card_tree"
 
 /**
  * The format picked last time (an [ExportFormat.id]).
