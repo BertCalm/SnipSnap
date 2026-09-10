@@ -34,7 +34,10 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -324,6 +327,7 @@ fun OrbitScreen(
                 set = current,
                 kit = kit,
                 frame = frame,
+                playing = playing,
                 selected = selected,
                 scheme = scheme,
                 onTapRing = { index -> selected = index },
@@ -469,6 +473,7 @@ private fun RingsCanvas(
     set: OrbitSet,
     kit: Kit,
     frame: Long,
+    playing: Boolean,
     selected: Int,
     scheme: Scheme,
     onTapRing: (Int) -> Unit,
@@ -523,29 +528,60 @@ private fun RingsCanvas(
                 for (s in 0 until ring.steps) {
                     drawCircle(dim, tick, geometry.point(r, s.toDouble() / ring.steps))
                 }
-                // Hits.
+                // Hits, flaring for a moment after the needle strikes them:
+                // the eye goes to where the sound just happened.
                 val content = ring.content
                 if (content is PatternOrbit) {
                     for (hit in content.hits) {
                         val drumClass = classBySlot[hit.slot]
                         val color = if (drumClass != null) Schemes.classColor(drumClass).tape else inkColor
                         val dotR = (2.5f + 2.5f * hit.velocity) * screenDensity
-                        drawCircle(color, dotR, geometry.point(r, hit.step.toDouble() / ring.steps))
+                        val at = geometry.point(r, hit.step.toDouble() / ring.steps)
+                        val flare = if (ring.engaged && playing) {
+                            val since = OrbitClock.framesSinceFiring(set, ring, hit, frame)
+                            (1f - since.toFloat() / (set.sampleRate * FLARE_SECONDS)).coerceIn(0f, 1f)
+                        } else {
+                            0f
+                        }
+                        if (flare > 0f) {
+                            drawCircle(color.copy(alpha = 0.35f * flare), dotR + 9f * screenDensity * flare, at)
+                        }
+                        drawCircle(color, dotR + 3f * screenDensity * flare, at)
                     }
                 }
-                // The needle.
+                // The needle, with a comet tail a twelfth of a lap long so it
+                // reads as a moving thing and not as one more dot.
                 val phase = OrbitClock.phase(set, ring, frame)
-                drawCircle(
-                    if (ring.engaged) inkColor else dim,
-                    3.5f * screenDensity,
-                    geometry.point(r, phase),
-                )
+                val needle = if (ring.engaged) inkColor else dim
+                val tailRect = Rect(centre - Offset(r, r), Size(r * 2, r * 2))
+                val segments = 8
+                val segDeg = (TAIL_LAP * 360.0 / segments).toFloat()
+                val headDeg = (phase * 360.0 - 90.0).toFloat()
+                for (j in 0 until segments) {
+                    val fade = 1f - j.toFloat() / segments
+                    drawArc(
+                        color = needle.copy(alpha = 0.75f * fade),
+                        startAngle = headDeg - (j + 1) * segDeg,
+                        sweepAngle = segDeg + 0.5f,
+                        useCenter = false,
+                        topLeft = tailRect.topLeft,
+                        size = tailRect.size,
+                        style = Stroke(width = (3f * fade + 0.6f) * screenDensity, cap = StrokeCap.Round),
+                    )
+                }
+                drawCircle(needle, 3.5f * screenDensity, geometry.point(r, phase))
             }
             // The hub: a dot marking the shared centre every ring turns about.
             drawCircle(dim, 2f * screenDensity, centre)
         }
     }
 }
+
+/** The comet tail's length as a fraction of a lap. */
+private const val TAIL_LAP = 1.0 / 12.0
+
+/** How long a struck hit glows. About a 16th at 150 BPM; shorter than a 16th at anything slower. */
+private const val FLARE_SECONDS = 0.1f
 
 /** Where ring [i] of [count] sits inside a [w]×[h] canvas, and the inverse for taps. */
 private class RingGeometry(w: Float, h: Float, private val count: Int, density: Float) {
