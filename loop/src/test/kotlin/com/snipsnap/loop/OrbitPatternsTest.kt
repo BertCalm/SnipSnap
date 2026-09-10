@@ -102,6 +102,9 @@ class OrbitPatternsTest {
         assertEquals("KICK 3", OrbitPatterns.copyName("KICK 2"))
         assertEquals("BASS 6", OrbitPatterns.copyName("BASS 5"), "a name that ends in a number counts up, whatever it meant")
         assertEquals("RING 10", OrbitPatterns.copyName("RING 9"))
+        assertEquals("KICK 3", OrbitPatterns.copyName("KICK  2"), "a double space still counts")
+        assertEquals("KICK 3", OrbitPatterns.copyName("KICK 2 "), "a trailing space still counts")
+        assertEquals("KICK 2", OrbitPatterns.copyName(" KICK "))
     }
 
     @Test

@@ -483,7 +483,9 @@ fun OrbitScreen(
         val s = set ?: return
         val ring = s.orbits.getOrNull(index) ?: return
         if (ring.content !is PatternOrbit || slot !in ring.pads) return
-        val heardAt = (engine?.position() ?: return) - s.sampleRate.toLong() * (AndroidAudioSink.BUFFER_MILLIS + REC_TOUCH_MS) / 1000
+        // Clamped at 0: in the first buffer after PLAY nothing has reached
+        // the ear yet, and a negative frame would wrap to the ring's end.
+        val heardAt = ((engine?.position() ?: return) - s.sampleRate.toLong() * (AndroidAudioSink.BUFFER_MILLIS + REC_TOUCH_MS) / 1000).coerceAtLeast(0L)
         val step = OrbitClock.nearestStep(s, ring, heardAt)
         updateRing(index) { OrbitPatterns.place(it, slot, step) }
     }

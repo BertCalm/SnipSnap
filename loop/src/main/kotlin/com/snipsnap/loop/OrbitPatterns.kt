@@ -64,10 +64,11 @@ object OrbitPatterns {
         return ring.copy(content = content.copy(hits = hits.sortedWith(compareBy({ it.step }, { it.slot }))))
     }
 
-    /** The name a copy of [name] takes: "KICK" → "KICK 2", "KICK 2" → "KICK 3". */
+    /** The name a copy of [name] takes: "KICK" → "KICK 2", "KICK 2" → "KICK 3". Stray spaces are tidied on the way. */
     fun copyName(name: String): String {
-        val m = Regex("""^(.*?)\s(\d+)$""").find(name)
-        return if (m != null) "${m.groupValues[1]} ${m.groupValues[2].toInt() + 1}" else "$name 2"
+        val trimmed = name.trim()
+        val m = Regex("""^(.*?)\s+(\d+)$""").find(trimmed)
+        return if (m != null) "${m.groupValues[1].trimEnd()} ${m.groupValues[2].toInt() + 1}" else "$trimmed 2"
     }
 
     /** [ring] with no hits at all. Its voice and shape stay. */
