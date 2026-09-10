@@ -2158,8 +2158,11 @@ APP+CORE wave WWW: ✓ all landed (2026-09-10) — DOUBLES, pads across the
   hidden folders, so a kit DELETED KITS keeps under `.bin/` - the
   likeliest double of its live self - and `.landing-*` staging are no
   longer part of the library. `DoublesScreen` (`:app`, new), from the
-  shelf's DOUBLES ▸ SAME SOUND, ANY KIT: measures once (the crate index
-  caches by path, mtime and size), regroups in memory as the ring steps,
+  shelf's DOUBLES ▸ SAME SOUND, ANY KIT: measures once, on IO - the
+  crate index (cached by path, mtime and size), `Doubles.measure`'s one
+  all-pairs pass at the widest ring, and the canonical-path join to the
+  shelf's entries - then regroups in memory as the ring steps
+  (`Doubles.clusters(measured, within)` is a filter over those pairs),
   a header per cluster, a row per pad with GO ▸ that opens the kit on
   that pad's sheet, and two lines that stay on screen because they are
   true: the number is a feature distance, not a verdict, and the first

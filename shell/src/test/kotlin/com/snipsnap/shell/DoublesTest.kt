@@ -6,6 +6,7 @@ import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class DoublesTest {
@@ -56,6 +57,26 @@ class DoublesTest {
         assertEquals(DrumClass.SNARE, clusters[0].label, "the tight trio comes first, named by its two snares")
         assertTrue(clusters[0].within < clusters[1].within)
         assertEquals(DrumClass.HAT_CLOSED, clusters[1].label, "a 1-1 tie goes to the class that comes first")
+    }
+
+    @Test
+    fun `one measure at the widest ring regroups to exactly what each ring would find fresh`() {
+        // Pairs at 0.01, 0.04 and 0.08 apart: each ring step admits one more.
+        val es = arrayOf(
+            entry("K1", 1, DrumClass.KICK, 0f, 0f), entry("K2", 1, DrumClass.KICK, 0.01f, 0f),
+            entry("K1", 2, DrumClass.SNARE, 5f, 0f), entry("K2", 2, DrumClass.SNARE, 5.04f, 0f),
+            entry("K1", 3, DrumClass.CLAP, 9f, 0f), entry("K2", 3, DrumClass.CLAP, 9.08f, 0f),
+        )
+        val idx = index(*es)
+        val measured = Doubles.measure(idx)
+        assertEquals(Doubles.WITHIN_STEPS.max(), measured.ring)
+        assertEquals(3, measured.pairs.size, "the widest ring holds every pair the dial can ever show")
+        for (step in Doubles.WITHIN_STEPS) {
+            assertEquals(Doubles.clusters(idx, step), Doubles.clusters(measured, step), "ring $step")
+        }
+        assertEquals(listOf(1, 2, 3), Doubles.WITHIN_STEPS.map { Doubles.clusters(measured, it).size })
+        // A ring wider than what was measured would silently miss pairs — refused, not guessed.
+        assertFailsWith<IllegalArgumentException> { Doubles.clusters(Doubles.measure(idx, ring = 0.05f), within = 0.10f) }
     }
 
     @Test

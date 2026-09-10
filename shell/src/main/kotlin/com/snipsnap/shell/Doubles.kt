@@ -39,14 +39,42 @@ object Doubles {
     data class Cluster(val entries: List<Crate.Entry>, val within: Float, val label: DrumClass, val kitCount: Int)
 
     /**
-     * Every cluster under [within], tightest first. Union-find over
-     * [Crate.dupes]' pairs: two pads that are each within the ring of a
-     * third belong together even when they sit further from each other —
-     * which is exactly why every cluster shows its own WITHIN.
+     * The pairwise pass, done once: every pair of pads within [ring] of
+     * each other, with its distance. [clusters] regroups these in memory
+     * for any [Cluster.within] up to the ring, so a screen stepping
+     * between rings never rescans the shelf — [Crate.dupes] is an
+     * all-pairs pass over the whole index, the one thing here that grows
+     * with the square of the library.
      */
-    fun clusters(index: Crate.Index, within: Float = DEFAULT_WITHIN): List<Cluster> {
+    data class Measured(
+        val index: Crate.Index,
+        /** The widest ring these pairs cover; a tighter ring is a filter over them. */
+        val ring: Float,
+        val pairs: List<Triple<Crate.Entry, Crate.Entry, Float>>,
+    )
+
+    /** Measure once at the widest step (or [ring]); regroup with [clusters] as the dial turns. */
+    fun measure(index: Crate.Index, ring: Float = WITHIN_STEPS.max()): Measured {
+        require(ring > 0f) { "ring must be positive, got $ring" }
+        return Measured(index, ring, Crate.dupes(index, ring))
+    }
+
+    /** Every cluster under [within], tightest first — one measure and one regroup. */
+    fun clusters(index: Crate.Index, within: Float = DEFAULT_WITHIN): List<Cluster> =
+        clusters(measure(index, within), within)
+
+    /**
+     * Every cluster under [within], tightest first, regrouped from pairs
+     * already [measure]d. Union-find over the pairs inside the ring: two
+     * pads that are each within the ring of a third belong together even
+     * when they sit further from each other — which is exactly why every
+     * cluster shows its own WITHIN. A [within] wider than what was
+     * measured would silently miss pairs, so it refuses instead.
+     */
+    fun clusters(measured: Measured, within: Float = DEFAULT_WITHIN): List<Cluster> {
         require(within > 0f) { "within must be positive, got $within" }
-        val entries = index.entries
+        require(within <= measured.ring) { "within $within is wider than the measured ring ${measured.ring}" }
+        val entries = measured.index.entries
         if (entries.size < 2) return emptyList()
         val parent = IntArray(entries.size) { it }
         fun find(i: Int): Int {
@@ -58,7 +86,8 @@ object Doubles {
             return x
         }
         val at = entries.withIndex().associate { (i, e) -> e.file to i }
-        for ((a, b, _) in Crate.dupes(index, within)) {
+        for ((a, b, d) in measured.pairs) {
+            if (d > within) continue
             val ra = find(at.getValue(a.file))
             val rb = find(at.getValue(b.file))
             if (ra != rb) parent[ra] = rb

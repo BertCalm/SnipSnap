@@ -63,10 +63,15 @@ fun DoublesScreen(
     val scheme = LocalScheme.current
     BackHandler { onBack() }
 
-    var index by remember(shelf.root) { mutableStateOf<Crate.Index?>(null) }
-    // Crate entries name kits by folder relative to the root; the shelf's
-    // own listing is what GO ▸ needs. Joined by canonical path, once.
-    var byDir by remember(shelf.root) { mutableStateOf<Map<String, KitShelf.Entry>>(emptyMap()) }
+    // Measured once, on IO: the crate index, the pairwise pass at the
+    // widest ring (the one all-pairs scan), and which crate kit folder is
+    // which shelf entry — crate entries name kits by folder relative to
+    // the root, the shelf's own listing is what GO ▸ needs, and joining
+    // them means canonical paths, which is filesystem work that can throw.
+    // None of it runs again while the screen is open; the ring steps
+    // regroup in memory.
+    var measured by remember(shelf.root) { mutableStateOf<Doubles.Measured?>(null) }
+    var onShelf by remember(shelf.root) { mutableStateOf<Map<String, KitShelf.Entry>>(emptyMap()) }
     var failed by remember(shelf.root) { mutableStateOf<String?>(null) }
     var within by remember(shelf.root) { mutableStateOf(Doubles.DEFAULT_WITHIN) }
 
@@ -75,21 +80,26 @@ fun DoublesScreen(
         val result = withContext(Dispatchers.IO) {
             runCatching {
                 val idx = Crate.index(shelf.root)
-                val entries = shelf.list(KitShelf.ShelfSort.RECENT).associateBy { it.dir.canonicalPath }
-                idx to entries
+                val pairs = Doubles.measure(idx)
+                val byCanonical = shelf.list(KitShelf.ShelfSort.RECENT).associateBy { it.dir.canonicalPath }
+                val byKitDir = idx.entries.map { it.kitDir }.distinct().mapNotNull { kitDir ->
+                    runCatching { byCanonical[File(shelf.root, kitDir).canonicalPath] }.getOrNull()?.let { kitDir to it }
+                }.toMap()
+                pairs to byKitDir
             }
         }
-        result.onSuccess { (idx, entries) ->
-            index = idx
-            byDir = entries
-            onToast(Copy.doublesMeasured(idx.extracted, idx.fromCache))
+        result.onSuccess { (pairs, byKitDir) ->
+            measured = pairs
+            onShelf = byKitDir
+            onToast(Copy.doublesMeasured(pairs.index.extracted, pairs.index.fromCache))
         }.onFailure { e ->
             failed = "COULDN'T MEASURE THE SHELF: ${(e.message ?: e.javaClass.simpleName).uppercase()}"
         }
     }
 
-    val idx = index
-    val clusters = remember(idx, within) { idx?.let { Doubles.clusters(it, within) } ?: emptyList() }
+    val idx = measured?.index
+    val pairs = measured
+    val clusters = remember(pairs, within) { pairs?.let { Doubles.clusters(it, within) } ?: emptyList() }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -151,7 +161,7 @@ fun DoublesScreen(
                     // across the whole index, and stable across ring steps.
                     for (e in cluster.entries) {
                         item(key = "pad-${e.file}") {
-                            val target = byDir[File(shelf.root, e.kitDir).canonicalPath]
+                            val target = onShelf[e.kitDir]
                             MemberRow(
                                 e,
                                 onShelf = target != null,
