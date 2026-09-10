@@ -62,6 +62,8 @@ import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
+import com.snipsnap.audio.Tempo
+import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
 import com.snipsnap.loop.Orbit
 import com.snipsnap.loop.OrbitBank
@@ -82,6 +84,8 @@ import com.snipsnap.shell.SnipStore
 import com.snipsnap.xpm.WavInfo
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -111,7 +115,10 @@ import kotlin.math.sin
  *
  * The picture tells the truth: rings are drawn shortest inside, so the
  * inner ring really does come round first, and each needle's comet tail is
- * one 16th of time, long on a fast ring and short on a slow one.
+ * one 16th of time, long on a fast ring and short on a slow one. A snip
+ * ring wears its own waveform, and its panel says what the fit did to it
+ * (as is, trimmed, padded, sliced) rather than leaving the ear to guess.
+ * A snip that knows its tempo offers it to the set once, when it lands.
  *
  * Interaction, in full: tap a ring to pick it, long-press a ring to solo
  * it. The picked ring unrolls into the strip below — the tape untaped —
@@ -152,6 +159,11 @@ fun OrbitScreen(
     /** OUT ▸ swaps the panel for the two ways a set leaves the screen: onto TAPE, or into the kit as a clip. */
     var outOpen by remember(kitDir) { mutableStateOf(false) }
     var bouncing by remember(kitDir) { mutableStateOf(false) }
+    /** A snip ring just added whose tempo the set does not match: SET it or KEEP the set's. Asked once. */
+    var tempoOffer by remember(kitDir) { mutableStateOf<TempoOffer?>(null) }
+    /** BPM taps settle before the snips refit: the job that fires the commit after a quiet [BPM_SETTLE_MS]. */
+    var bpmJob by remember(kitDir) { mutableStateOf<Job?>(null) }
+    var bpmPending by remember(kitDir) { mutableStateOf(false) }
 
     // The transport: null until PLAY. Bank and engine live across edits;
     // each edit prepares a new bank (reusing the old one's buffers) and
@@ -199,6 +211,11 @@ fun OrbitScreen(
             set = loaded
             snips = files
             refusal = null
+            // Prepare before PLAY: a snip ring's waveform and fit report
+            // are worth seeing the moment the screen opens, not after.
+            preparing = true
+            bank = withContext(Dispatchers.IO) { runCatching { OrbitBank.prepare(loaded, source) }.getOrNull() }
+            preparing = false
         }.onFailure { e ->
             set = null
             refusal = e.message ?: "NO RINGS"
@@ -383,20 +400,63 @@ fun OrbitScreen(
             val ring = OrbitPresets.snipRing(current, SnipStore.displayName(file).uppercase(), file.name, frames)
             commit(current.copy(orbits = current.orbits + ring))
             selected = current.orbits.size
+            // What the snip thinks its tempo is, offered once if it differs
+            // from the set's: a loop captured at 96 wrapped round a set at
+            // 92 is sliced and squeezed for no reason anyone chose.
+            val guess = withContext(Dispatchers.IO) {
+                runCatching { Tempo.estimate(WavReader.readCapped(file, TEMPO_MAX_SEC).snip) }.getOrNull()
+            }
+            if (guess != null && guess.confidence >= TEMPO_TRUST && guess.bpm.roundToInt() != current.bpm.roundToInt()) {
+                tempoOffer = TempoOffer(ring.name, file.name, guess.bpm.roundToInt().toFloat(), frames)
+            }
         }
+    }
+
+    /** Take the snip's tempo: the set moves to it and the snip's ring is re-sized to its natural length there. */
+    fun acceptTempo(offer: TempoOffer) {
+        tempoOffer = null
+        val s = set ?: return
+        bpmJob?.cancel()
+        bpmPending = false
+        val at = s.copy(bpm = offer.bpm.coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM))
+        val steps = OrbitClock.naturalSteps(at, offer.frames)
+        commit(at.copy(orbits = at.orbits.map { o ->
+            val content = o.content
+            if (content is SnipOrbit && content.sampleFile == offer.sampleFile) o.copy(steps = steps) else o
+        }))
     }
 
     fun deleteRing(index: Int) {
         val s = set ?: return
         if (index !in s.orbits.indices) return
         if (solo == index) solo = null
+        tempoOffer = null
         commit(s.copy(orbits = s.orbits.filterIndexed { i, _ -> i != index }))
         selected = (index - 1).coerceAtLeast(0)
     }
 
+    /**
+     * The tempo, debounced: the readout moves at once, the save and the
+     * refit wait for [BPM_SETTLE_MS] of quiet, so ten taps on BPM + do not
+     * slice a snip ten times. A set with no snip rings needs no refit —
+     * pads do not change with tempo — so the engine takes the new tempo
+     * on the next block and only the save waits.
+     */
     fun setBpm(bpm: Float) {
         val s = set ?: return
-        commit(s.copy(bpm = bpm.coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM)))
+        val next = s.copy(bpm = bpm.coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM))
+        set = next
+        val b = bank
+        if (b != null && next.orbits.none { it.content is SnipOrbit }) {
+            engine?.apply(OrbitEngine.Prepared(heard(next), b))
+        }
+        bpmJob?.cancel()
+        bpmPending = true
+        bpmJob = scope.launch {
+            delay(BPM_SETTLE_MS)
+            bpmPending = false
+            set?.let { commit(it) }
+        }
     }
 
     /**
@@ -485,6 +545,10 @@ fun OrbitScreen(
         }
 
         val stripRows = ring?.pads?.size ?: 0
+        val hasSnips = current.orbits.any { it.content is SnipOrbit }
+        // A snip ring is being cut to a new length: the picture says so
+        // rather than going quietly stale while the tempo settles.
+        val refitting = hasSnips && (bpmPending || preparing)
         Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // The rings give up a little height to the strip, and more to a
             // tall one (a bass ring's piano roll), so the transport stays on
@@ -497,6 +561,8 @@ fun OrbitScreen(
                 playing = playing,
                 selected = selected,
                 solo = solo,
+                bank = bank,
+                refitting = refitting,
                 scheme = scheme,
                 onTapRing = { index -> selected = index },
                 onLongPressRing = { index -> toggleSolo(index) },
@@ -516,6 +582,26 @@ fun OrbitScreen(
                     onCycle = { slot, step -> cycleHit(selected, slot, step) },
                     onAudition = { slot -> audition(slot) },
                 )
+            }
+
+            // The offer a snip makes on landing: its own tempo, once.
+            tempoOffer?.let { offer ->
+                Column(
+                    Modifier.fillMaxWidth().sunkenField(scheme).border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp)).padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    TapeText(
+                        "${offer.ringName} SOUNDS LIKE ${offer.bpm.roundToInt()} BPM · THE SET IS AT ${current.bpm.roundToInt()}.",
+                        TapeType.pixel,
+                        scheme.ink.tape,
+                        maxLines = 2,
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        SmallChip("SET ${offer.bpm.roundToInt()}", scheme, accent = true) { acceptTempo(offer) }
+                        SmallChip("KEEP ${current.bpm.roundToInt()}", scheme) { tempoOffer = null }
+                        TapeText("SET MOVES THE WHOLE SET AND RE-SIZES THE RING TO FIT.", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 2)
+                    }
+                }
             }
 
             // The picked ring's panel — or, while + SNIP RING is choosing, the shelf.
@@ -668,7 +754,21 @@ fun OrbitScreen(
                             }
                         }
                         is SnipOrbit -> {
-                            TapeText("WRAPS ${content.sampleFile.uppercase()} ROUND ${ring.steps} STEPS.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+                            // What the fit did, in the bank's own words: the
+                            // one line that tells a squeezed loop from a clean one.
+                            val report = bank?.fit(current, ring)
+                            val seconds = report?.let { "%.1f".format(it.sourceFrames.toFloat() / current.sampleRate) }
+                            val what = when {
+                                report != null -> report.label
+                                refitting || bank == null -> "FITTING…"
+                                else -> "FILE MISSING — NOTHING TO WRAP"
+                            }
+                            TapeText(
+                                "WRAPS ${content.sampleFile.uppercase()}${if (seconds != null) " ($seconds S)" else ""} ROUND ${ring.steps} STEPS · $what",
+                                TapeType.pixelSmall,
+                                if (report?.fit == com.snipsnap.loop.LoopFit.SLICED) scheme.amber.tape else scheme.ink2.tape,
+                                maxLines = 3,
+                            )
                         }
                     }
                 }
@@ -745,12 +845,24 @@ private fun RingsCanvas(
     playing: Boolean,
     selected: Int,
     solo: Int?,
+    bank: OrbitBank?,
+    refitting: Boolean,
     scheme: Scheme,
     onTapRing: (Int) -> Unit,
     onLongPressRing: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val screenDensity = LocalDensity.current.density
+    // Each snip ring's waveform as peaks round the ring, scaled so its
+    // loudest bucket reaches full height: a quiet capture still reads.
+    val waves = remember(bank, set) {
+        set.orbits.map { ring ->
+            bank?.peaks(set, ring, WAVE_BUCKETS)?.let { raw ->
+                val top = raw.maxOrNull() ?: 0f
+                if (top > 0f) FloatArray(raw.size) { raw[it] / top } else null
+            }
+        }
+    }
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TapeType.pixelSmall.copy(fontSize = 7.sp)
     val inkColor = scheme.lcdInk.tape
@@ -803,6 +915,18 @@ private fun RingsCanvas(
                     center = centre,
                     style = Stroke(width = strokeW),
                 )
+                // A snip ring wears its waveform: one bar across the stroke
+                // per bucket, as long as the loudest sample in that arc.
+                waves[i]?.let { wave ->
+                    val waveInk = ringInk.copy(alpha = if (heard) 0.55f else 0.2f)
+                    val amp = WAVE_AMP_DP * screenDensity
+                    for (b in wave.indices) {
+                        val a = wave[b] * amp
+                        if (a < 0.5f * screenDensity) continue
+                        val ph = (b + 0.5) / wave.size
+                        drawLine(waveInk, geometry.point(r - a, ph), geometry.point(r + a, ph), strokeWidth = 1.5f * screenDensity)
+                    }
+                }
                 // Step ticks: a faint dot per step, so the ring's size is readable.
                 val tick = 1.2f * screenDensity
                 for (s in 0 until ring.steps) {
@@ -863,6 +987,15 @@ private fun RingsCanvas(
             }
             // The hub: a dot marking the shared centre every ring turns about.
             drawCircle(dim, 2f * screenDensity, centre)
+            // A refit under way: the snips are being cut to a new length.
+            if (refitting) {
+                drawText(
+                    textMeasurer = textMeasurer,
+                    text = "REFITTING…",
+                    topLeft = Offset(0f, 0f),
+                    style = labelStyle.copy(color = amber),
+                )
+            }
             // The meeting: every ring on its downbeat together, once a cycle.
             if (playing && set.orbits.isNotEmpty()) {
                 val cycle = OrbitClock.cycleFrames(set)
@@ -1005,6 +1138,24 @@ private const val MEET_SECONDS = 0.35f
 
 /** Room outside the outermost ring for its name at 12 o'clock, in dp. */
 private const val LABEL_MARGIN_DP = 14f
+
+/** How many bars a snip ring's waveform is drawn in, round the ring. */
+private const val WAVE_BUCKETS = 120
+
+/** Half-height of the loudest waveform bar, across the ring's stroke. */
+private const val WAVE_AMP_DP = 9f
+
+/** Quiet after the last BPM tap before the set saves and its snips refit. */
+private const val BPM_SETTLE_MS = 400L
+
+/** Below this, a tempo estimate is numerology (see [Tempo]) and no offer is made. */
+private const val TEMPO_TRUST = 0.3f
+
+/** As much of a snip as the tempo estimate reads — the bank's own cap. */
+private const val TEMPO_MAX_SEC = 30f
+
+/** A snip ring's own tempo, offered to the set once when the ring lands. */
+private data class TempoOffer(val ringName: String, val sampleFile: String, val bpm: Float, val frames: Int)
 
 /** Where display slot [i] of [count] sits inside a [w]×[h] canvas, and the inverse for taps. */
 private class RingGeometry(w: Float, h: Float, private val count: Int, density: Float) {

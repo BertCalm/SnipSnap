@@ -98,21 +98,32 @@ choice, not a surprise.
   ring's period with the loop grid's one fit rule (`BlockBaker.fitLoop`:
   trim within 2 %, slice at the hits and re-place them beyond it), so a
   snip on a ring and a loop on the grid can never disagree about what
-  wrapping sounds like. A tempo change or a resize refits it.
+  wrapping sounds like. A tempo change or a resize refits it — and the fit
+  reports itself (`FitReport`: as is, trimmed, padded, or sliced, with the
+  percentage and the slice count), so the ring's panel says `SLICED AT 12
+  HITS · SQUEEZED 8%` rather than leaving the ear to guess. The ring wears
+  the fitted audio's waveform (`OrbitBank.peaks`: the loudest sample per
+  equal arc, scaled to the ring's own loudest). A snip that knows its
+  tempo (`Tempo.estimate`, trusted from 0.3 confidence) offers it once when
+  the ring lands: SET moves the whole set and re-sizes the ring to its
+  natural length there; KEEP leaves both. BPM taps settle for 400 ms before
+  the set saves and its snips refit, with `REFITTING…` in the rings' corner
+  meanwhile; a set with no snip rings takes the new tempo on the next block.
 
 ## Where it lives
 
 | Piece | What it is |
 |---|---|
 | `loop/Orbit.kt` | `Orbit` (steps, lock, voice), `OrbitSet`, the content types, and `OrbitClock` — every number above, plus the length and ratio labels |
-| `loop/OrbitBank.kt` | The prepared audio for a set: pads at the device rate, snips fitted to their periods. Immutable; an edit prepares a new one reusing the last |
+| `loop/OrbitBank.kt` | The prepared audio for a set: pads at the device rate, snips fitted to their periods, each with its `FitReport` and its peaks for the ring's waveform. Immutable; an edit prepares a new one reusing the last |
+| `loop/LoopFit.kt` | `LoopFit` (as is · trimmed · padded · sliced), `FitReport` and its label, `FittedLoop` — what `BlockBaker.fitLoopReported` says it did |
 | `loop/OrbitEngine.kt` | The transport: fixed 2048-frame blocks, hits scheduled per block, voices mixed, snips wrapped, written to the same `AudioSink` the loop grid uses. `render` is the offline bounce and the test harness |
 | `loop/OrbitStore.kt` | `orbits.json` (version 2; version 1 still loads), a sidecar beside the kit like `groove.json` |
 | `loop/OrbitClip.kt` | One cycle as an MPC clip in `groove.json`, and the 64-bar refusal both outputs share |
 | `loop/OrbitPatterns.kt` | Euclid, SPREAD, CLEAR, the dice, the weight cycle, the step-size choices |
 | `loop/OrbitPresets.kt` | The starter set from a kit — one ring per instrument the kit has (KICK 16 · SNARE 16 · HATS 12 · PERC 20 · THREE, a locked triplet · BASS 20 over the tonal pads) — and the empty-ring and snip-ring constructors |
 | `app/OrbitSampleSource.kt` | Pads from the kit shelf via `KitSampleSource`, snips from `snips/` |
-| `app/ui/OrbitScreen.kt` | The rings (shortest inside, a 16th-long comet tail, a strike flare, a pulse when they meet), the unrolled strip, the panel, the transport, audition through PLAY's pad engine, solo by long-press. Reached from GROOVE's **ORBIT ▸**, left by **◄ GROOVE** |
+| `app/ui/OrbitScreen.kt` | The rings (shortest inside, a 16th-long comet tail, a strike flare, a pulse when they meet, a snip ring's waveform), the unrolled strip, the panel (with the fit report), the tempo offer, the debounced BPM, the transport, audition through PLAY's pad engine, solo by long-press. Reached from GROOVE's **ORBIT ▸**, left by **◄ GROOVE** |
 
 ## Out the door
 

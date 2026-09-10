@@ -19,7 +19,7 @@ import com.snipsnap.audio.Snip
 class OrbitBank private constructor(
     val sampleRate: Int,
     private val pads: Map<PadKey, Snip>,
-    private val loops: Map<LoopKey, Snip>,
+    private val loops: Map<LoopKey, FittedLoop>,
 ) {
 
     private data class PadKey(val kit: String, val slot: Int)
@@ -31,7 +31,19 @@ class OrbitBank private constructor(
     fun pad(kit: String, slot: Int): Snip? = pads[PadKey(kit, slot)]
 
     /** The snip on [orbit], fitted to its period in [set], or null when the file is missing. */
-    fun loop(set: OrbitSet, orbit: Orbit): Snip? {
+    fun loop(set: OrbitSet, orbit: Orbit): Snip? = fitted(set, orbit)?.snip
+
+    /** What the fit did to the snip on [orbit] — as-is, trimmed, padded or sliced — or null when the file is missing. */
+    fun fit(set: OrbitSet, orbit: Orbit): FitReport? = fitted(set, orbit)?.report
+
+    /**
+     * The snip on [orbit] as [buckets] peaks round the ring — the loudest
+     * sample in each equal slice of its period, both channels — so the
+     * ring can wear its own waveform. Null when the file is missing.
+     */
+    fun peaks(set: OrbitSet, orbit: Orbit, buckets: Int): FloatArray? = loop(set, orbit)?.let { peaksOf(it, buckets) }
+
+    private fun fitted(set: OrbitSet, orbit: Orbit): FittedLoop? {
         val content = orbit.content as? SnipOrbit ?: return null
         return loops[LoopKey(content.sampleFile, OrbitClock.periodFrames(set, orbit))]
     }
@@ -50,7 +62,7 @@ class OrbitBank private constructor(
         fun prepare(set: OrbitSet, source: SampleSource, previous: OrbitBank? = null): OrbitBank {
             val reuse = previous?.takeIf { it.sampleRate == set.sampleRate }
             val pads = HashMap<PadKey, Snip>()
-            val loops = HashMap<LoopKey, Snip>()
+            val loops = HashMap<LoopKey, FittedLoop>()
 
             for (orbit in set.orbits) {
                 when (val content = orbit.content) {
@@ -66,14 +78,34 @@ class OrbitBank private constructor(
                         val key = LoopKey(content.sampleFile, period)
                         if (key in loops) continue
                         val kept = reuse?.loops?.get(key)
-                        val snip = kept ?: source.loop(content.sampleFile)?.let {
-                            BlockBaker.fitLoop(stereoAt(it, set.sampleRate), period.toInt())
+                        val fitted = kept ?: source.loop(content.sampleFile)?.let {
+                            BlockBaker.fitLoopReported(stereoAt(it, set.sampleRate), period.toInt())
                         }
-                        if (snip != null) loops[key] = snip
+                        if (fitted != null) loops[key] = fitted
                     }
                 }
             }
             return OrbitBank(set.sampleRate, pads, loops)
+        }
+
+        /** [buckets] peaks over [snip]: the loudest absolute sample in each equal run of frames, any channel. */
+        fun peaksOf(snip: Snip, buckets: Int): FloatArray {
+            require(buckets > 0) { "buckets must be positive: $buckets" }
+            val out = FloatArray(buckets)
+            val frames = snip.frameCount
+            if (frames == 0) return out
+            val channels = snip.channels
+            for (b in 0 until buckets) {
+                val from = (b.toLong() * frames / buckets).toInt()
+                val until = ((b + 1).toLong() * frames / buckets).toInt().coerceAtLeast(from + 1).coerceAtMost(frames)
+                var peak = 0f
+                for (i in from * channels until until * channels) {
+                    val a = kotlin.math.abs(snip.samples[i])
+                    if (a > peak) peak = a
+                }
+                out[b] = peak
+            }
+            return out
         }
 
         private fun stereoAt(snip: Snip, rate: Int): Snip =
