@@ -342,7 +342,27 @@ object Layout {
     const val FRAME_H = 844
     const val OUTER_MARGIN = 12
     const val TITLEBAR_H = 34
-    const val MENU_ROW_H = 26
+
+    /**
+     * The nav strip's height, and so the height of every tab in it.
+     *
+     * Was 26 — the handoff's figure, and September UAT finding 9: the row
+     * a lost user reaches for first held eleven targets a little over half
+     * the size [MIN_HIT_TARGET] sets for every other control in the app.
+     * It is that floor now, held there by a test rather than by this
+     * comment.
+     *
+     * The 22dp it costs comes out of the body below it, which is a
+     * `weight(1f)` box in `App` — no fixed-pixel frame in this app is
+     * measured off this constant, so the strip grows and the screen under
+     * it shrinks by the same amount.
+     *
+     * A taller strip is only half of it: `MenuRow` has to make each tab
+     * *fill* that height too. A 48dp strip around a text-sized tap area
+     * is a taller strip with the same finding still in it.
+     */
+    const val MENU_ROW_H = 48
+
     const val STATUS_BAR_H = 26
     const val LCD_HEADER_H = 40
     const val PAD_GAP = 8

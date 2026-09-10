@@ -10,6 +10,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,6 +31,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
@@ -176,6 +178,63 @@ val MENU_ITEMS = listOf(
     MenuItem("HELP", AppScreen.HELP),
 )
 
+/**
+ * The width kept clear at each end of the menu row for its overflow cue.
+ *
+ * Narrow on purpose. The eleven tabs already run about 34dp past the
+ * usable width at the 390dp design frame, so every dp spent here hides
+ * a little more of what it is pointing at — enough to be seen, and no
+ * more than that.
+ */
+private const val MENU_EDGE_W = 12
+
+/**
+ * One end of the menu row: an arrow while there are tabs that way, and
+ * an empty gutter of the same width while there are not.
+ *
+ * The gutter is always reserved rather than appearing with the arrow,
+ * so the tabs do not shift sideways under a thumb the moment a scroll
+ * starts or ends.
+ *
+ * The glyph is cleared from the semantics tree: it is a picture of the
+ * scroll state, and TalkBack already announces a scrollable row and its
+ * position without being told about a triangle. Announcing it as well
+ * would put a shape between the user and the tab names.
+ */
+@Composable
+private fun MenuEdge(glyph: String, showing: Boolean) {
+    val scheme = LocalScheme.current
+    Box(
+        Modifier
+            .width(MENU_EDGE_W.dp)
+            .fillMaxHeight()
+            .clearAndSetSemantics { },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (showing) TapeText(glyph, TapeType.pixel, scheme.ink3.tape)
+    }
+}
+
+/**
+ * The eleven tabs, and the two things September UAT found wrong with
+ * them.
+ *
+ * Finding 9: the row was 26dp tall and each tab's tap area was its text
+ * plus 3dp, so the app's primary navigation held the smallest targets in
+ * it. [Layout.MENU_ROW_H] is the hit-target floor now, and each tab
+ * fills the row rather than sitting inside it.
+ *
+ * Finding 10: the row scrolls — the tabs do not fit at 390dp and are not
+ * meant to — but it scrolled with no arrow, fade or cue of any kind, so
+ * SETUP and HELP were simply absent for anyone who never guessed to drag
+ * it. The arrows say which way the rest is.
+ *
+ * They are cues, not buttons. A tappable arrow would need to be a legal
+ * target itself, and two 48dp chips would take a quarter of the row's
+ * width to reveal about 34dp of tabs — paying more than the problem
+ * costs. Dragging the row is the gesture; the arrows only say it is
+ * there.
+ */
 @Composable
 fun MenuRow(
     current: AppScreen,
@@ -183,32 +242,51 @@ fun MenuRow(
     modifier: Modifier = Modifier,
 ) {
     val scheme = LocalScheme.current
+    val scroll = rememberScrollState()
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(Layout.MENU_ROW_H.dp)
-            .horizontalScroll(rememberScrollState()),
+            .height(Layout.MENU_ROW_H.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        for (item in MENU_ITEMS) {
-            val isSelected = item.screen == current
-            val itemModifier = Modifier
-                .let { if (isSelected) it.pressedBevel(scheme, 3.dp) else it }
-                // The tab's own name (item.label) is the accessible name
-                // via the merged descendant TapeText below; selection is
-                // the one thing that text can't say on its own (audit
-                // finding 7 — selection state had no programmatic
-                // exposure anywhere in the app).
-                .semantics { selected = isSelected }
-                .tapeClick(label = null) { onSelect(item.screen) }
-                .padding(horizontal = 4.dp, vertical = 3.dp)
-            TapeText(
-                item.label,
-                TapeType.pixel,
-                if (isSelected) scheme.ink.tape else scheme.ink2.tape,
-                itemModifier,
-            )
+        MenuEdge("◂", showing = scroll.canScrollBackward)
+        Row(
+            Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .horizontalScroll(scroll),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            for (item in MENU_ITEMS) {
+                val isSelected = item.screen == current
+                Box(
+                    Modifier
+                        // The row's height is fixed, so this is a bounded
+                        // parent and fillMaxHeight resolves to 48dp rather
+                        // than collapsing (the trap MIN_HIT_TARGET's own
+                        // KDoc records). It is what makes the whole tab
+                        // tappable instead of just the word in it.
+                        .fillMaxHeight()
+                        .let { if (isSelected) it.pressedBevel(scheme, 3.dp) else it }
+                        // The tab's own name (item.label) is the accessible
+                        // name via the merged descendant TapeText below;
+                        // selection is the one thing that text can't say on
+                        // its own (audit finding 7 — selection state had no
+                        // programmatic exposure anywhere in the app).
+                        .semantics { selected = isSelected }
+                        .tapeClick(label = null) { onSelect(item.screen) }
+                        .padding(horizontal = 4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(
+                        item.label,
+                        TapeType.pixel,
+                        if (isSelected) scheme.ink.tape else scheme.ink2.tape,
+                    )
+                }
+            }
         }
+        MenuEdge("▸", showing = scroll.canScrollForward)
     }
 }
 

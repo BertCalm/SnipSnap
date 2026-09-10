@@ -551,21 +551,22 @@ class UatSimTest {
         // 9sp pixel face + 0.5sp tracking ≈ 6dp/char; 4dp padding each side per tab.
         val perChar = 6.0
         val width = tabs.sumOf { it.length * perChar + 8 }
-        val usable = Layout.FRAME_W - Layout.OUTER_MARGIN * 2 - 12
+        // The window frame's own 6dp each side, and since finding 10 the
+        // 12dp gutter MenuRow keeps clear at each end for its arrows.
+        val usable = Layout.FRAME_W - Layout.OUTER_MARGIN * 2 - 12 - 24
         say("  menu row: ${tabs.size} tabs, estimated ${"%.0f".format(width)}dp wide")
         say("  usable width at the ${Layout.FRAME_W}dp design frame: ${usable}dp")
         var run = 0.0
         val visible = tabs.takeWhile { run += it.length * perChar + 8; run <= usable }
         note("fits on screen: ${visible.joinToString(" ")}")
-        note("needs a horizontal scroll to reach: ${(tabs - visible.toSet()).joinToString(" ")}")
-        finding(
-            "J10-MENU",
-            "the menu row is ${Layout.MENU_ROW_H}dp tall — the same Layout object sets MIN_HIT_TARGET=" +
-                "${Layout.MIN_HIT_TARGET}dp — and scrolls horizontally with no arrow, fade or overflow cue.",
+        note("reached by dragging the row, with a ▸ saying so: ${(tabs - visible.toSet()).joinToString(" ")}")
+        note(
+            "the row is ${Layout.MENU_ROW_H}dp and each tab fills it, against " +
+                "MIN_HIT_TARGET=${Layout.MIN_HIT_TARGET}dp (finding 9, fixed); the ends carry ◂ ▸ " +
+                "while there are tabs that way (finding 10, fixed)",
         )
         note("status bar cells: WHERE YOU ARE | KITS: n | a rotating quip (FULL personality only)")
-        note("title bar reads: SNIPSNAP.EXE   M0")
-        finding("J10-M0", "the title bar's build tag still reads M0; APP_PLAN.md puts the app at M5.")
+        note("title bar reads: SNIPSNAP.EXE — the stale M0 build tag went with finding 2")
 
         say("")
         say("  personality gates:")
