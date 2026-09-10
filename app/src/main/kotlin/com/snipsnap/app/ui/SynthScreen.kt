@@ -350,10 +350,15 @@ fun SynthScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                // ENGINE cycler — the EXPORT screen's FormatCyclerRow idiom
-                // (tap advances to the next entry, wrapping) ported onto the
-                // LCD header's title in place of a static "THUMP" label.
-                // Long-press is not used, per the brief.
+                // ENGINE cycler — tap advances to the next entry, wrapping,
+                // on the LCD header's title in place of a static "THUMP"
+                // label. Long-press is not used, per the brief.
+                //
+                // EXPORT's format row used to be the same idiom and is now a
+                // picker instead (September UAT, finding 7), because eight
+                // one-way states with no back step is a walk. This cycler is
+                // deliberately left alone: four engines, and the tap is an
+                // audition you want to hear one after another.
                 Box(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
