@@ -229,7 +229,12 @@ class PersonalityTest {
             "the move and both parents lead their own toast",
         )
         assertTrue(Copy.mutated("SPLICE", "A01", "A03").endsWith("."), "and still lands on a full stop")
-        assertEquals("+3 OFF-LANE — HEARD AND EXPORTED, NOT DRAWN", Copy.offLane(3), "the count leads its own line")
+        // "NOT DRAWN" was accurate before GrooveScreen.kt's NeedleRoll Fix 3
+        // (live-record follow-ups): an off-lane note now draws too, in its
+        // own sixth OTHER column, so the old wording would be an outright
+        // false claim on screen — this assertion tracks the corrected text,
+        // not a relaxation of the law itself.
+        assertEquals("+3 OFF-LANE — HEARD, EXPORTED, DRAWN UNDER OTHER", Copy.offLane(3), "the count leads its own line")
         assertTrue(Copy.offLane(1).uppercase() == Copy.offLane(1), "TapeOS shouts here too")
     }
 

@@ -324,9 +324,11 @@ object Copy {
     const val TAKE_UNDONE_EMPTY = "TAKE UNDONE. NO GROOVE LEFT - SAME AS BEFORE RECORD."
     /** UNDO TAKE's from-scratch-with-E branch: the take is gone, PROG E rides through untouched. */
     const val TAKE_UNDONE_TO_E = "TAKE UNDONE. PROG E RIDES THROUGH, UNTOUCHED."
+    /** STOP RECORDING with nothing captured — armed, counted in, played nothing, tapped STOP. Previously a bare no-op: no toast, no message at all (live-record follow-ups, Fix 4). See `GrooveScreen.kt`'s `stopRecording` for the guard this backs. */
+    const val TAKE_SILENT = "NOTHING PLAYED — NO TAKE LANDED."
 
-    /** The needle-roll only draws five lanes; a note on any other pad still plays and still exports — this says so. */
-    fun offLane(n: Int): String = "+$n OFF-LANE — HEARD AND EXPORTED, NOT DRAWN"
+    /** A note on any pad outside the five named drum lanes still plays and still exports — and, since GrooveScreen.kt's `NeedleRoll` Fix 3, still draws too, in its own sixth OTHER column rather than on one of the five named lanes. This says so; it must NOT claim "not drawn" again — see that fix's own KDoc for why that used to be true and now isn't. */
+    fun offLane(n: Int): String = "+$n OFF-LANE — HEARD, EXPORTED, DRAWN UNDER OTHER"
 
     // ---- ARRANGE ----
     const val ARRANGE_NEEDS_GROOVE = "NO GROOVE TO ARRANGE. CHOP WITH A GROOVE, OR STEAL ONE, FIRST."

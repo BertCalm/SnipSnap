@@ -164,9 +164,14 @@ private val LANE_DRUM_CLASS: Map<GrooveEdit.Lane, DrumClass> = mapOf(
 /**
  * The inverse of [GrooveEdit.LANE_SLOT]'s note mapping — what the
  * needle-roll's RENDERER needs to bucket a clip's raw notes into the five
- * drawn lane columns (the design). Playback does NOT gate on this map: a
+ * NAMED lane columns (the design). Playback does NOT gate on this map: a
  * note whose pad sits outside the five lanes (a CLAP, a TOM) still plays —
- * see the playback clock's own comment — it just isn't drawn as a block.
+ * see the playback clock's own comment. It used to be true that such a
+ * note also wasn't DRAWN at all (this was a defect, not a design choice —
+ * the note is captured, played, and landed regardless); `NeedleRoll`'s
+ * Fix 3 (live-record follow-ups) closed that: a note whose lookup here
+ * misses falls into a sixth, renderer-only OTHER column instead of being
+ * dropped from the drawing.
  */
 private val NOTE_TO_LANE: Map<Int, GrooveEdit.Lane> = GrooveEdit.Lane.entries.associateBy { GrooveEdit.noteFor(it) }
 
@@ -337,6 +342,16 @@ fun GrooveScreen(
     var recordBars by remember(kitDir) { mutableIntStateOf(2) }
     var take by remember(kitDir) { mutableStateOf<LiveRecord.Take?>(null) }
 
+    // Fix 2 (live-record follow-ups): the count-in previously said only
+    // "COUNTING IN…" with nothing to tell the user when the downbeat
+    // arrives. Written by `startRecording`'s own click loop as each of the
+    // four beats fires (4, 3, 2, 1), read by the three places this file
+    // renders the count-in label. Reset to 0 both when the count-in ends
+    // normally and when an armed take is dropped (`silenceGroove`) — a
+    // stale "COUNTING IN… 1" left on screen after the take vanished would
+    // be a lie, same reasoning as `justLanded`'s own reset discipline.
+    var countInBeat by remember(kitDir) { mutableIntStateOf(0) }
+
     // Task 5: the post-take row (FORK TO E / UNDO TAKE). NOT `preTake`'s
     // own nullness — `preTake == null` is a legitimate snapshot (the
     // from-scratch case), not "nothing to show". This flag is the row's
@@ -402,10 +417,11 @@ fun GrooveScreen(
     val currentClip = remember(progIndex, base, swingPercent, seed, eClip) {
         base?.let { computeProgram(progIndex, it, swingPercent, seed, eClip) }
     }
-    // Playback and MIDI export cover every note; the roll only draws the
-    // five lane columns (the design) — this is the honesty line that says
-    // so whenever the on-screen program actually has notes the roll can't
-    // place.
+    // Playback and MIDI export cover every note; the roll's five NAMED
+    // lane columns only cover five of the kit's pads (the design) — a note
+    // outside them still draws too, since Fix 3, just under the sixth
+    // OTHER column rather than a named one. This is the honesty line that
+    // says so whenever the on-screen program actually has notes like that.
     val offLaneCount = currentClip?.notes?.count { it.note !in NOTE_TO_LANE } ?: 0
 
     fun failure(action: String, e: Exception) {
@@ -493,6 +509,10 @@ fun GrooveScreen(
             recording = false
             countingIn = false
             take = null
+            // Fix 2: a dropped take must not leave a stale "COUNTING IN… N"
+            // label on screen for whatever renders next — see
+            // `countInBeat`'s own KDoc.
+            countInBeat = 0
         }
         // PLAY's and KIT's lesson: stopping the transport is not
         // stopping the sound. A backgrounded phone should not keep
@@ -571,6 +591,23 @@ fun GrooveScreen(
         var lastPos = posSteps
         clockAnchor.nanos = lastNanos
         clockAnchor.pos = lastPos
+        // Fix 1's own seam bug: the count-in's click loop
+        // (`startRecording`) fires its four clicks on ITS OWN schedule,
+        // then sets `posSteps = 0f` and `playing = true` — which restarts
+        // THIS effect with `lastPos = 0f`. The beat-crossing pass below
+        // fires on `b > lastPos && b <= np`, so `b = 0` — bar 1's downbeat,
+        // the most important click of the whole take — never crosses on
+        // this first tick; every LATER pass over the loop does catch it,
+        // via the wrap clause. One accented click here, once, at restart,
+        // anchors that first beat instead. Gated on `recording`, not
+        // `countingIn`: an overdub with the loop already stopped
+        // (`startRecording`'s else-branch) also resets `posSteps` to 0 and
+        // restarts this same effect, and needs the identical anchor click.
+        // A tempo or kit change mid-take (`entry.kit`, one of this
+        // effect's own keys) re-enters this same branch too and fires one
+        // EXTRA click that isn't a real downbeat — accepted: one spurious
+        // click mid-take beats a silent bar 1 every time.
+        if (recording) player.clickHit(accent = true)
         while (isActive) {
             withFrameNanos { now ->
                 val dtNanos = (now - lastNanos).coerceIn(0, GROOVE_STEP_MAX_NANOS)
@@ -588,6 +625,26 @@ fun GrooveScreen(
                         val crossed = (p > lastPos && p <= np) ||
                             (np >= totalSteps && p + totalSteps > lastPos && p + totalSteps <= np)
                         if (crossed) hit(n.note - 35)
+                    }
+                }
+                // Fix 1 — the metronome through the WHOLE take, not just the
+                // count-in: driven from THIS clock's own beat-boundary
+                // crossings (same `crossed` shape the note loop above just
+                // used, `b` standing in for `p`), never a second delay-based
+                // loop timed off System.nanoTime() — that reintroduces the
+                // two-timebase bug class the clockAnchor mechanism above
+                // already cost this project a shipped defect closing once.
+                // A beat is 4 steps (STEPS_PER_BAR / 4 beats per bar);
+                // accent lands on every bar downbeat, same as the count-in's
+                // own `beat == 0` accent. Gated on `recording`, not
+                // `playing` — ordinary PLAY/STOP must stay silent here;
+                // only a take actually in progress gets a click to play
+                // against.
+                if (recording) {
+                    for (b in 0 until totalSteps.toInt() step 4) {
+                        val crossed = (b > lastPos && b <= np) ||
+                            (np >= totalSteps && b + totalSteps > lastPos && b + totalSteps <= np)
+                        if (crossed) player.clickHit(accent = b % GrooveEdit.STEPS_PER_BAR == 0)
                     }
                 }
                 if (np >= totalSteps) np -= totalSteps
@@ -901,6 +958,13 @@ fun GrooveScreen(
             clockAnchor.nanos = startNanos + 4 * beatNanos
             clockAnchor.pos = 0f
             countingIn = true
+            // Fix 2: set synchronously, in lockstep with `countingIn`
+            // itself, rather than waiting for the launched loop below to
+            // reach beat 0 — the anchor above is already valid for beat 0
+            // this same instant (this function's own KDoc, "Blocker A"),
+            // so the label should read "4" from the very first frame, not
+            // flash a stale 0 for the one frame before the coroutine wakes.
+            countInBeat = 4
             // The capture gate opens with the anchor, not after the
             // count-in completes: `recordHit` gates on `recording`, and
             // with a valid anchor in place a hit fired a few ms EARLY
@@ -927,6 +991,15 @@ fun GrooveScreen(
                     // `scope` (rememberCoroutineScope) outlives ON_STOP;
                     // only leaving composition entirely cancels it.
                     if (take !== armedTake) return@launch
+                    // Fix 2: counts DOWN (4, 3, 2, 1) as each click fires —
+                    // `beat` itself counts up from 0, so this is the beats
+                    // REMAINING including the one about to sound, matching
+                    // what a human means by "counting in from 4". Written
+                    // only past the identity guard just above, same as
+                    // every other write this loop makes once armed — a
+                    // superseded or dropped arm must never touch this
+                    // state, per this function's own contract.
+                    countInBeat = 4 - beat
                     player.clickHit(accent = beat == 0)
                     val deadlineNanos = startNanos + (beat + 1) * beatNanos
                     val waitMs = (deadlineNanos - System.nanoTime()) / 1_000_000L
@@ -934,6 +1007,7 @@ fun GrooveScreen(
                 }
                 if (take !== armedTake) return@launch
                 countingIn = false
+                countInBeat = 0
                 posSteps = 0f
                 playing = true
             }
@@ -962,7 +1036,10 @@ fun GrooveScreen(
      * with nothing played) lands nothing — [LiveRecord.land] itself
      * refuses an empty note list, so this checks first rather than
      * surfacing that refusal as a failure toast for what's actually a
-     * no-op.
+     * no-op. Fix 4 (live-record follow-ups): that no-op used to be
+     * completely silent — arm, count in, play nothing, tap STOP, and
+     * nothing at all told the user their take didn't land. [Copy.TAKE_SILENT]
+     * closes that; see this branch below.
      *
      * `eClip`/local E state is untouched: [LiveRecord.land] re-reads E
      * fresh from disk and rides it along unmodified, so there's nothing
@@ -977,7 +1054,16 @@ fun GrooveScreen(
         recording = false
         val t = take
         take = null
-        if (t == null || t.notes().isEmpty()) return
+        if (t == null || t.notes().isEmpty()) {
+            // Fix 4: this was a bare `return` — no toast, no message at
+            // all, the button just went back to idle as if nothing had
+            // happened. Same silent-failure class this session's other
+            // fixes already close for RECORD's other outcomes ([Copy.takeLanded],
+            // [Copy.TAKE_UNDONE] and its siblings) — an armed-then-empty
+            // take deserves the same honesty.
+            onToast(Copy.TAKE_SILENT)
+            return
+        }
         val landBase = base
         val name = landBase?.name ?: "${kit.name} Take"
         scope.launch {
@@ -1056,7 +1142,8 @@ fun GrooveScreen(
                 Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     when {
                         countingIn -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            TapeText("COUNTING IN…", TapeType.lcd(19), scheme.amber.tape)
+                            // Fix 2: names the beat, not just the state — see `countInBeat`'s own KDoc.
+                            TapeText("COUNTING IN… $countInBeat", TapeType.lcd(19), scheme.amber.tape)
                         }
                         // Blocker C: a from-scratch take was played
                         // completely blind — no needle, no bar/beat
@@ -1137,7 +1224,8 @@ fun GrooveScreen(
                     ) {
                         TapeText(
                             when {
-                                countingIn -> "COUNTING IN…"
+                                // Fix 2: the beat count, same as the other two "COUNTING IN…" render sites.
+                                countingIn -> "COUNTING IN… $countInBeat"
                                 recording -> "■ STOP RECORDING"
                                 else -> "● RECORD"
                             },
@@ -1199,7 +1287,8 @@ fun GrooveScreen(
                     // MIDI all need a settled base, not one mid-overdub.
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         TapeText(
-                            if (countingIn) "COUNTING IN…" else "● RECORDING — OVERDUBBING ONTO PROG A",
+                            // Fix 2: the beat count, same as this screen's other two "COUNTING IN…" render sites.
+                            if (countingIn) "COUNTING IN… $countInBeat" else "● RECORDING — OVERDUBBING ONTO PROG A",
                             TapeType.pixel,
                             scheme.amber.tape,
                         )
@@ -1209,7 +1298,7 @@ fun GrooveScreen(
                     // can't work on a portrait-locked phone.
                     PlayBank(kit, WINDOW_GRID_ROWS, glow, ::recordHit, {}, Modifier.weight(2f).fillMaxWidth())
                     GrooveActionButton(
-                        if (countingIn) "COUNTING IN…" else "■ STOP RECORDING",
+                        if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING",
                         scheme,
                         Modifier.fillMaxWidth(),
                         enabled = !countingIn,
@@ -1457,7 +1546,17 @@ private fun NeedleRoll(
             val noteH = Layout.NOTE_H.dp.toPx()
             val laneLeft = 40.dp.toPx()
             val laneRight = size.width - 8.dp.toPx()
-            val columnW = ((laneRight - laneLeft) / LANE_ORDER.size).coerceAtLeast(1f)
+            // Fix 3 (off-lane pads are invisible in the roll — a DEFECT,
+            // not an enhancement): a hit on any pad outside the five drum
+            // lanes is still captured, played, and landed (see
+            // NOTE_TO_LANE's own KDoc) — it just used to draw nothing,
+            // so mid-take the roll answered "is it getting this?" with a
+            // visual NO while saying yes to disk. `+ 1` makes room for a
+            // sixth, RENDERER-ONLY column those notes fall into below —
+            // GrooveEdit.Lane itself stays five entries; this column
+            // exists only here, in the drawing, never in the step editor
+            // or LANE_SLOT.
+            val columnW = ((laneRight - laneLeft) / (LANE_ORDER.size + 1)).coerceAtLeast(1f)
             val noteW = columnW * 0.8f
 
             drawRect(
@@ -1473,14 +1572,20 @@ private fun NeedleRoll(
             )
 
             clip?.notes?.forEach { n ->
-                val lane = NOTE_TO_LANE[n.note] ?: return@forEach
-                val laneIndex = LANE_ORDER.indexOf(lane)
+                // No `?: return@forEach` here (Fix 3): an off-lane note
+                // falls through to the sixth column (`LANE_ORDER.size`)
+                // instead of being dropped from the drawing entirely.
+                val lane = NOTE_TO_LANE[n.note]
+                val laneIndex = lane?.let { LANE_ORDER.indexOf(it) } ?: LANE_ORDER.size
                 val p = n.timePulses.toFloat() / GrooveEdit.STEP_PULSES.toFloat()
                 val y = needleY + (p - posSteps) * stepW
                 if (y < -noteH || y > size.height) return@forEach
 
                 val hot = playing && p <= posSteps && (posSteps - p) < GROOVE_LIT_WINDOW
-                val color = LANE_DRUM_CLASS[lane]?.let { Schemes.classColor(it).tape } ?: scheme.ink.tape
+                // An off-lane note has no DrumClass to colour by — `scheme.ink.tape`
+                // is already this line's own fallback, so an off-lane hit
+                // simply keeps falling through to it, same as before.
+                val color = lane?.let { LANE_DRUM_CLASS[it] }?.let { Schemes.classColor(it).tape } ?: scheme.ink.tape
                 val alpha = if (hot) 1f else (0.35f + 0.55f * n.velocity)
                 val x = laneLeft + laneIndex * columnW + (columnW - noteW) / 2f
 
@@ -1506,8 +1611,12 @@ private fun NeedleRoll(
             // sit where it will sit once landed, or the roll would be
             // lying about what was captured.
             liveNotes.forEach { n ->
-                val lane = NOTE_TO_LANE[n.note] ?: return@forEach
-                val laneIndex = LANE_ORDER.indexOf(lane)
+                // Same sixth-column fallback as the saved-clip pass above —
+                // the two passes must stay geometrically identical, so a
+                // live note sits exactly where it will sit once landed
+                // (this composable's own KDoc on `liveNotes`).
+                val lane = NOTE_TO_LANE[n.note]
+                val laneIndex = lane?.let { LANE_ORDER.indexOf(it) } ?: LANE_ORDER.size
                 val p = n.timePulses.toFloat() / GrooveEdit.STEP_PULSES.toFloat()
                 val y = needleY + (p - posSteps) * stepW
                 if (y < -noteH || y > size.height) return@forEach
@@ -1554,6 +1663,20 @@ private fun NeedleRoll(
                 ) {
                     TapeText(LANE_LABEL.getValue(lane), TapeType.pixelSmall, c)
                 }
+            }
+            // Fix 3's sixth column, legended: same chip shape as the five
+            // above, in the same neutral colour the saved-clip pass falls
+            // back to for an off-lane note (`scheme.ink.tape`) — not a
+            // seventh `GrooveEdit.Lane`, purely this row's own label for
+            // the renderer-only column drawn above.
+            Box(
+                Modifier
+                    .padding(horizontal = 3.dp)
+                    .border(1.dp, scheme.ink.tape.copy(alpha = 0.4f), RoundedCornerShape(3.dp))
+                    .background(scheme.lcd.tape, RoundedCornerShape(3.dp))
+                    .padding(horizontal = 5.dp, vertical = 1.dp),
+            ) {
+                TapeText("OTHER", TapeType.pixelSmall, scheme.ink.tape)
             }
         }
     }
