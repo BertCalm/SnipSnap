@@ -68,6 +68,7 @@ Phone frame 390×844, outer margin 12. Titlebar 34 (r4). Menu row 26, items pad 
 | Small adjusts | TapeOS Oilslick.dc.html | X1.3 CLASSIC/MELODIC segmented on CHOP (accent fill = active; strip text swaps to the melodic rule) · F5.3 KEY cycler in KIT action row (—/Am/Cm/F#m/Eb, cyan border when set) · Y3.3 `MPC SESSION (.XPJ) — KITS + GROOVES` added to the FORMAT cycler · X4.4 TEACH THE MACHINE consent row in ⚙ (off by default, green dot when on, copy: "FEATURES ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE.") · W12 mini-waveforms on assigned KIT pads (12 bars, class colour @40%, exp decay — loops decay slower; real app draws from `PeaksPyramid`) |
 | GROOVE | TapeOS Oilslick.dc.html (`isGroove`) · ported to TapeOS Clear.dc.html | needle-roll, PROG A–E, swing, step editor — see GROOVE screen section |
 | LOOP | TapeOS Oilslick.dc.html (`isLoop` / `isLoopLandscape`) | 6-track phasing loop grid — see LOOP screen section |
+| ORBIT | Orbit.dc.html · OrbitSnipRing.dc.html · OrbitModes.dc.html | the circular sequencer, from GROOVE's ORBIT ▸ — see ORBIT screen section |
 
 ## LOOP screen (Android Plan 03 · Task 6 — use these, not hardcoded grey)
 
@@ -86,6 +87,20 @@ Block type tag: LOOP `#40E0E8`, PAT `#E040C8`. Muted track: everything `#40306A`
 **Rebake overlay**: `rgba(10,7,20,.72)` scrim over the grid, Silkscreen `#FFE08E` + amber glow — shown while re-fitting after BPM change.
 
 Compose notes: columns = `Row` of 6 equal `weight(1f)` `Column(spacing 4dp)`, blocks `weight(1f).heightIn(30.dp, 46.dp)`. Playhead advance on interval boundary only (blocks never cut mid-play); pull takes effect after current block finishes.
+
+## ORBIT screen (docs/ORBITS.md)
+
+A bar taped end to end is a ring; a longer snip taped round a bigger ring; one needle drives them all, so the inner ring comes round first. Reached from GROOVE's **ORBIT ▸** (beside SONG ▸), left by **◄ GROOVE** — the same GROOVE-scoped overlay as ARRANGE. Portrait 390 only; everything fits without scrolling.
+
+**Header** LCD h40: ◄ GROOVE chip (72px, 1px ink2 border) · `ORBIT` VT323 21px lcd-ink · cycle readout `15 BARS · 92 BPM` VT323 17px lcd-alt (cyan). The cycle is the LCM of every SPEED ring's steps with the 16-step bar; a LAP ring never lengthens it.
+
+**Rings** — a square LCD panel (scanlines) the full content width, 10px inner padding. Ring index 0 innermost; outer radius = box/2 − 14 (room for the outer label), spacing 26 (shrinks to fit past 5 rings). 12 o'clock is step 0, clockwise. Per ring: 1.25px stroke `ink2@70%` (picked: 2.5px lcd-alt; snip ring: `lcd-alt@60%`; muted: `ink3@60%`); a 1.2px tick dot per step in `ink3@60%`; hits as class-colour dots r = 2.5 + 2.5·velocity; name + size (`FLOOR · 16`, Silkscreen 7px, ink2 / lcd-alt when picked) just outside at 12 o'clock; a snip ring wears its waveform as bars across the stroke in LOOP blue `#3F8CF0@55%`. **The needle** is a 3.5px lcd-ink dot with glow, trailing a **comet tail** — a twelfth of a lap of arc in 8 segments thinning 3.6→0.6px and fading 75%→0 — and a hit the needle has just passed **flares**: a halo at `class@35%` out to +9px plus the dot growing +3px, fading over 100 ms. Both are pure functions of the engine's frame count. Tap a ring to pick it; tap a step on the picked pattern ring to place the chosen pad (again to remove).
+
+**Panel** (sunken field, r4, pad 8): ring name Michroma 11px + `PADS`/`SNIP` tag ink3 · chip row `−` `16 STEPS` `+` `SPEED|LAP` (accent when LAP) `ON|OFF` (accent when on) `DEL` — chips min-h 36, field fill, gray-edge border, accent border+ink when lit · one-line mode hint Silkscreen 8px ink3 · a pad ring shows the kit's pads as chips (chosen = class fill with lcd ink; used on this ring = 2px class border); a snip ring says what it wraps.
+
+**Transport** two rows of h48 buttons (field fill, r6, gray-edge; accent border+ink for the primary): `▶ PLAY|■ STOP` · `↺ TOP` · `BPM −` · `BPM +`, then `+ PAD RING` · `◄` [LCD cell: SNIP / name in lcd-alt] `►` · `+ SNIP RING` (the LCD cell reads `NO SNIPS YET` and + SNIP RING is disabled when the shelf is empty). Footer Silkscreen 8px ink3, two lines: `TAP A RING TO PICK IT · TAP A STEP TO PLACE THE PAD · INNER RINGS COME ROUND FIRST · ALL BACK ON THE DOWNBEAT EVERY 15 BARS.`
+
+**Modes** (OrbitModes.dc.html): SPEED — same 16ths per second on every ring, so a bigger ring takes longer (16 against 20 is 4/4 against 5/4, meeting every five bars); LAP — every ring once a bar whatever its steps (a 3-step ring is a triplet against a 4-step ring's quarters, meeting every bar).
 
 ## GROOVE screen
 
