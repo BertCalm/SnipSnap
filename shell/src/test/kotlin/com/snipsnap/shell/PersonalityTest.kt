@@ -1,6 +1,7 @@
 package com.snipsnap.shell
 
 import java.io.File
+import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -173,6 +174,25 @@ class PersonalityTest {
         for (seg in PadSheet.ROWS.flatten()) {
             val line = Copy.treatmentBusy(PadSheet.displayLabel(seg))
             assertTrue(line.length <= 40, "one line on the card: $line (${line.length})")
+        }
+    }
+
+    /**
+     * Finding 12. The empty shelf tells the user to make a kit for the snip
+     * they just captured; both ways into that kit have to say what happens
+     * next, and a full kit has to say something different from one with room.
+     */
+    @Test
+    fun `a landing snip is told where to go, or that there is no room`() {
+        val room = Copy.snipLanding(hasEmptyPad = true)
+        val full = Copy.snipLanding(hasEmptyPad = false)
+        assertTrue(room != full, "a full kit and an empty one cannot read the same")
+        assertTrue(room.contains("PAD"), room)
+        assertTrue(room.contains("LONG-PRESS"), "it names the gesture, which nothing else on that screen does: $room")
+        assertTrue(full.contains("FULL"), full)
+        for (line in listOf(room, full)) {
+            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+            assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
         }
     }
 
