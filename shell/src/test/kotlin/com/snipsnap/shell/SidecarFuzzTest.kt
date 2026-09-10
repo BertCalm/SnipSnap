@@ -1,6 +1,8 @@
 package com.snipsnap.shell
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.DrumSynth
+import com.snipsnap.audio.Similar
 import com.snipsnap.audio.Features
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
@@ -31,6 +33,7 @@ import java.io.File
 import kotlin.random.Random
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -358,6 +361,91 @@ class SidecarFuzzTest {
                 fail("sheet readers round $i: threw ${t::class.simpleName}: ${t.message}\n${Json.write(mutant)}")
             }
         }
+    }
+
+    @Test
+    fun `the replay planner and the diff read any recipe without throwing`() {
+        // DO IT AGAIN plans from a recipe before any byte moves, and the
+        // takes diff names recipes on the TAKES screen: both are the
+        // phone's defensive walk over a pad's recipe, so, like the pad
+        // sheets, the bar is no throwable at all - a Plan (Refused counts)
+        // and a word, whatever the tree says. Seeds are the doors' own
+        // recipes plus one of each refusal shape, fuzzed separately so a
+        // dropped key exercises every branch, not only the first refusal.
+        val m = KitBuilderModel.create("Replay", File(temp, "replay-seed"))
+        m.assign(1, DrumSynth.snare(), DrumClass.SNARE)
+        val era = m.eraPad(1, com.snipsnap.synth.Eras.names.first(), 0.5f).recipe!!
+        val character = m.characterPad(1, com.snipsnap.synth.Treatments.names.first(), 0.5f).recipe!!
+        val smear = m.smearPad(1, 0.4f).recipe!!
+        val keyedExtras = """{"keyed":"bodied","amount":0.6,"seed":7,"decay":0.8,"division":"1/8","tail":1.5,"knee":0.02,"key":"A minor"}"""
+        val robinAndCo = """{"robin":{"takes":3,"seed":2,"zones":2},"splice":{"head":"a.wav"},"clean":{"declip":true},"doctor":"tight","sculpt":{"mode":"carve"}}"""
+        val seeds = listOf(
+            "era" to Json.write(era), "character" to Json.write(character), "smear" to Json.write(smear),
+            "patch" to recipeJson(), "keyed" to keyedExtras, "robin and the measured ones" to robinAndCo,
+        )
+        val untouched = KitPad(slot = 1, sampleFile = "a.wav", recipe = era)
+        for ((i, seed) in seeds.withIndex()) {
+            val tree = Json.parse(seed.second)
+            val rnd = Random(60 + i)
+            for (round in 0 until ROUNDS / seeds.size) {
+                val mutant = mutateTree(tree, rnd)
+                val recipe = mutant as? JsonValue.Obj
+                try {
+                    RecipeReplay.plan(recipe)
+                    if (recipe != null) {
+                        KitDiff.recipeName(recipe)
+                        RecipeReplay.clip(recipe, "K", 1)
+                        val changed = KitPad(slot = 1, sampleFile = "a.wav", recipe = recipe)
+                        KitDiff.headline(KitDiff.changes(Kit("A", listOf(untouched)), Kit("A", listOf(changed))))
+                        KitDiff.headline(KitDiff.changes(Kit("A", listOf(changed)), Kit("A", listOf(untouched))))
+                    }
+                } catch (t: Throwable) {
+                    fail("replay/diff seed '${seed.first}' round $round: threw ${t::class.simpleName}: ${t.message}\n${Json.write(mutant)}")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `the crate index survives mutation and never hands back a vector it could not have written`() {
+        // The crate index is a cache, so a torn one may simply rebuild -
+        // but a structurally valid, wrong one (a hand edit, another tool)
+        // must not be believed either: every vector that comes back is
+        // one the extractor could have written, or the pad was measured
+        // again. DOUBLES and the roulette both read this.
+        val root = File(temp, "crate-fuzz").apply { mkdirs() }
+        val m = KitBuilderModel.create("One", File(root, "One"))
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        val indexFile = File(root, Crate.INDEX_NAME)
+        Crate.index(root)
+        val valid = indexFile.readText()
+        val tree = Json.parse(valid)
+        val rnd = Random(53)
+        val start = System.nanoTime()
+        for (i in 0 until ROUNDS / 5) {
+            val (kind, mutant) = if (i % 2 == 0) {
+                "bytes" to String(mutateBytes(valid.toByteArray(Charsets.UTF_8), rnd), Charsets.UTF_8)
+            } else {
+                "tree" to Json.write(mutateTree(tree, rnd))
+            }
+            indexFile.writeText(mutant)
+            val idx = try {
+                Crate.index(root)
+            } catch (t: Throwable) {
+                fail("crate index round $i ($kind): threw ${t::class.simpleName}: ${t.message}\n$mutant")
+            }
+            assertEquals(2, idx.entries.size, "round $i ($kind): both pads are in the index")
+            for (e in idx.entries) {
+                assertTrue(
+                    e.vector.size == Similar.DIMENSIONS && e.vector.all { it in 0f..1f },
+                    "round $i ($kind): an implausible vector was believed: ${e.vector}\n$mutant",
+                )
+            }
+        }
+        val ms = (System.nanoTime() - start) / 1_000_000
+        assertTrue(ms < 60_000, "crate index: ${ROUNDS / 5} rounds took ${ms}ms")
     }
 
     @Test

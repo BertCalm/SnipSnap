@@ -13,7 +13,12 @@ import kotlin.math.sqrt
  */
 object Similar {
 
-    /** The vector's dimensionality, for sanity checks and future storage. */
+    /**
+     * The vector's dimensionality, for sanity checks and storage. A reader
+     * loading vectors back from a cache checks against this: a vector of
+     * another length, or with a value outside 0..1, is not one this code
+     * wrote, and a distance to it would be a made-up number.
+     */
     const val DIMENSIONS = 9
 
     /**
