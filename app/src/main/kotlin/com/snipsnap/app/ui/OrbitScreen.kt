@@ -141,7 +141,9 @@ import kotlin.math.sin
  * spanned ring is measured in (12 to 32 steps, 3/4 to 8/4). REC arms the
  * strip's pad rail so a tap while playing writes a hit on the nearest
  * step, the way a groove gets played into an MPC; ◀ ▶ turn a ring a step
- * and DUP copies it, which is how phasing starts.
+ * and DUP copies it, which is how phasing starts. Each ring has a level
+ * and a pan on its panel; THE SET carries the swing, which moves the odd
+ * 16ths of every ring whose step is a 16th, the MPC's own way.
  */
 @Composable
 fun OrbitScreen(
@@ -741,12 +743,24 @@ fun OrbitScreen(
                             }
                         }
                     }
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TapeText("SWING", TapeType.pixelSmall, scheme.ink3.tape, Modifier.width(36.dp))
+                        for (n in OrbitSet.SWING_CHOICES) {
+                            SmallChip(if (n == OrbitSet.STRAIGHT_SWING) "50 · STRAIGHT" else "$n", scheme, accent = n == current.swing, description = "SWING $n") {
+                                if (n != current.swing) commit(current.copy(swing = n))
+                            }
+                        }
+                    }
                     TapeText(
-                        "THE BAR EVERY SPANNED RING IS MEASURED AGAINST. FREE RINGS DO NOT CARE. ${current.bpm.roundToInt()} BPM — HOLD BPM − / + BELOW TO RUN IT.",
+                        "THE BAR EVERY SPANNED RING IS MEASURED AGAINST; FREE RINGS DO NOT CARE. SWING PUSHES THE ODD 16THS LATE — 66 IS A TRIPLET FEEL — ON EVERY RING WHOSE STEP IS A 16TH. ${current.bpm.roundToInt()} BPM — HOLD BPM − / + BELOW TO RUN IT.",
                         TapeType.pixelSmall,
                         scheme.ink3.tape,
                         Modifier.fillMaxWidth(),
-                        maxLines = 3,
+                        maxLines = 4,
                     )
                 } else if (outOpen) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -883,6 +897,30 @@ fun OrbitScreen(
                             }
                         }
                     }
+                    // The ring's place in the mix: level in tenths, pan in quarters.
+                    // Tap the readout to put it back — 100, or centre.
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        SmallChip("−", scheme, description = "QUIETER") { updateRing(selected) { it.copy(level = (it.level - LEVEL_STEP).coerceAtLeast(0f)) } }
+                        Box(
+                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "LEVEL ${(ring.level * 100).roundToInt()} — TAP FOR 100") {
+                                updateRing(selected) { it.copy(level = 1f) }
+                            },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TapeText("LEVEL ${(ring.level * 100).roundToInt()}", TapeType.pixel, scheme.ink.tape)
+                        }
+                        SmallChip("+", scheme, description = "LOUDER") { updateRing(selected) { it.copy(level = (it.level + LEVEL_STEP).coerceAtMost(MAX_LEVEL)) } }
+                        SmallChip("◀", scheme, description = "PAN LEFT") { updateRing(selected) { it.copy(pan = (it.pan - PAN_STEP).coerceAtLeast(-1f)) } }
+                        Box(
+                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "PAN ${panLabel(ring.pan)} — TAP FOR CENTRE") {
+                                updateRing(selected) { it.copy(pan = 0f) }
+                            },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TapeText("PAN ${panLabel(ring.pan)}", TapeType.pixel, scheme.ink.tape)
+                        }
+                        SmallChip("▶", scheme, description = "PAN RIGHT") { updateRing(selected) { it.copy(pan = (it.pan + PAN_STEP).coerceAtMost(1f)) } }
+                    }
                     when (val content = ring.content) {
                         is PatternOrbit -> {
                             Row(
@@ -969,6 +1007,16 @@ private fun barLabel(set: OrbitSet, frame: Long, playing: Boolean): String {
     val lap = OrbitClock.lapFrames(set)
     val bar = if (playing && lap > 0) ((frame / lap) % total + 1).toInt() else 1
     return "BAR $bar/$total"
+}
+
+/** "C", "L 50", "R 25": a pan in words, quarter by quarter. */
+private fun panLabel(pan: Float): String {
+    val pct = (abs(pan) * 100).roundToInt()
+    return when {
+        pct == 0 -> "C"
+        pan < 0 -> "L $pct"
+        else -> "R $pct"
+    }
 }
 
 private fun padLabel(slot: Int): String {
@@ -1121,7 +1169,8 @@ private fun RingsCanvas(
                         val color = padColor(kit, hit.slot, inkColor)
                         val dotR = (2.5f + 2.5f * hit.velocity) * screenDensity
                         val pitch = if (pads.size > 1) (pads.indexOf(hit.slot).coerceAtLeast(0).toFloat() / (pads.size - 1) - 0.5f) else 0f
-                        val at = geometry.point(r + pitch * 8f * screenDensity, hit.step.toDouble() / ring.steps)
+                        // Drawn where it fires, so a swung offbeat sits late on the ring as it does in time.
+                        val at = geometry.point(r + pitch * 8f * screenDensity, OrbitClock.stepOffset(set, ring, hit.step).toDouble() / OrbitClock.periodFrames(set, ring))
                         val flare = if (heard && playing) {
                             val since = OrbitClock.framesSinceFiring(set, ring, hit, frame)
                             (1f - since.toFloat() / (set.sampleRate * FLARE_SECONDS)).coerceIn(0f, 1f)
@@ -1346,6 +1395,13 @@ private const val UNDO_DEPTH = 40
 /** A held BPM button waits this long before it runs, then steps every [REPEAT_EVERY_MS]. */
 private const val REPEAT_AFTER_MS = 400L
 private const val REPEAT_EVERY_MS = 90L
+
+/** One tap on LEVEL − / +, as a share of full; and the loudest a ring goes. */
+private const val LEVEL_STEP = 0.1f
+private const val MAX_LEVEL = 1.5f
+
+/** One tap on PAN ◀ / ▶: a quarter of the way. */
+private const val PAN_STEP = 0.25f
 
 /** How long after the ear a thumb lands, taken off a REC tap along with the output buffer. */
 private const val REC_TOUCH_MS = 30

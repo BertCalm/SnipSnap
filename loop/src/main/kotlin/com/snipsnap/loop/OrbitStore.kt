@@ -48,6 +48,7 @@ object OrbitStore {
             "version" to num(VERSION),
             "bpm" to num(set.bpm),
             "lapSteps" to num(set.lapSteps),
+            "swing" to num(set.swing),
             "sampleRate" to num(set.sampleRate),
             "orbits" to JsonValue.Arr(set.orbits.map { orbitJson(it) }),
         ),
@@ -101,6 +102,8 @@ object OrbitStore {
             bpm = (obj["bpm"]?.num() ?: 90.0).toFloat(),
             sampleRate = obj["sampleRate"]?.int() ?: 48_000,
             lapSteps = obj["lapSteps"]?.int() ?: OrbitSet.DEFAULT_LAP_STEPS,
+            // Optional since version 3 gained it; a file without it is straight.
+            swing = obj["swing"]?.int() ?: OrbitSet.STRAIGHT_SWING,
         )
     }
 

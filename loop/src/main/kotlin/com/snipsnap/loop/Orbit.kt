@@ -1,5 +1,6 @@
 package com.snipsnap.loop
 
+import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -165,17 +166,31 @@ data class OrbitSet(
     val bpm: Float,
     val sampleRate: Int,
     val lapSteps: Int = DEFAULT_LAP_STEPS,
+    /**
+     * Swing as the MPC counts it, [STRAIGHT_SWING] to [MAX_SWING]: the share
+     * of each pair of 16ths the first one takes. 50 is straight; 66 is a
+     * triplet feel; 75 pushes every offbeat 16th to the dotted-8th. It
+     * moves the odd steps of any ring whose step is a 16th ([OrbitClock.swingFrames]).
+     */
+    val swing: Int = STRAIGHT_SWING,
 ) {
     init {
         require(orbits.size <= MAX_ORBITS) { "at most $MAX_ORBITS rings, got ${orbits.size}" }
         require(bpm in MIN_BPM..MAX_BPM) { "bpm out of range: $bpm" }
         require(sampleRate > 0) { "sampleRate must be positive: $sampleRate" }
         require(lapSteps in 1..Orbit.MAX_STEPS) { "lapSteps must be 1..${Orbit.MAX_STEPS}: $lapSteps" }
+        require(swing in STRAIGHT_SWING..MAX_SWING) { "swing must be $STRAIGHT_SWING..$MAX_SWING: $swing" }
     }
 
     companion object {
         const val MAX_ORBITS = 8
         const val DEFAULT_LAP_STEPS = 16
+
+        const val STRAIGHT_SWING = 50
+        const val MAX_SWING = 75
+
+        /** The swings worth a chip: the MPC's own ladder, straight to dotted. */
+        val SWING_CHOICES: List<Int> = listOf(50, 54, 58, 62, 66, 71, 75)
 
         /** The bars worth a chip: the common meters, all even so a half-bar span stays whole. */
         val BAR_CHOICES: List<Int> = listOf(12, 16, 20, 24, 32)
@@ -261,9 +276,25 @@ object OrbitClock {
     fun ringStepFrames(set: OrbitSet, orbit: Orbit): Double =
         periodFrames(set, orbit).toDouble() / orbit.steps
 
-    /** The frame, within a lap, on which [step] fires. */
+    /** The frame, within a lap, on which [step] fires — its grid place plus the swing, if any. */
     fun stepOffset(set: OrbitSet, orbit: Orbit, step: Int): Long =
-        (step * ringStepFrames(set, orbit)).roundToLong()
+        (step * ringStepFrames(set, orbit) + swingFrames(set, orbit, step)).roundToLong()
+
+    /**
+     * How late [step] fires for the set's swing: nothing on an even step,
+     * nothing on a ring whose step is not a 16th (a 3-step ring across a
+     * bar has no offbeat 16ths to push), else (swing − 50) / 50 of a step
+     * — the MPC's own arithmetic, where 66 makes the pair a triplet.
+     */
+    fun swingFrames(set: OrbitSet, orbit: Orbit, step: Int): Double {
+        if (step % 2 == 0 || set.swing == OrbitSet.STRAIGHT_SWING) return 0.0
+        if (!stepIsSixteenth(set, orbit)) return 0.0
+        return (set.swing - OrbitSet.STRAIGHT_SWING) / 50.0 * stepFrames(set)
+    }
+
+    /** Whether [orbit]'s step is one 16th of the set's tempo — every free ring's is, and a spanned ring's when its steps fill its laps. */
+    fun stepIsSixteenth(set: OrbitSet, orbit: Orbit): Boolean =
+        abs(ringStepFrames(set, orbit) - stepFrames(set)) < 0.5
 
     /** How far round the ring the playhead is at [frame], 0 inclusive to 1 exclusive. */
     fun phase(set: OrbitSet, orbit: Orbit, frame: Long): Double {

@@ -62,6 +62,15 @@ class OrbitClipTest {
     }
 
     @Test
+    fun `swing rides into the clip as late pulses on the odd 16ths`() {
+        val s = OrbitSet(listOf(pattern("hats", 16, 3, listOf(0, 1))), 120f, 48_000, swing = 66)
+        val pulses = OrbitClip.clip(s).notes.map { it.timePulses }
+        assertEquals(0L, pulses[0])
+        assertTrue(pulses[1] > Mpc3Clip.PULSES_PER_16TH && pulses[1] < 2 * Mpc3Clip.PULSES_PER_16TH, "odd 16th late but before the next: ${pulses[1]}")
+        assertEquals(Math.round(1.32 * Mpc3Clip.PULSES_PER_16TH), pulses[1])
+    }
+
+    @Test
     fun `muted rings and snip rings leave no notes`() {
         val s = set(
             pattern("off", 16, 1, listOf(0), engaged = false),

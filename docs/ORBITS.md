@@ -66,6 +66,27 @@ That is the "4/4 × 2 = 8/4" observation kept apart from span: changing
 the bar changes every spanned ring's meaning at once; changing a span
 changes one ring's. Every change to the bar is one UNDO.
 
+## Swing
+
+The set carries a swing as the MPC counts it, `OrbitSet.swing`, 50 to 75
+(`SWING_CHOICES`: 50 · 54 · 58 · 62 · 66 · 71 · 75, a row of chips in
+THE SET). It is the share of each pair of 16ths the first takes: 50 is
+straight, 66 a triplet feel, 75 the dotted-8th. `OrbitClock.swingFrames`
+pushes every **odd step** late by (swing − 50) / 50 of a 16th, on every
+ring whose step *is* a 16th (`stepIsSixteenth`: every free ring, and a
+spanned ring whose steps fill its laps). A 3-step ring across a bar has no
+offbeat 16ths to push and is left straight. The offset lives in
+`stepOffset`, so the engine, the strike flare, the bounce and the MPC clip
+all carry it, and the ring draws each hit where it fires — a swung offbeat
+sits late on the ring as it does in time.
+
+## Level and pan
+
+Every ring has a level (0 to 150 %, in tenths) and a pan (quarter by
+quarter, L 100 to R 100) on its panel; the mixer applied both since the
+first build and the panel now reaches them. Tap the readout to put a
+level back to 100 or a pan back to centre.
+
 ## A ring's voice
 
 A pattern ring has a *voice*: the pads it may play, in the order they are
@@ -193,7 +214,6 @@ words when the cycle passes 64 bars (`OrbitClip.refusal`):
 
 ## Not yet
 
-- **Swing on a ring.** Hits carry a weight but no timing offset yet.
 - **Hardware verification** of the Android screen: the cloud session
   cannot compile `:app` (see `app/README.md`), so the screen is reviewed
   Kotlin until CI's `android-build` job or a desktop build has been through
