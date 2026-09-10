@@ -179,16 +179,6 @@ val MENU_ITEMS = listOf(
 )
 
 /**
- * The width kept clear at each end of the menu row for its overflow cue.
- *
- * Narrow on purpose. The eleven tabs already run about 34dp past the
- * usable width at the 390dp design frame, so every dp spent here hides
- * a little more of what it is pointing at — enough to be seen, and no
- * more than that.
- */
-private const val MENU_EDGE_W = 12
-
-/**
  * One end of the menu row: an arrow while there are tabs that way, and
  * an empty gutter of the same width while there are not.
  *
@@ -206,7 +196,7 @@ private fun MenuEdge(glyph: String, showing: Boolean) {
     val scheme = LocalScheme.current
     Box(
         Modifier
-            .width(MENU_EDGE_W.dp)
+            .width(Layout.MENU_EDGE_W.dp)
             .fillMaxHeight()
             .clearAndSetSemantics { },
         contentAlignment = Alignment.Center,

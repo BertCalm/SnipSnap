@@ -551,9 +551,14 @@ class UatSimTest {
         // 9sp pixel face + 0.5sp tracking ≈ 6dp/char; 4dp padding each side per tab.
         val perChar = 6.0
         val width = tabs.sumOf { it.length * perChar + 8 }
-        // The window frame's own 6dp each side, and since finding 10 the
-        // 12dp gutter MenuRow keeps clear at each end for its arrows.
-        val usable = Layout.FRAME_W - Layout.OUTER_MARGIN * 2 - 12 - 24
+        // What the row actually has to draw in: the frame's outer margin,
+        // the window frame's own 6dp border each side, and - since finding
+        // 10 - the gutter MenuRow keeps clear at each end for its arrows.
+        // The gutter is read from Layout rather than written again here,
+        // so this arithmetic cannot drift away from what MenuRow draws.
+        val windowFrame = 6 * 2
+        val gutters = Layout.MENU_EDGE_W * 2
+        val usable = Layout.FRAME_W - Layout.OUTER_MARGIN * 2 - windowFrame - gutters
         say("  menu row: ${tabs.size} tabs, estimated ${"%.0f".format(width)}dp wide")
         say("  usable width at the ${Layout.FRAME_W}dp design frame: ${usable}dp")
         var run = 0.0

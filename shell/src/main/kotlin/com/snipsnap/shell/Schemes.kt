@@ -363,6 +363,21 @@ object Layout {
      */
     const val MENU_ROW_H = 48
 
+    /**
+     * The width kept clear at each end of the menu row for its overflow
+     * cue — the arrow that says there are more tabs that way (September
+     * UAT, finding 10).
+     *
+     * Narrow on purpose. The eleven tabs already run past the usable width
+     * at the design frame, so every dp spent here hides a little more of
+     * what it is pointing at.
+     *
+     * It lives here rather than in `MenuRow` because it is not only that
+     * composable's business: the UAT sim measures what fits in the row,
+     * and a gutter width with two homes is a gutter width that drifts.
+     */
+    const val MENU_EDGE_W = 12
+
     const val STATUS_BAR_H = 26
     const val LCD_HEADER_H = 40
     const val PAD_GAP = 8
