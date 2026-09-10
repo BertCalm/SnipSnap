@@ -57,6 +57,17 @@ class OrbitStoreTest {
     }
 
     @Test
+    fun `swing round-trips, and a file without it is straight`() {
+        val dir = tempDir()
+        OrbitStore.save(sample.copy(swing = 66), dir)
+        assertEquals(66, OrbitStore.load(dir).swing)
+        OrbitStore.save(sample, dir)
+        val text = File(dir, OrbitStore.FILE_NAME).readText().replace(Regex(""""swing":\s*\d+,?"""), "")
+        File(dir, OrbitStore.FILE_NAME).writeText(text)
+        assertEquals(OrbitSet.STRAIGHT_SWING, OrbitStore.load(dir).swing)
+    }
+
+    @Test
     fun `every bar offered round-trips`() {
         val dir = tempDir()
         for (lap in OrbitSet.BAR_CHOICES) {

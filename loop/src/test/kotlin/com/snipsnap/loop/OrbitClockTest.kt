@@ -344,3 +344,43 @@ class OrbitNearestStepTest {
         assertEquals(0, OrbitClock.nearestStep(s, ring, 16 * step + 1))
     }
 }
+
+class OrbitSwingTest {
+
+    private fun ring(steps: Int, span: OrbitSpan = OrbitSpan.FREE, hits: List<Int>) =
+        Orbit("r", steps, PatternOrbit("kit", hits.map { OrbitHit(it, 1) }), span = span)
+
+    private fun set(swing: Int, vararg orbits: Orbit) = OrbitSet(orbits.toList(), 120f, 48_000, swing = swing)
+
+    @Test
+    fun `swing pushes the odd 16ths late by the MPC's share, and leaves the even ones`() {
+        val r = ring(16, hits = listOf(0, 1, 2, 3))
+        val step = OrbitClock.stepFrames(set(50)).toLong()
+        val straight = OrbitClock.firings(set(50, r), r, 0, 4 * step).map { it.frame }
+        assertEquals(listOf(0L, step, 2 * step, 3 * step), straight)
+        val triplet = OrbitClock.firings(set(66, r), r, 0, 4 * step + step).map { it.frame }
+        val late = Math.round(0.32 * step)
+        assertEquals(listOf(0L, step + late, 2 * step, 3 * step + late), triplet)
+        val dotted = OrbitClock.firings(set(75, r), r, 0, 4 * step + step).map { it.frame }
+        assertEquals(listOf(0L, step + step / 2, 2 * step, 3 * step + step / 2), dotted)
+    }
+
+    @Test
+    fun `a ring whose step is not a 16th is left straight`() {
+        val three = ring(3, OrbitSpan.ONE, hits = listOf(0, 1, 2))
+        val s = set(75, three)
+        assertEquals(0.0, OrbitClock.swingFrames(s, three, 1))
+        val twenty = ring(20, hits = listOf(1))
+        assertTrue(OrbitClock.stepIsSixteenth(s, twenty), "a free ring's step is always a 16th")
+        val full = ring(16, OrbitSpan.ONE, hits = listOf(1))
+        assertTrue(OrbitClock.stepIsSixteenth(s, full), "16 steps across one 16-step bar is 16ths too")
+        assertTrue(!OrbitClock.stepIsSixteenth(s, three))
+    }
+
+    @Test
+    fun `the swing ladder and its bounds`() {
+        assertEquals(listOf(50, 54, 58, 62, 66, 71, 75), OrbitSet.SWING_CHOICES)
+        assertTrue(runCatching { set(49) }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { set(76) }.exceptionOrNull() is IllegalArgumentException)
+    }
+}
