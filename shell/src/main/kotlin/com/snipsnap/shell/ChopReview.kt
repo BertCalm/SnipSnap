@@ -66,6 +66,24 @@ class ChopReviewModel private constructor(
         row.override = CHIP_CYCLE[(at + 1) % CHIP_CYCLE.size]
     }
 
+    /**
+     * Say outright what a slice is, in one move.
+     *
+     * The September UAT's finding 6, the worst number in the report: with
+     * [cycleLabel] the only way to correct a chip, and the cycle running one
+     * direction through ten classes with no back step, relabelling a
+     * 16-slice kit could cost **144 taps** — and overshooting your target by
+     * one meant going round again.
+     *
+     * Picking the class the classifier already chose is agreement, not
+     * correction: [Row.overridden] compares against the classification
+     * rather than merely testing for a set override, so the "YOU ✓" marker
+     * stays honest either way.
+     */
+    fun setLabel(index: Int, dc: DrumClass) {
+        rows[index].override = dc
+    }
+
     /** Put the classifier's call back on one chip. */
     fun clearOverride(index: Int) {
         rows[index].override = null
