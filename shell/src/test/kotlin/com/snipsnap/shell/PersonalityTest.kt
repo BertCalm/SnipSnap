@@ -197,6 +197,30 @@ class PersonalityTest {
     }
 
     /**
+     * Finding 13. NONE takes a treatment back off now, so it has three
+     * things to say — it landed, the ghosts are in the way, or the bin
+     * never held the take — and the three have to be told apart. Two of
+     * them are `const`s the reflective law already shouts at; [Copy.unTreated]
+     * is a function, which that law cannot see, so it is checked here.
+     */
+    @Test
+    fun `the un-treat says which of its three answers it is giving`() {
+        val landed = Copy.unTreated("KICK")
+        assertTrue(landed.contains("KICK"), "it names the pad it gave back: $landed")
+        assertTrue(landed.contains("BIN"), "the bin is where the take came from, and the user has to learn that: $landed")
+        assertEquals(landed.uppercase(Locale.ROOT), landed, "TapeOS shouts: $landed")
+        assertTrue(landed.endsWith("."), "a toast lands on a full stop: $landed")
+
+        // The three answers are three sentences, not one sentence three times.
+        val answers = listOf(landed, Copy.RETREAT_REFUSED, Copy.UNTREAT_NOT_BINNED)
+        assertEquals(answers.size, answers.toSet().size, "a refusal that reads like a success teaches nothing: $answers")
+        // The two refusals say what is in the way, and neither claims a restore.
+        assertTrue(Copy.RETREAT_REFUSED.contains("GHOSTS"), Copy.RETREAT_REFUSED)
+        assertTrue(Copy.UNTREAT_NOT_BINNED.contains("BIN"), Copy.UNTREAT_NOT_BINNED)
+        assertFalse(Copy.UNTREAT_NOT_BINNED.contains("BACK"), "nothing came back: ${Copy.UNTREAT_NOT_BINNED}")
+    }
+
+    /**
      * The legend that replaced the expiring toast (UAT findings 4 and 5).
      * It has to name the gesture, because it is the only thing on screen
      * that does — the toast it backstops can be dismissed forever.
