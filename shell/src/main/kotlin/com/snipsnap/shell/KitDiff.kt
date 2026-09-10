@@ -47,7 +47,9 @@ object KitDiff {
             out += Change(null, "KEY ${from.key?.label?.uppercase() ?: "NONE"} → ${to.key?.label?.uppercase() ?: "NONE"}")
         }
         if (from.tempoBpm != to.tempoBpm) {
-            out += Change(null, "TEMPO ${from.tempoBpm?.let { fmt1(it) } ?: "NONE"} → ${to.tempoBpm?.let { fmt1(it) } ?: "NONE"} BPM")
+            // The unit rides each value, so a cleared tempo reads "92.5 BPM
+            // → NONE", never "92.5 → NONE BPM".
+            out += Change(null, "TEMPO ${bpm(from.tempoBpm)} → ${bpm(to.tempoBpm)}")
         }
         // Bound to locals first: these are `val`s of a class from another
         // module, and Kotlin won't smart-cast those after a null check.
@@ -60,7 +62,7 @@ object KitDiff {
                     wearA == null -> "TAPE WEAR ON"
                     wearB == null -> "TAPE WEAR OFF"
                     wearA.enabled != wearB.enabled -> if (wearB.enabled) "TAPE WEAR ON" else "TAPE WEAR PAUSED"
-                    else -> "TAPE WEAR ${fmt1(wearA.mileage.toFloat())} → ${fmt1(wearB.mileage.toFloat())} MILES"
+                    else -> "TAPE WEAR ${fmt1(wearA.mileage)} → ${fmt1(wearB.mileage)} MILES"
                 },
             )
         }
@@ -191,6 +193,9 @@ object KitDiff {
     }
 
     private fun signed(v: Int): String = if (v > 0) "+$v" else "$v"
+    private fun bpm(v: Float?): String = if (v == null) "NONE" else "${fmt1(v)} BPM"
     private fun fmt1(v: Float): String = String.format(Locale.ROOT, "%.1f", v)
+    /** Mileage is a Double on the ledger — formatted as one, not through a Float that could move the tenth. */
+    private fun fmt1(v: Double): String = String.format(Locale.ROOT, "%.1f", v)
     private fun fmt2(v: Float): String = String.format(Locale.ROOT, "%.2f", v)
 }

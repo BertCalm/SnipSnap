@@ -154,6 +154,22 @@ class KitDiffTest {
     }
 
     @Test
+    fun `a cleared tempo keeps the unit on the value, and mileage is formatted as the Double it is`() {
+        val tempo = Kit("drums", listOf(pad(1)), tempoBpm = 92.5f)
+        val cleared = tempo.copy(tempoBpm = null)
+        assertEquals(listOf("TEMPO 92.5 BPM → NONE"), texts(tempo, cleared))
+        assertEquals(listOf("TEMPO 92.5 BPM → 120.0 BPM"), texts(tempo, tempo.copy(tempoBpm = 120f)))
+
+        // 16777216.75 is exact as a Double but not as a Float — above 2^24 a
+        // Float steps by 2, so a cast would print 16777216.0 here. `%.1f`
+        // rounds HALF_UP, hence .25 → .3 and .75 → .8.
+        val worn = Kit("drums", listOf(pad(1)), wear = WearLedger(mileage = 1234567.25))
+        val more = worn.copy(wear = WearLedger(mileage = 16777216.75))
+        assertEquals(listOf("TAPE WEAR 1234567.3 → 16777216.8 MILES"), texts(worn, more))
+        assertEquals(listOf("TAPE WEAR PAUSED"), texts(worn, worn.copy(wear = WearLedger(mileage = 1234567.25, enabled = false))))
+    }
+
+    @Test
     fun `provenance alone is not a change`() {
         val a = pad(1)
         val b = a.copy(source = mapOf("app" to "SnipSnap", "outside" to "REAMP"))
