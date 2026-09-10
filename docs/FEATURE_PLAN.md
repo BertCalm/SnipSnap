@@ -2084,8 +2084,9 @@ APP+CORE wave TTT: ✓ all landed (2026-09-10) — SINCE T3, the TAKES card
   wear. Provenance (`source`) is deliberately not a change. Every take
   row on VERSIONS + BIN now carries a collapsed headline ("3 CHANGES",
   "NO CHANGES") and taps open to the lines, read against the live kit at
-  the moment the list was built; a take that won't parse says so instead
-  of pretending. One caveat under every expander, because it is true:
+  the moment the list was built; the open row is keyed by (file, mtime),
+  the same identity RESTORE checks, since rotation recycles take paths.
+  One caveat under every expander, because it is true:
   `replaceAudio` rewrites the WAV under the SAME filename and records
   what it did in the recipe, so a rewrite that changed no recipe leaves
   no mark this diff can see.

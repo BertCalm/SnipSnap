@@ -1,10 +1,12 @@
 package com.snipsnap.shell
 
 import com.snipsnap.json.JsonValue
+import com.snipsnap.kit.ChainInfo
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.xpm.PadNoteMap
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /**
  * SINCE T3: what changed between two snapshots of one kit, said in the
@@ -100,7 +102,9 @@ object KitDiff {
     fun recipeName(recipe: JsonValue.Obj): String {
         PadSheet.read(recipe)?.let { applied ->
             val word = applied.segment?.let { PadSheet.displayLabel(it) } ?: applied.treatment.name.uppercase()
-            return "$word ${(applied.amount * 100).toInt()}%"
+            // Rounded, not truncated — the AMT stepper on the card itself
+            // prints `roundToInt()`, and this line must agree with it.
+            return "$word ${(applied.amount * 100).roundToInt()}%"
         }
         MutateSheet.read(recipe)?.let { return "MUTATED: ${it.word}" }
         OutsideSheet.read(recipe)?.let { return "OUTSIDE: ${it.move}" }
@@ -157,11 +161,24 @@ object KitDiff {
         if (chainA != chainB) {
             parts += when {
                 chainB == null -> "UNCHAINED"
-                chainA == null -> "CHAINED ×${chainB.boundaries.size}"
-                else -> "CHAIN ×${chainA.boundaries.size} → ×${chainB.boundaries.size}"
+                chainA == null -> "CHAINED: ${chainWord(chainB)}"
+                else -> "CHAIN ${chainWord(chainA)} → ${chainWord(chainB)}"
             }
         }
         return parts
+    }
+
+    /**
+     * A chain in the two numbers that matter: how many slices the WAV holds,
+     * and what a hit actually steps through — `PadHit` plays
+     * `zone?.cycle ?: chain.cycle`, so a single-zone chain is named by its
+     * cycle and a zoned one by its zone count (each zone carries its own
+     * cycle; naming just one of them would be a lie about the rest).
+     */
+    private fun chainWord(c: ChainInfo): String {
+        val zones = c.zones
+        val play = if (zones != null) "${zones.size} ZONES" else "CYCLE ${c.cycle}"
+        return "${c.boundaries.size} SLICES, $play"
     }
 
     /** A pad's zone count as the card says it: 1 for the classic single-sample pad, else its layers. */

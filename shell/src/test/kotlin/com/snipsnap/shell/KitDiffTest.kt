@@ -4,6 +4,7 @@ import com.snipsnap.audio.KeySpec
 import com.snipsnap.audio.Scale
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.ChainInfo
+import com.snipsnap.kit.ChainZone
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitLayer
 import com.snipsnap.kit.KitPad
@@ -109,9 +110,26 @@ class KitDiffTest {
         )
         assertEquals(listOf("A01 LAYERS 1 → 2"), texts(kit(a), kit(layered)))
 
-        val chained = a.copy(chain = ChainInfo(boundaries = listOf(0L, 1000L, 2000L), cycle = 3))
-        assertEquals(listOf("A01 CHAINED ×3"), texts(kit(a), kit(chained)))
+        // Four slices that cycle only three: both numbers are said, because
+        // `PadHit` plays the cycle and the WAV holds the slices.
+        val chained = a.copy(chain = ChainInfo(boundaries = listOf(0L, 1000L, 2000L, 3000L), cycle = 3))
+        assertEquals(listOf("A01 CHAINED: 4 SLICES, CYCLE 3"), texts(kit(a), kit(chained)))
         assertEquals(listOf("A01 UNCHAINED"), texts(kit(chained), kit(a)))
+
+        val zoned = a.copy(
+            chain = ChainInfo(
+                boundaries = listOf(0L, 1000L, 2000L, 3000L),
+                cycle = 2,
+                zones = listOf(ChainZone(0, 63, 0, 2), ChainZone(64, 127, 2, 2)),
+            ),
+        )
+        assertEquals(listOf("A01 CHAIN 4 SLICES, CYCLE 3 → 4 SLICES, 2 ZONES"), texts(kit(chained), kit(zoned)))
+    }
+
+    @Test
+    fun `the AMT is rounded the way the card's own stepper prints it`() {
+        val recipe = obj("era" to JsonValue.Str("sp1200"), "amount" to JsonValue.Num(0.346))
+        assertEquals("CRUSH 35%", KitDiff.recipeName(recipe), "roundToInt, not toInt — PadSheetScreen prints 35% for this pad")
     }
 
     @Test

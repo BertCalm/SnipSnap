@@ -121,10 +121,13 @@ fun TakesBinScreen(
     var takeScans by remember(model) { mutableStateOf<List<TakeScan>>(emptyList()) }
     var binEntries by remember(model) { mutableStateOf<List<KitBuilderModel.BinEntry>>(emptyList()) }
     var kitSnapshot by remember(model) { mutableStateOf(entry.kit) }
-    // SINCE T3: which take row is open. A File, not an index — rows are
-    // rebuilt on every refresh and the same T-number can name a different
-    // archive after a rotation, so the open row follows the file it named.
-    var expandedTake by remember(model) { mutableStateOf<File?>(null) }
+    // SINCE T3: which take row is open, as (file, mtime) — the same identity
+    // `doRestoreTake` checks, for the same reason (see its KDoc): rows are
+    // rebuilt on every refresh, T-numbers shift, and `take_NNN.json` paths
+    // get RECYCLED by rotation, so neither an index nor a bare File can say
+    // "the archive the user opened". A rotation that lands a different
+    // archive on the same path simply collapses the expander.
+    var expandedTake by remember(model) { mutableStateOf<TakeKey?>(null) }
 
     /**
      * `m.takes()`/`m.binContents()` are pure directory scans — they read
@@ -139,14 +142,19 @@ fun TakesBinScreen(
      * [doRestoreTake], which DOES change what's live, and the initial load
      * below, which has nothing to preserve yet, pass one.
      *
-     * SINCE T3 rides the same scan: each take is parsed once here, on IO,
-     * and diffed against the kit that is live *as of this refresh* (the
+     * SINCE T3 rides the same scan: each take is parsed here, on IO, and
+     * diffed against the kit that is live *as of this refresh* (the
      * override when there is one, else the standing snapshot), so the
-     * expander never reads a take file a second time on the main thread
-     * and never compares against a kit older than the list it sits in. A
-     * take that won't parse keeps its row — RESTORE will find out for
-     * itself — with `changes = null` so the row can say so instead of
-     * showing "NO CHANGES" for a file nothing could read.
+     * expander never reads a take file on the main thread and never
+     * compares against a kit older than the list it sits in. `m.takes()`
+     * has already dropped every take that won't parse (its own KDoc: a
+     * torn archive must never break the history), so `changes = null`
+     * here does NOT mean "a corrupt file" — it means the path changed
+     * hands between that listing and this read: a save's rotation racing
+     * the refresh, which the `doRestoreTake` KDoc explains can put a
+     * different archive, or none, at the same `take_NNN.json`. Rare, and
+     * the row still says so ("WON'T READ") rather than showing "NO
+     * CHANGES" for a file this read never saw.
      */
     suspend fun refreshLists(m: KitBuilderModel, kitOverride: com.snipsnap.kit.Kit? = null) {
         val live = kitOverride ?: kitSnapshot
@@ -446,13 +454,13 @@ fun TakesBinScreen(
             // different features (name-and-find followups).
             PillCard("TAKES — YOUR VERSION HISTORY, EVERY SAVE", scheme, scheme.accent.tape, scheme.accent.tape) {
                 for (row in takeRows) {
-                    val file = row.file
+                    val key = row.file?.let { TakeKey(it, row.lastModifiedMillis) }
                     TakeRowLine(
                         row,
                         scheme,
                         busy,
-                        expanded = file != null && file == expandedTake,
-                        onToggle = { if (file != null) expandedTake = if (expandedTake == file) null else file },
+                        expanded = key != null && key == expandedTake,
+                        onToggle = { if (key != null) expandedTake = if (expandedTake == key) null else key },
                     ) { f, label, mtime -> doRestoreTake(f, label, mtime) }
                 }
                 if (takeRows.size == 1) {
@@ -479,8 +487,11 @@ fun TakesBinScreen(
     }
 }
 
-/** One archived take as `refreshLists` scanned it: the file, its mtime at scan time, and its SINCE T3 lines against the kit live at that moment (null = the file wouldn't parse). */
+/** One archived take as `refreshLists` scanned it: the file, its mtime at scan time, and its SINCE T3 lines against the kit live at that moment (null = the path changed hands mid-scan; see `refreshLists`). */
 private data class TakeScan(val file: File, val lastModifiedMillis: Long, val changes: List<KitDiff.Change>?)
+
+/** The identity of one archive instance — a recycled `take_NNN.json` path plus the mtime it had when listed. What the SINCE T3 expander is keyed on. */
+private data class TakeKey(val file: File, val lastModifiedMillis: Long)
 
 private data class TakeRow(
     val label: String,
@@ -489,7 +500,7 @@ private data class TakeRow(
     val file: File?,
     /** [file]'s `lastModified()` as read when this row was built — [doRestoreTake]'s own identity check, see its KDoc. Meaningless (0L) on the `current`/no-`file` row. */
     val lastModifiedMillis: Long,
-    /** SINCE T3: what the live kit differs by from this take. Null on the `current` row (nothing to compare) and on a take that wouldn't parse — the row text tells the two apart by [current]. */
+    /** SINCE T3: what the live kit differs by from this take. Null on the `current` row (nothing to compare) and on a take whose path changed hands mid-scan (`TakeScan.changes`) — the row text tells the two apart by [current]. */
     val changes: List<KitDiff.Change>?,
 )
 
@@ -536,7 +547,8 @@ private fun agoLabel(millis: Long, nowMillis: Long = System.currentTimeMillis())
  * tap-to-open SINCE T3 expander (the whole header line toggles it, the
  * RESTORE chip inside keeps its own tap) whose collapsed headline is
  * `KitDiff.headline` — "3 CHANGES", "NO CHANGES" — or WON'T READ when the
- * take file didn't parse. Open, it lists the lines the diff found, then
+ * path changed hands between `takes()`'s listing and the diff's own read
+ * (see `refreshLists`). Open, it lists the lines the diff found, then
  * [Copy.TAKES_DIFF_CAVEAT], because the one thing this diff cannot see
  * (audio rewritten under the same name with no recipe change) is exactly
  * the thing a reader would otherwise assume it covers.

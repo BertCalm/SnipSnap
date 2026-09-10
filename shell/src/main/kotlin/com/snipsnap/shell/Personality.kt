@@ -348,7 +348,7 @@ object Copy {
     // ---- SINCE T3: the TAKES card's expander (Spec Sheet II #03) ----
     /** The expander's one honest limit: `KitDiff` reads `kit.json`, and a rewrite that touched no recipe leaves no mark there. */
     const val TAKES_DIFF_CAVEAT = "SETTINGS AND RECIPES ONLY. AUDIO REDRAWN UNDER THE SAME NAME LEAVES NO MARK HERE."
-    /** The take file wouldn't parse for the diff — it is still listed, and RESTORE still has to find out for itself. */
+    /** The take's path changed hands between `takes()` listing it and the diff reading it (a rotation racing the refresh) — the row stays, RESTORE's own identity check decides. */
     const val TAKES_DIFF_UNREADABLE = "THIS TAKE WON'T READ. NOTHING TO COMPARE."
 
     // ---- GROOVE ----
