@@ -55,6 +55,7 @@ import com.snipsnap.app.ui.KeysScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.MenuRow
 import com.snipsnap.app.ui.MessageBox
+import com.snipsnap.app.ui.OrbitScreen
 import com.snipsnap.app.ui.PadCaptureScreen
 import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.PlayScreen
@@ -264,6 +265,8 @@ fun App(shelf: KitShelf) {
     // reachable only from GROOVE's own "SONG ▸" button, not one of MenuRow's
     // fixed ten, so a boolean here rather than its own AppScreen entry.
     var arrangeOpen by remember { mutableStateOf(false) }
+    /** ORBIT: GROOVE's other overlay, the circular sequencer — same lifecycle as [arrangeOpen]. */
+    var orbitOpen by remember { mutableStateOf(false) }
     // SNIPS (Task 3): a shelf-level overlay, not KIT-scoped like PAD SHEET/
     // TAKES+BIN/PAD CAPTURE/GRAIN FIELD above — reachable from KitsScreen at
     // AppScreen.KITS (the shelf), one level up from those, so it's its own
@@ -633,6 +636,7 @@ fun App(shelf: KitShelf) {
                         padSheetSlot = null
                         takesBinOpen = false
                         arrangeOpen = false
+                        orbitOpen = false
                         screen = AppScreen.KIT
                     }
                     return@LaunchedEffect
@@ -653,6 +657,7 @@ fun App(shelf: KitShelf) {
             padSheetSlot = null
             takesBinOpen = false
             arrangeOpen = false
+            orbitOpen = false
             screen = AppScreen.TAPE
         } catch (e: CancellationException) {
             throw e
@@ -1315,6 +1320,7 @@ fun App(shelf: KitShelf) {
                             grainFieldSlot = null
                             spliceSlot = null
                             arrangeOpen = false
+                            orbitOpen = false
                         }
                     }
                 } else {
@@ -1437,6 +1443,7 @@ fun App(shelf: KitShelf) {
         grainFieldSlot = null
         spliceSlot = null
         arrangeOpen = false
+        orbitOpen = false
         // SNIPS is shelf-level, not KIT-scoped, but the same
         // "leaving must not leave an overlay/hand-off armed"
         // reasoning applies: a tab switch away from KITS
@@ -1472,7 +1479,7 @@ fun App(shelf: KitShelf) {
     // "◄ SHELF" chip, via `onBack`, which also silences the instrument
     // before leaving — this generic reset does not).
     val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || takesBinOpen ||
-        padCaptureSlot != null || snipsOpen || deletedKitsOpen || arrangeOpen || xray != null
+        padCaptureSlot != null || snipsOpen || deletedKitsOpen || arrangeOpen || orbitOpen || xray != null
     BackHandler(
         enabled = !anyOverlayOpen && screen != AppScreen.KITS &&
             screen != AppScreen.SPLIT && screen != AppScreen.KEYS &&
@@ -1999,7 +2006,14 @@ fun App(shelf: KitShelf) {
                         AppScreen.HELP -> HelpScreen()
                         AppScreen.GROOVE -> {
                             val songEntry = open
-                            if (arrangeOpen && songEntry != null) {
+                            if (orbitOpen && songEntry != null) {
+                                OrbitScreen(
+                                    entry = songEntry,
+                                    kitsRoot = shelf.root,
+                                    onBack = { orbitOpen = false },
+                                    onToast = { toast = it },
+                                )
+                            } else if (arrangeOpen && songEntry != null) {
                                 ArrangeScreen(
                                     entry = songEntry,
                                     onBack = { arrangeOpen = false },
@@ -2016,6 +2030,7 @@ fun App(shelf: KitShelf) {
                                     onToast = { toast = it },
                                     reloadRequest = grooveReload,
                                     onArrange = { arrangeOpen = true },
+                                    onOrbit = { orbitOpen = true },
                                 )
                             }
                         }

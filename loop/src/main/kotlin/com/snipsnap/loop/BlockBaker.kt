@@ -54,8 +54,22 @@ object BlockBaker {
         val target = session.intervalFrames
         if (stereo.frameCount == 0) return silence(session)
 
-        val drift = abs(stereo.frameCount - target).toDouble() / target
-        return if (drift <= FIT_TOLERANCE) conform(stereo, target) else retrigger(stereo, target)
+        return fitLoop(stereo, target)
+    }
+
+    /**
+     * Fit a stereo loop to exactly [targetFrames]: trim or pad when it is
+     * within [FIT_TOLERANCE] of the target, slice at the hits and re-place
+     * them on the new grid when it is not. The one fit rule for a loop on
+     * the grid ([bakeLoop]) and a snip on a ring ([OrbitBank]), so the two
+     * can never disagree about what a wrapped loop sounds like.
+     */
+    internal fun fitLoop(stereo: Snip, targetFrames: Int): Snip {
+        require(stereo.channels == 2) { "fitLoop wants stereo, got ${stereo.channels} channel(s)" }
+        require(targetFrames > 0) { "targetFrames must be positive: $targetFrames" }
+        if (stereo.frameCount == 0) return Snip(FloatArray(targetFrames * 2), 2, stereo.sampleRate)
+        val drift = abs(stereo.frameCount - targetFrames).toDouble() / targetFrames
+        return if (drift <= FIT_TOLERANCE) conform(stereo, targetFrames) else retrigger(stereo, targetFrames)
     }
 
     /**
