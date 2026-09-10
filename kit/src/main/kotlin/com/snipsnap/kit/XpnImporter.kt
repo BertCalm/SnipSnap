@@ -1,10 +1,10 @@
 package com.snipsnap.kit
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.mpc3.SafeXml
 import java.io.File
 import java.io.IOException
 import java.util.zip.ZipFile
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Reads an `.xpn` archive back into a kit folder — the receive half of
@@ -355,19 +355,11 @@ object XpnImporter {
      * billion-laughs attack through the parser.
      */
     private fun parseProgram(xml: String): ParsedProgram {
-        val dbf = DocumentBuilderFactory.newInstance().apply {
-            try {
-                setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-            } catch (_: Exception) {
-            }
-            isExpandEntityReferences = false
-            isNamespaceAware = false
-        }
         // An XML declaration must sit at byte zero; a BOM or leading
         // whitespace (both seen in real files) would otherwise make the
         // parser reject the whole document. Strip them first.
         val cleaned = xml.removePrefix("﻿").trimStart()
-        val doc = dbf.newDocumentBuilder()
+        val doc = SafeXml.newFactory().newDocumentBuilder()
             .parse(org.xml.sax.InputSource(java.io.StringReader(cleaned)))
         doc.documentElement.normalize()
 

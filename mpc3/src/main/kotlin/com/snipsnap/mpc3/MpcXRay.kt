@@ -5,7 +5,6 @@ import com.snipsnap.json.JsonValue
 import java.io.File
 import java.io.StringReader
 import java.util.zip.ZipFile
-import javax.xml.parsers.DocumentBuilderFactory
 import org.xml.sax.InputSource
 
 /**
@@ -259,16 +258,8 @@ object MpcXRay {
 
     private fun readXpm(xml: String, suffix: String): Reading {
         val doc = try {
-            val dbf = DocumentBuilderFactory.newInstance().apply {
-                try {
-                    setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-                } catch (_: Exception) {
-                }
-                isExpandEntityReferences = false
-                isNamespaceAware = false
-            }
             val cleaned = xml.removePrefix("﻿").trimStart()
-            dbf.newDocumentBuilder().parse(InputSource(StringReader(cleaned))).also { it.documentElement.normalize() }
+            SafeXml.newFactory().newDocumentBuilder().parse(InputSource(StringReader(cleaned))).also { it.documentElement.normalize() }
         } catch (e: Exception) {
             return Reading("MPC 2 (XML)$suffix", unreadable = e.message ?: "not readable XML")
         }
