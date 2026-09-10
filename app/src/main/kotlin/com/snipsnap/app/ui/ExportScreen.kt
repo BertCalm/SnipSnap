@@ -69,6 +69,7 @@ import com.snipsnap.kit.Severity
 import com.snipsnap.app.CardWriter
 import com.snipsnap.app.PREFS
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.DubStamp
 import com.snipsnap.shell.ExportWizardModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
@@ -442,6 +443,14 @@ private fun ExportContent(
                         session.overwriting = null
                         session.lastOutcome = result.outcome
                         val card = cardTree
+                        // The shelf's chip, recorded here because this is the
+                        // only place that knows a dub happened (September UAT,
+                        // finding 15). Written before the card copy is
+                        // attempted and again after it lands, so a copy that
+                        // fails leaves DUBBED rather than a false ON CARD.
+                        withContext(Dispatchers.IO) {
+                            DubStamp.write(session.dir, DubStamp.Stamp(System.currentTimeMillis(), cardTree = null))
+                        }
                         if (card == null) {
                             onToast(Copy.DUB_DONE)
                         } else {
@@ -456,6 +465,14 @@ private fun ExportContent(
                                     context,
                                     card,
                                     listOfNotNull(result.outcome.primary, result.outcome.companion),
+                                )
+                            }
+                            // Only now is it really on the card, so only now
+                            // does the stamp name one.
+                            withContext(Dispatchers.IO) {
+                                DubStamp.write(
+                                    session.dir,
+                                    DubStamp.Stamp(System.currentTimeMillis(), cardTree = card.toString()),
                                 )
                             }
                             onToast(Copy.DUB_DONE_CARD)
@@ -664,8 +681,13 @@ private fun exportShareMime(format: ExportFormat): String? = when (format) {
  * The picked card's tree URI. Stored rather than asked for each dub: a
  * card is picked once and is still the card next time the app opens,
  * which is the whole reason the grant is taken persistably.
+ *
+ * `internal`, not file-private: the kit shelf reads the same key to decide
+ * whether a kit's dub stamp may honestly say ON CARD (September UAT, finding
+ * 15). One key with two readers - if it ever gains a second definition, the
+ * chip and the wizard will disagree about which card is in the phone.
  */
-private const val PREF_CARD_TREE = "export_card_tree"
+internal const val PREF_CARD_TREE = "export_card_tree"
 
 /**
  * The format picked last time (an [ExportFormat.id]).
