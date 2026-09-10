@@ -97,16 +97,16 @@ class ExportWizardModel(
     }
 
     /**
-     * WRITE KIT. Runs the real export through [Exporters] — same driver as
-     * the CLI — and moves the stage machine. Never throws for a preflight
-     * block; that comes back as [WriteResult.Blocked] with the checklist.
-     */
-    /**
      * The browser tile for expansion/`.xpn` writes — the Z6.2 prototyping
      * verdict made waveform the default; null skips artwork entirely.
      */
     var artStyle: KitArt.Style? = KitArt.Style.WAVEFORM
 
+    /**
+     * WRITE KIT. Runs the real export through [Exporters] — same driver as
+     * the CLI — and moves the stage machine. Never throws for a preflight
+     * block; that comes back as [WriteResult.Blocked] with the checklist.
+     */
     fun write(destRoot: File, overwrite: Boolean = true): WriteResult {
         check(stage == Stage.READY) { "write() only from READY, stage is $stage" }
         runPreflight()

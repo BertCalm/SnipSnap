@@ -430,7 +430,6 @@ fun GrooveScreen(
         forkArmed = false
     }
 
-    /** Writes whatever's dirty in [eClip] right now, on [target] — shared by DONE's immediate flush and the teardown/ON_STOP safety nets. */
     /** The actual write, awaited — DONE's own flush needs to know when this is done, not just that it started. */
     suspend fun saveEditorNow() {
         if (!editorDirty) return

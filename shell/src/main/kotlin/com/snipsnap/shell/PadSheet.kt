@@ -223,14 +223,6 @@ object PadSheet {
     }
 
     /**
-     * What the card should light for a pad's recipe, read defensively:
-     * `eraPad` leaves `{"era", "amount"}`, `characterPad` (and `treatPad`,
-     * and bank B's twins) leave a `PadRecipe` carrying `treatment` +
-     * `amount`, `keyedPad` leaves `{"keyed", "key", "amount", "seed"}`. A synth patch or an fx-only recipe from any other door
-     * (`replaceAudio`, `mutate`) names neither and reads as untreated —
-     * the audio is what it is, but nothing here can claim a segment for it.
-     */
-    /**
      * SMEAR's own AMT off a pad's recipe — `{"verb":"smear","amount":x}`,
      * the `Mutate.morph` recipe idiom, not [read]'s shapes. [read] cannot
      * see SMEAR on purpose (see the object KDoc); this is its companion,
@@ -244,6 +236,14 @@ object PadSheet {
         return (recipe.entries["amount"] as? JsonValue.Num)?.value?.toFloat()
     }
 
+    /**
+     * What the card should light for a pad's recipe, read defensively:
+     * `eraPad` leaves `{"era", "amount"}`, `characterPad` (and `treatPad`,
+     * and bank B's twins) leave a `PadRecipe` carrying `treatment` +
+     * `amount`, `keyedPad` leaves `{"keyed", "key", "amount", "seed"}`. A synth patch or an fx-only recipe from any other door
+     * (`replaceAudio`, `mutate`) names neither and reads as untreated —
+     * the audio is what it is, but nothing here can claim a segment for it.
+     */
     fun read(recipe: JsonValue.Obj?): Applied? {
         if (recipe == null) return null
         val amount = (recipe.entries["amount"] as? JsonValue.Num)?.value?.toFloat()
@@ -283,8 +283,9 @@ object PadSheet {
          * The main sample can come back but a GHOSTS layer cannot — that layer
          * was rendered *from* the treated main sample and never earned its own
          * bin entry. Restoring half would leave the pad's layers treated one
-         * more time than its main sample: the "untreated underside" skew the
-         * whole-pad doors exist to avoid. Refusing says so.
+         * pass more than its main sample. That skew is what routing through
+         * the whole-pad doors exists to prevent; their own KDoc calls it an
+         * "untreated underside". Refusing says so.
          */
         GHOSTS_POSTDATE,
 
@@ -297,14 +298,6 @@ object PadSheet {
         NOT_BINNED,
     }
 
-    /**
-     * [UnTreat] for [pad], given the set of `originalName`s currently in the
-     * kit's bin (`KitBuilderModel.binContents()`).
-     *
-     * Both recipe readers are consulted: SMEAR rides its own shape and [read]
-     * cannot see it (see the object KDoc), but a smeared pad is every bit as
-     * un-treatable as an aged one.
-     */
     /**
      * Whether the card should accept a tap on [segment], given whether the
      * pad currently reads as untreated.
@@ -319,6 +312,14 @@ object PadSheet {
      */
     fun tappable(segment: String, isNoneState: Boolean): Boolean = segment != NONE || !isNoneState
 
+    /**
+     * [UnTreat] for [pad], given the set of `originalName`s currently in the
+     * kit's bin (`KitBuilderModel.binContents()`).
+     *
+     * Both recipe readers are consulted: SMEAR rides its own shape and [read]
+     * cannot see it (see the object KDoc), but a smeared pad is every bit as
+     * un-treatable as an aged one.
+     */
     fun unTreatState(pad: KitPad, binned: Set<String>): UnTreat {
         if (read(pad.recipe) == null && readSmear(pad.recipe) == null) return UnTreat.NOTHING
         if (pad.sampleFile !in binned) return UnTreat.NOT_BINNED

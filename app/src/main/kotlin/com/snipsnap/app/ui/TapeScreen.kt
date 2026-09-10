@@ -327,6 +327,9 @@ private fun EmptyDeck(scheme: Scheme) {
     }
 }
 
+/** [loadLongestTape]'s answer: the tape it settled on (if any), and whether [readMono] hit [TAPE_LOAD_MAX_SEC]'s OOM safety net along the way. */
+private class TapeLoadResult(val tape: LoadedTape?, val oomEncountered: Boolean)
+
 /**
  * TAPE's load-source priority, retroactive-snip Task 4: the newest snip
  * anywhere on the phone if one exists — a fresh capture always wins, since
@@ -337,9 +340,6 @@ private fun EmptyDeck(scheme: Scheme) {
  * exactly like any other WAV: [WavReader] + [Cleanup.toMono] is the same
  * path for all three sources.
  */
-/** [loadLongestTape]'s answer: the tape it settled on (if any), and whether [readMono] hit [TAPE_LOAD_MAX_SEC]'s OOM safety net along the way. */
-private class TapeLoadResult(val tape: LoadedTape?, val oomEncountered: Boolean)
-
 private fun loadLongestTape(entry: KitShelf.Entry?, filesDir: File, lastCommitSource: File?): TapeLoadResult {
     var oomEncountered = false
     for (file in listOfNotNull(SnipStore.newest(filesDir), lastCommitSource)) {
