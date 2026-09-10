@@ -276,6 +276,14 @@ object OrbitClock {
         floor(phase(set, orbit, frame) * orbit.steps).toInt().coerceIn(0, orbit.steps - 1)
 
     /**
+     * The step nearest [frame] on [orbit] — the one a pad tap at that
+     * moment meant, a late tap rounding back and an early one forward, the
+     * last half-step of the ring rounding to step 0 of the next turn.
+     */
+    fun nearestStep(set: OrbitSet, orbit: Orbit, frame: Long): Int =
+        Math.round(phase(set, orbit, frame) * orbit.steps).toInt() % orbit.steps
+
+    /**
      * How many 16ths before every ring is back on its downbeat together.
      *
      * The least common multiple of the ring lengths, where a bar-locked ring

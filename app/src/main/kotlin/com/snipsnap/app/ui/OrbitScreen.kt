@@ -138,7 +138,10 @@ import kotlin.math.sin
  * hear it. The panel changes the ring's step count, its span (free, or
  * ½, 1, 2 or 4 bars of the set's lap), which pads it plays, and whether
  * it is heard. Tapping the header's readout opens THE SET: the bar every
- * spanned ring is measured in (12 to 32 steps, 3/4 to 8/4).
+ * spanned ring is measured in (12 to 32 steps, 3/4 to 8/4). REC arms the
+ * strip's pad rail so a tap while playing writes a hit on the nearest
+ * step, the way a groove gets played into an MPC; ◀ ▶ turn a ring a step
+ * and DUP copies it, which is how phasing starts.
  */
 @Composable
 fun OrbitScreen(
@@ -175,6 +178,8 @@ fun OrbitScreen(
     var outOpen by remember(kitDir) { mutableStateOf(false) }
     /** Tapping the header's readout swaps the panel for THE SET: the bar, and the tempo it already shows. */
     var setPanelOpen by remember(kitDir) { mutableStateOf(false) }
+    /** REC: while armed and playing, a rail tap writes a hit on the ring's nearest step. A listening choice, never saved. */
+    var recording by remember(kitDir) { mutableStateOf(false) }
     var bouncing by remember(kitDir) { mutableStateOf(false) }
     /** A snip ring just added whose tempo the set does not match: SET it or KEEP the set's. Asked once. */
     var tempoOffer by remember(kitDir) { mutableStateOf<TempoOffer?>(null) }
@@ -465,6 +470,36 @@ fun OrbitScreen(
         }))
     }
 
+    /**
+     * A rail tap: heard always; written too while REC is armed and the
+     * transport runs, on the step nearest the moment the tap meant. The
+     * engine's frame count runs one output buffer ahead of the ear, and a
+     * thumb lands a little after the ear decides, so both come off before
+     * the step is chosen — what you meant lands where you heard it.
+     */
+    fun railTap(index: Int, slot: Int) {
+        audition(slot)
+        if (!recording || !playing) return
+        val s = set ?: return
+        val ring = s.orbits.getOrNull(index) ?: return
+        if (ring.content !is PatternOrbit || slot !in ring.pads) return
+        // Clamped at 0: in the first buffer after PLAY nothing has reached
+        // the ear yet, and a negative frame would wrap to the ring's end.
+        val heardAt = ((engine?.position() ?: return) - s.sampleRate.toLong() * (AndroidAudioSink.BUFFER_MILLIS + REC_TOUCH_MS) / 1000).coerceAtLeast(0L)
+        val step = OrbitClock.nearestStep(s, ring, heardAt)
+        updateRing(index) { OrbitPatterns.place(it, slot, step) }
+    }
+
+    /** A copy of ring [index] beside it, named one up: two of a ring, one turned or a step shorter, is how phasing starts. */
+    fun duplicateRing(index: Int) {
+        val s = set ?: return
+        val ring = s.orbits.getOrNull(index) ?: return
+        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast("EIGHT RINGS IS THE SKY"); return }
+        val copy = ring.copy(name = OrbitPatterns.copyName(ring.name))
+        commit(s.copy(orbits = s.orbits.take(index + 1) + copy + s.orbits.drop(index + 1)))
+        selected = index + 1
+    }
+
     fun deleteRing(index: Int) {
         val s = set ?: return
         if (index !in s.orbits.indices) return
@@ -635,7 +670,8 @@ fun OrbitScreen(
                     scheme = scheme,
                     onToggle = { slot, step -> toggleHit(selected, slot, step) },
                     onCycle = { slot, step -> cycleHit(selected, slot, step) },
-                    onAudition = { slot -> audition(slot) },
+                    onAudition = { slot -> railTap(selected, slot) },
+                    recording = recording,
                 )
             }
 
@@ -837,6 +873,14 @@ fun OrbitScreen(
                             SmallChip("SPREAD", scheme) { spreadOpen = true }
                             SmallChip("CLEAR", scheme) { updateRing(selected) { OrbitPatterns.clear(it) } }
                             SmallChip("⚄ DICE", scheme, description = "ROLL THE DICE") { scrambleRing(selected) }
+                            SmallChip("◀", scheme, description = "TURN ONE STEP EARLIER") { updateRing(selected) { OrbitPatterns.turn(it, -1) } }
+                            SmallChip("▶", scheme, description = "TURN ONE STEP LATER") { updateRing(selected) { OrbitPatterns.turn(it, 1) } }
+                        }
+                        SmallChip("DUP", scheme, description = "COPY THIS RING BESIDE IT") { duplicateRing(selected) }
+                        if (ring.content is PatternOrbit) {
+                            SmallChip("REC", scheme, accent = recording, description = if (recording) "REC ON — TAP TO DISARM THE RAIL" else "ARM THE RAIL TO RECORD") {
+                                recording = !recording
+                            }
                         }
                     }
                     when (val content = ring.content) {
@@ -1167,6 +1211,7 @@ private fun StripEditor(
     onToggle: (slot: Int, step: Int) -> Unit,
     onCycle: (slot: Int, step: Int) -> Unit,
     onAudition: (slot: Int) -> Unit,
+    recording: Boolean = false,
 ) {
     val content = ring.content as? PatternOrbit ?: return
     val rows = ring.pads.reversed()
@@ -1191,7 +1236,8 @@ private fun StripEditor(
                             .width(railW)
                             .height(CELL_H_DP.dp)
                             .background(scheme.field.tape, RoundedCornerShape(3.dp))
-                            .tapeClick(label = "HEAR PAD ${padLabel(slot)}") { onAudition(slot) },
+                            .border(1.dp, if (recording) scheme.accent.tape else Color.Transparent, RoundedCornerShape(3.dp))
+                            .tapeClick(label = "${if (recording) "RECORD" else "HEAR"} PAD ${padLabel(slot)}") { onAudition(slot) },
                         contentAlignment = Alignment.Center,
                     ) {
                         TapeText(padLabel(slot), TapeType.pixelSmall, color)
@@ -1300,6 +1346,9 @@ private const val UNDO_DEPTH = 40
 /** A held BPM button waits this long before it runs, then steps every [REPEAT_EVERY_MS]. */
 private const val REPEAT_AFTER_MS = 400L
 private const val REPEAT_EVERY_MS = 90L
+
+/** How long after the ear a thumb lands, taken off a REC tap along with the output buffer. */
+private const val REC_TOUCH_MS = 30
 
 /** Quiet after the last BPM tap before the set saves and its snips refit. */
 private const val BPM_SETTLE_MS = 400L
