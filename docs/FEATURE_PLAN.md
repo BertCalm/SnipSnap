@@ -2116,6 +2116,31 @@ APP+CORE wave UUU: ✓ all landed (2026-09-10) — STACK THE TAKES, a pad's
   locks TREAT / MUTATE / SPLICE / OUTSIDE until SOFT HITS is cleared, and
   clearing deletes the copies (the bin sources survive, until purge).
 
+APP+CORE wave VVV: ✓ all landed (2026-09-10) — DO IT AGAIN, COPY LAST
+  TREATMENT off one pad and PASTE it on another - "do to this snare what
+  I did to that one". Every rewritten pad carries `KitPad.recipe`; the
+  engines always promised it makes the sound re-treatable, and nothing
+  generic ever cashed it. `RecipeReplay` (`:shell`, new) `plan`s a
+  replay from the recipe's top-level key BEFORE any byte moves and
+  refuses by name what it can't carry - MUTATE (its parents are labels,
+  never bytes), SPLICE (names no takes), OUTSIDE (a room, not a
+  setting), CLEAN / THE DOCTOR / SCULPT (measurements of that exact
+  sound) - then `apply`s the rest through the model's own doors so
+  every destination guard stays where it lives: era and character with
+  their AMT, the keyed family with every dial the writer wrote (seed,
+  decay, division, tail, knee), SMEAR (its inline rewrite lifted out of
+  PAD SHEET into `KitBuilderModel.smearPad` on the way), a synth patch
+  (which REPLACES the sound, and the toast says so), round robin (same
+  recipe, new deal - the seed mixes with the slot). One honest limit
+  said on the button: the recipe is the LAST step, not the stack, so a
+  crushed-then-washed pad copies as washed. One honest surprise named
+  in the toast: a keyed recipe reads the DESTINATION kit's key - bodied
+  in C major pasted into a D-minor kit rings D minor, "THE SOURCE WAS C
+  MAJOR". The clipboard lives in `App` for the session and survives a
+  kit switch (the cross-kit case is the point); PAD SHEET's TREATMENT
+  box carries COPY LAST TREATMENT / PASTE ▸. CLI: `snipsnap recipe
+  <kit> <pad> --from <kit>:<pad>`.
+
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
   F6.1 .xpn import + expansion tile → velocity/bank B →

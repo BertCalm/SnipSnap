@@ -75,7 +75,6 @@ import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Outside
-import com.snipsnap.audio.Smear
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.json.JsonValue
@@ -95,6 +94,7 @@ import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PeaksPyramid
+import com.snipsnap.shell.RecipeReplay
 import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
@@ -155,6 +155,10 @@ fun PadSheetScreen(
     onSplice: (Int) -> Unit,
     /** STACK ▸: opens STACK THE TAKES scoped to this pad - its real prior takes as soft velocity zones, over the same history SPLICE reads. */
     onStack: (Int) -> Unit,
+    /** DO IT AGAIN: what COPY LAST TREATMENT last lifted, held by the caller so it survives a kit switch - PASTE reads it. */
+    clipboard: RecipeReplay.Clip? = null,
+    /** DO IT AGAIN: COPY LAST TREATMENT hands the clip up here; the caller keeps it. */
+    onRecipeCopied: (RecipeReplay.Clip) -> Unit = {},
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
     appScope: CoroutineScope,
     /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name), remembered per kit by the caller. */
@@ -466,28 +470,10 @@ fun PadSheetScreen(
                         check(freshPad.velocityLayers.isEmpty()) {
                             "pad $slot is velocity-layered - clear GHOSTS before smearing"
                         }
-                        if (readSmearRecipe(freshPad.recipe) != null) f.untreatPad(slot)
-                        if (amount > 0f) {
-                            val recipe = JsonValue.Obj(
-                                mapOf(
-                                    "verb" to JsonValue.Str("smear"),
-                                    "amount" to JsonValue.Num(amount.toDouble()),
-                                ),
-                            )
-                            f.replaceAudio(slot, recipe) { snip ->
-                                val smeared = Smear.process(snip, amount)
-                                if (snip.channels == 2 && smeared.channels == 1) {
-                                    val stereo = FloatArray(smeared.frameCount * 2)
-                                    for (i in 0 until smeared.frameCount) {
-                                        stereo[i * 2] = smeared.samples[i]
-                                        stereo[i * 2 + 1] = smeared.samples[i]
-                                    }
-                                    Snip(stereo, 2, smeared.sampleRate)
-                                } else {
-                                    smeared
-                                }
-                            }
-                        }
+                        // The rewrite itself lives in the model now
+                        // (`smearPad`: restore-first, then replaceAudio,
+                        // stereo kept stereo) so DO IT AGAIN can replay it.
+                        f.smearPad(slot, amount)
                         applied = true
                     }
                 }
@@ -621,6 +607,52 @@ fun PadSheetScreen(
                 }
             } finally {
                 busy = false
+            }
+        }
+    }
+
+    /** DO IT AGAIN, half one: lift this pad's last treatment onto the caller's clipboard, named. */
+    fun onCopyRecipe() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        val clip = RecipeReplay.clip(p.recipe, m.name, slot)
+        if (clip == null) {
+            onToast(Copy.REPLAY_NOTHING)
+            return
+        }
+        onRecipeCopied(clip)
+        onToast(Copy.copied(clip.word, clip.from))
+    }
+
+    /**
+     * DO IT AGAIN, half two: replay the clipboard's recipe on this pad
+     * through [commitPadEditNow] — same fresh model, same lock, same
+     * sample-identity guard as every other rewrite here. The plan is
+     * checked first so a recipe with no door here refuses in its own
+     * words before the lock is ever taken; the keyed family's own
+     * refusal (a drum, not a note) is caught inside and said the way the
+     * TREATMENT card says it, rather than as a "PASTE FAILED" diagnostic.
+     */
+    fun onPasteRecipe() {
+        if (busy) return
+        val clip = clipboard
+        if (clip == null) {
+            onToast(Copy.REPLAY_CLIPBOARD_EMPTY)
+            return
+        }
+        val plan = RecipeReplay.plan(clip.recipe)
+        if (plan is RecipeReplay.Plan.Refused) {
+            onToast(plan.reason)
+            return
+        }
+        val padName = model?.kit?.pad(slot)?.displayName?.uppercase() ?: return
+        var said: String? = null
+        commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
+            said = try {
+                RecipeReplay.apply(mm, slot, clip.recipe, padName).toast
+            } catch (e: KitBuilderModel.Unpitched) {
+                Copy.notANote(e.message ?: "not a note")
             }
         }
     }
@@ -1459,6 +1491,35 @@ fun PadSheetScreen(
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
                 onAmountCommit = { activeSegment?.let { seg -> applyTreatment(seg, pendingAmt) } },
             )
+            // DO IT AGAIN: the recipe as a thing you can carry to another
+            // pad. Dimmed, not disabled, when there's nothing to copy or
+            // nothing copied yet - the toast explains, same convention as
+            // SPLICE ▸ / STACK ▸ below.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton(
+                    "COPY LAST TREATMENT",
+                    scheme,
+                    enabled = !busy,
+                    dimmed = pad.recipe == null,
+                    modifier = Modifier.weight(1f),
+                    onClick = ::onCopyRecipe,
+                )
+                ActionButton(
+                    clipboard?.let { "PASTE ▸ ${it.word}" } ?: "PASTE ▸",
+                    scheme,
+                    enabled = !busy,
+                    dimmed = clipboard == null,
+                    modifier = Modifier.weight(1f),
+                    onClick = ::onPasteRecipe,
+                )
+            }
+            TapeText(
+                clipboard?.let { "ON THE CLIPBOARD: ${it.word} FROM ${it.from}" } ?: Copy.REPLAY_LAST_ONLY,
+                TapeType.pixelSmall,
+                scheme.ink3.tape,
+                Modifier.fillMaxWidth(),
+                maxLines = 2,
+            )
             }
 
             GroupBox(
@@ -1823,12 +1884,7 @@ private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String 
  * ahead of [PadSheet.read] wherever both are consulted, since SMEAR is
  * the one row-one segment [PadSheet.read] cannot see.
  */
-private fun readSmearRecipe(recipe: JsonValue.Obj?): Float? {
-    if (recipe == null) return null
-    val verb = (recipe.entries["verb"] as? JsonValue.Str)?.value ?: return null
-    if (verb != "smear") return null
-    return (recipe.entries["amount"] as? JsonValue.Num)?.value?.toFloat()
-}
+private fun readSmearRecipe(recipe: JsonValue.Obj?): Float? = PadSheet.readSmear(recipe)
 
 // ---------- level <-> dB ----------
 

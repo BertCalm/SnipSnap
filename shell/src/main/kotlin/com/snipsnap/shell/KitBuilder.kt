@@ -397,6 +397,46 @@ class KitBuilderModel private constructor(
         return spliced
     }
 
+    /**
+     * SMEAR: the pad through `Smear.process` at [amount], through the
+     * generic [replaceAudio] door — not an era, so not `eraPad`; the
+     * recipe is the `{"verb":"smear","amount"}` idiom [PadSheet.readSmear]
+     * reads. [replaceAudio] always reads the current on-disk audio, so a
+     * pad already wearing its own SMEAR is restored first (the previous
+     * take back out of the bin) rather than smeared twice over. AMT 0 on
+     * an unsmeared pad touches nothing. Lifted from PAD SHEET's inline
+     * rewrite so DO IT AGAIN can replay it; the screen calls this now.
+     */
+    fun smearPad(slot: Int, amount: Float): KitPad {
+        require(amount in 0f..1f) { "amount is 0..1, got $amount" }
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.velocityLayers.isEmpty()) { "pad $slot is velocity-layered - `clearGhostLayers($slot)` before smearing" }
+        requireNotChained(pad, "smearing")
+        val current = if (PadSheet.readSmear(pad.recipe) != null) untreatPad(slot) else pad
+        if (amount <= 0f) return current
+        val recipe = com.snipsnap.json.JsonValue.Obj(
+            linkedMapOf<String, com.snipsnap.json.JsonValue>(
+                "verb" to com.snipsnap.json.JsonValue.Str("smear"),
+                "amount" to com.snipsnap.json.JsonValue.Num(amount.toDouble()),
+            ),
+        )
+        return replaceAudio(slot, recipe) { snip ->
+            val smeared = com.snipsnap.audio.Smear.process(snip, amount)
+            // Smear folds to mono; a stereo pad stays stereo on disk so
+            // its format never changes underneath TAPE SPLICE's own check.
+            if (snip.channels == 2 && smeared.channels == 1) {
+                val stereo = FloatArray(smeared.frameCount * 2)
+                for (i in 0 until smeared.frameCount) {
+                    stereo[i * 2] = smeared.samples[i]
+                    stereo[i * 2 + 1] = smeared.samples[i]
+                }
+                Snip(stereo, 2, smeared.sampleRate)
+            } else {
+                smeared
+            }
+        }
+    }
+
     /** DE-SAMPLE's honest refusal: the nearest patch is a stranger; the match says how far. */
     class Far(val match: com.snipsnap.synth.Desample.Match) :
         IllegalArgumentException("no patch is near: the nearest is ${match.patch.voice.name.lowercase()} at distance %.2f".format(java.util.Locale.ROOT, match.distance))

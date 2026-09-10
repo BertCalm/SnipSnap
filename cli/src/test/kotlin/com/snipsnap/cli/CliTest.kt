@@ -1202,6 +1202,32 @@ class CliTest {
     }
 
     @Test
+    fun `recipe replays one pad's last treatment on another, and refuses by name what it can't`() {
+        val wav = writeBreak(File(temp, "rc.wav"))
+        val out = File(temp, "rc-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "RC", "--slices", "8").first)
+        val kitDir = File(out, "RC")
+        assertEquals(0, cli("treat", kitDir.path, "A02", "crushed", "--amount", "0.8").first)
+        val target = File(kitDir, KitStore.load(kitDir).pad(3)!!.sampleFile)
+        val before = target.readBytes()
+
+        val (code, stdout, stderr) = cli("recipe", kitDir.path, "A03", "--from", "${kitDir.path}:A02")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "done again")
+        assertTrue(!before.contentEquals(target.readBytes()), "A03 was re-rendered")
+        val kit = KitStore.load(kitDir)
+        assertEquals(kit.pad(2)!!.recipe, kit.pad(3)!!.recipe, "A03 carries A02's recipe now")
+
+        val (noRecipe, _, noRecipeErr) = cli("recipe", kitDir.path, "A04", "--from", "${kitDir.path}:A05")
+        assertTrue(noRecipe != 0)
+        assertContains(noRecipeErr, "no recipe")
+
+        val (badFrom, _, badFromErr) = cli("recipe", kitDir.path, "A04", "--from", "nowhere")
+        assertTrue(badFrom != 0)
+        assertContains(badFromErr, "<kit-dir>:<pad>")
+    }
+
+    @Test
     fun `mutate --transplant dresses the pad in the parent's tone, --bands its resolution`() {
         val wav = writeBreak(File(temp, "tp.wav"))
         val out = File(temp, "tp-out")

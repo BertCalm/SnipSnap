@@ -229,6 +229,20 @@ object PadSheet {
      * (`replaceAudio`, `mutate`) names neither and reads as untreated —
      * the audio is what it is, but nothing here can claim a segment for it.
      */
+    /**
+     * SMEAR's own AMT off a pad's recipe — `{"verb":"smear","amount":x}`,
+     * the `Mutate.morph` recipe idiom, not [read]'s shapes. [read] cannot
+     * see SMEAR on purpose (see the object KDoc); this is its companion,
+     * consulted ahead of [read] wherever both are. Anything else reads as
+     * no SMEAR active.
+     */
+    fun readSmear(recipe: JsonValue.Obj?): Float? {
+        if (recipe == null) return null
+        val verb = (recipe.entries["verb"] as? JsonValue.Str)?.value ?: return null
+        if (verb != "smear") return null
+        return (recipe.entries["amount"] as? JsonValue.Num)?.value?.toFloat()
+    }
+
     fun read(recipe: JsonValue.Obj?): Applied? {
         if (recipe == null) return null
         val amount = (recipe.entries["amount"] as? JsonValue.Num)?.value?.toFloat()

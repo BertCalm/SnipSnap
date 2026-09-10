@@ -435,6 +435,30 @@ object Copy {
     /** `TapeSplice.join`'s own refusal, said before the needle ever shows: a mutated (stereo) take against its mono original, or two rates. */
     const val SPLICE_FORMATS_DIFFER =
         "THOSE TWO TAKES DON'T MATCH - SAMPLE RATE OR CHANNELS. SPLICE WON'T RESAMPLE OR FOLD ONE TO FIT. PICK ANOTHER PAIR."
+    // ---- DO IT AGAIN: COPY LAST TREATMENT off one pad, PASTE it on another ----
+    const val REPLAY_NOTHING = "THIS PAD CARRIES NO RECIPE. NOTHING TO COPY."
+    const val REPLAY_CLIPBOARD_EMPTY = "NOTHING COPIED YET. COPY LAST TREATMENT OFF A PAD FIRST."
+    /** The honest limit, under the buttons: the recipe is the last step, never the stack. */
+    const val REPLAY_LAST_ONLY = "COPIES THE LAST TREATMENT ONLY. A CRUSHED-THEN-WASHED PAD COPIES AS WASHED."
+    /** MUTATE's recipe names its parents by label; the bytes never rode along. */
+    fun replayNeedsParent(move: String, parents: List<String>): String =
+        "MUTATE ($move WITH ${parents.joinToString(" + ").ifEmpty { "?" }}) NEEDS ITS PARENT - NOT CARRIED."
+    const val REPLAY_SPLICE = "SPLICE NAMES NO TAKES - NOT REPLAYABLE."
+    const val REPLAY_OUTSIDE = "OUTSIDE WAS A ROOM, NOT A SETTING - NOT REPLAYABLE."
+    /** CLEAN, THE DOCTOR and SCULPT are readings of that exact sound, not settings for another. */
+    fun replayMeasured(what: String): String = "$what WAS A MEASUREMENT OF THAT SOUND, NOT A SETTING - NOT REPLAYABLE."
+    const val REPLAY_NO_DOOR = "THIS RECIPE HAS NO DOOR HERE."
+    fun copied(word: String, from: String): String = "$word COPIED FROM $from. PASTE IT ON ANY PAD."
+    fun replayed(word: String, pad: String): String = "$word DONE AGAIN ON $pad. ORIGINAL SLEEPS IN THE BIN."
+    /** The keyed family reads the DESTINATION kit's key; [sourceKey] is named when it differs from what played. */
+    fun replayedInKey(word: String, pad: String, key: String, sourceKey: String?): String =
+        "$word DONE AGAIN ON $pad, IN $key" +
+            (if (sourceKey != null) " - THE SOURCE WAS $sourceKey" else "") +
+            ". ORIGINAL SLEEPS IN THE BIN."
+    /** A patch recipe replaces the sound outright, and the toast says so. */
+    fun replayedPatch(pad: String): String = "$pad IS THAT PATCH NOW. ITS OWN SOUND SLEEPS IN THE BIN."
+    fun replayedRobin(takes: Int, pad: String): String = "ROUND ROBIN ×$takes DEALT AGAIN ON $pad - SAME RECIPE, NEW DEAL."
+
     // ---- STACK THE TAKES: a pad's real prior takes as its velocity zones ----
     const val STACK_NEEDS_HISTORY =
         "STACK WANTS AT LEAST ONE PRIOR TAKE. RE-TRIM OR TREAT THIS PAD FIRST - ITS OLD AUDIO WAITS IN THE BIN."

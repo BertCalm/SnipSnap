@@ -104,6 +104,9 @@ object Cli {
         |                        as a tradeable file instead
         |  treat <kit-dir> <pad> <character>
         |                        crush/reverse/wash one pad (--undo restores)
+        |  recipe <kit-dir> <pad> --from <kit-dir>:<pad>
+        |                        do it again: replay another pad's last
+        |                        treatment here (refuses by name what it can't)
         |  retune <kit-dir> <pad>
         |                        every partial talked into the kit's key
         |                        (--key overrides, --amount how far, --undo)
@@ -342,6 +345,7 @@ object Cli {
                 "resample" -> ResampleCommand.run(args.drop(1), out)
                 "merge" -> MergeCommand.run(args.drop(1), out)
                 "treat" -> TreatCommand.run(args.drop(1), out)
+                "recipe" -> RecipeCommand.run(args.drop(1), out)
                 "retune" -> RetuneCommand.run(args.drop(1), out)
                 "body" -> BodyCommand.run(args.drop(1), out)
                 "wobble" -> WobbleCommand.run(args.drop(1), out)
