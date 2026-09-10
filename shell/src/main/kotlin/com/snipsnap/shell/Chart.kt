@@ -50,6 +50,17 @@ object Chart {
     private const val STEPS_PER_BAR = 16
     private const val EMPTY = '.'
 
+    /**
+     * The cell a hit is drawn in: the nearest 16th, with a hit exactly
+     * halfway between two grid lines belonging to the EARLIER one, as its
+     * late half. Plain half-up rounding would hand that hit to the next
+     * cell as an early one — and the panel's own maximum swing (75%)
+     * pushes every "and" by exactly half a 16th (120 pulses), so a clip
+     * swung all the way would chart as early downbeats with no hits on
+     * the ands at all. Swing never lands early; the tie goes late.
+     */
+    fun nearestCell(timePulses: Long): Long = (timePulses + CELL_PULSES / 2 - 1) / CELL_PULSES
+
     /** One off-grid hit, in the footnotes: where it was drawn, and how far off it really is. */
     data class OffGrid(
         val index: Int,
@@ -146,7 +157,7 @@ object Chart {
         var shared = 0
 
         for (n in clip.notes.sortedWith(compareBy({ it.timePulses }, { it.note }))) {
-            val nearest = (n.timePulses + CELL_PULSES / 2) / CELL_PULSES
+            val nearest = nearestCell(n.timePulses)
             val offset = n.timePulses - nearest * CELL_PULSES
             val across = nearest >= steps
             val drawnAt = (nearest % steps).toInt()
@@ -250,7 +261,7 @@ object Chart {
      */
     fun swingLine(clip: Mpc3Clip): String {
         val leans = clip.notes.mapNotNull { n ->
-            val nearest = (n.timePulses + CELL_PULSES / 2) / CELL_PULSES
+            val nearest = nearestCell(n.timePulses)
             if (nearest % 2 == 1L) n.timePulses - nearest * CELL_PULSES else null
         }
         if (leans.isEmpty()) return "NO HITS ON THE EVEN 16THS. NOTHING TO CALL SWING."

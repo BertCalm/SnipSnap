@@ -115,6 +115,17 @@ class ChartTest {
         // (62−50)/50 of a 16th = 57.6 → 57 pulses in Long arithmetic; 57 reads back as 62%.
         assertEquals("EVEN 16THS +57 PULSES, ≈ SWING 62%", line)
         assertEquals("EVEN 16THS ON THE GRID. STRAIGHT.", Chart.swingLine(straight))
+        // The panel's maximum pushes every "and" by exactly half a 16th (120
+        // pulses). A halfway hit belongs to the earlier cell, as its late
+        // half - so max swing reads back as max swing, not as early
+        // downbeats with no ands.
+        val max = GrooveVariations.swing(straight, 75)
+        assertEquals("EVEN 16THS +120 PULSES, ≈ SWING 75%", Chart.swingLine(max))
+        val maxChart = Chart.render(max, kit(), 92f, bpmIsDefault = false)
+        val hatRow = lines(maxChart).first { it.startsWith("A03") }
+        assertEquals("|x>x>x>x>x>x>x>x>|", hatRow.substring(hatRow.indexOf('|')))
+        assertTrue("OFF-GRID 1: A03 BAR 1 STEP 2, +120 PULSES LATE (x)" in maxChart, maxChart)
+        assertFalse("PULSES EARLY" in maxChart, "no hit of a swung clip is footnoted as early")
 
         val early = straight.copy(notes = straight.notes.map { if ((it.timePulses / s16) % 2 == 1L) it.copy(timePulses = it.timePulses - 30) else it })
         assertEquals("EVEN 16THS −30 PULSES EARLY. NOT A SWING — NO PANEL SETTING LANDS EARLY.", Chart.swingLine(early))
