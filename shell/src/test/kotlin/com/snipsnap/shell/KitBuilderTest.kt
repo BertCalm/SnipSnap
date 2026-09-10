@@ -528,6 +528,59 @@ class KitBuilderTest {
     }
 
     /**
+     * AMT 0 must not be destructive outside SMEAR's own family. The pad
+     * sheet's AMT slider reaches 0, and `applySmear` hands whatever it reads
+     * straight to this door — so an aged pad, AMT dragged to zero, SMEAR
+     * tapped would otherwise have its era silently undone with nothing
+     * smeared in its place. NONE is the way to take a treatment off; a
+     * slider passing through zero is not.
+     */
+    @Test
+    fun `AMT 0 leaves an era alone instead of quietly undoing it`() {
+        val dir = File(temp, "SmearZeroOverEra")
+        val m = KitBuilderModel.create("SmearZeroOverEra", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        m.eraPad(1, "tape", 1f)
+        m.save()
+        val aged = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        val recipe = m.pad(1)!!.recipe
+
+        m.smearPad(1, 0f)
+        m.save()
+        assertTrue(
+            File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(aged),
+            "AMT 0 is a no-op: the aged audio must still be there",
+        )
+        assertEquals(recipe, m.pad(1)!!.recipe, "and the era's recipe must still be riding the pad")
+    }
+
+    /**
+     * The prior behaviour this must not disturb: AMT 0 on a pad that is
+     * already smeared still takes the smear off, which is what "no smear"
+     * has always meant at this door.
+     */
+    @Test
+    fun `AMT 0 on an already-smeared pad still takes the smear off`() {
+        val dir = File(temp, "SmearZeroOverSmear")
+        val m = KitBuilderModel.create("SmearZeroOverSmear", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        val original = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        m.smearPad(1, 0.5f)
+        m.save()
+        assertFalse(File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(original), "the fixture really smeared")
+
+        m.smearPad(1, 0f)
+        m.save()
+        assertTrue(
+            File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(original),
+            "back to the original, byte-identical",
+        )
+        assertNull(m.pad(1)!!.recipe, "and the SMEAR recipe comes off with it")
+    }
+
+    /**
      * The other direction, and the one the pad sheet drives: re-smearing an
      * already-smeared pad was always restore-first. That must stay true now
      * the guard asks a broader question.

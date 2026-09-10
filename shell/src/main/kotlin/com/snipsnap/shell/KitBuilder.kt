@@ -419,13 +419,19 @@ class KitBuilderModel private constructor(
         // treatment while the file carried two. `unTreatState` reads both
         // shapes. Layers are already refused above, so `untreatPad`'s
         // single-file restore is the whole pad here.
-        val current = when (PadSheet.unTreatState(pad, binContents().map { it.originalName }.toSet())) {
-            PadSheet.UnTreat.READY -> untreatPad(slot)
-            // Nothing to undo, or nothing in the bin behind what the pad
-            // names: smear what is there, the way `treat` always has.
-            // GHOSTS_POSTDATE cannot arrive - a layered pad was refused above.
-            else -> pad
-        }
+        //
+        // `amount > 0f || smearedNow` is what keeps AMT 0 from becoming
+        // destructive outside this family. At 0 nothing is being smeared, so
+        // there is nothing for a restore to make room for: an era or a
+        // character must be left exactly as it is. A pad that IS smeared
+        // still comes back at 0 - that is what "no smear" has always meant
+        // here, and it predates the widened guard. NONE is the explicit way
+        // to take any treatment off (finding 13); a slider must not do it
+        // silently on the way past zero.
+        val smearedNow = PadSheet.readSmear(pad.recipe) != null
+        val restorable =
+            PadSheet.unTreatState(pad, binContents().map { it.originalName }.toSet()) == PadSheet.UnTreat.READY
+        val current = if (restorable && (amount > 0f || smearedNow)) untreatPad(slot) else pad
         if (amount <= 0f) return current
         val recipe = com.snipsnap.json.JsonValue.Obj(
             linkedMapOf<String, com.snipsnap.json.JsonValue>(
