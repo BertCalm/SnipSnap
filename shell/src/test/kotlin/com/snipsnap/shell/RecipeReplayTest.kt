@@ -5,6 +5,7 @@ import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.json.JsonValue
 import java.io.File
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -16,6 +17,11 @@ import kotlin.test.assertTrue
 class RecipeReplayTest {
 
     private val temp: File = java.nio.file.Files.createTempDirectory("replay").toFile()
+
+    @AfterTest
+    fun cleanUp() {
+        temp.deleteRecursively()
+    }
 
     private fun obj(vararg pairs: Pair<String, JsonValue>) = JsonValue.Obj(linkedMapOf(*pairs))
 

@@ -2141,6 +2141,34 @@ APP+CORE wave VVV: ✓ all landed (2026-09-10) — DO IT AGAIN, COPY LAST
   box carries COPY LAST TREATMENT / PASTE ▸. CLI: `snipsnap recipe
   <kit> <pad> --from <kit>:<pad>`.
 
+APP+CORE wave WWW: ✓ all landed (2026-09-10) — DOUBLES, pads across the
+  shelf's kits inside a "same sound" distance, the number on every row,
+  nothing deleted. X-RAY's posture turned on the user's own library.
+  `Doubles.clusters` (`:shell`, new) is union-find (single linkage) over
+  the pairs `Crate.dupes` already finds, each cluster carrying its own
+  widest intra-cluster distance as WITHIN - so a chain that reaches
+  further than the ring through a middle pad reads as exactly that -
+  its majority stored class as the label, and how many kits it spans.
+  The threshold is a dial the user reads, not a fence we assert:
+  `Crate.DUPE_DISTANCE` (0.02) was only ever the roulette's "same bytes"
+  exclusion, so DOUBLES steps through its own rings (0.02 / 0.05 /
+  0.10, default 0.05) and the empty state names the ring ("NO DOUBLES
+  WITHIN 0.05. NOT A CLEAN BILL - JUST NONE THIS CLOSE."). One scope fix
+  on the way in that reaches the roulette too: `Crate.index` now skips
+  hidden folders, so a kit DELETED KITS keeps under `.bin/` - the
+  likeliest double of its live self - and `.landing-*` staging are no
+  longer part of the library. `DoublesScreen` (`:app`, new), from the
+  shelf's DOUBLES ▸ SAME SOUND, ANY KIT: measures once, on IO - the
+  crate index (cached by path, mtime and size), `Doubles.measure`'s one
+  all-pairs pass at the widest ring, and the canonical-path join to the
+  shelf's entries - then regroups in memory as the ring steps
+  (`Doubles.clusters(measured, within)` is a filter over those pairs),
+  a header per cluster, a row per pad with GO ▸ that opens the kit on
+  that pad's sheet, and two lines that stay on screen because they are
+  true: the number is a feature distance, not a verdict, and the first
+  4096 samples are what's measured, so two trims of one hit may not
+  land this close.
+
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
   F6.1 .xpn import + expansion tile → velocity/bank B →

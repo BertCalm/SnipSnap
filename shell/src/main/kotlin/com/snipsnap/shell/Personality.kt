@@ -617,6 +617,21 @@ object Copy {
     /** The picker handed back a file X-Ray's own bytes-in-hand path never opens — a dead content URI, a provider that vanished mid-read. */
     fun xrayFailed(reason: String): String = "COULDN'T READ THAT: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
 
+    // ---- DOUBLES: pads across kits inside a "same sound" distance — the number, never a verdict ----
+    const val DOUBLES_BUSY = "MEASURING…"
+    /** The empty state names the ring, not a verdict — a clean bill is not something a distance can give. */
+    fun noDoubles(within: Float): String =
+        "NO DOUBLES WITHIN ${String.format(java.util.Locale.ROOT, "%.2f", within)}. NOT A CLEAN BILL - JUST NONE THIS CLOSE."
+    /** The screen's standing rule, on screen: what the number is, and what this screen never does. */
+    const val DOUBLES_RULE = "THE NUMBER IS A FEATURE DISTANCE, NOT A VERDICT. NOTHING HERE DELETES, MOVES OR MERGES."
+    /** The one known blind spot, said out loud: the head of the hit is what's measured, so two trims of one take can read as strangers. */
+    const val DOUBLES_TRIM_CAVEAT = "TWO TRIMS OF ONE HIT MAY NOT LAND THIS CLOSE. THE FIRST 4096 SAMPLES ARE WHAT'S MEASURED."
+    /** What the measuring pass actually did: the honest split between fresh work and the crate's cache. */
+    fun doublesMeasured(extracted: Int, fromCache: Int): String =
+        "$extracted ${if (extracted == 1) "PAD" else "PADS"} MEASURED, $fromCache FROM THE CRATE INDEX."
+    /** A GO ▸ on a kit the shelf's own listing doesn't hold (a kit in a subfolder, say) — the number stays, the door doesn't. */
+    const val DOUBLES_KIT_NOT_ON_SHELF = "THAT KIT ISN'T ON THE SHELF'S OWN LIST. THE NUMBER STANDS - THE DOOR DOESN'T."
+
     // ---- CHOP: the chip itself (HANDOFF.md — "chip tap = cycle class label, 'YOU ✓'") ----
     /** A chip under the confidence threshold, in its own words. */
     const val CHIP_NOT_SURE = "NOT SURE"
