@@ -58,6 +58,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layers
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.SnipStore
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -676,4 +677,6 @@ private fun Fader(
 private const val FADER_H = 140
 
 /** A slot as the MPC names it: 1..16 is bank A, 17..32 bank B, and so on. */
-private fun splitPadLabel(slot: Int): String = "%c%02d".format('A' + (slot - 1) / 16, (slot - 1) % 16 + 1)
+// One rule, one home ([PadBanks]) - this copy was correct, and is
+// now the same correct thing everywhere.
+private fun splitPadLabel(slot: Int): String = PadBanks.tag(slot)

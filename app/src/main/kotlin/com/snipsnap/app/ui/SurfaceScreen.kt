@@ -51,6 +51,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PrintLength
 import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.StreamFacts
@@ -625,10 +626,8 @@ fun SurfaceScreen(
     }
 }
 
-/** A slot as the MPC names it: 1..16 is bank A, 17..32 bank B, and so on. */
-private fun padLabel(slot: Int?): String {
-    if (slot == null) return ""
-    val bank = 'A' + (slot - 1) / 16
-    val n = (slot - 1) % 16 + 1
-    return "%c%02d".format(bank, n)
-}
+/**
+ * A slot as the MPC names it, over [PadBanks] - nullable here because the
+ * surface has no pad chosen until one is.
+ */
+private fun padLabel(slot: Int?): String = slot?.let { PadBanks.tag(it) } ?: ""

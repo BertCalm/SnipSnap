@@ -63,6 +63,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
@@ -608,7 +609,10 @@ private fun thumpChipLabel(voice: ThumpVoice): String = when (voice) {
     ThumpVoice.RIM -> "RIM"
 }
 
-private fun padTag(slot: Int): String = "A%02d".format(slot)
+// One rule, one home ([PadBanks]): this said "A%02d".format(slot) until
+// the September UAT's finding 11 made bank B reachable, at which point a
+// pad on slot 17 would have been titled A17 on this screen.
+private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
 // ---------- voice picker ----------
 
