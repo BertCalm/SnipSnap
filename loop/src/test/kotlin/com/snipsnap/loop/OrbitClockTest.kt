@@ -323,3 +323,24 @@ class OrbitBarTest {
         assertTrue(OrbitSet.BAR_CHOICES.all { it % 2 == 0 }, "a half-bar span must stay whole at every bar")
     }
 }
+
+class OrbitNearestStepTest {
+
+    private val s = OrbitSet(listOf(Orbit("r", 16, PatternOrbit("kit", emptyList()), voice = listOf(1))), 120f, 48_000)
+    private val ring = s.orbits[0]
+    private val step = OrbitClock.stepFrames(s).toLong()
+
+    @Test
+    fun `a tap just after a step rounds back to it, and just before the next rounds forward`() {
+        assertEquals(3, OrbitClock.nearestStep(s, ring, 3 * step + step / 4))
+        assertEquals(4, OrbitClock.nearestStep(s, ring, 3 * step + step * 3 / 4))
+        assertEquals(3, OrbitClock.stepAt(s, ring, 3 * step + step * 3 / 4), "stepAt still floors: it is where the needle is, not what was meant")
+    }
+
+    @Test
+    fun `the last half-step of the ring means step 0 of the next turn`() {
+        assertEquals(0, OrbitClock.nearestStep(s, ring, 16 * step - step / 4))
+        assertEquals(15, OrbitClock.nearestStep(s, ring, 15 * step + step / 4))
+        assertEquals(0, OrbitClock.nearestStep(s, ring, 16 * step + 1))
+    }
+}

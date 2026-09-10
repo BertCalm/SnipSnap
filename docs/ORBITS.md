@@ -94,6 +94,24 @@ strip cell cycles a hit's weight soft → normal → accent, or drops an accent
 on an empty cell. The step count is a picker of the sizes worth a chip
 (`STEP_CHOICES`), not a walk on − and +.
 
+Three more ways in, all on the panel's second row:
+
+- **REC** arms the strip's pad rail. While the transport runs, a rail tap
+  writes a hit for that pad on the ring's *nearest* step
+  (`OrbitClock.nearestStep`: a late tap rounds back, an early one
+  forward) and is heard through PLAY's engine as any rail tap is. The
+  tap's moment is taken from the engine's frame count less the output
+  buffer and a touch allowance, so what you meant lands where you heard
+  it. A hit already there is left as it is, weight and all
+  (`OrbitPatterns.place`): playing over a hit is not lifting it. Disarmed,
+  the rail only auditions, as before.
+- **◀ ▶ TURN** rotate every hit one step earlier or later, wrapping
+  (`OrbitPatterns.turn`). A tresillo turned one step is a different
+  groove; the `euclid` rotation the CLI has always had is now a chip.
+- **DUP** copies the picked ring beside itself, named `KICK 2`
+  (`OrbitPatterns.copyName`). Two identical rings, one of them a step
+  shorter or a step turned, is how phasing starts.
+
 ## The cycle
 
 `OrbitClock.cycleSteps` is the LCM of every ring's period with the reference
@@ -147,7 +165,7 @@ choice, not a surprise.
 | `loop/OrbitEngine.kt` | The transport: fixed 2048-frame blocks, hits scheduled per block, voices mixed, snips wrapped, written to the same `AudioSink` the loop grid uses. `render` is the offline bounce and the test harness |
 | `loop/OrbitStore.kt` | `orbits.json` (version 3; versions 1 and 2 still load, their lock becoming a one-bar span), a sidecar beside the kit like `groove.json` |
 | `loop/OrbitClip.kt` | One cycle as an MPC clip in `groove.json`, counted in the clip's own 4/4 bars whatever the set's bar, and the 64-bar refusal both outputs share |
-| `loop/OrbitPatterns.kt` | Euclid, SPREAD, CLEAR, the dice, the weight cycle, the step-size choices |
+| `loop/OrbitPatterns.kt` | Euclid, SPREAD, CLEAR, the dice, TURN, `place` (what REC writes), a copy's name, the weight cycle, the step-size choices |
 | `loop/OrbitPresets.kt` | The starter set from a kit — one ring per instrument the kit has (KICK 16 · SNARE 16 · HATS 12 · PERC 20 · THREE, a locked triplet · BASS 20 over the tonal pads) — and the empty-ring and snip-ring constructors |
 | `app/OrbitSampleSource.kt` | Pads from the kit shelf via `KitSampleSource`, snips from `snips/` |
 | `app/ui/OrbitScreen.kt` | The rings (shortest inside, a 16th-long comet tail, a strike flare, a pulse when they meet, a snip ring's waveform), the unrolled strip, the panel (with the fit report), the tempo offer, the debounced BPM (running while held), UNDO (40 edits deep, a BPM run counting as one), the transport, audition through PLAY's pad engine, solo by long-press, and a description of the rings and every cell's state for a screen reader. Reached from GROOVE's **ORBIT ▸**, left by **◄ GROOVE** |

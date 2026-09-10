@@ -76,9 +76,40 @@ class OrbitPatternsTest {
     }
 
     @Test
+    fun `turn moves every hit and wraps, either way round`() {
+        val r = ring(8, voice = listOf(1, 2), hits = listOf(OrbitHit(0, 1), OrbitHit(3, 1), OrbitHit(7, 2, 0.5f)))
+        val later = (OrbitPatterns.turn(r, 1).content as PatternOrbit).hits
+        assertEquals(listOf(OrbitHit(0, 2, 0.5f), OrbitHit(1, 1), OrbitHit(4, 1)), later)
+        val earlier = (OrbitPatterns.turn(r, -1).content as PatternOrbit).hits
+        assertEquals(listOf(OrbitHit(2, 1), OrbitHit(6, 2, 0.5f), OrbitHit(7, 1)), earlier)
+        assertEquals(r, OrbitPatterns.turn(r, 8), "a whole turn is no turn")
+        assertEquals(r, OrbitPatterns.turn(OrbitPatterns.turn(r, 3), -3))
+    }
+
+    @Test
+    fun `place writes a hit where there is none and leaves one that is there`() {
+        val r = ring(8, voice = listOf(1), hits = listOf(OrbitHit(2, 1, OrbitPatterns.ACCENT_VELOCITY)))
+        val placed = (OrbitPatterns.place(r, 1, 5).content as PatternOrbit).hits
+        assertEquals(listOf(OrbitHit(2, 1, OrbitPatterns.ACCENT_VELOCITY), OrbitHit(5, 1, OrbitPatterns.HIT_VELOCITY)), placed)
+        assertEquals(r, OrbitPatterns.place(r, 1, 2), "playing over an accent keeps the accent")
+        assertTrue(runCatching { OrbitPatterns.place(r, 9, 0) }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { OrbitPatterns.place(r, 1, 8) }.exceptionOrNull() is IllegalArgumentException)
+    }
+
+    @Test
+    fun `a copy's name counts up`() {
+        assertEquals("KICK 2", OrbitPatterns.copyName("KICK"))
+        assertEquals("KICK 3", OrbitPatterns.copyName("KICK 2"))
+        assertEquals("BASS 6", OrbitPatterns.copyName("BASS 5"), "a name that ends in a number counts up, whatever it meant")
+        assertEquals("RING 10", OrbitPatterns.copyName("RING 9"))
+    }
+
+    @Test
     fun `a snip ring is left alone by every generator`() {
         val s = Orbit("s", 16, SnipOrbit("a.wav"))
         assertEquals(s, OrbitPatterns.clear(s))
         assertEquals(s, OrbitPatterns.scramble(s, 3))
+        assertEquals(s, OrbitPatterns.turn(s, 2))
+        assertEquals(s, OrbitPatterns.place(s, 1, 0))
     }
 }

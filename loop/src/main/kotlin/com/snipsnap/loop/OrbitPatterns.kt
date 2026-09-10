@@ -37,6 +37,39 @@ object OrbitPatterns {
         return ring.copy(content = content.copy(hits = (kept + spread).sortedWith(compareBy({ it.step }, { it.slot }))))
     }
 
+    /**
+     * [ring] turned [by] steps later (earlier when negative), every hit
+     * wrapping round the ring. Turning a Euclidean pattern one step is how
+     * a tresillo becomes a different groove; turning a copy is how two
+     * rings start to phase.
+     */
+    fun turn(ring: Orbit, by: Int): Orbit {
+        val content = ring.content as? PatternOrbit ?: return ring
+        if (Math.floorMod(by, ring.steps) == 0) return ring
+        val hits = content.hits.map { it.copy(step = Math.floorMod(it.step + by, ring.steps)) }
+        return ring.copy(content = content.copy(hits = hits.sortedWith(compareBy({ it.step }, { it.slot }))))
+    }
+
+    /**
+     * [ring] with a hit for [slot] placed on [step] if there is none yet —
+     * what a pad tap writes while the rail is armed. An existing hit is
+     * left as it is, weight and all: playing over a hit is not lifting it.
+     */
+    fun place(ring: Orbit, slot: Int, step: Int, velocity: Float = HIT_VELOCITY): Orbit {
+        val content = ring.content as? PatternOrbit ?: return ring
+        require(slot in ring.pads) { "ring '${ring.name}' does not play pad $slot" }
+        require(step in 0 until ring.steps) { "ring '${ring.name}' has no step $step" }
+        if (content.hits.any { it.step == step && it.slot == slot }) return ring
+        val hits = content.hits + OrbitHit(step, slot, velocity)
+        return ring.copy(content = content.copy(hits = hits.sortedWith(compareBy({ it.step }, { it.slot }))))
+    }
+
+    /** The name a copy of [name] takes: "KICK" → "KICK 2", "KICK 2" → "KICK 3". */
+    fun copyName(name: String): String {
+        val m = Regex("""^(.*?)\s(\d+)$""").find(name)
+        return if (m != null) "${m.groupValues[1]} ${m.groupValues[2].toInt() + 1}" else "$name 2"
+    }
+
     /** [ring] with no hits at all. Its voice and shape stay. */
     fun clear(ring: Orbit): Orbit {
         val content = ring.content as? PatternOrbit ?: return ring
