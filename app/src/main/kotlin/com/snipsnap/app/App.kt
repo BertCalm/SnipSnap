@@ -174,6 +174,20 @@ fun App(shelf: KitShelf) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
 
+    // SETUP's WHERE YOUR FILES LIVE row (September UAT, finding 23).
+    // getExternalFilesDir does real filesystem work - it creates the
+    // directory if it is absent, and returns null when external storage is
+    // not mounted - so it is resolved on IO exactly once, the same rule
+    // ExportScreen's own write path states in so many words. Reading it in
+    // the composable branch that draws the row would touch the disk on the
+    // main thread on every recomposition of that screen.
+    var exportsWhere by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        exportsWhere = withContext(Dispatchers.IO) {
+            (context.getExternalFilesDir("exports") ?: context.filesDir).absolutePath
+        }
+    }
+
     var schemeId by remember {
         mutableStateOf(
             prefs.getString(PREF_SCHEME, null)
@@ -1998,7 +2012,7 @@ fun App(shelf: KitShelf) {
                             // EXPORT writes - one owner each, no second copy.
                             exportFormatLabel = prefs.getString(PREF_EXPORT_FORMAT, null)
                                 ?.let { ExportFormat.byId(it) }?.cyclerLabel,
-                            filesWhere = (context.getExternalFilesDir("exports") ?: context.filesDir).absolutePath,
+                            filesWhere = exportsWhere,
                             cardName = prefs.getString(PREF_CARD_TREE, null)
                                 ?.let { Copy.cardName(Uri.parse(it).lastPathSegment) },
                             onHelp = { screen = AppScreen.HELP },

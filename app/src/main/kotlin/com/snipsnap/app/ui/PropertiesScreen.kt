@@ -38,6 +38,21 @@ import com.snipsnap.shell.Schemes
  * its own colours — the design files' picker behaviour) and the
  * PERSONALITY slider, whose OFF is respected everywhere without
  * argument.
+ *
+ * September UAT, finding 23 added three facts the app already knew and
+ * never showed anyone, plus the door to HELP. They are **read-only on
+ * purpose**: [exportFormatLabel] is a memory of the last format picked on
+ * EXPORT, not a preference owned here — a second picker would give one
+ * setting two owners, and the row says where to change it instead.
+ * [filesWhere] and [cardName] are facts, not settings at all.
+ *
+ * @param exportFormatLabel the format EXPORT will open on, or null if none
+ *   has been picked yet.
+ * @param filesWhere the export folder's real path, or null while it is
+ *   still being resolved off the main thread. Resolving it touches the
+ *   filesystem (see `App`'s own note), so the heading and the path are
+ *   drawn together once it is known rather than a heading over a guess.
+ * @param cardName the card currently held, or null when none is.
  */
 @Composable
 fun PropertiesScreen(
@@ -47,18 +62,8 @@ fun PropertiesScreen(
     onPersonality: (Personality) -> Unit,
     teachEnabled: Boolean,
     onTeach: (Boolean) -> Unit,
-    /**
-     * September UAT, finding 23. Three facts the app already knows and never
-     * showed anyone, plus the door to HELP.
-     *
-     * They are **read-only on purpose**. [exportFormatLabel] is a memory of
-     * the last format picked on EXPORT, not a preference owned here — a
-     * second picker would give one setting two owners, and the row says
-     * where to change it instead. [filesWhere] and [cardName] are facts, not
-     * settings at all.
-     */
     exportFormatLabel: String?,
-    filesWhere: String,
+    filesWhere: String?,
     cardName: String?,
     onHelp: () -> Unit,
 ) {
@@ -150,12 +155,18 @@ fun PropertiesScreen(
         )
         TapeText(Copy.SETUP_FORMAT_NOTE, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
 
-        TapeText(Copy.SETUP_WHERE_HEADING, TapeType.display, scheme.ink.tape)
         // The real path, not a description of it: a user hunting for a file
         // over a cable needs the actual thing to look for. maxLines is
         // generous because a private-storage path is long and truncating it
         // would defeat the only reason to print it.
-        TapeText(Copy.setupWhere(filesWhere), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
+        //
+        // Heading and path appear together or not at all. The path arrives
+        // from IO a frame or two after the screen opens, and a heading with
+        // nothing under it reads as a fault rather than as a wait.
+        if (filesWhere != null) {
+            TapeText(Copy.SETUP_WHERE_HEADING, TapeType.display, scheme.ink.tape)
+            TapeText(Copy.setupWhere(filesWhere), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
+        }
 
         TapeText(Copy.SETUP_CARD_HEADING, TapeType.display, scheme.ink.tape)
         TapeText(
