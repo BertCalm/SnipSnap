@@ -187,15 +187,14 @@ object Crate {
 
     /**
      * Euclidean distance; +∞ for vectors of different lengths, which are
-     * not the same kind of measurement and so are never "close". (The
-     * length rule is what keeps this symmetric; the missing-dimension
-     * fallback below is then only ever reached with equal lengths.)
+     * not the same kind of measurement and so are never "close" - and
+     * the same answer whichever way round they are asked.
      */
     internal fun distance(a: List<Float>, b: List<Float>): Float {
         if (a.size != b.size) return Float.POSITIVE_INFINITY
         var acc = 0f
         for (i in a.indices) {
-            val d = a[i] - (b.getOrNull(i) ?: 0f)
+            val d = a[i] - b[i]
             acc += d * d
         }
         return sqrt(acc)
