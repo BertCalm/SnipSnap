@@ -146,6 +146,37 @@ class PersonalityTest {
     }
 
     /**
+     * Finding 14's fix: the TREATMENT card has to say it is working, and
+     * say which treatment, or a 1.8-second wait reads as a dead screen. The
+     * ellipsis is the part that carries "still going" - a header that
+     * merely renamed itself would look finished.
+     *
+     * Fed through [PadSheet.displayLabel] the way the card feeds it, which
+     * is not the same string as the segment id: the segment is "ETERNAL",
+     * what a user reads on the chip is "DRONE". Testing the id would have
+     * pinned a header no one ever sees.
+     */
+    @Test
+    fun `the treatment header names what it is working on`() {
+        val segment = "ETERNAL"
+        val label = PadSheet.displayLabel(segment)
+        assertTrue(label != segment, "this test is only meaningful while the two differ: $label")
+
+        val busy = Copy.treatmentBusy(label)
+        assertTrue(busy.contains(label), busy)
+        assertFalse(busy.contains(segment), "the header carries the chip's word, not the segment id: $busy")
+        assertTrue(busy.endsWith("…"), "a progress line has to look unfinished: $busy")
+        assertTrue(busy.startsWith("TREATMENT"), "it replaces the card's own header: $busy")
+        // Distinguishable from the idle header, which is the whole point.
+        assertTrue(busy != "TREATMENT", busy)
+        // Every segment's label has to fit, not just this one.
+        for (seg in PadSheet.ROWS.flatten()) {
+            val line = Copy.treatmentBusy(PadSheet.displayLabel(seg))
+            assertTrue(line.length <= 40, "one line on the card: $line (${line.length})")
+        }
+    }
+
+    /**
      * The legend that replaced the expiring toast (UAT findings 4 and 5).
      * It has to name the gesture, because it is the only thing on screen
      * that does — the toast it backstops can be dismissed forever.

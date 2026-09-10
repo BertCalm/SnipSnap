@@ -537,6 +537,16 @@ fun PadSheetScreen(
      * it. The waveform still refreshes via `LaunchedEffect(model, slot)`;
      * only the auto-preview-on-treat is gone, same trade [applySmear] makes.
      */
+    // Set on a treatment tap, shown only while `busy`, cleared whenever any
+    // operation on this sheet finishes. One effect rather than a clear in
+    // each coroutine's `finally`: `busy` is shared by fourteen call sites in
+    // this file, and gating the display on it makes a stale value invisible
+    // rather than wrong.
+    var applyingSegment by remember(slot) { mutableStateOf<String?>(null) }
+    LaunchedEffect(busy) {
+        if (!busy) applyingSegment = null
+    }
+
     fun applyTreatment(segment: String, amount: Float) {
         if (busy) return
         val m = model ?: return
@@ -1478,6 +1488,11 @@ fun PadSheetScreen(
                 onToggle = { tapBox(PadSheetBoxes.Box.TREATMENT) },
                 scheme = scheme,
             ) {
+            // Which segment the user just tapped, so the card can say what it
+            // is working on (September UAT, finding 14). Read only while
+            // `busy` is true - see `applying` below - so an applyTreatment
+            // that returns early without ever starting cannot leave a chip
+            // claiming to be in flight.
             TreatmentCard(
                 rows = PadSheet.ROWS,
                 noneSegment = PadSheet.NONE,
@@ -1488,9 +1503,22 @@ fun PadSheetScreen(
                 padColor = classColor,
                 scheme = scheme,
                 busy = busy,
-                onSegmentTap = { seg -> applyTreatment(seg, pendingAmt) },
+                applying = applyingSegment.takeIf { busy },
+                onSegmentTap = { seg ->
+                    applyingSegment = seg
+                    applyTreatment(seg, pendingAmt)
+                },
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
-                onAmountCommit = { activeSegment?.let { seg -> applyTreatment(seg, pendingAmt) } },
+                // AMT re-runs the treatment at the new amount, which is the
+                // same second-and-a-bit of work a chip tap starts - so it
+                // records the segment too. Finding 14 is about the treatment
+                // path, not only the taps that begin at a chip.
+                onAmountCommit = {
+                    activeSegment?.let { seg ->
+                        applyingSegment = seg
+                        applyTreatment(seg, pendingAmt)
+                    }
+                },
             )
             // DO IT AGAIN: the recipe as a thing you can carry to another
             // pad. Dimmed, not disabled, when there's nothing to copy or
@@ -2149,12 +2177,23 @@ private fun TreatmentCard(
     padColor: Color,
     scheme: Scheme,
     busy: Boolean,
+    /** The segment being applied right now, or null when nothing is in flight. */
+    applying: String?,
     onSegmentTap: (String) -> Unit,
     onAmountChange: (Float) -> Unit,
     onAmountCommit: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("TREATMENT", TapeType.pixelSmall, scheme.ink3.tape)
+        // The card says when it is working, and on what (September UAT,
+        // finding 14): ETERNAL takes 1.77 s on a desktop JVM and longer on a
+        // phone, and chips going quietly untappable read as a dead screen
+        // rather than a busy one.
+        TapeText(
+            if (applying != null) Copy.treatmentBusy(PadSheet.displayLabel(applying)) else "TREATMENT",
+            TapeType.pixelSmall,
+            if (applying != null) scheme.amber.tape else scheme.ink3.tape,
+            maxLines = 1,
+        )
         // Row one is the eras, the rest the rack's characters (PadSheet.ROWS);
         // one segment lights across every row, since a pad carries one recipe.
         val widest = rows.maxOf { it.size }
@@ -2166,16 +2205,38 @@ private fun TreatmentCard(
                     // action, so it never accepts a tap (see the file's report
                     // for why that's a deliberate scope line, not an oversight).
                     val tappable = !busy && seg != noneSegment
+                    // The one being applied wears the pad's colour at half
+                    // strength - lit enough to find, not so lit it reads as
+                    // already done.
+                    val working = seg == applying
                     Box(
                         Modifier
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                            .raisedBevel(
+                                scheme,
+                                fill = when {
+                                    working -> padColor.copy(alpha = 0.5f)
+                                    selected -> padColor.copy(alpha = 0.85f)
+                                    else -> null
+                                },
+                            )
                             .let { if (tappable) it.tapeClick(label = null) { onSegmentTap(seg) } else it }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(PadSheet.displayLabel(seg), TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                        TapeText(
+                            PadSheet.displayLabel(seg),
+                            TapeType.pixel,
+                            when {
+                                working || selected -> scheme.titleInk.tape
+                                // Everything else steps back while the work
+                                // runs, so "you cannot tap this yet" is
+                                // visible rather than merely true.
+                                busy -> scheme.ink3.tape
+                                else -> scheme.ink2.tape
+                            },
+                        )
                     }
                 }
                 // A short row keeps the same chip width as a full one.
