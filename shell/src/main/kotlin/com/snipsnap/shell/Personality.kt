@@ -237,6 +237,21 @@ object Copy {
      */
     const val PAD_SHEET_LEGEND = "HOLD A PAD · SHAPE, TUNE, TREAT, MUTATE, GRAIN"
 
+    /**
+     * The kit shelf's own legend (September UAT, finding 17). Every creation
+     * door auto-names, so RENAME is the only place a user ever types a kit
+     * name — and it sits behind a hold on the row that nothing on screen
+     * mentions. Most samplers ask for a name once, up front; this does not
+     * change that, it just stops the one door that exists from being a
+     * secret.
+     *
+     * Wording follows the row's own `onLongClickLabel` ("RENAME OR DELETE")
+     * so the sighted legend and the TalkBack announcement say the same
+     * thing. No full stop: like ROOMS' legend and [PAD_SHEET_LEGEND], this is
+     * furniture that stays on screen, not a line the app says once.
+     */
+    const val SHELF_LEGEND = "HOLD A KIT TO RENAME OR DELETE IT"
+
     // ---- HELP: what the app is, said inside the app ----
 
     /**

@@ -293,6 +293,14 @@ fun KitsScreen(
                             onRequestRename = { renameTarget = it },
                         )
                     }
+                    // The same move ROOMS makes under its own list, and KIT
+                    // under its grid: one line, always there, naming the hold.
+                    // A legend cannot be dismissed, so the gesture cannot be
+                    // forgotten - and RENAME is the only place a kit is ever
+                    // named by hand (September UAT, finding 17).
+                    item(key = "kits-note") {
+                        TapeText(Copy.SHELF_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                    }
                     // INSTRUMENTS: what MAKE INSTRUMENT and MAKE PAD left beside the kits, playable on KEYS.
                     if (instruments.isNotEmpty()) {
                         item(key = "instruments-header") {
