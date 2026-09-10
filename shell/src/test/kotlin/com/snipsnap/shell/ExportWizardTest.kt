@@ -9,6 +9,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.mpc3.MpcFormat
 import com.snipsnap.mpc3.MpcFormats
 import java.io.File
+import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -202,7 +203,11 @@ class ExportWizardTest {
         for (f in ExportFormat.entries) {
             assertTrue(f.why.isNotBlank(), "${f.id} has no reason")
             assertTrue(f.why.length <= 52, "${f.id}'s reason is too long for the row (${f.why.length})")
-            assertEquals(f.why.uppercase(), f.why, "${f.id}'s reason should shout like the rest of TapeOS")
+            // Locale.ROOT, the same reason KitAssembler gives: default-locale
+            // casing turns a lowercase "i" into "\u0130" on a Turkish device, so a
+            // reason written with one would pass or fail depending on where
+            // the suite ran.
+            assertEquals(f.why.uppercase(Locale.ROOT), f.why, "${f.id}'s reason should shout like the rest of TapeOS")
             assertTrue(f.why.endsWith("."), "${f.id}'s reason should land on a full stop")
         }
         assertEquals(whys.size, whys.toSet().size, "two formats share a reason - one was pasted from the other")

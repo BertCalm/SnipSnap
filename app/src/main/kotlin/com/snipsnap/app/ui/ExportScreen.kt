@@ -102,6 +102,17 @@ private const val TAG = "ExportScreen"
  * composable) is what `App.kt` keeps alive.
  */
 class ExportSession(val dir: File, val kit: Kit, val model: ExportWizardModel) {
+    /**
+     * Whether the remembered export format has already been restored onto
+     * [model] (see `PREF_EXPORT_FORMAT`). A plain latch, not Compose state:
+     * nothing renders from it, it only stops the restore running twice.
+     *
+     * It lives here rather than in a `remember` because the session is what
+     * survives a remount — leaving EXPORT and coming back re-runs the
+     * screen's effects against this same wizard, and restoring a second
+     * time would quietly undo a pick the user made in between.
+     */
+    var formatRestored: Boolean = false
     var busy by mutableStateOf(false)
     var lastOutcome by mutableStateOf<ExportOutcome?>(null)
     var writeStartedAtMs by mutableLongStateOf(0L)
@@ -246,6 +257,16 @@ private fun ExportContent(
     /** The format list, open or shut. Shut on arrival: the row says what is picked. */
     var formatPickerOpen by remember(model) { mutableStateOf(false) }
 
+    /**
+     * A dub locks the row (`enabled = !busy`), and a locked row cannot be
+     * tapped shut — so an open list would vanish while the header kept
+     * showing ▴, claiming a state the screen was not in, until the write
+     * finished. Shut it when the write starts instead.
+     */
+    LaunchedEffect(session.busy) {
+        if (session.busy) formatPickerOpen = false
+    }
+
     // Elapsed-time clock, not an incrementing counter: `SystemClock.
     // elapsedRealtime()` is monotonic (unlike a wall clock, which can jump)
     // and, because `filesShown` below is a pure function of "how long has
@@ -283,14 +304,20 @@ private fun ExportContent(
      * 7): every visit used to begin at index 0 however many times you had
      * exported `.xtd`.
      *
-     * Keyed on `model`, so it runs once per wizard rather than on every
-     * recompose, and it deliberately no-ops unless the wizard is still at
-     * its default — a remount mid-session must not undo a pick the user
-     * made a moment ago. An id that no longer exists (a format removed
-     * between releases) simply leaves the default alone.
+     * Guarded by the session's own latch rather than by the wizard's index:
+     * a remount re-runs this effect against the same wizard, and restoring
+     * twice would undo a pick made in between. The earlier version tested
+     * `formatIx == 0`, which tied the screen to the enum's order and would
+     * have started misbehaving the day the first entry changed.
+     *
+     * Stage-checked too, so `revision++` cannot fire for a `setFormat` that
+     * a non-READY wizard quietly refused. An id that no longer exists (a
+     * format dropped between releases) simply leaves the default alone.
      */
     LaunchedEffect(model) {
-        if (model.formatIx != 0) return@LaunchedEffect
+        if (session.formatRestored) return@LaunchedEffect
+        session.formatRestored = true
+        if (model.stage != ExportWizardModel.Stage.READY) return@LaunchedEffect
         val remembered = prefs.getString(PREF_EXPORT_FORMAT, null)?.let { ExportFormat.byId(it) }
         if (remembered != null && remembered != model.format) {
             model.setFormat(remembered)
