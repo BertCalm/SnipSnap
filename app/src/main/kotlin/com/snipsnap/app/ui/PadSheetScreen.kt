@@ -1509,7 +1509,16 @@ fun PadSheetScreen(
                     applyTreatment(seg, pendingAmt)
                 },
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
-                onAmountCommit = { activeSegment?.let { seg -> applyTreatment(seg, pendingAmt) } },
+                // AMT re-runs the treatment at the new amount, which is the
+                // same second-and-a-bit of work a chip tap starts - so it
+                // records the segment too. Finding 14 is about the treatment
+                // path, not only the taps that begin at a chip.
+                onAmountCommit = {
+                    activeSegment?.let { seg ->
+                        applyingSegment = seg
+                        applyTreatment(seg, pendingAmt)
+                    }
+                },
             )
             // DO IT AGAIN: the recipe as a thing you can carry to another
             // pad. Dimmed, not disabled, when there's nothing to copy or
