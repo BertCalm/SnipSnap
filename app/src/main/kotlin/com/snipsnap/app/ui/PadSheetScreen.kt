@@ -622,6 +622,76 @@ fun PadSheetScreen(
         }
     }
 
+    /**
+     * NONE: take the treatment back off (September UAT, finding 13 — "there
+     * is no un-treat"). Until now the chip was display-only, so undoing a
+     * treatment meant leaving PAD SHEET for TAKES + BIN and restoring a
+     * whole-kit take — which rolled back everything else done since.
+     *
+     * The move itself is [KitBuilderModel.unEraPad], the same door
+     * [applyTreatment] already uses to get back to clean audio before
+     * stacking a new treatment. Nothing new happens to the files; what is
+     * new is that the user can ask for it.
+     *
+     * Which of [PadSheet.UnTreat]'s answers applies is decided *inside* the
+     * lock, off the fresh pad and a fresh bin listing — not off the chip's
+     * enablement. The chip lights whenever the card shows a treatment,
+     * because deciding otherwise would mean listing the bin directory on
+     * every recomposition to draw one chip; refusing in words is this
+     * file's habit anyway, and a refusal that names its reason teaches more
+     * than a chip that is quietly grey.
+     *
+     * Same fresh-model shape, sample-identity guard and [model] swap as
+     * [applyTreatment] — see its KDoc. A round-robin pad refuses from
+     * [KitBuilderModel.unEraPad]'s own `require`, exactly as treating one
+     * does today; that is the card's existing gap, not this action's.
+     */
+    fun unTreat() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        val padName = p.displayName
+        val staleSampleFile = p.sampleFile
+        val kitDir = m.kitDir
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        scope.launch {
+            busy = true
+            try {
+                // null = the slot changed underneath us; BIN_ITEM_GONE says so.
+                var state: PadSheet.UnTreat? = null
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    val freshPad = f.kit.pad(slot)
+                    if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
+                        val binned = f.binContents().map { it.originalName }.toSet()
+                        val answer = PadSheet.unTreatState(freshPad, binned)
+                        if (answer == PadSheet.UnTreat.READY) f.unEraPad(slot)
+                        state = answer
+                    }
+                }
+                model = fresh
+                pendingMetadataSlots = emptySet()
+                onKitUpdated(fresh.kit)
+                onToast(
+                    when (state) {
+                        PadSheet.UnTreat.READY -> Copy.unTreated(padName)
+                        PadSheet.UnTreat.GHOSTS_POSTDATE -> Copy.RETREAT_REFUSED
+                        PadSheet.UnTreat.NOT_BINNED -> Copy.UNTREAT_NOT_BINNED
+                        // The card only offers NONE over a treatment, so this
+                        // is a race (a twin, another screen) rather than a tap
+                        // on an untreated pad - it reads the same either way.
+                        PadSheet.UnTreat.NOTHING, null -> Copy.BIN_ITEM_GONE
+                    },
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("UNTREAT", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
     /** DO IT AGAIN, half one: lift this pad's last treatment onto the caller's clipboard, named. */
     fun onCopyRecipe() {
         if (busy) return
@@ -1505,8 +1575,16 @@ fun PadSheetScreen(
                 busy = busy,
                 applying = applyingSegment.takeIf { busy },
                 onSegmentTap = { seg ->
-                    applyingSegment = seg
-                    applyTreatment(seg, pendingAmt)
+                    if (seg == PadSheet.NONE) {
+                        // No `applyingSegment` for NONE: the busy header reads
+                        // "TREATMENT · <segment>…", and a restore out of the bin
+                        // is a file copy, not the second-and-a-bit of DSP that
+                        // header exists to explain. `busy` still greys the card.
+                        unTreat()
+                    } else {
+                        applyingSegment = seg
+                        applyTreatment(seg, pendingAmt)
+                    }
                 },
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
                 // AMT re-runs the treatment at the new amount, which is the
@@ -2201,10 +2279,10 @@ private fun TreatmentCard(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (seg in row) {
                     val selected = if (seg == noneSegment) isNoneState else seg == activeSegment
-                    // NONE is display-only here — this card has no "un-treat"
-                    // action, so it never accepts a tap (see the file's report
-                    // for why that's a deliberate scope line, not an oversight).
-                    val tappable = !busy && seg != noneSegment
+                    // NONE takes the treatment back off (September UAT,
+                    // finding 13). Which chips are live is PadSheet's rule,
+                    // not this card's, so it can be asserted without a phone.
+                    val tappable = !busy && PadSheet.tappable(seg, isNoneState)
                     // The one being applied wears the pad's colour at half
                     // strength - lit enough to find, not so lit it reads as
                     // already done.

@@ -1,11 +1,14 @@
 package com.snipsnap.shell
 
 import com.snipsnap.json.JsonValue
+import com.snipsnap.kit.KitLayer
+import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.Eras
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Treatments
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -150,5 +153,79 @@ class PadSheetTest {
         for (segment in PadSheet.ALL_SEGMENTS - setOf("TUNE", "STOP", "START", "SLAP", "ETERNAL", "SKIM")) {
             assertEquals(segment, PadSheet.displayLabel(segment), "$segment wasn't renamed - it should draw itself")
         }
+    }
+
+    // ---- NONE, the un-treat (September UAT, finding 13) ----
+
+    private fun treated(
+        recipe: JsonValue.Obj?,
+        layers: List<KitLayer> = emptyList(),
+    ) = KitPad(slot = 1, sampleFile = "a1_kick.wav", recipe = recipe, velocityLayers = layers)
+
+    private val ERA = JsonValue.Obj(
+        linkedMapOf<String, JsonValue>("era" to JsonValue.Str("tape"), "amount" to JsonValue.Num(0.5)),
+    )
+
+    @Test
+    fun `NONE is live over a treatment and dead over an untreated pad - every other chip is always live`() {
+        assertTrue(PadSheet.tappable(PadSheet.NONE, isNoneState = false), "NONE is the un-treat when there is one")
+        assertFalse(PadSheet.tappable(PadSheet.NONE, isNoneState = true), "NONE over NONE is a no-op, not a toast")
+        for (segment in PadSheet.ALL_SEGMENTS - PadSheet.NONE) {
+            assertTrue(PadSheet.tappable(segment, isNoneState = true), "$segment is live on an untreated pad")
+            assertTrue(PadSheet.tappable(segment, isNoneState = false), "$segment re-treats when tapped again")
+        }
+    }
+
+    @Test
+    fun `NONE has nothing to undo on a pad no card treatment rides`() {
+        assertEquals(PadSheet.UnTreat.NOTHING, PadSheet.unTreatState(treated(null), setOf("a1_kick.wav")))
+        // An fx-only chain names no treatment, so the card never lit a
+        // segment for it and NONE claims no undo either.
+        val fxOnly = PadRecipe(fx = Treatments.chain("washed")).toJsonValue()
+        assertEquals(PadSheet.UnTreat.NOTHING, PadSheet.unTreatState(treated(fxOnly), setOf("a1_kick.wav")))
+    }
+
+    @Test
+    fun `NONE is ready when the bin holds every file the pad references`() {
+        assertEquals(PadSheet.UnTreat.READY, PadSheet.unTreatState(treated(ERA), setOf("a1_kick.wav")))
+
+        val layered = treated(ERA, listOf(KitLayer("a1_kick_soft.wav", 1, 63), KitLayer("a1_kick.wav", 64, 127)))
+        assertEquals(
+            PadSheet.UnTreat.READY,
+            PadSheet.unTreatState(layered, setOf("a1_kick.wav", "a1_kick_soft.wav")),
+        )
+    }
+
+    @Test
+    fun `SMEAR rides its own recipe shape and is just as undoable`() {
+        val smear = JsonValue.Obj(
+            linkedMapOf<String, JsonValue>("verb" to JsonValue.Str("smear"), "amount" to JsonValue.Num(0.4)),
+        )
+        // read() cannot see SMEAR on purpose, so a state that consulted only
+        // read() would call a smeared pad untreated and grey NONE out on it.
+        assertNull(PadSheet.read(smear))
+        assertEquals(PadSheet.UnTreat.READY, PadSheet.unTreatState(treated(smear), setOf("a1_kick.wav")))
+    }
+
+    @Test
+    fun `a ghost layer that postdates the treatment refuses rather than half-restoring`() {
+        val layered = treated(ERA, listOf(KitLayer("a1_kick_soft.wav", 1, 63), KitLayer("a1_kick.wav", 64, 127)))
+        assertEquals(
+            PadSheet.UnTreat.GHOSTS_POSTDATE,
+            PadSheet.unTreatState(layered, setOf("a1_kick.wav")),
+        )
+    }
+
+    @Test
+    fun `a treatment the bin never held is named but not undoable`() {
+        // A bank-B twin, a CLI treat in another folder, a bin since emptied.
+        assertEquals(PadSheet.UnTreat.NOT_BINNED, PadSheet.unTreatState(treated(ERA), emptySet()))
+        // The main sample decides: a bin holding only the ghost layer is
+        // still no earlier take of the pad.
+        val layered = treated(ERA, listOf(KitLayer("a1_kick_soft.wav", 1, 63), KitLayer("a1_kick.wav", 64, 127)))
+        assertEquals(
+            PadSheet.UnTreat.NOT_BINNED,
+            PadSheet.unTreatState(layered, setOf("a1_kick_soft.wav")),
+        )
     }
 }

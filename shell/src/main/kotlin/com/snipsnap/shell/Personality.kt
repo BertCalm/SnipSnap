@@ -440,6 +440,10 @@ object Copy {
     const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."
     const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."
+    /** NONE, when it lands: the pad's earlier take is back out of the bin and the recipe is off. */
+    fun unTreated(pad: String): String = "$pad IS ITSELF AGAIN. THE BIN GAVE THE ORIGINAL BACK."
+    /** NONE, when the bin cannot help: a twin's copied recipe, a treatment performed elsewhere, or a bin since emptied. */
+    const val UNTREAT_NOT_BINNED = "THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE TREATMENT STAYS."
     /** Row five and TUNE: [key] is the kit's key label, or what the treatment did without one ("THE NEAREST SEMITONES", "A, THE HIT'S OWN NOTE"). */
     fun keyed(segment: String, pad: String, key: String): String = "$segment ON $pad, IN $key. ORIGINAL SLEEPS IN THE BIN."
     /** The keyed family's honest refusal, [reason] in the treatment's own words ("a kick is a drum, not a note"). */
