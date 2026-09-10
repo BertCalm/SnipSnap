@@ -30,7 +30,7 @@ Kotlin that has **never been through a compiler**. Treat it accordingly.
 ## M0's exit test (from docs/APP_PLAN.md)
 
 Browse kits on a phone, tap pads, hear WAVs (interim `SoundPool`), flip
-schemes in Tape Properties. The FRESH TAPE menu (six starters from
+schemes in Tape Properties. The FRESH TAPE menu (eight starters from
 `StarterKits`, rendered by the `:synth` engines on-device) makes the
 shelf useful before capture (M1) exists.
 

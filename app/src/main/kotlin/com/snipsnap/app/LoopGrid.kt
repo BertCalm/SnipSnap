@@ -24,8 +24,12 @@ import com.snipsnap.loop.Session
 /**
  * TapeOS palette for this screen.
  *
- * Fixed rather than themed for now — the four schemes in UI_DESIGN.md become a
- * Compose theme object later, and hardcoding one keeps this task about the grid.
+ * Fixed rather than themed for now — this becomes a `Scheme` lookup like every
+ * other screen later, and hardcoding one keeps this task about the grid. The
+ * roster it will read is `SchemeId`, whose source of truth is
+ * `design/Schemes.dc.html`. This comment used to point at `docs/UI_DESIGN.md`
+ * instead, naming a set of schemes that no longer exists — see that file's own
+ * superseded note.
  */
 private object Tape {
     val Desk = Color(0xFF2B2B2B)

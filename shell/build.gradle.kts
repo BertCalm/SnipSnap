@@ -61,4 +61,15 @@ tasks.test {
             .withPropertyName("${module}SourcesScannedByConventionTest")
             .withPathSensitivity(PathSensitivity.RELATIVE)
     }
+
+    // The roster-count law reads these as prose, for the same reason and with
+    // the same hazard: undeclared, the task stays UP-TO-DATE after a README
+    // edit and the law goes green having never re-read the sentence that
+    // changed. Caught exactly that way while writing it — reverting a README
+    // to its stale count did not fail the test until these were declared.
+    mapOf("root" to "../README.md", "app" to "../app/README.md").forEach { (owner, readme) ->
+        inputs.file(layout.projectDirectory.file(readme))
+            .withPropertyName("${owner}ReadmeScannedByConventionTest")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    }
 }
