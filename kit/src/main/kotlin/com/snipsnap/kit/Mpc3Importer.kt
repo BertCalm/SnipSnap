@@ -280,7 +280,6 @@ object Mpc3Importer {
             )
         }
 
-    /** Slot-indexed (0-based) colour hex strings, or nulls when uncoloured. */
     /** `synthSection.ampEnvelope.<name>.value0` on one instrument, or null. */
     private fun ampField(inst: Map<String, JsonValue>, name: String): Double? {
         val synth = (inst["synthSection"] as? JsonValue.Obj)?.entries ?: return null
@@ -297,6 +296,7 @@ object Mpc3Importer {
         return (slot[name] as? JsonValue.Num)?.value
     }
 
+    /** Slot-indexed (0-based) colour hex strings, or nulls when uncoloured. */
     private fun padColours(program: Map<String, JsonValue>): List<String?> {
         val pp = (program["programPads"] as? JsonValue.Obj)?.entries ?: return List(128) { null }
         val universal = ((pp["Universal"] as? JsonValue.Obj)?.entries?.get("value0")

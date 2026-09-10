@@ -1048,12 +1048,6 @@ fun App(shelf: KitShelf) {
     }
 
     /**
-     * INSTANT KIT (F2.2): the one tap on TAPE — the selection (or the whole
-     * deck) chopped with the defaults and landed on the grid without the
-     * review, the same DUBBING… shape as a fresh tape. CHOP can still open
-     * the result later to argue with the chips.
-     */
-    /**
      * READ AS GROOVE (wave ZZ): the tape read as a rhythm instead of a
      * sound. The Ear hears the selection (or the whole deck), the open
      * kit's own pads play it, and GROOVE opens on it. Refusals are the
@@ -1146,6 +1140,12 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * INSTANT KIT (F2.2): the one tap on TAPE — the selection (or the whole
+     * deck) chopped with the defaults and landed on the grid without the
+     * review, the same DUBBING… shape as a fresh tape. CHOP can still open
+     * the result later to argue with the chips.
+     */
     fun instantKit(file: File, range: IntRange) {
         if (busy != null) return
         busy = "CHOPPING…"
@@ -1205,11 +1205,6 @@ fun App(shelf: KitShelf) {
         }
     }
 
-    /**
-     * BACKUP (X3.3): every kit on the shelf as one file, handed to the
-     * chooser - Drive, a cable, a messenger to yourself. The same file
-     * shared back in lands every kit again through the shelf's door.
-     */
     /** FORGET → BIN on a held room: into the bin for 30 days, the toast says so. */
     fun forgetRoom(room: Rooms.Room) {
         // Under the app's one busy lock, like every other file move: a second
@@ -1399,6 +1394,11 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * BACKUP (X3.3): every kit on the shelf as one file, handed to the
+     * chooser - Drive, a cable, a messenger to yourself. The same file
+     * shared back in lands every kit again through the shelf's door.
+     */
     fun backupShelf() {
         if (busy != null) return
         if (kits.isEmpty()) {

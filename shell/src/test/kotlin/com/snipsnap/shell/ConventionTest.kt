@@ -773,4 +773,105 @@ class ConventionTest {
             )
         }
     }
+
+    // ---- Law: a doc-comment is never stranded above another doc-comment ----
+
+    /** Every module's `src/main/kotlin`, from :shell's own project dir — the working directory Gradle gives `tasks.test`. */
+    private val moduleSrcRoots: List<File>
+        get() = listOf("app", "audio", "cli", "json", "kit", "loop", "mpc3", "shell", "synth", "xpm")
+            .map { File("../$it/src/main/kotlin") }
+
+    /** One doc-comment block: `first` and `last` are 0-based line indices, both inclusive. */
+    private data class DocBlock(val first: Int, val last: Int)
+
+    /** Every doc-comment block in [lines], in order. The opening delimiter must start its own line, which is this codebase's universal shape. */
+    private fun docBlocks(lines: List<String>): List<DocBlock> {
+        val blocks = mutableListOf<DocBlock>()
+        var i = 0
+        while (i < lines.size) {
+            val t = lines[i].trim()
+            if (t.startsWith("/**")) {
+                var j = i
+                // A one-liner opens and closes on the same line; anything
+                // else runs to the first line ending in a close delimiter.
+                if (!(t.endsWith("*/") && t.length > 3)) {
+                    while (j < lines.size && !lines[j].trim().endsWith("*/")) j++
+                }
+                if (j >= lines.size) break
+                blocks += DocBlock(i, j)
+                i = j + 1
+            } else {
+                i++
+            }
+        }
+        return blocks
+    }
+
+    /**
+     * A doc-comment documents the declaration directly beneath it. When
+     * another doc-comment is what sits directly beneath it instead, the
+     * first one documents nothing — it reaches no IDE and no generated
+     * doc — and the declaration it was written for is left bare.
+     *
+     * This is the doc-comment face of the bug 30e6d42 fixed: an
+     * `@OptIn(ExperimentalFoundationApi::class)` that had been separated
+     * from its function by an insertion, so the opt-in landed on a
+     * function that didn't need it and `SliceRow`, which did, lost it and
+     * turned `android-build` red. Same cause both times — a declaration
+     * inserted by anchoring on a signature line without looking at what
+     * sits above it — and the compiler is silent for both, because the
+     * file stays syntactically valid either way. Six of these were live in
+     * the tree when this law was written, across three modules.
+     *
+     * **The one exemption** is a file's *first* doc-comment. Kotlin has no
+     * file-level doc syntax, so a file overview is written as a
+     * doc-comment above the file's first declaration — which is
+     * positionally identical to a stranded one. Every module is scanned,
+     * not just `:app`: the instances were spread across `:app`, `:shell`
+     * and `:kit`, and a law that had only covered `:app` would have missed
+     * the one that prompted it.
+     */
+    @Test
+    fun `a doc-comment is never stranded above another doc-comment`() {
+        val roots = moduleSrcRoots
+        val missing = roots.filterNot { it.isDirectory }
+        require(missing.isEmpty()) {
+            "expected every module's source root to exist but these don't: " +
+                missing.joinToString { it.absolutePath } + ". This scan only works when the test " +
+                "JVM's working directory is :shell's own project dir (Gradle's default). If a module " +
+                "was renamed or removed, fix the list here rather than deleting the check: a scan " +
+                "that finds nothing would pass by accident, which is worse than no test at all."
+        }
+        val files = roots.flatMap { it.walkTopDown().filter { f -> f.isFile && f.extension == "kt" } }
+        require(files.size > 100) {
+            "found only ${files.size} .kt files across ${roots.size} module source roots — the scan is " +
+                "broken, not the tree. Fail loudly instead of silently checking almost nothing."
+        }
+
+        val stranded = mutableListOf<String>()
+        for (file in files) {
+            val lines = file.readText().split("\n")
+            val blocks = docBlocks(lines)
+            // `drop(1)`: the file's first doc-comment is the file-overview
+            // idiom and is exempt — see this law's KDoc.
+            for (block in blocks.drop(1)) {
+                var k = block.last + 1
+                while (k < lines.size && lines[k].isBlank()) k++
+                if (k < lines.size && lines[k].trim().startsWith("/**")) {
+                    stranded += "${file.path.replace('\\', '/')}:${block.first + 1} " +
+                        "(next doc-comment opens at line ${k + 1})"
+                }
+            }
+        }
+
+        assertTrue(
+            stranded.isEmpty(),
+            "these doc-comments document nothing — another doc-comment sits directly beneath each of " +
+                "them, so the declaration each was written for is undocumented:\n  " +
+                stranded.joinToString("\n  ") +
+                "\nMove each block down to sit directly above the declaration it describes, or delete " +
+                "it if a newer doc on that declaration has already superseded it. Do not silence this " +
+                "by merging two unrelated blocks into one.",
+        )
+    }
 }

@@ -51,7 +51,14 @@ tasks.test {
     // plugin; it just tells Gradle the truth about what this task reads.
     // `withPropertyName` keeps the build cache key stable, and RELATIVE
     // path sensitivity means moving the checkout doesn't invalidate it.
-    inputs.dir(layout.projectDirectory.dir("../app/src/main/kotlin"))
-        .withPropertyName("appSourcesScannedByConventionTest")
-        .withPathSensitivity(PathSensitivity.RELATIVE)
+    // Every module, not just :app: the stranded-doc-comment law scans the
+    // whole tree, and the instances it was written for were spread across
+    // :app, :shell and :kit. A module missing from this list is a module
+    // whose source changes leave this task UP-TO-DATE, so the law would go
+    // green having never re-read the file that broke it.
+    listOf("app", "audio", "cli", "json", "kit", "loop", "mpc3", "shell", "synth", "xpm").forEach { module ->
+        inputs.dir(layout.projectDirectory.dir("../$module/src/main/kotlin"))
+            .withPropertyName("${module}SourcesScannedByConventionTest")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    }
 }
