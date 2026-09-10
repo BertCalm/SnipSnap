@@ -184,7 +184,7 @@ object Exporters {
             val dataDir = File(destRoot, Mpc3ProjectWriter.projectDataDirName(kit.name))
             val xpj = File(destRoot, "${kit.name}.xpj")
             if ((xpj.exists() || dataDir.exists()) && !overwrite) {
-                throw DestinationExists(xpj)
+                throw DestinationExists.firstOf(xpj, dataDir)
             }
             dataDir.deleteRecursively()
             val program = Mpc3Exporter.stageTrack(kit, kitDir, dataDir)

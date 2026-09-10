@@ -28,7 +28,29 @@ import java.io.IOException
  */
 class DestinationExists(val path: File) : IOException(
     "destination already exists: $path (pass overwrite=true to replace same-named files)",
-)
+) {
+    companion object {
+        /**
+         * The first of [paths] that is actually on disk.
+         *
+         * The MPC-family writers guard on a *pair* — the program file OR its
+         * data folder — because either one alone is enough to make the next
+         * write a replacement. Naming the first of the pair unconditionally
+         * would report a path that need not exist: a half-written export, or
+         * one whose `.xpj` was deleted while its data folder stayed, blocks
+         * the write via the folder while the file is gone. [path] is shown to
+         * the user by name and asserted to exist by `ExportWizardTest`, so an
+         * OR-shaped guard has to make an OR-shaped report.
+         *
+         * Falls back to the first path when none exists, which cannot happen
+         * from a guard that already tested them — a caller reaching for this
+         * with nothing on disk gets a sensible name rather than an exception
+         * from inside an exception.
+         */
+        fun firstOf(vararg paths: File): DestinationExists =
+            DestinationExists(paths.firstOrNull { it.exists() } ?: paths.first())
+    }
+}
 
 /** Thrown when preflight found blocking problems; carries the full checklist. */
 class ExportBlockedException(val findings: List<Finding>) : Exception(

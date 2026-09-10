@@ -79,4 +79,48 @@ class ExportFormatsTest {
         assertTrue(base.name in clipNames, "the captured base must survive the cap")
         assertTrue(e.name in clipNames, "PROG E must survive the cap, displacing a derived variant instead")
     }
+
+    // ---- finding 18: the reported path must be the thing actually there ----
+
+    /**
+     * The MPC-family writers guard on a pair — the program file OR its data
+     * folder — so the refusal has to name whichever one is real. EXPORT shows
+     * that name to the user before they decide to overwrite it; naming a file
+     * that isn't there would be worse than saying nothing.
+     */
+    @Test
+    fun `DestinationExists names whichever of a guarded pair is actually on disk`() {
+        val dir = File(temp, "which-one").apply { mkdirs() }
+        val file = File(dir, "Kit.xpj")
+        val dataDir = File(dir, "Kit_ProjectData")
+
+        // Only the data folder survives - a deleted .xpj, or a half-written
+        // export. Naming the .xpj here would point at nothing.
+        dataDir.mkdirs()
+        assertEquals(dataDir, DestinationExists.firstOf(file, dataDir).path)
+
+        // Only the file.
+        dataDir.deleteRecursively()
+        file.writeText("x")
+        assertEquals(file, DestinationExists.firstOf(file, dataDir).path)
+
+        // Both: the first named wins, which is the one the user recognises.
+        dataDir.mkdirs()
+        assertEquals(file, DestinationExists.firstOf(file, dataDir).path)
+
+        // Whatever it names is on disk - the contract ExportWizardTest leans on.
+        assertTrue(DestinationExists.firstOf(file, dataDir).path.exists())
+    }
+
+    @Test
+    fun `DestinationExists stays an IOException carrying the old message`() {
+        val f = File(temp, "Legacy.xpj")
+        val e = DestinationExists(f)
+        assertTrue(e is java.io.IOException, "every existing catch has to keep working")
+        assertEquals(
+            "destination already exists: $f (pass overwrite=true to replace same-named files)",
+            e.message,
+            "the thirteen hand-written copies said exactly this; tests assert on it",
+        )
+    }
 }
