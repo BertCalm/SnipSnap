@@ -79,6 +79,27 @@ class FormatLocaleTest {
     }
 
     /**
+     * [receiverLiteral]'s raw-string branch, exercised directly: a `"""`
+     * receiver right before `.format(` is the one shape this codebase has
+     * no live example of today, so nothing in the scan itself would have
+     * caught a regression here. Also pins the everyday normal-string
+     * shape and the multi-line-chained shape (`Arranger.kt`'s own style)
+     * against the same helper, so all three stay proven together.
+     */
+    @Test
+    fun `receiverLiteral reads a raw triple-quoted string back to its own opening delimiter`() {
+        val raw = "val x = \"\"\"a %.2f b\"\"\".format(1.0)"
+        val dot = raw.indexOf(".format(")
+        assertEquals("\"\"\"a %.2f b\"\"\"", receiverLiteral(raw, dot))
+
+        val normal = "val x = \"a %d b\".format(1)"
+        assertEquals("\"a %d b\"", receiverLiteral(normal, normal.indexOf(".format(")))
+
+        val chained = "\"a %d b\"\n    .format(1)"
+        assertEquals("\"a %d b\"", receiverLiteral(chained, chained.indexOf(".format(")))
+    }
+
+    /**
      * `:shell`'s own module dir is `.` from the test JVM's working
      * directory (Gradle's default, per `ConventionTest`'s own KDoc); every
      * sibling module is reached the same way `ConventionTest` reaches
@@ -142,7 +163,10 @@ class FormatLocaleTest {
         while (i >= 0 && text[i].isWhitespace()) i--
         if (i < 0 || text[i] != '"') return null
         if (i >= 2 && text[i - 1] == '"' && text[i - 2] == '"') {
-            val start = text.lastIndexOf("\"\"\"", i - 2)
+            // i-2 is the closing delimiter's OWN start index; searching
+            // from there would match it against itself and return the
+            // closing """ instead of walking back to the opening one.
+            val start = text.lastIndexOf("\"\"\"", i - 3)
             return if (start < 0) null else text.substring(start, i + 1)
         }
         var j = i - 1
@@ -221,7 +245,7 @@ class FormatLocaleTest {
                 findings += Finding(
                     module,
                     file.relativeTo(root).path.replace('\\', '/'),
-                    text.count { it == '\n' }.let { text.substring(0, idx).count { c -> c == '\n' } + 1 },
+                    text.substring(0, idx).count { it == '\n' } + 1,
                     literal.take(90),
                 )
             }
