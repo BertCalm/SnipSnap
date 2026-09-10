@@ -2069,6 +2069,27 @@ APP+CORE wave SSS: ✓ all landed (2026-09-09) — READ BACK, X-RAY turned
   `RoundTripFuzzTest` was the test-time version of this idea; this is
   the one the user sees, on every format X-Ray can read.
 
+APP+CORE wave TTT: ✓ all landed (2026-09-10) — SINCE T3, the TAKES card
+  saying what a take differs by before you restore it. `KitDiff.changes`
+  (`:shell`, new) diffs two `kit.json` snapshots of the same kit keyed by
+  SLOT - never by position, so a pad added on B02 doesn't make every
+  later pad read as changed the way the positional `MpcDiff` would - and
+  says each difference in the pad's own words: ADDED / CLEARED, level,
+  pan, both tunes, mute group, one-shot, the shape fields (a null read as
+  DEFAULT, never an invented number), layer and chain counts, and the
+  recipe named the way the door that wrote it already names it
+  (`PadSheet.read` for the treatments with their AMT, MUTATE and OUTSIDE
+  through their own readers, a short word each for robin/splice/doctor/
+  clean/sculpt/smear/patch). Kit-level lines first: rename, key, tempo,
+  wear. Provenance (`source`) is deliberately not a change. Every take
+  row on VERSIONS + BIN now carries a collapsed headline ("3 CHANGES",
+  "NO CHANGES") and taps open to the lines, read against the live kit at
+  the moment the list was built; a take that won't parse says so instead
+  of pretending. One caveat under every expander, because it is true:
+  `replaceAudio` rewrites the WAV under the SAME filename and records
+  what it did in the recipe, so a rewrite that changed no recipe leaves
+  no mark this diff can see.
+
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
   F6.1 .xpn import + expansion tile → velocity/bank B →

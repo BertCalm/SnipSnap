@@ -36,8 +36,10 @@ import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
+import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.shell.KitDiff
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
@@ -116,9 +118,13 @@ fun TakesBinScreen(
 
     var busy by remember(model) { mutableStateOf(false) }
     var armed by remember(model) { mutableStateOf(false) }
-    var takeFiles by remember(model) { mutableStateOf<List<File>>(emptyList()) }
+    var takeScans by remember(model) { mutableStateOf<List<TakeScan>>(emptyList()) }
     var binEntries by remember(model) { mutableStateOf<List<KitBuilderModel.BinEntry>>(emptyList()) }
     var kitSnapshot by remember(model) { mutableStateOf(entry.kit) }
+    // SINCE T3: which take row is open. A File, not an index — rows are
+    // rebuilt on every refresh and the same T-number can name a different
+    // archive after a rotation, so the open row follows the file it named.
+    var expandedTake by remember(model) { mutableStateOf<File?>(null) }
 
     /**
      * `m.takes()`/`m.binContents()` are pure directory scans — they read
@@ -132,10 +138,29 @@ fun TakesBinScreen(
      * rather than resetting it back to the stale mount-time snapshot. Only
      * [doRestoreTake], which DOES change what's live, and the initial load
      * below, which has nothing to preserve yet, pass one.
+     *
+     * SINCE T3 rides the same scan: each take is parsed once here, on IO,
+     * and diffed against the kit that is live *as of this refresh* (the
+     * override when there is one, else the standing snapshot), so the
+     * expander never reads a take file a second time on the main thread
+     * and never compares against a kit older than the list it sits in. A
+     * take that won't parse keeps its row — RESTORE will find out for
+     * itself — with `changes = null` so the row can say so instead of
+     * showing "NO CHANGES" for a file nothing could read.
      */
     suspend fun refreshLists(m: KitBuilderModel, kitOverride: com.snipsnap.kit.Kit? = null) {
-        val (t, b) = withContext(Dispatchers.IO) { m.takes() to m.binContents() }
-        takeFiles = t
+        val live = kitOverride ?: kitSnapshot
+        val (t, b) = withContext(Dispatchers.IO) {
+            val scans = m.takes().map { f ->
+                // mtime read once, here: it is the row's identity check
+                // for `doRestoreTake` (see its KDoc) as well as its text.
+                val mtime = f.lastModified()
+                val changes = runCatching { KitDiff.changes(KitStore.read(f), live) }.getOrNull()
+                TakeScan(f, mtime, changes)
+            }
+            scans to m.binContents()
+        }
+        takeScans = t
         binEntries = b
         if (kitOverride != null) kitSnapshot = kitOverride
     }
@@ -165,7 +190,7 @@ fun TakesBinScreen(
      * Runs against a FRESH model opened under the lock (see
      * [withFreshKit]'s KDoc), never the long-lived [model] — mirrors
      * PadSheetScreen's own Law 5 fix. Unlike PAD SHEET, [model] itself is
-     * NOT swapped afterward: this screen keys `busy`/`armed`/`takeFiles`/
+     * NOT swapped afterward: this screen keys `busy`/`armed`/`takeScans`/
      * `binEntries`/`kitSnapshot` on [model]'s identity (`remember(model)`),
      * and `restoreTake` fully replaces `kit` from the take file's own
      * content regardless of which model instance it runs against — so
@@ -308,18 +333,26 @@ fun TakesBinScreen(
         return
     }
 
-    val takeRows = remember(takeFiles) {
-        val total = takeFiles.size + 1
+    val takeRows = remember(takeScans) {
+        val total = takeScans.size + 1
         buildList {
-            add(TakeRow(label = "T$total", whenText = null, current = true, file = null, lastModifiedMillis = 0L))
-            takeFiles.asReversed().forEachIndexed { i, f ->
-                // Read once, kept: this is the row's own identity check for
-                // `doRestoreTake` (see its KDoc) as well as the display text
-                // below, so both read the exact same instant this list was
-                // built rather than re-reading the file's mtime later, after
-                // a rotation may have already changed what's at this path.
-                val mtime = f.lastModified()
-                add(TakeRow(label = "T${total - 1 - i}", whenText = agoLabel(mtime), current = false, file = f, lastModifiedMillis = mtime))
+            add(TakeRow(label = "T$total", whenText = null, current = true, file = null, lastModifiedMillis = 0L, changes = null))
+            takeScans.asReversed().forEachIndexed { i, s ->
+                // The mtime was read once, in `refreshLists`, the same
+                // instant the take was parsed for its diff — so the identity
+                // check, the "ago" text and the SINCE T3 lines all describe
+                // the same file, not whatever a rotation has since put at
+                // this path.
+                add(
+                    TakeRow(
+                        label = "T${total - 1 - i}",
+                        whenText = agoLabel(s.lastModifiedMillis),
+                        current = false,
+                        file = s.file,
+                        lastModifiedMillis = s.lastModifiedMillis,
+                        changes = s.changes,
+                    ),
+                )
             }
         }
     }
@@ -413,7 +446,14 @@ fun TakesBinScreen(
             // different features (name-and-find followups).
             PillCard("TAKES — YOUR VERSION HISTORY, EVERY SAVE", scheme, scheme.accent.tape, scheme.accent.tape) {
                 for (row in takeRows) {
-                    TakeRowLine(row, scheme, busy) { file, label, mtime -> doRestoreTake(file, label, mtime) }
+                    val file = row.file
+                    TakeRowLine(
+                        row,
+                        scheme,
+                        busy,
+                        expanded = file != null && file == expandedTake,
+                        onToggle = { if (file != null) expandedTake = if (expandedTake == file) null else file },
+                    ) { f, label, mtime -> doRestoreTake(f, label, mtime) }
                 }
                 if (takeRows.size == 1) {
                     TapeText(Copy.TAKES_EMPTY, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
@@ -439,6 +479,9 @@ fun TakesBinScreen(
     }
 }
 
+/** One archived take as `refreshLists` scanned it: the file, its mtime at scan time, and its SINCE T3 lines against the kit live at that moment (null = the file wouldn't parse). */
+private data class TakeScan(val file: File, val lastModifiedMillis: Long, val changes: List<KitDiff.Change>?)
+
 private data class TakeRow(
     val label: String,
     val whenText: String?,
@@ -446,6 +489,8 @@ private data class TakeRow(
     val file: File?,
     /** [file]'s `lastModified()` as read when this row was built — [doRestoreTake]'s own identity check, see its KDoc. Meaningless (0L) on the `current`/no-`file` row. */
     val lastModifiedMillis: Long,
+    /** SINCE T3: what the live kit differs by from this take. Null on the `current` row (nothing to compare) and on a take that wouldn't parse — the row text tells the two apart by [current]. */
+    val changes: List<KitDiff.Change>?,
 )
 
 private data class BinRow(val entry: KitBuilderModel.BinEntry, val daysLeft: Int, val classColor: Color?)
@@ -486,34 +531,82 @@ private fun agoLabel(millis: Long, nowMillis: Long = System.currentTimeMillis())
     }
 }
 
+/**
+ * One take row. The NOW row is inert furniture; every archived row is a
+ * tap-to-open SINCE T3 expander (the whole header line toggles it, the
+ * RESTORE chip inside keeps its own tap) whose collapsed headline is
+ * `KitDiff.headline` — "3 CHANGES", "NO CHANGES" — or WON'T READ when the
+ * take file didn't parse. Open, it lists the lines the diff found, then
+ * [Copy.TAKES_DIFF_CAVEAT], because the one thing this diff cannot see
+ * (audio rewritten under the same name with no recipe change) is exactly
+ * the thing a reader would otherwise assume it covers.
+ */
 @Composable
-private fun TakeRowLine(row: TakeRow, scheme: Scheme, busy: Boolean, onRestore: (File, String, Long) -> Unit) {
-    Row(
+private fun TakeRowLine(
+    row: TakeRow,
+    scheme: Scheme,
+    busy: Boolean,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onRestore: (File, String, Long) -> Unit,
+) {
+    Column(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(if (row.current) scheme.raised.tape else scheme.lcd.tape, RoundedCornerShape(5.dp))
-            .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(5.dp))
-            .padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(5.dp)),
     ) {
-        TapeText(row.label, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.width(28.dp))
-        Spacer(Modifier.weight(1f))
-        row.whenText?.let { TapeText(it, TapeType.pixelSmall, scheme.ink3.tape) }
-        if (row.current) {
-            TapeText("NOW", TapeType.pixelSmall, scheme.amber.tape)
-        } else if (row.file != null) {
-            val file = row.file
-            Box(
-                Modifier
-                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                    .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                    .let { if (!busy) it.tapeClick(label = null) { onRestore(file, row.label, row.lastModifiedMillis) } else it }
-                    .padding(horizontal = 8.dp),
-                contentAlignment = Alignment.Center,
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .let { if (!row.current) it.tapeClick(label = null, onClick = onToggle) else it }
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            TapeText(row.label, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.width(28.dp))
+            if (!row.current) {
+                val changes = row.changes
+                val headline = if (changes == null) "WON'T READ" else KitDiff.headline(changes)
+                val headlineInk = if (changes == null) scheme.warn.tape else if (changes.isEmpty()) scheme.ink3.tape else scheme.ink2.tape
+                TapeText("$headline ${if (expanded) "▾" else "▸"}", TapeType.pixelSmall, headlineInk, maxLines = 1)
+            }
+            Spacer(Modifier.weight(1f))
+            row.whenText?.let { TapeText(it, TapeType.pixelSmall, scheme.ink3.tape) }
+            if (row.current) {
+                TapeText("NOW", TapeType.pixelSmall, scheme.amber.tape)
+            } else if (row.file != null) {
+                val file = row.file
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
+                        .let { if (!busy) it.tapeClick(label = null) { onRestore(file, row.label, row.lastModifiedMillis) } else it }
+                        .padding(horizontal = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText("RESTORE", TapeType.pixelSmall, if (busy) scheme.ink3.tape else scheme.amber.tape)
+                }
+            }
+        }
+        if (expanded && !row.current) {
+            Column(
+                Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
-                TapeText("RESTORE", TapeType.pixelSmall, if (busy) scheme.ink3.tape else scheme.amber.tape)
+                val changes = row.changes
+                if (changes == null) {
+                    TapeText(Copy.TAKES_DIFF_UNREADABLE, TapeType.pixelSmall, scheme.warn.tape, maxLines = 2)
+                } else {
+                    // "SINCE T3": the direction the lines read in — this take
+                    // then, the kit as it is now.
+                    TapeText("SINCE ${row.label}", TapeType.pixelSmall, scheme.amber.tape, maxLines = 1)
+                    for (c in changes) {
+                        TapeText(c.text, TapeType.pixelSmall, scheme.ink.tape, maxLines = 3)
+                    }
+                }
+                TapeText(Copy.TAKES_DIFF_CAVEAT, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3)
             }
         }
     }
