@@ -1145,8 +1145,13 @@ fun App(shelf: KitShelf) {
      * deck) chopped with the defaults and landed on the grid without the
      * review, the same DUBBING… shape as a fresh tape. CHOP can still open
      * the result later to argue with the chips.
+     *
+     * [hadSelection] is TAPE's answer, not this function's guess (September
+     * UAT, finding 19): the toast has to say which of the two it chopped,
+     * and [range] alone cannot tell them apart — an IN/OUT the user dragged
+     * across the whole tape arrives here identical to no selection at all.
      */
-    fun instantKit(file: File, range: IntRange) {
+    fun instantKit(file: File, range: IntRange, hadSelection: Boolean) {
         if (busy != null) return
         busy = "CHOPPING…"
         scope.launch {
@@ -1156,7 +1161,7 @@ fun App(shelf: KitShelf) {
             try {
                 val (entry, result) = withContext(Dispatchers.IO) { shelf.instantKit(file, range) }
                 kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                toast = Copy.instantKit(result.sliceCount, result.chokeSet)
+                toast = Copy.instantKit(result.sliceCount, result.chokeSet, wholeTape = !hadSelection)
                 open = entry
                 screen = AppScreen.KIT
             } catch (e: CancellationException) {

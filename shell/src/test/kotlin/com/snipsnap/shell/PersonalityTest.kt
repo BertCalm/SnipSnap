@@ -197,6 +197,40 @@ class PersonalityTest {
     }
 
     /**
+     * Finding 19. COMMIT and INSTANT KIT sit side by side under the deck and
+     * used to disagree about an empty selection: COMMIT refused in words
+     * while INSTANT KIT quietly chopped the whole tape, and the user was
+     * never told which they got.
+     *
+     * INSTANT KIT still takes the whole tape — that is the right default for
+     * a one-tap button, and the silence about it was the bug — so what this
+     * pins is that the two scopes now read differently, and that the
+     * selection reading borrows COMMIT's own words for the markers.
+     */
+    @Test
+    fun `INSTANT KIT names what it chopped`() {
+        val whole = Copy.instantKit(8, chokeSet = false, wholeTape = true)
+        val selected = Copy.instantKit(8, chokeSet = false, wholeTape = false)
+        assertTrue(whole != selected, "the whole tape and a selection cannot read the same: $whole")
+        assertTrue(whole.contains("WHOLE TAPE"), "it says it took everything: $whole")
+        // COMMIT's refusal is "SET IN + OUT FIRST"; the same two markers are
+        // named here, so the pair of buttons speaks one vocabulary.
+        assertTrue(selected.contains("IN + OUT"), "it names the markers COMMIT asks for: $selected")
+        assertTrue(Copy.COMMIT_NEEDS_SELECTION.contains("IN + OUT"), Copy.COMMIT_NEEDS_SELECTION)
+
+        for (line in listOf(whole, selected)) {
+            // The count survives either reading - it is the part users act on.
+            assertTrue(line.contains("8 SLICES"), "the slice count is still there: $line")
+            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+            assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
+        }
+        assertTrue(
+            Copy.instantKit(8, chokeSet = true, wholeTape = true).endsWith("CHOKE GROUP SET."),
+            "the choke note still rides on the end, whichever scope it was",
+        )
+    }
+
+    /**
      * Finding 13. NONE takes a treatment back off now, so it has three
      * things to say — it landed, the ghosts are in the way, or the bin
      * never held the take — and the three have to be told apart. Two of
@@ -332,8 +366,11 @@ class PersonalityTest {
         assertTrue(Copy.keySet("Am").startsWith("Am SET."), "the key leads its own toast")
         assertTrue(Copy.keySet("Am").endsWith("."), "and still lands on a full stop")
         assertEquals("1 PAD RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(1, "A MINOR"))
-        assertEquals("ONE TAP. 8 SLICES ON THE GRID. CHOKE GROUP SET.", Copy.instantKit(8, true))
-        assertEquals("ONE TAP. 5 SLICES ON THE GRID.", Copy.instantKit(5, false))
+        assertEquals(
+            "ONE TAP, YOUR IN + OUT. 8 SLICES ON THE GRID. CHOKE GROUP SET.",
+            Copy.instantKit(8, chokeSet = true, wholeTape = false),
+        )
+        assertEquals("ONE TAP, THE WHOLE TAPE. 5 SLICES ON THE GRID.", Copy.instantKit(5, chokeSet = false, wholeTape = true))
         assertEquals("3 PADS RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(3, "A MINOR"))
         assertTrue(Copy.takeRestored("T3").startsWith("T3 RESTORED."), "the take leads its own toast")
         assertTrue(
