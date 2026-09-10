@@ -4,8 +4,10 @@ name: dependency-check
 # header for why this repo's CI minutes are metered. The difference here:
 # a CVE disclosure doesn't move between two commits ten minutes apart the
 # way a code change does, so this job's real cadence is "at least once a
-# week", not "every push". A finding blocks nothing automatically; it
-# lands in the uploaded report for a person to read.
+# week", not "every push". A High/Critical finding does fail this job
+# (build.gradle.kts sets failBuildOnCVSS = 7.0), so it shows red in
+# Actions and the report still uploads via if: always() - it just never
+# blocks a PR merge, since this workflow isn't part of what gates one.
 on:
   schedule:
     - cron: "0 6 * * 1" # Monday 06:00 UTC
@@ -30,17 +32,23 @@ jobs:
       # The plugin downloads and caches the NVD/CISA-KEV feeds under the
       # Gradle user home; without this every run re-fetches gigabytes of
       # CVE data from scratch instead of just the delta since last week.
-      # Keyed on the build files rather than the run id - a run id is
-      # unique to itself, so using one as the cache key would never hit on
-      # a later run and would force a fresh upload every single time. This
-      # way an ordinary week (no build file changed) reuses last week's
-      # cache outright; the plugin's own incremental update still refreshes
-      # the CVE data against NVD from whatever base the cache restores.
+      #
+      # Keyed on the run id, deliberately unique every time: GitHub's
+      # cache backend is immutable per key, so a STABLE key (tried here
+      # first, then reverted) would hit on every later run and therefore
+      # never save again after the first - the cached database would be
+      # frozen as of whenever it was first written, doing a bigger and
+      # bigger incremental update against an ever-stabler base instead of
+      # ever persisting that update back. restore-keys still restores the
+      # most recent prior run's cache as that base, so this only costs a
+      # fresh upload each run (this workflow's own cadence is weekly plus
+      # occasional workflow_dispatch, not every push) in exchange for the
+      # cache actually staying current, which is the entire point of it.
       - name: Cache the vulnerability database
         uses: actions/cache@v4
         with:
           path: ~/.gradle/dependency-check-data
-          key: ${{ runner.os }}-dependency-check-data-${{ hashFiles('**/build.gradle.kts', '**/settings.gradle.kts') }}
+          key: ${{ runner.os }}-dependency-check-data-${{ github.run_id }}
           restore-keys: |
             ${{ runner.os }}-dependency-check-data-
       - name: Scan every module's dependencies for known vulnerabilities
