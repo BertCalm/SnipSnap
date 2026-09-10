@@ -285,3 +285,41 @@ class OrbitSpanTest {
         assertEquals(OrbitSpan.FREE, OrbitSpan.fromName(null))
     }
 }
+
+class OrbitBarTest {
+
+    private fun ring(steps: Int, span: OrbitSpan, hits: List<Int> = listOf(0)) =
+        Orbit("r", steps, PatternOrbit("kit", hits.map { OrbitHit(it, 1) }), span = span)
+
+    private fun set(lap: Int, vararg orbits: Orbit) = OrbitSet(orbits.toList(), 120f, 48_000, lapSteps = lap)
+
+    @Test
+    fun `a 12-step bar with a free sixteen - four bars of twelve before they meet`() {
+        val s = set(12, ring(16, OrbitSpan.FREE))
+        assertEquals(48L, OrbitClock.cycleSteps(s))
+        assertEquals(4.0, OrbitClock.cycleBars(s))
+        // The ratio is between rings, not against the bar: one ring reads "1".
+        assertEquals("1", OrbitClock.ratioLabel(s))
+        assertEquals("1 BAR", OrbitClock.lengthLabel(s, ring(12, OrbitSpan.FREE)))
+        // A 12-step bar's beat is three 16ths, which 16 does not divide by.
+        assertEquals("16 16THS", OrbitClock.lengthLabel(s, ring(16, OrbitSpan.FREE)))
+        assertEquals("2 BEATS", OrbitClock.lengthLabel(s, ring(6, OrbitSpan.FREE)))
+    }
+
+    @Test
+    fun `a one-bar triplet follows the bar - thirds of twelve`() {
+        val three = ring(3, OrbitSpan.ONE, hits = listOf(0, 1, 2))
+        val s = set(12, three)
+        val step = OrbitClock.stepFrames(s)
+        assertEquals(listOf(0L, 4L * step, 8L * step), OrbitClock.firings(s, three, 0, OrbitClock.cycleFrames(s)).map { it.frame })
+        assertEquals(12L, OrbitClock.cycleSteps(s))
+    }
+
+    @Test
+    fun `the meter labels and the chip list`() {
+        assertEquals(listOf(12, 16, 20, 24, 32), OrbitSet.BAR_CHOICES)
+        assertEquals(listOf("3/4", "4/4", "5/4", "6/4", "8/4"), OrbitSet.BAR_CHOICES.map { OrbitSet.meterLabel(it) })
+        assertEquals("7/16", OrbitSet.meterLabel(7))
+        assertTrue(OrbitSet.BAR_CHOICES.all { it % 2 == 0 }, "a half-bar span must stay whole at every bar")
+    }
+}

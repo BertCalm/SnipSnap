@@ -20,19 +20,32 @@ object OrbitClip {
     /** MPC clips top out at 64 bars, and so does the bounce. */
     const val MAX_BARS = 64
 
+    /** The clip's bar is always 16 sixteenths: [Mpc3Clip] has bars but no time signature. */
+    const val CLIP_BAR_STEPS = 16
+
     /** Every ORBIT clip's name starts with this, so saving replaces the last one and the GROOVE screen can tell it apart. */
     const val NAME_PREFIX = "ORBIT"
 
     /** The clip's name for [set]: the ratio says what the rings are. */
     fun nameFor(set: OrbitSet): String = "$NAME_PREFIX ${OrbitClock.ratioLabel(set).replace(" : ", ":")}".trim()
 
-    /** How many bars the clip (and the bounce) would be: the cycle, rounded up. */
-    fun bars(set: OrbitSet): Int = ceil(OrbitClock.cycleBars(set)).toInt().coerceAtLeast(1)
+    /**
+     * How many bars the clip (and the bounce) would be: the cycle in 4/4
+     * bars, rounded up. Counted in the clip's own bar, not the set's: a
+     * 3/4 set's four-bar cycle is 48 steps, which the clip calls three.
+     */
+    fun bars(set: OrbitSet): Int =
+        ceil(OrbitClock.cycleSteps(set).toDouble() / CLIP_BAR_STEPS).toInt().coerceAtLeast(1)
+
+    /** Whether the clip's bar count differs from the set's, so the screen can say so. */
+    fun countsDifferently(set: OrbitSet): Boolean = set.lapSteps != CLIP_BAR_STEPS
 
     /** Null when [set] fits, else the refusal in words. */
     fun refusal(set: OrbitSet): String? {
         val bars = bars(set)
-        return if (bars > MAX_BARS) "THE RINGS MEET EVERY $bars BARS — A CLIP STOPS AT $MAX_BARS. SHORTEN A RING." else null
+        if (bars <= MAX_BARS) return null
+        val unit = if (countsDifferently(set)) "BARS OF 4/4" else "BARS"
+        return "THE RINGS MEET EVERY $bars $unit — A CLIP STOPS AT $MAX_BARS. SHORTEN A RING."
     }
 
     /**

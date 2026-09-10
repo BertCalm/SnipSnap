@@ -137,7 +137,8 @@ import kotlin.math.sin
  * and a kick ring is a single row; tap a cell to place or lift a hit, and
  * hear it. The panel changes the ring's step count, its span (free, or
  * ½, 1, 2 or 4 bars of the set's lap), which pads it plays, and whether
- * it is heard.
+ * it is heard. Tapping the header's readout opens THE SET: the bar every
+ * spanned ring is measured in (12 to 32 steps, 3/4 to 8/4).
  */
 @Composable
 fun OrbitScreen(
@@ -172,6 +173,8 @@ fun OrbitScreen(
     var scrambleSeed by remember(kitDir) { mutableIntStateOf(1) }
     /** OUT ▸ swaps the panel for the two ways a set leaves the screen: onto TAPE, or into the kit as a clip. */
     var outOpen by remember(kitDir) { mutableStateOf(false) }
+    /** Tapping the header's readout swaps the panel for THE SET: the bar, and the tempo it already shows. */
+    var setPanelOpen by remember(kitDir) { mutableStateOf(false) }
     var bouncing by remember(kitDir) { mutableStateOf(false) }
     /** A snip ring just added whose tempo the set does not match: SET it or KEEP the set's. Asked once. */
     var tempoOffer by remember(kitDir) { mutableStateOf<TempoOffer?>(null) }
@@ -565,11 +568,21 @@ fun OrbitScreen(
             }
             TapeText("ORBIT", TapeType.lcd(21), scheme.lcdInk.tape)
             if (current != null) {
-                Column(horizontalAlignment = Alignment.End) {
+                // The readout is THE SET's door: tap it for the bar. Past the
+                // clip's 64-bar ceiling the cycle line turns warn-coloured,
+                // so OUT's refusal is never the first anyone hears of it.
+                Column(
+                    Modifier.tapeClick(label = "THE SET — TAP TO CHANGE THE BAR") {
+                        setPanelOpen = !setPanelOpen
+                        snipPickerOpen = false
+                        outOpen = false
+                    },
+                    horizontalAlignment = Alignment.End,
+                ) {
                     TapeText(
                         "${OrbitClock.ratioLabel(current).replace(" : ", ":")} · ${cycleLabel(current)}",
                         TapeType.lcd(14),
-                        scheme.amber.tape,
+                        if (OrbitClip.refusal(current) != null) scheme.warn.tape else scheme.amber.tape,
                     )
                     TapeText(barLabel(current, frame, playing) + " · ${current.bpm.roundToInt()} BPM", TapeType.lcd(14), scheme.lcdInk.tape)
                 }
@@ -672,12 +685,40 @@ fun OrbitScreen(
                             }
                         }
                     }
+                } else if (setPanelOpen) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        TapeText("THE SET", TapeType.pixel, scheme.ink.tape)
+                        SmallChip("CLOSE", scheme) { setPanelOpen = false }
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TapeText("BAR", TapeType.pixelSmall, scheme.ink3.tape, Modifier.width(36.dp))
+                        for (n in OrbitSet.BAR_CHOICES) {
+                            SmallChip("$n · ${OrbitSet.meterLabel(n)}", scheme, accent = n == current.lapSteps, description = "BAR OF $n STEPS, ${OrbitSet.meterLabel(n)}") {
+                                if (n != current.lapSteps) commit(current.copy(lapSteps = n))
+                            }
+                        }
+                    }
+                    TapeText(
+                        "THE BAR EVERY SPANNED RING IS MEASURED AGAINST. FREE RINGS DO NOT CARE. ${current.bpm.roundToInt()} BPM — HOLD BPM − / + BELOW TO RUN IT.",
+                        TapeType.pixelSmall,
+                        scheme.ink3.tape,
+                        Modifier.fillMaxWidth(),
+                        maxLines = 3,
+                    )
                 } else if (outOpen) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         TapeText("ONE CYCLE OUT — ${cycleLabel(current)}", TapeType.pixel, scheme.ink.tape)
                         SmallChip("CLOSE", scheme) { outOpen = false }
                     }
                     val refusal = OrbitClip.refusal(current)
+                    if (OrbitClip.countsDifferently(current)) {
+                        // The MPC clip has no time signature: its bar is sixteen 16ths whatever the set's is.
+                        TapeText("THE MPC COUNTS 4/4 BARS: ${OrbitClip.bars(current)}.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
+                    }
                     if (refusal != null) {
                         TapeText(refusal, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2)
                     } else {
@@ -845,17 +886,19 @@ fun OrbitScreen(
                 ActionButton("+ SNIP", scheme, Modifier.weight(1f), enabled = snips.isNotEmpty(), accent = snipPickerOpen) {
                     snipPickerOpen = !snipPickerOpen
                     outOpen = false
+                    setPanelOpen = false
                 }
                 ActionButton("OUT ▸", scheme, Modifier.weight(1f), accent = outOpen) {
                     outOpen = !outOpen
                     snipPickerOpen = false
+                    setPanelOpen = false
                 }
             }
             TapeText(
                 if (snips.isEmpty()) {
                     "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · NO SNIPS ON THE SHELF YET FOR + SNIP."
                 } else {
-                    "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · HOLD BPM TO RUN IT · SHORTEST RING INSIDE COMES ROUND FIRST."
+                    "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · HOLD BPM TO RUN IT · TAP THE READOUT FOR THE BAR · SHORTEST RING INSIDE COMES ROUND FIRST."
                 },
                 TapeType.pixelSmall,
                 scheme.ink3.tape,

@@ -1,7 +1,8 @@
 # ORBIT: span and bar
 
-A spec for ORBIT's two length knobs. **Span is built** (Round 7) and
-`docs/ORBITS.md` describes it as shipped; **bar is not yet** (Round 8).
+A spec for ORBIT's two length knobs. Both are built — span in Round 7,
+bar in Round 8 — and `docs/ORBITS.md` describes them as shipped. This
+stays as the reasoning.
 
 ## The idea in one table
 

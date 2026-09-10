@@ -47,6 +47,21 @@ class OrbitClipTest {
     }
 
     @Test
+    fun `the clip counts bars of sixteen whatever the set's bar`() {
+        // A 3/4 set: a free 16 against the 12-step bar meets every 48 steps, four bars of twelve — three of the clip's.
+        val waltz = OrbitSet(listOf(pattern("four", 16, 1, listOf(0))), 120f, 48_000, lapSteps = 12)
+        assertEquals(3, OrbitClip.bars(waltz))
+        assertTrue(OrbitClip.countsDifferently(waltz))
+        assertEquals(3, OrbitClip.clip(waltz).bars)
+        // A 5/4 set with one free 20: twenty steps need a second bar of sixteen.
+        val five = OrbitSet(listOf(pattern("five", 20, 1, listOf(0, 10))), 120f, 48_000, lapSteps = 20)
+        assertEquals(2, OrbitClip.bars(five))
+        assertEquals(listOf(0L, 10L * Mpc3Clip.PULSES_PER_16TH), OrbitClip.clip(five).notes.map { it.timePulses })
+        // The default bar counts as it always did.
+        assertTrue(!OrbitClip.countsDifferently(set(pattern("a", 16, 1, listOf(0)))))
+    }
+
+    @Test
     fun `muted rings and snip rings leave no notes`() {
         val s = set(
             pattern("off", 16, 1, listOf(0), engaged = false),

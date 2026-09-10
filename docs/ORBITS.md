@@ -47,6 +47,25 @@ keep in sync, nothing that can drift, and the tests check phases and firing
 frames as exact integers at 120 BPM and 48 kHz, where a 16th is exactly
 6,000 frames.
 
+## The bar
+
+The lap every spanned ring is measured in is the set's, not a ring's:
+`OrbitSet.lapSteps`, 16 by default and a choice of 12, 16, 20, 24 or 32
+(3/4, 4/4, 5/4, 6/4, 8/4 — `OrbitSet.BAR_CHOICES`, all even so a half-bar
+span stays whole). Tapping the header's readout opens THE SET, where the
+bar is a row of chips. Change it and:
+
+- a **free** ring is untouched: its period is its own steps;
+- a **spanned** ring re-periods: a one-bar triplet across 16 becomes a
+  triplet across 12, and the picture and label follow;
+- a **spanned snip** refits to its new period, and the fit report says so;
+- the **cycle** changes, since the lap seeds the LCM, and the header's
+  `BAR 2/15` counts the set's bars whatever their length.
+
+That is the "4/4 × 2 = 8/4" observation kept apart from span: changing
+the bar changes every spanned ring's meaning at once; changing a span
+changes one ring's. Every change to the bar is one UNDO.
+
 ## A ring's voice
 
 A pattern ring has a *voice*: the pads it may play, in the order they are
@@ -122,12 +141,12 @@ choice, not a surprise.
 
 | Piece | What it is |
 |---|---|
-| `loop/Orbit.kt` | `Orbit` (steps, span, voice), `OrbitSpan`, `OrbitSet`, the content types, and `OrbitClock` — every number above, plus the length and ratio labels |
+| `loop/Orbit.kt` | `Orbit` (steps, span, voice), `OrbitSpan`, `OrbitSet` (with the bar and its meter labels), the content types, and `OrbitClock` — every number above, plus the length and ratio labels |
 | `loop/OrbitBank.kt` | The prepared audio for a set: pads at the device rate, snips fitted to their periods, each with its `FitReport` and its peaks for the ring's waveform. Immutable; an edit prepares a new one reusing the last |
 | `loop/LoopFit.kt` | `LoopFit` (as is · trimmed · padded · sliced), `FitReport` and its label, `FittedLoop` — what `BlockBaker.fitLoopReported` says it did |
 | `loop/OrbitEngine.kt` | The transport: fixed 2048-frame blocks, hits scheduled per block, voices mixed, snips wrapped, written to the same `AudioSink` the loop grid uses. `render` is the offline bounce and the test harness |
 | `loop/OrbitStore.kt` | `orbits.json` (version 3; versions 1 and 2 still load, their lock becoming a one-bar span), a sidecar beside the kit like `groove.json` |
-| `loop/OrbitClip.kt` | One cycle as an MPC clip in `groove.json`, and the 64-bar refusal both outputs share |
+| `loop/OrbitClip.kt` | One cycle as an MPC clip in `groove.json`, counted in the clip's own 4/4 bars whatever the set's bar, and the 64-bar refusal both outputs share |
 | `loop/OrbitPatterns.kt` | Euclid, SPREAD, CLEAR, the dice, the weight cycle, the step-size choices |
 | `loop/OrbitPresets.kt` | The starter set from a kit — one ring per instrument the kit has (KICK 16 · SNARE 16 · HATS 12 · PERC 20 · THREE, a locked triplet · BASS 20 over the tonal pads) — and the empty-ring and snip-ring constructors |
 | `app/OrbitSampleSource.kt` | Pads from the kit shelf via `KitSampleSource`, snips from `snips/` |
@@ -144,7 +163,11 @@ words when the cycle passes 64 bars (`OrbitClip.refusal`):
   kit, MPC.
 - **CLIP ▸ KIT** flattens one cycle of every engaged pattern ring's firings
   onto the 960-PPQ grid (`OrbitClip.clip`: pad A0N plays note 35+N, the
-  writer's chromatic map) and writes it into the kit's `groove.json` as
+  writer's chromatic map; `Mpc3Clip` has no time signature, so the clip
+  counts bars of sixteen 16ths whatever the set's bar — a 3/4 set's
+  four-bar cycle is 48 steps, three of the clip's, and the OUT panel says
+  so — and the 64-bar ceiling is measured in those bars, with the header's
+  cycle line turning warn-coloured past it) and writes it into the kit's `groove.json` as
   "ORBIT 4:5", replacing the last ORBIT clip and leaving the captured base,
   the variations and PROG E untouched — so the native export embeds it and
   it rides to the MPC with the kit. A kit with no groove yet gets the ORBIT
@@ -152,9 +175,6 @@ words when the cycle passes 64 bars (`OrbitClip.refusal`):
 
 ## Not yet
 
-- **The bar.** A ring's span is built (above); the set's bar is still
-  always 16 steps. The per-set bar of 12 to 32 steps is specified in
-  `docs/ORBIT_SPAN_AND_BAR.md` (Round 8) and not yet built.
 - **Swing on a ring.** Hits carry a weight but no timing offset yet.
 - **Hardware verification** of the Android screen: the cloud session
   cannot compile `:app` (see `app/README.md`), so the screen is reviewed
