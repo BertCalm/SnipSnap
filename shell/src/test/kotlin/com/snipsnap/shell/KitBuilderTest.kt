@@ -968,4 +968,54 @@ class KitBuilderTest {
         assertFailsWith<IllegalArgumentException> { m.save() }
         assertFalse(dir.exists(), "save() must not resurrect the folder it once lived in")
     }
+
+    @Test
+    fun `a take that names a file outside the folder is refused before anything moves`() {
+        val dir = File(temp, "ClimbingTake")
+        val m = KitBuilderModel.create("ClimbingTake", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        m.treatPad(1, "reversed")
+        m.save()
+        // The newest take is the kit with its pad; the first is FRESH TAPE's empty kit.
+        val take = m.takes().last()
+        assertTrue(m.pad(1)!!.sampleFile in take.readText(), "the take names the pad's file")
+        val kitBefore = File(dir, "kit.json").readBytes()
+        val liveBefore = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        val binBefore = m.binContents().map { it.file.name }.toSet()
+
+        // An absolute-path climb, scoped to this test's own temp dir rather
+        // than a real global path - a hard-coded /tmp/escaped.wav would be
+        // flaky wherever that file already exists (a parallel run, a stray
+        // leftover) or /tmp is unwritable, and would leak outside this
+        // test's own cleanup if the refusal somehow failed.
+        val absoluteEscape = File(temp, "escaped.wav").absolutePath
+        // The backslash is JSON-escaped in the take text, the way a writer would
+        // carry it, so the pad type - not the JSON parser - is what refuses it.
+        for (climb in listOf("../escaped.wav", "..\\\\escaped.wav", absoluteEscape, "sub/escaped.wav")) {
+            take.writeText(take.readText().replace(m.pad(1)!!.sampleFile, climb))
+            val e = assertFailsWith<IllegalArgumentException> { KitBuilderModel.open(dir).restoreTake(take) }
+            assertTrue("bare filename" in (e.message ?: ""), "refused in the pad's own words: ${e.message}")
+            assertTrue(kitBefore.contentEquals(File(dir, "kit.json").readBytes()), "kit.json untouched after '$climb'")
+            assertTrue(liveBefore.contentEquals(File(dir, m.pad(1)!!.sampleFile).readBytes()), "live audio untouched after '$climb'")
+            assertEquals(binBefore, m.binContents().map { it.file.name }.toSet(), "the bin untouched after '$climb'")
+            assertFalse(File(dir.parentFile, "escaped.wav").exists() || File(absoluteEscape).exists(), "nothing landed outside after '$climb'")
+            take.writeText(take.readText().replace(climb, m.pad(1)!!.sampleFile))
+        }
+        // ".." has no separator, so the pad type lets it through; the restore
+        // then finds no such file and no such bin entry, and moves nothing -
+        // a quiet success, not a refusal. Asserted, not just run-and-forget:
+        // a house rule this whole file otherwise enforces (a valid result or
+        // a NAMED refusal, never a silently swallowed throwable) would
+        // otherwise not apply to this one branch.
+        take.writeText(take.readText().replace(m.pad(1)!!.sampleFile, ".."))
+        val dotDotResult = runCatching { KitBuilderModel.open(dir).restoreTake(take) }
+        dotDotResult.exceptionOrNull()?.let { ex ->
+            assertTrue(ex is IllegalArgumentException, "\"..\" threw ${ex::class.simpleName} instead of succeeding or refusing by name: ${ex.message}")
+            assertTrue(!ex.message.isNullOrBlank(), "\"..\" refused without saying why")
+        }
+        assertTrue(liveBefore.contentEquals(File(dir, m.pad(1)!!.sampleFile).readBytes()))
+        assertEquals(binBefore, m.binContents().map { it.file.name }.toSet())
+        assertTrue(dir.parentFile.listFiles()!!.none { it.name.startsWith("escaped") })
+    }
 }

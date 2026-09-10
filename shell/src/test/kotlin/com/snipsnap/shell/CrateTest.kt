@@ -152,4 +152,54 @@ class CrateTest {
         val e = Crate.Entry("K", "K", 17, "p", "K/p.wav", 0L, 0L, DrumClass.KICK, DrumClass.KICK, 1f, List(Similar.DIMENSIONS) { 0.5f })
         assertEquals("B01", e.label)
     }
+
+    @Test
+    fun `the index is what is inside the folder, each kit once, whatever the layout`() {
+        val root = File(temp, "layout").apply { mkdirs() }
+        fun kit(dir: File, name: String) = KitBuilderModel.create(name, dir).apply {
+            assign(1, DrumSynth.kick(), DrumClass.KICK)
+            save()
+        }
+        kit(File(root, "Plain"), "Plain")
+        kit(File(root, "With Spaces & dots.v2"), "Spaced")
+        // A JVM whose filesystem encoding is not UTF-8 (sun.jnu.encoding=ANSI
+        // on a bare container) cannot name such a folder at all - that is the
+        // JVM, not the crate; the phone is always UTF-8. Skip the name there.
+        val unicode = runCatching { kit(File(root, "Ünïcödé"), "Unicode") }.isSuccess
+        kit(File(root, "Outer"), "Outer")
+        kit(File(root, "Outer/Inner"), "Inner") // a kit inside a kit is still inside the library
+        kit(File(root, ".hidden"), "Hidden") // the binned/staging rule, unchanged
+        val outside = kit(File(temp, "Elsewhere"), "Elsewhere").kitDir
+
+        val expected = setOf("Plain", "With Spaces & dots.v2", "Outer", "Outer/Inner") + (if (unicode) setOf("Ünïcödé") else emptySet())
+        val links = try {
+            java.nio.file.Files.createSymbolicLink(File(root, "to-outside").toPath(), outside.toPath())
+            java.nio.file.Files.createSymbolicLink(File(root, "alias-of-plain").toPath(), File(root, "Plain").toPath())
+            java.nio.file.Files.createSymbolicLink(File(root, "loop").toPath(), root.toPath())
+            true
+        } catch (e: Exception) {
+            false // a filesystem without symlinks: the layout rules below still hold for the rest
+        }
+
+        val start = System.nanoTime()
+        val idx = Crate.index(root)
+        val ms = (System.nanoTime() - start) / 1_000_000
+        assertTrue(ms < 10_000, "a looping symlink must not walk forever (${ms}ms)")
+
+        assertEquals(expected, idx.entries.map { it.kitDir }.toSet(), "inside, under their own names, hidden skipped, no symlinked directory entered")
+        assertEquals(idx.entries.size, idx.entries.map { it.file }.toSet().size, "no pad indexed under two names")
+        if (links) {
+            assertTrue(idx.entries.none { "Elsewhere" in it.kitName }, "a symlink out of the shelf is not the library")
+            assertEquals(1, idx.entries.count { it.kitName == "Plain" }, "an alias is the same kit, not a double of itself")
+            assertTrue(idx.entries.none { it.kitDir == "alias-of-plain" }, "and the kit is indexed under its own name, whatever order the listing came in")
+        }
+        // The roulette's own dupe scan sees no false pair among these distinct hits.
+        assertTrue(Crate.dupes(idx).none { (a, b, d) -> a.kitDir == "Plain" && b.kitDir == "Plain" && d == 0f })
+        // A shelf whose root is itself reached through a symlink still indexes its kits.
+        if (links) {
+            val viaLink = File(temp, "shelf-link")
+            java.nio.file.Files.createSymbolicLink(viaLink.toPath(), root.toPath())
+            assertEquals(expected, Crate.index(viaLink).entries.map { it.kitDir }.toSet())
+        }
+    }
 }
