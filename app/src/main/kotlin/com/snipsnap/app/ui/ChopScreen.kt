@@ -53,6 +53,7 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Cleanup
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.PitchEstimate
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
@@ -308,6 +309,14 @@ private fun ChopContent(
     // is what forces a recompose after a chip tap, the same trick
     // TapeScreen's frame clock uses for its own outside-Compose model.
     var revision by remember(model) { mutableIntStateOf(0) }
+
+    /**
+     * The slice whose class picker is open (its 1-based `n`), or null.
+     *
+     * Only one at a time: the list is long, and two open panels would push
+     * the row you were looking at off screen.
+     */
+    var pickerFor by remember(model) { mutableStateOf<Int?>(null) }
     // Row overrides mutate outside Compose's snapshot system (see above);
     // this read is what makes the whole function's composition scope —
     // slice list included — depend on `revision`, so a chip mutation
@@ -443,19 +452,48 @@ private fun ChopContent(
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             items(model.rows, key = { it.n }) { row ->
-                SliceRow(
-                    row = row,
-                    pitchLabel = if (melodic) pitchLabels?.getOrNull(row.n - 1) else null,
-                    onTapChip = {
-                        model.cycleLabel(row.n - 1)
-                        revision++
-                    },
-                    onLongPressChip = {
-                        model.clearOverride(row.n - 1)
-                        revision++
-                    },
-                    onTapRow = { audition(row) },
-                )
+                Column(Modifier.fillMaxWidth()) {
+                    SliceRow(
+                        row = row,
+                        pitchLabel = if (melodic) pitchLabels?.getOrNull(row.n - 1) else null,
+                        // The chip opens the list rather than advancing one
+                        // step (September UAT, finding 6): the cycle ran one
+                        // way through ten classes with no back step, so a
+                        // 16-slice kit could cost 144 taps and overshooting
+                        // by one meant going round again.
+                        onTapChip = {
+                            pickerFor = if (pickerFor == row.n) null else row.n
+                        },
+                        // Long-press still restores the classifier's call
+                        // outright, for anyone who already has it in their
+                        // fingers. The picker offers the same thing in
+                        // words, which is finding 21's complaint about
+                        // hidden long-presses answered in passing.
+                        onLongPressChip = {
+                            model.clearOverride(row.n - 1)
+                            pickerFor = null
+                            revision++
+                        },
+                        onTapRow = { audition(row) },
+                    )
+                    if (pickerFor == row.n) {
+                        ClassPicker(
+                            current = row.effectiveClass,
+                            machine = row.classification.drumClass,
+                            scheme = scheme,
+                            onPick = { dc ->
+                                model.setLabel(row.n - 1, dc)
+                                pickerFor = null
+                                revision++
+                            },
+                            onMachine = {
+                                model.clearOverride(row.n - 1)
+                                pickerFor = null
+                                revision++
+                            },
+                        )
+                    }
+                }
             }
         }
 
@@ -543,6 +581,85 @@ private fun ChopContent(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Every class a slice can be, under the slice that asked.
+ *
+ * The September UAT's finding 6: the chip was a ten-state one-way cycle,
+ * so the class furthest from the machine's guess cost nine taps, one tap
+ * past it cost nine more, and relabelling a 16-slice kit ran to 144. This
+ * is two taps for any slice and any class — open, choose.
+ *
+ * The same inline-panel move EXPORT's format picker makes, deliberately:
+ * no dialog, no scrim, nothing new to learn, and the list sits directly
+ * under the chip it belongs to so it is obvious which slice is being
+ * relabelled.
+ */
+@Composable
+private fun ClassPicker(
+    current: DrumClass,
+    machine: DrumClass,
+    scheme: Scheme,
+    onPick: (DrumClass) -> Unit,
+    onMachine: () -> Unit,
+) {
+    Column(
+        Modifier.fillMaxWidth().lcdPanel(scheme).padding(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        for (chunk in ChopReviewModel.CHIP_CYCLE.chunked(3)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                for (dc in chunk) {
+                    val picked = dc == current
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .background(
+                                if (picked) Schemes.classColor(dc).tape else scheme.ink3.tape.copy(alpha = 0.15f),
+                                RoundedCornerShape(4.dp),
+                            )
+                            // label = null: the TapeText below already says
+                            // the class name, and clickable merges descendant
+                            // semantics into this node - an explicit label
+                            // would replace that text rather than add to it
+                            // (tapeClick's own contract, Chrome.kt).
+                            .tapeClick(label = null, onClick = { onPick(dc) }),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(
+                            ChopReviewModel.chipName(dc),
+                            TapeType.marker,
+                            if (picked) Schemes.padLabelInk(scheme, dc).tape else scheme.lcdInk.tape,
+                            maxLines = 1,
+                        )
+                    }
+                }
+                // The last row is short of three; keep the columns aligned.
+                repeat(3 - chunk.size) { Box(Modifier.weight(1f)) }
+            }
+        }
+        // The machine's own call, said in words rather than hidden behind a
+        // long-press nothing on screen mentions (finding 21).
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .tapeClick(label = null, onClick = onMachine),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText(
+                "THE MACHINE SAID ${ChopReviewModel.chipName(machine)}",
+                TapeType.pixelSmall,
+                scheme.ink3.tape,
+                maxLines = 1,
+            )
         }
     }
 }

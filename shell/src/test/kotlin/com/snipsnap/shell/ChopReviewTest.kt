@@ -79,6 +79,69 @@ class ChopReviewTest {
         assertEquals(machine, row.effectiveClass)
     }
 
+    /**
+     * Finding 6's fix. The cycler needed up to nine taps to reach a class
+     * and had no way back; the picker reaches every one of the ten in a
+     * single call, from wherever the chip happens to sit.
+     *
+     * The second half matters as much as the first: picking the class the
+     * machine already chose must read as agreement, not as a correction, or
+     * every chip a user merely confirms would wear the "YOU ✓" marker and
+     * the screen would stop meaning anything.
+     */
+    @Test
+    fun `setLabel reaches every class in one move and agreement is not a correction`() {
+        val model = ChopReviewModel.chop(breakSnip())
+        val row = model.rows[0]
+        val machine = row.effectiveClass
+
+        // Every class, from every starting point, in one call.
+        for (from in ChopReviewModel.CHIP_CYCLE) {
+            for (to in ChopReviewModel.CHIP_CYCLE) {
+                model.setLabel(0, from)
+                model.setLabel(0, to)
+                assertEquals(to, row.effectiveClass, "$from -> $to should be one move")
+            }
+        }
+
+        // Picking the machine's own call is agreement.
+        model.setLabel(0, machine)
+        assertEquals(machine, row.effectiveClass)
+        assertFalse(row.overridden, "choosing what the machine chose is agreement, not correction")
+
+        // Picking anything else is the human's word, and never dashed.
+        val other = ChopReviewModel.CHIP_CYCLE.first { it != machine }
+        model.setLabel(0, other)
+        assertTrue(row.overridden)
+        assertFalse(row.unsure, "the human's word is never a guess")
+
+        // And the machine's call is still one tap away afterwards.
+        model.clearOverride(0)
+        assertEquals(machine, row.effectiveClass)
+        assertFalse(row.overridden)
+    }
+
+    /**
+     * The number the report actually complained about. Sixteen slices, each
+     * needing the class furthest from where the cycler starts, is the worst
+     * case it measured at 144 taps; the picker is one tap to open plus one
+     * to choose, whatever the slice and whatever the target.
+     */
+    @Test
+    fun `relabelling a whole kit costs two taps a slice, not nine`() {
+        val model = ChopReviewModel.chop(breakSnip())
+        var taps = 0
+        for ((i, row) in model.rows.withIndex()) {
+            val target = ChopReviewModel.CHIP_CYCLE.last { it != row.effectiveClass }
+            taps += 1 // open the picker
+            model.setLabel(i, target)
+            taps += 1 // choose
+            assertEquals(target, row.effectiveClass)
+        }
+        assertEquals(model.rows.size * 2, taps)
+        assertTrue(taps <= 32, "two taps a slice at most, whatever the kit")
+    }
+
     @Test
     fun `overrides redirect placement`() {
         val model = ChopReviewModel.chop(breakSnip())
