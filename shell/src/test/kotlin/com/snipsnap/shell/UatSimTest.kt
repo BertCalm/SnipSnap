@@ -220,7 +220,9 @@ class UatSimTest {
         result.kit.pads.sortedBy { it.slot }.forEach {
             note("A%02d  %-14s %-10s".format(it.slot, it.displayName, it.drumClass))
         }
-        note("toast: \"${Copy.instantKit(result.sliceCount, result.chokeSet)}\"")
+        // No IN/OUT was set in this journey, so this is the whole-tape reading —
+        // the case finding 19 said the toast never named.
+        note("toast: \"${Copy.instantKit(result.sliceCount, result.chokeSet, wholeTape = true)}\"")
         say("  ⇒ TAPS FROM ARMED MIC TO A PLAYABLE KIT (fast path): $taps")
 
         val wiz = ExportWizardModel(result.kit, kdir)

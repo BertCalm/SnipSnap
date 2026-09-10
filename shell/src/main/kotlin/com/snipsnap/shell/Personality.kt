@@ -625,8 +625,24 @@ object Copy {
     /** "N SLICES ON THE GRID. CHOKE GROUP SET." — the send-to-grid toast. */
     fun sentToGrid(sliceCount: Int, chokeSet: Boolean): String =
         "$sliceCount SLICES ON THE GRID." + if (chokeSet) " CHOKE GROUP SET." else ""
-    /** INSTANT KIT: the one tap, then the same words SEND TO GRID says. */
-    fun instantKit(sliceCount: Int, chokeSet: Boolean): String = "ONE TAP. " + sentToGrid(sliceCount, chokeSet)
+    /**
+     * INSTANT KIT: the one tap, what it chopped, then the same words SEND TO
+     * GRID says.
+     *
+     * [wholeTape] is the September UAT's finding 19. INSTANT KIT sits beside
+     * COMMIT under the deck, and with nothing selected the two disagree:
+     * COMMIT refuses in words ([COMMIT_NEEDS_SELECTION]), INSTANT KIT quietly
+     * takes the whole tape. Taking the whole tape is the right default for a
+     * one-tap button — the silence about it was the bug — so the line names
+     * the scope instead, and names it as IN + OUT, the same two words COMMIT's
+     * refusal uses for the markers the user would have set.
+     *
+     * No default value on purpose: a caller that forgets this argument would
+     * otherwise report the wrong scope silently, which is the exact failure
+     * being fixed.
+     */
+    fun instantKit(sliceCount: Int, chokeSet: Boolean, wholeTape: Boolean): String =
+        (if (wholeTape) "ONE TAP, THE WHOLE TAPE. " else "ONE TAP, YOUR IN + OUT. ") + sentToGrid(sliceCount, chokeSet)
 
     // ---- CHOP ALL: the crate-digging verb, wired in ----
     /** CHOP ALL's busy line while every picked .wav chops in turn — same DUBBING…/BREEDING… shape. */
