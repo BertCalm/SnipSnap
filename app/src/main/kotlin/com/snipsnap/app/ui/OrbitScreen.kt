@@ -42,7 +42,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -374,18 +377,16 @@ fun OrbitScreen(
                     }
                     TapeText(
                         if (ring.mode == OrbitMode.SAME_SPEED) {
-                            "SPEED: SAME NEEDLE SPEED — ${ring.steps} STEPS TAKES ${ring.steps} 16THS. BIGGER RINGS COME ROUND LATER."
+                            "SPEED: SAME NEEDLE SPEED. A BIGGER RING COMES ROUND LATER."
                         } else {
-                            "LAP: ONCE A BAR WHATEVER THE STEPS — ${ring.steps} EVEN HITS AGAINST THE BAR'S ${current.lapSteps}."
+                            "LAP: ONCE A BAR WHATEVER THE STEPS. ${ring.steps} EVEN HITS AGAINST ${current.lapSteps}."
                         },
                         TapeType.pixelSmall,
                         scheme.ink3.tape,
                         Modifier.fillMaxWidth(),
-                        maxLines = 2,
                     )
                     when (val content = ring.content) {
                         is PatternOrbit -> {
-                            TapeText("TAP A STEP ON THE RING TO PLACE THIS PAD:", TapeType.pixelSmall, scheme.ink2.tape)
                             Row(
                                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -422,24 +423,46 @@ fun OrbitScreen(
                 ActionButton("BPM −", scheme, Modifier.weight(1f)) { setBpm(current.bpm - 2f) }
                 ActionButton("BPM +", scheme, Modifier.weight(1f)) { setBpm(current.bpm + 2f) }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // The ring shelf: add a pad ring, or pick a snip and add it as one.
+            // The chooser lives between the two buttons so the whole screen
+            // fits a phone without scrolling, as the artboards lay it out.
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 ActionButton("+ PAD RING", scheme, Modifier.weight(1f)) { addPatternRing() }
+                if (snips.isNotEmpty()) {
+                    SmallChip("◄", scheme) { snipIndex = (snipIndex - 1 + snips.size) % snips.size }
+                    Column(
+                        Modifier
+                            .weight(1.3f)
+                            .height(Layout.MIN_HIT_TARGET.dp)
+                            .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
+                            .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(6.dp)),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        TapeText("SNIP", TapeType.pixelSmall, scheme.ink3.tape)
+                        TapeText(SnipStore.displayName(snips[snipIndex]).uppercase(), TapeType.pixel, scheme.amber.tape)
+                    }
+                    SmallChip("►", scheme) { snipIndex = (snipIndex + 1) % snips.size }
+                } else {
+                    Box(
+                        Modifier
+                            .weight(1.3f)
+                            .height(Layout.MIN_HIT_TARGET.dp)
+                            .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
+                            .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(6.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText("NO SNIPS YET", TapeType.pixelSmall, scheme.ink3.tape)
+                    }
+                }
                 ActionButton("+ SNIP RING", scheme, Modifier.weight(1f), enabled = snips.isNotEmpty()) { addSnipRing() }
             }
-            if (snips.isNotEmpty()) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    SmallChip("◄", scheme) { snipIndex = (snipIndex - 1 + snips.size) % snips.size }
-                    TapeText(
-                        "SNIP: ${SnipStore.displayName(snips[snipIndex]).uppercase()}",
-                        TapeType.pixel,
-                        scheme.ink.tape,
-                        Modifier.weight(1f),
-                    )
-                    SmallChip("►", scheme) { snipIndex = (snipIndex + 1) % snips.size }
-                }
-            }
             TapeText(
-                "INNER RINGS COME ROUND FIRST. EVERY RING IS BACK ON ITS DOWNBEAT TOGETHER EVERY ${cycleLabel(current)}.",
+                "TAP A RING TO PICK IT · TAP A STEP TO PLACE THE PAD · INNER RINGS COME ROUND FIRST · ALL BACK ON THE DOWNBEAT EVERY ${cycleLabel(current)}.",
                 TapeType.pixelSmall,
                 scheme.ink3.tape,
                 Modifier.fillMaxWidth(),
@@ -482,6 +505,8 @@ private fun RingsCanvas(
 ) {
     val screenDensity = LocalDensity.current.density
     val classBySlot = remember(kit) { kit.pads.associate { it.slot to it.drumClass } }
+    val textMeasurer = rememberTextMeasurer()
+    val labelStyle = TapeType.pixelSmall.copy(fontSize = 7.sp)
     val inkColor = scheme.lcdInk.tape
     val amber = scheme.amber.tape
     val dim = scheme.ink3.tape.copy(alpha = 0.6f)
@@ -570,6 +595,14 @@ private fun RingsCanvas(
                     )
                 }
                 drawCircle(needle, 3.5f * screenDensity, geometry.point(r, phase))
+                // The ring's name and size, just outside it at 12 o'clock.
+                val labelAt = geometry.point(r + 9f * screenDensity, 0.012)
+                drawText(
+                    textMeasurer = textMeasurer,
+                    text = "${ring.name} · ${ring.steps}",
+                    topLeft = Offset(labelAt.x + 6f * screenDensity, labelAt.y - 4f * screenDensity),
+                    style = labelStyle.copy(color = if (picked) amber else scheme.ink2.tape),
+                )
             }
             // The hub: a dot marking the shared centre every ring turns about.
             drawCircle(dim, 2f * screenDensity, centre)

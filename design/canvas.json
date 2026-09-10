@@ -79,6 +79,30 @@
       "w": 920,
       "h": 640,
       "title": "Schemes"
+    },
+    {
+      "file": "Orbit.dc.html",
+      "x": 0,
+      "y": 1750,
+      "w": 390,
+      "h": 844,
+      "title": "ORBIT — starter set, FLOOR picked"
+    },
+    {
+      "file": "OrbitSnipRing.dc.html",
+      "x": 470,
+      "y": 1750,
+      "w": 390,
+      "h": 844,
+      "title": "ORBIT — a snip ring picked"
+    },
+    {
+      "file": "OrbitModes.dc.html",
+      "x": 940,
+      "y": 1750,
+      "w": 720,
+      "h": 580,
+      "title": "ORBIT — SPEED vs LAP"
     }
   ],
   "annotations": [
@@ -87,7 +111,7 @@
       "x": -520,
       "y": -160,
       "w": 360,
-      "text": "OILSLICK (TYPE \u221e) — the chosen Y2K direction, fully working: boot splash, 9 screens (KITS/KIT/TAPE/CHOP/PLAY/SYNTH/EXPORT/\u2699/HELP), WebAudio pads + THUMP, capture bubble, scheme picker. Tokens + Android notes in HANDOFF.md."
+      "text": "OILSLICK (TYPE ∞) — the chosen Y2K direction, fully working: boot splash, 9 screens (KITS/KIT/TAPE/CHOP/PLAY/SYNTH/EXPORT/⚙/HELP), WebAudio pads + THUMP, capture bubble, scheme picker. Tokens + Android notes in HANDOFF.md."
     },
     {
       "id": "note-direction",
@@ -116,6 +140,13 @@
       "y": 900,
       "w": 320,
       "text": "Schemes = swapped tokens, nothing else. Class colors are fixed in every scheme - pad color is the shared language with the MPC. The Main artboard has a live Scheme tweak: flip it from the chip above the frame."
+    },
+    {
+      "id": "note-orbit",
+      "x": 0,
+      "y": 1600,
+      "w": 380,
+      "text": "ORBIT — the circular sequencer, from GROOVE's ORBIT ▸. A bar taped end to end is a ring; a longer snip taped round a bigger ring; one needle drives them all, so the inner ring comes round first. Each needle trails a comet tail; a struck hit flares in its class colour. Arithmetic in docs/ORBITS.md; screen notes in HANDOFF.md."
     }
   ],
   "launch": {
