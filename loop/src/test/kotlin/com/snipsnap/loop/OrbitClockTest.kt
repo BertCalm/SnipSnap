@@ -12,8 +12,8 @@ class OrbitClockTest {
     private val bpm = 120f
     private val step = 6_000
 
-    private fun pattern(steps: Int, lock: Boolean = false, hits: List<Int> = listOf(0)) =
-        Orbit("r$steps", steps, PatternOrbit("kit", hits.map { OrbitHit(it, 1) }), lockToBar = lock)
+    private fun pattern(steps: Int, span: OrbitSpan = OrbitSpan.FREE, hits: List<Int> = listOf(0)) =
+        Orbit("r$steps", steps, PatternOrbit("kit", hits.map { OrbitHit(it, 1) }), span = span)
 
     private fun set(vararg orbits: Orbit) = OrbitSet(orbits.toList(), bpm, rate)
 
@@ -34,8 +34,8 @@ class OrbitClockTest {
     @Test
     fun `locked to the bar - every ring comes round once a bar whatever its steps`() {
         val s = set()
-        val three = pattern(3, lock = true)
-        val five = pattern(5, lock = true)
+        val three = pattern(3, span = OrbitSpan.ONE)
+        val five = pattern(5, span = OrbitSpan.ONE)
         assertEquals(OrbitClock.lapFrames(s), OrbitClock.periodFrames(s, three))
         assertEquals(OrbitClock.lapFrames(s), OrbitClock.periodFrames(s, five))
         // A triplet's steps are a third of the bar each: 16 steps / 3.
@@ -76,7 +76,7 @@ class OrbitClockTest {
 
     @Test
     fun `a bar-locked ring never lengthens the cycle`() {
-        val s = set(pattern(16), pattern(3, lock = true), pattern(7, lock = true))
+        val s = set(pattern(16), pattern(3, span = OrbitSpan.ONE), pattern(7, span = OrbitSpan.ONE))
         assertEquals(16L, OrbitClock.cycleSteps(s))
         assertEquals(1.0, OrbitClock.cycleBars(s))
     }
@@ -96,12 +96,12 @@ class OrbitClockTest {
         assertEquals("5 BEATS", OrbitClock.lengthLabel(s, pattern(20)))
         assertEquals("3 BEATS", OrbitClock.lengthLabel(s, pattern(12)))
         assertEquals("7 16THS", OrbitClock.lengthLabel(s, pattern(7)))
-        assertEquals("1 BAR", OrbitClock.lengthLabel(s, pattern(3, lock = true)))
+        assertEquals("1 BAR", OrbitClock.lengthLabel(s, pattern(3, span = OrbitSpan.ONE)))
     }
 
     @Test
     fun `the ratio is the distinct lengths reduced, shortest first`() {
-        assertEquals("4 : 5", OrbitClock.ratioLabel(set(pattern(16), pattern(20), pattern(3, lock = true))))
+        assertEquals("4 : 5", OrbitClock.ratioLabel(set(pattern(16), pattern(20), pattern(3, span = OrbitSpan.ONE))))
         assertEquals("3 : 4 : 5", OrbitClock.ratioLabel(set(pattern(20), pattern(12), pattern(16), pattern(16))))
         assertEquals("1", OrbitClock.ratioLabel(set(pattern(16))))
         assertEquals("", OrbitClock.ratioLabel(set()))
@@ -112,7 +112,7 @@ class OrbitClockTest {
         val s = set()
         assertEquals(1.0 / 16, OrbitClock.tailSweep(s, pattern(16)), 1e-12)
         assertEquals(1.0 / 20, OrbitClock.tailSweep(s, pattern(20)), 1e-12)
-        assertEquals(1.0 / 16, OrbitClock.tailSweep(s, pattern(3, lock = true)), 1e-12)
+        assertEquals(1.0 / 16, OrbitClock.tailSweep(s, pattern(3, span = OrbitSpan.ONE)), 1e-12)
     }
 
     @Test
@@ -156,7 +156,7 @@ class OrbitClockTest {
     @Test
     fun `firings - a locked ring spreads three hits evenly across the bar`() {
         val s = set()
-        val ring = pattern(3, lock = true, hits = listOf(0, 1, 2))
+        val ring = pattern(3, span = OrbitSpan.ONE, hits = listOf(0, 1, 2))
         val lap = 16L * step
         val frames = OrbitClock.firings(s, ring, 0, lap).map { it.frame }
         assertEquals(3, frames.size)
@@ -211,5 +211,77 @@ class OrbitClockTest {
     fun `a hit past the ring's end is refused at construction`() {
         val e = runCatching { pattern(4, hits = listOf(4)) }.exceptionOrNull()
         assertTrue(e is IllegalArgumentException, "expected a refusal, got $e")
+    }
+}
+
+class OrbitSpanTest {
+
+    private fun ring(steps: Int, span: OrbitSpan, hits: List<Int> = listOf(0)) =
+        Orbit("r", steps, PatternOrbit("kit", hits.map { OrbitHit(it, 1) }), span = span)
+
+    private fun set(lap: Int, vararg orbits: Orbit) = OrbitSet(orbits.toList(), 120f, 48_000, lapSteps = lap)
+
+    @Test
+    fun `a spanned ring's period is its laps of the bar, at every bar offered`() {
+        for (lap in listOf(12, 16, 20, 24, 32)) {
+            val s = set(lap)
+            assertEquals(lap / 2, OrbitClock.periodSteps(s, ring(3, OrbitSpan.HALF)), "HALF at $lap")
+            assertEquals(lap, OrbitClock.periodSteps(s, ring(3, OrbitSpan.ONE)), "ONE at $lap")
+            assertEquals(lap * 2, OrbitClock.periodSteps(s, ring(3, OrbitSpan.TWO)), "TWO at $lap")
+            assertEquals(lap * 4, OrbitClock.periodSteps(s, ring(3, OrbitSpan.FOUR)), "FOUR at $lap")
+            assertEquals(3, OrbitClock.periodSteps(s, ring(3, OrbitSpan.FREE)), "FREE at $lap")
+        }
+    }
+
+    @Test
+    fun `three across two bars against a free sixteen - cycle two bars, ratio one to two, hits at thirds`() {
+        val slow = ring(3, OrbitSpan.TWO, hits = listOf(0, 1, 2))
+        val s = set(16, ring(16, OrbitSpan.FREE), slow)
+        assertEquals(32L, OrbitClock.cycleSteps(s))
+        assertEquals(2.0, OrbitClock.cycleBars(s))
+        assertEquals("1 : 2", OrbitClock.ratioLabel(s))
+        val step = OrbitClock.stepFrames(s)
+        val frames = OrbitClock.firings(s, slow, 0, OrbitClock.cycleFrames(s)).map { it.frame }
+        val period = 32.0 * step
+        assertEquals(listOf(0L, Math.round(period / 3), Math.round(2 * period / 3)), frames)
+    }
+
+    @Test
+    fun `a spanned ring says its span and a free ring says its steps`() {
+        val s = set(16)
+        assertEquals("½ BAR", OrbitClock.lengthLabel(s, ring(4, OrbitSpan.HALF)))
+        assertEquals("1 BAR", OrbitClock.lengthLabel(s, ring(3, OrbitSpan.ONE)))
+        assertEquals("2 BARS", OrbitClock.lengthLabel(s, ring(3, OrbitSpan.TWO)))
+        assertEquals("4 BARS", OrbitClock.lengthLabel(s, ring(7, OrbitSpan.FOUR)))
+        assertEquals("5 BEATS", OrbitClock.lengthLabel(s, ring(20, OrbitSpan.FREE)))
+        // A 12-step bar: the spanned label does not change, the free one follows the bar.
+        val waltz = set(12)
+        assertEquals("1 BAR", OrbitClock.lengthLabel(waltz, ring(3, OrbitSpan.ONE)))
+        assertEquals("1 BAR", OrbitClock.lengthLabel(waltz, ring(12, OrbitSpan.FREE)))
+    }
+
+    @Test
+    fun `the tail is still one 16th of a spanned ring's turn`() {
+        val s = set(16)
+        assertEquals(1.0 / 32, OrbitClock.tailSweep(s, ring(3, OrbitSpan.TWO)), 1e-12)
+        assertEquals(1.0 / 8, OrbitClock.tailSweep(s, ring(3, OrbitSpan.HALF)), 1e-12)
+    }
+
+    @Test
+    fun `lap ticks - whole laps for two and four, none for free, half or one`() {
+        assertEquals(0, OrbitClock.spannedLaps(ring(3, OrbitSpan.FREE)))
+        assertEquals(0, OrbitClock.spannedLaps(ring(3, OrbitSpan.HALF)))
+        assertEquals(1, OrbitClock.spannedLaps(ring(3, OrbitSpan.ONE)))
+        assertEquals(2, OrbitClock.spannedLaps(ring(3, OrbitSpan.TWO)))
+        assertEquals(4, OrbitClock.spannedLaps(ring(3, OrbitSpan.FOUR)))
+    }
+
+    @Test
+    fun `the chip cycles round, and an unknown stored name is free`() {
+        assertEquals(OrbitSpan.HALF, OrbitSpan.FREE.next)
+        assertEquals(OrbitSpan.FREE, OrbitSpan.FOUR.next)
+        assertEquals(OrbitSpan.TWO, OrbitSpan.fromName("TWO"))
+        assertEquals(OrbitSpan.FREE, OrbitSpan.fromName("SIXTEEN"))
+        assertEquals(OrbitSpan.FREE, OrbitSpan.fromName(null))
     }
 }

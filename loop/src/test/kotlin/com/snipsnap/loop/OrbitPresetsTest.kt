@@ -35,8 +35,8 @@ class OrbitPresetsTest {
     @Test
     fun `free and locked rings are both in the starter set and the cycle is fifteen bars`() {
         val set = OrbitPresets.fromKit("Break Kit", kit, 92f, 48_000)
-        assertTrue(set.orbits.any { !it.lockToBar })
-        assertTrue(set.orbits.any { it.lockToBar })
+        assertTrue(set.orbits.any { it.span == OrbitSpan.FREE })
+        assertTrue(set.orbits.any { it.span == OrbitSpan.ONE })
         // 16, 16, 12, 20 (and the locked 3 counting as 16): LCM 240 steps.
         assertEquals(240L, OrbitClock.cycleSteps(set))
         assertEquals(15.0, OrbitClock.cycleBars(set))

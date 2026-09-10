@@ -22,14 +22,14 @@ class OrbitStoreTest {
             Orbit(
                 name = "THREE",
                 steps = 3,
-                lockToBar = true,
+                span = OrbitSpan.ONE,
                 content = PatternOrbit("Break Kit", listOf(OrbitHit(0, 4), OrbitHit(1, 4), OrbitHit(2, 4))),
                 voice = listOf(4),
                 engaged = false,
                 level = 0.5f,
                 pan = -0.25f,
             ),
-            Orbit(name = "TAPE", steps = 20, content = SnipOrbit("snip_1_bass.wav")),
+            Orbit(name = "TAPE", steps = 20, content = SnipOrbit("snip_1_bass.wav"), span = OrbitSpan.TWO),
         ),
         bpm = 96f,
         sampleRate = 44_100,
@@ -57,6 +57,33 @@ class OrbitStoreTest {
     }
 
     @Test
+    fun `a version 2 file still loads - lockToBar becomes a one-bar span`() {
+        val dir = tempDir()
+        File(dir, OrbitStore.FILE_NAME).writeText(
+            """{"version": 2, "bpm": 92, "sampleRate": 48000, "lapSteps": 16, "orbits": [
+               {"name": "KICK", "steps": 16, "lockToBar": false, "voice": [1], "engaged": true, "level": 1, "pan": 0,
+                "content": {"type": "pattern", "kit": "Break Kit", "hits": [{"step": 0, "slot": 1, "velocity": 0.9}]}},
+               {"name": "THREE", "steps": 3, "lockToBar": true, "voice": [4], "engaged": true, "level": 1, "pan": 0,
+                "content": {"type": "pattern", "kit": "Break Kit", "hits": [{"step": 0, "slot": 4, "velocity": 0.5}]}}
+            ]}""",
+        )
+        val loaded = OrbitStore.load(dir)
+        assertEquals(listOf(OrbitSpan.FREE, OrbitSpan.ONE), loaded.orbits.map { it.span })
+    }
+
+    @Test
+    fun `an unknown span name reads as free rather than refusing the file`() {
+        val dir = tempDir()
+        File(dir, OrbitStore.FILE_NAME).writeText(
+            """{"version": 3, "bpm": 92, "sampleRate": 48000, "lapSteps": 16, "orbits": [
+               {"name": "ODD", "steps": 5, "span": "SIXTEEN", "voice": [1], "engaged": true, "level": 1, "pan": 0,
+                "content": {"type": "pattern", "kit": "Break Kit", "hits": []}}
+            ]}""",
+        )
+        assertEquals(OrbitSpan.FREE, OrbitStore.load(dir).orbits.single().span)
+    }
+
+    @Test
     fun `a version 1 file still loads - the mode becomes the lock and the hits become the voice`() {
         val dir = tempDir()
         File(dir, OrbitStore.FILE_NAME).writeText(
@@ -71,13 +98,13 @@ class OrbitStoreTest {
             ]}""",
         )
         val loaded = OrbitStore.load(dir)
-        assertEquals(listOf(false, true, false), loaded.orbits.map { it.lockToBar })
+        assertEquals(listOf(OrbitSpan.FREE, OrbitSpan.ONE, OrbitSpan.FREE), loaded.orbits.map { it.span })
         assertEquals(listOf(1, 2), loaded.orbits[0].pads)
         assertEquals(listOf(4), loaded.orbits[1].pads)
         assertTrue(loaded.orbits[2].pads.isEmpty())
         // Saved again, it is a version 2 file with the voice written out.
         val text = OrbitStore.save(loaded, dir).readText()
-        assertTrue(text.contains("\"version\":2") || text.contains("\"version\": 2"), text.take(80))
+        assertTrue(text.contains("\"version\":3") || text.contains("\"version\": 3"), text.take(80))
         assertTrue(text.contains("\"voice\""))
     }
 

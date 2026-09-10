@@ -44,24 +44,56 @@ data class SnipOrbit(val sampleFile: String) : OrbitContent() {
 }
 
 /**
+ * How many laps of the set's bar one turn of a ring takes — or none, when
+ * the ring is as long as its own steps.
+ *
+ * A ring alone is just a circle; "one bar of 8/4" and "two bars of 4/4"
+ * are the same circle. The difference appears only against the shared
+ * lap, so a span is measured in laps: a 3-step ring spanning [TWO] is
+ * three hits across two bars. [FREE] is the polymeter case (its own steps
+ * in 16ths); the rest are polyrhythms against the bar.
+ */
+enum class OrbitSpan(
+    /** Laps per turn, or null for a free ring. */
+    val laps: Double?,
+    /** The chip's word for it. */
+    val label: String,
+) {
+    FREE(null, "FREE"),
+    HALF(0.5, "½ BAR"),
+    ONE(1.0, "1 BAR"),
+    TWO(2.0, "2 BARS"),
+    FOUR(4.0, "4 BARS");
+
+    /** The span after this one, wrapping: what one tap on the chip does. */
+    val next: OrbitSpan get() = entries[(ordinal + 1) % entries.size]
+
+    companion object {
+        /** The stored name back to a span; anything unknown is [FREE], never a refusal. */
+        fun fromName(name: String?): OrbitSpan = entries.firstOrNull { it.name == name } ?: FREE
+    }
+}
+
+/**
  * One ring: how many steps round it, how long it is, what it plays.
  *
  * Picture a bar of tape cut and taped end to end into a circle, then a
  * longer strip taped into a bigger circle around it, one needle-speed
  * driving both. A ring's *length* is its circumference in time:
  *
- *  - A free ring ([lockToBar] false) is as long as its steps: 16 steps is a
- *    bar, 20 steps is five beats. The needle covers the same 16ths per
- *    second on every free ring, so a bigger ring takes longer to come round
- *    — 16 against 20 is 4/4 against 5/4, a *polymeter*, meeting again only
- *    after 80 steps, five bars.
- *  - A bar-locked ring ([lockToBar] true) is exactly one bar long whatever
- *    its steps, so a 3-step ring plays a triplet against a 4-step ring's
- *    quarters — 3-against-4 inside one bar, a *polyrhythm* — and it meets
- *    the others again every bar.
+ *  - A free ring ([span] [OrbitSpan.FREE]) is as long as its steps: 16
+ *    steps is a bar, 20 steps is five beats. The needle covers the same
+ *    16ths per second on every free ring, so a bigger ring takes longer to
+ *    come round — 16 against 20 is 4/4 against 5/4, a *polymeter*, meeting
+ *    again only after 80 steps, five bars.
+ *  - A spanned ring is a whole number of laps long (½, 1, 2 or 4 bars)
+ *    whatever its steps, so a 3-step ring spanning one bar plays a triplet
+ *    against a 4-step ring's quarters — 3-against-4 inside one bar, a
+ *    *polyrhythm* — and a 3-step ring spanning two bars is three hits
+ *    across two bars.
  *
- * Both are one formula ([OrbitClock.periodFrames]); the lock only changes
- * what a ring's period is.
+ * All of it is one formula ([OrbitClock.periodFrames]); the span only
+ * changes what a ring's period is.
  *
  * A pattern ring also has a *voice*, [voice]: the pads it may play, in the
  * order they are shown when the ring is unrolled to edit it. A drum ring's
@@ -75,8 +107,8 @@ data class Orbit(
     /** Circumference in 16ths, 1..[MAX_STEPS]. */
     val steps: Int,
     val content: OrbitContent,
-    /** True: one bar long whatever [steps]. False: as long as its steps. */
-    val lockToBar: Boolean = false,
+    /** How many laps one turn takes; [OrbitSpan.FREE] means as long as its steps. */
+    val span: OrbitSpan = OrbitSpan.FREE,
     /** Pad slots this ring may play, in unrolled-strip order. Empty = the pads its hits name. */
     val voice: List<Int> = emptyList(),
     val engaged: Boolean = true,
@@ -161,12 +193,20 @@ object OrbitClock {
     fun stepFrames(set: OrbitSet): Int =
         (60.0 / set.bpm / 4.0 * set.sampleRate).roundToInt().coerceAtLeast(1)
 
-    /** Frames in one reference bar — the lap every bar-locked ring fits into. */
+    /** Frames in one reference bar — the lap every spanned ring is measured in. */
     fun lapFrames(set: OrbitSet): Long = set.lapSteps.toLong() * stepFrames(set)
 
-    /** [orbit]'s length in 16ths: its steps when free, the bar when locked. */
-    fun periodSteps(set: OrbitSet, orbit: Orbit): Int =
-        if (orbit.lockToBar) set.lapSteps else orbit.steps
+    /** [orbit]'s length in 16ths: its steps when free, else its span's laps of the bar. */
+    fun periodSteps(set: OrbitSet, orbit: Orbit): Int {
+        val laps = orbit.span.laps ?: return orbit.steps
+        return (set.lapSteps * laps).roundToInt().coerceAtLeast(1)
+    }
+
+    /** How many whole laps [orbit] spans, for the lap ticks: 0 for a free ring or one under a lap. */
+    fun spannedLaps(orbit: Orbit): Int {
+        val laps = orbit.span.laps ?: return 0
+        return if (laps >= 1.0) laps.roundToInt() else 0
+    }
 
     /** Frames in one lap of [orbit]: the ring's circumference in time. */
     fun periodFrames(set: OrbitSet, orbit: Orbit): Long =
@@ -174,9 +214,11 @@ object OrbitClock {
 
     /**
      * [orbit]'s length in words — "5 BEATS", "1 BAR", "2 BARS", "3 16THS" —
-     * so a ring's row can say what it is without a mode to explain.
+     * so a ring's row can say what it is without a mode to explain. A
+     * spanned ring says its span ("½ BAR"), whatever the bar's length.
      */
     fun lengthLabel(set: OrbitSet, orbit: Orbit): String {
+        if (orbit.span != OrbitSpan.FREE) return orbit.span.label
         val sixteenths = periodSteps(set, orbit)
         val bar = set.lapSteps
         return when {

@@ -80,6 +80,7 @@ import com.snipsnap.loop.OrbitHit
 import com.snipsnap.loop.OrbitPatterns
 import com.snipsnap.loop.OrbitPresets
 import com.snipsnap.loop.OrbitSet
+import com.snipsnap.loop.OrbitSpan
 import com.snipsnap.loop.OrbitStore
 import com.snipsnap.loop.PatternOrbit
 import com.snipsnap.loop.SnipOrbit
@@ -134,8 +135,9 @@ import kotlin.math.sin
  * it. The picked ring unrolls into the strip below — the tape untaped —
  * with one row per pad in its voice, so a bass ring is a small piano roll
  * and a kick ring is a single row; tap a cell to place or lift a hit, and
- * hear it. The panel changes the ring's step count, whether it is locked
- * to the bar, which pads it plays, and whether it is heard.
+ * hear it. The panel changes the ring's step count, its span (free, or
+ * ½, 1, 2 or 4 bars of the set's lap), which pads it plays, and whether
+ * it is heard.
  */
 @Composable
 fun OrbitScreen(
@@ -162,6 +164,8 @@ fun OrbitScreen(
     var snipPickerOpen by remember(kitDir) { mutableStateOf(false) }
     /** Tapping the step count opens a picker of ring sizes: eight taps on + is not a way to reach 24. */
     var stepsPickerOpen by remember(kitDir) { mutableStateOf(false) }
+    /** Long-pressing the SPAN chip opens the five spans as chips; a tap just cycles. */
+    var spanPickerOpen by remember(kitDir) { mutableStateOf(false) }
     /** SPREAD asks how many hits before it fills the ring. */
     var spreadOpen by remember(kitDir) { mutableStateOf(false) }
     /** The dice: every roll a new seed, so a roll can always be rolled again. */
@@ -703,6 +707,23 @@ fun OrbitScreen(
                         }
                     }
                     TapeText("16 IS A BAR · 20 IS FIVE BEATS · 12 IS THREE · ODD NUMBERS DRIFT FURTHEST", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+                } else if (spanPickerOpen && ring != null) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        TapeText("HOW MANY BARS IS ONE TURN OF ${ring.name}?", TapeType.pixel, scheme.ink.tape)
+                        SmallChip("CLOSE", scheme) { spanPickerOpen = false }
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        for (span in OrbitSpan.entries) {
+                            SmallChip(span.label, scheme, accent = span == ring.span) {
+                                spanPickerOpen = false
+                                updateRing(selected) { it.copy(span = span) }
+                            }
+                        }
+                    }
+                    TapeText("FREE IS AS LONG AS ITS STEPS. A SPAN IS A WHOLE NUMBER OF BARS WHATEVER THE STEPS: 3 STEPS ACROSS 2 BARS IS THREE HITS IN EIGHT BEATS.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3)
                 } else if (spreadOpen && ring != null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         TapeText("SPREAD HOW MANY HITS ROUND ${ring.steps} STEPS?", TapeType.pixel, scheme.ink.tape)
@@ -752,8 +773,9 @@ fun OrbitScreen(
                             )
                         }
                         SmallChip("+", scheme, description = "ONE STEP MORE") { setSteps(selected, ring.steps + 1) }
-                        SmallChip("LOCK TO BAR", scheme, accent = ring.lockToBar) {
-                            updateRing(selected) { it.copy(lockToBar = !it.lockToBar) }
+                        // Tap for the next span, hold to pick one of the five.
+                        SpanChip(ring.span, scheme, onNext = { updateRing(selected) { it.copy(span = it.span.next) } }) {
+                            spanPickerOpen = true
                         }
                     }
                     Row(
@@ -987,6 +1009,18 @@ private fun RingsCanvas(
                 for (s in 0 until ring.steps) {
                     drawCircle(dim, tick, geometry.point(r, s.toDouble() / ring.steps))
                 }
+                // Lap ticks: on a ring spanning two or more bars, a heavier
+                // mark where each bar boundary falls, so "the bar is here"
+                // reads on a ring longer than a bar. A free ring's bar
+                // boundary drifts, which is the point of it, so it gets none.
+                val laps = OrbitClock.spannedLaps(ring)
+                if (laps >= 2) {
+                    val reach = LAP_TICK_DP * screenDensity
+                    for (k in 0 until laps) {
+                        val ph = k.toDouble() / laps
+                        drawLine(ringInk.copy(alpha = 0.8f), geometry.point(r - reach, ph), geometry.point(r + reach, ph), strokeWidth = 1.5f * screenDensity)
+                    }
+                }
                 // Hits, flaring for a moment after the needle strikes them:
                 // the eye goes to where the sound just happened. On a ring
                 // with several pads, pitch steps the dot in or out from the line.
@@ -1205,6 +1239,9 @@ private const val MEET_SECONDS = 0.35f
 /** Room outside the outermost ring for its name at 12 o'clock, in dp. */
 private const val LABEL_MARGIN_DP = 14f
 
+/** How far a lap tick reaches either side of the ring's stroke. */
+private const val LAP_TICK_DP = 4f
+
 /** How many bars a snip ring's waveform is drawn in, round the ring. */
 private const val WAVE_BUCKETS = 120
 
@@ -1305,6 +1342,36 @@ private fun SmallChip(
         contentAlignment = Alignment.Center,
     ) {
         TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape)
+    }
+}
+
+/**
+ * The SPAN chip: what a ring's turn is measured in. A tap moves to the
+ * next span round the five; a long-press opens them as a picker. Both
+ * gestures are accessibility actions, as the strip's cells do it.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SpanChip(span: OrbitSpan, scheme: Scheme, onNext: () -> Unit, onPick: () -> Unit) {
+    val spanned = span != OrbitSpan.FREE
+    Box(
+        Modifier
+            .heightIn(min = 36.dp)
+            .background(scheme.field.tape, RoundedCornerShape(4.dp))
+            .border(1.dp, if (spanned) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+            .semantics { contentDescription = "SPAN: ${span.label}" }
+            .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClickLabel = "NEXT SPAN",
+                onLongClickLabel = "PICK A SPAN",
+                onLongClick = onPick,
+                onClick = onNext,
+            )
+            .padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        TapeText(if (spanned) "SPAN ${span.label}" else "SPAN FREE", TapeType.pixel, if (spanned) scheme.accent.tape else scheme.ink2.tape)
     }
 }
 

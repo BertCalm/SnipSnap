@@ -16,11 +16,12 @@ object OrbitStore {
     const val FILE_NAME = "orbits.json"
 
     /**
-     * 2: a ring has `lockToBar` and a `voice` (the pads it plays) where 1
-     * had a `mode` and no voice. Version 1 files still load: `SAME_LAP`
-     * becomes the lock, and the voice is the pads the hits already named.
+     * 3: a ring has a `span` (FREE, HALF, ONE, TWO, FOUR) where 2 had a
+     * boolean `lockToBar` and 1 had a `mode`. Every older file still loads:
+     * `lockToBar: true` and `SAME_LAP` both become `ONE`, and a version 1
+     * ring's voice is the pads its hits already named.
      */
-    const val VERSION = 2
+    const val VERSION = 3
     private const val FIRST_VERSION = 1
 
     fun save(set: OrbitSet, dir: File): File {
@@ -56,7 +57,7 @@ object OrbitStore {
         linkedMapOf(
             "name" to JsonValue.Str(orbit.name),
             "steps" to num(orbit.steps),
-            "lockToBar" to JsonValue.Bool(orbit.lockToBar),
+            "span" to JsonValue.Str(orbit.span.name),
             "voice" to JsonValue.Arr(orbit.pads.map { num(it) }),
             "engaged" to JsonValue.Bool(orbit.engaged),
             "level" to num(orbit.level),
@@ -105,11 +106,16 @@ object OrbitStore {
 
     private fun orbitFrom(value: JsonValue): Orbit {
         val o = value.obj()
-        // Version 1 wrote a mode name; SAME_LAP is the lock, anything else is free.
-        val lockToBar = o["lockToBar"]?.bool() ?: when (val mode = o["mode"]?.str()) {
-            null, "SAME_SPEED" -> false
-            "SAME_LAP" -> true
-            else -> throw IllegalStateException("unknown orbit mode '$mode'")
+        // Version 3 writes a span name. Version 2 wrote lockToBar; version 1
+        // a mode name. Both older forms only ever meant "one bar" or "free".
+        val span = when {
+            o["span"] != null -> OrbitSpan.fromName(o["span"]?.str())
+            o["lockToBar"] != null -> if (o["lockToBar"]?.bool() == true) OrbitSpan.ONE else OrbitSpan.FREE
+            else -> when (val mode = o["mode"]?.str()) {
+                null, "SAME_SPEED" -> OrbitSpan.FREE
+                "SAME_LAP" -> OrbitSpan.ONE
+                else -> throw IllegalStateException("unknown orbit mode '$mode'")
+            }
         }
         val content = contentFrom(o["content"] ?: throw IllegalStateException("orbit has no content"))
         // A snip ring has no voice; a version 1 pattern ring's voice is derived from its hits.
@@ -118,7 +124,7 @@ object OrbitStore {
             name = o["name"]?.str() ?: "",
             steps = o["steps"]?.int() ?: OrbitSet.DEFAULT_LAP_STEPS,
             content = content,
-            lockToBar = lockToBar,
+            span = span,
             voice = voice,
             engaged = o["engaged"]?.bool() ?: true,
             level = (o["level"]?.num() ?: 1.0).toFloat(),

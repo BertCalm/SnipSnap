@@ -29,7 +29,7 @@ class OrbitEngineTest {
     }
 
     private fun pattern(name: String, steps: Int, lock: Boolean, vararg hits: Pair<Int, Int>) =
-        Orbit(name, steps, PatternOrbit("kit", hits.map { (s, slot) -> OrbitHit(s, slot) }), lockToBar = lock)
+        Orbit(name, steps, PatternOrbit("kit", hits.map { (s, slot) -> OrbitHit(s, slot) }), span = if (lock) OrbitSpan.ONE else OrbitSpan.FREE)
 
     private fun set(vararg orbits: Orbit) = OrbitSet(orbits.toList(), bpm, rate)
 
