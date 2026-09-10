@@ -108,7 +108,7 @@ object ExpansionWriter {
 
         val dest = File(File(driveRoot, EXPANSIONS_DIR), meta.title)
         if (dest.exists() && !overwrite) {
-            throw IOException("destination already exists: $dest (pass overwrite=true to replace same-named files)")
+            throw DestinationExists(dest)
         }
         dest.mkdirs()
         if (!dest.isDirectory) throw IOException("could not create $dest")

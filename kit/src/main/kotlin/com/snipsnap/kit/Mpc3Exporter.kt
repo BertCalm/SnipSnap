@@ -49,7 +49,7 @@ object Mpc3Exporter {
         val trackFile = File(destRoot, "${kit.name}.xtd")
         val dataDir = File(destRoot, Mpc3TrackWriter.trackDataDirName(kit.name))
         if ((trackFile.exists() || dataDir.exists()) && !overwrite) {
-            throw IOException("destination already exists: $trackFile (pass overwrite=true to replace same-named files)")
+            throw DestinationExists(trackFile)
         }
         dataDir.deleteRecursively()
 

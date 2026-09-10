@@ -220,7 +220,7 @@ object OneNote {
         val xty = File(destRoot, "$name.xty")
         val dataDir = File(destRoot, Mpc3TrackWriter.trackDataDirName(name))
         if ((xty.exists() || dataDir.exists()) && !overwrite) {
-            throw IOException("destination already exists: $xty (pass overwrite=true to replace same-named files)")
+            throw DestinationExists(xty)
         }
         dataDir.deleteRecursively()
         dataDir.mkdirs()

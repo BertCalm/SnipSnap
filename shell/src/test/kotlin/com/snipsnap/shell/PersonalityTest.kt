@@ -197,6 +197,25 @@ class PersonalityTest {
     }
 
     /**
+     * Finding 18. Re-exporting to the same destination used to overwrite
+     * silently — on someone's SD card, the one write worth pausing on. The
+     * pause is only useful if it names the thing at risk and says what the
+     * next tap does; "are you sure?" teaches neither.
+     */
+    @Test
+    fun `the overwrite warning names what is at risk and what the next tap does`() {
+        val line = Copy.dubWouldOverwrite("MY KIT.XPN")
+        assertTrue(line.contains("MY KIT.XPN"), "it names the thing, not \"a file\": $line")
+        assertTrue(line.contains("DUB AGAIN"), "it says what the next tap does: $line")
+        assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+        assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
+        // It must not read like something already happened - nothing has been
+        // written when this appears.
+        assertFalse(line.contains("DONE"), "nothing was written yet: $line")
+        assertTrue(line != Copy.DUB_DONE && line != Copy.DUB_FAILED, "distinct from both outcomes: $line")
+    }
+
+    /**
      * Finding 19. COMMIT and INSTANT KIT sit side by side under the deck and
      * used to disagree about an empty selection: COMMIT refused in words
      * while INSTANT KIT quietly chopped the whole tape, and the user was

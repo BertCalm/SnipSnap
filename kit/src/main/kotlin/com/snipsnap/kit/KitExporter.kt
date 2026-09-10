@@ -8,6 +8,28 @@ import com.snipsnap.xpm.XpmWriter
 import java.io.File
 import java.io.IOException
 
+/**
+ * Thrown by every writer that refuses to replace something already on disk —
+ * the `overwrite = false` answer, carrying the path that is in the way.
+ *
+ * September UAT, finding 18: EXPORT hardcoded `overwrite = true`, so
+ * re-exporting to the same destination silently wrote over whatever was
+ * there. On someone's SD card that is the one write worth pausing on. The
+ * screen can only pause on it if it can tell "there is already a kit here"
+ * apart from "the write failed" — a disk that filled up, a card pulled
+ * mid-write, a folder it may not touch. Both used to arrive as a bare
+ * [IOException] with a message, so telling them apart meant matching on
+ * prose, and treating a full disk as a confirmable overwrite would be worse
+ * than the bug being fixed.
+ *
+ * It stays an [IOException] so every existing `catch` and every test that
+ * asserts on the message keeps working; the message is verbatim what the
+ * thirteen hand-written copies of it used to say.
+ */
+class DestinationExists(val path: File) : IOException(
+    "destination already exists: $path (pass overwrite=true to replace same-named files)",
+)
+
 /** Thrown when preflight found blocking problems; carries the full checklist. */
 class ExportBlockedException(val findings: List<Finding>) : Exception(
     "export blocked: " + findings.filter { it.severity == Severity.FAIL }.joinToString("; ") { it.message },
@@ -43,7 +65,7 @@ object KitExporter {
 
         val dest = File(destRoot, kit.name)
         if (dest.exists() && !overwrite) {
-            throw IOException("destination already exists: $dest (pass overwrite=true to replace same-named files)")
+            throw DestinationExists(dest)
         }
         dest.mkdirs()
         if (!dest.isDirectory) throw IOException("could not create $dest")

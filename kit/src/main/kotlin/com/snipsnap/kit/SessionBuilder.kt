@@ -51,7 +51,7 @@ object SessionBuilder {
         val xpj = File(destRoot, "$name.xpj")
         val dataDir = File(destRoot, Mpc3ProjectWriter.projectDataDirName(name))
         if ((xpj.exists() || dataDir.exists()) && !overwrite) {
-            throw IOException("destination already exists: $xpj (pass overwrite=true to replace same-named files)")
+            throw DestinationExists(xpj)
         }
         dataDir.deleteRecursively()
         dataDir.mkdirs()

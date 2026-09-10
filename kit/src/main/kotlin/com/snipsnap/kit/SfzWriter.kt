@@ -44,7 +44,7 @@ object SfzWriter {
 
         val dir = File(destRoot, "${kit.name} SFZ")
         if (dir.exists() && !overwrite) {
-            throw IOException("destination already exists: $dir (pass overwrite=true to replace same-named files)")
+            throw DestinationExists(dir)
         }
         dir.deleteRecursively()
         val (slots, _) = KitExporter.buildSlots(kit, kitDir, File(dir, "Samples"))

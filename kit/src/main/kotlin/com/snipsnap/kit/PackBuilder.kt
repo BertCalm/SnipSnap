@@ -49,7 +49,7 @@ object PackBuilder {
 
         val dest = File(File(destRoot, ExpansionWriter.EXPANSIONS_DIR), meta.title)
         if (dest.exists() && !overwrite) {
-            throw IOException("destination already exists: $dest (pass overwrite=true to replace same-named files)")
+            throw DestinationExists(dest)
         }
         dest.deleteRecursively()
         dest.mkdirs()
@@ -111,7 +111,7 @@ object PackBuilder {
         val xpn = if (asXpn) {
             val file = File(destRoot, "${meta.title}.xpn")
             if (file.exists() && !overwrite) {
-                throw IOException("destination already exists: $file (pass overwrite=true to replace same-named files)")
+                throw DestinationExists(file)
             }
             ZipOutputStream(file.outputStream().buffered()).use { zip ->
                 val entries = dest.walkTopDown()

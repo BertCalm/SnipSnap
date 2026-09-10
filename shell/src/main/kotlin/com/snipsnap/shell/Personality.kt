@@ -720,6 +720,16 @@ object Copy {
      */
     const val DUB_FAILED = "DUB FAILED. CHECK YOUR STORAGE AND TRY AGAIN."
     /**
+     * The first tap on DUB when something is already at the destination
+     * (September UAT, finding 18). [what] is the exact thing in the way, as
+     * the writer named it — a name, not "a file", because the user is about
+     * to decide whether that particular thing is expendable.
+     *
+     * It says what the next tap will do, so the confirmation is a decision
+     * rather than a dare: nothing has been written when this appears.
+     */
+    fun dubWouldOverwrite(what: String): String = "$what IS ALREADY THERE. DUB AGAIN TO WRITE OVER IT."
+    /**
      * The dub landed *and* went onto the card the user picked. Said apart
      * from [DUB_DONE] because it is a different promise: that one means
      * the file is on the phone, this one means it is on the thing you are

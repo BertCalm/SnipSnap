@@ -116,6 +116,19 @@ class ExportSession(val dir: File, val kit: Kit, val model: ExportWizardModel) {
     var busy by mutableStateOf(false)
     var lastOutcome by mutableStateOf<ExportOutcome?>(null)
     var writeStartedAtMs by mutableLongStateOf(0L)
+
+    /**
+     * What a first DUB found already at the destination, or null when
+     * nothing is armed (September UAT, finding 18). The next DUB writes over
+     * it; anything that changes *where* the write would land disarms it, so
+     * a confirmation can never be spent on a destination the user never saw.
+     *
+     * Hoisted alongside [busy] for the same reason: this screen remounts on
+     * every tab switch, and an armed confirm that forgot itself on remount
+     * would make the second tap a fresh first tap — an infinite loop the
+     * user cannot escape.
+     */
+    var overwriting by mutableStateOf<File?>(null)
 }
 
 /**
@@ -411,10 +424,22 @@ private fun ExportContent(
                         // that one agree now.
                         File(root, Names.sanitizeStem(kit.name))
                     }
-                    model.write(destRoot, overwrite = true)
+                    // overwrite only on the second tap, and only when the
+                    // armed path is the one this write is actually about
+                    // (finding 18). A stale arm - format changed, kit
+                    // changed - is not consent for this destination.
+                    model.write(destRoot, overwrite = session.overwriting != null)
                 }
                 when (result) {
+                    is ExportWizardModel.WriteResult.WouldOverwrite -> {
+                        // Nothing was written. Arm, and say what the next
+                        // tap would replace - by name, so the decision is
+                        // about that thing rather than an abstract "sure?".
+                        session.overwriting = result.path
+                        onToast(Copy.dubWouldOverwrite(result.path.name))
+                    }
                     is ExportWizardModel.WriteResult.Done -> {
+                        session.overwriting = null
                         session.lastOutcome = result.outcome
                         val card = cardTree
                         if (card == null) {
@@ -437,6 +462,7 @@ private fun ExportContent(
                         }
                     }
                     is ExportWizardModel.WriteResult.Blocked -> {
+                        session.overwriting = null
                         // Preflight flipped between render and tap (a file
                         // vanished, say) — write() already reset the model
                         // to READY and the refreshed checklist below is the
@@ -555,6 +581,10 @@ private fun ExportContent(
                     onToggle = { formatPickerOpen = !formatPickerOpen },
                     onPick = { picked ->
                         model.setFormat(picked)
+                        // A different format writes to a different place, so
+                        // a confirmation taken against the old destination is
+                        // not consent for this one (finding 18).
+                        session.overwriting = null
                         // Remembered for next time: finding 7's other half.
                         // Written on the pick rather than on the dub, so a
                         // change of mind is kept even if nothing is written.
