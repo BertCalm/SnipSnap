@@ -718,6 +718,23 @@ object Copy {
     // Kits.
     const val FRESH_TAPE = "FRESH TAPE. SMELLS LIKE FERRIC OXIDE."
 
+    /**
+     * What to say when a kit opens with a SNIPS → PAD hand-off still armed.
+     *
+     * The September UAT's finding 12 called the empty-shelf case a dead end
+     * — "nothing offers to make the kit". That is not what the code does:
+     * NEW KIT ▸ STARTERS sits right below the panel, exactly where
+     * [EMPTY_SHELF_FOR_ASSIGN] says it does, and `fresh()` never clears the
+     * pending snip, so the hand-off survives being sent to make a kit.
+     *
+     * The real gap was narrower and only on that one route. Every other way
+     * into a kit with a snip armed says what to do next; `fresh()` said
+     * [FRESH_TAPE] and nothing else, so the user arrived on a new kit with
+     * the snip still waiting and no idea it was. One rule, both call sites.
+     */
+    fun snipLanding(hasEmptyPad: Boolean): String =
+        if (hasEmptyPad) "LONG-PRESS AN EMPTY PAD TO PLACE THIS SNIP." else "THIS KIT IS FULL — PICK ANOTHER."
+
     /** Shown when a kit could not be created, at every personality level. */
     const val CREATE_FAILED = "COULDN'T MAKE THAT TAPE."
 

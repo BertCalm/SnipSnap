@@ -711,7 +711,17 @@ fun App(shelf: KitShelf) {
             }
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
             busy = null
-            toast = Copy.FRESH_TAPE
+            // A snip may be waiting for a home: the empty shelf's own copy
+            // sends the user here to make a kit for it (EMPTY_SHELF_FOR_ASSIGN),
+            // and `fresh` deliberately does not clear the hand-off. Saying
+            // only FRESH_TAPE there dropped the thread on the one route that
+            // copy points at, while every other way into a kit with a snip
+            // armed says what to do next (September UAT, finding 12).
+            toast = if (pendingSnipAssign != null) {
+                Copy.snipLanding((1..16).any { entry.kit.pad(it) == null })
+            } else {
+                Copy.FRESH_TAPE
+            }
             open = entry
             screen = AppScreen.KIT
         }
@@ -1638,12 +1648,7 @@ fun App(shelf: KitShelf) {
                                         // instead of pointing at a pad that
                                         // doesn't exist.
                                         if (pendingSnipAssign != null) {
-                                            val hasEmptyPad = (1..16).any { entry.kit.pad(it) == null }
-                                            toast = if (hasEmptyPad) {
-                                                "LONG-PRESS AN EMPTY PAD TO PLACE THIS SNIP"
-                                            } else {
-                                                "THIS KIT IS FULL — PICK ANOTHER"
-                                            }
+                                            toast = Copy.snipLanding((1..16).any { entry.kit.pad(it) == null })
                                         } else {
                                             // Teach the one gesture that opens PAD
                                             // SHEET, while it's still undiscovered.
