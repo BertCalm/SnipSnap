@@ -10,6 +10,7 @@ dependencies {
     implementation(project(":json"))
     implementation(project(":audio"))
     implementation(project(":kit"))
+    implementation(project(":mpc3"))
     testImplementation(kotlin("test"))
 }
 

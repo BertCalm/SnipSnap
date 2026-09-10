@@ -12,8 +12,8 @@ class OrbitClockTest {
     private val bpm = 120f
     private val step = 6_000
 
-    private fun pattern(steps: Int, mode: OrbitMode = OrbitMode.SAME_SPEED, hits: List<Int> = listOf(0)) =
-        Orbit("r$steps", steps, PatternOrbit("kit", hits.map { OrbitHit(it, 1) }), mode)
+    private fun pattern(steps: Int, lock: Boolean = false, hits: List<Int> = listOf(0)) =
+        Orbit("r$steps", steps, PatternOrbit("kit", hits.map { OrbitHit(it, 1) }), lockToBar = lock)
 
     private fun set(vararg orbits: Orbit) = OrbitSet(orbits.toList(), bpm, rate)
 
@@ -24,7 +24,7 @@ class OrbitClockTest {
     }
 
     @Test
-    fun `same speed - a bigger ring takes longer to come round`() {
+    fun `free - a bigger ring takes longer to come round`() {
         val s = set()
         assertEquals(16L * step, OrbitClock.periodFrames(s, pattern(16)))
         assertEquals(20L * step, OrbitClock.periodFrames(s, pattern(20)))
@@ -32,10 +32,10 @@ class OrbitClockTest {
     }
 
     @Test
-    fun `same lap - every ring comes round once a bar whatever its steps`() {
+    fun `locked to the bar - every ring comes round once a bar whatever its steps`() {
         val s = set()
-        val three = pattern(3, OrbitMode.SAME_LAP)
-        val five = pattern(5, OrbitMode.SAME_LAP)
+        val three = pattern(3, lock = true)
+        val five = pattern(5, lock = true)
         assertEquals(OrbitClock.lapFrames(s), OrbitClock.periodFrames(s, three))
         assertEquals(OrbitClock.lapFrames(s), OrbitClock.periodFrames(s, five))
         // A triplet's steps are a third of the bar each: 16 steps / 3.
@@ -75,8 +75,8 @@ class OrbitClockTest {
     }
 
     @Test
-    fun `a same-lap ring never lengthens the cycle`() {
-        val s = set(pattern(16), pattern(3, OrbitMode.SAME_LAP), pattern(7, OrbitMode.SAME_LAP))
+    fun `a bar-locked ring never lengthens the cycle`() {
+        val s = set(pattern(16), pattern(3, lock = true), pattern(7, lock = true))
         assertEquals(16L, OrbitClock.cycleSteps(s))
         assertEquals(1.0, OrbitClock.cycleBars(s))
     }
@@ -86,6 +86,45 @@ class OrbitClockTest {
         val s = set(pattern(16), pattern(17), pattern(19))
         assertEquals(16L * 17 * 19, OrbitClock.cycleSteps(s))
         assertEquals(323.0, OrbitClock.cycleBars(s))
+    }
+
+    @Test
+    fun `length reads in bars, beats or 16ths - whichever divides`() {
+        val s = set()
+        assertEquals("1 BAR", OrbitClock.lengthLabel(s, pattern(16)))
+        assertEquals("2 BARS", OrbitClock.lengthLabel(s, pattern(32)))
+        assertEquals("5 BEATS", OrbitClock.lengthLabel(s, pattern(20)))
+        assertEquals("3 BEATS", OrbitClock.lengthLabel(s, pattern(12)))
+        assertEquals("7 16THS", OrbitClock.lengthLabel(s, pattern(7)))
+        assertEquals("1 BAR", OrbitClock.lengthLabel(s, pattern(3, lock = true)))
+    }
+
+    @Test
+    fun `the ratio is the distinct lengths reduced, shortest first`() {
+        assertEquals("4 : 5", OrbitClock.ratioLabel(set(pattern(16), pattern(20), pattern(3, lock = true))))
+        assertEquals("3 : 4 : 5", OrbitClock.ratioLabel(set(pattern(20), pattern(12), pattern(16), pattern(16))))
+        assertEquals("1", OrbitClock.ratioLabel(set(pattern(16))))
+        assertEquals("", OrbitClock.ratioLabel(set()))
+    }
+
+    @Test
+    fun `the tail is one 16th of time - long on a fast ring, short on a slow one`() {
+        val s = set()
+        assertEquals(1.0 / 16, OrbitClock.tailSweep(s, pattern(16)), 1e-12)
+        assertEquals(1.0 / 20, OrbitClock.tailSweep(s, pattern(20)), 1e-12)
+        assertEquals(1.0 / 16, OrbitClock.tailSweep(s, pattern(3, lock = true)), 1e-12)
+    }
+
+    @Test
+    fun `a voice is the pads a ring may play, and a hit outside it is refused`() {
+        val bass = Orbit("bass", 8, PatternOrbit("kit", listOf(OrbitHit(0, 5), OrbitHit(4, 7))), voice = listOf(5, 6, 7))
+        assertEquals(listOf(5, 6, 7), bass.pads)
+        // No voice given: the pads are whatever the hits name, in slot order; an empty ring plays pad 1.
+        assertEquals(listOf(1, 3), Orbit("r", 8, PatternOrbit("kit", listOf(OrbitHit(0, 3), OrbitHit(2, 1)))).pads)
+        assertEquals(listOf(1), Orbit("r", 8, PatternOrbit("kit", emptyList())).pads)
+        assertTrue(Orbit("s", 8, SnipOrbit("a.wav")).pads.isEmpty())
+        val e = runCatching { Orbit("r", 8, PatternOrbit("kit", listOf(OrbitHit(0, 9))), voice = listOf(1, 2)) }.exceptionOrNull()
+        assertTrue(e is IllegalArgumentException, "expected a refusal, got $e")
     }
 
     @Test
@@ -103,7 +142,7 @@ class OrbitClockTest {
     }
 
     @Test
-    fun `firings - same speed hits land on step multiples every lap`() {
+    fun `firings - a free ring's hits land on step multiples every lap`() {
         val s = set()
         val ring = pattern(20, hits = listOf(0, 6))
         val period = 20L * step
@@ -115,9 +154,9 @@ class OrbitClockTest {
     }
 
     @Test
-    fun `firings - same lap spreads three hits evenly across the bar`() {
+    fun `firings - a locked ring spreads three hits evenly across the bar`() {
         val s = set()
-        val ring = pattern(3, OrbitMode.SAME_LAP, hits = listOf(0, 1, 2))
+        val ring = pattern(3, lock = true, hits = listOf(0, 1, 2))
         val lap = 16L * step
         val frames = OrbitClock.firings(s, ring, 0, lap).map { it.frame }
         assertEquals(3, frames.size)

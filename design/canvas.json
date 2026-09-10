@@ -86,23 +86,31 @@
       "y": 1750,
       "w": 390,
       "h": 844,
-      "title": "ORBIT — starter set, FLOOR picked"
+      "title": "ORBIT — starter set, KICK picked"
     },
     {
-      "file": "OrbitSnipRing.dc.html",
+      "file": "OrbitBassRing.dc.html",
       "x": 470,
       "y": 1750,
       "w": 390,
       "h": 844,
-      "title": "ORBIT — a snip ring picked"
+      "title": "ORBIT — BASS ring unrolled, soloed"
+    },
+    {
+      "file": "OrbitSnipRing.dc.html",
+      "x": 940,
+      "y": 1750,
+      "w": 390,
+      "h": 844,
+      "title": "ORBIT — a snip ring picked, its tempo offered"
     },
     {
       "file": "OrbitModes.dc.html",
-      "x": 940,
+      "x": 1410,
       "y": 1750,
       "w": 720,
       "h": 580,
-      "title": "ORBIT — SPEED vs LAP"
+      "title": "ORBIT — a ring's length"
     }
   ],
   "annotations": [
@@ -146,7 +154,7 @@
       "x": 0,
       "y": 1600,
       "w": 380,
-      "text": "ORBIT — the circular sequencer, from GROOVE's ORBIT ▸. A bar taped end to end is a ring; a longer snip taped round a bigger ring; one needle drives them all, so the inner ring comes round first. Each needle trails a comet tail; a struck hit flares in its class colour. Arithmetic in docs/ORBITS.md; screen notes in HANDOFF.md."
+      "text": "ORBIT — the circular sequencer, from GROOVE's ORBIT ▸. A bar taped end to end is a ring; a longer snip taped round a bigger ring; one needle drives them all. Rings draw shortest inside, so the inner ring really comes round first. Each ring is one instrument in its class colour; a melodic ring's voice is several pads and unrolls into a small piano roll. Tap a ring to pick it, hold to solo, tap the strip to place a hit. Arithmetic in docs/ORBITS.md; screen notes in HANDOFF.md."
     }
   ],
   "launch": {

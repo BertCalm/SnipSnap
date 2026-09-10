@@ -3,27 +3,6 @@ package com.snipsnap.loop
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
-/**
- * How a ring's playhead moves against the others.
- *
- * Picture a bar of tape cut and taped end to end into a circle, then a longer
- * strip taped into a bigger circle around it. A single needle-speed drives
- * both, and the question is what "the same speed" means:
- *
- *  - [SAME_SPEED]: the needle covers the same number of 16ths per second on
- *    every ring, so a bigger ring takes longer to come round. A 16-step ring
- *    against a 20-step ring is 4/4 against 5/4 — a *polymeter* — and the two
- *    downbeats meet again only after 80 steps, five bars.
- *  - [SAME_LAP]: every ring completes one lap in the time of one
- *    [OrbitSet.lapSteps]-long bar, so a 3-step ring plays triplets against a
- *    4-step ring's quarters. That is 3-against-4 inside one bar — a
- *    *polyrhythm* — and the rings meet again every bar.
- *
- * Both are one formula ([OrbitClock.periodFrames]); the toggle only changes
- * what a ring's period is.
- */
-enum class OrbitMode { SAME_SPEED, SAME_LAP }
-
 /** One hit on a pattern ring: which step of the ring, which pad, how hard. */
 data class OrbitHit(
     /** 0-based, less than the ring's [Orbit.steps]. */
@@ -64,13 +43,42 @@ data class SnipOrbit(val sampleFile: String) : OrbitContent() {
     }
 }
 
-/** One ring: its circumference in steps, how it moves, and what it carries. */
+/**
+ * One ring: how many steps round it, how long it is, what it plays.
+ *
+ * Picture a bar of tape cut and taped end to end into a circle, then a
+ * longer strip taped into a bigger circle around it, one needle-speed
+ * driving both. A ring's *length* is its circumference in time:
+ *
+ *  - A free ring ([lockToBar] false) is as long as its steps: 16 steps is a
+ *    bar, 20 steps is five beats. The needle covers the same 16ths per
+ *    second on every free ring, so a bigger ring takes longer to come round
+ *    — 16 against 20 is 4/4 against 5/4, a *polymeter*, meeting again only
+ *    after 80 steps, five bars.
+ *  - A bar-locked ring ([lockToBar] true) is exactly one bar long whatever
+ *    its steps, so a 3-step ring plays a triplet against a 4-step ring's
+ *    quarters — 3-against-4 inside one bar, a *polyrhythm* — and it meets
+ *    the others again every bar.
+ *
+ * Both are one formula ([OrbitClock.periodFrames]); the lock only changes
+ * what a ring's period is.
+ *
+ * A pattern ring also has a *voice*, [voice]: the pads it may play, in the
+ * order they are shown when the ring is unrolled to edit it. A drum ring's
+ * voice is one pad. A bass ring's voice is the kit's tonal pads, low to
+ * high, and every hit names which of them it plays — a melody is one ring,
+ * not one ring per note. Leave [voice] empty and it is the distinct pads
+ * the hits already name ([pads]); a pattern ring always plays at least one.
+ */
 data class Orbit(
     val name: String,
     /** Circumference in 16ths, 1..[MAX_STEPS]. */
     val steps: Int,
     val content: OrbitContent,
-    val mode: OrbitMode = OrbitMode.SAME_SPEED,
+    /** True: one bar long whatever [steps]. False: as long as its steps. */
+    val lockToBar: Boolean = false,
+    /** Pad slots this ring may play, in unrolled-strip order. Empty = the pads its hits name. */
+    val voice: List<Int> = emptyList(),
     val engaged: Boolean = true,
     val level: Float = 1f,
     val pan: Float = 0f,
@@ -79,12 +87,31 @@ data class Orbit(
         require(steps in 1..MAX_STEPS) { "steps must be 1..$MAX_STEPS: $steps" }
         require(level >= 0f) { "level must not be negative: $level" }
         require(pan in -1f..1f) { "pan out of range: $pan" }
-        if (content is PatternOrbit) {
-            for (hit in content.hits) {
+        require(voice.size == voice.toSet().size) { "ring '$name' names a pad twice in its voice: $voice" }
+        for (slot in voice) require(slot >= 1) { "ring '$name' voice slot is 1-based: $slot" }
+        when (content) {
+            is PatternOrbit -> for (hit in content.hits) {
                 require(hit.step < steps) { "ring '$name' has a hit on step ${hit.step} but only $steps steps" }
+                require(voice.isEmpty() || hit.slot in voice) {
+                    "ring '$name' has a hit on pad ${hit.slot}, which is not in its voice $voice"
+                }
             }
+            is SnipOrbit -> require(voice.isEmpty()) { "ring '$name' is a snip ring and has no voice" }
         }
     }
+
+    /**
+     * The pads this ring plays, in strip order: [voice] when set, else the
+     * distinct pads its hits name in slot order, else pad 1 for an empty
+     * pattern ring so there is always a row to put a hit on. Empty only for
+     * a snip ring.
+     */
+    val pads: List<Int>
+        get() = when {
+            voice.isNotEmpty() -> voice
+            content is PatternOrbit -> content.hits.map { it.slot }.distinct().sorted().ifEmpty { listOf(1) }
+            else -> emptyList()
+        }
 
     companion object {
         const val MAX_STEPS = 64
@@ -94,8 +121,8 @@ data class Orbit(
 /**
  * The whole set of rings and the one clock they share.
  *
- * [lapSteps] is the reference bar: the circumference every [OrbitMode.SAME_LAP]
- * ring squeezes its steps into, and the unit the cycle length is reported in.
+ * [lapSteps] is the reference bar: the circumference every bar-locked ring
+ * squeezes its steps into, and the unit the cycle length is reported in.
  * Sixteen — one 4/4 bar of 16ths — matches every other grid in the app.
  */
 data class OrbitSet(
@@ -134,16 +161,52 @@ object OrbitClock {
     fun stepFrames(set: OrbitSet): Int =
         (60.0 / set.bpm / 4.0 * set.sampleRate).roundToInt().coerceAtLeast(1)
 
-    /** Frames in one reference bar — the lap every SAME_LAP ring fits into. */
+    /** Frames in one reference bar — the lap every bar-locked ring fits into. */
     fun lapFrames(set: OrbitSet): Long = set.lapSteps.toLong() * stepFrames(set)
 
+    /** [orbit]'s length in 16ths: its steps when free, the bar when locked. */
+    fun periodSteps(set: OrbitSet, orbit: Orbit): Int =
+        if (orbit.lockToBar) set.lapSteps else orbit.steps
+
     /** Frames in one lap of [orbit]: the ring's circumference in time. */
-    fun periodFrames(set: OrbitSet, orbit: Orbit): Long = when (orbit.mode) {
-        OrbitMode.SAME_SPEED -> orbit.steps.toLong() * stepFrames(set)
-        OrbitMode.SAME_LAP -> lapFrames(set)
+    fun periodFrames(set: OrbitSet, orbit: Orbit): Long =
+        periodSteps(set, orbit).toLong() * stepFrames(set)
+
+    /**
+     * [orbit]'s length in words — "5 BEATS", "1 BAR", "2 BARS", "3 16THS" —
+     * so a ring's row can say what it is without a mode to explain.
+     */
+    fun lengthLabel(set: OrbitSet, orbit: Orbit): String {
+        val sixteenths = periodSteps(set, orbit)
+        val bar = set.lapSteps
+        return when {
+            sixteenths % bar == 0 -> (sixteenths / bar).let { if (it == 1) "1 BAR" else "$it BARS" }
+            bar % 4 == 0 && sixteenths % (bar / 4) == 0 -> "${sixteenths / (bar / 4)} BEATS"
+            else -> "$sixteenths 16THS"
+        }
     }
 
-    /** Frames from one of [orbit]'s steps to the next. Fractional for a SAME_LAP ring whose steps don't divide the lap. */
+    /**
+     * The rings' lengths against each other, reduced: 16, 20 and a locked
+     * 3-step ring (a bar, 16) read "4 : 5" — distinct lengths in 16ths,
+     * shortest first, divided by what they share. Empty with no rings.
+     */
+    fun ratioLabel(set: OrbitSet): String {
+        val lengths = set.orbits.map { periodSteps(set, it).toLong() }.distinct().sorted()
+        if (lengths.isEmpty()) return ""
+        val g = lengths.fold(0L) { acc, n -> gcd(acc, n) }
+        return lengths.joinToString(" : ") { (it / g).toString() }
+    }
+
+    /**
+     * How far round [orbit] the needle travels in one 16th, as a fraction
+     * of its lap — the comet tail's length. A fast inner ring wears a long
+     * tail, a slow outer ring a short one, which is the difference the
+     * screen exists to show.
+     */
+    fun tailSweep(set: OrbitSet, orbit: Orbit): Double = 1.0 / periodSteps(set, orbit)
+
+    /** Frames from one of [orbit]'s steps to the next. Fractional for a locked ring whose steps don't divide the bar. */
     fun ringStepFrames(set: OrbitSet, orbit: Orbit): Double =
         periodFrames(set, orbit).toDouble() / orbit.steps
 
@@ -164,16 +227,14 @@ object OrbitClock {
     /**
      * How many 16ths before every ring is back on its downbeat together.
      *
-     * The least common multiple of the ring lengths, where a SAME_LAP ring
-     * counts as one lap long whatever its step count — it comes round every
+     * The least common multiple of the ring lengths, where a bar-locked ring
+     * counts as one bar long whatever its step count — it comes round every
      * bar by definition. Grows fast with coprime rings: 16, 20 and 24 meet
      * again after 240 steps (15 bars), but 16, 17 and 19 need 5,168 steps
      * (323 bars). Show this number, as the loop grid's bounce does.
      */
     fun cycleSteps(set: OrbitSet): Long =
-        set.orbits.fold(set.lapSteps.toLong()) { acc, o ->
-            lcm(acc, if (o.mode == OrbitMode.SAME_LAP) set.lapSteps.toLong() else o.steps.toLong())
-        }
+        set.orbits.fold(set.lapSteps.toLong()) { acc, o -> lcm(acc, periodSteps(set, o).toLong()) }
 
     /** [cycleSteps] in reference bars, so the readout can say "15 BARS". */
     fun cycleBars(set: OrbitSet): Double = cycleSteps(set).toDouble() / set.lapSteps

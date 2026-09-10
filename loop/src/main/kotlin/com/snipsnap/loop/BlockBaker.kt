@@ -64,12 +64,29 @@ object BlockBaker {
      * the grid ([bakeLoop]) and a snip on a ring ([OrbitBank]), so the two
      * can never disagree about what a wrapped loop sounds like.
      */
-    internal fun fitLoop(stereo: Snip, targetFrames: Int): Snip {
+    internal fun fitLoop(stereo: Snip, targetFrames: Int): Snip = fitLoopReported(stereo, targetFrames).snip
+
+    /** [fitLoop], and the [FitReport] of what it did — the ring panel's line about a snip. */
+    internal fun fitLoopReported(stereo: Snip, targetFrames: Int): FittedLoop {
         require(stereo.channels == 2) { "fitLoop wants stereo, got ${stereo.channels} channel(s)" }
         require(targetFrames > 0) { "targetFrames must be positive: $targetFrames" }
-        if (stereo.frameCount == 0) return Snip(FloatArray(targetFrames * 2), 2, stereo.sampleRate)
-        val drift = abs(stereo.frameCount - targetFrames).toDouble() / targetFrames
-        return if (drift <= FIT_TOLERANCE) conform(stereo, targetFrames) else retrigger(stereo, targetFrames)
+        val source = stereo.frameCount
+        if (source == 0) {
+            return FittedLoop(Snip(FloatArray(targetFrames * 2), 2, stereo.sampleRate), FitReport(LoopFit.PADDED, 0, targetFrames))
+        }
+        val drift = abs(source - targetFrames).toDouble() / targetFrames
+        if (drift > FIT_TOLERANCE) {
+            // Sustained material has no onsets to cut on. Trimming is a worse
+            // fit but an honest one; silence would be a bug — and the report
+            // says what actually happened, not what was tried.
+            retrigger(stereo, targetFrames)?.let { return it }
+        }
+        val kind = when {
+            source == targetFrames -> LoopFit.AS_IS
+            source > targetFrames -> LoopFit.TRIMMED
+            else -> LoopFit.PADDED
+        }
+        return FittedLoop(conform(stereo, targetFrames), FitReport(kind, source, targetFrames))
     }
 
     /**
@@ -112,15 +129,15 @@ object BlockBaker {
      * chop-and-program does, and what SnipSnap's own Chopper was already built
      * for.
      */
-    private fun retrigger(snip: Snip, targetFrames: Int): Snip {
+    private fun retrigger(snip: Snip, targetFrames: Int): FittedLoop? {
         val slices = Chopper.byTransients(
             snip,
             maxSlices = 32,
             cleanup = Chopper.SLICE_CLEANUP,
         )
-        // Sustained material has no onsets to cut on. Trimming is a worse fit
-        // but an honest one; silence would be a bug.
-        if (slices.isEmpty()) return conform(snip, targetFrames)
+        // Sustained material has no onsets to cut on: nothing to slice, so
+        // the caller conforms instead (and reports that, not this).
+        if (slices.isEmpty()) return null
 
         // Onset detection cannot fire on an attack inside the first analysis window —
         // the rectified energy derivative has no earlier window to rise from. A loop
@@ -150,7 +167,8 @@ object BlockBaker {
         // buffer's last sample lands on live audio, not silence. On a stretched
         // fit there is usually no overhang and this fades trailing silence,
         // which is a no-op. Always applying it is what makes it safe either way.
-        return Cleanup.applyFades(Snip(out, 2, snip.sampleRate), fadeInMs = 0f, fadeOutMs = TAIL_FADE_MS)
+        val faded = Cleanup.applyFades(Snip(out, 2, snip.sampleRate), fadeInMs = 0f, fadeOutMs = TAIL_FADE_MS)
+        return FittedLoop(faded, FitReport(LoopFit.SLICED, snip.frameCount, targetFrames, slices = placed.size))
     }
 
     /** Trim or zero-pad to exactly [targetFrames]. */
