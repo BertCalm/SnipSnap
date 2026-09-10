@@ -70,6 +70,7 @@ import com.snipsnap.app.ui.SynthScreen
 import com.snipsnap.app.ui.TakesBinScreen
 import com.snipsnap.app.ui.TAPE_LOAD_MAX_SEC
 import com.snipsnap.app.ui.TapeScreen
+import com.snipsnap.app.ui.StackTakesScreen
 import com.snipsnap.app.ui.TapeSpliceScreen
 import com.snipsnap.app.ui.TapeText
 import com.snipsnap.app.ui.TitleBar
@@ -261,6 +262,8 @@ fun App(shelf: KitShelf) {
     // KIT-scoped overlay state too. Opening it closes PAD SHEET the same
     // way GRAIN FIELD's own onGrainField does below.
     var spliceSlot by remember { mutableStateOf<Int?>(null) }
+    // STACK THE TAKES: same shape as SPLICE, over the same pad history.
+    var stackSlot by remember { mutableStateOf<Int?>(null) }
     // ARRANGE: same shape again, but GROOVE-scoped rather than KIT-scoped —
     // reachable only from GROOVE's own "SONG ▸" button, not one of MenuRow's
     // fixed ten, so a boolean here rather than its own AppScreen entry.
@@ -1319,6 +1322,7 @@ fun App(shelf: KitShelf) {
                             padCaptureSlot = null
                             grainFieldSlot = null
                             spliceSlot = null
+                            stackSlot = null
                             arrangeOpen = false
                             orbitOpen = false
                         }
@@ -1442,6 +1446,7 @@ fun App(shelf: KitShelf) {
         padCaptureSlot = null
         grainFieldSlot = null
         spliceSlot = null
+        stackSlot = null
         arrangeOpen = false
         orbitOpen = false
         // SNIPS is shelf-level, not KIT-scoped, but the same
@@ -1478,7 +1483,7 @@ fun App(shelf: KitShelf) {
     // (its own "◄ KIT" chip below, via `onExit`), and KEYS (its own
     // "◄ SHELF" chip, via `onBack`, which also silences the instrument
     // before leaving — this generic reset does not).
-    val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || takesBinOpen ||
+    val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || stackSlot != null || takesBinOpen ||
         padCaptureSlot != null || snipsOpen || deletedKitsOpen || arrangeOpen || orbitOpen || xray != null
     BackHandler(
         enabled = !anyOverlayOpen && screen != AppScreen.KITS &&
@@ -1673,6 +1678,7 @@ fun App(shelf: KitShelf) {
                             val sheetEntry = open
                             val fieldSlot = grainFieldSlot
                             val spliceSlotState = spliceSlot
+                            val stackSlotState = stackSlot
                             when {
                                 // Checked before the PAD SHEET branch below:
                                 // opening GRAIN clears `padSheetSlot` at the
@@ -1699,6 +1705,21 @@ fun App(shelf: KitShelf) {
                                     entry = sheetEntry,
                                     slot = spliceSlotState,
                                     onBack = { spliceSlot = null },
+                                    onToast = { toast = it },
+                                    onKitUpdated = { updatedKit ->
+                                        if (open?.dir == sheetEntry.dir) open = open?.copy(kit = updatedKit)
+                                        scope.launch {
+                                            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                        }
+                                    },
+                                )
+                                // STACK, same ordering reasoning as SPLICE
+                                // above: onStack clears `padSheetSlot` as it
+                                // sets `stackSlot`.
+                                stackSlotState != null && sheetEntry != null -> StackTakesScreen(
+                                    entry = sheetEntry,
+                                    slot = stackSlotState,
+                                    onBack = { stackSlot = null },
                                     onToast = { toast = it },
                                     onKitUpdated = { updatedKit ->
                                         if (open?.dir == sheetEntry.dir) open = open?.copy(kit = updatedKit)
@@ -1741,6 +1762,10 @@ fun App(shelf: KitShelf) {
                                         // in, same reasoning as GRAIN above.
                                         padSheetSlot = null
                                         spliceSlot = slot
+                                    },
+                                    onStack = { slot ->
+                                        padSheetSlot = null
+                                        stackSlot = slot
                                     },
                                     onKitUpdated = { updatedKit ->
                                         // A write that outlived its screen must not be welded

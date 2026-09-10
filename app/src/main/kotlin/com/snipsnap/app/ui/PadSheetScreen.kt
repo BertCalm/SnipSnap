@@ -153,6 +153,8 @@ fun PadSheetScreen(
     onGrainField: (Int) -> Unit,
     /** SPLICE ▸: opens TAPE SPLICE scoped to this pad - unlike [onNavigateTape], which hands off to whatever TAPE's own source priority resolves. */
     onSplice: (Int) -> Unit,
+    /** STACK ▸: opens STACK THE TAKES scoped to this pad - its real prior takes as soft velocity zones, over the same history SPLICE reads. */
+    onStack: (Int) -> Unit,
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
     appScope: CoroutineScope,
     /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name), remembered per kit by the caller. */
@@ -1663,6 +1665,18 @@ fun PadSheetScreen(
                 dimmed = binDaysLeft == null,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { onSplice(slot) },
+            )
+            // Same history, same dimming rule as SPLICE ▸ - plus dimmed
+            // when the pad already has layers, since STACK wants a
+            // single-sample pad to build on. Still tappable: the screen
+            // says which of the two it is.
+            ActionButton(
+                "STACK ▸",
+                scheme,
+                enabled = !busy,
+                dimmed = binDaysLeft == null || pad.velocityLayers.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { onStack(slot) },
             )
             DeleteButton(scheme, enabled = !busy, onClick = ::onEject)
         }

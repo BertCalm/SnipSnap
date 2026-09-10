@@ -239,22 +239,83 @@ class KitBuilderModel private constructor(
         val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
 
         val amounts = if (softZones == 1) listOf(0.55f) else listOf(0.7f, 0.4f) // softest first
-        val zoneCount = softZones + 1
+        val windows = StackTakes.windows(softZones)
+        // Free names, not `_v1`/`_v2` blindly: a stale render left on disk
+        // (or a stacked sibling's copy) must not be overwritten.
+        val names = freeLayerNames(pad.sampleStem, softZones)
         val layers = buildList {
             amounts.forEachIndexed { v, amount ->
-                val file = "${pad.sampleStem}_v${v + 1}.wav"
-                WavWriter.write(File(kitDir, file), com.snipsnap.synth.Velocity.soften(main, amount))
-                add(
-                    com.snipsnap.kit.KitLayer(
-                        file,
-                        velStart = if (v == 0) 1 else 128 * v / zoneCount,
-                        velEnd = 128 * (v + 1) / zoneCount - 1,
-                    ),
-                )
+                WavWriter.write(File(kitDir, names[v]), com.snipsnap.synth.Velocity.soften(main, amount))
+                add(com.snipsnap.kit.KitLayer(names[v], windows[v].first, windows[v].last))
             }
-            add(com.snipsnap.kit.KitLayer(pad.sampleFile, 128 * softZones / zoneCount, 127))
+            add(com.snipsnap.kit.KitLayer(pad.sampleFile, windows.last().first, windows.last().last))
         }
         return update(slot) { it.copy(velocityLayers = layers) }
+    }
+
+    /**
+     * STACK THE TAKES: the pad's real prior takes as its soft velocity
+     * zones, [softTakes] in the caller's order, softest first, 1..
+     * [StackTakes.MAX_SOFT] of them, each a [BinEntry] of THIS pad's own
+     * file (`priorTakes`). Every take is COPIED out of the bin to a free
+     * `${stem}_vN.wav` — never `restoreFromBin`, which deletes the bin
+     * file: a take-restore reads history, it doesn't spend it, the same
+     * copy-don't-consume rule `restoreLiveAudioAsOf` keeps. The live
+     * sample stays the loudest zone (`KitPad.init` demands it). No
+     * recipe: layers aren't a treatment, exactly as [addGhostLayers].
+     * Undo is [clearGhostLayers], which deletes every layer file that
+     * isn't the live one — the copies, not the bin sources.
+     *
+     * Nothing here touches level: takes differ in loudness and length and
+     * this door keeps them as they are. The picker says so in words.
+     */
+    fun stackTakes(slot: Int, softTakes: List<BinEntry>): KitPad {
+        require(softTakes.size in 1..StackTakes.MAX_SOFT) { "1..${StackTakes.MAX_SOFT} soft takes, got ${softTakes.size}" }
+        require(softTakes.map { it.file }.toSet().size == softTakes.size) { "the same take can't fill two zones" }
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered - `clearGhostLayers($slot)` before stacking" }
+        requireNotChained(pad, "stacking")
+        // The entries must be THIS kit's bin's: `originalName` alone is a
+        // label anyone could forge, and copying a file from anywhere else
+        // into the kit folder is not what "a prior take" means.
+        val binDir = File(kitDir, BIN_DIR).canonicalFile
+        for (t in softTakes) {
+            require(t.originalName == pad.sampleFile) { "${t.file.name} is a take of ${t.originalName}, not of pad $slot's ${pad.sampleFile}" }
+            require(t.file.canonicalFile.parentFile == binDir) { "${t.file.name} isn't in this kit's bin" }
+            require(t.file.isFile) { "${t.file.name} isn't in the bin any more" }
+        }
+        val windows = StackTakes.windows(softTakes.size)
+        val names = freeLayerNames(pad.sampleStem, softTakes.size)
+        val layers = buildList {
+            softTakes.forEachIndexed { v, take ->
+                take.file.copyTo(File(kitDir, names[v]), overwrite = false)
+                add(com.snipsnap.kit.KitLayer(names[v], windows[v].first, windows[v].last))
+            }
+            add(com.snipsnap.kit.KitLayer(pad.sampleFile, windows.last().first, windows.last().last))
+        }
+        return update(slot) { it.copy(velocityLayers = layers) }
+    }
+
+    /**
+     * [count] layer filenames `${stem}_vN.wav` that nothing in the kit
+     * references and nothing on disk occupies, lowest N first. Bounded
+     * like [nextStem]: past [MAX_STEM_ATTEMPTS] candidates this fails
+     * loudly rather than hanging an onClick.
+     */
+    private fun freeLayerNames(stem: String, count: Int): List<String> {
+        val referenced = kit.pads
+            .flatMap { listOf(it.sampleFile) + it.velocityLayers.map { l -> l.sampleFile } }
+            .map { it.lowercase() }
+            .toSet()
+        val out = mutableListOf<String>()
+        var n = 1
+        while (out.size < count && n <= MAX_STEM_ATTEMPTS) {
+            val name = "${stem}_v$n.wav"
+            if (name.lowercase() !in referenced && !File(kitDir, name).exists()) out += name
+            n++
+        }
+        require(out.size == count) { "no free layer name for $stem after $MAX_STEM_ATTEMPTS candidates" }
+        return out
     }
 
     /**
