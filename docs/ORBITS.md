@@ -144,6 +144,9 @@ words when the cycle passes 64 bars (`OrbitClip.refusal`):
 
 ## Not yet
 
+- **Span and bar.** A ring's period is its steps or exactly one bar;
+  the bar is always 16 steps. Both knobs are specified in
+  `docs/ORBIT_SPAN_AND_BAR.md` and not yet built.
 - **Swing on a ring.** Hits carry a weight but no timing offset yet.
 - **Hardware verification** of the Android screen: the cloud session
   cannot compile `:app` (see `app/README.md`), so the screen is reviewed
