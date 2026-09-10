@@ -435,6 +435,25 @@ object Copy {
     /** `TapeSplice.join`'s own refusal, said before the needle ever shows: a mutated (stereo) take against its mono original, or two rates. */
     const val SPLICE_FORMATS_DIFFER =
         "THOSE TWO TAKES DON'T MATCH - SAMPLE RATE OR CHANNELS. SPLICE WON'T RESAMPLE OR FOLD ONE TO FIT. PICK ANOTHER PAIR."
+    // ---- STACK THE TAKES: a pad's real prior takes as its velocity zones ----
+    const val STACK_NEEDS_HISTORY =
+        "STACK WANTS AT LEAST ONE PRIOR TAKE. RE-TRIM OR TREAT THIS PAD FIRST - ITS OLD AUDIO WAITS IN THE BIN."
+    /** The pad grew layers (GHOSTS, or another STACK) while this screen was open, or was already layered when it opened. */
+    const val STACK_ALREADY_LAYERED = "THIS PAD IS LAYERED ALREADY. CLEAR SOFT HITS FIRST, THEN STACK."
+    const val STACK_MAX_THREE = "THREE SOFT ZONES IS THE STACK. THE MPC 2 HAS FOUR LAYER SLOTS AND LIVE TAKES ONE."
+    const val STACK_TAKE_UNREADABLE = "THAT TAKE WON'T READ ANY MORE. IT STAYS OUT OF THE STACK."
+    /** The screen's standing caveat: layers lock every single-sample door until cleared, and clearing deletes the copies. */
+    const val STACK_LOCKS =
+        "A STACKED PAD IS LAYERED. TREAT, MUTATE, SPLICE AND OUTSIDE WAIT UNTIL SOFT HITS IS CLEARED - AND CLEARING DELETES THE COPIES."
+    /** Shown, not fixed: no auto-gain, ever. */
+    const val STACK_NO_GAIN = "LEVELS ARE SHOWN, NOT FIXED. NO AUTO-GAIN - THE MPC'S VELOCITY CURVE OWNS LOUDNESS."
+    /** COMMIT: how many real takes now sit under LIVE, and what that costs. */
+    fun stacked(soft: Int): String =
+        "$soft REAL ${if (soft == 1) "TAKE" else "TAKES"} STACKED UNDER LIVE. THIS PAD IS LAYERED NOW - CLEAR SOFT HITS TO TREAT IT AGAIN."
+    /** A soft-zone take that peaks over the live one, said beside its row and left exactly that loud. */
+    fun stackOverLive(zone: String, db: Float): String =
+        "$zone IS +${String.format(java.util.Locale.ROOT, "%.1f", db)} DB OVER LIVE. THE MPC'S VELOCITY CURVE WILL NOT HIDE THIS."
+
     /** COMMIT: [crossfaded] is honest about whether the raw cut needed a declick overlap. */
     fun spliced(crossfaded: Boolean): String =
         if (crossfaded) {

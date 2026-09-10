@@ -201,6 +201,69 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `stack the takes - real prior takes become soft zones, copied out of the bin, and clear undoes it`() {
+        val dir = File(temp, "Stack")
+        val m = KitBuilderModel.create("Stack", dir)
+        m.assign(1, DrumSynth.snare(), DrumClass.SNARE)
+        val liveName = m.pad(1)!!.sampleFile
+        val originalBytes = File(dir, liveName).readBytes()
+        m.treatPad(1, "reversed") // bins the original
+        m.treatPad(1, "punched") // bins the reversed
+        val prior = m.priorTakes(1)
+        assertEquals(2, prior.size, "two prior takes of this pad wait in the bin")
+        val binBefore = m.binContents().map { it.file }.toSet()
+
+        // Oldest as SOFT, the reversed one as MID, live on top.
+        val stacked = m.stackTakes(1, listOf(prior[1], prior[0]))
+        assertEquals(3, stacked.velocityLayers.size)
+        assertEquals(listOf(1..41, 42..84, 85..127), stacked.velocityLayers.map { it.velStart..it.velEnd })
+        assertEquals(liveName, stacked.velocityLayers.last().sampleFile, "LIVE stays the loudest zone")
+        val soft = File(dir, stacked.velocityLayers[0].sampleFile)
+        val mid = File(dir, stacked.velocityLayers[1].sampleFile)
+        assertTrue(soft.readBytes().contentEquals(originalBytes), "SOFT is the original take, byte for byte")
+        assertTrue(mid.readBytes().contentEquals(prior[0].file.readBytes()), "MID is the reversed take, byte for byte")
+        assertEquals(binBefore, m.binContents().map { it.file }.toSet(), "copied, not consumed: the bin still holds both sources")
+        assertNull(stacked.recipe?.entries?.get("stack"), "layers aren't a recipe, exactly as GHOSTS")
+
+        assertFailsWith<IllegalArgumentException> { m.stackTakes(1, listOf(prior[0])) } // already layered
+
+        val cleared = m.clearGhostLayers(1)
+        assertTrue(cleared.velocityLayers.isEmpty())
+        assertFalse(soft.exists() || mid.exists(), "clearing deletes the copies")
+        assertEquals(binBefore, m.binContents().map { it.file }.toSet(), "…and leaves the bin sources alone")
+    }
+
+    @Test
+    fun `stack the takes - refusals, and layer names that are already taken are skipped`() {
+        val dir = File(temp, "StackRefuse")
+        val m = KitBuilderModel.create("StackRefuse", dir)
+        m.assign(1, DrumSynth.snare(), DrumClass.SNARE)
+        m.assign(2, DrumSynth.kick(), DrumClass.KICK)
+        m.treatPad(1, "reversed")
+        m.treatPad(2, "reversed")
+        val ofPad1 = m.priorTakes(1).single()
+        val ofPad2 = m.priorTakes(2).single()
+
+        assertFailsWith<IllegalArgumentException> { m.stackTakes(1, emptyList()) }
+        assertFailsWith<IllegalArgumentException> { m.stackTakes(1, listOf(ofPad1, ofPad1)) } // same take twice
+        assertFailsWith<IllegalArgumentException> { m.stackTakes(1, listOf(ofPad2)) } // another pad's history
+        assertFailsWith<IllegalArgumentException> { m.stackTakes(9, listOf(ofPad1)) } // no pad there
+        assertTrue(m.pad(1)!!.velocityLayers.isEmpty(), "a refusal touches nothing")
+
+        // A stale `_v1` render left on disk is not overwritten: STACK takes `_v2`.
+        val stem = m.pad(1)!!.sampleStem
+        val stale = File(dir, "${stem}_v1.wav").apply { writeBytes(byteArrayOf(1, 2, 3)) }
+        val stacked = m.stackTakes(1, listOf(ofPad1))
+        assertEquals("${stem}_v2.wav", stacked.velocityLayers[0].sampleFile)
+        assertTrue(stale.readBytes().contentEquals(byteArrayOf(1, 2, 3)), "the stale file is untouched")
+
+        // GHOSTS skips taken names the same way now.
+        m.clearGhostLayers(1)
+        val ghosted = m.addGhostLayers(1)
+        assertEquals("${stem}_v2.wav", ghosted.velocityLayers[0].sampleFile)
+    }
+
+    @Test
     fun `takes archive every meaningful save and restore rolls back`() {
         val dir = File(temp, "Takes")
         val m = KitBuilderModel.create("Takes", dir)

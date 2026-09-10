@@ -2091,6 +2091,31 @@ APP+CORE wave TTT: ✓ all landed (2026-09-10) — SINCE T3, the TAKES card
   what it did in the recipe, so a rewrite that changed no recipe leaves
   no mark this diff can see.
 
+APP+CORE wave UUU: ✓ all landed (2026-09-10) — STACK THE TAKES, a pad's
+  real prior takes as its velocity zones. SOFT HITS (`addGhostLayers`)
+  fakes soft zones by rendering darkened copies of the live sample; the
+  pad already owns real alternates, because every treat / rewrite /
+  splice bins the previous WAV under the same name and `priorTakes`
+  lists them. `KitBuilderModel.stackTakes` (`:shell`, new) takes one to
+  three of those in the user's order, softest first, COPIES each out of
+  the bin to a free `${stem}_vN.wav` - never `restoreFromBin`, which
+  would spend the history - and maps them plus the live sample onto
+  `velocityLayers` through the same 1..127 windows GHOSTS uses, now
+  shared as `StackTakes.windows`. Undo is the existing `clearGhostLayers`.
+  One fix on the way in: `addGhostLayers` blindly overwrote `_v1`/`_v2`;
+  both doors now take the first free name (`freeLayerNames`).
+  `StackTakesScreen` (`:app`, new), reached from PAD SHEET's STACK ▸
+  (dimmed with no history, or when the pad is already layered - the
+  screen says which), pins LIVE at the top with its peak dBFS and
+  length, lists every prior take the same way, ▶ previews any of them,
+  and shows the stack as it would land. Shown, not fixed: a soft take
+  that peaks over LIVE gets a line in words ("SOFT IS +3.0 DB OVER LIVE.
+  THE MPC'S VELOCITY CURVE WILL NOT HIDE THIS.") and stays exactly that
+  loud - no auto-gain, that would be a guessed default. The cost is said
+  before COMMIT, because it is real: a stacked pad is layered, which
+  locks TREAT / MUTATE / SPLICE / OUTSIDE until SOFT HITS is cleared, and
+  clearing deletes the copies (the bin sources survive, until purge).
+
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →
   F6.1 .xpn import + expansion tile → velocity/bank B →
