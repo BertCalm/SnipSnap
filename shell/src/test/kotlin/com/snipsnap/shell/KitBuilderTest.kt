@@ -1003,9 +1003,17 @@ class KitBuilderTest {
             take.writeText(take.readText().replace(climb, m.pad(1)!!.sampleFile))
         }
         // ".." has no separator, so the pad type lets it through; the restore
-        // then finds no such file and no such bin entry, and moves nothing.
+        // then finds no such file and no such bin entry, and moves nothing -
+        // a quiet success, not a refusal. Asserted, not just run-and-forget:
+        // a house rule this whole file otherwise enforces (a valid result or
+        // a NAMED refusal, never a silently swallowed throwable) would
+        // otherwise not apply to this one branch.
         take.writeText(take.readText().replace(m.pad(1)!!.sampleFile, ".."))
-        runCatching { KitBuilderModel.open(dir).restoreTake(take) }
+        val dotDotResult = runCatching { KitBuilderModel.open(dir).restoreTake(take) }
+        dotDotResult.exceptionOrNull()?.let { ex ->
+            assertTrue(ex is IllegalArgumentException, "\"..\" threw ${ex::class.simpleName} instead of succeeding or refusing by name: ${ex.message}")
+            assertTrue(!ex.message.isNullOrBlank(), "\"..\" refused without saying why")
+        }
         assertTrue(liveBefore.contentEquals(File(dir, m.pad(1)!!.sampleFile).readBytes()))
         assertEquals(binBefore, m.binContents().map { it.file.name }.toSet())
         assertTrue(dir.parentFile.listFiles()!!.none { it.name.startsWith("escaped") })
