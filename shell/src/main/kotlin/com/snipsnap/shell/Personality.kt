@@ -345,6 +345,12 @@ object Copy {
     const val TAKES_BIN_RULE =
         "EVERY SAVE ARCHIVES A TAKE. EVERY DELETE GOES TO THE BIN FIRST."
 
+    // ---- SINCE T3: the TAKES card's expander (Spec Sheet II #03) ----
+    /** The expander's one honest limit: `KitDiff` reads `kit.json`, and a rewrite that touched no recipe leaves no mark there. */
+    const val TAKES_DIFF_CAVEAT = "SETTINGS AND RECIPES ONLY. AUDIO REDRAWN UNDER THE SAME NAME LEAVES NO MARK HERE."
+    /** The take's path changed hands between `takes()` listing it and the diff reading it (a rotation racing the refresh) — the row stays, RESTORE's own identity check decides. */
+    const val TAKES_DIFF_UNREADABLE = "THIS TAKE WON'T READ. NOTHING TO COMPARE."
+
     // ---- GROOVE ----
     const val HUMANIZED = "HUMANIZED. NOBODY PLAYS LIKE A ROBOT."
     // The phone reads (wave ZZ): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE.
