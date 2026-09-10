@@ -108,7 +108,7 @@ object ChopCommand {
 
         var snip = WavReader.read(file)
         out.println(
-            "read %s: %.2fs, %d ch @ %d Hz".format(
+            "read %s: %.2fs, %d ch @ %d Hz".format(java.util.Locale.ROOT, 
                 file.name, snip.durationSeconds, snip.channels, snip.sampleRate,
             ),
         )
@@ -134,7 +134,7 @@ object ChopCommand {
         }
 
         val tempo = Tempo.estimate(snip)?.takeIf { it.confidence >= 0.3f }
-        tempo?.let { out.println("tempo: ~%s (confidence %.2f)".format(it.label, it.confidence)) }
+        tempo?.let { out.println("tempo: ~%s (confidence %.2f)".format(java.util.Locale.ROOT, it.label, it.confidence)) }
 
         val slices = if (grid != null) {
             Chopper.intoEqualParts(snip, grid, cleanup = Chopper.SLICE_CLEANUP)
@@ -160,7 +160,7 @@ object ChopCommand {
         if (profile.rolledOff) {
             out.println(
                 "phone capture heard: sub rolled off (%.1f%% of the low band below %d Hz) - kicks judged by shape"
-                    .format(profile.subShare * 100, com.snipsnap.audio.CaptureProfile.SUB_HZ.toInt()),
+                    .format(java.util.Locale.ROOT, profile.subShare * 100, com.snipsnap.audio.CaptureProfile.SUB_HZ.toInt()),
             )
         }
         val classified = slices.map { it to Classifier.classify(it.snip, profile) }
@@ -178,7 +178,7 @@ object ChopCommand {
                     ?: throw CliError(
                         "couldn't hear a key in this material - name one (--key Am) or drop --key",
                     )
-                out.println("key: sounds like ${sure.key.label} (confidence %.2f)".format(sure.confidence))
+                out.println("key: sounds like ${sure.key.label} (confidence %.2f)".format(java.util.Locale.ROOT, sure.confidence))
                 sure.key
             }
             else -> null
@@ -260,13 +260,13 @@ object ChopCommand {
                 out.println("(no LOOP pads - nothing to tempo-fit)")
             } else if (opts.has("--keep-pitch")) {
                 out.println(
-                    "tempo fit: %d loop(s) time-stretched %s -> %dbpm (pitch kept)".format(
+                    "tempo fit: %d loop(s) time-stretched %s -> %dbpm (pitch kept)".format(java.util.Locale.ROOT, 
                         fitted, tempo.label, Math.round(fitTempo),
                     ),
                 )
             } else {
                 out.println(
-                    "tempo fit: %d loop(s) repitched %s -> %dbpm (%+.1f semitones, SP-style)".format(
+                    "tempo fit: %d loop(s) repitched %s -> %dbpm (%+.1f semitones, SP-style)".format(java.util.Locale.ROOT, 
                         fitted, tempo.label, Math.round(fitTempo),
                         com.snipsnap.audio.TempoFit.semitones(tempo.bpm, fitTempo),
                     ),
@@ -361,7 +361,7 @@ object ChopCommand {
             val (slice, c) = entry ?: return@forEachIndexed
             val sure = if (c.confidence < SURE_CONFIDENCE) "?" else " "
             out.println(
-                "%-4s %-11s %s%.2f  %7.3fs  %7.3fs".format(
+                "%-4s %-11s %s%.2f  %7.3fs  %7.3fs".format(java.util.Locale.ROOT, 
                     PadNoteMap.labelForPad(i + 1),
                     c.drumClass,
                     sure,
@@ -431,7 +431,7 @@ object ChopCommand {
             out.println()
             val preview = if (opts.has("--preview")) {
                 com.snipsnap.kit.KitPreview.render(kit, kitDir).also {
-                    out.println("preview: rendered the kit playing its own beat (%.1fs)".format(it.durationSeconds))
+                    out.println("preview: rendered the kit playing its own beat (%.1fs)".format(java.util.Locale.ROOT, it.durationSeconds))
                 }
             } else {
                 null

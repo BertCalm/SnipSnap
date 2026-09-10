@@ -40,16 +40,16 @@ object CheckupCommand {
                 out.println("${file.name}: couldn't read it (${e.message}) - skipped")
                 continue
             }
-            out.println("${file.name}: %.2fs, %d ch @ %d Hz".format(snip.durationSeconds, snip.channels, snip.sampleRate))
+            out.println("${file.name}: %.2fs, %d ch @ %d Hz".format(java.util.Locale.ROOT, snip.durationSeconds, snip.channels, snip.sampleRate))
 
             val hum = CaptureDoctor.detectHum(snip)
             out.println(
-                "  hum:      " + (hum?.let { "%.0f Hz, %d harmonic(s), %.0f dBFS".format(it.hz, it.harmonics, it.levelDb) }
+                "  hum:      " + (hum?.let { "%.0f Hz, %d harmonic(s), %.0f dBFS".format(java.util.Locale.ROOT, it.hz, it.harmonics, it.levelDb) }
                     ?: "none stands out"),
             )
             val clip = CaptureDoctor.detectClipping(snip)
             out.println(
-                "  clipping: " + (clip?.let { "%.1f%% of samples pinned at %.2f (%d runs)".format(it.fraction * 100, it.ceiling, it.runs) }
+                "  clipping: " + (clip?.let { "%.1f%% of samples pinned at %.2f (%d runs)".format(java.util.Locale.ROOT, it.fraction * 100, it.ceiling, it.runs) }
                     ?: "no flat tops"),
             )
             val repair = runCatching { CaptureDoctor.repairClicks(snip) }
@@ -62,14 +62,14 @@ object CheckupCommand {
             val floor = CaptureDoctor.measureFloor(snip)
             out.println(
                 "  floor:    " + (floor?.let {
-                    "%.0f dBFS%s".format(it, if (it < CaptureDoctor.CLEAN_FLOOR_DB) " - clean" else " - the gate would act")
+                    "%.0f dBFS%s".format(java.util.Locale.ROOT, it, if (it < CaptureDoctor.CLEAN_FLOOR_DB) " - clean" else " - the gate would act")
                 } ?: "too short to say"),
             )
             val knee = CaptureDoctor.trimRoomTail(snip)
             out.println(
                 "  room:     " + (knee?.let {
                     "tail hands off %.0f ms after the hit (%.0f dB/s -> %.0f dB/s)"
-                        .format(it.kneeSec * 1000, it.hitSlopeDbPerSec, it.tailSlopeDbPerSec)
+                        .format(java.util.Locale.ROOT, it.kneeSec * 1000, it.hitSlopeDbPerSec, it.tailSlopeDbPerSec)
                 } ?: "no knee - single slope or not a one-shot"),
             )
             // How much of the signal is linearly predictable room: run
@@ -79,7 +79,7 @@ object CheckupCommand {
             fun energy(s: FloatArray): Double = s.sumOf { (it * it).toDouble() }
             val eIn = energy(snip.samples).coerceAtLeast(1e-12)
             val removed = ((eIn - energy(dv.samples)) / eIn * 100).coerceIn(-100.0, 100.0)
-            out.println("  wpe:      %.1f%% of the energy reads as predictable room".format(removed))
+            out.println("  wpe:      %.1f%% of the energy reads as predictable room".format(java.util.Locale.ROOT, removed))
         }
         out.println("(measurements only - nothing was written; `clean` applies the treatments)")
         return 0

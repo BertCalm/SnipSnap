@@ -60,7 +60,7 @@ object EraCommand {
         model.save()
         out.println(
             "$aged pad(s) through the $era%s - originals in the bin, recipes recorded (undo: --undo)".format(
-                if (amount < 1f) " at %.2f".format(amount) else "",
+                if (amount < 1f) " at %.2f".format(java.util.Locale.ROOT, amount) else "",
             ),
         )
         out.println("  re-export to hear the era on the card")

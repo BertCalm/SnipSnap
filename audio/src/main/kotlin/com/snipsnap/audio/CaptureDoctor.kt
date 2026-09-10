@@ -322,14 +322,14 @@ object CaptureDoctor {
         /** The one-line diagnosis, every finding named. */
         fun summary(): String {
             val parts = mutableListOf<String>()
-            clip?.let { parts += "clipping rebuilt (%.1f%% of samples pinned at %.2f)".format(it.fraction * 100, it.ceiling) }
+            clip?.let { parts += "clipping rebuilt (%.1f%% of samples pinned at %.2f)".format(java.util.Locale.ROOT, it.fraction * 100, it.ceiling) }
             if (deverbed) parts += "room predicted and subtracted (WPE)"
-            hum?.let { parts += "%.0f Hz hum notched (%d harmonic(s), %.0f dBFS)".format(it.hz, it.harmonics, it.levelDb) }
+            hum?.let { parts += "%.0f Hz hum notched (%d harmonic(s), %.0f dBFS)".format(java.util.Locale.ROOT, it.hz, it.harmonics, it.levelDb) }
             if (clicks > 0) parts += "$clicks click(s) repaired"
             if (dropouts > 0) parts += "$dropouts dropout(s) repaired"
             if (gated) {
                 parts += (if (denoised) "floor %.0f dBFS, spectrally de-noised" else "floor %.0f dBFS, gently gated")
-                    .format(floorDb)
+                    .format(java.util.Locale.ROOT, floorDb)
             }
             return if (parts.isEmpty()) "clean - nothing done" else parts.joinToString("; ")
         }

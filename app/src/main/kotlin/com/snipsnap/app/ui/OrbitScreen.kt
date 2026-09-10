@@ -796,7 +796,7 @@ fun OrbitScreen(
                             // What the fit did, in the bank's own words: the
                             // one line that tells a squeezed loop from a clean one.
                             val report = bank?.fit(current, ring)
-                            val seconds = report?.let { "%.1f".format(it.sourceFrames.toFloat() / current.sampleRate) }
+                            val seconds = report?.let { "%.1f".format(java.util.Locale.ROOT, it.sourceFrames.toFloat() / current.sampleRate) }
                             val what = when {
                                 report != null -> report.label
                                 refitting || bank == null -> "FITTING…"
@@ -848,7 +848,7 @@ fun OrbitScreen(
 private fun cycleLabel(set: OrbitSet): String {
     val bars = OrbitClock.cycleBars(set)
     val whole = bars.roundToInt()
-    return if (abs(bars - whole) < 1e-9) (if (whole == 1) "1 BAR" else "$whole BARS") else "${"%.1f".format(bars)} BARS"
+    return if (abs(bars - whole) < 1e-9) (if (whole == 1) "1 BAR" else "$whole BARS") else "${"%.1f".format(java.util.Locale.ROOT, bars)} BARS"
 }
 
 /** "BAR 7 / 15": where in the cycle the transport is. Stopped, it is at the top. */

@@ -740,7 +740,7 @@ private fun KitRow(
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             TapeText(kit.name, TapeType.markerBig, scheme.ink.tape)
-            val tempo = kit.tempoBpm?.let { "  ·  %.0f BPM".format(it) } ?: ""
+            val tempo = kit.tempoBpm?.let { "  ·  %.0f BPM".format(java.util.Locale.ROOT, it) } ?: ""
             TapeText("${kit.pads.size} PADS$tempo", TapeType.pixelSmall, scheme.ink2.tape)
         }
         if (revealActions) {
@@ -1165,7 +1165,7 @@ private fun LevelBar(level: Float, scheme: Scheme, possiblyMuted: Boolean = fals
 private fun formatElapsed(totalSeconds: Int): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return "%02d:%02d".format(minutes, seconds)
+    return "%02d:%02d".format(java.util.Locale.ROOT, minutes, seconds)
 }
 
 // Duplicated, not hoisted — TakesBinScreen.kt's own BIN_RED_BORDER

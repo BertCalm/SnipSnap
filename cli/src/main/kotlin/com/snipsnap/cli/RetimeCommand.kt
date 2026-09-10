@@ -53,7 +53,7 @@ object RetimeCommand {
         }
         WavWriter.write(dest, result)
         out.println(
-            "${file.name}: retimed %.0f -> %.0f bpm (x%.2f, pitch kept)".format(from, to, ratio),
+            "${file.name}: retimed %.0f -> %.0f bpm (x%.2f, pitch kept)".format(java.util.Locale.ROOT, from, to, ratio),
         )
         out.println("-> ${dest.path}")
         return 0

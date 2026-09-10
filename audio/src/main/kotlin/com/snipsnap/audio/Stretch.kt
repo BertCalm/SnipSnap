@@ -47,7 +47,7 @@ object Stretch {
         val mono = asMono(source)
         val at = atSec ?: loudestSec(mono)
         require(at >= 0f && at <= mono.durationSeconds) {
-            "--at %.2f is outside the source (%.2fs long)".format(at, mono.durationSeconds)
+            "--at %.2f is outside the source (%.2fs long)".format(java.util.Locale.ROOT, at, mono.durationSeconds)
         }
         val center = (at * mono.sampleRate).toInt()
         val start = (center - WINDOW / 2).coerceIn(0, (mono.frameCount - 1).coerceAtLeast(0))

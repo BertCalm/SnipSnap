@@ -50,7 +50,7 @@ object LabelCommand {
 
         out.println("${info.name} [${info.prefix}] - ${info.catalog.size} release(s) in the catalog")
         for ((kitName, n) in info.catalog.entries.sortedBy { it.value }) {
-            out.println("  %s-%03d  %s".format(info.prefix, n, kitName))
+            out.println("  %s-%03d  %s".format(java.util.Locale.ROOT, info.prefix, n, kitName))
         }
         out.println("ledger: ${File(root, Label.CATALOG_NAME).path}")
         return 0

@@ -95,7 +95,7 @@ object MixDoctor {
                 val b = lowBusy[j]
                 findings += Finding(
                     Code.LOW_MASKING, listOf(a.slot, b.slot),
-                    "%s and %s fight for the sub (%.0f%% and %.0f%% of their energy below 200 Hz, both sustained) - carve one".format(
+                    "%s and %s fight for the sub (%.0f%% and %.0f%% of their energy below 200 Hz, both sustained) - carve one".format(java.util.Locale.ROOT, 
                         label(a.slot), label(b.slot), a.features.lowRatio * 100, b.features.lowRatio * 100,
                     ),
                     fixable = true,
@@ -140,7 +140,7 @@ object MixDoctor {
                 if (median > 0f && m.effective > median * OUTLIER_RATIO) {
                     findings += Finding(
                         Code.LOUD_OUTLIER, listOf(m.slot),
-                        "%s is %.1fx the kit's median loudness - trim its level".format(label(m.slot), m.effective / median),
+                        "%s is %.1fx the kit's median loudness - trim its level".format(java.util.Locale.ROOT, label(m.slot), m.effective / median),
                         fixable = true,
                     )
                 }
@@ -152,7 +152,7 @@ object MixDoctor {
             if (m.dc > DC_OFFSET) {
                 findings += Finding(
                     Code.DC_RUMBLE, listOf(m.slot),
-                    "%s carries a DC offset of %.3f - high-pass it".format(label(m.slot), m.dc),
+                    "%s carries a DC offset of %.3f - high-pass it".format(java.util.Locale.ROOT, label(m.slot), m.dc),
                     fixable = true,
                 )
             }

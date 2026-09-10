@@ -23,7 +23,7 @@ object TempoFit {
         require(fromBpm > 0f && toBpm > 0f) { "tempos must be positive: $fromBpm -> $toBpm" }
         val speed = toBpm / fromBpm
         require(speed in 1f / MAX_RATIO..MAX_RATIO) {
-            "a $fromBpm -> $toBpm fit is a factor of %.2f - past double/half speed, that's not a fit".format(speed)
+            "a $fromBpm -> $toBpm fit is a factor of %.2f - past double/half speed, that's not a fit".format(java.util.Locale.ROOT, speed)
         }
         if (abs(speed - 1f) < 1e-4f) return snip
 

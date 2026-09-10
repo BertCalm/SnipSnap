@@ -634,8 +634,8 @@ private fun relativeTime(capturedAtMillis: Long, nowMillis: Long = System.curren
  */
 private fun humanSize(bytes: Long): String = when {
     bytes < 1024L -> "$bytes B"
-    bytes < 1024L * 1024L -> "%.1f KB".format(bytes / 1024.0)
-    else -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
+    bytes < 1024L * 1024L -> "%.1f KB".format(java.util.Locale.ROOT, bytes / 1024.0)
+    else -> "%.1f MB".format(java.util.Locale.ROOT, bytes / (1024.0 * 1024.0))
 }
 
 /**

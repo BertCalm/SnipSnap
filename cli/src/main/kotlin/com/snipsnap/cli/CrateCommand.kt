@@ -53,7 +53,7 @@ object CrateCommand {
                 out.println("best ${dc.name.lowercase()}${if (picks.size > 1) "s" else ""}:")
                 picks.forEachIndexed { i, e ->
                     out.println(
-                        "  %d. %-24s %s %-18s confidence %.2f".format(
+                        "  %d. %-24s %s %-18s confidence %.2f".format(java.util.Locale.ROOT, 
                             i + 1, e.kitName, e.label, "(${e.padName})", e.confidence,
                         ),
                     )
@@ -68,7 +68,7 @@ object CrateCommand {
             } else {
                 out.println("${dupes.size} duplicate pair(s):")
                 dupes.forEach { (a, b, d) ->
-                    out.println("  %s %s  ==  %s %s  (distance %.4f)".format(a.kitName, a.label, b.kitName, b.label, d))
+                    out.println("  %s %s  ==  %s %s  (distance %.4f)".format(java.util.Locale.ROOT, a.kitName, a.label, b.kitName, b.label, d))
                 }
             }
         }

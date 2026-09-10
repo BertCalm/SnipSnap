@@ -106,7 +106,7 @@ object DecodeContract {
 
         val durationDelta = abs(d.durationSeconds - expected.durationSeconds)
         if (durationDelta > 0.06f) {
-            issues += "duration off by %.0f ms".format(durationDelta * 1000)
+            issues += "duration off by %.0f ms".format(java.util.Locale.ROOT, durationDelta * 1000)
         }
 
         val rate = expected.sampleRate
@@ -121,7 +121,7 @@ object DecodeContract {
         val to = ((TONE_TO_SEC - 0.05f) * rate).toInt()
         val corr = correlation(em, dm, from, to, offset)
         if (corr < 0.85) {
-            issues += "correlation %.3f over the tone (want >= 0.85) - not the same signal".format(corr)
+            issues += "correlation %.3f over the tone (want >= 0.85) - not the same signal".format(java.util.Locale.ROOT, corr)
         }
 
         return Report(issues.isEmpty(), issues, offset, corr)

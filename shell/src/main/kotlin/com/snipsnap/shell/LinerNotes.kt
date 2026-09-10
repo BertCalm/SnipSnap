@@ -31,7 +31,7 @@ object LinerNotes {
         val identity = mutableListOf<String>()
         catalog?.let { identity += it }
         kit.key?.let { identity += it.label }
-        kit.tempoBpm?.let { identity += "%.0f bpm".format(it) }
+        kit.tempoBpm?.let { identity += "%.0f bpm".format(java.util.Locale.ROOT, it) }
         identity += "${kit.pads.size} pad${if (kit.pads.size == 1) "" else "s"}"
         appendLine(identity.joinToString(" - "))
         appendLine()
@@ -62,7 +62,7 @@ object LinerNotes {
                 if (wear.mileage <= 0.0) {
                     "A new tape."
                 } else {
-                    "%.0f mile%s on the tape (%.0f%% worn%s).".format(
+                    "%.0f mile%s on the tape (%.0f%% worn%s).".format(java.util.Locale.ROOT, 
                         wear.mileage, if (wear.mileage == 1.0) "" else "s", wear.w * 100,
                         if (wear.enabled) "" else ", aging paused",
                     )
@@ -84,7 +84,7 @@ object LinerNotes {
 
         appendLine("THE SOUNDS")
         for (pad in kit.pads.sortedBy { it.slot }) {
-            val label = "%s%02d".format('A' + (pad.slot - 1) / 16, (pad.slot - 1) % 16 + 1)
+            val label = "%s%02d".format(java.util.Locale.ROOT, 'A' + (pad.slot - 1) / 16, (pad.slot - 1) % 16 + 1)
             val extras = mutableListOf<String>()
             pad.recipe?.let { extras += recipeWord(it) }
             if (pad.decay != null || pad.attack != null || pad.cutoff != null || pad.resonance != null) {

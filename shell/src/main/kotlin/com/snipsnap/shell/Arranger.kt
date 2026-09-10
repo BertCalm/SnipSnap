@@ -88,12 +88,12 @@ object Arranger {
         val variation = if (preferGhosts && ghosted != null) ghosted else tight
         val variationReason = when {
             preferGhosts && ghosted != null ->
-                "ghosted — dynamic range %.1fx ≥ %.0fx threshold".format(dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
+                "ghosted — dynamic range %.1fx ≥ %.0fx threshold".format(java.util.Locale.ROOT, dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
             preferGhosts ->
                 "tight — dynamic range %.1fx ≥ %.0fx threshold, but no snare or clap to whisper on"
-                    .format(dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
+                    .format(java.util.Locale.ROOT, dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
             else ->
-                "tight — dynamic range %.1fx < %.0fx threshold".format(dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
+                "tight — dynamic range %.1fx < %.0fx threshold".format(java.util.Locale.ROOT, dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
         }
         val turn = try {
             GrooveVariations.fill(base, kit, seed = seed + 2)

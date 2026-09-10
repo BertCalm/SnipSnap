@@ -248,7 +248,7 @@ fun KitScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
-            val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(it) } ?: ""
+            val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
             val keyed = kit.key?.let { "${KeyPicker.label(it)}  " } ?: ""
             val banks = if (bankCount > 1) "${PadBanks.letter(showing)}  " else ""
             TapeText("$keyed$tempo$banks${kit.pads.size} PADS", TapeType.lcdSmall, scheme.amber.tape)

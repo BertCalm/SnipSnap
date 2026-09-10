@@ -52,7 +52,7 @@ object ChopAllCommand {
         out.println("chopped ${made.size} of ${wavs.size} files:")
         for ((file, r) in made) {
             val tempo = r.tempoLabel?.let { " ~$it" } ?: ""
-            out.println("  %-28s -> %s (%d pads%s)".format(file, r.kit.name, r.kit.pads.size, tempo))
+            out.println("  %-28s -> %s (%d pads%s)".format(java.util.Locale.ROOT, file, r.kit.name, r.kit.pads.size, tempo))
         }
         if (failed.isNotEmpty()) {
             out.println()

@@ -1483,7 +1483,7 @@ fun PadSheetScreen(
             StepperSlider(
                 label = "LEVEL",
                 fraction = ((pendingDb - LEVEL_DB_MIN) / (LEVEL_DB_MAX - LEVEL_DB_MIN)).coerceIn(0f, 1f),
-                valueText = "%.0f dB".format(pendingDb),
+                valueText = "%.0f dB".format(java.util.Locale.ROOT, pendingDb),
                 fillColor = classColor,
                 scheme = scheme,
                 enabled = !busy,
@@ -1641,7 +1641,7 @@ fun PadSheetScreen(
                     ShapeKnob(
                         label = "ATTACK",
                         fraction = pendingAttack,
-                        valueText = if (pad.attack == null) "OFF" else "%.0f ms".format(PadShape.attackSeconds(pendingAttack) * 1000f),
+                        valueText = if (pad.attack == null) "OFF" else "%.0f ms".format(java.util.Locale.ROOT, PadShape.attackSeconds(pendingAttack) * 1000f),
                         onChange = { f -> pendingAttack = (f * 20f).roundToInt() / 20f },
                         onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(attack = pendingAttack.takeIf { it > 0f }) } } },
                     ),
@@ -1662,7 +1662,7 @@ fun PadSheetScreen(
                     ShapeKnob(
                         label = "RES",
                         fraction = pendingRes,
-                        valueText = if (pad.resonance == null) "OFF" else "%.0f dB".format(PadShape.resonanceDb(pendingRes)),
+                        valueText = if (pad.resonance == null) "OFF" else "%.0f dB".format(java.util.Locale.ROOT, PadShape.resonanceDb(pendingRes)),
                         onChange = { f -> pendingRes = (f * 20f).roundToInt() / 20f },
                         onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(resonance = pendingRes.takeIf { it > 0f }) } } },
                     ),
@@ -1978,7 +1978,7 @@ private fun provenanceOrigin(source: Map<String, String>): String? = when {
 
 private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String {
     val parts = mutableListOf(provenanceOrigin(pad.source) ?: pad.sampleFile)
-    snip?.let { parts += "%.0f ms".format(it.durationSeconds * 1000f) }
+    snip?.let { parts += "%.0f ms".format(java.util.Locale.ROOT, it.durationSeconds * 1000f) }
     binDaysLeft?.let { parts += "original in bin, ${it}d left" }
     return parts.joinToString(" · ")
 }
@@ -2034,7 +2034,7 @@ private fun padTag(slot: Int): String = PadBanks.tag(slot)
 /** 632 Hz / 12.6k — six characters at most, the value column's width. */
 private fun cutoffLabel(cutoff: Float): String {
     val hz = PadShape.cutoffHz(cutoff)
-    return if (hz >= 1000f) "%.1fk".format(hz / 1000f) else "%.0f Hz".format(hz)
+    return if (hz >= 1000f) "%.1fk".format(java.util.Locale.ROOT, hz / 1000f) else "%.0f Hz".format(java.util.Locale.ROOT, hz)
 }
 
 // ---------- header ----------
