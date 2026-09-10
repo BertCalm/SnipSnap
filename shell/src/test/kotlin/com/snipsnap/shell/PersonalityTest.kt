@@ -330,11 +330,15 @@ class PersonalityTest {
         "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_NONE", "CARD_PICKED",
         "KONAMI_UNLOCK",
         "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
-        // Permanent on-screen furniture, not toasts: the legend that sits under
-        // KIT's grid for as long as the screen is open, and HELP's two section
-        // headings. ROOMS' own legend ("HOLD A ROOM TO FORGET IT · THE BIN KEEPS
-        // 30 DAYS") reads without a full stop for the same reason - it is a label
-        // on the furniture, not a line the app says to you once and takes away.
+        // Permanent on-screen furniture, not toasts: the two legends that sit
+        // under KIT's grid and the kit shelf's own list for as long as those
+        // screens are open, and HELP's two section headings. ROOMS' third
+        // legend ("HOLD A ROOM TO FORGET IT · THE BIN KEEPS 30 DAYS") reads
+        // without a full stop for the same reason, and is still written inline
+        // in `:app` rather than living here. A label on the furniture is not a
+        // line the app says to you once and takes away, so it does not end in
+        // a full stop - and every legend must be added here when it is written,
+        // or the shouting law will ask it to become a sentence.
         "PAD_SHEET_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER",
     )
 
