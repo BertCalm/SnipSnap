@@ -14,18 +14,24 @@ The picture above hides a choice, and ORBIT makes it a chip on each ring.
 
 | Ring | The rule | What it makes | Rings meet again |
 |---|---|---|---|
-| **Free** (LOCK TO BAR off) | The needle covers the same number of 16ths per second on every ring, so a ring's lap is its own step count: 20 steps is five beats. | **Polymeter**: a 16-step ring against a 20-step ring is 4/4 against 5/4. | After the least common multiple of the step counts: 16 and 20 meet every 80 steps, five bars. |
-| **Locked to the bar** (LOCK TO BAR on) | The ring is exactly one bar long whatever its step count, so a 3-step ring's steps are each a third of the bar. | **Polyrhythm**: three even hits against four inside one bar. | Every bar, by definition. |
+| **Free** (SPAN FREE) | The needle covers the same number of 16ths per second on every ring, so a ring's lap is its own step count: 20 steps is five beats. | **Polymeter**: a 16-step ring against a 20-step ring is 4/4 against 5/4. | After the least common multiple of the step counts: 16 and 20 meet every 80 steps, five bars. |
+| **Spanned** (SPAN ½ BAR · 1 BAR · 2 BARS · 4 BARS) | One turn of the ring is that many laps of the set's bar whatever its step count, so a 3-step ring spanning one bar is a triplet, and spanning two bars it is three hits across eight beats. | **Polyrhythm**: three even hits against four inside one bar, or across two. | Every span, by definition: a 2-bar ring meets the bar every two bars. |
 
 A ring's row says which it is in words — "20 STEPS · 5 BEATS", "3 STEPS ·
-1 BAR" — so there is no mode to explain. Both are one formula. A ring's
-*period* in frames is
+2 BARS" — so there is no mode to explain. A ring alone is just a circle;
+"one bar of 8/4" and "two bars of 4/4" are the same circle, and the
+difference appears only against the shared lap, which is why a span is
+measured in laps. Both are one formula. A ring's *period* in frames is
 
 ```
-free:    period = steps × stepFrames
-locked:  period = lapSteps × stepFrames         (the reference bar, 16 by default)
-stepFrames = 60 / bpm / 4 × sampleRate         (one 16th)
+free:     period = steps × stepFrames
+spanned:  period = round(lapSteps × laps) × stepFrames   (the bar, 16 by default; laps ½, 1, 2, 4)
+stepFrames = 60 / bpm / 4 × sampleRate                   (one 16th)
 ```
+
+The SPAN chip taps to the next span round the five and long-presses to a
+picker. A ring spanning two or more bars wears a heavier tick where each
+bar boundary falls; a free ring's bar boundary drifts, so it gets none.
 
 and everything else is a function of the frame count since play started:
 
@@ -54,7 +60,8 @@ result. On the ring, a melodic ring's dots step in and out from the line by
 pitch.
 
 The header shows the rings' lengths against each other, reduced: 16, 20
-and a bar-locked ring read "4 : 5".
+and a ring spanning one bar read "4 : 5"; a 3-step ring spanning two
+bars against a free 16 reads "1 : 2".
 
 ## Filling a ring
 
@@ -70,13 +77,14 @@ on an empty cell. The step count is a picker of the sizes worth a chip
 
 ## The cycle
 
-`OrbitClock.cycleSteps` is the LCM of every free ring's step count with the
-reference bar (a locked ring counts as one bar long whatever its steps). It
+`OrbitClock.cycleSteps` is the LCM of every ring's period with the reference
+bar (a spanned ring's period is its laps of the bar whatever its steps). It
 grows fast with coprime rings:
 
 | Rings | Cycle |
 |---|---|
-| 16, 12, 20 (+ a locked ring) | 240 steps — 15 bars |
+| 16, 12, 20 (+ a ring spanning one bar) | 240 steps — 15 bars |
+| 16 and a 3-step ring spanning two bars | 32 steps — 2 bars |
 | 16, 20 | 80 steps — 5 bars |
 | 16, 17, 19 | 5,168 steps — 323 bars |
 
@@ -114,11 +122,11 @@ choice, not a surprise.
 
 | Piece | What it is |
 |---|---|
-| `loop/Orbit.kt` | `Orbit` (steps, lock, voice), `OrbitSet`, the content types, and `OrbitClock` — every number above, plus the length and ratio labels |
+| `loop/Orbit.kt` | `Orbit` (steps, span, voice), `OrbitSpan`, `OrbitSet`, the content types, and `OrbitClock` — every number above, plus the length and ratio labels |
 | `loop/OrbitBank.kt` | The prepared audio for a set: pads at the device rate, snips fitted to their periods, each with its `FitReport` and its peaks for the ring's waveform. Immutable; an edit prepares a new one reusing the last |
 | `loop/LoopFit.kt` | `LoopFit` (as is · trimmed · padded · sliced), `FitReport` and its label, `FittedLoop` — what `BlockBaker.fitLoopReported` says it did |
 | `loop/OrbitEngine.kt` | The transport: fixed 2048-frame blocks, hits scheduled per block, voices mixed, snips wrapped, written to the same `AudioSink` the loop grid uses. `render` is the offline bounce and the test harness |
-| `loop/OrbitStore.kt` | `orbits.json` (version 2; version 1 still loads), a sidecar beside the kit like `groove.json` |
+| `loop/OrbitStore.kt` | `orbits.json` (version 3; versions 1 and 2 still load, their lock becoming a one-bar span), a sidecar beside the kit like `groove.json` |
 | `loop/OrbitClip.kt` | One cycle as an MPC clip in `groove.json`, and the 64-bar refusal both outputs share |
 | `loop/OrbitPatterns.kt` | Euclid, SPREAD, CLEAR, the dice, the weight cycle, the step-size choices |
 | `loop/OrbitPresets.kt` | The starter set from a kit — one ring per instrument the kit has (KICK 16 · SNARE 16 · HATS 12 · PERC 20 · THREE, a locked triplet · BASS 20 over the tonal pads) — and the empty-ring and snip-ring constructors |
@@ -144,10 +152,9 @@ words when the cycle passes 64 bars (`OrbitClip.refusal`):
 
 ## Not yet
 
-- **Span and bar.** Today a ring's period is either its own steps or
-  exactly one bar, and the bar is always 16 steps. The proposed change
-  — a per-ring span of ½, 1, 2 or 4 bars, and a per-set bar of 12 to 32
-  steps — is specified in `docs/ORBIT_SPAN_AND_BAR.md` and not yet built.
+- **The bar.** A ring's span is built (above); the set's bar is still
+  always 16 steps. The per-set bar of 12 to 32 steps is specified in
+  `docs/ORBIT_SPAN_AND_BAR.md` (Round 8) and not yet built.
 - **Swing on a ring.** Hits carry a weight but no timing offset yet.
 - **Hardware verification** of the Android screen: the cloud session
   cannot compile `:app` (see `app/README.md`), so the screen is reviewed

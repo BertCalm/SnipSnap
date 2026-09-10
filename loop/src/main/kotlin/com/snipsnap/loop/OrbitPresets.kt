@@ -33,12 +33,12 @@ object OrbitPresets {
             for (c in classes) kit.pads.filter { it.drumClass == c }.minByOrNull { it.slot }?.let { return it.slot }
             return null
         }
-        fun ring(name: String, steps: Int, slot: Int, hits: List<Pair<Int, Float>>, lock: Boolean = false, pan: Float = 0f) =
+        fun ring(name: String, steps: Int, slot: Int, hits: List<Pair<Int, Float>>, span: OrbitSpan = OrbitSpan.FREE, pan: Float = 0f) =
             Orbit(
                 name = name,
                 steps = steps,
                 content = PatternOrbit(kitFolder, hits.map { (step, vel) -> OrbitHit(step, slot, vel) }),
-                lockToBar = lock,
+                span = span,
                 voice = listOf(slot),
                 pan = pan,
             )
@@ -57,7 +57,7 @@ object OrbitPresets {
             rings += ring("PERC", 20, perc, listOf(0 to 0.6f, 6 to 0.45f, 12 to 0.5f, 17 to 0.4f), pan = 0.3f)
         }
         first(DrumClass.HAT_OPEN)?.let { open ->
-            rings += ring("THREE", 3, open, listOf(0 to 0.5f, 1 to 0.4f, 2 to 0.4f), lock = true, pan = -0.3f)
+            rings += ring("THREE", 3, open, listOf(0 to 0.5f, 1 to 0.4f, 2 to 0.4f), span = OrbitSpan.ONE, pan = -0.3f)
         }
         val tonal = kit.pads.filter { it.drumClass == DrumClass.TONAL }.map { it.slot }.sorted()
         if (tonal.size >= MELODIC_MIN_PADS) rings += bassRing(kitFolder, tonal)

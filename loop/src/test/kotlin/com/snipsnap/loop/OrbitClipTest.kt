@@ -10,8 +10,8 @@ import kotlin.test.assertTrue
 
 class OrbitClipTest {
 
-    private fun pattern(name: String, steps: Int, slot: Int, hits: List<Int>, lock: Boolean = false, engaged: Boolean = true) =
-        Orbit(name, steps, PatternOrbit("kit", hits.map { OrbitHit(it, slot, 0.8f) }), lockToBar = lock, engaged = engaged)
+    private fun pattern(name: String, steps: Int, slot: Int, hits: List<Int>, span: OrbitSpan = OrbitSpan.FREE, engaged: Boolean = true) =
+        Orbit(name, steps, PatternOrbit("kit", hits.map { OrbitHit(it, slot, 0.8f) }), span = span, engaged = engaged)
 
     private fun set(vararg orbits: Orbit) = OrbitSet(orbits.toList(), 120f, 48_000)
 
@@ -30,11 +30,20 @@ class OrbitClipTest {
 
     @Test
     fun `a locked triplet lands on thirds of the bar`() {
-        val s = set(pattern("three", 3, 4, listOf(0, 1, 2), lock = true))
+        val s = set(pattern("three", 3, 4, listOf(0, 1, 2), span = OrbitSpan.ONE))
         val clip = OrbitClip.clip(s)
         assertEquals(1, clip.bars)
         assertEquals(listOf(0L, 1280L, 2560L), clip.notes.map { it.timePulses })
         assertEquals(listOf(39, 39, 39), clip.notes.map { it.note })
+    }
+
+    @Test
+    fun `a triplet across two bars lands on thirds of two bars`() {
+        val s = set(pattern("slow", 3, 4, listOf(0, 1, 2), span = OrbitSpan.TWO))
+        val clip = OrbitClip.clip(s)
+        assertEquals(2, clip.bars)
+        val twoBars = 2 * Mpc3Clip.PULSES_PER_BAR
+        assertEquals(listOf(0L, Math.round(twoBars / 3.0), Math.round(2 * twoBars / 3.0)), clip.notes.map { it.timePulses })
     }
 
     @Test
