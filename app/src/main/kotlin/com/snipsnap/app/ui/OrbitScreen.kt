@@ -616,10 +616,16 @@ private const val TAIL_LAP = 1.0 / 12.0
 /** How long a struck hit glows. About a 16th at 150 BPM; shorter than a 16th at anything slower. */
 private const val FLARE_SECONDS = 0.1f
 
+/** Room outside the outermost ring for its name at 12 o'clock, in dp. */
+private const val LABEL_MARGIN_DP = 14f
+
 /** Where ring [i] of [count] sits inside a [w]×[h] canvas, and the inverse for taps. */
 private class RingGeometry(w: Float, h: Float, private val count: Int, density: Float) {
     val centre = Offset(w / 2f, h / 2f)
-    private val outer = minOf(w, h) / 2f - 8f * density
+    // 14dp in from the edge, not 8: the ring's label sits 9dp outside it
+    // at 12 o'clock and is about 9dp tall, so anything less puts the
+    // outermost label above the canvas.
+    private val outer = minOf(w, h) / 2f - LABEL_MARGIN_DP * density
     private val minSpacing = 26f * density
     private val spacing = if (count <= 1) 0f else minOf(minSpacing, (outer * 0.72f) / (count - 1))
 
