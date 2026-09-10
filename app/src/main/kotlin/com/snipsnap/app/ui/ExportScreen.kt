@@ -846,7 +846,15 @@ private fun FormatPickerRow(
                         Modifier
                             .fillMaxWidth()
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .tapeClick(label = f.cyclerLabel, onClick = { onPick(f) })
+                            // label = null, not the cycler label: this row
+                            // has TWO TapeText children - the name and the
+                            // reason finding 8 added - and an explicit label
+                            // *replaces* merged descendant semantics rather
+                            // than adding to it (see tapeClick's KDoc). With
+                            // the name here, a TalkBack user heard the format
+                            // and never the reason, which is the one thing
+                            // finding 8 existed to give them. Mine, from #77.
+                            .tapeClick(label = null, onClick = { onPick(f) })
                             .padding(horizontal = 6.dp, vertical = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {

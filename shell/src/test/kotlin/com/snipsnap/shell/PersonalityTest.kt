@@ -274,6 +274,28 @@ class PersonalityTest {
     }
 
     /**
+     * Finding 17. Every creation door auto-names a kit, so RENAME is the only
+     * place a name is ever typed — and it sits behind a hold on the row that
+     * nothing on screen mentioned. The legend has to name the gesture and the
+     * two things it reveals, in the same words the row's own TalkBack
+     * long-press label uses, so the sighted and the spoken app agree.
+     */
+    @Test
+    fun `the shelf legend names the hold and what it reveals`() {
+        assertTrue(Copy.SHELF_LEGEND.contains("HOLD"), "it names the gesture: ${Copy.SHELF_LEGEND}")
+        assertTrue(Copy.SHELF_LEGEND.contains("KIT"), "and what to hold: ${Copy.SHELF_LEGEND}")
+        assertTrue(Copy.SHELF_LEGEND.contains("RENAME"), "naming is the finding's own subject: ${Copy.SHELF_LEGEND}")
+        assertTrue(Copy.SHELF_LEGEND.contains("DELETE"), "the hold reveals both, so both are named: ${Copy.SHELF_LEGEND}")
+        assertEquals(Copy.SHELF_LEGEND.uppercase(Locale.ROOT), Copy.SHELF_LEGEND, "TapeOS shouts")
+        assertTrue(Copy.SHELF_LEGEND.length <= 52, "one line under the shelf: ${Copy.SHELF_LEGEND.length}")
+        // Furniture, not a toast - it never lands on a full stop, and the
+        // reflective law exempts it for exactly that reason.
+        assertFalse(Copy.SHELF_LEGEND.endsWith("."), "a permanent label is not a sentence: ${Copy.SHELF_LEGEND}")
+        // Two legends on two screens must not read as the same instruction.
+        assertTrue(Copy.SHELF_LEGEND != Copy.PAD_SHEET_LEGEND)
+    }
+
+    /**
      * The legend that replaced the expiring toast (UAT findings 4 and 5).
      * It has to name the gesture, because it is the only thing on screen
      * that does — the toast it backstops can be dismissed forever.
@@ -313,7 +335,7 @@ class PersonalityTest {
         // headings. ROOMS' own legend ("HOLD A ROOM TO FORGET IT · THE BIN KEEPS
         // 30 DAYS") reads without a full stop for the same reason - it is a label
         // on the furniture, not a line the app says to you once and takes away.
-        "PAD_SHEET_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER",
+        "PAD_SHEET_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER",
     )
 
     /**
