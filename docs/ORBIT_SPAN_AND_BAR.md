@@ -51,11 +51,13 @@ enum class OrbitSpan(val laps: Double?) {
 `FREE` is what a ring is today when not locked; `ONE` is what it is when
 locked. Nothing existing changes meaning.
 
-`OrbitClock.periodSteps(set, orbit)`:
+`OrbitClock.periodSteps(set, orbit)`, in the Kotlin it will be:
 
-```
-FREE  → orbit.steps
-else  → max(1, round(set.lapSteps × span.laps))
+```kotlin
+fun periodSteps(set: OrbitSet, orbit: Orbit): Int {
+    val laps = orbit.span.laps ?: return orbit.steps           // FREE
+    return (set.lapSteps * laps).roundToInt().coerceAtLeast(1)  // HALF, ONE, TWO, FOUR
+}
 ```
 
 Every bar length offered (below) is even, so `HALF` is always whole.
