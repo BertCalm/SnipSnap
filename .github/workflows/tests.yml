@@ -1,9 +1,42 @@
 name: tests
 
+# Three rules keep this from costing more than it is worth. The repo is
+# private, so every minute here is metered, and on 2026-09-10 a night of
+# three agents working in parallel exhausted the month's allowance - every
+# run then failed in three seconds with no logs, which looks exactly like a
+# broken build and is not one.
+#
+# 1. A branch is tested ONCE. `push: ["**"]` plus `pull_request` ran the whole
+#    suite twice for every push to a branch with a PR open - the paired runs
+#    in the history (743+744, 745+746, 747+748, all on one SHA). Push now
+#    covers only the default branch, where a merge lands and where
+#    setup-gradle writes the cache the PR runs read; everything else is a PR
+#    and `pull_request` covers it.
+# 2. A superseded run is cancelled. Fixing a red build means pushing two or
+#    three times in ten minutes, and without this every one of those runs to
+#    completion on a commit nobody will look at again. Default-branch runs
+#    are never cancelled: they write the cache and record what merged.
+# 3. Documentation does not build anything. No test reads docs/ or a .md
+#    file (`reference/` is fixture data and is deliberately NOT listed here -
+#    the audio and MPC-importer suites read it).
 on:
   push:
-    branches: ["**"]
+    branches: [claude/mobile-mpc-drum-sampler-t58x74]
+    # Repeated rather than shared with a YAML anchor: GitHub Actions'
+    # workflow parser does not support anchors or aliases, however happily
+    # every other YAML tool reads them.
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+
+concurrency:
+  # One in flight per PR (or per branch for the default-branch push).
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -54,6 +87,11 @@ jobs:
           name: snipsnap-debug-${{ github.sha }}
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          # A private repo meters artifact storage as well as minutes, and
+          # the default is 90 days - hundreds of APKs nobody will install
+          # after the evening they were built. A week is longer than any of
+          # these has ever stayed interesting.
+          retention-days: 7
 
   native-tests:
     runs-on: ubuntu-latest
