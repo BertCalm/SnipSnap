@@ -156,6 +156,11 @@ class UatSimTest {
                 note("stage now ${wiz.stage}, button reads \"${wiz.writeLabel}\"")
             }
             is ExportWizardModel.WriteResult.Blocked -> finding("J1-BLOCK", "factory starter blocked by preflight: ${res.findings}")
+            // Unreachable here - this destination is fresh, and `write`'s
+            // default is still overwrite=true - but the journey should say so
+            // out loud if it ever stops being true.
+            is ExportWizardModel.WriteResult.WouldOverwrite ->
+                finding("J1-EXISTS", "a fresh card already held something: ${res.path}")
         }
         say("  ⇒ TAPS TO FIRST EXPORTED KIT: $taps (plus one system folder-picker dialog)")
 
@@ -313,6 +318,8 @@ class UatSimTest {
                             note("%-38s → %s".format(f.cyclerLabel, res.outcome.primary.name))
                         is ExportWizardModel.WriteResult.Blocked ->
                             finding("J4-${f.id}", "blocked: ${res.findings.map { it.message }}")
+                        is ExportWizardModel.WriteResult.WouldOverwrite ->
+                            finding("J4-${f.id}", "already there: ${res.path}")
                     }
                 },
                 onFailure = { finding("J4-${f.id}", "threw ${it.javaClass.simpleName}: ${it.message}") },

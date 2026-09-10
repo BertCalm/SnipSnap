@@ -1,5 +1,6 @@
 package com.snipsnap.shell
 
+import com.snipsnap.kit.DestinationExists
 import com.snipsnap.kit.ExportBlockedException
 import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.ExportOutcome
@@ -94,6 +95,18 @@ class ExportWizardModel(
 
         /** On the card. [outcome] says exactly what and where. */
         data class Done(val outcome: ExportOutcome) : WriteResult
+
+        /**
+         * Something is already there and [write] was told not to replace it
+         * (September UAT, finding 18). [path] is the exact thing in the way,
+         * as the writer named it, so the screen can say what it would be
+         * writing over instead of asking an abstract "are you sure?".
+         *
+         * A value, not an exception, because this is an ordinary answer to
+         * "write this here" — the same reason [Blocked] is a value. A real
+         * write failure (a full card, one pulled mid-write) still throws.
+         */
+        data class WouldOverwrite(val path: File) : WriteResult
     }
 
     /**
@@ -105,7 +118,14 @@ class ExportWizardModel(
     /**
      * WRITE KIT. Runs the real export through [Exporters] — same driver as
      * the CLI — and moves the stage machine. Never throws for a preflight
-     * block; that comes back as [WriteResult.Blocked] with the checklist.
+     * block; that comes back as [WriteResult.Blocked] with the checklist,
+     * nor for a destination that already exists when [overwrite] is false —
+     * that comes back as [WriteResult.WouldOverwrite] naming what is there.
+     *
+     * [overwrite] still defaults to true: the CLI and the tests that drive
+     * this model want the old behaviour, and a default that silently changed
+     * under them would be a second bug. EXPORT passes false on the first tap
+     * and true only after the user has seen what they would replace.
      */
     fun write(destRoot: File, overwrite: Boolean = true): WriteResult {
         check(stage == Stage.READY) { "write() only from READY, stage is $stage" }
@@ -123,6 +143,13 @@ class ExportWizardModel(
         } catch (e: ExportBlockedException) {
             stage = Stage.READY
             WriteResult.Blocked(e.findings)
+        } catch (e: DestinationExists) {
+            // Caught ahead of the general handler below and *before* the
+            // IOException family it belongs to: nothing was written, so the
+            // wizard goes back to READY exactly as a preflight block does,
+            // and the caller decides whether to come back with overwrite.
+            stage = Stage.READY
+            WriteResult.WouldOverwrite(e.path)
         } catch (e: Exception) {
             // A half-written card must never show WRITE ANOTHER ✓.
             stage = Stage.READY

@@ -197,6 +197,68 @@ class ExportWizardTest {
      * a blank one, a duplicate pasted from its neighbour, one too long for
      * the row, or one that stops shouting the way the rest of TapeOS does.
      */
+    // ---- finding 18: a second dub to the same place asks first ----
+
+    @Test
+    fun `a first write to an empty destination just writes`() {
+        val (kit, dir) = makeKit("FirstDub")
+        val w = ExportWizardModel(kit, dir)
+        val dest = File(temp, "card-first")
+        val result = w.write(dest, overwrite = false)
+        assertTrue(result is ExportWizardModel.WriteResult.Done, "nothing was there: $result")
+        assertEquals(ExportWizardModel.Stage.COMPLETE, w.stage)
+    }
+
+    @Test
+    fun `writing over an earlier dub is refused by name, not silently done`() {
+        val (kit, dir) = makeKit("SecondDub")
+        val dest = File(temp, "card-second")
+        // The first dub lands.
+        val first = ExportWizardModel(kit, dir).write(dest, overwrite = false)
+        assertTrue(first is ExportWizardModel.WriteResult.Done, "$first")
+
+        // The second, to the same place, comes back as an answer rather than
+        // as an exception or a silent replacement.
+        val w = ExportWizardModel(kit, dir)
+        val again = w.write(dest, overwrite = false)
+        assertTrue(
+            again is ExportWizardModel.WriteResult.WouldOverwrite,
+            "a second dub to the same destination must say so: $again",
+        )
+        val inTheWay = (again as ExportWizardModel.WriteResult.WouldOverwrite).path
+        assertTrue(inTheWay.exists(), "the path it names has to be the thing actually there: $inTheWay")
+        assertTrue(inTheWay.name.isNotBlank(), "the screen shows this name to the user: $inTheWay")
+
+        // Refusing costs nothing: the wizard is READY again, so the next tap
+        // is a real write and not a stuck stage machine.
+        assertEquals(ExportWizardModel.Stage.READY, w.stage)
+    }
+
+    @Test
+    fun `the confirmed second dub writes`() {
+        val (kit, dir) = makeKit("ConfirmedDub")
+        val dest = File(temp, "card-confirmed")
+        assertTrue(ExportWizardModel(kit, dir).write(dest, overwrite = false) is ExportWizardModel.WriteResult.Done)
+
+        val w = ExportWizardModel(kit, dir)
+        assertTrue(w.write(dest, overwrite = false) is ExportWizardModel.WriteResult.WouldOverwrite)
+
+        val confirmed = ExportWizardModel(kit, dir).write(dest, overwrite = true)
+        assertTrue(confirmed is ExportWizardModel.WriteResult.Done, "the second tap writes: $confirmed")
+    }
+
+    @Test
+    fun `overwrite still defaults to true, so the CLI and every older caller are unchanged`() {
+        val (kit, dir) = makeKit("DefaultDub")
+        val dest = File(temp, "card-default")
+        assertTrue(ExportWizardModel(kit, dir).write(dest) is ExportWizardModel.WriteResult.Done)
+        // The whole point of the default: the same call again does NOT stop.
+        assertTrue(
+            ExportWizardModel(kit, dir).write(dest) is ExportWizardModel.WriteResult.Done,
+            "a caller that never asked for the guard must not start getting it",
+        )
+    }
+
     @Test
     fun `every format says why you would pick it`() {
         val whys = ExportFormat.entries.map { it.why }

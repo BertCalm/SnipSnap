@@ -8,6 +8,50 @@ import com.snipsnap.xpm.XpmWriter
 import java.io.File
 import java.io.IOException
 
+/**
+ * Thrown by every writer that refuses to replace something already on disk —
+ * the `overwrite = false` answer, carrying the path that is in the way.
+ *
+ * September UAT, finding 18: EXPORT hardcoded `overwrite = true`, so
+ * re-exporting to the same destination silently wrote over whatever was
+ * there. On someone's SD card that is the one write worth pausing on. The
+ * screen can only pause on it if it can tell "there is already a kit here"
+ * apart from "the write failed" — a disk that filled up, a card pulled
+ * mid-write, a folder it may not touch. Both used to arrive as a bare
+ * [IOException] with a message, so telling them apart meant matching on
+ * prose, and treating a full disk as a confirmable overwrite would be worse
+ * than the bug being fixed.
+ *
+ * It stays an [IOException] so every existing `catch` and every test that
+ * asserts on the message keeps working; the message is verbatim what the
+ * thirteen hand-written copies of it used to say.
+ */
+class DestinationExists(val path: File) : IOException(
+    "destination already exists: $path (pass overwrite=true to replace same-named files)",
+) {
+    companion object {
+        /**
+         * The first of [paths] that is actually on disk.
+         *
+         * The MPC-family writers guard on a *pair* — the program file OR its
+         * data folder — because either one alone is enough to make the next
+         * write a replacement. Naming the first of the pair unconditionally
+         * would report a path that need not exist: a half-written export, or
+         * one whose `.xpj` was deleted while its data folder stayed, blocks
+         * the write via the folder while the file is gone. [path] is shown to
+         * the user by name and asserted to exist by `ExportWizardTest`, so an
+         * OR-shaped guard has to make an OR-shaped report.
+         *
+         * Falls back to the first path when none exists, which cannot happen
+         * from a guard that already tested them — a caller reaching for this
+         * with nothing on disk gets a sensible name rather than an exception
+         * from inside an exception.
+         */
+        fun firstOf(vararg paths: File): DestinationExists =
+            DestinationExists(paths.firstOrNull { it.exists() } ?: paths.first())
+    }
+}
+
 /** Thrown when preflight found blocking problems; carries the full checklist. */
 class ExportBlockedException(val findings: List<Finding>) : Exception(
     "export blocked: " + findings.filter { it.severity == Severity.FAIL }.joinToString("; ") { it.message },
@@ -43,7 +87,7 @@ object KitExporter {
 
         val dest = File(destRoot, kit.name)
         if (dest.exists() && !overwrite) {
-            throw IOException("destination already exists: $dest (pass overwrite=true to replace same-named files)")
+            throw DestinationExists(dest)
         }
         dest.mkdirs()
         if (!dest.isDirectory) throw IOException("could not create $dest")
