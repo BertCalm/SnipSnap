@@ -21,33 +21,55 @@ class OrbitPresetsTest {
     )
 
     @Test
-    fun `a classified kit lands each class on its own ring`() {
+    fun `a classified kit gets one ring per instrument, each a single-pad voice`() {
         val set = OrbitPresets.fromKit("Break Kit", kit, 92f, 48_000)
-        assertEquals(4, set.orbits.size)
-        val floor = set.orbits[0].content as PatternOrbit
-        assertEquals("Break Kit", floor.kit)
-        assertEquals(setOf(1, 2), floor.hits.map { it.slot }.toSet())
-        assertEquals(setOf(3), (set.orbits[1].content as PatternOrbit).hits.map { it.slot }.toSet())
-        assertEquals(setOf(12), (set.orbits[2].content as PatternOrbit).hits.map { it.slot }.toSet())
-        assertEquals(setOf(4), (set.orbits[3].content as PatternOrbit).hits.map { it.slot }.toSet())
+        assertEquals(listOf("KICK", "SNARE", "HATS", "PERC", "THREE"), set.orbits.map { it.name })
+        assertEquals(listOf(listOf(1), listOf(2), listOf(3), listOf(12), listOf(4)), set.orbits.map { it.pads })
+        assertEquals("Break Kit", (set.orbits[0].content as PatternOrbit).kit)
+        for (ring in set.orbits) {
+            val content = ring.content as PatternOrbit
+            assertTrue(content.hits.all { it.slot == ring.pads.single() }, "${ring.name} strays off its pad")
+        }
     }
 
     @Test
-    fun `both modes are in the starter set and the cycle is fifteen bars`() {
+    fun `free and locked rings are both in the starter set and the cycle is fifteen bars`() {
         val set = OrbitPresets.fromKit("Break Kit", kit, 92f, 48_000)
-        assertTrue(set.orbits.any { it.mode == OrbitMode.SAME_SPEED })
-        assertTrue(set.orbits.any { it.mode == OrbitMode.SAME_LAP })
-        // 16, 12, 20 (and the same-lap 3 counting as 16): LCM 240 steps.
+        assertTrue(set.orbits.any { !it.lockToBar })
+        assertTrue(set.orbits.any { it.lockToBar })
+        // 16, 16, 12, 20 (and the locked 3 counting as 16): LCM 240 steps.
         assertEquals(240L, OrbitClock.cycleSteps(set))
         assertEquals(15.0, OrbitClock.cycleBars(set))
     }
 
     @Test
-    fun `an unclassified one-pad kit still gets a set on its only pad`() {
+    fun `a kit with tonal pads gets a bass ring whose voice is the tonal pads low to high`() {
+        val melodic = Kit(
+            "Keys",
+            kit.pads + listOf(KitPad(9, "c.wav", drumClass = DrumClass.TONAL), KitPad(11, "g.wav", drumClass = DrumClass.TONAL), KitPad(10, "e.wav", drumClass = DrumClass.TONAL)),
+        )
+        val set = OrbitPresets.fromKit("Keys", melodic, 92f, 48_000)
+        val bass = set.orbits.last()
+        assertEquals("BASS", bass.name)
+        assertEquals(listOf(9, 10, 11), bass.pads)
+        assertEquals(20, bass.steps)
+        val notes = (bass.content as PatternOrbit).hits.map { it.slot }.toSet()
+        assertTrue(notes.size >= 2, "a bass line uses more than one note: $notes")
+        assertTrue(notes.all { it in bass.pads })
+    }
+
+    @Test
+    fun `two tonal pads is not a line - no bass ring`() {
+        val two = Kit("Two", kit.pads + listOf(KitPad(9, "c.wav", drumClass = DrumClass.TONAL), KitPad(10, "e.wav", drumClass = DrumClass.TONAL)))
+        assertTrue(OrbitPresets.fromKit("Two", two, 92f, 48_000).orbits.none { it.name == "BASS" })
+    }
+
+    @Test
+    fun `an unclassified one-pad kit still gets a ring on its only pad`() {
         val lone = Kit("Lone", listOf(KitPad(5, "thing.wav")))
         val set = OrbitPresets.fromKit("Lone", lone, 120f, 44_100)
-        val slots = set.orbits.flatMap { (it.content as PatternOrbit).hits.map { h -> h.slot } }.toSet()
-        assertEquals(setOf(5), slots)
+        assertEquals(1, set.orbits.size)
+        assertEquals(listOf(5), set.orbits[0].pads)
     }
 
     @Test

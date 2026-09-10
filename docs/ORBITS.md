@@ -8,20 +8,22 @@ changes every lap until, some bars later, they meet again. Stack more rings
 and the meeting point moves further out. That is the whole feature, and
 this document is the arithmetic behind it and where it lives in the code.
 
-## Two meanings of "the same speed"
+## A ring's length
 
-The picture above hides a choice, and ORBIT makes it a per-ring toggle.
+The picture above hides a choice, and ORBIT makes it a chip on each ring.
 
-| Mode | The rule | What it makes | Rings meet again |
+| Ring | The rule | What it makes | Rings meet again |
 |---|---|---|---|
-| **SPEED** (`SAME_SPEED`) | The needle covers the same number of 16ths per second on every ring, so a ring's lap is its own step count. | **Polymeter**: a 16-step ring against a 20-step ring is 4/4 against 5/4. | After the least common multiple of the step counts: 16 and 20 meet every 80 steps, five bars. |
-| **LAP** (`SAME_LAP`) | Every ring completes one lap per reference bar, whatever its step count, so a 3-step ring's steps are each a third of the bar. | **Polyrhythm**: three even hits against four inside one bar. | Every bar, by definition. |
+| **Free** (LOCK TO BAR off) | The needle covers the same number of 16ths per second on every ring, so a ring's lap is its own step count: 20 steps is five beats. | **Polymeter**: a 16-step ring against a 20-step ring is 4/4 against 5/4. | After the least common multiple of the step counts: 16 and 20 meet every 80 steps, five bars. |
+| **Locked to the bar** (LOCK TO BAR on) | The ring is exactly one bar long whatever its step count, so a 3-step ring's steps are each a third of the bar. | **Polyrhythm**: three even hits against four inside one bar. | Every bar, by definition. |
 
-Both are one formula. A ring's *period* in frames is
+A ring's row says which it is in words — "20 STEPS · 5 BEATS", "3 STEPS ·
+1 BAR" — so there is no mode to explain. Both are one formula. A ring's
+*period* in frames is
 
 ```
-SPEED:  period = steps × stepFrames
-LAP:    period = lapSteps × stepFrames          (the reference bar, 16 by default)
+free:    period = steps × stepFrames
+locked:  period = lapSteps × stepFrames         (the reference bar, 16 by default)
 stepFrames = 60 / bpm / 4 × sampleRate         (one 16th)
 ```
 
@@ -39,15 +41,30 @@ keep in sync, nothing that can drift, and the tests check phases and firing
 frames as exact integers at 120 BPM and 48 kHz, where a 16th is exactly
 6,000 frames.
 
+## A ring's voice
+
+A pattern ring has a *voice*: the pads it may play, in the order they are
+shown when the ring is unrolled. A drum ring's voice is one pad. A bass
+ring's voice is the kit's tonal pads, low to high, and every hit names
+which of them it plays, so a melody is one ring rather than one ring per
+note. The screen unrolls the picked ring into a strip with one row per pad
+in its voice — a kick ring is a single row, a bass ring a small piano roll
+— and that strip is the editor; the ring itself is the picture of the
+result. On the ring, a melodic ring's dots step in and out from the line by
+pitch.
+
+The header shows the rings' lengths against each other, reduced: 16, 20
+and a bar-locked ring read "4 : 5".
+
 ## The cycle
 
-`OrbitClock.cycleSteps` is the LCM of every SPEED ring's step count with the
-reference bar (a LAP ring counts as one bar long whatever its steps). It
+`OrbitClock.cycleSteps` is the LCM of every free ring's step count with the
+reference bar (a locked ring counts as one bar long whatever its steps). It
 grows fast with coprime rings:
 
 | Rings | Cycle |
 |---|---|
-| 16, 12, 20 (+ a LAP ring) | 240 steps — 15 bars |
+| 16, 12, 20 (+ a locked ring) | 240 steps — 15 bars |
 | 16, 20 | 80 steps — 5 bars |
 | 16, 17, 19 | 5,168 steps — 323 bars |
 
@@ -58,9 +75,10 @@ choice, not a surprise.
 ## What a ring carries
 
 - **A pad pattern** (`PatternOrbit`): hits on steps against a kit, by pad
-  slot. A hit starts a voice — the pad's WAV, decoded and resampled once —
-  which rings out over the block boundary like any one-shot. The mixer is
-  the loop grid's linear pan law; 64 voices, oldest stolen.
+  slot, drawn from the ring's voice. A hit starts a sounding voice — the
+  pad's WAV, decoded and resampled once — which rings out over the block
+  boundary like any one-shot. The mixer is the loop grid's linear pan law;
+  64 sounding voices, oldest stolen.
 - **A snip** (`SnipOrbit`): one capture from the SNIPS shelf taped round the
   ring. Its default ring size is its own length in 16ths at the set's tempo
   (`OrbitClock.naturalSteps`), so a five-beat capture lands on a 20-step
@@ -74,13 +92,13 @@ choice, not a surprise.
 
 | Piece | What it is |
 |---|---|
-| `loop/Orbit.kt` | `Orbit`, `OrbitSet`, `OrbitMode`, the content types, and `OrbitClock` — every number above |
+| `loop/Orbit.kt` | `Orbit` (steps, lock, voice), `OrbitSet`, the content types, and `OrbitClock` — every number above, plus the length and ratio labels |
 | `loop/OrbitBank.kt` | The prepared audio for a set: pads at the device rate, snips fitted to their periods. Immutable; an edit prepares a new one reusing the last |
 | `loop/OrbitEngine.kt` | The transport: fixed 2048-frame blocks, hits scheduled per block, voices mixed, snips wrapped, written to the same `AudioSink` the loop grid uses. `render` is the offline bounce and the test harness |
-| `loop/OrbitStore.kt` | `orbits.json`, a sidecar beside the kit like `groove.json` |
-| `loop/OrbitPresets.kt` | The starter set from a kit (FLOOR 16 · HATS 12 · PERC 20 · THREE, a LAP triplet) and the empty-ring and snip-ring constructors |
+| `loop/OrbitStore.kt` | `orbits.json` (version 2; version 1 still loads), a sidecar beside the kit like `groove.json` |
+| `loop/OrbitPresets.kt` | The starter set from a kit — one ring per instrument the kit has (KICK 16 · SNARE 16 · HATS 12 · PERC 20 · THREE, a locked triplet · BASS 20 over the tonal pads) — and the empty-ring and snip-ring constructors |
 | `app/OrbitSampleSource.kt` | Pads from the kit shelf via `KitSampleSource`, snips from `snips/` |
-| `app/ui/OrbitScreen.kt` | The rings, the taps, the panel, the transport. Reached from GROOVE's **ORBIT ▸**, left by **◄ GROOVE** |
+| `app/ui/OrbitScreen.kt` | The rings (shortest inside, a 16th-long comet tail, a strike flare, a pulse when they meet), the unrolled strip, the panel, the transport, audition through PLAY's pad engine, solo by long-press. Reached from GROOVE's **ORBIT ▸**, left by **◄ GROOVE** |
 
 ## Not yet
 

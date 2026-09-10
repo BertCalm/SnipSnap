@@ -28,8 +28,8 @@ class OrbitEngineTest {
             if (kit == "kit" && slot in 1..9) Snip(floatArrayOf(slot / 10f), 1, 48_000) else null
     }
 
-    private fun pattern(name: String, steps: Int, mode: OrbitMode, vararg hits: Pair<Int, Int>) =
-        Orbit(name, steps, PatternOrbit("kit", hits.map { (s, slot) -> OrbitHit(s, slot) }), mode)
+    private fun pattern(name: String, steps: Int, lock: Boolean, vararg hits: Pair<Int, Int>) =
+        Orbit(name, steps, PatternOrbit("kit", hits.map { (s, slot) -> OrbitHit(s, slot) }), lockToBar = lock)
 
     private fun set(vararg orbits: Orbit) = OrbitSet(orbits.toList(), bpm, rate)
 
@@ -44,16 +44,16 @@ class OrbitEngineTest {
     fun `a hit lands on exactly its frame - across block boundaries`() {
         // Block is 2048 frames; step 3 fires at frame 18,000, well inside
         // block 8 and nowhere near a boundary; step 0 sits on one.
-        val s = set(pattern("a", 16, OrbitMode.SAME_SPEED, 0 to 1, 3 to 2))
+        val s = set(pattern("a", 16, false, 0 to 1, 3 to 2))
         val out = render(s, 16 * step)
         assertEquals(listOf(0 to 0.1f, 3 * step to 0.2f), clicks(out))
     }
 
     @Test
-    fun `same speed - 4 against 5 drift and realign after five bars`() {
+    fun `free rings - 4 against 5 drift and realign after five bars`() {
         val s = set(
-            pattern("four", 16, OrbitMode.SAME_SPEED, 0 to 1),
-            pattern("five", 20, OrbitMode.SAME_SPEED, 0 to 2),
+            pattern("four", 16, false, 0 to 1),
+            pattern("five", 20, false, 0 to 2),
         )
         val out = render(s, 80 * step + 1)
         val frames = clicks(out)
@@ -66,8 +66,8 @@ class OrbitEngineTest {
     }
 
     @Test
-    fun `same lap - a 3-step ring plays a triplet inside the bar`() {
-        val s = set(pattern("three", 3, OrbitMode.SAME_LAP, 0 to 1, 1 to 1, 2 to 1))
+    fun `locked ring - a 3-step ring plays a triplet inside the bar`() {
+        val s = set(pattern("three", 3, true, 0 to 1, 1 to 1, 2 to 1))
         val lap = 16 * step
         val out = render(s, lap)
         val frames = clicks(out).map { it.first }
@@ -75,19 +75,19 @@ class OrbitEngineTest {
     }
 
     @Test
-    fun `flipping a ring's mode changes only its period`() {
-        val sameSpeed = set(pattern("r", 4, OrbitMode.SAME_SPEED, 0 to 1))
-        val sameLap = set(pattern("r", 4, OrbitMode.SAME_LAP, 0 to 1))
+    fun `locking a ring to the bar changes only its period`() {
+        val free = set(pattern("r", 4, false, 0 to 1))
+        val locked = set(pattern("r", 4, true, 0 to 1))
         val lap = 16 * step
-        assertEquals(listOf(0, 4 * step, 8 * step, 12 * step), clicks(render(sameSpeed, lap)).map { it.first })
-        assertEquals(listOf(0), clicks(render(sameLap, lap)).map { it.first })
+        assertEquals(listOf(0, 4 * step, 8 * step, 12 * step), clicks(render(free, lap)).map { it.first })
+        assertEquals(listOf(0), clicks(render(locked, lap)).map { it.first })
     }
 
     @Test
     fun `a disengaged ring is silent and a missing pad is skipped not thrown`() {
         val s = set(
-            pattern("off", 16, OrbitMode.SAME_SPEED, 0 to 1).copy(engaged = false),
-            pattern("ghost", 16, OrbitMode.SAME_SPEED, 0 to 9).copy(content = PatternOrbit("nokit", listOf(OrbitHit(0, 1)))),
+            pattern("off", 16, false, 0 to 1).copy(engaged = false),
+            pattern("ghost", 16, false, 0 to 9).copy(content = PatternOrbit("nokit", listOf(OrbitHit(0, 1)))),
         )
         assertTrue(clicks(render(s, 16 * step)).isEmpty())
     }
@@ -126,7 +126,7 @@ class OrbitEngineTest {
 
     @Test
     fun `the bank reuses pads and loops from the previous bank when nothing changed`() {
-        val s = set(pattern("r", 16, OrbitMode.SAME_SPEED, 0 to 1), Orbit("s", 16, SnipOrbit("a.wav")))
+        val s = set(pattern("r", 16, false, 0 to 1), Orbit("s", 16, SnipOrbit("a.wav")))
         val first = OrbitBank.prepare(s, ClickSource(loopFrames = 16 * step))
         val second = OrbitBank.prepare(s, ClickSource(loopFrames = 16 * step), previous = first)
         assertTrue(first.pad("kit", 1) === second.pad("kit", 1), "pad should be the same object")
@@ -153,8 +153,8 @@ class OrbitEngineTest {
             override fun write(block: FloatArray) { written.add(block.copyOf()) }
             override fun close() {}
         }
-        val a = set(pattern("a", 16, OrbitMode.SAME_SPEED, 0 to 1))
-        val b = set(pattern("b", 16, OrbitMode.SAME_SPEED, 0 to 2))
+        val a = set(pattern("a", 16, false, 0 to 1))
+        val b = set(pattern("b", 16, false, 0 to 2))
         val engine = OrbitEngine(a, OrbitBank.prepare(a, ClickSource()), sink, blockFrames = 1_000)
 
         engine.runFor(1)
@@ -172,7 +172,7 @@ class OrbitEngineTest {
 
     @Test
     fun `render returns exactly the frames asked for`() {
-        val s = set(pattern("a", 16, OrbitMode.SAME_SPEED, 0 to 1))
+        val s = set(pattern("a", 16, false, 0 to 1))
         val snip = OrbitEngine.render(s, OrbitBank.prepare(s, ClickSource()), 5_000)
         assertEquals(5_000, snip.frameCount)
         assertEquals(2, snip.channels)
