@@ -626,7 +626,12 @@ private fun ClassPicker(
                                 if (picked) Schemes.classColor(dc).tape else scheme.ink3.tape.copy(alpha = 0.15f),
                                 RoundedCornerShape(4.dp),
                             )
-                            .tapeClick(label = ChopReviewModel.chipName(dc), onClick = { onPick(dc) }),
+                            // label = null: the TapeText below already says
+                            // the class name, and clickable merges descendant
+                            // semantics into this node - an explicit label
+                            // would replace that text rather than add to it
+                            // (tapeClick's own contract, Chrome.kt).
+                            .tapeClick(label = null, onClick = { onPick(dc) }),
                         contentAlignment = Alignment.Center,
                     ) {
                         TapeText(
