@@ -264,6 +264,55 @@ object OrbitClock {
         periodSteps(set, orbit).toLong() * stepFrames(set)
 
     /**
+     * [orbit]'s length in pulses — the same lap [periodFrames] measures,
+     * counted in the unit a clip is written in.
+     *
+     * There is no sample rate in this, and that is the whole point of it
+     * existing. A clip is musical time: the same set must export the same
+     * pulses whatever rate it happens to be playing at.
+     */
+    fun periodPulses(set: OrbitSet, orbit: Orbit): Long =
+        periodSteps(set, orbit).toLong() * Mpc3Clip.PULSES_PER_16TH
+
+    /** Pulses from one of [orbit]'s steps to the next. Fractional for a spanned ring whose steps don't divide its laps. */
+    fun ringStepPulses(set: OrbitSet, orbit: Orbit): Double =
+        periodPulses(set, orbit).toDouble() / orbit.steps
+
+    /**
+     * The pulse, within a lap, on which [step] fires — [stepOffset]'s
+     * answer in the export's own unit.
+     *
+     * The swing here is `Mpc3Clip.swingPush` itself rather than the frame
+     * ratio rounded on the way out. Those agree at every rate anyone
+     * plays at, but not at every rate the type accepts: a set is valid at
+     * any positive `sampleRate`, and once a frame is coarser than a pulse
+     * — under 16 frames per beat — rounding to a frame and back moves the
+     * note. At 120 BPM and 832 Hz a step is 104 frames but 240 pulses, and
+     * swing 58 came out a pulse late.
+     */
+    fun stepPulses(set: OrbitSet, orbit: Orbit, step: Int): Long =
+        (step * ringStepPulses(set, orbit)).roundToLong() + swingPulses(set, orbit, step)
+
+    /** How late [step] fires for the set's swing, in pulses — [swingFrames]'s counterpart, gated identically. */
+    fun swingPulses(set: OrbitSet, orbit: Orbit, step: Int): Long {
+        if (step % 2 == 0 || set.swing == OrbitSet.STRAIGHT_SWING) return 0L
+        if (!stepIsSixteenth(set, orbit)) return 0L
+        return Mpc3Clip.swingPush(set.swing)
+    }
+
+    /**
+     * Where [hit] falls in a clip: its step's pulse plus its own lean.
+     *
+     * [firingOffset]'s counterpart, and simpler than it for one reason —
+     * [OrbitHit.offset] is already pulses, so the export adds it and is
+     * done. Reaching this through frames converted it out of the unit it
+     * was stored in and back again, rounding twice to arrive where it
+     * started.
+     */
+    fun firingPulses(set: OrbitSet, orbit: Orbit, hit: OrbitHit): Long =
+        stepPulses(set, orbit, hit.step) + hit.offset
+
+    /**
      * [orbit]'s length in words — "5 BEATS", "1 BAR", "2 BARS", "3 16THS" —
      * so a ring's row can say what it is without a mode to explain. A
      * spanned ring says its span ("½ BAR"), whatever the bar's length.
@@ -316,10 +365,10 @@ object OrbitClock {
     fun swingFrames(set: OrbitSet, orbit: Orbit, step: Int): Double {
         if (step % 2 == 0 || set.swing == OrbitSet.STRAIGHT_SWING) return 0.0
         if (!stepIsSixteenth(set, orbit)) return 0.0
-        // The exact ratio, deliberately not the export's rounded pulse: a
-        // frame is finer than a pulse, and the two still agree where it
-        // counts, because `clip` rounds frames to pulses on the way out.
-        // Verified across the whole 50..75 ladder.
+        // The exact ratio rather than the export's rounded pulse, because
+        // this is the engine's answer and a frame is the finer unit at any
+        // rate worth playing at. The export does not come through here at
+        // all: it asks [swingPulses], which is `Mpc3Clip.swingPush` itself.
         return (set.swing - OrbitSet.STRAIGHT_SWING) / 50.0 * stepFrames(set)
     }
 
@@ -380,25 +429,57 @@ object OrbitClock {
     fun firings(set: OrbitSet, orbit: Orbit, from: Long, until: Long): List<Firing> {
         val content = orbit.content as? PatternOrbit ?: return emptyList()
         if (until <= from) return emptyList()
-        val period = periodFrames(set, orbit)
         val out = ArrayList<Firing>()
         for (hit in content.hits) {
             // The step's place on the ring, then the hit's own lean off it.
             // A hit dragged before step 0 has nowhere earlier to go on this
             // lap, so it sounds at the end of the previous one - which is
             // what a pickup before the downbeat is.
-            val offset = firingOffset(set, orbit, hit)
-            // First lap whose copy of this hit lands at or after `from`.
-            var lap = Math.floorDiv(from - offset, period)
-            if (lap * period + offset < from) lap++
-            var at = lap * period + offset
-            while (at < until) {
-                out.add(Firing(hit, at))
-                at += period
+            eachLap(periodFrames(set, orbit), firingOffset(set, orbit, hit), from, until) {
+                out.add(Firing(hit, it))
             }
         }
         out.sortBy { it.frame }
         return out
+    }
+
+    /**
+     * Every (hit, pulse) of [orbit] that falls before [untilPulses] — what
+     * the export writes, as [firings] is what the engine plays.
+     *
+     * The same walk as [firings] over the same laps, in the other unit. It
+     * is not a conversion of that one: the clip never visits the frame
+     * domain, so no rate can round a note off its pulse.
+     */
+    fun pulseFirings(set: OrbitSet, orbit: Orbit, untilPulses: Long): List<PulseFiring> {
+        val content = orbit.content as? PatternOrbit ?: return emptyList()
+        if (untilPulses <= 0L) return emptyList()
+        val out = ArrayList<PulseFiring>()
+        for (hit in content.hits) {
+            eachLap(periodPulses(set, orbit), firingPulses(set, orbit, hit), 0L, untilPulses) {
+                out.add(PulseFiring(hit, it))
+            }
+        }
+        out.sortBy { it.pulses }
+        return out
+    }
+
+    /**
+     * Every copy of one hit in [from] until [until], a lap apart.
+     *
+     * One walk for both units, because two of them is how the engine and
+     * the export come to disagree about which laps a hit lands on — the
+     * defect this wave keeps finding in a different costume.
+     */
+    private inline fun eachLap(period: Long, offset: Long, from: Long, until: Long, emit: (Long) -> Unit) {
+        // First lap whose copy of this hit lands at or after `from`.
+        var lap = Math.floorDiv(from - offset, period)
+        if (lap * period + offset < from) lap++
+        var at = lap * period + offset
+        while (at < until) {
+            emit(at)
+            at += period
+        }
     }
 
     /**
@@ -422,6 +503,8 @@ object OrbitClock {
         else Math.round(hit.offset.toDouble() / Mpc3Clip.PULSES_PER_16TH * stepFrames(set))
 
     data class Firing(val hit: OrbitHit, val frame: Long)
+
+    data class PulseFiring(val hit: OrbitHit, val pulses: Long)
 
     /**
      * Frames since [orbit]'s [hit] last fired, at or before [frame] — what

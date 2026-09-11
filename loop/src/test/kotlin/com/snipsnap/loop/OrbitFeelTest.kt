@@ -200,18 +200,42 @@ class OrbitFeelTest {
     @Test
     fun `a ring and a clip agree on the pulse at every swing the panel offers`() {
         // The contract the shared push exists for, across the whole ladder
-        // rather than at one percent. Each path reaches the pulse its own
-        // way - the ring through frames and a rounding, the clip through
-        // pulses directly - so a regression in either rounding puts them
-        // back a pulse apart without any single-path test noticing.
-        for (pct in OrbitSet.SWING_CHOICES) {
-            val r = ring(16, hits = arrayOf(OrbitHit(0, 1), OrbitHit(1, 1)))
-            val ringPulses = OrbitClip.clip(set(r, swing = pct)).notes.map { it.timePulses }
-            val flat = Mpc3Clip("G", 1, listOf(Mpc3Note(36, 0, 1f), Mpc3Note(36, s16, 1f)))
-            val clipPulses = com.snipsnap.kit.GrooveVariations.swing(flat, pct).notes.map { it.timePulses }
-            assertEquals(clipPulses, ringPulses, "a ring and a clip swung to $pct must write the same pulse")
-            assertEquals(listOf(0L, s16 + Mpc3Clip.swingPush(pct)), ringPulses, "and it is the shared push, at $pct")
+        // rather than at one percent, and at rates on both sides of the
+        // one that used to matter. 832 Hz is the case that found the bug:
+        // a step is 104 frames but 240 pulses there, so an export routed
+        // through frames rounded four of these seven swings onto the
+        // wrong pulse. `sampleRate` is only required to be positive, so
+        // "no realistic set does that" was never the guarantee on offer.
+        for (rate in listOf(832, 8_000, 44_100, 48_000, 96_000)) {
+            for (pct in OrbitSet.SWING_CHOICES) {
+                val r = ring(16, hits = arrayOf(OrbitHit(0, 1), OrbitHit(1, 1)))
+                val s = OrbitSet(listOf(r), bpm, rate, swing = pct)
+                val ringPulses = OrbitClip.clip(s).notes.map { it.timePulses }
+                val flat = Mpc3Clip("G", 1, listOf(Mpc3Note(36, 0, 1f), Mpc3Note(36, s16, 1f)))
+                val clipPulses = com.snipsnap.kit.GrooveVariations.swing(flat, pct).notes.map { it.timePulses }
+                assertEquals(clipPulses, ringPulses, "a ring and a clip swung to $pct at $rate Hz write the same pulse")
+                assertEquals(listOf(0L, s16 + Mpc3Clip.swingPush(pct)), ringPulses, "and it is the shared push, at $pct")
+            }
         }
+    }
+
+    @Test
+    fun `the same set exports the same clip at any sample rate`() {
+        // A clip is musical time. The rate a set happens to be playing at
+        // is a property of the speakers, not of the notes, so it must not
+        // reach a single exported pulse — including through a spanned
+        // ring's fractional step and a hit's own lean, the two places the
+        // arithmetic is least likely to land on a whole frame.
+        val spanned = Orbit(
+            "b",
+            7,
+            PatternOrbit("kit", (0 until 7).map { OrbitHit(it, 1, offset = it * 3L - 9) }),
+            span = OrbitSpan.TWO,
+        )
+        val exports = listOf(1, 832, 8_000, 44_100, 48_000, 192_000).map { rate ->
+            OrbitClip.clip(OrbitSet(listOf(spanned), bpm, rate, swing = 66)).notes.map { it.timePulses }
+        }
+        assertEquals(1, exports.distinct().size, "one set, one clip, whatever the rate: $exports")
     }
 
     // ---- humanize ----

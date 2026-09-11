@@ -31,8 +31,8 @@ object OrbitFeel {
      * offset of the position it falls on — which is a question about where
      * the hit lands in the bar, not which step of its ring it is. A
      * three-step ring across a bar lands on positions 0, 5 and 11, and
-     * takes those three offsets — which is how the polyrhythmic rings ORBIT
-     * exists for get a pocket at all.
+     * takes those three offsets — which is how a polyrhythmic ring, the
+     * kind ORBIT exists for, gets a pocket at all.
      *
      * A position the donor never played contributes nothing, exactly as
      * `GrooveFeel.apply` leaves such a position straight. Existing offsets
