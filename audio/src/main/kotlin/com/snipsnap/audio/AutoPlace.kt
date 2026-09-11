@@ -98,6 +98,17 @@ object AutoPlace {
     }
 
     /**
+     * Frames a choked voice takes to reach silence.
+     *
+     * A cut mid-cycle is a click, so a choke ramps instead. It lives here,
+     * beside the mute group that causes it, because every renderer has to
+     * choke the same way or one pattern sounds different depending on which
+     * of them played it: `KitPreview` offline, `OrbitEngine` live. About
+     * 2.7 ms at 48 kHz - short enough to still read as a choke.
+     */
+    const val CHOKE_FADE = 128
+
+    /**
      * Mute group for a class.
      *
      * Only hats get one by default: closed and open sharing a group is what

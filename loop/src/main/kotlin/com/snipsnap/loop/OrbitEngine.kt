@@ -1,5 +1,6 @@
 package com.snipsnap.loop
 
+import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Snip
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -36,10 +37,24 @@ class OrbitEngine(
     /** A set and the audio prepared for it, swapped in together. */
     data class Prepared(val set: OrbitSet, val bank: OrbitBank)
 
-    private class Voice(val samples: FloatArray, val gainL: Float, val gainR: Float) {
+    private class Voice(
+        val samples: FloatArray,
+        val gainL: Float,
+        val gainR: Float,
+        val muteGroup: Int,
+    ) {
         var pos = 0 // interleaved index
-        val done: Boolean get() = pos >= samples.size
+        /** Interleaved index past which this voice is silent; a choke moves it in. */
+        var limit = samples.size
+        /** Shortened by a choke rather than simply running out of sample. */
+        val choked: Boolean get() = limit < samples.size
+        /** Interleaved index this voice actually stops at. */
+        val stopAt: Int get() = if (choked) limit else samples.size
+        val done: Boolean get() = pos >= stopAt
     }
+
+    /** One hit that lands in this block, waiting to be started in time order. */
+    private class Scheduled(val orbit: Orbit, val hit: OrbitHit, val frame: Long)
 
     private val frame = AtomicLong(0)
     private val running = AtomicBoolean(true)
@@ -49,6 +64,7 @@ class OrbitEngine(
 
     private val block = FloatArray(blockFrames * 2)
     private val voices = ArrayList<Voice>()
+    private val due = ArrayList<Scheduled>()
 
     init {
         require(blockFrames > 0) { "blockFrames must be positive: $blockFrames" }
@@ -94,32 +110,70 @@ class OrbitEngine(
         val until = from + blockFrames
         block.fill(0f)
 
+        due.clear()
         for (orbit in set.orbits) {
             if (!orbit.engaged || orbit.level == 0f) continue
             when (orbit.content) {
-                is PatternOrbit -> schedule(set, bank, orbit, from, until)
+                is PatternOrbit -> collect(set, orbit, from, until)
                 is SnipOrbit -> addLoop(set, bank, orbit, from)
             }
         }
+        // Choke means "the newest hit in the group wins", so the hits have
+        // to be started in the order they are heard. Each ring's firings
+        // are sorted, but rings are not sorted against each other - ring
+        // two's downbeat can fall before ring one's third step - so the
+        // merged order is what makes "newest" mean newest.
+        due.sortBy { it.frame }
+        for (s in due) start(bank, s, from)
         mixVoices()
 
         sink.write(block)
         frame.set(until)
     }
 
-    /** Start a voice for every hit of [orbit] that lands inside this block. */
-    private fun schedule(set: OrbitSet, bank: OrbitBank, orbit: Orbit, from: Long, until: Long) {
-        val content = orbit.content as PatternOrbit
+    /** Note every hit of [orbit] that lands inside this block; starting them is [start]'s. */
+    private fun collect(set: OrbitSet, orbit: Orbit, from: Long, until: Long) {
         for (firing in OrbitClock.firings(set, orbit, from, until)) {
-            val pad = bank.pad(content.kit, firing.hit.slot) ?: continue
-            val gain = firing.hit.velocity * orbit.level
-            val voice = Voice(pad.samples, gain * leftLaw(orbit.pan), gain * rightLaw(orbit.pan))
-            // The voice starts partway into the block; anything before its
-            // start is not played, which the negative position expresses
-            // without a second offset field.
-            voice.pos = -((firing.frame - from).toInt() * 2)
-            if (voices.size >= MAX_VOICES) voices.removeAt(0) // steal the oldest
-            voices.add(voice)
+            due.add(Scheduled(orbit, firing.hit, firing.frame))
+        }
+    }
+
+    /** Start one hit's voice, choking whatever it shares a mute group with. */
+    private fun start(bank: OrbitBank, s: Scheduled, from: Long) {
+        val content = s.orbit.content as PatternOrbit
+        val pad = bank.pad(content.kit, s.hit.slot) ?: return
+        val offset = (s.frame - from).toInt()
+        val group = bank.muteGroup(content.kit, s.hit.slot)
+        if (group != 0) choke(group, offset)
+        val gain = s.hit.velocity * s.orbit.level
+        val voice = Voice(pad.samples, gain * leftLaw(s.orbit.pan), gain * rightLaw(s.orbit.pan), group)
+        // The voice starts partway into the block; anything before its
+        // start is not played, which the negative position expresses
+        // without a second offset field.
+        voice.pos = -(offset * 2)
+        if (voices.size >= MAX_VOICES) voices.removeAt(0) // steal the oldest
+        voices.add(voice)
+    }
+
+    /**
+     * The kit's own rule, honoured live: a new voice in [group] ends
+     * everything still ringing in it, [offset] frames into this block.
+     *
+     * The same rule and the same fade as `KitPreview.render`, so an open
+     * hat closed by a closed hat sounds the same in ORBIT, in the preview
+     * and on the hardware. It ends over [AutoPlace.CHOKE_FADE] frames rather than
+     * at once because a sample cut mid-cycle is a click.
+     */
+    private fun choke(group: Int, offset: Int) {
+        for (v in voices) {
+            if (v.muteGroup != group) continue
+            // Where that voice will be when this hit lands. Negative means
+            // it has not started yet, which only a hit later in this same
+            // block could be - and a later hit never chokes an earlier one.
+            val at = v.pos + offset * 2
+            if (at < 0) continue
+            val stop = at + AutoPlace.CHOKE_FADE * 2
+            if (stop < v.limit) v.limit = stop
         }
     }
 
@@ -148,11 +202,17 @@ class OrbitEngine(
             // Where in the block this voice begins (0 unless it started this block).
             var out = if (v.pos < 0) -v.pos else 0
             var src = if (v.pos < 0) 0 else v.pos
-            val n = min(block.size - out, samples.size - src)
+            val stop = v.stopAt
+            val n = min(block.size - out, stop - src)
+            // Only a choked voice ramps. One that simply reaches the end of
+            // its sample keeps the tail it was recorded with.
+            val fading = v.choked
             var k = 0
             while (k + 1 < n) {
-                block[out] += samples[src] * v.gainL
-                block[out + 1] += samples[src + 1] * v.gainR
+                val left = stop - src
+                val g = if (fading && left < AutoPlace.CHOKE_FADE * 2) left.toFloat() / (AutoPlace.CHOKE_FADE * 2) else 1f
+                block[out] += samples[src] * v.gainL * g
+                block[out + 1] += samples[src + 1] * v.gainR * g
                 out += 2
                 src += 2
                 k += 2
@@ -170,6 +230,7 @@ class OrbitEngine(
     companion object {
         const val DEFAULT_BLOCK_FRAMES = 2048
         const val MAX_VOICES = 64
+
 
         /**
          * Play [frames] of [set] offline into a [Snip] — the bounce, the

@@ -19,6 +19,7 @@ import com.snipsnap.audio.Snip
 class OrbitBank private constructor(
     val sampleRate: Int,
     private val pads: Map<PadKey, Snip>,
+    private val groups: Map<PadKey, Int>,
     private val loops: Map<LoopKey, FittedLoop>,
 ) {
 
@@ -29,6 +30,13 @@ class OrbitBank private constructor(
 
     /** A pad's stereo audio, or null when the kit or slot is missing (the hit is skipped, not thrown). */
     fun pad(kit: String, slot: Int): Snip? = pads[PadKey(kit, slot)]
+
+    /**
+     * A pad's choke group, 0 for none — read fresh on every [prepare] even
+     * when the audio is reused, so retuning a kit's choke reaches the next
+     * block rather than waiting for the sample to be evicted.
+     */
+    fun muteGroup(kit: String, slot: Int): Int = groups[PadKey(kit, slot)] ?: 0
 
     /** The snip on [orbit], fitted to its period in [set], or null when the file is missing. */
     fun loop(set: OrbitSet, orbit: Orbit): Snip? = fitted(set, orbit)?.snip
@@ -62,6 +70,7 @@ class OrbitBank private constructor(
         fun prepare(set: OrbitSet, source: SampleSource, previous: OrbitBank? = null): OrbitBank {
             val reuse = previous?.takeIf { it.sampleRate == set.sampleRate }
             val pads = HashMap<PadKey, Snip>()
+            val groups = HashMap<PadKey, Int>()
             val loops = HashMap<LoopKey, FittedLoop>()
 
             for (orbit in set.orbits) {
@@ -71,7 +80,11 @@ class OrbitBank private constructor(
                         if (key in pads) continue
                         val kept = reuse?.pads?.get(key)
                         val snip = kept ?: source.pad(content.kit, hit.slot)?.let { stereoAt(it, set.sampleRate) }
-                        if (snip != null) pads[key] = snip
+                        if (snip != null) {
+                            pads[key] = snip
+                            val group = source.muteGroup(content.kit, hit.slot)
+                            if (group != 0) groups[key] = group
+                        }
                     }
                     is SnipOrbit -> {
                         val period = OrbitClock.periodFrames(set, orbit)
@@ -85,7 +98,7 @@ class OrbitBank private constructor(
                     }
                 }
             }
-            return OrbitBank(set.sampleRate, pads, loops)
+            return OrbitBank(set.sampleRate, pads, groups, loops)
         }
 
         /** [buckets] peaks over [snip]: the loudest absolute sample in each equal run of frames, any channel. */

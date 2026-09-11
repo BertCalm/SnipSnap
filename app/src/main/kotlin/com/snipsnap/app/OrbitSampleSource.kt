@@ -41,6 +41,8 @@ class OrbitSampleSource(kitsRoot: File, filesDir: File) : SampleSource {
 
     override fun pad(kit: String, slot: Int): Snip? = kits.pad(kit, slot)
 
+    override fun muteGroup(kit: String, slot: Int): Int = kits.muteGroup(kit, slot)
+
     private companion object {
         /** 64 steps × a 16th at 40 BPM (0.375 s) = 24 s; a little headroom on top. */
         const val SNIP_MAX_SEC = 30f

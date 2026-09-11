@@ -1,5 +1,6 @@
 package com.snipsnap.kit
 
+import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
@@ -33,7 +34,6 @@ object KitPreview {
     private const val TAIL_SEC = 0.6f
 
     /** Choke fade, frames — a cut, but never a click. */
-    private const val CHOKE_FADE = 128
 
     fun render(
         kit: Kit,
@@ -106,7 +106,7 @@ object KitPreview {
                 // The kit rule, honoured in the render: a new voice in the
                 // group chokes everything still ringing in it.
                 voices.filter { it.muteGroup == pad.muteGroup && it.end > start }
-                    .forEach { it.end = min(it.end, start + CHOKE_FADE) }
+                    .forEach { it.end = min(it.end, start + AutoPlace.CHOKE_FADE) }
             }
             voices += voice
         }
@@ -132,8 +132,8 @@ object KitPreview {
                 val at = v.start + i
                 if (at >= totalFrames) break
                 // Choke fade: the last CHOKE_FADE frames ramp out.
-                var fade = if (v.end - v.start < v.samples.frameCount && i >= frames - CHOKE_FADE) {
-                    (frames - i).toFloat() / CHOKE_FADE
+                var fade = if (v.end - v.start < v.samples.frameCount && i >= frames - AutoPlace.CHOKE_FADE) {
+                    (frames - i).toFloat() / AutoPlace.CHOKE_FADE
                 } else {
                     1f
                 }
