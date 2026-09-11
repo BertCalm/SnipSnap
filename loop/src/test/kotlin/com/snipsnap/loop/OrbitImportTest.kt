@@ -301,6 +301,10 @@ class OrbitImportTest {
         val long = Mpc3Clip("L", 1, listOf(Mpc3Note(36, 0, 1f, lengthPulses = OrbitHit.MAX_LENGTH + 1)))
         val why = OrbitImport.refusal(long)
         assertTrue(why != null && "note" in why, why ?: "no refusal")
+        // And it names a difference. Counted in bars, a note one pulse over
+        // the ceiling reads as the same 64 the ceiling does, so the refusal
+        // would give one number twice and explain nothing.
+        assertTrue("${OrbitHit.MAX_LENGTH + 1}" in why!! && "${OrbitHit.MAX_LENGTH}" in why, why)
         assertFailsWith<IllegalArgumentException> { OrbitImport.rings(long, "break", kit(1), bpm, rate) }
 
         // And exactly MAX_LENGTH is allowed through, so the ceiling is a

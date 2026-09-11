@@ -86,8 +86,13 @@ object OrbitImport {
         // got an exception, which is the one thing a preflight is for.
         val longest = clip.notes.maxOf { it.lengthPulses }
         if (longest > OrbitHit.MAX_LENGTH) {
-            return "'${clip.name}' holds a note ${longest / Mpc3Clip.PULSES_PER_BAR} bars long, " +
-                "and a hit may sound for ${OrbitHit.MAX_LENGTH / Mpc3Clip.PULSES_PER_BAR}"
+            // In pulses, because bars are whole numbers here and a note one
+            // pulse over the ceiling rounds to the same bar count as the
+            // ceiling itself: "a note 64 bars long, and a hit may sound for
+            // 64" is a refusal that names no difference. The bar figure is
+            // context, not the reason.
+            return "'${clip.name}' holds a note $longest pulses long, and a hit may sound for " +
+                "${OrbitHit.MAX_LENGTH} (${OrbitHit.MAX_LENGTH / Mpc3Clip.PULSES_PER_BAR} bars)"
         }
         return null
     }
