@@ -580,7 +580,7 @@ fun OrbitScreen(
                 // leave it to be discovered on the hardware.
                 //
                 // The fact, not a route. What a clip can hold is fixed:
-                // notes, never audio, so a snip ring could never have come
+                // notes, never audio, so a snip ring can never ride along,
                 // whatever the player does next. What the bounce carries
                 // is not fixed - it renders heard(s) and skips a ring that
                 // is soloed out, muted, at level 0, or whose file has gone
