@@ -398,6 +398,8 @@ object Copy {
         "· ORBIT PUTS THE KIT ON RINGS: 5 AGAINST 4 IN ONE TAP.",
         "· EMPTY GROOVE? RECORD A TAKE, TAP STEPS IN, OR GO TO ORBIT.",
         "· HOLD A PAD, RE-TRIM ▸: TAPE OPENS ON ITS CUT. BACK ONTO LANDS IT.",
+        "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO BANK B. THEN TAP B TO FLIP.",
+        "· BREED ▸ MIXES TWO KITS' RECIPES INTO A NEW KIT. PARENTS STAY.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -440,8 +442,16 @@ object Copy {
     const val TEACH_CONSENT = "FEATURES ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE."
 
     // ---- BANK B: evil twins (W4.3) ----
-    const val BANK_B_LIT = "EVIL TWINS DEALT ONTO BANK B. RECIPES KEPT."
-    const val TWINS_REROLLED = "EVIL TWINS REROLLED. SAME SEED, DIFFERENT SINS."
+    /** Named after the button that did it (REMIX BANK B ▸), so the toast, the button and HELP say one thing. */
+    const val BANK_B_LIT = "BANK B REMIXED: EVERY PAD'S EVIL TWIN. RECIPES KEPT."
+    const val TWINS_REROLLED = "BANK B REROLLED. SAME SEED, DIFFERENT SINS."
+    /**
+     * Tapping BANK B on the KIT screen while it is empty. The row is
+     * always drawn now (a second page nobody can see is a page nobody
+     * finds), so the empty tap has to say what fills it rather than
+     * flip to sixteen blanks the grid can't fill.
+     */
+    const val BANK_B_EMPTY = "BANK B IS EMPTY. REMIX BANK B ▸ FILLS IT WITH EVIL TWINS."
 
     // ---- BREED: two kits crossed into a child (XX2 wired in) ----
     /** BREED's busy line while `KitShelf.breed` renders every crossed pad offline — same DUBBING…/TWINNING… shape as EVIL TWINS. */
@@ -460,6 +470,30 @@ object Copy {
     const val BREED_PICK_HINT = "TAP A KIT TO CROSS WITH THIS ONE."
     /** Refused: tapping the very kit BREED was pressed from during the pick — breeding needs two different kits. */
     const val BREED_SAME_KIT = "THAT'S THE KIT YOU'RE BREEDING FROM — PICK A DIFFERENT ONE."
+    /**
+     * Refused at the pick: `Breed.crossable` found no slot the coin could
+     * work on, so the child would be a copy of A with "0 PADS CROSSED".
+     * Said before the copy is made, in the precondition's own terms: a
+     * pad here needs its own patch or treatment (rack), or a partner
+     * there (same slot, else same class) whose treatment it can borrow —
+     * a partner's patch alone is not enough, since a captured pad has no
+     * engine to render it through. The fix is the same in every case.
+     */
+    const val BREED_NOTHING_TO_CROSS = "NOTHING WOULD CROSS: NO PAD HERE HAS A PATCH OR TREATMENT, OR A PARTNER THERE WITH ONE TO BORROW. TREAT A PAD FIRST."
+    /** The line under the BREED button: what comes out, before the tap. */
+    const val BREED_SUBTITLE = "MIXES THE TWO KITS' RECIPES INTO A NEW KIT. BOTH PARENTS STAY."
+    /**
+     * The BREED button's own readout: how many of this kit's pads carry
+     * a recipe the cross can use (`Breed.recipePads`), so "0 PADS
+     * CROSSED" is never the first time the user hears the word. A
+     * function, so the singular reads right and the laws leave it be.
+     */
+    fun breedButton(recipePads: Int, pads: Int): String = when {
+        recipePads == 0 -> "BREED ▸ NO RECIPES HERE YET"
+        pads == 1 -> "BREED ▸ ITS ONE PAD HAS A RECIPE"
+        recipePads == 1 -> "BREED ▸ 1 OF $pads PADS HAS A RECIPE"
+        else -> "BREED ▸ $recipePads OF $pads PADS HAVE RECIPES"
+    }
     /**
      * BREED's own toast: the child kit's name, how many pads actually
      * crossed, and — only when the audit sent one back (`Breed.Report.audited`

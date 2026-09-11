@@ -88,6 +88,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.KitStore
+import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.InstantKit
 import com.snipsnap.shell.KitBuilderModel
@@ -1752,6 +1753,12 @@ fun App(shelf: KitShelf) {
                                         // kits are chosen.
                                         if (entry.dir == breedSource.dir) {
                                             toast = Copy.BREED_SAME_KIT
+                                        } else if (Breed.crossable(breedSource.kit, entry.kit).isEmpty()) {
+                                            // Nothing for the coin on either
+                                            // side: the child would be a copy
+                                            // of A. Said now, the pick still
+                                            // armed for another kit.
+                                            toast = Copy.BREED_NOTHING_TO_CROSS
                                         } else {
                                             finishBreed(breedSource, entry)
                                         }
@@ -2040,6 +2047,7 @@ fun App(shelf: KitShelf) {
                                     onSetKey = ::setKey,
                                     onInKey = ::inKey,
                                     onTwins = ::evilTwins,
+                                    onBankEmpty = { toast = Copy.BANK_B_EMPTY },
                                     onBreed = ::startBreed,
                                     // A second kit to cross with has to
                                     // already be on the shelf — BREED can't
