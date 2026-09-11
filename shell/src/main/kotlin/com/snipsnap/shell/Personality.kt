@@ -733,6 +733,38 @@ object Copy {
     /** The shelf's own header chip while sorted `KitShelf.ShelfSort.ALPHA` — tapping switches back to [SHELF_SORT_RECENT]. */
     const val SHELF_SORT_ALPHA = "SORT ▸ A–Z"
 
+    // ---- SHELF FILTER (September UAT, finding 16): the tap-only find ----
+
+    /**
+     * The shelf's filter chip while nothing is filtered out.
+     *
+     * Reads as a state, not a command, exactly as the SORT chip beside it
+     * does: both say what the shelf is currently doing, and tapping moves
+     * it on. "ALL" rather than "NO FILTER" because the shelf is showing
+     * all of them, which is the fact; the absence of a filter is an
+     * implementation detail.
+     */
+    const val SHELF_FILTER_ALL = "SHOW ▸ ALL"
+
+    /**
+     * The same chip narrowed to one dub state, named with [dubChip] so the
+     * chip on the row and the chip in the header cannot drift apart.
+     */
+    fun shelfFilter(status: DubStamp.Status?): String =
+        if (status == null) SHELF_FILTER_ALL else "SHOW ▸ ${dubChip(status)}"
+
+    /**
+     * What the shelf says when a filter has hidden every kit on it.
+     *
+     * A list that empties itself with no explanation is the single most
+     * alarming thing a shelf can do - the user's reading is that the kits
+     * are gone, not that they are filtered. So this names the filter that
+     * did it and the tap that undoes it, and the count of what is really
+     * there. A sentence the screen says, so it keeps its full stop.
+     */
+    fun shelfFilterEmpty(status: DubStamp.Status, total: Int): String =
+        "NO KITS ARE ${dubChip(status)}. ALL $total ARE STILL THERE — TAP SHOW."
+
     // ---- PAD SHEET: pad from anything ----
     const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."
     const val PAD_TOO_SHORT = "TOO SHORT TO STRETCH INTO A PAD. FEED IT MORE THAN A BLINK."
