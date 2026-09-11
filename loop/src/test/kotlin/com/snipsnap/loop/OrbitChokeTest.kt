@@ -44,7 +44,7 @@ class OrbitChokeTest {
         override fun loop(sampleFile: String): Snip? = null
         override fun pad(kit: String, slot: Int): Snip? =
             if (kit == "kit" && slot in 1..9) Snip(FloatArray(frames) { slot / 10f }, 1, padRate) else null
-        override fun muteGroup(kit: String, slot: Int): Int = groups[slot] ?: 0
+        override fun muteGroups(kit: String): Map<Int, Int> = groups
     }
 
     /** Two kits, each with its own hats in the default hat group. */
@@ -57,7 +57,8 @@ class OrbitChokeTest {
         }
         // AutoPlace gives every kit's hats the same group, so this is the
         // default for any two kits that have hats - not an exotic setup.
-        override fun muteGroup(kit: String, slot: Int): Int = AutoPlace.muteGroupFor(DrumClass.HAT_CLOSED)
+        override fun muteGroups(kit: String): Map<Int, Int> =
+            (1..9).associateWith { AutoPlace.muteGroupFor(DrumClass.HAT_CLOSED) }
     }
 
     private fun ring(name: String, steps: Int, vararg hits: Pair<Int, Int>) =
@@ -264,11 +265,11 @@ class OrbitChokeTest {
         )
 
         val source = KitSampleSource(dir)
-        assertEquals(3, source.muteGroup("hats", 1))
-        assertEquals(3, source.muteGroup("hats", 2))
-        assertEquals(0, source.muteGroup("hats", 3), "a pad with no group is 0, not a group of its own")
-        assertEquals(0, source.muteGroup("hats", 9), "a slot the kit lacks")
-        assertEquals(0, source.muteGroup("no such kit", 1), "a kit that isn't there")
+        assertEquals(3, source.muteGroups("hats")[1] ?: 0)
+        assertEquals(3, source.muteGroups("hats")[2] ?: 0)
+        assertEquals(0, source.muteGroups("hats")[3] ?: 0, "a pad with no group is 0, not a group of its own")
+        assertEquals(0, source.muteGroups("hats")[9] ?: 0, "a slot the kit lacks")
+        assertEquals(0, source.muteGroups("no such kit")[1] ?: 0, "a kit that isn't there")
 
         val s = OrbitSet(listOf(Orbit("r", 16, PatternOrbit("hats", listOf(OrbitHit(0, 1), OrbitHit(4, 2))))), bpm, rate)
         val bank = OrbitBank.prepare(s, source)
@@ -293,7 +294,7 @@ class OrbitChokeTest {
 
         save(0)
         val source = KitSampleSource(dir)
-        assertEquals(0, source.muteGroup("hats", 1), "no choke to begin with")
+        assertEquals(0, source.muteGroups("hats")[1] ?: 0, "no choke to begin with")
         source.pad("hats", 1) // warm every cache the source keeps
 
         // The stamp has one-second resolution on some filesystems, so make
@@ -302,7 +303,7 @@ class OrbitChokeTest {
         save(2)
         json.setLastModified(json.lastModified() + 2_000)
 
-        assertEquals(2, source.muteGroup("hats", 1), "the edit should be heard by the same source")
+        assertEquals(2, source.muteGroups("hats")[1] ?: 0, "the edit should be heard by the same source")
     }
 
     @Test
@@ -327,10 +328,10 @@ class OrbitChokeTest {
         val stamp = System.currentTimeMillis() + 60_000
         saveAt(1, stamp)
         val source = KitSampleSource(dir)
-        assertEquals(1, source.muteGroup("hats", 1))
+        assertEquals(1, source.muteGroups("hats")[1] ?: 0)
 
         saveAt(2, stamp) // same mtime, different content
-        assertEquals(2, source.muteGroup("hats", 1), "a same-tick re-edit must not read as the first one")
+        assertEquals(2, source.muteGroups("hats")[1] ?: 0, "a same-tick re-edit must not read as the first one")
     }
 
     @Test
@@ -366,6 +367,34 @@ class OrbitChokeTest {
         save(0)
         val third = OrbitBank.prepare(s, source, previous = second)
         assertEquals(0, third.muteGroup("hats", 1), "and clearing it reaches the bank too")
+    }
+
+    @Test
+    fun `preparing a bank reads each kit's rule once, not once per pad`() {
+        // The groups are asked for per kit because a source may go to disk
+        // for them. Asking per pad meant a set whose rings all name one kit
+        // re-read that kit once for every pad - and worst right after an
+        // edit, which is exactly when a rebuild runs.
+        var reads = 0
+        val counting = object : SampleSource {
+            override fun loop(sampleFile: String): Snip? = null
+            override fun pad(kit: String, slot: Int): Snip? = Snip(FloatArray(100) { 0.1f }, 1, rate)
+            override fun muteGroups(kit: String): Map<Int, Int> {
+                reads++
+                return mapOf(1 to 1, 2 to 1, 3 to 1, 4 to 1)
+            }
+        }
+        val s = OrbitSet(
+            listOf(
+                Orbit("a", 16, PatternOrbit("one", listOf(OrbitHit(0, 1), OrbitHit(2, 2), OrbitHit(4, 3), OrbitHit(6, 4)))),
+                Orbit("b", 16, PatternOrbit("one", listOf(OrbitHit(8, 1), OrbitHit(10, 2)))),
+                Orbit("c", 16, PatternOrbit("two", listOf(OrbitHit(0, 1), OrbitHit(4, 2)))),
+            ),
+            bpm,
+            rate,
+        )
+        OrbitBank.prepare(s, counting)
+        assertEquals(2, reads, "two kits named across three rings and eight hits: two reads")
     }
 
     @Test

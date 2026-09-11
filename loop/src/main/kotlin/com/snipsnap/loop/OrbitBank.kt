@@ -76,18 +76,28 @@ class OrbitBank private constructor(
             val pads = HashMap<PadKey, Snip>()
             val groups = HashMap<PadKey, Int>()
             val loops = HashMap<LoopKey, FittedLoop>()
+            // One read of each kit's rule, not one per pad: the source may
+            // have to go to disk for it, and a set can name the same kit on
+            // every ring.
+            val byKit = HashMap<String, Map<Int, Int>>()
 
             for (orbit in set.orbits) {
                 when (val content = orbit.content) {
-                    is PatternOrbit -> for (hit in content.hits) {
-                        val key = PadKey(content.kit, hit.slot)
-                        if (key in pads) continue
-                        val kept = reuse?.pads?.get(key)
-                        val snip = kept ?: source.pad(content.kit, hit.slot)?.let { stereoAt(it, set.sampleRate) }
-                        if (snip != null) {
-                            pads[key] = snip
-                            val group = source.muteGroup(content.kit, hit.slot)
-                            if (group != 0) groups[key] = group
+                    is PatternOrbit -> {
+                        val kitGroups = byKit.getOrPut(content.kit) { source.muteGroups(content.kit) }
+                        for (hit in content.hits) {
+                            val key = PadKey(content.kit, hit.slot)
+                            if (key in pads) continue
+                            val kept = reuse?.pads?.get(key)
+                            val snip = kept ?: source.pad(content.kit, hit.slot)?.let { stereoAt(it, set.sampleRate) }
+                            if (snip != null) {
+                                pads[key] = snip
+                                // Read from the kit's current rule even when
+                                // the audio came from the previous bank, so a
+                                // retuned choke reaches the next block.
+                                val group = kitGroups[hit.slot] ?: 0
+                                if (group != 0) groups[key] = group
+                            }
                         }
                     }
                     is SnipOrbit -> {

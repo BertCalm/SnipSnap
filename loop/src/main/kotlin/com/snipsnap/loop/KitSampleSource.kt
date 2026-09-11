@@ -64,25 +64,28 @@ class KitSampleSource(private val dir: File) : SampleSource {
      * feed the bake path, where re-reading a WAV is a missed deadline. A
      * choke group is asked for only by `OrbitBank.prepare`, which is
      * off-thread by definition, so it can afford to check whether
-     * `kit.json` has moved under it — and it has to, or toggling choke on
+     * `kit.json` has moved under it - and it has to, or toggling choke on
      * a kit's hats would not be heard until the app was restarted.
+     *
+     * A snapshot taken while the file was still inside the timestamp's
+     * resolution is kept but marked unsettled, so the NEXT ask re-reads
+     * it - a second write in that window cannot hide behind an unchanged
+     * stamp. Kept rather than skipped because one prepare asks once per
+     * kit: discarding it would re-read on every ask during the very window
+     * a rebuild is most likely to be running.
      */
-    override fun muteGroup(kit: String, slot: Int): Int {
-        if (!isBareName(kit)) return 0
+    override fun muteGroups(kit: String): Map<Int, Int> {
+        if (!isBareName(kit)) return emptyMap()
         val stamp = File(File(dir, kit), KitStore.FILE_NAME).lastModified()
-        // A stamp alone cannot separate two writes inside the filesystem's
-        // timestamp resolution, so an entry read while the file was still
-        // that fresh is not trusted again - the re-reads land only in the
-        // second after an edit, which is exactly when they are affordable
-        // and exactly when a second edit is likely.
-        val settled = stamp != 0L && System.currentTimeMillis() - stamp > SETTLE_MS
-        groups[kit]?.let { if (it.stamp == stamp && it.settled) return it.bySlot[slot] ?: 0 }
+        val held = groups[kit]
+        if (held != null && held.stamp == stamp && held.settled) return held.bySlot
         val kitDir = File(dir, kit)
-        if (!kitDir.isDirectory) return 0
-        val loaded = runCatching { KitStore.load(kitDir) }.getOrNull() ?: return 0
-        val bySlot = loaded.pads.associate { it.slot to it.muteGroup }
+        if (!kitDir.isDirectory) return emptyMap()
+        val loaded = runCatching { KitStore.load(kitDir) }.getOrNull() ?: return emptyMap()
+        val bySlot = loaded.pads.filter { it.muteGroup != 0 }.associate { it.slot to it.muteGroup }
+        val settled = stamp != 0L && System.currentTimeMillis() - stamp > SETTLE_MS
         groups[kit] = Groups(stamp, settled, bySlot)
-        return bySlot[slot] ?: 0
+        return bySlot
     }
 
     /**
