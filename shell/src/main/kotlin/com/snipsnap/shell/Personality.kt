@@ -831,6 +831,25 @@ object Copy {
     /** Long-press the CARD row to go back to the phone. */
     const val CARD_FORGOTTEN = "CARD FORGOTTEN. DUBS GO TO THE PHONE."
 
+    /**
+     * The legend under EXPORT's DESTINATION row (September UAT, finding 21).
+     *
+     * Holding that row is the ONLY way to forget a card - there is no
+     * button and no menu entry anywhere else in the app - so without this
+     * the gesture was unfindable, and a user who granted the wrong folder
+     * had no visible way back.
+     *
+     * Shown only while a card is actually held, matching the row's own
+     * `onLongClick`, which is null without one. A legend offering to forget
+     * a card that was never picked would be furniture describing nothing.
+     *
+     * Wording follows the row's `onLongClickLabel` ("FORGET THIS CARD") so
+     * the sighted legend and the TalkBack announcement say the same thing -
+     * the rule [SHELF_LEGEND] and [PAD_SHEET_LEGEND] already follow. No full
+     * stop: it stays on screen, so it is furniture, not a line said once.
+     */
+    const val EXPORT_CARD_LEGEND = "HOLD TO FORGET THIS CARD"
+
     // Kits.
     const val FRESH_TAPE = "FRESH TAPE. SMELLS LIKE FERRIC OXIDE."
 

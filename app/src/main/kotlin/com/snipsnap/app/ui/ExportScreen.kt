@@ -824,6 +824,13 @@ private fun CardRow(
                 maxLines = 2,
             )
         }
+        // September UAT, finding 21: holding this row is the only way to
+        // forget a card anywhere in the app. Only drawn while there is one
+        // to forget, matching the long press above, which is null without
+        // a card.
+        if (tree != null) {
+            TapeText(Copy.EXPORT_CARD_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        }
     }
 }
 

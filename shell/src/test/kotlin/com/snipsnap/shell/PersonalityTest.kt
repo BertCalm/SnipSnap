@@ -388,6 +388,9 @@ class PersonalityTest {
         // a full stop - and every legend must be added here when it is written,
         // or the shouting law will ask it to become a sentence.
         "PAD_SHEET_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER",
+        // EXPORT's DESTINATION legend joins them (finding 21): same rule,
+        // same register - a line that stays under the row it explains.
+        "EXPORT_CARD_LEGEND",
         // SETUP's three section headings and the "nothing picked yet" it
         // shows in place of a format - labels above a readout, in the same
         // register as the legends above. SETUP_FORMAT_NOTE and
@@ -422,6 +425,36 @@ class PersonalityTest {
         "SCULPTED", "STRETCHED", "FROZEN", "PAD_MADE", "PAD_TOO_SHORT", "PAD_TOO_LONG",
         "IN_KEY_NONE", "IN_KEY_NEEDS_KEY", "TAPE_TOO_BIG",
     )
+
+    /**
+     * Every legend teaches a gesture, or it is not a legend.
+     *
+     * The legends exist because the actions behind them are long presses
+     * nothing on screen mentions - PAD SHEET, kit RENAME, and now EXPORT's
+     * forget-this-card, which is the only door to forgetting a card in the
+     * whole app (September UAT, findings 4, 5, 17 and 21). A legend that
+     * describes the feature but never names the hold would sit there
+     * looking like a fix while teaching nobody the one thing they cannot
+     * guess.
+     *
+     * Reflective rather than a list, so a legend written next year is held
+     * to it without anyone remembering to come back here.
+     */
+    @Test
+    fun `every legend names the gesture it teaches`() {
+        val legends = copyStringConstants().filterKeys { it.endsWith("_LEGEND") }
+        assertTrue(
+            legends.size >= 3,
+            "expected at least the three legends this law was written for, found ${legends.keys}",
+        )
+        for ((name, value) in legends) {
+            assertTrue(
+                "HOLD" in value,
+                "Copy.$name is a legend for a long press but never says HOLD: '$value' — " +
+                    "a legend that does not name the gesture teaches nobody the thing they cannot guess.",
+            )
+        }
+    }
 
     @Test
     fun `every Copy string constant shouts and stops (reflective)`() {

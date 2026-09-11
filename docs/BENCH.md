@@ -1,5 +1,11 @@
 # The bench
 
+> **Paused 2026-09-11.** Tabled by the phone's owner: the changes landing
+> around it — the September UAT round in particular — move enough of the
+> ground that a live pass now would measure the old app. Nothing here is
+> withdrawn or answered; it is waiting. Take the pause off when the app
+> settles and work it top to bottom as written below.
+
 Everything the code cannot judge, in one order, so a session with the
 phone in one hand answers as much as it possibly can.
 
