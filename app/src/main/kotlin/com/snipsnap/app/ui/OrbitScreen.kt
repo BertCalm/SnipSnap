@@ -592,8 +592,13 @@ fun OrbitScreen(
                 // So this says what is true in every one of those states -
                 // a clip holds no audio, so these rings could never have
                 // come - and leaves the route to the OUT panel, which
-                // already explains what BOUNCE and CLIP each do and is on
-                // screen when this toast appears.
+                // already explains what BOUNCE and CLIP each do in terms
+                // that no ring's state can falsify. Not because that panel
+                // is on screen here: clipIntoKit closes it above, before
+                // this coroutine starts. Because it is where the player
+                // just was - CLIP ▸ KIT is a button inside it - and OUT ▸
+                // reopens it. One tap away and never wrong beats three
+                // lines up and wrong under a solo.
                 val behind = OrbitClip.snipRings(s)
                 onToast(
                     if (behind.isEmpty()) {
