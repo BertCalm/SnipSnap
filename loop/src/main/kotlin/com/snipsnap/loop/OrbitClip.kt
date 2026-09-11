@@ -169,18 +169,22 @@ object OrbitClip {
     fun clip(set: OrbitSet, name: String = nameFor(set)): Mpc3Clip {
         clipRefusal(set)?.let { throw IllegalArgumentException(it) }
         val bars = bars(set)
-        val stepFrames = OrbitClock.stepFrames(set).toDouble()
-        val cycle = OrbitClock.cycleFrames(set)
         val limit = bars * Mpc3Clip.PULSES_PER_BAR
+        // The whole cycle in pulses. The clip is musical time, so it is
+        // counted in the unit it is written in rather than converted out
+        // of frames: a frame is the finer unit at any rate worth playing
+        // at, but `sampleRate` is only required to be positive, and with
+        // fewer than 960 frames to a beat — a rate below 16 × BPM hertz —
+        // the conversion moves a note off its pulse.
+        val cycle = OrbitClock.cycleSteps(set) * Mpc3Clip.PULSES_PER_16TH
         val notes = ArrayList<Mpc3Note>()
         for (ring in set.orbits) {
             if (!ring.engaged || ring.content !is PatternOrbit) continue
-            for (firing in OrbitClock.firings(set, ring, 0, cycle)) {
-                val pulses = Math.round(firing.frame / stepFrames * Mpc3Clip.PULSES_PER_16TH)
-                if (pulses >= limit) continue
+            for (firing in OrbitClock.pulseFirings(set, ring, cycle)) {
+                if (firing.pulses >= limit) continue
                 notes += Mpc3Note(
                     note = noteFor(firing.hit.slot),
-                    timePulses = pulses,
+                    timePulses = firing.pulses,
                     velocity = firing.hit.velocity,
                 )
             }

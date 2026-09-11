@@ -74,11 +74,21 @@ THE SET). It is the share of each pair of 16ths the first takes: 50 is
 straight, 66 a triplet feel, 75 the dotted-8th. `OrbitClock.swingFrames`
 pushes every **odd step** late by (swing − 50) / 50 of a 16th, on every
 ring whose step *is* a 16th (`stepIsSixteenth`: every free ring, and a
-spanned ring whose steps fill its laps). A 3-step ring across a bar has no
-offbeat 16ths to push and is left straight. The offset lives in
-`stepOffset`, so the engine, the strike flare, the bounce and the MPC clip
-all carry it, and the ring draws each hit where it fires — a swung offbeat
-sits late on the ring as it does in time.
+spanned ring whose steps fill its laps — asked as `periodSteps == steps`,
+a question about the music with no sample rate in it). A 3-step ring
+across a bar has no offbeat 16ths to push and is left straight.
+
+Swing and a hit's own `offset` are two layers, and they meet in two
+places rather than one. The engine, the strike flare and the bounce count
+frames: `stepOffset` carries the set's swing, `firingOffset` adds the
+hit's lean, and the ring draws each hit where it fires — a swung offbeat
+sits late on the ring as it does in time. The MPC clip counts pulses and
+never converts out of them: `stepPulses` carries the swing as
+`Mpc3Clip.swingPush` itself, `firingPulses` adds the lean (already in
+pulses, so nothing is converted at all), and `pulseFirings` walks the laps
+— the same walk `firings` uses, so the two cannot disagree about which
+laps a hit lands on. A clip is musical time, so the same set exports the
+same pulses whatever rate it happens to be playing at.
 
 ## Level and pan
 
@@ -184,8 +194,9 @@ choice, not a surprise.
 | `loop/OrbitBank.kt` | The prepared audio for a set: pads at the device rate, snips fitted to their periods, each with its `FitReport` and its peaks for the ring's waveform. Immutable; an edit prepares a new one reusing the last |
 | `loop/LoopFit.kt` | `LoopFit` (as is · trimmed · padded · sliced), `FitReport` and its label, `FittedLoop` — what `BlockBaker.fitLoopReported` says it did |
 | `loop/OrbitEngine.kt` | The transport: fixed 2048-frame blocks, hits scheduled per block, voices mixed, snips wrapped, written to the same `AudioSink` the loop grid uses. `render` is the offline bounce and the test harness |
-| `loop/OrbitStore.kt` | `orbits.json` (version 3; versions 1 and 2 still load, their lock becoming a one-bar span), a sidecar beside the kit like `groove.json` |
+| `loop/OrbitStore.kt` | `orbits.json` (version 4; versions 1–3 still load — a v1/v2 lock becomes a one-bar span, and a hit with no `offset` sits on its step), a sidecar beside the kit like `groove.json` |
 | `loop/OrbitClip.kt` | One cycle as an MPC clip in `groove.json`, counted in the clip's own 4/4 bars whatever the set's bar, and the 64-bar refusal both outputs share |
+| `loop/OrbitFeel.kt` | Pocket for rings: a `GrooveFeel` donor's sixteen per-position offsets laid onto hits, a seeded humanised take, or straight again. Writes `OrbitHit.offset` — pulses late or early of the step, which is the only place a feel or a jitter can live on a ring |
 | `loop/OrbitPatterns.kt` | Euclid, SPREAD, CLEAR, the dice, TURN, `place` (what REC writes), a copy's name, the weight cycle, the step-size choices |
 | `loop/OrbitPresets.kt` | The starter set from a kit — one ring per instrument the kit has (KICK 16 · SNARE 16 · HATS 12 · PERC 20 · THREE, a locked triplet · BASS 20 over the tonal pads) — and the empty-ring and snip-ring constructors |
 | `app/OrbitSampleSource.kt` | Pads from the kit shelf via `KitSampleSource`, snips from `snips/` |

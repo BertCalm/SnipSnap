@@ -124,7 +124,11 @@ class OrbitStoreTest {
         assertTrue(loaded.orbits[2].pads.isEmpty())
         // Saved again, it is a current-version file with the voice written out.
         val text = OrbitStore.save(loaded, dir).readText()
-        assertTrue(text.contains("\"version\":3") || text.contains("\"version\": 3"), text.take(80))
+        // The constant, not a literal: this asserts "re-saving upgrades to
+        // whatever the current version is", and a literal only says that
+        // until the next bump - it went stale on the very next one.
+        val v = OrbitStore.VERSION
+        assertTrue(text.contains("\"version\":$v") || text.contains("\"version\": $v"), text.take(80))
         assertTrue(text.contains("\"voice\""))
     }
 

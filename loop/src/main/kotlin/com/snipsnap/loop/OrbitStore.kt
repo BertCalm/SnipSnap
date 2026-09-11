@@ -16,12 +16,14 @@ object OrbitStore {
     const val FILE_NAME = "orbits.json"
 
     /**
+     * 4: a hit may carry an `offset` — its lean off its step, in pulses. A
+     * hit without one sits on its step, which is where every hit sat before.
      * 3: a ring has a `span` (FREE, HALF, ONE, TWO, FOUR) where 2 had a
      * boolean `lockToBar` and 1 had a `mode`. Every older file still loads:
      * `lockToBar: true` and `SAME_LAP` both become `ONE`, and a version 1
      * ring's voice is the pads its hits already named.
      */
-    const val VERSION = 3
+    const val VERSION = 4
     private const val FIRST_VERSION = 1
 
     fun save(set: OrbitSet, dir: File): File {
@@ -85,6 +87,10 @@ object OrbitStore {
                                 "step" to num(it.step),
                                 "slot" to num(it.slot),
                                 "velocity" to num(it.velocity),
+                                // Only when it leans: a straight hit keeps
+                                // the shape it always had, so a version 4 file
+                                // grows a field only where one is needed.
+                                *(if (it.offset != 0L) arrayOf("offset" to num(it.offset)) else emptyArray()),
                             ),
                         )
                     },
@@ -153,6 +159,9 @@ object OrbitStore {
             step = h["step"]?.int() ?: 0,
             slot = h["slot"]?.int() ?: 1,
             velocity = (h["velocity"]?.num() ?: 1.0).toFloat(),
+            // Absent in versions 1..3, and absent in a version 4 file whose
+            // hits are straight. Either way the hit sits on its step.
+            offset = h["offset"]?.long() ?: 0L,
         )
     }
 }
