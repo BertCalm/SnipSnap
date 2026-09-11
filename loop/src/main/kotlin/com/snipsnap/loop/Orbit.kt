@@ -1,5 +1,7 @@
 package com.snipsnap.loop
 
+import com.snipsnap.mpc3.Mpc3Clip
+
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
@@ -11,11 +13,33 @@ data class OrbitHit(
     /** Pad slot in the referenced kit, 1-based, matching KitPad.slot. */
     val slot: Int,
     val velocity: Float = 1f,
+    /**
+     * Pulses this hit lands late (+) or early (−) of its step.
+     *
+     * Where a pocket lives. The set's `swing` is one number for the whole
+     * set and can only push the odd 16th of a pair; a feel template is
+     * sixteen different numbers, a humanised take is one per hit, and
+     * neither has anywhere to go without this. In pulses rather than
+     * frames because a set outlives the device it was made on: frames
+     * would shift the whole pocket when the same file opened at a
+     * different sample rate.
+     */
+    val offset: Long = 0L,
 ) {
     init {
         require(step >= 0) { "step must not be negative: $step" }
         require(slot >= 1) { "slot is 1-based: $slot" }
         require(velocity in 0f..1f) { "velocity out of range: $velocity" }
+        require(offset in -MAX_OFFSET..MAX_OFFSET) { "offset out of range: $offset" }
+    }
+
+    companion object {
+        /**
+         * A 16th either way. Past that a hit reads as belonging to a
+         * different step, and the step is what the ring draws - a pocket
+         * that deep is a hit somewhere else, entered somewhere else.
+         */
+        const val MAX_OFFSET: Long = Mpc3Clip.PULSES_PER_16TH
     }
 }
 
@@ -186,8 +210,11 @@ data class OrbitSet(
         const val MAX_ORBITS = 8
         const val DEFAULT_LAP_STEPS = 16
 
-        const val STRAIGHT_SWING = 50
-        const val MAX_SWING = 75
+        // The MPC's scale, not a second copy of it: a ring's swing percent
+        // means what the exported clip's does, so it is defined where the
+        // rest of the format's arithmetic lives.
+        const val STRAIGHT_SWING = Mpc3Clip.STRAIGHT_SWING
+        const val MAX_SWING = Mpc3Clip.MAX_SWING
 
         /** The swings worth a chip: the MPC's own ladder, straight to dotted. */
         val SWING_CHOICES: List<Int> = listOf(50, 54, 58, 62, 66, 71, 75)
@@ -289,6 +316,10 @@ object OrbitClock {
     fun swingFrames(set: OrbitSet, orbit: Orbit, step: Int): Double {
         if (step % 2 == 0 || set.swing == OrbitSet.STRAIGHT_SWING) return 0.0
         if (!stepIsSixteenth(set, orbit)) return 0.0
+        // The exact ratio, deliberately not the export's rounded pulse: a
+        // frame is finer than a pulse, and the two still agree where it
+        // counts, because `clip` rounds frames to pulses on the way out.
+        // Verified across the whole 50..75 ladder.
         return (set.swing - OrbitSet.STRAIGHT_SWING) / 50.0 * stepFrames(set)
     }
 
@@ -352,7 +383,11 @@ object OrbitClock {
         val period = periodFrames(set, orbit)
         val out = ArrayList<Firing>()
         for (hit in content.hits) {
-            val offset = stepOffset(set, orbit, hit.step)
+            // The step's place on the ring, then the hit's own lean off it.
+            // A hit dragged before step 0 has nowhere earlier to go on this
+            // lap, so it sounds at the end of the previous one - which is
+            // what a pickup before the downbeat is.
+            val offset = stepOffset(set, orbit, hit.step) + offsetFrames(set, hit)
             // First lap whose copy of this hit lands at or after `from`.
             var lap = Math.floorDiv(from - offset, period)
             if (lap * period + offset < from) lap++
@@ -365,6 +400,14 @@ object OrbitClock {
         out.sortBy { it.frame }
         return out
     }
+
+    /**
+     * [hit]'s own [OrbitHit.offset] in frames at the set's tempo — pulses
+     * are what a set stores, frames are what the engine counts.
+     */
+    fun offsetFrames(set: OrbitSet, hit: OrbitHit): Long =
+        if (hit.offset == 0L) 0L
+        else Math.round(hit.offset.toDouble() / Mpc3Clip.PULSES_PER_16TH * stepFrames(set))
 
     data class Firing(val hit: OrbitHit, val frame: Long)
 

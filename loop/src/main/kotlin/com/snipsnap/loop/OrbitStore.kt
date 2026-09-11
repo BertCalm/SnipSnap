@@ -21,7 +21,7 @@ object OrbitStore {
      * `lockToBar: true` and `SAME_LAP` both become `ONE`, and a version 1
      * ring's voice is the pads its hits already named.
      */
-    const val VERSION = 3
+    const val VERSION = 4
     private const val FIRST_VERSION = 1
 
     fun save(set: OrbitSet, dir: File): File {
@@ -85,6 +85,10 @@ object OrbitStore {
                                 "step" to num(it.step),
                                 "slot" to num(it.slot),
                                 "velocity" to num(it.velocity),
+                                // Only when it leans: a straight set writes
+                                // the same bytes it always did, so version 4
+                                // is a file older builds' shapes still fit.
+                                *(if (it.offset != 0L) arrayOf("offset" to num(it.offset)) else emptyArray()),
                             ),
                         )
                     },
@@ -153,6 +157,9 @@ object OrbitStore {
             step = h["step"]?.int() ?: 0,
             slot = h["slot"]?.int() ?: 1,
             velocity = (h["velocity"]?.num() ?: 1.0).toFloat(),
+            // Absent in versions 1..3, and absent in a version 4 file whose
+            // hits are straight. Either way the hit sits on its step.
+            offset = h["offset"]?.num()?.toLong() ?: 0L,
         )
     }
 }
