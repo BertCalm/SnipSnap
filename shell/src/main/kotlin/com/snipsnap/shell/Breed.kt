@@ -68,11 +68,10 @@ object Breed {
 
         for (pad in a.pads.sortedBy { it.slot }) {
             val aSnip = WavReader.read(File(aDir, pad.sampleFile))
-            val partner = b.pad(pad.slot) ?: b.pads.sortedBy { it.slot }.firstOrNull { it.drumClass == pad.drumClass }
+            val partner = partnerOf(pad, b)
             val aRecipe = recipeOf(pad)
             val bRecipe = partner?.let { recipeOf(it) }
-            val canCross = partner != null && (aRecipe != null || bRecipe != null) &&
-                (aRecipe?.patch != null || aRecipe?.fx != null || bRecipe?.fx != null)
+            val canCross = partner != null && crossable(aRecipe, bRecipe)
             if (!canCross) {
                 place(model, pad, aSnip, pad.recipe, stamp)
                 kept += pad.slot
@@ -98,6 +97,41 @@ object Breed {
         model.save()
         return Report(model.kit, crossed, kept, audited)
     }
+
+    /** B's partner for [pad]: the pad on the same slot, else B's first pad of the same class. */
+    fun partnerOf(pad: KitPad, b: Kit): KitPad? =
+        b.pad(pad.slot) ?: b.pads.sortedBy { it.slot }.firstOrNull { it.drumClass == pad.drumClass }
+
+    /**
+     * Whether the coin has anything to throw for: A's own patch or rack,
+     * or B's rack over A's audio. B's patch alone is not enough — a
+     * captured pad has no engine to render B's patch through.
+     */
+    private fun crossable(aRecipe: PadRecipe?, bRecipe: PadRecipe?): Boolean =
+        (aRecipe != null || bRecipe != null) && (aRecipe?.patch != null || aRecipe?.fx != null || bRecipe?.fx != null)
+
+    /**
+     * The slots of [a] that would cross with [b] — what [breed] will do,
+     * before it does it, so the KIT screen can refuse a pick that would
+     * only copy A. The audit may still send some of these back; every
+     * slot [breed] reports as crossed or audited is in this list, and
+     * nothing else is.
+     */
+    fun crossable(a: Kit, b: Kit): List<Int> =
+        a.pads.sortedBy { it.slot }
+            .filter { pad -> partnerOf(pad, b)?.let { crossable(recipeOf(pad), recipeOf(it)) } == true }
+            .map { it.slot }
+
+    /**
+     * The slots of [kit] carrying something BREED can cross from this
+     * side: a synth patch or a rack. The BREED button's readout — a
+     * kit of plain captures counts zero here, which is the one
+     * number that explains "0 PADS CROSSED" before it happens.
+     */
+    fun recipePads(kit: Kit): List<Int> =
+        kit.pads.sortedBy { it.slot }
+            .filter { pad -> recipeOf(pad)?.let { it.patch != null || it.fx != null } == true }
+            .map { it.slot }
 
     /** A pad's recipe as the synth's own shape, or null for anything else (an era, a mutate, a keyed treatment, none). */
     fun recipeOf(pad: KitPad): PadRecipe? {

@@ -82,4 +82,42 @@ class BreedTest {
         assertFailsWith<IllegalArgumentException> { Breed.breed(aDir, b, File(temp, "Kept"), seed = 0) }
         assertFailsWith<IllegalArgumentException> { Breed.breed(aDir, b, File(temp, "Named"), name = "", seed = 0) }
     }
+
+    @Test
+    fun `crossable says beforehand exactly which slots breed will cross or audit, and recipePads counts the button's number`() {
+        val a = starter("factory", "Mother", 0)
+        val b = starter("lucky-dip", "Father", 3)
+        val mother = KitStore.load(a)
+        val father = KitStore.load(b)
+        val would = Breed.crossable(mother, father)
+        assertTrue(would.isNotEmpty())
+        val report = Breed.breed(a, b, File(temp, "Child"), seed = 1)
+        assertEquals(would, (report.crossed + report.audited).sorted(), "the pick's promise is the breed's report")
+        assertEquals(would, mother.pads.map { it.slot }.sorted().filter { it !in report.kept })
+        // A synth kit: every pad carries a patch, so the button counts them all.
+        assertEquals(mother.pads.map { it.slot }.sorted(), Breed.recipePads(mother))
+
+        // Two plain captures: nothing on either side, and the pick can say so before copying A.
+        val cDir = File(temp, "Caught")
+        val m = KitBuilderModel.create("Caught", cDir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        val dDir = File(temp, "Other")
+        val n = KitBuilderModel.create("Other", dDir)
+        n.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        n.save()
+        assertTrue(Breed.crossable(m.kit, n.kit).isEmpty(), "no recipe on either side")
+        assertTrue(Breed.recipePads(m.kit).isEmpty())
+        // A rack on one side is enough: a treated capture crosses its rack
+        // over the other kit's audio, whichever kit BREED is pressed from.
+        m.characterPad(1, "crushed", 0.7f)
+        assertEquals(listOf(1), Breed.recipePads(m.kit))
+        assertEquals(listOf(1), Breed.crossable(m.kit, n.kit), "A's rack")
+        assertEquals(listOf(1), Breed.crossable(n.kit, m.kit), "B's rack over A's audio")
+        assertTrue(Breed.recipePads(n.kit).isEmpty(), "the button on the plain kit still reads zero")
+        assertEquals(Copy.breedButton(0, 2), "BREED ▸ NO RECIPES HERE YET")
+        assertEquals(Copy.breedButton(1, 2), "BREED ▸ 1 OF 2 PADS HAS A RECIPE")
+        assertEquals(Copy.breedButton(2, 2), "BREED ▸ 2 OF 2 PADS HAVE RECIPES")
+    }
 }

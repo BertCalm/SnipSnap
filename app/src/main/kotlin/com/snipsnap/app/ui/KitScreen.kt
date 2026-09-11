@@ -56,6 +56,7 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitPad
+import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KeyPicker
 import com.snipsnap.shell.Layout
@@ -105,6 +106,8 @@ fun KitScreen(
     onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
     onInKey: () -> Unit,
     onTwins: () -> Unit,
+    /** BANK B tapped while nothing is on it: say what fills it (`Copy.BANK_B_EMPTY`) rather than flip to blanks. */
+    onBankEmpty: () -> Unit = {},
     /**
      * BREED (XX2 wired in): arms the pick-a-partner hand-off (`App.kt`'s
      * `pendingBreedWith`) and sends the user to the shelf to tap kit B —
@@ -266,33 +269,38 @@ fun KitScreen(
             }
         }
 
-        // The door onto bank B (September UAT, finding 11). Only drawn when
-        // there is a second bank to reach: nothing here fills one, so an
-        // always-present B would be a switch to sixteen pads the user has no
-        // way to put anything on. EVIL TWINS is what makes bank B exist.
-        if (bankCount > 1) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                for (b in 0 until bankCount) {
-                    val here = b == showing
-                    val filled = kit.pads.count { it.slot in PadBanks.slots(b) }
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .let { if (here) it.raisedBevel(scheme) else it.sunkenField(scheme) }
-                            .tapeClick(label = null, onClick = { bank = b }),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        TapeText(
-                            "BANK ${PadBanks.letter(b)} · $filled",
-                            TapeType.pixel,
-                            if (here) scheme.titleInk.tape else scheme.ink2.tape,
-                            maxLines = 1,
-                        )
-                    }
+        // The door onto bank B (September UAT, finding 11). Always drawn,
+        // even with only bank A filled: a second page that only appears
+        // once something is on it is a page nobody finds, and the BREED /
+        // bank B round found exactly that. An empty bank reads EMPTY and
+        // its tap says what fills it (REMIX BANK B ▸ deals the twins)
+        // rather than flipping to sixteen blanks the grid cannot fill.
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            for (b in 0 until maxOf(bankCount, 2)) {
+                val here = b == showing
+                val filled = kit.pads.count { it.slot in PadBanks.slots(b) }
+                val empty = b >= bankCount
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .let { if (here) it.raisedBevel(scheme) else it.sunkenField(scheme) }
+                        .tapeClick(label = null, onClick = { if (empty) onBankEmpty() else bank = b }),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(
+                        "BANK ${PadBanks.letter(b)} · ${if (empty) "EMPTY" else filled.toString()}",
+                        TapeType.pixel,
+                        when {
+                            here -> scheme.titleInk.tape
+                            empty -> scheme.ink3.tape
+                            else -> scheme.ink2.tape
+                        },
+                        maxLines = 1,
+                    )
                 }
             }
         }
@@ -394,19 +402,24 @@ fun KitScreen(
                     onClick = onSplit,
                 )
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 // BREED: this kit's own recipes crossed with a second kit's
                 // into a new child, kept beside this one — the shelf-level
                 // "pick a kit" hand-off (App.kt's pendingBreedWith) runs
                 // next, the same shape SNIPS → PAD already uses to pick a
-                // kit for a snip.
+                // kit for a snip. The label counts the pads with a recipe
+                // to cross (`Breed.recipePads`) and the line under it says
+                // what comes out, so "0 PADS CROSSED" is never the first
+                // word of the explanation. Still enabled at zero: the other
+                // kit's racks can cross over this one's audio.
                 ActionButton(
-                    "BREED ▸ CROSS TWO KITS",
+                    Copy.breedButton(Breed.recipePads(kit).size, kit.pads.size),
                     scheme,
                     enabled = !busy && kit.pads.isNotEmpty() && canBreed,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = onBreed,
                 )
+                TapeText(Copy.BREED_SUBTITLE, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth(), maxLines = 1)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (kind in TextureKits.KINDS) {
