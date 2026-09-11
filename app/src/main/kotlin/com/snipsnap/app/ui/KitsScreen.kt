@@ -201,10 +201,20 @@ fun KitsScreen(
     // way, a filter hides them, and a hidden filter restored on next open
     // is how a user decides the app lost their kits.
     var shelfFilter by remember { mutableStateOf<DubStamp.Status?>(null) }
-    // Filtering needs the stamps, and they arrive from IO a moment after
-    // the screen does. Until then the chip is not offered at all (below),
-    // so this only ever narrows against answers that are actually in.
-    val shownKits = ShelfFilter.apply(kits, shelfFilter) { dubStatuses[it.dir.path] }
+    // ONE condition decides both whether the chip is drawn and whether the
+    // filter bites, so the two cannot drift apart. A filter still applied
+    // with its chip off screen removes kits the user cannot get back:
+    // during SNIPS -> PAD that makes a kit unpickable for no stated reason,
+    // and on a shrinking shelf it strands the "TAP SHOW" the empty line
+    // promises. The stamps are part of it too - they arrive from IO a
+    // moment after the screen does, and a kit without one is claimed by no
+    // filter.
+    val filterOffered =
+        !assigningSnip && breedingFrom == null && kits.size > 1 && dubStatuses.isNotEmpty()
+    val shownKits =
+        ShelfFilter.apply(kits, ShelfFilter.effective(shelfFilter, filterOffered)) {
+            dubStatuses[it.dir.path]
+        }
 
     // DELETE/RENAME (Task 4): screen-level, not per-row — same shape as
     // SnipsScreen's own `confirmDelete`, so only one row's dialog is ever
@@ -246,7 +256,16 @@ fun KitsScreen(
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(Layout.LCD_HEADER_H.dp)
+                    // heightIn, not height: this header carries tappable chips
+                    // (SORT, and now SHOW), and a fixed LCD_HEADER_H of 40dp
+                    // capped them below MIN_HIT_TARGET however tall they asked
+                    // to be - a child cannot exceed a fixed parent. SORT has
+                    // been undersized here since it was written; adding a
+                    // second control to the same header is what made it worth
+                    // reading the constraint rather than the request. Other
+                    // tappable headers already take the taller of the two
+                    // (SplitScreen.kt's own LCD header).
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .lcdPanel(scheme)
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.CenterStart,
@@ -282,7 +301,7 @@ fun KitsScreen(
                         // most of the row, and this is the same shape as the
                         // SORT chip it sits beside. Offered only once the
                         // stamps are read - see `shownKits` above.
-                        if (dubStatuses.isNotEmpty()) {
+                        if (filterOffered) {
                             Box(
                                 Modifier
                                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
@@ -290,7 +309,10 @@ fun KitsScreen(
                                     // the TapeText below already says which state
                                     // is active, and an explicit label would
                                     // REPLACE it for TalkBack.
-                                    .tapeClick(label = null) { shelfFilter = ShelfFilter.next(shelfFilter) }
+                                    .tapeClick(label = null) {
+                                        shelfFilter =
+                                            ShelfFilter.nextFrom(shelfFilter, shownKits.isEmpty())
+                                    }
                                     .padding(horizontal = 4.dp),
                                 contentAlignment = Alignment.Center,
                             ) {

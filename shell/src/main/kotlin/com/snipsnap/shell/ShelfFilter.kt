@@ -43,6 +43,40 @@ object ShelfFilter {
     }
 
     /**
+     * The filter that is actually in force: [current] while the chip is
+     * [offered], and none of it otherwise.
+     *
+     * **The invariant this object exists to keep.** A filter narrows the
+     * shelf only while the control that undoes it is on screen. The screen
+     * hides that chip in three situations - a pick flow (SNIPS to PAD,
+     * BREED), a shelf too short to be worth filtering, and before the dub
+     * stamps have been read - and in every one of them a filter left
+     * quietly applied would remove kits with no way to get them back. The
+     * SNIPS to PAD case is the sharp one: a kit that cannot be seen cannot
+     * be picked, so a forgotten DRAFT filter would make a snip unplaceable
+     * on most of the shelf for no stated reason.
+     *
+     * Taking the rule rather than repeating the condition means the two
+     * cannot drift: whatever decides to draw the chip decides what filters.
+     */
+    fun effective(current: DubStamp.Status?, offered: Boolean): DubStamp.Status? =
+        if (offered) current else null
+
+    /**
+     * Where a tap on the chip goes, given whether the shelf is currently
+     * showing nothing ([showingNothing]).
+     *
+     * From an empty result it goes straight back to everything rather than
+     * on to the next state. `Copy.shelfFilterEmpty` promises the user that
+     * a tap brings their kits back, and plain [next] only keeps that
+     * promise from the last state in the cycle - from DRAFT it would step
+     * to DUBBED, which may be just as empty, and the line would have lied
+     * twice before anything came back.
+     */
+    fun nextFrom(current: DubStamp.Status?, showingNothing: Boolean): DubStamp.Status? =
+        if (showingNothing) null else next(current)
+
+    /**
      * [items] narrowed to [current], or all of them when it is null.
      *
      * [statusOf] answers null for a kit whose stamp has not been read yet.

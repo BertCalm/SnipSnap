@@ -99,6 +99,57 @@ class ShelfFilterTest {
         assertEquals(line.uppercase(java.util.Locale.ROOT), line, "TapeOS shouts: $line")
     }
 
+    /**
+     * The screen hides the chip during a pick flow (SNIPS to PAD, BREED),
+     * on a shelf too short to filter, and before the stamps are read. A
+     * filter left applied in any of those removes kits with no control on
+     * screen to bring them back - and during SNIPS to PAD a kit that
+     * cannot be seen cannot be picked, so a forgotten DRAFT filter would
+     * make a snip unplaceable on most of the shelf for no stated reason.
+     */
+    @Test
+    fun `a filter with no chip on screen does not bite`() {
+        for (status in DubStamp.Status.entries) {
+            assertNull(
+                ShelfFilter.effective(status, offered = false),
+                "$status must not narrow the shelf while its chip is hidden",
+            )
+            assertEquals(status, ShelfFilter.effective(status, offered = true))
+        }
+        assertNull(ShelfFilter.effective(null, offered = true))
+        assertNull(ShelfFilter.effective(null, offered = false))
+
+        // And through apply(), which is how the screen actually uses it.
+        assertEquals(
+            shelf,
+            ShelfFilter.apply(shelf, ShelfFilter.effective(DubStamp.Status.DRAFT, offered = false)) { it.status },
+            "every kit stays pickable while the chip is away",
+        )
+    }
+
+    /**
+     * `Copy.shelfFilterEmpty` tells the user a tap brings their kits back.
+     * Plain `next` only keeps that promise from the last state in the
+     * cycle: from DRAFT it steps to DUBBED, which may be just as empty, and
+     * the line would have lied twice before anything came back.
+     */
+    @Test
+    fun `a tap from an empty shelf goes straight back to everything`() {
+        for (status in DubStamp.Status.entries) {
+            assertNull(
+                ShelfFilter.nextFrom(status, showingNothing = true),
+                "the line promises one tap back, so $status must return to ALL",
+            )
+        }
+        // With kits on screen it is an ordinary cycle step.
+        for (status in ShelfFilter.CYCLE) {
+            assertEquals(
+                ShelfFilter.next(status),
+                ShelfFilter.nextFrom(status, showingNothing = false),
+            )
+        }
+    }
+
     @Test
     fun `the header chip and the row chip name a state the same way`() {
         for (status in DubStamp.Status.entries) {
