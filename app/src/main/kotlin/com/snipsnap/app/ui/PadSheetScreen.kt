@@ -223,6 +223,11 @@ fun PadSheetScreen(
 
     var voice by remember(model) { mutableStateOf<TapeVoice?>(null) }
     DisposableEffect(model) { onDispose { voice?.release() } }
+    // Set by `applyTreatment`/`applySmear` when a treatment lands; read
+    // (and cleared) by the effect under `audition` below, once the fresh
+    // model's audio is decoded. Keyed on the slot, not the model, because
+    // its whole job is to outlive the model swap those writes make.
+    var auditionOnRefresh by remember(slot) { mutableStateOf(false) }
     // Backgrounding mid-audition must stop the voice, not wait for this
     // composable to next leave composition (see ChopScreen's own fix).
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -282,6 +287,47 @@ fun PadSheetScreen(
         val v = TapeVoice(gained, rendered.sampleRate)
         voice = v
         v.start(0)
+    }
+
+    // A treatment that just landed plays itself. `applyTreatment` and
+    // `applySmear` swap [model] for a fresh instance, and `voice` is
+    // `remember(model)`-keyed, so a play from inside their coroutine
+    // would start a voice in a slot the new model never sees (and the old
+    // model's `DisposableEffect` would then release the wrong one —
+    // `applySmear`'s KDoc). This effect runs after the swap, once
+    // `refreshPadAudio` has decoded the new file into `snip`, so the
+    // voice it starts is the one HIT would: the treated sound, through
+    // the pad's SHAPE, the moment the toast says it landed.
+    LaunchedEffect(snip) {
+        val s = snip
+        if (auditionOnRefresh && s != null) {
+            auditionOnRefresh = false
+            builtModel.kit.pad(slot)?.let { audition(s, it.level, it) }
+        }
+    }
+
+    /**
+     * ◀ BEFORE: the pad as it sounded before its treatment — the newest
+     * bin entry for its file, the same take `unEraPad` would restore —
+     * through the same SHAPE and level as HIT, so the only difference
+     * between the two chips is the treatment. The chip only shows while
+     * a treatment is on and that take is still in the bin; a bin emptied
+     * between the frame and the tap says so rather than playing nothing.
+     */
+    fun playBefore(p: KitPad) {
+        if (busy) return
+        scope.launch {
+            val before = withContext(Dispatchers.IO) {
+                builtModel.binContents()
+                    .filter { it.originalName == p.sampleFile }
+                    .maxByOrNull { it.binnedAtMillis }
+                    ?.let { runCatching { Cleanup.toMono(WavReader.readCapped(it.file, TAPE_LOAD_MAX_SEC).snip) }.getOrNull() }
+            }
+            // The model swapped while the file was read: `voice` now
+            // belongs to the new one, so don't start a voice in the old slot.
+            if (model !== builtModel) return@launch
+            if (before != null) audition(before, p.level, p) else onToast(Copy.BIN_ITEM_GONE)
+        }
     }
 
     fun failure(action: String, e: Exception) {
@@ -449,13 +495,13 @@ fun PadSheetScreen(
      * re-read off the *fresh* pad instead, and the whole action is refused
      * (not silently applied to the wrong sound) if [slot]'s `sampleFile`
      * has changed since [p] was captured. [model] is swapped to the fresh
-     * instance on completion; this drops this screen's immediate re-
-     * audition of the treated result (`voice` is `remember(model)`-keyed,
-     * so writing to it from this coroutine after the swap would target an
-     * already-orphaned state slot, and the *next* [DisposableEffect] for
-     * the old model would then release a voice the new one never knew
-     * about) — the waveform and any later HIT still refresh correctly via
-     * `LaunchedEffect(model, slot)`, just not instantly.
+     * instance on completion, which is why the treated result is not
+     * auditioned from *this* coroutine: `voice` is `remember(model)`-keyed,
+     * so writing to it after the swap would target an already-orphaned
+     * state slot, and the *next* [DisposableEffect] for the old model
+     * would then release a voice the new one never knew about. The play
+     * rides [auditionOnRefresh] instead — `LaunchedEffect(model, slot)`
+     * decodes the new file, and the effect under `audition` plays it.
      */
     fun applySmear(m: KitBuilderModel, p: KitPad, amount: Float, padName: String) {
         val kitDir = m.kitDir
@@ -479,6 +525,7 @@ fun PadSheetScreen(
                         applied = true
                     }
                 }
+                if (applied) auditionOnRefresh = true
                 model = fresh
                 pendingMetadataSlots = emptySet()
                 onKitUpdated(fresh.kit)
@@ -604,6 +651,7 @@ fun PadSheetScreen(
                         applied = true
                     }
                 }
+                if (applied) auditionOnRefresh = true
                 model = fresh
                 pendingMetadataSlots = emptySet()
                 onKitUpdated(fresh.kit)
@@ -1476,6 +1524,9 @@ fun PadSheetScreen(
             busy = busy,
             onBack = ::requestBack,
             onHit = { snip?.let { audition(it, pad.level, pad) } },
+            // A/B: only while a treatment is on and the take before it is
+            // still in the bin (`binDaysLeft` is that entry's countdown).
+            onBefore = if (!isNoneState && binDaysLeft != null) ({ playBefore(pad) }) else null,
         )
 
         Column(
@@ -2068,6 +2119,7 @@ private fun PadSheetHeader(
     busy: Boolean,
     onBack: () -> Unit,
     onHit: () -> Unit,
+    onBefore: (() -> Unit)?,
 ) {
     Row(
         Modifier
@@ -2094,6 +2146,13 @@ private fun PadSheetHeader(
             }
         }
         Spacer(Modifier.weight(1f))
+        // ◀ BEFORE sits against ▶ HIT so an A/B is two taps in one place.
+        // Dimmed while busy: a treatment mid-write is about to swap the
+        // model, and the take it would play is about to change.
+        onBefore?.let {
+            HeaderChip("◀ BEFORE", scheme, Modifier.width(92.dp), enabled = !busy, onClick = it)
+            Spacer(Modifier.width(4.dp))
+        }
         HeaderChip("▶ HIT", scheme, Modifier.width(64.dp), onClick = onHit)
     }
 }
