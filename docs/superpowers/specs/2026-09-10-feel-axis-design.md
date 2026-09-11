@@ -205,7 +205,20 @@ FEEL reuses the SWING row shape exactly.
 shipped a layout collapse two builds ago (a stray `fillMaxHeight` starving
 `NeedleRoll`'s weight). Adding a row is exactly the change that
 reintroduces it, and no test will catch it. Device verification is part of
-this task.
+this task, not a follow-up.
+
+The risk rose after the ORBIT merge. GROOVE's non-recording column now
+carries **four** action rows - `PLAY`+`SWING`, the transient
+`FORK TO E`/`UNDO TAKE` pair, `HUMANIZE`/`EDIT STEPS`/`MIDI`, and
+`SONG`/`ORBIT`/... - plus a full-width `RECORD` and two lines of footer
+text. A fifth full-width row is genuinely tight on a ~390dp portrait
+phone, and the question cannot be settled by reading source.
+
+Required: build, install, screenshot, and confirm nothing is pushed off
+screen. **Stated fallback if it does not fit:** put FEEL in the `PLAY` row
+and let `► PLAY` shrink to an icon-width button, rather than reducing
+`NeedleRoll`'s weight - the roll is the screen's primary readout and
+starving it is the failure this screen already shipped once.
 
 ## 7. Consumers — all four, or it is a preview and not a lens
 
@@ -225,6 +238,18 @@ subtitle is "ON THE GRID, PUSHED LATE". The fix is disclosure in the idiom
 this screen already uses (SWING's readout says "RIDES PROG B"), so FEEL's
 says **"RIDES A · C · D"**. A test pins it so it cannot drift silently.
 
+**Everything else reads the persisted groove, not the live feel.**
+`ExportFormats`, `PackBuilder`, `JCard`, `LinerNotes`, `BeatTape` and
+`SessionBuilder` all call `GrooveStore.load(kitDir)` and take no
+`swingPercent`. They therefore already ignore the SWING control, and the
+feel inherits exactly the same behaviour by construction, since both are
+transient screen state. The consequence is real and should be named rather
+than discovered: **`MIDI ▸` and the full EXPORT path give different answers
+to "export my groove"** - the button applies swing and feel, the export
+path ships whatever is on disk. This is pre-existing, it is consistent
+between the two controls, and threading transient state into every export
+path is a larger change than this spec. Out of scope, stated.
+
 **Pre-existing bug fixed here:** `Arranger.arrange` calls `standard(base)`
 with no `swingPercent`, so **ARRANGE has silently ignored the SWING control
 since it shipped**. We are editing that exact line to thread feel through;
@@ -242,8 +267,11 @@ existing kits' arrangements sound like.
   It is a fix, but it is a behaviour change and must be stated in the
   commit, not discovered.
 - `GrooveVariations.humanize` becomes dead once `computeProgram` stops
-  calling it. Verify no other callers (`grep`, including `cli/` and tests)
-  and then remove it — do not assume.
+  calling it. Re-verified after the ORBIT merge: its only non-test caller is
+  `GrooveScreen.kt:187`. Confirm again at implementation time, then remove.
+  Note `GrooveVariations.standard` now has eleven non-test callers (the
+  merge added `GrooveEdit.kt:126`), so the `quantize` change reaches further
+  than the spec first recorded.
 
 ## 9. Out of scope, and why
 
