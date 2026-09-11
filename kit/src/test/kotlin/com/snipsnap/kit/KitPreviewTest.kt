@@ -63,11 +63,18 @@ class KitPreviewTest {
     fun `a choke with less than a fade left still ramps out`() {
         val dir = File(temp, "near-end")
         dir.mkdirs()
-        // At 120 BPM one pulse is 25 frames, so the choke lands 125 frames
-        // in - leaving this pad 35, fewer than a full fade.
+        // One pulse is RATE/960 * 60/bpm frames - about 23 at 120 BPM and
+        // 44.1 kHz - so the closing hit at pulse 5 lands near frame 115,
+        // leaving this pad 45 frames: fewer than a full fade.
         val padFrames = AutoPlace.CHOKE_FADE + 32
+        val chokeAt = Math.round(5 * (60.0 / 120 * KitPreview.RATE / 960.0)).toInt()
+        assertTrue(
+            chokeAt in (padFrames - AutoPlace.CHOKE_FADE + 1) until padFrames,
+            "the choke must land inside the pad's last fade for this to test anything: $chokeAt of $padFrames",
+        )
+
         WavWriter.write(File(dir, "A01_Open_01.wav"), Snip(FloatArray(padFrames) { 0.5f }, 1, KitPreview.RATE))
-        // The closing hit is near-silent so the measurement below reads the
+        // The closing hit is near-silent so the measurement reads the
         // choked pad's own level rather than the sum of the two.
         WavWriter.write(File(dir, "A02_Closed_01.wav"), Snip(FloatArray(400) { 0.001f }, 1, KitPreview.RATE))
         val kit = Kit(
@@ -86,10 +93,18 @@ class KitPreviewTest {
         )
         val out = KitPreview.render(kit, dir, clip = clip, tempoBpm = 120f)
 
-        val full = rms(out, 40, 80)
-        val tail = rms(out, padFrames - 12, padFrames)
+        val full = rms(out, 40, 43)
+        val atChoke = rms(out, chokeAt, chokeAt + 3)
+        val tail = rms(out, padFrames - 6, padFrames)
+
         assertTrue(full > 0.1f, "sanity: the pad is sounding before the choke ($full)")
-        assertTrue(tail < full / 3f, "the choked tail should be ramping away, not running out at full: $tail vs $full")
+        // The ramp has to START at full and reach silence across the 45
+        // frames left. A fixed 128-frame slope applied to a 45-frame tail
+        // also ends at zero - it just begins at 45/128 of the level, which
+        // is a step down at the choke instant: the click the ramp exists
+        // to avoid. Measuring only the last frames cannot tell them apart.
+        assertTrue(atChoke > full * 0.8f, "the ramp must begin at full: $atChoke vs $full")
+        assertTrue(tail < full / 3f, "and reach silence by the sample's end: $tail vs $full")
     }
 
     /** RMS over a frame window of an interleaved stereo render. */

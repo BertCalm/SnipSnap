@@ -320,13 +320,52 @@ class OrbitChokeTest {
             json.setLastModified(stamp)
         }
 
-        val stamp = System.currentTimeMillis()
+        // Dated ahead, so "has this file stopped being written?" is false
+        // no matter how long the run takes to get here. Reading a clock and
+        // hoping the next two lines land inside the settle window would be
+        // a race, not a test - and a slow CI box would fail it.
+        val stamp = System.currentTimeMillis() + 60_000
         saveAt(1, stamp)
         val source = KitSampleSource(dir)
         assertEquals(1, source.muteGroup("hats", 1))
 
         saveAt(2, stamp) // same mtime, different content
         assertEquals(2, source.muteGroup("hats", 1), "a same-tick re-edit must not read as the first one")
+    }
+
+    @Test
+    fun `a bank that reuses audio still re-reads the group`() {
+        // The branch that matters for a live edit: prepare, change the kit,
+        // prepare again passing the first bank as `previous`. The audio is
+        // reused from it - so a group carried along with the audio, rather
+        // than asked for again, would leave the next ORBIT block choking by
+        // yesterday's rule. Both directions: off to on, and on to off.
+        val dir = File.createTempFile("snipsnap-reuse", "").let { it.delete(); it.mkdirs(); it.deleteOnExit(); it }
+        val kitDir = File(dir, "hats").also { it.mkdirs() }
+        WavWriter.write(File(kitDir, "a.wav"), Snip(FloatArray(400) { 0.3f }, 2, 44_100), WavWriter.BitDepth.PCM_24)
+        val json = File(kitDir, KitStore.FILE_NAME)
+        var stamp = System.currentTimeMillis() + 60_000
+        fun save(group: Int) {
+            KitStore.save(Kit("hats", listOf(KitPad(slot = 1, sampleFile = "a.wav", muteGroup = group))), kitDir)
+            stamp += 1_000
+            json.setLastModified(stamp)
+        }
+
+        val source = KitSampleSource(dir)
+        val s = OrbitSet(listOf(Orbit("r", 16, PatternOrbit("hats", listOf(OrbitHit(0, 1))))), bpm, rate)
+
+        save(0)
+        val first = OrbitBank.prepare(s, source)
+        assertEquals(0, first.muteGroup("hats", 1), "no choke to begin with")
+
+        save(3)
+        val second = OrbitBank.prepare(s, source, previous = first)
+        assertTrue(first.pad("hats", 1) === second.pad("hats", 1), "the audio really was reused")
+        assertEquals(3, second.muteGroup("hats", 1), "but the group is the kit's current one")
+
+        save(0)
+        val third = OrbitBank.prepare(s, source, previous = second)
+        assertEquals(0, third.muteGroup("hats", 1), "and clearing it reaches the bank too")
     }
 
     @Test
