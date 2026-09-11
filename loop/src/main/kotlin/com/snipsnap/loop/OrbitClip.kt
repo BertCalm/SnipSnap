@@ -173,8 +173,9 @@ object OrbitClip {
         // The whole cycle in pulses. The clip is musical time, so it is
         // counted in the unit it is written in rather than converted out
         // of frames: a frame is the finer unit at any rate worth playing
-        // at, but `sampleRate` is only required to be positive, and under
-        // 16 frames per beat the conversion moves a note off its pulse.
+        // at, but `sampleRate` is only required to be positive, and with
+        // fewer than 960 frames to a beat — a rate below 16 × BPM hertz —
+        // the conversion moves a note off its pulse.
         val cycle = OrbitClock.cycleSteps(set) * Mpc3Clip.PULSES_PER_16TH
         val notes = ArrayList<Mpc3Note>()
         for (ring in set.orbits) {

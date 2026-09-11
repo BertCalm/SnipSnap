@@ -286,9 +286,10 @@ object OrbitClock {
      * ratio rounded on the way out. Those agree at every rate anyone
      * plays at, but not at every rate the type accepts: a set is valid at
      * any positive `sampleRate`, and once a frame is coarser than a pulse
-     * — under 16 frames per beat — rounding to a frame and back moves the
-     * note. At 120 BPM and 832 Hz a step is 104 frames but 240 pulses, and
-     * swing 58 came out a pulse late.
+     * — fewer than 960 frames in a beat, which is a rate below 16 × BPM
+     * hertz — rounding to a frame and back moves the note. At 120 BPM and
+     * 832 Hz there are 416 frames to a beat against 960 pulses, so a step
+     * is 104 frames but 240 pulses, and swing 58 came out a pulse late.
      */
     fun stepPulses(set: OrbitSet, orbit: Orbit, step: Int): Long =
         (step * ringStepPulses(set, orbit)).roundToLong() + swingPulses(set, orbit, step)
@@ -372,9 +373,20 @@ object OrbitClock {
         return (set.swing - OrbitSet.STRAIGHT_SWING) / 50.0 * stepFrames(set)
     }
 
-    /** Whether [orbit]'s step is one 16th of the set's tempo — every free ring's is, and a spanned ring's when its steps fill its laps. */
+    /**
+     * Whether [orbit]'s step is one 16th of the set's tempo — every free
+     * ring's is, and a spanned ring's when its steps fill its laps.
+     *
+     * Asked of the ring's own arithmetic rather than of a frame distance,
+     * because "is this a 16th" is a question about the music and has no
+     * business consulting the sample rate. A half-frame tolerance answers
+     * it wrongly wherever a step is only a frame or two long: at 1 Hz a
+     * 15-step bar-locked ring has steps 1.07 frames apart against a 16th
+     * of 1, which came within tolerance, and the export swung the odd
+     * steps of a ring that has no pairs of 16ths to swing.
+     */
     fun stepIsSixteenth(set: OrbitSet, orbit: Orbit): Boolean =
-        abs(ringStepFrames(set, orbit) - stepFrames(set)) < 0.5
+        periodSteps(set, orbit) == orbit.steps
 
     /** How far round the ring the playhead is at [frame], 0 inclusive to 1 exclusive. */
     fun phase(set: OrbitSet, orbit: Orbit, frame: Long): Double {
@@ -498,9 +510,16 @@ object OrbitClock {
      * [hit]'s own [OrbitHit.offset] in frames at the set's tempo — pulses
      * are what a set stores, frames are what the engine counts.
      */
-    fun offsetFrames(set: OrbitSet, hit: OrbitHit): Long =
-        if (hit.offset == 0L) 0L
-        else Math.round(hit.offset.toDouble() / Mpc3Clip.PULSES_PER_16TH * stepFrames(set))
+    fun offsetFrames(set: OrbitSet, hit: OrbitHit): Long {
+        if (hit.offset == 0L) return 0L
+        // Round the magnitude, then put the sign back. `Math.round` breaks
+        // ties toward positive infinity, so a lean landing on half a frame
+        // rounds out late and back early: at 8 kHz a +3 pulse lean was 13
+        // frames and a -3 was 12, and an equal pair was not a pair. It also
+        // biased a humanised take late, every tie in one direction.
+        val frames = Math.round(abs(hit.offset).toDouble() / Mpc3Clip.PULSES_PER_16TH * stepFrames(set))
+        return if (hit.offset < 0L) -frames else frames
+    }
 
     data class Firing(val hit: OrbitHit, val frame: Long)
 

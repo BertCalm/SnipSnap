@@ -220,6 +220,63 @@ class OrbitFeelTest {
     }
 
     @Test
+    fun `an early lean and a late lean of the same size are opposites`() {
+        // `Math.round` breaks ties toward positive infinity, so a lean
+        // landing on exactly half a frame used to round out late and back
+        // early. 8 kHz is where a 3-pulse lean is 12.5 frames: it came
+        // back +13 and -12, so nudging a hit early and late by the same
+        // amount did not move it the same distance.
+        //
+        // Small, and one-directional, which is the part that matters: a
+        // humanised take draws symmetric offsets, and every tie in it
+        // rounded the same way.
+        val s = OrbitSet(listOf(ring(16, hits = arrayOf(OrbitHit(0, 1)))), bpm, 8_000)
+        for (pulses in 1L..OrbitHit.MAX_OFFSET) {
+            val late = OrbitClock.offsetFrames(s, OrbitHit(0, 1, offset = pulses))
+            val early = OrbitClock.offsetFrames(s, OrbitHit(0, 1, offset = -pulses))
+            assertEquals(-late, early, "a lean of $pulses pulses must go the same distance both ways")
+        }
+    }
+
+    @Test
+    fun `a spanned ring whose steps do not fill its laps is left straight at any rate`() {
+        // The declined ask, held at every rate the type accepts. A 15-step
+        // bar-locked ring has no pairs of 16ths to swing, so swing must
+        // not touch it — but `stepIsSixteenth` used to answer from a
+        // half-frame tolerance, and at 1 Hz its steps are 1.07 frames
+        // apart against a 16th of 1. That came within tolerance, and the
+        // export swung a ring that has no offbeats.
+        //
+        // `periodSteps == steps` asks the musical question instead: the
+        // ring's step is a 16th exactly when its step count equals its
+        // length in 16ths, which no sample rate can change.
+        val fifteen = Orbit(
+            "b",
+            15,
+            PatternOrbit("kit", (0 until 15).map { OrbitHit(it, 1) }),
+            span = OrbitSpan.ONE,
+        )
+        for (rate in listOf(1, 100, 1_000, 48_000)) {
+            val s = OrbitSet(listOf(fifteen), bpm, rate, swing = OrbitSet.MAX_SWING)
+            assertTrue(!OrbitClock.stepIsSixteenth(s, fifteen), "a 15-step ring in a 16-step bar at $rate Hz")
+            assertEquals(0L, OrbitClock.swingPulses(s, fifteen, 1), "the export must not swing it at $rate Hz")
+            assertEquals(0.0, OrbitClock.swingFrames(s, fifteen, 1), "nor may the engine, at $rate Hz")
+        }
+
+        // And a ring whose steps DO fill its laps still swings, so the
+        // guard did not simply turn swing off for spanned rings.
+        val sixteen = Orbit(
+            "a",
+            16,
+            PatternOrbit("kit", (0 until 16).map { OrbitHit(it, 1) }),
+            span = OrbitSpan.ONE,
+        )
+        val swung = OrbitSet(listOf(sixteen), bpm, rate, swing = OrbitSet.MAX_SWING)
+        assertTrue(OrbitClock.stepIsSixteenth(swung, sixteen), "16 steps across a 16-step bar is a 16th")
+        assertEquals(Mpc3Clip.swingPush(OrbitSet.MAX_SWING), OrbitClock.swingPulses(swung, sixteen, 1))
+    }
+
+    @Test
     fun `the same set exports the same clip at any sample rate`() {
         // A clip is musical time. The rate a set happens to be playing at
         // is a property of the speakers, not of the notes, so it must not

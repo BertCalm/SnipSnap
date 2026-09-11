@@ -74,11 +74,21 @@ THE SET). It is the share of each pair of 16ths the first takes: 50 is
 straight, 66 a triplet feel, 75 the dotted-8th. `OrbitClock.swingFrames`
 pushes every **odd step** late by (swing − 50) / 50 of a 16th, on every
 ring whose step *is* a 16th (`stepIsSixteenth`: every free ring, and a
-spanned ring whose steps fill its laps). A 3-step ring across a bar has no
-offbeat 16ths to push and is left straight. The offset lives in
-`stepOffset`, so the engine, the strike flare, the bounce and the MPC clip
-all carry it, and the ring draws each hit where it fires — a swung offbeat
-sits late on the ring as it does in time.
+spanned ring whose steps fill its laps — asked as `periodSteps == steps`,
+a question about the music with no sample rate in it). A 3-step ring
+across a bar has no offbeat 16ths to push and is left straight.
+
+Swing and a hit's own `offset` are two layers, and they meet in two
+places rather than one. The engine, the strike flare and the bounce count
+frames: `stepOffset` carries the set's swing, `firingOffset` adds the
+hit's lean, and the ring draws each hit where it fires — a swung offbeat
+sits late on the ring as it does in time. The MPC clip counts pulses and
+never converts out of them: `stepPulses` carries the swing as
+`Mpc3Clip.swingPush` itself, `firingPulses` adds the lean (already in
+pulses, so nothing is converted at all), and `pulseFirings` walks the laps
+— the same walk `firings` uses, so the two cannot disagree about which
+laps a hit lands on. A clip is musical time, so the same set exports the
+same pulses whatever rate it happens to be playing at.
 
 ## Level and pan
 
