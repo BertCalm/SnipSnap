@@ -148,6 +148,19 @@ object GrooveFeel {
      * unaffected by [t], so "fully tight with a dragging snare" stays
      * reachable — that combination is most of the MPC catalogue, and a naive
      * single control would make it impossible.
+     *
+     * The `t == 0f` short-circuit deliberately skips [GrooveEdit.dedupeLouder].
+     * Every other value of [t] runs the map through it, so a clip carrying two
+     * notes at an identical (note, timePulses) address keeps both at the
+     * centre detent and collapses to the louder one at any other position on
+     * the axis. That is not an oversight: such clips are genuinely reachable
+     * — [CapturedGroove.clip] with a `quantizeTo` grid can bucket two hits
+     * from the same pad onto one pulse, and [GrooveStore.clipFromJson] reads
+     * `groove.json` written by another tool, with no uniqueness check on the
+     * way in ([Mpc3Clip]'s own constructor enforces none either). AS PLAYED
+     * must return exactly what is stored; a centre detent that silently edits
+     * the groove — even just by merging duplicate notes — would be a worse
+     * failure than a note-count step the moment [t] moves off zero.
      */
     fun applyFeel(clip: Mpc3Clip, t: Float, template: Template): Mpc3Clip {
         require(t in -1f..1f) { "feel wants -1..1, got $t" }
