@@ -40,12 +40,54 @@ object OrbitClip {
     /** Whether the clip's bar count differs from the set's, so the screen can say so. */
     fun countsDifferently(set: OrbitSet): Boolean = set.lapSteps != CLIP_BAR_STEPS
 
+    /**
+     * The rings carrying audio rather than notes. A clip has no way to
+     * hold one — a snip is a waveform, not a pulse and a velocity — so an
+     * export leaves them behind, and the screen says how many rather than
+     * letting the player discover it on the hardware.
+     */
+    fun snipRings(set: OrbitSet): List<String> =
+        set.orbits.filter { it.content is SnipOrbit }.map { it.name }
+
     /** Null when [set] fits, else the refusal in words. */
     fun refusal(set: OrbitSet): String? {
+        noNotes(set)?.let { return it }
         val bars = bars(set)
         if (bars <= MAX_BARS) return null
         val unit = if (countsDifferently(set)) "BARS OF 4/4" else "BARS"
         return "THE RINGS MEET EVERY $bars $unit — A CLIP STOPS AT $MAX_BARS. SHORTEN A RING."
+    }
+
+    /**
+     * Why [set] would write a clip with no notes in it at all, or null
+     * when at least one note would land.
+     *
+     * Four shapes arrive here and they are four different mistakes — an
+     * empty screen, a set that is all snips, everything muted, and rings
+     * that exist but have not been played onto yet — so each says its own
+     * thing instead of one refusal standing in for all of them. The last
+     * is the one worth the separate sentence: `+ PAD RING` makes an
+     * engaged ring with no hits, so the shape a player reaches first by
+     * simply making a ring and tapping CLIP is also the shape a single
+     * "nothing to clip" would explain worst.
+     *
+     * Silence here is not a harmless no-op. A note-less clip saves into
+     * `groove.json` like any other, and on a kit with no other groove it
+     * becomes the base — so the kit's beat, everywhere that reads one,
+     * is then nothing at all.
+     */
+    private fun noNotes(set: OrbitSet): String? {
+        if (set.orbits.isEmpty()) return "THERE ARE NO RINGS TO CLIP."
+        val patterns = set.orbits.filter { it.content is PatternOrbit }
+        if (patterns.isEmpty()) {
+            return "EVERY RING HERE IS A SNIP. A SNIP IS AUDIO, NOT NOTES — BOUNCE IT INSTEAD."
+        }
+        val engaged = patterns.filter { it.engaged }
+        if (engaged.isEmpty()) return "EVERY PATTERN RING IS MUTED. ENGAGE ONE TO CLIP IT."
+        if (engaged.none { (it.content as PatternOrbit).hits.isNotEmpty() }) {
+            return "NO RING HAS A HIT ON IT YET. TAP A STEP FIRST."
+        }
+        return null
     }
 
     /**

@@ -6,6 +6,7 @@ import com.snipsnap.mpc3.Mpc3Note
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class OrbitClipTest {
@@ -87,6 +88,66 @@ class OrbitClipTest {
         assertTrue(refusal != null && "323" in refusal, "expected the cycle length in the refusal: $refusal")
         val e = runCatching { OrbitClip.clip(s) }.exceptionOrNull()
         assertTrue(e is IllegalArgumentException)
+    }
+
+    @Test
+    fun `each shape that would clip nothing refuses, and says which shape it is`() {
+        // Four ways to reach a clip with no notes in it. They are four
+        // different mistakes, so each gets its own sentence rather than
+        // one refusal standing in for all of them.
+        val shapes = listOf(
+            "no rings at all" to OrbitSet(emptyList(), 120f, 48_000) to "NO RINGS",
+            "every ring a snip" to set(Orbit("tape", 16, SnipOrbit("a.wav"))) to "SNIP",
+            "every pattern muted" to set(pattern("off", 16, 1, listOf(0), engaged = false)) to "MUTED",
+            // What `+ PAD RING` makes before a step is tapped.
+            "a ring with no hits" to set(pattern("new", 16, 1, emptyList())) to "HIT",
+        )
+        val seen = mutableSetOf<String>()
+        for ((labelled, expect) in shapes) {
+            val (label, s) = labelled
+            val refusal = OrbitClip.refusal(s)
+            assertTrue(refusal != null, "$label should refuse, got null")
+            assertTrue(expect in refusal, "$label should say \"$expect\": $refusal")
+            assertTrue(seen.add(refusal), "$label repeats an earlier refusal: $refusal")
+            assertFailsWith<IllegalArgumentException>("$label should throw from clip()") { OrbitClip.clip(s) }
+        }
+    }
+
+    @Test
+    fun `a set that clips keeps clipping, and names the snip rings it leaves behind`() {
+        // A snip beside rings that do play is not a refusal - the clip
+        // carries what it can and the count is what the screen reports.
+        val mixed = set(
+            Orbit("tape", 16, SnipOrbit("a.wav")),
+            Orbit("more tape", 16, SnipOrbit("b.wav")),
+            pattern("on", 16, 2, listOf(4)),
+        )
+        assertEquals(null, OrbitClip.refusal(mixed))
+        assertEquals(listOf(37), OrbitClip.clip(mixed).notes.map { it.note })
+        assertEquals(listOf("tape", "more tape"), OrbitClip.snipRings(mixed))
+        assertEquals(emptyList(), OrbitClip.snipRings(set(pattern("on", 16, 2, listOf(4)))))
+    }
+
+    @Test
+    fun `refusing and clipping agree - a set that passes always carries a note`() {
+        // The invariant the refusal exists to hold: never a silent empty
+        // clip saved into groove.json, where it would become the kit's
+        // base and read as a kit whose beat is nothing.
+        val sets = listOf(
+            OrbitSet(emptyList(), 120f, 48_000),
+            set(Orbit("tape", 16, SnipOrbit("a.wav"))),
+            set(pattern("off", 16, 1, listOf(0), engaged = false)),
+            set(pattern("new", 16, 1, emptyList())),
+            set(pattern("on", 16, 1, listOf(0))),
+            set(pattern("new", 16, 1, emptyList()), pattern("on", 16, 2, listOf(4))),
+            set(pattern("off", 16, 1, listOf(0), engaged = false), pattern("on", 16, 2, listOf(4))),
+            set(pattern("four", 16, 1, listOf(0)), pattern("five", 20, 2, listOf(0, 10))),
+        )
+        for (s in sets) {
+            if (OrbitClip.refusal(s) == null) {
+                assertTrue(OrbitClip.clip(s).notes.isNotEmpty(), "passed refusal but clipped nothing")
+            }
+        }
     }
 
     @Test

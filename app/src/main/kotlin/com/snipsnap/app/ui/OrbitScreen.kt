@@ -575,7 +575,16 @@ fun OrbitScreen(
         scope.launch {
             val result = withContext(Dispatchers.IO) { runCatching { OrbitClip.save(kitDir, s) } }
             result.onSuccess { clip ->
-                onToast("${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC.")
+                // Snips are audio and a clip holds notes, so a snip ring
+                // cannot ride along. Say how many stayed behind rather than
+                // leave it to be discovered on the hardware.
+                val behind = OrbitClip.snipRings(s)
+                val left = if (behind.isEmpty()) {
+                    ""
+                } else {
+                    " ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED BEHIND — TAPE ▸ FOR THOSE."
+                }
+                onToast("${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC.$left")
             }.onFailure { e -> onToast("CLIP FAILED: ${e.message ?: e.javaClass.simpleName}") }
         }
     }

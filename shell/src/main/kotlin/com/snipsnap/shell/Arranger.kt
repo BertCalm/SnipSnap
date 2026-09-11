@@ -66,6 +66,16 @@ object Arranger {
             ?: throw IllegalArgumentException(
                 "no groove to arrange - chop with --groove, or import a .mid",
             )
+        // A stored groove with no notes is a real state, not a corrupt
+        // one: GrooveEdit.startEmpty writes exactly this when GROOVE opens
+        // on a kit that has recorded nothing yet, and ORBIT could write it
+        // too. There is no song to plan out of silence, so it refuses by
+        // name here - one line before the median arithmetic below, which
+        // has no element to index and would otherwise raise a bare
+        // IndexOutOfBoundsException instead of saying what is wrong.
+        require(base.notes.isNotEmpty()) {
+            "the groove \"${base.name}\" has no notes yet - record a take on GROOVE, or chop with --groove"
+        }
         val std = GrooveVariations.standard(base)
         val captured = std[0]
         val tight = std[1]
