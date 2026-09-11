@@ -63,6 +63,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
+import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.TapeDeckModel
 import java.io.File
@@ -683,8 +684,12 @@ private fun TapeDeckContent(
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         CassetteRow(
             // The header says what is going on while a RE-TRIM is live:
-            // which pad, which tape.
+            // which pad, which tape — in the pad's own colour, the way the
+            // PAD SHEET's chip carries it, so the deck reads as that pad's.
             title = retrim?.let { Copy.retrimHeader(it.padLabel, it.file.name) } ?: entry?.kit?.name ?: "TAPE",
+            titleColor = retrim?.let {
+                (it.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(it.drumClass)).tape
+            } ?: scheme.lcdInk.tape,
             model = model,
             position = position,
             onToast = onToast,
@@ -1027,6 +1032,8 @@ private fun WindButton(
 private fun CassetteRow(
     /** The kit's name, or `RE-TRIM A02 · BASS 5.WAV` while a RE-TRIM is live. */
     title: String,
+    /** The LCD ink, or the pad's own colour while a RE-TRIM is live. */
+    titleColor: androidx.compose.ui.graphics.Color,
     model: TapeDeckModel,
     position: () -> Double,
     onToast: (String) -> Unit,
@@ -1094,7 +1101,7 @@ private fun CassetteRow(
         TapeText(
             title,
             TapeType.marker,
-            scheme.lcdInk.tape,
+            titleColor,
             Modifier.weight(1f),
             maxLines = 1,
         )

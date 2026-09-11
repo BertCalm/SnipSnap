@@ -1,6 +1,7 @@
 # RE-TRIM: a pad goes back to its own tape
 
-**Status: rounds 1 and 2 built.** Round 3 (polish) is open. It answers
+**Status: all three rounds built.** Round 3 added the header chip in the
+pad's own colour, a HELP line, and the `TapeRetrim` design board. It answers
 one question a phone test asked: *once a recording is chopped and on a
 pad, how do I change the length of that chop?* Before this the honest
 answer was "you can't, directly"; now it is one tap.
@@ -192,8 +193,9 @@ is what tells you RE-TRIM will land where you expect before you tap it.
 2. **TAPE on the pad**: `RetrimRequest` in App, the new first rung in
    TAPE's load priority, the header, BACK ONTO with the metadata carry
    and the take, the PAD SHEET's line. `android-build` is the check.
-3. **Polish**: the refusal toasts on the sheet; BACK ONTO on INSTANT KIT's
-   slice list (out of scope until asked).
+3. **Polish**: the header chip in the pad's class colour, the HELP line,
+   the design board. BACK ONTO from INSTANT KIT stays out of scope until
+   asked.
 
 ## Open questions
 
