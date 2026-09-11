@@ -91,6 +91,14 @@ object Arranger {
             "the groove \"${base.name}\" has no notes yet - record a take on GROOVE, or chop with --groove"
         }
         val felt = if (feel != 0f && feelTemplate != null) GrooveFeel.applyFeel(base, feel, feelTemplate) else base
+        // Deliberately uniform, unlike GrooveScreen's exportMidi: this is
+        // NOT mirroring the A-E selector (that's what GrooveProgram.compute
+        // is for), it's picking clips for song SECTIONS by name - captured /
+        // tight / half / sparse are a song-structure choice, and "tight"
+        // here is the section named "variation", not a stand-in for PROG B.
+        // So it stays plain GrooveVariations.standard(felt, swingPercent),
+        // which puts felt into every slot including the swing one - ARRANGE
+        // differs from the screen's PROG B feel-exemption on purpose.
         val std = GrooveVariations.standard(felt, swingPercent)
         val captured = std[0]
         val tight = std[1]

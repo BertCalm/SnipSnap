@@ -825,18 +825,30 @@ fun GrooveScreen(
         midiBusy = true
         scope.launch {
             try {
-                // The kit's grooves as .mid files: the base plus its three
-                // mechanical derivations, plus E when it exists — the same
-                // set the A–E selector cycles through, reusing MidiGroove
-                // directly rather than going through ExportFormat.MIDI
-                // (which writes one clip per call, not this screen's
-                // "everything, at once" button).
-                // The feel the user is hearing, not the raw base — otherwise
-                // tightening a groove and exporting it hands back the
-                // untightened one, which is the whole defect this task exists
-                // to prevent.
-                val felt = if (feel == 0) exportBase else GrooveFeel.applyFeel(exportBase, feel / 100f, feelTemplate)
-                val clips = GrooveVariations.standard(felt, swingPercent) + listOfNotNull(eClip)
+                // The kit's grooves as .mid files: PROG A-D plus E when it
+                // exists, reusing MidiGroove directly rather than going
+                // through ExportFormat.MIDI (which writes one clip per call,
+                // not this screen's "everything, at once" button).
+                //
+                // This calls GrooveProgram.compute — the exact function the
+                // needle roll and playback clock already call — specifically
+                // so the screen and the export CANNOT diverge; the same
+                // reason Task 5 moved that function out to :kit in the first
+                // place. Building the four clips any other way (e.g.
+                // GrooveVariations.standard(felt, swingPercent), applying
+                // feel once and handing every slot the felt clip) would
+                // silently break PROG B's own on-screen exemption: compute()
+                // deliberately hands PROG B the UNFELT base, because swing
+                // quantizes internally and a felt clip would shift notes
+                // across its rounding boundary. Calling standard() directly
+                // here would export a Tight/Swing file that sounds felt even
+                // though the screen's PROG B never is — the exact "what you
+                // hear isn't what you exported" defect this task exists to
+                // close, just relocated to one of the four files instead of
+                // fixed.
+                val clips = (0 until 4).mapNotNull {
+                    GrooveProgram.compute(it, exportBase, swingPercent, feel, feelTemplate, eClip = null)
+                } + listOfNotNull(eClip)
                 val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
                 val written = withContext(Dispatchers.IO) {
                     val root = context.getExternalFilesDir("exports")
