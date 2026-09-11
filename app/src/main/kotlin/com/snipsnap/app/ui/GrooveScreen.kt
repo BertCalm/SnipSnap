@@ -57,6 +57,8 @@ import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.kit.GrooveEdit
+import com.snipsnap.kit.GrooveFeel
+import com.snipsnap.kit.GrooveProgram
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.GrooveVariations
 import com.snipsnap.kit.KitPreview
@@ -113,14 +115,6 @@ private const val GROOVE_SAVE_DEBOUNCE_MS = 1000L
 /** How long FORK TO E's own armed confirm (replacing an existing PROG E) stays armed before it disarms itself — same window as `TakesBinScreen`'s `EMPTY_BIN_ARM_MS`. */
 private const val GROOVE_FORK_ARM_MS = 3_000L
 
-/**
- * HUMANIZE's jitter amount, passed straight to [GrooveVariations.humanize].
- * The handoff names the control but not a number; 0.5 mirrors the
- * artboard's own captured-groove mock (`(rnd-0.5)*0.5` of a 16th) —
- * noticeably loose without wandering off the pocket.
- */
-private const val GROOVE_HUMANIZE_AMOUNT = 0.5f
-
 /** SWING's range and step, per the handoff; the artboard's own default state is 62%. */
 private const val GROOVE_SWING_DEFAULT = 62
 private const val GROOVE_SWING_MIN = 50
@@ -176,20 +170,6 @@ private val LANE_DRUM_CLASS: Map<GrooveEdit.Lane, DrumClass> = mapOf(
  * dropped from the drawing.
  */
 private val NOTE_TO_LANE: Map<Int, GrooveEdit.Lane> = GrooveEdit.Lane.entries.associateBy { GrooveEdit.noteFor(it) }
-
-/**
- * A–E as a pure function of the loaded state — used both by composition
- * (to render) and by the playback clock (to trigger), so the two can never
- * disagree about what's currently on screen.
- */
-private fun computeProgram(index: Int, base: Mpc3Clip, swingPercent: Int, seed: Int, eClip: Mpc3Clip?): Mpc3Clip? =
-    when (index) {
-        0 -> GrooveVariations.humanize(base, GROOVE_HUMANIZE_AMOUNT, seed)
-        1 -> GrooveVariations.swing(base, swingPercent)
-        2 -> GrooveVariations.halfTime(base)
-        3 -> GrooveVariations.sparse(base)
-        else -> eClip
-    }
 
 @Composable
 fun GrooveScreen(
@@ -325,6 +305,8 @@ fun GrooveScreen(
 
     var progIndex by remember(kitDir) { mutableIntStateOf(0) }
     var seed by remember(kitDir) { mutableIntStateOf(1) }
+    // Rolled once per seed, not per frame: the clock reads this every tick.
+    val feelTemplate = remember(seed) { GrooveFeel.generated(seed) }
     var swingPercent by remember(kitDir) { mutableIntStateOf(GROOVE_SWING_DEFAULT) }
     var playing by remember(kitDir) { mutableStateOf(false) }
     var posSteps by remember(kitDir) { mutableFloatStateOf(0f) }
@@ -418,8 +400,8 @@ fun GrooveScreen(
     // was already unreachable from this screen before this task and stays
     // that way; RECORD doesn't change what GROOVE can display, only how a
     // base gets here.
-    val currentClip = remember(progIndex, base, swingPercent, seed, eClip) {
-        base?.let { computeProgram(progIndex, it, swingPercent, seed, eClip) }
+    val currentClip = remember(progIndex, base, swingPercent, feelTemplate, eClip) {
+        base?.let { GrooveProgram.compute(progIndex, it, swingPercent, 0, feelTemplate, eClip) }
     }
     // Playback and MIDI export cover every note; the roll's five NAMED
     // lane columns only cover five of the kit's pads (the design) — a note
@@ -560,7 +542,7 @@ fun GrooveScreen(
     // The playback clock — a `withFrameNanos` loop converting elapsed wall
     // time to elapsed steps (TAPE's own dt-clamp lesson against a stale
     // frame gap fast-forwarding the needle). Notes are read live each
-    // tick via `computeProgram`, not a value captured when the loop
+    // tick via `GrooveProgram.compute`, not a value captured when the loop
     // started, so switching programs mid-play changes what's triggered on
     // the very next tick — matching the artboard's own `gToggle`.
     //
@@ -588,7 +570,16 @@ fun GrooveScreen(
     // between frames from a pointer callback, reads the SAME reference
     // point this loop just used — one formula, shared, per the plan's own
     // Design Question 5.
-    LaunchedEffect(playing, kitDir, entry.kit) {
+    // `feelTemplate` is a key too, not just read inside the loop: unlike
+    // `progIndex`/`swingPercent`/`base`/`eClip`, it is a plain `val` from
+    // `remember(seed)`, not Compose state — a reroll's new value would
+    // otherwise sit unseen in this coroutine's closure until some OTHER
+    // key change happened to restart it, leaving the clock playing a
+    // stale template while `currentClip` (recomputed on every
+    // `feelTemplate` change) had already moved on. Restarting costs
+    // nothing here for the same reason a kit change already does: `lastPos`
+    // is read from `posSteps`, which is state.
+    LaunchedEffect(playing, kitDir, entry.kit, feelTemplate) {
         if (!playing) return@LaunchedEffect
         var lastNanos = withFrameNanos { it }
         var lastPos = posSteps
@@ -616,7 +607,7 @@ fun GrooveScreen(
                 val dtNanos = (now - lastNanos).coerceIn(0, GROOVE_STEP_MAX_NANOS)
                 lastNanos = now
                 val currentBase = base
-                val clip = currentBase?.let { computeProgram(progIndex, it, swingPercent, seed, eClip) }
+                val clip = currentBase?.let { GrooveProgram.compute(progIndex, it, swingPercent, 0, feelTemplate, eClip) }
                 val totalSteps = ((clip?.bars ?: recordBars) * GrooveEdit.STEPS_PER_BAR).toFloat()
                 val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
                 val stepsPerSecond = bpm / 60.0 * 4.0
