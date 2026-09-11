@@ -1211,8 +1211,12 @@ private fun RingsCanvas(
                         val color = padColor(kit, hit.slot, inkColor)
                         val dotR = (2.5f + 2.5f * hit.velocity) * screenDensity
                         val pitch = if (pads.size > 1) (pads.indexOf(hit.slot).coerceAtLeast(0).toFloat() / (pads.size - 1) - 0.5f) else 0f
-                        // Drawn where it fires, so a swung offbeat sits late on the ring as it does in time.
-                        val at = geometry.point(r + pitch * 8f * screenDensity, OrbitClock.stepOffset(set, ring, hit.step).toDouble() / OrbitClock.periodFrames(set, ring))
+                        // Drawn where it fires, so a swung offbeat - or one
+                        // given a pocket of its own - sits late on the ring
+                        // as it does in time. firingOffset, not stepOffset:
+                        // the latter knows the step's place and the set's
+                        // swing but not the hit's own lean.
+                        val at = geometry.point(r + pitch * 8f * screenDensity, OrbitClock.firingOffset(set, ring, hit).toDouble() / OrbitClock.periodFrames(set, ring))
                         val flare = if (heard && playing) {
                             val since = OrbitClock.framesSinceFiring(set, ring, hit, frame)
                             (1f - since.toFloat() / (set.sampleRate * FLARE_SECONDS)).coerceIn(0f, 1f)

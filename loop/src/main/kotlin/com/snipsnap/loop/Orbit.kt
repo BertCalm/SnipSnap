@@ -387,7 +387,7 @@ object OrbitClock {
             // A hit dragged before step 0 has nowhere earlier to go on this
             // lap, so it sounds at the end of the previous one - which is
             // what a pickup before the downbeat is.
-            val offset = stepOffset(set, orbit, hit.step) + offsetFrames(set, hit)
+            val offset = firingOffset(set, orbit, hit)
             // First lap whose copy of this hit lands at or after `from`.
             var lap = Math.floorDiv(from - offset, period)
             if (lap * period + offset < from) lap++
@@ -400,6 +400,18 @@ object OrbitClock {
         out.sortBy { it.frame }
         return out
     }
+
+    /**
+     * The frame within a lap on which [hit] actually sounds: its step's
+     * grid place, the set's swing, and the hit's own lean.
+     *
+     * Everything that answers "when does this hit happen" goes through
+     * here — the engine, the export, and the ring the screen draws. They
+     * were three separate sums of the same parts, and a hit given a pocket
+     * sounded late while its dot stayed on the grid.
+     */
+    fun firingOffset(set: OrbitSet, orbit: Orbit, hit: OrbitHit): Long =
+        stepOffset(set, orbit, hit.step) + offsetFrames(set, hit)
 
     /**
      * [hit]'s own [OrbitHit.offset] in frames at the set's tempo — pulses
@@ -419,8 +431,7 @@ object OrbitClock {
      */
     fun framesSinceFiring(set: OrbitSet, orbit: Orbit, hit: OrbitHit, frame: Long): Long {
         val period = periodFrames(set, orbit)
-        val offset = stepOffset(set, orbit, hit.step)
-        return Math.floorMod(frame - offset, period)
+        return Math.floorMod(frame - firingOffset(set, orbit, hit), period)
     }
 
     private fun lcm(a: Long, b: Long): Long = a / gcd(a, b) * b

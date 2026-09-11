@@ -144,6 +144,42 @@ class OrbitFeelTest {
         assertEquals(2L, (feeling.orbits[0].content as PatternOrbit).hits.single().offset)
     }
 
+    // ---- the ring the screen draws is the ring you hear ----
+
+    @Test
+    fun `the flare follows the hit's lean, not its step`() {
+        // The dot's position and the strike flare both read the firing
+        // time. They used to sum the step's place and the swing and stop
+        // there, so a hit given a pocket sounded late while its dot sat on
+        // the grid - the engine and the screen disagreeing about one hit.
+        val leaning = OrbitHit(4, 1, offset = 60)
+        val r = ring(16, hits = arrayOf(leaning))
+        val s = set(r)
+        val sounds = OrbitClock.firings(s, r, 0, 16 * step).first().frame
+
+        assertEquals(sounds, OrbitClock.firingOffset(s, r, leaning), "the ring is drawn where the hit fires")
+        assertEquals(0L, OrbitClock.framesSinceFiring(s, r, leaning, sounds), "the flare strikes as it sounds")
+        // And on the step's old place it is nearly a whole lap stale.
+        assertTrue(OrbitClock.framesSinceFiring(s, r, leaning, 4 * step) > 0, "not still flaring on the grid")
+    }
+
+    @Test
+    fun `a ring and a clip agree on the pulse at every swing the panel offers`() {
+        // The contract the shared push exists for, across the whole ladder
+        // rather than at one percent. Each path reaches the pulse its own
+        // way - the ring through frames and a rounding, the clip through
+        // pulses directly - so a regression in either rounding puts them
+        // back a pulse apart without any single-path test noticing.
+        for (pct in OrbitSet.SWING_CHOICES) {
+            val r = ring(16, hits = arrayOf(OrbitHit(0, 1), OrbitHit(1, 1)))
+            val ringPulses = OrbitClip.clip(set(r, swing = pct)).notes.map { it.timePulses }
+            val flat = Mpc3Clip("G", 1, listOf(Mpc3Note(36, 0, 1f), Mpc3Note(36, s16, 1f)))
+            val clipPulses = com.snipsnap.kit.GrooveVariations.swing(flat, pct).notes.map { it.timePulses }
+            assertEquals(clipPulses, ringPulses, "a ring and a clip swung to $pct must write the same pulse")
+            assertEquals(listOf(0L, s16 + Mpc3Clip.swingPush(pct)), ringPulses, "and it is the shared push, at $pct")
+        }
+    }
+
     // ---- humanize ----
 
     @Test

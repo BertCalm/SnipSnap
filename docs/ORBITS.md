@@ -184,8 +184,9 @@ choice, not a surprise.
 | `loop/OrbitBank.kt` | The prepared audio for a set: pads at the device rate, snips fitted to their periods, each with its `FitReport` and its peaks for the ring's waveform. Immutable; an edit prepares a new one reusing the last |
 | `loop/LoopFit.kt` | `LoopFit` (as is · trimmed · padded · sliced), `FitReport` and its label, `FittedLoop` — what `BlockBaker.fitLoopReported` says it did |
 | `loop/OrbitEngine.kt` | The transport: fixed 2048-frame blocks, hits scheduled per block, voices mixed, snips wrapped, written to the same `AudioSink` the loop grid uses. `render` is the offline bounce and the test harness |
-| `loop/OrbitStore.kt` | `orbits.json` (version 3; versions 1 and 2 still load, their lock becoming a one-bar span), a sidecar beside the kit like `groove.json` |
+| `loop/OrbitStore.kt` | `orbits.json` (version 4; versions 1–3 still load — a v1/v2 lock becomes a one-bar span, and a hit with no `offset` sits on its step), a sidecar beside the kit like `groove.json` |
 | `loop/OrbitClip.kt` | One cycle as an MPC clip in `groove.json`, counted in the clip's own 4/4 bars whatever the set's bar, and the 64-bar refusal both outputs share |
+| `loop/OrbitFeel.kt` | Pocket for rings: a `GrooveFeel` donor's sixteen per-position offsets laid onto hits, a seeded humanised take, or straight again. Writes `OrbitHit.offset` — pulses late or early of the step, which is the only place a feel or a jitter can live on a ring |
 | `loop/OrbitPatterns.kt` | Euclid, SPREAD, CLEAR, the dice, TURN, `place` (what REC writes), a copy's name, the weight cycle, the step-size choices |
 | `loop/OrbitPresets.kt` | The starter set from a kit — one ring per instrument the kit has (KICK 16 · SNARE 16 · HATS 12 · PERC 20 · THREE, a locked triplet · BASS 20 over the tonal pads) — and the empty-ring and snip-ring constructors |
 | `app/OrbitSampleSource.kt` | Pads from the kit shelf via `KitSampleSource`, snips from `snips/` |
