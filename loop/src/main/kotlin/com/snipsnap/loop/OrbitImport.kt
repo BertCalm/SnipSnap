@@ -35,12 +35,21 @@ object OrbitImport {
     /**
      * A set built from [clip], and what could not come with it.
      *
-     * [skipped] is never silent: a note whose pad the kit does not have is
-     * left out and named, the same policy [OrbitBank] already applies at
-     * play time when a `(kit, slot)` is missing. It is not fatal either,
-     * *unless* it is everything — a clip naming no pad the kit has has
-     * nothing to open, and [rings] refuses rather than hand back an empty
-     * set, so a caller holding an [Imported] knows at least one pad came.
+     * [skipped] is never silent: a note whose pad the kit does not **list**
+     * is left out and named. It is not fatal either, *unless* it is
+     * everything — a clip naming no pad the kit has has nothing to open,
+     * and [rings] refuses rather than hand back an empty set, so a caller
+     * holding an [Imported] knows at least one pad came.
+     *
+     * Listed is the whole of what it checks. A pad the kit names whose WAV
+     * has gone is not caught here — `OrbitBank.pad` returns null for it at
+     * play time and the engine skips its hits, so the ring is silent and
+     * this report says nothing. That is not a gap this import opened:
+     * `OrbitPresets.fromKit` builds its rings off `kit.pads` the same way,
+     * so every ring in ORBIT is made from the kit's word rather than from
+     * its files. Worth fixing where rings are *made*, not here — an
+     * earlier draft of this doc claimed the bank's own policy, which is a
+     * different and stronger thing than what the code does.
      */
     data class Imported(
         val set: OrbitSet,

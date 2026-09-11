@@ -181,9 +181,15 @@ class OrbitEngine(
      *
      * A hit with [OrbitHit.WHOLE_SAMPLE] is left alone and plays its
      * sample out, which is what every hit did before lengths existed and
-     * what a drum wants: a kick is over when the kick is over. A gated
-     * hit stops where it is told, and the pads that want that are the
-     * ones the kit calls `oneShot = false`.
+     * what a drum wants: a kick is over when the kick is over. A gated hit
+     * stops where it is told.
+     *
+     * Any positive length gates any pad. This deliberately does not consult
+     * `KitPad.oneShot`: that is a boolean over what the corpus records as
+     * three trigger modes, so it cannot say whether a given pad reads a
+     * note's length, and gating on the guess would stop voices live that
+     * the hardware plays out. The length is the caller's instruction, and
+     * this honours it.
      *
      * It ends over the same ramp a choke uses rather than a fifth fade
      * length of its own. The two are the same act — a voice cut before
