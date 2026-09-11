@@ -57,6 +57,7 @@ import com.snipsnap.shell.DubStamp
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.SchemeId
+import com.snipsnap.shell.ShelfFilter
 import com.snipsnap.shell.StarterKits
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -194,6 +195,17 @@ fun KitsScreen(
         dubStatuses = read.mapValues { it.value.first }
         editedAges = read.mapNotNull { (k, v) -> v.second?.let { k to it } }.toMap()
     }
+    // SHELF FILTER (September UAT, finding 16): which dub state the shelf
+    // is narrowed to, or null for all of them. Screen-local and NOT
+    // persisted, unlike the sort beside it - a sort shows every kit either
+    // way, a filter hides them, and a hidden filter restored on next open
+    // is how a user decides the app lost their kits.
+    var shelfFilter by remember { mutableStateOf<DubStamp.Status?>(null) }
+    // Filtering needs the stamps, and they arrive from IO a moment after
+    // the screen does. Until then the chip is not offered at all (below),
+    // so this only ever narrows against answers that are actually in.
+    val shownKits = ShelfFilter.apply(kits, shelfFilter) { dubStatuses[it.dir.path] }
+
     // DELETE/RENAME (Task 4): screen-level, not per-row — same shape as
     // SnipsScreen's own `confirmDelete`, so only one row's dialog is ever
     // up regardless of how many rows are armed at once.
@@ -248,35 +260,69 @@ fun KitsScreen(
                     TapeType.lcdHeader,
                     scheme.lcdInk.tape,
                 )
-                // SORT toggle (name-and-find followups): RECENT (the
-                // default — most-recently-edited kit.json first, so a
-                // returning user's own last kit is right where they left
-                // it) vs A-Z. Hidden during SNIPS → PAD / BREED's own pick
-                // mode (the header's line is a hint there, not "THE
-                // SHELF") and with fewer than two kits, where an order has
-                // nothing to say.
+                // The shelf's two controls, in one row at the header's end.
+                //
+                // SORT (name-and-find followups): RECENT (the default —
+                // most-recently-edited kit.json first, so a returning
+                // user's own last kit is right where they left it) vs A-Z.
+                // SHOW (September UAT, finding 16) narrows to one dub
+                // state. Both are hidden during SNIPS → PAD / BREED's own
+                // pick mode (the header's line is a hint there, not "THE
+                // SHELF") and with fewer than two kits, where neither an
+                // order nor a filter has anything to say.
                 if (!assigningSnip && breedingFrom == null && kits.size > 1) {
-                    Box(
-                        Modifier
-                            .align(Alignment.CenterEnd)
-                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            // null, not an explicit label: the descendant
-                            // TapeText below already says which mode is
-                            // active ("SORT ▸ RECENT"/"SORT ▸ A–Z") — an
-                            // explicit label here would REPLACE that merged
-                            // text for TalkBack (Chrome.kt's own tapeClick
-                            // KDoc), leaving a screen-reader user unable to
-                            // hear which state they're toggling out of.
-                            .tapeClick(label = null, onClick = onToggleSort)
-                            .padding(horizontal = 4.dp),
-                        contentAlignment = Alignment.Center,
+                    Row(
+                        Modifier.align(Alignment.CenterEnd),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        TapeText(
-                            if (shelfSort == KitShelf.ShelfSort.RECENT) Copy.SHELF_SORT_RECENT else Copy.SHELF_SORT_ALPHA,
-                            TapeType.pixelSmall,
-                            scheme.amber.tape,
-                            maxLines = 1,
-                        )
+                        // SHOW cycles ALL → DRAFT → DUBBED → ON CARD → ALL
+                        // (September UAT, finding 16). One cycling chip rather
+                        // than four filter chips: four legal targets would take
+                        // most of the row, and this is the same shape as the
+                        // SORT chip it sits beside. Offered only once the
+                        // stamps are read - see `shownKits` above.
+                        if (dubStatuses.isNotEmpty()) {
+                            Box(
+                                Modifier
+                                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                                    // null for the same reason SORT passes null:
+                                    // the TapeText below already says which state
+                                    // is active, and an explicit label would
+                                    // REPLACE it for TalkBack.
+                                    .tapeClick(label = null) { shelfFilter = ShelfFilter.next(shelfFilter) }
+                                    .padding(horizontal = 4.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                TapeText(
+                                    Copy.shelfFilter(shelfFilter),
+                                    TapeType.pixelSmall,
+                                    scheme.amber.tape,
+                                    maxLines = 1,
+                                )
+                            }
+                        }
+                        Box(
+                            Modifier
+                                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                                // null, not an explicit label: the descendant
+                                // TapeText below already says which mode is
+                                // active ("SORT ▸ RECENT"/"SORT ▸ A–Z") — an
+                                // explicit label here would REPLACE that merged
+                                // text for TalkBack (Chrome.kt's own tapeClick
+                                // KDoc), leaving a screen-reader user unable to
+                                // hear which state they're toggling out of.
+                                .tapeClick(label = null, onClick = onToggleSort)
+                                .padding(horizontal = 4.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TapeText(
+                                if (shelfSort == KitShelf.ShelfSort.RECENT) Copy.SHELF_SORT_RECENT else Copy.SHELF_SORT_ALPHA,
+                                TapeType.pixelSmall,
+                                scheme.amber.tape,
+                                maxLines = 1,
+                            )
+                        }
                     }
                 }
             }
@@ -318,7 +364,22 @@ fun KitsScreen(
                         .padding(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    items(kits, key = { it.dir.name }) { entry ->
+                    // A filter that empties the shelf must say so itself: a
+                    // list that simply goes blank reads as lost work, not as
+                    // a filter. Names the state, the real count, and the tap
+                    // back (September UAT, finding 16).
+                    val hiddenBy = shelfFilter
+                    if (hiddenBy != null && shownKits.isEmpty()) {
+                        item(key = "filter-empty") {
+                            TapeText(
+                                Copy.shelfFilterEmpty(hiddenBy, kits.size),
+                                TapeType.pixelSmall,
+                                scheme.ink2.tape,
+                                maxLines = 2,
+                            )
+                        }
+                    }
+                    items(shownKits, key = { it.dir.name }) { entry ->
                         KitRow(
                             entry = entry,
                             armed = entry.dir.path in armedKitDirs,

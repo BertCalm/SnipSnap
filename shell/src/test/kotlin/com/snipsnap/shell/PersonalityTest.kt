@@ -378,6 +378,11 @@ class PersonalityTest {
         "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_NONE", "CARD_PICKED",
         "KONAMI_UNLOCK",
         "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
+        // The shelf filter's chip (finding 16) is the sort chip's twin and
+        // sits beside it, so it is furniture under the same rule. The
+        // filtered labels come from Copy.shelfFilter(), a function, which
+        // this reflective law does not reach - ShelfFilterTest holds those.
+        "SHELF_FILTER_ALL",
         // Permanent on-screen furniture, not toasts: the two legends that sit
         // under KIT's grid and the kit shelf's own list for as long as those
         // screens are open, and HELP's two section headings. ROOMS' third
