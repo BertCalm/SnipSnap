@@ -14,9 +14,11 @@ import kotlin.test.assertTrue
  *
  * `OrbitClip` ran one way, so a captured break, a `.mid` and PROG E were
  * all material the live engine could not play. The arithmetic had to wait
- * for two things: a bijective pad map (note 35 had no pad before, and note
- * 127 had ninety-seven), and a per-hit lean, without which a note off the
- * 16th grid could only be rounded onto it and lost.
+ * for two things: a bijective pad map (note 35 had no pad at all, and the
+ * old clamp collapsed all thirty-seven slots from 92 to 128 onto note 127,
+ * so no inverse could say which pad it meant — `slotFor(127)` is 92 now),
+ * and a per-hit lean, without which a note off the 16th grid could only be
+ * rounded onto it and lost.
  */
 class OrbitImportTest {
 
@@ -88,6 +90,48 @@ class OrbitImportTest {
             assertEquals(slot, hitsOf(imported.set).single().slot, "note $note")
             assertEquals(note, OrbitClip.clip(imported.set).notes.single().note, "note $note round-trips")
         }
+    }
+
+    @Test
+    fun `the lean is measured from where the hit fires, so a swung set does not push it twice`() {
+        // The import's promise is that material arrives where it was
+        // recorded. `stepPulses` adds the set's swing to every odd step, so
+        // an inverse that ignored swing was exact only into a straight set:
+        // joining a swung one moved the source groove by the whole push.
+        val notes = listOf(
+            Mpc3Note(36, 0, 1f),
+            Mpc3Note(36, s16 + 37, 0.8f),
+            Mpc3Note(38, 3 * s16, 0.7f),
+        )
+        for (swing in OrbitSet.SWING_CHOICES) {
+            val imported = OrbitImport.rings(clip(1, *notes.toTypedArray()), "break", kit(1, 3), bpm, rate, swing = swing)
+            assertEquals(swing, imported.set.swing)
+            assertEquals(
+                notes.map { it.timePulses }.sorted(),
+                OrbitClip.clip(imported.set).notes.map { it.timePulses }.sorted(),
+                "at swing $swing the notes must land where the clip put them",
+            )
+        }
+    }
+
+    @Test
+    fun `two notes the clip holds on one pad at one pulse become one hit, and are counted`() {
+        // A clip may legally hold them; `OrbitClip.clip` keeps the louder on
+        // the way out. Carrying both in would put two hits where only one
+        // can come back, so the round trip would lose a note this import
+        // had promised to carry. Deduped on the way in by the export's own
+        // rule, and reported rather than dropped in silence.
+        val dup = clip(
+            1,
+            Mpc3Note(36, 0, 0.4f),
+            Mpc3Note(36, 0, 0.9f),
+            Mpc3Note(38, s16, 0.5f),
+        )
+        val imported = OrbitImport.rings(dup, "break", kit(1, 3), bpm, rate)
+        assertEquals(1, imported.collisions)
+        assertTrue(!imported.complete, "a collision is something the player should be told about")
+        assertEquals(listOf(0.9f), hitsOf(imported.set).map { it.velocity }, "the louder one survives, as on export")
+        assertEquals(2, OrbitClip.clip(imported.set).notes.size, "and what comes back is what went in")
     }
 
     // ---- one clip, several rings ----

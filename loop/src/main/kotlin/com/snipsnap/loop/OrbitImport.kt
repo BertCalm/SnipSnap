@@ -1,5 +1,6 @@
 package com.snipsnap.loop
 
+import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.Kit
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
@@ -34,13 +35,22 @@ object OrbitImport {
     /**
      * A set built from [clip], and what could not come with it.
      *
-     * [skipped] is never silent and never fatal: a note whose pad the kit
-     * does not have is left out and named, the same policy [OrbitBank]
-     * already applies at play time when a `(kit, slot)` is missing.
+     * [skipped] is never silent: a note whose pad the kit does not have is
+     * left out and named, the same policy [OrbitBank] already applies at
+     * play time when a `(kit, slot)` is missing. It is not fatal either,
+     * *unless* it is everything — a clip naming no pad the kit has has
+     * nothing to open, and [rings] refuses rather than hand back an empty
+     * set, so a caller holding an [Imported] knows at least one pad came.
      */
-    data class Imported(val set: OrbitSet, val skipped: List<Skipped>, val shared: List<Int> = emptyList()) {
+    data class Imported(
+        val set: OrbitSet,
+        val skipped: List<Skipped>,
+        val shared: List<Int> = emptyList(),
+        /** Notes the clip held twice on one pad at one pulse, which only one of could ever sound. */
+        val collisions: Int = 0,
+    ) {
         /** Whether anything was left behind — worth a line on screen when true. */
-        val complete: Boolean get() = skipped.isEmpty()
+        val complete: Boolean get() = skipped.isEmpty() && collisions == 0
     }
 
     /** A pad the clip asked for that the kit does not have, and how many notes wanted it. */
@@ -79,24 +89,35 @@ object OrbitImport {
         bpm: Float,
         sampleRate: Int,
         maxRings: Int = OrbitSet.MAX_ORBITS,
+        swing: Int = OrbitSet.STRAIGHT_SWING,
     ): Imported {
         refusal(clip)?.let { throw IllegalArgumentException(it) }
         require(maxRings in 1..OrbitSet.MAX_ORBITS) { "a set holds 1..${OrbitSet.MAX_ORBITS} rings, asked for $maxRings" }
         val steps = clip.bars * OrbitClip.CLIP_BAR_STEPS
         val have = kit.pads.map { it.slot }.toSet()
 
+        // The export's own collision rule, not a second copy of it: a clip
+        // may legally hold two notes on one pad at one pulse, and
+        // `OrbitClip.clip` keeps the louder on the way out. Keeping both
+        // here would put two hits where only one can return, so the round
+        // trip would quietly lose a note that the import had promised to
+        // carry. Deduped on the way in, and counted, because a drop nobody
+        // is told about is the thing this import must never do.
+        val notes = GrooveEdit.dedupeLouder(clip.notes)
+        val collisions = clip.notes.size - notes.size
+
         // Every note placed, then split by the pad it names. A note the kit
         // has no pad for is counted rather than carried: a ring naming a
         // slot that is not there would draw a lane that can never sound.
         val wanted = LinkedHashMap<Int, MutableList<OrbitHit>>()
         val missing = LinkedHashMap<Int, Int>()
-        for (note in clip.notes) {
+        for (note in notes) {
             val slot = Mpc3Note.slotFor(note.note)
             if (slot !in have) {
                 missing[note.note] = (missing[note.note] ?: 0) + 1
                 continue
             }
-            wanted.getOrPut(slot) { ArrayList() } += hitFor(note, slot, steps)
+            wanted.getOrPut(slot) { ArrayList() } += hitFor(note, slot, steps, swing)
         }
         val skipped = missing.entries.map { (note, count) -> Skipped(note, Mpc3Note.slotFor(note), count) }
         if (wanted.isEmpty()) {
@@ -118,9 +139,10 @@ object OrbitImport {
             )
         }
         return Imported(
-            set = OrbitSet(rings, bpm, sampleRate, lapSteps = OrbitClip.CLIP_BAR_STEPS),
+            set = OrbitSet(rings, bpm, sampleRate, lapSteps = OrbitClip.CLIP_BAR_STEPS, swing = swing),
             skipped = skipped,
             shared = sharing,
+            collisions = collisions,
         )
     }
 
@@ -157,16 +179,35 @@ object OrbitImport {
      * into rather than the one before. The lean is then whatever is left,
      * always within half a 16th and so always inside [OrbitHit.MAX_OFFSET].
      */
-    private fun hitFor(note: Mpc3Note, slot: Int, steps: Int): OrbitHit {
+    private fun hitFor(note: Mpc3Note, slot: Int, steps: Int, swing: Int): OrbitHit {
         val nearest = Math.round(note.timePulses.toDouble() / Mpc3Clip.PULSES_PER_16TH)
-        val offset = note.timePulses - nearest * Mpc3Clip.PULSES_PER_16TH
+        val step = Math.floorMod(nearest, steps.toLong()).toInt()
+        // The lean is measured from where the hit will actually fire, which
+        // includes the set's swing — `stepPulses` adds it, so the inverse
+        // has to take it off. Without this the import is exact only into a
+        // straight set: join a swung one and every odd step gets the set's
+        // push on top of the note's own recorded time, moving material that
+        // was supposed to arrive untouched.
+        val fires = nearest * Mpc3Clip.PULSES_PER_16TH + swingAt(step, swing)
         return OrbitHit(
-            step = Math.floorMod(nearest, steps.toLong()).toInt(),
+            step = step,
             slot = slot,
             velocity = note.velocity,
-            offset = offset,
+            offset = note.timePulses - fires,
         )
     }
+
+    /**
+     * The set's swing on [step], in pulses — [OrbitClock.swingPulses] for a
+     * ring this import builds.
+     *
+     * It need not ask `stepIsSixteenth`: every ring here is FREE, so its
+     * period in 16ths is its own step count and its step is a 16th by
+     * construction. Worth stating rather than relying on, since the day a
+     * ring here is spanned that stops being true.
+     */
+    private fun swingAt(step: Int, swing: Int): Long =
+        if (step % 2 == 0 || swing == OrbitSet.STRAIGHT_SWING) 0L else Mpc3Clip.swingPush(swing)
 
     private fun ring(name: String, steps: Int, kitFolder: String, voice: List<Int>, hits: List<OrbitHit>) =
         Orbit(name = name, steps = steps, content = PatternOrbit(kitFolder, hits), voice = voice)

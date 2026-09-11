@@ -70,6 +70,7 @@ import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Tempo
 import com.snipsnap.audio.WavReader
+import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.loop.Orbit
@@ -592,15 +593,29 @@ fun OrbitScreen(
         scope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    val clip = GrooveStore.load(kitDir).firstOrNull()
+                    // E when there is one, else the captured base. E is what
+                    // the player has been editing — `GrooveStore.load` hands
+                    // back oldest first, which is always the base, so taking
+                    // the first clip meant PROG E could never reach a ring.
+                    val stored = GrooveStore.load(kitDir)
+                    val clip = stored.firstOrNull { GrooveEdit.isProgE(it) } ?: stored.firstOrNull()
                         ?: throw IllegalArgumentException("NO GROOVE IN THIS KIT YET — RECORD ONE IN GROOVE FIRST")
-                    clip.name to OrbitImport.rings(clip, kitDir.name, kit, s.bpm, s.sampleRate, maxRings = room)
+                    // The destination's swing, so the import lands where the
+                    // clip put it rather than taking the set's push on top.
+                    clip.name to OrbitImport.rings(
+                        clip, kitDir.name, kit, s.bpm, s.sampleRate, maxRings = room, swing = s.swing,
+                    )
                 }
             }
             result.onSuccess { (name, imported) ->
-                val current = set ?: return@onSuccess
-                commit(current.copy(orbits = current.orbits + imported.set.orbits))
-                selected = current.orbits.size
+                // The set can have moved while the file was being read — a
+                // ring added, one deleted, or this action tapped twice. The
+                // budget was measured against the old one, and `OrbitSet`
+                // refuses a ninth ring by throwing, out here where no
+                // `runCatching` would catch it.
+                if (set !== s) { onToast("THE RINGS CHANGED WHILE THAT LOADED — TRY AGAIN"); return@onSuccess }
+                commit(s.copy(orbits = s.orbits + imported.set.orbits))
+                selected = s.orbits.size
                 // Every pad that could not come, named. A silent drop here
                 // reads as the import having worked, and the player finds
                 // the missing snare later with nothing to blame.
@@ -614,6 +629,10 @@ fun OrbitScreen(
                         imported.shared.isNotEmpty() ->
                             "$name: ${imported.set.orbits.size} RING${if (imported.set.orbits.size == 1) "" else "S"}. " +
                                 "${imported.shared.size} PADS SHARE THE LAST ONE — PULL THEM APART WHEN THERE IS ROOM."
+                        imported.collisions > 0 ->
+                            "$name: ${imported.set.orbits.size} RING${if (imported.set.orbits.size == 1) "" else "S"}. " +
+                                "${imported.collisions} DOUBLED NOTE${if (imported.collisions == 1) "" else "S"} " +
+                                "BECAME ONE — THE LOUDER, AS ON THE WAY OUT."
                         else ->
                             "$name IS ON THE RINGS — ${imported.set.orbits.size} OF THEM. RE-LENGTH ONE AND HEAR IT DRIFT."
                     },
