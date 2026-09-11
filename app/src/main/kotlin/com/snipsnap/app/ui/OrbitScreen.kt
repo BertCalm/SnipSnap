@@ -577,23 +577,28 @@ fun OrbitScreen(
             result.onSuccess { clip ->
                 // Snips are audio and a clip holds notes, so a snip ring
                 // cannot ride along. Say how many stayed behind rather than
-                // leave it to be discovered on the hardware, and name the
-                // route that does take them.
+                // leave it to be discovered on the hardware.
                 //
-                // The route, not a promise: OrbitBank skips a snip whose
-                // file has gone (SampleSource.loop returns null) and
-                // OrbitEngine.addLoop returns early for it, so that ring
-                // bounces to silence. "IS THEIR WAY OUT" stays true either
-                // way - a clip can never hold them and the bounce is the
-                // only thing that might - where "CATCHES THOSE" would be a
-                // guarantee this screen cannot make.
+                // A shorter sentence, not a longer one: ToastOverlay caps
+                // every toast at two lines (Chrome.kt), and every other
+                // toast on this screen runs 15 to 55 characters. Appending
+                // the snip report took this one to 166, which on a phone
+                // ellipsises away the very thing it exists to surface. So
+                // the snip case replaces the line rather than extending it.
+                //
+                // "FOR THOSE" points at the route without promising the
+                // outcome: OrbitBank skips a snip whose file has gone
+                // (SampleSource.loop returns null) and OrbitEngine.addLoop
+                // returns early for it, so that one ring bounces to
+                // silence. The bounce is still the only way out a snip has.
                 val behind = OrbitClip.snipRings(s)
-                val left = if (behind.isEmpty()) {
-                    ""
-                } else {
-                    " ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED BEHIND — A CLIP HOLDS NOTES, NOT AUDIO. BOUNCE ▸ TAPE IS THEIR WAY OUT."
-                }
-                onToast("${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC.$left")
+                onToast(
+                    if (behind.isEmpty()) {
+                        "${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC."
+                    } else {
+                        "${clip.name}: ${clip.bars} BARS, ${clip.notes.size} NOTES. ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED — BOUNCE ▸ TAPE FOR THOSE."
+                    },
+                )
             }.onFailure { e -> onToast("CLIP FAILED: ${e.message ?: e.javaClass.simpleName}") }
         }
     }
