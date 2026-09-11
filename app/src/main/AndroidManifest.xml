@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- SPIKE ONLY - throwaway. Everything below the M0 comment is probe
+         scaffolding for the AudioPlaybackCapture feasibility test and is
+         meant to be deleted with this branch. -->
+
     <!-- M0 needs no permissions: SoundPool + app-private files only.
          Capture (M1) adds its foreground-service and overlay entries. -->
+
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:label="SnipSnap"
@@ -19,6 +28,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- SPIKE ONLY -->
+        <activity
+            android:name=".spike.SpikeActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- SPIKE ONLY -->
+        <service
+            android:name=".spike.CaptureProbeService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
     </application>
 
 </manifest>
