@@ -462,7 +462,10 @@ object Copy {
     const val TAKES_DIFF_UNREADABLE = "THIS TAKE WON'T READ. NOTHING TO COMPARE."
 
     // ---- GROOVE ----
-    const val HUMANIZED = "HUMANIZED. NOBODY PLAYS LIKE A ROBOT."
+    // HUMANIZE ⚄ (and Copy.HUMANIZED, its toast) is gone — the feel axis
+    // (wave, task 6) replaced it with a control that actually changes the
+    // clip continuously instead of jittering PROG A once and forcing a jump
+    // to it. See feelRolled/FEEL_RECENTRED below for its replacements.
     // The phone reads (wave ZZ): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE.
     const val READ_GROOVE_BUSY = "LISTENING…"
     const val READ_GROOVE_NEEDS_KIT = "OPEN A KIT FIRST. THE EAR NEEDS PADS TO PLAY ON."
@@ -488,6 +491,12 @@ object Copy {
     const val BAR_WIPED = "BAR WIPED. THE MACHINE FORGIVES."
     /** RECORD tapped before `PadEngine.load` has committed the bank (`clickSampleIndex == -1` until then, so the count-in clicks would be silent and give no feedback at all) — told instead of armed. */
     const val KIT_STILL_LOADING = "KIT'S STILL LOADING. GIVE IT A SECOND."
+
+    /** ⚄ RESEED: a new rolled feel. Names the seed so a roll worth keeping can be found again by hand, until `.pocket` files make it saveable. */
+    fun feelRolled(seed: Int): String = "FEEL #$seed ROLLED."
+
+    /** Tapping the FEEL readout returns the axis to the performance itself. */
+    const val FEEL_RECENTRED = "BACK TO AS PLAYED."
 
     // ---- GROOVE: RECORD landing and UNDO TAKE (live-record plan, Task 5) ----
     /** RECORD landed a take as the new PROG A; echoes [grooveRead]'s shape, but names what was PLAYED, not what was heard. */

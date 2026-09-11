@@ -424,7 +424,11 @@ class PersonalityTest {
     private val legacyHandListedToasts = setOf(
         "MELODIC_ON", "KEY_OFF", "TEACHING_ON", "TEACHING_OFF",
         "BANK_B_LIT", "TWINS_REROLLED", "BACK_FROM_BIN", "BIN_EMPTIED",
-        "HUMANIZED", "FORKED_TO_E", "BAR_WIPED", "GHOSTS_ON",
+        // "HUMANIZED" dropped (feel axis, task 6): HUMANIZE ⚄ is gone, so
+        // Copy.HUMANIZED no longer exists for reflection to find — this was
+        // the control it described being removed, not a relaxation of the
+        // law itself.
+        "FORKED_TO_E", "BAR_WIPED", "GHOSTS_ON",
         "INSTRUMENT_MADE", "NO_PITCH", "RETREAT_REFUSED",
         "TAKES_BIN_RULE", "TEACH_CONSENT", "SNAPPED",
         "TAKES_EMPTY", "BIN_EMPTY_STATE", "BIN_ITEM_GONE", "KIT_WONT_OPEN",

@@ -121,18 +121,25 @@ private const val GROOVE_SWING_MIN = 50
 private const val GROOVE_SWING_MAX = 75
 private const val GROOVE_SWING_STEP = 2
 
+/** The feel axis as the stepper reads it: percent, −100 (fully tight) through 0 (as played) to +100 (fully loose). */
+private const val GROOVE_FEEL_MIN = -100
+private const val GROOVE_FEEL_MAX = 100
+
+/** Five taps from the detent to either end, and 0 falls on a step so the centre is actually reachable. */
+private const val GROOVE_FEEL_STEP = 20
+
 /** A note reads "lit" for this many steps after the needle passes it. */
 private const val GROOVE_LIT_WINDOW = 0.7f
 
 private val PROG_NAMES = listOf(
-    "PROG A · AS CAPTURED",
+    "PROG A · THE BREAK",
     "PROG B · SWUNG",
     "PROG C · HALF-TIME",
     "PROG D · SPARSE",
     "PROG E · EDITED",
 )
 private val PROG_SUBS = listOf(
-    "THE BREAK, AS PLAYED",
+    "THE CAPTURED CLIP",
     "ON THE GRID, PUSHED LATE",
     "ROOM TO BREATHE",
     "THE SKELETON",
@@ -308,6 +315,10 @@ fun GrooveScreen(
     // Rolled once per seed, not per frame: the clock reads this every tick.
     val feelTemplate = remember(seed) { GrooveFeel.generated(seed) }
     var swingPercent by remember(kitDir) { mutableIntStateOf(GROOVE_SWING_DEFAULT) }
+    // The feel axis. Transient like `swingPercent` — reopening a kit shows
+    // what was actually played, so a setting left on can never quietly alter
+    // an export.
+    var feel by remember(kitDir) { mutableIntStateOf(0) }
     var playing by remember(kitDir) { mutableStateOf(false) }
     var posSteps by remember(kitDir) { mutableFloatStateOf(0f) }
     var busy by remember(kitDir) { mutableStateOf(false) }
@@ -343,7 +354,7 @@ fun GrooveScreen(
     // from-scratch case), not "nothing to show". This flag is the row's
     // whole lifetime: true the instant a take lands, false the instant
     // it's consumed (UNDO TAKE) or the user does anything else that moves
-    // the program on (PROG prev/next, HUMANIZE, FORK TO E/EDIT STEPS, MIDI
+    // the program on (PROG prev/next, RESEED, EDIT THIS TAKE/EDIT STEPS, MIDI
     // export, SONG ▸, arming another RECORD) — never a persistent control.
     var justLanded by remember(kitDir) { mutableStateOf(false) }
 
@@ -400,8 +411,8 @@ fun GrooveScreen(
     // was already unreachable from this screen before this task and stays
     // that way; RECORD doesn't change what GROOVE can display, only how a
     // base gets here.
-    val currentClip = remember(progIndex, base, swingPercent, feelTemplate, eClip) {
-        base?.let { GrooveProgram.compute(progIndex, it, swingPercent, 0, feelTemplate, eClip) }
+    val currentClip = remember(progIndex, base, swingPercent, feel, feelTemplate, eClip) {
+        base?.let { GrooveProgram.compute(progIndex, it, swingPercent, feel, feelTemplate, eClip) }
     }
     // Playback and MIDI export cover every note; the roll's five NAMED
     // lane columns only cover five of the kit's pads (the design) — a note
@@ -417,7 +428,7 @@ fun GrooveScreen(
     /**
      * Every place that used to write `justLanded = false` bare now goes
      * through here, so `forkArmed` can never outlive the row it belongs
-     * to: switching programs, HUMANIZE, EDIT STEPS, MIDI, SONG ▸, or
+     * to: switching programs, RESEED, EDIT STEPS, MIDI, SONG ▸, or
      * arming another RECORD must all cancel a pending "REPLACE E?"
      * confirm exactly as they already cancel the just-landed row itself —
      * otherwise the NEXT take's row could render already armed, skipping
@@ -607,7 +618,7 @@ fun GrooveScreen(
                 val dtNanos = (now - lastNanos).coerceIn(0, GROOVE_STEP_MAX_NANOS)
                 lastNanos = now
                 val currentBase = base
-                val clip = currentBase?.let { GrooveProgram.compute(progIndex, it, swingPercent, 0, feelTemplate, eClip) }
+                val clip = currentBase?.let { GrooveProgram.compute(progIndex, it, swingPercent, feel, feelTemplate, eClip) }
                 val totalSteps = ((clip?.bars ?: recordBars) * GrooveEdit.STEPS_PER_BAR).toFloat()
                 val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
                 val stepsPerSecond = bpm / 60.0 * 4.0
@@ -790,7 +801,7 @@ fun GrooveScreen(
      * by re-reading the sidecar from disk (`GrooveEdit.fork`'s early-return
      * path just hands back whatever's stored), so a fresh fork racing an
      * in-flight save could read a stale copy and rewind `eClip` to it.
-     * `busy` (which already gates EDIT STEPS/HUMANIZE) closes that window —
+     * `busy` (which already gates EDIT STEPS/RESEED) closes that window —
      * no mutex needed if the button simply can't fire while this runs.
      */
     fun closeEditor() {
@@ -1207,7 +1218,7 @@ fun GrooveScreen(
     Box(Modifier.fillMaxSize()) {
         val loadedBase = base
         if (loadedBase == null) {
-            // From-scratch: no base yet, so none of A–E, swing, HUMANIZE,
+            // From-scratch: no base yet, so none of A–E, swing, feel, RESEED,
             // EDIT STEPS or MIDI have anything to operate on — EmptyGroove's
             // own message stays the resting state, RECORD is the only
             // control, and a take landing here is what turns this into the
@@ -1360,7 +1371,7 @@ fun GrooveScreen(
                     // below: PLAY/STOP is meaningless here (RECORD already
                     // implies PLAY, and stopping playback mid-take would
                     // freeze the clock `recordHit` interpolates against
-                    // without stopping the take), and HUMANIZE/EDIT STEPS/
+                    // without stopping the take), and RESEED/EDIT STEPS/
                     // MIDI all need a settled base, not one mid-overdub.
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         TapeText(
@@ -1413,6 +1424,21 @@ fun GrooveScreen(
                         }
                     }
 
+                    FeelRow(
+                        feel = feel,
+                        seed = seed,
+                        scheme = scheme,
+                        onChange = { clearJustLanded(); feel = it },
+                        onRecentre = {
+                            if (feel != 0) {
+                                clearJustLanded()
+                                feel = 0
+                                onToast(Copy.FEEL_RECENTRED)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
                     if (justLanded) {
                         // The take just landed — a transient, one-shot pair
                         // of actions (Task 5): FORK TO E calls [forkTakeToE],
@@ -1426,7 +1452,11 @@ fun GrooveScreen(
                         // via `clearJustLanded`; see `justLanded`'s own KDoc.
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             GrooveActionButton(
-                                if (forkArmed) "REPLACE E?" else "FORK TO E ▸",
+                                // Resting label renamed (feel axis, task 6): with the
+                                // axis carrying quantize now, this button's job is
+                                // "make this editable", not "make this tight" — the
+                                // armed confirm and the handler underneath are unchanged.
+                                if (forkArmed) "REPLACE E?" else "EDIT THIS TAKE",
                                 scheme,
                                 Modifier.weight(1f),
                                 enabled = !busy,
@@ -1437,11 +1467,19 @@ fun GrooveScreen(
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        GrooveActionButton("HUMANIZE ⚄", scheme, Modifier.weight(1f), enabled = !busy) {
+                        // HUMANIZE ⚄ is gone (feel axis, task 6): it jittered
+                        // PROG A once and forced a jump to it — a control
+                        // whose whole job the feel axis now does continuously,
+                        // on every program the axis rides. RESEED only rerolls
+                        // the template feel is currently drawing from, so it's
+                        // disabled at feel <= 0 (nothing is applying it yet)
+                        // and, unlike the old button, never touches progIndex:
+                        // the axis reaches A, C and D alike, so there is no
+                        // one program to jump to.
+                        GrooveActionButton("⚄ RESEED", scheme, Modifier.weight(1f), enabled = !busy && feel > 0) {
                             clearJustLanded()
                             seed++
-                            progIndex = 0
-                            onToast(Copy.HUMANIZED)
+                            onToast(Copy.feelRolled(seed))
                         }
                         GrooveActionButton("EDIT STEPS", scheme, Modifier.weight(1f), enabled = !busy) { forkToE() }
                         GrooveActionButton("MIDI ▸", scheme, Modifier.weight(1f), enabled = !midiBusy, accent = true) { exportMidi() }
@@ -1577,6 +1615,49 @@ private fun SwingStepper(label: String, scheme: Scheme, onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         TapeText(label, TapeType.lcd(19), scheme.ink.tape)
+    }
+}
+
+/**
+ * The feel axis, shaped exactly like the SWING row above it. This app has no
+ * slider anywhere — every continuous value is a −/+ stepper with a two-line
+ * readout — and introducing drag beside a scrolling needle roll would be both
+ * a new interaction and a poor one on a phone.
+ *
+ * Tapping the readout recentres. Without it, crossing the axis end to end is
+ * ten taps, and A/B-ing the two extremes is the thing people will actually do.
+ */
+@Composable
+private fun FeelRow(
+    feel: Int,
+    seed: Int,
+    scheme: Scheme,
+    onChange: (Int) -> Unit,
+    onRecentre: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier.height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        SwingStepper("−", scheme) { onChange((feel - GROOVE_FEEL_STEP).coerceAtLeast(GROOVE_FEEL_MIN)) }
+        Column(
+            Modifier.weight(1f).tapeClick(label = null, onClick = onRecentre),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            TapeText(
+                when {
+                    feel == 0 -> "FEEL · AS PLAYED"
+                    feel < 0 -> "FEEL · TIGHT ${-feel}%"
+                    else -> "FEEL · LOOSE $feel% · #$seed"
+                },
+                TapeType.pixel,
+                scheme.amber.tape,
+            )
+            TapeText("RIDES A · C · D", TapeType.pixelSmall, scheme.ink3.tape)
+        }
+        SwingStepper("+", scheme) { onChange((feel + GROOVE_FEEL_STEP).coerceAtMost(GROOVE_FEEL_MAX)) }
     }
 }
 
