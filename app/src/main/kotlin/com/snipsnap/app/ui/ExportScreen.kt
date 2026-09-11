@@ -825,10 +825,15 @@ private fun CardRow(
             )
         }
         // September UAT, finding 21: holding this row is the only way to
-        // forget a card anywhere in the app. Only drawn while there is one
-        // to forget, matching the long press above, which is null without
-        // a card.
-        if (tree != null) {
+        // forget a card anywhere in the app.
+        //
+        // Drawn only when the gesture it names actually exists, which takes
+        // BOTH of the conditions the row above puts on it: a card to forget
+        // (onLongClick is null without one) and `enabled` (the whole
+        // combinedClickable is dropped while a dub is in flight). Miss
+        // either and the legend advertises an action that cannot run - the
+        // same "furniture describing nothing" this gate exists to prevent.
+        if (tree != null && enabled) {
             TapeText(Copy.EXPORT_CARD_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
         }
     }
