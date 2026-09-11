@@ -7,7 +7,9 @@ import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class OrbitClipTest {
@@ -247,6 +249,40 @@ class OrbitClipTest {
         assertEquals(null, OrbitClip.clipRefusal(onePlaying))
     }
 
+
+    /**
+     * A ring with no hits on it is not a second kit.
+     *
+     * `clip()` writes notes for hits, so a hit-less ring contributes
+     * nothing to the clip whatever kit it names. Counting it as a kit
+     * refuses a set that would have exported perfectly well - and `+ PAD
+     * RING` makes exactly that ring, so this is the shape a player
+     * reaches by making a ring and not yet playing it.
+     */
+    @Test
+    fun `an empty ring naming another kit does not make this a two-kit clip`() {
+        val s = set(
+            Orbit("a", 16, PatternOrbit("brk", listOf(OrbitHit(0, 1, 0.9f))), voice = listOf(1)),
+            Orbit("b", 16, PatternOrbit("keys", emptyList()), voice = listOf(1)),
+        )
+        assertNull(OrbitClip.clipRefusal(s), "only one kit actually plays a note here")
+        assertEquals(1, OrbitClip.clip(s).notes.size)
+    }
+
+    /**
+     * And with nothing played anywhere, the reason is that nothing is
+     * played - not an arbitrary count of the kits the empty rings name.
+     */
+    @Test
+    fun `two empty rings of different kits say no hit yet, not two kits`() {
+        val s = set(
+            Orbit("a", 16, PatternOrbit("brk", emptyList()), voice = listOf(1)),
+            Orbit("b", 16, PatternOrbit("keys", emptyList()), voice = listOf(1)),
+        )
+        val why = assertNotNull(OrbitClip.clipRefusal(s))
+        assertTrue("HIT" in why, "expected the no-hits reason, got: $why")
+        assertFalse("KITS" in why, "the kits are not the problem: $why")
+    }
     @Test
     fun `a pad past the program's last refuses by number`() {
         val s = set(

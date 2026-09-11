@@ -37,6 +37,29 @@ class ChartTest {
 
     private fun lines(text: String) = text.lines()
 
+    /**
+     * A pad above the wrap charts as its pad, not as a negative slot.
+     *
+     * The writer's map is chromatic with wraparound, so pad 93 plays note
+     * 0. Reading the slot back as `note - 35` gives it -35, which is no
+     * pad at all, and the row renders "NOTE 0 (NO PAD)" for a pad the kit
+     * really has. GROOVE's CHART button reaches this.
+     */
+    @Test
+    fun `a pad above the wrap charts as its pad, not as no pad`() {
+        val m = KitBuilderModel.create("Upper", File(temp, "Upper"))
+        m.assign(93, DrumSynth.snare(), DrumClass.SNARE)
+        m.update(93) { it.copy(displayName = "High Snare") }
+        val k = m.kit
+
+        val note = Mpc3Note(Mpc3Note.noteFor(93), 0, 0.9f)
+        val text = Chart.render(Mpc3Clip("High", 1, listOf(note)), k, 92f, bpmIsDefault = false)
+
+        assertEquals(93, Chart.slotOf(note), "the chart must read the pad the writer wrote")
+        assertFalse(text.contains("NO PAD"), "the kit has this pad:\n$text")
+        assertTrue(text.contains("HIGH SNARE"), "the pad's own name should label its row:\n$text")
+    }
+
     @Test
     fun `a straight two-bar groove charts row by row, glyph by velocity`() {
         val notes = buildList {
@@ -148,20 +171,27 @@ class ChartTest {
     }
 
     @Test
-    fun `the header says when the tempo is a stand-in, and a note with no pad says so`() {
+    fun `the header says when the tempo is a stand-in, and a pad the kit lacks says so`() {
         val k = kit()
         val notes = listOf(
             Mpc3Note(36, 0, 0.9f),
             Mpc3Note(39, 4 * s16, 0.9f), // A04 exists as a slot but holds no pad
-            Mpc3Note(30, 8 * s16, 0.9f), // below the pad map entirely
+            // Note 30 used to chart as "NOTE 30 (NO PAD)", on the belief
+            // that notes under 36 were off the map. They are not: the map
+            // wraps, so 30 is pad 123 - H11 - which this kit simply does
+            // not have. "(EMPTY)" is the honest answer; "NO PAD" was the
+            // old inverse's arithmetic showing through.
+            Mpc3Note(30, 8 * s16, 0.9f),
         )
+        assertEquals(123, Mpc3Note.slotFor(30), "note 30 is a pad, not a gap")
         val text = Chart.render(Mpc3Clip("Odd", 1, notes), k, 92f, bpmIsDefault = true)
         assertTrue(text.startsWith("ODD · 92 BPM (STAND-IN, NO TEMPO SET) · 1 BAR · 3 NOTES"), text)
         assertTrue(lines(text).any { it.startsWith("A04 (EMPTY)") }, text)
-        assertTrue(lines(text).any { it.startsWith("NOTE 30 (NO PAD)") }, text)
-        // Rows run in slot order, the no-pad note first because its slot is lowest.
-        val order = lines(text).filter { it.startsWith("NOTE 30") || it.startsWith("A0") }.map { it.substringBefore(' ') }
-        assertEquals(listOf("NOTE", "A01", "A04"), order)
+        assertTrue(lines(text).any { it.startsWith("H11 (EMPTY)") }, text)
+        assertFalse(text.contains("NO PAD"), "every note is some pad now:\n$text")
+        // Rows run in slot order, so the wrapped note sorts last, not first.
+        val order = lines(text).filter { it.startsWith("H11") || it.startsWith("A0") }.map { it.substringBefore(' ') }
+        assertEquals(listOf("A01", "A04", "H11"), order)
 
         val empty = Chart.render(Mpc3Clip("Silence", 2, emptyList()), k, 92f, false)
         assertTrue("NO HITS. AN EMPTY CHART IS STILL A CHART." in empty, empty)
