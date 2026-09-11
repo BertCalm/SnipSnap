@@ -70,6 +70,7 @@ import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Tempo
 import com.snipsnap.audio.WavReader
+import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.loop.Orbit
 import com.snipsnap.loop.OrbitBank
@@ -77,6 +78,7 @@ import com.snipsnap.loop.OrbitClip
 import com.snipsnap.loop.OrbitClock
 import com.snipsnap.loop.OrbitEngine
 import com.snipsnap.loop.OrbitHit
+import com.snipsnap.loop.OrbitImport
 import com.snipsnap.loop.OrbitPatterns
 import com.snipsnap.loop.OrbitPresets
 import com.snipsnap.loop.OrbitSet
@@ -567,6 +569,59 @@ fun OrbitScreen(
         }
     }
 
+    /**
+     * The kit's groove as rings, joining the ones already on screen.
+     *
+     * CLIP ▸ KIT's return leg, and the reason it is worth having: the
+     * chop pipeline's best material — a captured break, an imported
+     * `.mid`, whatever PROG E holds — lived in `groove.json` where the
+     * live engine could not reach it.
+     *
+     * It joins rather than replaces — not for safety, since [commit]
+     * records history and UNDO would bring a replaced set back, but
+     * because joining is the useful answer. A break sitting next to a
+     * ring that drifts against it is what ORBIT is for; a break that
+     * cleared the screen to arrive would just be GROOVE again, drawn
+     * round. The budget is what is left of the eight.
+     */
+    fun ringsFromGroove() {
+        val s = set ?: return
+        val room = OrbitSet.MAX_ORBITS - s.orbits.size
+        if (room <= 0) { onToast("EIGHT RINGS IS THE SKY — TAKE ONE OFF FIRST"); return }
+        outOpen = false
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val clip = GrooveStore.load(kitDir).firstOrNull()
+                        ?: throw IllegalArgumentException("NO GROOVE IN THIS KIT YET — RECORD ONE IN GROOVE FIRST")
+                    clip.name to OrbitImport.rings(clip, kitDir.name, kit, s.bpm, s.sampleRate, maxRings = room)
+                }
+            }
+            result.onSuccess { (name, imported) ->
+                val current = set ?: return@onSuccess
+                commit(current.copy(orbits = current.orbits + imported.set.orbits))
+                selected = current.orbits.size
+                // Every pad that could not come, named. A silent drop here
+                // reads as the import having worked, and the player finds
+                // the missing snare later with nothing to blame.
+                val missing = imported.skipped.sumOf { it.notes }
+                onToast(
+                    when {
+                        missing > 0 ->
+                            "$name: ${imported.set.orbits.size} RING${if (imported.set.orbits.size == 1) "" else "S"}. " +
+                                "$missing NOTE${if (missing == 1) "" else "S"} STAYED OUT — " +
+                                "NO PAD FOR ${imported.skipped.joinToString(", ") { "SLOT ${it.slot}" }}."
+                        imported.shared.isNotEmpty() ->
+                            "$name: ${imported.set.orbits.size} RING${if (imported.set.orbits.size == 1) "" else "S"}. " +
+                                "${imported.shared.size} PADS SHARE THE LAST ONE — PULL THEM APART WHEN THERE IS ROOM."
+                        else ->
+                            "$name IS ON THE RINGS — ${imported.set.orbits.size} OF THEM. RE-LENGTH ONE AND HEAR IT DRIFT."
+                    },
+                )
+            }.onFailure { e -> onToast(e.message ?: "COULD NOT READ THE GROOVE") }
+        }
+    }
+
     /** One cycle as a clip in the kit's grooves, so it rides to the MPC with the kit. */
     fun clipIntoKit() {
         val s = set ?: return
@@ -827,6 +882,19 @@ fun OrbitScreen(
                             )
                         }
                     }
+                    // The way back in. It sits under the two ways out
+                    // because this is where the route between ORBIT and
+                    // the kit's grooves is already explained, and a player
+                    // who has just read what CLIP ▸ KIT does is the one
+                    // who wants to know the grooves can come back.
+                    ActionButton("GROOVE ▸ RINGS", scheme, Modifier.fillMaxWidth()) { ringsFromGroove() }
+                    TapeText(
+                        "THE KIT'S GROOVE AS RINGS, ONE PER PAD, JOINING WHAT IS ALREADY HERE — A CAPTURED BREAK OR AN IMPORTED .MID, PLAYED BY THIS ENGINE AT LAST.",
+                        TapeType.pixelSmall,
+                        scheme.ink3.tape,
+                        Modifier.fillMaxWidth(),
+                        maxLines = 3,
+                    )
                 } else if (stepsPickerOpen && ring != null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         TapeText("HOW MANY STEPS ROUND ${ring.name}?", TapeType.pixel, scheme.ink.tape)
