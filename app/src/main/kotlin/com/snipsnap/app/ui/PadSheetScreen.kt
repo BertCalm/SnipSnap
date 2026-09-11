@@ -230,8 +230,11 @@ fun PadSheetScreen(
     var auditionOnRefresh by remember(slot) { mutableStateOf(false) }
     // Backgrounding mid-audition must stop the voice, not wait for this
     // composable to next leave composition (see ChopScreen's own fix).
+    // Keyed on `model` too: `voice` is `remember(model)`-keyed, so an
+    // observer from before a treatment's model swap would close over the
+    // old state and leave the fresh voice playing in the background.
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
+    DisposableEffect(lifecycleOwner, model) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
                 voice?.release()
@@ -328,24 +331,31 @@ fun PadSheetScreen(
     fun playBefore(p: KitPad) {
         if (busy) return
         // Claimed like every other sheet action, so a second tap or a
-        // treatment can't run alongside the read; and the read takes the
-        // writers' lock, since `moveToBin` copies and deletes bin files
-        // under it and a half-copied take would read as gone or stale.
+        // treatment can't run alongside the read. Picking the take is
+        // under the writers' lock (`moveToBin` copies and deletes bin
+        // files under it, so a half-copied take can't be chosen); the
+        // decode is outside it, as `KitWrites` keeps every read-only DSP
+        // pass — a purge racing the decode reads as gone, which is true.
         busy = true
         scope.launch {
             try {
                 val before = withContext(Dispatchers.IO) {
-                    KitWrites.mutex.withLock {
+                    val take = KitWrites.mutex.withLock {
                         builtModel.binContents()
                             .filter { it.originalName == p.sampleFile }
                             .maxByOrNull { it.binnedAtMillis }
-                            ?.let { runCatching { Cleanup.toMono(WavReader.readCapped(it.file, TAPE_LOAD_MAX_SEC).snip) }.getOrNull() }
+                            ?.file
                     }
+                    take?.let { runCatching { Cleanup.toMono(WavReader.readCapped(it, TAPE_LOAD_MAX_SEC).snip) }.getOrNull() }
                 }
                 // The model swapped while the file was read: `voice` now
                 // belongs to the new one, so don't start a voice in the old slot.
                 if (model !== builtModel) return@launch
-                if (before != null) audition(before, p.level, p) else onToast(Copy.BIN_ITEM_GONE)
+                when {
+                    before == null -> onToast(Copy.BIN_ITEM_GONE)
+                    // Backgrounded during the read: the same rule as the landing play.
+                    lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) -> audition(before, p.level, p)
+                }
             } finally {
                 busy = false
             }
