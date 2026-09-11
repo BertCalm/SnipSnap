@@ -207,6 +207,50 @@ class OrbitImportTest {
         }
     }
 
+    @Test
+    fun `a pickup and the downbeat it wraps onto share a step, and that is counted`() {
+        // Ordinary material makes this: a note just before the bar line is
+        // a pickup, which rounds FORWARD onto step 0 where the downbeat
+        // already sits. Both sound and both export — their leans differ —
+        // but the step grid draws one square per (step, pad), so the
+        // import says how many squares hold more than one thing rather
+        // than letting the player find out by tapping one.
+        val imported = OrbitImport.rings(
+            clip(1, Mpc3Note(36, 16 * s16 - 96, 0.7f), Mpc3Note(36, 0, 1f)),
+            "break",
+            kit(1),
+            bpm,
+            rate,
+        )
+        val hits = hitsOf(imported.set)
+        assertEquals(2, hits.size, "nothing is merged: they are different moments")
+        assertEquals(1, hits.map { it.step to it.slot }.distinct().size, "on one square")
+        assertEquals(1, imported.crowded)
+        assertTrue(!imported.complete, "a square holding two is worth saying")
+
+        // And both still reach the clip, on the pulses they came in on.
+        assertEquals(listOf(0L, 16 * s16 - 96), OrbitClip.clip(imported.set).notes.map { it.timePulses }.sorted())
+    }
+
+    @Test
+    fun `a lean reaches a whole 16th where the destination swings, and never more`() {
+        // The bound is not half a 16th: half the grid (120) plus the widest
+        // push (`swingPush(75)`, also 120) is a full `MAX_OFFSET`, and a
+        // note at pulse 120 into a swing-75 set hits it exactly. Swept
+        // across every pulse of a bar and every swing the panel offers, so
+        // a change that pushed it past the bound refuses rather than
+        // silently clamping.
+        var widest = 0L
+        for (swing in OrbitSet.SWING_CHOICES) {
+            for (t in 0 until Mpc3Clip.PULSES_PER_BAR) {
+                val one = OrbitImport.rings(clip(1, Mpc3Note(36, t, 1f)), "break", kit(1), bpm, rate, swing = swing)
+                val off = hitsOf(one.set).single().offset
+                if (kotlin.math.abs(off) > kotlin.math.abs(widest)) widest = off
+            }
+        }
+        assertEquals(-OrbitHit.MAX_OFFSET, widest, "the widest lean is a whole 16th early")
+    }
+
     // ---- what cannot come ----
 
     @Test

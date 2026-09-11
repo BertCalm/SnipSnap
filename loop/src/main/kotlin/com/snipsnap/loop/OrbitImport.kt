@@ -48,9 +48,19 @@ object OrbitImport {
         val shared: List<Int> = emptyList(),
         /** Notes the clip held twice on one pad at one pulse, which only one of could ever sound. */
         val collisions: Int = 0,
+        /**
+         * Cells where one pad has more than one hit on a single step.
+         *
+         * Ordinary material makes these: a note just before the downbeat
+         * is a pickup, which rounds forward onto step 0 where the downbeat
+         * already is. Both sound and both export, because their leans
+         * differ — but the step grid draws one square per (step, pad), so
+         * it can only show that *something* is there.
+         */
+        val crowded: Int = 0,
     ) {
-        /** Whether anything was left behind — worth a line on screen when true. */
-        val complete: Boolean get() = skipped.isEmpty() && collisions == 0
+        /** Whether every note arrived — nothing skipped, nothing merged, nothing sharing a square. */
+        val complete: Boolean get() = skipped.isEmpty() && collisions == 0 && crowded == 0
     }
 
     /** A pad the clip asked for that the kit does not have, and how many notes wanted it. */
@@ -76,11 +86,18 @@ object OrbitImport {
     /**
      * [clip] as rings on [kit], at [bpm] and [sampleRate].
      *
-     * The set is straight — `swing` stays at [OrbitSet.STRAIGHT_SWING] —
-     * because the clip's feel is already in its notes. Reading a swing
-     * percent back out of the pulses and then applying it again would
-     * push every offbeat twice, and a donor's pocket is sixteen numbers
-     * anyway, which is what the per-hit lean is for.
+     * [swing] is the swing of the set these rings are *going into*, and
+     * the default is straight because a clip on its own is not going
+     * anywhere else. It is not read out of the clip: the feel is already
+     * in the notes, and inferring a percent to re-apply would push every
+     * offbeat twice.
+     *
+     * It matters because `OrbitClock.stepPulses` adds the set's push to
+     * every odd step, so a lean measured from the bare grid would arrive
+     * on top of it. Measuring from the firing pulse instead is what lets
+     * the same clip land where it was recorded whatever the destination
+     * swings — and joining a swung set is the ordinary case, since the
+     * screen passes the set the player is already listening to.
      */
     fun rings(
         clip: Mpc3Clip,
@@ -143,6 +160,16 @@ object OrbitImport {
             skipped = skipped,
             shared = sharing,
             collisions = collisions,
+            // Counted after the rings are built, off the hits themselves,
+            // rather than guessed from the notes: two notes a whole 16th
+            // apart can still land on one step once a pickup wraps, and
+            // only the placed hits know that.
+            crowded = rings.sumOf { ring ->
+                (ring.content as PatternOrbit).hits
+                    .groupingBy { it.step to it.slot }
+                    .eachCount()
+                    .count { it.value > 1 }
+            },
         )
     }
 
@@ -176,8 +203,14 @@ object OrbitImport {
      *
      * The step is the 16th the note is *nearest*, not the one it is past,
      * so a note dragged a little early belongs to the beat it is leaning
-     * into rather than the one before. The lean is then whatever is left,
-     * always within half a 16th and so always inside [OrbitHit.MAX_OFFSET].
+     * into rather than the one before.
+     *
+     * The lean is whatever is left over — within half a 16th of the grid,
+     * plus the set's own push where that step is swung, so up to a whole
+     * 16th either way. That is exactly [OrbitHit.MAX_OFFSET] and never
+     * more: half a 16th is 120 pulses, the widest push is
+     * `swingPush(MAX_SWING)` at 120, and a note at pulse 120 into a
+     * swing-75 set reaches the bound precisely.
      */
     private fun hitFor(note: Mpc3Note, slot: Int, steps: Int, swing: Int): OrbitHit {
         val nearest = Math.round(note.timePulses.toDouble() / Mpc3Clip.PULSES_PER_16TH)
