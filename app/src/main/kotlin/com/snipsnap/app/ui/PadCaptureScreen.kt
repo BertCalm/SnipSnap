@@ -131,8 +131,10 @@ fun PadCaptureScreen(
 ) {
     val scheme = LocalScheme.current
     // Where a capture's tape lands (docs/RETRIM.md round 4): every GRAB and
-    // HOLD is a SNIP on the shelf too, so the pad can RE-TRIM later.
-    val snipsDir = File(LocalContext.current.filesDir, SnipStore.DIR)
+    // HOLD is a SNIP on the shelf too, so the pad can RE-TRIM later. The
+    // shelf ROOT (filesDir), not `filesDir/snips`: SnipStore appends its
+    // own DIR, the same call SnipSnapApplication's SNIP hook makes.
+    val snipsRoot: File = LocalContext.current.filesDir
     var committing by remember { mutableStateOf<Gesture?>(null) }
     var holding by remember { mutableStateOf(false) }
     var holdStart by remember { mutableStateOf(0L) }
@@ -170,7 +172,7 @@ fun PadCaptureScreen(
             try {
                 val updated: Kit? = withContext(Dispatchers.IO) {
                     val landing = producer() ?: return@withContext null
-                    val tape = SnipStore.commitPrepared(landing.tape, snipsDir, System.currentTimeMillis())
+                    val tape = SnipStore.commitPrepared(landing.tape, snipsRoot, System.currentTimeMillis())
                     val snip = landing.pad
                     val cls = Classifier.classify(snip).drumClass
                     KitWrites.mutex.withLock {

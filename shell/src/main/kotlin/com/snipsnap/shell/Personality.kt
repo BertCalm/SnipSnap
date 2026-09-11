@@ -588,8 +588,12 @@ object Copy {
     const val HITS_BUSY = "HITS…"
     /** Stepping the HITS stepper on a tape with no hit in it. */
     const val HITS_NONE = "NO HITS ON THIS TAPE. DRAG IN AND OUT INSTEAD."
-    /** The HITS stepper's readout: which of the tape's hits the selection sits on, or none. */
-    fun hitReadout(index: Int, count: Int): String = if (index < 0) "HIT -/$count" else "HIT ${index + 1}/$count"
+    /** The HITS stepper's readout: which of the tape's hits the selection sits on, none, or a tape with no hits at all. */
+    fun hitReadout(index: Int, count: Int): String = when {
+        count == 0 -> "NO HITS"
+        index < 0 -> "HIT -/$count"
+        else -> "HIT ${index + 1}/$count"
+    }
     /**
      * BACK ONTO landed. [treatment] is the old pad's treatment name when it
      * had one — a treatment is baked into the file, so it stays with the

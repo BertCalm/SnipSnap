@@ -651,4 +651,11 @@ class PersonalityTest {
             assertFalse(ceilingClaim.containsMatchIn(rawLine), ceilingLawMessage("Personality.kt:${index + 1}", rawLine.trim()))
         }
     }
+
+    @Test
+    fun `the HITS readout names the hit, or none, or a tape without any`() {
+        assertEquals("HIT 3/7", Copy.hitReadout(2, 7))
+        assertEquals("HIT -/7", Copy.hitReadout(-1, 7))
+        assertEquals("NO HITS", Copy.hitReadout(-1, 0), "known the moment the search comes back empty, not on a tap")
+    }
 }

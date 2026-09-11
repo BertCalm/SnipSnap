@@ -762,7 +762,10 @@ private fun TapeDeckContent(
                 }
                 val next = if (current < 0) (if (delta > 0) 0 else list.size - 1) else (current + delta).mod(list.size)
                 val hit = list[next]
-                if (model.playing) model.togglePlay()
+                // stop(), not togglePlay(): a coasting or gliding deck is
+                // not `playing` but still moving, and would carry the head
+                // off the hit `select` just parked it on.
+                model.stop()
                 stopVoice()
                 model.select(hit.first, hit.last + 1)
                 touch()
