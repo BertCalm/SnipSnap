@@ -92,7 +92,14 @@ object OrbitClip {
      * [Mpc3Note.noteFor] has nothing to map it to.
      */
     private fun oneProgram(set: OrbitSet): String? {
-        val playing = set.orbits.filter { it.engaged && it.content is PatternOrbit }
+        // Rings that actually put a note in the clip - engaged, a
+        // pattern, and played onto. A hit-less ring contributes nothing
+        // whatever kit it names, so counting it as a kit refuses a set
+        // that would have exported fine, and with nothing played anywhere
+        // it answers "two kits" where the truth is "no hits yet".
+        val playing = set.orbits.filter {
+            it.engaged && it.content is PatternOrbit && (it.content as PatternOrbit).hits.isNotEmpty()
+        }
         val kits = playing.map { (it.content as PatternOrbit).kit }.distinct()
         if (kits.size > 1) {
             return "THESE RINGS PLAY ${kits.size} KITS — ${kits.joinToString(" AND ") { it.uppercase() }}. " +
