@@ -96,6 +96,7 @@ import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.RecipeReplay
+import com.snipsnap.shell.Retrim
 import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
@@ -152,7 +153,7 @@ fun PadSheetScreen(
     onToast: (String) -> Unit,
     onNavigateTape: () -> Unit,
     onGrainField: (Int) -> Unit,
-    /** SPLICE ▸: opens TAPE SPLICE scoped to this pad - unlike [onNavigateTape], which hands off to whatever TAPE's own source priority resolves. */
+    /** SPLICE ▸: opens TAPE SPLICE scoped to this pad - unlike [onNavigateTape], which is RE-TRIM ▸: App resolves the pad's own tape (`Retrim.of`) and opens TAPE on its cut, or toasts why it can't. */
     onSplice: (Int) -> Unit,
     /** STACK ▸: opens STACK THE TAKES scoped to this pad - its real prior takes as soft velocity zones, over the same history SPLICE reads. */
     onStack: (Int) -> Unit,
@@ -1975,6 +1976,9 @@ private fun reapplyPendingMetadataFields(fresh: KitBuilderModel, stalePads: Map<
 private fun provenanceOrigin(source: Map<String, String>): String? = when {
     source["song"] != null -> "\"${source["song"]}\" @ ${source["at"] ?: "?"}"
     source["file"] != null -> source.getValue("file")
+    // RE-TRIM's own key (Retrim.FILE_KEY): CHOP and INSTANT KIT name the
+    // tape now, so a chopped pad reads its file rather than "from tape".
+    source["tapeFile"] != null -> source.getValue("tapeFile")
     source["resampledFrom"] != null -> "resampled from ${source.getValue("resampledFrom")}"
     source["importedFrom"] != null -> "imported from ${source.getValue("importedFrom")}"
     source["sculptedFrom"] != null -> "sculpted from ${source.getValue("sculptedFrom")}"
@@ -1987,7 +1991,13 @@ private fun provenanceOrigin(source: Map<String, String>): String? = when {
 }
 
 private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String {
-    val parts = mutableListOf(provenanceOrigin(pad.source) ?: pad.sampleFile)
+    val origin = provenanceOrigin(pad.source) ?: pad.sampleFile
+    // The cut in the tape (`BASS 5.WAV @ 1.20–1.62s`, docs/RETRIM.md §5):
+    // the one place the numbers show, and what says where RE-TRIM ▸ will
+    // land before it is tapped. Frames sit at the tape's rate, which is
+    // the pad's own — neither CHOP nor BACK ONTO resamples.
+    val cut = Retrim.cutOf(pad)
+    val parts = mutableListOf(if (cut != null && snip != null) "$origin @ ${cut.label(snip.sampleRate)}" else origin)
     snip?.let { parts += "%.0f ms".format(java.util.Locale.ROOT, it.durationSeconds * 1000f) }
     binDaysLeft?.let { parts += "original in bin, ${it}d left" }
     return parts.joinToString(" · ")

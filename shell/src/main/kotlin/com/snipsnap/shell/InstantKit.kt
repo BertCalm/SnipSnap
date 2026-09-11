@@ -32,10 +32,15 @@ object InstantKit {
         return Snip(mono.samples.copyOfRange(start, end), 1, mono.sampleRate)
     }
 
-    /** Chop [source] with the defaults and land it as the kit [name] in [kitDir]. */
-    fun build(source: Snip, name: String, kitDir: File): Result {
+    /**
+     * Chop [source] with the defaults and land it as the kit [name] in
+     * [kitDir]. [tape] is where [source] sits in its snip file, when TAPE
+     * knows (the deck's own file and the [slice] range's start), so every
+     * pad of the kit remembers its cut for RE-TRIM.
+     */
+    fun build(source: Snip, name: String, kitDir: File, tape: ChopReviewModel.TapeRef? = null): Result {
         require(source.frameCount > 0) { "nothing to chop" }
-        val review = ChopReviewModel.chop(source)
+        val review = ChopReviewModel.chop(source, tape = tape)
         require(review.sliceCount > 0) { "no hits found to chop - trim closer to the sound, or use CHOP's grid" }
         val send = review.sendToGrid()
         val builder = KitBuilderModel.fromChop(name, send.arranged, kitDir)

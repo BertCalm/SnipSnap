@@ -104,6 +104,52 @@ class KitBuilderModel private constructor(
         return pad
     }
 
+    /**
+     * BACK ONTO (RE-TRIM, `docs/RETRIM.md`): [snip] — a fresh cut of the
+     * pad's own tape — replaces the pad's audio, and the pad keeps
+     * everything that is metadata rather than file: class, name, colour,
+     * level, pan, tune, choke, one-shot and SHAPE. [cut] is `Retrim.tag`'s
+     * three keys for the new cut; they overwrite the old ones and the rest
+     * of the pad's provenance stays.
+     *
+     * What does NOT carry: a treatment (its recipe is dropped — the sound
+     * was baked into the old file, which [assign] bins as it would for any
+     * replaced pad, and stacking it silently onto the new cut is the kind
+     * of surprise the SMEAR bug taught) and the stamps that described the
+     * old audio's processing (`mutatedWith`, `outside`, `desampled`). The
+     * caller names the treatment left behind (`Retrim.treatmentLeft`) in
+     * the toast. A velocity-layered pad (GHOSTS, or STACK THE TAKES — the
+     * model can't tell them apart, and either rides on the old file) and a
+     * round-robin chain (its boundaries index the old file) are refused,
+     * the same way [treatPad] and [smearPad] refuse them; `Retrim.of`
+     * says so before TAPE ever opens. [save] archives a take, so UNDO on
+     * the sheet is the TAKES room, as for every other replacement.
+     */
+    fun backOnto(slot: Int, snip: Snip, cut: Map<String, String>): KitPad {
+        val old = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(old.velocityLayers.isEmpty()) { "pad $slot is velocity-layered - clear GHOSTS (or the stack) before re-trimming" }
+        requireNotChained(old, "re-trimming")
+        val source = old.source - LEFT_WITH_OLD_FILE + cut
+        assign(slot, snip, old.drumClass, old.displayName, source)
+        update(slot) {
+            it.copy(
+                colorHex = old.colorHex,
+                level = old.level,
+                pan = old.pan,
+                tuneCoarse = old.tuneCoarse,
+                tuneFine = old.tuneFine,
+                muteGroup = old.muteGroup,
+                oneShot = old.oneShot,
+                attack = old.attack,
+                decay = old.decay,
+                cutoff = old.cutoff,
+                resonance = old.resonance,
+                humanize = old.humanize,
+            )
+        }
+        return kit.pad(slot)!!
+    }
+
     /** Long-press clear: the pad empties; its file goes if nothing shares it. */
     fun clear(slot: Int) {
         val pad = kit.pad(slot) ?: return
@@ -1012,6 +1058,9 @@ class KitBuilderModel private constructor(
     }
 
     companion object {
+
+        /** Provenance stamps that describe the old file's processing, dropped by [backOnto]. */
+        val LEFT_WITH_OLD_FILE: Set<String> = setOf("mutatedWith", "outside", "desampled")
 
         /** Where saves archive their history, inside the kit folder. */
         const val TAKES_DIR = ".takes"

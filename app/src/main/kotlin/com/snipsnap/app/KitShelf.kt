@@ -253,11 +253,14 @@ class KitShelf(val root: File) {
      * whole-file decode. Can throw [OutOfMemoryError]; the caller (`App.kt`'s
      * `instantKit`) catches it separately from `Exception`.
      */
-    fun instantKit(file: File, range: IntRange): Pair<Entry, com.snipsnap.shell.InstantKit.Result> {
+    fun instantKit(file: File, range: IntRange, snipsDir: File): Pair<Entry, com.snipsnap.shell.InstantKit.Result> {
         val snip = com.snipsnap.shell.InstantKit.slice(WavReader.readCapped(file, TAPE_LOAD_MAX_SEC).snip, range)
         root.mkdirs()
         val name = freshName("${file.nameWithoutExtension} KIT")
-        val result = com.snipsnap.shell.InstantKit.build(snip, name, File(root, name))
+        // A snip off the SNIPS shelf is a tape the pads can go back to
+        // (RE-TRIM); a kit sample TAPE fell back to is not.
+        val tape = com.snipsnap.shell.ChopReviewModel.TapeRef.ofSnip(file, range.first, snipsDir)
+        val result = com.snipsnap.shell.InstantKit.build(snip, name, File(root, name), tape)
         return Entry(result.kitDir, result.kit) to result
     }
 

@@ -356,7 +356,8 @@ class SnipStoreTest {
     @Test
     fun `provenanceTag omits capturedAtMillis for a file whose name doesn't parse as a snip`() {
         val f = File(Files.createTempDirectory("snips").toFile(), "not_a_snip.wav")
-        assertEquals(mapOf("file" to "not_a_snip.wav"), SnipStore.provenanceTag(f))
+        // "tapeFile" (RE-TRIM's key) rides along on every tag; the cut keys only with a frame count.
+        assertEquals(mapOf("file" to "not_a_snip.wav", "tapeFile" to "not_a_snip.wav"), SnipStore.provenanceTag(f))
     }
 
     @Test

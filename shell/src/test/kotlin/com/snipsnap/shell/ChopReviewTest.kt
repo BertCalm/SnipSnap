@@ -289,4 +289,41 @@ class ChopReviewTest {
         assertEquals("NOT SURE", ChopReviewModel.chipName(DrumClass.UNKNOWN))
         assertEquals(DrumClass.entries.size, ChopReviewModel.CHIP_CYCLE.size)
     }
+
+    // ---------- RE-TRIM: the tape reference (docs/RETRIM.md §1) ----------
+
+    @Test
+    fun `a chop with a tape reference sends every slice with its absolute cut in the file`() {
+        val model = ChopReviewModel.chop(breakSnip(), tape = ChopReviewModel.TapeRef("snip_7_BREAK.wav", 10_000))
+        val sent = model.sendToGrid()
+        val pads = sent.arranged.filterNotNull()
+        assertEquals(4, pads.size)
+        for (pad in pads) {
+            val start = pad.source.getValue("sourceFrame").toInt()
+            val length = pad.source.getValue("lengthFrames").toInt()
+            assertEquals("snip_7_BREAK.wav", pad.source[Retrim.FILE_KEY])
+            assertEquals(10_000 + start, pad.source.getValue(Retrim.IN_KEY).toInt(), "the KEEP range's start is added")
+            assertEquals(10_000 + start + length, pad.source.getValue(Retrim.OUT_KEY).toInt())
+            assertEquals(pad.snip.frameCount, length)
+        }
+        // Two slices of one commit land on different frames of the same tape.
+        assertEquals(pads.size, pads.map { it.source[Retrim.IN_KEY] }.toSet().size)
+        // The melodic layout carries the same keys.
+        val melodic = model.sendToGridMelodic().arranged.filterNotNull()
+        assertTrue(melodic.all { it.source[Retrim.FILE_KEY] == "snip_7_BREAK.wav" })
+    }
+
+    @Test
+    fun `no tape reference means no tape keys, and RE-CHOP carries the reference it had`() {
+        val bare = ChopReviewModel.chop(breakSnip()).sendToGrid().arranged.filterNotNull()
+        assertTrue(bare.all { Retrim.FILE_KEY !in it.source && Retrim.IN_KEY !in it.source })
+        assertEquals("chop", bare.first().source["origin"], "the CLI's own keys stay as they were")
+
+        val ref = ChopReviewModel.TapeRef("snip_7_BREAK.wav", 500)
+        val rechopped = ChopReviewModel.chop(breakSnip(), tape = ref).rechop(ChopReviewModel.ChopMode.Grid(4))
+        assertEquals(ref, rechopped.tape)
+        val sent = rechopped.sendToGrid().arranged.filterNotNull()
+        assertEquals(4, sent.size)
+        assertEquals("500", sent.first().source[Retrim.IN_KEY], "the first grid part starts where the source starts")
+    }
 }

@@ -46,6 +46,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.MicSessionService
+import com.snipsnap.app.RetrimRequest
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -219,6 +220,20 @@ fun TapeScreen(
      * idle-reload watcher stay the other two triggers.
      */
     reloadRequest: Int = 0,
+    /**
+     * RE-TRIM (docs/RETRIM.md §3): the PAD SHEET's request to open on a
+     * pad's own tape. Its file is the load priority's first rung, above
+     * `SnipStore.newest`; the deck opens with IN and OUT on the pad's cut;
+     * and the primary button becomes BACK ONTO. Live only while the tape
+     * on screen is the request's own file — a request whose file won't
+     * read falls through to the ordinary priority and shows as a plain
+     * deck, never as a RE-TRIM of something else.
+     */
+    retrim: RetrimRequest? = null,
+    /** BACK ONTO: the request and the deck's selection, at the file's own rate. */
+    onBackOnto: (RetrimRequest, IntRange) -> Unit = { _, _ -> },
+    /** A new snip landed while TAPE was idle: App drops a live RE-TRIM before the reload re-resolves. */
+    onCaptureLanded: () -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
@@ -240,11 +255,11 @@ fun TapeScreen(
     // for what bumps it and why.
     var reloadToken by remember(kitDir) { mutableStateOf(0) }
 
-    LaunchedEffect(kitDir, reloadToken, reloadRequest) {
+    LaunchedEffect(kitDir, reloadToken, reloadRequest, retrim) {
         loaded = null
         failed = false
         val result = withContext(Dispatchers.IO) {
-            loadLongestTape(entry, context.filesDir, lastCommitSource)
+            loadLongestTape(entry, context.filesDir, lastCommitSource, retrim?.file)
         }
         // Distinct from an ordinary unreadable file (silent, always was):
         // this is [TAPE_LOAD_MAX_SEC]'s own safety net catching an
@@ -317,6 +332,10 @@ fun TapeScreen(
         onReadGroove,
         onStealFeel,
         onIdleReload = { reloadToken++ },
+        // Live only on its own file: see the `retrim` parameter's KDoc.
+        retrim = retrim?.takeIf { it.file == tapeData.sourceFile },
+        onBackOnto = onBackOnto,
+        onCaptureLanded = onCaptureLanded,
     )
 }
 
@@ -346,9 +365,15 @@ private class TapeLoadResult(val tape: LoadedTape?, val oomEncountered: Boolean)
  * exactly like any other WAV: [WavReader] + [Cleanup.toMono] is the same
  * path for all three sources.
  */
-private fun loadLongestTape(entry: KitShelf.Entry?, filesDir: File, lastCommitSource: File?): TapeLoadResult {
+private fun loadLongestTape(
+    entry: KitShelf.Entry?,
+    filesDir: File,
+    lastCommitSource: File?,
+    /** A live RE-TRIM's tape: the first rung, above the newest snip — the freshest intent there is. */
+    retrimFile: File? = null,
+): TapeLoadResult {
     var oomEncountered = false
-    for (file in listOfNotNull(SnipStore.newest(filesDir), lastCommitSource)) {
+    for (file in listOfNotNull(retrimFile, SnipStore.newest(filesDir), lastCommitSource)) {
         when (val outcome = readMono(file)) {
             is MonoOutcome.Ok -> return TapeLoadResult(buildLoadedTape(file, outcome.read), oomEncountered)
             MonoOutcome.OutOfMemory -> oomEncountered = true
@@ -463,6 +488,10 @@ private fun TapeDeckContent(
     onReadGroove: (File, IntRange) -> Unit,
     onStealFeel: (File, IntRange) -> Unit,
     onIdleReload: () -> Unit,
+    /** The live RE-TRIM, already checked against [tapeData]'s file by the caller. */
+    retrim: RetrimRequest? = null,
+    onBackOnto: (RetrimRequest, IntRange) -> Unit = { _, _ -> },
+    onCaptureLanded: () -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val digScope = rememberCoroutineScope()
@@ -492,8 +521,20 @@ private fun TapeDeckContent(
     // live model instead of leaving it closed over a stale, already-
     // replaced one.
     LaunchedEffect(model) {
+        // `lastSnipFile` is a StateFlow: a fresh collector replays its
+        // current value at once. That replay is the snip already on the
+        // shelf when this deck loaded, not a capture that landed since —
+        // and with a RE-TRIM live the deck is on the pad's own tape, which
+        // is normally NOT that snip, so the old `file != sourceFile` test
+        // alone would read the replay as news and drop the request before
+        // the cut-selection effect below ever ran. Baseline it instead:
+        // only a later emission is a capture.
+        val baseline = MicSessionService.lastSnipFile.value
         MicSessionService.lastSnipFile.collect { file ->
-            if (file != null && file != tapeData.sourceFile && !model.playing && !model.hasSelection) {
+            if (file != null && file != baseline && file != tapeData.sourceFile && !model.playing && !model.hasSelection) {
+                // Dropped before the reload so the re-resolve can't put
+                // the RE-TRIM's file back above the snip that just landed.
+                onCaptureLanded()
                 onIdleReload()
             }
         }
@@ -543,6 +584,26 @@ private fun TapeDeckContent(
     }
 
     var commitIndex by remember(model) { mutableStateOf(0) }
+
+    // RE-TRIM opens on the pad's own cut: IN and OUT up, LEN reading the
+    // pad's length, the head parked at IN so PLAY previews it. A pad tagged
+    // before the cut keys existed selects the whole tape, so BACK ONTO has
+    // something to land either way. A cut that lies past what
+    // TAPE_LOAD_MAX_SEC kept can't be reached: said once, and the deck
+    // opens at the top as it does for any long file.
+    LaunchedEffect(model, retrim) {
+        val live = retrim ?: return@LaunchedEffect
+        val cut = live.cut
+        when {
+            cut == null -> model.select(0, model.lengthFrames)
+            // The exclusive end too: `select` would otherwise clamp a cut
+            // that runs past the cap into a shorter one and let BACK ONTO
+            // land it as if it were the pad's.
+            cut.outFrame > model.lengthFrames -> onToast(Copy.RETRIM_PAST_CAP)
+            else -> model.select(cut.inFrame, cut.outFrame)
+        }
+        touch()
+    }
 
     // The model advances outside Compose's snapshot system (it's plain
     // Kotlin, tested on its own) — `positionState` is the bridge into it.
@@ -620,7 +681,16 @@ private fun TapeDeckContent(
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        CassetteRow(entry, model, position, onToast, ::stopVoice, ::touch)
+        CassetteRow(
+            // The header says what is going on while a RE-TRIM is live:
+            // which pad, which tape.
+            title = retrim?.let { Copy.retrimHeader(it.padLabel, it.file.name) } ?: entry?.kit?.name ?: "TAPE",
+            model = model,
+            position = position,
+            onToast = onToast,
+            onScrubStart = ::stopVoice,
+            onTouch = ::touch,
+        )
         WaveformLcd(
             model,
             tapeData.onsets,
@@ -664,8 +734,12 @@ private fun TapeDeckContent(
             WindButton("▶▶", Modifier.weight(1f), 1, model, ::stopVoice, ::touch)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // BACK ONTO A02 replaces KEEP while a RE-TRIM is live
+            // (docs/RETRIM.md §4): the request owns the primary. The
+            // selection's frames are the loaded file's own, which is what
+            // App reads the cut back out of.
             DeckButton(
-                "KEEP",
+                retrim?.let { Copy.backOnto(it.padLabel) } ?: "KEEP",
                 Modifier
                     .weight(1f)
                     .height(Layout.PRIMARY_ACTION_H.dp),
@@ -673,7 +747,15 @@ private fun TapeDeckContent(
             ) {
                 val range = model.commitSelection()
                 touch()
-                if (range != null) {
+                if (retrim != null) {
+                    if (range != null) {
+                        if (model.playing) model.togglePlay()
+                        stopVoice()
+                        onBackOnto(retrim, range)
+                    } else {
+                        onToast(Copy.COMMIT_NEEDS_SELECTION)
+                    }
+                } else if (range != null) {
                     // tapeData.sourceFile, not a re-derived "open kit's longest
                     // sample" — TapeCommit's own contract is that `range`'s
                     // frames only mean something against the exact file TAPE
@@ -943,7 +1025,8 @@ private fun WindButton(
  */
 @Composable
 private fun CassetteRow(
-    entry: KitShelf.Entry?,
+    /** The kit's name, or `RE-TRIM A02 · BASS 5.WAV` while a RE-TRIM is live. */
+    title: String,
     model: TapeDeckModel,
     position: () -> Double,
     onToast: (String) -> Unit,
@@ -1009,7 +1092,7 @@ private fun CassetteRow(
                 },
         )
         TapeText(
-            entry?.kit?.name ?: "TAPE",
+            title,
             TapeType.marker,
             scheme.lcdInk.tape,
             Modifier.weight(1f),
