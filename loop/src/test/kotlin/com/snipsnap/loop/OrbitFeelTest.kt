@@ -242,8 +242,9 @@ class OrbitFeelTest {
         val back = OrbitStore.load(dir)
         assertEquals(listOf(0L, -31L), (back!!.orbits[0].content as PatternOrbit).hits.map { it.offset })
 
-        // A straight set writes no offset key at all, so the file a
-        // previous build would have written is the file this one writes.
+        // A straight hit writes no offset key at all, so its shape is the
+        // one every previous build wrote. The file is not byte-identical —
+        // `version` itself goes 3 to 4 — but nothing about the hit changes.
         val straightDir = Files.createTempDirectory("orbit-straight").toFile().also { it.deleteOnExit() }
         OrbitStore.save(set(ring(16, hits = arrayOf(OrbitHit(0, 1)))), straightDir)
         val text = java.io.File(straightDir, OrbitStore.FILE_NAME).readText()
