@@ -130,6 +130,62 @@ object GrooveFeel {
         )
     }
 
+    /**
+     * One bipolar axis. [t] runs −1 (fully snapped to the 16th grid) through
+     * 0 (exactly as played) to +1 (fully leaned by [template]).
+     *
+     * TIGHTEN and HUMANIZE are the same machine read at two signs, which is
+     * why this is one function and not two. The centre is not an arbitrary
+     * midpoint — it is the performance itself, which is what lets "AS PLAYED"
+     * be an honest label.
+     *
+     * Does NOT rename the clip, unlike [apply]. [GrooveVariations.standard]
+     * derives every variation's name from its input and MIDI export uses
+     * those names as filenames, so renaming here would silently rename every
+     * exported file.
+     *
+     * The pocket ([Template.laneOffsets]) is added AFTER the blend and is
+     * unaffected by [t], so "fully tight with a dragging snare" stays
+     * reachable — that combination is most of the MPC catalogue, and a naive
+     * single control would make it impossible.
+     */
+    fun applyFeel(clip: Mpc3Clip, t: Float, template: Template): Mpc3Clip {
+        require(t in -1f..1f) { "feel wants -1..1, got $t" }
+        // Structural, not arithmetic: "as played" must not depend on a lerp
+        // round-tripping Long pulses through Float.
+        if (t == 0f) return clip
+        val grid = Mpc3Clip.PULSES_PER_16TH
+        return clip.copy(
+            notes = GrooveEdit.dedupeLouder(
+                clip.notes.map { n ->
+                    // UNWRAPPED on purpose. A hit at 7600 in a 2-bar clip
+                    // snaps to 7680, which wraps to 0; lerping toward the
+                    // wrapped target would send a half-tight note to 3800,
+                    // the middle of the bar, instead of 7640. Wrap last.
+                    val snapped = (n.timePulses + grid / 2) / grid * grid
+                    val pos = ((snapped / grid) % POSITIONS).toInt()
+                    val lane = GrooveEdit.Lane.entries.firstOrNull { GrooveEdit.noteFor(it) == n.note }
+                    val lead = if (t < 0f) {
+                        n.timePulses + Math.round((snapped - n.timePulses) * -t.toDouble())
+                    } else {
+                        n.timePulses + Math.round(t.toDouble() * (template.offsets[pos] ?: 0L))
+                    }
+                    val withPocket = lead + (lane?.let { template.laneOffsets[it] } ?: 0L)
+                    // Dynamics ride the LOOSE half only - tightening timing
+                    // is not a reason to flatten velocity.
+                    val velocity = if (t > 0f) {
+                        val scale = (template.accents[pos] ?: 1f) * (lane?.let { template.laneAccents[it] } ?: 1f)
+                        val target = n.velocity * scale
+                        (n.velocity + (target - n.velocity) * t).coerceIn(0.05f, 1f)
+                    } else {
+                        n.velocity
+                    }
+                    n.copy(timePulses = LiveRecord.wrapped(withPocket, clip.bars), velocity = velocity)
+                },
+            ),
+        )
+    }
+
     private fun median(values: List<Long>): Long {
         val sorted = values.sorted()
         return sorted[sorted.size / 2]

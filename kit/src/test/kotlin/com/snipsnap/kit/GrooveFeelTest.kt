@@ -116,4 +116,110 @@ class GrooveFeelTest {
         assertTrue(t.accents.all { it == null }, "subsystem A generates timing only, never accents")
         assertTrue(t.laneOffsets.isEmpty(), "and no lane pocket - that is subsystem B's to supply")
     }
+
+    private fun twoBar(vararg pulses: Long) = Mpc3Clip(
+        "break", 2,
+        pulses.mapIndexed { i, p -> Mpc3Note(note = 36 + (i % 3), timePulses = p, velocity = 0.8f) },
+    )
+
+    private val ZERO = GrooveFeel.Template(
+        offsets = List(GrooveFeel.POSITIONS) { 0L },
+        accents = List(GrooveFeel.POSITIONS) { null },
+    )
+
+    @Test
+    fun `t of zero is note-for-note identity`() {
+        val clip = twoBar(37L, 1201L, 3799L, 7600L)
+        val out = GrooveFeel.applyFeel(clip, 0f, GrooveFeel.generated(5))
+        assertEquals(clip.notes, out.notes, "AS PLAYED must be exactly what was played")
+        assertEquals(clip.name, out.name, "and it does not rename the clip")
+    }
+
+    @Test
+    fun `full tight equals GrooveEdit quantized`() {
+        val clip = twoBar(37L, 1201L, 3799L, 7600L)
+        val tight = GrooveFeel.applyFeel(clip, -1f, ZERO)
+        val expected = GrooveEdit.quantized(clip, clip.name)
+        assertEquals(expected.notes.map { it.timePulses }, tight.notes.map { it.timePulses },
+            "the tight endpoint IS the wrapping quantize, not a second implementation")
+    }
+
+    @Test
+    fun `half tight lerps toward the unwrapped grid, not across the bar`() {
+        // 7600 snaps to 7680, which wraps to 0. Lerping toward the WRAPPED
+        // target would give 3800 - the middle of the bar. Correct is 7640.
+        val out = GrooveFeel.applyFeel(twoBar(7600L), -0.5f, ZERO)
+        assertEquals(7640L, out.notes[0].timePulses, "halfway to the downbeat, not halfway across the clip")
+    }
+
+    @Test
+    fun `full loose adds the template offset`() {
+        val t = GrooveFeel.Template(
+            offsets = List(GrooveFeel.POSITIONS) { 30L },
+            accents = List(GrooveFeel.POSITIONS) { null },
+        )
+        val out = GrooveFeel.applyFeel(twoBar(1200L), 1f, t)
+        assertEquals(1230L, out.notes[0].timePulses, "the loose endpoint is original plus offset")
+    }
+
+    @Test
+    fun `a loose push past the loop end wraps instead of clamping`() {
+        val t = GrooveFeel.Template(
+            offsets = List(GrooveFeel.POSITIONS) { 200L },
+            accents = List(GrooveFeel.POSITIONS) { null },
+        )
+        val out = GrooveFeel.applyFeel(twoBar(7600L), 1f, t)
+        assertEquals(120L, out.notes[0].timePulses, "7800 wraps to 120, it does not clamp to 7679")
+    }
+
+    @Test
+    fun `the lane pocket survives full tight`() {
+        val t = GrooveFeel.Template(
+            offsets = List(GrooveFeel.POSITIONS) { 0L },
+            accents = List(GrooveFeel.POSITIONS) { null },
+            laneOffsets = mapOf(GrooveEdit.Lane.SNARE to 24L),
+        )
+        val snare = Mpc3Clip("b", 2, listOf(Mpc3Note(note = GrooveEdit.noteFor(GrooveEdit.Lane.SNARE), timePulses = 1210L, velocity = 0.8f)))
+        val out = GrooveFeel.applyFeel(snare, -1f, t)
+        assertEquals(1200L + 24L, out.notes[0].timePulses, "tight, but the snare still drags - the pocket is not on the axis")
+    }
+
+    @Test
+    fun `an off-lane note takes position offsets and no lane offset`() {
+        val t = GrooveFeel.Template(
+            offsets = List(GrooveFeel.POSITIONS) { 10L },
+            accents = List(GrooveFeel.POSITIONS) { null },
+            laneOffsets = mapOf(GrooveEdit.Lane.SNARE to 24L),
+        )
+        // Pad 6 (note 41) is not one of the five named lanes.
+        val offLane = Mpc3Clip("b", 2, listOf(Mpc3Note(note = 41, timePulses = 1200L, velocity = 0.8f)))
+        val out = GrooveFeel.applyFeel(offLane, 1f, t)
+        assertEquals(1210L, out.notes[0].timePulses, "position offset applies; the snare's pocket does not")
+    }
+
+    @Test
+    fun `continuity across the detent`() {
+        val clip = twoBar(1207L)
+        val justTight = GrooveFeel.applyFeel(clip, -0.001f, ZERO).notes[0].timePulses
+        val justLoose = GrooveFeel.applyFeel(clip, 0.001f, GrooveFeel.generated(4)).notes[0].timePulses
+        assertTrue(Math.abs(justTight - 1207L) <= 1L, "just tight of centre is still essentially as played: $justTight")
+        assertTrue(Math.abs(justLoose - 1207L) <= 1L, "and so is just loose of it: $justLoose")
+    }
+
+    @Test
+    fun `a template accent scales velocity on the loose side only`() {
+        val t = GrooveFeel.Template(
+            offsets = List(GrooveFeel.POSITIONS) { 0L },
+            accents = List(GrooveFeel.POSITIONS) { 0.5f },
+        )
+        val clip = Mpc3Clip("b", 2, listOf(Mpc3Note(note = 36, timePulses = 1200L, velocity = 0.8f)))
+        assertEquals(0.4f, GrooveFeel.applyFeel(clip, 1f, t).notes[0].velocity, 1e-4f, "full loose takes the accent")
+        assertEquals(0.8f, GrooveFeel.applyFeel(clip, -1f, t).notes[0].velocity, 1e-4f, "tightening timing must not touch dynamics")
+    }
+
+    @Test
+    fun `t outside the range is refused in words`() {
+        val e = assertFailsWith<IllegalArgumentException> { GrooveFeel.applyFeel(twoBar(0L), 1.5f, ZERO) }
+        assertTrue(e.message!!.contains("-1"), "the refusal names the range: ${e.message}")
+    }
 }
