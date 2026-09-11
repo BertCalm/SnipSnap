@@ -189,7 +189,7 @@ choice, not a surprise.
 | `loop/OrbitPatterns.kt` | Euclid, SPREAD, CLEAR, the dice, TURN, `place` (what REC writes), a copy's name, the weight cycle, the step-size choices |
 | `loop/OrbitPresets.kt` | The starter set from a kit — one ring per instrument the kit has (KICK 16 · SNARE 16 · HATS 12 · PERC 20 · THREE, a locked triplet · BASS 20 over the tonal pads) — and the empty-ring and snip-ring constructors |
 | `app/OrbitSampleSource.kt` | Pads from the kit shelf via `KitSampleSource`, snips from `snips/` |
-| `app/ui/OrbitScreen.kt` | The rings (shortest inside, a 16th-long comet tail, a strike flare, a pulse when they meet, a snip ring's waveform), the unrolled strip, the panel (with the fit report), the tempo offer, the debounced BPM (running while held), UNDO (40 edits deep, a BPM run counting as one), the transport, audition through PLAY's pad engine, solo by long-press, and a description of the rings and every cell's state for a screen reader. Reached from GROOVE's **ORBIT ▸**, left by **◄ GROOVE** |
+| `app/ui/OrbitScreen.kt` | Reached from **ORBIT** on the menu row (with a kit open), or from GROOVE's `ORBIT ▸` — on its empty state beside RECORD and STEPS, and on its action row once a groove exists. The rings (shortest inside, a 16th-long comet tail, a strike flare, a pulse when they meet, a snip ring's waveform), the unrolled strip, the panel (with the fit report), the tempo offer, the debounced BPM (running while held), UNDO (40 edits deep, a BPM run counting as one), the transport, audition through PLAY's pad engine, solo by long-press, and a description of the rings and every cell's state for a screen reader. Reached from GROOVE's **ORBIT ▸**, left by **◄ GROOVE** |
 
 ## Out the door
 

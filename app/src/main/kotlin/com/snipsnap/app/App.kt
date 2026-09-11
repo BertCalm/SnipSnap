@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeTheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.rememberDeskBrush
 import com.snipsnap.app.theme.tape
@@ -2125,6 +2126,24 @@ fun App(shelf: KitShelf) {
                                     reloadRequest = grooveReload,
                                     onArrange = { arrangeOpen = true },
                                     onOrbit = { orbitOpen = true },
+                                )
+                            }
+                        }
+                        AppScreen.ORBIT -> {
+                            // The menu row's own door to the rings. GROOVE's
+                            // ORBIT ▸ still opens the same screen as an overlay;
+                            // this one needs no groove and no scrolling, only a kit.
+                            val orbitEntry = open
+                            if (orbitEntry == null) {
+                                Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
+                                    TapeText(Copy.NO_KIT_FOR_ORBIT, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+                                }
+                            } else {
+                                OrbitScreen(
+                                    entry = orbitEntry,
+                                    kitsRoot = shelf.root,
+                                    onBack = { screen = AppScreen.GROOVE },
+                                    onToast = { toast = it },
                                 )
                             }
                         }

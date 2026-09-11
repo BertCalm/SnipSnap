@@ -102,6 +102,8 @@ object GrooveVariations {
      * ghost notes drop away and the skeleton of the beat remains.
      */
     fun sparse(clip: Mpc3Clip): Mpc3Clip {
+        // An empty bar (STEPS from scratch) has no median; its skeleton is itself.
+        if (clip.notes.isEmpty()) return clip.copy(name = variantName(clip.name, "Sparse"))
         val median = clip.notes.map { it.velocity }.sorted()[clip.notes.size / 2]
         val kept = clip.notes.filter { it.velocity >= median }
         return clip.copy(
