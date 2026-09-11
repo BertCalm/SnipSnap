@@ -70,6 +70,18 @@ sealed class Retrim {
             return applied.segment?.let(PadSheet::displayLabel) ?: applied.treatment.name.uppercase()
         }
 
+        /**
+         * The hits INSTANT KIT would cut from [mono] — `Chopper.byTransients`
+         * with CHOP's defaults, as frame ranges in the tape — for TAPE's HITS
+         * stepper while a RE-TRIM is live: pick the hit, then BACK ONTO it,
+         * instead of dragging IN and OUT by hand. Lengths match INSTANT
+         * KIT's slices exactly (its cleanup never trims), so a hit landed
+         * this way is the pad INSTANT KIT would have made.
+         */
+        fun hits(mono: Snip): List<IntRange> =
+            Chopper.byTransients(mono, maxSlices = ChopReviewModel.ChopMode.ByHits().maxSlices, cleanup = null)
+                .map { it.sourceFrame until it.sourceFrame + it.snip.frameCount }
+
         /** The three keys for [fileName]'s cut [inFrame] until [outFrame], ready to merge into a pad's source. */
         fun tag(fileName: String, inFrame: Int, outFrame: Int): Map<String, String> {
             require('/' !in fileName && '\\' !in fileName) { "tapeFile is a bare filename: '$fileName'" }

@@ -62,6 +62,7 @@ import com.snipsnap.shell.Dig
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.PeaksPyramid
+import com.snipsnap.shell.Retrim
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.SnipStore
@@ -498,6 +499,14 @@ private fun TapeDeckContent(
     val digScope = rememberCoroutineScope()
     // DIG runs on this screen: it only moves the deck's own IN and OUT.
     var digging by remember(tapeData) { mutableStateOf(false) }
+    // The HITS stepper (RE-TRIM only): INSTANT KIT's slices of this tape,
+    // found once per loaded tape, off the main thread — null until then.
+    var hits by remember(tapeData) { mutableStateOf<List<IntRange>?>(null) }
+    LaunchedEffect(tapeData, retrim != null) {
+        if (retrim != null && hits == null) {
+            hits = withContext(Dispatchers.IO) { Retrim.hits(Snip(tapeData.samples, 1, tapeData.sampleRate)) }
+        }
+    }
 
     val model = remember(tapeData) {
         TapeDeckModel(tapeData.samples, tapeData.sampleRate, tapeData.onsets)
@@ -737,6 +746,36 @@ private fun TapeDeckContent(
             WindButton("◄◄", Modifier.weight(1f), -1, model, ::stopVoice, ::touch)
             DeckButton(if (model.playing) "■ STOP" else "▶ PLAY", Modifier.weight(1f)) { onPlayStop() }
             WindButton("▶▶", Modifier.weight(1f), 1, model, ::stopVoice, ::touch)
+        }
+        if (retrim != null) {
+            // HITS (docs/RETRIM.md round 4): step IN and OUT through the
+            // hits INSTANT KIT would cut from this tape, so picking "the
+            // next hit instead" is one tap, not a drag — then BACK ONTO.
+            // The readout names the hit the selection sits on, if any.
+            val found = hits
+            val current = found?.indexOfFirst { model.inFrame in it } ?: -1
+            fun stepHit(delta: Int) {
+                val list = hits
+                if (list.isNullOrEmpty()) {
+                    onToast(if (list == null) Copy.HITS_BUSY else Copy.HITS_NONE)
+                    return
+                }
+                val next = if (current < 0) (if (delta > 0) 0 else list.size - 1) else (current + delta).mod(list.size)
+                val hit = list[next]
+                if (model.playing) model.togglePlay()
+                stopVoice()
+                model.select(hit.first, hit.last + 1)
+                touch()
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                DeckButton("◀ HIT", Modifier.weight(1f)) { stepHit(-1) }
+                DeckButton(
+                    if (found == null) Copy.HITS_BUSY else Copy.hitReadout(current, found.size),
+                    Modifier.weight(1.2f),
+                    engaged = current >= 0,
+                ) { stepHit(1) }
+                DeckButton("HIT ▶", Modifier.weight(1f)) { stepHit(1) }
+            }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             // BACK ONTO A02 replaces KEEP while a RE-TRIM is live

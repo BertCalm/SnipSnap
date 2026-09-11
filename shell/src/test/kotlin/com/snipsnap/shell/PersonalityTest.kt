@@ -375,6 +375,8 @@ class PersonalityTest {
         "CHOP_ALL_BUSY",
         // BACK ONTO's busy overlay line, like every other *_BUSY above.
         "RETRIM_BUSY",
+        // The HITS stepper's own busy readout.
+        "HITS_BUSY",
         "OUTSIDE_LISTENING", "ROOM_FORGET_BUSY", "ROOM_RESTORE_BUSY", "ROOM_BIN_EMPTY_BUSY", "KIT_DELETE_BUSY", "KIT_RENAME_BUSY",
         "CHIP_NOT_SURE", "CHIP_OVERRIDDEN",
         "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_NONE", "CARD_PICKED",

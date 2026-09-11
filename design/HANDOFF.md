@@ -54,7 +54,7 @@ Phone frame 390×844, outer margin 12. Titlebar 34 (r4). Menu row 26, items pad 
 | KITS | (new) | tape shelf, status ON CARD/DRAFT |
 | KIT | Main.dc.html | pads WebAudio-triggered, arm session |
 | TAPE | TapeDeck.dc.html + prototype/tapedeck.html | drag-under-fixed-needle, zoom 1-4×, snap-to-onset, pencil rewind gag |
-| TAPE (RE-TRIM) | TapeRetrim.dc.html | opened from a pad's RE-TRIM ▸: header `RE-TRIM A02 · <file>` in the pad's colour, IN/OUT on the pad's cut, BACK ONTO A02 where KEEP was — `docs/RETRIM.md` |
+| TAPE (RE-TRIM) | TapeRetrim.dc.html | opened from a pad's RE-TRIM ▸: header `RE-TRIM A02 · <file>` in the pad's colour, IN/OUT on the pad's cut, a `◀ HIT · HIT 3/7 · HIT ▶` stepper over INSTANT KIT's slices above the primary row, BACK ONTO A02 where KEEP was — `docs/RETRIM.md`. GRAB/HOLD pads have a tape too (every capture lands on the SNIPS shelf) |
 | CHOP | ChopShop.dc.html | chip tap = cycle class label, "YOU ✓" |
 | PLAY | PlayMode.dc.html | in-window 4×4; ⟳ → fullscreen 8×2 landscape |
 | SYNTH | docs/SYNTH_ROADMAP.md THUMP | 5 voices, macro sliders, SCRAMBLE, scope |

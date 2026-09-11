@@ -1,7 +1,8 @@
 # RE-TRIM: a pad goes back to its own tape
 
-**Status: all three rounds built.** Round 3 added the header chip in the
-pad's own colour, a HELP line, and the `TapeRetrim` design board. It answers
+**Status: all three rounds built, plus round 4.** Round 3 added the header
+chip in the pad's own colour, a HELP line, and the `TapeRetrim` design
+board. Round 4 (below) closed the two gaps the spec had left. It answers
 one question a phone test asked: *once a recording is chopped and on a
 pad, how do I change the length of that chop?* Before this the honest
 answer was "you can't, directly"; now it is one tap.
@@ -197,8 +198,22 @@ is what tells you RE-TRIM will land where you expect before you tap it.
    TAPE's load priority, the header, BACK ONTO with the metadata carry
    and the take, the PAD SHEET's line. `android-build` is the check.
 3. **Polish**: the header chip in the pad's class colour, the HELP line,
-   the design board. BACK ONTO from INSTANT KIT stays out of scope until
-   asked.
+   the design board.
+4. **The two gaps** (built):
+   - **GRAB and HOLD land a tape too.** The raw ring snapshot goes through
+     the same chain a SNIP gets and is written to the SNIPS shelf; the pad
+     is a cut of that very audio (`PadTape` in `:shell`: GRAB's cut runs
+     from the last onset to the end, HOLD's is the whole tape), tagged
+     with the file and the cut. So a mic pad RE-TRIMs like a chopped one,
+     and BACK ONTO reproduces the grabbed sound bit for bit. The one
+     visible change: every GRAB and HOLD now shows on the SNIPS shelf. A
+     quiet room is still "nothing to grab yet", not a tape.
+   - **HITS on the deck while a RE-TRIM is live.** A row `◀ HIT · HIT 3/7
+     · HIT ▶` steps IN and OUT through the hits INSTANT KIT would cut from
+     this tape (`Retrim.hits`, the same slices, the same lengths), so "the
+     next hit instead" is one tap rather than a drag; the readout names
+     the hit the selection sits on. Then BACK ONTO. This is what the spec
+     meant by "BACK ONTO on INSTANT KIT's slice list".
 
 ## Open questions (as settled)
 

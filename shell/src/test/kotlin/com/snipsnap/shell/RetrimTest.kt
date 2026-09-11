@@ -164,4 +164,22 @@ class RetrimTest {
         assertEquals(rate, clamped.frameCount)
         assertFailsWith<IllegalArgumentException> { Retrim.cut(mono, 500 until 500) }
     }
+
+    @Test
+    fun `hits are INSTANT KIT's slices as ranges in the tape`() {
+        val rate = 44_100
+        val step = rate / 2
+        val total = FloatArray(step * 6)
+        val hits = listOf(1 to com.snipsnap.audio.DrumSynth.kick(), 2 to com.snipsnap.audio.DrumSynth.closedHat(), 3 to com.snipsnap.audio.DrumSynth.snare(), 4 to com.snipsnap.audio.DrumSynth.openHat())
+        for ((s, hit) in hits) for (i in hit.samples.indices) if (s * step + i < total.size) total[s * step + i] += hit.samples[i] * 0.8f
+        val mono = com.snipsnap.audio.Snip(total, 1, rate)
+        val ranges = Retrim.hits(mono)
+        assertEquals(4, ranges.size)
+        for (i in 1 until ranges.size) assertTrue(ranges[i].first >= ranges[i - 1].last, "in tape order")
+        assertTrue(ranges.all { it.first >= 0 && it.last < mono.frameCount && !it.isEmpty() })
+        // The same slices INSTANT KIT lands: one pad per hit, same lengths.
+        val sent = ChopReviewModel.chop(mono).sendToGrid().arranged.filterNotNull()
+        assertEquals(ranges.map { it.last + 1 - it.first }.sorted(), sent.map { it.snip.frameCount }.sorted())
+        assertTrue(Retrim.hits(com.snipsnap.audio.Snip(FloatArray(rate), 1, rate)).isEmpty(), "silence has no hits")
+    }
 }
