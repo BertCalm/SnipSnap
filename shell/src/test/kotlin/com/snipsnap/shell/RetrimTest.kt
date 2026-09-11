@@ -107,11 +107,47 @@ class RetrimTest {
     @Test
     fun `TapeRef ofSnip only names a file on the SNIPS shelf and clamps a negative offset`() {
         val tape = tapeOnShelf()
-        assertEquals(ChopReviewModel.TapeRef(tape.name, 0), ChopReviewModel.TapeRef.ofSnip(tape, -40))
-        assertEquals(ChopReviewModel.TapeRef(tape.name, 99), ChopReviewModel.TapeRef.ofSnip(tape, 99))
+        assertEquals(ChopReviewModel.TapeRef(tape.name, 0), ChopReviewModel.TapeRef.ofSnip(tape, -40, snips))
+        assertEquals(ChopReviewModel.TapeRef(tape.name, 99), ChopReviewModel.TapeRef.ofSnip(tape, 99, snips))
         val kitSample = File(File(temp, "SomeKit"), "A01_Kick_01.wav")
-        assertNull(ChopReviewModel.TapeRef.ofSnip(kitSample, 0), "a kit sample TAPE fell back to is not a tape to go back to")
+        assertNull(ChopReviewModel.TapeRef.ofSnip(kitSample, 0, snips), "a kit sample TAPE fell back to is not a tape to go back to")
+        // The directory itself, not its name: a kit that happens to be called "snips" is not the shelf.
+        val lookalike = File(File(File(temp, "kits"), SnipStore.DIR), "A01_Kick_01.wav")
+        assertNull(ChopReviewModel.TapeRef.ofSnip(lookalike, 0, snips))
         assertTrue(Retrim.of(pad(Retrim.tag(tape.name, 0, 1)), snips) is Retrim.Ready)
+    }
+
+    @Test
+    fun `a layered or chained pad refuses before TAPE opens - both ride on the old file`() {
+        val tape = tapeOnShelf()
+        val tagged = pad(Retrim.tag(tape.name, 0, 10))
+        val layered = tagged.copy(velocityLayers = listOf(com.snipsnap.kit.KitLayer("A02_Bass_01_v1.wav", 0, 63), com.snipsnap.kit.KitLayer("A02_Bass_01.wav", 64, 127)))
+        assertEquals(Retrim.Refused(Copy.RETRIM_LAYERED), Retrim.of(layered, snips))
+        val chained = tagged.copy(chain = com.snipsnap.kit.ChainInfo(listOf(0L, 100L, 200L), cycle = 3))
+        assertEquals(Retrim.Refused(Copy.RETRIM_CHAINED), Retrim.of(chained, snips))
+    }
+
+    @Test
+    fun `treatmentLeft names the card's word, sees SMEAR, and is null for an untreated pad`() {
+        val bare = pad(emptyMap())
+        assertNull(Retrim.treatmentLeft(bare))
+        val crushed = bare.copy(
+            recipe = com.snipsnap.json.JsonValue.Obj(
+                mapOf("treatment" to com.snipsnap.json.JsonValue.Str("crush"), "amount" to com.snipsnap.json.JsonValue.Num(0.5)),
+            ),
+        )
+        val word = Retrim.treatmentLeft(crushed)
+        assertTrue(word != null && word == word.uppercase(), "the toast shouts: $word")
+        val smeared = bare.copy(
+            recipe = com.snipsnap.json.JsonValue.Obj(
+                mapOf("verb" to com.snipsnap.json.JsonValue.Str("smear"), "amount" to com.snipsnap.json.JsonValue.Num(0.3)),
+            ),
+        )
+        assertEquals("SMEAR", Retrim.treatmentLeft(smeared), "PadSheet.read can't see SMEAR on purpose; this must")
+        assertEquals(
+            "A02 RE-CUT. THE SMEAR STAYED WITH THE OLD ONE - IT'S IN THE BIN.",
+            Copy.retrimLanded("A02", Retrim.treatmentLeft(smeared)),
+        )
     }
 
     @Test

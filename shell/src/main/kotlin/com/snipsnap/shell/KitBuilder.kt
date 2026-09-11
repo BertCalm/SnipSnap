@@ -115,18 +115,20 @@ class KitBuilderModel private constructor(
      * What does NOT carry: a treatment (its recipe is dropped — the sound
      * was baked into the old file, which [assign] bins as it would for any
      * replaced pad, and stacking it silently onto the new cut is the kind
-     * of surprise the SMEAR bug taught), the stamps that described the old
-     * audio's processing (`mutatedWith`, `outside`, `desampled`), and GHOSTS
-     * as files — those were renderings of the old cut, so they are rendered
-     * again from the new one, the same number of soft zones. The caller
-     * reads the old pad's treatment before calling (`PadSheet.read`) to say
-     * in the toast that it stayed behind. [save] archives a take, so UNDO
-     * on the sheet is the TAKES room, as for every other replacement.
+     * of surprise the SMEAR bug taught) and the stamps that described the
+     * old audio's processing (`mutatedWith`, `outside`, `desampled`). The
+     * caller names the treatment left behind (`Retrim.treatmentLeft`) in
+     * the toast. A velocity-layered pad (GHOSTS, or STACK THE TAKES — the
+     * model can't tell them apart, and either rides on the old file) and a
+     * round-robin chain (its boundaries index the old file) are refused,
+     * the same way [treatPad] and [smearPad] refuse them; `Retrim.of`
+     * says so before TAPE ever opens. [save] archives a take, so UNDO on
+     * the sheet is the TAKES room, as for every other replacement.
      */
     fun backOnto(slot: Int, snip: Snip, cut: Map<String, String>): KitPad {
         val old = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        // Layers count the main sample too (addGhostLayers appends it last).
-        val ghosts = (old.velocityLayers.size - 1).coerceIn(0, 2)
+        require(old.velocityLayers.isEmpty()) { "pad $slot is velocity-layered - clear GHOSTS (or the stack) before re-trimming" }
+        requireNotChained(old, "re-trimming")
         val source = old.source - LEFT_WITH_OLD_FILE + cut
         assign(slot, snip, old.drumClass, old.displayName, source)
         update(slot) {
@@ -142,9 +144,9 @@ class KitBuilderModel private constructor(
                 decay = old.decay,
                 cutoff = old.cutoff,
                 resonance = old.resonance,
+                humanize = old.humanize,
             )
         }
-        if (ghosts > 0) addGhostLayers(slot, ghosts)
         return kit.pad(slot)!!
     }
 

@@ -1216,17 +1216,26 @@ class KitBuilderTest {
     }
 
     @Test
-    fun `backOnto renders GHOSTS again from the new cut rather than keeping the old renderings`() {
+    fun `backOnto refuses a velocity-layered pad and leaves it untouched - GHOSTS or a stack ride on the old file`() {
         val dir = File(temp, "BackOntoGhosts")
         val m = KitBuilderModel.create("BackOntoGhosts", dir)
         m.assign(1, DrumSynth.snare(), DrumClass.SNARE)
         val ghosted = m.addGhostLayers(1, softZones = 2)
-        val oldLayerFiles = ghosted.velocityLayers.map { it.sampleFile }
+        m.save()
 
-        val recut = m.backOnto(1, DrumSynth.kick(), Retrim.tag("snip_1_X.wav", 0, 100))
-        assertEquals(3, recut.velocityLayers.size, "two soft zones under the main, as before")
-        assertTrue(recut.velocityLayers.none { it.sampleFile in oldLayerFiles })
-        assertTrue(recut.velocityLayers.all { File(dir, it.sampleFile).isFile })
-        assertTrue(oldLayerFiles.none { File(dir, it).isFile }, "the old renderings went with the old file")
+        assertFailsWith<IllegalArgumentException> { m.backOnto(1, DrumSynth.kick(), Retrim.tag("snip_1_X.wav", 0, 100)) }
+        assertEquals(ghosted, m.pad(1), "a refusal changes nothing")
+        assertTrue(ghosted.velocityLayers.all { File(dir, it.sampleFile).isFile })
+        assertTrue(m.binContents().isEmpty(), "nothing binned on a refusal")
+    }
+
+    @Test
+    fun `backOnto carries humanize like the rest of the pad's metadata`() {
+        val dir = File(temp, "BackOntoHumanize")
+        val m = KitBuilderModel.create("BackOntoHumanize", dir)
+        m.assign(1, DrumSynth.snare(), DrumClass.SNARE, source = Retrim.tag("snip_1_X.wav", 0, 100))
+        m.update(1) { it.copy(humanize = 0.35f) }
+        val recut = m.backOnto(1, DrumSynth.kick(), Retrim.tag("snip_1_X.wav", 10, 90))
+        assertEquals(0.35f, recut.humanize)
     }
 }

@@ -14,9 +14,11 @@ What the build settled beyond the spec below:
   resolver falls back to the legacy `file` key, which that path always
   wrote and which always meant "this whole snip".
 - **A treatment is left with the old file**, never re-applied. The toast
-  names it. GHOSTS are not carried as files (they were renderings of the
-  old cut) but rendered again from the new cut, the same number of soft
-  zones.
+  names it (SMEAR included). A pad with GHOSTS or STACK THE TAKES layers,
+  or a round-robin chain, refuses at RE-TRIM ▸ with its own line: the
+  layers and the chain's boundaries belong to the old file, and the model
+  cannot tell ghosts from stacked takes, so it says "clear them first"
+  rather than guess — the same refusal the treatment doors make.
 - **BACK ONTO A02 replaces KEEP** while a re-trim is live; there is no
   second KEEP on the row. A plain KEEP is one tap away by leaving TAPE
   and coming back, which drops the request.

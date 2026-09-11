@@ -38,6 +38,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -65,6 +66,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.TeachLog
 import java.io.File
 import kotlin.math.max
@@ -100,6 +102,8 @@ fun ChopScreen(
     // loadChopSource's kit-fallback branch (loadLongestSample) needs
     // `entry`, and it's skipped when `entry == null`.
     val kitDir = entry?.dir
+    // The app's actual SNIPS shelf, for the tape reference below.
+    val snipsDir = File(LocalContext.current.filesDir, SnipStore.DIR)
 
     var sourceFile by remember(kitDir, lastCommit) { mutableStateOf<File?>(null) }
     var model by remember(kitDir, lastCommit) { mutableStateOf<ChopReviewModel?>(null) }
@@ -124,7 +128,7 @@ fun ChopScreen(
                 // the commit's own snip — the kit-sample fallback is not a
                 // tape the pads could go back to.
                 val tape = lastCommit?.takeIf { it.sourceFile == file }
-                    ?.let { ChopReviewModel.TapeRef.ofSnip(it.sourceFile, it.range.first) }
+                    ?.let { ChopReviewModel.TapeRef.ofSnip(it.sourceFile, it.range.first, snipsDir) }
                 file to ChopReviewModel.chop(snip, tape = tape)
             }
             result.oomEncountered to built

@@ -521,8 +521,17 @@ private fun TapeDeckContent(
     // live model instead of leaving it closed over a stale, already-
     // replaced one.
     LaunchedEffect(model) {
+        // `lastSnipFile` is a StateFlow: a fresh collector replays its
+        // current value at once. That replay is the snip already on the
+        // shelf when this deck loaded, not a capture that landed since —
+        // and with a RE-TRIM live the deck is on the pad's own tape, which
+        // is normally NOT that snip, so the old `file != sourceFile` test
+        // alone would read the replay as news and drop the request before
+        // the cut-selection effect below ever ran. Baseline it instead:
+        // only a later emission is a capture.
+        val baseline = MicSessionService.lastSnipFile.value
         MicSessionService.lastSnipFile.collect { file ->
-            if (file != null && file != tapeData.sourceFile && !model.playing && !model.hasSelection) {
+            if (file != null && file != baseline && file != tapeData.sourceFile && !model.playing && !model.hasSelection) {
                 // Dropped before the reload so the re-resolve can't put
                 // the RE-TRIM's file back above the snip that just landed.
                 onCaptureLanded()
@@ -587,7 +596,10 @@ private fun TapeDeckContent(
         val cut = live.cut
         when {
             cut == null -> model.select(0, model.lengthFrames)
-            cut.inFrame >= model.lengthFrames -> onToast(Copy.RETRIM_PAST_CAP)
+            // The exclusive end too: `select` would otherwise clamp a cut
+            // that runs past the cap into a shorter one and let BACK ONTO
+            // land it as if it were the pad's.
+            cut.outFrame > model.lengthFrames -> onToast(Copy.RETRIM_PAST_CAP)
             else -> model.select(cut.inFrame, cut.outFrame)
         }
         touch()

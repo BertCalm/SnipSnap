@@ -58,6 +58,18 @@ sealed class Retrim {
         fun cut(mono: Snip, range: IntRange): Snip =
             Cleanup.process(InstantKit.slice(mono, range), Chopper.SLICE_CLEANUP)
 
+        /**
+         * The treatment BACK ONTO leaves with the old file, named for the
+         * toast — the card's own word for it ([PadSheet.read] → the segment
+         * label), or SMEAR, which [PadSheet.read] can't see on purpose and
+         * [PadSheet.readSmear] can; null when the pad carried none.
+         */
+        fun treatmentLeft(pad: KitPad): String? {
+            if (PadSheet.readSmear(pad.recipe) != null) return "SMEAR"
+            val applied = PadSheet.read(pad.recipe) ?: return null
+            return applied.segment?.let(PadSheet::displayLabel) ?: applied.treatment.name.uppercase()
+        }
+
         /** The three keys for [fileName]'s cut [inFrame] until [outFrame], ready to merge into a pad's source. */
         fun tag(fileName: String, inFrame: Int, outFrame: Int): Map<String, String> {
             require('/' !in fileName && '\\' !in fileName) { "tapeFile is a bare filename: '$fileName'" }
@@ -90,13 +102,19 @@ sealed class Retrim {
          * its cut, or the reason it can't. A missing tape name is the mic
          * or an import — unless `origin=chop` says the pad was chopped
          * before tapes were remembered, which gets its own line since the
-         * fix (RE-CHOP) is different. A named tape that isn't in
+         * fix (RE-CHOP) is different. A pad with velocity layers (GHOSTS,
+         * or STACK THE TAKES) or a round-robin chain refuses too: both are
+         * renderings of, or indexes into, the old file, so the same doors
+         * that rewrite audio (`treatPad`, `smearPad`) refuse them, and the
+         * PAD SHEET can clear them first. A named tape that isn't in
          * [snipsDir] (deleted past the bin, never copied to this phone,
          * or a name that isn't bare) is gone; the pad keeps what it has.
          */
         fun of(pad: KitPad, snipsDir: File): Retrim {
             val name = tapeName(pad)
                 ?: return Refused(if (pad.source["origin"] == "chop") Copy.RETRIM_OLD_CHOP else Copy.RETRIM_NO_TAPE)
+            if (pad.velocityLayers.isNotEmpty()) return Refused(Copy.RETRIM_LAYERED)
+            if (pad.chain != null) return Refused(Copy.RETRIM_CHAINED)
             if ('/' in name || '\\' in name) return Refused(Copy.RETRIM_TAPE_GONE)
             val file = File(snipsDir, name)
             if (!file.isFile) return Refused(Copy.RETRIM_TAPE_GONE)

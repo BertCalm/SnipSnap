@@ -41,15 +41,17 @@ class ChopReviewModel private constructor(
 
         companion object {
             /**
-             * A reference for [file] when it lives on the SNIPS shelf
-             * (`SnipStore.DIR`) — the only place `Retrim.of` looks — else
-             * null: TAPE also scrubs a kit's longest sample as a fallback,
-             * and a pad tagged with that would only ever resolve to "gone".
-             * A negative [offsetFrames] (a KEEP range clamped to the head)
-             * reads as 0, the same clamp the slice itself gets.
+             * A reference for [file] when it lives in [snipsDir] — the
+             * app's actual SNIPS shelf, the only place `Retrim.of` looks —
+             * else null: TAPE also scrubs a kit's longest sample as a
+             * fallback, and a pad tagged with that would only ever resolve
+             * to "gone" (or, worse, to a same-named snip). The directory
+             * itself is compared, not its name. A negative [offsetFrames]
+             * (a KEEP range clamped to the head) reads as 0, the same clamp
+             * the slice itself gets.
              */
-            fun ofSnip(file: java.io.File, offsetFrames: Int): TapeRef? =
-                if (file.parentFile?.name == SnipStore.DIR) TapeRef(file.name, offsetFrames.coerceAtLeast(0)) else null
+            fun ofSnip(file: java.io.File, offsetFrames: Int, snipsDir: java.io.File): TapeRef? =
+                if (file.parentFile?.absoluteFile == snipsDir.absoluteFile) TapeRef(file.name, offsetFrames.coerceAtLeast(0)) else null
         }
     }
 

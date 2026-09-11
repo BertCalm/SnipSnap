@@ -92,7 +92,6 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
-import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.Personality
 import com.snipsnap.shell.ReadGroove
 import com.snipsnap.shell.RecipeReplay
@@ -371,6 +370,12 @@ fun App(shelf: KitShelf) {
     // is exactly what `tapeOpenOverride` above can't promise. See
     // RetrimRequest for what clears it.
     var retrim by remember { mutableStateOf<RetrimRequest?>(null) }
+    // A RE-TRIM lives on TAPE only. Every way off the screen — the menu
+    // row, system back, INSTANT KIT, READ AS GROOVE, a SNIPS → TAPE that
+    // re-enters — drops it here, in one place, rather than at each exit.
+    LaunchedEffect(screen) {
+        if (screen != AppScreen.TAPE) retrim = null
+    }
     // X4.4 TEACH THE MACHINE: off by default, flipped on SETUP's consent
     // row, remembered like the scheme. CHOP reads it; what it gates is
     // feature vectors and labels into the kit's own folder, never audio,
@@ -1119,9 +1124,7 @@ fun App(shelf: KitShelf) {
                         val model = KitBuilderModel.open(request.kitDir)
                         val old = model.pad(request.slot)
                             ?: error("${request.padLabel} is empty now - nothing to go back onto")
-                        val treatment = PadSheet.read(old.recipe)?.let { applied ->
-                            applied.segment?.let(PadSheet::displayLabel) ?: applied.treatment.name
-                        }
+                        val treatment = Retrim.treatmentLeft(old)
                         model.backOnto(request.slot, snip, Retrim.tag(request.file.name, start, start + snip.frameCount))
                         model.save()
                         model.kit to treatment
@@ -1262,7 +1265,9 @@ fun App(shelf: KitShelf) {
             // (built, refused, or the scope cancelled underneath it), the
             // screen never stays stuck on CHOPPING….
             try {
-                val (entry, result) = withContext(Dispatchers.IO) { shelf.instantKit(file, range) }
+                val (entry, result) = withContext(Dispatchers.IO) {
+                    shelf.instantKit(file, range, File(context.filesDir, SnipStore.DIR))
+                }
                 kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                 toast = Copy.instantKit(result.sliceCount, result.chokeSet, wholeTape = !hadSelection)
                 open = entry
@@ -1592,7 +1597,6 @@ fun App(shelf: KitShelf) {
         // than leaving KitsScreen stuck naming a cross partner forever.
         pendingBreedWith = null
         tapeOpenOverride = null
-        retrim = null
         // DELETED KITS is shelf-level too — same reasoning
         // as SNIPS above: a tab switch away from KITS must
         // not leave this overlay armed to reopen on top of
@@ -1670,6 +1674,9 @@ fun App(shelf: KitShelf) {
                                 onOpenInTape = { file ->
                                     snipsOpen = false
                                     tapeOpenOverride = file
+                                    // An explicit SNIPS → TAPE choice, never
+                                    // shadowed by an older RE-TRIM's tape.
+                                    retrim = null
                                     screen = AppScreen.TAPE
                                 },
                                 onPickPadFor = { file ->

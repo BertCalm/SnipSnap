@@ -533,6 +533,10 @@ object Copy {
     const val RETRIM_OLD_CHOP = "THIS PAD WAS CHOPPED BEFORE TAPES WERE REMEMBERED. RE-CHOP TO FIX THAT."
     /** RE-TRIM ▸ when the named tape isn't on this phone's SNIPS shelf any more. */
     const val RETRIM_TAPE_GONE = "THAT TAPE'S GONE. THE PAD KEEPS WHAT IT HAS."
+    /** RE-TRIM ▸ on a pad with GHOSTS or STACK THE TAKES layers: they were rendered from, or are, the old file. */
+    const val RETRIM_LAYERED = "CLEAR GHOSTS (OR THE STACK) FIRST. LAYERS RIDE ON THE OLD FILE."
+    /** RE-TRIM ▸ on a round-robin chain: its boundaries index the old file. */
+    const val RETRIM_CHAINED = "THIS PAD IS A ROUND-ROBIN CHAIN. UNDO THE ROBIN FIRST."
     /** The cut lies beyond TAPE's load cap; the deck opens at the top instead. */
     const val RETRIM_PAST_CAP = "THAT CUT SITS PAST WHAT TAPE CAN HOLD."
     /** TAPE's header while a RE-TRIM is live: which pad, which tape. */
