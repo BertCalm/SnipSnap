@@ -23,6 +23,23 @@ object GrooveFeel {
         val offsets: List<Long?>,
         /** Velocity vs the donor's own average per position; null = donor silent there. */
         val accents: List<Float?>,
+        /**
+         * Constant push (+) or drag (−) for a whole lane, in pulses — the pocket.
+         * Separate from [offsets] on purpose: a lane's lean is one number
+         * estimated from every note that lane plays, so it survives a donor
+         * too sparse to fill sixteen positions. Absent key = that lane is
+         * straight. Notes on pads outside the five named lanes have no lane
+         * and so take [offsets] only.
+         *
+         * An extractor that learns BOTH layers from one donor must decompose,
+         * not double-count: take the lane median first, then compute
+         * [offsets] from the residual. Applying two independently-learned
+         * layers overshoots the lean. Nothing in subsystem A extracts — this
+         * note is here for whoever implements it.
+         */
+        val laneOffsets: Map<GrooveEdit.Lane, Long> = emptyMap(),
+        /** Velocity scale for a whole lane; absent key = unscaled. Same decomposition rule as [laneOffsets], by division. */
+        val laneAccents: Map<GrooveEdit.Lane, Float> = emptyMap(),
     ) {
         init {
             require(offsets.size == POSITIONS && accents.size == POSITIONS) {

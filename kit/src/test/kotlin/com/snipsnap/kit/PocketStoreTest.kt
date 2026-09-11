@@ -55,4 +55,39 @@ class PocketStoreTest {
         assertFailsWith<Exception> { PocketStore.read(file) }
         assertFailsWith<java.io.IOException> { PocketStore.read(File(temp, "missing.pocket")) }
     }
+
+    @Test
+    fun `a v2 pocket round-trips its lane layer`() {
+        val template = GrooveFeel.Template(
+            offsets = List(GrooveFeel.POSITIONS) { 0L },
+            accents = List(GrooveFeel.POSITIONS) { null },
+            laneOffsets = mapOf(GrooveEdit.Lane.SNARE to 18L, GrooveEdit.Lane.HAT_CLOSED to -6L),
+            laneAccents = mapOf(GrooveEdit.Lane.SNARE to 1.2f),
+        )
+        val file = PocketStore.save(PocketStore.Pocket("dilla", template), File(temp, "x.pocket"))
+        val back = PocketStore.read(file)
+        assertEquals(18L, back.template.laneOffsets[GrooveEdit.Lane.SNARE], "the snare's drag survives the file")
+        assertEquals(-6L, back.template.laneOffsets[GrooveEdit.Lane.HAT_CLOSED], "and so does the hat's push")
+        assertEquals(1.2f, back.template.laneAccents[GrooveEdit.Lane.SNARE], "lane accents round-trip too")
+    }
+
+    @Test
+    fun `a v1 pocket still reads, with an empty lane layer`() {
+        val file = File(temp, "old.pocket")
+        file.writeText(
+            """{"version":1,"name":"old","offsets":[${List(16) { "0" }.joinToString(",")}],""" +
+                """"accents":[${List(16) { "null" }.joinToString(",")}]}""",
+        )
+        val back = PocketStore.read(file)
+        assertEquals("old", back.name, "a v1 file is still readable")
+        assertTrue(back.template.laneOffsets.isEmpty(), "v1 carried no lane layer, so it reads as none")
+        assertTrue(back.template.laneAccents.isEmpty(), "and no lane accents")
+    }
+
+    @Test
+    fun `an unknown version is still refused`() {
+        val file = File(temp, "future.pocket")
+        file.writeText("""{"version":99,"name":"x","offsets":[],"accents":[]}""")
+        assertFailsWith<com.snipsnap.json.JsonException> { PocketStore.read(file) }
+    }
 }
