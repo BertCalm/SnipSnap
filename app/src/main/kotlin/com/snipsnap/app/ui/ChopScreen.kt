@@ -709,7 +709,13 @@ private fun SliceRow(
                 .combinedClickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onLongClickLabel = "RECLASSIFY",
+                    // NOT "RECLASSIFY": the long press does the opposite
+                    // of reclassifying - it drops any override and puts the
+                    // classifier's own call back (onLongPressChip below is
+                    // clearOverride). Tapping is what reclassifies, by
+                    // opening the picker. TalkBack was announcing this
+                    // action as the one gesture it is not.
+                    onLongClickLabel = "RESTORE THE MACHINE'S CALL",
                     onLongClick = { onLongPressChip() },
                     onClick = { onTapChip() },
                 )
