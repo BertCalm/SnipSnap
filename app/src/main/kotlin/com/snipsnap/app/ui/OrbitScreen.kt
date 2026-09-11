@@ -577,14 +577,21 @@ fun OrbitScreen(
             result.onSuccess { clip ->
                 // Snips are audio and a clip holds notes, so a snip ring
                 // cannot ride along. Say how many stayed behind rather than
-                // leave it to be discovered on the hardware, and point at
-                // the action that does carry them: the bounce renders every
-                // ring, snips included, so BOUNCE ▸ TAPE is where they go.
+                // leave it to be discovered on the hardware, and name the
+                // route that does take them.
+                //
+                // The route, not a promise: OrbitBank skips a snip whose
+                // file has gone (SampleSource.loop returns null) and
+                // OrbitEngine.addLoop returns early for it, so that ring
+                // bounces to silence. "IS THEIR WAY OUT" stays true either
+                // way - a clip can never hold them and the bounce is the
+                // only thing that might - where "CATCHES THOSE" would be a
+                // guarantee this screen cannot make.
                 val behind = OrbitClip.snipRings(s)
                 val left = if (behind.isEmpty()) {
                     ""
                 } else {
-                    " ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED BEHIND — BOUNCE ▸ TAPE CATCHES THOSE."
+                    " ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED BEHIND — A CLIP HOLDS NOTES, NOT AUDIO. BOUNCE ▸ TAPE IS THEIR WAY OUT."
                 }
                 onToast("${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC.$left")
             }.onFailure { e -> onToast("CLIP FAILED: ${e.message ?: e.javaClass.simpleName}") }
