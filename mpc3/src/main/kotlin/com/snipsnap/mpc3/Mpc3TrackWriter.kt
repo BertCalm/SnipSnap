@@ -11,8 +11,8 @@ import java.io.File
 
 /**
  * One note of an embedded pattern clip. [note] is a MIDI note — for a drum
- * track, pad A0N plays note 36+N-1 under the writer's chromatic map.
- * Velocity is MPC 3's normalised float, not a 0..127 int.
+ * track, which pad it plays is [Mpc3Note.slotFor]. Velocity is MPC 3's
+ * normalised float, not a 0..127 int.
  */
 data class Mpc3Note(
     val note: Int,
@@ -25,6 +25,39 @@ data class Mpc3Note(
         require(timePulses >= 0) { "timePulses must not be negative" }
         require(velocity in 0f..1f) { "velocity out of range: $velocity" }
         require(lengthPulses > 0) { "lengthPulses must be positive" }
+    }
+
+    companion object {
+        /** Pads a drum program holds — `Kit`'s own range, and `padNoteMap`'s length. */
+        const val PAD_SLOTS = 128
+
+        /**
+         * Which note plays pad [padSlot], 1-based: the writer's own
+         * chromatic map in one place rather than re-derived per caller.
+         *
+         * Pad A01 is note 36 and it climbs by semitone, **wrapping** at
+         * 128 — so slot 92 is note 127, slot 93 is note 0, and slot 128 is
+         * note 35. That wrap is not a liberty: it is exactly what
+         * `Mpc3TrackWriter.padNoteMap` emits (`(36 + padIndex) % 128`), so
+         * a clip written this way addresses the pad the hardware will
+         * actually play.
+         *
+         * Bijective over the whole range — 128 slots, 128 notes, none
+         * shared. That is the property worth having, and the reason a
+         * clamp is wrong here rather than merely lossy: clamping sends
+         * every slot from 92 up to note 127, so the MPC plays pad 92 for
+         * all of them and the quieter hits vanish into a dedupe on the way.
+         */
+        fun noteFor(padSlot: Int): Int {
+            require(padSlot in 1..PAD_SLOTS) { "pad slot out of range: $padSlot" }
+            return (35 + padSlot) % 128
+        }
+
+        /** [noteFor] inverted: the pad the hardware plays for [note]. */
+        fun slotFor(note: Int): Int {
+            require(note in 0..127) { "note out of range: $note" }
+            return Math.floorMod(note - 36, 128) + 1
+        }
     }
 }
 

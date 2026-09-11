@@ -68,7 +68,10 @@ object KitPreview {
         // lane on a grid, so each zone cycles its own takes independently.
         val hitsByLane = HashMap<Int, Int>()
         for (note in groove.notes.sortedBy { it.timePulses }) {
-            val slot = note.note - 36 + 1
+            // Mpc3Note.slotFor, not `note - 36 + 1`: the map wraps, so
+            // notes 0..35 are pads 93..128. Subtracting alone gives those
+            // a negative slot, and the pad - the whole ring - renders silent.
+            val slot = Mpc3Note.slotFor(note.note)
             val pad = kit.pad(slot) ?: continue
             val whole = cache.getOrPut(pad.sampleFile) { WavReader.read(File(kitDir, pad.sampleFile)) }
             // Slice Motion, audible before the card: velocity picks the
