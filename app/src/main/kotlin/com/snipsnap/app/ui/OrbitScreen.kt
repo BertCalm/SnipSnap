@@ -579,26 +579,20 @@ fun OrbitScreen(
                 // cannot ride along. Say how many stayed behind rather than
                 // leave it to be discovered on the hardware.
                 //
-                // The fact, not a route. Five review rounds went on trying
-                // to point this line at BOUNCE ▸ TAPE, and each one found
-                // another state where that route does not carry the rings
-                // being reported: a solo (bounceToTape renders heard(s),
-                // which disengages everything else), a muted snip, a snip
-                // at level 0 (OrbitEngine skips both), a snip whose file
-                // has gone (OrbitBank makes no entry for it). Enumerating
-                // those in two lines is not possible and chasing them one
-                // at a time is how four of the five rounds happened.
+                // The fact, not a route. What a clip can hold is fixed:
+                // notes, never audio, so a snip ring could never have come
+                // whatever the player does next. What the bounce carries
+                // is not fixed - it renders heard(s) and skips a ring that
+                // is soloed out, muted, at level 0, or whose file has gone
+                // - so any sentence here naming it is true only for the
+                // ring states it happens to have considered.
                 //
-                // So this says what is true in every one of those states -
-                // a clip holds no audio, so these rings could never have
-                // come - and leaves the route to the OUT panel, which
-                // already explains what BOUNCE and CLIP each do in terms
-                // that no ring's state can falsify. Not because that panel
-                // is on screen here: clipIntoKit closes it above, before
-                // this coroutine starts. Because it is where the player
-                // just was - CLIP ▸ KIT is a button inside it - and OUT ▸
-                // reopens it. One tap away and never wrong beats three
-                // lines up and wrong under a solo.
+                // So this reports what is always true and points nowhere.
+                // The route lives in the OUT panel, which explains BOUNCE
+                // and CLIP in terms no ring state can falsify. Not on
+                // screen at this moment - clipIntoKit closes it above -
+                // but it is where the player just was, since CLIP ▸ KIT is
+                // a button inside it, and OUT ▸ reopens it.
                 val behind = OrbitClip.snipRings(s)
                 onToast(
                     if (behind.isEmpty()) {
