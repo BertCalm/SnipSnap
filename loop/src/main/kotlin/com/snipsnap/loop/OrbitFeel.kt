@@ -81,6 +81,10 @@ object OrbitFeel {
         // the set's swing in, and a swung hit still belongs to its own
         // 16th. Swing displaces a hit; it does not renumber it.
         val grid = hit.step * OrbitClock.ringStepFrames(set, orbit)
+        // Half-up, ties toward positive infinity — which is what
+        // `GrooveFeel` does in integer pulses as `(t + s16 / 2) / s16`.
+        // The two must land on the same position or one donor gives a clip
+        // and a ring different pockets; the tie case is tested.
         val sixteenths = (grid / sixteenth).roundToLong()
         return Math.floorMod(sixteenths, GrooveFeel.POSITIONS.toLong()).toInt()
     }
