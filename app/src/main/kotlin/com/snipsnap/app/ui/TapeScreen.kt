@@ -62,7 +62,9 @@ import com.snipsnap.shell.Dig
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.PeaksPyramid
+import com.snipsnap.shell.Retrim
 import com.snipsnap.shell.Scheme
+import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.TapeDeckModel
 import java.io.File
@@ -497,6 +499,14 @@ private fun TapeDeckContent(
     val digScope = rememberCoroutineScope()
     // DIG runs on this screen: it only moves the deck's own IN and OUT.
     var digging by remember(tapeData) { mutableStateOf(false) }
+    // The HITS stepper (RE-TRIM only): INSTANT KIT's slices of this tape,
+    // found once per loaded tape, off the main thread — null until then.
+    var hits by remember(tapeData) { mutableStateOf<List<IntRange>?>(null) }
+    LaunchedEffect(tapeData, retrim != null) {
+        if (retrim != null && hits == null) {
+            hits = withContext(Dispatchers.IO) { Retrim.hits(Snip(tapeData.samples, 1, tapeData.sampleRate)) }
+        }
+    }
 
     val model = remember(tapeData) {
         TapeDeckModel(tapeData.samples, tapeData.sampleRate, tapeData.onsets)
@@ -683,8 +693,12 @@ private fun TapeDeckContent(
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         CassetteRow(
             // The header says what is going on while a RE-TRIM is live:
-            // which pad, which tape.
+            // which pad, which tape — in the pad's own colour, the way the
+            // PAD SHEET's chip carries it, so the deck reads as that pad's.
             title = retrim?.let { Copy.retrimHeader(it.padLabel, it.file.name) } ?: entry?.kit?.name ?: "TAPE",
+            titleColor = retrim?.let {
+                (it.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(it.drumClass)).tape
+            } ?: scheme.lcdInk.tape,
             model = model,
             position = position,
             onToast = onToast,
@@ -732,6 +746,39 @@ private fun TapeDeckContent(
             WindButton("◄◄", Modifier.weight(1f), -1, model, ::stopVoice, ::touch)
             DeckButton(if (model.playing) "■ STOP" else "▶ PLAY", Modifier.weight(1f)) { onPlayStop() }
             WindButton("▶▶", Modifier.weight(1f), 1, model, ::stopVoice, ::touch)
+        }
+        if (retrim != null) {
+            // HITS (docs/RETRIM.md round 4): step IN and OUT through the
+            // hits INSTANT KIT would cut from this tape, so picking "the
+            // next hit instead" is one tap, not a drag — then BACK ONTO.
+            // The readout names the hit the selection sits on, if any.
+            val found = hits
+            val current = found?.indexOfFirst { model.inFrame in it } ?: -1
+            fun stepHit(delta: Int) {
+                val list = hits
+                if (list.isNullOrEmpty()) {
+                    onToast(if (list == null) Copy.HITS_BUSY else Copy.HITS_NONE)
+                    return
+                }
+                val next = if (current < 0) (if (delta > 0) 0 else list.size - 1) else (current + delta).mod(list.size)
+                val hit = list[next]
+                // stop(), not togglePlay(): a coasting or gliding deck is
+                // not `playing` but still moving, and would carry the head
+                // off the hit `select` just parked it on.
+                model.stop()
+                stopVoice()
+                model.select(hit.first, hit.last + 1)
+                touch()
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                DeckButton("◀ HIT", Modifier.weight(1f)) { stepHit(-1) }
+                DeckButton(
+                    if (found == null) Copy.HITS_BUSY else Copy.hitReadout(current, found.size),
+                    Modifier.weight(1.2f),
+                    engaged = current >= 0,
+                ) { stepHit(1) }
+                DeckButton("HIT ▶", Modifier.weight(1f)) { stepHit(1) }
+            }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             // BACK ONTO A02 replaces KEEP while a RE-TRIM is live
@@ -1027,6 +1074,8 @@ private fun WindButton(
 private fun CassetteRow(
     /** The kit's name, or `RE-TRIM A02 · BASS 5.WAV` while a RE-TRIM is live. */
     title: String,
+    /** The LCD ink, or the pad's own colour while a RE-TRIM is live. */
+    titleColor: androidx.compose.ui.graphics.Color,
     model: TapeDeckModel,
     position: () -> Double,
     onToast: (String) -> Unit,
@@ -1094,7 +1143,7 @@ private fun CassetteRow(
         TapeText(
             title,
             TapeType.marker,
-            scheme.lcdInk.tape,
+            titleColor,
             Modifier.weight(1f),
             maxLines = 1,
         )

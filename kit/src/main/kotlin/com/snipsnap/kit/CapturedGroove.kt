@@ -67,8 +67,7 @@ object CapturedGroove {
                 time = (time + quantizeTo / 2) / quantizeTo * quantizeTo
             }
             Mpc3Note(
-                // The writer's chromatic map: pad A0N plays note 36+N-1.
-                note = 36 + hit.padSlot - 1,
+                note = Mpc3Note.noteFor(hit.padSlot),
                 timePulses = time,
                 velocity = hit.velocity,
                 lengthPulses = (hit.lengthFrames * pulsesPerFrame).roundToLong()

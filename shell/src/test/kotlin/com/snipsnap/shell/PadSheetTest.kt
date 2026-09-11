@@ -86,8 +86,8 @@ class PadSheetTest {
     }
 
     @Test
-    fun `the sheet opens at NONE, 35 percent`() {
-        assertEquals(0.35f, PadSheet.DEFAULT_AMOUNT)
+    fun `the sheet opens at NONE, 70 percent - a first tap you can hear`() {
+        assertEquals(0.7f, PadSheet.DEFAULT_AMOUNT)
     }
 
     @Test

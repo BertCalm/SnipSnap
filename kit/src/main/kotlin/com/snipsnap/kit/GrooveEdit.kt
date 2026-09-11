@@ -43,8 +43,8 @@ object GrooveEdit {
         Lane.PERC to 12,
     )
 
-    /** The writer's chromatic map (see `Mpc3TrackWriter`): pad A0N plays note 35+N. */
-    fun noteFor(lane: Lane): Int = 35 + LANE_SLOT.getValue(lane)
+    /** Which note plays a lane's pad — [Mpc3Note.noteFor], the one map. */
+    fun noteFor(lane: Lane): Int = Mpc3Note.noteFor(LANE_SLOT.getValue(lane))
 
     /** Cells per bar in the step editor; a bar is [Mpc3Clip.PULSES_PER_BAR]. */
     const val STEPS_PER_BAR = 16

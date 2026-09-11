@@ -181,6 +181,9 @@ data class RetrimRequest(
     val padLabel: String,
     val file: File,
     val cut: com.snipsnap.shell.Retrim.Cut?,
+    /** The pad's own colour, for TAPE's header chip: the class colour when the pad has none of its own. */
+    val colorHex: String? = null,
+    val drumClass: com.snipsnap.audio.DrumClass = com.snipsnap.audio.DrumClass.UNKNOWN,
 )
 
 /** X-RAY's own state: the picked file's display name and what [MpcXRay.read] made of it. Non-null IS "the screen is open" — there is no separate boolean to keep in sync with it. */
@@ -1915,6 +1918,8 @@ fun App(shelf: KitShelf) {
                                                     PadNoteMap.labelForPad(sheetSlot),
                                                     resolved.file,
                                                     resolved.cut,
+                                                    colorHex = pad?.colorHex,
+                                                    drumClass = pad?.drumClass ?: com.snipsnap.audio.DrumClass.UNKNOWN,
                                                 )
                                                 padSheetSlot = null
                                                 screen = AppScreen.TAPE

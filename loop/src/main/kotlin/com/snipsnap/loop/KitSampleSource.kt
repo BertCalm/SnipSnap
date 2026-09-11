@@ -22,7 +22,18 @@ class KitSampleSource(private val dir: File) : SampleSource {
 
     private val loops = ConcurrentHashMap<String, Snip>()
     private val pads = ConcurrentHashMap<Pair<String, Int>, Snip>()
-    private val kitIndex = ConcurrentHashMap<String, Map<Int, String>>()
+    private val kitIndex = ConcurrentHashMap<String, Map<Int, Indexed>>()
+    private val groups = ConcurrentHashMap<String, Groups>()
+
+    /** What the index keeps off a pad: where its audio is. */
+    private data class Indexed(val sampleFile: String)
+
+    /**
+     * Choke groups as of one `kit.json` write, so a later edit is re-read.
+     * [settled] records that the file had already stopped being written
+     * when this was taken; an unsettled entry is re-read next time.
+     */
+    private class Groups(val stamp: Long, val settled: Boolean, val bySlot: Map<Int, Int>)
 
     override fun loop(sampleFile: String): Snip? {
         if (!isBareName(sampleFile)) return null
@@ -39,7 +50,7 @@ class KitSampleSource(private val dir: File) : SampleSource {
         pads[key]?.let { return it }
 
         val slots = slotsFor(kit)
-        val name = slots[slot] ?: return null
+        val name = slots[slot]?.sampleFile ?: return null
         val file = File(File(dir, kit), name)
         if (!file.isFile) return null
         val snip = runCatching { WavReader.read(file) }.getOrNull() ?: return null
@@ -47,23 +58,54 @@ class KitSampleSource(private val dir: File) : SampleSource {
     }
 
     /**
-     * slot -> bare filename for [kit], cached only once the kit has actually
+     * Unlike the audio and the filename index, this one notices an edit.
+     *
+     * Those two are cached for the whole life of the source because they
+     * feed the bake path, where re-reading a WAV is a missed deadline. A
+     * choke group is asked for only by `OrbitBank.prepare`, which is
+     * off-thread by definition, so it can afford to check whether
+     * `kit.json` has moved under it - and it has to, or toggling choke on
+     * a kit's hats would not be heard until the app was restarted.
+     *
+     * A snapshot taken while the file was still inside the timestamp's
+     * resolution is kept but marked unsettled, so the NEXT ask re-reads
+     * it - a second write in that window cannot hide behind an unchanged
+     * stamp. Kept rather than skipped because one prepare asks once per
+     * kit: discarding it would re-read on every ask during the very window
+     * a rebuild is most likely to be running.
+     */
+    override fun muteGroups(kit: String): Map<Int, Int> {
+        if (!isBareName(kit)) return emptyMap()
+        val stamp = File(File(dir, kit), KitStore.FILE_NAME).lastModified()
+        val held = groups[kit]
+        if (held != null && held.stamp == stamp && held.settled) return held.bySlot
+        val kitDir = File(dir, kit)
+        if (!kitDir.isDirectory) return emptyMap()
+        val loaded = runCatching { KitStore.load(kitDir) }.getOrNull() ?: return emptyMap()
+        val bySlot = loaded.pads.filter { it.muteGroup != 0 }.associate { it.slot to it.muteGroup }
+        val settled = stamp != 0L && System.currentTimeMillis() - stamp > SETTLE_MS
+        groups[kit] = Groups(stamp, settled, bySlot)
+        return bySlot
+    }
+
+    /**
+     * slot -> pad for [kit], cached only once the kit has actually
      * loaded. A kit that doesn't exist yet, or whose kit.json fails to parse,
      * must not poison the index forever: the kit can be written (or fixed)
      * later in the session, and the next lookup has to see it.
      */
-    private fun slotsFor(kit: String): Map<Int, String> {
+    private fun slotsFor(kit: String): Map<Int, Indexed> {
         kitIndex[kit]?.let { return it }
         val indexed = indexKit(kit) ?: return emptyMap()
         return kitIndex.putIfAbsent(kit, indexed) ?: indexed
     }
 
-    /** slot -> bare filename for [kit], or null if the kit can't be loaded right now. */
-    private fun indexKit(kit: String): Map<Int, String>? {
+    /** slot -> pad for [kit], or null if the kit can't be loaded right now. */
+    private fun indexKit(kit: String): Map<Int, Indexed>? {
         val kitDir = File(dir, kit)
         if (!kitDir.isDirectory) return null
         val loaded = runCatching { KitStore.load(kitDir) }.getOrNull() ?: return null
-        return loaded.pads.associate { it.slot to it.sampleFile }
+        return loaded.pads.associate { it.slot to Indexed(it.sampleFile) }
     }
 
     /**
@@ -71,6 +113,11 @@ class KitSampleSource(private val dir: File) : SampleSource {
      * loop.json is a file on a phone; it can be edited, synced or corrupted,
      * and a traversal should read nothing rather than something.
      */
+    private companion object {
+        /** How long after a write a stamp is treated as able to hide a second one. */
+        const val SETTLE_MS = 2_000L
+    }
+
     private fun isBareName(name: String): Boolean =
         name.isNotBlank() && '/' !in name && '\\' !in name && name != ".." && name != "."
 }

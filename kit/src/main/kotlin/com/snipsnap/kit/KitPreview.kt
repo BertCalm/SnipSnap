@@ -1,5 +1,6 @@
 package com.snipsnap.kit
 
+import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
@@ -33,7 +34,6 @@ object KitPreview {
     private const val TAIL_SEC = 0.6f
 
     /** Choke fade, frames — a cut, but never a click. */
-    private const val CHOKE_FADE = 128
 
     fun render(
         kit: Kit,
@@ -57,6 +57,9 @@ object KitPreview {
             val pan: Float,
             val muteGroup: Int,
             var end: Int,
+            /** Ended early by a choke, and the ramp that end carries. */
+            var choked: Boolean = false,
+            var fadeLen: Int = 0,
             /** Pad shape, approximated in the render (see below). Null = none. */
             val attack: Float? = null,
             val decay: Float? = null,
@@ -68,7 +71,10 @@ object KitPreview {
         // lane on a grid, so each zone cycles its own takes independently.
         val hitsByLane = HashMap<Int, Int>()
         for (note in groove.notes.sortedBy { it.timePulses }) {
-            val slot = note.note - 36 + 1
+            // Mpc3Note.slotFor, not `note - 36 + 1`: the map wraps, so
+            // notes 0..35 are pads 93..128. Subtracting alone gives those
+            // a negative slot, and the pad - the whole ring - renders silent.
+            val slot = Mpc3Note.slotFor(note.note)
             val pad = kit.pad(slot) ?: continue
             val whole = cache.getOrPut(pad.sampleFile) { WavReader.read(File(kitDir, pad.sampleFile)) }
             // Slice Motion, audible before the card: velocity picks the
@@ -102,8 +108,18 @@ object KitPreview {
             if (pad.muteGroup != 0) {
                 // The kit rule, honoured in the render: a new voice in the
                 // group chokes everything still ringing in it.
-                voices.filter { it.muteGroup == pad.muteGroup && it.end > start }
-                    .forEach { it.end = min(it.end, start + CHOKE_FADE) }
+                //
+                // The ramp spans whatever is left when less than a full
+                // fade remains, and a voice already fading keeps the ramp
+                // it is on - the same two rules `OrbitEngine` plays by, so
+                // the preview and the live engine agree on a pattern.
+                voices.filter { it.muteGroup == pad.muteGroup && it.end > start && !it.choked }
+                    .forEach {
+                        val len = min(AutoPlace.CHOKE_FADE, it.end - start)
+                        it.end = start + len
+                        it.fadeLen = len
+                        it.choked = true
+                    }
             }
             voices += voice
         }
@@ -128,9 +144,10 @@ object KitPreview {
             for (i in 0 until frames) {
                 val at = v.start + i
                 if (at >= totalFrames) break
-                // Choke fade: the last CHOKE_FADE frames ramp out.
-                var fade = if (v.end - v.start < v.samples.frameCount && i >= frames - CHOKE_FADE) {
-                    (frames - i).toFloat() / CHOKE_FADE
+                // Choke fade: the voice ramps out across its own fade,
+                // which is a full one or whatever the sample had left.
+                var fade = if (v.choked && v.fadeLen > 0 && i >= frames - v.fadeLen) {
+                    (frames - i).toFloat() / v.fadeLen
                 } else {
                     1f
                 }
@@ -182,23 +199,23 @@ object KitPreview {
             for (bar in 0 until 2) {
                 val b = bar * Mpc3Clip.PULSES_PER_BAR
                 kick?.let {
-                    notes += Mpc3Note(35 + it, b, 0.9f)
-                    notes += Mpc3Note(35 + it, b + 8 * s16, 0.85f)
+                    notes += Mpc3Note(Mpc3Note.noteFor(it), b, 0.9f)
+                    notes += Mpc3Note(Mpc3Note.noteFor(it), b + 8 * s16, 0.85f)
                 }
                 snare?.let {
-                    notes += Mpc3Note(35 + it, b + 4 * s16, 0.85f)
-                    notes += Mpc3Note(35 + it, b + 12 * s16, 0.9f)
+                    notes += Mpc3Note(Mpc3Note.noteFor(it), b + 4 * s16, 0.85f)
+                    notes += Mpc3Note(Mpc3Note.noteFor(it), b + 12 * s16, 0.9f)
                 }
                 hat?.let {
                     for (e in 0 until 8) {
-                        notes += Mpc3Note(35 + it, b + e * 2L * s16, if (e % 2 == 0) 0.6f else 0.4f)
+                        notes += Mpc3Note(Mpc3Note.noteFor(it), b + e * 2L * s16, if (e % 2 == 0) 0.6f else 0.4f)
                     }
                 }
             }
         } else {
             // The pad walk: every pad in slot order, a 16th each.
             kit.pads.sortedBy { it.slot }.take(32).forEachIndexed { i, pad ->
-                notes += Mpc3Note(35 + pad.slot, i * s16, 0.8f)
+                notes += Mpc3Note(Mpc3Note.noteFor(pad.slot), i * s16, 0.8f)
             }
         }
         val bars = ((notes.maxOf { it.timePulses } / Mpc3Clip.PULSES_PER_BAR) + 1).toInt().coerceIn(1, 64)

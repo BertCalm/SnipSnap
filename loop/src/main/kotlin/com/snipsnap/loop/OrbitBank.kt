@@ -19,6 +19,7 @@ import com.snipsnap.audio.Snip
 class OrbitBank private constructor(
     val sampleRate: Int,
     private val pads: Map<PadKey, Snip>,
+    private val groups: Map<PadKey, Int>,
     private val loops: Map<LoopKey, FittedLoop>,
 ) {
 
@@ -29,6 +30,17 @@ class OrbitBank private constructor(
 
     /** A pad's stereo audio, or null when the kit or slot is missing (the hit is skipped, not thrown). */
     fun pad(kit: String, slot: Int): Snip? = pads[PadKey(kit, slot)]
+
+    /**
+     * A pad's choke group, 0 for none.
+     *
+     * Asked of the source on every [prepare], even for a pad whose audio is
+     * reused — so retuning a kit's choke reaches the next block rather than
+     * waiting for the sample to be evicted. Whether the answer is actually
+     * fresh is the source's to keep: `KitSampleSource` re-reads `kit.json`
+     * when it has been written since.
+     */
+    fun muteGroup(kit: String, slot: Int): Int = groups[PadKey(kit, slot)] ?: 0
 
     /** The snip on [orbit], fitted to its period in [set], or null when the file is missing. */
     fun loop(set: OrbitSet, orbit: Orbit): Snip? = fitted(set, orbit)?.snip
@@ -62,16 +74,31 @@ class OrbitBank private constructor(
         fun prepare(set: OrbitSet, source: SampleSource, previous: OrbitBank? = null): OrbitBank {
             val reuse = previous?.takeIf { it.sampleRate == set.sampleRate }
             val pads = HashMap<PadKey, Snip>()
+            val groups = HashMap<PadKey, Int>()
             val loops = HashMap<LoopKey, FittedLoop>()
+            // One read of each kit's rule, not one per pad: the source may
+            // have to go to disk for it, and a set can name the same kit on
+            // every ring.
+            val byKit = HashMap<String, Map<Int, Int>>()
 
             for (orbit in set.orbits) {
                 when (val content = orbit.content) {
-                    is PatternOrbit -> for (hit in content.hits) {
-                        val key = PadKey(content.kit, hit.slot)
-                        if (key in pads) continue
-                        val kept = reuse?.pads?.get(key)
-                        val snip = kept ?: source.pad(content.kit, hit.slot)?.let { stereoAt(it, set.sampleRate) }
-                        if (snip != null) pads[key] = snip
+                    is PatternOrbit -> {
+                        val kitGroups = byKit.getOrPut(content.kit) { source.muteGroups(content.kit) }
+                        for (hit in content.hits) {
+                            val key = PadKey(content.kit, hit.slot)
+                            if (key in pads) continue
+                            val kept = reuse?.pads?.get(key)
+                            val snip = kept ?: source.pad(content.kit, hit.slot)?.let { stereoAt(it, set.sampleRate) }
+                            if (snip != null) {
+                                pads[key] = snip
+                                // Read from the kit's current rule even when
+                                // the audio came from the previous bank, so a
+                                // retuned choke reaches the next block.
+                                val group = kitGroups[hit.slot] ?: 0
+                                if (group != 0) groups[key] = group
+                            }
+                        }
                     }
                     is SnipOrbit -> {
                         val period = OrbitClock.periodFrames(set, orbit)
@@ -85,7 +112,7 @@ class OrbitBank private constructor(
                     }
                 }
             }
-            return OrbitBank(set.sampleRate, pads, loops)
+            return OrbitBank(set.sampleRate, pads, groups, loops)
         }
 
         /** [buckets] peaks over [snip]: the loudest absolute sample in each equal run of frames, any channel. */

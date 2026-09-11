@@ -366,16 +366,50 @@ fun KitsScreen(
                         .padding(14.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    // A user mid SNIPS → PAD hand-off just made the very
-                    // snip they're trying to place — EMPTY_SHELF's "NOTHING
-                    // TAPED YET" would flatly contradict that. This names
-                    // the real blocker (no kit yet) and the real fix.
-                    TapeText(
-                        if (assigningSnip) Copy.EMPTY_SHELF_FOR_ASSIGN else Copy.EMPTY_SHELF,
-                        TapeType.lcdSmall,
-                        scheme.lcdInk.tape,
-                        maxLines = 3,
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        // A user mid SNIPS → PAD hand-off just made the very
+                        // snip they're trying to place — EMPTY_SHELF's "NOTHING
+                        // TAPED YET" would flatly contradict that. This names
+                        // the real blocker (no kit yet) and the real fix.
+                        TapeText(
+                            if (assigningSnip) Copy.EMPTY_SHELF_FOR_ASSIGN else Copy.EMPTY_SHELF,
+                            TapeType.lcdSmall,
+                            scheme.lcdInk.tape,
+                            maxLines = 3,
+                        )
+                        // September UAT, finding 3: the app never stated its
+                        // own loop anywhere. It does now, on the one screen a
+                        // new user is guaranteed to meet, in the words of the
+                        // tabs themselves.
+                        //
+                        // NOT shown mid-hand-off: a user placing a snip has a
+                        // blocker to clear, and the tour of an app they are
+                        // already using would be in the way of it.
+                        //
+                        // There is no dismiss and no "seen it" flag. This IS
+                        // the empty state - it leaves when the shelf has
+                        // something on it and comes back if the shelf empties.
+                        // The hint that taught PAD SHEET could be dismissed
+                        // and lost, which is how finding 5 happened; a thing
+                        // that cannot be dismissed cannot be lost.
+                        if (!assigningSnip) {
+                            TapeText(
+                                Copy.FIRST_RUN_LOOP,
+                                TapeType.lcdSmall,
+                                scheme.amber.tape,
+                                maxLines = 1,
+                            )
+                            TapeText(
+                                Copy.FIRST_RUN_LOOP_NOTE,
+                                TapeType.pixelSmall,
+                                scheme.lcdInk.tape,
+                                maxLines = 2,
+                            )
+                        }
+                    }
                 }
             } else {
                 LazyColumn(

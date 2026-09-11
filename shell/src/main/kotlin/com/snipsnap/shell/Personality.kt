@@ -50,6 +50,42 @@ object Copy {
 
     // Empty states.
     const val EMPTY_SHELF = "NOTHING TAPED YET. GO STEAL A SOUND (LEGALLY)."
+
+    /**
+     * The product loop, named once, on the only screen a new user is
+     * guaranteed to see (September UAT, finding 3: capture -> trim -> grid
+     * -> export is never stated anywhere in the app, and `BOOT_LINES` had
+     * no caller outside HELP).
+     *
+     * **These are the menu tabs, not prose.** Learning the line teaches the
+     * navigation, because the words are the tabs - a `ConventionTest` law
+     * holds every stage here to a real `MenuItem` label, so a renamed tab
+     * fails the build rather than leaving the app's one explanation of
+     * itself pointing at a screen that no longer exists.
+     *
+     * A list rather than a written-out string for the same reason: the
+     * separator is applied once, in [FIRST_RUN_LOOP], and the law reads the
+     * stages without having to parse it back out.
+     */
+    val FIRST_RUN_LOOP_STAGES = listOf("TAPE", "CHOP", "KIT", "EXPORT")
+
+    /** [FIRST_RUN_LOOP_STAGES] as the shelf draws it. Furniture: a row of tab names, not a sentence. */
+    val FIRST_RUN_LOOP: String = FIRST_RUN_LOOP_STAGES.joinToString(" ▸ ")
+
+    /**
+     * What the four words mean, in verbs.
+     *
+     * The finding's complaint is that the *loop* is never stated - and four
+     * tab names alone are a map, not an explanation. This is the sentence
+     * that makes them one: it says what you do at each stop, in the order
+     * [FIRST_RUN_LOOP] lists them.
+     *
+     * No door is named here on purpose. NEW KIT sits directly under this
+     * panel as the screen's primary action, and TAPE is a tab on the row
+     * above it - a line pointing at either would be a third copy of a
+     * control already twice on screen.
+     */
+    const val FIRST_RUN_LOOP_NOTE = "RECORD IT, CUT IT, PLAY IT, DUB IT. FOUR TABS, IN ORDER."
     /**
      * The shelf's empty face during a SNIPS → PAD hand-off (`assigningSnip`
      * in `KitsScreen`/`App.kt`) when the shelf also has zero kits — distinct
@@ -361,6 +397,7 @@ object Copy {
         "· PLAY IS THE ONE THAT FEELS LIKE DRUMS. SURFACE IS THE ONE THAT PRINTS.",
         "· ORBIT PUTS THE KIT ON RINGS: 5 AGAINST 4 IN ONE TAP.",
         "· EMPTY GROOVE? RECORD A TAKE, TAP STEPS IN, OR GO TO ORBIT.",
+        "· HOLD A PAD, RE-TRIM ▸: TAPE OPENS ON ITS CUT. BACK ONTO LANDS IT.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -556,6 +593,16 @@ object Copy {
     fun backOnto(pad: String): String = "BACK ONTO $pad"
     /** The busy line while BACK ONTO reads the cut and writes the pad. */
     const val RETRIM_BUSY = "RE-CUTTING…"
+    /** The HITS stepper's readout while the hits are still being found. */
+    const val HITS_BUSY = "HITS…"
+    /** Stepping the HITS stepper on a tape with no hit in it. */
+    const val HITS_NONE = "NO HITS ON THIS TAPE. DRAG IN AND OUT INSTEAD."
+    /** The HITS stepper's readout: which of the tape's hits the selection sits on, none, or a tape with no hits at all. */
+    fun hitReadout(index: Int, count: Int): String = when {
+        count == 0 -> "NO HITS"
+        index < 0 -> "HIT -/$count"
+        else -> "HIT ${index + 1}/$count"
+    }
     /**
      * BACK ONTO landed. [treatment] is the old pad's treatment name when it
      * had one — a treatment is baked into the file, so it stays with the

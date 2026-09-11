@@ -1,5 +1,6 @@
 package com.snipsnap.kit
 
+import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
@@ -46,6 +47,64 @@ class KitPreviewTest {
         )
         KitStore.save(kit, dir)
         return kit
+    }
+
+    /**
+     * A pad choked with less than a full fade left still ramps.
+     *
+     * The end was clamped with `min`, so a choke landing inside the last
+     * CHOKE_FADE frames left the end where it already was - and "was it
+     * shortened?" then answered no, skipping the ramp and letting the
+     * voice run out at full level. `OrbitEngine` had the same bug; both
+     * now ramp across whatever remains, which is the whole point of the
+     * two renderers sharing the constant.
+     */
+    @Test
+    fun `a choke with less than a fade left still ramps out`() {
+        val dir = File(temp, "near-end")
+        dir.mkdirs()
+        // One pulse is RATE/960 * 60/bpm frames - about 23 at 120 BPM and
+        // 44.1 kHz - so the closing hit at pulse 5 lands near frame 115,
+        // leaving this pad 45 frames: fewer than a full fade.
+        val padFrames = AutoPlace.CHOKE_FADE + 32
+        val chokeAt = Math.round(5 * (60.0 / 120 * KitPreview.RATE / 960.0)).toInt()
+        assertTrue(
+            chokeAt in (padFrames - AutoPlace.CHOKE_FADE + 1) until padFrames,
+            "the choke must land inside the pad's last fade for this to test anything: $chokeAt of $padFrames",
+        )
+
+        WavWriter.write(File(dir, "A01_Open_01.wav"), Snip(FloatArray(padFrames) { 0.5f }, 1, KitPreview.RATE))
+        // The closing hit is near-silent so the measurement reads the
+        // choked pad's own level rather than the sum of the two.
+        WavWriter.write(File(dir, "A02_Closed_01.wav"), Snip(FloatArray(400) { 0.001f }, 1, KitPreview.RATE))
+        val kit = Kit(
+            "Near End",
+            listOf(
+                KitPad(slot = 1, sampleFile = "A01_Open_01.wav", drumClass = DrumClass.HAT_OPEN, muteGroup = 1),
+                KitPad(slot = 2, sampleFile = "A02_Closed_01.wav", drumClass = DrumClass.HAT_CLOSED, muteGroup = 1),
+            ),
+            tempoBpm = 120f,
+        )
+        KitStore.save(kit, dir)
+
+        val clip = Mpc3Clip(
+            "Choke", 1,
+            listOf(Mpc3Note(Mpc3Note.noteFor(1), 0, 1f), Mpc3Note(Mpc3Note.noteFor(2), 5, 1f)),
+        )
+        val out = KitPreview.render(kit, dir, clip = clip, tempoBpm = 120f)
+
+        val full = rms(out, 40, 43)
+        val atChoke = rms(out, chokeAt, chokeAt + 3)
+        val tail = rms(out, padFrames - 6, padFrames)
+
+        assertTrue(full > 0.1f, "sanity: the pad is sounding before the choke ($full)")
+        // The ramp has to START at full and reach silence across the 45
+        // frames left. A fixed 128-frame slope applied to a 45-frame tail
+        // also ends at zero - it just begins at 45/128 of the level, which
+        // is a step down at the choke instant: the click the ramp exists
+        // to avoid. Measuring only the last frames cannot tell them apart.
+        assertTrue(atChoke > full * 0.8f, "the ramp must begin at full: $atChoke vs $full")
+        assertTrue(tail < full / 3f, "and reach silence by the sample's end: $tail vs $full")
     }
 
     /** RMS over a frame window of an interleaved stereo render. */
@@ -185,5 +244,27 @@ class KitPreviewTest {
         // plus tail as the explicit-clip render.
         assertEquals(2 * KitPreview.RATE + (0.6f * KitPreview.RATE).toInt(), snip.frameCount)
         assertTrue(snip.peak() > 0.05f)
+    }
+
+    @Test
+    fun `a pad above the wrap is rendered, not silently skipped`() {
+        // The map wraps: pad 93 is note 0, pad 128 is note 35. Reading a
+        // slot back as `note - 36 + 1` gives those pads a slot of -35 and
+        // 0, so kit.pad() misses and the hit renders as nothing. That was
+        // harmless only while nothing wrote such a note; OrbitClip now does.
+        val dir = File(temp, "HighPads")
+        dir.mkdirs()
+        WavWriter.write(File(dir, "F13_High_01.wav"), tone(0.4f, 300.0))
+        val kit = Kit(
+            "High Kit",
+            listOf(KitPad(slot = 93, sampleFile = "F13_High_01.wav", drumClass = DrumClass.PERC)),
+            tempoBpm = 120f,
+        )
+        KitStore.save(kit, dir)
+
+        assertEquals(0, Mpc3Note.noteFor(93), "pad 93 is note 0 under the writer's map")
+        val clip = Mpc3Clip("High", 1, listOf(Mpc3Note(Mpc3Note.noteFor(93), 0, 0.9f)))
+        val rendered = KitPreview.render(kit, dir, clip = clip)
+        assertTrue(rms(rendered, 0, KitPreview.RATE / 4) > 0.01f, "the pad above the wrap should sound")
     }
 }

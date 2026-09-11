@@ -73,8 +73,14 @@ object PadSheet {
     /** Every segment on any row. */
     val ALL_SEGMENTS: List<String> get() = ROWS.flatten()
 
-    /** Where the AMT stepper sits when a pad has never been treated. */
-    const val DEFAULT_AMOUNT = 0.35f
+    /**
+     * Where the AMT stepper sits when a pad has never been treated. 70,
+     * not 35: every macro scales linearly with AMT (`Treatments.chain`),
+     * and at 35 the quieter characters (WASH, SLAP, GHOST) moved the
+     * sound by about a tenth — the phone ruling was "did it even work?".
+     * At 70 the first tap is meant to be heard; AMT ▼ is there for less.
+     */
+    const val DEFAULT_AMOUNT = 0.7f
 
     /**
      * The card's own display words for a segment — a language-only layer on

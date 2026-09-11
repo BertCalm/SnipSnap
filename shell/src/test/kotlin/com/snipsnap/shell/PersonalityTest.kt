@@ -375,6 +375,8 @@ class PersonalityTest {
         "CHOP_ALL_BUSY",
         // BACK ONTO's busy overlay line, like every other *_BUSY above.
         "RETRIM_BUSY",
+        // The HITS stepper's own busy readout.
+        "HITS_BUSY",
         "OUTSIDE_LISTENING", "ROOM_FORGET_BUSY", "ROOM_RESTORE_BUSY", "ROOM_BIN_EMPTY_BUSY", "KIT_DELETE_BUSY", "KIT_RENAME_BUSY",
         "CHIP_NOT_SURE", "CHIP_OVERRIDDEN",
         "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_NONE", "CARD_PICKED",
@@ -395,6 +397,11 @@ class PersonalityTest {
         // a full stop - and every legend must be added here when it is written,
         // or the shouting law will ask it to become a sentence.
         "PAD_SHEET_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER",
+        // The empty shelf's loop line (finding 3) is a row of tab names,
+        // not a line the app says - it reads TAPE > CHOP > KIT > EXPORT.
+        // FIRST_RUN_LOOP_NOTE, the sentence under it that says what the
+        // four words mean, is NOT here: it keeps its full stop.
+        "FIRST_RUN_LOOP",
         // EXPORT's DESTINATION legend joins them (finding 21): same rule,
         // same register - a line that stays under the row it explains.
         "EXPORT_CARD_LEGEND",
@@ -649,5 +656,12 @@ class PersonalityTest {
             if (reviewedCeilingClaimSourceSnippets.any { rawLine.contains(it) }) continue
             assertFalse(ceilingClaim.containsMatchIn(rawLine), ceilingLawMessage("Personality.kt:${index + 1}", rawLine.trim()))
         }
+    }
+
+    @Test
+    fun `the HITS readout names the hit, or none, or a tape without any`() {
+        assertEquals("HIT 3/7", Copy.hitReadout(2, 7))
+        assertEquals("HIT -/7", Copy.hitReadout(-1, 7))
+        assertEquals("NO HITS", Copy.hitReadout(-1, 0), "known the moment the search comes back empty, not on a tap")
     }
 }

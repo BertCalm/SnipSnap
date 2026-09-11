@@ -40,13 +40,6 @@ object Chart {
     /** One column of the grid is one 16th — the step editor's own cell. */
     val CELL_PULSES: Long = Mpc3Clip.PULSES_PER_16TH
 
-    /**
-     * The groove writer's chromatic map: pad slot N plays note 35+N
-     * (`GrooveEdit.noteFor`, `KitPreview`, `GrooveVariations` all count
-     * from the same 35). A row is a slot, so a note reads back as one.
-     */
-    const val NOTE_OFFSET = 35
-
     private const val STEPS_PER_BAR = 16
     private const val EMPTY = '.'
 
@@ -226,11 +219,18 @@ object Chart {
 
     // ---- words ----
 
-    fun slotOf(note: Mpc3Note): Int = note.note - NOTE_OFFSET
+    /**
+     * The pad a note plays, through the writer's own map.
+     *
+     * Not `note - 35`: that map wraps, so notes 0..35 are pads 93..128
+     * and subtracting alone gives them a negative slot. Every note in
+     * 0..127 is some pad - the map is bijective - so this is total, and
+     * "a note with no pad" is not a shape a chart can be asked to draw.
+     */
+    fun slotOf(note: Mpc3Note): Int = Mpc3Note.slotFor(note.note)
 
-    /** "A02 SNARE", the pad's own label and name; an off-pad note says what it is. */
+    /** "A02 SNARE", the pad's own label and name; a pad the kit lacks is "(EMPTY)". */
     fun rowLabel(slot: Int, kit: Kit): String {
-        if (slot !in 1..PadNoteMap.PAD_COUNT) return "NOTE ${slot + NOTE_OFFSET} (NO PAD)"
         val name = kit.pad(slot)?.displayName?.uppercase() ?: "(EMPTY)"
         val shown = if (name.length > NAME_WIDTH) name.take(NAME_WIDTH - 1) + "…" else name
         return "${PadNoteMap.labelForPad(slot)} $shown"
@@ -244,7 +244,7 @@ object Chart {
 
     /** "OFF-GRID 1: A02 BAR 2 STEP 15, +31 PULSES LATE (x)". */
     fun footnote(o: OffGrid): String {
-        val label = if (o.slot in 1..PadNoteMap.PAD_COUNT) PadNoteMap.labelForPad(o.slot) else "NOTE ${o.slot + NOTE_OFFSET}"
+        val label = PadNoteMap.labelForPad(o.slot)
         val pulses = pulses(kotlin.math.abs(o.offsetPulses))
         val direction = if (o.offsetPulses > 0) "LATE" else "EARLY"
         val sign = if (o.offsetPulses > 0) "+" else "−"
