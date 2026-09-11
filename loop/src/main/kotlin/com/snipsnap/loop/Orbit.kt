@@ -217,7 +217,7 @@ data class OrbitSet(
         const val MAX_SWING = Mpc3Clip.MAX_SWING
 
         /** The swings worth a chip: the MPC's own ladder, straight to dotted. */
-        val SWING_CHOICES: List<Int> = listOf(50, 54, 58, 62, 66, 71, 75)
+        val SWING_CHOICES: List<Int> = listOf(STRAIGHT_SWING, 54, 58, 62, 66, 71, MAX_SWING)
 
         /** The bars worth a chip: the common meters, all even so a half-bar span stays whole. */
         val BAR_CHOICES: List<Int> = listOf(12, 16, 20, 24, 32)
