@@ -68,11 +68,14 @@ object Arranger {
             )
         // A stored groove with no notes is a real state, not a corrupt
         // one: GrooveEdit.startEmpty writes exactly this when GROOVE opens
-        // on a kit that has recorded nothing yet, and ORBIT could write it
-        // too. There is no song to plan out of silence, so it refuses by
-        // name here - one line before the median arithmetic below, which
-        // has no element to index and would otherwise raise a bare
-        // IndexOutOfBoundsException instead of saying what is wrong.
+        // on a kit that has recorded nothing yet. ORBIT used to be able to
+        // write one too, until OrbitClip learned to refuse every no-note
+        // shape, so a groove.json from before that can still carry one.
+        // There is no song to plan out of silence either way, so it
+        // refuses by name here - above the median arithmetic below
+        // (`velocities[velocities.size / 2]`), which has no element to
+        // index and would otherwise raise a bare IndexOutOfBoundsException
+        // instead of saying what is wrong.
         require(base.notes.isNotEmpty()) {
             "the groove \"${base.name}\" has no notes yet - record a take on GROOVE, or chop with --groove"
         }
