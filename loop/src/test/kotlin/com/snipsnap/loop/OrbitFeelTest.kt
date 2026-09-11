@@ -364,6 +364,25 @@ class OrbitFeelTest {
         OrbitStore.save(set(ring(16, hits = arrayOf(OrbitHit(0, 1)))), straightDir)
         val text = java.io.File(straightDir, OrbitStore.FILE_NAME).readText()
         assertTrue("offset" !in text, "a straight hit says nothing about lean:\n$text")
+
+        // And the other direction: a version 3 file, written before an
+        // offset could exist, loads with every hit on its step. That is
+        // the whole migration this bump needs — the older-version tests
+        // in `OrbitStoreTest` cover spans and voices, but none of them
+        // carries a hit, so nothing else asserted what a pre-offset hit
+        // becomes.
+        val older = Files.createTempDirectory("orbit-v3").toFile().also { it.deleteOnExit() }
+        java.io.File(older, OrbitStore.FILE_NAME).writeText(
+            """{"version": 3, "bpm": 92, "sampleRate": 48000, "lapSteps": 16, "orbits": [
+               {"name": "R", "steps": 16, "span": "ONE", "voice": [1, 2], "engaged": true, "level": 1, "pan": 0,
+                "content": {"type": "pattern", "kit": "Break Kit", "hits": [
+                  {"step": 0, "slot": 1, "velocity": 1}, {"step": 4, "slot": 2, "velocity": 0.8}]}}
+            ]}""",
+        )
+        val migrated = (OrbitStore.load(older).orbits.single().content as PatternOrbit).hits
+        assertEquals(listOf(0L, 0L), migrated.map { it.offset }, "a hit written before offsets sits on its step")
+        assertEquals(listOf(0, 4), migrated.map { it.step }, "and is otherwise the hit it always was")
+        assertEquals(listOf(1, 2), migrated.map { it.slot })
     }
 
     @Test
