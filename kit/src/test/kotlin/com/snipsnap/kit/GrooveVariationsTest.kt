@@ -175,23 +175,6 @@ class GrooveVariationsTest {
     }
 
     @Test
-    fun `humanize is seeded, bounded, and leaves dynamics alone`() {
-        val a = GrooveVariations.humanize(base, 1f, seed = 5)
-        val b = GrooveVariations.humanize(base, 1f, seed = 5)
-        assertEquals(a, b, "same seed, same feel")
-        assertTrue(a != GrooveVariations.humanize(base, 1f, seed = 6), "different dice, different feel")
-
-        base.notes.zip(a.notes).forEach { (orig, loose) ->
-            assertTrue(
-                kotlin.math.abs(loose.timePulses - orig.timePulses) <= Mpc3Clip.PULSES_PER_16TH / 2,
-                "loose, not sloppy: ${orig.timePulses} -> ${loose.timePulses}",
-            )
-            assertEquals(orig.velocity, loose.velocity)
-        }
-        assertEquals(base.notes, GrooveVariations.humanize(base, 0f, seed = 5).notes, "zero amount is a no-op")
-    }
-
-    @Test
     fun `asking for swing swaps the tight slot, budget intact`() {
         val four = GrooveVariations.standard(base, swingPercent = 62)
         assertEquals(4, four.size)

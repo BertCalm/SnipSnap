@@ -51,25 +51,6 @@ object GrooveVariations {
     }
 
     /**
-     * Seeded jitter on note starts, bounded to ±half a 16th at full
-     * [amount] — loose, not sloppy. Same seed, same feel; velocities
-     * untouched here too.
-     */
-    fun humanize(clip: Mpc3Clip, amount: Float, seed: Int): Mpc3Clip {
-        require(amount in 0f..1f) { "amount wants 0..1, got $amount" }
-        val rnd = kotlin.random.Random(seed)
-        val span = Mpc3Clip.PULSES_PER_16TH / 2f * amount
-        val limit = clip.bars * Mpc3Clip.PULSES_PER_BAR
-        return clip.copy(
-            name = variantName(clip.name, "Loose"),
-            notes = clip.notes.map { n ->
-                val jitter = ((rnd.nextFloat() * 2f - 1f) * span).toLong()
-                n.copy(timePulses = (n.timePulses + jitter).coerceIn(0L, limit - 1))
-            },
-        )
-    }
-
-    /**
      * Snap to [grid], wrapping past the loop point and resolving collisions
      * louder-wins — the same rule as [GrooveEdit.quantized], which this used
      * to contradict.

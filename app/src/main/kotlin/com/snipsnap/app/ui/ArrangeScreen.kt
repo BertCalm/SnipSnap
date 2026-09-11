@@ -37,6 +37,7 @@ import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
+import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.shell.Arranger
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
@@ -72,6 +73,9 @@ fun ArrangeScreen(
     entry: KitShelf.Entry,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
+    swingPercent: Int? = null,
+    feel: Float = 0f,
+    feelTemplate: GrooveFeel.Template? = null,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -85,7 +89,9 @@ fun ArrangeScreen(
     var firstLoad by remember(kitDir) { mutableStateOf(true) }
     LaunchedEffect(kitDir, seed) {
         loading = true
-        val result = withContext(Dispatchers.IO) { runCatching { Arranger.arrange(kit, kitDir, seed) } }
+        val result = withContext(Dispatchers.IO) {
+            runCatching { Arranger.arrange(kit, kitDir, seed, swingPercent, feel, feelTemplate) }
+        }
         result.onSuccess {
             plan = it
             refusal = null

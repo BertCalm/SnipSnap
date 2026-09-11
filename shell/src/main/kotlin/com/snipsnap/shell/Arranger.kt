@@ -3,6 +3,7 @@ package com.snipsnap.shell
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.AnswerStore
 import com.snipsnap.kit.BeatTape
+import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.GrooveVariations
 import com.snipsnap.kit.Kit
@@ -61,7 +62,17 @@ object Arranger {
      */
     private const val VARIATION_GHOST_DYNAMIC_RANGE = 2f
 
-    fun arrange(kit: Kit, kitDir: File, seed: Int = 0): Arrangement {
+    fun arrange(
+        kit: Kit,
+        kitDir: File,
+        seed: Int = 0,
+        /** Null means straight — `standard`'s own default. Previously not accepted at all, which is why ARRANGE silently ignored the SWING control. */
+        swingPercent: Int? = null,
+        /** The feel axis, −1f..1f. 0 means untouched. */
+        feel: Float = 0f,
+        /** The rolled template [feel] scales. Null alongside a non-zero [feel] is a no-op, not an error: a caller with no template has no feel to apply. */
+        feelTemplate: GrooveFeel.Template? = null,
+    ): Arrangement {
         val base = GrooveStore.load(kitDir).firstOrNull()
             ?: throw IllegalArgumentException(
                 "no groove to arrange - chop with --groove, or import a .mid",
@@ -79,7 +90,8 @@ object Arranger {
         require(base.notes.isNotEmpty()) {
             "the groove \"${base.name}\" has no notes yet - record a take on GROOVE, or chop with --groove"
         }
-        val std = GrooveVariations.standard(base)
+        val felt = if (feel != 0f && feelTemplate != null) GrooveFeel.applyFeel(base, feel, feelTemplate) else base
+        val std = GrooveVariations.standard(felt, swingPercent)
         val captured = std[0]
         val tight = std[1]
         val half = std[2]

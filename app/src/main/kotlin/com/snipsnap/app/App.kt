@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -85,6 +86,7 @@ import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.ExportFormat
+import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.InstantKit
@@ -308,6 +310,12 @@ fun App(shelf: KitShelf) {
     // reachable only from GROOVE's own "SONG ▸" button, not one of MenuRow's
     // fixed ten, so a boolean here rather than its own AppScreen entry.
     var arrangeOpen by remember { mutableStateOf(false) }
+    // GROOVE's own swing/feel at the moment SONG ▸ was tapped — carried
+    // across so ARRANGE plans the groove this screen is actually showing,
+    // not the raw base it would otherwise reload from disk itself.
+    var arrangeSwing by remember { mutableStateOf<Int?>(null) }
+    var arrangeFeel by remember { mutableFloatStateOf(0f) }
+    var arrangeFeelTemplate by remember { mutableStateOf<GrooveFeel.Template?>(null) }
     /** ORBIT: GROOVE's other overlay, the circular sequencer — same lifecycle as [arrangeOpen]. */
     var orbitOpen by remember { mutableStateOf(false) }
     // SNIPS (Task 3): a shelf-level overlay, not KIT-scoped like PAD SHEET/
@@ -2224,6 +2232,9 @@ fun App(shelf: KitShelf) {
                                     entry = songEntry,
                                     onBack = { arrangeOpen = false },
                                     onToast = { toast = it },
+                                    swingPercent = arrangeSwing,
+                                    feel = arrangeFeel,
+                                    feelTemplate = arrangeFeelTemplate,
                                 )
                             } else {
                                 GrooveScreen(
@@ -2235,7 +2246,7 @@ fun App(shelf: KitShelf) {
                                     appScope = scope,
                                     onToast = { toast = it },
                                     reloadRequest = grooveReload,
-                                    onArrange = { arrangeOpen = true },
+                                    onArrange = { swing, f, tpl -> arrangeSwing = swing; arrangeFeel = f; arrangeFeelTemplate = tpl; arrangeOpen = true },
                                     onOrbit = { orbitOpen = true },
                                 )
                             }

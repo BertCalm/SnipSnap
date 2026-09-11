@@ -185,8 +185,8 @@ fun GrooveScreen(
     onToast: (String) -> Unit,
     /** Bumped by App when TAPE rewrote the kit's groove (READ AS GROOVE, STEAL THE FEEL) while this screen may be up. */
     reloadRequest: Int = 0,
-    /** SONG ▸ — opens ARRANGE, the same GROOVE-scoped-overlay shape as PAD SHEET's own onGrainField. */
-    onArrange: () -> Unit = {},
+    /** SONG ▸ — carries this screen's own swing and feel, or ARRANGE arranges a different groove than the one on screen. */
+    onArrange: (swingPercent: Int, feel: Float, feelTemplate: GrooveFeel.Template) -> Unit = { _, _, _ -> },
     /** ORBIT ▸ — opens the circular sequencer, the same overlay shape as ARRANGE. */
     onOrbit: () -> Unit = {},
 ) {
@@ -831,7 +831,12 @@ fun GrooveScreen(
                 // directly rather than going through ExportFormat.MIDI
                 // (which writes one clip per call, not this screen's
                 // "everything, at once" button).
-                val clips = GrooveVariations.standard(exportBase, swingPercent) + listOfNotNull(eClip)
+                // The feel the user is hearing, not the raw base — otherwise
+                // tightening a groove and exporting it hands back the
+                // untightened one, which is the whole defect this task exists
+                // to prevent.
+                val felt = if (feel == 0) exportBase else GrooveFeel.applyFeel(exportBase, feel / 100f, feelTemplate)
+                val clips = GrooveVariations.standard(felt, swingPercent) + listOfNotNull(eClip)
                 val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
                 val written = withContext(Dispatchers.IO) {
                     val root = context.getExternalFilesDir("exports")
@@ -1490,7 +1495,7 @@ fun GrooveScreen(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
                             clearJustLanded()
-                            onArrange()
+                            onArrange(swingPercent, feel / 100f, feelTemplate)
                         }
                         // ORBIT ▸ — the kit on rings of different lengths, one
                         // needle speed: polymeter and polyrhythm from the same

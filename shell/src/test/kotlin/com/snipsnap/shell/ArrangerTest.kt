@@ -2,6 +2,7 @@ package com.snipsnap.shell
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
+import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
@@ -10,6 +11,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class ArrangerTest {
@@ -278,5 +280,67 @@ class ArrangerTest {
                 assertTrue(chart.lineSequence().first().startsWith(plan.name.uppercase()), "'$name': the song is named")
             }
         }
+    }
+
+    /** Deliberately OFF the 16th grid — on-grid notes make a tight feel a no-op, and the assertions below vacuous. */
+    private fun offGridClip(): Mpc3Clip {
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        return Mpc3Clip(
+            "Loose Fixture", 1,
+            listOf(
+                Mpc3Note(36, 37, 0.9f),
+                Mpc3Note(37, 4 * s16 - 31, 0.85f),
+                Mpc3Note(36, 8 * s16 + 44, 0.9f),
+                Mpc3Note(37, 12 * s16 - 18, 0.9f),
+                Mpc3Note(38, 2 * s16 + 22, 0.5f),
+                Mpc3Note(38, 6 * s16 - 25, 0.5f),
+            ),
+        )
+    }
+
+    private fun noteTimes(plan: Arranger.Arrangement): List<List<Long>> =
+        plan.sections.map { s -> s.clip.notes.map { it.timePulses } }
+
+    @Test
+    fun `arrange honours the swing it is given`() {
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        // offGridClip's six hits all nearest-round to EVEN 16ths (steps 0,
+        // 2, 4, 6, 8, 12 - the same even steps grooveClip() itself sits
+        // on), and swing() only pushes the ODD ("and") 16ths - so that
+        // fixture alone can't tell 50% from 75% apart, whatever the
+        // percent. One more off-grid hit on an odd step (739 rounds to
+        // step 3, still no multiple of 240) gives the push something to
+        // move without perturbing the dynamic-range branch: note 38 and
+        // velocity 0.5 are already in the fixture and the kit, and the
+        // seven-note median (0.85) keeps `preferGhosts` false so the
+        // variation section still carries the swing slot.
+        val clip = offGridClip().let { it.copy(notes = it.notes + Mpc3Note(38, 3 * s16 + 19, 0.5f)) }
+        val m = model("ArrangeSwing", clip = clip)
+        val straight = Arranger.arrange(m.kit, m.kitDir, seed = 0, swingPercent = 50)
+        val swung = Arranger.arrange(m.kit, m.kitDir, seed = 0, swingPercent = 75)
+        assertNotEquals(
+            noteTimes(straight), noteTimes(swung),
+            "ARRANGE ignored swingPercent entirely before this - 50 and 75 must differ",
+        )
+    }
+
+    @Test
+    fun `arrange honours a feel it is given`() {
+        val m = model("ArrangeFeel", clip = offGridClip())
+        val plain = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        val tight = Arranger.arrange(
+            m.kit, m.kitDir, seed = 0, feel = -1f, feelTemplate = GrooveFeel.generated(1),
+        )
+        assertNotEquals(noteTimes(plain), noteTimes(tight), "a fully tight feel must reach the arrangement")
+    }
+
+    @Test
+    fun `a feel with no template is a no-op, not a crash`() {
+        val m = model("ArrangeNoTpl", clip = offGridClip())
+        assertEquals(
+            noteTimes(Arranger.arrange(m.kit, m.kitDir, seed = 0)),
+            noteTimes(Arranger.arrange(m.kit, m.kitDir, seed = 0, feel = -1f, feelTemplate = null)),
+            "a caller with no template has no feel to apply",
+        )
     }
 }
