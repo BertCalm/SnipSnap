@@ -86,10 +86,15 @@ object OrbitClip {
      * simply making a ring and tapping CLIP is also the shape a single
      * "nothing to clip" would explain worst.
      *
-     * Silence here is not a harmless no-op. A note-less clip saves into
+     * Silence here would not be a harmless no-op, which is why this
+     * guard exists rather than a shrug: a note-less clip would save into
      * `groove.json` like any other, and on a kit with no other groove it
-     * becomes the base — so the kit's beat, everywhere that reads one,
-     * is then nothing at all.
+     * would become the base — so the kit's beat, everywhere that reads
+     * one, would be nothing at all. Refusing here closes that door for
+     * ORBIT; it stays open for a `groove.json` written before this guard,
+     * and for `GrooveEdit.startEmpty`, which stores a note-less base
+     * deliberately. Readers still have to cope, which is why
+     * `Arranger.arrange` refuses one by name.
      */
     private fun noNotes(set: OrbitSet): String? {
         if (set.orbits.isEmpty()) return "THERE ARE NO RINGS TO CLIP."

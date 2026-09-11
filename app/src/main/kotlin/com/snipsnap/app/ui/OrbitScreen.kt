@@ -579,36 +579,27 @@ fun OrbitScreen(
                 // cannot ride along. Say how many stayed behind rather than
                 // leave it to be discovered on the hardware.
                 //
-                // A shorter sentence, not a longer one: ToastOverlay caps
-                // every toast at two lines (Chrome.kt), and every other
-                // toast on this screen runs 15 to 55 characters. Appending
-                // the snip report took this one to 166, which on a phone
-                // ellipsises away the very thing it exists to surface. So
-                // the snip case replaces the line rather than extending it.
+                // The fact, not a route. Five review rounds went on trying
+                // to point this line at BOUNCE ▸ TAPE, and each one found
+                // another state where that route does not carry the rings
+                // being reported: a solo (bounceToTape renders heard(s),
+                // which disengages everything else), a muted snip, a snip
+                // at level 0 (OrbitEngine skips both), a snip whose file
+                // has gone (OrbitBank makes no entry for it). Enumerating
+                // those in two lines is not possible and chasing them one
+                // at a time is how four of the five rounds happened.
                 //
-                // "FOR THOSE" points at the route without promising the
-                // outcome: OrbitBank skips a snip whose file has gone
-                // (SampleSource.loop returns null) and OrbitEngine.addLoop
-                // returns early for it, so that one ring bounces to
-                // silence. The bounce is still the only way out a snip has.
-                //
-                // Except under a solo, where it is not a way out at all:
-                // bounceToTape renders heard(s), which disengages every
-                // ring but the soloed one, so the snips being reported
-                // would not be in it. The clip does not honour solo and the
-                // bounce does, so the advice has to know which it is - and
-                // under a solo the useful thing to say is the order to do
-                // it in, not a route that is currently shut.
+                // So this says what is true in every one of those states -
+                // a clip holds no audio, so these rings could never have
+                // come - and leaves the route to the OUT panel, which
+                // already explains what BOUNCE and CLIP each do and is on
+                // screen when this toast appears.
                 val behind = OrbitClip.snipRings(s)
-                val rings = "${behind.size} SNIP RING${if (behind.size == 1) "" else "S"}"
                 onToast(
-                    when {
-                        behind.isEmpty() ->
-                            "${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC."
-                        solo != null ->
-                            "${clip.name}: ${clip.bars} BARS, ${clip.notes.size} NOTES. $rings STAYED. CLEAR SOLO, THEN BOUNCE ▸ TAPE."
-                        else ->
-                            "${clip.name}: ${clip.bars} BARS, ${clip.notes.size} NOTES. $rings STAYED — BOUNCE ▸ TAPE FOR THOSE."
+                    if (behind.isEmpty()) {
+                        "${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC."
+                    } else {
+                        "${clip.name}: ${clip.bars} BARS, ${clip.notes.size} NOTES. ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED — A CLIP HOLDS NO AUDIO."
                     },
                 )
             }.onFailure { e -> onToast("CLIP FAILED: ${e.message ?: e.javaClass.simpleName}") }
