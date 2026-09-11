@@ -398,7 +398,7 @@ object Copy {
         "· ORBIT PUTS THE KIT ON RINGS: 5 AGAINST 4 IN ONE TAP.",
         "· EMPTY GROOVE? RECORD A TAKE, TAP STEPS IN, OR GO TO ORBIT.",
         "· HOLD A PAD, RE-TRIM ▸: TAPE OPENS ON ITS CUT. BACK ONTO LANDS IT.",
-        "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO BANK B. TAP BANK B TO FLIP.",
+        "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO BANK B. THEN TAP B TO FLIP.",
         "· BREED ▸ MIXES TWO KITS' RECIPES INTO A NEW KIT. PARENTS STAY.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
@@ -473,10 +473,13 @@ object Copy {
     /**
      * Refused at the pick: `Breed.crossable` found no slot the coin could
      * work on, so the child would be a copy of A with "0 PADS CROSSED".
-     * Said before the copy is made, with the fix — a recipe is a
-     * treatment, an instrument, or a twin.
+     * Said before the copy is made, in the precondition's own terms: a
+     * pad here needs its own patch or treatment (rack), or a partner
+     * there (same slot, else same class) whose treatment it can borrow —
+     * a partner's patch alone is not enough, since a captured pad has no
+     * engine to render it through. The fix is the same in every case.
      */
-    const val BREED_NOTHING_TO_CROSS = "NOTHING WOULD CROSS: NO RECIPE ON EITHER SIDE. TREAT A PAD FIRST."
+    const val BREED_NOTHING_TO_CROSS = "NOTHING WOULD CROSS: NO PAD HERE HAS A PATCH OR TREATMENT, OR A PARTNER THERE WITH ONE TO BORROW. TREAT A PAD FIRST."
     /** The line under the BREED button: what comes out, before the tap. */
     const val BREED_SUBTITLE = "MIXES THE TWO KITS' RECIPES INTO A NEW KIT. BOTH PARENTS STAY."
     /**
@@ -485,9 +488,10 @@ object Copy {
      * CROSSED" is never the first time the user hears the word. A
      * function, so the singular reads right and the laws leave it be.
      */
-    fun breedButton(recipePads: Int, pads: Int): String = when (recipePads) {
-        0 -> "BREED ▸ NO RECIPES HERE YET"
-        1 -> "BREED ▸ 1 OF $pads PADS HAS A RECIPE"
+    fun breedButton(recipePads: Int, pads: Int): String = when {
+        recipePads == 0 -> "BREED ▸ NO RECIPES HERE YET"
+        pads == 1 -> "BREED ▸ ITS ONE PAD HAS A RECIPE"
+        recipePads == 1 -> "BREED ▸ 1 OF $pads PADS HAS A RECIPE"
         else -> "BREED ▸ $recipePads OF $pads PADS HAVE RECIPES"
     }
     /**

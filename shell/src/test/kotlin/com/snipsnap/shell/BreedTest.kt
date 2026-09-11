@@ -118,6 +118,7 @@ class BreedTest {
         assertTrue(Breed.recipePads(n.kit).isEmpty(), "the button on the plain kit still reads zero")
         assertEquals(Copy.breedButton(0, 2), "BREED ▸ NO RECIPES HERE YET")
         assertEquals(Copy.breedButton(1, 2), "BREED ▸ 1 OF 2 PADS HAS A RECIPE")
+        assertEquals(Copy.breedButton(1, 1), "BREED ▸ ITS ONE PAD HAS A RECIPE", "a one-pad kit reads in the singular")
         assertEquals(Copy.breedButton(2, 2), "BREED ▸ 2 OF 2 PADS HAVE RECIPES")
     }
 }

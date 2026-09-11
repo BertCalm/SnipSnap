@@ -282,7 +282,12 @@ fun KitScreen(
             for (b in 0 until maxOf(bankCount, 2)) {
                 val here = b == showing
                 val filled = kit.pads.count { it.slot in PadBanks.slots(b) }
-                val empty = b >= bankCount
+                // Empty by its count, not by `bankCount`: a sparse kit with
+                // pads on A and C has a B with nothing on it, and that B
+                // takes the same toast path rather than flipping to blanks.
+                // Bank A is never "empty" this way — an empty kit is bank A
+                // with nothing on it, and the grid is where it gets filled.
+                val empty = b > 0 && filled == 0
                 Box(
                     Modifier
                         .weight(1f)
