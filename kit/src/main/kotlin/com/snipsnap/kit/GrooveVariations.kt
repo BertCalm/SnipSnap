@@ -69,16 +69,37 @@ object GrooveVariations {
         )
     }
 
-    /** Note starts snapped to [grid] pulses; the push becomes the pocket. */
+    /**
+     * Snap to [grid], wrapping past the loop point and resolving collisions
+     * louder-wins — the same rule as [GrooveEdit.quantized], which this used
+     * to contradict.
+     *
+     * It previously ended `.coerceAtMost(limit - 1)`. In a 240-pulse grid
+     * `limit - 1` is never itself a multiple of 240, so a hit rounding past
+     * the loop end landed OFF-GRID inside the clip named "Tight" — and
+     * because [swing] calls this and [standard] ships its result, that
+     * off-grid ghost reached every MIDI export and every arrangement. These
+     * clips loop: the loop end IS the next pass's downbeat, so wrapping is
+     * both correct and the only answer that stays on the grid.
+     *
+     * Wrapping (and plain snapping, for two hits a half-step apart) can put
+     * two notes on one (note, pulse) address. One survives: the louder.
+     */
     fun quantize(clip: Mpc3Clip, grid: Long, suffix: String = "Tight"): Mpc3Clip {
         require(grid > 0) { "grid must be positive: $grid" }
-        val limit = clip.bars * Mpc3Clip.PULSES_PER_BAR
+        // Made explicit rather than assumed: every caller passes
+        // PULSES_PER_16TH, and `step * grid` is only provably in range when
+        // the grid divides a bar evenly.
+        require(Mpc3Clip.PULSES_PER_BAR % grid == 0L) { "grid must divide a bar evenly: $grid" }
+        val stepsInClip = clip.bars * Mpc3Clip.PULSES_PER_BAR / grid
         return clip.copy(
             name = variantName(clip.name, suffix),
-            notes = clip.notes.map { n ->
-                val snapped = ((n.timePulses + grid / 2) / grid * grid).coerceAtMost(limit - 1)
-                n.copy(timePulses = snapped)
-            },
+            notes = GrooveEdit.dedupeLouder(
+                clip.notes.map { n ->
+                    val step = ((n.timePulses + grid / 2) / grid) % stepsInClip
+                    n.copy(timePulses = step * grid)
+                },
+            ),
         )
     }
 

@@ -201,6 +201,50 @@ class GrooveVariationsTest {
     }
 
     @Test
+    fun `a note rounding past the loop end wraps to the downbeat, not to limit minus one`() {
+        // 2 bars = 7680 pulses, 32 steps of 240. A hit at 7600 is 80 pulses
+        // before the loop point, so it rounds UP to 7680 - which IS the next
+        // pass's downbeat, pulse 0. Clamping it to 7679 would put it off-grid,
+        // at an address no step index can reach.
+        val clip = Mpc3Clip("b", 2, listOf(Mpc3Note(note = 36, timePulses = 7600L, velocity = 0.9f)))
+        val tight = GrooveVariations.quantize(clip, Mpc3Clip.PULSES_PER_16TH)
+        assertEquals(1, tight.notes.size, "the note survives")
+        assertEquals(0L, tight.notes[0].timePulses, "it wraps to the downbeat")
+    }
+
+    @Test
+    fun `every quantized note lands on a grid multiple`() {
+        val notes = listOf(7600L, 7679L, 120L, 3810L, 5000L).mapIndexed { i, t ->
+            Mpc3Note(note = 36 + i, timePulses = t, velocity = 0.8f)
+        }
+        val tight = GrooveVariations.quantize(Mpc3Clip("b", 2, notes), Mpc3Clip.PULSES_PER_16TH)
+        tight.notes.forEach { n ->
+            assertEquals(0L, n.timePulses % Mpc3Clip.PULSES_PER_16TH, "note at ${n.timePulses} is off-grid")
+        }
+    }
+
+    @Test
+    fun `two hits snapping to the same address resolve louder-wins`() {
+        val clip = Mpc3Clip(
+            "b", 1,
+            listOf(
+                Mpc3Note(note = 36, timePulses = 230L, velocity = 0.4f),
+                Mpc3Note(note = 36, timePulses = 250L, velocity = 0.95f),
+            ),
+        )
+        val tight = GrooveVariations.quantize(clip, Mpc3Clip.PULSES_PER_16TH)
+        assertEquals(1, tight.notes.size, "one note per address survives")
+        assertEquals(0.95f, tight.notes[0].velocity, "and it is the louder one")
+    }
+
+    @Test
+    fun `a grid that does not divide a bar is refused in words`() {
+        val clip = Mpc3Clip("b", 1, listOf(Mpc3Note(note = 36, timePulses = 0L, velocity = 0.9f)))
+        val e = kotlin.test.assertFailsWith<IllegalArgumentException> { GrooveVariations.quantize(clip, 7L) }
+        assertTrue(e.message!!.contains("divide"), "the refusal names the real problem: ${e.message}")
+    }
+
+    @Test
     fun `four clips ride the payload with keys one to four`() {
         val four = GrooveVariations.standard(base)
         val writer = com.snipsnap.mpc3.Mpc3TrackWriter()
