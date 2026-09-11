@@ -49,13 +49,20 @@ class OrbitEngine(
         /** Interleaved index past which this voice is silent; a choke moves it in. */
         var limit = samples.size
         /**
-         * Shortened by a choke, rather than simply running out of sample —
-         * tracked, not inferred from [limit]. A choke arriving inside the
-         * last fade's worth of a pad leaves the stop point where it already
-         * was, so "is it shorter than the sample?" answers no for a voice
-         * that really was choked, and it would run out at full level.
+         * On its way out under a ramp, rather than simply running out of
+         * sample — tracked, not inferred from [limit]. A stop arriving
+         * inside the last fade's worth of a pad leaves the stop point where
+         * it already was, so "is it shorter than the sample?" answers no
+         * for a voice that really was stopped, and it would run out at full
+         * level.
+         *
+         * Two things set it: a choke, and a hit's own [OrbitHit.length].
+         * They are the same act — a voice ended before its sample — and it
+         * is named for that rather than for the choke, because a flag
+         * called `choked` read as false on a gated voice, which is how the
+         * first cut of the gate came to stop flat and click.
          */
-        var choked = false
+        var fading = false
         /**
          * Interleaved length of this voice's ramp: a full fade, or the rest
          * of the sample when less than that remains. Normalised rather than
@@ -137,7 +144,7 @@ class OrbitEngine(
         // two's downbeat can fall before ring one's third step - so the
         // merged order is what makes "newest" mean newest.
         due.sortBy { it.frame }
-        for (s in due) start(bank, s, from)
+        for (s in due) start(set, bank, s, from)
         mixVoices()
 
         sink.write(block)
@@ -152,7 +159,7 @@ class OrbitEngine(
     }
 
     /** Start one hit's voice, choking whatever it shares a mute group with. */
-    private fun start(bank: OrbitBank, s: Scheduled, from: Long) {
+    private fun start(set: OrbitSet, bank: OrbitBank, s: Scheduled, from: Long) {
         val content = s.orbit.content as PatternOrbit
         val pad = bank.pad(content.kit, s.hit.slot) ?: return
         val offset = (s.frame - from).toInt()
@@ -164,8 +171,42 @@ class OrbitEngine(
         // start is not played, which the negative position expresses
         // without a second offset field.
         voice.pos = -(offset * 2)
+        gate(voice, set, s.hit)
         if (voices.size >= MAX_VOICES) voices.removeAt(0) // steal the oldest
         voices.add(voice)
+    }
+
+    /**
+     * End [voice] after [hit]'s own length, when it has one.
+     *
+     * A hit with [OrbitHit.WHOLE_SAMPLE] is left alone and plays its
+     * sample out, which is what every hit did before lengths existed and
+     * what a drum wants: a kick is over when the kick is over. A gated
+     * hit stops where it is told, and the pads that want that are the
+     * ones the kit calls `oneShot = false`.
+     *
+     * It ends over the same ramp a choke uses rather than a fifth fade
+     * length of its own. The two are the same act — a voice cut before
+     * its sample ran out — and a sample stopped mid-cycle is a click
+     * whichever reason stopped it. So it marks [Voice.fading], which both
+     * switches the ramp on and tells a later choke this voice is already
+     * on its way out: re-deriving a fresh ramp from that instant would put
+     * the gain back to full and the voice would jump up mid-fade.
+     */
+    private fun gate(voice: Voice, set: OrbitSet, hit: OrbitHit) {
+        if (!hit.gated) return
+        val frames = OrbitClock.framesForPulses(set, hit.length)
+        // A plain index into the sample, because that is what [Voice.limit]
+        // is. A new voice's `pos` is negative — it encodes where in *this
+        // block* the hit lands, not how much sample has played — so adding
+        // it here gated a hit by however far into the block it started,
+        // which for step 1 at 120 BPM was nearly two thousand frames early.
+        val end = (frames * 2).toInt()
+        if (end >= voice.limit) return // the sample runs out first; nothing to cut
+        val fade = min(AutoPlace.CHOKE_FADE * 2, end)
+        voice.limit = end + fade
+        voice.fadeLen = fade
+        voice.fading = true
     }
 
     /**
@@ -190,7 +231,7 @@ class OrbitEngine(
             // instant would put the gain back to full and the voice would
             // jump up mid-fade; it is going to silence either way, and
             // sooner than a fresh fade would take it.
-            if (v.choked) continue
+            if (v.fading) continue
             // Where that voice will be when this hit lands. Negative means
             // it has not started yet, which only a hit later in this same
             // block could be - and a later hit never chokes an earlier one.
@@ -201,7 +242,7 @@ class OrbitEngine(
             val fade = min(AutoPlace.CHOKE_FADE * 2, v.limit - at)
             v.limit = at + fade
             v.fadeLen = fade
-            v.choked = true
+            v.fading = true
         }
     }
 
@@ -232,9 +273,10 @@ class OrbitEngine(
             var src = if (v.pos < 0) 0 else v.pos
             val stop = v.limit
             val n = min(block.size - out, stop - src)
-            // Only a choked voice ramps. One that simply reaches the end of
-            // its sample keeps the tail it was recorded with.
-            val fading = v.choked
+            // Only a voice being ended ramps — choked, or gated by its
+            // hit's own length. One that simply reaches the end of its
+            // sample keeps the tail it was recorded with.
+            val fading = v.fading
             val fadeLen = v.fadeLen
             var k = 0
             while (k + 1 < n) {

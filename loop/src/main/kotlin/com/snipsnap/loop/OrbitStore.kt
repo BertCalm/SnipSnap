@@ -16,6 +16,8 @@ object OrbitStore {
     const val FILE_NAME = "orbits.json"
 
     /**
+     * 5: a hit may carry a `length` — how long it sounds, in pulses. A hit
+     * without one plays its sample out, which is what every hit did before.
      * 4: a hit may carry an `offset` — its lean off its step, in pulses. A
      * hit without one sits on its step, which is where every hit sat before.
      * 3: a ring has a `span` (FREE, HALF, ONE, TWO, FOUR) where 2 had a
@@ -23,7 +25,7 @@ object OrbitStore {
      * `lockToBar: true` and `SAME_LAP` both become `ONE`, and a version 1
      * ring's voice is the pads its hits already named.
      */
-    const val VERSION = 4
+    const val VERSION = 5
     private const val FIRST_VERSION = 1
 
     fun save(set: OrbitSet, dir: File): File {
@@ -87,10 +89,15 @@ object OrbitStore {
                                 "step" to num(it.step),
                                 "slot" to num(it.slot),
                                 "velocity" to num(it.velocity),
-                                // Only when it leans: a straight hit keeps
-                                // the shape it always had, so a version 4 file
-                                // grows a field only where one is needed.
+                                // Only where there is something to say: a
+                                // hit that neither leans nor stops early
+                                // keeps the exact shape it always had, and
+                                // the file grows a field only where one is
+                                // needed. Stated as the rule rather than
+                                // against a version number, since that is
+                                // what has to hold at the next bump too.
                                 *(if (it.offset != 0L) arrayOf("offset" to num(it.offset)) else emptyArray()),
+                                *(if (it.gated) arrayOf("length" to num(it.length)) else emptyArray()),
                             ),
                         )
                     },
@@ -159,9 +166,12 @@ object OrbitStore {
             step = h["step"]?.int() ?: 0,
             slot = h["slot"]?.int() ?: 1,
             velocity = (h["velocity"]?.num() ?: 1.0).toFloat(),
-            // Absent in versions 1..3, and absent in a version 4 file whose
-            // hits are straight. Either way the hit sits on its step.
+            // Absent before version 4, and absent since wherever a hit is
+            // straight. Either way the hit sits on its step.
             offset = h["offset"]?.long() ?: 0L,
+            // Absent before version 5, and absent since wherever a hit
+            // plays out. Either way it lasts as long as its sample.
+            length = h["length"]?.long() ?: OrbitHit.WHOLE_SAMPLE,
         )
     }
 }

@@ -194,6 +194,11 @@ object OrbitImport {
             slot = slot,
             velocity = note.velocity,
             offset = note.timePulses - fires,
+            // The clip's own length, carried rather than discarded. A 16th
+            // is what `Mpc3Note` means by saying nothing, so it comes in as
+            // WHOLE_SAMPLE — the state every hit was in before lengths
+            // existed — and anything else is a length someone chose.
+            length = if (note.lengthPulses == Mpc3Clip.PULSES_PER_16TH) OrbitHit.WHOLE_SAMPLE else note.lengthPulses,
         )
     }
 

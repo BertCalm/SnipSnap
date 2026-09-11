@@ -25,13 +25,33 @@ data class OrbitHit(
      * different sample rate.
      */
     val offset: Long = 0L,
+    /**
+     * How long this hit sounds, in pulses — or [WHOLE_SAMPLE] for all of it.
+     *
+     * Zero is not "no time", it is "however long the sample is", which is
+     * what every hit meant before this field existed and what a drum
+     * almost always wants: a kick is over when the kick is over, and
+     * gating it at a 16th would be a new and worse sound. A length is for
+     * the pads that hold — `KitPad.oneShot = false`, which the `.xpn`,
+     * `.sfz` and MPC importers all read off real kits — where the note
+     * really does stop when it is told to.
+     *
+     * In pulses for the reason [offset] is: a set outlives the device it
+     * was made on, and a length in frames would mean a different note at
+     * a different sample rate.
+     */
+    val length: Long = WHOLE_SAMPLE,
 ) {
     init {
         require(step >= 0) { "step must not be negative: $step" }
         require(slot >= 1) { "slot is 1-based: $slot" }
         require(velocity in 0f..1f) { "velocity out of range: $velocity" }
         require(offset in -MAX_OFFSET..MAX_OFFSET) { "offset out of range: $offset" }
+        require(length >= 0L) { "length must not be negative: $length" }
     }
+
+    /** Whether this hit stops when it is told to rather than when the sample runs out. */
+    val gated: Boolean get() = length > WHOLE_SAMPLE
 
     companion object {
         /**
@@ -40,6 +60,15 @@ data class OrbitHit(
          * that deep is a hit somewhere else, entered somewhere else.
          */
         const val MAX_OFFSET: Long = Mpc3Clip.PULSES_PER_16TH
+
+        /**
+         * A [length] of zero: play the sample out.
+         *
+         * Named rather than written as 0 because "no length" and "every
+         * length there is" are opposite readings of the same number, and
+         * the second one is meant.
+         */
+        const val WHOLE_SAMPLE: Long = 0L
     }
 }
 
@@ -510,15 +539,24 @@ object OrbitClock {
      * [hit]'s own [OrbitHit.offset] in frames at the set's tempo — pulses
      * are what a set stores, frames are what the engine counts.
      */
-    fun offsetFrames(set: OrbitSet, hit: OrbitHit): Long {
-        if (hit.offset == 0L) return 0L
-        // Round the magnitude, then put the sign back. `Math.round` breaks
-        // ties toward positive infinity, so a lean landing on half a frame
-        // rounds out late and back early: at 8 kHz a +3 pulse lean was 13
-        // frames and a -3 was 12, and an equal pair was not a pair. It also
-        // biased a humanised take late, every tie in one direction.
-        val frames = Math.round(abs(hit.offset).toDouble() / Mpc3Clip.PULSES_PER_16TH * stepFrames(set))
-        return if (hit.offset < 0L) -frames else frames
+    fun offsetFrames(set: OrbitSet, hit: OrbitHit): Long = framesForPulses(set, hit.offset)
+
+    /**
+     * [pulses] of musical time as frames at [set]'s tempo.
+     *
+     * The one conversion between the two units, because a lean and a note
+     * length are the same question asked twice and two answers to it drift.
+     *
+     * Rounds the magnitude and puts the sign back: `Math.round` breaks ties
+     * toward positive infinity, so a value landing on half a frame rounds
+     * out late and back early — at 8 kHz a +3 pulse lean was 13 frames and
+     * a −3 was 12, an equal pair that was not a pair, and it biased a
+     * humanised take late with every tie in one direction.
+     */
+    fun framesForPulses(set: OrbitSet, pulses: Long): Long {
+        if (pulses == 0L) return 0L
+        val frames = Math.round(abs(pulses).toDouble() / Mpc3Clip.PULSES_PER_16TH * stepFrames(set))
+        return if (pulses < 0L) -frames else frames
     }
 
     data class Firing(val hit: OrbitHit, val frame: Long)
