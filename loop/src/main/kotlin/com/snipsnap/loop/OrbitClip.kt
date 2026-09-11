@@ -97,10 +97,16 @@ object OrbitClip {
         if (patterns.isEmpty()) {
             return "EVERY RING HERE IS A SNIP. A SNIP IS AUDIO, NOT NOTES — BOUNCE IT INSTEAD."
         }
-        val engaged = patterns.filter { it.engaged }
-        if (engaged.isEmpty()) return "EVERY PATTERN RING IS MUTED. ENGAGE ONE TO CLIP IT."
-        if (engaged.none { (it.content as PatternOrbit).hits.isNotEmpty() }) {
-            return "NO RING HAS A HIT ON IT YET. TAP A STEP FIRST."
+        // Order matters, and not for tidiness. Asking "are the engaged
+        // rings empty?" first answers yes for a set whose only played ring
+        // happens to be muted, and then says no ring has a hit on it while
+        // one plainly does. So ask what exists before asking what is
+        // audible: a set with no hits anywhere has not been played yet, and
+        // a set whose every played ring is muted has a mute to undo.
+        val played = patterns.filter { (it.content as PatternOrbit).hits.isNotEmpty() }
+        if (played.isEmpty()) return "NO RING HAS A HIT ON IT YET. TAP A STEP FIRST."
+        if (played.none { it.engaged }) {
+            return "EVERY RING WITH A HIT ON IT IS MUTED. ENGAGE ONE TO CLIP IT."
         }
         return null
     }

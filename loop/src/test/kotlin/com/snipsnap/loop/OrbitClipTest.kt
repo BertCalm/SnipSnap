@@ -117,6 +117,31 @@ class OrbitClipTest {
     }
 
     @Test
+    fun `the reason names what is actually wrong, even when two things are`() {
+        // A muted ring that HAS hits, beside an engaged ring that has
+        // none. Asking "do the engaged rings have hits?" answers no and
+        // says NO RING HAS A HIT ON IT YET - while a ring plainly has one.
+        // The true reason the clip is empty is that the ring with the hits
+        // is muted, and that is the one to say.
+        val mixed = set(
+            pattern("played", 16, 1, listOf(0, 8), engaged = false),
+            pattern("new", 16, 2, emptyList()),
+        )
+        val refusal = assertNotNull(OrbitClip.clipRefusal(mixed))
+        assertTrue("MUTED" in refusal, "the muted ring is why it is empty: $refusal")
+        assertTrue("HIT ON IT YET" !in refusal, "a ring does have a hit: $refusal")
+        assertEquals(null, OrbitClip.refusal(mixed), "still bounceable")
+
+        // And the other way round: nothing anywhere has a hit, engaged or
+        // not, so "nothing played yet" is the honest answer.
+        val nothingPlayed = set(
+            pattern("new", 16, 1, emptyList(), engaged = false),
+            pattern("newer", 16, 2, emptyList()),
+        )
+        assertTrue("HIT ON IT YET" in assertNotNull(OrbitClip.clipRefusal(nothingPlayed)))
+    }
+
+    @Test
     fun `a set with nothing to clip still has something to bounce`() {
         // The clip refusal and the shared one are different questions and
         // must not be asked through the same door: OrbitScreen hides BOTH
