@@ -90,4 +90,34 @@ class PocketStoreTest {
         file.writeText("""{"version":99,"name":"x","offsets":[],"accents":[]}""")
         assertFailsWith<com.snipsnap.json.JsonException> { PocketStore.read(file) }
     }
+
+    @Test
+    fun `an unrecognized lane name in the lane layer is dropped, not thrown`() {
+        val file = File(temp, "unknown-lane.pocket")
+        file.writeText(
+            """{"version":2,"name":"x","offsets":[${List(16) { "0" }.joinToString(",")}],""" +
+                """"accents":[${List(16) { "null" }.joinToString(",")}],""" +
+                """"laneOffsets":{"SNARE":5,"COWBELL":9},""" +
+                """"laneAccents":{"SNARE":1.1,"COWBELL":2.0}}""",
+        )
+        val back = PocketStore.read(file)
+        assertEquals(5L, back.template.laneOffsets[GrooveEdit.Lane.SNARE], "the known lane survives")
+        assertEquals(1, back.template.laneOffsets.size, "the unrecognized lane name is dropped, not thrown")
+        assertEquals(1.1f, back.template.laneAccents[GrooveEdit.Lane.SNARE], "the known lane's accent survives too")
+        assertEquals(1, back.template.laneAccents.size, "same drop, same reason, for lane accents")
+    }
+
+    @Test
+    fun `version 0 is refused - below the readable set, not just above it`() {
+        // READABLE is an explicit membership set ({1, 2}), not a relaxed
+        // upper-bound check like `version <= VERSION`. Every other version
+        // test here uses 99, which a relaxed `<= VERSION` check would also
+        // reject - so none of them can tell a real set from a sloppy bound.
+        // version 0 is the case that only a genuine set check refuses: it's
+        // <= VERSION (2), so a relaxed check would let it through and read
+        // a pocket this build never agreed to understand.
+        val file = File(temp, "zero.pocket")
+        file.writeText("""{"version":0,"name":"x","offsets":[],"accents":[]}""")
+        assertFailsWith<com.snipsnap.json.JsonException> { PocketStore.read(file) }
+    }
 }
