@@ -116,14 +116,17 @@ Refusals, each its own line of copy:
 - **The PAD SHEET's RE-TRIM ▸** resolves `Retrim.of` first. `Refused`
   toasts the reason and stays on the sheet — the button is not
   disabled, since the reason is the useful part. `Ready` hands App a
-  `RetrimRequest(kitDir, slot, file, inFrame, outFrame)` and goes to TAPE.
+  `RetrimRequest(kitDir, slot, padLabel, file, cut, colorHex, drumClass)`
+  (as built; `cut` is a `Retrim.Cut?`, null for a pre-spec pad's whole
+  file) and goes to TAPE.
 - **TAPE's load priority gains a first rung**: a pending
   `RetrimRequest` beats `SnipStore.newest`. Today's `tapeOpenOverride`
   sits *below* the newest snip, which is exactly the trap this spec is
   about — a capture made since would shadow the pad's tape. A RE-TRIM is
   the freshest intent there is.
-- On load, the deck gets `selectRange(inFrame, outFrame)` (one new
-  method on `TapeDeckModel`, the pair `setIn`/`setOut` already imply)
+- On load, the deck gets `select(inFrame, outFrame)` (`TapeDeckModel`'s
+  existing hand-in, the one DIG uses; the spec first called it
+  `selectRange`)
   and seeks to `inFrame`, so the first thing on screen is the pad's own
   cut, IN and OUT flags up, LEN reading the pad's length.
 - The header LCD says what is going on: `RE-TRIM A02 · BASS 5.WAV`,
@@ -179,7 +182,7 @@ is what tells you RE-TRIM will land where you expect before you tap it.
 - `SnipStore.provenanceTag` writes the three keys for a whole snip.
 - `Retrim.of`: ready; no key; file gone; keys absent but file present
   (whole file, not a refusal).
-- `TapeDeckModel.selectRange` sets IN and OUT, clamps to the tape, and
+- `TapeDeckModel.select` sets IN and OUT, clamps to the tape, and
   `commitSelection` returns exactly that range.
 - Re-assign through `assign` with the old pad's metadata carried and the
   old file archived (a take exists after, the bin holds the old WAV).
@@ -188,7 +191,7 @@ is what tells you RE-TRIM will land where you expect before you tap it.
 ## Rounds
 
 1. **Provenance and the resolver** (`:shell`, `:kit`): the three keys on
-   every path that can write them, `Retrim.of`, `selectRange`, the copy.
+   every path that can write them, `Retrim.of`, the deck's `select`, the copy.
    Pure, tested, no screen.
 2. **TAPE on the pad**: `RetrimRequest` in App, the new first rung in
    TAPE's load priority, the header, BACK ONTO with the metadata carry
@@ -197,17 +200,15 @@ is what tells you RE-TRIM will land where you expect before you tap it.
    the design board. BACK ONTO from INSTANT KIT stays out of scope until
    asked.
 
-## Open questions
+## Open questions (as settled)
 
-- **Pads chopped before this ships** have no `tapeFile`. RE-TRIM on them
-  refuses with the mic/import line, which is honest but slightly wrong
-  for a chop. A one-line variant — `THIS PAD WAS CHOPPED BEFORE TAPES
-  WERE REMEMBERED. RE-CHOP TO FIX THAT.` — when `origin=chop` is
-  present and `tapeFile` is not. Cheap; included in round 1 unless
-  you would rather not.
-- **Should BACK ONTO keep the treatment by re-applying it?** The
-  treatment recipe is on the pad, so it could be re-run on the new cut.
-  Left out: a re-trim is a cut, and stacking a treatment silently is the
-  kind of surprise the SMEAR bug already taught. A follow-up if wanted.
+- **Pads chopped before this shipped** have no `tapeFile`. Settled: they
+  refuse with their own line, `THIS PAD WAS CHOPPED BEFORE TAPES WERE
+  REMEMBERED. RE-CHOP TO FIX THAT.`, when `origin=chop` is present and
+  `tapeFile` is not (built in round 1).
+- **Should BACK ONTO keep the treatment by re-applying it?** Settled: no.
+  A re-trim is a cut, and stacking a treatment silently is the kind of
+  surprise the SMEAR bug already taught. The treatment stays with the
+  old file and the toast names it. A follow-up if ever wanted.
 - **ORBIT's BOUNCE ▸ TAPE** snips land on the shelf and go to pads via
   SNIPS → PAD, so they get the keys for free.
