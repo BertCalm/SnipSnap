@@ -197,12 +197,15 @@ class OrbitEngine(
      * this honours it.
      *
      * It ends over the same ramp a choke uses rather than a fifth fade
-     * length of its own. The two are the same act — a voice cut before
-     * its sample ran out — and a sample stopped mid-cycle is a click
-     * whichever reason stopped it. So it marks [Voice.fading], which both
-     * switches the ramp on and tells a later choke this voice is already
-     * on its way out: re-deriving a fresh ramp from that instant would put
-     * the gain back to full and the voice would jump up mid-fade.
+     * length of its own — the two are the same act, a voice cut before its
+     * sample ran out, and a sample stopped mid-cycle is a click whichever
+     * reason stopped it. They share [endAt] for that reason.
+     *
+     * The voice stays chokeable in the meantime. It is marked
+     * [Voice.fading] so the mixer ramps it, but that flag says nothing
+     * about whether a later hit may shorten it: this one is at full gain
+     * until its gate arrives, and [choke] works that out from the ramp
+     * rather than from the flag.
      */
     private fun gate(voice: Voice, set: OrbitSet, hit: OrbitHit) {
         if (!hit.gated) return
