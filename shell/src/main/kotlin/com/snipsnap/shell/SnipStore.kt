@@ -84,12 +84,26 @@ object SnipStore {
      * writes. Leaving the level alone is the honest choice: there is
      * nothing in a sub-floor buffer worth normalising toward.
      */
-    fun commit(samples: FloatArray, sampleRate: Int, root: File, nowMillis: Long): File {
+    fun commit(samples: FloatArray, sampleRate: Int, root: File, nowMillis: Long): File =
+        commitPrepared(prepare(samples, sampleRate)!!, root, nowMillis)
+
+    /**
+     * The audio half of [commit]: [samples] through the commit-time chain
+     * and the doctor, as a [Snip] not yet on disk. Split out so a pad
+     * capture (`PadTape`) can cut its pad from the very audio the shelf
+     * will hold, then write both. [silentFallback] false returns null for
+     * a capture that trims to nothing, where [commit] would keep a short
+     * head slice of it (a SNIP of a quiet room is still a SNIP; a GRAB of
+     * one is "nothing to grab yet").
+     */
+    fun prepare(samples: FloatArray, sampleRate: Int, silentFallback: Boolean = true): Snip? {
         val original = Snip(samples, channels = 1, sampleRate = sampleRate)
         val cleaned = Cleanup.process(original)
 
-        val toWrite = if (cleaned.frameCount > 0) {
+        return if (cleaned.frameCount > 0) {
             CaptureDoctor.clean(cleaned).snip
+        } else if (!silentFallback) {
+            null
         } else {
             // All-silence trim: skip the doctor entirely (nothing to
             // diagnose in dead air) and fall back to a short, DC-corrected,
@@ -102,7 +116,10 @@ object SnipStore {
             val window = original.copy(samples = original.samples.copyOf(keepFrames * original.channels))
             Cleanup.process(window, CleanupConfig(trimSilence = false, normalize = false))
         }
+    }
 
+    /** The disk half of [commit]: a [prepare]d snip named, claimed and written under `root/snips`. */
+    fun commitPrepared(toWrite: Snip, root: File, nowMillis: Long): File {
         require(toWrite.sampleRate == WavWriter.MPC_SAMPLE_RATE) {
             "sample rate ${toWrite.sampleRate} is not MPC-native (${WavWriter.MPC_SAMPLE_RATE}); " +
                 "capture at 44.1 kHz"

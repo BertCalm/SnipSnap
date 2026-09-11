@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.onClick
@@ -48,12 +49,14 @@ import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.PadCapture
-import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.PadTape
 import com.snipsnap.shell.SchemeId
+import com.snipsnap.shell.SnipStore
+import java.io.File
 import kotlin.math.sqrt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -63,7 +66,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-/** GRAB looks back this far into the ring for the last hit — PadCapture.grabOneShot trims it down from there. */
+/** GRAB looks back this far into the ring for the last hit — PadTape.grab cuts it from there, and keeps the rest as the pad's tape. */
 private const val GRAB_SECONDS = 2
 private val GRAB_FRAMES get() = GRAB_SECONDS * MicSessionService.SAMPLE_RATE
 
@@ -127,6 +130,11 @@ fun PadCaptureScreen(
     appScope: CoroutineScope,
 ) {
     val scheme = LocalScheme.current
+    // Where a capture's tape lands (docs/RETRIM.md round 4): every GRAB and
+    // HOLD is a SNIP on the shelf too, so the pad can RE-TRIM later. The
+    // shelf ROOT (filesDir), not `filesDir/snips`: SnipStore appends its
+    // own DIR, the same call SnipSnapApplication's SNIP hook makes.
+    val snipsRoot: File = LocalContext.current.filesDir
     var committing by remember { mutableStateOf<Gesture?>(null) }
     var holding by remember { mutableStateOf(false) }
     var holdStart by remember { mutableStateOf(0L) }
@@ -145,23 +153,31 @@ fun PadCaptureScreen(
     // the snapshot/DSP work it replaces. Which [Gesture] is stashed only
     // changes which control's busy label lights up — the guard/disable/
     // finally-clear semantics are identical to the old shared boolean.
+    //
+    // `producer` hands back a `PadTape.Landing` — the cleaned capture as
+    // the tape it will be on the shelf, and the pad's cut of it — so the
+    // write below is two things: the tape into `snips/` (the same file a
+    // SNIP would make) and the pad, tagged with that file and its cut, so
+    // RE-TRIM can open TAPE on it later (docs/RETRIM.md round 4).
     fun commitToPad(
         gesture: Gesture,
         successLabel: String,
         nothingLabel: String,
         failurePrefix: String,
-        producer: suspend () -> Snip?,
+        producer: suspend () -> PadTape.Landing?,
     ) {
         if (!armed || committing != null) return
         committing = gesture
         appScope.launch {
             try {
                 val updated: Kit? = withContext(Dispatchers.IO) {
-                    val snip = producer() ?: return@withContext null
+                    val landing = producer() ?: return@withContext null
+                    val tape = SnipStore.commitPrepared(landing.tape, snipsRoot, System.currentTimeMillis())
+                    val snip = landing.pad
                     val cls = Classifier.classify(snip).drumClass
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(entry.dir)
-                        model.assign(slot, snip, cls, cls.name.replace('_', ' '))
+                        model.assign(slot, snip, cls, cls.name.replace('_', ' '), source = PadTape.tag(tape, landing))
                         model.save()
                         model.kit
                     }
@@ -196,7 +212,7 @@ fun PadCaptureScreen(
             failurePrefix = "GRAB FAILED",
         ) {
             val raw = MicSessionService.snapshotTail(GRAB_FRAMES) ?: return@commitToPad null
-            PadCapture.grabOneShot(raw, MicSessionService.SAMPLE_RATE)
+            PadTape.grab(raw, MicSessionService.SAMPLE_RATE)
         }
     }
 
@@ -226,7 +242,7 @@ fun PadCaptureScreen(
             nothingLabel = "NOTHING RECORDED",
             failurePrefix = "RECORD FAILED",
         ) {
-            MicSessionService.snapshotTail(frames)?.let { PadCapture.holdClip(it, MicSessionService.SAMPLE_RATE) }
+            MicSessionService.snapshotTail(frames)?.let { PadTape.hold(it, MicSessionService.SAMPLE_RATE) }
         }
     }
 
