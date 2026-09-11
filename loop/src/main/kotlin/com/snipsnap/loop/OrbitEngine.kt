@@ -195,15 +195,20 @@ class OrbitEngine(
      */
     private fun gate(voice: Voice, set: OrbitSet, hit: OrbitHit) {
         if (!hit.gated) return
-        val frames = OrbitClock.framesForPulses(set, hit.length)
         // A plain index into the sample, because that is what [Voice.limit]
         // is. A new voice's `pos` is negative — it encodes where in *this
         // block* the hit lands, not how much sample has played — so adding
         // it here gated a hit by however far into the block it started,
         // which for step 1 at 120 BPM was nearly two thousand frames early.
-        val end = (frames * 2).toInt()
+        //
+        // Compared as a `Long` and narrowed only once the answer is known
+        // to fit. `sampleRate` is merely required to be positive, so a set
+        // at 3 MHz and 40 BPM makes a MAX_LENGTH hit 2.3 billion samples:
+        // truncating first wrapped that negative, sailed past this guard,
+        // and silenced a voice that should have played its sample out.
+        val end = OrbitClock.framesForPulses(set, hit.length) * 2
         if (end >= voice.limit) return // the sample runs out first; nothing to cut
-        endAt(voice, end)
+        endAt(voice, end.toInt())
     }
 
     /**

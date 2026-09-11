@@ -293,6 +293,28 @@ class OrbitImportTest {
     }
 
     @Test
+    fun `a note longer than a hit may sound refuses in the preflight, not from inside`() {
+        // `Mpc3Clip` puts no ceiling on a note's length and `OrbitHit` does,
+        // so without this `refusal` answered null and `rings` threw from
+        // `hitFor` — a caller that checked first still got an exception,
+        // which is the one thing a preflight exists to prevent.
+        val long = Mpc3Clip("L", 1, listOf(Mpc3Note(36, 0, 1f, lengthPulses = OrbitHit.MAX_LENGTH + 1)))
+        val why = OrbitImport.refusal(long)
+        assertTrue(why != null && "note" in why, why ?: "no refusal")
+        assertFailsWith<IllegalArgumentException> { OrbitImport.rings(long, "break", kit(1), bpm, rate) }
+
+        // And exactly MAX_LENGTH is allowed through, so the ceiling is a
+        // ceiling rather than one short of it.
+        val atMax = Mpc3Clip("M", 1, listOf(Mpc3Note(36, 0, 1f, lengthPulses = OrbitHit.MAX_LENGTH)))
+        assertEquals(null, OrbitImport.refusal(atMax))
+        assertEquals(
+            OrbitHit.MAX_LENGTH,
+            (OrbitImport.rings(atMax, "break", kit(1), bpm, rate).set.orbits[0].content as PatternOrbit)
+                .hits.single().length,
+        )
+    }
+
+    @Test
     fun `a clip with no notes refuses by name`() {
         val empty = Mpc3Clip("Silence", 1, emptyList())
         assertTrue(OrbitImport.refusal(empty)!!.contains("no notes"), OrbitImport.refusal(empty)!!)

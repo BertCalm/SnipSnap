@@ -80,6 +80,15 @@ object OrbitImport {
             return "'${clip.name}' is ${clip.bars} bars, and a ring holds " +
                 "${Orbit.MAX_STEPS / OrbitClip.CLIP_BAR_STEPS}"
         }
+        // `Mpc3Clip` puts no ceiling on a note's length, and `OrbitHit` does.
+        // Without this the refusal answered null and `rings` threw from
+        // inside `hitFor` instead — so a caller that checked first still
+        // got an exception, which is the one thing a preflight is for.
+        val longest = clip.notes.maxOf { it.lengthPulses }
+        if (longest > OrbitHit.MAX_LENGTH) {
+            return "'${clip.name}' holds a note ${longest / Mpc3Clip.PULSES_PER_BAR} bars long, " +
+                "and a hit may sound for ${OrbitHit.MAX_LENGTH / Mpc3Clip.PULSES_PER_BAR}"
+        }
         return null
     }
 

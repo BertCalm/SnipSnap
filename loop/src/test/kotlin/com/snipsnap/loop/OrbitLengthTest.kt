@@ -171,6 +171,30 @@ class OrbitLengthTest {
         assertClose(0.5f, at(out, 11_000), "still one voice, past where pad 1's gate would have been")
     }
 
+    @Test
+    fun `a gate too long to count in frames lets the sample finish instead of wrapping`() {
+        // `sampleRate` is only required to be positive. At 3 MHz and 40 BPM
+        // a MAX_LENGTH hit is 2.3 billion samples — past `Int` — and
+        // truncating before the comparison wrapped it negative, slipped
+        // past "does the sample run out first?", and silenced a voice that
+        // should have played out.
+        class Pad : SampleSource {
+            override fun loop(sampleFile: String): Snip? = null
+            override fun pad(kit: String, slot: Int): Snip? = Snip(FloatArray(4_000) { 0.5f }, 1, 48_000)
+        }
+        val s = OrbitSet(
+            listOf(Orbit("R", 16, PatternOrbit("kit", listOf(OrbitHit(0, 1, length = OrbitHit.MAX_LENGTH))))),
+            40f,
+            3_000_000,
+        )
+        assertTrue(
+            OrbitClock.framesForPulses(s, OrbitHit.MAX_LENGTH) * 2 > Int.MAX_VALUE,
+            "the case only bites when the frame count overflows Int",
+        )
+        val out = OrbitEngine.render(s, OrbitBank.prepare(s, Pad()), 8_000).samples
+        assertClose(0.5f, at(out, 2_000), "a gate longer than the sample leaves it alone")
+    }
+
     // ---- the export says the same number ----
 
     @Test
