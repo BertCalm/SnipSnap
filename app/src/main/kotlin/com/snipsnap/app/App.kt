@@ -92,9 +92,11 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
+import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.Personality
 import com.snipsnap.shell.ReadGroove
 import com.snipsnap.shell.RecipeReplay
+import com.snipsnap.shell.Retrim
 import com.snipsnap.shell.RoomPackager
 import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.SchemeId
@@ -103,6 +105,7 @@ import com.snipsnap.shell.ShelfImport
 import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.shell.TextureKits
+import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -160,6 +163,24 @@ private const val CHOP_ALL_MAX_FILE_BYTES = 96L * 1024 * 1024
  * `open` alone wouldn't tell CHOP which file the commit was cut from.
  */
 data class TapeCommit(val sourceFile: File, val range: IntRange)
+
+/**
+ * RE-TRIM (docs/RETRIM.md §3): the PAD SHEET asked TAPE to open on this
+ * pad's own tape. [file] is the snip on the SNIPS shelf and [cut] where
+ * the pad's audio sits in it (null = the whole file, a pad tagged before
+ * the cut keys existed). While one is live, TAPE loads [file] ahead of
+ * everything else, opens with IN and OUT on the cut, and its primary
+ * button is BACK ONTO [padLabel] instead of KEEP. It dies on BACK ONTO, a
+ * plain KEEP, leaving TAPE by the menu row, or a new capture landing.
+ */
+data class RetrimRequest(
+    val kitDir: File,
+    val slot: Int,
+    /** "A02" — what the header and the button call the pad. */
+    val padLabel: String,
+    val file: File,
+    val cut: com.snipsnap.shell.Retrim.Cut?,
+)
 
 /** X-RAY's own state: the picked file's display name and what [MpcXRay.read] made of it. Non-null IS "the screen is open" — there is no separate boolean to keep in sync with it. */
 data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay.Reading)
@@ -346,6 +367,10 @@ fun App(shelf: KitShelf) {
     // (the row a user just captured, sent straight to TAPE) it's usually the
     // same file regardless.
     var tapeOpenOverride by remember { mutableStateOf<File?>(null) }
+    // RE-TRIM's request, TAPE's first rung — above SnipStore.newest, which
+    // is exactly what `tapeOpenOverride` above can't promise. See
+    // RetrimRequest for what clears it.
+    var retrim by remember { mutableStateOf<RetrimRequest?>(null) }
     // X4.4 TEACH THE MACHINE: off by default, flipped on SETUP's consent
     // row, remembered like the scheme. CHOP reads it; what it gates is
     // feature vectors and labels into the kit's own folder, never audio,
@@ -686,6 +711,8 @@ fun App(shelf: KitShelf) {
                 open = withContext(Dispatchers.IO) { shelf.list(shelfSort) }.firstOrNull()
             }
             toast = Copy.imported(landed.seconds, landed.truncated)
+            // A new capture landing outranks a RE-TRIM in flight (RetrimRequest).
+            retrim = null
             importCount++
             padSheetSlot = null
             takesBinOpen = false
@@ -1045,7 +1072,12 @@ fun App(shelf: KitShelf) {
                     val cls = Classifier.classify(snip).drumClass
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(target.dir)
-                        model.assign(slot, snip, cls, cls.name.replace('_', ' '), source = SnipStore.provenanceTag(file))
+                        // The frame count makes the tag a cut (the whole
+                        // snip) RE-TRIM can open TAPE on later.
+                        model.assign(
+                            slot, snip, cls, cls.name.replace('_', ' '),
+                            source = SnipStore.provenanceTag(file, snip.frameCount),
+                        )
                         model.save()
                         model.kit
                     }
@@ -1061,6 +1093,59 @@ fun App(shelf: KitShelf) {
             } catch (e: Exception) {
                 // Law 3: when it breaks, say exactly what happened.
                 toast = "PLACE FAILED: ${e.message ?: e.javaClass.simpleName}"
+            }
+        }
+    }
+
+    /**
+     * BACK ONTO (docs/RETRIM.md §4): [range] of [request]'s tape, read at
+     * the file's own rate and cut as CHOP's slice would be (`Retrim.cut`),
+     * replaces the pad's audio through `KitBuilderModel.backOnto` — class,
+     * name, level, pan, tune, choke, SHAPE carried; a treatment left with
+     * the old file in the bin, and the toast says so. The save archives a
+     * take, so UNDO is the TAKES room. Then PAD SHEET reopens on that pad,
+     * whose provenance line now reads the new cut.
+     */
+    fun backOnto(request: RetrimRequest, range: IntRange) {
+        if (busy != null) return
+        busy = Copy.RETRIM_BUSY
+        scope.launch {
+            try {
+                val (updated, treatment) = withContext(Dispatchers.IO) {
+                    val mono = Cleanup.toMono(WavReader.readCapped(request.file, TAPE_LOAD_MAX_SEC).snip)
+                    val snip = Retrim.cut(mono, range)
+                    val start = range.first.coerceIn(0, mono.frameCount)
+                    KitWrites.mutex.withLock {
+                        val model = KitBuilderModel.open(request.kitDir)
+                        val old = model.pad(request.slot)
+                            ?: error("${request.padLabel} is empty now - nothing to go back onto")
+                        val treatment = PadSheet.read(old.recipe)?.let { applied ->
+                            applied.segment?.let(PadSheet::displayLabel) ?: applied.treatment.name
+                        }
+                        model.backOnto(request.slot, snip, Retrim.tag(request.file.name, start, start + snip.frameCount))
+                        model.save()
+                        model.kit to treatment
+                    }
+                }
+                // Same identity guard as assignPendingSnip: the write must
+                // not weld itself onto whichever kit is open now.
+                if (open?.dir == request.kitDir) open = open?.copy(kit = updated)
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                toast = Copy.retrimLanded(request.padLabel, treatment)
+                retrim = null
+                if (open?.dir == request.kitDir) {
+                    screen = AppScreen.KIT
+                    padSheetSlot = request.slot
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: OutOfMemoryError) {
+                toast = Copy.TAPE_TOO_BIG
+            } catch (e: Exception) {
+                // Law 3: when it breaks, say exactly what happened.
+                toast = "RE-TRIM FAILED: ${e.message ?: e.javaClass.simpleName}"
+            } finally {
+                busy = null
             }
         }
     }
@@ -1507,6 +1592,7 @@ fun App(shelf: KitShelf) {
         // than leaving KitsScreen stuck naming a cross partner forever.
         pendingBreedWith = null
         tapeOpenOverride = null
+        retrim = null
         // DELETED KITS is shelf-level too — same reasoning
         // as SNIPS above: a tab switch away from KITS must
         // not leave this overlay armed to reopen on top of
@@ -1796,17 +1882,29 @@ fun App(shelf: KitShelf) {
                                     openBox = padSheetBox,
                                     onOpenBox = { padSheetBox = it },
                                     onNavigateTape = {
-                                        // TAPE has no notion of "open on this
-                                        // pad's WAV" — it loads whatever
-                                        // `TapeScreen.loadLongestTape`'s
-                                        // source-priority chain resolves
-                                        // (newest snip → last commit's own
-                                        // source → open kit's longest pad),
-                                        // not necessarily this pad — RE-TRIM
-                                        // is honest about that gap: it opens
-                                        // TAPE, not necessarily on this pad.
-                                        padSheetSlot = null
-                                        screen = AppScreen.TAPE
+                                        // RE-TRIM ▸ (docs/RETRIM.md §3): resolve
+                                        // the pad's own tape first. A refusal
+                                        // toasts its reason and stays on the
+                                        // sheet — the reason is the useful
+                                        // part, so the button is never grey.
+                                        val pad = sheetEntry.kit.pad(sheetSlot)
+                                        val resolved = pad?.let {
+                                            Retrim.of(it, File(context.filesDir, SnipStore.DIR))
+                                        } ?: Retrim.Refused(Copy.RETRIM_NO_TAPE)
+                                        when (resolved) {
+                                            is Retrim.Refused -> toast = resolved.reason
+                                            is Retrim.Ready -> {
+                                                retrim = RetrimRequest(
+                                                    sheetEntry.dir,
+                                                    sheetSlot,
+                                                    PadNoteMap.labelForPad(sheetSlot),
+                                                    resolved.file,
+                                                    resolved.cut,
+                                                )
+                                                padSheetSlot = null
+                                                screen = AppScreen.TAPE
+                                            }
+                                        }
                                     },
                                     onGrainField = { slot ->
                                         // GRAIN closes PAD SHEET on the way
@@ -1985,11 +2083,17 @@ fun App(shelf: KitShelf) {
                                 // permanently shadowing `lastCommit` for the
                                 // rest of the session once it's ever been set.
                                 tapeOpenOverride = null
+                                // Same for a RE-TRIM: a plain KEEP is a
+                                // different intent (RetrimRequest).
+                                retrim = null
                             },
                             onInstantKit = ::instantKit,
                             onReadGroove = ::readGroove,
                             onStealFeel = ::stealFeel,
                             reloadRequest = importCount,
+                            retrim = retrim,
+                            onBackOnto = ::backOnto,
+                            onCaptureLanded = { retrim = null },
                         )
                         AppScreen.PROPERTIES -> PropertiesScreen(
                             currentScheme = schemeId,

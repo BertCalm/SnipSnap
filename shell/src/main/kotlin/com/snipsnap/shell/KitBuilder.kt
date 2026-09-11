@@ -104,6 +104,50 @@ class KitBuilderModel private constructor(
         return pad
     }
 
+    /**
+     * BACK ONTO (RE-TRIM, `docs/RETRIM.md`): [snip] — a fresh cut of the
+     * pad's own tape — replaces the pad's audio, and the pad keeps
+     * everything that is metadata rather than file: class, name, colour,
+     * level, pan, tune, choke, one-shot and SHAPE. [cut] is `Retrim.tag`'s
+     * three keys for the new cut; they overwrite the old ones and the rest
+     * of the pad's provenance stays.
+     *
+     * What does NOT carry: a treatment (its recipe is dropped — the sound
+     * was baked into the old file, which [assign] bins as it would for any
+     * replaced pad, and stacking it silently onto the new cut is the kind
+     * of surprise the SMEAR bug taught), the stamps that described the old
+     * audio's processing (`mutatedWith`, `outside`, `desampled`), and GHOSTS
+     * as files — those were renderings of the old cut, so they are rendered
+     * again from the new one, the same number of soft zones. The caller
+     * reads the old pad's treatment before calling (`PadSheet.read`) to say
+     * in the toast that it stayed behind. [save] archives a take, so UNDO
+     * on the sheet is the TAKES room, as for every other replacement.
+     */
+    fun backOnto(slot: Int, snip: Snip, cut: Map<String, String>): KitPad {
+        val old = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        // Layers count the main sample too (addGhostLayers appends it last).
+        val ghosts = (old.velocityLayers.size - 1).coerceIn(0, 2)
+        val source = old.source - LEFT_WITH_OLD_FILE + cut
+        assign(slot, snip, old.drumClass, old.displayName, source)
+        update(slot) {
+            it.copy(
+                colorHex = old.colorHex,
+                level = old.level,
+                pan = old.pan,
+                tuneCoarse = old.tuneCoarse,
+                tuneFine = old.tuneFine,
+                muteGroup = old.muteGroup,
+                oneShot = old.oneShot,
+                attack = old.attack,
+                decay = old.decay,
+                cutoff = old.cutoff,
+                resonance = old.resonance,
+            )
+        }
+        if (ghosts > 0) addGhostLayers(slot, ghosts)
+        return kit.pad(slot)!!
+    }
+
     /** Long-press clear: the pad empties; its file goes if nothing shares it. */
     fun clear(slot: Int) {
         val pad = kit.pad(slot) ?: return
@@ -1012,6 +1056,9 @@ class KitBuilderModel private constructor(
     }
 
     companion object {
+
+        /** Provenance stamps that describe the old file's processing, dropped by [backOnto]. */
+        val LEFT_WITH_OLD_FILE: Set<String> = setOf("mutatedWith", "outside", "desampled")
 
         /** Where saves archive their history, inside the kit folder. */
         const val TAKES_DIR = ".takes"

@@ -515,10 +515,18 @@ object SnipStore {
      * `"capturedAtMillis"` — [snip]'s immutable capture time, unaffected by
      * a later [rename]. Both keys land together on every fresh assign;
      * [isUsedBy] is what makes the second one load-bearing.
+     *
+     * With [frameCount] (the whole snip, decoded, at the file's own rate)
+     * the tag also carries [Retrim]'s three keys — the file, and the cut
+     * `0 until frameCount` — so RE-TRIM ▸ on the PAD SHEET can open TAPE
+     * on this snip with IN and OUT already up. Without it, only the file:
+     * [Retrim.of] treats a missing cut as the whole file, never a refusal.
      */
-    fun provenanceTag(snip: File): Map<String, String> {
+    fun provenanceTag(snip: File, frameCount: Int? = null): Map<String, String> {
         val tag = linkedMapOf("file" to snip.name)
         parsedTimestamp(snip)?.let { tag["capturedAtMillis"] = it.toString() }
+        if (frameCount != null && frameCount > 0) tag += Retrim.tag(snip.name, 0, frameCount)
+        else tag[Retrim.FILE_KEY] = snip.name
         return tag
     }
 

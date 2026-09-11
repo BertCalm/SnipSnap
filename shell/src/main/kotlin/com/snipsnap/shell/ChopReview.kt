@@ -23,7 +23,35 @@ class ChopReviewModel private constructor(
     val source: Snip,
     val mode: ChopMode,
     slices: List<Slice>,
+    /** Where [source] sits in a tape on the SNIPS shelf, when it came off one; null = nothing to go back to. */
+    val tape: TapeRef? = null,
 ) {
+
+    /**
+     * The tape [source] was cut from: [file] is the snip's bare filename
+     * on the SNIPS shelf and [offsetFrames] where [source] starts in it
+     * (TAPE's KEEP range, or 0 for a whole file), at the file's own rate.
+     * Every slice sent to the grid gets `Retrim`'s three keys from this,
+     * so RE-TRIM can open TAPE on the pad's own cut later.
+     */
+    data class TapeRef(val file: String, val offsetFrames: Int) {
+        init {
+            require(offsetFrames >= 0) { "a tape offset can't be negative: $offsetFrames" }
+        }
+
+        companion object {
+            /**
+             * A reference for [file] when it lives on the SNIPS shelf
+             * (`SnipStore.DIR`) — the only place `Retrim.of` looks — else
+             * null: TAPE also scrubs a kit's longest sample as a fallback,
+             * and a pad tagged with that would only ever resolve to "gone".
+             * A negative [offsetFrames] (a KEEP range clamped to the head)
+             * reads as 0, the same clamp the slice itself gets.
+             */
+            fun ofSnip(file: java.io.File, offsetFrames: Int): TapeRef? =
+                if (file.parentFile?.name == SnipStore.DIR) TapeRef(file.name, offsetFrames.coerceAtLeast(0)) else null
+        }
+    }
 
     sealed interface ChopMode {
         /** Follow the hits — right for breaks. */
@@ -131,17 +159,29 @@ class ChopReviewModel private constructor(
         return SendResult(arranged, rows.size, choke)
     }
 
-    private fun arrangedPad(row: Row) = ArrangedPad(
-        row.slice.snip, row.effectiveClass,
-        source = mapOf(
-            "origin" to "chop",
-            "sourceFrame" to row.slice.sourceFrame.toString(),
-            "lengthFrames" to row.slice.snip.frameCount.toString(),
-        ),
-    )
+    /**
+     * One slice as the kit builder takes it. `sourceFrame`/`lengthFrames`
+     * are within [source] (the CLI's own keys); the `Retrim` keys, when a
+     * [tape] is known, are the same cut made absolute in the file —
+     * [TapeRef.offsetFrames] added — so two slices of one KEEP land on
+     * different frames of the same tape.
+     */
+    private fun arrangedPad(row: Row): ArrangedPad {
+        val start = row.slice.sourceFrame
+        val length = row.slice.snip.frameCount
+        val cut = tape?.let { Retrim.tag(it.file, it.offsetFrames + start, it.offsetFrames + start + length) } ?: emptyMap()
+        return ArrangedPad(
+            row.slice.snip, row.effectiveClass,
+            source = mapOf(
+                "origin" to "chop",
+                "sourceFrame" to start.toString(),
+                "lengthFrames" to length.toString(),
+            ) + cut,
+        )
+    }
 
-    /** RE-CHOP: fresh detection, fresh labels, overrides gone. */
-    fun rechop(newMode: ChopMode = mode): ChopReviewModel = chop(source, newMode)
+    /** RE-CHOP: fresh detection, fresh labels, overrides gone; the tape reference rides along. */
+    fun rechop(newMode: ChopMode = mode): ChopReviewModel = chop(source, newMode, tape)
 
     /**
      * The teach-the-machine harvest: every overridden chip as a labeled
@@ -262,14 +302,15 @@ class ChopReviewModel private constructor(
             DrumClass.UNKNOWN -> "NOT SURE"
         }
 
-        fun chop(source: Snip, mode: ChopMode = ChopMode.ByHits()): ChopReviewModel {
+        /** Slice [source] by [mode]; [tape] names where it came from so the slices can find their way back. */
+        fun chop(source: Snip, mode: ChopMode = ChopMode.ByHits(), tape: TapeRef? = null): ChopReviewModel {
             val slices = when (mode) {
                 is ChopMode.ByHits ->
                     Chopper.byTransients(source, maxSlices = mode.maxSlices, cleanup = Chopper.SLICE_CLEANUP)
                 is ChopMode.Grid ->
                     Chopper.intoEqualParts(source, mode.parts, cleanup = Chopper.SLICE_CLEANUP)
             }
-            return ChopReviewModel(source, mode, slices)
+            return ChopReviewModel(source, mode, slices, tape)
         }
     }
 }

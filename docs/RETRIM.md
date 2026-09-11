@@ -1,11 +1,35 @@
 # RE-TRIM: a pad goes back to its own tape
 
-A spec. Nothing here is built. It answers one question a phone test
-asked: *once a recording is chopped and on a pad, how do I change the
-length of that chop?* Today the honest answer is "you can't, directly",
-and this is the plan to make it one tap.
+**Status: rounds 1 and 2 built.** Round 3 (polish) is open. It answers
+one question a phone test asked: *once a recording is chopped and on a
+pad, how do I change the length of that chop?* Before this the honest
+answer was "you can't, directly"; now it is one tap.
 
-## What happens today
+What the build settled beyond the spec below:
+
+- **Pads chopped before this shipped** refuse with their own line,
+  `THIS PAD WAS CHOPPED BEFORE TAPES WERE REMEMBERED. RE-CHOP TO FIX
+  THAT.` (the open question, answered yes).
+- **Pads placed by SNIPS → PAD before this shipped** still open: the
+  resolver falls back to the legacy `file` key, which that path always
+  wrote and which always meant "this whole snip".
+- **A treatment is left with the old file**, never re-applied. The toast
+  names it. GHOSTS are not carried as files (they were renderings of the
+  old cut) but rendered again from the new cut, the same number of soft
+  zones.
+- **BACK ONTO A02 replaces KEEP** while a re-trim is live; there is no
+  second KEEP on the row. A plain KEEP is one tap away by leaving TAPE
+  and coming back, which drops the request.
+- `TapeDeckModel.select(from, to)` already was the `selectRange` the
+  spec asked for (DIG's own hand-in), so no new deck method.
+- The deck's primary while busy reads `RE-CUTTING…`.
+
+Where it lives: `shell/Retrim.kt` (the resolver, the tag, the cut),
+`ChopReviewModel.TapeRef`, `KitBuilderModel.backOnto`, `RetrimRequest` in
+`App.kt`, and TAPE's first load rung. Tests: `RetrimTest`,
+`ChopReviewTest`, `KitBuilderTest`, `TapeDeckTest`, `SnipStoreTest`.
+
+## What happened before this was built
 
 A pad's audio is a WAV in the kit folder. It has no start and end of its
 own; its length is the file's length. Three things bear on "edit the

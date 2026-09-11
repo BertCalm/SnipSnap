@@ -119,7 +119,14 @@ fun ChopScreen(
         // TapeScreen's own `loadLongestTape`.
         val (oomEncountered, loaded) = withContext(Dispatchers.IO) {
             val result = loadChopSource(entry, lastCommit)
-            val built = result.found?.let { (file, snip) -> file to ChopReviewModel.chop(snip) }
+            val built = result.found?.let { (file, snip) ->
+                // The tape reference (RE-TRIM): only when what loaded is
+                // the commit's own snip — the kit-sample fallback is not a
+                // tape the pads could go back to.
+                val tape = lastCommit?.takeIf { it.sourceFile == file }
+                    ?.let { ChopReviewModel.TapeRef.ofSnip(it.sourceFile, it.range.first) }
+                file to ChopReviewModel.chop(snip, tape = tape)
+            }
             result.oomEncountered to built
         }
         // Same courtesy as TapeScreen's own toast: said even when the kit

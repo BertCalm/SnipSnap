@@ -526,8 +526,31 @@ object Copy {
     const val ARRANGE_MIXING = "MIXING…"
     const val ARRANGE_REROLLED = "REROLLED. SAME STRUCTURE, A FRESH TAKE ON THE VARIATION."
 
+    // ---- RE-TRIM: a pad goes back to its own tape (docs/RETRIM.md) ----
+    /** RE-TRIM ▸ on a pad with no tape name at all: GRAB/HOLD off the mic ring, an import, a synth. */
+    const val RETRIM_NO_TAPE = "THIS PAD CAME OFF THE MIC (OR AN IMPORT). NO TAPE TO GO BACK TO."
+    /** RE-TRIM ▸ on a pad CHOP landed before the tape keys existed: honest about which fix works. */
+    const val RETRIM_OLD_CHOP = "THIS PAD WAS CHOPPED BEFORE TAPES WERE REMEMBERED. RE-CHOP TO FIX THAT."
+    /** RE-TRIM ▸ when the named tape isn't on this phone's SNIPS shelf any more. */
+    const val RETRIM_TAPE_GONE = "THAT TAPE'S GONE. THE PAD KEEPS WHAT IT HAS."
+    /** The cut lies beyond TAPE's load cap; the deck opens at the top instead. */
+    const val RETRIM_PAST_CAP = "THAT CUT SITS PAST WHAT TAPE CAN HOLD."
+    /** TAPE's header while a RE-TRIM is live: which pad, which tape. */
+    fun retrimHeader(pad: String, tape: String): String = "RE-TRIM $pad · $tape"
+    /** The deck's primary button while a RE-TRIM is live — it replaces KEEP. */
+    fun backOnto(pad: String): String = "BACK ONTO $pad"
+    /** The busy line while BACK ONTO reads the cut and writes the pad. */
+    const val RETRIM_BUSY = "RE-CUTTING…"
+    /**
+     * BACK ONTO landed. [treatment] is the old pad's treatment name when it
+     * had one — a treatment is baked into the file, so it stays with the
+     * old file in the bin rather than being silently re-applied to the cut.
+     */
+    fun retrimLanded(pad: String, treatment: String?): String =
+        "$pad RE-CUT." + (treatment?.let { " THE ${it.uppercase()} STAYED WITH THE OLD ONE - IT'S IN THE BIN." } ?: "")
+
     // ---- PAD SHEET ----
-    const val GHOSTS_ON = "GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
+    const val GHOSTS_ON ="GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
     fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
     const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."

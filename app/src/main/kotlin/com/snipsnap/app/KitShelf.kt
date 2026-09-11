@@ -257,7 +257,10 @@ class KitShelf(val root: File) {
         val snip = com.snipsnap.shell.InstantKit.slice(WavReader.readCapped(file, TAPE_LOAD_MAX_SEC).snip, range)
         root.mkdirs()
         val name = freshName("${file.nameWithoutExtension} KIT")
-        val result = com.snipsnap.shell.InstantKit.build(snip, name, File(root, name))
+        // A snip off the SNIPS shelf is a tape the pads can go back to
+        // (RE-TRIM); a kit sample TAPE fell back to is not.
+        val tape = com.snipsnap.shell.ChopReviewModel.TapeRef.ofSnip(file, range.first)
+        val result = com.snipsnap.shell.InstantKit.build(snip, name, File(root, name), tape)
         return Entry(result.kitDir, result.kit) to result
     }
 
