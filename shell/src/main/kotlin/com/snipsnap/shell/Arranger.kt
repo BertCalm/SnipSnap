@@ -96,9 +96,11 @@ object Arranger {
         // is for), it's picking clips for song SECTIONS by name - captured /
         // tight / half / sparse are a song-structure choice, and "tight"
         // here is the section named "variation", not a stand-in for PROG B.
-        // So it stays plain GrooveVariations.standard(felt, swingPercent),
-        // which puts felt into every slot including the swing one - ARRANGE
-        // differs from the screen's PROG B feel-exemption on purpose.
+        // So every clip below is derived from felt, not base: std's four
+        // slots via GrooveVariations.standard(felt, swingPercent), and
+        // ghosted/fill further down take felt too - all six arrangement
+        // sections carry the feel. ARRANGE differs from the screen's
+        // PROG B feel-exemption on purpose.
         val std = GrooveVariations.standard(felt, swingPercent)
         val captured = std[0]
         val tight = std[1]
@@ -114,7 +116,7 @@ object Arranger {
         val dynamicRange = if (median > 0f) loudest / median else 0f
         val preferGhosts = dynamicRange >= VARIATION_GHOST_DYNAMIC_RANGE
         val ghosted = try {
-            GrooveVariations.ghosted(base, kit, seed = seed + 1)
+            GrooveVariations.ghosted(felt, kit, seed = seed + 1)
         } catch (e: IllegalArgumentException) {
             null
         }
@@ -129,7 +131,7 @@ object Arranger {
                 "tight — dynamic range %.1fx < %.0fx threshold".format(java.util.Locale.ROOT, dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
         }
         val turn = try {
-            GrooveVariations.fill(base, kit, seed = seed + 2)
+            GrooveVariations.fill(felt, kit, seed = seed + 2)
         } catch (e: IllegalArgumentException) {
             null
         }

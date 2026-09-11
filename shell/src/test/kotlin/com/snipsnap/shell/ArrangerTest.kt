@@ -298,6 +298,22 @@ class ArrangerTest {
         )
     }
 
+    /** Same shape as [offGridClip], but one loud hit over five quiet ones — dynamic range 4.5x, well past the ghost threshold, so a fully tight feel also exercises [GrooveVariations.ghosted]'s input, not just the always-snapping quantize path. */
+    private fun offGridDynamicClip(): Mpc3Clip {
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        return Mpc3Clip(
+            "Loose Dynamic Fixture", 1,
+            listOf(
+                Mpc3Note(36, 37, 0.9f),
+                Mpc3Note(37, 4 * s16 - 31, 0.2f),
+                Mpc3Note(36, 8 * s16 + 44, 0.2f),
+                Mpc3Note(37, 12 * s16 - 18, 0.2f),
+                Mpc3Note(38, 2 * s16 + 22, 0.2f),
+                Mpc3Note(38, 6 * s16 - 25, 0.2f),
+            ),
+        )
+    }
+
     private fun noteTimes(plan: Arranger.Arrangement): List<List<Long>> =
         plan.sections.map { s -> s.clip.notes.map { it.timePulses } }
 
@@ -332,6 +348,60 @@ class ArrangerTest {
             m.kit, m.kitDir, seed = 0, feel = -1f, feelTemplate = GrooveFeel.generated(1),
         )
         assertNotEquals(noteTimes(plain), noteTimes(tight), "a fully tight feel must reach the arrangement")
+
+        // `assertNotEquals` above passes as soon as ANY ONE section moved,
+        // so it can't catch a site that was quietly left on `base` while
+        // its siblings moved to `felt` - which is exactly what happened to
+        // GrooveVariations.ghosted and GrooveVariations.fill. Check every
+        // section on its own: at t = -1 every note felt touches lands
+        // exactly on the 16th grid, so any section built from felt must
+        // be on-grid throughout. "the turn" is the one exception - its
+        // generated roll deliberately rolls 32nds (multiples of 120, not
+        // every 16th; see GrooveVariations.kt:156-163) into the back half
+        // of its fill bar, so only the surviving FIRST half (the played
+        // notes fill() keeps verbatim from its input) proves the point
+        // there without the 32nd roll producing a false failure.
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        for (section in tight.sections) {
+            val notes = if (section.name == "the turn") {
+                section.clip.notes.filter { it.timePulses % Mpc3Clip.PULSES_PER_BAR < 8 * s16 }
+            } else {
+                section.clip.notes
+            }
+            notes.forEach { n ->
+                assertEquals(
+                    0L, n.timePulses % s16,
+                    "'${section.name}': fully tight feel left an off-grid note at ${n.timePulses} - this section did not receive felt",
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `arrange's ghosted variation also receives the feel, not the base`() {
+        // Same regression as above, isolated to GrooveVariations.ghosted:
+        // offGridClip's own dynamic range (1.0x) never crosses the ghost
+        // threshold, so it can't exercise this call site. This fixture's
+        // real dynamic range (4.5x) does, while keeping the same off-grid
+        // hits a fully tight feel has something to snap.
+        val m = model("ArrangeFeelGhost", clip = offGridDynamicClip())
+        val tight = Arranger.arrange(
+            m.kit, m.kitDir, seed = 0, feel = -1f, feelTemplate = GrooveFeel.generated(1),
+        )
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+
+        val variation = tight.sections.first { it.name == "variation" }
+        assertTrue(
+            variation.clip.name.endsWith("Ghosted"),
+            "fixture's dynamic range should have picked the ghosted branch: ${variation.clip.name}",
+        )
+        variation.clip.notes.forEach { n ->
+            assertEquals(
+                0L, n.timePulses % s16,
+                "variation (ghosted): fully tight feel left an off-grid note at ${n.timePulses} - " +
+                    "GrooveVariations.ghosted received base instead of felt",
+            )
+        }
     }
 
     @Test

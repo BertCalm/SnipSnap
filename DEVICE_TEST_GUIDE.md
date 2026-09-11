@@ -44,7 +44,12 @@ could NOT verify. Test in this order; each item names what "wrong" looks like.
 17. PLAY: notes light as they cross the needle; pads audibly trigger in sync.
     If you see "+N OFF-LANE" in the footer, those hits are heard, not drawn —
     by design.
-18. Swing: only PROG B changes. HUMANIZE: only PROG A reshuffles.
+18. FEEL: drag toward TIGHT — notes snap onto the grid, more of them as you
+    approach full TIGHT. Return to centre (AS PLAYED) — the capture plays
+    back untouched. Drag toward LOOSE — notes lean by the rolled template.
+    RESEED is disabled at centre and anywhere on the TIGHT side, enabled
+    only once you're on the LOOSE side. PROG B never moves, at any FEEL
+    setting.
 19. EDIT STEPS: toggle cells (each auditions), CLEAR BAR, DONE, re-enter —
     your edits must persist. Kill the app, reopen: still there.
 20. MIDI ▸ → check Files app: Android/data/com.snipsnap.app/files/exports/.

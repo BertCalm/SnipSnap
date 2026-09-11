@@ -71,9 +71,9 @@ object GrooveEdit {
     /**
      * Clone [source]'s notes, snapped to the 16th grid — the fork's core
      * transform, pure and file-free so it's independently testable.
-     * Snapping the time is what drops the source's feel (swing push,
-     * humanize jitter) by construction — there's no separate offset field
-     * to strip.
+     * Snapping the time is what drops the source's feel (swing push, the
+     * FEEL axis's lean, humanize jitter) by construction — there's no
+     * separate offset field to strip.
      *
      * These clips loop, so a note that rounds past the last step doesn't
      * clamp to the tail (that would produce an off-grid ghost no step

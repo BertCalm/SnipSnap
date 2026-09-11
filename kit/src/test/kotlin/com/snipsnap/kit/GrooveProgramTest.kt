@@ -57,10 +57,21 @@ class GrooveProgramTest {
         // (its own subtitle is "ON THE GRID, PUSHED LATE"), so feeding it a
         // felt clip would not reproduce this, it would shift notes that
         // crossed a rounding boundary. Pinned so the disclosure cannot rot.
+        //
+        // Compares full notes, not just times: applyFeel's loose half moves
+        // velocity too (GrooveFeel.kt:189-195), and a pin that only watched
+        // timePulses would stay green while B's exemption quietly rotted on
+        // that axis. TPL itself can't exercise that: GrooveFeel.generated
+        // leaves every accent null, so applyFeel's velocity path is an
+        // identity against it and a `.notes` diff would have no more
+        // detection power than the old `times()` did. An accented template
+        // gives the loose side (feel 40, 100) real velocity movement to
+        // leak, if the exemption ever stopped handing swing() the unfelt base.
         val base = offGrid()
-        val plain = times(GrooveProgram.compute(1, base, 62, 0, TPL, null))
+        val accented = TPL.copy(accents = List(GrooveFeel.POSITIONS) { 1.6f })
+        val plain = GrooveProgram.compute(1, base, 62, 0, accented, null)!!.notes
         for (feel in listOf(-100, -40, 40, 100)) {
-            assertEquals(plain, times(GrooveProgram.compute(1, base, 62, feel, TPL, null)),
+            assertEquals(plain, GrooveProgram.compute(1, base, 62, feel, accented, null)!!.notes,
                 "PROG B moved at feel=$feel, contradicting RIDES A . C . D")
         }
     }

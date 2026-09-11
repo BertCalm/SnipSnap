@@ -516,6 +516,8 @@ class PersonalityTest {
         assertEquals("ONE TAP, THE WHOLE TAPE. 5 SLICES ON THE GRID.", Copy.instantKit(5, chokeSet = false, wholeTape = true))
         assertEquals("3 PADS RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(3, "A MINOR"))
         assertTrue(Copy.takeRestored("T3").startsWith("T3 RESTORED."), "the take leads its own toast")
+        assertTrue(Copy.feelRolled(4).startsWith("FEEL #4 ROLLED."), "the seed leads its own toast")
+        assertTrue(Copy.feelRolled(4).endsWith("."), "and still lands on a full stop")
         assertTrue(
             Copy.treated("CRUSH", "A02").startsWith("CRUSH ON A02."),
             "the treatment and the pad both lead their own toast",

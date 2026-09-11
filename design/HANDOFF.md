@@ -108,7 +108,7 @@ A bar taped end to end is a ring; a longer snip taped round a bigger ring; one n
 
 Captured break → four derived programs + one user fork, at fixed 92 BPM · 2 bars · 32 steps (5 lanes: KICK, SNARE, HAT C, HAT O, PERC — class colours as above).
 
-**Programs**: A · AS CAPTURED (per-note humanize offset, reseeds via HUMANIZE) · B · SWUNG (odd steps pushed by swing amount) · C · HALF-TIME · D · SPARSE · E · EDITED (exists only after a fork). B–D are pure functions of A — never stored.
+**Programs**: A · AS CAPTURED (shaped by the FEEL axis — tight through as-played to loose; RESEED rerolls the loose-side template) · B · SWUNG (odd steps pushed by swing amount) · C · HALF-TIME · D · SPARSE · E · EDITED (exists only after a fork). B–D are pure functions of A — never stored.
 
 **Needle-roll**: fixed needle at y=96 (amber `warn` in OILSLICK-cyan slot; `#FF9A1A` in CLEAR), notes scroll under it at 20px/step. Note block: lane column ×5, h17 r2, opacity `0.35+0.55*vel`; lit while under needle (<0.7 step): full opacity + 10/18px class glow. Bar ticks left rail: `1.1`-style labels every 4 steps, bar starts in lcd-alt.
 

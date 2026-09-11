@@ -86,9 +86,9 @@ import kotlinx.coroutines.withContext
 
 /**
  * GROOVE: the needle-roll over a kit's captured break — five derived-or-
- * forked programs (A–E) scrolling under a fixed needle, swing, humanize,
- * the fork-to-E step editor, MIDI export, and (live-record plan) RECORD —
- * playing a new take in over the loop, overdub or from scratch. See
+ * forked programs (A–E) scrolling under a fixed needle, swing, the FEEL
+ * axis, the fork-to-E step editor, MIDI export, and (live-record plan)
+ * RECORD — playing a new take in over the loop, overdub or from scratch. See
  * `design/HANDOFF.md` "GROOVE screen" and `TapeOS Oilslick.dc.html`'s
  * `isGroove` state for the source of truth this file renders.
  *
@@ -112,7 +112,7 @@ private const val GROOVE_STEP_MAX_NANOS = 100_000_000L
 /** E's debounced disk write — one save per burst of taps, not one per tap (the PAD SHEET lesson). */
 private const val GROOVE_SAVE_DEBOUNCE_MS = 1000L
 
-/** How long FORK TO E's own armed confirm (replacing an existing PROG E) stays armed before it disarms itself — same window as `TakesBinScreen`'s `EMPTY_BIN_ARM_MS`. */
+/** How long EDIT THIS TAKE's own armed confirm (replacing an existing PROG E) stays armed before it disarms itself — same window as `TakesBinScreen`'s `EMPTY_BIN_ARM_MS`. */
 private const val GROOVE_FORK_ARM_MS = 3_000L
 
 /** SWING's range and step, per the handoff; the artboard's own default state is 62%. */
@@ -349,20 +349,21 @@ fun GrooveScreen(
     // be a lie, same reasoning as `justLanded`'s own reset discipline.
     var countInBeat by remember(kitDir) { mutableIntStateOf(0) }
 
-    // Task 5: the post-take row (FORK TO E / UNDO TAKE). NOT `preTake`'s
+    // Task 5: the post-take row (EDIT THIS TAKE / UNDO TAKE). NOT `preTake`'s
     // own nullness — `preTake == null` is a legitimate snapshot (the
     // from-scratch case), not "nothing to show". This flag is the row's
     // whole lifetime: true the instant a take lands, false the instant
     // it's consumed (UNDO TAKE) or the user does anything else that moves
     // the program on (PROG prev/next, RESEED, EDIT THIS TAKE/EDIT STEPS, MIDI
-    // export, SONG ▸, arming another RECORD) — never a persistent control.
+    // export, SONG ▸, arming another RECORD, the FEEL stepper, or its
+    // recentre tap — `clearJustLanded` below) — never a persistent control.
     var justLanded by remember(kitDir) { mutableStateOf(false) }
 
-    // FORK TO E's own armed confirm (bug fix, live-record plan Task 6):
+    // EDIT THIS TAKE's own armed confirm (bug fix, live-record plan Task 6):
     // [GrooveEdit.fork] silently hands back a pre-existing E when one is
     // already stored — correct for EDIT STEPS (re-entering the editor is
-    // SUPPOSED to keep editing the same E) but wrong for this row's FORK
-    // TO E, whose whole point is "make my just-landed take grid-perfect."
+    // SUPPOSED to keep editing the same E) but wrong for this row's EDIT
+    // THIS TAKE, whose whole point is "make my just-landed take grid-perfect."
     // Landing on a stale E there would leave the fresh take unquantized
     // with no feedback at all — the same announces-success-does-nothing
     // failure class this session already fixed twice (HOLD, WIND). So an
@@ -695,8 +696,8 @@ fun GrooveScreen(
      * EDIT STEPS's own fork: [GrooveEdit.fork]'s early-return (hand back
      * whatever E is already stored) is exactly right here — re-entering
      * the editor is SUPPOSED to keep editing the same E, not discard it.
-     * NOT used by the post-take row's FORK TO E — see [forkTakeToE], which
-     * needs the opposite default for the opposite reason.
+     * NOT used by the post-take row's EDIT THIS TAKE — see [forkTakeToE],
+     * which needs the opposite default for the opposite reason.
      */
     fun forkToE() {
         if (busy) return
@@ -726,7 +727,7 @@ fun GrooveScreen(
     }
 
     /**
-     * The post-take row's FORK TO E (bug fix, live-record plan Task 6).
+     * The post-take row's EDIT THIS TAKE (bug fix, live-record plan Task 6).
      * [forkToE]'s early-return-the-existing-E default is wrong here: this
      * offer's whole point is "make my just-landed take grid-perfect," so
      * silently handing back a stale E would leave the fresh take
@@ -871,8 +872,9 @@ fun GrooveScreen(
     // CHART ▸ — the program on screen as a monospace drum chart, one text
     // file handed to the system chooser. It reads the same `currentClip`
     // the roll plays and MIDI ▸ writes, so what the chart shows is what
-    // this screen is playing right now — including PROG E's edits and the
-    // live swing percent. Off-grid hits are drawn in their nearest cell and
+    // this screen is playing right now — including PROG E's edits, the
+    // live swing percent, and the FEEL axis (`currentClip` is already the
+    // felt read). Off-grid hits are drawn in their nearest cell and
     // named in footnotes, never snapped: the J-card's step thumbnail
     // quantizes quietly for a picture, but a chart is a document, and this
     // one draws exactly what is stored.
@@ -989,7 +991,7 @@ fun GrooveScreen(
      * which branch follows — Task 5's undo needs to know what was there
      * BEFORE this take even in the from-scratch case, where that's `null`.
      * Forces PROG A: recording always plays in against the base's own
-     * humanized read, never a derived program with a different bar count
+     * felt read, never a derived program with a different bar count
      * (HALF-TIME doubles `bars` — [LiveRecord.toClip] requires the take
      * and the existing base agree on bar count, so this isn't optional).
      *
@@ -1153,7 +1155,7 @@ fun GrooveScreen(
      *
      * A landed take shows `justLanded` (Task 5): the completion this take
      * currently lacked otherwise — a toast naming what was actually played,
-     * plus the FORK TO E / UNDO TAKE row below.
+     * plus the EDIT THIS TAKE / UNDO TAKE row below.
      */
     fun stopRecording() {
         if (!recording) return
@@ -1458,7 +1460,7 @@ fun GrooveScreen(
 
                     if (justLanded) {
                         // The take just landed — a transient, one-shot pair
-                        // of actions (Task 5): FORK TO E calls [forkTakeToE],
+                        // of actions (Task 5): EDIT THIS TAKE calls [forkTakeToE],
                         // NOT the plain [forkToE] EDIT STEPS below uses — an
                         // existing E arms a "REPLACE E?" confirm instead of
                         // silently handing back stale steps (Task 6 bug fix;
