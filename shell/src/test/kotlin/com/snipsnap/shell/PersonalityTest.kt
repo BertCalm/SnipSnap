@@ -395,6 +395,11 @@ class PersonalityTest {
         // a full stop - and every legend must be added here when it is written,
         // or the shouting law will ask it to become a sentence.
         "PAD_SHEET_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER",
+        // The empty shelf's loop line (finding 3) is a row of tab names,
+        // not a line the app says - it reads TAPE > CHOP > KIT > EXPORT.
+        // FIRST_RUN_LOOP_NOTE, the sentence under it that says what the
+        // four words mean, is NOT here: it keeps its full stop.
+        "FIRST_RUN_LOOP",
         // EXPORT's DESTINATION legend joins them (finding 21): same rule,
         // same register - a line that stays under the row it explains.
         "EXPORT_CARD_LEGEND",

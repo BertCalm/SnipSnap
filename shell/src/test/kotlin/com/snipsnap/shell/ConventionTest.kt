@@ -976,4 +976,44 @@ class ConventionTest {
                 "of names that no longer existed. Check the names, not just the number.",
         )
     }
+
+    // ---- Law: the app's one explanation of itself names real screens ----
+
+    /**
+     * September UAT, finding 3. The empty shelf states the product loop as
+     * the four tabs it runs through, which is the whole reason the line
+     * works: learn it and you have learned the navigation.
+     *
+     * That only holds while the words ARE the tabs. Rename a tab and the
+     * app's single explanation of itself would point at a screen that no
+     * longer exists — and nothing else in the build would notice, because
+     * `Copy` and `MenuRow` live in different modules and neither reads the
+     * other.
+     *
+     * So this reads `MENU_ITEMS` out of `Chrome.kt` by source, the same way
+     * the roster law above reads prose, and holds every stage to it.
+     */
+    @Test
+    fun `the first-run loop names real menu tabs`() {
+        val chrome = File("../app/src/main/kotlin/com/snipsnap/app/ui/Chrome.kt")
+        assertTrue(chrome.isFile, "expected to find ${chrome.absolutePath} to read MENU_ITEMS from")
+        val labels = Regex("""MenuItem\("([^"]+)"""")
+            .findAll(chrome.readText(Charsets.UTF_8))
+            .map { it.groupValues[1] }
+            .toSet()
+        assertTrue(
+            labels.size >= 5,
+            "only found $labels in Chrome.kt — the MenuItem pattern this law reads must have changed, " +
+                "which would make it pass by checking nothing. Fix the pattern, do not lower this bound.",
+        )
+        for (stage in Copy.FIRST_RUN_LOOP_STAGES) {
+            assertTrue(
+                stage in labels,
+                "Copy.FIRST_RUN_LOOP_STAGES names '$stage', which is not a menu tab. The empty shelf is " +
+                    "the app's only statement of its own loop and it works by naming the tabs — a stage " +
+                    "that is not one sends a new user looking for a screen that does not exist. " +
+                    "Tabs are: ${labels.sorted()}",
+            )
+        }
+    }
 }
