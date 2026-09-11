@@ -1,5 +1,6 @@
 package com.snipsnap.loop
 
+import com.snipsnap.json.JsonException
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
@@ -121,6 +122,39 @@ class OrbitFeelTest {
 
         val feeling = OrbitFeel.apply(s, donor())
         assertEquals(listOf(0L, 10L, 22L), (feeling.orbits[0].content as PatternOrbit).hits.map { it.offset })
+    }
+
+    @Test
+    fun `a ring and a clip put a hit on the same sixteenth, ties included`() {
+        // Two quantisers, written independently, that must agree or a donor's
+        // pocket lands on one position for a clip and another for a ring.
+        // `GrooveFeel` rounds half-up in integer pulses, `positionOf` rounds a
+        // frame ratio; they agree today, and this is what says so tomorrow.
+        //
+        // The case that would find a drift is an exact tie: a four-step HALF
+        // ring in a twelve-step bar sits at 0, 1.5, 3 and 4.5 sixteenths, and
+        // the last two land exactly between positions. A quantiser rounding
+        // ties the other way puts that hit on 4 while the donor logic says 5.
+        val twelve = OrbitSet(
+            listOf(ring(4, OrbitSpan.HALF, *(0 until 4).map { OrbitHit(it, 1) }.toTypedArray())),
+            bpm,
+            rate,
+            lapSteps = 12,
+        )
+        val r = twelve.orbits[0]
+        for (stepIndex in 0 until 4) {
+            val hit = OrbitHit(stepIndex, 1)
+            val ring = OrbitFeel.positionOf(twelve, r, hit)
+
+            // The oracle is the donor path itself, not a second copy of its
+            // arithmetic: a clip carrying one note at the same place, asked
+            // which position it learned from.
+            val pulses = Math.round(stepIndex * 1.5 * s16)
+            val learned = GrooveFeel.extract(Mpc3Clip("One", 1, listOf(Mpc3Note(36, pulses, 0.8f))))
+            val clip = learned.offsets.indexOfFirst { it != null }
+
+            assertEquals(clip, ring, "step $stepIndex sits at $pulses pulses")
+        }
     }
 
     @Test
@@ -250,4 +284,29 @@ class OrbitFeelTest {
         val text = java.io.File(straightDir, OrbitStore.FILE_NAME).readText()
         assertTrue("offset" !in text, "a straight hit says nothing about lean:\n$text")
     }
+
+    @Test
+    fun `an offset that is not a whole pulse count is refused, not truncated`() {
+        // A pulse is the smallest time the format has, so there is no such
+        // thing as 37.9 of one. Reading it as 37 would silently move a hit
+        // and hand back a set that does not match its own file — the one
+        // outcome a loader must never produce.
+        val dir = Files.createTempDirectory("orbit-fractional").toFile().also { it.deleteOnExit() }
+        java.io.File(dir, OrbitStore.FILE_NAME).writeText(fileWithOffset("37.9"))
+        val fractional = assertFailsWith<JsonException> { OrbitStore.load(dir) }
+        assertTrue("whole number" in (fractional.message ?: ""), fractional.message ?: "")
+
+        // And a number past Long refuses as a number rather than clamping to
+        // Long.MAX_VALUE and then failing the range check on 9223372036854775807,
+        // which names a value the file never contained.
+        val huge = Files.createTempDirectory("orbit-huge").toFile().also { it.deleteOnExit() }
+        java.io.File(huge, OrbitStore.FILE_NAME).writeText(fileWithOffset("1e300"))
+        assertFailsWith<JsonException> { OrbitStore.load(huge) }
+    }
+
+    private fun fileWithOffset(offset: String) = """
+        {"version":4,"bpm":120,"lapSteps":16,"swing":50,"sampleRate":48000,
+         "orbits":[{"name":"r","steps":16,"span":"ONE","voice":[1],"engaged":true,"level":1,"pan":0,
+          "content":{"type":"pattern","kit":"k","hits":[{"step":0,"slot":1,"velocity":1,"offset":$offset}]}}]}
+    """.trimIndent()
 }

@@ -161,7 +161,7 @@ object OrbitStore {
             velocity = (h["velocity"]?.num() ?: 1.0).toFloat(),
             // Absent in versions 1..3, and absent in a version 4 file whose
             // hits are straight. Either way the hit sits on its step.
-            offset = h["offset"]?.num()?.toLong() ?: 0L,
+            offset = h["offset"]?.long() ?: 0L,
         )
     }
 }

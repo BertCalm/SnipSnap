@@ -17,10 +17,10 @@ import kotlin.random.Random
  * a humanised take is one per hit, so neither could be said in a ring's
  * vocabulary at all.
  *
- * [OrbitHit.offset] is that vocabulary, and this is what writes it. Both
- * functions are pure: a set in, a set out, the hits' steps untouched. What
- * moves is where each hit sits *against* its step, which is the difference
- * between a pattern and a performance.
+ * [OrbitHit.offset] is that vocabulary, and this is what writes it. Every
+ * operation here is pure: a set in, a set out, the hits' steps untouched.
+ * What moves is where each hit sits *against* its step, which is the
+ * difference between a pattern and a performance.
  */
 object OrbitFeel {
 
@@ -31,8 +31,8 @@ object OrbitFeel {
      * offset of the position it falls on — which is a question about where
      * the hit lands in the bar, not which step of its ring it is. A
      * three-step ring across a bar lands on positions 0, 5 and 11, and
-     * takes those three offsets; that is how a ring ORBIT exists for gets
-     * a pocket at all.
+     * takes those three offsets — which is how the polyrhythmic rings ORBIT
+     * exists for get a pocket at all.
      *
      * A position the donor never played contributes nothing, exactly as
      * `GrooveFeel.apply` leaves such a position straight. Existing offsets
