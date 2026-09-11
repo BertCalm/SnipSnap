@@ -591,12 +591,24 @@ fun OrbitScreen(
                 // (SampleSource.loop returns null) and OrbitEngine.addLoop
                 // returns early for it, so that one ring bounces to
                 // silence. The bounce is still the only way out a snip has.
+                //
+                // Except under a solo, where it is not a way out at all:
+                // bounceToTape renders heard(s), which disengages every
+                // ring but the soloed one, so the snips being reported
+                // would not be in it. The clip does not honour solo and the
+                // bounce does, so the advice has to know which it is - and
+                // under a solo the useful thing to say is the order to do
+                // it in, not a route that is currently shut.
                 val behind = OrbitClip.snipRings(s)
+                val rings = "${behind.size} SNIP RING${if (behind.size == 1) "" else "S"}"
                 onToast(
-                    if (behind.isEmpty()) {
-                        "${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC."
-                    } else {
-                        "${clip.name}: ${clip.bars} BARS, ${clip.notes.size} NOTES. ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED — BOUNCE ▸ TAPE FOR THOSE."
+                    when {
+                        behind.isEmpty() ->
+                            "${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC."
+                        solo != null ->
+                            "${clip.name}: ${clip.bars} BARS, ${clip.notes.size} NOTES. $rings STAYED. CLEAR SOLO, THEN BOUNCE ▸ TAPE."
+                        else ->
+                            "${clip.name}: ${clip.bars} BARS, ${clip.notes.size} NOTES. $rings STAYED — BOUNCE ▸ TAPE FOR THOSE."
                     },
                 )
             }.onFailure { e -> onToast("CLIP FAILED: ${e.message ?: e.javaClass.simpleName}") }
