@@ -186,4 +186,26 @@ class KitPreviewTest {
         assertEquals(2 * KitPreview.RATE + (0.6f * KitPreview.RATE).toInt(), snip.frameCount)
         assertTrue(snip.peak() > 0.05f)
     }
+
+    @Test
+    fun `a pad above the wrap is rendered, not silently skipped`() {
+        // The map wraps: pad 93 is note 0, pad 128 is note 35. Reading a
+        // slot back as `note - 36 + 1` gives those pads a slot of -35 and
+        // 0, so kit.pad() misses and the hit renders as nothing. That was
+        // harmless only while nothing wrote such a note; OrbitClip now does.
+        val dir = File(temp, "HighPads")
+        dir.mkdirs()
+        WavWriter.write(File(dir, "F13_High_01.wav"), tone(0.4f, 300.0))
+        val kit = Kit(
+            "High Kit",
+            listOf(KitPad(slot = 93, sampleFile = "F13_High_01.wav", drumClass = DrumClass.PERC)),
+            tempoBpm = 120f,
+        )
+        KitStore.save(kit, dir)
+
+        assertEquals(0, Mpc3Note.noteFor(93), "pad 93 is note 0 under the writer's map")
+        val clip = Mpc3Clip("High", 1, listOf(Mpc3Note(Mpc3Note.noteFor(93), 0, 0.9f)))
+        val rendered = KitPreview.render(kit, dir, clip = clip)
+        assertTrue(rms(rendered, 0, KitPreview.RATE / 4) > 0.01f, "the pad above the wrap should sound")
+    }
 }

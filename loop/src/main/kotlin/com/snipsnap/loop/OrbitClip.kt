@@ -71,7 +71,44 @@ object OrbitClip {
      * shared ceiling first, then the reasons peculiar to a clip. A caller
      * that only wants audio wants [refusal] instead.
      */
-    fun clipRefusal(set: OrbitSet): String? = refusal(set) ?: noNotes(set)
+    fun clipRefusal(set: OrbitSet): String? = refusal(set) ?: oneProgram(set) ?: noNotes(set)
+
+    /**
+     * Why [set]'s rings cannot share one clip, or null when they can.
+     *
+     * A clip rides a track and a track carries one program, so every note
+     * in it addresses that program's pads. Rings on two kits have no
+     * shared pad numbering: `noteFor` maps slot to note with no idea which
+     * kit the slot belongs to, so kitA's pad 1 and kitB's pad 1 both
+     * become note 36 and `dedupeLouder` keeps whichever was louder. The
+     * quieter kit loses the hit with nothing said.
+     *
+     * `save` writes into one kit's `groove.json`, so there is no reading
+     * of a two-kit set that a single clip could honour. It refuses and
+     * names them rather than picking one.
+     *
+     * The pad ceiling is the same question at the other end: a slot past
+     * [Mpc3Note.PAD_SLOTS] names a pad no program can hold, so
+     * [Mpc3Note.noteFor] has nothing to map it to.
+     */
+    private fun oneProgram(set: OrbitSet): String? {
+        val playing = set.orbits.filter { it.engaged && it.content is PatternOrbit }
+        val kits = playing.map { (it.content as PatternOrbit).kit }.distinct()
+        if (kits.size > 1) {
+            return "THESE RINGS PLAY ${kits.size} KITS — ${kits.joinToString(" AND ") { it.uppercase() }}. " +
+                "ONE CLIP RIDES ONE PROGRAM. CLIP THEM A KIT AT A TIME."
+        }
+        val tooHigh = playing
+            .flatMap { (it.content as PatternOrbit).hits }
+            .map { it.slot }
+            .filter { it > Mpc3Note.PAD_SLOTS }
+            .distinct()
+            .sorted()
+        if (tooHigh.isNotEmpty()) {
+            return "PAD ${tooHigh.joinToString(", ")} IS PAST ${Mpc3Note.PAD_SLOTS} — NO PROGRAM HOLDS IT."
+        }
+        return null
+    }
 
     /**
      * Why [set] would write a clip with no notes in it at all, or null
@@ -118,8 +155,9 @@ object OrbitClip {
 
     /**
      * One cycle of [set] as a clip. Only engaged pattern rings contribute;
-     * snip rings are audio and have no notes. Pad A0N plays note 35+N, the
-     * writer's chromatic map, as the GROOVE step editor already does.
+     * snip rings are audio and have no notes. Which note plays which pad
+     * is [Mpc3Note.noteFor] — the writer's own map, wrapping at 128, so
+     * pad 93 is note 0 rather than another copy of pad 92's.
      */
     fun clip(set: OrbitSet, name: String = nameFor(set)): Mpc3Clip {
         clipRefusal(set)?.let { throw IllegalArgumentException(it) }
@@ -143,8 +181,13 @@ object OrbitClip {
         return Mpc3Clip(name = name, bars = bars, notes = GrooveEdit.dedupeLouder(notes))
     }
 
-    /** The writer's chromatic map, as [Mpc3Note] documents it: pad A0N plays note 36+N−1. */
-    fun noteFor(slot: Int): Int = (35 + slot).coerceIn(0, 127)
+    /**
+     * Which note plays a ring's pad — [Mpc3Note.noteFor], not a second
+     * copy of it. This used to clamp `35 + slot` into `0..127`, which sent
+     * every slot from 92 up to note 127: two pads of one kit struck
+     * together exported as one note, and the MPC played pad 92 for both.
+     */
+    fun noteFor(slot: Int): Int = Mpc3Note.noteFor(slot)
 
     /** Whether [clip] is an ORBIT clip — by its name, the same way PROG E is found. */
     fun isOrbit(clip: Mpc3Clip): Boolean = clip.name.startsWith(NAME_PREFIX)

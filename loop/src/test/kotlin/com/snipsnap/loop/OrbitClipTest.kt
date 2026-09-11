@@ -199,6 +199,65 @@ class OrbitClipTest {
     }
 
     @Test
+    fun `two pads above the wrap stay two notes, on the pads the MPC will play`() {
+        // The collapse this row exists for: noteFor clamped, so slots 92
+        // and 100 both became note 127. One note survived the dedupe and
+        // the hardware played pad 92 for it.
+        val s = set(
+            Orbit("high", 16, PatternOrbit("kit", listOf(OrbitHit(0, 92, 0.9f), OrbitHit(0, 100, 0.5f))), voice = listOf(92, 100)),
+        )
+        val notes = OrbitClip.clip(s).notes
+        assertEquals(2, notes.size, "two pads struck together are two notes")
+        assertEquals(listOf(127, 7), notes.map { it.note })
+        // And they address the pads that were actually played.
+        assertEquals(listOf(92, 100), notes.map { Mpc3Note.slotFor(it.note) })
+    }
+
+    @Test
+    fun `pads below the wrap export exactly the notes they always did`() {
+        // The row's own condition: this fix must not move a single note
+        // that was already right.
+        for (slot in listOf(1, 2, 16, 64, 91)) {
+            assertEquals(35 + slot, OrbitClip.noteFor(slot), "slot $slot must keep its note")
+        }
+        val s = set(pattern("four", 16, 1, listOf(0)), pattern("five", 20, 2, listOf(0, 10)))
+        assertEquals(listOf(36, 37), OrbitClip.clip(s).notes.map { it.note }.distinct().sorted())
+    }
+
+    @Test
+    fun `rings on two kits refuse, and the refusal names them`() {
+        // One clip rides one track, one track carries one program. Two
+        // kits share no pad numbering, so kitA's pad 1 and kitB's pad 1
+        // both became note 36 and the quieter one vanished into the dedupe.
+        val two = set(
+            Orbit("a", 16, PatternOrbit("brk", listOf(OrbitHit(0, 1, 0.9f))), voice = listOf(1)),
+            Orbit("b", 16, PatternOrbit("keys", listOf(OrbitHit(0, 1, 0.5f))), voice = listOf(1)),
+        )
+        val refusal = assertNotNull(OrbitClip.clipRefusal(two))
+        assertTrue("BRK" in refusal && "KEYS" in refusal, "the refusal names both kits: $refusal")
+        assertFailsWith<IllegalArgumentException> { OrbitClip.clip(two) }
+        // Audio is still audio: a two-kit set bounces.
+        assertEquals(null, OrbitClip.refusal(two))
+
+        // A muted ring is not playing, so it does not make a set two-kit.
+        val onePlaying = set(
+            Orbit("a", 16, PatternOrbit("brk", listOf(OrbitHit(0, 1, 0.9f))), voice = listOf(1)),
+            Orbit("b", 16, PatternOrbit("keys", listOf(OrbitHit(0, 1, 0.5f))), voice = listOf(1), engaged = false),
+        )
+        assertEquals(null, OrbitClip.clipRefusal(onePlaying))
+    }
+
+    @Test
+    fun `a pad past the program's last refuses by number`() {
+        val s = set(
+            Orbit("x", 16, PatternOrbit("kit", listOf(OrbitHit(0, 200, 0.9f))), voice = listOf(200)),
+        )
+        val refusal = assertNotNull(OrbitClip.clipRefusal(s))
+        assertTrue("200" in refusal, "the refusal names the pad: $refusal")
+        assertFailsWith<IllegalArgumentException> { OrbitClip.clip(s) }
+    }
+
+    @Test
     fun `saving replaces the last ORBIT clip and keeps every other groove`() {
         val dir = Files.createTempDirectory("orbitclip").toFile()
         val captured = Mpc3Clip("Break", 2, listOf(Mpc3Note(36, 0, 0.9f)))

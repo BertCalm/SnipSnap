@@ -68,7 +68,10 @@ object KitPreview {
         // lane on a grid, so each zone cycles its own takes independently.
         val hitsByLane = HashMap<Int, Int>()
         for (note in groove.notes.sortedBy { it.timePulses }) {
-            val slot = note.note - 36 + 1
+            // Mpc3Note.slotFor, not `note - 36 + 1`: the map wraps, so
+            // notes 0..35 are pads 93..128. Subtracting alone gives those
+            // a negative slot, and the pad - the whole ring - renders silent.
+            val slot = Mpc3Note.slotFor(note.note)
             val pad = kit.pad(slot) ?: continue
             val whole = cache.getOrPut(pad.sampleFile) { WavReader.read(File(kitDir, pad.sampleFile)) }
             // Slice Motion, audible before the card: velocity picks the
@@ -182,23 +185,23 @@ object KitPreview {
             for (bar in 0 until 2) {
                 val b = bar * Mpc3Clip.PULSES_PER_BAR
                 kick?.let {
-                    notes += Mpc3Note(35 + it, b, 0.9f)
-                    notes += Mpc3Note(35 + it, b + 8 * s16, 0.85f)
+                    notes += Mpc3Note(Mpc3Note.noteFor(it), b, 0.9f)
+                    notes += Mpc3Note(Mpc3Note.noteFor(it), b + 8 * s16, 0.85f)
                 }
                 snare?.let {
-                    notes += Mpc3Note(35 + it, b + 4 * s16, 0.85f)
-                    notes += Mpc3Note(35 + it, b + 12 * s16, 0.9f)
+                    notes += Mpc3Note(Mpc3Note.noteFor(it), b + 4 * s16, 0.85f)
+                    notes += Mpc3Note(Mpc3Note.noteFor(it), b + 12 * s16, 0.9f)
                 }
                 hat?.let {
                     for (e in 0 until 8) {
-                        notes += Mpc3Note(35 + it, b + e * 2L * s16, if (e % 2 == 0) 0.6f else 0.4f)
+                        notes += Mpc3Note(Mpc3Note.noteFor(it), b + e * 2L * s16, if (e % 2 == 0) 0.6f else 0.4f)
                     }
                 }
             }
         } else {
             // The pad walk: every pad in slot order, a 16th each.
             kit.pads.sortedBy { it.slot }.take(32).forEachIndexed { i, pad ->
-                notes += Mpc3Note(35 + pad.slot, i * s16, 0.8f)
+                notes += Mpc3Note(Mpc3Note.noteFor(pad.slot), i * s16, 0.8f)
             }
         }
         val bars = ((notes.maxOf { it.timePulses } / Mpc3Clip.PULSES_PER_BAR) + 1).toInt().coerceIn(1, 64)

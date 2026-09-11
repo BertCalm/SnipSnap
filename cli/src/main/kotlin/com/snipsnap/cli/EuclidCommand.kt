@@ -73,7 +73,7 @@ object EuclidCommand {
             for (pos in positions) {
                 val time = pos * step
                 notes += Mpc3Note(
-                    note = 35 + slot,
+                    note = Mpc3Note.noteFor(slot),
                     timePulses = time,
                     velocity = when {
                         time == 0L -> ACCENT_DOWNBEAT

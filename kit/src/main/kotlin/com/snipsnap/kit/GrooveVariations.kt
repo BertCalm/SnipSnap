@@ -146,7 +146,7 @@ object GrooveVariations {
             for (step in 8..11) {
                 val ramp = (step - 8) / 8f
                 notes += Mpc3Note(
-                    35 + rollSlot, b + step * s16,
+                    Mpc3Note.noteFor(rollSlot), b + step * s16,
                     (0.5f + 0.45f * ramp + jitter()).coerceIn(0.3f, 1f),
                 )
             }
@@ -155,7 +155,7 @@ object GrooveVariations {
             for (k in 0..7) {
                 val ramp = 0.5f + (k / 14f)
                 notes += Mpc3Note(
-                    35 + rollSlot, b + 12 * s16 + k * s32,
+                    Mpc3Note.noteFor(rollSlot), b + 12 * s16 + k * s32,
                     (0.5f + 0.45f * ramp + jitter()).coerceIn(0.3f, 1f),
                     lengthPulses = s32,
                 )
@@ -163,7 +163,7 @@ object GrooveVariations {
             // Hat eighths keep the time under the roll.
             hatSlot?.let { hs ->
                 for (e in 4..7) {
-                    notes += Mpc3Note(35 + hs, b + e * 2L * s16, 0.4f)
+                    notes += Mpc3Note(Mpc3Note.noteFor(hs), b + e * 2L * s16, 0.4f)
                 }
             }
         }
@@ -201,7 +201,7 @@ object GrooveVariations {
                     if (step in occupied) continue
                     if (rnd.nextFloat() < 0.6f) {
                         ghosts += Mpc3Note(
-                            35 + ghostSlot, step * s16,
+                            Mpc3Note.noteFor(ghostSlot), step * s16,
                             velocity = 0.18f + rnd.nextFloat() * (GHOST_VELOCITY_CEILING - 0.18f),
                             lengthPulses = s16 / 2,
                         )
