@@ -186,6 +186,16 @@ object OrbitClip {
                     note = noteFor(firing.hit.slot),
                     timePulses = firing.pulses,
                     velocity = firing.hit.velocity,
+                    // A gated hit says how long it sounds; a one-shot says
+                    // a 16th, which is what every note said before lengths
+                    // existed and what the hardware ignores on a pad whose
+                    // `triggerMode` is One Shot — "the whole sample fires
+                    // and ends", per the corpus in docs/MPC3_FORMAT.md.
+                    // Writing the sample's real length instead would need
+                    // the kit, which a clip built from a set alone has not
+                    // got — and on the pads where the number IS read, the
+                    // hit now carries one rather than defaulting.
+                    lengthPulses = if (firing.hit.gated) firing.hit.length else Mpc3Clip.PULSES_PER_16TH,
                 )
             }
         }

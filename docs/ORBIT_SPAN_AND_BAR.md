@@ -90,8 +90,10 @@ ticks below.
 
 ### Store
 
-`orbits.json` went to version 3 with this change; it is at version 4 now,
-per-hit `offset` having been added since (docs/ORBITS.md).
+`orbits.json` went to version 3 with this change; it has moved on since,
+and docs/ORBITS.md carries the current version and what each bump added.
+Named rather than numbered on purpose: this line has gone stale at every
+bump, because a number here is a second copy of one that lives there.
 Rings write `"span": "FREE" | "HALF" | "ONE" | "TWO" | "FOUR"`. Reading:
 
 | File version | Field | Becomes |

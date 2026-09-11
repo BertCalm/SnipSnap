@@ -70,6 +70,8 @@ import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Tempo
 import com.snipsnap.audio.WavReader
+import com.snipsnap.kit.GrooveEdit
+import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.loop.Orbit
 import com.snipsnap.loop.OrbitBank
@@ -77,6 +79,7 @@ import com.snipsnap.loop.OrbitClip
 import com.snipsnap.loop.OrbitClock
 import com.snipsnap.loop.OrbitEngine
 import com.snipsnap.loop.OrbitHit
+import com.snipsnap.loop.OrbitImport
 import com.snipsnap.loop.OrbitPatterns
 import com.snipsnap.loop.OrbitPresets
 import com.snipsnap.loop.OrbitSet
@@ -349,9 +352,13 @@ fun OrbitScreen(
         var placed = false
         updateRing(index) { ring ->
             val content = ring.content as? PatternOrbit ?: return@updateRing ring
-            val existing = content.hits.firstOrNull { it.step == step && it.slot == slot }
-            val hits = if (existing != null) content.hits - existing else content.hits + OrbitHit(step, slot, 0.9f)
-            placed = existing == null
+            // Everything on this square, not the first of it: an import
+            // can put a pickup and a downbeat on one step of one pad, and
+            // lifting one of two left the square still filled after a tap
+            // that should have cleared it.
+            val existing = content.hits.filter { it.step == step && it.slot == slot }
+            val hits = if (existing.isNotEmpty()) content.hits - existing.toSet() else content.hits + OrbitHit(step, slot, 0.9f)
+            placed = existing.isEmpty()
             ring.copy(content = content.copy(hits = hits.sortedWith(compareBy({ it.step }, { it.slot }))))
         }
         if (placed) audition(slot)
@@ -361,9 +368,13 @@ fun OrbitScreen(
     fun cycleHit(index: Int, slot: Int, step: Int) {
         updateRing(index) { ring ->
             val content = ring.content as? PatternOrbit ?: return@updateRing ring
-            val existing = content.hits.firstOrNull { it.step == step && it.slot == slot }
-            val hits = if (existing != null) {
-                content.hits - existing + existing.copy(velocity = OrbitPatterns.nextVelocity(existing.velocity))
+            val existing = content.hits.filter { it.step == step && it.slot == slot }
+            val hits = if (existing.isNotEmpty()) {
+                // Every hit on the square, moved together and read off the
+                // loudest — which is the one the square is drawn at, so the
+                // cycle follows what the player can actually see.
+                val next = OrbitPatterns.nextVelocity(existing.maxOf { it.velocity })
+                content.hits - existing.toSet() + existing.map { it.copy(velocity = next) }
             } else {
                 content.hits + OrbitHit(step, slot, OrbitPatterns.ACCENT_VELOCITY)
             }
@@ -564,6 +575,95 @@ fun OrbitScreen(
                 snips = SnipStore.list(filesDir)
                 onToast("ON TAPE: ${cycleLabel(what)}. TRIM IT, CHOP IT, KIT IT.")
             }.onFailure { e -> onToast("BOUNCE FAILED: ${e.message ?: e.javaClass.simpleName}") }
+        }
+    }
+
+    /**
+     * The kit's groove as rings, joining the ones already on screen.
+     *
+     * CLIP ▸ KIT's return leg, and the reason it is worth having: the
+     * chop pipeline's best material — a captured break, an imported
+     * `.mid`, whatever PROG E holds — lived in `groove.json` where the
+     * live engine could not reach it.
+     *
+     * It joins rather than replaces — not for safety, since [commit]
+     * records history and UNDO would bring a replaced set back, but
+     * because joining is the useful answer. A break sitting next to a
+     * ring that drifts against it is what ORBIT is for; a break that
+     * cleared the screen to arrive would just be GROOVE again, drawn
+     * round. The budget is what is left of the eight.
+     */
+    fun ringsFromGroove() {
+        val s = set ?: return
+        val room = OrbitSet.MAX_ORBITS - s.orbits.size
+        if (room <= 0) { onToast("EIGHT RINGS IS THE SKY — TAKE ONE OFF FIRST"); return }
+        outOpen = false
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    // E when there is one, else the captured base. E is what
+                    // the player has been editing — `GrooveStore.load` hands
+                    // back oldest first, which is always the base, so taking
+                    // the first clip meant PROG E could never reach a ring.
+                    val stored = GrooveStore.load(kitDir)
+                    val clip = stored.firstOrNull { GrooveEdit.isProgE(it) } ?: stored.firstOrNull()
+                        ?: throw IllegalArgumentException("NO GROOVE IN THIS KIT YET — RECORD ONE IN GROOVE FIRST")
+                    // The destination's swing, so the import lands where the
+                    // clip put it rather than taking the set's push on top.
+                    clip.name to OrbitImport.rings(
+                        clip, kitDir.name, kit, s.bpm, s.sampleRate, maxRings = room, swing = s.swing,
+                    )
+                }
+            }
+            result.onSuccess { (name, imported) ->
+                // The set can have moved while the file was being read — a
+                // ring added, one deleted, or this action tapped twice. The
+                // budget was measured against the old one, and `OrbitSet`
+                // refuses a ninth ring by throwing, out here where no
+                // `runCatching` would catch it.
+                if (set !== s) { onToast("THE RINGS CHANGED WHILE THAT LOADED — TRY AGAIN"); return@onSuccess }
+                commit(s.copy(orbits = s.orbits + imported.set.orbits))
+                selected = s.orbits.size
+                // Every pad that could not come, named. A silent drop here
+                // reads as the import having worked, and the player finds
+                // the missing snare later with nothing to blame.
+                // Every caveat, not the first one that applies. A clip can
+                // easily have a missing pad AND a doubled note, and a
+                // `when` announced the pad while the note went quietly —
+                // which is the silent drop this route exists to avoid.
+                val rings = "${imported.set.orbits.size} RING${if (imported.set.orbits.size == 1) "" else "S"}"
+                val missing = imported.skipped.sumOf { it.notes }
+                val caveats = buildList {
+                    if (missing > 0) {
+                        add(
+                            "$missing NOTE${if (missing == 1) "" else "S"} STAYED OUT — " +
+                                "NO PAD FOR ${imported.skipped.joinToString(", ") { "SLOT ${it.slot}" }}",
+                        )
+                    }
+                    if (imported.shared.isNotEmpty()) {
+                        add("${imported.shared.size} PADS SHARE THE LAST RING — PULL THEM APART WHEN THERE IS ROOM")
+                    }
+                    if (imported.collisions > 0) {
+                        add(
+                            "${imported.collisions} DOUBLED NOTE${if (imported.collisions == 1) "" else "S"} " +
+                                "BECAME ONE — THE LOUDER, AS ON THE WAY OUT",
+                        )
+                    }
+                    if (imported.crowded > 0) {
+                        add(
+                            "${imported.crowded} STEP${if (imported.crowded == 1) "" else "S"} HOLD MORE THAN ONE HIT — " +
+                                "ALL OF THEM SOUND, THE GRID DRAWS ONE SQUARE",
+                        )
+                    }
+                }
+                onToast(
+                    if (caveats.isEmpty()) {
+                        "$name IS ON THE RINGS — $rings. RE-LENGTH ONE AND HEAR IT DRIFT."
+                    } else {
+                        "$name: $rings. ${caveats.joinToString(". ")}."
+                    },
+                )
+            }.onFailure { e -> onToast(e.message ?: "COULD NOT READ THE GROOVE") }
         }
     }
 
@@ -827,6 +927,19 @@ fun OrbitScreen(
                             )
                         }
                     }
+                    // The way back in. It sits under the two ways out
+                    // because this is where the route between ORBIT and
+                    // the kit's grooves is already explained, and a player
+                    // who has just read what CLIP ▸ KIT does is the one
+                    // who wants to know the grooves can come back.
+                    ActionButton("GROOVE ▸ RINGS", scheme, Modifier.fillMaxWidth()) { ringsFromGroove() }
+                    TapeText(
+                        "THE KIT'S GROOVE AS RINGS, ONE PER PAD, JOINING WHAT IS ALREADY HERE — A CAPTURED BREAK OR AN IMPORTED .MID, PLAYED BY THIS ENGINE AT LAST.",
+                        TapeType.pixelSmall,
+                        scheme.ink3.tape,
+                        Modifier.fillMaxWidth(),
+                        maxLines = 3,
+                    )
                 } else if (stepsPickerOpen && ring != null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         TapeText("HOW MANY STEPS ROUND ${ring.name}?", TapeType.pixel, scheme.ink.tape)
@@ -1312,7 +1425,15 @@ private fun StripEditor(
     val rows = ring.pads.reversed()
     // One index per ring, not one scan per cell: a 64-step bass ring is
     // rows × steps lookups per recomposition, and that must stay cheap.
-    val hitAt = remember(content) { content.hits.associateBy { it.step to it.slot } }
+    // One index per ring, and the LOUDEST where a square holds more than
+    // one hit. `associateBy` kept whichever came last, which after an
+    // import could be a pickup's ghost drawn over the downbeat it shares a
+    // step with — the square would read quiet while the beat under it was
+    // full. A square can only say "something is here"; it may as well say
+    // it at the strength of the strongest thing.
+    val hitAt = remember(content) {
+        content.hits.groupBy { it.step to it.slot }.mapValues { (_, all) -> all.maxBy { it.velocity } }
+    }
     val playheadStep = if (playing) OrbitClock.stepAt(set, ring, frame) else -1
     val inkColor = scheme.lcdInk.tape
 
