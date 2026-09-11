@@ -177,6 +177,32 @@ class ArrangerTest {
     }
 
     @Test
+    fun `a stored groove with no notes refuses by name, not by index`() {
+        // GrooveEdit.startEmpty stores exactly this - an empty one-bar
+        // base - when GROOVE opens on a kit that has recorded nothing, so
+        // it is a state a user reaches by tapping STEPS, not a corrupt
+        // file. Arranging it used to reach `velocities[velocities.size /
+        // 2]` on an empty list and raise a bare IndexOutOfBoundsException.
+        val empty = model("Empty", clip = Mpc3Clip("Empty Groove", 1, emptyList()))
+        val e = assertFailsWith<IllegalArgumentException> {
+            Arranger.arrange(empty.kit, empty.kitDir)
+        }
+        val message = e.message ?: ""
+        assertTrue("Empty Groove" in message, "the refusal names the groove: $message")
+        assertTrue("no notes" in message, "the refusal says what is wrong: $message")
+
+        // The guard is what refuses, not luck: without it the same kit
+        // reaches the median arithmetic, and that is the exception the
+        // BB/SS contract forbids.
+        val velocities = emptyList<Float>()
+        assertFailsWith<IndexOutOfBoundsException> { velocities[velocities.size / 2] }
+
+        // One note is enough to plan from - the guard refuses nothing else.
+        val one = model("One", clip = Mpc3Clip("One", 1, listOf(Mpc3Note(36, 0, 0.9f))))
+        assertTrue(Arranger.arrange(one.kit, one.kitDir).sections.isNotEmpty())
+    }
+
+    @Test
     fun `the grammar plans and the chart draws any groove shape, or refuses by name`() {
         // SONG ▸ and CHART ▸ on the arrangement meet every groove the
         // store can hold: one hit, two hits, everything off the grid, the

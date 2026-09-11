@@ -116,6 +116,17 @@ class TapeDeckTest {
     }
 
     @Test
+    fun `select then commitSelection hands back exactly the range - RE-TRIM's IN and OUT land where the pad's cut was`() {
+        val m = deck()
+        m.select(52_920, 71_442)
+        assertEquals(52_920 until 71_442, m.commitSelection())
+        assertEquals("LEN 0.42s", m.lengthReadout)
+        // A cut that runs past the tape's end (a file TAPE capped) clamps rather than errors.
+        m.select(rate * 9, rate * 20)
+        assertEquals(rate * 9 until m.lengthFrames, m.commitSelection())
+    }
+
+    @Test
     fun `selection set-out before set-in swaps instead of erroring`() {
         val d = deck(onsets = IntArray(0))
         d.snapToZero = false

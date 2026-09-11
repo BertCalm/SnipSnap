@@ -1161,4 +1161,81 @@ class KitBuilderTest {
         assertEquals(binBefore, m.binContents().map { it.file.name }.toSet())
         assertTrue(dir.parentFile.listFiles()!!.none { it.name.startsWith("escaped") })
     }
+
+    // ---------- RE-TRIM: BACK ONTO (docs/RETRIM.md §4) ----------
+
+    @Test
+    fun `backOnto replaces the audio and carries the pad's metadata, drops the treatment, bins the old file`() {
+        val dir = File(temp, "BackOnto")
+        val m = KitBuilderModel.create("BackOnto", dir)
+        val first = m.assign(2, DrumSynth.snare(), DrumClass.SNARE, "BASS 5", source = Retrim.tag("snip_1_BASS.wav", 0, 44_100))
+        m.update(2) {
+            it.copy(
+                level = 0.5f, pan = 0.25f, tuneCoarse = -2, tuneFine = 30, muteGroup = 3, oneShot = false,
+                attack = 0.1f, decay = 0.4f, cutoff = 0.7f, resonance = 0.2f,
+                recipe = com.snipsnap.json.JsonValue.Obj(
+                    mapOf(
+                        "treatment" to com.snipsnap.json.JsonValue.Str("crush"),
+                        "amount" to com.snipsnap.json.JsonValue.Num(1.0),
+                    ),
+                ),
+                source = it.source + mapOf("mutatedWith" to "X", "capturedAtMillis" to "1"),
+            )
+        }
+        m.save()
+        val oldFile = first.sampleFile
+        val takesBefore = m.takes().size
+
+        val cut = Retrim.tag("snip_1_BASS.wav", 52_920, 71_442)
+        val recut = m.backOnto(2, DrumSynth.kick(), cut)
+        m.save()
+
+        assertEquals("BASS 5", recut.displayName)
+        assertEquals(DrumClass.SNARE, recut.drumClass)
+        assertEquals(0.5f, recut.level)
+        assertEquals(0.25f, recut.pan)
+        assertEquals(-2, recut.tuneCoarse)
+        assertEquals(30, recut.tuneFine)
+        assertEquals(3, recut.muteGroup)
+        assertFalse(recut.oneShot)
+        assertEquals(0.1f, recut.attack)
+        assertEquals(0.4f, recut.decay)
+        assertEquals(0.7f, recut.cutoff)
+        assertEquals(0.2f, recut.resonance)
+        assertNull(recut.recipe, "the treatment was baked into the old file and stays with it")
+        assertEquals("52920", recut.source[Retrim.IN_KEY])
+        assertEquals("71442", recut.source[Retrim.OUT_KEY])
+        assertEquals("1", recut.source["capturedAtMillis"], "the rest of the provenance stays")
+        assertNull(recut.source["mutatedWith"], "a stamp about the old audio's processing does not")
+
+        assertTrue(recut.sampleFile != oldFile || !File(dir, oldFile).readBytes().contentEquals(File(dir, first.sampleFile).readBytes()))
+        assertTrue(m.binContents().any { it.originalName == oldFile }, "the old file waits in the bin")
+        assertEquals(takesBefore + 1, m.takes().size, "the save archived a take, so UNDO is the TAKES room")
+        val reopened = KitBuilderModel.open(dir).pad(2)!!
+        assertEquals(recut.copy(), reopened, "everything round-trips through kit.json")
+    }
+
+    @Test
+    fun `backOnto refuses a velocity-layered pad and leaves it untouched - GHOSTS or a stack ride on the old file`() {
+        val dir = File(temp, "BackOntoGhosts")
+        val m = KitBuilderModel.create("BackOntoGhosts", dir)
+        m.assign(1, DrumSynth.snare(), DrumClass.SNARE)
+        val ghosted = m.addGhostLayers(1, softZones = 2)
+        m.save()
+
+        assertFailsWith<IllegalArgumentException> { m.backOnto(1, DrumSynth.kick(), Retrim.tag("snip_1_X.wav", 0, 100)) }
+        assertEquals(ghosted, m.pad(1), "a refusal changes nothing")
+        assertTrue(ghosted.velocityLayers.all { File(dir, it.sampleFile).isFile })
+        assertTrue(m.binContents().isEmpty(), "nothing binned on a refusal")
+    }
+
+    @Test
+    fun `backOnto carries humanize like the rest of the pad's metadata`() {
+        val dir = File(temp, "BackOntoHumanize")
+        val m = KitBuilderModel.create("BackOntoHumanize", dir)
+        m.assign(1, DrumSynth.snare(), DrumClass.SNARE, source = Retrim.tag("snip_1_X.wav", 0, 100))
+        m.update(1) { it.copy(humanize = 0.35f) }
+        val recut = m.backOnto(1, DrumSynth.kick(), Retrim.tag("snip_1_X.wav", 10, 90))
+        assertEquals(0.35f, recut.humanize)
+    }
 }

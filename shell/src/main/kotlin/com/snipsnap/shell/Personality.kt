@@ -528,8 +528,35 @@ object Copy {
     const val ARRANGE_MIXING = "MIXING…"
     const val ARRANGE_REROLLED = "REROLLED. SAME STRUCTURE, A FRESH TAKE ON THE VARIATION."
 
+    // ---- RE-TRIM: a pad goes back to its own tape (docs/RETRIM.md) ----
+    /** RE-TRIM ▸ on a pad with no tape name at all: GRAB/HOLD off the mic ring, an import, a synth. */
+    const val RETRIM_NO_TAPE = "THIS PAD CAME OFF THE MIC (OR AN IMPORT). NO TAPE TO GO BACK TO."
+    /** RE-TRIM ▸ on a pad CHOP landed before the tape keys existed: honest about which fix works. */
+    const val RETRIM_OLD_CHOP = "THIS PAD WAS CHOPPED BEFORE TAPES WERE REMEMBERED. RE-CHOP TO FIX THAT."
+    /** RE-TRIM ▸ when the named tape isn't on this phone's SNIPS shelf any more. */
+    const val RETRIM_TAPE_GONE = "THAT TAPE'S GONE. THE PAD KEEPS WHAT IT HAS."
+    /** RE-TRIM ▸ on a pad with GHOSTS or STACK THE TAKES layers: they were rendered from, or are, the old file. */
+    const val RETRIM_LAYERED = "CLEAR GHOSTS (OR THE STACK) FIRST. LAYERS RIDE ON THE OLD FILE."
+    /** RE-TRIM ▸ on a round-robin chain: its boundaries index the old file. */
+    const val RETRIM_CHAINED = "THIS PAD IS A ROUND-ROBIN CHAIN. UNDO THE ROBIN FIRST."
+    /** The cut lies beyond TAPE's load cap; the deck opens at the top instead. */
+    const val RETRIM_PAST_CAP = "THAT CUT SITS PAST WHAT TAPE CAN HOLD."
+    /** TAPE's header while a RE-TRIM is live: which pad, which tape. */
+    fun retrimHeader(pad: String, tape: String): String = "RE-TRIM $pad · $tape"
+    /** The deck's primary button while a RE-TRIM is live — it replaces KEEP. */
+    fun backOnto(pad: String): String = "BACK ONTO $pad"
+    /** The busy line while BACK ONTO reads the cut and writes the pad. */
+    const val RETRIM_BUSY = "RE-CUTTING…"
+    /**
+     * BACK ONTO landed. [treatment] is the old pad's treatment name when it
+     * had one — a treatment is baked into the file, so it stays with the
+     * old file in the bin rather than being silently re-applied to the cut.
+     */
+    fun retrimLanded(pad: String, treatment: String?): String =
+        "$pad RE-CUT." + (treatment?.let { " THE ${it.uppercase()} STAYED WITH THE OLD ONE - IT'S IN THE BIN." } ?: "")
+
     // ---- PAD SHEET ----
-    const val GHOSTS_ON = "GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
+    const val GHOSTS_ON ="GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
     fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
     const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."
@@ -707,6 +734,38 @@ object Copy {
     const val SHELF_SORT_RECENT = "SORT ▸ RECENT"
     /** The shelf's own header chip while sorted `KitShelf.ShelfSort.ALPHA` — tapping switches back to [SHELF_SORT_RECENT]. */
     const val SHELF_SORT_ALPHA = "SORT ▸ A–Z"
+
+    // ---- SHELF FILTER (September UAT, finding 16): the tap-only find ----
+
+    /**
+     * The shelf's filter chip while nothing is filtered out.
+     *
+     * Reads as a state, not a command, exactly as the SORT chip beside it
+     * does: both say what the shelf is currently doing, and tapping moves
+     * it on. "ALL" rather than "NO FILTER" because the shelf is showing
+     * all of them, which is the fact; the absence of a filter is an
+     * implementation detail.
+     */
+    const val SHELF_FILTER_ALL = "SHOW ▸ ALL"
+
+    /**
+     * The same chip narrowed to one dub state, named with [dubChip] so the
+     * chip on the row and the chip in the header cannot drift apart.
+     */
+    fun shelfFilter(status: DubStamp.Status?): String =
+        if (status == null) SHELF_FILTER_ALL else "SHOW ▸ ${dubChip(status)}"
+
+    /**
+     * What the shelf says when a filter has hidden every kit on it.
+     *
+     * A list that empties itself with no explanation is the single most
+     * alarming thing a shelf can do - the user's reading is that the kits
+     * are gone, not that they are filtered. So this names the filter that
+     * did it and the tap that undoes it, and the count of what is really
+     * there. A sentence the screen says, so it keeps its full stop.
+     */
+    fun shelfFilterEmpty(status: DubStamp.Status, total: Int): String =
+        "NO KITS ARE ${dubChip(status)}. ALL $total ARE STILL THERE — TAP SHOW."
 
     // ---- PAD SHEET: pad from anything ----
     const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."
