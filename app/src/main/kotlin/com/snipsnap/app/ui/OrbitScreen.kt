@@ -570,7 +570,7 @@ fun OrbitScreen(
     /** One cycle as a clip in the kit's grooves, so it rides to the MPC with the kit. */
     fun clipIntoKit() {
         val s = set ?: return
-        OrbitClip.refusal(s)?.let { onToast(it); return }
+        OrbitClip.clipRefusal(s)?.let { onToast(it); return }
         outOpen = false
         scope.launch {
             val result = withContext(Dispatchers.IO) { runCatching { OrbitClip.save(kitDir, s) } }
@@ -777,6 +777,10 @@ fun OrbitScreen(
                         SmallChip("CLOSE", scheme) { outOpen = false }
                     }
                     val refusal = OrbitClip.refusal(current)
+                    // A reason the clip alone cannot go: the snips, the
+                    // mutes, the ring with no hits on it yet. BOUNCE is
+                    // unaffected by all of them, so it stays on the row.
+                    val clipOnly = if (refusal == null) OrbitClip.clipRefusal(current) else null
                     if (OrbitClip.countsDifferently(current)) {
                         // The MPC clip has no time signature: its bar is sixteen 16ths whatever the set's is.
                         TapeText("THE MPC COUNTS 4/4 BARS: ${OrbitClip.bars(current)}.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
@@ -786,15 +790,21 @@ fun OrbitScreen(
                     } else {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             ActionButton(if (bouncing) "BOUNCING…" else "BOUNCE ▸ TAPE", scheme, Modifier.weight(1f), enabled = !bouncing, accent = true) { bounceToTape() }
-                            ActionButton("CLIP ▸ KIT", scheme, Modifier.weight(1f), accent = true) { clipIntoKit() }
+                            if (clipOnly == null) {
+                                ActionButton("CLIP ▸ KIT", scheme, Modifier.weight(1f), accent = true) { clipIntoKit() }
+                            }
                         }
-                        TapeText(
-                            "TAPE: WHAT YOU HEAR, AS A SNIP ON THE SHELF — TRIM IT, CHOP IT, MAKE A KIT OF IT. KIT: THE PATTERN AS A CLIP IN THE KIT'S GROOVES, SO IT RIDES TO THE MPC.",
-                            TapeType.pixelSmall,
-                            scheme.ink3.tape,
-                            Modifier.fillMaxWidth(),
-                            maxLines = 3,
-                        )
+                        if (clipOnly != null) {
+                            TapeText(clipOnly, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2)
+                        } else {
+                            TapeText(
+                                "TAPE: WHAT YOU HEAR, AS A SNIP ON THE SHELF — TRIM IT, CHOP IT, MAKE A KIT OF IT. KIT: THE PATTERN AS A CLIP IN THE KIT'S GROOVES, SO IT RIDES TO THE MPC.",
+                                TapeType.pixelSmall,
+                                scheme.ink3.tape,
+                                Modifier.fillMaxWidth(),
+                                maxLines = 3,
+                            )
+                        }
                     }
                 } else if (stepsPickerOpen && ring != null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {

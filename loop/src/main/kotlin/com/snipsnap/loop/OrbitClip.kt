@@ -49,14 +49,29 @@ object OrbitClip {
     fun snipRings(set: OrbitSet): List<String> =
         set.orbits.filter { it.content is SnipOrbit }.map { it.name }
 
-    /** Null when [set] fits, else the refusal in words. */
+    /**
+     * Null when one cycle of [set] can leave the screen at all, else the
+     * refusal in words. This is the ceiling both ways out share — the
+     * bounce is one cycle of audio and the clip is one cycle of notes, and
+     * neither has anywhere to put more than [MAX_BARS] of it.
+     *
+     * Deliberately not the place for "there are no notes in this": a set
+     * of snip rings has nothing to clip and is still perfectly good to
+     * bounce, so that question belongs to [clipRefusal] alone.
+     */
     fun refusal(set: OrbitSet): String? {
-        noNotes(set)?.let { return it }
         val bars = bars(set)
         if (bars <= MAX_BARS) return null
         val unit = if (countsDifferently(set)) "BARS OF 4/4" else "BARS"
         return "THE RINGS MEET EVERY $bars $unit — A CLIP STOPS AT $MAX_BARS. SHORTEN A RING."
     }
+
+    /**
+     * Null when [set] would write a clip worth writing, else why not: the
+     * shared ceiling first, then the reasons peculiar to a clip. A caller
+     * that only wants audio wants [refusal] instead.
+     */
+    fun clipRefusal(set: OrbitSet): String? = refusal(set) ?: noNotes(set)
 
     /**
      * Why [set] would write a clip with no notes in it at all, or null
@@ -96,7 +111,7 @@ object OrbitClip {
      * writer's chromatic map, as the GROOVE step editor already does.
      */
     fun clip(set: OrbitSet, name: String = nameFor(set)): Mpc3Clip {
-        refusal(set)?.let { throw IllegalArgumentException(it) }
+        clipRefusal(set)?.let { throw IllegalArgumentException(it) }
         val bars = bars(set)
         val stepFrames = OrbitClock.stepFrames(set).toDouble()
         val cycle = OrbitClock.cycleFrames(set)

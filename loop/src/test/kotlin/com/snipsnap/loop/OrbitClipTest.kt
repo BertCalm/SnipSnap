@@ -7,6 +7,7 @@ import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class OrbitClipTest {
@@ -105,12 +106,33 @@ class OrbitClipTest {
         val seen = mutableSetOf<String>()
         for ((labelled, expect) in shapes) {
             val (label, s) = labelled
-            val refusal = OrbitClip.refusal(s)
-            assertTrue(refusal != null, "$label should refuse, got null")
+            val refusal = assertNotNull(OrbitClip.clipRefusal(s), "$label should refuse the clip")
             assertTrue(expect in refusal, "$label should say \"$expect\": $refusal")
             assertTrue(seen.add(refusal), "$label repeats an earlier refusal: $refusal")
             assertFailsWith<IllegalArgumentException>("$label should throw from clip()") { OrbitClip.clip(s) }
+            // None of these is a reason the AUDIO cannot leave: every one
+            // of them still bounces.
+            assertEquals(null, OrbitClip.refusal(s), "$label should not block the bounce")
         }
+    }
+
+    @Test
+    fun `a set with nothing to clip still has something to bounce`() {
+        // The clip refusal and the shared one are different questions and
+        // must not be asked through the same door: OrbitScreen hides BOTH
+        // ways out when refusal() is non-null, so folding "no notes here"
+        // into it told a snip-only set to BOUNCE IT INSTEAD while hiding
+        // the bounce button. Snips are audio; OrbitEngine renders them.
+        val snipsOnly = set(Orbit("tape", 16, SnipOrbit("a.wav")), Orbit("more", 20, SnipOrbit("b.wav")))
+        assertEquals(null, OrbitClip.refusal(snipsOnly), "audio can still leave")
+        assertTrue(OrbitClip.clipRefusal(snipsOnly)!!.contains("SNIP"), "but the clip cannot, and says why")
+
+        // The ceiling is the one reason that stops both, so it has to
+        // survive in each.
+        val tooLong = set(pattern("a", 16, 1, listOf(0)), pattern("b", 17, 2, listOf(0)), pattern("c", 19, 3, listOf(0)))
+        val shared = assertNotNull(OrbitClip.refusal(tooLong))
+        assertTrue("323" in shared, "the ceiling still names the cycle: $shared")
+        assertEquals(shared, OrbitClip.clipRefusal(tooLong), "the ceiling reaches the clip unchanged")
     }
 
     @Test
@@ -123,6 +145,7 @@ class OrbitClipTest {
             pattern("on", 16, 2, listOf(4)),
         )
         assertEquals(null, OrbitClip.refusal(mixed))
+        assertEquals(null, OrbitClip.clipRefusal(mixed))
         assertEquals(listOf(37), OrbitClip.clip(mixed).notes.map { it.note })
         assertEquals(listOf("tape", "more tape"), OrbitClip.snipRings(mixed))
         assertEquals(emptyList(), OrbitClip.snipRings(set(pattern("on", 16, 2, listOf(4)))))
@@ -144,7 +167,7 @@ class OrbitClipTest {
             set(pattern("four", 16, 1, listOf(0)), pattern("five", 20, 2, listOf(0, 10))),
         )
         for (s in sets) {
-            if (OrbitClip.refusal(s) == null) {
+            if (OrbitClip.clipRefusal(s) == null) {
                 assertTrue(OrbitClip.clip(s).notes.isNotEmpty(), "passed refusal but clipped nothing")
             }
         }
