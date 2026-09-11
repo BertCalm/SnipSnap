@@ -238,6 +238,34 @@ class ArrangerTest {
                 assertTrue(plan.sections.all { it.bars >= 1 && it.reason.isNotBlank() }, "'$name': every section has bars and a reason")
                 assertEquals(plan, Arranger.arrange(m.kit, m.kitDir, seed = 3), "'$name': deterministic per seed")
 
+                if (name == "a hit at the last pulse") {
+                    // Regression guard for the GrooveVariations.quantize fix: a
+                    // hit one pulse before the loop end used to clamp to
+                    // `limit - 1`, which in a 240-pulse grid is never itself a
+                    // multiple of 240 - an off-grid ghost baked straight into
+                    // whichever quantize-derived clip an arrangement ships, and
+                    // this "Edge" fixture's own note (`4 * bar - 1`) is exactly
+                    // that shape. `Arranger.arrange` reaches `quantize` only
+                    // through GrooveVariations.standard's Tight slot (or Swing,
+                    // if a later caller asks for it) - "intro"/"theme"/
+                    // "reprise"/"outro" deliberately preserve the raw capture's
+                    // own timing (sparse filters by velocity only; half just
+                    // doubles it), and "the turn" (fill) legitimately rolls
+                    // 32nds that land on multiples of 120, not every 16th - so
+                    // only the quantize-derived section is asserted on here.
+                    val quantized = plan.sections.filter { it.clip.name.endsWith("Tight") || it.clip.name.contains("Swing") }
+                    assertTrue(quantized.isNotEmpty(), "'$name': no quantize-derived section found to guard")
+                    for (section in quantized) {
+                        section.clip.notes.forEach { n ->
+                            assertEquals(
+                                0L,
+                                n.timePulses % s16,
+                                "'$name': an off-grid ghost reached '${section.name}' at ${n.timePulses}",
+                            )
+                        }
+                    }
+                }
+
                 val chart = try {
                     Chart.render(plan, m.kit, 92f, bpmIsDefault = true)
                 } catch (t: Throwable) {
