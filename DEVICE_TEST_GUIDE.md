@@ -44,12 +44,15 @@ could NOT verify. Test in this order; each item names what "wrong" looks like.
 17. PLAY: notes light as they cross the needle; pads audibly trigger in sync.
     If you see "+N OFF-LANE" in the footer, those hits are heard, not drawn —
     by design.
-18. FEEL: drag toward TIGHT — notes snap onto the grid, more of them as you
-    approach full TIGHT. Return to centre (AS PLAYED) — the capture plays
-    back untouched. Drag toward LOOSE — notes lean by the rolled template.
-    RESEED is disabled at centre and anywhere on the TIGHT side, enabled
-    only once you're on the LOOSE side. PROG B never moves, at any FEEL
-    setting.
+18. FEEL is a −/+ stepper like SWING beside it, not a slider — five taps from
+    centre to either end. Tap − toward TIGHT: EVERY note moves proportionally
+    closer to the grid on each tap (not one note snapping at a time), and at
+    TIGHT 100% they all sit on it. Tap the readout itself: it snaps back to
+    AS PLAYED, and the capture plays back untouched — that centre must be
+    exactly what you chopped, with no jitter. Tap + toward LOOSE: notes lean
+    by the rolled template. RESEED is greyed out at centre and anywhere on
+    the TIGHT side, live only on the LOOSE side. PROG B never moves, at any
+    FEEL setting — the readout says "RIDES A · C · D" and that is literal.
 19. EDIT STEPS: toggle cells (each auditions), CLEAR BAR, DONE, re-enter —
     your edits must persist. Kill the app, reopen: still there.
 20. MIDI ▸ → check Files app: Android/data/com.snipsnap.app/files/exports/.
