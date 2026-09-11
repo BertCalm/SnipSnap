@@ -977,6 +977,67 @@ class ConventionTest {
         )
     }
 
+    // ---- Law: nobody takes a voice allocation and drops the casualties ----
+
+    /**
+     * `VoiceAllocator.noteOn` returns three things: the voice you asked
+     * for, the voices it **choked** (same mute group — this is what makes a
+     * closed hat cut an open one) and the voices it **stole** (the ring ran
+     * out of room). The allocator has already forgotten all three. If the
+     * caller does not stop the choked and stolen ones, their audio keeps
+     * playing with nothing tracking it: a hat that never closes, a voice
+     * count that drifts down, a pad that will not retrigger.
+     *
+     * Three screens do this correctly today, in three copies of one line.
+     * A fourth screen that forgets is a stuck note — and `:app` has no test
+     * source set and is excluded from CI's `test` task, so nothing else in
+     * this build would catch it.
+     *
+     * This is deliberately a source law rather than a unit test. The bug is
+     * not in the allocator (`VoiceAllocatorTest` covers that thoroughly) —
+     * it is in whether each *caller* honours the contract, and the callers
+     * are Compose screens holding a native audio handle. The law reads what
+     * they do; it is not a substitute for the seam that would let them be
+     * tested properly (see `docs/SPECS_2026_09.md`).
+     */
+    @Test
+    fun `every voice allocation stops the voices it displaced`() {
+        val binding = Regex("""val\s+\w+\s*=\s*\w+\.noteOn\(""")
+        val offenders = mutableListOf<String>()
+        var checked = 0
+        for (file in File("../app/src/main/kotlin").walkTopDown()) {
+            if (!file.isFile || file.extension != "kt") continue
+            val src = file.readText(Charsets.UTF_8)
+            // Both conditions, and the first is the one that matters: this
+            // law is about VoiceAllocator's contract, so a file that never
+            // names the type is not bound by it. InstrumentPlayer binds a
+            // `NativePads.noteOn(` and does its own stealing internally -
+            // the shape matches, the contract does not, and keying on shape
+            // alone reported it on this law's first run.
+            if (!src.contains("VoiceAllocator")) continue
+            if (!binding.containsMatchIn(src)) continue
+            checked++
+            val missing = listOf("choked", "stolen").filter { it !in src }
+            if (missing.isNotEmpty()) {
+                offenders += "${file.path.replace('\\', '/')} never mentions ${missing.joinToString(" or ")}"
+            }
+        }
+        assertTrue(
+            checked >= 3,
+            "expected at least the three screens that allocate voices, found $checked — the pattern this " +
+                "law matches must have changed, which would make it pass by checking nothing. Fix the " +
+                "pattern, do not lower this bound.",
+        )
+        assertTrue(
+            offenders.isEmpty(),
+            "a caller takes a voice allocation and drops what it displaced:\n  " +
+                offenders.joinToString("\n  ") +
+                "\nEvery site that binds VoiceAllocator.noteOn must stop allocation.choked + " +
+                "allocation.stolen. The allocator has already dropped them; if you do not stop them the " +
+                "audio plays on untracked — a hat that never closes, or a voice count that drifts down.",
+        )
+    }
+
     // ---- Law: the app's one explanation of itself names real screens ----
 
     /**
