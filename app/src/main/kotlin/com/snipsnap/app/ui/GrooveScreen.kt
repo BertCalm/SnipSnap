@@ -547,9 +547,11 @@ fun GrooveScreen(
     // Every note triggers here, not just the five lane notes the roll
     // draws (see [NOTE_TO_LANE]'s own KDoc) — a groove with a CLAP or TOM
     // hit should still be heard, same as it's still written by MIDI ▸.
-    // `noteFor(lane) = 35 + slot` is the writer's whole chromatic map, not
-    // a fact specific to the five lanes, so `note - 35` recovers the pad
-    // slot for any note; `hit` is silence on a slot with nothing loaded.
+    // The lane notes are just five points on the writer's own chromatic
+    // map, not a rule of their own, so `Mpc3Note.slotFor` recovers the pad
+    // slot for any note - including the ones past the wrap, where plain
+    // subtraction gives a slot no kit has; `hit` is silence on a slot with
+    // nothing loaded.
     // Keyed on the kit too, not just the transport: an edit that reaches
     // this screen while the roll is running reloads the engine's bank, and
     // the loop's own `kit` (its tempo) and `hit` (its pads) have to follow
