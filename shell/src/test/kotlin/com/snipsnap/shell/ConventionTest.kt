@@ -977,6 +977,95 @@ class ConventionTest {
         )
     }
 
+    // ---- Law: nobody takes a voice allocation and drops the casualties ----
+
+    /**
+     * `VoiceAllocator.noteOn` returns three things: the voice you asked
+     * for, the voices it **choked** (same mute group — this is what makes a
+     * closed hat cut an open one) and the voices it **stole** (the ring ran
+     * out of room). The allocator has already forgotten all three. If the
+     * caller does not stop the choked and stolen ones, their audio keeps
+     * playing with nothing tracking it: a hat that never closes, a voice
+     * count that drifts down, a pad that will not retrigger.
+     *
+     * Three screens do this correctly today, in three copies of one line.
+     * A fourth that forgets is a stuck note — and `:app` has no test source
+     * set and is excluded from CI's `test` task, so nothing else in this
+     * build would catch it.
+     *
+     * **What this law can and cannot prove.** It reads the code after
+     * comments and string literals are stripped, finds every `.noteOn(`
+     * call in a file that names `VoiceAllocator`, and requires the lines
+     * that follow it to stop both lists. It cannot prove the stop is
+     * reached at runtime, that it stops the right voices, or that the
+     * engine honours it — that needs the `NativePads` seam described in
+     * `docs/SPECS_2026_09.md`. It is a fence, not a test.
+     *
+     * **Two holes this law shipped with, both found in review.** The first
+     * version tested `"choked" in src` against the whole file including
+     * comments — and `KitScreen` names both words in a comment above the
+     * call, so deleting its stop loop would have passed. The mutation check
+     * that was supposed to catch that happened to pick `PlayScreen`, the
+     * one site with no such comment. The second version matched only
+     * `val x = y.noteOn(`, so a `var`, a safe call or a line break before
+     * `noteOn` would have slipped past while the three known sites kept the
+     * count satisfied. Both are why this now strips comments and searches
+     * from each call rather than across the file.
+     */
+    @Test
+    fun `every voice allocation stops the voices it displaced`() {
+        val offenders = mutableListOf<String>()
+        var checked = 0
+        for (file in File("../app/src/main/kotlin").walkTopDown()) {
+            if (!file.isFile || file.extension != "kt") continue
+            val code = stripCommentsAndStrings(file.readText(Charsets.UTF_8))
+            // The type, in code, is what puts a file under this contract.
+            // InstrumentPlayer binds `NativePads.noteOn(` and steals its own
+            // voices: the call shape matches, the contract does not, and
+            // keying on shape alone reported it on this law's first run.
+            if ("VoiceAllocator" !in code) continue
+            // Any call form - val, var, safe call, a line break before the
+            // dot - because all of them leave `.noteOn(` in the source.
+            for (call in Regex("""\.noteOn\s*\(""").findAll(code)) {
+                checked++
+                // The cleanup sits within a few lines of the call in every
+                // correct site. A generous window: this is a fence against
+                // deletion, not a style rule about where to put the loop.
+                val after = code.substring(call.range.last, minOf(code.length, call.range.last + 800))
+                val missing = listOf(".choked", ".stolen", "stop").filter { it !in after }
+                if (missing.isNotEmpty()) {
+                    offenders += "${file.path.replace('\\', '/')} allocates at offset ${call.range.first} " +
+                        "and never ${missing.joinToString(" or ")} in the 800 characters after it"
+                }
+            }
+        }
+        assertTrue(
+            checked >= 3,
+            "expected at least the three screens that allocate voices, found $checked — the pattern this " +
+                "law matches must have changed, which would make it pass by checking nothing. Fix the " +
+                "pattern, do not lower this bound.",
+        )
+        assertTrue(
+            offenders.isEmpty(),
+            "a caller takes a voice allocation and drops what it displaced:\n  " +
+                offenders.joinToString("\n  ") +
+                "\nEvery VoiceAllocator.noteOn call must stop allocation.choked + allocation.stolen. The " +
+                "allocator has already dropped them; if you do not stop them the audio plays on untracked " +
+                "— a hat that never closes, or a voice count that drifts down.",
+        )
+    }
+
+    /**
+     * Source with block comments, line comments and string literals blanked
+     * out, so a law reads what the code *does* rather than what it says
+     * about itself. Lengths are not preserved; offsets are only used to
+     * search forward from a match within the same stripped text.
+     */
+    private fun stripCommentsAndStrings(src: String): String =
+        src.replace(Regex("""/\*.*?\*/""", RegexOption.DOT_MATCHES_ALL), " ")
+            .replace(Regex("""//[^\n]*"""), " ")
+            .replace(Regex(""""(?:[^"\\\n]|\\.)*""""), "\"\"")
+
     // ---- Law: the app's one explanation of itself names real screens ----
 
     /**
