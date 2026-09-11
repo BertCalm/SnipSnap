@@ -227,10 +227,18 @@ object OrbitImport {
             slot = slot,
             velocity = note.velocity,
             offset = note.timePulses - fires,
-            // The clip's own length, carried rather than discarded. A 16th
-            // is what `Mpc3Note` means by saying nothing, so it comes in as
-            // WHOLE_SAMPLE — the state every hit was in before lengths
-            // existed — and anything else is a length someone chose.
+            // The clip's own length, carried rather than discarded.
+            //
+            // A 16th comes in as WHOLE_SAMPLE, because 240 is `Mpc3Note`'s
+            // default and it has no presence bit: a note that says 240 and
+            // a note that says nothing are the same bytes, so a deliberate
+            // one-16th gate cannot be told from an unspecified length and
+            // does not survive a rings -> clip -> rings trip as a gate.
+            // The other reading is worse by far — treating every bare note
+            // as gated would gate every drum in every imported break at a
+            // 16th, which is exactly the sound `WHOLE_SAMPLE` exists to
+            // avoid. Clip -> rings -> clip is unaffected either way: the
+            // export writes 240 for an ungated hit, so the number returns.
             length = if (note.lengthPulses == Mpc3Clip.PULSES_PER_16TH) OrbitHit.WHOLE_SAMPLE else note.lengthPulses,
         )
     }

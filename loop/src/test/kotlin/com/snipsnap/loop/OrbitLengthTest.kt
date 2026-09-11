@@ -45,6 +45,9 @@ class OrbitLengthTest {
 
     private fun at(samples: FloatArray, frame: Int) = samples[frame * 2]
 
+    private fun assertClose(expected: Float, actual: Float, what: String) =
+        assertTrue(abs(expected - actual) < 1e-3f, "$what: expected $expected, got $actual")
+
     // ---- the field ----
 
     @Test
@@ -59,9 +62,24 @@ class OrbitLengthTest {
     }
 
     @Test
-    fun `a negative length is refused rather than read as a direction`() {
-        val e = assertFailsWith<IllegalArgumentException> { OrbitHit(0, 1, length = -1L) }
-        assertTrue("length" in (e.message ?: ""), e.message ?: "")
+    fun `a length outside what a file can carry is refused at both ends`() {
+        assertTrue("length" in (assertFailsWith<IllegalArgumentException> { OrbitHit(0, 1, length = -1L) }.message ?: ""))
+        assertTrue("length" in (assertFailsWith<IllegalArgumentException> {
+            OrbitHit(0, 1, length = OrbitHit.MAX_LENGTH + 1)
+        }.message ?: ""))
+
+        // The ceiling is not arbitrary: `orbits.json` carries a number as a
+        // JSON Double, and past 2^53 a length would round on the way out
+        // and read back as a different note. 64 bars is the cap both
+        // outputs already put on a cycle, and it survives the file exactly.
+        assertTrue(OrbitHit.MAX_LENGTH < 1L shl 53, "the bound keeps every length exact through a Double")
+        val dir = Files.createTempDirectory("orbit-max").toFile().also { it.deleteOnExit() }
+        OrbitStore.save(set(ring(OrbitHit(0, 1, length = OrbitHit.MAX_LENGTH))), dir)
+        assertEquals(
+            OrbitHit.MAX_LENGTH,
+            (OrbitStore.load(dir).orbits[0].content as PatternOrbit).hits.single().length,
+            "the longest a hit may be still comes back as itself",
+        )
     }
 
     // ---- the engine stops where it is told ----
@@ -110,6 +128,47 @@ class OrbitLengthTest {
         val out = render(set(ring(OrbitHit(1, 1, length = s16))), 24_000)
         assertTrue(at(out, 11_900) > 0.4f, "still at full gain just before its gate: ${at(out, 11_900)}")
         assertTrue(abs(at(out, 12_400)) < 1e-4f, "and silent just after it: ${at(out, 12_400)}")
+    }
+
+    @Test
+    fun `a sample barely longer than its gate ramps to its own end instead of running off it`() {
+        // The gate clamped its fade against the stop point rather than
+        // against what was left of the sample, so `end + fade` could reach
+        // past the buffer and `mixVoices` indexed off it: a real throw, on
+        // a pad ten frames longer than the 16th it was gated to.
+        class ShortPad(private val frames: Int) : SampleSource {
+            override fun loop(sampleFile: String): Snip? = null
+            override fun pad(kit: String, slot: Int): Snip? = Snip(FloatArray(frames) { 0.5f }, 1, 48_000)
+        }
+        val s = set(ring(OrbitHit(0, 1, length = s16)))
+        for (frames in listOf(step + 10, step + 1, step + AutoPlace.CHOKE_FADE - 1)) {
+            val out = OrbitEngine.render(s, OrbitBank.prepare(s, ShortPad(frames)), 24_000).samples
+            assertTrue(abs(out[(frames - 1) * 2]) <= 0.5f, "a pad of $frames frames renders at all")
+        }
+    }
+
+    @Test
+    fun `a hit gated long is still choked by a later hit in its mute group`() {
+        // The gate marked the voice as already leaving, and `choke` skips a
+        // voice that is on its way out — so a gated hit rang straight
+        // through the hit that should have silenced it, which is YYY4's
+        // whole rule broken by YYY8's new one.
+        //
+        // The guard asks where the ramp starts now, not whether a flag is
+        // set: a voice whose end is merely scheduled is at full gain until
+        // it gets there, so re-deriving from this instant lowers it rather
+        // than raising it.
+        class Grouped : SampleSource {
+            override fun loop(sampleFile: String): Snip? = null
+            override fun pad(kit: String, slot: Int): Snip? = Snip(FloatArray(48_000) { 0.5f }, 1, 48_000)
+            override fun muteGroups(kit: String): Map<Int, Int> = mapOf(1 to 1, 2 to 1)
+        }
+        // Pad 1 gated at two 16ths; pad 2 lands on step 1, before that gate.
+        val s = set(ring(OrbitHit(0, 1, length = 2 * s16), OrbitHit(1, 2)))
+        val out = OrbitEngine.render(s, OrbitBank.prepare(s, Grouped()), 24_000).samples
+        assertClose(0.5f, at(out, 3_000), "pad 1 alone before the choke")
+        assertClose(0.5f, at(out, 8_000), "pad 2 alone after it — not both summed")
+        assertClose(0.5f, at(out, 11_000), "still one voice, past where pad 1's gate would have been")
     }
 
     // ---- the export says the same number ----

@@ -31,10 +31,16 @@ data class OrbitHit(
      * Zero is not "no time", it is "however long the sample is", which is
      * what every hit meant before this field existed and what a drum
      * almost always wants: a kick is over when the kick is over, and
-     * gating it at a 16th would be a new and worse sound. A length is for
-     * the pads that hold — `KitPad.oneShot = false`, which the `.xpn`,
-     * `.sfz` and MPC importers all read off real kits — where the note
-     * really does stop when it is told to.
+     * gating it at a 16th would be a new and worse sound.
+     *
+     * Whose length it is, is the caller's: the engine gates *any* positive
+     * length on *any* pad, and this deliberately cannot consult the pad's
+     * trigger mode. `KitPad.oneShot` is a boolean over what the corpus
+     * records as three states — One Shot, Note Off, Note On
+     * (docs/MPC3_FORMAT.md) — so nothing here can tell whether a given pad
+     * reads a note's length at all, and gating on that guess would stop
+     * voices live that the hardware would play out. A length is most
+     * useful on a pad that holds; it is not restricted to one.
      *
      * In pulses for the reason [offset] is: a set outlives the device it
      * was made on, and a length in frames would mean a different note at
@@ -47,7 +53,7 @@ data class OrbitHit(
         require(slot >= 1) { "slot is 1-based: $slot" }
         require(velocity in 0f..1f) { "velocity out of range: $velocity" }
         require(offset in -MAX_OFFSET..MAX_OFFSET) { "offset out of range: $offset" }
-        require(length >= 0L) { "length must not be negative: $length" }
+        require(length in 0L..MAX_LENGTH) { "length out of range: $length" }
     }
 
     /** Whether this hit stops when it is told to rather than when the sample runs out. */
@@ -69,6 +75,19 @@ data class OrbitHit(
          * the second one is meant.
          */
         const val WHOLE_SAMPLE: Long = 0L
+
+        /**
+         * The longest a hit may sound: the 64 bars both outputs already
+         * cap a cycle at, in pulses.
+         *
+         * A ceiling rather than none, because `orbits.json` carries numbers
+         * as JSON and a JSON number is a `Double` — past 2^53 a length
+         * would round on the way out and read back as a different note,
+         * which is the one thing a file must not do quietly. 64 bars is
+         * nowhere near that, and it is the repo's own number rather than an
+         * invented one: nothing longer can be exported anyway.
+         */
+        const val MAX_LENGTH: Long = OrbitClip.MAX_BARS * Mpc3Clip.PULSES_PER_BAR
     }
 }
 

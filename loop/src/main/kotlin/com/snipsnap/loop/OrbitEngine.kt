@@ -203,10 +203,26 @@ class OrbitEngine(
         // which for step 1 at 120 BPM was nearly two thousand frames early.
         val end = (frames * 2).toInt()
         if (end >= voice.limit) return // the sample runs out first; nothing to cut
-        val fade = min(AutoPlace.CHOKE_FADE * 2, end)
-        voice.limit = end + fade
-        voice.fadeLen = fade
-        voice.fading = true
+        endAt(voice, end)
+    }
+
+    /**
+     * Stop [v] at [at], on a ramp.
+     *
+     * The one place that shortens a voice, because a choke and a gate do
+     * the same thing and writing it twice got it wrong once already: the
+     * gate clamped its fade against the stop point instead of against what
+     * was left of the sample, so a pad only a little longer than its gate
+     * ran the ramp off the end of its own buffer and threw.
+     *
+     * The fade is whatever is left when less than a full one remains, so
+     * the voice still ramps over a shorter slope rather than stopping flat.
+     */
+    private fun endAt(v: Voice, at: Int) {
+        val fade = min(AutoPlace.CHOKE_FADE * 2, v.limit - at)
+        v.limit = at + fade
+        v.fadeLen = fade
+        v.fading = true
     }
 
     /**
@@ -227,22 +243,26 @@ class OrbitEngine(
     private fun choke(kit: String, group: Int, offset: Int) {
         for (v in voices) {
             if (v.muteGroup != group || v.kit != kit) continue
-            // Already on its way out. Re-deriving its ramp from this
-            // instant would put the gain back to full and the voice would
-            // jump up mid-fade; it is going to silence either way, and
-            // sooner than a fresh fade would take it.
-            if (v.fading) continue
             // Where that voice will be when this hit lands. Negative means
             // it has not started yet, which only a hit later in this same
             // block could be - and a later hit never chokes an earlier one.
             val at = v.pos + offset * 2
-            if (at < 0 || at >= v.limit) continue
-            // Whatever is left when less than a fade remains: the voice
-            // still ramps, over a shorter slope, instead of stopping flat.
-            val fade = min(AutoPlace.CHOKE_FADE * 2, v.limit - at)
-            v.limit = at + fade
-            v.fadeLen = fade
-            v.fading = true
+            if (at < 0) continue
+            // Already inside its own ramp, whatever put it there. Re-deriving
+            // from this instant would set the gain back to full and the voice
+            // would jump up mid-fade; it is going to silence either way, and
+            // sooner than a fresh fade would take it.
+            //
+            // Asked of where the ramp starts rather than of a flag. A voice
+            // with an end merely SCHEDULED - a hit gated by its own length -
+            // is still at full gain until it gets there, and must still be
+            // chokeable; a flag said it was already leaving and a later hit
+            // in its mute group rang straight through it.
+            //
+            // For a voice nothing has shortened, `fadeLen` is 0 and this is
+            // the plain "has it finished?" it replaces.
+            if (at >= v.limit - v.fadeLen) continue
+            endAt(v, at)
         }
     }
 
