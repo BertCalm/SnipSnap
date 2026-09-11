@@ -46,11 +46,22 @@ class OrbitEngine(
         var pos = 0 // interleaved index
         /** Interleaved index past which this voice is silent; a choke moves it in. */
         var limit = samples.size
-        /** Shortened by a choke rather than simply running out of sample. */
-        val choked: Boolean get() = limit < samples.size
-        /** Interleaved index this voice actually stops at. */
-        val stopAt: Int get() = if (choked) limit else samples.size
-        val done: Boolean get() = pos >= stopAt
+        /**
+         * Shortened by a choke, rather than simply running out of sample —
+         * tracked, not inferred from [limit]. A choke arriving inside the
+         * last fade's worth of a pad leaves the stop point where it already
+         * was, so "is it shorter than the sample?" answers no for a voice
+         * that really was choked, and it would run out at full level.
+         */
+        var choked = false
+        /**
+         * Interleaved length of this voice's ramp: a full fade, or the rest
+         * of the sample when less than that remains. Normalised rather than
+         * fixed so the ramp always begins at full gain — starting a short
+         * tail part-way down the slope is the click the fade exists to avoid.
+         */
+        var fadeLen = 0
+        val done: Boolean get() = pos >= limit
     }
 
     /** One hit that lands in this block, waiting to be started in time order. */
@@ -171,9 +182,13 @@ class OrbitEngine(
             // it has not started yet, which only a hit later in this same
             // block could be - and a later hit never chokes an earlier one.
             val at = v.pos + offset * 2
-            if (at < 0) continue
-            val stop = at + AutoPlace.CHOKE_FADE * 2
-            if (stop < v.limit) v.limit = stop
+            if (at < 0 || at >= v.limit) continue
+            // Whatever is left when less than a fade remains: the voice
+            // still ramps, over a shorter slope, instead of stopping flat.
+            val fade = min(AutoPlace.CHOKE_FADE * 2, v.limit - at)
+            v.limit = at + fade
+            v.fadeLen = fade
+            v.choked = true
         }
     }
 
@@ -202,15 +217,17 @@ class OrbitEngine(
             // Where in the block this voice begins (0 unless it started this block).
             var out = if (v.pos < 0) -v.pos else 0
             var src = if (v.pos < 0) 0 else v.pos
-            val stop = v.stopAt
+            val stop = v.limit
             val n = min(block.size - out, stop - src)
             // Only a choked voice ramps. One that simply reaches the end of
             // its sample keeps the tail it was recorded with.
             val fading = v.choked
+            val fadeLen = v.fadeLen
             var k = 0
             while (k + 1 < n) {
-                val left = stop - src
-                val g = if (fading && left < AutoPlace.CHOKE_FADE * 2) left.toFloat() / (AutoPlace.CHOKE_FADE * 2) else 1f
+                // Capped at 1: a voice choked partway through this block
+                // is still at full gain for the frames before the hit landed.
+                val g = if (fading) min(1f, (stop - src).toFloat() / fadeLen) else 1f
                 block[out] += samples[src] * v.gainL * g
                 block[out + 1] += samples[src + 1] * v.gainR * g
                 out += 2

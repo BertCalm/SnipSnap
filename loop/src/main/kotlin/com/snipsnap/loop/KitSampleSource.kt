@@ -23,9 +23,13 @@ class KitSampleSource(private val dir: File) : SampleSource {
     private val loops = ConcurrentHashMap<String, Snip>()
     private val pads = ConcurrentHashMap<Pair<String, Int>, Snip>()
     private val kitIndex = ConcurrentHashMap<String, Map<Int, Indexed>>()
+    private val groups = ConcurrentHashMap<String, Groups>()
 
-    /** What the index keeps off a pad: where its audio is, and what it chokes with. */
-    private data class Indexed(val sampleFile: String, val muteGroup: Int)
+    /** What the index keeps off a pad: where its audio is. */
+    private data class Indexed(val sampleFile: String)
+
+    /** Choke groups as of one `kit.json` write, so a later edit is re-read. */
+    private class Groups(val stamp: Long, val bySlot: Map<Int, Int>)
 
     override fun loop(sampleFile: String): Snip? {
         if (!isBareName(sampleFile)) return null
@@ -49,9 +53,26 @@ class KitSampleSource(private val dir: File) : SampleSource {
         return pads.putIfAbsent(key, snip) ?: snip
     }
 
+    /**
+     * Unlike the audio and the filename index, this one notices an edit.
+     *
+     * Those two are cached for the whole life of the source because they
+     * feed the bake path, where re-reading a WAV is a missed deadline. A
+     * choke group is asked for only by `OrbitBank.prepare`, which is
+     * off-thread by definition, so it can afford to check whether
+     * `kit.json` has moved under it — and it has to, or toggling choke on
+     * a kit's hats would not be heard until the app was restarted.
+     */
     override fun muteGroup(kit: String, slot: Int): Int {
         if (!isBareName(kit)) return 0
-        return slotsFor(kit)[slot]?.muteGroup ?: 0
+        val stamp = File(File(dir, kit), KitStore.FILE_NAME).lastModified()
+        groups[kit]?.let { if (it.stamp == stamp) return it.bySlot[slot] ?: 0 }
+        val kitDir = File(dir, kit)
+        if (!kitDir.isDirectory) return 0
+        val loaded = runCatching { KitStore.load(kitDir) }.getOrNull() ?: return 0
+        val bySlot = loaded.pads.associate { it.slot to it.muteGroup }
+        groups[kit] = Groups(stamp, bySlot)
+        return bySlot[slot] ?: 0
     }
 
     /**
@@ -71,7 +92,7 @@ class KitSampleSource(private val dir: File) : SampleSource {
         val kitDir = File(dir, kit)
         if (!kitDir.isDirectory) return null
         val loaded = runCatching { KitStore.load(kitDir) }.getOrNull() ?: return null
-        return loaded.pads.associate { it.slot to Indexed(it.sampleFile, it.muteGroup) }
+        return loaded.pads.associate { it.slot to Indexed(it.sampleFile) }
     }
 
     /**

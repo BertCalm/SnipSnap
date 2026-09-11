@@ -123,6 +123,24 @@ class OrbitChokeTest {
     }
 
     @Test
+    fun `a choke landing near the end of a pad still ramps it out`() {
+        // The first voice has only 64 frames left when the second hit
+        // lands - fewer than a full fade. It must still ramp to silence
+        // across what remains, rather than running out at full level
+        // because "was it choked?" was inferred from the stop point.
+        val padFrames = step + 64
+        val s = set(ring("hats", 16, 0 to 1, 1 to 2))
+        val out = render(s, 3 * step, SustainSource(groups = mapOf(1 to 1, 2 to 1), frames = padFrames), blockFrames = 3 * step)
+
+        assertClose(0.3f, at(out, step), "both sounding at the moment of the choke")
+        // Across the 64 frames it has left, pad 1 must fall away.
+        val tail = (1 until 64).map { at(out, step + it) - 0.2f }
+        assertTrue(tail.first() > 0.09f, "the ramp starts at full: ${tail.first()}")
+        assertTrue(tail.last() < 0.01f, "and reaches silence by the sample's end: ${tail.last()}")
+        assertTrue(tail.zipWithNext().all { (a, b) -> b <= a }, "monotonically down")
+    }
+
+    @Test
     fun `a pad in a mute group chokes its own previous hit`() {
         // The same pad struck twice: the hardware's rule chokes the earlier
         // voice, so the two strikes do not sum into a pad playing twice as
@@ -199,6 +217,34 @@ class OrbitChokeTest {
         assertEquals(3, bank.muteGroup("hats", 1), "the bank carries what the kit said")
         assertEquals(3, bank.muteGroup("hats", 2))
         assertEquals(0, bank.muteGroup("hats", 3), "a pad no ring plays has no entry, and answers 0")
+    }
+
+    @Test
+    fun `retuning a kit's choke is heard without restarting the source`() {
+        // The same live KitSampleSource, across an edit. Its filename index
+        // and decoded audio are cached for the life of the source - so a
+        // choke group cached beside them would have meant toggling choke in
+        // the pad sheet did nothing in ORBIT until the app was restarted.
+        val dir = File.createTempFile("snipsnap-retune", "").let { it.delete(); it.mkdirs(); it.deleteOnExit(); it }
+        val kitDir = File(dir, "hats").also { it.mkdirs() }
+        WavWriter.write(File(kitDir, "a.wav"), Snip(FloatArray(400) { 0.3f }, 2, 44_100), WavWriter.BitDepth.PCM_24)
+        fun save(group: Int) = KitStore.save(
+            Kit("hats", listOf(KitPad(slot = 1, sampleFile = "a.wav", muteGroup = group))),
+            kitDir,
+        )
+
+        save(0)
+        val source = KitSampleSource(dir)
+        assertEquals(0, source.muteGroup("hats", 1), "no choke to begin with")
+        source.pad("hats", 1) // warm every cache the source keeps
+
+        // The stamp has one-second resolution on some filesystems, so make
+        // the edit unambiguously later rather than racing it.
+        val json = File(kitDir, KitStore.FILE_NAME)
+        save(2)
+        json.setLastModified(json.lastModified() + 2_000)
+
+        assertEquals(2, source.muteGroup("hats", 1), "the edit should be heard by the same source")
     }
 
     @Test

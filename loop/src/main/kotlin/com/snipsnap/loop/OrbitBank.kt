@@ -32,9 +32,13 @@ class OrbitBank private constructor(
     fun pad(kit: String, slot: Int): Snip? = pads[PadKey(kit, slot)]
 
     /**
-     * A pad's choke group, 0 for none — read fresh on every [prepare] even
-     * when the audio is reused, so retuning a kit's choke reaches the next
-     * block rather than waiting for the sample to be evicted.
+     * A pad's choke group, 0 for none.
+     *
+     * Asked of the source on every [prepare], even for a pad whose audio is
+     * reused — so retuning a kit's choke reaches the next block rather than
+     * waiting for the sample to be evicted. Whether the answer is actually
+     * fresh is the source's to keep: `KitSampleSource` re-reads `kit.json`
+     * when it has been written since.
      */
     fun muteGroup(kit: String, slot: Int): Int = groups[PadKey(kit, slot)] ?: 0
 
