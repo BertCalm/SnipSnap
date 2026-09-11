@@ -55,7 +55,7 @@ object OneNote {
                 "no pitch found - a one-note instrument needs a pitched note, not a hit",
             )
         require(est.confidence >= MIN_CONFIDENCE) {
-            "pitch too uncertain (%.0f Hz at confidence %.2f, want >= %.2f) - ".format(
+            "pitch too uncertain (%.0f Hz at confidence %.2f, want >= %.2f) - ".format(java.util.Locale.ROOT, 
                 est.hz, est.confidence, MIN_CONFIDENCE,
             ) + "try a cleaner sustained note"
         }
@@ -156,7 +156,7 @@ object OneNote {
             val est = Pitch.detect(snip)
                 ?: throw IllegalArgumentException("$label: no pitch found - every zone needs a pitched note")
             require(est.confidence >= MIN_CONFIDENCE) {
-                "%s: pitch too uncertain (%.0f Hz at confidence %.2f)".format(label, est.hz, est.confidence)
+                "%s: pitch too uncertain (%.0f Hz at confidence %.2f)".format(java.util.Locale.ROOT, label, est.hz, est.confidence)
             }
             // Per-zone sustain loops: a zone that honestly has none plays unlooped.
             val looped = if (sustainLoop) com.snipsnap.audio.LoopCut.sustainLoop(snip) else null
@@ -220,7 +220,7 @@ object OneNote {
         val xty = File(destRoot, "$name.xty")
         val dataDir = File(destRoot, Mpc3TrackWriter.trackDataDirName(name))
         if ((xty.exists() || dataDir.exists()) && !overwrite) {
-            throw IOException("destination already exists: $xty (pass overwrite=true to replace same-named files)")
+            throw DestinationExists.firstOf(xty, dataDir)
         }
         dataDir.deleteRecursively()
         dataDir.mkdirs()

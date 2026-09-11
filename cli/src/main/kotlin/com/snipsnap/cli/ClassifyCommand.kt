@@ -36,7 +36,7 @@ object ClassifyCommand {
             val f = c.features
             val sure = if (c.confidence < ChopCommand.SURE_CONFIDENCE) "?" else " "
             out.println(
-                "%-28s %s%-11s %5.2f  %5.2fs %6.0fHz %4.0fms %5.2f %5.2f %5.2f".format(
+                "%-28s %s%-11s %5.2f  %5.2fs %6.0fHz %4.0fms %5.2f %5.2f %5.2f".format(java.util.Locale.ROOT, 
                     file.name.take(28), sure, c.drumClass, c.confidence,
                     f.durationSeconds, f.centroidHz, f.decayMs,
                     f.lowRatio, f.midRatio, f.highRatio,

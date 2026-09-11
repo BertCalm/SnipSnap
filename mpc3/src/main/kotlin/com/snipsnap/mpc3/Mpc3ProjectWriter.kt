@@ -215,7 +215,7 @@ class Mpc3ProjectWriter(
             "key" to i(key.toLong()),
             "value" to obj(
                 "version" to i(5),
-                "name" to s(clipByTrack.values.firstOrNull()?.name ?: "Sequence %02d".format(key + 1)),
+                "name" to s(clipByTrack.values.firstOrNull()?.name ?: "Sequence %02d".format(java.util.Locale.ROOT, key + 1)),
                 "bpm" to d(tempoBpm.toDouble()),
                 "lengthBars" to i(bars.toLong()),
                 "loopStartBar" to i(0),

@@ -48,6 +48,7 @@ import com.snipsnap.audio.Similar
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.Scheme
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -55,7 +56,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-private fun padTag(slot: Int): String = "A%02d".format(slot)
+// One rule, one home ([PadBanks]): this said "A%02d".format(slot) until
+// the September UAT's finding 11 made bank B reachable, at which point a
+// pad on slot 17 would have been titled A17 on this screen.
+private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
 /** Grains within this many dp of the live touch light up in [Scheme.accent] instead of [Scheme.ink2]. */
 private val LIT_RADIUS = 56.dp

@@ -63,6 +63,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
@@ -350,10 +351,15 @@ fun SynthScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                // ENGINE cycler — the EXPORT screen's FormatCyclerRow idiom
-                // (tap advances to the next entry, wrapping) ported onto the
-                // LCD header's title in place of a static "THUMP" label.
-                // Long-press is not used, per the brief.
+                // ENGINE cycler — tap advances to the next entry, wrapping,
+                // on the LCD header's title in place of a static "THUMP"
+                // label. Long-press is not used, per the brief.
+                //
+                // EXPORT's format row used to be the same idiom and is now a
+                // picker instead (September UAT, finding 7), because eight
+                // one-way states with no back step is a walk. This cycler is
+                // deliberately left alone: four engines, and the tap is an
+                // audition you want to hear one after another.
                 Box(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
@@ -603,7 +609,10 @@ private fun thumpChipLabel(voice: ThumpVoice): String = when (voice) {
     ThumpVoice.RIM -> "RIM"
 }
 
-private fun padTag(slot: Int): String = "A%02d".format(slot)
+// One rule, one home ([PadBanks]): this said "A%02d".format(slot) until
+// the September UAT's finding 11 made bank B reachable, at which point a
+// pad on slot 17 would have been titled A17 on this screen.
+private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
 // ---------- voice picker ----------
 

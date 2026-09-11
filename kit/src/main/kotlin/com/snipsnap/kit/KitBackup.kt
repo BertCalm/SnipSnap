@@ -35,7 +35,7 @@ object KitBackup {
         val kitDirs = KitStore.list(kitsRoot)
         require(kitDirs.isNotEmpty()) { "no kits under $kitsRoot" }
         if (outFile.exists() && !overwrite) {
-            throw IOException("destination already exists: $outFile (pass overwrite=true to replace same-named files)")
+            throw DestinationExists(outFile)
         }
         outFile.parentFile?.mkdirs()
 

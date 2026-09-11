@@ -57,7 +57,7 @@ object SculptCommand {
         }
         outRoot.mkdirs()
 
-        out.println("sculpting $mode from $sourceLabel - $TAKES takes of %.0fs".format(seconds))
+        out.println("sculpting $mode from $sourceLabel - $TAKES takes of %.0fs".format(java.util.Locale.ROOT, seconds))
         TextureKits.render(name, kitDir, source, sourceLabel, TextureKits.Spec.Sculpt(mode, seconds, seed)) { out.println(it) }
         out.println("-> ${kitDir.path} ($TAKES LOOP pads, provenance stamped; same seed, same texture)")
         return 0

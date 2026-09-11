@@ -60,6 +60,10 @@ object Copy {
      */
     const val EMPTY_SHELF_FOR_ASSIGN = "THIS SNIP NEEDS A KIT TO LAND ON. TAP NEW KIT BELOW TO MAKE ONE."
     const val EMPTY_KIT = "16 EMPTY PADS. TERRIFYING."
+    /** GROOVE with a kit open and nothing in it yet: the three ways in, named. TAPE's [EMPTY_SHELF] sent people to the wrong screen. */
+    const val EMPTY_GROOVE = "NOTHING HERE YET. PLAY A TAKE IN, TAP STEPS IN, OR PUT THE KIT ON RINGS."
+    /** ORBIT from the menu row with no kit open. */
+    const val NO_KIT_FOR_ORBIT = "ORBIT PUTS A KIT ON RINGS. OPEN ONE FROM KITS FIRST."
     /** A kit folder that won't parse (torn `kit.json`, missing file, etc.) — distinct from EMPTY_SHELF, which claims no kit exists at all. */
     const val KIT_WONT_OPEN = "THIS KIT WON'T OPEN. THE TAPE MAY BE CHEWED."
     /**
@@ -142,6 +146,8 @@ object Copy {
     // SHARE, BACKUP, and kits landing on the shelf (F6.3, X3.3, W3.3).
     const val PACKING_BUSY = "PACKING…"
     const val LANDING_BUSY = "UNPACKING…"
+    /** READ BACK's own caveat under the completion-stage card: agreement with our reader is not a hardware guarantee. */
+    const val READ_BACK_CAVEAT = "THE FILE AGREES WITH OUR OWN READER. HARDWARE IS THE ONLY PROOF IT OPENS."
     /** SHARE: the kit is one file now and the chooser is up. */
     fun kitPacked(kit: String): String = "$kit PACKED AS ONE FILE. PICK WHERE IT GOES."
     /** BACKUP: every kit on one file; [skipped] the ones preflight refused, named in the file's own report. */
@@ -200,17 +206,182 @@ object Copy {
 
     // ---- KIT: teaching the one gesture that opens PAD SHEET ----
     /**
-     * Shown on opening a kit, at most a few times, and never again once the
-     * user has actually held a pad. PAD SHEET is reachable ONLY by a long
-     * press on a filled pad — no button, no menu entry — and it holds every
-     * treatment, shape, tune and mutate control in the app. Without this the
-     * gesture is undiscoverable, and a feature nobody can find is a feature
-     * they don't have.
+     * Shown on opening a kit until the user has actually held a pad, and
+     * never again after that. PAD SHEET is reachable ONLY by a long press on
+     * a filled pad — no button, no menu entry — and it holds every
+     * treatment, shape, tune and mutate control in the app.
+     *
+     * This used to stop after three showings, which meant three dismissals
+     * while busy with something else cost the user that half of the app for
+     * good (September UAT, finding 5). The cap is gone: only opening the
+     * sheet retires the hint, because that is the only event that proves
+     * they found it.
+     *
+     * It is no longer the only teacher either — [PAD_SHEET_LEGEND] sits
+     * under KIT's grid permanently (finding 4), so this is a nudge with a
+     * backstop rather than the single thread the feature hangs from.
      *
      * Says what to do and what it gets, in that order, and names the thing
      * it opens so the toast and the screen agree.
      */
     const val PAD_SHEET_HINT = "HOLD A PAD TO OPEN ITS PAD SHEET — SHAPE, TUNE, TREAT."
+
+    /**
+     * The permanent legend under KIT's grid.
+     *
+     * The September UAT's findings 4 and 5: the 480 ms hold was PAD SHEET's
+     * only door, and [PAD_SHEET_HINT] — the toast that taught it — stopped
+     * after three showings. Dismiss it three times while learning something
+     * else and half the app's depth was gone for good.
+     *
+     * ROOMS already had the answer on its own list ("HOLD A ROOM TO FORGET
+     * IT · THE BIN KEEPS 30 DAYS"): one line, always on screen, naming the
+     * gesture and what it opens. A legend cannot be dismissed, so the
+     * feature behind it cannot be lost.
+     */
+    const val PAD_SHEET_LEGEND = "HOLD A PAD · SHAPE, TUNE, TREAT, MUTATE, GRAIN"
+
+    /**
+     * The kit shelf's own legend (September UAT, finding 17). Every creation
+     * door auto-names, so RENAME is the only place a user ever types a kit
+     * name — and it sits behind a hold on the row that nothing on screen
+     * mentions. Most samplers ask for a name once, up front; this does not
+     * change that, it just stops the one door that exists from being a
+     * secret.
+     *
+     * Wording follows the row's own `onLongClickLabel` ("RENAME OR DELETE")
+     * so the sighted legend and the TalkBack announcement say the same
+     * thing. No full stop: like ROOMS' legend and [PAD_SHEET_LEGEND], this is
+     * furniture that stays on screen, not a line the app says once.
+     */
+    const val SHELF_LEGEND = "HOLD A KIT TO RENAME OR DELETE IT"
+
+    // ---- SETUP's answers (September UAT, finding 23) ----
+
+    /**
+     * SETUP held three settings and answered none of the questions a user
+     * actually arrives with. These are the three the app can answer from
+     * what it already knows, rather than from settings invented to fill a
+     * screen.
+     *
+     * Headings, not toasts: no full stops.
+     */
+    const val SETUP_FORMAT_HEADING = "EXPORT OPENS ON"
+    const val SETUP_WHERE_HEADING = "WHERE YOUR FILES LIVE"
+    const val SETUP_CARD_HEADING = "THE CARD"
+
+    /**
+     * Under the format readout: this is a memory of the last format picked,
+     * not a preference set here, so it says where it is changed rather than
+     * pretending to be a second picker.
+     */
+    const val SETUP_FORMAT_NOTE = "THE LAST ONE YOU PICKED. CHANGE IT ON EXPORT."
+
+    /** No format has ever been picked, so EXPORT will open on its own first entry. */
+    const val SETUP_FORMAT_NONE = "NOTHING PICKED YET"
+
+    /** No card has been granted, or the grant was forgotten. */
+    const val SETUP_CARD_NONE = "NO CARD PICKED. EXPORT ASKS FOR ONE."
+
+    /**
+     * The exports folder, said plainly. [where] is the real path, because a
+     * user hunting for a file on a cable needs the actual thing to look for
+     * and "your app's private storage" is not it.
+     */
+    fun setupWhere(where: String): String = where
+
+    /** A card is held: [name] is what [cardName] made of its tree uri. */
+    fun setupCardHeld(name: String): String = "HOLDING: ${name.uppercase(java.util.Locale.ROOT)}"
+
+    /**
+     * A readable name for a picked card, from its SAF tree uri's last path
+     * segment — `primary:Music/Kits` becomes `Kits`, `1A2B-3C4D:` becomes the
+     * fallback.
+     *
+     * String work rather than `DocumentFile.fromTreeUri`, which would mean a
+     * dependency and a disk touch for a label. EXPORT's DESTINATION row was
+     * already doing exactly this inline; SETUP needs the same answer, and two
+     * screens naming one card two ways would be its own small lie.
+     */
+    fun cardName(lastPathSegment: String?): String =
+        lastPathSegment?.substringAfterLast(':')?.substringAfterLast('/').orEmpty().ifBlank { "CARD" }
+
+    /**
+     * The kit row's status chip (September UAT, finding 15). Three words for
+     * the three states [DubStamp.Status] can honestly tell apart:
+     *
+     * - DRAFT — nothing was ever written out.
+     * - DUBBED — written out, but not to the card in this phone right now.
+     * - ON CARD — written to the card this phone is holding.
+     *
+     * DUBBED exists so the middle case is not forced to lie in either
+     * direction. Calling it DRAFT would deny work the user did; calling it ON
+     * CARD would promise a card that is not there.
+     *
+     * Chips, not toasts: no full stop, like every other label on the
+     * furniture.
+     */
+    fun dubChip(status: DubStamp.Status): String = when (status) {
+        DubStamp.Status.DRAFT -> "DRAFT"
+        DubStamp.Status.DUBBED -> "DUBBED"
+        DubStamp.Status.ON_CARD -> "ON CARD"
+    }
+
+    // ---- HELP: what the app is, said inside the app ----
+
+    /**
+     * HELP's body, kept here rather than in the Composable that draws it.
+     *
+     * The September UAT's finding 1: HELP was twenty hardcoded lines in
+     * `StubScreen.kt` describing "the M0 skeleton" and promising that
+     * capture "arrives with M1" — months after capture shipped. It was the
+     * only in-app explanation of anything, and every line of it was false.
+     *
+     * It rotted because it lived where nothing could test it. Here it is
+     * ordinary data in a module with tests, and `PersonalityTest` holds it
+     * to the app as built: no milestone tags, and the four steps of the
+     * loop named in order. The next person to move a feature has to walk
+     * past a failing test to leave this stale.
+     */
+    const val HELP_LOOP_HEADER = "THE LOOP:"
+
+    val HELP_LOOP = listOf(
+        "· TAPE — CATCH A SOUND. THE MIC, ANOTHER APP, OR A FILE SHARED IN.",
+        "· CHOP — CUT IT ON THE HITS. THE MACHINE GUESSES; ARGUE WITH IT.",
+        "· KIT — 16 PADS. TAP TO HEAR, HOLD FOR THE PAD SHEET.",
+        "· EXPORT — ONTO THE CARD, EIGHT WAYS. THE MPC IS ONE OF THEM.",
+    )
+
+    const val HELP_MORE_HEADER = "WORTH KNOWING:"
+
+    val HELP_MORE = listOf(
+        "· HOLD A PAD: SHAPE, TUNE, TREAT, MUTATE, LAYERS, TAKES, GRAIN.",
+        "· HOLD A ROW ON THE SHELF TO RENAME IT, OR TO BIN IT.",
+        "· THE BIN KEEPS WHAT YOU THREW OUT FOR ${Rooms.BIN_DAYS} DAYS.",
+        "· PLAY IS THE ONE THAT FEELS LIKE DRUMS. SURFACE IS THE ONE THAT PRINTS.",
+        "· ORBIT PUTS THE KIT ON RINGS: 5 AGAINST 4 IN ONE TAP.",
+        "· EMPTY GROOVE? RECORD A TAKE, TAP STEPS IN, OR GO TO ORBIT.",
+        "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
+        "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
+    )
+
+    /**
+     * The TREATMENT card's header while a treatment is being applied.
+     *
+     * The September UAT's finding 14: ETERNAL measured 1.77 s on a desktop
+     * JVM (SKIM 480 ms, DUB 247 ms, GHOST 162 ms) and a phone is several
+     * times slower - but while `busy` was true the chips silently stopped
+     * accepting taps with no label change, no dimming and no spinner. The
+     * user taps ETERNAL, nothing happens, taps again, still nothing. An app
+     * that is working should say so; this is the card saying it, and naming
+     * which treatment, so the wait is attributable.
+     *
+     * A function rather than a constant, so it carries the segment's own
+     * name - and so the reflective "every Copy constant shouts and stops"
+     * law, which scans constants, does not need an exemption for a
+     * progress indicator.
+     */
+    fun treatmentBusy(label: String): String = "TREATMENT · $label…"
 
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."
@@ -284,6 +455,12 @@ object Copy {
     const val TAKES_BIN_RULE =
         "EVERY SAVE ARCHIVES A TAKE. EVERY DELETE GOES TO THE BIN FIRST."
 
+    // ---- SINCE T3: the TAKES card's expander (Spec Sheet II #03) ----
+    /** The expander's one honest limit: `KitDiff` reads `kit.json`, and a rewrite that touched no recipe leaves no mark there. */
+    const val TAKES_DIFF_CAVEAT = "SETTINGS AND RECIPES ONLY. AUDIO REDRAWN UNDER THE SAME NAME LEAVES NO MARK HERE."
+    /** The take's path changed hands between `takes()` listing it and the diff reading it (a rotation racing the refresh) — the row stays, RESTORE's own identity check decides. */
+    const val TAKES_DIFF_UNREADABLE = "THIS TAKE WON'T READ. NOTHING TO COMPARE."
+
     // ---- GROOVE ----
     const val HUMANIZED = "HUMANIZED. NOBODY PLAYS LIKE A ROBOT."
     // The phone reads (wave ZZ): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE.
@@ -330,6 +507,22 @@ object Copy {
     /** A note on any pad outside the five named drum lanes still plays and still exports — and, since GrooveScreen.kt's `NeedleRoll` Fix 3, still draws too, in its own sixth OTHER column rather than on one of the five named lanes. This says so; it must NOT claim "not drawn" again — see that fix's own KDoc for why that used to be true and now isn't. */
     fun offLane(n: Int): String = "+$n OFF-LANE — HEARD, EXPORTED, DRAWN UNDER OTHER"
 
+    // ---- GROOVE: CHART ▸ (wave XXX) — the program on screen as a text drum chart ----
+    const val CHART_BUSY = "CHARTING…"
+    const val CHART_NEEDS_GROOVE = "NO GROOVE TO CHART. CHOP WITH A GROOVE, RECORD ONE, OR STEAL ONE FIRST."
+    /** The chart is written and the chooser is up; [offGrid] hits were drawn in their nearest cell and footnoted, never moved. */
+    fun chartWritten(notes: Int, offGrid: Int): String {
+        val noteWord = if (notes == 1) "NOTE" else "NOTES"
+        val grid = when (offGrid) {
+            0 -> "ALL ON THE GRID"
+            1 -> "1 OFF THE GRID - DRAWN, NOT MOVED"
+            else -> "$offGrid OFF THE GRID - DRAWN, NOT MOVED"
+        }
+        return "CHART WRITTEN: $notes $noteWord, $grid. PICK WHERE IT GOES."
+    }
+    /** The chart is written but no app took it; [where] is the path under the app's own files, so it isn't lost. */
+    fun chartKept(where: String): String = "CHART KEPT AT $where. $SHARE_NOWHERE"
+
     // ---- ARRANGE ----
     const val ARRANGE_NEEDS_GROOVE = "NO GROOVE TO ARRANGE. CHOP WITH A GROOVE, OR STEAL ONE, FIRST."
     const val ARRANGE_MIXING = "MIXING…"
@@ -341,6 +534,10 @@ object Copy {
     const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."
     const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."
+    /** NONE, when it lands: the pad's earlier take is back out of the bin and the recipe is off. */
+    fun unTreated(pad: String): String = "$pad IS ITSELF AGAIN. THE BIN GAVE THE ORIGINAL BACK."
+    /** NONE, when the bin cannot help: a twin's copied recipe, a treatment performed elsewhere, or a bin since emptied. */
+    const val UNTREAT_NOT_BINNED = "THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE TREATMENT STAYS."
     /** Row five and TUNE: [key] is the kit's key label, or what the treatment did without one ("THE NEAREST SEMITONES", "A, THE HIT'S OWN NOTE"). */
     fun keyed(segment: String, pad: String, key: String): String = "$segment ON $pad, IN $key. ORIGINAL SLEEPS IN THE BIN."
     /** The keyed family's honest refusal, [reason] in the treatment's own words ("a kick is a drum, not a note"). */
@@ -370,6 +567,49 @@ object Copy {
     /** `TapeSplice.join`'s own refusal, said before the needle ever shows: a mutated (stereo) take against its mono original, or two rates. */
     const val SPLICE_FORMATS_DIFFER =
         "THOSE TWO TAKES DON'T MATCH - SAMPLE RATE OR CHANNELS. SPLICE WON'T RESAMPLE OR FOLD ONE TO FIT. PICK ANOTHER PAIR."
+    // ---- DO IT AGAIN: COPY LAST TREATMENT off one pad, PASTE it on another ----
+    const val REPLAY_NOTHING = "THIS PAD CARRIES NO RECIPE. NOTHING TO COPY."
+    const val REPLAY_CLIPBOARD_EMPTY = "NOTHING COPIED YET. COPY LAST TREATMENT OFF A PAD FIRST."
+    /** The honest limit, under the buttons: the recipe is the last step, never the stack. */
+    const val REPLAY_LAST_ONLY = "COPIES THE LAST TREATMENT ONLY. A CRUSHED-THEN-WASHED PAD COPIES AS WASHED."
+    /** MUTATE's recipe names its parents by label; the bytes never rode along. */
+    fun replayNeedsParent(move: String, parents: List<String>): String =
+        "MUTATE ($move WITH ${parents.joinToString(" + ").ifEmpty { "?" }}) NEEDS ITS PARENT - NOT CARRIED."
+    const val REPLAY_SPLICE = "SPLICE NAMES NO TAKES - NOT REPLAYABLE."
+    const val REPLAY_OUTSIDE = "OUTSIDE WAS A ROOM, NOT A SETTING - NOT REPLAYABLE."
+    /** CLEAN, THE DOCTOR and SCULPT are readings of that exact sound, not settings for another. */
+    fun replayMeasured(what: String): String = "$what WAS A MEASUREMENT OF THAT SOUND, NOT A SETTING - NOT REPLAYABLE."
+    const val REPLAY_NO_DOOR = "THIS RECIPE HAS NO DOOR HERE."
+    fun copied(word: String, from: String): String = "$word COPIED FROM $from. PASTE IT ON ANY PAD."
+    fun replayed(word: String, pad: String): String = "$word DONE AGAIN ON $pad. ORIGINAL SLEEPS IN THE BIN."
+    /** The keyed family reads the DESTINATION kit's key; [sourceKey] is named when it differs from what played. */
+    fun replayedInKey(word: String, pad: String, key: String, sourceKey: String?): String =
+        "$word DONE AGAIN ON $pad, IN $key" +
+            (if (sourceKey != null) " - THE SOURCE WAS $sourceKey" else "") +
+            ". ORIGINAL SLEEPS IN THE BIN."
+    /** A patch recipe replaces the sound outright, and the toast says so. */
+    fun replayedPatch(pad: String): String = "$pad IS THAT PATCH NOW. ITS OWN SOUND SLEEPS IN THE BIN."
+    fun replayedRobin(takes: Int, pad: String): String = "ROUND ROBIN ×$takes DEALT AGAIN ON $pad - SAME RECIPE, NEW DEAL."
+
+    // ---- STACK THE TAKES: a pad's real prior takes as its velocity zones ----
+    const val STACK_NEEDS_HISTORY =
+        "STACK WANTS AT LEAST ONE PRIOR TAKE. RE-TRIM OR TREAT THIS PAD FIRST - ITS OLD AUDIO WAITS IN THE BIN."
+    /** The pad grew layers (GHOSTS, or another STACK) while this screen was open, or was already layered when it opened. */
+    const val STACK_ALREADY_LAYERED = "THIS PAD IS LAYERED ALREADY. CLEAR SOFT HITS FIRST, THEN STACK."
+    const val STACK_MAX_THREE = "THREE SOFT ZONES IS THE STACK. THE MPC 2 HAS FOUR LAYER SLOTS AND LIVE TAKES ONE."
+    const val STACK_TAKE_UNREADABLE = "THAT TAKE WON'T READ ANY MORE. IT STAYS OUT OF THE STACK."
+    /** The screen's standing caveat: layers lock every single-sample door until cleared, and clearing deletes the copies. */
+    const val STACK_LOCKS =
+        "A STACKED PAD IS LAYERED. TREAT, MUTATE, SPLICE AND OUTSIDE WAIT UNTIL SOFT HITS IS CLEARED - AND CLEARING DELETES THE COPIES."
+    /** Shown, not fixed: no auto-gain, ever. */
+    const val STACK_NO_GAIN = "LEVELS ARE SHOWN, NOT FIXED. NO AUTO-GAIN - THE MPC'S VELOCITY CURVE OWNS LOUDNESS."
+    /** COMMIT: how many real takes now sit under LIVE, and what that costs. */
+    fun stacked(soft: Int): String =
+        "$soft REAL ${if (soft == 1) "TAKE" else "TAKES"} STACKED UNDER LIVE. THIS PAD IS LAYERED NOW - CLEAR SOFT HITS TO TREAT IT AGAIN."
+    /** A soft-zone take that peaks over the live one, said beside its row and left exactly that loud. */
+    fun stackOverLive(zone: String, db: Float): String =
+        "$zone IS +${String.format(java.util.Locale.ROOT, "%.1f", db)} DB OVER LIVE. THE MPC'S VELOCITY CURVE WILL NOT HIDE THIS."
+
     /** COMMIT: [crossfaded] is honest about whether the raw cut needed a declick overlap. */
     fun spliced(crossfaded: Boolean): String =
         if (crossfaded) {
@@ -479,8 +719,24 @@ object Copy {
     /** "N SLICES ON THE GRID. CHOKE GROUP SET." — the send-to-grid toast. */
     fun sentToGrid(sliceCount: Int, chokeSet: Boolean): String =
         "$sliceCount SLICES ON THE GRID." + if (chokeSet) " CHOKE GROUP SET." else ""
-    /** INSTANT KIT: the one tap, then the same words SEND TO GRID says. */
-    fun instantKit(sliceCount: Int, chokeSet: Boolean): String = "ONE TAP. " + sentToGrid(sliceCount, chokeSet)
+    /**
+     * INSTANT KIT: the one tap, what it chopped, then the same words SEND TO
+     * GRID says.
+     *
+     * [wholeTape] is the September UAT's finding 19. INSTANT KIT sits beside
+     * COMMIT under the deck, and with nothing selected the two disagree:
+     * COMMIT refuses in words ([COMMIT_NEEDS_SELECTION]), INSTANT KIT quietly
+     * takes the whole tape. Taking the whole tape is the right default for a
+     * one-tap button — the silence about it was the bug — so the line names
+     * the scope instead, and names it as IN + OUT, the same two words COMMIT's
+     * refusal uses for the markers the user would have set.
+     *
+     * No default value on purpose: a caller that forgets this argument would
+     * otherwise report the wrong scope silently, which is the exact failure
+     * being fixed.
+     */
+    fun instantKit(sliceCount: Int, chokeSet: Boolean, wholeTape: Boolean): String =
+        (if (wholeTape) "ONE TAP, THE WHOLE TAPE. " else "ONE TAP, YOUR IN + OUT. ") + sentToGrid(sliceCount, chokeSet)
 
     // ---- CHOP ALL: the crate-digging verb, wired in ----
     /** CHOP ALL's busy line while every picked .wav chops in turn — same DUBBING…/BREEDING… shape. */
@@ -508,6 +764,21 @@ object Copy {
     const val XRAY_BUSY = "READING…"
     /** The picker handed back a file X-Ray's own bytes-in-hand path never opens — a dead content URI, a provider that vanished mid-read. */
     fun xrayFailed(reason: String): String = "COULDN'T READ THAT: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
+
+    // ---- DOUBLES: pads across kits inside a "same sound" distance — the number, never a verdict ----
+    const val DOUBLES_BUSY = "MEASURING…"
+    /** The empty state names the ring, not a verdict — a clean bill is not something a distance can give. */
+    fun noDoubles(within: Float): String =
+        "NO DOUBLES WITHIN ${String.format(java.util.Locale.ROOT, "%.2f", within)}. NOT A CLEAN BILL - JUST NONE THIS CLOSE."
+    /** The screen's standing rule, on screen: what the number is, and what this screen never does. */
+    const val DOUBLES_RULE = "THE NUMBER IS A FEATURE DISTANCE, NOT A VERDICT. NOTHING HERE DELETES, MOVES OR MERGES."
+    /** The one known blind spot, said out loud: the head of the hit is what's measured, so two trims of one take can read as strangers. */
+    const val DOUBLES_TRIM_CAVEAT = "TWO TRIMS OF ONE HIT MAY NOT LAND THIS CLOSE. THE FIRST 4096 SAMPLES ARE WHAT'S MEASURED."
+    /** What the measuring pass actually did: the honest split between fresh work and the crate's cache. */
+    fun doublesMeasured(extracted: Int, fromCache: Int): String =
+        "$extracted ${if (extracted == 1) "PAD" else "PADS"} MEASURED, $fromCache FROM THE CRATE INDEX."
+    /** A GO ▸ on a kit the shelf's own listing doesn't hold (a kit in a subfolder, say) — the number stays, the door doesn't. */
+    const val DOUBLES_KIT_NOT_ON_SHELF = "THAT KIT ISN'T ON THE SHELF'S OWN LIST. THE NUMBER STANDS - THE DOOR DOESN'T."
 
     // ---- CHOP: the chip itself (HANDOFF.md — "chip tap = cycle class label, 'YOU ✓'") ----
     /** A chip under the confidence threshold, in its own words. */
@@ -543,6 +814,16 @@ object Copy {
      */
     const val DUB_FAILED = "DUB FAILED. CHECK YOUR STORAGE AND TRY AGAIN."
     /**
+     * The first tap on DUB when something is already at the destination
+     * (September UAT, finding 18). [what] is the exact thing in the way, as
+     * the writer named it — a name, not "a file", because the user is about
+     * to decide whether that particular thing is expendable.
+     *
+     * It says what the next tap will do, so the confirmation is a decision
+     * rather than a dare: nothing has been written when this appears.
+     */
+    fun dubWouldOverwrite(what: String): String = "$what IS ALREADY THERE. DUB AGAIN TO WRITE OVER IT."
+    /**
      * The dub landed *and* went onto the card the user picked. Said apart
      * from [DUB_DONE] because it is a different promise: that one means
      * the file is on the phone, this one means it is on the thing you are
@@ -558,8 +839,44 @@ object Copy {
     /** Long-press the CARD row to go back to the phone. */
     const val CARD_FORGOTTEN = "CARD FORGOTTEN. DUBS GO TO THE PHONE."
 
+    /**
+     * The legend under EXPORT's DESTINATION row (September UAT, finding 21).
+     *
+     * Holding that row is the ONLY way to forget a card - there is no
+     * button and no menu entry anywhere else in the app - so without this
+     * the gesture was unfindable, and a user who granted the wrong folder
+     * had no visible way back.
+     *
+     * Shown only while a card is actually held, matching the row's own
+     * `onLongClick`, which is null without one. A legend offering to forget
+     * a card that was never picked would be furniture describing nothing.
+     *
+     * Wording follows the row's `onLongClickLabel` ("FORGET THIS CARD") so
+     * the sighted legend and the TalkBack announcement say the same thing -
+     * the rule [SHELF_LEGEND] and [PAD_SHEET_LEGEND] already follow. No full
+     * stop: it stays on screen, so it is furniture, not a line said once.
+     */
+    const val EXPORT_CARD_LEGEND = "HOLD TO FORGET THIS CARD"
+
     // Kits.
     const val FRESH_TAPE = "FRESH TAPE. SMELLS LIKE FERRIC OXIDE."
+
+    /**
+     * What to say when a kit opens with a SNIPS → PAD hand-off still armed.
+     *
+     * The September UAT's finding 12 called the empty-shelf case a dead end
+     * — "nothing offers to make the kit". That is not what the code does:
+     * NEW KIT ▸ STARTERS sits right below the panel, exactly where
+     * [EMPTY_SHELF_FOR_ASSIGN] says it does, and `fresh()` never clears the
+     * pending snip, so the hand-off survives being sent to make a kit.
+     *
+     * The real gap was narrower and only on that one route. Every other way
+     * into a kit with a snip armed says what to do next; `fresh()` said
+     * [FRESH_TAPE] and nothing else, so the user arrived on a new kit with
+     * the snip still waiting and no idea it was. One rule, both call sites.
+     */
+    fun snipLanding(hasEmptyPad: Boolean): String =
+        if (hasEmptyPad) "LONG-PRESS AN EMPTY PAD TO PLACE THIS SNIP." else "THIS KIT IS FULL — PICK ANOTHER."
 
     /** Shown when a kit could not be created, at every personality level. */
     const val CREATE_FAILED = "COULDN'T MAKE THAT TAPE."

@@ -5,7 +5,12 @@ import com.snipsnap.xpm.WavInfo
 import java.io.File
 import java.io.IOException
 
-enum class Severity { OK, WARN, FAIL }
+/**
+ * [SKIP] is "not checked", said out loud — a row a checker couldn't
+ * reach (a field the reader has no name for, a format it can't read) and
+ * refuses to count as [OK]. Never blocks anything.
+ */
+enum class Severity { OK, WARN, FAIL, SKIP }
 
 data class Finding(
     val severity: Severity,

@@ -75,7 +75,6 @@ import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Outside
-import com.snipsnap.audio.Smear
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.json.JsonValue
@@ -91,10 +90,12 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Mutate
 import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.OutsideSheet
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PeaksPyramid
+import com.snipsnap.shell.RecipeReplay
 import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
@@ -153,6 +154,12 @@ fun PadSheetScreen(
     onGrainField: (Int) -> Unit,
     /** SPLICE ▸: opens TAPE SPLICE scoped to this pad - unlike [onNavigateTape], which hands off to whatever TAPE's own source priority resolves. */
     onSplice: (Int) -> Unit,
+    /** STACK ▸: opens STACK THE TAKES scoped to this pad - its real prior takes as soft velocity zones, over the same history SPLICE reads. */
+    onStack: (Int) -> Unit,
+    /** DO IT AGAIN: what COPY LAST TREATMENT last lifted, held by the caller so it survives a kit switch - PASTE reads it. */
+    clipboard: RecipeReplay.Clip? = null,
+    /** DO IT AGAIN: COPY LAST TREATMENT hands the clip up here; the caller keeps it. */
+    onRecipeCopied: (RecipeReplay.Clip) -> Unit = {},
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
     appScope: CoroutineScope,
     /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name), remembered per kit by the caller. */
@@ -464,28 +471,10 @@ fun PadSheetScreen(
                         check(freshPad.velocityLayers.isEmpty()) {
                             "pad $slot is velocity-layered - clear GHOSTS before smearing"
                         }
-                        if (readSmearRecipe(freshPad.recipe) != null) f.untreatPad(slot)
-                        if (amount > 0f) {
-                            val recipe = JsonValue.Obj(
-                                mapOf(
-                                    "verb" to JsonValue.Str("smear"),
-                                    "amount" to JsonValue.Num(amount.toDouble()),
-                                ),
-                            )
-                            f.replaceAudio(slot, recipe) { snip ->
-                                val smeared = Smear.process(snip, amount)
-                                if (snip.channels == 2 && smeared.channels == 1) {
-                                    val stereo = FloatArray(smeared.frameCount * 2)
-                                    for (i in 0 until smeared.frameCount) {
-                                        stereo[i * 2] = smeared.samples[i]
-                                        stereo[i * 2 + 1] = smeared.samples[i]
-                                    }
-                                    Snip(stereo, 2, smeared.sampleRate)
-                                } else {
-                                    smeared
-                                }
-                            }
-                        }
+                        // The rewrite itself lives in the model now
+                        // (`smearPad`: restore-first, then replaceAudio,
+                        // stereo kept stereo) so DO IT AGAIN can replay it.
+                        f.smearPad(slot, amount)
                         applied = true
                     }
                 }
@@ -548,6 +537,16 @@ fun PadSheetScreen(
      * it. The waveform still refreshes via `LaunchedEffect(model, slot)`;
      * only the auto-preview-on-treat is gone, same trade [applySmear] makes.
      */
+    // Set on a treatment tap, shown only while `busy`, cleared whenever any
+    // operation on this sheet finishes. One effect rather than a clear in
+    // each coroutine's `finally`: `busy` is shared by fourteen call sites in
+    // this file, and gating the display on it makes a stale value invisible
+    // rather than wrong.
+    var applyingSegment by remember(slot) { mutableStateOf<String?>(null) }
+    LaunchedEffect(busy) {
+        if (!busy) applyingSegment = null
+    }
+
     fun applyTreatment(segment: String, amount: Float) {
         if (busy) return
         val m = model ?: return
@@ -571,16 +570,26 @@ fun PadSheetScreen(
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
-                        if (PadSheet.read(freshPad.recipe) != null) {
-                            val files = (listOf(freshPad.sampleFile) + freshPad.velocityLayers.map { it.sampleFile }).distinct()
-                            val binned = f.binContents().map { it.originalName }.toSet()
-                            if (freshPad.sampleFile in binned) {
-                                check(files.all { it in binned }) {
-                                    "pad $slot can't cleanly re-treat - its ghost layers postdate the last " +
-                                        "treatment - clear GHOSTS, or accept the current sound, before treating again"
-                                }
-                                f.unEraPad(slot)
-                            }
+                        // One question, both recipe shapes (September UAT,
+                        // finding 20). This used to ask `PadSheet.read` alone,
+                        // which cannot see SMEAR by design - so tapping CRUSH
+                        // on a smeared pad skipped the restore and baked the
+                        // era onto the stretched audio, then lit CRUSH alone.
+                        // The card claimed one treatment while the sound
+                        // carried two. `unTreatState` reads both shapes and
+                        // answers the bin question at the same time.
+                        when (PadSheet.unTreatState(freshPad, f.binContents().map { it.originalName }.toSet())) {
+                            PadSheet.UnTreat.READY -> f.unEraPad(slot)
+                            PadSheet.UnTreat.GHOSTS_POSTDATE -> error(
+                                "pad $slot can't cleanly re-treat - its ghost layers postdate the last " +
+                                    "treatment - clear GHOSTS, or accept the current sound, before treating again",
+                            )
+                            // A recipe with nothing in the bin behind it (a
+                            // bank-B twin, a CLI treat, a bin since emptied)
+                            // is a sound the sheet can name but not undo: the
+                            // new treatment stacks, the way `treat` always has.
+                            PadSheet.UnTreat.NOT_BINNED -> Unit
+                            PadSheet.UnTreat.NOTHING -> Unit
                         }
                         when (treatment) {
                             is PadSheet.Treatment.Era -> f.eraPad(slot, treatment.name, amount)
@@ -619,6 +628,122 @@ fun PadSheetScreen(
                 }
             } finally {
                 busy = false
+            }
+        }
+    }
+
+    /**
+     * NONE: take the treatment back off (September UAT, finding 13 — "there
+     * is no un-treat"). Until now the chip was display-only, so undoing a
+     * treatment meant leaving PAD SHEET for TAKES + BIN and restoring a
+     * whole-kit take — which rolled back everything else done since.
+     *
+     * The move itself is [KitBuilderModel.unEraPad], the same door
+     * [applyTreatment] already uses to get back to clean audio before
+     * stacking a new treatment. Nothing new happens to the files; what is
+     * new is that the user can ask for it.
+     *
+     * Which of [PadSheet.UnTreat]'s answers applies is decided *inside* the
+     * lock, off the fresh pad and a fresh bin listing — not off the chip's
+     * enablement. The chip lights whenever the card shows a treatment,
+     * because deciding otherwise would mean listing the bin directory on
+     * every recomposition to draw one chip; refusing in words is this
+     * file's habit anyway, and a refusal that names its reason teaches more
+     * than a chip that is quietly grey.
+     *
+     * Same fresh-model shape, sample-identity guard and [model] swap as
+     * [applyTreatment] — see its KDoc. A round-robin pad refuses from
+     * [KitBuilderModel.unEraPad]'s own `require`, exactly as treating one
+     * does today; that is the card's existing gap, not this action's.
+     */
+    fun unTreat() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        val padName = p.displayName
+        val staleSampleFile = p.sampleFile
+        val kitDir = m.kitDir
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        scope.launch {
+            busy = true
+            try {
+                // null = the slot changed underneath us; BIN_ITEM_GONE says so.
+                var state: PadSheet.UnTreat? = null
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    val freshPad = f.kit.pad(slot)
+                    if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
+                        val binned = f.binContents().map { it.originalName }.toSet()
+                        val answer = PadSheet.unTreatState(freshPad, binned)
+                        if (answer == PadSheet.UnTreat.READY) f.unEraPad(slot)
+                        state = answer
+                    }
+                }
+                model = fresh
+                pendingMetadataSlots = emptySet()
+                onKitUpdated(fresh.kit)
+                onToast(
+                    when (state) {
+                        PadSheet.UnTreat.READY -> Copy.unTreated(padName)
+                        PadSheet.UnTreat.GHOSTS_POSTDATE -> Copy.RETREAT_REFUSED
+                        PadSheet.UnTreat.NOT_BINNED -> Copy.UNTREAT_NOT_BINNED
+                        // The card only offers NONE over a treatment, so this
+                        // is a race (a twin, another screen) rather than a tap
+                        // on an untreated pad - it reads the same either way.
+                        PadSheet.UnTreat.NOTHING, null -> Copy.BIN_ITEM_GONE
+                    },
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("UNTREAT", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    /** DO IT AGAIN, half one: lift this pad's last treatment onto the caller's clipboard, named. */
+    fun onCopyRecipe() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        val clip = RecipeReplay.clip(p.recipe, m.name, slot)
+        if (clip == null) {
+            onToast(Copy.REPLAY_NOTHING)
+            return
+        }
+        onRecipeCopied(clip)
+        onToast(Copy.copied(clip.word, clip.from))
+    }
+
+    /**
+     * DO IT AGAIN, half two: replay the clipboard's recipe on this pad
+     * through [commitPadEditNow] — same fresh model, same lock, same
+     * sample-identity guard as every other rewrite here. The plan is
+     * checked first so a recipe with no door here refuses in its own
+     * words before the lock is ever taken; the keyed family's own
+     * refusal (a drum, not a note) is caught inside and said the way the
+     * TREATMENT card says it, rather than as a "PASTE FAILED" diagnostic.
+     */
+    fun onPasteRecipe() {
+        if (busy) return
+        val clip = clipboard
+        if (clip == null) {
+            onToast(Copy.REPLAY_CLIPBOARD_EMPTY)
+            return
+        }
+        val plan = RecipeReplay.plan(clip.recipe)
+        if (plan is RecipeReplay.Plan.Refused) {
+            onToast(plan.reason)
+            return
+        }
+        val padName = model?.kit?.pad(slot)?.displayName?.uppercase() ?: return
+        var said: String? = null
+        commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
+            said = try {
+                RecipeReplay.apply(mm, slot, clip.recipe, padName).toast
+            } catch (e: KitBuilderModel.Unpitched) {
+                Copy.notANote(e.message ?: "not a note")
             }
         }
     }
@@ -1368,7 +1493,7 @@ fun PadSheetScreen(
             StepperSlider(
                 label = "LEVEL",
                 fraction = ((pendingDb - LEVEL_DB_MIN) / (LEVEL_DB_MAX - LEVEL_DB_MIN)).coerceIn(0f, 1f),
-                valueText = "%.0f dB".format(pendingDb),
+                valueText = "%.0f dB".format(java.util.Locale.ROOT, pendingDb),
                 fillColor = classColor,
                 scheme = scheme,
                 enabled = !busy,
@@ -1443,6 +1568,11 @@ fun PadSheetScreen(
                 onToggle = { tapBox(PadSheetBoxes.Box.TREATMENT) },
                 scheme = scheme,
             ) {
+            // Which segment the user just tapped, so the card can say what it
+            // is working on (September UAT, finding 14). Read only while
+            // `busy` is true - see `applying` below - so an applyTreatment
+            // that returns early without ever starting cannot leave a chip
+            // claiming to be in flight.
             TreatmentCard(
                 rows = PadSheet.ROWS,
                 noneSegment = PadSheet.NONE,
@@ -1453,9 +1583,59 @@ fun PadSheetScreen(
                 padColor = classColor,
                 scheme = scheme,
                 busy = busy,
-                onSegmentTap = { seg -> applyTreatment(seg, pendingAmt) },
+                applying = applyingSegment.takeIf { busy },
+                onSegmentTap = { seg ->
+                    if (seg == PadSheet.NONE) {
+                        // No `applyingSegment` for NONE: the busy header reads
+                        // "TREATMENT · <segment>…", and a restore out of the bin
+                        // is a file copy, not the second-and-a-bit of DSP that
+                        // header exists to explain. `busy` still greys the card.
+                        unTreat()
+                    } else {
+                        applyingSegment = seg
+                        applyTreatment(seg, pendingAmt)
+                    }
+                },
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
-                onAmountCommit = { activeSegment?.let { seg -> applyTreatment(seg, pendingAmt) } },
+                // AMT re-runs the treatment at the new amount, which is the
+                // same second-and-a-bit of work a chip tap starts - so it
+                // records the segment too. Finding 14 is about the treatment
+                // path, not only the taps that begin at a chip.
+                onAmountCommit = {
+                    activeSegment?.let { seg ->
+                        applyingSegment = seg
+                        applyTreatment(seg, pendingAmt)
+                    }
+                },
+            )
+            // DO IT AGAIN: the recipe as a thing you can carry to another
+            // pad. Dimmed, not disabled, when there's nothing to copy or
+            // nothing copied yet - the toast explains, same convention as
+            // SPLICE ▸ / STACK ▸ below.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton(
+                    "COPY LAST TREATMENT",
+                    scheme,
+                    enabled = !busy,
+                    dimmed = pad.recipe == null,
+                    modifier = Modifier.weight(1f),
+                    onClick = ::onCopyRecipe,
+                )
+                ActionButton(
+                    clipboard?.let { "PASTE ▸ ${it.word}" } ?: "PASTE ▸",
+                    scheme,
+                    enabled = !busy,
+                    dimmed = clipboard == null,
+                    modifier = Modifier.weight(1f),
+                    onClick = ::onPasteRecipe,
+                )
+            }
+            TapeText(
+                clipboard?.let { "ON THE CLIPBOARD: ${it.word} FROM ${it.from}" } ?: Copy.REPLAY_LAST_ONLY,
+                TapeType.pixelSmall,
+                scheme.ink3.tape,
+                Modifier.fillMaxWidth(),
+                maxLines = 2,
             )
             }
 
@@ -1471,7 +1651,7 @@ fun PadSheetScreen(
                     ShapeKnob(
                         label = "ATTACK",
                         fraction = pendingAttack,
-                        valueText = if (pad.attack == null) "OFF" else "%.0f ms".format(PadShape.attackSeconds(pendingAttack) * 1000f),
+                        valueText = if (pad.attack == null) "OFF" else "%.0f ms".format(java.util.Locale.ROOT, PadShape.attackSeconds(pendingAttack) * 1000f),
                         onChange = { f -> pendingAttack = (f * 20f).roundToInt() / 20f },
                         onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(attack = pendingAttack.takeIf { it > 0f }) } } },
                     ),
@@ -1492,7 +1672,7 @@ fun PadSheetScreen(
                     ShapeKnob(
                         label = "RES",
                         fraction = pendingRes,
-                        valueText = if (pad.resonance == null) "OFF" else "%.0f dB".format(PadShape.resonanceDb(pendingRes)),
+                        valueText = if (pad.resonance == null) "OFF" else "%.0f dB".format(java.util.Locale.ROOT, PadShape.resonanceDb(pendingRes)),
                         onChange = { f -> pendingRes = (f * 20f).roundToInt() / 20f },
                         onCommit = { editPadMetadata { m -> m.update(slot) { p -> p.copy(resonance = pendingRes.takeIf { it > 0f }) } } },
                     ),
@@ -1664,6 +1844,18 @@ fun PadSheetScreen(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { onSplice(slot) },
             )
+            // Same history, same dimming rule as SPLICE ▸ - plus dimmed
+            // when the pad already has layers, since STACK wants a
+            // single-sample pad to build on. Still tappable: the screen
+            // says which of the two it is.
+            ActionButton(
+                "STACK ▸",
+                scheme,
+                enabled = !busy,
+                dimmed = binDaysLeft == null || pad.velocityLayers.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { onStack(slot) },
+            )
             DeleteButton(scheme, enabled = !busy, onClick = ::onEject)
         }
 
@@ -1796,7 +1988,7 @@ private fun provenanceOrigin(source: Map<String, String>): String? = when {
 
 private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String {
     val parts = mutableListOf(provenanceOrigin(pad.source) ?: pad.sampleFile)
-    snip?.let { parts += "%.0f ms".format(it.durationSeconds * 1000f) }
+    snip?.let { parts += "%.0f ms".format(java.util.Locale.ROOT, it.durationSeconds * 1000f) }
     binDaysLeft?.let { parts += "original in bin, ${it}d left" }
     return parts.joinToString(" · ")
 }
@@ -1809,12 +2001,7 @@ private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String 
  * ahead of [PadSheet.read] wherever both are consulted, since SMEAR is
  * the one row-one segment [PadSheet.read] cannot see.
  */
-private fun readSmearRecipe(recipe: JsonValue.Obj?): Float? {
-    if (recipe == null) return null
-    val verb = (recipe.entries["verb"] as? JsonValue.Str)?.value ?: return null
-    if (verb != "smear") return null
-    return (recipe.entries["amount"] as? JsonValue.Num)?.value?.toFloat()
-}
+private fun readSmearRecipe(recipe: JsonValue.Obj?): Float? = PadSheet.readSmear(recipe)
 
 // ---------- level <-> dB ----------
 
@@ -1849,12 +2036,15 @@ private fun tuneLabel(semis: Int): String = when {
     else -> "$semis st"
 }
 
-private fun padTag(slot: Int): String = "A%02d".format(slot)
+// One rule, one home ([PadBanks]): this said "A%02d".format(slot) until
+// the September UAT's finding 11 made bank B reachable, at which point a
+// pad on slot 17 would have been titled A17 on this screen.
+private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
 /** 632 Hz / 12.6k — six characters at most, the value column's width. */
 private fun cutoffLabel(cutoff: Float): String {
     val hz = PadShape.cutoffHz(cutoff)
-    return if (hz >= 1000f) "%.1fk".format(hz / 1000f) else "%.0f Hz".format(hz)
+    return if (hz >= 1000f) "%.1fk".format(java.util.Locale.ROOT, hz / 1000f) else "%.0f Hz".format(java.util.Locale.ROOT, hz)
 }
 
 // ---------- header ----------
@@ -2075,12 +2265,23 @@ private fun TreatmentCard(
     padColor: Color,
     scheme: Scheme,
     busy: Boolean,
+    /** The segment being applied right now, or null when nothing is in flight. */
+    applying: String?,
     onSegmentTap: (String) -> Unit,
     onAmountChange: (Float) -> Unit,
     onAmountCommit: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("TREATMENT", TapeType.pixelSmall, scheme.ink3.tape)
+        // The card says when it is working, and on what (September UAT,
+        // finding 14): ETERNAL takes 1.77 s on a desktop JVM and longer on a
+        // phone, and chips going quietly untappable read as a dead screen
+        // rather than a busy one.
+        TapeText(
+            if (applying != null) Copy.treatmentBusy(PadSheet.displayLabel(applying)) else "TREATMENT",
+            TapeType.pixelSmall,
+            if (applying != null) scheme.amber.tape else scheme.ink3.tape,
+            maxLines = 1,
+        )
         // Row one is the eras, the rest the rack's characters (PadSheet.ROWS);
         // one segment lights across every row, since a pad carries one recipe.
         val widest = rows.maxOf { it.size }
@@ -2088,20 +2289,42 @@ private fun TreatmentCard(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (seg in row) {
                     val selected = if (seg == noneSegment) isNoneState else seg == activeSegment
-                    // NONE is display-only here — this card has no "un-treat"
-                    // action, so it never accepts a tap (see the file's report
-                    // for why that's a deliberate scope line, not an oversight).
-                    val tappable = !busy && seg != noneSegment
+                    // NONE takes the treatment back off (September UAT,
+                    // finding 13). Which chips are live is PadSheet's rule,
+                    // not this card's, so it can be asserted without a phone.
+                    val tappable = !busy && PadSheet.tappable(seg, isNoneState)
+                    // The one being applied wears the pad's colour at half
+                    // strength - lit enough to find, not so lit it reads as
+                    // already done.
+                    val working = seg == applying
                     Box(
                         Modifier
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                            .raisedBevel(
+                                scheme,
+                                fill = when {
+                                    working -> padColor.copy(alpha = 0.5f)
+                                    selected -> padColor.copy(alpha = 0.85f)
+                                    else -> null
+                                },
+                            )
                             .let { if (tappable) it.tapeClick(label = null) { onSegmentTap(seg) } else it }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(PadSheet.displayLabel(seg), TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                        TapeText(
+                            PadSheet.displayLabel(seg),
+                            TapeType.pixel,
+                            when {
+                                working || selected -> scheme.titleInk.tape
+                                // Everything else steps back while the work
+                                // runs, so "you cannot tap this yet" is
+                                // visible rather than merely true.
+                                busy -> scheme.ink3.tape
+                                else -> scheme.ink2.tape
+                            },
+                        )
                     }
                 }
                 // A short row keeps the same chip width as a full one.

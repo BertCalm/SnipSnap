@@ -25,6 +25,6 @@ object Dig {
     /** `m:ss` for a toast. */
     fun stamp(sec: Float): String {
         val s = sec.toInt()
-        return "%d:%02d".format(s / 60, s % 60)
+        return "%d:%02d".format(java.util.Locale.ROOT, s / 60, s % 60)
     }
 }

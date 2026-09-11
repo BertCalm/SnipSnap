@@ -112,7 +112,7 @@ object ImportCommand {
         val clip = imported.clip
         // The DAW beat becomes the kit's groove, standard four included.
         com.snipsnap.kit.GrooveStore.save(kitDir, com.snipsnap.kit.GrooveVariations.standard(clip))
-        val bpm = imported.bpm?.let { " at %.1f bpm".format(it) } ?: ""
+        val bpm = imported.bpm?.let { " at %.1f bpm".format(java.util.Locale.ROOT, it) } ?: ""
         out.println(
             "groove: \"${clip.name}\"$bpm - ${clip.notes.size} notes over ${clip.bars} bar(s), " +
                 "now this kit's patterns (captured/tight/half/sparse)",

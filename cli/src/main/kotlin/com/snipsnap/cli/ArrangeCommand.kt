@@ -37,7 +37,7 @@ object ArrangeCommand {
 
         // Sequence names carry the order: flipping 01.. IS the arrangement.
         val sectionClips = plan.sections.mapIndexed { i, s ->
-            s.clip.copy(name = "%02d %s".format(i + 1, s.name))
+            s.clip.copy(name = "%02d %s".format(java.util.Locale.ROOT, i + 1, s.name))
         }
 
         val destRoot = File(opts["--out"] ?: "snipsnap-out", "card")
@@ -65,10 +65,10 @@ object ArrangeCommand {
         )
         plan.sections.forEachIndexed { i, s ->
             val loops = if (s.repeats > 1) "  (${s.clip.bars}-bar pattern x${s.repeats})" else ""
-            out.println("  %02d  %-10s %2d bars$loops".format(i + 1, s.name, s.bars))
+            out.println("  %02d  %-10s %2d bars$loops".format(java.util.Locale.ROOT, i + 1, s.name, s.bars))
         }
         out.println("project: ${xpj.path}")
-        out.println("  flip sequences 01..%02d in order on the hardware - that's the song".format(plan.sections.size))
+        out.println("  flip sequences 01..%02d in order on the hardware - that's the song".format(java.util.Locale.ROOT, plan.sections.size))
 
         if (opts.has("--mixdown")) {
             val mix = Arranger.mixdown(kit, kitDir, plan)
@@ -78,7 +78,7 @@ object ArrangeCommand {
             }
             com.snipsnap.audio.WavWriter.write(wav, mix.snip)
             out.println(
-                "mixdown: ${wav.path} (%.1fs - pull-up into the turn, tape stop on the outro%s)".format(
+                "mixdown: ${wav.path} (%.1fs - pull-up into the turn, tape stop on the outro%s)".format(java.util.Locale.ROOT, 
                     mix.snip.durationSeconds,
                     if (com.snipsnap.kit.AnswerStore.load(kitDir) != null) ", the Answer under the body" else "",
                 ),

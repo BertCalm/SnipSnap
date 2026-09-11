@@ -61,7 +61,7 @@ object ShapeCommand {
         }
         model.save()
 
-        fun show(name: String, v: Float?): String = v?.let { "%s %.2f".format(name, it) } ?: ""
+        fun show(name: String, v: Float?): String = v?.let { "%s %.2f".format(java.util.Locale.ROOT, name, it) } ?: ""
         val line = listOf(
             show("attack", shaped.attack), show("decay", shaped.decay),
             show("cutoff", shaped.cutoff), show("res", shaped.resonance),

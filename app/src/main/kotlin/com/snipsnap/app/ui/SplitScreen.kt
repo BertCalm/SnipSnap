@@ -58,6 +58,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layers
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.SnipStore
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -335,8 +336,8 @@ fun SplitScreen(
                 onToast("PRINT LOST: ${(e.message ?: "UNREADABLE").uppercase()}.")
                 return@launch
             }
-            val note = if (hot > 1f) " HOT: PEAK ${"%.2f".format(hot)}." else ""
-            onToast("SPLIT PRINTED ${"%.1f".format(landed.seconds)} S TO TAPE.$note")
+            val note = if (hot > 1f) " HOT: PEAK ${"%.2f".format(java.util.Locale.ROOT, hot)}." else ""
+            onToast("SPLIT PRINTED ${"%.1f".format(java.util.Locale.ROOT, landed.seconds)} S TO TAPE.$note")
             onPrinted()
         }
     }
@@ -403,7 +404,7 @@ fun SplitScreen(
                 if (printToPad && entry != null) {
                     // The chooser is about to take over and says nothing of
                     // its own, so a warning here survives to be read.
-                    if (peak > 1f) onToast("THE MIX IS HOT: PEAK ${"%.2f".format(peak)}. PICK A PAD, OR PULL A FADER DOWN.")
+                    if (peak > 1f) onToast("THE MIX IS HOT: PEAK ${"%.2f".format(java.util.Locale.ROOT, peak)}. PICK A PAD, OR PULL A FADER DOWN.")
                     pendingPrint = mixed
                 } else {
                     landOnTape(mixed, peak)
@@ -439,7 +440,7 @@ fun SplitScreen(
                     working -> "WORKING"
                     split == null -> "NOT SPLIT"
                     playing -> "PLAYING"
-                    else -> "SPLIT · ${"%.1f".format(splitSeconds)} S"
+                    else -> "SPLIT · ${"%.1f".format(java.util.Locale.ROOT, splitSeconds)} S"
                 },
                 TapeType.lcdSmall,
                 scheme.amber.tape,
@@ -574,7 +575,7 @@ private fun ChannelStrip(
             Modifier.fillMaxWidth().height(18.dp),
             contentAlignment = Alignment.Center,
         ) {
-            TapeText("%.2f".format(strip.level), TapeType.pixelSmall, scheme.ink3.tape)
+            TapeText("%.2f".format(java.util.Locale.ROOT, strip.level), TapeType.pixelSmall, scheme.ink3.tape)
         }
         ActionButton("REV", scheme, enabled = enabled, lit = strip.reverse, modifier = Modifier.fillMaxWidth()) { onReverse() }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -676,4 +677,6 @@ private fun Fader(
 private const val FADER_H = 140
 
 /** A slot as the MPC names it: 1..16 is bank A, 17..32 bank B, and so on. */
-private fun splitPadLabel(slot: Int): String = "%c%02d".format('A' + (slot - 1) / 16, (slot - 1) % 16 + 1)
+// One rule, one home ([PadBanks]) - this copy was correct, and is
+// now the same correct thing everywhere.
+private fun splitPadLabel(slot: Int): String = PadBanks.tag(slot)

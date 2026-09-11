@@ -124,8 +124,10 @@ class AndroidAudioSink(override val sampleRate: Int) : AudioSink, AudioVoice {
         runCatching { track.release() }
     }
 
-    private companion object {
-        const val BYTES_PER_FLOAT = 4
+    companion object {
+        private const val BYTES_PER_FLOAT = 4
+
+        /** How far ahead of the ear the engine's frame count runs: the output buffer, in milliseconds. */
         const val BUFFER_MILLIS = 150
 
         fun bufferBytes(sampleRate: Int): Int {

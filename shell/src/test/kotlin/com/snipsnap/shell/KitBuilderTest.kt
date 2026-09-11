@@ -201,6 +201,73 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `stack the takes - real prior takes become soft zones, copied out of the bin, and clear undoes it`() {
+        val dir = File(temp, "Stack")
+        val m = KitBuilderModel.create("Stack", dir)
+        m.assign(1, DrumSynth.snare(), DrumClass.SNARE)
+        val liveName = m.pad(1)!!.sampleFile
+        val originalBytes = File(dir, liveName).readBytes()
+        m.treatPad(1, "reversed") // bins the original
+        m.treatPad(1, "punched") // bins the reversed
+        val prior = m.priorTakes(1)
+        assertEquals(2, prior.size, "two prior takes of this pad wait in the bin")
+        val binBefore = m.binContents().map { it.file }.toSet()
+
+        // Oldest as SOFT, the reversed one as MID, live on top.
+        val stacked = m.stackTakes(1, listOf(prior[1], prior[0]))
+        assertEquals(3, stacked.velocityLayers.size)
+        assertEquals(listOf(1..41, 42..84, 85..127), stacked.velocityLayers.map { it.velStart..it.velEnd })
+        assertEquals(liveName, stacked.velocityLayers.last().sampleFile, "LIVE stays the loudest zone")
+        val soft = File(dir, stacked.velocityLayers[0].sampleFile)
+        val mid = File(dir, stacked.velocityLayers[1].sampleFile)
+        assertTrue(soft.readBytes().contentEquals(originalBytes), "SOFT is the original take, byte for byte")
+        assertTrue(mid.readBytes().contentEquals(prior[0].file.readBytes()), "MID is the reversed take, byte for byte")
+        assertEquals(binBefore, m.binContents().map { it.file }.toSet(), "copied, not consumed: the bin still holds both sources")
+        assertNull(stacked.recipe?.entries?.get("stack"), "layers aren't a recipe, exactly as GHOSTS")
+
+        assertFailsWith<IllegalArgumentException> { m.stackTakes(1, listOf(prior[0])) } // already layered
+
+        val cleared = m.clearGhostLayers(1)
+        assertTrue(cleared.velocityLayers.isEmpty())
+        assertFalse(soft.exists() || mid.exists(), "clearing deletes the copies")
+        assertEquals(binBefore, m.binContents().map { it.file }.toSet(), "…and leaves the bin sources alone")
+    }
+
+    @Test
+    fun `stack the takes - refusals, and layer names that are already taken are skipped`() {
+        val dir = File(temp, "StackRefuse")
+        val m = KitBuilderModel.create("StackRefuse", dir)
+        m.assign(1, DrumSynth.snare(), DrumClass.SNARE)
+        m.assign(2, DrumSynth.kick(), DrumClass.KICK)
+        m.treatPad(1, "reversed")
+        m.treatPad(2, "reversed")
+        val ofPad1 = m.priorTakes(1).single()
+        val ofPad2 = m.priorTakes(2).single()
+
+        assertFailsWith<IllegalArgumentException> { m.stackTakes(1, emptyList()) }
+        assertFailsWith<IllegalArgumentException> { m.stackTakes(1, listOf(ofPad1, ofPad1)) } // same take twice
+        assertFailsWith<IllegalArgumentException> { m.stackTakes(1, listOf(ofPad2)) } // another pad's history
+        assertFailsWith<IllegalArgumentException> { m.stackTakes(9, listOf(ofPad1)) } // no pad there
+        // A forged entry: the right originalName, but a file that isn't in this kit's bin.
+        val stranger = File(temp, "stranger.wav").apply { writeBytes(File(dir, m.pad(1)!!.sampleFile).readBytes()) }
+        val forged = KitBuilderModel.BinEntry(ofPad1.originalName, ofPad1.binnedAtMillis, stranger)
+        assertFailsWith<IllegalArgumentException> { m.stackTakes(1, listOf(forged)) }
+        assertTrue(m.pad(1)!!.velocityLayers.isEmpty(), "a refusal touches nothing")
+
+        // A stale `_v1` render left on disk is not overwritten: STACK takes `_v2`.
+        val stem = m.pad(1)!!.sampleStem
+        val stale = File(dir, "${stem}_v1.wav").apply { writeBytes(byteArrayOf(1, 2, 3)) }
+        val stacked = m.stackTakes(1, listOf(ofPad1))
+        assertEquals("${stem}_v2.wav", stacked.velocityLayers[0].sampleFile)
+        assertTrue(stale.readBytes().contentEquals(byteArrayOf(1, 2, 3)), "the stale file is untouched")
+
+        // GHOSTS skips taken names the same way now.
+        m.clearGhostLayers(1)
+        val ghosted = m.addGhostLayers(1)
+        assertEquals("${stem}_v2.wav", ghosted.velocityLayers[0].sampleFile)
+    }
+
+    @Test
     fun `takes archive every meaningful save and restore rolls back`() {
         val dir = File(temp, "Takes")
         val m = KitBuilderModel.create("Takes", dir)
@@ -414,6 +481,149 @@ class KitBuilderTest {
             restored.contentEquals(originals.getValue(m.pad(1)!!.sampleFile)),
             "pad 1 audio restored byte-identical",
         )
+    }
+
+    // ---- finding 20: the two families compose, they do not stack ----
+
+    /**
+     * SMEAR is special-cased - its own recipe shape, its own door - and that
+     * special-casing used to leak. `smearPad`'s restore-first guard asked
+     * `readSmear` alone, so an *aged* pad was smeared on top of the ageing
+     * and then had SMEAR's recipe written over the era's: the card naming one
+     * treatment while the file carried two.
+     *
+     * The proof is byte-stable rather than "it changed": smearing an aged pad
+     * must produce exactly what smearing the original produces.
+     */
+    @Test
+    fun `smearing an aged pad restores it first, instead of stacking on the ageing`() {
+        // The reference: the same source, smeared once, never aged.
+        val refDir = File(temp, "SmearRef")
+        val ref = KitBuilderModel.create("SmearRef", refDir)
+        ref.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        ref.save()
+        ref.smearPad(1, 0.5f)
+        ref.save()
+        val reference = File(refDir, ref.pad(1)!!.sampleFile).readBytes()
+
+        // The same source, aged first, then smeared.
+        val dir = File(temp, "SmearOverEra")
+        val m = KitBuilderModel.create("SmearOverEra", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        val original = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        m.eraPad(1, "tape", 1f)
+        m.save()
+        assertFalse(File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(original), "the fixture really aged")
+
+        m.smearPad(1, 0.5f)
+        m.save()
+        assertTrue(
+            File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(reference),
+            "SMEAR must land on the restored original, not on the aged audio",
+        )
+        // And the recipe says SMEAR alone, which is now the truth.
+        assertEquals(0.5f, PadSheet.readSmear(m.pad(1)!!.recipe))
+        assertNull(PadSheet.read(m.pad(1)!!.recipe), "the era's recipe is gone, not merely overwritten")
+    }
+
+    /**
+     * AMT 0 must not be destructive outside SMEAR's own family. The pad
+     * sheet's AMT slider reaches 0, and `applySmear` hands whatever it reads
+     * straight to this door — so an aged pad, AMT dragged to zero, SMEAR
+     * tapped would otherwise have its era silently undone with nothing
+     * smeared in its place. NONE is the way to take a treatment off; a
+     * slider passing through zero is not.
+     */
+    @Test
+    fun `AMT 0 leaves an era alone instead of quietly undoing it`() {
+        val dir = File(temp, "SmearZeroOverEra")
+        val m = KitBuilderModel.create("SmearZeroOverEra", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        m.eraPad(1, "tape", 1f)
+        m.save()
+        val aged = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        val recipe = m.pad(1)!!.recipe
+
+        m.smearPad(1, 0f)
+        m.save()
+        assertTrue(
+            File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(aged),
+            "AMT 0 is a no-op: the aged audio must still be there",
+        )
+        assertEquals(recipe, m.pad(1)!!.recipe, "and the era's recipe must still be riding the pad")
+    }
+
+    /**
+     * The prior behaviour this must not disturb: AMT 0 on a pad that is
+     * already smeared still takes the smear off, which is what "no smear"
+     * has always meant at this door.
+     */
+    @Test
+    fun `AMT 0 on an already-smeared pad still takes the smear off`() {
+        val dir = File(temp, "SmearZeroOverSmear")
+        val m = KitBuilderModel.create("SmearZeroOverSmear", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        val original = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        m.smearPad(1, 0.5f)
+        m.save()
+        assertFalse(File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(original), "the fixture really smeared")
+
+        m.smearPad(1, 0f)
+        m.save()
+        assertTrue(
+            File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(original),
+            "back to the original, byte-identical",
+        )
+        assertNull(m.pad(1)!!.recipe, "and the SMEAR recipe comes off with it")
+    }
+
+    /**
+     * The other direction, and the one the pad sheet drives: re-smearing an
+     * already-smeared pad was always restore-first. That must stay true now
+     * the guard asks a broader question.
+     */
+    @Test
+    fun `re-smearing still restores first`() {
+        val dir = File(temp, "ReSmear")
+        val m = KitBuilderModel.create("ReSmear", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        m.smearPad(1, 0.5f)
+        m.save()
+        val once = File(dir, m.pad(1)!!.sampleFile).readBytes()
+
+        m.smearPad(1, 0.5f)
+        m.save()
+        assertTrue(
+            File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(once),
+            "the same AMT twice is the same sound, not the stretch applied twice",
+        )
+    }
+
+    /**
+     * A pad whose recipe the bin cannot undo - a bank-B twin, a CLI treat -
+     * still stacks, because there is nothing to restore. Refusing outright
+     * would take away a sound the user can still legitimately reach for.
+     */
+    @Test
+    fun `a recipe with nothing in the bin behind it still smears on top`() {
+        val dir = File(temp, "SmearUnbinned")
+        val m = KitBuilderModel.create("SmearUnbinned", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        m.eraPad(1, "tape", 1f)
+        m.save()
+        m.emptyBin()
+        val aged = File(dir, m.pad(1)!!.sampleFile).readBytes()
+
+        m.smearPad(1, 0.5f)
+        m.save()
+        val after = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        assertFalse(after.contentEquals(aged), "it still smeared something")
+        assertEquals(0.5f, PadSheet.readSmear(m.pad(1)!!.recipe))
     }
 
     @Test
@@ -900,5 +1110,55 @@ class KitBuilderTest {
         // directory containing nothing but this kit.json.
         assertFailsWith<IllegalArgumentException> { m.save() }
         assertFalse(dir.exists(), "save() must not resurrect the folder it once lived in")
+    }
+
+    @Test
+    fun `a take that names a file outside the folder is refused before anything moves`() {
+        val dir = File(temp, "ClimbingTake")
+        val m = KitBuilderModel.create("ClimbingTake", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        m.treatPad(1, "reversed")
+        m.save()
+        // The newest take is the kit with its pad; the first is FRESH TAPE's empty kit.
+        val take = m.takes().last()
+        assertTrue(m.pad(1)!!.sampleFile in take.readText(), "the take names the pad's file")
+        val kitBefore = File(dir, "kit.json").readBytes()
+        val liveBefore = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        val binBefore = m.binContents().map { it.file.name }.toSet()
+
+        // An absolute-path climb, scoped to this test's own temp dir rather
+        // than a real global path - a hard-coded /tmp/escaped.wav would be
+        // flaky wherever that file already exists (a parallel run, a stray
+        // leftover) or /tmp is unwritable, and would leak outside this
+        // test's own cleanup if the refusal somehow failed.
+        val absoluteEscape = File(temp, "escaped.wav").absolutePath
+        // The backslash is JSON-escaped in the take text, the way a writer would
+        // carry it, so the pad type - not the JSON parser - is what refuses it.
+        for (climb in listOf("../escaped.wav", "..\\\\escaped.wav", absoluteEscape, "sub/escaped.wav")) {
+            take.writeText(take.readText().replace(m.pad(1)!!.sampleFile, climb))
+            val e = assertFailsWith<IllegalArgumentException> { KitBuilderModel.open(dir).restoreTake(take) }
+            assertTrue("bare filename" in (e.message ?: ""), "refused in the pad's own words: ${e.message}")
+            assertTrue(kitBefore.contentEquals(File(dir, "kit.json").readBytes()), "kit.json untouched after '$climb'")
+            assertTrue(liveBefore.contentEquals(File(dir, m.pad(1)!!.sampleFile).readBytes()), "live audio untouched after '$climb'")
+            assertEquals(binBefore, m.binContents().map { it.file.name }.toSet(), "the bin untouched after '$climb'")
+            assertFalse(File(dir.parentFile, "escaped.wav").exists() || File(absoluteEscape).exists(), "nothing landed outside after '$climb'")
+            take.writeText(take.readText().replace(climb, m.pad(1)!!.sampleFile))
+        }
+        // ".." has no separator, so the pad type lets it through; the restore
+        // then finds no such file and no such bin entry, and moves nothing -
+        // a quiet success, not a refusal. Asserted, not just run-and-forget:
+        // a house rule this whole file otherwise enforces (a valid result or
+        // a NAMED refusal, never a silently swallowed throwable) would
+        // otherwise not apply to this one branch.
+        take.writeText(take.readText().replace(m.pad(1)!!.sampleFile, ".."))
+        val dotDotResult = runCatching { KitBuilderModel.open(dir).restoreTake(take) }
+        dotDotResult.exceptionOrNull()?.let { ex ->
+            assertTrue(ex is IllegalArgumentException, "\"..\" threw ${ex::class.simpleName} instead of succeeding or refusing by name: ${ex.message}")
+            assertTrue(!ex.message.isNullOrBlank(), "\"..\" refused without saying why")
+        }
+        assertTrue(liveBefore.contentEquals(File(dir, m.pad(1)!!.sampleFile).readBytes()))
+        assertEquals(binBefore, m.binContents().map { it.file.name }.toSet())
+        assertTrue(dir.parentFile.listFiles()!!.none { it.name.startsWith("escaped") })
     }
 }

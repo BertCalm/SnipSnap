@@ -1,6 +1,7 @@
 package com.snipsnap.shell
 
 import com.snipsnap.json.JsonValue
+import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.Eras
 import com.snipsnap.synth.Treatments
 
@@ -222,6 +223,20 @@ object PadSheet {
     }
 
     /**
+     * SMEAR's own AMT off a pad's recipe — `{"verb":"smear","amount":x}`,
+     * the `Mutate.morph` recipe idiom, not [read]'s shapes. [read] cannot
+     * see SMEAR on purpose (see the object KDoc); this is its companion,
+     * consulted ahead of [read] wherever both are. Anything else reads as
+     * no SMEAR active.
+     */
+    fun readSmear(recipe: JsonValue.Obj?): Float? {
+        if (recipe == null) return null
+        val verb = (recipe.entries["verb"] as? JsonValue.Str)?.value ?: return null
+        if (verb != "smear") return null
+        return (recipe.entries["amount"] as? JsonValue.Num)?.value?.toFloat()
+    }
+
+    /**
      * What the card should light for a pad's recipe, read defensively:
      * `eraPad` leaves `{"era", "amount"}`, `characterPad` (and `treatPad`,
      * and bank B's twins) leave a `PadRecipe` carrying `treatment` +
@@ -245,5 +260,70 @@ object PadSheet {
             return Applied(t, amount ?: return null, segmentFor(t))
         }
         return null
+    }
+
+    /**
+     * What [NONE] can do on a pad — the answer to the question every other
+     * chip on the card already answers, and the one NONE used to duck.
+     *
+     * The treatment doors ([KitBuilderModel.eraPad], `characterPad`,
+     * `keyedPad`, `smearPad`) each bin the file they rewrite, so undo is
+     * `unEraPad`: every file the pad references comes back out of the bin
+     * and the recipe comes off. That only works when the bin still holds
+     * *all* of them, which is why this is four answers and not a boolean.
+     */
+    enum class UnTreat {
+        /** No card recipe rides the pad, so NONE is already the truth and the chip does nothing. */
+        NOTHING,
+
+        /** The bin holds an earlier take of every file the pad references: `unEraPad` will land. */
+        READY,
+
+        /**
+         * The main sample can come back but a GHOSTS layer cannot — that layer
+         * was rendered *from* the treated main sample and never earned its own
+         * bin entry. Restoring half would leave the pad's layers treated one
+         * pass more than its main sample. That skew is what routing through
+         * the whole-pad doors exists to prevent; their own KDoc calls it an
+         * "untreated underside". Refusing says so.
+         */
+        GHOSTS_POSTDATE,
+
+        /**
+         * The pad names a treatment the bin cannot undo — a bank-B twin whose
+         * recipe was copied rather than performed, a CLI `treat` run in another
+         * kit folder, or a bin since emptied. The card can say what the sound
+         * is; it cannot give back what it never held.
+         */
+        NOT_BINNED,
+    }
+
+    /**
+     * Whether the card should accept a tap on [segment], given whether the
+     * pad currently reads as untreated.
+     *
+     * Every other chip is always live — re-tapping the lit one re-treats at
+     * the AMT on screen, which is the card's oldest gesture. [NONE] is the
+     * one chip that can be a no-op: on an untreated pad it is already the
+     * truth, and tapping the state you are in should do nothing rather than
+     * toast about it. On a treated pad it is the un-treat, so it is live.
+     *
+     * The busy state is the screen's own business and is not read here.
+     */
+    fun tappable(segment: String, isNoneState: Boolean): Boolean = segment != NONE || !isNoneState
+
+    /**
+     * [UnTreat] for [pad], given the set of `originalName`s currently in the
+     * kit's bin (`KitBuilderModel.binContents()`).
+     *
+     * Both recipe readers are consulted: SMEAR rides its own shape and [read]
+     * cannot see it (see the object KDoc), but a smeared pad is every bit as
+     * un-treatable as an aged one.
+     */
+    fun unTreatState(pad: KitPad, binned: Set<String>): UnTreat {
+        if (read(pad.recipe) == null && readSmear(pad.recipe) == null) return UnTreat.NOTHING
+        if (pad.sampleFile !in binned) return UnTreat.NOT_BINNED
+        val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
+        return if (files.all { it in binned }) UnTreat.READY else UnTreat.GHOSTS_POSTDATE
     }
 }

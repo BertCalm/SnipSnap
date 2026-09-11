@@ -200,7 +200,13 @@ fun TapeScreen(
     lastCommitSource: File?,
     onToast: (String) -> Unit,
     onCommit: (File, IntRange) -> Unit,
-    onInstantKit: (File, IntRange) -> Unit,
+    /**
+     * INSTANT KIT: the range to chop, and whether the user actually drew it.
+     * The flag can't be re-derived downstream — a selection dragged across
+     * the whole tape is a different event from no selection at all, and only
+     * this screen knows which happened (September UAT, finding 19).
+     */
+    onInstantKit: (File, IntRange, Boolean) -> Unit,
     /** READ AS GROOVE (wave ZZ): the selection, or the whole deck, read as a rhythm onto the open kit. */
     onReadGroove: (File, IntRange) -> Unit,
     /** STEAL THE FEEL (wave ZZ): the same reading kept as timing and accent, poured over the kit's pattern. */
@@ -327,6 +333,9 @@ private fun EmptyDeck(scheme: Scheme) {
     }
 }
 
+/** [loadLongestTape]'s answer: the tape it settled on (if any), and whether [readMono] hit [TAPE_LOAD_MAX_SEC]'s OOM safety net along the way. */
+private class TapeLoadResult(val tape: LoadedTape?, val oomEncountered: Boolean)
+
 /**
  * TAPE's load-source priority, retroactive-snip Task 4: the newest snip
  * anywhere on the phone if one exists — a fresh capture always wins, since
@@ -337,9 +346,6 @@ private fun EmptyDeck(scheme: Scheme) {
  * exactly like any other WAV: [WavReader] + [Cleanup.toMono] is the same
  * path for all three sources.
  */
-/** [loadLongestTape]'s answer: the tape it settled on (if any), and whether [readMono] hit [TAPE_LOAD_MAX_SEC]'s OOM safety net along the way. */
-private class TapeLoadResult(val tape: LoadedTape?, val oomEncountered: Boolean)
-
 private fun loadLongestTape(entry: KitShelf.Entry?, filesDir: File, lastCommitSource: File?): TapeLoadResult {
     var oomEncountered = false
     for (file in listOfNotNull(SnipStore.newest(filesDir), lastCommitSource)) {
@@ -453,7 +459,7 @@ private fun TapeDeckContent(
     tapeData: LoadedTape,
     onToast: (String) -> Unit,
     onCommit: (File, IntRange) -> Unit,
-    onInstantKit: (File, IntRange) -> Unit,
+    onInstantKit: (File, IntRange, Boolean) -> Unit,
     onReadGroove: (File, IntRange) -> Unit,
     onStealFeel: (File, IntRange) -> Unit,
     onIdleReload: () -> Unit,
@@ -694,12 +700,17 @@ private fun TapeDeckContent(
                 // otherwise keep rolling silently under the busy overlay.
                 if (model.playing) model.togglePlay()
                 stopVoice()
-                val range = if (model.hasSelection) model.commitSelection() else null
+                // Read before commitSelection(), which clears it — and passed
+                // on rather than left to be inferred from `range`, since an
+                // IN/OUT the user dragged across the whole tape arrives in
+                // App.kt looking exactly like no selection at all.
+                val hadSelection = model.hasSelection
+                val range = if (hadSelection) model.commitSelection() else null
                 // togglePlay and commitSelection both change what the
                 // PLAY/STOP label and the IN/OUT engaged state should read —
                 // same reasoning as onPlayStop/the COMMIT button above.
                 touch()
-                onInstantKit(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
+                onInstantKit(tapeData.sourceFile, range ?: (0 until tapeData.samples.size), hadSelection)
             }
         }
         // Wave ZZ, the phone reads: three more readings of the same tape.

@@ -175,4 +175,54 @@ class ArrangerTest {
             "the variation falls back to a timing variant: ${plan.sections[2].clip.name}",
         )
     }
+
+    @Test
+    fun `the grammar plans and the chart draws any groove shape, or refuses by name`() {
+        // SONG ▸ and CHART ▸ on the arrangement meet every groove the
+        // store can hold: one hit, two hits, everything off the grid, the
+        // longest clip with the fewest notes, a hit at the very last pulse
+        // (half time drops it), a flat dense bar (median == loudest), a
+        // groove entirely at velocity zero, and hits on pads the kit does
+        // not have. A plan with at least a bar per section, charted with
+        // one grid per section, or an IllegalArgumentException in words.
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        val bar = Mpc3Clip.PULSES_PER_BAR
+        val shapes: List<Pair<String, Mpc3Clip>> = listOf(
+            "one hit" to Mpc3Clip("One", 1, listOf(Mpc3Note(36, 0, 0.9f))),
+            "two hits" to Mpc3Clip("Two", 1, listOf(Mpc3Note(36, 0, 0.9f), Mpc3Note(37, 8 * s16, 0.3f))),
+            "all off the grid" to Mpc3Clip("Loose", 2, (0 until 16).map { Mpc3Note(36 + it % 3, it * 2L * s16 + 37, 0.5f + (it % 4) * 0.1f) }),
+            "64 bars, one hit a bar" to Mpc3Clip("Long", 64, (0 until 64).map { Mpc3Note(36, it * bar, 0.9f) }),
+            "a hit at the last pulse" to Mpc3Clip("Edge", 4, listOf(Mpc3Note(36, 0, 0.9f), Mpc3Note(37, 4 * bar - 1, 0.9f))),
+            "flat and dense" to Mpc3Clip("Flat", 1, (0 until 16).flatMap { st -> listOf(36, 37, 38).map { Mpc3Note(it, st * s16, 0.7f) } }),
+            "all at velocity zero" to Mpc3Clip("Silent", 1, (0 until 4).map { Mpc3Note(36, it * 4L * s16, 0f) }),
+            "pads the kit has not got" to Mpc3Clip("Elsewhere", 1, listOf(Mpc3Note(100, 0, 0.9f), Mpc3Note(127, 8 * s16, 0.9f), Mpc3Note(0, 12 * s16, 0.9f))),
+        )
+        for ((name, clip) in shapes) {
+            for (withSnare in listOf(true, false)) {
+                val m = model("Shape-${name.hashCode()}-$withSnare", withSnare = withSnare, clip = clip)
+                val plan = try {
+                    Arranger.arrange(m.kit, m.kitDir, seed = 3)
+                } catch (e: IllegalArgumentException) {
+                    assertTrue(!e.message.isNullOrBlank(), "'$name' (snare=$withSnare) refused without saying why")
+                    continue
+                } catch (t: Throwable) {
+                    throw AssertionError("'$name' (snare=$withSnare): arrange threw ${t::class.simpleName}: ${t.message}", t)
+                }
+                assertTrue(plan.sections.isNotEmpty() && plan.totalBars >= 1, "'$name': a plan with bars")
+                assertTrue(plan.sections.all { it.bars >= 1 && it.reason.isNotBlank() }, "'$name': every section has bars and a reason")
+                assertEquals(plan, Arranger.arrange(m.kit, m.kitDir, seed = 3), "'$name': deterministic per seed")
+
+                val chart = try {
+                    Chart.render(plan, m.kit, 92f, bpmIsDefault = true)
+                } catch (t: Throwable) {
+                    throw AssertionError("'$name' (snare=$withSnare): chart threw ${t::class.simpleName}: ${t.message}", t)
+                }
+                assertEquals(chart, Chart.render(plan, m.kit, 92f, bpmIsDefault = true), "'$name': same plan, same chart")
+                for (section in plan.sections) {
+                    assertTrue(chart.lineSequence().any { it.startsWith(section.name.uppercase() + " · ") }, "'$name': section '${section.name}' is charted\n$chart")
+                }
+                assertTrue(chart.lineSequence().first().startsWith(plan.name.uppercase()), "'$name': the song is named")
+            }
+        }
+    }
 }

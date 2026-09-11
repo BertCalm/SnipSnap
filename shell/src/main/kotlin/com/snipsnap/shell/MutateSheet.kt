@@ -66,17 +66,17 @@ object MutateSheet {
     /** What the value column reads: "40 ms", "200 Hz" / "1.2k", "50%", "16 bands". */
     fun label(knob: Knob, value: Float): String = when (knob.label) {
         "AT" -> "${value.roundToInt()} ms"
-        "HZ" -> if (value >= 1000f) "%.1fk".format(value / 1000f) else "${value.roundToInt()} Hz"
+        "HZ" -> if (value >= 1000f) "%.1fk".format(java.util.Locale.ROOT, value / 1000f) else "${value.roundToInt()} Hz"
         "BANDS" -> "${value.roundToInt()} bands"
         else -> "${(value * 100).roundToInt()}%"
     }
 
-    /** "A03", "B01" — the pad's tag across banks, the way the CLI and the lineage name it. */
-    fun padTag(slot: Int): String {
-        require(slot >= 1) { "slots are 1-based, got $slot" }
-        val bank = 'A' + (slot - 1) / 16
-        return "%c%02d".format(bank, (slot - 1) % 16 + 1)
-    }
+    /**
+     * "A03", "B01" — the pad's tag across banks, the way the CLI and the
+     * lineage name it. Kept as the name a dozen callers already use; the
+     * rule itself lives in [PadBanks] now, where the screens share it.
+     */
+    fun padTag(slot: Int): String = PadBanks.tag(slot)
 
     /** Every other assigned pad on [kit], slot order — the mini grid's candidates. Never the pad itself. */
     fun partners(kit: Kit, slot: Int): List<KitPad> = kit.pads.filter { it.slot != slot }.sortedBy { it.slot }

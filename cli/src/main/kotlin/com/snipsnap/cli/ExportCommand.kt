@@ -62,7 +62,7 @@ object ExportCommand {
 
         val preview = if (opts.has("--preview")) {
             com.snipsnap.shell.Wear.render(kit, com.snipsnap.kit.KitPreview.render(kit, kitDir), wearW).also {
-                out.println("preview: rendered the kit playing its own beat (%.1fs)".format(it.durationSeconds))
+                out.println("preview: rendered the kit playing its own beat (%.1fs)".format(java.util.Locale.ROOT, it.durationSeconds))
             }
         } else {
             null
@@ -76,7 +76,7 @@ object ExportCommand {
             if (wornStage != null) {
                 out.println(
                     "wear: samples rendered at %.1f%% worn - the kit's own files stay pristine (--no-wear skips)"
-                        .format(wearW * 100),
+                        .format(java.util.Locale.ROOT, wearW * 100),
                 )
             }
             Exports.write(

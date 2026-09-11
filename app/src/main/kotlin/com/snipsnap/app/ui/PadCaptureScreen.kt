@@ -52,6 +52,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.SchemeId
 import kotlin.math.sqrt
 import kotlinx.coroutines.CancellationException
@@ -85,7 +86,10 @@ private const val MIN_HOLD_MS = 150L
  */
 private const val HOLD_A11Y_MS = 500L
 
-private fun padTag(slot: Int): String = "A%02d".format(slot)
+// One rule, one home ([PadBanks]): this said "A%02d".format(slot) until
+// the September UAT's finding 11 made bank B reachable, at which point a
+// pad on slot 17 would have been titled A17 on this screen.
+private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
 /** Which gesture's commit is in flight, if any — drives the busy label on each control. */
 private enum class Gesture { GRAB, HOLD }
@@ -486,5 +490,5 @@ private fun CaptureLevelBar(level: Float, scheme: com.snipsnap.shell.Scheme, mod
 private fun formatCaptureElapsed(totalSeconds: Int): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return "%02d:%02d".format(minutes, seconds)
+    return "%02d:%02d".format(java.util.Locale.ROOT, minutes, seconds)
 }

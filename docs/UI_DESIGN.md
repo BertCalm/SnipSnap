@@ -90,6 +90,18 @@ every control is built from the token set, a theme is one small table, and a
 
 Named after tape formulations:
 
+> **Superseded 2026-09-10 — the roster changed, not just the count.** The
+> table below names Chrome, Ferric, Metal, Snack Bar, Oilslick and Clear. The
+> app ships **eight** schemes and only two of those names survived: `SchemeId`
+> is METAL, OILSLICK, PETROL, INFRARED, ACID, SODIUM, ICE, VAPOR. The current
+> roster's source of truth is `design/Schemes.dc.html` (the artboard the token
+> tables were transcribed from, which matches the code exactly) and
+> `shell/src/main/kotlin/com/snipsnap/shell/Schemes.kt` (the tables, with
+> `SchemesTest` and `ContrastTest` behind them). The table is kept as the
+> record of what was designed first. Everything else in this section — the
+> token-swap rule, the two-surface rule, the fixed-per-scheme list below —
+> still holds and still describes how a scheme works.
+
 | Scheme | Chrome | Desktop | LCD ink | Character |
 |---|---|---|---|---|
 | **Chrome** (Type II, default) | `#c3c7cb` gray | teal `#0a7a78` | green `#49e83e` | the classic |
@@ -136,11 +148,11 @@ Full token sets live in the theme classes in
 - **record red** `#e83a2e` and the cassette shell/label anatomy
 - LCD contrast: ink hue may change per scheme, but sound surfaces stay dark
 
-Mockups: the **Schemes** artboard shows all six side by side; **Tape
+Mockups: the **Schemes** artboard shows all eight side by side; **Tape
 Properties** is the picker — the Display-Properties-style dialog with the CRT
 preview monitor, scheme list with swatch chips, Save As…/Apply. The **Main**
 artboard carries a live `Scheme` tweak on the canvas, so the real screen can be
-flipped between all six.
+flipped between all eight.
 
 In the app this is a Compose theme object holding the token table; scheme
 choice persists per user, and the system theme maps onto schemes for free:

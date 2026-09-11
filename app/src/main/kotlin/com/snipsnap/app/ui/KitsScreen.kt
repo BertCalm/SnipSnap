@@ -39,8 +39,11 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.MicSessionService
+import com.snipsnap.app.PREFS
+import com.snipsnap.kit.KitStore
 import com.snipsnap.audio.SilenceWatch
 import com.snipsnap.app.theme.BinRedGlow
+import androidx.compose.ui.platform.LocalContext
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -48,7 +51,9 @@ import com.snipsnap.app.theme.oilslickSweep
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
+import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.DubStamp
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.SchemeId
@@ -56,7 +61,10 @@ import com.snipsnap.shell.StarterKits
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
+import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import com.snipsnap.shell.Rooms
 import com.snipsnap.app.theme.pressedBevel
 import androidx.compose.ui.graphics.Brush
@@ -141,6 +149,8 @@ fun KitsScreen(
     onDeletedKits: () -> Unit = {},
     /** X-RAY: opens the system picker, then reads whatever comes back — never lands it, never gated on the shelf holding anything. */
     onXRay: () -> Unit = {},
+    /** DOUBLES: pads across the shelf's kits inside a "same sound" distance, the number on every row — read-only, X-RAY's own posture turned on the library. */
+    onDoubles: () -> Unit = {},
     /**
      * SHELF SORT (name-and-find followups): [KitShelf.ShelfSort] the shelf
      * is currently ordered by — `App`'s own [KitShelf.ShelfSort.RECENT]
@@ -154,6 +164,36 @@ fun KitsScreen(
 ) {
     val scheme = LocalScheme.current
     var menuOpen by remember { mutableStateOf(false) }
+
+    // The dub chips (September UAT, finding 15). Read once per shelf render
+    // on IO, not per row in a composable body: a row's chip is a file read,
+    // and twenty of them on every recomposition would be twenty disk hits on
+    // the main thread. Keyed on the kit list, so a rename, a delete, a
+    // restore or a fresh dub re-reads; `context` supplies the same
+    // PREF_CARD_TREE the export wizard writes, so ON CARD can only mean the
+    // card actually in the phone.
+    val context = LocalContext.current
+    var dubStatuses by remember { mutableStateOf<Map<String, DubStamp.Status>>(emptyMap()) }
+    // When each kit was last edited - the very thing RECENT already sorts by,
+    // which until now the shelf never showed (September UAT, finding 16). Read
+    // in the same pass: one more lastModified() on a list already being walked.
+    var editedAges by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    LaunchedEffect(kits) {
+        val read = withContext(Dispatchers.IO) {
+            val card = context
+                .getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+                .getString(PREF_CARD_TREE, null)
+            val now = System.currentTimeMillis()
+            kits.associate {
+                it.dir.path to Pair<DubStamp.Status, String?>(
+                    DubStamp.status(DubStamp.read(it.dir), card),
+                    Ages.agoOrNull(File(it.dir, KitStore.FILE_NAME).lastModified(), now),
+                )
+            }
+        }
+        dubStatuses = read.mapValues { it.value.first }
+        editedAges = read.mapNotNull { (k, v) -> v.second?.let { k to it } }.toMap()
+    }
     // DELETE/RENAME (Task 4): screen-level, not per-row — same shape as
     // SnipsScreen's own `confirmDelete`, so only one row's dialog is ever
     // up regardless of how many rows are armed at once.
@@ -289,7 +329,17 @@ fun KitsScreen(
                             onOpen = onOpen,
                             onRequestDelete = { confirmDeleteKit = it },
                             onRequestRename = { renameTarget = it },
+                            dubStatus = dubStatuses[entry.dir.path] ?: DubStamp.Status.DRAFT,
+                            editedAge = editedAges[entry.dir.path],
                         )
+                    }
+                    // The same move ROOMS makes under its own list, and KIT
+                    // under its grid: one line, always there, naming the hold.
+                    // A legend cannot be dismissed, so the gesture cannot be
+                    // forgotten - and RENAME is the only place a kit is ever
+                    // named by hand (September UAT, finding 17).
+                    item(key = "kits-note") {
+                        TapeText(Copy.SHELF_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
                     }
                     // INSTRUMENTS: what MAKE INSTRUMENT and MAKE PAD left beside the kits, playable on KEYS.
                     if (instruments.isNotEmpty()) {
@@ -403,6 +453,16 @@ fun KitsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onXRay,
             )
+            // DOUBLES: the same read-only posture as X-RAY, pointed at the
+            // shelf itself. Never gated on the shelf holding anything - an
+            // empty shelf's screen says NO DOUBLES in words, not a dead row.
+            ActionButton(
+                "DOUBLES ▸ SAME SOUND, ANY KIT",
+                scheme,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onDoubles,
+            )
             // DELETED KITS: gated on the bin actually holding something —
             // unlike SNIPS/BACKUP above, this is never shown merely dimmed;
             // a user who has never deleted a kit sees no door to an empty
@@ -505,8 +565,9 @@ private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.Ins
 private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> Unit, onShare: (Rooms.Room) -> Unit) {
     val scheme = LocalScheme.current
     var armed by remember(room.file) { mutableStateOf(false) }
-    val ageDays = ((System.currentTimeMillis() - room.measuredAt) / (24L * 60 * 60 * 1000)).toInt()
-    val age = if (ageDays <= 0) "TODAY" else "$ageDays D AGO"
+    // Ages.ago, not a second inline copy of the same arithmetic: two lists on
+    // one screen must not say the same age two different ways.
+    val age = Ages.ago(room.measuredAt, System.currentTimeMillis())
     // Built from the parts the sidecar actually held: a room whose sidecar
     // was lost reads UNMEASURED and its age, never "0 MS · 0% SURE ·  ·".
     val meta = buildList {
@@ -690,6 +751,10 @@ private fun KitRow(
     onOpen: (KitShelf.Entry) -> Unit,
     onRequestDelete: (KitShelf.Entry) -> Unit,
     onRequestRename: (KitShelf.Entry) -> Unit,
+    /** What this kit's last dub left behind, read against the card in the phone — see [DubStamp]. */
+    dubStatus: DubStamp.Status = DubStamp.Status.DRAFT,
+    /** When this kit was last edited, as [Ages] words — null until the shelf's read lands. */
+    editedAge: String? = null,
 ) {
     val scheme = LocalScheme.current
     val kit = entry.kit
@@ -728,8 +793,12 @@ private fun KitRow(
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             TapeText(kit.name, TapeType.markerBig, scheme.ink.tape)
-            val tempo = kit.tempoBpm?.let { "  ·  %.0f BPM".format(it) } ?: ""
-            TapeText("${kit.pads.size} PADS$tempo", TapeType.pixelSmall, scheme.ink2.tape)
+            val tempo = kit.tempoBpm?.let { "  ·  %.0f BPM".format(java.util.Locale.ROOT, it) } ?: ""
+            // The age last, and only once it is known: a row that flashed a
+            // placeholder before the read landed would be worse than a row
+            // that gains a word.
+            val age = editedAge?.let { "  ·  $it" } ?: ""
+            TapeText("${kit.pads.size} PADS$tempo$age", TapeType.pixelSmall, scheme.ink2.tape)
         }
         if (revealActions) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -756,9 +825,11 @@ private fun KitRow(
                 }
             }
         } else {
-            // Every kit is a DRAFT until the export wizard (M5) records a dub
-            // to the card; ON CARD status arrives with it.
-            TapeText("DRAFT", TapeType.pixelSmall, scheme.ink2.tape)
+            // What the last dub left behind, read against the card this
+            // phone is holding right now (September UAT, finding 15). The
+            // wizard records the stamp; DubStamp.status decides what may
+            // honestly be claimed, and never claims a card that isn't there.
+            TapeText(Copy.dubChip(dubStatus), TapeType.pixelSmall, scheme.ink2.tape)
         }
     }
 }
@@ -1153,7 +1224,7 @@ private fun LevelBar(level: Float, scheme: Scheme, possiblyMuted: Boolean = fals
 private fun formatElapsed(totalSeconds: Int): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return "%02d:%02d".format(minutes, seconds)
+    return "%02d:%02d".format(java.util.Locale.ROOT, minutes, seconds)
 }
 
 // Duplicated, not hoisted — TakesBinScreen.kt's own BIN_RED_BORDER

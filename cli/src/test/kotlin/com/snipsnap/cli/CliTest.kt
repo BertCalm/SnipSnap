@@ -10,6 +10,7 @@ import com.snipsnap.kit.MidiGroove
 import com.snipsnap.mpc3.Acvs
 import com.snipsnap.mpc3.MpcFormat
 import com.snipsnap.mpc3.MpcFormats
+import com.snipsnap.shell.KitBuilderModel
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
@@ -1199,6 +1200,32 @@ class CliTest {
         val (badCode, _, badErr) = cli("treat", kitDir.path, "A02", "sparkled")
         assertTrue(badCode != 0)
         assertContains(badErr, "crushed")
+    }
+
+    @Test
+    fun `recipe replays one pad's last treatment on another, and refuses by name what it can't`() {
+        val wav = writeBreak(File(temp, "rc.wav"))
+        val out = File(temp, "rc-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "RC", "--slices", "8").first)
+        val kitDir = File(out, "RC")
+        assertEquals(0, cli("treat", kitDir.path, "A02", "crushed", "--amount", "0.8").first)
+        val target = File(kitDir, KitStore.load(kitDir).pad(3)!!.sampleFile)
+        val before = target.readBytes()
+
+        val (code, stdout, stderr) = cli("recipe", kitDir.path, "A03", "--from", "${kitDir.path}:A02")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "done again")
+        assertTrue(!before.contentEquals(target.readBytes()), "A03 was re-rendered")
+        val kit = KitStore.load(kitDir)
+        assertEquals(kit.pad(2)!!.recipe, kit.pad(3)!!.recipe, "A03 carries A02's recipe now")
+
+        val (noRecipe, _, noRecipeErr) = cli("recipe", kitDir.path, "A04", "--from", "${kitDir.path}:A05")
+        assertTrue(noRecipe != 0)
+        assertContains(noRecipeErr, "no recipe")
+
+        val (badFrom, _, badFromErr) = cli("recipe", kitDir.path, "A04", "--from", "nowhere")
+        assertTrue(badFrom != 0)
+        assertContains(badFromErr, "<kit-dir>:<pad>")
     }
 
     @Test
@@ -3164,7 +3191,54 @@ class CliTest {
         val (dupCode, _, dupErr) = cli("pad", note.path, "--out", out.path)
         assertTrue(dupCode != 0 && "already exists" in dupErr, "overwrite discipline: $dupErr")
     }
-}
 
-// KeySpec's own tests live in :audio beside the parser (KeySpecTest);
-// the chop tests above cover the CLI's use of it.
+    @Test
+    fun `recipe refuses hostile arguments in words and touches nothing`() {
+        // The verb grown since BBB3 that reads TWO kit folders and writes
+        // one: every wrong way to call it exits 1..2 with a word on stderr,
+        // and the destination kit is byte-for-byte what it was.
+        val dest = File(temp, "RecipeDest")
+        val src = File(temp, "RecipeSrc")
+        KitBuilderModel.create("RecipeDest", dest).apply {
+            assign(1, DrumSynth.kick(), DrumClass.KICK)
+            save()
+        }
+        KitBuilderModel.create("RecipeSrc", src).apply {
+            assign(1, DrumSynth.snare(), DrumClass.SNARE)
+            assign(2, DrumSynth.kick(), DrumClass.KICK)
+            eraPad(1, com.snipsnap.synth.Eras.names.first(), 0.5f)
+            save()
+        }
+        val rnd = kotlin.random.Random(9)
+        val garbage = File(temp, "RecipeGarbage").apply {
+            mkdirs()
+            File(this, "kit.json").writeBytes(ByteArray(300) { rnd.nextInt(256).toByte() })
+        }
+        val before = File(dest, "kit.json").readBytes()
+        val hostile: List<Pair<String, Array<String>>> = listOf(
+            "no arguments" to arrayOf(),
+            "not a kit" to arrayOf(temp.path, "A01", "--from", "${src.path}:A01"),
+            "pad off the grid" to arrayOf(dest.path, "Z99", "--from", "${src.path}:A01"),
+            "pad past the bank" to arrayOf(dest.path, "A17", "--from", "${src.path}:A01"),
+            "no --from" to arrayOf(dest.path, "A01"),
+            "--from without a pad" to arrayOf(dest.path, "A01", "--from", src.path),
+            "--from with an empty pad" to arrayOf(dest.path, "A01", "--from", "${src.path}:"),
+            "--from with an empty kit" to arrayOf(dest.path, "A01", "--from", ":A01"),
+            "--from a folder that isn't there" to arrayOf(dest.path, "A01", "--from", "${File(temp, "nowhere").path}:A01"),
+            "--from a pad with no recipe" to arrayOf(dest.path, "A01", "--from", "${src.path}:A02"),
+            "--from an empty slot" to arrayOf(dest.path, "A01", "--from", "${src.path}:A09"),
+            "onto an empty slot" to arrayOf(dest.path, "A09", "--from", "${src.path}:A01"),
+            "--from a kit that is garbage" to arrayOf(dest.path, "A01", "--from", "${garbage.path}:A01"),
+            "onto a kit that is garbage" to arrayOf(garbage.path, "A01", "--from", "${src.path}:A01"),
+            "--from a path that climbs" to arrayOf(dest.path, "A01", "--from", "../../../../etc:A01"),
+        )
+        for ((name, args) in hostile) {
+            val (code, _, err) = cli("recipe", *args)
+            assertTrue(code in 1..2, "recipe ($name): exit $code")
+            assertTrue(err.startsWith("snipsnap:"), "recipe ($name): refused without a word: '$err'")
+            assertTrue(before.contentEquals(File(dest, "kit.json").readBytes()), "recipe ($name): the destination kit changed")
+        }
+        // The sane call still lands, so the sweep above is not vacuous.
+        assertEquals(0, cli("recipe", dest.path, "A01", "--from", "${src.path}:A01").first)
+    }
+}

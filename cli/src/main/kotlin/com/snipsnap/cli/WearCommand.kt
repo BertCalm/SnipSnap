@@ -67,13 +67,13 @@ object WearCommand {
             out.println("  switch it on: snipsnap wear ${kitDir.path} --on")
         } else {
             out.println(
-                "${model.name}: %.0f mile(s) on the tape - wear %.1f%%, aging %s (K = %.0f)".format(
+                "${model.name}: %.0f mile(s) on the tape - wear %.1f%%, aging %s (K = %.0f)".format(java.util.Locale.ROOT, 
                     wear.mileage, wear.w * 100, if (wear.enabled) "on" else "off", wear.k,
                 ),
             )
             out.println(
                 ("  caps at full wear: flutter <=+/-%.0f cents, hiss <=%.0f dBFS, " +
-                    "shelf >=%.0f kHz, dropouts rare and never on a hit").format(
+                    "shelf >=%.0f kHz, dropouts rare and never on a hit").format(java.util.Locale.ROOT, 
                     TapeWear.MAX_FLUTTER_CENTS, TapeWear.MAX_HISS_DB, TapeWear.MIN_SHELF_HZ / 1000,
                 ),
             )

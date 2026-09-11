@@ -50,14 +50,14 @@ object SideACommand {
         // The tracklist, timestamped to the sample-accurate track starts.
         fun stamp(frame: Int): String {
             val secs = frame / BeatTape.RATE
-            return "%d:%02d".format(secs / 60, secs % 60)
+            return "%d:%02d".format(java.util.Locale.ROOT, secs / 60, secs % 60)
         }
         val tracklist = buildString {
             appendLine("SIDE A - $title")
             appendLine()
             tape.tracks.forEachIndexed { i, t ->
                 val transition = t.transition?.let { ", $it" } ?: ""
-                appendLine("%2d. %-24s %s  (%d bars at %.0f bpm%s)".format(i + 1, t.name, stamp(t.startFrame), t.bars, t.bpm, transition))
+                appendLine("%2d. %-24s %s  (%d bars at %.0f bpm%s)".format(java.util.Locale.ROOT, i + 1, t.name, stamp(t.startFrame), t.bars, t.bpm, transition))
             }
         }
         File(tapeDir, "tracklist.txt").writeText(tracklist)
@@ -74,9 +74,9 @@ object SideACommand {
         val session = SessionBuilder.build(title, kitDirs, tapeDir, overwrite = true)
 
         out.println("SIDE A: ${tapeDir.path}")
-        out.println("  tape:      ${wav.name} (%.1fs, ${tape.tracks.size} tracks)".format(tape.audio.durationSeconds))
+        out.println("  tape:      ${wav.name} (%.1fs, ${tape.tracks.size} tracks)".format(java.util.Locale.ROOT, tape.audio.durationSeconds))
         tape.tracks.forEachIndexed { i, t ->
-            out.println("    %d. %s at %s%s".format(i + 1, t.name, stamp(t.startFrame), t.transition?.let { " -> $it" } ?: ""))
+            out.println("    %d. %s at %s%s".format(java.util.Locale.ROOT, i + 1, t.name, stamp(t.startFrame), t.transition?.let { " -> $it" } ?: ""))
         }
         out.println("  tracklist: tracklist.txt")
         out.println("  cover:     cover.png")

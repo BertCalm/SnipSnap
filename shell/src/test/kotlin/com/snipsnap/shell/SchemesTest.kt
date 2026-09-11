@@ -167,6 +167,40 @@ class SchemesTest {
         assertTrue(Layout.TRACK_HEADER_H >= 24, "the header is a tap target for mute")
     }
 
+    /**
+     * September UAT, finding 9. The nav strip was 26dp - the handoff's
+     * figure - which made the eleven tabs a lost user reaches for first
+     * the smallest targets in an app that holds everything else to
+     * MIN_HIT_TARGET.
+     *
+     * This is the guard the constant's own KDoc promises. It fails if the
+     * strip is set back below the floor, and it fails again if the floor
+     * is ever raised without the strip following it up.
+     */
+    @Test
+    fun `the menu row is at least a hit target tall`() {
+        assertTrue(
+            Layout.MENU_ROW_H >= Layout.MIN_HIT_TARGET,
+            "the app's primary navigation cannot hold its smallest targets: " +
+                "MENU_ROW_H=${Layout.MENU_ROW_H} against MIN_HIT_TARGET=${Layout.MIN_HIT_TARGET}",
+        )
+    }
+
+    /**
+     * The other half of finding 9, stated where it can be read: the strip
+     * grows into the body, so the body has to be the thing that gives.
+     * Nothing here can assert `MenuRow`'s Compose tree - this is the
+     * arithmetic that says the frame has the room.
+     */
+    @Test
+    fun `the chrome still leaves the body most of the frame`() {
+        val chrome = Layout.TITLEBAR_H + Layout.MENU_ROW_H + Layout.STATUS_BAR_H
+        assertTrue(
+            chrome < Layout.FRAME_H / 4,
+            "titlebar + menu + status = ${chrome}dp of a ${Layout.FRAME_H}dp frame",
+        )
+    }
+
     @Test
     fun `the landscape frame is the portrait frame turned over`() {
         assertTrue(

@@ -65,12 +65,12 @@ object SplitCommand {
                 com.snipsnap.audio.Snip(FloatArray(s.samples.size) { s.samples[it] * g }, s.channels, s.sampleRate)
             dOut = scaled(split.percussive)
             mOut = scaled(split.harmonic)
-            out.println("halves scaled by %.3f to fit the file format - they still sum to the song, that much quieter".format(g))
+            out.println("halves scaled by %.3f to fit the file format - they still sum to the song, that much quieter".format(java.util.Locale.ROOT, g))
         }
         WavWriter.write(drums, dOut)
         WavWriter.write(music, mOut)
         out.println(
-            "${file.name}: drums %.0f%% / music %.0f%% - $verdict".format(dShare * 100, (1 - dShare) * 100),
+            "${file.name}: drums %.0f%% / music %.0f%% - $verdict".format(java.util.Locale.ROOT, dShare * 100, (1 - dShare) * 100),
         )
         out.println("-> ${drums.path}")
         out.println("-> ${music.path}")

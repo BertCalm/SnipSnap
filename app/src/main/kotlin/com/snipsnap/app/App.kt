@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeTheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.rememberDeskBrush
 import com.snipsnap.app.theme.tape
@@ -45,6 +46,7 @@ import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.DeletedKitsScreen
+import com.snipsnap.app.ui.DoublesScreen
 import com.snipsnap.app.ui.ExportScreen
 import com.snipsnap.app.ui.ExportSession
 import com.snipsnap.app.ui.GrainFieldScreen
@@ -55,9 +57,12 @@ import com.snipsnap.app.ui.KeysScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.MenuRow
 import com.snipsnap.app.ui.MessageBox
+import com.snipsnap.app.ui.OrbitScreen
 import com.snipsnap.app.ui.PadCaptureScreen
 import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.PlayScreen
+import com.snipsnap.app.ui.PREF_CARD_TREE
+import com.snipsnap.app.ui.PREF_EXPORT_FORMAT
 import com.snipsnap.app.ui.PrimaryAction
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.SnipsScreen
@@ -69,6 +74,7 @@ import com.snipsnap.app.ui.SynthScreen
 import com.snipsnap.app.ui.TakesBinScreen
 import com.snipsnap.app.ui.TAPE_LOAD_MAX_SEC
 import com.snipsnap.app.ui.TapeScreen
+import com.snipsnap.app.ui.StackTakesScreen
 import com.snipsnap.app.ui.TapeSpliceScreen
 import com.snipsnap.app.ui.TapeText
 import com.snipsnap.app.ui.TitleBar
@@ -78,6 +84,7 @@ import com.snipsnap.app.ui.tapeClick
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.WavReader
+import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.InstantKit
@@ -87,6 +94,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Personality
 import com.snipsnap.shell.ReadGroove
+import com.snipsnap.shell.RecipeReplay
 import com.snipsnap.shell.RoomPackager
 import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.SchemeId
@@ -115,14 +123,17 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
 
 /**
  * How many times the "hold a pad" hint has been shown, or [PAD_SHEET_FOUND]
- * once the user has actually opened PAD SHEET.
+ * once the user has actually opened PAD SHEET. The count is kept as a
+ * record of how often the app has said it; nothing caps it any more.
  *
  * PAD SHEET — every treatment, shape, tune and mutate control, plus GRAIN
  * FIELD below it — has no tap path at all: a 480ms long-press on a filled
- * pad is the only way in, and nothing on screen says so. The UX audit put
- * 40-50% of the app's real depth behind that one unhinted gesture, and
- * both the returning-user and day-3 walkthroughs independently predicted
- * users plateau without ever finding it.
+ * pad is the only way in. The UX audit put 40-50% of the app's real depth
+ * behind that one gesture, and both the returning-user and day-3
+ * walkthroughs independently predicted users plateau without ever finding
+ * it. KIT now carries a permanent legend naming the hold (September UAT,
+ * finding 4), so the gesture is no longer unhinted and this toast is a
+ * nudge rather than the only teacher it used to be.
  *
  * The empty-pad branch already teaches its own long-press by toasting on
  * tap ([KitScreen]'s `onEmptyTapHint`). The filled branch can't copy that
@@ -130,9 +141,6 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  * pad — so the hint rides kit-open instead, and only while undiscovered.
  */
 private const val PREF_PAD_SHEET_HINTS = "pad_sheet_hints"
-
-/** Show the hold-a-pad hint at most this many kit-opens before letting it go. */
-private const val PAD_SHEET_HINT_LIMIT = 3
 
 /** Sentinel for [PREF_PAD_SHEET_HINTS]: PAD SHEET has been opened, so never hint again. */
 private const val PAD_SHEET_FOUND = -1
@@ -166,6 +174,20 @@ data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay
 fun App(shelf: KitShelf) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
+
+    // SETUP's WHERE YOUR FILES LIVE row (September UAT, finding 23).
+    // getExternalFilesDir does real filesystem work - it creates the
+    // directory if it is absent, and returns null when external storage is
+    // not mounted - so it is resolved on IO exactly once, the same rule
+    // ExportScreen's own write path states in so many words. Reading it in
+    // the composable branch that draws the row would touch the disk on the
+    // main thread on every recomposition of that screen.
+    var exportsWhere by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        exportsWhere = withContext(Dispatchers.IO) {
+            (context.getExternalFilesDir("exports") ?: context.filesDir).absolutePath
+        }
+    }
 
     var schemeId by remember {
         mutableStateOf(
@@ -260,10 +282,14 @@ fun App(shelf: KitShelf) {
     // KIT-scoped overlay state too. Opening it closes PAD SHEET the same
     // way GRAIN FIELD's own onGrainField does below.
     var spliceSlot by remember { mutableStateOf<Int?>(null) }
+    // STACK THE TAKES: same shape as SPLICE, over the same pad history.
+    var stackSlot by remember { mutableStateOf<Int?>(null) }
     // ARRANGE: same shape again, but GROOVE-scoped rather than KIT-scoped —
     // reachable only from GROOVE's own "SONG ▸" button, not one of MenuRow's
     // fixed ten, so a boolean here rather than its own AppScreen entry.
     var arrangeOpen by remember { mutableStateOf(false) }
+    /** ORBIT: GROOVE's other overlay, the circular sequencer — same lifecycle as [arrangeOpen]. */
+    var orbitOpen by remember { mutableStateOf(false) }
     // SNIPS (Task 3): a shelf-level overlay, not KIT-scoped like PAD SHEET/
     // TAKES+BIN/PAD CAPTURE/GRAIN FIELD above — reachable from KitsScreen at
     // AppScreen.KITS (the shelf), one level up from those, so it's its own
@@ -275,6 +301,10 @@ fun App(shelf: KitShelf) {
     // landed anywhere), so it carries its own reading rather than a bare
     // boolean.
     var xray by remember { mutableStateOf<XRayView?>(null) }
+    // DOUBLES: shelf-level too, same shape as X-RAY — reachable from
+    // KitsScreen's own DOUBLES ▸ row, a bare boolean since the screen
+    // measures the shelf itself on mount.
+    var doublesOpen by remember { mutableStateOf(false) }
     // DELETED KITS (Task 2 of the bin-restore plan): same shape as
     // `snipsOpen` above — a shelf-level overlay, not KIT-scoped, reachable
     // from `KitsScreen`'s own `DELETED KITS ▸` row at `AppScreen.KITS`.
@@ -299,6 +329,12 @@ fun App(shelf: KitShelf) {
     // by the MenuRow tab-switch reset below if the user gives up on the
     // pick without ever tapping a second kit.
     var pendingBreedWith by remember { mutableStateOf<KitShelf.Entry?>(null) }
+    // DO IT AGAIN: what COPY LAST TREATMENT last lifted off a pad. A
+    // clipboard, not a hand-off — deliberately NOT cleared by the tab-
+    // switch reset below: pasting onto a pad in ANOTHER kit means going
+    // through the shelf, and a clipboard that empties on the way there
+    // would make the cross-kit case impossible. Replaced by the next COPY.
+    var recipeClip by remember { mutableStateOf<RecipeReplay.Clip?>(null) }
     // SNIPS → TAPE: the file a SNIPS row's → TAPE asked to open, offered to
     // TapeScreen's own `lastCommitSource` fallback slot rather than folded
     // into `lastCommit` — CHOP reads `lastCommit` as the *real* last COMMIT's
@@ -633,6 +669,7 @@ fun App(shelf: KitShelf) {
                         padSheetSlot = null
                         takesBinOpen = false
                         arrangeOpen = false
+                        orbitOpen = false
                         screen = AppScreen.KIT
                     }
                     return@LaunchedEffect
@@ -653,6 +690,7 @@ fun App(shelf: KitShelf) {
             padSheetSlot = null
             takesBinOpen = false
             arrangeOpen = false
+            orbitOpen = false
             screen = AppScreen.TAPE
         } catch (e: CancellationException) {
             throw e
@@ -691,7 +729,17 @@ fun App(shelf: KitShelf) {
             }
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
             busy = null
-            toast = Copy.FRESH_TAPE
+            // A snip may be waiting for a home: the empty shelf's own copy
+            // sends the user here to make a kit for it (EMPTY_SHELF_FOR_ASSIGN),
+            // and `fresh` deliberately does not clear the hand-off. Saying
+            // only FRESH_TAPE there dropped the thread on the one route that
+            // copy points at, while every other way into a kit with a snip
+            // armed says what to do next (September UAT, finding 12).
+            toast = if (pendingSnipAssign != null) {
+                Copy.snipLanding((1..16).any { entry.kit.pad(it) == null })
+            } else {
+                Copy.FRESH_TAPE
+            }
             open = entry
             screen = AppScreen.KIT
         }
@@ -1007,7 +1055,7 @@ fun App(shelf: KitShelf) {
                 // onto whichever kit is open now.
                 if (open?.dir == target.dir) open = open?.copy(kit = updated)
                 kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                toast = "SNIP PLACED ON PAD A%02d".format(slot)
+                toast = "SNIP PLACED ON PAD A%02d".format(java.util.Locale.ROOT, slot)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -1017,12 +1065,6 @@ fun App(shelf: KitShelf) {
         }
     }
 
-    /**
-     * INSTANT KIT (F2.2): the one tap on TAPE — the selection (or the whole
-     * deck) chopped with the defaults and landed on the grid without the
-     * review, the same DUBBING… shape as a fresh tape. CHOP can still open
-     * the result later to argue with the chips.
-     */
     /**
      * READ AS GROOVE (wave ZZ): the tape read as a rhythm instead of a
      * sound. The Ear hears the selection (or the whole deck), the open
@@ -1116,7 +1158,18 @@ fun App(shelf: KitShelf) {
         }
     }
 
-    fun instantKit(file: File, range: IntRange) {
+    /**
+     * INSTANT KIT (F2.2): the one tap on TAPE — the selection (or the whole
+     * deck) chopped with the defaults and landed on the grid without the
+     * review, the same DUBBING… shape as a fresh tape. CHOP can still open
+     * the result later to argue with the chips.
+     *
+     * [hadSelection] is TAPE's answer, not this function's guess (September
+     * UAT, finding 19): the toast has to say which of the two it chopped,
+     * and [range] alone cannot tell them apart — an IN/OUT the user dragged
+     * across the whole tape arrives here identical to no selection at all.
+     */
+    fun instantKit(file: File, range: IntRange, hadSelection: Boolean) {
         if (busy != null) return
         busy = "CHOPPING…"
         scope.launch {
@@ -1126,7 +1179,7 @@ fun App(shelf: KitShelf) {
             try {
                 val (entry, result) = withContext(Dispatchers.IO) { shelf.instantKit(file, range) }
                 kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                toast = Copy.instantKit(result.sliceCount, result.chokeSet)
+                toast = Copy.instantKit(result.sliceCount, result.chokeSet, wholeTape = !hadSelection)
                 open = entry
                 screen = AppScreen.KIT
             } catch (e: CancellationException) {
@@ -1175,11 +1228,6 @@ fun App(shelf: KitShelf) {
         }
     }
 
-    /**
-     * BACKUP (X3.3): every kit on the shelf as one file, handed to the
-     * chooser - Drive, a cable, a messenger to yourself. The same file
-     * shared back in lands every kit again through the shelf's door.
-     */
     /** FORGET → BIN on a held room: into the bin for 30 days, the toast says so. */
     fun forgetRoom(room: Rooms.Room) {
         // Under the app's one busy lock, like every other file move: a second
@@ -1314,7 +1362,9 @@ fun App(shelf: KitShelf) {
                             padCaptureSlot = null
                             grainFieldSlot = null
                             spliceSlot = null
+                            stackSlot = null
                             arrangeOpen = false
+                            orbitOpen = false
                         }
                     }
                 } else {
@@ -1367,6 +1417,11 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * BACKUP (X3.3): every kit on the shelf as one file, handed to the
+     * chooser - Drive, a cable, a messenger to yourself. The same file
+     * shared back in lands every kit again through the shelf's door.
+     */
     fun backupShelf() {
         if (busy != null) return
         if (kits.isEmpty()) {
@@ -1436,7 +1491,9 @@ fun App(shelf: KitShelf) {
         padCaptureSlot = null
         grainFieldSlot = null
         spliceSlot = null
+        stackSlot = null
         arrangeOpen = false
+        orbitOpen = false
         // SNIPS is shelf-level, not KIT-scoped, but the same
         // "leaving must not leave an overlay/hand-off armed"
         // reasoning applies: a tab switch away from KITS
@@ -1457,6 +1514,8 @@ fun App(shelf: KitShelf) {
         deletedKitsOpen = false
         // X-RAY is shelf-level too, same reasoning again.
         xray = null
+        // DOUBLES likewise.
+        doublesOpen = false
     }
 
     // System Back, root policy: with no KIT-scoped or shelf-level overlay
@@ -1471,8 +1530,8 @@ fun App(shelf: KitShelf) {
     // (its own "◄ KIT" chip below, via `onExit`), and KEYS (its own
     // "◄ SHELF" chip, via `onBack`, which also silences the instrument
     // before leaving — this generic reset does not).
-    val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || takesBinOpen ||
-        padCaptureSlot != null || snipsOpen || deletedKitsOpen || arrangeOpen || xray != null
+    val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || stackSlot != null || takesBinOpen ||
+        padCaptureSlot != null || snipsOpen || deletedKitsOpen || doublesOpen || arrangeOpen || orbitOpen || xray != null
     BackHandler(
         enabled = !anyOverlayOpen && screen != AppScreen.KITS &&
             screen != AppScreen.SPLIT && screen != AppScreen.KEYS &&
@@ -1557,6 +1616,21 @@ fun App(shelf: KitShelf) {
                                     }
                                 },
                             )
+                        } else if (doublesOpen) {
+                            DoublesScreen(
+                                shelf = shelf,
+                                onBack = { doublesOpen = false },
+                                onToast = { toast = it },
+                                onGoTo = { entry, slot ->
+                                    // The shelf's own onOpen, plus the pad:
+                                    // land on that kit with its PAD SHEET
+                                    // already up on the double in question.
+                                    doublesOpen = false
+                                    open = entry
+                                    screen = AppScreen.KIT
+                                    padSheetSlot = slot
+                                },
+                            )
                         } else {
                             KitsScreen(
                                 kits = kits,
@@ -1584,24 +1658,20 @@ fun App(shelf: KitShelf) {
                                         // still pending: tell the user what the
                                         // next empty-pad long-press will do, since
                                         // `KitScreen` itself carries no hint banner
-                                        // of its own for this mode. But KitScreen
-                                        // only ever renders bank A (slots 1..16 —
-                                        // see its own GRID_ROWS), so an "empty
-                                        // pad" instruction is only actually
-                                        // followable if bank A has one; a kit
-                                        // that's already full there has nothing
+                                        // of its own for this mode. KitScreen can
+                                        // show bank B now (September UAT, finding
+                                        // 11) but always opens on bank A, and
+                                        // nothing here fills an upper bank anyway,
+                                        // so an "empty pad" instruction is only
+                                        // actually followable if bank A has one; a
+                                        // kit that's already full there has nothing
                                         // for the long-press to catch (the v1
                                         // "empty pads only" scope this task's
                                         // brief calls out), so the hint says so
                                         // instead of pointing at a pad that
                                         // doesn't exist.
                                         if (pendingSnipAssign != null) {
-                                            val hasEmptyPad = (1..16).any { entry.kit.pad(it) == null }
-                                            toast = if (hasEmptyPad) {
-                                                "LONG-PRESS AN EMPTY PAD TO PLACE THIS SNIP"
-                                            } else {
-                                                "THIS KIT IS FULL — PICK ANOTHER"
-                                            }
+                                            toast = Copy.snipLanding((1..16).any { entry.kit.pad(it) == null })
                                         } else {
                                             // Teach the one gesture that opens PAD
                                             // SHEET, while it's still undiscovered.
@@ -1613,7 +1683,15 @@ fun App(shelf: KitShelf) {
                                             // fighting it for the one toast slot.
                                             val shown = prefs.getInt(PREF_PAD_SHEET_HINTS, 0)
                                             val hasFilledPad = (1..16).any { entry.kit.pad(it) != null }
-                                            if (shown != PAD_SHEET_FOUND && shown < PAD_SHEET_HINT_LIMIT && hasFilledPad) {
+                                            // No showing limit any more (September UAT,
+                                            // finding 5): it used to stop after three, so
+                                            // three dismissals while busy with something
+                                            // else cost the user PAD SHEET permanently.
+                                            // It now runs until they actually open the
+                                            // sheet, which is the only event that means
+                                            // they found it. KIT's legend is the real
+                                            // backstop; this is just the nudge.
+                                            if (shown != PAD_SHEET_FOUND && hasFilledPad) {
                                                 toast = Copy.PAD_SHEET_HINT
                                                 prefs.edit().putInt(PREF_PAD_SHEET_HINTS, shown + 1).apply()
                                             }
@@ -1636,6 +1714,7 @@ fun App(shelf: KitShelf) {
                                 onBackup = ::backupShelf,
                                 onChopAll = { chopAllPickerLauncher.launch(arrayOf("audio/wav", "audio/x-wav")) },
                                 onXRay = { xrayPickerLauncher.launch(arrayOf("*/*")) },
+                                onDoubles = { doublesOpen = true },
                                 onSnips = { snipsOpen = true },
                                 assigningSnip = pendingSnipAssign != null,
                                 breedingFrom = pendingBreedWith,
@@ -1658,6 +1737,7 @@ fun App(shelf: KitShelf) {
                             val sheetEntry = open
                             val fieldSlot = grainFieldSlot
                             val spliceSlotState = spliceSlot
+                            val stackSlotState = stackSlot
                             when {
                                 // Checked before the PAD SHEET branch below:
                                 // opening GRAIN clears `padSheetSlot` at the
@@ -1684,6 +1764,21 @@ fun App(shelf: KitShelf) {
                                     entry = sheetEntry,
                                     slot = spliceSlotState,
                                     onBack = { spliceSlot = null },
+                                    onToast = { toast = it },
+                                    onKitUpdated = { updatedKit ->
+                                        if (open?.dir == sheetEntry.dir) open = open?.copy(kit = updatedKit)
+                                        scope.launch {
+                                            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                        }
+                                    },
+                                )
+                                // STACK, same ordering reasoning as SPLICE
+                                // above: onStack clears `padSheetSlot` as it
+                                // sets `stackSlot`.
+                                stackSlotState != null && sheetEntry != null -> StackTakesScreen(
+                                    entry = sheetEntry,
+                                    slot = stackSlotState,
+                                    onBack = { stackSlot = null },
                                     onToast = { toast = it },
                                     onKitUpdated = { updatedKit ->
                                         if (open?.dir == sheetEntry.dir) open = open?.copy(kit = updatedKit)
@@ -1727,6 +1822,12 @@ fun App(shelf: KitShelf) {
                                         padSheetSlot = null
                                         spliceSlot = slot
                                     },
+                                    onStack = { slot ->
+                                        padSheetSlot = null
+                                        stackSlot = slot
+                                    },
+                                    clipboard = recipeClip,
+                                    onRecipeCopied = { recipeClip = it },
                                     onKitUpdated = { updatedKit ->
                                         // A write that outlived its screen must not be welded
                                         // onto whichever kit is open NOW (QA: the "Frankenstein
@@ -1811,8 +1912,9 @@ fun App(shelf: KitShelf) {
                                     onLongPress = { slot ->
                                         padSheetSlot = slot
                                         // Found it — the hint has done its job and
-                                        // retires for good, however many of its
-                                        // PAD_SHEET_HINT_LIMIT showings were left.
+                                        // retires for good. This is the only event
+                                        // that proves discovery, which is why it is
+                                        // now the only thing that stops the nudge.
                                         prefs.edit().putInt(PREF_PAD_SHEET_HINTS, PAD_SHEET_FOUND).apply()
                                     },
                                     onTakesBin = { takesBinOpen = true },
@@ -1906,6 +2008,15 @@ fun App(shelf: KitShelf) {
                                 prefs.edit().putBoolean(PREF_TEACH, on).apply()
                                 toast = if (on) Copy.TEACHING_ON else Copy.TEACHING_OFF
                             },
+                            // Finding 23: three facts the app already kept and
+                            // never showed. Read straight from the same prefs
+                            // EXPORT writes - one owner each, no second copy.
+                            exportFormatLabel = prefs.getString(PREF_EXPORT_FORMAT, null)
+                                ?.let { ExportFormat.byId(it) }?.cyclerLabel,
+                            filesWhere = exportsWhere,
+                            cardName = prefs.getString(PREF_CARD_TREE, null)
+                                ?.let { Copy.cardName(Uri.parse(it).lastPathSegment) },
+                            onHelp = { screen = AppScreen.HELP },
                         )
                         AppScreen.CHOP -> ChopScreen(
                             entry = open,
@@ -1990,7 +2101,14 @@ fun App(shelf: KitShelf) {
                         AppScreen.HELP -> HelpScreen()
                         AppScreen.GROOVE -> {
                             val songEntry = open
-                            if (arrangeOpen && songEntry != null) {
+                            if (orbitOpen && songEntry != null) {
+                                OrbitScreen(
+                                    entry = songEntry,
+                                    kitsRoot = shelf.root,
+                                    onBack = { orbitOpen = false },
+                                    onToast = { toast = it },
+                                )
+                            } else if (arrangeOpen && songEntry != null) {
                                 ArrangeScreen(
                                     entry = songEntry,
                                     onBack = { arrangeOpen = false },
@@ -2007,6 +2125,25 @@ fun App(shelf: KitShelf) {
                                     onToast = { toast = it },
                                     reloadRequest = grooveReload,
                                     onArrange = { arrangeOpen = true },
+                                    onOrbit = { orbitOpen = true },
+                                )
+                            }
+                        }
+                        AppScreen.ORBIT -> {
+                            // The menu row's own door to the rings. GROOVE's
+                            // ORBIT ▸ still opens the same screen as an overlay;
+                            // this one needs no groove and no scrolling, only a kit.
+                            val orbitEntry = open
+                            if (orbitEntry == null) {
+                                Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
+                                    TapeText(Copy.NO_KIT_FOR_ORBIT, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+                                }
+                            } else {
+                                OrbitScreen(
+                                    entry = orbitEntry,
+                                    kitsRoot = shelf.root,
+                                    onBack = { screen = AppScreen.GROOVE },
+                                    onToast = { toast = it },
                                 )
                             }
                         }

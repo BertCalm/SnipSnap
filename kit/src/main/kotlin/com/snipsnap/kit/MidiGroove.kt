@@ -85,9 +85,7 @@ object MidiGroove {
 
     fun writeTo(file: File, clip: Mpc3Clip, bpm: Float, overwrite: Boolean = false): File {
         if (file.exists() && !overwrite) {
-            throw java.io.IOException(
-                "destination already exists: $file (pass overwrite=true to replace same-named files)",
-            )
+            throw DestinationExists(file)
         }
         file.parentFile?.mkdirs()
         file.writeBytes(write(clip, bpm))

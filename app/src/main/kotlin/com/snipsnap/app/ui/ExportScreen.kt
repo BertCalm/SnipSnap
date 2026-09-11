@@ -69,6 +69,7 @@ import com.snipsnap.kit.Severity
 import com.snipsnap.app.CardWriter
 import com.snipsnap.app.PREFS
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.DubStamp
 import com.snipsnap.shell.ExportWizardModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
@@ -102,9 +103,33 @@ private const val TAG = "ExportScreen"
  * composable) is what `App.kt` keeps alive.
  */
 class ExportSession(val dir: File, val kit: Kit, val model: ExportWizardModel) {
+    /**
+     * Whether the remembered export format has already been restored onto
+     * [model] (see `PREF_EXPORT_FORMAT`). A plain latch, not Compose state:
+     * nothing renders from it, it only stops the restore running twice.
+     *
+     * It lives here rather than in a `remember` because the session is what
+     * survives a remount — leaving EXPORT and coming back re-runs the
+     * screen's effects against this same wizard, and restoring a second
+     * time would quietly undo a pick the user made in between.
+     */
+    var formatRestored: Boolean = false
     var busy by mutableStateOf(false)
     var lastOutcome by mutableStateOf<ExportOutcome?>(null)
     var writeStartedAtMs by mutableLongStateOf(0L)
+
+    /**
+     * What a first DUB found already at the destination, or null when
+     * nothing is armed (September UAT, finding 18). The next DUB writes over
+     * it; anything that changes *where* the write would land disarms it, so
+     * a confirmation can never be spent on a destination the user never saw.
+     *
+     * Hoisted alongside [busy] for the same reason: this screen remounts on
+     * every tab switch, and an armed confirm that forgot itself on remount
+     * would make the second tap a fresh first tap — an infinite loop the
+     * user cannot escape.
+     */
+    var overwriting by mutableStateOf<File?>(null)
 }
 
 /**
@@ -243,6 +268,19 @@ private fun ExportContent(
     var revision by remember(model) { mutableIntStateOf(0) }
     val revisionTick = revision
 
+    /** The format list, open or shut. Shut on arrival: the row says what is picked. */
+    var formatPickerOpen by remember(model) { mutableStateOf(false) }
+
+    /**
+     * A dub locks the row (`enabled = !busy`), and a locked row cannot be
+     * tapped shut — so an open list would vanish while the header kept
+     * showing ▴, claiming a state the screen was not in, until the write
+     * finished. Shut it when the write starts instead.
+     */
+    LaunchedEffect(session.busy) {
+        if (session.busy) formatPickerOpen = false
+    }
+
     // Elapsed-time clock, not an incrementing counter: `SystemClock.
     // elapsedRealtime()` is monotonic (unlike a wall clock, which can jump)
     // and, because `filesShown` below is a pure function of "how long has
@@ -274,6 +312,32 @@ private fun ExportContent(
     // permission below is taken *persistably* rather than for this
     // process only.
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
+
+    /**
+     * Start on the format this user actually uses (September UAT, finding
+     * 7): every visit used to begin at index 0 however many times you had
+     * exported `.xtd`.
+     *
+     * Guarded by the session's own latch rather than by the wizard's index:
+     * a remount re-runs this effect against the same wizard, and restoring
+     * twice would undo a pick made in between. The earlier version tested
+     * `formatIx == 0`, which tied the screen to the enum's order and would
+     * have started misbehaving the day the first entry changed.
+     *
+     * Stage-checked too, so `revision++` cannot fire for a `setFormat` that
+     * a non-READY wizard quietly refused. An id that no longer exists (a
+     * format dropped between releases) simply leaves the default alone.
+     */
+    LaunchedEffect(model) {
+        if (session.formatRestored) return@LaunchedEffect
+        session.formatRestored = true
+        if (model.stage != ExportWizardModel.Stage.READY) return@LaunchedEffect
+        val remembered = prefs.getString(PREF_EXPORT_FORMAT, null)?.let { ExportFormat.byId(it) }
+        if (remembered != null && remembered != model.format) {
+            model.setFormat(remembered)
+            revision++
+        }
+    }
     var cardTree by remember {
         mutableStateOf(prefs.getString(PREF_CARD_TREE, null)?.let { Uri.parse(it) })
     }
@@ -328,6 +392,24 @@ private fun ExportContent(
         prefs.edit().remove(PREF_CARD_TREE).apply()
     }
 
+    /**
+     * Record the dub for the shelf's chip — and never let that recording turn
+     * a successful dub into a failure.
+     *
+     * The files are already written when this runs. A sidecar is ancillary:
+     * losing it costs a chip that reads DRAFT until the next dub, which is
+     * the same under-claim [DubStamp.read] already makes for an unreadable
+     * stamp. Letting an IOException here escape into `startWrite`'s catch
+     * would show DUB FAILED over a card that actually has the kit on it —
+     * a worse lie than the one finding 15 set out to fix.
+     */
+    suspend fun stampDub(kitDir: File, card: String?) {
+        withContext(Dispatchers.IO) {
+            runCatching { DubStamp.write(kitDir, DubStamp.Stamp(System.currentTimeMillis(), cardTree = card)) }
+                .onFailure { Log.w(TAG, "stampDub: the dub landed but its stamp did not", it) }
+        }
+    }
+
     fun startWrite() {
         if (session.busy || model.stage != ExportWizardModel.Stage.READY || model.blocked) return
         session.busy = true
@@ -361,12 +443,30 @@ private fun ExportContent(
                         // that one agree now.
                         File(root, Names.sanitizeStem(kit.name))
                     }
-                    model.write(destRoot, overwrite = true)
+                    // overwrite only on the second tap, and only when the
+                    // armed path is the one this write is actually about
+                    // (finding 18). A stale arm - format changed, kit
+                    // changed - is not consent for this destination.
+                    model.write(destRoot, overwrite = session.overwriting != null)
                 }
                 when (result) {
+                    is ExportWizardModel.WriteResult.WouldOverwrite -> {
+                        // Nothing was written. Arm, and say what the next
+                        // tap would replace - by name, so the decision is
+                        // about that thing rather than an abstract "sure?".
+                        session.overwriting = result.path
+                        onToast(Copy.dubWouldOverwrite(result.path.name))
+                    }
                     is ExportWizardModel.WriteResult.Done -> {
+                        session.overwriting = null
                         session.lastOutcome = result.outcome
                         val card = cardTree
+                        // The shelf's chip, recorded here because this is the
+                        // only place that knows a dub happened (September UAT,
+                        // finding 15). Written before the card copy is
+                        // attempted and again after it lands, so a copy that
+                        // fails leaves DUBBED rather than a false ON CARD.
+                        stampDub(session.dir, card = null)
                         if (card == null) {
                             onToast(Copy.DUB_DONE)
                         } else {
@@ -383,10 +483,14 @@ private fun ExportContent(
                                     listOfNotNull(result.outcome.primary, result.outcome.companion),
                                 )
                             }
+                            // Only now is it really on the card, so only now
+                            // does the stamp name one.
+                            stampDub(session.dir, card = card.toString())
                             onToast(Copy.DUB_DONE_CARD)
                         }
                     }
                     is ExportWizardModel.WriteResult.Blocked -> {
+                        session.overwriting = null
                         // Preflight flipped between render and tap (a file
                         // vanished, say) — write() already reset the model
                         // to READY and the refreshed checklist below is the
@@ -453,6 +557,7 @@ private fun ExportContent(
             val outcome = session.lastOutcome
             DoneContent(
                 destinationPath = outcome?.primary?.absolutePath ?: "",
+                readBack = outcome?.readBack.orEmpty(),
                 scheme = scheme,
                 modifier = Modifier.weight(1f),
             )
@@ -479,7 +584,7 @@ private fun ExportContent(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                PreflightCard(model.preflight, scheme)
+                FindingsCard(model.preflight, scheme)
                 CardRow(
                     tree = cardTree,
                     enabled = !session.busy,
@@ -490,17 +595,31 @@ private fun ExportContent(
                         onToast(Copy.CARD_FORGOTTEN)
                     },
                 )
-                FormatCyclerRow(
-                    label = model.formatLabel,
+                FormatPickerRow(
+                    current = model.format,
+                    open = formatPickerOpen,
                     // `session.busy` (Compose-tracked) rather than
                     // `model.stage` directly — `stage` flips to WRITING on
                     // the IO thread inside `write()`, so it can lag a tick
-                    // behind `busy` going true; `cycleFormat()` no-ops off
-                    // READY either way, but this keeps the button's own
+                    // behind `busy` going true; `setFormat()` no-ops off
+                    // READY either way, but this keeps the row's own
                     // enabled state from racing the plain var.
                     enabled = !session.busy,
                     scheme = scheme,
-                    onTap = { model.cycleFormat(); revision++ },
+                    onToggle = { formatPickerOpen = !formatPickerOpen },
+                    onPick = { picked ->
+                        model.setFormat(picked)
+                        // A different format writes to a different place, so
+                        // a confirmation taken against the old destination is
+                        // not consent for this one (finding 18).
+                        session.overwriting = null
+                        // Remembered for next time: finding 7's other half.
+                        // Written on the pick rather than on the dub, so a
+                        // change of mind is kept even if nothing is written.
+                        prefs.edit().putString(PREF_EXPORT_FORMAT, picked.id).apply()
+                        formatPickerOpen = false
+                        revision++
+                    },
                 )
                 DubProgressCard(model, filesShown, session.busy, scheme)
             }
@@ -516,19 +635,34 @@ private fun ExportContent(
 // ---------- DONE stage ----------
 
 @Composable
-private fun DoneContent(destinationPath: String, scheme: Scheme, modifier: Modifier = Modifier) {
+private fun DoneContent(
+    destinationPath: String,
+    /** READ BACK: the written file re-read and diffed against the kit. Empty only before it has run; a format X-Ray can't read (MIDI, SFZ, DecentSampler) is one SKIP row, not an empty list. */
+    readBack: List<Finding>,
+    scheme: Scheme,
+    modifier: Modifier = Modifier,
+) {
     Column(
-        modifier.fillMaxWidth().padding(16.dp),
+        modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         TapeText(Copy.EXPORT_DONE, TapeType.lcd(25), scheme.ink.tape, maxLines = 2)
-        Spacer(Modifier.height(8.dp))
         // Where the write actually landed, in plain words — regardless of
         // whether SHARE is offered below, or ever tapped. No claim about
         // which file browser can reach it, just the fact of it.
         TapeText(Copy.EXPORT_SAVED_TO, TapeType.pixelSmall, scheme.ink3.tape)
         TapeText(destinationPath, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
+        if (readBack.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            // The file just written, read back through X-Ray and diffed pad
+            // by pad against what the kit asked for — a check on the writers,
+            // said in the same rows PREFLIGHT uses. The caveat under it is
+            // the honest limit: our reader agreeing is not the Live III
+            // agreeing.
+            FindingsCard(readBack, scheme, title = "READ BACK")
+            TapeText(Copy.READ_BACK_CAVEAT, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth(), maxLines = 3)
+        }
     }
 }
 
@@ -558,18 +692,37 @@ private fun exportShareMime(format: ExportFormat): String? = when (format) {
  * The picked card's tree URI. Stored rather than asked for each dub: a
  * card is picked once and is still the card next time the app opens,
  * which is the whole reason the grant is taken persistably.
+ *
+ * `internal`, not file-private: the kit shelf reads the same key to decide
+ * whether a kit's dub stamp may honestly say ON CARD (September UAT, finding
+ * 15). One key with two readers - if it ever gains a second definition, the
+ * chip and the wizard will disagree about which card is in the phone.
  */
-private const val PREF_CARD_TREE = "export_card_tree"
+internal const val PREF_CARD_TREE = "export_card_tree"
+
+/**
+ * The format picked last time (an [ExportFormat.id]).
+ *
+ * The September UAT's finding 7: every visit to EXPORT started at index 0,
+ * so someone who exports `.xtd` every day walked the same three taps every
+ * day. A format is a property of how you work, not of this one visit.
+ *
+ * `internal` for the same reason [PREF_CARD_TREE] is: SETUP reads it to show
+ * what EXPORT will open on (September UAT, finding 23). One key, two readers,
+ * one owner — SETUP only ever reads it.
+ */
+internal const val PREF_EXPORT_FORMAT = "export_format"
 
 // The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
 // (accessibility audit finding 5) — a single tuned token, not a
 // duplicated literal; the border half is untouched.
 private val BIN_RED_BORDER = Color(0xFF6A2020)
 
+/** One titled list of [Finding] rows — PREFLIGHT before the write, READ BACK after it, same rows either way. */
 @Composable
-private fun PreflightCard(findings: List<Finding>, scheme: Scheme, modifier: Modifier = Modifier) {
+private fun FindingsCard(findings: List<Finding>, scheme: Scheme, modifier: Modifier = Modifier, title: String = "PREFLIGHT") {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("PREFLIGHT", TapeType.pixelSmall, scheme.ink3.tape)
+        TapeText(title, TapeType.pixelSmall, scheme.ink3.tape)
         Column(
             Modifier.fillMaxWidth().sunkenField(scheme).padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -587,11 +740,15 @@ private fun FindingRow(finding: Finding, scheme: Scheme) {
         Severity.FAIL -> BinRedGlow
         Severity.WARN -> scheme.warn.tape
         Severity.OK -> scheme.ink2.tape
+        // "Not checked" reads quieter than OK on purpose: it's an absence
+        // of a claim, not a pass.
+        Severity.SKIP -> scheme.ink3.tape
     }
     val tag = when (finding.severity) {
         Severity.FAIL -> "FAIL"
         Severity.WARN -> "WARN"
         Severity.OK -> "OK"
+        Severity.SKIP -> "SKIP"
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(
@@ -630,7 +787,7 @@ private fun CardRow(
     val label = if (tree == null) {
         Copy.CARD_NONE
     } else {
-        "${Copy.CARD_PICKED} ${tree.lastPathSegment?.substringAfterLast(':')?.substringAfterLast('/').orEmpty().ifBlank { "CARD" }}"
+        "${Copy.CARD_PICKED} ${Copy.cardName(tree.lastPathSegment)}"
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TapeText("DESTINATION", TapeType.pixelSmall, scheme.ink3.tape)
@@ -667,11 +824,44 @@ private fun CardRow(
                 maxLines = 2,
             )
         }
+        // September UAT, finding 21: holding this row is the only way to
+        // forget a card anywhere in the app.
+        //
+        // Drawn only when the gesture it names actually exists, which takes
+        // BOTH of the conditions the row above puts on it: a card to forget
+        // (onLongClick is null without one) and `enabled` (the whole
+        // combinedClickable is dropped while a dub is in flight). Miss
+        // either and the legend advertises an action that cannot run - the
+        // same "furniture describing nothing" this gate exists to prevent.
+        if (tree != null && enabled) {
+            TapeText(Copy.EXPORT_CARD_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        }
     }
 }
 
+/**
+ * FORMAT: what is picked, and — when opened — every format with the reason
+ * you would pick it.
+ *
+ * This was a one-way cycler (September UAT, findings 7 and 8). Eight states,
+ * no back step: DECENTSAMPLER cost seven taps, one tap past your target cost
+ * seven more, and [ExportFormat.cyclerLabel] was the only copy a format ever
+ * got, so nothing said when EXPANSION beats XPN.
+ *
+ * A list, not a dialog: the same inline-panel move KIT's key picker makes,
+ * so it costs no new machinery and cannot strand the user behind a scrim.
+ * The closed row still reads exactly as the cycler did, so nothing is lost
+ * for someone who liked it.
+ */
 @Composable
-private fun FormatCyclerRow(label: String, enabled: Boolean, scheme: Scheme, onTap: () -> Unit) {
+private fun FormatPickerRow(
+    current: ExportFormat,
+    open: Boolean,
+    enabled: Boolean,
+    scheme: Scheme,
+    onToggle: () -> Unit,
+    onPick: (ExportFormat) -> Unit,
+) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TapeText("FORMAT", TapeType.pixelSmall, scheme.ink3.tape)
         Box(
@@ -679,20 +869,55 @@ private fun FormatCyclerRow(label: String, enabled: Boolean, scheme: Scheme, onT
                 .fillMaxWidth()
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .raisedBevel(scheme)
-                .let { if (enabled) it.tapeClick(label = null, onClick = onTap) else it }
+                .let { if (enabled) it.tapeClick(label = null, onClick = onToggle) else it }
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
-            // The cycler's longest label ("MPC SESSION (.XPJ) — KITS +
-            // GROOVES") wraps to a second line here rather than shrinking
-            // below readable size — maxLines=2, fixed 9sp, per the brief.
+            // The longest label ("MPC SESSION (.XPJ) — KITS + GROOVES")
+            // wraps to a second line here rather than shrinking below
+            // readable size — maxLines=2, fixed 9sp, per the brief.
             TapeText(
-                label,
+                if (open) "${current.cyclerLabel} ▴" else "${current.cyclerLabel} ▾",
                 TapeType.pixel.copy(textAlign = TextAlign.Center),
                 if (enabled) scheme.ink.tape else scheme.ink3.tape,
                 Modifier.fillMaxWidth(),
                 maxLines = 2,
             )
+        }
+        if (open && enabled) {
+            Column(
+                Modifier.fillMaxWidth().lcdPanel(scheme).padding(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                for (f in ExportFormat.entries) {
+                    val picked = f == current
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            // label = null, not the cycler label: this row
+                            // has TWO TapeText children - the name and the
+                            // reason finding 8 added - and an explicit label
+                            // *replaces* merged descendant semantics rather
+                            // than adding to it (see tapeClick's KDoc). With
+                            // the name here, a TalkBack user heard the format
+                            // and never the reason, which is the one thing
+                            // finding 8 existed to give them. Mine, from #77.
+                            .tapeClick(label = null, onClick = { onPick(f) })
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        TapeText(
+                            if (picked) "▸ ${f.cyclerLabel}" else f.cyclerLabel,
+                            TapeType.pixel,
+                            if (picked) scheme.amber.tape else scheme.lcdInk.tape,
+                            maxLines = 2,
+                        )
+                        // Finding 8: the reason, not just the name.
+                        TapeText(f.why, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+                    }
+                }
+            }
         }
     }
 }

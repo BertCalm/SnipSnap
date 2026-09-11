@@ -148,7 +148,7 @@ class ConventionTest {
     private fun scanBackHandlerSites(): List<BackHandlerSite> {
         val sites = mutableListOf<BackHandlerSite>()
         for (file in requireAppKotlinFiles()) {
-            val text = file.readText()
+            val text = file.readText(Charsets.UTF_8)
             var searchFrom = 0
             while (true) {
                 val idx = text.indexOf("BackHandler(", searchFrom)
@@ -414,7 +414,7 @@ class ConventionTest {
     private fun scanKitWriteOpenSites(): List<KitWriteSite> {
         val sites = mutableListOf<KitWriteSite>()
         for (file in requireAppKotlinFiles()) {
-            val text = file.readText()
+            val text = file.readText(Charsets.UTF_8)
             val spans = lockSpans(text)
             var searchFrom = 0
             while (true) {
@@ -648,7 +648,7 @@ class ConventionTest {
     private fun scanKitSaveSites(): List<KitSaveSite> {
         val sites = mutableListOf<KitSaveSite>()
         for (file in requireAppKotlinFiles()) {
-            val text = file.readText()
+            val text = file.readText(Charsets.UTF_8)
             if (!text.contains("KitBuilderModel")) continue
             val spans = lockSpans(text)
             var searchFrom = 0
@@ -772,5 +772,208 @@ class ConventionTest {
                     "was deleted outright (delete this entry too).",
             )
         }
+    }
+
+    // ---- Law: a doc-comment is never stranded above another doc-comment ----
+
+    /** Every module's `src/main/kotlin`, from :shell's own project dir — the working directory Gradle gives `tasks.test`. */
+    private val moduleSrcRoots: List<File>
+        get() = listOf("app", "audio", "cli", "json", "kit", "loop", "mpc3", "shell", "synth", "xpm")
+            .map { File("../$it/src/main/kotlin") }
+
+    /** One doc-comment block: `first` and `last` are 0-based line indices, both inclusive. */
+    private data class DocBlock(val first: Int, val last: Int)
+
+    /** Every doc-comment block in [lines], in order. The opening delimiter must start its own line, which is this codebase's universal shape. */
+    private fun docBlocks(lines: List<String>): List<DocBlock> {
+        val blocks = mutableListOf<DocBlock>()
+        var i = 0
+        while (i < lines.size) {
+            val t = lines[i].trim()
+            if (t.startsWith("/**")) {
+                var j = i
+                // A one-liner opens and closes on the same line; anything
+                // else runs to the first line ending in a close delimiter.
+                if (!(t.endsWith("*/") && t.length > 3)) {
+                    while (j < lines.size && !lines[j].trim().endsWith("*/")) j++
+                }
+                if (j >= lines.size) break
+                blocks += DocBlock(i, j)
+                i = j + 1
+            } else {
+                i++
+            }
+        }
+        return blocks
+    }
+
+    /**
+     * A doc-comment documents the declaration directly beneath it. When
+     * another doc-comment is what sits directly beneath it instead, the
+     * first one documents nothing — it reaches no IDE and no generated
+     * doc — and the declaration it was written for is left bare.
+     *
+     * This is the doc-comment face of the bug 30e6d42 fixed: an
+     * `@OptIn(ExperimentalFoundationApi::class)` that had been separated
+     * from its function by an insertion, so the opt-in landed on a
+     * function that didn't need it and `SliceRow`, which did, lost it and
+     * turned `android-build` red. Same cause both times — a declaration
+     * inserted by anchoring on a signature line without looking at what
+     * sits above it — and the compiler is silent for both, because the
+     * file stays syntactically valid either way. Six of these were live in
+     * the tree when this law was written, across three modules.
+     *
+     * **The one exemption** is a file's *first* doc-comment. Kotlin has no
+     * file-level doc syntax, so a file overview is written as a
+     * doc-comment above the file's first declaration — which is
+     * positionally identical to a stranded one. Every module is scanned,
+     * not just `:app`: the instances were spread across `:app`, `:shell`
+     * and `:kit`, and a law that had only covered `:app` would have missed
+     * the one that prompted it.
+     */
+    @Test
+    fun `a doc-comment is never stranded above another doc-comment`() {
+        val roots = moduleSrcRoots
+        val missing = roots.filterNot { it.isDirectory }
+        require(missing.isEmpty()) {
+            "expected every module's source root to exist but these don't: " +
+                missing.joinToString { it.absolutePath } + ". This scan only works when the test " +
+                "JVM's working directory is :shell's own project dir (Gradle's default). If a module " +
+                "was renamed or removed, fix the list here rather than deleting the check: a scan " +
+                "that finds nothing would pass by accident, which is worse than no test at all."
+        }
+        val files = roots.flatMap { it.walkTopDown().filter { f -> f.isFile && f.extension == "kt" } }
+        require(files.size > 100) {
+            "found only ${files.size} .kt files across ${roots.size} module source roots — the scan is " +
+                "broken, not the tree. Fail loudly instead of silently checking almost nothing."
+        }
+
+        val stranded = mutableListOf<String>()
+        for (file in files) {
+            val lines = file.readText(Charsets.UTF_8).split("\n")
+            val blocks = docBlocks(lines)
+            // `drop(1)`: the file's first doc-comment is the file-overview
+            // idiom and is exempt — see this law's KDoc.
+            for (block in blocks.drop(1)) {
+                var k = block.last + 1
+                while (k < lines.size && lines[k].isBlank()) k++
+                if (k < lines.size && lines[k].trim().startsWith("/**")) {
+                    stranded += "${file.path.replace('\\', '/')}:${block.first + 1} " +
+                        "(next doc-comment opens at line ${k + 1})"
+                }
+            }
+        }
+
+        assertTrue(
+            stranded.isEmpty(),
+            "these doc-comments document nothing — another doc-comment sits directly beneath each of " +
+                "them, so the declaration each was written for is undocumented:\n  " +
+                stranded.joinToString("\n  ") +
+                "\nMove each block down to sit directly above the declaration it describes, or delete " +
+                "it if a newer doc on that declaration has already superseded it. Do not silence this " +
+                "by merging two unrelated blocks into one.",
+        )
+    }
+
+    // ---- Law: prose never states a stale count for a roster the code owns ----
+
+    /**
+     * The rosters this law polices, and where the true count comes from.
+     * A roster earns an entry here when it is small, named in prose, and
+     * grown by editing one list — the conditions under which a written count
+     * silently goes wrong.
+     */
+    private val rosterCounts: Map<String, Int>
+        get() = mapOf(
+            "scheme" to SchemeId.entries.size,
+            "starter" to StarterKits.ALL.size,
+        )
+
+    /** Number words this law can read; anything larger is written as digits in this codebase. */
+    private val numberWords = mapOf(
+        "one" to 1, "two" to 2, "three" to 3, "four" to 4, "five" to 5, "six" to 6,
+        "seven" to 7, "eight" to 8, "nine" to 9, "ten" to 10, "eleven" to 11, "twelve" to 12,
+    )
+
+    /**
+     * A word between the number and the noun that means the number is not a
+     * count of the roster at all — "4.5:1 in every scheme" is a contrast
+     * ratio, "the other seven entries" counts something else.
+     */
+    private val notACount = setOf("every", "each", "all", "any", "other", "per")
+
+    /**
+     * Prose that names how many schemes or starters there are must be right.
+     *
+     * September UAT, finding 22: `SchemeId` had grown to eight while the
+     * README still called them "the six TapeOS scheme token tables". Chasing
+     * that number down found worse — `docs/UI_DESIGN.md` named six schemes of
+     * which only two still exist, and `app/README.md` was a starter count out
+     * — because nothing anywhere connected the written number to the list.
+     * This connects them.
+     *
+     * Scope is the two READMEs plus `:shell` and `:app` sources: the places a
+     * developer or a new contributor reads as current fact. `docs/` is
+     * deliberately out, and that was tested rather than assumed — running this
+     * scan across every Markdown file directly under `docs/` finds three real
+     * drifts (fixed by hand in the same change) and two things it must not
+     * touch:
+     *
+     * - `docs/FEATURE_PLAN.md` says "the real MPC 3 scheme". That is a product
+     *   name, not a count, and no reasonable widening of the shape rules below
+     *   tells it apart from one. A law that cries wolf gets weakened or
+     *   deleted, which is worse than a narrow law that is always right.
+     * - `docs/APP_PLAN.md`'s finished-milestone entries record what M0 did
+     *   when there were six modules and six schemes. That is history; editing
+     *   it to satisfy a scan would falsify the record.
+     *
+     * So prose in `docs/` stays a human's job. Copilot caught one there that
+     * this law cannot see (`docs/UI_DESIGN.md`'s "flipped between all six"),
+     * which is the honest cost of the narrower scope.
+     */
+    @Test
+    fun `prose never states a stale count for a roster the code owns`() {
+        val readmes = listOf(File("../README.md"), File("../app/README.md"))
+        val missing = readmes.filterNot { it.isFile }
+        require(missing.isEmpty()) {
+            "expected these READMEs to exist but they don't: " + missing.joinToString { it.absolutePath } +
+                ". Fix the paths rather than deleting the check — a scan that reads nothing passes by accident."
+        }
+        val sources = listOf(File("../shell/src/main/kotlin"), File("../app/src/main/kotlin"))
+            .flatMap { it.walkTopDown().filter { f -> f.isFile && f.extension == "kt" } }
+        require(sources.size > 50) { "found only ${sources.size} .kt files — the scan is broken, not the tree." }
+
+        val counts = rosterCounts
+        val nouns = counts.keys.joinToString("|")
+        val numbers = (numberWords.keys + """\d+""").joinToString("|")
+        // The number must be a number (not a word that merely precedes one),
+        // may sit up to two words from the noun, and must not be part of a
+        // decimal or a ratio - hence the lookbehind.
+        val pattern = Regex("""(?<![\d:.])\b($numbers)\s+((?:[A-Za-z]+\s+){0,2}?)($nouns)s?\b""", RegexOption.IGNORE_CASE)
+
+        val wrong = mutableListOf<String>()
+        for (file in readmes + sources) {
+            file.readText(Charsets.UTF_8).lineSequence().forEachIndexed { i, line ->
+                for (m in pattern.findAll(line)) {
+                    val token = m.groupValues[1].lowercase()
+                    val stated = numberWords[token] ?: token.toIntOrNull() ?: continue
+                    if (m.groupValues[2].lowercase().split(" ").any { it in notACount }) continue
+                    val noun = m.groupValues[3].lowercase()
+                    val actual = counts.getValue(noun)
+                    if (stated != actual) {
+                        wrong += "${file.path.replace('\\', '/')}:${i + 1} says \"${m.value.trim()}\" " +
+                            "but there are $actual"
+                    }
+                }
+            }
+        }
+
+        assertTrue(
+            wrong.isEmpty(),
+            "prose states a count that the code disagrees with:\n  " + wrong.joinToString("\n  ") +
+                "\nEither the sentence is stale (fix the number) or the roster genuinely changed and the " +
+                "surrounding prose needs rewriting too — finding 22 was a count that was wrong AND a list " +
+                "of names that no longer existed. Check the names, not just the number.",
+        )
     }
 }

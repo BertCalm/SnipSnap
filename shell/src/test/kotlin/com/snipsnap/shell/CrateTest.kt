@@ -2,6 +2,8 @@ package com.snipsnap.shell
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
+import com.snipsnap.audio.FeatureExtractor
+import com.snipsnap.audio.Similar
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.Severity
@@ -55,6 +57,16 @@ class CrateTest {
     }
 
     @Test
+    fun `a kit under a hidden folder is not in the library`() {
+        val root = library()
+        File(root, "Crate A").copyRecursively(File(root, ".bin/Crate A-1"))
+        File(root, "Crate B").copyRecursively(File(root, ".landing-42/Crate B"))
+        val index = Crate.index(root)
+        assertEquals(6, index.entries.size, "the two live kits only: ${index.entries.map { it.file }}")
+        assertTrue(index.entries.none { it.file.startsWith(".") }, "nothing under .bin/ or .landing-*")
+    }
+
+    @Test
     fun `dupes finds the planted twin and picks rank a class`() {
         val root = library()
         val index = Crate.index(root)
@@ -91,6 +103,103 @@ class CrateTest {
         // The pads are real copies, playable without the source library.
         for (pad in model.kit.pads) {
             assertTrue(WavReader.read(File(model.kitDir, pad.sampleFile)).frameCount > 0)
+        }
+    }
+
+    @Test
+    fun `a cached vector the extractor could not have written is re-measured, not trusted`() {
+        val root = File(temp, "trust").apply { mkdirs() }
+        val m = KitBuilderModel.create("One", File(root, "One"))
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        assertEquals(Similar.DIMENSIONS, Similar.vector(FeatureExtractor.extract(DrumSynth.kick())).size, "the named dimension is the real one")
+
+        val first = Crate.index(root)
+        assertEquals(2, first.extracted)
+        assertTrue(first.entries.all { plausible(it.vector) })
+
+        // Hand-edit the cache the way another tool or a stray editor might:
+        // one vector cut to three numbers, one with a value past the moon.
+        // Neither is a measurement this code makes, and a distance to
+        // either would be a made-up number - so both pads measure again.
+        val indexFile = File(root, Crate.INDEX_NAME)
+        val vectors = Regex("\"vector\":\\s*\\[[^\\]]*\\]").findAll(indexFile.readText()).toList()
+        assertEquals(2, vectors.size)
+        val doctored = StringBuilder(indexFile.readText())
+        doctored.replace(vectors[1].range.first, vectors[1].range.last + 1, "\"vector\":[1e300,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1]")
+        doctored.replace(vectors[0].range.first, vectors[0].range.last + 1, "\"vector\":[0.1,0.2,0.3]")
+        indexFile.writeText(doctored.toString())
+
+        val second = Crate.index(root)
+        assertEquals(2, second.extracted, "both doctored entries are measured again, not believed")
+        assertTrue(second.entries.all { plausible(it.vector) })
+
+        // An untouched cache is still a cache.
+        val third = Crate.index(root)
+        assertEquals(0, third.extracted)
+        assertEquals(2, third.fromCache)
+    }
+
+    private fun plausible(v: List<Float>) = v.size == Similar.DIMENSIONS && v.all { it in 0f..1f }
+
+    @Test
+    fun `distance refuses to compare vectors of different lengths, and the label is an identifier`() {
+        assertEquals(Float.POSITIVE_INFINITY, Crate.distance(listOf(0.5f), listOf(0.5f, 0.5f)))
+        assertEquals(Float.POSITIVE_INFINITY, Crate.distance(listOf(0.5f, 0.5f), listOf(0.5f)), "the same answer both ways round")
+        assertEquals(Float.POSITIVE_INFINITY, Crate.distance(emptyList(), listOf(0.1f)), "an empty vector is not close to anything")
+        assertEquals(0f, Crate.distance(listOf(0.3f, 0.4f), listOf(0.3f, 0.4f)))
+        val e = Crate.Entry("K", "K", 17, "p", "K/p.wav", 0L, 0L, DrumClass.KICK, DrumClass.KICK, 1f, List(Similar.DIMENSIONS) { 0.5f })
+        assertEquals("B01", e.label)
+    }
+
+    @Test
+    fun `the index is what is inside the folder, each kit once, whatever the layout`() {
+        val root = File(temp, "layout").apply { mkdirs() }
+        fun kit(dir: File, name: String) = KitBuilderModel.create(name, dir).apply {
+            assign(1, DrumSynth.kick(), DrumClass.KICK)
+            save()
+        }
+        kit(File(root, "Plain"), "Plain")
+        kit(File(root, "With Spaces & dots.v2"), "Spaced")
+        // A JVM whose filesystem encoding is not UTF-8 (sun.jnu.encoding=ANSI
+        // on a bare container) cannot name such a folder at all - that is the
+        // JVM, not the crate; the phone is always UTF-8. Skip the name there.
+        val unicode = runCatching { kit(File(root, "Ünïcödé"), "Unicode") }.isSuccess
+        kit(File(root, "Outer"), "Outer")
+        kit(File(root, "Outer/Inner"), "Inner") // a kit inside a kit is still inside the library
+        kit(File(root, ".hidden"), "Hidden") // the binned/staging rule, unchanged
+        val outside = kit(File(temp, "Elsewhere"), "Elsewhere").kitDir
+
+        val expected = setOf("Plain", "With Spaces & dots.v2", "Outer", "Outer/Inner") + (if (unicode) setOf("Ünïcödé") else emptySet())
+        val links = try {
+            java.nio.file.Files.createSymbolicLink(File(root, "to-outside").toPath(), outside.toPath())
+            java.nio.file.Files.createSymbolicLink(File(root, "alias-of-plain").toPath(), File(root, "Plain").toPath())
+            java.nio.file.Files.createSymbolicLink(File(root, "loop").toPath(), root.toPath())
+            true
+        } catch (e: Exception) {
+            false // a filesystem without symlinks: the layout rules below still hold for the rest
+        }
+
+        val start = System.nanoTime()
+        val idx = Crate.index(root)
+        val ms = (System.nanoTime() - start) / 1_000_000
+        assertTrue(ms < 10_000, "a looping symlink must not walk forever (${ms}ms)")
+
+        assertEquals(expected, idx.entries.map { it.kitDir }.toSet(), "inside, under their own names, hidden skipped, no symlinked directory entered")
+        assertEquals(idx.entries.size, idx.entries.map { it.file }.toSet().size, "no pad indexed under two names")
+        if (links) {
+            assertTrue(idx.entries.none { "Elsewhere" in it.kitName }, "a symlink out of the shelf is not the library")
+            assertEquals(1, idx.entries.count { it.kitName == "Plain" }, "an alias is the same kit, not a double of itself")
+            assertTrue(idx.entries.none { it.kitDir == "alias-of-plain" }, "and the kit is indexed under its own name, whatever order the listing came in")
+        }
+        // The roulette's own dupe scan sees no false pair among these distinct hits.
+        assertTrue(Crate.dupes(idx).none { (a, b, d) -> a.kitDir == "Plain" && b.kitDir == "Plain" && d == 0f })
+        // A shelf whose root is itself reached through a symlink still indexes its kits.
+        if (links) {
+            val viaLink = File(temp, "shelf-link")
+            java.nio.file.Files.createSymbolicLink(viaLink.toPath(), root.toPath())
+            assertEquals(expected, Crate.index(viaLink).entries.map { it.kitDir }.toSet())
         }
     }
 }

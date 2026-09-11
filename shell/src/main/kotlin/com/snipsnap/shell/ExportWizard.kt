@@ -1,8 +1,10 @@
 package com.snipsnap.shell
 
+import com.snipsnap.kit.DestinationExists
 import com.snipsnap.kit.ExportBlockedException
 import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.ExportOutcome
+import com.snipsnap.kit.ExportReadBack
 import com.snipsnap.kit.Exporters
 import com.snipsnap.kit.Finding
 import com.snipsnap.kit.Kit
@@ -49,6 +51,22 @@ class ExportWizardModel(
         if (stage == Stage.READY) formatIx = (formatIx + 1) % ExportFormat.entries.size
     }
 
+    /**
+     * Pick a format outright, in one move rather than by walking to it.
+     *
+     * The September UAT's finding 7: [cycleFormat] was the only way in, and
+     * it goes one direction with no back step, so DECENT_SAMPLER cost seven
+     * taps and overshooting your target cost seven more. That is a picker's
+     * job, not a cycler's, and the screen has one now.
+     *
+     * Locked off READY exactly as [cycleFormat] is — the destination cannot
+     * change out from under a dub that has already started choosing its
+     * writer.
+     */
+    fun setFormat(f: ExportFormat) {
+        if (stage == Stage.READY) formatIx = ExportFormat.entries.indexOf(f)
+    }
+
     // ---------- preflight ----------
 
     var preflight: List<Finding> = Preflight.check(kit, kitDir)
@@ -77,19 +95,38 @@ class ExportWizardModel(
 
         /** On the card. [outcome] says exactly what and where. */
         data class Done(val outcome: ExportOutcome) : WriteResult
+
+        /**
+         * Something is already there and [write] was told not to replace it
+         * (September UAT, finding 18). [path] is the exact thing in the way,
+         * as the writer named it, so the screen can say what it would be
+         * writing over instead of asking an abstract "are you sure?".
+         *
+         * A value, not an exception, because this is an ordinary answer to
+         * "write this here" — the same reason [Blocked] is a value. A real
+         * write failure (a full card, one pulled mid-write) still throws.
+         */
+        data class WouldOverwrite(val path: File) : WriteResult
     }
 
-    /**
-     * WRITE KIT. Runs the real export through [Exporters] — same driver as
-     * the CLI — and moves the stage machine. Never throws for a preflight
-     * block; that comes back as [WriteResult.Blocked] with the checklist.
-     */
     /**
      * The browser tile for expansion/`.xpn` writes — the Z6.2 prototyping
      * verdict made waveform the default; null skips artwork entirely.
      */
     var artStyle: KitArt.Style? = KitArt.Style.WAVEFORM
 
+    /**
+     * WRITE KIT. Runs the real export through [Exporters] — same driver as
+     * the CLI — and moves the stage machine. Never throws for a preflight
+     * block; that comes back as [WriteResult.Blocked] with the checklist,
+     * nor for a destination that already exists when [overwrite] is false —
+     * that comes back as [WriteResult.WouldOverwrite] naming what is there.
+     *
+     * [overwrite] still defaults to true: the CLI and the tests that drive
+     * this model want the old behaviour, and a default that silently changed
+     * under them would be a second bug. EXPORT passes false on the first tap
+     * and true only after the user has seen what they would replace.
+     */
     fun write(destRoot: File, overwrite: Boolean = true): WriteResult {
         check(stage == Stage.READY) { "write() only from READY, stage is $stage" }
         runPreflight()
@@ -102,15 +139,35 @@ class ExportWizardModel(
                 ?.let { KitArt.png(kit, kitDir, it) }
             val outcome = Exporters.export(format, kit, kitDir, destRoot, overwrite, artworkPng = artwork)
             stage = Stage.COMPLETE
-            WriteResult.Done(outcome)
+            WriteResult.Done(outcome.copy(readBack = readBack(outcome)))
         } catch (e: ExportBlockedException) {
             stage = Stage.READY
             WriteResult.Blocked(e.findings)
+        } catch (e: DestinationExists) {
+            // Caught ahead of the general handler below and *before* the
+            // IOException family it belongs to: nothing was written, so the
+            // wizard goes back to READY exactly as a preflight block does,
+            // and the caller decides whether to come back with overwrite.
+            stage = Stage.READY
+            WriteResult.WouldOverwrite(e.path)
         } catch (e: Exception) {
             // A half-written card must never show WRITE ANOTHER ✓.
             stage = Stage.READY
             throw e
         }
+    }
+
+    /**
+     * READ BACK, after the write landed: the file re-read through X-Ray
+     * and diffed against the kit ([ExportReadBack.verify]). The file is
+     * already on the card by now, so a checker that itself falls over is
+     * one FAIL row in words — never a throw that would hide a finished
+     * write behind an error.
+     */
+    private fun readBack(outcome: ExportOutcome): List<Finding> = try {
+        ExportReadBack.verify(kit, outcome)
+    } catch (e: Exception) {
+        listOf(Finding(Severity.FAIL, "read back fell over: ${e.message ?: e.javaClass.simpleName}"))
     }
 
     /**

@@ -46,6 +46,7 @@ import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.PadEngine
+import com.snipsnap.app.ShareOut
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -64,6 +65,7 @@ import com.snipsnap.kit.MidiGroove
 import com.snipsnap.kit.Names
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
+import com.snipsnap.shell.Chart
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
@@ -198,6 +200,8 @@ fun GrooveScreen(
     reloadRequest: Int = 0,
     /** SONG ▸ — opens ARRANGE, the same GROOVE-scoped-overlay shape as PAD SHEET's own onGrainField. */
     onArrange: () -> Unit = {},
+    /** ORBIT ▸ — opens the circular sequencer, the same overlay shape as ARRANGE. */
+    onOrbit: () -> Unit = {},
 ) {
     val scheme = LocalScheme.current
 
@@ -442,7 +446,6 @@ fun GrooveScreen(
         forkArmed = false
     }
 
-    /** Writes whatever's dirty in [eClip] right now, on [target] — shared by DONE's immediate flush and the teardown/ON_STOP safety nets. */
     /** The actual write, awaited — DONE's own flush needs to know when this is done, not just that it started. */
     suspend fun saveEditorNow() {
         if (!editorDirty) return
@@ -657,6 +660,36 @@ fun GrooveScreen(
     }
 
     /**
+     * STEPS with nothing recorded: an empty one-bar base lands the way a
+     * take does, an empty E is forked from it, and the step editor opens on
+     * the blank bar — so GROOVE can start from a grid, not only from a
+     * performance. One bar, as the MPC gives you; the editor takes it from
+     * there.
+     */
+    fun startSteps() {
+        if (busy || base != null) return
+        clearJustLanded()
+        busy = true
+        scope.launch {
+            try {
+                val (b, e) = withContext(Dispatchers.IO) { GrooveEdit.startEmpty(kitDir, kit.name) }
+                base = b
+                eClip = e
+                editorSourceLabel = PROG_LETTERS[0]
+                editorBar = 0
+                editorDirty = false
+                progIndex = 4
+                isEditing = true
+            } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
+                failure("STEPS", ex)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    /**
      * EDIT STEPS's own fork: [GrooveEdit.fork]'s early-return (hand back
      * whatever E is already stored) is exactly right here — re-entering
      * the editor is SUPPOSED to keep editing the same E, not discard it.
@@ -812,6 +845,60 @@ fun GrooveScreen(
                 failure("MIDI EXPORT", e)
             } finally {
                 midiBusy = false
+            }
+        }
+    }
+
+    // CHART ▸ — the program on screen as a monospace drum chart, one text
+    // file handed to the system chooser. It reads the same `currentClip`
+    // the roll plays and MIDI ▸ writes, so what the chart shows is what
+    // this screen is playing right now — including PROG E's edits and the
+    // live swing percent. Off-grid hits are drawn in their nearest cell and
+    // named in footnotes, never snapped: the J-card's step thumbnail
+    // quantizes quietly for a picture, but a chart is a document, and this
+    // one draws exactly what is stored.
+    var chartBusy by remember(kitDir) { mutableStateOf(false) }
+    fun exportChart() {
+        val clip = currentClip
+        if (clip == null) {
+            onToast(Copy.CHART_NEEDS_GROOVE)
+            return
+        }
+        if (chartBusy) return
+        clearJustLanded()
+        chartBusy = true
+        scope.launch {
+            try {
+                val tempo = kit.tempoBpm
+                val program = PROG_NAMES[progIndex].substringBefore(" ·")
+                val text = Chart.render(
+                    clip, kit,
+                    bpm = tempo ?: KitPreview.DEFAULT_BPM,
+                    bpmIsDefault = tempo == null,
+                    program = program,
+                )
+                val relative = "exports/${Names.sanitizeStem(kit.name)}/chart/${Names.sanitizeStem(clip.name)}.txt"
+                val file = withContext(Dispatchers.IO) {
+                    val root = context.getExternalFilesDir("exports")
+                        ?: throw IOException("external storage unavailable")
+                    val out = File(File(File(root, Names.sanitizeStem(kit.name)), "chart"), "${Names.sanitizeStem(clip.name)}.txt")
+                    out.parentFile?.mkdirs()
+                    out.writeText(text)
+                    out
+                }
+                val summary = Chart.summary(clip)
+                onToast(
+                    if (ShareOut.send(context, file, "text/plain", kit.name)) {
+                        Copy.chartWritten(summary.notes, summary.offGrid)
+                    } else {
+                        Copy.chartKept(relative)
+                    },
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("CHART", e)
+            } finally {
+                chartBusy = false
             }
         }
     }
@@ -1174,7 +1261,7 @@ fun GrooveScreen(
                             liveNotes = take?.notes().orEmpty(),
                         )
                         else -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+                            TapeText(Copy.EMPTY_GROOVE, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
                         }
                     }
                     if (recording && !countingIn) {
@@ -1207,31 +1294,30 @@ fun GrooveScreen(
                         // on is the grid you already know.
                         PlayBank(kit, WINDOW_GRID_ROWS, glow, ::recordHit, {}, Modifier.weight(2f).fillMaxWidth())
                     }
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(Layout.MIN_HIT_TARGET.dp)
-                            .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
-                            .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-                            .let { m ->
-                                if (countingIn) {
-                                    m
-                                } else {
-                                    m.tapeClick(label = null) { if (recording) stopRecording() else startRecording() }
-                                }
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        TapeText(
-                            when {
-                                // Fix 2: the beat count, same as the other two "COUNTING IN…" render sites.
-                                countingIn -> "COUNTING IN… $countInBeat"
-                                recording -> "■ STOP RECORDING"
-                                else -> "● RECORD"
-                            },
-                            TapeType.pixel,
-                            scheme.lcdInk.tape,
-                        )
+                    if (countingIn || recording) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(Layout.MIN_HIT_TARGET.dp)
+                                .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
+                                .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
+                                .let { m -> if (countingIn) m else m.tapeClick(label = null) { stopRecording() } },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TapeText(if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape)
+                        }
+                    } else {
+                        // Three ways in, side by side: play it, tap it, or ring it.
+                        // ORBIT needs no groove at all, so it belongs here as much
+                        // as on the full screen's action row.
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            GrooveActionButton("● RECORD", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startRecording() }
+                            GrooveActionButton("STEPS", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startSteps() }
+                            GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+                                clearJustLanded()
+                                onOrbit()
+                            }
+                        }
                     }
                 }
             }
@@ -1245,7 +1331,7 @@ fun GrooveScreen(
                         TapeText("GROOVE", TapeType.lcd(23), scheme.lcdInk.tape)
                         val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
                         TapeText(
-                            "%.1f BPM · %d BARS · %d NOTES".format(bpm, currentClip?.bars ?: 0, currentClip?.notes?.size ?: 0),
+                            "%.1f BPM · %d BARS · %d NOTES".format(java.util.Locale.ROOT, bpm, currentClip?.bars ?: 0, currentClip?.notes?.size ?: 0),
                             TapeType.lcdSmall,
                             scheme.ink.tape,
                         )
@@ -1287,7 +1373,7 @@ fun GrooveScreen(
                     // MIDI all need a settled base, not one mid-overdub.
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         TapeText(
-                            // Fix 2: the beat count, same as this screen's other two "COUNTING IN…" render sites.
+                            // Fix 2: the beat count, same as this screen's other three "COUNTING IN…" render sites.
                             if (countingIn) "COUNTING IN… $countInBeat" else "● RECORDING — OVERDUBBING ONTO PROG A",
                             TapeType.pixel,
                             scheme.amber.tape,
@@ -1372,9 +1458,27 @@ fun GrooveScreen(
                     // SONG ▸ — the same four programs laid into a structure, not
                     // just cycled: intro/theme/variation/the turn/reprise/outro,
                     // one tap away from what this screen already has loaded.
-                    GrooveActionButton("SONG ▸", scheme, Modifier.fillMaxWidth(), accent = true) {
-                        clearJustLanded()
-                        onArrange()
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
+                            clearJustLanded()
+                            onArrange()
+                        }
+                        // ORBIT ▸ — the kit on rings of different lengths, one
+                        // needle speed: polymeter and polyrhythm from the same
+                        // pads this screen already has loaded.
+                        GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+                            clearJustLanded()
+                            onOrbit()
+                        }
+                        // CHART ▸ — the program on screen as a text drum chart,
+                        // beside MIDI ▸'s row: the same clip, read instead of played.
+                        GrooveActionButton(
+                            if (chartBusy) Copy.CHART_BUSY else "CHART ▸",
+                            scheme,
+                            Modifier.weight(1f),
+                            enabled = !chartBusy,
+                            accent = true,
+                        ) { exportChart() }
                     }
                     GrooveActionButton("● RECORD", scheme, Modifier.fillMaxWidth(), enabled = !busy && !midiBusy) { startRecording() }
 
@@ -1418,7 +1522,7 @@ fun GrooveScreen(
 @Composable
 private fun EmptyGroove(scheme: Scheme) {
     Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
-        TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+        TapeText(Copy.READ_GROOVE_NEEDS_KIT, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
     }
 }
 

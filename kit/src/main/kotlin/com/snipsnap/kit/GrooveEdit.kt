@@ -111,6 +111,23 @@ object GrooveEdit {
         .map { collision -> collision.maxBy { it.velocity } }
         .sortedBy { it.timePulses }
 
+    /**
+     * GROOVE's STEPS with nothing recorded: an empty one-bar base named
+     * after the kit, stored with its standard variations the way a landed
+     * take is ([LiveRecord.land]), so every path that reads a base finds
+     * one — and an empty E forked from it, so the step editor opens on a
+     * blank bar. An E already stored (a take undone back to nothing) is
+     * kept. Returns the base and the E.
+     */
+    fun startEmpty(kitDir: File, kitName: String, bars: Int = 1): Pair<Mpc3Clip, Mpc3Clip> {
+        require(bars >= 1) { "bars must be positive: $bars" }
+        val base = Mpc3Clip(name = kitName.ifBlank { "Groove" }, bars = bars, notes = emptyList())
+        val existingE = load(kitDir)
+        GrooveStore.save(kitDir, GrooveVariations.standard(base) + listOfNotNull(existingE))
+        val e = fork(kitDir, base)
+        return base to e
+    }
+
     /** PROG E from a kit dir, or null when no fork has happened yet. */
     fun load(kitDir: File): Mpc3Clip? = GrooveStore.load(kitDir).firstOrNull { isProgE(it) }
 

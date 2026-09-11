@@ -1499,6 +1499,9 @@ now, each pairing named on failure.
 | BBB3 | ✓ done: the CLI hostile sweep extended — `learn`, `beat`, `pad` and `restore` join the file-taking verbs, and the corpus gains a zero-channel WAV, a three-channel WAV, a RIFF size past the moon, a sheet whose loop runs past the audio, and a backup zip whose entries climb with `../`; every verb exits 0..2 and nothing lands outside its folder (`KitBackup.restore` flattens entry names, `XpnImporter` runs through `SafePath`) | CORE | S | every (verb × hostile) pair exits cleanly; no escaped file anywhere |
 | BBB4 | ✓ done: the sidecars under mutation, round three — `SidecarFuzzTest` (`:shell`) reads the kit, the grooves, the instrument, the pocket, the teach log, the pad recipe and the fx chain back under two kinds of damage: torn bytes (flips, truncation, zero and 0xFF runs) and rewritten trees (a random node swapped for null / a string / a huge, negative or fractional number / an empty array or object / a boolean, or a key dropped); a valid parse or a typed refusal, the teach log never throwing at all, and the parser refusing a nesting attack in words. Found and fixed: `GrooveStore` trusted its casts (a torn `lengthPulses` was an NPE, a string `bars` a `ClassCastException`); `KitStore` cast chain boundaries. Both read through the typed accessors now | CORE | S | no untyped throwable in any batch, inside the hang bound |
 | BBB5 | ✓ done: the containers under mutation, round four — `ContainerFuzzTest` (`:kit`) damages *inside* the wrapper so the mutation reaches the reader that matters: the `.xpm` program XML inside a sound `.xpn` (round one tore the zip, and the XML parser never saw a bad byte), the JSON payload inside a sound ACVS container, the `.sfz` text (lines dropped, doubled, tokens swapped for `1e300` / `../../escaped` / empty), the backup zip, the answer sidecar, the WAV header walker, and the two name parsers over any string; `SidecarFuzzTest` adds the three pad-sheet readers (never throw at all) and the label. Found and fixed: `AnswerStore` trusted its casts (a dropped `seed` was an NPE) — typed accessors now. Nothing climbs out: every batch checks no `escaped.*` landed anywhere | CORE | S | no untyped throwable in any batch, inside the hang bound; no escaped file |
+| BBB6 | ✓ done: the Spec Sheet II doors, round five — every door the six sheet-two features grew meets the house rules. `DegenerateDoorsTest`: {one sample, tiny, silence, DC, square, low rate, stereo, noise} × {`RecipeReplay.apply` with the doors' own era / character / smear / keyed recipes, a synth patch and a robin deal; `stackTakes` on a real bin take} — a pad whose file reads back finite, or an `IllegalArgumentException` in words; `Chart.render` over 300 seeded clips of every shape inside `Mpc3Clip`'s fence (dense, empty, half-cell hits, the loop's last pulses, notes with no pad): every grid row the same width, one footnote per off-grid hit, one row per pad per system, deterministic; `Doubles.clusters` over empty / one / odd-vector / crowd indexes: no cluster of one, finite spreads, tightest first, disjoint, and an entry whose vector this code could not have measured (empty, short, NaN, ∞, negative) is never called a double. `SidecarFuzzTest`: the replay planner, the diff's recipe word, COPY's clip and `KitDiff.changes` over six fuzzed recipe seeds never throw at all; the crate index under torn bytes and rewritten trees never throws and never hands back a vector the extractor could not have written. `CliTest`: `recipe` against fifteen wrong calls (no args, not a kit, pads off the grid and past the bank, every malformed `--from`, a garbage kit either side, a climbing path) exits 1..2 with a word and leaves the destination byte-for-byte. Found and fixed: `Crate.loadIndex` believed any cached vector — a hand-edited or foreign index with a short vector read as 0.00 from everything after it in the list, because `Crate.distance` only walked the shorter vector's dimensions; the reader now drops a vector that is not `Similar.DIMENSIONS` numbers inside 0..1 (the pad measures again) and `distance` is +∞ across lengths, symmetric; `Crate.Entry.label` formatted its digits in the default locale (an identifier — `Locale.ROOT` now, as `PadNoteMap`) | CORE | S | every pairing passes; no untyped throwable in any batch; every hostile `recipe` call exits clean with the kit untouched |
+| BBB7 | ✓ done: round six — the sheet-two surface round five could not reach. **The takes bin under damage** (`SidecarFuzzTest`, `KitBuilderTest`): the TAKES screen reads every archived take through `KitStore.read` (already fuzzed) and RESTORE acts on one — `restoreTake` under torn bytes and rewritten trees refuses typed or restores what the take says, the kit on disk stays a kit after every round, and nothing lands outside its folder; a take whose pad file climbs (`../`, `..\`, absolute, a subfolder) is refused in the pad type's own words before anything moves, kit.json, live audio and bin untouched; `..` alone passes the type but finds no file and moves nothing. **The shelf under odd layouts** (`CrateTest`): plain, spaced and dotted names, a kit inside a kit, a hidden folder, a symlink out of the shelf, a symlink alias of a kit already in it, a symlink loop, and the shelf reached through a symlink itself — the index is the folder's own contents under their own names, each once, and the loop terminates. **The grammar and the chart over any groove** (`ArrangerTest`): one hit, two hits, everything off the grid, 64 bars with one hit a bar, a hit at the last pulse, a flat dense bar, all at velocity zero, pads the kit has not got — × with and without a snare: a plan with a bar per section and a reason, charted with one grid per section, deterministic, or an `IllegalArgumentException` in words. Found and fixed: `Crate.index` entered symlinked directories — a link pointing out of the shelf indexed a kit GO ▸ could never open, a link looping back would have walked until the path ran out, and an alias of a kit already on the shelf indexed it twice (every pad its own double at 0.00) under whichever name the directory listing returned first; a symlinked directory is now never entered, the root itself aside | CORE | S | every pairing passes; no untyped throwable in the take batch; the layout test terminates and names each kit once |
+| BBB8 | ✓ done: a repo-wide bug hunt, not a sheet-two round — every module's own `.format(` calls, not just the doors sheet two grew. `PadNoteMapLocaleTest`, `KitAssemblerLocaleTest` and `KitBuilderLocaleTest` each caught the same defect once, by hand, after it shipped: `String.format`'s `%d`/`%f`-family conversions follow the JVM's DEFAULT locale, so on an Arabic-, Persian- or Burmese-locale phone a bare `"%02d".format(n)` renders Eastern-Arabic or Myanmar digits — a bug no desktop-JVM test with the default locale can see. A full sweep found 137 candidate call sites across every module; two turned out already correctly guarded a line further down than the sweep's first look reached (caught and left alone by the sweep's own double-guard audit, not landed as a false fix). The other 135 — filenames, pad labels, toast text, liner notes, CLI reports, MixDoctor findings, the whole surface, `:app` included (40 of them) — now pass `Locale.ROOT`. Two calls whose receiver was an `if`/`+`-built string rather than a plain literal (`CaptureDoctor.summary()`, `WearCommand`'s report line) needed a by-hand look, not the mechanical pass. Rebasing onto the base branch after two other PRs landed (Orbit, and a `PadBanks` refactor consolidating six screens' duplicated single-bank pad-tag functions into one) surfaced two more rounds: `PadBanks.tag` inherited the same unguarded `%02d` from the duplicates it replaced, and the newly-merged work had already added 17 more sites of its own — both fixed the same way, verified by re-running `FormatLocaleTest` until it found nothing left. `FormatLocaleTest` (`:shell`, new) is the permanent guard: a `ConventionTest`-shaped source-scanning law reading every module's `src/main` (`:app`'s included, the same way `ConventionTest` already reaches it) for a `.format(` call whose literal carries a digit conversion but doesn't pass `Locale.ROOT`; its own probe test proves empirically which conversions actually localize (`%d`/`%f`, plus the decimal separator itself) and which don't (`%x`, `%s`) rather than assuming | CORE | M | the law finds zero violations on real source (153 total sites fixed across the original sweep and the post-merge follow-up) and is proven non-vacuous (300+ sites scanned); the probe test pins the exact Arabic digit and separator characters `String.format` produces |
 
 ## Wave CCC — the Surface (APP + CORE)
 
@@ -1550,6 +1553,72 @@ been heard on a phone; then it follows in one small PR.
 | EEE8 | ✓ done: the native engines read in full — four doors the review found and a case for each. A reading that is not a number is now refused at the Surface's door rather than latched for ever: the smoothers and the filter carry state across callbacks, so one NaN (a gravity sensor reporting one, and TILT is resonance in XYZ) killed the surface for the session; `clamp01` passed NaN through, since `NaN < 0` and `NaN > 1` are both false. A pad voice's speed and gains come through a door too — a zero speed froze a voice on one frame for ever and a negative one walked the read off the front of the buffer, which `render` never guarded (the suite segfaults without the fix). `PadEngine::stop` now sweeps: a closed stream takes its voices and its queued commands with it, so a route change does not resume notes mid-sample seconds later or leave the allocator holding ids. `PrintBuffer::clear` refuses a live print on the same terms `arm` has since the first round. `TiltSource` keeps its last reading rather than pass a NaN on | CORE + APP | S | 24 native cases green; each of the three engine fixes has a case that fails (or crashes) without it |
 | EEE9 | ✓ done: SPLIT — one sound on three faders. `Separate.stn` has been in `:audio` since the anatomy lesson and only `snipsnap dissect` could reach it; SPLIT puts it on the phone. `Layers` (`:shell`, tested): three strips, each a level, a REVERSE, a mute and a solo; solo silences the others and mute wins over solo; and an exact offline render. Because the STN masks sum to one, **the desk is transparent at rest** — three faders at unity render the source back sample for sample, and a case says so (a 2% gain error trips two). That is also why PRINT needs no capture at all, unlike SURFACE's: the mix is determined by the three buffers and the desk, so a print is `Layers.render` — deterministic, and provably the sound itself when nothing is touched. The engine side (EEE8's successor): reverse as a direction flag, `hitLayers` publishing the group atomically, `setGain` gliding a sounding voice, `loadSnips` banking audio already in hand. The screen is reached from KIT's action row on the pad you want taken apart — a menu of twelve fits no phone, and SPLIT is something you do *to a pad* | CORE + APP | M | bench: sines backwards under a forward transient; a fader move is a glide, not a click; PRINT at rest is the pad you started with |
 | EEE10 | ✓ done: the interim voice retired — GROOVE's roll and its editor taps move to the same `PadEngine` the other four screens share, with a `VoiceAllocator` beside them (a groove tick can cross several notes in one frame, and a hat should choke against its own mute group on the roll exactly as under a finger); backgrounding now stops the *sound* and not merely the transport. `PadPlayer` — M0's one-SoundPool-per-kit interim, main-thread by necessity — is deleted with its last caller, and the comments and docs that named it now name what is actually there | APP | S | bench: the roll sounds like the grid sounds like PLAY, because it is one engine; a busy bar does not outrun its voices |
+
+## Wave YYY — the three sequencers (CORE + APP)
+
+SnipSnap sequences in three places and they have drifted apart. The loop
+grid (`Session`/`Track`/`Step`, `:loop`) chains blocks against an
+interval; ORBIT (`OrbitSet`/`Orbit`/`OrbitHit`, `:loop`) turns rings
+against one shared needle; grooves (`Mpc3Clip`/`Mpc3Note`, `:kit`/`:mpc3`)
+are the note lists every export writes. Three models of "a hit at a time
+with a velocity", and four separate timing conversions: frames to
+pulses (`CapturedGroove.kt:61`), seconds to pulses (`LiveRecord.kt:33`),
+steps to frames (`OrbitClock.stepFrames`) and pulses to frames
+(`KitPreview.kt:51`). Exactly one bridge joins them — `OrbitClip`, which
+runs rings → clip and never the other way.
+
+The drift shows up first as four things that are simply wrong: a crash
+reachable from the screen, a note collapse, a silent drop, and a choke
+rule ORBIT alone doesn't honour. Underneath them is the feel gap. It is
+narrower than it was — the circular-sequencer wave gave `OrbitSet` a
+set-level `swing` (50–75, the MPC's own ladder) that `OrbitClock.stepOffset`
+folds in, so a swung ring now rides to the export intact. What is still
+missing is *per-hit* time: `OrbitHit` is `(step, slot, velocity)`, so
+there is nowhere to put the seeded jitter `GrooveVariations.humanize`
+applies, nowhere to put the sixteen distinct per-position offsets a
+`GrooveFeel` template carries, and no swing at all on a ring whose step
+is not a 16th — which is exactly the spanned, polyrhythmic ring ORBIT
+exists for.
+
+Build order: YYY1 → YYY2 → YYY3 → YYY4 (the correctness pass, about a
+day, all JVM-testable) → YYY5 → YYY6 (the unlock, in that order —
+importing a captured break into rings is only worth doing once a ring
+can hold the break's pocket) → the rest by appetite, except YYY10,
+which is gated on its own corpus probe exactly as AA1 was.
+
+Every row below was verified by running it, not by reading it, against
+`a2ced3c`: the crash, the collapse, the silent drop, the fabricated note
+length, the swing that does reach the export and the meter that does not
+each have a recorded reproduction. Two caveats stated once rather than
+per row — `:app` has no JVM test source set, so the UI-reachability
+claims in YYY1, YYY2 and YYY3 rest on reading `OrbitScreen.kt` and
+`GrooveScreen.kt` — for YYY2 that is one half only, since
+`OrbitPresets.emptyPattern` was run and the `+ PAD RING` call into it was
+read; and every CORE row here is testable in the cloud
+session, so only YYY4's bench line wants hardware.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| YYY1 | Empty-clip refusal — `GrooveVariations.sparse` reads `clip.notes.map { it.velocity }.sorted()[clip.notes.size / 2]` (`GrooveVariations.kt:105`), which throws a raw `IndexOutOfBoundsException` on a note-less clip; `standard()` calls it. `Mpc3Clip` permits zero notes, and the path is reachable: `OrbitClip.refusal()` checks only the 64-bar ceiling, so ORBIT's CLIP ▸ KIT (`clipIntoKit()`, `OrbitScreen.kt:571-579`) writes a 0-note ORBIT clip into `groove.json`; when the kit had no other groove that clip is `GrooveStore.load(dir).firstOrNull()` — the base — and GROOVE's program D is `sparse(base)` (`GrooveScreen.kt:185`). `Arranger.kt:69` and `:79` (`velocities[velocities.size / 2]`, the line after the `sorted()` that feeds it) fail the same way. Breaks the BB/SS contract this repo states outright: any input, a typed refusal or a valid result, never a raw stack trace | CORE | S | a note-less clip through `sparse`, `standard` and `Arranger.arrange` raises a named bad-input refusal, not an `IndexOutOfBoundsException`; CLI `arrange` on such a kit exits 1 with one honest line |
+| YYY2 | `OrbitClip.refusal()` names an empty export — the same door widened. Three shapes reach an empty export and all three pass `refusal()` today: snip rings only, every ring disengaged, and — the one worth naming separately — a single engaged `PatternOrbit` carrying no hits, which is exactly what `+ PAD RING` makes (`OrbitScreen.kt:416` → `OrbitPresets.emptyPattern`) before a hit is put on it. Verified: each yields `refusal = null` and a 0-note clip called `ORBIT 1`, which is also what feeds YYY1. Snip rings having no notes is correct and documented; being silent about it is not, and a ring the user just made exporting nothing is a different bug from a snip ring doing it | CORE | S | all three empty-export shapes refuse with a reason that names which one it is; a mixed set exports its pattern rings and says how many rings were left behind; the CLIP ▸ KIT path surfaces it the way it already surfaces the bar ceiling |
+| YYY3 | Cross-kit collapse — `OrbitClip.clip()` maps every firing through `noteFor(slot) = 35 + slot` (`OrbitClip.kt:79`) with no reference to the ring's kit, then `GrooveEdit.dedupeLouder` groups by `(note, timePulses)`. Verified: `kitA` slot 1 on steps {0,4} against `kitB` slot 1 on {0,8} exports **3** notes, not 4 — step 0 silently merged two different samples. `PatternOrbit` carries a per-ring `kit`, `OrbitStore` round-trips it and `OrbitBank` keys pads by `(kit, slot)`, so the model supports multi-kit sets whatever the screen currently builds. One MPC track carries one program, so this is a decision, not a patch: a track per kit, or a refusal that names both. Round two of review found a second collapse on the same line that needs no second kit at all — the plainer of the two, and the one to fix first: `noteFor` clamps `(35 + slot)` to `0..127` while `KitPad` allows `slot in 1..128` (`Kit.kt:86`), so **every slot from 92 up lands on note 127**. Verified: two distinct pads of one kit, slots 92 and 100, struck on the same step export as a single note with the quieter one dropped | CORE | S | a two-kit set either exports every hit or refuses naming both kits; two distinct pads above slot 91 struck together export as two notes or refuse, never silently as one; the single-kit path under slot 92 stays byte-identical |
+| YYY4 | Choke in `OrbitEngine` — `KitPreview.render` honours `pad.muteGroup` with a 128-frame fade (`KitPreview.kt:102-107`); `OrbitEngine` has no reference to `muteGroup` anywhere, and `OrbitBank.pad()` hands back a bare `Snip` with no pad metadata, so choke is structurally absent. An open hat rings through a closed hat in ORBIT and chokes correctly in the preview, in the mixdown and on the hardware — one pattern, three different sounds | CORE + APP | S | in an offline `OrbitEngine.render`, a hit in a mute group stops the one still ringing in it within a choke fade of its own onset and is silent after — the cutoff and the fade only. Not sample-parity with `KitPreview`, which also applies pad level, its velocity curve, equal-power pan and pad shape where `OrbitEngine` applies hit velocity × ring level and a linear pan law; that parity is a separate question this row does not open. Bench: ORBIT's hats choke under a finger |
+| YYY5 | Per-hit time on `OrbitHit` — the set-level `swing` added with the circular sequencer works and reaches the export (verified: swing 66 moves the odd 16ths of a 16-step ring from 240 to 317 pulses). Three things it cannot do, because one number is not sixteen. `GrooveVariations.humanize`'s seeded jitter has nowhere to live. A `GrooveFeel` template is sixteen distinct per-position offsets — verified, a real donor extracts to `[0, 7, 14, 21, 28, 4, 11, 18, 25, 1, 8, 15, 22, 29, 5, 12]` — so templates still cannot reach rings at all. And `OrbitClock.swingFrames` gates on `stepIsSixteenth`, so a spanned ring whose step is not a 16th gets no swing whatever — exactly the polyrhythmic ring ORBIT exists for. An offset field on the hit closes all three and lets the feel stack compose across all three sequencers instead of living on one side of the bridge. A fourth thing came out of the review and belongs here: the two swings are not the same arithmetic at the pulse. `OrbitClock` works in float frames and `OrbitClip` rounds 316.8 up to **317**, while `GrooveVariations.swing` takes its push through `Long` division — `(66−50) * 240 / 50` truncates to 76 — and lands the same note on **316**. One pulse, but it means a ring and a clip swung "the same" are not the same file, so the per-hit work wants an explicit rounding contract across the two rather than two roundings that happen to be close | CORE | M | `GrooveFeel.apply` onto a ring set reproduces the donor's sixteen offsets in the exported clip; a humanized ring re-renders identically for one seed; a 3-step ring spanning a bar can be given a pocket; a ring and a clip given the same swing percent put their notes on the same pulse; `orbits.json` bumps a version and every older file still loads |
+| YYY6 | Grooves → rings, the missing direction — `OrbitClip` runs one way, so a captured break, an imported `.mid` and PROG E can none of them be played by the live engine, and the chop pipeline's best material is invisible to ORBIT. Pulses → steps is arithmetic; the real decision is how one clip becomes several rings, and per-pad is both the obvious rule and exactly what `OrbitPresets` already builds. This is the single change that would make the three sequencers feel like one instrument. One decision the arithmetic hides: `noteFor(slot) = 35 + slot` inverts to `slot = note − 35`, so a clip carrying any note below 36 has no ring slot at all and `OrbitHit`'s own `require(slot >= 1)` refuses it — verified, and GM note 35 (Acoustic Bass Drum) is the common case, not a hostile one. The top end is YYY3's to fix before this row can rely on it: while `noteFor` clamps at 127, note 127 could have come from any of slots 92..128, so no inverse recovers it. `OrbitBank` already skips a `(kit, slot)` it cannot find, so the policy should match it: skip and report, never a silent drop and never a whole-file refusal | CORE | M | a captured groove → rings → `OrbitClip.clip()` round-trips every note's pad, step and velocity within a 16th; a `.mid` whose notes all map opens in ORBIT as rings; one carrying note 35, or a note whose pad the kit lacks, opens with the rest and names what it left out; a clip that won't fit `MAX_STEPS`/`MAX_ORBITS` refuses with a reason rather than truncating |
+| YYY7 | Probability, conditionals and ratchets — `OrbitHit` carries velocity and nothing else. Per-hit trigger probability, every-N-laps conditionals and ratchets are the three staples of every modern step sequencer, and rings are an unusually good home for them: hits already drift against each other, so probability compounds with the polymeter instead of merely adding noise. The roll arithmetic already exists in `GrooveVariations.fill` | CORE + APP | S | a seeded set renders identically twice and differently across laps; a 1-in-4 hit fires on the laps its seed names; a ratcheted hit exports as its sub-16th notes; every new field round-trips through `orbits.json` |
+| YYY8 | Note length — `OrbitHit` has none, so `OrbitClip.clip()` takes `Mpc3Note`'s 240-pulse default: verified, **every** exported note is exactly a 16th. Meanwhile `OrbitEngine.schedule` starts a voice that plays its sample to completion with no gate, so live playback sustains and the export truncates. Invisible on drums; on the BASS ring `OrbitPresets.bassRing` builds over tonal pads it means every exported bass note is a 16th staccato regardless of what was heard | CORE | S–M | a held ring note exports with its own length; the offline render and the export agree on where a note stops; drum-ring exports are unchanged |
+| YYY9 | ORBIT sections — a set loops forever. The grid has `Arrangement` (chains advancing per interval, an LCM cycle), the groove side has `BeatTape.arrange` and `SessionBuilder`'s four named sequences; rings have neither, so there is no way to say "these rings for eight bars, then those". `OrbitClip` already computes the full cycle, so sections extend what is there rather than adding machinery | CORE + APP | M–L | a two-section set renders each section for its length and repeats; the export carries the sections as the sequences the hardware's switcher flips; a one-section set exports byte-identically to today |
+| YYY10 | Meter — `Mpc3Clip` hardcodes 4/4 (`PULSES_PER_BAR = 3840`) and `GrooveFeel.POSITIONS = 16` folds every donor modulo a 4/4 bar, while `OrbitSet.lapSteps` offers 12/16/20/24/32. Verified: a 3/4 set (`lapSteps = 12`) with hits on steps 0/3/6/9 exports at pulses 0/720/1440/2160 — the absolute timing is right and nothing records that it was 3/4, so the MPC reads 4/4 with hits on an odd grid. `countsDifferently()` discloses this on screen, which is honest but is not a fix. And the clip is not the only 4/4 in the path: `Mpc3ProjectWriter`'s sequence writes a `timeSignatureTrack` of `beatsPerBar 4`, `beatLength 960` (`Mpc3ProjectWriter.kt:229-231`), so a meter that stopped at `Mpc3Clip` and `GrooveFeel` would still emit 4/4 into every `.xpj`. Corpus first, exactly as AA1 did | CORE | M | probe notes + the key paths recorded in docs/MPC3_FORMAT.md before any writer code, `Mpc3ProjectWriter`'s `timeSignatureTrack` covered alongside the clip; then either a meter that round-trips through our own reader, or a recorded finding that the format cannot carry one |
+
+**Below the line (not scheduled):** unifying the three note models.
+`Mpc3Note`, `OrbitHit` and `Step` are three shapes of one idea, and
+`LiveRecord`'s own comment already records the duplication ("960.0 is
+960 PPQ, not a fresh constant … no shared 'pulses per quarter' constant
+exists to reuse"). Each model earns its shape — a file format, a ring,
+an interval — and a unification would touch everything for nothing the
+user could hear. The cheap 80% is one shared PPQ constant and one
+conversion helper, worth folding into whichever row above lands first.
+
 
 ## Sequence
 
@@ -1785,6 +1854,17 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
   ✓ BBB5 (the Hardening, round four): the containers damaged inside the
     wrapper (xpm in xpn, payload in ACVS, sfz, backup zip, answer, WAV
     header, name parsers, pad sheets, label); the answer reader made typed
+  ✓ BBB6 (the Hardening, round five): the Spec Sheet II doors — replay,
+    stack, chart, doubles, the takes diff and the `recipe` verb — under
+    the degenerate matrix, recipe and crate-index fuzz, and the CLI sweep;
+    the crate reader made to trust only vectors it could have written
+  ✓ BBB7 (the Hardening, round six): the takes bin under damage, the
+    shelf under symlinks, aliases, loops and nesting, the grammar and the
+    chart over any groove; the crate walk made to stay inside the folder
+  ✓ BBB8 (a repo-wide bug hunt): every module's %d/%f-family format()
+    call now passes Locale.ROOT - the PadNoteMap/KitAssembler/KitBuilder
+    locale defect, caught three separate times by hand, found 137 more
+    times and closed everywhere at once; FormatLocaleTest guards it for good
   ✓ wave CCC (the Surface): the tactile pad over Oboe — XY / XYZ / MORPH,
     the roll of the phone, PRINT to resample the gesture onto TAPE; then
     the shared fallback, SET A..D corners in surface.json, PAD ◄ ►,
@@ -2047,6 +2127,151 @@ APP+CORE wave RRR: ✓ all landed (2026-09-09) — TAPE SPLICE, joining two
   same move as `Mutate.Mode.SPLICE`, which always crossfades one pad's
   transient into an unrelated crate parent - this one only ever joins
   two takes of the *same* pad, and only fades when the cut demands it.
+
+APP+CORE wave SSS: ✓ all landed (2026-09-09) — READ BACK, X-RAY turned
+  inward on the app's own writers. `ExportReadBack.verify` (`:kit`, new)
+  re-reads the file DUB just wrote through `MpcXRay` and diffs it pad by
+  pad against what the kit asked for - sample stems and velocity
+  zones, level, pan, both tunes, mute group, the four shape fields -
+  with expected values built the way the writers build them (stems
+  through `Names.sanitizeStem`, decay 0.047244 on the XML side and 1.0
+  on ACVS when the kit left it null, X-Ray's 0-based XML instrument
+  numbers), so a disagreement is a real one. Preflight checked the kit
+  *before* the write; nothing checked the file *after* it until this.
+  `Severity.SKIP` (new) is "not checked" said out loud - a field X-Ray
+  has no name for (colour, one-shot, humanize), a chain pad's zones, a
+  format that isn't an MPC program at all - never counted as OK, never
+  blocking. The wizard runs it after every write (`ExportOutcome.readBack`)
+  and the completion stage shows it as a READ BACK card in PREFLIGHT's
+  own rows, with one caveat under it: the file agreeing with our reader
+  is not the Live III agreeing - a writer and a reader can share one
+  misunderstanding, and hardware stays the only proof it opens.
+  `RoundTripFuzzTest` was the test-time version of this idea; this is
+  the one the user sees, on every format X-Ray can read.
+
+APP+CORE wave TTT: ✓ all landed (2026-09-10) — SINCE T3, the TAKES card
+  saying what a take differs by before you restore it. `KitDiff.changes`
+  (`:shell`, new) diffs two `kit.json` snapshots of the same kit keyed by
+  SLOT - never by position, so a pad added on B02 doesn't make every
+  later pad read as changed the way the positional `MpcDiff` would - and
+  says each difference in the pad's own words: ADDED / CLEARED, level,
+  pan, both tunes, mute group, one-shot, the shape fields (a null read as
+  DEFAULT, never an invented number), layer and chain counts, and the
+  recipe named the way the door that wrote it already names it
+  (`PadSheet.read` for the treatments with their AMT, MUTATE and OUTSIDE
+  through their own readers, a short word each for robin/splice/doctor/
+  clean/sculpt/smear/patch). Kit-level lines first: rename, key, tempo,
+  wear. Provenance (`source`) is deliberately not a change. Every take
+  row on VERSIONS + BIN now carries a collapsed headline ("3 CHANGES",
+  "NO CHANGES") and taps open to the lines, read against the live kit at
+  the moment the list was built; the open row is keyed by (file, mtime),
+  the same identity RESTORE checks, since rotation recycles take paths.
+  One caveat under every expander, because it is true:
+  `replaceAudio` rewrites the WAV under the SAME filename and records
+  what it did in the recipe, so a rewrite that changed no recipe leaves
+  no mark this diff can see.
+
+APP+CORE wave UUU: ✓ all landed (2026-09-10) — STACK THE TAKES, a pad's
+  real prior takes as its velocity zones. SOFT HITS (`addGhostLayers`)
+  fakes soft zones by rendering darkened copies of the live sample; the
+  pad already owns real alternates, because every treat / rewrite /
+  splice bins the previous WAV under the same name and `priorTakes`
+  lists them. `KitBuilderModel.stackTakes` (`:shell`, new) takes one to
+  three of those in the user's order, softest first, COPIES each out of
+  the bin to a free `${stem}_vN.wav` - never `restoreFromBin`, which
+  would spend the history - and maps them plus the live sample onto
+  `velocityLayers` through the same 1..127 windows GHOSTS uses, now
+  shared as `StackTakes.windows`. Undo is the existing `clearGhostLayers`.
+  One fix on the way in: `addGhostLayers` blindly overwrote `_v1`/`_v2`;
+  both doors now take the first free name (`freeLayerNames`).
+  `StackTakesScreen` (`:app`, new), reached from PAD SHEET's STACK ▸
+  (dimmed with no history, or when the pad is already layered - the
+  screen says which), pins LIVE at the top with its peak dBFS and
+  length, lists every prior take the same way, ▶ previews any of them,
+  and shows the stack as it would land. Shown, not fixed: a soft take
+  that peaks over LIVE gets a line in words ("SOFT IS +3.0 DB OVER LIVE.
+  THE MPC'S VELOCITY CURVE WILL NOT HIDE THIS.") and stays exactly that
+  loud - no auto-gain, that would be a guessed default. The cost is said
+  before COMMIT, because it is real: a stacked pad is layered, which
+  locks TREAT / MUTATE / SPLICE / OUTSIDE until SOFT HITS is cleared, and
+  clearing deletes the copies (the bin sources survive, until purge).
+
+APP+CORE wave VVV: ✓ all landed (2026-09-10) — DO IT AGAIN, COPY LAST
+  TREATMENT off one pad and PASTE it on another - "do to this snare what
+  I did to that one". Every rewritten pad carries `KitPad.recipe`; the
+  engines always promised it makes the sound re-treatable, and nothing
+  generic ever cashed it. `RecipeReplay` (`:shell`, new) `plan`s a
+  replay from the recipe's top-level key BEFORE any byte moves and
+  refuses by name what it can't carry - MUTATE (its parents are labels,
+  never bytes), SPLICE (names no takes), OUTSIDE (a room, not a
+  setting), CLEAN / THE DOCTOR / SCULPT (measurements of that exact
+  sound) - then `apply`s the rest through the model's own doors so
+  every destination guard stays where it lives: era and character with
+  their AMT, the keyed family with every dial the writer wrote (seed,
+  decay, division, tail, knee), SMEAR (its inline rewrite lifted out of
+  PAD SHEET into `KitBuilderModel.smearPad` on the way), a synth patch
+  (which REPLACES the sound, and the toast says so), round robin (same
+  recipe, new deal - the seed mixes with the slot). One honest limit
+  said on the button: the recipe is the LAST step, not the stack, so a
+  crushed-then-washed pad copies as washed. One honest surprise named
+  in the toast: a keyed recipe reads the DESTINATION kit's key - bodied
+  in C major pasted into a D-minor kit rings D minor, "THE SOURCE WAS C
+  MAJOR". The clipboard lives in `App` for the session and survives a
+  kit switch (the cross-kit case is the point); PAD SHEET's TREATMENT
+  box carries COPY LAST TREATMENT / PASTE ▸. CLI: `snipsnap recipe
+  <kit> <pad> --from <kit>:<pad>`.
+
+APP+CORE wave WWW: ✓ all landed (2026-09-10) — DOUBLES, pads across the
+  shelf's kits inside a "same sound" distance, the number on every row,
+  nothing deleted. X-RAY's posture turned on the user's own library.
+  `Doubles.clusters` (`:shell`, new) is union-find (single linkage) over
+  the pairs `Crate.dupes` already finds, each cluster carrying its own
+  widest intra-cluster distance as WITHIN - so a chain that reaches
+  further than the ring through a middle pad reads as exactly that -
+  its majority stored class as the label, and how many kits it spans.
+  The threshold is a dial the user reads, not a fence we assert:
+  `Crate.DUPE_DISTANCE` (0.02) was only ever the roulette's "same bytes"
+  exclusion, so DOUBLES steps through its own rings (0.02 / 0.05 /
+  0.10, default 0.05) and the empty state names the ring ("NO DOUBLES
+  WITHIN 0.05. NOT A CLEAN BILL - JUST NONE THIS CLOSE."). One scope fix
+  on the way in that reaches the roulette too: `Crate.index` now skips
+  hidden folders, so a kit DELETED KITS keeps under `.bin/` - the
+  likeliest double of its live self - and `.landing-*` staging are no
+  longer part of the library. `DoublesScreen` (`:app`, new), from the
+  shelf's DOUBLES ▸ SAME SOUND, ANY KIT: measures once, on IO - the
+  crate index (cached by path, mtime and size), `Doubles.measure`'s one
+  all-pairs pass at the widest ring, and the canonical-path join to the
+  shelf's entries - then regroups in memory as the ring steps
+  (`Doubles.clusters(measured, within)` is a filter over those pairs),
+  a header per cluster, a row per pad with GO ▸ that opens the kit on
+  that pad's sheet, and two lines that stay on screen because they are
+  true: the number is a feature distance, not a verdict, and the first
+  4096 samples are what's measured, so two trims of one hit may not
+  land this close.
+
+APP+CORE wave XXX: ✓ all landed (2026-09-10) — THE CHART, a groove as
+  a monospace drum chart: one row per pad the clip plays, one column
+  per 16th, `X` / `x` / `o` by velocity (≥ .75 / ≥ .40 / softer), bars
+  numbered over a beat ruler, four bars to a system with the labels
+  repeated. `Chart.render` (`:shell`, new) draws exactly what is
+  stored: a hit off the 16th grid is drawn in its nearest cell as `>`
+  (late) or `<` (early) and footnoted with its bar, step and pulse
+  offset ("OFF-GRID 1: A02 BAR 1 STEP 5, +31 PULSES LATE (x)"), a hit
+  whose nearest cell is past the loop's end says "ACROSS THE LOOP'S
+  END", and a cell two hits share says so — never the quiet quantize
+  the J-card's step thumbnail does for a picture. The header names the
+  program on screen, the tempo (and that it's a stand-in when the kit
+  has none), bars and notes; the swing line is measured, not asserted:
+  the even 16ths' median lean in pulses and the panel percent it reads
+  back to through `GrooveVariations.swing`'s own arithmetic ("EVEN
+  16THS +57 PULSES, ≈ SWING 62%"), "STRAIGHT" on the grid, and an early
+  lean named as not a swing. A second `render(arrangement)` stacks a
+  SONG's sections, each under its name, length, repeat count and the
+  reason that picked it. Door: CHART ▸ on GROOVE (the SONG ▸ / ORBIT ▸
+  row, under MIDI ▸) writes `<exports>/<kit>/chart/<clip>.txt` from the
+  same `currentClip` the roll plays — PROG E's edits and the live swing
+  included — and hands it to the system chooser as text/plain; when no
+  app takes it the toast says where the file was kept.
 
 USER (one card session, value order — ideally before M5):
   Session .xpj → native keys + instruments → MPC 2 keys →

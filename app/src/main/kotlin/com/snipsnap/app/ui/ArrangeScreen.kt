@@ -296,7 +296,7 @@ private fun SectionRow(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TapeText(if (active) "▶" else "%02d".format(index + 1), TapeType.pixel, scheme.amber.tape)
+            TapeText(if (active) "▶" else "%02d".format(java.util.Locale.ROOT, index + 1), TapeType.pixel, scheme.amber.tape)
             TapeText(section.name.uppercase(), TapeType.pixel, scheme.ink.tape)
         }
         TapeText("${section.bars} BARS", TapeType.pixelSmall, scheme.ink2.tape)

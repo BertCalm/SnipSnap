@@ -9,6 +9,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.mpc3.MpcFormat
 import com.snipsnap.mpc3.MpcFormats
 import java.io.File
+import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -44,6 +45,13 @@ class ExportWizardTest {
         val result = w.write(File(temp, "card-stages"))
         assertTrue(result is ExportWizardModel.WriteResult.Done)
         assertEquals(ExportWizardModel.Stage.COMPLETE, w.stage)
+        // READ BACK ran on the file that landed, and the writer agreed with the reader.
+        val readBack = result.outcome.readBack
+        assertTrue(readBack.isNotEmpty(), "READ BACK ran")
+        assertTrue(
+            readBack.none { it.severity == com.snipsnap.kit.Severity.FAIL },
+            readBack.joinToString(" | ") { it.message },
+        )
         assertEquals("WRITE ANOTHER ✓", w.writeLabel)
         assertEquals("DUB COMPLETE", w.dubLabel)
         assertTrue("ALL 4 FILES ON TAPE" in w.dubFilesLine(4))
@@ -134,5 +142,136 @@ class ExportWizardTest {
         KitStore.save(layered, dir)
         val w = ExportWizardModel(layered, dir)
         assertEquals(4, w.fileCount) // kick + two zones + program
+    }
+
+    /**
+     * The September UAT's finding 7: the cycler goes one way with no back
+     * step, so the eighth format cost seven taps and one tap past your
+     * target cost seven more. `setFormat` is the picker's door — every
+     * format in exactly one move, from wherever you happen to be.
+     */
+    @Test
+    fun `setFormat reaches any format in one move`() {
+        val (kit, dir) = makeKit("Pick")
+        val w = ExportWizardModel(kit, dir)
+        // From every starting point, to every destination, in one call.
+        for (from in ExportFormat.entries) {
+            for (to in ExportFormat.entries) {
+                val m = ExportWizardModel(kit, dir)
+                while (m.format != from) m.cycleFormat()
+                m.setFormat(to)
+                assertEquals(to, m.format, "$from -> $to should be one move")
+            }
+        }
+        // And it agrees with the cycler about where index 0 is.
+        w.setFormat(ExportFormat.DECENT_SAMPLER)
+        assertEquals(ExportFormat.DECENT_SAMPLER, w.format)
+        w.cycleFormat()
+        assertEquals(ExportFormat.entries.first(), w.format, "picking still leaves the cycler wrapping correctly")
+    }
+
+    /**
+     * `setFormat` is locked off READY for the same reason `cycleFormat` is:
+     * a dub that has already chosen its writer must not have the
+     * destination changed under it.
+     */
+    @Test
+    fun `setFormat is refused once writing has begun`() {
+        val (kit, dir) = makeKit("Locked")
+        val w = ExportWizardModel(kit, dir)
+        w.setFormat(ExportFormat.SFZ)
+        val card = File(temp, "card-locked")
+        assertTrue(w.write(card, overwrite = true) is ExportWizardModel.WriteResult.Done)
+        // COMPLETE, not READY: the wizard is showing what it just wrote.
+        val after = w.format
+        w.setFormat(ExportFormat.MIDI)
+        assertEquals(after, w.format, "the format must not move after a dub")
+        w.cycleFormat()
+        assertEquals(after, w.format, "and the cycler is locked the same way")
+    }
+
+    /**
+     * Finding 8: `cyclerLabel` used to be the only copy a format ever got,
+     * so nothing told the user when EXPANSION beats XPN. Every format now
+     * carries a reason, and these are the ways that could go wrong quietly:
+     * a blank one, a duplicate pasted from its neighbour, one too long for
+     * the row, or one that stops shouting the way the rest of TapeOS does.
+     */
+    // ---- finding 18: a second dub to the same place asks first ----
+
+    @Test
+    fun `a first write to an empty destination just writes`() {
+        val (kit, dir) = makeKit("FirstDub")
+        val w = ExportWizardModel(kit, dir)
+        val dest = File(temp, "card-first")
+        val result = w.write(dest, overwrite = false)
+        assertTrue(result is ExportWizardModel.WriteResult.Done, "nothing was there: $result")
+        assertEquals(ExportWizardModel.Stage.COMPLETE, w.stage)
+    }
+
+    @Test
+    fun `writing over an earlier dub is refused by name, not silently done`() {
+        val (kit, dir) = makeKit("SecondDub")
+        val dest = File(temp, "card-second")
+        // The first dub lands.
+        val first = ExportWizardModel(kit, dir).write(dest, overwrite = false)
+        assertTrue(first is ExportWizardModel.WriteResult.Done, "$first")
+
+        // The second, to the same place, comes back as an answer rather than
+        // as an exception or a silent replacement.
+        val w = ExportWizardModel(kit, dir)
+        val again = w.write(dest, overwrite = false)
+        assertTrue(
+            again is ExportWizardModel.WriteResult.WouldOverwrite,
+            "a second dub to the same destination must say so: $again",
+        )
+        val inTheWay = (again as ExportWizardModel.WriteResult.WouldOverwrite).path
+        assertTrue(inTheWay.exists(), "the path it names has to be the thing actually there: $inTheWay")
+        assertTrue(inTheWay.name.isNotBlank(), "the screen shows this name to the user: $inTheWay")
+
+        // Refusing costs nothing: the wizard is READY again, so the next tap
+        // is a real write and not a stuck stage machine.
+        assertEquals(ExportWizardModel.Stage.READY, w.stage)
+    }
+
+    @Test
+    fun `the confirmed second dub writes`() {
+        val (kit, dir) = makeKit("ConfirmedDub")
+        val dest = File(temp, "card-confirmed")
+        assertTrue(ExportWizardModel(kit, dir).write(dest, overwrite = false) is ExportWizardModel.WriteResult.Done)
+
+        val w = ExportWizardModel(kit, dir)
+        assertTrue(w.write(dest, overwrite = false) is ExportWizardModel.WriteResult.WouldOverwrite)
+
+        val confirmed = ExportWizardModel(kit, dir).write(dest, overwrite = true)
+        assertTrue(confirmed is ExportWizardModel.WriteResult.Done, "the second tap writes: $confirmed")
+    }
+
+    @Test
+    fun `overwrite still defaults to true, so the CLI and every older caller are unchanged`() {
+        val (kit, dir) = makeKit("DefaultDub")
+        val dest = File(temp, "card-default")
+        assertTrue(ExportWizardModel(kit, dir).write(dest) is ExportWizardModel.WriteResult.Done)
+        // The whole point of the default: the same call again does NOT stop.
+        assertTrue(
+            ExportWizardModel(kit, dir).write(dest) is ExportWizardModel.WriteResult.Done,
+            "a caller that never asked for the guard must not start getting it",
+        )
+    }
+
+    @Test
+    fun `every format says why you would pick it`() {
+        val whys = ExportFormat.entries.map { it.why }
+        for (f in ExportFormat.entries) {
+            assertTrue(f.why.isNotBlank(), "${f.id} has no reason")
+            assertTrue(f.why.length <= 52, "${f.id}'s reason is too long for the row (${f.why.length})")
+            // Locale.ROOT, the same reason KitAssembler gives: default-locale
+            // casing turns a lowercase "i" into "\u0130" on a Turkish device, so a
+            // reason written with one would pass or fail depending on where
+            // the suite ran.
+            assertEquals(f.why.uppercase(Locale.ROOT), f.why, "${f.id}'s reason should shout like the rest of TapeOS")
+            assertTrue(f.why.endsWith("."), "${f.id}'s reason should land on a full stop")
+        }
+        assertEquals(whys.size, whys.toSet().size, "two formats share a reason - one was pasted from the other")
     }
 }

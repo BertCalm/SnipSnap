@@ -51,7 +51,7 @@ object XpnPackager {
         val findings = Preflight.check(kit, kitDir)
         if (findings.blocked()) throw ExportBlockedException(findings)
         if (outputFile.exists() && !overwrite) {
-            throw IOException("destination already exists: $outputFile (pass overwrite=true to replace same-named files)")
+            throw DestinationExists(outputFile)
         }
         outputFile.parentFile?.mkdirs()
 

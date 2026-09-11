@@ -825,7 +825,8 @@ Deterministic: same kit, same parameters, same bytes.
 Four styles: `waveform` (all the pads end to end, each in its class
 colour), `grid` (the 4×4 bank-A grid, lit by class), `slices` (one bar
 per pad), `rings` (seeded arcs — `--seed N` reshuffles). `--scheme`
-picks any of the six TapeOS schemes (`chrome`…`clear`), `--size PX`
+picks any of the eight TapeOS schemes (`metal`…`vapor`; the words come
+from `SchemeId`, and `art` with no `--style` lists them), `--size PX`
 sets the square edge (default 600), `--out DIR` says where the PNGs
 land. **No `--style` renders every style side by side** — the
 prototyping loop is one command per look. The winning direction becomes

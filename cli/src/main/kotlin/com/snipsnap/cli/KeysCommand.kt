@@ -45,7 +45,7 @@ object KeysCommand {
         if (result.zones.size == 1) {
             val z = result.zones.single()
             out.println(
-                "detected %s (%.1f Hz, confidence %.2f) - rooted there, playable 0..127".format(
+                "detected %s (%.1f Hz, confidence %.2f) - rooted there, playable 0..127".format(java.util.Locale.ROOT, 
                     z.rootName, z.detectedHz, z.confidence,
                 ),
             )
@@ -54,7 +54,7 @@ object KeysCommand {
             result.program.keygroups.forEachIndexed { i, kg ->
                 val z = result.zones[i]
                 out.println(
-                    "  %-4s root, keys %3d..%3d  (%.1f Hz, conf %.2f, %s)".format(
+                    "  %-4s root, keys %3d..%3d  (%.1f Hz, conf %.2f, %s)".format(java.util.Locale.ROOT, 
                         z.rootName, kg.lowNote, kg.highNote, z.detectedHz, z.confidence, File(z.label).name,
                     ),
                 )

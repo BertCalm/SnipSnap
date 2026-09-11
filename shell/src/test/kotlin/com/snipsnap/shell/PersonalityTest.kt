@@ -1,6 +1,7 @@
 package com.snipsnap.shell
 
 import java.io.File
+import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -117,6 +118,244 @@ class PersonalityTest {
     }
 
     /**
+     * HELP's one job is to be true, and the September UAT caught it being
+     * false: twenty hardcoded lines in `StubScreen.kt` calling the app "the
+     * M0 skeleton" and promising capture "arrives with M1", long after it
+     * shipped. It had no test because it lived in a Composable, so nothing
+     * failed as the app grew past it.
+     *
+     * These are the two ways it went wrong, now nailed down: a milestone
+     * tag anywhere in the text, and the loop not naming the four screens a
+     * user actually walks through. Moving or renaming one of those screens
+     * now breaks a test rather than quietly making HELP lie.
+     */
+    @Test
+    fun `help describes the app rather than a milestone`() {
+        val all = (Copy.HELP_LOOP + Copy.HELP_MORE + Copy.HELP_LOOP_HEADER + Copy.HELP_MORE_HEADER)
+            .joinToString(" ")
+        for (tag in listOf("M0", "M1", "M2", "M3", "M4", "M5", "SKELETON", "ARRIVES WITH", "NOT RECORDED")) {
+            assertFalse(all.contains(tag), "HELP still talks about the build, not the app: found \"$tag\"")
+        }
+        // The loop, in the order a user walks it.
+        val steps = Copy.HELP_LOOP.map { it.removePrefix("· ").substringBefore(" ") }
+        assertEquals(listOf("TAPE", "CHOP", "KIT", "EXPORT"), steps)
+        // Every line is a line, not a paragraph: HELP renders on a phone.
+        for (line in Copy.HELP_LOOP + Copy.HELP_MORE) {
+            assertTrue(line.startsWith("· "), "HELP lines are bulleted: $line")
+            assertTrue(line.length <= 72, "HELP line is too long for the panel (${line.length}): $line")
+        }
+    }
+
+    /**
+     * Finding 14's fix: the TREATMENT card has to say it is working, and
+     * say which treatment, or a 1.8-second wait reads as a dead screen. The
+     * ellipsis is the part that carries "still going" - a header that
+     * merely renamed itself would look finished.
+     *
+     * Fed through [PadSheet.displayLabel] the way the card feeds it, which
+     * is not the same string as the segment id: the segment is "ETERNAL",
+     * what a user reads on the chip is "DRONE". Testing the id would have
+     * pinned a header no one ever sees.
+     */
+    @Test
+    fun `the treatment header names what it is working on`() {
+        val segment = "ETERNAL"
+        val label = PadSheet.displayLabel(segment)
+        assertTrue(label != segment, "this test is only meaningful while the two differ: $label")
+
+        val busy = Copy.treatmentBusy(label)
+        assertTrue(busy.contains(label), busy)
+        assertFalse(busy.contains(segment), "the header carries the chip's word, not the segment id: $busy")
+        assertTrue(busy.endsWith("…"), "a progress line has to look unfinished: $busy")
+        assertTrue(busy.startsWith("TREATMENT"), "it replaces the card's own header: $busy")
+        // Distinguishable from the idle header, which is the whole point.
+        assertTrue(busy != "TREATMENT", busy)
+        // Every segment's label has to fit, not just this one.
+        for (seg in PadSheet.ROWS.flatten()) {
+            val line = Copy.treatmentBusy(PadSheet.displayLabel(seg))
+            assertTrue(line.length <= 40, "one line on the card: $line (${line.length})")
+        }
+    }
+
+    /**
+     * Finding 12. The empty shelf tells the user to make a kit for the snip
+     * they just captured; both ways into that kit have to say what happens
+     * next, and a full kit has to say something different from one with room.
+     */
+    @Test
+    fun `a landing snip is told where to go, or that there is no room`() {
+        val room = Copy.snipLanding(hasEmptyPad = true)
+        val full = Copy.snipLanding(hasEmptyPad = false)
+        assertTrue(room != full, "a full kit and an empty one cannot read the same")
+        assertTrue(room.contains("PAD"), room)
+        assertTrue(room.contains("LONG-PRESS"), "it names the gesture, which nothing else on that screen does: $room")
+        assertTrue(full.contains("FULL"), full)
+        for (line in listOf(room, full)) {
+            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+            assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
+        }
+    }
+
+    /**
+     * Finding 18. Re-exporting to the same destination used to overwrite
+     * silently — on someone's SD card, the one write worth pausing on. The
+     * pause is only useful if it names the thing at risk and says what the
+     * next tap does; "are you sure?" teaches neither.
+     */
+    @Test
+    fun `the overwrite warning names what is at risk and what the next tap does`() {
+        val line = Copy.dubWouldOverwrite("MY KIT.XPN")
+        assertTrue(line.contains("MY KIT.XPN"), "it names the thing, not \"a file\": $line")
+        assertTrue(line.contains("DUB AGAIN"), "it says what the next tap does: $line")
+        assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+        assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
+        // It must not read like something already happened - nothing has been
+        // written when this appears.
+        assertFalse(line.contains("DONE"), "nothing was written yet: $line")
+        assertTrue(line != Copy.DUB_DONE && line != Copy.DUB_FAILED, "distinct from both outcomes: $line")
+    }
+
+    /**
+     * Finding 19. COMMIT and INSTANT KIT sit side by side under the deck and
+     * used to disagree about an empty selection: COMMIT refused in words
+     * while INSTANT KIT quietly chopped the whole tape, and the user was
+     * never told which they got.
+     *
+     * INSTANT KIT still takes the whole tape — that is the right default for
+     * a one-tap button, and the silence about it was the bug — so what this
+     * pins is that the two scopes now read differently, and that the
+     * selection reading borrows COMMIT's own words for the markers.
+     */
+    @Test
+    fun `INSTANT KIT names what it chopped`() {
+        val whole = Copy.instantKit(8, chokeSet = false, wholeTape = true)
+        val selected = Copy.instantKit(8, chokeSet = false, wholeTape = false)
+        assertTrue(whole != selected, "the whole tape and a selection cannot read the same: $whole")
+        assertTrue(whole.contains("WHOLE TAPE"), "it says it took everything: $whole")
+        // COMMIT's refusal is "SET IN + OUT FIRST"; the same two markers are
+        // named here, so the pair of buttons speaks one vocabulary.
+        assertTrue(selected.contains("IN + OUT"), "it names the markers COMMIT asks for: $selected")
+        assertTrue(Copy.COMMIT_NEEDS_SELECTION.contains("IN + OUT"), Copy.COMMIT_NEEDS_SELECTION)
+
+        for (line in listOf(whole, selected)) {
+            // The count survives either reading - it is the part users act on.
+            assertTrue(line.contains("8 SLICES"), "the slice count is still there: $line")
+            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+            assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
+        }
+        assertTrue(
+            Copy.instantKit(8, chokeSet = true, wholeTape = true).endsWith("CHOKE GROUP SET."),
+            "the choke note still rides on the end, whichever scope it was",
+        )
+    }
+
+    /**
+     * Finding 13. NONE takes a treatment back off now, so it has three
+     * things to say — it landed, the ghosts are in the way, or the bin
+     * never held the take — and the three have to be told apart. Two of
+     * them are `const`s the reflective law already shouts at; [Copy.unTreated]
+     * is a function, which that law cannot see, so it is checked here.
+     */
+    @Test
+    fun `the un-treat says which of its three answers it is giving`() {
+        val landed = Copy.unTreated("KICK")
+        assertTrue(landed.contains("KICK"), "it names the pad it gave back: $landed")
+        assertTrue(landed.contains("BIN"), "the bin is where the take came from, and the user has to learn that: $landed")
+        assertEquals(landed.uppercase(Locale.ROOT), landed, "TapeOS shouts: $landed")
+        assertTrue(landed.endsWith("."), "a toast lands on a full stop: $landed")
+
+        // The three answers are three sentences, not one sentence three times.
+        val answers = listOf(landed, Copy.RETREAT_REFUSED, Copy.UNTREAT_NOT_BINNED)
+        assertEquals(answers.size, answers.toSet().size, "a refusal that reads like a success teaches nothing: $answers")
+        // The two refusals say what is in the way, and neither claims a restore.
+        assertTrue(Copy.RETREAT_REFUSED.contains("GHOSTS"), Copy.RETREAT_REFUSED)
+        assertTrue(Copy.UNTREAT_NOT_BINNED.contains("BIN"), Copy.UNTREAT_NOT_BINNED)
+        assertFalse(Copy.UNTREAT_NOT_BINNED.contains("BACK"), "nothing came back: ${Copy.UNTREAT_NOT_BINNED}")
+    }
+
+    /**
+     * Finding 23. SETUP held three settings and answered none of the
+     * questions a user actually arrives with. These are the three the app
+     * can answer from what it already knows — the format EXPORT will open
+     * on, where the files are, whether a card is held — rather than from
+     * settings invented to fill a screen.
+     */
+    @Test
+    fun `SETUP answers its three questions without pretending to own them`() {
+        // The format readout says where it is changed, because SETUP is not
+        // a second picker and must not read like one.
+        assertTrue(Copy.SETUP_FORMAT_NOTE.contains("EXPORT"), Copy.SETUP_FORMAT_NOTE)
+        assertTrue(Copy.SETUP_FORMAT_NOTE.endsWith("."), "a sentence the screen says: ${Copy.SETUP_FORMAT_NOTE}")
+        assertTrue(Copy.SETUP_CARD_NONE.endsWith("."), Copy.SETUP_CARD_NONE)
+
+        // The headings are labels above a readout, so they do not end in a
+        // full stop - the same register as the legends.
+        for (h in listOf(Copy.SETUP_FORMAT_HEADING, Copy.SETUP_WHERE_HEADING, Copy.SETUP_CARD_HEADING)) {
+            assertFalse(h.endsWith("."), "furniture, not a sentence: $h")
+            assertEquals(h.uppercase(Locale.ROOT), h, "TapeOS shouts: $h")
+            assertTrue(h.length <= 24, "a heading on a narrow screen: $h")
+        }
+        // Three different questions must read as three different questions.
+        val headings = listOf(Copy.SETUP_FORMAT_HEADING, Copy.SETUP_WHERE_HEADING, Copy.SETUP_CARD_HEADING)
+        assertEquals(headings.size, headings.toSet().size, "$headings")
+
+        // The path is handed through unchanged: a user hunting on a cable
+        // needs the real thing to look for, not a description of it.
+        assertEquals("/storage/emulated/0/Android/data/x/files/exports", Copy.setupWhere("/storage/emulated/0/Android/data/x/files/exports"))
+
+        // One card, one name. EXPORT's DESTINATION row and SETUP both go
+        // through Copy.cardName, so the two screens cannot name it two ways -
+        // and it is string work on the uri rather than a DocumentFile lookup,
+        // which would mean a dependency and a disk touch for a label.
+        assertEquals("Kits", Copy.cardName("primary:Music/Kits"))
+        assertEquals("Kits", Copy.cardName("Music/Kits"))
+        assertEquals("SDCARD", Copy.cardName("SDCARD"))
+        assertEquals("CARD", Copy.cardName("1A2B-3C4D:"), "a volume root has no folder to name")
+        assertEquals("CARD", Copy.cardName(null), "and neither has a uri with no segment")
+        assertEquals("CARD", Copy.cardName(""))
+
+        // A held card is named, and shouts like everything else.
+        val held = Copy.setupCardHeld("Untitled SD card")
+        assertTrue(held.contains("UNTITLED SD CARD"), held)
+        assertEquals(held.uppercase(Locale.ROOT), held, held)
+        assertTrue(held != Copy.SETUP_CARD_NONE)
+    }
+
+    /**
+     * Finding 17. Every creation door auto-names a kit, so RENAME is the only
+     * place a name is ever typed — and it sits behind a hold on the row that
+     * nothing on screen mentioned. The legend has to name the gesture and the
+     * two things it reveals, in the same words the row's own TalkBack
+     * long-press label uses, so the sighted and the spoken app agree.
+     */
+    @Test
+    fun `the shelf legend names the hold and what it reveals`() {
+        assertTrue(Copy.SHELF_LEGEND.contains("HOLD"), "it names the gesture: ${Copy.SHELF_LEGEND}")
+        assertTrue(Copy.SHELF_LEGEND.contains("KIT"), "and what to hold: ${Copy.SHELF_LEGEND}")
+        assertTrue(Copy.SHELF_LEGEND.contains("RENAME"), "naming is the finding's own subject: ${Copy.SHELF_LEGEND}")
+        assertTrue(Copy.SHELF_LEGEND.contains("DELETE"), "the hold reveals both, so both are named: ${Copy.SHELF_LEGEND}")
+        assertEquals(Copy.SHELF_LEGEND.uppercase(Locale.ROOT), Copy.SHELF_LEGEND, "TapeOS shouts")
+        assertTrue(Copy.SHELF_LEGEND.length <= 52, "one line under the shelf: ${Copy.SHELF_LEGEND.length}")
+        // Furniture, not a toast - it never lands on a full stop, and the
+        // reflective law exempts it for exactly that reason.
+        assertFalse(Copy.SHELF_LEGEND.endsWith("."), "a permanent label is not a sentence: ${Copy.SHELF_LEGEND}")
+        // Two legends on two screens must not read as the same instruction.
+        assertTrue(Copy.SHELF_LEGEND != Copy.PAD_SHEET_LEGEND)
+    }
+
+    /**
+     * The legend that replaced the expiring toast (UAT findings 4 and 5).
+     * It has to name the gesture, because it is the only thing on screen
+     * that does — the toast it backstops can be dismissed forever.
+     */
+    @Test
+    fun `the pad sheet legend names the gesture`() {
+        assertTrue(Copy.PAD_SHEET_LEGEND.contains("HOLD"), Copy.PAD_SHEET_LEGEND)
+        assertTrue(Copy.PAD_SHEET_LEGEND.contains("PAD"), Copy.PAD_SHEET_LEGEND)
+        assertTrue(Copy.PAD_SHEET_LEGEND.length <= 52, "one line under the grid: ${Copy.PAD_SHEET_LEGEND.length}")
+    }
+
+    /**
      * `Copy` constants that are legitimately not full-stop toasts — button
      * labels, tile subtitles, chip text, "…BUSY" progress indicators, and
      * one hidden-egg unlock name — so the "every line lands on a full
@@ -131,14 +370,33 @@ class PersonalityTest {
     private val notASentence = setOf(
         "TILE_LABEL_IDLE", "TILE_LABEL_ARMED", "TILE_SUBTITLE_IDLE", "TILE_SUBTITLE_ARMED",
         "COMMIT_NEEDS_SELECTION", "CAPTURE_BLOCKED_BUTTON",
-        "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "BREEDING_BUSY",
-        "ARRANGE_MIXING", "XRAY_BUSY",
+        "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "CHART_BUSY", "BREEDING_BUSY",
+        "ARRANGE_MIXING", "XRAY_BUSY", "DOUBLES_BUSY",
         "CHOP_ALL_BUSY",
         "OUTSIDE_LISTENING", "ROOM_FORGET_BUSY", "ROOM_RESTORE_BUSY", "ROOM_BIN_EMPTY_BUSY", "KIT_DELETE_BUSY", "KIT_RENAME_BUSY",
         "CHIP_NOT_SURE", "CHIP_OVERRIDDEN",
         "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_NONE", "CARD_PICKED",
         "KONAMI_UNLOCK",
         "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
+        // Permanent on-screen furniture, not toasts: the two legends that sit
+        // under KIT's grid and the kit shelf's own list for as long as those
+        // screens are open, and HELP's two section headings. ROOMS' third
+        // legend ("HOLD A ROOM TO FORGET IT · THE BIN KEEPS 30 DAYS") reads
+        // without a full stop for the same reason, and is still written inline
+        // in `:app` rather than living here. A label on the furniture is not a
+        // line the app says to you once and takes away, so it does not end in
+        // a full stop - and every legend must be added here when it is written,
+        // or the shouting law will ask it to become a sentence.
+        "PAD_SHEET_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER",
+        // EXPORT's DESTINATION legend joins them (finding 21): same rule,
+        // same register - a line that stays under the row it explains.
+        "EXPORT_CARD_LEGEND",
+        // SETUP's three section headings and the "nothing picked yet" it
+        // shows in place of a format - labels above a readout, in the same
+        // register as the legends above. SETUP_FORMAT_NOTE and
+        // SETUP_CARD_NONE are NOT here: both are sentences the screen says
+        // to you, and both keep their full stops.
+        "SETUP_FORMAT_HEADING", "SETUP_WHERE_HEADING", "SETUP_CARD_HEADING", "SETUP_FORMAT_NONE",
     )
 
     /**
@@ -167,6 +425,36 @@ class PersonalityTest {
         "SCULPTED", "STRETCHED", "FROZEN", "PAD_MADE", "PAD_TOO_SHORT", "PAD_TOO_LONG",
         "IN_KEY_NONE", "IN_KEY_NEEDS_KEY", "TAPE_TOO_BIG",
     )
+
+    /**
+     * Every legend teaches a gesture, or it is not a legend.
+     *
+     * The legends exist because the actions behind them are long presses
+     * nothing on screen mentions - PAD SHEET, kit RENAME, and now EXPORT's
+     * forget-this-card, which is the only door to forgetting a card in the
+     * whole app (September UAT, findings 4, 5, 17 and 21). A legend that
+     * describes the feature but never names the hold would sit there
+     * looking like a fix while teaching nobody the one thing they cannot
+     * guess.
+     *
+     * Reflective rather than a list, so a legend written next year is held
+     * to it without anyone remembering to come back here.
+     */
+    @Test
+    fun `every legend names the gesture it teaches`() {
+        val legends = copyStringConstants().filterKeys { it.endsWith("_LEGEND") }
+        assertTrue(
+            legends.size >= 3,
+            "expected at least the three legends this law was written for, found ${legends.keys}",
+        )
+        for ((name, value) in legends) {
+            assertTrue(
+                "HOLD" in value,
+                "Copy.$name is a legend for a long press but never says HOLD: '$value' — " +
+                    "a legend that does not name the gesture teaches nobody the thing they cannot guess.",
+            )
+        }
+    }
 
     @Test
     fun `every Copy string constant shouts and stops (reflective)`() {
@@ -210,8 +498,11 @@ class PersonalityTest {
         assertTrue(Copy.keySet("Am").startsWith("Am SET."), "the key leads its own toast")
         assertTrue(Copy.keySet("Am").endsWith("."), "and still lands on a full stop")
         assertEquals("1 PAD RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(1, "A MINOR"))
-        assertEquals("ONE TAP. 8 SLICES ON THE GRID. CHOKE GROUP SET.", Copy.instantKit(8, true))
-        assertEquals("ONE TAP. 5 SLICES ON THE GRID.", Copy.instantKit(5, false))
+        assertEquals(
+            "ONE TAP, YOUR IN + OUT. 8 SLICES ON THE GRID. CHOKE GROUP SET.",
+            Copy.instantKit(8, chokeSet = true, wholeTape = false),
+        )
+        assertEquals("ONE TAP, THE WHOLE TAPE. 5 SLICES ON THE GRID.", Copy.instantKit(5, chokeSet = false, wholeTape = true))
         assertEquals("3 PADS RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(3, "A MINOR"))
         assertTrue(Copy.takeRestored("T3").startsWith("T3 RESTORED."), "the take leads its own toast")
         assertTrue(

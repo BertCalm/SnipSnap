@@ -259,4 +259,34 @@ class GrooveEditTest {
         }
         assertTrue(programs.any { GrooveEdit.isProgE(it) }, "E rides in the exported set alongside A-D")
     }
+
+    @Test
+    fun `startEmpty lands an empty one-bar base with its variations and a blank E`() {
+        val (base, e) = GrooveEdit.startEmpty(temp, "Break Kit")
+        assertEquals(1, base.bars)
+        assertTrue(base.notes.isEmpty())
+        assertEquals("Break Kit", base.name)
+        assertTrue(GrooveEdit.isProgE(e))
+        assertTrue(e.notes.isEmpty())
+        val stored = GrooveStore.load(temp)
+        assertEquals(base, stored.first(), "the base is first by convention")
+        assertEquals(GrooveVariations.standard(base).size + 1, stored.size)
+        assertEquals(e, GrooveEdit.load(temp))
+    }
+
+    @Test
+    fun `startEmpty keeps an E that was already there`() {
+        val kept = Mpc3Clip("Old E", 2, listOf(Mpc3Note(38, 240, 0.7f)))
+        GrooveEdit.save(temp, kept)
+        val (_, e) = GrooveEdit.startEmpty(temp, "Break Kit")
+        assertEquals(kept, e)
+    }
+
+    @Test
+    fun `sparse of an empty bar is an empty bar, not a crash`() {
+        val empty = Mpc3Clip("Nothing", 1, emptyList())
+        assertTrue(GrooveVariations.sparse(empty).notes.isEmpty())
+        assertEquals(4, GrooveVariations.standard(empty).size)
+    }
+
 }

@@ -44,7 +44,7 @@ object SfzWriter {
 
         val dir = File(destRoot, "${kit.name} SFZ")
         if (dir.exists() && !overwrite) {
-            throw IOException("destination already exists: $dir (pass overwrite=true to replace same-named files)")
+            throw DestinationExists(dir)
         }
         dir.deleteRecursively()
         val (slots, _) = KitExporter.buildSlots(kit, kitDir, File(dir, "Samples"))
@@ -146,5 +146,5 @@ object SfzWriter {
     }
 
     private fun padLabel(slot: Int): String =
-        "%c%02d".format('A' + (slot - 1) / 16, (slot - 1) % 16 + 1)
+        "%c%02d".format(java.util.Locale.ROOT, 'A' + (slot - 1) / 16, (slot - 1) % 16 + 1)
 }

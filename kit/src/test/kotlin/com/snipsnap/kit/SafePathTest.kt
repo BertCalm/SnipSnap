@@ -75,4 +75,18 @@ class SafePathTest {
         assertFailsWith<BadPathException> { SafePath.basename("../../") }   // no file part
         assertFailsWith<BadPathException> { SafePath.basename("C:evil.wav") }
     }
+
+    @Test
+    fun `a NUL byte is refused, not merely a blank`() {
+        // isSafe's own NUL check nearly shipped as a raw NUL byte sitting
+        // between two quotes in the source - indistinguishable by eye (and
+        // by most diff tools) from a plain space, so a future whitespace
+        // cleanup could have deleted the check without anyone noticing.
+        // Spelling it out as \u0000 here, never a raw byte, is what
+        // actually proves the check exists and does its job.
+        val withNul = "evil\u0000.wav"
+        assertTrue(!SafePath.isSafe(withNul), "isSafe should reject a NUL byte")
+        assertFailsWith<BadPathException> { SafePath.child(temp, withNul) }
+        assertFailsWith<BadPathException> { SafePath.basename("dir/evil\u0000.wav") }
+    }
 }

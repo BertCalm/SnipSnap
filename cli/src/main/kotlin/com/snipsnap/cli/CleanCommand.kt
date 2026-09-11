@@ -94,7 +94,7 @@ object CleanCommand {
         var alreadyClean = 0
         val skipped = mutableListOf<String>()
         for (pad in model.kit.pads.sortedBy { it.slot }) {
-            val label = "%c%02d".format('A' + (pad.slot - 1) / 16, (pad.slot - 1) % 16 + 1)
+            val label = "%c%02d".format(java.util.Locale.ROOT, 'A' + (pad.slot - 1) / 16, (pad.slot - 1) % 16 + 1)
             if (pad.velocityLayers.isNotEmpty()) {
                 skipped += "$label (velocity-layered)"
                 continue
@@ -128,7 +128,7 @@ object CleanCommand {
                 alreadyClean++
                 continue
             }
-            val trimNote = trim?.let { "; room tail faded from %.0f ms".format(it.kneeSec * 1000) } ?: ""
+            val trimNote = trim?.let { "; room tail faded from %.0f ms".format(java.util.Locale.ROOT, it.kneeSec * 1000) } ?: ""
             out.println("  $label ${pad.displayName}: ${report.summary()}$trimNote")
             if (!opts.has("--dry")) {
                 val recipe = JsonValue.Obj(
