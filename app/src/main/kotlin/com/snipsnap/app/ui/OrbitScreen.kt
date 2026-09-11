@@ -587,7 +587,12 @@ fun OrbitScreen(
                 // - so any sentence here naming it is true only for the
                 // ring states it happens to have considered.
                 //
-                // So this reports what is always true and points nowhere.
+                // So this confirms the save, counts what stayed out, and
+                // points nowhere. It leads with the grooves because a
+                // player who just tapped CLIP ▸ KIT wants the confirmation
+                // first; a line that opened on the omission would read as
+                // a warning about a thing that worked.
+                //
                 // The route lives in the OUT panel, which explains BOUNCE
                 // and CLIP in terms no ring state can falsify. Not on
                 // screen at this moment - clipIntoKit closes it above -
@@ -598,7 +603,7 @@ fun OrbitScreen(
                     if (behind.isEmpty()) {
                         "${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC."
                     } else {
-                        "${clip.name}: ${clip.bars} BARS, ${clip.notes.size} NOTES. ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED — A CLIP HOLDS NO AUDIO."
+                        "${clip.name} IN THE GROOVES: ${clip.bars} BARS, ${clip.notes.size} NOTES. ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED OUT."
                     },
                 )
             }.onFailure { e -> onToast("CLIP FAILED: ${e.message ?: e.javaClass.simpleName}") }
