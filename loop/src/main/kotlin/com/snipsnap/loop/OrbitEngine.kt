@@ -49,18 +49,23 @@ class OrbitEngine(
         /** Interleaved index past which this voice is silent; a choke moves it in. */
         var limit = samples.size
         /**
-         * On its way out under a ramp, rather than simply running out of
-         * sample — tracked, not inferred from [limit]. A stop arriving
-         * inside the last fade's worth of a pad leaves the stop point where
-         * it already was, so "is it shorter than the sample?" answers no
-         * for a voice that really was stopped, and it would run out at full
-         * level.
+         * Whether the mixer ramps this voice out at [limit] instead of
+         * letting it end on the tail it was recorded with.
          *
-         * Two things set it: a choke, and a hit's own [OrbitHit.length].
-         * They are the same act — a voice ended before its sample — and it
-         * is named for that rather than for the choke, because a flag
-         * called `choked` read as false on a gated voice, which is how the
-         * first cut of the gate came to stop flat and click.
+         * That is the whole of it, and the only thing that reads it is
+         * [mixVoices]. Two things set it — a choke, and a hit's own
+         * [OrbitHit.length] — because they are one act, a voice ended
+         * before its sample; hence the name, since a flag called `choked`
+         * read false on a gated voice and the first cut of the gate
+         * stopped flat and clicked.
+         *
+         * It is deliberately **not** what [choke] asks to decide whether a
+         * voice is already leaving. A gated voice sets this the instant it
+         * starts and then sits at full gain until its gate arrives, so a
+         * flag here said "already going" while the voice was still at
+         * full — and a later hit in its mute group rang straight through
+         * it. That question is about *time*, not about intent, so [choke]
+         * asks the ramp: `at >= limit - fadeLen`.
          */
         var fading = false
         /**
