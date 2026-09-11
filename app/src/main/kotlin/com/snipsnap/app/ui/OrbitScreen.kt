@@ -577,12 +577,14 @@ fun OrbitScreen(
             result.onSuccess { clip ->
                 // Snips are audio and a clip holds notes, so a snip ring
                 // cannot ride along. Say how many stayed behind rather than
-                // leave it to be discovered on the hardware.
+                // leave it to be discovered on the hardware, and point at
+                // the action that does carry them: the bounce renders every
+                // ring, snips included, so BOUNCE ▸ TAPE is where they go.
                 val behind = OrbitClip.snipRings(s)
                 val left = if (behind.isEmpty()) {
                     ""
                 } else {
-                    " ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED BEHIND — TAPE ▸ FOR THOSE."
+                    " ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED BEHIND — BOUNCE ▸ TAPE CATCHES THOSE."
                 }
                 onToast("${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC.$left")
             }.onFailure { e -> onToast("CLIP FAILED: ${e.message ?: e.javaClass.simpleName}") }
