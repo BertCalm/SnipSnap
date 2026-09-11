@@ -41,6 +41,8 @@ class OrbitEngine(
         val samples: FloatArray,
         val gainL: Float,
         val gainR: Float,
+        /** The kit whose rule this is — a group number means nothing outside it. */
+        val kit: String,
         val muteGroup: Int,
     ) {
         var pos = 0 // interleaved index
@@ -155,9 +157,9 @@ class OrbitEngine(
         val pad = bank.pad(content.kit, s.hit.slot) ?: return
         val offset = (s.frame - from).toInt()
         val group = bank.muteGroup(content.kit, s.hit.slot)
-        if (group != 0) choke(group, offset)
+        if (group != 0) choke(content.kit, group, offset)
         val gain = s.hit.velocity * s.orbit.level
-        val voice = Voice(pad.samples, gain * leftLaw(s.orbit.pan), gain * rightLaw(s.orbit.pan), group)
+        val voice = Voice(pad.samples, gain * leftLaw(s.orbit.pan), gain * rightLaw(s.orbit.pan), content.kit, group)
         // The voice starts partway into the block; anything before its
         // start is not played, which the negative position expresses
         // without a second offset field.
@@ -167,17 +169,28 @@ class OrbitEngine(
     }
 
     /**
-     * The kit's own rule, honoured live: a new voice in [group] ends
-     * everything still ringing in it, [offset] frames into this block.
+     * The kit's own rule, honoured live: a new voice in [kit]'s [group]
+     * ends everything still ringing in it, [offset] frames into this block.
+     *
+     * Scoped to the kit because a mute group numbers a slot in one program
+     * and says nothing about another's. Rings in a set can name different
+     * kits, and `AutoPlace` puts every kit's hats in the same group, so
+     * comparing the number alone would have one kit's hats silencing
+     * another's.
      *
      * The same rule and the same fade as `KitPreview.render`, so an open
      * hat closed by a closed hat sounds the same in ORBIT, in the preview
      * and on the hardware. It ends over [AutoPlace.CHOKE_FADE] frames rather than
      * at once because a sample cut mid-cycle is a click.
      */
-    private fun choke(group: Int, offset: Int) {
+    private fun choke(kit: String, group: Int, offset: Int) {
         for (v in voices) {
-            if (v.muteGroup != group) continue
+            if (v.muteGroup != group || v.kit != kit) continue
+            // Already on its way out. Re-deriving its ramp from this
+            // instant would put the gain back to full and the voice would
+            // jump up mid-fade; it is going to silence either way, and
+            // sooner than a fresh fade would take it.
+            if (v.choked) continue
             // Where that voice will be when this hit lands. Negative means
             // it has not started yet, which only a hit later in this same
             // block could be - and a later hit never chokes an earlier one.

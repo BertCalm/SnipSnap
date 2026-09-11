@@ -28,8 +28,12 @@ class KitSampleSource(private val dir: File) : SampleSource {
     /** What the index keeps off a pad: where its audio is. */
     private data class Indexed(val sampleFile: String)
 
-    /** Choke groups as of one `kit.json` write, so a later edit is re-read. */
-    private class Groups(val stamp: Long, val bySlot: Map<Int, Int>)
+    /**
+     * Choke groups as of one `kit.json` write, so a later edit is re-read.
+     * [settled] records that the file had already stopped being written
+     * when this was taken; an unsettled entry is re-read next time.
+     */
+    private class Groups(val stamp: Long, val settled: Boolean, val bySlot: Map<Int, Int>)
 
     override fun loop(sampleFile: String): Snip? {
         if (!isBareName(sampleFile)) return null
@@ -66,12 +70,18 @@ class KitSampleSource(private val dir: File) : SampleSource {
     override fun muteGroup(kit: String, slot: Int): Int {
         if (!isBareName(kit)) return 0
         val stamp = File(File(dir, kit), KitStore.FILE_NAME).lastModified()
-        groups[kit]?.let { if (it.stamp == stamp) return it.bySlot[slot] ?: 0 }
+        // A stamp alone cannot separate two writes inside the filesystem's
+        // timestamp resolution, so an entry read while the file was still
+        // that fresh is not trusted again - the re-reads land only in the
+        // second after an edit, which is exactly when they are affordable
+        // and exactly when a second edit is likely.
+        val settled = stamp != 0L && System.currentTimeMillis() - stamp > SETTLE_MS
+        groups[kit]?.let { if (it.stamp == stamp && it.settled) return it.bySlot[slot] ?: 0 }
         val kitDir = File(dir, kit)
         if (!kitDir.isDirectory) return 0
         val loaded = runCatching { KitStore.load(kitDir) }.getOrNull() ?: return 0
         val bySlot = loaded.pads.associate { it.slot to it.muteGroup }
-        groups[kit] = Groups(stamp, bySlot)
+        groups[kit] = Groups(stamp, settled, bySlot)
         return bySlot[slot] ?: 0
     }
 
@@ -100,6 +110,11 @@ class KitSampleSource(private val dir: File) : SampleSource {
      * loop.json is a file on a phone; it can be edited, synced or corrupted,
      * and a traversal should read nothing rather than something.
      */
+    private companion object {
+        /** How long after a write a stamp is treated as able to hide a second one. */
+        const val SETTLE_MS = 2_000L
+    }
+
     private fun isBareName(name: String): Boolean =
         name.isNotBlank() && '/' !in name && '\\' !in name && name != ".." && name != "."
 }

@@ -1,5 +1,6 @@
 package com.snipsnap.kit
 
+import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
@@ -46,6 +47,49 @@ class KitPreviewTest {
         )
         KitStore.save(kit, dir)
         return kit
+    }
+
+    /**
+     * A pad choked with less than a full fade left still ramps.
+     *
+     * The end was clamped with `min`, so a choke landing inside the last
+     * CHOKE_FADE frames left the end where it already was - and "was it
+     * shortened?" then answered no, skipping the ramp and letting the
+     * voice run out at full level. `OrbitEngine` had the same bug; both
+     * now ramp across whatever remains, which is the whole point of the
+     * two renderers sharing the constant.
+     */
+    @Test
+    fun `a choke with less than a fade left still ramps out`() {
+        val dir = File(temp, "near-end")
+        dir.mkdirs()
+        // At 120 BPM one pulse is 25 frames, so the choke lands 125 frames
+        // in - leaving this pad 35, fewer than a full fade.
+        val padFrames = AutoPlace.CHOKE_FADE + 32
+        WavWriter.write(File(dir, "A01_Open_01.wav"), Snip(FloatArray(padFrames) { 0.5f }, 1, KitPreview.RATE))
+        // The closing hit is near-silent so the measurement below reads the
+        // choked pad's own level rather than the sum of the two.
+        WavWriter.write(File(dir, "A02_Closed_01.wav"), Snip(FloatArray(400) { 0.001f }, 1, KitPreview.RATE))
+        val kit = Kit(
+            "Near End",
+            listOf(
+                KitPad(slot = 1, sampleFile = "A01_Open_01.wav", drumClass = DrumClass.HAT_OPEN, muteGroup = 1),
+                KitPad(slot = 2, sampleFile = "A02_Closed_01.wav", drumClass = DrumClass.HAT_CLOSED, muteGroup = 1),
+            ),
+            tempoBpm = 120f,
+        )
+        KitStore.save(kit, dir)
+
+        val clip = Mpc3Clip(
+            "Choke", 1,
+            listOf(Mpc3Note(Mpc3Note.noteFor(1), 0, 1f), Mpc3Note(Mpc3Note.noteFor(2), 5, 1f)),
+        )
+        val out = KitPreview.render(kit, dir, clip = clip, tempoBpm = 120f)
+
+        val full = rms(out, 40, 80)
+        val tail = rms(out, padFrames - 12, padFrames)
+        assertTrue(full > 0.1f, "sanity: the pad is sounding before the choke ($full)")
+        assertTrue(tail < full / 3f, "the choked tail should be ramping away, not running out at full: $tail vs $full")
     }
 
     /** RMS over a frame window of an interleaved stereo render. */

@@ -57,6 +57,9 @@ object KitPreview {
             val pan: Float,
             val muteGroup: Int,
             var end: Int,
+            /** Ended early by a choke, and the ramp that end carries. */
+            var choked: Boolean = false,
+            var fadeLen: Int = 0,
             /** Pad shape, approximated in the render (see below). Null = none. */
             val attack: Float? = null,
             val decay: Float? = null,
@@ -105,8 +108,18 @@ object KitPreview {
             if (pad.muteGroup != 0) {
                 // The kit rule, honoured in the render: a new voice in the
                 // group chokes everything still ringing in it.
-                voices.filter { it.muteGroup == pad.muteGroup && it.end > start }
-                    .forEach { it.end = min(it.end, start + AutoPlace.CHOKE_FADE) }
+                //
+                // The ramp spans whatever is left when less than a full
+                // fade remains, and a voice already fading keeps the ramp
+                // it is on - the same two rules `OrbitEngine` plays by, so
+                // the preview and the live engine agree on a pattern.
+                voices.filter { it.muteGroup == pad.muteGroup && it.end > start && !it.choked }
+                    .forEach {
+                        val len = min(AutoPlace.CHOKE_FADE, it.end - start)
+                        it.end = start + len
+                        it.fadeLen = len
+                        it.choked = true
+                    }
             }
             voices += voice
         }
@@ -131,9 +144,10 @@ object KitPreview {
             for (i in 0 until frames) {
                 val at = v.start + i
                 if (at >= totalFrames) break
-                // Choke fade: the last CHOKE_FADE frames ramp out.
-                var fade = if (v.end - v.start < v.samples.frameCount && i >= frames - AutoPlace.CHOKE_FADE) {
-                    (frames - i).toFloat() / AutoPlace.CHOKE_FADE
+                // Choke fade: the voice ramps out across its own fade,
+                // which is a full one or whatever the sample had left.
+                var fade = if (v.choked && v.fadeLen > 0 && i >= frames - v.fadeLen) {
+                    (frames - i).toFloat() / v.fadeLen
                 } else {
                     1f
                 }

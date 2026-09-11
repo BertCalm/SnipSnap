@@ -1,6 +1,7 @@
 package com.snipsnap.loop
 
 import com.snipsnap.audio.AutoPlace
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.Kit
@@ -38,12 +39,25 @@ class OrbitChokeTest {
     private class SustainSource(
         private val groups: Map<Int, Int> = emptyMap(),
         private val frames: Int = 48_000,
+        private val padRate: Int = 48_000,
     ) : SampleSource {
         override fun loop(sampleFile: String): Snip? = null
         override fun pad(kit: String, slot: Int): Snip? =
-            if (kit == "kit" && slot in 1..9) Snip(FloatArray(frames) { slot / 10f }, 1, rateOf) else null
+            if (kit == "kit" && slot in 1..9) Snip(FloatArray(frames) { slot / 10f }, 1, padRate) else null
         override fun muteGroup(kit: String, slot: Int): Int = groups[slot] ?: 0
-        private companion object { const val rateOf = 48_000 }
+    }
+
+    /** Two kits, each with its own hats in the default hat group. */
+    private class TwoKitSource(private val frames: Int = 48_000) : SampleSource {
+        override fun loop(sampleFile: String): Snip? = null
+        override fun pad(kit: String, slot: Int): Snip? = when (kit) {
+            "A" -> Snip(FloatArray(frames) { 0.1f }, 1, 48_000)
+            "B" -> Snip(FloatArray(frames) { 0.2f }, 1, 48_000)
+            else -> null
+        }
+        // AutoPlace gives every kit's hats the same group, so this is the
+        // default for any two kits that have hats - not an exotic setup.
+        override fun muteGroup(kit: String, slot: Int): Int = AutoPlace.muteGroupFor(DrumClass.HAT_CLOSED)
     }
 
     private fun ring(name: String, steps: Int, vararg hits: Pair<Int, Int>) =
@@ -138,6 +152,50 @@ class OrbitChokeTest {
         assertTrue(tail.first() > 0.09f, "the ramp starts at full: ${tail.first()}")
         assertTrue(tail.last() < 0.01f, "and reaches silence by the sample's end: ${tail.last()}")
         assertTrue(tail.zipWithNext().all { (a, b) -> b <= a }, "monotonically down")
+    }
+
+    @Test
+    fun `a mute group belongs to its kit, and does not reach across to another`() {
+        // A ring on kit A and a ring on kit B. Both pads sit in group 1,
+        // because that is what AutoPlace gives hats - but they are hats in
+        // two different programs, and one program's choke rule says nothing
+        // about the other's. Comparing the number alone silences kit A.
+        val s = OrbitSet(
+            listOf(
+                Orbit("a", 16, PatternOrbit("A", listOf(OrbitHit(0, 1)))),
+                Orbit("b", 16, PatternOrbit("B", listOf(OrbitHit(4, 1)))),
+            ),
+            bpm,
+            rate,
+        )
+        val out = render(s, 8 * step, TwoKitSource())
+        assertClose(0.3f, at(out, 6 * step), "two kits, two programs - neither chokes the other")
+    }
+
+    @Test
+    fun `a second hit does not restart a ramp already under way`() {
+        // Three hits in one group, close enough together that the third
+        // lands while the first is still fading. Recomputing that voice's
+        // ramp from the new instant sets its gain back to full, so it jumps
+        // UP mid-fade - louder, and exactly the click the ramp exists to
+        // avoid. A fade of 128 frames is shorter than a 16th at any real
+        // tempo, so the set runs at a rate that makes a step 100 frames;
+        // the engine derives everything from the set's own rate.
+        val slow = 800
+        val slowStep = slow / 8 // a 16th at 120 BPM
+        val s = OrbitSet(listOf(ring("hats", 16, 0 to 1, 1 to 2, 2 to 3)), bpm, slow)
+        val out = OrbitEngine.render(
+            s,
+            OrbitBank.prepare(s, SustainSource(groups = mapOf(1 to 1, 2 to 1, 3 to 1), frames = 2_000, padRate = slow)),
+            4 * slowStep,
+            4 * slowStep,
+        ).samples
+
+        // At the third hit: pad 3 starting (0.3), pad 2 beginning its own
+        // ramp at full (0.2), and pad 1 partway down its ramp - 56 of its
+        // 256 interleaved frames left, so 0.1 * 56/256.
+        val expected = 0.3f + 0.2f + 0.1f * 56f / 256f
+        assertClose(expected, at(out, 2 * slowStep), "the first voice must keep falling, not snap back to full")
     }
 
     @Test
@@ -245,6 +303,30 @@ class OrbitChokeTest {
         json.setLastModified(json.lastModified() + 2_000)
 
         assertEquals(2, source.muteGroup("hats", 1), "the edit should be heard by the same source")
+    }
+
+    @Test
+    fun `two edits under one timestamp are not aliased into the first`() {
+        // The case the stamp alone cannot see: a second write whose
+        // mtime is identical to the one already cached. Forced here by
+        // pinning both writes to the same stamp, which is what a coarse
+        // filesystem does on its own.
+        val dir = File.createTempFile("snipsnap-alias", "").let { it.delete(); it.mkdirs(); it.deleteOnExit(); it }
+        val kitDir = File(dir, "hats").also { it.mkdirs() }
+        WavWriter.write(File(kitDir, "a.wav"), Snip(FloatArray(400) { 0.3f }, 2, 44_100), WavWriter.BitDepth.PCM_24)
+        val json = File(kitDir, KitStore.FILE_NAME)
+        fun saveAt(group: Int, stamp: Long) {
+            KitStore.save(Kit("hats", listOf(KitPad(slot = 1, sampleFile = "a.wav", muteGroup = group))), kitDir)
+            json.setLastModified(stamp)
+        }
+
+        val stamp = System.currentTimeMillis()
+        saveAt(1, stamp)
+        val source = KitSampleSource(dir)
+        assertEquals(1, source.muteGroup("hats", 1))
+
+        saveAt(2, stamp) // same mtime, different content
+        assertEquals(2, source.muteGroup("hats", 1), "a same-tick re-edit must not read as the first one")
     }
 
     @Test
