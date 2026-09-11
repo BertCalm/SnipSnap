@@ -18,6 +18,48 @@ object GrooveFeel {
     /** Feel resolves per 16th within a 4/4 bar. */
     const val POSITIONS = 16
 
+    /**
+     * Ceiling on a generated offset at full weight: 90 pulses, three eighths
+     * of a 16th. Wide enough to lean audibly, narrow enough that a note stays
+     * clearly attached to its own step rather than going ambiguous between two.
+     */
+    const val FEEL_MAX_OFFSET_PULSES: Long = 90L
+
+    /**
+     * How far each 16th position is allowed to lean, as a fraction of
+     * [FEEL_MAX_OFFSET_PULSES]. A groove leans on its weak beats, not on its
+     * pulse: a large offset on a downbeat does not read as human, it reads as
+     * wrong, because the downbeat is what the listener counts from. Order is
+     * 1 e & a, repeated for four beats.
+     */
+    val FEEL_WEIGHT: List<Float> = listOf(
+        0.25f, 1f, 0.6f, 1f,
+        0.25f, 1f, 0.6f, 1f,
+        0.25f, 1f, 0.6f, 1f,
+        0.25f, 1f, 0.6f, 1f,
+    )
+
+    /**
+     * A rolled feel: sixteen offsets drawn once from [seed], weighted by
+     * metric position. Generated at FULL magnitude — the axis position scales
+     * it in [applyFeel], so rerolling and moving the slider stay independent.
+     *
+     * Timing only. Accents are null throughout: this app's material is chopped
+     * breaks whose velocities are already a real performance, so random
+     * dynamics would be noise on signal. Accent STRUCTURE is worth having and
+     * comes from a real donor — subsystem B.
+     */
+    fun generated(seed: Int): Template {
+        val rnd = kotlin.random.Random(seed)
+        return Template(
+            offsets = (0 until POSITIONS).map { pos ->
+                val span = FEEL_MAX_OFFSET_PULSES.toFloat() * FEEL_WEIGHT[pos]
+                Math.round(((rnd.nextFloat() * 2f - 1f) * span).toDouble())
+            },
+            accents = List(POSITIONS) { null },
+        )
+    }
+
     data class Template(
         /** Pulses late (+) or early (−) per 16th position; null = donor silent there. */
         val offsets: List<Long?>,

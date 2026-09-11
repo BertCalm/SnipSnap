@@ -5,6 +5,7 @@ import com.snipsnap.mpc3.Mpc3Note
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class GrooveFeelTest {
@@ -79,5 +80,40 @@ class GrooveFeelTest {
         assertFailsWith<IllegalArgumentException> {
             GrooveFeel.extract(Mpc3Clip("Empty", 1, emptyList()))
         }
+    }
+
+    @Test
+    fun `a generated template is deterministic for a seed`() {
+        assertEquals(GrooveFeel.generated(7).offsets, GrooveFeel.generated(7).offsets, "same seed, same feel")
+    }
+
+    @Test
+    fun `different seeds give different feels`() {
+        assertNotEquals(GrooveFeel.generated(1).offsets, GrooveFeel.generated(2).offsets, "the dice actually roll")
+    }
+
+    @Test
+    fun `downbeats barely move and weak sixteenths move most`() {
+        // The pulse must survive the roll. Every seed, not a lucky one.
+        val downbeatCap = Math.round(0.25 * GrooveFeel.FEEL_MAX_OFFSET_PULSES)
+        for (seed in 1..200) {
+            val t = GrooveFeel.generated(seed)
+            for (pos in 0 until GrooveFeel.POSITIONS step 4) {
+                val o = t.offsets[pos]!!
+                assertTrue(Math.abs(o) <= downbeatCap, "seed $seed moved downbeat $pos by $o, cap $downbeatCap")
+            }
+            t.offsets.forEach { o ->
+                assertTrue(Math.abs(o!!) <= GrooveFeel.FEEL_MAX_OFFSET_PULSES, "seed $seed exceeded the ceiling: $o")
+            }
+        }
+    }
+
+    @Test
+    fun `generation covers every position and no accents`() {
+        val t = GrooveFeel.generated(3)
+        assertEquals(GrooveFeel.POSITIONS, t.offsets.size, "every position has an offset")
+        assertTrue(t.offsets.all { it != null }, "a generated template is never silent at a position")
+        assertTrue(t.accents.all { it == null }, "subsystem A generates timing only, never accents")
+        assertTrue(t.laneOffsets.isEmpty(), "and no lane pocket - that is subsystem B's to supply")
     }
 }
