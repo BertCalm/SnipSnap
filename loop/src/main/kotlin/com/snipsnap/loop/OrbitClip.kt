@@ -155,8 +155,9 @@ object OrbitClip {
 
     /**
      * One cycle of [set] as a clip. Only engaged pattern rings contribute;
-     * snip rings are audio and have no notes. Pad A0N plays note 35+N, the
-     * writer's chromatic map, as the GROOVE step editor already does.
+     * snip rings are audio and have no notes. Which note plays which pad
+     * is [Mpc3Note.noteFor] — the writer's own map, wrapping at 128, so
+     * pad 93 is note 0 rather than another copy of pad 92's.
      */
     fun clip(set: OrbitSet, name: String = nameFor(set)): Mpc3Clip {
         clipRefusal(set)?.let { throw IllegalArgumentException(it) }

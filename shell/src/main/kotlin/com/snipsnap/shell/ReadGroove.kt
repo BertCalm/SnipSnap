@@ -67,7 +67,7 @@ object ReadGroove {
                 null
             } else {
                 Mpc3Note(
-                    note = 35 + slot,
+                    note = Mpc3Note.noteFor(slot),
                     timePulses = Math.round(hit.frame / framesPerPulse),
                     velocity = hit.velocity,
                 )

@@ -590,7 +590,11 @@ fun GrooveScreen(
                         val p = n.timePulses.toFloat() / GrooveEdit.STEP_PULSES.toFloat()
                         val crossed = (p > lastPos && p <= np) ||
                             (np >= totalSteps && p + totalSteps > lastPos && p + totalSteps <= np)
-                        if (crossed) hit(n.note - 35)
+                        // Mpc3Note.slotFor, not `note - 35`: the map wraps, so
+                        // notes 0..35 are pads 93..128 and subtracting alone
+                        // gives them a slot no kit has. A clip that plays on
+                        // the MPC would be silent in this roll.
+                        if (crossed) hit(Mpc3Note.slotFor(n.note))
                     }
                 }
                 if (np >= totalSteps) np -= totalSteps
@@ -905,7 +909,7 @@ fun GrooveScreen(
         // that resolve to posAtHit * STEP_PULSES, the identical quantity
         // the needle-roll and playback clock already use for `p`.
         val elapsedSeconds = posAtHit / stepsPerSecond
-        t.add(slot + 35, elapsedSeconds, bpm, velocity)
+        t.add(Mpc3Note.noteFor(slot), elapsedSeconds, bpm, velocity)
     }
 
     /**

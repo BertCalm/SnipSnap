@@ -1,5 +1,9 @@
 package com.snipsnap.mpc3
 
+import com.snipsnap.json.Json
+import com.snipsnap.json.JsonValue
+import com.snipsnap.xpm.DrumProgram
+import com.snipsnap.xpm.Pad
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -16,8 +20,18 @@ import kotlin.test.assertTrue
  */
 class PadNoteMapTest {
 
-    /** `Mpc3TrackWriter.padNoteMap`'s arithmetic, restated: `value<n>` for 0-based pad index n. */
-    private fun writerNoteForPadIndex(n: Int) = (36 + n) % 128
+    /**
+     * The map the writer actually serialises, read back out of a rendered
+     * payload — not a restatement of its formula. A copied oracle would
+     * pass while the two drifted apart, which is the failure this test
+     * exists to prevent.
+     */
+    private fun writerPadNoteMap(): Map<String, JsonValue> {
+        val payload = (Json.parse(Mpc3TrackWriter().payloadText(DrumProgram("Map", listOf(Pad("S", 1_000L))))) as JsonValue.Obj).entries
+        val data = (payload["data"] as JsonValue.Obj).entries
+        val prog = (data["program"] as JsonValue.Obj).entries
+        return ((prog["padNoteMap"] as JsonValue.Obj).entries["noteForPad"] as JsonValue.Obj).entries
+    }
 
     @Test
     fun `every pad has its own note, and no two pads share one`() {
@@ -28,12 +42,14 @@ class PadNoteMapTest {
     }
 
     @Test
-    fun `the map is the writer's own, pad for pad`() {
+    fun `the map is the writer's own, pad for pad, as serialised`() {
+        val written = writerPadNoteMap()
+        assertEquals(Mpc3Note.PAD_SLOTS, written.size)
         for (slot in 1..Mpc3Note.PAD_SLOTS) {
             assertEquals(
-                writerNoteForPadIndex(slot - 1),
                 Mpc3Note.noteFor(slot),
-                "slot $slot disagrees with padNoteMap, so the MPC would play a different pad",
+                written["value${slot - 1}"]!!.int(),
+                "slot $slot disagrees with the padNoteMap the writer emits, so the MPC would play a different pad",
             )
         }
     }

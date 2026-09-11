@@ -461,7 +461,11 @@ class Mpc3TrackWriter(
     private fun padNoteMap(chromaticFrom36: Boolean): J = obj(
         "noteForPad" to obj(
             *(0 until 128).map { n ->
-                "value$n" to i(if (chromaticFrom36) ((36 + n) % 128).toLong() else n.toLong())
+                // Derived, not restated: Mpc3Note.noteFor is the map, and a
+                // clip's notes are built from the same call. Two copies of
+                // this arithmetic could drift apart and the clip would
+                // address pads the program never assigned.
+                "value$n" to i(if (chromaticFrom36) Mpc3Note.noteFor(n + 1).toLong() else n.toLong())
             }.toTypedArray(),
         ),
     )
