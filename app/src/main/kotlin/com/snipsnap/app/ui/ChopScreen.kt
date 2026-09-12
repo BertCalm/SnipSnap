@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -301,11 +302,6 @@ private fun loadChopSource(entry: KitShelf.Entry?, lastCommit: TapeCommit?): Cho
     return ChopSourceResult(kit.found, oomEncountered || kit.oomEncountered)
 }
 
-private fun modeLabel(mode: ChopReviewModel.ChopMode): String = when (mode) {
-    is ChopReviewModel.ChopMode.ByHits -> "BY HITS"
-    is ChopReviewModel.ChopMode.Grid -> "GRID ×${mode.parts}"
-}
-
 /** "A2", "C#4" — what a detected pitch reads as on a MELODIC row. */
 private fun pitchLabel(estimate: PitchEstimate): String =
     Scales.nameOf(Scales.hzToMidi(estimate.hz).roundToInt())
@@ -359,6 +355,85 @@ private fun ChopContent(
 
     var rechopBusy by remember { mutableStateOf(false) }
     var sendBusy by remember { mutableStateOf(false) }
+
+    // The CUT bench (docs/CHOP_CONTROLS.md): closed by default so the
+    // screen is the screen it was; open, the count, the ear, the cut and
+    // the grid. Every change is a fresh chop off the main thread with the
+    // corrected chips carried across, and the markers under the header
+    // move with it — the feedback that makes the controls usable.
+    var cutOpen by remember { mutableStateOf(false) }
+
+    /**
+     * Re-chop at [newMode] with overrides carried, then [after] on the
+     * result on the main thread (a toast, a check the count moved).
+     * Shares RE-CHOP's busy flag: two chops in flight would race for
+     * `model`.
+     */
+    fun rechopTo(newMode: ChopReviewModel.ChopMode, after: (ChopReviewModel) -> Unit = {}) {
+        if (rechopBusy || sendBusy) return
+        rechopBusy = true
+        val current = model
+        scope.launch {
+            try {
+                val fresh = withContext(Dispatchers.IO) { current.rechopKeeping(newMode) }
+                model = fresh
+                after(fresh)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("ChopScreen", "rechop: failed", e)
+                onToast(Copy.RECHOP_FAILED)
+            } finally {
+                rechopBusy = false
+            }
+        }
+    }
+
+    /** HITS ◀ ▶: one fewer or one more than the chop has now, so the step is always visible when the tape allows it. */
+    fun stepHits(delta: Int) {
+        val hits = model.mode as? ChopReviewModel.ChopMode.ByHits ?: return
+        val want = (model.sliceCount + delta).coerceIn(1, ChopReviewModel.MAX_HITS)
+        if (want == model.sliceCount) return
+        val before = model.sliceCount
+        rechopTo(hits.copy(maxSlices = want)) { fresh ->
+            if (delta > 0 && fresh.sliceCount <= before) onToast(Copy.chopOnlyHits(fresh.sliceCount))
+        }
+    }
+
+    /** GRID ◀ ▶: one part fewer or more. */
+    fun stepGrid(delta: Int) {
+        val grid = model.mode as? ChopReviewModel.ChopMode.Grid ?: return
+        val want = (grid.parts + delta).coerceIn(1, ChopReviewModel.MAX_HITS)
+        if (want != grid.parts) rechopTo(grid.copy(parts = want))
+    }
+
+    /**
+     * MERGE / SPLIT under a chip: a local move on the model, off the main
+     * thread all the same — SPLIT runs the detector over the slice, and a
+     * slice can be most of a long tape. A refusal says why in words; a
+     * landing says what the slices are now.
+     */
+    fun editSlices(edit: (ChopReviewModel) -> ChopReviewModel?, landed: String, refused: String) {
+        if (rechopBusy || sendBusy) return
+        rechopBusy = true
+        val current = model
+        scope.launch {
+            try {
+                val fresh = withContext(Dispatchers.IO) { edit(current) }
+                if (fresh == null) {
+                    onToast(refused)
+                } else {
+                    model = fresh
+                    onToast(landed)
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("ChopScreen", "edit: failed", e)
+                onToast(Copy.RECHOP_FAILED)
+            } finally {
+                rechopBusy = false
+            }
+        }
+    }
 
     var voice by remember(model) { mutableStateOf<TapeVoice?>(null) }
     DisposableEffect(model) {
@@ -438,11 +513,68 @@ private fun ChopContent(
             contentAlignment = Alignment.CenterStart,
         ) {
             TapeText(
-                "${model.sliceCount} SLICES — ${modeLabel(model.mode)}",
+                "${model.sliceCount} SLICES — ${model.modeLabel()}",
                 TapeType.lcdHeader,
                 scheme.lcdInk.tape,
             )
         }
+
+        // The whole tape with every cut drawn on it, live: as the bench
+        // moves the count or the ear, the markers move, before anything is
+        // committed. Until now the only way to see what changed was to
+        // scroll the rows.
+        SourceStrip(model.source, model.cutFrames(), scheme)
+
+        CutBench(
+            model = model,
+            open = cutOpen,
+            busy = rechopBusy || sendBusy,
+            scheme = scheme,
+            onToggle = { cutOpen = !cutOpen },
+            onByHits = {
+                if (model.mode !is ChopReviewModel.ChopMode.ByHits) rechopTo(ChopReviewModel.ChopMode.ByHits(model.sliceCount.coerceIn(1, ChopReviewModel.MAX_HITS)))
+            },
+            onGrid = {
+                if (model.mode !is ChopReviewModel.ChopMode.Grid) rechopTo(ChopReviewModel.ChopMode.Grid(model.sliceCount.coerceIn(1, ChopReviewModel.MAX_HITS)))
+            },
+            onStep = { delta -> if (model.mode is ChopReviewModel.ChopMode.Grid) stepGrid(delta) else stepHits(delta) },
+            onAuto = {
+                val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
+                if (hits != null && !rechopBusy && !sendBusy) {
+                    rechopBusy = true
+                    val current = model
+                    scope.launch {
+                        try {
+                            val (count, fresh) = withContext(Dispatchers.IO) {
+                                val n = current.autoCount()
+                                n to n?.let { current.rechopKeeping(hits.copy(maxSlices = it)) }
+                            }
+                            // No hit at all is a refusal, not a count of one.
+                            if (count == null || fresh == null) {
+                                onToast(Copy.CHOP_AUTO_NONE)
+                            } else {
+                                model = fresh
+                                onToast(Copy.chopAuto(count))
+                            }
+                        } catch (e: Exception) {
+                            if (e is kotlinx.coroutines.CancellationException) throw e
+                            Log.e("ChopScreen", "auto: failed", e)
+                            onToast(Copy.RECHOP_FAILED)
+                        } finally {
+                            rechopBusy = false
+                        }
+                    }
+                }
+            },
+            onEar = { ear ->
+                val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
+                if (hits != null && hits.ear != ear) rechopTo(hits.copy(ear = ear))
+            },
+            onCut = { cut ->
+                val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
+                if (hits != null && hits.cut != cut) rechopTo(hits.copy(cut = cut))
+            },
+        )
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             SegmentButton("CLASSIC", active = !melodic, modifier = Modifier.weight(1f)) {
@@ -509,6 +641,9 @@ private fun ChopContent(
                             current = row.effectiveClass,
                             machine = row.classification.drumClass,
                             scheme = scheme,
+                            busy = rechopBusy || sendBusy,
+                            mergeWith = if (row.n < model.sliceCount) row.n + 1 else null,
+                            enabled = !(rechopBusy || sendBusy),
                             onPick = { dc ->
                                 model.setLabel(row.n - 1, dc)
                                 pickerFor = null
@@ -518,6 +653,14 @@ private fun ChopContent(
                                 model.clearOverride(row.n - 1)
                                 pickerFor = null
                                 revision++
+                            },
+                            onMerge = {
+                                pickerFor = null
+                                editSlices({ it.merged(row.n - 1) }, Copy.chopMerged(row.n), Copy.CHOP_MERGE_LAST)
+                            },
+                            onSplit = {
+                                pickerFor = null
+                                editSlices({ it.split(row.n - 1) }, Copy.chopSplit(row.n), Copy.chopNoSplit(row.n))
                             },
                         )
                     }
@@ -690,13 +833,45 @@ private fun ClassPicker(
     current: DrumClass,
     machine: DrumClass,
     scheme: Scheme,
+    busy: Boolean,
+    /** The slice MERGE would join this one with (its 1-based number), or null on the last slice. */
+    mergeWith: Int?,
+    /**
+     * False while a chop or a send is reading the model off the main
+     * thread: a chip changed under it would hand the chop a half-carried
+     * set of labels, or SEND labels from two moments. Every tap in the
+     * panel stays announced and refuses, rather than vanishing.
+     */
+    enabled: Boolean = true,
     onPick: (DrumClass) -> Unit,
     onMachine: () -> Unit,
+    onMerge: () -> Unit,
+    onSplit: () -> Unit,
 ) {
     Column(
         Modifier.fillMaxWidth().lcdPanel(scheme).padding(6.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        // The slice's own two cuts (docs/CHOP_CONTROLS.md): join it with
+        // the next, or cut it at its own next hit. Under the chip because
+        // this panel is already the slice's bench, and a row has no room.
+        // MERGE on the last slice stays tappable and refuses in words
+        // (this screen's convention: dimmed, not disabled; the toast
+        // explains), so the refusal is something a user can actually hear.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            SecondaryButton(
+                mergeWith?.let { "MERGE WITH $it" } ?: "MERGE",
+                modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp),
+                enabled = !busy,
+                onClick = onMerge,
+            )
+            SecondaryButton(
+                "SPLIT AT ITS NEXT HIT",
+                modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp),
+                enabled = !busy,
+                onClick = onSplit,
+            )
+        }
         for (chunk in ChopReviewModel.CHIP_CYCLE.chunked(3)) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -712,7 +887,7 @@ private fun ClassPicker(
                                 if (picked) Schemes.classColor(dc).tape else scheme.ink3.tape.copy(alpha = 0.15f),
                                 RoundedCornerShape(4.dp),
                             )
-                            .tapeClick(label = ChopReviewModel.chipName(dc), onClick = { onPick(dc) }),
+                            .tapeClick(label = ChopReviewModel.chipName(dc), enabled = enabled, onClick = { onPick(dc) }),
                         contentAlignment = Alignment.Center,
                     ) {
                         TapeText(
@@ -736,7 +911,7 @@ private fun ClassPicker(
                 // Tapping accepts the machine's own guess back (clears the
                 // manual override) — named as that action, not just the
                 // readout it shows.
-                .tapeClick(label = "ACCEPT THE MACHINE'S GUESS: ${ChopReviewModel.chipName(machine)}", onClick = onMachine),
+                .tapeClick(label = "ACCEPT THE MACHINE'S GUESS: ${ChopReviewModel.chipName(machine)}", enabled = enabled, onClick = onMachine),
             contentAlignment = Alignment.Center,
         ) {
             TapeText(
@@ -745,6 +920,114 @@ private fun ClassPicker(
                 scheme.ink3.tape,
                 maxLines = 1,
             )
+        }
+    }
+}
+
+/**
+ * The whole source with a marker at every cut — `PeaksPyramid` over the
+ * tape once (it is the one thing on this screen that does not change),
+ * the cuts redrawn whenever the model does. The first cut is where the
+ * first slice starts, which is not always frame zero.
+ */
+@Composable
+private fun SourceStrip(source: Snip, cuts: List<Int>, scheme: Scheme) {
+    // The pyramid is real work on a long tape (CHOP takes the same
+    // 600-second cap TAPE does), so it is built on IO and the strip
+    // draws its markers alone until it lands, rather than freezing the
+    // screen on first composition.
+    val peaks by produceState<PeaksPyramid?>(initialValue = null, source) {
+        value = withContext(Dispatchers.IO) { PeaksPyramid.fromSnip(source) }
+    }
+    Canvas(Modifier.fillMaxWidth().height(40.dp).lcdPanel(scheme).padding(horizontal = 2.dp)) {
+        if (source.frameCount <= 0) return@Canvas
+        val barStep = 2.dp.toPx()
+        val h = size.height
+        val halfH = h / 2f
+        val count = max(1, (size.width / barStep).toInt())
+        val columns = peaks?.columns(0, source.frameCount, count) ?: emptyList()
+        for ((i, col) in columns.withIndex()) {
+            val top = (halfH - col.max * halfH).coerceIn(0f, h)
+            val bottom = (halfH - col.min * halfH).coerceIn(0f, h)
+            drawRect(
+                color = scheme.lcdInk.tape.copy(alpha = 0.55f),
+                topLeft = Offset(i * barStep, top),
+                size = Size(barStep, (bottom - top).coerceAtLeast(1f)),
+            )
+        }
+        for (cut in cuts) {
+            val x = (cut.toFloat() / source.frameCount * size.width).coerceIn(0f, size.width - 1f)
+            drawRect(color = scheme.accent.tape, topLeft = Offset(x, 0f), size = Size(2.dp.toPx(), h))
+        }
+    }
+}
+
+/**
+ * The CUT bench: BY HITS or GRID; ◀ the count ▶ with AUTO; and, by
+ * hits, the EAR (how hard the detector listens) and the CUT (where each
+ * cut lands against the attack). A GroupBox like the pad sheet's, closed
+ * to one summary line by default so the review is what it was.
+ */
+@Composable
+private fun CutBench(
+    model: ChopReviewModel,
+    open: Boolean,
+    busy: Boolean,
+    scheme: Scheme,
+    onToggle: () -> Unit,
+    onByHits: () -> Unit,
+    onGrid: () -> Unit,
+    onStep: (Int) -> Unit,
+    onAuto: () -> Unit,
+    onEar: (ChopReviewModel.Ear) -> Unit,
+    onCut: (ChopReviewModel.Cut) -> Unit,
+) {
+    val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
+    val readout = when (val mode = model.mode) {
+        is ChopReviewModel.ChopMode.ByHits -> "${model.sliceCount} ${if (model.sliceCount == 1) "HIT" else "HITS"}"
+        is ChopReviewModel.ChopMode.Grid -> "GRID ×${mode.parts}"
+    }
+    // By hits the count and the mode are two things (12 HITS · BY HITS ·
+    // FINE); on a grid the mode label already is the count.
+    val summary = if (hits != null) "$readout · ${model.modeLabel()}" else model.modeLabel()
+    val unit = if (hits != null) "HIT" else "PART"
+    GroupBox(
+        legend = "CUT",
+        summary = summary,
+        open = open,
+        onToggle = onToggle,
+        scheme = scheme,
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            SegmentButton("BY HITS", active = hits != null, modifier = Modifier.weight(1f), onClick = onByHits)
+            SegmentButton("GRID", active = hits == null, modifier = Modifier.weight(1f), onClick = onGrid)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            SecondaryButton("◀", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy, spoken = "ONE $unit FEWER") { onStep(-1) }
+            Box(
+                Modifier.weight(1.6f).heightIn(min = Layout.MIN_HIT_TARGET.dp).lcdPanel(scheme),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText(if (busy) Copy.CHOP_BENCH_BUSY else readout, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 1)
+            }
+            SecondaryButton("▶", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy, spoken = "ONE $unit MORE") { onStep(1) }
+            if (hits != null) {
+                SecondaryButton("AUTO", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy, onClick = onAuto)
+            }
+        }
+        if (hits != null) {
+            TapeText("EAR · HOW HARD IT LISTENS", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (ear in ChopReviewModel.Ear.entries) {
+                    SegmentButton(ear.name, active = hits.ear == ear, modifier = Modifier.weight(1f)) { if (!busy) onEar(ear) }
+                }
+            }
+            TapeText("CUT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (cut in ChopReviewModel.Cut.entries) {
+                    SegmentButton(cut.name, active = hits.cut == cut, modifier = Modifier.weight(1f)) { if (!busy) onCut(cut) }
+                }
+            }
         }
     }
 }
@@ -924,6 +1207,8 @@ private fun SecondaryButton(
     label: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    /** What a screen reader says for a glyph-only label (◀, ▶): the action, not the arrow. Null = the label itself. */
+    spoken: String? = null,
     onClick: () -> Unit,
 ) {
     val scheme = LocalScheme.current
@@ -934,7 +1219,7 @@ private fun SecondaryButton(
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = label, enabled = enabled, onClick = onClick)
+            .tapeClick(label = spoken ?: label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {

@@ -7,6 +7,7 @@ import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Slice
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.Transients
 import com.snipsnap.kit.ArrangedPad
 import com.snipsnap.xpm.PadNoteMap
 
@@ -18,6 +19,14 @@ import com.snipsnap.xpm.PadNoteMap
  * A chip under the confidence threshold renders dashed with NOT SURE
  * (the UI treatment); overriding one marks it "YOU ✓". RE-CHOP re-runs
  * detection and clears overrides — new slices, new opinions.
+ *
+ * The CUT bench (`docs/CHOP_CONTROLS.md`): how many hits, how hard the
+ * detector listens ([Ear]), where each cut lands against the attack
+ * ([Cut]), or a grid instead — every change a fresh chop through
+ * [rechop], with the chips the user already corrected carried across
+ * by [carryingOverrides]. And two local moves, [merged] and [split],
+ * for when fourteen of sixteen cuts are right: the global count is the
+ * wrong tool for the other two.
  */
 class ChopReviewModel private constructor(
     val source: Snip,
@@ -25,6 +34,8 @@ class ChopReviewModel private constructor(
     slices: List<Slice>,
     /** Where [source] sits in a tape on the SNIPS shelf, when it came off one; null = nothing to go back to. */
     val tape: TapeRef? = null,
+    /** True once [merged] or [split] moved a cut by hand: the slices are no longer exactly what [mode] would cut. */
+    val edited: Boolean = false,
 ) {
 
     /**
@@ -56,11 +67,56 @@ class ChopReviewModel private constructor(
     }
 
     sealed interface ChopMode {
-        /** Follow the hits — right for breaks. */
-        data class ByHits(val maxSlices: Int = 16) : ChopMode
+        /**
+         * Follow the hits — right for breaks. [maxSlices] keeps the
+         * strongest that many; [ear] is how hard the detector listens and
+         * [cut] where each cut lands against the attack.
+         */
+        data class ByHits(val maxSlices: Int = 16, val ear: Ear = Ear.NORMAL, val cut: Cut = Cut.ON) : ChopMode {
+            init {
+                require(maxSlices in 1..MAX_HITS) { "hits is 1..$MAX_HITS, got $maxSlices" }
+            }
+
+            /** The detector's settings for this ear and cut. */
+            fun config(): Transients.Config = ear.config(cut)
+        }
 
         /** Divide evenly — right when the bars matter more than the attacks. */
-        data class Grid(val parts: Int) : ChopMode
+        data class Grid(val parts: Int) : ChopMode {
+            init {
+                require(parts in 1..MAX_HITS) { "parts is 1..$MAX_HITS, got $parts" }
+            }
+        }
+    }
+
+    /**
+     * How hard the detector listens. NORMAL is the detector's own
+     * defaults; FINE lowers the bar a hit has to clear and lets hits sit
+     * closer, so ghost notes and fast hats come through; COARSE raises
+     * it and keeps them apart, so only the hits that carry the beat do.
+     * The three move the same two thresholds and the gap together —
+     * one control, not three, because the ear is one thing.
+     */
+    enum class Ear {
+        COARSE, NORMAL, FINE;
+
+        /** The detector's settings at this ear, cutting per [cut]. */
+        fun config(cut: Cut = Cut.ON): Transients.Config = when (this) {
+            COARSE -> Transients.Config(thresholdFactor = 2.6f, thresholdFloorDb = 7f, minSliceMs = 80f, backoffFrames = cut.backoffFrames)
+            NORMAL -> Transients.Config(backoffFrames = cut.backoffFrames)
+            FINE -> Transients.Config(thresholdFactor = 1.2f, thresholdFloorDb = 1.5f, minSliceMs = 15f, backoffFrames = cut.backoffFrames)
+        }
+    }
+
+    /**
+     * Where a cut lands against the attack it found. The detector lags
+     * the true attack by up to a hop and backs every cut off by a fixed
+     * amount to make up for it (ON, the default); EARLY backs off more,
+     * for when a kick still lost its click; LATE not at all, for when
+     * the previous slice's tail was bleeding into this one's front.
+     */
+    enum class Cut(val backoffFrames: Int) {
+        EARLY(384), ON(128), LATE(0)
     }
 
     inner class Row internal constructor(
@@ -88,6 +144,125 @@ class ChopReviewModel private constructor(
     }
 
     val sliceCount: Int get() = rows.size
+
+    /** Where each slice starts in [source]: the cut markers the screen draws live. */
+    fun cutFrames(): List<Int> = rows.map { it.slice.sourceFrame }
+
+    /**
+     * What the header says after the count: the mode, then only what is
+     * off its default (BY HITS · FINE · CUT EARLY), then EDITED once a
+     * cut was moved by hand — so a chop is reproducible from its words.
+     */
+    fun modeLabel(): String {
+        val parts = mutableListOf<String>()
+        when (mode) {
+            is ChopMode.ByHits -> {
+                parts += "BY HITS"
+                if (mode.ear != Ear.NORMAL) parts += mode.ear.name
+                if (mode.cut != Cut.ON) parts += "CUT ${mode.cut.name}"
+            }
+            is ChopMode.Grid -> parts += "GRID ×${mode.parts}"
+        }
+        if (edited) parts += "EDITED"
+        return parts.joinToString(" · ")
+    }
+
+    /**
+     * How many hits [source] wants at this ear — the knee in the sorted
+     * loudness curve where the real hits end and the detector's table
+     * scraps begin (`Chopper.autoSliceCount`), capped at the stepper's
+     * ceiling. The AUTO button's answer; null when the tape has no hit
+     * at all, which is a refusal, not a count of one.
+     */
+    fun autoCount(): Int? {
+        val config = (mode as? ChopMode.ByHits)?.config() ?: Transients.Config()
+        return Chopper.autoSliceCount(source, config).takeIf { it > 0 }?.coerceAtMost(MAX_HITS)
+    }
+
+    /**
+     * This model's overrides carried onto [fresh], chip by chip, wherever
+     * a fresh slice starts within [CARRY_TOLERANCE_FRAMES] of a slice the
+     * user had corrected — so nudging CUT, or one step of HITS, does not
+     * throw away ten relabelled chips. One to one, nearest pairs first:
+     * a corrected chip lands on at most one fresh slice, so when FINE
+     * reveals a ghost a hair from a slice the user relabelled, the ghost
+     * does not inherit the label too. A slice that moved further than
+     * the tolerance is a different slice and takes the classifier's
+     * word. Returns [fresh] itself, mutated.
+     */
+    fun carryingOverrides(fresh: ChopReviewModel): ChopReviewModel {
+        val corrected = rows.filter { it.override != null }
+        if (corrected.isEmpty()) return fresh
+        val pairs = ArrayList<Triple<Int, Row, Row>>()
+        for (old in corrected) for (row in fresh.rows) {
+            val d = kotlin.math.abs(old.slice.sourceFrame - row.slice.sourceFrame)
+            if (d <= CARRY_TOLERANCE_FRAMES) pairs += Triple(d, old, row)
+        }
+        val usedOld = HashSet<Row>()
+        val usedFresh = HashSet<Row>()
+        for ((_, old, row) in pairs.sortedBy { it.first }) {
+            if (old in usedOld || row in usedFresh) continue
+            row.override = old.override
+            usedOld += old
+            usedFresh += row
+        }
+        return fresh
+    }
+
+    /**
+     * MERGE: slice [index] and the one after it as one slice — the cut
+     * between them gone, the joined slice cut from [source] again so its
+     * cleanup is one slice's, not two fades in the middle. The joined
+     * slice keeps the first's chip; every other row keeps its own. Null
+     * when [index] is the last slice: nothing after it to merge with.
+     */
+    fun merged(index: Int): ChopReviewModel? {
+        if (index !in 0 until rows.size - 1) return null
+        val a = rows[index].slice
+        val b = rows[index + 1].slice
+        val joined = Chopper.slice(source, a.sourceFrame, b.sourceFrame + b.snip.frameCount, a.onset, Chopper.SLICE_CLEANUP)
+        val slices = rows.map { it.slice }.toMutableList()
+        slices[index] = joined
+        slices.removeAt(index + 1)
+        val overrides = rows.map { it.override }.toMutableList().also { it.removeAt(index + 1) }
+        return rebuilt(slices, overrides)
+    }
+
+    /**
+     * SPLIT: slice [index] cut in two at its own strongest inner hit —
+     * the detector at the FINE ear over just this slice, any hit at least
+     * [SPLIT_MARGIN_MS] in from either end (a hit on the very edge is the
+     * slice's own attack or the next slice's), the strongest one taken
+     * and the cut snapped to the zero crossing before it, as every chop
+     * cut is. The first half keeps the chip; the second takes the
+     * classifier's word. Null when the slice holds no second hit.
+     */
+    fun split(index: Int): ChopReviewModel? {
+        if (index !in rows.indices) return null
+        val a = rows[index].slice
+        val piece = a.snip
+        val margin = (SPLIT_MARGIN_MS / 1000f * piece.sampleRate).toInt()
+        val inner = Transients.detect(piece, Ear.FINE.config(Cut.ON))
+            .filter { it.frame in margin..(piece.frameCount - margin) }
+            .maxByOrNull { it.strength } ?: return null
+        val at = Transients.zeroCrossingBefore(piece, inner.frame)
+        if (at <= 0 || at >= piece.frameCount) return null
+        val cut = a.sourceFrame + at
+        val first = Chopper.slice(source, a.sourceFrame, cut, a.onset, Chopper.SLICE_CLEANUP)
+        val second = Chopper.slice(source, cut, a.sourceFrame + piece.frameCount, inner.copy(frame = cut), Chopper.SLICE_CLEANUP)
+        val slices = rows.map { it.slice }.toMutableList()
+        slices[index] = first
+        slices.add(index + 1, second)
+        val overrides = rows.map { it.override }.toMutableList().also { it.add(index + 1, null) }
+        return rebuilt(slices, overrides)
+    }
+
+    /** A model over [slices] with [overrides] laid back onto its rows, marked [edited]. */
+    private fun rebuilt(slices: List<Slice>, overrides: List<DrumClass?>): ChopReviewModel {
+        val m = ChopReviewModel(source, mode, slices, tape, edited = true)
+        for ((i, o) in overrides.withIndex()) m.rows[i].override = o
+        return m
+    }
 
     /** Tap the chip: the label advances through the cycle and wraps. */
     fun cycleLabel(index: Int) {
@@ -182,8 +357,11 @@ class ChopReviewModel private constructor(
         )
     }
 
-    /** RE-CHOP: fresh detection, fresh labels, overrides gone; the tape reference rides along. */
+    /** RE-CHOP: fresh detection, fresh labels, overrides gone, hand edits gone; the tape reference rides along. */
     fun rechop(newMode: ChopMode = mode): ChopReviewModel = chop(source, newMode, tape)
+
+    /** The bench's own re-chop: [newMode], with this model's corrected chips carried across ([carryingOverrides]). */
+    fun rechopKeeping(newMode: ChopMode): ChopReviewModel = carryingOverrides(rechop(newMode))
 
     /**
      * The teach-the-machine harvest: every overridden chip as a labeled
@@ -280,6 +458,15 @@ class ChopReviewModel private constructor(
         /** Below this the chip goes dashed — same threshold as the CLI's `?`. */
         const val NOT_SURE_BELOW = 0.5f
 
+        /** The HITS and GRID steppers' ceiling: four banks, the same bound the CLI's auto count keeps. */
+        const val MAX_HITS = Chopper.AUTO_MAX
+
+        /** An override follows a slice across a re-chop when the fresh slice starts within this many frames of it (two hops each way of a CUT nudge). */
+        const val CARRY_TOLERANCE_FRAMES = 512
+
+        /** SPLIT ignores a hit closer than this to either end of the slice. */
+        const val SPLIT_MARGIN_MS = 30f
+
         /** Below this a slice counts as unpitched for melodic placement. */
         const val MELODIC_PITCH_CONFIDENCE = 0.5f
 
@@ -308,7 +495,7 @@ class ChopReviewModel private constructor(
         fun chop(source: Snip, mode: ChopMode = ChopMode.ByHits(), tape: TapeRef? = null): ChopReviewModel {
             val slices = when (mode) {
                 is ChopMode.ByHits ->
-                    Chopper.byTransients(source, maxSlices = mode.maxSlices, cleanup = Chopper.SLICE_CLEANUP)
+                    Chopper.byTransients(source, maxSlices = mode.maxSlices, config = mode.config(), cleanup = Chopper.SLICE_CLEANUP)
                 is ChopMode.Grid ->
                     Chopper.intoEqualParts(source, mode.parts, cleanup = Chopper.SLICE_CLEANUP)
             }
