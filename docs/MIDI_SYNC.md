@@ -11,7 +11,7 @@ implementation, and this document is the reason why.
 
 ## How far to trust this document
 
-Two rounds of review found **23 errors** in it. Every one was real. That
+Three rounds of review found **39 errors** in it. Every one was real. That
 is a bad enough rate to be a fact about the document rather than an
 anecdote, so here is the pattern, because it tells you which parts to
 lean on.
@@ -34,11 +34,19 @@ proposing what to build:
 | `continue` has the state already | ORBIT's screen discards the engine on stop |
 | one transport in frames | there are two output streams, `AudioTrack` and Oboe |
 | the same seam as the `PadEngine` test interface | two different dependencies |
+| four bench *procedures* | not one was executable: wrong stream, uncalibrated reference, two screens that cannot co-exist, and an experiment on a follower that does not exist |
 
 The reason is not subtle: **I cannot run this app.** Reading the source
 is enough to say what is there. It is not enough to say what will keep
 time, because timing lives in the gaps between components — buffering,
 scheduling, two clocks that drift — and those do not appear in any file.
+
+The third round is the clearest instance, because it caught the same
+overreach one level down: having written "I cannot run this app", I then
+wrote four step-by-step bench procedures for hardware I cannot touch, in
+an app whose screen lifecycle I had not checked. Those are now questions
+with their difficulties named, and the method belongs to whoever holds
+the phone.
 
 So read the survey as findings, and the design section as **constraints
 and open questions** rather than a plan. The four bench items exist
@@ -59,15 +67,19 @@ corrections taught.
 
 **That is wrong in a way that matters.** It describes a single timeline
 being handed from one owner to another. There is no single timeline. The
-app runs **four separate notions of "now"**, none of which is the
-hardware's, and none of which is exposed as a clock another component
-could follow.
+app runs **four separate notions of "now"**, and **no shared,
+hardware-referenced transport** among them.
 
-That is the precise claim, and it is narrower than "unreadable". GROOVE's
-position *is* readable — it is Compose state, and the needle and the
-recorder both read it. What it is not is a transport: nothing outside
-that composable can ask it what time it is, and it is derived from the
-display rather than from audio.
+That is the precise claim, and two earlier drafts got it wrong in
+opposite directions. It is not that they "cannot be read" — GROOVE's
+position is Compose state its own needle and recorder read. Nor is it
+that none is "exposed as a clock another component could follow" —
+`OrbitEngine.position()` and `LoopEngine.position()` are exposed, and
+their screens follow them.
+
+What is missing is one clock, referenced to the hardware, that everything
+shares. Each of the four is local to its own engine or composable, and
+each counts something different.
 
 The work is not transferring ownership. It is **creating one clock where
 there are currently four**, and that is a larger and more interesting
@@ -179,9 +191,15 @@ sed -n 310,325p app/src/main/kotlin/com/snipsnap/app/TapeVoice.kt
 ```
 
 A clock built naively on that number would sit at zero for most of a bar
-on those devices. Whatever reads hardware position for timing needs the
-same defensive shape those two voices already use, and the bench item
-below exists to find out how widespread the quirk is.
+on those devices.
+
+**And the existing defence does not cover it**, which a draft claimed it
+did. `runCatching { playbackHeadPosition }` falls back only when the call
+*throws*; the documented HAL returns a perfectly valid `0` while playing.
+Copying that shape would freeze a sync clock for 800 ms without a single
+exception raised. Detecting a stale or implausible position is a separate
+problem, unsolved here, and bench item S1 exists to find out how
+widespread the quirk is before anyone designs around it.
 
 ### Latency is measured and then only printed
 
@@ -269,8 +287,10 @@ stops entirely when the screen does.
 This is one piece of work with no MIDI in it at all, and it is the
 prerequisite for everything below:
 
-- a single `Transport` holding **two cursors, not one** — and this is a
-  correction to an earlier draft, which said the engines should read the
+- **on the shared-sink branch of the fork above** — and only there; with
+  two streams retained it becomes a cursor pair *per stream* plus the
+  mapping between them — a `Transport` holding **two cursors, not one**.
+  This is a correction to an earlier draft, which said the engines should read the
   hardware position "instead of" their own counters. They must not.
   `OrbitEngine` mixes `[frame, frame + blockFrames)` and only advances
   `frame` *after* `sink.write`, so the render cursor necessarily **leads**
@@ -346,7 +366,7 @@ states exist locally:
 | `start` | go to zero and run | the closest match: ORBIT rewinds, GROOVE's RECORD zeroes `posSteps` |
 | `stop` | freeze **here** | at ENGINE level the counters survive — `OrbitEngine.stop()` and `LoopEngine.stop()` only set `running = false`, and GROOVE's `posSteps` is state. At SCREEN level ORBIT throws it away: `OrbitScreen.stopPlayback()` stops, joins, closes the sink and sets `engine = null`, so the next start builds a fresh engine at frame 0 |
 | `continue` | resume from where `stop` left off | no control offers it, and for ORBIT the state is not merely unused but **discarded**. GROOVE is the closest: `posSteps` really does survive |
-| Song Position Pointer | a 14-bit count of **MIDI beats**, six clocks each — *not* a bar/beat pair | nothing can seek, and the conversion needs the session meter. See below: a seek is more than arithmetic |
+| Song Position Pointer | a 14-bit count of **MIDI beats** — six clocks each, so a 16th at 24 PPQN, *not* a bar/beat pair | nothing can seek. Converting one to frames needs the tempo and the sample rate (a draft said "the session meter" — meter is only needed to *label* a position as bar and beat, and requiring it would add a dependency seek arithmetic does not have). See below: a seek is more than arithmetic anyway |
 | clock stalls | the master died or the cable went | undefined — nothing would notice |
 
 Two corrections live in that table, a draft apart.
@@ -424,9 +444,19 @@ different costs, and **the spec's "half of it is worse than none" was
 about shipping a broken follower, not about shipping master alone.**
 
 **As master**, the app sends 24 PPQ derived from its own transport, plus
-`start`/`stop`. Every other device follows. This costs: a transport that
-can be read (question 1), a MIDI output port, and arithmetic. It changes
-no timing authority, because the app already believes it is in charge.
+`start`/`stop`. This costs: a transport that can be read (question 1), a
+MIDI output port, and arithmetic. It changes no timing authority, because
+the app already believes it is in charge.
+
+**But "every other device follows" needs a boundary drawn**, which a
+draft left out. Clock plus `start`/`stop` only keeps a follower aligned
+if the master never pauses-and-resumes or relocates. The moment it does,
+a follower needs `continue` and Song Position Pointer — the same two
+events the table above says the app has no concept of. So either the
+master half emits them, which means building the concepts rather than
+just the port, or it declares them out of scope and the app is a master
+that can only ever start from the top. That is a real limitation and it
+should be chosen deliberately, not discovered.
 
 **As follower**, the app's transport is driven by arriving pulses. This
 costs everything in question 2, plus the fact that a follower's audio
