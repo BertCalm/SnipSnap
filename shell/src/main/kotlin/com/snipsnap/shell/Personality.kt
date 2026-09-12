@@ -952,7 +952,9 @@ object Copy {
     fun chopOnlyHits(heard: Int): String =
         "ONLY $heard ${if (heard == 1) "HIT" else "HITS"} HEARD AT THIS EAR. FINE HEARS MORE."
     /** AUTO's landing: the knee, in words. */
-    fun chopAuto(hits: Int): String = "AUTO: $hits HITS, WHERE THE REAL ONES END AND THE SCRAPS BEGIN."
+    fun chopAuto(hits: Int): String = "AUTO: $hits ${if (hits == 1) "HIT" else "HITS"}, WHERE THE REAL ONES END AND THE SCRAPS BEGIN."
+    /** AUTO on a tape the detector hears nothing in: no count to find. */
+    const val CHOP_AUTO_NONE = "NO HITS ON THIS TAPE TO COUNT. TRY GRID, OR TRIM CLOSER TO THE SOUND."
     /** MERGE landed: the two slices are one. */
     fun chopMerged(n: Int): String = "SLICES $n AND ${n + 1} ARE ONE NOW."
     /** MERGE on the last slice: nothing after it. */

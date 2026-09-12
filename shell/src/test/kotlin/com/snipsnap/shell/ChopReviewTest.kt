@@ -91,6 +91,7 @@ class ChopReviewTest {
     fun `AUTO finds the knee, and a bench re-chop carries corrected chips onto the slices that stayed`() {
         val model = ChopReviewModel.chop(breakSnip(), byHits(8))
         assertEquals(4, model.autoCount(), "four hits of a kind: all four")
+        assertEquals(null, ChopReviewModel.chop(Snip(FloatArray(rate * 2), 1, rate), byHits(8)).autoCount(), "no hits: no count, not one")
         model.setLabel(0, DrumClass.TOM)
         model.setLabel(2, DrumClass.CLAP)
         val nudged = model.rechopKeeping(byHits(8, cut = ChopReviewModel.Cut.EARLY))
@@ -107,6 +108,15 @@ class ChopReviewTest {
         }
         // Plain RE-CHOP still clears them.
         assertTrue(model.rechop().rows.all { it.override == null })
+        // One to one: two fresh slices within the tolerance of one corrected
+        // chip (a grid of 500-frame parts under a one-part grid) inherit it
+        // once, on the nearest, never both.
+        val short = Snip(DrumSynth.kick().samples.copyOf(16_000), 1, rate)
+        val one = ChopReviewModel.chop(short, ChopReviewModel.ChopMode.Grid(1))
+        one.setLabel(0, DrumClass.TOM)
+        val many = one.rechopKeeping(ChopReviewModel.ChopMode.Grid(32))
+        assertTrue(many.rows[1].slice.sourceFrame <= ChopReviewModel.CARRY_TOLERANCE_FRAMES, "the second part is within the tolerance too: ${many.rows[1].slice.sourceFrame}")
+        assertEquals(listOf(0), many.rows.withIndex().filter { it.value.override == DrumClass.TOM }.map { it.index }, "the chip lands once, on the nearest")
     }
 
     @Test

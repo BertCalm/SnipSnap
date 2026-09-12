@@ -37,9 +37,16 @@ EAR. FINE HEARS MORE. — rather than doing nothing.
 every override onto the fresh slice that starts within 512 frames of
 the slice it was on (`carryingOverrides`, `CARRY_TOLERANCE_FRAMES`),
 so nudging CUT or stepping HITS by one does not throw away ten
-relabelled chips. A slice that moved further is a different slice and
-takes the classifier's word. RE-CHOP itself still clears everything:
-that button means "start over".
+relabelled chips. One to one, nearest pairs first: a chip lands on at
+most one fresh slice, so when FINE reveals a ghost a hair from a slice
+the user relabelled, the ghost does not inherit the label too. A slice
+that moved further is a different slice and takes the classifier's
+word. RE-CHOP itself still clears everything: that button means "start
+over".
+
+AUTO on a tape the detector hears nothing in is a refusal (NO HITS ON
+THIS TAPE TO COUNT. TRY GRID, OR TRIM CLOSER TO THE SOUND.), never a
+count of one.
 
 ## 3. MERGE and SPLIT
 
@@ -79,6 +86,7 @@ the rows and count.
 |---|---|
 | HITS ▶ found no more at this ear | ONLY 6 HITS HEARD AT THIS EAR. FINE HEARS MORE. |
 | AUTO landed | AUTO: 8 HITS, WHERE THE REAL ONES END AND THE SCRAPS BEGIN. |
+| AUTO on a tape with no hits | NO HITS ON THIS TAPE TO COUNT. TRY GRID, OR TRIM CLOSER TO THE SOUND. |
 | MERGE landed | SLICES 3 AND 4 ARE ONE NOW. |
 | MERGE on the last slice | NOTHING AFTER THE LAST SLICE TO MERGE IT WITH. |
 | SPLIT landed | SLICE 3 IS TWO NOW. |
@@ -94,9 +102,10 @@ the rows and count.
   ON, and the nudge is real.
 - The header names only what is off its default, and EDITED after a
   hand edit; the cut markers are the slice starts, in order.
-- AUTO on four hits of a kind is four.
+- AUTO on four hits of a kind is four; on silence it is no count.
 - A bench re-chop carries corrected chips onto the slices that stayed,
-  through a CUT nudge and through fewer hits; RE-CHOP clears them.
+  through a CUT nudge and through fewer hits, one chip to one slice;
+  RE-CHOP clears them.
 - MERGE joins end to end and keeps the other chips; SPLIT on the joined
   slice puts the cut back near the hat and loses nothing; SPLIT on a
   single hit refuses; the tape reference rides through both.

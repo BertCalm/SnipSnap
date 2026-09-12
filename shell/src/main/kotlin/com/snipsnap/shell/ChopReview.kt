@@ -170,28 +170,41 @@ class ChopReviewModel private constructor(
     /**
      * How many hits [source] wants at this ear — the knee in the sorted
      * loudness curve where the real hits end and the detector's table
-     * scraps begin (`Chopper.autoSliceCount`), bounded to the stepper's
-     * range. The AUTO button's answer.
+     * scraps begin (`Chopper.autoSliceCount`), capped at the stepper's
+     * ceiling. The AUTO button's answer; null when the tape has no hit
+     * at all, which is a refusal, not a count of one.
      */
-    fun autoCount(): Int {
+    fun autoCount(): Int? {
         val config = (mode as? ChopMode.ByHits)?.config() ?: Transients.Config()
-        return Chopper.autoSliceCount(source, config).coerceIn(1, MAX_HITS)
+        return Chopper.autoSliceCount(source, config).takeIf { it > 0 }?.coerceAtMost(MAX_HITS)
     }
 
     /**
      * This model's overrides carried onto [fresh], chip by chip, wherever
      * a fresh slice starts within [CARRY_TOLERANCE_FRAMES] of a slice the
      * user had corrected — so nudging CUT, or one step of HITS, does not
-     * throw away ten relabelled chips. A slice that moved further than
-     * that is a different slice and takes the classifier's word. Returns
-     * [fresh] itself, mutated.
+     * throw away ten relabelled chips. One to one, nearest pairs first:
+     * a corrected chip lands on at most one fresh slice, so when FINE
+     * reveals a ghost a hair from a slice the user relabelled, the ghost
+     * does not inherit the label too. A slice that moved further than
+     * the tolerance is a different slice and takes the classifier's
+     * word. Returns [fresh] itself, mutated.
      */
     fun carryingOverrides(fresh: ChopReviewModel): ChopReviewModel {
         val corrected = rows.filter { it.override != null }
         if (corrected.isEmpty()) return fresh
-        for (row in fresh.rows) {
-            val near = corrected.minByOrNull { kotlin.math.abs(it.slice.sourceFrame - row.slice.sourceFrame) } ?: continue
-            if (kotlin.math.abs(near.slice.sourceFrame - row.slice.sourceFrame) <= CARRY_TOLERANCE_FRAMES) row.override = near.override
+        val pairs = ArrayList<Triple<Int, Row, Row>>()
+        for (old in corrected) for (row in fresh.rows) {
+            val d = kotlin.math.abs(old.slice.sourceFrame - row.slice.sourceFrame)
+            if (d <= CARRY_TOLERANCE_FRAMES) pairs += Triple(d, old, row)
+        }
+        val usedOld = HashSet<Row>()
+        val usedFresh = HashSet<Row>()
+        for ((_, old, row) in pairs.sortedBy { it.first }) {
+            if (old in usedOld || row in usedFresh) continue
+            row.override = old.override
+            usedOld += old
+            usedFresh += row
         }
         return fresh
     }
