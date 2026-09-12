@@ -1,10 +1,9 @@
 package com.snipsnap.app
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement as LayoutArrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -65,7 +67,6 @@ fun LoopGrid(
     session: Session,
     interval: Int,
     onToggleTrack: (Int) -> Unit,
-    onSelectBlock: (trackIndex: Int, blockIndex: Int) -> Unit,
     /** HOLD a block: the track goes back to empty. Nothing on screen can say this, so [Copy.LOOP_LEGEND] does. */
     onClearTrack: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -83,7 +84,6 @@ fun LoopGrid(
                     track = track,
                     playing = Arrangement.indexAt(track.chain.size, interval),
                     onToggle = { onToggleTrack(t) },
-                    onSelect = { b -> onSelectBlock(t, b) },
                     onClear = { onClearTrack(t) },
                     modifier = Modifier.weight(1f),
                 )
@@ -101,21 +101,22 @@ fun LoopGrid(
 }
 
 /**
- * LOOP with no session on disk — which, until a snip is sent, is every time.
+ * LOOP with no session to draw.
  *
  * Reached from the shelf only once a track holds something, so in practice this
- * is the `adb` entry point and the "the sidecar would not parse" case. It says
- * which door fills the grid rather than drawing an empty one, because an empty
- * grid looks like a bug.
+ * is the `adb` entry point and the "the sidecar would not parse" case — which
+ * is why the caller passes the [line]: those two are the same `null` here and
+ * must not read the same on screen. It says something in words rather than
+ * drawing an empty grid, because an empty grid looks like a bug.
  */
 @Composable
-fun LoopEmpty(modifier: Modifier = Modifier) {
+fun LoopEmpty(line: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier.fillMaxSize().background(Tape.Desk).padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
         androidx.compose.material3.Text(
-            text = Copy.LOOP_EMPTY,
+            text = line,
             color = Tape.Panel,
             fontSize = 12.sp,
             fontFamily = FontFamily.Monospace,
@@ -129,7 +130,6 @@ private fun TrackColumn(
     track: com.snipsnap.loop.Track,
     playing: Int,
     onToggle: () -> Unit,
-    onSelect: (Int) -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -146,10 +146,9 @@ private fun TrackColumn(
                 lit = track.engaged && b == playing,
                 // An empty track has nothing to clear, and its one cell is a
                 // placeholder rather than a block anyone put there — so it
-                // takes neither gesture.
+                // takes no gesture at all.
                 filled = !empty,
-                onClick = { if (!empty) onSelect(b) },
-                onLongClick = { if (!empty) onClear() },
+                onClear = onClear,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -181,18 +180,30 @@ private fun TrackHeader(name: String, engaged: Boolean, onToggle: () -> Unit) {
  *
  * HOLD clears the whole track, not this one block: a chain is what a snip
  * became, and half a snip on the grid is not a state worth being able to
- * reach. `combinedClickable` rather than a raw `pointerInput` for the same
- * reason `KitsScreen`'s own room row uses it — it registers real onClick and
- * onLongClick actions for a screen reader, which a drag gesture does not.
+ * reach.
+ *
+ * The hold is the cell's ONLY gesture, and the accessibility tree says so.
+ * This used to be a `clickable` with an empty lambda — block editing lands in
+ * a later plan — which told a screen reader there was something to activate
+ * here and then did nothing when it was. `pointerInput` alone would swing too
+ * far the other way (the fault `KitsScreen`'s own room row was fixed for:
+ * operable by touch, invisible to TalkBack), so the long press is declared as
+ * a real semantics action beside it. When a tap does something, it comes back
+ * as a real action too.
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BlockCell(
     label: String,
     lit: Boolean,
     filled: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    /**
+     * Named for what it does rather than for the gesture: inside the
+     * `semantics` block below, a parameter called `onLongClick` would sit in
+     * the same scope as `SemanticsPropertyReceiver.onLongClick`, whose own
+     * arguments are all optional — so `onLongClick()` there could resolve to
+     * either one.
+     */
+    onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     androidx.compose.material3.Text(
@@ -207,12 +218,13 @@ private fun BlockCell(
             .aspectRatio(1.2f)
             .background(if (lit) Tape.Amber else if (filled) Tape.Panel else Tape.Lcd)
             .border(width = 2.dp, color = if (lit) Tape.BevelLight else Tape.BevelDark)
-            .combinedClickable(
-                enabled = filled,
-                onLongClickLabel = "CLEAR THIS TRACK",
-                onLongClick = onLongClick,
-                onClick = onClick,
-            )
+            .pointerInput(filled) {
+                if (!filled) return@pointerInput
+                detectTapGestures(onLongPress = { onClear() })
+            }
+            .semantics(mergeDescendants = true) {
+                if (filled) onLongClick(label = "CLEAR THIS TRACK") { onClear(); true }
+            }
             .padding(4.dp),
     )
 }

@@ -1245,25 +1245,11 @@ fun App(shelf: KitShelf) {
     fun sendSnipToLoop(info: SnipStore.Info) {
         scope.launch {
             val outcome = withContext(Dispatchers.IO) {
-                // A missing sidecar is a first send; a sidecar that will not
-                // parse is not. Starting fresh in that second case would put a
-                // one-track session on top of six tracks someone built, which
-                // is a silent delete — so the two are told apart here rather
-                // than collapsed into one getOrNull.
-                val sidecar = File(loopDir, SessionStore.FILE_NAME)
-                val session = if (sidecar.isFile) {
-                    runCatching { SessionStore.load(loopDir) }
-                        .onFailure { e -> Log.e(TAG, "sendSnipToLoop: session unreadable", e) }
-                        .getOrNull()
-                        ?: return@withContext LoopSend(Copy.LOOP_UNREADABLE, null)
-                } else {
-                    SessionBuilder.empty(deviceSampleRate(context))
-                }
-                val at = SessionBuilder.nextEmpty(session)
-                // Said in words rather than by a dead button on the row: a
-                // disabled → LOOP would not say WHICH of its reasons applied.
-                if (at < 0) return@withContext LoopSend(Copy.loopFull(Session.TRACK_COUNT), null)
-
+                // Decoded BEFORE the lock: this is the slow part (a whole snip
+                // to float32) and it needs nothing from the session. Holding
+                // the grid's one writer through it would make a second tap
+                // wait for the first tap's decode for no reason.
+                //
                 // `info.file` is a SNIP, already bounded by
                 // SnipStore.IMPORT_MAX_SEC (180s) or real-time capture —
                 // readCapped's ceiling is defense in depth, per ConventionTest
@@ -1275,31 +1261,56 @@ fun App(shelf: KitShelf) {
                     return@withContext LoopSend(Copy.LOOP_NOTHING_TO_SEND, null)
                 }
 
-                // Past the decode, the only way this fails is a write — so it
-                // reports a write failure, never "no audio", which would send
-                // someone looking at the wrong thing.
-                val sent = runCatching {
-                    SessionBuilder.send(session, at, info.displayName, info.file.nameWithoutExtension, audio, loopDir)
-                }
-                    .onFailure { e -> Log.e(TAG, "sendSnipToLoop: cut failed", e) }
-                    .getOrNull()
-                    ?: return@withContext LoopSend(Copy.LOOP_SEND_FAILED, null)
-
-                val saved = runCatching { SessionStore.save(sent.session, loopDir) }
-                    .onFailure { e -> Log.e(TAG, "sendSnipToLoop: save failed", e) }
-                    .isSuccess
-                if (!saved) return@withContext LoopSend(Copy.LOOP_SEND_FAILED, null)
-
-                // 1-based: the column a player counts across the grid.
-                val track = sent.trackIndex + 1
-                LoopSend(
-                    if (sent.truncated) {
-                        Copy.loopTrackTruncated(info.displayName, track, sent.blocks)
+                // Read-modify-write, so the whole of it is one writer's turn.
+                // Two quick taps otherwise both read the same session, both
+                // pick the same empty track, and the second save drops the
+                // first snip while its toast says it landed. See LoopWrites.
+                LoopWrites.writing {
+                    // A missing sidecar is a first send; a sidecar that will
+                    // not parse is not. Starting fresh in that second case
+                    // would put a one-track session on top of six tracks
+                    // someone built, which is a silent delete — so the two are
+                    // told apart here rather than collapsed into one getOrNull.
+                    val sidecar = File(loopDir, SessionStore.FILE_NAME)
+                    val session = if (sidecar.isFile) {
+                        runCatching { SessionStore.load(loopDir) }
+                            .onFailure { e -> Log.e(TAG, "sendSnipToLoop: session unreadable", e) }
+                            .getOrNull()
+                            ?: return@writing LoopSend(Copy.LOOP_UNREADABLE, null)
                     } else {
-                        Copy.loopTrackFilled(info.displayName, track, sent.blocks)
-                    },
-                    SessionBuilder.filled(sent.session),
-                )
+                        SessionBuilder.empty(deviceSampleRate(context))
+                    }
+                    val at = SessionBuilder.nextEmpty(session)
+                    // Said in words rather than by a dead button on the row: a
+                    // disabled → LOOP would not say WHICH of its reasons applied.
+                    if (at < 0) return@writing LoopSend(Copy.loopFull(Session.TRACK_COUNT), null)
+
+                    // Past the decode, the only way this fails is a write — so
+                    // it reports a write failure, never "no audio", which would
+                    // send someone looking at the wrong thing.
+                    val sent = runCatching {
+                        SessionBuilder.send(session, at, info.displayName, info.file.nameWithoutExtension, audio, loopDir)
+                    }
+                        .onFailure { e -> Log.e(TAG, "sendSnipToLoop: cut failed", e) }
+                        .getOrNull()
+                        ?: return@writing LoopSend(Copy.LOOP_SEND_FAILED, null)
+
+                    val saved = runCatching { SessionStore.save(sent.session, loopDir) }
+                        .onFailure { e -> Log.e(TAG, "sendSnipToLoop: save failed", e) }
+                        .isSuccess
+                    if (!saved) return@writing LoopSend(Copy.LOOP_SEND_FAILED, null)
+
+                    // 1-based: the column a player counts across the grid.
+                    val track = sent.trackIndex + 1
+                    LoopSend(
+                        if (sent.truncated) {
+                            Copy.loopTrackTruncated(info.displayName, track, sent.blocks)
+                        } else {
+                            Copy.loopTrackFilled(info.displayName, track, sent.blocks)
+                        },
+                        SessionBuilder.filled(sent.session),
+                    )
+                }
             }
             toast = outcome.toast
             outcome.filled?.let { loopTracks = it }

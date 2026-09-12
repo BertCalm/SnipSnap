@@ -2,7 +2,9 @@ package com.snipsnap.loop
 
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.kit.AtomicFile
 import com.snipsnap.kit.Names
+import java.io.ByteArrayOutputStream
 import java.io.File
 
 /**
@@ -149,7 +151,7 @@ object SessionBuilder {
         val safe = Names.sanitizeStem(stem)
         val chain = (0 until blocks).map { n ->
             val file = File(dir, "${safe}_${n + 1}.wav")
-            WavWriter.write(file, pieceAt(audio, n * frames, frames), allowNonMpcRate = true)
+            writePiece(file, pieceAt(audio, n * frames, frames))
             LoopBlock(file.name)
         }
 
@@ -178,6 +180,27 @@ object SessionBuilder {
         val tracks = session.tracks.toMutableList()
         tracks[trackIndex] = emptyTrack()
         return session.copy(tracks = tracks.toList())
+    }
+
+    /**
+     * One piece, written the way [SessionStore] writes the sidecar: into a
+     * sibling temp file and renamed over the target.
+     *
+     * A re-send deliberately reuses the same filenames, so a piece is not
+     * always a new file — it can be one a track already on the grid is
+     * playing from. Writing straight to that path means an interrupted write
+     * leaves that track pointing at a truncated WAV while its sidecar still
+     * says everything is fine. Rename-into-place means the old piece survives
+     * intact instead.
+     *
+     * Through the stream overload rather than `WavWriter.write(file, ...)`:
+     * the bytes have to exist before the rename, and the stream form also has
+     * no MPC-rate check to opt out of — a piece keeps the snip's own rate by
+     * design.
+     */
+    private fun writePiece(file: File, piece: Snip) {
+        val bytes = ByteArrayOutputStream().also { WavWriter.write(it, piece) }.toByteArray()
+        AtomicFile.writeBytes(file, bytes)
     }
 
     /** Exactly [frames] frames from [at], zero-padded when the source runs out. */

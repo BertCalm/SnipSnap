@@ -2,6 +2,7 @@ package com.snipsnap.loop
 
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
+import com.snipsnap.kit.AtomicFile
 import java.io.File
 import java.io.IOException
 
@@ -17,11 +18,23 @@ object SessionStore {
     const val FILE_NAME = "loop.json"
     const val VERSION = 1
 
+    /**
+     * Write-then-rename through [AtomicFile], never in place.
+     *
+     * The same reason `kit.json` goes through it: this file *is* the session,
+     * and an in-place `writeText` that is interrupted — disk full, the OS
+     * killing the app mid-save — truncates a session that was valid a moment
+     * ago. What the app does next makes that worse rather than better: a
+     * sidecar that will not parse stops the next send rather than overwriting
+     * it, which is right, but it means a torn write is a grid nobody can
+     * repair from inside the app. A reader now sees either the whole old
+     * session or the whole new one.
+     */
     fun save(session: Session, dir: File): File {
         dir.mkdirs()
         require(dir.isDirectory) { "not a directory: $dir" }
         val file = File(dir, FILE_NAME)
-        file.writeText(Json.write(toJson(session)) + "\n", Charsets.UTF_8)
+        AtomicFile.writeText(file, Json.write(toJson(session)) + "\n")
         return file
     }
 

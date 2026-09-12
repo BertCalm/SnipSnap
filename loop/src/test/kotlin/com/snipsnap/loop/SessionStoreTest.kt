@@ -82,6 +82,24 @@ class SessionStoreTest {
     }
 
     @Test
+    fun `saving over an existing session renames into place`() {
+        val dir = tempDir()
+        SessionStore.save(session(), dir)
+        val edited = session().let { it.copy(bpm = 120f) }
+
+        SessionStore.save(edited, dir)
+
+        // AtomicFile writes a sibling temp and renames: a leftover .tmp would
+        // mean the rename never ran, and an in-place write would mean a
+        // killed app could leave the sidecar torn.
+        assertTrue(
+            dir.listFiles()!!.none { it.name.endsWith(".tmp") },
+            "a finished save leaves no temp file: ${dir.list()?.toList()}",
+        )
+        assertEquals(edited, SessionStore.load(dir))
+    }
+
+    @Test
     fun `fails clearly when there is no sidecar`() {
         assertFailsWith<IOException> { SessionStore.load(tempDir()) }
     }

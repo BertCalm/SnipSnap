@@ -173,6 +173,24 @@ class SessionBuilderTest {
     }
 
     @Test
+    fun `a send leaves no temp files behind, and a re-send replaces in place`() {
+        val session = fresh()
+        val dir = tempDir()
+
+        val first = assertNotNull(SessionBuilder.send(session, 0, "ATOMIC", "snip_14_atomic", tone(3_000), dir))
+        // Pieces are renamed into place (AtomicFile), so a finished send is a
+        // folder of WAVs and nothing else — a leftover .tmp would mean the
+        // rename never happened and a reader could find a half-written piece.
+        assertTrue(dir.listFiles()!!.none { it.name.endsWith(".tmp") }, "a finished send leaves no temp file")
+
+        val before = File(dir, "snip_14_atomic_1.wav").readBytes()
+        assertNotNull(SessionBuilder.send(first.session, 1, "ATOMIC", "snip_14_atomic", tone(3_000), dir))
+
+        assertTrue(dir.listFiles()!!.none { it.name.endsWith(".tmp") })
+        assertTrue(before.contentEquals(File(dir, "snip_14_atomic_1.wav").readBytes()), "the same snip writes the same bytes")
+    }
+
+    @Test
     fun `clearing a track empties it without deleting the audio`() {
         val session = fresh()
         val dir = tempDir()
