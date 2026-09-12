@@ -87,6 +87,34 @@ object Copy {
      * is unreadable rather than be told they never made one.
      */
     const val CHOP_SOURCE_GONE = "THAT TAPE WON'T READ. IT MAY BE CHEWED."
+    /**
+     * CHOP SHOP's own empty face with no source at all — no TAPE commit
+     * exists yet and no open kit has a sample to fall back on. Reusing
+     * EMPTY_SHELF here used to be TAPE's own "NOTHING TAPED YET." said on a
+     * screen that isn't TAPE, the exact wrong-screen bug EMPTY_GROOVE was
+     * already written to fix elsewhere — this is CHOP's own copy of that
+     * fix. Names both real doors in: TAPE's own KEEP button (the button's
+     * actual on-screen label; `TapeCommit`/`onCommit` are this app's
+     * internal name for the same action, never shown to a user), and the
+     * kit-fallback (`ChopScreen.loadLongestSample`) for anyone who already
+     * has a sample-bearing kit open. A shared-in file and CHOP ALL are
+     * deliberately not named: both land elsewhere (TAPE's own deck, or a
+     * new kit built directly) rather than putting anything CHOP itself can
+     * read.
+     */
+    const val EMPTY_CHOP = "NOTHING TO CHOP YET. TAPE SOMETHING AND KEEP IT, OR OPEN A KIT WITH SAMPLES ON IT."
+    /**
+     * CHOP SHOP's own empty face when a source loaded fine but
+     * `Chopper.byTransients` found zero onsets (silence, or nothing loud
+     * enough to register) — `ChopReviewModel.sliceCount == 0`. Distinct
+     * from [EMPTY_CHOP] (nothing was ever loaded) and [CHOP_SOURCE_GONE]
+     * (the file wouldn't read at all): this file read and decoded
+     * perfectly, it simply had nothing in it CHOP's own detector could
+     * find. RE-CHOP re-runs the same deterministic detector over the same
+     * source and mode, so it cannot fix this on its own — a different
+     * source is the only way out, the same KEEP door [EMPTY_CHOP] names.
+     */
+    const val CHOP_NO_HITS = "NO HITS IN THIS SOURCE TO SLICE. TAPE SOMETHING ELSE AND KEEP IT."
     /** CHOP SHOP's empty face when the classic (non-melodic) layout itself fails — agrees with the toast `ChopScreen` fires alongside it, whose own fallback is this same "couldn't lay out the slices". */
     const val CHOP_LAYOUT_FAILED = "CHOP FAILED. COULDN'T LAY OUT THE SLICES."
 
