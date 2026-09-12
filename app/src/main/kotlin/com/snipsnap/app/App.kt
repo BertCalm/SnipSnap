@@ -781,28 +781,32 @@ fun App(shelf: KitShelf) {
     val shared by ShareInbox.pending.collectAsState()
     var importCount by remember { mutableStateOf(0) }
     // GROOVE's reload request: bumped when TAPE rewrites the open kit's
-    // groove (READ AS GROOVE, STEAL THE FEEL) so a GROOVE already up reloads.
+    // groove (READ AS GROOVE, STEAL THE FEEL), or ORBIT's CLIP ▸ KIT does
+    // (OrbitScreen's `onGrooveWritten`), so a GROOVE already up reloads.
     var grooveReload by remember { mutableStateOf(0) }
     // Follow-up, a door the hoist above opened: `grooveJustLanded`/
     // `groovePreTake` surviving a tab switch means they can now ALSO survive
-    // a trip through TAPE and back — READ AS GROOVE / STEAL THE FEEL below
-    // rewrite the open kit's groove.json out from under GROOVE and bump
-    // `grooveReload` for exactly that reason, but neither ever touches
+    // a trip through TAPE (or ORBIT) and back — READ AS GROOVE / STEAL THE
+    // FEEL below, and OrbitScreen's `clipIntoKit` (CLIP ▸ KIT), all rewrite
+    // the open kit's groove.json out from under GROOVE and bump
+    // `grooveReload` for exactly that reason, but none of them ever touches
     // `justLanded`. Before this hoist that never mattered: leaving GROOVE
-    // for TAPE tore the whole composable (and `justLanded` with it) down
-    // regardless. Now it doesn't, so without this: land a take, hop to TAPE,
-    // steal a different feel into the SAME kit, hop back — GROOVE would show
-    // a stale UNDO TAKE row over a base that isn't this take's own pre-state
-    // at all. Tapping it would clobber TAPE's rewrite with an unrelated
+    // for TAPE (or ORBIT) tore the whole composable (and `justLanded` with
+    // it) down regardless. Now it doesn't, so without this: land a take,
+    // hop to TAPE, steal a different feel into the SAME kit (or hop to
+    // ORBIT and CLIP ▸ KIT), hop back — GROOVE would show a stale UNDO TAKE
+    // row over a base that isn't this take's own pre-state at all. Tapping
+    // it would clobber the other screen's rewrite with an unrelated
     // snapshot and toast [Copy.TAKE_UNDONE], a claim about what happened
     // that wouldn't be true. `grooveReload` only ever increments from those
-    // two TAPE actions — never from GROOVE's own writes, which deliberately
-    // avoid bumping it (see `GrooveScreen.stopRecording`'s own KDoc) — so
-    // keying on it alone here, not `open?.dir` too, is deliberate: a KIT
-    // CHANGE is already covered by the `remember(open?.dir)` block above.
-    // `groovePreTake` is left alone, same as `clearJustLanded` itself never
-    // nulls `preTake` — `justLanded` alone gates whether the row (and the
-    // snapshot it would restore) is ever reachable.
+    // three groove-writing actions — never from GROOVE's own writes, which
+    // deliberately avoid bumping it (see `GrooveScreen.stopRecording`'s own
+    // KDoc) — so keying on it alone here, not `open?.dir` too, is
+    // deliberate: a KIT CHANGE is already covered by the
+    // `remember(open?.dir)` block above. `groovePreTake` is left alone,
+    // same as `clearJustLanded` itself never nulls `preTake` — `justLanded`
+    // alone gates whether the row (and the snapshot it would restore) is
+    // ever reachable.
     LaunchedEffect(grooveReload) { grooveJustLanded = false }
     LaunchedEffect(shared) {
         val uri = shared ?: return@LaunchedEffect
