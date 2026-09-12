@@ -574,7 +574,13 @@ private fun TakeRowLine(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .let { if (!row.current) it.tapeClick(label = null, onClick = onToggle) else it }
+                .let {
+                    if (!row.current) {
+                        it.tapeClick(label = "${if (expanded) "COLLAPSE" else "EXPAND"} TAKE ${row.label}", onClick = onToggle)
+                    } else {
+                        it
+                    }
+                }
                 .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -598,7 +604,7 @@ private fun TakeRowLine(
                         .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
                         // Always clickable, `!busy` forwarded rather than
                         // dropped (accessibility audit finding 12).
-                        .tapeClick(label = null, enabled = !busy) { onRestore(file, row.label, row.lastModifiedMillis) }
+                        .tapeClick(label = "RESTORE TAKE ${row.label}", enabled = !busy) { onRestore(file, row.label, row.lastModifiedMillis) }
                         .padding(horizontal = 8.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -657,7 +663,7 @@ private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (K
                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
                 // Always clickable, `!busy` forwarded rather than dropped
                 // (accessibility audit finding 12).
-                .tapeClick(label = null, enabled = !busy) { onRestore(row.entry) }
+                .tapeClick(label = "BRING BACK ${row.entry.originalName.uppercase()}", enabled = !busy) { onRestore(row.entry) }
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -668,6 +674,8 @@ private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (K
 
 @Composable
 private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onClick: () -> Unit) {
+    // Same text the TapeText below shows — it already follows `armed`.
+    val label = if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS"
     Box(
         Modifier
             .fillMaxWidth()
@@ -678,7 +686,7 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -686,7 +694,7 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             // The armed state is a deviation from the artboard (see
             // `doEmptyBin`'s KDoc) so it earns its own label here rather
             // than a `Copy` constant for prototype text that doesn't exist.
-            if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS",
+            label,
             TapeType.pixel,
             if (enabled) BinRedGlow else scheme.ink3.tape,
             maxLines = 1,
@@ -749,7 +757,7 @@ private fun HeaderChip(
             // `enabled` goes through `tapeClick`, not around it: a dimmed
             // chip stays in the semantics tree instead of silently
             // vanishing from it (accessibility audit finding 12).
-            .tapeClick(label = null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
