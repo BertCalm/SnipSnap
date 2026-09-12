@@ -114,6 +114,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -1072,29 +1073,47 @@ fun PadSheetScreen(
      * `onBack()` would then yank the user off a pad they're actively
      * looking at, which is worse than the stale-write bug this is fixing.
      *
-     * Guarded on [liveSlot] == the [slot] this delete actually targeted
-     * (captured by this closure at the moment EJECT was tapped) — not on
-     * `scope.isActive` as well, because every OTHER way to leave this
-     * sheet already nulls `padSheetSlot` in the same synchronous step that
-     * disposes it (`goToScreen`, GRAIN/SPLICE/STACK, RE-TRIM's own
-     * `onNavigateTape` — see their call sites in `App.kt`), so a disposed-
-     * and-not-remounted sheet can never fail this slot check to begin
-     * with; a disposed-and-*remounted* sheet (the user re-opened some pad
-     * sheet afresh) is always a new composable instance whose own [onEject]
-     * closure — not this stale one — owns the live [liveSlot] read here,
-     * so this check alone can't be fooled by it either. If the guard skips
-     * `onBack()`, `onKitUpdated` still ran: `App`'s copy of the kit already
-     * shows the slot cleared, and the pre-existing `pad == null` branch
-     * near this file's top (the one already documented for "mid-EJECT this
-     * slot just emptied") renders a working ◄ KIT header if this exact
-     * slot is ever shown again — not a broken screen, the same fallback
-     * this file already relies on elsewhere.
+     * Guarded on two independent conditions, not one — each closes a
+     * different door:
+     *
+     * 1. [liveSlot] == the [slot] this delete actually targeted (captured
+     * by this closure at the moment EJECT was tapped): catches an in-place
+     * slot change on a sheet that's still mounted (the pad-nav case above).
+     *
+     * 2. `scope.isActive`: catches the sheet being *disposed and later
+     * remounted* — e.g. the user leaves this pad entirely, then long-
+     * presses a different pad from KIT, mounting a fresh `PadSheetScreen`.
+     * [liveSlot] alone does NOT catch this: this `onSuccess` closure and
+     * the [liveSlot] it reads both belong to the OLD, disposed instance,
+     * not the new one. [rememberUpdatedState] is `remember`-scoped to
+     * that instance's own slot table — once disposed, nothing writes to
+     * it again, so it simply holds its last value (the slot EJECT
+     * targeted) forever after; it does NOT start reflecting some other,
+     * newer screen's `slot`. So [liveSlot] == `targetSlot` would still
+     * hold, and an unguarded `onBack()` would fire against the NEW
+     * screen's `App`-level `padSheetSlot`, closing a sheet the user just
+     * opened, for a delete that has nothing to do with it. `scope` (line
+     * ~174, `rememberCoroutineScope()`) is cancelled the moment the OLD
+     * composable is disposed, and this closure still holds a reference to
+     * that same, now-cancelled `scope` — so `scope.isActive` is false
+     * exactly when this hazard applies, independent of what [liveSlot]
+     * says. (On a plain exit with no remount yet, a late `onBack()` would
+     * be a harmless second `padSheetSlot = null` regardless; the guard
+     * still skips it, which is fine — nothing depends on it firing.)
+     *
+     * `onKitUpdated`/the toast are unconditional either way: `App`'s copy
+     * of the kit is correct as soon as they run, regardless of whether
+     * `onBack()` also fires. If the guard skips `onBack()` and this exact
+     * slot is ever shown again, the pre-existing `pad == null` branch near
+     * this file's top (already documented for "mid-EJECT this slot just
+     * emptied") renders a working ◄ KIT header — not a broken screen, the
+     * same fallback this file already relies on elsewhere.
      */
     fun onEject() {
         val targetSlot = slot
         commitPadEditNow("DELETE", onSuccess = {
             onToast(Copy.DELETE_SNIP)
-            if (liveSlot == targetSlot) onBack()
+            if (scope.isActive && liveSlot == targetSlot) onBack()
         }) { mm -> mm.clear(slot) }
     }
 
