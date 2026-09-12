@@ -176,6 +176,15 @@ fun PadSheetScreen(
     // The SNIPS shelf: where a pad's tape, and the dust print cached beside it, live.
     val snipsDir = File(context.filesDir, SnipStore.DIR)
 
+    // [onEject]'s own guard against a late `onBack()`, nothing else: a
+    // closure formed during one recomposition captures that recomposition's
+    // `slot` (a plain parameter, frozen at the value it had when EJECT was
+    // tapped); this tracks the *live* one instead, so a coroutine that
+    // finishes later can tell whether the pad-nav arrows (`onSlotChange`,
+    // not gated on `busy`) already moved the user to a different pad on
+    // this same still-mounted sheet before the delete's confirmation lands.
+    val liveSlot by rememberUpdatedState(slot)
+
     var model by remember(entry.dir) { mutableStateOf<KitBuilderModel?>(null) }
     var loadFailed by remember(entry.dir) { mutableStateOf(false) }
     LaunchedEffect(entry.dir) {
@@ -463,6 +472,23 @@ fun PadSheetScreen(
      * teardown flush already checks, not just null-ness, is the point:
      * a reassigned slot is non-null and would otherwise let this action
      * land on somebody else's sound.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope], not this
+     * composable's own `scope` — same fix, same reason, as [applySmear]'s
+     * own KDoc: this is a real audio-rewriting op (GHOSTS/EJECT/UNDO/
+     * MUTATE/DRIFT/DESAMPLE/OUTSIDE undo/PASTE), so a cancelled `scope`
+     * could abandon the write before it starts, or let it land on disk
+     * while losing `onKitUpdated`/the toast — this function's own opening
+     * line. [onSuccess] is a generic callback most callers only use to
+     * toast; [onEject] is the one exception (it also navigates via
+     * `onBack()`) and guards that call itself rather than this shared
+     * helper trying to guess which callbacks are safe to run late — see
+     * [onEject]'s own comment for why. A dispose-then-remount while this
+     * write is still in flight also means a second commit can now start
+     * against the same kit before the first lands (impossible before,
+     * since disposal used to cancel the first) — benign: [withFreshKit]
+     * serialises both under `KitWrites.mutex`, and the `sampleFile`
+     * identity check above already refuses whichever one loses the race.
      */
     fun commitPadEditNow(action: String, onSuccess: (() -> Unit)? = null, mutate: (KitBuilderModel) -> Unit) {
         if (busy) return
@@ -470,7 +496,7 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val staleSampleFile = m.kit.pad(slot)?.sampleFile
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 var applied = false
@@ -1026,12 +1052,50 @@ fun PadSheetScreen(
         }
     }
 
+    /**
+     * "DELETE", not "EJECT" — EJECT means "stop listening" on the shelf's
+     * own ArmControl; this clears the pad into the bin, a different action
+     * entirely, and a failure here must read "DELETE FAILED", not
+     * "EJECT FAILED".
+     *
+     * `onSuccess` both toasts AND navigates via [onBack] — unlike every
+     * other [commitPadEditNow] caller, which only toasts. [commitPadEditNow]
+     * now runs on [appScope] (see its own KDoc), so this callback can fire
+     * well after the tap that triggered it; a toast landing late is fine
+     * (App's own callback, harmless whenever it arrives — the existing
+     * [appScope] KDoc already reasons about that), but [onBack] pops
+     * whatever pad-sheet session `padSheetSlot` currently names in `App` —
+     * which, by the time this fires, might not be this one any more. The
+     * pad-nav ◄/► arrows (`onSlotChange`) are not gated on `busy`, so a tap
+     * on either while this delete is still in flight leaves the sheet
+     * mounted but showing a *different* [slot] — an unguarded late
+     * `onBack()` would then yank the user off a pad they're actively
+     * looking at, which is worse than the stale-write bug this is fixing.
+     *
+     * Guarded on [liveSlot] == the [slot] this delete actually targeted
+     * (captured by this closure at the moment EJECT was tapped) — not on
+     * `scope.isActive` as well, because every OTHER way to leave this
+     * sheet already nulls `padSheetSlot` in the same synchronous step that
+     * disposes it (`goToScreen`, GRAIN/SPLICE/STACK, RE-TRIM's own
+     * `onNavigateTape` — see their call sites in `App.kt`), so a disposed-
+     * and-not-remounted sheet can never fail this slot check to begin
+     * with; a disposed-and-*remounted* sheet (the user re-opened some pad
+     * sheet afresh) is always a new composable instance whose own [onEject]
+     * closure — not this stale one — owns the live [liveSlot] read here,
+     * so this check alone can't be fooled by it either. If the guard skips
+     * `onBack()`, `onKitUpdated` still ran: `App`'s copy of the kit already
+     * shows the slot cleared, and the pre-existing `pad == null` branch
+     * near this file's top (the one already documented for "mid-EJECT this
+     * slot just emptied") renders a working ◄ KIT header if this exact
+     * slot is ever shown again — not a broken screen, the same fallback
+     * this file already relies on elsewhere.
+     */
     fun onEject() {
-        // "DELETE", not "EJECT" — EJECT means "stop listening" on the
-        // shelf's own ArmControl; this clears the pad into the bin, a
-        // different action entirely, and a failure here must read
-        // "DELETE FAILED", not "EJECT FAILED".
-        commitPadEditNow("DELETE", onSuccess = { onToast(Copy.DELETE_SNIP); onBack() }) { mm -> mm.clear(slot) }
+        val targetSlot = slot
+        commitPadEditNow("DELETE", onSuccess = {
+            onToast(Copy.DELETE_SNIP)
+            if (liveSlot == targetSlot) onBack()
+        }) { mm -> mm.clear(slot) }
     }
 
     // ---- MUTATE: one hit from two parents (MutateSheet over Mutate) ----
