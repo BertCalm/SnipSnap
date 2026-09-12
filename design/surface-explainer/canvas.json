@@ -1,0 +1,13 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0,   "y": 0, "w": 390, "h": 844, "title": "The blend, live" },
+    { "file": "SetCorner.dc.html",  "x": 480, "y": 0, "w": 390, "h": 844, "title": "How SET A works" }
+  ],
+  "annotations": [
+    { "id": "n-blend", "x": 0, "y": -170, "w": 390,
+      "text": "THE BLEND, LIVE\n\nThe puck's dashed lines to each corner are drawn at that corner's actual weight — heaviest line is where the puck is closest.\n\nThe callout below is not on the real screen; it's this board's own addition, translating the four percentages into the four macro values they actually produce (pitch/cutoff/resonance/drive), which the real app never shows in one place." },
+    { "id": "n-setcorner", "x": 480, "y": -170, "w": 390,
+      "text": "HOW SET A WORKS\n\nThe two-step capture flow: find a sound in XY, tap SET A, and that exact sound becomes corner A's new preset. Step 3 shows the state after two of four corners are captured — C and D still hold the factory defaults until you do the same for them." }
+  ],
+  "launch": { "view": "canvas" }
+}
