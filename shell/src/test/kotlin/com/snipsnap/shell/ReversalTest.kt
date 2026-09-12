@@ -78,6 +78,14 @@ class ReversalTest {
     private val notADestructiveLanding = mapOf(
         "SHELF_LEGEND" to "a legend under the shelf naming the gesture; nothing has happened yet",
         // Refusals: the delete did NOT happen, so there is nothing to take back.
+        // TWINS_KEEP_OWN is the newest of these and arrived from another PR
+        // (#136) while this one was open — App.kt's `evilTwins` returns on the
+        // guard without touching a pad, so the line names a wipe that did not
+        // happen. Worth recording how it was found: this law went red on CI and
+        // green here, because CI tests the PR MERGED WITH ITS BASE and the base
+        // had moved. That is the law working across a branch boundary, which is
+        // the case a local run structurally cannot cover.
+        "TWINS_KEEP_OWN" to "REMIX refused; the pads were not wiped",
         "KIT_DELETE_FAILED" to "the delete failed; nothing was destroyed",
         "SNIP_DELETE_FAILED" to "the delete failed; nothing was destroyed",
         "BIN_ITEM_GONE" to "the restore failed because it was already gone; this IS the way-back answer",
