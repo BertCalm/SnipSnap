@@ -95,6 +95,7 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.Personality
 import com.snipsnap.shell.ReadGroove
 import com.snipsnap.shell.RecipeReplay
@@ -759,6 +760,15 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * Whether a SNIPS → PAD landing has somewhere to go: an empty pad on
+     * bank A or B — both are pages the long-press fills (bank B round 2).
+     * One predicate for every hint that says so, so a full bank A with
+     * an empty B never reads as "THIS KIT IS FULL".
+     */
+    fun hasLandingPad(kit: com.snipsnap.kit.Kit): Boolean =
+        (PadBanks.slots(0).first..PadBanks.slots(1).last).any { kit.pad(it) == null }
+
     fun fresh(starter: StarterKits.Starter) {
         if (busy != null) return
         busy = "DUBBING ${starter.displayName}…"
@@ -780,7 +790,7 @@ fun App(shelf: KitShelf) {
             // copy points at, while every other way into a kit with a snip
             // armed says what to do next (September UAT, finding 12).
             toast = if (pendingSnipAssign != null) {
-                Copy.snipLanding((1..16).any { entry.kit.pad(it) == null })
+                Copy.snipLanding(hasLandingPad(entry.kit))
             } else {
                 Copy.FRESH_TAPE
             }
@@ -859,6 +869,14 @@ fun App(shelf: KitShelf) {
     fun evilTwins() {
         val source = open ?: return
         if (busy != null) return
+        // A remix replaces bank B. The user's own pads there (capture,
+        // SNIPS → PAD, a chop landed ONTO it) are not the remix's to
+        // replace: `remixBankB` refuses, and this says so first, in the
+        // app's words, instead of a TWINS FAILED with the model's.
+        if (KitBuilderModel.ownPadsOnBankB(source.kit).isNotEmpty()) {
+            toast = Copy.TWINS_KEEP_OWN
+            return
+        }
         val hadTwins = source.kit.pads.any { it.slot > 16 }
         busy = "TWINNING…"
         scope.launch {
@@ -1104,7 +1122,8 @@ fun App(shelf: KitShelf) {
                 // onto whichever kit is open now.
                 if (open?.dir == target.dir) open = open?.copy(kit = updated)
                 kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                toast = "SNIP PLACED ON PAD A%02d".format(java.util.Locale.ROOT, slot)
+                // PadBanks, not "A%02d": a landing on bank B is B01, not A17.
+                toast = "SNIP PLACED ON PAD ${PadBanks.tag(slot)}"
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -1782,7 +1801,7 @@ fun App(shelf: KitShelf) {
                                         // instead of pointing at a pad that
                                         // doesn't exist.
                                         if (pendingSnipAssign != null) {
-                                            toast = Copy.snipLanding((1..16).any { entry.kit.pad(it) == null })
+                                            toast = Copy.snipLanding(hasLandingPad(entry.kit))
                                         } else {
                                             // Teach the one gesture that opens PAD
                                             // SHEET, while it's still undiscovered.
@@ -1793,7 +1812,7 @@ fun App(shelf: KitShelf) {
                                             // pending-snip hint above rather than
                                             // fighting it for the one toast slot.
                                             val shown = prefs.getInt(PREF_PAD_SHEET_HINTS, 0)
-                                            val hasFilledPad = (1..16).any { entry.kit.pad(it) != null }
+                                            val hasFilledPad = entry.kit.pads.isNotEmpty()
                                             // No showing limit any more (September UAT,
                                             // finding 5): it used to stop after three, so
                                             // three dismissals while busy with something
@@ -2047,7 +2066,7 @@ fun App(shelf: KitShelf) {
                                     onSetKey = ::setKey,
                                     onInKey = ::inKey,
                                     onTwins = ::evilTwins,
-                                    onBankEmpty = { toast = Copy.BANK_B_EMPTY },
+                                    onBankEmpty = { toast = Copy.bankEmpty(PadBanks.letter(it)) },
                                     onBreed = ::startBreed,
                                     // A second kit to cross with has to
                                     // already be on the shelf — BREED can't

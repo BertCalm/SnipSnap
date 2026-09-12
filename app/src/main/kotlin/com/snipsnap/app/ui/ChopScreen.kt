@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.KitWrites
 import com.snipsnap.app.TapeCommit
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
@@ -63,6 +64,7 @@ import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
@@ -73,6 +75,7 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -158,6 +161,7 @@ fun ChopScreen(
     }
 
     ChopContent(
+        entry = entry,
         shelf = shelf,
         sourceFile = file,
         initialModel = loadedModel,
@@ -304,6 +308,8 @@ private val CHOP_GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 
 @Composable
 private fun ChopContent(
+    /** The open kit, if any: ONTO <kit> · BANK X lands the chop on its first empty bank. */
+    entry: KitShelf.Entry?,
     shelf: KitShelf,
     sourceFile: File,
     initialModel: ChopReviewModel,
@@ -589,6 +595,61 @@ private fun ChopContent(
                         } finally {
                             sendBusy = false
                         }
+                    }
+                }
+            }
+        }
+
+        // ONTO <kit> · BANK X (bank B round 2): the same arrangement, landed
+        // on the open kit's first empty bank instead of into a new kit —
+        // the second page a user builds by hand. Only offered when there
+        // is such a bank; `KitBuilderModel.landArranged` refuses a bank
+        // with anything on it, so nothing here ever decides which of two
+        // sounds a slot keeps. A bank holds sixteen: a wider chop lands its
+        // first sixteen and the toast counts the rest.
+        val landBank = entry?.let { e -> (0..1).firstOrNull { b -> e.kit.pads.none { it.slot in PadBanks.slots(b) } } }
+        if (entry != null && landBank != null) {
+            SecondaryButton(
+                if (sendBusy) "…" else "ONTO ${entry.kit.name} · BANK ${PadBanks.letter(landBank)}",
+                modifier = Modifier.fillMaxWidth().height(Layout.PRIMARY_ACTION_H.dp),
+                enabled = !sendBusy && !rechopBusy,
+            ) {
+                if (sendBusy || rechopBusy) return@SecondaryButton
+                sendBusy = true
+                voice?.release()
+                voice = null
+                val current = model
+                val isMelodic = melodic
+                val target = entry
+                scope.launch {
+                    try {
+                        val send = withContext(Dispatchers.IO) {
+                            if (isMelodic) current.sendToGridMelodic() else current.sendToGrid()
+                        }
+                        val (updated, landed) = withContext(Dispatchers.IO) {
+                            // The same lock every kit writer takes: this is an
+                            // open → assign → save on the open kit's kit.json.
+                            KitWrites.mutex.withLock {
+                                val m = KitBuilderModel.open(target.dir)
+                                val slots = m.landArranged(send.arranged, landBank)
+                                m.save()
+                                if (teachEnabled) {
+                                    val examples = current.labeledOverrides()
+                                    if (examples.isNotEmpty()) {
+                                        TeachLog.append(File(target.dir, TeachLog.FILE_NAME), examples)
+                                    }
+                                }
+                                KitShelf.Entry(target.dir, m.kit) to slots
+                            }
+                        }
+                        val left = send.arranged.drop(PadBanks.SIZE).count { it != null }
+                        onToast(Copy.landedOnto(target.kit.name, PadBanks.letter(landBank), landed.size, left))
+                        onSentToGrid(updated)
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        onToast("LAND FAILED: ${e.message ?: e.javaClass.simpleName}")
+                    } finally {
+                        sendBusy = false
                     }
                 }
             }
