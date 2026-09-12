@@ -106,7 +106,7 @@ fun KitScreen(
     onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
     onInKey: () -> Unit,
     onTwins: () -> Unit,
-    /** BANK B tapped while nothing is on it: say what fills it (`Copy.BANK_B_EMPTY`) rather than flip to blanks. */
+    /** Flipped to a bank with nothing on it: say what fills it (`Copy.BANK_B_EMPTY`) as the blanks come up. */
     onBankEmpty: () -> Unit = {},
     /**
      * BREED (XX2 wired in): arms the pick-a-partner hand-off (`App.kt`'s
@@ -232,13 +232,15 @@ fun KitScreen(
     /** Which bank the grid is drawing, 0-based. Bank A until asked otherwise. */
     var bank by remember(entry.dir) { mutableIntStateOf(0) }
     val bankCount = PadBanks.banksUsed(kit.pads.map { it.slot })
-    // A kit can lose its upper bank while this screen is open - clearing the
-    // twins, or an UNDO. Fall back rather than draw sixteen empty pads the
-    // user cannot fill from here.
-    LaunchedEffect(bankCount) {
-        if (bank >= bankCount) bank = 0
+    // Two banks are always reachable, filled or not: an empty B is a page
+    // the user fills the same three ways A is filled (hold a pad to
+    // capture, SNIPS → PAD, a chop landed ONTO it) plus the twins. A kit
+    // that loses a bank above B (an UNDO past a third bank) falls back.
+    val reachable = maxOf(bankCount, 2)
+    LaunchedEffect(reachable) {
+        if (bank >= reachable) bank = 0
     }
-    val showing = bank.coerceAtMost(bankCount - 1)
+    val showing = bank.coerceAtMost(reachable - 1)
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -253,7 +255,7 @@ fun KitScreen(
             TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
             val keyed = kit.key?.let { "${KeyPicker.label(it)}  " } ?: ""
-            val banks = if (bankCount > 1) "${PadBanks.letter(showing)}  " else ""
+            val banks = if (bankCount > 1 || showing > 0) "${PadBanks.letter(showing)}  " else ""
             TapeText("$keyed$tempo$banks${kit.pads.size} PADS", TapeType.lcdSmall, scheme.amber.tape)
         }
 
@@ -272,14 +274,14 @@ fun KitScreen(
         // The door onto bank B (September UAT, finding 11). Always drawn,
         // even with only bank A filled: a second page that only appears
         // once something is on it is a page nobody finds, and the BREED /
-        // bank B round found exactly that. An empty bank reads EMPTY and
-        // its tap says what fills it (REMIX BANK B ▸ deals the twins)
-        // rather than flipping to sixteen blanks the grid cannot fill.
+        // bank B round found exactly that. An empty bank reads EMPTY, and
+        // flips like a full one — its blanks take a capture, a SNIPS → PAD
+        // landing or a chop, the same as A's — with a toast saying so.
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            for (b in 0 until maxOf(bankCount, 2)) {
+            for (b in 0 until reachable) {
                 val here = b == showing
                 val filled = kit.pads.count { it.slot in PadBanks.slots(b) }
                 // Empty by its count, not by `bankCount`: a sparse kit with
@@ -293,7 +295,10 @@ fun KitScreen(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .let { if (here) it.raisedBevel(scheme) else it.sunkenField(scheme) }
-                        .tapeClick(label = null, onClick = { if (empty) onBankEmpty() else bank = b }),
+                        .tapeClick(label = null, onClick = {
+                            bank = b
+                            if (empty && !here) onBankEmpty()
+                        }),
                     contentAlignment = Alignment.Center,
                 ) {
                     TapeText(

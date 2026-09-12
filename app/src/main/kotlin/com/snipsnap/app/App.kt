@@ -95,6 +95,7 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.Personality
 import com.snipsnap.shell.ReadGroove
 import com.snipsnap.shell.RecipeReplay
@@ -859,6 +860,14 @@ fun App(shelf: KitShelf) {
     fun evilTwins() {
         val source = open ?: return
         if (busy != null) return
+        // A remix replaces bank B. The user's own pads there (capture,
+        // SNIPS → PAD, a chop landed ONTO it) are not the remix's to
+        // replace: `remixBankB` refuses, and this says so first, in the
+        // app's words, instead of a TWINS FAILED with the model's.
+        if (KitBuilderModel.ownPadsOnBankB(source.kit).isNotEmpty()) {
+            toast = Copy.TWINS_KEEP_OWN
+            return
+        }
         val hadTwins = source.kit.pads.any { it.slot > 16 }
         busy = "TWINNING…"
         scope.launch {
@@ -1782,7 +1791,9 @@ fun App(shelf: KitShelf) {
                                         // instead of pointing at a pad that
                                         // doesn't exist.
                                         if (pendingSnipAssign != null) {
-                                            toast = Copy.snipLanding((1..16).any { entry.kit.pad(it) == null })
+                                            // Both banks: an empty pad on B is a landing too (bank B round 2).
+                                            val bothBanks = PadBanks.slots(0).first..PadBanks.slots(1).last
+                                            toast = Copy.snipLanding(bothBanks.any { entry.kit.pad(it) == null })
                                         } else {
                                             // Teach the one gesture that opens PAD
                                             // SHEET, while it's still undiscovered.
@@ -1793,7 +1804,7 @@ fun App(shelf: KitShelf) {
                                             // pending-snip hint above rather than
                                             // fighting it for the one toast slot.
                                             val shown = prefs.getInt(PREF_PAD_SHEET_HINTS, 0)
-                                            val hasFilledPad = (1..16).any { entry.kit.pad(it) != null }
+                                            val hasFilledPad = entry.kit.pads.isNotEmpty()
                                             // No showing limit any more (September UAT,
                                             // finding 5): it used to stop after three, so
                                             // three dismissals while busy with something

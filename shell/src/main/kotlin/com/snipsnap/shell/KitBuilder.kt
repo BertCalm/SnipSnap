@@ -234,8 +234,12 @@ class KitBuilderModel private constructor(
      * EVIL TWINS: bank B becomes seeded FX re-treatments of bank A, one
      * twin per pad — [com.snipsnap.synth.Shuffle.withRemixBank] over the
      * kit's own audio. Twins keep their source's colour and mute group
-     * (so the hats still choke in bank B) and carry fx-only recipes.
-     * Rerolling with a new seed replaces the bank. Returns bank-B slots.
+     * (so the hats still choke in bank B), carry fx-only recipes, and are
+     * stamped [TWIN_OF] with the pad they twin, so a later remix knows
+     * which bank-B pads are its own to replace. Rerolling with a new seed
+     * replaces the bank — but never a pad the user put there themselves
+     * (capture, SNIPS → PAD or a chop landed on B): [ownPadsOnBankB]
+     * non-empty refuses, with the pads named. Returns bank-B slots.
      */
     fun remixBankB(seed: Int): List<Int> {
         val bankA = (1..16).map { slot ->
@@ -247,6 +251,8 @@ class KitBuilderModel private constructor(
             }
         }
         require(bankA.any { it != null }) { "bank A is empty - nothing to remix" }
+        val own = ownPadsOnBankB()
+        check(own.isEmpty()) { "bank B holds your own pads (${own.joinToString { PadBanks.tag(it) }}) - a remix would wipe them" }
 
         (17..32).forEach { clear(it) }
         val remixed = com.snipsnap.synth.Shuffle.withRemixBank(bankA, seed)
@@ -264,12 +270,56 @@ class KitBuilderModel private constructor(
                     displayName = "${source.displayName} B",
                     recipe = twin.recipe,
                     velocityLayers = emptyList(),
+                    source = source.source + (TWIN_OF to PadBanks.tag(slot - 16)),
                 ),
             )
             added += slot
         }
         dirty = true
         return added
+    }
+
+    /**
+     * Whether [pad] is one of EVIL TWINS' own: stamped [TWIN_OF], or — for
+     * a twin dealt before the stamp existed — the shape a twin has and
+     * nothing else on bank B did until now: the bank-A pad's name plus
+     * " B", with a recipe, sixteen slots up from a pad that exists.
+     */
+    fun isTwin(pad: KitPad): Boolean = isTwin(kit, pad)
+
+    /**
+     * Bank-B slots holding a pad that is not a twin — the user's own,
+     * landed by capture, SNIPS → PAD or a chop — which [remixBankB]
+     * refuses to wipe and the KIT screen warns about before trying.
+     */
+    fun ownPadsOnBankB(): List<Int> = ownPadsOnBankB(kit)
+
+    /**
+     * A chop's arrangement landed onto one [bank] of THIS kit, in the
+     * order SEND TO GRID would have laid it, instead of into a new kit:
+     * the second page a user builds by hand rather than the twins tray.
+     * The bank must be empty (nothing here decides which of two sounds
+     * a slot keeps), and a bank holds sixteen, so an arrangement wider
+     * than that lands its first sixteen entries and the caller says how
+     * many did not fit ([arranged] entries past the bank, non-null).
+     * Each pad lands through [assign] — the same door capture and
+     * SNIPS → PAD use — so its class name, provenance (`origin=chop`,
+     * the tape keys) and in-key retune are the ones any pad gets.
+     * Returns the slots landed on, in order.
+     */
+    fun landArranged(arranged: List<ArrangedPad?>, bank: Int): List<Int> {
+        val slots = PadBanks.slots(bank)
+        val taken = kit.pads.filter { it.slot in slots }
+        require(taken.isEmpty()) { "bank ${PadBanks.letter(bank)} is not empty: ${taken.joinToString { PadBanks.tag(it.slot) }}" }
+        val landed = mutableListOf<Int>()
+        arranged.take(PadBanks.SIZE).forEachIndexed { i, entry ->
+            val pad = entry ?: return@forEachIndexed
+            if (pad.snip.frameCount == 0) return@forEachIndexed
+            val slot = slots.first + i
+            assign(slot, pad.snip, pad.drumClass, pad.drumClass.name.replace('_', ' '), source = pad.source)
+            landed += slot
+        }
+        return landed
     }
 
     /**
@@ -1080,6 +1130,21 @@ class KitBuilderModel private constructor(
         /** Open an existing kit folder. */
         fun open(kitDir: File): KitBuilderModel =
             KitBuilderModel(kitDir, KitStore.load(kitDir))
+
+        /** The source key a twin carries: the bank-A tag it was dealt from. */
+        const val TWIN_OF = "twinOf"
+
+        /** [isTwin] on a loaded [kit], for a screen that holds the kit but not the model. */
+        fun isTwin(kit: Kit, pad: KitPad): Boolean {
+            if (pad.source[TWIN_OF] != null) return true
+            if (pad.slot !in 17..32 || pad.recipe == null) return false
+            val a = kit.pad(pad.slot - 16) ?: return false
+            return pad.displayName == "${a.displayName} B"
+        }
+
+        /** [ownPadsOnBankB] on a loaded [kit]: the KIT screen's pre-check before REMIX BANK B runs. */
+        fun ownPadsOnBankB(kit: Kit): List<Int> =
+            kit.pads.filter { it.slot in 17..32 && !isTwin(kit, it) }.map { it.slot }.sorted()
 
         /** FRESH TAPE: a new, empty kit. */
         fun create(name: String, kitDir: File): KitBuilderModel {
