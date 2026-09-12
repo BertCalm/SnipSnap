@@ -540,12 +540,35 @@ fun PadSheetScreen(
      * would then release a voice the new one never knew about. The play
      * rides [auditionOnRefresh] instead — `LaunchedEffect(model, slot)`
      * decodes the new file, and the effect under `audition` plays it.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope], not this
+     * composable's own `scope` — see [appScope]'s own KDoc and the teardown
+     * `DisposableEffect` (~1552) this mirrors. `withFreshKit`'s `block` is a
+     * plain (non-`suspend`) lambda, so the WAV rewrite and `fresh.save()`
+     * inside it already run to completion once entered — cancelling
+     * `scope` could never tear a WAV file in half. What it *could* do is
+     * abandon the write before it starts (cancelled while waiting on
+     * `KitWrites.mutex`, before anything touched disk — the tap silently
+     * never happens) or let the write land on disk but lose the app-level
+     * confirmation of it (cancelled at the `withContext` return boundary,
+     * after `WavWriter.write`/`fresh.save()` already ran — `model`,
+     * `onKitUpdated`, and the toast never fire, so `App`'s in-memory `Kit`
+     * goes stale against what's actually on disk until the pad is reopened
+     * fresh). `appScope` closes both: the write always finishes and always
+     * reaches `onKitUpdated`/`onToast`, which are `App`'s own stable
+     * callbacks and outlive this screen regardless. The local writes below
+     * (`model =`, `busy =`, `pendingMetadataSlots =`, `auditionOnRefresh =`)
+     * are harmless no-ops if this composable has since been disposed — a
+     * torn-down composition's `remember` holders are simply never read
+     * again, and a remount gets its own fresh ones — so nothing here needs
+     * to skip them for a dead composable the way the teardown effect skips
+     * saving a stale `m`.
      */
     fun applySmear(m: KitBuilderModel, p: KitPad, amount: Float, padName: String) {
         val kitDir = m.kitDir
         val staleSampleFile = p.sampleFile
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 var applied = false
@@ -611,6 +634,9 @@ fun PadSheetScreen(
      * with nothing between its hits says that. The print is made, or
      * read off the shelf's cache, on IO before the kit is opened, so the
      * write under the lock is only the convolution.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
+     * same reason, as [applySmear]'s own KDoc above.
      */
     fun applyDust(m: KitBuilderModel, p: KitPad, amount: Float, padName: String, from: String? = null) {
         // Which tape: the one asked for (DUST FROM ▸); else the one the pad
@@ -627,7 +653,7 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val staleSampleFile = p.sampleFile
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 val tapeFile = File(snipsDir, tape)
@@ -726,6 +752,10 @@ fun PadSheetScreen(
      * treatment applied, consumed by the effect under `audition` once
      * `LaunchedEffect(model, slot)` has decoded the fresh file — so the
      * treated pad is heard the moment the toast says it landed.
+     *
+     * Bug fix (tab-switch data loss): the era/character/keyed branch below
+     * is launched into [appScope], not this composable's own `scope` — same
+     * fix, same reason, as [applySmear]'s own KDoc.
      */
     // Set on a treatment tap, shown only while `busy`, cleared whenever any
     // operation on this sheet finishes. One effect rather than a clear in
@@ -755,7 +785,7 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         val keyedSeed = kotlin.random.Random.nextLong(0L, 1_000_000L)
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 var applied = false
@@ -856,6 +886,12 @@ fun PadSheetScreen(
      * [applyTreatment] — see its KDoc. A round-robin pad refuses from
      * [KitBuilderModel.unEraPad]'s own `require`, exactly as treating one
      * does today; that is the card's existing gap, not this action's.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
+     * same reason, as [applySmear]'s own KDoc. [KitBuilderModel.unEraPad]
+     * is a real audio rewrite (restores the bin's prior take over the
+     * live sample) exactly like [applyTreatment]'s own doors, so it shares
+     * the same exposure to a scope cancelled mid-flight.
      */
     fun unTreat() {
         if (busy) return
@@ -865,7 +901,7 @@ fun PadSheetScreen(
         val staleSampleFile = p.sampleFile
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 // null = the slot changed underneath us; BIN_ITEM_GONE says so.
