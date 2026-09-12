@@ -361,7 +361,12 @@ private fun ChopContent(
     // below actually recomposes the rows that show it.
     val revisionTick = revision
 
-    var melodic by remember(model) { mutableStateOf(false) }
+    // CLASSIC, MELODIC or FOLD (docs/CHOP_CONTROLS.md §8): which layout
+    // the grid preview and SEND use. `melodic` and `fold` are the two
+    // reads the rest of this function makes of it.
+    var layout by remember(model) { mutableStateOf(ChopLayout.CLASSIC) }
+    val melodic = layout == ChopLayout.MELODIC
+    val fold = layout == ChopLayout.FOLD
     // MELODIC's placement runs pitch detection over every row on first
     // touch — real DSP, so it's computed off the main thread rather than
     // inline during composition. Row pitch labels ride along with it
@@ -372,6 +377,14 @@ private fun ChopContent(
 
     var rechopBusy by remember { mutableStateOf(false) }
     var sendBusy by remember { mutableStateOf(false) }
+
+    // The source's tempo, for ON THE GRID's row: measured once on IO off
+    // the first model (every later model cut from this source shares the
+    // measurement), null while measuring or when the tape has no pulse.
+    val tempoMeasured by produceState<Pair<Boolean, com.snipsnap.audio.TempoEstimate?>>(initialValue = false to null, initialModel) {
+        val t = withContext(Dispatchers.IO) { initialModel.tempo }
+        value = true to t
+    }
 
     // The CUT bench (docs/CHOP_CONTROLS.md): closed by default so the
     // screen is the screen it was; open, the count, the ear, the cut and
@@ -494,11 +507,20 @@ private fun ChopContent(
     // pure read of state, not a place to trigger side effects directly).
     var classicError by remember(model) { mutableStateOf<String?>(null) }
     val classicPlacement = if (melodic) null else try {
-        (model.placementPreview() to model.placementSummary()).also { classicError = null }
+        if (fold) {
+            // FOLD: one pad per fold; the preview draws the leads. The
+            // distance pass is pairwise over at most 64 rows of features
+            // already measured — a lookup, not DSP.
+            val folded = model.foldedPreview()
+            (folded.map { it?.lead } to Copy.folded(model.sliceCount, folded.count { it != null })).also { classicError = null }
+        } else {
+            (model.placementPreview() to model.placementSummary()).also { classicError = null }
+        }
     } catch (e: Exception) {
         classicError = e.message ?: e.javaClass.simpleName
         null
     }
+    val foldTags = if (fold) model.foldTags() else null
     val classicFailed = !melodic && classicPlacement == null
 
     LaunchedEffect(classicFailed) {
@@ -591,14 +613,31 @@ private fun ChopContent(
                 val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
                 if (hits != null && hits.cut != cut) rechopTo(hits.copy(cut = cut))
             },
+            tempo = tempoMeasured,
+            onSnap = { grid ->
+                val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
+                if (hits != null && hits.grid != grid) {
+                    // Without a pulse the choice is still recorded — the cuts
+                    // stay where the hits were and the header reads (NO
+                    // TEMPO) — and the toast says why nothing moved.
+                    if (grid != ChopReviewModel.GridSnap.OFF && tempoMeasured.first && tempoMeasured.second == null) onToast(Copy.CHOP_NO_TEMPO)
+                    rechopTo(hits.copy(grid = grid))
+                }
+            },
         )
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            SegmentButton("CLASSIC", active = !melodic, modifier = Modifier.weight(1f)) {
-                melodic = false
+            SegmentButton("CLASSIC", active = layout == ChopLayout.CLASSIC, modifier = Modifier.weight(1f)) {
+                layout = ChopLayout.CLASSIC
+            }
+            // FOLD DOUBLES: sixteen slices of a break are five sounds played
+            // over and over; one pad per sound, the repeats cycling under it.
+            SegmentButton("FOLD", active = fold, modifier = Modifier.weight(1f)) {
+                layout = ChopLayout.FOLD
+                onToast(Copy.FOLD_ON)
             }
             SegmentButton("MELODIC", active = melodic, modifier = Modifier.weight(1f)) {
-                melodic = true
+                layout = ChopLayout.MELODIC
                 onToast(Copy.MELODIC_ON)
                 if (melodicPlaced == null) {
                     melodicBusy = true
@@ -632,7 +671,7 @@ private fun ChopContent(
                 Column(Modifier.fillMaxWidth()) {
                     SliceRow(
                         row = row,
-                        pitchLabel = if (melodic) pitchLabels?.getOrNull(row.n - 1) else null,
+                        pitchLabel = if (melodic) pitchLabels?.getOrNull(row.n - 1) else foldTags?.getOrNull(row.n - 1),
                         // The chip opens the list rather than advancing one
                         // step (September UAT, finding 6): the cycle ran one
                         // way through ten classes with no back step, so a
@@ -741,11 +780,16 @@ private fun ChopContent(
                     voice = null
                     val current = model
                     val isMelodic = melodic
+                    val isFold = fold
                     val base = "${sourceFile.nameWithoutExtension} CHOP"
                     scope.launch {
                         try {
                             val send = withContext(Dispatchers.IO) {
-                                if (isMelodic) current.sendToGridMelodic() else current.sendToGrid()
+                                when {
+                                    isMelodic -> current.sendToGridMelodic()
+                                    isFold -> current.sendToGridFolded()
+                                    else -> current.sendToGrid()
+                                }
                             }
                             val newEntry = withContext(Dispatchers.IO) {
                                 val kitName = shelf.freshName(base)
@@ -759,7 +803,7 @@ private fun ChopContent(
                                 }
                                 KitShelf.Entry(kitDir, builder.kit)
                             }
-                            onToast(Copy.sentToGrid(send.sliceCount, send.chokeSet))
+                            onToast(if (isFold) Copy.foldedToGrid(current.sliceCount, send.sliceCount, send.chokeSet) else Copy.sentToGrid(send.sliceCount, send.chokeSet))
                             onSentToGrid(newEntry)
                         } catch (e: Exception) {
                             if (e is kotlinx.coroutines.CancellationException) throw e
@@ -793,11 +837,16 @@ private fun ChopContent(
                 voice = null
                 val current = model
                 val isMelodic = melodic
+                val isFold = fold
                 val target = entry
                 scope.launch {
                     try {
                         val send = withContext(Dispatchers.IO) {
-                            if (isMelodic) current.sendToGridMelodic() else current.sendToGrid()
+                            when {
+                                isMelodic -> current.sendToGridMelodic()
+                                isFold -> current.sendToGridFolded()
+                                else -> current.sendToGrid()
+                            }
                         }
                         val (updated, landed) = withContext(Dispatchers.IO) {
                             // The same lock every kit writer takes: this is an
@@ -816,7 +865,10 @@ private fun ChopContent(
                             }
                         }
                         val left = send.arranged.drop(PadBanks.SIZE).count { it != null }
-                        onToast(Copy.landedOnto(target.kit.name, PadBanks.letter(landBank), landed.size, left))
+                        onToast(
+                            if (isFold) Copy.foldedOnto(target.kit.name, PadBanks.letter(landBank), current.sliceCount, landed.size, left)
+                            else Copy.landedOnto(target.kit.name, PadBanks.letter(landBank), landed.size, left),
+                        )
                         // KIT opens on the bank it landed on, not A: the
                         // pads that just arrived are the point of the tap.
                         onLandedOnto(updated, landBank)
@@ -998,6 +1050,10 @@ private fun CutBench(
     onAuto: () -> Unit,
     onEar: (ChopReviewModel.Ear) -> Unit,
     onCut: (ChopReviewModel.Cut) -> Unit,
+    /** (measured yet, the tempo): ON THE GRID's row reads the pulse it would snap to, or that none was heard. */
+    tempo: Pair<Boolean, com.snipsnap.audio.TempoEstimate?>,
+    /** ON THE GRID's row: the snap picked. (`onGrid` above is the BY HITS / GRID segment; the two are different things.) */
+    onSnap: (ChopReviewModel.GridSnap) -> Unit,
 ) {
     val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
     val readout = when (val mode = model.mode) {
@@ -1043,6 +1099,18 @@ private fun CutBench(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (cut in ChopReviewModel.Cut.entries) {
                     SegmentButton(cut.name, active = hits.cut == cut, modifier = Modifier.weight(1f)) { if (!busy) onCut(cut) }
+                }
+            }
+            val (measured, t) = tempo
+            val pulse = when {
+                !measured -> "MEASURING…"
+                t == null -> "NO TEMPO HEARD"
+                else -> "${t.bpm.roundToInt()} BPM"
+            }
+            TapeText("ON THE GRID · CUTS ON THE PULSE · $pulse", TapeType.pixelSmall, if (t == null) scheme.ink3.tape else scheme.ink2.tape, maxLines = 1)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (grid in ChopReviewModel.GridSnap.entries) {
+                    SegmentButton(grid.label, active = hits.grid == grid, modifier = Modifier.weight(1f)) { if (!busy) onSnap(grid) }
                 }
             }
         }
@@ -1243,6 +1311,9 @@ private fun SecondaryButton(
         TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink2.tape)
     }
 }
+
+/** Which layout the grid preview and SEND use: the classifier's placement, the low-to-high scale, or one pad per sound. */
+private enum class ChopLayout { CLASSIC, FOLD, MELODIC }
 
 /** The "NOT SURE" dashed-chip treatment — a guess, and honest about it. */
 private fun Modifier.dashedBorder(color: Color, radius: Dp = 4.dp): Modifier = this.drawWithContent {

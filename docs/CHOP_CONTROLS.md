@@ -1,9 +1,8 @@
 # CHOP CONTROLS — the CUT bench, MERGE and SPLIT, live markers
 
-**Status: round one built.** The plain controls (HITS, EAR, CUT, GRID),
-the two local moves (MERGE, SPLIT), and the markers that show what any
-of them did. Round two — FOLD DOUBLES and ON THE GRID — waits on a
-short spec each, and on the phone's verdict on round one.
+**Status: round two built.** Round one: the plain controls (HITS, EAR,
+CUT, GRID), the two local moves (MERGE, SPLIT), and the markers that
+show what any of them did. Round two (§8): ON THE GRID and FOLD DOUBLES.
 
 ## 1. What was wrong
 
@@ -111,13 +110,8 @@ the rows and count.
   single hit refuses; the tape reference rides through both.
 - The counts are 1..64 by the mode's own law.
 
-## 7. Round two, and what the phone should judge
+## 7. What the phone should judge
 
-- **FOLD DOUBLES**: group near-identical slices and land one pad per
-  group with the repeats as a round-robin chain. **ON THE GRID**: snap
-  cuts to the nearest 16th of the detected tempo. Each needs a short
-  spec: how similar is "the same sound"; whether ON THE GRID moves the
-  audio or only the cut.
 - Whether FINE's thresholds (1.2× the local novelty, 1.5 dB floor,
   15 ms gap) hear the ghosts on a real break without hearing the room,
   and whether COARSE (2.6×, 7 dB, 80 ms) still hears a fast snare
@@ -125,3 +119,106 @@ the rows and count.
   ghost hat; a real room, with novelty everywhere, is where the
   threshold factor does its work, and that has not been heard yet.
 - Whether EARLY's 384 frames (8.7 ms) is enough for a soft kick's rise.
+
+## 8. Round two: ON THE GRID and FOLD DOUBLES
+
+### ON THE GRID
+
+A row on the CUT bench (BY HITS only): **OFF · 8TH · 16TH · 32ND**,
+under a line that reads the pulse it would snap to (`ON THE GRID · CUTS
+ON THE PULSE · 94 BPM`), or that none was heard. Every cut moves to the
+nearest line of that division of the source's own tempo
+(`ChopMode.ByHits.grid`, `GridSnap`), so the slices play back in time on
+the pads by construction and the density control becomes musical:
+eighths, sixteenths, thirty-seconds of *this* break.
+
+Three decisions, each with a reason:
+
+- **The grid is anchored on the first cut, and its spacing is fitted to
+  the hits.** The tempo estimator gives a period, not a phase
+  (autocorrelation has no downbeat), and captures rarely start on the
+  one; the groove clip already anchors on the first hit for the same
+  reason. And the estimate is only a seed: it decides which line each
+  hit is nearest to, then the spacing is fitted to the hits by least
+  squares, twice. Found the hard way: an estimate a percent off (118.8
+  for a break at 120) drifts past the later hits within four bars, and
+  every one of them then reads as "early" and keeps its cut. The pulse
+  of this take is the hits themselves. A fit further than 10 % from the
+  seed is not trusted and the seed stands (`GRID_FIT_TOLERANCE`).
+- **It moves the cut, never the audio, and a cut never lands after the
+  attack the detector found.** The detector's cut already sits a backoff
+  before the attack; the snap takes the nearest line *or that cut,
+  whichever is earlier*. A hit that pushed early keeps its cut and its
+  click; a hit that dragged late gets a cut a hair early and a little
+  air in front, which is harmless. Shaving a transient to make a number
+  round is the one thing this must never do.
+- **Two hits on one line become one slice**, the stronger hit's; the
+  audio between joins it. A flam on an 8th grid is one slice. The count
+  drops and the header says so.
+
+The tempo is measured once per source and shared by every model cut from
+it (a re-chop, a merge, a split), on IO, so the bench never measures
+twice and never on the main thread. A tape with no pulse keeps its cuts
+where the hits were; the header reads `ON THE 16TH (NO TEMPO)` and the
+row's tap says NO TEMPO HEARD ON THIS TAPE. THE GRID NEEDS A PULSE. A
+tempo under 0.3 confidence counts as none (`TEMPO_CONFIDENCE`), the
+same bar the groove clip uses.
+
+### FOLD DOUBLES
+
+A third segment beside CLASSIC and MELODIC. A sixteen-slice break is
+usually five sounds played over and over; FOLD lands one pad per sound
+with the repeats cycling under it as a round-robin chain (the pad's WAV
+every take end to end, `ChainInfo` stepping a take per hit — the same
+chain ROBIN renders from one take, here made of the drummer's own).
+Tap the snare pad four times and you hear the four snares they played.
+
+- **"The same sound"** is `Similar.distance` over the classifier's own
+  features within 0.05 (`FOLD_WITHIN`, DOUBLES' opening ring), single
+  linkage. Level is left out of the distance on purpose, so a ghost
+  snare folds with the snare — that is the point of a chain.
+- **Never across classes.** A slice the user relabelled TOM is a TOM and
+  folds with toms, whatever it sounds like: the chip is the human's word.
+- **Never wider than a chain can cycle** (8, `Robin.MAX_TAKES`); a
+  longer run becomes two folds.
+- **Folds in capture order, led by their first slice**; takes in capture
+  order, so take one is what the drummer played first. The lead's chip,
+  provenance and RE-TRIM keys are the pad's, plus `folded = N`.
+- The rows say what folded: the lead reads `×4 TAKES`, a take reads
+  `TAKE 2 OF 4 · = 3` (the slice it folded under). The strip reads
+  `FOLD: 16 SLICES → 5 PADS. TAP A PAD, HEAR ITS TAKES IN TURN.`, SEND
+  says `16 SLICES FOLDED ONTO 5 PADS.`, and ONTO an existing kit's bank
+  lands the same chains (`landArranged` carries the takes) and says
+  `'KIT' BANK B: 16 SLICES FOLDED ONTO 5 PADS.`
+- ON THE GRID on a tape with no pulse still records the choice: the cuts
+  stay where the hits were, the header reads `(NO TEMPO)`, and the tap
+  says why nothing moved.
+
+A folded pad is a chain pad, and chain pads refuse the treatments,
+RE-TRIM, STACK and SPLICE (they are single-zone, and every audio rewrite
+refuses them); ROBIN's undo pulls the single take back out of the bin.
+That is the trade, and the pad sheet already says so.
+
+### Laws the tests hold
+
+- Eight bars at 120 have a tempo near 120; on a 16th grid no hit is
+  lost, every cut is on the pulse or exactly where the detector left it,
+  a cut never lands after the detector's, the late hits moved and the
+  early one kept its click; a flam on an 8th grid is one slice; the
+  tempo is one measurement per source.
+- Two kicks, two snares (one soft) and a hat fold to kicks, snares, hat,
+  in capture order, led by their first slices, with the right tags; a
+  relabelled chip never folds; the landing is one chain pad per fold of
+  many — both takes end to end in the WAV, the boundaries at the lead's
+  length, the lead's provenance plus `folded` — and a fold of one is a
+  plain pad.
+
+### What the phone should judge
+
+- Whether 0.05 is "the same sound" on a real break: too tight and a
+  drummer's louder snare stays its own pad; too loose and the rim folds
+  into the snare. One constant, and DOUBLES' dial is the same number.
+- Whether a folded kit wants the chain's cycle order to follow loudness
+  rather than capture order, so the top of the cycle is the hardest hit.
+- Whether the grid wants an anchor other than the first cut — a downbeat
+  the user taps — for captures that start on a pickup.

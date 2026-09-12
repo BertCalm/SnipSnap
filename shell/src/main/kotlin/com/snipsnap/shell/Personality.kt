@@ -412,6 +412,7 @@ object Copy {
         "· BREED ▸ PICK A KIT TO CROSS RECIPES WITH. PARENTS STAY.",
         "· DUST: THE TAPE'S OWN HISS, ROOM AND CRACKLE UNDER A PAD. OR ANOTHER'S.",
         "· CHOP'S CUT BENCH: HITS, EAR, GRID. MERGE OR SPLIT UNDER A CHIP.",
+        "· FOLD ON CHOP: ONE PAD PER SOUND, THE REPEATS CYCLE UNDER IT.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -1012,6 +1013,23 @@ object Copy {
     fun chopNoSplit(n: Int): String = "NO SECOND HIT INSIDE SLICE $n. NOTHING TO SPLIT."
     /** The CUT bench's readout for the count while a chop is running. */
     const val CHOP_BENCH_BUSY = "CUTTING…"
+
+    // ---- CHOP round two: ON THE GRID and FOLD DOUBLES (docs/CHOP_CONTROLS.md §8) ----
+    /** ON THE GRID asked for on a tape the tempo estimator hears no pulse in. */
+    const val CHOP_NO_TEMPO = "NO TEMPO HEARD ON THIS TAPE. THE GRID NEEDS A PULSE."
+    /** FOLD's segment toast: what the layout is now. */
+    const val FOLD_ON = "FOLDED. ONE PAD PER SOUND; THE REPEATS CYCLE UNDER IT."
+    /** FOLD's strip: how many slices became how many pads. */
+    fun folded(slices: Int, pads: Int): String =
+        "FOLD: $slices ${if (slices == 1) "SLICE" else "SLICES"} → $pads ${if (pads == 1) "PAD" else "PADS"}. TAP A PAD, HEAR ITS TAKES IN TURN."
+    /** SEND TO GRID's toast when the layout was FOLD: both numbers, then the choke word SEND's own toast uses. */
+    fun foldedToGrid(slices: Int, pads: Int, chokeSet: Boolean): String =
+        "$slices ${if (slices == 1) "SLICE" else "SLICES"} FOLDED ONTO $pads ${if (pads == 1) "PAD" else "PADS"}." + if (chokeSet) " CHOKE GROUP SET." else ""
+    /** ONTO <kit> · BANK X when the layout was FOLD: [landedOnto]'s shape with both numbers. */
+    fun foldedOnto(kitName: String, bank: Char, slices: Int, pads: Int, left: Int): String {
+        val tail = if (left > 0) " $left DIDN'T FIT — A BANK HOLDS 16." else ""
+        return "'$kitName' BANK $bank: $slices ${if (slices == 1) "SLICE" else "SLICES"} FOLDED ONTO $pads ${if (pads == 1) "PAD" else "PADS"}.$tail"
+    }
 
     /** "N SLICES ON THE GRID. CHOKE GROUP SET." — the send-to-grid toast. */
     fun sentToGrid(sliceCount: Int, chokeSet: Boolean): String =
