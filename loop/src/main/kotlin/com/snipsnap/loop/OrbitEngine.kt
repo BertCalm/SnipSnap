@@ -39,8 +39,7 @@ class OrbitEngine(
         // initializer runs ahead of an `init` block further down the file,
         // so `FloatArray(blockFrames * 2)` threw NegativeArraySizeException
         // for a huge or negative block size and this check never ran.
-        require(blockFrames > 0) { "blockFrames must be positive: $blockFrames" }
-        require(blockFrames <= MAX_RENDER_FRAMES) { "blockFrames past a stereo buffer: $blockFrames" }
+        requireBlockFrames(blockFrames)
     }
 
     /**
@@ -488,6 +487,21 @@ class OrbitEngine(
         const val MAX_RENDER_FRAMES = Int.MAX_VALUE / 2
 
         /**
+         * What a block size has to be, asked in ONE place.
+         *
+         * The constructor asks it before allocating its own buffer, and
+         * [render] asks it before allocating the output — which is the
+         * order that matters: `render` sized its sink first, so a bad
+         * block size arrived at the constructor's check only after an
+         * eight-gigabyte allocation had been attempted for a render that
+         * was never going to run.
+         */
+        fun requireBlockFrames(blockFrames: Int) {
+            require(blockFrames > 0) { "blockFrames must be positive: $blockFrames" }
+            require(blockFrames <= MAX_RENDER_FRAMES) { "blockFrames past a stereo buffer: $blockFrames" }
+        }
+
+        /**
          * Play [frames] of [set] offline into a [Snip] — the bounce, the
          * preview, and the way a test listens without a device.
          */
@@ -496,6 +510,8 @@ class OrbitEngine(
             require(frames <= MAX_RENDER_FRAMES) {
                 "frames past what a stereo buffer holds: $frames > $MAX_RENDER_FRAMES"
             }
+            // Both lengths answered for before either is allocated.
+            requireBlockFrames(blockFrames)
             val sink = CollectingSink(set.sampleRate, frames * 2)
             val engine = OrbitEngine(set, bank, sink, blockFrames)
             // Divided before it is added to, so no block size can carry the

@@ -1085,6 +1085,16 @@ class OrbitSectionTest {
             OrbitEngine.render(s, bank, 1, blockFrames = OrbitEngine.MAX_RENDER_FRAMES + 1)
         }
         assertFailsWith<IllegalArgumentException> { OrbitEngine.render(s, bank, 1, blockFrames = 0) }
+        // And BEFORE the output is allocated, which is the part that
+        // matters: `render` used to size its sink first, so a bad block
+        // size reached the constructor's check only after an eight-gigabyte
+        // allocation had been attempted for a render that could never run.
+        // This asks for both at once - it passes instantly where the
+        // lengths are answered for first, and dies of memory where they
+        // are not.
+        assertFailsWith<IllegalArgumentException> {
+            OrbitEngine.render(s, bank, OrbitEngine.MAX_RENDER_FRAMES, blockFrames = 0)
+        }
         // And a render holds exactly what it was asked for, not the whole
         // blocks it wrote: 1,000 frames of 300-frame blocks is four blocks
         // and a thousand frames.

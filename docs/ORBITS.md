@@ -215,13 +215,16 @@ choice, not a surprise.
 
 ## Out the door
 
-Two ways a set leaves the screen, both refused in words past 64 bars —
-but **not by the same question once there is an arrangement**: a clip is
-refused when any clip it would write is too long (`OrbitClip.clipRefusal`,
+Two ways a set leaves the screen, both refused in words — and **not by
+the same question once there is an arrangement**: a clip is refused when
+any clip it would write is longer than 64 bars (`OrbitClip.clipRefusal`,
 asking each section on its own), a bounce when one turn of the transport
-is (`OrbitClip.refusal`, asking the plan — and the frames, since the
-renderer holds a turn interleaved in one array). With no arrangement the
-two are one length and one sentence. The OUT panel asks them separately
+is (`OrbitClip.refusal`, asking the plan). The bounce has a second
+ceiling a clip has not, and it is not musical: the renderer holds a turn
+INTERLEAVED in one array, so a turn of more than `MAX_BOUNCE_FRAMES`
+frames is refused however few bars it is — 64 bars at a 6 MHz sample rate
+is 2.3 billion frames, and the conversion used to wrap negative. With no
+arrangement the two are one length and one sentence. The OUT panel asks them separately
 and shows whichever button is still open. **What "one cycle" means depends
 on whether the set has an arrangement**: with no sections it is the rings' meeting, as it
 always was; with sections it is the plan, which is the length the

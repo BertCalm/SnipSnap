@@ -358,9 +358,14 @@ fun OrbitScreen(
         val s = set ?: return
         if (playing || preparing) return
         preparing = true
+        // Which edit this is starting from. An edit that lands while the
+        // bank is being prepared finds no engine to hand itself to —
+        // `engine?.apply` is a no-op — so without this, play began on the
+        // arrangement the player had a moment ago and nothing was
+        // guaranteed to correct it.
+        val startedAt = edits
         scope.launch {
             val prepared = withContext(Dispatchers.IO) { OrbitBank.prepare(s, source, previous = bank) }
-            bank = prepared
             val audioSink = AndroidAudioSink(s.sampleRate)
             val e = OrbitEngine(s, prepared, audioSink, initialSolo = solo)
             sink = audioSink
@@ -368,6 +373,15 @@ fun OrbitScreen(
             audioThread = thread(name = "snipsnap-orbit", isDaemon = true) { e.run() }
             playing = true
             preparing = false
+            val now = set
+            val newer = bank
+            if (edits != startedAt && now != null && newer != null) {
+                // Something was edited while this was starting. The engine
+                // exists now, so hand it what the screen shows.
+                e.apply(OrbitEngine.Prepared(now, newer, solo))
+            } else {
+                bank = prepared
+            }
         }
     }
 
@@ -674,6 +688,13 @@ fun OrbitScreen(
         // One UNDO steps back the whole run of taps, not one tap of it.
         if (!bpmPending) history = (history + OrbitStep(s, solo)).takeLast(UNDO_DEPTH)
         set = next
+        // This writes `set` without going through `commit`, so it takes an
+        // edit number of its own: a structural commit still preparing when
+        // the tempo moves would otherwise pass its `edit == edits` check
+        // and put the PRE-TEMPO set back on the engine, leaving playback
+        // at the old tempo until the debounce fired - or for good, if the
+        // player left before it did.
+        edits++
         val b = bank
         if (b != null && next.orbits.none { it.content is SnipOrbit }) {
             engine?.apply(OrbitEngine.Prepared(next, b, solo))
@@ -1152,11 +1173,11 @@ fun OrbitScreen(
                                     if (here) scheme.accent.tape else scheme.ink.tape,
                                     Modifier.width(28.dp),
                                 )
-                                SmallChip("−", scheme, enabled = section.bars > 1, description = "ONE BAR SHORTER") {
+                                SmallChip("−", scheme, enabled = section.bars > 1, description = "SECTION ${section.name}: ONE BAR SHORTER") {
                                     editSection(index) { it.copy(bars = it.bars - 1) }
                                 }
                                 TapeText("${section.bars} BAR${if (section.bars == 1) "" else "S"}", TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(56.dp))
-                                SmallChip("+", scheme, enabled = section.bars < OrbitClip.MAX_BARS, description = "ONE BAR LONGER") {
+                                SmallChip("+", scheme, enabled = section.bars < OrbitClip.MAX_BARS, description = "SECTION ${section.name}: ONE BAR LONGER") {
                                     editSection(index) { it.copy(bars = it.bars + 1) }
                                 }
                                 for ((ringIndex, ring) in current.orbits.withIndex()) {
