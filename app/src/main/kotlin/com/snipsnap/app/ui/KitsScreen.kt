@@ -318,7 +318,7 @@ fun KitsScreen(
                                 Modifier
                                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                                     // Same text the TapeText below shows —
-                                    // it already reads as a state ("SHOW ▸
+                                    // it already reads as a state ("SHOW ·
                                     // ALL") the way Copy.shelfFilter's own
                                     // KDoc intends. (A descendant TapeText
                                     // does NOT merge into this node for
@@ -344,8 +344,8 @@ fun KitsScreen(
                                 Modifier
                                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                                     // Same text as the TapeText below — it
-                                    // already reads as a state ("SORT ▸
-                                    // RECENT"/"SORT ▸ A–Z").
+                                    // already reads as a state ("SORT ·
+                                    // RECENT"/"SORT · A–Z").
                                     .tapeClick(label = sortLabel, onClick = onToggleSort)
                                     .padding(horizontal = 4.dp),
                                 contentAlignment = Alignment.Center,
