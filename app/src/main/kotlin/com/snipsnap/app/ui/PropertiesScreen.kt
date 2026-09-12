@@ -101,7 +101,7 @@ fun PropertiesScreen(
                         .height(44.dp)
                         .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
                         .semantics { this.selected = selected }
-                        .tapeClick(label = null) { if (!selected) onTeach(on) },
+                        .tapeClick(label = "TEACH THE MACHINE ${if (on) "ON" else "OFF"}") { if (!selected) onTeach(on) },
                     contentAlignment = Alignment.Center,
                 ) {
                     TapeText(if (on) "ON" else "OFF", TapeType.pixel, if (selected) scheme.ink.tape else scheme.ink2.tape)
@@ -157,7 +157,7 @@ fun PropertiesScreen(
                 .fillMaxWidth()
                 .height(44.dp)
                 .raisedBevel(scheme)
-                .tapeClick(label = null, onClick = onHelp),
+                .tapeClick(label = "HELP", onClick = onHelp),
             contentAlignment = Alignment.Center,
         ) {
             TapeText("HELP ▸", TapeType.pixel, scheme.amber.tape)
@@ -177,7 +177,7 @@ private fun SchemeRow(s: Scheme, selected: Boolean, onPick: () -> Unit) {
             .fillMaxWidth()
             .let { if (selected) it.pressedBevel(host) else it.raisedBevel(host) }
             .semantics { this.selected = selected }
-            .tapeClick(label = null, onClick = onPick)
+            .tapeClick(label = s.id.displayName, onClick = onPick)
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
