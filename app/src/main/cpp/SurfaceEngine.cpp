@@ -163,13 +163,21 @@ MacroState SurfaceEngine::morphed(const ControlFrame& f) const {
         out.resonance += w[i] * corners_[i][2].load(std::memory_order_relaxed);
         out.drive += w[i] * corners_[i][3].load(std::memory_order_relaxed);
     }
+    // Tilt nudges resonance on top of the blend, the same half-weighted
+    // amount XY gives it (see the XY case below) - a flat phone (tilt
+    // 0.5) is a no-op, so every corner the pad already saved still sounds
+    // exactly as captured. A non-finite f.tilt carries into out.resonance
+    // and out through the door in applyControl below, same as everywhere
+    // else a reading arrives; SurfaceStore.Corner.from's MORPH branch
+    // mirrors this exactly, so SET A..D captures what you'd actually hear.
+    out.resonance += (f.tilt - 0.5f) * 0.5f;
     return out;
 }
 
 void SurfaceEngine::applyControl(const ControlFrame& f) {
     MacroState target;
     switch (f.mode) {
-        case 2:  // MORPH: the puck weights four states
+        case 2:  // MORPH: the puck weights four states, tilt nudges resonance
             target = morphed(f);
             break;
         case 1:  // XYZ: X pitch, Y cutoff, Z drive, tilt resonance

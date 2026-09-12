@@ -420,6 +420,40 @@ TEST(surface_engine_morph_blends_the_corners) {
     CHECK(pa > pd);
 }
 
+TEST(surface_engine_morph_tilt_reaches_the_filter) {
+    // Two frames identical but for tilt, both weighted fully onto corner A:
+    // if the tilt nudge in morphed() reaches applyControl (as it should -
+    // SurfaceStore.Corner.from mirrors the same arithmetic in Kotlin, and
+    // that side already proves the numbers), the two tilts land on
+    // different resonance targets, which land on different SVF
+    // coefficients, which cannot produce byte-identical output over
+    // hundreds of callbacks. This does not re-derive the filter's theory,
+    // only that the wire from tilt to the DSP is actually connected.
+    SurfaceEngine e(kRate);
+    e.setCorner(0, MacroState{0.5f, 0.6f, 0.5f, 0.0f});
+    std::vector<float> square(100);
+    for (int i = 0; i < 100; ++i) square[i] = (i % 10 < 5) ? 0.5f : -0.5f;
+    e.loadSample(square.data(), square.size(), kRate);
+
+    ControlFrame lowTilt;
+    lowTilt.mode = 2;
+    lowTilt.gate = true;
+    lowTilt.a = 1;
+    lowTilt.b = lowTilt.c = lowTilt.d = 0;
+    lowTilt.tilt = 0.0f;
+    e.pushControl(lowTilt);
+    std::vector<float> lo;
+    for (int i = 0; i < 400; ++i) lo = callback(e, 64);  // let the coefficients settle
+
+    ControlFrame hiTilt = lowTilt;
+    hiTilt.tilt = 1.0f;
+    e.pushControl(hiTilt);
+    std::vector<float> hi;
+    for (int i = 0; i < 400; ++i) hi = callback(e, 64);
+
+    CHECK(lo != hi);
+}
+
 TEST(surface_engine_survives_a_reading_that_is_not_a_number) {
     // A gravity sensor may report NaN, and TILT is resonance in XYZ. Before
     // the door, one such frame was permanent: the smoothers latch NaN
