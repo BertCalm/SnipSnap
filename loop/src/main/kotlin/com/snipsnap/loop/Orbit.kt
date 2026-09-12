@@ -774,6 +774,17 @@ object OrbitClock {
      * straddles a boundary is played as two pieces, each with its own
      * local frame, rather than as one piece belonging to whichever section
      * happened to own its first sample.
+     *
+     * **Always strictly after [frame]**, and the engine's loop depends on
+     * it: that loop walks `at = nextBoundary(at)` until the block is
+     * spent, so an answer at or behind where it was asked is not a wrong
+     * block but a block that never ends — silence, and a wedged device.
+     * It holds by construction, since [localFrame] is always less than the
+     * section's own length, and `the next boundary is where the block has
+     * to be cut` asserts it at the awkward frames rather than trusting the
+     * arithmetic. A revert of [localFrame] during review broke exactly
+     * this and hung the test run, which is how the invariant got written
+     * down.
      */
     fun nextBoundary(set: OrbitSet, frame: Long): Long {
         val total = arrangementFrames(set)
