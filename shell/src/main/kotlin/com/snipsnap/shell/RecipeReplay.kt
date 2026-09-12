@@ -71,7 +71,14 @@ object RecipeReplay {
         if ("sculpt" in e) return Plan.Refused(Copy.replayMeasured("SCULPT"))
         (e["verb"] as? JsonValue.Str)?.value?.let { verb ->
             PadSheet.readSmear(recipe)?.let { if (verb == "smear") return Plan.Smear(it) }
-            PadSheet.readDust(recipe)?.let { if (verb == "dust") return Plan.Dust(it.amount, it.tape) }
+            PadSheet.readDust(recipe)?.let {
+                if (verb == "dust") {
+                    // The recipe names the tape; a pasted recipe is text, so
+                    // a name with a path in it is no tape (`DustPrints.isBare`)
+                    // and refuses as gone, before anyone opens a file by it.
+                    return if (DustPrints.isBare(it.tape)) Plan.Dust(it.amount, it.tape) else Plan.Refused(Copy.dustTapeGone(it.tape))
+                }
+            }
             return Plan.Refused(Copy.REPLAY_NO_DOOR)
         }
         if ("patch" in e) {

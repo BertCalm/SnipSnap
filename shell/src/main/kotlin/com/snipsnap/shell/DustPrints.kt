@@ -33,11 +33,22 @@ object DustPrints {
     private const val STORED_PEAK = 0.9f
 
     /** The tape [pad] dusts from: its own, else the kit's ([kitTape]), else null. */
-    fun tapeFor(kit: Kit, pad: KitPad): String? = Retrim.tapeName(pad) ?: kitTape(kit)
+    fun tapeFor(kit: Kit, pad: KitPad): String? = ownTape(pad) ?: kitTape(kit)
 
     /** The tape most of [kit]'s pads came off, or null when none did. */
     fun kitTape(kit: Kit): String? =
-        kit.pads.mapNotNull { Retrim.tapeName(it) }.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+        kit.pads.mapNotNull { ownTape(it) }.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+
+    /**
+     * [pad]'s own tape name when it is a bare file name on the shelf.
+     * Provenance comes off `kit.json`, which a hand edit can fill with
+     * `../` — the same rule as `Retrim.of`: a name that isn't bare is no
+     * tape, so nothing is ever read or cached outside SNIPS.
+     */
+    private fun ownTape(pad: KitPad): String? = Retrim.tapeName(pad)?.takeIf { isBare(it) }
+
+    /** True when [name] is a bare file name: no path separators. */
+    fun isBare(name: String): Boolean = '/' !in name && '\\' !in name
 
     /**
      * The print of [tape], from the cache when it is current, else made

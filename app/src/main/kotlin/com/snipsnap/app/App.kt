@@ -88,6 +88,8 @@ import com.snipsnap.audio.Dust
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.GrooveFeel
+import com.snipsnap.kit.Kit
+import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
@@ -928,6 +930,9 @@ fun App(shelf: KitShelf) {
         }
         busy = Copy.DUSTING_BUSY
         scope.launch {
+            // What landed before a failure, if one comes: saved and shown,
+            // never left as audio in the bin with no recipe in kit.json.
+            var partial: KitShelf.Entry? = null
             val result = try {
                 withContext(Dispatchers.IO) {
                     // Which tape each pad dusts from: its own when that tape is
@@ -935,48 +940,66 @@ fun App(shelf: KitShelf) {
                     // (or read off the cache) here, before the lock — the one
                     // expensive step, and a null answer is remembered too, so
                     // a gated tape is asked once, not once per pad.
-                    val pads = source.kit.pads
-                    val tapeOf = pads.associate { pad ->
-                        pad.slot to (DustPrints.tapeFor(source.kit, pad)?.takeIf { File(snipsDir, it).isFile } ?: kitTape)
-                    }
+                    fun tapeOf(kit: Kit, pad: KitPad): String =
+                        DustPrints.tapeFor(kit, pad)?.takeIf { File(snipsDir, it).isFile } ?: kitTape
                     val prints = HashMap<String, Dust.Print?>()
-                    for (tape in tapeOf.values.toSet()) prints[tape] = DustPrints.forTape(File(snipsDir, tape))
+                    for (tape in source.kit.pads.map { tapeOf(source.kit, it) }.toSet()) {
+                        prints[tape] = DustPrints.forTape(File(snipsDir, tape))
+                    }
                     KitWrites.mutex.withLock {
                         val m = KitBuilderModel.open(source.dir)
                         var dusted = 0
                         var left = 0
-                        for (pad in m.kit.pads.toList()) {
-                            // Layers and chains are what every audio rewrite
-                            // refuses: counted, not attempted. Anything else
-                            // that fails is a real failure and says so.
-                            if (pad.velocityLayers.isNotEmpty() || pad.chain != null) {
-                                left++
-                                continue
+                        var noDust = 0
+                        try {
+                            for (pad in m.kit.pads.toList()) {
+                                // Layers and chains are what every audio rewrite
+                                // refuses: counted, not attempted. Anything else
+                                // that fails is a real failure and says so.
+                                if (pad.velocityLayers.isNotEmpty() || pad.chain != null) {
+                                    left++
+                                    continue
+                                }
+                                // The tape is read off the kit as it is now, not
+                                // the one shown when DUST ALL was tapped: a pad
+                                // re-trimmed in between dusts from its new tape.
+                                // A tape the plan above never saw is printed
+                                // here, under the lock — the rare case.
+                                val tape = tapeOf(m.kit, pad)
+                                val print = prints.getOrPut(tape) { DustPrints.forTape(File(snipsDir, tape)) }
+                                if (print == null) {
+                                    noDust++
+                                    continue
+                                }
+                                m.dustPad(pad.slot, PadSheet.DUST_ALL_AMOUNT, tape, print)
+                                dusted++
                             }
-                            val tape = tapeOf[pad.slot] ?: kitTape
-                            val print = prints[tape] ?: continue
-                            m.dustPad(pad.slot, PadSheet.DUST_ALL_AMOUNT, tape, print)
-                            dusted++
+                        } finally {
+                            if (dusted > 0) {
+                                m.save()
+                                partial = KitShelf.Entry(source.dir, m.kit)
+                            }
                         }
-                        if (dusted > 0) m.save()
-                        Triple(KitShelf.Entry(source.dir, m.kit), dusted, left)
+                        Triple(KitShelf.Entry(source.dir, m.kit), dusted, left to noDust)
                     }
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 busy = null
+                partial?.let { if (open?.dir == source.dir) open = it }
                 toast = "DUST FAILED: ${e.message ?: e.javaClass.simpleName}"
                 return@launch
             }
             busy = null
-            val (entry, dusted, left) = result
+            val (entry, dusted, counts) = result
+            val (left, noDust) = counts
             if (dusted == 0 && left == 0) {
                 toast = Copy.DUST_NO_GHOSTS
                 return@launch
             }
             if (open?.dir == source.dir) open = entry
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-            toast = Copy.dustedAll(dusted, left)
+            toast = Copy.dustedAll(dusted, left, noDust)
         }
     }
 

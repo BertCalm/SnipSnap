@@ -90,6 +90,19 @@ class DustPrintsTest {
         assertEquals("theirs.wav", DustPrints.tapeFor(kit, mic), "a capture borrows the kit's tape")
         assertNull(DustPrints.kitTape(com.snipsnap.kit.Kit("M", listOf(mic))))
         assertNull(DustPrints.tapeFor(com.snipsnap.kit.Kit("M", listOf(mic)), mic))
+        // A hand-edited kit.json naming a path, not a tape: no tape at all,
+        // so nothing is read or cached outside the shelf.
+        val forged = KitPad(slot = 5, sampleFile = "A05_Perc_01.wav", source = mapOf(Retrim.FILE_KEY to "../../secret.wav"))
+        assertNull(DustPrints.tapeFor(com.snipsnap.kit.Kit("F", listOf(forged)), forged))
+        assertNull(DustPrints.kitTape(com.snipsnap.kit.Kit("F", listOf(forged, forged.copy(slot = 6)))))
+        assertEquals("theirs.wav", DustPrints.tapeFor(com.snipsnap.kit.Kit("F", listOf(forged, other)), forged), "a forged own tape falls back to the kit's")
+        // And a pasted recipe naming a path refuses as gone before any file is opened by it.
+        val recipe = com.snipsnap.json.JsonValue.Obj(mapOf(
+            "verb" to com.snipsnap.json.JsonValue.Str("dust"),
+            "amount" to com.snipsnap.json.JsonValue.Num(0.5),
+            "tape" to com.snipsnap.json.JsonValue.Str("../../secret.wav"),
+        ))
+        assertEquals(RecipeReplay.Plan.Refused(Copy.dustTapeGone("../../secret.wav")), RecipeReplay.plan(recipe))
     }
 
     @Test
