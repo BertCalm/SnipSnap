@@ -1201,13 +1201,31 @@ fun OrbitScreen(
                     val bounceWhy = OrbitClip.refusal(current)
                     val clipWhy = OrbitClip.clipRefusal(current)
                     if (OrbitClip.countsDifferently(current)) {
-                        // The MPC clip has no time signature: its bar is sixteen 16ths whatever the set's is.
-                        // Counted off the transport's own turn, which is
-                        // what goes out: `OrbitClip.bars` is the rings'
-                        // meeting, and an arranged set never reaches it.
-                        // The same number as before for a set with none.
+                        // The MPC clip has no time signature: its bar is
+                        // sixteen 16ths whatever the set's is, and this
+                        // line is what tells the player what that will
+                        // make of their bars.
+                        //
+                        // So it counts what is WRITTEN. With an
+                        // arrangement that is one clip per section, each
+                        // rounded up to its own whole bars — and their
+                        // total is not the plan's: three of a 3/4 set's
+                        // bars twice over is two clips of three, where the
+                        // plan's 72 steps round to five. One number would
+                        // have been none of the lengths the player is
+                        // about to see on the hardware, so each section
+                        // says its own, by name, as the sequences will.
+                        val mpcBars = if (current.sections.isEmpty()) {
+                            "${OrbitClip.barsFor(OrbitClock.transportSteps(current))}"
+                        } else {
+                            current.sections.indices
+                                .filter { current.sections[it].plays.isNotEmpty() }
+                                .joinToString(", ") {
+                                    "${current.sections[it].name} ${OrbitClip.barsFor(OrbitClip.sectionSteps(current, it))}"
+                                }
+                        }
                         TapeText(
-                            "THE MPC COUNTS 4/4 BARS: ${OrbitClip.barsFor(OrbitClock.transportSteps(current))}.",
+                            "THE MPC COUNTS 4/4 BARS: $mpcBars.",
                             TapeType.pixelSmall,
                             scheme.ink2.tape,
                             Modifier.fillMaxWidth(),
