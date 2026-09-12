@@ -25,6 +25,7 @@ class PadEngine(preferredSampleRate: Int) {
 
     private var handle: Long = NativePads.create(preferredSampleRate)
     private val open get() = handle != 0L
+    private val preferredRate = preferredSampleRate
 
     /** True between a successful [start] and [close]. See [isUp] for whether a callback is actually running. */
     @Volatile
@@ -349,6 +350,86 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun drainEnded(): IntArray = if (open) NativePads.drainEnded(handle) else IntArray(0)
 
+    // ---- the resample tap -------------------------------------------------
+
+    /**
+     * `SurfaceEngine.PrintState`'s own twin, ordinal for ordinal ([NativePads]
+     * hands back `PrintBuffer::State` unchanged) — kept as a second copy
+     * rather than shared, the way `Layer` is its own type here rather than
+     * reused from `SurfaceEngine`: the two engines' prints are a different
+     * shape (mono there, stereo here) and sharing the enum would not save
+     * the caller from knowing which engine it is reading.
+     */
+    enum class PrintState { IDLE, RECORDING, STOPPING, DONE }
+
+    /**
+     * The longest print [armPrint] currently allows, in seconds, at this
+     * engine's own [sampleRate] — not the flat constant the first version
+     * of this class used. [PRINT_BYTE_BUDGET] is a memory bound, and bytes
+     * per second of stereo float32 audio scales with the rate: a 96kHz
+     * device costs roughly double a 48kHz one for the same seconds, so a
+     * fixed-seconds ceiling is only really a memory bound at the rates
+     * common on Android today, not a promise this class can keep in
+     * general. Computed from [sampleRate] so it stays true regardless of
+     * what the device actually reports; a caller reasoning in seconds (a
+     * bars-based length, say) clamps against this instead.
+     */
+    @Synchronized
+    fun maxPrintSeconds(): Float = PRINT_BYTE_BUDGET.toFloat() / (2 * Float.SIZE_BYTES * sampleRate())
+
+    /**
+     * Reserve [seconds] of RAM and record the mixed bus, stereo, from the
+     * next callback. False when a print is still recording or stopping —
+     * take that one first — or the engine has no callback actually
+     * running: an open handle is not a running stream (see [isUp]), and
+     * arming before [start] would reserve at whatever rate the native
+     * side defaults to before it knows the device's real one, which can
+     * differ from what ends up playing.
+     *
+     * This is what a GROOVE bounce is made of: what gets captured is the
+     * mix every voice's own gain and choke already went through, the same
+     * frames the speaker gets, so there is no second engine that could
+     * disagree with it. See `PadEngine.h`'s (the native one) own KDoc for
+     * why that is the whole point.
+     */
+    @Synchronized
+    fun armPrint(seconds: Float): Boolean {
+        if (!isUp()) return false
+        val ceiling = maxPrintSeconds()
+        require(seconds > 0f && seconds <= ceiling) {
+            "print length is 0..$ceiling s at ${sampleRate()} Hz, got $seconds"
+        }
+        val frames = (seconds * sampleRate()).toInt()
+        // A positive `seconds` can still round to zero frames at the
+        // extreme low end (a fraction of a millisecond); arming with 0
+        // would leave the native side recording into an empty reservation,
+        // where the very first callback finds no room and the capture is
+        // nothing rather than the small-but-real print the caller asked
+        // for. Refuse rather than arm something that cannot hold a sample.
+        if (frames <= 0) return false
+        return NativePads.armPrint(handle, frames)
+    }
+
+    @Synchronized
+    fun printState(): PrintState =
+        if (open) PrintState.entries[NativePads.printState(handle)] else PrintState.IDLE
+
+    /**
+     * Stop and take the print as a stereo snip at the engine's rate; null
+     * when nothing was captured. Waits up to half a second for the
+     * callback's last write, so call it off the main thread.
+     */
+    @Synchronized
+    fun stopPrint(): Snip? {
+        if (!open) return null
+        val frames = NativePads.stopPrint(handle) ?: return null
+        return Snip(frames, 2, sampleRate())
+    }
+
+    /** The rate the device actually gave us; a printed take carries it. */
+    @Synchronized
+    fun sampleRate(): Int = if (open) NativePads.sampleRate(handle) else preferredRate
+
     @Synchronized
     fun close() {
         if (!open) return
@@ -374,5 +455,19 @@ class PadEngine(preferredSampleRate: Int) {
 
         /** The count-in click's fixed level — a cue meant to sit under the kit, not a mixed-in sound. */
         const val CLICK_GAIN = 0.6f
+
+        /**
+         * A print's RAM ceiling, in bytes rather than seconds — review
+         * caught what a flat seconds cap gets wrong: bytes per second of
+         * stereo float32 audio scales with the device's own rate, so "60
+         * seconds is under 25MB" is only true at the rates common on
+         * Android today, not in general (a 96kHz device would cost nearly
+         * double that for the same 60 seconds). [maxPrintSeconds] derives
+         * the actual ceiling from this and [sampleRate], so the promise
+         * stays true at whatever rate the device reports. 25MiB is the
+         * same order of magnitude `SnipStore` already accepts from an
+         * import, not a new ceiling this app has to defend.
+         */
+        const val PRINT_BYTE_BUDGET = 25L * 1024 * 1024
     }
 }
