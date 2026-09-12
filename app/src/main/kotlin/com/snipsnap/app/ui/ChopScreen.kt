@@ -118,7 +118,7 @@ fun ChopScreen(
     var model by remember(kitDir, lastCommit) { mutableStateOf<ChopReviewModel?>(null) }
     // Null while still decoding (or once loaded); set on failure to the
     // honest reason — distinct copy for "nothing was ever taped" (no
-    // commit at all, [Copy.EMPTY_SHELF]) versus "a commit exists but its
+    // commit at all, [Copy.EMPTY_CHOP]) versus "a commit exists but its
     // file won't read anymore" ([Copy.CHOP_SOURCE_GONE]), so a user who
     // made something can tell that apart from a user who hasn't yet.
     var emptyReason by remember(kitDir, lastCommit) { mutableStateOf<String?>(null) }
@@ -148,7 +148,7 @@ fun ChopScreen(
         // and still unreadable from CHOP.
         if (oomEncountered) onToast(Copy.TAPE_TOO_BIG)
         if (loaded == null) {
-            emptyReason = if (lastCommit != null) Copy.CHOP_SOURCE_GONE else Copy.EMPTY_SHELF
+            emptyReason = if (lastCommit != null) Copy.CHOP_SOURCE_GONE else Copy.EMPTY_CHOP
         } else {
             sourceFile = loaded.first
             model = loaded.second
@@ -163,6 +163,21 @@ fun ChopScreen(
         // file is the honest state to show in between (TapeScreen's call).
         val reason = emptyReason
         if (reason != null) EmptyChop(scheme, reason) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
+        return
+    }
+
+    // A source loaded and decoded fine, but `Chopper.byTransients` found no
+    // onsets (silence, or nothing loud enough to register) — `Chopper.kt`'s
+    // own KDoc on `bankAlignedPadCount` notes this deliberately still
+    // produces a full (empty) 16-pad grid rather than refusing outright, so
+    // without this guard `ChopContent` renders a real header reading
+    // "0 SLICES — BY HITS", the CLASSIC/MELODIC picker, and an empty
+    // scrollable list over an all-gray grid preview — a fully-drawn screen
+    // that says nothing readable happened. RE-CHOP can't fix this on its
+    // own (same source, same deterministic detector), so the honest empty
+    // face belongs here, not a silent zero-row render.
+    if (loadedModel.sliceCount == 0) {
+        EmptyChop(scheme, Copy.CHOP_NO_HITS)
         return
     }
 

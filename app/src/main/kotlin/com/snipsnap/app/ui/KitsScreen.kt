@@ -1246,11 +1246,35 @@ private fun ArmControl(
             // "LISTEN" is load-bearing text, not just this button's label:
             // half a dozen toasts and the quick-settings tile
             // (`Copy.TILE_LABEL_IDLE`) all say "PRESS LISTEN AGAIN"/"LISTEN
-            // STILL WORKS" expecting that exact word, so it stays put
-            // rather than being reworded for parallelism with the button
-            // beside it (truncation pass).
-            Box(Modifier.weight(1f)) {
-                PrimaryAction(label = "LISTEN", enabled = true, onClick = onArm)
+            // STILL WORKS" expecting that exact word, so it leads this
+            // label rather than being dropped for parallelism with the
+            // button beside it (truncation pass). But "LISTEN" alone never
+            // said what it listens TO: the mic. Paired against the button
+            // beside it (which does name its source), the row used to read
+            // LISTEN vs INSIDE — one source named, one not.
+            //
+            // "· MIC", not "▸ MIC": the ▸ rule (this file's own KEY/REMIX
+            // BANK B precedent in KitScreen.kt) reserves ▸ for a control
+            // that opens a screen or panel. `onArm` (`App.kt`'s
+            // `requestArm`) arms the mic in place — no navigation, no
+            // panel — the same shape `onTwins`/REMIX BANK B already
+            // decided doesn't earn a ▸. The mic permission prompt this can
+            // trigger is a one-time OS dialog on first use only, not a
+            // per-session "opens something" the way INSIDE's projection
+            // consent always is (see the comment below) — an occasional
+            // exception, not the rule this button follows every time.
+            // "·" is the plain separator already used for exactly this
+            // case elsewhere in the app.
+            //
+            // Each box's weight IS its label's character count, so both
+            // halves sit at the same tightness and neither can be starved
+            // by the other growing. Naming LISTEN's source is what forced
+            // this: at displayBig the two labels' natural widths came to
+            // 838px against a 360dp row's 833px, so once "· MIC" was added
+            // NO weight split fit them both — the pair only works now
+            // because INSIDE's half was shortened too (see below).
+            Box(Modifier.weight(12f)) {
+                PrimaryAction(label = "LISTEN · MIC", enabled = true, onClick = onArm)
             }
             // Was equal-weighted against "LISTEN" above at 33 characters,
             // rendering as "LISTEN INSIDE ▸ …" — the half of the pair that
@@ -1264,15 +1288,25 @@ private fun ArmControl(
             // sits beside the button of that exact name, so INSIDE alone
             // (the term this feature's own KDoc above already uses:
             // "ARM INSIDE") reads as the sibling action without repeating
-            // the word. Weighted 2:1 (same idiom as STOP/SNIP ▸ below).
+            // the word.
+            //
+            // "APPS", not "APP AUDIO": a length fix first — "APP AUDIO"
+            // truncated to "INSIDE ▸ APP AUDI…" at 360dp once LISTEN's
+            // half grew (measured on device, not estimated). It reads at
+            // least as well shortened, because the only words that now
+            // differ across the pair are the two sources themselves —
+            // MIC against APPS — but the reason it changed is that it
+            // did not fit. Safe to reword: "APP AUDIO" appears nowhere
+            // else in the app, unlike "LISTEN" above.
+            //
             // ▸ kept — `onArmInside` (`App.kt`'s `requestArmInside`) always
             // opens the system's screen-capture consent dialog first
             // (`projectionLauncher`/`createScreenCaptureIntent`, asked
             // fresh every session, never cached), which is genuinely
             // "opens something," unlike LISTEN's occasional one-time mic
             // permission prompt.
-            Box(Modifier.weight(2f)) {
-                PrimaryAction(label = "INSIDE ▸ APP AUDIO", enabled = true, onClick = onArmInside)
+            Box(Modifier.weight(13f)) {
+                PrimaryAction(label = "INSIDE ▸ APPS", enabled = true, onClick = onArmInside)
             }
         }
         return
