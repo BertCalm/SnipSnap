@@ -242,8 +242,10 @@ class OrbitSectionTest {
 
     @Test
     fun `a section counts in the set's own bar, not the clip's`() {
-        // A 3/4 set: eight of its bars is 96 sixteenths, which the clip's
-        // bar of sixteen calls six.
+        // A 3/4 set: eight of its bars is 96 sixteenths. The clip's bar of
+        // sixteen used to call that six, and the name of this test was
+        // the opposite of what it asserted. The clip declares the set's
+        // bar now, so eight bars asked for is eight bars written.
         val threeFour = OrbitSet(
             listOf(ring("A", 1, 0)),
             bpm,
@@ -252,7 +254,13 @@ class OrbitSectionTest {
             sections = listOf(OrbitSection("A", 8, setOf(0))),
         )
         assertEquals(96L, OrbitClip.sectionSteps(threeFour, 0))
-        assertEquals(6, OrbitClip.clips(threeFour).single().bars)
+        val clip = OrbitClip.clips(threeFour).single()
+        assertEquals(8, clip.bars)
+        assertEquals(3, clip.beatsPerBar)
+        assertEquals(96L * Mpc3Clip.PULSES_PER_16TH, clip.lengthPulses, "the section's own length, not a padded one")
+        // Six is still the right answer to the other question - what a
+        // track file, whose clips cannot say 3/4, has to pad this to.
+        assertEquals(6, clip.fourFourBars)
     }
 
     @Test
@@ -362,7 +370,13 @@ class OrbitSectionTest {
         // Halve it and the same set is fine.
         val ok = long.copy(sections = listOf(OrbitSection("LONG", 32, setOf(0))))
         assertEquals(null, OrbitClip.refusal(ok))
-        assertEquals(64, OrbitClip.clips(ok).single().bars)
+        // 32 of the set's own 8/4 bars, which is what was asked for. The
+        // cap still counts the 64 bars of 4/4 the same music fills, since
+        // both containers have to hold it.
+        val single = OrbitClip.clips(ok).single()
+        assertEquals(32, single.bars)
+        assertEquals(8, single.beatsPerBar)
+        assertEquals(64, single.fourFourBars)
     }
 
     @Test
