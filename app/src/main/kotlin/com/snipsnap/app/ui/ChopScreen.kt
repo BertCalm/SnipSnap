@@ -167,19 +167,21 @@ fun ChopScreen(
         return
     }
 
-    // A source loaded and decoded fine, but `Chopper.byTransients` found no
-    // onsets (silence, or nothing loud enough to register) — `Chopper.kt`'s
-    // own KDoc on `bankAlignedPadCount` notes this deliberately still
-    // produces a full (empty) 16-pad grid rather than refusing outright, so
-    // without this guard `ChopContent` renders a real header reading
-    // "0 SLICES — BY HITS", the CLASSIC/MELODIC picker, and an empty
-    // scrollable list over an all-gray grid preview — a fully-drawn screen
-    // that says nothing readable happened. RE-CHOP can't fix this on its
-    // own (same source, same deterministic detector), so the honest empty
-    // face belongs here, not a silent zero-row render.
-    if (loadedModel.sliceCount == 0) {
-        EmptyChop(scheme, Copy.CHOP_NO_HITS)
-        return
+    // A source loaded and decoded fine, but the detector found no onsets
+    // (silence, or nothing loud enough to register): `rows` comes straight
+    // off `slices` with no floor, and `bankAlignedPadCount(0)` is 16, so
+    // `ChopContent` draws a real header reading "0 SLICES — BY HITS" over
+    // an empty list and an all-gray grid — fully drawn, saying nothing.
+    //
+    // Said in a toast rather than swapped for an empty face, because
+    // GRID is a live way out and it lives *inside* ChopContent: the mode
+    // row's rechopTo(ChopMode.Grid(sliceCount.coerceIn(1, MAX_HITS)))
+    // slices this same source into equal parts, and coerceIn floors the
+    // zero at 1. An early return here would take the only door to it and
+    // turn a merely-ugly screen into a dead end — the same escape
+    // `Copy.CHOP_AUTO_NONE` already points AUTO's own no-onset case at.
+    LaunchedEffect(loadedModel) {
+        if (loadedModel.sliceCount == 0) onToast(Copy.CHOP_NO_HITS)
     }
 
     ChopContent(

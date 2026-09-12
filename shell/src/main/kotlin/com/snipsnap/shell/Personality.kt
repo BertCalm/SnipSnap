@@ -104,17 +104,22 @@ object Copy {
      */
     const val EMPTY_CHOP = "NOTHING TO CHOP YET. TAPE SOMETHING AND KEEP IT, OR OPEN A KIT WITH SAMPLES ON IT."
     /**
-     * CHOP SHOP's own empty face when a source loaded fine but
-     * `Chopper.byTransients` found zero onsets (silence, or nothing loud
-     * enough to register) — `ChopReviewModel.sliceCount == 0`. Distinct
-     * from [EMPTY_CHOP] (nothing was ever loaded) and [CHOP_SOURCE_GONE]
-     * (the file wouldn't read at all): this file read and decoded
-     * perfectly, it simply had nothing in it CHOP's own detector could
-     * find. RE-CHOP re-runs the same deterministic detector over the same
-     * source and mode, so it cannot fix this on its own — a different
-     * source is the only way out, the same KEEP door [EMPTY_CHOP] names.
+     * Said when a source loaded fine but the detector found zero onsets
+     * (silence, or nothing loud enough to register) —
+     * `ChopReviewModel.sliceCount == 0`, which still draws a full 16-pad
+     * grid and a "0 SLICES" header. Distinct from [EMPTY_CHOP] (nothing
+     * was ever loaded) and [CHOP_SOURCE_GONE] (the file wouldn't read at
+     * all): this file read and decoded perfectly, it simply had nothing in
+     * it CHOP's detector could find.
+     *
+     * Names GRID first because GRID actually works here — it cuts equal
+     * parts without asking the detector anything, so it is the near way
+     * out, and a fresh source is the far one. RE-CHOP is not offered: it
+     * re-runs the same deterministic detector over the same source and
+     * mode. Agrees with [CHOP_AUTO_NONE], which points AUTO's own
+     * no-onset refusal at the same door.
      */
-    const val CHOP_NO_HITS = "NO HITS IN THIS SOURCE TO SLICE. TAPE SOMETHING ELSE AND KEEP IT."
+    const val CHOP_NO_HITS = "NO HITS IN THIS SOURCE. TRY GRID, OR TAPE SOMETHING ELSE."
     /** CHOP SHOP's empty face when the classic (non-melodic) layout itself fails — agrees with the toast `ChopScreen` fires alongside it, whose own fallback is this same "couldn't lay out the slices". */
     const val CHOP_LAYOUT_FAILED = "CHOP FAILED. COULDN'T LAY OUT THE SLICES."
 
