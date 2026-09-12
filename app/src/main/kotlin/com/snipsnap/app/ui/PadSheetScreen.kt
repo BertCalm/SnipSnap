@@ -1110,6 +1110,53 @@ fun PadSheetScreen(
         }
     }
 
+    /**
+     * HEAR: what MUTATE would write, played without writing it — through
+     * [MutateSheet.preview], which reads [slot] and [partner] exactly as
+     * [onMutate] does and refuses exactly what it refuses (own-parent,
+     * GHOSTS, chained — `MutateSheetTest` asserts the SAME words), so
+     * nothing a player hears here is a promise KEEP can't keep.
+     *
+     * Runs against the live [model], not a fresh one under [withFreshKit]:
+     * nothing is written, so there is nothing to serialise against a
+     * concurrent save — the same posture [onRoulette] takes. The GHOSTS
+     * pre-check is copied from [onMutate] rather than left to
+     * [MutateSheet.preview]'s own refusal, so a thumb sees the same
+     * friendly line before AND after committing, not a generic failure
+     * toast on the way there.
+     *
+     * Auditioned through [audition]'s own `shape` parameter, like every
+     * other play on this screen — a mutate replaces the pad's AUDIO, not
+     * its SHAPE, so previewing the bytes alone would promise a sound the
+     * pad's own attack/decay/cutoff would then change.
+     */
+    fun onHear() {
+        if (busy) return
+        val m = model ?: return
+        val who = partner ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (p.velocityLayers.isNotEmpty()) {
+            onToast(Copy.MUTATE_NEEDS_ONE)
+            return
+        }
+        val move = MutateSheet.modeFor(mutateMode)
+        val fraction = pendingMutateKnob
+        scope.launch {
+            busy = true
+            try {
+                val rendered = withContext(Dispatchers.IO) { MutateSheet.preview(m, slot, who, move, fraction) }
+                if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                    audition(rendered, p.level, p)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("HEAR", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
     fun onUnmutate() {
         commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNMUTATED) }) { mm -> MutateSheet.undo(mm, slot) }
     }
@@ -2012,6 +2059,7 @@ fun PadSheetScreen(
                 onKnobChange = { f -> pendingMutateKnob = (f * 40f).roundToInt() / 40f },
                 mutated = MutateSheet.read(pad.recipe),
                 canUndo = binDaysLeft != null,
+                onHear = ::onHear,
                 onMutate = ::onMutate,
                 onUndo = ::onUnmutate,
                 padColor = classColor,
@@ -2802,11 +2850,16 @@ private fun ShapeCard(
  * MUTATE: one hit from two parents. A move (STACK · SPLICE · SPLIT ·
  * MORPH), a partner — a pad on this kit from the mini grid, or the deal
  * ROULETTE spins off the shelf — the move's one knob when it has one,
- * then MUTATE. The line under the title says what the pad already is
- * ("SPLICE: Kit:A02") so a mutated pad never reads as an original; UNDO
- * pulls the pre-mutation sound back out of the bin. Everything behind it
- * is `MutateSheet` over the CLI's own `Mutate` — same recipe, same
- * provenance, same bin.
+ * then HEAR or MUTATE. The line under the title says what the pad
+ * already is ("SPLICE: Kit:A02") so a mutated pad never reads as an
+ * original; UNDO pulls the pre-mutation sound back out of the bin.
+ * Everything behind it is `MutateSheet` over the CLI's own `Mutate` —
+ * same recipe, same provenance, same bin.
+ *
+ * HEAR plays [MutateSheet.preview] — exactly what MUTATE would write,
+ * heard without writing it. Before it existed, using this card was pick
+ * a move, pick a partner, commit a file write, listen, undo: every
+ * iteration cost a rewrite (design/mutate-v2 has the argument in full).
  */
 @Composable
 private fun MutateCard(
@@ -2832,6 +2885,7 @@ private fun MutateCard(
     onKnobChange: (Float) -> Unit,
     mutated: MutateSheet.Applied?,
     canUndo: Boolean,
+    onHear: () -> Unit,
     onMutate: () -> Unit,
     onUndo: () -> Unit,
     padColor: Color,
@@ -3053,6 +3107,18 @@ private fun MutateCard(
             onFractionCommit = {},
         )
 
+        // What MUTATE would write, played without writing it — the
+        // whole reason the card kept feeling like a gamble (design/
+        // mutate-v2): every move used to be pick, commit, listen, undo.
+        // Same enablement as MUTATE, since nothing to preview is nothing
+        // to keep either.
+        ActionButton(
+            "▶ HEAR",
+            scheme,
+            enabled = !busy && partner != null,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onHear,
+        )
         ActionButton(
             "MUTATE ▸",
             scheme,
