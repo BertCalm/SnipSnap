@@ -144,11 +144,14 @@ private fun BounceButton(session: Session, bouncing: Boolean, onBounce: () -> Un
             // Through the app's own wrapper rather than a raw `clickable`: it
             // drops Compose's ripple (TapeOS draws its own feedback) and makes
             // the accessible-name decision explicit. Null, because the text
-            // inside this control already says what it does — and `enabled` is
-            // forwarded rather than dropped, so a screen reader is told the
-            // control is temporarily unavailable instead of it vanishing from
-            // the tree while a render runs.
-            .tapeClick(label = null, enabled = !bouncing, onClick = onBounce)
+            // inside this control already says what it does.
+            //
+            // Enabled even while bouncing, which is the same call SNIPS' own
+            // → LOOP makes: a dead button says only "no". This one is already
+            // labelled BOUNCING…, and pressing it says a bounce is running and
+            // where it will land — which is the answer someone pressing a
+            // second time is actually looking for.
+            .tapeClick(label = null, onClick = onBounce)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
