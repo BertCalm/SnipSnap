@@ -52,6 +52,63 @@ class MutateSheetTest {
     }
 
     @Test
+    fun `preview is the sound KEEP would write, for every move`() {
+        // The card's whole promise: what you hear is what you get. If
+        // HEAR and KEEP could compute a different splice point, a
+        // different crossover or a different band count, auditioning
+        // would be theatre. They read one knob mapping and one render.
+        for (mode in Mutate.Mode.values()) {
+            val m = model("Heard$mode")
+            val partner = MutateSheet.Partner.Pad(2)
+            val heard = MutateSheet.preview(m, 1, partner, mode, 0.5f)
+
+            MutateSheet.apply(m, 1, partner, mode, 0.5f)
+            val kept = WavReader.read(File(m.kitDir, m.pad(1)!!.sampleFile))
+
+            assertEquals(heard.channels, kept.channels, "$mode: channels")
+            assertEquals(heard.sampleRate, kept.sampleRate, "$mode: rate")
+            assertEquals(heard.samples.size, kept.samples.size, "$mode: length")
+            // Within one 16-bit step: the only thing between the two is
+            // the file's own quantisation (WavWriter scales by 32767),
+            // never a different rendering.
+            var worst = 0f
+            for (i in heard.samples.indices) {
+                val d = Math.abs(heard.samples[i] - kept.samples[i])
+                if (d > worst) worst = d
+            }
+            assertTrue(worst <= 2f / 32767f, "$mode: heard and kept differ by $worst, more than the file's own step")
+        }
+    }
+
+    @Test
+    fun `preview leaves the kit exactly as it found it`() {
+        val m = model("Untouched")
+        val pad = m.pad(1)!!
+        val wav = File(m.kitDir, pad.sampleFile)
+        val before = wav.readBytes()
+
+        repeat(3) { MutateSheet.preview(m, 1, MutateSheet.Partner.Pad(2), Mutate.Mode.MORPH, 0.75f) }
+
+        assertTrue(before.contentEquals(wav.readBytes()), "the pad's audio moved")
+        assertNull(m.pad(1)!!.recipe, "a preview left a recipe behind")
+        assertNull(MutateSheet.read(m.pad(1)!!.recipe), "a preview read back as mutated")
+        assertTrue(m.binContents().isEmpty(), "a preview put something in the bin")
+    }
+
+    @Test
+    fun `preview refuses what keeping it would refuse`() {
+        // A move the keep would decline must not be audible first: the
+        // player would hear a sound the card then refuses to give them.
+        val m = model("Refused")
+        assertFailsWith<IllegalArgumentException>("a pad can't be its own parent") {
+            MutateSheet.preview(m, 1, MutateSheet.Partner.Pad(1), Mutate.Mode.MORPH, 0.5f)
+        }
+        assertFailsWith<IllegalArgumentException>("no pad on that slot") {
+            MutateSheet.preview(m, 7, MutateSheet.Partner.Pad(2), Mutate.Mode.MORPH, 0.5f)
+        }
+    }
+
+    @Test
     fun `knobs open at the verb's defaults, round-trip, and read in plain units`() {
         for (mode in listOf(Mutate.Mode.SPLICE, Mutate.Mode.SPLIT, Mutate.Mode.MORPH, Mutate.Mode.ROOM, Mutate.Mode.TRANSPLANT)) {
             val k = MutateSheet.knobFor(mode)!!

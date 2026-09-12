@@ -105,6 +105,91 @@ object Mutate {
         )
     }
 
+    /**
+     * What a mutate sounds like, and what it had to flip to say it.
+     *
+     * [flipped] names the layers STACK inverted because they measurably
+     * cancelled — the recipe records them, and so does the line the
+     * player reads.
+     */
+    data class Rendered(val snip: Snip, val flipped: List<String>)
+
+    /**
+     * The parameter checks, in one place because two entry points ask
+     * them. [apply] asks BEFORE it looks the pad up, so a bad parameter
+     * still refuses ahead of a missing pad — the order every caller has
+     * seen — and [render] asks again for the callers that never go
+     * through [apply] at all.
+     */
+    private fun requireParams(
+        sources: List<Source>,
+        mode: Mode,
+        spliceAtMs: Int,
+        crossoverHz: Float,
+        morphAmount: Float,
+        roomMix: Float,
+        bands: Int,
+    ) {
+        require(sources.isNotEmpty()) { "mutate wants at least one --with parent" }
+        if (mode != Mode.STACK) {
+            require(sources.size == 1) { "${mode.name.lowercase()} takes exactly one --with parent" }
+        }
+        require(spliceAtMs in 5..2000) { "--at wants 5..2000 ms, got $spliceAtMs" }
+        require(crossoverHz in 40f..8000f) { "--hz wants 40..8000, got $crossoverHz" }
+        require(morphAmount in 0f..1f) { "--amount wants 0..1, got $morphAmount" }
+        require(roomMix in 0f..1f) { "--amount wants 0..1, got $roomMix" }
+        require(bands in com.snipsnap.audio.Transplant.MIN_BANDS..com.snipsnap.audio.Transplant.MAX_BANDS) {
+            "--bands wants ${com.snipsnap.audio.Transplant.MIN_BANDS}..${com.snipsnap.audio.Transplant.MAX_BANDS}, got $bands"
+        }
+    }
+
+    /**
+     * The sound a mutate makes, and nothing else: no kit, no bin, no
+     * recipe, no file. [base] and the [sources] in, one [Rendered] out.
+     *
+     * This is the whole of the mutation — the alignment and resampling
+     * that make the parents comparable, then the move itself. [apply] is
+     * this plus the writing: it reads the pad, calls this, and hands the
+     * result to the bin-backed door with a recipe.
+     *
+     * Pulled out so a caller can hear a mutate before it exists. The
+     * MUTATE card has no way to audition a move today, so the loop is
+     * pick, commit a write, listen, undo — and the reason it was a write
+     * was only that the sound lived inside a function that also wrote
+     * (design/mutate-v2). Anything this returns is exactly what [apply]
+     * would have put in the file, which is what lets a preview promise
+     * what it plays.
+     */
+    fun render(
+        base: Snip,
+        sources: List<Source>,
+        mode: Mode = Mode.STACK,
+        spliceAtMs: Int = DEFAULT_SPLICE_MS,
+        crossoverHz: Float = DEFAULT_CROSSOVER_HZ,
+        /** MORPH only: 0 = all pad, 1 = all parent. */
+        morphAmount: Float = 0.5f,
+        /** ROOM only: 0 = dry, 1 = the room alone. */
+        roomMix: Float = 0.5f,
+        /** TRANSPLANT only: how finely the parent's tone is read. */
+        bands: Int = com.snipsnap.audio.Transplant.DEFAULT_BANDS,
+    ): Rendered {
+        requireParams(sources, mode, spliceAtMs, crossoverHz, morphAmount, roomMix, bands)
+        val rate = base.sampleRate
+        val baseAligned = alignToOnset(toStereo(base))
+        val parents = sources.map { it.copy(snip = alignToOnset(resampled(toStereo(it.snip), rate))) }
+
+        val flipped = mutableListOf<String>()
+        val snip = when (mode) {
+            Mode.STACK -> stack(baseAligned, parents, flipped)
+            Mode.SPLICE -> splice(baseAligned, parents.single().snip, spliceAtMs, rate)
+            Mode.SPLIT -> split(baseAligned, parents.single().snip, crossoverHz, rate)
+            Mode.MORPH -> morph(baseAligned, parents.single().snip, morphAmount, rate)
+            Mode.ROOM -> room(baseAligned, parents.single().snip, roomMix, rate)
+            Mode.TRANSPLANT -> com.snipsnap.audio.Transplant.apply(baseAligned, parents.single().snip, bands)
+        }
+        return Rendered(snip, flipped)
+    }
+
     fun apply(
         model: KitBuilderModel,
         slot: Int,
@@ -121,33 +206,13 @@ object Mutate {
         /** Extra recipe fields — how the roulette records its spin. */
         extraRecipe: Map<String, JsonValue> = emptyMap(),
     ): Outcome {
-        require(sources.isNotEmpty()) { "mutate wants at least one --with parent" }
-        if (mode != Mode.STACK) {
-            require(sources.size == 1) { "${mode.name.lowercase()} takes exactly one --with parent" }
-        }
-        require(spliceAtMs in 5..2000) { "--at wants 5..2000 ms, got $spliceAtMs" }
-        require(crossoverHz in 40f..8000f) { "--hz wants 40..8000, got $crossoverHz" }
-        require(morphAmount in 0f..1f) { "--amount wants 0..1, got $morphAmount" }
-        require(roomMix in 0f..1f) { "--amount wants 0..1, got $roomMix" }
-        require(bands in com.snipsnap.audio.Transplant.MIN_BANDS..com.snipsnap.audio.Transplant.MAX_BANDS) {
-            "--bands wants ${com.snipsnap.audio.Transplant.MIN_BANDS}..${com.snipsnap.audio.Transplant.MAX_BANDS}, got $bands"
-        }
+        requireParams(sources, mode, spliceAtMs, crossoverHz, morphAmount, roomMix, bands)
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
 
         val base = com.snipsnap.audio.WavReader.read(File(model.kitDir, pad.sampleFile))
-        val rate = base.sampleRate
-        val baseAligned = alignToOnset(toStereo(base))
-        val parents = sources.map { it.copy(snip = alignToOnset(resampled(toStereo(it.snip), rate))) }
-
-        val flipped = mutableListOf<String>()
-        val result = when (mode) {
-            Mode.STACK -> stack(baseAligned, parents, flipped)
-            Mode.SPLICE -> splice(baseAligned, parents.single().snip, spliceAtMs, rate)
-            Mode.SPLIT -> split(baseAligned, parents.single().snip, crossoverHz, rate)
-            Mode.MORPH -> morph(baseAligned, parents.single().snip, morphAmount, rate)
-            Mode.ROOM -> room(baseAligned, parents.single().snip, roomMix, rate)
-            Mode.TRANSPLANT -> com.snipsnap.audio.Transplant.apply(baseAligned, parents.single().snip, bands)
-        }
+        val (result, flipped) = render(
+            base, sources, mode, spliceAtMs, crossoverHz, morphAmount, roomMix, bands,
+        )
 
         val recipe = JsonValue.Obj(
             linkedMapOf<String, JsonValue>(
