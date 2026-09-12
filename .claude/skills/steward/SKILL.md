@@ -24,11 +24,13 @@ an Android SDK is located** (`local.properties` `sdk.dir`, then
 content-filtered. There is a fourth suite outside Gradle entirely: the
 native audio engines, built with CMake under `app/src/main/cpp/test`.
 
-`app/src/` has no `test` directory, so **`:app` has no Kotlin test source
-set**. Its Compose and ViewModel code is proved only by a compiler —
-`android-build` in CI, or `./gradlew :app:assembleDebug` on a machine with
-an SDK (`app/README.md`, which is worth reading: that tree was written by a
-session that could not compile it).
+There is no `app/src/test` (nor `app/src/androidTest`), so **`:app` has no
+Kotlin test source set** — say the path, because `app/src/main/cpp/test`
+*does* exist and is a different thing entirely. Its Compose and ViewModel
+code is proved only by a compiler — `android-build` in CI, or
+`./gradlew :app:assembleDebug` on a machine with an SDK (`app/README.md` is
+worth reading: that tree was written by a session that could not compile
+it).
 
 Its *native* half is a different story, and "no test source set" must not
 be read as "nothing under `app/` is tested": `app/src/main/cpp/test` holds
@@ -65,7 +67,23 @@ Run the native block whenever the change touches anything under
 `app/src/main/cpp` — the engine sources, the JNI bridge, or the test
 tree's own `CMakeLists.txt` and stubs (`oboe_stubs.cpp`, `stub/jni.h`). A
 build-configuration edit there breaks the suite as effectively as a DSP
-one, and nothing else covers it.
+one.
+
+**But it does not cover `app/src/main/cpp/CMakeLists.txt`.** There are two
+CMake files and they share nothing: the production one is what
+`app/build.gradle.kts` points `externalNativeBuild` at, while the test one
+is standalone and names the engine sources itself
+(`${ENGINE_DIR}/SurfaceEngine.cpp`, `PadEngine.cpp`, `jni.cpp`). So a new
+`.cpp` has to be added to *both* or the host suite silently stops covering
+it, and a production-CMake edit can leave `native-tests` green while
+`:app:assembleDebug` breaks. That one is proved only by `android-build`,
+or by an SDK-backed `./gradlew :app:assembleDebug` — the local run is not
+available in a cloud session, so read that job's log rather than trusting
+green native tests.
+
+This is the repo's recurring defect shape (one quantity in two places)
+wearing a build system: the source list exists twice, and nothing checks
+that the copies agree.
 
 There is **no linter and no formatter** in this build — no ktlint, no
 detekt, no spotless. Don't go looking for a `check` task that does more
