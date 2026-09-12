@@ -334,8 +334,14 @@ Pure: two snips in, cuts out. The screen owns the mic and the deck.
   same amount — the phone's output latency, the ear, the mouth — so the
   median offset between the mouth's onsets and their nearest hits, over
   those within `LAG_MAX_SEC` (200 ms), is taken out before matching. A
-  hum 70 ms late reads as on time; a hum 300 ms late lands nothing, and
-  the toast says so. The screen adds no latency constant of its own.
+  hum 70 ms late reads as on time. A hum with no hit within 200 ms of
+  any of its sounds has no lag to measure and lands nothing, and the
+  toast says so — on a half-second grid a hum 300 ms late is also
+  200 ms early for the next hit, and reads as that; only a hum further
+  than 200 ms from every hit is past reach. The screen adds no latency
+  constant of its own; the stop instant is fixed before anything that
+  waits, and the ring's audio since the stop is dropped, so the window
+  ends where the finger did.
 - **One hit, one sound.** Two mouth sounds on one hit: the nearer keeps
   it, the other is a miss. A mouth sound with no hit within reach is a
   miss. Misses are counted and said, never landed: the mouth's timing
@@ -343,8 +349,9 @@ Pure: two snips in, cuts out. The screen owns the mic and the deck.
 - **What the mouth said** is the classifier's reading of the mouth
   sound itself, from its onset to the next (at most `MOUTH_MAX_SEC`,
   300 ms): a "boom" reads kick-like, a "tss" hat-like. Unsure (under
-  `NOT_SURE_BELOW`), or not a drum (LOOP, UNKNOWN), the tape slice's
-  own classification stands. The classifier has never heard beatbox;
+  `NOT_SURE_BELOW`), or not a drum (LOOP, UNKNOWN, or TONAL — a held
+  vowel is a note, not a hit), the tape slice's own classification
+  stands. The classifier has never heard beatbox;
   the teach log already records corrections, and a hummed chip
   corrected by hand is one.
 - **`ChopMode.Hummed(cuts, labels)`**: exactly those cuts of the source,
@@ -355,6 +362,15 @@ Pure: two snips in, cuts out. The screen owns the mic and the deck.
   since the mouth's word is fresher than a chip corrected before it.
 - **The mouth's own rate.** The mic ring records at its rate, the tape
   is at its own; onsets are read across in tape frames.
+- **The ring's last minute.** GRAB and HOLD's ring holds sixty seconds;
+  a hum longer than that keeps its last minute, and the reader is told
+  where on the tape that window starts (`offsetFrames`), so the sounds
+  it holds still land on the right hits. The mic has to be armed, and
+  armed as the mic: the INSIDE's ring is other apps' playback, not a
+  mouth, and HUM refuses it in words.
+- **Nothing interrupts a hum.** The bench, RE-CHOP, MERGE and SPLIT,
+  SEND and ONTO, and a row's audition are all off while the hum runs:
+  the source playing is what the mouth is following.
 - **The beat you sang** rides along in the reading (`pattern`, every
   mouth onset on the tape with the lag out) for a READ AS GROOVE of the
   hum — the extension the idea named, left for a round that has heard
@@ -362,7 +378,7 @@ Pure: two snips in, cuts out. The screen owns the mic and the deck.
 
 ### What it says
 
-- `ARM THE MIC FIRST. HUM LISTENS THROUGH IT.`
+- `ARM THE MIC FIRST. HUM LISTENS THROUGH IT.` · `THE INSIDE IS ARMED, NOT THE MIC. HUM NEEDS THE MIC.`
 - `HUM ALONG. HEADPHONES ON, OR THE MIC HEARS THE TAPE TOO. TAP HUM AGAIN TO STOP.`
 - `HUMMING…` (the readout) · `6 HUMMED` · header `6 SLICES — HUMMED`
 - `THE MIC HEARD NOTHING. ARM IT, THEN HUM AGAIN.`
@@ -382,7 +398,10 @@ Pure: two snips in, cuts out. The screen owns the mic and the deck.
   mouth's words.
 - Two mouth sounds on one hit: the nearer keeps it, the other is a
   miss. A bar the classifier can't clear leaves every chip the tape's
-  own word. A hum 300 ms late lands nothing, and the lag reads zero.
+  own word. A hum 250 ms from every hit lands nothing, and the lag
+  reads zero.
+- A hum whose window starts a second into the tape is read from there;
+  a held vowel over the kick never becomes a TONAL chip.
 - A hum recorded at half the tape's rate reads in the tape's frames,
   its lag with it.
 

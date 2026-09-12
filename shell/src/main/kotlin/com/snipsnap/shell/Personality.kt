@@ -728,6 +728,8 @@ object Copy {
     // ---- HUM THE CHOP: your mouth places and names the cuts (docs/CHOP_CONTROLS.md §10) ----
     /** HUM with the mic not armed: the hum comes off the same ring GRAB and HOLD use. */
     const val HUM_NOT_LISTENING = "ARM THE MIC FIRST. HUM LISTENS THROUGH IT."
+    /** HUM with the INSIDE armed: that ring holds other apps' playback, not a mouth. */
+    const val HUM_INSIDE = "THE INSIDE IS ARMED, NOT THE MIC. HUM NEEDS THE MIC."
     /** HUM began: the tape is playing, the mic is on. Headphones, or the mic hears the tape and every hit matches. */
     const val HUM_START = "HUM ALONG. HEADPHONES ON, OR THE MIC HEARS THE TAPE TOO. TAP HUM AGAIN TO STOP."
     /** The bench's readout while the hum runs. */

@@ -92,6 +92,21 @@ class HumTest {
     }
 
     @Test
+    fun `a hum whose window starts later on the tape is read from there, and a held vowel names nothing`() {
+        val tape = breakSnip()
+        val hits = CatchModel.hitsOf(tape)
+        // The ring kept only the hum's last part: its first frame sits a second in.
+        val later = Hum.read(tape, hum(0.55 to DrumSynth.kick()), offsetFrames = rate)
+        assertEquals(listOf(2), later.cuts.map { it.hit }, "0.55 s into a window that starts at 1.0 s is the snare")
+        assertEquals(hits[2].range, later.cuts[0].range)
+        // A hummed note over the kick: a note is not a drum, so the kick's own word stands.
+        val vowel = Snip(FloatArray((0.25 * rate).toInt()) { 0.4f * kotlin.math.sin(2 * Math.PI * 220 * it / rate).toFloat() }, 1, rate)
+        val sung = Hum.read(tape, hum(0.53 to vowel))
+        assertEquals(listOf(0), sung.cuts.map { it.hit })
+        assertTrue(sung.cuts[0].mouth != DrumClass.TONAL, "a held vowel never becomes a TONAL chip")
+    }
+
+    @Test
     fun `a hum at its own rate is read in the tape's frames`() {
         val tape = breakSnip()
         val full = hum(0.55 to DrumSynth.kick(), 1.55 to DrumSynth.snare())

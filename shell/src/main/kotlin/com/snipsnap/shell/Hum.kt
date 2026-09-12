@@ -67,21 +67,25 @@ object Hum {
     }
 
     /**
-     * [hum] read against [tape], both mono; the hum's first frame is the
-     * tape's first frame (they started together), at its own rate. [hits]
-     * are the tape's hits as CATCH hears them (every one, not a chop's
-     * sixteen); [sure] is the confidence a mouth sound needs to name a chip.
+     * [hum] read against [tape], both mono; the hum's first frame sits at
+     * tape frame [offsetFrames] (zero when they started together — the
+     * mic ring keeps only its last minute, so a longer hum's window
+     * starts later), at its own rate. [hits] are the tape's hits as
+     * CATCH hears them (every one, not a chop's sixteen); [sure] is the
+     * confidence a mouth sound needs to name a chip.
      */
     fun read(
         tape: Snip,
         hum: Snip,
         hits: List<CatchModel.Hit> = CatchModel.hitsOf(tape),
         sure: Float = ChopReviewModel.NOT_SURE_BELOW,
+        offsetFrames: Int = 0,
     ): Reading {
         require(tape.channels == 1 && hum.channels == 1) { "the tape and the hum are mono here" }
+        require(offsetFrames >= 0) { "the hum's window starts on the tape, not before it: $offsetFrames" }
         val onsets = Transients.detect(hum)
         val scale = tape.sampleRate.toDouble() / hum.sampleRate
-        val mouthAt = onsets.map { (it.frame * scale).roundToInt() }
+        val mouthAt = onsets.map { (it.frame * scale).roundToInt() + offsetFrames }
         val starts = hits.map { it.range.first }
         val matchFrames = (MATCH_SEC * tape.sampleRate).toInt()
         val lagMax = (LAG_MAX_SEC * tape.sampleRate).toInt()
@@ -115,7 +119,11 @@ object Hum {
         return Reading(cuts, missed, lag, hits.size, mouthAt.map { it - lag })
     }
 
-    /** What the mouth said at onset [m] of [hum], or null when it wasn't sure, or not a drum. */
+    /**
+     * What the mouth said at onset [m] of [hum], or null when it wasn't
+     * sure, or not a drum: UNKNOWN, LOOP and TONAL (a held vowel is a note,
+     * not a hit) all leave the tape's own word standing.
+     */
     private fun mouthClass(hum: Snip, onsets: List<Int>, m: Int, sure: Float): DrumClass? {
         val start = onsets[m]
         val cap = start + (MOUTH_MAX_SEC * hum.sampleRate).toInt()
@@ -123,6 +131,8 @@ object Hum {
         if (end - start < (MOUTH_MIN_SEC * hum.sampleRate).toInt()) return null
         val piece = Snip(hum.samples.copyOfRange(start, end), 1, hum.sampleRate)
         val heard = Classifier.classify(piece)
-        return heard.drumClass.takeIf { it != DrumClass.UNKNOWN && it != DrumClass.LOOP && heard.confidence >= sure }
+        return heard.drumClass.takeIf {
+            it != DrumClass.UNKNOWN && it != DrumClass.LOOP && it != DrumClass.TONAL && heard.confidence >= sure
+        }
     }
 }

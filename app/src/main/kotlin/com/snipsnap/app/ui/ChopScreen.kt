@@ -515,6 +515,11 @@ private fun ChopContent(
             onToast(Copy.HUM_NOT_LISTENING)
             return
         }
+        // The INSIDE's ring is other apps' playback, not a mouth.
+        if (MicSessionService.source.value != MicSessionService.Source.MIC) {
+            onToast(Copy.HUM_INSIDE)
+            return
+        }
         voice?.release()
         val v = TapeVoice(model.source.samples, model.source.sampleRate)
         voice = v
@@ -534,23 +539,40 @@ private fun ChopContent(
     fun stopHum(read: Boolean) {
         if (!humming) return
         humming = false
-        voice?.release()
+        // The stop instant is taken before anything that waits: the voice's
+        // release can block up to 200 ms, and the ring keeps recording, so
+        // the hum's length and the snapshot's end are both fixed from here.
+        val stopAt = SystemClock.elapsedRealtime()
+        val heldMs = stopAt - humStart
+        val v = voice
         voice = null
-        if (!read || rechopBusy || sendBusy) return
-        val heldMs = SystemClock.elapsedRealtime() - humStart
+        if (!read || rechopBusy || sendBusy) {
+            v?.release()
+            return
+        }
         val source = model.source
-        val sourceFrames = source.frameCount.toLong() * MicSessionService.SAMPLE_RATE / source.sampleRate
-        val frames = (heldMs * MicSessionService.SAMPLE_RATE / 1000L)
-            .coerceAtMost(sourceFrames + MicSessionService.SAMPLE_RATE * HUM_TAIL_MS / 1000L)
-            .coerceIn(1L, MicSessionService.RING_SECONDS.toLong() * MicSessionService.SAMPLE_RATE)
-            .toInt()
+        val micRate = MicSessionService.SAMPLE_RATE
+        val sourceFrames = source.frameCount.toLong() * micRate / source.sampleRate
+        val heldFrames = (heldMs * micRate / 1000L)
+            .coerceAtMost(sourceFrames + micRate * HUM_TAIL_MS / 1000L)
+            .coerceAtLeast(1L)
+        // The ring keeps its last minute: a longer hum's window starts
+        // later on the tape, and the reader is told where.
+        val ringFrames = MicSessionService.RING_SECONDS.toLong() * micRate
+        val frames = heldFrames.coerceAtMost(ringFrames).toInt()
+        val offsetOnTape = ((heldFrames - frames) * source.sampleRate / micRate).toInt()
         rechopBusy = true
         val current = model
         scope.launch {
             try {
                 val reading = withContext(Dispatchers.IO) {
-                    val raw = MicSessionService.snapshotTail(frames) ?: return@withContext null
-                    Hum.read(current.source, Snip(raw, 1, MicSessionService.SAMPLE_RATE))
+                    // Whatever the ring recorded since the stop is the newest
+                    // part of the tail: asked for and dropped, so the window
+                    // ends at the stop, not at the snapshot.
+                    val late = ((SystemClock.elapsedRealtime() - stopAt) * micRate / 1000L).toInt().coerceAtLeast(0)
+                    val raw = MicSessionService.snapshotTail(frames + late) ?: return@withContext null
+                    val window = if (late > 0 && raw.size > late) raw.copyOf(raw.size - late) else raw
+                    Hum.read(current.source, Snip(window, 1, micRate), offsetFrames = offsetOnTape)
                 }
                 when {
                     reading == null -> onToast(Copy.HUM_NOTHING)
@@ -569,6 +591,9 @@ private fun ChopContent(
                 rechopBusy = false
             }
         }
+        // After the launch, so the snapshot's clock starts before this
+        // can block; `late` above absorbs however long it takes.
+        v?.release()
     }
 
     // The tape running out ends the hum on its own, a beat after its last
@@ -580,6 +605,8 @@ private fun ChopContent(
     }
 
     fun audition(row: ChopReviewModel.Row) {
+        // Not over a hum: the source is what the mouth is following.
+        if (humming) return
         // `TapeVoice.release()` is a bounded join on its own streaming
         // thread (~200ms worst case, usually instant) — doing it here,
         // synchronously at the swap site, is what guarantees the previous
@@ -886,9 +913,9 @@ private fun ChopContent(
             Box(Modifier.weight(2f)) {
                 PrimaryAction(
                     label = if (sendBusy) "…" else "SEND TO GRID",
-                    enabled = !sendBusy && !rechopBusy,
+                    enabled = !sendBusy && !rechopBusy && !humming,
                 ) {
-                    if (sendBusy || rechopBusy) return@PrimaryAction
+                    if (sendBusy || rechopBusy || humming) return@PrimaryAction
                     sendBusy = true
                     // Synchronous, not a composition-scoped launch — see
                     // `audition()`'s comment on why that matters.
@@ -945,9 +972,9 @@ private fun ChopContent(
             SecondaryButton(
                 if (sendBusy) "…" else "ONTO ${entry.kit.name} · BANK ${PadBanks.letter(landBank)}",
                 modifier = Modifier.fillMaxWidth().height(Layout.PRIMARY_ACTION_H.dp),
-                enabled = !sendBusy && !rechopBusy,
+                enabled = !sendBusy && !rechopBusy && !humming,
             ) {
-                if (sendBusy || rechopBusy) return@SecondaryButton
+                if (sendBusy || rechopBusy || humming) return@SecondaryButton
                 sendBusy = true
                 voice?.release()
                 voice = null
