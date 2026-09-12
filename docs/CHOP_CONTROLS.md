@@ -457,3 +457,105 @@ inside 64 bars there is no clip.
   check (a hum whose onsets match every hit, and classify like the tape
   did) could refuse instead.
 
+## 11. Round five: THE ZOOM LADDER
+
+"How many slices" is the wrong question. A four-bar break has a natural
+set of answers — one phrase, four bars, sixteen beats, some number of
+hits, sixty-four sixteenths — and the ladder makes those the choices.
+At the top a pad is a whole phrase, at the bottom it is one sixteenth,
+and every rung is musical: chopping at BAR gives you pads you can
+rearrange into a new song in seconds; chopping at 16TH gives you the
+classic stutter-and-roll kit. The HIT rung is BY HITS, which already
+exists; BEAT and 16TH's *snap* already exists as ON THE GRID; this
+round adds the rungs themselves, and the two things above HIT that the
+tempo estimate does not give — the one, and the phrase.
+
+### In the hand
+
+Under GRID on the CUT bench, a row: `ZOOM · THE LADDER · THE ONE AT
+0.52s · 4 BARS A PHRASE`, and five segments — **COUNT · 16TH · BEAT ·
+BAR · PHRASE**. COUNT is the plain grid, so many equal parts. The
+other four cut the source's own pulse from the one: a pad per
+sixteenth, per beat, per bar, per phrase. The header reads `8 SLICES —
+BAR ×8`, the readout `BAR ×8`. Every row is classed LOOP and named for
+its rung (`BAR 3`, `16TH 12`), and lands as a one-shot pad of that
+name through SEND and ONTO alike. On a rung, **◀ ▶ moves the one** a
+beat earlier or later (the caption follows), since the one can be
+wrong: a half-time feel, a snare-led break. With no confident tempo
+the row reads `NO TEMPO HEARD. THE LADDER NEEDS A PULSE.` and a rung
+refuses with the same words. MERGE and SPLIT work on a rung's slices
+and keep their names.
+
+### Underneath (`shell/Ladder.kt`)
+
+Pure: the source, its tempo and its hits in, a pulse and cut frames
+out. The chop model cuts and names the slices (`ChopMode.Ladder`).
+
+- **The beat is fitted to the hits**, the way ON THE GRID fits its
+  step (the one `fitStep` now serves both): the tempo estimate is the
+  seed, the pulse of this take is the hits.
+- **The one.** The estimator has a period but no phase, and captures
+  rarely start on the downbeat. Of the four beats the first bar could
+  start on, the one is the beat whose lines carry the most weight down
+  the tape — the loudest sample in the window round each line
+  (`ONE_LOOK_BEFORE` 0.05 of a beat before it, for the detector's
+  backoff, to `ONE_LOOK_AFTER` 0.25 after), summed — since the kick on
+  the one is what a break leans on. The earliest wins a tie. The hits
+  before the one are the pickup, and no pad: BY HITS keeps them, the
+  ladder starts on the one. The honest first version the idea named
+  put bar one at the first strong hit and let you nudge; this weighs
+  every bar, and still lets you nudge.
+- **The phrase** is the period at which the bars rhyme. A bar is its
+  rhythm first — energy per sixteenth against the bar's loudest
+  (`PROFILE_STEPS`) — and its colour second (`Similar.distance` on the
+  bar's features, at `FEATURE_WEIGHT` 0.5): two bars of the same kit
+  with the snare on a different step sound alike to the spectral
+  features and nothing alike to the ear. Over the periods the tape
+  holds at least twice (`PHRASE_PERIODS` 2, 4, 8), the mean distance
+  between each bar and the bar a period later; the phrase is the
+  smallest period that rhymes as well as any longer one
+  (`RHYME_SLACK` 1.2), so an ABAB break phrases at two bars and an
+  ABCD at four. Fewer than four whole bars is one phrase of them.
+- **The rungs** cut every span from the one to the end, the last slice
+  running to the end whole or not, at most 64 (`MAX_HITS`): a 16TH
+  chop of eight bars keeps its first 64. A last slice shorter than
+  half a span (`TAIL_MIN`) is the sliver the detector's backoff leaves,
+  no pad, and joins the one before.
+- **Names ride on the row** (`Row.label`: a ghost's `AFTER SNARE 2`, or
+  a rung's `BAR 3`) and land as the pad's name; a rung's pad is a
+  one-shot, a ghost's a gate.
+
+### What it says
+
+- `ZOOM · THE LADDER · THE ONE AT 0.52s · 4 BARS A PHRASE`
+- `NO TEMPO HEARD. THE LADDER NEEDS A PULSE.`
+- header `8 SLICES — BAR ×8` · `BAR (NO TEMPO)` · readout `BAR ×8` · `BAR · NO TEMPO`
+- HELP: `· ZOOM ON CHOP: 16TH, BEAT, BAR OR PHRASE PADS. ◀ ▶ MOVES THE ONE.`
+
+### Laws the tests hold (`LadderTest`)
+
+- On eight bars at 120 with a hat pickup a beat before the first loud
+  kick: the beat fits to half a second, the one is a beat after the
+  anchor and sits on the kick; nudged a beat later it moves a beat,
+  nudged a beat earlier the pickup is the one, four beats round is the
+  same one; eight whole bars.
+- BAR cuts eight, four beats apart, from the one; BEAT cuts 32; 16TH
+  cuts 128 and keeps 64; PHRASE cuts eight over the phrase; the one a
+  beat later leaves a three-beat tail that is a pad, three beats later
+  a one-beat tail that is not.
+- Bars ABAB phrase at two, ABCD at four, three bars are one phrase.
+- The ladder mode cuts four bars named BAR 1..4, LOOP and sure, header
+  `BAR ×4`, the bench's hit controls off, the pads named and one-shot;
+  BEAT cuts sixteen; a merge keeps the names it keeps and reads
+  EDITED; a tape with no tempo cuts nothing and reads `BAR (NO TEMPO)`.
+
+### What the phone should judge
+
+- Whether the loudest-line rule finds the one on real breaks, or
+  whether it wants the low band alone (a kick is low, a snare is not),
+  and how often the nudge is needed.
+- Whether 1.2 is the right slack for a rhyme: too tight and every
+  break phrases at eight, too loose and every one at two.
+- Whether the pickup wants to be a pad after all (`PICKUP`, before
+  BAR 1) for breaks that start on the and.
+

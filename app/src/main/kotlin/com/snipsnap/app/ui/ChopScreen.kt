@@ -71,6 +71,7 @@ import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Hum
 import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.shell.Ladder
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PeaksPyramid
@@ -453,6 +454,35 @@ private fun ChopContent(
         if (want != grid.parts) rechopTo(grid.copy(parts = want))
     }
 
+    /** THE ZOOM LADDER's ◀ ▶ (docs/CHOP_CONTROLS.md §11): the one a beat earlier or later. */
+    fun stepLadder(delta: Int) {
+        val ladder = model.mode as? ChopReviewModel.ChopMode.Ladder ?: return
+        if (model.pulse == null) {
+            onToast(Copy.LADDER_NO_TEMPO)
+            return
+        }
+        rechopTo(ladder.copy(nudge = ladder.nudge + delta))
+    }
+
+    /**
+     * A rung of the ladder, or (null) the plain GRID by count. With no
+     * pulse the ladder refuses in words and the chop stays as it is; a
+     * rung keeps the nudge the last rung had.
+     */
+    fun climbTo(rung: Ladder.Rung?) {
+        if (rung == null) {
+            if (model.mode !is ChopReviewModel.ChopMode.Grid) rechopTo(ChopReviewModel.ChopMode.Grid(model.hitsHeard.coerceIn(1, ChopReviewModel.MAX_HITS)))
+            return
+        }
+        if (tempoMeasured.first && tempoMeasured.second == null) {
+            onToast(Copy.LADDER_NO_TEMPO)
+            return
+        }
+        val current = model.mode as? ChopReviewModel.ChopMode.Ladder
+        if (current?.rung == rung) return
+        rechopTo(ChopReviewModel.ChopMode.Ladder(rung, current?.nudge ?: 0))
+    }
+
     /**
      * MERGE / SPLIT under a chip: a local move on the model, off the main
      * thread all the same — SPLIT runs the detector over the slice, and a
@@ -714,7 +744,14 @@ private fun ChopContent(
                     }
                 }
             },
-            onStep = { delta -> if (model.mode is ChopReviewModel.ChopMode.Grid) stepGrid(delta) else stepHits(delta) },
+            onStep = { delta ->
+                when (model.mode) {
+                    is ChopReviewModel.ChopMode.Grid -> stepGrid(delta)
+                    is ChopReviewModel.ChopMode.Ladder -> stepLadder(delta)
+                    else -> stepHits(delta)
+                }
+            },
+            onRung = ::climbTo,
             onAuto = {
                 val hits = ChopReviewModel.hitsOf(model.mode)
                 if (hits != null && !rechopBusy && !sendBusy) {
@@ -814,7 +851,7 @@ private fun ChopContent(
                     SliceRow(
                         row = row,
                         // The small text beside the chip: the pitch on MELODIC, the fold on FOLD, else a ghost's name.
-                        pitchLabel = if (melodic) pitchLabels?.getOrNull(row.n - 1) else foldTags?.getOrNull(row.n - 1) ?: row.ghostOf,
+                        pitchLabel = if (melodic) pitchLabels?.getOrNull(row.n - 1) else foldTags?.getOrNull(row.n - 1) ?: row.label,
                         // The chip opens the list rather than advancing one
                         // step (September UAT, finding 6): the cycle ran one
                         // way through ten classes with no back step, so a
@@ -1214,6 +1251,8 @@ private fun CutBench(
     onHum: () -> Unit,
     /** True while the hum runs: the segment reads STOP and the readout HUMMING…. */
     humming: Boolean,
+    /** THE ZOOM LADDER (§11): a rung, or null for the plain GRID by count. */
+    onRung: (Ladder.Rung?) -> Unit,
 ) {
     val hits = ChopReviewModel.hitsOf(model.mode)
     val readout = when (val mode = model.mode) {
@@ -1222,11 +1261,16 @@ private fun CutBench(
         is ChopReviewModel.ChopMode.Ghosts -> "${model.sliceCount} ${if (model.sliceCount == 1) "GHOST" else "GHOSTS"} · ${model.hitsHeard} HITS"
         is ChopReviewModel.ChopMode.Grid -> "GRID ×${mode.parts}"
         is ChopReviewModel.ChopMode.Hummed -> "${model.sliceCount} HUMMED"
+        is ChopReviewModel.ChopMode.Ladder -> if (model.pulse != null) "${mode.rung.label} ×${model.sliceCount}" else "${mode.rung.label} · NO TEMPO"
     }
     // By hits the count and the mode are two things (12 HITS · BY HITS ·
     // FINE); on a grid the mode label already is the count.
     val summary = if (hits != null) "$readout · ${model.modeLabel()}" else model.modeLabel()
-    val unit = if (hits != null) "HIT" else "PART"
+    val unit = when {
+        hits != null -> "HIT"
+        model.mode is ChopReviewModel.ChopMode.Ladder -> "BEAT"
+        else -> "PART"
+    }
     GroupBox(
         legend = "CUT",
         summary = summary,
@@ -1236,7 +1280,7 @@ private fun CutBench(
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             SegmentButton("BY HITS", active = model.mode is ChopReviewModel.ChopMode.ByHits, modifier = Modifier.weight(1f), onClick = onByHits)
-            SegmentButton("GRID", active = model.mode is ChopReviewModel.ChopMode.Grid, modifier = Modifier.weight(1f), onClick = onGrid)
+            SegmentButton("GRID", active = model.mode is ChopReviewModel.ChopMode.Grid || model.mode is ChopReviewModel.ChopMode.Ladder, modifier = Modifier.weight(1f), onClick = onGrid)
             SegmentButton("GHOSTS", active = model.ghosts, modifier = Modifier.weight(1f), onClick = onGhosts)
             SegmentButton(
                 if (humming) "STOP" else "HUM",
@@ -1246,16 +1290,38 @@ private fun CutBench(
             )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            SecondaryButton("◀", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy, spoken = "ONE $unit FEWER") { onStep(-1) }
+            SecondaryButton("◀", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy, spoken = if (unit == "BEAT") "THE ONE A BEAT EARLIER" else "ONE $unit FEWER") { onStep(-1) }
             Box(
                 Modifier.weight(1.6f).heightIn(min = Layout.MIN_HIT_TARGET.dp).lcdPanel(scheme),
                 contentAlignment = Alignment.Center,
             ) {
                 TapeText(if (humming) Copy.HUM_BUSY else if (busy) Copy.CHOP_BENCH_BUSY else readout, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 1)
             }
-            SecondaryButton("▶", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy, spoken = "ONE $unit MORE") { onStep(1) }
+            SecondaryButton("▶", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy, spoken = if (unit == "BEAT") "THE ONE A BEAT LATER" else "ONE $unit MORE") { onStep(1) }
             if (hits != null) {
                 SecondaryButton("AUTO", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy, onClick = onAuto)
+            }
+        }
+        if (model.mode is ChopReviewModel.ChopMode.Grid || model.mode is ChopReviewModel.ChopMode.Ladder) {
+            // THE ZOOM LADDER (§11): under GRID, the rungs — COUNT is the
+            // plain grid; the rest cut the source's own pulse from the
+            // one, and ◀ ▶ moves the one. The caption reads where the one
+            // sits and how long a phrase runs, or that there is no pulse.
+            val ladder = model.mode as? ChopReviewModel.ChopMode.Ladder
+            val pulse = model.pulse
+            val (measured, t) = tempo
+            val caption = when {
+                pulse != null -> Copy.ladderOne(pulse.downbeat(ladder?.nudge ?: 0).toFloat() / model.source.sampleRate, pulse.phraseBars)
+                !measured -> "MEASURING…"
+                t == null -> Copy.LADDER_NO_TEMPO
+                else -> "A PAD PER RUNG OF THE PULSE, FROM THE ONE"
+            }
+            TapeText("ZOOM · THE LADDER · $caption", TapeType.pixelSmall, if (t == null && measured) scheme.ink3.tape else scheme.ink2.tape, maxLines = 1)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                SegmentButton("COUNT", active = ladder == null, modifier = Modifier.weight(1f)) { if (!busy) onRung(null) }
+                for (rung in Ladder.Rung.entries) {
+                    SegmentButton(rung.label, active = ladder?.rung == rung, modifier = Modifier.weight(1f)) { if (!busy) onRung(rung) }
+                }
             }
         }
         if (hits != null) {

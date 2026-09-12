@@ -65,6 +65,10 @@ class ChopReviewModel private constructor(
     private val ghostNames: List<String?>? = null,
     /** GHOSTS: how many hits the spaces are the spaces of; null for a chop of hits, where the rows are the hits. */
     hitsHeard: Int? = null,
+    /** THE ZOOM LADDER (§11): each row's name (`BAR 3`), a one-shot pad classed LOOP; null on any other chop. */
+    private val labels: List<String?>? = null,
+    /** THE ZOOM LADDER: the take's pulse the rungs were cut on; null off the ladder, or with no tempo to cut on. */
+    val pulse: Ladder.Pulse? = null,
 ) {
     /** How many hits the ear heard: the rows on a chop of hits, the hits underneath on GHOSTS. The bench steps from this. */
     val hitsHeard: Int = hitsHeard ?: slices.size
@@ -148,6 +152,15 @@ class ChopReviewModel private constructor(
             /** One mouth sound as a note: [at] in source frames (the lag out), [velocity] its loudness among the hum's sounds, 0..1. */
             data class Beat(val at: Int, val velocity: Float)
         }
+
+        /**
+         * THE ZOOM LADDER (§11, `Ladder`): a pad per [rung] of the source's
+         * own pulse — sixteenth, beat, bar or phrase — from the one, moved
+         * [nudge] beats by the bench's ◀ ▶. Rows are classed LOOP and
+         * named for the rung (`BAR 3`). With no confident tempo there is
+         * nothing to cut on: no rows, and the header says so.
+         */
+        data class Ladder(val rung: com.snipsnap.shell.Ladder.Rung, val nudge: Int = 0) : ChopMode
     }
 
     /**
@@ -201,7 +214,11 @@ class ChopReviewModel private constructor(
         val classification: Classification,
         /** GHOSTS: the hit this space follows, as the pad's name (AFTER SNARE 2); null on a chop of hits. */
         val ghostOf: String? = null,
+        /** THE ZOOM LADDER: the rung's name for this slice (`BAR 3`); null off the ladder. */
+        val tag: String? = null,
     ) {
+        /** The pad's name when the chop gives one — a ghost's, or a rung's — else null and the class names it. */
+        val label: String? get() = ghostOf ?: tag
         /** Tap-to-cycle override; null = the classifier's call stands. */
         var override: DrumClass? = null
             internal set
@@ -221,7 +238,13 @@ class ChopReviewModel private constructor(
         // A ghost is texture, not a drum: the drum classifier would call
         // every one NOT SURE. Its features still ride along, for FOLD.
         val ghost = ghostNames?.getOrNull(i)
-        if (ghost != null) Row(i + 1, s, Classification(DrumClass.LOOP, 1f, heard.features), ghost) else Row(i + 1, s, heard)
+        val rung = labels?.getOrNull(i)
+        when {
+            ghost != null -> Row(i + 1, s, Classification(DrumClass.LOOP, 1f, heard.features), ghost)
+            // A bar or a beat is a piece of groove, not a drum: LOOP, named for the rung.
+            rung != null -> Row(i + 1, s, Classification(DrumClass.LOOP, 1f, heard.features), tag = rung)
+            else -> Row(i + 1, s, heard)
+        }
     }
 
     /** True for a GHOSTS chop: rows are the spaces between the hits. */
@@ -245,6 +268,7 @@ class ChopReviewModel private constructor(
             is ChopMode.Ghosts -> parts += "GHOSTS"
             is ChopMode.Grid -> parts += "GRID ×${mode.parts}"
             is ChopMode.Hummed -> parts += "HUMMED"
+            is ChopMode.Ladder -> parts += if (pulse != null) "${mode.rung.label} ×$sliceCount" else "${mode.rung.label} (NO TEMPO)"
         }
         if (hits != null) {
             if (hits.ear != Ear.NORMAL) parts += hits.ear.name
@@ -316,7 +340,8 @@ class ChopReviewModel private constructor(
         slices.removeAt(index + 1)
         val overrides = rows.map { it.override }.toMutableList().also { it.removeAt(index + 1) }
         val names = ghostNames?.toMutableList()?.also { it.removeAt(index + 1) }
-        return rebuilt(slices, overrides, names)
+        val tags = labels?.toMutableList()?.also { it.removeAt(index + 1) }
+        return rebuilt(slices, overrides, names, tags)
     }
 
     /**
@@ -347,12 +372,14 @@ class ChopReviewModel private constructor(
         val overrides = rows.map { it.override }.toMutableList().also { it.add(index + 1, null) }
         // The second half of a split ghost is still the space after the same hit.
         val names = ghostNames?.toMutableList()?.also { it.add(index + 1, it[index]) }
-        return rebuilt(slices, overrides, names)
+        // The second half of a split bar is still that bar.
+        val tags = labels?.toMutableList()?.also { it.add(index + 1, it[index]) }
+        return rebuilt(slices, overrides, names, tags)
     }
 
     /** A model over [slices] with [overrides] laid back onto its rows, marked [edited]. */
-    private fun rebuilt(slices: List<Slice>, overrides: List<DrumClass?>, names: List<String?>?): ChopReviewModel {
-        val m = ChopReviewModel(source, mode, slices, tape, edited = true, tempoLazy = tempoLazy, gridStep = gridStep, ghostNames = names, hitsHeard = if (ghosts) hitsHeard else null)
+    private fun rebuilt(slices: List<Slice>, overrides: List<DrumClass?>, names: List<String?>?, tags: List<String?>? = labels): ChopReviewModel {
+        val m = ChopReviewModel(source, mode, slices, tape, edited = true, tempoLazy = tempoLazy, gridStep = gridStep, ghostNames = names, hitsHeard = if (ghosts) hitsHeard else null, labels = tags, pulse = pulse)
         for ((i, o) in overrides.withIndex()) m.rows[i].override = o
         return m
     }
@@ -459,7 +486,7 @@ class ChopReviewModel private constructor(
                 "sourceFrame" to start.toString(),
                 "lengthFrames" to length.toString(),
             ) + cut + ghost,
-            displayName = row.ghostOf,
+            displayName = row.label,
         )
     }
 
@@ -661,6 +688,7 @@ class ChopReviewModel private constructor(
             is ChopMode.Ghosts -> mode.hits
             is ChopMode.Grid -> null
             is ChopMode.Hummed -> null
+            is ChopMode.Ladder -> null
         }
 
         /** [mode] with its hits chop replaced by [hits] (a grid becomes [hits] itself). */
@@ -711,20 +739,7 @@ class ChopReviewModel private constructor(
             val seed = 60.0 / bpm / grid.perBeat * source.sampleRate
             if (slices.size < 2 || grid == GridSnap.OFF) return slices to seed
             val anchor = slices.first().sourceFrame
-            var step = seed
-            repeat(2) {
-                var num = 0.0
-                var den = 0.0
-                for (s in slices) {
-                    val k = Math.round((s.sourceFrame - anchor) / step).toDouble()
-                    num += k * (s.sourceFrame - anchor)
-                    den += k * k
-                }
-                if (den > 0.0) {
-                    val fitted = num / den
-                    if (kotlin.math.abs(fitted - seed) <= seed * GRID_FIT_TOLERANCE) step = fitted
-                }
-            }
+            val step = fitStep(anchor, slices.map { it.sourceFrame }, seed)
             val kept = LinkedHashMap<Long, Slice>()
             for (s in slices) {
                 val k = Math.round((s.sourceFrame - anchor) / step)
@@ -739,6 +754,33 @@ class ChopReviewModel private constructor(
                 val end = if (i + 1 < cuts.size) cuts[i + 1].first else source.frameCount
                 Chopper.slice(source, cut, end, s.onset, Chopper.SLICE_CLEANUP)
             }.filter { it.snip.frameCount > 0 } to step
+        }
+
+        /**
+         * [seed] spacing fitted to [positions] from [anchor]: the seed
+         * decides which line each position is nearest to, then the
+         * spacing is the least-squares fit of offset against line index,
+         * twice. A fit further than [GRID_FIT_TOLERANCE] from the seed is
+         * not trusted and the seed stands. ON THE GRID's step, and the
+         * ladder's beat (`Ladder.hear`), are both this.
+         */
+        internal fun fitStep(anchor: Int, positions: List<Int>, seed: Double): Double {
+            if (positions.size < 2) return seed
+            var step = seed
+            repeat(2) {
+                var num = 0.0
+                var den = 0.0
+                for (p in positions) {
+                    val k = Math.round((p - anchor) / step).toDouble()
+                    num += k * (p - anchor)
+                    den += k * k
+                }
+                if (den > 0.0) {
+                    val fitted = num / den
+                    if (kotlin.math.abs(fitted - seed) <= seed * GRID_FIT_TOLERANCE) step = fitted
+                }
+            }
+            return step
         }
 
         /** Below this a slice counts as unpitched for melodic placement. */
@@ -771,6 +813,24 @@ class ChopReviewModel private constructor(
 
         /** [chop] with a tempo already measured for this source (or not yet, but shared). */
         private fun chop(source: Snip, mode: ChopMode, tape: TapeRef?, tempoLazy: Lazy<TempoEstimate?>): ChopReviewModel {
+            if (mode is ChopMode.Ladder) {
+                // THE ZOOM LADDER: the take's pulse off every hit, then a
+                // cut per rung from the one. No tempo, nothing to cut on.
+                val tempo = tempoLazy.value ?: return ChopReviewModel(source, mode, emptyList(), tape, tempoLazy = tempoLazy)
+                val hits = Chopper.byTransients(source, maxSlices = Chopper.AUTO_MAX, cleanup = null)
+                val pulse = Ladder.hear(source, tempo, hits) ?: return ChopReviewModel(source, mode, emptyList(), tape, tempoLazy = tempoLazy)
+                val cuts = Ladder.cuts(source, pulse, mode.rung, mode.nudge)
+                val slices = cuts.mapIndexed { i, c ->
+                    val end = cuts.getOrNull(i + 1) ?: source.frameCount
+                    Chopper.slice(source, c, end, null, Chopper.SLICE_CLEANUP)
+                }
+                val kept = slices.withIndex().filter { it.value.snip.frameCount > 0 }
+                return ChopReviewModel(
+                    source, mode, kept.map { it.value }, tape, tempoLazy = tempoLazy,
+                    labels = kept.map { Ladder.name(mode.rung, it.index) },
+                    pulse = pulse,
+                )
+            }
             if (mode is ChopMode.Hummed) {
                 // The mouth's cuts, each cut from the source as any chop cut
                 // is; a cut off the source (a stale reading) is dropped with

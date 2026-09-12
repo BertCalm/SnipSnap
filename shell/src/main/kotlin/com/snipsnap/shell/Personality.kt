@@ -416,6 +416,7 @@ object Copy {
         "· GHOSTS ON CHOP: THE SPACES BETWEEN HITS. HOLD A PAD, HOLD THE ROOM.",
         "· CATCH ON TAPE: HOLD A PAD AS THE HIT GOES BY. IT LANDS THERE.",
         "· HUM ON CHOP: BEATBOX ALONG. THE CUTS AND LABELS FOLLOW YOUR MOUTH.",
+        "· ZOOM ON CHOP: 16TH, BEAT, BAR OR PHRASE PADS. ◀ ▶ MOVES THE ONE.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -724,6 +725,13 @@ object Copy {
      */
     fun retrimLanded(pad: String, treatment: String?): String =
         "$pad RE-CUT." + (treatment?.let { " THE ${it.uppercase()} STAYED WITH THE OLD ONE - IT'S IN THE BIN." } ?: "")
+
+    // ---- THE ZOOM LADDER: a pad per sixteenth, beat, bar or phrase (docs/CHOP_CONTROLS.md §11) ----
+    /** The ladder row's caption: where the one sits on the source, and how long a phrase runs. */
+    fun ladderOne(oneSec: Float, phraseBars: Int): String =
+        String.format(java.util.Locale.ROOT, "THE ONE AT %.2fs · %s A PHRASE", oneSec, if (phraseBars == 1) "1 BAR" else "$phraseBars BARS")
+    /** The ladder row's caption with no pulse to climb. */
+    const val LADDER_NO_TEMPO = "NO TEMPO HEARD. THE LADDER NEEDS A PULSE."
 
     // ---- HUM THE CHOP: your mouth places and names the cuts (docs/CHOP_CONTROLS.md §10) ----
     /** HUM with the mic not armed: the hum comes off the same ring GRAB and HOLD use. */
