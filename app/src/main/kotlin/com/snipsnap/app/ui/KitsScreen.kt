@@ -740,7 +740,9 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
             Modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .border(1.dp, scheme.ink2.tape, RoundedCornerShape(4.dp))
-                .let { if (!busy) it.tapeClick(label = null) { onShare(room) } else it }
+                // Always clickable, `!busy` forwarded rather than dropped
+                // (accessibility audit finding 12).
+                .tapeClick(label = null, enabled = !busy) { onShare(room) }
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -753,7 +755,9 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
                     .border(2.dp, Brush.linearGradient(listOf(BinRedGlow, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
-                    .let { if (!busy) it.tapeClick(label = null) { onForget(room) } else it },
+                    // Always clickable, `!busy` forwarded rather than
+                    // dropped (accessibility audit finding 12).
+                    .tapeClick(label = null, enabled = !busy) { onForget(room) },
                 contentAlignment = Alignment.Center,
             ) {
                 TapeText("FORGET → BIN", TapeType.pixel, if (busy) scheme.ink3.tape else BinRedGlow)
@@ -793,7 +797,9 @@ private fun BinnedRoomRow(binned: Rooms.Binned, busy: Boolean, onRestore: (Rooms
             Modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                .let { if (!busy) it.tapeClick(label = null) { onRestore(binned) } else it }
+                // Always clickable, `!busy` forwarded rather than dropped
+                // (accessibility audit finding 12).
+                .tapeClick(label = null, enabled = !busy) { onRestore(binned) }
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -818,7 +824,11 @@ private fun EmptyRoomsBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
             .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(5.dp))
-            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
+            // Always clickable, `enabled` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 — see ActionButton in PadSheetScreen.kt).
+            .tapeClick(label = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -923,7 +933,9 @@ private fun KitRow(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme)
-                        .let { if (!busy) it.tapeClick(label = null) { onRequestRename(entry) } else it }
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12).
+                        .tapeClick(label = null, enabled = !busy) { onRequestRename(entry) }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -934,7 +946,9 @@ private fun KitRow(
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme)
                         .border(2.dp, Brush.linearGradient(listOf(BinRedGlow, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
-                        .let { if (!busy) it.tapeClick(label = null) { onRequestDelete(entry) } else it }
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12).
+                        .tapeClick(label = null, enabled = !busy) { onRequestDelete(entry) }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -1090,7 +1104,11 @@ fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
             .height(Layout.PRIMARY_ACTION_H.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
             .then(rim)
-            .then(if (enabled) Modifier.tapeClick(label = null, onClick = onClick) else Modifier),
+            // Always clickable, `enabled` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 — see ActionButton in PadSheetScreen.kt).
+            .tapeClick(label = null, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(
@@ -1171,11 +1189,36 @@ private fun ArmControl(
     val scheme = LocalScheme.current
     if (!armed) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // "LISTEN" is load-bearing text, not just this button's label:
+            // half a dozen toasts and the quick-settings tile
+            // (`Copy.TILE_LABEL_IDLE`) all say "PRESS LISTEN AGAIN"/"LISTEN
+            // STILL WORKS" expecting that exact word, so it stays put
+            // rather than being reworded for parallelism with the button
+            // beside it (truncation pass).
             Box(Modifier.weight(1f)) {
                 PrimaryAction(label = "LISTEN", enabled = true, onClick = onArm)
             }
-            Box(Modifier.weight(1f)) {
-                PrimaryAction(label = "LISTEN INSIDE ▸ OTHER APPS' AUDIO", enabled = true, onClick = onArmInside)
+            // Was equal-weighted against "LISTEN" above at 33 characters,
+            // rendering as "LISTEN INSIDE ▸ …" — the half of the pair that
+            // actually says which audio this arms (another app's, not the
+            // mic) was exactly what got cut. PrimaryAction sets
+            // TapeType.displayBig (12sp + 2sp tracking, much wider per
+            // character than ActionButton's own pixel face), so even
+            // weight(2f) against "LISTEN" still ellipsized on-device at
+            // "LISTEN INSIDE ▸ APP A…" — confirmed by screenshot, not just
+            // estimated. "LISTEN" dropped from this half too: it already
+            // sits beside the button of that exact name, so INSIDE alone
+            // (the term this feature's own KDoc above already uses:
+            // "ARM INSIDE") reads as the sibling action without repeating
+            // the word. Weighted 2:1 (same idiom as STOP/SNIP ▸ below).
+            // ▸ kept — `onArmInside` (`App.kt`'s `requestArmInside`) always
+            // opens the system's screen-capture consent dialog first
+            // (`projectionLauncher`/`createScreenCaptureIntent`, asked
+            // fresh every session, never cached), which is genuinely
+            // "opens something," unlike LISTEN's occasional one-time mic
+            // permission prompt.
+            Box(Modifier.weight(2f)) {
+                PrimaryAction(label = "INSIDE ▸ APP AUDIO", enabled = true, onClick = onArmInside)
             }
         }
         return

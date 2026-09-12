@@ -800,19 +800,19 @@ private fun CardRow(
                 // long press and tapeClick has only the one gesture — the
                 // same pair ChopScreen's class chip uses, and the same
                 // reason: it registers real accessibility actions for both.
-                .let {
-                    if (enabled) {
-                        it.combinedClickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onLongClickLabel = if (tree != null) "FORGET THIS CARD" else null,
-                            onLongClick = if (tree != null) onForget else null,
-                            onClick = onPick,
-                        )
-                    } else {
-                        it
-                    }
-                }
+                // `enabled` is forwarded into combinedClickable itself
+                // rather than gating the call — the same principle as
+                // tapeClick's own `enabled` param: dropping the call
+                // entirely would remove this row from the accessibility
+                // tree instead of announcing it as unavailable (finding 12).
+                .combinedClickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    enabled = enabled,
+                    onLongClickLabel = if (tree != null) "FORGET THIS CARD" else null,
+                    onLongClick = if (tree != null) onForget else null,
+                    onClick = onPick,
+                )
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -869,7 +869,11 @@ private fun FormatPickerRow(
                 .fillMaxWidth()
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .raisedBevel(scheme)
-                .let { if (enabled) it.tapeClick(label = null, onClick = onToggle) else it }
+                // Always clickable, `enabled` forwarded rather than
+                // dropped: a screen reader is told this control is
+                // temporarily unavailable instead of it silently vanishing
+                // from the tree (accessibility audit finding 12).
+                .tapeClick(label = null, enabled = enabled, onClick = onToggle)
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {

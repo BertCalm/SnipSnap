@@ -307,10 +307,15 @@ fun StackTakesScreen(
         TapeText(Copy.STACK_NO_GAIN, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 2)
         TapeText(Copy.STACK_LOCKS, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 3)
         ActionButton(
+            // Batch 3, Task 4: no ▸ — this button commits the picked takes
+            // in place; it doesn't navigate anywhere or open a panel, so it
+            // doesn't get the glyph. "·" is the house separator for a
+            // label-plus-detail pair that isn't one of those two things
+            // (`PROG A · THE BREAK`, GrooveScreen.kt).
             when {
                 busy -> "STACKING…"
-                picked.isEmpty() -> "STACK ▸ PICK A TAKE FIRST"
-                else -> "STACK ▸ COMMIT ${picked.size} UNDER LIVE"
+                picked.isEmpty() -> "STACK · PICK A TAKE FIRST"
+                else -> "STACK · COMMIT ${picked.size} UNDER LIVE"
             },
             scheme,
             enabled = !busy && picked.isNotEmpty(),

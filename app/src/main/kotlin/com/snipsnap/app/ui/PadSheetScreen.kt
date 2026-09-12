@@ -1810,6 +1810,17 @@ fun PadSheetScreen(
             // pad. Dimmed, not disabled, when there's nothing to copy or
             // nothing copied yet - the toast explains, same convention as
             // SPLICE ▸ / STACK ▸ below.
+            //
+            // "COPY LAST TREATMENT" keeps its exact wording — it's quoted
+            // verbatim inside `Copy.REPLAY_CLIPBOARD_EMPTY`
+            // ("NOTHING COPIED YET. COPY LAST TREATMENT OFF A PAD FIRST."),
+            // so shortening it here would desync the toast from the button
+            // it's pointing at. PASTE's ▸ dropped instead (truncation
+            // pass): `onPasteRecipe` replays the recipe on THIS pad right
+            // here via `commitPadEditNow` — an in-place mutation, not a
+            // navigation or a panel — so the "opens something" glyph never
+            // applied; "·" is the same neutral separator ROULETTE/DRIFT use
+            // above for the same reason.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton(
                     "COPY LAST TREATMENT",
@@ -1820,7 +1831,7 @@ fun PadSheetScreen(
                     onClick = ::onCopyRecipe,
                 )
                 ActionButton(
-                    clipboard?.let { "PASTE ▸ ${it.word}" } ?: "PASTE ▸",
+                    clipboard?.let { "PASTE · ${it.word}" } ?: "PASTE",
                     scheme,
                     enabled = !busy,
                     dimmed = clipboard == null,
@@ -2482,11 +2493,20 @@ private fun ToggleChip(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme, fill = if (engaged) color.copy(alpha = 0.85f) else null)
-            .let { if (enabled) it.tapeClick(label = null, onClick = onToggle) else it }
+            // Always clickable, `enabled` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 — see ActionButton, above in this file).
+            .tapeClick(label = null, enabled = enabled, onClick = onToggle)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (engaged) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 1)
+        TapeText(
+            label,
+            TapeType.pixel,
+            if (!enabled) scheme.ink3.tape else if (engaged) scheme.titleInk.tape else scheme.ink2.tape,
+            maxLines = 1,
+        )
     }
 }
 
@@ -2547,7 +2567,11 @@ private fun TreatmentCard(
                                     else -> null
                                 },
                             )
-                            .let { if (tappable) it.tapeClick(label = null) { onSegmentTap(seg) } else it }
+                            // Always clickable, `tappable` forwarded rather
+                            // than dropped so a non-tappable segment still
+                            // announces itself instead of vanishing from the
+                            // accessibility tree (finding 12).
+                            .tapeClick(label = null, enabled = tappable) { onSegmentTap(seg) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -2694,11 +2718,13 @@ private fun MutateCard(
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                            .let { if (!busy) it.tapeClick(label = null) { onMode(m) } else it }
+                            // Always clickable, `!busy` forwarded rather
+                            // than dropped (accessibility audit finding 12).
+                            .tapeClick(label = null, enabled = !busy) { onMode(m) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(m, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                        TapeText(m, TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
                     }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -2716,11 +2742,17 @@ private fun MutateCard(
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                            .let { if (!busy) it.tapeClick(label = null) { onPartner(p) } else it }
+                            // Always clickable, `!busy` forwarded rather
+                            // than dropped (accessibility audit finding 12).
+                            .tapeClick(label = null, enabled = !busy) { onPartner(p) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(MutateSheet.padTag(p), TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                        TapeText(
+                            MutateSheet.padTag(p),
+                            TapeType.pixel,
+                            if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                        )
                     }
                 }
                 // A short last row keeps the same chip width as a full one.
@@ -2741,11 +2773,19 @@ private fun MutateCard(
                                 .weight(1f)
                                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                                 .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                                .let { if (!busy) it.tapeClick(label = null) { onRoom(r) } else it }
+                                // Always clickable, `!busy` forwarded
+                                // rather than dropped (accessibility audit
+                                // finding 12).
+                                .tapeClick(label = null, enabled = !busy) { onRoom(r) }
                                 .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            TapeText(r, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 1)
+                            TapeText(
+                                r,
+                                TapeType.pixel,
+                                if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                                maxLines = 1,
+                            )
                         }
                     }
                     repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -2766,11 +2806,19 @@ private fun MutateCard(
                                 .weight(1f)
                                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                                 .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                                .let { if (!busy) it.tapeClick(label = null) { onPickKit(k) } else it }
+                                // Always clickable, `!busy` forwarded
+                                // rather than dropped (accessibility audit
+                                // finding 12).
+                                .tapeClick(label = null, enabled = !busy) { onPickKit(k) }
                                 .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            TapeText(k, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 1)
+                            TapeText(
+                                k,
+                                TapeType.pixel,
+                                if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                                maxLines = 1,
+                            )
                         }
                     }
                     repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -2787,11 +2835,18 @@ private fun MutateCard(
                                     .weight(1f)
                                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                                     .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                                    .let { if (!busy) it.tapeClick(label = null) { onOtherPad(p) } else it }
+                                    // Always clickable, `!busy` forwarded
+                                    // rather than dropped (accessibility
+                                    // audit finding 12).
+                                    .tapeClick(label = null, enabled = !busy) { onOtherPad(p) }
                                     .padding(horizontal = 4.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                TapeText(MutateSheet.padTag(p), TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                                TapeText(
+                                    MutateSheet.padTag(p),
+                                    TapeType.pixel,
+                                    if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                                )
                             }
                         }
                         repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -2811,17 +2866,37 @@ private fun MutateCard(
             onClick = onPickFile,
         )
         val deal = partner as? MutateSheet.Partner.Deal
+        // Both labels were 29 characters at rest ("ROULETTE ▸ LET THE CRATE
+        // DEAL" / "DRIFT ▸ DEALS & SAVES A BLEND"), so ROULETTE's old
+        // weight(2f) against DRIFT's weight(1f) gave the wider share to no
+        // more text — backwards, not proportional (truncation pass).
+        // Equalizing the weight wasn't enough on its own — confirmed by
+        // screenshot inside this MUTATE box's own 10dp side padding
+        // (`GroupBox`'s content `Column`), both halves still ellipsized —
+        // so both are shortened too: "LET THE" and the article "A" were
+        // pure filler around the words that carry meaning (CRATE DEAL,
+        // DEALS & SAVES). Neither keeps its ▸: `onRoulette` deals a
+        // partner and `onDrift` deals AND mutates, both right here on this
+        // card with a toast, never navigating or opening a panel — the
+        // same "no ▸" rule RESET/UNDO on this same screen already follow.
+        // "·" replaces it, same neutral separator "REMIX BANK B · REROLL"
+        // (`KitScreen.kt`) uses for the same reason.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             ActionButton(
-                deal?.let { "ROULETTE ▸ ${it.label}" } ?: "ROULETTE ▸ LET THE CRATE DEAL",
+                deal?.let { "ROULETTE · ${it.label}" } ?: "ROULETTE · CRATE DEAL",
                 scheme,
                 enabled = !busy,
                 dimmed = deal == null,
-                modifier = Modifier.weight(2f),
+                modifier = Modifier.weight(1f),
                 onClick = onRoulette,
             )
             // DRIFT: the deal and the morph in one tap, MIX how far.
-            ActionButton("DRIFT ▸ DEALS & SAVES A BLEND", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onDrift)
+            // "SAVES" stays — it's the one word that says DRIFT commits
+            // the blend, unlike ROULETTE's preview-only deal — but the
+            // article "A" and "BLEND" (already this GroupBox's own legend,
+            // "MUTATE · ONE HIT FROM TWO", right above) don't need to be
+            // said again in a label that must also fit half this row.
+            ActionButton("DRIFT · DEALS & SAVES", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onDrift)
         }
 
         // The move's knob, when it has one; STACK's row stays so the card never jumps.
@@ -2914,11 +2989,13 @@ private fun OutsideCard(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                        .let { if (!busy) it.tapeClick(label = null) { onMove(m) } else it }
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12).
+                        .tapeClick(label = null, enabled = !busy) { onMove(m) }
                         .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(m, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                    TapeText(m, TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
                 }
             }
         }
@@ -3036,6 +3113,12 @@ private fun DeleteButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) 
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText("DELETE → BIN", TapeType.pixel, BinRedGlow)
+        // The glow was fixed regardless of `enabled` — a dead DELETE button
+        // that still glows red reads as live. Falling back to `ink3` (not a
+        // dimmed BinRedGlow) matches the convention already used by every
+        // sibling BIN-red button (EmptyBinButton × 3, EmptyRoomsBinButton):
+        // BinRedGlow at reduced alpha risks failing contrast against the
+        // dark LCD fill, where ink3 is a scheme token already tuned for it.
+        TapeText("DELETE → BIN", TapeType.pixel, if (enabled) BinRedGlow else scheme.ink3.tape)
     }
 }
