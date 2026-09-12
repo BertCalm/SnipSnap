@@ -184,7 +184,7 @@ object XpnImporter {
             }
 
             val destDir = File(destRoot, kitName)
-            if (File(destDir, "kit.json").exists() && !overwrite) {
+            if (File(destDir, KitStore.FILE_NAME).exists() && !overwrite) {
                 throw IOException("kit already exists: $destDir (pass overwrite=true to replace it)")
             }
 

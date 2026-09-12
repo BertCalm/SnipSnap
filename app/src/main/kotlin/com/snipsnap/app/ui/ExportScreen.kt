@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.snipsnap.app.Exports
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.ShareOut
@@ -138,7 +139,7 @@ class ExportSession(val dir: File, val kit: Kit, val model: ExportWizardModel) {
  * cycler and the dub write all live in `:shell`/`:kit`; this file renders
  * the checklist, forwards taps, paces the dub-progress animation on its
  * own clock (the model exposes labels, not a live byte count — see the
- * model's own KDoc), and always writes to `getExternalFilesDir("exports")`
+ * model's own KDoc), and always writes to `Exports.dir`
  * first — no permission needed. When the user has picked a card (the
  * `CardRow` below, SAF `ACTION_OPEN_DOCUMENT_TREE`, a persistable grant),
  * `startWrite` also copies the outcome onto it through [CardWriter] —
@@ -427,7 +428,7 @@ private fun ExportContent(
                     // the directory if absent, can return null if external
                     // storage isn't mounted) — resolved here, on IO, not in
                     // the composable body.
-                    val root = context.getExternalFilesDir("exports")
+                    val root = Exports.dir(context)
                         ?: throw IOException("external storage unavailable")
                     // A self-nesting format (see ExportFormat.selfNesting's
                     // KDoc) already nests the kit's own name inside

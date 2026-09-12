@@ -52,6 +52,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
+import com.snipsnap.app.Exports
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.ShareOut
@@ -991,7 +992,7 @@ fun GrooveScreen(
                 } + listOfNotNull(eClip)
                 val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
                 val written = withContext(Dispatchers.IO) {
-                    val root = context.getExternalFilesDir("exports")
+                    val root = Exports.dir(context)
                         ?: throw IOException("external storage unavailable")
                     val midiDir = File(File(root, Names.sanitizeStem(kit.name)), "midi")
                     clips.map { c ->
@@ -1039,7 +1040,7 @@ fun GrooveScreen(
                 )
                 val relative = "exports/${Names.sanitizeStem(kit.name)}/chart/${Names.sanitizeStem(clip.name)}.txt"
                 val file = withContext(Dispatchers.IO) {
-                    val root = context.getExternalFilesDir("exports")
+                    val root = Exports.dir(context)
                         ?: throw IOException("external storage unavailable")
                     val out = File(File(File(root, Names.sanitizeStem(kit.name)), "chart"), "${Names.sanitizeStem(clip.name)}.txt")
                     out.parentFile?.mkdirs()

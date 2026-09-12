@@ -1441,6 +1441,16 @@ object Copy {
      * redo, so this is not a [Reversal.goneBut] site.
      */
     const val LOOP_TRACK_CLEARED = "TRACK CLEARED. THE SNIP STAYS IN SNIPS."
+    /**
+     * A tempo change, once the taps have stopped and it is on the grid.
+     *
+     * The new number is already on screen by then — this says it reached the
+     * disk, which is the half the screen cannot show. The BPM itself is not
+     * repeated here: it is three inches away in the control the player just
+     * used, and a toast that quotes it would be the same number in two places
+     * on one screen.
+     */
+    const val LOOP_TEMPO_SET = "TEMPO SAVED."
     /** LOOP opened with nothing sent to it yet — the grid's own empty state. */
     const val LOOP_EMPTY = "NO TRACKS YET. SEND A SNIP FROM SNIPS."
     /**
@@ -1484,7 +1494,20 @@ object Copy {
      * name is not obviously a mute button and a block is not obviously
      * clearable — and the hold is the one nobody can guess.
      */
-    const val LOOP_LEGEND = "TAP A TRACK NAME TO MUTE. HOLD A BLOCK TO CLEAR THAT TRACK."
+    const val LOOP_LEGEND = "TAP A NAME TO MUTE. TAP A BLOCK TO SEE IT. HOLD ONE TO CLEAR THE TRACK."
+    /**
+     * What a tapped block is, in the line the legend usually occupies.
+     *
+     * [track] and [block] are 1-based, the numbers on screen. [what] is the
+     * snip's own filename, or the kit a pattern plays, or null for a track
+     * nothing has been sent to — the grid always holds six tracks, so an empty
+     * one is a real thing to tap and has to answer.
+     *
+     * A function rather than a constant because every part of it is data; the
+     * only word this owns is the one for nothing.
+     */
+    fun loopBlock(track: Int, block: Int, what: String?): String =
+        "TRACK $track · BLOCK $block · ${what ?: "NOTHING SENT HERE YET"}"
 
     // ==================== Escaped strings, brought in (copy-consolidation follow-ups) ====================
     //

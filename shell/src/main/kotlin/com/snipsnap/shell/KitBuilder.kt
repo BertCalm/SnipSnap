@@ -983,7 +983,7 @@ class KitBuilderModel private constructor(
     }
 
     private fun archiveTake() {
-        val current = File(kitDir, "kit.json")
+        val current = File(kitDir, KitStore.FILE_NAME)
         // A clean save changes nothing; archiving it would duplicate takes.
         if (!current.isFile || !dirty) return
         val takesDir = File(kitDir, TAKES_DIR).apply { mkdirs() }

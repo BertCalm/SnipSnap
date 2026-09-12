@@ -225,7 +225,7 @@ fun App(shelf: KitShelf) {
     var exportsWhere by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         exportsWhere = withContext(Dispatchers.IO) {
-            (context.getExternalFilesDir("exports") ?: context.filesDir).absolutePath
+            (Exports.dir(context) ?: context.filesDir).absolutePath
         }
     }
 
@@ -374,7 +374,7 @@ fun App(shelf: KitShelf) {
     // activity, and its session lives in this one folder. Held here rather
     // than inside SNIPS because two screens read it — SNIPS' own → LOOP fills
     // it, and the shelf's LOOP row is only shown once something is in it.
-    val loopDir = remember(context) { File(context.filesDir, "sessions/current") }
+    val loopDir = remember(context) { LoopWrites.dir(context) }
     // How many of the six tracks hold a snip. Read once on mount and then
     // maintained by `sendSnipToLoop`'s own result — re-read on every return
     // from LOOP as well, since clearing a track there changes it behind this

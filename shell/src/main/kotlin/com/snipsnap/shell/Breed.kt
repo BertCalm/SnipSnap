@@ -51,7 +51,7 @@ object Breed {
 
     fun breed(aDir: File, bDir: File, destDir: File, name: String = destDir.name, seed: Int = 0): Report {
         require(Names.isMpcSafe(name)) { "kit name isn't MPC-safe: '$name'" }
-        require(!File(destDir, "kit.json").exists()) { "destination is already a kit: $destDir" }
+        require(!File(destDir, KitStore.FILE_NAME).exists()) { "destination is already a kit: $destDir" }
         val a = KitStore.load(aDir)
         val b = KitStore.load(bDir)
         require(a.pads.isNotEmpty()) { "'${a.name}' has no pads to breed from" }
