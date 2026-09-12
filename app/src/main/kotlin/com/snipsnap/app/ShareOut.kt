@@ -25,8 +25,20 @@ import java.io.File
  */
 object ShareOut {
 
+    /**
+     * The cache subfolder's own name — the same review that named
+     * `sessions/current`, `exports` and `Kits` their own owners found this
+     * one typed twice too: here and in [StorageSweep]'s sweep of it, with
+     * `res/xml/share_paths.xml`'s `cache-path` declaring the same folder a
+     * third time for the FileProvider. That XML entry has to keep saying
+     * `share/` by hand — a manifest resource cannot reference a Kotlin
+     * constant — so it is the one copy `ConventionTest`'s law cannot reach;
+     * the other two now do.
+     */
+    const val DIR = "share"
+
     /** Where packed kits and backups are written before they leave. */
-    fun shareDir(context: Context): File = File(context.cacheDir, "share").apply { mkdirs() }
+    fun shareDir(context: Context): File = File(context.cacheDir, DIR).apply { mkdirs() }
 
     /**
      * Offer [file] through the system chooser as [mime]. [title] heads

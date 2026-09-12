@@ -1502,6 +1502,18 @@ object Copy {
      * on one screen.
      */
     const val LOOP_TEMPO_SET = "TEMPO SAVED."
+
+    /**
+     * The tempo's own failure line.
+     *
+     * It exists because the clear's line was being used for both, and that
+     * line says the track is clear and will be back — true of a clear, and
+     * three kinds of wrong about a tempo: nothing was cleared, nothing is
+     * coming back, and the number on screen is the one thing that did not
+     * survive. A toast that describes the wrong action is worse than no
+     * toast, because the player goes looking for a track they never touched.
+     */
+    const val LOOP_TEMPO_NOT_SAVED = "TEMPO DID NOT SAVE. THE OLD ONE IS WHAT COMES BACK NEXT TIME."
     /** LOOP opened with nothing sent to it yet — the grid's own empty state. */
     const val LOOP_EMPTY = "NO TRACKS YET. SEND A SNIP FROM SNIPS."
     /**

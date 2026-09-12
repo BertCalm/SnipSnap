@@ -21,7 +21,15 @@ import java.io.File
  */
 object Exports {
 
-    /** The folder's name under the app's external files directory. */
+    /**
+     * The folder's name under the app's external files directory.
+     *
+     * `res/xml/share_paths.xml`'s `external-files-path` entry says `exports/`
+     * too, by hand — a manifest resource cannot reference a Kotlin constant,
+     * so that one copy is outside what `ConventionTest`'s law can reach.
+     * `ShareOut.DIR` carries the same caveat for the FileProvider's other
+     * root.
+     */
     const val DIR = "exports"
 
     /**

@@ -264,6 +264,97 @@ class ResidencyTest {
     // ---- warm: a tempo change that costs the audio thread nothing ----
 
     @Test
+    fun `warm does not return until its bakes have run`() {
+        // The hole review found, and why every other warm test missed it:
+        // they all use `sameThread`, which runs the bake inside `execute`, so
+        // a warm that merely submits and a warm that waits are
+        // indistinguishable. On a real pool they are not. The first version
+        // submitted and returned, which let the caller apply the new tempo
+        // while the bakes were still running — the engine then found a cold
+        // cache and baked on the audio thread, the exact stall warm exists
+        // to prevent. Moving the call to a background dispatcher looked like
+        // a fix and was not: it moved the enqueue, not the wait.
+        val s = session(1, 1, 1, 1, 1, 1)
+        val source = CountingSource(s.intervalFrames)
+        val pool = Executors.newFixedThreadPool(2)
+        // Every bake made slow enough that a warm which does not wait is
+        // certain to return first, rather than racing the assertion.
+        val slow = Executor { task -> pool.execute { Thread.sleep(40); task.run() } }
+        try {
+            val r = Residency(s, source, slow)
+            val faster = s.copy(bpm = 100f)
+            assertTrue(faster.intervalFrames != s.intervalFrames, "a tempo change has to resize the interval")
+
+            r.warm(faster, 1)
+
+            assertEquals(
+                6,
+                source.loopCalls.get(),
+                "warm returned with bakes still in flight — the caller will apply the tempo " +
+                    "onto a cold cache and the audio thread will bake it",
+            )
+            // And the point of waiting: the apply that follows costs nothing.
+            r.update(faster)
+            r.buffersFor(1)
+            assertEquals(6, source.loopCalls.get(), "buffersFor baked on the audio thread despite the warm")
+        } finally {
+            pool.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `warm gives up rather than hanging when a bake never finishes`() {
+        // A bounded wait, because this sits under a finger. A bake wedged on
+        // a bad file costs a stall — which is what happened before warm
+        // existed — and never a frozen screen.
+        val s = session(1, 1, 1, 1, 1, 1)
+        val source = CountingSource(s.intervalFrames)
+        val stuck = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(2)
+        val wedged = Executor { task -> pool.execute { stuck.await(); task.run() } }
+        try {
+            val r = Residency(s, source, wedged)
+            val began = System.nanoTime()
+            r.warm(s.copy(bpm = 100f), 1)
+            val waited = (System.nanoTime() - began) / 1_000_000
+            assertTrue(
+                waited < Residency.WARM_TIMEOUT_MS * 3,
+                "warm waited ${waited}ms on a bake that never finishes — it must give up at " +
+                    "${Residency.WARM_TIMEOUT_MS}ms and let the caller carry on",
+            )
+        } finally {
+            stuck.countDown()
+            pool.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `warm releases its waiter when a bake throws`() {
+        // The countDown is in a finally for this: without it one bad sample
+        // file hangs the caller for the whole timeout instead of costing it
+        // one cold block.
+        val s = session(1, 1, 1, 1, 1, 1)
+        val angry = object : SampleSource {
+            override fun loop(sampleFile: String): Snip = error("this file will not read")
+            override fun pad(kit: String, slot: Int): Snip? = null
+        }
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            val r = Residency(s, angry, Executor { task -> pool.execute(task) })
+            val began = System.nanoTime()
+            r.warm(s.copy(bpm = 100f), 1)
+            val waited = (System.nanoTime() - began) / 1_000_000
+            assertTrue(
+                waited < Residency.WARM_TIMEOUT_MS,
+                "warm waited ${waited}ms for bakes that all threw — the latch has to be released " +
+                    "in a finally, not after a bake that never returns normally",
+            )
+        } finally {
+            pool.shutdownNow()
+        }
+    }
+
+    @Test
     fun `a warmed tempo change needs no bake when it lands`() {
         val s = session(1, 1, 1, 1, 1, 1)
         val source = CountingSource(s.intervalFrames)

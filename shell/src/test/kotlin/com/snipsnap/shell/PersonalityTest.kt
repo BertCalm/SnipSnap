@@ -550,6 +550,13 @@ class PersonalityTest {
         // lines count the same thing and both have to say BAR for it.
         assertEquals("1 BAR BOUNCED. IT IS IN SNIPS NOW.", Copy.loopBounced(1))
         assertEquals("1 BAR BOUNCED, OUT OF A 6 BAR CYCLE. IT IS IN SNIPS NOW.", Copy.loopBouncedPart(1, 6))
+        // The block readout: 1-based like everything else on the grid, and
+        // its own line for a track nothing has been sent to — an app that
+        // counts tracks and blocks from zero anywhere on screen is the one
+        // thing this line exists to rule out.
+        assertEquals("TRACK 1 · BLOCK 1 · KICK", Copy.loopBlock(1, 1, "KICK"))
+        assertEquals("TRACK 6 · BLOCK 8 · KICK · PIECE 2/3", Copy.loopBlock(6, 8, "KICK · PIECE 2/3"))
+        assertEquals("TRACK 2 · BLOCK 1 · NOTHING SENT HERE YET", Copy.loopBlock(2, 1, null))
     }
 
     @Test

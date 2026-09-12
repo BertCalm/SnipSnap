@@ -170,39 +170,59 @@ class LoopActivity : ComponentActivity() {
                         persist(written, dir)
                     },
                     onBpm = { step ->
-                        val next = s.copy(
-                            bpm = (s.bpm + step).coerceIn(Session.MIN_BPM, Session.MAX_BPM),
-                        )
+                        val targetBpm = (s.bpm + step).coerceIn(Session.MIN_BPM, Session.MAX_BPM)
                         // The readout moves now; the audio moves when the
                         // taps stop.
-                        session = next
+                        session = s.copy(bpm = targetBpm)
                         tempoSettle?.cancel()
                         tempoSettle = scope.launch {
                             kotlinx.coroutines.delay(TEMPO_SETTLE_MS)
+                            // Read live, not the snapshot the tap closed
+                            // over: a mute or a clear tapped during the
+                            // settle window has already updated `session`
+                            // (and, for a clear, the engine and the disk),
+                            // and applying the stale snapshot here would
+                            // silently undo it. Only the tempo is ours to
+                            // carry forward — everything else comes from
+                            // whatever the grid is showing right now.
+                            val toApply = (session ?: s).copy(bpm = targetBpm)
                             // Baked BEFORE it is applied, on the baker pool:
                             // a new BPM resizes the interval, and without this
                             // the engine's next buffersFor would bake six
                             // blocks on the audio thread. See Residency.warm.
                             val at = engine?.position() ?: 0
-                            withContext(Dispatchers.IO) { residency?.warm(next, at + 1, at + 2) }
-                            engine?.apply(next)
+                            withContext(Dispatchers.IO) { residency?.warm(toApply, at + 1, at + 2) }
+                            engine?.apply(toApply)
                             // A tempo is an edit, so it is written — from the
                             // disk-backed copy, so this does not also save the
                             // mutes tapped beside it.
-                            val written = (onDisk ?: next).copy(bpm = next.bpm)
+                            val written = (onDisk ?: toApply).copy(bpm = targetBpm)
                             onDisk = written
-                            persist(written, dir, Copy.LOOP_TEMPO_SET)
+                            persist(written, dir, Copy.LOOP_TEMPO_SET, Copy.LOOP_TEMPO_NOT_SAVED)
                         }
                     },
                     bouncing = bouncing,
                     onBounce = {
-                        // The session as it is on screen, captured now: a mute
-                        // tapped mid-render must not change what is being
-                        // rendered half way through. What is heard is what is
-                        // bounced, as of the tap.
-                        val refused = LoopBounce.start(this@LoopActivity, s, samples)
-                        if (refused != null) {
-                            Toast.makeText(applicationContext, refused, Toast.LENGTH_SHORT).show()
+                        scope.launch {
+                            // If a tempo tap is still settling, its bpm is on
+                            // screen already but the engine has not caught up
+                            // yet (see TEMPO_SETTLE_MS) — bouncing `s` as-is
+                            // here would render a tempo the speaker is not
+                            // actually playing, breaking the promise below.
+                            // Joining forces that change to land first; a
+                            // completed or absent settle returns at once.
+                            tempoSettle?.join()
+                            // The session as it is on screen, read live rather
+                            // than the `s` this lambda closed over: a mute
+                            // tapped mid-render must not change what is being
+                            // rendered half way through, but the join above
+                            // can itself take up to TEMPO_SETTLE_MS, and `s`
+                            // would not see an edit made during that wait.
+                            // What is heard is what is bounced, as of now.
+                            val refused = LoopBounce.start(this@LoopActivity, session ?: s, samples)
+                            if (refused != null) {
+                                Toast.makeText(applicationContext, refused, Toast.LENGTH_SHORT).show()
+                            }
                         }
                     },
                 )
@@ -231,8 +251,17 @@ class LoopActivity : ComponentActivity() {
      * The toast reports the write, not the intent — a clear that could not be
      * saved is a clear that comes back on the next launch, and the player has
      * to be told that rather than shown a grid that disagrees with the disk.
+     * [failed] is the caller's own edit, worded for its own noun: a tempo
+     * that did not save is not a track coming back, and a toast that
+     * describes the wrong action sends the player looking for the wrong
+     * thing.
      */
-    private fun persist(session: Session, dir: File, landed: String = Copy.LOOP_TRACK_CLEARED) {
+    private fun persist(
+        session: Session,
+        dir: File,
+        landed: String = Copy.LOOP_TRACK_CLEARED,
+        failed: String = Copy.LOOP_CLEAR_NOT_SAVED,
+    ) {
         writer.execute {
             // Behind the same lock SNIPS' own → LOOP takes: that one is a
             // read-modify-write of this exact file from another screen, and it
@@ -241,7 +270,7 @@ class LoopActivity : ComponentActivity() {
             runOnUiThread {
                 Toast.makeText(
                     applicationContext,
-                    if (saved) landed else Copy.LOOP_CLEAR_NOT_SAVED,
+                    if (saved) landed else failed,
                     Toast.LENGTH_SHORT,
                 ).show()
             }

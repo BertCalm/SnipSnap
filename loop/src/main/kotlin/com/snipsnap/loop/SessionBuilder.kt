@@ -166,6 +166,29 @@ object SessionBuilder {
     }
 
     /**
+     * The snip a piece was cut from, recovered from the name [send] gave it.
+     *
+     * Every piece is `<stem>_<block>.wav` where `<stem>` is the source
+     * snip's own filename without its extension — [send]'s own contract, one
+     * block suffix always appended, even for a chain of one. Undoing exactly
+     * that suffix recovers `<stem>` exactly, which is what lets the loop
+     * grid's readout show the snip a block belongs to rather than the
+     * generated piece name nothing else in the app would recognise.
+     *
+     * The block suffix is always the LAST `_`-delimited segment, so a stem
+     * that itself ends in digits after an underscore (a renamed snip,
+     * `snip_<millis>_take_2`) still recovers correctly: `_1`/`_2`/… of the
+     * PIECE is what gets stripped, whatever the stem already ends with. A
+     * name with no underscore at all — [send] never writes one, but a
+     * hand-edited sidecar could — is returned unchanged rather than mangled.
+     */
+    fun sourceOf(sampleFile: String): String {
+        val base = sampleFile.removeSuffix(".wav")
+        val cut = base.lastIndexOf('_')
+        return if (cut < 0) base else base.substring(0, cut)
+    }
+
+    /**
      * Take a track back to empty.
      *
      * The pieces stay on disk on purpose: this drops the arrangement, not the

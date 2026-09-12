@@ -255,4 +255,46 @@ class SessionBuilderTest {
         assertEquals(atDevice.intervalFrames, baked.frameCount)
         assertTrue(baked.samples.any { it != 0f }, "the tone should survive the rate change")
     }
+
+    // ---- sourceOf: the readout's own reason to exist -------------------------------
+
+    @Test
+    fun `sourceOf undoes exactly the block suffix send appends`() {
+        val dir = tempDir()
+        // Two intervals, so send writes two pieces and there is a real
+        // suffix — "_1" and "_2" — to undo rather than a coincidence with
+        // a single block always being "_1".
+        val session = fresh()
+        val frames = SessionBuilder.chunkFrames(session, rate)
+        val sent = assertNotNull(
+            SessionBuilder.send(session, 0, "KICK", "snip_1700000000000_kick", tone(frames * 2), dir),
+        )
+        val chain = sent.session.tracks[0].chain
+        assertEquals(2, chain.size)
+        for (piece in chain) {
+            val file = (piece as LoopBlock).sampleFile
+            assertEquals(
+                "snip_1700000000000_kick",
+                SessionBuilder.sourceOf(file),
+                "$file should recover its source snip's own stem",
+            )
+        }
+    }
+
+    @Test
+    fun `sourceOf survives a stem that already ends in digits after an underscore`() {
+        // A renamed snip's own name can end in "_2" ("take_2") before send
+        // ever appends its own block suffix — the recovery has to remove
+        // the PIECE's suffix, not whatever the stem already ends with.
+        assertEquals("snip_1_take_2", SessionBuilder.sourceOf("snip_1_take_2_1.wav"))
+        assertEquals("snip_1_take_2", SessionBuilder.sourceOf("snip_1_take_2_7.wav"))
+    }
+
+    @Test
+    fun `sourceOf returns a name with no underscore unchanged rather than mangling it`() {
+        // send() never writes a piece without a block suffix, but a
+        // hand-edited sidecar could reference one — this must not throw
+        // or silently corrupt a name it does not recognise.
+        assertEquals("nosuffix", SessionBuilder.sourceOf("nosuffix.wav"))
+    }
 }

@@ -1201,6 +1201,12 @@ class ConventionTest {
         "exports" to "Exports.kt",
         "snips" to "SnipStore.kt",
         "Kits" to "MainActivity.kt",
+        // Found in the same review that named the six above: the cache's
+        // two scratch folders were typed independently by their own writer
+        // and by StorageSweep's sweep of them — the identical shape SNIPS
+        // paid five days for, just not yet triggered by a rename.
+        "share" to "ShareOut.kt",
+        "landing" to "ShareInbox.kt",
     )
 
     @Test
@@ -1214,11 +1220,14 @@ class ConventionTest {
         for ((path, owner) in pathOwners) {
             val file = sources.singleOrNull { it.name == owner }
             assertTrue(file != null, "pathOwners names $owner as the home of \"$path\", and no such source exists.")
+            val declares = file!!.readText(Charsets.UTF_8).lineSequence()
+                .any { line -> !isCommentLine(line.trim()) && "\"$path\"" in line }
             assertTrue(
-                file!!.readText(Charsets.UTF_8).contains("\"$path\""),
-                "$owner is listed as the one place that says \"$path\", but it does not say it. Either the " +
-                    "constant moved (point this entry at its new home) or it is gone (drop the entry) — " +
-                    "do not leave it guarding a path nobody declares.",
+                declares,
+                "$owner is listed as the one place that says \"$path\", but no CODE line there does — a KDoc " +
+                    "or comment naming the path does not count. Either the constant moved (point this entry at " +
+                    "its new home) or it is gone (drop the entry) — do not leave it guarding a path nobody " +
+                    "declares.",
             )
         }
 
@@ -1228,7 +1237,7 @@ class ConventionTest {
                 val t = line.trim()
                 // Prose may name a path freely: a KDoc explaining where
                 // exports land is documentation, not a second definition.
-                if (t.startsWith("*") || t.startsWith("//") || t.startsWith("/*")) return@forEachIndexed
+                if (isCommentLine(t)) return@forEachIndexed
                 for ((path, owner) in pathOwners) {
                     if (file.name == owner) continue
                     if ("\"$path\"" in line) {
