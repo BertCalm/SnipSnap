@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,6 +52,7 @@ import com.snipsnap.app.ui.DeletedKitsScreen
 import com.snipsnap.app.ui.DoublesScreen
 import com.snipsnap.app.ui.ExportScreen
 import com.snipsnap.app.ui.ExportSession
+import com.snipsnap.app.ui.GROOVE_SWING_DEFAULT
 import com.snipsnap.app.ui.GrainFieldScreen
 import com.snipsnap.app.ui.GrooveScreen
 import com.snipsnap.app.ui.HelpScreen
@@ -314,6 +316,24 @@ fun App(shelf: KitShelf) {
     var arrangeSwing by remember { mutableStateOf<Int?>(null) }
     var arrangeFeel by remember { mutableFloatStateOf(0f) }
     var arrangeFeelTemplate by remember { mutableStateOf<GrooveFeel.Template?>(null) }
+    // Bug fix (tab-switch data loss): GROOVE's FEEL, SWING and selected
+    // program used to be `remember(kitDir)` locals INSIDE GrooveScreen, so
+    // this screen's bare `when (screen)` below — no `SaveableStateHolder`,
+    // no `rememberSaveable` — tore the whole composable down on every tab
+    // switch and silently reset all three. Hoisted here instead, same
+    // value+setter shape as `exportSession`/`onSessionChange` below, keyed
+    // on `open?.dir` so App (which never leaves composition) is what
+    // actually survives the tab switch. Keying on the dir — not a bare
+    // `remember { }` — is the other half of the fix: these are
+    // per-kit-SESSION settings, not per-kit-persisted ones, so opening a
+    // DIFFERENT kit must still reset them; a forgotten FEEL must never
+    // quietly alter a different kit's export. GrooveScreen's own defaults
+    // (`GROOVE_SWING_DEFAULT`, 0, 0) are mirrored here rather than left
+    // nullable, matching what a from-scratch GROOVE screen already showed
+    // before this fix.
+    var grooveFeel by remember(open?.dir) { mutableIntStateOf(0) }
+    var grooveSwingPercent by remember(open?.dir) { mutableIntStateOf(GROOVE_SWING_DEFAULT) }
+    var grooveProgIndex by remember(open?.dir) { mutableIntStateOf(0) }
     /** ORBIT: GROOVE's other overlay, the circular sequencer — same lifecycle as [arrangeOpen]. */
     var orbitOpen by remember { mutableStateOf(false) }
     // SNIPS (Task 3): a shelf-level overlay, not KIT-scoped like PAD SHEET/
@@ -2315,6 +2335,12 @@ fun App(shelf: KitShelf) {
                                     reloadRequest = grooveReload,
                                     onArrange = { swing, f, tpl -> arrangeSwing = swing; arrangeFeel = f; arrangeFeelTemplate = tpl; arrangeOpen = true },
                                     onOrbit = { orbitOpen = true },
+                                    feel = grooveFeel,
+                                    onFeelChange = { grooveFeel = it },
+                                    swingPercent = grooveSwingPercent,
+                                    onSwingPercentChange = { grooveSwingPercent = it },
+                                    progIndex = grooveProgIndex,
+                                    onProgIndexChange = { grooveProgIndex = it },
                                 )
                             }
                         }

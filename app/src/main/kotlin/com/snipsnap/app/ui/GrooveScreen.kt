@@ -116,8 +116,14 @@ private const val GROOVE_SAVE_DEBOUNCE_MS = 1000L
 /** How long EDIT THIS TAKE's own armed confirm (replacing an existing PROG E) stays armed before it disarms itself — same window as `TakesBinScreen`'s `EMPTY_BIN_ARM_MS`. */
 private const val GROOVE_FORK_ARM_MS = 3_000L
 
-/** SWING's range and step, per the handoff; the artboard's own default state is 62%. */
-private const val GROOVE_SWING_DEFAULT = 62
+/**
+ * SWING's range and step, per the handoff; the artboard's own default state
+ * is 62%. NOT `private` — App.kt's own hoisted `grooveSwingPercent` (the
+ * tab-switch data-loss fix) needs the same default a from-scratch GROOVE
+ * screen would otherwise fall back to internally, so it's imported rather
+ * than duplicated as a second magic number that could drift from this one.
+ */
+const val GROOVE_SWING_DEFAULT = 62
 private const val GROOVE_SWING_MIN = 50
 private const val GROOVE_SWING_MAX = 75
 private const val GROOVE_SWING_STEP = 2
@@ -190,6 +196,26 @@ fun GrooveScreen(
     onArrange: (swingPercent: Int, feel: Float, feelTemplate: GrooveFeel.Template) -> Unit = { _, _, _ -> },
     /** ORBIT ▸ — opens the circular sequencer, the same overlay shape as ARRANGE. */
     onOrbit: () -> Unit = {},
+    /**
+     * Bug fix (tab-switch data loss): FEEL, SWING and the selected program
+     * used to be `remember(kitDir)` locals only, so App.kt's bare
+     * `when (screen)` — no `SaveableStateHolder`, nothing — tore this whole
+     * composable down on every tab switch and took them with it. App hoists
+     * exactly these three, keyed on the open kit's own dir (so a KIT CHANGE
+     * still resets them — a forgotten FEEL must never silently alter a
+     * DIFFERENT kit's export), same shape as `exportSession`/`onSessionChange`
+     * elsewhere in App.kt. The three `LaunchedEffect`s just below push every
+     * local change straight up through these setters — cheaper and less
+     * error-prone than threading a call through each of this screen's many
+     * mutation sites (PROG prev/next, RESEED's fork, RECORD's arm, UNDO
+     * TAKE, the FEEL/SWING steppers) and risking a missed one.
+     */
+    feel: Int = 0,
+    onFeelChange: (Int) -> Unit = {},
+    swingPercent: Int = GROOVE_SWING_DEFAULT,
+    onSwingPercentChange: (Int) -> Unit = {},
+    progIndex: Int = 0,
+    onProgIndexChange: (Int) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
 
@@ -311,15 +337,34 @@ fun GrooveScreen(
         return
     }
 
-    var progIndex by remember(kitDir) { mutableIntStateOf(0) }
+    // `progIndex`/`swingPercent`/`feel` shadow this composable's own
+    // parameters of the same name — App's hoisted, per-kit-dir state (see
+    // this function's own KDoc on those parameters) — so every existing
+    // read/write site below keeps working unmodified. `remember(kitDir)`
+    // still resets each to the passed-in value whenever the KIT changes,
+    // exactly as before; the three `LaunchedEffect`s further down are what
+    // push local writes back up so a tab switch (which tears this whole
+    // composable down) doesn't lose them.
+    var progIndex by remember(kitDir) { mutableIntStateOf(progIndex) }
     var seed by remember(kitDir) { mutableIntStateOf(1) }
     // Rolled once per seed, not per frame: the clock reads this every tick.
     val feelTemplate = remember(seed) { GrooveFeel.generated(seed) }
-    var swingPercent by remember(kitDir) { mutableIntStateOf(GROOVE_SWING_DEFAULT) }
+    var swingPercent by remember(kitDir) { mutableIntStateOf(swingPercent) }
     // The feel axis. Transient like `swingPercent` — reopening a kit shows
     // what was actually played, so a setting left on can never quietly alter
     // an export.
-    var feel by remember(kitDir) { mutableIntStateOf(0) }
+    var feel by remember(kitDir) { mutableIntStateOf(feel) }
+    // Bug fix (tab-switch data loss) — see this function's own KDoc on the
+    // `feel`/`swingPercent`/`progIndex` parameters just above: these three
+    // effects are the ONLY thing keeping App's hoisted copies in sync with
+    // whatever this screen's many mutation sites do to the locals of the
+    // same name, so a tab switch mid-session (App tears this whole
+    // composable down, `remember(kitDir)` and all) restores exactly what
+    // was on screen instead of quietly resetting to AS PLAYED / default
+    // swing / PROG A.
+    LaunchedEffect(feel) { onFeelChange(feel) }
+    LaunchedEffect(swingPercent) { onSwingPercentChange(swingPercent) }
+    LaunchedEffect(progIndex) { onProgIndexChange(progIndex) }
     var playing by remember(kitDir) { mutableStateOf(false) }
     var posSteps by remember(kitDir) { mutableFloatStateOf(0f) }
     var busy by remember(kitDir) { mutableStateOf(false) }
