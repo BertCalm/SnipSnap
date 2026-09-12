@@ -1413,6 +1413,42 @@ object Copy {
     /** LOOP opened with nothing sent to it yet — the grid's own empty state. */
     const val LOOP_EMPTY = "NO TRACKS YET. SEND A SNIP FROM SNIPS."
     /**
+     * The grid, rendered offline and landed in SNIPS — the same door ORBIT's
+     * own bounce uses, so what the loop grid makes can be chopped, padded and
+     * sent back to a track. [bars] is what was actually rendered.
+     */
+    fun loopBounced(bars: Int): String = "${barsOf(bars)} BOUNCED. IT IS IN SNIPS NOW."
+    /**
+     * The same landing, when the grid's full cycle is longer than a snip can
+     * hold. Both numbers, because the difference is the point: the cycle is
+     * the least common multiple of the chain lengths and can run for half an
+     * hour, and a player who is told only the first number would think that
+     * was the whole loop.
+     */
+    fun loopBouncedPart(bars: Int, cycleBars: Int): String =
+        "${barsOf(bars)} BOUNCED, OUT OF A $cycleBars BAR CYCLE. IT IS IN SNIPS NOW."
+
+    /**
+     * "1 BAR" or "N BARS" — one place, because both bounce lines count the
+     * same thing and "1 BARS BOUNCED" is the kind of sentence a player reads
+     * as a bug in everything else too. The cycle length beside it stays a bare
+     * number: it is already followed by the singular "BAR CYCLE".
+     */
+    private fun barsOf(bars: Int): String = if (bars == 1) "1 BAR" else "$bars BARS"
+    /** Every track is still empty — there is nothing to render. */
+    const val LOOP_BOUNCE_EMPTY = "NOTHING ON THE GRID TO BOUNCE YET."
+    /** The render or the write failed. Law 3: say what did not happen. */
+    const val LOOP_BOUNCE_FAILED = "THE BOUNCE DIDN'T SAVE. NOTHING WAS ADDED TO SNIPS."
+    /**
+     * BOUNCE pressed while one is already running — which can happen from a
+     * second visit to the screen, since a render outlives the screen that
+     * started it.
+     */
+    const val LOOP_BOUNCE_ALREADY = "A BOUNCE IS ALREADY RUNNING. IT LANDS IN SNIPS WHEN IT IS DONE."
+    /** The button while the render runs — a bounce is seconds of work, not instant. */
+    const val LOOP_BOUNCE_BUSY = "BOUNCING…"
+
+    /**
      * LOOP's own legend. Both of the grid's gestures are invisible — a track
      * name is not obviously a mute button and a block is not obviously
      * clearable — and the hold is the one nobody can guess.

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,9 +26,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.snipsnap.loop.Arrangement
+import com.snipsnap.loop.Bouncer
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
+import com.snipsnap.app.ui.tapeClick
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.Layout
+import com.snipsnap.shell.SnipStore
 
 /**
  * TapeOS palette for this screen.
@@ -69,6 +74,10 @@ fun LoopGrid(
     onToggleTrack: (Int) -> Unit,
     /** HOLD a block: the track goes back to empty. Nothing on screen can say this, so [Copy.LOOP_LEGEND] does. */
     onClearTrack: (Int) -> Unit,
+    /** BOUNCE: what the grid is doing, rendered offline into SNIPS. */
+    onBounce: () -> Unit,
+    /** True while that render runs — it is seconds of work, and the button says so rather than looking dead. */
+    bouncing: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -89,13 +98,66 @@ fun LoopGrid(
                 )
             }
         }
-        androidx.compose.material3.Text(
-            text = Copy.LOOP_LEGEND,
-            color = Tape.Dim,
-            fontSize = 9.sp,
-            fontFamily = FontFamily.Monospace,
-            textAlign = TextAlign.Center,
+        Row(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = LayoutArrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            androidx.compose.material3.Text(
+                text = Copy.LOOP_LEGEND,
+                color = Tape.Dim,
+                fontSize = 9.sp,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.weight(1f),
+            )
+            BounceButton(session = session, bouncing = bouncing, onBounce = onBounce)
+        }
+    }
+}
+
+/**
+ * BOUNCE, with the length it will actually render on it.
+ *
+ * The number is [Bouncer.intervalsWithin]'s, not the raw cycle: a cycle is the
+ * least common multiple of the chain lengths and can run for half an hour,
+ * which no snip can hold. `LoopActivity` renders through the same function
+ * when the button is pressed, so what is printed here and what lands in SNIPS
+ * cannot drift apart — the shared quantity is one function, not one number
+ * copied twice.
+ */
+@Composable
+private fun BounceButton(session: Session, bouncing: Boolean, onBounce: () -> Unit) {
+    val bars = Bouncer.intervalsWithin(session, SnipStore.IMPORT_MAX_SEC) * session.barsPerInterval
+    // A Box with the text centred in it, not a Text with a minimum height:
+    // `heightIn` on the text itself makes the box taller and leaves the
+    // glyphs at the top of it. `ActionButton` is built this way for the same
+    // reason.
+    Box(
+        modifier = Modifier
+            // The app's own minimum touch target, not whatever 10sp plus
+            // padding happens to come to: this is the one control on the
+            // screen a finger has to find, and every other action row in the
+            // app is built to this floor.
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .background(if (bouncing) Tape.Lcd else Tape.Panel)
+            .border(width = 2.dp, color = Tape.BevelDark)
+            // Through the app's own wrapper rather than a raw `clickable`: it
+            // drops Compose's ripple (TapeOS draws its own feedback) and makes
+            // the accessible-name decision explicit. Null, because the text
+            // inside this control already says what it does — and `enabled` is
+            // forwarded rather than dropped, so a screen reader is told the
+            // control is temporarily unavailable instead of it vanishing from
+            // the tree while a render runs.
+            .tapeClick(label = null, enabled = !bouncing, onClick = onBounce)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.material3.Text(
+            text = if (bouncing) Copy.LOOP_BOUNCE_BUSY else "BOUNCE ▸ $bars BARS",
+            color = if (bouncing) Tape.Dim else Tape.Ink,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace,
         )
     }
 }

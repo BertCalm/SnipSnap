@@ -23,11 +23,15 @@ import kotlin.concurrent.thread
 /**
  * The loop player screen.
  *
- * Three threads, each with one job: the audio thread runs LoopEngine and blocks
- * on AudioTrack; a small pool bakes blocks ahead of it; the UI thread reads the
- * engine's position and draws. They share exactly two things — an AtomicInteger
- * for position and an AtomicReference for pending edits — which is the whole
- * concurrency story.
+ * Each thread has one job. The audio thread runs LoopEngine and blocks on
+ * AudioTrack; a pool of two bakes blocks ahead of it; the UI thread reads the
+ * engine's position and draws. Between the engine and the UI that is the whole
+ * concurrency story: they share an AtomicInteger for position and an
+ * AtomicReference for pending edits, and nothing else.
+ *
+ * One more thread sits beside them, deliberately not [bakers]: [writer], which
+ * saves the session. BOUNCE has a thread too and it is not here at all — a
+ * render outlives this screen, so it belongs to [LoopBounce] and the app.
  */
 class LoopActivity : ComponentActivity() {
 
@@ -46,6 +50,17 @@ class LoopActivity : ComponentActivity() {
      * edits in quick succession land in the order they were made.
      */
     private val writer = Executors.newSingleThreadExecutor()
+
+    /**
+     * The one decode cache, shared by playback and BOUNCE.
+     *
+     * A second `KitSampleSource` for the bounce would decode every piece on
+     * the grid all over again — the same WAVs the residency already holds — so
+     * the render pays a second copy of the whole session in memory to produce
+     * exactly the same audio. It is safe to share: the cache is a
+     * `ConcurrentHashMap` and both readers only ever read.
+     */
+    private var source: KitSampleSource? = null
     private var engine: LoopEngine? = null
     private var sink: AndroidAudioSink? = null
     private var audioThread: Thread? = null
@@ -70,6 +85,9 @@ class LoopActivity : ComponentActivity() {
             Copy.LOOP_EMPTY
         }
 
+        val samples = KitSampleSource(dir)
+        source = samples
+
         setContent {
             // remember, or every recomposition resets the session to what was
             // loaded from disk and throws away the mutes the user just tapped.
@@ -81,6 +99,8 @@ class LoopActivity : ComponentActivity() {
             // tapped beside it.
             var onDisk by remember { mutableStateOf(loaded) }
             var interval by remember { mutableIntStateOf(0) }
+            // One bounce at a time, and the button says so while it runs.
+            var bouncing by remember { mutableStateOf(false) }
 
             val s = session
             if (s == null) {
@@ -118,11 +138,31 @@ class LoopActivity : ComponentActivity() {
                         onDisk = written
                         persist(written, dir)
                     },
+                    bouncing = bouncing,
+                    onBounce = {
+                        // The session as it is on screen, captured now: a mute
+                        // tapped mid-render must not change what is being
+                        // rendered half way through. What is heard is what is
+                        // bounced, as of the tap.
+                        val refused = LoopBounce.start(this@LoopActivity, s, samples)
+                        if (refused != null) {
+                            Toast.makeText(applicationContext, refused, Toast.LENGTH_SHORT).show()
+                        } else {
+                            // Immediate, rather than waiting up to a tick for
+                            // the poll below to notice: a button that takes
+                            // 50ms to acknowledge a press reads as a missed tap.
+                            bouncing = true
+                        }
+                    },
                 )
 
                 androidx.compose.runtime.LaunchedEffect(Unit) {
                     while (true) {
                         interval = engine?.position() ?: 0
+                        // Read, not owned: a render started here can still be
+                        // running when this screen is opened again, and the
+                        // button has to say so on that second visit too.
+                        bouncing = LoopBounce.busy()
                         kotlinx.coroutines.delay(50)
                     }
                 }
@@ -135,11 +175,11 @@ class LoopActivity : ComponentActivity() {
     /**
      * Write the session back, then say whether it landed.
      *
-     * On [bakers] rather than the main thread: it is a small JSON file, but a
-     * file write on the UI thread is a file write on the UI thread, and this
-     * pool is already the activity's off-thread worker. It is sized for baking
-     * and a sidecar write is microseconds beside a bake, so it cannot
-     * meaningfully delay one.
+     * On [writer] rather than the main thread: it is a small JSON file, but a
+     * file write on the UI thread is a file write on the UI thread. It used to
+     * ride [bakers] — that pool is already off-thread and a sidecar write is
+     * microseconds beside a bake — which was wrong for a reason that has
+     * nothing to do with speed: see [writer]'s own note.
      *
      * The toast reports the write, not the intent — a clear that could not be
      * saved is a clear that comes back on the next launch, and the player has
@@ -163,7 +203,7 @@ class LoopActivity : ComponentActivity() {
 
     private fun start(session: Session, dir: File) {
         val audioSink = AndroidAudioSink(session.sampleRate)
-        val residency = Residency(session, KitSampleSource(dir), bakers)
+        val residency = Residency(session, source ?: KitSampleSource(dir), bakers)
         val loopEngine = LoopEngine(residency, audioSink)
 
         sink = audioSink
@@ -216,6 +256,9 @@ class LoopActivity : ComponentActivity() {
         bakers.shutdownNow()
         writer.shutdown()
         writer.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS)
+        // Nothing to do for a bounce in flight: it is not this activity's
+        // thread, does not hold this activity, and finishes into SNIPS on its
+        // own. See LoopBounce.
         super.onDestroy()
     }
 }

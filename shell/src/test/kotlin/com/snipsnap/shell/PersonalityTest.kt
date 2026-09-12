@@ -344,6 +344,9 @@ class PersonalityTest {
         "CHOP_ALL_BUSY",
         // DUST ALL's busy overlay line, like every other *_BUSY above.
         "DUSTING_BUSY",
+        // LOOP's bounce, while the render runs — same shape as every other
+        // *_BUSY above: a button's label, not a landing.
+        "LOOP_BOUNCE_BUSY",
         // BACK ONTO's busy overlay line, like every other *_BUSY above.
         "RETRIM_BUSY",
         // The HITS stepper's own busy readout.
@@ -537,6 +540,16 @@ class PersonalityTest {
         assertEquals("HIT IS ON TRACK 1, 1 BLOCK LONG.", Copy.loopTrackFilled("HIT", 1, 1))
         assertEquals("LONG IS ON TRACK 4. ONLY ITS FIRST 8 BLOCKS FIT.", Copy.loopTrackTruncated("LONG", 4, 8))
         assertEquals("ALL 6 TRACKS ARE FULL. CLEAR ONE IN LOOP FIRST.", Copy.loopFull(6))
+        // The bounce names what it rendered, and names the cycle too when the
+        // two differ — a player told only "12 BARS" would read that as the
+        // whole loop.
+        assertEquals("12 BARS BOUNCED. IT IS IN SNIPS NOW.", Copy.loopBounced(12))
+        assertEquals("64 BARS BOUNCED, OUT OF A 840 BAR CYCLE. IT IS IN SNIPS NOW.", Copy.loopBouncedPart(64, 840))
+        // One bar is a legal bounce — the grid's default interval is one bar,
+        // so a six-track grid of one-block chains bounces exactly this. Both
+        // lines count the same thing and both have to say BAR for it.
+        assertEquals("1 BAR BOUNCED. IT IS IN SNIPS NOW.", Copy.loopBounced(1))
+        assertEquals("1 BAR BOUNCED, OUT OF A 6 BAR CYCLE. IT IS IN SNIPS NOW.", Copy.loopBouncedPart(1, 6))
     }
 
     @Test
