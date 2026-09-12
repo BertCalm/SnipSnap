@@ -164,6 +164,20 @@ fun OrbitScreen(
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     /**
+     * Bug fix (GROOVE staleness): `clipIntoKit` (CLIP ▸ KIT, below) writes
+     * straight into the open kit's `groove.json` via [OrbitClip.save] — the
+     * same file TAPE's READ AS GROOVE / STEAL THE FEEL rewrite, which is
+     * why App.kt bumps `grooveReload` after those. This screen's own KDoc
+     * (below, on the staleness pass) named this door and left it reported
+     * rather than fixed, since closing it belongs to GROOVE's own reload
+     * wiring, not this screen. No default: both call sites in App.kt must
+     * wire this to `grooveReload++`, or a GROOVE screen that survives a tab
+     * switch through here can end up keyed to a clip that's no longer at
+     * position 0. Called only on [OrbitClip.save] SUCCESS — a failed write
+     * changed nothing on disk for GROOVE to be stale about.
+     */
+    onGrooveWritten: () -> Unit,
+    /**
      * Bug fix (tab-switch data loss): App.kt renders screens with a bare
      * `when (screen)` — no `SaveableStateHolder`, no `rememberSaveable` —
      * so this whole composable used to be torn down, and every
@@ -362,22 +376,23 @@ fun OrbitScreen(
      *   the hoist commit, because it belongs with the staleness pass this
      *   KDoc is describing.
      *
-     * One door found here is NOT this screen's to close: `CLIP ▸ KIT`
-     * (`clipIntoKit` below, via `OrbitClip.save`) writes straight into the
-     * open kit's `groove.json`, replacing every previous ORBIT-authored
-     * clip — the same file TAPE's actions rewrite — and does not bump
-     * `grooveReload`. GROOVE's own hoisted `progIndex` selects among fixed
-     * transforms of `GrooveStore.load(kitDir).firstOrNull()` ("the base"),
-     * so in the ordinary case (a real captured base already at position 0)
-     * this is harmless — `clipIntoKit` appends after every non-ORBIT clip,
-     * never displacing it. But a kit whose ONLY clip is itself
-     * ORBIT-authored has no such base to protect: a second `CLIP ▸ KIT`
-     * replaces it, and a GROOVE screen whose hoisted `progIndex` survived
-     * a round trip through here would silently describe a transform of a
-     * DIFFERENT clip than what's on screen — `3cfe60cb`'s fixed defect,
-     * running the other direction. Reported rather than fixed: it's
-     * GROOVE's `grooveReload` wiring that would need to change, which is
-     * outside this screen and outside these two commits.
+     * One door found here now IS closed: `CLIP ▸ KIT` (`clipIntoKit` below,
+     * via `OrbitClip.save`) writes straight into the open kit's
+     * `groove.json`, replacing every previous ORBIT-authored clip — the
+     * same file TAPE's actions rewrite. GROOVE's own hoisted `progIndex`
+     * selects among fixed transforms of `GrooveStore.load(kitDir)
+     * .firstOrNull()` ("the base"), so in the ordinary case (a real
+     * captured base already at position 0) a stale reload would be
+     * harmless — `clipIntoKit` appends after every non-ORBIT clip, never
+     * displacing it. But a kit whose ONLY clip is itself ORBIT-authored has
+     * no such base to protect: a second `CLIP ▸ KIT` replaces it, and a
+     * GROOVE screen whose hoisted `progIndex` survived a round trip through
+     * here would silently describe a transform of a DIFFERENT clip than
+     * what's on screen — `3cfe60cb`'s fixed defect, running the other
+     * direction. `clipIntoKit` now calls [onGrooveWritten] on
+     * `OrbitClip.save` success (see that parameter's own KDoc), which App.kt
+     * wires to the same `grooveReload++` TAPE's two groove-writing actions
+     * already use.
      */
     LaunchedEffect(kitDir) {
         // `snips` is a directory listing, not user work — always worth a
@@ -991,6 +1006,14 @@ fun OrbitScreen(
         scope.launch {
             val result = withContext(Dispatchers.IO) { runCatching { OrbitClip.save(kitDir, s) } }
             result.onSuccess { clip ->
+                // GROOVE staleness fix — see [onGrooveWritten]'s own KDoc
+                // and this function's own KDoc above (on the staleness
+                // pass): the write just landed on disk, so any GROOVE
+                // screen that survived a tab switch through here needs to
+                // know its `progIndex` may now describe a different clip.
+                // Success only — a failed `OrbitClip.save` changed nothing
+                // on disk for GROOVE to be stale about.
+                onGrooveWritten()
                 // Snips are audio and a clip holds notes, so a snip ring
                 // cannot ride along. Say how many stayed behind rather than
                 // leave it to be discovered on the hardware.

@@ -2626,6 +2626,12 @@ fun App(shelf: KitShelf) {
                                     kitsRoot = shelf.root,
                                     onBack = { orbitOpen = false },
                                     onToast = { toast = it },
+                                    // CLIP ▸ KIT rewrites the open kit's
+                                    // groove.json (OrbitClip.save) the same
+                                    // way TAPE's READ AS GROOVE / STEAL THE
+                                    // FEEL do — so it bumps the same reload
+                                    // request they do.
+                                    onGrooveWritten = { grooveReload++ },
                                     history = orbitHistory,
                                     onHistoryChange = { orbitHistory = it },
                                     selected = orbitSelected,
@@ -2690,6 +2696,11 @@ fun App(shelf: KitShelf) {
                                     kitsRoot = shelf.root,
                                     onBack = { screen = AppScreen.GROOVE },
                                     onToast = { toast = it },
+                                    // Same reload request as the `orbitOpen`
+                                    // overlay call above — this is the menu
+                                    // row's own door to the same groove.json,
+                                    // not a second one.
+                                    onGrooveWritten = { grooveReload++ },
                                     // Same six as the `orbitOpen` overlay call
                                     // above — this is the menu row's own door
                                     // to the exact same session, not a second
