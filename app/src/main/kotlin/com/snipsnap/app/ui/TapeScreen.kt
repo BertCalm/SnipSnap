@@ -770,8 +770,18 @@ private fun TapeDeckContent(
 
             TapeText("EDIT", TapeType.pixelSmall, scheme.ink3.tape)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                DeckButton("IN", Modifier.weight(1f), engaged = model.inFrame >= 0) { model.setIn(); touch() }
-                DeckButton("OUT", Modifier.weight(1f), engaged = model.outFrame >= 0) { model.setOut(); touch() }
+                DeckButton(
+                    "IN",
+                    Modifier.weight(1f),
+                    engaged = model.inFrame >= 0,
+                    accessibilityLabel = "IN, ${if (model.inFrame >= 0) "SET" else "NOT SET"}",
+                ) { model.setIn(); touch() }
+                DeckButton(
+                    "OUT",
+                    Modifier.weight(1f),
+                    engaged = model.outFrame >= 0,
+                    accessibilityLabel = "OUT, ${if (model.outFrame >= 0) "SET" else "NOT SET"}",
+                ) { model.setOut(); touch() }
                 DeckButton(model.zoomLabel, Modifier.weight(1f)) { model.cycleZoom(); touch() }
             }
             if (retrim != null) {
@@ -971,7 +981,10 @@ private fun ReadoutRow(model: TapeDeckModel, readoutPos: State<Long>, onToast: (
                 .weight(1.3f)
                 .height(Layout.LCD_HEADER_MAX_H.dp)
                 .lcdPanel(scheme)
-                .tapeClick(label = null) {
+                // Named for what the tap switches to, not Copy.ODOMETER_ON/
+                // OFF — those are toasts (full stop, said once) while this
+                // is a control name spoken every time it's found.
+                .tapeClick(label = if (model.odometer) "SWITCH TO REAL TIME" else "SWITCH TO TAPE COUNTER") {
                     model.toggleOdometer()
                     localGen++
                     onToast(if (model.odometer) Copy.ODOMETER_ON else Copy.ODOMETER_OFF)
@@ -1005,6 +1018,12 @@ private fun DeckButton(
     // for IN/OUT (`model.inFrame`/`outFrame >= 0`). Every other DeckButton
     // call leaves this at the default and renders exactly as before.
     engaged: Boolean = false,
+    /**
+     * Accessible name override, for the IN/OUT call sites where [engaged]
+     * is a real "is this set?" state a screen reader needs to hear.
+     * `null` (every other call site) falls back to [label] alone.
+     */
+    accessibilityLabel: String? = null,
     onClick: () -> Unit,
 ) {
     val scheme = LocalScheme.current
@@ -1016,7 +1035,7 @@ private fun DeckButton(
             // this is what makes `engaged` a strict overlay on the normal
             // look rather than a different component.
             .raisedBevel(scheme, fill = if (engaged) scheme.accent.tape else null)
-            .tapeClick(label = null, onClick = onClick)
+            .tapeClick(label = accessibilityLabel ?: label, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
