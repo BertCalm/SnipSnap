@@ -16,3 +16,10 @@ local.properties
 
 # The native build tree of :app (CMake/NDK intermediates).
 app/.cxx/
+
+# Seeded design-canvas pages - the ~2 MB editor payload the /design helper
+# wraps an artboard set in. The .dc.html boards, canvas.json and support.js
+# beside them ARE the design; the seeded page is rebuilt from those and
+# lives on the artifact, so it is never committed.
+design/*/*.html
+!design/*/*.dc.html
