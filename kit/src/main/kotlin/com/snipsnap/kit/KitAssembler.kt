@@ -43,6 +43,8 @@ data class ArrangedPad(
      * first. A chain pad is single-zone, so no [softVariants] with it.
      */
     val takes: List<Snip> = emptyList(),
+    /** The pad's own name when the chop has one (a ghost's AFTER SNARE 2); null = the class and a counter. */
+    val displayName: String? = null,
 ) {
     init {
         require(softVariants.size <= 3) { "at most 3 soft variants (4 zones total)" }
@@ -138,7 +140,7 @@ object KitAssembler {
             pads += KitPad(
                 slot = slot,
                 sampleFile = "$stem.wav",
-                displayName = String.format(Locale.ROOT, "%s %02d", className, n),
+                displayName = pad.displayName ?: String.format(Locale.ROOT, "%s %02d", className, n),
                 drumClass = pad.drumClass,
                 colorHex = AutoPlace.colorFor(pad.drumClass),
                 level = pad.level ?: 0.707946f,

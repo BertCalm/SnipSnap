@@ -3,6 +3,7 @@ package com.snipsnap.shell
 import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Chopper
 import com.snipsnap.audio.Classification
+import com.snipsnap.kit.Balance
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Similar
@@ -38,6 +39,11 @@ import com.snipsnap.xpm.PadNoteMap
  * as one pad with the repeats cycling under it as a round-robin chain,
  * so sixteen slices of a break become the five sounds the drummer
  * played.
+ *
+ * GHOST CHOP (§9): [ChopMode.Ghosts] — the spaces *between* the hits,
+ * each named for the hit it follows, as gate pads: hold the pad, hold
+ * the room. A second kit from every tape, made of what the chop threw
+ * away.
  */
 class ChopReviewModel private constructor(
     val source: Snip,
@@ -55,7 +61,13 @@ class ChopReviewModel private constructor(
     private val tempoLazy: Lazy<TempoEstimate?> = lazy { estimateTempo(source) },
     /** ON THE GRID's fitted line spacing in frames (see [snapped]), null when the cuts were not snapped. */
     val gridStep: Double? = null,
+    /** GHOSTS: each row's name (AFTER SNARE 2), by row; null for a chop of hits. */
+    private val ghostNames: List<String?>? = null,
+    /** GHOSTS: how many hits the spaces are the spaces of; null for a chop of hits, where the rows are the hits. */
+    hitsHeard: Int? = null,
 ) {
+    /** How many hits the ear heard: the rows on a chop of hits, the hits underneath on GHOSTS. The bench steps from this. */
+    val hitsHeard: Int = hitsHeard ?: slices.size
 
     /**
      * The tape [source] was cut from: [file] is the snip's bare filename
@@ -106,6 +118,13 @@ class ChopReviewModel private constructor(
                 require(parts in 1..MAX_HITS) { "parts is 1..$MAX_HITS, got $parts" }
             }
         }
+
+        /**
+         * GHOST CHOP: the spaces between the hits of [hits] — the chop
+         * that [hits] would make, then `Chopper.ghosts` over it. The
+         * bench's count, ear, cut and grid all reach [hits].
+         */
+        data class Ghosts(val hits: ByHits = ByHits()) : ChopMode
     }
 
     /**
@@ -157,6 +176,8 @@ class ChopReviewModel private constructor(
         val n: Int,
         val slice: Slice,
         val classification: Classification,
+        /** GHOSTS: the hit this space follows, as the pad's name (AFTER SNARE 2); null on a chop of hits. */
+        val ghostOf: String? = null,
     ) {
         /** Tap-to-cycle override; null = the classifier's call stands. */
         var override: DrumClass? = null
@@ -173,8 +194,15 @@ class ChopReviewModel private constructor(
     }
 
     val rows: List<Row> = slices.mapIndexed { i, s ->
-        Row(i + 1, s, Classifier.classify(s.snip))
+        val heard = Classifier.classify(s.snip)
+        // A ghost is texture, not a drum: the drum classifier would call
+        // every one NOT SURE. Its features still ride along, for FOLD.
+        val ghost = ghostNames?.getOrNull(i)
+        if (ghost != null) Row(i + 1, s, Classification(DrumClass.LOOP, 1f, heard.features), ghost) else Row(i + 1, s, heard)
     }
+
+    /** True for a GHOSTS chop: rows are the spaces between the hits. */
+    val ghosts: Boolean get() = mode is ChopMode.Ghosts
 
     val sliceCount: Int get() = rows.size
 
@@ -188,16 +216,18 @@ class ChopReviewModel private constructor(
      */
     fun modeLabel(): String {
         val parts = mutableListOf<String>()
+        val hits = hitsOf(mode)
         when (mode) {
-            is ChopMode.ByHits -> {
-                parts += "BY HITS"
-                if (mode.ear != Ear.NORMAL) parts += mode.ear.name
-                if (mode.cut != Cut.ON) parts += "CUT ${mode.cut.name}"
-                // `tempo` is already measured whenever the grid is on: [chop]
-                // forced it to snap, so reading it here is a lookup, not DSP.
-                if (mode.grid != GridSnap.OFF) parts += if (tempo != null) "ON THE ${mode.grid.label}" else "ON THE ${mode.grid.label} (NO TEMPO)"
-            }
+            is ChopMode.ByHits -> parts += "BY HITS"
+            is ChopMode.Ghosts -> parts += "GHOSTS"
             is ChopMode.Grid -> parts += "GRID ×${mode.parts}"
+        }
+        if (hits != null) {
+            if (hits.ear != Ear.NORMAL) parts += hits.ear.name
+            if (hits.cut != Cut.ON) parts += "CUT ${hits.cut.name}"
+            // `tempo` is already measured whenever the grid is on: [chop]
+            // forced it to snap, so reading it here is a lookup, not DSP.
+            if (hits.grid != GridSnap.OFF) parts += if (tempo != null) "ON THE ${hits.grid.label}" else "ON THE ${hits.grid.label} (NO TEMPO)"
         }
         if (edited) parts += "EDITED"
         return parts.joinToString(" · ")
@@ -211,7 +241,7 @@ class ChopReviewModel private constructor(
      * at all, which is a refusal, not a count of one.
      */
     fun autoCount(): Int? {
-        val config = (mode as? ChopMode.ByHits)?.config() ?: Transients.Config()
+        val config = hitsOf(mode)?.config() ?: Transients.Config()
         return Chopper.autoSliceCount(source, config).takeIf { it > 0 }?.coerceAtMost(MAX_HITS)
     }
 
@@ -261,7 +291,8 @@ class ChopReviewModel private constructor(
         slices[index] = joined
         slices.removeAt(index + 1)
         val overrides = rows.map { it.override }.toMutableList().also { it.removeAt(index + 1) }
-        return rebuilt(slices, overrides)
+        val names = ghostNames?.toMutableList()?.also { it.removeAt(index + 1) }
+        return rebuilt(slices, overrides, names)
     }
 
     /**
@@ -290,12 +321,14 @@ class ChopReviewModel private constructor(
         slices[index] = first
         slices.add(index + 1, second)
         val overrides = rows.map { it.override }.toMutableList().also { it.add(index + 1, null) }
-        return rebuilt(slices, overrides)
+        // The second half of a split ghost is still the space after the same hit.
+        val names = ghostNames?.toMutableList()?.also { it.add(index + 1, it[index]) }
+        return rebuilt(slices, overrides, names)
     }
 
     /** A model over [slices] with [overrides] laid back onto its rows, marked [edited]. */
-    private fun rebuilt(slices: List<Slice>, overrides: List<DrumClass?>): ChopReviewModel {
-        val m = ChopReviewModel(source, mode, slices, tape, edited = true, tempoLazy = tempoLazy, gridStep = gridStep)
+    private fun rebuilt(slices: List<Slice>, overrides: List<DrumClass?>, names: List<String?>?): ChopReviewModel {
+        val m = ChopReviewModel(source, mode, slices, tape, edited = true, tempoLazy = tempoLazy, gridStep = gridStep, ghostNames = names, hitsHeard = if (ghosts) hitsHeard else null)
         for ((i, o) in overrides.withIndex()) m.rows[i].override = o
         return m
     }
@@ -367,10 +400,19 @@ class ChopReviewModel private constructor(
 
     fun sendToGrid(): SendResult {
         val placed = placementPreview()
-        val arranged = placed.map { row -> row?.let(::arrangedPad) }
+        val arranged = balanced(placed.map { row -> row?.let(::arrangedPad) })
         val choke = placed.any { it != null && AutoPlace.muteGroupFor(it.effectiveClass) != 0 }
         return SendResult(arranged, rows.size, choke)
     }
+
+    /**
+     * GHOSTS through the kit-level balancer (`Balance`): ghosts are quiet
+     * by nature — they are the tape's decays — and the mixer level is the
+     * non-destructive place to bring them up, the WAVs untouched. A chop
+     * of hits lands as it always has.
+     */
+    private fun balanced(arranged: List<ArrangedPad?>): List<ArrangedPad?> =
+        if (ghosts) Balance.apply(arranged) else arranged
 
     /**
      * One slice as the kit builder takes it. `sourceFrame`/`lengthFrames`
@@ -383,13 +425,17 @@ class ChopReviewModel private constructor(
         val start = row.slice.sourceFrame
         val length = row.slice.snip.frameCount
         val cut = tape?.let { Retrim.tag(it.file, it.offsetFrames + start, it.offsetFrames + start + length) } ?: emptyMap()
+        val ghost = row.ghostOf?.let { mapOf("ghost" to it) } ?: emptyMap()
         return ArrangedPad(
             row.slice.snip, row.effectiveClass,
+            // A ghost is a gate pad: hold the pad, hold the room; let go, it stops.
+            oneShot = row.ghostOf == null,
             source = mapOf(
                 "origin" to "chop",
                 "sourceFrame" to start.toString(),
                 "lengthFrames" to length.toString(),
-            ) + cut,
+            ) + cut + ghost,
+            displayName = row.ghostOf,
         )
     }
 
@@ -444,7 +490,7 @@ class ChopReviewModel private constructor(
     /** SEND TO GRID, melodic layout. */
     fun sendToGridMelodic(): SendResult {
         val placed = melodicPreview()
-        val arranged = placed.map { row -> row?.let(::arrangedPad) }
+        val arranged = balanced(placed.map { row -> row?.let(::arrangedPad) })
         val choke = placed.any { it != null && AutoPlace.muteGroupFor(it.effectiveClass) != 0 }
         return SendResult(arranged, rows.size, choke)
     }
@@ -542,7 +588,7 @@ class ChopReviewModel private constructor(
             }
         }
         val choke = placed.any { it != null && AutoPlace.muteGroupFor(it.lead.effectiveClass) != 0 }
-        return SendResult(arranged, placed.count { it != null }, choke)
+        return SendResult(balanced(arranged), placed.count { it != null }, choke)
     }
 
     /**
@@ -584,6 +630,19 @@ class ChopReviewModel private constructor(
 
         /** Below this the chip goes dashed — same threshold as the CLI's `?`. */
         const val NOT_SURE_BELOW = 0.5f
+
+        /** The hits chop under [mode] — its own for BY HITS, the one GHOSTS is the spaces of; null for a grid. */
+        fun hitsOf(mode: ChopMode): ChopMode.ByHits? = when (mode) {
+            is ChopMode.ByHits -> mode
+            is ChopMode.Ghosts -> mode.hits
+            is ChopMode.Grid -> null
+        }
+
+        /** [mode] with its hits chop replaced by [hits] (a grid becomes [hits] itself). */
+        fun withHits(mode: ChopMode, hits: ChopMode.ByHits): ChopMode = when (mode) {
+            is ChopMode.Ghosts -> mode.copy(hits = hits)
+            else -> hits
+        }
 
         /** The HITS and GRID steppers' ceiling: four banks, the same bound the CLI's auto count keeps. */
         const val MAX_HITS = Chopper.AUTO_MAX
@@ -687,20 +746,34 @@ class ChopReviewModel private constructor(
 
         /** [chop] with a tempo already measured for this source (or not yet, but shared). */
         private fun chop(source: Snip, mode: ChopMode, tape: TapeRef?, tempoLazy: Lazy<TempoEstimate?>): ChopReviewModel {
-            var slices = when (mode) {
-                is ChopMode.ByHits ->
-                    Chopper.byTransients(source, maxSlices = mode.maxSlices, config = mode.config(), cleanup = Chopper.SLICE_CLEANUP)
-                is ChopMode.Grid ->
+            val hits = hitsOf(mode)
+            var slices = when {
+                hits != null ->
+                    Chopper.byTransients(source, maxSlices = hits.maxSlices, config = hits.config(), cleanup = Chopper.SLICE_CLEANUP)
+                mode is ChopMode.Grid ->
                     Chopper.intoEqualParts(source, mode.parts, cleanup = Chopper.SLICE_CLEANUP)
+                else -> emptyList()
             }
             var gridStep: Double? = null
-            if (mode is ChopMode.ByHits && mode.grid != GridSnap.OFF) {
+            if (hits != null && hits.grid != GridSnap.OFF) {
                 // A tape with no pulse keeps its cuts where the hits were; the label says so.
                 tempoLazy.value?.let {
-                    val (snappedSlices, step) = snapped(source, slices, mode.grid, it.bpm)
+                    val (snappedSlices, step) = snapped(source, slices, hits.grid, it.bpm)
                     slices = snappedSlices
                     gridStep = step
                 }
+            }
+            if (mode is ChopMode.Ghosts) {
+                // The spaces between the hits, each named for the hit before
+                // it — the hit's own class, as the chip would have read it.
+                val names = slices.map { chipName(Classifier.classify(it.snip).drumClass) }
+                val ghosts = Chopper.ghosts(source, slices)
+                return ChopReviewModel(
+                    source, mode, ghosts.map { it.slice }, tape,
+                    tempoLazy = tempoLazy, gridStep = gridStep,
+                    ghostNames = ghosts.map { "AFTER ${names[it.afterHit]} ${it.afterHit + 1}" },
+                    hitsHeard = slices.size,
+                )
             }
             return ChopReviewModel(source, mode, slices, tape, tempoLazy = tempoLazy, gridStep = gridStep)
         }
