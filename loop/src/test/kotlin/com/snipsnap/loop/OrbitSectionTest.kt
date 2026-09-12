@@ -522,6 +522,37 @@ class OrbitSectionTest {
         }
     }
 
+    @Test
+    fun `at a section boundary every ring it plays really is on its downbeat`() {
+        // I claimed in a commit message that the canvas's "the rings met"
+        // flash needed no change, because it already reads the frame the
+        // canvas is handed - the section's - so it fires at local zero.
+        // Review read that as a lie the flash tells. This is the claim
+        // made checkable rather than argued: under restart semantics a
+        // section start IS a meeting, for every ring the section plays.
+        val s = OrbitSet(
+            listOf(ring("A", 1, 0), Orbit("B", 20, PatternOrbit("kit", listOf(OrbitHit(0, 2))))),
+            bpm,
+            rate,
+            sections = listOf(OrbitSection("A", 2, setOf(0, 1)), OrbitSection("B", 1, setOf(0))),
+        )
+        for (boundary in longArrayOf(0, 2 * bar, 3 * bar, 5 * bar)) {
+            val local = OrbitClock.localFrame(s, boundary)
+            assertEquals(0L, local, "a section does not begin at its own frame zero")
+            val here = OrbitClock.sectionAt(s, boundary)
+            for (index in s.sections[here].plays) {
+                assertEquals(
+                    0.0,
+                    OrbitClock.phase(s, s.orbits[index], local),
+                    "ring $index is not on its downbeat at the start of section ${s.sections[here].name}",
+                )
+            }
+        }
+        // Rings of 16 and 20 do not meet within the first section at all,
+        // so this is the restart doing it rather than a coincidence.
+        assertEquals(80L, OrbitClock.cycleSteps(s.copy(sections = emptyList())))
+    }
+
     // ---- the file ----
 
     @Test
