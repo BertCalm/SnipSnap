@@ -4,6 +4,7 @@ import com.snipsnap.kit.GrooveStore
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import java.nio.file.Files
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -13,6 +14,17 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class OrbitClipTest {
+
+    private val temps = mutableListOf<java.io.File>()
+
+    private fun tempKit(name: String): java.io.File =
+        Files.createTempDirectory(name).toFile().also { temps += it }
+
+    @AfterTest
+    fun takeTheTempKitsAway() {
+        temps.forEach { it.deleteRecursively() }
+        temps.clear()
+    }
 
     private fun pattern(name: String, steps: Int, slot: Int, hits: List<Int>, span: OrbitSpan = OrbitSpan.FREE, engaged: Boolean = true) =
         Orbit(name, steps, PatternOrbit("kit", hits.map { OrbitHit(it, slot, 0.8f) }), span = span, engaged = engaged)
@@ -345,7 +357,7 @@ class OrbitClipTest {
 
     @Test
     fun `saving replaces the last ORBIT clip and keeps every other groove`() {
-        val dir = Files.createTempDirectory("orbitclip").toFile()
+        val dir = tempKit("orbitclip")
         val captured = Mpc3Clip("Break", 2, listOf(Mpc3Note(36, 0, 0.9f)))
         val progE = Mpc3Clip("Break E", 2, listOf(Mpc3Note(38, 240, 0.7f)))
         GrooveStore.save(dir, listOf(captured, progE, Mpc3Clip("ORBIT 4:5", 5, emptyList())))
@@ -361,11 +373,33 @@ class OrbitClipTest {
     }
 
     @Test
+    fun `the sidecar version moves because bars changed meaning, and version 1 still reads`() {
+        // A one-bar 5/4 clip is `bars: 1`; the same music used to be
+        // written `bars: 2` of 4/4. A build without `pulsesPerBar` would
+        // read the new number as 4/4 bars and play music of the wrong
+        // length, so it has to refuse the file - which an unknown version
+        // is how it does. Version 1 files only ever held 4/4 clips, so the
+        // absent key means 4/4 there and is still read.
+        val dir = tempKit("orbitversion")
+        OrbitClip.save(dir, OrbitSet(listOf(pattern("five", 20, 1, listOf(0))), 120f, 48_000, lapSteps = 20))
+        val text = java.io.File(dir, GrooveStore.FILE_NAME).readText()
+        assertTrue("\"version\": 2" in text, "said: ${text.take(80)}")
+
+        val old = tempKit("orbitv1")
+        java.io.File(old, GrooveStore.FILE_NAME).writeText(
+            """{"version": 1, "clips": [{"name": "Break", "bars": 2, "notes": []}]}""",
+        )
+        val read = GrooveStore.load(old).single()
+        assertEquals(Mpc3Clip.PULSES_PER_BAR, read.pulsesPerBar, "a version 1 clip is 4/4, and correctly so")
+        assertEquals(2, read.bars)
+    }
+
+    @Test
     fun `the meter survives the groove store, and a four-four file does not change`() {
         // groove.json is what carries a clip from the screen to the
         // exporter, so a meter that does not round-trip through it never
         // reaches the .xpj at all.
-        val dir = Files.createTempDirectory("orbitmeter").toFile()
+        val dir = tempKit("orbitmeter")
         val waltz = OrbitSet(listOf(pattern("four", 16, 1, listOf(0))), 120f, 48_000, lapSteps = 12)
         OrbitClip.save(dir, waltz)
         val stored = GrooveStore.load(dir).single()
@@ -375,7 +409,7 @@ class OrbitClipTest {
         // The key is written only when the clip is not 4/4, so every
         // groove.json already on a card stays byte-for-byte what it was
         // and its version does not have to move.
-        val plain = Files.createTempDirectory("orbitplain").toFile()
+        val plain = tempKit("orbitplain")
         OrbitClip.save(plain, set(pattern("a", 16, 1, listOf(0))))
         assertFalse(
             "pulsesPerBar" in java.io.File(plain, GrooveStore.FILE_NAME).readText(),

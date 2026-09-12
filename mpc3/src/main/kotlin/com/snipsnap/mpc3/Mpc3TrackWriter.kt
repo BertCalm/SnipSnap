@@ -91,8 +91,17 @@ data class Mpc3Clip(
     init {
         require(name.isNotBlank()) { "clip name must not be blank" }
         require(bars in 1..64) { "bars out of range: $bars" }
+        // Bounded, not just divisible. `GrooveStore` reads this out of
+        // JSON, and both `beatsPerBar` and `fourFourBars` narrow to Int:
+        // a multi-trillion-pulse bar would pass a divisibility-only check
+        // and then wrap into a negative meter or a negative clip bound.
+        // MAX_BEATS_PER_BAR is far past any meter a musician writes and
+        // still leaves 64 bars of it inside Int.
         require(pulsesPerBar > 0 && pulsesPerBar % PULSES_PER_BEAT == 0L) {
             "a bar is whole beats of $PULSES_PER_BEAT pulses, not $pulsesPerBar"
+        }
+        require(pulsesPerBar <= MAX_BEATS_PER_BAR * PULSES_PER_BEAT) {
+            "a bar of ${pulsesPerBar / PULSES_PER_BEAT} beats is past the $MAX_BEATS_PER_BAR this writes"
         }
         notes.forEach {
             require(it.timePulses < bars * pulsesPerBar) { "note at ${it.timePulses} falls outside $bars bars" }
@@ -133,6 +142,14 @@ data class Mpc3Clip(
          * 2 is exactly its `lengthPulses` of 7680.
          */
         const val PULSES_PER_BEAT: Long = 960L
+
+        /**
+         * The widest bar this writes, in beats. No meter a musician writes
+         * comes near it; what it actually does is keep every derived
+         * number inside `Int` — 64 bars of 64 beats is 3,932,160 pulses,
+         * and `fourFourBars` of that is 1024.
+         */
+        const val MAX_BEATS_PER_BAR: Long = 64L
 
         /** Straight; the MPC's swing scale runs from here to [MAX_SWING]. */
         const val STRAIGHT_SWING = 50

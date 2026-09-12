@@ -46,8 +46,18 @@ object GrooveEdit {
     /** Which note plays a lane's pad — [Mpc3Note.noteFor], the one map. */
     fun noteFor(lane: Lane): Int = Mpc3Note.noteFor(LANE_SLOT.getValue(lane))
 
-    /** Cells per bar in the step editor; a bar is [Mpc3Clip.PULSES_PER_BAR]. */
+    /** Cells per bar in the step editor, for a 4/4 bar. See [stepsPerBar]. */
     const val STEPS_PER_BAR = 16
+
+    /**
+     * Cells per bar for [clip] — sixteen for a 4/4 one, twelve for a 3/4.
+     *
+     * The editor's grid is a 16th either way ([STEP_PULSES]); what changes
+     * is how many of them a bar holds. Asked of the clip rather than
+     * assumed, because an ORBIT clip declares its own bar and a cell index
+     * computed against sixteen would address the wrong beat in it.
+     */
+    fun stepsPerBar(clip: Mpc3Clip): Int = (clip.pulsesPerBar / STEP_PULSES).toInt()
 
     /** One step's width in pulses — a 16th, matching the editor's grid. */
     val STEP_PULSES: Long = Mpc3Clip.PULSES_PER_16TH
@@ -90,12 +100,12 @@ object GrooveEdit {
      */
     fun quantized(source: Mpc3Clip, name: String): Mpc3Clip {
         val grid = STEP_PULSES
-        val stepsInClip = source.bars * Mpc3Clip.PULSES_PER_BAR / grid
+        val stepsInClip = source.lengthPulses / grid
         val snapped = source.notes.map { n ->
             val step = ((n.timePulses + grid / 2) / grid) % stepsInClip
             n.copy(timePulses = step * grid)
         }
-        return Mpc3Clip(name = name, bars = source.bars, notes = dedupeLouder(snapped))
+        return Mpc3Clip(name = name, bars = source.bars, notes = dedupeLouder(snapped), pulsesPerBar = source.pulsesPerBar)
     }
 
     /**
@@ -185,7 +195,7 @@ object GrooveEdit {
      * always time-sorted, so repeated toggles round-trip byte-for-byte.
      */
     fun toggleStep(clip: Mpc3Clip, lane: Lane, step: Int): Mpc3Clip {
-        val stepsInClip = clip.bars * STEPS_PER_BAR
+        val stepsInClip = clip.bars * stepsPerBar(clip)
         require(step in 0 until stepsInClip) { "step out of range for a ${clip.bars}-bar clip: $step" }
         val note = noteFor(lane)
         val pulses = step * STEP_PULSES
@@ -207,8 +217,8 @@ object GrooveEdit {
      */
     fun clearBar(clip: Mpc3Clip, bar: Int): Mpc3Clip {
         require(bar in 0 until clip.bars) { "bar out of range for a ${clip.bars}-bar clip: $bar" }
-        val from = bar * Mpc3Clip.PULSES_PER_BAR
-        val until = from + Mpc3Clip.PULSES_PER_BAR
+        val from = bar * clip.pulsesPerBar
+        val until = from + clip.pulsesPerBar
         val laneNotes = Lane.entries.mapTo(HashSet()) { noteFor(it) }
         return clip.copy(notes = clip.notes.filterNot { it.timePulses in from until until && it.note in laneNotes })
     }

@@ -39,6 +39,32 @@ class OrbitImportTest {
     // ---- the arithmetic ----
 
     @Test
+    fun `a three-four clip round trips through CLIP to KIT without gaining a bar`() {
+        // The round trip is exact (YYY6), and a clip that declares its own
+        // bar must not break that. `bars * 16` would have built a 64-step
+        // ring out of 48 steps of 3/4 music and handed back a 4/4 set:
+        // the notes would land on the right pulses inside a loop a third
+        // too long, which is a quiet way to lose the music's shape.
+        val notes = listOf(Mpc3Note(36, 0, 1f), Mpc3Note(38, 5 * s16, 0.8f), Mpc3Note(42, 47 * s16, 0.4f))
+        val waltz = Mpc3Clip("Waltz", 4, notes, pulsesPerBar = 3 * Mpc3Clip.PULSES_PER_BEAT)
+        assertEquals(48, OrbitImport.importSteps(waltz))
+        assertEquals(12, OrbitImport.importLapSteps(waltz))
+
+        val imported = OrbitImport.rings(waltz, "break", kit(1, 3, 7), bpm, rate)
+        assertTrue(imported.complete, "every pad is in the kit: ${imported.skipped}")
+        assertEquals(12, imported.set.lapSteps, "the set counts in the clip's own bar")
+        imported.set.orbits.forEach { assertEquals(48, it.steps, "a ring is the clip's length, not bars x 16") }
+
+        val back = OrbitClip.clip(imported.set)
+        assertEquals(waltz.pulsesPerBar, back.pulsesPerBar)
+        assertEquals(waltz.lengthPulses, back.lengthPulses)
+        assertEquals(
+            notes.map { it.note to it.timePulses }.sortedBy { it.second },
+            back.notes.map { it.note to it.timePulses }.sortedBy { it.second },
+        )
+    }
+
+    @Test
     fun `a clip goes to rings and back on the same pulse, not merely the same 16th`() {
         // The row asked for a round trip "within a 16th", which is what it
         // would have been before `OrbitHit.offset` existed. It is exact:

@@ -279,6 +279,24 @@ class Mpc3TrackWriterTest {
     )
 
     @Test
+    fun `a clip's bar is bounded, not merely divisible`() {
+        // `pulsesPerBar` arrives from groove.json, and `beatsPerBar` and
+        // `fourFourBars` both narrow to Int. Divisibility alone would let a
+        // multi-trillion-pulse bar through and then wrap those into
+        // nonsense - a negative meter, or a negative clip bound in a file.
+        val widest = Mpc3Clip.MAX_BEATS_PER_BAR * Mpc3Clip.PULSES_PER_BEAT
+        assertEquals(64, Mpc3Clip("WIDE", 1, listOf(Mpc3Note(36, 0, 0.9f)), widest).beatsPerBar)
+        val why = assertFailsWith<IllegalArgumentException> {
+            Mpc3Clip("TOO WIDE", 1, listOf(Mpc3Note(36, 0, 0.9f)), widest + Mpc3Clip.PULSES_PER_BEAT)
+        }.message
+        assertTrue(why != null && "65" in why, "said: $why")
+        // Still refused for the original reason, too: a bar has to be whole beats.
+        assertFailsWith<IllegalArgumentException> {
+            Mpc3Clip("RAGGED", 1, listOf(Mpc3Note(36, 0, 0.9f)), 13 * Mpc3Clip.PULSES_PER_16TH)
+        }
+    }
+
+    @Test
     fun `a track pads a non-four-four clip, because its clips cannot say otherwise`() {
         // The other half of the meter work, and the half that does NOT
         // change. A track's clips are version 1 and `timeSignatureList`
