@@ -134,11 +134,34 @@ class ReversalTest {
      * warning says what the NEXT tap would do, and nothing has happened yet,
      * so there is nothing to take back. A landing says it happened.
      */
+    private data class NotALanding(
+        /** Why the law does not apply. */
+        val why: String,
+        /**
+         * The phrase that MAKES it not a landing, which must still be in the
+         * function's source.
+         *
+         * Without this the entry is an unconditional bypass: change
+         * `dubWouldOverwrite` to return "ITEM REPLACED. DUB AGAIN TO WRITE
+         * OVER IT." and it is a destructive landing that the law skips
+         * forever. Found in review, and it is the same fault this whole file
+         * keeps producing — an exclusion nobody re-checks. Every other set
+         * here is validated (a parked gap must still be a gap, a
+         * you-cannot site must say so); this one was not.
+         */
+        val stillTrue: String,
+    )
+
     private val templatedNotALanding = mapOf(
         // Its own KDoc: "nothing has been written when this appears." The tap
         // that overwrites is the next one, and this line exists so that tap is
-        // a decision rather than a dare.
-        "dubWouldOverwrite" to "a warning before the act, not a landing",
+        // a decision rather than a dare. "IS ALREADY THERE" is the clause that
+        // says so: it describes the CURRENT state of the file, before anything
+        // is written. A post-write rewrite loses it, and the guard fires.
+        "dubWouldOverwrite" to NotALanding(
+            why = "a warning before the act, not a landing",
+            stillTrue = "IS ALREADY THERE",
+        ),
     )
 
     /**
@@ -335,31 +358,43 @@ class ReversalTest {
     }
 
     /**
-     * Anti-relaxation. Every exclusion must name a constant that exists, or
-     * it sits there exempting nothing forever — and no constant may be in
-     * both sets, which would be claiming a line is simultaneously not a
-     * destructive landing and a destructive landing with no way back.
-     */
-    /**
-     * [templatedNotALanding] needs the same staleness guard the two
-     * constant-keyed sets have, and shipped without one: a renamed or deleted
-     * function would leave an entry exempting nothing, forever, and the next
-     * reader would take it for a live decision. Caught by mutation, not by
-     * review - adding an exclusion for a function that does not exist passed
-     * silently until this test existed.
+     * [templatedNotALanding] earns its exemptions twice over: the function
+     * must still exist, and the phrase that makes it a warning rather than a
+     * landing must still be in it.
+     *
+     * Both halves were found by review rather than by me, one round apart.
+     * The set shipped with no staleness guard at all — an entry naming a
+     * function that does not exist passed silently — and then with a guard
+     * that only checked the name, which left the exemption unconditional: a
+     * rewrite to a post-write message would have kept the bypass.
      */
     @Test
-    fun `no templated exclusion is stale`() {
+    fun `no templated exclusion is stale, and each is still a warning`() {
         val src = personalitySource().readText(Charsets.UTF_8)
-        for ((name, why) in templatedNotALanding) {
+        for ((name, entry) in templatedNotALanding) {
+            val decl = Regex("""\bfun\s+${Regex.escape(name)}\s*\([^\n]*""").find(src)
             assertTrue(
-                Regex("""\bfun\s+${Regex.escape(name)}\s*\(""").containsMatchIn(src),
-                "templatedNotALanding lists Copy.$name ($why) but Personality.kt declares no such " +
-                    "function - remove the stale entry, or fix the rename it is tracking.",
+                decl != null,
+                "templatedNotALanding lists Copy.$name (${entry.why}) but Personality.kt declares no " +
+                    "such function - remove the stale entry, or fix the rename it is tracking.",
+            )
+            assertTrue(
+                entry.stillTrue in decl!!.value,
+                "Copy.$name is exempted as \"${entry.why}\", which held because its line said " +
+                    "\"${entry.stillTrue}\". It no longer does:\n  ${decl.value.trim()}\n" +
+                    "If it has become a landing, delete the exemption and give it a way back. If it " +
+                    "is still a warning, say so in a new stillTrue phrase - deliberately, not by " +
+                    "widening the match.",
             )
         }
     }
 
+    /**
+     * Anti-relaxation. Every exclusion must name a constant that exists, or
+     * it sits there exempting nothing forever — and no constant may be in
+     * two sets at once, which would be claiming a line is simultaneously not
+     * a destructive landing and a destructive landing with no way back.
+     */
     @Test
     fun `no exclusion is stale, and none is in both sets`() {
         val all = copyStringConstants()
