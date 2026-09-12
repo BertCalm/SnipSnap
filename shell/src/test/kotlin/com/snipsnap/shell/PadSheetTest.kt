@@ -16,13 +16,13 @@ import kotlin.test.assertTrue
 class PadSheetTest {
 
     @Test
-    fun `the five segments the design draws, NONE first, SMEAR last`() {
-        assertEquals(listOf("NONE", "CRUSH", "TAPE", "DIRT", "SMEAR"), PadSheet.SEGMENTS)
+    fun `the six segments the design draws, NONE first, SMEAR and DUST last`() {
+        assertEquals(listOf("NONE", "CRUSH", "TAPE", "DIRT", "SMEAR", "DUST"), PadSheet.SEGMENTS)
     }
 
     @Test
     fun `every era segment names a real era`() {
-        for (segment in PadSheet.SEGMENTS - PadSheet.NONE - PadSheet.SMEAR) {
+        for (segment in PadSheet.SEGMENTS - PadSheet.NONE - PadSheet.SMEAR - PadSheet.DUST) {
             val era = PadSheet.eraFor(segment)
             assertTrue(
                 era in Eras.names,
@@ -69,6 +69,9 @@ class PadSheetTest {
 
         // They sit on different rows, and only one of them is on row one.
         assertTrue(PadSheet.SMEAR in PadSheet.SEGMENTS, "SMEAR is row one")
+        assertTrue(PadSheet.DUST in PadSheet.SEGMENTS, "DUST is row one too")
+        assertNull(PadSheet.eraFor(PadSheet.DUST), "DUST names no era, like SMEAR")
+        assertNull(PadSheet.treatmentFor(PadSheet.DUST))
         assertTrue(PadSheet.TAIL in PadSheet.CHARACTER_SEGMENTS, "TAIL is row two")
         assertFalse(PadSheet.TAIL in PadSheet.SEGMENTS)
         assertFalse(PadSheet.SMEAR in PadSheet.CHARACTER_SEGMENTS)
@@ -92,7 +95,7 @@ class PadSheetTest {
 
     @Test
     fun `segmentFor is eraFor's inverse for every era segment`() {
-        for (segment in PadSheet.SEGMENTS - PadSheet.NONE - PadSheet.SMEAR) {
+        for (segment in PadSheet.SEGMENTS - PadSheet.NONE - PadSheet.SMEAR - PadSheet.DUST) {
             val era = PadSheet.eraFor(segment)!!
             assertEquals(segment, PadSheet.segmentFor(era))
         }

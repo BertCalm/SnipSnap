@@ -86,6 +86,7 @@ import com.snipsnap.kit.OneNote
 import com.snipsnap.kit.PadFromAnything
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Mutate
@@ -102,6 +103,7 @@ import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.ShapeAudition
+import com.snipsnap.shell.SnipStore
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.exp
@@ -171,6 +173,8 @@ fun PadSheetScreen(
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    // The SNIPS shelf: where a pad's tape, and the dust print cached beside it, live.
+    val snipsDir = File(context.filesDir, SnipStore.DIR)
 
     var model by remember(entry.dir) { mutableStateOf<KitBuilderModel?>(null) }
     var loadFailed by remember(entry.dir) { mutableStateOf(false) }
@@ -599,6 +603,78 @@ fun PadSheetScreen(
     }
 
     /**
+     * DUST: the tape's own hiss and room under this pad (`docs/DUST.md`) —
+     * `KitBuilderModel.dustPad`, the same door shape as [applySmear] with
+     * one step in front: which tape, and its print. The tape is the pad's
+     * own, else the kit's (`DustPrints.tapeFor`); none at all is refused
+     * in the app's words, a tape gone from the shelf says so, and a tape
+     * with nothing between its hits says that. The print is made, or
+     * read off the shelf's cache, on IO before the kit is opened, so the
+     * write under the lock is only the convolution.
+     */
+    fun applyDust(m: KitBuilderModel, p: KitPad, amount: Float, padName: String) {
+        val tape = DustPrints.tapeFor(m.kit, p)
+        if (tape == null) {
+            onToast(Copy.DUST_NO_TAPE)
+            return
+        }
+        val kitDir = m.kitDir
+        val staleSampleFile = p.sampleFile
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        scope.launch {
+            busy = true
+            try {
+                val tapeFile = File(snipsDir, tape)
+                // AMT 0 takes dust off and needs no print; anything above needs the tape's.
+                val print = if (amount > 0f) withContext(Dispatchers.IO) { DustPrints.forTape(tapeFile) } else null
+                if (amount > 0f && print == null) {
+                    onToast(if (tapeFile.isFile) Copy.DUST_NO_GHOSTS else Copy.dustTapeGone(tape))
+                    return@launch
+                }
+                var applied = false
+                var stacked = false
+                var noop = false
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    val freshPad = f.kit.pad(slot)
+                    if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
+                        check(freshPad.velocityLayers.isEmpty()) {
+                            "pad $slot is velocity-layered - clear GHOSTS before dusting"
+                        }
+                        // AMT 0 on a pad that isn't dusted: `dustPad` touches
+                        // nothing, so this is not a landing.
+                        if (amount <= 0f && PadSheet.readDust(freshPad.recipe) == null) {
+                            noop = true
+                            return@withFreshKit
+                        }
+                        stacked = amount > 0f &&
+                            PadSheet.unTreatState(freshPad, f.binContents().map { it.originalName }.toSet()) == PadSheet.UnTreat.NOT_BINNED
+                        f.dustPad(slot, amount, tape, print)
+                        applied = true
+                    }
+                }
+                if (applied) auditionOnRefresh = true
+                model = fresh
+                pendingMetadataSlots = emptySet()
+                onKitUpdated(fresh.kit)
+                if (applied) {
+                    val label = PadSheet.displayLabel(PadSheet.DUST)
+                    onToast(if (stacked) Copy.treatedStacked(label, padName) else Copy.treated(label, padName))
+                } else if (noop) {
+                    onToast(Copy.DUST_ZERO)
+                } else {
+                    onToast(Copy.BIN_ITEM_GONE)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (e is IllegalStateException) onToast(Copy.RETREAT_REFUSED) else failure("TREATMENT", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    /**
      * TREATMENT: picking a segment on either row, or moving AMT (SMEAR is
      * handled separately — see [applySmear] above). Both whole-pad doors
      * (`eraPad`, `characterPad`, `keyedPad`) always read the *current
@@ -656,6 +732,10 @@ fun PadSheetScreen(
         val padName = p.displayName
         if (segment == PadSheet.SMEAR) {
             applySmear(m, p, amount, padName)
+            return
+        }
+        if (segment == PadSheet.DUST) {
+            applyDust(m, p, amount, padName)
             return
         }
         val treatment = PadSheet.treatmentFor(segment) ?: return
@@ -850,7 +930,7 @@ fun PadSheetScreen(
         var said: String? = null
         commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
             said = try {
-                RecipeReplay.apply(mm, slot, clip.recipe, padName).toast
+                RecipeReplay.apply(mm, slot, clip.recipe, padName) { tape -> DustPrints.forTape(File(snipsDir, tape)) }.toast
             } catch (e: KitBuilderModel.Unpitched) {
                 Copy.notANote(e.message ?: "not a note")
             }
@@ -1528,9 +1608,15 @@ fun PadSheetScreen(
     // and checked first: it always draws its own row-one segment, so it
     // never needs the phone-ruling fallback below.
     val smearAmount = readSmearRecipe(pad.recipe)
-    val applied = if (smearAmount != null) null else PadSheet.read(pad.recipe)
-    val activeSegment = if (smearAmount != null) PadSheet.SMEAR else applied?.segment
-    val isNoneState = smearAmount == null && applied == null
+    // DUST rides its own shape too (`{"verb":"dust","amount","tape"}`), read the same way.
+    val dustAmount = PadSheet.readDust(pad.recipe)?.amount
+    val applied = if (smearAmount != null || dustAmount != null) null else PadSheet.read(pad.recipe)
+    val activeSegment = when {
+        smearAmount != null -> PadSheet.SMEAR
+        dustAmount != null -> PadSheet.DUST
+        else -> applied?.segment
+    }
+    val isNoneState = smearAmount == null && dustAmount == null && applied == null
     // The phone ruling, both rows: a treatment no segment draws is named
     // on the provenance line, never shown as NONE.
     val unmappedLabel = applied?.takeIf { it.segment == null }?.let { a ->
@@ -1540,7 +1626,7 @@ fun PadSheetScreen(
             is PadSheet.Treatment.Keyed -> "IN KEY: ${a.treatment.name.uppercase()}"
         }
     }
-    val amount = smearAmount ?: applied?.amount ?: PadSheet.DEFAULT_AMOUNT
+    val amount = smearAmount ?: dustAmount ?: applied?.amount ?: PadSheet.DEFAULT_AMOUNT
 
     val assignedSlots = kit.pads.map { it.slot }.sorted()
     val idx = assignedSlots.indexOf(slot)
@@ -2126,6 +2212,8 @@ private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String 
     val cut = Retrim.cutOf(pad)
     val parts = mutableListOf<String>()
     parts += lineage(pad.source)
+    // DUST names the tape it borrowed from, which may not be the pad's own.
+    PadSheet.readDust(pad.recipe)?.let { parts += "dusted from ${it.tape}" }
     parts += if (cut != null && snip != null) "$origin @ ${cut.label(snip.sampleRate)}" else origin
     snip?.let { parts += "%.0f ms".format(java.util.Locale.ROOT, it.durationSeconds * 1000f) }
     binDaysLeft?.let { parts += "original in bin, ${it}d left" }

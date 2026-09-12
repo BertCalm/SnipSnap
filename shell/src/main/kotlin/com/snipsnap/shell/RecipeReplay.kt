@@ -41,6 +41,8 @@ object RecipeReplay {
         /** [sourceKey] is the key label the recipe was written in — a label, not an input: the destination kit's own key is what plays. */
         data class KeyedPlan(val name: String, val amount: Float, val seed: Long, val dials: Keyed.Dials, val sourceKey: String?) : Plan()
         data class Smear(val amount: Float) : Plan()
+        /** DUST: replayable when [tape]'s print can be found — [apply] needs a way to that print. */
+        data class Dust(val amount: Float, val tape: String) : Plan()
         /** A synth patch: replaying it REPLACES the destination's sound with the patch's own render. */
         data class Patch(val recipe: PadRecipe) : Plan()
         /** Round robin: complete, but the deal mixes the seed with the slot — same recipe, new deal. */
@@ -68,8 +70,9 @@ object RecipeReplay {
         if ("doctor" in e) return Plan.Refused(Copy.replayMeasured("THE DOCTOR"))
         if ("sculpt" in e) return Plan.Refused(Copy.replayMeasured("SCULPT"))
         (e["verb"] as? JsonValue.Str)?.value?.let { verb ->
-            val amount = PadSheet.readSmear(recipe)
-            return if (verb == "smear" && amount != null) Plan.Smear(amount) else Plan.Refused(Copy.REPLAY_NO_DOOR)
+            PadSheet.readSmear(recipe)?.let { if (verb == "smear") return Plan.Smear(it) }
+            PadSheet.readDust(recipe)?.let { if (verb == "dust") return Plan.Dust(it.amount, it.tape) }
+            return Plan.Refused(Copy.REPLAY_NO_DOOR)
         }
         if ("patch" in e) {
             val parsed = runCatching { PadRecipe.fromJsonValue(recipe) }.getOrNull()
@@ -113,9 +116,18 @@ object RecipeReplay {
      * Saves are the caller's job, as everywhere in the model. A
      * [Plan.Refused] recipe throws an [IllegalArgumentException] carrying
      * its reason; the doors' own refusals (`Unpitched`, a layered pad)
-     * propagate untouched. [padName] is only for the toast.
+     * propagate untouched. [padName] is only for the toast. [prints]
+     * finds a tape's dust by name for a [Plan.Dust] (the app hands in
+     * `DustPrints.forTape` over its shelf); without one, or when the tape
+     * is gone, a dust recipe refuses with [Copy.dustTapeGone].
      */
-    fun apply(model: KitBuilderModel, slot: Int, recipe: JsonValue.Obj, padName: String): Done {
+    fun apply(
+        model: KitBuilderModel,
+        slot: Int,
+        recipe: JsonValue.Obj,
+        padName: String,
+        prints: ((String) -> com.snipsnap.audio.Dust.Print?)? = null,
+    ): Done {
         val word = KitDiff.recipeName(recipe)
         return when (val p = plan(recipe)) {
             is Plan.Refused -> throw IllegalArgumentException(p.reason)
@@ -135,6 +147,10 @@ object RecipeReplay {
                 Done(pad, toast)
             }
             is Plan.Smear -> Done(model.smearPad(slot, p.amount), Copy.replayed(word, padName))
+            is Plan.Dust -> {
+                val print = prints?.invoke(p.tape) ?: throw IllegalArgumentException(Copy.dustTapeGone(p.tape))
+                Done(model.dustPad(slot, p.amount, p.tape, print), Copy.replayed(word, padName))
+            }
             is Plan.Patch -> Done(
                 model.replaceAudio(slot, p.recipe.toJsonValue()) { p.recipe.render() },
                 Copy.replayedPatch(padName),

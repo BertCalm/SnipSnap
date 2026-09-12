@@ -377,6 +377,7 @@ object Copy {
         "· TAP BANK B: A SECOND PAGE. HOLD A PAD, OR SEND A CHOP ONTO IT.",
         "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO AN EMPTY BANK B.",
         "· BREED ▸ MIXES TWO KITS' RECIPES INTO A NEW KIT. PARENTS STAY.",
+        "· DUST: THE TAPE'S OWN HISS AND ROOM UNDER A PAD. FROM ITS OWN TAPE.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -686,6 +687,28 @@ object Copy {
         "$segment ON $pad, OVER THE LAST ONE — NO ORIGINAL IN THE BIN TO SWAP FROM. VERSIONS ▸ ROLLS BACK."
     /** SMEAR at AMT 0 on a pad that isn't smeared: `smearPad` writes nothing, so nothing landed. */
     const val SMEAR_ZERO = "AMT 0: NOTHING TO SMEAR. THE PAD STAYS AS IT IS."
+
+    // ---- DUST: the tape's own hiss and room under a pad (docs/DUST.md) ----
+    /** DUST ALL's busy line while every pad's print is read and applied — the DUBBING…/BREEDING… shape. */
+    const val DUSTING_BUSY = "DUSTING…"
+    /** No tape to take dust from: neither the pad nor the kit came off one (a synth kit, a mic kit). */
+    const val DUST_NO_TAPE = "NO TAPE TO TAKE DUST FROM: THIS PAD, AND THIS KIT, NEVER CAME OFF ONE."
+    /** The tape is there but `Dust.print` found no room between its hits (a tight, gated break). */
+    const val DUST_NO_GHOSTS = "NOTHING BETWEEN THE HITS ON THAT TAPE. NO DUST TO TAKE."
+    /** DUST at AMT 0 on a pad that isn't dusted: `dustPad` writes nothing, so nothing landed. */
+    const val DUST_ZERO = "AMT 0: NOTHING TO DUST. THE PAD STAYS AS IT IS."
+    /** The tape a dust recipe names is no longer on the shelf — DO IT AGAIN, or DUST on a pad whose tape went. */
+    fun dustTapeGone(tape: String): String = "THE TAPE '$tape' IS GONE FROM THE SHELF. NO DUST TO TAKE."
+    /**
+     * DUST ALL's landing: how many pads took the dust, and how many were
+     * left as they were (layered or chained pads, which every audio
+     * rewrite refuses; nothing was destroyed on them).
+     */
+    fun dustedAll(dusted: Int, left: Int): String {
+        val pads = "$dusted ${if (dusted == 1) "PAD" else "PADS"} DUSTED FROM THE KIT'S OWN TAPE."
+        val rest = if (left > 0) " $left LEFT AS ${if (left == 1) "IT WAS" else "THEY WERE"} (LAYERED OR CHAINED)." else ""
+        return pads + rest
+    }
     const val INSTRUMENT_MADE = "INSTRUMENT MADE. ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH."
     const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."
