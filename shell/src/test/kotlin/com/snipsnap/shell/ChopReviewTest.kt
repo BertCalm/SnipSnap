@@ -320,6 +320,10 @@ class ChopReviewTest {
             val onto = KitBuilderModel.create("Onto", File(dir, "onto"))
             val landed = onto.landArranged(send.arranged, 1)
             assertTrue(landed.map { onto.pad(it)!! }.all { !it.oneShot && it.displayName.startsWith("AFTER ") }, "and so does ONTO")
+            for ((i, slot) in landed.withIndex()) {
+                assertEquals(send.arranged[i]!!.level, onto.pad(slot)!!.level, "ONTO keeps the balancer's level on pad ${i + 1}")
+                assertEquals(kit.pad(i + 1)!!.level, onto.pad(slot)!!.level, "the same level SEND landed")
+            }
         } finally {
             dir.deleteRecursively()
         }

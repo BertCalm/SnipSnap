@@ -577,17 +577,19 @@ private fun ChopContent(
             onByHits = {
                 // From GHOSTS, back to the hits it was the spaces of; from a grid, that many hits.
                 if (model.mode !is ChopReviewModel.ChopMode.ByHits) {
-                    rechopTo(ChopReviewModel.hitsOf(model.mode) ?: ChopReviewModel.ChopMode.ByHits(model.sliceCount.coerceIn(1, ChopReviewModel.MAX_HITS)))
+                    rechopTo(ChopReviewModel.hitsOf(model.mode) ?: ChopReviewModel.ChopMode.ByHits(model.hitsHeard.coerceIn(1, ChopReviewModel.MAX_HITS)))
                 }
             },
             onGrid = {
-                if (model.mode !is ChopReviewModel.ChopMode.Grid) rechopTo(ChopReviewModel.ChopMode.Grid(model.sliceCount.coerceIn(1, ChopReviewModel.MAX_HITS)))
+                // As many parts as hits the ear heard — on GHOSTS that is the
+                // hits underneath, not the spaces (a gated break has hits and no ghosts).
+                if (model.mode !is ChopReviewModel.ChopMode.Grid) rechopTo(ChopReviewModel.ChopMode.Grid(model.hitsHeard.coerceIn(1, ChopReviewModel.MAX_HITS)))
             },
             onGhosts = {
                 // GHOST CHOP (docs/CHOP_CONTROLS.md §9): the spaces between
                 // the hits this chop makes (or would make, from a grid).
                 if (model.mode !is ChopReviewModel.ChopMode.Ghosts) {
-                    val hits = ChopReviewModel.hitsOf(model.mode) ?: ChopReviewModel.ChopMode.ByHits(model.sliceCount.coerceIn(1, ChopReviewModel.MAX_HITS))
+                    val hits = ChopReviewModel.hitsOf(model.mode) ?: ChopReviewModel.ChopMode.ByHits(model.hitsHeard.coerceIn(1, ChopReviewModel.MAX_HITS))
                     rechopTo(ChopReviewModel.ChopMode.Ghosts(hits)) { fresh ->
                         onToast(if (fresh.sliceCount == 0) Copy.CHOP_GHOSTS_NONE else Copy.CHOP_GHOSTS_ON)
                     }

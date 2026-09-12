@@ -329,8 +329,11 @@ class KitBuilderModel private constructor(
                 update(slot) { it.copy(chain = com.snipsnap.kit.ChainInfo(boundaries, cycle = all.size)) }
             }
             // A gate pad (a ghost: hold the pad, hold the room) stays a gate
-            // through this door too, as it does through KitAssembler's.
-            if (!pad.oneShot) update(slot) { it.copy(oneShot = false) }
+            // through this door too, and a balanced pad keeps the mixer level
+            // the balancer set — both as they do through KitAssembler's.
+            if (!pad.oneShot || pad.level != null) {
+                update(slot) { it.copy(oneShot = pad.oneShot, level = pad.level ?: it.level) }
+            }
             landed += slot
         }
         return landed
