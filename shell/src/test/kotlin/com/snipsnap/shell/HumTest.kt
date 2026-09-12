@@ -7,6 +7,7 @@ import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -27,8 +28,8 @@ class HumTest {
     }
 
     /** Mouth sounds (stand-ins from the synth) at the given seconds, three seconds of hum. */
-    private fun hum(vararg sounds: Pair<Double, Snip>): Snip {
-        val total = FloatArray(rate * 3)
+    private fun hum(vararg sounds: Pair<Double, Snip>, seconds: Double = 3.0): Snip {
+        val total = FloatArray((rate * seconds).toInt())
         for ((sec, s) in sounds) {
             val at = (sec * rate).toInt()
             for (i in s.samples.indices) if (at + i < total.size) total[at + i] += s.samples[i] * 0.6f
@@ -104,6 +105,62 @@ class HumTest {
         val sung = Hum.read(tape, hum(0.53 to vowel))
         assertEquals(listOf(0), sung.cuts.map { it.hit })
         assertTrue(sung.cuts[0].mouth != DrumClass.TONAL, "a held vowel never becomes a TONAL chip")
+    }
+
+    /** Eight hits on half-second steps over five seconds: enough of a pulse for a confident tempo. */
+    private fun longBreak(): Snip {
+        val step = rate / 2
+        val kit = listOf(DrumSynth.kick(), DrumSynth.closedHat(), DrumSynth.snare(), DrumSynth.closedHat())
+        val total = FloatArray(step * 10)
+        for (s in 1..8) {
+            val hit = kit[(s - 1) % 4]
+            val at = s * step
+            for (i in hit.samples.indices) if (at + i < total.size) total[at + i] += hit.samples[i] * 0.8f
+        }
+        return Snip(total, 1, rate)
+    }
+
+    @Test
+    fun `the beat you sang goes on as the kit's groove, where and as loud as the mouth made it`() {
+        val tape = longBreak()
+        val hits = CatchModel.hitsOf(tape)
+        assertEquals(8, hits.size)
+        // Boom, tss, boom, tss on the kick, the snare, the kick, the snare; the second boom quieter.
+        val quiet = Snip(FloatArray(DrumSynth.kick().frameCount) { DrumSynth.kick().samples[it] * 0.35f }, 1, rate)
+        val reading = Hum.read(tape, hum(0.56 to DrumSynth.kick(), 1.56 to DrumSynth.closedHat(), 2.56 to quiet, 3.56 to DrumSynth.closedHat(), seconds = 5.0))
+        assertEquals(listOf(0, 2, 4, 6), reading.cuts.map { it.hit })
+        assertTrue(reading.cuts[2].loud < reading.cuts[0].loud, "the quieter boom is quieter")
+        assertTrue(reading.cuts.all { it.loud in Hum.VELOCITY_FLOOR..1f })
+
+        val model = ChopReviewModel.chop(tape, reading.mode())
+        val tempo = assertNotNull(model.tempo, "the long break has a pulse")
+        val clip = assertNotNull(Hum.groove(model, "break"))
+        assertEquals("break Sung", clip.name)
+        assertEquals(4, clip.notes.size, "one note per sound the mouth made")
+        val framesPerPulse = 60.0 / tempo.bpm * rate / 960.0
+        val placed = model.placementPreview()
+        for ((i, note) in clip.notes.withIndex()) {
+            val beat = (model.mode as ChopReviewModel.ChopMode.Hummed).beat[i]
+            assertEquals(Math.round(beat.at / framesPerPulse), note.timePulses, "note $i sits where the mouth put it")
+            val slot = placed.indexOfFirst { it === model.rows[i] } + 1
+            assertEquals(com.snipsnap.mpc3.Mpc3Note.noteFor(slot), note.note, "note $i plays the pad its cut landed on")
+            assertEquals(beat.velocity, note.velocity)
+        }
+        assertTrue(clip.notes[2].velocity < clip.notes[0].velocity)
+        assertTrue(clip.bars >= 1)
+
+        assertNull(Hum.groove(model.merged(0)!!, "break"), "a merge moved the cuts off the beat: no groove")
+        assertNull(Hum.groove(ChopReviewModel.chop(tape), "break"), "a chop by hits sang nothing")
+
+        val dir = java.nio.file.Files.createTempDirectory("sung").toFile()
+        try {
+            KitBuilderModel.fromChop("Sung", model.sendToGrid().arranged, dir)
+            Hum.landGroove(dir, clip)
+            val kept = com.snipsnap.kit.GrooveStore.load(dir)
+            assertTrue(kept.any { it.name == clip.name }, "the kit's grooves carry the sung clip: ${kept.map { it.name }}")
+        } finally {
+            dir.deleteRecursively()
+        }
     }
 
     @Test

@@ -371,12 +371,35 @@ Pure: two snips in, cuts out. The screen owns the mic and the deck.
 - **Nothing interrupts a hum.** The bench, RE-CHOP, MERGE and SPLIT,
   SEND and ONTO, and a row's audition are all off while the hum runs:
   the source playing is what the mouth is following.
-- **The beat you sang** rides along in the reading (`pattern`, every
-  mouth onset on the tape with the lag out) for a READ AS GROOVE of the
-  hum — the extension the idea named, left for a round that has heard
-  this one.
+- **The beat you sang** rides along: the reading keeps every mouth
+  onset on the tape with the lag out (`pattern`), and the mode keeps,
+  per cut, where the mouth's sound sat and how loud it was among the
+  hum's own (`Hummed.beat`, `Hum.VELOCITY_FLOOR` 0.3 the quietest a
+  sound reads as a note). See below.
+
+### The beat you sang
+
+The extension the idea named: with a tape, the hum's timing is also a
+pattern, so the beat you sang is played by the pads you cut. SEND of a
+hummed chop writes it as the new kit's groove (`Hum.groove`,
+`Hum.landGroove`): one note per sound the mouth made, on the pad its cut
+landed on (the CLASSIC placement SEND used), where the mouth put it, as
+loud as the mouth made it, on the source's own pulse — the standard
+variations off it, the way READ AS GROOVE lands on a kit with none. The
+toast says so: `SENT. THE BEAT YOU SANG IS ON THE GRID: 2 BARS. GROOVE
+HAS IT.` KIT opens as after any SEND; GROOVE is one tap away.
+
+Nothing is written when there is nothing honest to write, and SEND
+says what it always said: the chop is not a hum; its slices were edited
+since (a MERGE or SPLIT moves the cuts off the beat the mouth made);
+the source has no confident tempo (a clip needs a grid — the bench
+already reads NO TEMPO HEARD); the layout is FOLD or MELODIC (their
+pads are not the rows'); or ONTO, which lands on a kit that may have a
+groove of its own already. Sounds the mouth made that met no hit are
+not in the groove either: they have no pad.
 
 ### What it says
+
 
 - `ARM THE MIC FIRST. HUM LISTENS THROUGH IT.` · `THE INSIDE IS ARMED, NOT THE MIC. HUM NEEDS THE MIC.`
 - `HUM ALONG. HEADPHONES ON, OR THE MIC HEARS THE TAPE TOO. TAP HUM AGAIN TO STOP.`
@@ -384,6 +407,7 @@ Pure: two snips in, cuts out. The screen owns the mic and the deck.
 - `THE MIC HEARD NOTHING. ARM IT, THEN HUM AGAIN.`
 - `NOTHING YOU HUMMED LANDED ON A HIT. HEADPHONES ON, AND HUM WITH THE BEAT.`
 - `HUMMED: 6 CUTS, YOUR MOUTH'S WORDS ON THEM. 2 SOUNDS FOUND NO HIT.`
+- `SENT. THE BEAT YOU SANG IS ON THE GRID: 2 BARS. GROOVE HAS IT.`
 - HELP: `· HUM ON CHOP: BEATBOX ALONG. THE CUTS AND LABELS FOLLOW YOUR MOUTH.`
 
 ### Laws the tests hold (`HumTest`)
@@ -404,6 +428,12 @@ Pure: two snips in, cuts out. The screen owns the mic and the deck.
   a held vowel over the kick never becomes a TONAL chip.
 - A hum recorded at half the tape's rate reads in the tape's frames,
   its lag with it.
+- On an eight-hit break with a pulse, boom-tss-boom-tss over the kick
+  and snare, the second boom quieter: the groove has four notes, each
+  where the mouth put it on the source's pulse, on the pad its cut
+  landed on, as loud as the mouth made it (the quieter boom quieter);
+  a merge since the hum, or a chop by hits, writes no groove; landed on
+  the kit, the sung clip is among its grooves.
 
 ### What the phone should judge
 

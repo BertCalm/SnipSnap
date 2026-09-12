@@ -934,7 +934,7 @@ private fun ChopContent(
                                     else -> current.sendToGrid()
                                 }
                             }
-                            val newEntry = withContext(Dispatchers.IO) {
+                            val (newEntry, sungBars) = withContext(Dispatchers.IO) {
                                 val kitName = shelf.freshName(base)
                                 val kitDir = File(shelf.root, kitName)
                                 val builder = KitBuilderModel.fromChop(kitName, send.arranged, kitDir)
@@ -944,9 +944,20 @@ private fun ChopContent(
                                         TeachLog.append(File(kitDir, TeachLog.FILE_NAME), examples)
                                     }
                                 }
-                                KitShelf.Entry(kitDir, builder.kit)
+                                // THE BEAT YOU SANG (docs/CHOP_CONTROLS.md §10): a
+                                // hummed chop's own timing goes on as the new
+                                // kit's groove, on the CLASSIC layout SEND used.
+                                val sung = if (!isMelodic && !isFold) Hum.groove(current, base) else null
+                                sung?.let { Hum.landGroove(kitDir, it) }
+                                KitShelf.Entry(kitDir, builder.kit) to sung?.bars
                             }
-                            onToast(if (isFold) Copy.foldedToGrid(current.sliceCount, send.sliceCount, send.chokeSet) else Copy.sentToGrid(send.sliceCount, send.chokeSet))
+                            onToast(
+                                when {
+                                    sungBars != null -> Copy.sungGroove(sungBars)
+                                    isFold -> Copy.foldedToGrid(current.sliceCount, send.sliceCount, send.chokeSet)
+                                    else -> Copy.sentToGrid(send.sliceCount, send.chokeSet)
+                                },
+                            )
                             onSentToGrid(newEntry)
                         } catch (e: Exception) {
                             if (e is kotlinx.coroutines.CancellationException) throw e
