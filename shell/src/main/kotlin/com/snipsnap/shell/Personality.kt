@@ -1365,6 +1365,14 @@ object Copy {
     fun surfacePrintingStarted(bars: Int, bpm: Int?): String =
         if (bars > 0 && bpm != null) "PRINTING ${PrintLength.label(bars)} AT $bpm BPM." else SURFACE_PRINTING_NO_TEMPO
 
+    // ---- GROOVE: BOUNCE ----
+    /** BOUNCE landed - [SnipStore.Imported.seconds]'s own count, [surfacePrinted]'s twin for the pads' print. */
+    fun groovePrinted(seconds: Float): String = "BOUNCED ${"%.1f".format(java.util.Locale.ROOT, seconds)} S TO SNIPS."
+    /** The armed print's own buffer never reached a captured frame worth keeping - the same near-nothing guard [SURFACE_NOTHING_PRINTED] states for the other engine's print. */
+    const val GROOVE_NOTHING_BOUNCED = "NOTHING BOUNCED. TRY AGAIN."
+    /** `PadEngine.armPrint` refused - no stream running, one already recording, or the reservation itself failed. */
+    const val GROOVE_BOUNCE_FAILED = "BOUNCE FAILED. TRY AGAIN."
+
     // ---- SPLIT ----
     const val SPLIT_ALL_FADERS_DOWN = "EVERY FADER IS DOWN. NOTHING TO HEAR."
     /** SPLIT's engine refused to arm playback - not an exception, just `false` back from `armPrint`/its own start call. */

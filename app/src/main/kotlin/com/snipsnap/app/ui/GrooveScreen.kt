@@ -65,6 +65,7 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Snip
 import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveProgram
@@ -82,6 +83,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.VoiceAllocator
 import java.io.File
 import java.io.IOException
@@ -435,6 +437,72 @@ fun GrooveScreen(
     var posSteps by remember(kitDir) { mutableFloatStateOf(0f) }
     var busy by remember(kitDir) { mutableStateOf(false) }
 
+    // BOUNCE: printing the pads' own bus into SNIPS. `bounceArmed` means
+    // "tapped, waiting for the loop's own downbeat" — arming the native
+    // print the instant BOUNCE is tapped would capture whatever is
+    // already sounding mid-pattern, not one clean pass of it. `bouncing`
+    // means the print is actually running, from that downbeat to the
+    // next one. Only one is ever true at once; both `remember(kitDir)`,
+    // same as `playing`, so switching kits can't leave a stale arm or an
+    // in-flight print pointed at a `player` this screen just tore down.
+    var bounceArmed by remember(kitDir) { mutableStateOf(false) }
+    var bouncing by remember(kitDir) { mutableStateOf(false) }
+
+    // Cancels a bounce without landing it: STOP, a kit or tempo change, or
+    // leaving the screen mid-bounce all count as "never mind" here, the
+    // same silent-abandonment call `silenceGroove` already makes for an
+    // in-flight take. `stopPrint` itself blocks (bounded) for the
+    // callback's last write, so it goes on its own dispatcher rather than
+    // wherever this is called from — the frame clock's own coroutine,
+    // most concretely, which must not stall a frame waiting on it.
+    fun discardBounce() {
+        if (!bounceArmed && !bouncing) return
+        bounceArmed = false
+        bouncing = false
+        scope.launch(Dispatchers.Default) { player.stopPrint() }
+    }
+
+    // The print's landing, once a full loop has actually been captured.
+    fun landBounce(snip: Snip) {
+        scope.launch {
+            val landed = withContext(Dispatchers.IO) {
+                runCatching { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
+            }
+            landed.onSuccess {
+                onToast(Copy.groovePrinted(it.seconds))
+            }.onFailure {
+                Log.e("GrooveScreen", "landBounce: print lost", it)
+                onToast(Copy.PRINT_LOST)
+            }
+        }
+    }
+
+    // The print's own end, whether a full loop actually filled the
+    // buffer (rare — see the byte budget on `PadEngine.maxPrintSeconds`)
+    // or the wrap detection below called time on it. Either way `bouncing`
+    // drops here, before the (bounded, blocking) native call rather than
+    // after — the button reads "not bouncing" the instant this is called,
+    // matching SURFACE's own `finishing`-guard shape for the same reason:
+    // a second call while this one is still landing must never re-enter.
+    var landingBounce by remember(kitDir) { mutableStateOf(false) }
+    fun finishBounce() {
+        if (landingBounce) return
+        landingBounce = true
+        bouncing = false
+        scope.launch {
+            try {
+                val snip = withContext(Dispatchers.Default) { player.stopPrint() }
+                if (snip == null || snip.frameCount < player.sampleRate() / 10) {
+                    onToast(Copy.GROOVE_NOTHING_BOUNCED)
+                } else {
+                    landBounce(snip)
+                }
+            } finally {
+                landingBounce = false
+            }
+        }
+    }
+
     // RECORD: playing pads in against the clock. `preTake` is the base
     // *before* this take (null on a from-scratch kit) — Task 5's undo
     // snapshot, captured the moment RECORD arms, never touched again until
@@ -750,55 +818,96 @@ fun GrooveScreen(
         // EXTRA click that isn't a real downbeat — accepted: one spurious
         // click mid-take beats a silent bar 1 every time.
         if (recording) player.clickHit(accent = true)
-        while (isActive) {
-            withFrameNanos { now ->
-                val dtNanos = (now - lastNanos).coerceIn(0, GROOVE_STEP_MAX_NANOS)
-                lastNanos = now
-                val currentBase = base
-                val clip = currentBase?.let { GrooveProgram.compute(progIndex, it, swingPercent, feel, feelTemplate, eClip) }
-                val totalSteps = ((clip?.bars ?: recordBars) * GrooveEdit.STEPS_PER_BAR).toFloat()
-                val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
-                val stepsPerSecond = bpm / 60.0 * 4.0
-                val inc = (dtNanos / 1_000_000_000.0 * stepsPerSecond).toFloat()
-                var np = lastPos + inc
-                if (clip != null && clip.notes.isNotEmpty()) {
-                    for (n in clip.notes) {
-                        val p = n.timePulses.toFloat() / GrooveEdit.STEP_PULSES.toFloat()
-                        val crossed = (p > lastPos && p <= np) ||
-                            (np >= totalSteps && p + totalSteps > lastPos && p + totalSteps <= np)
-                        // Mpc3Note.slotFor, not `note - 35`: the map wraps, so
-                        // notes 0..35 are pads 93..128 and subtracting alone
-                        // gives them a slot no kit has. A clip that plays on
-                        // the MPC would be silent in this roll.
-                        if (crossed) hit(Mpc3Note.slotFor(n.note))
+        // A bounce armed or in flight when this effect is cancelled — STOP,
+        // a kit or tempo change, or leaving the screen mid-bounce all
+        // restart or end it — is abandoned here, the same silent call
+        // `silenceGroove` already makes for an in-flight take: the
+        // pattern's own loop is gone, so there is no downbeat left to
+        // bounce against.
+        try {
+            while (isActive) {
+                withFrameNanos { now ->
+                    val dtNanos = (now - lastNanos).coerceIn(0, GROOVE_STEP_MAX_NANOS)
+                    lastNanos = now
+                    val currentBase = base
+                    val clip = currentBase?.let { GrooveProgram.compute(progIndex, it, swingPercent, feel, feelTemplate, eClip) }
+                    val totalSteps = ((clip?.bars ?: recordBars) * GrooveEdit.STEPS_PER_BAR).toFloat()
+                    val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
+                    val stepsPerSecond = bpm / 60.0 * 4.0
+                    val inc = (dtNanos / 1_000_000_000.0 * stepsPerSecond).toFloat()
+                    var np = lastPos + inc
+                    if (clip != null && clip.notes.isNotEmpty()) {
+                        for (n in clip.notes) {
+                            val p = n.timePulses.toFloat() / GrooveEdit.STEP_PULSES.toFloat()
+                            val crossed = (p > lastPos && p <= np) ||
+                                (np >= totalSteps && p + totalSteps > lastPos && p + totalSteps <= np)
+                            // Mpc3Note.slotFor, not `note - 35`: the map wraps, so
+                            // notes 0..35 are pads 93..128 and subtracting alone
+                            // gives them a slot no kit has. A clip that plays on
+                            // the MPC would be silent in this roll.
+                            if (crossed) hit(Mpc3Note.slotFor(n.note))
+                        }
+                    }
+                    // Fix 1 — the metronome through the WHOLE take, not just the
+                    // count-in: driven from THIS clock's own beat-boundary
+                    // crossings (same `crossed` shape the note loop above just
+                    // used, `b` standing in for `p`), never a second delay-based
+                    // loop timed off System.nanoTime() — that reintroduces the
+                    // two-timebase bug class the clockAnchor mechanism above
+                    // already cost this project a shipped defect closing once.
+                    // A beat is 4 steps (STEPS_PER_BAR / 4 beats per bar);
+                    // accent lands on every bar downbeat, same as the count-in's
+                    // own `beat == 0` accent. Gated on `recording`, not
+                    // `playing` — ordinary PLAY/STOP must stay silent here;
+                    // only a take actually in progress gets a click to play
+                    // against.
+                    if (recording) {
+                        for (b in 0 until totalSteps.toInt() step 4) {
+                            val crossed = (b > lastPos && b <= np) ||
+                                (np >= totalSteps && b + totalSteps > lastPos && b + totalSteps <= np)
+                            if (crossed) player.clickHit(accent = b % GrooveEdit.STEPS_PER_BAR == 0)
+                        }
+                    }
+                    val wrapped = np >= totalSteps
+                    if (wrapped) np -= totalSteps
+                    lastPos = np
+                    posSteps = np
+                    clockAnchor.nanos = now
+                    clockAnchor.pos = np
+
+                    // BOUNCE: this frame loop is the only place that knows
+                    // exactly when the pattern completes one pass, so it is
+                    // where a bounce starts and stops too — never a separate
+                    // timer (see Fix 1's own note above on why a second
+                    // timebase is the bug class this clock exists to avoid).
+                    // A tapped BOUNCE waits here for the NEXT wrap (the
+                    // pattern's own downbeat) before arming the native print,
+                    // rather than arming the instant it is tapped — arming
+                    // immediately would capture whatever is already sounding
+                    // mid-pattern, not one clean pass of it.
+                    if (bounceArmed && wrapped) {
+                        bounceArmed = false
+                        val seconds = (totalSteps / stepsPerSecond).toFloat().coerceAtMost(player.maxPrintSeconds())
+                        if (player.armPrint(seconds)) {
+                            bouncing = true
+                        } else {
+                            onToast(Copy.GROOVE_BOUNCE_FAILED)
+                        }
+                    } else if (bouncing) {
+                        // The ordinary end: one full pass, the same wrap that
+                        // started it. `printState() == DONE` is the other,
+                        // rare way this ends — a groove long or slow enough to
+                        // fill `PadEngine`'s own byte-budgeted reservation
+                        // before the loop naturally wraps; landing the
+                        // shorter, already-complete take beats refusing the
+                        // whole bounce over a ceiling that exists for memory,
+                        // not for musical correctness.
+                        if (wrapped || player.printState() == PadEngine.PrintState.DONE) finishBounce()
                     }
                 }
-                // Fix 1 — the metronome through the WHOLE take, not just the
-                // count-in: driven from THIS clock's own beat-boundary
-                // crossings (same `crossed` shape the note loop above just
-                // used, `b` standing in for `p`), never a second delay-based
-                // loop timed off System.nanoTime() — that reintroduces the
-                // two-timebase bug class the clockAnchor mechanism above
-                // already cost this project a shipped defect closing once.
-                // A beat is 4 steps (STEPS_PER_BAR / 4 beats per bar);
-                // accent lands on every bar downbeat, same as the count-in's
-                // own `beat == 0` accent. Gated on `recording`, not
-                // `playing` — ordinary PLAY/STOP must stay silent here;
-                // only a take actually in progress gets a click to play
-                // against.
-                if (recording) {
-                    for (b in 0 until totalSteps.toInt() step 4) {
-                        val crossed = (b > lastPos && b <= np) ||
-                            (np >= totalSteps && b + totalSteps > lastPos && b + totalSteps <= np)
-                        if (crossed) player.clickHit(accent = b % GrooveEdit.STEPS_PER_BAR == 0)
-                    }
-                }
-                if (np >= totalSteps) np -= totalSteps
-                lastPos = np
-                posSteps = np
-                clockAnchor.nanos = now
-                clockAnchor.pos = np
             }
+        } finally {
+            discardBounce()
         }
     }
 
@@ -1644,6 +1753,31 @@ fun GrooveScreen(
                             ) {
                                 TapeText(if (playing) "■ STOP" else "► PLAY", TapeType.pixel, scheme.lcdInk.tape)
                             }
+                            // Needs a loop already running — see BOUNCE's
+                            // own wrap-based logic in the frame clock above
+                            // for why: it prints the pattern as it plays,
+                            // starting at the next downbeat, so there is
+                            // nothing to start it against otherwise. Not
+                            // offered mid-take either: RECORD owns this
+                            // same clock while it runs, and a bounce racing
+                            // a take that has not landed yet is scope this
+                            // PR leaves for later, not a case handled here.
+                            // Cancel is STOP, not a second tap — the frame
+                            // effect's own `finally` discards an armed or
+                            // in-flight bounce the instant playback stops,
+                            // so a dedicated cancel would do the same thing
+                            // through a second door.
+                            GrooveActionButton(
+                                label = when {
+                                    bounceArmed -> "WAITING…"
+                                    bouncing || landingBounce -> "BOUNCING…"
+                                    else -> "BOUNCE"
+                                },
+                                scheme = scheme,
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = playing && !recording && !countingIn &&
+                                    !bounceArmed && !bouncing && !landingBounce,
+                            ) { bounceArmed = true }
 
                             TapeText("SHAPE THE GROOVE", TapeType.pixelSmall, scheme.ink3.tape)
                             Row(
