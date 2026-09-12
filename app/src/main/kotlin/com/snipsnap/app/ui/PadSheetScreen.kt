@@ -928,9 +928,40 @@ fun PadSheetScreen(
         }
         val padName = model?.kit?.pad(slot)?.displayName?.uppercase() ?: return
         var said: String? = null
+        if (plan is RecipeReplay.Plan.Dust) {
+            // A dust recipe needs its tape's print. Resolved here, on IO and
+            // before the lock, so the refusals are the app's own words
+            // (the tape gone, or nothing between its hits) rather than a
+            // PASTE FAILED, and the extraction never runs under the mutex.
+            // `busy` is held from here: the button is enabled on `!busy`,
+            // and a second tap during the extraction must not start a
+            // second commit. It is let go right before `commitPadEditNow`
+            // takes it back, on the same main-thread turn.
+            busy = true
+            scope.launch {
+                val tapeFile = File(snipsDir, plan.tape)
+                val print = try {
+                    withContext(Dispatchers.IO) { DustPrints.forTape(tapeFile) }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    busy = false
+                    failure("PASTE", e)
+                    return@launch
+                }
+                busy = false
+                if (print == null) {
+                    onToast(if (tapeFile.isFile) Copy.DUST_NO_GHOSTS else Copy.dustTapeGone(plan.tape))
+                    return@launch
+                }
+                commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
+                    said = RecipeReplay.apply(mm, slot, clip.recipe, padName) { print }.toast
+                }
+            }
+            return
+        }
         commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
             said = try {
-                RecipeReplay.apply(mm, slot, clip.recipe, padName) { tape -> DustPrints.forTape(File(snipsDir, tape)) }.toast
+                RecipeReplay.apply(mm, slot, clip.recipe, padName).toast
             } catch (e: KitBuilderModel.Unpitched) {
                 Copy.notANote(e.message ?: "not a note")
             }

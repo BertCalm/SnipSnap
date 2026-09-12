@@ -65,6 +65,13 @@ class DustPrintsTest {
         for (i in first.room.samples.indices) diff += abs(first.room.samples[i] - again.room.samples[i])
         assertTrue(diff / first.room.frameCount < 1e-4, "24-bit round trip keeps the room: $diff")
         assertNull(DustPrints.forTape(File(snips, "not_there.wav")))
+        // The print follows its tape off the shelf, and off a rename.
+        val renamed = assertNotNull(SnipStore.rename(tape, "ROOM SIX"))
+        assertTrue(!File(dir, "${tape.name}.room.wav").exists(), "a renamed tape's print is forgotten")
+        assertNotNull(DustPrints.forTape(renamed))
+        assertTrue(File(dir, "${renamed.name}.room.wav").isFile)
+        assertTrue(SnipStore.delete(renamed))
+        assertTrue(!File(dir, "${renamed.name}.room.wav").exists() && !File(dir, "${renamed.name}.hiss.wav").exists(), "a binned tape's print is forgotten")
         // A silent tape has no hits and no dust, and leaves no cache behind.
         val silent = File(snips, "snip_2000_SILENT.wav").also { WavWriter.write(it, Snip(FloatArray(rate * 2), 1, rate)) }
         assertNull(DustPrints.forTape(silent))
@@ -83,6 +90,19 @@ class DustPrintsTest {
         assertEquals("theirs.wav", DustPrints.tapeFor(kit, mic), "a capture borrows the kit's tape")
         assertNull(DustPrints.kitTape(com.snipsnap.kit.Kit("M", listOf(mic))))
         assertNull(DustPrints.tapeFor(com.snipsnap.kit.Kit("M", listOf(mic)), mic))
+        // A hand-edited kit.json naming a path, not a tape: no tape at all,
+        // so nothing is read or cached outside the shelf.
+        val forged = KitPad(slot = 5, sampleFile = "A05_Perc_01.wav", source = mapOf(Retrim.FILE_KEY to "../../secret.wav"))
+        assertNull(DustPrints.tapeFor(com.snipsnap.kit.Kit("F", listOf(forged)), forged))
+        assertNull(DustPrints.kitTape(com.snipsnap.kit.Kit("F", listOf(forged, forged.copy(slot = 6)))))
+        assertEquals("theirs.wav", DustPrints.tapeFor(com.snipsnap.kit.Kit("F", listOf(forged, other)), forged), "a forged own tape falls back to the kit's")
+        // And a pasted recipe naming a path refuses as gone before any file is opened by it.
+        val recipe = com.snipsnap.json.JsonValue.Obj(mapOf(
+            "verb" to com.snipsnap.json.JsonValue.Str("dust"),
+            "amount" to com.snipsnap.json.JsonValue.Num(0.5),
+            "tape" to com.snipsnap.json.JsonValue.Str("../../secret.wav"),
+        ))
+        assertEquals(RecipeReplay.Plan.Refused(Copy.dustTapeGone("../../secret.wav")), RecipeReplay.plan(recipe))
     }
 
     @Test

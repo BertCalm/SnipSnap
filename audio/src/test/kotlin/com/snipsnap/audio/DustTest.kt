@@ -133,12 +133,22 @@ class DustTest {
         }
         assertTrue(bedOf(quiet) > bedOf(loud) * 1.5f, "relative to its own peak, the quiet hit sits on more floor")
 
-        // A hot hit keeps its own attack byte for byte: the clip guard scales the dust, never the hit.
+        // A hot hit keeps its own peak: the clip guard scales the dust, never the hit — and still dusts it.
         val hot = Snip(FloatArray(loud.samples.size) { (loud.samples[it] / loud.samples.maxOf { v -> abs(v) }) * 0.999f }, 1, rate)
         val dustedHot = Dust.apply(hot, print, 1f)
         val hotPeakAt = hot.samples.indices.maxBy { abs(hot.samples[it]) }
-        assertEquals(hot.samples[hotPeakAt], dustedHot.samples[hotPeakAt], 0.001f, "the hit's own peak is untouched")
+        // The peak sample may carry up to MIN_DUST_SHARE of the dust, held at the ceiling: within the dust's own size, never below.
+        assertEquals(hot.samples[hotPeakAt], dustedHot.samples[hotPeakAt], 0.01f, "the hit's own peak is untouched")
         assertTrue(dustedHot.samples.maxOf { abs(it) } <= 0.999f)
+        val hotTail = rms(dustedHot.samples, hot.frameCount + (0.01f * rate).toInt(), hot.frameCount + (0.06f * rate).toInt())
+        assertTrue(hotTail > 0f, "a hot hit still gets its room")
+        // A capture that clipped — samples at full scale — is still dusted, at least MIN_DUST_SHARE of it, never above its own peak.
+        val clipped = Snip(FloatArray(loud.samples.size) { (loud.samples[it] * 3f).coerceIn(-1f, 1f) }, 1, rate)
+        val dustedClipped = Dust.apply(clipped, print, 1f)
+        val clippedTail = rms(dustedClipped.samples, clipped.frameCount + (0.01f * rate).toInt(), clipped.frameCount + (0.06f * rate).toInt())
+        val reference = rms(Dust.apply(Snip(FloatArray(clipped.samples.size) { clipped.samples[it] * 0.5f }, 1, rate), print, 1f).samples, clipped.frameCount + (0.01f * rate).toInt(), clipped.frameCount + (0.06f * rate).toInt())
+        assertTrue(clippedTail >= reference * 0.5f * Dust.MIN_DUST_SHARE * 0.9f, "the room survives a clipped hit: $clippedTail vs $reference")
+        assertTrue(dustedClipped.samples.maxOf { abs(it) } <= 1f, "never above the hit's own peak")
 
         val stereo = Snip(FloatArray(loud.frameCount * 2) { loud.samples[it / 2] }, 2, rate)
         val d = Dust.apply(stereo, print, 0.5f)
@@ -147,8 +157,17 @@ class DustTest {
     }
 
     @Test
-    fun `a print at another rate is resampled to the hit's`() {
+    fun `a print at another rate is resampled to the hit's, back on its contract, its loop still seamless`() {
         val print = assertNotNull(Dust.print(tape()))
+        val at48 = print.at(48_000)
+        assertEquals(48_000, at48.sampleRate)
+        assertEquals(1f, at48.room.samples.fold(0.0) { a, v -> a + abs(v) }.toFloat(), 0.01f, "L1 back to one after resampling")
+        assertEquals(1f, rms(at48.hiss.samples, 0, at48.hiss.frameCount), 0.05f, "unit RMS back after resampling")
+        assertEquals(Math.round(print.hiss.frameCount * 48_000.0 / rate).toInt(), at48.hiss.frameCount, "the loop's length follows the rate")
+        // No taper at the seam: the loop's first and last 5 ms are as loud as its middle.
+        val edge = (0.005f * 48_000).toInt()
+        val mid = rms(at48.hiss.samples, at48.hiss.frameCount / 2 - edge, at48.hiss.frameCount / 2 + edge)
+        assertTrue(rms(at48.hiss.samples, 0, edge) > mid * 0.5f && rms(at48.hiss.samples, at48.hiss.frameCount - edge, at48.hiss.frameCount) > mid * 0.5f, "no dip at the seam")
         val hit48 = Resampler.resample(kick(), 48_000)
         val d = Dust.apply(hit48, print, 0.5f)
         assertEquals(48_000, d.sampleRate)

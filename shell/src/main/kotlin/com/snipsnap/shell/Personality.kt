@@ -704,10 +704,11 @@ object Copy {
      * left as they were (layered or chained pads, which every audio
      * rewrite refuses; nothing was destroyed on them).
      */
-    fun dustedAll(dusted: Int, left: Int): String {
+    fun dustedAll(dusted: Int, left: Int, noDust: Int = 0): String {
         val pads = "$dusted ${if (dusted == 1) "PAD" else "PADS"} DUSTED FROM THE KIT'S OWN TAPE."
         val rest = if (left > 0) " $left LEFT AS ${if (left == 1) "IT WAS" else "THEY WERE"} (LAYERED OR CHAINED)." else ""
-        return pads + rest
+        val bare = if (noDust > 0) " $noDust LEFT AS ${if (noDust == 1) "IT WAS" else "THEY WERE"}: NOTHING BETWEEN THE HITS ON ${if (noDust == 1) "ITS" else "THEIR"} TAPE." else ""
+        return pads + rest + bare
     }
     const val INSTRUMENT_MADE = "INSTRUMENT MADE. ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH."

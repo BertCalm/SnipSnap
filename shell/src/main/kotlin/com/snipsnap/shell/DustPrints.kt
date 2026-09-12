@@ -8,7 +8,6 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import java.io.File
 import kotlin.math.abs
-import kotlin.math.sqrt
 
 /**
  * A tape's dust, made once and kept beside the tape (`docs/DUST.md` §3).
@@ -34,11 +33,22 @@ object DustPrints {
     private const val STORED_PEAK = 0.9f
 
     /** The tape [pad] dusts from: its own, else the kit's ([kitTape]), else null. */
-    fun tapeFor(kit: Kit, pad: KitPad): String? = Retrim.tapeName(pad) ?: kitTape(kit)
+    fun tapeFor(kit: Kit, pad: KitPad): String? = ownTape(pad) ?: kitTape(kit)
 
     /** The tape most of [kit]'s pads came off, or null when none did. */
     fun kitTape(kit: Kit): String? =
-        kit.pads.mapNotNull { Retrim.tapeName(it) }.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+        kit.pads.mapNotNull { ownTape(it) }.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+
+    /**
+     * [pad]'s own tape name when it is a bare file name on the shelf.
+     * Provenance comes off `kit.json`, which a hand edit can fill with
+     * `../` — the same rule as `Retrim.of`: a name that isn't bare is no
+     * tape, so nothing is ever read or cached outside SNIPS.
+     */
+    private fun ownTape(pad: KitPad): String? = Retrim.tapeName(pad)?.takeIf { isBare(it) }
+
+    /** True when [name] is a bare file name: no path separators. */
+    fun isBare(name: String): Boolean = '/' !in name && '\\' !in name
 
     /**
      * The print of [tape], from the cache when it is current, else made
@@ -63,12 +73,18 @@ object DustPrints {
         return print
     }
 
-    /** A print read back off disk, re-levelled to the contract: HISS at unit RMS, ROOM's absolute values summing to one. */
-    private fun levelled(p: Dust.Print): Dust.Print {
-        val hissRms = sqrt(p.hiss.samples.fold(0.0) { a, v -> a + v.toDouble() * v } / p.hiss.frameCount.coerceAtLeast(1)).toFloat()
-        val hiss = if (hissRms > 1e-6f) Snip(FloatArray(p.hiss.samples.size) { p.hiss.samples[it] / hissRms }, 1, p.hiss.sampleRate) else p.hiss
-        val l1 = p.room.samples.fold(0.0) { a, v -> a + abs(v) }.toFloat()
-        val room = if (l1 > 1e-6f) Snip(FloatArray(p.room.samples.size) { p.room.samples[it] / l1 }, 1, p.room.sampleRate) else p.room
-        return Dust.Print(hiss, room)
+    /** A print read back off disk, re-levelled to the contract (`Dust.Print.levelled`). */
+    private fun levelled(p: Dust.Print): Dust.Print = p.levelled()
+
+    /**
+     * The cached print of [tape] removed — called when the tape leaves
+     * the shelf (`SnipStore.delete`) or changes its name
+     * (`SnipStore.rename`), so `.dust` never fills with prints of tapes
+     * that are gone or renamed. Idempotent; nothing to remove is fine.
+     */
+    fun forget(tape: File) {
+        val dir = File(tape.parentFile ?: return, DIR)
+        File(dir, "${tape.name}.hiss.wav").delete()
+        File(dir, "${tape.name}.room.wav").delete()
     }
 }

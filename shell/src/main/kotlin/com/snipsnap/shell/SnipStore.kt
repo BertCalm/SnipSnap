@@ -358,6 +358,8 @@ object SnipStore {
      */
     fun delete(file: File, nowMillis: Long = System.currentTimeMillis()): Boolean {
         if (!file.isFile) return false
+        // A tape's dust print goes with it (a restore remakes it on demand).
+        DustPrints.forget(file)
         // file's own parent IS root/[DIR] already (every live snip lives
         // directly there) — [binDir] takes the app's root, not this, so
         // the bin sits beside file at File(file.parentFile, BIN_DIR)
@@ -520,6 +522,8 @@ object SnipStore {
         val target = File(dir, fileName(millis, newName))
         if (target == file) return file
         if (target.exists()) return null
+        // The print is keyed by name; the renamed tape gets a fresh one on demand.
+        DustPrints.forget(file)
         return if (file.renameTo(target)) target else null
     }
 
