@@ -1,6 +1,5 @@
 package com.snipsnap.shell
 
-import com.snipsnap.audio.Chopper
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.Snip
@@ -59,8 +58,7 @@ class LadderTest {
     private fun hear(source: Snip): Ladder.Pulse {
         val tempo = assertNotNull(ChopReviewModel.chop(source).tempo, "the break has a pulse")
         assertTrue(abs(tempo.bpm - 120f) < 3f || abs(tempo.bpm - 60f) < 2f || abs(tempo.bpm - 240f) < 5f, "a 120 tempo or its octave, got ${tempo.bpm}")
-        val hits = Chopper.byTransients(source, maxSlices = Chopper.AUTO_MAX, cleanup = null)
-        return assertNotNull(Ladder.hear(source, tempo, hits))
+        return assertNotNull(Ladder.hear(source, tempo))
     }
 
     @Test
@@ -74,6 +72,19 @@ class LadderTest {
         assertTrue(abs(pulse.downbeat(-1) - lead) < 600, "nudged a beat earlier: the pickup is the one")
         assertTrue(abs(pulse.downbeat(4) - pulse.downbeat()) < 2, "four beats round is the same one")
         assertEquals(8, pulse.wholeBars(source.frameCount))
+
+        // Every hit, not a chop's strongest sixty-four: the pickup and the
+        // first bars are quiet next to what follows, and must still anchor.
+        assertTrue(Ladder.hits(source).size > ChopReviewModel.MAX_HITS, "eight bars of hats and kicks are more than 64 hits")
+        assertTrue(abs(Ladder.hits(source).first() - lead) < 600, "the pickup hat is the first hit")
+
+        // A stereo source is heard as its mono mix, on the same frames.
+        val stereo = Snip(FloatArray(source.frameCount * 2) { source.samples[it / 2] }, 2, rate)
+        val tempo = assertNotNull(ChopReviewModel.chop(source).tempo)
+        val wide = assertNotNull(Ladder.hear(stereo, tempo))
+        assertEquals(pulse.one, wide.one)
+        assertEquals(pulse.phraseBars, wide.phraseBars)
+        assertTrue(abs(wide.beatFrames - pulse.beatFrames) < 50.0)
     }
 
     @Test

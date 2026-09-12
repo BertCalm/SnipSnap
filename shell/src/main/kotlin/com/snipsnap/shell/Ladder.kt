@@ -1,11 +1,12 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.FeatureExtractor
 import com.snipsnap.audio.Features
 import com.snipsnap.audio.Similar
-import com.snipsnap.audio.Slice
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.TempoEstimate
+import com.snipsnap.audio.Transients
 import kotlin.math.abs
 
 /**
@@ -83,20 +84,31 @@ object Ladder {
     }
 
     /**
-     * [source]'s pulse from [tempo] and [hits] (INSTANT KIT's cuts of it,
-     * every one — `CatchModel.hitsOf`'s list, as slices). Null with no
-     * hits: there is nothing to anchor on.
+     * Every hit on [source], as the cuts a chop would make of them (the
+     * zero crossing before each onset) — every one, not a chop's
+     * strongest sixteen or sixty-four: on a dense break the cap would
+     * drop the quiet first hits, and with them the anchor and the tape's
+     * first bars.
      */
-    fun hear(source: Snip, tempo: TempoEstimate, hits: List<Slice>): Pulse? {
+    fun hits(source: Snip): List<Int> =
+        Transients.detect(source).map { Transients.zeroCrossingBefore(source, it.frame) }
+
+    /**
+     * [source]'s pulse from [tempo] and [hits] (every one, [hits]). A
+     * stereo source is heard as its mono mix; the frames are the same.
+     * Null with no hits: there is nothing to anchor on.
+     */
+    fun hear(source: Snip, tempo: TempoEstimate, hits: List<Int> = hits(source)): Pulse? {
         if (hits.isEmpty()) return null
-        val seed = 60.0 / tempo.bpm * source.sampleRate
-        val anchor = hits.first().sourceFrame
+        val mono = if (source.channels == 1) source else Cleanup.toMono(source)
+        val seed = 60.0 / tempo.bpm * mono.sampleRate
+        val anchor = hits.first()
         // Fitted on the sixteenth, not the beat: hits sit between beats
         // (the hats, the snare's and), and fitting them to beat lines
         // would pull the beat toward whichever side they fall on.
-        val beat = ChopReviewModel.fitStep(anchor, hits.map { it.sourceFrame }, seed / Rung.SIXTEENTH.perBeat) * Rung.SIXTEENTH.perBeat
-        val one = theOne(source, anchor, beat)
-        val phrase = phrase(source, anchor + Math.round(one * beat).toInt(), beat)
+        val beat = ChopReviewModel.fitStep(anchor, hits, seed / Rung.SIXTEENTH.perBeat) * Rung.SIXTEENTH.perBeat
+        val one = theOne(mono, anchor, beat)
+        val phrase = phrase(mono, anchor + Math.round(one * beat).toInt(), beat)
         return Pulse(tempo.bpm, beat, anchor, one, phrase)
     }
 
@@ -106,6 +118,7 @@ object Ladder {
      * the window round each line, summed — the earliest on a tie.
      */
     fun theOne(source: Snip, anchor: Int, beat: Double): Int {
+        require(source.channels == 1) { "the one is heard on a mono mix" }
         val before = (beat * ONE_LOOK_BEFORE).toInt()
         val after = (beat * ONE_LOOK_AFTER).toInt()
         var best = 0
@@ -134,6 +147,7 @@ object Ladder {
      * at least twice. Fewer than four whole bars is one phrase of them.
      */
     fun phrase(source: Snip, downbeat: Int, beat: Double): Int {
+        require(source.channels == 1) { "the phrase is heard on a mono mix" }
         val bar = beat * BEATS_PER_BAR
         val bars = ((source.frameCount - downbeat) / bar).toInt()
         val periods = PHRASE_PERIODS.filter { bars >= 2 * it }

@@ -492,8 +492,13 @@ Pure: the source, its tempo and its hits in, a pulse and cut frames
 out. The chop model cuts and names the slices (`ChopMode.Ladder`).
 
 - **The beat is fitted to the hits**, the way ON THE GRID fits its
-  step (the one `fitStep` now serves both): the tempo estimate is the
-  seed, the pulse of this take is the hits.
+  step (the one `fitStep` now serves both), on the sixteenth grid
+  (hits sit between beats, and fitting them to beat lines pulls the
+  beat toward whichever side they fall on): the tempo estimate is the
+  seed, the pulse of this take is the hits — every hit (`Ladder.hits`),
+  not a chop's strongest sixty-four, since on a dense break the cap
+  would drop the quiet first hits and with them the anchor and the
+  tape's first bars. A stereo source is heard as its mono mix.
 - **The one.** The estimator has a period but no phase, and captures
   rarely start on the downbeat. Of the four beats the first bar could
   start on, the one is the beat whose lines carry the most weight down
@@ -538,7 +543,9 @@ out. The chop model cuts and names the slices (`ChopMode.Ladder`).
   kick: the beat fits to half a second, the one is a beat after the
   anchor and sits on the kick; nudged a beat later it moves a beat,
   nudged a beat earlier the pickup is the one, four beats round is the
-  same one; eight whole bars.
+  same one; eight whole bars; the hits are more than sixty-four and the
+  pickup is still the first; a stereo copy hears the same one, phrase
+  and beat.
 - BAR cuts eight, four beats apart, from the one; BEAT cuts 32; 16TH
   cuts 128 and keeps 64; PHRASE cuts eight over the phrase; the one a
   beat later leaves a three-beat tail that is a pad, three beats later

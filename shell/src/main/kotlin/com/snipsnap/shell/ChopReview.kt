@@ -817,8 +817,7 @@ class ChopReviewModel private constructor(
                 // THE ZOOM LADDER: the take's pulse off every hit, then a
                 // cut per rung from the one. No tempo, nothing to cut on.
                 val tempo = tempoLazy.value ?: return ChopReviewModel(source, mode, emptyList(), tape, tempoLazy = tempoLazy)
-                val hits = Chopper.byTransients(source, maxSlices = Chopper.AUTO_MAX, cleanup = null)
-                val pulse = Ladder.hear(source, tempo, hits) ?: return ChopReviewModel(source, mode, emptyList(), tape, tempoLazy = tempoLazy)
+                val pulse = Ladder.hear(source, tempo) ?: return ChopReviewModel(source, mode, emptyList(), tape, tempoLazy = tempoLazy)
                 val cuts = Ladder.cuts(source, pulse, mode.rung, mode.nudge)
                 val slices = cuts.mapIndexed { i, c ->
                     val end = cuts.getOrNull(i + 1) ?: source.frameCount
