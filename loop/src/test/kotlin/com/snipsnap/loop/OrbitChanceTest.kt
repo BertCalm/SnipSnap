@@ -461,3 +461,108 @@ class OrbitConditionalClipTest {
         assertEquals(null, OrbitClip.refusal(short))
     }
 }
+
+/**
+ * Round 1 of review, all eight findings reproduced before they were fixed.
+ *
+ * Six of them were one mistake in two shapes: `!certain` and `chance = 0`
+ * were read as "the seed decides this" and "this hit counts", and neither
+ * is true. `OrbitHit.rolled` and `OrbitHit.neverSounds` are those two
+ * readings named, so the callers stop inventing them.
+ */
+class OrbitChanceReviewTest {
+
+    private fun ring(steps: Int, vararg h: OrbitHit) = Orbit("R", steps, PatternOrbit("kit", h.toList()))
+    private fun set(vararg o: Orbit) = OrbitSet(o.toList(), 120f, 48_000)
+
+    @Test
+    fun `uncertain is not the same as rolled`() {
+        // A hit at 100% on one lap in two does not sound every lap, and no
+        // seed in the world changes which laps those are.
+        val conditional = OrbitHit(0, 1, everyLaps = 2, onLap = 0)
+        assertTrue(!conditional.certain)
+        assertTrue(!conditional.rolled, "a certain conditional is not something a seed decides")
+        // Nor is a hit that never sounds.
+        assertTrue(!OrbitHit(0, 1, chance = 0).rolled)
+        assertTrue(OrbitHit(0, 1, chance = 0).neverSounds)
+        // Only a chance strictly between the two.
+        assertTrue(OrbitHit(0, 1, chance = 1).rolled)
+        assertTrue(OrbitHit(0, 1, chance = 99).rolled)
+        assertTrue(!OrbitHit(0, 1, chance = OrbitHit.ALWAYS).rolled)
+    }
+
+    @Test
+    fun `a hit that never sounds stretches no cycle and explains no refusal`() {
+        // Before: a silenced hit carrying a 1-in-8 made a one-bar ring
+        // claim 128 steps, which is eight bars of clip.
+        val dead = set(ring(16, OrbitHit(0, 1, chance = 0, everyLaps = 8, onLap = 0), OrbitHit(4, 1)))
+        assertEquals(16L, OrbitClock.cycleSteps(dead))
+        assertEquals(1, OrbitClip.bars(dead))
+        // And the one it can be heard on still counts.
+        val live = set(ring(16, OrbitHit(0, 1, chance = 25, everyLaps = 8, onLap = 0)))
+        assertEquals(128L, OrbitClock.cycleSteps(live))
+    }
+
+    @Test
+    fun `a refusal names a conditional only where one can be heard`() {
+        // Rings long enough to refuse on their own, so the message is the
+        // only thing under test.
+        fun rings(hit: OrbitHit) = OrbitSet(
+            listOf(
+                Orbit("A", 64, PatternOrbit("kit", listOf(hit))),
+                Orbit("B", 63, PatternOrbit("kit", listOf(OrbitHit(0, 2)))),
+                Orbit("C", 61, PatternOrbit("kit", listOf(OrbitHit(0, 3)))),
+            ),
+            120f,
+            48_000,
+        )
+        val heard = OrbitClip.refusal(rings(OrbitHit(0, 1, everyLaps = 2, onLap = 0)))
+        assertTrue(heard != null && heard.contains("CONDITIONAL"), "said: $heard")
+        val silent = OrbitClip.refusal(rings(OrbitHit(0, 1, chance = 0, everyLaps = 2, onLap = 0)))
+        assertTrue(silent != null && !silent.contains("CONDITIONAL"), "said: $silent")
+    }
+
+    @Test
+    fun `the flare fades from the latest strike, not the first`() {
+        // A 4-step free ring at 120 BPM, 48 kHz: its step is one 16th,
+        // 6,000 frames, so a ratchet of four strikes 1,500 apart and the
+        // ring comes round every 24,000. Anchored to the first strike, the
+        // fourth read as 4,500 frames old at the instant it was heard.
+        val r = ring(4, OrbitHit(0, 1, ratchet = 4))
+        val s = OrbitSet(listOf(r), 120f, 48_000)
+        val hit = (r.content as PatternOrbit).hits[0]
+        for (at in OrbitClock.firings(s, r, 0L, OrbitClock.periodFrames(s, r))) {
+            assertEquals(0L, OrbitClock.framesSinceFiring(s, r, hit, at.frame), "stale flare at frame ${at.frame}")
+        }
+        // And it still counts up between strikes rather than resetting:
+        // 100 frames past the fourth strike, and 1,600 past it again once
+        // the ring has run out of strikes to offer.
+        assertEquals(100L, OrbitClock.framesSinceFiring(s, r, hit, 4_600))
+        assertEquals(1_600L, OrbitClock.framesSinceFiring(s, r, hit, 6_100))
+    }
+
+    @Test
+    fun `a stray onLap with no everyLaps is ignored rather than refusing the file`() {
+        val dir = Files.createTempDirectory("orbit-stray").toFile()
+        java.io.File(dir, OrbitStore.FILE_NAME).writeText(
+            """
+            {"version":6,"bpm":90.0,"lapSteps":16,"swing":50,"sampleRate":48000,"orbits":[
+              {"name":"R","steps":16,"span":"FREE","voice":[1],"engaged":true,"level":1.0,"pan":0.0,
+               "content":{"type":"pattern","kit":"kit","hits":[{"step":0,"slot":1,"velocity":1.0,"onLap":3}]}}
+            ]}
+            """.trimIndent(),
+        )
+        // The writer never makes such a file; reading the stray field
+        // anyway threw IllegalArgumentException and lost the whole set.
+        val hit = (OrbitStore.load(dir).orbits[0].content as PatternOrbit).hits.single()
+        assertEquals(OrbitHit.EVERY_LAP, hit.everyLaps)
+        assertEquals(0, hit.onLap)
+        assertTrue(hit.certain)
+    }
+
+    @Test
+    fun `a long-press announces the brush it will move`() {
+        assertEquals("CHANGE WEIGHT", OrbitBrush.WEIGHT.action)
+        for (b in OrbitBrush.entries) assertTrue(b.action.contains(b.label), "${b.action} does not name $b")
+    }
+}

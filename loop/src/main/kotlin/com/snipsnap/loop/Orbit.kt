@@ -119,6 +119,28 @@ data class OrbitHit(
     /** Whether this hit strikes more than once across its step. */
     val ratcheted: Boolean get() = ratchet > ONCE
 
+    /**
+     * Whether this hit can ever sound at all.
+     *
+     * A [chance] of zero is a hit that is on the ring and silent — kept
+     * rather than lifted, which is what a player does to try a bar without
+     * it. It costs nothing to play, but it must not cost anything to
+     * *reason* about either: it lengthens no cycle and explains no refusal,
+     * because nothing it does can be heard.
+     */
+    val neverSounds: Boolean get() = chance <= 0
+
+    /**
+     * Whether the set's seed decides anything about this hit.
+     *
+     * Narrower than `!`[certain]: a hit at [ALWAYS] on one lap in two is
+     * uncertain in the sense that it does not sound every lap, and yet no
+     * seed in the world changes which laps those are. So is a hit at zero.
+     * Only a chance strictly between the two is actually rolled, and only
+     * those make a set a *take*.
+     */
+    val rolled: Boolean get() = chance in 1 until ALWAYS
+
     companion object {
         /**
          * A 16th either way. Past that a hit reads as belonging to a
@@ -560,13 +582,15 @@ object OrbitClock {
         Math.round(phase(set, orbit, frame) * orbit.steps).toInt() % orbit.steps
 
     /**
-     * How many 16ths before every ring is back on its downbeat together.
+     * How many 16ths before every ring is saying the same thing again.
      *
-     * The least common multiple of the ring lengths, where a bar-locked ring
-     * counts as one bar long whatever its step count — it comes round every
-     * bar by definition. Grows fast with coprime rings: 16, 20 and 24 meet
-     * again after 240 steps (15 bars), but 16, 17 and 19 need 5,168 steps
-     * (323 bars). Show this number, as the loop grid's bounce does.
+     * The least common multiple of the ring *turns* — [turnSteps], which is
+     * a ring's length stretched by the conditionals on it, since a hit on
+     * one lap in four does not come back until the fourth lap. A bar-locked
+     * ring counts as one bar long whatever its step count; it comes round
+     * every bar by definition. Grows fast with coprime rings: 16, 20 and 24
+     * meet again after 240 steps (15 bars), but 16, 17 and 19 need 5,168
+     * steps (323 bars). Show this number, as the loop grid's bounce does.
      */
     fun cycleSteps(set: OrbitSet): Long =
         set.orbits.fold(set.lapSteps.toLong()) { acc, o -> lcm(acc, turnSteps(set, o)) }
@@ -582,15 +606,21 @@ object OrbitClock {
      * realignment is concerned, and the clip that writes one cycle has to
      * be four times as long to hold it.
      *
-     * [OrbitHit.chance] is deliberately not in this. A rolled hit never
-     * repeats - that is what rolling it is for - so there is no cycle
-     * length that would hold it, and the export writes the rolls of the
-     * first cycle rather than pretending to a period it has not got.
+     * [OrbitHit.chance] is deliberately not in this, with one exception at
+     * each end. A *rolled* hit never repeats - that is what rolling it is
+     * for - so there is no cycle length that would hold it, and the export
+     * writes the rolls of the first cycle rather than pretending to a
+     * period it has not got. A hit that [OrbitHit.neverSounds] is left out
+     * entirely: a silenced hit carrying a 1-in-8 made a one-bar ring claim
+     * an eight-lap cycle, which is eight bars of clip and a refusal, over
+     * a hit nothing can hear.
      */
     fun turnSteps(set: OrbitSet, orbit: Orbit): Long {
         val period = periodSteps(set, orbit).toLong()
         val content = orbit.content as? PatternOrbit ?: return period
-        return period * content.hits.fold(1L) { acc, h -> lcm(acc, h.everyLaps.toLong()) }
+        return period * content.hits
+            .filter { !it.neverSounds }
+            .fold(1L) { acc, h -> lcm(acc, h.everyLaps.toLong()) }
     }
 
     /** [cycleSteps] in reference bars, so the readout can say "15 BARS". */
@@ -609,9 +639,16 @@ object OrbitClock {
         (frameCount.toDouble() / stepFrames(set)).roundToInt().coerceIn(1, Orbit.MAX_STEPS)
 
     /**
-     * Every (hit, frame) of [orbit] that fires in [from] inclusive to [until]
+     * Every *strike* of [orbit] that sounds in [from] inclusive to [until]
      * exclusive — what the engine schedules for one block, and what a test
      * asserts against. Frames are absolute, since the start of play.
+     *
+     * One entry per strike, not per hit per lap, and neither number is
+     * fixed: a ratcheted hit contributes [OrbitHit.ratchet] entries across
+     * its own step, and a hit whose condition or roll comes up short on a
+     * lap contributes none for it ([sounds]). A hit appears as many times
+     * as it is heard, which is the only count a caller starting voices can
+     * use.
      */
     fun firings(set: OrbitSet, orbit: Orbit, from: Long, until: Long): List<Firing> {
         val content = orbit.content as? PatternOrbit ?: return emptyList()
@@ -808,25 +845,43 @@ object OrbitClock {
     data class PulseFiring(val hit: OrbitHit, val pulses: Long)
 
     /**
-     * Frames since [orbit]'s [hit] last fired, at or before [frame] — what
-     * the screen's strike flare fades on. Never negative: a hit the needle
-     * has not reached yet this lap counts from its firing on the lap before,
-     * which at frame 0 means "a whole lap ago" rather than "about to fire".
+     * Frames since [orbit]'s [hit] last *struck*, at or before [frame] —
+     * what the screen's strike flare fades on — or [NEVER] where it has
+     * not struck within the laps its condition repeats over.
+     *
+     * Never negative: a hit the needle has not reached yet this lap counts
+     * from its strike on the lap before, which at frame 0 means "a whole
+     * lap ago" rather than "about to fire".
+     *
+     * Two things make this a search rather than a remainder, and both are
+     * the flare telling the truth. A hit that did not sound must not flare,
+     * or a 1-in-4 flashes four times for every time it is heard; its
+     * condition repeats every `everyLaps` laps, so looking that far back
+     * either finds the strike or there was not one. And a *ratcheted* hit
+     * strikes several times across its step, so the flare has to fade from
+     * the latest of them: anchored to the first, a slow ring's fourth
+     * strike was heard against a dot that had already gone out.
+     *
+     * One path rather than a remainder with a search behind it, because
+     * for a plain hit the search's first answer *is* that remainder, and a
+     * second copy of it is how the two come to disagree.
      */
     fun framesSinceFiring(set: OrbitSet, orbit: Orbit, hit: OrbitHit, frame: Long): Long {
         val period = periodFrames(set, orbit)
         val at = firingOffset(set, orbit, hit)
-        val since = Math.floorMod(frame - at, period)
-        if (hit.certain) return since
-        // A hit that did not sound must not flare, or a 1-in-4 flashes
-        // four times for every time it is heard. Its condition repeats
-        // every `everyLaps` laps, so a search that far back either finds
-        // the firing or there was not one: past that the answer is the
-        // same on every lap, and [NEVER] is what the screen wants anyway.
+        val step = ringStepFrames(set, orbit)
         var lap = Math.floorDiv(frame - at, period)
         val floor = lap - hit.everyLaps
         while (lap >= floor) {
-            if (sounds(set, orbit, hit, lap)) return frame - (lap * period + at)
+            if (sounds(set, orbit, hit, lap)) {
+                val base = lap * period + at
+                // Latest first: the later strikes of this lap may still be
+                // ahead of the needle, and the first one never is.
+                for (k in hit.ratchet - 1 downTo 0) {
+                    val struck = base + strike(step, hit.ratchet, k)
+                    if (struck <= frame) return frame - struck
+                }
+            }
             lap--
         }
         return NEVER

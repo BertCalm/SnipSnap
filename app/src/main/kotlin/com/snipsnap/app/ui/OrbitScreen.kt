@@ -904,13 +904,16 @@ fun OrbitScreen(
                             }
                         }
                     }
-                    // The take. A set with a chancy hit on it sounds the
+                    // The take. A set with a rolled hit on it sounds the
                     // same every time it is played, bounced or clipped;
                     // this is the one control that makes it a different
                     // arrangement of the same hits. Only offered where
-                    // something actually rolls — on a set of certain hits
-                    // it would be a button that does nothing, twice.
-                    if (current.orbits.any { o -> (o.content as? PatternOrbit)?.hits?.any { !it.certain } == true }) {
+                    // something the seed decides actually exists —
+                    // `rolled`, not `!certain`: a hit at 100% on one lap in
+                    // two is not certain and no seed changes it, and nor is
+                    // one at 0%, so gating on certainty offered a button
+                    // that could do nothing.
+                    if (current.orbits.any { o -> (o.content as? PatternOrbit)?.hits?.any { it.rolled } == true }) {
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -1550,6 +1553,7 @@ private fun StripEditor(
                                     hit.velocity < OrbitPatterns.HIT_VELOCITY -> "SOFT HIT"
                                     else -> "HIT"
                                 }.let { if (mark.isEmpty()) it else "$it $mark" },
+                                longPressLabel = brush.action,
                                 onTap = { onToggle(slot, step) },
                                 onLongPress = { onCycle(slot, step) },
                             )
@@ -1566,7 +1570,9 @@ private fun StripEditor(
  * whatever the strip's brush names — its weight, its chance, its
  * conditional or its ratchet — or places an accent on an empty cell.
  * `combinedClickable` rather than a raw pointerInput so both gestures are
- * real accessibility actions, as the CHOP chips do it.
+ * real accessibility actions, as the CHOP chips do it; [longPressLabel] is
+ * the brush's own word, so what a screen reader announces is what the
+ * press is about to do rather than what it used to do.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1577,6 +1583,7 @@ private fun StripCell(
     edgeWidth: androidx.compose.ui.unit.Dp,
     label: String,
     state: String,
+    longPressLabel: String,
     onTap: () -> Unit,
     onLongPress: () -> Unit,
 ) {
@@ -1591,7 +1598,7 @@ private fun StripCell(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClickLabel = label,
-                onLongClickLabel = "ACCENT",
+                onLongClickLabel = longPressLabel,
                 onLongClick = onLongPress,
                 onClick = onTap,
             ),
