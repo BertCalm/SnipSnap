@@ -24,26 +24,53 @@ an Android SDK is located** (`local.properties` `sdk.dir`, then
 content-filtered. There is a fourth suite outside Gradle entirely: the
 native audio engines, built with CMake under `app/src/main/cpp/test`.
 
-`app/src/` contains only `main`. **`:app` has no test source set**, so
-nothing about it is provable by running tests — it is compiled, and only by
-CI.
+`app/src/` has no `test` directory, so **`:app` has no Kotlin test source
+set**. Its Compose and ViewModel code is proved only by a compiler —
+`android-build` in CI, or `./gradlew :app:assembleDebug` on a machine with
+an SDK (`app/README.md`, which is worth reading: that tree was written by a
+session that could not compile it).
+
+Its *native* half is a different story, and "no test source set" must not
+be read as "nothing under `app/` is tested": `app/src/main/cpp/test` holds
+host-run tests for the audio engines **and the JNI bridge**
+(`jni_tests.cpp`), and those run anywhere, SDK or not.
 
 ## Before you push
 
 Run what CI runs, not something adjacent to it:
 
 ```
-./gradlew --no-daemon test -x :app:test          # the JVM suites
+./gradlew --no-daemon test                       # the JVM suites, no SDK present
+./gradlew --no-daemon test -x :app:test          # ...with an SDK present (what CI runs)
+
 cmake -S app/src/main/cpp/test -B build/native-tests \
   && cmake --build build/native-tests \
   && ctest --test-dir build/native-tests --output-on-failure
 ```
 
-The native block is only needed when the change touches C++. There is **no
-linter and no formatter** in this build — no ktlint, no detekt, no
-spotless. Don't go looking for a `check` task that does more than `test`;
-the one other root task is `dependencyCheckAggregate`, which is the weekly
-CVE scan and is not part of what gates a PR.
+**Do not copy CI's gradle line into a session with no Android SDK.** It
+fails in about thirty seconds with
+
+```
+Cannot locate excluded tasks that match ':app:test' as project 'app'
+not found in root project 'snipsnap'.
+```
+
+which is a red build that says nothing about your change. `-x :app:test`
+needs `:app` to be *in* the graph, and without an SDK
+`settings.gradle.kts` leaves it out. Drop the `-x` there; the exclusion has
+nothing to exclude.
+
+Run the native block whenever the change touches anything under
+`app/src/main/cpp` — the engine sources, the JNI bridge, or the test
+tree's own `CMakeLists.txt` and stubs (`oboe_stubs.cpp`, `stub/jni.h`). A
+build-configuration edit there breaks the suite as effectively as a DSP
+one, and nothing else covers it.
+
+There is **no linter and no formatter** in this build — no ktlint, no
+detekt, no spotless. Don't go looking for a `check` task that does more
+than `test`; the one other root task is `dependencyCheckAggregate`, the
+weekly CVE scan, which is not part of what gates a PR.
 
 **Gate "the suite is green" on gradle's exit code, never on grepping its
 output.** A suite that fails to *execute* prints no failure lines, and a
@@ -90,10 +117,18 @@ correspondingly careful: a speculative push to fix a job you cannot run
 costs a full CI cycle. Re-read the diff adversarially instead.
 
 Also worth knowing: PR runs are cancel-in-progress, so a superseded run
-showing "cancelled" after you pushed again is expected. And `jvm-tests`
-installs the Android SDK despite excluding `:app` — AGP resolves it at
-configuration time, so without it *every* module fails to configure and the
-pure-JVM tests go red for a reason unrelated to them.
+showing "cancelled" after you pushed again is expected.
+
+**One comment in that workflow is stale — don't reason from it.** It says
+the Android SDK is required "from the moment `:app` exists" because AGP
+resolves it at configuration time, and that without it every module fails
+to configure. That was true when it was written (`a0a8fb0`, 2026-08-24),
+when `:app` was included unconditionally. The conditional include landed
+five days later (`982f103`) and inverts it: with no SDK, `settings.gradle.kts`
+simply leaves `:app` out and the nine JVM modules configure perfectly well
+— which is what a cloud session does every day. What `setup-android` buys
+`jvm-tests` is that `:app` *is* in the graph there, which is why that job
+can exclude it. A no-SDK run is not a configuration failure.
 
 ## When CI is red
 
