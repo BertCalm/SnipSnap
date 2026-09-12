@@ -161,6 +161,7 @@ fun ChopScreen(
     }
 
     ChopContent(
+        entry = entry,
         shelf = shelf,
         sourceFile = file,
         initialModel = loadedModel,
@@ -307,6 +308,8 @@ private val CHOP_GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 
 @Composable
 private fun ChopContent(
+    /** The open kit, if any: ONTO <kit> · BANK X lands the chop on its first empty bank. */
+    entry: KitShelf.Entry?,
     shelf: KitShelf,
     sourceFile: File,
     initialModel: ChopReviewModel,
