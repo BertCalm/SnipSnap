@@ -530,6 +530,13 @@ class PersonalityTest {
         // not a relaxation of the law itself.
         assertEquals("+3 OFF-LANE — HEARD, EXPORTED, DRAWN UNDER OTHER", Copy.offLane(3), "the count leads its own line")
         assertTrue(Copy.offLane(1).uppercase() == Copy.offLane(1), "TapeOS shouts here too")
+        // LOOP: the snip, the track it landed on, and the block count that
+        // decides how it drifts — all three named, and the counts passed in
+        // rather than typed into the line (`:shell` cannot import `:loop`).
+        assertEquals("BREAK IS ON TRACK 2, 3 BLOCKS LONG.", Copy.loopTrackFilled("BREAK", 2, 3))
+        assertEquals("HIT IS ON TRACK 1, 1 BLOCK LONG.", Copy.loopTrackFilled("HIT", 1, 1))
+        assertEquals("LONG IS ON TRACK 4. ONLY ITS FIRST 8 BLOCKS FIT.", Copy.loopTrackTruncated("LONG", 4, 8))
+        assertEquals("ALL 6 TRACKS ARE FULL. CLEAR ONE IN LOOP FIRST.", Copy.loopFull(6))
     }
 
     @Test

@@ -38,6 +38,17 @@ data class Step(
     }
 }
 
+/**
+ * A track position with nothing in it yet.
+ *
+ * The grid is always exactly [Session.TRACK_COUNT] tracks and every track
+ * needs a non-empty chain, so a session that is only half filled in still has
+ * to say what the other tracks hold. This is that answer, stated rather than
+ * faked: a block that bakes to one interval of silence, so an unfilled track
+ * is silent because it is empty, not because a file it names went missing.
+ */
+data object SilenceBlock : Block()
+
 /** A sequence of hits against a kit, rendered to audio at bake time. */
 data class PatternBlock(val kit: String, val steps: List<Step>) : Block() {
     init { require(kit.isNotBlank()) { "kit must not be blank" } }

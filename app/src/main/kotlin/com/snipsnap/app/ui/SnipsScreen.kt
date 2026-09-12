@@ -79,6 +79,12 @@ import kotlinx.coroutines.withContext
  * comment on `tapeOpenOverride` for the honest limit of what that actually
  * guarantees (TAPE's newest-snip-first priority usually wins regardless).
  *
+ * **→ LOOP.** [onSendToLoop] hands the file to `App`, which cuts it into
+ * interval-length pieces and gives one of the six loop-grid tracks the chain
+ * that plays them (`SessionBuilder`). Unlike → PAD and → TAPE this does not
+ * close SNIPS: filling a grid means picking several snips, and bouncing out to
+ * another screen after each one would make that six round trips.
+ *
  * **Playback** reuses [TapeVoice] — the same unity-speed one-shot voice
  * `TapeScreen` already streams a decoded WAV through — rather than building
  * a second audio path for what's still just "play one file, stop it on a
@@ -92,6 +98,8 @@ fun SnipsScreen(
     onToast: (String) -> Unit,
     onOpenInTape: (File) -> Unit,
     onPickPadFor: (File) -> Unit,
+    /** → LOOP: this snip becomes one track of the six-track grid. The screen stays open. */
+    onSendToLoop: (SnipStore.Info) -> Unit,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -354,6 +362,7 @@ fun SnipsScreen(
                             onTogglePlay = { togglePlay(info) },
                             onPickPad = { onPickPadFor(info.file) },
                             onOpenTape = { onOpenInTape(info.file) },
+                            onSendLoop = { onSendToLoop(info) },
                             onRename = { renameTarget = info },
                             onDelete = { confirmDelete = info },
                         )
@@ -404,6 +413,7 @@ private fun SnipRow(
     onTogglePlay: () -> Unit,
     onPickPad: () -> Unit,
     onOpenTape: () -> Unit,
+    onSendLoop: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -455,6 +465,11 @@ private fun SnipRow(
             // file's own KDoc and App.kt's `pendingSnipAssign` for why.
             ActionButton("→ PAD", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onPickPad)
             ActionButton("→ TAPE", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onOpenTape)
+            // Always enabled, like its two neighbours. A full grid is the one
+            // state that could dim this, and it is answered in words instead
+            // (Copy.loopFull, which also says how to make room) — a dead
+            // button would only say "no".
+            ActionButton("→ LOOP", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onSendLoop)
         }
         // RENAME paired with DELETE — KitsScreen's own KitRow shape for the
         // same two actions.
