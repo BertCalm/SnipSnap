@@ -94,7 +94,6 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
-import com.snipsnap.shell.Personality
 import com.snipsnap.shell.ReadGroove
 import com.snipsnap.shell.RecipeReplay
 import com.snipsnap.shell.Retrim
@@ -118,7 +117,6 @@ import kotlin.random.Random
 
 internal const val PREFS = "tapeos"
 private const val PREF_SCHEME = "scheme"
-private const val PREF_PERSONALITY = "personality"
 private const val PREF_TEACH = "teach"
 /** The shelf's sort toggle (name-and-find followups) — [KitShelf.ShelfSort], remembered like the scheme. */
 private const val PREF_SHELF_SORT = "shelf_sort"
@@ -221,17 +219,10 @@ fun App(shelf: KitShelf) {
                 ?: Schemes.DEFAULT.id,
         )
     }
-    var personality by remember {
-        mutableStateOf(
-            prefs.getString(PREF_PERSONALITY, null)
-                ?.let { saved -> Personality.entries.firstOrNull { it.name == saved } }
-                ?: Personality.FULL,
-        )
-    }
     val scheme = Schemes[schemeId]
 
     // SHELF SORT (name-and-find followups): RECENT by default — persisted
-    // like scheme/personality above. `setShelfSort` both writes the pref
+    // like scheme above. `setShelfSort` both writes the pref
     // and re-fetches `kits` under the new order immediately, the same
     // "flip it, see it" shape STARTER/SCHEME's own toggles already have.
     var shelfSort by remember {
@@ -633,7 +624,7 @@ fun App(shelf: KitShelf) {
 
     /**
      * The shelf's sort toggle (name-and-find followups): persists the
-     * choice like [PREF_SCHEME]/[PREF_PERSONALITY] above, then re-fetches
+     * choice like [PREF_SCHEME] above, then re-fetches
      * [kits] under the new order right away — every OTHER refresh in this
      * file already passes [shelfSort] into its own `shelf.list` call, so
      * this is only needed for the toggle's own immediate refresh, not to
@@ -1639,7 +1630,7 @@ fun App(shelf: KitShelf) {
             note == null && !captureBlocked && !micPermissionDenied,
     ) { goToScreen(AppScreen.KITS) }
 
-    TapeTheme(scheme, personality) {
+    TapeTheme(scheme) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -2121,11 +2112,6 @@ fun App(shelf: KitShelf) {
                                 schemeId = it
                                 prefs.edit().putString(PREF_SCHEME, it.name).apply()
                             },
-                            personality = personality,
-                            onPersonality = {
-                                personality = it
-                                prefs.edit().putString(PREF_PERSONALITY, it.name).apply()
-                            },
                             teachEnabled = teachEnabled,
                             onTeach = { on ->
                                 teachEnabled = on
@@ -2293,6 +2279,7 @@ fun App(shelf: KitShelf) {
                     screenLabel = screen.label,
                     shelfLabel = "KITS: ${kits.size}",
                     busy = busy,
+                    kitName = open?.kit?.name.orEmpty(),
                 )
             }
             // A toast raised while the box is up (a share landing behind it)

@@ -28,16 +28,16 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Copy
-import com.snipsnap.shell.Personality
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.Schemes
 
 /**
  * TAPE PROPERTIES: the live scheme picker (each row previews itself in
- * its own colours — the design files' picker behaviour) and the
- * PERSONALITY slider, whose OFF is respected everywhere without
- * argument.
+ * its own colours — the design files' picker behaviour). The PERSONALITY
+ * slider that used to live here is gone; see `Personality.kt`'s own KDoc
+ * for why — the app's personality is now carried entirely by the visual
+ * design, not by a tone knob over its words.
  *
  * September UAT, finding 23 added three facts the app already knew and
  * never showed anyone, plus the door to HELP. They are **read-only on
@@ -58,8 +58,6 @@ import com.snipsnap.shell.Schemes
 fun PropertiesScreen(
     currentScheme: SchemeId,
     onScheme: (SchemeId) -> Unit,
-    personality: Personality,
-    onPersonality: (Personality) -> Unit,
     teachEnabled: Boolean,
     onTeach: (Boolean) -> Unit,
     exportFormatLabel: String?,
@@ -85,32 +83,6 @@ fun PropertiesScreen(
         ) {
             for (s in Schemes.ALL) {
                 SchemeRow(s, selected = s.id == currentScheme, onPick = { onScheme(s.id) })
-            }
-        }
-
-        TapeText("PERSONALITY", TapeType.display, scheme.ink.tape)
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            for (level in Personality.entries) {
-                val selected = level == personality
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .height(44.dp)
-                        .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-                        // Audit finding 7: selection had no programmatic
-                        // exposure anywhere in the app — the ~1.05:1 fill
-                        // contrast between pressed/raised is nearly
-                        // invisible even to sighted eyes, let alone absent
-                        // for a screen reader.
-                        .semantics { this.selected = selected }
-                        .tapeClick(label = null) { onPersonality(level) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText(level.name, TapeType.pixel, if (selected) scheme.ink.tape else scheme.ink2.tape)
-                }
             }
         }
 

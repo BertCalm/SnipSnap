@@ -981,9 +981,6 @@ class KitBuilderModel private constructor(
         return children.count { it.delete() }
     }
 
-    /** The kit-name easter egg, for the rename dialog to surface. */
-    fun nameResponse(proposed: String): String? = Copy.kitNameResponse(proposed)
-
     /**
      * A chain pad's slice boundaries index into its WAV frame-for-frame;
      * any rewrite (or restore) that isn't the robin's own would orphan

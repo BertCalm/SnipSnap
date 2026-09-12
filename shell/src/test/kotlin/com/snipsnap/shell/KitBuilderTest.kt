@@ -1033,7 +1033,7 @@ class KitBuilderTest {
     }
 
     @Test
-    fun `bank view and the TEST kit egg`() {
+    fun `bank view`() {
         val dir = File(temp, "Banks")
         val m = KitBuilderModel.create("Banks", dir)
         m.assign(1, DrumSynth.kick(), DrumClass.KICK)
@@ -1046,8 +1046,6 @@ class KitBuilderTest {
         assertNull(bankA[1])
         assertEquals(DrumClass.SNARE, bankB[0]?.drumClass)
 
-        assertEquals("VERY CREATIVE.", m.nameResponse("TEST"))
-        assertNull(m.nameResponse("Banks"))
         assertFailsWith<IllegalArgumentException> { KitBuilderModel.create("bad:name", File(temp, "x")) }
     }
 

@@ -9,7 +9,6 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
 import com.snipsnap.app.R
-import com.snipsnap.shell.Personality
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 
@@ -35,17 +34,14 @@ val Int.tape: Color get() = Color((0xFF shl 24) or this)
 val BinRedGlow: Color get() = Schemes.BIN_RED_GLOW.tape
 
 val LocalScheme = staticCompositionLocalOf { Schemes.DEFAULT }
-val LocalPersonality = staticCompositionLocalOf { Personality.FULL }
 
 @Composable
 fun TapeTheme(
     scheme: Scheme,
-    personality: Personality,
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(
         LocalScheme provides scheme,
-        LocalPersonality provides personality,
         content = content,
     )
 }
