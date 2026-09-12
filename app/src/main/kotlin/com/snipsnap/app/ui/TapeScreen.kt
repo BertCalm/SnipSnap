@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -730,7 +732,16 @@ private fun TapeDeckContent(
             // it don't need, rather than a hardcoded height that clips
             // COMMIT off-screen on a short viewport (landscape, split
             // screen) — WAVEFORM_MIN_H keeps it from collapsing to nothing.
-            modifier = Modifier.weight(1f, fill = true).heightIn(min = WAVEFORM_MIN_H.dp),
+            //
+            // Batch 3, Task 2: weight 2f, not 1f — this used to be the ONLY
+            // weighted child of the outer Column, so it already absorbed
+            // 100% of whatever the ~11 ungrouped rows below left over;
+            // raising the number alone would have changed nothing. What
+            // actually gives height back is the grouped-controls Column
+            // below becoming a SECOND weighted region: the waveform now
+            // claims 2 parts of a 2:1 split against that region's 1,
+            // instead of "the remainder after eleven fixed rows."
+            modifier = Modifier.weight(2f, fill = true).heightIn(min = WAVEFORM_MIN_H.dp),
         )
         // Same strong-skipping reasoning as WaveformLcd's `uiGen` above:
         // `model`/`readoutPos`/`onToast` are all instance-equal across a
@@ -738,165 +749,191 @@ private fun TapeDeckContent(
         // skipped and the selection-length ("LEN") text would go stale
         // after IN/OUT/COMMIT while stopped.
         ReadoutRow(model, readoutPos, onToast, uiGen = uiGeneration)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            DeckButton("IN", Modifier.weight(1f), engaged = model.inFrame >= 0) { model.setIn(); touch() }
-            DeckButton("OUT", Modifier.weight(1f), engaged = model.outFrame >= 0) { model.setOut(); touch() }
-            DeckButton(model.zoomLabel, Modifier.weight(1f)) { model.cycleZoom(); touch() }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            WindButton("◄◄", Modifier.weight(1f), -1, model, ::stopVoice, ::touch)
-            DeckButton(if (model.playing) "■ STOP" else "▶ PLAY", Modifier.weight(1f)) { onPlayStop() }
-            WindButton("▶▶", Modifier.weight(1f), 1, model, ::stopVoice, ::touch)
-        }
-        if (retrim != null) {
-            // HITS (docs/RETRIM.md round 4): step IN and OUT through the
-            // hits INSTANT KIT would cut from this tape, so picking "the
-            // next hit instead" is one tap, not a drag — then BACK ONTO.
-            // The readout names the hit the selection sits on, if any.
-            val found = hits
-            val current = found?.indexOfFirst { model.inFrame in it } ?: -1
-            fun stepHit(delta: Int) {
-                val list = hits
-                if (list.isNullOrEmpty()) {
-                    onToast(if (list == null) Copy.HITS_BUSY else Copy.HITS_NONE)
-                    return
+        // Batch 3, Task 2: EXPORT's own shape (named section headings over
+        // a scrollable list) applied here, the same move Task 1 made on
+        // GROOVE. The ~11 peer controls below used to stack with no
+        // grouping, competing directly with WaveformLcd's own weight for a
+        // fixed height; this Column is now the second weighted region that
+        // split actually depends on, and it scrolls internally on a short
+        // viewport that can't fit all three groups plus a live RE-TRIM's
+        // HITS row at once.
+        Column(
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            TapeText("TRANSPORT", TapeType.pixelSmall, scheme.ink3.tape)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                WindButton("◄◄", Modifier.weight(1f), -1, model, ::stopVoice, ::touch)
+                DeckButton(if (model.playing) "■ STOP" else "▶ PLAY", Modifier.weight(1f)) { onPlayStop() }
+                WindButton("▶▶", Modifier.weight(1f), 1, model, ::stopVoice, ::touch)
+            }
+
+            TapeText("EDIT", TapeType.pixelSmall, scheme.ink3.tape)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                DeckButton("IN", Modifier.weight(1f), engaged = model.inFrame >= 0) { model.setIn(); touch() }
+                DeckButton("OUT", Modifier.weight(1f), engaged = model.outFrame >= 0) { model.setOut(); touch() }
+                DeckButton(model.zoomLabel, Modifier.weight(1f)) { model.cycleZoom(); touch() }
+            }
+            if (retrim != null) {
+                // HITS (docs/RETRIM.md round 4): step IN and OUT through the
+                // hits INSTANT KIT would cut from this tape, so picking "the
+                // next hit instead" is one tap, not a drag — then BACK ONTO.
+                // The readout names the hit the selection sits on, if any.
+                val found = hits
+                val current = found?.indexOfFirst { model.inFrame in it } ?: -1
+                fun stepHit(delta: Int) {
+                    val list = hits
+                    if (list.isNullOrEmpty()) {
+                        onToast(if (list == null) Copy.HITS_BUSY else Copy.HITS_NONE)
+                        return
+                    }
+                    val next = if (current < 0) (if (delta > 0) 0 else list.size - 1) else (current + delta).mod(list.size)
+                    val hit = list[next]
+                    // stop(), not togglePlay(): a coasting or gliding deck is
+                    // not `playing` but still moving, and would carry the head
+                    // off the hit `select` just parked it on.
+                    model.stop()
+                    stopVoice()
+                    model.select(hit.first, hit.last + 1)
+                    touch()
                 }
-                val next = if (current < 0) (if (delta > 0) 0 else list.size - 1) else (current + delta).mod(list.size)
-                val hit = list[next]
-                // stop(), not togglePlay(): a coasting or gliding deck is
-                // not `playing` but still moving, and would carry the head
-                // off the hit `select` just parked it on.
-                model.stop()
-                stopVoice()
-                model.select(hit.first, hit.last + 1)
-                touch()
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    DeckButton("◀ HIT", Modifier.weight(1f)) { stepHit(-1) }
+                    DeckButton(
+                        if (found == null) Copy.HITS_BUSY else Copy.hitReadout(current, found.size),
+                        Modifier.weight(1.2f),
+                        engaged = current >= 0,
+                    ) { stepHit(1) }
+                    DeckButton("HIT ▶", Modifier.weight(1f)) { stepHit(1) }
+                }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                DeckButton("◀ HIT", Modifier.weight(1f)) { stepHit(-1) }
+                // BACK ONTO A02 replaces KEEP while a RE-TRIM is live
+                // (docs/RETRIM.md §4): the request owns the primary. The
+                // selection's frames are the loaded file's own, which is what
+                // App reads the cut back out of.
                 DeckButton(
-                    if (found == null) Copy.HITS_BUSY else Copy.hitReadout(current, found.size),
-                    Modifier.weight(1.2f),
-                    engaged = current >= 0,
-                ) { stepHit(1) }
-                DeckButton("HIT ▶", Modifier.weight(1f)) { stepHit(1) }
-            }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            // BACK ONTO A02 replaces KEEP while a RE-TRIM is live
-            // (docs/RETRIM.md §4): the request owns the primary. The
-            // selection's frames are the loaded file's own, which is what
-            // App reads the cut back out of.
-            DeckButton(
-                retrim?.let { Copy.backOnto(it.padLabel) } ?: "KEEP",
-                Modifier
-                    .weight(1f)
-                    .height(Layout.PRIMARY_ACTION_H.dp),
-                active = model.hasSelection,
-            ) {
-                val range = model.commitSelection()
-                touch()
-                if (retrim != null) {
-                    if (range != null) {
-                        if (model.playing) model.togglePlay()
-                        stopVoice()
-                        onBackOnto(retrim, range)
+                    retrim?.let { Copy.backOnto(it.padLabel) } ?: "KEEP",
+                    Modifier
+                        .weight(1f)
+                        .height(Layout.PRIMARY_ACTION_H.dp),
+                    active = model.hasSelection,
+                ) {
+                    val range = model.commitSelection()
+                    touch()
+                    if (retrim != null) {
+                        if (range != null) {
+                            if (model.playing) model.togglePlay()
+                            stopVoice()
+                            onBackOnto(retrim, range)
+                        } else {
+                            onToast(Copy.COMMIT_NEEDS_SELECTION)
+                        }
+                    } else if (range != null) {
+                        // tapeData.sourceFile, not a re-derived "open kit's longest
+                        // sample" — TapeCommit's own contract is that `range`'s
+                        // frames only mean something against the exact file TAPE
+                        // was scrubbing when COMMIT fired, and under the new
+                        // source priority that's frequently a snip, not a pad WAV.
+                        onCommit(tapeData.sourceFile, range)
+                        onToast(Copy.rotating(Copy.COMMIT_LINES, commitIndex))
+                        commitIndex++
                     } else {
                         onToast(Copy.COMMIT_NEEDS_SELECTION)
                     }
-                } else if (range != null) {
-                    // tapeData.sourceFile, not a re-derived "open kit's longest
-                    // sample" — TapeCommit's own contract is that `range`'s
-                    // frames only mean something against the exact file TAPE
-                    // was scrubbing when COMMIT fired, and under the new
-                    // source priority that's frequently a snip, not a pad WAV.
-                    onCommit(tapeData.sourceFile, range)
-                    onToast(Copy.rotating(Copy.COMMIT_LINES, commitIndex))
-                    commitIndex++
-                } else {
-                    onToast(Copy.COMMIT_NEEDS_SELECTION)
+                }
+                // INSTANT KIT (F2.2): the one tap. The selection when there is
+                // one, else the whole deck, chopped with the defaults and on the
+                // grid without the review - CHOP's own result, nothing touched.
+                // Batch 3, Task 4: no ▸ — this commits in place (a chop),
+                // it does not navigate or open a panel.
+                DeckButton(
+                    "INSTANT KIT",
+                    Modifier
+                        .weight(1f)
+                        .height(Layout.PRIMARY_ACTION_H.dp),
+                    active = true,
+                ) {
+                    // Stop the transport as well as the voice: the deck would
+                    // otherwise keep rolling silently under the busy overlay.
+                    if (model.playing) model.togglePlay()
+                    stopVoice()
+                    // Read before commitSelection(), which clears it — and passed
+                    // on rather than left to be inferred from `range`, since an
+                    // IN/OUT the user dragged across the whole tape arrives in
+                    // App.kt looking exactly like no selection at all.
+                    val hadSelection = model.hasSelection
+                    val range = if (hadSelection) model.commitSelection() else null
+                    // togglePlay and commitSelection both change what the
+                    // PLAY/STOP label and the IN/OUT engaged state should read —
+                    // same reasoning as onPlayStop/the COMMIT button above.
+                    touch()
+                    onInstantKit(tapeData.sourceFile, range ?: (0 until tapeData.samples.size), hadSelection)
                 }
             }
-            // INSTANT KIT (F2.2): the one tap. The selection when there is
-            // one, else the whole deck, chopped with the defaults and on the
-            // grid without the review - CHOP's own result, nothing touched.
-            DeckButton(
-                "INSTANT KIT ▸",
-                Modifier
-                    .weight(1f)
-                    .height(Layout.PRIMARY_ACTION_H.dp),
-                active = true,
-            ) {
-                // Stop the transport as well as the voice: the deck would
-                // otherwise keep rolling silently under the busy overlay.
-                if (model.playing) model.togglePlay()
-                stopVoice()
-                // Read before commitSelection(), which clears it — and passed
-                // on rather than left to be inferred from `range`, since an
-                // IN/OUT the user dragged across the whole tape arrives in
-                // App.kt looking exactly like no selection at all.
-                val hadSelection = model.hasSelection
-                val range = if (hadSelection) model.commitSelection() else null
-                // togglePlay and commitSelection both change what the
-                // PLAY/STOP label and the IN/OUT engaged state should read —
-                // same reasoning as onPlayStop/the COMMIT button above.
-                touch()
-                onInstantKit(tapeData.sourceFile, range ?: (0 until tapeData.samples.size), hadSelection)
-            }
-        }
-        // Wave ZZ, the phone reads: three more readings of the same tape.
-        // DIG finds the break and sets IN and OUT to it, so INSTANT KIT is
-        // the next tap; READ AS GROOVE hears the tape as a rhythm for the
-        // open kit's pads; STEAL THE FEEL keeps only its timing and accent.
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            DeckButton("FIND BREAK ▸", Modifier.weight(1f), active = !digging) {
-                if (digging) return@DeckButton
-                if (model.playing) model.togglePlay()
-                stopVoice()
-                touch()
-                digging = true
-                onToast(Copy.DIG_BUSY)
-                digScope.launch {
-                    try {
-                        val found = withContext(Dispatchers.IO) {
-                            Dig.best(Snip(tapeData.samples, 1, tapeData.sampleRate))
+
+            TapeText("DESTINATIONS", TapeType.pixelSmall, scheme.ink3.tape)
+            // Wave ZZ, the phone reads: three more readings of the same tape.
+            // DIG finds the break and sets IN and OUT to it, so INSTANT KIT is
+            // the next tap; READ AS GROOVE hears the tape as a rhythm for the
+            // open kit's pads; STEAL THE FEEL keeps only its timing and accent.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Batch 3, Task 4: no ▸ — DIG runs in place on this deck; it
+                // moves IN/OUT, it doesn't navigate or open a panel.
+                DeckButton("FIND BREAK", Modifier.weight(1f), active = !digging) {
+                    if (digging) return@DeckButton
+                    if (model.playing) model.togglePlay()
+                    stopVoice()
+                    touch()
+                    digging = true
+                    onToast(Copy.DIG_BUSY)
+                    digScope.launch {
+                        try {
+                            val found = withContext(Dispatchers.IO) {
+                                Dig.best(Snip(tapeData.samples, 1, tapeData.sampleRate))
+                            }
+                            if (found == null) {
+                                onToast(Copy.NO_BREAK)
+                            } else {
+                                model.select(found.startFrame, found.endFrame)
+                                // IN/OUT just moved off the model, outside any
+                                // DeckButton tap — same reasoning as every other
+                                // direct `model` mutation in this file: the
+                                // IN/OUT engaged state and LEN readout only see
+                                // it once this composable recomposes.
+                                touch()
+                                onToast(Copy.dug(Dig.stamp(found.startSec), Dig.stamp(found.endSec)))
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // Law 3: when it breaks, say exactly what happened -
+                            // the exception's own detail goes to logcat, not the toast.
+                            Log.e("TapeScreen", "dig: failed", e)
+                            onToast(Copy.DIG_FAILED)
+                        } finally {
+                            digging = false
                         }
-                        if (found == null) {
-                            onToast(Copy.NO_BREAK)
-                        } else {
-                            model.select(found.startFrame, found.endFrame)
-                            // IN/OUT just moved off the model, outside any
-                            // DeckButton tap — same reasoning as every other
-                            // direct `model` mutation in this file: the
-                            // IN/OUT engaged state and LEN readout only see
-                            // it once this composable recomposes.
-                            touch()
-                            onToast(Copy.dug(Dig.stamp(found.startSec), Dig.stamp(found.endSec)))
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        // Law 3: when it breaks, say exactly what happened -
-                        // the exception's own detail goes to logcat, not the toast.
-                        Log.e("TapeScreen", "dig: failed", e)
-                        onToast(Copy.DIG_FAILED)
-                    } finally {
-                        digging = false
                     }
                 }
-            }
-            DeckButton("READ AS GROOVE ▸", Modifier.weight(1.4f)) {
-                if (model.playing) model.togglePlay()
-                stopVoice()
-                val range = if (model.hasSelection) model.commitSelection() else null
-                touch()
-                onReadGroove(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
-            }
-            DeckButton("COPY GROOVE ▸", Modifier.weight(1.4f)) {
-                if (model.playing) model.togglePlay()
-                stopVoice()
-                val range = if (model.hasSelection) model.commitSelection() else null
-                touch()
-                onStealFeel(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
+                // READ AS GROOVE ▸ / COPY GROOVE ▸ keep the glyph (Task 4):
+                // both navigate away to GROOVE on success (`App.readGroove`/
+                // `App.stealFeel` set `screen = AppScreen.GROOVE`), unlike
+                // FIND BREAK and INSTANT KIT above, which stay on this deck.
+                DeckButton("READ AS GROOVE ▸", Modifier.weight(1.4f)) {
+                    if (model.playing) model.togglePlay()
+                    stopVoice()
+                    val range = if (model.hasSelection) model.commitSelection() else null
+                    touch()
+                    onReadGroove(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
+                }
+                DeckButton("COPY GROOVE ▸", Modifier.weight(1.4f)) {
+                    if (model.playing) model.togglePlay()
+                    stopVoice()
+                    val range = if (model.hasSelection) model.commitSelection() else null
+                    touch()
+                    onStealFeel(tapeData.sourceFile, range ?: (0 until tapeData.samples.size))
+                }
             }
         }
     }
