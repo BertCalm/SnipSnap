@@ -194,6 +194,14 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
     cutoff_.setTarget(control01(target.cutoff, 1.0f));
     resonance_.setTarget(control01(target.resonance, 0.0f));
     drive_.setTarget(control01(target.drive, 0.0f));
+    // A touch-down restarts the loop from its head, so a tapped rhythm
+    // triggers like a drum hit; a held note still rides wherever the loop
+    // has turned to since. Without this, phase_ keeps advancing even while
+    // ungated (the loop is muted, not paused - renderMono reads and
+    // advances it regardless of gain), so the next touch would land
+    // wherever the loop happened to drift to, not at its head.
+    if (f.gate && !gated_) phase_ = 0.0;
+    gated_ = f.gate;
     gain_.setTarget(f.gate ? 1.0f : 0.0f);
 }
 

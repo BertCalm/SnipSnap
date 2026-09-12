@@ -108,6 +108,10 @@ private:
     // Controls.
     SpscRing<ControlFrame, 64> controls_;
     ControlFrame latest_;
+    // The gate as of the last control frame applied, so a touch-down (the
+    // false -> true edge) is told apart from a touch merely held - see
+    // applyControl.
+    bool gated_ = false;
     std::atomic<float> corners_[4][4];  // [corner][pitch, cutoff, resonance, drive]
 
     // Per-sample smoothing of every macro plus the gate.

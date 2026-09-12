@@ -534,6 +534,46 @@ TEST(surface_engine_morph_blends_the_corners) {
     CHECK(pa > pd);
 }
 
+TEST(surface_engine_retriggers_the_loop_on_touch_down) {
+    // Without a reset, phase_ keeps advancing even while ungated - the loop
+    // is muted, not paused - so a second touch lands wherever it would
+    // naturally have drifted to by then, not at the loop's head. Two runs
+    // that differ only in how many samples the pad sat released before the
+    // second touch must land at the exact same output once retriggered and
+    // settled: if phase_ actually resets on touch-down, both runs read the
+    // ramp from the same starting point and every later control frame lines
+    // up the same way, so the two waveforms are bit-identical. A ramp
+    // (not a short repeating wave) makes any leftover drift visible - it
+    // has no periodicity shorter than its own length for a coincidental
+    // match to hide behind.
+    auto run = [](int32_t releaseCallbacks) {
+        SurfaceEngine e(kRate);
+        std::vector<float> ramp(1000);
+        for (size_t i = 0; i < ramp.size(); ++i) ramp[i] = static_cast<float>(i) / 1000.0f - 0.5f;
+        e.loadSample(ramp.data(), ramp.size(), kRate);
+
+        ControlFrame on;
+        on.mode = 0;
+        on.gate = true;
+        on.x = 0.5f;
+        on.y = 1.0f;
+        e.pushControl(on);
+        for (int i = 0; i < 137; ++i) callback(e, 64);  // hold for an arbitrary stretch
+
+        ControlFrame off = on;
+        off.gate = false;
+        e.pushControl(off);
+        for (int i = 0; i < releaseCallbacks; ++i) callback(e, 64);  // sit released, drifting if unfixed
+
+        e.pushControl(on);  // touch down again
+        std::vector<float> tail;
+        for (int i = 0; i < 400; ++i) tail = callback(e, 64);  // let the envelope and filter settle
+        return tail;
+    };
+
+    CHECK(run(50) == run(311));
+}
+
 TEST(surface_engine_morph_tilt_reaches_the_filter) {
     // Two frames identical but for tilt, both weighted fully onto corner A:
     // if the tilt nudge in morphed() reaches applyControl (as it should -
