@@ -330,7 +330,7 @@ claim is tested against, instead of our own output.
 
 ---
 
-## MIDI sync: the three measurements that decide it
+## MIDI sync: the four measurements that decide it
 
 Added 2026-09-12 by `docs/MIDI_SYNC.md`, which needs these answered
 **before any sync code is written** — they decide whether it is worth
@@ -344,9 +344,16 @@ MPC, a laptop, anything that sends MIDI beat clock).
 because the buffer was not filled to capacity. A transport built on that
 number would sit at zero for most of a bar.
 
-Play a short one-shot and a long one, and watch the reported position
-against wall time. **What to write down:** whether it starts at zero and
-stays there, for how long, and whether buffer size changes it.
+**This one needs a probe first — the app cannot answer it as it stands.**
+The only reads are private locals inside `MixVoice`'s and `TapeVoice`'s
+drain loops; nothing displays or logs them. So step zero is a temporary
+`Log.d` of `playbackHeadPosition` beside `framesWritten` in
+`TapeVoice`'s drain loop, on a throwaway branch that is never merged.
+
+Then play a short one-shot and a long one and watch the two numbers in
+logcat. **What to write down:** whether the position starts at zero and
+stays there, for how long, whether clip length changes it (the 800 ms
+case was a clip shorter than the buffer), and the device.
 
 →
 
@@ -365,7 +372,32 @@ shared or exclusive.
 
 →
 
-### S3 · How long should a follower coast when the clock stops?
+### S3 · Does the app's clock hold rate against a reference, over minutes?
+
+The one that decides whether sync is achievable at all, and it was
+missing from the first version of this list — `MIDI_SYNC.md` and
+`SPECS_2026_09.md` both say drift against real hardware must be
+measured, and S1/S2 measure neither rate nor drift.
+
+Two separate questions, and the second is the one that bites:
+
+- **as master** — start the app and a second device together, leave them
+  for five minutes, and see whether they are still together. This is the
+  cheap one and it gates the master-first recommendation.
+- **across the app's own two streams** — `AndroidAudioSink`
+  (`AudioTrack`, used by ORBIT and the loop grid) and `PadEngine` (Oboe,
+  used by GROOVE and PLAY) are independent output streams with
+  independent clocks. Play an ORBIT ring against a repeating pad hit and
+  see whether they stay together over minutes.
+
+**What to write down:** the offset at start and after five minutes, for
+each, in milliseconds. If the app's own two streams drift against each
+other, no external sync can hold both, and the fork in `MIDI_SYNC.md`
+question 1 is decided for us.
+
+→
+
+### S4 · How long should a follower coast when the clock stops?
 
 `MIDI_SYNC.md` recommends coast-then-stop with a timeout on the order of
 one beat, and says plainly that the number is a guess until measured.

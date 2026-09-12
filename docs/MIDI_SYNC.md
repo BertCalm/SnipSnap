@@ -9,6 +9,46 @@ implementation, and this document is the reason why.
 
 ---
 
+## How far to trust this document
+
+Two rounds of review found **23 errors** in it. Every one was real. That
+is a bad enough rate to be a fact about the document rather than an
+anecdote, so here is the pattern, because it tells you which parts to
+lean on.
+
+**The survey held up.** Every claim about what the code does today —
+four transports, GROOVE clocked off the display, no position accessor on
+the sink, round-trip latency on screen, commands applied at the top of
+the audio callback — survived checking, and the corrections *sharpened*
+them rather than reversing them.
+
+**The prescriptions did not.** Nearly every error was in a sentence
+proposing what to build:
+
+| the draft said | it was wrong because |
+|---|---|
+| engines read the hardware position | the render cursor must *lead* it by the buffer |
+| one buffer ahead | the lead is bounded and varying, not fixed |
+| a PLL with a slew limit answers a stall | it does not; holdover is a separate mechanism |
+| a seek is arithmetic | the engine carries voices across blocks |
+| `continue` has the state already | ORBIT's screen discards the engine on stop |
+| one transport in frames | there are two output streams, `AudioTrack` and Oboe |
+| the same seam as the `PadEngine` test interface | two different dependencies |
+
+The reason is not subtle: **I cannot run this app.** Reading the source
+is enough to say what is there. It is not enough to say what will keep
+time, because timing lives in the gaps between components — buffering,
+scheduling, two clocks that drift — and those do not appear in any file.
+
+So read the survey as findings, and the design section as **constraints
+and open questions** rather than a plan. The four bench items exist
+because they are the parts no amount of further reading can settle, and
+the document now says plainly that none of the code should start before
+they are answered. That is not caution for its own sake; it is what 23
+corrections taught.
+
+---
+
 ## A correction, first
 
 `docs/SPECS_2026_09.md` §2 says, and I repeated it twice in conversation:
@@ -77,10 +117,22 @@ grep -n "fun hit(" -A 6 app/src/main/kotlin/com/snipsnap/app/ui/GrooveScreen.kt
 grep -n "fun hit\|fun noteOn" app/src/main/kotlin/com/snipsnap/app/PadEngine.kt
 ```
 
-So GROOVE's timing accuracy is bounded by the display's refresh
-(~16.7 ms at 60 Hz) plus whatever the audio path adds. That is fine for
-a needle you watch. It is not a foundation for clock sync, where the
-error budget is closer to a millisecond.
+So GROOVE's timing granularity is the display's refresh — ~16.7 ms at
+60 Hz — plus whatever the audio path adds.
+
+**That figure is a best case, not a bound**, and an earlier draft
+presented it as a bound. A delayed tick is clamped to
+`GROOVE_STEP_MAX_NANOS`, which is **100 ms**, and every step crossed in
+that interval is then sent to `hit` in the same callback:
+
+```
+grep -n "GROOVE_STEP_MAX_NANOS = \|coerceIn(0, GROOVE_STEP_MAX_NANOS)" app/src/main/kotlin/com/snipsnap/app/ui/GrooveScreen.kt
+```
+
+That clamp is correct for its own purpose — it stops a backgrounded app
+fast-forwarding the needle — but it means notes can arrive batched and
+tens of milliseconds late. Fine for a needle you watch; not a foundation
+for clock sync, where the error budget is closer to a millisecond.
 
 ### No *transport* reads the hardware's playback position — but two voices do
 
@@ -169,13 +221,44 @@ That is a bench item, not an arithmetic detail.
 ## The three questions, answered
 
 The spec said this needs a design pass before any code, and named the
-questions. Here they are with answers.
+questions. Here they are — with the constraints any answer has to
+satisfy, and the choices flagged as choices. Per the section above,
+treat the prescriptive parts as arguments, not as a plan.
 
 ### 1. Where does the timeline live?
 
 **It must become one thing, and that thing must be audio frames** —
 specifically, frames as the *hardware* reports them, not as an engine
 counts them.
+
+**And the hardest part of that is not stated anywhere above, because I
+missed it.** There is not one output stream to take frames from. There
+are two, of different kinds:
+
+```
+grep -n "import android.media.AudioTrack" app/src/main/kotlin/com/snipsnap/app/AndroidAudioSink.kt
+grep -n "oboe::AudioStream\|requestStart" app/src/main/cpp/PadEngine.cpp | head -3
+```
+
+ORBIT and the loop grid write through `AndroidAudioSink`, which is an
+`android.media.AudioTrack`. GROOVE and PLAY sound through `PadEngine`,
+which is an **Oboe** stream in C++. Two streams, two origins, two
+buffering regimes, two clocks that drift against each other.
+
+So "one transport in frames" begs the question *frames of which stream*,
+and the answer is a fork in the design that this document is not entitled
+to settle:
+
+- **one shared output stream** — everything mixes into a single sink.
+  Cleanest clock, largest change, and it puts ORBIT's Kotlin mixer and
+  the native pad engine in the same signal path;
+- **two streams with a measured offset** — keep them, and maintain a
+  mapping between their positions. Smaller change, permanent obligation:
+  the mapping has to be re-derived whenever a route changes.
+
+Until that is chosen, **a single `Transport` cannot align a pad hit with
+an ORBIT ring**, which is most of what "synced" would mean to a user
+playing both. It is the first question, ahead of anything MIDI.
 
 Audio frames are the only clock in the system that cannot drift against
 the sound the user hears, because they *are* the sound the user hears.
@@ -195,11 +278,21 @@ prerequisite for everything below:
   would make it re-render audio already queued. The two cursors are:
   - a **scheduling cursor** — where the engine is writing to, which is
     the future;
-  - a **hardware position** — where the listener is, used for phase
-    comparison and latency correction, never for deciding what to render.
+  - a **hardware position** — the device's *output cursor*, used for
+    phase comparison and latency correction, never for deciding what to
+    render. Note it is **not** "where the listener is", as an earlier
+    draft put it: that would make S2's output-side delay redundant, and
+    it is not. The cursor is where the stream says it has got to; the ear
+    is that plus a delay nobody has measured.
 
   Sync is the business of keeping the second aligned with the master
-  while the first stays exactly one buffer ahead of it;
+  while the first runs a **bounded, varying** lead ahead of it — not
+  "exactly one buffer", which an earlier draft claimed. `bufferBytes`
+  takes `maxOf(a 150 ms target, AudioTrack.getMinBufferSize(...))`, and
+  the sink blocks on write, so the queued lead depends on the route and
+  on write timing. `BUFFER_MILLIS`' own KDoc already names the concept —
+  *"How far ahead of the ear the engine's frame count runs"* — and an
+  implementation must read that lead rather than assume it;
 - `OrbitEngine` and `LoopEngine` take their scheduling cursor from that
   transport rather than each owning a private counter;
 - GROOVE's needle reads it instead of `withFrameNanos` — the needle can
@@ -251,18 +344,47 @@ states exist locally:
 | event | what it means | what the app has today |
 |---|---|---|
 | `start` | go to zero and run | the closest match: ORBIT rewinds, GROOVE's RECORD zeroes `posSteps` |
-| `stop` | freeze **here** | *partly there already* — `OrbitEngine.stop()` and `LoopEngine.stop()` set `running = false` and **do not reset** their counters, and GROOVE's `posSteps` is state that survives. What is missing is not the position but the meaning: nothing treats it as a resume point |
-| `continue` | resume from where `stop` left off | no control offers it, though the state to do it is sitting there |
-| Song Position Pointer | relocate to bar N beat M | nothing can seek. ORBIT's rings are a pure function of frame, so a jump is arithmetic; GROOVE and the loop grid have no expression for it |
+| `stop` | freeze **here** | at ENGINE level the counters survive — `OrbitEngine.stop()` and `LoopEngine.stop()` only set `running = false`, and GROOVE's `posSteps` is state. At SCREEN level ORBIT throws it away: `OrbitScreen.stopPlayback()` stops, joins, closes the sink and sets `engine = null`, so the next start builds a fresh engine at frame 0 |
+| `continue` | resume from where `stop` left off | no control offers it, and for ORBIT the state is not merely unused but **discarded**. GROOVE is the closest: `posSteps` really does survive |
+| Song Position Pointer | a 14-bit count of **MIDI beats**, six clocks each — *not* a bar/beat pair | nothing can seek, and the conversion needs the session meter. See below: a seek is more than arithmetic |
 | clock stalls | the master died or the cable went | undefined — nothing would notice |
 
-An earlier draft said "stopping resets". It does not, for any of the
-three, and the difference matters: `continue` is closer than it looked.
+Two corrections live in that table, a draft apart.
+
+The first draft said "stopping resets". At engine level it does not.
 
 ```
 grep -n "fun stop" -A 1 loop/src/main/kotlin/com/snipsnap/loop/OrbitEngine.kt
 grep -n "fun stop" -A 1 loop/src/main/kotlin/com/snipsnap/loop/LoopEngine.kt
 ```
+
+The second draft then over-corrected, and said "the state to do it is
+sitting there". For ORBIT it is not: the screen discards the engine
+entirely.
+
+```
+grep -n "fun stopPlayback" -A 8 app/src/main/kotlin/com/snipsnap/app/ui/OrbitScreen.kt
+```
+
+**Engine behaviour is not screen behaviour**, and conflating them is how
+a design ends up assuming a resume point that the app throws away on
+every stop.
+
+### A seek is not arithmetic
+
+The same draft said ORBIT's rings are "a pure function of frame, so a
+jump is arithmetic". `OrbitClock`'s *position* maths is pure. The
+**engine's rendering is not**: it carries a mutable `voices` list across
+blocks, and `rewind()` exists precisely to clear it.
+
+```
+grep -n "private val voices\|voices.clear()" loop/src/main/kotlin/com/snipsnap/loop/OrbitEngine.kt
+```
+
+So a relocation that moved only the frame would leave pre-jump sample
+tails sounding at the new position. Any SPP support has to define what
+happens to voices in flight — clear, or fade — and that is a decision
+about how a jump should *sound*, not a calculation.
 
 **The stall case is the one that decides the design**, and an earlier
 draft answered it badly. It said the answer is "a phase-locked loop with
@@ -382,9 +504,22 @@ measured.
 They are the items that decide whether any of this is worth shipping, so
 **none of the code below should start before they are answered.**
 
-**The seam this shares with everything else**: a readable transport is
-also what would make `PadEngine` JVM-testable, which
-`docs/SPECS_2026_09.md`'s closing section already flagged as the gate on
-testing the runtime at all. The two pieces of work want the same
-interface. That is an argument for doing question 1 well and separately,
-under its own measurement, rather than as a detail inside a MIDI feature.
+**A seam this does NOT share, though a draft said it did.** That draft
+claimed a readable transport is "the same interface" that would make
+`PadEngine` JVM-testable. It is not, and the difference matters because
+the claim invites one broad abstraction on the audio hot path where two
+narrow ones are wanted.
+
+`SPECS_2026_09.md`'s closing section asks for **an interface in front of
+`NativePads`**, so a unit test can supply a fake in place of the JNI
+bridge. That is a *dependency-injection* seam around a boundary that
+cannot load in a JVM test.
+
+A transport is a *different* dependency: something `PadEngine` reads to
+know what time it is. Injecting one does not make `NativePads` loadable,
+and faking `NativePads` does not give anything a clock.
+
+They are two adapters. Both may be worth building, and building them
+together may be sensible — but they are not one interface, and pretending
+otherwise is how an audio hot path acquires a layer nobody could justify
+on its own.
