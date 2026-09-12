@@ -31,7 +31,7 @@ class DustPrintsTest {
     }
 
     /** A tape with a room after every hit over a steady floor — the same shape DustTest measures. */
-    private fun tapeSnip(seconds: Float = 5f): Snip {
+    private fun tapeSnip(seconds: Float = 5f, clicks: Int = 0): Snip {
         val n = (seconds * rate).toInt()
         val out = FloatArray(n)
         val r = java.util.Random(7L)
@@ -42,28 +42,46 @@ class DustPrintsTest {
             for (i in 0 until (0.08f * rate).toInt()) if (at + i < n) out[at + i] += 0.8f * sin(2.0 * Math.PI * 60.0 * i / rate).toFloat() * exp(-i / (0.02f * rate))
             for (i in 0 until (0.4f * rate).toInt()) if (at + i < n) out[at + i] += 0.25f * (r2.nextGaussian().toFloat() * 0.5f).coerceIn(-1f, 1f) * exp(-i / (0.12f * rate))
         }
+        for (c in 0 until clicks) {
+            val at = (0.4f * rate).toInt() + c * (rate / 2) + (0.3f * rate).toInt()
+            if (at < n) out[at] = 0.6f
+        }
         return Snip(out, 1, rate)
     }
 
-    private fun tapeOnShelf(name: String = "snip_1000_ROOM 5.wav"): File =
-        File(snips, name).also { WavWriter.write(it, tapeSnip()) }
+    private fun tapeOnShelf(name: String = "snip_1000_ROOM 5.wav", clicks: Int = 0): File =
+        File(snips, name).also { WavWriter.write(it, tapeSnip(clicks = clicks)) }
 
     private fun rms(a: FloatArray) = sqrt(a.fold(0.0) { acc, v -> acc + v.toDouble() * v } / a.size).toFloat()
 
     @Test
     fun `a print is made once, kept beside the tape, and read back to the same contract`() {
-        val tape = tapeOnShelf()
+        val tape = tapeOnShelf(clicks = 4)
         val first = assertNotNull(DustPrints.forTape(tape))
         val dir = File(snips, DustPrints.DIR)
-        assertTrue(File(dir, "${tape.name}.hiss.wav").isFile && File(dir, "${tape.name}.room.wav").isFile, "cached beside the tape")
+        val crackleFile = File(dir, "${tape.name}.crackle.wav")
+        assertTrue(File(dir, "${tape.name}.hiss.wav").isFile && File(dir, "${tape.name}.room.wav").isFile && crackleFile.isFile, "cached beside the tape")
         val again = assertNotNull(DustPrints.forTape(tape))
-        // Off disk, re-levelled: unit RMS hiss, unit-L1 room, and the same shape as the fresh print.
+        // Off disk, re-levelled: unit RMS hiss, unit-L1 room, unit-peak grains, and the same shape as the fresh print.
         assertEquals(1f, rms(again.hiss.samples), 0.02f)
         assertEquals(1f, again.room.samples.fold(0.0) { a, v -> a + abs(v) }.toFloat(), 0.02f)
         assertEquals(first.room.frameCount, again.room.frameCount)
         var diff = 0.0
         for (i in first.room.samples.indices) diff += abs(first.room.samples[i] - again.room.samples[i])
         assertTrue(diff / first.room.frameCount < 1e-4, "24-bit round trip keeps the room: $diff")
+        assertEquals(4, first.grains, "the planted clicks are the crackle")
+        assertEquals(first.grains, again.grains)
+        var cdiff = 0.0
+        for (i in first.crackle.samples.indices) cdiff += abs(first.crackle.samples[i] - again.crackle.samples[i])
+        assertTrue(cdiff / first.crackle.frameCount < 1e-4, "24-bit round trip keeps the crackle: $cdiff")
+        // A cache from before CRACKLE — two files, no third — is remade, not trusted.
+        assertTrue(crackleFile.delete())
+        assertEquals(4, assertNotNull(DustPrints.forTape(tape)).grains)
+        assertTrue(crackleFile.isFile, "the third file is back")
+        // A clean tape's crackle file is a placeholder that reads back as no grains.
+        val clean = tapeOnShelf("snip_1500_CLEAN.wav")
+        assertEquals(0, assertNotNull(DustPrints.forTape(clean)).grains)
+        assertEquals(0, assertNotNull(DustPrints.forTape(clean)).grains, "and again off the cache")
         assertNull(DustPrints.forTape(File(snips, "not_there.wav")))
         // The print follows its tape off the shelf, and off a rename.
         val renamed = assertNotNull(SnipStore.rename(tape, "ROOM SIX"))
@@ -71,7 +89,7 @@ class DustPrintsTest {
         assertNotNull(DustPrints.forTape(renamed))
         assertTrue(File(dir, "${renamed.name}.room.wav").isFile)
         assertTrue(SnipStore.delete(renamed))
-        assertTrue(!File(dir, "${renamed.name}.room.wav").exists() && !File(dir, "${renamed.name}.hiss.wav").exists(), "a binned tape's print is forgotten")
+        assertTrue(!File(dir, "${renamed.name}.room.wav").exists() && !File(dir, "${renamed.name}.hiss.wav").exists() && !File(dir, "${renamed.name}.crackle.wav").exists(), "a binned tape's print is forgotten")
         // A silent tape has no hits and no dust, and leaves no cache behind.
         val silent = File(snips, "snip_2000_SILENT.wav").also { WavWriter.write(it, Snip(FloatArray(rate * 2), 1, rate)) }
         assertNull(DustPrints.forTape(silent))

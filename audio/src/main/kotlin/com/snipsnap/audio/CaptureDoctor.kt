@@ -162,6 +162,15 @@ object CaptureDoctor {
         }
     }
 
+    /**
+     * The clicks in one mono channel, as frame ranges, without repairing
+     * them — the same hunt [repairClicks] runs (derivative outliers,
+     * transient-guarded, isolated), offered to DUST, which collects them
+     * off a tape's ghosts as CRACKLE rather than mending them. Throws
+     * like [repairClicks] when the capture is distortion, not clicks.
+     */
+    fun findClicks(x: FloatArray): List<IntRange> = clickRegions(x)
+
     /** Click candidates as frame ranges, transient-guarded. */
     private fun clickRegions(x: FloatArray): List<IntRange> {
         if (x.size < 3) return emptyList()

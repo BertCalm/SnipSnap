@@ -16,7 +16,7 @@ import kotlin.math.sqrt
  * under every pad, so a kit sounds like one recording again rather than
  * sixteen clean slices. `docs/DUST.md`.
  *
- * Two ingredients in a [Print], made once per tape by [print]:
+ * Three ingredients in a [Print], made once per tape by [print]:
  *
  * - **ROOM** — the tails. After each hit the envelope falls; from where
  *   it has dropped [TAIL_DROP_DB] below its peak until the next hit is
@@ -27,11 +27,18 @@ import kotlin.math.sqrt
  * - **HISS** — the floor. The quietest [HISS_SEC] window of the tape,
  *   made into a seamless loop, levelled to unit RMS so [apply] sets how
  *   loud it sits.
+ * - **CRACKLE** — the clicks. The Capture Doctor finds clicks in order
+ *   to mend them (its follow test keeps a drum's own attack out);
+ *   collected instead, each a [CRACKLE_GRAIN_SEC] grain at unit peak, they are
+ *   the crackle that belongs to this recording. A clean tape has none,
+ *   and a print without crackle is still a print.
  *
  * [apply] convolves the hit with ROOM (the FFT the classifier already
- * carries) and adds a bed of HISS, louder under a quiet hit the way real
- * tape reveals its floor when the music drops. Pure arithmetic: the same
- * hit, print and amount produce the same bytes.
+ * carries), adds a bed of HISS, louder under a quiet hit the way real
+ * tape reveals its floor when the music drops, and sprinkles CRACKLE
+ * sparsely across the hit and its tail, the sprinkle seeded from the hit
+ * itself. Each ingredient rides its own curve of the one AMT ([Curves]).
+ * Pure arithmetic: the same hit, print and amount produce the same bytes.
  */
 object Dust {
 
@@ -96,20 +103,71 @@ object Dust {
     /** The least of the dust [apply] will ever settle for when a hit leaves it no room: see the clip guard. */
     const val MIN_DUST_SHARE = 0.5f
 
+    /** A crackle grain: the click with a little of its surround, under a raised-cosine window. */
+    const val CRACKLE_GRAIN_SEC = 0.004f
+
+    /** Enough clicks to sprinkle from; caps the work on a crackly tape and the size of the cache. */
+    const val MAX_CRACKLES = 32
+
+    /** At amount 1, crackles per second across a hit and its tail ([Curves.cracklePerSec] thins them below that). */
+    const val CRACKLE_PER_SEC_AT_FULL = 12f
+
+    /** A crackle's peak, dB below the hit's peak (lifted under a quiet hit like the hiss). */
+    const val CRACKLE_DB = -24f
+
+    /** HISS sits this many dB lower at amount 0 than at amount 1 ([Curves.hissDb]). */
+    const val HISS_RANGE_DB = 18f
+
     /**
-     * A tape's dust: both parts mono at [sampleRate], HISS at unit RMS,
+     * How the one AMT reaches each ingredient. The three are different
+     * kinds of thing — a level, a floor, a count — and one straight line
+     * through all of them was wrong for two: hiss at half amount was 6 dB
+     * down (barely a change), and a crackle count that halves at half
+     * amount is still busy. So: ROOM is a level and rides linear; HISS
+     * is a floor and rides in dB, [HISS_RANGE_DB] across the travel, so
+     * each step of AMT is heard as the same step; CRACKLE is a density
+     * and rides the square, sparse until pushed. Amount 0 is silence for
+     * all three ([apply] returns the hit itself before any of this).
+     */
+    object Curves {
+        /** ROOM's share of the hit's level: linear, [ROOM_GAIN] at full. */
+        fun roomGain(amount: Float): Float = ROOM_GAIN * amount
+
+        /** HISS's level below the hit's peak, in dB: [HISS_DB_AT_FULL] at full, [HISS_RANGE_DB] lower at 0. */
+        fun hissDb(amount: Float): Float = HISS_DB_AT_FULL - HISS_RANGE_DB * (1f - amount)
+
+        /** Crackles per second: [CRACKLE_PER_SEC_AT_FULL] at full, the square below it. */
+        fun cracklePerSec(amount: Float): Float = CRACKLE_PER_SEC_AT_FULL * amount * amount
+    }
+
+    /** Frames in one crackle grain at [rate]. */
+    fun grainFrames(rate: Int): Int = max(8, Math.round(CRACKLE_GRAIN_SEC * rate))
+
+    /**
+     * A tape's dust: every part mono at [sampleRate], HISS at unit RMS,
      * ROOM with its absolute values summing to one — so a hit convolved
      * with it can never come out louder than the hit went in, whatever
-     * the hit, and [ROOM_GAIN] means what it says.
+     * the hit, and [ROOM_GAIN] means what it says — and CRACKLE as
+     * [grains] grains of [grainFrames] each, end to end, every grain at
+     * unit peak. No crackle is an empty (or shorter-than-a-grain) snip.
      */
-    data class Print(val hiss: Snip, val room: Snip) {
+    data class Print(val hiss: Snip, val room: Snip, val crackle: Snip = Snip(FloatArray(0), 1, room.sampleRate)) {
         val sampleRate: Int get() = room.sampleRate
 
+        /** Frames per crackle grain at this print's rate. */
+        val grainFrames: Int get() = grainFrames(sampleRate)
+
+        /** How many crackle grains the print carries; zero on a clean tape. */
+        val grains: Int get() = crackle.frameCount / grainFrames
+
         init {
-            require(hiss.channels == 1 && room.channels == 1) { "a print is mono" }
-            require(hiss.sampleRate == room.sampleRate) { "hiss and room share a rate" }
+            require(hiss.channels == 1 && room.channels == 1 && crackle.channels == 1) { "a print is mono" }
+            require(hiss.sampleRate == room.sampleRate && crackle.sampleRate == room.sampleRate) { "a print's parts share a rate" }
             require(room.frameCount > 0) { "a print has a room" }
         }
+
+        /** Grain [i] of the crackle, as its own snip. */
+        fun grain(i: Int): Snip = Snip(crackle.samples.copyOfRange(i * grainFrames, (i + 1) * grainFrames), 1, sampleRate)
 
         /**
          * This print back on its contract — HISS at unit RMS, ROOM's
@@ -123,13 +181,23 @@ object Dust {
             val h = if (hissRms > SILENCE_RMS) Snip(FloatArray(hiss.samples.size) { hiss.samples[it] / hissRms }, 1, hiss.sampleRate) else hiss
             val l1 = room.samples.fold(0.0) { a, v -> a + kotlin.math.abs(v) }.toFloat()
             val r = if (l1 > SILENCE_RMS) Snip(FloatArray(room.samples.size) { room.samples[it] / l1 }, 1, room.sampleRate) else room
-            return Print(h, r)
+            // Each grain back to unit peak; a grain the round trip silenced stays silent.
+            val g = grainFrames
+            val c = FloatArray(grains * g)
+            for (i in 0 until grains) {
+                var peak = 0f
+                for (k in 0 until g) peak = max(peak, kotlin.math.abs(crackle.samples[i * g + k]))
+                for (k in 0 until g) c[i * g + k] = if (peak > SILENCE_RMS) crackle.samples[i * g + k] / peak else 0f
+            }
+            return Print(h, r, Snip(c, 1, sampleRate))
         }
 
         /**
          * This print at [rate]. The loop is resampled as three copies
          * end to end and the middle one kept, so the resampler's edge
-         * taper never lands on the seam; then both parts are [levelled].
+         * taper never lands on the seam; each crackle grain is resampled
+         * on its own and fitted to the grain length at the new rate; then
+         * every part is [levelled].
          */
         fun at(rate: Int): Print {
             if (rate == sampleRate) return this
@@ -139,7 +207,13 @@ object Dust {
             val len = Math.round(n.toDouble() * rate / hiss.sampleRate).toInt().coerceAtLeast(1)
             val from = ((wide.frameCount - len) / 2).coerceAtLeast(0)
             val loop = Snip(wide.samples.copyOfRange(from, min(wide.frameCount, from + len)), 1, rate)
-            return Print(loop, Resampler.resample(room, rate)).levelled()
+            val g = grainFrames(rate)
+            val c = FloatArray(grains * g)
+            for (i in 0 until grains) {
+                val r = Resampler.resample(grain(i), rate)
+                for (k in 0 until min(g, r.frameCount)) c[i * g + k] = r.samples[k]
+            }
+            return Print(loop, Resampler.resample(room, rate), Snip(c, 1, rate)).levelled()
         }
     }
 
@@ -218,7 +292,45 @@ object Dust {
         if (l1 <= SILENCE_RMS) return null
         for (k in room.indices) room[k] /= l1
 
-        return Print(hiss = hissLoop(mono), room = Snip(room, 1, rate))
+        return Print(hiss = hissLoop(mono), room = Snip(room, 1, rate), crackle = crackleGrains(mono))
+    }
+
+    /**
+     * The clicks of [mono] as grains end to end — the Capture Doctor's
+     * hunt (`CaptureDoctor.findClicks`), whose follow test already keeps
+     * a drum's attack out (an onset's energy persists past the jump; a
+     * click's dies) — each cut [grainFrames] wide around the click's
+     * centre, windowed, at unit peak. At most [MAX_CRACKLES]; none on a
+     * clean tape, and none on a tape the doctor refuses as distortion
+     * (every sample a jump is not crackle, it is the recording). The
+     * onset detector is not consulted: a click *is* a transient to it,
+     * and it would name every click a hit.
+     */
+    private fun crackleGrains(mono: Snip): Snip {
+        val rate = mono.sampleRate
+        val g = grainFrames(rate)
+        val half = g / 2
+        val regions = runCatching { CaptureDoctor.findClicks(mono.samples) }.getOrDefault(emptyList())
+        val grains = ArrayList<FloatArray>()
+        for (r in regions) {
+            if (grains.size >= MAX_CRACKLES) break
+            val centre = (r.first + r.last) / 2
+            val from = centre - half
+            if (from < 0 || from + g > mono.frameCount) continue
+            val grain = FloatArray(g)
+            var peak = 0f
+            for (k in 0 until g) {
+                val w = (0.5 * (1.0 - cos(2.0 * Math.PI * k / (g - 1)))).toFloat()
+                grain[k] = mono.samples[from + k] * w
+                peak = max(peak, kotlin.math.abs(grain[k]))
+            }
+            if (peak <= SILENCE_RMS) continue
+            for (k in 0 until g) grain[k] /= peak
+            grains += grain
+        }
+        val flat = FloatArray(grains.size * g)
+        for ((i, grain) in grains.withIndex()) System.arraycopy(grain, 0, flat, i * g, g)
+        return Snip(flat, 1, rate)
     }
 
     /**
@@ -265,9 +377,10 @@ object Dust {
 
     /**
      * [hit] with [print]'s dust under it at [amount] (0..1): the hit plus
-     * its room tail (after [ROOM_PREDELAY_SEC]) plus a hiss bed, the whole
-     * thing the pre-delay and [print]'s room length longer than the hit.
-     * Amount 0 is [hit] itself, untouched. Channels are dusted alike; a
+     * its room tail (after [ROOM_PREDELAY_SEC]) plus a hiss bed plus a
+     * sprinkle of crackle, the whole thing the pre-delay and [print]'s
+     * room length longer than the hit. Amount 0 is [hit] itself,
+     * untouched. Channels are dusted alike (one crackle lands on both); a
      * print at another rate is resampled first.
      */
     fun apply(hit: Snip, print: Print, amount: Float): Snip {
@@ -278,13 +391,15 @@ object Dust {
         val predelay = (ROOM_PREDELAY_SEC * rate).toInt()
         val n = hit.frameCount + predelay + p.room.frameCount - 1
         val fadeFrames = min((FADE_OUT_SEC * rate).toInt(), n / 4).coerceAtLeast(1)
-        val roomGain = ROOM_GAIN * amount
+        val roomGain = Curves.roomGain(amount)
 
-        // Hiss sits HISS_DB_AT_FULL under the hit's peak at full amount, lifted for a quiet hit.
+        // Hiss sits Curves.hissDb under the hit's peak, lifted for a quiet hit; crackle likewise at CRACKLE_DB.
         var hitPeak = 0f
         for (v in hit.samples) hitPeak = max(hitPeak, kotlin.math.abs(v))
         val lift = HISS_QUIET_LIFT_DB * (1f - hitPeak.coerceIn(0f, 1f))
-        val hissGain = if (hitPeak <= 0f) 0f else hitPeak * 10f.pow((HISS_DB_AT_FULL + lift) / 20f) * amount
+        val hissGain = if (hitPeak <= 0f) 0f else hitPeak * 10f.pow((Curves.hissDb(amount) + lift) / 20f)
+        val crackleGain = if (hitPeak <= 0f) 0f else hitPeak * 10f.pow((CRACKLE_DB + lift) / 20f)
+        val crackle = sprinkle(p, n, amount, seedOf(hit, amount))
 
         val out = FloatArray(n * hit.channels)
         // What DUST adds, kept apart from the hit so the clip guard below can
@@ -315,7 +430,7 @@ object Dust {
             for (f in 0 until n) {
                 val dry = if (f < hit.frameCount) hit.samples[f * hit.channels + ch] else 0f
                 val bed = if (loop.isNotEmpty()) loop[f % loop.size] * hissGain else 0f
-                var dust = re[f] * roomGain + bed
+                var dust = re[f] * roomGain + bed + (crackle?.get(f) ?: 0f) * crackleGain
                 // The bed and the tail fade out over the last stretch; the dry hit is already over by then.
                 if (f >= n - fadeFrames) {
                     val t = (f - (n - fadeFrames)).toFloat() / fadeFrames
@@ -350,6 +465,48 @@ object Dust {
         }
         for (i in out.indices) out[i] = (out[i] + added[i] * s).coerceIn(-ceiling, ceiling)
         return Snip(out, hit.channels, rate)
+    }
+
+    /**
+     * CRACKLE across [n] frames at [amount]: [Curves.cracklePerSec] over
+     * the output's length decides how many (the fraction left over is
+     * one more crackle with that probability, so a short hit at low
+     * amount is sometimes clean and sometimes has its one click, never
+     * always nothing); each lands at a random frame with a random grain
+     * of [p], summed at unit peak for [apply] to level. Null when there
+     * is nothing to sprinkle. [seed] makes the sprinkle part of the
+     * arithmetic: the same hit and amount, the same crackle.
+     */
+    private fun sprinkle(p: Print, n: Int, amount: Float, seed: Long): FloatArray? {
+        val g = p.grainFrames
+        val grains = p.grains
+        if (grains == 0 || n <= g) return null
+        val expected = Curves.cracklePerSec(amount) * n / p.sampleRate
+        val rnd = java.util.Random(seed)
+        var count = kotlin.math.floor(expected).toInt()
+        if (rnd.nextFloat() < expected - count) count++
+        if (count == 0) return null
+        val buf = FloatArray(n)
+        repeat(count) {
+            val at = rnd.nextInt(n - g)
+            val which = rnd.nextInt(grains)
+            for (k in 0 until g) buf[at + k] += p.crackle.samples[which * g + k]
+        }
+        return buf
+    }
+
+    /** A seed from the hit's own bytes and the amount, so [sprinkle] is a function of them. */
+    private fun seedOf(hit: Snip, amount: Float): Long {
+        var h = 1125899906842597L
+        h = 31 * h + hit.frameCount
+        h = 31 * h + hit.channels
+        h = 31 * h + amount.toBits()
+        var i = 0
+        while (i < hit.samples.size) {
+            h = 31 * h + hit.samples[i].toBits()
+            i += 7
+        }
+        return h
     }
 
     /** Whether [dry] plus [added] at [scale] would exceed [ceiling] anywhere. */
