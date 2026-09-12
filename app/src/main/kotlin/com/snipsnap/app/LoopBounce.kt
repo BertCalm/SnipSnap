@@ -53,19 +53,33 @@ object LoopBounce {
 
     private val inFlight = MutableStateFlow(false)
 
-    /**
-     * True while a render is running.
-     *
-     * A flow rather than a flag, because two screens ask different questions
-     * of it. LOOP's button asks "am I bouncing" to label itself. SNIPS asks
-     * "did a bounce just finish", because a snip that lands while that list is
-     * open would otherwise stay invisible until the screen was built again —
-     * and the bounce's own toast says IT IS IN SNIPS NOW, which has to be true
-     * of the screen the player is looking at. A false edge here is that
-     * signal: the render is over and the file is written by the time it
-     * arrives.
-     */
+    /** True while a render is running — what LOOP's button labels itself from. */
     val busy: StateFlow<Boolean> = inFlight.asStateFlow()
+
+    private val landings = MutableStateFlow(0)
+
+    /**
+     * How many bounces have finished and landed, ever, this process.
+     *
+     * A count rather than an edge of [busy], and the difference is not
+     * decoration. `StateFlow` conflates: a render short enough to finish
+     * between two frames publishes `false → true → false`, and a collector
+     * that only ever observes the latest value sees `false` both times. An
+     * effect keyed on the boolean would get no new key and never re-run —
+     * exactly the stale list this signal exists to prevent, in exactly the
+     * case (a one-bar grid, a fast phone) where it is most likely.
+     *
+     * A monotonic count cannot be conflated away: the newest value differs
+     * from the last one observed no matter how many were skipped. SNIPS keys
+     * its list on this, because a snip landing while that list is open has to
+     * appear — the bounce's own toast says IT IS IN SNIPS NOW, which has to be
+     * true of the screen the player is looking at.
+     *
+     * Bumped only on success, and only after the import returns: nothing
+     * landed when a render fails, and the file exists by the time anyone is
+     * told it does.
+     */
+    val landed: StateFlow<Int> = landings.asStateFlow()
 
     /**
      * Start a bounce of [session], reading its audio through [source].
@@ -86,18 +100,20 @@ object LoopBounce {
 
         val app = context.applicationContext
         worker.execute {
-            val line = runCatching { render(app, session, source) }
-                .getOrElse { e ->
-                    // Law 3: the toast says what did not happen; the
-                    // exception's own detail goes to logcat.
-                    Log.e(TAG, "bounce: failed", e)
-                    Copy.LOOP_BOUNCE_FAILED
-                }
-            // Cleared after the import and before the toast. Both halves
-            // matter: the file exists by the time anything sees false, so
-            // SNIPS reloading on that edge finds the new snip rather than
-            // racing it — and a player watching BOUNCING… sees it finish when
-            // the work finishes, not when a message queue gets round to it.
+            val result = runCatching { render(app, session, source) }
+            // Announced to the app before it is announced to the player: the
+            // file is on disk by the time this bumps, so a screen reloading on
+            // it finds the new snip rather than racing the write.
+            result.onSuccess { landings.value += 1 }
+            val line = result.getOrElse { e ->
+                // Law 3: the toast says what did not happen; the exception's
+                // own detail goes to logcat.
+                Log.e(TAG, "bounce: failed", e)
+                Copy.LOOP_BOUNCE_FAILED
+            }
+            // Cleared before the toast, so a player watching BOUNCING… sees it
+            // finish when the work finishes rather than when a message queue
+            // gets round to it.
             inFlight.value = false
             Handler(Looper.getMainLooper()).post {
                 Toast.makeText(app, line, Toast.LENGTH_LONG).show()

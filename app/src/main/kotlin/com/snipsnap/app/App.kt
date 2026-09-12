@@ -693,7 +693,9 @@ fun App(shelf: KitShelf) {
         // Same promise, for deleted snips (name-and-find task): SNIPS's own
         // bin empties itself of whatever DELETE put there more than 30 days
         // ago — no kit write involved, so no KitWrites.mutex needed here.
-        withContext(Dispatchers.IO) { runCatching { SnipStore.sweepBin(shelf.root) } }
+        // context.filesDir, not shelf.root: snips live at `<files>/snips`, and
+        // the shelf is `<files>/Kits`. This swept a bin that never existed.
+        withContext(Dispatchers.IO) { runCatching { SnipStore.sweepBin(context.filesDir) } }
         // Orphaned import-staging left by a crashed/killed import, and
         // regenerable derived output (share-sheet temp copies) — never a
         // live kit or snip. Exports are deliberately NOT swept here: see
@@ -2007,6 +2009,7 @@ fun App(shelf: KitShelf) {
                         } else if (snipsOpen) {
                             SnipsScreen(
                                 shelf = shelf,
+                                snipsRoot = context.filesDir,
                                 onBack = { snipsOpen = false },
                                 onToast = { toast = it },
                                 onOpenInTape = { file ->

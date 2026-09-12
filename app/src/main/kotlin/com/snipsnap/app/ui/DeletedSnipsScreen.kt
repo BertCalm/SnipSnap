@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.snipsnap.app.KitShelf
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -70,7 +69,18 @@ private const val EMPTY_BIN_ARM_MS = 3_000L
  */
 @Composable
 fun DeletedSnipsScreen(
-    shelf: KitShelf,
+    /**
+     * Where snips live: the app's own files directory, NOT the shelf root.
+     *
+     * Every writer in the app — the mic commit in `SnipSnapApplication`, the
+     * share import, SPLIT, SURFACE, PAD CAPTURE, ORBIT's bounce and LOOP's —
+     * passes `filesDir`, so a snip is at `<files>/snips/`. This screen used to
+     * take the `KitShelf` and read `shelf.root`, which `MainActivity` builds as
+     * `<files>/Kits`: it was listing `<files>/Kits/snips`, a directory nothing
+     * has ever written. The bin it showed was always empty, whatever was
+     * actually in it.
+     */
+    snipsRoot: File,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onRestored: (File) -> Unit,
@@ -80,7 +90,7 @@ fun DeletedSnipsScreen(
 
     var binned by remember { mutableStateOf<List<SnipStore.BinnedSnip>>(emptyList()) }
     LaunchedEffect(Unit) {
-        binned = withContext(Dispatchers.IO) { SnipStore.binned(shelf.root) }
+        binned = withContext(Dispatchers.IO) { SnipStore.binned(snipsRoot) }
     }
 
     var busy by remember { mutableStateOf(false) }
@@ -111,7 +121,7 @@ fun DeletedSnipsScreen(
         busy = true
         scope.launch {
             try {
-                val restored = withContext(Dispatchers.IO) { SnipStore.restore(shelf.root, target) }
+                val restored = withContext(Dispatchers.IO) { SnipStore.restore(snipsRoot, target) }
                 if (restored != null) {
                     binned = binned.filter { it.file != target.file }
                     // The name it actually landed under, off the returned
@@ -124,7 +134,7 @@ fun DeletedSnipsScreen(
                     // Not an exception — a row that outran the tap (a stale
                     // list, a second restore/sweep racing this one). Still
                     // worth a fresh list, `DeletedKitsScreen.kt`'s own shape.
-                    binned = withContext(Dispatchers.IO) { SnipStore.binned(shelf.root) }
+                    binned = withContext(Dispatchers.IO) { SnipStore.binned(snipsRoot) }
                     onToast(Copy.BIN_ITEM_GONE)
                 }
             } catch (e: Exception) {
@@ -146,7 +156,7 @@ fun DeletedSnipsScreen(
         busy = true
         scope.launch {
             try {
-                withContext(Dispatchers.IO) { SnipStore.emptyBin(shelf.root) }
+                withContext(Dispatchers.IO) { SnipStore.emptyBin(snipsRoot) }
                 binned = emptyList()
                 onToast(Copy.snipBinEmptied)
             } catch (e: Exception) {
