@@ -738,6 +738,9 @@ object Copy {
     const val HUM_NOTHING = "THE MIC HEARD NOTHING. ARM IT, THEN HUM AGAIN."
     /** Every mouth sound missed every hit (or none was heard). */
     const val HUM_NO_MATCH = "NOTHING YOU HUMMED LANDED ON A HIT. HEADPHONES ON, AND HUM WITH THE BEAT."
+    /** SEND of a hummed chop: the beat you sang went onto the new kit as its groove. */
+    fun sungGroove(bars: Int): String =
+        "SENT. THE BEAT YOU SANG IS ON THE GRID: ${if (bars == 1) "1 BAR" else "$bars BARS"}. GROOVE HAS IT."
     /** The hum landed: how many cuts, and how many sounds found no hit. */
     fun hummed(cuts: Int, missed: Int): String {
         val head = if (cuts == 1) "HUMMED: 1 CUT, YOUR MOUTH'S WORD ON IT." else "HUMMED: $cuts CUTS, YOUR MOUTH'S WORDS ON THEM."

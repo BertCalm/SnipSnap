@@ -134,10 +134,19 @@ class ChopReviewModel private constructor(
          * The bench's count, ear, cut and grid do not reach it: the count
          * is the mouth's.
          */
-        data class Hummed(val cuts: List<IntRange>, val labels: List<DrumClass?>) : ChopMode {
+        data class Hummed(
+            val cuts: List<IntRange>,
+            val labels: List<DrumClass?>,
+            /** The beat you sang: per cut, where the mouth's sound sat on the source and how loud (`Hum.groove`); empty when not kept. */
+            val beat: List<Beat> = emptyList(),
+        ) : ChopMode {
             init {
                 require(cuts.size == labels.size) { "one label per cut: ${cuts.size} cuts, ${labels.size} labels" }
+                require(beat.isEmpty() || beat.size == cuts.size) { "one beat per cut, or none: ${cuts.size} cuts, ${beat.size} beats" }
             }
+
+            /** One mouth sound as a note: [at] in source frames (the lag out), [velocity] its loudness among the hum's sounds, 0..1. */
+            data class Beat(val at: Int, val velocity: Float)
         }
     }
 
