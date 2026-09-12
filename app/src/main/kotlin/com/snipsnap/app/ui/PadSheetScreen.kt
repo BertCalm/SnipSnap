@@ -543,6 +543,7 @@ fun PadSheetScreen(
             busy = true
             try {
                 var applied = false
+                var stacked = false
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
@@ -550,6 +551,11 @@ fun PadSheetScreen(
                         check(freshPad.velocityLayers.isEmpty()) {
                             "pad $slot is velocity-layered - clear GHOSTS before smearing"
                         }
+                        // `smearPad` restores first when it can; when the
+                        // original is not in the bin it stacks (amount 0 is
+                        // a no-op, never a stack), and the toast says so.
+                        stacked = amount > 0f &&
+                            PadSheet.unTreatState(freshPad, f.binContents().map { it.originalName }.toSet()) == PadSheet.UnTreat.NOT_BINNED
                         // The rewrite itself lives in the model now
                         // (`smearPad`: restore-first, then replaceAudio,
                         // stereo kept stereo) so DO IT AGAIN can replay it.
@@ -562,7 +568,8 @@ fun PadSheetScreen(
                 pendingMetadataSlots = emptySet()
                 onKitUpdated(fresh.kit)
                 if (applied) {
-                    onToast(Copy.treated(PadSheet.displayLabel(PadSheet.SMEAR), padName))
+                    val label = PadSheet.displayLabel(PadSheet.SMEAR)
+                    onToast(if (stacked) Copy.treatedStacked(label, padName) else Copy.treated(label, padName))
                 } else {
                     onToast(Copy.BIN_ITEM_GONE)
                 }
@@ -647,6 +654,7 @@ fun PadSheetScreen(
             busy = true
             try {
                 var applied = false
+                var stacked = false
                 var keyLabel = ""
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
@@ -669,8 +677,10 @@ fun PadSheetScreen(
                             // A recipe with nothing in the bin behind it (a
                             // bank-B twin, a CLI treat, a bin since emptied)
                             // is a sound the sheet can name but not undo: the
-                            // new treatment stacks, the way `treat` always has.
-                            PadSheet.UnTreat.NOT_BINNED -> Unit
+                            // new treatment stacks, the way `treat` always has
+                            // — and the toast says so, since the card will
+                            // light one segment while the sound carries two.
+                            PadSheet.UnTreat.NOT_BINNED -> stacked = true
                             PadSheet.UnTreat.NOTHING -> Unit
                         }
                         when (treatment) {
@@ -691,8 +701,11 @@ fun PadSheetScreen(
                 onKitUpdated(fresh.kit)
                 if (applied) {
                     onToast(
-                        if (treatment is PadSheet.Treatment.Keyed) Copy.keyed(PadSheet.displayLabel(segment), padName, keyLabel)
-                        else Copy.treated(PadSheet.displayLabel(segment), padName),
+                        when {
+                            stacked -> Copy.treatedStacked(PadSheet.displayLabel(segment), padName)
+                            treatment is PadSheet.Treatment.Keyed -> Copy.keyed(PadSheet.displayLabel(segment), padName, keyLabel)
+                            else -> Copy.treated(PadSheet.displayLabel(segment), padName)
+                        },
                     )
                 } else {
                     onToast(Copy.BIN_ITEM_GONE)
@@ -2075,6 +2088,18 @@ private fun provenanceOrigin(source: Map<String, String>): String? = when {
     else -> null
 }
 
+/**
+ * How the pad came to be, when a door made it from other pads: a twin
+ * (`KitBuilderModel.TWIN_OF`, the bank-A pad it was dealt from) or a
+ * bred child (`Breed`'s `bredFrom`, "Mother x Father"). Both doors copy
+ * the parent's source keys, so [provenanceOrigin] alone would read a
+ * twin as its parent's tape — this goes first on the line, so BREED and
+ * REMIX BANK B are answered for on the one screen that inspects a pad.
+ */
+private fun lineage(source: Map<String, String>): String? =
+    source[KitBuilderModel.TWIN_OF]?.let { "twin of $it" }
+        ?: source["bredFrom"]?.let { "bred from ${it.replace(" x ", " × ")}" }
+
 private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String {
     val origin = provenanceOrigin(pad.source) ?: pad.sampleFile
     // The cut in the tape (`BASS 5.WAV @ 1.20–1.62s`, docs/RETRIM.md §5):
@@ -2082,7 +2107,9 @@ private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String 
     // land before it is tapped. Frames sit at the tape's rate, which is
     // the pad's own — neither CHOP nor BACK ONTO resamples.
     val cut = Retrim.cutOf(pad)
-    val parts = mutableListOf(if (cut != null && snip != null) "$origin @ ${cut.label(snip.sampleRate)}" else origin)
+    val parts = mutableListOf<String>()
+    lineage(pad.source)?.let { parts += it }
+    parts += if (cut != null && snip != null) "$origin @ ${cut.label(snip.sampleRate)}" else origin
     snip?.let { parts += "%.0f ms".format(java.util.Locale.ROOT, it.durationSeconds * 1000f) }
     binDaysLeft?.let { parts += "original in bin, ${it}d left" }
     return parts.joinToString(" · ")

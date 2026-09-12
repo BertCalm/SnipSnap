@@ -668,6 +668,15 @@ object Copy {
     // ---- PAD SHEET ----
     const val GHOSTS_ON ="GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
     fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
+    /**
+     * The same landing when `PadSheet.unTreatState` was NOT_BINNED: the
+     * pad carried a treatment with no original in the bin behind it (a
+     * bank-B twin, a CLI treat, a bin since emptied), so the new one went
+     * on top of the old rather than in its place. Said, since the card
+     * lights one segment while the sound carries two; the fix is named.
+     */
+    fun treatedStacked(segment: String, pad: String): String =
+        "$segment ON $pad, OVER THE LAST ONE — NO ORIGINAL IN THE BIN TO SWAP FROM. VERSIONS ▸ ROLLS BACK."
     const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."
     const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."
