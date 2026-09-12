@@ -936,6 +936,48 @@ class OrbitSectionTest {
     }
 
     @Test
+    fun `a snip no section plays is not counted as left behind`() {
+        // The CLIP ▸ KIT line says how many tape rings stayed out of the
+        // export. With an arrangement that is not every snip in the set:
+        // one added after the sections were drawn is in no clip this save
+        // attempted, so counting it reported a ring as left out of an
+        // export it was never in.
+        val s = OrbitSet(
+            listOf(ring("A", 1, 0), Orbit("in", 16, SnipOrbit("a.wav")), Orbit("out", 16, SnipOrbit("b.wav"))),
+            bpm,
+            rate,
+            sections = listOf(OrbitSection("X", 1, setOf(0, 1))),
+        )
+        assertEquals(listOf("in"), OrbitClip.snipRings(s))
+        // A break plays nothing, so its rings are in no clip either.
+        val withBreak = s.copy(sections = listOf(OrbitSection("X", 1, setOf(0)), OrbitSection("GAP", 1, emptySet())))
+        assertEquals(emptyList(), OrbitClip.snipRings(withBreak))
+        // With no arrangement every snip in the set is left behind, which
+        // is what this said before and still says.
+        assertEquals(listOf("in", "out"), OrbitClip.snipRings(s.copy(sections = emptyList())))
+    }
+
+    @Test
+    fun `a section with no rings written down is malformed, not a break`() {
+        val dir = Files.createTempDirectory("orbit-plays").toFile()
+        fun write(section: String) = java.io.File(dir, OrbitStore.FILE_NAME).writeText(
+            """
+            {"version":7,"bpm":120.0,"lapSteps":16,"swing":50,"sampleRate":48000,"seed":1,"orbits":[
+              {"name":"R","steps":16,"span":"FREE","voice":[1],"engaged":true,"level":1.0,"pan":0.0,
+               "content":{"type":"pattern","kit":"kit","hits":[{"step":0,"slot":1,"velocity":1.0}]}}
+            ],"sections":[$section]}
+            """.trimIndent(),
+        )
+        // An EMPTY plays is the deliberate spelling of a break and loads.
+        write("""{"name":"GAP","bars":1,"plays":[]}""")
+        assertEquals(emptySet(), OrbitStore.load(dir).sections.single().plays)
+        // A MISSING one is a malformed section, and is not silently read
+        // as the same thing - `name` and `bars` have always refused it.
+        write("""{"name":"GAP","bars":1}""")
+        assertFailsWith<IllegalStateException> { OrbitStore.load(dir) }
+    }
+
+    @Test
     fun `a solo hands back every ring it does not change, as itself`() {
         // The engine matches a sounding voice to its ring by identity, so
         // a set that copies every ring on every edit loses every voice

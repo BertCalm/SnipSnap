@@ -99,8 +99,20 @@ object OrbitClip {
      * export leaves them behind, and the screen says how many rather than
      * letting the player discover it on the hardware.
      */
-    fun snipRings(set: OrbitSet): List<String> =
-        set.orbits.filter { it.content is SnipOrbit }.map { it.name }
+    fun snipRings(set: OrbitSet): List<String> {
+        // Only the snips a clip would actually have left behind. With an
+        // arrangement that is not every snip in the set: a tape ring no
+        // section plays was never part of any clip this save attempted, so
+        // counting it told the player two rings stayed out of an export
+        // one of them was never in.
+        val clipped = if (set.sections.isEmpty()) {
+            set.orbits
+        } else {
+            val played = set.sections.flatMap { it.plays }.toSet()
+            set.orbits.filterIndexed { i, _ -> i in played }
+        }
+        return clipped.filter { it.content is SnipOrbit }.map { it.name }
+    }
 
     /**
      * Null when [set] can leave the screen at all, else the refusal in

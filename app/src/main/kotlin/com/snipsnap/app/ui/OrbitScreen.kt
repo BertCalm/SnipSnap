@@ -207,7 +207,7 @@ fun OrbitScreen(
     var bpmJob by remember(kitDir) { mutableStateOf<Job?>(null) }
     var bpmPending by remember(kitDir) { mutableStateOf(false) }
     /** The sets before each edit, newest last: one UNDO steps back one edit. Not saved; a screen's worth. */
-    var history by remember(kitDir) { mutableStateOf<List<OrbitSet>>(emptyList()) }
+    var history by remember(kitDir) { mutableStateOf<List<OrbitStep>>(emptyList()) }
 
     // The transport: null until PLAY. Bank and engine live across edits;
     // each edit prepares a new bank (reusing the old one's buffers) and
@@ -313,7 +313,14 @@ fun OrbitScreen(
      */
     fun commit(next: OrbitSet, record: Boolean = true) {
         val before = set
-        if (record && before != null && before != next) history = (history + before).takeLast(UNDO_DEPTH)
+        // The solo is recorded WITH the set, because an edit that moves
+        // the rings moves it too: undoing a delete brought the rings back
+        // and left the index pointing at whichever ring is that number
+        // now, so UNDO soloed a different ring than the one the player was
+        // listening to. Read here, before any caller re-points it.
+        if (record && before != null && before != next) {
+            history = (history + OrbitStep(before, solo)).takeLast(UNDO_DEPTH)
+        }
         set = next
         scope.launch {
             preparing = true
@@ -547,13 +554,16 @@ fun OrbitScreen(
 
     /** Step back one edit: the set before it, saved and handed to the engine like any other change. */
     fun undo() {
-        val previous = history.lastOrNull() ?: run { onToast(Copy.ORBIT_NOTHING_TO_UNDO); return }
+        val step = history.lastOrNull() ?: run { onToast(Copy.ORBIT_NOTHING_TO_UNDO); return }
         history = history.dropLast(1)
         bpmJob?.cancel()
         bpmPending = false
         tempoOffer = null
-        val soloed = solo
-        if (soloed != null && soloed >= previous.orbits.size) solo = null
+        val previous = step.set
+        // The solo that went WITH that set, not the one this edit left
+        // behind. Clearing only an out-of-range index put the solo on a
+        // ring the player never soloed.
+        solo = step.solo?.takeIf { it in previous.orbits.indices }
         selected = selected.coerceIn(0, (previous.orbits.size - 1).coerceAtLeast(0))
         commit(previous, record = false)
     }
@@ -614,15 +624,19 @@ fun OrbitScreen(
     fun deleteRing(index: Int) {
         val s = set ?: return
         if (index !in s.orbits.indices) return
-        // `solo` is an index into the same list, so a delete moves it just
-        // as it moves a section's rings: without this, deleting an EARLIER
-        // ring left solo pointing at its neighbour and the wrong ring
-        // played alone. Pre-existing, and in the two lines below it.
-        solo = solo?.let { at -> if (at == index) null else if (at > index) at - 1 else at }
         tempoOffer = null
         // Through the set, so the arrangement is re-pointed rather than
         // left naming a ring that moved or one that is gone.
         commit(s.withoutOrbit(index))
+        // `solo` is an index into the same list, so a delete moves it just
+        // as it moves a section's rings: without this, deleting an EARLIER
+        // ring left solo pointing at its neighbour and the wrong ring
+        // played alone. Pre-existing, and in the two lines above it.
+        //
+        // AFTER the commit, as in `duplicateRing`: the step UNDO records
+        // is the solo the player was listening to, and the engine reads
+        // this one when the prepared set reaches it a moment later.
+        solo = solo?.let { at -> if (at == index) null else if (at > index) at - 1 else at }
         selected = (index - 1).coerceAtLeast(0)
     }
 
@@ -638,7 +652,7 @@ fun OrbitScreen(
         val next = s.copy(bpm = bpm.coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM))
         if (next == s) return
         // One UNDO steps back the whole run of taps, not one tap of it.
-        if (!bpmPending) history = (history + s).takeLast(UNDO_DEPTH)
+        if (!bpmPending) history = (history + OrbitStep(s, solo)).takeLast(UNDO_DEPTH)
         set = next
         val b = bank
         if (b != null && next.orbits.none { it.content is SnipOrbit }) {
@@ -1934,6 +1948,16 @@ private const val CELL_H_DP = 26
 
 /** How long a struck hit glows. About a 16th at 150 BPM; shorter than a 16th at anything slower. */
 private const val FLARE_SECONDS = 0.1f
+
+/**
+ * One step of UNDO: the set as it was, and the ring soloed while it was.
+ *
+ * The solo is not part of the set and is never saved, but it is an INDEX
+ * into the set's rings — so an edit that moves the rings moves it, and
+ * stepping back has to move it back. Keeping the two together is the only
+ * way the pair can stay true to each other.
+ */
+private data class OrbitStep(val set: OrbitSet, val solo: Int?)
 
 /** How long the panel's frame glows when every ring meets on its downbeat. */
 private const val MEET_SECONDS = 0.35f

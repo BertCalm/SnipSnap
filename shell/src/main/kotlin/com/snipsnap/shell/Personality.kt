@@ -1246,12 +1246,22 @@ object Copy {
      * for — a section that plays no rings is a break and writes none, so
      * the line says what is in the kit rather than what was intended.
      */
-    fun clippedSectionsIntoKit(sections: Int, bars: Int, notes: Int, snipRingsLeftOut: Int): String =
-        if (snipRingsLeftOut == 0) {
-            "$sections SECTIONS ARE IN THE KIT'S GROOVES — $bars BARS, $notes NOTES, ONE SEQUENCE EACH. THEY RIDE TO THE MPC."
+    fun clippedSectionsIntoKit(sections: Int, bars: Int, notes: Int, snipRingsLeftOut: Int): String {
+        // One section is a sentence, not a count with an S on it. The
+        // screen sends a single clip to [clippedIntoKit] instead, so this
+        // is not reachable from CLIP ▸ KIT today — but a line that reads
+        // "1 SECTIONS ARE" the first time it is called from anywhere is a
+        // trap left lying about, and the plural is two words.
+        val many = sections != 1
+        val subject = if (many) "$sections SECTIONS ARE" else "1 SECTION IS"
+        val them = if (many) "THEY RIDE" else "IT RIDES"
+        return if (snipRingsLeftOut == 0) {
+            "$subject IN THE KIT'S GROOVES — $bars BARS, $notes NOTES, ONE SEQUENCE EACH. $them TO THE MPC."
         } else {
-            "$sections SECTIONS IN THE GROOVES: $bars BARS, $notes NOTES. $snipRingsLeftOut SNIP RING${if (snipRingsLeftOut == 1) "" else "S"} STAYED OUT."
+            "$sections SECTION${if (many) "S" else ""} IN THE GROOVES: $bars BARS, $notes NOTES. " +
+                "$snipRingsLeftOut SNIP RING${if (snipRingsLeftOut == 1) "" else "S"} STAYED OUT."
         }
+    }
 
     // ---- GRAIN FIELD ----
     const val GRAIN_FIELD_TOO_SHORT = "TOO SHORT TO MAP. THE FIELD NEEDS MORE TAPE."

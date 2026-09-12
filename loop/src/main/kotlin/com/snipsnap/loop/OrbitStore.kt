@@ -171,7 +171,12 @@ object OrbitStore {
         return OrbitSection(
             name = o["name"]?.str() ?: throw IllegalStateException("section has no name"),
             bars = o["bars"]?.int() ?: throw IllegalStateException("section has no bars"),
-            plays = o["plays"]?.arr().orEmpty().map { it.int() }.toSet(),
+            // Required, like the two above it: the writer always emits
+            // `plays`, and an EMPTY one is the deliberate spelling of a
+            // break. Defaulting a missing field to empty made a malformed
+            // section indistinguishable from a silence the player chose.
+            plays = (o["plays"] ?: throw IllegalStateException("section has no plays"))
+                .arr().map { it.int() }.toSet(),
         )
     }
 
