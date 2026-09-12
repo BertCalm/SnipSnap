@@ -50,7 +50,12 @@ class ReversalTest {
      * a line that says nothing either way is the defect.
      */
     private val answersIt = listOf(
-        "BIN", "UNDO", "BACK", "DAYS", "RESTORE", "KEPT", "KEEPS", "SLEEPS",
+        // The bin as a destination or a holder — never the bare word, which
+        // "BIN EMPTIED" also contains while saying the opposite. That loophole
+        // let a genuinely irreversible line satisfy this law with the noun that
+        // flagged it, and awaitingWords was quietly masking it.
+        "THE BIN KEEPS", "IN THE BIN", "TO THE BIN", "FROM THE BIN",
+        "UNDO", "BACK", "DAYS", "RESTORE", "KEPT", "KEEPS", "SLEEPS",
         "RECOVER", "AGAIN", "STILL THERE", "CANNOT BE UNDONE", "FOR GOOD",
         "UNTOUCHED", "STAYS", "WAITS",
         // "ARE GONE" / "IS GONE", never the bare word: "GONE" is in
@@ -165,6 +170,111 @@ class ReversalTest {
     }
 
     /**
+     * The same law over `Personality.kt`'s own source text, because the
+     * reflective scan above sees **fields only** — and `Copy`'s destructive
+     * *functions* are invisible to it.
+     *
+     * Found in review, and it is exactly the hole this file exists to
+     * close. The mutation that "proved" the law worked removed a way back
+     * from a constant. Removing the `Reversal.MIND` reference from `kitDeleted`
+     * instead left the whole suite green — a law that cannot catch the
+     * regression it was written for, which is the same failure
+     * `ConventionTest`'s voice-allocation law shipped with in September.
+     * Checking the value was never enough; the templated toasts have to be
+     * read from source, the way `PersonalityTest`'s ceiling law already
+     * reads them.
+     *
+     * A `Reversal.` reference counts as answering: naming the shared
+     * constant *is* naming the way back, and it is the form this change
+     * wants callers to use.
+     */
+    @Test
+    fun `destructive templated toasts answer it too`() {
+        val lines = personalitySource().readLines()
+        val declares = Regex("""\bfun\s+(\w+)\s*\(""")
+        val stringLiteral = Regex(""""((?:[^"\\]|\\.)*)"""")
+
+        val unanswered = mutableListOf<String>()
+        var checked = 0
+        for ((i, raw) in lines.withIndex()) {
+            val head = raw.trim()
+            if (isComment(head)) continue
+            if (!declares.containsMatchIn(head) || ": String" !in head) continue
+            // The declaration plus its continuation lines, so a `fun` whose
+            // literal sits on the next line is read too - but STOPPING at the
+            // next declaration. An unbounded window swept forward into the
+            // following constant and charged `noDoubles` with DOUBLES_RULE's
+            // "NOTHING HERE DELETES, MOVES OR MERGES", which is the opposite
+            // of a destructive line.
+            val body = mutableListOf(head)
+            for (next in lines.subList(i + 1, minOf(lines.size, i + 5))) {
+                val t = next.trim()
+                if (isComment(t) || startsDeclaration(t)) break
+                body += t
+            }
+            val window = body.joinToString(" ")
+            // The function NAME plus its string literals — never the rest of the
+            // code. Two lessons, both learned the hard way here:
+            //
+            // The name has to be in, because the destructive verb often lives
+            // only there: `kitDeleted` says "IS OFF THE SHELF" and `snipDeleted`
+            // "IS OFF THE LIST", so scanning literals alone matched nothing at
+            // all and the law went back to checking nothing.
+            //
+            // The code has to be out, because Kotlin's own method names collide
+            // with the vocabulary: `.replace('_', ' ')` inside `desampleFar` — a
+            // refusal that destroys nothing — matched REPLACE.
+            val name = declares.find(head)?.groupValues?.get(1).orEmpty()
+            // Interpolations are stripped from the literal before matching:
+            // `${'$'}{voice.uppercase().replace('_', ' ')}` sits INSIDE the string, so
+            // excluding the surrounding code was not enough — `desampleFar`,
+            // a refusal that destroys nothing, still matched REPLACE.
+            val said = stringLiteral.findAll(window)
+                .joinToString(" ") { it.groupValues[1] }
+                .replace(Regex("""\$\{[^}]*\}"""), " ")
+                .replace(Regex("""\$\w+"""), " ")
+            val text = "$name $said".uppercase(java.util.Locale.ROOT)
+            if (!soundsDestructive(text)) continue
+            checked++
+            if (answersTheQuestion(text) || "Reversal." in window) continue
+            unanswered += "Personality.kt:${i + 1}  $head"
+        }
+
+        assertTrue(
+            unanswered.isEmpty(),
+            "these templated toasts destroy something and do not say whether it can be got back:\n  " +
+                unanswered.joinToString("\n  "),
+        )
+
+        // Sanity: the scan must actually reach the three functions this change
+        // routed through Reversal. Without this it could pass by matching
+        // nothing at all, which is how the reflective law missed them.
+        assertTrue(checked >= 3, "the source scan found only $checked destructive templated toasts - it is matching almost nothing")
+        for (name in listOf("kitDeleted", "snipDeleted", "roomForgotten")) {
+            assertTrue(
+                lines.any { "fun $name(" in it && "Reversal." in it },
+                "Copy.$name no longer names its way back through Reversal. It is a function, so the " +
+                    "reflective law cannot see it and this assertion is the only thing holding it.",
+            )
+        }
+    }
+
+    private fun isComment(line: String) =
+        line.startsWith("*") || line.startsWith("//") || line.startsWith("/*")
+
+    /** Where one `Copy` member ends and the next begins, for bounding the scan's window. */
+    private fun startsDeclaration(line: String) =
+        Regex("""^(const\s+)?(val|var|fun)\s""").containsMatchIn(line)
+
+    /** `:shell`'s own project dir is the working dir, as `PersonalityTest`'s ceiling law assumes too. */
+    private fun personalitySource(): java.io.File {
+        val f = java.io.File("src/main/kotlin/com/snipsnap/shell/Personality.kt")
+        assertTrue(f.isFile, "expected Copy's source at ${f.absolutePath} - has the file moved?")
+        assertTrue(f.readLines().size > 500, "Personality.kt looks truncated - a source scan that reads nothing passes by checking nothing")
+        return f
+    }
+
+    /**
      * Anti-relaxation. Every exclusion must name a constant that exists, or
      * it sits there exempting nothing forever — and no constant may be in
      * both sets, which would be claiming a line is simultaneously not a
@@ -215,10 +325,15 @@ class ReversalTest {
 
     /**
      * The count, asserted so it cannot drift without someone deciding to
-     * let it. Six is not yet an argument for a command history: three are
-     * bin-emptying, which is *supposed* to be final, and one more is the
-     * takes bin saying the same thing. The two that genuinely hurt are the
-     * bar wipe and the PROG E replace.
+     * let it. Five is not yet an argument for a command history: three of
+     * them are bin-emptying, which is *supposed* to be final. The two that
+     * genuinely hurt are the bar wipe and the PROG E replace — both on one
+     * screen, inside one feature.
+     *
+     * The takes bin is a sixth irreversible site and is deliberately NOT
+     * counted here: its line does not yet say so, which puts it in
+     * [awaitingWords] until the copy rewrite gives it words. When it gets
+     * them it moves into [noWayBack] and this number becomes six.
      *
      * Raise this number only alongside a note in `docs/SPECS_2026_09.md`
      * §3 — that document is where the stack decision is recorded, and a
@@ -246,12 +361,15 @@ class ReversalTest {
         // Four objects sweep four bins on their own constants. The promise is
         // made once, here, and this is what stops the app saying 30 while the
         // sweep uses 7. Three are imported; the fourth is read from source.
-        // Compared as Int: assertEquals(Double, Double, String) binds to the
-        // tolerance overload, which would silently take the message as a
-        // tolerance and compare nothing useful.
-        assertEquals(Reversal.DAYS, KitBuilderModel.BIN_KEEP_DAYS.toInt(), "kit takes bin")
-        assertEquals(Reversal.DAYS, SnipStore.BIN_DAYS.toInt(), "snips bin")
-        assertEquals(Reversal.DAYS, Rooms.BIN_DAYS, "rooms bin")
+        // Compared as Double with zero tolerance, never via toInt(): these are
+        // Double policies, and truncating them would let a bin sweep at 30.5
+        // days pass while the app promises 30. The explicit 0.0 also picks the
+        // tolerance overload deliberately - assertEquals(Double, Double, String)
+        // would otherwise bind the message as a tolerance and compare nothing.
+        val promised = Reversal.DAYS.toDouble()
+        assertEquals(promised, KitBuilderModel.BIN_KEEP_DAYS, 0.0, "kit takes bin")
+        assertEquals(promised, SnipStore.BIN_DAYS, 0.0, "snips bin")
+        assertEquals(promised, Rooms.BIN_DAYS.toDouble(), 0.0, "rooms bin")
 
         // The fourth sweeps from `:app`, which `:shell` cannot import, so it is
         // pinned by reading its source - the same way ConventionTest reaches
@@ -271,12 +389,14 @@ class ReversalTest {
         // Read the SOURCE, not the values - every line that correctly uses
         // Reversal.BIN has "30 DAYS" in its value, so a value scan would flag
         // the fix and miss nothing else.
-        val src = java.io.File("src/main/kotlin/com/snipsnap/shell/Personality.kt")
-        assertTrue(src.isFile, "expected Copy's source at ${src.absolutePath} - has the file moved?")
-        val literal = Regex("""\b${Reversal.DAYS}\s+DAYS\b""")
+        val src = personalitySource()
+        // Any numeric retention literal, not just today's value: interpolating
+        // Reversal.DAYS would let a stale "30 DAYS" survive a policy change to 7,
+        // which is precisely the drift this law exists to stop.
+        val literal = Regex("""\b\d+\s+DAYS\b""")
         for ((i, line) in src.readLines().withIndex()) {
             val code = line.trim()
-            if (code.startsWith("*") || code.startsWith("//")) continue
+            if (isComment(code)) continue
             assertFalse(
                 literal.containsMatchIn(code),
                 "Personality.kt:${i + 1} writes the bin retention as a literal: $code\n" +
@@ -326,5 +446,33 @@ class ReversalTest {
                 "an open bug; if the copy rewrite has landed, fix the line and remove it from here " +
                 "rather than adding another.",
         )
+    }
+
+    /**
+     * Every parked gap must still *be* a gap.
+     *
+     * Found in review. The main law skips [awaitingWords] outright, so a
+     * line the copy rewrite fixes while leaving its key here would stay
+     * parked as an open bug forever — and, worse, would never be covered
+     * by the law again. This fails the moment one is fixed, which is the
+     * only reliable prompt to remove it.
+     */
+    @Test
+    fun `a parked gap that has been fixed must be unparked`() {
+        val all = copyStringConstants()
+        for ((name, why) in awaitingWords) {
+            val line = all.getValue(name)
+            assertTrue(
+                soundsDestructive(line),
+                "Copy.$name no longer reads as destructive (\"$line\"), so it is not a gap. " +
+                    "Remove it from awaitingWords.",
+            )
+            assertFalse(
+                answersTheQuestion(line),
+                "Copy.$name now says what happens next (\"$line\") — the gap is closed ($why). " +
+                    "Remove it from awaitingWords so the law covers this line again, and move it to " +
+                    "noWayBack if the answer turned out to be that there is no way back.",
+            )
+        }
     }
 }
