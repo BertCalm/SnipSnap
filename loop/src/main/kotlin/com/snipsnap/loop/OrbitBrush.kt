@@ -23,6 +23,17 @@ enum class OrbitBrush(
 
     /** The brush after this one, wrapping: what one tap on the chip does. */
     val next: OrbitBrush get() = entries[(ordinal + 1) % entries.size]
+
+    /**
+     * What a screen reader says a long-press will do.
+     *
+     * A square's long-press used to be labelled "ACCENT" whatever it did,
+     * which was true when weight was all it wrote and became a lie the
+     * moment the chip could change it — TalkBack announced ACCENT while
+     * the press was about to move a chance. The label follows the brush
+     * for the same reason the chip exists.
+     */
+    val action: String get() = "CHANGE $label"
 }
 
 /**

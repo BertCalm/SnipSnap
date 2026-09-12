@@ -196,7 +196,11 @@ object OrbitStore {
             // certain and strikes once. Either way it sounds every lap.
             chance = h["chance"]?.int() ?: OrbitHit.ALWAYS,
             everyLaps = h["everyLaps"]?.int() ?: OrbitHit.EVERY_LAP,
-            onLap = h["onLap"]?.int() ?: 0,
+            // The pair together on the way in as on the way out. A stray
+            // `onLap` with no `everyLaps` says nothing - the writer never
+            // makes one - and reading it anyway refused the whole file by
+            // name over a field that could not have meant anything.
+            onLap = (if (h["everyLaps"] != null) h["onLap"]?.int() else null) ?: 0,
             ratchet = h["ratchet"]?.int() ?: OrbitHit.ONCE,
         )
     }

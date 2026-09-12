@@ -69,7 +69,13 @@ object OrbitClip {
         // ([OrbitClock.turnSteps]). Telling a player to shorten a ring when
         // what did it was a conditional sends them to the wrong chip.
         val conditional = set.orbits.any { o ->
-            (o.content as? PatternOrbit)?.hits?.any { it.everyLaps != OrbitHit.EVERY_LAP } == true
+            (o.content as? PatternOrbit)?.hits?.any {
+                // A conditional on a hit that never sounds stretched
+                // nothing ([OrbitClock.turnSteps] leaves it out), so
+                // naming it here would send the player to undo the one
+                // thing that is not the cause.
+                it.everyLaps != OrbitHit.EVERY_LAP && !it.neverSounds
+            } == true
         }
         val fix = if (conditional) "SHORTEN A RING, OR TAKE A CONDITIONAL OFF A HIT." else "SHORTEN A RING."
         return "THE RINGS MEET EVERY $bars $unit — A CLIP STOPS AT $MAX_BARS. $fix"

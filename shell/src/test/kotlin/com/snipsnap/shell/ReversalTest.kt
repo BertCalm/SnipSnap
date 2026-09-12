@@ -80,6 +80,17 @@ class ReversalTest {
     private val notADestructiveLanding = mapOf(
         "SHELF_LEGEND" to "a legend under the shelf naming the gesture; nothing has happened yet",
         // Refusals: the delete did NOT happen, so there is nothing to take back.
+        // TWINS_KEEP_OWN arrived from PR #136 while #137 was open, and broke
+        // the default branch: `App.kt`'s `evilTwins` checks `ownPadsOnBankB`
+        // and returns before touching a pad, so the line names a wipe that did
+        // NOT happen - but it says WIPE and EJECT, so the law claimed it.
+        //
+        // Worth recording how it was missed. #137 was green on its own branch
+        // and red on CI, because CI tests a PR MERGED WITH ITS BASE and the
+        // base had moved. That gap is exactly what a law over shared copy is
+        // for, and it is the one case a green local run structurally cannot
+        // cover: another branch can add a line to the same file at any time.
+        "TWINS_KEEP_OWN" to "REMIX refused; the pads were not wiped",
         "KIT_DELETE_FAILED" to "the delete failed; nothing was destroyed",
         "SNIP_DELETE_FAILED" to "the delete failed; nothing was destroyed",
         "BIN_ITEM_GONE" to "the restore failed because it was already gone; this IS the way-back answer",
