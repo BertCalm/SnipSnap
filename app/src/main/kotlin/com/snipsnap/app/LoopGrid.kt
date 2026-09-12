@@ -25,9 +25,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.snipsnap.loop.Arrangement
+import com.snipsnap.loop.Bouncer
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.SnipStore
 
 /**
  * TapeOS palette for this screen.
@@ -69,6 +71,10 @@ fun LoopGrid(
     onToggleTrack: (Int) -> Unit,
     /** HOLD a block: the track goes back to empty. Nothing on screen can say this, so [Copy.LOOP_LEGEND] does. */
     onClearTrack: (Int) -> Unit,
+    /** BOUNCE: what the grid is doing, rendered offline into SNIPS. */
+    onBounce: () -> Unit,
+    /** True while that render runs — it is seconds of work, and the button says so rather than looking dead. */
+    bouncing: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -89,15 +95,51 @@ fun LoopGrid(
                 )
             }
         }
-        androidx.compose.material3.Text(
-            text = Copy.LOOP_LEGEND,
-            color = Tape.Dim,
-            fontSize = 9.sp,
-            fontFamily = FontFamily.Monospace,
-            textAlign = TextAlign.Center,
+        Row(
             modifier = Modifier.fillMaxWidth(),
-        )
+            horizontalArrangement = LayoutArrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            androidx.compose.material3.Text(
+                text = Copy.LOOP_LEGEND,
+                color = Tape.Dim,
+                fontSize = 9.sp,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.weight(1f),
+            )
+            BounceButton(session = session, bouncing = bouncing, onBounce = onBounce)
+        }
     }
+}
+
+/**
+ * BOUNCE, with the length it will actually render on it.
+ *
+ * The number is [Bouncer.intervalsWithin]'s, not the raw cycle: a cycle is the
+ * least common multiple of the chain lengths and can run for half an hour,
+ * which no snip can hold. `LoopActivity` renders through the same function
+ * when the button is pressed, so what is printed here and what lands in SNIPS
+ * cannot drift apart — the shared quantity is one function, not one number
+ * copied twice.
+ */
+@Composable
+private fun BounceButton(session: Session, bouncing: Boolean, onBounce: () -> Unit) {
+    val bars = Bouncer.intervalsWithin(session, SnipStore.IMPORT_MAX_SEC) * session.barsPerInterval
+    androidx.compose.material3.Text(
+        text = if (bouncing) Copy.LOOP_BOUNCE_BUSY else "BOUNCE ▸ $bars BARS",
+        color = if (bouncing) Tape.Dim else Tape.Ink,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Bold,
+        fontFamily = FontFamily.Monospace,
+        modifier = Modifier
+            .background(if (bouncing) Tape.Lcd else Tape.Panel)
+            .border(width = 2.dp, color = Tape.BevelDark)
+            // Enabled is forwarded rather than dropped, the same reason
+            // `ActionButton` gives: a screen reader is told the control is
+            // temporarily unavailable instead of it vanishing from the tree.
+            .clickable(enabled = !bouncing) { onBounce() }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    )
 }
 
 /**
