@@ -460,8 +460,12 @@ object Copy {
         val twins = if (bank == 'B') " REMIX BANK B ▸ DEALS TWINS HERE TOO." else ""
         return "BANK $bank: EMPTY. HOLD A PAD TO CAPTURE ONTO IT, OR TO PLACE A SNIP FROM SNIPS. A CHOP CAN LAND HERE.$twins"
     }
-    /** REMIX BANK B pressed while bank B holds pads the user put there: a remix would wipe them, so it refuses. */
-    const val TWINS_KEEP_OWN = "BANK B HOLDS YOUR OWN PADS. REMIX WON'T WIPE THEM — EJECT THEM FIRST, OR KEEP THE PAGE."
+    /**
+     * REMIX BANK B pressed while bank B holds pads the user put there: a
+     * refusal, and it says so in the reversal law's terms — the pads stay
+     * untouched; nothing here destroyed anything (`ReversalTest`).
+     */
+    const val TWINS_KEEP_OWN = "BANK B HOLDS YOUR OWN PADS. THEY STAY UNTOUCHED — REMIX ONLY DEALS ONTO AN EMPTY B. CLEAR THEM FIRST, OR KEEP THE PAGE."
     /**
      * CHOP's ONTO <kit> · BANK X: the slices landed on an existing kit's
      * empty bank, and how many did not fit when the chop was wider than
