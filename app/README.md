@@ -128,9 +128,12 @@ logcat tag to grab when something is wrong.
   the print destination to → PAD: STOP PRINT opens the slot chooser;
   an empty pad gets the print, a taken pad is replaced with the
   original in the bin, CANCEL sends the print to TAPE instead. LATCH,
-  lift: the loop should hold where the finger left it. With a kit that
-  has a tempo, BARS to 2 and PRINT: the print should stop itself on the
-  bar (5.2 s at 92 BPM) and the toast should say so.
+  lift: the loop should hold where the finger left it. With LATCH off,
+  lift fully and tap again after a pause: the loop should retrigger
+  from its head, like a drum hit, not continue from wherever it had
+  drifted to while released. With a kit that has a tempo, BARS to 2
+  and PRINT: the print should stop itself on the bar (5.2 s at 92 BPM)
+  and the toast should say so.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad
