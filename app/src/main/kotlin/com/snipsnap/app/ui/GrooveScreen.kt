@@ -17,10 +17,13 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -39,6 +42,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -664,7 +669,7 @@ fun GrooveScreen(
     //
     // Every note triggers here, not just the five lane notes the roll
     // draws (see [NOTE_TO_LANE]'s own KDoc) — a groove with a CLAP or TOM
-    // hit should still be heard, same as it's still written by MIDI ▸.
+    // hit should still be heard, same as it's still written by MIDI.
     // The lane notes are just five points on the writer's own chromatic
     // map, not a rule of their own, so `Mpc3Note.slotFor` recovers the pad
     // slot for any note - including the ones past the wrap, where plain
@@ -979,9 +984,9 @@ fun GrooveScreen(
         }
     }
 
-    // CHART ▸ — the program on screen as a monospace drum chart, one text
+    // CHART — the program on screen as a monospace drum chart, one text
     // file handed to the system chooser. It reads the same `currentClip`
-    // the roll plays and MIDI ▸ writes, so what the chart shows is what
+    // the roll plays and MIDI writes, so what the chart shows is what
     // this screen is playing right now — including PROG E's edits, the
     // live swing percent, and the FEEL axis (`currentClip` is already the
     // felt read). Off-grid hits are drawn in their nearest cell and
@@ -1500,7 +1505,15 @@ fun GrooveScreen(
                     posSteps = posSteps,
                     playing = playing,
                     scheme = scheme,
-                    modifier = Modifier.weight(if (recording || countingIn) 1f else 1.6f).fillMaxWidth(),
+                    // Batch 3, Task 1: this used to be the ONLY weighted
+                    // child of the outer Column, so it already absorbed 100%
+                    // of whatever the fixed rows below left over — raising
+                    // this number alone changed nothing. What actually gives
+                    // height back is the grouped-controls Column further
+                    // down becoming a SECOND weighted region: the roll now
+                    // claims 2 parts of a 2:1 split against that region's 1,
+                    // instead of "the remainder after ~13 ungrouped rows."
+                    modifier = Modifier.weight(if (recording || countingIn) 1f else 2f).fillMaxWidth(),
                     // Re-read every frame: `posSteps` advances on each
                     // withFrameNanos tick, so this composition re-runs and
                     // picks up whatever the take has accumulated since.
@@ -1534,58 +1547,6 @@ fun GrooveScreen(
                         accent = true,
                     ) { stopRecording() }
                 } else {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Box(
-                            Modifier
-                                .weight(1.2f)
-                                .height(Layout.MIN_HIT_TARGET.dp)
-                                .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
-                                .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-                                .tapeClick(label = null) { playing = !playing },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            TapeText(if (playing) "■ STOP" else "► PLAY", TapeType.pixel, scheme.lcdInk.tape)
-                        }
-                        Row(
-                            // Growing this row's own height is safe (NeedleRoll
-                            // above absorbs it via weight(1f)); growing the two
-                            // SwingSteppers' *width* to match is not — see
-                            // SwingStepper's own KDoc for why their width is
-                            // capped below Layout.MIN_HIT_TARGET.
-                            Modifier.weight(1.6f).height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            SwingStepper("−", scheme) { swingPercent = (swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN) }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
-                                TapeText("RIDES PROG B", TapeType.pixelSmall, scheme.ink3.tape)
-                            }
-                            SwingStepper("+", scheme) { swingPercent = (swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX) }
-                        }
-                    }
-
-                    FeelRow(
-                        feel = feel,
-                        seed = seed,
-                        scheme = scheme,
-                        // Deliberately does NOT clearJustLanded — FEEL is a
-                        // non-destructive preview lens, same as `► PLAY`
-                        // above. The take is already written to disk once
-                        // this row is up, so the row is the only way back;
-                        // dismissing it just because the user nudged FEEL to
-                        // audition the take tighter or looser would strand
-                        // them with no undo. See `justLanded`'s own KDoc.
-                        onChange = { feel = it },
-                        onRecentre = {
-                            if (feel != 0) {
-                                feel = 0
-                                onToast(Copy.FEEL_RECENTRED)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
                     if (justLanded) {
                         // The take just landed — a transient, one-shot pair
                         // of actions (Task 5): EDIT THIS TAKE calls [forkTakeToE],
@@ -1597,6 +1558,14 @@ fun GrooveScreen(
                         // — and anything else that moves the program on —
                         // clear this row (and any pending "REPLACE E?" arm)
                         // via `clearJustLanded`; see `justLanded`'s own KDoc.
+                        //
+                        // Batch 3, Task 1: kept above the grouped controls
+                        // below, outside their scrollable region, rather
+                        // than folded into any one group — it is a
+                        // time-boxed decision about the take that just
+                        // landed, not a standing SHAPE/SEND/TRANSPORT
+                        // control, and it must stay on screen the instant
+                        // the take lands, not wait behind a scroll.
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             GrooveActionButton(
                                 // Resting label renamed (feel axis, task 6): with the
@@ -1613,61 +1582,150 @@ fun GrooveScreen(
                         }
                     }
 
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        // HUMANIZE ⚄ is gone (feel axis, task 6): it jittered
-                        // PROG A once and forced a jump to it — a control
-                        // whose whole job the feel axis now does continuously,
-                        // on every program the axis rides. RESEED only rerolls
-                        // the template feel is currently drawing from, so it's
-                        // disabled at feel <= 0 (nothing is applying it yet)
-                        // and, unlike the old button, never touches progIndex:
-                        // the axis reaches A, C and D alike, so there is no
-                        // one program to jump to.
-                        GrooveActionButton("⚄ RESEED", scheme, Modifier.weight(1f), enabled = !busy && feel > 0) {
-                            clearJustLanded()
-                            seed++
-                            onToast(Copy.feelRolled(seed))
+                    // Batch 3, Task 1: EXPORT's own shape (named section
+                    // headings over a scrollable list, ONE anchored primary
+                    // action below it) applied here. The ~13 peer controls
+                    // this column used to stack with no grouping competed
+                    // directly with NeedleRoll for a fixed height — GROOVE
+                    // was the one dense screen with no `verticalScroll`.
+                    // Making this its OWN weighted, scrolling region (rather
+                    // than more fixed rows) is what actually returns height
+                    // to the roll above: the two now split a fixed ratio
+                    // instead of the roll getting only what these rows
+                    // declined to use, and this region still scrolls on a
+                    // short viewport that can't fit every group at once.
+                    Column(
+                        Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(9.dp),
+                    ) {
+                        TapeText("TRANSPORT", TapeType.pixelSmall, scheme.ink3.tape)
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(Layout.MIN_HIT_TARGET.dp)
+                                .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
+                                .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
+                                .tapeClick(label = null) { playing = !playing },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TapeText(if (playing) "■ STOP" else "► PLAY", TapeType.pixel, scheme.lcdInk.tape)
                         }
-                        GrooveActionButton("EDIT STEPS", scheme, Modifier.weight(1f), enabled = !busy) { forkToE() }
-                        GrooveActionButton("MIDI ▸", scheme, Modifier.weight(1f), enabled = !midiBusy, accent = true) { exportMidi() }
-                    }
-                    // SONG ▸ — the same four programs laid into a structure, not
-                    // just cycled: intro/theme/variation/the turn/reprise/outro,
-                    // one tap away from what this screen already has loaded.
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
-                            clearJustLanded()
-                            onArrange(swingPercent, feel / 100f, feelTemplate)
-                        }
-                        // ORBIT ▸ — the kit on rings of different lengths, one
-                        // needle speed: polymeter and polyrhythm from the same
-                        // pads this screen already has loaded.
-                        GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
-                            clearJustLanded()
-                            onOrbit()
-                        }
-                        // CHART ▸ — the program on screen as a text drum chart,
-                        // beside MIDI ▸'s row: the same clip, read instead of played.
-                        GrooveActionButton(
-                            if (chartBusy) Copy.CHART_BUSY else "CHART ▸",
-                            scheme,
-                            Modifier.weight(1f),
-                            enabled = !chartBusy,
-                            accent = true,
-                        ) { exportChart() }
-                    }
-                    GrooveActionButton("● RECORD", scheme, Modifier.fillMaxWidth(), enabled = !busy && !midiBusy) { startRecording() }
 
-                    TapeText(
-                        "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
-                        TapeType.pixelSmall,
-                        scheme.ink3.tape,
-                        Modifier.fillMaxWidth(),
-                        maxLines = 2,
-                    )
-                    if (offLaneCount > 0) {
-                        TapeText(Copy.offLane(offLaneCount), TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
+                        TapeText("SHAPE THE GROOVE", TapeType.pixelSmall, scheme.ink3.tape)
+                        Row(
+                            Modifier.fillMaxWidth().height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            SwingStepper("−", scheme) { swingPercent = (swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN) }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
+                                TapeText("RIDES PROG B", TapeType.pixelSmall, scheme.ink3.tape)
+                            }
+                            SwingStepper("+", scheme) { swingPercent = (swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX) }
+                        }
+
+                        FeelRow(
+                            feel = feel,
+                            seed = seed,
+                            scheme = scheme,
+                            // Deliberately does NOT clearJustLanded — FEEL is a
+                            // non-destructive preview lens, same as `► PLAY`
+                            // above. The take is already written to disk once
+                            // this row is up, so the row is the only way back;
+                            // dismissing it just because the user nudged FEEL to
+                            // audition the take tighter or looser would strand
+                            // them with no undo. See `justLanded`'s own KDoc.
+                            onChange = { feel = it },
+                            onRecentre = {
+                                if (feel != 0) {
+                                    feel = 0
+                                    onToast(Copy.FEEL_RECENTRED)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // HUMANIZE ⚄ is gone (feel axis, task 6): it jittered
+                            // PROG A once and forced a jump to it — a control
+                            // whose whole job the feel axis now does continuously,
+                            // on every program the axis rides. RESEED only rerolls
+                            // the template feel is currently drawing from, so it's
+                            // disabled at feel <= 0 (nothing is applying it yet)
+                            // and, unlike the old button, never touches progIndex:
+                            // the axis reaches A, C and D alike, so there is no
+                            // one program to jump to.
+                            GrooveActionButton("⚄ RESEED", scheme, Modifier.weight(1f), enabled = !busy && feel > 0) {
+                                clearJustLanded()
+                                seed++
+                                onToast(Copy.feelRolled(seed))
+                            }
+                            GrooveActionButton("EDIT STEPS", scheme, Modifier.weight(1f), enabled = !busy) { forkToE() }
+                        }
+
+                        TapeText("SEND IT SOMEWHERE", TapeType.pixelSmall, scheme.ink3.tape)
+                        // Batch 3, Task 1: one row of four rather than a
+                        // 3-plus-1 or 2x2 split — post Task 4's ▸ sweep every
+                        // label here is five characters or fewer at 9sp, so
+                        // a single row reads fine and costs this column one
+                        // fewer row than any split would, which is the row
+                        // NeedleRoll actually needed back.
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // Batch 3, Task 4: MIDI writes files in place —
+                            // no navigation, no panel — so it lost the ▸ a
+                            // navigate/panel-opener keeps.
+                            GrooveActionButton("MIDI", scheme, Modifier.weight(1f), enabled = !midiBusy, accent = true) { exportMidi() }
+                            // SONG ▸ — the same four programs laid into a structure, not
+                            // just cycled: intro/theme/variation/the turn/reprise/outro,
+                            // one tap away from what this screen already has loaded.
+                            GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
+                                clearJustLanded()
+                                onArrange(swingPercent, feel / 100f, feelTemplate)
+                            }
+                            // ORBIT ▸ — the kit on rings of different lengths, one
+                            // needle speed: polymeter and polyrhythm from the same
+                            // pads this screen already has loaded.
+                            GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+                                clearJustLanded()
+                                onOrbit()
+                            }
+                            // CHART writes a text file in place — no
+                            // navigation, no panel — so it lost its ▸ too
+                            // (Task 4).
+                            GrooveActionButton(
+                                if (chartBusy) Copy.CHART_BUSY else "CHART",
+                                scheme,
+                                Modifier.weight(1f),
+                                enabled = !chartBusy,
+                                accent = true,
+                            ) { exportChart() }
+                        }
+
+                        TapeText(
+                            "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
+                            TapeType.pixelSmall,
+                            scheme.ink3.tape,
+                            Modifier.fillMaxWidth(),
+                            maxLines = 2,
+                        )
+                        if (offLaneCount > 0) {
+                            TapeText(Copy.offLane(offLaneCount), TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
+                        }
                     }
+
+                    // Batch 3, Task 1: the one visually distinct primary
+                    // action, EXPORT's own shape (WRITE KIT anchored below
+                    // its own scrollable list, outside any section heading).
+                    // RECORD used to be one more `GrooveActionButton` in the
+                    // stack above, no more prominent than EDIT STEPS or
+                    // CHART — it is the button every other control on this
+                    // screen exists to feed.
+                    PrimaryAction(
+                        label = "● RECORD",
+                        enabled = !busy && !midiBusy,
+                        onClick = ::startRecording,
+                    )
                 }
             }
         }
@@ -2073,15 +2131,24 @@ private fun StepEditorOverlay(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (bar in 0 until clip.bars) {
                     val selected = bar == editorBar
-                    Box(
+                    // Batch 3, Task 5: this was already the closest of the
+                    // app's three selected-state treatments to the one the
+                    // sweep settled on (SETUP's bright border, PropertiesScreen
+                    // .kt's `SchemeRow`) — [pressedBevel] already IS that
+                    // border, so only the missing sub-label is added here,
+                    // reserved on every bar (blank when not selected) so
+                    // picking one doesn't grow only its own cell.
+                    Column(
                         Modifier
                             .weight(1f)
-                            .height(Layout.MIN_HIT_TARGET.dp)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .let { if (selected) it.pressedBevel(scheme, 4.dp) else it.sunkenField(scheme, 4.dp) }
+                            .semantics { this.selected = selected }
                             .tapeClick(label = null) { onBarSelect(bar) },
-                        contentAlignment = Alignment.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         TapeText("BAR ${bar + 1}", TapeType.pixelSmall, if (selected) scheme.lcd.tape else scheme.ink2.tape)
+                        TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape)
                     }
                 }
                 Box(
