@@ -597,7 +597,7 @@ private fun ChopContent(
                 if (hits != null && hits.cut != cut) rechopTo(hits.copy(cut = cut))
             },
             tempo = tempoMeasured,
-            onGrid = { grid ->
+            onSnap = { grid ->
                 val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
                 if (hits != null && hits.grid != grid) {
                     // The row stays tappable without a pulse (dimmed, not
@@ -1030,7 +1030,8 @@ private fun CutBench(
     onCut: (ChopReviewModel.Cut) -> Unit,
     /** (measured yet, the tempo): ON THE GRID's row reads the pulse it would snap to, or that none was heard. */
     tempo: Pair<Boolean, com.snipsnap.audio.TempoEstimate?>,
-    onGrid: (ChopReviewModel.GridSnap) -> Unit,
+    /** ON THE GRID's row: the snap picked. (`onGrid` above is the BY HITS / GRID segment; the two are different things.) */
+    onSnap: (ChopReviewModel.GridSnap) -> Unit,
 ) {
     val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
     val readout = when (val mode = model.mode) {
@@ -1087,7 +1088,7 @@ private fun CutBench(
             TapeText("ON THE GRID · CUTS ON THE PULSE · $pulse", TapeType.pixelSmall, if (t == null) scheme.ink3.tape else scheme.ink2.tape, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (grid in ChopReviewModel.GridSnap.entries) {
-                    SegmentButton(grid.label, active = hits.grid == grid, modifier = Modifier.weight(1f)) { if (!busy) onGrid(grid) }
+                    SegmentButton(grid.label, active = hits.grid == grid, modifier = Modifier.weight(1f)) { if (!busy) onSnap(grid) }
                 }
             }
         }
