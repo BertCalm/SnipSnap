@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -61,6 +62,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
@@ -236,7 +238,8 @@ fun SynthScreen(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            onToast("RENDER FAILED: ${e.message ?: e.javaClass.simpleName}")
+            Log.e("SynthScreen", "render: failed", e)
+            onToast(Copy.RENDER_FAILED)
         } finally {
             shimmerJob.cancel()
             rendering = false
@@ -320,7 +323,8 @@ fun SynthScreen(
                 if (ex is IllegalStateException || ex is IllegalArgumentException) {
                     onToast(ex.message ?: "SEND REFUSED.")
                 } else {
-                    onToast("SEND FAILED: ${ex.message ?: ex.javaClass.simpleName}")
+                    Log.e("SynthScreen", "sendToSlot: failed", ex)
+                    onToast(Copy.SEND_FAILED)
                 }
             } finally {
                 sendBusy = false

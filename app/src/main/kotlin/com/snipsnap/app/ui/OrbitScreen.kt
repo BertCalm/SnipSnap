@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -84,6 +85,7 @@ import com.snipsnap.loop.OrbitSpan
 import com.snipsnap.loop.OrbitStore
 import com.snipsnap.loop.PatternOrbit
 import com.snipsnap.loop.SnipOrbit
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
@@ -410,8 +412,8 @@ fun OrbitScreen(
 
     fun addPatternRing() {
         val s = set ?: return
-        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast("EIGHT RINGS IS THE SKY"); return }
-        val firstPad = kit.pads.minOfOrNull { it.slot } ?: run { onToast("NO PADS ON THIS KIT"); return }
+        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast(Copy.ORBIT_RINGS_FULL); return }
+        val firstPad = kit.pads.minOfOrNull { it.slot } ?: run { onToast(Copy.ORBIT_NO_PADS); return }
         val name = "RING ${s.orbits.size + 1}"
         commit(s.copy(orbits = s.orbits + OrbitPresets.emptyPattern(kitDir.name, name, listOf(firstPad))))
         selected = s.orbits.size
@@ -420,13 +422,13 @@ fun OrbitScreen(
     fun addSnipRing(file: File) {
         val s = set ?: return
         snipPickerOpen = false
-        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast("EIGHT RINGS IS THE SKY"); return }
+        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast(Copy.ORBIT_RINGS_FULL); return }
         scope.launch {
             // The header alone says how long the snip is — no decode, no
             // size ceiling to worry about. The bank decodes (capped) when
             // the ring is actually prepared for playback.
             val info = withContext(Dispatchers.IO) { runCatching { WavInfo.read(file) }.getOrNull() }
-            if (info == null) { onToast("COULD NOT READ ${file.name}"); return@launch }
+            if (info == null) { onToast(Copy.orbitFileUnreadable(file.name)); return@launch }
             val current = set ?: return@launch
             // Frames at the set's rate, since the bank resamples before it fits.
             val frames = (info.frameCount.toDouble() / info.sampleRate * current.sampleRate).roundToInt()
@@ -447,7 +449,7 @@ fun OrbitScreen(
 
     /** Step back one edit: the set before it, saved and handed to the engine like any other change. */
     fun undo() {
-        val previous = history.lastOrNull() ?: run { onToast("NOTHING TO UNDO"); return }
+        val previous = history.lastOrNull() ?: run { onToast(Copy.ORBIT_NOTHING_TO_UNDO); return }
         history = history.dropLast(1)
         bpmJob?.cancel()
         bpmPending = false
@@ -496,7 +498,7 @@ fun OrbitScreen(
     fun duplicateRing(index: Int) {
         val s = set ?: return
         val ring = s.orbits.getOrNull(index) ?: return
-        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast("EIGHT RINGS IS THE SKY"); return }
+        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast(Copy.ORBIT_RINGS_FULL); return }
         val copy = ring.copy(name = OrbitPatterns.copyName(ring.name))
         commit(s.copy(orbits = s.orbits.take(index + 1) + copy + s.orbits.drop(index + 1)))
         selected = index + 1
@@ -562,8 +564,11 @@ fun OrbitScreen(
             bouncing = false
             result.onSuccess { imported ->
                 snips = SnipStore.list(filesDir)
-                onToast("ON TAPE: ${cycleLabel(what)}. TRIM IT, CHOP IT, KIT IT.")
-            }.onFailure { e -> onToast("BOUNCE FAILED: ${e.message ?: e.javaClass.simpleName}") }
+                onToast(Copy.orbitBounced(cycleLabel(what)))
+            }.onFailure { e ->
+                Log.e("OrbitScreen", "bounceToTape: failed", e)
+                onToast(Copy.ORBIT_BOUNCE_FAILED)
+            }
         }
     }
 
@@ -606,7 +611,10 @@ fun OrbitScreen(
                         "${clip.name} IN THE GROOVES: ${clip.bars} BARS, ${clip.notes.size} NOTES. ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED OUT."
                     },
                 )
-            }.onFailure { e -> onToast("CLIP FAILED: ${e.message ?: e.javaClass.simpleName}") }
+            }.onFailure { e ->
+                Log.e("OrbitScreen", "clipIntoKit: failed", e)
+                onToast(Copy.ORBIT_CLIP_FAILED)
+            }
         }
     }
 

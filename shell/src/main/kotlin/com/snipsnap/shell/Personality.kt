@@ -997,6 +997,141 @@ object Copy {
      */
     const val CREATE_FAILED = "COULDN'T MAKE THAT TAPE."
 
+    // ==================== Escaped strings, brought in (name-and-find follow-ups, Part C) ====================
+    //
+    // 78 strings across `:app`'s newer screens lived as inline literals
+    // passed straight to `onToast(...)`/`toast = "..."`, invisible to every
+    // law in `PersonalityTest` because they were never `Copy` fields — this
+    // KDoc's own claim that "everything the UI says lives here" was false
+    // for all of them. Moved in here, screen by screen, rewritten to the
+    // same plain register as the rest of this file.
+    //
+    // The single biggest repeated shape, across `App.kt` and a dozen other
+    // screens, was `"$VERB FAILED: ${e.message ?: e.javaClass.simpleName}"` —
+    // an unexpected exception quoted straight at the user, sometimes as
+    // nothing more than a bare Java class name. [CREATE_FAILED]'s and
+    // [DUB_FAILED]'s own KDocs already refuse to do this. The exception's own
+    // detail now goes to `Log.e` at every one of those call sites instead of
+    // the toast, and the toast itself is one of the `*_FAILED` constants
+    // below — a `const val`, like every other field in this file, so the
+    // reflective shout/full-stop laws actually check it (the whole reason
+    // this section exists: a string that only lives in a function argument
+    // is invisible to them, same as it was invisible entirely before this
+    // pass). [actionFailed] is the one exception: it exists only for the
+    // handful of call sites where the verb itself is a runtime value
+    // (`TextureKits.Spec.verb`, or a `failure(action, e)` helper shared by
+    // several buttons on one screen) and a fixed constant genuinely cannot
+    // name it in advance.
+    const val KEY_FAILED = "KEY FAILED. TRY AGAIN."
+    const val TWINS_FAILED = "EVIL TWINS FAILED. TRY AGAIN."
+    const val BREED_FAILED = "BREED FAILED. TRY AGAIN."
+    const val PLACE_FAILED = "PLACE FAILED. TRY AGAIN."
+    const val RETRIM_FAILED = "RE-TRIM FAILED. TRY AGAIN."
+    const val READ_GROOVE_FAILED = "READ FAILED. TRY AGAIN."
+    const val FEEL_FAILED = "FEEL FAILED. TRY AGAIN."
+    const val INSTANT_KIT_FAILED = "INSTANT KIT FAILED. TRY AGAIN."
+    /** SHARE's own generic failure — both a kit's SHARE and a room's SHARE in `App.kt` use this one line. */
+    const val SHARE_FAILED = "SHARE FAILED. TRY AGAIN."
+    const val ROOM_FORGET_FAILED = "FORGET FAILED. TRY AGAIN."
+    const val ROOM_RESTORE_FAILED = "RESTORE FAILED. TRY AGAIN."
+    const val ROOM_BIN_EMPTY_FAILED = "EMPTY BIN FAILED. TRY AGAIN."
+    const val BACKUP_FAILED = "BACKUP FAILED. TRY AGAIN."
+    const val IN_KEY_FAILED = "IN KEY FAILED. TRY AGAIN."
+    const val RECHOP_FAILED = "RE-CHOP FAILED. TRY AGAIN."
+    /** SEND's own generic failure — CHOP's send-to-grid and SYNTH's send-to-pad both use this one line. */
+    const val SEND_FAILED = "SEND FAILED. TRY AGAIN."
+    const val SPLICE_FAILED = "SPLICE FAILED. TRY AGAIN."
+    const val PREVIEW_FAILED = "PREVIEW FAILED. TRY AGAIN."
+    const val RENDER_FAILED = "RENDER FAILED. TRY AGAIN."
+    const val DIG_FAILED = "DIG FAILED. TRY AGAIN."
+    const val STACK_FAILED = "STACK FAILED. TRY AGAIN."
+    const val MIX_FAILED = "MIX FAILED. TRY AGAIN."
+    const val ORBIT_BOUNCE_FAILED = "BOUNCE FAILED. TRY AGAIN."
+    const val ORBIT_CLIP_FAILED = "CLIP FAILED. TRY AGAIN."
+
+    /**
+     * The generic "X failed, try again" toast for the handful of call sites
+     * where [action] is a runtime value, not a fixed verb — `App.kt`'s
+     * `texture` (`TextureKits.Spec.verb`: SCULPT, STRETCH or FREEZE) and the
+     * `failure(action, e)` helpers several screens share across more than
+     * one of their own buttons. A function, not a field, so the reflective
+     * laws don't reach it - written in register by hand for exactly that
+     * reason. Every call site whose verb is fixed at compile time gets its
+     * own `*_FAILED` constant above instead, so the law actually checks it.
+     */
+    fun actionFailed(action: String): String = "$action FAILED. TRY AGAIN."
+
+    /** PLACE (SNIPS → PAD): the snip landed on [slot], `App.kt`'s `assignPendingSnip`'s success line, moved out of an inline literal. */
+    fun snipPlaced(slot: Int): String = "SNIP PLACED ON PAD A%02d.".format(java.util.Locale.ROOT, slot)
+
+    // ---- SURFACE + SPLIT: the two printing screens share one shape ----
+    //
+    // Both SURFACE (the tactile pad) and SPLIT (stems) print a live
+    // performance to TAPE or onto a pad, through the same `SnipStore.import`/
+    // `KitBuilderModel.assign`-or-`replaceAudio` pair - so the failures they
+    // can hit are the same failures, and now say the same thing.
+    /** Neither screen's engine could open a low-latency audio stream. */
+    fun noLowLatencyStream(screen: String): String = "NO LOW-LATENCY STREAM. $screen IS SILENT."
+    const val SURFACE_SHARED_STREAM = "SHARED STREAM. A LITTLE MORE LATENCY."
+    /** A kit pad's own sample wouldn't decode - SURFACE loading a voice, SPLIT loading a source. */
+    fun sourceUnreadable(name: String): String = "${name.uppercase(java.util.Locale.ROOT)} WOULD NOT READ."
+    /** `SnipStore.import` threw on the way to TAPE - an unexpected write failure, not a refusal with words of its own. */
+    const val PRINT_LOST = "PRINT LOST. TRY AGAIN."
+    /** The chooser's own `IllegalArgumentException`/`IllegalStateException` when the kit changed under it (a layered or chained pad) - the exception's own message is `KitBuilder`'s internal "no pad on slot N", not user copy, so it stays out of the toast. */
+    const val PRINT_PAD_REFUSED = "THAT PAD WON'T TAKE THE PRINT. PICK ANOTHER."
+    /** Disk or decode trouble landing a print on a pad - the print itself is not lost, so this says so, unlike [PRINT_LOST]. */
+    const val PRINT_LANDING_FAILED = "LANDING FAILED. THE PRINT IS STILL HERE."
+
+    // ---- SURFACE ----
+    const val SURFACE_SETTINGS_NOT_SAVED = "SURFACE SETTINGS NOT SAVED. TRY AGAIN."
+    const val SURFACE_SETTINGS_UNREADABLE = "SURFACE SETTINGS UNREADABLE. USING THE DEFAULTS."
+    const val SURFACE_SET_NEEDS_TOUCH = "TOUCH THE PAD FIRST. SET KEEPS WHAT WAS UNDER THE FINGER."
+    fun surfaceCornerSet(letter: Char): String = "CORNER $letter SET."
+    fun surfacePrinted(seconds: Float): String = "PRINTED ${"%.1f".format(java.util.Locale.ROOT, seconds)} S TO TAPE."
+    const val SURFACE_NOTHING_PRINTED = "NOTHING PRINTED. HOLD THE SURFACE WHILE IT PRINTS."
+    const val SURFACE_STILL_LANDING = "STILL LANDING THE LAST PRINT."
+
+    // ---- SPLIT ----
+    const val SPLIT_ALL_FADERS_DOWN = "EVERY FADER IS DOWN. NOTHING TO HEAR."
+    /** SPLIT's engine refused to arm playback - not an exception, just `false` back from `armPrint`/its own start call. */
+    const val SPLIT_START_FAILED = "SPLIT WOULD NOT START. TRY AGAIN."
+    const val SPLIT_PAD_EMPTY = "THAT PAD HAS NOTHING ON IT."
+    /** `Separate.stn`'s own unexpected failure - no domain refusal words of its own, so nothing worth quoting. */
+    const val SPLIT_REFUSED = "SPLIT REFUSED. TRY AGAIN."
+    /** [hotPeak] over 1.0 when the split's own mix clipped; null when it did not, matching `SPLIT PRINTED`'s own optional "HOT" note. */
+    fun splitPrinted(seconds: Float, hotPeak: Float?): String {
+        val note = if (hotPeak != null) " HOT: PEAK ${"%.2f".format(java.util.Locale.ROOT, hotPeak)}." else ""
+        return "SPLIT PRINTED ${"%.1f".format(java.util.Locale.ROOT, seconds)} S TO TAPE.$note"
+    }
+    const val SPLIT_NOTHING_TO_PRINT = "EVERY FADER IS DOWN. THERE IS NOTHING TO PRINT."
+    fun splitMixHot(peak: Float): String = "THE MIX IS HOT: PEAK ${"%.2f".format(java.util.Locale.ROOT, peak)}. PICK A PAD, OR PULL A FADER DOWN."
+
+    // ---- ORBIT ----
+    /** ADD RING x3 (a pad ring, a snip ring, DUPLICATE) - `OrbitSet.MAX_ORBITS` is 8; a settled fact worth stating outright, not "THE SKY". */
+    const val ORBIT_RINGS_FULL = "8 RINGS ALREADY. ORBIT HOLDS NO MORE."
+    const val ORBIT_NO_PADS = "NO PADS ON THIS KIT."
+    fun orbitFileUnreadable(name: String): String = "COULD NOT READ $name."
+    const val ORBIT_NOTHING_TO_UNDO = "NOTHING TO UNDO."
+    /** BOUNCE landed: [label] is `cycleLabel`'s own name for what was heard. */
+    fun orbitBounced(label: String): String = "ON TAPE: $label. TRIM IT, CHOP IT, KIT IT."
+
+    // ---- GRAIN FIELD ----
+    const val GRAIN_FIELD_TOO_SHORT = "TOO SHORT TO MAP. THE FIELD NEEDS MORE TAPE."
+    /** `GrainVoice.start()` threw - the platform rejected the format; a caught, retryable condition. */
+    const val GRAIN_FIELD_START_FAILED = "GRAIN VOICE WON'T START."
+    /** The render thread died on its own, or a live gesture threw against it - DUET turns itself off either way. */
+    const val GRAIN_FIELD_DUET_STOPPED = "DUET STOPPED — OFF."
+
+    // ---- GROOVE: MIDI EXPORT's own success line ----
+    fun midiFilesWritten(count: Int): String =
+        "$count MIDI FILES WRITTEN — ANY DAW OPENS THE RHYTHM. THE MPC PLAYS IT TOO."
+
+    // ---- PAD CAPTURE: GRAB/HOLD's own too-short guard ----
+    const val PAD_CAPTURE_HOLD_TOO_SHORT = "HOLD TO RECORD."
+
+    // ---- SNIPS: a row that will not decode ----
+    const val SNIP_CANT_PLAY = "CAN'T PLAY THIS SNIP."
+
     /** Rotation helper: line [n] of a rotating list (n counts from 0) — [COMMIT_LINES]'s own rotation. */
     fun rotating(lines: List<String>, n: Int): String = lines[n % lines.size]
 }

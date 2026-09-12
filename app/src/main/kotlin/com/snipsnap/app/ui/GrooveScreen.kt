@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
@@ -423,7 +424,8 @@ fun GrooveScreen(
     val offLaneCount = currentClip?.notes?.count { it.note !in NOTE_TO_LANE } ?: 0
 
     fun failure(action: String, e: Exception) {
-        onToast("$action FAILED: ${e.message ?: e.javaClass.simpleName}")
+        Log.e("GrooveScreen", "$action: failed", e)
+        onToast(Copy.actionFailed(action))
     }
 
     /**
@@ -865,7 +867,7 @@ fun GrooveScreen(
                         MidiGroove.writeTo(File(midiDir, "${Names.sanitizeStem(c.name)}.mid"), c, bpm, overwrite = true)
                     }
                 }
-                onToast("${written.size} MIDI FILES WRITTEN — ANY DAW OPENS THE RHYTHM. THE MPC PLAYS IT TOO.")
+                onToast(Copy.midiFilesWritten(written.size))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 failure("MIDI EXPORT", e)

@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -245,7 +246,8 @@ fun TapeSpliceScreen(
                                 }
                             } catch (e: Exception) {
                                 if (e is CancellationException) throw e
-                                onToast("SPLICE FAILED: ${e.message ?: e.javaClass.simpleName}")
+                                Log.e("TapeSpliceScreen", "splice: failed", e)
+                                onToast(Copy.SPLICE_FAILED)
                             } finally {
                                 busy = false
                             }
@@ -427,7 +429,8 @@ private fun NeedleStep(
                     // never a crash, same as COMMIT's own guard.
                     val samples = runCatching { previewSamples(head, tail, needleFrame) }
                         .getOrElse { e ->
-                            onToast("PREVIEW FAILED: ${e.message ?: e.javaClass.simpleName}")
+                            Log.e("TapeSpliceScreen", "preview: failed", e)
+                            onToast(Copy.PREVIEW_FAILED)
                             return@ActionButton
                         }
                     val v = TapeVoice(samples, head.original.sampleRate)

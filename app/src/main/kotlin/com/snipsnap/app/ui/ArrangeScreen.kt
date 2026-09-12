@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -153,7 +154,8 @@ fun ArrangeScreen(
                 mix = m
                 playMix(m)
             }.onFailure { e ->
-                onToast("MIX FAILED: ${e.message ?: e.javaClass.simpleName}")
+                Log.e("ArrangeScreen", "mixdown: failed", e)
+                onToast(Copy.MIX_FAILED)
             }
         }
     }

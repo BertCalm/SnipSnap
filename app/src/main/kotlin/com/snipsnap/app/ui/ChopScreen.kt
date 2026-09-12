@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -396,7 +397,10 @@ private fun ChopContent(
     val classicFailed = !melodic && classicPlacement == null
 
     LaunchedEffect(classicFailed) {
-        if (classicFailed) onToast("CHOP FAILED: ${classicError ?: "couldn't lay out the slices"}")
+        if (classicFailed) {
+            classicError?.let { Log.e("ChopScreen", "classic layout failed: $it") }
+            onToast(Copy.CHOP_LAYOUT_FAILED)
+        }
     }
 
     if (!melodic && classicFailed) {
@@ -544,7 +548,8 @@ private fun ChopContent(
                         onToast(Copy.RECHOPPED)
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) throw e
-                        onToast("RE-CHOP FAILED: ${e.message ?: e.javaClass.simpleName}")
+                        Log.e("ChopScreen", "rechop: failed", e)
+                        onToast(Copy.RECHOP_FAILED)
                     } finally {
                         rechopBusy = false
                     }
@@ -585,7 +590,8 @@ private fun ChopContent(
                             onSentToGrid(newEntry)
                         } catch (e: Exception) {
                             if (e is kotlinx.coroutines.CancellationException) throw e
-                            onToast("SEND FAILED: ${e.message ?: e.javaClass.simpleName}")
+                            Log.e("ChopScreen", "sendToGrid: failed", e)
+                            onToast(Copy.SEND_FAILED)
                         } finally {
                             sendBusy = false
                         }

@@ -75,8 +75,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * The KIT screen: bank A as the 4×4 grid, physically laid out — A13–A16
- * across the top, A01 bottom-left, exactly the MPC's own geometry (and
- * the geometry `Copy.KONAMI_PADS` assumes).
+ * across the top, A01 bottom-left, exactly the MPC's own geometry.
  */
 private val GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 

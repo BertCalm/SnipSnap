@@ -803,8 +803,10 @@ fun App(shelf: KitShelf) {
                 withContext(Dispatchers.IO) { shelf.texture(source, slot, spec) }
             } catch (e: Exception) {
                 busy = null
-                // Law 3: when it breaks, say exactly what happened.
-                toast = "${spec.verb} FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Law 3: when it breaks, say exactly what happened - the
+                // exception's own detail goes to logcat, not the toast.
+                Log.e(TAG, "texture: ${spec.verb} failed", e)
+                toast = Copy.actionFailed(spec.verb)
                 return@launch
             }
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
@@ -833,7 +835,8 @@ fun App(shelf: KitShelf) {
                 // write, so it goes through the same KitWrites lock they do.
                 withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.setKey(source, key) } }
             } catch (e: Exception) {
-                toast = "KEY FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "setKey: failed", e)
+                toast = Copy.KEY_FAILED
                 return@launch
             }
             // Same identity guard as the KIT branch's onKitUpdated closures
@@ -863,7 +866,8 @@ fun App(shelf: KitShelf) {
                 withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.evilTwins(source, Random.nextInt()) } }
             } catch (e: Exception) {
                 busy = null
-                toast = "TWINS FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "evilTwins: failed", e)
+                toast = Copy.TWINS_FAILED
                 return@launch
             }
             // Same identity guard as setKey above — `busy` blocks a second
@@ -911,7 +915,8 @@ fun App(shelf: KitShelf) {
                 withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.breed(source, partner, Random.nextInt()) } }
             } catch (e: Exception) {
                 busy = null
-                toast = "BREED FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "finishBreed: failed", e)
+                toast = Copy.BREED_FAILED
                 return@launch
             }
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
@@ -1099,12 +1104,14 @@ fun App(shelf: KitShelf) {
                 // onto whichever kit is open now.
                 if (open?.dir == target.dir) open = open?.copy(kit = updated)
                 kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                toast = "SNIP PLACED ON PAD A%02d".format(java.util.Locale.ROOT, slot)
+                toast = Copy.snipPlaced(slot)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Law 3: when it breaks, say exactly what happened.
-                toast = "PLACE FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Law 3: when it breaks, say exactly what happened - the
+                // exception's own detail goes to logcat, not the toast.
+                Log.e(TAG, "assignPendingSnip: place failed", e)
+                toast = Copy.PLACE_FAILED
             }
         }
     }
@@ -1152,8 +1159,10 @@ fun App(shelf: KitShelf) {
             } catch (e: OutOfMemoryError) {
                 toast = Copy.TAPE_TOO_BIG
             } catch (e: Exception) {
-                // Law 3: when it breaks, say exactly what happened.
-                toast = "RE-TRIM FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Law 3: when it breaks, say exactly what happened - the
+                // exception's own detail goes to logcat, not the toast.
+                Log.e(TAG, "backOnto: failed", e)
+                toast = Copy.RETRIM_FAILED
             } finally {
                 busy = null
             }
@@ -1202,8 +1211,10 @@ fun App(shelf: KitShelf) {
             } catch (e: IllegalArgumentException) {
                 toast = Copy.grooveRefused(e.message ?: "the ear refused")
             } catch (e: Exception) {
-                // Law 3: when it breaks, say exactly what happened.
-                toast = "READ FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Law 3: when it breaks, say exactly what happened - the
+                // exception's own detail goes to logcat, not the toast.
+                Log.e(TAG, "readGroove: failed", e)
+                toast = Copy.READ_GROOVE_FAILED
             } finally {
                 busy = null
             }
@@ -1246,7 +1257,8 @@ fun App(shelf: KitShelf) {
             } catch (e: IllegalArgumentException) {
                 toast = Copy.feelRefused(e.message ?: "the ear refused")
             } catch (e: Exception) {
-                toast = "FEEL FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "stealFeel: failed", e)
+                toast = Copy.FEEL_FAILED
             } finally {
                 busy = null
             }
@@ -1289,8 +1301,10 @@ fun App(shelf: KitShelf) {
                 // own catch — same as TapeScreen's readMono.
                 toast = Copy.TAPE_TOO_BIG
             } catch (e: Exception) {
-                // Law 3: when it breaks, say exactly what happened.
-                toast = "INSTANT KIT FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Law 3: when it breaks, say exactly what happened - the
+                // exception's own detail goes to logcat, not the toast.
+                Log.e(TAG, "instantKit: failed", e)
+                toast = Copy.INSTANT_KIT_FAILED
             } finally {
                 busy = null
             }
@@ -1318,7 +1332,8 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "SHARE FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "shareKit: failed", e)
+                toast = Copy.SHARE_FAILED
             } finally {
                 busy = null
             }
@@ -1340,7 +1355,8 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "FORGET FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "forgetRoom: failed", e)
+                toast = Copy.ROOM_FORGET_FAILED
             } finally {
                 busy = null
             }
@@ -1367,7 +1383,8 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "SHARE FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "shareRoom: failed", e)
+                toast = Copy.SHARE_FAILED
             } finally {
                 busy = null
             }
@@ -1386,7 +1403,8 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "RESTORE FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "restoreRoom: failed", e)
+                toast = Copy.ROOM_RESTORE_FAILED
             } finally {
                 busy = null
             }
@@ -1413,7 +1431,8 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "EMPTY BIN FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "emptyRoomsBin: failed", e)
+                toast = Copy.ROOM_BIN_EMPTY_FAILED
             } finally {
                 busy = null
             }
@@ -1470,7 +1489,10 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "DELETE FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Same failure `ok == false` already reports above - one
+                // word for both, whether the write refused or threw.
+                Log.e(TAG, "deleteKit: failed", e)
+                toast = Copy.KIT_DELETE_FAILED
             } finally {
                 busy = null
             }
@@ -1507,7 +1529,10 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "RENAME FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Same failure `renamed == null` already reports above - one
+                // word for both, whether the write refused or threw.
+                Log.e(TAG, "renameKit: failed", e)
+                toast = Copy.KIT_RENAME_FAILED
             } finally {
                 busy = null
             }
@@ -1542,7 +1567,8 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "BACKUP FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "backupShelf: failed", e)
+                toast = Copy.BACKUP_FAILED
             } finally {
                 busy = null
             }
@@ -1564,7 +1590,8 @@ fun App(shelf: KitShelf) {
                 // open→mutate→save on kit.json.
                 withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.inKey(source) } }
             } catch (e: Exception) {
-                toast = "IN KEY FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "inKey: failed", e)
+                toast = Copy.IN_KEY_FAILED
                 return@launch
             }
             // Same identity guard as setKey above — inKey sets no `busy`

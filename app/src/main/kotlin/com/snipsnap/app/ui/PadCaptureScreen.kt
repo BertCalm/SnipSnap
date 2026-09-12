@@ -1,6 +1,7 @@
 package com.snipsnap.app.ui
 
 import android.os.SystemClock
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -50,6 +51,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.PadCapture
 import com.snipsnap.kit.Kit
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
@@ -163,7 +165,7 @@ fun PadCaptureScreen(
         gesture: Gesture,
         successLabel: String,
         nothingLabel: String,
-        failurePrefix: String,
+        failureAction: String,
         producer: suspend () -> PadTape.Landing?,
     ) {
         if (!armed || committing != null) return
@@ -197,7 +199,8 @@ fun PadCaptureScreen(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                onToast("$failurePrefix: ${e.message ?: e.javaClass.simpleName}")
+                Log.e("PadCaptureScreen", "commitToPad ($gesture): failed", e)
+                onToast(Copy.actionFailed(failureAction))
             } finally {
                 committing = null
             }
@@ -209,7 +212,7 @@ fun PadCaptureScreen(
             gesture = Gesture.GRAB,
             successLabel = "GRABBED → PAD ${padTag(slot)}",
             nothingLabel = "NOTHING TO GRAB YET",
-            failurePrefix = "GRAB FAILED",
+            failureAction = "GRAB",
         ) {
             val raw = MicSessionService.snapshotTail(GRAB_FRAMES) ?: return@commitToPad null
             PadTape.grab(raw, MicSessionService.SAMPLE_RATE)
@@ -225,7 +228,7 @@ fun PadCaptureScreen(
         holding = false
         val heldMs = SystemClock.elapsedRealtime() - holdStart
         if (heldMs < MIN_HOLD_MS) {
-            onToast("HOLD TO RECORD")
+            onToast(Copy.PAD_CAPTURE_HOLD_TOO_SHORT)
             return
         }
         // The ring was recording the whole time this control was held down —
@@ -240,7 +243,7 @@ fun PadCaptureScreen(
             gesture = Gesture.HOLD,
             successLabel = "RECORDED → PAD ${padTag(slot)}",
             nothingLabel = "NOTHING RECORDED",
-            failurePrefix = "RECORD FAILED",
+            failureAction = "RECORD",
         ) {
             MicSessionService.snapshotTail(frames)?.let { PadTape.hold(it, MicSessionService.SAMPLE_RATE) }
         }

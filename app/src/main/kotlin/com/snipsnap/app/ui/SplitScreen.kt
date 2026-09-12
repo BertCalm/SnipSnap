@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -55,6 +56,7 @@ import com.snipsnap.audio.Separate
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layers
 import com.snipsnap.shell.Layout
@@ -147,7 +149,7 @@ fun SplitScreen(
 
     DisposableEffect(engine) {
         engineUp = engine.start()
-        if (!engineUp) onToast("NO LOW-LATENCY STREAM. SPLIT IS SILENT.")
+        if (!engineUp) onToast(Copy.noLowLatencyStream("SPLIT"))
         onDispose { engine.close() }
     }
 
@@ -209,7 +211,7 @@ fun SplitScreen(
     fun startAll() {
         if (!engineUp || banked.size < Layers.Part.entries.size || splitFrames <= 1) return
         if (desk.silent) {
-            onToast("EVERY FADER IS DOWN. NOTHING TO HEAR.")
+            onToast(Copy.SPLIT_ALL_FADERS_DOWN)
             return
         }
         val started = engine.hitLayers(
@@ -220,7 +222,7 @@ fun SplitScreen(
             pitch = 1.0,
         )
         playing = started
-        if (!started) onToast("THE ENGINE WOULD NOT TAKE IT. TRY AGAIN.")
+        if (!started) onToast(Copy.SPLIT_START_FAILED)
     }
 
     /** A fader moved: glide the sounding voice rather than retrigger it. */
@@ -256,7 +258,7 @@ fun SplitScreen(
             val pad = entry?.kit?.pad(slot)
             val file = pad?.sampleFile
             if (file == null) {
-                onToast("THAT PAD HAS NOTHING ON IT.")
+                onToast(Copy.SPLIT_PAD_EMPTY)
                 return
             }
             // `runCatching` would take a CancellationException along with the
@@ -274,7 +276,7 @@ fun SplitScreen(
                 null
             }
             if (source == null) {
-                onToast("${name.uppercase()} WOULD NOT READ.")
+                onToast(Copy.sourceUnreadable(name))
                 return
             }
             // The expensive part: a spectrogram and two median filters.
@@ -283,7 +285,8 @@ fun SplitScreen(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                onToast("SPLIT REFUSED: ${(e.message ?: "UNREADABLE").uppercase()}.")
+                Log.e("SplitScreen", "loadSource: split refused", e)
+                onToast(Copy.SPLIT_REFUSED)
                 return
             }
             val indices = withContext(Dispatchers.Default) {
@@ -333,11 +336,11 @@ fun SplitScreen(
             } catch (e: CancellationException) {
                 throw e  // leaving the screen is not a lost print to report
             } catch (e: Exception) {
-                onToast("PRINT LOST: ${(e.message ?: "UNREADABLE").uppercase()}.")
+                Log.e("SplitScreen", "landOnTape: print lost", e)
+                onToast(Copy.PRINT_LOST)
                 return@launch
             }
-            val note = if (hot > 1f) " HOT: PEAK ${"%.2f".format(java.util.Locale.ROOT, hot)}." else ""
-            onToast("SPLIT PRINTED ${"%.1f".format(java.util.Locale.ROOT, landed.seconds)} S TO TAPE.$note")
+            onToast(Copy.splitPrinted(landed.seconds, hot.takeIf { it > 1f }))
             onPrinted()
         }
     }
@@ -373,11 +376,12 @@ fun SplitScreen(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IllegalArgumentException) {
-                onToast("${(e.message ?: "PAD REFUSED").uppercase()}. PICK ANOTHER PAD.")
+                onToast(Copy.PRINT_PAD_REFUSED)
             } catch (e: IllegalStateException) {
-                onToast("${(e.message ?: "PAD REFUSED").uppercase()}. PICK ANOTHER PAD.")
+                onToast(Copy.PRINT_PAD_REFUSED)
             } catch (e: Exception) {
-                onToast("LANDING FAILED: ${(e.message ?: e.javaClass.simpleName).uppercase()}. THE PRINT IS STILL HERE.")
+                Log.e("SplitScreen", "landOnPad: failed", e)
+                onToast(Copy.PRINT_LANDING_FAILED)
             } finally {
                 landing = false
             }
@@ -393,7 +397,7 @@ fun SplitScreen(
     fun printMix() {
         val parts = split ?: return
         if (desk.silent) {
-            onToast("EVERY FADER IS DOWN. THERE IS NOTHING TO PRINT.")
+            onToast(Copy.SPLIT_NOTHING_TO_PRINT)
             return
         }
         working = true
@@ -404,7 +408,7 @@ fun SplitScreen(
                 if (printToPad && entry != null) {
                     // The chooser is about to take over and says nothing of
                     // its own, so a warning here survives to be read.
-                    if (peak > 1f) onToast("THE MIX IS HOT: PEAK ${"%.2f".format(java.util.Locale.ROOT, peak)}. PICK A PAD, OR PULL A FADER DOWN.")
+                    if (peak > 1f) onToast(Copy.splitMixHot(peak))
                     pendingPrint = mixed
                 } else {
                     landOnTape(mixed, peak)

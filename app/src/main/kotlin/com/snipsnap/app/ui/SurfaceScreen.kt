@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +51,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PrintLength
@@ -134,8 +136,8 @@ fun SurfaceScreen(
 
     fun started(up: Boolean) {
         engineUp = up
-        if (!up) onToast("NO LOW-LATENCY STREAM. THE SURFACE IS SILENT.")
-        else if (engine.isShared()) onToast("SHARED STREAM. A LITTLE MORE LATENCY.")
+        if (!up) onToast(Copy.noLowLatencyStream("THE SURFACE"))
+        else if (engine.isShared()) onToast(Copy.SURFACE_SHARED_STREAM)
     }
 
     DisposableEffect(engine) {
@@ -193,7 +195,7 @@ fun SurfaceScreen(
         }
         if (snip == null) {
             padName = null
-            onToast("${pad.displayName.uppercase()} WOULD NOT READ.")
+            onToast(Copy.sourceUnreadable(pad.displayName))
         } else {
             engine.load(snip)
             padName = pad.displayName
@@ -209,7 +211,10 @@ fun SurfaceScreen(
         settings = next
         scope.launch {
             withContext(Dispatchers.IO) { runCatching { SurfaceStore.save(dir, next) } }
-                .onFailure { onToast("SURFACE SETTINGS NOT SAVED: ${(it.message ?: "UNREADABLE").uppercase()}.") }
+                .onFailure {
+                    Log.e("SurfaceScreen", "persist: settings not saved", it)
+                    onToast(Copy.SURFACE_SETTINGS_NOT_SAVED)
+                }
         }
     }
 
@@ -223,7 +228,7 @@ fun SurfaceScreen(
         // said aloud), then the pad they name, or the kit's lowest.
         val loaded = withContext(Dispatchers.IO) { runCatching { SurfaceStore.load(entry.dir) } }
         settings = loaded.getOrElse {
-            onToast("SURFACE SETTINGS UNREADABLE. USING THE DEFAULTS.")
+            onToast(Copy.SURFACE_SETTINGS_UNREADABLE)
             SurfaceStore.Settings.DEFAULT
         }
         pushCorners(settings.corners)
@@ -256,14 +261,14 @@ fun SurfaceScreen(
     fun setCorner(index: Int) {
         val dir = entry?.dir ?: return
         val held = lastHeld ?: run {
-            onToast("TOUCH THE PAD FIRST. SET KEEPS WHAT WAS UNDER THE FINGER.")
+            onToast(Copy.SURFACE_SET_NEEDS_TOUCH)
             return
         }
         val corner = SurfaceStore.Corner.from(mode, held, tilt.tilt, settings.corners)
         val corners = settings.corners.toMutableList().also { it[index] = corner }
         pushCorners(corners)
         persist(dir, settings.copy(corners = corners))
-        onToast("CORNER ${'A' + index} SET.")
+        onToast(Copy.surfaceCornerSet('A' + index))
     }
 
     // The print's landing, once: `finishing` guards the frame loop from
@@ -277,10 +282,11 @@ fun SurfaceScreen(
                 runCatching { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
             }
             landed.onSuccess {
-                onToast("PRINTED ${"%.1f".format(java.util.Locale.ROOT, it.seconds)} S TO TAPE.")
+                onToast(Copy.surfacePrinted(it.seconds))
                 onPrinted()
             }.onFailure {
-                onToast("PRINT LOST: ${(it.message ?: "UNREADABLE").uppercase()}.")
+                Log.e("SurfaceScreen", "landOnTape: print lost", it)
+                onToast(Copy.PRINT_LOST)
             }
         }
     }
@@ -293,7 +299,7 @@ fun SurfaceScreen(
             try {
                 val snip = withContext(Dispatchers.Default) { engine.stopPrint() }
                 if (snip == null || snip.frameCount < engine.sampleRate / 10) {
-                    onToast("NOTHING PRINTED. HOLD THE SURFACE WHILE IT PRINTS.")
+                    onToast(Copy.SURFACE_NOTHING_PRINTED)
                     return@launch
                 }
                 if (printToPad && entry != null) {
@@ -347,14 +353,15 @@ fun SurfaceScreen(
                 // The chooser already dims a layered or chained pad (SYNTH's
                 // rule), so this is the rarer refusal: the kit changed under
                 // the chooser. In words, the print kept.
-                onToast("${(e.message ?: "PAD REFUSED").uppercase()}. PICK ANOTHER PAD.")
+                onToast(Copy.PRINT_PAD_REFUSED)
             } catch (e: IllegalStateException) {
-                onToast("${(e.message ?: "PAD REFUSED").uppercase()}. PICK ANOTHER PAD.")
+                onToast(Copy.PRINT_PAD_REFUSED)
             } catch (e: Exception) {
                 // Disk or decode trouble - not a pad problem, so no "pick
                 // another"; the print is still pending and TAPE is one
                 // CANCEL away.
-                onToast("LANDING FAILED: ${(e.message ?: e.javaClass.simpleName).uppercase()}. THE PRINT IS STILL HERE.")
+                Log.e("SurfaceScreen", "landOnPad: failed", e)
+                onToast(Copy.PRINT_LANDING_FAILED)
             } finally {
                 landing = false
             }
@@ -436,7 +443,7 @@ fun SurfaceScreen(
                                 else "PRINTING. PLAY THE SURFACE.",
                             )
                         } else {
-                            onToast("STILL LANDING THE LAST PRINT.")
+                            onToast(Copy.SURFACE_STILL_LANDING)
                         }
                     }
                 }

@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -47,6 +48,7 @@ import com.snipsnap.audio.GrainField
 import com.snipsnap.audio.Similar
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.Scheme
@@ -154,7 +156,7 @@ fun GrainFieldScreen(
             // 44.1kHz) it returns null regardless of level, so a loud, short
             // hat or snare bounces here far more often than a genuinely
             // quiet sample does.
-            onToast("TOO SHORT TO MAP. THE FIELD NEEDS MORE TAPE.")
+            onToast(Copy.GRAIN_FIELD_TOO_SHORT)
             onBack()
         }
     }
@@ -193,7 +195,8 @@ fun GrainFieldScreen(
     // screen or an uncaught crash on the class of device that triggers it.
     LaunchedEffect(voice) {
         runCatching { voice?.start() }.onFailure {
-            onToast("THE FIELD LOST ITS VOICE")
+            Log.e("GrainFieldScreen", "voice failed to start", it)
+            onToast(Copy.GRAIN_FIELD_START_FAILED)
             onBack()
         }
     }
@@ -246,7 +249,7 @@ fun GrainFieldScreen(
                         // signal that used to have no public accessor; keep
                         // polling a dead voice's setTarget/gate forever is
                         // the silent-failure shape this closes.
-                        onToast("DUET STUMBLED — OFF")
+                        onToast(Copy.GRAIN_FIELD_DUET_STOPPED)
                         duetOn = false
                         break
                     }
@@ -290,7 +293,8 @@ fun GrainFieldScreen(
                     }
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
-                    onToast("DUET STUMBLED — OFF")
+                    Log.e("GrainFieldScreen", "duet loop stumbled", e)
+                    onToast(Copy.GRAIN_FIELD_DUET_STOPPED)
                     duetOn = false
                     break
                 }

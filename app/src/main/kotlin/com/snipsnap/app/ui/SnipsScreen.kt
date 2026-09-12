@@ -195,7 +195,7 @@ fun SnipsScreen(
             // `playToken`'s own KDoc above.
             if (playToken != myToken) return@launch
             if (mono == null || mono.frameCount <= 0) {
-                onToast("CAN'T PLAY THIS SNIP")
+                onToast(Copy.SNIP_CANT_PLAY)
                 return@launch
             }
             val v = TapeVoice(mono.samples, mono.sampleRate)

@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -96,7 +97,8 @@ fun DeletedSnipsScreen(
     }
 
     fun failure(action: String, e: Exception) {
-        onToast("$action FAILED: ${e.message ?: e.javaClass.simpleName}")
+        Log.e("DeletedSnipsScreen", "$action: failed", e)
+        onToast(Copy.actionFailed(action))
     }
 
     fun doRestore(target: SnipStore.BinnedSnip) {
