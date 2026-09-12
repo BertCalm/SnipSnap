@@ -330,6 +330,54 @@ claim is tested against, instead of our own output.
 
 ---
 
+## MIDI sync: the three measurements that decide it
+
+Added 2026-09-12 by `docs/MIDI_SYNC.md`, which needs these answered
+**before any sync code is written** — they decide whether it is worth
+writing at all. Each needs the phone; two need a second clock source (an
+MPC, a laptop, anything that sends MIDI beat clock).
+
+### S1 · Does `playbackHeadPosition` tell the truth on this device?
+
+`TapeVoice`'s KDoc records a measured case where a HAL reported
+`playbackHeadPosition == 0` for **800 ms** while `playState == PLAYING`,
+because the buffer was not filled to capacity. A transport built on that
+number would sit at zero for most of a bar.
+
+Play a short one-shot and a long one, and watch the reported position
+against wall time. **What to write down:** whether it starts at zero and
+stays there, for how long, and whether buffer size changes it.
+
+→
+
+### S2 · What is the output-side delay, in milliseconds?
+
+Not the round-trip figure PLAY and SURFACE already print — that is
+`calculateLatencyMillis`, input-to-output, and may be absent entirely
+("not every HAL implements it"). What sync needs is how far ahead of the
+speaker the engine must write for a note to land where a listener
+expects.
+
+Simplest honest method: play a click on the phone against a click from
+gear known to be in time, and move one until they flam out. **What to
+write down:** the offset in ms, the device, and whether the stream was
+shared or exclusive.
+
+→
+
+### S3 · How long should a follower coast when the clock stops?
+
+`MIDI_SYNC.md` recommends coast-then-stop with a timeout on the order of
+one beat, and says plainly that the number is a guess until measured.
+
+With a master running, pull the cable mid-bar. **What to write down:**
+how long a stall feels like a hiccup rather than a stop, and whether any
+real master stutters for longer than that in normal use.
+
+→
+
+---
+
 ## Recording what you find
 
 A pass: tick the plan row and say so here — I will move it in
