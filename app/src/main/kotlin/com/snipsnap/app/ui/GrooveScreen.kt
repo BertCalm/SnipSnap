@@ -1473,7 +1473,7 @@ fun GrooveScreen(
                                 .height(Layout.MIN_HIT_TARGET.dp)
                                 .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-                                .let { m -> if (countingIn) m else m.tapeClick(label = null) { stopRecording() } },
+                                .let { m -> if (countingIn) m else m.tapeClick(label = "STOP RECORDING") { stopRecording() } },
                             contentAlignment = Alignment.Center,
                         ) {
                             TapeText(if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape)
@@ -1638,7 +1638,7 @@ fun GrooveScreen(
                                     .height(Layout.MIN_HIT_TARGET.dp)
                                     .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                                     .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-                                    .tapeClick(label = null) { playing = !playing },
+                                    .tapeClick(label = if (playing) "STOP" else "PLAY") { playing = !playing },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 TapeText(if (playing) "■ STOP" else "► PLAY", TapeType.pixel, scheme.lcdInk.tape)
@@ -1650,12 +1650,12 @@ fun GrooveScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
-                                SwingStepper("−", scheme) { swingPercent = (swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN) }
+                                SwingStepper("−", scheme, description = "SWING DOWN") { swingPercent = (swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN) }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
                                     TapeText("RIDES PROG B", TapeType.pixelSmall, scheme.ink3.tape)
                                 }
-                                SwingStepper("+", scheme) { swingPercent = (swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX) }
+                                SwingStepper("+", scheme, description = "SWING UP") { swingPercent = (swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX) }
                             }
 
                             FeelRow(
@@ -1845,7 +1845,7 @@ private fun ProgramSelector(
             // weight(1.6f) to nothing and pushed the action rows and RECORD
             // clean off the screen. The ► button never had it, which is why
             // only ◄ stretched. Both are a plain 48dp square.
-            Modifier.width(Layout.MIN_HIT_TARGET.dp).height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 6.dp).tapeClick(label = null, onClick = onPrev),
+            Modifier.width(Layout.MIN_HIT_TARGET.dp).height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 6.dp).tapeClick(label = "PREVIOUS PROGRAM", onClick = onPrev),
             contentAlignment = Alignment.Center,
         ) {
             TapeText("◄", TapeType.lcd(19), scheme.ink.tape)
@@ -1859,7 +1859,7 @@ private fun ProgramSelector(
             TapeText(sub, TapeType.pixelSmall, scheme.ink3.tape)
         }
         Box(
-            Modifier.width(Layout.MIN_HIT_TARGET.dp).height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 6.dp).tapeClick(label = null, onClick = onNext),
+            Modifier.width(Layout.MIN_HIT_TARGET.dp).height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 6.dp).tapeClick(label = "NEXT PROGRAM", onClick = onNext),
             contentAlignment = Alignment.Center,
         ) {
             TapeText("►", TapeType.lcd(19), scheme.ink.tape)
@@ -1882,9 +1882,20 @@ private fun ProgramSelector(
  * grow) clears the floor in full.
  */
 @Composable
-private fun SwingStepper(label: String, scheme: Scheme, onClick: () -> Unit) {
+private fun SwingStepper(
+    label: String,
+    scheme: Scheme,
+    /**
+     * What a screen reader says instead of [label] — this button is
+     * shared by the SWING row and the FEEL row below it, both showing
+     * the same "−"/"+" glyph for opposite axes, so the glyph alone
+     * can't name either one (a11y audit: "MINUS" twice is useless).
+     */
+    description: String,
+    onClick: () -> Unit,
+) {
     Box(
-        Modifier.width(40.dp).height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 4.dp).tapeClick(label = null, onClick = onClick),
+        Modifier.width(40.dp).height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 4.dp).tapeClick(label = description, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(label, TapeType.lcd(19), scheme.ink.tape)
@@ -1914,9 +1925,12 @@ private fun FeelRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        SwingStepper("−", scheme) { onChange((feel - GROOVE_FEEL_STEP).coerceAtLeast(GROOVE_FEEL_MIN)) }
+        SwingStepper("−", scheme, description = "FEEL TIGHTER") { onChange((feel - GROOVE_FEEL_STEP).coerceAtLeast(GROOVE_FEEL_MIN)) }
         Column(
-            Modifier.weight(1f).tapeClick(label = null, onClick = onRecentre),
+            // Names the reset this tap performs, not the live readout it
+            // shows (a real label here would replace, not add to, the
+            // TapeText below — clickable does not merge it for free).
+            Modifier.weight(1f).tapeClick(label = "RESET FEEL TO AS PLAYED", onClick = onRecentre),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             TapeText(
@@ -1930,7 +1944,7 @@ private fun FeelRow(
             )
             TapeText("RIDES A · C · D", TapeType.pixelSmall, scheme.ink3.tape)
         }
-        SwingStepper("+", scheme) { onChange((feel + GROOVE_FEEL_STEP).coerceAtMost(GROOVE_FEEL_MAX)) }
+        SwingStepper("+", scheme, description = "FEEL LOOSER") { onChange((feel + GROOVE_FEEL_STEP).coerceAtMost(GROOVE_FEEL_MAX)) }
     }
 }
 
@@ -1952,7 +1966,7 @@ private fun GrooveActionButton(
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = null, enabled = enabled, onClick = onClick),
+            .tapeClick(label = label, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape)
@@ -2188,7 +2202,7 @@ private fun StepEditorOverlay(
                     Modifier
                         .height(Layout.MIN_HIT_TARGET.dp)
                         .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                        .tapeClick(label = null, onClick = onDone)
+                        .tapeClick(label = "DONE", onClick = onDone)
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -2212,7 +2226,7 @@ private fun StepEditorOverlay(
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .let { if (selected) it.pressedBevel(scheme, 4.dp) else it.sunkenField(scheme, 4.dp) }
                             .semantics { this.selected = selected }
-                            .tapeClick(label = null) { onBarSelect(bar) },
+                            .tapeClick(label = "SELECT BAR ${bar + 1}") { onBarSelect(bar) },
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         TapeText("BAR ${bar + 1}", TapeType.pixelSmall, if (selected) scheme.lcd.tape else scheme.ink2.tape)
@@ -2220,7 +2234,7 @@ private fun StepEditorOverlay(
                     }
                 }
                 Box(
-                    Modifier.height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 4.dp).tapeClick(label = null, onClick = onClear).padding(horizontal = 10.dp),
+                    Modifier.height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 4.dp).tapeClick(label = "CLEAR BAR", onClick = onClear).padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     TapeText("CLEAR BAR", TapeType.pixelSmall, scheme.ink2.tape)
@@ -2267,7 +2281,12 @@ private fun StepEditorOverlay(
                                     Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
-                                        .tapeClick(label = null) { onToggle(lane, step) }
+                                        // Names the lane, the step, and
+                                        // which way this tap flips it — a
+                                        // 16-cell grid with no name at all
+                                        // read as identical unlabelled
+                                        // squares to a screen reader.
+                                        .tapeClick(label = "${LANE_LABEL.getValue(lane)} STEP ${col + 1}: ${if (on) "ON" else "OFF"}") { onToggle(lane, step) }
                                         .padding(1.5.dp)
                                         .background(fillColor, RoundedCornerShape(3.dp))
                                         .border(
