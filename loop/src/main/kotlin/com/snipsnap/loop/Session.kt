@@ -94,7 +94,7 @@ data class Session(
         require(tracks.size == TRACK_COUNT) {
             "a session has exactly $TRACK_COUNT tracks, got ${tracks.size}"
         }
-        require(bpm in 40f..220f) { "bpm out of range: $bpm" }
+        require(bpm in MIN_BPM..MAX_BPM) { "bpm out of range: $bpm" }
         require(barsPerInterval in VALID_BARS) {
             "barsPerInterval must be one of $VALID_BARS, was $barsPerInterval"
         }
@@ -109,6 +109,19 @@ data class Session(
     val stepsPerInterval: Int get() = STEPS_PER_BAR * barsPerInterval
 
     companion object {
+        /**
+         * The tempo range the grid accepts, named rather than typed into the
+         * require above — a screen with a tempo control has to clamp to the
+         * same numbers this refuses, and two copies of a range is the same
+         * trap as two copies of a path.
+         *
+         * `OrbitSet` has its own pair with the same values. They are not this
+         * one: the ring set and the grid are separate features that each chose
+         * a range, and either could move without the other.
+         */
+        const val MIN_BPM = 40f
+        const val MAX_BPM = 220f
+
         const val TRACK_COUNT = 6
         const val MAX_CHAIN = 8
         const val STEPS_PER_BAR = 16
