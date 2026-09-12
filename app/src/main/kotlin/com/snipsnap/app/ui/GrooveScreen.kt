@@ -466,6 +466,13 @@ fun GrooveScreen(
     // toast and a SNIP for a take the cancellation contract says never
     // happened.
     var bounceGeneration by remember(kitDir) { mutableIntStateOf(0) }
+    // True from the moment a print naturally ends through the end of its
+    // own landing (the stop, the read, and the SNIPS import) — declared
+    // here, ahead of `discardBounce`, because that function has to be able
+    // to see a landing already in flight to know there is still something
+    // for it to invalidate; see `finishBounce` below for what actually
+    // sets it.
+    var landingBounce by remember(kitDir) { mutableStateOf(false) }
 
     // Cancels a bounce without landing it: STOP, a kit or tempo change, a
     // pattern change mid-print, or leaving the screen mid-bounce all
@@ -514,7 +521,6 @@ fun GrooveScreen(
     // — the button reads "not bouncing" the instant this is called,
     // matching SURFACE's own `finishing`-guard shape for the same reason:
     // a second call while this one is still landing must never re-enter.
-    var landingBounce by remember(kitDir) { mutableStateOf(false) }
     fun finishBounce() {
         if (landingBounce) return
         landingBounce = true
