@@ -378,6 +378,7 @@ object Copy {
         "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO AN EMPTY BANK B.",
         "· BREED ▸ MIXES TWO KITS' RECIPES INTO A NEW KIT. PARENTS STAY.",
         "· DUST: THE TAPE'S OWN HISS, ROOM AND CRACKLE UNDER A PAD. OR ANOTHER'S.",
+        "· CHOP'S CUT BENCH: HITS, EAR, GRID. MERGE OR SPLIT UNDER A CHIP.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -945,6 +946,23 @@ object Copy {
      * States what actually happened instead of inventing a slice number.
      */
     const val RECHOPPED = "RE-CHOPPED."
+
+    // ---- CHOP's CUT bench (docs/CHOP_CONTROLS.md) ----
+    /** HITS ▶ asked for one more than the detector can hear at this ear: the count did not move, and the ear is the way to more. */
+    fun chopOnlyHits(heard: Int): String =
+        "ONLY $heard ${if (heard == 1) "HIT" else "HITS"} HEARD AT THIS EAR. FINE HEARS MORE."
+    /** AUTO's landing: the knee, in words. */
+    fun chopAuto(hits: Int): String = "AUTO: $hits HITS, WHERE THE REAL ONES END AND THE SCRAPS BEGIN."
+    /** MERGE landed: the two slices are one. */
+    fun chopMerged(n: Int): String = "SLICES $n AND ${n + 1} ARE ONE NOW."
+    /** MERGE on the last slice: nothing after it. */
+    const val CHOP_MERGE_LAST = "NOTHING AFTER THE LAST SLICE TO MERGE IT WITH."
+    /** SPLIT landed: the slice is two. */
+    fun chopSplit(n: Int): String = "SLICE $n IS TWO NOW."
+    /** SPLIT found no second hit inside the slice. */
+    fun chopNoSplit(n: Int): String = "NO SECOND HIT INSIDE SLICE $n. NOTHING TO SPLIT."
+    /** The CUT bench's readout for the count while a chop is running. */
+    const val CHOP_BENCH_BUSY = "CUTTING…"
 
     /** "N SLICES ON THE GRID. CHOKE GROUP SET." — the send-to-grid toast. */
     fun sentToGrid(sliceCount: Int, chokeSet: Boolean): String =
