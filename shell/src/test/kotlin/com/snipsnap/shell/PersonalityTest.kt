@@ -5,9 +5,17 @@ import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+/**
+ * Despite the name, this no longer tests a PERSONALITY slider — that
+ * enum and its `Delight` gate are gone (see `Personality.kt`'s own
+ * KDoc). What survives, and what this class actually holds to the
+ * app: the copy laws — every shipped `Copy` string shouts, lands on a
+ * full stop, and never states an unfilled buffer as settled fact.
+ * File not renamed per the ask that added this note; the laws below
+ * are the reason it still lives in `Personality.kt`'s test file.
+ */
 class PersonalityTest {
 
     // ==================== Reflective Copy scan (shared by the laws below) ====================
@@ -45,35 +53,9 @@ class PersonalityTest {
     }
 
     @Test
-    fun `OFF is respected everywhere without argument`() {
-        assertFalse(Delight.toastsEnabled(Personality.OFF))
-        assertFalse(Delight.quipsEnabled(Personality.OFF))
-        assertFalse(Delight.deckSoundsEnabled(Personality.OFF, captureArmed = false))
-    }
-
-    @Test
-    fun `quips need FULL, toasts settle for MILD`() {
-        assertTrue(Delight.toastsEnabled(Personality.MILD))
-        assertFalse(Delight.quipsEnabled(Personality.MILD))
-        assertTrue(Delight.toastsEnabled(Personality.FULL))
-        assertTrue(Delight.quipsEnabled(Personality.FULL))
-    }
-
-    @Test
-    fun `law 2 - deck sounds hard-mute while capture is armed, at any level`() {
-        for (level in Personality.entries) {
-            assertFalse(
-                Delight.deckSoundsEnabled(level, captureArmed = true),
-                "$level: a deck thunk must never land inside a snip",
-            )
-        }
-        assertTrue(Delight.deckSoundsEnabled(Personality.FULL, captureArmed = false))
-    }
-
-    @Test
     fun `commit lines rotate in order and wrap`() {
         assertEquals("TAPED. NO TAKEBACKS.", Copy.rotating(Copy.COMMIT_LINES, 0))
-        assertEquals("IT'S OURS NOW.", Copy.rotating(Copy.COMMIT_LINES, 1))
+        assertEquals("COMMITTED TO TAPE.", Copy.rotating(Copy.COMMIT_LINES, 1))
         assertEquals(
             Copy.rotating(Copy.COMMIT_LINES, 0),
             Copy.rotating(Copy.COMMIT_LINES, Copy.COMMIT_LINES.size),
@@ -100,21 +82,8 @@ class PersonalityTest {
     }
 
     @Test
-    fun `hidden eggs answer only their triggers`() {
-        assertEquals("VERY CREATIVE.", Copy.kitNameResponse("TEST"))
-        assertEquals("VERY CREATIVE.", Copy.kitNameResponse("  test "))
-        assertNull(Copy.kitNameResponse("Regroove"))
-        assertEquals("ELITE.", Copy.bpmResponse(133.7f))
-        assertNull(Copy.bpmResponse(120f))
-        // Konami: 8 steps, all on the 4x4 grid.
-        assertEquals(8, Copy.KONAMI_PADS.size)
-        assertTrue(Copy.KONAMI_PADS.all { it in 1..16 })
-    }
-
-    @Test
     fun `boot sequence ends ready`() {
         assertEquals("READY.", Copy.BOOT_LINES.last())
-        assertTrue(Copy.STATUS_QUIPS.isNotEmpty())
     }
 
     /**
@@ -380,7 +349,6 @@ class PersonalityTest {
         "OUTSIDE_LISTENING", "ROOM_FORGET_BUSY", "ROOM_RESTORE_BUSY", "ROOM_BIN_EMPTY_BUSY", "KIT_DELETE_BUSY", "KIT_RENAME_BUSY",
         "CHIP_NOT_SURE", "CHIP_OVERRIDDEN",
         "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_NONE", "CARD_PICKED",
-        "KONAMI_UNLOCK",
         "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
         // The shelf filter's chip (finding 16) is the sort chip's twin and
         // sits beside it, so it is furniture under the same rule. The
@@ -390,13 +358,14 @@ class PersonalityTest {
         // Permanent on-screen furniture, not toasts: the two legends that sit
         // under KIT's grid and the kit shelf's own list for as long as those
         // screens are open, and HELP's two section headings. ROOMS' third
-        // legend ("HOLD A ROOM TO FORGET IT · THE BIN KEEPS 30 DAYS") reads
-        // without a full stop for the same reason, and is still written inline
-        // in `:app` rather than living here. A label on the furniture is not a
-        // line the app says to you once and takes away, so it does not end in
-        // a full stop - and every legend must be added here when it is written,
-        // or the shouting law will ask it to become a sentence.
-        "PAD_SHEET_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER",
+        // legend, Copy.ROOMS_LEGEND ("HOLD A ROOM TO FORGET IT · THE BIN
+        // KEEPS IT 30 DAYS"), reads without a full stop for the same reason -
+        // a copy-consolidation pass brought it in from `:app`, where it used
+        // to live inline. A label on the furniture is not a line the app
+        // says to you once and takes away, so it does not end in a full stop
+        // - and every legend must be added here when it is written, or the
+        // shouting law will ask it to become a sentence.
+        "PAD_SHEET_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER", "ROOMS_LEGEND",
         // The empty shelf's loop line (finding 3) is a row of tab names,
         // not a line the app says - it reads TAPE > CHOP > KIT > EXPORT.
         // FIRST_RUN_LOOP_NOTE, the sentence under it that says what the
@@ -411,6 +380,12 @@ class PersonalityTest {
         // SETUP_CARD_NONE are NOT here: both are sentences the screen says
         // to you, and both keep their full stops.
         "SETUP_FORMAT_HEADING", "SETUP_WHERE_HEADING", "SETUP_CARD_HEADING", "SETUP_FORMAT_NONE",
+        // GRAIN FIELD's own busy line while the tape is read into its grid -
+        // furniture, like every other `…`-suffixed busy line above.
+        "GRAIN_FIELD_LISTENING",
+        // EVIL TWINS' and INSTANT KIT's own busy overlays - the same
+        // `…`-suffixed shape as every other *_BUSY constant above.
+        "EVIL_TWINS_BUSY", "INSTANT_KIT_BUSY",
     )
 
     /**

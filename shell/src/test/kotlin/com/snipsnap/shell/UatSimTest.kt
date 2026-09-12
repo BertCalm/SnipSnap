@@ -570,16 +570,15 @@ class UatSimTest {
                 "MIN_HIT_TARGET=${Layout.MIN_HIT_TARGET}dp (finding 9, fixed); the ends carry ◂ ▸ " +
                 "while there are tabs that way (finding 10, fixed)",
         )
-        note("status bar cells: WHERE YOU ARE | KITS: n | a rotating quip (FULL personality only)")
+        note("status bar cells: WHERE YOU ARE | KITS: n | a busy line, or the open kit's name")
         note("title bar reads: SNIPSNAP.EXE — the stale M0 build tag went with finding 2")
-
-        say("")
-        say("  personality gates:")
-        Personality.entries.forEach { p ->
-            note("%-5s toasts=%-5s quips=%-5s deckSounds(idle)=%s".format(
-                p, Delight.toastsEnabled(p), Delight.quipsEnabled(p), Delight.deckSoundsEnabled(p, false)))
-        }
-        note("at OFF the toast bubble is still composed for TalkBack but drawn at alpha 0 — sighted users lose every confirmation")
+        // The PERSONALITY slider and its `Delight` gate (OFF/MILD/FULL,
+        // toasts/quips/deckSounds) are gone — deleted rather than fixed,
+        // since once every toast states fact there is nothing left for a
+        // tone slider to gate, and the gate had a real bug: OFF silenced
+        // every toast, including failures like DUB FAILED. See
+        // `Personality.kt`'s own KDoc.
+        note("the toast bubble is unconditionally composed and drawn — no personality gate to silence a failure toast")
 
         say("")
         say("  the ${SchemeId.entries.size} schemes a user can pick in SETUP: ${SchemeId.entries.joinToString(", ")}")

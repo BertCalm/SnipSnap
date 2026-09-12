@@ -167,7 +167,10 @@ class ExportWizardModel(
     private fun readBack(outcome: ExportOutcome): List<Finding> = try {
         ExportReadBack.verify(kit, outcome)
     } catch (e: Exception) {
-        listOf(Finding(Severity.FAIL, "read back fell over: ${e.message ?: e.javaClass.simpleName}"))
+        // FindingRow shows this row's own message verbatim (ExportScreen.kt)
+        // - the reader's own words when it has them, a domain phrase when it
+        // doesn't, never the raw exception class.
+        listOf(Finding(Severity.FAIL, "read back fell over: ${e.message ?: "the reader itself refused"}"))
     }
 
     /**

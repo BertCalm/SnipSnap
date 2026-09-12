@@ -112,6 +112,13 @@ class ReversalTest {
         "ROOM_FORGET_BUSY" to "a progress line",
         // Reassurance that the screen destroys nothing at all.
         "DOUBLES_RULE" to "states that nothing here deletes, moves or merges",
+        // An EMPTY STATE, not a landing: DELETED KITS / DELETED SNIPS with an
+        // empty bin. It carries the word DELETED, which is what the law's
+        // vocabulary matches on, but it reports that no deletion exists to
+        // get back. Arrived with the copy-consolidation pass that moved this
+        // screen's inline empty state into Copy, which is how the law first
+        // got to see it at all.
+        "NOTHING_DELETED" to "an empty bin's empty state; nothing was destroyed",
         // A standing caveat on a screen, not an action's landing.
         "STACK_LOCKS" to "a standing caveat; the landing is Copy.stacked()",
         // A legend on the export card row, naming the gesture. Nothing has happened yet.

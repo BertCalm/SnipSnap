@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,6 +38,8 @@ import com.snipsnap.shell.Scheme
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+private const val TAG = "DoublesScreen"
 
 /**
  * DOUBLES: pads across the shelf's kits inside a "same sound" distance,
@@ -93,7 +96,8 @@ fun DoublesScreen(
             onShelf = byKitDir
             onToast(Copy.doublesMeasured(pairs.index.extracted, pairs.index.fromCache))
         }.onFailure { e ->
-            failed = "COULDN'T MEASURE THE SHELF: ${(e.message ?: e.javaClass.simpleName).uppercase()}"
+            Log.e(TAG, "measure: failed", e)
+            failed = Copy.doublesFailed(e.message ?: "the shelf wouldn't read")
         }
     }
 

@@ -22,7 +22,6 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,7 +38,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.snipsnap.app.theme.LocalPersonality
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.oilslickSweep
@@ -47,16 +45,19 @@ import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
-import com.snipsnap.shell.Copy
-import com.snipsnap.shell.Delight
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.SchemeId
-import kotlinx.coroutines.delay
 
 /**
- * Every place the menu row can land. M0 builds KITS, KIT and PROPERTIES
- * for real; the rest render an honest stub naming their milestone.
+ * Every place the menu row can land. Every entry routes to a real,
+ * shipped screen — `App.kt`'s `when (screen)` has no catch-all branch, so
+ * a new entry added here without a matching branch there fails to
+ * compile instead of silently falling through to a stub. (There used to
+ * be a `StubScreen` and an `else ->` branch for milestones that hadn't
+ * shipped yet; every one of them had shipped long before the stub was
+ * finally deleted, which is exactly the failure mode the missing
+ * catch-all now prevents from recurring.)
  */
 enum class AppScreen(val label: String) {
     KITS("KITS"),
@@ -284,29 +285,23 @@ fun MenuRow(
 }
 
 /**
- * Three cells: where you are, what's on the shelf, and the deck
- * muttering to itself (FULL personality only; a busy line preempts the
- * quip because status is function, not joke).
+ * Three cells: where you are, what's on the shelf, and either a busy
+ * line or the open kit's name. The third cell used to carry a rotating
+ * quip instead (gated behind the now-deleted PERSONALITY slider — see
+ * `Personality.kt`'s own KDoc on why that gate was removed); this is
+ * real state in a slot shaped for state, so it names the kit that is
+ * actually open instead of the machine talking to itself.
  */
 @Composable
 fun StatusBar(
     screenLabel: String,
     shelfLabel: String,
     busy: String?,
+    kitName: String,
     modifier: Modifier = Modifier,
 ) {
     val scheme = LocalScheme.current
-    val personality = LocalPersonality.current
-
-    var quipIndex by remember { mutableIntStateOf(0) }
-    LaunchedEffect(personality) {
-        while (Delight.quipsEnabled(personality)) {
-            delay(Motion.QUIP_ROTATE_MS.toLong())
-            quipIndex++
-        }
-    }
-    val tail = busy
-        ?: if (Delight.quipsEnabled(personality)) Copy.rotating(Copy.STATUS_QUIPS, quipIndex) else ""
+    val tail = busy ?: kitName
 
     Row(
         modifier = modifier
@@ -338,18 +333,17 @@ private fun StatusCell(text: String, modifier: Modifier = Modifier) {
 
 /**
  * The toast: rises 8dp and fades in over 250ms, dwells, and is cleared by
- * the state holder (see `App`). Whether the *visible* bubble shows at all
- * is the personality slider's call — but PERSONALITY is a tone preference
- * (Law 2/3 territory: no quips, no flourish at OFF), not a permission to
- * withhold function. A toast is a screen-reader user's only channel for
- * "did DELETE/SHARE/RENAME work" (audit finding 3); OFF silencing that
- * entirely, with no fallback, would cost that user information a sighted
- * user still gets from watching the operation resolve. So the bubble is
- * always composed while a message is live, carrying [liveRegion]
- * semantics regardless of PERSONALITY — only its *drawn* alpha is gated
- * (`t` never animates past 0 at OFF, since the `LaunchedEffect` below
- * skips it), which keeps the visible result identical to before this fix
- * for a sighted user. The semantics node lives on the bubble itself, not
+ * the state holder (see `App`). Always composed and always drawn while a
+ * message is live, carrying [liveRegion] semantics so a screen-reader
+ * user gets the same "did DELETE/SHARE/RENAME work" channel a sighted
+ * user gets from watching the operation resolve (audit finding 3).
+ *
+ * This used to be gated by the PERSONALITY slider: OFF drew the bubble at
+ * alpha 0 while still composing it for TalkBack, which meant a *failure*
+ * toast like DUB FAILED silently never appeared for a sighted user who'd
+ * turned personality off — a real bug this removal fixes by construction.
+ * See `Personality.kt`'s own KDoc for why the gate is gone rather than
+ * patched in place. The semantics node lives on the bubble itself, not
  * a screen-sized wrapper around it — a full-screen node would sit in
  * TalkBack's touch-exploration path for the whole `TOAST_DWELL_MS`
  * dwell, intercepting an explore-by-touch anywhere on screen instead of
@@ -364,12 +358,10 @@ private fun StatusCell(text: String, modifier: Modifier = Modifier) {
 @Composable
 fun ToastOverlay(message: String?, modifier: Modifier = Modifier) {
     val scheme = LocalScheme.current
-    val personality = LocalPersonality.current
     if (message == null) return
-    val visible = Delight.toastsEnabled(personality)
 
     val t = remember(message) { Animatable(0f) }
-    LaunchedEffect(message) { if (visible) t.animateTo(1f, tween(Motion.TOAST_IN_MS)) }
+    LaunchedEffect(message) { t.animateTo(1f, tween(Motion.TOAST_IN_MS)) }
 
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Box(

@@ -26,6 +26,7 @@ import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.json.JsonValue
 import com.snipsnap.mpc3.MpcXRay
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.Scheme
@@ -79,7 +80,7 @@ fun XRayScreen(fileName: String, reading: MpcXRay.Reading, onBack: () -> Unit) {
             ) {
                 val topKeys = (reading.rawTree as? JsonValue.Obj)?.entries?.keys?.size
                 TapeText(
-                    if (topKeys != null) "JSON, NOT AN MPC PROGRAM. $topKeys TOP-LEVEL FIELDS." else "NOTHING TO SHOW.",
+                    Copy.xrayNotAProgram(topKeys),
                     TapeType.lcdSmall,
                     scheme.lcdInk.tape,
                     maxLines = 3,
@@ -104,8 +105,7 @@ fun XRayScreen(fileName: String, reading: MpcXRay.Reading, onBack: () -> Unit) {
 
         if (reading.unlabeledFieldCount > 0) {
             TapeText(
-                "${reading.unlabeledFieldCount} FIELD${if (reading.unlabeledFieldCount == 1) "" else "S"} " +
-                    "PRESENT IN THIS FILE, NOT YET LABELED HERE.",
+                Copy.xrayUnlabeledFields(reading.unlabeledFieldCount),
                 TapeType.pixelSmall,
                 scheme.ink3.tape,
                 Modifier.fillMaxWidth().padding(horizontal = 4.dp),

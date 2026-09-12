@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -236,7 +237,8 @@ fun StackTakesScreen(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                onToast("STACK FAILED: ${e.message ?: e.javaClass.simpleName}")
+                Log.e("StackTakesScreen", "stack: failed", e)
+                onToast(Copy.STACK_FAILED)
             } finally {
                 busy = false
             }
