@@ -41,6 +41,7 @@ import com.snipsnap.app.KitShelf
 import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.PREFS
 import com.snipsnap.kit.KitStore
+import com.snipsnap.loop.Session
 import com.snipsnap.audio.SilenceWatch
 import com.snipsnap.app.theme.BinRedGlow
 import androidx.compose.ui.platform.LocalContext
@@ -101,6 +102,14 @@ fun KitsScreen(
     onChopAll: () -> Unit = {},
     /** SNIPS (Task 3): every catch on the phone, one list — play, assign to a pad, open in TAPE, or delete. */
     onSnips: () -> Unit = {},
+    /**
+     * How many of the loop grid's tracks hold a snip — 0 until one is sent,
+     * which is also when the LOOP row appears at all. Passed in rather than
+     * read here: the session lives on disk and `App` owns the IO.
+     */
+    loopTracks: Int = 0,
+    /** LOOP: opens the six-track grid. */
+    onLoop: () -> Unit = {},
     /**
      * True while a SNIPS row's → PAD is routing the user here to pick a kit
      * (see `App.kt`'s `pendingSnipAssign`) — swaps the header's own line for
@@ -560,6 +569,20 @@ fun KitsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onSnips,
             )
+            // LOOP: the six-track phasing grid, filled from SNIPS' own
+            // → LOOP. Gated on a track actually holding something, the way
+            // DELETED KITS below is gated on the bin — never a door onto an
+            // empty room, which is exactly what this screen was before
+            // anything could write a session at all.
+            if (loopTracks > 0) {
+                ActionButton(
+                    "LOOP ▸ $loopTracks OF ${Session.TRACK_COUNT} TRACKS",
+                    scheme,
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onLoop,
+                )
+            }
             // X-RAY: reads any MPC file the system picker hands back — never
             // gated on the shelf holding anything, same as SNIPS above,
             // since this never lands what it reads onto the shelf at all.

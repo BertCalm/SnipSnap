@@ -89,6 +89,9 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.KitStore
+import com.snipsnap.loop.Session
+import com.snipsnap.loop.SessionBuilder
+import com.snipsnap.loop.SessionStore
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DustPrints
@@ -324,6 +327,16 @@ fun App(shelf: KitShelf) {
     // AppScreen.KITS (the shelf), one level up from those, so it's its own
     // boolean at this scope rather than sharing theirs.
     var snipsOpen by remember { mutableStateOf(false) }
+    // LOOP (plan-03's front door): the six-track grid lives in its own
+    // activity, and its session lives in this one folder. Held here rather
+    // than inside SNIPS because two screens read it — SNIPS' own → LOOP fills
+    // it, and the shelf's LOOP row is only shown once something is in it.
+    val loopDir = remember(context) { File(context.filesDir, "sessions/current") }
+    // How many of the six tracks hold a snip. Read once on mount and then
+    // maintained by `sendSnipToLoop`'s own result — re-read on every return
+    // from LOOP as well, since clearing a track there changes it behind this
+    // screen's back.
+    var loopTracks by remember { mutableStateOf(0) }
     // X-RAY: same shelf-level shape as snipsOpen above, reached from
     // KitsScreen's own X-RAY ▸ INSPECT A FILE row — but there's no kit
     // it could belong to even in principle (the file picked is never
@@ -585,6 +598,21 @@ fun App(shelf: KitShelf) {
             // never fall into [captureBlocked].
             micPermissionDenied = true
         }
+    }
+
+    /**
+     * LOOP's own door, launched for a result only so there is a callback when
+     * it closes: clearing a track happens over there, so the shelf's count
+     * would otherwise keep showing what was true before the trip. Nothing is
+     * read from the result itself — the session on disk is the answer.
+     */
+    val loopLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        scope.launch { loopTracks = withContext(Dispatchers.IO) { filledLoopTracks(loopDir) } }
+    }
+    LaunchedEffect(Unit) {
+        loopTracks = withContext(Dispatchers.IO) { filledLoopTracks(loopDir) }
     }
 
     fun requestArm() {
@@ -1203,6 +1231,82 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * SNIPS → LOOP: this snip becomes one track of the six-track grid.
+     *
+     * The work lives here rather than in `SnipsScreen` because it is IO — a
+     * decode, up to eight WAV writes and a sidecar, none of which belongs on
+     * the main thread — and because the count it changes is read by the shelf
+     * too.
+     *
+     * The session is re-read from disk on every send rather than kept in
+     * memory: LOOP is a separate activity with its own copy, and a track
+     * cleared over there has to be what the next send builds on.
+     */
+    fun sendSnipToLoop(info: SnipStore.Info) {
+        scope.launch {
+            val outcome = withContext(Dispatchers.IO) {
+                // A missing sidecar is a first send; a sidecar that will not
+                // parse is not. Starting fresh in that second case would put a
+                // one-track session on top of six tracks someone built, which
+                // is a silent delete — so the two are told apart here rather
+                // than collapsed into one getOrNull.
+                val sidecar = File(loopDir, SessionStore.FILE_NAME)
+                val session = if (sidecar.isFile) {
+                    runCatching { SessionStore.load(loopDir) }
+                        .onFailure { e -> Log.e(TAG, "sendSnipToLoop: session unreadable", e) }
+                        .getOrNull()
+                        ?: return@withContext LoopSend(Copy.LOOP_UNREADABLE, null)
+                } else {
+                    SessionBuilder.empty(deviceSampleRate(context))
+                }
+                val at = SessionBuilder.nextEmpty(session)
+                // Said in words rather than by a dead button on the row: a
+                // disabled → LOOP would not say WHICH of its reasons applied.
+                if (at < 0) return@withContext LoopSend(Copy.loopFull(Session.TRACK_COUNT), null)
+
+                // `info.file` is a SNIP, already bounded by
+                // SnipStore.IMPORT_MAX_SEC (180s) or real-time capture —
+                // readCapped's ceiling is defense in depth, per ConventionTest
+                // Law 4, which also requires it over the unbounded read.
+                val audio = runCatching { WavReader.readCapped(info.file, TAPE_LOAD_MAX_SEC).snip }
+                    .onFailure { e -> Log.e(TAG, "sendSnipToLoop: decode failed", e) }
+                    .getOrNull()
+                if (audio == null || audio.frameCount <= 0) {
+                    return@withContext LoopSend(Copy.LOOP_NOTHING_TO_SEND, null)
+                }
+
+                // Past the decode, the only way this fails is a write — so it
+                // reports a write failure, never "no audio", which would send
+                // someone looking at the wrong thing.
+                val sent = runCatching {
+                    SessionBuilder.send(session, at, info.displayName, info.file.nameWithoutExtension, audio, loopDir)
+                }
+                    .onFailure { e -> Log.e(TAG, "sendSnipToLoop: cut failed", e) }
+                    .getOrNull()
+                    ?: return@withContext LoopSend(Copy.LOOP_SEND_FAILED, null)
+
+                val saved = runCatching { SessionStore.save(sent.session, loopDir) }
+                    .onFailure { e -> Log.e(TAG, "sendSnipToLoop: save failed", e) }
+                    .isSuccess
+                if (!saved) return@withContext LoopSend(Copy.LOOP_SEND_FAILED, null)
+
+                // 1-based: the column a player counts across the grid.
+                val track = sent.trackIndex + 1
+                LoopSend(
+                    if (sent.truncated) {
+                        Copy.loopTrackTruncated(info.displayName, track, sent.blocks)
+                    } else {
+                        Copy.loopTrackFilled(info.displayName, track, sent.blocks)
+                    },
+                    SessionBuilder.filled(sent.session),
+                )
+            }
+            toast = outcome.toast
+            outcome.filled?.let { loopTracks = it }
+        }
+    }
+
+    /**
      * BACK ONTO (docs/RETRIM.md §4): [range] of [request]'s tape, read at
      * the file's own rate and cut as CHOP's slice would be (`Retrim.cut`),
      * replaces the pad's audio through `KitBuilderModel.backOnto` — class,
@@ -1813,6 +1917,7 @@ fun App(shelf: KitShelf) {
                                     snipsOpen = false
                                     pendingSnipAssign = file
                                 },
+                                onSendToLoop = ::sendSnipToLoop,
                             )
                         } else if (deletedKitsOpen) {
                             DeletedKitsScreen(
@@ -1939,6 +2044,8 @@ fun App(shelf: KitShelf) {
                                 onXRay = { xrayPickerLauncher.launch(arrayOf("*/*")) },
                                 onDoubles = { doublesOpen = true },
                                 onSnips = { snipsOpen = true },
+                                loopTracks = loopTracks,
+                                onLoop = { loopLauncher.launch(Intent(context, LoopActivity::class.java)) },
                                 assigningSnip = pendingSnipAssign != null,
                                 breedingFrom = pendingBreedWith,
                                 rooms = rooms,
@@ -2485,3 +2592,24 @@ private fun BlockedDialog(message: String, buttonLabel: String, onDismiss: () ->
         }
     }
 }
+
+/**
+ * What one SNIPS → LOOP send came to: the line to show, and the new filled-track
+ * count when a track was actually filled (null when nothing changed — a full
+ * grid, an unreadable snip, a failed write).
+ *
+ * A tiny type rather than a Pair so the null half cannot be read as "zero
+ * tracks", which is what a bare Int would have let it mean on every failure.
+ */
+private data class LoopSend(val toast: String, val filled: Int?)
+
+/**
+ * How many of the loop grid's tracks hold a snip, straight off disk.
+ *
+ * Zero for every reason a session might not be readable — none written yet,
+ * a sidecar that will not parse — because the count's only job is to decide
+ * whether the shelf shows a door at all, and a door onto an unreadable
+ * session is the same mistake as a door onto an empty one.
+ */
+private fun filledLoopTracks(dir: File): Int =
+    runCatching { SessionBuilder.filled(SessionStore.load(dir)) }.getOrDefault(0)

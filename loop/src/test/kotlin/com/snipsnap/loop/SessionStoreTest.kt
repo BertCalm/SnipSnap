@@ -68,6 +68,20 @@ class SessionStoreTest {
     }
 
     @Test
+    fun `an empty track is written as silence, not as a missing file`() {
+        val dir = tempDir()
+        val built = session().let { it.copy(tracks = it.tracks.toMutableList().also { t -> t[0] = Track("Empty", listOf(SilenceBlock), engaged = false) }) }
+
+        val file = SessionStore.save(built, dir)
+
+        // The distinction the sidecar has to keep: an unfilled track says so
+        // in words. A LoopBlock naming a file that isn't there would bake to
+        // the same silence and read, wrongly, as a session with a lost sample.
+        assertTrue(file.readText().contains("\"silence\""), "an empty track should be spelled out")
+        assertEquals(built, SessionStore.load(dir))
+    }
+
+    @Test
     fun `fails clearly when there is no sidecar`() {
         assertFailsWith<IOException> { SessionStore.load(tempDir()) }
     }

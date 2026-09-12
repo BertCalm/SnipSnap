@@ -77,9 +77,20 @@ could NOT verify. Test in this order; each item names what "wrong" looks like.
     and confirm the kit audibly reverts. EJECT a pad, find it in the bin,
     BACK restores it. EMPTY THE BIN NOW needs a second tap (armed confirm).
 
+## LOOP
+27. From SNIPS, → LOOP on a few snips of DIFFERENT lengths — the toast names
+    the track and how many blocks it became. The shelf then shows LOOP ▸ n OF
+    6 TRACKS; open it. Listen for the tracks pulling apart and coming back
+    together rather than repeating in lockstep; that only happens when the
+    block counts differ. Tap a track name to mute it, HOLD a block to clear
+    that track, then send a snip again: it fills the leftmost empty track, so
+    with one track cleared that is the one it lands on.
+
 ## Known blind spots (listen for these specifically)
 - One-shot samples LONGER than ~6s stop responding to chokes after 6s (ledgered).
-- LOOP screen still launches via adb only: `adb shell am start -n com.snipsnap.app/.LoopActivity`.
+- LOOP has a door now (SNIPS → LOOP fills a track, then a LOOP row appears on
+  the shelf), but it is the newest one in the app and the least walked: no
+  tempo control, no bounce, and a block tap that does nothing yet.
 - SYNTH and HELP are stubs; capture doesn't exist yet.
 
 Report anything that feels wrong even if you can't name why — "the tape drag

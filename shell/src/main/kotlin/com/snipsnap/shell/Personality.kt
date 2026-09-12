@@ -1349,6 +1349,75 @@ object Copy {
     // ---- SNIPS: a row that will not decode ----
     const val SNIP_CANT_PLAY = "CAN'T PLAY THIS SNIP."
 
+    // ---- LOOP: a snip sent to the six-track grid ----
+    //
+    // Plain labels, per the September decision to say what happened rather
+    // than say it in character. Every count here is passed in rather than
+    // typed: the numbers belong to `Session.TRACK_COUNT` and
+    // `Session.MAX_CHAIN` in `:loop`, which `:shell` does not depend on, and
+    // a retyped number is how a line ends up promising something the code
+    // stopped doing.
+    /**
+     * A snip landed on a track. [track] is 1-based, the column the player
+     * counts on screen; [blocks] is how many intervals of the snip are on
+     * the grid.
+     *
+     * The block count is said out loud because it is the number that decides
+     * how this track drifts against the others — two blocks against three is
+     * the whole feature — and nothing on the grid spells it.
+     */
+    fun loopTrackFilled(name: String, track: Int, blocks: Int): String =
+        "$name IS ON TRACK $track, ${if (blocks == 1) "1 BLOCK" else "$blocks BLOCKS"} LONG."
+    /**
+     * The same landing, for a snip that ran past what a chain holds: it is on
+     * the grid, but only its first [blocks] intervals are. Its own line
+     * rather than a clause on [loopTrackFilled] — a tail left off is not a
+     * detail to bury.
+     */
+    fun loopTrackTruncated(name: String, track: Int, blocks: Int): String =
+        "$name IS ON TRACK $track. ONLY ITS FIRST $blocks BLOCKS FIT."
+    /** Every track already holds something. [tracks] is the grid's own track count. */
+    fun loopFull(tracks: Int): String = "ALL $tracks TRACKS ARE FULL. CLEAR ONE IN LOOP FIRST."
+    /** The snip decoded to nothing — empty, or not readable as audio. */
+    const val LOOP_NOTHING_TO_SEND = "THAT SNIP HAS NO AUDIO TO SEND."
+    /**
+     * A send that could not be written. Nothing is on the grid that was not
+     * there before — so it says so, rather than leaving the player to guess
+     * whether half of it landed.
+     */
+    const val LOOP_SEND_FAILED = "COULDN'T SAVE THE LOOP. THE GRID IS AS IT WAS."
+    /**
+     * A clear that could not be written — the other half of the same failure,
+     * and it needs its own words: the track IS clear on screen, because the
+     * engine took the edit, and it is the disk that refused. [ORBIT_SAVE_FAILED]
+     * says the same shape of thing for the rings.
+     */
+    const val LOOP_CLEAR_NOT_SAVED = "THE TRACK IS CLEAR NOW, BUT IT DID NOT SAVE. IT WILL BE BACK NEXT TIME."
+    /**
+     * A `loop.json` that exists but will not parse. The send stops rather than
+     * starting a fresh session over the top of it — six tracks someone built
+     * are not something to overwrite quietly — so the line says that nothing
+     * moved.
+     */
+    const val LOOP_UNREADABLE = "THE LOOP FILE WON'T READ. NOTHING WAS CHANGED."
+    /**
+     * A track taken back to empty.
+     *
+     * The way back is real and is named: nothing is deleted by this — the
+     * snip is where it always was, and sending it again rebuilds the track.
+     * What does not come back is the arrangement itself, which is one tap to
+     * redo, so this is not a [Reversal.goneBut] site.
+     */
+    const val LOOP_TRACK_CLEARED = "TRACK CLEARED. THE SNIP STAYS IN SNIPS."
+    /** LOOP opened with nothing sent to it yet — the grid's own empty state. */
+    const val LOOP_EMPTY = "NO TRACKS YET. SEND A SNIP FROM SNIPS."
+    /**
+     * LOOP's own legend. Both of the grid's gestures are invisible — a track
+     * name is not obviously a mute button and a block is not obviously
+     * clearable — and the hold is the one nobody can guess.
+     */
+    const val LOOP_LEGEND = "TAP A TRACK NAME TO MUTE. HOLD A BLOCK TO CLEAR THAT TRACK."
+
     // ==================== Escaped strings, brought in (copy-consolidation follow-ups) ====================
     //
     // The count-driven pass above stopped once it hit its own tally of 78.

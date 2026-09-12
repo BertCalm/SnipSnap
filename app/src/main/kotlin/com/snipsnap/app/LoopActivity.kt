@@ -1,6 +1,7 @@
 package com.snipsnap.app
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
@@ -13,7 +14,9 @@ import com.snipsnap.loop.KitSampleSource
 import com.snipsnap.loop.LoopEngine
 import com.snipsnap.loop.Residency
 import com.snipsnap.loop.Session
+import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.loop.SessionStore
+import com.snipsnap.shell.Copy
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
@@ -51,7 +54,13 @@ class LoopActivity : ComponentActivity() {
             var interval by remember { mutableIntStateOf(0) }
 
             val s = session
-            if (s != null) {
+            if (s == null) {
+                // Never a black screen: say which door fills the grid. Until a
+                // snip is sent there is no session on disk at all, and this
+                // activity is reachable by adb regardless of what the shelf
+                // shows.
+                LoopEmpty()
+            } else {
                 LoopGrid(
                     session = s,
                     interval = interval,
@@ -63,8 +72,20 @@ class LoopActivity : ComponentActivity() {
                         )
                         session = next
                         engine?.apply(next)
+                        // Deliberately not saved. A mute is a performance
+                        // control — it belongs to this run of the screen, not
+                        // to the session on disk — and writing the sidecar on
+                        // every tap of a header would be a file write per
+                        // gesture. Clearing a track below is an edit, and that
+                        // one is written.
                     },
                     onSelectBlock = { _, _ -> /* block editing lands in a later plan */ },
+                    onClearTrack = { t ->
+                        val next = SessionBuilder.clear(s, t)
+                        session = next
+                        engine?.apply(next)
+                        persist(next, dir)
+                    },
                 )
 
                 androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -77,6 +98,32 @@ class LoopActivity : ComponentActivity() {
         }
 
         if (loaded != null) start(loaded, dir)
+    }
+
+    /**
+     * Write the session back, then say whether it landed.
+     *
+     * On [bakers] rather than the main thread: it is a small JSON file, but a
+     * file write on the UI thread is a file write on the UI thread, and this
+     * pool is already the activity's off-thread worker. It is sized for baking
+     * and a sidecar write is microseconds beside a bake, so it cannot
+     * meaningfully delay one.
+     *
+     * The toast reports the write, not the intent — a clear that could not be
+     * saved is a clear that comes back on the next launch, and the player has
+     * to be told that rather than shown a grid that disagrees with the disk.
+     */
+    private fun persist(session: Session, dir: File) {
+        bakers.execute {
+            val saved = runCatching { SessionStore.save(session, dir) }.isSuccess
+            runOnUiThread {
+                Toast.makeText(
+                    applicationContext,
+                    if (saved) Copy.LOOP_TRACK_CLEARED else Copy.LOOP_CLEAR_NOT_SAVED,
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
     }
 
     private fun start(session: Session, dir: File) {

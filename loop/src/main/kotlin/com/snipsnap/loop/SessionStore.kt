@@ -61,6 +61,7 @@ object SessionStore {
                 "sampleFile" to JsonValue.Str(block.sampleFile),
             ),
         )
+        is SilenceBlock -> JsonValue.Obj(linkedMapOf("type" to JsonValue.Str("silence")))
         is PatternBlock -> JsonValue.Obj(
             linkedMapOf(
                 "type" to JsonValue.Str("pattern"),
@@ -108,6 +109,7 @@ object SessionStore {
     private fun blockFrom(value: JsonValue): Block {
         val b = value.obj()
         return when (val type = b["type"]?.str()) {
+            "silence" -> SilenceBlock
             "loop" -> LoopBlock(b["sampleFile"]?.str() ?: throw IllegalStateException("loop block has no sampleFile"))
             "pattern" -> PatternBlock(
                 kit = b["kit"]?.str() ?: throw IllegalStateException("pattern block has no kit"),
