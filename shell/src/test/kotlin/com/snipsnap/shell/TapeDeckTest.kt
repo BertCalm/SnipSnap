@@ -210,6 +210,26 @@ class TapeDeckTest {
     }
 
     @Test
+    fun `loop preview reports every wrap so the voice can restart at IN`() {
+        val d = deck()
+        d.snapToOnset = false
+        d.select(rate, rate * 2)
+        d.loopPreview = true
+        d.play()
+        val events = mutableListOf<TapeDeckModel.Event>()
+        repeat(4) { events += d.step(rate) }
+        // Spin-up eases toward 1x, so four seconds of stepping cross a one
+        // second loop at least twice and no more than four times.
+        val wraps = events.count { it == TapeDeckModel.Event.Looped }
+        assertTrue(wraps in 2..4, "wrapped $wraps times")
+        assertTrue(d.position >= d.inFrame && d.position < d.outFrame)
+        d.loopPreview = false
+        val after = mutableListOf<TapeDeckModel.Event>()
+        repeat(3) { after += d.step(rate) }
+        assertTrue(after.none { it == TapeDeckModel.Event.Looped }, "no loop, no wrap")
+    }
+
+    @Test
     fun `pencil rewind winds to the top and reports done`() {
         val d = deck()
         d.seekTo(rate * 6)

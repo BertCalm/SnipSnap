@@ -45,6 +45,16 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
     private val running = AtomicBoolean(false)
     private val cursor = AtomicInteger(0)
 
+    /**
+     * CATCH A HIT's loop (`docs/CATCH.md`): `[loopIn, loopOut)` in frames
+     * when [start] was given one, else -1. The stream wraps its own cursor
+     * at OUT, so the loop is gapless — no thread or track is respawned
+     * per pass, and the deck model wrapping in step with it (its own
+     * `Event.Looped`) has nothing to restart.
+     */
+    private val loopIn = AtomicInteger(-1)
+    private val loopOut = AtomicInteger(-1)
+
     /** Bumped by every [start]; a stream thread stops once this moves past its own value. */
     private val generation = AtomicInteger(0)
     private var streamThread: Thread? = null
@@ -73,7 +83,14 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
      * thread was running before notices its generation is stale and winds
      * down on its own, without touching the new thread's track.
      */
-    fun start(frame: Int) {
+    fun start(frame: Int, loop: IntRange? = null) {
+        if (loop != null && loop.last + 1 > loop.first && loop.first >= 0) {
+            loopIn.set(loop.first.coerceAtMost(tape.size))
+            loopOut.set((loop.last + 1).coerceAtMost(tape.size))
+        } else {
+            loopIn.set(-1)
+            loopOut.set(-1)
+        }
         cursor.set(frame.coerceIn(0, tape.size))
         running.set(true)
         val myGeneration = generation.incrementAndGet()
@@ -173,7 +190,12 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
             runCatching { track.play() }
             val block = FloatArray(BLOCK_FRAMES)
             while (running.get() && generation.get() == myGeneration) {
-                val at = cursor.get()
+                var at = cursor.get()
+                val out = loopOut.get()
+                if (out > 0 && at >= out) {
+                    at = loopIn.get()
+                    cursor.set(at)
+                }
                 if (at >= tape.size) {
                     running.set(false)
                     ranToCompletion = true
@@ -192,7 +214,8 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
                     framesWritten += padToFillBuffer(track, framesWritten, myGeneration)
                     return
                 }
-                val n = minOf(BLOCK_FRAMES, tape.size - at)
+                val limit = if (out > 0) minOf(out, tape.size) else tape.size
+                val n = minOf(BLOCK_FRAMES, limit - at)
                 System.arraycopy(tape, at, block, 0, n)
                 var written = 0
                 while (written < n) {

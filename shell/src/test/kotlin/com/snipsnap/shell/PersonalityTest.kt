@@ -349,6 +349,9 @@ class PersonalityTest {
         "LOOP_BOUNCE_BUSY",
         // BACK ONTO's busy overlay line, like every other *_BUSY above.
         "RETRIM_BUSY",
+        // CATCH A HIT's busy line while the hits are found, and its grid's
+        // one-word button — a label, not a landing.
+        "CATCH_BUSY", "CATCH_DONE_BUTTON",
         // The HITS stepper's own busy readout.
         "HITS_BUSY",
         "OUTSIDE_LISTENING", "ROOM_FORGET_BUSY", "ROOM_RESTORE_BUSY", "ROOM_BIN_EMPTY_BUSY", "KIT_DELETE_BUSY", "KIT_RENAME_BUSY",

@@ -114,6 +114,7 @@ import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.ReadGroove
 import com.snipsnap.shell.RecipeReplay
+import com.snipsnap.shell.CatchModel
 import com.snipsnap.shell.Retrim
 import com.snipsnap.shell.RoomPackager
 import com.snipsnap.shell.Rooms
@@ -202,6 +203,18 @@ data class RetrimRequest(
     /** The pad's own colour, for TAPE's header chip: the class colour when the pad has none of its own. */
     val colorHex: String? = null,
     val drumClass: com.snipsnap.audio.DrumClass = com.snipsnap.audio.DrumClass.UNKNOWN,
+)
+
+/**
+ * CATCH A HIT (docs/CATCH.md): one caught cut, ready to land on [kitDir]'s
+ * pad — [cut] is `Retrim.cut` of [caught]'s range, cut by TAPE off the
+ * tape it already holds so App never re-reads the file per catch.
+ */
+data class CatchLanding(
+    val kitDir: File,
+    val tape: File,
+    val cut: com.snipsnap.audio.Snip,
+    val caught: com.snipsnap.shell.CatchModel.Caught,
 )
 
 /** X-RAY's own state: the picked file's display name and what [MpcXRay.read] made of it. Non-null IS "the screen is open" — there is no separate boolean to keep in sync with it. */
@@ -1525,6 +1538,60 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * CATCH A HIT's landing (docs/CATCH.md): the caught cut onto the open
+     * kit's pad through the same assign door SNIPS → PAD uses
+     * (`CatchModel.land`), under `KitWrites.mutex` like every kit write
+     * here. No busy line: catches arrive one after another while the loop
+     * runs and each is one short write; the pad's name lighting on the
+     * grid is the landing's own signal. The tape is tagged for RE-TRIM
+     * only when it is a snip on the shelf — a kit sample TAPE fell back
+     * to is no tape to go back to (the same rule `TapeRef.ofSnip` keeps).
+     */
+    fun catchOnto(landing: CatchLanding) {
+        scope.launch {
+            try {
+                val snipsDir = File(context.filesDir, SnipStore.DIR)
+                val tapeName = landing.tape.takeIf { it.parentFile == snipsDir }?.name
+                val (updated, pad) = withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock {
+                        val model = KitBuilderModel.open(landing.kitDir)
+                        val pad = CatchModel.land(model, tapeName, landing.cut, landing.caught)
+                        model.save()
+                        model.kit to pad
+                    }
+                }
+                // Same identity guard as backOnto: the write must not weld
+                // itself onto whichever kit is open now.
+                if (open?.dir == landing.kitDir) open = open?.copy(kit = updated)
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                val tag = PadBanks.tag(pad.slot)
+                toast = if (landing.caught.hit == null) Copy.caughtBetween(tag) else Copy.caught(tag, pad.displayName)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Law 3: when it breaks, say exactly what happened - the
+                // exception's own detail goes to logcat, not the toast.
+                Log.e(TAG, "catchOnto: failed", e)
+                toast = Copy.CATCH_FAILED
+            }
+        }
+    }
+
+    /**
+     * DONE on the catch grid: what landed, and — with anything caught —
+     * KIT opened on the first catch's bank, the way ONTO opens it after
+     * a chop lands (`kitBankRequest`).
+     */
+    fun catchDone(count: Int, firstSlot: Int?) {
+        val target = open ?: return
+        toast = Copy.catchDone(count, target.kit.name)
+        if (count > 0 && firstSlot != null) {
+            kitBankRequest = PadBanks.bankOf(firstSlot)
+            screen = AppScreen.KIT
+        }
+    }
+
+    /**
      * READ AS GROOVE (wave ZZ): the tape read as a rhythm instead of a
      * sound. The Ear hears the selection (or the whole deck), the open
      * kit's own pads play it, and GROOVE opens on it. Refusals are the
@@ -2510,6 +2577,8 @@ fun App(shelf: KitShelf) {
                             retrim = retrim,
                             onBackOnto = ::backOnto,
                             onCaptureLanded = { retrim = null },
+                            onCatch = ::catchOnto,
+                            onCatchDone = ::catchDone,
                         )
                         AppScreen.PROPERTIES -> PropertiesScreen(
                             currentScheme = schemeId,
