@@ -170,7 +170,8 @@ object Robin {
         return Snip(out, s.channels, s.sampleRate)
     }
 
-    private fun concat(takes: List<Snip>): Snip {
+    /** [takes] end to end as one snip — a chain's WAV; CHOP's FOLD lands its takes the same way. */
+    internal fun concat(takes: List<Snip>): Snip {
         val channels = takes.first().channels
         val rate = takes.first().sampleRate
         val total = takes.sumOf { it.samples.size }
