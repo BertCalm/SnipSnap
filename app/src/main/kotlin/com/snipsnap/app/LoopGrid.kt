@@ -13,11 +13,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
@@ -25,8 +27,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.snipsnap.loop.Arrangement
 import com.snipsnap.loop.Bouncer
+import com.snipsnap.loop.LoopBlock
+import com.snipsnap.loop.PatternBlock
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.app.ui.tapeClick
@@ -76,6 +84,12 @@ fun LoopGrid(
     onClearTrack: (Int) -> Unit,
     /** BOUNCE: what the grid is doing, rendered offline into SNIPS. */
     onBounce: () -> Unit,
+    /**
+     * A nudge to the tempo, in whole BPM. The grid shows the new number at
+     * once; what the caller does about the audio is its own business — see
+     * `LoopActivity`, which warms the new interval before applying it.
+     */
+    onBpm: (Int) -> Unit,
     /** True while that render runs — it is seconds of work, and the button says so rather than looking dead. */
     bouncing: Boolean = false,
     modifier: Modifier = Modifier,
@@ -84,6 +98,11 @@ fun LoopGrid(
         modifier = modifier.fillMaxSize().background(Tape.Desk).padding(8.dp),
         verticalArrangement = LayoutArrangement.spacedBy(6.dp),
     ) {
+        // Which block was last tapped, if any — pure screen state, so it
+        // lives here rather than in the activity: nothing outside this grid
+        // acts on it, and it should not survive the screen.
+        var selected by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+
         Row(
             modifier = Modifier.fillMaxWidth().weight(1f),
             horizontalArrangement = LayoutArrangement.spacedBy(6.dp),
@@ -94,6 +113,10 @@ fun LoopGrid(
                     playing = Arrangement.indexAt(track.chain.size, interval),
                     onToggle = { onToggleTrack(t) },
                     onClear = { onClearTrack(t) },
+                    // A second tap on the same block puts the legend back:
+                    // the readout is an answer to a question, not a mode.
+                    onSelect = { b -> selected = if (selected == t to b) null else t to b },
+                    selected = selected?.takeIf { it.first == t }?.second,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -103,15 +126,84 @@ fun LoopGrid(
             horizontalArrangement = LayoutArrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            TempoControl(bpm = session.bpm, onBpm = onBpm)
             androidx.compose.material3.Text(
-                text = Copy.LOOP_LEGEND,
-                color = Tape.Dim,
+                // The readout takes the legend's place while a block is
+                // selected: one line, and the question just asked is worth
+                // more than the instructions for asking it.
+                text = selected?.let { (t, b) -> Copy.loopBlock(t + 1, b + 1, describe(session, t, b)) }
+                    ?: Copy.LOOP_LEGEND,
+                color = if (selected != null) Tape.Panel else Tape.Dim,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
                 modifier = Modifier.weight(1f),
             )
             BounceButton(session = session, bouncing = bouncing, onBounce = onBounce)
         }
+    }
+}
+
+/**
+ * What a block is, for the readout: the snip's own filename, the kit a
+ * pattern plays, or null for a track nothing has been sent to.
+ *
+ * The filename rather than a prettier name on purpose — it is what SNIPS
+ * shows, what the session folder holds, and the only thing that lets a player
+ * match a column on screen to a catch in the list.
+ */
+private fun describe(session: Session, track: Int, block: Int): String? =
+    when (val b = session.tracks.getOrNull(track)?.chain?.getOrNull(block)) {
+        is LoopBlock -> b.sampleFile
+        is PatternBlock -> b.kit
+        else -> null
+    }
+
+/**
+ * The tempo, and one step either way.
+ *
+ * Whole BPM per tap rather than a drag: this is a landscape screen with six
+ * columns on it and no room for a slider, and a grid is usually being matched
+ * to something by ear a beat at a time. The clamp lives in [Session] — the
+ * same range its own `require` refuses — so the buttons cannot ask for a
+ * tempo the session would throw on.
+ */
+@Composable
+private fun TempoControl(bpm: Float, onBpm: (Int) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = LayoutArrangement.spacedBy(2.dp)) {
+        TempoStep(label = "−", enabled = bpm > Session.MIN_BPM) { onBpm(-1) }
+        androidx.compose.material3.Text(
+            text = "${bpm.toInt()} BPM",
+            color = Tape.Amber,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace,
+            modifier = Modifier.background(Tape.Lcd).padding(horizontal = 8.dp, vertical = 6.dp),
+        )
+        TempoStep(label = "+", enabled = bpm < Session.MAX_BPM) { onBpm(1) }
+    }
+}
+
+@Composable
+private fun TempoStep(label: String, enabled: Boolean, onStep: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .widthIn(min = Layout.MIN_HIT_TARGET.dp)
+            .background(if (enabled) Tape.Panel else Tape.Lcd)
+            .border(width = 2.dp, color = Tape.BevelDark)
+            // A label, because the glyph is a single character TalkBack would
+            // otherwise read as punctuation — the exception `tapeClick`'s own
+            // KDoc names.
+            .tapeClick(label = if (label == "+") "TEMPO UP" else "TEMPO DOWN", enabled = enabled, onClick = onStep),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.material3.Text(
+            text = label,
+            color = if (enabled) Tape.Ink else Tape.Dim,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace,
+        )
     }
 }
 
@@ -144,11 +236,14 @@ private fun BounceButton(session: Session, bouncing: Boolean, onBounce: () -> Un
             // Through the app's own wrapper rather than a raw `clickable`: it
             // drops Compose's ripple (TapeOS draws its own feedback) and makes
             // the accessible-name decision explicit. Null, because the text
-            // inside this control already says what it does — and `enabled` is
-            // forwarded rather than dropped, so a screen reader is told the
-            // control is temporarily unavailable instead of it vanishing from
-            // the tree while a render runs.
-            .tapeClick(label = null, enabled = !bouncing, onClick = onBounce)
+            // inside this control already says what it does.
+            //
+            // Enabled even while bouncing, which is the same call SNIPS' own
+            // → LOOP makes: a dead button says only "no". This one is already
+            // labelled BOUNCING…, and pressing it says a bounce is running and
+            // where it will land — which is the answer someone pressing a
+            // second time is actually looking for.
+            .tapeClick(label = null, onClick = onBounce)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -193,6 +288,9 @@ private fun TrackColumn(
     playing: Int,
     onToggle: () -> Unit,
     onClear: () -> Unit,
+    onSelect: (Int) -> Unit,
+    /** Which block of THIS track is selected, if the selected one is in it at all. */
+    selected: Int?,
     modifier: Modifier = Modifier,
 ) {
     val empty = SessionBuilder.isEmpty(track)
@@ -210,6 +308,8 @@ private fun TrackColumn(
                 // placeholder rather than a block anyone put there — so it
                 // takes no gesture at all.
                 filled = !empty,
+                selected = b == selected,
+                onSelect = { onSelect(b) },
                 onClear = onClear,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -244,26 +344,30 @@ private fun TrackHeader(name: String, engaged: Boolean, onToggle: () -> Unit) {
  * became, and half a snip on the grid is not a state worth being able to
  * reach.
  *
- * The hold is the cell's ONLY gesture, and the accessibility tree says so.
- * This used to be a `clickable` with an empty lambda — block editing lands in
- * a later plan — which told a screen reader there was something to activate
- * here and then did nothing when it was. `pointerInput` alone would swing too
- * far the other way (the fault `KitsScreen`'s own room row was fixed for:
- * operable by touch, invisible to TalkBack), so the long press is declared as
- * a real semantics action beside it. When a tap does something, it comes back
- * as a real action too.
+ * Both gestures are real, and the accessibility tree says so. The tap used to
+ * be a `clickable` with an empty lambda — block editing was "a later plan" —
+ * which told a screen reader there was something to activate here and then did
+ * nothing when it was; it was removed for that reason and comes back now that
+ * it answers, which is what that note said would happen. The hold is declared
+ * as an explicit semantics action beside `pointerInput`, because
+ * `pointerInput` alone would swing the other way into the fault
+ * `KitsScreen`'s own room row was fixed for: operable by touch, invisible to
+ * TalkBack.
  */
 @Composable
 private fun BlockCell(
     label: String,
     lit: Boolean,
     filled: Boolean,
+    selected: Boolean,
+    /** TAP: say what this block is. Every track has blocks, including an empty one. */
+    onSelect: () -> Unit,
     /**
-     * Named for what it does rather than for the gesture: inside the
-     * `semantics` block below, a parameter called `onLongClick` would sit in
-     * the same scope as `SemanticsPropertyReceiver.onLongClick`, whose own
-     * arguments are all optional — so `onLongClick()` there could resolve to
-     * either one.
+     * HOLD: the track goes back to empty. Named for what it does rather than
+     * for the gesture — inside the `semantics` block below, a parameter called
+     * `onLongClick` would sit in the same scope as
+     * `SemanticsPropertyReceiver.onLongClick`, whose own arguments are all
+     * optional, so `onLongClick()` there could resolve to either one.
      */
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
@@ -279,12 +383,24 @@ private fun BlockCell(
         modifier = modifier
             .aspectRatio(1.2f)
             .background(if (lit) Tape.Amber else if (filled) Tape.Panel else Tape.Lcd)
-            .border(width = 2.dp, color = if (lit) Tape.BevelLight else Tape.BevelDark)
+            .border(
+                width = 2.dp,
+                // Selection reads as a lighter rim, not a fill: the fill is
+                // already saying which block is playing, and one cell must not
+                // be able to claim both.
+                color = if (selected || lit) Tape.BevelLight else Tape.BevelDark,
+            )
+            // The tap is on every cell, an empty track's included — "nothing
+            // sent here yet" is an answer. The hold is only where there is
+            // something to clear.
             .pointerInput(filled) {
-                if (!filled) return@pointerInput
-                detectTapGestures(onLongPress = { onClear() })
+                detectTapGestures(
+                    onTap = { onSelect() },
+                    onLongPress = if (filled) ({ onClear() }) else null,
+                )
             }
             .semantics(mergeDescendants = true) {
+                onClick(label = "WHAT IS THIS BLOCK") { onSelect(); true }
                 if (filled) onLongClick(label = "CLEAR THIS TRACK") { onClear(); true }
             }
             .padding(4.dp),

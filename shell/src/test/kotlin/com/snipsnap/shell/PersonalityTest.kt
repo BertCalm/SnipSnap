@@ -343,7 +343,7 @@ class PersonalityTest {
         "ARRANGE_MIXING", "XRAY_BUSY", "DOUBLES_BUSY",
         "CHOP_ALL_BUSY",
         // DUST ALL's busy overlay line, like every other *_BUSY above.
-        "DUSTING_BUSY",
+        "DUSTING_BUSY", "CHOP_BENCH_BUSY",
         // LOOP's bounce, while the render runs — same shape as every other
         // *_BUSY above: a button's label, not a landing.
         "LOOP_BOUNCE_BUSY",

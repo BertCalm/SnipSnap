@@ -53,8 +53,13 @@ object OrbitClip {
     fun nameFor(set: OrbitSet): String = "$NAME_PREFIX ${OrbitClock.ratioLabel(set).replace(" : ", ":")}".trim()
 
     /**
-     * The RINGS' CYCLE in the clip's own 4/4 bars, rounded up: a 3/4
-     * set's four-bar cycle is 48 steps, which the clip calls three.
+     * The RINGS' CYCLE in 4/4 bars, rounded up: a 3/4 set's four-bar cycle
+     * is 48 steps, which is three bars of 4/4.
+     *
+     * Not the clip's own bar any more — a clip declares the set's
+     * ([declaredBarPulses]) and calls that cycle four bars of 3/4. This
+     * stayed because it is still a real question: it is the container a
+     * TRACK file has to pad to, whose clips cannot state a meter.
      *
      * That is the clip's length only for a set with NO arrangement. An
      * arranged set writes one clip per section, each [sectionSteps] long,
@@ -76,6 +81,60 @@ object OrbitClip {
         ceil(steps.toDouble() / CLIP_BAR_STEPS).toInt().coerceAtLeast(1)
 
     /**
+     * The bar an ORBIT clip of [set] declares, in pulses — or a plain 4/4
+     * bar when the set's lap cannot be spelled as one.
+     *
+     * The format states a bar as `beatsPerBar` × `beatLength`, and every
+     * meter in the corpus uses a `beatLength` of 960, a quarter note
+     * (docs/MPC3_FORMAT.md, "Meter"). So a lap of whole quarters is
+     * declarable — 12, 16, 20, 24 and 32 sixteenths, which is every length
+     * the screen offers — and a lap of 13 is not.
+     *
+     * The odd ones are reachable even though no control makes them:
+     * `lapSteps` is only required to be `1..MAX_STEPS` and [OrbitStore]
+     * reads it straight out of JSON. They keep the padded 4/4 container
+     * they have always had, rather than crashing on a bar this format
+     * cannot spell.
+     */
+    fun declaredBarPulses(set: OrbitSet): Long {
+        val lap = set.lapSteps * Mpc3Clip.PULSES_PER_16TH
+        return if (lap % Mpc3Clip.PULSES_PER_BEAT == 0L) lap else Mpc3Clip.PULSES_PER_BAR
+    }
+
+    /**
+     * [steps] as whole bars of the one the clip will declare, rounded up —
+     * the number the written clip actually carries.
+     *
+     * Where the set's lap is declarable this lands exactly: a 3/4 set's
+     * two-bar section is two bars of 2880 pulses, where [barsFor] calls it
+     * two bars of 3840 and pads eight steps of silence into the
+     * difference. That padding is the defect this exists to end. Where it
+     * is not declarable this IS [barsFor], because the bar is then 4/4 —
+     * one expression, so the two cannot drift.
+     */
+    fun clipBars(set: OrbitSet, steps: Long): Int =
+        ceil(clipPulses(steps).toDouble() / declaredBarPulses(set)).toInt().coerceAtLeast(1)
+
+    /**
+     * The bar count [MAX_BARS] is asked about: the larger of the two, because
+     * both containers have to hold.
+     *
+     * A clip's `bars` field carries [clipBars] and cannot exceed 64; the
+     * same clip written into a track file is padded to [barsFor] whole 4/4
+     * bars, which cannot either. Only one of them is ever the binding one
+     * — 8/4 makes the 4/4 count bigger, 3/4 makes the set's bigger — and
+     * asking the smaller would let a preflight say yes to a clip the
+     * writer then refuses, which is the one failure this ceiling exists to
+     * prevent.
+     */
+    fun cappedBars(set: OrbitSet, steps: Long): Int =
+        maxOf(barsFor(steps), clipBars(set, steps))
+
+    /** Which bar [cappedBars] counted, for the sentence that reports it. */
+    private fun capUnit(set: OrbitSet, steps: Long): String =
+        if (barsFor(steps) >= clipBars(set, steps) && countsDifferently(set)) "BARS OF 4/4" else "BARS"
+
+    /**
      * The pulses a clip of [steps] of the set's 16ths actually writes.
      *
      * The STEPS themselves, which is the window [clip]'s walk is bounded
@@ -92,6 +151,21 @@ object OrbitClip {
      * writer's is the whole of that class of defect.
      */
     fun clipPulses(steps: Long): Long = steps * Mpc3Clip.PULSES_PER_16TH
+
+    /**
+     * The meter a PROJECT export declares for [set] — "3/4", "5/4" — or
+     * null when it writes 4/4 like everything else.
+     *
+     * The screen's own sentence is built from this rather than from
+     * `lapSteps / 4`, because the two are not the same question: a lap the
+     * format cannot spell ([declaredBarPulses]) writes 4/4 and the line
+     * must not promise otherwise. One answer, one place.
+     */
+    fun declaredMeterLabel(set: OrbitSet): String? {
+        val bar = declaredBarPulses(set)
+        if (bar == Mpc3Clip.PULSES_PER_BAR) return null
+        return "${bar / Mpc3Clip.PULSES_PER_BEAT}/4"
+    }
 
     /** Whether the clip's bar count differs from the set's, so the screen can say so. */
     fun countsDifferently(set: OrbitSet): Boolean = set.lapSteps != CLIP_BAR_STEPS
@@ -199,9 +273,10 @@ object OrbitClip {
      */
     private fun barCap(set: OrbitSet): String? {
         if (set.sections.isEmpty()) {
-            val bars = bars(set)
+            val steps = OrbitClock.cycleSteps(set)
+            val bars = cappedBars(set, steps)
             if (bars <= MAX_BARS) return null
-            return ringsMeet(set, bars, if (countsDifferently(set)) "BARS OF 4/4" else "BARS")
+            return ringsMeet(set, bars, capUnit(set, steps))
         }
         set.sections.indices.forEach { index ->
             sectionBarCap(set, index)?.let { return it }
@@ -225,9 +300,10 @@ object OrbitClip {
      */
     private fun sectionBarCap(set: OrbitSet, index: Int): String? {
         if (set.sections[index].plays.isEmpty()) return null
-        val bars = barsFor(sectionSteps(set, index))
+        val steps = sectionSteps(set, index)
+        val bars = cappedBars(set, steps)
         if (bars <= MAX_BARS) return null
-        return "SECTION ${set.sections[index].name} IS $bars BARS OF 4/4 — A CLIP STOPS AT $MAX_BARS. SHORTEN IT."
+        return "SECTION ${set.sections[index].name} IS $bars ${capUnit(set, steps)} — A CLIP STOPS AT $MAX_BARS. SHORTEN IT."
     }
 
     /**
@@ -460,10 +536,19 @@ object OrbitClip {
         // cycle. A section is a short clip cut out of rings that may take
         // eighty bars to meet, and checking the cycle here refused the
         // very sets an arrangement exists to make writable.
-        val bars = barsFor(steps)
+        // Both containers, because the clip has to fit each: the `bars`
+        // field it carries, and the padded 4/4 bars a track file would put
+        // it in. The preflight asks this same function, so a section it
+        // passed cannot throw here.
+        val bars = cappedBars(set, steps)
         if (bars > MAX_BARS) {
-            throw IllegalArgumentException("$bars BARS OF 4/4 — A CLIP STOPS AT $MAX_BARS.")
+            throw IllegalArgumentException("$bars ${capUnit(set, steps)} — A CLIP STOPS AT $MAX_BARS.")
         }
+        // The clip's own bars: the set's, not sixteen's. This is what ends
+        // the padding - a 3/4 section of 24 steps is two bars of 2880
+        // pulses, exactly its music, where rounding to whole 4/4 bars made
+        // it 7680 and looped eight steps of silence the set never plays.
+        val writtenBars = clipBars(set, steps)
         // The window this clip writes, in pulses. The clip is musical
         // time, so it is counted in the unit it is written in rather than
         // converted out of frames: a frame is the finer unit at any rate
@@ -510,11 +595,16 @@ object OrbitClip {
         // shape earlier and by section name; this is the floor under it.
         if (written.isEmpty()) {
             throw IllegalArgumentException(
-                "NO HIT LANDS IN THESE $bars BAR${if (bars == 1) "" else "S"}. " +
+                "NO HIT LANDS IN THESE $writtenBars BAR${if (writtenBars == 1) "" else "S"}. " +
                     "LENGTHEN IT, OR GIVE IT A RING THAT PLAYS.",
             )
         }
-        return Mpc3Clip(name = name, bars = bars, notes = written)
+        return Mpc3Clip(
+            name = name,
+            bars = writtenBars,
+            notes = written,
+            pulsesPerBar = declaredBarPulses(set),
+        )
     }
 
     /**

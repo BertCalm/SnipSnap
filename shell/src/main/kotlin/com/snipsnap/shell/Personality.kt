@@ -406,6 +406,7 @@ object Copy {
         "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO AN EMPTY BANK B.",
         "· BREED ▸ MIXES TWO KITS' RECIPES INTO A NEW KIT. PARENTS STAY.",
         "· DUST: THE TAPE'S OWN HISS, ROOM AND CRACKLE UNDER A PAD. OR ANOTHER'S.",
+        "· CHOP'S CUT BENCH: HITS, EAR, GRID. MERGE OR SPLIT UNDER A CHIP.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -974,6 +975,25 @@ object Copy {
      */
     const val RECHOPPED = "RE-CHOPPED."
 
+    // ---- CHOP's CUT bench (docs/CHOP_CONTROLS.md) ----
+    /** HITS ▶ asked for one more than the detector can hear at this ear: the count did not move, and the ear is the way to more. */
+    fun chopOnlyHits(heard: Int): String =
+        "ONLY $heard ${if (heard == 1) "HIT" else "HITS"} HEARD AT THIS EAR. FINE HEARS MORE."
+    /** AUTO's landing: the knee, in words. */
+    fun chopAuto(hits: Int): String = "AUTO: $hits ${if (hits == 1) "HIT" else "HITS"}, WHERE THE REAL ONES END AND THE SCRAPS BEGIN."
+    /** AUTO on a tape the detector hears nothing in: no count to find. */
+    const val CHOP_AUTO_NONE = "NO HITS ON THIS TAPE TO COUNT. TRY GRID, OR TRIM CLOSER TO THE SOUND."
+    /** MERGE landed: the two slices are one. */
+    fun chopMerged(n: Int): String = "SLICES $n AND ${n + 1} ARE ONE NOW."
+    /** MERGE on the last slice: nothing after it. */
+    const val CHOP_MERGE_LAST = "NOTHING AFTER THE LAST SLICE TO MERGE IT WITH."
+    /** SPLIT landed: the slice is two. */
+    fun chopSplit(n: Int): String = "SLICE $n IS TWO NOW."
+    /** SPLIT found no second hit inside the slice. */
+    fun chopNoSplit(n: Int): String = "NO SECOND HIT INSIDE SLICE $n. NOTHING TO SPLIT."
+    /** The CUT bench's readout for the count while a chop is running. */
+    const val CHOP_BENCH_BUSY = "CUTTING…"
+
     /** "N SLICES ON THE GRID. CHOKE GROUP SET." — the send-to-grid toast. */
     fun sentToGrid(sliceCount: Int, chokeSet: Boolean): String =
         "$sliceCount SLICES ON THE GRID." + if (chokeSet) " CHOKE GROUP SET." else ""
@@ -1449,6 +1469,16 @@ object Copy {
      * redo, so this is not a [Reversal.goneBut] site.
      */
     const val LOOP_TRACK_CLEARED = "TRACK CLEARED. THE SNIP STAYS IN SNIPS."
+    /**
+     * A tempo change, once the taps have stopped and it is on the grid.
+     *
+     * The new number is already on screen by then — this says it reached the
+     * disk, which is the half the screen cannot show. The BPM itself is not
+     * repeated here: it is three inches away in the control the player just
+     * used, and a toast that quotes it would be the same number in two places
+     * on one screen.
+     */
+    const val LOOP_TEMPO_SET = "TEMPO SAVED."
     /** LOOP opened with nothing sent to it yet — the grid's own empty state. */
     const val LOOP_EMPTY = "NO TRACKS YET. SEND A SNIP FROM SNIPS."
     /**
@@ -1492,7 +1522,20 @@ object Copy {
      * name is not obviously a mute button and a block is not obviously
      * clearable — and the hold is the one nobody can guess.
      */
-    const val LOOP_LEGEND = "TAP A TRACK NAME TO MUTE. HOLD A BLOCK TO CLEAR THAT TRACK."
+    const val LOOP_LEGEND = "TAP A NAME TO MUTE. TAP A BLOCK TO SEE IT. HOLD ONE TO CLEAR THE TRACK."
+    /**
+     * What a tapped block is, in the line the legend usually occupies.
+     *
+     * [track] and [block] are 1-based, the numbers on screen. [what] is the
+     * snip's own filename, or the kit a pattern plays, or null for a track
+     * nothing has been sent to — the grid always holds six tracks, so an empty
+     * one is a real thing to tap and has to answer.
+     *
+     * A function rather than a constant because every part of it is data; the
+     * only word this owns is the one for nothing.
+     */
+    fun loopBlock(track: Int, block: Int, what: String?): String =
+        "TRACK $track · BLOCK $block · ${what ?: "NOTHING SENT HERE YET"}"
 
     // ==================== Escaped strings, brought in (copy-consolidation follow-ups) ====================
     //

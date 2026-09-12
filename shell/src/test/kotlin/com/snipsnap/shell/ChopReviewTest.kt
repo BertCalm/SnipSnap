@@ -33,6 +33,123 @@ class ChopReviewTest {
         return Snip(total, 1, rate)
     }
 
+    /**
+     * The same four hits with a quiet ghost hat 125 ms after each of the
+     * first three, inside their decay — what the ear controls are for.
+     * (Hits in silence all clear every ear: the detector's bar is set
+     * against the local novelty, and silence has none. A ghost inside a
+     * decay is the case that separates them.)
+     */
+    private fun busyBreak(ghost: Float = 0.06f): Snip {
+        val base = breakSnip()
+        val out = base.samples.copyOf()
+        val hat = DrumSynth.closedHat()
+        val step = rate / 2
+        for (s in 1..3) {
+            val at = s * step + step / 4
+            for (i in hat.samples.indices) if (at + i < out.size) out[at + i] += hat.samples[i] * ghost
+        }
+        return Snip(out, 1, rate)
+    }
+
+    private fun byHits(hits: Int = 8, ear: ChopReviewModel.Ear = ChopReviewModel.Ear.NORMAL, cut: ChopReviewModel.Cut = ChopReviewModel.Cut.ON) =
+        ChopReviewModel.ChopMode.ByHits(hits, ear, cut)
+
+    @Test
+    fun `the ear hears more at FINE than at COARSE, and CUT moves every cut against the attack`() {
+        val coarse = ChopReviewModel.chop(busyBreak(), byHits(16, ChopReviewModel.Ear.COARSE))
+        val normal = ChopReviewModel.chop(busyBreak(), byHits(16, ChopReviewModel.Ear.NORMAL))
+        val fine = ChopReviewModel.chop(busyBreak(), byHits(16, ChopReviewModel.Ear.FINE))
+        assertTrue(coarse.sliceCount <= normal.sliceCount && normal.sliceCount <= fine.sliceCount, "${coarse.sliceCount} ≤ ${normal.sliceCount} ≤ ${fine.sliceCount}")
+        assertTrue(fine.sliceCount > coarse.sliceCount, "FINE hears a ghost COARSE does not: ${fine.sliceCount} vs ${coarse.sliceCount}")
+        assertTrue(coarse.sliceCount >= 4, "COARSE still hears the four that carry the beat")
+        // CUT: the same hits, each cut earlier at EARLY and later at LATE.
+        val early = ChopReviewModel.chop(breakSnip(), byHits(8, cut = ChopReviewModel.Cut.EARLY))
+        val on = ChopReviewModel.chop(breakSnip(), byHits(8))
+        val late = ChopReviewModel.chop(breakSnip(), byHits(8, cut = ChopReviewModel.Cut.LATE))
+        assertEquals(on.sliceCount, early.sliceCount)
+        assertEquals(on.sliceCount, late.sliceCount)
+        for (i in on.rows.indices) {
+            assertTrue(early.cutFrames()[i] <= on.cutFrames()[i], "EARLY cuts no later than ON at $i")
+            assertTrue(on.cutFrames()[i] <= late.cutFrames()[i], "LATE cuts no earlier than ON at $i")
+        }
+        assertTrue(early.cutFrames()[1] < late.cutFrames()[1], "and the nudge is real")
+        // The header says only what is off its default.
+        assertEquals("BY HITS", on.modeLabel())
+        assertEquals("BY HITS · FINE", fine.modeLabel())
+        assertEquals("BY HITS · CUT EARLY", early.modeLabel())
+        assertEquals("GRID ×8", ChopReviewModel.chop(breakSnip(), ChopReviewModel.ChopMode.Grid(8)).modeLabel())
+        assertEquals(on.rows.map { it.slice.sourceFrame }, on.cutFrames())
+        assertEquals(on.cutFrames(), on.cutFrames().sorted())
+        // The stepper's bounds are the mode's own law.
+        kotlin.test.assertFailsWith<IllegalArgumentException> { ChopReviewModel.ChopMode.ByHits(0) }
+        kotlin.test.assertFailsWith<IllegalArgumentException> { ChopReviewModel.ChopMode.ByHits(ChopReviewModel.MAX_HITS + 1) }
+        kotlin.test.assertFailsWith<IllegalArgumentException> { ChopReviewModel.ChopMode.Grid(0) }
+    }
+
+    @Test
+    fun `AUTO finds the knee, and a bench re-chop carries corrected chips onto the slices that stayed`() {
+        val model = ChopReviewModel.chop(breakSnip(), byHits(8))
+        assertEquals(4, model.autoCount(), "four hits of a kind: all four")
+        assertEquals(null, ChopReviewModel.chop(Snip(FloatArray(rate * 2), 1, rate), byHits(8)).autoCount(), "no hits: no count, not one")
+        model.setLabel(0, DrumClass.TOM)
+        model.setLabel(2, DrumClass.CLAP)
+        val nudged = model.rechopKeeping(byHits(8, cut = ChopReviewModel.Cut.EARLY))
+        assertEquals(DrumClass.TOM, nudged.rows[0].override, "the chip followed its slice across the nudge")
+        assertEquals(DrumClass.CLAP, nudged.rows[2].override)
+        assertEquals(null, nudged.rows[1].override)
+        assertFalse(nudged.edited)
+        // Fewer hits: the chips of the slices that stayed stay.
+        val fewer = model.rechopKeeping(byHits(2))
+        assertEquals(2, fewer.sliceCount)
+        for (row in fewer.rows) {
+            val was = model.rows.firstOrNull { abs(it.slice.sourceFrame - row.slice.sourceFrame) <= ChopReviewModel.CARRY_TOLERANCE_FRAMES }
+            assertEquals(was?.override, row.override, "row ${row.n}")
+        }
+        // Plain RE-CHOP still clears them.
+        assertTrue(model.rechop().rows.all { it.override == null })
+        // One to one: two fresh slices within the tolerance of one corrected
+        // chip (a grid of 500-frame parts under a one-part grid) inherit it
+        // once, on the nearest, never both.
+        val short = Snip(DrumSynth.kick().samples.copyOf(16_000), 1, rate)
+        val one = ChopReviewModel.chop(short, ChopReviewModel.ChopMode.Grid(1))
+        one.setLabel(0, DrumClass.TOM)
+        val many = one.rechopKeeping(ChopReviewModel.ChopMode.Grid(32))
+        assertTrue(many.rows[1].slice.sourceFrame <= ChopReviewModel.CARRY_TOLERANCE_FRAMES, "the second part is within the tolerance too: ${many.rows[1].slice.sourceFrame}")
+        assertEquals(listOf(0), many.rows.withIndex().filter { it.value.override == DrumClass.TOM }.map { it.index }, "the chip lands once, on the nearest")
+    }
+
+    @Test
+    fun `MERGE joins two slices and keeps the other chips, SPLIT cuts a slice at its inner hit, and both refuse honestly`() {
+        val model = ChopReviewModel.chop(breakSnip(), byHits(8))
+        assertEquals(4, model.sliceCount)
+        model.setLabel(2, DrumClass.CLAP)
+        val lengths = model.rows.map { it.slice.snip.frameCount }
+        val merged = assertNotNull(model.merged(0))
+        assertEquals(3, merged.sliceCount)
+        assertEquals(lengths[0] + lengths[1], merged.rows[0].slice.snip.frameCount, "the joined slice is both, end to end")
+        assertEquals(model.rows[0].slice.sourceFrame, merged.rows[0].slice.sourceFrame)
+        assertEquals(DrumClass.CLAP, merged.rows[1].override, "the chip after the join is still the human's")
+        assertTrue(merged.edited)
+        assertTrue("EDITED" in merged.modeLabel(), merged.modeLabel())
+        assertEquals(null, model.merged(3), "nothing after the last slice")
+        assertEquals(null, model.merged(-1))
+        // SPLIT the joined slice: its inner hit is the hat, so the cut lands where it was.
+        val split = assertNotNull(merged.split(0))
+        assertEquals(4, split.sliceCount)
+        assertTrue(abs(split.rows[1].slice.sourceFrame - model.rows[1].slice.sourceFrame) <= ChopReviewModel.CARRY_TOLERANCE_FRAMES, "the cut is back near the hat: ${split.rows[1].slice.sourceFrame} vs ${model.rows[1].slice.sourceFrame}")
+        assertEquals(lengths[0] + lengths[1], split.rows[0].slice.snip.frameCount + split.rows[1].slice.snip.frameCount, "nothing lost in the split")
+        assertEquals(DrumClass.CLAP, split.rows[2].override, "the chip after the split is still the human's")
+        assertEquals(null, split.rows[1].override, "the new half takes the classifier's word")
+        // A slice with one hit in it has nothing to split at.
+        assertEquals(null, model.split(3), "one hit, no second")
+        assertEquals(null, model.split(9))
+        // The tape reference rides through both.
+        val taped = ChopReviewModel.chop(breakSnip(), byHits(8), ChopReviewModel.TapeRef("snip_1_X.wav", 100))
+        assertEquals(taped.tape, assertNotNull(taped.merged(0)).tape)
+        assertEquals(taped.tape, assertNotNull(assertNotNull(taped.merged(0)).split(0)).tape)
+    }
+
     @Test
     fun `chop classifies rows and the core classes place on their pads`() {
         val model = ChopReviewModel.chop(breakSnip(), ChopReviewModel.ChopMode.ByHits(8))

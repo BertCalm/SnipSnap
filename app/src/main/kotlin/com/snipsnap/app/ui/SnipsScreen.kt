@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +34,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.LoopBounce
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
@@ -95,7 +97,22 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 fun SnipsScreen(
+    /**
+     * The kits, for the USED badge alone — that badge asks which pads across
+     * the shelf came from a snip, which is a question about kits.
+     */
     shelf: KitShelf,
+    /**
+     * Where snips live: the app's own files directory, NOT [shelf]'s root.
+     *
+     * Every writer in the app passes `filesDir`, so a snip is at
+     * `<files>/snips/`. This screen read `shelf.root` instead, which
+     * `MainActivity` builds as `<files>/Kits` — so it listed
+     * `<files>/Kits/snips`, a directory nothing has ever written, and showed
+     * NO SNIPS YET however many the phone held. `ConventionTest`'s own law
+     * over `SnipStore` call sites is what stops the two drifting apart again.
+     */
+    snipsRoot: File,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onOpenInTape: (File) -> Unit,
@@ -107,8 +124,20 @@ fun SnipsScreen(
     val scope = rememberCoroutineScope()
 
     var snips by remember { mutableStateOf<List<SnipStore.Info>>(emptyList()) }
-    LaunchedEffect(Unit) {
-        snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(shelf.root) }
+    // Keyed on LOOP's landing count rather than on `Unit`: a bounce is the one
+    // thing that writes a snip while this list is on screen — it outlives the
+    // screen that started it, so it can land seconds after the player has
+    // walked back here — and its own toast says IT IS IN SNIPS NOW. A one-shot
+    // load would make that sentence false for exactly the person reading it.
+    //
+    // The count, not [LoopBounce.busy]'s false edge: a StateFlow conflates, so
+    // a render that finishes between two frames would publish true and false
+    // with nothing observing the true, leaving the key unchanged and the list
+    // stale — see that property's own note. On mount this is the load it
+    // always was; every landing after that runs it again.
+    val landed by LoopBounce.landed.collectAsState()
+    LaunchedEffect(landed) {
+        snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(snipsRoot) }
     }
 
     // DELETED SNIPS (name-and-find task): the SNIPS-level equivalent of
@@ -126,7 +155,7 @@ fun SnipsScreen(
     var deletedSnipsOpen by remember { mutableStateOf(false) }
     var binnedCount by remember { mutableStateOf(0) }
     LaunchedEffect(deletedSnipsOpen) {
-        binnedCount = withContext(Dispatchers.IO) { SnipStore.binned(shelf.root).size }
+        binnedCount = withContext(Dispatchers.IO) { SnipStore.binned(snipsRoot).size }
     }
 
     // USED badge: null until the cheap gate below resolves, and the list
@@ -242,13 +271,13 @@ fun SnipsScreen(
         // `enabled =` gate to keep in sync.
         stopPlayback()
         DeletedSnipsScreen(
-            shelf = shelf,
+            snipsRoot = snipsRoot,
             onBack = { deletedSnipsOpen = false },
             onToast = onToast,
             onRestored = {
                 binnedCount = (binnedCount - 1).coerceAtLeast(0)
                 scope.launch {
-                    snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(shelf.root) }
+                    snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(snipsRoot) }
                 }
             },
         )
@@ -286,7 +315,7 @@ fun SnipsScreen(
         scope.launch {
             val renamed = withContext(Dispatchers.IO) { SnipStore.rename(info.file, newName) }
             if (renamed != null) {
-                snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(shelf.root) }
+                snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(snipsRoot) }
                 // The name it actually landed under, read straight off the
                 // returned file rather than echoing `newName` — the same
                 // "never trust the typed string, trust the result" posture

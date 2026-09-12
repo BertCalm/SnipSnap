@@ -4,10 +4,12 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import java.io.File
 import com.snipsnap.loop.KitSampleSource
@@ -19,6 +21,19 @@ import com.snipsnap.loop.SessionStore
 import com.snipsnap.shell.Copy
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/**
+ * How long a run of tempo taps has to stop before the change is baked and
+ * applied.
+ *
+ * `OrbitScreen.BPM_SETTLE_MS` is the same idea for the same reason; this one
+ * is its own because the two screens' costs differ — a grid re-fits every
+ * snip on the change, which is why it is worth waiting for the taps to end.
+ */
+private const val TEMPO_SETTLE_MS = 350L
 
 /**
  * The loop player screen.
@@ -61,6 +76,13 @@ class LoopActivity : ComponentActivity() {
      * `ConcurrentHashMap` and both readers only ever read.
      */
     private var source: KitSampleSource? = null
+
+    /**
+     * Kept rather than left inside [start], because the tempo control needs
+     * it: a new BPM has to be baked before it is applied, and `warm` is on
+     * this.
+     */
+    private var residency: Residency? = null
     private var engine: LoopEngine? = null
     private var sink: AndroidAudioSink? = null
     private var audioThread: Thread? = null
@@ -68,7 +90,7 @@ class LoopActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val dir = File(filesDir, "sessions/current")
+        val dir = LoopWrites.dir(this)
         val rate = deviceSampleRate(this)
 
         // Bake at the device's rate, not the MPC's: nothing converts in the
@@ -99,8 +121,17 @@ class LoopActivity : ComponentActivity() {
             // tapped beside it.
             var onDisk by remember { mutableStateOf(loaded) }
             var interval by remember { mutableIntStateOf(0) }
-            // One bounce at a time, and the button says so while it runs.
-            var bouncing by remember { mutableStateOf(false) }
+            val scope = rememberCoroutineScope()
+            // A run of taps on − or + is one tempo change, not eight: each tap
+            // moves the number on screen at once and restarts this, so the
+            // bake-and-apply happens once, when the player stops. ORBIT's own
+            // BPM control settles the same way and for the same reason.
+            var tempoSettle by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+            // Read from the app, not held here: a render outlives this screen,
+            // so opening LOOP again while one is still going has to show
+            // BOUNCING… too. `LoopBounce.start` flips this before it returns,
+            // so the button changes on the tap rather than a frame later.
+            val bouncing by LoopBounce.busy.collectAsState()
 
             val s = session
             if (s == null) {
@@ -138,6 +169,31 @@ class LoopActivity : ComponentActivity() {
                         onDisk = written
                         persist(written, dir)
                     },
+                    onBpm = { step ->
+                        val next = s.copy(
+                            bpm = (s.bpm + step).coerceIn(Session.MIN_BPM, Session.MAX_BPM),
+                        )
+                        // The readout moves now; the audio moves when the
+                        // taps stop.
+                        session = next
+                        tempoSettle?.cancel()
+                        tempoSettle = scope.launch {
+                            kotlinx.coroutines.delay(TEMPO_SETTLE_MS)
+                            // Baked BEFORE it is applied, on the baker pool:
+                            // a new BPM resizes the interval, and without this
+                            // the engine's next buffersFor would bake six
+                            // blocks on the audio thread. See Residency.warm.
+                            val at = engine?.position() ?: 0
+                            withContext(Dispatchers.IO) { residency?.warm(next, at + 1, at + 2) }
+                            engine?.apply(next)
+                            // A tempo is an edit, so it is written — from the
+                            // disk-backed copy, so this does not also save the
+                            // mutes tapped beside it.
+                            val written = (onDisk ?: next).copy(bpm = next.bpm)
+                            onDisk = written
+                            persist(written, dir, Copy.LOOP_TEMPO_SET)
+                        }
+                    },
                     bouncing = bouncing,
                     onBounce = {
                         // The session as it is on screen, captured now: a mute
@@ -147,11 +203,6 @@ class LoopActivity : ComponentActivity() {
                         val refused = LoopBounce.start(this@LoopActivity, s, samples)
                         if (refused != null) {
                             Toast.makeText(applicationContext, refused, Toast.LENGTH_SHORT).show()
-                        } else {
-                            // Immediate, rather than waiting up to a tick for
-                            // the poll below to notice: a button that takes
-                            // 50ms to acknowledge a press reads as a missed tap.
-                            bouncing = true
                         }
                     },
                 )
@@ -159,10 +210,6 @@ class LoopActivity : ComponentActivity() {
                 androidx.compose.runtime.LaunchedEffect(Unit) {
                     while (true) {
                         interval = engine?.position() ?: 0
-                        // Read, not owned: a render started here can still be
-                        // running when this screen is opened again, and the
-                        // button has to say so on that second visit too.
-                        bouncing = LoopBounce.busy()
                         kotlinx.coroutines.delay(50)
                     }
                 }
@@ -185,7 +232,7 @@ class LoopActivity : ComponentActivity() {
      * saved is a clear that comes back on the next launch, and the player has
      * to be told that rather than shown a grid that disagrees with the disk.
      */
-    private fun persist(session: Session, dir: File) {
+    private fun persist(session: Session, dir: File, landed: String = Copy.LOOP_TRACK_CLEARED) {
         writer.execute {
             // Behind the same lock SNIPS' own → LOOP takes: that one is a
             // read-modify-write of this exact file from another screen, and it
@@ -194,7 +241,7 @@ class LoopActivity : ComponentActivity() {
             runOnUiThread {
                 Toast.makeText(
                     applicationContext,
-                    if (saved) Copy.LOOP_TRACK_CLEARED else Copy.LOOP_CLEAR_NOT_SAVED,
+                    if (saved) landed else Copy.LOOP_CLEAR_NOT_SAVED,
                     Toast.LENGTH_SHORT,
                 ).show()
             }
@@ -203,18 +250,19 @@ class LoopActivity : ComponentActivity() {
 
     private fun start(session: Session, dir: File) {
         val audioSink = AndroidAudioSink(session.sampleRate)
-        val residency = Residency(session, source ?: KitSampleSource(dir), bakers)
-        val loopEngine = LoopEngine(residency, audioSink)
+        val res = Residency(session, source ?: KitSampleSource(dir), bakers)
+        val loopEngine = LoopEngine(res, audioSink)
 
         sink = audioSink
+        residency = res
         engine = loopEngine
 
         audioThread = thread(name = "snipsnap-audio", isDaemon = true) {
             // Prime here, not in onCreate. Baking interval 0 is six WAV decodes,
             // six resamples and possibly six slice-retriggers — seconds of work
             // that must never touch the main thread.
-            residency.buffersFor(0)
-            residency.prefetch(1)
+            res.buffersFor(0)
+            res.prefetch(1)
             loopEngine.run()
         }
     }

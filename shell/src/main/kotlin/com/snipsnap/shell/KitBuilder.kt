@@ -445,11 +445,7 @@ class KitBuilderModel private constructor(
         recipe: com.snipsnap.json.JsonValue.Obj?,
         transform: (Snip) -> Snip,
     ): KitPad {
-        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        require(pad.velocityLayers.isEmpty()) {
-            "pad $slot is velocity-layered - clear the layers before rewriting its audio"
-        }
-        requireNotChained(pad, "rewriting")
+        val pad = requireRewritable(slot)
         val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
         val processed = transform(original)
         require(processed.frameCount > 0) { "a rewrite must leave audio behind" }
@@ -983,7 +979,7 @@ class KitBuilderModel private constructor(
     }
 
     private fun archiveTake() {
-        val current = File(kitDir, "kit.json")
+        val current = File(kitDir, KitStore.FILE_NAME)
         // A clean save changes nothing; archiving it would duplicate takes.
         if (!current.isFile || !dirty) return
         val takesDir = File(kitDir, TAKES_DIR).apply { mkdirs() }
@@ -1062,6 +1058,28 @@ class KitBuilderModel private constructor(
     fun emptyBin(): Int {
         val children = File(kitDir, BIN_DIR).listFiles() ?: return 0
         return children.count { it.delete() }
+    }
+
+    /**
+     * The pad on [slot], refused in words when its audio cannot be
+     * rewritten: a velocity-layered pad has more than one sound to
+     * replace, and a round-robin chain is several files pretending to be
+     * one pad.
+     *
+     * Public because [replaceAudio] is not the only caller that needs the
+     * answer. A door that renders a preview of a rewrite has to refuse
+     * exactly what the rewrite will refuse — `MutateSheet.preview` plays a
+     * mutate before it exists, and a preview of a move the keep would then
+     * decline is worse than no preview. One gate, asked twice, rather than
+     * two copies that can drift apart.
+     */
+    fun requireRewritable(slot: Int): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.velocityLayers.isEmpty()) {
+            "pad $slot is velocity-layered - clear the layers before rewriting its audio"
+        }
+        requireNotChained(pad, "rewriting")
+        return pad
     }
 
     /**

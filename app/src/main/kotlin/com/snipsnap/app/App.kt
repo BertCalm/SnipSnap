@@ -228,7 +228,7 @@ fun App(shelf: KitShelf) {
     var exportsWhere by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         exportsWhere = withContext(Dispatchers.IO) {
-            (context.getExternalFilesDir("exports") ?: context.filesDir).absolutePath
+            (Exports.dir(context) ?: context.filesDir).absolutePath
         }
     }
 
@@ -421,7 +421,7 @@ fun App(shelf: KitShelf) {
     // activity, and its session lives in this one folder. Held here rather
     // than inside SNIPS because two screens read it — SNIPS' own → LOOP fills
     // it, and the shelf's LOOP row is only shown once something is in it.
-    val loopDir = remember(context) { File(context.filesDir, "sessions/current") }
+    val loopDir = remember(context) { LoopWrites.dir(context) }
     // How many of the six tracks hold a snip. Read once on mount and then
     // maintained by `sendSnipToLoop`'s own result — re-read on every return
     // from LOOP as well, since clearing a track there changes it behind this
@@ -742,7 +742,9 @@ fun App(shelf: KitShelf) {
         // Same promise, for deleted snips (name-and-find task): SNIPS's own
         // bin empties itself of whatever DELETE put there more than 30 days
         // ago — no kit write involved, so no KitWrites.mutex needed here.
-        withContext(Dispatchers.IO) { runCatching { SnipStore.sweepBin(shelf.root) } }
+        // context.filesDir, not shelf.root: snips live at `<files>/snips`, and
+        // the shelf is `<files>/Kits`. This swept a bin that never existed.
+        withContext(Dispatchers.IO) { runCatching { SnipStore.sweepBin(context.filesDir) } }
         // Orphaned import-staging left by a crashed/killed import, and
         // regenerable derived output (share-sheet temp copies) — never a
         // live kit or snip. Exports are deliberately NOT swept here: see
@@ -2056,6 +2058,7 @@ fun App(shelf: KitShelf) {
                         } else if (snipsOpen) {
                             SnipsScreen(
                                 shelf = shelf,
+                                snipsRoot = context.filesDir,
                                 onBack = { snipsOpen = false },
                                 onToast = { toast = it },
                                 onOpenInTape = { file ->

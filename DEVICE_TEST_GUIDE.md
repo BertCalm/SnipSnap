@@ -93,6 +93,12 @@ could NOT verify. Test in this order; each item names what "wrong" looks like.
     SNIPS. Mute a track first and confirm the bounce is missing it — what is
     heard is what is rendered. Then → LOOP the bounce back onto a free track:
     the grid can eat what it makes.
+29. The bounce outlives the screen, so check both halves of that. Press BOUNCE,
+    press Back immediately, and open SNIPS while it is still rendering: the new
+    snip has to appear in the list on its own when the render lands, with no
+    leaving and re-entering. Then reopen LOOP mid-render — the button reads
+    BOUNCING… there too, and pressing it says one is already running rather
+    than starting a second.
 
 ## Known blind spots (listen for these specifically)
 - One-shot samples LONGER than ~6s stop responding to chokes after 6s (ledgered).

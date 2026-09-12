@@ -53,8 +53,18 @@ object LiveRecord {
      */
     fun wrapped(timePulses: Long, bars: Int): Long {
         require(bars in 1..64) { "bars out of range: $bars" }
-        val limit = bars.toLong() * Mpc3Clip.PULSES_PER_BAR
-        return ((timePulses % limit) + limit) % limit
+        return wrappedInto(timePulses, bars.toLong() * Mpc3Clip.PULSES_PER_BAR)
+    }
+
+    /**
+     * The same wrap against a clip's own length rather than a count of 4/4
+     * bars — what a caller holding an [Mpc3Clip] should ask, since a clip
+     * may declare its own bar ([Mpc3Clip.pulsesPerBar]) and `bars * 3840`
+     * is then not its length. One arithmetic, two ways in.
+     */
+    fun wrappedInto(timePulses: Long, limitPulses: Long): Long {
+        require(limitPulses > 0) { "a clip's length is positive, not $limitPulses" }
+        return ((timePulses % limitPulses) + limitPulses) % limitPulses
     }
 
     /** Accumulates hits during one take; not itself persisted. */

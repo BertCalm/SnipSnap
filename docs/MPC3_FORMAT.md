@@ -640,16 +640,45 @@ or `3.4.x` one). It is a chop-editor property — how a sliced sample's grid
 is subdivided — not the sequence meter, and its `2` is not a numerator.
 A case-insensitive grep for `timesignature` finds it first and in bulk.
 
-### Where this leaves YYY10
+### What the writer does with this (YYY10, shipped)
 
-Meter can be written into `.xpj` sequences today: one entry, the numerator
-from the set's `lapSteps`, `beatLength` derived so
-`beatsPerBar × beatLength` equals the bar length the clip writer is
-already using. It cannot be written into `.xtd`/`.xty` clips without first
-moving those clips to version 3. Neither can be *verified* beyond 4/4
-without either a non-4/4 capture in `reference/` or a Live III bench run,
-so any writer work here ships with that caveat attached rather than as a
-confirmed round-trip.
+The probe's conclusion turned out to be sharper than "we could write some
+metadata". A 3/4 ORBIT set's clip was being written into 4/4 bars —
+`OrbitClip` rounded a 24-step section up to two bars of 3840 pulses and
+`endPulses`/`loopEndPulses` followed — so the exported loop played eight
+sixteenths of silence the set never plays. Declaring the meter is what
+sizes the container to the music, so this is a fix and not an annotation.
+
+What ships:
+
+- **`Mpc3Clip.pulsesPerBar`**, defaulted to `PULSES_PER_BAR`. Every clip
+  from a donor groove, an import or the step editor is unchanged and never
+  had to learn about it. Constrained to whole 960-pulse beats, because
+  `beatsPerBar` × `beatLength` is all the format can say.
+- **A project sequence declares the meter** and takes every length from it:
+  `timeSignatureTrack`, `lengthBars`/`lengthPulses`, the loop bounds, and
+  each clip's `endPulses` are one number, so the corpus's own cross-check
+  holds by construction rather than by two expressions agreeing. Two
+  meters in one sequence is refused — a sequence has one
+  `timeSignatureTrack`, so there is no winner to pick.
+- **A track file still pads to whole 4/4 bars.** Its clips are version 1;
+  `timeSignatureList` is version 3. Writing it there would invent a shape
+  no real file has.
+- **A lap the format cannot spell keeps its 4/4 container.** `lapSteps` is
+  only required to be `1..MAX_STEPS` and `OrbitStore` reads it straight
+  from JSON, so 13 is reachable even though no control makes one — and a
+  bar of 3120 pulses is not whole quarters. Those sets keep exactly the
+  behaviour they have always had rather than crashing on a bar that cannot
+  be written.
+
+**What is still unverified, and it is the important part.** No file in the
+corpus carries a `beatsPerBar` other than 4, so the first non-4/4 `.xpj`
+this writes is the first one a Live III has ever been asked to read. The
+arithmetic is confirmed and the shape is confirmed; the *range* is not.
+The failure mode if the hardware rejects it is worse than the padding it
+fixes — a project that will not open rather than a loop with a silent beat
+— so this wants one bench check: export a 3/4 set and open it on the
+device. That is the only evidence the corpus could never supply.
 
 ## Embedded sequences
 
