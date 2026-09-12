@@ -439,7 +439,9 @@ private fun NeedleStep(
                 },
             )
             ActionButton(
-                if (busy) "SPLICING…" else "SPLICE ▸ COMMIT",
+                // Batch 3, Task 4: no ▸ — COMMIT writes the splice in
+                // place; it doesn't navigate or open a panel.
+                if (busy) "SPLICING…" else "SPLICE · COMMIT",
                 scheme,
                 enabled = !busy,
                 modifier = Modifier.weight(1.4f).heightIn(min = Layout.PRIMARY_ACTION_H.dp),

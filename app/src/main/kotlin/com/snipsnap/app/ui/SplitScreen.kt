@@ -455,7 +455,11 @@ fun SplitScreen(
             ActionButton("PAD ►", scheme, enabled = !working && entry != null, modifier = Modifier.weight(1f)) { stepPad(1) }
         }
         ActionButton(
-            if (working) "WORKING…" else if (split == null) "SPLIT ▸ TAKE THIS PAD APART" else "SPLIT ▸ AGAIN",
+            // Batch 3, Task 4: no ▸ — SPLIT runs in place on the loaded pad;
+            // it doesn't navigate or open a panel. "·" is the house
+            // separator for a label-plus-detail pair (`PROG A · THE BREAK`,
+            // GrooveScreen.kt) that replaces it here.
+            if (working) "WORKING…" else if (split == null) "SPLIT · TAKE THIS PAD APART" else "SPLIT AGAIN",
             scheme,
             enabled = !working && entry != null && sourceSlot != null,
             lit = split == null,
@@ -499,7 +503,10 @@ fun SplitScreen(
         // ---- transport and print ----
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton(
-                if (playing) "STOP" else "PLAY ▸",
+                // Batch 3, Task 4: no ▸ — this toggles the desk's own
+                // transport in place, same as its "STOP" counterpart, which
+                // never carried one.
+                if (playing) "STOP" else "PLAY",
                 scheme,
                 enabled = split != null && !working && engineUp,
                 lit = playing,

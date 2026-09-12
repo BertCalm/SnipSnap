@@ -959,9 +959,13 @@ fun OrbitScreen(
                         TapeText(refusal, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2)
                     } else {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            ActionButton(if (bouncing) "BOUNCING…" else "BOUNCE ▸ TAPE", scheme, Modifier.weight(1f), enabled = !bouncing, accent = true) { bounceToTape() }
+                            // Batch 3, Task 4: no ▸ on either — both write
+                            // in place (a snip on the shelf, a clip in this
+                            // kit's grooves) and leave the player on ORBIT;
+                            // neither navigates or opens a panel.
+                            ActionButton(if (bouncing) "BOUNCING…" else "BOUNCE TO TAPE", scheme, Modifier.weight(1f), enabled = !bouncing, accent = true) { bounceToTape() }
                             if (clipOnly == null) {
-                                ActionButton("CLIP ▸ KIT", scheme, Modifier.weight(1f), accent = true) { clipIntoKit() }
+                                ActionButton("CLIP TO KIT", scheme, Modifier.weight(1f), accent = true) { clipIntoKit() }
                             }
                         }
                         if (clipOnly != null) {
@@ -979,9 +983,13 @@ fun OrbitScreen(
                     // The way back in. It sits under the two ways out
                     // because this is where the route between ORBIT and
                     // the kit's grooves is already explained, and a player
-                    // who has just read what CLIP ▸ KIT does is the one
+                    // who has just read what CLIP TO KIT does is the one
                     // who wants to know the grooves can come back.
-                    ActionButton("GROOVE ▸ RINGS", scheme, Modifier.fillMaxWidth()) { ringsFromGroove() }
+                    //
+                    // Batch 3, Task 4: no ▸ — this reads the kit's groove
+                    // and rebuilds the rings in place, on this same screen;
+                    // it doesn't navigate anywhere.
+                    ActionButton("GROOVE TO RINGS", scheme, Modifier.fillMaxWidth()) { ringsFromGroove() }
                     TapeText(
                         "THE KIT'S GROOVE AS RINGS, ONE PER PAD, JOINING WHAT IS ALREADY HERE — A CAPTURED BREAK OR AN IMPORTED .MID, PLAYED BY THIS ENGINE AT LAST.",
                         TapeType.pixelSmall,
@@ -1183,12 +1191,25 @@ fun OrbitScreen(
                     setPanelOpen = false
                 }
             }
+            // Batch 3, Task 3: this is ORBIT's only documentation for ~30
+            // controls, and at 173 characters (the `hasSnips` variant) it
+            // was ellipsized after roughly three screen-widths' worth of
+            // text — everything from "HOLD" on (that holding a ring solos
+            // it, that holding BPM runs the set, how ring ordering resolves
+            // ties) was unreadable. `maxLines = 3` wasn't a deliberate
+            // clamp, just the value that happened to survive whatever this
+            // TapeText started as; raised here rather than restructuring
+            // the rest of ORBIT (a separate piece of work per the brief) —
+            // this row already lives inside the screen's own scrollable
+            // region (the `Column(weight(1f).verticalScroll(...))` this sits
+            // in, opened above at the rings), so a taller block only means
+            // more to scroll past, never anything clipped off the bottom.
             TapeText(
                 Copy.orbitLegend(hasSnips = snips.isNotEmpty()),
                 TapeType.pixelSmall,
                 scheme.ink3.tape,
                 Modifier.fillMaxWidth(),
-                maxLines = 3,
+                maxLines = 8,
             )
         }
     }
@@ -1500,7 +1521,12 @@ private fun StripEditor(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                SmallChip("HOLD ▸ ${brush.label}", scheme, accent = brush != OrbitBrush.WEIGHT, onClick = onBrush)
+                // Batch 3, Task 4: "·", not "▸" — one tap cycles the brush
+                // in place (the KDoc above), it doesn't navigate or open a
+                // panel. "·" is the house separator for a label-plus-detail
+                // pair that isn't either of those (`PROG A · THE BREAK`,
+                // GrooveScreen.kt).
+                SmallChip("HOLD · ${brush.label}", scheme, accent = brush != OrbitBrush.WEIGHT, onClick = onBrush)
                 TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
             }
             for (slot in rows) {
