@@ -81,11 +81,14 @@ through the door every capture uses.
   has nothing to restart. The whole-tape loop ends two frames early:
   the deck's own end clamp fires HitEnd there, and OUT must sit before
   it for the wrap to win.
-- **Tap or hold.** `TAP_SEC` (100 ms) separates them. A hold shorter
-  than `MIN_SEC` (20 ms) of audio is a tap that took a while, and takes
-  the whole hit; nothing shorter than 20 ms ever lands. A release
-  before its press (the loop wrapped under the finger) runs to the end
-  of the loop.
+- **Tap or hold.** `TAP_SEC` (100 ms) separates them, measured between
+  the touch's own down and up timestamps (the grid passes the up event's
+  `uptimeMillis` through, not the moment the callback ran). A hold
+  shorter than `MIN_SEC` (20 ms) of audio is a tap that took a while,
+  and takes the whole hit; nothing shorter than 20 ms ever lands. A
+  release on a later pass of the loop than its press (TAPE counts the
+  deck's `Looped` events), or at a frame before it, is a hold the loop
+  wrapped under: it runs to the end of the loop.
 - **Landing** (`CatchModel.land`): `Retrim.cut` of the range — the
   same clamp, DC removal and click-guard fades INSTANT KIT's slice
   gets, no trim, no normalise — classed by ear, named by class, through
@@ -93,11 +96,26 @@ through the door every capture uses.
   `origin=catch`. A caught pad opens on TAPE at its cut like any chopped
   pad. The tape is tagged only when it is a snip on the SNIPS shelf; a
   kit sample TAPE fell back to gets the origin alone (`TapeRef.ofSnip`'s
-  rule).
-- **App owns the write** (`App.catchOnto`): one short write per catch
-  under `KitWrites.mutex`, the kit re-read into `open`, the toast
-  naming what landed. No busy line: the pad's name lighting on the grid
-  is the signal.
+  rule). The write looks at the slot again: a pad that is not a catch
+  (another door put it there since the press) is the user's and is
+  never replaced; an earlier catch is exactly what "the next pass
+  replaces" means.
+- **TAPE cuts on the spot, App owns the write.** The cut is a copy plus
+  fades over at most a loop's worth of tape, made synchronously at the
+  release and handed to App at once — a job left suspended in the
+  screen's own scope would be cancelled the moment DONE opens KIT. App
+  (`catchOnto`) queues the writes in release order (each joins the one
+  before it, so two quick passes on one pad land in the order they were
+  let go and `open` is published in that order), one short write per
+  catch under `KitWrites.mutex`. DONE (`catchDone`) waits for the queue
+  and speaks from what actually landed: a catch whose write failed is
+  not announced, and KIT never opens a beat before the pads it promises
+  are there. No busy line: the pad's name lighting on the grid is the
+  signal.
+- **The grid.** PLAY's `BankRow`, with one addition: `emptyHits` gives
+  an empty slot the same press-and-release an assigned one has, since
+  the empty pads are the ones to catch onto. Every other screen leaves
+  them inert.
 
 ## 4. What it says
 
@@ -127,10 +145,16 @@ through the door every capture uses.
   and the only hit inside it does.
 - A loop bounds every cut: a hold across the wrap runs to OUT, a tapped
   hat whose own cut would run past OUT ends at OUT.
-- A second pass replaces the first; a slot taken before CATCH began
-  refuses at the press and lands nothing on release; no press, no
-  catch; the landing carries the class, `tapeFile`/`tapeIn`/`tapeOut`
-  and `origin=catch`, and the pad's WAV is exactly the range long.
+- A hold whose release falls on a later pass than its press runs to
+  OUT even when the lift's frame is later than the press's; the same
+  pass is an ordinary hold.
+- A second pass replaces the first and keeps its place: replacing the
+  first catch leaves it first, so DONE opens the right bank. A slot
+  taken before CATCH began refuses at the press and lands nothing on
+  release; no press, no catch; the landing carries the class,
+  `tapeFile`/`tapeIn`/`tapeOut` and `origin=catch`, and the pad's WAV
+  is exactly the range long. A catch lands over a catch; over a pad
+  that isn't one, the write refuses and the pad is untouched.
 - The deck's loop preview reports a `Looped` event on every wrap, and
   none once the loop is off.
 

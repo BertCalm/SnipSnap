@@ -58,7 +58,8 @@ class CatchModel(
     private val tapFrames = (TAP_SEC * rate).toInt()
     private val minFrames = (MIN_SEC * rate).toInt()
 
-    private val pressed = HashMap<Int, Int>()
+    /** Slot → the press's frame and loop pass. */
+    private val pressed = HashMap<Int, Pair<Int, Int>>()
     private val landed = LinkedHashMap<Int, Caught>()
 
     /** Everything caught so far, in the order it was first caught. */
@@ -68,13 +69,14 @@ class CatchModel(
     fun caughtOn(slot: Int): Caught? = landed[slot]
 
     /**
-     * Finger down on [slot] at tape frame [atFrame]. False when the slot
-     * had a pad before CATCH began: that press is refused rather than
-     * wiping the user's own pad, and no release will land anything.
+     * Finger down on [slot] at tape frame [atFrame], on loop pass [pass]
+     * (the screen counts wraps; any consistent count will do). False when
+     * the slot had a pad before CATCH began: that press is refused rather
+     * than wiping the user's own pad, and no release will land anything.
      */
-    fun press(slot: Int, atFrame: Int): Boolean {
+    fun press(slot: Int, atFrame: Int, pass: Int = 0): Boolean {
         if (slot in taken) return false
-        pressed[slot] = atFrame
+        pressed[slot] = atFrame to pass
         return true
     }
 
@@ -84,11 +86,13 @@ class CatchModel(
      * tapped with no hit near — nothing went by, and a tap has no length
      * of its own to take.
      */
-    fun release(slot: Int, atFrame: Int): Caught? {
-        val at = pressed.remove(slot) ?: return null
+    fun release(slot: Int, atFrame: Int, pass: Int = 0): Caught? {
+        val (at, pressPass) = pressed.remove(slot) ?: return null
         val hitIndex = hitFor(at)
         val hit = hitIndex?.let { hits[it] }
-        val wrapped = atFrame < at
+        // The loop wrapped under the finger: a later pass, or (with no
+        // pass count kept) a frame before the press's own.
+        val wrapped = pass != pressPass || atFrame < at
         val tapped = !wrapped && atFrame - at < tapFrames
         val start = hit?.range?.first ?: Transients.zeroCrossingBefore(tape, at.coerceIn(region)).coerceIn(region)
         val regionEnd = region.last + 1
@@ -108,7 +112,8 @@ class CatchModel(
         }
         if (end - start < minFrames) return null
         val result = Caught(slot, start until end, hitIndex, !tapped && !wrapped)
-        landed.remove(slot)
+        // Overwriting keeps the slot's place: `caught` stays in first-catch
+        // order, so a replaced first catch is still the first.
         landed[slot] = result
         return result
     }
@@ -177,8 +182,17 @@ class CatchModel(
          * the SNIPS shelf (a kit sample TAPE fell back to): tagged with
          * the origin alone, since RE-TRIM could not open it anyway. The
          * builder is not saved here: the caller owns the write.
+         *
+         * Null, and nothing written, when the slot holds a pad that is not
+         * a catch: the press was accepted against a snapshot of the kit,
+         * and the write is the moment to look again — a pad another door
+         * put there since is the user's, never replaced. An earlier catch
+         * on the slot (this pass or the last) is what "the next pass
+         * replaces" means, and is.
          */
-        fun land(builder: KitBuilderModel, tapeName: String?, cut: Snip, caught: Caught): KitPad {
+        fun land(builder: KitBuilderModel, tapeName: String?, cut: Snip, caught: Caught): KitPad? {
+            val there = builder.pad(caught.slot)
+            if (there != null && there.source["origin"] != ORIGIN) return null
             val cls = Classifier.classify(cut).drumClass
             val source = LinkedHashMap<String, String>()
             if (tapeName != null) source += Retrim.tag(tapeName, caught.range.first, caught.range.first + cut.frameCount)

@@ -118,23 +118,24 @@ internal fun BankRow(
     kit: Kit,
     glow: Map<Int, Animatable<Float, AnimationVector1D>>,
     onHit: (Int, Float, Long) -> Unit,
-    onRelease: (Int) -> Unit,
+    onRelease: (Int, Long) -> Unit,
     modifier: Modifier = Modifier,
+    emptyHits: Boolean = false,
 ) {
     val bankFloor = (Layout.MIN_HIT_TARGET * 8 + Layout.PAD_GAP * 7).dp
     BoxWithConstraints(modifier) {
         if (maxWidth >= bankFloor * 2 + Layout.PAD_GAP.dp) {
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp)) {
-                PlayBank(kit, BANK_A_ROWS, glow, onHit, onRelease, Modifier.weight(1f).fillMaxHeight())
-                PlayBank(kit, BANK_B_ROWS, glow, onHit, onRelease, Modifier.weight(1f).fillMaxHeight())
+                PlayBank(kit, BANK_A_ROWS, glow, onHit, onRelease, Modifier.weight(1f).fillMaxHeight(), emptyHits)
+                PlayBank(kit, BANK_B_ROWS, glow, onHit, onRelease, Modifier.weight(1f).fillMaxHeight(), emptyHits)
             }
         } else {
             Row(
                 Modifier.fillMaxHeight().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp),
             ) {
-                PlayBank(kit, BANK_A_ROWS, glow, onHit, onRelease, Modifier.width(bankFloor).fillMaxHeight())
-                PlayBank(kit, BANK_B_ROWS, glow, onHit, onRelease, Modifier.width(bankFloor).fillMaxHeight())
+                PlayBank(kit, BANK_A_ROWS, glow, onHit, onRelease, Modifier.width(bankFloor).fillMaxHeight(), emptyHits)
+                PlayBank(kit, BANK_B_ROWS, glow, onHit, onRelease, Modifier.width(bankFloor).fillMaxHeight(), emptyHits)
             }
         }
     }
@@ -147,8 +148,9 @@ internal fun PlayBank(
     rows: List<IntRange>,
     glow: Map<Int, Animatable<Float, AnimationVector1D>>,
     onHit: (Int, Float, Long) -> Unit,
-    onRelease: (Int) -> Unit,
+    onRelease: (Int, Long) -> Unit,
     modifier: Modifier = Modifier,
+    emptyHits: Boolean = false,
 ) {
     Column(
         modifier,
@@ -167,12 +169,59 @@ internal fun PlayBank(
                         onHit = onHit,
                         onRelease = onRelease,
                         modifier = Modifier.weight(1f).fillMaxSize(),
+                        emptyHits = emptyHits,
                     )
                 }
             }
         }
     }
 }
+
+/**
+ * The pad's press-and-release, shared by an assigned cell and (for CATCH A
+ * HIT) an empty one. The accessibility floor is a single click action —
+ * fire the hit at CENTER_VELOCITY, then release immediately. A gated
+ * (non-one-shot) pad won't sustain the way a real press-and-hold would,
+ * but this is strictly better than the false affordance a focusable,
+ * silently-inert cell was before (audit finding 1). mergeDescendants:
+ * without it, the tag and name TapeTexts stay separate focus stops from
+ * the cell's own. A synthesized TalkBack click has no MotionEvent, hence
+ * no hardware touch time (same reasoning as CENTER_VELOCITY's own KDoc) —
+ * "now" is the only timestamp available, for the release as for the hit.
+ * A real release carries the up event's own `uptimeMillis`.
+ */
+private fun Modifier.padGesture(
+    slot: Int,
+    description: String,
+    onHit: (Int, Float, Long) -> Unit,
+    onRelease: (Int, Long) -> Unit,
+): Modifier = this
+    .semantics(mergeDescendants = true) {
+        contentDescription = description
+        onClick(label = "PLAY") {
+            val now = SystemClock.uptimeMillis()
+            onHit(slot, CENTER_VELOCITY, now)
+            onRelease(slot, now)
+            true
+        }
+    }
+    .pointerInput(slot) {
+        while (true) {
+            val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
+            val height = size.height.toFloat().coerceAtLeast(1f)
+            onHit(slot, velocityFromY(down.position.y, height), down.uptimeMillis)
+            var up = down.uptimeMillis
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                    up = change.uptimeMillis
+                    if (!change.pressed) break
+                }
+            }
+            onRelease(slot, up)
+        }
+    }
 
 /**
  * PLAY's own pad cell — mirrors KitScreen's `PadCell` (same tag/name
@@ -192,8 +241,16 @@ internal fun PlayPad(
     pad: KitPad?,
     glow: Animatable<Float, AnimationVector1D>?,
     onHit: (Int, Float, Long) -> Unit,
-    onRelease: (Int) -> Unit,
+    /** Finger up: the slot and the up event's own `uptimeMillis` (CATCH places the lift on the tape by it; PLAY ignores it). */
+    onRelease: (Int, Long) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * CATCH A HIT (docs/CATCH.md): an empty slot takes the same press and
+     * release an assigned one does, so a hit can be caught onto it. Off
+     * (every other screen), an empty slot is inert — PLAY has nothing to
+     * play there and GROOVE nothing to record.
+     */
+    emptyHits: Boolean = false,
 ) {
     val scheme = LocalScheme.current
     val shape = RoundedCornerShape(Layout.PAD_RADIUS.dp)
@@ -203,7 +260,8 @@ internal fun PlayPad(
         Box(
             modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .raisedBevel(scheme, Layout.PAD_RADIUS.dp),
+                .raisedBevel(scheme, Layout.PAD_RADIUS.dp)
+                .then(if (emptyHits) Modifier.padGesture(slot, "EMPTY PAD $tag", onHit, onRelease) else Modifier),
             contentAlignment = Alignment.TopEnd,
         ) {
             // Full-opacity ink2, not a dimmed copy — the alpha reduction
@@ -230,36 +288,10 @@ internal fun PlayPad(
             .background(cls.tape.copy(alpha = 0.40f * g), shape)
             .border(2.dp, cls.tape, shape)
             // No long-press here (see this composable's own KDoc — PLAY
-            // is for playing), so the accessibility floor is a single
-            // click action: fire the hit at CENTER_VELOCITY, then
-            // release immediately. A gated (non-one-shot) pad won't
-            // sustain the way a real press-and-hold would, but this is
-            // strictly better than the false affordance a focusable,
-            // silently-inert cell was before (audit finding 1).
-            // mergeDescendants: without it, the tag and name TapeTexts
-            // below stay separate focus stops from this cell's own.
-            .semantics(mergeDescendants = true) {
-                contentDescription = "PAD $tag: ${pad.displayName}"
-                // A synthesized TalkBack click has no MotionEvent, hence no
-                // hardware touch time (same reasoning as CENTER_VELOCITY's
-                // own KDoc above) — "now" is the only timestamp available.
-                onClick(label = "PLAY") { onHit(slot, CENTER_VELOCITY, SystemClock.uptimeMillis()); onRelease(slot); true }
-            }
-            .pointerInput(slot) {
-                while (true) {
-                    val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
-                    val height = size.height.toFloat().coerceAtLeast(1f)
-                    onHit(slot, velocityFromY(down.position.y, height), down.uptimeMillis)
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                            if (!change.pressed) break
-                        }
-                    }
-                    onRelease(slot)
-                }
-            }
+            // is for playing): the press-and-release gesture and its
+            // accessibility floor live in `padGesture`, shared with the
+            // empty slot CATCH can land on.
+            .padGesture(slot, "PAD $tag: ${pad.displayName}", onHit, onRelease)
             .padding(5.dp),
     ) {
         // Full-opacity ink2 on its own solid backing chip, not a dimmed

@@ -117,6 +117,12 @@ class CatchTest {
         m.press(1, kick + sec(0.10))
         val wrapped = assertNotNull(m.release(1, sec(0.45)))
         assertEquals(kick until sec(1.2), wrapped.range, "held past OUT and round again: to the end of the loop")
+        m.press(3, kick + sec(0.10), pass = 4)
+        val passed = assertNotNull(m.release(3, kick + sec(0.30), pass = 5), "a later pass is a wrap even when the frame is later too")
+        assertEquals(kick until sec(1.2), passed.range)
+        m.press(4, kick + sec(0.10), pass = 4)
+        val same = assertNotNull(m.release(4, kick + sec(0.30), pass = 4))
+        assertTrue(same.range.last + 1 < sec(1.2), "the same pass is an ordinary hold")
         val hat = hits[1].range.first
         m.press(2, hat + sec(0.05))
         val tapped = assertNotNull(m.release(2, hat + sec(0.10)))
@@ -135,6 +141,10 @@ class CatchTest {
         val second = assertNotNull(m.release(1, kick + sec(0.30)))
         assertEquals(second, m.caughtOn(1), "the second pass replaced the first")
         assertEquals(1, m.caught.size)
+        val hat = hits[1].range.first
+        m.press(5, hat + sec(0.05)); m.release(5, hat + sec(0.08))
+        m.press(1, kick + sec(0.10)); m.release(1, kick + sec(0.12))
+        assertEquals(listOf(1, 5), m.caught.map { it.slot }, "replacing the first catch keeps it first")
         assertFalse(m.press(2, kick + sec(0.10)), "A02 had a pad before CATCH began")
         assertNull(m.release(2, kick + sec(0.30)))
         assertNull(m.release(3, kick + sec(0.30)), "no press, no catch")
@@ -142,7 +152,7 @@ class CatchTest {
         val dir = java.nio.file.Files.createTempDirectory("catch").toFile()
         try {
             val builder = KitBuilderModel.create("Caught", dir)
-            val pad = CatchModel.land(builder, "break.wav", Retrim.cut(tape, second.range), second)
+            val pad = assertNotNull(CatchModel.land(builder, "break.wav", Retrim.cut(tape, second.range), second))
             assertEquals(1, pad.slot)
             assertEquals(DrumClass.KICK, pad.drumClass, "classed by ear")
             assertEquals("break.wav", pad.source[Retrim.FILE_KEY])
@@ -150,6 +160,14 @@ class CatchTest {
             assertEquals(CatchModel.ORIGIN, pad.source["origin"])
             assertEquals(second.range.last - second.range.first + 1, com.snipsnap.audio.WavReader.read(java.io.File(dir, pad.sampleFile)).frameCount)
             assertNotNull(builder.pad(1))
+            // The next pass replaces a catch; a pad another door put there
+            // since the press is the user's, and the write looks again.
+            val again = m.caughtOn(1)!!
+            assertNotNull(CatchModel.land(builder, "break.wav", Retrim.cut(tape, again.range), again), "a catch replaces a catch")
+            builder.assign(6, DrumSynth.snare(), DrumClass.SNARE)
+            val onto6 = m.caughtOn(5)!!.copy(slot = 6)
+            assertNull(CatchModel.land(builder, "break.wav", Retrim.cut(tape, onto6.range), onto6), "never over a pad that isn't a catch")
+            assertEquals(DrumClass.SNARE, builder.pad(6)!!.drumClass, "and it is untouched")
         } finally {
             dir.deleteRecursively()
         }

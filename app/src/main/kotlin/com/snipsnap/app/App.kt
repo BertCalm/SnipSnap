@@ -128,6 +128,7 @@ import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
@@ -216,6 +217,19 @@ data class CatchLanding(
     val cut: com.snipsnap.audio.Snip,
     val caught: com.snipsnap.shell.CatchModel.Caught,
 )
+
+/**
+ * One CATCH A HIT session's bookkeeping, App-side: the writes are queued
+ * on [chain] in release order (each landing joins the one before it, so
+ * two quick passes on one slot land in the order they were let go, and
+ * `open` is published in that order too), and [landed] is the slots that
+ * actually landed — the count DONE speaks from, since a write can fail
+ * after the screen's model counted the catch.
+ */
+private class CatchSession {
+    var chain: Job? = null
+    val landed = LinkedHashSet<Int>()
+}
 
 /** X-RAY's own state: the picked file's display name and what [MpcXRay.read] made of it. Non-null IS "the screen is open" — there is no separate boolean to keep in sync with it. */
 data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay.Reading)
@@ -477,6 +491,8 @@ fun App(shelf: KitShelf) {
     // A chop landed ONTO a bank asks KIT to open on that bank, once
     // (KitScreen's `bankRequest`); null again the moment KIT honours it.
     var kitBankRequest by remember { mutableStateOf<Int?>(null) }
+    // CATCH A HIT's write queue and tally for the live session (docs/CATCH.md).
+    val catchSession = remember { CatchSession() }
     // DO IT AGAIN: what COPY LAST TREATMENT last lifted off a pad. A
     // clipboard, not a hand-off — deliberately NOT cleared by the tab-
     // switch reset below: pasting onto a pad in ANOTHER kit means going
@@ -1548,23 +1564,34 @@ fun App(shelf: KitShelf) {
      * to is no tape to go back to (the same rule `TapeRef.ofSnip` keeps).
      */
     fun catchOnto(landing: CatchLanding) {
-        scope.launch {
+        val before = catchSession.chain
+        catchSession.chain = scope.launch {
+            // Release order is landing order: the write before this one
+            // finishes first, whatever the IO dispatcher made of them.
+            before?.join()
             try {
                 val snipsDir = File(context.filesDir, SnipStore.DIR)
                 val tapeName = landing.tape.takeIf { it.parentFile == snipsDir }?.name
                 val (updated, pad) = withContext(Dispatchers.IO) {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(landing.kitDir)
+                        // Null: the slot took a pad through another door
+                        // since the press — the user's, kept (CatchModel.land).
                         val pad = CatchModel.land(model, tapeName, landing.cut, landing.caught)
-                        model.save()
+                        if (pad != null) model.save()
                         model.kit to pad
                     }
+                }
+                val tag = PadBanks.tag(landing.caught.slot)
+                if (pad == null) {
+                    toast = Copy.catchTaken(tag, updated.pad(landing.caught.slot)?.displayName ?: "TAKEN")
+                    return@launch
                 }
                 // Same identity guard as backOnto: the write must not weld
                 // itself onto whichever kit is open now.
                 if (open?.dir == landing.kitDir) open = open?.copy(kit = updated)
                 kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                val tag = PadBanks.tag(pad.slot)
+                catchSession.landed += pad.slot
                 toast = if (landing.caught.hit == null) Copy.caughtBetween(tag) else Copy.caught(tag, pad.displayName)
             } catch (e: CancellationException) {
                 throw e
@@ -1578,16 +1605,24 @@ fun App(shelf: KitShelf) {
     }
 
     /**
-     * DONE on the catch grid: what landed, and — with anything caught —
-     * KIT opened on the first catch's bank, the way ONTO opens it after
-     * a chop lands (`kitBankRequest`).
+     * DONE on the catch grid: once every queued landing has finished,
+     * what actually landed — and, with anything caught, KIT opened on the
+     * first catch's bank, the way ONTO opens it after a chop lands
+     * (`kitBankRequest`). Waiting on the chain is what keeps DONE honest:
+     * a catch whose write failed is not announced, and KIT never opens a
+     * beat before the pads it promises are there.
      */
-    fun catchDone(count: Int, firstSlot: Int?) {
+    fun catchDone() {
         val target = open ?: return
-        toast = Copy.catchDone(count, target.kit.name)
-        if (count > 0 && firstSlot != null) {
-            kitBankRequest = PadBanks.bankOf(firstSlot)
-            screen = AppScreen.KIT
+        scope.launch {
+            catchSession.chain?.join()
+            val landed = catchSession.landed.toList()
+            catchSession.landed.clear()
+            toast = Copy.catchDone(landed.size, target.kit.name)
+            if (landed.isNotEmpty() && open?.dir == target.dir) {
+                kitBankRequest = PadBanks.bankOf(landed.first())
+                screen = AppScreen.KIT
+            }
         }
     }
 

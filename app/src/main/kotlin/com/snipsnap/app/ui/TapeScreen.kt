@@ -1,6 +1,5 @@
 package com.snipsnap.app.ui
 
-import android.os.SystemClock
 import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -248,8 +247,8 @@ fun TapeScreen(
     onCaptureLanded: () -> Unit = {},
     /** CATCH A HIT (docs/CATCH.md): one caught cut, for App to land on the open kit's pad. */
     onCatch: (CatchLanding) -> Unit = {},
-    /** DONE on the catch grid: how many landed, and the first catch's slot, so KIT can open on its bank. */
-    onCatchDone: (Int, Int?) -> Unit = { _, _ -> },
+    /** DONE on the catch grid: App, which owns the writes, says what landed and opens KIT on its bank. */
+    onCatchDone: () -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
@@ -511,7 +510,7 @@ private fun TapeDeckContent(
     onBackOnto: (RetrimRequest, IntRange) -> Unit = { _, _ -> },
     onCaptureLanded: () -> Unit = {},
     onCatch: (CatchLanding) -> Unit = {},
-    onCatchDone: (Int, Int?) -> Unit = { _, _ -> },
+    onCatchDone: () -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val digScope = rememberCoroutineScope()
@@ -628,6 +627,10 @@ private fun TapeDeckContent(
     // touch's `uptimeMillis` is stamped in (PadGrid's own KDoc), so a press
     // lands on the tape where it happened, not where the next frame was.
     val lastTick = remember(model) { LongArray(1) }
+    // Which pass of the loop the deck is on, counted off `Event.Looped`,
+    // so a hold that lasts a whole pass reads as a wrap even when the
+    // lift's frame is later than the press's.
+    val catchPass = remember(model) { IntArray(1) }
     val mono = remember(tapeData) { Snip(tapeData.samples, 1, tapeData.sampleRate) }
     fun frameAt(uptimeMillis: Long): Int {
         val live = catching ?: return model.position.toInt()
@@ -706,8 +709,8 @@ private fun TapeDeckContent(
                             TapeDeckModel.Event.PencilDone -> onToast(Copy.PENCIL_DONE)
                             // The voice loops the same range on its own
                             // (TapeVoice.start's `loop`), gaplessly; the
-                            // model's wrap needs no restart.
-                            TapeDeckModel.Event.Looped -> Unit
+                            // model's wrap needs no restart, only counting.
+                            TapeDeckModel.Event.Looped -> catchPass[0]++
                         }
                     }
                     // HitEnd (at least) flips `model.playing` off outside
@@ -766,6 +769,7 @@ private fun TapeDeckContent(
                 val region = model.inFrame until model.outFrame
                 catching = CatchModel(mono, region, hits, taken = kit.pads.map { it.slot }.toSet())
                 catchPressed.clear()
+                catchPass[0] = 0
                 model.loopPreview = true
                 model.stop()
                 model.play()
@@ -783,33 +787,51 @@ private fun TapeDeckContent(
     }
 
     fun finishCatch() {
-        val live = catching ?: return
+        if (catching == null) return
         catching = null
         model.loopPreview = false
         if (model.playing) model.togglePlay()
         stopVoice()
         touch()
-        onCatchDone(live.caught.size, live.caught.firstOrNull()?.slot)
+        // App counts what actually landed (a write can fail after the
+        // model counted the catch), so DONE's own word comes from there.
+        onCatchDone()
     }
 
     fun catchPress(slot: Int, uptimeMillis: Long) {
         val live = catching ?: return
-        if (live.press(slot, frameAt(uptimeMillis))) {
+        if (live.press(slot, frameAt(uptimeMillis), catchPass[0])) {
             catchPressed += slot
         } else {
             onToast(Copy.catchTaken(PadBanks.tag(slot), entry?.kit?.pad(slot)?.displayName ?: "TAKEN"))
         }
     }
 
-    fun catchRelease(slot: Int) {
+    fun catchRelease(slot: Int, uptimeMillis: Long) {
         val live = catching ?: return
         val pressedHere = catchPressed.remove(slot)
-        val caught = live.release(slot, frameAt(SystemClock.uptimeMillis()))
+        val caught = live.release(slot, frameAt(uptimeMillis), catchPass[0])
         if (caught == null) {
             if (pressedHere) onToast(Copy.CATCH_NOTHING)
             return
         }
         val kitDir = entry?.dir ?: return
+        // The cut is made here, on the spot: a caught range is at most a
+        // loop long, and `Retrim.cut` is a copy plus fades — milliseconds.
+        // Handing it to App synchronously is what keeps a catch from
+        // being lost to this screen's own scope: DONE takes the user to
+        // KIT, and a job still suspended here would be cancelled with the
+        // composable. App's scope outlives the screen, and App queues the
+        // writes in release order.
+        val cut = try {
+            Retrim.cut(mono, caught.range)
+        } catch (e: Exception) {
+            Log.e("TapeScreen", "catch: cut failed", e)
+            live.forget(slot)
+            onToast(Copy.CATCH_FAILED)
+            return
+        }
+        onCatch(CatchLanding(kitDir, tapeData.sourceFile, cut, caught))
         // The band on the waveform reads off `catching.caught` at the next
         // touch(); the pad's flash is the landing's own signal.
         touch()
@@ -817,17 +839,6 @@ private fun TapeDeckContent(
             catchGlow[slot]?.let { g ->
                 g.snapTo(1f)
                 g.animateTo(0f, tween(350))
-            }
-        }
-        digScope.launch {
-            try {
-                val cut = withContext(Dispatchers.IO) { Retrim.cut(mono, caught.range) }
-                onCatch(CatchLanding(kitDir, tapeData.sourceFile, cut, caught))
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e("TapeScreen", "catch: cut failed", e)
-                onToast(Copy.CATCH_FAILED)
             }
         }
     }
@@ -921,6 +932,9 @@ private fun TapeDeckContent(
                     onHit = { slot, _, uptime -> catchPress(slot, uptime) },
                     onRelease = ::catchRelease,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
+                    // The whole point: the empty pads are the ones to
+                    // catch onto. PLAY leaves them inert.
+                    emptyHits = true,
                 )
             }
         } else {
@@ -1051,13 +1065,17 @@ private fun TapeDeckContent(
 
             // CATCH A HIT (docs/CATCH.md): the pad grid as the chopper. In
             // place, no ▸ (Task 4) — the grid comes up under the waveform.
-            // Not while a RE-TRIM is live: that request owns the deck.
-            DeckButton(
-                if (catchBusy) Copy.CATCH_BUSY else "CATCH A HIT",
-                Modifier.fillMaxWidth().height(Layout.PRIMARY_ACTION_H.dp),
-                active = !catchBusy && retrim == null,
-            ) {
-                if (retrim == null) startCatch()
+            // Not offered at all while a RE-TRIM is live (that request
+            // owns the deck): `active` only dims a DeckButton, it doesn't
+            // disable it, so the button is simply not there.
+            if (retrim == null) {
+                DeckButton(
+                    if (catchBusy) Copy.CATCH_BUSY else "CATCH A HIT",
+                    Modifier.fillMaxWidth().height(Layout.PRIMARY_ACTION_H.dp),
+                    active = !catchBusy,
+                ) {
+                    startCatch()
+                }
             }
 
             TapeText("DESTINATIONS", TapeType.pixelSmall, scheme.ink3.tape)
