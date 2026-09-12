@@ -279,6 +279,41 @@ class Mpc3TrackWriterTest {
     )
 
     @Test
+    fun `a track pads a non-four-four clip, because its clips cannot say otherwise`() {
+        // The other half of the meter work, and the half that does NOT
+        // change. A track's clips are version 1 and `timeSignatureList`
+        // arrives at version 3 (docs/MPC3_FORMAT.md, "Meter"), so an .xtd
+        // has no way to say 3/4 and a 3/4 clip is written into whole 4/4
+        // bars here exactly as everything was before the meter existed.
+        // Declaring the meter in a container that cannot carry it would
+        // invent a shape no real file has.
+        val waltz = Mpc3Clip(
+            "ORBIT 3/4", 2,
+            listOf(Mpc3Note(36, 0L, 0.9f)),
+            pulsesPerBar = 3 * Mpc3Clip.PULSES_PER_BEAT,
+        )
+        val root = Json.parse(writer.payloadText(program(), clip = waltz)) as JsonValue.Obj
+        val data = (root.entries["data"] as JsonValue.Obj).entries
+        val value = ((data["sharedClipMap"] as JsonValue.Arr).items[0] as JsonValue.Obj)
+            .entries["value"]!!.let { (it as JsonValue.Obj).entries }
+        assertEquals(5760L, waltz.lengthPulses, "the music is two bars of three quarters")
+        assertEquals(
+            2 * Mpc3Clip.PULSES_PER_BAR,
+            value["endPulses"]!!.num().toLong(),
+            "padded up to whole 4/4 bars, which is all a version-1 clip can be",
+        )
+        assertEquals(
+            value["endPulses"]!!.num().toLong(),
+            value["loopEndPulses"]!!.num().toLong(),
+            "one length, not two expressions",
+        )
+        assertTrue(
+            "timeSignatureList" !in writer.payloadText(program(), clip = waltz),
+            "a version-1 clip must not carry a version-3 field",
+        )
+    }
+
+    @Test
     fun `an embedded clip lands in sharedClipMap with real note events`() {
         val root = Json.parse(writer.payloadText(program(), clip = clip())) as JsonValue.Obj
         val data = (root.entries["data"] as JsonValue.Obj).entries

@@ -51,18 +51,68 @@ class OrbitClipTest {
     }
 
     @Test
-    fun `the clip counts bars of sixteen whatever the set's bar`() {
-        // A 3/4 set: a free 16 against the 12-step bar meets every 48 steps, four bars of twelve — three of the clip's.
+    fun `the clip counts the set's own bar and declares it`() {
+        // A 3/4 set: a free 16 against the 12-step bar meets every 48
+        // steps — four bars of twelve. The clip used to call that three
+        // bars of sixteen, which is the same music inside a container a
+        // quarter longer: the loop played a silent beat the set never has.
         val waltz = OrbitSet(listOf(pattern("four", 16, 1, listOf(0))), 120f, 48_000, lapSteps = 12)
-        assertEquals(3, OrbitClip.bars(waltz))
         assertTrue(OrbitClip.countsDifferently(waltz))
-        assertEquals(3, OrbitClip.clip(waltz).bars)
-        // A 5/4 set with one free 20: twenty steps need a second bar of sixteen.
+        val clip = OrbitClip.clip(waltz)
+        assertEquals(4, clip.bars, "four bars of twelve, not three of sixteen")
+        assertEquals(3, clip.beatsPerBar)
+        assertEquals(
+            48L * Mpc3Clip.PULSES_PER_16TH,
+            clip.lengthPulses,
+            "exactly the 48 steps - nothing padded onto the end",
+        )
+        // The 4/4 question is still asked and still answered, because a
+        // TRACK file still has to use it: its clips are version 1 and
+        // cannot say 3/4 (docs/MPC3_FORMAT.md, "Meter").
+        assertEquals(3, OrbitClip.bars(waltz))
+        assertEquals(3, clip.fourFourBars)
+        // A 5/4 set with one free 20: one bar of five, where the clip's
+        // own bar of sixteen needed two and padded twelve steps.
         val five = OrbitSet(listOf(pattern("five", 20, 1, listOf(0, 10))), 120f, 48_000, lapSteps = 20)
         assertEquals(2, OrbitClip.bars(five))
-        assertEquals(listOf(0L, 10L * Mpc3Clip.PULSES_PER_16TH), OrbitClip.clip(five).notes.map { it.timePulses })
-        // The default bar counts as it always did.
-        assertTrue(!OrbitClip.countsDifferently(set(pattern("a", 16, 1, listOf(0)))))
+        val fiveClip = OrbitClip.clip(five)
+        assertEquals(1, fiveClip.bars)
+        assertEquals(5, fiveClip.beatsPerBar)
+        assertEquals(20L * Mpc3Clip.PULSES_PER_16TH, fiveClip.lengthPulses)
+        assertEquals(listOf(0L, 10L * Mpc3Clip.PULSES_PER_16TH), fiveClip.notes.map { it.timePulses })
+        // The default bar counts as it always did, and declares 4/4.
+        val plain = set(pattern("a", 16, 1, listOf(0)))
+        assertTrue(!OrbitClip.countsDifferently(plain))
+        assertEquals(Mpc3Clip.PULSES_PER_BAR, OrbitClip.clip(plain).pulsesPerBar)
+    }
+
+    @Test
+    fun `the screen's meter label says what a project will actually write`() {
+        // The line on ORBIT is built from this, so it has to be true of
+        // the file rather than of `lapSteps / 4`: a lap the format cannot
+        // spell writes 4/4 and the screen must not promise 13/4.
+        assertEquals("3/4", OrbitClip.declaredMeterLabel(OrbitSet(listOf(pattern("a", 16, 1, listOf(0))), 120f, 48_000, lapSteps = 12)))
+        assertEquals("5/4", OrbitClip.declaredMeterLabel(OrbitSet(listOf(pattern("a", 16, 1, listOf(0))), 120f, 48_000, lapSteps = 20)))
+        assertNull(OrbitClip.declaredMeterLabel(set(pattern("a", 16, 1, listOf(0)))), "4/4 says nothing")
+        assertNull(
+            OrbitClip.declaredMeterLabel(OrbitSet(listOf(pattern("a", 16, 1, listOf(0))), 120f, 48_000, lapSteps = 13)),
+            "a lap that cannot be spelled writes 4/4, so the line must not claim a meter",
+        )
+    }
+
+    @Test
+    fun `a lap the format cannot spell keeps its 4-4 container`() {
+        // `lapSteps` is only required to be 1..MAX_STEPS and OrbitStore
+        // reads it straight from JSON, so 13 is reachable even though no
+        // control makes one. A bar of 3120 pulses is not whole quarters,
+        // and the format states a bar as beatsPerBar x beatLength with
+        // beatLength 960 - so this one cannot be declared and keeps the
+        // padded 4/4 bar it has always had, rather than throwing.
+        val odd = OrbitSet(listOf(pattern("odd", 13, 1, listOf(0))), 120f, 48_000, lapSteps = 13)
+        val clip = OrbitClip.clip(odd)
+        assertEquals(Mpc3Clip.PULSES_PER_BAR, clip.pulsesPerBar)
+        assertEquals(4, clip.beatsPerBar)
+        assertEquals(OrbitClip.barsFor(13), clip.bars)
     }
 
     @Test
@@ -308,5 +358,28 @@ class OrbitClipTest {
         // clip per section, and that is the only thing that changed.
         assertEquals(written.single(), stored.last())
         assertEquals(1, stored.count { OrbitClip.isOrbit(it) })
+    }
+
+    @Test
+    fun `the meter survives the groove store, and a four-four file does not change`() {
+        // groove.json is what carries a clip from the screen to the
+        // exporter, so a meter that does not round-trip through it never
+        // reaches the .xpj at all.
+        val dir = Files.createTempDirectory("orbitmeter").toFile()
+        val waltz = OrbitSet(listOf(pattern("four", 16, 1, listOf(0))), 120f, 48_000, lapSteps = 12)
+        OrbitClip.save(dir, waltz)
+        val stored = GrooveStore.load(dir).single()
+        assertEquals(3 * Mpc3Clip.PULSES_PER_BEAT, stored.pulsesPerBar)
+        assertEquals(OrbitClip.clip(waltz), stored)
+
+        // The key is written only when the clip is not 4/4, so every
+        // groove.json already on a card stays byte-for-byte what it was
+        // and its version does not have to move.
+        val plain = Files.createTempDirectory("orbitplain").toFile()
+        OrbitClip.save(plain, set(pattern("a", 16, 1, listOf(0))))
+        assertFalse(
+            "pulsesPerBar" in java.io.File(plain, GrooveStore.FILE_NAME).readText(),
+            "a 4/4 groove.json gains nothing",
+        )
     }
 }

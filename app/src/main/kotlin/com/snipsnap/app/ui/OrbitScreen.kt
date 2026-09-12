@@ -1224,8 +1224,20 @@ fun OrbitScreen(
                                     "${current.sections[it].name} ${OrbitClip.barsFor(OrbitClip.sectionSteps(current, it))}"
                                 }
                         }
+                        // Two exports, two answers, since YYY10. A PROJECT
+                        // declares the set's meter and its sequences are as
+                        // long as the music; a TRACK cannot say anything but
+                        // 4/4 (its clips are version 1 and `timeSignatureList`
+                        // is a version-3 field) and still pads. The label comes
+                        // from `OrbitClip` rather than from `lapSteps / 4`
+                        // because a lap the format cannot spell writes 4/4 too.
+                        val keeps = OrbitClip.declaredMeterLabel(current)
                         TapeText(
-                            "THE MPC COUNTS 4/4 BARS: $mpcBars.",
+                            if (keeps != null) {
+                                "A PROJECT KEEPS $keeps. A TRACK COUNTS 4/4 BARS: $mpcBars."
+                            } else {
+                                "THE MPC COUNTS 4/4 BARS: $mpcBars."
+                            },
                             TapeType.pixelSmall,
                             scheme.ink2.tape,
                             Modifier.fillMaxWidth(),

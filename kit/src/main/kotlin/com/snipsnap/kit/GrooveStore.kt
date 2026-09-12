@@ -67,6 +67,19 @@ object GrooveStore {
         linkedMapOf(
             "name" to JsonValue.Str(clip.name),
             "bars" to JsonValue.Num(clip.bars.toDouble()),
+            // Written only when the clip is not in 4/4, so a 4/4 groove.json
+            // is byte-identical to the ones already on cards and the version
+            // does not have to move. A build that predates this key reads a
+            // non-4/4 clip as 4/4 - which is exactly what every build did
+            // before the key existed, so the old behaviour is the floor
+            // rather than a new way to be wrong.
+            *(
+                if (clip.pulsesPerBar != Mpc3Clip.PULSES_PER_BAR) {
+                    arrayOf("pulsesPerBar" to JsonValue.Num(clip.pulsesPerBar.toDouble()))
+                } else {
+                    emptyArray()
+                }
+                ),
             "notes" to JsonValue.Arr(
                 clip.notes.map { n ->
                     JsonValue.Obj(
@@ -92,6 +105,7 @@ object GrooveStore {
         return Mpc3Clip(
             name = c["name"]?.str() ?: throw JsonException("clip has no name"),
             bars = c["bars"]?.int() ?: throw JsonException("clip has no bars"),
+            pulsesPerBar = c["pulsesPerBar"]?.long() ?: Mpc3Clip.PULSES_PER_BAR,
             notes = c["notes"]?.arr().orEmpty().map { noteJson ->
                 val n = noteJson.obj()
                 Mpc3Note(

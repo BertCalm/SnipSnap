@@ -71,19 +71,68 @@ data class Mpc3Clip(
     val name: String,
     val bars: Int,
     val notes: List<Mpc3Note>,
+    /**
+     * This clip's own bar, in pulses — [PULSES_PER_BAR], a 4/4 bar, for
+     * every clip that comes from a donor groove, an imported file or the
+     * step editor, which is why it is defaulted and why nothing else in
+     * the codebase had to learn about it.
+     *
+     * An ORBIT set is the exception: its bar is `lapSteps` 16ths, so a 3/4
+     * set's is 2880. Carrying it here is what lets a project sequence
+     * declare the meter and size itself to the music instead of padding it
+     * out to the next 4/4 bar (docs/MPC3_FORMAT.md, "Meter").
+     *
+     * Constrained to whole 960-pulse beats because that is all the format
+     * can say: a `timeSignatures` entry is `beatsPerBar` × `beatLength`,
+     * and every meter this app can make is a whole number of quarters.
+     */
+    val pulsesPerBar: Long = PULSES_PER_BAR,
 ) {
     init {
         require(name.isNotBlank()) { "clip name must not be blank" }
         require(bars in 1..64) { "bars out of range: $bars" }
+        require(pulsesPerBar > 0 && pulsesPerBar % PULSES_PER_BEAT == 0L) {
+            "a bar is whole beats of $PULSES_PER_BEAT pulses, not $pulsesPerBar"
+        }
         notes.forEach {
-            require(it.timePulses < bars * PULSES_PER_BAR) { "note at ${it.timePulses} falls outside $bars bars" }
+            require(it.timePulses < bars * pulsesPerBar) { "note at ${it.timePulses} falls outside $bars bars" }
         }
     }
+
+    /**
+     * The music's length: the one number every container question is
+     * answered from, so a sequence's `lengthPulses`, its `endPulses` and
+     * its loop bounds cannot drift apart.
+     */
+    val lengthPulses: Long get() = bars * pulsesPerBar
+
+    /** The meter's numerator — what a sequence writes as `beatsPerBar`. */
+    val beatsPerBar: Int get() = (pulsesPerBar / PULSES_PER_BEAT).toInt()
+
+    /**
+     * The whole 4/4 bars this clip fits into, rounded up.
+     *
+     * What a *track* file has to use: its clips are version 1 and version 1
+     * has no `timeSignatureList` (the field arrives at version 3, and only
+     * the two `3.9.0.31` files in the corpus have it), so an `.xtd` cannot
+     * say a clip is 3/4 and a 3/4 clip is padded there exactly as
+     * everything was before this field existed.
+     */
+    val fourFourBars: Int get() = ((lengthPulses + PULSES_PER_BAR - 1) / PULSES_PER_BAR).toInt()
 
     companion object {
         /** 960 PPQ × 4 quarters. */
         const val PULSES_PER_BAR: Long = 3840L
         const val PULSES_PER_16TH: Long = 240L
+
+        /**
+         * One quarter note. The corpus writes it as a meter entry's
+         * `beatLength`, which is a pulse count and not a `2 4 8 16`
+         * denominator — confirmed arithmetically against the harvested
+         * project, where `beatsPerBar` 4 × `beatLength` 960 × `lengthBars`
+         * 2 is exactly its `lengthPulses` of 7680.
+         */
+        const val PULSES_PER_BEAT: Long = 960L
 
         /** Straight; the MPC's swing scale runs from here to [MAX_SWING]. */
         const val STRAIGHT_SWING = 50
@@ -1016,15 +1065,32 @@ class Mpc3TrackWriter(
     /**
      * The clip object itself — also the value a sequence's `trackClipMaps`
      * carries, where the real project omits the MIDI bank block.
+     *
+     * [meterDeclared] says whether the thing holding this clip can state
+     * its meter. A project sequence can (`timeSignatureTrack`, written by
+     * [Mpc3ProjectWriter]), so the clip is exactly as long as the music.
+     * A track's `sharedClipMap` cannot — these clips are version 1 and
+     * `timeSignatureList` is a version-3 field (docs/MPC3_FORMAT.md,
+     * "Meter") — so a non-4/4 clip is padded up to whole 4/4 bars there,
+     * which is what every clip did before the meter existed.
      */
-    internal fun clipValue(clip: Mpc3Clip, includeMidiBank: Boolean = true): J = J.O(
+    internal fun clipValue(
+        clip: Mpc3Clip,
+        includeMidiBank: Boolean = true,
+        meterDeclared: Boolean = false,
+    ): J = J.O(
         buildList {
+            // One length, read once. It was written twice before, which is
+            // the shape of defect this repo keeps finding: `endPulses` and
+            // `loopEndPulses` are the same question and must not be two
+            // expressions that could drift.
+            val length = if (meterDeclared) clip.lengthPulses else clip.fourFourBars * Mpc3Clip.PULSES_PER_BAR
             add("version" to i(1))
             add("launchQuantisation" to i(0))
             add("startPulses" to i(0))
-            add("endPulses" to i(clip.bars * Mpc3Clip.PULSES_PER_BAR))
+            add("endPulses" to i(length))
             add("loopStartPulses" to i(0))
-            add("loopEndPulses" to i(clip.bars * Mpc3Clip.PULSES_PER_BAR))
+            add("loopEndPulses" to i(length))
             add("loop" to b(true))
             add("legato" to b(false))
             add("launch" to i(0))
