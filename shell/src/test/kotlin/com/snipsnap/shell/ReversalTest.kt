@@ -106,6 +106,13 @@ class ReversalTest {
         // that passes by accident is a line the law is not really holding.
         "RETRIM_TAPE_GONE" to "RE-TRIM refused; the pad was never changed",
         "KIT_DELETE_FAILED" to "the delete failed; nothing was destroyed",
+        // App.kt's forgetRoom catch block: the forget THREW, so the room is
+        // still on the shelf. It reads "FORGET FAILED. TRY AGAIN." and this
+        // law only sees it because the same change that classified it removed
+        // "AGAIN" from the answering vocabulary - under the old list a retry
+        // instruction counted as a way back, and this line sailed through
+        // saying nothing about the room at all.
+        "ROOM_FORGET_FAILED" to "the forget threw; the room was never binned",
         "SNIP_DELETE_FAILED" to "the delete failed; nothing was destroyed",
         "BIN_ITEM_GONE" to "the restore failed because it was already gone; this IS the way-back answer",
         // Busy lines, shown while the work runs.
