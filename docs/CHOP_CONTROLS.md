@@ -186,8 +186,13 @@ Tap the snare pad four times and you hear the four snares they played.
   provenance and RE-TRIM keys are the pad's, plus `folded = N`.
 - The rows say what folded: the lead reads `×4 TAKES`, a take reads
   `TAKE 2 OF 4 · = 3` (the slice it folded under). The strip reads
-  `FOLD: 16 SLICES → 5 PADS. TAP A PAD, HEAR ITS TAKES IN TURN.` and
-  SEND says `16 SLICES FOLDED ONTO 5 PADS.`
+  `FOLD: 16 SLICES → 5 PADS. TAP A PAD, HEAR ITS TAKES IN TURN.`, SEND
+  says `16 SLICES FOLDED ONTO 5 PADS.`, and ONTO an existing kit's bank
+  lands the same chains (`landArranged` carries the takes) and says
+  `'KIT' BANK B: 16 SLICES FOLDED ONTO 5 PADS.`
+- ON THE GRID on a tape with no pulse still records the choice: the cuts
+  stay where the hits were, the header reads `(NO TEMPO)`, and the tap
+  says why nothing moved.
 
 A folded pad is a chain pad, and chain pads refuse the treatments,
 RE-TRIM, STACK and SPLICE (they are single-zone, and every audio rewrite

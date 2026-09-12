@@ -316,7 +316,18 @@ class KitBuilderModel private constructor(
             val pad = entry ?: return@forEachIndexed
             if (pad.snip.frameCount == 0) return@forEachIndexed
             val slot = slots.first + i
-            assign(slot, pad.snip, pad.drumClass, pad.drumClass.name.replace('_', ' '), source = pad.source)
+            if (pad.takes.isEmpty()) {
+                assign(slot, pad.snip, pad.drumClass, pad.drumClass.name.replace('_', ' '), source = pad.source)
+            } else {
+                // A folded pad (CHOP's FOLD DOUBLES): every take end to end
+                // through the same door, then the chain that steps through
+                // them — what KitAssembler does for SEND TO GRID.
+                val all = listOf(pad.snip) + pad.takes
+                var at = 0L
+                val boundaries = all.map { t -> at.also { at += t.frameCount } }
+                assign(slot, Robin.concat(all), pad.drumClass, pad.drumClass.name.replace('_', ' '), source = pad.source)
+                update(slot) { it.copy(chain = com.snipsnap.kit.ChainInfo(boundaries, cycle = all.size)) }
+            }
             landed += slot
         }
         return landed

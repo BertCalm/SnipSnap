@@ -477,8 +477,12 @@ class ChopReviewModel private constructor(
         val n = rows.size
         val parent = IntArray(n) { it }
         fun find(i: Int): Int {
+            // Path halving: each step points x at its grandparent, then moves up.
             var x = i
-            while (parent[x] != x) x = parent[x].also { parent[x] = parent[parent[x]] }
+            while (parent[x] != x) {
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            }
             return x
         }
         for (i in 0 until n) for (j in i + 1 until n) {
@@ -493,7 +497,9 @@ class ChopReviewModel private constructor(
         }
         val groups = LinkedHashMap<Int, MutableList<Row>>()
         for (i in 0 until n) groups.getOrPut(find(i)) { mutableListOf() } += rows[i]
-        return groups.values.flatMap { takes -> takes.chunked(Robin.MAX_TAKES).map { Fold(it) } }
+        // Chunking a long run makes a second fold led by a later slice; the
+        // promise is capture order of leads, so sort after chunking.
+        return groups.values.flatMap { takes -> takes.chunked(Robin.MAX_TAKES).map { Fold(it) } }.sortedBy { it.lead.n }
     }
 
     /**

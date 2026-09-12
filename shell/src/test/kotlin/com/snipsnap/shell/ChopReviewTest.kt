@@ -251,10 +251,20 @@ class ChopReviewTest {
             val wav = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile))
             assertEquals(model.rows[0].slice.snip.frameCount + model.rows[1].slice.snip.frameCount, wav.frameCount, "both takes end to end")
             assertEquals(null, assertNotNull(kit.pad(3)).chain, "a fold of one is a plain pad")
+            // ONTO an existing kit's bank carries the takes too: the same chain, through `assign`.
+            val onto = KitBuilderModel.create("Onto", File(dir, "onto"))
+            val landed = onto.landArranged(send.arranged, 1)
+            assertEquals(3, landed.size)
+            val ontoKick = assertNotNull(onto.pad(landed[0]))
+            assertEquals(chain.boundaries, assertNotNull(ontoKick.chain, "ONTO lands the chain").boundaries)
+            assertEquals(wav.frameCount, com.snipsnap.audio.WavReader.read(File(File(dir, "onto"), ontoKick.sampleFile)).frameCount)
+            assertEquals(null, assertNotNull(onto.pad(landed[2])).chain)
         } finally {
             dir.deleteRecursively()
         }
         assertEquals("5 SLICES FOLDED ONTO 3 PADS. CHOKE GROUP SET.", Copy.foldedToGrid(5, 3, true))
+        assertEquals("1 SLICE FOLDED ONTO 1 PAD.", Copy.foldedToGrid(1, 1, false))
+        assertEquals("'K' BANK B: 5 SLICES FOLDED ONTO 3 PADS.", Copy.foldedOnto("K", 'B', 5, 3, 0))
     }
 
     @Test

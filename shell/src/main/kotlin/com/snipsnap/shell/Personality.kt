@@ -977,7 +977,12 @@ object Copy {
         "FOLD: $slices ${if (slices == 1) "SLICE" else "SLICES"} → $pads ${if (pads == 1) "PAD" else "PADS"}. TAP A PAD, HEAR ITS TAKES IN TURN."
     /** SEND TO GRID's toast when the layout was FOLD: both numbers, then the choke word SEND's own toast uses. */
     fun foldedToGrid(slices: Int, pads: Int, chokeSet: Boolean): String =
-        "$slices SLICES FOLDED ONTO $pads ${if (pads == 1) "PAD" else "PADS"}." + if (chokeSet) " CHOKE GROUP SET." else ""
+        "$slices ${if (slices == 1) "SLICE" else "SLICES"} FOLDED ONTO $pads ${if (pads == 1) "PAD" else "PADS"}." + if (chokeSet) " CHOKE GROUP SET." else ""
+    /** ONTO <kit> · BANK X when the layout was FOLD: [landedOnto]'s shape with both numbers. */
+    fun foldedOnto(kitName: String, bank: Char, slices: Int, pads: Int, left: Int): String {
+        val tail = if (left > 0) " $left DIDN'T FIT — A BANK HOLDS 16." else ""
+        return "'$kitName' BANK $bank: $slices ${if (slices == 1) "SLICE" else "SLICES"} FOLDED ONTO $pads ${if (pads == 1) "PAD" else "PADS"}.$tail"
+    }
 
     /** "N SLICES ON THE GRID. CHOKE GROUP SET." — the send-to-grid toast. */
     fun sentToGrid(sliceCount: Int, chokeSet: Boolean): String =

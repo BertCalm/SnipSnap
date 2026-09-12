@@ -600,9 +600,11 @@ private fun ChopContent(
             onSnap = { grid ->
                 val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
                 if (hits != null && hits.grid != grid) {
-                    // The row stays tappable without a pulse (dimmed, not
-                    // disabled; the toast explains) — OFF is always allowed.
-                    if (grid != ChopReviewModel.GridSnap.OFF && tempoMeasured.first && tempoMeasured.second == null) onToast(Copy.CHOP_NO_TEMPO) else rechopTo(hits.copy(grid = grid))
+                    // Without a pulse the choice is still recorded — the cuts
+                    // stay where the hits were and the header reads (NO
+                    // TEMPO) — and the toast says why nothing moved.
+                    if (grid != ChopReviewModel.GridSnap.OFF && tempoMeasured.first && tempoMeasured.second == null) onToast(Copy.CHOP_NO_TEMPO)
+                    rechopTo(hits.copy(grid = grid))
                 }
             },
         )
@@ -846,7 +848,10 @@ private fun ChopContent(
                             }
                         }
                         val left = send.arranged.drop(PadBanks.SIZE).count { it != null }
-                        onToast(Copy.landedOnto(target.kit.name, PadBanks.letter(landBank), landed.size, left))
+                        onToast(
+                            if (isFold) Copy.foldedOnto(target.kit.name, PadBanks.letter(landBank), current.sliceCount, landed.size, left)
+                            else Copy.landedOnto(target.kit.name, PadBanks.letter(landBank), landed.size, left),
+                        )
                         // KIT opens on the bank it landed on, not A: the
                         // pads that just arrived are the point of the tap.
                         onLandedOnto(updated, landBank)
