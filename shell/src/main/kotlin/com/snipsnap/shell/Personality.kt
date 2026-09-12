@@ -414,6 +414,7 @@ object Copy {
         "· CHOP'S CUT BENCH: HITS, EAR, GRID. MERGE OR SPLIT UNDER A CHIP.",
         "· FOLD ON CHOP: ONE PAD PER SOUND, THE REPEATS CYCLE UNDER IT.",
         "· GHOSTS ON CHOP: THE SPACES BETWEEN HITS. HOLD A PAD, HOLD THE ROOM.",
+        "· CATCH ON TAPE: HOLD A PAD AS THE HIT GOES BY. IT LANDS THERE.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -722,6 +723,34 @@ object Copy {
      */
     fun retrimLanded(pad: String, treatment: String?): String =
         "$pad RE-CUT." + (treatment?.let { " THE ${it.uppercase()} STAYED WITH THE OLD ONE - IT'S IN THE BIN." } ?: "")
+
+    // ---- CATCH A HIT: the pad grid is the chopper (docs/CATCH.md) ----
+    /** CATCH A HIT with no kit open: the grid it lands on is the open kit's. */
+    const val CATCH_NEEDS_KIT = "OPEN A KIT FIRST. CATCH LANDS ON ITS PADS."
+    /** The busy line while the tape's hits are found, before the grid comes up. */
+    const val CATCH_BUSY = "LISTENING FOR HITS…"
+    /** CATCH A HIT on a tape the detector heard nothing on. */
+    const val CATCH_NO_HITS = "NO HITS ON THIS TAPE TO CATCH. KEEP, OR INSTANT KIT, INSTEAD."
+    /** Over the grid while catching. */
+    const val CATCH_HEADER = "HOLD A PAD AS THE HIT GOES BY. LET GO, IT'S CAUGHT."
+    /** The grid's own button while catching: leave, and go play what landed. */
+    const val CATCH_DONE_BUTTON = "DONE"
+    /** A pad caught a hit, classed by ear. */
+    fun caught(pad: String, name: String): String = "$name CAUGHT ONTO $pad."
+    /** A pad held between hits: it took the tape from the press to the lift. */
+    fun caughtBetween(pad: String): String = "NO HIT WENT BY. $pad TOOK THE TAPE YOU HELD."
+    /** A tap between hits: nothing to take. */
+    const val CATCH_NOTHING = "NOTHING WENT BY. HOLD THE PAD AS THE HIT PASSES."
+    /** A pad that had a sound before CATCH began is never replaced. */
+    fun catchTaken(pad: String, name: String): String = "$pad IS $name ALREADY. CATCH ONTO AN EMPTY PAD INSTEAD."
+    /** DONE: what landed, and where to go. */
+    fun catchDone(count: Int, kit: String): String = when (count) {
+        0 -> "NOTHING CAUGHT. THE KIT IS AS IT WAS."
+        1 -> "1 HIT CAUGHT ONTO $kit. GO PLAY IT."
+        else -> "$count HITS CAUGHT ONTO $kit. GO PLAY THEM."
+    }
+    /** The write behind a catch failed; the pad is untouched (Law 3: say what happened). */
+    const val CATCH_FAILED = "THAT CATCH DIDN'T LAND. THE PAD IS AS IT WAS."
 
     // ---- PAD SHEET ----
     const val GHOSTS_ON ="GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
