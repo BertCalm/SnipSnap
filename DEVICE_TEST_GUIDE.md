@@ -1,11 +1,12 @@
-# SnipSnap device-test guide — the nine-screen wave
+# SnipSnap device-test guide
 
-Everything in this build passed compile, 1002 JVM tests, and code review — but
-zero seconds on real hardware. This guide is keyed to exactly what desk review
+Everything in this build passed compile, 1971 JVM tests, and code review. The
+`:app` module has NO unit tests at all, so every UI change in it is verified by
+compilation, diff review and screenshots only — never by a test. This guide is keyed to exactly what desk review
 could NOT verify. Test in this order; each item names what "wrong" looks like.
 
 ## First five minutes
-1. **FRESH TAPE → any starter → tap pads.** Do hits feel instant? SoundPool
+1. **NEW KIT ▸ STARTERS → any starter → tap pads.** Do hits feel instant? SoundPool
    latency varies wildly per device; if taps feel spongy everywhere, say so —
    that's an engine-swap conversation, not a bug fix.
 2. **KIT → tap the closed hat, then the open hat, then closed again.**
@@ -98,7 +99,14 @@ could NOT verify. Test in this order; each item names what "wrong" looks like.
 - LOOP has a door now (SNIPS → LOOP fills a track, then a LOOP row appears on
   the shelf), but it is the newest one in the app and the least walked: no
   tempo control, and a block tap that does nothing yet.
-- SYNTH and HELP are stubs; capture doesn't exist yet.
+- **Screen readers are the biggest blind spot.** 105 controls now carry
+  accessibility labels (up from 14), and a disabled control correctly reports as
+  disabled rather than vanishing. But an emulator tree dump shows those labels on
+  nodes marked non-focusable, beside the clickable ones — Compose may merge them
+  at runtime, or may not, and `uiautomator` cannot tell the two apart. **Turn
+  TalkBack on and swipe through a screen.** If it names each control, this is
+  solved; if it says nothing useful, it is not. Nothing short of listening
+  answers it.
 
 Report anything that feels wrong even if you can't name why — "the tape drag
 feels floaty" is a fully actionable bug report here.
