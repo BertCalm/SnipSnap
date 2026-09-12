@@ -20,6 +20,31 @@ using snipsnap::SurfaceEngine;
 
 namespace {
 inline SurfaceEngine* engine(jlong handle) { return reinterpret_cast<SurfaceEngine*>(handle); }
+
+/**
+ * Ask a print to stop and wait (bounded, on the caller's thread) for the
+ * callback to make its last write. Returns whether it actually got there
+ * (state is now Done) - review correctly caught what the first version
+ * assumed instead of checked: a timeout does not prove the callback is
+ * gone, only that it has not run again inside the bound, and a stream
+ * that is merely delayed (backgrounded, a route change, a slow HAL) can
+ * still be mid-write on `frames_` after the wait gives up. Reading or
+ * freeing that buffer on the strength of the timeout alone is the
+ * use-after-free/corruption this return value exists to prevent - the
+ * caller only touches the print once this is true.
+ *
+ * A template because both engines carry a print and the wait is the same
+ * handshake for each; written once so the two cannot drift apart on how
+ * long they are willing to wait.
+ */
+template <typename Engine>
+bool stopPrinting(Engine* e) {
+    e->requestStopPrint();
+    for (int i = 0; i < 100 && e->printState() == PrintBuffer::State::Stopping; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    return e->printState() == PrintBuffer::State::Done;
+}
 }  // namespace
 
 extern "C" {
@@ -104,9 +129,22 @@ Java_com_snipsnap_app_NativeSurface_setCorner(
     engine(handle)->setCorner(index, MacroState{pitch, cutoff, resonance, drive});
 }
 
+/**
+ * `PrintBuffer::arm`'s reservation is a print's worth of seconds of
+ * audio, the largest single allocation this bridge makes on a caller's
+ * own request - review found it was the one such allocation here with
+ * no catch, so a length past what the allocator can give (or past
+ * `vector::max_size`, for a hostile `maxFrames`) would throw C++ past
+ * the JNI boundary and abort the process instead of the plain refusal
+ * every other undersized-memory path in this file already returns.
+ */
 JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativeSurface_armPrint(JNIEnv*, jobject, jlong handle, jint maxFrames) {
-    return engine(handle)->armPrint(maxFrames > 0 ? static_cast<size_t>(maxFrames) : 0) ? JNI_TRUE : JNI_FALSE;
+    try {
+        return engine(handle)->armPrint(maxFrames > 0 ? static_cast<size_t>(maxFrames) : 0) ? JNI_TRUE : JNI_FALSE;
+    } catch (const std::exception&) {
+        return JNI_FALSE;
+    }
 }
 
 JNIEXPORT jint JNICALL
@@ -115,19 +153,19 @@ Java_com_snipsnap_app_NativeSurface_printState(JNIEnv*, jobject, jlong handle) {
 }
 
 /**
- * Stop the print and hand back what was captured, or null when nothing
- * was. Waits (bounded, UI thread) for the callback to make its last
- * write; if the stream is dead the callback will never flip the state,
- * so after the bound the buffer is read as-is - with no writer left,
- * that read is safe.
+ * Stop the print and hand back the mono bus that was captured, or null
+ * when nothing was. See `stopPrinting` for what the wait is for.
  */
 JNIEXPORT jfloatArray JNICALL
 Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv* env, jobject, jlong handle) {
     SurfaceEngine* e = engine(handle);
-    e->requestStopPrint();
-    for (int i = 0; i < 100 && e->printState() == PrintBuffer::State::Stopping; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
+    // Still Stopping past the bound: the callback has not made its last
+    // write yet, merely delayed rather than proven gone. Neither reading
+    // nor clearing is safe here - leave the buffer alone and report
+    // nothing this call; a later stopPrint (once the callback does catch
+    // up, or once destroy() tears the stream down for good) reaches Done
+    // and frees it then.
+    if (!stopPrinting(e)) return nullptr;
     const size_t frames = e->printFrames();
     jfloatArray out = nullptr;
     if (frames > 0) {
@@ -350,6 +388,47 @@ Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv* env, jobject, jlong handle) 
     if (out != nullptr && n > 0) {
         env->SetIntArrayRegion(out, 0, static_cast<jsize>(n), reinterpret_cast<const jint*>(buf));
     }
+    return out;
+}
+
+/** See NativeSurface_armPrint's twin: the same reservation, the same catch. */
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_armPrint(JNIEnv*, jobject, jlong handle, jint maxFrames) {
+    try {
+        return pads(handle)->armPrint(maxFrames > 0 ? static_cast<size_t>(maxFrames) : 0) ? JNI_TRUE : JNI_FALSE;
+    } catch (const std::exception&) {
+        return JNI_FALSE;
+    }
+}
+
+JNIEXPORT jint JNICALL
+Java_com_snipsnap_app_NativePads_printState(JNIEnv*, jobject, jlong handle) {
+    return static_cast<jint>(pads(handle)->printState());
+}
+
+/**
+ * Stop the print and hand back what was captured as interleaved stereo,
+ * or null when nothing was. The surface's twin returns mono, because
+ * that is the bus it has; this one returns two channels for the same
+ * reason, and the array is twice as long per frame. See `stopPrinting`
+ * for the wait, and `drainEnded` for why a null return is the JVM's
+ * pending OutOfMemoryError rather than an answer.
+ */
+JNIEXPORT jfloatArray JNICALL
+Java_com_snipsnap_app_NativePads_stopPrint(JNIEnv* env, jobject, jlong handle) {
+    PadEngine* e = pads(handle);
+    // See NativeSurface_stopPrint: still Stopping past the bound means
+    // not proven gone, and neither reading nor clearing is safe yet.
+    if (!stopPrinting(e)) return nullptr;
+    const size_t samples = e->printSamples();
+    jfloatArray out = nullptr;
+    if (samples > 0) {
+        out = env->NewFloatArray(static_cast<jsize>(samples));
+        if (out != nullptr) {
+            env->SetFloatArrayRegion(out, 0, static_cast<jsize>(samples), e->printData());
+        }
+    }
+    e->clearPrint();
     return out;
 }
 

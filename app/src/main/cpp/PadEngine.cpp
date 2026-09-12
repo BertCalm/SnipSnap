@@ -326,7 +326,12 @@ oboe::DataCallbackResult PadEngine::onAudioReady(oboe::AudioStream*, void* audio
     adoptPendingBank();
     PadCommand c;
     while (commands_.pop(c)) apply(c);
-    render(static_cast<float*>(audioData), numFrames);
+    auto* out = static_cast<float*>(audioData);
+    render(out, numFrames);
+    // The print tap takes the bus after the mix, so what it captures is
+    // what the speaker got: the clamp, the stolen voices and the fades
+    // are already in these frames. It is a no-op unless a print is armed.
+    print_.record(out, static_cast<size_t>(numFrames));
     return oboe::DataCallbackResult::Continue;
 }
 
