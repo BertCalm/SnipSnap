@@ -363,9 +363,28 @@ class PadEngine(preferredSampleRate: Int) {
     enum class PrintState { IDLE, RECORDING, STOPPING, DONE }
 
     /**
+     * The longest print [armPrint] currently allows, in seconds, at this
+     * engine's own [sampleRate] — not the flat constant the first version
+     * of this class used. [PRINT_BYTE_BUDGET] is a memory bound, and bytes
+     * per second of stereo float32 audio scales with the rate: a 96kHz
+     * device costs roughly double a 48kHz one for the same seconds, so a
+     * fixed-seconds ceiling is only really a memory bound at the rates
+     * common on Android today, not a promise this class can keep in
+     * general. Computed from [sampleRate] so it stays true regardless of
+     * what the device actually reports; a caller reasoning in seconds (a
+     * bars-based length, say) clamps against this instead.
+     */
+    @Synchronized
+    fun maxPrintSeconds(): Float = PRINT_BYTE_BUDGET.toFloat() / (2 * Float.SIZE_BYTES * sampleRate())
+
+    /**
      * Reserve [seconds] of RAM and record the mixed bus, stereo, from the
      * next callback. False when a print is still recording or stopping —
-     * take that one first — or there is no stream.
+     * take that one first — or the engine has no callback actually
+     * running: an open handle is not a running stream (see [isUp]), and
+     * arming before [start] would reserve at whatever rate the native
+     * side defaults to before it knows the device's real one, which can
+     * differ from what ends up playing.
      *
      * This is what a GROOVE bounce is made of: what gets captured is the
      * mix every voice's own gain and choke already went through, the same
@@ -375,8 +394,20 @@ class PadEngine(preferredSampleRate: Int) {
      */
     @Synchronized
     fun armPrint(seconds: Float): Boolean {
-        require(seconds > 0f && seconds <= MAX_PRINT_SECONDS) { "print length is 0..$MAX_PRINT_SECONDS s, got $seconds" }
-        return open && NativePads.armPrint(handle, (seconds * sampleRate()).toInt())
+        if (!isUp()) return false
+        val ceiling = maxPrintSeconds()
+        require(seconds > 0f && seconds <= ceiling) {
+            "print length is 0..$ceiling s at ${sampleRate()} Hz, got $seconds"
+        }
+        val frames = (seconds * sampleRate()).toInt()
+        // A positive `seconds` can still round to zero frames at the
+        // extreme low end (a fraction of a millisecond); arming with 0
+        // would leave the native side recording into an empty reservation,
+        // where the very first callback finds no room and the capture is
+        // nothing rather than the small-but-real print the caller asked
+        // for. Refuse rather than arm something that cannot hold a sample.
+        if (frames <= 0) return false
+        return NativePads.armPrint(handle, frames)
     }
 
     @Synchronized
@@ -426,13 +457,17 @@ class PadEngine(preferredSampleRate: Int) {
         const val CLICK_GAIN = 0.6f
 
         /**
-         * A print's RAM ceiling, the same bound `SurfaceEngine`'s own print
-         * uses: seconds of audio held in one reservation, not a length
-         * anyone would actually want to sit through. Stereo makes this
-         * print's bytes-per-second twice the surface's, and 60s of it is
-         * still under 25MB — the same order of magnitude `SnipStore` already
-         * accepts from an import, not a new ceiling this app has to defend.
+         * A print's RAM ceiling, in bytes rather than seconds — review
+         * caught what a flat seconds cap gets wrong: bytes per second of
+         * stereo float32 audio scales with the device's own rate, so "60
+         * seconds is under 25MB" is only true at the rates common on
+         * Android today, not in general (a 96kHz device would cost nearly
+         * double that for the same 60 seconds). [maxPrintSeconds] derives
+         * the actual ceiling from this and [sampleRate], so the promise
+         * stays true at whatever rate the device reports. 25MiB is the
+         * same order of magnitude `SnipStore` already accepts from an
+         * import, not a new ceiling this app has to defend.
          */
-        const val MAX_PRINT_SECONDS = 60f
+        const val PRINT_BYTE_BUDGET = 25L * 1024 * 1024
     }
 }
