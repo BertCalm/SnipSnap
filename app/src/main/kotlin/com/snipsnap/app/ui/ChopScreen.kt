@@ -94,6 +94,8 @@ fun ChopScreen(
     teachEnabled: Boolean,
     onToast: (String) -> Unit,
     onSentToGrid: (KitShelf.Entry) -> Unit,
+    /** ONTO <kit> · BANK X landed: the kit as it is now, and the bank (0-based) to open KIT on. */
+    onLandedOnto: (KitShelf.Entry, Int) -> Unit = { e, _ -> onSentToGrid(e) },
 ) {
     val scheme = LocalScheme.current
 
@@ -168,6 +170,7 @@ fun ChopScreen(
         teachEnabled = teachEnabled,
         onToast = onToast,
         onSentToGrid = onSentToGrid,
+        onLandedOnto = onLandedOnto,
     )
 }
 
@@ -316,6 +319,7 @@ private fun ChopContent(
     teachEnabled: Boolean,
     onToast: (String) -> Unit,
     onSentToGrid: (KitShelf.Entry) -> Unit,
+    onLandedOnto: (KitShelf.Entry, Int) -> Unit,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -644,7 +648,9 @@ private fun ChopContent(
                         }
                         val left = send.arranged.drop(PadBanks.SIZE).count { it != null }
                         onToast(Copy.landedOnto(target.kit.name, PadBanks.letter(landBank), landed.size, left))
-                        onSentToGrid(updated)
+                        // KIT opens on the bank it landed on, not A: the
+                        // pads that just arrived are the point of the tap.
+                        onLandedOnto(updated, landBank)
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) throw e
                         onToast("LAND FAILED: ${e.message ?: e.javaClass.simpleName}")

@@ -110,6 +110,14 @@ fun KitScreen(
     /** Flipped to a bank (0-based) with nothing on it: say what fills it (`Copy.bankEmpty`) as the blanks come up. */
     onBankEmpty: (Int) -> Unit = {},
     /**
+     * A one-shot ask to open on this bank (0-based) — a chop landed ONTO
+     * bank B wants B on screen, not A. Consumed through
+     * [onBankRequestConsumed] the moment it is honoured, so a later flip
+     * by hand is never fought, and a stale ask never re-fires.
+     */
+    bankRequest: Int? = null,
+    onBankRequestConsumed: () -> Unit = {},
+    /**
      * BREED (XX2 wired in): arms the pick-a-partner hand-off (`App.kt`'s
      * `pendingBreedWith`) and sends the user to the shelf to tap kit B —
      * `:shell`'s tested `Breed.breed` crosses this kit's own recipes with
@@ -240,6 +248,11 @@ fun KitScreen(
     val reachable = maxOf(bankCount, 2)
     LaunchedEffect(reachable) {
         if (bank >= reachable) bank = 0
+    }
+    LaunchedEffect(bankRequest) {
+        val asked = bankRequest ?: return@LaunchedEffect
+        bank = asked.coerceIn(0, reachable - 1)
+        onBankRequestConsumed()
     }
     val showing = bank.coerceAtMost(reachable - 1)
 

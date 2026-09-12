@@ -460,8 +460,12 @@ object Copy {
         val twins = if (bank == 'B') " REMIX BANK B ▸ DEALS TWINS HERE TOO." else ""
         return "BANK $bank: EMPTY. HOLD A PAD TO CAPTURE ONTO IT, OR TO PLACE A SNIP FROM SNIPS. A CHOP CAN LAND HERE.$twins"
     }
-    /** REMIX BANK B pressed while bank B holds pads the user put there: a remix would wipe them, so it refuses. */
-    const val TWINS_KEEP_OWN = "BANK B HOLDS YOUR OWN PADS. REMIX WON'T WIPE THEM — EJECT THEM FIRST, OR KEEP THE PAGE."
+    /**
+     * REMIX BANK B pressed while bank B holds pads the user put there: a
+     * refusal, and it says so in the reversal law's terms — the pads stay
+     * untouched; nothing here destroyed anything (`ReversalTest`).
+     */
+    const val TWINS_KEEP_OWN = "BANK B HOLDS YOUR OWN PADS. THEY STAY UNTOUCHED — REMIX ONLY DEALS ONTO AN EMPTY B. CLEAR THEM FIRST, OR KEEP THE PAGE."
     /**
      * CHOP's ONTO <kit> · BANK X: the slices landed on an existing kit's
      * empty bank, and how many did not fit when the chop was wider than
@@ -679,6 +683,17 @@ object Copy {
     // ---- PAD SHEET ----
     const val GHOSTS_ON ="GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
     fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
+    /**
+     * The same landing when `PadSheet.unTreatState` was NOT_BINNED: the
+     * pad carried a treatment with no original in the bin behind it (a
+     * bank-B twin, a CLI treat, a bin since emptied), so the new one went
+     * on top of the old rather than in its place. Said, since the card
+     * lights one segment while the sound carries two; the fix is named.
+     */
+    fun treatedStacked(segment: String, pad: String): String =
+        "$segment ON $pad, OVER THE LAST ONE — NO ORIGINAL IN THE BIN TO SWAP FROM. VERSIONS ▸ ROLLS BACK."
+    /** SMEAR at AMT 0 on a pad that isn't smeared: `smearPad` writes nothing, so nothing landed. */
+    const val SMEAR_ZERO = "AMT 0: NOTHING TO SMEAR. THE PAD STAYS AS IT IS."
     const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."
     const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."

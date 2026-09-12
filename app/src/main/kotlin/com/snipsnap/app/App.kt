@@ -362,6 +362,9 @@ fun App(shelf: KitShelf) {
     // by the MenuRow tab-switch reset below if the user gives up on the
     // pick without ever tapping a second kit.
     var pendingBreedWith by remember { mutableStateOf<KitShelf.Entry?>(null) }
+    // A chop landed ONTO a bank asks KIT to open on that bank, once
+    // (KitScreen's `bankRequest`); null again the moment KIT honours it.
+    var kitBankRequest by remember { mutableStateOf<Int?>(null) }
     // DO IT AGAIN: what COPY LAST TREATMENT last lifted off a pad. A
     // clipboard, not a hand-off — deliberately NOT cleared by the tab-
     // switch reset below: pasting onto a pad in ANOTHER kit means going
@@ -1627,6 +1630,10 @@ fun App(shelf: KitShelf) {
         // a tab switch away from KITS mid-pick abandons the hand-off rather
         // than leaving KitsScreen stuck naming a cross partner forever.
         pendingBreedWith = null
+        // ONTO's ask to open KIT on its bank is for the KIT that follows
+        // it; a tab switch abandons it rather than letting it fire on
+        // some later visit to some other kit.
+        kitBankRequest = null
         tapeOpenOverride = null
         // DELETED KITS is shelf-level too — same reasoning
         // as SNIPS above: a tab switch away from KITS must
@@ -2067,6 +2074,8 @@ fun App(shelf: KitShelf) {
                                     onInKey = ::inKey,
                                     onTwins = ::evilTwins,
                                     onBankEmpty = { toast = Copy.bankEmpty(PadBanks.letter(it)) },
+                                    bankRequest = kitBankRequest,
+                                    onBankRequestConsumed = { kitBankRequest = null },
                                     onBreed = ::startBreed,
                                     // A second kit to cross with has to
                                     // already be on the shelf — BREED can't
@@ -2177,6 +2186,14 @@ fun App(shelf: KitShelf) {
                             onToast = { toast = it },
                             onSentToGrid = { newEntry ->
                                 open = newEntry
+                                screen = AppScreen.KIT
+                                scope.launch {
+                                    kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                }
+                            },
+                            onLandedOnto = { updated, bank ->
+                                open = updated
+                                kitBankRequest = bank
                                 screen = AppScreen.KIT
                                 scope.launch {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
