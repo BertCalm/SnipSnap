@@ -84,18 +84,21 @@ import com.snipsnap.app.ui.XRayScreen
 import com.snipsnap.app.ui.tapeClick
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.Cleanup
+import com.snipsnap.audio.Dust
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.InstantKit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.Personality
 import com.snipsnap.shell.ReadGroove
 import com.snipsnap.shell.RecipeReplay
@@ -898,6 +901,66 @@ fun App(shelf: KitShelf) {
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
             busy = null
             toast = if (hadTwins) Copy.TWINS_REROLLED else Copy.BANK_B_LIT
+        }
+    }
+
+    /**
+     * DUST ALL: every pad of the open kit dusted at `PadSheet.DUST_ALL_AMOUNT`
+     * from its own tape, else the kit's (`DustPrints.tapeFor`) — the
+     * per-pad door `KitBuilderModel.dustPad` once per pad under one
+     * `KitWrites.mutex`, each tape's print read once. Layered and chained
+     * pads are left as they are and counted, since every audio rewrite
+     * refuses them. The same DUBBING…-shaped busy line as EVIL TWINS: the
+     * prints and sixteen convolutions run offline.
+     */
+    fun dustAll() {
+        val source = open ?: return
+        if (busy != null) return
+        if (DustPrints.kitTape(source.kit) == null) {
+            toast = Copy.DUST_NO_TAPE
+            return
+        }
+        val snipsDir = File(context.filesDir, SnipStore.DIR)
+        busy = Copy.DUSTING_BUSY
+        scope.launch {
+            val result = try {
+                withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock {
+                        val m = KitBuilderModel.open(source.dir)
+                        val prints = HashMap<String, Dust.Print?>()
+                        var dusted = 0
+                        var left = 0
+                        for (pad in m.kit.pads.toList()) {
+                            val tape = DustPrints.tapeFor(m.kit, pad) ?: continue
+                            val print = prints.getOrPut(tape) { DustPrints.forTape(File(snipsDir, tape)) } ?: continue
+                            try {
+                                m.dustPad(pad.slot, PadSheet.DUST_ALL_AMOUNT, tape, print)
+                                dusted++
+                            } catch (e: IllegalArgumentException) {
+                                left++
+                            } catch (e: IllegalStateException) {
+                                left++
+                            }
+                        }
+                        if (dusted > 0) m.save()
+                        Triple(KitShelf.Entry(source.dir, m.kit), dusted, left)
+                    }
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                busy = null
+                toast = "DUST FAILED: ${e.message ?: e.javaClass.simpleName}"
+                return@launch
+            }
+            busy = null
+            val (entry, dusted, left) = result
+            if (dusted == 0 && left == 0) {
+                toast = Copy.DUST_NO_GHOSTS
+                return@launch
+            }
+            if (open?.dir == source.dir) open = entry
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+            toast = Copy.dustedAll(dusted, left)
         }
     }
 
@@ -2083,6 +2146,7 @@ fun App(shelf: KitShelf) {
                                     canBreed = kits.size > 1,
                                     onShare = ::shareKit,
                                     onSplit = { screen = AppScreen.SPLIT },
+                                    onDustAll = ::dustAll,
                                     onEmptyLongPress = { slot ->
                                         // SNIPS → PAD's landing: a pick still
                                         // armed intercepts the press here,

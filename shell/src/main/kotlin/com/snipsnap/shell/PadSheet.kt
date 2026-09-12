@@ -46,8 +46,20 @@ object PadSheet {
     /** The fifth chip: HPSS + phase-locked stretch, not a Time Machine era. */
     const val SMEAR = "SMEAR"
 
-    /** Row one, left to right, as the card draws it — the eras, plus SMEAR. */
-    val SEGMENTS: List<String> = listOf(NONE, "CRUSH", "TAPE", "DIRT", SMEAR)
+    /**
+     * The sixth chip: the tape's own hiss and room under the pad
+     * (`com.snipsnap.audio.Dust`, `docs/DUST.md`). Like [SMEAR], not an
+     * era and never in [ERA_FOR]: it rides its own recipe shape
+     * (`{"verb":"dust","amount":x,"tape":"<file>"}`), read by [readDust],
+     * because it needs a tape as well as an amount.
+     */
+    const val DUST = "DUST"
+
+    /** Where DUST ALL lands every pad: lower than the card's default, since the point is one room shared, not sixteen soups. */
+    const val DUST_ALL_AMOUNT = 0.5f
+
+    /** Row one, left to right, as the card draws it — the eras, plus SMEAR and DUST. */
+    val SEGMENTS: List<String> = listOf(NONE, "CRUSH", "TAPE", "DIRT", SMEAR, DUST)
 
     /** Row two, first chip: the rack's transient-removal character (`"smeared"`) — see the object KDoc for why it isn't named SMEAR. */
     const val TAIL = "TAIL"
@@ -242,6 +254,23 @@ object PadSheet {
         return (recipe.entries["amount"] as? JsonValue.Num)?.value?.toFloat()
     }
 
+    /** What a dusted pad carries: how much, and which tape's dust. */
+    data class Dusted(val amount: Float, val tape: String)
+
+    /**
+     * DUST's own recipe off a pad — `{"verb":"dust","amount":x,"tape":t}`,
+     * [readSmear]'s companion for the sixth chip. Anything else reads as
+     * no DUST active; a dust recipe missing its tape is not a dust recipe.
+     */
+    fun readDust(recipe: JsonValue.Obj?): Dusted? {
+        if (recipe == null) return null
+        val verb = (recipe.entries["verb"] as? JsonValue.Str)?.value ?: return null
+        if (verb != "dust") return null
+        val amount = (recipe.entries["amount"] as? JsonValue.Num)?.value?.toFloat() ?: return null
+        val tape = (recipe.entries["tape"] as? JsonValue.Str)?.value ?: return null
+        return Dusted(amount, tape)
+    }
+
     /**
      * What the card should light for a pad's recipe, read defensively:
      * `eraPad` leaves `{"era", "amount"}`, `characterPad` (and `treatPad`,
@@ -322,12 +351,12 @@ object PadSheet {
      * [UnTreat] for [pad], given the set of `originalName`s currently in the
      * kit's bin (`KitBuilderModel.binContents()`).
      *
-     * Both recipe readers are consulted: SMEAR rides its own shape and [read]
-     * cannot see it (see the object KDoc), but a smeared pad is every bit as
-     * un-treatable as an aged one.
+     * Every recipe reader is consulted: SMEAR and DUST ride their own
+     * shapes and [read] cannot see them (see the object KDoc), but a
+     * smeared or dusted pad is every bit as un-treatable as an aged one.
      */
     fun unTreatState(pad: KitPad, binned: Set<String>): UnTreat {
-        if (read(pad.recipe) == null && readSmear(pad.recipe) == null) return UnTreat.NOTHING
+        if (read(pad.recipe) == null && readSmear(pad.recipe) == null && readDust(pad.recipe) == null) return UnTreat.NOTHING
         if (pad.sampleFile !in binned) return UnTreat.NOT_BINNED
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
         return if (files.all { it in binned }) UnTreat.READY else UnTreat.GHOSTS_POSTDATE

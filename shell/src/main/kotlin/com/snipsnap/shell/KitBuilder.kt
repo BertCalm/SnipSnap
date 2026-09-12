@@ -459,6 +459,39 @@ class KitBuilderModel private constructor(
     }
 
     /**
+     * DUST: the tape's own hiss and room under one pad (`docs/DUST.md`),
+     * [amount] 0..1 through `com.snipsnap.audio.Dust.apply` with [print],
+     * the dust of [tape] (a bare file name on the SNIPS shelf, recorded
+     * in the recipe so DO IT AGAIN and the pad sheet can name it). The
+     * same shape as [smearPad] in every rule: restore-first when the bin
+     * holds the original (so re-dusting, or dusting an aged pad, never
+     * stacks), amount 0 takes an existing dust off and touches an
+     * undusted pad not at all, layers and chains refused, bin-backed
+     * through [replaceAudio].
+     */
+    fun dustPad(slot: Int, amount: Float, tape: String, print: com.snipsnap.audio.Dust.Print?): KitPad {
+        require(amount in 0f..1f) { "amount is 0..1, got $amount" }
+        require(amount <= 0f || print != null) { "dusting at $amount needs the tape's print" }
+        require('/' !in tape && '\\' !in tape) { "tape is a bare file name: '$tape'" }
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.velocityLayers.isEmpty()) { "pad $slot is velocity-layered - `clearGhostLayers($slot)` before dusting" }
+        requireNotChained(pad, "dusting")
+        val dustedNow = PadSheet.readDust(pad.recipe) != null
+        val restorable =
+            PadSheet.unTreatState(pad, binContents().map { it.originalName }.toSet()) == PadSheet.UnTreat.READY
+        val current = if (restorable && (amount > 0f || dustedNow)) untreatPad(slot) else pad
+        if (amount <= 0f) return current
+        val recipe = com.snipsnap.json.JsonValue.Obj(
+            linkedMapOf<String, com.snipsnap.json.JsonValue>(
+                "verb" to com.snipsnap.json.JsonValue.Str("dust"),
+                "amount" to com.snipsnap.json.JsonValue.Num(amount.toDouble()),
+                "tape" to com.snipsnap.json.JsonValue.Str(tape),
+            ),
+        )
+        return replaceAudio(slot, recipe) { snip -> com.snipsnap.audio.Dust.apply(snip, print!!, amount) }
+    }
+
+    /**
      * TAPE SPLICE's own candidate list for one pad: every recoverable
      * prior take of its file, newest first — [binContents] filtered to
      * just this pad's own history. The live sample itself isn't in this
