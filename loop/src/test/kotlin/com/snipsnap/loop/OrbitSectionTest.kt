@@ -764,11 +764,71 @@ class OrbitSectionTest {
         assertTrue(frames.toInt() < 0, "and it must wrap negative, which is the bug")
         val why = OrbitClip.refusal(fast)
         assertTrue(why != null && why.contains("FRAMES"), "said: $why")
+        // And the half-an-Int case, which the first cut of this guard let
+        // through: 64 bars at 3 MHz and 40 BPM is 1,152,000,000 frames -
+        // inside an Int, and past it the moment the renderer doubles it
+        // for the interleaved buffer it allocates.
+        val half = fast.copy(sampleRate = 3_000_000)
+        val halfFrames = OrbitClock.transportFrames(half)
+        assertTrue(halfFrames < Int.MAX_VALUE, "the fixture must fit an Int: $halfFrames")
+        assertTrue(halfFrames.toInt() * 2 < 0, "and must overflow when interleaved, which is the bug")
+        assertTrue(OrbitClip.refusal(half) != null, "a turn the renderer cannot count must be refused")
+        assertEquals(null, OrbitClip.clipRefusal(half))
         // A CLIP is written in bars and never reaches a frame, so it is
         // not refused for this.
         assertEquals(null, OrbitClip.clipRefusal(fast))
         // And an ordinary set is untouched.
         assertEquals(null, OrbitClip.refusal(set(OrbitSection("A", 1, setOf(0)))))
+    }
+
+    @Test
+    fun `a break is not measured against a ceiling on clips it does not write`() {
+        // A 64-bar break in 8/4 is 128 of the clip's bars - but a break
+        // writes no clip, so there is no clip of that length to be too
+        // long. Every clip this set does write is one bar.
+        val s = OrbitSet(
+            listOf(ring("A", 1, 0)),
+            bpm,
+            rate,
+            lapSteps = 32,
+            sections = listOf(OrbitSection("IN", 1, setOf(0)), OrbitSection("GAP", 64, emptySet())),
+        )
+        assertEquals(null, OrbitClip.clipRefusal(s))
+        assertEquals(listOf("ORBIT IN"), OrbitClip.clips(s).map { it.name })
+        // The BOUNCE still counts it, because silence has a length: the
+        // plan is 65 of the set's bars, which is 130 of the clip's.
+        assertTrue(OrbitClip.refusal(s)!!.contains("PLAN"), "said: ${OrbitClip.refusal(s)}")
+        // And a PLAYABLE section that long is still refused to both.
+        val playable = s.copy(sections = listOf(OrbitSection("LONG", 64, setOf(0))))
+        assertTrue(OrbitClip.clipRefusal(playable)!!.contains("LONG"))
+    }
+
+    @Test
+    fun `the window the preflight asks is the window the writer walks`() {
+        // A 3/4 set: a one-bar section is twelve 16ths, written into a
+        // clip bar of SIXTEEN. The four steps of padding are silence the
+        // writer never reaches, and asking the preflight over the padded
+        // length counted a hit that is not in the file.
+        val a = Orbit("A", 12, PatternOrbit("kitA", listOf(OrbitHit(0, 1))))
+        val late = Orbit("B", 16, PatternOrbit("kitB", listOf(OrbitHit(15, 2))))
+        val s = OrbitSet(
+            listOf(a, late),
+            bpm,
+            rate,
+            lapSteps = 12,
+            sections = listOf(OrbitSection("X", 1, setOf(0, 1))),
+        )
+        // Step 15 is pulse 3,600; the section writes 2,880. Counting it
+        // refused this as a two-kit clip, for a note the clip has not got.
+        assertEquals(2_880L, OrbitClip.clipPulses(OrbitClip.sectionSteps(s, 0)))
+        assertEquals(null, OrbitClip.clipRefusal(s))
+        assertEquals(1, OrbitClip.clips(s).single().notes.size)
+        // The same number the other way about: a section whose ONLY ring
+        // is that one sounds nothing, and counting the padding would have
+        // declared it sounding and then written the clip empty.
+        val only = s.copy(sections = listOf(OrbitSection("LATE", 1, setOf(1))))
+        assertTrue(!OrbitClip.sectionSounds(only, 0))
+        assertTrue(OrbitClip.clipRefusal(only)!!.contains("LATE"))
     }
 
     @Test

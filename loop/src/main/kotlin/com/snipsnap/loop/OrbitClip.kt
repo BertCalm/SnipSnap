@@ -25,6 +25,19 @@ object OrbitClip {
     /** MPC clips top out at 64 bars, and so does the bounce. */
     const val MAX_BARS = 64
 
+    /**
+     * The longest bounce the renderer can even count, in frames.
+     *
+     * Not [Int.MAX_VALUE]: `OrbitEngine.render` takes an `Int`, allocates
+     * the turn INTERLEAVED (`frames * 2` floats) and rounds up to whole
+     * blocks (`frames + blockFrames - 1`), so the ceiling is half of an
+     * `Int`, less one block. A turn between the two passed the first cut
+     * of this guard and then overflowed inside the renderer instead — 64
+     * bars at 3 MHz and 40 BPM is 1,152,000,000 frames, which fits an
+     * `Int` and doubles straight past it.
+     */
+    val MAX_BOUNCE_FRAMES: Long = ((Int.MAX_VALUE - OrbitEngine.DEFAULT_BLOCK_FRAMES) / 2).toLong()
+
     /** The clip's bar is always 16 sixteenths: [Mpc3Clip] has bars but no time signature. */
     const val CLIP_BAR_STEPS = 16
 
@@ -60,15 +73,20 @@ object OrbitClip {
     /**
      * The pulses a clip of [steps] of the set's 16ths actually writes.
      *
-     * WHOLE CLIP BARS, not the steps themselves: an [Mpc3Clip] is bars
-     * long, so a 3/4 set's twelve-step section is written as one bar of
-     * sixteen and a hit in those last four steps lands in the file. Every
-     * question about "what does this clip contain" is asked over this one
+     * The STEPS themselves, which is the window [clip]'s walk is bounded
+     * by. [barsFor] is the container it is written into and is a different
+     * number whenever the set's bar is not sixteen: a 3/4 set's twelve
+     * steps are written into a bar of sixteen, and the four steps of
+     * padding are silence the writer never reaches. Asking the preflight
+     * over the padded length counted a hit the writer leaves out - a
+     * false two-kit refusal one way round, and a clip declared to sound
+     * and then written empty the other.
+     *
+     * Every question about what a clip contains is asked over this one
      * number, because a preflight measuring a different window from the
-     * writer's is how a section came to be refused for a hit that is not
-     * in it - and, the other way about, written empty.
+     * writer's is the whole of that class of defect.
      */
-    fun clipPulses(steps: Long): Long = barsFor(steps).toLong() * Mpc3Clip.PULSES_PER_BAR
+    fun clipPulses(steps: Long): Long = steps * Mpc3Clip.PULSES_PER_16TH
 
     /** Whether the clip's bar count differs from the set's, so the screen can say so. */
     fun countsDifferently(set: OrbitSet): Boolean = set.lapSteps != CLIP_BAR_STEPS
@@ -160,6 +178,12 @@ object OrbitClip {
             return "THE RINGS MEET EVERY $bars $unit — A CLIP STOPS AT $MAX_BARS. $fix"
         }
         set.sections.indices.forEach { index ->
+            // A break writes no clip, so there is no clip of its length to
+            // be too long: a 64-bar 8/4 break beside a short playable
+            // section refused an export in which every clip written fits.
+            // The BOUNCE still counts it, through the plan's own ceiling
+            // in [refusal] - a break is silence and silence has a length.
+            if (set.sections[index].plays.isEmpty()) return@forEach
             val sectionBars = barsFor(sectionSteps(set, index))
             if (sectionBars > MAX_BARS) {
                 return "SECTION ${set.sections[index].name} IS $sectionBars BARS OF 4/4 — A CLIP STOPS AT $MAX_BARS. SHORTEN IT."
@@ -183,7 +207,7 @@ object OrbitClip {
      */
     private fun frameCap(set: OrbitSet): String? {
         val frames = OrbitClock.transportFrames(set)
-        if (frames <= Int.MAX_VALUE) return null
+        if (frames <= MAX_BOUNCE_FRAMES) return null
         return "ONE TURN IS $frames FRAMES AT ${set.sampleRate} Hz — MORE THAN ONE BOUNCE HOLDS. " +
             "LOWER THE RATE, OR SHORTEN IT."
     }
@@ -378,24 +402,25 @@ object OrbitClip {
         if (bars > MAX_BARS) {
             throw IllegalArgumentException("$bars BARS OF 4/4 — A CLIP STOPS AT $MAX_BARS.")
         }
+        // The window this clip writes, in pulses. The clip is musical
+        // time, so it is counted in the unit it is written in rather than
+        // converted out of frames: a frame is the finer unit at any rate
+        // worth playing at, but `sampleRate` is only required to be
+        // positive, and with fewer than 960 frames to a beat — a rate
+        // below 16 × BPM hertz — the conversion moves a note off its pulse.
         val limit = clipPulses(steps)
-        // Over the window this clip writes: a ring whose only hit falls
-        // outside it puts no note in the file, so it names no kit here
-        // and its pad is not this clip's to hold.
+        // Over that window: a ring whose only hit falls outside it puts no
+        // note in the file, so it names no kit here and its pad is not
+        // this clip's to hold.
         oneProgram(set, limit)?.let { throw IllegalArgumentException(it) }
         noNotes(set)?.let { throw IllegalArgumentException(it) }
-        // The whole cycle in pulses. The clip is musical time, so it is
-        // counted in the unit it is written in rather than converted out
-        // of frames: a frame is the finer unit at any rate worth playing
-        // at, but `sampleRate` is only required to be positive, and with
-        // fewer than 960 frames to a beat — a rate below 16 × BPM hertz —
-        // the conversion moves a note off its pulse.
-        val cycle = steps * Mpc3Clip.PULSES_PER_16TH
         val notes = ArrayList<Mpc3Note>()
         for (ring in set.orbits) {
             if (!ring.engaged || ring.content !is PatternOrbit) continue
-            for (firing in OrbitClock.pulseFirings(set, ring, cycle)) {
-                if (firing.pulses >= limit) continue
+            // No second filter after this one: `pulseFirings` widens its
+            // lap walk and then filters every strike back into `0 until
+            // limit` itself, so nothing it returns is outside the window.
+            for (firing in OrbitClock.pulseFirings(set, ring, limit)) {
                 notes += Mpc3Note(
                     note = noteFor(firing.hit.slot),
                     timePulses = firing.pulses,

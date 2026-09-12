@@ -1160,11 +1160,16 @@ fun OrbitScreen(
                         TapeText("ONE TURN OUT — ${transportLabel(current)}", TapeType.pixel, scheme.ink.tape)
                         SmallChip("CLOSE", scheme) { outOpen = false }
                     }
-                    val refusal = OrbitClip.refusal(current)
-                    // A reason the clip alone cannot go: the snips, the
-                    // mutes, the ring with no hits on it yet. BOUNCE is
-                    // unaffected by all of them, so it stays on the row.
-                    val clipOnly = if (refusal == null) OrbitClip.clipRefusal(current) else null
+                    // The two ways out are asked SEPARATELY, because
+                    // they no longer refuse together. A clip has reasons a
+                    // bounce has not - the snips, the mutes, the ring with
+                    // no hits on it yet - and since sections, a bounce has
+                    // one a clip has not: eight sections of 32 bars are
+                    // eight legal sequences and one impossible bounce.
+                    // Gating both on `refusal` hid CLIP ▸ KIT in exactly
+                    // the case an arrangement exists to make exportable.
+                    val bounceWhy = OrbitClip.refusal(current)
+                    val clipWhy = OrbitClip.clipRefusal(current)
                     if (OrbitClip.countsDifferently(current)) {
                         // The MPC clip has no time signature: its bar is sixteen 16ths whatever the set's is.
                         // Counted off the transport's own turn, which is
@@ -1178,26 +1183,29 @@ fun OrbitScreen(
                             Modifier.fillMaxWidth(),
                         )
                     }
-                    if (refusal != null) {
-                        TapeText(refusal, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2)
-                    } else {
+                    if (bounceWhy == null || clipWhy == null) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            ActionButton(if (bouncing) "BOUNCING…" else "BOUNCE ▸ TAPE", scheme, Modifier.weight(1f), enabled = !bouncing, accent = true) { bounceToTape() }
-                            if (clipOnly == null) {
+                            if (bounceWhy == null) {
+                                ActionButton(if (bouncing) "BOUNCING…" else "BOUNCE ▸ TAPE", scheme, Modifier.weight(1f), enabled = !bouncing, accent = true) { bounceToTape() }
+                            }
+                            if (clipWhy == null) {
                                 ActionButton("CLIP ▸ KIT", scheme, Modifier.weight(1f), accent = true) { clipIntoKit() }
                             }
                         }
-                        if (clipOnly != null) {
-                            TapeText(clipOnly, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2)
-                        } else {
-                            TapeText(
-                                "TAPE: WHAT YOU HEAR, AS A SNIP ON THE SHELF — TRIM IT, CHOP IT, MAKE A KIT OF IT. KIT: THE PATTERN AS A CLIP IN THE KIT'S GROOVES, SO IT RIDES TO THE MPC.",
-                                TapeType.pixelSmall,
-                                scheme.ink3.tape,
-                                Modifier.fillMaxWidth(),
-                                maxLines = 3,
-                            )
-                        }
+                    }
+                    // Each reason once. The clip's ceiling is part of the
+                    // bounce's, so when a length is what refuses them both
+                    // it is literally the same sentence twice.
+                    val why = listOfNotNull(bounceWhy, clipWhy).distinct()
+                    why.forEach { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2) }
+                    if (why.isEmpty()) {
+                        TapeText(
+                            "TAPE: WHAT YOU HEAR, AS A SNIP ON THE SHELF — TRIM IT, CHOP IT, MAKE A KIT OF IT. KIT: THE PATTERN AS A CLIP IN THE KIT'S GROOVES, SO IT RIDES TO THE MPC.",
+                            TapeType.pixelSmall,
+                            scheme.ink3.tape,
+                            Modifier.fillMaxWidth(),
+                            maxLines = 3,
+                        )
                     }
                     // The way back in. It sits under the two ways out
                     // because this is where the route between ORBIT and
