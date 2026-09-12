@@ -63,7 +63,16 @@ object OrbitClip {
         val bars = bars(set)
         if (bars <= MAX_BARS) return null
         val unit = if (countsDifferently(set)) "BARS OF 4/4" else "BARS"
-        return "THE RINGS MEET EVERY $bars $unit — A CLIP STOPS AT $MAX_BARS. SHORTEN A RING."
+        // A ring's length is no longer the only thing that makes a cycle
+        // long: a hit on one lap in four does not repeat until the fourth
+        // lap, so it multiplies its ring's contribution
+        // ([OrbitClock.turnSteps]). Telling a player to shorten a ring when
+        // what did it was a conditional sends them to the wrong chip.
+        val conditional = set.orbits.any { o ->
+            (o.content as? PatternOrbit)?.hits?.any { it.everyLaps != OrbitHit.EVERY_LAP } == true
+        }
+        val fix = if (conditional) "SHORTEN A RING, OR TAKE A CONDITIONAL OFF A HIT." else "SHORTEN A RING."
+        return "THE RINGS MEET EVERY $bars $unit — A CLIP STOPS AT $MAX_BARS. $fix"
     }
 
     /**

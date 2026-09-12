@@ -63,8 +63,9 @@ fun periodSteps(set: OrbitSet, orbit: Orbit): Int {
 
 Every bar length offered (below) is even, so `HALF` is always whole.
 `lapFrames`, `periodFrames`, `phase`, `stepAt`, `firings`, `cycleSteps`
-(the LCM over periods, seeded with the lap), `cycleBars`, `ratioLabel`
-and `tailSweep` are unchanged: they already work from `periodSteps`.
+(the LCM over turns — periods, stretched by any conditional — seeded with
+the lap), `cycleBars`, `ratioLabel` and `tailSweep` are unchanged by the
+span work: they already work from `periodSteps`.
 
 A spanned ring's steps divide its span, however many there are. 32 steps
 across half a lap is a run of 32nd-note-ish cells; 3 steps across four

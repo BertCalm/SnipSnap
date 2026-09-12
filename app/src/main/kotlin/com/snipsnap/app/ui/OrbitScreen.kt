@@ -75,6 +75,8 @@ import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.loop.Orbit
 import com.snipsnap.loop.OrbitBank
+import com.snipsnap.loop.OrbitBrush
+import com.snipsnap.loop.OrbitBrushes
 import com.snipsnap.loop.OrbitClip
 import com.snipsnap.loop.OrbitClock
 import com.snipsnap.loop.OrbitEngine
@@ -138,10 +140,12 @@ import kotlin.math.sin
  * it. The picked ring unrolls into the strip below — the tape untaped —
  * with one row per pad in its voice, so a bass ring is a small piano roll
  * and a kick ring is a single row; tap a cell to place or lift a hit, and
- * hear it. The panel changes the ring's step count, its span (free, or
- * ½, 1, 2 or 4 bars of the set's lap), which pads it plays, and whether
- * it is heard. Tapping the header's readout opens THE SET: the bar every
- * spanned ring is measured in (12 to 32 steps, 3/4 to 8/4). REC arms the
+ * hear it; long-press one to move whatever the strip's brush names — its
+ * weight, its chance, its every-N-laps conditional or its ratchet — the
+ * chip above the strip saying which. The panel changes the ring's step
+ * count, its span (free, or ½, 1, 2 or 4 bars of the set's lap), which
+ * pads it plays, and whether it is heard. Tapping the header's readout
+ * opens THE SET: the bar every spanned ring is measured in (12 to 32 steps, 3/4 to 8/4). REC arms the
  * strip's pad rail so a tap while playing writes a hit on the nearest
  * step, the way a groove gets played into an MPC; ◀ ▶ turn a ring a step
  * and DUP copies it, which is how phasing starts. Each ring has a level
@@ -179,6 +183,10 @@ fun OrbitScreen(
     var spreadOpen by remember(kitDir) { mutableStateOf(false) }
     /** The dice: every roll a new seed, so a roll can always be rolled again. */
     var scrambleSeed by remember(kitDir) { mutableIntStateOf(1) }
+    // What a long-press on a square writes. [OrbitBrush.WEIGHT] is what it
+    // always wrote, so the strip behaves exactly as it did until the chip
+    // above it is touched.
+    var brush by remember(kitDir) { mutableStateOf(OrbitBrush.WEIGHT) }
     /** OUT ▸ swaps the panel for the two ways a set leaves the screen: onto TAPE, or into the kit as a clip. */
     var outOpen by remember(kitDir) { mutableStateOf(false) }
     /** Tapping the header's readout swaps the panel for THE SET: the bar, and the tempo it already shows. */
@@ -364,7 +372,15 @@ fun OrbitScreen(
         if (placed) audition(slot)
     }
 
-    /** Long-press on a cell: an existing hit cycles soft → normal → accent; an empty cell takes an accent. */
+    /**
+     * Long-press on a cell: [brush]'s property moves one rung on.
+     *
+     * With the weight brush that is soft → normal → accent, which is what
+     * a long-press did before there was anything else to write. An empty
+     * cell takes an accent as it always did, and then the brush is applied
+     * to it, so one long-press with CHANCE picked leaves a hit that is
+     * actually chancy rather than a certain one to press again.
+     */
     fun cycleHit(index: Int, slot: Int, step: Int) {
         updateRing(index) { ring ->
             val content = ring.content as? PatternOrbit ?: return@updateRing ring
@@ -373,10 +389,11 @@ fun OrbitScreen(
                 // Every hit on the square, moved together and read off the
                 // loudest — which is the one the square is drawn at, so the
                 // cycle follows what the player can actually see.
-                val next = OrbitPatterns.nextVelocity(existing.maxOf { it.velocity })
-                content.hits - existing.toSet() + existing.map { it.copy(velocity = next) }
+                val next = OrbitBrushes.cycle(existing.maxBy { it.velocity }, brush)
+                content.hits - existing.toSet() + existing.map { OrbitBrushes.adopt(it, next, brush) }
             } else {
-                content.hits + OrbitHit(step, slot, OrbitPatterns.ACCENT_VELOCITY)
+                val placed = OrbitHit(step, slot, OrbitPatterns.ACCENT_VELOCITY)
+                content.hits + if (brush == OrbitBrush.WEIGHT) placed else OrbitBrushes.cycle(placed, brush)
             }
             ring.copy(content = content.copy(hits = hits.sortedWith(compareBy({ it.step }, { it.slot }))))
         }
@@ -803,6 +820,8 @@ fun OrbitScreen(
                     onToggle = { slot, step -> toggleHit(selected, slot, step) },
                     onCycle = { slot, step -> cycleHit(selected, slot, step) },
                     onAudition = { slot -> railTap(selected, slot) },
+                    brush = brush,
+                    onBrush = { brush = brush.next },
                     recording = recording,
                 )
             }
@@ -883,6 +902,31 @@ fun OrbitScreen(
                             SmallChip(if (n == OrbitSet.STRAIGHT_SWING) "50 · STRAIGHT" else "$n", scheme, accent = n == current.swing, description = "SWING $n") {
                                 if (n != current.swing) commit(current.copy(swing = n))
                             }
+                        }
+                    }
+                    // The take. A set with a chancy hit on it sounds the
+                    // same every time it is played, bounced or clipped;
+                    // this is the one control that makes it a different
+                    // arrangement of the same hits. Only offered where
+                    // something actually rolls — on a set of certain hits
+                    // it would be a button that does nothing, twice.
+                    if (current.orbits.any { o -> (o.content as? PatternOrbit)?.hits?.any { !it.certain } == true }) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            TapeText("TAKE", TapeType.pixelSmall, scheme.ink3.tape, Modifier.width(36.dp))
+                            SmallChip("ROLL · ${current.seed}", scheme, description = "ROLL A NEW TAKE OF THE SAME HITS") {
+                                commit(current.copy(seed = current.seed + 1))
+                            }
+                            TapeText(
+                                "THE SAME TAKE PLAYS, BOUNCES AND CLIPS THE SAME EVERY TIME. ROLL FOR A NEW ONE — NO HIT MOVES.",
+                                TapeType.pixelSmall,
+                                scheme.ink3.tape,
+                                Modifier.weight(1f),
+                                maxLines = 2,
+                            )
                         }
                     }
                     TapeText(
@@ -1419,6 +1463,8 @@ private fun StripEditor(
     onToggle: (slot: Int, step: Int) -> Unit,
     onCycle: (slot: Int, step: Int) -> Unit,
     onAudition: (slot: Int) -> Unit,
+    brush: OrbitBrush,
+    onBrush: () -> Unit,
     recording: Boolean = false,
 ) {
     val content = ring.content as? PatternOrbit ?: return
@@ -1444,6 +1490,18 @@ private fun StripEditor(
         val cellW = maxOf(CELL_MIN_DP.dp, (available - gap * (ring.steps - 1)) / ring.steps)
         val scroll = rememberScrollState()
         Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+            // What a long-press writes. The grid has two gestures and a hit
+            // has four things to say, so the chip is the third gesture -
+            // one tap to change what the next long-press means, rather than
+            // a panel over the strip the player is trying to hear.
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SmallChip("HOLD ▸ ${brush.label}", scheme, accent = brush != OrbitBrush.WEIGHT, onClick = onBrush)
+                TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            }
             for (slot in rows) {
                 val color = padColor(kit, slot, inkColor)
                 Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
@@ -1468,8 +1526,15 @@ private fun StripEditor(
                                 else -> scheme.field.tape
                             }
                             val accent = hit != null && hit.velocity >= OrbitPatterns.ACCENT_VELOCITY
+                            // What the hit says beyond its weight, if
+                            // anything: "50%", "2:4", "×3". A square is one
+                            // cell and cannot draw three numbers, so the
+                            // amber edge says "this one is not plain" and
+                            // the accessibility state says which.
+                            val mark = hit?.let { OrbitBrushes.mark(it) }.orEmpty()
                             val edge = when {
                                 step == playheadStep -> inkColor
+                                mark.isNotEmpty() -> scheme.amber.tape
                                 accent -> color
                                 else -> scheme.grayEdge.tape
                             }
@@ -1477,14 +1542,14 @@ private fun StripEditor(
                                 width = cellW,
                                 fill = fill,
                                 edge = edge,
-                                edgeWidth = if (step == playheadStep || accent) 2.dp else 1.dp,
+                                edgeWidth = if (step == playheadStep || accent || mark.isNotEmpty()) 2.dp else 1.dp,
                                 label = "STEP ${step + 1} PAD ${padLabel(slot)}",
                                 state = when {
                                     hit == null -> "EMPTY"
                                     accent -> "ACCENT"
                                     hit.velocity < OrbitPatterns.HIT_VELOCITY -> "SOFT HIT"
                                     else -> "HIT"
-                                },
+                                }.let { if (mark.isEmpty()) it else "$it $mark" },
                                 onTap = { onToggle(slot, step) },
                                 onLongPress = { onCycle(slot, step) },
                             )
@@ -1497,8 +1562,9 @@ private fun StripEditor(
 }
 
 /**
- * One strip cell. A tap places or lifts the hit; a long-press cycles its
- * weight (soft, normal, accent) or places an accent on an empty cell.
+ * One strip cell. A tap places or lifts the hit; a long-press moves
+ * whatever the strip's brush names — its weight, its chance, its
+ * conditional or its ratchet — or places an accent on an empty cell.
  * `combinedClickable` rather than a raw pointerInput so both gestures are
  * real accessibility actions, as the CHOP chips do it.
  */
@@ -1531,6 +1597,14 @@ private fun StripCell(
             ),
     )
 }
+
+/** What each brush writes, said once under the chip rather than in a manual. */
+private val BRUSH_SAYS: Map<OrbitBrush, String> = mapOf(
+    OrbitBrush.WEIGHT to "SOFT → NORMAL → ACCENT",
+    OrbitBrush.CHANCE to "HOW OFTEN IT SOUNDS — 100 → 75 → 50 → 25%",
+    OrbitBrush.EVERY to "WHICH LAP IT SOUNDS ON — EVERY → 1:2 → 2:2 → 1:4 → 4:4",
+    OrbitBrush.RATCHET to "STRIKES ACROSS THE STEP — 1 → 2 → 3 → 4",
+)
 
 /** A strip cell's least width, in dp: GROOVE's step editor at 16 across, and still a thumb-sized target with a gap. */
 private const val CELL_MIN_DP = 22
