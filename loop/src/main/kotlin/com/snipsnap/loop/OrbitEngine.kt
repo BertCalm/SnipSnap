@@ -95,7 +95,14 @@ class OrbitEngine(
         require(blockFrames > 0) { "blockFrames must be positive: $blockFrames" }
     }
 
-    /** Frames played since the start — every ring's phase is a function of this one number. */
+    /**
+     * Frames played since the start.
+     *
+     * Every ring's phase is a function of this one number — through
+     * [OrbitClock.localFrame], which on a set with an arrangement counts
+     * from where the current section began and on one without hands this
+     * number straight back.
+     */
     fun position(): Long = frame.get()
 
     /** What is playing right now — the set the UI should draw. */
@@ -136,12 +143,33 @@ class OrbitEngine(
         block.fill(0f)
 
         due.clear()
-        for (orbit in set.orbits) {
-            if (!orbit.engaged || orbit.level == 0f) continue
-            when (orbit.content) {
-                is PatternOrbit -> collect(set, orbit, from, until)
-                is SnipOrbit -> addLoop(set, bank, orbit, from)
+        // A block is a slice of wall-clock time and a section boundary does
+        // not wait for one to end, so a block that straddles one is played
+        // as two pieces. Each piece is handed its OWN local frame, which is
+        // the whole of what a section does: the rings inside it are the
+        // same pure function of the same one number they always were,
+        // counted from where the section began rather than from play.
+        //
+        // A set with no arrangement takes this loop exactly once, with
+        // `local == at` and `shift == 0` - the code it ran before.
+        var at = from
+        while (at < until) {
+            val edge = min(until, OrbitClock.nextBoundary(set, at))
+            val local = OrbitClock.localFrame(set, at)
+            // Back to the transport's own numbering, which is what a voice
+            // offset inside this block is measured against.
+            val shift = at - local
+            for ((index, orbit) in set.orbits.withIndex()) {
+                // The ring's own mute and the section's choice are different
+                // questions: a muted ring stays muted whatever a section says.
+                if (!orbit.engaged || orbit.level == 0f) continue
+                if (!OrbitClock.playsAt(set, index, at)) continue
+                when (orbit.content) {
+                    is PatternOrbit -> collect(set, orbit, local, local + (edge - at), shift)
+                    is SnipOrbit -> addLoop(set, bank, orbit, local, (at - from).toInt(), (edge - from).toInt())
+                }
             }
+            at = edge
         }
         // Choke means "the newest hit in the group wins", so the hits have
         // to be started in the order they are heard. Each ring's firings
@@ -156,10 +184,18 @@ class OrbitEngine(
         frame.set(until)
     }
 
-    /** Note every hit of [orbit] that lands inside this block; starting them is [start]'s. */
-    private fun collect(set: OrbitSet, orbit: Orbit, from: Long, until: Long) {
+    /**
+     * Note every hit of [orbit] that lands inside this piece of the block;
+     * starting them is [start]'s.
+     *
+     * [from] and [until] are the section's own frames; [shift] puts the
+     * answer back on the transport's numbering, since that is what the
+     * voice offset inside the block is measured against. With no
+     * arrangement [shift] is zero and this is what it always was.
+     */
+    private fun collect(set: OrbitSet, orbit: Orbit, from: Long, until: Long, shift: Long) {
         for (firing in OrbitClock.firings(set, orbit, from, until)) {
-            due.add(Scheduled(orbit, firing.hit, firing.frame))
+            due.add(Scheduled(orbit, firing.hit, firing.frame + shift))
         }
     }
 
@@ -285,8 +321,24 @@ class OrbitEngine(
         }
     }
 
-    /** Add [blockFrames] of a snip ring, wrapping at its period. */
-    private fun addLoop(set: OrbitSet, bank: OrbitBank, orbit: Orbit, from: Long) {
+    /**
+     * Add one piece of a snip ring to the block, wrapping at its period.
+     *
+     * [from] is the section's own frame, so a snip ring restarts with its
+     * section exactly as a pattern ring does — a taped loop that carried
+     * on through a section change would be the one thing on screen still
+     * playing the section before. [blockStart] and [blockEnd] bound the
+     * piece inside this block; with no arrangement they are the whole of
+     * it and this is what it always was.
+     */
+    private fun addLoop(
+        set: OrbitSet,
+        bank: OrbitBank,
+        orbit: Orbit,
+        from: Long,
+        blockStart: Int,
+        blockEnd: Int,
+    ) {
         val loop = bank.loop(set, orbit) ?: return
         val period = loop.frameCount
         if (period == 0) return
@@ -294,7 +346,7 @@ class OrbitEngine(
         val gainR = orbit.level * rightLaw(orbit.pan)
         var src = Math.floorMod(from, period.toLong()).toInt()
         val samples = loop.samples
-        for (f in 0 until blockFrames) {
+        for (f in blockStart until blockEnd) {
             block[f * 2] += samples[src * 2] * gainL
             block[f * 2 + 1] += samples[src * 2 + 1] * gainR
             src++

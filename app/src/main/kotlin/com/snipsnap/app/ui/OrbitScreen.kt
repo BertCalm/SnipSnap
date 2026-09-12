@@ -84,6 +84,7 @@ import com.snipsnap.loop.OrbitHit
 import com.snipsnap.loop.OrbitImport
 import com.snipsnap.loop.OrbitPatterns
 import com.snipsnap.loop.OrbitPresets
+import com.snipsnap.loop.OrbitSection
 import com.snipsnap.loop.OrbitSet
 import com.snipsnap.loop.OrbitSpan
 import com.snipsnap.loop.OrbitStore
@@ -104,7 +105,6 @@ import kotlinx.coroutines.withContext
 import kotlin.concurrent.thread
 import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.roundToInt
@@ -145,7 +145,10 @@ import kotlin.math.sin
  * chip above the strip saying which. The panel changes the ring's step
  * count, its span (free, or ½, 1, 2 or 4 bars of the set's lap), which
  * pads it plays, and whether it is heard. Tapping the header's readout
- * opens THE SET: the bar every spanned ring is measured in (12 to 32 steps, 3/4 to 8/4). REC arms the
+ * opens THE SET, and SECTIONS ▸ inside it opens the arrangement — which
+ * rings play, and for how long, each section starting its rings over so
+ * it repeats the same every time. THE SET also holds the bar every
+ * spanned ring is measured in (12 to 32 steps, 3/4 to 8/4). REC arms the
  * strip's pad rail so a tap while playing writes a hit on the nearest
  * step, the way a groove gets played into an MPC; ◀ ▶ turn a ring a step
  * and DUP copies it, which is how phasing starts. Each ring has a level
@@ -191,6 +194,8 @@ fun OrbitScreen(
     var outOpen by remember(kitDir) { mutableStateOf(false) }
     /** Tapping the header's readout swaps the panel for THE SET: the bar, and the tempo it already shows. */
     var setPanelOpen by remember(kitDir) { mutableStateOf(false) }
+    /** SECTIONS ▸ swaps the panel for the arrangement: what plays, and for how long. */
+    var sectionsOpen by remember(kitDir) { mutableStateOf(false) }
     /** REC: while armed and playing, a rail tap writes a hit on the ring's nearest step. A listening choice, never saved. */
     var recording by remember(kitDir) { mutableStateOf(false) }
     var bouncing by remember(kitDir) { mutableStateOf(false) }
@@ -400,6 +405,53 @@ fun OrbitScreen(
         audition(slot)
     }
 
+    /**
+     * Add a section at the end, playing whatever the last one played.
+     *
+     * Copying the last section rather than starting empty, because an
+     * empty section is a break and a player reaching for "+ SECTION"
+     * almost always wants a variation of what they have — the first
+     * section of a new arrangement takes every ring, which is what the
+     * set was doing a moment ago.
+     */
+    fun addSection() {
+        val s = set ?: return
+        if (s.sections.size >= OrbitSection.MAX_SECTIONS) {
+            onToast("AN ARRANGEMENT HOLDS ${OrbitSection.MAX_SECTIONS} SECTIONS.")
+            return
+        }
+        val plays = s.sections.lastOrNull()?.plays ?: s.orbits.indices.toSet()
+        val name = ('A' + s.sections.size).toString()
+        commit(s.copy(sections = s.sections + OrbitSection(name, DEFAULT_SECTION_BARS, plays)))
+    }
+
+    fun deleteSection(index: Int) {
+        val s = set ?: return
+        if (index !in s.sections.indices) return
+        commit(s.copy(sections = s.sections.filterIndexed { i, _ -> i != index }))
+    }
+
+    fun editSection(index: Int, edit: (OrbitSection) -> OrbitSection) {
+        val s = set ?: return
+        if (index !in s.sections.indices) return
+        val next = runCatching {
+            s.copy(sections = s.sections.mapIndexed { i, sec -> if (i == index) edit(sec) else sec })
+        }
+        next.onSuccess { commit(it) }.onFailure { e -> onToast(e.message ?: "NO") }
+    }
+
+    /**
+     * Take the arrangement away, leaving the rings exactly as they are.
+     *
+     * The way back to a set that simply turns forever, and the reason the
+     * empty list means that rather than needing a flag: dropping the
+     * sections IS dropping the arrangement.
+     */
+    fun clearSections() {
+        val s = set ?: return
+        commit(s.copy(sections = emptyList()))
+    }
+
     fun spreadRing(index: Int, k: Int) {
         spreadOpen = false
         updateRing(index) { ring -> OrbitPatterns.spread(ring, ring.pads.first(), k) }
@@ -526,7 +578,10 @@ fun OrbitScreen(
         val ring = s.orbits.getOrNull(index) ?: return
         if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast("EIGHT RINGS IS THE SKY"); return }
         val copy = ring.copy(name = OrbitPatterns.copyName(ring.name))
-        commit(s.copy(orbits = s.orbits.take(index + 1) + copy + s.orbits.drop(index + 1)))
+        // Through the set, so the arrangement moves with the rings: a
+        // section names them by index, and an insert shifts every index
+        // past it.
+        commit(s.withOrbitAfter(index, copy))
         selected = index + 1
     }
 
@@ -535,7 +590,9 @@ fun OrbitScreen(
         if (index !in s.orbits.indices) return
         if (solo == index) solo = null
         tempoOffer = null
-        commit(s.copy(orbits = s.orbits.filterIndexed { i, _ -> i != index }))
+        // Through the set, so the arrangement is re-pointed rather than
+        // left naming a ring that moved or one that is gone.
+        commit(s.withoutOrbit(index))
         selected = (index - 1).coerceAtLeast(0)
     }
 
@@ -716,11 +773,22 @@ fun OrbitScreen(
                 // but it is where the player just was, since CLIP ▸ KIT is
                 // a button inside it, and OUT ▸ reopens it.
                 val behind = OrbitClip.snipRings(s)
+                // One clip, or one per section. A section that plays no
+                // ring writes none, so the count is the clips actually
+                // written rather than the sections asked for - the toast
+                // says what is in the kit, not what was intended.
+                val bars = clip.sumOf { it.bars }
+                val notes = clip.sumOf { it.notes.size }
+                val what = if (clip.size == 1) {
+                    "${clip[0].name} IS IN THE KIT'S GROOVES — $bars BARS, $notes NOTES"
+                } else {
+                    "${clip.size} SECTIONS ARE IN THE KIT'S GROOVES — $bars BARS, $notes NOTES, ONE SEQUENCE EACH"
+                }
                 onToast(
                     if (behind.isEmpty()) {
-                        "${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC."
+                        "$what. ${if (clip.size == 1) "IT RIDES" else "THEY RIDE"} TO THE MPC."
                     } else {
-                        "${clip.name} IN THE GROOVES: ${clip.bars} BARS, ${clip.notes.size} NOTES. ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED OUT."
+                        "$what. ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED OUT."
                     },
                 )
             }.onFailure { e -> onToast("CLIP FAILED: ${e.message ?: e.javaClass.simpleName}") }
@@ -763,6 +831,7 @@ fun OrbitScreen(
                         setPanelOpen = !setPanelOpen
                         snipPickerOpen = false
                         outOpen = false
+                        sectionsOpen = false
                     },
                     horizontalAlignment = Alignment.End,
                 ) {
@@ -904,6 +973,33 @@ fun OrbitScreen(
                             }
                         }
                     }
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TapeText("PLAN", TapeType.pixelSmall, scheme.ink3.tape, Modifier.width(36.dp))
+                        SmallChip(
+                            if (current.sections.isEmpty()) "SECTIONS ▸" else "SECTIONS ▸ ${current.sections.size}",
+                            scheme,
+                            accent = current.sections.isNotEmpty(),
+                            description = "THE ARRANGEMENT — WHICH RINGS PLAY, AND FOR HOW LONG",
+                        ) {
+                            sectionsOpen = true
+                            setPanelOpen = false
+                        }
+                        TapeText(
+                            if (current.sections.isEmpty()) {
+                                "NO ARRANGEMENT — EVERY RING TURNS FOREVER."
+                            } else {
+                                "${OrbitClock.arrangementFrames(current) / OrbitClock.lapFrames(current)} BARS ROUND THE PLAN."
+                            },
+                            TapeType.pixelSmall,
+                            scheme.ink3.tape,
+                            Modifier.weight(1f),
+                            maxLines = 2,
+                        )
+                    }
                     // The take. A set with a rolled hit on it sounds the
                     // same every time it is played, bounced or clipped;
                     // this is the one control that makes it a different
@@ -934,6 +1030,74 @@ fun OrbitScreen(
                     }
                     TapeText(
                         "THE BAR EVERY SPANNED RING IS MEASURED AGAINST; FREE RINGS DO NOT CARE. SWING PUSHES THE ODD 16THS LATE — 66 IS A TRIPLET FEEL — ON EVERY RING WHOSE STEP IS A 16TH. ${current.bpm.roundToInt()} BPM — HOLD BPM − / + BELOW TO RUN IT.",
+                        TapeType.pixelSmall,
+                        scheme.ink3.tape,
+                        Modifier.fillMaxWidth(),
+                        maxLines = 4,
+                    )
+                } else if (sectionsOpen) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        TapeText("SECTIONS", TapeType.pixel, scheme.ink.tape)
+                        SmallChip("CLOSE", scheme) { sectionsOpen = false }
+                    }
+                    if (current.sections.isEmpty()) {
+                        TapeText(
+                            "NO ARRANGEMENT — EVERY RING TURNS FOREVER. ADD A SECTION TO SAY \"THESE RINGS FOR EIGHT BARS, THEN THOSE\".",
+                            TapeType.pixelSmall,
+                            scheme.ink3.tape,
+                            Modifier.fillMaxWidth(),
+                            maxLines = 3,
+                        )
+                    } else {
+                        for ((index, section) in current.sections.withIndex()) {
+                            val here = playing && OrbitClock.sectionAt(current, frame) == index
+                            Row(
+                                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                // The section playing right now wears the
+                                // accent, so the panel says where the set is
+                                // rather than only what it is made of.
+                                TapeText(
+                                    section.name,
+                                    TapeType.pixel,
+                                    if (here) scheme.accent.tape else scheme.ink.tape,
+                                    Modifier.width(28.dp),
+                                )
+                                SmallChip("−", scheme, enabled = section.bars > 1, description = "ONE BAR SHORTER") {
+                                    editSection(index) { it.copy(bars = it.bars - 1) }
+                                }
+                                TapeText("${section.bars} BAR${if (section.bars == 1) "" else "S"}", TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(56.dp))
+                                SmallChip("+", scheme, enabled = section.bars < OrbitClip.MAX_BARS, description = "ONE BAR LONGER") {
+                                    editSection(index) { it.copy(bars = it.bars + 1) }
+                                }
+                                for ((ringIndex, ring) in current.orbits.withIndex()) {
+                                    val plays = ringIndex in section.plays
+                                    SmallChip(
+                                        ring.name.ifBlank { "RING ${ringIndex + 1}" },
+                                        scheme,
+                                        accent = plays,
+                                        description = "${if (plays) "TAKE OUT OF" else "PUT INTO"} SECTION ${section.name}",
+                                    ) {
+                                        editSection(index) {
+                                            it.copy(plays = if (plays) it.plays - ringIndex else it.plays + ringIndex)
+                                        }
+                                    }
+                                }
+                                SmallChip("DEL", scheme, description = "DELETE SECTION ${section.name}") { deleteSection(index) }
+                            }
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        SmallChip("+ SECTION", scheme, accent = current.sections.isEmpty()) { addSection() }
+                        if (current.sections.isNotEmpty()) {
+                            SmallChip("NO ARRANGEMENT", scheme, description = "DROP THE SECTIONS, KEEP THE RINGS") { clearSections() }
+                        }
+                    }
+                    TapeText(
+                        "A SECTION STARTS ITS RINGS OVER, SO IT REPEATS THE SAME EVERY TIME AND CLIPS AS ITS OWN SEQUENCE. " +
+                            "A SECTION WITH NO RINGS IS A BREAK. CLIP ▸ KIT WRITES ONE GROOVE PER SECTION — FLIP THEM ON THE MPC.",
                         TapeType.pixelSmall,
                         scheme.ink3.tape,
                         Modifier.fillMaxWidth(),
@@ -1174,11 +1338,13 @@ fun OrbitScreen(
                     snipPickerOpen = !snipPickerOpen
                     outOpen = false
                     setPanelOpen = false
+                    sectionsOpen = false
                 }
                 ActionButton("OUT ▸", scheme, Modifier.weight(1f), accent = outOpen) {
                     outOpen = !outOpen
                     snipPickerOpen = false
                     setPanelOpen = false
+                    sectionsOpen = false
                 }
             }
             TapeText(
@@ -1203,11 +1369,17 @@ private fun cycleLabel(set: OrbitSet): String {
     return if (abs(bars - whole) < 1e-9) (if (whole == 1) "1 BAR" else "$whole BARS") else "${"%.1f".format(java.util.Locale.ROOT, bars)} BARS"
 }
 
-/** "BAR 7 / 15": where in the cycle the transport is. Stopped, it is at the top. */
+/**
+ * "BAR 7 / 15": where in the transport's own turn it is. Stopped, it is at
+ * the top.
+ *
+ * Round the arrangement where there is one, rather than round the rings'
+ * cycle — which an arranged set may never reach, so the readout would
+ * climb towards a total the player never arrives at.
+ */
 private fun barLabel(set: OrbitSet, frame: Long, playing: Boolean): String {
-    val total = ceil(OrbitClock.cycleBars(set)).toInt().coerceAtLeast(1)
-    val lap = OrbitClock.lapFrames(set)
-    val bar = if (playing && lap > 0) ((frame / lap) % total + 1).toInt() else 1
+    val total = OrbitClock.transportBars(set)
+    val bar = if (playing) OrbitClock.transportBar(set, frame) else 1
     return "BAR $bar/$total"
 }
 
@@ -1604,6 +1776,14 @@ private fun StripCell(
             ),
     )
 }
+
+/**
+ * How long a new section is, in the set's own bars.
+ *
+ * Four, because an arrangement is written in fours far more often than in
+ * ones, and a section is quicker to shorten than to lengthen four times.
+ */
+private const val DEFAULT_SECTION_BARS = 4
 
 /** What each brush writes, said once under the chip rather than in a manual. */
 private val BRUSH_SAYS: Map<OrbitBrush, String> = mapOf(

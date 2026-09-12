@@ -8,12 +8,16 @@ import java.io.File
 import kotlin.math.ceil
 
 /**
- * A set of rings as one MPC clip: every ring's firings over one full cycle,
- * flattened onto the 960-PPQ grid the native export already carries, so a
- * polymeter rides to the MPC inside the kit's `groove.json` like any other
- * groove. The cycle is the clip's length — 16 against 20 is a five-bar
- * clip — which is why a long cycle is refused rather than truncated: a
- * clip that stops before the rings meet is a different piece of music.
+ * A set of rings as MPC clips: every ring's firings flattened onto the
+ * 960-PPQ grid the native export already carries, so a polymeter rides to
+ * the MPC inside the kit's `groove.json` like any other groove.
+ *
+ * A set with no arrangement is one clip, and the rings' cycle is its
+ * length — 16 against 20 is a five-bar clip — which is why a long cycle
+ * is refused rather than truncated: a clip that stops before the rings
+ * meet is a different piece of music. A set WITH an arrangement is one
+ * clip per section, each as long as its section says and capped on its
+ * own; the cycle is then not what leaves the screen, so it does not bind.
  */
 object OrbitClip {
 
@@ -34,8 +38,16 @@ object OrbitClip {
      * bars, rounded up. Counted in the clip's own bar, not the set's: a
      * 3/4 set's four-bar cycle is 48 steps, which the clip calls three.
      */
-    fun bars(set: OrbitSet): Int =
-        ceil(OrbitClock.cycleSteps(set).toDouble() / CLIP_BAR_STEPS).toInt().coerceAtLeast(1)
+    fun bars(set: OrbitSet): Int = barsFor(OrbitClock.cycleSteps(set))
+
+    /**
+     * [steps] of the set's own 16ths as whole clip bars, rounded up.
+     *
+     * Counted in the clip's bar of sixteen, not the set's: a 3/4 set's
+     * eight-bar section is 96 sixteenths, which the clip calls six.
+     */
+    fun barsFor(steps: Long): Int =
+        ceil(steps.toDouble() / CLIP_BAR_STEPS).toInt().coerceAtLeast(1)
 
     /** Whether the clip's bar count differs from the set's, so the screen can say so. */
     fun countsDifferently(set: OrbitSet): Boolean = set.lapSteps != CLIP_BAR_STEPS
@@ -50,18 +62,35 @@ object OrbitClip {
         set.orbits.filter { it.content is SnipOrbit }.map { it.name }
 
     /**
-     * Null when one cycle of [set] can leave the screen at all, else the
-     * refusal in words. This is the ceiling both ways out share — the
-     * bounce is one cycle of audio and the clip is one cycle of notes, and
-     * neither has anywhere to put more than [MAX_BARS] of it.
+     * Null when [set] can leave the screen at all, else the refusal in
+     * words. This is the ceiling both ways out share — the bounce is one
+     * cycle of audio and the clip is one cycle of notes (or, with an
+     * arrangement, one section of them), and neither has anywhere to put
+     * more than [MAX_BARS] of it.
      *
      * Deliberately not the place for "there are no notes in this": a set
      * of snip rings has nothing to clip and is still perfectly good to
      * bounce, so that question belongs to [clipRefusal] alone.
      */
     fun refusal(set: OrbitSet): String? {
+        // A section is a clip of its own and has its own ceiling, which is
+        // not the rings' cycle. A section's length is capped in the set's
+        // bars, and the clip counts in bars of sixteen - so 64 bars of 8/4
+        // is 128 of the clip's, twice what one holds. Without this the
+        // preflight said yes and `Mpc3Clip` threw "bars out of range: 128"
+        // at the caller, which is a preflight that makes the caller catch
+        // anyway.
+        set.sections.indices.forEach { index ->
+            val sectionBars = barsFor(sectionSteps(set, index))
+            if (sectionBars > MAX_BARS) {
+                return "SECTION ${set.sections[index].name} IS $sectionBars BARS OF 4/4 — A CLIP STOPS AT $MAX_BARS. SHORTEN IT."
+            }
+        }
         val bars = bars(set)
-        if (bars <= MAX_BARS) return null
+        // The rings' own cycle only binds a set with no arrangement: with
+        // one, each section is written and capped on its own, and the
+        // cycle is not what leaves the screen.
+        if (set.sections.isNotEmpty() || bars <= MAX_BARS) return null
         val unit = if (countsDifferently(set)) "BARS OF 4/4" else "BARS"
         // A ring's length is no longer the only thing that makes a cycle
         // long: a hit on one lap in four does not repeat until the fourth
@@ -181,9 +210,26 @@ object OrbitClip {
      * is [Mpc3Note.noteFor] — the writer's own map, wrapping at 128, so
      * pad 93 is note 0 rather than another copy of pad 92's.
      */
-    fun clip(set: OrbitSet, name: String = nameFor(set)): Mpc3Clip {
-        clipRefusal(set)?.let { throw IllegalArgumentException(it) }
-        val bars = bars(set)
+    fun clip(
+        set: OrbitSet,
+        name: String = nameFor(set),
+        /**
+         * How many 16ths the clip holds. The rings' own cycle by default;
+         * a section passes its own length instead, so the clip is as long
+         * as the section is rather than as long as the rings take to meet.
+         */
+        steps: Long = OrbitClock.cycleSteps(set),
+    ): Mpc3Clip {
+        // Asked of the length actually being written, not of the set's
+        // cycle. A section is a short clip cut out of rings that may take
+        // eighty bars to meet, and checking the cycle here refused the
+        // very sets an arrangement exists to make writable.
+        val bars = barsFor(steps)
+        if (bars > MAX_BARS) {
+            throw IllegalArgumentException("$bars BARS OF 4/4 — A CLIP STOPS AT $MAX_BARS.")
+        }
+        oneProgram(set)?.let { throw IllegalArgumentException(it) }
+        noNotes(set)?.let { throw IllegalArgumentException(it) }
         val limit = bars * Mpc3Clip.PULSES_PER_BAR
         // The whole cycle in pulses. The clip is musical time, so it is
         // counted in the unit it is written in rather than converted out
@@ -191,7 +237,7 @@ object OrbitClip {
         // at, but `sampleRate` is only required to be positive, and with
         // fewer than 960 frames to a beat — a rate below 16 × BPM hertz —
         // the conversion moves a note off its pulse.
-        val cycle = OrbitClock.cycleSteps(set) * Mpc3Clip.PULSES_PER_16TH
+        val cycle = steps * Mpc3Clip.PULSES_PER_16TH
         val notes = ArrayList<Mpc3Note>()
         for (ring in set.orbits) {
             if (!ring.engaged || ring.content !is PatternOrbit) continue
@@ -229,14 +275,76 @@ object OrbitClip {
     fun isOrbit(clip: Mpc3Clip): Boolean = clip.name.startsWith(NAME_PREFIX)
 
     /**
-     * Write [set]'s clip into the kit's grooves, replacing the last ORBIT
-     * clip and leaving every other stored clip — the captured base, the
-     * variations, PROG E — untouched. Returns the clip written.
+     * The set as one section hears it: the rings that section plays, and
+     * no arrangement of its own.
+     *
+     * The rings are not copied or altered — a section chooses among them,
+     * it does not own them. Dropping the arrangement is what makes the
+     * result clippable at all: a sub-set that still carried sections would
+     * ask this same question again, one section further down.
      */
-    fun save(kitDir: File, set: OrbitSet): Mpc3Clip {
-        val clip = clip(set)
+    fun sectionSet(set: OrbitSet, index: Int): OrbitSet {
+        val section = set.sections[index]
+        return set.copy(
+            orbits = set.orbits.filterIndexed { i, _ -> i in section.plays },
+            sections = emptyList(),
+        )
+    }
+
+    /** How many of the set's own 16ths [index]'s section lasts. */
+    fun sectionSteps(set: OrbitSet, index: Int): Long =
+        set.sections[index].bars.toLong() * set.lapSteps
+
+    /**
+     * One clip per section — or the single whole-set clip when there is no
+     * arrangement, byte for byte what [clip] wrote before sections existed.
+     *
+     * Each becomes its own sequence on the hardware, because
+     * `ExportFormats` already turns every stored groove into one: "the
+     * pattern flip on the hardware's switcher". The missing piece was
+     * never the export, it was having more than one clip to give it.
+     *
+     * **What does not ride along is the order.** `Mpc3Song`'s step schema
+     * — which sequence, how many repeats — has never been captured from
+     * the corpus, so `Mpc3ProjectWriter` refuses a non-empty song and the
+     * sections arrive as sequences a player flips by hand rather than as
+     * an arrangement that plays itself. That is a limit of what has been
+     * verified, not a choice, and it is why the sections keep their names:
+     * the name is the only thing left telling the player what order they
+     * were in.
+     *
+     * A section that plays no rings writes no clip. A break is a real
+     * section and sounds like one here, but there is nothing for the
+     * hardware to flip *to* for silence, and a note-less clip is the one
+     * thing [noNotes] exists to keep out of `groove.json`.
+     */
+    fun clips(set: OrbitSet): List<Mpc3Clip> {
+        if (set.sections.isEmpty()) return listOf(clip(set))
+        return set.sections.indices.mapNotNull { index ->
+            val sub = sectionSet(set, index)
+            // Only the break is skipped. Anything else a section cannot
+            // write is a refusal the player should hear about, so it is
+            // left to [clip] to throw and to [refusal] to have caught.
+            if (noNotes(sub) != null) return@mapNotNull null
+            clip(sub, name = "$NAME_PREFIX ${set.sections[index].name}", steps = sectionSteps(set, index))
+        }
+    }
+
+    /**
+     * Write [set]'s clips into the kit's grooves, replacing every previous
+     * ORBIT clip and leaving every other stored clip — the captured base,
+     * the variations, PROG E — untouched. Returns the clips written.
+     *
+     * Appended rather than prepended, which matters more now that there
+     * may be several: a kit's *base* is `groove.json`'s first clip to
+     * `KitPreview`, `PackBuilder` and the exporters alike, and an
+     * arrangement must not quietly become it.
+     */
+    fun save(kitDir: File, set: OrbitSet): List<Mpc3Clip> {
+        val clips = clips(set)
+        require(clips.isNotEmpty()) { "NO SECTION HERE PLAYS A RING. GIVE ONE A RING TO PLAY." }
         val others = GrooveStore.load(kitDir).filterNot { isOrbit(it) }
-        GrooveStore.save(kitDir, others + clip)
-        return clip
+        GrooveStore.save(kitDir, others + clips)
+        return clips
     }
 }
