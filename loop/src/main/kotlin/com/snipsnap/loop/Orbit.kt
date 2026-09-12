@@ -442,6 +442,16 @@ data class OrbitSet(
         require(sections.size <= OrbitSection.MAX_SECTIONS) {
             "at most ${OrbitSection.MAX_SECTIONS} sections, got ${sections.size}"
         }
+        // The name is not decoration: the arrangement's ORDER does not
+        // reach the hardware, so once the clips are sequences the name is
+        // the only thing saying which section is which. Two called the
+        // same thing is the arrangement becoming unreadable at exactly the
+        // point the player has left the app - so it is refused here, where
+        // a file and a caller both have to come through, rather than only
+        // in the screen that happens to make them.
+        require(sections.map { it.name }.distinct().size == sections.size) {
+            "two sections share a name: ${sections.map { it.name }}"
+        }
         // Checked here rather than on the section, because a section alone
         // cannot know how many rings there are - and an index past the end
         // is the one way an arrangement can silently stop matching its set.

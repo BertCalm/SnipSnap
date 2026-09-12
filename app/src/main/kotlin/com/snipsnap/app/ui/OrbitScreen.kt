@@ -593,13 +593,19 @@ fun OrbitScreen(
         // section names them by index, and an insert shifts every index
         // past it.
         commit(s.withOrbitAfter(index, copy))
+        // The same index arithmetic the sections get, for the same reason.
+        solo = solo?.let { if (it > index) it + 1 else it }
         selected = index + 1
     }
 
     fun deleteRing(index: Int) {
         val s = set ?: return
         if (index !in s.orbits.indices) return
-        if (solo == index) solo = null
+        // `solo` is an index into the same list, so a delete moves it just
+        // as it moves a section's rings: without this, deleting an EARLIER
+        // ring left solo pointing at its neighbour and the wrong ring
+        // played alone. Pre-existing, and in the two lines below it.
+        solo = solo?.let { at -> if (at == index) null else if (at > index) at - 1 else at }
         tempoOffer = null
         // Through the set, so the arrangement is re-pointed rather than
         // left naming a ring that moved or one that is gone.
@@ -808,7 +814,14 @@ fun OrbitScreen(
                 )
             }.onFailure { e ->
                 Log.e("OrbitScreen", "clipIntoKit: failed", e)
-                onToast(Copy.ORBIT_CLIP_FAILED)
+                // Our own refusals arrive as IllegalArgumentException and
+                // are written to be read - the sequence-capacity one names
+                // the two remedies. Swallowing them into the generic line
+                // left a player told only "TRY AGAIN" for a condition that
+                // trying again cannot change. Anything else is a fault
+                // rather than a refusal and keeps the generic line.
+                val why = (e as? IllegalArgumentException)?.message
+                onToast(if (why.isNullOrBlank()) Copy.ORBIT_CLIP_FAILED else why)
             }
         }
     }
@@ -1105,7 +1118,13 @@ fun OrbitScreen(
                                         ring.name.ifBlank { "RING ${ringIndex + 1}" },
                                         scheme,
                                         accent = plays,
-                                        description = "${if (plays) "TAKE OUT OF" else "PUT INTO"} SECTION ${section.name}",
+                                        // `SmallChip` passes this as the click
+                                        // label, which REPLACES the visible text
+                                        // rather than adding to it - so the ring's
+                                        // name has to be in here or a screen reader
+                                        // never hears which ring the chip changes.
+                                        description = "${if (plays) "TAKE" else "PUT"} ${ring.name.ifBlank { "RING ${ringIndex + 1}" }} " +
+                                            "${if (plays) "OUT OF" else "INTO"} SECTION ${section.name}",
                                     ) {
                                         editSection(index) {
                                             it.copy(plays = if (plays) it.plays - ringIndex else it.plays + ringIndex)
@@ -1142,7 +1161,16 @@ fun OrbitScreen(
                     val clipOnly = if (refusal == null) OrbitClip.clipRefusal(current) else null
                     if (OrbitClip.countsDifferently(current)) {
                         // The MPC clip has no time signature: its bar is sixteen 16ths whatever the set's is.
-                        TapeText("THE MPC COUNTS 4/4 BARS: ${OrbitClip.bars(current)}.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
+                        // Counted off the transport's own turn, which is
+                        // what goes out: `OrbitClip.bars` is the rings'
+                        // meeting, and an arranged set never reaches it.
+                        // The same number as before for a set with none.
+                        TapeText(
+                            "THE MPC COUNTS 4/4 BARS: ${OrbitClip.barsFor(OrbitClock.transportSteps(current))}.",
+                            TapeType.pixelSmall,
+                            scheme.ink2.tape,
+                            Modifier.fillMaxWidth(),
+                        )
                     }
                     if (refusal != null) {
                         TapeText(refusal, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2)
@@ -1502,7 +1530,21 @@ private fun RingsCanvas(
             ).joinToString(" ")
             "${ring.name}, ${OrbitClock.lengthLabel(set, ring)}${if (state.isEmpty()) "" else ", $state"}"
         }
-        if (set.orbits.isEmpty()) "RINGS: NONE" else "RINGS, SHORTEST INSIDE: $rings. THEY MEET EVERY ${cycleLabel(set)}."
+        if (set.orbits.isEmpty()) {
+            "RINGS: NONE"
+        } else if (set.sections.isEmpty()) {
+            "RINGS, SHORTEST INSIDE: $rings. THEY MEET EVERY ${cycleLabel(set)}."
+        } else {
+            // With an arrangement the rings' meeting is not what the
+            // transport goes round, and which rings are even sounding
+            // changes with the section - a screen reader was told neither.
+            val here = OrbitClock.sectionAt(set, transportFrame)
+            val playing = set.sections.getOrNull(here)?.plays.orEmpty()
+                .mapNotNull { set.orbits.getOrNull(it)?.name?.ifBlank { "RING ${it + 1}" } }
+            "RINGS, SHORTEST INSIDE: $rings. SECTION ${set.sections.getOrNull(here)?.name ?: "?"} OF " +
+                "${set.sections.size}, ${transportLabel(set)} ROUND THE PLAN. " +
+                if (playing.isEmpty()) "IT PLAYS NOTHING — A BREAK." else "IT PLAYS ${playing.joinToString(", ")}."
+        }
     }
 
     Box(modifier.lcdPanel(scheme).semantics { contentDescription = description }) {

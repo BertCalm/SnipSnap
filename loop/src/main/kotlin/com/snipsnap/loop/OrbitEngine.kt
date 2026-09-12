@@ -44,6 +44,8 @@ class OrbitEngine(
         /** The kit whose rule this is — a group number means nothing outside it. */
         val kit: String,
         val muteGroup: Int,
+        /** Which ring struck it, so a section change can tell whose voice this is. */
+        val ring: Int,
     ) {
         var pos = 0 // interleaved index
         /** Interleaved index past which this voice is silent; a choke moves it in. */
@@ -79,7 +81,7 @@ class OrbitEngine(
     }
 
     /** One hit that lands in this block, waiting to be started in time order. */
-    private class Scheduled(val orbit: Orbit, val hit: OrbitHit, val frame: Long)
+    private class Scheduled(val orbit: Orbit, val ring: Int, val hit: OrbitHit, val frame: Long)
 
     private val frame = AtomicLong(0)
     private val running = AtomicBoolean(true)
@@ -159,13 +161,14 @@ class OrbitEngine(
             // Back to the transport's own numbering, which is what a voice
             // offset inside this block is measured against.
             val shift = at - local
+            hush(set, from, at)
             for ((index, orbit) in set.orbits.withIndex()) {
                 // The ring's own mute and the section's choice are different
                 // questions: a muted ring stays muted whatever a section says.
                 if (!orbit.engaged || orbit.level == 0f) continue
                 if (!OrbitClock.playsAt(set, index, at)) continue
                 when (orbit.content) {
-                    is PatternOrbit -> collect(set, orbit, local, local + (edge - at), shift)
+                    is PatternOrbit -> collect(set, orbit, index, local, local + (edge - at), shift)
                     is SnipOrbit -> addLoop(set, bank, orbit, local, (at - from).toInt(), (edge - from).toInt())
                 }
             }
@@ -193,9 +196,37 @@ class OrbitEngine(
      * voice offset inside the block is measured against. With no
      * arrangement [shift] is zero and this is what it always was.
      */
-    private fun collect(set: OrbitSet, orbit: Orbit, from: Long, until: Long, shift: Long) {
+    private fun collect(set: OrbitSet, orbit: Orbit, ring: Int, from: Long, until: Long, shift: Long) {
         for (firing in OrbitClock.firings(set, orbit, from, until)) {
-            due.add(Scheduled(orbit, firing.hit, firing.frame + shift))
+            due.add(Scheduled(orbit, ring, firing.hit, firing.frame + shift))
+        }
+    }
+
+    /**
+     * End any voice whose ring the section at [at] leaves out.
+     *
+     * A section says which rings play, and a voice already sounding is not
+     * exempt from that: without this, a pad struck just before a boundary
+     * rang on into the section after it, and a BREAK - a section that
+     * plays nothing at all - was audible. Verified before it was fixed:
+     * the buffer read full gain a thousand frames into a break.
+     *
+     * Over [endAt]'s ramp, and asking the ramp rather than a flag, exactly
+     * as [choke] does - this is the same act as a choke, a voice ended
+     * before its sample, and a third copy of that arithmetic is how the
+     * three of them come to disagree. A ring the next section still plays
+     * keeps its tail, which is the point of asking per ring rather than
+     * silencing everything at every boundary.
+     */
+    private fun hush(set: OrbitSet, from: Long, at: Long) {
+        if (set.sections.isEmpty()) return
+        val offset = (at - from).toInt()
+        for (v in voices) {
+            if (OrbitClock.playsAt(set, v.ring, at)) continue
+            val cut = v.pos + offset * 2
+            if (cut < 0) continue
+            if (cut >= v.limit - v.fadeLen) continue
+            endAt(v, cut)
         }
     }
 
@@ -207,7 +238,7 @@ class OrbitEngine(
         val group = bank.muteGroup(content.kit, s.hit.slot)
         if (group != 0) choke(content.kit, group, offset)
         val gain = s.hit.velocity * s.orbit.level
-        val voice = Voice(pad.samples, gain * leftLaw(s.orbit.pan), gain * rightLaw(s.orbit.pan), content.kit, group)
+        val voice = Voice(pad.samples, gain * leftLaw(s.orbit.pan), gain * rightLaw(s.orbit.pan), content.kit, group, s.ring)
         // The voice starts partway into the block; anything before its
         // start is not played, which the negative position expresses
         // without a second offset field.

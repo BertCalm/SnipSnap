@@ -455,6 +455,73 @@ class OrbitSectionTest {
         assertEquals(1, OrbitClip.save(dir, set(OrbitSection("A", 1, setOf(0)))).size)
     }
 
+    // ---- review round 2 ----
+
+    @Test
+    fun `a voice does not ring on into a section that leaves its ring out`() {
+        // The hit is on step 15, so it fires at frame 90,000 and its pad
+        // runs 48,000 frames - alive well past the boundary at 96,000.
+        // Sampled a thousand frames INSIDE the break, where the voice must
+        // still be live for the question to mean anything: the first probe
+        // I wrote sampled past the voice's own end and proved nothing.
+        val r = Orbit("A", 16, PatternOrbit("kit", listOf(OrbitHit(15, 1))))
+        val s = OrbitSet(
+            listOf(r),
+            bpm,
+            rate,
+            sections = listOf(OrbitSection("A", 1, setOf(0)), OrbitSection("DROP", 1, emptySet())),
+        )
+        val out = OrbitEngine.render(s, OrbitBank.prepare(s, Sustain()), (2 * bar).toInt()).samples
+        assertTrue(out[(bar - 1_000L).toInt() * 2] > 0.4f, "the hit did not sound in its own section")
+        assertEquals(0f, out[(bar + 1_000L).toInt() * 2], 1e-3f, "the break was audible")
+    }
+
+    @Test
+    fun `a ring the next section still plays keeps its tail`() {
+        // The other half of the same rule, and the reason this asks per
+        // ring rather than silencing everything at every boundary.
+        val r = Orbit("A", 16, PatternOrbit("kit", listOf(OrbitHit(15, 1))))
+        val s = OrbitSet(
+            listOf(r),
+            bpm,
+            rate,
+            sections = listOf(OrbitSection("A", 1, setOf(0)), OrbitSection("B", 1, setOf(0))),
+        )
+        val out = OrbitEngine.render(s, OrbitBank.prepare(s, Sustain()), (2 * bar).toInt()).samples
+        assertTrue(out[(bar + 1_000L).toInt() * 2] > 0.4f, "the tail was cut at a boundary its ring plays through")
+    }
+
+    @Test
+    fun `a section whose rings have no hit in its window is refused, not written empty`() {
+        // A 64-step ring whose only hit is step 63, cut to one bar: it has
+        // hits by any reading of the ring, and none at all inside the
+        // sixteen steps the section writes. `noNotes` passed it and an
+        // empty clip went into groove.json.
+        val late = Orbit("A", 64, PatternOrbit("kit", listOf(OrbitHit(63, 1))))
+        val s = OrbitSet(listOf(late), bpm, rate, sections = listOf(OrbitSection("LATE", 1, setOf(0))))
+        assertTrue(!OrbitClip.sectionSounds(s, 0))
+        val why = OrbitClip.clipRefusal(s)
+        assertTrue(why != null && why.contains("LATE") && why.contains("SILENT"), "said: $why")
+        // Four bars reach the hit, and then it writes.
+        val long = s.copy(sections = listOf(OrbitSection("LATE", 4, setOf(0))))
+        assertTrue(OrbitClip.sectionSounds(long, 0))
+        assertEquals(1, OrbitClip.clips(long).single().notes.size)
+    }
+
+    @Test
+    fun `two sections may not share a name`() {
+        // The order does not reach the hardware, so the name is the only
+        // thing identifying a sequence once it is there.
+        assertFailsWith<IllegalArgumentException> {
+            OrbitSet(
+                listOf(ring("A", 1, 0)),
+                bpm,
+                rate,
+                sections = listOf(OrbitSection("A", 1, setOf(0)), OrbitSection("A", 1, setOf(0))),
+            )
+        }
+    }
+
     // ---- the file ----
 
     @Test

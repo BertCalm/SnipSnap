@@ -140,8 +140,15 @@ object OrbitClip {
             for (index in set.sections.indices) {
                 if (set.sections[index].plays.isEmpty()) continue
                 val sub = sectionSet(set, index)
-                val why = oneProgram(sub) ?: noNotes(sub) ?: continue
-                return "SECTION ${set.sections[index].name}: $why"
+                oneProgram(sub)?.let { return "SECTION ${set.sections[index].name}: $it" }
+                noNotes(sub)?.let { return "SECTION ${set.sections[index].name}: $it" }
+                // And the question `noNotes` cannot ask, because it knows
+                // the rings but not the window they are being cut to.
+                if (!sectionSounds(set, index)) {
+                    return "SECTION ${set.sections[index].name} IS SILENT — ITS RINGS HAVE NO HIT IN ITS " +
+                        "${set.sections[index].bars} BAR${if (set.sections[index].bars == 1) "" else "S"}. " +
+                        "LENGTHEN IT, OR GIVE IT A RING THAT PLAYS."
+                }
             }
             if (set.sections.all { it.plays.isEmpty() }) {
                 return "EVERY SECTION HERE IS A BREAK. GIVE ONE A RING TO PLAY."
@@ -331,6 +338,26 @@ object OrbitClip {
         set.sections[index].bars.toLong() * set.lapSteps
 
     /**
+     * Whether [index]'s section would write any note at all.
+     *
+     * Asked of the section's own WINDOW rather than of its rings' metadata,
+     * which is not the same question: a 64-step ring whose only hit is on
+     * step 63, chosen for a one-bar section, has hits by any reading of the
+     * ring and none at all inside the sixteen steps the section writes.
+     * `noNotes` passed it and an empty clip went into `groove.json` -
+     * the one thing `noNotes` exists to prevent.
+     */
+    fun sectionSounds(set: OrbitSet, index: Int): Boolean {
+        if (set.sections[index].plays.isEmpty()) return false
+        val sub = sectionSet(set, index)
+        val limit = sectionSteps(set, index) * Mpc3Clip.PULSES_PER_16TH
+        return sub.orbits.any { ring ->
+            ring.engaged && ring.content is PatternOrbit &&
+                OrbitClock.pulseFirings(sub, ring, limit).isNotEmpty()
+        }
+    }
+
+    /**
      * One clip per section — or the single whole-set clip when there is no
      * arrangement, which is byte for byte what [clip] wrote before
      * sections existed.
@@ -369,7 +396,7 @@ object OrbitClip {
             // arrangement in silence, though the player named it and can
             // see it on screen. Those reach [clip] and throw, and
             // [clipRefusal] has already said which section and why.
-            if (set.sections[index].plays.isEmpty()) return@mapNotNull null
+            if (!sectionSounds(set, index)) return@mapNotNull null
             clip(sub, name = "$NAME_PREFIX ${set.sections[index].name}", steps = sectionSteps(set, index))
         }
     }
