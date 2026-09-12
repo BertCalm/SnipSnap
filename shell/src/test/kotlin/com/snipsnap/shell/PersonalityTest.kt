@@ -355,6 +355,12 @@ class PersonalityTest {
         "CHIP_NOT_SURE", "CHIP_OVERRIDDEN",
         "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_NONE", "CARD_PICKED",
         "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
+        // BREED's button label (glyph sweep): now a constant destination
+        // name, same shape as CAPTURE_BLOCKED_BUTTON above — furniture on
+        // a button, not a line the app says once. The pad-count readout
+        // that used to live here moved to Copy.breedSubtitle, a function,
+        // which this reflective law doesn't reach either.
+        "BREED_BUTTON",
         // The shelf filter's chip (finding 16) is the sort chip's twin and
         // sits beside it, so it is furniture under the same rule. The
         // filtered labels come from Copy.shelfFilter(), a function, which

@@ -471,19 +471,26 @@ fun KitScreen(
                 // into a new child, kept beside this one — the shelf-level
                 // "pick a kit" hand-off (App.kt's pendingBreedWith) runs
                 // next, the same shape SNIPS → PAD already uses to pick a
-                // kit for a snip. The label counts the pads with a recipe
-                // to cross (`Breed.recipePads`) and the line under it says
-                // what comes out, so "0 PADS CROSSED" is never the first
-                // word of the explanation. Still enabled at zero: the other
-                // kit's racks can cross over this one's audio.
+                // kit for a snip. The button always opens that picker, so
+                // its label is constant; the line under it counts the pads
+                // with a recipe to cross (`Breed.recipePads`), so "0 PADS
+                // CROSSED" is never the first word of the explanation.
+                // Still enabled at zero: the other kit's racks can cross
+                // over this one's audio.
                 ActionButton(
-                    Copy.breedButton(Breed.recipePads(kit).size, kit.pads.size),
+                    Copy.BREED_BUTTON,
                     scheme,
                     enabled = !busy && kit.pads.isNotEmpty() && canBreed,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = onBreed,
                 )
-                TapeText(Copy.BREED_SUBTITLE, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth(), maxLines = 1)
+                TapeText(
+                    Copy.breedSubtitle(Breed.recipePads(kit).size, kit.pads.size),
+                    TapeType.pixelSmall,
+                    scheme.ink3.tape,
+                    Modifier.fillMaxWidth(),
+                    maxLines = 1,
+                )
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (kind in TextureKits.KINDS) {

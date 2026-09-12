@@ -409,7 +409,7 @@ object Copy {
         "· HOLD A PAD, RE-TRIM ▸: TAPE OPENS ON ITS CUT. BACK ONTO LANDS IT.",
         "· TAP BANK B: A SECOND PAGE. HOLD A PAD, OR SEND A CHOP ONTO IT.",
         "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO AN EMPTY BANK B.",
-        "· BREED ▸ MIXES TWO KITS' RECIPES INTO A NEW KIT. PARENTS STAY.",
+        "· BREED ▸ PICK A KIT TO CROSS RECIPES WITH. PARENTS STAY.",
         "· DUST: THE TAPE'S OWN HISS, ROOM AND CRACKLE UNDER A PAD. OR ANOTHER'S.",
         "· CHOP'S CUT BENCH: HITS, EAR, GRID. MERGE OR SPLIT UNDER A CHIP.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
@@ -531,19 +531,33 @@ object Copy {
      * engine to render it through. The fix is the same in every case.
      */
     const val BREED_NOTHING_TO_CROSS = "NOTHING WOULD CROSS: NO PAD HERE HAS A PATCH OR TREATMENT, OR A PARTNER THERE WITH ONE TO BORROW. TREAT A PAD FIRST."
-    /** The line under the BREED button: what comes out, before the tap. */
-    const val BREED_SUBTITLE = "MIXES THE TWO KITS' RECIPES INTO A NEW KIT. BOTH PARENTS STAY."
     /**
-     * The BREED button's own readout: how many of this kit's pads carry
-     * a recipe the cross can use (`Breed.recipePads`), so "0 PADS
-     * CROSSED" is never the first time the user hears the word. A
-     * function, so the singular reads right and the laws leave it be.
+     * The BREED button's own label. BREED always opens the kit picker
+     * (`App.kt`'s `pendingBreedWith`), so `▸` is earned — but the
+     * destination is constant, so the label just names it. What used to
+     * vary here (the recipe-pad count) now lives in [breedSubtitle].
      */
-    fun breedButton(recipePads: Int, pads: Int): String = when {
-        recipePads == 0 -> "BREED ▸ NO RECIPES HERE YET"
-        pads == 1 -> "BREED ▸ ITS ONE PAD HAS A RECIPE"
-        recipePads == 1 -> "BREED ▸ 1 OF $pads PADS HAS A RECIPE"
-        else -> "BREED ▸ $recipePads OF $pads PADS HAVE RECIPES"
+    const val BREED_BUTTON = "BREED ▸ MIX TWO KITS"
+
+    /**
+     * The line under the BREED button: how many of this kit's pads carry
+     * a recipe the cross can use (`Breed.recipePads`), so "0 PADS
+     * CROSSED" is never the first time the user hears the word — and,
+     * since [BREED_BUTTON] no longer says what comes out, the reminder
+     * that both parents survive the cross. A function, so the singular
+     * reads right and the laws leave it be.
+     *
+     * **The zero case is not a dead end.** At `recipePads == 0` the button
+     * stays enabled: the *other* kit's own racks can still cross over
+     * this one's audio (`Breed.crossable`, "B's rack over A's audio" in
+     * `BreedTest`) — so this line says the other kit can still cross
+     * rather than implying the tap goes nowhere.
+     */
+    fun breedSubtitle(recipePads: Int, pads: Int): String = when {
+        recipePads == 0 -> "NO RECIPES HERE YET. THE OTHER KIT'S CAN CROSS. PARENTS STAY."
+        pads == 1 -> "ITS ONE PAD HAS A RECIPE TO CROSS. BOTH PARENTS STAY."
+        recipePads == 1 -> "1 OF $pads PADS HAS A RECIPE. BOTH PARENTS STAY."
+        else -> "$recipePads OF $pads PADS HAVE RECIPES. BOTH PARENTS STAY."
     }
     /**
      * BREED's own toast: the child kit's name, how many pads actually

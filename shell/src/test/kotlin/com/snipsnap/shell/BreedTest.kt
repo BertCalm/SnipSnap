@@ -116,9 +116,10 @@ class BreedTest {
         assertEquals(listOf(1), Breed.crossable(m.kit, n.kit), "A's rack")
         assertEquals(listOf(1), Breed.crossable(n.kit, m.kit), "B's rack over A's audio")
         assertTrue(Breed.recipePads(n.kit).isEmpty(), "the button on the plain kit still reads zero")
-        assertEquals(Copy.breedButton(0, 2), "BREED ▸ NO RECIPES HERE YET")
-        assertEquals(Copy.breedButton(1, 2), "BREED ▸ 1 OF 2 PADS HAS A RECIPE")
-        assertEquals(Copy.breedButton(1, 1), "BREED ▸ ITS ONE PAD HAS A RECIPE", "a one-pad kit reads in the singular")
-        assertEquals(Copy.breedButton(2, 2), "BREED ▸ 2 OF 2 PADS HAVE RECIPES")
+        assertEquals(Copy.BREED_BUTTON, "BREED ▸ MIX TWO KITS", "the button always opens the picker, so its label is constant")
+        assertEquals(Copy.breedSubtitle(0, 2), "NO RECIPES HERE YET. THE OTHER KIT'S CAN CROSS. PARENTS STAY.")
+        assertEquals(Copy.breedSubtitle(1, 2), "1 OF 2 PADS HAS A RECIPE. BOTH PARENTS STAY.")
+        assertEquals(Copy.breedSubtitle(1, 1), "ITS ONE PAD HAS A RECIPE TO CROSS. BOTH PARENTS STAY.", "a one-pad kit reads in the singular")
+        assertEquals(Copy.breedSubtitle(2, 2), "2 OF 2 PADS HAVE RECIPES. BOTH PARENTS STAY.")
     }
 }
