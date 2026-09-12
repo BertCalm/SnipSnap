@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.os.SystemClock
 import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.TapeCommit
 import com.snipsnap.app.TapeVoice
@@ -67,6 +69,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.Hum
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
@@ -79,6 +82,7 @@ import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -326,6 +330,9 @@ private fun pitchLabel(estimate: PitchEstimate): String =
 /** Pad-numbered like the real 4×4 (A13–A16 top row, A01 bottom-left) — see KitScreen. */
 private val CHOP_GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 
+/** HUM THE CHOP: how long after the tape's end the mic keeps listening, for a last "tss" on the tape's last hit. */
+private const val HUM_TAIL_MS = 400L
+
 @Composable
 private fun ChopContent(
     /** The open kit, if any: ONTO <kit> · BANK X lands the chop on its first empty bank. */
@@ -378,6 +385,14 @@ private fun ChopContent(
     var rechopBusy by remember { mutableStateOf(false) }
     var sendBusy by remember { mutableStateOf(false) }
 
+    // HUM THE CHOP (docs/CHOP_CONTROLS.md §10): true while the hum runs —
+    // the source playing through `voice`, the armed mic ring recording —
+    // from `humStart` (elapsedRealtime), so the ring's tail at the stop
+    // is exactly the hum's length. Keyed on the model like the voice:
+    // the hum's own landing swaps the model, and the flag with it.
+    var humming by remember(model) { mutableStateOf(false) }
+    var humStart by remember(model) { mutableStateOf(0L) }
+
     // The source's tempo, for ON THE GRID's row: measured once on IO off
     // the first model (every later model cut from this source shares the
     // measurement), null while measuring or when the tape has no pulse.
@@ -400,7 +415,7 @@ private fun ChopContent(
      * `model`.
      */
     fun rechopTo(newMode: ChopReviewModel.ChopMode, after: (ChopReviewModel) -> Unit = {}) {
-        if (rechopBusy || sendBusy) return
+        if (rechopBusy || sendBusy || humming) return
         rechopBusy = true
         val current = model
         scope.launch {
@@ -445,7 +460,7 @@ private fun ChopContent(
      * landing says what the slices are now.
      */
     fun editSlices(edit: (ChopReviewModel) -> ChopReviewModel?, landed: String, refused: String) {
-        if (rechopBusy || sendBusy) return
+        if (rechopBusy || sendBusy || humming) return
         rechopBusy = true
         val current = model
         scope.launch {
@@ -481,10 +496,87 @@ private fun ChopContent(
             if (event == Lifecycle.Event.ON_STOP) {
                 voice?.release()
                 voice = null
+                // A hum the phone interrupted is not read: the tape stopped
+                // in the ear, so the mouth stopped too.
+                humming = false
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // ---- HUM THE CHOP (docs/CHOP_CONTROLS.md §10) ----
+
+    fun startHum() {
+        if (humming || rechopBusy || sendBusy) return
+        // The hum comes off the same ring GRAB and HOLD use: nothing
+        // starts or stops recording here, so the mic has to be armed already.
+        if (!MicSessionService.armed.value) {
+            onToast(Copy.HUM_NOT_LISTENING)
+            return
+        }
+        voice?.release()
+        val v = TapeVoice(model.source.samples, model.source.sampleRate)
+        voice = v
+        humStart = SystemClock.elapsedRealtime()
+        humming = true
+        v.start(0)
+        onToast(Copy.HUM_START)
+    }
+
+    /**
+     * The hum's end: the source stops, and — [read] — the ring's tail
+     * since the start is read against the source (`Hum.read`, IO) and the
+     * rows re-cut to the hits the mouth landed on. Not through
+     * `rechopKeeping`: the mouth's word is fresher than a chip corrected
+     * before it. Nothing landed leaves the chop as it was, in words.
+     */
+    fun stopHum(read: Boolean) {
+        if (!humming) return
+        humming = false
+        voice?.release()
+        voice = null
+        if (!read || rechopBusy || sendBusy) return
+        val heldMs = SystemClock.elapsedRealtime() - humStart
+        val source = model.source
+        val sourceFrames = source.frameCount.toLong() * MicSessionService.SAMPLE_RATE / source.sampleRate
+        val frames = (heldMs * MicSessionService.SAMPLE_RATE / 1000L)
+            .coerceAtMost(sourceFrames + MicSessionService.SAMPLE_RATE * HUM_TAIL_MS / 1000L)
+            .coerceIn(1L, MicSessionService.RING_SECONDS.toLong() * MicSessionService.SAMPLE_RATE)
+            .toInt()
+        rechopBusy = true
+        val current = model
+        scope.launch {
+            try {
+                val reading = withContext(Dispatchers.IO) {
+                    val raw = MicSessionService.snapshotTail(frames) ?: return@withContext null
+                    Hum.read(current.source, Snip(raw, 1, MicSessionService.SAMPLE_RATE))
+                }
+                when {
+                    reading == null -> onToast(Copy.HUM_NOTHING)
+                    reading.cuts.isEmpty() -> onToast(Copy.HUM_NO_MATCH)
+                    else -> {
+                        val fresh = withContext(Dispatchers.IO) { current.rechop(reading.mode()) }
+                        model = fresh
+                        onToast(Copy.hummed(fresh.sliceCount, reading.missed))
+                    }
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("ChopScreen", "hum: failed", e)
+                onToast(Copy.RECHOP_FAILED)
+            } finally {
+                rechopBusy = false
+            }
+        }
+    }
+
+    // The tape running out ends the hum on its own, a beat after its last
+    // frame so a "tss" on the last hit is still heard.
+    LaunchedEffect(humming) {
+        if (!humming) return@LaunchedEffect
+        delay(model.source.frameCount * 1000L / model.source.sampleRate + HUM_TAIL_MS)
+        stopHum(read = true)
     }
 
     fun audition(row: ChopReviewModel.Row) {
@@ -633,6 +725,10 @@ private fun ChopContent(
                 if (hits != null && hits.cut != cut) rechopTo(ChopReviewModel.withHits(model.mode, hits.copy(cut = cut)))
             },
             tempo = tempoMeasured,
+            // HUM (§10): a performance, not a mode switch — the segment
+            // starts the hum and, while it runs, reads STOP and ends it.
+            onHum = { if (humming) stopHum(read = true) else startHum() },
+            humming = humming,
             onSnap = { grid ->
                 val hits = ChopReviewModel.hitsOf(model.mode)
                 if (hits != null && hits.grid != grid) {
@@ -1076,6 +1172,10 @@ private fun CutBench(
     tempo: Pair<Boolean, com.snipsnap.audio.TempoEstimate?>,
     /** ON THE GRID's row: the snap picked. (`onGrid` above is the BY HITS / GRID segment; the two are different things.) */
     onSnap: (ChopReviewModel.GridSnap) -> Unit,
+    /** HUM (§10): start the hum, or stop it and read it. */
+    onHum: () -> Unit,
+    /** True while the hum runs: the segment reads STOP and the readout HUMMING…. */
+    humming: Boolean,
 ) {
     val hits = ChopReviewModel.hitsOf(model.mode)
     val readout = when (val mode = model.mode) {
@@ -1083,6 +1183,7 @@ private fun CutBench(
         // GHOSTS: the spaces, and the hits they are the spaces of.
         is ChopReviewModel.ChopMode.Ghosts -> "${model.sliceCount} ${if (model.sliceCount == 1) "GHOST" else "GHOSTS"} · ${model.hitsHeard} HITS"
         is ChopReviewModel.ChopMode.Grid -> "GRID ×${mode.parts}"
+        is ChopReviewModel.ChopMode.Hummed -> "${model.sliceCount} HUMMED"
     }
     // By hits the count and the mode are two things (12 HITS · BY HITS ·
     // FINE); on a grid the mode label already is the count.
@@ -1099,6 +1200,12 @@ private fun CutBench(
             SegmentButton("BY HITS", active = model.mode is ChopReviewModel.ChopMode.ByHits, modifier = Modifier.weight(1f), onClick = onByHits)
             SegmentButton("GRID", active = model.mode is ChopReviewModel.ChopMode.Grid, modifier = Modifier.weight(1f), onClick = onGrid)
             SegmentButton("GHOSTS", active = model.ghosts, modifier = Modifier.weight(1f), onClick = onGhosts)
+            SegmentButton(
+                if (humming) "STOP" else "HUM",
+                active = humming || model.mode is ChopReviewModel.ChopMode.Hummed,
+                modifier = Modifier.weight(1f),
+                onClick = onHum,
+            )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             SecondaryButton("◀", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy, spoken = "ONE $unit FEWER") { onStep(-1) }
@@ -1106,7 +1213,7 @@ private fun CutBench(
                 Modifier.weight(1.6f).heightIn(min = Layout.MIN_HIT_TARGET.dp).lcdPanel(scheme),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(if (busy) Copy.CHOP_BENCH_BUSY else readout, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 1)
+                TapeText(if (humming) Copy.HUM_BUSY else if (busy) Copy.CHOP_BENCH_BUSY else readout, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 1)
             }
             SecondaryButton("▶", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy, spoken = "ONE $unit MORE") { onStep(1) }
             if (hits != null) {

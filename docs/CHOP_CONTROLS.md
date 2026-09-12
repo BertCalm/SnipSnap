@@ -288,3 +288,116 @@ go, it stops.
 - Whether the SPLIT engine's air separation over each ghost (the room
   without the tonal ring) is worth a second pass — the richer version
   the idea named, left for when the plain one has been heard.
+
+## 10. Round four: HUM THE CHOP
+
+You beatbox the pattern you want over the break, and your mouth decides
+both where the cuts fall and what they are called. HUM is the fourth
+segment on the CUT bench's mode row (BY HITS · GRID · GHOSTS · HUM). Tap
+it and the tape plays while the mic listens; you go "boom tss ka tss"
+along with it; tap again (or let the tape run out) and the rows re-cut
+to match: a cut at every sound you made, labelled by what your mouth
+said. Sounds you did not make are not kept. You chop by performing the
+chop — CATCH A HIT's claim, made with the mouth instead of a finger, and
+the first of the two to inherit the other's parts: the tape's hits are
+CATCH's own list (`CatchModel.hitsOf`, every hit, not a chop's sixteen).
+
+### In the hand
+
+- **HUM** on the mode row. With the mic not armed it refuses and says
+  which door arms it (`ARM THE MIC FIRST. HUM LISTENS THROUGH IT.`); the
+  hum comes off the same sixty-second ring GRAB and HOLD use, so nothing
+  starts or stops recording here. Armed, the source plays from its top
+  through the same voice that auditions a row, the readout reads
+  `HUMMING…`, and the toast says what to do: `HUM ALONG. HEADPHONES ON,
+  OR THE MIC HEARS THE TAPE TOO. TAP HUM AGAIN TO STOP.`
+- **Tap HUM again**, or let the tape run out, and the hum is read
+  against the tape. The rows become the hits the mouth landed on, each
+  chip the mouth's word (`YOU ✓` where it differs from the tape's own),
+  the header `6 SLICES — HUMMED`, the readout `6 HUMMED`, and the toast
+  `HUMMED: 6 CUTS, YOUR MOUTH'S WORDS ON THEM. 2 SOUNDS FOUND NO HIT.`
+- **Nothing landed** (`NOTHING YOU HUMMED LANDED ON A HIT. HEADPHONES
+  ON, AND HUM WITH THE BEAT.`) leaves the chop as it was.
+- The bench's count, ear, cut and grid do not reach a hummed chop: the
+  count is the mouth's. BY HITS, GRID or GHOSTS leave it, as they leave
+  each other. MERGE and SPLIT, FOLD, MELODIC, SEND and ONTO all work on
+  it as on any chop; a hummed chop's pads carry RE-TRIM's keys like any
+  other.
+
+### Underneath (`shell/Hum.kt`)
+
+Pure: two snips in, cuts out. The screen owns the mic and the deck.
+
+- **Onsets on the hum**, the same detector the tape gets. Each mouth
+  onset is matched to the nearest tape hit within `MATCH_SEC` (120 ms).
+- **The lag is measured, not guessed.** The whole hum is late by the
+  same amount — the phone's output latency, the ear, the mouth — so the
+  median offset between the mouth's onsets and their nearest hits, over
+  those within `LAG_MAX_SEC` (200 ms), is taken out before matching. A
+  hum 70 ms late reads as on time; a hum 300 ms late lands nothing, and
+  the toast says so. The screen adds no latency constant of its own.
+- **One hit, one sound.** Two mouth sounds on one hit: the nearer keeps
+  it, the other is a miss. A mouth sound with no hit within reach is a
+  miss. Misses are counted and said, never landed: the mouth's timing
+  is the point, and a cut where the tape has no hit is not a chop.
+- **What the mouth said** is the classifier's reading of the mouth
+  sound itself, from its onset to the next (at most `MOUTH_MAX_SEC`,
+  300 ms): a "boom" reads kick-like, a "tss" hat-like. Unsure (under
+  `NOT_SURE_BELOW`), or not a drum (LOOP, UNKNOWN), the tape slice's
+  own classification stands. The classifier has never heard beatbox;
+  the teach log already records corrections, and a hummed chip
+  corrected by hand is one.
+- **`ChopMode.Hummed(cuts, labels)`**: exactly those cuts of the source,
+  each INSTANT KIT's own cut of its hit (to the next tape hit, not the
+  next kept one — the hits between are not kept), the mouth's words as
+  the chips' overrides. RE-CHOP of a hum re-applies the mouth's words;
+  the hum is not carried through `carryingOverrides` on its way in,
+  since the mouth's word is fresher than a chip corrected before it.
+- **The mouth's own rate.** The mic ring records at its rate, the tape
+  is at its own; onsets are read across in tape frames.
+- **The beat you sang** rides along in the reading (`pattern`, every
+  mouth onset on the tape with the lag out) for a READ AS GROOVE of the
+  hum — the extension the idea named, left for a round that has heard
+  this one.
+
+### What it says
+
+- `ARM THE MIC FIRST. HUM LISTENS THROUGH IT.`
+- `HUM ALONG. HEADPHONES ON, OR THE MIC HEARS THE TAPE TOO. TAP HUM AGAIN TO STOP.`
+- `HUMMING…` (the readout) · `6 HUMMED` · header `6 SLICES — HUMMED`
+- `THE MIC HEARD NOTHING. ARM IT, THEN HUM AGAIN.`
+- `NOTHING YOU HUMMED LANDED ON A HIT. HEADPHONES ON, AND HUM WITH THE BEAT.`
+- `HUMMED: 6 CUTS, YOUR MOUTH'S WORDS ON THEM. 2 SOUNDS FOUND NO HIT.`
+- HELP: `· HUM ON CHOP: BEATBOX ALONG. THE CUTS AND LABELS FOLLOW YOUR MOUTH.`
+
+### Laws the tests hold (`HumTest`)
+
+- On a break of kick, hat, snare and open hat, a boom on the kick and a
+  tss on the snare, both 70 ms late, cut the kick and the snare and no
+  other, INSTANT KIT's own cut of each; the lag reads 70 ms; the kick's
+  chip is KICK and the snare's is HAT CL, `YOU ✓`, the tape's own word
+  SNARE still underneath; a boom between the hits is one miss; the
+  pattern has every sound; the header reads HUMMED; the bench's hit
+  controls don't reach it; SEND lands the two; RE-CHOP keeps the
+  mouth's words.
+- Two mouth sounds on one hit: the nearer keeps it, the other is a
+  miss. A bar the classifier can't clear leaves every chip the tape's
+  own word. A hum 300 ms late lands nothing, and the lag reads zero.
+- A hum recorded at half the tape's rate reads in the tape's frames,
+  its lag with it.
+
+### What the phone should judge
+
+- Whether 120 ms is the right reach: a loose beatboxer wants more, a
+  busy break wants less. One constant.
+- Whether 200 ms is enough lag to carry on a slow phone with a Bluetooth
+  headset (their latency can run past it); if hums keep landing
+  nothing with headphones on, this is the constant.
+- Whether the classifier's word on beatbox is worth having at all before
+  the teach log has heard some, or whether round one should have left
+  every chip the tape's own word and let the mouth only choose.
+- Speaker bleed: with the tape out loud the mic hears the break and
+  every hit matches. Round one asks for headphones in words; a bleed
+  check (a hum whose onsets match every hit, and classify like the tape
+  did) could refuse instead.
+
