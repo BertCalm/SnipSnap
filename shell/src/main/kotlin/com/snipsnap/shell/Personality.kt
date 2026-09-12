@@ -1372,6 +1372,8 @@ object Copy {
     const val GROOVE_NOTHING_BOUNCED = "NOTHING BOUNCED. TRY AGAIN."
     /** `PadEngine.armPrint` refused - no stream running, one already recording, or the reservation itself failed. */
     const val GROOVE_BOUNCE_FAILED = "BOUNCE FAILED. TRY AGAIN."
+    /** PROG, SWING, FEEL, or a new take landing moved the pattern out from under an armed or running bounce - it is cancelled rather than landing a splice of two different takes. */
+    const val GROOVE_BOUNCE_PATTERN_CHANGED = "GROOVE CHANGED. BOUNCE CANCELLED."
 
     // ---- SPLIT ----
     const val SPLIT_ALL_FADERS_DOWN = "EVERY FADER IS DOWN. NOTHING TO HEAR."
