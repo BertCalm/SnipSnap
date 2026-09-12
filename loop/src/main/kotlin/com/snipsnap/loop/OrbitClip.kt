@@ -35,9 +35,16 @@ object OrbitClip {
     fun nameFor(set: OrbitSet): String = "$NAME_PREFIX ${OrbitClock.ratioLabel(set).replace(" : ", ":")}".trim()
 
     /**
-     * How many bars the clip (and the bounce) would be: the cycle in 4/4
-     * bars, rounded up. Counted in the clip's own bar, not the set's: a
-     * 3/4 set's four-bar cycle is 48 steps, which the clip calls three.
+     * The RINGS' CYCLE in the clip's own 4/4 bars, rounded up: a 3/4
+     * set's four-bar cycle is 48 steps, which the clip calls three.
+     *
+     * That is the clip's length only for a set with NO arrangement. An
+     * arranged set writes one clip per section, each [sectionSteps] long,
+     * and its bounce is one turn of the transport
+     * ([OrbitClock.transportSteps]) - neither of which the cycle measures,
+     * since an arranged set may never reach the rings' meeting at all.
+     * The name kept its old promise for a while after that stopped being
+     * true, which is what this paragraph is for.
      */
     fun bars(set: OrbitSet): Int = barsFor(OrbitClock.cycleSteps(set))
 
@@ -49,6 +56,19 @@ object OrbitClip {
      */
     fun barsFor(steps: Long): Int =
         ceil(steps.toDouble() / CLIP_BAR_STEPS).toInt().coerceAtLeast(1)
+
+    /**
+     * The pulses a clip of [steps] of the set's 16ths actually writes.
+     *
+     * WHOLE CLIP BARS, not the steps themselves: an [Mpc3Clip] is bars
+     * long, so a 3/4 set's twelve-step section is written as one bar of
+     * sixteen and a hit in those last four steps lands in the file. Every
+     * question about "what does this clip contain" is asked over this one
+     * number, because a preflight measuring a different window from the
+     * writer's is how a section came to be refused for a hit that is not
+     * in it - and, the other way about, written empty.
+     */
+    fun clipPulses(steps: Long): Long = barsFor(steps).toLong() * Mpc3Clip.PULSES_PER_BAR
 
     /** Whether the clip's bar count differs from the set's, so the screen can say so. */
     fun countsDifferently(set: OrbitSet): Boolean = set.lapSteps != CLIP_BAR_STEPS
@@ -75,52 +95,97 @@ object OrbitClip {
      * bounce, so that question belongs to [clipRefusal] alone.
      */
     fun refusal(set: OrbitSet): String? {
-        // A section is a clip of its own and has its own ceiling, which is
-        // not the rings' cycle. A section's length is capped in the set's
-        // bars, and the clip counts in bars of sixteen - so 64 bars of 8/4
-        // is 128 of the clip's, twice what one holds. Without this the
-        // preflight said yes and `Mpc3Clip` threw "bars out of range: 128"
-        // at the caller, which is a preflight that makes the caller catch
-        // anyway.
+        // What every clip that would be WRITTEN has to fit in - shared,
+        // because a bounce of a turn containing a section too long to clip
+        // is no use either.
+        barCap(set)?.let { return it }
+        // Then the BOUNCE's own ceiling, which is a different length from
+        // a clip's the moment there is an arrangement: a bounce is one
+        // turn of the TRANSPORT, and an arranged set's turn is its plan
+        // rather than the rings' meeting. The first cut of sections
+        // relaxed this for arranged sets altogether, which left
+        // `bounceToTape` rendering `cycleFrames` with nothing to stop it -
+        // minutes of audio for a three-bar plan on coprime rings, through
+        // a `Long` the renderer's `Int` cannot hold.
+        //
+        // A CLIP does not share this one: eight sections of 32 bars are
+        // eight legal sequences and one bounce far too long, and refusing
+        // the clip for the bounce's reason refused an arrangement that
+        // exports perfectly.
+        val bars = barsFor(OrbitClock.transportSteps(set))
+        if (bars <= MAX_BARS) return frameCap(set)
+        // Only an ARRANGED set reaches this: a set without one turns on
+        // the rings' cycle, which is also the clip it would write, so
+        // [barCap] has already answered - in the rings' own words, which
+        // are not these. An arranged set's turn is its plan, and the
+        // player shortens a section: the rings never meet at all by
+        // design, so telling them to shorten a ring would be doubly wrong.
+        val unit = if (countsDifferently(set)) "BARS OF 4/4" else "BARS"
+        return "THE PLAN RUNS $bars $unit — A BOUNCE STOPS AT $MAX_BARS. SHORTEN A SECTION."
+    }
+
+    /**
+     * Why some clip this set would write cannot be written at its length,
+     * or null. The ceiling a CLIP answers to, and the only part of
+     * [refusal] a clip shares.
+     *
+     * An arranged set is asked section by section, because each section is
+     * a clip of its own: a section's length is capped in the SET's bars
+     * and a clip counts in bars of sixteen, so 64 bars of 8/4 is 128 of
+     * the clip's, twice what one holds. Without this the preflight said
+     * yes and `Mpc3Clip` threw "bars out of range: 128" at the caller,
+     * which is a preflight that makes the caller catch anyway.
+     *
+     * A set with no arrangement is one clip and the rings' cycle is its
+     * length, so that is what it is asked.
+     */
+    private fun barCap(set: OrbitSet): String? {
+        if (set.sections.isEmpty()) {
+            val bars = bars(set)
+            if (bars <= MAX_BARS) return null
+            val unit = if (countsDifferently(set)) "BARS OF 4/4" else "BARS"
+            // A ring's length is no longer the only thing that makes a
+            // cycle long: a hit on one lap in four does not repeat until
+            // the fourth lap ([OrbitClock.turnSteps]), so telling a player
+            // to shorten a ring when what did it was a conditional sends
+            // them to the wrong chip. A conditional on a hit that never
+            // sounds stretched nothing, so naming it would send them to
+            // undo the one thing that is not the cause.
+            val conditional = set.orbits.any { o ->
+                (o.content as? PatternOrbit)?.hits?.any {
+                    it.everyLaps != OrbitHit.EVERY_LAP && !it.neverSounds
+                } == true
+            }
+            val fix = if (conditional) "SHORTEN A RING, OR TAKE A CONDITIONAL OFF A HIT." else "SHORTEN A RING."
+            return "THE RINGS MEET EVERY $bars $unit — A CLIP STOPS AT $MAX_BARS. $fix"
+        }
         set.sections.indices.forEach { index ->
             val sectionBars = barsFor(sectionSteps(set, index))
             if (sectionBars > MAX_BARS) {
                 return "SECTION ${set.sections[index].name} IS $sectionBars BARS OF 4/4 — A CLIP STOPS AT $MAX_BARS. SHORTEN IT."
             }
         }
-        // Then the BOUNCE's ceiling, which is a different length from a
-        // clip's the moment there is an arrangement: a bounce is one turn
-        // of the TRANSPORT, and an arranged set's turn is its plan rather
-        // than the rings' meeting. The first cut of sections relaxed this
-        // for arranged sets altogether, which left `bounceToTape`
-        // rendering `cycleFrames` with nothing to stop it - minutes of
-        // audio for a three-bar plan on coprime rings, through a `Long`
-        // the renderer's `Int` cannot hold.
-        val bars = barsFor(OrbitClock.transportSteps(set))
-        if (bars <= MAX_BARS) return null
-        val unit = if (countsDifferently(set)) "BARS OF 4/4" else "BARS"
-        // A ring's length is no longer the only thing that makes a cycle
-        // long: a hit on one lap in four does not repeat until the fourth
-        // lap, so it multiplies its ring's contribution
-        // ([OrbitClock.turnSteps]). Telling a player to shorten a ring when
-        // what did it was a conditional sends them to the wrong chip.
-        val conditional = set.orbits.any { o ->
-            (o.content as? PatternOrbit)?.hits?.any {
-                // A conditional on a hit that never sounds stretched
-                // nothing ([OrbitClock.turnSteps] leaves it out), so
-                // naming it here would send the player to undo the one
-                // thing that is not the cause.
-                it.everyLaps != OrbitHit.EVERY_LAP && !it.neverSounds
-            } == true
-        }
-        // An arranged set's turn is the plan, so the sentence about the
-        // rings meeting is not the one to say: the player shortens a
-        // section, and the rings never meet at all by design.
-        if (set.sections.isNotEmpty()) {
-            return "THE PLAN RUNS $bars $unit — A BOUNCE STOPS AT $MAX_BARS. SHORTEN A SECTION."
-        }
-        val fix = if (conditional) "SHORTEN A RING, OR TAKE A CONDITIONAL OFF A HIT." else "SHORTEN A RING."
-        return "THE RINGS MEET EVERY $bars $unit — A CLIP STOPS AT $MAX_BARS. $fix"
+        return null
+    }
+
+    /**
+     * Why one turn is too many FRAMES to bounce, or null.
+     *
+     * [MAX_BARS] is a musical ceiling and not a bound on frames: a set's
+     * `sampleRate` is only required to be positive, so a perfectly legal
+     * 64-bar turn at 6 MHz and 40 BPM is 2,304,000,000 frames - and
+     * `bounceToTape` narrows that to the `Int` [OrbitEngine.render]
+     * counts in, where it wraps NEGATIVE. Verified: `refusal` answered
+     * null and the conversion gave -1,990,967,296.
+     *
+     * The bounce's alone. A clip is written in bars and never reaches a
+     * frame, so this would refuse a clip for a number it does not use.
+     */
+    private fun frameCap(set: OrbitSet): String? {
+        val frames = OrbitClock.transportFrames(set)
+        if (frames <= Int.MAX_VALUE) return null
+        return "ONE TURN IS $frames FRAMES AT ${set.sampleRate} Hz — MORE THAN ONE BOUNCE HOLDS. " +
+            "LOWER THE RATE, OR SHORTEN IT."
     }
 
     /**
@@ -129,7 +194,9 @@ object OrbitClip {
      * that only wants audio wants [refusal] instead.
      */
     fun clipRefusal(set: OrbitSet): String? {
-        refusal(set)?.let { return it }
+        // [barCap] rather than [refusal]: what a clip has to fit in, not
+        // what a bounce has to.
+        barCap(set)?.let { return it }
         // Asked of each section's own clip, because that is what gets
         // written. Over the whole set it answered two different questions
         // wrongly: an arrangement that puts kit A in one section and kit B
@@ -165,7 +232,13 @@ object OrbitClip {
         val section = set.sections[index]
         if (section.plays.isEmpty()) return null
         val sub = sectionSet(set, index)
-        oneProgram(sub)?.let { return "SECTION ${section.name}: $it" }
+        // Over the section's own WINDOW, because that is what gets
+        // written. Asked of the rings' metadata instead, a one-bar section
+        // holding a 64-step kitB ring whose only hit is step 63 was
+        // refused as a two-kit clip - while the clip it would have written
+        // has kitA's note and nothing of kitB's in it at all.
+        oneProgram(sub, clipPulses(sectionSteps(set, index)))
+            ?.let { return "SECTION ${section.name}: $it" }
         noNotes(sub)?.let { return "SECTION ${section.name}: $it" }
         // And the question `noNotes` cannot ask, because it knows the
         // rings but not the window they are being cut to.
@@ -195,14 +268,19 @@ object OrbitClip {
      * [Mpc3Note.PAD_SLOTS] names a pad no program can hold, so
      * [Mpc3Note.noteFor] has nothing to map it to.
      */
-    private fun oneProgram(set: OrbitSet): String? {
+    private fun oneProgram(set: OrbitSet, limitPulses: Long? = null): String? {
         // Rings that actually put a note in the clip - engaged, a
         // pattern, and played onto. A hit-less ring contributes nothing
         // whatever kit it names, so counting it as a kit refuses a set
         // that would have exported fine, and with nothing played anywhere
         // it answers "two kits" where the truth is "no hits yet".
+        //
+        // [limitPulses] narrows "played onto" to the hits that SOUND
+        // inside a window - what a section writes, rather than what its
+        // rings contain.
+        val sounding = set.orbits.associateWith { sounds(set, it, limitPulses) }
         val playing = set.orbits.filter {
-            it.engaged && it.content is PatternOrbit && (it.content as PatternOrbit).hits.isNotEmpty()
+            it.engaged && it.content is PatternOrbit && sounding.getValue(it).isNotEmpty()
         }
         val kits = playing.map { (it.content as PatternOrbit).kit }.distinct()
         if (kits.size > 1) {
@@ -210,7 +288,7 @@ object OrbitClip {
                 "ONE CLIP RIDES ONE PROGRAM. CLIP THEM A KIT AT A TIME."
         }
         val tooHigh = playing
-            .flatMap { (it.content as PatternOrbit).hits }
+            .flatMap { sounding.getValue(it) }
             .map { it.slot }
             .filter { it > Mpc3Note.PAD_SLOTS }
             .distinct()
@@ -219,6 +297,17 @@ object OrbitClip {
             return "PAD ${tooHigh.joinToString(", ")} IS PAST ${Mpc3Note.PAD_SLOTS} — NO PROGRAM HOLDS IT."
         }
         return null
+    }
+
+    /**
+     * [ring]'s hits that would be written: all of them with no window, and
+     * the ones that fire inside [limitPulses] when there is one. Empty for
+     * a ring that is not a pattern at all.
+     */
+    private fun sounds(set: OrbitSet, ring: Orbit, limitPulses: Long?): List<OrbitHit> {
+        val content = ring.content as? PatternOrbit ?: return emptyList()
+        if (limitPulses == null) return content.hits
+        return OrbitClock.pulseFirings(set, ring, limitPulses).map { it.hit }.distinct()
     }
 
     /**
@@ -289,9 +378,12 @@ object OrbitClip {
         if (bars > MAX_BARS) {
             throw IllegalArgumentException("$bars BARS OF 4/4 — A CLIP STOPS AT $MAX_BARS.")
         }
-        oneProgram(set)?.let { throw IllegalArgumentException(it) }
+        val limit = clipPulses(steps)
+        // Over the window this clip writes: a ring whose only hit falls
+        // outside it puts no note in the file, so it names no kit here
+        // and its pad is not this clip's to hold.
+        oneProgram(set, limit)?.let { throw IllegalArgumentException(it) }
         noNotes(set)?.let { throw IllegalArgumentException(it) }
-        val limit = bars * Mpc3Clip.PULSES_PER_BAR
         // The whole cycle in pulses. The clip is musical time, so it is
         // counted in the unit it is written in rather than converted out
         // of frames: a frame is the finer unit at any rate worth playing
@@ -369,7 +461,7 @@ object OrbitClip {
     fun sectionSounds(set: OrbitSet, index: Int): Boolean {
         if (set.sections[index].plays.isEmpty()) return false
         val sub = sectionSet(set, index)
-        val limit = sectionSteps(set, index) * Mpc3Clip.PULSES_PER_16TH
+        val limit = clipPulses(sectionSteps(set, index))
         return sub.orbits.any { ring ->
             ring.engaged && ring.content is PatternOrbit &&
                 OrbitClock.pulseFirings(sub, ring, limit).isNotEmpty()

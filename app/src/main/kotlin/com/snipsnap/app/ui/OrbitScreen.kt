@@ -292,11 +292,17 @@ fun OrbitScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    /** What the engine plays: the set, with every ring but the soloed one silenced while a solo holds. */
-    fun heard(s: OrbitSet): OrbitSet {
-        val only = solo ?: return s
-        return s.copy(orbits = s.orbits.mapIndexed { i, o -> o.copy(engaged = i == only && o.engaged) })
-    }
+    /**
+     * What the engine plays: the set, with every ring but the soloed one
+     * silenced while a solo holds.
+     *
+     * Through [OrbitSet.soloing] rather than a `map` here, because the
+     * rule it keeps is the engine's: a ring this does not change comes
+     * back as itself, so a voice already sounding can still be matched to
+     * the ring that struck it. Copying all of them on every edit is what
+     * let a tail slip past `hush` into a section that leaves its ring out.
+     */
+    fun heard(s: OrbitSet): OrbitSet = s.soloing(solo)
 
     /**
      * Persist and, if the transport is up, hand the edit to the engine at

@@ -695,4 +695,129 @@ class OrbitSectionTest {
         val withBreak = tape.copy(sections = listOf(OrbitSection("IN", 1, setOf(0)), OrbitSection("DROP", 1, emptySet())))
         assertEquals(listOf("ORBIT IN"), OrbitClip.clips(withBreak).map { it.name })
     }
+
+    // ---- review round 4 ----
+
+    @Test
+    fun `an arrangement clips even when its plan is far too long to bounce`() {
+        // Eight sections of 32 bars: every clip that would be written is
+        // half the ceiling, and the plan is 256 bars - four times it. The
+        // clip preflight inherited the BOUNCE's ceiling and refused the
+        // lot, so an arrangement that exports as eight perfectly legal
+        // sequences could not be clipped at all.
+        val s = OrbitSet(
+            listOf(ring("A", 1, 0)),
+            bpm,
+            rate,
+            sections = (1..8).map { OrbitSection("S$it", 32, setOf(0)) },
+        )
+        assertEquals(null, OrbitClip.clipRefusal(s))
+        assertEquals(8, OrbitClip.clips(s).size)
+        assertTrue(OrbitClip.clips(s).all { it.bars == 32 })
+        // And the bounce still refuses it, in the plan's own words - which
+        // is the ceiling that must not be relaxed.
+        val why = OrbitClip.refusal(s)
+        assertTrue(why != null && why.contains("PLAN") && why.contains("256"), "said: $why")
+        // A section too long to clip is still refused to BOTH of them.
+        val long = s.copy(sections = listOf(OrbitSection("LONG", 64, setOf(0))), lapSteps = 32)
+        assertTrue(OrbitClip.clipRefusal(long)!!.contains("LONG"))
+        assertTrue(OrbitClip.refusal(long)!!.contains("LONG"))
+    }
+
+    @Test
+    fun `a section is judged by the notes it writes, not by the kits its rings name`() {
+        // Ring B is on another kit and its only hit is step 63 of a
+        // 64-step ring. A ONE-bar section never reaches it, so the clip
+        // that section writes holds kitA's note and nothing of kitB's -
+        // and it was refused as a two-kit clip on the strength of a hit
+        // that is not in it.
+        val a = ring("A", 1, 0)
+        val b = Orbit("B", 64, PatternOrbit("kitB", listOf(OrbitHit(63, 2))))
+        val one = OrbitSet(listOf(a, b), bpm, rate, sections = listOf(OrbitSection("X", 1, setOf(0, 1))))
+        assertEquals(null, OrbitClip.clipRefusal(one))
+        assertEquals(1, OrbitClip.clips(one).single().notes.size)
+        // Four bars DO reach it, and then the two kits are a real refusal.
+        val four = one.copy(sections = listOf(OrbitSection("X", 4, setOf(0, 1))))
+        assertTrue(OrbitClip.clipRefusal(four)!!.contains("KITS"), "two kits in one clip must still refuse")
+        // The same for a pad no program holds: outside the window it is
+        // not written, inside it the clip cannot carry it.
+        val high = Orbit("H", 64, PatternOrbit("kit", listOf(OrbitHit(63, com.snipsnap.mpc3.Mpc3Note.PAD_SLOTS + 1))))
+        val pads = OrbitSet(listOf(a, high), bpm, rate, sections = listOf(OrbitSection("X", 1, setOf(0, 1))))
+        assertEquals(null, OrbitClip.clipRefusal(pads))
+        assertTrue(OrbitClip.clipRefusal(pads.copy(sections = listOf(OrbitSection("X", 4, setOf(0, 1)))))!!.contains("PAD"))
+    }
+
+    @Test
+    fun `a turn too long in frames to bounce is refused, not narrowed into a negative`() {
+        // 64 bars is a MUSICAL ceiling and says nothing about frames:
+        // `sampleRate` is only required to be positive, so a legal 64-bar
+        // turn at 6 MHz and 40 BPM is 2,304,000,000 frames, which the
+        // bounce's Int conversion wrapped to -1,990,967,296.
+        val fast = OrbitSet(
+            listOf(ring("A", 1, 0)),
+            OrbitSet.MIN_BPM,
+            6_000_000,
+            sections = listOf(OrbitSection("S", 64, setOf(0))),
+        )
+        val frames = OrbitClock.transportFrames(fast)
+        assertTrue(frames > Int.MAX_VALUE, "the fixture must actually overflow: $frames")
+        assertTrue(frames.toInt() < 0, "and it must wrap negative, which is the bug")
+        val why = OrbitClip.refusal(fast)
+        assertTrue(why != null && why.contains("FRAMES"), "said: $why")
+        // A CLIP is written in bars and never reaches a frame, so it is
+        // not refused for this.
+        assertEquals(null, OrbitClip.clipRefusal(fast))
+        // And an ordinary set is untouched.
+        assertEquals(null, OrbitClip.refusal(set(OrbitSection("A", 1, setOf(0)))))
+    }
+
+    @Test
+    fun `a solo hands back every ring it does not change, as itself`() {
+        // The engine matches a sounding voice to its ring by identity, so
+        // a set that copies every ring on every edit loses every voice
+        // struck before it.
+        val a = ring("A", 1, 0)
+        val b = ring("B", 2, 8)
+        val muted = ring("C", 3, 4).copy(engaged = false)
+        val s = OrbitSet(listOf(a, b, muted), bpm, rate)
+        val soloed = s.soloing(0)
+        assertTrue(soloed.orbits[0] === a, "the soloed ring must be the same ring")
+        assertTrue(soloed.orbits[2] === muted, "a ring already silent must be the same ring")
+        assertTrue(soloed.orbits[1] !== b, "the ring the solo silences is the one that changes")
+        assertTrue(!soloed.orbits[1].engaged)
+        // No solo is the set itself.
+        assertTrue(s.soloing(null) === s)
+        // Soloing a muted ring leaves it muted - a solo does not unmute.
+        assertTrue(!s.soloing(2).orbits[2].engaged)
+    }
+
+    @Test
+    fun `a voice struck before a solo is still hushed by the section after it`() {
+        // The whole chain: ring A is struck, the player solos A mid-tail,
+        // and the next section leaves A out. With the solo copying every
+        // ring, A's voice no longer matched any ring in the set that
+        // arrived, so `hush` skipped it and the tail crossed the boundary.
+        val a = Orbit("A", 16, PatternOrbit("kit", listOf(OrbitHit(15, 1))))
+        val b = ring("B", 2, 0)
+        val before = OrbitSet(
+            listOf(a, b),
+            bpm,
+            rate,
+            sections = listOf(OrbitSection("X", 1, setOf(0, 1)), OrbitSection("Y", 1, setOf(1))),
+        )
+        val sink = object : AudioSink {
+            override val sampleRate = rate
+            override val channels = 2
+            val written = ArrayList<FloatArray>()
+            override fun write(block: FloatArray) { written.add(block.copyOf()) }
+            override fun close() {}
+        }
+        val engine = OrbitEngine(before, OrbitBank.prepare(before, Graded()), sink, blockFrames = 1_000)
+        engine.runFor(95)
+        assertEquals(0.1f, sink.written[94][0], 1e-4f, "A did not sound in its own section")
+        val soloed = before.soloing(0)
+        engine.apply(OrbitEngine.Prepared(soloed, OrbitBank.prepare(soloed, Graded())))
+        engine.runFor(3)
+        assertEquals(0f, sink.written[97][0], 1e-3f, "A's tail crossed into a section that leaves A out")
+    }
 }

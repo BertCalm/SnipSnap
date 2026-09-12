@@ -469,6 +469,30 @@ data class OrbitSet(
     }
 
     /**
+     * This set as a solo makes it heard: every ring but [only] silenced,
+     * and [only] left exactly as it is (a soloed ring the player has also
+     * muted stays muted). A null [only] is no solo and hands back this
+     * very set.
+     *
+     * **A ring this does not change comes back as itself, not as a copy.**
+     * The engine finds a sounding voice's ring by identity, so a set that
+     * copies every ring on every edit loses every voice struck before it
+     * — those voices then answer to no section and slip past
+     * `OrbitEngine.hush`, which is the arrangement leaking out of the one
+     * place it is enforced. Copying only what changes keeps the soloed
+     * ring — the only one still striking while a solo holds — findable.
+     */
+    fun soloing(only: Int?): OrbitSet {
+        if (only == null) return this
+        return copy(
+            orbits = orbits.mapIndexed { i, o ->
+                val heard = i == only && o.engaged
+                if (o.engaged == heard) o else o.copy(engaged = heard)
+            },
+        )
+    }
+
+    /**
      * This set with ring [index] gone, and the arrangement re-pointed at
      * the rings that are left.
      *
