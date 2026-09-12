@@ -1,5 +1,7 @@
 package com.snipsnap.app
 
+import android.content.Context
+import java.io.File
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -22,6 +24,21 @@ import kotlin.concurrent.withLock
  * do.
  */
 object LoopWrites {
+
+    /**
+     * Where the loop session lives, under the app's own files directory.
+     *
+     * Here because this object already exists to be the one thing that knows
+     * about that folder. It was written out as a literal in two files —
+     * `App.kt` and `LoopActivity.kt` — which is the same shape that had SNIPS
+     * reading `<files>/Kits/snips` for five days: a path typed twice, with
+     * nothing to notice when the copies stop agreeing. `ConventionTest`'s own
+     * law over retyped paths is what keeps it single now.
+     */
+    const val DIR = "sessions/current"
+
+    /** The session folder itself, for whichever screen is asking. */
+    fun dir(context: Context): File = File(context.filesDir, DIR)
 
     private val lock = ReentrantLock()
 

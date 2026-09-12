@@ -69,7 +69,7 @@ class LoopActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val dir = File(filesDir, "sessions/current")
+        val dir = LoopWrites.dir(this)
         val rate = deviceSampleRate(this)
 
         // Bake at the device's rate, not the MPC's: nothing converts in the

@@ -16,7 +16,7 @@ import java.io.File
  * progress is, at most, a few seconds old; [ORPHAN_MAX_AGE_MS] gives it a
  * full day of headroom before it's considered abandoned.
  *
- * Exports (`getExternalFilesDir("exports")`) are deliberately NOT swept
+ * Exports (`Exports.dir`) are deliberately NOT swept
  * here: a user exports an `.xpn` specifically to keep or move it
  * elsewhere, so it is the user's file now, not app-internal derived
  * cruft — sweeping it would delete something they asked to KEEP, even

@@ -201,7 +201,7 @@ object Mpc3Importer {
             trackName.takeIf { Names.isMpcSafe(it) } ?: Names.sanitizeStem(trackName),
         )
         val destDir = File(destRoot, kitName)
-        if (File(destDir, "kit.json").exists() && !overwrite) {
+        if (File(destDir, KitStore.FILE_NAME).exists() && !overwrite) {
             throw IOException("kit already exists: $destDir (pass overwrite=true to replace it)")
         }
         destDir.mkdirs()

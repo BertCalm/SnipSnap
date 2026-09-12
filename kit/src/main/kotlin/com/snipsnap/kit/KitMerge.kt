@@ -28,7 +28,7 @@ object KitMerge {
         replace: Boolean = false,
     ): Kit {
         require(Names.isMpcSafe(name)) { "kit name isn't MPC-safe: '$name'" }
-        require(!File(destDir, "kit.json").exists()) {
+        require(!File(destDir, KitStore.FILE_NAME).exists()) {
             "destination is already a kit: $destDir"
         }
         val a = KitStore.load(aDir)
