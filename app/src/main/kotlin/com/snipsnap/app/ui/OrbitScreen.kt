@@ -312,13 +312,96 @@ fun OrbitScreen(
         auditionId = auditionId % 1_000_000 + 1
     }
 
+    /**
+     * Staleness pass (the hoist's follow-up): making `history`/`selected`/
+     * `solo`/`set`/`scrambleSeed`/`brush` outlive a single mount means they
+     * can now be invalidated by things that happen OUTSIDE this screen
+     * while it's torn down — the same class of door `3cfe60cb` found and
+     * closed for GROOVE's `justLanded`. Worked through every one asked
+     * about, plus one this screen's own code raised:
+     *
+     * - **A groove rewritten (`grooveReload`'s own path).** Doesn't apply
+     *   here at all: `OrbitStore` — the only reader or writer of this
+     *   kit's `orbits.json` anywhere in the app — is used exclusively from
+     *   inside this file. Nothing outside ORBIT ever rewrites the file
+     *   `set`/`history` are keyed to, unlike `groove.json`, which TAPE's
+     *   READ AS GROOVE / STEAL THE FEEL also rewrite. No `grooveReload`-
+     *   style counter is needed because there is no second writer to race.
+     *
+     * - **A pad ejected, or a kit edit from PAD SHEET/KIT.** A `history`
+     *   entry or the live `set` can reference a pad slot (a `PatternOrbit`
+     *   hit's `slot`) that's since been emptied or reassigned elsewhere.
+     *   This was already true before this hoist — leaving ORBIT open while
+     *   a kit edit landed elsewhere always risked it — and `OrbitBank`'s
+     *   own contract is to tolerate it: `pad()`/`muteGroup()` return a
+     *   default for a missing slot, and `loop()`/`fit()`/`peaks()` return
+     *   null for a missing sample, all documented as "the hit is skipped,
+     *   not thrown." The ring-drawing code already consumes that null
+     *   safely (`bank?.peaks(...)?.let { ... }`). Hoisting only widens the
+     *   window this can be true in; it doesn't change what happens when it
+     *   is, so no new clearing is needed.
+     *
+     * - **A snip deleted.** Same shape and same answer as the pad case: a
+     *   `SnipOrbit` naming a file that's gone renders silent, not broken.
+     *
+     * - **`undo()` restoring a `set` with fewer rings than `selected`/
+     *   `solo` currently point at.** Already handled, unchanged by this
+     *   fix: `undo()` clamps `selected` and re-checks `solo` against the
+     *   restored set's own ring indices before committing (see its own
+     *   KDoc). That guard runs on every UNDO regardless of whether the
+     *   step came from this mount's own history or one carried in from
+     *   App.
+     *
+     * - **A kit renamed.** `KitShelf.renameKit` moves the directory, so
+     *   `entry.dir` — and therefore `open?.dir`, the hoist's own key —
+     *   changes; the same trust GROOVE's hoist already places in this.
+     *
+     * - **The device's own sample rate moving between mounts** (a route
+     *   change — headset, Bluetooth — with no kit change at all). This one
+     *   DOES need code, immediately below: seeded here, not folded into
+     *   the hoist commit, because it belongs with the staleness pass this
+     *   KDoc is describing.
+     *
+     * One door found here is NOT this screen's to close: `CLIP ▸ KIT`
+     * (`clipIntoKit` below, via `OrbitClip.save`) writes straight into the
+     * open kit's `groove.json`, replacing every previous ORBIT-authored
+     * clip — the same file TAPE's actions rewrite — and does not bump
+     * `grooveReload`. GROOVE's own hoisted `progIndex` selects among fixed
+     * transforms of `GrooveStore.load(kitDir).firstOrNull()` ("the base"),
+     * so in the ordinary case (a real captured base already at position 0)
+     * this is harmless — `clipIntoKit` appends after every non-ORBIT clip,
+     * never displacing it. But a kit whose ONLY clip is itself
+     * ORBIT-authored has no such base to protect: a second `CLIP ▸ KIT`
+     * replaces it, and a GROOVE screen whose hoisted `progIndex` survived
+     * a round trip through here would silently describe a transform of a
+     * DIFFERENT clip than what's on screen — `3cfe60cb`'s fixed defect,
+     * running the other direction. Reported rather than fixed: it's
+     * GROOVE's `grooveReload` wiring that would need to change, which is
+     * outside this screen and outside these two commits.
+     */
     LaunchedEffect(kitDir) {
         // `snips` is a directory listing, not user work — always worth a
         // fresh read, so a shelf that gained or lost a snip since the last
         // mount shows it rather than the stale list this mount would
         // otherwise inherit from nowhere (it isn't hoisted).
         snips = withContext(Dispatchers.IO) { SnipStore.list(filesDir) }
-        val existing = set
+        // Follow-up to the hoist above: `set` carries its own `sampleRate`,
+        // stamped in from `rate` the moment it was ever (re)loaded. `rate`
+        // itself is `remember(context) { deviceSampleRate(context) }` —
+        // read fresh on every mount, and Android can hand back a DIFFERENT
+        // answer between two mounts of the same kitDir (a headset plugged
+        // in, a Bluetooth route taking over) without this screen, or its
+        // kit, changing at all. That is exactly the kind of outside-ORBIT
+        // invalidation this fix's staleness pass went looking for: a
+        // hoisted `set` whose own sampleRate no longer matches the device
+        // is stale in a way `kitDir` keying can't catch, because the KIT
+        // didn't change — the device did. `takeIf` here is what refuses to
+        // trust it: a mismatch falls through to the reload path below,
+        // which already re-applies `copy(sampleRate = rate)` to whatever it
+        // reads. Every fit/period calculation downstream (`OrbitClock`,
+        // `OrbitBank.prepare`) is against this field, so trusting a stale
+        // one would be silently wrong at the sample level, not just the UI.
+        val existing = set?.takeIf { it.sampleRate == rate }
         if (existing != null) {
             // Bug fix (tab-switch data loss): `set` is now hoisted (see
             // this function's own KDoc on the `set`/`onSetChange`
