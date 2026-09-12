@@ -215,14 +215,22 @@ choice, not a surprise.
 
 ## Out the door
 
-Two ways a set leaves the screen, both one cycle long and both refused in
-words when the cycle passes 64 bars (`OrbitClip.refusal`):
+Two ways a set leaves the screen, both refused in words past 64 bars
+(`OrbitClip.refusal`). **What "one cycle" means depends on whether the set
+has an arrangement**: with no sections it is the rings' meeting, as it
+always was; with sections it is the plan, which is the length the
+transport actually goes round (`OrbitClock.transportSteps`) — an arranged
+set never reaches the rings' meeting, which is what arranging it did.
 
-- **BOUNCE ▸ TAPE** renders one cycle of what is heard (`OrbitEngine.render`
-  over `cycleFrames`; a solo bounces alone) and drops it on the TAPE shelf
-  through `SnipStore.import`, so rings feed the app's own loop: tape, chop,
-  kit, MPC.
-- **CLIP ▸ KIT** flattens one cycle of every engaged pattern ring's firings
+- **BOUNCE ▸ TAPE** renders one turn of what is heard (`OrbitEngine.render`
+  over `transportFrames`; a solo bounces alone) and drops it on the TAPE
+  shelf through `SnipStore.import`, so rings feed the app's own loop: tape,
+  chop, kit, MPC.
+- **CLIP ▸ KIT** writes one clip where there is no arrangement and **one
+  per section** where there is — each becoming a sequence the hardware's
+  switcher flips between, capped per section rather than by the rings'
+  cycle, and a section that plays no rings writes none. It flattens every
+  engaged pattern ring's firings
   onto the 960-PPQ grid (`OrbitClip.clip`: pad A0N plays note 35+N, the
   writer's chromatic map; `Mpc3Clip` has no time signature, so the clip
   counts bars of sixteen 16ths whatever the set's bar — a 3/4 set's

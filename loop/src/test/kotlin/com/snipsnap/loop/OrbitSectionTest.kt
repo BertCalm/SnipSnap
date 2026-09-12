@@ -177,17 +177,34 @@ class OrbitSectionTest {
     // ---- the export ----
 
     @Test
-    fun `a one-section set exports exactly what a no-section set does`() {
-        // The byte-identity the row asks for, stated as the clip itself:
-        // the same rings with an arrangement naming all of them for the
-        // cycle's length write the same notes as the same rings with none.
+    fun `a set with no arrangement exports byte-identically, name included`() {
+        // This is the row's byte-identity criterion, and it is about a set
+        // with NO arrangement - which is what every set was and what most
+        // stay. Stated as the whole clip rather than as its notes, because
+        // `Mpc3Clip.name` is serialised and is part of what "identical"
+        // has to mean.
         val plain = OrbitSet(listOf(ring("A", 1, 0, 4), ring("B", 2, 8)), bpm, rate)
-        val bars = OrbitClip.bars(plain)
-        val one = plain.copy(sections = listOf(OrbitSection("ALL", bars, setOf(0, 1))))
+        assertEquals(OrbitClip.clip(plain), OrbitClip.clips(plain).single())
+        // "1", not "1:1": both rings are sixteen steps, so `ratioLabel`
+        // reduces the distinct lengths to one number.
+        assertEquals("ORBIT 1", OrbitClip.clips(plain).single().name)
+    }
+
+    @Test
+    fun `a one-section set writes the same notes, under the section's own name`() {
+        // Deliberately NOT byte-identical, and the PR said so too loosely
+        // before review caught it: a section has a name the player gave
+        // it, and the clip is named after the section because on the
+        // hardware that name is the only thing saying which is which.
+        // What carries over unchanged is the music.
+        val plain = OrbitSet(listOf(ring("A", 1, 0, 4), ring("B", 2, 8)), bpm, rate)
+        val one = plain.copy(sections = listOf(OrbitSection("ALL", OrbitClip.bars(plain), setOf(0, 1))))
         val a = OrbitClip.clips(plain).single()
         val b = OrbitClip.clips(one).single()
         assertEquals(a.bars, b.bars)
         assertEquals(a.notes, b.notes)
+        assertEquals("ORBIT ALL", b.name)
+        assertTrue(a.name != b.name, "the section's name is the point of naming it")
     }
 
     @Test
@@ -357,6 +374,87 @@ class OrbitSectionTest {
         assertEquals(3, OrbitClock.transportBar(plain, 2 * bar))
     }
 
+    // ---- review round 1 ----
+
+    @Test
+    fun `a bounce is one turn of the plan, and the plan is what the ceiling measures`() {
+        // Rings of 64, 63 and 61 meet after 246,078 sixteenths. With no
+        // arrangement that is refused; with a three-bar plan the bounce is
+        // three bars, and refusing it would refuse the very set an
+        // arrangement exists to make renderable.
+        val coprime = OrbitSet(
+            listOf(
+                Orbit("A", 64, PatternOrbit("kit", listOf(OrbitHit(0, 1)))),
+                Orbit("B", 63, PatternOrbit("kit", listOf(OrbitHit(0, 2)))),
+                Orbit("C", 61, PatternOrbit("kit", listOf(OrbitHit(0, 3)))),
+            ),
+            bpm,
+            rate,
+        )
+        assertEquals(OrbitClock.cycleSteps(coprime), OrbitClock.transportSteps(coprime))
+        assertTrue(OrbitClip.refusal(coprime) != null)
+        val arranged = coprime.copy(sections = listOf(OrbitSection("A", 2, setOf(0)), OrbitSection("B", 1, setOf(1))))
+        assertEquals(48L, OrbitClock.transportSteps(arranged), "three bars of sixteen")
+        assertEquals(3 * bar, OrbitClock.transportFrames(arranged))
+        assertEquals(null, OrbitClip.refusal(arranged))
+        // And a plan longer than the ceiling is refused in the plan's own
+        // words - the rings never meet at all here, so "shorten a ring"
+        // would be the wrong instruction.
+        val huge = coprime.copy(sections = listOf(OrbitSection("A", 40, setOf(0)), OrbitSection("B", 40, setOf(1))))
+        val why = OrbitClip.refusal(huge)
+        assertTrue(why != null && why.contains("PLAN") && why.contains("SECTION"), "said: $why")
+    }
+
+    @Test
+    fun `the preflight asks each section, not the whole set`() {
+        val kitA = Orbit("A", 16, PatternOrbit("kitA", listOf(OrbitHit(0, 1))))
+        val kitB = Orbit("B", 16, PatternOrbit("kitB", listOf(OrbitHit(0, 2))))
+        val twoKits = OrbitSet(listOf(kitA, kitB), bpm, rate)
+        // Together in one clip they cannot go: one clip rides one program.
+        assertTrue(OrbitClip.clipRefusal(twoKits)!!.contains("KITS"))
+        // A section each, and they are two clips on one program apiece.
+        val split = twoKits.copy(sections = listOf(OrbitSection("A", 1, setOf(0)), OrbitSection("B", 1, setOf(1))))
+        assertEquals(null, OrbitClip.clipRefusal(split))
+        assertEquals(listOf("ORBIT A", "ORBIT B"), OrbitClip.clips(split).map { it.name })
+        // An arrangement of nothing but breaks is refused in words here,
+        // rather than passing and failing on a bare `require` inside save.
+        val allBreaks = twoKits.copy(sections = listOf(OrbitSection("A", 1, emptySet())))
+        assertTrue(OrbitClip.clipRefusal(allBreaks)!!.contains("BREAK"))
+    }
+
+    @Test
+    fun `a named section that cannot be written is named, not silently dropped`() {
+        // Its ring is a snip: audio, which a note-only clip can never
+        // carry. Skipping on "no notes" swallowed such a section whole.
+        val s = OrbitSet(
+            listOf(ring("A", 1, 0), Orbit("tape", 16, SnipOrbit("a.wav"))),
+            bpm,
+            rate,
+            sections = listOf(OrbitSection("IN", 1, setOf(0)), OrbitSection("TAPE", 1, setOf(1))),
+        )
+        val why = OrbitClip.clipRefusal(s)
+        assertTrue(why != null && why.contains("TAPE"), "said: $why")
+        // A break, by contrast, is still skipped without a word.
+        val withBreak = s.copy(sections = listOf(OrbitSection("IN", 1, setOf(0)), OrbitSection("DROP", 1, emptySet())))
+        assertEquals(null, OrbitClip.clipRefusal(withBreak))
+        assertEquals(listOf("ORBIT IN"), OrbitClip.clips(withBreak).map { it.name })
+    }
+
+    @Test
+    fun `the kit refuses more grooves than a project can carry`() {
+        val dir = Files.createTempDirectory("orbit-seq-cap").toFile()
+        val room = com.snipsnap.mpc3.Mpc3ProjectWriter.MAX_SEQUENCES
+        val others = (1..room - 1).map { Mpc3Clip("Groove $it", 1, listOf(com.snipsnap.mpc3.Mpc3Note(36, 0, 0.9f))) }
+        com.snipsnap.kit.GrooveStore.save(dir, others)
+        val two = set(OrbitSection("A", 1, setOf(0)), OrbitSection("B", 1, setOf(1)))
+        // 31 + 2 is past the hardware's list, and the export would take the
+        // first 32 and drop the rest without a word.
+        val why = assertFailsWith<IllegalArgumentException> { OrbitClip.save(dir, two) }
+        assertTrue(why.message!!.contains("$room"), "said: ${why.message}")
+        // One section fits exactly, and is written.
+        assertEquals(1, OrbitClip.save(dir, set(OrbitSection("A", 1, setOf(0)))).size)
+    }
+
     // ---- the file ----
 
     @Test
@@ -364,7 +462,10 @@ class OrbitSectionTest {
         val s = set(OrbitSection("INTRO", 2, setOf(0)), OrbitSection("DROP", 4, setOf(0, 1)), OrbitSection("BREAK", 1, emptySet()))
         val dir = Files.createTempDirectory("orbit-sec-json").toFile()
         OrbitStore.save(s, dir)
-        assertEquals(7, OrbitStore.VERSION)
+        // No version literal. I removed exactly this from a YYY7 test one
+        // PR ago because a bump failed a test that has nothing to say
+        // about versions, and then wrote a fresh one here. What versions
+        // still LOAD is the real claim and has its own test below.
         assertEquals(s.sections, OrbitStore.load(dir).sections)
         // A set with no arrangement writes no `sections` key at all.
         val plain = OrbitSet(listOf(ring("A", 1, 0)), bpm, rate)

@@ -423,7 +423,12 @@ fun OrbitScreen(
             return
         }
         val plays = s.sections.lastOrNull()?.plays ?: s.orbits.indices.toSet()
-        val name = ('A' + s.sections.size).toString()
+        // The first unused letter, not the count. Deleting A from [A, B]
+        // leaves [B], and naming the next one by the count made a second
+        // B - two clips called ORBIT B on the hardware, where the name is
+        // the only thing left saying which section is which.
+        val taken = s.sections.map { it.name }.toSet()
+        val name = ('A'..'Z').first { it.toString() !in taken }.toString()
         commit(s.copy(sections = s.sections + OrbitSection(name, DEFAULT_SECTION_BARS, plays)))
     }
 
@@ -570,7 +575,11 @@ fun OrbitScreen(
         // Clamped at 0: in the first buffer after PLAY nothing has reached
         // the ear yet, and a negative frame would wrap to the ring's end.
         val heardAt = ((engine?.position() ?: return) - s.sampleRate.toLong() * (AndroidAudioSink.BUFFER_MILLIS + REC_TOUCH_MS) / 1000).coerceAtLeast(0L)
-        val step = OrbitClock.nearestStep(s, ring, heardAt)
+        // In the section's own frames, because that is where the ring was
+        // when the tap was heard. Against the transport's, a hit recorded
+        // in the second section landed on whatever step the ring would
+        // have been on had it never restarted.
+        val step = OrbitClock.nearestStep(s, ring, OrbitClock.localFrame(s, heardAt))
         updateRing(index) { OrbitPatterns.place(it, slot, step) }
     }
 
@@ -641,7 +650,13 @@ fun OrbitScreen(
             val result = withContext(Dispatchers.IO) {
                 runCatching {
                     val prepared = OrbitBank.prepare(what, source, previous = bank)
-                    val frames = OrbitClock.cycleFrames(what).toInt()
+                    // One turn of the TRANSPORT, which for an arranged
+                    // set is its plan rather than the rings' meeting - a
+                    // meeting an arranged set never reaches, so rendering
+                    // the cycle would bounce minutes of audio for a
+                    // three-bar plan. `refusal` above caps this same
+                    // number, so the Int conversion is inside a ceiling.
+                    val frames = OrbitClock.transportFrames(what).toInt()
                     val rendered = OrbitEngine.render(what, prepared, frames)
                     SnipStore.import(rendered, filesDir, System.currentTimeMillis())
                 }
@@ -856,6 +871,14 @@ fun OrbitScreen(
         }
 
         val stripRows = ring?.pads?.size ?: 0
+        // The frame the PICTURE is drawn from: the section's own, so the
+        // needle, the comet tail, the strike flares and the strip's
+        // playhead all restart where the audio restarts. Against the
+        // transport's frame the rings went on turning through a section
+        // change that had already reset what could be heard. One
+        // localisation, here, because everything below is handed a frame
+        // and none of it should have to know about sections.
+        val localFrame = OrbitClock.localFrame(current, frame)
         val hasSnips = current.orbits.any { it.content is SnipOrbit }
         // A snip ring is being cut to a new length: the picture says so
         // rather than going quietly stale while the tempo settles.
@@ -868,7 +891,8 @@ fun OrbitScreen(
             RingsCanvas(
                 set = current,
                 kit = kit,
-                frame = frame,
+                frame = localFrame,
+                transportFrame = frame,
                 playing = playing,
                 selected = selected,
                 solo = solo,
@@ -886,7 +910,7 @@ fun OrbitScreen(
                     set = current,
                     ring = ring,
                     kit = kit,
-                    frame = frame,
+                    frame = localFrame,
                     playing = playing,
                     scheme = scheme,
                     onToggle = { slot, step -> toggleHit(selected, slot, step) },
@@ -1414,7 +1438,10 @@ private fun padColor(kit: Kit, slot: Int, fallback: Color): Color =
 private fun RingsCanvas(
     set: OrbitSet,
     kit: Kit,
+    /** The SECTION's own frame: where every ring is drawn from. */
     frame: Long,
+    /** The transport's, for the questions that are about the arrangement itself. */
+    transportFrame: Long,
     playing: Boolean,
     selected: Int,
     solo: Int?,
@@ -1487,7 +1514,14 @@ private fun RingsCanvas(
                 val ring = set.orbits[i]
                 val r = geometry.radius(slot)
                 val picked = i == selected
-                val heard = ring.engaged && (solo == null || solo == i)
+                // A section's choice is the third thing that silences a
+                // ring, beside its own mute and another ring's solo, and
+                // the picture has to say so: a ring left out of the
+                // section playing now is not being heard, however engaged
+                // it is. Asked of the TRANSPORT's frame, since which
+                // section it is is a question about the arrangement.
+                val heard = ring.engaged && (solo == null || solo == i) &&
+                    OrbitClock.playsAt(set, i, transportFrame)
                 val ringInk = when (val content = ring.content) {
                     is PatternOrbit -> padColor(kit, ring.pads.first(), inkColor)
                     is SnipOrbit -> Schemes.classColor(com.snipsnap.audio.DrumClass.LOOP).tape

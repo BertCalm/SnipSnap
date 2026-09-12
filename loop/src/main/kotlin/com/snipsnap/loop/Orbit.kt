@@ -797,11 +797,8 @@ object OrbitClock {
      * player never arrives at.
      */
     fun transportBars(set: OrbitSet): Int {
-        val lap = lapFrames(set)
-        if (set.sections.isEmpty() || lap <= 0L) {
-            return Math.ceil(cycleBars(set)).toInt().coerceAtLeast(1)
-        }
-        return (arrangementFrames(set) / lap).toInt().coerceAtLeast(1)
+        if (set.sections.isEmpty()) return Math.ceil(cycleBars(set)).toInt().coerceAtLeast(1)
+        return (transportSteps(set) / set.lapSteps).toInt().coerceAtLeast(1)
     }
 
     /**
@@ -818,6 +815,24 @@ object OrbitClock {
         val at = if (arrangement > 0L) Math.floorMod(frame, arrangement) else frame
         return (Math.floorMod(at / lap, total.toLong()) + 1).toInt()
     }
+
+    /**
+     * How many of the set's own 16ths one turn of the transport takes: the
+     * arrangement's length where there is one, else the rings' cycle.
+     *
+     * What a **bounce** is long, and what its ceiling is measured against.
+     * An arranged set never reaches the rings' meeting — that is what
+     * arranging it did — so rendering `cycleSteps` of it would be minutes
+     * of audio for a three-bar plan, and on coprime rings a number that
+     * does not fit the `Int` the renderer takes.
+     */
+    fun transportSteps(set: OrbitSet): Long {
+        if (set.sections.isEmpty()) return cycleSteps(set)
+        return set.sections.sumOf { it.bars.toLong() } * set.lapSteps
+    }
+
+    /** [transportSteps] in frames: exactly how long a bounce of [set] is. */
+    fun transportFrames(set: OrbitSet): Long = transportSteps(set) * stepFrames(set)
 
     /** [sectionAt]'s answer for a set with no arrangement. */
     const val NO_SECTION = -1

@@ -4,6 +4,7 @@ import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
+import com.snipsnap.mpc3.Mpc3ProjectWriter
 import java.io.File
 import kotlin.math.ceil
 
@@ -86,11 +87,16 @@ object OrbitClip {
                 return "SECTION ${set.sections[index].name} IS $sectionBars BARS OF 4/4 — A CLIP STOPS AT $MAX_BARS. SHORTEN IT."
             }
         }
-        val bars = bars(set)
-        // The rings' own cycle only binds a set with no arrangement: with
-        // one, each section is written and capped on its own, and the
-        // cycle is not what leaves the screen.
-        if (set.sections.isNotEmpty() || bars <= MAX_BARS) return null
+        // Then the BOUNCE's ceiling, which is a different length from a
+        // clip's the moment there is an arrangement: a bounce is one turn
+        // of the TRANSPORT, and an arranged set's turn is its plan rather
+        // than the rings' meeting. The first cut of sections relaxed this
+        // for arranged sets altogether, which left `bounceToTape`
+        // rendering `cycleFrames` with nothing to stop it - minutes of
+        // audio for a three-bar plan on coprime rings, through a `Long`
+        // the renderer's `Int` cannot hold.
+        val bars = barsFor(OrbitClock.transportSteps(set))
+        if (bars <= MAX_BARS) return null
         val unit = if (countsDifferently(set)) "BARS OF 4/4" else "BARS"
         // A ring's length is no longer the only thing that makes a cycle
         // long: a hit on one lap in four does not repeat until the fourth
@@ -106,6 +112,12 @@ object OrbitClip {
                 it.everyLaps != OrbitHit.EVERY_LAP && !it.neverSounds
             } == true
         }
+        // An arranged set's turn is the plan, so the sentence about the
+        // rings meeting is not the one to say: the player shortens a
+        // section, and the rings never meet at all by design.
+        if (set.sections.isNotEmpty()) {
+            return "THE PLAN RUNS $bars $unit — A BOUNCE STOPS AT $MAX_BARS. SHORTEN A SECTION."
+        }
         val fix = if (conditional) "SHORTEN A RING, OR TAKE A CONDITIONAL OFF A HIT." else "SHORTEN A RING."
         return "THE RINGS MEET EVERY $bars $unit — A CLIP STOPS AT $MAX_BARS. $fix"
     }
@@ -115,7 +127,28 @@ object OrbitClip {
      * shared ceiling first, then the reasons peculiar to a clip. A caller
      * that only wants audio wants [refusal] instead.
      */
-    fun clipRefusal(set: OrbitSet): String? = refusal(set) ?: oneProgram(set) ?: noNotes(set)
+    fun clipRefusal(set: OrbitSet): String? {
+        refusal(set)?.let { return it }
+        // Asked of each section's own clip, because that is what gets
+        // written. Over the whole set it answered two different questions
+        // wrongly: an arrangement that puts kit A in one section and kit B
+        // in another is two clips, each on one program, and was refused as
+        // a two-kit clip; while an arrangement of nothing but breaks
+        // passed and then failed inside `save` on a bare `require`.
+        if (set.sections.isNotEmpty()) {
+            for (index in set.sections.indices) {
+                if (set.sections[index].plays.isEmpty()) continue
+                val sub = sectionSet(set, index)
+                val why = oneProgram(sub) ?: noNotes(sub) ?: continue
+                return "SECTION ${set.sections[index].name}: $why"
+            }
+            if (set.sections.all { it.plays.isEmpty() }) {
+                return "EVERY SECTION HERE IS A BREAK. GIVE ONE A RING TO PLAY."
+            }
+            return null
+        }
+        return oneProgram(set) ?: noNotes(set)
+    }
 
     /**
      * Why [set]'s rings cannot share one clip, or null when they can.
@@ -322,10 +355,13 @@ object OrbitClip {
         if (set.sections.isEmpty()) return listOf(clip(set))
         return set.sections.indices.mapNotNull { index ->
             val sub = sectionSet(set, index)
-            // Only the break is skipped. Anything else a section cannot
-            // write is a refusal the player should hear about, so it is
-            // left to [clip] to throw and to [refusal] to have caught.
-            if (noNotes(sub) != null) return@mapNotNull null
+            // A break is a section that plays NO RINGS. Skipping on
+            // `noNotes` instead swallowed a named section whose rings are
+            // all snips, or hitless, or muted - dropped from the
+            // arrangement in silence, though the player named it and can
+            // see it on screen. Those reach [clip] and throw, and
+            // [clipRefusal] has already said which section and why.
+            if (set.sections[index].plays.isEmpty()) return@mapNotNull null
             clip(sub, name = "$NAME_PREFIX ${set.sections[index].name}", steps = sectionSteps(set, index))
         }
     }
@@ -344,6 +380,17 @@ object OrbitClip {
         val clips = clips(set)
         require(clips.isNotEmpty()) { "NO SECTION HERE PLAYS A RING. GIVE ONE A RING TO PLAY." }
         val others = GrooveStore.load(kitDir).filterNot { isOrbit(it) }
+        // The promise this feature makes is one sequence per section, and
+        // the export keeps it only as far as the hardware's list goes:
+        // `ExportFormats` takes the kit's grooves `.take(MAX_SEQUENCES)`,
+        // so past thirty-two the later ones are written to `groove.json`
+        // and then silently left out of the `.xpj`. A promise that stops
+        // being true at a number nobody is told is worse than a refusal.
+        val room = Mpc3ProjectWriter.MAX_SEQUENCES
+        require(others.size + clips.size <= room) {
+            "THIS KIT WOULD HOLD ${others.size + clips.size} GROOVES AND A PROJECT CARRIES $room. " +
+                "CLEAR SOME GROOVES, OR USE FEWER SECTIONS."
+        }
         GrooveStore.save(kitDir, others + clips)
         return clips
     }
