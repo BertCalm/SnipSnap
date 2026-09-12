@@ -115,16 +115,36 @@ fun TapeText(
  * `TapeText` already shows the same words on screen. This modifier used
  * to say `clickable` merges descendant semantics into this node
  * automatically, so `null` was "fine" whenever visible text was nearby;
- * an accessibility-tree dump (2026-09 followup) proved that false —
- * `clickable`'s own semantics node does not fold sibling text into
- * itself, so every call site that relied on that claim shipped a
- * clickable node with an empty name, while its visible label sat in a
- * separate `focusable="false"` node TalkBack's linear navigation never
- * reaches. `null` is for controls that genuinely have no accessible
- * name to give (see call sites that pair it with
- * `Modifier.clearAndSetSemantics {}` to drop out of the tree entirely,
- * e.g. a tap-absorbing scrim card whose `onClick` is empty) — not a
- * shorthand for "the text nearby covers it."
+ * an accessibility-tree dump (2026-09 followup) proved that claim false
+ * for the unlabelled case: `clickable`'s own semantics node did not
+ * fold sibling text into itself, so every call site relying on it
+ * shipped a clickable node with an empty name.
+ *
+ * What that same followup could NOT settle: whether an explicit
+ * [label] here lands on the same accessibility node `clickable` makes
+ * actionable, or on an adjacent one. `uiautomator dump` (the only tool
+ * this pass was permitted — TalkBack itself destabilised the test
+ * emulator in an earlier session) shows both `clickable().semantics {
+ * contentDescription = label }` and the same call with
+ * `mergeDescendants = true` added producing byte-identical trees, and
+ * this file's own KNOWN-GOOD reference (`KitRow` in KitsScreen.kt,
+ * explicit `mergeDescendants = true`, reviewed and shipped) shows that
+ * same shape too — an outer node with an empty raw `content-desc` and
+ * separate child text nodes beneath it. That means the dump cannot
+ * distinguish "TalkBack speaks [label] once, correctly" from "TalkBack
+ * speaks it as a second, adjacent, non-actionable node": both render
+ * the same way to this tool. Left at the pre-existing, reviewed shape
+ * (`clickable(...).semantics { contentDescription = label }`, no merge
+ * flag) rather than shipping an unverified change across the ~113
+ * call sites that route through this one function. Flagged for
+ * adjudication with real TalkBack, not re-guessed here.
+ *
+ * `null` is for controls that genuinely have no accessible name to
+ * give — not a shorthand for "the text nearby covers it." (A control
+ * whose `onClick` is genuinely empty, e.g. a tap-absorbing scrim card,
+ * isn't reachable through `tapeClick` at all for that purpose — see
+ * call sites using a raw `Modifier.pointerInput { detectTapGestures {}
+ * }` instead, which registers no semantics node.)
  *
  * [enabled] mirrors `clickable`'s own flag: a disabled control keeps
  * its semantics node (and its name) but exposes Compose's `disabled()`
