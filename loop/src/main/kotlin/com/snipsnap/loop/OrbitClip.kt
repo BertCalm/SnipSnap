@@ -64,10 +64,11 @@ object OrbitClip {
 
     /**
      * Null when [set] can leave the screen at all, else the refusal in
-     * words. This is the ceiling both ways out share — the bounce is one
-     * cycle of audio and the clip is one cycle of notes (or, with an
-     * arrangement, one section of them), and neither has anywhere to put
-     * more than [MAX_BARS] of it.
+     * words. This is the ceiling both ways out share, though they are no
+     * longer the same length: the bounce is one turn of the TRANSPORT
+     * (the plan, where there is one) and a clip is one cycle of notes, or
+     * one section of them. Neither has anywhere to put more than
+     * [MAX_BARS], and both are measured here.
      *
      * Deliberately not the place for "there are no notes in this": a set
      * of snip rings has nothing to clip and is still perfectly good to
@@ -238,7 +239,8 @@ object OrbitClip {
     }
 
     /**
-     * One cycle of [set] as a clip. Only engaged pattern rings contribute;
+     * [steps] of [set] as a clip — its cycle by default, or a section's
+     * own length. Only engaged pattern rings contribute;
      * snip rings are audio and have no notes. Which note plays which pad
      * is [Mpc3Note.noteFor] — the writer's own map, wrapping at 128, so
      * pad 93 is note 0 rather than another copy of pad 92's.
@@ -330,7 +332,13 @@ object OrbitClip {
 
     /**
      * One clip per section — or the single whole-set clip when there is no
-     * arrangement, byte for byte what [clip] wrote before sections existed.
+     * arrangement, which is byte for byte what [clip] wrote before
+     * sections existed.
+     *
+     * A set with ONE section is not that case and is not byte-identical:
+     * its clip takes the section's name, deliberately, because on the
+     * hardware that name is the only thing left saying which sequence is
+     * which. The music is the same; the label is the player's.
      *
      * Each becomes its own sequence on the hardware, because
      * `ExportFormats` already turns every stored groove into one: "the

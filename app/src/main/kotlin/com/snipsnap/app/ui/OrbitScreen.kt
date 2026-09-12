@@ -664,7 +664,7 @@ fun OrbitScreen(
             bouncing = false
             result.onSuccess { imported ->
                 snips = SnipStore.list(filesDir)
-                onToast(Copy.orbitBounced(cycleLabel(what)))
+                onToast(Copy.orbitBounced(transportLabel(what)))
             }.onFailure { e ->
                 Log.e("OrbitScreen", "bounceToTape: failed", e)
                 onToast(Copy.ORBIT_BOUNCE_FAILED)
@@ -761,7 +761,7 @@ fun OrbitScreen(
         }
     }
 
-    /** One cycle as a clip in the kit's grooves, so it rides to the MPC with the kit. */
+    /** One clip in the kit's grooves, or one per section, so it rides to the MPC with the kit. */
     fun clipIntoKit() {
         val s = set ?: return
         OrbitClip.clipRefusal(s)?.let { onToast(it); return }
@@ -854,7 +854,7 @@ fun OrbitScreen(
                     horizontalAlignment = Alignment.End,
                 ) {
                     TapeText(
-                        "${OrbitClock.ratioLabel(current).replace(" : ", ":")} · ${cycleLabel(current)}",
+                        "${OrbitClock.ratioLabel(current).replace(" : ", ":")} · ${transportLabel(current)}",
                         TapeType.lcd(14),
                         if (OrbitClip.refusal(current) != null) scheme.warn.tape else scheme.amber.tape,
                     )
@@ -1132,7 +1132,7 @@ fun OrbitScreen(
                     )
                 } else if (outOpen) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        TapeText("ONE CYCLE OUT — ${cycleLabel(current)}", TapeType.pixel, scheme.ink.tape)
+                        TapeText("ONE TURN OUT — ${transportLabel(current)}", TapeType.pixel, scheme.ink.tape)
                         SmallChip("CLOSE", scheme) { outOpen = false }
                     }
                     val refusal = OrbitClip.refusal(current)
@@ -1384,6 +1384,21 @@ fun OrbitScreen(
         }
     }
 }
+
+/**
+ * How long one turn of the transport is, in words — the plan's length
+ * where there is an arrangement, else the rings' meeting.
+ *
+ * What BOUNCE renders and what the OUT panel and the header are talking
+ * about. [cycleLabel] stays for the sentences that really are about the
+ * rings meeting, which an arranged set never does.
+ */
+private fun transportLabel(set: OrbitSet): String =
+    if (set.sections.isEmpty()) {
+        cycleLabel(set)
+    } else {
+        OrbitClock.transportBars(set).let { if (it == 1) "1 BAR" else "$it BARS" }
+    }
 
 /** "15 BARS", or "1 BAR" — the realignment length the loop grid's bounce also reports. */
 private fun cycleLabel(set: OrbitSet): String {
