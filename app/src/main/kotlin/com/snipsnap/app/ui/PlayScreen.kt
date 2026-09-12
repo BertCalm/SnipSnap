@@ -347,7 +347,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
                             // the touch timestamp is GROOVE's concern, not
                             // this screen's, so it's simply dropped here.
                             onHit = { s, v, _ -> hit(s, v) },
-                            onRelease = ::release,
+                            onRelease = { s, _ -> release(s) },
                             modifier = Modifier.weight(1f).height(Layout.PAD_H.dp),
                         )
                     }
@@ -370,7 +370,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
                 glow = glow,
                 status = status,
                 onHit = { s, v, _ -> hit(s, v) },
-                onRelease = ::release,
+                onRelease = { s, _ -> release(s) },
                 onExit = exitFullscreen,
             )
         }
@@ -383,7 +383,7 @@ private fun FullscreenPlayGrid(
     glow: Map<Int, Animatable<Float, AnimationVector1D>>,
     status: String,
     onHit: (Int, Float, Long) -> Unit,
-    onRelease: (Int) -> Unit,
+    onRelease: (Int, Long) -> Unit,
     onExit: () -> Unit,
 ) {
     val scheme = LocalScheme.current

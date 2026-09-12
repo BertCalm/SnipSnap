@@ -38,6 +38,8 @@ class TapeDeckModel(
     sealed interface Event {
         /** Coast died near an onset; the deck is gliding onto it. */
         data class SnappingToOnset(val frame: Int) : Event
+        /** Loop preview wrapped from OUT back to IN: whatever plays the tape restarts there. */
+        object Looped : Event
         /** Play ran off the end of the tape and stopped. */
         data object HitEnd : Event
         /** Pencil rewind reached the top of the tape. */
@@ -140,6 +142,7 @@ class TapeDeckModel(
                 position >= outFrame
             ) {
                 position = inFrame + (position - outFrame)
+                events += Event.Looped
             }
 
             if (position < 0) {

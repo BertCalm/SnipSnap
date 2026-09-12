@@ -1465,7 +1465,7 @@ fun GrooveScreen(
                         // playing it. 4x4 is also what KIT's own GRID_ROWS and
                         // PLAY's windowed view both render, so the grid you record
                         // on is the grid you already know.
-                        PlayBank(kit, WINDOW_GRID_ROWS, glow, ::recordHit, {}, Modifier.weight(2f).fillMaxWidth())
+                        PlayBank(kit, WINDOW_GRID_ROWS, glow, ::recordHit, { _, _ -> }, Modifier.weight(2f).fillMaxWidth())
                     }
                     if (countingIn || recording) {
                         Box(
@@ -1563,7 +1563,7 @@ fun GrooveScreen(
                     // WINDOW_GRID_ROWS, not BankRow — see the from-scratch
                     // branch above for why the fullscreen two-bank layout
                     // can't work on a portrait-locked phone.
-                    PlayBank(kit, WINDOW_GRID_ROWS, glow, ::recordHit, {}, Modifier.weight(2f).fillMaxWidth())
+                    PlayBank(kit, WINDOW_GRID_ROWS, glow, ::recordHit, { _, _ -> }, Modifier.weight(2f).fillMaxWidth())
                     GrooveActionButton(
                         if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING",
                         scheme,
