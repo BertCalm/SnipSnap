@@ -291,8 +291,17 @@ object OrbitClip {
         // And the question `noNotes` cannot ask, because it knows the
         // rings but not the window they are being cut to.
         if (!sectionSounds(set, index)) {
-            return "SECTION ${section.name} IS SILENT — ITS RINGS HAVE NO HIT IN ITS " +
-                "${section.bars} BAR${if (section.bars == 1) "" else "S"}. " +
+            // "SILENT" was not true of every section this catches: one
+            // playing a snip is perfectly audible, and what stops it is
+            // that a clip carries notes and a snip is audio. What IS true
+            // of all of them is that no note gets written.
+            val bars = "${section.bars} BAR${if (section.bars == 1) "" else "S"}"
+            val tape = if (sub.orbits.any { it.content is SnipOrbit }) {
+                " A SNIP IS AUDIO, NOT NOTES — BOUNCE IT INSTEAD."
+            } else {
+                ""
+            }
+            return "SECTION ${section.name} WRITES NO NOTE IN ITS $bars.$tape " +
                 "LENGTHEN IT, OR GIVE IT A RING THAT PLAYS."
         }
         return null

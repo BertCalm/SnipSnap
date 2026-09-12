@@ -474,13 +474,14 @@ data class OrbitSet(
      * muted stays muted). A null [only] is no solo and hands back this
      * very set.
      *
-     * **A ring this does not change comes back as itself, not as a copy.**
-     * The engine finds a sounding voice's ring by identity, so a set that
-     * copies every ring on every edit loses every voice struck before it
-     * — those voices then answer to no section and slip past
-     * `OrbitEngine.hush`, which is the arrangement leaking out of the one
-     * place it is enforced. Copying only what changes keeps the soloed
-     * ring — the only one still striking while a solo holds — findable.
+     * **A ring this does not change comes back as itself, not as a copy**,
+     * because the engine finds a sounding voice's ring by identity and a
+     * copy is a different ring to it.
+     *
+     * Live playback does not use this at all: the solo rides alongside the
+     * set in `OrbitEngine.Prepared`, so no ring is copied and no voice can
+     * lose the ring that struck it. This is for the OFFLINE render, where
+     * a bounce takes a set and nothing is sounding yet.
      */
     fun soloing(only: Int?): OrbitSet {
         if (only == null) return this
@@ -790,7 +791,7 @@ object OrbitClock {
     }
 
     /**
-     * The next frame at or after [frame] on which the section changes, or
+     * The next frame AFTER [frame] on which the section changes, or
      * [NO_BOUNDARY] when the set has no arrangement.
      *
      * The engine needs this because a block is a slice of wall-clock time

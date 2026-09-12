@@ -508,7 +508,7 @@ class OrbitSectionTest {
         val s = OrbitSet(listOf(late), bpm, rate, sections = listOf(OrbitSection("LATE", 1, setOf(0))))
         assertTrue(!OrbitClip.sectionSounds(s, 0))
         val why = OrbitClip.clipRefusal(s)
-        assertTrue(why != null && why.contains("LATE") && why.contains("SILENT"), "said: $why")
+        assertTrue(why != null && why.contains("LATE") && why.contains("WRITES NO NOTE"), "said: $why")
         // Four bars reach the hit, and then it writes.
         val long = s.copy(sections = listOf(OrbitSection("LATE", 4, setOf(0))))
         assertTrue(OrbitClip.sectionSounds(long, 0))
@@ -910,7 +910,7 @@ class OrbitSectionTest {
         val late = Orbit("L", 64, PatternOrbit("kit", listOf(OrbitHit(63, 1)))).copy(engaged = false)
         val s = OrbitSet(listOf(late), bpm, rate, sections = listOf(OrbitSection("LATE", 1, setOf(0))))
         val why = OrbitClip.clipRefusal(s)
-        assertTrue(why != null && why.contains("SILENT"), "said: $why")
+        assertTrue(why != null && why.contains("WRITES NO NOTE"), "said: $why")
         assertTrue(!why!!.contains("MUTED"), "the muted remedy does not apply here: $why")
         // A hit the section DOES reach, on a muted ring, still says muted -
         // there the remedy works.
@@ -953,6 +953,80 @@ class OrbitSectionTest {
         assertTrue(s.soloing(null) === s)
         // Soloing a muted ring leaves it muted - a solo does not unmute.
         assertTrue(!s.soloing(2).orbits[2].engaged)
+    }
+
+    @Test
+    fun `a voice from a ring the solo silences is still hushed by the section after it`() {
+        // The other half of the solo rule, and the one a copied set could
+        // not keep: ring A is struck, the player solos B - which silences
+        // A but does not cut the tail it has already left - and the next
+        // section leaves A out. Copying A to silence it made it a
+        // different ring to `hush`, so its tail crossed the boundary.
+        val a = Orbit("A", 16, PatternOrbit("kit", listOf(OrbitHit(15, 1))))
+        // Hitless, so nothing but A's tail can be sounding at the frame
+        // this reads - the question has to be answerable from the buffer.
+        val b = ring("B", 2)
+        val before = OrbitSet(
+            listOf(a, b),
+            bpm,
+            rate,
+            sections = listOf(OrbitSection("X", 1, setOf(0, 1)), OrbitSection("Y", 1, setOf(1))),
+        )
+        val sink = object : AudioSink {
+            override val sampleRate = rate
+            override val channels = 2
+            val written = ArrayList<FloatArray>()
+            override fun write(block: FloatArray) { written.add(block.copyOf()) }
+            override fun close() {}
+        }
+        val engine = OrbitEngine(before, OrbitBank.prepare(before, Graded()), sink, blockFrames = 1_000)
+        engine.runFor(95)
+        assertEquals(0.1f, sink.written[94][0], 1e-4f, "A did not sound in its own section")
+        // Solo B. A is silenced from here on, but its tail is not cut -
+        // that is what a solo has always done.
+        engine.apply(OrbitEngine.Prepared(before, OrbitBank.prepare(before, Graded()), solo = 1))
+        engine.runFor(1)
+        assertEquals(0.1f, sink.written[95][0], 1e-4f, "the solo cut a tail it should only have silenced")
+        // Past the boundary into a section that leaves A out.
+        engine.runFor(2)
+        assertEquals(0f, sink.written[97][0], 1e-3f, "A's tail crossed into a section that leaves A out")
+    }
+
+    @Test
+    fun `a solo silences every other ring without touching the set`() {
+        val two = OrbitSet(listOf(ring("A", 1, 0), ring("B", 2, 0)), bpm, rate)
+        val bank = OrbitBank.prepare(two, Graded())
+        val sink = object : AudioSink {
+            override val sampleRate = rate
+            override val channels = 2
+            val written = ArrayList<FloatArray>()
+            override fun write(block: FloatArray) { written.add(block.copyOf()) }
+            override fun close() {}
+        }
+        // Both rings hit step 0: with no solo the pads sum, with one only
+        // the soloed pad sounds - and the set handed over is the SAME set.
+        val engine = OrbitEngine(two, bank, sink, blockFrames = 1_000, initialSolo = 1)
+        engine.runFor(1)
+        assertEquals(0.2f, sink.written[0][0], 1e-4f, "the solo did not silence the other ring")
+        assertTrue(engine.prepared().set === two, "the set must not be copied to carry a solo")
+        assertEquals(1, engine.prepared().solo)
+    }
+
+    @Test
+    fun `the renderer refuses a block it cannot allocate, before it allocates it`() {
+        // `FloatArray(blockFrames * 2)` is a property initializer and ran
+        // BEFORE the constructor's own check, so a huge block threw
+        // NegativeArraySizeException rather than saying what was wrong.
+        val s = set(OrbitSection("A", 1, setOf(0)))
+        val bank = OrbitBank.prepare(s, Sustain())
+        assertFailsWith<IllegalArgumentException> {
+            OrbitEngine.render(s, bank, 1, blockFrames = OrbitEngine.MAX_RENDER_FRAMES + 1)
+        }
+        assertFailsWith<IllegalArgumentException> { OrbitEngine.render(s, bank, 1, blockFrames = 0) }
+        // And a render holds exactly what it was asked for, not the whole
+        // blocks it wrote: 1,000 frames of 300-frame blocks is four blocks
+        // and a thousand frames.
+        assertEquals(1_000, OrbitEngine.render(s, bank, 1_000, blockFrames = 300).samples.size / 2)
     }
 
     @Test

@@ -293,14 +293,15 @@ fun OrbitScreen(
     }
 
     /**
-     * What the engine plays: the set, with every ring but the soloed one
-     * silenced while a solo holds.
+     * What the OFFLINE bounce renders: the set, with every ring but the
+     * soloed one silenced.
      *
-     * Through [OrbitSet.soloing] rather than a `map` here, because the
-     * rule it keeps is the engine's: a ring this does not change comes
-     * back as itself, so a voice already sounding can still be matched to
-     * the ring that struck it. Copying all of them on every edit is what
-     * let a tail slip past `hush` into a section that leaves its ring out.
+     * Live playback does not go through this. The engine is handed the
+     * solo alongside the set (`OrbitEngine.Prepared`), so no ring is
+     * copied and no sounding voice loses the ring that struck it — which
+     * is what a copied set did, leaving tails that answered to no section
+     * and slipped past `hush`. A bounce has no voices in flight, so there
+     * it costs nothing.
      */
     fun heard(s: OrbitSet): OrbitSet = s.soloing(solo)
 
@@ -321,7 +322,7 @@ fun OrbitScreen(
                 OrbitBank.prepare(next, source, previous = bank)
             }
             bank = prepared
-            engine?.apply(OrbitEngine.Prepared(heard(next), prepared))
+            engine?.apply(OrbitEngine.Prepared(next, prepared, solo))
             preparing = false
         }
     }
@@ -334,7 +335,7 @@ fun OrbitScreen(
             val prepared = withContext(Dispatchers.IO) { OrbitBank.prepare(s, source, previous = bank) }
             bank = prepared
             val audioSink = AndroidAudioSink(s.sampleRate)
-            val e = OrbitEngine(heard(s), prepared, audioSink)
+            val e = OrbitEngine(s, prepared, audioSink, initialSolo = solo)
             sink = audioSink
             engine = e
             audioThread = thread(name = "snipsnap-orbit", isDaemon = true) { e.run() }
@@ -343,12 +344,18 @@ fun OrbitScreen(
         }
     }
 
-    /** Solo is a listening choice, not part of the set: applied to the engine, never saved. */
+    /**
+     * Solo is a listening choice, not part of the set: applied to the
+     * engine, never saved — and handed to it AS ITSELF, beside the set
+     * rather than baked into a copy of every ring. A copied ring is a
+     * different ring to `OrbitEngine.hush`, which matches a sounding
+     * voice to the ring that struck it by identity.
+     */
     fun toggleSolo(index: Int) {
         solo = if (solo == index) null else index
         val s = set ?: return
         val b = bank ?: return
-        engine?.apply(OrbitEngine.Prepared(heard(s), b))
+        engine?.apply(OrbitEngine.Prepared(s, b, solo))
     }
 
     // The needle: read the engine's own frame count every display frame.
@@ -635,7 +642,7 @@ fun OrbitScreen(
         set = next
         val b = bank
         if (b != null && next.orbits.none { it.content is SnipOrbit }) {
-            engine?.apply(OrbitEngine.Prepared(heard(next), b))
+            engine?.apply(OrbitEngine.Prepared(next, b, solo))
         }
         bpmJob?.cancel()
         bpmPending = true
@@ -1533,7 +1540,7 @@ private fun RingsCanvas(
     // it flashed "every ring on its downbeat" over a section whose rings
     // are all muted, or over one the solo leaves out.
     fun heardRing(i: Int): Boolean =
-        set.orbits[i].engaged && (solo == null || solo == i) &&
+        set.orbits[i].engaged && set.orbits[i].level > 0f && (solo == null || solo == i) &&
             OrbitClock.playsAt(set, i, transportFrame)
 
     // Display order: shortest period innermost, then fewer steps, then as added.

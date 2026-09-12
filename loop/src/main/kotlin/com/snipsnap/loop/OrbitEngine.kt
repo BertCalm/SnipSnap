@@ -32,10 +32,31 @@ class OrbitEngine(
     initialBank: OrbitBank,
     private val sink: AudioSink,
     val blockFrames: Int = DEFAULT_BLOCK_FRAMES,
+    initialSolo: Int? = null,
 ) {
+    init {
+        // Before the buffer below is allocated, not after: a property
+        // initializer runs ahead of an `init` block further down the file,
+        // so `FloatArray(blockFrames * 2)` threw NegativeArraySizeException
+        // for a huge or negative block size and this check never ran.
+        require(blockFrames > 0) { "blockFrames must be positive: $blockFrames" }
+        require(blockFrames <= MAX_RENDER_FRAMES) { "blockFrames past a stereo buffer: $blockFrames" }
+    }
 
-    /** A set and the audio prepared for it, swapped in together. */
-    data class Prepared(val set: OrbitSet, val bank: OrbitBank)
+    /**
+     * A set, the audio prepared for it, and the ring being soloed —
+     * swapped in together.
+     *
+     * The solo rides ALONGSIDE the set rather than inside it. Baking it in
+     * means copying every ring the solo silences, and a copy is a
+     * different ring to [hush], which finds a sounding voice's ring by
+     * identity: every voice struck before a solo then answered to no
+     * section and slipped through the one place the arrangement is
+     * enforced. It was never part of the set anyway — the screen's own
+     * word for it is "a listening choice, not part of the set: applied to
+     * the engine, never saved".
+     */
+    data class Prepared(val set: OrbitSet, val bank: OrbitBank, val solo: Int? = null)
 
     private class Voice(
         val samples: FloatArray,
@@ -99,15 +120,11 @@ class OrbitEngine(
     private val running = AtomicBoolean(true)
     private val pending = AtomicReference<Prepared?>(null)
     private val rewindRequested = AtomicBoolean(false)
-    private val current = AtomicReference(Prepared(initial, initialBank))
+    private val current = AtomicReference(Prepared(initial, initialBank, initialSolo))
 
     private val block = FloatArray(blockFrames * 2)
     private val voices = ArrayList<Voice>()
     private val due = ArrayList<Scheduled>()
-
-    init {
-        require(blockFrames > 0) { "blockFrames must be positive: $blockFrames" }
-    }
 
     /**
      * Frames played since the start.
@@ -151,7 +168,7 @@ class OrbitEngine(
             voices.clear()
         }
 
-        val (set, bank) = current.get()
+        val (set, bank, solo) = current.get()
         val from = frame.get()
         val until = from + blockFrames
         block.fill(0f)
@@ -175,9 +192,13 @@ class OrbitEngine(
             hush(set, from, at)
             due.clear()
             for ((index, orbit) in set.orbits.withIndex()) {
-                // The ring's own mute and the section's choice are different
-                // questions: a muted ring stays muted whatever a section says.
+                // The ring's own mute, another ring's solo, and the
+                // section's choice are three different questions, and all
+                // three silence a ring. A muted ring stays muted whatever a
+                // section says; a solo silences the rest without touching
+                // the set they are in.
                 if (!orbit.engaged || orbit.level == 0f) continue
+                if (solo != null && index != solo) continue
                 if (!OrbitClock.playsAt(set, index, at)) continue
                 when (orbit.content) {
                     is PatternOrbit -> collect(set, orbit, local, local + (edge - at), shift)
@@ -475,7 +496,7 @@ class OrbitEngine(
             require(frames <= MAX_RENDER_FRAMES) {
                 "frames past what a stereo buffer holds: $frames > $MAX_RENDER_FRAMES"
             }
-            val sink = CollectingSink(set.sampleRate)
+            val sink = CollectingSink(set.sampleRate, frames * 2)
             val engine = OrbitEngine(set, bank, sink, blockFrames)
             // Divided before it is added to, so no block size can carry the
             // sum past an `Int`: `(frames + blockFrames - 1)` overflows for
@@ -483,17 +504,29 @@ class OrbitEngine(
             // count renders nothing at all.
             val blocks = frames / blockFrames + if (frames % blockFrames == 0) 0 else 1
             engine.runFor(blocks)
-            return Snip(sink.samples.copyOf(frames * 2), 2, set.sampleRate)
+            return Snip(sink.samples, 2, set.sampleRate)
         }
 
-        private class CollectingSink(override val sampleRate: Int) : AudioSink {
+        /**
+         * Holds exactly the render it was asked for and drops the rest.
+         *
+         * Sized once, up front, rather than grown by doubling and trimmed
+         * at the end: the engine writes WHOLE blocks, so the old sink held
+         * the requested frames rounded up to a block — and near the
+         * ceiling that padding is what carried `size + block.size` past an
+         * `Int`, on a render the guard above had just allowed. Now nothing
+         * is ever held that is not returned, and the last block is simply
+         * cut where the answer ends.
+         */
+        private class CollectingSink(override val sampleRate: Int, limit: Int) : AudioSink {
             override val channels = 2
-            var samples = FloatArray(0)
+            val samples = FloatArray(limit)
             private var size = 0
             override fun write(block: FloatArray) {
-                if (size + block.size > samples.size) samples = samples.copyOf(maxOf(samples.size * 2, size + block.size))
-                System.arraycopy(block, 0, samples, size, block.size)
-                size += block.size
+                val room = min(block.size, samples.size - size)
+                if (room <= 0) return
+                System.arraycopy(block, 0, samples, size, room)
+                size += room
             }
             override fun close() {}
         }
