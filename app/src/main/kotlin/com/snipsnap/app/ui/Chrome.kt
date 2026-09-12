@@ -111,20 +111,26 @@ fun TapeText(
  * default: every call site has to make an explicit choice, so a new
  * control can't silently ship without one the way all 97 of this app's
  * pre-existing interactive sites did (see the 2026-09-08 accessibility
- * audit). Pass `null` when a descendant `TapeText`/`TapeText`-bearing
- * child already says what the control does — `clickable` merges
- * descendant semantics into this node automatically, so a real
- * [label] here would *replace* that text in what TalkBack announces,
- * not add to it. Reserve an explicit [label] for controls with no
- * text child (scrim dismissers, glyph-only chips, colour swatches) or
- * whose visible glyph is itself an accessibility risk (single-letter
- * chips TalkBack may spell out instead of reading as a word).
+ * audit). Pass a real [label] always — including when a descendant
+ * `TapeText` already shows the same words on screen. This modifier used
+ * to say `clickable` merges descendant semantics into this node
+ * automatically, so `null` was "fine" whenever visible text was nearby;
+ * an accessibility-tree dump (2026-09 followup) proved that false —
+ * `clickable`'s own semantics node does not fold sibling text into
+ * itself, so every call site that relied on that claim shipped a
+ * clickable node with an empty name, while its visible label sat in a
+ * separate `focusable="false"` node TalkBack's linear navigation never
+ * reaches. `null` is for controls that genuinely have no accessible
+ * name to give (see call sites that pair it with
+ * `Modifier.clearAndSetSemantics {}` to drop out of the tree entirely,
+ * e.g. a tap-absorbing scrim card whose `onClick` is empty) — not a
+ * shorthand for "the text nearby covers it."
  *
  * [enabled] mirrors `clickable`'s own flag: a disabled control keeps
- * its semantics node (and its merged/explicit name) but exposes
- * Compose's `disabled()` state instead of an actionable one, so a
- * screen-reader user is told "temporarily unavailable" instead of the
- * control silently vanishing from the tree (audit finding 12).
+ * its semantics node (and its name) but exposes Compose's `disabled()`
+ * state instead of an actionable one, so a screen-reader user is told
+ * "temporarily unavailable" instead of the control silently vanishing
+ * from the tree (audit finding 12).
  */
 @Composable
 fun Modifier.tapeClick(label: String?, enabled: Boolean = true, onClick: () -> Unit): Modifier =
