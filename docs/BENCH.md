@@ -330,6 +330,102 @@ claim is tested against, instead of our own output.
 
 ---
 
+## MIDI sync: the four questions that decide it
+
+Added 2026-09-12 by `docs/MIDI_SYNC.md`; **rewritten the same day**, and
+the rewrite is the point.
+
+The first version of this section gave four step-by-step procedures.
+Review established that not one of them was executable as written: the
+probe read a stream the transport would not use, the offset method
+measured two output paths against each other rather than the phone's own
+delay, the cross-stream test asked for ORBIT and GROOVE at once when
+`App.kt` composes them in an `if`/`else`, and the last asked an operator
+to measure a follower that does not exist.
+
+That is the same overreach `MIDI_SYNC.md` opens by admitting, one level
+down: **I cannot run this app or hold the phone, so I should not be
+writing the experiments.** What follows is what I can honestly supply —
+the questions, why each decides something, and what the source says makes
+each one awkward. Whoever has the device designs the method.
+
+All four need the phone. S2 needs an acoustic reference, S3 and S4 need a
+second device sending MIDI beat clock, and **S4 additionally needs a
+follower to exist**, so it cannot be answered before the code it is meant
+to gate. It is listed here so it is not forgotten, not as a precondition.
+
+### S1 · Does the hardware playback position tell the truth?
+
+**Why it decides something.** `MIDI_SYNC.md` proposes a transport
+referenced to hardware position. `TapeVoice`'s KDoc records a measured
+case where a HAL reported `playbackHeadPosition == 0` for **800 ms**
+while `playState == PLAYING`, for a clip shorter than its buffer. A clock
+built on a number that does that sits still for most of a bar.
+
+**What makes it awkward.** Nothing displays or logs the value — the only
+reads are private locals in `MixVoice`'s and `TapeVoice`'s drain loops,
+and `TapeVoice` caps a short clip's buffer to the clip's own length, so
+the very configuration that produced the 800 ms case is the one it now
+avoids. The streams a transport would actually use are `AndroidAudioSink`
+(`AudioTrack`) and `PadEngine` (Oboe), and **neither is one of those two
+voices.** Any probe has to reach the right stream, not the convenient one.
+
+→
+
+### S2 · What is this phone's output-side delay?
+
+**Why it decides something.** It is the correction term that places a
+note where a listener expects it, and the app does not have it: the
+figure PLAY and SURFACE print is `calculateLatencyMillis`, which is
+round-trip, and "not every HAL implements it".
+
+**What makes it awkward.** Comparing the phone against other gear by ear
+measures the *difference between two complete output paths*, so it only
+yields the phone's own delay if the reference path is calibrated or
+cancelled. And there is no single answer: `AudioTrack` and Oboe are
+separate paths with separate buffering, so this is at least two numbers,
+possibly more by route.
+
+→
+
+### S3 · Does rate hold — against a reference, and between the app's own two streams?
+
+**Why it decides something.** Two parts. Against an external reference,
+it gates the master-first recommendation. Between the app's own streams,
+it bears on `MIDI_SYNC.md` question 1's fork: `AndroidAudioSink` and
+`PadEngine` are independent streams with independent clocks, and if they
+do not hold together, a *fixed* offset mapping between them is off the
+table.
+
+Note what that does **not** prove, since an earlier draft overstated it:
+drift between the two does not mean no external sync can hold both. Each
+could be corrected against the master independently, or one resampled.
+It rules out the cheap mapping, not every two-stream design.
+
+**What makes it awkward.** ORBIT and GROOVE cannot be heard together —
+`App.kt` composes `OrbitScreen` *or* `GrooveScreen`, never both — so
+there is no in-app way to sound one against the other. Any cross-stream
+comparison needs a harness, or two independently runnable outputs. And a
+GROOVE-side repeating hit is triggered from the `withFrameNanos` display
+loop, so it would measure UI scheduling as much as the audio clock.
+
+→
+
+### S4 · How long should a follower coast when the clock stops? *(after the follower exists)*
+
+**Why it decides something.** `MIDI_SYNC.md` recommends coast-then-stop
+with a timeout on the order of a beat and says plainly the number is a
+guess. It is the difference between riding a hiccup and running away.
+
+**What makes it awkward.** There is nothing to measure yet. What *can* be
+answered first, without any app change, is the other half: with a master
+running normally, how long does a real device stall in ordinary use?
+That bounds the timeout from below and needs only the gear.
+
+→
+
+---
+
 ## Recording what you find
 
 A pass: tick the plan row and say so here — I will move it in
