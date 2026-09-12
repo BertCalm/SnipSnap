@@ -422,6 +422,7 @@ fun SynthScreen(
                         scheme,
                         enabled = kit != null && !sendBusy,
                         modifier = Modifier.weight(1f),
+                        accessibilityLabel = "SEND TO PAD",
                     ) {
                         showChooser = true
                     }
@@ -809,6 +810,14 @@ private fun LabButton(
     scheme: Scheme,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    /**
+     * Override for [label] as the accessible name — for the one call site
+     * (SEND TO PAD ▸) whose visible [label] itself turns into "…" while
+     * busy: `enabled` already carries that busy state to a screen reader,
+     * so the name stays stable instead of briefly becoming an ellipsis.
+     * `null` (every other call site) falls back to [label] alone.
+     */
+    accessibilityLabel: String? = null,
     onClick: () -> Unit,
 ) {
     Box(
@@ -819,7 +828,7 @@ private fun LabButton(
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = label, enabled = enabled, onClick = onClick)
+            .tapeClick(label = accessibilityLabel ?: label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
