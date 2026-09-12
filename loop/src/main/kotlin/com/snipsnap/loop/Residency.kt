@@ -51,6 +51,19 @@ class Residency(
     private data class CacheKey(val block: Block, val intervalFrames: Int)
 
     private val current = AtomicReference(initial)
+
+    /**
+     * A session that has been baked for but is not playing yet — see [warm].
+     *
+     * It exists so that [retain], whose job is to throw away everything the
+     * engine does not need, does not throw away the very buffers a tempo
+     * change is about to need. Cleared by [update] the moment that session
+     * becomes current, and overwritten by a later [warm]: only one change can
+     * be on its way in at a time, because only one can be [LoopEngine.apply]'d
+     * next.
+     */
+    private val incoming = AtomicReference<Session?>(null)
+
     private val baked = ConcurrentHashMap<CacheKey, Snip>()
 
     fun session(): Session = current.get()
@@ -91,12 +104,60 @@ class Residency(
         }
     }
 
-    /** Drop every buffer not needed by one of [intervals]. */
+    /**
+     * Bake [session] for [intervals] before it is playing, so that applying it
+     * costs nothing on the audio thread.
+     *
+     * This exists for one edit: a tempo change. Everything else the grid can
+     * do is free — mutes and levels are read by the mixer, and a chain edit
+     * re-keys the cache by itself — but a new BPM resizes the interval, which
+     * makes every baked buffer the wrong length at once. Without this, the
+     * first [buffersFor] after the change finds an empty cache and bakes six
+     * blocks **on the caller's thread**, which is the audio thread: an audible
+     * stall every time someone nudges the tempo.
+     *
+     * Warmed entries are stamped with [session]'s own interval length, so they
+     * are unreachable until it becomes current — a warm for a change the
+     * player undoes before it lands is wasted work, not a wrong buffer. The
+     * caller warms, then [LoopEngine.apply]s; the engine's own [update] at the
+     * next boundary keeps what was warmed and drops what went stale.
+     */
+    fun warm(session: Session, vararg intervals: Int) {
+        incoming.set(session)
+        for (i in intervals) {
+            for (track in session.tracks) {
+                val block = Arrangement.blockAt(track, i)
+                val key = CacheKey(block, session.intervalFrames)
+                if (baked.containsKey(key)) continue
+                executor.execute {
+                    // Still wanted? The same early-out prefetch makes, against
+                    // both sessions this cache serves: the one playing and the
+                    // one on its way in.
+                    val wanted = session.intervalFrames == current.get().intervalFrames ||
+                        session.intervalFrames == incoming.get()?.intervalFrames
+                    if (wanted) baked.putIfAbsent(key, BlockBaker.bake(block, session, source))
+                }
+            }
+        }
+    }
+
+    /**
+     * Drop every buffer not needed by one of [intervals].
+     *
+     * "Needed" counts the session on its way in as well as the one playing
+     * (see [warm]): this runs every interval, so without that a tempo change
+     * warmed a moment ago would be swept before the engine ever applied it,
+     * and the stall the warm exists to prevent would happen anyway.
+     */
     fun retain(vararg intervals: Int) {
         val s = current.get()
+        val next = incoming.get()
         val keep = HashSet<CacheKey>()
         for (i in intervals) {
             for (track in s.tracks) keep.add(CacheKey(Arrangement.blockAt(track, i), s.intervalFrames))
+            if (next != null) {
+                for (track in next.tracks) keep.add(CacheKey(Arrangement.blockAt(track, i), next.intervalFrames))
+            }
         }
         baked.keys.retainAll(keep)
     }
@@ -111,6 +172,15 @@ class Residency(
      */
     fun update(session: Session) {
         val previous = current.getAndSet(session)
-        if (previous.intervalFrames != session.intervalFrames) baked.clear()
+        // This session has arrived, so it is no longer on its way in.
+        incoming.compareAndSet(session, null)
+        if (previous.intervalFrames == session.intervalFrames) return
+        // Evict by stamp rather than clearing outright: a clear would also
+        // throw away whatever [warm] baked for this very session, which is the
+        // one case where the cache has exactly what is needed at the moment
+        // the length changes. Anything left over from the old length is
+        // unreachable either way — the keys are stamped — so this is about
+        // memory, and about keeping the warm.
+        baked.keys.removeIf { it.intervalFrames != session.intervalFrames }
     }
 }

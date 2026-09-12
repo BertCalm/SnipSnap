@@ -260,4 +260,92 @@ class ResidencyTest {
             pool.shutdownNow()
         }
     }
+
+    // ---- warm: a tempo change that costs the audio thread nothing ----
+
+    @Test
+    fun `a warmed tempo change needs no bake when it lands`() {
+        val s = session(1, 1, 1, 1, 1, 1)
+        val source = CountingSource(s.intervalFrames)
+        val r = Residency(s, source, sameThread)
+        r.buffersFor(0)
+        val bakedAtOldTempo = source.loopCalls.get()
+        assertTrue(bakedAtOldTempo > 0, "the fixture has to bake something for this test to mean anything")
+
+        // The player nudges the tempo. The screen warms the session it is
+        // about to apply, for the interval the engine will play next.
+        val faster = s.copy(bpm = 100f)
+        assertTrue(faster.intervalFrames != s.intervalFrames, "a tempo change has to resize the interval")
+        r.warm(faster, 1)
+        val bakedByWarm = source.loopCalls.get()
+        assertTrue(bakedByWarm > bakedAtOldTempo, "warm should have baked the new length")
+
+        // The engine applies it at the boundary and asks for its buffers. That
+        // ask is the audio thread, and it must not bake: every buffer it wants
+        // is the one warm already made.
+        r.update(faster)
+        val buffers = r.buffersFor(1)
+
+        assertEquals(bakedByWarm, source.loopCalls.get(), "buffersFor baked on the audio thread despite the warm")
+        assertEquals(6, buffers.size)
+        for (b in buffers) assertEquals(faster.intervalFrames, b.frameCount)
+    }
+
+    @Test
+    fun `the interval's own retain does not sweep a warm before it lands`() {
+        val s = session(1, 1, 1, 1, 1, 1)
+        val source = CountingSource(s.intervalFrames)
+        val r = Residency(s, source, sameThread)
+        r.buffersFor(0)
+
+        val faster = s.copy(bpm = 100f)
+        r.warm(faster, 1)
+        val bakedByWarm = source.loopCalls.get()
+
+        // The engine finishes the interval it was playing and tidies up, which
+        // happens between the warm and the apply on every real tempo change.
+        r.retain(0, 1)
+
+        r.update(faster)
+        r.buffersFor(1)
+        assertEquals(bakedByWarm, source.loopCalls.get(), "retain swept the warmed buffers before they could land")
+    }
+
+    @Test
+    fun `the old length is dropped once the new one is playing`() {
+        val s = session(1, 1, 1, 1, 1, 1)
+        val r = Residency(s, CountingSource(s.intervalFrames), sameThread)
+        r.buffersFor(0)
+        val faster = s.copy(bpm = 100f)
+        r.warm(faster, 1)
+        val whileBothLive = r.residentCount()
+
+        r.update(faster)
+
+        assertTrue(
+            r.residentCount() < whileBothLive,
+            "update kept buffers of the old interval length: $whileBothLive resident before, ${r.residentCount()} after",
+        )
+        assertEquals(6, r.residentCount(), "exactly the warmed six should remain")
+    }
+
+    @Test
+    fun `a warm nobody applies is evicted rather than kept forever`() {
+        val s = session(1, 1, 1, 1, 1, 1)
+        val r = Residency(s, CountingSource(s.intervalFrames), sameThread)
+        r.buffersFor(0)
+        r.warm(s.copy(bpm = 100f), 1)
+
+        // The player changes their mind and the tempo goes back to where it
+        // was, so the warmed length is never applied. The next warm replaces
+        // it as the one session on its way in, and the retain that follows has
+        // no reason to keep the abandoned one.
+        r.warm(s, 1)
+        r.retain(0, 1)
+
+        assertTrue(
+            r.residentCount() <= 12,
+            "an abandoned warm is still resident: ${r.residentCount()} buffers for a six-track grid",
+        )
+    }
 }
