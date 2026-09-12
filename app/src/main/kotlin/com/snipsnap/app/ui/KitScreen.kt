@@ -59,6 +59,7 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KeyPicker
+import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
@@ -106,8 +107,8 @@ fun KitScreen(
     onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
     onInKey: () -> Unit,
     onTwins: () -> Unit,
-    /** Flipped to a bank with nothing on it: say what fills it (`Copy.BANK_B_EMPTY`) as the blanks come up. */
-    onBankEmpty: () -> Unit = {},
+    /** Flipped to a bank (0-based) with nothing on it: say what fills it (`Copy.bankEmpty`) as the blanks come up. */
+    onBankEmpty: (Int) -> Unit = {},
     /**
      * BREED (XX2 wired in): arms the pick-a-partner hand-off (`App.kt`'s
      * `pendingBreedWith`) and sends the user to the shelf to tap kit B —
@@ -297,7 +298,7 @@ fun KitScreen(
                         .let { if (here) it.raisedBevel(scheme) else it.sunkenField(scheme) }
                         .tapeClick(label = null, onClick = {
                             bank = b
-                            if (empty && !here) onBankEmpty()
+                            if (empty && !here) onBankEmpty(b)
                         }),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -376,8 +377,11 @@ fun KitScreen(
                 // header; the destination screen and its Kotlin symbol are
                 // unchanged, only this entry-point label.
                 ActionButton("VERSIONS + BIN ▸ ROLL BACK OR RESTORE", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onTakesBin)
-                // EVIL TWINS: bank B lit with seeded re-treatments of bank A; a second press rerolls.
-                val twinned = kit.pads.any { it.slot > 16 }
+                // EVIL TWINS: bank B lit with seeded re-treatments of bank A; a
+                // second press rerolls. REROLL means twins are there — not
+                // merely something on B, which since bank B round 2 can be
+                // the user's own pads (and then the press is refused).
+                val twinned = kit.pads.any { KitBuilderModel.isTwin(kit, it) }
                 ActionButton(
                     if (twinned) "REMIX BANK B ▸ REROLL" else "REMIX BANK B ▸",
                     scheme,

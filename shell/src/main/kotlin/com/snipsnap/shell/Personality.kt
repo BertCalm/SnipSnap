@@ -447,12 +447,19 @@ object Copy {
     const val BANK_B_LIT = "BANK B REMIXED: EVERY PAD'S EVIL TWIN. RECIPES KEPT."
     const val TWINS_REROLLED = "BANK B REROLLED. SAME SEED, DIFFERENT SINS."
     /**
-     * Flipping to an empty bank B on the KIT screen. The row is always
+     * Flipping to an empty bank on the KIT screen. The row is always
      * drawn (a second page nobody can see is a page nobody finds) and an
-     * empty B flips like a full one, since its pads fill the same three
-     * ways bank A's do; the toast names them, and the fourth.
+     * empty bank flips like a full one, since its pads fill the same
+     * three ways bank A's do — hold a pad to capture, the same hold to
+     * place a snip SNIPS → PAD armed, a chop sent ONTO it; the toast
+     * names them, plus the twins for bank B (REMIX BANK B fills B only,
+     * so a sparse kit's empty C is not told to press it). A function:
+     * the bank letter rides in, so the laws leave it be.
      */
-    const val BANK_B_EMPTY = "BANK B: EMPTY. HOLD A PAD TO CAPTURE ONTO IT, SEND A CHOP HERE, OR REMIX BANK B ▸ FOR TWINS."
+    fun bankEmpty(bank: Char): String {
+        val twins = if (bank == 'B') " REMIX BANK B ▸ DEALS TWINS HERE TOO." else ""
+        return "BANK $bank: EMPTY. HOLD A PAD TO CAPTURE ONTO IT, OR TO PLACE A SNIP FROM SNIPS. A CHOP CAN LAND HERE.$twins"
+    }
     /** REMIX BANK B pressed while bank B holds pads the user put there: a remix would wipe them, so it refuses. */
     const val TWINS_KEEP_OWN = "BANK B HOLDS YOUR OWN PADS. REMIX WON'T WIPE THEM — EJECT THEM FIRST, OR KEEP THE PAGE."
     /**
