@@ -210,6 +210,28 @@ TEST(print_buffer_stereo_counts_frames_and_cuts_on_a_frame_boundary) {
     p.clear();
 }
 
+TEST(print_buffer_arm_throws_rather_than_silently_truncating_an_impossible_reservation) {
+    // What jni.cpp's armPrint try/catch actually guards against: `arm`
+    // takes a plain size_t, unlike the bridge's jint-bounded parameter,
+    // so it can be asked for more frames than a vector<float> can ever
+    // hold. Proving the throw is real here is what makes that catch
+    // load-bearing rather than defensive dead code - a JNI entry point
+    // this jint-bounded can't itself manufacture the request, but
+    // `PrintBuffer::arm` has no such ceiling, and nothing stops a future
+    // caller (or an ABI change) from reaching it directly with one.
+    PrintBuffer p;
+    const size_t impossible = std::vector<float>().max_size() + 1;
+    bool threw = false;
+    try {
+        p.arm(impossible, 2);
+    } catch (const std::exception&) {
+        threw = true;
+    }
+    CHECK(threw);
+    // Refused, not half-armed: still Idle, nothing to clear or leak.
+    CHECK(p.state() == PrintBuffer::State::Idle);
+}
+
 // ---- PadEngine -----------------------------------------------------------------
 
 TEST(pad_engine_plays_the_window_with_its_gains_and_reports_the_end) {

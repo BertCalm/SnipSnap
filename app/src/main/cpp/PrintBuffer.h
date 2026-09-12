@@ -103,9 +103,17 @@ public:
      * UI thread: release the memory and go back to Idle. Refuses (false)
      * while a print is Recording, for the reason `arm` does - the callback
      * is writing into those frames, and freeing them under it is a
-     * use-after-free. Ask with `requestStop` first and take the print when
-     * it says Done. Clearing from Stopping is safe: the callback makes no
-     * further write once it has seen that state.
+     * use-after-free.
+     *
+     * Clearing from Stopping is NOT the same guarantee, and review was
+     * right to say so: a call to `record` already past its own state
+     * check when `requestStop` runs commits to finishing that write
+     * regardless, so "the callback has seen Stopping" does not mean it
+     * has made its last write. Only Done means that. Callers of this
+     * class wait for it (see `jni.cpp`'s `stopPrinting`, which does not
+     * read or clear until `state() == Done`) rather than treating
+     * Stopping, or a bounded wait that gives up still inside it, as
+     * license to free this buffer.
      */
     bool clear() {
         if (state_.load(std::memory_order_acquire) == State::Recording) return false;
