@@ -26,10 +26,10 @@ internal const val ORPHAN_MAX_AGE_MS = 24L * 60 * 60 * 1000 // 1 day — a crash
 
 /**
  * Sweeps [shelfRoot] (where `ShelfImport` stages a landing kit, ".landing-*"
- * beside the shelf's own kit folders) and [cacheDir]'s "landing" (ShareInbox's
- * staging, `cacheDir/landing/`) and "share" (share-sheet temp copies,
- * `cacheDir/share/`) subfolders of anything stale. Called once per launch,
- * off the main thread, beside `shelf.sweepRooms()` and the bin purge.
+ * beside the shelf's own kit folders) and [cacheDir]'s [ShareInbox.DIR]
+ * (ShareInbox's staging) and [ShareOut.DIR] (share-sheet temp copies)
+ * subfolders of anything stale. Called once per launch, off the main
+ * thread, beside `shelf.sweepRooms()` and the bin purge.
  */
 internal fun sweepOrphanedStorage(shelfRoot: File, cacheDir: File) {
     val now = System.currentTimeMillis()
@@ -43,7 +43,7 @@ internal fun sweepOrphanedStorage(shelfRoot: File, cacheDir: File) {
     shelfRoot.listFiles { f -> f.isDirectory && f.name.startsWith(".landing-") }?.forEach(::deleteIfStale)
     // ShareInbox's staging — a flat file per shared item (see
     // ShareInbox.copyToCache), not a directory, so no isDirectory filter here.
-    File(cacheDir, "landing").listFiles()?.forEach(::deleteIfStale)
+    File(cacheDir, ShareInbox.DIR).listFiles()?.forEach(::deleteIfStale)
     // Share-sheet temp copies — fully regenerable on next share.
-    File(cacheDir, "share").listFiles()?.forEach(::deleteIfStale)
+    File(cacheDir, ShareOut.DIR).listFiles()?.forEach(::deleteIfStale)
 }

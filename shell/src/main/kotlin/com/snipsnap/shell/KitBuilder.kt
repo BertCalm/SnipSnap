@@ -317,7 +317,7 @@ class KitBuilderModel private constructor(
             if (pad.snip.frameCount == 0) return@forEachIndexed
             val slot = slots.first + i
             if (pad.takes.isEmpty()) {
-                assign(slot, pad.snip, pad.drumClass, pad.drumClass.name.replace('_', ' '), source = pad.source)
+                assign(slot, pad.snip, pad.drumClass, pad.displayName ?: pad.drumClass.name.replace('_', ' '), source = pad.source)
             } else {
                 // A folded pad (CHOP's FOLD DOUBLES): every take end to end
                 // through the same door, then the chain that steps through
@@ -325,8 +325,14 @@ class KitBuilderModel private constructor(
                 val all = listOf(pad.snip) + pad.takes
                 var at = 0L
                 val boundaries = all.map { t -> at.also { at += t.frameCount } }
-                assign(slot, Robin.concat(all), pad.drumClass, pad.drumClass.name.replace('_', ' '), source = pad.source)
+                assign(slot, Robin.concat(all), pad.drumClass, pad.displayName ?: pad.drumClass.name.replace('_', ' '), source = pad.source)
                 update(slot) { it.copy(chain = com.snipsnap.kit.ChainInfo(boundaries, cycle = all.size)) }
+            }
+            // A gate pad (a ghost: hold the pad, hold the room) stays a gate
+            // through this door too, and a balanced pad keeps the mixer level
+            // the balancer set — both as they do through KitAssembler's.
+            if (!pad.oneShot || pad.level != null) {
+                update(slot) { it.copy(oneShot = pad.oneShot, level = pad.level ?: it.level) }
             }
             landed += slot
         }

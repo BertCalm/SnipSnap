@@ -255,4 +255,85 @@ class SessionBuilderTest {
         assertEquals(atDevice.intervalFrames, baked.frameCount)
         assertTrue(baked.samples.any { it != 0f }, "the tone should survive the rate change")
     }
+
+    // ---- sourceOf: the readout's own reason to exist -------------------------------
+
+    @Test
+    fun `sourceOf undoes exactly the block suffix send appends`() {
+        val dir = tempDir()
+        // Two intervals, so send writes two pieces and there is a real
+        // suffix — "_1" and "_2" — to undo rather than a coincidence with
+        // a single block always being "_1".
+        val session = fresh()
+        val frames = SessionBuilder.chunkFrames(session, rate)
+        val sent = assertNotNull(
+            SessionBuilder.send(session, 0, "KICK", "snip_1700000000000_kick", tone(frames * 2), dir),
+        )
+        val chain = sent.session.tracks[0].chain
+        assertEquals(2, chain.size)
+        for (piece in chain) {
+            val file = (piece as LoopBlock).sampleFile
+            assertEquals(
+                "snip_1700000000000_kick",
+                SessionBuilder.sourceOf(file),
+                "$file should recover its source snip's own stem",
+            )
+        }
+    }
+
+    @Test
+    fun `sourceOf survives a stem that already ends in digits after an underscore`() {
+        // A renamed snip's own name can end in "_2" ("take_2") before send
+        // ever appends its own block suffix — the recovery has to remove
+        // the PIECE's suffix, not whatever the stem already ends with.
+        assertEquals("snip_1_take_2", SessionBuilder.sourceOf("snip_1_take_2_1.wav"))
+        assertEquals("snip_1_take_2", SessionBuilder.sourceOf("snip_1_take_2_7.wav"))
+    }
+
+    @Test
+    fun `sourceOf returns a name with no underscore unchanged rather than mangling it`() {
+        // send() never writes a piece without a block suffix, but a
+        // hand-edited sidecar could reference one — this must not throw
+        // or silently corrupt a name it does not recognise.
+        assertEquals("nosuffix", SessionBuilder.sourceOf("nosuffix.wav"))
+    }
+
+    @Test
+    fun `sourceOf only strips a trailing segment that is actually digits`() {
+        // A bare source filename — not a piece send() ever wrote, but
+        // nothing stops a hand-edited sidecar from storing one directly —
+        // must come back unchanged. Stripping "kick" here would recover
+        // "SNIP" as the displayed label instead of "KICK".
+        assertEquals("snip_1700000000000_kick", SessionBuilder.sourceOf("snip_1700000000000_kick.wav"))
+    }
+
+    @Test
+    fun `a double underscore in a renamed snip survives send and sourceOf exactly`() {
+        // Names.isMpcSafe permits a run of underscores (it only forbids a
+        // fixed character set), so SnipStore.rename can produce a stem
+        // like this one. Names.sanitizeStem does not: it collapses "__" to
+        // "_", which is fine for a kit name but would make this recovery
+        // return a name SNIPS itself never shows. send() has to skip
+        // sanitizeStem for a stem already isMpcSafe, or this drifts.
+        val dir = tempDir()
+        val session = fresh()
+        val frames = SessionBuilder.chunkFrames(session, rate)
+        val stem = "snip_1700000000000__take__two"
+        val sent = assertNotNull(SessionBuilder.send(session, 0, "TAKE", stem, tone(frames), dir))
+        val file = (sent.session.tracks[0].chain[0] as LoopBlock).sampleFile
+        assertEquals("${stem}_1.wav", file, "an already-safe stem must not be re-collapsed")
+        assertEquals(stem, SessionBuilder.sourceOf(file))
+    }
+
+    @Test
+    fun `a stem sanitizeStem would reject is still normalized, not written raw`() {
+        // The fallback the doc promises: something SNIPS would never hand
+        // this (a slash, here) still has to land on disk as a safe name.
+        val dir = tempDir()
+        val session = fresh()
+        val frames = SessionBuilder.chunkFrames(session, rate)
+        val sent = assertNotNull(SessionBuilder.send(session, 0, "BAD", "snip_1/oops", tone(frames), dir))
+        val file = (sent.session.tracks[0].chain[0] as LoopBlock).sampleFile
+        assertTrue('/' !in file, "an MPC-unsafe stem must still be sanitized: $file")
+    }
 }

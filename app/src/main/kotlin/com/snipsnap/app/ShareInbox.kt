@@ -27,6 +27,13 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 object ShareInbox {
 
+    /**
+     * The cache subfolder's own name — typed here and, before this, again
+     * in [StorageSweep]'s sweep of the same folder. Same shape as
+     * [ShareOut.DIR] beside it, same reason.
+     */
+    const val DIR = "landing"
+
     private val _pending = MutableStateFlow<Uri?>(null)
 
     /** The shared file waiting to be imported, or null. */
@@ -79,7 +86,7 @@ object ShareInbox {
      * shelf's importers want a real file, and a content URI is not one.
      */
     fun copyToCache(context: Context, uri: Uri, displayName: String, maxBytes: Long): File {
-        val dir = File(context.cacheDir, "landing").apply { mkdirs() }
+        val dir = File(context.cacheDir, DIR).apply { mkdirs() }
         // The sending app chose this name, so it is a door - and it is
         // Landing's door now (:shell, tested), not a regex inline here.
         val out = File(dir, Landing.safeName(displayName))
