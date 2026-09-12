@@ -5,8 +5,11 @@ import com.snipsnap.audio.Chopper
 import com.snipsnap.audio.Classification
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Similar
 import com.snipsnap.audio.Slice
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.Tempo
+import com.snipsnap.audio.TempoEstimate
 import com.snipsnap.audio.Transients
 import com.snipsnap.kit.ArrangedPad
 import com.snipsnap.xpm.PadNoteMap
@@ -27,6 +30,14 @@ import com.snipsnap.xpm.PadNoteMap
  * by [carryingOverrides]. And two local moves, [merged] and [split],
  * for when fourteen of sixteen cuts are right: the global count is the
  * wrong tool for the other two.
+ *
+ * Round two (`docs/CHOP_CONTROLS.md` §8): ON THE GRID ([GridSnap]) —
+ * every cut snapped to the nearest 8th, 16th or 32nd of the source's
+ * own tempo, anchored on the first cut, and never after the attack it
+ * found; and FOLD DOUBLES ([folds]) — near-identical slices of one class
+ * as one pad with the repeats cycling under it as a round-robin chain,
+ * so sixteen slices of a break become the five sounds the drummer
+ * played.
  */
 class ChopReviewModel private constructor(
     val source: Snip,
@@ -36,6 +47,14 @@ class ChopReviewModel private constructor(
     val tape: TapeRef? = null,
     /** True once [merged] or [split] moved a cut by hand: the slices are no longer exactly what [mode] would cut. */
     val edited: Boolean = false,
+    /**
+     * The source's tempo, measured once and shared by every model cut
+     * from the same source (a re-chop, a merge, a split): the bench asks
+     * many times and the tape never changes.
+     */
+    private val tempoLazy: Lazy<TempoEstimate?> = lazy { estimateTempo(source) },
+    /** ON THE GRID's fitted line spacing in frames (see [snapped]), null when the cuts were not snapped. */
+    val gridStep: Double? = null,
 ) {
 
     /**
@@ -72,7 +91,7 @@ class ChopReviewModel private constructor(
          * strongest that many; [ear] is how hard the detector listens and
          * [cut] where each cut lands against the attack.
          */
-        data class ByHits(val maxSlices: Int = 16, val ear: Ear = Ear.NORMAL, val cut: Cut = Cut.ON) : ChopMode {
+        data class ByHits(val maxSlices: Int = 16, val ear: Ear = Ear.NORMAL, val cut: Cut = Cut.ON, val grid: GridSnap = GridSnap.OFF) : ChopMode {
             init {
                 require(maxSlices in 1..MAX_HITS) { "hits is 1..$MAX_HITS, got $maxSlices" }
             }
@@ -106,6 +125,20 @@ class ChopReviewModel private constructor(
             NORMAL -> Transients.Config(backoffFrames = cut.backoffFrames)
             FINE -> Transients.Config(thresholdFactor = 1.2f, thresholdFloorDb = 1.5f, minSliceMs = 15f, backoffFrames = cut.backoffFrames)
         }
+    }
+
+    /**
+     * ON THE GRID: the pulse every cut snaps to, as divisions of a beat
+     * of the source's own tempo. OFF leaves the cuts where the hits were.
+     * The grid is anchored on the first cut (captures rarely start on
+     * the one, and the tempo estimate has a period but no phase), and a
+     * cut never lands after the attack the detector found — a hit that
+     * pushed early keeps its cut and its click, a hit that dragged late
+     * gets a cut a hair early and a little air in front. Two hits on one
+     * line become one slice, the stronger hit's.
+     */
+    enum class GridSnap(val perBeat: Int, val label: String) {
+        OFF(0, "OFF"), EIGHTH(2, "8TH"), SIXTEENTH(4, "16TH"), THIRTY_SECOND(8, "32ND")
     }
 
     /**
@@ -160,6 +193,9 @@ class ChopReviewModel private constructor(
                 parts += "BY HITS"
                 if (mode.ear != Ear.NORMAL) parts += mode.ear.name
                 if (mode.cut != Cut.ON) parts += "CUT ${mode.cut.name}"
+                // `tempo` is already measured whenever the grid is on: [chop]
+                // forced it to snap, so reading it here is a lookup, not DSP.
+                if (mode.grid != GridSnap.OFF) parts += if (tempo != null) "ON THE ${mode.grid.label}" else "ON THE ${mode.grid.label} (NO TEMPO)"
             }
             is ChopMode.Grid -> parts += "GRID ×${mode.parts}"
         }
@@ -259,7 +295,7 @@ class ChopReviewModel private constructor(
 
     /** A model over [slices] with [overrides] laid back onto its rows, marked [edited]. */
     private fun rebuilt(slices: List<Slice>, overrides: List<DrumClass?>): ChopReviewModel {
-        val m = ChopReviewModel(source, mode, slices, tape, edited = true)
+        val m = ChopReviewModel(source, mode, slices, tape, edited = true, tempoLazy = tempoLazy, gridStep = gridStep)
         for ((i, o) in overrides.withIndex()) m.rows[i].override = o
         return m
     }
@@ -358,7 +394,7 @@ class ChopReviewModel private constructor(
     }
 
     /** RE-CHOP: fresh detection, fresh labels, overrides gone, hand edits gone; the tape reference rides along. */
-    fun rechop(newMode: ChopMode = mode): ChopReviewModel = chop(source, newMode, tape)
+    fun rechop(newMode: ChopMode = mode): ChopReviewModel = chop(source, newMode, tape, tempoLazy)
 
     /** The bench's own re-chop: [newMode], with this model's corrected chips carried across ([carryingOverrides]). */
     fun rechopKeeping(newMode: ChopMode): ChopReviewModel = carryingOverrides(rechop(newMode))
@@ -413,9 +449,94 @@ class ChopReviewModel private constructor(
         return SendResult(arranged, rows.size, choke)
     }
 
-    /** The source's tempo, when it confidently has one. */
-    val tempo: com.snipsnap.audio.TempoEstimate? by lazy {
-        com.snipsnap.audio.Tempo.estimate(source)?.takeIf { it.confidence >= 0.3f }
+    /** The source's tempo, when it confidently has one — measured once per source (see [tempoLazy]). */
+    val tempo: TempoEstimate? by tempoLazy
+
+    // ---------- FOLD DOUBLES ----------
+
+    /**
+     * One pad's worth of slices: [takes] in capture order, the first the
+     * pad's own sound and the rest cycling under it as a round-robin
+     * chain. A lone slice is a fold of one.
+     */
+    data class Fold(val takes: List<Row>) {
+        val lead: Row get() = takes.first()
+        val size: Int get() = takes.size
+    }
+
+    /**
+     * The rows folded: near-identical slices of one class as one fold —
+     * `Similar.distance` over the classifier's own features within
+     * [within] (level left out, so a ghost snare folds with the snare),
+     * single linkage, never across classes (a snare the user relabelled
+     * TOM is a TOM and folds with toms), never wider than a chain can
+     * cycle (`Robin.MAX_TAKES`; a bigger run becomes two folds). Folds
+     * in capture order of their first slice; takes in capture order.
+     */
+    fun folds(within: Float = FOLD_WITHIN): List<Fold> {
+        val n = rows.size
+        val parent = IntArray(n) { it }
+        fun find(i: Int): Int {
+            var x = i
+            while (parent[x] != x) x = parent[x].also { parent[x] = parent[parent[x]] }
+            return x
+        }
+        for (i in 0 until n) for (j in i + 1 until n) {
+            val a = rows[i]
+            val b = rows[j]
+            if (a.effectiveClass != b.effectiveClass) continue
+            if (Similar.distance(a.classification.features, b.classification.features) <= within) {
+                val ra = find(i)
+                val rb = find(j)
+                if (ra != rb) parent[maxOf(ra, rb)] = minOf(ra, rb)
+            }
+        }
+        val groups = LinkedHashMap<Int, MutableList<Row>>()
+        for (i in 0 until n) groups.getOrPut(find(i)) { mutableListOf() } += rows[i]
+        return groups.values.flatMap { takes -> takes.chunked(Robin.MAX_TAKES).map { Fold(it) } }
+    }
+
+    /**
+     * What each row says about its fold, by row: the lead of a fold of
+     * many says how many cycle under it, a take says which it is and
+     * whose; a fold of one says nothing.
+     */
+    fun foldTags(within: Float = FOLD_WITHIN): List<String?> {
+        val tags = arrayOfNulls<String>(rows.size)
+        for (fold in folds(within)) {
+            if (fold.size < 2) continue
+            for ((k, row) in fold.takes.withIndex()) {
+                tags[row.n - 1] = if (k == 0) "×${fold.size} TAKES" else "TAKE ${k + 1} OF ${fold.size} · = ${fold.lead.n}"
+            }
+        }
+        return tags.toList()
+    }
+
+    /** FOLD placement: one pad per fold, laid out by the lead's class, whole banks. */
+    fun foldedPreview(within: Float = FOLD_WITHIN): List<Fold?> {
+        val fs = folds(within)
+        return AutoPlace.arrange(fs, bankAlignedPadCount(fs.size)) { it.lead.effectiveClass }
+    }
+
+    /**
+     * SEND TO GRID, folded: each pad the fold's lead with the other takes
+     * cycling under it (`ArrangedPad.takes` → a chain pad), the lead's
+     * provenance plus how many folded. [SendResult.sliceCount] is the
+     * pad count here; the toast says both numbers.
+     */
+    fun sendToGridFolded(within: Float = FOLD_WITHIN): SendResult {
+        val placed = foldedPreview(within)
+        val arranged = placed.map { fold ->
+            fold?.let {
+                val lead = arrangedPad(it.lead)
+                lead.copy(
+                    takes = it.takes.drop(1).map { r -> r.slice.snip },
+                    source = lead.source + ("folded" to it.size.toString()),
+                )
+            }
+        }
+        val choke = placed.any { it != null && AutoPlace.muteGroupFor(it.lead.effectiveClass) != 0 }
+        return SendResult(arranged, placed.count { it != null }, choke)
     }
 
     /**
@@ -467,6 +588,69 @@ class ChopReviewModel private constructor(
         /** SPLIT ignores a hit closer than this to either end of the slice. */
         const val SPLIT_MARGIN_MS = 30f
 
+        /** FOLD's "the same sound": DOUBLES' own opening ring over the same distance. */
+        const val FOLD_WITHIN = Doubles.DEFAULT_WITHIN
+
+        /** A tempo under this confidence is numerology, not a pulse: no grid, no groove. */
+        const val TEMPO_CONFIDENCE = 0.3f
+
+        /** The one place the tempo is measured. */
+        private fun estimateTempo(source: Snip): TempoEstimate? =
+            Tempo.estimate(source)?.takeIf { it.confidence >= TEMPO_CONFIDENCE }
+
+        /** The fitted grid may differ from the tempo estimate's by this much either way; further is a bad fit and the seed stands. */
+        const val GRID_FIT_TOLERANCE = 0.1
+
+        /**
+         * [slices] with every cut on [grid], anchored on the first cut.
+         * The tempo estimate seeds the line spacing and decides which line
+         * each hit is nearest to; the spacing is then **fitted to the
+         * hits** (least squares of each cut's offset from the anchor
+         * against its line index, twice) — an estimate a percent off
+         * drifts past the later hits within a few bars, and the pulse of
+         * this take is the hits themselves. A fit further than
+         * [GRID_FIT_TOLERANCE] from the seed is not trusted and the seed
+         * stands. Each cut then moves to its line, but never later than
+         * the cut the detector made (which already sits a backoff before
+         * the attack), so no attack is shaved; two hits on one line keep
+         * the stronger, and the audio between joins that slice. Cut from
+         * [source] again so each slice's cleanup is its own. Returns the
+         * slices and the fitted spacing.
+         */
+        internal fun snapped(source: Snip, slices: List<Slice>, grid: GridSnap, bpm: Float): Pair<List<Slice>, Double> {
+            val seed = 60.0 / bpm / grid.perBeat * source.sampleRate
+            if (slices.size < 2 || grid == GridSnap.OFF) return slices to seed
+            val anchor = slices.first().sourceFrame
+            var step = seed
+            repeat(2) {
+                var num = 0.0
+                var den = 0.0
+                for (s in slices) {
+                    val k = Math.round((s.sourceFrame - anchor) / step).toDouble()
+                    num += k * (s.sourceFrame - anchor)
+                    den += k * k
+                }
+                if (den > 0.0) {
+                    val fitted = num / den
+                    if (kotlin.math.abs(fitted - seed) <= seed * GRID_FIT_TOLERANCE) step = fitted
+                }
+            }
+            val kept = LinkedHashMap<Long, Slice>()
+            for (s in slices) {
+                val k = Math.round((s.sourceFrame - anchor) / step)
+                val had = kept[k]
+                if (had == null || (s.onset?.strength ?: 0f) > (had.onset?.strength ?: 0f)) kept[k] = s
+            }
+            val cuts = kept.entries.sortedBy { it.key }.map { (k, s) ->
+                val line = anchor + Math.round(k * step).toInt()
+                minOf(line, s.sourceFrame) to s
+            }
+            return cuts.mapIndexed { i, (cut, s) ->
+                val end = if (i + 1 < cuts.size) cuts[i + 1].first else source.frameCount
+                Chopper.slice(source, cut, end, s.onset, Chopper.SLICE_CLEANUP)
+            }.filter { it.snip.frameCount > 0 } to step
+        }
+
         /** Below this a slice counts as unpitched for melodic placement. */
         const val MELODIC_PITCH_CONFIDENCE = 0.5f
 
@@ -492,14 +676,27 @@ class ChopReviewModel private constructor(
         }
 
         /** Slice [source] by [mode]; [tape] names where it came from so the slices can find their way back. */
-        fun chop(source: Snip, mode: ChopMode = ChopMode.ByHits(), tape: TapeRef? = null): ChopReviewModel {
-            val slices = when (mode) {
+        fun chop(source: Snip, mode: ChopMode = ChopMode.ByHits(), tape: TapeRef? = null): ChopReviewModel =
+            chop(source, mode, tape, lazy { estimateTempo(source) })
+
+        /** [chop] with a tempo already measured for this source (or not yet, but shared). */
+        private fun chop(source: Snip, mode: ChopMode, tape: TapeRef?, tempoLazy: Lazy<TempoEstimate?>): ChopReviewModel {
+            var slices = when (mode) {
                 is ChopMode.ByHits ->
                     Chopper.byTransients(source, maxSlices = mode.maxSlices, config = mode.config(), cleanup = Chopper.SLICE_CLEANUP)
                 is ChopMode.Grid ->
                     Chopper.intoEqualParts(source, mode.parts, cleanup = Chopper.SLICE_CLEANUP)
             }
-            return ChopReviewModel(source, mode, slices, tape)
+            var gridStep: Double? = null
+            if (mode is ChopMode.ByHits && mode.grid != GridSnap.OFF) {
+                // A tape with no pulse keeps its cuts where the hits were; the label says so.
+                tempoLazy.value?.let {
+                    val (snappedSlices, step) = snapped(source, slices, mode.grid, it.bpm)
+                    slices = snappedSlices
+                    gridStep = step
+                }
+            }
+            return ChopReviewModel(source, mode, slices, tape, tempoLazy = tempoLazy, gridStep = gridStep)
         }
     }
 }

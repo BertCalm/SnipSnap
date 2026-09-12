@@ -3,6 +3,7 @@ package com.snipsnap.shell
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.Snip
+import java.io.File
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -148,6 +149,112 @@ class ChopReviewTest {
         val taped = ChopReviewModel.chop(breakSnip(), byHits(8), ChopReviewModel.TapeRef("snip_1_X.wav", 100))
         assertEquals(taped.tape, assertNotNull(taped.merged(0)).tape)
         assertEquals(taped.tape, assertNotNull(assertNotNull(taped.merged(0)).split(0)).tape)
+    }
+
+    /**
+     * A break at 120 BPM (a hit every half second, 22050 frames), eight
+     * bars of it so the tempo is unmistakable, with [nudges] moving named
+     * hits off the pulse by that many frames (negative = early).
+     */
+    private fun pulsed(nudges: Map<Int, Int> = emptyMap(), extra: List<Int> = emptyList()): Snip {
+        val step = rate / 2
+        val total = FloatArray(step * 10)
+        val kit = listOf(DrumSynth.kick(), DrumSynth.closedHat(), DrumSynth.snare(), DrumSynth.closedHat())
+        fun put(at: Int, hit: Snip, gain: Float) { for (i in hit.samples.indices) if (at + i < total.size) total[at + i] += hit.samples[i] * gain }
+        for (s in 1..8) put(s * step + (nudges[s] ?: 0), kit[(s - 1) % 4], 0.8f)
+        for (at in extra) put(at, DrumSynth.snare(), 0.5f)
+        return Snip(total, 1, rate)
+    }
+
+    @Test
+    fun `ON THE GRID snaps late cuts to the pulse, never cuts after an attack, and folds two hits on one line`() {
+        val nudges = mapOf(2 to 441, 3 to -441, 5 to 882)
+        val off = ChopReviewModel.chop(pulsed(nudges), byHits(16))
+        val tempo = assertNotNull(off.tempo, "eight bars at 120 have a tempo")
+        assertTrue(Math.abs(tempo.bpm - 120f) < 3f, "heard ~120: ${tempo.bpm}")
+        val on = ChopReviewModel.chop(pulsed(nudges), byHits(16, cut = ChopReviewModel.Cut.ON).copy(grid = ChopReviewModel.GridSnap.SIXTEENTH))
+        assertEquals(off.sliceCount, on.sliceCount, "no hit lost to the grid")
+        assertEquals("BY HITS · ON THE 16TH", on.modeLabel())
+        // The grid's spacing is fitted to the hits, not read off the estimate: the true 16th here is 5512.5 frames.
+        val step = assertNotNull(on.gridStep)
+        assertTrue(Math.abs(step - rate / 8.0) < 40, "the grid fits the hits' own pulse: $step")
+        assertEquals(null, off.gridStep)
+        val anchor = on.cutFrames().first()
+        var moved = 0
+        for (i in on.rows.indices) {
+            val was = off.cutFrames()[i]
+            val now = on.cutFrames()[i]
+            assertTrue(now <= was, "a cut never lands after the one the detector made: slice ${i + 1} $now vs $was")
+            val phase = ((now - anchor) / step) % 1.0
+            val onLine = Math.min(phase, 1.0 - phase) < 0.02
+            assertTrue(onLine || now == was, "slice ${i + 1} is on the pulse or where the hit was: phase $phase")
+            if (now != was) moved++
+        }
+        assertTrue(moved >= 2, "the late hits moved onto the pulse: $moved")
+        // The early hit (3) keeps its own cut: the click is never shaved.
+        assertEquals(off.cutFrames()[2], on.cutFrames()[2])
+        // A flam — a second hit 60 ms after the sixth, its own hit to the ear (past the 30 ms gap) — on an 8th grid is one slice, the stronger's.
+        val flam = ChopReviewModel.chop(pulsed(extra = listOf(6 * (rate / 2) + 2646)), byHits(16))
+        assertEquals(9, flam.sliceCount, "the ear hears the flam as its own hit")
+        val flamOn = ChopReviewModel.chop(pulsed(extra = listOf(6 * (rate / 2) + 2646)), byHits(16).copy(grid = ChopReviewModel.GridSnap.EIGHTH))
+        assertEquals(8, flamOn.sliceCount, "the flam folds onto one line")
+        // The grid rides the bench like everything else: the tempo is measured once and shared.
+        val again = on.rechopKeeping(byHits(16).copy(grid = ChopReviewModel.GridSnap.OFF))
+        assertEquals(off.cutFrames(), again.cutFrames())
+        assertTrue(again.tempo === on.tempo, "one measurement per source")
+    }
+
+    /** Two kicks, two snares (one soft), a hat — five slices, three sounds. */
+    private fun repeats(): Snip {
+        val step = rate / 2
+        val total = FloatArray(step * 7)
+        fun put(at: Int, hit: Snip, gain: Float) { for (i in hit.samples.indices) if (at + i < total.size) total[at + i] += hit.samples[i] * gain }
+        put(1 * step, DrumSynth.kick(), 0.8f)
+        put(2 * step, DrumSynth.kick(), 0.7f)
+        put(3 * step, DrumSynth.snare(), 0.8f)
+        put(4 * step, DrumSynth.snare(), 0.5f)
+        put(5 * step, DrumSynth.closedHat(), 0.8f)
+        return Snip(total, 1, rate)
+    }
+
+    @Test
+    fun `FOLD groups the same sound, never across classes, and lands a chain pad`() {
+        val model = ChopReviewModel.chop(repeats(), byHits(8))
+        assertEquals(5, model.sliceCount)
+        val folds = model.folds()
+        assertEquals(listOf(2, 2, 1), folds.map { it.size }, "kicks, snares, the hat")
+        assertEquals(listOf(1, 3, 5), folds.map { it.lead.n }, "folds in capture order, led by their first slice")
+        assertEquals(listOf("×2 TAKES", "TAKE 2 OF 2 · = 1", "×2 TAKES", "TAKE 2 OF 2 · = 3", null), model.foldTags())
+        val placed = model.foldedPreview()
+        assertEquals(3, placed.count { it != null })
+        assertEquals(DrumClass.KICK, placed[0]?.lead?.effectiveClass)
+        assertEquals(DrumClass.SNARE, placed[1]?.lead?.effectiveClass)
+        // A relabelled chip is a different sound: the second kick as a TOM folds with nothing.
+        model.setLabel(1, DrumClass.TOM)
+        assertEquals(4, model.folds().size, "never across classes")
+        model.clearOverride(1)
+        // Landing: one chain pad per fold of many, the lead first, the takes cycling under it.
+        val send = model.sendToGridFolded()
+        assertEquals(3, send.sliceCount, "pads, not slices")
+        val kickPad = assertNotNull(send.arranged[0])
+        assertEquals(1, kickPad.takes.size)
+        assertEquals("2", kickPad.source["folded"])
+        assertEquals(model.rows[0].slice.sourceFrame.toString(), kickPad.source["sourceFrame"], "the lead's provenance")
+        val dir = java.nio.file.Files.createTempDirectory("fold").toFile()
+        try {
+            val kit = KitBuilderModel.fromChop("Folded", send.arranged, dir).kit
+            val kick = assertNotNull(kit.pad(1))
+            val chain = assertNotNull(kick.chain, "a folded pad is a chain")
+            assertEquals(2, chain.sliceCount)
+            assertEquals(listOf(0L, model.rows[0].slice.snip.frameCount.toLong()), chain.boundaries)
+            assertEquals(2, chain.cycle)
+            val wav = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile))
+            assertEquals(model.rows[0].slice.snip.frameCount + model.rows[1].slice.snip.frameCount, wav.frameCount, "both takes end to end")
+            assertEquals(null, assertNotNull(kit.pad(3)).chain, "a fold of one is a plain pad")
+        } finally {
+            dir.deleteRecursively()
+        }
+        assertEquals("5 SLICES FOLDED ONTO 3 PADS. CHOKE GROUP SET.", Copy.foldedToGrid(5, 3, true))
     }
 
     @Test
