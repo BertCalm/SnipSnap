@@ -55,6 +55,8 @@ class ReversalTest {
         // let a genuinely irreversible line satisfy this law with the noun that
         // flagged it, and awaitingWords was quietly masking it.
         "THE BIN KEEPS", "IN THE BIN", "TO THE BIN", "FROM THE BIN",
+        // Accept the same direction words without "THE" too.
+        "IN BIN", "TO BIN", "FROM BIN",
         "UNDO", "BACK", "DAYS", "RESTORE", "KEPT", "KEEPS", "SLEEPS",
         "RECOVER", "AGAIN", "STILL THERE", "CANNOT BE UNDONE", "FOR GOOD",
         "UNTOUCHED", "STAYS", "WAITS",
