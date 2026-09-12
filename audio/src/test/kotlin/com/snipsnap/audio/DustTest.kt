@@ -2,6 +2,7 @@ package com.snipsnap.audio
 
 import kotlin.math.abs
 import kotlin.math.exp
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.test.Test
@@ -27,7 +28,7 @@ class DustTest {
      * noise decaying with time constant [roomTau] — over a steady floor at
      * [floorDb]. Zero [roomTau] means a gated tape: silence between the hits.
      */
-    private fun tape(seconds: Float = 6f, roomTau: Float = 0.12f, floorDb: Float = -50f, hits: Int = 10): Snip {
+    private fun tape(seconds: Float = 6f, roomTau: Float = 0.12f, floorDb: Float = -50f, hits: Int = 10, clicks: Int = 0): Snip {
         val n = (seconds * rate).toInt()
         val out = FloatArray(n)
         val floor = 10.0.pow(floorDb / 20.0).toFloat()
@@ -48,7 +49,94 @@ class DustTest {
                 }
             }
         }
+        // Clicks: one-sample spikes 300 ms after a hit, well into the floor, one per hit until [clicks].
+        for (c in 0 until clicks) {
+            val at = (0.4f * rate).toInt() + c * (rate / 2) + (0.3f * rate).toInt()
+            if (at < n) out[at] = 0.6f
+        }
         return Snip(out, 1, rate)
+    }
+
+    /** Where the crackle lands in [out] past [from]: runs of samples over [over], counted once each. */
+    private fun crackles(out: FloatArray, from: Int, over: Float): Int {
+        var count = 0
+        var inside = false
+        for (i in from until out.size) {
+            val hot = abs(out[i]) > over
+            if (hot && !inside) count++
+            inside = hot || (inside && i % 8 != 0 && abs(out[i]) > over / 4)
+        }
+        return count
+    }
+
+    /** A print with no hiss and a bare impulse for a room, so what [Dust.apply] adds is only what the test puts there. */
+    private fun bare(crackle: Snip = Snip(FloatArray(0), 1, rate)): Dust.Print =
+        Dust.Print(hiss = Snip(FloatArray(rate / 4), 1, rate), room = Snip(floatArrayOf(1f), 1, rate), crackle = crackle)
+
+    /** A hit: one spike at [peak], then [seconds] of nothing — so every sample after 20 ms is the dust's. */
+    private fun spike(peak: Float, seconds: Float): Snip = Snip(FloatArray((seconds * rate).toInt()).also { it[0] = peak }, 1, rate)
+
+    @Test
+    fun `a tape's clicks become crackle grains at unit peak, and a clean tape has none`() {
+        val p = assertNotNull(Dust.print(tape(clicks = 6)))
+        assertEquals(6, p.grains, "one grain per planted click")
+        assertEquals(Dust.grainFrames(rate), p.grainFrames)
+        for (i in 0 until p.grains) {
+            val g = p.grain(i)
+            assertEquals(1f, g.samples.maxOf { abs(it) }, 1e-5f, "grain $i at unit peak")
+            assertEquals(0f, g.samples.first(), 1e-6f, "windowed: nothing at the edges")
+        }
+        assertEquals(0, assertNotNull(Dust.print(tape())).grains, "a clean tape has no crackle")
+        val again = assertNotNull(Dust.print(tape(clicks = 6)))
+        assertTrue(again.crackle.samples.contentEquals(p.crackle.samples), "the same tape, the same crackle")
+        // The cached shape survives a level change and a rate change.
+        val scaled = Dust.Print(p.hiss, p.room, Snip(FloatArray(p.crackle.samples.size) { p.crackle.samples[it] * 0.3f }, 1, rate)).levelled()
+        assertEquals(1f, scaled.grain(2).samples.maxOf { abs(it) }, 1e-5f)
+        val other = p.at(48_000)
+        assertEquals(6, other.grains)
+        assertEquals(Dust.grainFrames(48_000), other.grainFrames)
+        assertEquals(1f, other.grain(0).samples.maxOf { abs(it) }, 1e-5f)
+    }
+
+    @Test
+    fun `crackle sprinkles by amount, is the same sprinkle twice, and a print without it adds none`() {
+        val crackle = assertNotNull(Dust.print(tape(clicks = 6))).crackle
+        val hit = spike(0.8f, 2f)
+        val after = (0.02f * rate).toInt()
+        val full = Dust.apply(hit, bare(crackle), 1f)
+        // ~24 expected across two seconds at full (Curves.cracklePerSec), a few merged where two land close.
+        val atFull = crackles(full.samples, after, 0.02f)
+        assertTrue(atFull in 16..26, "crackles at full: $atFull")
+        val light = crackles(Dust.apply(hit, bare(crackle), 0.3f).samples, after, 0.02f)
+        assertTrue(light < atFull && light <= 6, "the square of the amount thins them: $light at 0.3 vs $atFull at 1")
+        assertTrue(Dust.apply(hit, bare(crackle), 1f).samples.contentEquals(full.samples), "the same hit, the same sprinkle")
+        assertEquals(0, crackles(Dust.apply(hit, bare(), 1f).samples, after, 0.02f), "no crackle in the print, none under the hit")
+        // The crackle sits CRACKLE_DB under the hit's peak (plus the quiet lift), never over it.
+        val loudest = full.samples.drop(after).maxOf { abs(it) }
+        assertTrue(loudest <= 0.8f * 10f.pow((Dust.CRACKLE_DB + Dust.HISS_QUIET_LIFT_DB * 0.2f) / 20f) * 1.01f, "crackle level: $loudest")
+    }
+
+    @Test
+    fun `each ingredient rides its own curve of the one amount`() {
+        assertEquals(Dust.HISS_DB_AT_FULL, Dust.Curves.hissDb(1f))
+        assertEquals(Dust.HISS_DB_AT_FULL - Dust.HISS_RANGE_DB / 2, Dust.Curves.hissDb(0.5f))
+        assertEquals(Dust.HISS_DB_AT_FULL - Dust.HISS_RANGE_DB, Dust.Curves.hissDb(0f))
+        assertEquals(Dust.ROOM_GAIN / 2, Dust.Curves.roomGain(0.5f))
+        assertEquals(Dust.CRACKLE_PER_SEC_AT_FULL / 4, Dust.Curves.cracklePerSec(0.5f))
+        var last = Float.NEGATIVE_INFINITY
+        for (step in 0..20) {
+            val a = step / 20f
+            assertTrue(Dust.Curves.hissDb(a) > last && Dust.Curves.roomGain(a) >= 0f && Dust.Curves.cracklePerSec(a) >= 0f)
+            last = Dust.Curves.hissDb(a)
+        }
+        // Heard: the hiss bed under a hit at half amount measures hissDb(0.5), lifted for the hit's own quietness.
+        val hiss = Snip(noise(rate / 4, 3L), 1, rate)
+        val print = Dust.Print(hiss, Snip(floatArrayOf(1f), 1, rate)).levelled()
+        val hit = spike(0.8f, 1f)
+        val out = Dust.apply(hit, print, 0.5f)
+        val bed = rms(out.samples, (0.2f * rate).toInt(), (0.9f * rate).toInt())
+        val expected = 0.8f * 10f.pow((Dust.Curves.hissDb(0.5f) + Dust.HISS_QUIET_LIFT_DB * 0.2f) / 20f)
+        assertEquals(expected, bed, expected * 0.1f, "the bed at half amount")
     }
 
     private fun Double.pow(e: Double) = Math.pow(this, e)

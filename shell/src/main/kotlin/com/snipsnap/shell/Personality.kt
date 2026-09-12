@@ -377,7 +377,7 @@ object Copy {
         "· TAP BANK B: A SECOND PAGE. HOLD A PAD, OR SEND A CHOP ONTO IT.",
         "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO AN EMPTY BANK B.",
         "· BREED ▸ MIXES TWO KITS' RECIPES INTO A NEW KIT. PARENTS STAY.",
-        "· DUST: THE TAPE'S OWN HISS AND ROOM UNDER A PAD. FROM ITS OWN TAPE.",
+        "· DUST: THE TAPE'S OWN HISS, ROOM AND CRACKLE UNDER A PAD. OR ANOTHER'S.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -699,6 +699,17 @@ object Copy {
     const val DUST_ZERO = "AMT 0: NOTHING TO DUST. THE PAD STAYS AS IT IS."
     /** The tape a dust recipe names is no longer on the shelf — DO IT AGAIN, or DUST on a pad whose tape went. */
     fun dustTapeGone(tape: String): String = "THE TAPE '$tape' IS GONE FROM THE SHELF. NO DUST TO TAKE."
+    /** DUST FROM ▸ with nothing on the SNIPS shelf to pick: no tape anywhere to borrow dust off. */
+    const val DUST_FROM_EMPTY = "NO TAPES ON THE SHELF TO TAKE DUST FROM. RECORD OR IMPORT ONE FIRST."
+    /** DUST FROM ▸'s bench heading, over the shelf's tapes: pick one and its dust goes under this pad. */
+    const val DUST_FROM_PICK = "DUST FROM: PICK A TAPE. ITS DUST GOES UNDER THIS PAD AT AMT."
+    /**
+     * DUST FROM ▸'s landing: the treatment's own line ([treated] /
+     * [treatedStacked]) with the borrowed tape named in the segment's
+     * place, so "DUST FROM 'KITCHEN' ON A02. ORIGINAL SLEEPS IN THE BIN."
+     * says where the dust came from without a second toast.
+     */
+    fun dustFromLabel(tape: String): String = "DUST FROM '$tape'"
     /**
      * DUST ALL's landing: how many pads took the dust, and how many were
      * left as they were (layered or chained pads, which every audio

@@ -612,8 +612,14 @@ fun PadSheetScreen(
      * read off the shelf's cache, on IO before the kit is opened, so the
      * write under the lock is only the convolution.
      */
-    fun applyDust(m: KitBuilderModel, p: KitPad, amount: Float, padName: String) {
-        val tape = DustPrints.tapeFor(m.kit, p)
+    fun applyDust(m: KitBuilderModel, p: KitPad, amount: Float, padName: String, from: String? = null) {
+        // Which tape: the one asked for (DUST FROM ▸); else the one the pad
+        // already dusts from, so moving AMT on a borrowed dust keeps the
+        // borrowed tape — and when that tape has left the shelf, says so
+        // by name below rather than quietly dusting from another; else
+        // the pad's own or the kit's.
+        val riding = PadSheet.readDust(p.recipe)?.tape?.takeIf { DustPrints.isBare(it) }
+        val tape = from ?: riding ?: DustPrints.tapeFor(m.kit, p)
         if (tape == null) {
             onToast(Copy.DUST_NO_TAPE)
             return
@@ -637,7 +643,13 @@ fun PadSheetScreen(
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
-                    if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
+                    // The tape was read off the pad before the lock; a DUST
+                    // rewrite keeps the sample file's name and changes only
+                    // the recipe, so the sample-file guard alone would let a
+                    // print made for one tape land under a recipe that now
+                    // names another. The pad has to still ride the same tape.
+                    val ridingNow = freshPad?.let { PadSheet.readDust(it.recipe)?.tape?.takeIf { t -> DustPrints.isBare(t) } }
+                    if (freshPad != null && freshPad.sampleFile == staleSampleFile && (from != null || ridingNow == riding)) {
                         check(freshPad.velocityLayers.isEmpty()) {
                             "pad $slot is velocity-layered - clear GHOSTS before dusting"
                         }
@@ -658,7 +670,7 @@ fun PadSheetScreen(
                 pendingMetadataSlots = emptySet()
                 onKitUpdated(fresh.kit)
                 if (applied) {
-                    val label = PadSheet.displayLabel(PadSheet.DUST)
+                    val label = if (from != null) Copy.dustFromLabel(SnipStore.displayName(tapeFile)) else PadSheet.displayLabel(PadSheet.DUST)
                     onToast(if (stacked) Copy.treatedStacked(label, padName) else Copy.treated(label, padName))
                 } else if (noop) {
                     onToast(Copy.DUST_ZERO)
@@ -1692,6 +1704,32 @@ fun PadSheetScreen(
     val openBoxKind = openBox?.let { PadSheetBoxes.boxFor(it) }
     fun tapBox(box: PadSheetBoxes.Box) = onOpenBox(PadSheetBoxes.toggle(openBoxKind, box)?.name)
 
+    // DUST FROM ▸ (docs/DUST.md §5): borrow another tape's dust. The shelf's
+    // tapes open inline on the TREATMENT bench, newest first; a pick runs
+    // the DUST door at the card's AMT with that tape, and since the recipe
+    // carries the tape, AMT moves after that keep the borrowed dust.
+    var dustFromOpen by remember(slot) { mutableStateOf(false) }
+    var dustFromTapes by remember { mutableStateOf<List<File>>(emptyList()) }
+    fun openDustFrom() {
+        if (busy) return
+        scope.launch {
+            val tapes = withContext(Dispatchers.IO) { SnipStore.list(context.filesDir) }
+            if (tapes.isEmpty()) {
+                onToast(Copy.DUST_FROM_EMPTY)
+                return@launch
+            }
+            dustFromTapes = tapes
+            dustFromOpen = true
+        }
+    }
+    fun applyDustFrom(tape: String) {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        applyingSegment = PadSheet.DUST
+        applyDust(m, p, pendingAmt, p.displayName, from = tape)
+    }
+
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PadSheetHeader(
             slot = slot,
@@ -1835,6 +1873,21 @@ fun PadSheetScreen(
                         applyingSegment = seg
                         applyTreatment(seg, pendingAmt)
                     }
+                },
+            )
+            // The tape this pad's dust comes from — or would come from — and
+            // the door to borrow another's.
+            DustFromRow(
+                tape = PadSheet.readDust(pad.recipe)?.tape ?: model?.kit?.let { DustPrints.tapeFor(it, pad) },
+                open = dustFromOpen,
+                tapes = dustFromTapes,
+                scheme = scheme,
+                busy = busy,
+                onOpen = ::openDustFrom,
+                onClose = { dustFromOpen = false },
+                onPick = { file ->
+                    dustFromOpen = false
+                    applyDustFrom(file.name)
                 },
             )
             // DO IT AGAIN: the recipe as a thing you can carry to another
@@ -2634,6 +2687,62 @@ private fun TreatmentCard(
             onFractionChange = onAmountChange,
             onFractionCommit = onAmountCommit,
         )
+    }
+}
+
+/** DUST FROM ▸ shows this many of the shelf's tapes, newest first; the bench is a column, not a browser. */
+private const val DUST_FROM_SHOWN = 24
+
+/**
+ * DUST FROM ▸: the tape this pad's dust comes from, or would come from
+ * ([tape], lit in the list so the label and the list agree), and the
+ * shelf's tapes inline when [open] — the bench's own convention over a
+ * dialog, since a pick is one tap and the column already scrolls.
+ */
+@Composable
+private fun DustFromRow(
+    tape: String?,
+    open: Boolean,
+    tapes: List<File>,
+    scheme: Scheme,
+    busy: Boolean,
+    onOpen: () -> Unit,
+    onClose: () -> Unit,
+    onPick: (File) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            ActionButton(
+                if (open) "DUST FROM ▾" else "DUST FROM ▸",
+                scheme,
+                enabled = !busy,
+                modifier = Modifier.weight(1f),
+                onClick = { if (open) onClose() else onOpen() },
+            )
+            TapeText(
+                tape?.let { "FROM ${SnipStore.displayName(File(it))}" } ?: "NO TAPE YET",
+                TapeType.pixelSmall,
+                scheme.ink3.tape,
+                Modifier.weight(1f),
+                maxLines = 1,
+            )
+        }
+        if (open) {
+            TapeText(Copy.DUST_FROM_PICK, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            for (file in tapes.take(DUST_FROM_SHOWN)) {
+                ActionButton(
+                    SnipStore.displayName(file),
+                    scheme,
+                    enabled = !busy,
+                    lit = file.name == tape,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onPick(file) },
+                )
+            }
+            if (tapes.size > DUST_FROM_SHOWN) {
+                TapeText("NEWEST $DUST_FROM_SHOWN OF ${tapes.size}.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            }
+        }
     }
 }
 
