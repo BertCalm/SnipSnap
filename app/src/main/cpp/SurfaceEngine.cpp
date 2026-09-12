@@ -257,15 +257,24 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
 oboe::DataCallbackResult SurfaceEngine::onAudioReady(oboe::AudioStream*, void* audioData, int32_t numFrames) {
     adoptPendingSample();
 
-    // Drain the ring to the newest frame: a control stream is a position,
-    // not a history, and the smoothers glide toward wherever it is now.
+    // Drain the ring, applying every frame in the order it arrived: the
+    // continuous macros (pitch/cutoff/...) are a position, not a history,
+    // so applying several before rendering a sample is harmless - only the
+    // last setTarget before renderMono's next() calls sticks. But the
+    // gate's *edge* is an event, and a lift-then-retouch that lands in the
+    // same drain (the ring holds up to 64 frames, and the UI can push
+    // faster than one audio callback drains) is a real sequence, not a
+    // single level: jumping straight to the newest frame would apply
+    // gate=true against a gated_ that was never told about the
+    // intervening false, and applyControl's touch-down check would miss
+    // the retrigger entirely.
     ControlFrame frame;
     bool any = false;
-    while (controls_.pop(frame)) any = true;
-    if (any) {
-        latest_ = frame;
-        applyControl(latest_);
+    while (controls_.pop(frame)) {
+        any = true;
+        applyControl(frame);
     }
+    if (any) latest_ = frame;
 
     auto* out = static_cast<float*>(audioData);
     int32_t done = 0;
