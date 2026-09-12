@@ -41,6 +41,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -53,6 +54,7 @@ import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
+import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
@@ -370,7 +372,10 @@ fun SynthScreen(
                         },
                     contentAlignment = Alignment.CenterStart,
                 ) {
-                    TapeText("${engine.name} ▸", TapeType.lcdHeader, scheme.lcdInk.tape)
+                    // Batch 3, Task 4: no ▸ — the tap cycles to the next
+                    // engine in place, same as the cyclers below; it doesn't
+                    // navigate or open a panel.
+                    TapeText(engine.name, TapeType.lcdHeader, scheme.lcdInk.tape)
                 }
                 TapeText(chipLabel(engine, voice), TapeType.lcdSmall, scheme.amber.tape)
             }
@@ -615,6 +620,22 @@ private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
 // ---------- voice picker ----------
 
+/**
+ * Batch 3, Task 5: bright border + sub-label, not a solid fill — SETUP's
+ * own selected-state treatment (`PropertiesScreen.kt`'s `SchemeRow`,
+ * [pressedBevel] vs [raisedBevel]), applied here so this picker agrees with
+ * every other one in the app. [pressedBevel]'s own KDoc already makes the
+ * colourblindness case for a border over a fill (a thicker, distinctly-hued
+ * ring reads even to someone who can't use the hue at all); this call site
+ * is citing that, not re-deriving it. The move matters more here than on
+ * CHOP: this screen's solid fill already carries THREE meanings at once —
+ * selected voice (this fill), a macro slider's value ([MacroSlider]'s own
+ * fill), and AUDITION's primary-action fill — and the same fill standing
+ * for "selected engine" too is exactly why it couldn't also mean that.
+ * [Schemes.classColor] moves onto the label text instead of the
+ * background, so the kick/snare/hat colour coding survives the swap rather
+ * than disappearing with the fill.
+ */
 @Composable
 private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSelect: (Enum<*>) -> Unit) {
     val voices = engine.voices()
@@ -633,21 +654,27 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
                 for (v in row) {
                     val selected = v == current
                     val color = Schemes.classColor(engine.drumClass(v)).tape
-                    Box(
+                    Column(
                         Modifier
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .raisedBevel(scheme, fill = if (selected) color.copy(alpha = 0.85f) else null)
+                            .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                            .semantics { this.selected = selected }
                             .tapeClick(label = null) { onSelect(v) }
-                            .padding(horizontal = 2.dp),
-                        contentAlignment = Alignment.Center,
+                            .padding(horizontal = 2.dp, vertical = 3.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         TapeText(
                             chipLabel(engine, v),
                             TapeType.pixelSmall,
-                            if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                            color,
                             maxLines = 1,
                         )
+                        // Reserved on every chip, not just the selected one
+                        // (blank when not selected) — so one selection
+                        // doesn't grow only its own cell and leave the row
+                        // jagged against its neighbours.
+                        TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
                     }
                 }
             }
@@ -782,7 +809,11 @@ private fun LabButton(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme)
-            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
+            // Always clickable, `enabled` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 — see ActionButton in PadSheetScreen.kt).
+            .tapeClick(label = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -822,7 +853,11 @@ internal fun SlotChooserOverlay(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                        .let { if (!busy) it.tapeClick(label = null, onClick = onCancel) else it }
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12) — the
+                        // "…" label swap below is this control's visual
+                        // distinction, so no separate colour dim is needed.
+                        .tapeClick(label = null, enabled = !busy, onClick = onCancel)
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -874,16 +909,24 @@ private fun SlotCell(
     val tag = padTag(slot)
 
     if (pad == null) {
+        // Disabled dims the same amount branch two's locked cells do
+        // (0.35×) — one "can't drop here right now" look shared by empty
+        // and occupied slots, rather than a third treatment invented here.
+        val fade = if (enabled) 1f else 0.35f
         Box(
             modifier
                 .height(Layout.PAD_H.dp)
                 .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-                .border(2.dp, previewColor.copy(alpha = 0.55f), shape)
-                .let { if (enabled) it.tapeClick(label = null, onClick = onTap) else it }
+                .border(2.dp, previewColor.copy(alpha = 0.55f * fade), shape)
+                // Always clickable, `enabled` forwarded rather than dropped:
+                // a screen reader is told this cell is temporarily
+                // unavailable instead of it silently vanishing from the
+                // tree (accessibility audit finding 12).
+                .tapeClick(label = null, enabled = enabled, onClick = onTap)
                 .padding(5.dp),
             contentAlignment = Alignment.TopEnd,
         ) {
-            TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f))
+            TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f * fade))
         }
         return
     }
@@ -891,13 +934,19 @@ private fun SlotCell(
     val locked = pad.velocityLayers.isNotEmpty() || pad.chain != null
     val tappable = enabled && !locked
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(pad.drumClass)
-    val fade = if (locked) 0.35f else 1f
+    // Locked (chained/layered, refused by replaceAudio) and explicitly
+    // disabled (SlotChooserOverlay's `busy`) read as the same "can't tap
+    // this" state — one fade, not a distinct look per reason.
+    val fade = if (tappable) 1f else 0.35f
     Box(
         modifier
             .height(Layout.PAD_H.dp)
             .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
             .border(2.dp, cls.tape.copy(alpha = fade), shape)
-            .let { if (tappable) it.tapeClick(label = null, onClick = onTap) else it }
+            // Always clickable, `tappable` forwarded rather than dropped so
+            // a locked or disabled cell still announces itself instead of
+            // vanishing from the accessibility tree (finding 12).
+            .tapeClick(label = null, enabled = tappable, onClick = onTap)
             .padding(5.dp),
     ) {
         TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f * fade), Modifier.align(Alignment.TopEnd))

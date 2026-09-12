@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,6 +52,7 @@ import com.snipsnap.app.ui.DeletedKitsScreen
 import com.snipsnap.app.ui.DoublesScreen
 import com.snipsnap.app.ui.ExportScreen
 import com.snipsnap.app.ui.ExportSession
+import com.snipsnap.app.ui.GROOVE_SWING_DEFAULT
 import com.snipsnap.app.ui.GrainFieldScreen
 import com.snipsnap.app.ui.GrooveScreen
 import com.snipsnap.app.ui.HelpScreen
@@ -88,10 +90,13 @@ import com.snipsnap.audio.Dust
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.GrooveFeel
+import com.snipsnap.kit.Kit
+import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.loop.SessionStore
+import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DustPrints
@@ -320,6 +325,42 @@ fun App(shelf: KitShelf) {
     var arrangeSwing by remember { mutableStateOf<Int?>(null) }
     var arrangeFeel by remember { mutableFloatStateOf(0f) }
     var arrangeFeelTemplate by remember { mutableStateOf<GrooveFeel.Template?>(null) }
+    // Bug fix (tab-switch data loss): GROOVE's FEEL, SWING and selected
+    // program used to be `remember(kitDir)` locals INSIDE GrooveScreen, so
+    // this screen's bare `when (screen)` below — no `SaveableStateHolder`,
+    // no `rememberSaveable` — tore the whole composable down on every tab
+    // switch and silently reset all three. Hoisted here instead, same
+    // value+setter shape as `exportSession`/`onSessionChange` below, keyed
+    // on `open?.dir` so App (which never leaves composition) is what
+    // actually survives the tab switch. Keying on the dir — not a bare
+    // `remember { }` — is the other half of the fix: these are
+    // per-kit-SESSION settings, not per-kit-persisted ones, so opening a
+    // DIFFERENT kit must still reset them; a forgotten FEEL must never
+    // quietly alter a different kit's export. GrooveScreen's own defaults
+    // (`GROOVE_SWING_DEFAULT`, 0, 0) are mirrored here rather than left
+    // nullable, matching what a from-scratch GROOVE screen already showed
+    // before this fix.
+    var grooveFeel by remember(open?.dir) { mutableIntStateOf(0) }
+    var grooveSwingPercent by remember(open?.dir) { mutableIntStateOf(GROOVE_SWING_DEFAULT) }
+    var grooveProgIndex by remember(open?.dir) { mutableIntStateOf(0) }
+    // Follow-up to the three above: `seed` is one setting split across two
+    // variables with `grooveFeel`, not a separate one — GrooveScreen's own
+    // FeelRow label reads `FEEL · LOOSE 40% · #$seed`, and its feelTemplate
+    // is derived from `seed` alone. Leaving `seed` behind meant a tab switch
+    // could restore the FEEL percentage while silently rerolling the
+    // template underneath it — the readout would show a stale `#n` for a
+    // groove that no longer matched what was on screen. `grooveJustLanded`/
+    // `groovePreTake` are the post-take EDIT THIS TAKE / UNDO TAKE row and
+    // its restore snapshot — the SAME data-loss bug `9a0a9772` fixed for the
+    // FEEL stepper, reached through a second door: recording a take,
+    // switching tabs, and coming back used to lose the row (and the only
+    // way back to the pre-take state) exactly as FEEL used to reset. All
+    // three keyed identically to the block above — a KIT CHANGE must still
+    // reset them, so a `preTake` snapshot captured under one kit can never
+    // be restored onto a different kit that's since been opened.
+    var grooveSeed by remember(open?.dir) { mutableIntStateOf(1) }
+    var grooveJustLanded by remember(open?.dir) { mutableStateOf(false) }
+    var groovePreTake by remember(open?.dir) { mutableStateOf<Mpc3Clip?>(null) }
     /** ORBIT: GROOVE's other overlay, the circular sequencer — same lifecycle as [arrangeOpen]. */
     var orbitOpen by remember { mutableStateOf(false) }
     // SNIPS (Task 3): a shelf-level overlay, not KIT-scoped like PAD SHEET/
@@ -691,6 +732,27 @@ fun App(shelf: KitShelf) {
     // GROOVE's reload request: bumped when TAPE rewrites the open kit's
     // groove (READ AS GROOVE, STEAL THE FEEL) so a GROOVE already up reloads.
     var grooveReload by remember { mutableStateOf(0) }
+    // Follow-up, a door the hoist above opened: `grooveJustLanded`/
+    // `groovePreTake` surviving a tab switch means they can now ALSO survive
+    // a trip through TAPE and back — READ AS GROOVE / STEAL THE FEEL below
+    // rewrite the open kit's groove.json out from under GROOVE and bump
+    // `grooveReload` for exactly that reason, but neither ever touches
+    // `justLanded`. Before this hoist that never mattered: leaving GROOVE
+    // for TAPE tore the whole composable (and `justLanded` with it) down
+    // regardless. Now it doesn't, so without this: land a take, hop to TAPE,
+    // steal a different feel into the SAME kit, hop back — GROOVE would show
+    // a stale UNDO TAKE row over a base that isn't this take's own pre-state
+    // at all. Tapping it would clobber TAPE's rewrite with an unrelated
+    // snapshot and toast [Copy.TAKE_UNDONE], a claim about what happened
+    // that wouldn't be true. `grooveReload` only ever increments from those
+    // two TAPE actions — never from GROOVE's own writes, which deliberately
+    // avoid bumping it (see `GrooveScreen.stopRecording`'s own KDoc) — so
+    // keying on it alone here, not `open?.dir` too, is deliberate: a KIT
+    // CHANGE is already covered by the `remember(open?.dir)` block above.
+    // `groovePreTake` is left alone, same as `clearJustLanded` itself never
+    // nulls `preTake` — `justLanded` alone gates whether the row (and the
+    // snapshot it would restore) is ever reachable.
+    LaunchedEffect(grooveReload) { grooveJustLanded = false }
     LaunchedEffect(shared) {
         val uri = shared ?: return@LaunchedEffect
         // The status line is borrowed only when nothing else holds it: a
@@ -944,51 +1006,88 @@ fun App(shelf: KitShelf) {
     fun dustAll() {
         val source = open ?: return
         if (busy != null) return
-        if (DustPrints.kitTape(source.kit) == null) {
+        val kitTape = DustPrints.kitTape(source.kit)
+        if (kitTape == null) {
             toast = Copy.DUST_NO_TAPE
             return
         }
         val snipsDir = File(context.filesDir, SnipStore.DIR)
+        if (!File(snipsDir, kitTape).isFile) {
+            toast = Copy.dustTapeGone(kitTape)
+            return
+        }
         busy = Copy.DUSTING_BUSY
         scope.launch {
+            // What landed before a failure, if one comes: saved and shown,
+            // never left as audio in the bin with no recipe in kit.json.
+            var partial: KitShelf.Entry? = null
             val result = try {
                 withContext(Dispatchers.IO) {
+                    // Which tape each pad dusts from: its own when that tape is
+                    // still on the shelf, else the kit's. Every print is made
+                    // (or read off the cache) here, before the lock — the one
+                    // expensive step, and a null answer is remembered too, so
+                    // a gated tape is asked once, not once per pad.
+                    fun tapeOf(kit: Kit, pad: KitPad): String =
+                        DustPrints.tapeFor(kit, pad)?.takeIf { File(snipsDir, it).isFile } ?: kitTape
+                    val prints = HashMap<String, Dust.Print?>()
+                    for (tape in source.kit.pads.map { tapeOf(source.kit, it) }.toSet()) {
+                        prints[tape] = DustPrints.forTape(File(snipsDir, tape))
+                    }
                     KitWrites.mutex.withLock {
                         val m = KitBuilderModel.open(source.dir)
-                        val prints = HashMap<String, Dust.Print?>()
                         var dusted = 0
                         var left = 0
-                        for (pad in m.kit.pads.toList()) {
-                            val tape = DustPrints.tapeFor(m.kit, pad) ?: continue
-                            val print = prints.getOrPut(tape) { DustPrints.forTape(File(snipsDir, tape)) } ?: continue
-                            try {
+                        var noDust = 0
+                        try {
+                            for (pad in m.kit.pads.toList()) {
+                                // Layers and chains are what every audio rewrite
+                                // refuses: counted, not attempted. Anything else
+                                // that fails is a real failure and says so.
+                                if (pad.velocityLayers.isNotEmpty() || pad.chain != null) {
+                                    left++
+                                    continue
+                                }
+                                // The tape is read off the kit as it is now, not
+                                // the one shown when DUST ALL was tapped: a pad
+                                // re-trimmed in between dusts from its new tape.
+                                // A tape the plan above never saw is printed
+                                // here, under the lock — the rare case.
+                                val tape = tapeOf(m.kit, pad)
+                                val print = prints.getOrPut(tape) { DustPrints.forTape(File(snipsDir, tape)) }
+                                if (print == null) {
+                                    noDust++
+                                    continue
+                                }
                                 m.dustPad(pad.slot, PadSheet.DUST_ALL_AMOUNT, tape, print)
                                 dusted++
-                            } catch (e: IllegalArgumentException) {
-                                left++
-                            } catch (e: IllegalStateException) {
-                                left++
+                            }
+                        } finally {
+                            if (dusted > 0) {
+                                m.save()
+                                partial = KitShelf.Entry(source.dir, m.kit)
                             }
                         }
-                        if (dusted > 0) m.save()
-                        Triple(KitShelf.Entry(source.dir, m.kit), dusted, left)
+                        Triple(KitShelf.Entry(source.dir, m.kit), dusted, left to noDust)
                     }
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 busy = null
+                partial?.let { if (open?.dir == source.dir) open = it }
                 toast = "DUST FAILED: ${e.message ?: e.javaClass.simpleName}"
                 return@launch
             }
             busy = null
-            val (entry, dusted, left) = result
+            val (entry, dusted, counts) = result
+            val (left, noDust) = counts
             if (dusted == 0 && left == 0) {
                 toast = Copy.DUST_NO_GHOSTS
                 return@launch
             }
             if (open?.dir == source.dir) open = entry
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-            toast = Copy.dustedAll(dusted, left)
+            toast = Copy.dustedAll(dusted, left, noDust)
         }
     }
 
@@ -2497,6 +2596,18 @@ fun App(shelf: KitShelf) {
                                     reloadRequest = grooveReload,
                                     onArrange = { swing, f, tpl -> arrangeSwing = swing; arrangeFeel = f; arrangeFeelTemplate = tpl; arrangeOpen = true },
                                     onOrbit = { orbitOpen = true },
+                                    feel = grooveFeel,
+                                    onFeelChange = { grooveFeel = it },
+                                    swingPercent = grooveSwingPercent,
+                                    onSwingPercentChange = { grooveSwingPercent = it },
+                                    progIndex = grooveProgIndex,
+                                    onProgIndexChange = { grooveProgIndex = it },
+                                    seed = grooveSeed,
+                                    onSeedChange = { grooveSeed = it },
+                                    justLanded = grooveJustLanded,
+                                    onJustLandedChange = { grooveJustLanded = it },
+                                    preTake = groovePreTake,
+                                    onPreTakeChange = { groovePreTake = it },
                                 )
                             }
                         }
