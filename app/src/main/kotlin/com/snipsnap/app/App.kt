@@ -2460,6 +2460,16 @@ fun App(shelf: KitShelf) {
                                     // completes instead of being cancelled by
                                     // the very navigation that triggers it.
                                     appScope = scope,
+                                    // KEEP ROOM / MAKE INSTRUMENT / MAKE PAD
+                                    // all write straight to the shelf
+                                    // (rooms/instruments), the same three
+                                    // doors `instruments`/`rooms`/
+                                    // `binnedRooms`/`binnedKitsCount`'s own
+                                    // refresh effect (above, keyed on
+                                    // `roomsRevision` among others) already
+                                    // reloads for. Bumping the same counter
+                                    // here covers all three with one wire.
+                                    onShelfAssetWritten = { roomsRevision++ },
                                 )
                                 takesBinOpen && sheetEntry != null -> TakesBinScreen(
                                     entry = sheetEntry,

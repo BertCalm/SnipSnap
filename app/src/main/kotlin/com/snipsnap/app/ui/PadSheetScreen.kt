@@ -166,6 +166,23 @@ fun PadSheetScreen(
     /** DO IT AGAIN: COPY LAST TREATMENT hands the clip up here; the caller keeps it. */
     onRecipeCopied: (RecipeReplay.Clip) -> Unit = {},
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
+    /**
+     * Bug fix (shelf staleness): [onKeepRoom] (`OutsideSheet.keep`),
+     * [onMakeInstrument] (`OneNote.export`) and [onMakePad]
+     * (`PadFromAnything.export`) all write a real file to the shelf — a
+     * room or an instrument package, beside the kits — the same
+     * directories `App`'s own `rooms`/`instruments` lists (see `App.kt`)
+     * are read from. All three now run on [appScope] (see this file's own
+     * KDoc), so the write can land on disk AFTER `App`'s KITS-keyed
+     * refresh effect already ran for this visit, leaving that visit
+     * showing a list without the asset just made; it self-heals the next
+     * time KITS reloads, but nothing forces that here. Call on SUCCESS
+     * ONLY, from each of the three doors, once the write is confirmed on
+     * disk — a refused or failed write changed nothing on the shelf to be
+     * stale about. No default: `App.kt` has exactly one call site, and a
+     * default would let a future second one silently skip the wiring.
+     */
+    onShelfAssetWritten: () -> Unit,
     appScope: CoroutineScope,
     /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name), remembered per kit by the caller. */
     openBox: String? = null,
@@ -1415,11 +1432,13 @@ fun PadSheetScreen(
      * KDoc, even though this doesn't touch `kit.json`: cancelling `scope`
      * mid-export could abandon the write before `OneNote.export` starts,
      * or let the package land on disk while losing the one signal the user
-     * gets that it worked ([Copy.INSTRUMENT_MADE]). `App`'s `instruments`
-     * list isn't notified either way — no callback wires this screen back
-     * to it — so it can still read stale until something else refreshes
-     * it; that's a pre-existing gap in a different file, not something
-     * this scope change fixes or worsens.
+     * gets that it worked ([Copy.INSTRUMENT_MADE]).
+     *
+     * Bug fix (shelf staleness): calls [onShelfAssetWritten] on
+     * `OneNote.export` success — see that parameter's own KDoc. `App`'s
+     * `instruments` list isn't reactive to this screen otherwise; without
+     * this, a visit to KITS that raced this write on [appScope] would show
+     * a list one instrument short until KITS reloaded again.
      */
     fun onMakeInstrument() {
         if (busy) return
@@ -1435,6 +1454,7 @@ fun PadSheetScreen(
                 withContext(Dispatchers.IO) {
                     OneNote.export(instrumentName, currentSnip, destRoot, overwrite = true)
                 }
+                onShelfAssetWritten()
                 onToast(Copy.INSTRUMENT_MADE)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -1625,11 +1645,15 @@ fun PadSheetScreen(
      * list (see `App.kt`) is read from — so cancelling `scope` mid-write
      * could abandon it before it starts, or land it on disk while losing
      * this screen's own toast/`partner` confirmation, same reasoning as
-     * [commitPadEditNow]'s KDoc. (`App`'s `rooms` list isn't notified of a
-     * new room by this screen at all, appScope or not — no callback wires
-     * that path — so it can still read stale until something else
-     * refreshes it; that's a separate, pre-existing gap this scope change
-     * doesn't touch.)
+     * [commitPadEditNow]'s KDoc.
+     *
+     * Bug fix (shelf staleness): calls [onShelfAssetWritten] on
+     * `OutsideSheet.keep` success — see that parameter's own KDoc. Note
+     * `roomsRevision++` right below is THIS screen's own local counter
+     * (declared with `rooms` above, for this sheet's own MUTATE partner
+     * picker) — a different variable from `App.kt`'s `roomsRevision` that
+     * [onShelfAssetWritten] is wired to; both need bumping, for two
+     * different lists.
      */
     fun onKeepRoom() {
         if (busy) return
@@ -1648,6 +1672,7 @@ fun PadSheetScreen(
                 val kept = withContext(Dispatchers.IO) { OutsideSheet.keep(root, o, m.kit.name) }
                 measuredRoom = null
                 roomsRevision++
+                onShelfAssetWritten()
                 partner = Rooms.partner(kept)
                 onToast(Copy.roomKept(kept.name))
             } catch (e: Exception) {
@@ -1673,6 +1698,10 @@ fun PadSheetScreen(
      * same reason, as [onMakeInstrument]'s own KDoc: `PadFromAnything.export`
      * writes into the same `KitShelf.INSTRUMENTS_DIR` `App`'s `instruments`
      * list reads from.
+     *
+     * Bug fix (shelf staleness): calls [onShelfAssetWritten] on
+     * `PadFromAnything.export` success, same as [onMakeInstrument] — see
+     * that parameter's own KDoc.
      */
     fun onMakePad() {
         if (busy) return
@@ -1699,6 +1728,7 @@ fun PadSheetScreen(
                 withContext(Dispatchers.IO) {
                     PadFromAnything.export(padName, currentSnip, destRoot, spec, overwrite = true)
                 }
+                onShelfAssetWritten()
                 onToast(Copy.PAD_MADE)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
