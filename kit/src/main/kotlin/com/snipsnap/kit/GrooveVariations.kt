@@ -34,9 +34,12 @@ object GrooveVariations {
      * runs 50–75. Velocities are untouched — swing is time, not dynamics.
      */
     fun swing(clip: Mpc3Clip, percent: Int): Mpc3Clip {
-        require(percent in 50..75) { "swing wants 50..75 percent, got $percent" }
         val s16 = Mpc3Clip.PULSES_PER_16TH
-        val push = (percent - 50L) * s16 / 50L
+        // Mpc3Clip.swingPush, not the arithmetic inline: a ring swung to
+        // the same percent has to land on the same pulse, and `Long`
+        // division here used to truncate 76.8 to 76 while the ring's
+        // frame maths rounded it to 77.
+        val push = Mpc3Clip.swingPush(percent)
         val limit = clip.bars * Mpc3Clip.PULSES_PER_BAR
         val tight = quantize(clip, s16, suffix = "Swing $percent")
         return tight.copy(

@@ -63,8 +63,9 @@ fun periodSteps(set: OrbitSet, orbit: Orbit): Int {
 
 Every bar length offered (below) is even, so `HALF` is always whole.
 `lapFrames`, `periodFrames`, `phase`, `stepAt`, `firings`, `cycleSteps`
-(the LCM over periods, seeded with the lap), `cycleBars`, `ratioLabel`
-and `tailSweep` are unchanged: they already work from `periodSteps`.
+(the LCM over turns — periods, stretched by any conditional — seeded with
+the lap), `cycleBars`, `ratioLabel` and `tailSweep` are unchanged by the
+span work: they already work from `periodSteps`.
 
 A spanned ring's steps divide its span, however many there are. 32 steps
 across half a lap is a run of 32nd-note-ish cells; 3 steps across four
@@ -90,8 +91,11 @@ ticks below.
 
 ### Store
 
-`orbits.json` goes to version 3. Rings write `"span": "FREE" | "HALF" |
-"ONE" | "TWO" | "FOUR"`. Reading:
+`orbits.json` went to version 3 with this change; it has moved on since,
+and docs/ORBITS.md carries the current version and what each bump added.
+Named rather than numbered on purpose: this line has gone stale at every
+bump, because a number here is a second copy of one that lives there.
+Rings write `"span": "FREE" | "HALF" | "ONE" | "TWO" | "FOUR"`. Reading:
 
 | File version | Field | Becomes |
 |---|---|---|

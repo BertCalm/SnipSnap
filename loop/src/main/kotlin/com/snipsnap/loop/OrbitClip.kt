@@ -63,7 +63,22 @@ object OrbitClip {
         val bars = bars(set)
         if (bars <= MAX_BARS) return null
         val unit = if (countsDifferently(set)) "BARS OF 4/4" else "BARS"
-        return "THE RINGS MEET EVERY $bars $unit — A CLIP STOPS AT $MAX_BARS. SHORTEN A RING."
+        // A ring's length is no longer the only thing that makes a cycle
+        // long: a hit on one lap in four does not repeat until the fourth
+        // lap, so it multiplies its ring's contribution
+        // ([OrbitClock.turnSteps]). Telling a player to shorten a ring when
+        // what did it was a conditional sends them to the wrong chip.
+        val conditional = set.orbits.any { o ->
+            (o.content as? PatternOrbit)?.hits?.any {
+                // A conditional on a hit that never sounds stretched
+                // nothing ([OrbitClock.turnSteps] leaves it out), so
+                // naming it here would send the player to undo the one
+                // thing that is not the cause.
+                it.everyLaps != OrbitHit.EVERY_LAP && !it.neverSounds
+            } == true
+        }
+        val fix = if (conditional) "SHORTEN A RING, OR TAKE A CONDITIONAL OFF A HIT." else "SHORTEN A RING."
+        return "THE RINGS MEET EVERY $bars $unit — A CLIP STOPS AT $MAX_BARS. $fix"
     }
 
     /**
@@ -169,19 +184,33 @@ object OrbitClip {
     fun clip(set: OrbitSet, name: String = nameFor(set)): Mpc3Clip {
         clipRefusal(set)?.let { throw IllegalArgumentException(it) }
         val bars = bars(set)
-        val stepFrames = OrbitClock.stepFrames(set).toDouble()
-        val cycle = OrbitClock.cycleFrames(set)
         val limit = bars * Mpc3Clip.PULSES_PER_BAR
+        // The whole cycle in pulses. The clip is musical time, so it is
+        // counted in the unit it is written in rather than converted out
+        // of frames: a frame is the finer unit at any rate worth playing
+        // at, but `sampleRate` is only required to be positive, and with
+        // fewer than 960 frames to a beat — a rate below 16 × BPM hertz —
+        // the conversion moves a note off its pulse.
+        val cycle = OrbitClock.cycleSteps(set) * Mpc3Clip.PULSES_PER_16TH
         val notes = ArrayList<Mpc3Note>()
         for (ring in set.orbits) {
             if (!ring.engaged || ring.content !is PatternOrbit) continue
-            for (firing in OrbitClock.firings(set, ring, 0, cycle)) {
-                val pulses = Math.round(firing.frame / stepFrames * Mpc3Clip.PULSES_PER_16TH)
-                if (pulses >= limit) continue
+            for (firing in OrbitClock.pulseFirings(set, ring, cycle)) {
+                if (firing.pulses >= limit) continue
                 notes += Mpc3Note(
                     note = noteFor(firing.hit.slot),
-                    timePulses = pulses,
+                    timePulses = firing.pulses,
                     velocity = firing.hit.velocity,
+                    // A gated hit says how long it sounds; a one-shot says
+                    // a 16th, which is what every note said before lengths
+                    // existed and what the hardware ignores on a pad whose
+                    // `triggerMode` is One Shot — "the whole sample fires
+                    // and ends", per the corpus in docs/MPC3_FORMAT.md.
+                    // Writing the sample's real length instead would need
+                    // the kit, which a clip built from a set alone has not
+                    // got — and on the pads where the number IS read, the
+                    // hit now carries one rather than defaulting.
+                    lengthPulses = if (firing.hit.gated) firing.hit.length else Mpc3Clip.PULSES_PER_16TH,
                 )
             }
         }

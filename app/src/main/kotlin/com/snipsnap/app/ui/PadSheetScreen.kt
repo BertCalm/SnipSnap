@@ -231,8 +231,11 @@ fun PadSheetScreen(
     var auditionOnRefresh by remember(slot) { mutableStateOf(false) }
     // Backgrounding mid-audition must stop the voice, not wait for this
     // composable to next leave composition (see ChopScreen's own fix).
+    // Keyed on `model` too: `voice` is `remember(model)`-keyed, so an
+    // observer from before a treatment's model swap would close over the
+    // old state and leave the fresh voice playing in the background.
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
+    DisposableEffect(lifecycleOwner, model) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
                 voice?.release()
@@ -249,6 +252,7 @@ fun PadSheetScreen(
         if (p == null) {
             snip = null
             binDaysLeft = null
+            auditionOnRefresh = false
             return
         }
         val (loadedSnip, daysLeft) = withContext(Dispatchers.IO) {
@@ -267,6 +271,11 @@ fun PadSheetScreen(
         }
         snip = loadedSnip
         binDaysLeft = daysLeft
+        // A refresh that couldn't decode the file consumes the play
+        // request too: otherwise it stays armed and the next unrelated
+        // refresh that does decode (an undo, a pad swap) plays as if a
+        // treatment had just landed.
+        if (loadedSnip == null) auditionOnRefresh = false
     }
 
     LaunchedEffect(model, slot) { refreshPadAudio(builtModel) }
@@ -303,7 +312,12 @@ fun PadSheetScreen(
         val s = snip
         if (auditionOnRefresh && s != null) {
             auditionOnRefresh = false
-            builtModel.kit.pad(slot)?.let { audition(s, it.level, it) }
+            // The decode can finish after ON_STOP with the sheet still
+            // mounted; the observer above only releases a voice that
+            // already exists, so don't start one from the background.
+            if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                builtModel.kit.pad(slot)?.let { audition(s, it.level, it) }
+            }
         }
     }
 
@@ -317,17 +331,35 @@ fun PadSheetScreen(
      */
     fun playBefore(p: KitPad) {
         if (busy) return
+        // Claimed like every other sheet action, so a second tap or a
+        // treatment can't run alongside the read. Picking the take is
+        // under the writers' lock (`moveToBin` copies and deletes bin
+        // files under it, so a half-copied take can't be chosen); the
+        // decode is outside it, as `KitWrites` keeps every read-only DSP
+        // pass — a purge racing the decode reads as gone, which is true.
+        busy = true
         scope.launch {
-            val before = withContext(Dispatchers.IO) {
-                builtModel.binContents()
-                    .filter { it.originalName == p.sampleFile }
-                    .maxByOrNull { it.binnedAtMillis }
-                    ?.let { runCatching { Cleanup.toMono(WavReader.readCapped(it.file, TAPE_LOAD_MAX_SEC).snip) }.getOrNull() }
+            try {
+                val before = withContext(Dispatchers.IO) {
+                    val take = KitWrites.mutex.withLock {
+                        builtModel.binContents()
+                            .filter { it.originalName == p.sampleFile }
+                            .maxByOrNull { it.binnedAtMillis }
+                            ?.file
+                    }
+                    take?.let { runCatching { Cleanup.toMono(WavReader.readCapped(it, TAPE_LOAD_MAX_SEC).snip) }.getOrNull() }
+                }
+                // The model swapped while the file was read: `voice` now
+                // belongs to the new one, so don't start a voice in the old slot.
+                if (model !== builtModel) return@launch
+                when {
+                    before == null -> onToast(Copy.BIN_ITEM_GONE)
+                    // Backgrounded during the read: the same rule as the landing play.
+                    lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) -> audition(before, p.level, p)
+                }
+            } finally {
+                busy = false
             }
-            // The model swapped while the file was read: `voice` now
-            // belongs to the new one, so don't start a voice in the old slot.
-            if (model !== builtModel) return@launch
-            if (before != null) audition(before, p.level, p) else onToast(Copy.BIN_ITEM_GONE)
         }
     }
 
@@ -513,6 +545,8 @@ fun PadSheetScreen(
             busy = true
             try {
                 var applied = false
+                var stacked = false
+                var noop = false
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
@@ -520,6 +554,19 @@ fun PadSheetScreen(
                         check(freshPad.velocityLayers.isEmpty()) {
                             "pad $slot is velocity-layered - clear GHOSTS before smearing"
                         }
+                        // AMT 0 on a pad that isn't smeared: `smearPad`
+                        // touches nothing (its own KDoc — a slider must not
+                        // take an era off on the way past zero), so this is
+                        // not a landing: no toast claiming one, no audition.
+                        if (amount <= 0f && PadSheet.readSmear(freshPad.recipe) == null) {
+                            noop = true
+                            return@withFreshKit
+                        }
+                        // `smearPad` restores first when it can; when the
+                        // original is not in the bin it stacks (amount 0 is
+                        // a no-op, never a stack), and the toast says so.
+                        stacked = amount > 0f &&
+                            PadSheet.unTreatState(freshPad, f.binContents().map { it.originalName }.toSet()) == PadSheet.UnTreat.NOT_BINNED
                         // The rewrite itself lives in the model now
                         // (`smearPad`: restore-first, then replaceAudio,
                         // stereo kept stereo) so DO IT AGAIN can replay it.
@@ -532,7 +579,10 @@ fun PadSheetScreen(
                 pendingMetadataSlots = emptySet()
                 onKitUpdated(fresh.kit)
                 if (applied) {
-                    onToast(Copy.treated(PadSheet.displayLabel(PadSheet.SMEAR), padName))
+                    val label = PadSheet.displayLabel(PadSheet.SMEAR)
+                    onToast(if (stacked) Copy.treatedStacked(label, padName) else Copy.treated(label, padName))
+                } else if (noop) {
+                    onToast(Copy.SMEAR_ZERO)
                 } else {
                     onToast(Copy.BIN_ITEM_GONE)
                 }
@@ -580,12 +630,14 @@ fun PadSheetScreen(
      * era/character/keyed rewrite is refused (not applied to the wrong
      * sound) if [slot]'s `sampleFile` has changed since [p] was captured.
      * [model] is swapped to the fresh instance on completion, which is why
-     * this — like [applySmear] — does NOT audition the result immediately
-     * afterward: `voice` is `remember(model)`-keyed, and writing to it from
-     * this coroutine after the swap would target a state slot the next
+     * this — like [applySmear] — does NOT audition the result from this
+     * coroutine: `voice` is `remember(model)`-keyed, and writing to it
+     * after the swap would target a state slot the next
      * `DisposableEffect(model)` teardown is about to release out from under
-     * it. The waveform still refreshes via `LaunchedEffect(model, slot)`;
-     * only the auto-preview-on-treat is gone, same trade [applySmear] makes.
+     * it. The play rides [auditionOnRefresh] instead — set here when the
+     * treatment applied, consumed by the effect under `audition` once
+     * `LaunchedEffect(model, slot)` has decoded the fresh file — so the
+     * treated pad is heard the moment the toast says it landed.
      */
     // Set on a treatment tap, shown only while `busy`, cleared whenever any
     // operation on this sheet finishes. One effect rather than a clear in
@@ -615,6 +667,7 @@ fun PadSheetScreen(
             busy = true
             try {
                 var applied = false
+                var stacked = false
                 var keyLabel = ""
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
@@ -637,8 +690,10 @@ fun PadSheetScreen(
                             // A recipe with nothing in the bin behind it (a
                             // bank-B twin, a CLI treat, a bin since emptied)
                             // is a sound the sheet can name but not undo: the
-                            // new treatment stacks, the way `treat` always has.
-                            PadSheet.UnTreat.NOT_BINNED -> Unit
+                            // new treatment stacks, the way `treat` always has
+                            // — and the toast says so, since the card will
+                            // light one segment while the sound carries two.
+                            PadSheet.UnTreat.NOT_BINNED -> stacked = amount > 0f
                             PadSheet.UnTreat.NOTHING -> Unit
                         }
                         when (treatment) {
@@ -659,8 +714,11 @@ fun PadSheetScreen(
                 onKitUpdated(fresh.kit)
                 if (applied) {
                     onToast(
-                        if (treatment is PadSheet.Treatment.Keyed) Copy.keyed(PadSheet.displayLabel(segment), padName, keyLabel)
-                        else Copy.treated(PadSheet.displayLabel(segment), padName),
+                        when {
+                            stacked -> Copy.treatedStacked(PadSheet.displayLabel(segment), padName)
+                            treatment is PadSheet.Treatment.Keyed -> Copy.keyed(PadSheet.displayLabel(segment), padName, keyLabel)
+                            else -> Copy.treated(PadSheet.displayLabel(segment), padName)
+                        },
                     )
                 } else {
                     onToast(Copy.BIN_ITEM_GONE)
@@ -2043,6 +2101,22 @@ private fun provenanceOrigin(source: Map<String, String>): String? = when {
     else -> null
 }
 
+/**
+ * How the pad came to be, when a door made it from other pads: a twin
+ * (`KitBuilderModel.TWIN_OF`, the bank-A pad it was dealt from) and/or a
+ * bred child (`Breed`'s `bredFrom`, "Mother x Father"). Both doors copy
+ * the parent's source keys, so [provenanceOrigin] alone would read a
+ * twin as its parent's tape — this goes first on the line, so BREED and
+ * REMIX BANK B are answered for on the one screen that inspects a pad.
+ * Both stamps show when both are there (a bred kit whose parent had
+ * twins carries a twin's `twinOf` under BREED's `bredFrom`): neither
+ * derivation is the whole story alone.
+ */
+private fun lineage(source: Map<String, String>): List<String> = listOfNotNull(
+    source[KitBuilderModel.TWIN_OF]?.let { "twin of $it" },
+    source["bredFrom"]?.let { "bred from ${it.replace(" x ", " × ")}" },
+)
+
 private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String {
     val origin = provenanceOrigin(pad.source) ?: pad.sampleFile
     // The cut in the tape (`BASS 5.WAV @ 1.20–1.62s`, docs/RETRIM.md §5):
@@ -2050,7 +2124,9 @@ private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String 
     // land before it is tapped. Frames sit at the tape's rate, which is
     // the pad's own — neither CHOP nor BACK ONTO resamples.
     val cut = Retrim.cutOf(pad)
-    val parts = mutableListOf(if (cut != null && snip != null) "$origin @ ${cut.label(snip.sampleRate)}" else origin)
+    val parts = mutableListOf<String>()
+    parts += lineage(pad.source)
+    parts += if (cut != null && snip != null) "$origin @ ${cut.label(snip.sampleRate)}" else origin
     snip?.let { parts += "%.0f ms".format(java.util.Locale.ROOT, it.durationSeconds * 1000f) }
     binDaysLeft?.let { parts += "original in bin, ${it}d left" }
     return parts.joinToString(" · ")
@@ -2171,7 +2247,10 @@ private fun HeaderChip(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
+            // `enabled` goes through `tapeClick`, not around it: a dimmed
+            // chip stays in the semantics tree, so TalkBack finds ◀ BEFORE
+            // (and ◄ KIT) during the same busy spell sighted users see it.
+            .tapeClick(label = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

@@ -71,13 +71,18 @@ import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Tempo
 import com.snipsnap.audio.WavReader
+import com.snipsnap.kit.GrooveEdit
+import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.loop.Orbit
 import com.snipsnap.loop.OrbitBank
+import com.snipsnap.loop.OrbitBrush
+import com.snipsnap.loop.OrbitBrushes
 import com.snipsnap.loop.OrbitClip
 import com.snipsnap.loop.OrbitClock
 import com.snipsnap.loop.OrbitEngine
 import com.snipsnap.loop.OrbitHit
+import com.snipsnap.loop.OrbitImport
 import com.snipsnap.loop.OrbitPatterns
 import com.snipsnap.loop.OrbitPresets
 import com.snipsnap.loop.OrbitSet
@@ -137,10 +142,12 @@ import kotlin.math.sin
  * it. The picked ring unrolls into the strip below — the tape untaped —
  * with one row per pad in its voice, so a bass ring is a small piano roll
  * and a kick ring is a single row; tap a cell to place or lift a hit, and
- * hear it. The panel changes the ring's step count, its span (free, or
- * ½, 1, 2 or 4 bars of the set's lap), which pads it plays, and whether
- * it is heard. Tapping the header's readout opens THE SET: the bar every
- * spanned ring is measured in (12 to 32 steps, 3/4 to 8/4). REC arms the
+ * hear it; long-press one to move whatever the strip's brush names — its
+ * weight, its chance, its every-N-laps conditional or its ratchet — the
+ * chip above the strip saying which. The panel changes the ring's step
+ * count, its span (free, or ½, 1, 2 or 4 bars of the set's lap), which
+ * pads it plays, and whether it is heard. Tapping the header's readout
+ * opens THE SET: the bar every spanned ring is measured in (12 to 32 steps, 3/4 to 8/4). REC arms the
  * strip's pad rail so a tap while playing writes a hit on the nearest
  * step, the way a groove gets played into an MPC; ◀ ▶ turn a ring a step
  * and DUP copies it, which is how phasing starts. Each ring has a level
@@ -178,6 +185,10 @@ fun OrbitScreen(
     var spreadOpen by remember(kitDir) { mutableStateOf(false) }
     /** The dice: every roll a new seed, so a roll can always be rolled again. */
     var scrambleSeed by remember(kitDir) { mutableIntStateOf(1) }
+    // What a long-press on a square writes. [OrbitBrush.WEIGHT] is what it
+    // always wrote, so the strip behaves exactly as it did until the chip
+    // above it is touched.
+    var brush by remember(kitDir) { mutableStateOf(OrbitBrush.WEIGHT) }
     /** OUT ▸ swaps the panel for the two ways a set leaves the screen: onto TAPE, or into the kit as a clip. */
     var outOpen by remember(kitDir) { mutableStateOf(false) }
     /** Tapping the header's readout swaps the panel for THE SET: the bar, and the tempo it already shows. */
@@ -351,23 +362,40 @@ fun OrbitScreen(
         var placed = false
         updateRing(index) { ring ->
             val content = ring.content as? PatternOrbit ?: return@updateRing ring
-            val existing = content.hits.firstOrNull { it.step == step && it.slot == slot }
-            val hits = if (existing != null) content.hits - existing else content.hits + OrbitHit(step, slot, 0.9f)
-            placed = existing == null
+            // Everything on this square, not the first of it: an import
+            // can put a pickup and a downbeat on one step of one pad, and
+            // lifting one of two left the square still filled after a tap
+            // that should have cleared it.
+            val existing = content.hits.filter { it.step == step && it.slot == slot }
+            val hits = if (existing.isNotEmpty()) content.hits - existing.toSet() else content.hits + OrbitHit(step, slot, 0.9f)
+            placed = existing.isEmpty()
             ring.copy(content = content.copy(hits = hits.sortedWith(compareBy({ it.step }, { it.slot }))))
         }
         if (placed) audition(slot)
     }
 
-    /** Long-press on a cell: an existing hit cycles soft → normal → accent; an empty cell takes an accent. */
+    /**
+     * Long-press on a cell: [brush]'s property moves one rung on.
+     *
+     * With the weight brush that is soft → normal → accent, which is what
+     * a long-press did before there was anything else to write. An empty
+     * cell takes an accent as it always did, and then the brush is applied
+     * to it, so one long-press with CHANCE picked leaves a hit that is
+     * actually chancy rather than a certain one to press again.
+     */
     fun cycleHit(index: Int, slot: Int, step: Int) {
         updateRing(index) { ring ->
             val content = ring.content as? PatternOrbit ?: return@updateRing ring
-            val existing = content.hits.firstOrNull { it.step == step && it.slot == slot }
-            val hits = if (existing != null) {
-                content.hits - existing + existing.copy(velocity = OrbitPatterns.nextVelocity(existing.velocity))
+            val existing = content.hits.filter { it.step == step && it.slot == slot }
+            val hits = if (existing.isNotEmpty()) {
+                // Every hit on the square, moved together and read off the
+                // loudest — which is the one the square is drawn at, so the
+                // cycle follows what the player can actually see.
+                val next = OrbitBrushes.cycle(existing.maxBy { it.velocity }, brush)
+                content.hits - existing.toSet() + existing.map { OrbitBrushes.adopt(it, next, brush) }
             } else {
-                content.hits + OrbitHit(step, slot, OrbitPatterns.ACCENT_VELOCITY)
+                val placed = OrbitHit(step, slot, OrbitPatterns.ACCENT_VELOCITY)
+                content.hits + if (brush == OrbitBrush.WEIGHT) placed else OrbitBrushes.cycle(placed, brush)
             }
             ring.copy(content = content.copy(hits = hits.sortedWith(compareBy({ it.step }, { it.slot }))))
         }
@@ -572,6 +600,95 @@ fun OrbitScreen(
         }
     }
 
+    /**
+     * The kit's groove as rings, joining the ones already on screen.
+     *
+     * CLIP ▸ KIT's return leg, and the reason it is worth having: the
+     * chop pipeline's best material — a captured break, an imported
+     * `.mid`, whatever PROG E holds — lived in `groove.json` where the
+     * live engine could not reach it.
+     *
+     * It joins rather than replaces — not for safety, since [commit]
+     * records history and UNDO would bring a replaced set back, but
+     * because joining is the useful answer. A break sitting next to a
+     * ring that drifts against it is what ORBIT is for; a break that
+     * cleared the screen to arrive would just be GROOVE again, drawn
+     * round. The budget is what is left of the eight.
+     */
+    fun ringsFromGroove() {
+        val s = set ?: return
+        val room = OrbitSet.MAX_ORBITS - s.orbits.size
+        if (room <= 0) { onToast("EIGHT RINGS IS THE SKY — TAKE ONE OFF FIRST"); return }
+        outOpen = false
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    // E when there is one, else the captured base. E is what
+                    // the player has been editing — `GrooveStore.load` hands
+                    // back oldest first, which is always the base, so taking
+                    // the first clip meant PROG E could never reach a ring.
+                    val stored = GrooveStore.load(kitDir)
+                    val clip = stored.firstOrNull { GrooveEdit.isProgE(it) } ?: stored.firstOrNull()
+                        ?: throw IllegalArgumentException("NO GROOVE IN THIS KIT YET — RECORD ONE IN GROOVE FIRST")
+                    // The destination's swing, so the import lands where the
+                    // clip put it rather than taking the set's push on top.
+                    clip.name to OrbitImport.rings(
+                        clip, kitDir.name, kit, s.bpm, s.sampleRate, maxRings = room, swing = s.swing,
+                    )
+                }
+            }
+            result.onSuccess { (name, imported) ->
+                // The set can have moved while the file was being read — a
+                // ring added, one deleted, or this action tapped twice. The
+                // budget was measured against the old one, and `OrbitSet`
+                // refuses a ninth ring by throwing, out here where no
+                // `runCatching` would catch it.
+                if (set !== s) { onToast("THE RINGS CHANGED WHILE THAT LOADED — TRY AGAIN"); return@onSuccess }
+                commit(s.copy(orbits = s.orbits + imported.set.orbits))
+                selected = s.orbits.size
+                // Every pad that could not come, named. A silent drop here
+                // reads as the import having worked, and the player finds
+                // the missing snare later with nothing to blame.
+                // Every caveat, not the first one that applies. A clip can
+                // easily have a missing pad AND a doubled note, and a
+                // `when` announced the pad while the note went quietly —
+                // which is the silent drop this route exists to avoid.
+                val rings = "${imported.set.orbits.size} RING${if (imported.set.orbits.size == 1) "" else "S"}"
+                val missing = imported.skipped.sumOf { it.notes }
+                val caveats = buildList {
+                    if (missing > 0) {
+                        add(
+                            "$missing NOTE${if (missing == 1) "" else "S"} STAYED OUT — " +
+                                "NO PAD FOR ${imported.skipped.joinToString(", ") { "SLOT ${it.slot}" }}",
+                        )
+                    }
+                    if (imported.shared.isNotEmpty()) {
+                        add("${imported.shared.size} PADS SHARE THE LAST RING — PULL THEM APART WHEN THERE IS ROOM")
+                    }
+                    if (imported.collisions > 0) {
+                        add(
+                            "${imported.collisions} DOUBLED NOTE${if (imported.collisions == 1) "" else "S"} " +
+                                "BECAME ONE — THE LOUDER, AS ON THE WAY OUT",
+                        )
+                    }
+                    if (imported.crowded > 0) {
+                        add(
+                            "${imported.crowded} STEP${if (imported.crowded == 1) "" else "S"} HOLD MORE THAN ONE HIT — " +
+                                "ALL OF THEM SOUND, THE GRID DRAWS ONE SQUARE",
+                        )
+                    }
+                }
+                onToast(
+                    if (caveats.isEmpty()) {
+                        "$name IS ON THE RINGS — $rings. RE-LENGTH ONE AND HEAR IT DRIFT."
+                    } else {
+                        "$name: $rings. ${caveats.joinToString(". ")}."
+                    },
+                )
+            }.onFailure { e -> onToast(e.message ?: "COULD NOT READ THE GROOVE") }
+        }
+    }
+
     /** One cycle as a clip in the kit's grooves, so it rides to the MPC with the kit. */
     fun clipIntoKit() {
         val s = set ?: return
@@ -705,6 +822,8 @@ fun OrbitScreen(
                     onToggle = { slot, step -> toggleHit(selected, slot, step) },
                     onCycle = { slot, step -> cycleHit(selected, slot, step) },
                     onAudition = { slot -> railTap(selected, slot) },
+                    brush = brush,
+                    onBrush = { brush = brush.next },
                     recording = recording,
                 )
             }
@@ -787,6 +906,34 @@ fun OrbitScreen(
                             }
                         }
                     }
+                    // The take. A set with a rolled hit on it sounds the
+                    // same every time it is played, bounced or clipped;
+                    // this is the one control that makes it a different
+                    // arrangement of the same hits. Only offered where
+                    // something the seed decides actually exists —
+                    // `rolled`, not `!certain`: a hit at 100% on one lap in
+                    // two is not certain and no seed changes it, and nor is
+                    // one at 0%, so gating on certainty offered a button
+                    // that could do nothing.
+                    if (current.orbits.any { o -> (o.content as? PatternOrbit)?.hits?.any { it.rolled } == true }) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            TapeText("TAKE", TapeType.pixelSmall, scheme.ink3.tape, Modifier.width(36.dp))
+                            SmallChip("ROLL · ${current.seed}", scheme, description = "ROLL A NEW TAKE OF THE SAME HITS") {
+                                commit(current.copy(seed = current.seed + 1))
+                            }
+                            TapeText(
+                                "THE SAME TAKE PLAYS, BOUNCES AND CLIPS THE SAME EVERY TIME. ROLL FOR A NEW ONE — NO HIT MOVES.",
+                                TapeType.pixelSmall,
+                                scheme.ink3.tape,
+                                Modifier.weight(1f),
+                                maxLines = 2,
+                            )
+                        }
+                    }
                     TapeText(
                         "THE BAR EVERY SPANNED RING IS MEASURED AGAINST; FREE RINGS DO NOT CARE. SWING PUSHES THE ODD 16THS LATE — 66 IS A TRIPLET FEEL — ON EVERY RING WHOSE STEP IS A 16TH. ${current.bpm.roundToInt()} BPM — HOLD BPM − / + BELOW TO RUN IT.",
                         TapeType.pixelSmall,
@@ -829,6 +976,19 @@ fun OrbitScreen(
                             )
                         }
                     }
+                    // The way back in. It sits under the two ways out
+                    // because this is where the route between ORBIT and
+                    // the kit's grooves is already explained, and a player
+                    // who has just read what CLIP ▸ KIT does is the one
+                    // who wants to know the grooves can come back.
+                    ActionButton("GROOVE ▸ RINGS", scheme, Modifier.fillMaxWidth()) { ringsFromGroove() }
+                    TapeText(
+                        "THE KIT'S GROOVE AS RINGS, ONE PER PAD, JOINING WHAT IS ALREADY HERE — A CAPTURED BREAK OR AN IMPORTED .MID, PLAYED BY THIS ENGINE AT LAST.",
+                        TapeType.pixelSmall,
+                        scheme.ink3.tape,
+                        Modifier.fillMaxWidth(),
+                        maxLines = 3,
+                    )
                 } else if (stepsPickerOpen && ring != null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         TapeText("HOW MANY STEPS ROUND ${ring.name}?", TapeType.pixel, scheme.ink.tape)
@@ -1209,8 +1369,12 @@ private fun RingsCanvas(
                         val color = padColor(kit, hit.slot, inkColor)
                         val dotR = (2.5f + 2.5f * hit.velocity) * screenDensity
                         val pitch = if (pads.size > 1) (pads.indexOf(hit.slot).coerceAtLeast(0).toFloat() / (pads.size - 1) - 0.5f) else 0f
-                        // Drawn where it fires, so a swung offbeat sits late on the ring as it does in time.
-                        val at = geometry.point(r + pitch * 8f * screenDensity, OrbitClock.stepOffset(set, ring, hit.step).toDouble() / OrbitClock.periodFrames(set, ring))
+                        // Drawn where it fires, so a swung offbeat - or one
+                        // given a pocket of its own - sits late on the ring
+                        // as it does in time. firingOffset, not stepOffset:
+                        // the latter knows the step's place and the set's
+                        // swing but not the hit's own lean.
+                        val at = geometry.point(r + pitch * 8f * screenDensity, OrbitClock.firingOffset(set, ring, hit).toDouble() / OrbitClock.periodFrames(set, ring))
                         val flare = if (heard && playing) {
                             val since = OrbitClock.framesSinceFiring(set, ring, hit, frame)
                             (1f - since.toFloat() / (set.sampleRate * FLARE_SECONDS)).coerceIn(0f, 1f)
@@ -1300,13 +1464,23 @@ private fun StripEditor(
     onToggle: (slot: Int, step: Int) -> Unit,
     onCycle: (slot: Int, step: Int) -> Unit,
     onAudition: (slot: Int) -> Unit,
+    brush: OrbitBrush,
+    onBrush: () -> Unit,
     recording: Boolean = false,
 ) {
     val content = ring.content as? PatternOrbit ?: return
     val rows = ring.pads.reversed()
     // One index per ring, not one scan per cell: a 64-step bass ring is
     // rows × steps lookups per recomposition, and that must stay cheap.
-    val hitAt = remember(content) { content.hits.associateBy { it.step to it.slot } }
+    // One index per ring, and the LOUDEST where a square holds more than
+    // one hit. `associateBy` kept whichever came last, which after an
+    // import could be a pickup's ghost drawn over the downbeat it shares a
+    // step with — the square would read quiet while the beat under it was
+    // full. A square can only say "something is here"; it may as well say
+    // it at the strength of the strongest thing.
+    val hitAt = remember(content) {
+        content.hits.groupBy { it.step to it.slot }.mapValues { (_, all) -> all.maxBy { it.velocity } }
+    }
     val playheadStep = if (playing) OrbitClock.stepAt(set, ring, frame) else -1
     val inkColor = scheme.lcdInk.tape
 
@@ -1317,6 +1491,18 @@ private fun StripEditor(
         val cellW = maxOf(CELL_MIN_DP.dp, (available - gap * (ring.steps - 1)) / ring.steps)
         val scroll = rememberScrollState()
         Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+            // What a long-press writes. The grid has two gestures and a hit
+            // has four things to say, so the chip is the third gesture -
+            // one tap to change what the next long-press means, rather than
+            // a panel over the strip the player is trying to hear.
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SmallChip("HOLD ▸ ${brush.label}", scheme, accent = brush != OrbitBrush.WEIGHT, onClick = onBrush)
+                TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            }
             for (slot in rows) {
                 val color = padColor(kit, slot, inkColor)
                 Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
@@ -1341,8 +1527,15 @@ private fun StripEditor(
                                 else -> scheme.field.tape
                             }
                             val accent = hit != null && hit.velocity >= OrbitPatterns.ACCENT_VELOCITY
+                            // What the hit says beyond its weight, if
+                            // anything: "50%", "2:4", "×3". A square is one
+                            // cell and cannot draw three numbers, so the
+                            // amber edge says "this one is not plain" and
+                            // the accessibility state says which.
+                            val mark = hit?.let { OrbitBrushes.mark(it) }.orEmpty()
                             val edge = when {
                                 step == playheadStep -> inkColor
+                                mark.isNotEmpty() -> scheme.amber.tape
                                 accent -> color
                                 else -> scheme.grayEdge.tape
                             }
@@ -1350,14 +1543,15 @@ private fun StripEditor(
                                 width = cellW,
                                 fill = fill,
                                 edge = edge,
-                                edgeWidth = if (step == playheadStep || accent) 2.dp else 1.dp,
+                                edgeWidth = if (step == playheadStep || accent || mark.isNotEmpty()) 2.dp else 1.dp,
                                 label = "STEP ${step + 1} PAD ${padLabel(slot)}",
                                 state = when {
                                     hit == null -> "EMPTY"
                                     accent -> "ACCENT"
                                     hit.velocity < OrbitPatterns.HIT_VELOCITY -> "SOFT HIT"
                                     else -> "HIT"
-                                },
+                                }.let { if (mark.isEmpty()) it else "$it $mark" },
+                                longPressLabel = brush.action,
                                 onTap = { onToggle(slot, step) },
                                 onLongPress = { onCycle(slot, step) },
                             )
@@ -1370,10 +1564,13 @@ private fun StripEditor(
 }
 
 /**
- * One strip cell. A tap places or lifts the hit; a long-press cycles its
- * weight (soft, normal, accent) or places an accent on an empty cell.
+ * One strip cell. A tap places or lifts the hit; a long-press moves
+ * whatever the strip's brush names — its weight, its chance, its
+ * conditional or its ratchet — or places an accent on an empty cell.
  * `combinedClickable` rather than a raw pointerInput so both gestures are
- * real accessibility actions, as the CHOP chips do it.
+ * real accessibility actions, as the CHOP chips do it; [longPressLabel] is
+ * the brush's own word, so what a screen reader announces is what the
+ * press is about to do rather than what it used to do.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1384,6 +1581,7 @@ private fun StripCell(
     edgeWidth: androidx.compose.ui.unit.Dp,
     label: String,
     state: String,
+    longPressLabel: String,
     onTap: () -> Unit,
     onLongPress: () -> Unit,
 ) {
@@ -1398,12 +1596,20 @@ private fun StripCell(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClickLabel = label,
-                onLongClickLabel = "ACCENT",
+                onLongClickLabel = longPressLabel,
                 onLongClick = onLongPress,
                 onClick = onTap,
             ),
     )
 }
+
+/** What each brush writes, said once under the chip rather than in a manual. */
+private val BRUSH_SAYS: Map<OrbitBrush, String> = mapOf(
+    OrbitBrush.WEIGHT to "SOFT → NORMAL → ACCENT",
+    OrbitBrush.CHANCE to "HOW OFTEN IT SOUNDS — 100 → 75 → 50 → 25%",
+    OrbitBrush.EVERY to "WHICH LAP IT SOUNDS ON — EVERY → 1:2 → 2:2 → 1:4 → 4:4",
+    OrbitBrush.RATCHET to "STRIKES ACROSS THE STEP — 1 → 2 → 3 → 4",
+)
 
 /** A strip cell's least width, in dp: GROOVE's step editor at 16 across, and still a thumb-sized target with a gap. */
 private const val CELL_MIN_DP = 22

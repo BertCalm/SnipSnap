@@ -505,6 +505,12 @@ class PersonalityTest {
             "the treatment and the pad both lead their own toast",
         )
         assertTrue(Copy.treated("CRUSH", "A02").endsWith("."), "and still lands on a full stop")
+        // The stacked landing: same opening, then the honest difference and the way back.
+        val stacked = Copy.treatedStacked("CRUSH", "A02")
+        assertTrue(stacked.startsWith("CRUSH ON A02,"), stacked)
+        assertTrue("NO ORIGINAL IN THE BIN" in stacked && "VERSIONS" in stacked, stacked)
+        assertEquals(stacked.uppercase(), stacked, "shouts")
+        assertTrue(stacked.endsWith("."))
         assertEquals("TUNE ON A02, IN C MAJOR. ORIGINAL SLEEPS IN THE BIN.", Copy.keyed("TUNE", "A02", "C MAJOR"))
         assertEquals("A02 DRIFTED TOWARD Other:B03. ORIGINAL SLEEPS IN THE BIN.", Copy.drifted("A02", "Other:B03"))
         assertEquals("A03 IS A HAT CLOSED PATCH NOW, 0.12 AWAY. ORIGINAL SLEEPS IN THE BIN.", Copy.desampled("A03", "HAT_CLOSED", 0.123f))

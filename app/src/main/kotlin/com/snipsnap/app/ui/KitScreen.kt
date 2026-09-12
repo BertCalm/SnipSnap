@@ -56,8 +56,10 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitPad
+import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KeyPicker
+import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
@@ -104,6 +106,16 @@ fun KitScreen(
     onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
     onInKey: () -> Unit,
     onTwins: () -> Unit,
+    /** Flipped to a bank (0-based) with nothing on it: say what fills it (`Copy.bankEmpty`) as the blanks come up. */
+    onBankEmpty: (Int) -> Unit = {},
+    /**
+     * A one-shot ask to open on this bank (0-based) — a chop landed ONTO
+     * bank B wants B on screen, not A. Consumed through
+     * [onBankRequestConsumed] the moment it is honoured, so a later flip
+     * by hand is never fought, and a stale ask never re-fires.
+     */
+    bankRequest: Int? = null,
+    onBankRequestConsumed: () -> Unit = {},
     /**
      * BREED (XX2 wired in): arms the pick-a-partner hand-off (`App.kt`'s
      * `pendingBreedWith`) and sends the user to the shelf to tap kit B —
@@ -228,13 +240,20 @@ fun KitScreen(
     /** Which bank the grid is drawing, 0-based. Bank A until asked otherwise. */
     var bank by remember(entry.dir) { mutableIntStateOf(0) }
     val bankCount = PadBanks.banksUsed(kit.pads.map { it.slot })
-    // A kit can lose its upper bank while this screen is open - clearing the
-    // twins, or an UNDO. Fall back rather than draw sixteen empty pads the
-    // user cannot fill from here.
-    LaunchedEffect(bankCount) {
-        if (bank >= bankCount) bank = 0
+    // Two banks are always reachable, filled or not: an empty B is a page
+    // the user fills the same three ways A is filled (hold a pad to
+    // capture, SNIPS → PAD, a chop landed ONTO it) plus the twins. A kit
+    // that loses a bank above B (an UNDO past a third bank) falls back.
+    val reachable = maxOf(bankCount, 2)
+    LaunchedEffect(reachable) {
+        if (bank >= reachable) bank = 0
     }
-    val showing = bank.coerceAtMost(bankCount - 1)
+    LaunchedEffect(bankRequest) {
+        val asked = bankRequest ?: return@LaunchedEffect
+        bank = asked.coerceIn(0, reachable - 1)
+        onBankRequestConsumed()
+    }
+    val showing = bank.coerceAtMost(reachable - 1)
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -249,7 +268,7 @@ fun KitScreen(
             TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
             val keyed = kit.key?.let { "${KeyPicker.label(it)}  " } ?: ""
-            val banks = if (bankCount > 1) "${PadBanks.letter(showing)}  " else ""
+            val banks = if (bankCount > 1 || showing > 0) "${PadBanks.letter(showing)}  " else ""
             TapeText("$keyed$tempo$banks${kit.pads.size} PADS", TapeType.lcdSmall, scheme.amber.tape)
         }
 
@@ -265,33 +284,46 @@ fun KitScreen(
             }
         }
 
-        // The door onto bank B (September UAT, finding 11). Only drawn when
-        // there is a second bank to reach: nothing here fills one, so an
-        // always-present B would be a switch to sixteen pads the user has no
-        // way to put anything on. EVIL TWINS is what makes bank B exist.
-        if (bankCount > 1) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                for (b in 0 until bankCount) {
-                    val here = b == showing
-                    val filled = kit.pads.count { it.slot in PadBanks.slots(b) }
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .let { if (here) it.raisedBevel(scheme) else it.sunkenField(scheme) }
-                            .tapeClick(label = null, onClick = { bank = b }),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        TapeText(
-                            "BANK ${PadBanks.letter(b)} · $filled",
-                            TapeType.pixel,
-                            if (here) scheme.titleInk.tape else scheme.ink2.tape,
-                            maxLines = 1,
-                        )
-                    }
+        // The door onto bank B (September UAT, finding 11). Always drawn,
+        // even with only bank A filled: a second page that only appears
+        // once something is on it is a page nobody finds, and the BREED /
+        // bank B round found exactly that. An empty bank reads EMPTY, and
+        // flips like a full one — its blanks take a capture, a SNIPS → PAD
+        // landing or a chop, the same as A's — with a toast saying so.
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            for (b in 0 until reachable) {
+                val here = b == showing
+                val filled = kit.pads.count { it.slot in PadBanks.slots(b) }
+                // Empty by its count, not by `bankCount`: a sparse kit with
+                // pads on A and C has a B with nothing on it, and that B
+                // takes the same toast path rather than flipping to blanks.
+                // Bank A is never "empty" this way — an empty kit is bank A
+                // with nothing on it, and the grid is where it gets filled.
+                val empty = b > 0 && filled == 0
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .let { if (here) it.raisedBevel(scheme) else it.sunkenField(scheme) }
+                        .tapeClick(label = null, onClick = {
+                            bank = b
+                            if (empty && !here) onBankEmpty(b)
+                        }),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(
+                        "BANK ${PadBanks.letter(b)} · ${if (empty) "EMPTY" else filled.toString()}",
+                        TapeType.pixel,
+                        when {
+                            here -> scheme.titleInk.tape
+                            empty -> scheme.ink3.tape
+                            else -> scheme.ink2.tape
+                        },
+                        maxLines = 1,
+                    )
                 }
             }
         }
@@ -357,8 +389,11 @@ fun KitScreen(
                 // header; the destination screen and its Kotlin symbol are
                 // unchanged, only this entry-point label.
                 ActionButton("VERSIONS + BIN ▸ ROLL BACK OR RESTORE", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onTakesBin)
-                // EVIL TWINS: bank B lit with seeded re-treatments of bank A; a second press rerolls.
-                val twinned = kit.pads.any { it.slot > 16 }
+                // EVIL TWINS: bank B lit with seeded re-treatments of bank A; a
+                // second press rerolls. REROLL means twins are there — not
+                // merely something on B, which since bank B round 2 can be
+                // the user's own pads (and then the press is refused).
+                val twinned = kit.pads.any { KitBuilderModel.isTwin(kit, it) }
                 ActionButton(
                     if (twinned) "REMIX BANK B ▸ REROLL" else "REMIX BANK B ▸",
                     scheme,
@@ -393,19 +428,24 @@ fun KitScreen(
                     onClick = onSplit,
                 )
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 // BREED: this kit's own recipes crossed with a second kit's
                 // into a new child, kept beside this one — the shelf-level
                 // "pick a kit" hand-off (App.kt's pendingBreedWith) runs
                 // next, the same shape SNIPS → PAD already uses to pick a
-                // kit for a snip.
+                // kit for a snip. The label counts the pads with a recipe
+                // to cross (`Breed.recipePads`) and the line under it says
+                // what comes out, so "0 PADS CROSSED" is never the first
+                // word of the explanation. Still enabled at zero: the other
+                // kit's racks can cross over this one's audio.
                 ActionButton(
-                    "BREED ▸ CROSS TWO KITS",
+                    Copy.breedButton(Breed.recipePads(kit).size, kit.pads.size),
                     scheme,
                     enabled = !busy && kit.pads.isNotEmpty() && canBreed,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = onBreed,
                 )
+                TapeText(Copy.BREED_SUBTITLE, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth(), maxLines = 1)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (kind in TextureKits.KINDS) {

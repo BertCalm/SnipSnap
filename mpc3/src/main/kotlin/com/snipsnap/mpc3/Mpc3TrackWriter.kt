@@ -84,6 +84,29 @@ data class Mpc3Clip(
         /** 960 PPQ × 4 quarters. */
         const val PULSES_PER_BAR: Long = 3840L
         const val PULSES_PER_16TH: Long = 240L
+
+        /** Straight; the MPC's swing scale runs from here to [MAX_SWING]. */
+        const val STRAIGHT_SWING = 50
+
+        /** The MPC's own ceiling: at 75 the pair is a dotted-eighth and a sixteenth. */
+        const val MAX_SWING = 75
+
+        /**
+         * How many pulses a swing of [percent] pushes the second 16th of a
+         * pair — `(percent − 50) / 50` of a 16th, the MPC's own arithmetic,
+         * where 66 makes the pair very nearly a triplet.
+         *
+         * One home for one number, because two callers have to agree on it
+         * exactly. A ring and a groove clip given the same percent write
+         * the same file, and they did not before: this rounds to nearest,
+         * where the groove side used to truncate through `Long` division
+         * and land 66 on 316 while the ring rounded 316.8 to 317. A pulse
+         * apart is inaudible and was still two answers to one question.
+         */
+        fun swingPush(percent: Int): Long {
+            require(percent in STRAIGHT_SWING..MAX_SWING) { "swing wants $STRAIGHT_SWING..$MAX_SWING percent, got $percent" }
+            return Math.round((percent - STRAIGHT_SWING) / 50.0 * PULSES_PER_16TH)
+        }
     }
 }
 

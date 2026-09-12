@@ -197,7 +197,7 @@ object Copy {
     const val ODOMETER_ON = "TAPE COUNTER. LIKE THE OLD DAYS."
     const val ODOMETER_OFF = "BACK TO REAL TIME."
     /** PAD SHEET's own DELETE → BIN, on a pad — a real delete, distinct from EJECT (stop listening) or the export wizard's reset. */
-    const val DELETE_SNIP = "DELETED. THE BIN KEEPS IT 30 DAYS."
+    const val DELETE_SNIP = "DELETED. ${Reversal.BIN}"
     /**
      * A source file TAPE loaded (a kit pad or the last COMMIT's source —
      * the two ingest paths with no length cap of their own) ran past
@@ -369,11 +369,14 @@ object Copy {
     val HELP_MORE = listOf(
         "· HOLD A PAD: SHAPE, TUNE, TREAT, MUTATE, LAYERS, TAKES, GRAIN.",
         "· HOLD A ROW ON THE SHELF TO RENAME IT, OR TO BIN IT.",
-        "· THE BIN KEEPS WHAT YOU THREW OUT FOR ${Rooms.BIN_DAYS} DAYS.",
+        "· THE BIN KEEPS WHAT YOU THREW OUT FOR ${Reversal.DAYS} DAYS.",
         "· PLAY IS THE ONE THAT FEELS LIKE DRUMS. SURFACE IS THE ONE THAT PRINTS.",
         "· ORBIT PUTS THE KIT ON RINGS: 5 AGAINST 4 IN ONE TAP.",
         "· EMPTY GROOVE? RECORD A TAKE, TAP STEPS IN, OR GO TO ORBIT.",
         "· HOLD A PAD, RE-TRIM ▸: TAPE OPENS ON ITS CUT. BACK ONTO LANDS IT.",
+        "· TAP BANK B: A SECOND PAGE. HOLD A PAD, OR SEND A CHOP ONTO IT.",
+        "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO AN EMPTY BANK B.",
+        "· BREED ▸ MIXES TWO KITS' RECIPES INTO A NEW KIT. PARENTS STAY.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -432,8 +435,39 @@ object Copy {
     const val TEACH_CONSENT = "FEATURES ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE."
 
     // ---- BANK B: evil twins (W4.3) ----
-    const val BANK_B_LIT = "EVIL TWINS DEALT ONTO BANK B. RECIPES KEPT."
-    const val TWINS_REROLLED = "EVIL TWINS REROLLED."
+    /** Named after the button that did it (REMIX BANK B ▸), so the toast, the button and HELP say one thing. */
+    const val BANK_B_LIT = "BANK B REMIXED: EVERY PAD'S EVIL TWIN. RECIPES KEPT."
+    const val TWINS_REROLLED = "BANK B REROLLED."
+    /**
+     * Flipping to an empty bank on the KIT screen. The row is always
+     * drawn (a second page nobody can see is a page nobody finds) and an
+     * empty bank flips like a full one, since its pads fill the same
+     * three ways bank A's do — hold a pad to capture, the same hold to
+     * place a snip SNIPS → PAD armed, a chop sent ONTO it; the toast
+     * names them, plus the twins for bank B (REMIX BANK B fills B only,
+     * so a sparse kit's empty C is not told to press it). A function:
+     * the bank letter rides in, so the laws leave it be.
+     */
+    fun bankEmpty(bank: Char): String {
+        val twins = if (bank == 'B') " REMIX BANK B ▸ DEALS TWINS HERE TOO." else ""
+        return "BANK $bank: EMPTY. HOLD A PAD TO CAPTURE ONTO IT, OR TO PLACE A SNIP FROM SNIPS. A CHOP CAN LAND HERE.$twins"
+    }
+    /**
+     * REMIX BANK B pressed while bank B holds pads the user put there: a
+     * refusal, and it says so in the reversal law's terms — the pads stay
+     * untouched; nothing here destroyed anything (`ReversalTest`).
+     */
+    const val TWINS_KEEP_OWN = "BANK B HOLDS YOUR OWN PADS. THEY STAY UNTOUCHED — REMIX ONLY DEALS ONTO AN EMPTY B. CLEAR THEM FIRST, OR KEEP THE PAGE."
+    /**
+     * CHOP's ONTO <kit> · BANK X: the slices landed on an existing kit's
+     * empty bank, and how many did not fit when the chop was wider than
+     * sixteen (a bank is a bank; the rest is one more chop away).
+     */
+    fun landedOnto(kitName: String, bank: Char, landed: Int, left: Int): String {
+        val slices = "$landed ${if (landed == 1) "SLICE" else "SLICES"}"
+        val tail = if (left > 0) " $left DIDN'T FIT — A BANK HOLDS 16." else ""
+        return "'$kitName' BANK $bank: $slices LANDED.$tail"
+    }
 
     // ---- BREED: two kits crossed into a child (XX2 wired in) ----
     /** BREED's busy line while `KitShelf.breed` renders every crossed pad offline — same DUBBING…/TWINNING… shape as EVIL TWINS. */
@@ -452,6 +486,30 @@ object Copy {
     const val BREED_PICK_HINT = "TAP A KIT TO CROSS WITH THIS ONE."
     /** Refused: tapping the very kit BREED was pressed from during the pick — breeding needs two different kits. */
     const val BREED_SAME_KIT = "THAT'S THE KIT YOU'RE BREEDING FROM — PICK A DIFFERENT ONE."
+    /**
+     * Refused at the pick: `Breed.crossable` found no slot the coin could
+     * work on, so the child would be a copy of A with "0 PADS CROSSED".
+     * Said before the copy is made, in the precondition's own terms: a
+     * pad here needs its own patch or treatment (rack), or a partner
+     * there (same slot, else same class) whose treatment it can borrow —
+     * a partner's patch alone is not enough, since a captured pad has no
+     * engine to render it through. The fix is the same in every case.
+     */
+    const val BREED_NOTHING_TO_CROSS = "NOTHING WOULD CROSS: NO PAD HERE HAS A PATCH OR TREATMENT, OR A PARTNER THERE WITH ONE TO BORROW. TREAT A PAD FIRST."
+    /** The line under the BREED button: what comes out, before the tap. */
+    const val BREED_SUBTITLE = "MIXES THE TWO KITS' RECIPES INTO A NEW KIT. BOTH PARENTS STAY."
+    /**
+     * The BREED button's own readout: how many of this kit's pads carry
+     * a recipe the cross can use (`Breed.recipePads`), so "0 PADS
+     * CROSSED" is never the first time the user hears the word. A
+     * function, so the singular reads right and the laws leave it be.
+     */
+    fun breedButton(recipePads: Int, pads: Int): String = when {
+        recipePads == 0 -> "BREED ▸ NO RECIPES HERE YET"
+        pads == 1 -> "BREED ▸ ITS ONE PAD HAS A RECIPE"
+        recipePads == 1 -> "BREED ▸ 1 OF $pads PADS HAS A RECIPE"
+        else -> "BREED ▸ $recipePads OF $pads PADS HAVE RECIPES"
+    }
     /**
      * BREED's own toast: the child kit's name, how many pads actually
      * crossed, and — only when the audit sent one back (`Breed.Report.audited`
@@ -517,7 +575,18 @@ object Copy {
     const val FORKED_TO_E = "FORKED TO PROG E. A–D STAY UNTOUCHED."
     /** The post-take FORK TO E row's confirmed-replace branch (live-record plan Task 6 bug fix): an E already existed and the user tapped "REPLACE E?" a second time — says the old steps are gone, never claims a plain "forked" like [FORKED_TO_E] does for a from-nothing fork. */
     const val FORKED_TO_E_REPLACED = "PROG E REPLACED WITH THIS TAKE. THE OLD STEPS ARE GONE."
-    const val BAR_WIPED = "BAR WIPED."
+    /**
+     * The step editor's WIPE BAR, said honestly.
+     *
+     * It read "THE MACHINE FORGIVES" until the September undo-labelling
+     * pass, which is an offer of forgiveness the machine does not make:
+     * `clearEditorBar` bumps `editorSaveTick`, the autosave writes the
+     * wiped bar to the sidecar, and no control on that screen steps it
+     * back — UNDO TAKE is about recorded takes, not editor edits. A user
+     * who trusted the old line lost steps they believed were recoverable.
+     * So this names the recourse that actually exists: tap them in again.
+     */
+    val BAR_WIPED: String = Reversal.goneBut("TAP THE STEPS BACK IN")
     /** RECORD tapped before `PadEngine.load` has committed the bank (`clickSampleIndex == -1` until then, so the count-in clicks would be silent and give no feedback at all) — told instead of armed. */
     const val KIT_STILL_LOADING = "KIT'S STILL LOADING. GIVE IT A SECOND."
 
@@ -606,6 +675,17 @@ object Copy {
     // ---- PAD SHEET ----
     const val GHOSTS_ON ="GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
     fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
+    /**
+     * The same landing when `PadSheet.unTreatState` was NOT_BINNED: the
+     * pad carried a treatment with no original in the bin behind it (a
+     * bank-B twin, a CLI treat, a bin since emptied), so the new one went
+     * on top of the old rather than in its place. Said, since the card
+     * lights one segment while the sound carries two; the fix is named.
+     */
+    fun treatedStacked(segment: String, pad: String): String =
+        "$segment ON $pad, OVER THE LAST ONE — NO ORIGINAL IN THE BIN TO SWAP FROM. VERSIONS ▸ ROLLS BACK."
+    /** SMEAR at AMT 0 on a pad that isn't smeared: `smearPad` writes nothing, so nothing landed. */
+    const val SMEAR_ZERO = "AMT 0: NOTHING TO SMEAR. THE PAD STAYS AS IT IS."
     const val INSTRUMENT_MADE = "INSTRUMENT MADE. ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH."
     const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."
@@ -714,7 +794,7 @@ object Copy {
     fun roomKept(name: String): String = "$name IS ON THE SHELF. ANY PAD CAN PLAY IN IT - MUTATE ▸ ROOM."
     const val ROOM_NONE_TO_KEEP = "NO ROOM MEASURED YET. SEND A SWEEP OUT FIRST - ROOM ▸ SEND."
     /** FORGET → BIN on the shelf: the room sleeps in the bin, like every delete. */
-    fun roomForgotten(name: String): String = "$name IS IN THE BIN. ${Rooms.BIN_DAYS} DAYS TO CHANGE YOUR MIND."
+    fun roomForgotten(name: String): String = "$name IS IN THE BIN. ${Reversal.MIND}"
     /** RESTORE on a binned room: back on the shelf under [name]. */
     fun roomRestored(name: String): String = "$name IS BACK ON THE SHELF."
     const val ROOM_FORGET_BUSY = "FORGETTING…"
@@ -737,7 +817,7 @@ object Copy {
      * old "gone for good" wording, which was only ever true because that
      * screen didn't exist yet.
      */
-    fun kitDeleted(name: String): String = "$name IS OFF THE SHELF. 30 DAYS TO CHANGE YOUR MIND."
+    fun kitDeleted(name: String): String = "$name IS OFF THE SHELF. ${Reversal.MIND}"
     const val KIT_DELETE_BUSY = "DELETING…"
     const val KIT_DELETE_FAILED = "DELETE FAILED. THE KIT MAY ALREADY BE GONE."
     /** RENAME on a shelf kit; [name] is what it actually landed under — a collision may have freshened it. */
@@ -768,7 +848,7 @@ object Copy {
      * `SnipStore.Info.displayName`, so a never-confidently-classified snip
      * reads "SNIP", never a guess.
      */
-    fun snipDeleted(name: String): String = "$name IS OFF THE LIST. 30 DAYS TO CHANGE YOUR MIND."
+    fun snipDeleted(name: String): String = "$name IS OFF THE LIST. ${Reversal.MIND}"
     const val SNIP_DELETE_FAILED = "DELETE FAILED. THE FILE MAY ALREADY BE GONE."
 
     // ---- DELETED SNIPS: restore or empty early ----
@@ -1080,7 +1160,7 @@ object Copy {
     fun actionFailed(action: String): String = "$action FAILED. TRY AGAIN."
 
     /** PLACE (SNIPS → PAD): the snip landed on [slot], `App.kt`'s `assignPendingSnip`'s success line, moved out of an inline literal. */
-    fun snipPlaced(slot: Int): String = "SNIP PLACED ON PAD A%02d.".format(java.util.Locale.ROOT, slot)
+    fun snipPlaced(slot: Int): String = "SNIP PLACED ON PAD ${PadBanks.tag(slot)}."
 
     // ---- SURFACE + SPLIT: the two printing screens share one shape ----
     //

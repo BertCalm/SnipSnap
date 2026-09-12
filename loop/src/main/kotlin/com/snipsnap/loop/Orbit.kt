@@ -1,6 +1,9 @@
 package com.snipsnap.loop
 
+import com.snipsnap.mpc3.Mpc3Clip
+
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -11,11 +14,193 @@ data class OrbitHit(
     /** Pad slot in the referenced kit, 1-based, matching KitPad.slot. */
     val slot: Int,
     val velocity: Float = 1f,
+    /**
+     * Pulses this hit lands late (+) or early (−) of its step.
+     *
+     * Where a pocket lives. The set's `swing` is one number for the whole
+     * set and can only push the odd 16th of a pair; a feel template is
+     * sixteen different numbers, a humanised take is one per hit, and
+     * neither has anywhere to go without this. In pulses rather than
+     * frames because a set outlives the device it was made on: frames
+     * would shift the whole pocket when the same file opened at a
+     * different sample rate.
+     */
+    val offset: Long = 0L,
+    /**
+     * How long this hit sounds, in pulses — or [WHOLE_SAMPLE] for all of it.
+     *
+     * Zero is not "no time", it is "however long the sample is", which is
+     * what every hit meant before this field existed and what a drum
+     * almost always wants: a kick is over when the kick is over, and
+     * gating it at a 16th would be a new and worse sound.
+     *
+     * Whose length it is, is the caller's: the engine gates *any* positive
+     * length on *any* pad, and this deliberately cannot consult the pad's
+     * trigger mode. `KitPad.oneShot` is a boolean over what the corpus
+     * records as three states — One Shot, Note Off, Note On
+     * (docs/MPC3_FORMAT.md) — so nothing here can tell whether a given pad
+     * reads a note's length at all, and gating on that guess would stop
+     * voices live that the hardware would play out. A length is most
+     * useful on a pad that holds; it is not restricted to one.
+     *
+     * In pulses for the reason [offset] is: a set outlives the device it
+     * was made on, and a length in frames would mean a different note at
+     * a different sample rate.
+     */
+    val length: Long = WHOLE_SAMPLE,
+    /**
+     * How often this hit sounds when its lap comes round, as a percent —
+     * [ALWAYS] for every time.
+     *
+     * The roll is not random at play time. It is a pure function of the
+     * set's [OrbitSet.seed], the ring, the hit and the lap number
+     * ([OrbitClock.sounds]), so the same set renders to the same audio
+     * twice and the engine and the export agree lap for lap. A live
+     * `Random` would give neither: a bounce would differ from what was
+     * heard, and a rewind would play a different take of the same set.
+     *
+     * Percent rather than a 0..1 float because it is stored, and a
+     * percent is exact in JSON where 0.15 is not.
+     */
+    val chance: Int = ALWAYS,
+    /**
+     * One lap in this many carries the hit — [EVERY_LAP] for all of them.
+     *
+     * Laps of this ring, not of the set's bar: on a free 20-step ring
+     * against a 16-step one, "every other lap" is every other turn of the
+     * twenty, which is where the figure a player hears actually lives.
+     *
+     * Which of the laps is [onLap], so 1-in-4 is four different hits, not
+     * one. The pair is the sequencer staple written as two numbers because
+     * that is what it is — the Elektron writes it `1:4`.
+     */
+    val everyLaps: Int = EVERY_LAP,
+    /** Which lap of [everyLaps] this hit takes, 0-based and less than it. */
+    val onLap: Int = 0,
+    /**
+     * How many times the hit strikes across its step — [ONCE] for a plain
+     * hit, 2 for a 32nd pair on a 16th step, and so on.
+     *
+     * Across *its own* step rather than a 16th, so a 3-step ring spanning
+     * a bar ratchets into thirds of a bar. The ring's step is the unit the
+     * player is looking at; a 16th would be a second grid nothing draws.
+     *
+     * Every strike carries the hit's own [velocity]. A ramp across the
+     * roll is a good sound and a bad field: it would be a second velocity
+     * the hit does not show and the grid cannot draw, and the player who
+     * wants one can put the strikes on their own steps.
+     */
+    val ratchet: Int = ONCE,
 ) {
     init {
         require(step >= 0) { "step must not be negative: $step" }
         require(slot >= 1) { "slot is 1-based: $slot" }
         require(velocity in 0f..1f) { "velocity out of range: $velocity" }
+        require(offset in -MAX_OFFSET..MAX_OFFSET) { "offset out of range: $offset" }
+        require(length in 0L..MAX_LENGTH) { "length out of range: $length" }
+        require(chance in 0..ALWAYS) { "chance is a percent: $chance" }
+        require(everyLaps in EVERY_LAP..MAX_EVERY) { "everyLaps must be $EVERY_LAP..$MAX_EVERY: $everyLaps" }
+        require(onLap in 0 until everyLaps) { "onLap must be 0 until $everyLaps: $onLap" }
+        require(ratchet in ONCE..MAX_RATCHET) { "ratchet must be $ONCE..$MAX_RATCHET: $ratchet" }
+    }
+
+    /** Whether this hit stops when it is told to rather than when the sample runs out. */
+    val gated: Boolean get() = length > WHOLE_SAMPLE
+
+    /**
+     * Whether this hit sounds on every lap it comes round on.
+     *
+     * The two ways out of certainty are one question wherever the answer
+     * only matters as "can I skip asking": a hit at [ALWAYS] on
+     * [EVERY_LAP] needs no seed, no lap number and no roll.
+     */
+    val certain: Boolean get() = chance >= ALWAYS && everyLaps == EVERY_LAP
+
+    /** Whether this hit strikes more than once across its step. */
+    val ratcheted: Boolean get() = ratchet > ONCE
+
+    /**
+     * Whether this hit can ever sound at all.
+     *
+     * A [chance] of zero is a hit that is on the ring and silent — kept
+     * rather than lifted, which is what a player does to try a bar without
+     * it. It costs nothing to play, but it must not cost anything to
+     * *reason* about either: it lengthens no cycle and explains no refusal,
+     * because nothing it does can be heard.
+     */
+    val neverSounds: Boolean get() = chance <= 0
+
+    /**
+     * Whether the set's seed decides anything about this hit.
+     *
+     * Narrower than `!`[certain]: a hit at [ALWAYS] on one lap in two is
+     * uncertain in the sense that it does not sound every lap, and yet no
+     * seed in the world changes which laps those are. So is a hit at zero.
+     * Only a chance strictly between the two is actually rolled, and only
+     * those make a set a *take*.
+     */
+    val rolled: Boolean get() = chance in 1 until ALWAYS
+
+    companion object {
+        /**
+         * A 16th either way. Past that a hit reads as belonging to a
+         * different step, and the step is what the ring draws - a pocket
+         * that deep is a hit somewhere else, entered somewhere else.
+         */
+        const val MAX_OFFSET: Long = Mpc3Clip.PULSES_PER_16TH
+
+        /**
+         * A [length] of zero: play the sample out.
+         *
+         * Named rather than written as 0 because "no length" and "every
+         * length there is" are opposite readings of the same number, and
+         * the second one is meant.
+         */
+        const val WHOLE_SAMPLE: Long = 0L
+
+        /**
+         * The longest a hit may sound: the 64 bars both outputs already
+         * cap a cycle at, in pulses.
+         *
+         * A ceiling rather than none, because `orbits.json` carries numbers
+         * as JSON and a JSON number is a `Double` — past 2^53 a length
+         * would round on the way out and read back as a different note,
+         * which is the one thing a file must not do quietly. 64 bars is
+         * nowhere near that, and it is the repo's own number rather than an
+         * invented one: nothing longer can be exported anyway.
+         */
+        const val MAX_LENGTH: Long = OrbitClip.MAX_BARS * Mpc3Clip.PULSES_PER_BAR
+
+        /** A [chance] of 100: the hit sounds every time its lap comes round. */
+        const val ALWAYS: Int = 100
+
+        /** An [everyLaps] of 1: every lap is this hit's lap. */
+        const val EVERY_LAP: Int = 1
+
+        /** A [ratchet] of 1: one strike, which is what a hit is. */
+        const val ONCE: Int = 1
+
+        /**
+         * The longest a conditional may count.
+         *
+         * A ceiling because [OrbitClock.cycleSteps] multiplies by it: a
+         * hit on one lap in N makes its ring N turns long before the set
+         * repeats, and the export writes that whole cycle. Eight is the
+         * sequencer convention (the Elektron counts to 8) and keeps the
+         * worst case — eight rings all coprime and all conditional — a
+         * number the refusal can still say out loud.
+         */
+        const val MAX_EVERY: Int = 8
+
+        /**
+         * The most strikes one step may hold.
+         *
+         * Eight across a 16th is 128th notes, which at 120 BPM is 15 ms
+         * apart — already past where a drum reads as a roll rather than a
+         * pitch, and far past what the export's 960 PPQ can place evenly
+         * on the slower rings.
+         */
+        const val MAX_RATCHET: Int = 8
     }
 }
 
@@ -173,6 +358,17 @@ data class OrbitSet(
      * moves the odd steps of any ring whose step is a 16th ([OrbitClock.swingFrames]).
      */
     val swing: Int = STRAIGHT_SWING,
+    /**
+     * The one number every [OrbitHit.chance] on this set rolls against.
+     *
+     * A set with a seed is a take: the same seed gives the same audio
+     * every time it is rendered, bounced or exported, and a new one gives
+     * a different arrangement of the same material without a hit moving.
+     * That is the whole reason a seed is stored rather than a `Random`
+     * kept alive somewhere — a live generator makes a bounce that does not
+     * match what was heard, and there is nothing to write in the file.
+     */
+    val seed: Int = DEFAULT_SEED,
 ) {
     init {
         require(orbits.size <= MAX_ORBITS) { "at most $MAX_ORBITS rings, got ${orbits.size}" }
@@ -186,11 +382,17 @@ data class OrbitSet(
         const val MAX_ORBITS = 8
         const val DEFAULT_LAP_STEPS = 16
 
-        const val STRAIGHT_SWING = 50
-        const val MAX_SWING = 75
+        /** The seed a set has until someone rolls a new one. Any number does; this one is a number. */
+        const val DEFAULT_SEED = 1
+
+        // The MPC's scale, not a second copy of it: a ring's swing percent
+        // means what the exported clip's does, so it is defined where the
+        // rest of the format's arithmetic lives.
+        const val STRAIGHT_SWING = Mpc3Clip.STRAIGHT_SWING
+        const val MAX_SWING = Mpc3Clip.MAX_SWING
 
         /** The swings worth a chip: the MPC's own ladder, straight to dotted. */
-        val SWING_CHOICES: List<Int> = listOf(50, 54, 58, 62, 66, 71, 75)
+        val SWING_CHOICES: List<Int> = listOf(STRAIGHT_SWING, 54, 58, 62, 66, 71, MAX_SWING)
 
         /** The bars worth a chip: the common meters, all even so a half-bar span stays whole. */
         val BAR_CHOICES: List<Int> = listOf(12, 16, 20, 24, 32)
@@ -235,6 +437,56 @@ object OrbitClock {
     /** Frames in one lap of [orbit]: the ring's circumference in time. */
     fun periodFrames(set: OrbitSet, orbit: Orbit): Long =
         periodSteps(set, orbit).toLong() * stepFrames(set)
+
+    /**
+     * [orbit]'s length in pulses — the same lap [periodFrames] measures,
+     * counted in the unit a clip is written in.
+     *
+     * There is no sample rate in this, and that is the whole point of it
+     * existing. A clip is musical time: the same set must export the same
+     * pulses whatever rate it happens to be playing at.
+     */
+    fun periodPulses(set: OrbitSet, orbit: Orbit): Long =
+        periodSteps(set, orbit).toLong() * Mpc3Clip.PULSES_PER_16TH
+
+    /** Pulses from one of [orbit]'s steps to the next. Fractional for a spanned ring whose steps don't divide its laps. */
+    fun ringStepPulses(set: OrbitSet, orbit: Orbit): Double =
+        periodPulses(set, orbit).toDouble() / orbit.steps
+
+    /**
+     * The pulse, within a lap, on which [step] fires — [stepOffset]'s
+     * answer in the export's own unit.
+     *
+     * The swing here is `Mpc3Clip.swingPush` itself rather than the frame
+     * ratio rounded on the way out. Those agree at every rate anyone
+     * plays at, but not at every rate the type accepts: a set is valid at
+     * any positive `sampleRate`, and once a frame is coarser than a pulse
+     * — fewer than 960 frames in a beat, which is a rate below 16 × BPM
+     * hertz — rounding to a frame and back moves the note. At 120 BPM and
+     * 832 Hz there are 416 frames to a beat against 960 pulses, so a step
+     * is 104 frames but 240 pulses, and swing 58 came out a pulse late.
+     */
+    fun stepPulses(set: OrbitSet, orbit: Orbit, step: Int): Long =
+        (step * ringStepPulses(set, orbit)).roundToLong() + swingPulses(set, orbit, step)
+
+    /** How late [step] fires for the set's swing, in pulses — [swingFrames]'s counterpart, gated identically. */
+    fun swingPulses(set: OrbitSet, orbit: Orbit, step: Int): Long {
+        if (step % 2 == 0 || set.swing == OrbitSet.STRAIGHT_SWING) return 0L
+        if (!stepIsSixteenth(set, orbit)) return 0L
+        return Mpc3Clip.swingPush(set.swing)
+    }
+
+    /**
+     * Where [hit] falls in a clip: its step's pulse plus its own lean.
+     *
+     * [firingOffset]'s counterpart, and simpler than it for one reason —
+     * [OrbitHit.offset] is already pulses, so the export adds it and is
+     * done. Reaching this through frames converted it out of the unit it
+     * was stored in and back again, rounding twice to arrive where it
+     * started.
+     */
+    fun firingPulses(set: OrbitSet, orbit: Orbit, hit: OrbitHit): Long =
+        stepPulses(set, orbit, hit.step) + hit.offset
 
     /**
      * [orbit]'s length in words — "5 BEATS", "1 BAR", "2 BARS", "3 16THS" —
@@ -289,12 +541,27 @@ object OrbitClock {
     fun swingFrames(set: OrbitSet, orbit: Orbit, step: Int): Double {
         if (step % 2 == 0 || set.swing == OrbitSet.STRAIGHT_SWING) return 0.0
         if (!stepIsSixteenth(set, orbit)) return 0.0
+        // The exact ratio rather than the export's rounded pulse, because
+        // this is the engine's answer and a frame is the finer unit at any
+        // rate worth playing at. The export does not come through here at
+        // all: it asks [swingPulses], which is `Mpc3Clip.swingPush` itself.
         return (set.swing - OrbitSet.STRAIGHT_SWING) / 50.0 * stepFrames(set)
     }
 
-    /** Whether [orbit]'s step is one 16th of the set's tempo — every free ring's is, and a spanned ring's when its steps fill its laps. */
+    /**
+     * Whether [orbit]'s step is one 16th of the set's tempo — every free
+     * ring's is, and a spanned ring's when its steps fill its laps.
+     *
+     * Asked of the ring's own arithmetic rather than of a frame distance,
+     * because "is this a 16th" is a question about the music and has no
+     * business consulting the sample rate. A half-frame tolerance answers
+     * it wrongly wherever a step is only a frame or two long: at 1 Hz a
+     * 15-step bar-locked ring has steps 1.07 frames apart against a 16th
+     * of 1, which came within tolerance, and the export swung the odd
+     * steps of a ring that has no pairs of 16ths to swing.
+     */
     fun stepIsSixteenth(set: OrbitSet, orbit: Orbit): Boolean =
-        abs(ringStepFrames(set, orbit) - stepFrames(set)) < 0.5
+        periodSteps(set, orbit) == orbit.steps
 
     /** How far round the ring the playhead is at [frame], 0 inclusive to 1 exclusive. */
     fun phase(set: OrbitSet, orbit: Orbit, frame: Long): Double {
@@ -315,16 +582,46 @@ object OrbitClock {
         Math.round(phase(set, orbit, frame) * orbit.steps).toInt() % orbit.steps
 
     /**
-     * How many 16ths before every ring is back on its downbeat together.
+     * How many 16ths before every ring is saying the same thing again.
      *
-     * The least common multiple of the ring lengths, where a bar-locked ring
-     * counts as one bar long whatever its step count — it comes round every
-     * bar by definition. Grows fast with coprime rings: 16, 20 and 24 meet
-     * again after 240 steps (15 bars), but 16, 17 and 19 need 5,168 steps
-     * (323 bars). Show this number, as the loop grid's bounce does.
+     * The least common multiple of the ring *turns* — [turnSteps], which is
+     * a ring's length stretched by the conditionals on it, since a hit on
+     * one lap in four does not come back until the fourth lap. A bar-locked
+     * ring counts as one bar long whatever its step count; it comes round
+     * every bar by definition. Grows fast with coprime rings: 16, 20 and 24
+     * meet again after 240 steps (15 bars), but 16, 17 and 19 need 5,168
+     * steps (323 bars). Show this number, as the loop grid's bounce does.
      */
     fun cycleSteps(set: OrbitSet): Long =
-        set.orbits.fold(set.lapSteps.toLong()) { acc, o -> lcm(acc, periodSteps(set, o).toLong()) }
+        set.orbits.fold(set.lapSteps.toLong()) { acc, o -> lcm(acc, turnSteps(set, o)) }
+
+    /**
+     * How many 16ths before [orbit] itself repeats: its lap, stretched by
+     * the conditionals on it.
+     *
+     * A lap is how long the ring takes to come round; this is how long it
+     * takes to *say the same thing again*, which is what a cycle is made
+     * of. A hit on one lap in four does not repeat until the fourth lap,
+     * so a 16-step ring carrying one is 64 steps long as far as the set's
+     * realignment is concerned, and the clip that writes one cycle has to
+     * be four times as long to hold it.
+     *
+     * [OrbitHit.chance] is deliberately not in this, with one exception at
+     * each end. A *rolled* hit never repeats - that is what rolling it is
+     * for - so there is no cycle length that would hold it, and the export
+     * writes the rolls of the first cycle rather than pretending to a
+     * period it has not got. A hit that [OrbitHit.neverSounds] is left out
+     * entirely: a silenced hit carrying a 1-in-8 made a one-bar ring claim
+     * an eight-lap cycle, which is eight bars of clip and a refusal, over
+     * a hit nothing can hear.
+     */
+    fun turnSteps(set: OrbitSet, orbit: Orbit): Long {
+        val period = periodSteps(set, orbit).toLong()
+        val content = orbit.content as? PatternOrbit ?: return period
+        return period * content.hits
+            .filter { !it.neverSounds }
+            .fold(1L) { acc, h -> lcm(acc, h.everyLaps.toLong()) }
+    }
 
     /** [cycleSteps] in reference bars, so the readout can say "15 BARS". */
     fun cycleBars(set: OrbitSet): Double = cycleSteps(set).toDouble() / set.lapSteps
@@ -342,43 +639,263 @@ object OrbitClock {
         (frameCount.toDouble() / stepFrames(set)).roundToInt().coerceIn(1, Orbit.MAX_STEPS)
 
     /**
-     * Every (hit, frame) of [orbit] that fires in [from] inclusive to [until]
+     * Every *strike* of [orbit] that sounds in [from] inclusive to [until]
      * exclusive — what the engine schedules for one block, and what a test
      * asserts against. Frames are absolute, since the start of play.
+     *
+     * One entry per strike, not per hit per lap, and neither number is
+     * fixed: a ratcheted hit contributes [OrbitHit.ratchet] entries across
+     * its own step, and a hit whose condition or roll comes up short on a
+     * lap contributes none for it ([sounds]). A hit appears as many times
+     * as it is heard, which is the only count a caller starting voices can
+     * use.
      */
     fun firings(set: OrbitSet, orbit: Orbit, from: Long, until: Long): List<Firing> {
         val content = orbit.content as? PatternOrbit ?: return emptyList()
         if (until <= from) return emptyList()
         val period = periodFrames(set, orbit)
+        val step = ringStepFrames(set, orbit)
         val out = ArrayList<Firing>()
         for (hit in content.hits) {
-            val offset = stepOffset(set, orbit, hit.step)
-            // First lap whose copy of this hit lands at or after `from`.
-            var lap = Math.floorDiv(from - offset, period)
-            if (lap * period + offset < from) lap++
-            var at = lap * period + offset
-            while (at < until) {
-                out.add(Firing(hit, at))
-                at += period
+            // The step's place on the ring is what the lap is counted from;
+            // the hit's own lean is added to the answer. A hit dragged
+            // before step 0 has nowhere earlier to go on its lap, so it
+            // sounds at the end of the previous one - which is what a
+            // pickup before the downbeat is, and it still belongs to the
+            // lap it leans into. Walking the step rather than the leaned
+            // position is what keeps [reachOf]'s widening bounded.
+            val lean = offsetFrames(set, hit)
+            val reach = reachOf(lean, step)
+            eachLap(period, stepOffset(set, orbit, hit.step), from - reach, until + reach) { lap, at ->
+                if (!sounds(set, orbit, hit, lap)) return@eachLap
+                for (k in 0 until hit.ratchet) {
+                    val frame = at + lean + strike(step, hit.ratchet, k)
+                    if (frame in from until until) out.add(Firing(hit, frame))
+                }
             }
         }
         out.sortBy { it.frame }
         return out
     }
 
-    data class Firing(val hit: OrbitHit, val frame: Long)
+    /**
+     * Every (hit, pulse) of [orbit] that falls before [untilPulses] — what
+     * the export writes, as [firings] is what the engine plays.
+     *
+     * The same walk as [firings] over the same laps, in the other unit. It
+     * is not a conversion of that one: the clip never visits the frame
+     * domain, so no rate can round a note off its pulse.
+     */
+    fun pulseFirings(set: OrbitSet, orbit: Orbit, untilPulses: Long): List<PulseFiring> {
+        val content = orbit.content as? PatternOrbit ?: return emptyList()
+        if (untilPulses <= 0L) return emptyList()
+        val period = periodPulses(set, orbit)
+        val step = ringStepPulses(set, orbit)
+        val out = ArrayList<PulseFiring>()
+        for (hit in content.hits) {
+            val lean = hit.offset
+            val reach = reachOf(lean, step)
+            eachLap(period, stepPulses(set, orbit, hit.step), -reach, untilPulses + reach) { lap, at ->
+                if (!sounds(set, orbit, hit, lap)) return@eachLap
+                for (k in 0 until hit.ratchet) {
+                    val pulses = at + lean + strike(step, hit.ratchet, k)
+                    if (pulses in 0L until untilPulses) out.add(PulseFiring(hit, pulses))
+                }
+            }
+        }
+        out.sortBy { it.pulses }
+        return out
+    }
 
     /**
-     * Frames since [orbit]'s [hit] last fired, at or before [frame] — what
-     * the screen's strike flare fades on. Never negative: a hit the needle
-     * has not reached yet this lap counts from its firing on the lap before,
-     * which at frame 0 means "a whole lap ago" rather than "about to fire".
+     * How far either side of its step one hit can reach: its lean, plus
+     * the step a ratchet strikes across, plus one for the rounding.
+     *
+     * The lap walk is widened by this and every strike it produces is then
+     * filtered against the window. Widening alone would emit a strike
+     * twice, once from each of two neighbouring blocks; filtering alone
+     * would miss the strike of a lap that starts before the block it lands
+     * in. Together they are exactly-once, and the filter is what makes it
+     * so - the widening only has to be generous enough.
+     */
+    private fun reachOf(lean: Long, step: Double): Long = abs(lean) + ceil(step).toLong() + 1
+
+    /**
+     * Where strike [k] of a [ratchet] falls after the hit, in the same
+     * unit [step] is given in.
+     *
+     * Evenly across the step, first strike on the beat: a ratchet of two
+     * is the hit and its halfway echo, not two echoes. The last strike is
+     * one interval short of the next step, so a ratchet never lands on
+     * top of the hit that follows it.
+     */
+    private fun strike(step: Double, ratchet: Int, k: Int): Long =
+        if (k == 0) 0L else Math.round(k * step / ratchet)
+
+    /**
+     * Whether [hit] sounds on [lap] of [orbit] - its condition, then its
+     * roll.
+     *
+     * The lap is the ring's own turn count, and the engine and the export
+     * ask this with the same number for the same turn. That much is by
+     * construction rather than by care: each walk indexes its own copies
+     * algebraically, so turn N is lap N in both, whatever the units.
+     *
+     * What the step-based walk buys is the widening. A lean and a ratchet
+     * both reach outside the lap a hit belongs to, so the walk has to be
+     * widened past the block and every strike filtered back into it - and
+     * that is only bounded if the position it walks is inside the lap to
+     * begin with. A step's place is always in `[0, period)`; where a hit
+     * finally sounds is not.
+     */
+    fun sounds(set: OrbitSet, orbit: Orbit, hit: OrbitHit, lap: Long): Boolean {
+        if (hit.certain) return true
+        if (Math.floorMod(lap, hit.everyLaps.toLong()) != hit.onLap.toLong()) return false
+        if (hit.chance >= OrbitHit.ALWAYS) return true
+        if (hit.chance <= 0) return false
+        return roll(set, orbit, hit, lap) < hit.chance
+    }
+
+    /**
+     * [hit]'s roll on [lap], 0 until [OrbitHit.ALWAYS] - a number, not a
+     * random one.
+     *
+     * Everything that identifies the hit goes into the seed, so two hits
+     * that differ at all roll differently: the ring's name, length and
+     * span, and the hit's step, pad and lean. Two rings that are identical
+     * in all of those do roll identically, which is the honest answer -
+     * they fire at the same instants on the same pads, so a set cannot
+     * hear the difference anyway.
+     *
+     * Deliberately not the ring's index in the set: reordering the rings
+     * on screen would re-roll every conditional in the set, and moving a
+     * row is not meant to be a new take. `kotlin.random.Random` because
+     * its generator is specified rather than the platform's - the same
+     * seed gives the same number on the JVM, on the device, and in a test.
+     */
+    fun roll(set: OrbitSet, orbit: Orbit, hit: OrbitHit, lap: Long): Int {
+        var h = set.seed.toLong()
+        h = h * 31 + orbit.name.hashCode()
+        h = h * 31 + orbit.steps
+        h = h * 31 + orbit.span.ordinal
+        h = h * 31 + hit.step
+        h = h * 31 + hit.slot
+        h = h * 31 + hit.offset
+        h = h * 31 + lap
+        return kotlin.random.Random(h).nextInt(OrbitHit.ALWAYS)
+    }
+
+    /**
+     * Every copy of one hit in [from] until [until], a lap apart.
+     *
+     * One walk for both units, because two of them is how the engine and
+     * the export come to disagree about which laps a hit lands on — the
+     * defect this wave keeps finding in a different costume.
+     */
+    private inline fun eachLap(period: Long, offset: Long, from: Long, until: Long, emit: (Long, Long) -> Unit) {
+        // First lap whose copy of this hit lands at or after `from`.
+        var lap = Math.floorDiv(from - offset, period)
+        if (lap * period + offset < from) lap++
+        var at = lap * period + offset
+        while (at < until) {
+            emit(lap, at)
+            lap++
+            at += period
+        }
+    }
+
+    /**
+     * The frame within a lap on which [hit] actually sounds: its step's
+     * grid place, the set's swing, and the hit's own lean.
+     *
+     * Everything that answers "when does this hit happen" goes through
+     * here — the engine, the export, and the ring the screen draws. They
+     * were three separate sums of the same parts, and a hit given a pocket
+     * sounded late while its dot stayed on the grid.
+     */
+    fun firingOffset(set: OrbitSet, orbit: Orbit, hit: OrbitHit): Long =
+        stepOffset(set, orbit, hit.step) + offsetFrames(set, hit)
+
+    /**
+     * [hit]'s own [OrbitHit.offset] in frames at the set's tempo — pulses
+     * are what a set stores, frames are what the engine counts.
+     */
+    fun offsetFrames(set: OrbitSet, hit: OrbitHit): Long = framesForPulses(set, hit.offset)
+
+    /**
+     * [pulses] of musical time as frames at [set]'s tempo.
+     *
+     * The one conversion between the two units, because a lean and a note
+     * length are the same question asked twice and two answers to it drift.
+     *
+     * Rounds the magnitude and puts the sign back: `Math.round` breaks ties
+     * toward positive infinity, so a value landing on half a frame rounds
+     * out late and back early — at 8 kHz a +3 pulse lean was 13 frames and
+     * a −3 was 12, an equal pair that was not a pair, and it biased a
+     * humanised take late with every tie in one direction.
+     */
+    fun framesForPulses(set: OrbitSet, pulses: Long): Long {
+        if (pulses == 0L) return 0L
+        val frames = Math.round(abs(pulses).toDouble() / Mpc3Clip.PULSES_PER_16TH * stepFrames(set))
+        return if (pulses < 0L) -frames else frames
+    }
+
+    data class Firing(val hit: OrbitHit, val frame: Long)
+
+    data class PulseFiring(val hit: OrbitHit, val pulses: Long)
+
+    /**
+     * Frames since [orbit]'s [hit] last *struck*, at or before [frame] —
+     * what the screen's strike flare fades on — or [NEVER] where it has
+     * not struck within the laps its condition repeats over.
+     *
+     * Never negative: a hit the needle has not reached yet this lap counts
+     * from its strike on the lap before, which at frame 0 means "a whole
+     * lap ago" rather than "about to fire".
+     *
+     * Two things make this a search rather than a remainder, and both are
+     * the flare telling the truth. A hit that did not sound must not flare,
+     * or a 1-in-4 flashes four times for every time it is heard; its
+     * condition repeats every `everyLaps` laps, so looking that far back
+     * either finds the strike or there was not one. And a *ratcheted* hit
+     * strikes several times across its step, so the flare has to fade from
+     * the latest of them: anchored to the first, a slow ring's fourth
+     * strike was heard against a dot that had already gone out.
+     *
+     * One path rather than a remainder with a search behind it, because
+     * for a plain hit the search's first answer *is* that remainder, and a
+     * second copy of it is how the two come to disagree.
      */
     fun framesSinceFiring(set: OrbitSet, orbit: Orbit, hit: OrbitHit, frame: Long): Long {
         val period = periodFrames(set, orbit)
-        val offset = stepOffset(set, orbit, hit.step)
-        return Math.floorMod(frame - offset, period)
+        val at = firingOffset(set, orbit, hit)
+        val step = ringStepFrames(set, orbit)
+        var lap = Math.floorDiv(frame - at, period)
+        val floor = lap - hit.everyLaps
+        while (lap >= floor) {
+            if (sounds(set, orbit, hit, lap)) {
+                val base = lap * period + at
+                // Latest first: the later strikes of this lap may still be
+                // ahead of the needle, and the first one never is.
+                for (k in hit.ratchet - 1 downTo 0) {
+                    val struck = base + strike(step, hit.ratchet, k)
+                    if (struck <= frame) return frame - struck
+                }
+            }
+            lap--
+        }
+        return NEVER
     }
+
+    /**
+     * [framesSinceFiring]'s answer for a hit that has not sounded lately:
+     * longer ago than any flare lasts.
+     *
+     * A number rather than a null because every caller divides it by a
+     * fade length and clamps, and "so long ago it is nothing" is the true
+     * answer for a hit whose roll came up short.
+     */
+    const val NEVER: Long = Long.MAX_VALUE
 
     private fun lcm(a: Long, b: Long): Long = a / gcd(a, b) * b
 

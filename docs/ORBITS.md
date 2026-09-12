@@ -74,11 +74,21 @@ THE SET). It is the share of each pair of 16ths the first takes: 50 is
 straight, 66 a triplet feel, 75 the dotted-8th. `OrbitClock.swingFrames`
 pushes every **odd step** late by (swing − 50) / 50 of a 16th, on every
 ring whose step *is* a 16th (`stepIsSixteenth`: every free ring, and a
-spanned ring whose steps fill its laps). A 3-step ring across a bar has no
-offbeat 16ths to push and is left straight. The offset lives in
-`stepOffset`, so the engine, the strike flare, the bounce and the MPC clip
-all carry it, and the ring draws each hit where it fires — a swung offbeat
-sits late on the ring as it does in time.
+spanned ring whose steps fill its laps — asked as `periodSteps == steps`,
+a question about the music with no sample rate in it). A 3-step ring
+across a bar has no offbeat 16ths to push and is left straight.
+
+Swing and a hit's own `offset` are two layers, and they meet in two
+places rather than one. The engine, the strike flare and the bounce count
+frames: `stepOffset` carries the set's swing, `firingOffset` adds the
+hit's lean, and the ring draws each hit where it fires — a swung offbeat
+sits late on the ring as it does in time. The MPC clip counts pulses and
+never converts out of them: `stepPulses` carries the swing as
+`Mpc3Clip.swingPush` itself, `firingPulses` adds the lean (already in
+pulses, so nothing is converted at all), and `pulseFirings` walks the laps
+— the same walk `firings` uses, so the two cannot disagree about which
+laps a hit lands on. A clip is musical time, so the same set exports the
+same pulses whatever rate it happens to be playing at.
 
 ## Level and pan
 
@@ -111,8 +121,12 @@ Bjorklund as Toussaint tells it, onset first — 3 round 8 is the tresillo
 puts k of them on the ring's first pad. CLEAR empties a ring. The dice
 (`scramble`) roll a seeded handful of hits for every pad in the voice,
 soft, normal or accented, and a new seed rolls again. A long-press on a
-strip cell cycles a hit's weight soft → normal → accent, or drops an accent
-on an empty cell. The step count is a picker of the sizes worth a chip
+strip cell moves whatever the strip's brush names — its weight
+(soft → normal → accent, which is what a long-press meant before there was
+anything else to write), its chance, its conditional or its ratchet — or
+drops an accent on an empty cell and applies the brush to it. The brush is
+the chip above the strip, because the grid's two gestures were already
+spent. The step count is a picker of the sizes worth a chip
 (`STEP_CHOICES`), not a walk on − and +.
 
 Three more ways in, all on the panel's second row:
@@ -135,9 +149,12 @@ Three more ways in, all on the panel's second row:
 
 ## The cycle
 
-`OrbitClock.cycleSteps` is the LCM of every ring's period with the reference
-bar (a spanned ring's period is its laps of the bar whatever its steps). It
-grows fast with coprime rings:
+`OrbitClock.cycleSteps` is the LCM of every ring's *turn* with the reference
+bar — its period (a spanned ring's is its laps of the bar whatever its
+steps), multiplied by the conditionals on it, since a hit on one lap in
+four does not repeat until the fourth lap (`turnSteps`). A `chance` is not
+in that sum: a rolled hit has no period to add. It grows fast with coprime
+rings:
 
 | Rings | Cycle |
 |---|---|
@@ -184,8 +201,12 @@ choice, not a surprise.
 | `loop/OrbitBank.kt` | The prepared audio for a set: pads at the device rate, snips fitted to their periods, each with its `FitReport` and its peaks for the ring's waveform. Immutable; an edit prepares a new one reusing the last |
 | `loop/LoopFit.kt` | `LoopFit` (as is · trimmed · padded · sliced), `FitReport` and its label, `FittedLoop` — what `BlockBaker.fitLoopReported` says it did |
 | `loop/OrbitEngine.kt` | The transport: fixed 2048-frame blocks, hits scheduled per block, voices mixed, snips wrapped, written to the same `AudioSink` the loop grid uses. `render` is the offline bounce and the test harness |
-| `loop/OrbitStore.kt` | `orbits.json` (version 3; versions 1 and 2 still load, their lock becoming a one-bar span), a sidecar beside the kit like `groove.json` |
+| `loop/OrbitStore.kt` | `orbits.json` (version 6; versions 1–5 still load — a v1/v2 lock becomes a one-bar span, a hit with no `offset` sits on its step, one with no `length` plays its sample out, and one with no `chance`, conditional or `ratchet` strikes once on every lap), a sidecar beside the kit like `groove.json` |
 | `loop/OrbitClip.kt` | One cycle as an MPC clip in `groove.json`, counted in the clip's own 4/4 bars whatever the set's bar, and the 64-bar refusal both outputs share |
+| `loop/OrbitLength` (in `Orbit.kt`, `OrbitEngine.kt`, `OrbitClip.kt`) | How long a hit sounds. `OrbitHit.length` in pulses, `WHOLE_SAMPLE` (0) meaning play the sample out — what every hit meant before, and what a drum wants. A gated hit ends live over the choke's own ramp, and exports its own `lengthPulses` where an ungated one still writes a 16th. Whether the hardware acts on that number is the pad's `triggerMode` — One Shot fires the whole sample and ends, Note Off plays while held, Note On covers vocals, loops, keys and sustained chops (docs/MPC3_FORMAT.md) — and `KitPad.oneShot` is a boolean over all three, so nothing in this model can tell which. The engine therefore gates any positive length on any pad rather than guessing, and the export writes the number either way |
+| `loop/OrbitChance` (in `Orbit.kt`, `OrbitBrush.kt`) | Whether a hit happens at all. `OrbitHit.chance` is a percent, `everyLaps`/`onLap` the every-N-laps conditional (laps of *this ring*, so on a free 20-step ring it is every other turn of the twenty), `ratchet` how many times it strikes across its own step. The roll is `OrbitClock.sounds`: a pure function of `OrbitSet.seed`, the ring's name, length and span, the hit's step, pad and lean, and the lap number — so a set is a **take** that renders the same every time, and the engine and the export decide each lap identically. A new seed is a new arrangement of the same hits, with nothing moved. A conditional lengthens the cycle (`OrbitClock.turnSteps`) because the set does not repeat until it does; a chance does not, because it never repeats at all — except a chance of zero, which takes its hit out of that sum altogether, since a hit nothing can hear must not cost a clip four bars. `OrbitBrush` is what a long-press writes — the grid's two gestures were spent, so the chip above the strip is the third |
+| `loop/OrbitImport.kt` | The other direction: a `groove.json` clip as rings, one per pad, each the clip's own length. A note's pulse becomes the 16th it is nearest plus its lean off *where that step fires*, so a clip goes out and comes back on the same pulse rather than snapped to the grid — which needed `OrbitHit.offset` to exist, and needs the destination's swing, since `stepPulses` adds a push the inverse has to take off. A note in the last half-16th wraps to step 0 as a pickup. Pads past the ring budget share the last circle instead of being dropped; a note whose pad the kit lacks is left out and named; two notes the clip holds on one pad at one pulse become the louder, by the export's own rule, and are counted |
+| `loop/OrbitFeel.kt` | Pocket for rings: a `GrooveFeel` donor's sixteen per-position offsets laid onto hits, a seeded humanised take, or straight again. Writes `OrbitHit.offset` — pulses late or early of the step, which is the only place a feel or a jitter can live on a ring |
 | `loop/OrbitPatterns.kt` | Euclid, SPREAD, CLEAR, the dice, TURN, `place` (what REC writes), a copy's name, the weight cycle, the step-size choices |
 | `loop/OrbitPresets.kt` | The starter set from a kit — one ring per instrument the kit has (KICK 16 · SNARE 16 · HATS 12 · PERC 20 · THREE, a locked triplet · BASS 20 over the tonal pads) — and the empty-ring and snip-ring constructors |
 | `app/OrbitSampleSource.kt` | Pads from the kit shelf via `KitSampleSource`, snips from `snips/` |

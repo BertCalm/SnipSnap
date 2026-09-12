@@ -160,8 +160,15 @@ class GrooveVariationsTest {
     fun `swing pushes even 16ths late by exactly the formula and nothing else`() {
         val swung = GrooveVariations.swing(base, 66)
         // Quantized first (0, 480, 960, 1680, 1920), then every odd-index
-        // 16th pushed by (66-50)*240/50 = 76 pulses.
-        assertEquals(listOf(0L, 480L, 960L, 1680L + 76, 1920L), swung.notes.map { it.timePulses })
+        // 16th pushed by Mpc3Clip.swingPush(66).
+        //
+        // 77, not 76: (66-50)/50 of a 240-pulse 16th is 76.8, and this
+        // used to reach 76 through `Long` division while a ring swung to
+        // the same percent rounded to 77 and exported a different file.
+        // One pulse, and two answers to one question; the push now has a
+        // single home that rounds to nearest.
+        assertEquals(77L, Mpc3Clip.swingPush(66))
+        assertEquals(listOf(0L, 480L, 960L, 1680L + 77, 1920L), swung.notes.map { it.timePulses })
         assertEquals(base.notes.map { it.velocity }, swung.notes.map { it.velocity }, "swing is time, not dynamics")
         assertEquals("Break Swing 66", swung.name)
 

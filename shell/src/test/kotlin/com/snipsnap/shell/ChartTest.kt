@@ -135,8 +135,14 @@ class ChartTest {
         )
         val swung = GrooveVariations.swing(straight, 62)
         val line = Chart.swingLine(swung)
-        // (62−50)/50 of a 16th = 57.6 → 57 pulses in Long arithmetic; 57 reads back as 62%.
-        assertEquals("EVEN 16THS +57 PULSES, ≈ SWING 62%", line)
+        // (62−50)/50 of a 16th is 57.6, which Mpc3Clip.swingPush rounds to
+        // 58. It read 57 while the push truncated through Long division -
+        // the same pulse a ring swung to 62 never agreed with. Either way
+        // the readback is 62%: the inverse is robust to the rounding, and
+        // taking the figure from the constant keeps this from going stale
+        // the next time the push is touched.
+        assertEquals(58L, Mpc3Clip.swingPush(62))
+        assertEquals("EVEN 16THS +${Mpc3Clip.swingPush(62)} PULSES, ≈ SWING 62%", line)
         assertEquals("EVEN 16THS ON THE GRID. STRAIGHT.", Chart.swingLine(straight))
         // The panel's maximum pushes every "and" by exactly half a 16th (120
         // pulses). A halfway hit belongs to the earlier cell, as its late

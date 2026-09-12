@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen&amp;family=VT323&amp;family=Michroma&amp;family=Rock+Salt&amp;display=swap" rel="stylesheet">
+  <style>
+body{margin:0;background:#0C0618;}
+a{color:#40E0E8;} a:hover{color:#8EEEF4;}
+.px{font-family:'Silkscreen','Verdana',sans-serif;font-size:9px;letter-spacing:0.5px;line-height:1.2;text-transform:uppercase;}
+.pxs{font-family:'Silkscreen','Verdana',sans-serif;font-size:8px;letter-spacing:0.5px;line-height:1.25;text-transform:uppercase;}
+.lcdf{font-family:'VT323','Courier New',monospace;line-height:1;}
+.lcd{background:#0A0714;border-radius:6px;position:relative;overflow:hidden;box-shadow:inset 0 2px 8px #000;}
+.lcd::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(180deg,rgba(0,0,0,.3) 0 1px,transparent 1px 3px);pointer-events:none;}
+.glow{text-shadow:0 0 6px rgba(154,108,240,.9);}
+.cell{display:flex;flex-direction:column;gap:3px;align-items:center;}
+.cbar{width:100%;height:6px;border-radius:2px;background:#221A34;overflow:hidden;}
+</style>
+</helmet>
+<div style="width:390px;height:400px;background:#0C0618;display:flex;flex-direction:column;overflow:hidden;">
+<div style="flex:1;margin:12px;display:flex;flex-direction:column;gap:8px;overflow:hidden;">
+
+<div style="display:flex;align-items:center;gap:8px;">
+  <div style="padding:4px 8px;border:1px solid #FFB000;border-radius:3px;"><span class="pxs" style="color:#FFB000;">PROPOSAL</span></div>
+  <span class="pxs" style="color:#7A6AA0;">SURFACE · MORPH READOUT, RESTRUCTURED — NO FIELD EVER DROPS</span>
+</div>
+
+<div class="pxs" style="color:#584A80;">AS BUILT: ONE WRAPPED LCD LINE; THE WORST CASE (TILT + SHARED STREAM + LONG PAD NAME) STILL LOSES THE PAD NAME AT TWO LINES.</div>
+
+<div class="lcd" style="flex:none;padding:10px;display:flex;flex-direction:column;gap:10px;">
+
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div style="flex:none;display:flex;flex-direction:column;gap:2px;padding:4px 8px;border:1px solid #34285A;border-radius:4px;">
+      <span class="pxs" style="color:#584A80;">LAT</span>
+      <span class="lcdf" style="color:#FFB000;font-size:19px;white-space:nowrap;">18 MS·SH</span>
+    </div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;">
+      <span class="pxs" style="color:#584A80;">PAD</span>
+      <span class="lcdf glow" style="color:#C8B2F8;font-size:19px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">A07 BODEGA CHORD LONG…</span>
+    </div>
+    <div style="flex:none;display:flex;flex-direction:column;gap:2px;align-items:flex-end;">
+      <span class="pxs" style="color:#584A80;">X / Y</span>
+      <span class="lcdf" style="color:#40E0E8;font-size:19px;">.62 · .31</span>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;align-items:flex-end;">
+    <div class="cell" style="flex:1;">
+      <div class="cbar"><div style="width:52%;height:100%;background:#E040C8;"></div></div>
+      <span class="pxs" style="color:#7A6AA0;">A .52</span>
+    </div>
+    <div class="cell" style="flex:1;">
+      <div class="cbar"><div style="width:18%;height:100%;background:#40E0E8;"></div></div>
+      <span class="pxs" style="color:#7A6AA0;">B .18</span>
+    </div>
+    <div class="cell" style="flex:1;">
+      <div class="cbar"><div style="width:24%;height:100%;background:#8FD424;"></div></div>
+      <span class="pxs" style="color:#7A6AA0;">C .24</span>
+    </div>
+    <div class="cell" style="flex:1;">
+      <div class="cbar"><div style="width:6%;height:100%;background:#FFB000;"></div></div>
+      <span class="pxs" style="color:#7A6AA0;">D .06</span>
+    </div>
+    <div class="cell" style="flex:none;width:64px;">
+      <div class="cbar"><div style="width:38%;height:100%;background:#9A6CF0;"></div></div>
+      <span class="pxs" style="color:#7A6AA0;">TILT .38</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="pxs" style="color:#584A80;">THREE FIXED CELLS + ELLIPSIZED PAD NAME ON ROW ONE; CORNER WEIGHTS AND TILT AS MICRO-BARS ON ROW TWO. BARS READ FASTER THAN FOUR DECIMALS MID-PERFORMANCE, AND EVERY FIELD OWNS ITS PIXELS — NOTHING COMPETES WITH LATENCY FOR THE LINE. SAME 40PX LCD BUDGET AS TWO TEXT LINES.</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:400}}"></script>
+</body>
+</html>

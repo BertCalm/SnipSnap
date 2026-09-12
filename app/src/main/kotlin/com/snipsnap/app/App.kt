@@ -88,12 +88,14 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.KitStore
+import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.InstantKit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.ReadGroove
 import com.snipsnap.shell.RecipeReplay
 import com.snipsnap.shell.Retrim
@@ -353,6 +355,9 @@ fun App(shelf: KitShelf) {
     // by the MenuRow tab-switch reset below if the user gives up on the
     // pick without ever tapping a second kit.
     var pendingBreedWith by remember { mutableStateOf<KitShelf.Entry?>(null) }
+    // A chop landed ONTO a bank asks KIT to open on that bank, once
+    // (KitScreen's `bankRequest`); null again the moment KIT honours it.
+    var kitBankRequest by remember { mutableStateOf<Int?>(null) }
     // DO IT AGAIN: what COPY LAST TREATMENT last lifted off a pad. A
     // clipboard, not a hand-off — deliberately NOT cleared by the tab-
     // switch reset below: pasting onto a pad in ANOTHER kit means going
@@ -751,6 +756,15 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * Whether a SNIPS → PAD landing has somewhere to go: an empty pad on
+     * bank A or B — both are pages the long-press fills (bank B round 2).
+     * One predicate for every hint that says so, so a full bank A with
+     * an empty B never reads as "THIS KIT IS FULL".
+     */
+    fun hasLandingPad(kit: com.snipsnap.kit.Kit): Boolean =
+        (PadBanks.slots(0).first..PadBanks.slots(1).last).any { kit.pad(it) == null }
+
     fun fresh(starter: StarterKits.Starter) {
         if (busy != null) return
         busy = Copy.dubbingBusy(starter.displayName)
@@ -775,7 +789,7 @@ fun App(shelf: KitShelf) {
             // copy points at, while every other way into a kit with a snip
             // armed says what to do next (September UAT, finding 12).
             toast = if (pendingSnipAssign != null) {
-                Copy.snipLanding((1..16).any { entry.kit.pad(it) == null })
+                Copy.snipLanding(hasLandingPad(entry.kit))
             } else {
                 Copy.FRESH_TAPE
             }
@@ -857,6 +871,14 @@ fun App(shelf: KitShelf) {
     fun evilTwins() {
         val source = open ?: return
         if (busy != null) return
+        // A remix replaces bank B. The user's own pads there (capture,
+        // SNIPS → PAD, a chop landed ONTO it) are not the remix's to
+        // replace: `remixBankB` refuses, and this says so first, in the
+        // app's words, instead of a TWINS FAILED with the model's.
+        if (KitBuilderModel.ownPadsOnBankB(source.kit).isNotEmpty()) {
+            toast = Copy.TWINS_KEEP_OWN
+            return
+        }
         val hadTwins = source.kit.pads.any { it.slot > 16 }
         busy = Copy.EVIL_TWINS_BUSY
         scope.launch {
@@ -1631,6 +1653,10 @@ fun App(shelf: KitShelf) {
         // a tab switch away from KITS mid-pick abandons the hand-off rather
         // than leaving KitsScreen stuck naming a cross partner forever.
         pendingBreedWith = null
+        // ONTO's ask to open KIT on its bank is for the KIT that follows
+        // it; a tab switch abandons it rather than letting it fire on
+        // some later visit to some other kit.
+        kitBankRequest = null
         tapeOpenOverride = null
         // DELETED KITS is shelf-level too — same reasoning
         // as SNIPS above: a tab switch away from KITS must
@@ -1776,6 +1802,12 @@ fun App(shelf: KitShelf) {
                                         // kits are chosen.
                                         if (entry.dir == breedSource.dir) {
                                             toast = Copy.BREED_SAME_KIT
+                                        } else if (Breed.crossable(breedSource.kit, entry.kit).isEmpty()) {
+                                            // Nothing for the coin on either
+                                            // side: the child would be a copy
+                                            // of A. Said now, the pick still
+                                            // armed for another kit.
+                                            toast = Copy.BREED_NOTHING_TO_CROSS
                                         } else {
                                             finishBreed(breedSource, entry)
                                         }
@@ -1799,7 +1831,7 @@ fun App(shelf: KitShelf) {
                                         // instead of pointing at a pad that
                                         // doesn't exist.
                                         if (pendingSnipAssign != null) {
-                                            toast = Copy.snipLanding((1..16).any { entry.kit.pad(it) == null })
+                                            toast = Copy.snipLanding(hasLandingPad(entry.kit))
                                         } else {
                                             // Teach the one gesture that opens PAD
                                             // SHEET, while it's still undiscovered.
@@ -1810,7 +1842,7 @@ fun App(shelf: KitShelf) {
                                             // pending-snip hint above rather than
                                             // fighting it for the one toast slot.
                                             val shown = prefs.getInt(PREF_PAD_SHEET_HINTS, 0)
-                                            val hasFilledPad = (1..16).any { entry.kit.pad(it) != null }
+                                            val hasFilledPad = entry.kit.pads.isNotEmpty()
                                             // No showing limit any more (September UAT,
                                             // finding 5): it used to stop after three, so
                                             // three dismissals while busy with something
@@ -2064,6 +2096,9 @@ fun App(shelf: KitShelf) {
                                     onSetKey = ::setKey,
                                     onInKey = ::inKey,
                                     onTwins = ::evilTwins,
+                                    onBankEmpty = { toast = Copy.bankEmpty(PadBanks.letter(it)) },
+                                    bankRequest = kitBankRequest,
+                                    onBankRequestConsumed = { kitBankRequest = null },
                                     onBreed = ::startBreed,
                                     // A second kit to cross with has to
                                     // already be on the shelf — BREED can't
@@ -2169,6 +2204,14 @@ fun App(shelf: KitShelf) {
                             onToast = { toast = it },
                             onSentToGrid = { newEntry ->
                                 open = newEntry
+                                screen = AppScreen.KIT
+                                scope.launch {
+                                    kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                }
+                            },
+                            onLandedOnto = { updated, bank ->
+                                open = updated
+                                kitBankRequest = bank
                                 screen = AppScreen.KIT
                                 scope.launch {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
