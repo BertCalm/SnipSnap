@@ -352,6 +352,8 @@ class PersonalityTest {
         // CATCH A HIT's busy line while the hits are found, and its grid's
         // one-word button — a label, not a landing.
         "CATCH_BUSY", "CATCH_DONE_BUTTON",
+        // HUM THE CHOP's readout while the hum runs.
+        "HUM_BUSY",
         // The HITS stepper's own busy readout.
         "HITS_BUSY",
         "OUTSIDE_LISTENING", "ROOM_FORGET_BUSY", "ROOM_RESTORE_BUSY", "ROOM_BIN_EMPTY_BUSY", "KIT_DELETE_BUSY", "KIT_RENAME_BUSY",

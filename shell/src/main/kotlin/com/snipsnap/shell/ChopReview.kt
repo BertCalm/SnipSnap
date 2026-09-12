@@ -125,6 +125,20 @@ class ChopReviewModel private constructor(
          * bench's count, ear, cut and grid all reach [hits].
          */
         data class Ghosts(val hits: ByHits = ByHits()) : ChopMode
+
+        /**
+         * HUM THE CHOP (§10, `Hum`): exactly these [cuts] of the source —
+         * the hits the mouth landed on, each INSTANT KIT's own cut of that
+         * hit — with the mouth's word for each as its chip ([labels]; null
+         * where the mouth was unsure, and the tape's own class stands).
+         * The bench's count, ear, cut and grid do not reach it: the count
+         * is the mouth's.
+         */
+        data class Hummed(val cuts: List<IntRange>, val labels: List<DrumClass?>) : ChopMode {
+            init {
+                require(cuts.size == labels.size) { "one label per cut: ${cuts.size} cuts, ${labels.size} labels" }
+            }
+        }
     }
 
     /**
@@ -221,6 +235,7 @@ class ChopReviewModel private constructor(
             is ChopMode.ByHits -> parts += "BY HITS"
             is ChopMode.Ghosts -> parts += "GHOSTS"
             is ChopMode.Grid -> parts += "GRID ×${mode.parts}"
+            is ChopMode.Hummed -> parts += "HUMMED"
         }
         if (hits != null) {
             if (hits.ear != Ear.NORMAL) parts += hits.ear.name
@@ -636,6 +651,7 @@ class ChopReviewModel private constructor(
             is ChopMode.ByHits -> mode
             is ChopMode.Ghosts -> mode.hits
             is ChopMode.Grid -> null
+            is ChopMode.Hummed -> null
         }
 
         /** [mode] with its hits chop replaced by [hits] (a grid becomes [hits] itself). */
@@ -746,6 +762,17 @@ class ChopReviewModel private constructor(
 
         /** [chop] with a tempo already measured for this source (or not yet, but shared). */
         private fun chop(source: Snip, mode: ChopMode, tape: TapeRef?, tempoLazy: Lazy<TempoEstimate?>): ChopReviewModel {
+            if (mode is ChopMode.Hummed) {
+                // The mouth's cuts, each cut from the source as any chop cut
+                // is; a cut off the source (a stale reading) is dropped with
+                // its label. The mouth's word goes on as the chip's
+                // override — YOU ✓ where it differs from the tape's own.
+                val cut = mode.cuts.map { Chopper.slice(source, it.first, it.last + 1, null, Chopper.SLICE_CLEANUP) }
+                val kept = cut.withIndex().filter { it.value.snip.frameCount > 0 }
+                val m = ChopReviewModel(source, mode, kept.map { it.value }, tape, tempoLazy = tempoLazy)
+                for ((row, iv) in m.rows.zip(kept)) mode.labels[iv.index]?.let { row.override = it }
+                return m
+            }
             val hits = hitsOf(mode)
             var slices = when {
                 hits != null ->
