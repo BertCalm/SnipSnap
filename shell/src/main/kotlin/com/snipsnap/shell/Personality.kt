@@ -677,6 +677,8 @@ object Copy {
      */
     fun treatedStacked(segment: String, pad: String): String =
         "$segment ON $pad, OVER THE LAST ONE — NO ORIGINAL IN THE BIN TO SWAP FROM. VERSIONS ▸ ROLLS BACK."
+    /** SMEAR at AMT 0 on a pad that isn't smeared: `smearPad` writes nothing, so nothing landed. */
+    const val SMEAR_ZERO = "AMT 0: NOTHING TO SMEAR. THE PAD STAYS AS IT IS."
     const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."
     const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."

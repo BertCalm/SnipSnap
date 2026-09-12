@@ -544,12 +544,21 @@ fun PadSheetScreen(
             try {
                 var applied = false
                 var stacked = false
+                var noop = false
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
                         check(freshPad.velocityLayers.isEmpty()) {
                             "pad $slot is velocity-layered - clear GHOSTS before smearing"
+                        }
+                        // AMT 0 on a pad that isn't smeared: `smearPad`
+                        // touches nothing (its own KDoc — a slider must not
+                        // take an era off on the way past zero), so this is
+                        // not a landing: no toast claiming one, no audition.
+                        if (amount <= 0f && PadSheet.readSmear(freshPad.recipe) == null) {
+                            noop = true
+                            return@withFreshKit
                         }
                         // `smearPad` restores first when it can; when the
                         // original is not in the bin it stacks (amount 0 is
@@ -570,6 +579,8 @@ fun PadSheetScreen(
                 if (applied) {
                     val label = PadSheet.displayLabel(PadSheet.SMEAR)
                     onToast(if (stacked) Copy.treatedStacked(label, padName) else Copy.treated(label, padName))
+                } else if (noop) {
+                    onToast(Copy.SMEAR_ZERO)
                 } else {
                     onToast(Copy.BIN_ITEM_GONE)
                 }
@@ -680,7 +691,7 @@ fun PadSheetScreen(
                             // new treatment stacks, the way `treat` always has
                             // — and the toast says so, since the card will
                             // light one segment while the sound carries two.
-                            PadSheet.UnTreat.NOT_BINNED -> stacked = true
+                            PadSheet.UnTreat.NOT_BINNED -> stacked = amount > 0f
                             PadSheet.UnTreat.NOTHING -> Unit
                         }
                         when (treatment) {
@@ -2090,15 +2101,19 @@ private fun provenanceOrigin(source: Map<String, String>): String? = when {
 
 /**
  * How the pad came to be, when a door made it from other pads: a twin
- * (`KitBuilderModel.TWIN_OF`, the bank-A pad it was dealt from) or a
+ * (`KitBuilderModel.TWIN_OF`, the bank-A pad it was dealt from) and/or a
  * bred child (`Breed`'s `bredFrom`, "Mother x Father"). Both doors copy
  * the parent's source keys, so [provenanceOrigin] alone would read a
  * twin as its parent's tape — this goes first on the line, so BREED and
  * REMIX BANK B are answered for on the one screen that inspects a pad.
+ * Both stamps show when both are there (a bred kit whose parent had
+ * twins carries a twin's `twinOf` under BREED's `bredFrom`): neither
+ * derivation is the whole story alone.
  */
-private fun lineage(source: Map<String, String>): String? =
-    source[KitBuilderModel.TWIN_OF]?.let { "twin of $it" }
-        ?: source["bredFrom"]?.let { "bred from ${it.replace(" x ", " × ")}" }
+private fun lineage(source: Map<String, String>): List<String> = listOfNotNull(
+    source[KitBuilderModel.TWIN_OF]?.let { "twin of $it" },
+    source["bredFrom"]?.let { "bred from ${it.replace(" x ", " × ")}" },
+)
 
 private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String {
     val origin = provenanceOrigin(pad.source) ?: pad.sampleFile
@@ -2108,7 +2123,7 @@ private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String 
     // the pad's own — neither CHOP nor BACK ONTO resamples.
     val cut = Retrim.cutOf(pad)
     val parts = mutableListOf<String>()
-    lineage(pad.source)?.let { parts += it }
+    parts += lineage(pad.source)
     parts += if (cut != null && snip != null) "$origin @ ${cut.label(snip.sampleRate)}" else origin
     snip?.let { parts += "%.0f ms".format(java.util.Locale.ROOT, it.durationSeconds * 1000f) }
     binDaysLeft?.let { parts += "original in bin, ${it}d left" }

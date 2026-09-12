@@ -1630,6 +1630,10 @@ fun App(shelf: KitShelf) {
         // a tab switch away from KITS mid-pick abandons the hand-off rather
         // than leaving KitsScreen stuck naming a cross partner forever.
         pendingBreedWith = null
+        // ONTO's ask to open KIT on its bank is for the KIT that follows
+        // it; a tab switch abandons it rather than letting it fire on
+        // some later visit to some other kit.
+        kitBankRequest = null
         tapeOpenOverride = null
         // DELETED KITS is shelf-level too — same reasoning
         // as SNIPS above: a tab switch away from KITS must
