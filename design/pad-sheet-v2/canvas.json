@@ -413,6 +413,96 @@
       "h": 400,
       "title": "DELETED KITS · EMPTY armed",
       "page": "page-13"
+    },
+    {
+      "file": "TapeSplicePick.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 560,
+      "title": "TAPE SPLICE · pick HEAD + TAIL",
+      "page": "page-14"
+    },
+    {
+      "file": "TapeSpliceNeedle.dc.html",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 620,
+      "title": "TAPE SPLICE · the needle, one frame",
+      "page": "page-14"
+    },
+    {
+      "file": "StackTakes.dc.html",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 700,
+      "title": "STACK THE TAKES · 2 picked, one over LIVE",
+      "page": "page-14"
+    },
+    {
+      "file": "ArrangePlan.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 700,
+      "title": "ARRANGE · the plan, theme playing",
+      "page": "page-15"
+    },
+    {
+      "file": "Doubles.dc.html",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 640,
+      "title": "DOUBLES · two clusters at 0.05",
+      "page": "page-15"
+    },
+    {
+      "file": "XRay.dc.html",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 600,
+      "title": "X-RAY · a drum program, read-only",
+      "page": "page-15"
+    },
+    {
+      "file": "DeletedSnips.dc.html",
+      "x": 1440,
+      "y": 0,
+      "w": 390,
+      "h": 520,
+      "title": "DELETED SNIPS · the fourth bin",
+      "page": "page-15"
+    },
+    {
+      "file": "SurfaceReadoutProposal.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 400,
+      "title": "PROPOSAL · SURFACE readout restructured",
+      "page": "page-16"
+    },
+    {
+      "file": "KitActionsProposal.dc.html",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 560,
+      "title": "PROPOSAL · KIT action row grouped",
+      "page": "page-16"
+    },
+    {
+      "file": "SmearGhostsRefused.dc.html",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 420,
+      "title": "UNDRAWN STATE · SMEAR refused, ghosts on",
+      "page": "page-16"
     }
   ],
   "annotations": [
@@ -535,11 +625,35 @@
       "w": 1350,
       "page": "page-13",
       "text": "DELETED KITS (drawn from DeletedKitsScreen.kt; never had a board - the last screen this archaeology pass found. Closes the gap KitsScreen.kt's and Personality.kt's own prior KDocs used to describe accurately: a deleted kit used to have neither a listing nor a restore, unlike TAKES + BIN and ROOMS's own FORGET → BIN)\nEmpty bin: NOTHING DELETED. in the LCD panel, the plain locked tone SNIPS' own NO SNIPS YET set, not the shelf's usual tape-metaphor quips. List, unarmed: two rows, each name/pad-count/relative-age over a RESTORE chip; days-left reads in warn (amber-orange) at ≤2 days and amber otherwise, the same threshold TAKES + BIN and ROOMS's own binned rows use - a row at 0 days left still shows and still restores, the sweep decides when it's actually gone, not this screen. EMPTY armed: a RESTORE tap disarms it first (the row vanishing shifts everything under the finger, so the very next tap must not read as EMPTY's own second tap), and a real second tap on EMPTY itself swaps the label to TAP AGAIN TO CONFIRM — NO TAKEBACKS, the same three-second self-disarming confirm TakesBinScreen's own EMPTY THE BIN NOW uses, copied verbatim.\nWhat the drawing found: no defect - both EMPTY-button strings are the same ones already proven to fit TakesBinScreen's identical layout, and the fixed bin-red border/glow reads the same scheme-invariant pair SNIPS' own DELETE uses."
+    },
+    {
+      "id": "note-splice-stack",
+      "x": 0,
+      "y": -230,
+      "w": 1350,
+      "page": "page-14",
+      "text": "TAPE SPLICE + STACK THE TAKES (drawn from TapeSpliceScreen.kt and StackTakesScreen.kt; the September merge's PAD SHEET take-workshops, boards drawn after the code)\nSPLICE, pick: HEAD and TAIL chosen from this pad's own recoverable history - LIVE is always a candidate (amber name, never binned until something rewrites it), each row reading its real peak and length (-6.2 DBFS · 0.41 S) or the honest WON'T READ; picked chips wear the accent border. SPLICE, needle: both takes stacked on one LCD each, ONE shared needle over both - the frame where the head hands off to the tail; bright tape is what survives the cut. COMMIT is honest about the seam (SPLICED CLEAN. NO OVERLAP NEEDED. / …A FEW MS OF TAPE OVERLAP WENT IN.), and whatever was live is binned, undoable.\nSTACK: LIVE pinned on top (KitPad.init demands it be loudest), candidates below with age + facts; picks order softest-first, ▲ moves one softer, three zones is the cap (STACK_MAX_THREE says why: the MPC 2 has four layer slots and LIVE takes one). A pick that peaks over LIVE is SAID beside its row (S2 IS +1.2 DB OVER LIVE…) and left exactly that loud - no auto-gain, per STACK_NO_GAIN. The cost is said before COMMIT: STACK_LOCKS, verbatim, above the button.\nWhat the drawing found: no defect in either - both reuse the row/chip/bin vocabulary exactly; the one judgement call drawn here is SPLICE's needle timestamp riding above the lane (the code draws it in the transport readout - either is honest, the board's placement keeps the eye on the seam)."
+    },
+    {
+      "id": "note-arrange-utility",
+      "x": 0,
+      "y": -230,
+      "w": 1830,
+      "page": "page-15",
+      "text": "ARRANGE + THE THREE READ-ONLY ROOMS (drawn from ArrangeScreen.kt, DoublesScreen.kt, XRayScreen.kt, DeletedSnipsScreen.kt)\nARRANGE: GROOVE's variations laid into a song - intro → theme → variation → the turn → reprise → outro, each section's row carrying its bars and its REASON in the arranger's own words (sparse - only the hits at or above the base groove's median velocity). The playing section wears the accent border and a ▶ in its number cell; ■ STOP holds PLAY's slot; REROLL ⚄ rerolls the variation, same structure (ARRANGE_REROLLED). Mixdown runs on first PLAY, cached per plan - MIXING… rides the PLAY button, not a scrim.\nDOUBLES: the shelf measured once, grouped at the ring you pick (WITHIN 0.02/0.05/0.10 chips); every cluster header says its own WITHIN so a wider ring reads as what it is; GO ▸ opens that kit on that pad's sheet. The two standing caveats (DOUBLES_RULE, DOUBLES_TRIM_CAVEAT) close the screen - nothing here deletes, moves or merges.\nX-RAY: what's inside the file, read-only on purpose - EMPTY slots listed rather than left off, unlabeled fields counted at the foot, never guessed at. No action row by design.\nDELETED SNIPS: the fourth bin, nested under SNIPS, same red-pill listing/RESTORE/EMPTY grammar as TAKES + BIN and DELETED KITS - days-left goes warn at ≤2 days.\nWhat the drawing found: no defect in any of the four - all reuse proven vocabulary; ARRANGE's section-reason lines are the one new text pattern, drawn at pxs/ink3 where they can't compete with the mark-type section names."
+    },
+    {
+      "id": "note-proposals",
+      "x": 0,
+      "y": -230,
+      "w": 1350,
+      "page": "page-16",
+      "text": "THREE PROPOSALS (not as-built - each board says which way the code should move, if at all)\n1. SURFACE readout, restructured: page seven's own note conceded the worst case (MORPH + tilt + shared stream + long pad name) still drops the pad name even at two wrapped lines. The proposal gives every field its pixels: LAT fixed-left (it already leads the line by the code's own comment), pad name ellipsized in the middle, X/Y fixed-right; corner weights and TILT as micro-bars below - bars read faster than four decimals mid-performance. Same 40px LCD budget.\n2. KIT action row, grouped: page five flagged six flat lines as a GroupBox candidate. MAKE (changes what you hear: REMIX BANK B, KEY, TEXTURE) vs KEEP (never touches the sound: TAKES + BIN, SHARE); SCULPT and STRETCH fold into the one TEXTURE door they already share; each row earns a status column. Same GroupBox the pad sheet owns - one open at a time, remembered per kit.\n3. SMEAR refused, drawn: the one refusal state page one never drew - SMEAR tapped on a ghosted pad. The segment wears the bin-red border for the toast's 2.6s, the toast names the door to clear, the lit GHOSTS toggle points at it, and the selection never moves off the prior segment. The copy is the code's own exception line, uppercased - worth promoting to a Personality.Copy const beside RETRIM_LAYERED so the voice matches."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-13"
+    "page": "page-14"
   },
   "pages": [
     {
@@ -593,6 +707,18 @@
     {
       "id": "page-13",
       "name": "DELETED KITS"
+    },
+    {
+      "id": "page-14",
+      "name": "TAPE SPLICE + STACK"
+    },
+    {
+      "id": "page-15",
+      "name": "ARRANGE · DOUBLES · X-RAY · DELETED SNIPS"
+    },
+    {
+      "id": "page-16",
+      "name": "Proposals"
     }
   ]
 }
