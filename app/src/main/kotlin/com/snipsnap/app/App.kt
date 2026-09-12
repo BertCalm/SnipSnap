@@ -64,6 +64,7 @@ import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.MenuRow
 import com.snipsnap.app.ui.MessageBox
 import com.snipsnap.app.ui.OrbitScreen
+import com.snipsnap.app.ui.OrbitStep
 import com.snipsnap.app.ui.PadCaptureScreen
 import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.PlayScreen
@@ -95,6 +96,8 @@ import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
+import com.snipsnap.loop.OrbitBrush
+import com.snipsnap.loop.OrbitSet
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.loop.SessionStore
@@ -365,6 +368,50 @@ fun App(shelf: KitShelf) {
     var groovePreTake by remember(open?.dir) { mutableStateOf<Mpc3Clip?>(null) }
     /** ORBIT: GROOVE's other overlay, the circular sequencer — same lifecycle as [arrangeOpen]. */
     var orbitOpen by remember { mutableStateOf(false) }
+    // Bug fix (tab-switch data loss), ORBIT's own version of the fix above:
+    // this screen is reachable through TWO doors — GROOVE's own "ORBIT ▸"
+    // (the `orbitOpen` overlay just above) and the menu row's own ORBIT tab
+    // (`AppScreen.ORBIT` further down) — and both used to tear the whole
+    // composable down on every tab switch, taking ~30 `remember(kitDir)`
+    // values with it. Six of those are the player's actual work rather than
+    // in-flight machinery or an open panel, so they're hoisted here exactly
+    // like GROOVE's own six above: same value+onChange shape, threaded into
+    // BOTH `OrbitScreen` call sites so either door leads to the same
+    // session, keyed on `open?.dir` so a KIT CHANGE still resets every one
+    // of them — a `history` entry (an undo snapshot) or a `set` (the rings
+    // themselves) from one kit must never be reachable from a different
+    // one, which would be worse than the data loss this fixes.
+    // - `orbitHistory`: the undo stack. The headline — this used to lose a
+    //   whole stack of edits on a tab switch, not just one snapshot the way
+    //   GROOVE's post-take row did.
+    // - `orbitSelected`/`orbitSolo`: which ring is being edited and which
+    //   is soloed — losing either reads as losing your cursor mid-edit.
+    // - `orbitSet`: the rings and bar configuration themselves. Hoisting
+    //   this isn't only about avoiding a reload from `orbits.json` on every
+    //   remount — a fast tab switch right after an edit could otherwise
+    //   read the file before `commit`'s own async save lands and silently
+    //   roll the rings back. See `OrbitScreen`'s own KDoc on its `set`
+    //   parameter for how the reload guard closes that specific race.
+    // - `orbitScrambleSeed`: what SCRAMBLE rolled.
+    // - `orbitBrush`: what the user dialled in for long-press writes.
+    //
+    // `bank` and `engine` — named as candidates alongside these by the
+    // brief that asked for this fix — are deliberately NOT hoisted: reading
+    // their own definitions (`OrbitBank`/`OrbitEngine`) shows both are live
+    // transport machinery (decoded/resampled audio buffers, and the
+    // audio-thread engine that plays them), the same family as `sink`/
+    // `audioThread`, which nobody proposed hoisting either. Hoisting them
+    // would fight OrbitScreen's own `DisposableEffect(kitDir) { onDispose {
+    // stopPlayback() } }`, which already (and correctly) nulls both out on
+    // every unmount — a stale audio handle surviving a tab switch would be
+    // a bug, not a feature, exactly as the brief that asked for this fix
+    // itself warned.
+    var orbitHistory by remember(open?.dir) { mutableStateOf<List<OrbitStep>>(emptyList()) }
+    var orbitSelected by remember(open?.dir) { mutableIntStateOf(0) }
+    var orbitSolo by remember(open?.dir) { mutableStateOf<Int?>(null) }
+    var orbitSet by remember(open?.dir) { mutableStateOf<OrbitSet?>(null) }
+    var orbitScrambleSeed by remember(open?.dir) { mutableIntStateOf(1) }
+    var orbitBrush by remember(open?.dir) { mutableStateOf(OrbitBrush.WEIGHT) }
     // SNIPS (Task 3): a shelf-level overlay, not KIT-scoped like PAD SHEET/
     // TAKES+BIN/PAD CAPTURE/GRAIN FIELD above — reachable from KitsScreen at
     // AppScreen.KITS (the shelf), one level up from those, so it's its own
@@ -2576,6 +2623,18 @@ fun App(shelf: KitShelf) {
                                     kitsRoot = shelf.root,
                                     onBack = { orbitOpen = false },
                                     onToast = { toast = it },
+                                    history = orbitHistory,
+                                    onHistoryChange = { orbitHistory = it },
+                                    selected = orbitSelected,
+                                    onSelectedChange = { orbitSelected = it },
+                                    solo = orbitSolo,
+                                    onSoloChange = { orbitSolo = it },
+                                    set = orbitSet,
+                                    onSetChange = { orbitSet = it },
+                                    scrambleSeed = orbitScrambleSeed,
+                                    onScrambleSeedChange = { orbitScrambleSeed = it },
+                                    brush = orbitBrush,
+                                    onBrushChange = { orbitBrush = it },
                                 )
                             } else if (arrangeOpen && songEntry != null) {
                                 ArrangeScreen(
@@ -2628,6 +2687,24 @@ fun App(shelf: KitShelf) {
                                     kitsRoot = shelf.root,
                                     onBack = { screen = AppScreen.GROOVE },
                                     onToast = { toast = it },
+                                    // Same six as the `orbitOpen` overlay call
+                                    // above — this is the menu row's own door
+                                    // to the exact same session, not a second
+                                    // one, so both must read/write the same
+                                    // App-level state or the two doors would
+                                    // disagree about what's on the rings.
+                                    history = orbitHistory,
+                                    onHistoryChange = { orbitHistory = it },
+                                    selected = orbitSelected,
+                                    onSelectedChange = { orbitSelected = it },
+                                    solo = orbitSolo,
+                                    onSoloChange = { orbitSolo = it },
+                                    set = orbitSet,
+                                    onSetChange = { orbitSet = it },
+                                    scrambleSeed = orbitScrambleSeed,
+                                    onScrambleSeedChange = { orbitScrambleSeed = it },
+                                    brush = orbitBrush,
+                                    onBrushChange = { orbitBrush = it },
                                 )
                             }
                         }
