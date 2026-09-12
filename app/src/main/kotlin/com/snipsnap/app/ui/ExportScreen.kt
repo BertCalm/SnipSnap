@@ -873,7 +873,7 @@ private fun FormatPickerRow(
                 // dropped: a screen reader is told this control is
                 // temporarily unavailable instead of it silently vanishing
                 // from the tree (accessibility audit finding 12).
-                .tapeClick(label = null, enabled = enabled, onClick = onToggle)
+                .tapeClick(label = "FORMAT: ${current.cyclerLabel}, ${if (open) "CLOSE" else "OPEN"}", enabled = enabled, onClick = onToggle)
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -899,15 +899,11 @@ private fun FormatPickerRow(
                         Modifier
                             .fillMaxWidth()
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            // label = null, not the cycler label: this row
-                            // has TWO TapeText children - the name and the
-                            // reason finding 8 added - and an explicit label
-                            // *replaces* merged descendant semantics rather
-                            // than adding to it (see tapeClick's KDoc). With
-                            // the name here, a TalkBack user heard the format
-                            // and never the reason, which is the one thing
-                            // finding 8 existed to give them. Mine, from #77.
-                            .tapeClick(label = null, onClick = { onPick(f) })
+                            // Names both the format and the reason finding
+                            // 8 added below (f.why) — the whole point of
+                            // that finding was that TalkBack (and everyone
+                            // else) should hear why, not just which.
+                            .tapeClick(label = "${f.cyclerLabel}: ${f.why}", onClick = { onPick(f) })
                             .padding(horizontal = 6.dp, vertical = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
