@@ -614,10 +614,11 @@ fun PadSheetScreen(
      */
     fun applyDust(m: KitBuilderModel, p: KitPad, amount: Float, padName: String, from: String? = null) {
         // Which tape: the one asked for (DUST FROM ▸); else the one the pad
-        // already dusts from while it is still on the shelf, so moving AMT
-        // on a borrowed dust keeps the borrowed tape; else the pad's own or
-        // the kit's.
-        val riding = PadSheet.readDust(p.recipe)?.tape?.takeIf { DustPrints.isBare(it) && File(snipsDir, it).isFile }
+        // already dusts from, so moving AMT on a borrowed dust keeps the
+        // borrowed tape — and when that tape has left the shelf, says so
+        // by name below rather than quietly dusting from another; else
+        // the pad's own or the kit's.
+        val riding = PadSheet.readDust(p.recipe)?.tape?.takeIf { DustPrints.isBare(it) }
         val tape = from ?: riding ?: DustPrints.tapeFor(m.kit, p)
         if (tape == null) {
             onToast(Copy.DUST_NO_TAPE)
@@ -642,7 +643,13 @@ fun PadSheetScreen(
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
-                    if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
+                    // The tape was read off the pad before the lock; a DUST
+                    // rewrite keeps the sample file's name and changes only
+                    // the recipe, so the sample-file guard alone would let a
+                    // print made for one tape land under a recipe that now
+                    // names another. The pad has to still ride the same tape.
+                    val ridingNow = freshPad?.let { PadSheet.readDust(it.recipe)?.tape?.takeIf { t -> DustPrints.isBare(t) } }
+                    if (freshPad != null && freshPad.sampleFile == staleSampleFile && (from != null || ridingNow == riding)) {
                         check(freshPad.velocityLayers.isEmpty()) {
                             "pad $slot is velocity-layered - clear GHOSTS before dusting"
                         }
@@ -1872,7 +1879,6 @@ fun PadSheetScreen(
             // the door to borrow another's.
             DustFromRow(
                 tape = PadSheet.readDust(pad.recipe)?.tape ?: model?.kit?.let { DustPrints.tapeFor(it, pad) },
-                riding = PadSheet.readDust(pad.recipe)?.tape,
                 open = dustFromOpen,
                 tapes = dustFromTapes,
                 scheme = scheme,
@@ -2688,15 +2694,14 @@ private fun TreatmentCard(
 private const val DUST_FROM_SHOWN = 24
 
 /**
- * DUST FROM ▸: the tape this pad's dust comes from ([tape]; [riding] when
- * the pad is dusted now, so that tape is lit in the list), and the
+ * DUST FROM ▸: the tape this pad's dust comes from, or would come from
+ * ([tape], lit in the list so the label and the list agree), and the
  * shelf's tapes inline when [open] — the bench's own convention over a
  * dialog, since a pick is one tap and the column already scrolls.
  */
 @Composable
 private fun DustFromRow(
     tape: String?,
-    riding: String?,
     open: Boolean,
     tapes: List<File>,
     scheme: Scheme,
@@ -2729,7 +2734,7 @@ private fun DustFromRow(
                     SnipStore.displayName(file),
                     scheme,
                     enabled = !busy,
-                    lit = file.name == riding,
+                    lit = file.name == tape,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { onPick(file) },
                 )

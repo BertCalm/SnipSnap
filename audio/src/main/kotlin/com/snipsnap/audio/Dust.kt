@@ -488,24 +488,20 @@ object Dust {
         if (count == 0) return null
         val buf = FloatArray(n)
         repeat(count) {
-            val at = rnd.nextInt(n - g)
+            val at = rnd.nextInt(n - g + 1)
             val which = rnd.nextInt(grains)
             for (k in 0 until g) buf[at + k] += p.crackle.samples[which * g + k]
         }
         return buf
     }
 
-    /** A seed from the hit's own bytes and the amount, so [sprinkle] is a function of them. */
+    /** A seed from every sample of the hit and the amount, so [sprinkle] is a function of exactly them. */
     private fun seedOf(hit: Snip, amount: Float): Long {
         var h = 1125899906842597L
         h = 31 * h + hit.frameCount
         h = 31 * h + hit.channels
         h = 31 * h + amount.toBits()
-        var i = 0
-        while (i < hit.samples.size) {
-            h = 31 * h + hit.samples[i].toBits()
-            i += 7
-        }
+        for (v in hit.samples) h = 31 * h + v.toBits()
         return h
     }
 

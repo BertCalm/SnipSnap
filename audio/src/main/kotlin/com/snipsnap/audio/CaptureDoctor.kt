@@ -166,10 +166,17 @@ object CaptureDoctor {
      * The clicks in one mono channel, as frame ranges, without repairing
      * them — the same hunt [repairClicks] runs (derivative outliers,
      * transient-guarded, isolated), offered to DUST, which collects them
-     * off a tape's ghosts as CRACKLE rather than mending them. Throws
-     * like [repairClicks] when the capture is distortion, not clicks.
+     * off a tape's ghosts as CRACKLE rather than mending them. Dropouts
+     * are mended on a copy first, as [repairClicks] does, so a hole's two
+     * walls — each a derivative cliff — are never returned as clicks.
+     * Throws like [repairClicks] when the capture is distortion, not
+     * clicks.
      */
-    fun findClicks(x: FloatArray): List<IntRange> = clickRegions(x)
+    fun findClicks(x: FloatArray): List<IntRange> {
+        val mended = x.copyOf()
+        for (r in dropoutRegions(mended)) interpolate(mended, 1, 0, r.first, r.last)
+        return clickRegions(mended)
+    }
 
     /** Click candidates as frame ranges, transient-guarded. */
     private fun clickRegions(x: FloatArray): List<IntRange> {
