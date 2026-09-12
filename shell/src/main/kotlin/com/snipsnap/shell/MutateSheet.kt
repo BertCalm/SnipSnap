@@ -256,7 +256,10 @@ object MutateSheet {
      */
     fun preview(model: KitBuilderModel, slot: Int, partner: Partner, mode: Mutate.Mode, fraction: Float): Snip {
         require(partner !is Partner.Pad || partner.slot != slot) { "a pad can't be its own parent" }
-        val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on ${padTag(slot)}")
+        // The rewrite's own gate, not a copy of it: a velocity-layered pad
+        // or a round-robin chain refuses here exactly as it refuses inside
+        // `replaceAudio`, so HEAR never plays a move KEEP would decline.
+        val pad = model.requireRewritable(slot)
         val base = WavReader.read(File(model.kitDir, pad.sampleFile))
         val k = knobs(mode, fraction)
         return Mutate.render(

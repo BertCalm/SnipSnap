@@ -68,15 +68,17 @@ class MutateSheetTest {
             assertEquals(heard.channels, kept.channels, "$mode: channels")
             assertEquals(heard.sampleRate, kept.sampleRate, "$mode: rate")
             assertEquals(heard.samples.size, kept.samples.size, "$mode: length")
-            // Within one 16-bit step: the only thing between the two is
-            // the file's own quantisation (WavWriter scales by 32767),
-            // never a different rendering.
+            // Within one 24-bit step: `replaceAudio` writes through
+            // `WavWriter.write`'s default depth, PCM_24, which scales by
+            // 8_388_607 - so this is the file's own quantisation and
+            // nothing else. A 16-bit bound would be 256x looser and would
+            // let a materially different preview pass.
             var worst = 0f
             for (i in heard.samples.indices) {
                 val d = Math.abs(heard.samples[i] - kept.samples[i])
                 if (d > worst) worst = d
             }
-            assertTrue(worst <= 2f / 32767f, "$mode: heard and kept differ by $worst, more than the file's own step")
+            assertTrue(worst <= 2f / 8_388_607f, "$mode: heard and kept differ by $worst, more than the file's own step")
         }
     }
 
@@ -106,6 +108,21 @@ class MutateSheetTest {
         assertFailsWith<IllegalArgumentException>("no pad on that slot") {
             MutateSheet.preview(m, 7, MutateSheet.Partner.Pad(2), Mutate.Mode.MORPH, 0.5f)
         }
+        // The two the WRITE refuses, which a preview skipped until review
+        // caught it: a round-robin chain is several files pretending to be
+        // one pad, and a velocity-layered pad has more than one sound to
+        // replace. Heard-then-refused is worse than never heard.
+        val chained = model("Chained")
+        Robin.apply(chained, 2, takes = 2)
+        val why = assertFailsWith<IllegalArgumentException> {
+            MutateSheet.preview(chained, 2, MutateSheet.Partner.Pad(1), Mutate.Mode.MORPH, 0.5f)
+        }.message
+        assertTrue(why != null && "round-robin" in why, "said: $why")
+        // And it is the same refusal the keep gives, not a lookalike.
+        val kept = assertFailsWith<IllegalArgumentException> {
+            MutateSheet.apply(chained, 2, MutateSheet.Partner.Pad(1), Mutate.Mode.MORPH, 0.5f)
+        }.message
+        assertEquals(kept, why, "HEAR and KEEP refuse in different words")
     }
 
     @Test
