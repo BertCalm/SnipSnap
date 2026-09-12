@@ -415,6 +415,7 @@ object Copy {
         "· FOLD ON CHOP: ONE PAD PER SOUND, THE REPEATS CYCLE UNDER IT.",
         "· GHOSTS ON CHOP: THE SPACES BETWEEN HITS. HOLD A PAD, HOLD THE ROOM.",
         "· CATCH ON TAPE: HOLD A PAD AS THE HIT GOES BY. IT LANDS THERE.",
+        "· HUM ON CHOP: BEATBOX ALONG. THE CUTS AND LABELS FOLLOW YOUR MOUTH.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -723,6 +724,29 @@ object Copy {
      */
     fun retrimLanded(pad: String, treatment: String?): String =
         "$pad RE-CUT." + (treatment?.let { " THE ${it.uppercase()} STAYED WITH THE OLD ONE - IT'S IN THE BIN." } ?: "")
+
+    // ---- HUM THE CHOP: your mouth places and names the cuts (docs/CHOP_CONTROLS.md §10) ----
+    /** HUM with the mic not armed: the hum comes off the same ring GRAB and HOLD use. */
+    const val HUM_NOT_LISTENING = "ARM THE MIC FIRST. HUM LISTENS THROUGH IT."
+    /** HUM with the INSIDE armed: that ring holds other apps' playback, not a mouth. */
+    const val HUM_INSIDE = "THE INSIDE IS ARMED, NOT THE MIC. HUM NEEDS THE MIC."
+    /** HUM began: the tape is playing, the mic is on. Headphones, or the mic hears the tape and every hit matches. */
+    const val HUM_START = "HUM ALONG. HEADPHONES ON, OR THE MIC HEARS THE TAPE TOO. TAP HUM AGAIN TO STOP."
+    /** The bench's readout while the hum runs. */
+    const val HUM_BUSY = "HUMMING…"
+    /** The ring gave nothing back: it stopped listening while the hum ran. */
+    const val HUM_NOTHING = "THE MIC HEARD NOTHING. ARM IT, THEN HUM AGAIN."
+    /** Every mouth sound missed every hit (or none was heard). */
+    const val HUM_NO_MATCH = "NOTHING YOU HUMMED LANDED ON A HIT. HEADPHONES ON, AND HUM WITH THE BEAT."
+    /** The hum landed: how many cuts, and how many sounds found no hit. */
+    fun hummed(cuts: Int, missed: Int): String {
+        val head = if (cuts == 1) "HUMMED: 1 CUT, YOUR MOUTH'S WORD ON IT." else "HUMMED: $cuts CUTS, YOUR MOUTH'S WORDS ON THEM."
+        return when (missed) {
+            0 -> head
+            1 -> "$head 1 SOUND FOUND NO HIT."
+            else -> "$head $missed SOUNDS FOUND NO HIT."
+        }
+    }
 
     // ---- CATCH A HIT: the pad grid is the chopper (docs/CATCH.md) ----
     /** CATCH A HIT with no kit open: the grid it lands on is the open kit's. */
