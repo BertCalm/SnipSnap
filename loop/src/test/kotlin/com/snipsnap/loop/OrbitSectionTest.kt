@@ -604,4 +604,95 @@ class OrbitSectionTest {
             OrbitSet(two, bpm, rate, sections = (0..OrbitSection.MAX_SECTIONS).map { OrbitSection("S$it", 1, setOf(0)) })
         }
     }
+
+    // ---- review round 3 ----
+
+    @Test
+    fun `a hit in the same block as the boundary is ended by it, not carried past it`() {
+        // The round-2 test of this rule passes with 2,048-frame blocks
+        // because the hit at 90,000 and the boundary at 96,000 fall in
+        // different ones, so the voice already exists when the boundary is
+        // reached. Ten-thousand-frame blocks put them in the SAME block —
+        // and the hits were started only once the whole block had been
+        // walked, so the boundary asked a list the voice was not in yet
+        // and the break was audible for the rest of the block.
+        val r = Orbit("A", 16, PatternOrbit("kit", listOf(OrbitHit(15, 1))))
+        val s = OrbitSet(
+            listOf(r),
+            bpm,
+            rate,
+            sections = listOf(OrbitSection("A", 1, setOf(0)), OrbitSection("DROP", 1, emptySet())),
+        )
+        val out = OrbitEngine.render(s, OrbitBank.prepare(s, Sustain()), (2 * bar).toInt(), blockFrames = 10_000).samples
+        // Both sides of the boundary, and both inside the block that holds it.
+        assertTrue(out[(bar - 1_000L).toInt() * 2] > 0.4f, "the hit did not sound in its own section")
+        assertEquals(0f, out[(bar + 1_000L).toInt() * 2], 1e-3f, "the break was audible inside the boundary's own block")
+    }
+
+    @Test
+    fun `a sounding voice still answers for its own ring after an edit moves the rings`() {
+        // A ring's INDEX is only true of the set it came from. Ring B is
+        // struck, ring A is then deleted while B's tail is still sounding,
+        // and B — which every section here plays — is index 0 in the set
+        // that arrives. A voice holding the old index 1 answered for a
+        // ring the new set has not got, and its tail was cut at the next
+        // boundary although nothing about it had changed.
+        val a = ring("A", 1)
+        val b = ring("B", 2, 15)
+        val before = OrbitSet(
+            listOf(a, b),
+            bpm,
+            rate,
+            sections = listOf(OrbitSection("X", 1, setOf(0, 1)), OrbitSection("Y", 1, setOf(0, 1))),
+        )
+        val sink = object : AudioSink {
+            override val sampleRate = rate
+            override val channels = 2
+            val written = ArrayList<FloatArray>()
+            override fun write(block: FloatArray) { written.add(block.copyOf()) }
+            override fun close() {}
+        }
+        val engine = OrbitEngine(before, OrbitBank.prepare(before, Graded()), sink, blockFrames = 1_000)
+        // Up to 95,000: B's step-15 hit fired at 90,000 and is still sounding.
+        engine.runFor(95)
+        assertEquals(0.2f, sink.written[94][0], 1e-4f, "B did not sound in its own section")
+        // Now drop ring A. B becomes index 0, and the sections follow it.
+        val after = before.withoutOrbit(0)
+        assertEquals(listOf("B"), after.orbits.map { it.name })
+        engine.apply(OrbitEngine.Prepared(after, OrbitBank.prepare(after, Graded())))
+        // Past the boundary at 96,000, into a section that still plays B.
+        engine.runFor(3)
+        assertEquals(0.2f, sink.written[97][0], 1e-4f, "B's tail was cut by a section that plays B")
+    }
+
+    @Test
+    fun `a named section that cannot be written stops the save, not only the preflight`() {
+        // `save` calls `clips` and not `clipRefusal`, so a section skipped
+        // inside `clips` was written out of the arrangement in silence:
+        // the sections either side of it went into groove.json as though
+        // that were the whole plan.
+        val dir = Files.createTempDirectory("orbit-partial").toFile()
+        // Its ring is a snip — audio, which a note-only clip cannot carry.
+        val tape = OrbitSet(
+            listOf(ring("A", 1, 0), Orbit("tape", 16, SnipOrbit("a.wav"))),
+            bpm,
+            rate,
+            sections = listOf(OrbitSection("IN", 1, setOf(0)), OrbitSection("TAPE", 1, setOf(1))),
+        )
+        assertTrue(OrbitClip.clipRefusal(tape)!!.contains("TAPE"))
+        assertTrue(assertFailsWith<IllegalArgumentException> { OrbitClip.clips(tape) }.message!!.contains("TAPE"))
+        assertFailsWith<IllegalArgumentException> { OrbitClip.save(dir, tape) }
+        assertEquals(emptyList(), com.snipsnap.kit.GrooveStore.load(dir), "a partial arrangement was stored")
+        // The same for a section whose only hit falls outside its window.
+        val late = OrbitSet(
+            listOf(ring("A", 1, 0), Orbit("L", 64, PatternOrbit("kit", listOf(OrbitHit(63, 2))))),
+            bpm,
+            rate,
+            sections = listOf(OrbitSection("IN", 1, setOf(0)), OrbitSection("LATE", 1, setOf(1))),
+        )
+        assertTrue(assertFailsWith<IllegalArgumentException> { OrbitClip.clips(late) }.message!!.contains("LATE"))
+        // A break is still the one section skipped without a word.
+        val withBreak = tape.copy(sections = listOf(OrbitSection("IN", 1, setOf(0)), OrbitSection("DROP", 1, emptySet())))
+        assertEquals(listOf("ORBIT IN"), OrbitClip.clips(withBreak).map { it.name })
+    }
 }

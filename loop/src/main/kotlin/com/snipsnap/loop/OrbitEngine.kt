@@ -44,8 +44,20 @@ class OrbitEngine(
         /** The kit whose rule this is — a group number means nothing outside it. */
         val kit: String,
         val muteGroup: Int,
-        /** Which ring struck it, so a section change can tell whose voice this is. */
-        val ring: Int,
+        /**
+         * The ring that struck it, held as the ring ITSELF rather than as
+         * its index.
+         *
+         * An index is only true of the set it was read from, and a voice
+         * outlives a set: an edit arrives through [apply] while a tail is
+         * still sounding, and `withoutOrbit`/`withOrbitAfter` shift every
+         * index after the one that moved. A voice still holding 2 across a
+         * deletion then answers for whichever ring is 2 now, and [hush]
+         * cuts, or spares, the wrong tail. A ring cannot go stale that
+         * way: it is either still in the set or it is not, and [hush] asks
+         * which by identity.
+         */
+        val orbit: Orbit,
     ) {
         var pos = 0 // interleaved index
         /** Interleaved index past which this voice is silent; a choke moves it in. */
@@ -81,7 +93,7 @@ class OrbitEngine(
     }
 
     /** One hit that lands in this block, waiting to be started in time order. */
-    private class Scheduled(val orbit: Orbit, val ring: Int, val hit: OrbitHit, val frame: Long)
+    private class Scheduled(val orbit: Orbit, val hit: OrbitHit, val frame: Long)
 
     private val frame = AtomicLong(0)
     private val running = AtomicBoolean(true)
@@ -144,7 +156,6 @@ class OrbitEngine(
         val until = from + blockFrames
         block.fill(0f)
 
-        due.clear()
         // A block is a slice of wall-clock time and a section boundary does
         // not wait for one to end, so a block that straddles one is played
         // as two pieces. Each piece is handed its OWN local frame, which is
@@ -162,25 +173,34 @@ class OrbitEngine(
             // offset inside this block is measured against.
             val shift = at - local
             hush(set, from, at)
+            due.clear()
             for ((index, orbit) in set.orbits.withIndex()) {
                 // The ring's own mute and the section's choice are different
                 // questions: a muted ring stays muted whatever a section says.
                 if (!orbit.engaged || orbit.level == 0f) continue
                 if (!OrbitClock.playsAt(set, index, at)) continue
                 when (orbit.content) {
-                    is PatternOrbit -> collect(set, orbit, index, local, local + (edge - at), shift)
+                    is PatternOrbit -> collect(set, orbit, local, local + (edge - at), shift)
                     is SnipOrbit -> addLoop(set, bank, orbit, local, (at - from).toInt(), (edge - from).toInt())
                 }
             }
+            // Choke means "the newest hit in the group wins", so the hits
+            // have to be started in the order they are heard. Each ring's
+            // firings are sorted, but rings are not sorted against each
+            // other - ring two's downbeat can fall before ring one's third
+            // step - so the merged order is what makes "newest" mean newest.
+            //
+            // Started here, piece by piece, rather than once the whole
+            // block has been walked: a hit landing just before a boundary
+            // was still only a plan when that boundary's [hush] ran, so
+            // nothing ended it and it sounded on into a section that
+            // leaves its ring out - a break, audible for the rest of the
+            // block. Pieces run in time order, so starting them piece by
+            // piece keeps the merged order "newest" needs.
+            due.sortBy { it.frame }
+            for (s in due) start(set, bank, s, from)
             at = edge
         }
-        // Choke means "the newest hit in the group wins", so the hits have
-        // to be started in the order they are heard. Each ring's firings
-        // are sorted, but rings are not sorted against each other - ring
-        // two's downbeat can fall before ring one's third step - so the
-        // merged order is what makes "newest" mean newest.
-        due.sortBy { it.frame }
-        for (s in due) start(set, bank, s, from)
         mixVoices()
 
         sink.write(block)
@@ -196,9 +216,9 @@ class OrbitEngine(
      * voice offset inside the block is measured against. With no
      * arrangement [shift] is zero and this is what it always was.
      */
-    private fun collect(set: OrbitSet, orbit: Orbit, ring: Int, from: Long, until: Long, shift: Long) {
+    private fun collect(set: OrbitSet, orbit: Orbit, from: Long, until: Long, shift: Long) {
         for (firing in OrbitClock.firings(set, orbit, from, until)) {
-            due.add(Scheduled(orbit, ring, firing.hit, firing.frame + shift))
+            due.add(Scheduled(orbit, firing.hit, firing.frame + shift))
         }
     }
 
@@ -222,7 +242,14 @@ class OrbitEngine(
         if (set.sections.isEmpty()) return
         val offset = (at - from).toInt()
         for (v in voices) {
-            if (OrbitClock.playsAt(set, v.ring, at)) continue
+            // By identity, against the set being played right now. A ring
+            // that is no longer in it was deleted, or edited into a new
+            // ring, while this tail was still sounding: it belongs to no
+            // section, so it rings out, which is what deleting a ring did
+            // before sections existed.
+            val ring = set.orbits.indexOfFirst { it === v.orbit }
+            if (ring < 0) continue
+            if (OrbitClock.playsAt(set, ring, at)) continue
             val cut = v.pos + offset * 2
             if (cut < 0) continue
             if (cut >= v.limit - v.fadeLen) continue
@@ -238,7 +265,7 @@ class OrbitEngine(
         val group = bank.muteGroup(content.kit, s.hit.slot)
         if (group != 0) choke(content.kit, group, offset)
         val gain = s.hit.velocity * s.orbit.level
-        val voice = Voice(pad.samples, gain * leftLaw(s.orbit.pan), gain * rightLaw(s.orbit.pan), content.kit, group, s.ring)
+        val voice = Voice(pad.samples, gain * leftLaw(s.orbit.pan), gain * rightLaw(s.orbit.pan), content.kit, group, s.orbit)
         // The voice starts partway into the block; anything before its
         // start is not played, which the negative position expresses
         // without a second offset field.

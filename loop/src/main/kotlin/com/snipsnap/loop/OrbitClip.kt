@@ -138,17 +138,7 @@ object OrbitClip {
         // passed and then failed inside `save` on a bare `require`.
         if (set.sections.isNotEmpty()) {
             for (index in set.sections.indices) {
-                if (set.sections[index].plays.isEmpty()) continue
-                val sub = sectionSet(set, index)
-                oneProgram(sub)?.let { return "SECTION ${set.sections[index].name}: $it" }
-                noNotes(sub)?.let { return "SECTION ${set.sections[index].name}: $it" }
-                // And the question `noNotes` cannot ask, because it knows
-                // the rings but not the window they are being cut to.
-                if (!sectionSounds(set, index)) {
-                    return "SECTION ${set.sections[index].name} IS SILENT — ITS RINGS HAVE NO HIT IN ITS " +
-                        "${set.sections[index].bars} BAR${if (set.sections[index].bars == 1) "" else "S"}. " +
-                        "LENGTHEN IT, OR GIVE IT A RING THAT PLAYS."
-                }
+                sectionRefusal(set, index)?.let { return it }
             }
             if (set.sections.all { it.plays.isEmpty() }) {
                 return "EVERY SECTION HERE IS A BREAK. GIVE ONE A RING TO PLAY."
@@ -156,6 +146,35 @@ object OrbitClip {
             return null
         }
         return oneProgram(set) ?: noNotes(set)
+    }
+
+    /**
+     * Why [index]'s section cannot be written, or null when it can.
+     *
+     * The one place that answers this, because [clipRefusal] and [clips]
+     * have to answer it the same way: the preflight that says a set may
+     * leave the screen and the writer that then writes it are the same
+     * question asked twice, and when they disagreed the writer won
+     * silently — a section the preflight would have named was dropped
+     * between the screen and `groove.json`.
+     *
+     * A BREAK answers null: it writes nothing by design, and there is
+     * nothing for the hardware to flip to for silence.
+     */
+    private fun sectionRefusal(set: OrbitSet, index: Int): String? {
+        val section = set.sections[index]
+        if (section.plays.isEmpty()) return null
+        val sub = sectionSet(set, index)
+        oneProgram(sub)?.let { return "SECTION ${section.name}: $it" }
+        noNotes(sub)?.let { return "SECTION ${section.name}: $it" }
+        // And the question `noNotes` cannot ask, because it knows the
+        // rings but not the window they are being cut to.
+        if (!sectionSounds(set, index)) {
+            return "SECTION ${section.name} IS SILENT — ITS RINGS HAVE NO HIT IN ITS " +
+                "${section.bars} BAR${if (section.bars == 1) "" else "S"}. " +
+                "LENGTHEN IT, OR GIVE IT A RING THAT PLAYS."
+        }
+        return null
     }
 
     /**
@@ -389,15 +408,23 @@ object OrbitClip {
     fun clips(set: OrbitSet): List<Mpc3Clip> {
         if (set.sections.isEmpty()) return listOf(clip(set))
         return set.sections.indices.mapNotNull { index ->
-            val sub = sectionSet(set, index)
-            // A break is a section that plays NO RINGS. Skipping on
-            // `noNotes` instead swallowed a named section whose rings are
-            // all snips, or hitless, or muted - dropped from the
-            // arrangement in silence, though the player named it and can
-            // see it on screen. Those reach [clip] and throw, and
-            // [clipRefusal] has already said which section and why.
-            if (!sectionSounds(set, index)) return@mapNotNull null
-            clip(sub, name = "$NAME_PREFIX ${set.sections[index].name}", steps = sectionSteps(set, index))
+            // A break is a section that plays NO RINGS, and it is the only
+            // one skipped without a word.
+            if (set.sections[index].plays.isEmpty()) return@mapNotNull null
+            // Every other section either writes its clip or says why not,
+            // here rather than only in the preflight: [save] calls this
+            // and not [clipRefusal], so a section skipped here was written
+            // out of the arrangement in silence - a named section whose
+            // rings are all snips, or muted, or whose only hit falls
+            // outside its own window, gone between the screen and
+            // `groove.json`, with the sections either side of it stored as
+            // though that were the whole plan.
+            sectionRefusal(set, index)?.let { throw IllegalArgumentException(it) }
+            clip(
+                sectionSet(set, index),
+                name = "$NAME_PREFIX ${set.sections[index].name}",
+                steps = sectionSteps(set, index),
+            )
         }
     }
 

@@ -1520,7 +1520,14 @@ private fun RingsCanvas(
 
     // The picture in words, for a screen reader: every ring in display
     // order, its length, and whether it is picked, muted or soloed.
-    val description = remember(set, selected, solo) {
+    //
+    // Keyed by the SECTION rather than by the frame: what this says
+    // changes at a boundary and nowhere else, so the frame would rebuild
+    // it forty-seven times a second to say the same sentence, and leaving
+    // it out left a screen reader on the first section's words for the
+    // whole arrangement. `sectionAt` is NO_SECTION for a set with no
+    // arrangement, which never changes, so such a set rebuilds as it did.
+    val description = remember(set, selected, solo, OrbitClock.sectionAt(set, transportFrame)) {
         val rings = order.joinToString(", ") { i ->
             val ring = set.orbits[i]
             val state = listOfNotNull(
