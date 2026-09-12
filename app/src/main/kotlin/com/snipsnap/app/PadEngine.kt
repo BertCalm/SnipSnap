@@ -25,6 +25,7 @@ class PadEngine(preferredSampleRate: Int) {
 
     private var handle: Long = NativePads.create(preferredSampleRate)
     private val open get() = handle != 0L
+    private val preferredRate = preferredSampleRate
 
     /** True between a successful [start] and [close]. See [isUp] for whether a callback is actually running. */
     @Volatile
@@ -349,6 +350,55 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun drainEnded(): IntArray = if (open) NativePads.drainEnded(handle) else IntArray(0)
 
+    // ---- the resample tap -------------------------------------------------
+
+    /**
+     * `SurfaceEngine.PrintState`'s own twin, ordinal for ordinal ([NativePads]
+     * hands back `PrintBuffer::State` unchanged) — kept as a second copy
+     * rather than shared, the way `Layer` is its own type here rather than
+     * reused from `SurfaceEngine`: the two engines' prints are a different
+     * shape (mono there, stereo here) and sharing the enum would not save
+     * the caller from knowing which engine it is reading.
+     */
+    enum class PrintState { IDLE, RECORDING, STOPPING, DONE }
+
+    /**
+     * Reserve [seconds] of RAM and record the mixed bus, stereo, from the
+     * next callback. False when a print is still recording or stopping —
+     * take that one first — or there is no stream.
+     *
+     * This is what a GROOVE bounce is made of: what gets captured is the
+     * mix every voice's own gain and choke already went through, the same
+     * frames the speaker gets, so there is no second engine that could
+     * disagree with it. See `PadEngine.h`'s (the native one) own KDoc for
+     * why that is the whole point.
+     */
+    @Synchronized
+    fun armPrint(seconds: Float): Boolean {
+        require(seconds > 0f && seconds <= MAX_PRINT_SECONDS) { "print length is 0..$MAX_PRINT_SECONDS s, got $seconds" }
+        return open && NativePads.armPrint(handle, (seconds * sampleRate()).toInt())
+    }
+
+    @Synchronized
+    fun printState(): PrintState =
+        if (open) PrintState.entries[NativePads.printState(handle)] else PrintState.IDLE
+
+    /**
+     * Stop and take the print as a stereo snip at the engine's rate; null
+     * when nothing was captured. Waits up to half a second for the
+     * callback's last write, so call it off the main thread.
+     */
+    @Synchronized
+    fun stopPrint(): Snip? {
+        if (!open) return null
+        val frames = NativePads.stopPrint(handle) ?: return null
+        return Snip(frames, 2, sampleRate())
+    }
+
+    /** The rate the device actually gave us; a printed take carries it. */
+    @Synchronized
+    fun sampleRate(): Int = if (open) NativePads.sampleRate(handle) else preferredRate
+
     @Synchronized
     fun close() {
         if (!open) return
@@ -374,5 +424,15 @@ class PadEngine(preferredSampleRate: Int) {
 
         /** The count-in click's fixed level — a cue meant to sit under the kit, not a mixed-in sound. */
         const val CLICK_GAIN = 0.6f
+
+        /**
+         * A print's RAM ceiling, the same bound `SurfaceEngine`'s own print
+         * uses: seconds of audio held in one reservation, not a length
+         * anyone would actually want to sit through. Stereo makes this
+         * print's bytes-per-second twice the surface's, and 60s of it is
+         * still under 25MB — the same order of magnitude `SnipStore` already
+         * accepts from an import, not a new ceiling this app has to defend.
+         */
+        const val MAX_PRINT_SECONDS = 60f
     }
 }
