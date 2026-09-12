@@ -213,6 +213,66 @@ object MutateSheet {
     }
 
     /**
+     * The card's one stepper as the five knob slots [Mutate.render] and
+     * [Mutate.apply] take.
+     *
+     * One place, because HEAR and KEEP have to agree exactly: a preview
+     * that computed its own splice point would play a sound the write
+     * then did not make, which is the whole promise of auditioning first.
+     * The move's knob fills its own slot; every other slot keeps the
+     * verb's default, since a move never reads a knob that is not its.
+     */
+    private data class Knobs(
+        val spliceAtMs: Int,
+        val crossoverHz: Float,
+        val morphAmount: Float,
+        val roomMix: Float,
+        val bands: Int,
+    )
+
+    private fun knobs(mode: Mutate.Mode, fraction: Float): Knobs {
+        val v = knobFor(mode)?.let { value(it, fraction) }
+        return Knobs(
+            spliceAtMs = if (mode == Mutate.Mode.SPLICE) v!!.roundToInt() else Mutate.DEFAULT_SPLICE_MS,
+            crossoverHz = if (mode == Mutate.Mode.SPLIT) v!! else Mutate.DEFAULT_CROSSOVER_HZ,
+            morphAmount = if (mode == Mutate.Mode.MORPH) v!! else 0.5f,
+            roomMix = if (mode == Mutate.Mode.ROOM) v!! else 0.5f,
+            bands = if (mode == Mutate.Mode.TRANSPLANT) v!!.roundToInt() else com.snipsnap.audio.Transplant.DEFAULT_BANDS,
+        )
+    }
+
+    /**
+     * What [apply] would write, without writing it — the card's HEAR.
+     *
+     * Reads the pad and the partner exactly as [apply] does and renders
+     * through [Mutate.render], so what this returns is what that would
+     * put in the file, sample for sample. Nothing moves: no bin entry, no
+     * recipe, no provenance, and the pad's WAV is untouched.
+     *
+     * It refuses what [apply] refuses, and for the same reasons, so a
+     * player never hears a move the keep would then decline: a pad cannot
+     * parent itself, a move that takes one parent gets one, and a knob out
+     * of range is out of range here too.
+     */
+    fun preview(model: KitBuilderModel, slot: Int, partner: Partner, mode: Mutate.Mode, fraction: Float): Snip {
+        require(partner !is Partner.Pad || partner.slot != slot) { "a pad can't be its own parent" }
+        // The rewrite's own gate, not a copy of it: a velocity-layered pad
+        // or a round-robin chain refuses here exactly as it refuses inside
+        // `replaceAudio`, so HEAR never plays a move KEEP would decline.
+        val pad = model.requireRewritable(slot)
+        val base = WavReader.read(File(model.kitDir, pad.sampleFile))
+        val k = knobs(mode, fraction)
+        return Mutate.render(
+            base, listOf(source(model, partner)), mode,
+            spliceAtMs = k.spliceAtMs,
+            crossoverHz = k.crossoverHz,
+            morphAmount = k.morphAmount,
+            roomMix = k.roomMix,
+            bands = k.bands,
+        ).snip
+    }
+
+    /**
      * MUTATE: [slot] and [partner] become one hit by [mode]; [fraction] is
      * the stepper's position on the move's knob (ignored by STACK). Through
      * [Mutate.apply], so the bin, the recipe and the provenance are exactly
@@ -220,8 +280,6 @@ object MutateSheet {
      */
     fun apply(model: KitBuilderModel, slot: Int, partner: Partner, mode: Mutate.Mode, fraction: Float): Mutate.Outcome {
         require(partner !is Partner.Pad || partner.slot != slot) { "a pad can't be its own parent" }
-        val knob = knobFor(mode)
-        val v = knob?.let { value(it, fraction) }
         val extra = when (partner) {
             is Partner.Deal -> mapOf(
                 "roulette" to JsonValue.Obj(
@@ -236,13 +294,14 @@ object MutateSheet {
             // Nothing beyond the label, exactly as the CLI records a .wav parent.
             is Partner.Wav, is Partner.Pad -> emptyMap()
         }
+        val k = knobs(mode, fraction)
         return Mutate.apply(
             model, slot, listOf(source(model, partner)), mode,
-            spliceAtMs = if (mode == Mutate.Mode.SPLICE) v!!.roundToInt() else Mutate.DEFAULT_SPLICE_MS,
-            crossoverHz = if (mode == Mutate.Mode.SPLIT) v!! else Mutate.DEFAULT_CROSSOVER_HZ,
-            morphAmount = if (mode == Mutate.Mode.MORPH) v!! else 0.5f,
-            roomMix = if (mode == Mutate.Mode.ROOM) v!! else 0.5f,
-            bands = if (mode == Mutate.Mode.TRANSPLANT) v!!.roundToInt() else com.snipsnap.audio.Transplant.DEFAULT_BANDS,
+            spliceAtMs = k.spliceAtMs,
+            crossoverHz = k.crossoverHz,
+            morphAmount = k.morphAmount,
+            roomMix = k.roomMix,
+            bands = k.bands,
             extraRecipe = extra,
         )
     }
