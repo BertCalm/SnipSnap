@@ -244,7 +244,10 @@ set never reaches the rings' meeting, which is what arranging it did.
   four-bar cycle is 48 steps, three of the clip's, and the OUT panel says
   so — and the 64-bar ceiling is measured in those bars, with the header's
   cycle line turning warn-coloured past it) and writes it into the kit's `groove.json` as
-  "ORBIT 4:5", replacing the last ORBIT clip and leaving the captured base,
+  "ORBIT 4:5" — or, with an arrangement, one named clip per playable
+  section, APPENDED in the plan's order after the kit's other grooves so
+  the base stays the base — replacing EVERY previous ORBIT clip rather
+  than only the last, and leaving the captured base,
   the variations and PROG E untouched — so the native export embeds it and
   it rides to the MPC with the kit. A kit with no groove yet gets the ORBIT
   clip as its first, which is what GROOVE then shows.

@@ -103,6 +103,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.concurrent.thread
 import kotlin.math.PI
@@ -208,6 +210,16 @@ fun OrbitScreen(
     var bpmPending by remember(kitDir) { mutableStateOf(false) }
     /** The sets before each edit, newest last: one UNDO steps back one edit. Not saved; a screen's worth. */
     var history by remember(kitDir) { mutableStateOf<List<OrbitStep>>(emptyList()) }
+    // Which edit is the newest. Every commit takes a number and only the
+    // newest one publishes: each launches its own preparation, and two
+    // taps in quick succession can finish in the other order, so without
+    // this an older bank and an older set reached the engine LAST and the
+    // player heard the edit before the one they had just made.
+    var edits by remember(kitDir) { mutableStateOf(0) }
+    // And the saves go one at a time, in the order they were asked for.
+    // `OrbitStore.save` writes the whole file; two of them at once is a
+    // file interleaved from two arrangements, which is not either of them.
+    val savingOrder = remember(kitDir) { Mutex() }
 
     // The transport: null until PLAY. Bank and engine live across edits;
     // each edit prepares a new bank (reusing the old one's buffers) and
@@ -322,14 +334,22 @@ fun OrbitScreen(
             history = (history + OrbitStep(before, solo)).takeLast(UNDO_DEPTH)
         }
         set = next
+        val edit = ++edits
         scope.launch {
             preparing = true
             val prepared = withContext(Dispatchers.IO) {
-                runCatching { OrbitStore.save(next, kitDir) }
-                OrbitBank.prepare(next, source, previous = bank)
+                savingOrder.withLock {
+                    runCatching { OrbitStore.save(next, kitDir) }
+                    OrbitBank.prepare(next, source, previous = bank)
+                }
             }
-            bank = prepared
-            engine?.apply(OrbitEngine.Prepared(next, prepared, solo))
+            // Only the newest edit publishes. An older one that finished
+            // late would put its own bank and its own set back on the
+            // engine — the edit before the one the player just made.
+            if (edit == edits) {
+                bank = prepared
+                engine?.apply(OrbitEngine.Prepared(next, prepared, solo))
+            }
             preparing = false
         }
     }
@@ -1170,7 +1190,7 @@ fun OrbitScreen(
                     }
                     TapeText(
                         "A SECTION STARTS ITS RINGS OVER, SO IT REPEATS THE SAME EVERY TIME AND CLIPS AS ITS OWN SEQUENCE. " +
-                            "A SECTION WITH NO RINGS IS A BREAK. CLIP ▸ KIT WRITES ONE GROOVE PER SECTION — FLIP THEM ON THE MPC.",
+                            "A SECTION WITH NO RINGS IS A BREAK, AND WRITES NO GROOVE. CLIP ▸ KIT WRITES ONE FOR EVERY OTHER — FLIP THEM ON THE MPC.",
                         TapeType.pixelSmall,
                         scheme.ink3.tape,
                         Modifier.fillMaxWidth(),
@@ -1546,8 +1566,16 @@ private fun RingsCanvas(
     val inkColor = scheme.lcdInk.tape
     val amber = scheme.amber.tape
     val dim = scheme.ink3.tape.copy(alpha = 0.6f)
+    // The rings the section playing now is made of — the set itself where
+    // there is no arrangement. What "the rings meet" is a question about.
+    val here = OrbitClock.sectionAt(set, transportFrame)
+    val playedHere = remember(set, here) {
+        if (here == OrbitClock.NO_SECTION) set else OrbitClip.sectionSet(set, here)
+    }
+
     // One definition of "this ring is being heard right now": its own
-    // mute, another ring's solo, and the section playing at this instant.
+    // mute, its level, another ring's solo, and the section playing at
+    // this instant — the same four the engine asks before it strikes.
     // The picture says it in two places — the ring's own colour and the
     // meeting pulse — and two copies of a predicate is how they come to
     // disagree, which they did: the pulse asked only about the section, so
@@ -1751,7 +1779,13 @@ private fun RingsCanvas(
             // anything the panel flashed "every ring on its downbeat"
             // into silence.
             if (playing && set.orbits.indices.any(::heardRing)) {
-                val cycle = OrbitClock.cycleFrames(set)
+                // Over the rings THIS SECTION plays, not the whole set's.
+                // The set's cycle is when every ring meets, including ones
+                // the section leaves out, so two 16-step rings chosen for a
+                // section met every bar and the pulse waited five - the
+                // length of a meeting that is not happening here. A set
+                // with no arrangement gets its own cycle back.
+                val cycle = OrbitClock.cycleFrames(playedHere)
                 val since = Math.floorMod(frame, cycle)
                 val pulse = (1f - since.toFloat() / (set.sampleRate * MEET_SECONDS)).coerceIn(0f, 1f)
                 if (pulse > 0f) {

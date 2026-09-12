@@ -17,8 +17,11 @@ import kotlin.math.ceil
  * length — 16 against 20 is a five-bar clip — which is why a long cycle
  * is refused rather than truncated: a clip that stops before the rings
  * meet is a different piece of music. A set WITH an arrangement is one
- * clip per section, each as long as its section says and capped on its
- * own; the cycle is then not what leaves the screen, so it does not bind.
+ * clip per section THAT PLAYS SOMETHING — a break writes none, since a
+ * note-less clip is the one thing `noNotes` exists to keep out of the file
+ * and there is nothing for the hardware to flip to for silence — each as
+ * long as its section says and capped on its own; the cycle is then not
+ * what leaves the screen, so it does not bind.
  */
 object OrbitClip {
 
@@ -448,6 +451,11 @@ object OrbitClip {
          */
         steps: Long = OrbitClock.cycleSteps(set),
     ): Mpc3Clip {
+        // A window of nothing is not a short clip, it is a caller mistake:
+        // `barsFor` would round it up to a one-bar container while the walk
+        // over it found nothing, and the player would be told no hit lands
+        // in a bar that was never asked for.
+        require(steps > 0) { "a clip is written over steps, and $steps is not a length" }
         // Asked of the length actually being written, not of the set's
         // cycle. A section is a short clip cut out of rings that may take
         // eighty bars to meet, and checking the cycle here refused the

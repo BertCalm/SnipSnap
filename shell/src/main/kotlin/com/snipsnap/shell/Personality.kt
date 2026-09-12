@@ -1247,11 +1247,14 @@ object Copy {
      * the line says what is in the kit rather than what was intended.
      */
     fun clippedSectionsIntoKit(sections: Int, bars: Int, notes: Int, snipRingsLeftOut: Int): String {
-        // One section is a sentence, not a count with an S on it. The
-        // screen sends a single clip to [clippedIntoKit] instead, so this
-        // is not reachable from CLIP ▸ KIT today — but a line that reads
-        // "1 SECTIONS ARE" the first time it is called from anywhere is a
-        // trap left lying about, and the plural is two words.
+        // One section is a sentence, not a count with an S on it.
+        //
+        // This function IS the multi-section path from CLIP ▸ KIT; what
+        // has no caller today is the [sections] == 1 case, because a save
+        // that wrote one clip goes to [clippedIntoKit] and names it. But a
+        // line that reads "1 SECTIONS ARE" the first time anything calls
+        // it that way is a trap left lying about, and the plural is two
+        // words.
         val many = sections != 1
         val subject = if (many) "$sections SECTIONS ARE" else "1 SECTION IS"
         val them = if (many) "THEY RIDE" else "IT RIDES"

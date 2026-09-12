@@ -978,6 +978,26 @@ class OrbitSectionTest {
     }
 
     @Test
+    fun `a clip is written over a length, and nothing is not one`() {
+        // `steps` became a parameter in this PR, so a caller can now hand
+        // one in. Zero or less is not a short clip: `barsFor` would round
+        // it up to a one-bar container while the walk over it found
+        // nothing, and the player would be told no hit lands in a bar
+        // nobody asked for.
+        //
+        // Asserted on the MESSAGE, not merely that it throws: without the
+        // guard it throws anyway, from the empty-clip floor, and says the
+        // wrong thing. A test that only asked "did it throw" passed with
+        // the guard reverted - `NOTHING FAILED - guard not proven`.
+        val s = OrbitSet(listOf(ring("A", 1, 0)), bpm, rate)
+        val zero = assertFailsWith<IllegalArgumentException> { OrbitClip.clip(s, "X", steps = 0) }
+        assertTrue(zero.message!!.contains("not a length"), "said: ${zero.message}")
+        val under = assertFailsWith<IllegalArgumentException> { OrbitClip.clip(s, "X", steps = -16) }
+        assertTrue(under.message!!.contains("not a length"), "said: ${under.message}")
+        assertEquals(1, OrbitClip.clip(s, "X", steps = 16).notes.size)
+    }
+
+    @Test
     fun `a solo hands back every ring it does not change, as itself`() {
         // The engine matches a sounding voice to its ring by identity, so
         // a set that copies every ring on every edit loses every voice
