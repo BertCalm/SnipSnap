@@ -25,7 +25,7 @@ object Copy {
     )
 
     // Empty states.
-    const val EMPTY_SHELF = "NOTHING TAPED YET. GO STEAL A SOUND (LEGALLY)."
+    const val EMPTY_SHELF = "NOTHING TAPED YET."
 
     /**
      * The product loop, named once, on the only screen a new user is
@@ -71,7 +71,7 @@ object Copy {
      * (NEW KIT, right below this panel) rather than denying the snip exists.
      */
     const val EMPTY_SHELF_FOR_ASSIGN = "THIS SNIP NEEDS A KIT TO LAND ON. TAP NEW KIT BELOW TO MAKE ONE."
-    const val EMPTY_KIT = "16 EMPTY PADS. TERRIFYING."
+    const val EMPTY_KIT = "16 EMPTY PADS."
     /** GROOVE with a kit open and nothing in it yet: the three ways in, named. TAPE's [EMPTY_SHELF] sent people to the wrong screen. */
     const val EMPTY_GROOVE = "NOTHING HERE YET. PLAY A TAKE IN, TAP STEPS IN, OR PUT THE KIT ON RINGS."
     /** ORBIT from the menu row with no kit open. */
@@ -91,7 +91,7 @@ object Copy {
     const val CHOP_LAYOUT_FAILED = "CHOP FAILED. COULDN'T LAY OUT THE SLICES."
 
     // Capture.
-    const val SESSION_ARMED = "TAPE ROLLING. GO STEAL A SOUND (LEGALLY)."
+    const val SESSION_ARMED = "TAPE ROLLING."
     /**
      * SNIP's own toast — the arm-then-capture promise, stated honestly:
      * LISTEN is what starts the ring; this only ever holds what's been
@@ -103,7 +103,7 @@ object Copy {
     /** The Bubble's drag-to-hot-zone stop — harmless, distinct from a delete or a reset. */
     const val BUBBLE_EJECTED = "STOPPED. TAPE IS KEPT."
     const val CAPTURE_BLOCKED =
-        "TAPE JAM — SPOTIFY BLOCKS THE TAPE. USE THE SCREEN RECORDER, I'LL PULL THE AUDIO OUT."
+        "TAPE JAM — SPOTIFY BLOCKS THE TAPE. USE THE SCREEN RECORDER; THE AUDIO PULLS OUT OF THAT."
     const val CAPTURE_BLOCKED_BUTTON = "FINE"
     /**
      * RECORD_AUDIO denied by the user (or the system, permanently) —
@@ -115,9 +115,9 @@ object Copy {
     const val MIC_PERMISSION_DENIED =
         "SNIPSNAP NEEDS THE MIC TO LISTEN. TURN IT ON IN YOUR PHONE'S SETTINGS, THEN HIT LISTEN AGAIN."
     // INSIDE: another app's audio, from inside it (M1's second source).
-    const val INSIDE_ARMED = "TAPE ROLLING ON THE INSIDE. GO PLAY THE THING."
+    const val INSIDE_ARMED = "TAPE ROLLING ON THE INSIDE."
     /** The projection consent dialog was dismissed: nothing armed, nothing lost; LISTEN is still there. */
-    const val INSIDE_REFUSED = "NO NOD, NO TAPE. NOTHING ARMED. LISTEN STILL WORKS."
+    const val INSIDE_REFUSED = "PROJECTION DECLINED. NOTHING ARMED. LISTEN STILL WORKS."
     /** The platform ended the session — the lock screen or the status-bar stop chip, never us. */
     const val PHONE_STOPPED_TAPE = "THE PHONE STOPPED THE TAPE. LOCK SCREEN OR THE STOP CHIP. PRESS LISTEN AGAIN."
 
@@ -184,15 +184,15 @@ object Copy {
     /** COMMIT toasts, rotated in order per commit. */
     val COMMIT_LINES = listOf(
         "TAPED. NO TAKEBACKS.",
-        "IT'S OURS NOW.",
-        "CLEAN CUT. NICE EARS.",
-        "SHELF +1. LABEL IT LATER.",
+        "COMMITTED TO TAPE.",
+        "CLEAN CUT.",
+        "ON THE SHELF. RENAME IT LATER.",
     )
     const val COMMIT_NEEDS_SELECTION = "SET IN + OUT FIRST"
     /** The deck glided onto an onset after a coast. */
-    const val SNAPPED = "SNAPPED TO THE HIT. THE MACHINE HAS EARS."
+    const val SNAPPED = "SNAPPED TO THE HIT."
     const val PENCIL_STARTED = "PENCIL REWIND. OLD SCHOOL."
-    const val PENCIL_DONE = "REWOUND. YOU'RE WELCOME."
+    const val PENCIL_DONE = "REWOUND."
     const val PENCIL_AT_TOP = "ALREADY AT THE TOP."
     const val ODOMETER_ON = "TAPE COUNTER. LIKE THE OLD DAYS."
     const val ODOMETER_OFF = "BACK TO REAL TIME."
@@ -417,7 +417,7 @@ object Copy {
 
     // ---- BANK B: evil twins (W4.3) ----
     const val BANK_B_LIT = "EVIL TWINS DEALT ONTO BANK B. RECIPES KEPT."
-    const val TWINS_REROLLED = "EVIL TWINS REROLLED. SAME SEED, DIFFERENT SINS."
+    const val TWINS_REROLLED = "EVIL TWINS REROLLED."
 
     // ---- BREED: two kits crossed into a child (XX2 wired in) ----
     /** BREED's busy line while `KitShelf.breed` renders every crossed pad offline — same DUBBING…/TWINNING… shape as EVIL TWINS. */
@@ -454,15 +454,15 @@ object Copy {
     }
 
     // ---- TAKES + BIN (X2.3) ----
-    fun takeRestored(take: String): String = "$take RESTORED. THE PAST, REPLAYED."
-    const val BACK_FROM_BIN = "BACK FROM THE BIN. NO QUESTIONS ASKED."
-    const val BIN_EMPTIED = "BIN EMPTIED. THE MACHINE FORGETS, AS ASKED."
+    fun takeRestored(take: String): String = "$take RESTORED."
+    const val BACK_FROM_BIN = "BACK FROM THE BIN."
+    const val BIN_EMPTIED = "BIN EMPTIED."
     /** No archived takes yet — the TAKES card holds only the current (NOW) state. */
     const val TAKES_EMPTY = "NOTHING TO ROLL BACK TO YET."
     /** The bin's own empty state (the artboard's literal copy — `binEmpty` in `TapeOS Oilslick.dc.html`). */
-    const val BIN_EMPTY_STATE = "THE BIN IS EMPTY. NOTHING TO REGRET."
+    const val BIN_EMPTY_STATE = "THE BIN IS EMPTY."
     /** `restoreFromBin` returned null: the row was stale by the time BACK was tapped (already pulled, or purged). */
-    const val BIN_ITEM_GONE = "ALREADY GONE. SOMEONE BEAT YOU TO IT."
+    const val BIN_ITEM_GONE = "ALREADY GONE."
 
     // ---- TAKES + BIN: the rule the screen states plainly (X2.3) ----
     const val TAKES_BIN_RULE =
@@ -501,7 +501,7 @@ object Copy {
     const val FORKED_TO_E = "FORKED TO PROG E. A–D STAY UNTOUCHED."
     /** The post-take FORK TO E row's confirmed-replace branch (live-record plan Task 6 bug fix): an E already existed and the user tapped "REPLACE E?" a second time — says the old steps are gone, never claims a plain "forked" like [FORKED_TO_E] does for a from-nothing fork. */
     const val FORKED_TO_E_REPLACED = "PROG E REPLACED WITH THIS TAKE. THE OLD STEPS ARE GONE."
-    const val BAR_WIPED = "BAR WIPED. THE MACHINE FORGIVES."
+    const val BAR_WIPED = "BAR WIPED."
     /** RECORD tapped before `PadEngine.load` has committed the bank (`clickSampleIndex == -1` until then, so the count-in clicks would be silent and give no feedback at all) — told instead of armed. */
     const val KIT_STILL_LOADING = "KIT'S STILL LOADING. GIVE IT A SECOND."
 
@@ -590,8 +590,8 @@ object Copy {
     // ---- PAD SHEET ----
     const val GHOSTS_ON ="GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
     fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
-    const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
-    const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."
+    const val INSTRUMENT_MADE = "INSTRUMENT MADE. ON THE SHELF."
+    const val NO_PITCH = "NO CONFIDENT PITCH."
     const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."
     /** NONE, when it lands: the pad's earlier take is back out of the bin and the recipe is off. */
     fun unTreated(pad: String): String = "$pad IS ITSELF AGAIN. THE BIN GAVE THE ORIGINAL BACK."
@@ -678,9 +678,9 @@ object Copy {
         }
 
     // ---- KIT: textures ----
-    const val SCULPTED = "SCULPTED. THE HIT IS WEATHER NOW. NEW TAPE ON THE SHELF."
-    const val STRETCHED = "STRETCHED. A BLINK BECAME A LANDSCAPE. NEW TAPE ON THE SHELF."
-    const val FROZEN = "FROZEN. ONE INSTANT, HELD. NEW TAPE ON THE SHELF."
+    const val SCULPTED = "SCULPTED. NEW TAPE ON THE SHELF."
+    const val STRETCHED = "STRETCHED. NEW TAPE ON THE SHELF."
+    const val FROZEN = "FROZEN. NEW TAPE ON THE SHELF."
 
     // ---- PAD SHEET: outside ----
     /** OUTSIDE: the pad went out the jack and came back; [lagMs] the trip, [confidence] how surely the return was found. */
@@ -700,7 +700,7 @@ object Copy {
     /** FORGET → BIN on the shelf: the room sleeps in the bin, like every delete. */
     fun roomForgotten(name: String): String = "$name IS IN THE BIN. ${Rooms.BIN_DAYS} DAYS TO CHANGE YOUR MIND."
     /** RESTORE on a binned room: back on the shelf under [name]. */
-    fun roomRestored(name: String): String = "$name IS BACK ON THE SHELF. AS IF NOTHING HAPPENED."
+    fun roomRestored(name: String): String = "$name IS BACK ON THE SHELF."
     const val ROOM_FORGET_BUSY = "FORGETTING…"
     const val ROOM_RESTORE_BUSY = "RESTORING…"
     const val ROOM_BIN_EMPTY_BUSY = "EMPTYING…"
@@ -731,7 +731,7 @@ object Copy {
 
     // ---- DELETED KITS (Task 2 of the bin-restore plan): restore or empty early ----
     /** RESTORE on a binned kit; [name] is what it actually landed under — `KitShelf.restoreKit`'s own collision fallback may have freshened it, never the name that was tapped. */
-    fun kitRestored(name: String): String = "$name IS BACK ON THE SHELF. AS IF NOTHING HAPPENED."
+    fun kitRestored(name: String): String = "$name IS BACK ON THE SHELF."
     /**
      * EMPTY THE BIN NOW on DELETED KITS, confirmed. Deliberately carries no
      * count: `KitShelf.emptyKitBin` reports every child it removed, but the
@@ -757,7 +757,7 @@ object Copy {
 
     // ---- DELETED SNIPS: restore or empty early ----
     /** RESTORE on a binned snip; [name] is what it actually landed under — `SnipStore.restore`'s own collision fallback may have freshened it, never the name the row showed. */
-    fun snipRestored(name: String): String = "$name IS BACK IN SNIPS. AS IF NOTHING HAPPENED."
+    fun snipRestored(name: String): String = "$name IS BACK IN SNIPS."
     /** EMPTY THE BIN NOW on DELETED SNIPS, confirmed — `kitBinEmptied`'s own no-count reasoning applies here too. */
     val snipBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
 
@@ -800,7 +800,7 @@ object Copy {
         "NO KITS ARE ${dubChip(status)}. ALL $total ARE STILL THERE — TAP SHOW."
 
     // ---- PAD SHEET: pad from anything ----
-    const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."
+    const val PAD_MADE = "PAD MADE. ON THE SHELF."
     const val PAD_TOO_SHORT = "TOO SHORT TO STRETCH INTO A PAD. FEED IT MORE THAN A BLINK."
     const val PAD_TOO_LONG = "TOO LONG TO SLOW INSIDE A MINUTE. TRIM IT UNDER THIRTY SECONDS."
 
@@ -887,7 +887,7 @@ object Copy {
     const val CHIP_OVERRIDDEN = "YOU ✓"
 
     // Export.
-    const val EXPORT_DONE = "DUBBED. GO MAKE SOMETHING."
+    const val EXPORT_DONE = "DUBBED."
     /**
      * WRITE KIT landed with no card picked, so the file is on the phone
      * only. Used to claim "SOUNDS 3% WARMER NOW" — a fabricated
@@ -965,7 +965,7 @@ object Copy {
     const val EXPORT_CARD_LEGEND = "HOLD TO FORGET THIS CARD"
 
     // Kits.
-    const val FRESH_TAPE = "FRESH TAPE. SMELLS LIKE FERRIC OXIDE."
+    const val FRESH_TAPE = "NEW TAPE."
 
     /**
      * What to say when a kit opens with a SNIPS → PAD hand-off still armed.

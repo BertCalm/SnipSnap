@@ -55,7 +55,7 @@ class PersonalityTest {
     @Test
     fun `commit lines rotate in order and wrap`() {
         assertEquals("TAPED. NO TAKEBACKS.", Copy.rotating(Copy.COMMIT_LINES, 0))
-        assertEquals("IT'S OURS NOW.", Copy.rotating(Copy.COMMIT_LINES, 1))
+        assertEquals("COMMITTED TO TAPE.", Copy.rotating(Copy.COMMIT_LINES, 1))
         assertEquals(
             Copy.rotating(Copy.COMMIT_LINES, 0),
             Copy.rotating(Copy.COMMIT_LINES, Copy.COMMIT_LINES.size),
