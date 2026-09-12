@@ -547,7 +547,13 @@ class UatSimTest {
     private fun j10ChromeAndCopy() {
         say("")
         say("── J10: CHROME · the frame the whole app is read through ──")
-        val tabs = listOf("KITS", "KIT", "TAPE", "CHOP", "PLAY", "GROOVE", "SYNTH", "SURFACE", "EXPORT", "SETUP", "HELP")
+        // Twelve tabs, in `Chrome.kt`'s own `MENU_ITEMS` order — this list
+        // was missing ORBIT (September UAT never added it here after it
+        // shipped) and had EXPORT last, both stale: `MENU_ITEMS` reordered
+        // EXPORT up beside TAPE/CHOP/KIT so step four of the app's own
+        // stated loop ("TAPE ▸ CHOP ▸ KIT ▸ EXPORT") lands inside the
+        // visible run instead of past the row's fold (truncation pass).
+        val tabs = listOf("KITS", "KIT", "TAPE", "CHOP", "EXPORT", "PLAY", "GROOVE", "ORBIT", "SYNTH", "SURFACE", "SETUP", "HELP")
         // 9sp pixel face + 0.5sp tracking ≈ 6dp/char; 4dp padding each side per tab.
         val perChar = 6.0
         val width = tabs.sumOf { it.length * perChar + 8 }

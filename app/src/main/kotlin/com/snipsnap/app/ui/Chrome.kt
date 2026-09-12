@@ -74,7 +74,7 @@ enum class AppScreen(val label: String) {
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),
-    /** Not one of MenuRow's ten: reached from the shelf's INSTRUMENTS list, left by its own ◄ SHELF. */
+    /** Not one of MenuRow's twelve: reached from the shelf's INSTRUMENTS list, left by its own ◄ SHELF. */
     KEYS("KEYS"),
 
     /**
@@ -167,17 +167,29 @@ fun TitleBar(modifier: Modifier = Modifier) {
 /** One menu entry: its label and the screen it lands on. */
 data class MenuItem(val label: String, val screen: AppScreen)
 
+// EXPORT moved up beside TAPE/CHOP/KIT (name-and-find followups,
+// truncation pass): the cold-open screen states the app's own primary
+// flow as "TAPE ▸ CHOP ▸ KIT ▸ EXPORT — four tabs, in order," but at
+// twelve items EXPORT sat at position 10 — past the ~8-9 tabs that fit
+// on screen at every width tested (390dp/411dp/360dp), so step four of
+// the app's own stated loop was never visible without a drag the row
+// gives no other cue to try beyond its ◂/▸ edges. Reordering (not
+// shortening, not wrapping) is the smallest change that puts it back in
+// the visible run — total row width is unchanged, only which items land
+// in the first ~9 slots. `ConventionTest`'s "first-run loop names real
+// menu tabs" law only checks membership, not order, so this is safe
+// against it.
 val MENU_ITEMS = listOf(
     MenuItem("KITS", AppScreen.KITS),
     MenuItem("KIT", AppScreen.KIT),
     MenuItem("TAPE", AppScreen.TAPE),
     MenuItem("CHOP", AppScreen.CHOP),
+    MenuItem("EXPORT", AppScreen.EXPORT),
     MenuItem("PLAY", AppScreen.PLAY),
     MenuItem("GROOVE", AppScreen.GROOVE),
     MenuItem("ORBIT", AppScreen.ORBIT),
     MenuItem("SYNTH", AppScreen.SYNTH),
     MenuItem("SURFACE", AppScreen.SURFACE),
-    MenuItem("EXPORT", AppScreen.EXPORT),
     MenuItem("SETUP", AppScreen.PROPERTIES),
     MenuItem("HELP", AppScreen.HELP),
 )
@@ -210,7 +222,7 @@ private fun MenuEdge(glyph: String, showing: Boolean) {
 }
 
 /**
- * The eleven tabs, and the two things September UAT found wrong with
+ * The twelve tabs, and the two things September UAT found wrong with
  * them.
  *
  * Finding 9: the row was 26dp tall and each tab's tap area was its text
