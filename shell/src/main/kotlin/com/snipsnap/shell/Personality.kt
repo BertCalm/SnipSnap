@@ -377,7 +377,7 @@ object Copy {
         "· TAP BANK B: A SECOND PAGE. HOLD A PAD, OR SEND A CHOP ONTO IT.",
         "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO AN EMPTY BANK B.",
         "· BREED ▸ MIXES TWO KITS' RECIPES INTO A NEW KIT. PARENTS STAY.",
-        "· DUST: THE TAPE'S OWN HISS AND ROOM UNDER A PAD. FROM ITS OWN TAPE.",
+        "· DUST: THE TAPE'S OWN HISS, ROOM AND CRACKLE UNDER A PAD. OR ANOTHER'S.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -699,6 +699,17 @@ object Copy {
     const val DUST_ZERO = "AMT 0: NOTHING TO DUST. THE PAD STAYS AS IT IS."
     /** The tape a dust recipe names is no longer on the shelf — DO IT AGAIN, or DUST on a pad whose tape went. */
     fun dustTapeGone(tape: String): String = "THE TAPE '$tape' IS GONE FROM THE SHELF. NO DUST TO TAKE."
+    /** DUST FROM ▸ with nothing on the SNIPS shelf to pick: no tape anywhere to borrow dust off. */
+    const val DUST_FROM_EMPTY = "NO TAPES ON THE SHELF TO TAKE DUST FROM. RECORD OR IMPORT ONE FIRST."
+    /** DUST FROM ▸'s bench heading, over the shelf's tapes: pick one and its dust goes under this pad. */
+    const val DUST_FROM_PICK = "DUST FROM: PICK A TAPE. ITS DUST GOES UNDER THIS PAD AT AMT."
+    /**
+     * DUST FROM ▸'s landing: the treatment's own line ([treated] /
+     * [treatedStacked]) with the borrowed tape named in the segment's
+     * place, so "DUST FROM 'KITCHEN' ON A02. ORIGINAL SLEEPS IN THE BIN."
+     * says where the dust came from without a second toast.
+     */
+    fun dustFromLabel(tape: String): String = "DUST FROM '$tape'"
     /**
      * DUST ALL's landing: how many pads took the dust, and how many were
      * left as they were (layered or chained pads, which every audio
@@ -1349,6 +1360,111 @@ object Copy {
 
     // ---- SNIPS: a row that will not decode ----
     const val SNIP_CANT_PLAY = "CAN'T PLAY THIS SNIP."
+
+    // ---- LOOP: a snip sent to the six-track grid ----
+    //
+    // Plain labels, per the September decision to say what happened rather
+    // than say it in character. Every count here is passed in rather than
+    // typed: the numbers belong to `Session.TRACK_COUNT` and
+    // `Session.MAX_CHAIN` in `:loop`, which `:shell` does not depend on, and
+    // a retyped number is how a line ends up promising something the code
+    // stopped doing.
+    /**
+     * A snip landed on a track. [track] is 1-based, the column the player
+     * counts on screen; [blocks] is how many intervals of the snip are on
+     * the grid.
+     *
+     * The block count is said out loud because it is the number that decides
+     * how this track drifts against the others — two blocks against three is
+     * the whole feature — and nothing on the grid spells it.
+     */
+    fun loopTrackFilled(name: String, track: Int, blocks: Int): String =
+        "$name IS ON TRACK $track, ${if (blocks == 1) "1 BLOCK" else "$blocks BLOCKS"} LONG."
+    /**
+     * The same landing, for a snip that ran past what a chain holds: it is on
+     * the grid, but only its first [blocks] intervals are. Its own line
+     * rather than a clause on [loopTrackFilled] — a tail left off is not a
+     * detail to bury.
+     */
+    fun loopTrackTruncated(name: String, track: Int, blocks: Int): String =
+        "$name IS ON TRACK $track. ONLY ITS FIRST $blocks BLOCKS FIT."
+    /** Every track already holds something. [tracks] is the grid's own track count. */
+    fun loopFull(tracks: Int): String = "ALL $tracks TRACKS ARE FULL. CLEAR ONE IN LOOP FIRST."
+    /** The snip decoded to nothing — empty, or not readable as audio. */
+    const val LOOP_NOTHING_TO_SEND = "THAT SNIP HAS NO AUDIO TO SEND."
+    /**
+     * A send that could not be written. Nothing is on the grid that was not
+     * there before — so it says so, rather than leaving the player to guess
+     * whether half of it landed.
+     */
+    const val LOOP_SEND_FAILED = "COULDN'T SAVE THE LOOP. THE GRID IS AS IT WAS."
+    /**
+     * A clear that could not be written — the other half of the same failure,
+     * and it needs its own words: the track IS clear on screen, because the
+     * engine took the edit, and it is the disk that refused. [ORBIT_SAVE_FAILED]
+     * says the same shape of thing for the rings.
+     */
+    const val LOOP_CLEAR_NOT_SAVED = "THE TRACK IS CLEAR NOW, BUT IT DID NOT SAVE. IT WILL BE BACK NEXT TIME."
+    /**
+     * A `loop.json` that exists but will not parse. The send stops rather than
+     * starting a fresh session over the top of it — six tracks someone built
+     * are not something to overwrite quietly — so the line says that nothing
+     * moved.
+     */
+    const val LOOP_UNREADABLE = "THE LOOP FILE WON'T READ. NOTHING WAS CHANGED."
+    /**
+     * A track taken back to empty.
+     *
+     * The way back is real and is named: nothing is deleted by this — the
+     * snip is where it always was, and sending it again rebuilds the track.
+     * What does not come back is the arrangement itself, which is one tap to
+     * redo, so this is not a [Reversal.goneBut] site.
+     */
+    const val LOOP_TRACK_CLEARED = "TRACK CLEARED. THE SNIP STAYS IN SNIPS."
+    /** LOOP opened with nothing sent to it yet — the grid's own empty state. */
+    const val LOOP_EMPTY = "NO TRACKS YET. SEND A SNIP FROM SNIPS."
+    /**
+     * The grid, rendered offline and landed in SNIPS — the same door ORBIT's
+     * own bounce uses, so what the loop grid makes can be chopped, padded and
+     * sent back to a track. [bars] is what was actually rendered.
+     */
+    fun loopBounced(bars: Int): String = "${barsOf(bars)} BOUNCED. IT IS IN SNIPS NOW."
+    /**
+     * The same landing, when the grid's full cycle is longer than a snip can
+     * hold. Both numbers, because the difference is the point: the cycle is
+     * the least common multiple of the chain lengths and can run for half an
+     * hour, and a player who is told only the first number would think that
+     * was the whole loop.
+     */
+    fun loopBouncedPart(bars: Int, cycleBars: Int): String =
+        "${barsOf(bars)} BOUNCED, OUT OF A $cycleBars BAR CYCLE. IT IS IN SNIPS NOW."
+
+    /**
+     * "1 BAR" or "N BARS" — one place, because both bounce lines count the
+     * same thing and "1 BARS BOUNCED" is the kind of sentence a player reads
+     * as a bug in everything else too. The cycle length beside it stays a bare
+     * number: it is already followed by the singular "BAR CYCLE".
+     */
+    private fun barsOf(bars: Int): String = if (bars == 1) "1 BAR" else "$bars BARS"
+    /** Every track is still empty — there is nothing to render. */
+    const val LOOP_BOUNCE_EMPTY = "NOTHING ON THE GRID TO BOUNCE YET."
+    /** The render or the write failed. Law 3: say what did not happen. */
+    const val LOOP_BOUNCE_FAILED = "THE BOUNCE DIDN'T SAVE. NOTHING WAS ADDED TO SNIPS."
+    /**
+     * BOUNCE pressed while one is already running — which can happen from a
+     * second visit to the screen, since a render outlives the screen that
+     * started it.
+     */
+    const val LOOP_BOUNCE_ALREADY = "A BOUNCE IS ALREADY RUNNING. IT LANDS IN SNIPS WHEN IT IS DONE."
+    /** The button while the render runs — a bounce is seconds of work, not instant. */
+    const val LOOP_BOUNCE_BUSY = "BOUNCING…"
+
+    /**
+     * LOOP's own legend. Both of the grid's gestures are invisible — a track
+     * name is not obviously a mute button and a block is not obviously
+     * clearable — and the hold is the one nobody can guess.
+     */
+    const val LOOP_LEGEND = "TAP A TRACK NAME TO MUTE. HOLD A BLOCK TO CLEAR THAT TRACK."
 
     // ==================== Escaped strings, brought in (copy-consolidation follow-ups) ====================
     //

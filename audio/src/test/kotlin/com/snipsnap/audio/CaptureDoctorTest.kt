@@ -77,6 +77,10 @@ class CaptureDoctorTest {
         assertTrue(repair.touched)
         assertEquals(3, repair.clicks, "every planted click found")
         assertEquals(1, repair.dropouts, "the dropout found")
+        // The hunt on its own (DUST's CRACKLE) sees the same three, and not the dropout's two walls.
+        val found = CaptureDoctor.findClicks(dirty)
+        assertEquals(3, found.size, "findClicks: the clicks, not the hole's walls: $found")
+        for (at in clickAt) assertTrue(found.any { at in it }, "click at $at found")
         for (at in clickAt) {
             assertTrue(
                 Math.abs(repair.snip.samples[at] - pure[at]) < 0.06f,

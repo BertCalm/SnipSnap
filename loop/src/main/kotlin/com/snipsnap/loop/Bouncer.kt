@@ -37,6 +37,32 @@ object Bouncer {
     const val MAX_RENDER_BYTES = 512L * 1024 * 1024
 
     /**
+     * How many whole intervals to bounce so the result fits in [maxSeconds]:
+     * the whole cycle when it fits, and as many whole intervals as do when it
+     * does not — never fewer than one.
+     *
+     * A cycle is the least common multiple of the chain lengths, so it grows
+     * in jumps rather than steps: chains of 5, 7, 8 and 3 give 840 intervals,
+     * which is over half an hour of audio at an ordinary tempo. Nothing in the
+     * app has anywhere to put that — a bounce lands as a snip, and
+     * `SnipStore.import` cuts one at its own ceiling — so the choice is
+     * between refusing such a grid outright and bouncing a stated part of it.
+     * This is the second: the caller renders [intervalsWithin] intervals and
+     * says how many bars that is against how many the whole cycle runs, the
+     * same shape a snip too long for a chain is already reported with.
+     *
+     * Whole intervals, never a fraction of one: every block bakes to exactly
+     * one interval, and a bounce that stopped mid-interval would end on a cut
+     * waveform — a click on a file whose whole purpose is to be looped again.
+     */
+    fun intervalsWithin(session: Session, maxSeconds: Float): Int {
+        require(maxSeconds > 0f) { "maxSeconds must be positive: $maxSeconds" }
+        val intervalSeconds = session.intervalFrames.toDouble() / session.sampleRate
+        val fits = (maxSeconds / intervalSeconds).toInt()
+        return fits.coerceIn(1, Arrangement.cycleIntervals(session))
+    }
+
+    /**
      * Render [intervals] of [session], or one full phase cycle when 0.
      *
      * A cycle is the least common multiple of the chain lengths, which grows

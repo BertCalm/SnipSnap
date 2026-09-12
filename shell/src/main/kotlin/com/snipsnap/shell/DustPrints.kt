@@ -15,8 +15,10 @@ import kotlin.math.abs
  * `Dust.print` reads every hit's tail on a tape, so it is the one
  * expensive step in dusting, and dusting sixteen pads from one tape
  * must not pay it sixteen times. The print lives in [DIR] beside the
- * tape on the SNIPS shelf as two small WAVs, the way peaks are cached,
- * and is remade when the tape is newer than they are. A tape with no
+ * tape on the SNIPS shelf as three small WAVs (hiss, room, crackle), the
+ * way peaks are cached, and is remade when the tape is newer than they
+ * are, or when any of the three is missing — so a cache from before
+ * CRACKLE existed is simply made again. A tape with no
  * dust to give (`Dust.print` null) is not cached: it is cheap to ask
  * again and the answer may change once the tape is re-recorded.
  *
@@ -57,12 +59,11 @@ object DustPrints {
     fun forTape(tape: File): Dust.Print? {
         if (!tape.isFile) return null
         val dir = File(tape.parentFile, DIR)
-        val hissFile = File(dir, "${tape.name}.hiss.wav")
-        val roomFile = File(dir, "${tape.name}.room.wav")
-        val current = hissFile.isFile && roomFile.isFile &&
-            hissFile.lastModified() >= tape.lastModified() && roomFile.lastModified() >= tape.lastModified()
+        val files = listOf("hiss", "room", "crackle").map { File(dir, "${tape.name}.$it.wav") }
+        val (hissFile, roomFile, crackleFile) = files
+        val current = files.all { it.isFile && it.lastModified() >= tape.lastModified() }
         if (current) {
-            runCatching { levelled(Dust.Print(WavReader.read(hissFile), WavReader.read(roomFile))) }.getOrNull()?.let { return it }
+            runCatching { levelled(Dust.Print(WavReader.read(hissFile), WavReader.read(roomFile), WavReader.read(crackleFile))) }.getOrNull()?.let { return it }
         }
         val print = Dust.print(WavReader.read(tape)) ?: return null
         dir.mkdirs()
@@ -70,6 +71,9 @@ object DustPrints {
         val scale = if (peak > 0f) STORED_PEAK / peak else 1f
         WavWriter.write(hissFile, Snip(FloatArray(print.hiss.samples.size) { print.hiss.samples[it] * scale }, 1, print.hiss.sampleRate))
         WavWriter.write(roomFile, print.room)
+        // No crackle is written as one silent frame — shorter than a grain,
+        // so it reads back as no grains — rather than an empty WAV.
+        WavWriter.write(crackleFile, if (print.grains > 0) print.crackle else Snip(FloatArray(1), 1, print.sampleRate))
         return print
     }
 
@@ -84,7 +88,6 @@ object DustPrints {
      */
     fun forget(tape: File) {
         val dir = File(tape.parentFile ?: return, DIR)
-        File(dir, "${tape.name}.hiss.wav").delete()
-        File(dir, "${tape.name}.room.wav").delete()
+        for (part in listOf("hiss", "room", "crackle")) File(dir, "${tape.name}.$part.wav").delete()
     }
 }
