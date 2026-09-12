@@ -64,6 +64,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -141,6 +142,24 @@ fun PadCaptureScreen(
     var holding by remember { mutableStateOf(false) }
     var holdStart by remember { mutableStateOf(0L) }
 
+    // Liveness signal ONLY — nothing is launched into this scope. It exists
+    // purely so `commitToPad`'s onSuccess closure (below) has something to
+    // read that is cancelled the instant THIS composable instance is
+    // disposed: `rememberCoroutineScope()` is `remember`-scoped exactly like
+    // any other `remember { ... }` value here, so a fresh `PadCaptureScreen`
+    // (a different slot's capture, mounted after this one is torn down) gets
+    // its own new `scope`, not this one. Same idiom as PadSheetScreen's own
+    // `onEject` guard (`scope.isActive`) — see its KDoc for the disposal
+    // hazard this closes: a GRAB's write outlives this screen on [appScope]
+    // (by design, so a MenuRow tab switch can't cancel a WAV partway onto
+    // disk), so the write can complete, and this closure run, after the user
+    // has already left this screen and possibly opened pad capture on a
+    // DIFFERENT slot. An unconditional `onBack()` in that case would fire
+    // against `App`'s CURRENT `padCaptureSlot` — the new slot the user is
+    // now looking at — not the one this GRAB targeted, closing a screen the
+    // user just opened for no reason they can see.
+    val scope = rememberCoroutineScope()
+
     // Mirrors the header's own ◄ KIT chip, which is unconditionally
     // enabled here (unlike PAD SHEET's — nothing on this screen debounces
     // a save to flush, so there's nothing extra for Back to await).
@@ -194,7 +213,30 @@ fun PadCaptureScreen(
                 } else {
                     onKitUpdated(updated)
                     onToast(successLabel)
-                    onBack()
+                    // `scope.isActive` guards ONLY this navigation — see the
+                    // KDoc on `scope`'s declaration above for the disposed-
+                    // and-remounted hazard this closes (GRAB pad 3, leave,
+                    // open pad 7's capture, pad 3's write lands late and
+                    // would otherwise close pad 7's screen). `onKitUpdated`
+                    // and the toast stay unconditional: both are App-level
+                    // state with no screen identity, so a late arrival is
+                    // harmless there — same split PadSheetScreen's `onEject`
+                    // guard makes.
+                    //
+                    // No `liveSlot == targetSlot` half, unlike `onEject`'s
+                    // guard: this screen has no pad-nav ◄/► that can
+                    // reassign `slot` on a live, still-mounted instance the
+                    // way PadSheetScreen's can. `App.kt` only ever sets
+                    // `padCaptureSlot` from null (KitScreen's own
+                    // `onEmptyLongPress`, reachable only while this screen
+                    // is NOT showing, since the `when` branch that renders
+                    // it requires `padCaptureSlot != null`) or back to null
+                    // (this `onBack`, `goToScreen`, `deleteKit`) — never
+                    // from one non-null slot straight to another. So a
+                    // slot-identity check here would be dead code, not
+                    // defense in depth; `scope.isActive` alone is the whole
+                    // guard.
+                    if (scope.isActive) onBack()
                 }
             } catch (e: CancellationException) {
                 throw e
