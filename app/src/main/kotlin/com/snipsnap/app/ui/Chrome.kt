@@ -282,12 +282,16 @@ fun MenuRow(
                         .fillMaxHeight()
                         .let { if (isSelected) it.pressedBevel(scheme, 3.dp) else it }
                         // The tab's own name (item.label) is the accessible
-                        // name via the merged descendant TapeText below;
-                        // selection is the one thing that text can't say on
+                        // name, passed explicitly — an accessibility-tree
+                        // dump showed the descendant TapeText below does
+                        // NOT merge into this clickable node for free (that
+                        // was the assumption this comment used to make; all
+                        // 11 tabs spoke as unnamed nodes with it). Selection
+                        // is the one thing the label text still can't say on
                         // its own (audit finding 7 — selection state had no
                         // programmatic exposure anywhere in the app).
                         .semantics { selected = isSelected }
-                        .tapeClick(label = null) { onSelect(item.screen) }
+                        .tapeClick(label = item.label) { onSelect(item.screen) }
                         .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {

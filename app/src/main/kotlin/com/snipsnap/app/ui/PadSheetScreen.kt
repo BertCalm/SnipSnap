@@ -3080,11 +3080,18 @@ internal fun ActionButton(
      */
     lit: Boolean = false,
     /**
-     * Override for [label] as the accessible name — for the rare button
-     * whose visible glyph is too short/acronym-shaped to trust TalkBack
-     * to read as a word (e.g. SplitScreen's "M"/"S" mute/solo chips).
-     * `null` (the default, and every call site but those two) lets
-     * [label] serve as its own name via `tapeClick`'s merge.
+     * Override for [label] as the accessible name — for the button whose
+     * visible glyph is too short/acronym-shaped to trust TalkBack to read
+     * as a word (e.g. SplitScreen's "M"/"S" mute/solo chips, or "▶"/"▲"
+     * transport glyphs elsewhere). `null` (the default) falls back to
+     * [label] itself below — *not* to a descendant-merge, which an
+     * accessibility-tree dump showed [tapeClick]'s clickable node does
+     * not actually receive (compose's semantics tree does not fold a
+     * sibling `TapeText` into a `clickable` ancestor for free; that was
+     * this constant's founding bug, audit finding: every plain-glyph
+     * `ActionButton` across ~14 screens spoke as unnamed). Deriving from
+     * [label] here fixes every one of those call sites at once, since
+     * [label] is real word-shaped text at all but the handful above.
      */
     accessibilityLabel: String? = null,
     modifier: Modifier = Modifier,
@@ -3100,7 +3107,7 @@ internal fun ActionButton(
             // a screen reader is told this control is temporarily
             // unavailable instead of it silently vanishing from the tree
             // (accessibility audit finding 12).
-            .tapeClick(label = accessibilityLabel, enabled = enabled, onClick = onClick)
+            .tapeClick(label = accessibilityLabel ?: label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {

@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeTheme
@@ -2587,7 +2588,15 @@ private fun BlockedDialog(message: String, buttonLabel: String, onDismiss: () ->
                 .fillMaxWidth()
                 .padding(24.dp)
                 .raisedBevel(scheme)
+                // This tapeClick exists only to swallow the tap so it
+                // doesn't fall through to the scrim's dismiss handler —
+                // its onClick is genuinely empty, so it is not a control a
+                // person could act on and needs no name. clearAndSetSemantics
+                // drops it from the accessibility tree entirely instead of
+                // labelling a button that does nothing when activated
+                // (same reasoning as Chrome.kt's MenuEdge glyph).
                 .tapeClick(label = null) { }
+                .clearAndSetSemantics { }
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
