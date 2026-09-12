@@ -36,6 +36,20 @@ import kotlinx.coroutines.withContext
 private const val TEMPO_SETTLE_MS = 350L
 
 /**
+ * How long BOUNCE will wait for `LoopEngine` to actually adopt a tempo it
+ * was just handed, before giving up and rendering anyway.
+ *
+ * `LoopEngine.apply` only queues; `playOne` adopts once, at the top of its
+ * own next pass — which can be up to one whole interval away if the audio
+ * thread is mid-write on the interval already playing. One bar at
+ * `Session.MIN_BPM` (40) is 6 seconds; this gives that a comfortable
+ * margin without letting a stuck audio thread hang the button forever —
+ * giving up and bouncing the (still correct) session data is the same
+ * fallback a timed-out `Residency.warm` already leaves the caller with.
+ */
+private const val BOUNCE_SYNC_TIMEOUT_MS = 8_000L
+
+/**
  * The loop player screen.
  *
  * Each thread has one job. The audio thread runs LoopEngine and blocks on
@@ -185,13 +199,21 @@ class LoopActivity : ComponentActivity() {
                             // silently undo it. Only the tempo is ours to
                             // carry forward — everything else comes from
                             // whatever the grid is showing right now.
-                            val toApply = (session ?: s).copy(bpm = targetBpm)
+                            val toWarm = (session ?: s).copy(bpm = targetBpm)
                             // Baked BEFORE it is applied, on the baker pool:
                             // a new BPM resizes the interval, and without this
                             // the engine's next buffersFor would bake six
                             // blocks on the audio thread. See Residency.warm.
                             val at = engine?.position() ?: 0
-                            withContext(Dispatchers.IO) { residency?.warm(toApply, at + 1, at + 2) }
+                            withContext(Dispatchers.IO) { residency?.warm(toWarm, at + 1, at + 2) }
+                            // Read live AGAIN, not `toWarm`: warm itself can
+                            // now take up to Residency.WARM_TIMEOUT_MS, and a
+                            // mute or clear landing during THAT wait would be
+                            // the same silent-undo bug one re-read up already
+                            // fixed for the shorter settle delay — applying
+                            // `toWarm` here would just move the race, not
+                            // close it.
+                            val toApply = (session ?: s).copy(bpm = targetBpm)
                             engine?.apply(toApply)
                             // A tempo is an edit, so it is written — from the
                             // disk-backed copy, so this does not also save the
@@ -211,6 +233,19 @@ class LoopActivity : ComponentActivity() {
                             // actually playing, breaking the promise below.
                             // Joining forces that change to land first; a
                             // completed or absent settle returns at once.
+                            //
+                            // Joining is necessary but not sufficient: it
+                            // only guarantees `engine.apply` was CALLED, and
+                            // LoopEngine.apply only stores a pending
+                            // reference — LoopEngine.playOne adopts it once,
+                            // at the top of its own next pass, which can
+                            // still be mid-write on the OLD tempo's interval
+                            // when this resumes (sink.write blocks for
+                            // roughly one interval). The poll below waits for
+                            // that adoption itself, the same bounded shape
+                            // Residency.warm uses for the same reason: a
+                            // stuck audio thread costs a wait here, never a
+                            // hang.
                             tempoSettle?.join()
                             // The session as it is on screen, read live rather
                             // than the `s` this lambda closed over: a mute
@@ -219,7 +254,15 @@ class LoopActivity : ComponentActivity() {
                             // can itself take up to TEMPO_SETTLE_MS, and `s`
                             // would not see an edit made during that wait.
                             // What is heard is what is bounced, as of now.
-                            val refused = LoopBounce.start(this@LoopActivity, session ?: s, samples)
+                            val target = session ?: s
+                            val res = residency
+                            if (res != null) {
+                                val deadline = System.currentTimeMillis() + BOUNCE_SYNC_TIMEOUT_MS
+                                while (res.session().bpm != target.bpm && System.currentTimeMillis() < deadline) {
+                                    kotlinx.coroutines.delay(20)
+                                }
+                            }
+                            val refused = LoopBounce.start(this@LoopActivity, target, samples)
                             if (refused != null) {
                                 Toast.makeText(applicationContext, refused, Toast.LENGTH_SHORT).show()
                             }
