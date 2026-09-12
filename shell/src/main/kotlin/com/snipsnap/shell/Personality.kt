@@ -221,7 +221,7 @@ object Copy {
     const val ODOMETER_ON = "TAPE COUNTER. LIKE THE OLD DAYS."
     const val ODOMETER_OFF = "BACK TO REAL TIME."
     /** PAD SHEET's own DELETE → BIN, on a pad — a real delete, distinct from EJECT (stop listening) or the export wizard's reset. */
-    const val DELETE_SNIP = "DELETED. THE BIN KEEPS IT 30 DAYS."
+    const val DELETE_SNIP = "DELETED. ${Reversal.BIN}"
     /**
      * A source file TAPE loaded (a kit pad or the last COMMIT's source —
      * the two ingest paths with no length cap of their own) ran past
@@ -393,7 +393,7 @@ object Copy {
     val HELP_MORE = listOf(
         "· HOLD A PAD: SHAPE, TUNE, TREAT, MUTATE, LAYERS, TAKES, GRAIN.",
         "· HOLD A ROW ON THE SHELF TO RENAME IT, OR TO BIN IT.",
-        "· THE BIN KEEPS WHAT YOU THREW OUT FOR ${Rooms.BIN_DAYS} DAYS.",
+        "· THE BIN KEEPS WHAT YOU THREW OUT FOR ${Reversal.DAYS} DAYS.",
         "· PLAY IS THE ONE THAT FEELS LIKE DRUMS. SURFACE IS THE ONE THAT PRINTS.",
         "· ORBIT PUTS THE KIT ON RINGS: 5 AGAINST 4 IN ONE TAP.",
         "· EMPTY GROOVE? RECORD A TAKE, TAP STEPS IN, OR GO TO ORBIT.",
@@ -579,7 +579,18 @@ object Copy {
     const val FORKED_TO_E = "FORKED TO PROG E. A–D STAY UNTOUCHED."
     /** The post-take FORK TO E row's confirmed-replace branch (live-record plan Task 6 bug fix): an E already existed and the user tapped "REPLACE E?" a second time — says the old steps are gone, never claims a plain "forked" like [FORKED_TO_E] does for a from-nothing fork. */
     const val FORKED_TO_E_REPLACED = "PROG E REPLACED WITH THIS TAKE. THE OLD STEPS ARE GONE."
-    const val BAR_WIPED = "BAR WIPED. THE MACHINE FORGIVES."
+    /**
+     * The step editor's WIPE BAR, said honestly.
+     *
+     * It read "THE MACHINE FORGIVES" until the September undo-labelling
+     * pass, which is an offer of forgiveness the machine does not make:
+     * `clearEditorBar` bumps `editorSaveTick`, the autosave writes the
+     * wiped bar to the sidecar, and no control on that screen steps it
+     * back — UNDO TAKE is about recorded takes, not editor edits. A user
+     * who trusted the old line lost steps they believed were recoverable.
+     * So this names the recourse that actually exists: tap them in again.
+     */
+    val BAR_WIPED: String = Reversal.goneBut("TAP THE STEPS BACK IN")
     /** RECORD tapped before `PadEngine.load` has committed the bank (`clickSampleIndex == -1` until then, so the count-in clicks would be silent and give no feedback at all) — told instead of armed. */
     const val KIT_STILL_LOADING = "KIT'S STILL LOADING. GIVE IT A SECOND."
 
@@ -787,7 +798,7 @@ object Copy {
     fun roomKept(name: String): String = "$name IS ON THE SHELF. ANY PAD CAN PLAY IN IT - MUTATE ▸ ROOM."
     const val ROOM_NONE_TO_KEEP = "NO ROOM MEASURED YET. SEND A SWEEP OUT FIRST - ROOM ▸ SEND."
     /** FORGET → BIN on the shelf: the room sleeps in the bin, like every delete. */
-    fun roomForgotten(name: String): String = "$name IS IN THE BIN. ${Rooms.BIN_DAYS} DAYS TO CHANGE YOUR MIND."
+    fun roomForgotten(name: String): String = "$name IS IN THE BIN. ${Reversal.MIND}"
     /** RESTORE on a binned room: back on the shelf under [name]. */
     fun roomRestored(name: String): String = "$name IS BACK ON THE SHELF. AS IF NOTHING HAPPENED."
     const val ROOM_FORGET_BUSY = "FORGETTING…"
@@ -810,7 +821,7 @@ object Copy {
      * old "gone for good" wording, which was only ever true because that
      * screen didn't exist yet.
      */
-    fun kitDeleted(name: String): String = "$name IS OFF THE SHELF. 30 DAYS TO CHANGE YOUR MIND."
+    fun kitDeleted(name: String): String = "$name IS OFF THE SHELF. ${Reversal.MIND}"
     const val KIT_DELETE_BUSY = "DELETING…"
     const val KIT_DELETE_FAILED = "DELETE FAILED. THE KIT MAY ALREADY BE GONE."
     /** RENAME on a shelf kit; [name] is what it actually landed under — a collision may have freshened it. */
@@ -841,7 +852,7 @@ object Copy {
      * `SnipStore.Info.displayName`, so a never-confidently-classified snip
      * reads "SNIP", never a guess.
      */
-    fun snipDeleted(name: String): String = "$name IS OFF THE LIST. 30 DAYS TO CHANGE YOUR MIND."
+    fun snipDeleted(name: String): String = "$name IS OFF THE LIST. ${Reversal.MIND}"
     const val SNIP_DELETE_FAILED = "DELETE FAILED. THE FILE MAY ALREADY BE GONE."
 
     // ---- DELETED SNIPS: restore or empty early ----
