@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
@@ -17,38 +16,6 @@ import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Copy
-
-/**
- * The honest placeholder for a screen whose milestone hasn't shipped:
- * names the screen, names the milestone, gates nothing (law 3 — the menu
- * still navigates, the app still says exactly what's true).
- */
-@Composable
-fun StubScreen(screen: AppScreen) {
-    val scheme = LocalScheme.current
-    val milestone = when (screen) {
-        AppScreen.TAPE -> "M2 — THE TAPE DECK"
-        AppScreen.CHOP -> "M3 — THE CHOP SHOP"
-        AppScreen.PLAY -> "M4 — PLAY MODE"
-        AppScreen.SYNTH -> "M5 — THE SYNTH"
-        AppScreen.EXPORT -> "M5 — THE EXPORT WIZARD"
-        else -> "LATER"
-    }
-    Column(
-        Modifier
-            .fillMaxSize()
-            .lcdPanel(scheme)
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        TapeText(screen.label, TapeType.lcd(25), scheme.lcdInk.tape)
-        Spacer(Modifier.height(8.dp))
-        TapeText("SIDE B — NOT RECORDED YET.", TapeType.lcdSmall, scheme.amber.tape)
-        Spacer(Modifier.height(4.dp))
-        TapeText(milestone, TapeType.lcdSmall, scheme.lcdInk.tape.copy(alpha = 0.7f))
-    }
-}
 
 /**
  * HELP: what the app is, for whoever went looking for it.
@@ -63,6 +30,11 @@ fun StubScreen(screen: AppScreen) {
  * are in [Copy] now, held to the app as built by `PersonalityTest`; this
  * composable only draws them. It scrolls because the true version is
  * longer than the lie was and a phone in one hand is short.
+ *
+ * Moved out of `StubScreen.kt` when that file's own stub (its other
+ * occupant) was deleted — every `AppScreen` had shipped a real screen for
+ * a long time, so `StubScreen` itself was unreachable, but `HelpScreen`
+ * was real and stayed.
  */
 @Composable
 fun HelpScreen() {

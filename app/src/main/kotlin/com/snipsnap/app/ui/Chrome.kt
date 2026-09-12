@@ -50,8 +50,14 @@ import com.snipsnap.shell.Motion
 import com.snipsnap.shell.SchemeId
 
 /**
- * Every place the menu row can land. M0 builds KITS, KIT and PROPERTIES
- * for real; the rest render an honest stub naming their milestone.
+ * Every place the menu row can land. Every entry routes to a real,
+ * shipped screen — `App.kt`'s `when (screen)` has no catch-all branch, so
+ * a new entry added here without a matching branch there fails to
+ * compile instead of silently falling through to a stub. (There used to
+ * be a `StubScreen` and an `else ->` branch for milestones that hadn't
+ * shipped yet; every one of them had shipped long before the stub was
+ * finally deleted, which is exactly the failure mode the missing
+ * catch-all now prevents from recurring.)
  */
 enum class AppScreen(val label: String) {
     KITS("KITS"),

@@ -8,6 +8,7 @@ import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -69,7 +70,6 @@ import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.SnipsScreen
 import com.snipsnap.app.ui.SplitScreen
 import com.snipsnap.app.ui.StatusBar
-import com.snipsnap.app.ui.StubScreen
 import com.snipsnap.app.ui.SurfaceScreen
 import com.snipsnap.app.ui.SynthScreen
 import com.snipsnap.app.ui.TakesBinScreen
@@ -114,6 +114,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
+
+private const val TAG = "App"
 
 internal const val PREFS = "tapeos"
 private const val PREF_SCHEME = "scheme"
@@ -757,8 +759,11 @@ fun App(shelf: KitShelf) {
                 withContext(Dispatchers.IO) { shelf.render(starter, Random.nextInt()) }
             } catch (e: Exception) {
                 busy = null
-                // Law 3: when it breaks, say exactly what happened.
-                toast = "DUB FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Law 3 in practice, matching ExportScreen's own dub-failed
+                // catch: the user gets what failed, not a Java exception's
+                // `message` quoted at them — that detail stays in logcat.
+                Log.e(TAG, "fresh: kit render failed", e)
+                toast = Copy.CREATE_FAILED
                 return@launch
             }
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
@@ -2272,7 +2277,6 @@ fun App(shelf: KitShelf) {
                                 )
                             }
                         }
-                        else -> StubScreen(screen)
                     }
                 }
                 StatusBar(

@@ -1296,8 +1296,20 @@ fun GrooveScreen(
                         // above doesn't itself say — same label the
                         // original single-Box status line used, kept
                         // alongside the needle rather than replaced by it.
+                        //
+                        // This used to hardcode "BAR 1" — true for the
+                        // first bar of a take and false for every one
+                        // after, so a session recording into bar 2 or
+                        // later showed a stale bar number right beside
+                        // NeedleRoll's own live "▶ BAR n.b" readout, which
+                        // never agreed with it (observed on device: "BAR 1"
+                        // here, "BAR 2.2" on the needle). Same derivation
+                        // as NeedleRoll's own nowBar/nowBeat, from the same
+                        // posSteps, so the two readouts can't disagree.
+                        val nowBar = (posSteps.toInt() / GrooveEdit.STEPS_PER_BAR) + 1
+                        val nowBeat = ((posSteps.toInt() % GrooveEdit.STEPS_PER_BAR) / 4) + 1
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            TapeText("● RECORDING — LAY DOWN BAR 1", TapeType.pixel, scheme.amber.tape)
+                            TapeText("● RECORDING — BAR $nowBar.$nowBeat", TapeType.pixel, scheme.amber.tape)
                         }
                     }
                     if (recording || countingIn) {

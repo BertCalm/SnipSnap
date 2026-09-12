@@ -805,7 +805,15 @@ object Copy {
     const val PAD_TOO_LONG = "TOO LONG TO SLOW INSIDE A MINUTE. TRIM IT UNDER THIRTY SECONDS."
 
     // Chop shop.
-    const val RECHOPPED = "RE-CHOPPED. THE MACHINE APOLOGIZES FOR SLICE 3."
+    /**
+     * RE-CHOP's own toast. Used to always name "SLICE 3" regardless of
+     * which slice, or even how many slices, were actually involved —
+     * `ChopScreen.kt`'s RE-CHOP button calls `ChopReviewModel.rechop`,
+     * which redoes the *whole* chop from the tape, not one numbered
+     * slice, so there is no real "which slice" for this toast to name.
+     * States what actually happened instead of inventing a slice number.
+     */
+    const val RECHOPPED = "RE-CHOPPED."
 
     /** "N SLICES ON THE GRID. CHOKE GROUP SET." — the send-to-grid toast. */
     fun sentToGrid(sliceCount: Int, chokeSet: Boolean): String =
@@ -880,7 +888,14 @@ object Copy {
 
     // Export.
     const val EXPORT_DONE = "DUBBED. GO MAKE SOMETHING."
-    const val DUB_DONE = "DUB DONE. SOUNDS 3% WARMER NOW."
+    /**
+     * WRITE KIT landed with no card picked, so the file is on the phone
+     * only. Used to claim "SOUNDS 3% WARMER NOW" — a fabricated
+     * measurement attached to every successful export, nothing actually
+     * measured. States what really happened: the file is on the phone,
+     * the same fact [DUB_DONE_CARD] states for the card.
+     */
+    const val DUB_DONE = "DUB DONE. IT'S ON THE PHONE."
     /**
      * WRITE ANOTHER ✓ (`ExportWizardModel.writeLabel`'s COMPLETE-stage
      * label — no longer "EJECT CARD ✓", which claimed an eject that never
@@ -969,7 +984,17 @@ object Copy {
     fun snipLanding(hasEmptyPad: Boolean): String =
         if (hasEmptyPad) "LONG-PRESS AN EMPTY PAD TO PLACE THIS SNIP." else "THIS KIT IS FULL — PICK ANOTHER."
 
-    /** Shown when a kit could not be created. */
+    /**
+     * `App.kt`'s `fresh()` when `KitShelf.render` throws mid-render (a
+     * starter kit fails to write). Its KDoc used to claim this fired "at
+     * every personality level," a leftover from the deleted PERSONALITY
+     * system — but `fresh()`'s catch block never actually called it; it
+     * built its own literal, `"DUB FAILED: ${e.message ?: e.javaClass
+     * .simpleName}"`, quoting the raw exception at the user. Wired to
+     * this constant now: the exception's own message goes to logcat
+     * instead, same reasoning as [DUB_FAILED]'s own KDoc on why law 3
+     * means saying what happened, not quoting Java at somebody.
+     */
     const val CREATE_FAILED = "COULDN'T MAKE THAT TAPE."
 
     /** Rotation helper: line [n] of a rotating list (n counts from 0) — [COMMIT_LINES]'s own rotation. */
