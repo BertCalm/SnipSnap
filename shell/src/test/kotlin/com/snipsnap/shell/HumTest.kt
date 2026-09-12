@@ -126,7 +126,8 @@ class HumTest {
         val hits = CatchModel.hitsOf(tape)
         assertEquals(8, hits.size)
         // Boom, tss, boom, tss on the kick, the snare, the kick, the snare; the second boom quieter.
-        val quiet = Snip(FloatArray(DrumSynth.kick().frameCount) { DrumSynth.kick().samples[it] * 0.35f }, 1, rate)
+        val kick = DrumSynth.kick()
+        val quiet = Snip(FloatArray(kick.frameCount) { kick.samples[it] * 0.35f }, 1, rate)
         val reading = Hum.read(tape, hum(0.56 to DrumSynth.kick(), 1.56 to DrumSynth.closedHat(), 2.56 to quiet, 3.56 to DrumSynth.closedHat(), seconds = 5.0))
         assertEquals(listOf(0, 2, 4, 6), reading.cuts.map { it.hit })
         assertTrue(reading.cuts[2].loud < reading.cuts[0].loud, "the quieter boom is quieter")
@@ -151,6 +152,17 @@ class HumTest {
 
         assertNull(Hum.groove(model.merged(0)!!, "break"), "a merge moved the cuts off the beat: no groove")
         assertNull(Hum.groove(ChopReviewModel.chop(tape), "break"), "a chop by hits sang nothing")
+
+        // A sound sung past the clip's 64 bars is dropped, not a failure;
+        // all of them past it, and there is no clip.
+        val mode = model.mode as ChopReviewModel.ChopMode.Hummed
+        val farFrames = (65 * 4 * 60.0 / tempo.bpm * rate).toInt()
+        val oneFar = mode.copy(beat = mode.beat.mapIndexed { i, b -> if (i == 3) b.copy(at = farFrames) else b })
+        val trimmed = assertNotNull(Hum.groove(ChopReviewModel.chop(tape, oneFar), "break"))
+        assertEquals(3, trimmed.notes.size, "the far note is dropped")
+        assertTrue(trimmed.bars <= 64)
+        val allFar = mode.copy(beat = mode.beat.map { it.copy(at = farFrames) })
+        assertNull(Hum.groove(ChopReviewModel.chop(tape, allFar), "break"), "nothing inside 64 bars: no clip")
 
         val dir = java.nio.file.Files.createTempDirectory("sung").toFile()
         try {

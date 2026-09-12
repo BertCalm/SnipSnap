@@ -374,8 +374,11 @@ Pure: two snips in, cuts out. The screen owns the mic and the deck.
 - **The beat you sang** rides along: the reading keeps every mouth
   onset on the tape with the lag out (`pattern`), and the mode keeps,
   per cut, where the mouth's sound sat and how loud it was among the
-  hum's own (`Hummed.beat`, `Hum.VELOCITY_FLOOR` 0.3 the quietest a
-  sound reads as a note). See below.
+  hum's own — the sound's own peak over its window against the loudest
+  sound's, the measure the chop's captured groove uses, not the
+  detector's novelty, which is the size of the jump (`Hummed.beat`,
+  `Hum.VELOCITY_FLOOR` 0.3 the quietest a sound reads as a note). See
+  below.
 
 ### The beat you sang
 
@@ -396,7 +399,10 @@ the source has no confident tempo (a clip needs a grid — the bench
 already reads NO TEMPO HEARD); the layout is FOLD or MELODIC (their
 pads are not the rows'); or ONTO, which lands on a kit that may have a
 groove of its own already. Sounds the mouth made that met no hit are
-not in the groove either: they have no pad.
+not in the groove either: they have no pad. A clip runs 64 bars at
+most; a sound sung past that (a long tape, a late hum) is dropped
+rather than failing the SEND after the kit is built, and with nothing
+inside 64 bars there is no clip.
 
 ### What it says
 
@@ -432,8 +438,9 @@ not in the groove either: they have no pad.
   and snare, the second boom quieter: the groove has four notes, each
   where the mouth put it on the source's pulse, on the pad its cut
   landed on, as loud as the mouth made it (the quieter boom quieter);
-  a merge since the hum, or a chop by hits, writes no groove; landed on
-  the kit, the sung clip is among its grooves.
+  a merge since the hum, or a chop by hits, writes no groove; a sound
+  sung past 64 bars is dropped and all of them past it is no clip;
+  landed on the kit, the sung clip is among its grooves.
 
 ### What the phone should judge
 

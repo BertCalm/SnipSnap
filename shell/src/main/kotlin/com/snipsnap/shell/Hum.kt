@@ -127,12 +127,37 @@ object Hum {
                 missed++
             }
         }
-        val loudest = onsets.maxOfOrNull { it.strength }?.takeIf { it > 0f }
+        // Loudness is the mouth sound's own peak (its window, the same the
+        // classifier hears), against the loudest sound in the hum — not
+        // the detector's novelty, which is the size of the jump, and can
+        // read a quiet attack after silence louder than a loud one after
+        // a decay. The same measure the chop's own captured groove uses.
+        val frames = onsets.map { it.frame }
+        val peaks = frames.indices.map { m -> peakOf(hum, mouthWindow(hum, frames, m)) }
+        val loudest = peaks.maxOrNull()?.takeIf { it > 0f }
         val cuts = claimed.entries.sortedBy { it.key }.map { (i, mc) ->
-            val loud = loudest?.let { (onsets[mc.first].strength / it).coerceIn(VELOCITY_FLOOR, 1f) } ?: 1f
-            Cut(i, hits[i].range, mouthClass(hum, onsets.map { it.frame }, mc.first, sure), mouthAt[mc.first] - lag, loud)
+            val loud = loudest?.let { (peaks[mc.first] / it).coerceIn(VELOCITY_FLOOR, 1f) } ?: 1f
+            Cut(i, hits[i].range, mouthClass(hum, frames, mc.first, sure), mouthAt[mc.first] - lag, loud)
         }
         return Reading(cuts, missed, lag, hits.size, mouthAt.map { it - lag })
+    }
+
+    /** The mouth sound at onset [m]: from its onset to the next, at most [MOUTH_MAX_SEC], inside the hum. */
+    private fun mouthWindow(hum: Snip, onsets: List<Int>, m: Int): IntRange {
+        val start = onsets[m]
+        val cap = start + (MOUTH_MAX_SEC * hum.sampleRate).toInt()
+        val end = minOf(onsets.getOrNull(m + 1) ?: hum.frameCount, cap, hum.frameCount)
+        return start until end
+    }
+
+    /** The loudest sample in [window] of [hum], as a magnitude. */
+    private fun peakOf(hum: Snip, window: IntRange): Float {
+        var peak = 0f
+        for (i in window) {
+            val a = abs(hum.samples[i])
+            if (a > peak) peak = a
+        }
+        return peak
     }
 
     /**
@@ -152,14 +177,16 @@ object Hum {
         val framesPerPulse = 60.0 / tempo.bpm * model.source.sampleRate / 960.0
         val slotOf = HashMap<ChopReviewModel.Row, Int>()
         model.placementPreview().forEachIndexed { i, row -> if (row != null) slotOf[row] = i + 1 }
+        // A clip runs 64 bars at most; a sound sung past that (a long tape,
+        // a late hum) is dropped rather than failing the SEND after the kit
+        // is already built — the same rule the captured groove keeps.
+        val limit = 64L * Mpc3Clip.PULSES_PER_BAR
         val notes = model.rows.mapIndexedNotNull { i, row ->
             val slot = slotOf[row] ?: return@mapIndexedNotNull null
             val beat = mode.beat[i]
-            Mpc3Note(
-                note = Mpc3Note.noteFor(slot),
-                timePulses = Math.round(beat.at.coerceAtLeast(0) / framesPerPulse),
-                velocity = beat.velocity.coerceIn(0f, 1f),
-            )
+            val at = Math.round(beat.at.coerceAtLeast(0) / framesPerPulse)
+            if (at >= limit) return@mapIndexedNotNull null
+            Mpc3Note(note = Mpc3Note.noteFor(slot), timePulses = at, velocity = beat.velocity.coerceIn(0f, 1f))
         }.sortedBy { it.timePulses }
         if (notes.isEmpty()) return null
         val bars = ((notes.maxOf { it.timePulses } / Mpc3Clip.PULSES_PER_BAR) + 1).toInt().coerceIn(1, 64)
@@ -176,11 +203,9 @@ object Hum {
      * not a hit) all leave the tape's own word standing.
      */
     private fun mouthClass(hum: Snip, onsets: List<Int>, m: Int, sure: Float): DrumClass? {
-        val start = onsets[m]
-        val cap = start + (MOUTH_MAX_SEC * hum.sampleRate).toInt()
-        val end = minOf(onsets.getOrNull(m + 1) ?: hum.frameCount, cap, hum.frameCount)
-        if (end - start < (MOUTH_MIN_SEC * hum.sampleRate).toInt()) return null
-        val piece = Snip(hum.samples.copyOfRange(start, end), 1, hum.sampleRate)
+        val window = mouthWindow(hum, onsets, m)
+        if (window.last + 1 - window.first < (MOUTH_MIN_SEC * hum.sampleRate).toInt()) return null
+        val piece = Snip(hum.samples.copyOfRange(window.first, window.last + 1), 1, hum.sampleRate)
         val heard = Classifier.classify(piece)
         return heard.drumClass.takeIf {
             it != DrumClass.UNKNOWN && it != DrumClass.LOOP && it != DrumClass.TONAL && heard.confidence >= sure
