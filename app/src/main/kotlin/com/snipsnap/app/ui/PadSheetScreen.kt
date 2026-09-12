@@ -3,6 +3,7 @@ package com.snipsnap.app.ui
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -367,7 +368,8 @@ fun PadSheetScreen(
     }
 
     fun failure(action: String, e: Exception) {
-        onToast("$action FAILED: ${e.message ?: e.javaClass.simpleName}")
+        Log.e("PadSheetScreen", "$action: failed", e)
+        onToast(Copy.actionFailed(action))
     }
 
     // `save()` is deliberately NOT called per stepper nudge: see

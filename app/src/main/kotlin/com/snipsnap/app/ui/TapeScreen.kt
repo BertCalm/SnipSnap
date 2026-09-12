@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -874,8 +875,10 @@ private fun TapeDeckContent(
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        // Law 3: when it breaks, say exactly what happened.
-                        onToast("DIG FAILED: ${e.message ?: e.javaClass.simpleName}")
+                        // Law 3: when it breaks, say exactly what happened -
+                        // the exception's own detail goes to logcat, not the toast.
+                        Log.e("TapeScreen", "dig: failed", e)
+                        onToast(Copy.DIG_FAILED)
                     } finally {
                         digging = false
                     }

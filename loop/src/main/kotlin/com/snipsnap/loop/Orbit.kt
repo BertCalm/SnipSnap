@@ -337,6 +337,63 @@ data class Orbit(
 }
 
 /**
+ * One stretch of an arrangement: which rings play, and for how long.
+ *
+ * A set loops forever, and a section is the only way to say "these rings
+ * for eight bars, then those". The grid has had this as [Arrangement]
+ * since the beginning and the groove side has `BeatTape.arrange`; rings
+ * had neither.
+ *
+ * **A section restarts its rings.** That is the decision the whole row
+ * turns on, and it follows from what a section has to be rather than from
+ * taste. The alternative reading — a section as a mute lane over a set
+ * that keeps turning underneath — fails both things a section is for: the
+ * arrangement would only repeat after the sections and the rings' own
+ * cycle agreed, which is rarely; and the clip exported for a section
+ * would be true on its first pass and a lie on its second, since the
+ * rings would be somewhere else by then. A hardware sequence is
+ * self-contained and loops. So is this.
+ *
+ * The drift that makes ORBIT ORBIT is unhurt: inside a section the rings
+ * are the same pure function of the same one number they always were.
+ * What a section changes is where that number is counted from.
+ */
+data class OrbitSection(
+    val name: String,
+    /** How long, in the set's own reference bars ([OrbitSet.lapSteps] of them). */
+    val bars: Int,
+    /**
+     * Which of [OrbitSet.orbits] play here, by index.
+     *
+     * Empty is a real answer and means silence — a break is a section
+     * like any other, and a player who wants one should not have to
+     * delete their rings to get it. It is deliberately not read as "all
+     * of them": a default that quietly means the opposite of what it says
+     * is how a break becomes a full bar on stage.
+     */
+    val plays: Set<Int>,
+) {
+    init {
+        require(name.isNotBlank()) { "section name must not be blank" }
+        require(bars in 1..OrbitClip.MAX_BARS) { "section bars must be 1..${OrbitClip.MAX_BARS}: $bars" }
+        for (index in plays) require(index >= 0) { "section '$name' names ring $index" }
+    }
+
+    companion object {
+        /**
+         * The most sections one set may hold.
+         *
+         * Every section becomes its own clip and every clip its own
+         * sequence on the hardware, so the real ceiling is
+         * `Mpc3ProjectWriter.MAX_SEQUENCES` (32). Eight is well under it,
+         * matches [OrbitSet.MAX_ORBITS], and is as much arrangement as a
+         * phone screen can show without a second page.
+         */
+        const val MAX_SECTIONS = 8
+    }
+}
+
+/**
  * The whole set of rings and the one clock they share.
  *
  * [lapSteps] is the reference bar: the lap every spanned ring is measured
@@ -369,14 +426,119 @@ data class OrbitSet(
      * match what was heard, and there is nothing to write in the file.
      */
     val seed: Int = DEFAULT_SEED,
+    /**
+     * The arrangement, or empty for none.
+     *
+     * Empty is what every set was before sections existed and is what
+     * most sets stay: every engaged ring, turning forever, counted from
+     * the start of play. Nothing about such a set is touched by any of
+     * this — [OrbitClock.localFrame] hands back the frame it was given,
+     * and the clip written from it is the clip that was written before.
+     */
+    val sections: List<OrbitSection> = emptyList(),
 ) {
     init {
         require(orbits.size <= MAX_ORBITS) { "at most $MAX_ORBITS rings, got ${orbits.size}" }
+        require(sections.size <= OrbitSection.MAX_SECTIONS) {
+            "at most ${OrbitSection.MAX_SECTIONS} sections, got ${sections.size}"
+        }
+        // The name is not decoration: the arrangement's ORDER does not
+        // reach the hardware, so once the clips are sequences the name is
+        // the only thing saying which section is which. Two called the
+        // same thing is the arrangement becoming unreadable at exactly the
+        // point the player has left the app - so it is refused here, where
+        // a file and a caller both have to come through, rather than only
+        // in the screen that happens to make them.
+        require(sections.map { it.name }.distinct().size == sections.size) {
+            "two sections share a name: ${sections.map { it.name }}"
+        }
+        // Checked here rather than on the section, because a section alone
+        // cannot know how many rings there are - and an index past the end
+        // is the one way an arrangement can silently stop matching its set.
+        for (section in sections) {
+            for (index in section.plays) {
+                require(index < orbits.size) {
+                    "section '${section.name}' plays ring $index of ${orbits.size}"
+                }
+            }
+        }
         require(bpm in MIN_BPM..MAX_BPM) { "bpm out of range: $bpm" }
         require(sampleRate > 0) { "sampleRate must be positive: $sampleRate" }
         require(lapSteps in 1..Orbit.MAX_STEPS) { "lapSteps must be 1..${Orbit.MAX_STEPS}: $lapSteps" }
         require(swing in STRAIGHT_SWING..MAX_SWING) { "swing must be $STRAIGHT_SWING..$MAX_SWING: $swing" }
     }
+
+    /**
+     * This set as a solo makes it heard: every ring but [only] silenced,
+     * and [only] left exactly as it is (a soloed ring the player has also
+     * muted stays muted). A null [only] is no solo and hands back this
+     * very set.
+     *
+     * **A ring this does not change comes back as itself, not as a copy**,
+     * because the engine finds a sounding voice's ring by identity and a
+     * copy is a different ring to it.
+     *
+     * Live playback does not use this at all: the solo rides alongside the
+     * set in `OrbitEngine.Prepared`, so no ring is copied and no voice can
+     * lose the ring that struck it. This is for the OFFLINE render, where
+     * a bounce takes a set and nothing is sounding yet.
+     */
+    fun soloing(only: Int?): OrbitSet {
+        if (only == null) return this
+        return copy(
+            orbits = orbits.mapIndexed { i, o ->
+                val heard = i == only && o.engaged
+                if (o.engaged == heard) o else o.copy(engaged = heard)
+            },
+        )
+    }
+
+    /**
+     * This set with ring [index] gone, and the arrangement re-pointed at
+     * the rings that are left.
+     *
+     * A section names its rings by index, so removing one from the middle
+     * silently re-points every section past it at the wrong ring — or,
+     * where the last ring went, at nothing, which the set's own guard
+     * turns into a refusal the player did not ask for. The re-pointing
+     * belongs with the removal rather than at the call site, because
+     * there is no correct way to do one without the other.
+     */
+    fun withoutOrbit(index: Int): OrbitSet = copy(
+        orbits = orbits.filterIndexed { i, _ -> i != index },
+        sections = sections.map { section ->
+            section.copy(
+                plays = section.plays.mapNotNull {
+                    when {
+                        it == index -> null
+                        it > index -> it - 1
+                        else -> it
+                    }
+                }.toSet(),
+            )
+        },
+    )
+
+    /**
+     * This set with [ring] inserted just after ring [index], and the
+     * arrangement re-pointed — the new ring playing wherever the one it
+     * was copied from plays.
+     *
+     * Inheriting the original's membership rather than starting out of
+     * every section: a duplicated ring is a variation of the one beside
+     * it, and a copy that appeared in no section would be silent
+     * everywhere on a set that has an arrangement, which reads as the
+     * duplicate having failed.
+     */
+    fun withOrbitAfter(index: Int, ring: Orbit): OrbitSet = copy(
+        orbits = orbits.take(index + 1) + ring + orbits.drop(index + 1),
+        sections = sections.map { section ->
+            section.copy(
+                plays = section.plays.map { if (it > index) it + 1 else it }.toSet() +
+                    if (index in section.plays) setOf(index + 1) else emptySet(),
+            )
+        },
+    )
 
     companion object {
         const val MAX_ORBITS = 8
@@ -412,6 +574,12 @@ data class OrbitSet(
  * pure function of that number and its own period, so there are no per-ring
  * cursors, nothing to keep in sync, and nothing that can drift. The same
  * functions drive the audio engine, the ring drawing and the tests.
+ *
+ * An arrangement changes where the number is counted from and nothing
+ * else: [localFrame] turns the transport's frame into the current
+ * section's, and everything below is handed that instead. A set with no
+ * sections gets its own frame back, which is why none of this shows up in
+ * how such a set behaves.
  */
 object OrbitClock {
 
@@ -562,6 +730,161 @@ object OrbitClock {
      */
     fun stepIsSixteenth(set: OrbitSet, orbit: Orbit): Boolean =
         periodSteps(set, orbit) == orbit.steps
+
+    // ---- the arrangement ----
+    //
+    // Everything below turns one absolute frame into "which section, and
+    // how far into it". The rest of this object never learns that sections
+    // exist: it is handed [localFrame]'s answer and goes on being the same
+    // pure function of one number it always was. A set with no sections
+    // gets its own frame back from every one of these, which is why such a
+    // set behaves exactly as it did before any of this.
+
+    /** How long [section] lasts, in frames. */
+    fun sectionFrames(set: OrbitSet, section: OrbitSection): Long =
+        section.bars.toLong() * lapFrames(set)
+
+    /** How long the whole arrangement lasts before it comes round, or 0 with no sections. */
+    fun arrangementFrames(set: OrbitSet): Long =
+        set.sections.sumOf { sectionFrames(set, it) }
+
+    /**
+     * Which section is playing at [frame], or -1 when the set has no
+     * arrangement.
+     *
+     * The arrangement repeats, so this wraps: a two-section set is section
+     * 0, then 1, then 0 again, for as long as it runs.
+     */
+    fun sectionAt(set: OrbitSet, frame: Long): Int {
+        val total = arrangementFrames(set)
+        if (total <= 0L) return NO_SECTION
+        var at = Math.floorMod(frame, total)
+        for ((index, section) in set.sections.withIndex()) {
+            val length = sectionFrames(set, section)
+            if (at < length) return index
+            at -= length
+        }
+        // Unreachable while the lengths sum to `total`; the last section is
+        // the honest answer if rounding ever made them not.
+        return set.sections.size - 1
+    }
+
+    /**
+     * [frame] counted from the start of the section it is in — or [frame]
+     * itself when the set has no arrangement.
+     *
+     * This is the whole of what a section does to the clock. Every ring's
+     * phase, every firing and every flare is a function of *this* number
+     * rather than of the transport's, which is what makes a section
+     * self-contained and repeatable.
+     */
+    fun localFrame(set: OrbitSet, frame: Long): Long {
+        val total = arrangementFrames(set)
+        if (total <= 0L) return frame
+        var at = Math.floorMod(frame, total)
+        for (section in set.sections) {
+            val length = sectionFrames(set, section)
+            if (at < length) return at
+            at -= length
+        }
+        return at
+    }
+
+    /**
+     * The next frame AFTER [frame] on which the section changes, or
+     * [NO_BOUNDARY] when the set has no arrangement.
+     *
+     * The engine needs this because a block is a slice of wall-clock time
+     * and a section boundary does not wait for one to end. A block that
+     * straddles a boundary is played as two pieces, each with its own
+     * local frame, rather than as one piece belonging to whichever section
+     * happened to own its first sample.
+     *
+     * **Always strictly after [frame]**, and the engine's loop depends on
+     * it: that loop walks `at = nextBoundary(at)` until the block is
+     * spent, so an answer at or behind where it was asked is not a wrong
+     * block but a block that never ends — silence, and a wedged device.
+     * It holds by construction, since [localFrame] is always less than the
+     * section's own length, and `the next boundary is where the block has
+     * to be cut` asserts it at the awkward frames rather than trusting the
+     * arithmetic. A revert of [localFrame] during review broke exactly
+     * this and hung the test run, which is how the invariant got written
+     * down.
+     */
+    fun nextBoundary(set: OrbitSet, frame: Long): Long {
+        val total = arrangementFrames(set)
+        if (total <= 0L) return NO_BOUNDARY
+        val index = sectionAt(set, frame)
+        val local = localFrame(set, frame)
+        return frame + (sectionFrames(set, set.sections[index]) - local)
+    }
+
+    /**
+     * Whether the ring at [index] sounds at [frame].
+     *
+     * Two different questions, both answered here so no caller has to ask
+     * only one of them: a set with no arrangement plays every ring it has,
+     * and a set with one plays the rings its current section names. The
+     * ring's own [Orbit.engaged] is separate and is the player's mute — a
+     * muted ring stays muted whatever a section says.
+     */
+    fun playsAt(set: OrbitSet, index: Int, frame: Long): Boolean {
+        val section = sectionAt(set, frame)
+        return section == NO_SECTION || index in set.sections[section].plays
+    }
+
+    /**
+     * How many of the set's own bars one turn of the transport takes: the
+     * arrangement's length where there is one, else the rings' cycle.
+     *
+     * What a "BAR 7 / 15" readout counts against. With an arrangement the
+     * rings' cycle is the wrong number — the sections may never reach the
+     * meeting it names, so the readout would climb towards a total the
+     * player never arrives at.
+     */
+    fun transportBars(set: OrbitSet): Int {
+        if (set.sections.isEmpty()) return Math.ceil(cycleBars(set)).toInt().coerceAtLeast(1)
+        return (transportSteps(set) / set.lapSteps).toInt().coerceAtLeast(1)
+    }
+
+    /**
+     * Which of [transportBars] the transport is on at [frame], 1-based.
+     *
+     * Counted round the arrangement where there is one, so it comes back
+     * to bar 1 when the plan does rather than when the rings happen to.
+     */
+    fun transportBar(set: OrbitSet, frame: Long): Int {
+        val lap = lapFrames(set)
+        if (lap <= 0L) return 1
+        val total = transportBars(set)
+        val arrangement = arrangementFrames(set)
+        val at = if (arrangement > 0L) Math.floorMod(frame, arrangement) else frame
+        return (Math.floorMod(at / lap, total.toLong()) + 1).toInt()
+    }
+
+    /**
+     * How many of the set's own 16ths one turn of the transport takes: the
+     * arrangement's length where there is one, else the rings' cycle.
+     *
+     * What a **bounce** is long, and what its ceiling is measured against.
+     * An arranged set never reaches the rings' meeting — that is what
+     * arranging it did — so rendering `cycleSteps` of it would be minutes
+     * of audio for a three-bar plan, and on coprime rings a number that
+     * does not fit the `Int` the renderer takes.
+     */
+    fun transportSteps(set: OrbitSet): Long {
+        if (set.sections.isEmpty()) return cycleSteps(set)
+        return set.sections.sumOf { it.bars.toLong() } * set.lapSteps
+    }
+
+    /** [transportSteps] in frames: exactly how long a bounce of [set] is. */
+    fun transportFrames(set: OrbitSet): Long = transportSteps(set) * stepFrames(set)
+
+    /** [sectionAt]'s answer for a set with no arrangement. */
+    const val NO_SECTION = -1
+
+    /** [nextBoundary]'s answer for a set with no arrangement: never. */
+    const val NO_BOUNDARY = Long.MAX_VALUE
 
     /** How far round the ring the playhead is at [frame], 0 inclusive to 1 exclusive. */
     fun phase(set: OrbitSet, orbit: Orbit, frame: Long): Double {
