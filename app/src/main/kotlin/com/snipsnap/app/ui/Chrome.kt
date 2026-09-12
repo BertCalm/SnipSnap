@@ -179,11 +179,18 @@ data class MenuItem(val label: String, val screen: AppScreen)
 // in the first ~9 slots. `ConventionTest`'s "first-run loop names real
 // menu tabs" law only checks membership, not order, so this is safe
 // against it.
+//
+// KIT then moved after CHOP (same followups): KITS is the shelf you
+// arrive at, not one of the four steps, so it stays first — but KIT had
+// landed second, ahead of TAPE and CHOP, which put the strip out of step
+// with the loop it was just fixed to make visible. The four flow tabs
+// now read TAPE ▸ CHOP ▸ KIT ▸ EXPORT, matching the stated order exactly,
+// still inside the same visible run.
 val MENU_ITEMS = listOf(
     MenuItem("KITS", AppScreen.KITS),
-    MenuItem("KIT", AppScreen.KIT),
     MenuItem("TAPE", AppScreen.TAPE),
     MenuItem("CHOP", AppScreen.CHOP),
+    MenuItem("KIT", AppScreen.KIT),
     MenuItem("EXPORT", AppScreen.EXPORT),
     MenuItem("PLAY", AppScreen.PLAY),
     MenuItem("GROOVE", AppScreen.GROOVE),
