@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -364,7 +365,12 @@ fun SynthScreen(
                 Box(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .tapeClick(label = null) {
+                        // States which engine is current and what the tap
+                        // does, the same shape as KitsScreen's SORT/SHOW
+                        // cyclers (a real word name, not a glyph, but the
+                        // TapeText below still doesn't merge into this
+                        // node for free).
+                        .tapeClick(label = "ENGINE ${engine.name} · TAP FOR NEXT") {
                             touched = true
                             val next = engine.next()
                             engine = next
@@ -427,7 +433,7 @@ fun SynthScreen(
                     .fillMaxWidth()
                     .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
                     .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
-                    .tapeClick(label = null) { snip?.let { audition(it) } }
+                    .tapeClick(label = "AUDITION") { snip?.let { audition(it) } }
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -660,7 +666,7 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
                             .semantics { this.selected = selected }
-                            .tapeClick(label = null) { onSelect(v) }
+                            .tapeClick(label = chipLabel(engine, v)) { onSelect(v) }
                             .padding(horizontal = 2.dp, vertical = 3.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
@@ -813,7 +819,7 @@ private fun LabButton(
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -839,9 +845,15 @@ internal fun SlotChooserOverlay(
     // here, a tap in any gap this overlay doesn't fully cover (the grid's
     // leftover space, the header row's empty middle) would fall through to
     // whatever SynthScreen composable sits underneath (SCRAMBLE, SEND TO
-    // PAD, the AUDITION pad). `tapeClick {}` makes the backdrop itself the
-    // catch-all, same as any other TapeOS surface that means to block input.
-    Box(Modifier.fillMaxSize().background(scheme.lcd.tape).tapeClick(label = null) {}.padding(10.dp)) {
+    // PAD, the AUDITION pad). A raw pointerInput, not tapeClick: this Box
+    // wraps the whole overlay (CANCEL + the slot grid below), each with
+    // its own accessible name — tapeClick's clickable() would add a
+    // second, nameless actionable node wrapping all of them, exactly the
+    // regression the KitsScreen/MessageBox dialog cards had to be
+    // corrected out of. A bare gesture detector registers no semantics
+    // node at all, so it's still a catch-all for touch without touching
+    // the accessibility tree.
+    Box(Modifier.fillMaxSize().background(scheme.lcd.tape).pointerInput(Unit) { detectTapGestures { } }.padding(10.dp)) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -857,7 +869,10 @@ internal fun SlotChooserOverlay(
                         // dropped (accessibility audit finding 12) — the
                         // "…" label swap below is this control's visual
                         // distinction, so no separate colour dim is needed.
-                        .tapeClick(label = null, enabled = !busy, onClick = onCancel)
+                        // Name stays "CANCEL" through the swap: `enabled`
+                        // already tells a screen reader this is busy, and
+                        // a spoken "…" would name nothing.
+                        .tapeClick(label = "CANCEL", enabled = !busy, onClick = onCancel)
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -922,7 +937,7 @@ private fun SlotCell(
                 // a screen reader is told this cell is temporarily
                 // unavailable instead of it silently vanishing from the
                 // tree (accessibility audit finding 12).
-                .tapeClick(label = null, enabled = enabled, onClick = onTap)
+                .tapeClick(label = "$tag, EMPTY", enabled = enabled, onClick = onTap)
                 .padding(5.dp),
             contentAlignment = Alignment.TopEnd,
         ) {
@@ -945,8 +960,10 @@ private fun SlotCell(
             .border(2.dp, cls.tape.copy(alpha = fade), shape)
             // Always clickable, `tappable` forwarded rather than dropped so
             // a locked or disabled cell still announces itself instead of
-            // vanishing from the accessibility tree (finding 12).
-            .tapeClick(label = null, enabled = tappable, onClick = onTap)
+            // vanishing from the accessibility tree (finding 12). Names
+            // which pad and what's on it (task convention), plus LOCKED
+            // when a velocity-layered/chained pad refuses replaceAudio.
+            .tapeClick(label = "$tag, ${pad.displayName}" + if (locked) ", LOCKED" else "", enabled = tappable, onClick = onTap)
             .padding(5.dp),
     ) {
         TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f * fade), Modifier.align(Alignment.TopEnd))
