@@ -148,6 +148,9 @@ class KitBuilderTest {
         val slots = m.remixBankB(seed = 5)
         assertEquals(listOf(17, 19, 20), slots)
         val twin = m.pad(19)!!
+        assertEquals("A03", twin.source[KitBuilderModel.TWIN_OF], "a twin knows which pad it twins")
+        assertTrue(m.isTwin(twin))
+        assertTrue(m.ownPadsOnBankB().isEmpty(), "twins are the remix's own to replace")
         assertEquals(m.pad(3)!!.colorHex, twin.colorHex, "twins keep the class colour")
         assertEquals(1, twin.muteGroup, "the hats still choke in bank B")
         assertTrue(twin.displayName.endsWith(" B"))
@@ -1237,5 +1240,59 @@ class KitBuilderTest {
         m.update(1) { it.copy(humanize = 0.35f) }
         val recut = m.backOnto(1, DrumSynth.kick(), Retrim.tag("snip_1_X.wav", 10, 90))
         assertEquals(0.35f, recut.humanize)
+    }
+
+    @Test
+    fun `a remix never wipes a pad the user put on bank B, and an unstamped twin still reads as a twin`() {
+        val dir = File(temp, "Own")
+        val m = KitBuilderModel.create("Own", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.remixBankB(seed = 1)
+        // A pad captured onto bank B by hand.
+        m.assign(20, DrumSynth.closedHat(), DrumClass.HAT_CLOSED)
+        assertEquals(listOf(20), m.ownPadsOnBankB())
+        val before = m.kit
+        val refused = assertFailsWith<IllegalStateException> { m.remixBankB(seed = 2) }
+        assertTrue("B04" in refused.message!!, refused.message)
+        assertEquals(before, m.kit, "refused means untouched")
+        m.clear(20)
+        assertEquals(listOf(17, 18), m.remixBankB(seed = 2), "with the own pad gone the remix runs again")
+
+        // A twin dealt before the stamp existed: name + " B", a recipe, sixteen up from a real pad.
+        val legacy = m.pad(17)!!.copy(source = m.pad(17)!!.source - KitBuilderModel.TWIN_OF)
+        assertTrue(m.isTwin(legacy), "the legacy shape still reads as a twin")
+        assertFalse(m.isTwin(legacy.copy(displayName = "MY HAT")), "a renamed pad is the user's")
+        assertFalse(m.isTwin(legacy.copy(recipe = null)), "no recipe, not a twin")
+    }
+
+    @Test
+    fun `a chop lands onto an empty bank of an existing kit, first sixteen, through assign`() {
+        val dir = File(temp, "Landed")
+        val m = KitBuilderModel.create("Landed", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        val rate = 44_100
+        val total = FloatArray(rate * 10)
+        val hits = listOf(DrumSynth.kick(), DrumSynth.snare(), DrumSynth.closedHat(), DrumSynth.openHat())
+        for (n in 0 until 18) {
+            val hit = hits[n % hits.size]
+            val at = n * (rate / 2)
+            for (i in hit.samples.indices) if (at + i < total.size) total[at + i] += hit.samples[i] * 0.8f
+        }
+        val send = ChopReviewModel.chop(com.snipsnap.audio.Snip(total, 1, rate), ChopReviewModel.ChopMode.ByHits(maxSlices = 18)).sendToGrid()
+        assertTrue(send.arranged.size > 16, "wider than a bank: ${send.arranged.size}")
+
+        assertFailsWith<IllegalArgumentException> { m.landArranged(send.arranged, bank = 0) }
+        val landed = m.landArranged(send.arranged, bank = 1)
+        assertTrue(landed.isNotEmpty() && landed.all { it in 17..32 }, "$landed")
+        assertEquals(landed.size, m.kit.pads.count { it.slot in 17..32 })
+        assertEquals(1, m.kit.pads.count { it.slot in 1..16 }, "bank A untouched")
+        val first = m.pad(17)!!
+        assertEquals("chop", first.source["origin"], "provenance rides through assign")
+        assertTrue(File(dir, first.sampleFile).isFile)
+        assertEquals(listOf(17), m.ownPadsOnBankB().take(1), "landed pads are the user's own, not twins")
+        m.save()
+        assertEquals(m.kit, KitStore.load(dir))
+        assertFailsWith<IllegalArgumentException> { m.landArranged(send.arranged, bank = 1) }
     }
 }

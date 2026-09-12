@@ -398,7 +398,8 @@ object Copy {
         "· ORBIT PUTS THE KIT ON RINGS: 5 AGAINST 4 IN ONE TAP.",
         "· EMPTY GROOVE? RECORD A TAKE, TAP STEPS IN, OR GO TO ORBIT.",
         "· HOLD A PAD, RE-TRIM ▸: TAPE OPENS ON ITS CUT. BACK ONTO LANDS IT.",
-        "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO BANK B. THEN TAP B TO FLIP.",
+        "· TAP BANK B: A SECOND PAGE. HOLD A PAD, OR SEND A CHOP ONTO IT.",
+        "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO AN EMPTY BANK B.",
         "· BREED ▸ MIXES TWO KITS' RECIPES INTO A NEW KIT. PARENTS STAY.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
@@ -446,12 +447,31 @@ object Copy {
     const val BANK_B_LIT = "BANK B REMIXED: EVERY PAD'S EVIL TWIN. RECIPES KEPT."
     const val TWINS_REROLLED = "BANK B REROLLED. SAME SEED, DIFFERENT SINS."
     /**
-     * Tapping BANK B on the KIT screen while it is empty. The row is
-     * always drawn now (a second page nobody can see is a page nobody
-     * finds), so the empty tap has to say what fills it rather than
-     * flip to sixteen blanks the grid can't fill.
+     * Flipping to an empty bank on the KIT screen. The row is always
+     * drawn (a second page nobody can see is a page nobody finds) and an
+     * empty bank flips like a full one, since its pads fill the same
+     * three ways bank A's do — hold a pad to capture, the same hold to
+     * place a snip SNIPS → PAD armed, a chop sent ONTO it; the toast
+     * names them, plus the twins for bank B (REMIX BANK B fills B only,
+     * so a sparse kit's empty C is not told to press it). A function:
+     * the bank letter rides in, so the laws leave it be.
      */
-    const val BANK_B_EMPTY = "BANK B IS EMPTY. REMIX BANK B ▸ FILLS IT WITH EVIL TWINS."
+    fun bankEmpty(bank: Char): String {
+        val twins = if (bank == 'B') " REMIX BANK B ▸ DEALS TWINS HERE TOO." else ""
+        return "BANK $bank: EMPTY. HOLD A PAD TO CAPTURE ONTO IT, OR TO PLACE A SNIP FROM SNIPS. A CHOP CAN LAND HERE.$twins"
+    }
+    /** REMIX BANK B pressed while bank B holds pads the user put there: a remix would wipe them, so it refuses. */
+    const val TWINS_KEEP_OWN = "BANK B HOLDS YOUR OWN PADS. REMIX WON'T WIPE THEM — EJECT THEM FIRST, OR KEEP THE PAGE."
+    /**
+     * CHOP's ONTO <kit> · BANK X: the slices landed on an existing kit's
+     * empty bank, and how many did not fit when the chop was wider than
+     * sixteen (a bank is a bank; the rest is one more chop away).
+     */
+    fun landedOnto(kitName: String, bank: Char, landed: Int, left: Int): String {
+        val slices = "$landed ${if (landed == 1) "SLICE" else "SLICES"}"
+        val tail = if (left > 0) " $left DIDN'T FIT — A BANK HOLDS 16." else ""
+        return "'$kitName' BANK $bank: $slices LANDED.$tail"
+    }
 
     // ---- BREED: two kits crossed into a child (XX2 wired in) ----
     /** BREED's busy line while `KitShelf.breed` renders every crossed pad offline — same DUBBING…/TWINNING… shape as EVIL TWINS. */
