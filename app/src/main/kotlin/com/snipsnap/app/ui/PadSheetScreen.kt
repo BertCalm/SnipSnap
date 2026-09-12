@@ -1165,6 +1165,11 @@ fun PadSheetScreen(
      * (like [applySmear]/[applyTreatment]) this does not audition the
      * result immediately — see [applySmear]'s KDoc for why that write would
      * target an already-orphaned `remember(model)` state slot.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
+     * same reason, as [applySmear]'s own KDoc. `MutateSheet.apply` is a
+     * real audio rewrite under [withFreshKit]'s lock, same shape as every
+     * other converted sibling.
      */
     fun onMutate() {
         if (busy) return
@@ -1181,7 +1186,7 @@ fun PadSheetScreen(
         val fraction = pendingMutateKnob
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 var applied = false
@@ -1296,6 +1301,11 @@ fun PadSheetScreen(
      * — nothing was applied, nothing to save, same refusal as before. On
      * success [model] swaps to the fresh instance; no immediate audition,
      * same trade as [applySmear]/[onMutate] for the same reason.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
+     * same reason, as [applySmear]'s own KDoc. `MutateSheet.drift`'s write
+     * is a real audio rewrite under [withFreshKit]'s lock, same shape as
+     * [onMutate].
      */
     fun onDrift() {
         if (busy) return
@@ -1313,7 +1323,7 @@ fun PadSheetScreen(
         val fraction = pendingMutateKnob
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 var drifted: Mutate.Drifted? = null
@@ -1375,6 +1385,23 @@ fun PadSheetScreen(
         if (uri != null) onFilePicked(uri)
     }
 
+    /**
+     * MAKE INSTRUMENT: writes a real instrument package (`.xty` + WAV/`.xpm`
+     * twin, [OneNote.export]) beside the kits, into the same
+     * `KitShelf.INSTRUMENTS_DIR` `App`'s own `instruments` list is read
+     * from.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope], not this
+     * composable's own `scope` — same reasoning as [commitPadEditNow]'s
+     * KDoc, even though this doesn't touch `kit.json`: cancelling `scope`
+     * mid-export could abandon the write before `OneNote.export` starts,
+     * or let the package land on disk while losing the one signal the user
+     * gets that it worked ([Copy.INSTRUMENT_MADE]). `App`'s `instruments`
+     * list isn't notified either way — no callback wires this screen back
+     * to it — so it can still read stale until something else refreshes
+     * it; that's a pre-existing gap in a different file, not something
+     * this scope change fixes or worsens.
+     */
     fun onMakeInstrument() {
         if (busy) return
         val m = model
@@ -1382,7 +1409,7 @@ fun PadSheetScreen(
         if (m == null || currentSnip == null) return
         val p = m.kit.pad(slot) ?: return
         val instrumentName = Names.sanitizeStem("${m.kit.name}_${p.displayName}")
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 val destRoot = File(entry.dir.parentFile ?: entry.dir, KitShelf.INSTRUMENTS_DIR)
@@ -1435,6 +1462,28 @@ fun PadSheetScreen(
      * is abandoned rather than landing the return on somebody else's pad.
      * [model] swaps to the fresh instance on success; no immediate
      * audition, same trade as the other converted siblings.
+     *
+     * Bug fix (tab-switch data loss), split rather than moved wholesale:
+     * unlike [applySmear]'s siblings, this function holds the mic open for
+     * seconds ([OutsideSession.run], a live recording that also plays out
+     * the speaker/line). Moving the whole thing to [appScope] would fix
+     * the write but break something else — a tab switch would no longer
+     * stop the mic, and a background capture racing the user going to ARM
+     * a tape (`tapeArmed`, this function's own pre-check) is a new bug
+     * worse than the one this is closing. So the capture stays on `scope`
+     * (cancelling it on dispose is correct: a mic session dying with the
+     * screen is the point, not a bug), and only the write that follows it
+     * — `withFreshKit`'s rewrite, the `model` swap, `onKitUpdated`, the
+     * toast — hands off to [appScope] once the return is actually in. A
+     * cancelled capture then writes nothing (nothing to abandon mid-write:
+     * the handoff below never runs), and a capture that finishes always
+     * gets its write and confirmation regardless of what the screen does
+     * next — the same guarantee [applySmear] gives its own write, just
+     * drawn around the write alone instead of the whole function. This
+     * also keeps the nested `scope.launch { outsideStage = … }` a few
+     * lines below honest: its own comment says it hops back to "the
+     * composition's own (main) scope," which a wholesale move to
+     * [appScope] would have quietly made untrue.
      */
     fun onOutside() {
         if (busy) return
@@ -1463,10 +1512,18 @@ fun PadSheetScreen(
         scope.launch {
             busy = true
             outsideStage = Copy.OUTSIDE_LISTENING
+            // Set once the capture below lands and the write is handed off
+            // to `appScope`; the outer `finally` only tidies `busy`/
+            // `outsideStage` itself when this stays false, since past that
+            // point the handoff's own `finally` owns them instead — see
+            // this function's own KDoc for why the write, not the capture,
+            // is what needs to outlive a cancelled `scope`.
+            var handedOff = false
             try {
                 // Unlocked: reading the send off `m` (still the screen-mount
                 // model — fine, this only READS the pad's current audio) and
-                // the mic capture itself, which can run for seconds.
+                // the mic capture itself, which can run for seconds. Stays on
+                // `scope`, not `appScope`: see this function's own KDoc.
                 val returned = withContext(Dispatchers.IO) {
                     val send = OutsideSheet.send(m, slot, move)
                     val preRoll = OutsideSheet.preRollFrames(send.sampleRate)
@@ -1478,39 +1535,56 @@ fun PadSheetScreen(
                     } to preRoll
                 }
                 val (returnedSnip, preRoll) = returned
-                var applied = false
-                var outcome: OutsideSheet.Outcome? = null
-                val (fresh, _) = withFreshKit(kitDir) { f ->
-                    reapplyPendingMetadataFields(f, stalePads)
-                    val freshPad = f.kit.pad(slot)
-                    if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
-                        outcome = OutsideSheet.apply(f, slot, move, returnedSnip, fraction, preRoll)
-                        applied = true
+                handedOff = true
+                appScope.launch {
+                    try {
+                        var applied = false
+                        var outcome: OutsideSheet.Outcome? = null
+                        val (fresh, _) = withFreshKit(kitDir) { f ->
+                            reapplyPendingMetadataFields(f, stalePads)
+                            val freshPad = f.kit.pad(slot)
+                            if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
+                                outcome = OutsideSheet.apply(f, slot, move, returnedSnip, fraction, preRoll)
+                                applied = true
+                            }
+                        }
+                        model = fresh
+                        pendingMetadataSlots = emptySet()
+                        onKitUpdated(fresh.kit)
+                        val o = outcome
+                        if (applied && o != null) {
+                            // The last trip's room, or none: a REAMP measures no
+                            // room, so KEEP ROOM dims until the next ROOM trip.
+                            measuredRoom = o.takeIf { it.impulse != null }
+                            onToast(Copy.outside(outsideMove, padName, o.lagMs, o.confidence))
+                        } else {
+                            // Not `measuredRoom = null` here: this trip abandoned
+                            // without applying anything, so an earlier ROOM trip's
+                            // still-unkept measurement (measuredRoom is
+                            // remember(slot)-keyed, so it survives this model swap)
+                            // is exactly as keepable as it was before this tap.
+                            onToast(Copy.BIN_ITEM_GONE)
+                        }
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        if (e is Outside.Refused) onToast(Copy.outsideRefused(e.message ?: "the room said no")) else failure("OUTSIDE", e)
+                    } finally {
+                        outsideStage = null
+                        busy = false
                     }
                 }
-                model = fresh
-                pendingMetadataSlots = emptySet()
-                onKitUpdated(fresh.kit)
-                val o = outcome
-                if (applied && o != null) {
-                    // The last trip's room, or none: a REAMP measures no
-                    // room, so KEEP ROOM dims until the next ROOM trip.
-                    measuredRoom = o.takeIf { it.impulse != null }
-                    onToast(Copy.outside(outsideMove, padName, o.lagMs, o.confidence))
-                } else {
-                    // Not `measuredRoom = null` here: this trip abandoned
-                    // without applying anything, so an earlier ROOM trip's
-                    // still-unkept measurement (measuredRoom is
-                    // remember(slot)-keyed, so it survives this model swap)
-                    // is exactly as keepable as it was before this tap.
-                    onToast(Copy.BIN_ITEM_GONE)
-                }
             } catch (e: Exception) {
+                // `Outside.Refused` is only ever thrown from `OutsideSheet.apply`
+                // (its own KDoc: "Refusals... come before any byte is touched"),
+                // which now runs inside the `appScope` handoff above, not here —
+                // this capture-phase catch only ever sees a mic/IO failure.
                 if (e is CancellationException) throw e
-                if (e is Outside.Refused) onToast(Copy.outsideRefused(e.message ?: "the room said no")) else failure("OUTSIDE", e)
+                failure("OUTSIDE", e)
             } finally {
-                outsideStage = null
-                busy = false
+                if (!handedOff) {
+                    outsideStage = null
+                    busy = false
+                }
             }
         }
     }
@@ -1525,6 +1599,18 @@ fun PadSheetScreen(
      * and becomes this card's MUTATE partner at once - so the next pad can
      * take it without a trip. Kept once: the button dims until the next
      * ROOM trip measures another.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope], not this
+     * composable's own `scope`. `OutsideSheet.keep` writes a real room file
+     * to the shelf's ROOMS directory — the same one `App`'s own `rooms`
+     * list (see `App.kt`) is read from — so cancelling `scope` mid-write
+     * could abandon it before it starts, or land it on disk while losing
+     * this screen's own toast/`partner` confirmation, same reasoning as
+     * [commitPadEditNow]'s KDoc. (`App`'s `rooms` list isn't notified of a
+     * new room by this screen at all, appScope or not — no callback wires
+     * that path — so it can still read stale until something else
+     * refreshes it; that's a separate, pre-existing gap this scope change
+     * doesn't touch.)
      */
     fun onKeepRoom() {
         if (busy) return
@@ -1538,7 +1624,7 @@ fun PadSheetScreen(
         // Busy before the launch, not inside it: a second tap in the gap
         // before the coroutine starts must not keep the same room twice.
         busy = true
-        scope.launch {
+        appScope.launch {
             try {
                 val kept = withContext(Dispatchers.IO) { OutsideSheet.keep(root, o, m.kit.name) }
                 measuredRoom = null
@@ -1563,6 +1649,11 @@ fun PadSheetScreen(
      * kits), but any pad qualifies — a drum lands as a drone. Seconds of
      * stretching, so it runs on IO under the busy flag; a fresh seed every
      * press, like every other door that renders.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
+     * same reason, as [onMakeInstrument]'s own KDoc: `PadFromAnything.export`
+     * writes into the same `KitShelf.INSTRUMENTS_DIR` `App`'s `instruments`
+     * list reads from.
      */
     fun onMakePad() {
         if (busy) return
@@ -1582,7 +1673,7 @@ fun PadSheetScreen(
         }
         val padName = Names.sanitizeStem("${m.kit.name}_${p.displayName}_Pad")
         val spec = PadMaker.spec(pendingDepth, pendingBloom, kotlin.random.Random.nextLong(0L, 1_000_000L))
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 val destRoot = File(entry.dir.parentFile ?: entry.dir, KitShelf.INSTRUMENTS_DIR)
@@ -1609,6 +1700,11 @@ fun PadSheetScreen(
      * pad's audio) but nothing was written, so there's nothing to save
      * either way. On success [model] swaps to the fresh instance; no
      * immediate audition, same trade as the other converted siblings.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
+     * same reason, as [applySmear]'s own KDoc. `desamplePad`'s write is a
+     * real audio rewrite under [withFreshKit]'s lock, same shape as
+     * [onMutate]/[onDrift].
      */
     fun onDesample() {
         if (busy) return
@@ -1622,7 +1718,7 @@ fun PadSheetScreen(
         val staleSampleFile = p.sampleFile
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 var match: com.snipsnap.synth.Desample.Match? = null
