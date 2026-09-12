@@ -4,6 +4,12 @@ import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.Transients
+import com.snipsnap.kit.GrooveStore
+import com.snipsnap.kit.GrooveVariations
+import com.snipsnap.kit.Names
+import com.snipsnap.mpc3.Mpc3Clip
+import com.snipsnap.mpc3.Mpc3Note
+import java.io.File
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -45,13 +51,17 @@ object Hum {
     /** Under this many frames a mouth sound is a click, not a word: the tape's class stands. */
     private const val MOUTH_MIN_SEC = 0.02f
 
+    /** A mouth sound's loudness never reads under this as a note: the quietest "tss" still plays. */
+    const val VELOCITY_FLOOR = 0.3f
+
     /**
      * One cut the mouth chose: [hit] indexes the tape's hits, [range] is
      * that hit's own cut, [mouth] what the mouth said (null: the tape's
      * own word stands), [at] where the mouth's onset sits on the tape
-     * with the lag removed.
+     * with the lag removed, [loud] how loud the sound was among the hum's
+     * own, [VELOCITY_FLOOR]..1 — the beat you sang keeps its dynamics.
      */
-    data class Cut(val hit: Int, val range: IntRange, val mouth: DrumClass?, val at: Int)
+    data class Cut(val hit: Int, val range: IntRange, val mouth: DrumClass?, val at: Int, val loud: Float = 1f)
 
     /**
      * The hum read against the tape: the [cuts] in tape order, how many
@@ -61,9 +71,13 @@ object Hum {
      * later READ AS GROOVE of it.
      */
     data class Reading(val cuts: List<Cut>, val missed: Int, val lagFrames: Int, val hitsHeard: Int, val pattern: List<Int>) {
-        /** The chop mode that cuts exactly these, with the mouth's words as the chips. */
+        /** The chop mode that cuts exactly these, with the mouth's words as the chips and the beat you sang riding along. */
         fun mode(): ChopReviewModel.ChopMode.Hummed =
-            ChopReviewModel.ChopMode.Hummed(cuts.map { it.range }, cuts.map { it.mouth })
+            ChopReviewModel.ChopMode.Hummed(
+                cuts.map { it.range },
+                cuts.map { it.mouth },
+                cuts.map { ChopReviewModel.ChopMode.Hummed.Beat(it.at, it.loud) },
+            )
     }
 
     /**
@@ -113,11 +127,75 @@ object Hum {
                 missed++
             }
         }
+        // Loudness is the mouth sound's own peak (its window, the same the
+        // classifier hears), against the loudest sound in the hum — not
+        // the detector's novelty, which is the size of the jump, and can
+        // read a quiet attack after silence louder than a loud one after
+        // a decay. The same measure the chop's own captured groove uses.
+        val frames = onsets.map { it.frame }
+        val peaks = frames.indices.map { m -> peakOf(hum, mouthWindow(hum, frames, m)) }
+        val loudest = peaks.maxOrNull()?.takeIf { it > 0f }
         val cuts = claimed.entries.sortedBy { it.key }.map { (i, mc) ->
-            Cut(i, hits[i].range, mouthClass(hum, onsets.map { it.frame }, mc.first, sure), mouthAt[mc.first] - lag)
+            val loud = loudest?.let { (peaks[mc.first] / it).coerceIn(VELOCITY_FLOOR, 1f) } ?: 1f
+            Cut(i, hits[i].range, mouthClass(hum, frames, mc.first, sure), mouthAt[mc.first] - lag, loud)
         }
         return Reading(cuts, missed, lag, hits.size, mouthAt.map { it - lag })
     }
+
+    /** The mouth sound at onset [m]: from its onset to the next, at most [MOUTH_MAX_SEC], inside the hum. */
+    private fun mouthWindow(hum: Snip, onsets: List<Int>, m: Int): IntRange {
+        val start = onsets[m]
+        val cap = start + (MOUTH_MAX_SEC * hum.sampleRate).toInt()
+        val end = minOf(onsets.getOrNull(m + 1) ?: hum.frameCount, cap, hum.frameCount)
+        return start until end
+    }
+
+    /** The loudest sample in [window] of [hum], as a magnitude. */
+    private fun peakOf(hum: Snip, window: IntRange): Float {
+        var peak = 0f
+        for (i in window) {
+            val a = abs(hum.samples[i])
+            if (a > peak) peak = a
+        }
+        return peak
+    }
+
+    /**
+     * THE BEAT YOU SANG: the hum's own timing as a clip for the kit SEND
+     * makes of a hummed chop — each mouth sound a note on the pad its cut
+     * landed on (`placementPreview`, the CLASSIC layout SEND uses), where
+     * the mouth put it, as loud as the mouth made it, on the source's own
+     * pulse. Null when there is nothing honest to write: the chop is not
+     * a hum, its slices were edited since (a merge or split moves the
+     * cuts off the beat the mouth made), the source has no confident
+     * tempo (a clip needs a grid), or no beat was kept.
+     */
+    fun groove(model: ChopReviewModel, name: String): Mpc3Clip? {
+        val mode = model.mode as? ChopReviewModel.ChopMode.Hummed ?: return null
+        if (model.edited || mode.beat.isEmpty() || mode.beat.size != model.rows.size) return null
+        val tempo = model.tempo ?: return null
+        val framesPerPulse = 60.0 / tempo.bpm * model.source.sampleRate / 960.0
+        val slotOf = HashMap<ChopReviewModel.Row, Int>()
+        model.placementPreview().forEachIndexed { i, row -> if (row != null) slotOf[row] = i + 1 }
+        // A clip runs 64 bars at most; a sound sung past that (a long tape,
+        // a late hum) is dropped rather than failing the SEND after the kit
+        // is already built — the same rule the captured groove keeps.
+        val limit = 64L * Mpc3Clip.PULSES_PER_BAR
+        val notes = model.rows.mapIndexedNotNull { i, row ->
+            val slot = slotOf[row] ?: return@mapIndexedNotNull null
+            val beat = mode.beat[i]
+            val at = Math.round(beat.at.coerceAtLeast(0) / framesPerPulse)
+            if (at >= limit) return@mapIndexedNotNull null
+            Mpc3Note(note = Mpc3Note.noteFor(slot), timePulses = at, velocity = beat.velocity.coerceIn(0f, 1f))
+        }.sortedBy { it.timePulses }
+        if (notes.isEmpty()) return null
+        val bars = ((notes.maxOf { it.timePulses } / Mpc3Clip.PULSES_PER_BAR) + 1).toInt().coerceIn(1, 64)
+        return Mpc3Clip("${Names.sanitizeStem(name)} Sung", bars, notes)
+    }
+
+    /** [clip] as the fresh kit's grooves, the standard variations off it — the way READ AS GROOVE lands, on a kit with none yet. */
+    fun landGroove(kitDir: File, clip: Mpc3Clip): File =
+        GrooveStore.save(kitDir, GrooveVariations.standard(clip))
 
     /**
      * What the mouth said at onset [m] of [hum], or null when it wasn't
@@ -125,11 +203,9 @@ object Hum {
      * not a hit) all leave the tape's own word standing.
      */
     private fun mouthClass(hum: Snip, onsets: List<Int>, m: Int, sure: Float): DrumClass? {
-        val start = onsets[m]
-        val cap = start + (MOUTH_MAX_SEC * hum.sampleRate).toInt()
-        val end = minOf(onsets.getOrNull(m + 1) ?: hum.frameCount, cap, hum.frameCount)
-        if (end - start < (MOUTH_MIN_SEC * hum.sampleRate).toInt()) return null
-        val piece = Snip(hum.samples.copyOfRange(start, end), 1, hum.sampleRate)
+        val window = mouthWindow(hum, onsets, m)
+        if (window.last + 1 - window.first < (MOUTH_MIN_SEC * hum.sampleRate).toInt()) return null
+        val piece = Snip(hum.samples.copyOfRange(window.first, window.last + 1), 1, hum.sampleRate)
         val heard = Classifier.classify(piece)
         return heard.drumClass.takeIf {
             it != DrumClass.UNKNOWN && it != DrumClass.LOOP && it != DrumClass.TONAL && heard.confidence >= sure

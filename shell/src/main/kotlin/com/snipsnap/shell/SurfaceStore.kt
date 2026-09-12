@@ -41,7 +41,11 @@ object SurfaceStore {
              * The macro state under the finger, by the same map the engine
              * applies: XY is pitch across, cutoff up, half the roll as
              * resonance; XYZ adds the pinch as drive and the whole roll as
-             * resonance; MORPH is the weighted blend of [corners].
+             * resonance; MORPH is the weighted blend of [corners] with that
+             * same half-roll nudge layered onto resonance (see
+             * `SurfaceEngine.cpp`'s `morphed()`, which this mirrors) - a
+             * flat phone (tilt 0.5) is a no-op, so a corner blend still
+             * captures exactly what its four corners say.
              */
             fun from(mode: TouchSurface.Mode, reading: TouchSurface.Reading, tilt: Float, corners: List<Corner>): Corner {
                 val t = tilt.coerceIn(0f, 1f)
@@ -53,7 +57,8 @@ object SurfaceStore {
                         val w = listOf(reading.a, reading.b, reading.c, reading.d)
                         fun blend(pick: (Corner) -> Float) =
                             corners.indices.sumOf { (w[it] * pick(corners[it])).toDouble() }.toFloat().coerceIn(0f, 1f)
-                        Corner(blend { it.pitch }, blend { it.cutoff }, blend { it.resonance }, blend { it.drive })
+                        val resonance = (blend { it.resonance } + (t - 0.5f) * 0.5f).coerceIn(0f, 1f)
+                        Corner(blend { it.pitch }, blend { it.cutoff }, resonance, blend { it.drive })
                     }
                 }
             }

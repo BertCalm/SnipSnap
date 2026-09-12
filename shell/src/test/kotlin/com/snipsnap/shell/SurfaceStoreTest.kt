@@ -81,4 +81,21 @@ class SurfaceStoreTest {
         near(Corner.DEFAULTS.map { it.drive }.average().toFloat(), mid.drive)
         assertFailsWith<IllegalArgumentException> { Corner.from(Mode.MORPH, centre, 0.5f, Corner.DEFAULTS.take(2)) }
     }
+
+    @Test
+    fun `tilt nudges MORPH resonance the same half-weighted amount XY gives it, and clamps at the ends`() {
+        // CLEAN's resonance is 0 (Corner.CLEAN = Corner(0.5f, 1.0f, 0.0f, 0.0f)),
+        // so the nudge alone is what shows up here - the same arithmetic
+        // SurfaceEngine.cpp's morphed() applies at audio rate.
+        val atA = Reading(0f, 1f, 0f, 1f, 0f, 0f, 0f, touching = true)
+        near(0f, Corner.from(Mode.MORPH, atA, 0.5f, Corner.DEFAULTS).resonance)  // flat phone: no nudge
+        near(0.25f, Corner.from(Mode.MORPH, atA, 1f, Corner.DEFAULTS).resonance)  // full tilt: +0.5 * 0.5
+        near(0f, Corner.from(Mode.MORPH, atA, 0f, Corner.DEFAULTS).resonance)  // the other way clamps at 0, not negative
+
+        // HOT already carries resonance 0.2 (Corner.HOT = Corner(0.75f, 0.85f, 0.2f, 0.9f));
+        // a full-tilt nudge of +0.25 lands on top of that, not in place of it.
+        val atD = Reading(0f, 0f, 0f, 0f, 0f, 0f, 1f, touching = true)
+        near(0.45f, Corner.from(Mode.MORPH, atD, 1f, Corner.DEFAULTS).resonance)
+        near(1f, Corner.from(Mode.MORPH, atD, 1f, listOf(Corner(0.5f, 0.5f, 0.9f, 0f), Corner.DARK, Corner.LOW, Corner(0.5f, 0.5f, 0.9f, 0f))).resonance)
+    }
 }

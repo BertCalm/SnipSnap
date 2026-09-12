@@ -163,13 +163,21 @@ MacroState SurfaceEngine::morphed(const ControlFrame& f) const {
         out.resonance += w[i] * corners_[i][2].load(std::memory_order_relaxed);
         out.drive += w[i] * corners_[i][3].load(std::memory_order_relaxed);
     }
+    // Tilt nudges resonance on top of the blend, the same half-weighted
+    // amount XY gives it (see the XY case below) - a flat phone (tilt
+    // 0.5) is a no-op, so every corner the pad already saved still sounds
+    // exactly as captured. A non-finite f.tilt carries into out.resonance
+    // and out through the door in applyControl below, same as everywhere
+    // else a reading arrives; SurfaceStore.Corner.from's MORPH branch
+    // mirrors this exactly, so SET A..D captures what you'd actually hear.
+    out.resonance += (f.tilt - 0.5f) * 0.5f;
     return out;
 }
 
 void SurfaceEngine::applyControl(const ControlFrame& f) {
     MacroState target;
     switch (f.mode) {
-        case 2:  // MORPH: the puck weights four states
+        case 2:  // MORPH: the puck weights four states, tilt nudges resonance
             target = morphed(f);
             break;
         case 1:  // XYZ: X pitch, Y cutoff, Z drive, tilt resonance
@@ -186,6 +194,14 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
     cutoff_.setTarget(control01(target.cutoff, 1.0f));
     resonance_.setTarget(control01(target.resonance, 0.0f));
     drive_.setTarget(control01(target.drive, 0.0f));
+    // A touch-down restarts the loop from its head, so a tapped rhythm
+    // triggers like a drum hit; a held note still rides wherever the loop
+    // has turned to since. Without this, phase_ keeps advancing even while
+    // ungated (the loop is muted, not paused - renderMono reads and
+    // advances it regardless of gain), so the next touch would land
+    // wherever the loop happened to drift to, not at its head.
+    if (f.gate && !gated_) phase_ = 0.0;
+    gated_ = f.gate;
     gain_.setTarget(f.gate ? 1.0f : 0.0f);
 }
 
@@ -241,15 +257,24 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
 oboe::DataCallbackResult SurfaceEngine::onAudioReady(oboe::AudioStream*, void* audioData, int32_t numFrames) {
     adoptPendingSample();
 
-    // Drain the ring to the newest frame: a control stream is a position,
-    // not a history, and the smoothers glide toward wherever it is now.
+    // Drain the ring, applying every frame in the order it arrived: the
+    // continuous macros (pitch/cutoff/...) are a position, not a history,
+    // so applying several before rendering a sample is harmless - only the
+    // last setTarget before renderMono's next() calls sticks. But the
+    // gate's *edge* is an event, and a lift-then-retouch that lands in the
+    // same drain (the ring holds up to 64 frames, and the UI can push
+    // faster than one audio callback drains) is a real sequence, not a
+    // single level: jumping straight to the newest frame would apply
+    // gate=true against a gated_ that was never told about the
+    // intervening false, and applyControl's touch-down check would miss
+    // the retrigger entirely.
     ControlFrame frame;
     bool any = false;
-    while (controls_.pop(frame)) any = true;
-    if (any) {
-        latest_ = frame;
-        applyControl(latest_);
+    while (controls_.pop(frame)) {
+        any = true;
+        applyControl(frame);
     }
+    if (any) latest_ = frame;
 
     auto* out = static_cast<float*>(audioData);
     int32_t done = 0;

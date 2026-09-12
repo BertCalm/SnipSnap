@@ -371,12 +371,41 @@ Pure: two snips in, cuts out. The screen owns the mic and the deck.
 - **Nothing interrupts a hum.** The bench, RE-CHOP, MERGE and SPLIT,
   SEND and ONTO, and a row's audition are all off while the hum runs:
   the source playing is what the mouth is following.
-- **The beat you sang** rides along in the reading (`pattern`, every
-  mouth onset on the tape with the lag out) for a READ AS GROOVE of the
-  hum — the extension the idea named, left for a round that has heard
-  this one.
+- **The beat you sang** rides along: the reading keeps every mouth
+  onset on the tape with the lag out (`pattern`), and the mode keeps,
+  per cut, where the mouth's sound sat and how loud it was among the
+  hum's own — the sound's own peak over its window against the loudest
+  sound's, the measure the chop's captured groove uses, not the
+  detector's novelty, which is the size of the jump (`Hummed.beat`,
+  `Hum.VELOCITY_FLOOR` 0.3 the quietest a sound reads as a note). See
+  below.
+
+### The beat you sang
+
+The extension the idea named: with a tape, the hum's timing is also a
+pattern, so the beat you sang is played by the pads you cut. SEND of a
+hummed chop writes it as the new kit's groove (`Hum.groove`,
+`Hum.landGroove`): one note per sound the mouth made, on the pad its cut
+landed on (the CLASSIC placement SEND used), where the mouth put it, as
+loud as the mouth made it, on the source's own pulse — the standard
+variations off it, the way READ AS GROOVE lands on a kit with none. The
+toast says so: `SENT. THE BEAT YOU SANG IS ON THE GRID: 2 BARS. GROOVE
+HAS IT.` KIT opens as after any SEND; GROOVE is one tap away.
+
+Nothing is written when there is nothing honest to write, and SEND
+says what it always said: the chop is not a hum; its slices were edited
+since (a MERGE or SPLIT moves the cuts off the beat the mouth made);
+the source has no confident tempo (a clip needs a grid — the bench
+already reads NO TEMPO HEARD); the layout is FOLD or MELODIC (their
+pads are not the rows'); or ONTO, which lands on a kit that may have a
+groove of its own already. Sounds the mouth made that met no hit are
+not in the groove either: they have no pad. A clip runs 64 bars at
+most; a sound sung past that (a long tape, a late hum) is dropped
+rather than failing the SEND after the kit is built, and with nothing
+inside 64 bars there is no clip.
 
 ### What it says
+
 
 - `ARM THE MIC FIRST. HUM LISTENS THROUGH IT.` · `THE INSIDE IS ARMED, NOT THE MIC. HUM NEEDS THE MIC.`
 - `HUM ALONG. HEADPHONES ON, OR THE MIC HEARS THE TAPE TOO. TAP HUM AGAIN TO STOP.`
@@ -384,6 +413,7 @@ Pure: two snips in, cuts out. The screen owns the mic and the deck.
 - `THE MIC HEARD NOTHING. ARM IT, THEN HUM AGAIN.`
 - `NOTHING YOU HUMMED LANDED ON A HIT. HEADPHONES ON, AND HUM WITH THE BEAT.`
 - `HUMMED: 6 CUTS, YOUR MOUTH'S WORDS ON THEM. 2 SOUNDS FOUND NO HIT.`
+- `SENT. THE BEAT YOU SANG IS ON THE GRID: 2 BARS. GROOVE HAS IT.`
 - HELP: `· HUM ON CHOP: BEATBOX ALONG. THE CUTS AND LABELS FOLLOW YOUR MOUTH.`
 
 ### Laws the tests hold (`HumTest`)
@@ -404,6 +434,13 @@ Pure: two snips in, cuts out. The screen owns the mic and the deck.
   a held vowel over the kick never becomes a TONAL chip.
 - A hum recorded at half the tape's rate reads in the tape's frames,
   its lag with it.
+- On an eight-hit break with a pulse, boom-tss-boom-tss over the kick
+  and snare, the second boom quieter: the groove has four notes, each
+  where the mouth put it on the source's pulse, on the pad its cut
+  landed on, as loud as the mouth made it (the quieter boom quieter);
+  a merge since the hum, or a chop by hits, writes no groove; a sound
+  sung past 64 bars is dropped and all of them past it is no clip;
+  landed on the kit, the sung clip is among its grooves.
 
 ### What the phone should judge
 
@@ -419,4 +456,113 @@ Pure: two snips in, cuts out. The screen owns the mic and the deck.
   every hit matches. Round one asks for headphones in words; a bleed
   check (a hum whose onsets match every hit, and classify like the tape
   did) could refuse instead.
+
+## 11. Round five: THE ZOOM LADDER
+
+"How many slices" is the wrong question. A four-bar break has a natural
+set of answers — one phrase, four bars, sixteen beats, some number of
+hits, sixty-four sixteenths — and the ladder makes those the choices.
+At the top a pad is a whole phrase, at the bottom it is one sixteenth,
+and every rung is musical: chopping at BAR gives you pads you can
+rearrange into a new song in seconds; chopping at 16TH gives you the
+classic stutter-and-roll kit. The HIT rung is BY HITS, which already
+exists; BEAT and 16TH's *snap* already exists as ON THE GRID; this
+round adds the rungs themselves, and the two things above HIT that the
+tempo estimate does not give — the one, and the phrase.
+
+### In the hand
+
+Under GRID on the CUT bench, a row: `ZOOM · THE LADDER · THE ONE AT
+0.52s · 4 BARS A PHRASE`, and five segments — **COUNT · 16TH · BEAT ·
+BAR · PHRASE**. COUNT is the plain grid, so many equal parts. The
+other four cut the source's own pulse from the one: a pad per
+sixteenth, per beat, per bar, per phrase. The header reads `8 SLICES —
+BAR ×8`, the readout `BAR ×8`. Every row is classed LOOP and named for
+its rung (`BAR 3`, `16TH 12`), and lands as a one-shot pad of that
+name through SEND and ONTO alike. On a rung, **◀ ▶ moves the one** a
+beat earlier or later (the caption follows), since the one can be
+wrong: a half-time feel, a snare-led break. With no confident tempo
+the row reads `NO TEMPO HEARD. THE LADDER NEEDS A PULSE.` and a rung
+refuses with the same words. MERGE and SPLIT work on a rung's slices
+and keep their names.
+
+### Underneath (`shell/Ladder.kt`)
+
+Pure: the source, its tempo and its hits in, a pulse and cut frames
+out. The chop model cuts and names the slices (`ChopMode.Ladder`).
+
+- **The beat is fitted to the hits**, the way ON THE GRID fits its
+  step (the one `fitStep` now serves both), on the sixteenth grid
+  (hits sit between beats, and fitting them to beat lines pulls the
+  beat toward whichever side they fall on): the tempo estimate is the
+  seed, the pulse of this take is the hits — every hit (`Ladder.hits`),
+  not a chop's strongest sixty-four, since on a dense break the cap
+  would drop the quiet first hits and with them the anchor and the
+  tape's first bars. A stereo source is heard as its mono mix.
+- **The one.** The estimator has a period but no phase, and captures
+  rarely start on the downbeat. Of the four beats the first bar could
+  start on, the one is the beat whose lines carry the most weight down
+  the tape — the loudest sample in the window round each line
+  (`ONE_LOOK_BEFORE` 0.05 of a beat before it, for the detector's
+  backoff, to `ONE_LOOK_AFTER` 0.25 after), summed — since the kick on
+  the one is what a break leans on. The earliest wins a tie. The hits
+  before the one are the pickup, and no pad: BY HITS keeps them, the
+  ladder starts on the one. The honest first version the idea named
+  put bar one at the first strong hit and let you nudge; this weighs
+  every bar, and still lets you nudge.
+- **The phrase** is the period at which the bars rhyme. A bar is its
+  rhythm first — energy per sixteenth against the bar's loudest
+  (`PROFILE_STEPS`) — and its colour second (`Similar.distance` on the
+  bar's features, at `FEATURE_WEIGHT` 0.5): two bars of the same kit
+  with the snare on a different step sound alike to the spectral
+  features and nothing alike to the ear. Over the periods the tape
+  holds at least twice (`PHRASE_PERIODS` 2, 4, 8), the mean distance
+  between each bar and the bar a period later; the phrase is the
+  smallest period that rhymes as well as any longer one
+  (`RHYME_SLACK` 1.2), so an ABAB break phrases at two bars and an
+  ABCD at four. Fewer than four whole bars is one phrase of them.
+- **The rungs** cut every span from the one to the end, the last slice
+  running to the end whole or not, at most 64 (`MAX_HITS`): a 16TH
+  chop of eight bars keeps its first 64. A last slice shorter than
+  half a span (`TAIL_MIN`) is the sliver the detector's backoff leaves,
+  no pad, and joins the one before.
+- **Names ride on the row** (`Row.label`: a ghost's `AFTER SNARE 2`, or
+  a rung's `BAR 3`) and land as the pad's name; a rung's pad is a
+  one-shot, a ghost's a gate.
+
+### What it says
+
+- `ZOOM · THE LADDER · THE ONE AT 0.52s · 4 BARS A PHRASE`
+- `NO TEMPO HEARD. THE LADDER NEEDS A PULSE.`
+- header `8 SLICES — BAR ×8` · `BAR (NO TEMPO)` · readout `BAR ×8` · `BAR · NO TEMPO`
+- HELP: `· ZOOM ON CHOP: 16TH, BEAT, BAR OR PHRASE PADS. ◀ ▶ MOVES THE ONE.`
+
+### Laws the tests hold (`LadderTest`)
+
+- On eight bars at 120 with a hat pickup a beat before the first loud
+  kick: the beat fits to half a second, the one is a beat after the
+  anchor and sits on the kick; nudged a beat later it moves a beat,
+  nudged a beat earlier the pickup is the one, four beats round is the
+  same one; eight whole bars; the hits are more than sixty-four and the
+  pickup is still the first; a stereo copy hears the same one, phrase
+  and beat.
+- BAR cuts eight, four beats apart, from the one; BEAT cuts 32; 16TH
+  cuts 128 and keeps 64; PHRASE cuts eight over the phrase; the one a
+  beat later leaves a three-beat tail that is a pad, three beats later
+  a one-beat tail that is not.
+- Bars ABAB phrase at two, ABCD at four, three bars are one phrase.
+- The ladder mode cuts four bars named BAR 1..4, LOOP and sure, header
+  `BAR ×4`, the bench's hit controls off, the pads named and one-shot;
+  BEAT cuts sixteen; a merge keeps the names it keeps and reads
+  EDITED; a tape with no tempo cuts nothing and reads `BAR (NO TEMPO)`.
+
+### What the phone should judge
+
+- Whether the loudest-line rule finds the one on real breaks, or
+  whether it wants the low band alone (a kick is low, a snare is not),
+  and how often the nudge is needed.
+- Whether 1.2 is the right slack for a rhyme: too tight and every
+  break phrases at eight, too loose and every one at two.
+- Whether the pickup wants to be a pad after all (`PICKUP`, before
+  BAR 1) for breaks that start on the and.
 

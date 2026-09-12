@@ -416,6 +416,7 @@ object Copy {
         "· GHOSTS ON CHOP: THE SPACES BETWEEN HITS. HOLD A PAD, HOLD THE ROOM.",
         "· CATCH ON TAPE: HOLD A PAD AS THE HIT GOES BY. IT LANDS THERE.",
         "· HUM ON CHOP: BEATBOX ALONG. THE CUTS AND LABELS FOLLOW YOUR MOUTH.",
+        "· ZOOM ON CHOP: 16TH, BEAT, BAR OR PHRASE PADS. ◀ ▶ MOVES THE ONE.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -725,6 +726,13 @@ object Copy {
     fun retrimLanded(pad: String, treatment: String?): String =
         "$pad RE-CUT." + (treatment?.let { " THE ${it.uppercase()} STAYED WITH THE OLD ONE - IT'S IN THE BIN." } ?: "")
 
+    // ---- THE ZOOM LADDER: a pad per sixteenth, beat, bar or phrase (docs/CHOP_CONTROLS.md §11) ----
+    /** The ladder row's caption: where the one sits on the source, and how long a phrase runs. */
+    fun ladderOne(oneSec: Float, phraseBars: Int): String =
+        String.format(java.util.Locale.ROOT, "THE ONE AT %.2fs · %s A PHRASE", oneSec, if (phraseBars == 1) "1 BAR" else "$phraseBars BARS")
+    /** The ladder row's caption with no pulse to climb. */
+    const val LADDER_NO_TEMPO = "NO TEMPO HEARD. THE LADDER NEEDS A PULSE."
+
     // ---- HUM THE CHOP: your mouth places and names the cuts (docs/CHOP_CONTROLS.md §10) ----
     /** HUM with the mic not armed: the hum comes off the same ring GRAB and HOLD use. */
     const val HUM_NOT_LISTENING = "ARM THE MIC FIRST. HUM LISTENS THROUGH IT."
@@ -738,6 +746,9 @@ object Copy {
     const val HUM_NOTHING = "THE MIC HEARD NOTHING. ARM IT, THEN HUM AGAIN."
     /** Every mouth sound missed every hit (or none was heard). */
     const val HUM_NO_MATCH = "NOTHING YOU HUMMED LANDED ON A HIT. HEADPHONES ON, AND HUM WITH THE BEAT."
+    /** SEND of a hummed chop: the beat you sang went onto the new kit as its groove. */
+    fun sungGroove(bars: Int): String =
+        "SENT. THE BEAT YOU SANG IS ON THE GRID: ${if (bars == 1) "1 BAR" else "$bars BARS"}. GROOVE HAS IT."
     /** The hum landed: how many cuts, and how many sounds found no hit. */
     fun hummed(cuts: Int, missed: Int): String {
         val head = if (cuts == 1) "HUMMED: 1 CUT, YOUR MOUTH'S WORD ON IT." else "HUMMED: $cuts CUTS, YOUR MOUTH'S WORDS ON THEM."
@@ -1388,6 +1399,16 @@ object Copy {
     /** PRINT armed: names the bar count and tempo when the kit has one to count against, or falls back to [SURFACE_PRINTING_NO_TEMPO] when it doesn't. */
     fun surfacePrintingStarted(bars: Int, bpm: Int?): String =
         if (bars > 0 && bpm != null) "PRINTING ${PrintLength.label(bars)} AT $bpm BPM." else SURFACE_PRINTING_NO_TEMPO
+
+    // ---- GROOVE: BOUNCE ----
+    /** BOUNCE landed - [SnipStore.Imported.seconds]'s own count, [surfacePrinted]'s twin for the pads' print. */
+    fun groovePrinted(seconds: Float): String = "BOUNCED ${"%.1f".format(java.util.Locale.ROOT, seconds)} S TO SNIPS."
+    /** The armed print's own buffer never reached a captured frame worth keeping - the same near-nothing guard [SURFACE_NOTHING_PRINTED] states for the other engine's print. */
+    const val GROOVE_NOTHING_BOUNCED = "NOTHING BOUNCED. TRY AGAIN."
+    /** `PadEngine.armPrint` refused - no stream running, one already recording, or the reservation itself failed. */
+    const val GROOVE_BOUNCE_FAILED = "BOUNCE FAILED. TRY AGAIN."
+    /** PROG, SWING, FEEL, or a new take landing moved the pattern out from under an armed or running bounce - it is cancelled rather than landing a splice of two different takes. */
+    const val GROOVE_BOUNCE_PATTERN_CHANGED = "GROOVE CHANGED. BOUNCE CANCELLED."
 
     // ---- SPLIT ----
     const val SPLIT_ALL_FADERS_DOWN = "EVERY FADER IS DOWN. NOTHING TO HEAR."

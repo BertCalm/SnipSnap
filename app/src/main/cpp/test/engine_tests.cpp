@@ -534,6 +534,149 @@ TEST(surface_engine_morph_blends_the_corners) {
     CHECK(pa > pd);
 }
 
+TEST(surface_engine_retriggers_the_loop_on_touch_down) {
+    // Without a reset, phase_ keeps advancing even while ungated - the loop
+    // is muted, not paused - so a second touch lands wherever it would
+    // naturally have drifted to by then, not at the loop's head. Two runs
+    // that differ only in how many samples the pad sat released before the
+    // second touch must land at the exact same output once retriggered and
+    // settled: if phase_ actually resets on touch-down, both runs read the
+    // ramp from the same starting point and every later control frame lines
+    // up the same way, so the two waveforms are bit-identical. A ramp
+    // (not a short repeating wave) makes any leftover drift visible - it
+    // has no periodicity shorter than its own length for a coincidental
+    // match to hide behind.
+    auto run = [](int32_t releaseCallbacks) {
+        SurfaceEngine e(kRate);
+        std::vector<float> ramp(1000);
+        for (size_t i = 0; i < ramp.size(); ++i) ramp[i] = static_cast<float>(i) / 1000.0f - 0.5f;
+        e.loadSample(ramp.data(), ramp.size(), kRate);
+
+        ControlFrame on;
+        on.mode = 0;
+        on.gate = true;
+        on.x = 0.5f;
+        on.y = 1.0f;
+        e.pushControl(on);
+        for (int i = 0; i < 137; ++i) callback(e, 64);  // hold for an arbitrary stretch
+
+        ControlFrame off = on;
+        off.gate = false;
+        e.pushControl(off);
+        for (int i = 0; i < releaseCallbacks; ++i) callback(e, 64);  // sit released, drifting if unfixed
+
+        e.pushControl(on);  // touch down again
+        std::vector<float> tail;
+        for (int i = 0; i < 400; ++i) tail = callback(e, 64);  // let the envelope and filter settle
+        return tail;
+    };
+
+    CHECK(run(50) == run(311));
+}
+
+TEST(surface_engine_retriggers_even_when_release_and_touch_share_one_drain) {
+    // onAudioReady used to drain the ring straight to its newest frame,
+    // treating the control stream as a position and nothing else. But the
+    // gate's *edge* is an event: if a lift and a fast retouch both land in
+    // the ring before the next audio callback (entirely possible - it
+    // holds up to 64 frames, and the UI can push faster than one callback
+    // drains), jumping to "newest" collapses them into a single gate=true
+    // apply against a gated_ that was never told about the intervening
+    // false, and the retrigger is missed. Forcing the release into its own
+    // drain (a plain callback() in between) must land on the exact same
+    // settled output as leaving them queued together.
+    auto run = [](bool sameDrain) {
+        SurfaceEngine e(kRate);
+        std::vector<float> ramp(1000);
+        for (size_t i = 0; i < ramp.size(); ++i) ramp[i] = static_cast<float>(i) / 1000.0f - 0.5f;
+        e.loadSample(ramp.data(), ramp.size(), kRate);
+
+        ControlFrame on;
+        on.mode = 0;
+        on.gate = true;
+        on.x = 0.5f;
+        on.y = 1.0f;
+        e.pushControl(on);
+        for (int i = 0; i < 137; ++i) callback(e, 64);
+
+        ControlFrame off = on;
+        off.gate = false;
+        e.pushControl(off);
+        if (!sameDrain) callback(e, 64);  // force the release into a drain of its own
+        e.pushControl(on);
+
+        std::vector<float> tail;
+        for (int i = 0; i < 400; ++i) tail = callback(e, 64);
+        return tail;
+    };
+
+    CHECK(run(true) == run(false));
+}
+
+TEST(surface_engine_does_not_retrigger_while_the_touch_is_only_held) {
+    // The edge, not the level: a second gate=true frame while already
+    // gated - a moved finger re-sending its position, say - must not yank
+    // phase_ back to the head mid-note. An implementation that reset on
+    // every true frame instead of the false -> true edge would still pass
+    // the touch-down tests above (they only ever push one true frame per
+    // touch) but would fail this one.
+    auto run = [](bool resendWhileHeld) {
+        SurfaceEngine e(kRate);
+        std::vector<float> ramp(1000);
+        for (size_t i = 0; i < ramp.size(); ++i) ramp[i] = static_cast<float>(i) / 1000.0f - 0.5f;
+        e.loadSample(ramp.data(), ramp.size(), kRate);
+
+        ControlFrame on;
+        on.mode = 0;
+        on.gate = true;
+        on.x = 0.5f;
+        on.y = 1.0f;
+        e.pushControl(on);
+        for (int i = 0; i < 137; ++i) callback(e, 64);
+        if (resendWhileHeld) e.pushControl(on);  // still gate=true - a level, not an edge
+
+        std::vector<float> tail;
+        for (int i = 0; i < 400; ++i) tail = callback(e, 64);
+        return tail;
+    };
+
+    CHECK(run(true) == run(false));
+}
+
+TEST(surface_engine_morph_tilt_reaches_the_filter) {
+    // Two frames identical but for tilt, both weighted fully onto corner A:
+    // if the tilt nudge in morphed() reaches applyControl (as it should -
+    // SurfaceStore.Corner.from mirrors the same arithmetic in Kotlin, and
+    // that side already proves the numbers), the two tilts land on
+    // different resonance targets, which land on different SVF
+    // coefficients, which cannot produce byte-identical output over
+    // hundreds of callbacks. This does not re-derive the filter's theory,
+    // only that the wire from tilt to the DSP is actually connected.
+    SurfaceEngine e(kRate);
+    e.setCorner(0, MacroState{0.5f, 0.6f, 0.5f, 0.0f});
+    std::vector<float> square(100);
+    for (int i = 0; i < 100; ++i) square[i] = (i % 10 < 5) ? 0.5f : -0.5f;
+    e.loadSample(square.data(), square.size(), kRate);
+
+    ControlFrame lowTilt;
+    lowTilt.mode = 2;
+    lowTilt.gate = true;
+    lowTilt.a = 1;
+    lowTilt.b = lowTilt.c = lowTilt.d = 0;
+    lowTilt.tilt = 0.0f;
+    e.pushControl(lowTilt);
+    std::vector<float> lo;
+    for (int i = 0; i < 400; ++i) lo = callback(e, 64);  // let the coefficients settle
+
+    ControlFrame hiTilt = lowTilt;
+    hiTilt.tilt = 1.0f;
+    e.pushControl(hiTilt);
+    std::vector<float> hi;
+    for (int i = 0; i < 400; ++i) hi = callback(e, 64);
+
+    CHECK(lo != hi);
+}
+
 TEST(surface_engine_survives_a_reading_that_is_not_a_number) {
     // A gravity sensor may report NaN, and TILT is resonance in XYZ. Before
     // the door, one such frame was permanent: the smoothers latch NaN
