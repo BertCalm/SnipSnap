@@ -35,6 +35,9 @@ void Java_com_snipsnap_app_NativePads_commitBank(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_noteOn(JNIEnv*, jobject, jlong, jint, jint, jlong, jlong, jlong, jfloat, jfloat, jdouble, jboolean);
 jboolean Java_com_snipsnap_app_NativePads_noteOnLayers(JNIEnv*, jobject, jlong, jintArray, jintArray, jlong, jlong, jlong, jfloatArray, jfloatArray, jdouble, jbooleanArray);
 jintArray Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv*, jobject, jlong);
+jboolean Java_com_snipsnap_app_NativePads_armPrint(JNIEnv*, jobject, jlong, jint);
+jint Java_com_snipsnap_app_NativePads_printState(JNIEnv*, jobject, jlong);
+jfloatArray Java_com_snipsnap_app_NativePads_stopPrint(JNIEnv*, jobject, jlong);
 jlong Java_com_snipsnap_app_NativeSurface_create(JNIEnv*, jobject, jint);
 void Java_com_snipsnap_app_NativeSurface_destroy(JNIEnv*, jobject, jlong);
 void Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv*, jobject, jlong, jfloatArray, jint);
@@ -341,4 +344,63 @@ TEST(jni_a_print_the_jvm_cannot_hold_comes_back_empty_handed) {
     CHECK(Java_com_snipsnap_app_NativeSurface_stopPrint(e, nullptr, h) == nullptr);
 
     Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+}
+
+TEST(jni_the_pads_print_crosses_as_stereo_at_its_full_length) {
+    // The bridge's own arithmetic, and the mistake this one invites: the
+    // surface's print is mono, so there frames and floats are the same
+    // number and either reads correctly. The pads' is not. An array sized
+    // in frames would hand back the first half of the take at half its
+    // length - a bounce that ends early and plays at the wrong speed -
+    // and nothing above this line would notice, because the engine's
+    // buffer would be perfectly correct.
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    auto* pads = reinterpret_cast<PadEngine*>(h);
+    Java_com_snipsnap_app_NativePads_beginBank(e, nullptr, h);
+    Java_com_snipsnap_app_NativePads_addSample(e, nullptr, h, floats(ramp(1000)), 1, 48000);
+    Java_com_snipsnap_app_NativePads_commitBank(e, nullptr, h);
+
+    pull(pads, 256);  // adopt the bank
+    CHECK(Java_com_snipsnap_app_NativePads_armPrint(e, nullptr, h, 4096) == JNI_TRUE);
+    CHECK(Java_com_snipsnap_app_NativePads_printState(e, nullptr, h) ==
+          static_cast<jint>(PrintBuffer::State::Recording));
+    CHECK(Java_com_snipsnap_app_NativePads_noteOn(
+              e, nullptr, h, 1, 0, 0, 900, -1, 1.0f, 0.25f, 1.0, JNI_FALSE) == JNI_TRUE);
+    for (int i = 0; i < 3; ++i) pull(pads, 256);
+
+    const size_t frames = pads->printFrames();
+    CHECK_EQ(static_cast<int>(frames), 768);
+    // Read the engine's own copy before stopPrint clears it, to compare against.
+    const std::vector<float> kept(pads->printData(), pads->printData() + frames * 2);
+
+    jfloatArray got = Java_com_snipsnap_app_NativePads_stopPrint(e, nullptr, h);
+    CHECK(got != nullptr);
+    CHECK_EQ(static_cast<int>(impl(got)->length), static_cast<int>(frames * 2));
+    for (size_t i = 0; i < kept.size(); ++i) CHECK_NEAR(impl(got)->f[i], kept[i], 1e-6);
+    // Stopping hands the buffer back and lets go of it, ready for the next take.
+    CHECK(Java_com_snipsnap_app_NativePads_printState(e, nullptr, h) ==
+          static_cast<jint>(PrintBuffer::State::Idle));
+
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
+TEST(jni_a_pad_print_the_jvm_cannot_hold_comes_back_empty_handed) {
+    // The surface's case, for the engine whose prints are twice the size.
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    auto* pads = reinterpret_cast<PadEngine*>(h);
+    Java_com_snipsnap_app_NativePads_beginBank(e, nullptr, h);
+    Java_com_snipsnap_app_NativePads_addSample(e, nullptr, h, floats(ramp(1000)), 1, 48000);
+    Java_com_snipsnap_app_NativePads_commitBank(e, nullptr, h);
+    pull(pads, 256);
+    CHECK(Java_com_snipsnap_app_NativePads_armPrint(e, nullptr, h, 4096) == JNI_TRUE);
+    Java_com_snipsnap_app_NativePads_noteOn(e, nullptr, h, 1, 0, 0, 900, -1, 1.0f, 1.0f, 1.0, JNI_FALSE);
+    pull(pads, 256);
+    CHECK(pads->printFrames() > 0);
+
+    failAllocations = true;
+    CHECK(Java_com_snipsnap_app_NativePads_stopPrint(e, nullptr, h) == nullptr);
+
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
 }

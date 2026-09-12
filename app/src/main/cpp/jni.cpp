@@ -20,6 +20,24 @@ using snipsnap::SurfaceEngine;
 
 namespace {
 inline SurfaceEngine* engine(jlong handle) { return reinterpret_cast<SurfaceEngine*>(handle); }
+
+/**
+ * Ask a print to stop and wait (bounded, on the caller's thread) for the
+ * callback to make its last write. If the stream is dead the callback
+ * will never flip the state, so after the bound the buffer is read
+ * as-is - with no writer left, that read is safe.
+ *
+ * A template because both engines carry a print and the wait is the same
+ * handshake for each; written once so the two cannot drift apart on how
+ * long they are willing to wait.
+ */
+template <typename Engine>
+void stopPrinting(Engine* e) {
+    e->requestStopPrint();
+    for (int i = 0; i < 100 && e->printState() == PrintBuffer::State::Stopping; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+}
 }  // namespace
 
 extern "C" {
@@ -115,19 +133,13 @@ Java_com_snipsnap_app_NativeSurface_printState(JNIEnv*, jobject, jlong handle) {
 }
 
 /**
- * Stop the print and hand back what was captured, or null when nothing
- * was. Waits (bounded, UI thread) for the callback to make its last
- * write; if the stream is dead the callback will never flip the state,
- * so after the bound the buffer is read as-is - with no writer left,
- * that read is safe.
+ * Stop the print and hand back the mono bus that was captured, or null
+ * when nothing was. See `stopPrinting` for what the wait is for.
  */
 JNIEXPORT jfloatArray JNICALL
 Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv* env, jobject, jlong handle) {
     SurfaceEngine* e = engine(handle);
-    e->requestStopPrint();
-    for (int i = 0; i < 100 && e->printState() == PrintBuffer::State::Stopping; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
+    stopPrinting(e);
     const size_t frames = e->printFrames();
     jfloatArray out = nullptr;
     if (frames > 0) {
@@ -350,6 +362,40 @@ Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv* env, jobject, jlong handle) 
     if (out != nullptr && n > 0) {
         env->SetIntArrayRegion(out, 0, static_cast<jsize>(n), reinterpret_cast<const jint*>(buf));
     }
+    return out;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_armPrint(JNIEnv*, jobject, jlong handle, jint maxFrames) {
+    return pads(handle)->armPrint(maxFrames > 0 ? static_cast<size_t>(maxFrames) : 0) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_snipsnap_app_NativePads_printState(JNIEnv*, jobject, jlong handle) {
+    return static_cast<jint>(pads(handle)->printState());
+}
+
+/**
+ * Stop the print and hand back what was captured as interleaved stereo,
+ * or null when nothing was. The surface's twin returns mono, because
+ * that is the bus it has; this one returns two channels for the same
+ * reason, and the array is twice as long per frame. See `stopPrinting`
+ * for the wait, and `drainEnded` for why a null return is the JVM's
+ * pending OutOfMemoryError rather than an answer.
+ */
+JNIEXPORT jfloatArray JNICALL
+Java_com_snipsnap_app_NativePads_stopPrint(JNIEnv* env, jobject, jlong handle) {
+    PadEngine* e = pads(handle);
+    stopPrinting(e);
+    const size_t samples = e->printSamples();
+    jfloatArray out = nullptr;
+    if (samples > 0) {
+        out = env->NewFloatArray(static_cast<jsize>(samples));
+        if (out != nullptr) {
+            env->SetFloatArrayRegion(out, 0, static_cast<jsize>(samples), e->printData());
+        }
+    }
+    e->clearPrint();
     return out;
 }
 

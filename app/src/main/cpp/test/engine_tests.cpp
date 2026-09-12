@@ -181,6 +181,35 @@ TEST(print_buffer_stop_lands_on_the_callback_and_rearm_is_refused_meanwhile) {
     p.clear();
 }
 
+TEST(print_buffer_stereo_counts_frames_and_cuts_on_a_frame_boundary) {
+    // Two channels: the ceiling is in frames, the storage is interleaved,
+    // and a copy that does not fit is cut between frames - never between
+    // a frame's left and right, which would swap the channels for the
+    // rest of the print.
+    PrintBuffer p;
+    CHECK(p.arm(3, 2));
+    CHECK_EQ(p.channels(), 2);
+    const float two[4] = {1.0f, -1.0f, 2.0f, -2.0f};
+    CHECK(p.record(two, 2));
+    CHECK_EQ(static_cast<int>(p.framesWritten()), 2);
+    CHECK_EQ(static_cast<int>(p.samplesWritten()), 4);
+    // Two more frames offered, one frame of room: the odd frame is dropped whole.
+    CHECK(!p.record(two, 2));
+    CHECK(p.state() == PrintBuffer::State::Done);
+    CHECK_EQ(static_cast<int>(p.framesWritten()), 3);
+    CHECK_EQ(static_cast<int>(p.samplesWritten()), 6);
+    CHECK_NEAR(p.data()[4], 1.0f, 1e-6);
+    CHECK_NEAR(p.data()[5], -1.0f, 1e-6);
+    p.clear();
+    // Back to one channel by default, so the surface's print is untouched.
+    CHECK(p.arm(4));
+    CHECK_EQ(p.channels(), 1);
+    p.requestStop();
+    p.record(two, 1);
+    CHECK_EQ(static_cast<int>(p.framesWritten()), 0);
+    p.clear();
+}
+
 // ---- PadEngine -----------------------------------------------------------------
 
 TEST(pad_engine_plays_the_window_with_its_gains_and_reports_the_end) {
@@ -350,6 +379,69 @@ TEST(latency_is_minus_one_with_no_stream) {
     CHECK(pads.latencyMillis() < 0.0);
     SurfaceEngine surface(kRate);
     CHECK(surface.latencyMillis() < 0.0);
+}
+
+TEST(pad_engine_prints_the_stereo_bus_it_just_played) {
+    // The point of printing the bus rather than rendering the kit again:
+    // the print cannot disagree with what was heard. So the assertion is
+    // literally that - the frames the callback wrote and the frames the
+    // print kept are the same frames, both channels of them.
+    PadEngine& e = seeded();
+    CHECK(e.armPrint(200));
+    CHECK(!e.armPrint(200));  // not while recording
+    e.pushCommand(noteOn(1, 0, 0, 900, 1.0f, 0.25f));
+    const std::vector<float> heard = callback(e, 128);
+    CHECK(e.printState() == PrintBuffer::State::Recording);
+    CHECK_EQ(static_cast<int>(e.printFrames()), 128);
+    CHECK_EQ(static_cast<int>(e.printSamples()), 256);
+    CHECK(peak(heard) > 0.01f);  // something was actually playing
+    for (size_t i = 0; i < heard.size(); ++i) CHECK_NEAR(e.printData()[i], heard[i], 1e-6);
+    // Stereo, not a mono copy: the note was panned four to one, so the
+    // print's left carries plainly more than its right. Measured over the
+    // whole print rather than one frame, because the first frames of the
+    // ramp are near silence and a gain glide is still settling there.
+    float left = 0.0f, right = 0.0f;
+    for (int f = 0; f < 128; ++f) {
+        left += std::fabs(e.printData()[2 * f]);
+        right += std::fabs(e.printData()[2 * f + 1]);
+    }
+    CHECK(left > right * 2.0f);
+
+    e.requestStopPrint();
+    callback(e, 64);
+    CHECK(e.printState() == PrintBuffer::State::Done);
+    CHECK_EQ(static_cast<int>(e.printFrames()), 128);  // the stop pass added nothing
+    CHECK(e.clearPrint());
+    CHECK(e.printState() == PrintBuffer::State::Idle);
+}
+
+TEST(pad_engine_with_no_print_armed_records_nothing) {
+    // The tap sits in the callback of every kit hit anyone ever plays, so
+    // an unarmed engine must stay at Idle no matter how much runs through
+    // it - that is what makes it free when nobody is bouncing.
+    PadEngine& e = seeded();
+    e.pushCommand(noteOn(1, 0, 0, 900));
+    for (int i = 0; i < 20; ++i) callback(e, 64);
+    CHECK(e.printState() == PrintBuffer::State::Idle);
+    CHECK_EQ(static_cast<int>(e.printFrames()), 0);
+}
+
+TEST(pad_engine_print_stops_at_its_ceiling_mid_callback) {
+    // A bounce asks for a fixed number of frames; the callback that
+    // crosses the ceiling keeps the frames that fit and finishes there,
+    // rather than running past the buffer.
+    PadEngine& e = seeded();
+    CHECK(e.armPrint(100));
+    e.pushCommand(noteOn(1, 0, 0, 900));
+    callback(e, 64);
+    CHECK(e.printState() == PrintBuffer::State::Recording);
+    callback(e, 64);
+    CHECK(e.printState() == PrintBuffer::State::Done);
+    CHECK_EQ(static_cast<int>(e.printFrames()), 100);
+    CHECK_EQ(static_cast<int>(e.printSamples()), 200);
+    callback(e, 64);  // and stays there
+    CHECK_EQ(static_cast<int>(e.printFrames()), 100);
+    e.clearPrint();
 }
 
 // ---- SurfaceEngine -------------------------------------------------------------
