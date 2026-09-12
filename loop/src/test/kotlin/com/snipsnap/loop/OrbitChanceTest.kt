@@ -242,7 +242,11 @@ class OrbitChanceTest {
         val dir = Files.createTempDirectory("orbit-chance").toFile()
         OrbitStore.save(s, dir)
         val back = OrbitStore.load(dir)
-        assertEquals(OrbitStore.VERSION, 6)
+        // Deliberately not a version literal. This test is about the
+        // fields surviving the round trip; pinning the number here made
+        // every later bump fail a test that has nothing to say about it,
+        // and version 7 duly did. What versions still LOAD is a real
+        // claim and has its own test, one per bump.
         assertEquals(s.seed, back.seed)
         assertEquals(hits, (back.orbits[0].content as PatternOrbit).hits)
         // A certain hit still writes exactly the fields it always did: the

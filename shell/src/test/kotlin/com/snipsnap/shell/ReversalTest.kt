@@ -58,8 +58,16 @@ class ReversalTest {
         // Accept the same direction words without "THE" too.
         "IN BIN", "TO BIN", "FROM BIN",
         "UNDO", "BACK", "DAYS", "RESTORE", "KEPT", "KEEPS", "SLEEPS",
-        "RECOVER", "AGAIN", "STILL THERE", "CANNOT BE UNDONE", "FOR GOOD",
+        "RECOVER", "STILL THERE", "CANNOT BE UNDONE", "FOR GOOD",
         "UNTOUCHED", "STAYS", "WAITS",
+        // "AGAIN" was here and is gone. It is a RETRY instruction, not a way
+        // back: "DUB AGAIN TO WRITE OVER IT" tells you how to repeat the act,
+        // not how to reverse it. It was the only thing letting
+        // `dubWouldOverwrite` through, and a genuinely destructive line
+        // reading "ITEM REPLACED. TRY AGAIN." would have passed on it too.
+        // Removing it is what forced [templatedNotALanding] to exist, which is
+        // the honest mechanism: say a line is not a landing, rather than
+        // pretend it answered.
         // "ARE GONE" / "IS GONE", never the bare word: "GONE" is in
         // [destructive], and a token in both lists would let every
         // destructive line satisfy the law with the word that flagged it.
@@ -91,7 +99,20 @@ class ReversalTest {
         // for, and it is the one case a green local run structurally cannot
         // cover: another branch can add a line to the same file at any time.
         "TWINS_KEEP_OWN" to "REMIX refused; the pads were not wiped",
+        // RE-TRIM refused: `Retrim.of` returns Refused(RETRIM_TAPE_GONE) at
+        // Retrim.kt:130 and :132 and the pad is untouched. It was passing the
+        // law for the WRONG REASON - "KEEPS", from "THE PAD KEEPS WHAT IT
+        // HAS", which is not a recovery answer for the missing tape. A line
+        // that passes by accident is a line the law is not really holding.
+        "RETRIM_TAPE_GONE" to "RE-TRIM refused; the pad was never changed",
         "KIT_DELETE_FAILED" to "the delete failed; nothing was destroyed",
+        // App.kt's forgetRoom catch block: the forget THREW, so the room is
+        // still on the shelf. It reads "FORGET FAILED. TRY AGAIN." and this
+        // law only sees it because the same change that classified it removed
+        // "AGAIN" from the answering vocabulary - under the old list a retry
+        // instruction counted as a way back, and this line sailed through
+        // saying nothing about the room at all.
+        "ROOM_FORGET_FAILED" to "the forget threw; the room was never binned",
         "SNIP_DELETE_FAILED" to "the delete failed; nothing was destroyed",
         "BIN_ITEM_GONE" to "the restore failed because it was already gone; this IS the way-back answer",
         // Busy lines, shown while the work runs.
@@ -109,6 +130,52 @@ class ReversalTest {
         "STACK_LOCKS" to "a standing caveat; the landing is Copy.stacked()",
         // A legend on the export card row, naming the gesture. Nothing has happened yet.
         "EXPORT_CARD_LEGEND" to "a legend, not a landing",
+    )
+
+    /**
+     * `Copy` **functions** that read as destructive but are not a destructive
+     * landing — the source scan's own version of [notADestructiveLanding],
+     * which is keyed by constant name and so cannot reach them.
+     *
+     * This set exists because "AGAIN" was removed from [answersIt]. While it
+     * was there, `dubWouldOverwrite` satisfied the law with "DUB AGAIN TO
+     * WRITE OVER IT" — a retry instruction, not a way back — and the scan had
+     * no way to say "this one is not a landing" other than to keep a bad
+     * token. A law that needs a wrong answer to stay green is not holding
+     * anything; this is the honest version.
+     *
+     * The distinction the set records is **warning versus landing**: a
+     * warning says what the NEXT tap would do, and nothing has happened yet,
+     * so there is nothing to take back. A landing says it happened.
+     */
+    private data class NotALanding(
+        /** Why the law does not apply. */
+        val why: String,
+        /**
+         * The phrase that MAKES it not a landing, which must still be in the
+         * function's source.
+         *
+         * Without this the entry is an unconditional bypass: change
+         * `dubWouldOverwrite` to return "ITEM REPLACED. DUB AGAIN TO WRITE
+         * OVER IT." and it is a destructive landing that the law skips
+         * forever. Found in review, and it is the same fault this whole file
+         * keeps producing — an exclusion nobody re-checks. Every other set
+         * here is validated (a parked gap must still be a gap, a
+         * you-cannot site must say so); this one was not.
+         */
+        val stillTrue: String,
+    )
+
+    private val templatedNotALanding = mapOf(
+        // Its own KDoc: "nothing has been written when this appears." The tap
+        // that overwrites is the next one, and this line exists so that tap is
+        // a decision rather than a dare. "IS ALREADY THERE" is the clause that
+        // says so: it describes the CURRENT state of the file, before anything
+        // is written. A post-write rewrite loses it, and the guard fires.
+        "dubWouldOverwrite" to NotALanding(
+            why = "a warning before the act, not a landing",
+            stillTrue = "IS ALREADY THERE",
+        ),
     )
 
     /**
@@ -220,16 +287,28 @@ class ReversalTest {
             val head = raw.trim()
             if (isComment(head)) continue
             if (!declares.containsMatchIn(head) || ": String" !in head) continue
-            // The declaration plus its continuation lines, so a `fun` whose
-            // literal sits on the next line is read too - but STOPPING at the
-            // next declaration. An unbounded window swept forward into the
-            // following constant and charged `noDoubles` with DOUBLES_RULE's
-            // "NOTHING HERE DELETES, MOVES OR MERGES", which is the opposite
-            // of a destructive line.
+            // The declaration plus its whole body, bounded by INDENTATION:
+            // read on while lines are indented deeper than the declaration,
+            // stop at the first that is not. A `Copy` member sits at one
+            // indent and the next member sits at the same one, so this ends
+            // exactly where the member does.
+            //
+            // Two earlier bounds were both wrong, in opposite directions.
+            // Unbounded, the window swept into the FOLLOWING constant and
+            // charged `noDoubles` with DOUBLES_RULE's "NOTHING HERE DELETES,
+            // MOVES OR MERGES". Bounded by "the next val/var", it stopped at a
+            // LOCAL val inside the body - so a function with a neutral name
+            // and its destructive string returned further down, the shape
+            // `imported` and `grooveRead` already use, was cut off before the
+            // law ever saw the string. Found in review. Indentation knows the
+            // difference between a member and a local; a keyword does not.
+            val indent = raw.indexOfFirst { !it.isWhitespace() }
             val body = mutableListOf(head)
-            for (next in lines.subList(i + 1, minOf(lines.size, i + 5))) {
+            for (next in lines.subList(i + 1, lines.size)) {
+                if (next.isBlank()) continue
+                if (next.indexOfFirst { !it.isWhitespace() } <= indent) break
                 val t = next.trim()
-                if (isComment(t) || startsDeclaration(t)) break
+                if (isComment(t)) continue
                 body += t
             }
             val window = body.joinToString(" ")
@@ -255,6 +334,7 @@ class ReversalTest {
                 .replace(Regex("""\$\w+"""), " ")
             val text = "$name $said".uppercase(java.util.Locale.ROOT)
             if (!soundsDestructive(text)) continue
+            if (name in templatedNotALanding) continue
             checked++
             if (answersTheQuestion(text) || "Reversal." in window) continue
             unanswered += "Personality.kt:${i + 1}  $head"
@@ -282,9 +362,6 @@ class ReversalTest {
     private fun isComment(line: String) =
         line.startsWith("*") || line.startsWith("//") || line.startsWith("/*")
 
-    /** Where one `Copy` member ends and the next begins, for bounding the scan's window. */
-    private fun startsDeclaration(line: String) =
-        Regex("""^(const\s+)?(val|var|fun)\s""").containsMatchIn(line)
 
     /** `:shell`'s own project dir is the working dir, as `PersonalityTest`'s ceiling law assumes too. */
     private fun personalitySource(): java.io.File {
@@ -295,10 +372,42 @@ class ReversalTest {
     }
 
     /**
+     * [templatedNotALanding] earns its exemptions twice over: the function
+     * must still exist, and the phrase that makes it a warning rather than a
+     * landing must still be in it.
+     *
+     * Both halves were found by review rather than by me, one round apart.
+     * The set shipped with no staleness guard at all — an entry naming a
+     * function that does not exist passed silently — and then with a guard
+     * that only checked the name, which left the exemption unconditional: a
+     * rewrite to a post-write message would have kept the bypass.
+     */
+    @Test
+    fun `no templated exclusion is stale, and each is still a warning`() {
+        val src = personalitySource().readText(Charsets.UTF_8)
+        for ((name, entry) in templatedNotALanding) {
+            val decl = Regex("""\bfun\s+${Regex.escape(name)}\s*\([^\n]*""").find(src)
+            assertTrue(
+                decl != null,
+                "templatedNotALanding lists Copy.$name (${entry.why}) but Personality.kt declares no " +
+                    "such function - remove the stale entry, or fix the rename it is tracking.",
+            )
+            assertTrue(
+                entry.stillTrue in decl!!.value,
+                "Copy.$name is exempted as \"${entry.why}\", which held because its line said " +
+                    "\"${entry.stillTrue}\". It no longer does:\n  ${decl.value.trim()}\n" +
+                    "If it has become a landing, delete the exemption and give it a way back. If it " +
+                    "is still a warning, say so in a new stillTrue phrase - deliberately, not by " +
+                    "widening the match.",
+            )
+        }
+    }
+
+    /**
      * Anti-relaxation. Every exclusion must name a constant that exists, or
      * it sits there exempting nothing forever — and no constant may be in
-     * both sets, which would be claiming a line is simultaneously not a
-     * destructive landing and a destructive landing with no way back.
+     * two sets at once, which would be claiming a line is simultaneously not
+     * a destructive landing and a destructive landing with no way back.
      */
     @Test
     fun `no exclusion is stale, and none is in both sets`() {

@@ -58,6 +58,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KeyPicker
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
@@ -130,6 +131,8 @@ fun KitScreen(
     onShare: () -> Unit,
     /** SPLIT: a pad taken apart into sines, transient and air, on three faders. */
     onSplit: () -> Unit,
+    /** DUST ALL: every pad under the kit's own tape's hiss and room (`docs/DUST.md`), the per-pad chip at one amount. */
+    onDustAll: () -> Unit = {},
     onEmptyLongPress: (Int) -> Unit = {},
     onEmptyTapHint: (Int) -> Unit = {},
 ) {
@@ -446,6 +449,19 @@ fun KitScreen(
                     enabled = !busy && kit.pads.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth(),
                     onClick = onSplit,
+                )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // DUST ALL: the per-pad DUST chip on every pad at one amount,
+                // from the tape each pad came off (else the kit's), so the
+                // kit shares one room and one floor (docs/DUST.md). Only
+                // offered when the kit came off a tape at all.
+                ActionButton(
+                    "DUST ALL ▸ THE TAPE'S OWN HISS AND ROOM",
+                    scheme,
+                    enabled = !busy && DustPrints.kitTape(kit) != null,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onDustAll,
                 )
             }
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {

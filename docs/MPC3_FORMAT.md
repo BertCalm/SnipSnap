@@ -511,6 +511,146 @@ the multi-sequence payload.
 instruments, and the demo groove on the timeline — the entire SnipSnap
 session in one file.
 
+## Meter — the corpus probe (YYY10)
+
+Probed 2026-09-12, before any writer code, because `Mpc3Clip` hardcodes a
+3840-pulse bar and `Mpc3ProjectWriter` hardcodes `beatsPerBar 4` /
+`beatLength 960` into every sequence it emits. The rule this repo learned
+from `keyTrackEnable` applies again: read the whole corpus, then say what
+it shows *and* what it cannot.
+
+**Key paths.** Meter lives in two places under two different names.
+
+```
+$.data.sequences[N].value.timeSignatureTrack.timeSignatures[]   ← project (.xpj)
+      └ { beatsPerBar: 4, beatLength: 960, barStart: 0 }
+
+$.data.arrangementClipMap[N].value.timeSignatureList.timeSignatures[]  ← track (.xtd/.xty)
+      └ { beatsPerBar: 4, beatLength: 960, barStart: 0 }
+```
+
+Same entry shape, different container key — `timeSignatureTrack` on a
+sequence, `timeSignatureList` on a clip. A grep for one will not find the
+other.
+
+### `beatLength` is a pulse count, not a denominator
+
+The entry has no `4/4` in it anywhere, and `beatLength: 960` is easy to
+misread as "quarter note = the 960 PPQ constant, therefore decorative".
+The harvested project settles it arithmetically, inside one file, without
+needing a non-4/4 example:
+
+```
+sequences[0].value.lengthBars    = 2
+sequences[0].value.lengthPulses  = 7680
+beatsPerBar 4 × beatLength 960   = 3840 pulses per bar
+2 × 3840                         = 7680   ✓ equals lengthPulses
+```
+
+So `beatsPerBar` is the numerator (beats in a bar) and `beatLength` is the
+length of one beat **in pulses** — the denominator expressed as a duration
+against the 960 PPQ clock, not as a `2 4 8 16`-style exponent the way a
+standard MIDI file's `FF 58` carries it. 6/8 would therefore be
+`beatsPerBar 6, beatLength 480`, and 3/4 `beatsPerBar 3, beatLength 960`
+— *by construction from the arithmetic, not from an observed file*; see
+the limits below.
+
+`timeSignatures` is an array and each entry carries `barStart`, which is
+the shape of a meter *track* — a list of changes keyed by the bar they
+take effect at. Only ever one entry, `barStart 0`, has been observed.
+
+### Build-gated on the track side
+
+The clip-level field is not something every track file has. It arrives with
+the clip object's own `version`, which tracks the exporter build on ACVS
+header line 2 — the same build-gating this document records for
+`samples[]` and `program.base.*`:
+
+| Build | clip `version` | `timeSignatureList` | Files |
+|---|---|---|---|
+| `0.1.0.968` – `0.1.0.1020` | 1 | no | 7 |
+| `3.4.0.105`, `3.4.1.96` | 1 | no | 2 |
+| `3.6.0.106`, `3.6.0.129` | 2 | no | 2 |
+| `3.9.0.31` | **3** | **yes** | 2 |
+
+Both `3.9.0.31` files (`Kit-PSK 009 Hip Hop Kit.xtd`,
+`Bass-60s Precision-Clean.xty`) carry it on all 128 `arrangementClipMap`
+slots, every one `{beatsPerBar 4, beatLength 960, barStart 0}`. No file at
+version 1 or 2 has the key at all. The versions are a clean ladder: v2 adds
+`perClipParameterValues` over v1, v3 adds `timeSignatureList` over v2, and
+nothing in the corpus breaks that order.
+
+One of those 128 slots is a real clip in each file — key 8 with 78 note
+events in the PSK kit, key 20 with 97 in the bass — so the field has been
+seen on played music, not only on empty lanes. Those two clips repeat the
+arithmetic cross-check on the track side: `endPulses` 15360 and 7680 are
+exactly 4 and 2 × (`beatsPerBar` × `beatLength`).
+
+The harvested project fits that ladder exactly: its `sequences[0]` is
+sequence `version 5` and carries `timeSignatureTrack`, while the clip values
+inside its `trackClipMaps` are clip `version 2` — they have
+`perClipParameterValues` and no meter of their own, which is what v2 means.
+Its header build is `1.2.1.2`, a number that does not sit anywhere on the
+track exporters' `0.1.0.x` / `3.x` scale, so it gets no row in the table
+above; the clip version, not the build, is what the field actually follows.
+
+**Consequence for our writer.** `Mpc3TrackWriter` emits clip `version 1`
+(`clipValue`, `arrangementClips`). Adding `timeSignatureList` there would
+produce a byte shape no real file has: a version-1 clip with a version-3
+field. Meter on the track path means moving that clip version first, which
+is a much larger change than meter — and the project path, where the field
+sits on the sequence rather than on a clip, is where a meter can go today.
+
+A second finding fell out of the same probe, recorded here rather than
+fixed: `Mpc3ProjectWriter` builds its `trackClipMaps` values with the same
+`clipValue`, so the sequences it writes carry clip `version 1` and no
+`perClipParameterValues`, where the harvested project's carry `version 2`
+and do. Our output is a *lower* version than the corpus, not an invented
+one — every key it writes exists in a real file — so the key-path guard
+passes and this has never shown up. Whether a Live III minds is untested.
+
+### What the corpus cannot show
+
+Stated plainly, because this is exactly where the `keyTrackEnable` mistake
+was made:
+
+- **Zero non-4/4 examples.** Across all 14 ACVS files, the only values that
+  ever appear are `beatsPerBar 4`, `beatLength 960`, `barStart 0` — no
+  other value of any of the three, anywhere. The `.sxq` standard MIDI file
+  agrees from the MPC 2 side: one `FF 58` meta event, 4/4, division 960.
+  The MPC 2 `.xpj` carries `<BPM>` and no meter at all (its sequences live
+  in a separate `.xal` that was never harvested).
+- **Zero multi-entry examples.** That `timeSignatures` is an array keyed by
+  `barStart` says mid-sequence meter changes are *representable*; it is not
+  evidence that the hardware reads more than the first entry.
+- **One project.** `DD1 Chamber 92bpm.xpj` is still the only real MPC 3
+  project in `reference/`, so everything project-side is n=1.
+
+The honest summary: the field's **shape and semantics are confirmed** (the
+arithmetic cross-check is not weakened by n=1 — it is internally
+consistent within the file). The field's **range is unverified** — that a
+Live III accepts `beatsPerBar 3` has not been shown by any file and can
+only be settled on the hardware bench or by a capture of a non-4/4 project.
+
+### Grep trap: `chopTimeSignature`
+
+`$.data.program.drum.instruments[*].chopProperties.chopTimeSignature: 2`
+appears 128× per file in every `3.6.x`/`3.9.x` track (and in no `0.1.0.*`
+or `3.4.x` one). It is a chop-editor property — how a sliced sample's grid
+is subdivided — not the sequence meter, and its `2` is not a numerator.
+A case-insensitive grep for `timesignature` finds it first and in bulk.
+
+### Where this leaves YYY10
+
+Meter can be written into `.xpj` sequences today: one entry, the numerator
+from the set's `lapSteps`, `beatLength` derived so
+`beatsPerBar × beatLength` equals the bar length the clip writer is
+already using. It cannot be written into `.xtd`/`.xty` clips without first
+moving those clips to version 3. Neither can be *verified* beyond 4/4
+without either a non-4/4 capture in `reference/` or a Live III bench run,
+so any writer work here ships with that caveat attached rather than as a
+confirmed round-trip.
+
 ## Embedded sequences
 
 Undocumented until now, and directly relevant since the repo already ships a

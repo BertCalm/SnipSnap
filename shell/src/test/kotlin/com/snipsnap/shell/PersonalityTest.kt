@@ -342,6 +342,8 @@ class PersonalityTest {
         "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "CHART_BUSY", "BREEDING_BUSY",
         "ARRANGE_MIXING", "XRAY_BUSY", "DOUBLES_BUSY",
         "CHOP_ALL_BUSY",
+        // DUST ALL's busy overlay line, like every other *_BUSY above.
+        "DUSTING_BUSY",
         // BACK ONTO's busy overlay line, like every other *_BUSY above.
         "RETRIM_BUSY",
         // The HITS stepper's own busy readout.
@@ -644,5 +646,17 @@ class PersonalityTest {
         assertEquals("HIT 3/7", Copy.hitReadout(2, 7))
         assertEquals("HIT -/7", Copy.hitReadout(-1, 7))
         assertEquals("NO HITS", Copy.hitReadout(-1, 0), "known the moment the search comes back empty, not on a tap")
+    }
+
+    @Test
+    fun `one section clipped is a sentence, not a count with an S on it`() {
+        val one = Copy.clippedSectionsIntoKit(1, 2, 8, 0)
+        assertTrue(one.startsWith("1 SECTION IS"), "said: $one")
+        assertTrue(one.contains("IT RIDES TO THE MPC"), "said: $one")
+        val many = Copy.clippedSectionsIntoKit(3, 6, 24, 0)
+        assertTrue(many.startsWith("3 SECTIONS ARE") && many.contains("THEY RIDE"), "said: $many")
+        // And the same on the branch that counts what stayed behind.
+        assertTrue(Copy.clippedSectionsIntoKit(1, 2, 8, 1).startsWith("1 SECTION IN"))
+        assertTrue(Copy.clippedSectionsIntoKit(2, 2, 8, 2).startsWith("2 SECTIONS IN"))
     }
 }

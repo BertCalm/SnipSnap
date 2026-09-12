@@ -377,6 +377,7 @@ object Copy {
         "· TAP BANK B: A SECOND PAGE. HOLD A PAD, OR SEND A CHOP ONTO IT.",
         "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO AN EMPTY BANK B.",
         "· BREED ▸ MIXES TWO KITS' RECIPES INTO A NEW KIT. PARENTS STAY.",
+        "· DUST: THE TAPE'S OWN HISS AND ROOM UNDER A PAD. FROM ITS OWN TAPE.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -686,6 +687,28 @@ object Copy {
         "$segment ON $pad, OVER THE LAST ONE — NO ORIGINAL IN THE BIN TO SWAP FROM. VERSIONS ▸ ROLLS BACK."
     /** SMEAR at AMT 0 on a pad that isn't smeared: `smearPad` writes nothing, so nothing landed. */
     const val SMEAR_ZERO = "AMT 0: NOTHING TO SMEAR. THE PAD STAYS AS IT IS."
+
+    // ---- DUST: the tape's own hiss and room under a pad (docs/DUST.md) ----
+    /** DUST ALL's busy line while every pad's print is read and applied — the DUBBING…/BREEDING… shape. */
+    const val DUSTING_BUSY = "DUSTING…"
+    /** No tape to take dust from: neither the pad nor the kit came off one (a synth kit, a mic kit). */
+    const val DUST_NO_TAPE = "NO TAPE TO TAKE DUST FROM: THIS PAD, AND THIS KIT, NEVER CAME OFF ONE."
+    /** The tape is there but `Dust.print` found no room between its hits (a tight, gated break). */
+    const val DUST_NO_GHOSTS = "NOTHING BETWEEN THE HITS ON THAT TAPE. NO DUST TO TAKE."
+    /** DUST at AMT 0 on a pad that isn't dusted: `dustPad` writes nothing, so nothing landed. */
+    const val DUST_ZERO = "AMT 0: NOTHING TO DUST. THE PAD STAYS AS IT IS."
+    /** The tape a dust recipe names is no longer on the shelf — DO IT AGAIN, or DUST on a pad whose tape went. */
+    fun dustTapeGone(tape: String): String = "THE TAPE '$tape' IS GONE FROM THE SHELF. NO DUST TO TAKE."
+    /**
+     * DUST ALL's landing: how many pads took the dust, and how many were
+     * left as they were (layered or chained pads, which every audio
+     * rewrite refuses; nothing was destroyed on them).
+     */
+    fun dustedAll(dusted: Int, left: Int): String {
+        val pads = "$dusted ${if (dusted == 1) "PAD" else "PADS"} DUSTED FROM THE KIT'S OWN TAPE."
+        val rest = if (left > 0) " $left LEFT AS ${if (left == 1) "IT WAS" else "THEY WERE"} (LAYERED OR CHAINED)." else ""
+        return pads + rest
+    }
     const val INSTRUMENT_MADE = "INSTRUMENT MADE. ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH."
     const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."
@@ -1148,6 +1171,16 @@ object Copy {
     const val ORBIT_CLIP_FAILED = "CLIP FAILED. TRY AGAIN."
 
     /**
+     * The set could not be written to the kit's folder.
+     *
+     * Not "try again", because the edit is not lost — it is on screen and
+     * it is playing, and the thing that failed is the writing down. What
+     * the player needs to know is that leaving now costs them the edit,
+     * which is why this names the consequence rather than the operation.
+     */
+    const val ORBIT_SAVE_FAILED = "THE RINGS DID NOT SAVE. THEY PLAY, BUT THIS EDIT WILL NOT BE HERE NEXT TIME."
+
+    /**
      * The generic "X failed, try again" toast for the handful of call sites
      * where [action] is a runtime value, not a fixed verb — `App.kt`'s
      * `texture` (`TextureKits.Spec.verb`: SCULPT, STRETCH or FREEZE) and the
@@ -1236,6 +1269,35 @@ object Copy {
         } else {
             "$name IN THE GROOVES: $bars BARS, $notes NOTES. $snipRingsLeftOut SNIP RING${if (snipRingsLeftOut == 1) "" else "S"} STAYED OUT."
         }
+
+    /**
+     * CLIP ▸ KIT landed for a set with an arrangement: [sections] clips
+     * rather than one, each becoming a sequence the hardware's switcher
+     * flips between.
+     *
+     * [sections] is the clips actually WRITTEN, not the sections asked
+     * for — a section that plays no rings is a break and writes none, so
+     * the line says what is in the kit rather than what was intended.
+     */
+    fun clippedSectionsIntoKit(sections: Int, bars: Int, notes: Int, snipRingsLeftOut: Int): String {
+        // One section is a sentence, not a count with an S on it.
+        //
+        // This function IS the multi-section path from CLIP ▸ KIT; what
+        // has no caller today is the [sections] == 1 case, because a save
+        // that wrote one clip goes to [clippedIntoKit] and names it. But a
+        // line that reads "1 SECTIONS ARE" the first time anything calls
+        // it that way is a trap left lying about, and the plural is two
+        // words.
+        val many = sections != 1
+        val subject = if (many) "$sections SECTIONS ARE" else "1 SECTION IS"
+        val them = if (many) "THEY RIDE" else "IT RIDES"
+        return if (snipRingsLeftOut == 0) {
+            "$subject IN THE KIT'S GROOVES — $bars BARS, $notes NOTES, ONE SEQUENCE EACH. $them TO THE MPC."
+        } else {
+            "$sections SECTION${if (many) "S" else ""} IN THE GROOVES: $bars BARS, $notes NOTES. " +
+                "$snipRingsLeftOut SNIP RING${if (snipRingsLeftOut == 1) "" else "S"} STAYED OUT."
+        }
+    }
 
     // ---- GRAIN FIELD ----
     const val GRAIN_FIELD_TOO_SHORT = "TOO SHORT TO MAP. THE FIELD NEEDS MORE TAPE."

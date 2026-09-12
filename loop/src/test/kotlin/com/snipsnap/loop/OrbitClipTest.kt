@@ -303,7 +303,10 @@ class OrbitClipTest {
         val written = OrbitClip.save(dir, set(pattern("four", 16, 1, listOf(0))))
         val stored = GrooveStore.load(dir)
         assertEquals(listOf("Break", "Break E", "ORBIT 1"), stored.map { it.name })
-        assertEquals(written, stored.last())
+        // A set with no arrangement writes exactly one clip, as it always
+        // did - `save` returns a list now because a set WITH one writes a
+        // clip per section, and that is the only thing that changed.
+        assertEquals(written.single(), stored.last())
         assertEquals(1, stored.count { OrbitClip.isOrbit(it) })
     }
 }

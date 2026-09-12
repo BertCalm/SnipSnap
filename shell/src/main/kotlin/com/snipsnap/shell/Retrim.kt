@@ -66,6 +66,7 @@ sealed class Retrim {
          */
         fun treatmentLeft(pad: KitPad): String? {
             if (PadSheet.readSmear(pad.recipe) != null) return "SMEAR"
+            if (PadSheet.readDust(pad.recipe) != null) return "DUST"
             val applied = PadSheet.read(pad.recipe) ?: return null
             return applied.segment?.let(PadSheet::displayLabel) ?: applied.treatment.name.uppercase()
         }

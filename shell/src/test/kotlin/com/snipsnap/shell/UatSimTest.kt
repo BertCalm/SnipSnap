@@ -357,7 +357,11 @@ class UatSimTest {
         PadSheet.ALL_SEGMENTS.forEach { seg ->
             val t = runCatching { PadSheet.treatmentFor(seg) }.getOrNull()
             if (t == null) {
-                note("%-8s → not a treatment (%s)".format(seg, if (seg == PadSheet.SMEAR) "SMEAR is special-cased by the screen" else "the OFF chip"))
+                note("%-8s → not a treatment (%s)".format(seg, when (seg) {
+                    PadSheet.SMEAR -> "SMEAR is special-cased by the screen"
+                    PadSheet.DUST -> "DUST is special-cased by the screen: it needs a tape"
+                    else -> "the OFF chip"
+                }))
                 return@forEach
             }
             val t0 = System.currentTimeMillis()
