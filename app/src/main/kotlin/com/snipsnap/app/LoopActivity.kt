@@ -1,7 +1,6 @@
 package com.snipsnap.app
 
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,8 +10,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import java.io.File
-import com.snipsnap.loop.Arrangement
-import com.snipsnap.loop.Bouncer
 import com.snipsnap.loop.KitSampleSource
 import com.snipsnap.loop.LoopEngine
 import com.snipsnap.loop.Residency
@@ -20,12 +17,8 @@ import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.loop.SessionStore
 import com.snipsnap.shell.Copy
-import com.snipsnap.shell.SnipStore
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
-
-/** Logcat tag for this screen; file-private, like `App.kt`'s own. */
-private const val TAG = "LoopActivity"
 
 /**
  * The loop player screen.
@@ -36,10 +29,9 @@ private const val TAG = "LoopActivity"
  * concurrency story: they share an AtomicInteger for position and an
  * AtomicReference for pending edits, and nothing else.
  *
- * Two more threads sit beside them, each deliberately not [bakers], and each
- * with its own note below: [writer] saves the session, [bouncer] renders it.
- * They are separate because they fail differently — one must survive the
- * screen closing, the other must not hold it up.
+ * One more thread sits beside them, deliberately not [bakers]: [writer], which
+ * saves the session. BOUNCE has a thread too and it is not here at all — a
+ * render outlives this screen, so it belongs to [LoopBounce] and the app.
  */
 class LoopActivity : ComponentActivity() {
 
@@ -58,21 +50,6 @@ class LoopActivity : ComponentActivity() {
      * edits in quick succession land in the order they were made.
      */
     private val writer = Executors.newSingleThreadExecutor()
-
-    /**
-     * One more thread, for BOUNCE.
-     *
-     * Not [bakers], whose two threads exist to stay ahead of the audio thread:
-     * a render is seconds of solid work and would sit on half of that pool for
-     * all of them, which is a dropout while the grid is still playing. Not
-     * [writer] either — a sidecar save queued behind a three-minute render
-     * would miss `onDestroy`'s window entirely.
-     *
-     * Shut down with `shutdown()`, not `shutdownNow()`: a bounce already
-     * underway when the player leaves the screen still lands in SNIPS, which
-     * is what they asked for and where they will look for it.
-     */
-    private val bouncer = Executors.newSingleThreadExecutor()
 
     /**
      * The one decode cache, shared by playback and BOUNCE.
@@ -163,13 +140,18 @@ class LoopActivity : ComponentActivity() {
                     },
                     bouncing = bouncing,
                     onBounce = {
-                        if (!bouncing) {
+                        // The session as it is on screen, captured now: a mute
+                        // tapped mid-render must not change what is being
+                        // rendered half way through. What is heard is what is
+                        // bounced, as of the tap.
+                        val refused = LoopBounce.start(this@LoopActivity, s, samples)
+                        if (refused != null) {
+                            Toast.makeText(applicationContext, refused, Toast.LENGTH_SHORT).show()
+                        } else {
+                            // Immediate, rather than waiting up to a tick for
+                            // the poll below to notice: a button that takes
+                            // 50ms to acknowledge a press reads as a missed tap.
                             bouncing = true
-                            // The session as it is on screen, captured now: a
-                            // mute tapped mid-render must not change what is
-                            // being rendered half way through. What is heard
-                            // is what is bounced, as of the tap.
-                            bounce(s, samples) { bouncing = false }
                         }
                     },
                 )
@@ -177,6 +159,10 @@ class LoopActivity : ComponentActivity() {
                 androidx.compose.runtime.LaunchedEffect(Unit) {
                     while (true) {
                         interval = engine?.position() ?: 0
+                        // Read, not owned: a render started here can still be
+                        // running when this screen is opened again, and the
+                        // button has to say so on that second visit too.
+                        bouncing = LoopBounce.busy()
                         kotlinx.coroutines.delay(50)
                     }
                 }
@@ -211,55 +197,6 @@ class LoopActivity : ComponentActivity() {
                     if (saved) Copy.LOOP_TRACK_CLEARED else Copy.LOOP_CLEAR_NOT_SAVED,
                     Toast.LENGTH_SHORT,
                 ).show()
-            }
-        }
-    }
-
-    /**
-     * Render what the grid is doing and land it in SNIPS.
-     *
-     * The same path playback takes — bake, mix, into a sink — with the sink
-     * swapped, which is `Bouncer`'s own first line and the reason a bounce
-     * cannot drift from what was heard. It lands through `SnipStore.import`,
-     * exactly as ORBIT's own bounce does, so the result is an ordinary snip:
-     * choppable, paddable, and sendable straight back to a track.
-     *
-     * How much of the grid: [Bouncer.intervalsWithin], the same function the
-     * button's own label is printed from. A full cycle is the least common
-     * multiple of the chain lengths and can run for half an hour, which no
-     * snip can hold, so a long one is bounced in part and the toast says so
-     * against the whole cycle's length.
-     */
-    private fun bounce(session: Session, samples: KitSampleSource, done: () -> Unit) {
-        if (session.tracks.all { SessionBuilder.isEmpty(it) }) {
-            Toast.makeText(applicationContext, Copy.LOOP_BOUNCE_EMPTY, Toast.LENGTH_SHORT).show()
-            done()
-            return
-        }
-        bouncer.execute {
-            val line = runCatching {
-                val intervals = Bouncer.intervalsWithin(session, SnipStore.IMPORT_MAX_SEC)
-                val rendered = Bouncer.render(session, samples, intervals)
-                val imported = SnipStore.import(rendered, filesDir, System.currentTimeMillis())
-                // Should be impossible: the interval count was chosen against
-                // that very ceiling. Logged rather than ignored because if it
-                // ever fires, the toast below is stating a length that is not
-                // what landed — and nothing else would say so.
-                if (imported.truncated) {
-                    Log.w(TAG, "bounce: import cut a render sized to fit — $intervals intervals, ${imported.seconds}s")
-                }
-                val bars = intervals * session.barsPerInterval
-                val cycleBars = Arrangement.cycleIntervals(session) * session.barsPerInterval
-                if (bars < cycleBars) Copy.loopBouncedPart(bars, cycleBars) else Copy.loopBounced(bars)
-            }.getOrElse { e ->
-                // Law 3: the toast says what did not happen; the exception's
-                // own detail goes to logcat.
-                Log.e(TAG, "bounce: failed", e)
-                Copy.LOOP_BOUNCE_FAILED
-            }
-            runOnUiThread {
-                done()
-                Toast.makeText(applicationContext, line, Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -319,11 +256,9 @@ class LoopActivity : ComponentActivity() {
         bakers.shutdownNow()
         writer.shutdown()
         writer.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS)
-        // Not awaited, and not interrupted: a render can take a minute, which
-        // is far too long to hold up a screen closing, and abandoning it would
-        // throw away work the player explicitly asked for. It finishes on its
-        // own thread and the snip is in SNIPS when they get there.
-        bouncer.shutdown()
+        // Nothing to do for a bounce in flight: it is not this activity's
+        // thread, does not hold this activity, and finishes into SNIPS on its
+        // own. See LoopBounce.
         super.onDestroy()
     }
 }

@@ -545,6 +545,11 @@ class PersonalityTest {
         // whole loop.
         assertEquals("12 BARS BOUNCED. IT IS IN SNIPS NOW.", Copy.loopBounced(12))
         assertEquals("64 BARS BOUNCED, OUT OF A 840 BAR CYCLE. IT IS IN SNIPS NOW.", Copy.loopBouncedPart(64, 840))
+        // One bar is a legal bounce — the grid's default interval is one bar,
+        // so a six-track grid of one-block chains bounces exactly this. Both
+        // lines count the same thing and both have to say BAR for it.
+        assertEquals("1 BAR BOUNCED. IT IS IN SNIPS NOW.", Copy.loopBounced(1))
+        assertEquals("1 BAR BOUNCED, OUT OF A 6 BAR CYCLE. IT IS IN SNIPS NOW.", Copy.loopBouncedPart(1, 6))
     }
 
     @Test

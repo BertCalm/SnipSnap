@@ -1417,7 +1417,7 @@ object Copy {
      * own bounce uses, so what the loop grid makes can be chopped, padded and
      * sent back to a track. [bars] is what was actually rendered.
      */
-    fun loopBounced(bars: Int): String = "$bars BARS BOUNCED. IT IS IN SNIPS NOW."
+    fun loopBounced(bars: Int): String = "${barsOf(bars)} BOUNCED. IT IS IN SNIPS NOW."
     /**
      * The same landing, when the grid's full cycle is longer than a snip can
      * hold. Both numbers, because the difference is the point: the cycle is
@@ -1426,11 +1426,25 @@ object Copy {
      * was the whole loop.
      */
     fun loopBouncedPart(bars: Int, cycleBars: Int): String =
-        "$bars BARS BOUNCED, OUT OF A $cycleBars BAR CYCLE. IT IS IN SNIPS NOW."
+        "${barsOf(bars)} BOUNCED, OUT OF A $cycleBars BAR CYCLE. IT IS IN SNIPS NOW."
+
+    /**
+     * "1 BAR" or "N BARS" — one place, because both bounce lines count the
+     * same thing and "1 BARS BOUNCED" is the kind of sentence a player reads
+     * as a bug in everything else too. The cycle length beside it stays a bare
+     * number: it is already followed by the singular "BAR CYCLE".
+     */
+    private fun barsOf(bars: Int): String = if (bars == 1) "1 BAR" else "$bars BARS"
     /** Every track is still empty — there is nothing to render. */
     const val LOOP_BOUNCE_EMPTY = "NOTHING ON THE GRID TO BOUNCE YET."
     /** The render or the write failed. Law 3: say what did not happen. */
     const val LOOP_BOUNCE_FAILED = "THE BOUNCE DIDN'T SAVE. NOTHING WAS ADDED TO SNIPS."
+    /**
+     * BOUNCE pressed while one is already running — which can happen from a
+     * second visit to the screen, since a render outlives the screen that
+     * started it.
+     */
+    const val LOOP_BOUNCE_ALREADY = "A BOUNCE IS ALREADY RUNNING. IT LANDS IN SNIPS WHEN IT IS DONE."
     /** The button while the render runs — a bounce is seconds of work, not instant. */
     const val LOOP_BOUNCE_BUSY = "BOUNCING…"
 
