@@ -329,8 +329,15 @@ class OrbitSectionTest {
             lapSteps = 32,
             sections = listOf(OrbitSection("LONG", 64, setOf(0))),
         )
-        val why = OrbitClip.refusal(long)
+        // The CLIP names the section, because a section IS a clip.
+        val why = OrbitClip.clipRefusal(long)
         assertTrue(why != null && why.contains("LONG") && why.contains("128"), "said: $why")
+        // The BOUNCE says the bounce's sentence about the same set: a
+        // section too long to clip makes the plan holding it too long to
+        // bounce, and a player who wants audio should not be told what a
+        // clip stops at.
+        val bounce = OrbitClip.refusal(long)
+        assertTrue(bounce != null && bounce.contains("PLAN") && bounce.contains("128"), "said: $bounce")
         // Halve it and the same set is fine.
         val ok = long.copy(sections = listOf(OrbitSection("LONG", 32, setOf(0))))
         assertEquals(null, OrbitClip.refusal(ok))
@@ -721,7 +728,7 @@ class OrbitSectionTest {
         // A section too long to clip is still refused to BOTH of them.
         val long = s.copy(sections = listOf(OrbitSection("LONG", 64, setOf(0))), lapSteps = 32)
         assertTrue(OrbitClip.clipRefusal(long)!!.contains("LONG"))
-        assertTrue(OrbitClip.refusal(long)!!.contains("LONG"))
+        assertTrue(OrbitClip.refusal(long)!!.contains("PLAN"), "the bounce says the bounce's sentence")
     }
 
     @Test
@@ -829,6 +836,51 @@ class OrbitSectionTest {
         val only = s.copy(sections = listOf(OrbitSection("LATE", 1, setOf(1))))
         assertTrue(!OrbitClip.sectionSounds(only, 0))
         assertTrue(OrbitClip.clipRefusal(only)!!.contains("LATE"))
+    }
+
+    @Test
+    fun `the writer refuses to write a clip with no notes in it, whoever asked`() {
+        // `noNotes` knows the rings and not the window: a 64-step ring
+        // whose only hit is step 63, clipped with steps = 16, passed it and
+        // the PUBLIC api returned ORBIT X with no notes at all. `clips`
+        // catches the same shape earlier and by section name; this is the
+        // floor under it, asked of what was actually written.
+        val late = OrbitSet(listOf(Orbit("A", 64, PatternOrbit("kit", listOf(OrbitHit(63, 1))))), bpm, rate)
+        val why = assertFailsWith<IllegalArgumentException> { OrbitClip.clip(late, "ORBIT X", steps = 16) }
+        assertTrue(why.message!!.contains("NO HIT LANDS"), "said: ${why.message}")
+        // A window that reaches the hit writes it, as it always did.
+        assertEquals(1, OrbitClip.clip(late, "ORBIT X", steps = 64).notes.size)
+    }
+
+    @Test
+    fun `each way out says its own sentence about the same set`() {
+        // The number is shared and the reader is not. A set whose rings
+        // meet past the ceiling refuses both, and each says what IT stops
+        // at rather than borrowing the other's words.
+        val coprime = OrbitSet(
+            listOf(
+                Orbit("A", 64, PatternOrbit("kit", listOf(OrbitHit(0, 1)))),
+                Orbit("B", 63, PatternOrbit("kit", listOf(OrbitHit(0, 2)))),
+            ),
+            bpm,
+            rate,
+        )
+        // With no arrangement the two doors share the number AND the
+        // sentence, and it names neither of them: both refuse, both for
+        // the rings' meeting, so naming one would be wrong half the time.
+        val shared = OrbitClip.refusal(coprime)
+        assertEquals(shared, OrbitClip.clipRefusal(coprime))
+        assertTrue(shared!!.contains("THE RINGS MEET") && shared.contains("ALL THAT GOES OUT"), "said: $shared")
+        assertTrue(!shared.contains("A CLIP STOPS") && !shared.contains("A BOUNCE STOPS"))
+        // An ARRANGED set's two ceilings are genuinely different lengths,
+        // and then each says its own door: the section is the clip's, the
+        // plan is the bounce's.
+        val arranged = coprime.copy(
+            lapSteps = 32,
+            sections = listOf(OrbitSection("LONG", 64, setOf(0, 1))),
+        )
+        assertTrue(OrbitClip.clipRefusal(arranged)!!.contains("A CLIP STOPS"))
+        assertTrue(OrbitClip.refusal(arranged)!!.contains("A BOUNCE STOPS"))
     }
 
     @Test

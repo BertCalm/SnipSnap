@@ -1713,8 +1713,14 @@ private fun RingsCanvas(
                     style = labelStyle.copy(color = amber),
                 )
             }
-            // The meeting: every ring on its downbeat together, once a cycle.
-            if (playing && set.orbits.isNotEmpty()) {
+            // The meeting: every ring on its downbeat together, once a
+            // cycle - and only where there is something to meet. The local
+            // frame is zero at the start of EVERY section, a break
+            // included, so without asking whether the section plays
+            // anything the panel flashed "every ring on its downbeat"
+            // into silence.
+            val anyPlaying = set.orbits.indices.any { OrbitClock.playsAt(set, it, transportFrame) }
+            if (playing && set.orbits.isNotEmpty() && anyPlaying) {
                 val cycle = OrbitClock.cycleFrames(set)
                 val since = Math.floorMod(frame, cycle)
                 val pulse = (1f - since.toFloat() / (set.sampleRate * MEET_SECONDS)).coerceIn(0f, 1f)

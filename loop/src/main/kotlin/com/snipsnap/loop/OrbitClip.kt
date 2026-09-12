@@ -113,13 +113,7 @@ object OrbitClip {
      * bounce, so that question belongs to [clipRefusal] alone.
      */
     fun refusal(set: OrbitSet): String? {
-        // What every clip that would be WRITTEN has to fit in - shared,
-        // because a bounce of a turn containing a section too long to clip
-        // is no use either.
-        barCap(set)?.let { return it }
-        // Then the BOUNCE's own ceiling, which is a different length from
-        // a clip's the moment there is an arrangement: a bounce is one
-        // turn of the TRANSPORT, and an arranged set's turn is its plan
+        // One turn of the TRANSPORT, which for an arranged set is its plan
         // rather than the rings' meeting. The first cut of sections
         // relaxed this for arranged sets altogether, which left
         // `bounceToTape` rendering `cycleFrames` with nothing to stop it -
@@ -132,14 +126,43 @@ object OrbitClip {
         // exports perfectly.
         val bars = barsFor(OrbitClock.transportSteps(set))
         if (bars <= MAX_BARS) return frameCap(set)
-        // Only an ARRANGED set reaches this: a set without one turns on
-        // the rings' cycle, which is also the clip it would write, so
-        // [barCap] has already answered - in the rings' own words, which
-        // are not these. An arranged set's turn is its plan, and the
-        // player shortens a section: the rings never meet at all by
-        // design, so telling them to shorten a ring would be doubly wrong.
+        // And it says the BOUNCE's own sentence. A section too long to
+        // clip makes the plan containing it too long to bounce, so asking
+        // [barCap] here as well only changed the wording - a player who
+        // wants audio was told a CLIP stops at 64 bars and to shorten a
+        // section whose rings are, say, all snips: a sentence about the
+        // export they did not ask for.
         val unit = if (countsDifferently(set)) "BARS OF 4/4" else "BARS"
+        if (set.sections.isEmpty()) return ringsMeet(set, bars, unit)
         return "THE PLAN RUNS $bars $unit — A BOUNCE STOPS AT $MAX_BARS. SHORTEN A SECTION."
+    }
+
+    /**
+     * The sentence for a set with no arrangement, whose one turn and one
+     * clip are the same length: the rings' meeting, and what to shorten.
+     *
+     * Names NEITHER door, deliberately. Both refuse this set and both
+     * refuse it for this number, so naming one of them is wrong half the
+     * time - which it was: a player who wanted audio was told what a CLIP
+     * stops at. The door-specific ceilings say their own door, because
+     * those really are one door's: a section's length is the clip's and
+     * the plan's is the bounce's.
+     */
+    private fun ringsMeet(set: OrbitSet, bars: Int, unit: String): String {
+        // A ring's length is no longer the only thing that makes a cycle
+        // long: a hit on one lap in four does not repeat until the fourth
+        // lap ([OrbitClock.turnSteps]), so telling a player to shorten a
+        // ring when what did it was a conditional sends them to the wrong
+        // chip. A conditional on a hit that never sounds stretched
+        // nothing, so naming it would send them to undo the one thing that
+        // is not the cause.
+        val conditional = set.orbits.any { o ->
+            (o.content as? PatternOrbit)?.hits?.any {
+                it.everyLaps != OrbitHit.EVERY_LAP && !it.neverSounds
+            } == true
+        }
+        val fix = if (conditional) "SHORTEN A RING, OR TAKE A CONDITIONAL OFF A HIT." else "SHORTEN A RING."
+        return "THE RINGS MEET EVERY $bars $unit — $MAX_BARS IS ALL THAT GOES OUT. $fix"
     }
 
     /**
@@ -161,21 +184,7 @@ object OrbitClip {
         if (set.sections.isEmpty()) {
             val bars = bars(set)
             if (bars <= MAX_BARS) return null
-            val unit = if (countsDifferently(set)) "BARS OF 4/4" else "BARS"
-            // A ring's length is no longer the only thing that makes a
-            // cycle long: a hit on one lap in four does not repeat until
-            // the fourth lap ([OrbitClock.turnSteps]), so telling a player
-            // to shorten a ring when what did it was a conditional sends
-            // them to the wrong chip. A conditional on a hit that never
-            // sounds stretched nothing, so naming it would send them to
-            // undo the one thing that is not the cause.
-            val conditional = set.orbits.any { o ->
-                (o.content as? PatternOrbit)?.hits?.any {
-                    it.everyLaps != OrbitHit.EVERY_LAP && !it.neverSounds
-                } == true
-            }
-            val fix = if (conditional) "SHORTEN A RING, OR TAKE A CONDITIONAL OFF A HIT." else "SHORTEN A RING."
-            return "THE RINGS MEET EVERY $bars $unit — A CLIP STOPS AT $MAX_BARS. $fix"
+            return ringsMeet(set, bars, if (countsDifferently(set)) "BARS OF 4/4" else "BARS")
         }
         set.sections.indices.forEach { index ->
             // A break writes no clip, so there is no clip of its length to
@@ -438,7 +447,21 @@ object OrbitClip {
                 )
             }
         }
-        return Mpc3Clip(name = name, bars = bars, notes = GrooveEdit.dedupeLouder(notes))
+        val written = GrooveEdit.dedupeLouder(notes)
+        // Asked of what was actually written, which is the one form of
+        // this question that cannot drift from the answer. [noNotes] knows
+        // the rings and not the window they are being cut to, so a 64-step
+        // ring whose only hit is step 63 passed it and this returned a
+        // note-less clip - through the PUBLIC api, which `save` and every
+        // caller with a short `steps` can reach. `clips` refuses the same
+        // shape earlier and by section name; this is the floor under it.
+        if (written.isEmpty()) {
+            throw IllegalArgumentException(
+                "NO HIT LANDS IN THESE $bars BAR${if (bars == 1) "" else "S"}. " +
+                    "LENGTHEN IT, OR GIVE IT A RING THAT PLAYS.",
+            )
+        }
+        return Mpc3Clip(name = name, bars = bars, notes = written)
     }
 
     /**
