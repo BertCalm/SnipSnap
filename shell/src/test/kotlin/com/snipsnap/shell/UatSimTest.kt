@@ -189,7 +189,7 @@ class UatSimTest {
         val root = tmp("j2")
         var taps = 0
 
-        step(++taps, "Shelf: two primary buttons — LISTEN | LISTEN INSIDE ▸ OTHER APPS' AUDIO")
+        step(++taps, "Shelf: two primary buttons — LISTEN · MIC | INSIDE ▸ APPS")
         note("LISTEN raises RECORD_AUDIO (+POST_NOTIFICATIONS on 33+). One system dialog.")
         note("armed toast: \"${Copy.SESSION_ARMED}\"")
         note("armed UI = level meter + mm:ss + STOP | SNIP ▸ UP TO 60s")

@@ -1177,4 +1177,72 @@ class ConventionTest {
                 wrong.joinToString("\n  "),
         )
     }
+
+    // ==================== Law: a path is named in one place ====================
+
+    /**
+     * Every folder and filename the app builds a path from, and the one file
+     * allowed to say it out loud.
+     *
+     * A path typed in two places is two paths that happen to agree today.
+     * SNIPS proved what that costs: `<files>/snips` from seven writers,
+     * `<files>/Kits/snips` from the list screen, and five days of a screen
+     * that could not show anything. Nothing connected them, so nothing
+     * noticed.
+     *
+     * This is the same guard the bin's "30 DAYS" already has in
+     * `ReversalTest` — say the number once, and fail anyone who retypes it —
+     * applied to the other quantity this app keeps in two places.
+     */
+    private val pathOwners = mapOf(
+        "kit.json" to "KitStore.kt",
+        "loop.json" to "SessionStore.kt",
+        "sessions/current" to "LoopWrites.kt",
+        "exports" to "Exports.kt",
+        "snips" to "SnipStore.kt",
+        "Kits" to "MainActivity.kt",
+    )
+
+    @Test
+    fun `law - no source retypes a path another file already owns`() {
+        val roots = listOf("../app/src/main/kotlin", "../shell/src/main/kotlin", "../kit/src/main/kotlin", "../loop/src/main/kotlin")
+        val sources = roots.flatMap { File(it).walkTopDown().filter { f -> f.isFile && f.extension == "kt" } }
+        require(sources.size > 60) { "found only ${sources.size} sources — the scan is broken, not the tree." }
+
+        // Anti-staleness, first: an owner that no longer says its own path is
+        // an entry guarding nothing, which is how an exclusion list rots.
+        for ((path, owner) in pathOwners) {
+            val file = sources.singleOrNull { it.name == owner }
+            assertTrue(file != null, "pathOwners names $owner as the home of \"$path\", and no such source exists.")
+            assertTrue(
+                file!!.readText(Charsets.UTF_8).contains("\"$path\""),
+                "$owner is listed as the one place that says \"$path\", but it does not say it. Either the " +
+                    "constant moved (point this entry at its new home) or it is gone (drop the entry) — " +
+                    "do not leave it guarding a path nobody declares.",
+            )
+        }
+
+        val strays = mutableListOf<String>()
+        for (file in sources) {
+            file.readText(Charsets.UTF_8).lineSequence().forEachIndexed { i, line ->
+                val t = line.trim()
+                // Prose may name a path freely: a KDoc explaining where
+                // exports land is documentation, not a second definition.
+                if (t.startsWith("*") || t.startsWith("//") || t.startsWith("/*")) return@forEachIndexed
+                for ((path, owner) in pathOwners) {
+                    if (file.name == owner) continue
+                    if ("\"$path\"" in line) {
+                        strays += "${file.name}:${i + 1} says \"$path\" — $owner owns it\n      ${t.take(100)}"
+                    }
+                }
+            }
+        }
+
+        assertTrue(
+            strays.isEmpty(),
+            "these lines retype a path another file already names. Use that file's constant instead: a " +
+                "second copy is a second path the day someone renames one of them, which is exactly how " +
+                "SNIPS spent five days reading a directory nothing wrote:\n  " + strays.joinToString("\n  "),
+        )
+    }
 }

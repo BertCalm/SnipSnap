@@ -14,7 +14,7 @@ import java.io.File
  * SHARE and BACKUP pack a fresh copy under `cacheDir/share/` (via
  * [shareDir]) before calling [send] — a packed kit is a copy the system
  * may reclaim. EXPORT instead calls [send] straight on the file it already
- * wrote to `getExternalFilesDir("exports")`: no second copy, and sharing
+ * wrote to `Exports.dir`: no second copy, and sharing
  * stays additive to the write rather than a replacement for it. Either
  * way, [send] serves it through the manifest's `FileProvider` (authority
  * `<package>.files`, paths in `res/xml/share_paths.xml`, which covers both

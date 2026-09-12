@@ -163,6 +163,49 @@ fun OrbitScreen(
     kitsRoot: File,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
+    /**
+     * Bug fix (tab-switch data loss): App.kt renders screens with a bare
+     * `when (screen)` — no `SaveableStateHolder`, no `rememberSaveable` —
+     * so this whole composable used to be torn down, and every
+     * `remember(kitDir)` value inside it destroyed, on every tab switch.
+     * That's the same defect `27542b6c`/`3cfe60cb` fixed for GROOVE's
+     * FEEL/SWING/PROG/seed/justLanded/preTake, applied here to ORBIT's own
+     * user's-work values: [history] (the undo stack — the headline, a
+     * whole stack lost rather than one snapshot), [selected] (which ring
+     * is being edited — losing it is like losing your cursor), [solo],
+     * [set] (the rings themselves, so a fast tab switch mid-edit can't
+     * even momentarily show the ring as blank while `orbits.json`
+     * reloads), [scrambleSeed] (what SCRAMBLE rolled) and [brush] (what
+     * the user dialled in for long-press). All six hoisted into App.kt,
+     * same value+onChange shape as GrooveScreen's own parameters, keyed
+     * on the open kit's own dir so App (which never leaves composition)
+     * is what survives the tab switch, while a KIT CHANGE still resets
+     * them — a `history` entry or a `set` from one kit must never be
+     * applicable to another, which would be worse than the bug being
+     * fixed.
+     *
+     * `bank` and `engine` were also named as candidates by the brief that
+     * asked for this fix, but are deliberately NOT among these six: both
+     * are live transport machinery (decoded/resampled audio buffers and
+     * the audio-thread engine, respectively — see [OrbitBank] and
+     * [OrbitEngine]'s own KDoc), not settings, in the same family as
+     * `sink`/`audioThread` below which nobody proposed hoisting. Hoisting
+     * them would fight the existing `DisposableEffect(kitDir) { onDispose
+     * { stopPlayback() } }` teardown below, which already (and correctly)
+     * nulls them out on every unmount.
+     */
+    history: List<OrbitStep> = emptyList(),
+    onHistoryChange: (List<OrbitStep>) -> Unit = {},
+    selected: Int = 0,
+    onSelectedChange: (Int) -> Unit = {},
+    solo: Int? = null,
+    onSoloChange: (Int?) -> Unit = {},
+    set: OrbitSet? = null,
+    onSetChange: (OrbitSet?) -> Unit = {},
+    scrambleSeed: Int = 1,
+    onScrambleSeedChange: (Int) -> Unit = {},
+    brush: OrbitBrush = OrbitBrush.WEIGHT,
+    onBrushChange: (OrbitBrush) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
@@ -173,10 +216,18 @@ fun OrbitScreen(
     val rate = remember(context) { deviceSampleRate(context) }
     val source = remember(kitDir) { OrbitSampleSource(kitsRoot, filesDir) }
 
-    var set by remember(kitDir) { mutableStateOf<OrbitSet?>(null) }
+    // `set`/`selected`/`solo` shadow this composable's own parameters of the
+    // same name — App's hoisted, per-kit-dir state (see this function's own
+    // KDoc on those parameters) — so every existing read/write site below
+    // keeps working unmodified. `remember(kitDir)` still resets each to the
+    // passed-in value whenever the KIT changes; the push-up `LaunchedEffect`s
+    // further down (right after `history`) are what keep App's copies in
+    // sync so a tab switch (which tears this whole composable down) doesn't
+    // lose them.
+    var set by remember(kitDir) { mutableStateOf(set) }
     var refusal by remember(kitDir) { mutableStateOf<String?>(null) }
-    var selected by remember(kitDir) { mutableIntStateOf(0) }
-    var solo by remember(kitDir) { mutableStateOf<Int?>(null) }
+    var selected by remember(kitDir) { mutableIntStateOf(selected) }
+    var solo by remember(kitDir) { mutableStateOf(solo) }
     var snips by remember(kitDir) { mutableStateOf<List<File>>(emptyList()) }
     /** + SNIP RING opens the shelf as a list to pick from — no arrow-cycling through a long shelf. */
     var snipPickerOpen by remember(kitDir) { mutableStateOf(false) }
@@ -187,11 +238,13 @@ fun OrbitScreen(
     /** SPREAD asks how many hits before it fills the ring. */
     var spreadOpen by remember(kitDir) { mutableStateOf(false) }
     /** The dice: every roll a new seed, so a roll can always be rolled again. */
-    var scrambleSeed by remember(kitDir) { mutableIntStateOf(1) }
+    var scrambleSeed by remember(kitDir) { mutableIntStateOf(scrambleSeed) }
     // What a long-press on a square writes. [OrbitBrush.WEIGHT] is what it
     // always wrote, so the strip behaves exactly as it did until the chip
-    // above it is touched.
-    var brush by remember(kitDir) { mutableStateOf(OrbitBrush.WEIGHT) }
+    // above it is touched. Shadows the incoming `brush` parameter — see
+    // this function's own KDoc — so a from-scratch screen (App's hoisted
+    // copy still at its default) shows exactly what it always showed.
+    var brush by remember(kitDir) { mutableStateOf(brush) }
     /** OUT ▸ swaps the panel for the two ways a set leaves the screen: onto TAPE, or into the kit as a clip. */
     var outOpen by remember(kitDir) { mutableStateOf(false) }
     /** Tapping the header's readout swaps the panel for THE SET: the bar, and the tempo it already shows. */
@@ -206,8 +259,28 @@ fun OrbitScreen(
     /** BPM taps settle before the snips refit: the job that fires the commit after a quiet [BPM_SETTLE_MS]. */
     var bpmJob by remember(kitDir) { mutableStateOf<Job?>(null) }
     var bpmPending by remember(kitDir) { mutableStateOf(false) }
-    /** The sets before each edit, newest last: one UNDO steps back one edit. Not saved; a screen's worth. */
-    var history by remember(kitDir) { mutableStateOf<List<OrbitStep>>(emptyList()) }
+    /**
+     * The sets before each edit, newest last: one UNDO steps back one edit.
+     * Not saved to disk; a screen's worth — but no longer just a screen's
+     * lifetime either. Shadows the incoming `history` parameter (App's
+     * hoisted copy) the same way `set`/`selected`/`solo` above do.
+     */
+    var history by remember(kitDir) { mutableStateOf(history) }
+    // Bug fix (tab-switch data loss) — see this function's own KDoc on the
+    // `history`/`selected`/`solo`/`set`/`scrambleSeed`/`brush` parameters:
+    // these six effects are the ONLY thing keeping App's hoisted copies in
+    // sync with whatever this screen's many mutation sites do to the
+    // locals of the same name, so a tab switch mid-session (App tears this
+    // whole composable down, `remember(kitDir)` and all) restores exactly
+    // what was on the rings instead of quietly resetting to an empty undo
+    // stack, ring 0 picked, nothing soloed, seed 1, the weight brush — or,
+    // for `set`, a flash of "no rings" while `orbits.json` reloads.
+    LaunchedEffect(history) { onHistoryChange(history) }
+    LaunchedEffect(selected) { onSelectedChange(selected) }
+    LaunchedEffect(solo) { onSoloChange(solo) }
+    LaunchedEffect(set) { onSetChange(set) }
+    LaunchedEffect(scrambleSeed) { onScrambleSeedChange(scrambleSeed) }
+    LaunchedEffect(brush) { onBrushChange(brush) }
 
     // The transport: null until PLAY. Bank and engine live across edits;
     // each edit prepares a new bank (reusing the old one's buffers) and
@@ -239,7 +312,115 @@ fun OrbitScreen(
         auditionId = auditionId % 1_000_000 + 1
     }
 
+    /**
+     * Staleness pass (the hoist's follow-up): making `history`/`selected`/
+     * `solo`/`set`/`scrambleSeed`/`brush` outlive a single mount means they
+     * can now be invalidated by things that happen OUTSIDE this screen
+     * while it's torn down — the same class of door `3cfe60cb` found and
+     * closed for GROOVE's `justLanded`. Worked through every one asked
+     * about, plus one this screen's own code raised:
+     *
+     * - **A groove rewritten (`grooveReload`'s own path).** Doesn't apply
+     *   here at all: `OrbitStore` — the only reader or writer of this
+     *   kit's `orbits.json` anywhere in the app — is used exclusively from
+     *   inside this file. Nothing outside ORBIT ever rewrites the file
+     *   `set`/`history` are keyed to, unlike `groove.json`, which TAPE's
+     *   READ AS GROOVE / STEAL THE FEEL also rewrite. No `grooveReload`-
+     *   style counter is needed because there is no second writer to race.
+     *
+     * - **A pad ejected, or a kit edit from PAD SHEET/KIT.** A `history`
+     *   entry or the live `set` can reference a pad slot (a `PatternOrbit`
+     *   hit's `slot`) that's since been emptied or reassigned elsewhere.
+     *   This was already true before this hoist — leaving ORBIT open while
+     *   a kit edit landed elsewhere always risked it — and `OrbitBank`'s
+     *   own contract is to tolerate it: `pad()`/`muteGroup()` return a
+     *   default for a missing slot, and `loop()`/`fit()`/`peaks()` return
+     *   null for a missing sample, all documented as "the hit is skipped,
+     *   not thrown." The ring-drawing code already consumes that null
+     *   safely (`bank?.peaks(...)?.let { ... }`). Hoisting only widens the
+     *   window this can be true in; it doesn't change what happens when it
+     *   is, so no new clearing is needed.
+     *
+     * - **A snip deleted.** Same shape and same answer as the pad case: a
+     *   `SnipOrbit` naming a file that's gone renders silent, not broken.
+     *
+     * - **`undo()` restoring a `set` with fewer rings than `selected`/
+     *   `solo` currently point at.** Already handled, unchanged by this
+     *   fix: `undo()` clamps `selected` and re-checks `solo` against the
+     *   restored set's own ring indices before committing (see its own
+     *   KDoc). That guard runs on every UNDO regardless of whether the
+     *   step came from this mount's own history or one carried in from
+     *   App.
+     *
+     * - **A kit renamed.** `KitShelf.renameKit` moves the directory, so
+     *   `entry.dir` — and therefore `open?.dir`, the hoist's own key —
+     *   changes; the same trust GROOVE's hoist already places in this.
+     *
+     * - **The device's own sample rate moving between mounts** (a route
+     *   change — headset, Bluetooth — with no kit change at all). This one
+     *   DOES need code, immediately below: seeded here, not folded into
+     *   the hoist commit, because it belongs with the staleness pass this
+     *   KDoc is describing.
+     *
+     * One door found here is NOT this screen's to close: `CLIP ▸ KIT`
+     * (`clipIntoKit` below, via `OrbitClip.save`) writes straight into the
+     * open kit's `groove.json`, replacing every previous ORBIT-authored
+     * clip — the same file TAPE's actions rewrite — and does not bump
+     * `grooveReload`. GROOVE's own hoisted `progIndex` selects among fixed
+     * transforms of `GrooveStore.load(kitDir).firstOrNull()` ("the base"),
+     * so in the ordinary case (a real captured base already at position 0)
+     * this is harmless — `clipIntoKit` appends after every non-ORBIT clip,
+     * never displacing it. But a kit whose ONLY clip is itself
+     * ORBIT-authored has no such base to protect: a second `CLIP ▸ KIT`
+     * replaces it, and a GROOVE screen whose hoisted `progIndex` survived
+     * a round trip through here would silently describe a transform of a
+     * DIFFERENT clip than what's on screen — `3cfe60cb`'s fixed defect,
+     * running the other direction. Reported rather than fixed: it's
+     * GROOVE's `grooveReload` wiring that would need to change, which is
+     * outside this screen and outside these two commits.
+     */
     LaunchedEffect(kitDir) {
+        // `snips` is a directory listing, not user work — always worth a
+        // fresh read, so a shelf that gained or lost a snip since the last
+        // mount shows it rather than the stale list this mount would
+        // otherwise inherit from nowhere (it isn't hoisted).
+        snips = withContext(Dispatchers.IO) { SnipStore.list(filesDir) }
+        // Follow-up to the hoist above: `set` carries its own `sampleRate`,
+        // stamped in from `rate` the moment it was ever (re)loaded. `rate`
+        // itself is `remember(context) { deviceSampleRate(context) }` —
+        // read fresh on every mount, and Android can hand back a DIFFERENT
+        // answer between two mounts of the same kitDir (a headset plugged
+        // in, a Bluetooth route taking over) without this screen, or its
+        // kit, changing at all. That is exactly the kind of outside-ORBIT
+        // invalidation this fix's staleness pass went looking for: a
+        // hoisted `set` whose own sampleRate no longer matches the device
+        // is stale in a way `kitDir` keying can't catch, because the KIT
+        // didn't change — the device did. `takeIf` here is what refuses to
+        // trust it: a mismatch falls through to the reload path below,
+        // which already re-applies `copy(sampleRate = rate)` to whatever it
+        // reads. Every fit/period calculation downstream (`OrbitClock`,
+        // `OrbitBank.prepare`) is against this field, so trusting a stale
+        // one would be silently wrong at the sample level, not just the UI.
+        val existing = set?.takeIf { it.sampleRate == rate }
+        if (existing != null) {
+            // Bug fix (tab-switch data loss): `set` is now hoisted (see
+            // this function's own KDoc on the `set`/`onSetChange`
+            // parameters), so a remount with the SAME kitDir already
+            // carries the rings the player left on screen. Reloading
+            // `orbits.json` here unconditionally, as this effect always
+            // used to, would race `commit`'s own async save — a fast tab
+            // switch right after an edit could read the file before that
+            // write lands and silently roll the rings back to what disk
+            // still says, reintroducing the exact bug this hoist exists
+            // to fix. `bank` is deliberately NOT hoisted (a live
+            // decoded-audio cache tied to this mount's own `source` —
+            // see the KDoc on this function's parameters), so it always
+            // needs rebuilding from whatever `set` already is.
+            preparing = true
+            bank = withContext(Dispatchers.IO) { runCatching { OrbitBank.prepare(existing, source) }.getOrNull() }
+            preparing = false
+            return@LaunchedEffect
+        }
         val result = withContext(Dispatchers.IO) {
             runCatching {
                 val loaded = if (OrbitStore.exists(kitDir)) {
@@ -248,12 +429,11 @@ fun OrbitScreen(
                     val bpm = (kit.tempoBpm ?: 92f).coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM)
                     OrbitPresets.fromKit(kitDir.name, kit, bpm, rate)
                 }
-                loaded.copy(sampleRate = rate) to SnipStore.list(filesDir)
+                loaded.copy(sampleRate = rate)
             }
         }
-        result.onSuccess { (loaded, files) ->
+        result.onSuccess { loaded ->
             set = loaded
-            snips = files
             refusal = null
             // Prepare before PLAY: a snip ring's waveform and fit report
             // are worth seeing the moment the screen opens, not after.
@@ -2052,8 +2232,12 @@ private const val FLARE_SECONDS = 0.1f
  * into the set's rings — so an edit that moves the rings moves it, and
  * stepping back has to move it back. Keeping the two together is the only
  * way the pair can stay true to each other.
+ *
+ * NOT `private` — App.kt's own hoisted `orbitHistory` (the tab-switch
+ * data-loss fix) needs this type for its own `remember`/parameter, the
+ * same reason `GROOVE_SWING_DEFAULT` had to lose its own `private`.
  */
-private data class OrbitStep(val set: OrbitSet, val solo: Int?)
+data class OrbitStep(val set: OrbitSet, val solo: Int?)
 
 /** How long the panel's frame glows when every ring meets on its downbeat. */
 private const val MEET_SECONDS = 0.35f

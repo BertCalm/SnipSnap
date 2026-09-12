@@ -119,7 +119,7 @@ fun ChopScreen(
     var model by remember(kitDir, lastCommit) { mutableStateOf<ChopReviewModel?>(null) }
     // Null while still decoding (or once loaded); set on failure to the
     // honest reason — distinct copy for "nothing was ever taped" (no
-    // commit at all, [Copy.EMPTY_SHELF]) versus "a commit exists but its
+    // commit at all, [Copy.EMPTY_CHOP]) versus "a commit exists but its
     // file won't read anymore" ([Copy.CHOP_SOURCE_GONE]), so a user who
     // made something can tell that apart from a user who hasn't yet.
     var emptyReason by remember(kitDir, lastCommit) { mutableStateOf<String?>(null) }
@@ -149,7 +149,7 @@ fun ChopScreen(
         // and still unreadable from CHOP.
         if (oomEncountered) onToast(Copy.TAPE_TOO_BIG)
         if (loaded == null) {
-            emptyReason = if (lastCommit != null) Copy.CHOP_SOURCE_GONE else Copy.EMPTY_SHELF
+            emptyReason = if (lastCommit != null) Copy.CHOP_SOURCE_GONE else Copy.EMPTY_CHOP
         } else {
             sourceFile = loaded.first
             model = loaded.second
@@ -165,6 +165,23 @@ fun ChopScreen(
         val reason = emptyReason
         if (reason != null) EmptyChop(scheme, reason) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
         return
+    }
+
+    // A source loaded and decoded fine, but the detector found no onsets
+    // (silence, or nothing loud enough to register): `rows` comes straight
+    // off `slices` with no floor, and `bankAlignedPadCount(0)` is 16, so
+    // `ChopContent` draws a real header reading "0 SLICES — BY HITS" over
+    // an empty list and an all-gray grid — fully drawn, saying nothing.
+    //
+    // Said in a toast rather than swapped for an empty face, because
+    // GRID is a live way out and it lives *inside* ChopContent: the mode
+    // row's rechopTo(ChopMode.Grid(sliceCount.coerceIn(1, MAX_HITS)))
+    // slices this same source into equal parts, and coerceIn floors the
+    // zero at 1. An early return here would take the only door to it and
+    // turn a merely-ugly screen into a dead end — the same escape
+    // `Copy.CHOP_AUTO_NONE` already points AUTO's own no-onset case at.
+    LaunchedEffect(loadedModel) {
+        if (loadedModel.sliceCount == 0) onToast(Copy.CHOP_NO_HITS)
     }
 
     ChopContent(

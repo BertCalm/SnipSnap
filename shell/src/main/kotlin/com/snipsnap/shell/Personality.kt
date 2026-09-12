@@ -87,6 +87,39 @@ object Copy {
      * is unreadable rather than be told they never made one.
      */
     const val CHOP_SOURCE_GONE = "THAT TAPE WON'T READ. IT MAY BE CHEWED."
+    /**
+     * CHOP SHOP's own empty face with no source at all — no TAPE commit
+     * exists yet and no open kit has a sample to fall back on. Reusing
+     * EMPTY_SHELF here used to be TAPE's own "NOTHING TAPED YET." said on a
+     * screen that isn't TAPE, the exact wrong-screen bug EMPTY_GROOVE was
+     * already written to fix elsewhere — this is CHOP's own copy of that
+     * fix. Names both real doors in: TAPE's own KEEP button (the button's
+     * actual on-screen label; `TapeCommit`/`onCommit` are this app's
+     * internal name for the same action, never shown to a user), and the
+     * kit-fallback (`ChopScreen.loadLongestSample`) for anyone who already
+     * has a sample-bearing kit open. A shared-in file and CHOP ALL are
+     * deliberately not named: both land elsewhere (TAPE's own deck, or a
+     * new kit built directly) rather than putting anything CHOP itself can
+     * read.
+     */
+    const val EMPTY_CHOP = "NOTHING TO CHOP YET. TAPE SOMETHING AND KEEP IT, OR OPEN A KIT WITH SAMPLES ON IT."
+    /**
+     * Said when a source loaded fine but the detector found zero onsets
+     * (silence, or nothing loud enough to register) —
+     * `ChopReviewModel.sliceCount == 0`, which still draws a full 16-pad
+     * grid and a "0 SLICES" header. Distinct from [EMPTY_CHOP] (nothing
+     * was ever loaded) and [CHOP_SOURCE_GONE] (the file wouldn't read at
+     * all): this file read and decoded perfectly, it simply had nothing in
+     * it CHOP's detector could find.
+     *
+     * Names GRID first because GRID actually works here — it cuts equal
+     * parts without asking the detector anything, so it is the near way
+     * out, and a fresh source is the far one. RE-CHOP is not offered: it
+     * re-runs the same deterministic detector over the same source and
+     * mode. Agrees with [CHOP_AUTO_NONE], which points AUTO's own
+     * no-onset refusal at the same door.
+     */
+    const val CHOP_NO_HITS = "NO HITS IN THIS SOURCE. TRY GRID, OR TAPE SOMETHING ELSE."
     /** CHOP SHOP's empty face when the classic (non-melodic) layout itself fails — agrees with the toast `ChopScreen` fires alongside it, whose own fallback is this same "couldn't lay out the slices". */
     const val CHOP_LAYOUT_FAILED = "CHOP FAILED. COULDN'T LAY OUT THE SLICES."
 
@@ -1441,6 +1474,16 @@ object Copy {
      * redo, so this is not a [Reversal.goneBut] site.
      */
     const val LOOP_TRACK_CLEARED = "TRACK CLEARED. THE SNIP STAYS IN SNIPS."
+    /**
+     * A tempo change, once the taps have stopped and it is on the grid.
+     *
+     * The new number is already on screen by then — this says it reached the
+     * disk, which is the half the screen cannot show. The BPM itself is not
+     * repeated here: it is three inches away in the control the player just
+     * used, and a toast that quotes it would be the same number in two places
+     * on one screen.
+     */
+    const val LOOP_TEMPO_SET = "TEMPO SAVED."
     /** LOOP opened with nothing sent to it yet — the grid's own empty state. */
     const val LOOP_EMPTY = "NO TRACKS YET. SEND A SNIP FROM SNIPS."
     /**
@@ -1484,7 +1527,20 @@ object Copy {
      * name is not obviously a mute button and a block is not obviously
      * clearable — and the hold is the one nobody can guess.
      */
-    const val LOOP_LEGEND = "TAP A TRACK NAME TO MUTE. HOLD A BLOCK TO CLEAR THAT TRACK."
+    const val LOOP_LEGEND = "TAP A NAME TO MUTE. TAP A BLOCK TO SEE IT. HOLD ONE TO CLEAR THE TRACK."
+    /**
+     * What a tapped block is, in the line the legend usually occupies.
+     *
+     * [track] and [block] are 1-based, the numbers on screen. [what] is the
+     * snip's own filename, or the kit a pattern plays, or null for a track
+     * nothing has been sent to — the grid always holds six tracks, so an empty
+     * one is a real thing to tap and has to answer.
+     *
+     * A function rather than a constant because every part of it is data; the
+     * only word this owns is the one for nothing.
+     */
+    fun loopBlock(track: Int, block: Int, what: String?): String =
+        "TRACK $track · BLOCK $block · ${what ?: "NOTHING SENT HERE YET"}"
 
     // ==================== Escaped strings, brought in (copy-consolidation follow-ups) ====================
     //
