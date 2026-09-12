@@ -356,8 +356,15 @@ fun GrooveScreen(
     // whole lifetime: true the instant a take lands, false the instant
     // it's consumed (UNDO TAKE) or the user does anything else that moves
     // the program on (PROG prev/next, RESEED, EDIT THIS TAKE/EDIT STEPS, MIDI
-    // export, SONG ▸, arming another RECORD, the FEEL stepper, or its
-    // recentre tap — `clearJustLanded` below) — never a persistent control.
+    // export, CHART export, SONG ▸, ORBIT ▸, arming another RECORD —
+    // `clearJustLanded` below) — never a persistent control. The take is
+    // already on disk by the time this row can show, so this flag is the
+    // ONLY route back to the pre-take state; `► PLAY` and the FEEL
+    // stepper/recentre deliberately do NOT clear it, same reasoning both
+    // ways — auditioning how the take sounds (at speed, or tighter/looser)
+    // is exactly what a person does BEFORE deciding whether to keep it, and
+    // losing the offer because they listened first would be data loss
+    // dressed as a UI reset.
     var justLanded by remember(kitDir) { mutableStateOf(false) }
 
     // EDIT THIS TAKE's own armed confirm (bug fix, live-record plan Task 6):
@@ -431,11 +438,13 @@ fun GrooveScreen(
     /**
      * Every place that used to write `justLanded = false` bare now goes
      * through here, so `forkArmed` can never outlive the row it belongs
-     * to: switching programs, RESEED, EDIT STEPS, MIDI, SONG ▸, or
-     * arming another RECORD must all cancel a pending "REPLACE E?"
-     * confirm exactly as they already cancel the just-landed row itself —
-     * otherwise the NEXT take's row could render already armed, skipping
-     * the first tap its own confirm exists for.
+     * to: switching programs, RESEED, EDIT STEPS, MIDI, CHART, SONG ▸,
+     * ORBIT ▸, or arming another RECORD must all cancel a pending
+     * "REPLACE E?" confirm exactly as they already cancel the just-landed
+     * row itself — otherwise the NEXT take's row could render already
+     * armed, skipping the first tap its own confirm exists for. FEEL and
+     * `► PLAY` are deliberately absent from this list — see `justLanded`'s
+     * own KDoc for why.
      */
     fun clearJustLanded() {
         justLanded = false
@@ -1467,10 +1476,16 @@ fun GrooveScreen(
                         feel = feel,
                         seed = seed,
                         scheme = scheme,
-                        onChange = { clearJustLanded(); feel = it },
+                        // Deliberately does NOT clearJustLanded — FEEL is a
+                        // non-destructive preview lens, same as `► PLAY`
+                        // above. The take is already written to disk once
+                        // this row is up, so the row is the only way back;
+                        // dismissing it just because the user nudged FEEL to
+                        // audition the take tighter or looser would strand
+                        // them with no undo. See `justLanded`'s own KDoc.
+                        onChange = { feel = it },
                         onRecentre = {
                             if (feel != 0) {
-                                clearJustLanded()
                                 feel = 0
                                 onToast(Copy.FEEL_RECENTRED)
                             }
