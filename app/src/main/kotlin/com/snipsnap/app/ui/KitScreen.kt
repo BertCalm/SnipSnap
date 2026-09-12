@@ -131,7 +131,7 @@ fun KitScreen(
                 .padding(14.dp),
             contentAlignment = Alignment.Center,
         ) {
-            TapeText("NO TAPE IN THE DECK. OPEN ONE ON THE SHELF.", TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+            TapeText(Copy.NO_TAPE_IN_DECK, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
         }
         return
     }
@@ -543,7 +543,7 @@ private fun KeyPanel(
         }
 
         if (readouts.isEmpty()) {
-            TapeText("NO TONAL PADS. DRUMS LAND AS CAPTURED.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText(Copy.NO_TONAL_PADS, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         } else {
             for (line in readouts) TapeText(line, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         }

@@ -753,7 +753,7 @@ fun App(shelf: KitShelf) {
 
     fun fresh(starter: StarterKits.Starter) {
         if (busy != null) return
-        busy = "DUBBING ${starter.displayName}…"
+        busy = Copy.dubbingBusy(starter.displayName)
         scope.launch {
             val entry = try {
                 withContext(Dispatchers.IO) { shelf.render(starter, Random.nextInt()) }
@@ -858,7 +858,7 @@ fun App(shelf: KitShelf) {
         val source = open ?: return
         if (busy != null) return
         val hadTwins = source.kit.pads.any { it.slot > 16 }
-        busy = "TWINNING…"
+        busy = Copy.EVIL_TWINS_BUSY
         scope.launch {
             val (entry, _) = try {
                 // Same reasoning as setKey above: evilTwins is an
@@ -1043,7 +1043,8 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = Copy.xrayFailed(e.message ?: e.javaClass.simpleName)
+                Log.e(TAG, "xray: failed", e)
+                toast = Copy.xrayFailed(e.message ?: "the file wouldn't read")
             } finally {
                 busy = null
             }
@@ -1278,7 +1279,7 @@ fun App(shelf: KitShelf) {
      */
     fun instantKit(file: File, range: IntRange, hadSelection: Boolean) {
         if (busy != null) return
-        busy = "CHOPPING…"
+        busy = Copy.INSTANT_KIT_BUSY
         scope.launch {
             // `finally` owns the busy overlay: whichever way this leaves
             // (built, refused, or the scope cancelled underneath it), the

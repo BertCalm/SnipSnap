@@ -319,7 +319,7 @@ private fun PickingStep(
 ) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         TapeText(
-            "PICK A HEAD AND A TAIL - TWO DIFFERENT TAKES OF THIS PAD.",
+            Copy.SPLICE_PICK_HINT,
             TapeType.pixelSmall,
             scheme.ink3.tape,
             Modifier.fillMaxWidth().padding(horizontal = 4.dp),

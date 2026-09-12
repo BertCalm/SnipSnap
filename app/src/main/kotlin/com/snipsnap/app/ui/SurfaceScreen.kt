@@ -343,10 +343,7 @@ fun SurfaceScreen(
                 }
                 pendingPrint = null
                 onKitUpdated(updated)
-                onToast(
-                    if (existed) "PAD ${padLabel(slot)} REPLACED WITH THE PRINT. ORIGINAL SLEEPS IN THE BIN."
-                    else "PRINTED TO PAD ${padLabel(slot)}.",
-                )
+                onToast(Copy.surfacePrintedToPad(padLabel(slot), replaced = existed))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IllegalArgumentException) {
@@ -438,10 +435,7 @@ fun SurfaceScreen(
                         }
                         if (engine.armPrint(seconds)) {
                             printing = true
-                            onToast(
-                                if (bars > 0 && bpm != null) "PRINTING ${PrintLength.label(bars)} AT ${bpm.toInt()} BPM."
-                                else "PRINTING. PLAY THE SURFACE.",
-                            )
+                            onToast(Copy.surfacePrintingStarted(bars, bpm?.toInt()))
                         } else {
                             onToast(Copy.SURFACE_STILL_LANDING)
                         }
@@ -581,7 +575,7 @@ fun SurfaceScreen(
                 }
                 if (padName == null) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        TapeText("OPEN A KIT. THE SURFACE PLAYS ITS FIRST PAD.", TapeType.lcdSmall, scheme.amber.tape)
+                        TapeText(Copy.SURFACE_NEEDS_KIT, TapeType.lcdSmall, scheme.amber.tape)
                     }
                 }
                 if (printing) {

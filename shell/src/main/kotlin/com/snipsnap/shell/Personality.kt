@@ -396,6 +396,22 @@ object Copy {
      */
     fun treatmentBusy(label: String): String = "TREATMENT · $label…"
 
+    // ---- SYNTH: SEND TO PAD (a rendered patch lands on a pad) ----
+    /**
+     * SEND TO PAD's own landing toast: [name] the patch's own display name.
+     * REPLACE bins the pad's old sample ([replaced] true, the same fact
+     * [treated]'s "ORIGINAL SLEEPS IN THE BIN" states for a treatment); ADD
+     * has no original to bin.
+     */
+    fun synthSent(pad: String, name: String, replaced: Boolean): String =
+        if (replaced) {
+            "PAD $pad REPLACED WITH ${name.uppercase(java.util.Locale.ROOT)}. ORIGINAL SLEEPS IN THE BIN."
+        } else {
+            "PAD $pad ADDED: ${name.uppercase(java.util.Locale.ROOT)}."
+        }
+    /** The chooser's own `IllegalArgumentException`/`IllegalStateException` when the kit changed under it - same "no pad on slot N" internal text `KitBuilder.assign`/`replaceAudio`/`update` throw that [PRINT_PAD_REFUSED] already keeps out of a toast, so this keeps it out here too rather than quoting it. */
+    const val SYNTH_PAD_REFUSED = "THAT PAD WON'T TAKE THE PATCH. PICK ANOTHER."
+
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."
 
@@ -878,6 +894,8 @@ object Copy {
         "$extracted ${if (extracted == 1) "PAD" else "PADS"} MEASURED, $fromCache FROM THE CRATE INDEX."
     /** A GO ▸ on a kit the shelf's own listing doesn't hold (a kit in a subfolder, say) — the number stays, the door doesn't. */
     const val DOUBLES_KIT_NOT_ON_SHELF = "THAT KIT ISN'T ON THE SHELF'S OWN LIST. THE NUMBER STANDS - THE DOOR DOESN'T."
+    /** The measuring pass itself threw — a folder that vanished mid-scan, an unreadable `kit.json`. [reason] in the exception's own words when it has one; the exception's detail goes to `Log.e`, never a Java class name here. */
+    fun doublesFailed(reason: String): String = "COULDN'T MEASURE THE SHELF: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
 
     // ---- CHOP: the chip itself (HANDOFF.md — "chip tap = cycle class label, 'YOU ✓'") ----
     /** A chip under the confidence threshold, in its own words. */
@@ -1081,6 +1099,12 @@ object Copy {
     const val PRINT_PAD_REFUSED = "THAT PAD WON'T TAKE THE PRINT. PICK ANOTHER."
     /** Disk or decode trouble landing a print on a pad - the print itself is not lost, so this says so, unlike [PRINT_LOST]. */
     const val PRINT_LANDING_FAILED = "LANDING FAILED. THE PRINT IS STILL HERE."
+    /** SPLIT's own → PAD landing: [replaced] is true when a taken slot's old sample went to the bin; false when the split landed fresh on an empty one. */
+    fun splitPrintedToPad(pad: String, replaced: Boolean): String =
+        if (replaced) "PAD $pad REPLACED WITH THE SPLIT. ORIGINAL SLEEPS IN THE BIN." else "SPLIT PRINTED TO PAD $pad."
+    /** SURFACE's own → PAD landing - same shape as [splitPrintedToPad], SURFACE's own words. */
+    fun surfacePrintedToPad(pad: String, replaced: Boolean): String =
+        if (replaced) "PAD $pad REPLACED WITH THE PRINT. ORIGINAL SLEEPS IN THE BIN." else "PRINTED TO PAD $pad."
 
     // ---- SURFACE ----
     const val SURFACE_SETTINGS_NOT_SAVED = "SURFACE SETTINGS NOT SAVED. TRY AGAIN."
@@ -1090,6 +1114,11 @@ object Copy {
     fun surfacePrinted(seconds: Float): String = "PRINTED ${"%.1f".format(java.util.Locale.ROOT, seconds)} S TO TAPE."
     const val SURFACE_NOTHING_PRINTED = "NOTHING PRINTED. HOLD THE SURFACE WHILE IT PRINTS."
     const val SURFACE_STILL_LANDING = "STILL LANDING THE LAST PRINT."
+    /** PRINT armed with no tempo to count bars against - a `const val` (not folded into [surfacePrintingStarted]'s own fixed text) so the reflective shout/full-stop laws actually check it. */
+    const val SURFACE_PRINTING_NO_TEMPO = "PRINTING. PLAY THE SURFACE."
+    /** PRINT armed: names the bar count and tempo when the kit has one to count against, or falls back to [SURFACE_PRINTING_NO_TEMPO] when it doesn't. */
+    fun surfacePrintingStarted(bars: Int, bpm: Int?): String =
+        if (bars > 0 && bpm != null) "PRINTING ${PrintLength.label(bars)} AT $bpm BPM." else SURFACE_PRINTING_NO_TEMPO
 
     // ---- SPLIT ----
     const val SPLIT_ALL_FADERS_DOWN = "EVERY FADER IS DOWN. NOTHING TO HEAR."
@@ -1114,6 +1143,19 @@ object Copy {
     const val ORBIT_NOTHING_TO_UNDO = "NOTHING TO UNDO."
     /** BOUNCE landed: [label] is `cycleLabel`'s own name for what was heard. */
     fun orbitBounced(label: String): String = "ON TAPE: $label. TRIM IT, CHOP IT, KIT IT."
+    /**
+     * CLIP ▸ KIT landed: [name] the clip's own name, [bars]/[notes] what it
+     * holds, [snipRingsLeftOut] how many snip rings (audio, which a
+     * note-only clip can never carry) stayed out of it. Leads with the
+     * confirmation, not the omission - a player who just tapped CLIP ▸ KIT
+     * wants to hear that it worked first.
+     */
+    fun clippedIntoKit(name: String, bars: Int, notes: Int, snipRingsLeftOut: Int): String =
+        if (snipRingsLeftOut == 0) {
+            "$name IS IN THE KIT'S GROOVES — $bars BARS, $notes NOTES. IT RIDES TO THE MPC."
+        } else {
+            "$name IN THE GROOVES: $bars BARS, $notes NOTES. $snipRingsLeftOut SNIP RING${if (snipRingsLeftOut == 1) "" else "S"} STAYED OUT."
+        }
 
     // ---- GRAIN FIELD ----
     const val GRAIN_FIELD_TOO_SHORT = "TOO SHORT TO MAP. THE FIELD NEEDS MORE TAPE."
@@ -1121,6 +1163,12 @@ object Copy {
     const val GRAIN_FIELD_START_FAILED = "GRAIN VOICE WON'T START."
     /** The render thread died on its own, or a live gesture threw against it - DUET turns itself off either way. */
     const val GRAIN_FIELD_DUET_STOPPED = "DUET STOPPED — OFF."
+    /** The field's own busy line while the tape is read into its grid - furniture, like every other `…`-suffixed busy line, so it carries no full stop. */
+    const val GRAIN_FIELD_LISTENING = "LISTENING TO THE GRAIN…"
+    /** DUET on: the mic plays the field live, said once so headphones are a choice, not a surprise. */
+    const val GRAIN_FIELD_DUET_HINT = "THE MIC PLAYS THE FIELD. HEADPHONES RECOMMENDED."
+    /** DUET off: the field's ordinary touch-to-play hint. */
+    const val GRAIN_FIELD_DRAG_HINT = "DRAG TO PLAY THE GRAIN FIELD."
 
     // ---- GROOVE: MIDI EXPORT's own success line ----
     fun midiFilesWritten(count: Int): String =
@@ -1128,9 +1176,99 @@ object Copy {
 
     // ---- PAD CAPTURE: GRAB/HOLD's own too-short guard ----
     const val PAD_CAPTURE_HOLD_TOO_SHORT = "HOLD TO RECORD."
+    /** GRAB/HOLD attempted before LISTEN was ever pressed - `MicSessionService.armed` is false, so there is no ring to snapshot at all. */
+    const val PAD_CAPTURE_NOT_LISTENING = "NOT LISTENING YET."
+    /** GRAB's own empty snapshot - the ring had nothing in it to cut. */
+    const val GRAB_NOTHING_YET = "NOTHING TO GRAB YET."
+    /** HOLD's own empty snapshot - released before a single frame landed. */
+    const val HOLD_NOTHING_RECORDED = "NOTHING RECORDED."
+    /** GRAB/HOLD's own landing toast: [verb] the gesture's own past-tense word ("GRABBED"/"RECORDED"), [pad] the pad it landed on. */
+    fun padGestureLanded(verb: String, pad: String): String = "$verb → PAD $pad."
+    /**
+     * GRAB/HOLD's own idle panel once armed: what each gesture actually
+     * captures - [grabSeconds] interpolated so this can't drift from the
+     * real ring window. [SNIPPED]'s own shape ("KEPT WHAT IT'S HEARD SINCE
+     * LISTEN, UP TO 60s") rather than "THE LAST ${grabSeconds}s HEARD" -
+     * naming the start point (SINCE LISTEN), not just the cap, is what
+     * makes "UP TO" true: `CaptureRing.snapshot` returns a SHORT array when
+     * the ring holds fewer frames than asked for, so in the first couple
+     * seconds after LISTEN a GRAB genuinely gets less than this. (The
+     * reflective ceiling law now catches a bare "LAST Ns" here the way it
+     * always could for a `const val` - moving this out of
+     * `PadCaptureScreen.kt` and into a function here is what let it reach
+     * this line at all, and it caught exactly that shape on the first
+     * draft of this fn.)
+     */
+    fun padCaptureReady(grabSeconds: Int): String =
+        "GRAB KEEPS WHAT'S BEEN HEARD SINCE LISTEN, UP TO ${grabSeconds}s. HOLD RECORDS WHILE YOU HOLD."
+    /** GRAB/HOLD's own idle panel before LISTEN has ever been pressed. */
+    const val PAD_CAPTURE_NEEDS_MIC = "NOT LISTENING YET. START THE MIC, THEN HIT SOMETHING."
 
     // ---- SNIPS: a row that will not decode ----
     const val SNIP_CANT_PLAY = "CAN'T PLAY THIS SNIP."
+
+    // ==================== Escaped strings, brought in (copy-consolidation follow-ups) ====================
+    //
+    // The count-driven pass above stopped once it hit its own tally of 78.
+    // These were the residue: inline literals a `grep 'onToast("'` never
+    // saw (a multi-line call, a `TapeText` argument, a parameter carrying a
+    // literal from its call site) but a user reads all the same, so the
+    // property this file's own KDoc claims - "everything the UI says lives
+    // here" - was still false for every one of them.
+    /** DELETED KITS'/DELETED SNIPS' own empty state - plain, not the tape-metaphor voice, matching SNIPS' own locked tone ([SNIPS_EMPTY]). */
+    const val NOTHING_DELETED = "NOTHING DELETED."
+    /** SNIPS' own empty state. */
+    const val SNIPS_EMPTY = "NO SNIPS YET."
+    /** KIT/PLAY with no tape ever committed to this kit - both screens' own empty deck. */
+    const val NO_TAPE_IN_DECK = "NO TAPE IN THE DECK. OPEN ONE ON THE SHELF."
+    /** IN KEY's row when the kit holds no tonal pad at all. */
+    const val NO_TONAL_PADS = "NO TONAL PADS. DRUMS LAND AS CAPTURED."
+    /** SNIPS → PAD's own header hint once the shelf has a kit to tap - [EMPTY_SHELF_FOR_ASSIGN] carries the instruction when it doesn't. */
+    const val ASSIGN_PICK_HINT = "TAP A KIT, THEN LONG-PRESS AN EMPTY PAD."
+    /**
+     * The kit shelf's ROOMS legend (September UAT, finding 4/5's own shape
+     * applied here): HOLD is the only door to FORGET on a room row, so this
+     * stays on screen rather than riding on a toast that can be dismissed
+     * forever. A `val`, not `const val`, only because [Rooms.BIN_DAYS]
+     * rides in the template - reflection over `Copy`'s declared fields
+     * finds it either way.
+     */
+    val ROOMS_LEGEND: String = "HOLD A ROOM TO FORGET IT · THE BIN KEEPS IT ${Rooms.BIN_DAYS} DAYS"
+    /** ORBIT's SET ▸ TEMPO confirm row: what accepting the offered tempo actually does to the ring, since SET is otherwise silent about it. */
+    const val ORBIT_SET_TEMPO_HINT = "SET MOVES THE WHOLE SET AND RE-SIZES THE RING TO FIT."
+    /**
+     * ORBIT's own on-screen legend: the ring/cell gestures, permanent
+     * furniture under the deck, plus one of two closing clauses depending
+     * on whether the shelf actually holds a snip for + SNIP to reach for. A
+     * function, not a `_LEGEND` field, because of that branch - the
+     * reflective legend law only walks fields, same reasoning as
+     * `breedPickHeader`'s own KDoc.
+     */
+    fun orbitLegend(hasSnips: Boolean): String =
+        "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · " +
+            if (hasSnips) {
+                "HOLD BPM TO RUN IT · TAP THE READOUT FOR THE BAR · SHORTEST RING INSIDE COMES ROUND FIRST."
+            } else {
+                "NO SNIPS ON THE SHELF YET FOR + SNIP."
+            }
+    /** SURFACE with no kit open - the pad it plays has nothing to come from yet. */
+    const val SURFACE_NEEDS_KIT = "OPEN A KIT. THE SURFACE PLAYS ITS FIRST PAD."
+    /** SPLICE's own picker hint before a head and a tail are chosen. */
+    const val SPLICE_PICK_HINT = "PICK A HEAD AND A TAIL - TWO DIFFERENT TAKES OF THIS PAD."
+    /** X-RAY on a JSON file that isn't an MPC program at all - [topKeys] the top-level field count when the tree parsed as an object, null when it didn't even parse that far. */
+    fun xrayNotAProgram(topKeys: Int?): String =
+        if (topKeys != null) "JSON, NOT AN MPC PROGRAM. $topKeys TOP-LEVEL FIELDS." else XRAY_NOTHING_TO_SHOW
+    /** [xrayNotAProgram]'s own fallback, pulled out as a `const val` so the reflective laws reach it. */
+    const val XRAY_NOTHING_TO_SHOW = "NOTHING TO SHOW."
+    /** X-RAY's own footnote: fields the reading found but doesn't yet have a label for. */
+    fun xrayUnlabeledFields(count: Int): String =
+        "$count FIELD${if (count == 1) "" else "S"} PRESENT IN THIS FILE, NOT YET LABELED HERE."
+    /** `App.kt`'s `fresh()`: the busy overlay while a starter kit renders offline, named so the wait is attributable - same shape as [treatmentBusy]. */
+    fun dubbingBusy(name: String): String = "DUBBING $name…"
+    /** EVIL TWINS' own busy overlay while every twin renders offline. */
+    const val EVIL_TWINS_BUSY = "TWINNING…"
+    /** INSTANT KIT's own busy overlay - the same word [CHOP_ALL_BUSY] uses for its own (unrelated) crate-digging pass, kept as its own constant since the two features are otherwise unconnected. */
+    const val INSTANT_KIT_BUSY = "CHOPPING…"
 
     /** Rotation helper: line [n] of a rotating list (n counts from 0) — [COMMIT_LINES]'s own rotation. */
     fun rotating(lines: List<String>, n: Int): String = lines[n % lines.size]

@@ -334,7 +334,7 @@ fun GrainFieldScreen(
                 Modifier.fillMaxWidth().weight(1f).lcdPanel(scheme).padding(14.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText("LISTENING TO THE GRAIN…", TapeType.lcdSmall, scheme.lcdInk.tape)
+                TapeText(Copy.GRAIN_FIELD_LISTENING, TapeType.lcdSmall, scheme.lcdInk.tape)
             }
         } else {
             val (_, map) = current
@@ -343,11 +343,7 @@ fun GrainFieldScreen(
                 PrimaryAction(label = "START MIC", enabled = true, onClick = onRequestArm)
             }
             TapeText(
-                if (duetOn) {
-                    "THE MIC PLAYS THE FIELD. HEADPHONES RECOMMENDED."
-                } else {
-                    "DRAG TO PLAY THE GRAIN FIELD"
-                },
+                if (duetOn) Copy.GRAIN_FIELD_DUET_HINT else Copy.GRAIN_FIELD_DRAG_HINT,
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 Modifier.fillMaxWidth().padding(horizontal = 10.dp),

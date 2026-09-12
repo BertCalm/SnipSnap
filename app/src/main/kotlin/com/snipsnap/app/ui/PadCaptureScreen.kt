@@ -190,7 +190,7 @@ fun PadCaptureScreen(
                     // mid-commit (EJECT from the notification, most likely),
                     // and this read is what keeps the toast honest about
                     // which of the two actually happened.
-                    onToast(if (!MicSessionService.armed.value) "NOT LISTENING YET" else nothingLabel)
+                    onToast(if (!MicSessionService.armed.value) Copy.PAD_CAPTURE_NOT_LISTENING else nothingLabel)
                 } else {
                     onKitUpdated(updated)
                     onToast(successLabel)
@@ -210,8 +210,8 @@ fun PadCaptureScreen(
     fun grab() {
         commitToPad(
             gesture = Gesture.GRAB,
-            successLabel = "GRABBED → PAD ${padTag(slot)}",
-            nothingLabel = "NOTHING TO GRAB YET",
+            successLabel = Copy.padGestureLanded("GRABBED", padTag(slot)),
+            nothingLabel = Copy.GRAB_NOTHING_YET,
             failureAction = "GRAB",
         ) {
             val raw = MicSessionService.snapshotTail(GRAB_FRAMES) ?: return@commitToPad null
@@ -241,8 +241,8 @@ fun PadCaptureScreen(
             .coerceIn(1, PadCapture.MAX_HOLD_FRAMES)
         commitToPad(
             gesture = Gesture.HOLD,
-            successLabel = "RECORDED → PAD ${padTag(slot)}",
-            nothingLabel = "NOTHING RECORDED",
+            successLabel = Copy.padGestureLanded("RECORDED", padTag(slot)),
+            nothingLabel = Copy.HOLD_NOTHING_RECORDED,
             failureAction = "RECORD",
         ) {
             MicSessionService.snapshotTail(frames)?.let { PadTape.hold(it, MicSessionService.SAMPLE_RATE) }
@@ -298,14 +298,14 @@ fun PadCaptureScreen(
                     // GRAB genuinely gets less than this. Same reason SNIP
                     // says "UP TO 60s" rather than "LAST 60s".
                     TapeText(
-                        "GRAB KEEPS UP TO THE LAST ${GRAB_SECONDS}s HEARD. HOLD RECORDS WHILE YOU HOLD.",
+                        Copy.padCaptureReady(GRAB_SECONDS),
                         TapeType.lcdSmall,
                         scheme.lcdInk.tape,
                         maxLines = 3,
                     )
                 } else {
                     TapeText(
-                        "NOT LISTENING YET. START THE MIC, THEN HIT SOMETHING.",
+                        Copy.PAD_CAPTURE_NEEDS_MIC,
                         TapeType.lcdSmall,
                         scheme.lcdInk.tape,
                         maxLines = 3,

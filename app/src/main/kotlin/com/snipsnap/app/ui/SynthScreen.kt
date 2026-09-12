@@ -130,15 +130,13 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * (TINES, VELVET, VOX, PLUCK, TONEWHEEL) join it here. GRAINS is out of
  * scope — it has no voice enum, a different shape entirely.
  *
- * Two copy carve-outs, both because `Personality.kt`'s `Copy` object has no
- * matching line and the brief says not to invent one this wave:
- * - SCRAMBLE has no toast (the prototype's `SCRAMBLE_LINES` are prototype-
- *   only flavour, never ported to `Copy`).
- * - SEND TO PAD's success toast is a plain inline sentence, for both of its
- *   branches (REPLACE an assigned pad's audio, or ADD to an empty slot) —
- *   `Copy.treated` and `Copy.INSTRUMENT_MADE` both exist but neither is
- *   semantically a "a synth patch landed on this pad" line, so nothing in
- *   the TREATED/INSTRUMENT family fits either shape.
+ * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
+ * `SCRAMBLE_LINES` are prototype-only flavour, never ported to `Copy`).
+ * SEND TO PAD's own landing line used to be a second carve-out — a plain
+ * inline sentence, because neither `Copy.treated` nor `Copy.INSTRUMENT_MADE`
+ * is semantically "a synth patch landed on this pad" — but a copy-
+ * consolidation pass gave it its own line, `Copy.synthSent`, rather than
+ * leaving it outside every law in `PersonalityTest`.
  */
 @Composable
 fun SynthScreen(
@@ -303,25 +301,22 @@ fun SynthScreen(
                 }
                 showChooser = false
                 onKitUpdated(updatedKit)
-                // No Copy line fits a synth patch landing on a pad (see the
-                // file KDoc's carve-out) — the simplest honest sentence,
-                // said plainly. Only the REPLACE branch bins anything —
+                // Copy.synthSent: only the REPLACE branch bins anything —
                 // `replaceAudio` moves the displaced WAV to the bin
                 // (`moveToBin`), the same fact `Copy.treated`'s "ORIGINAL
                 // SLEEPS IN THE BIN" states for TREATMENT — `assign`'s own
                 // `deleteIfUnreferenced` is a no-op on an empty slot (there
                 // was no original), so the ADD branch doesn't claim it.
-                onToast(
-                    if (existed) {
-                        "PAD ${padTag(slot)} REPLACED WITH ${name.uppercase()}. ORIGINAL SLEEPS IN THE BIN."
-                    } else {
-                        "PAD ${padTag(slot)} ADDED: ${name.uppercase()}."
-                    },
-                )
+                onToast(Copy.synthSent(padTag(slot), name, replaced = existed))
             } catch (ex: Exception) {
                 if (ex is CancellationException) throw ex
                 if (ex is IllegalStateException || ex is IllegalArgumentException) {
-                    onToast(ex.message ?: "SEND REFUSED.")
+                    // Same race as SPLIT/SURFACE's own → PAD landing (the kit
+                    // changed under the chooser - a layered or chained pad):
+                    // the exception's own text is KitBuilder's internal "no
+                    // pad on slot N", not user copy, so it stays out of the
+                    // toast, same as Copy.PRINT_PAD_REFUSED's own reasoning.
+                    onToast(Copy.SYNTH_PAD_REFUSED)
                 } else {
                     Log.e("SynthScreen", "sendToSlot: failed", ex)
                     onToast(Copy.SEND_FAILED)

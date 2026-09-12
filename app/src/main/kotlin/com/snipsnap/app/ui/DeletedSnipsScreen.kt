@@ -192,7 +192,7 @@ fun DeletedSnipsScreen(
             ) {
                 // Plain, not the tape-metaphor voice — SNIPS's own locked
                 // tone (`SnipsScreen.kt`'s "NO SNIPS YET").
-                TapeText("NOTHING DELETED.", TapeType.lcdSmall, scheme.lcdInk.tape)
+                TapeText(Copy.NOTHING_DELETED, TapeType.lcdSmall, scheme.lcdInk.tape)
             }
         } else {
             LazyColumn(

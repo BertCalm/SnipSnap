@@ -358,13 +358,14 @@ class PersonalityTest {
         // Permanent on-screen furniture, not toasts: the two legends that sit
         // under KIT's grid and the kit shelf's own list for as long as those
         // screens are open, and HELP's two section headings. ROOMS' third
-        // legend ("HOLD A ROOM TO FORGET IT · THE BIN KEEPS 30 DAYS") reads
-        // without a full stop for the same reason, and is still written inline
-        // in `:app` rather than living here. A label on the furniture is not a
-        // line the app says to you once and takes away, so it does not end in
-        // a full stop - and every legend must be added here when it is written,
-        // or the shouting law will ask it to become a sentence.
-        "PAD_SHEET_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER",
+        // legend, Copy.ROOMS_LEGEND ("HOLD A ROOM TO FORGET IT · THE BIN
+        // KEEPS IT 30 DAYS"), reads without a full stop for the same reason -
+        // a copy-consolidation pass brought it in from `:app`, where it used
+        // to live inline. A label on the furniture is not a line the app
+        // says to you once and takes away, so it does not end in a full stop
+        // - and every legend must be added here when it is written, or the
+        // shouting law will ask it to become a sentence.
+        "PAD_SHEET_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER", "ROOMS_LEGEND",
         // The empty shelf's loop line (finding 3) is a row of tab names,
         // not a line the app says - it reads TAPE > CHOP > KIT > EXPORT.
         // FIRST_RUN_LOOP_NOTE, the sentence under it that says what the
@@ -379,6 +380,12 @@ class PersonalityTest {
         // SETUP_CARD_NONE are NOT here: both are sentences the screen says
         // to you, and both keep their full stops.
         "SETUP_FORMAT_HEADING", "SETUP_WHERE_HEADING", "SETUP_CARD_HEADING", "SETUP_FORMAT_NONE",
+        // GRAIN FIELD's own busy line while the tape is read into its grid -
+        // furniture, like every other `…`-suffixed busy line above.
+        "GRAIN_FIELD_LISTENING",
+        // EVIL TWINS' and INSTANT KIT's own busy overlays - the same
+        // `…`-suffixed shape as every other *_BUSY constant above.
+        "EVIL_TWINS_BUSY", "INSTANT_KIT_BUSY",
     )
 
     /**

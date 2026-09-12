@@ -604,13 +604,7 @@ fun OrbitScreen(
                 // but it is where the player just was, since CLIP ▸ KIT is
                 // a button inside it, and OUT ▸ reopens it.
                 val behind = OrbitClip.snipRings(s)
-                onToast(
-                    if (behind.isEmpty()) {
-                        "${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC."
-                    } else {
-                        "${clip.name} IN THE GROOVES: ${clip.bars} BARS, ${clip.notes.size} NOTES. ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED OUT."
-                    },
-                )
+                onToast(Copy.clippedIntoKit(clip.name, clip.bars, clip.notes.size, behind.size))
             }.onFailure { e ->
                 Log.e("OrbitScreen", "clipIntoKit: failed", e)
                 onToast(Copy.ORBIT_CLIP_FAILED)
@@ -730,7 +724,7 @@ fun OrbitScreen(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         SmallChip("SET ${offer.bpm.roundToInt()}", scheme, accent = true) { acceptTempo(offer) }
                         SmallChip("KEEP ${current.bpm.roundToInt()}", scheme) { tempoOffer = null }
-                        TapeText("SET MOVES THE WHOLE SET AND RE-SIZES THE RING TO FIT.", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 2)
+                        TapeText(Copy.ORBIT_SET_TEMPO_HINT, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 2)
                     }
                 }
             }
@@ -1030,11 +1024,7 @@ fun OrbitScreen(
                 }
             }
             TapeText(
-                if (snips.isEmpty()) {
-                    "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · NO SNIPS ON THE SHELF YET FOR + SNIP."
-                } else {
-                    "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · HOLD BPM TO RUN IT · TAP THE READOUT FOR THE BAR · SHORTEST RING INSIDE COMES ROUND FIRST."
-                },
+                Copy.orbitLegend(hasSnips = snips.isNotEmpty()),
                 TapeType.pixelSmall,
                 scheme.ink3.tape,
                 Modifier.fillMaxWidth(),

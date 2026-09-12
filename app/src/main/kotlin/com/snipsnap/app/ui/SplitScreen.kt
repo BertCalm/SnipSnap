@@ -369,10 +369,7 @@ fun SplitScreen(
                 }
                 pendingPrint = null
                 onKitUpdated(updated)
-                onToast(
-                    if (existed) "PAD ${splitPadLabel(slot)} REPLACED WITH THE SPLIT. ORIGINAL SLEEPS IN THE BIN."
-                    else "SPLIT PRINTED TO PAD ${splitPadLabel(slot)}.",
-                )
+                onToast(Copy.splitPrintedToPad(splitPadLabel(slot), replaced = existed))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IllegalArgumentException) {

@@ -335,7 +335,7 @@ fun SnipsScreen(
                 ) {
                     // Plain, not the tape-metaphor voice (`Copy`'s own quips) —
                     // this screen's own locked tone, per the task brief.
-                    TapeText("NO SNIPS YET", TapeType.lcdSmall, scheme.lcdInk.tape)
+                    TapeText(Copy.SNIPS_EMPTY, TapeType.lcdSmall, scheme.lcdInk.tape)
                 }
             } else {
                 LazyColumn(

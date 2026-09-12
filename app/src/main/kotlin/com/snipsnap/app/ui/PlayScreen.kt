@@ -97,7 +97,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
                 .padding(14.dp),
             contentAlignment = Alignment.Center,
         ) {
-            TapeText("NO TAPE IN THE DECK. OPEN ONE ON THE SHELF.", TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+            TapeText(Copy.NO_TAPE_IN_DECK, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
         }
         return
     }
