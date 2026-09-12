@@ -7,6 +7,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,7 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -1004,12 +1005,15 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
                 .padding(24.dp)
                 .raisedBevel(scheme)
                 // Swallows the tap so it doesn't fall through to the
-                // scrim's CANCEL below — onClick is genuinely empty, so
-                // this isn't a control anyone can act on and gets no
-                // invented label; clearAndSetSemantics drops it from the
-                // accessibility tree entirely (MessageBox.kt's pattern).
-                .tapeClick(label = null) { }
-                .clearAndSetSemantics { }
+                // scrim's CANCEL below. A raw pointerInput, not tapeClick:
+                // this Column's real children below (CANCEL/DELETE or
+                // CANCEL/RENAME) carry their own accessible names, and
+                // clickable()'s own semantics would add a second, nameless
+                // actionable node wrapping all of them. A bare gesture
+                // detector registers no semantics node at all, consuming
+                // the touch without touching the accessibility tree
+                // (MessageBox.kt's pattern).
+                .pointerInput(Unit) { detectTapGestures { } }
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -1066,12 +1070,15 @@ private fun KitRenameDialog(initialName: String, onCancel: () -> Unit, onConfirm
                 .padding(24.dp)
                 .raisedBevel(scheme)
                 // Swallows the tap so it doesn't fall through to the
-                // scrim's CANCEL below — onClick is genuinely empty, so
-                // this isn't a control anyone can act on and gets no
-                // invented label; clearAndSetSemantics drops it from the
-                // accessibility tree entirely (MessageBox.kt's pattern).
-                .tapeClick(label = null) { }
-                .clearAndSetSemantics { }
+                // scrim's CANCEL below. A raw pointerInput, not tapeClick:
+                // this Column's real children below (CANCEL/DELETE or
+                // CANCEL/RENAME) carry their own accessible names, and
+                // clickable()'s own semantics would add a second, nameless
+                // actionable node wrapping all of them. A bare gesture
+                // detector registers no semantics node at all, consuming
+                // the touch without touching the accessibility tree
+                // (MessageBox.kt's pattern).
+                .pointerInput(Unit) { detectTapGestures { } }
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -1157,13 +1164,13 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
                 .fillMaxWidth()
                 .padding(12.dp)
                 .raisedBevel(scheme)
-                // Swallow taps so the scrim's dismiss doesn't fire through
-                // — onClick is genuinely empty, so this isn't a control
-                // anyone can act on and gets no invented label;
-                // clearAndSetSemantics drops it from the accessibility
-                // tree entirely (MessageBox.kt's pattern).
-                .tapeClick(label = null) { }
-                .clearAndSetSemantics { }
+                // Swallow taps so the scrim's dismiss doesn't fire through.
+                // A raw pointerInput, not tapeClick: the starter rows below
+                // carry their own accessible names, and clickable()'s own
+                // semantics would add a second, nameless actionable node
+                // wrapping all of them. A bare gesture detector registers
+                // no semantics node at all (MessageBox.kt's pattern).
+                .pointerInput(Unit) { detectTapGestures { } }
                 .padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
