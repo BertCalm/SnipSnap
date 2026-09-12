@@ -40,6 +40,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.selected
@@ -142,6 +144,28 @@ private const val GROOVE_FEEL_STEP = 20
 
 /** A note reads "lit" for this many steps after the needle passes it. */
 private const val GROOVE_LIT_WINDOW = 0.7f
+
+/**
+ * Height of the fade scrim over the grouped-controls scroll region's
+ * bottom edge (batch 3b follow-up).
+ *
+ * `MenuRow` (Chrome.kt, September UAT finding 10) already establishes the
+ * house rule for this class of problem — "it scrolled with no arrow, fade
+ * or cue of any kind" was itself the bug — but it solves it with a
+ * reserved gutter and a directional glyph, because a tab strip has no
+ * content living at the edge to protect: the row is padded in from
+ * [Layout.MENU_EDGE_W] on both sides, so the cue never overlaps a tab.
+ * This screen's scroll region has no such margin — TRANSPORT / SHAPE THE
+ * GROOVE / SEND IT SOMEWHERE run edge to edge, so whichever control the
+ * viewport happens to end on (the FEEL stepper, at the 1080x2400/420dpi
+ * repro) is bisected by the same hard clip a gutter would have avoided.
+ * A fade reads as "this continues" where a hard clip reads as "this
+ * broke"; an arrow glyph would just be a second thing floating on top of
+ * the same severed control. Paired with a matching spacer at the bottom
+ * of the scrolled content (below) so the last control can be dragged
+ * fully clear of the scrim rather than resting permanently behind it.
+ */
+private const val GROOVE_SCROLL_EDGE_DP = 20
 
 private val PROG_NAMES = listOf(
     "PROG A · THE BREAK",
@@ -1594,123 +1618,167 @@ fun GrooveScreen(
                     // instead of the roll getting only what these rows
                     // declined to use, and this region still scrolls on a
                     // short viewport that can't fit every group at once.
-                    Column(
-                        Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(9.dp),
-                    ) {
-                        TapeText("TRANSPORT", TapeType.pixelSmall, scheme.ink3.tape)
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .height(Layout.MIN_HIT_TARGET.dp)
-                                .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
-                                .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-                                .tapeClick(label = null) { playing = !playing },
-                            contentAlignment = Alignment.Center,
+                    //
+                    // Batch 3b follow-up: named rather than the previous
+                    // inline `rememberScrollState()` so the fade scrim
+                    // below can read `canScrollForward` off the same
+                    // instance — see [GROOVE_SCROLL_EDGE_DP]'s own KDoc for
+                    // why this region needs one and MenuRow's arrow cue
+                    // doesn't.
+                    val groupedControlsScroll = rememberScrollState()
+                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                        Column(
+                            Modifier.fillMaxSize().verticalScroll(groupedControlsScroll),
+                            verticalArrangement = Arrangement.spacedBy(9.dp),
                         ) {
-                            TapeText(if (playing) "■ STOP" else "► PLAY", TapeType.pixel, scheme.lcdInk.tape)
-                        }
-
-                        TapeText("SHAPE THE GROOVE", TapeType.pixelSmall, scheme.ink3.tape)
-                        Row(
-                            Modifier.fillMaxWidth().height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            SwingStepper("−", scheme) { swingPercent = (swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN) }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
-                                TapeText("RIDES PROG B", TapeType.pixelSmall, scheme.ink3.tape)
+                            TapeText("TRANSPORT", TapeType.pixelSmall, scheme.ink3.tape)
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(Layout.MIN_HIT_TARGET.dp)
+                                    .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
+                                    .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
+                                    .tapeClick(label = null) { playing = !playing },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                TapeText(if (playing) "■ STOP" else "► PLAY", TapeType.pixel, scheme.lcdInk.tape)
                             }
-                            SwingStepper("+", scheme) { swingPercent = (swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX) }
-                        }
 
-                        FeelRow(
-                            feel = feel,
-                            seed = seed,
-                            scheme = scheme,
-                            // Deliberately does NOT clearJustLanded — FEEL is a
-                            // non-destructive preview lens, same as `► PLAY`
-                            // above. The take is already written to disk once
-                            // this row is up, so the row is the only way back;
-                            // dismissing it just because the user nudged FEEL to
-                            // audition the take tighter or looser would strand
-                            // them with no undo. See `justLanded`'s own KDoc.
-                            onChange = { feel = it },
-                            onRecentre = {
-                                if (feel != 0) {
-                                    feel = 0
-                                    onToast(Copy.FEEL_RECENTRED)
+                            TapeText("SHAPE THE GROOVE", TapeType.pixelSmall, scheme.ink3.tape)
+                            Row(
+                                Modifier.fillMaxWidth().height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                SwingStepper("−", scheme) { swingPercent = (swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN) }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
+                                    TapeText("RIDES PROG B", TapeType.pixelSmall, scheme.ink3.tape)
                                 }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            // HUMANIZE ⚄ is gone (feel axis, task 6): it jittered
-                            // PROG A once and forced a jump to it — a control
-                            // whose whole job the feel axis now does continuously,
-                            // on every program the axis rides. RESEED only rerolls
-                            // the template feel is currently drawing from, so it's
-                            // disabled at feel <= 0 (nothing is applying it yet)
-                            // and, unlike the old button, never touches progIndex:
-                            // the axis reaches A, C and D alike, so there is no
-                            // one program to jump to.
-                            GrooveActionButton("⚄ RESEED", scheme, Modifier.weight(1f), enabled = !busy && feel > 0) {
-                                clearJustLanded()
-                                seed++
-                                onToast(Copy.feelRolled(seed))
+                                SwingStepper("+", scheme) { swingPercent = (swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX) }
                             }
-                            GrooveActionButton("EDIT STEPS", scheme, Modifier.weight(1f), enabled = !busy) { forkToE() }
+
+                            FeelRow(
+                                feel = feel,
+                                seed = seed,
+                                scheme = scheme,
+                                // Deliberately does NOT clearJustLanded — FEEL is a
+                                // non-destructive preview lens, same as `► PLAY`
+                                // above. The take is already written to disk once
+                                // this row is up, so the row is the only way back;
+                                // dismissing it just because the user nudged FEEL to
+                                // audition the take tighter or looser would strand
+                                // them with no undo. See `justLanded`'s own KDoc.
+                                onChange = { feel = it },
+                                onRecentre = {
+                                    if (feel != 0) {
+                                        feel = 0
+                                        onToast(Copy.FEEL_RECENTRED)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                // HUMANIZE ⚄ is gone (feel axis, task 6): it jittered
+                                // PROG A once and forced a jump to it — a control
+                                // whose whole job the feel axis now does continuously,
+                                // on every program the axis rides. RESEED only rerolls
+                                // the template feel is currently drawing from, so it's
+                                // disabled at feel <= 0 (nothing is applying it yet)
+                                // and, unlike the old button, never touches progIndex:
+                                // the axis reaches A, C and D alike, so there is no
+                                // one program to jump to.
+                                GrooveActionButton("⚄ RESEED", scheme, Modifier.weight(1f), enabled = !busy && feel > 0) {
+                                    clearJustLanded()
+                                    seed++
+                                    onToast(Copy.feelRolled(seed))
+                                }
+                                GrooveActionButton("EDIT STEPS", scheme, Modifier.weight(1f), enabled = !busy) { forkToE() }
+                            }
+
+                            TapeText("SEND IT SOMEWHERE", TapeType.pixelSmall, scheme.ink3.tape)
+                            // Batch 3, Task 1: one row of four rather than a
+                            // 3-plus-1 or 2x2 split — post Task 4's ▸ sweep every
+                            // label here is five characters or fewer at 9sp, so
+                            // a single row reads fine and costs this column one
+                            // fewer row than any split would, which is the row
+                            // NeedleRoll actually needed back.
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                // Batch 3, Task 4: MIDI writes files in place —
+                                // no navigation, no panel — so it lost the ▸ a
+                                // navigate/panel-opener keeps.
+                                GrooveActionButton("MIDI", scheme, Modifier.weight(1f), enabled = !midiBusy, accent = true) { exportMidi() }
+                                // SONG ▸ — the same four programs laid into a structure, not
+                                // just cycled: intro/theme/variation/the turn/reprise/outro,
+                                // one tap away from what this screen already has loaded.
+                                GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
+                                    clearJustLanded()
+                                    onArrange(swingPercent, feel / 100f, feelTemplate)
+                                }
+                                // ORBIT ▸ — the kit on rings of different lengths, one
+                                // needle speed: polymeter and polyrhythm from the same
+                                // pads this screen already has loaded.
+                                GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+                                    clearJustLanded()
+                                    onOrbit()
+                                }
+                                // CHART writes a text file in place — no
+                                // navigation, no panel — so it lost its ▸ too
+                                // (Task 4).
+                                GrooveActionButton(
+                                    if (chartBusy) Copy.CHART_BUSY else "CHART",
+                                    scheme,
+                                    Modifier.weight(1f),
+                                    enabled = !chartBusy,
+                                    accent = true,
+                                ) { exportChart() }
+                            }
+
+                            TapeText(
+                                "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
+                                TapeType.pixelSmall,
+                                scheme.ink3.tape,
+                                Modifier.fillMaxWidth(),
+                                maxLines = 2,
+                            )
+                            if (offLaneCount > 0) {
+                                TapeText(Copy.offLane(offLaneCount), TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
+                            }
+
+                            // Trailing clearance, sized to match the scrim
+                            // below: without it the last control (the off-lane
+                            // note, or SEND IT SOMEWHERE's row above it on a kit
+                            // with nothing off-lane) rests permanently half
+                            // behind the fade rather than scrolling fully past
+                            // it — the same "always cuts something somewhere"
+                            // failure the boundary itself has, just moved one
+                            // control later.
+                            Box(Modifier.fillMaxWidth().height(GROOVE_SCROLL_EDGE_DP.dp))
                         }
 
-                        TapeText("SEND IT SOMEWHERE", TapeType.pixelSmall, scheme.ink3.tape)
-                        // Batch 3, Task 1: one row of four rather than a
-                        // 3-plus-1 or 2x2 split — post Task 4's ▸ sweep every
-                        // label here is five characters or fewer at 9sp, so
-                        // a single row reads fine and costs this column one
-                        // fewer row than any split would, which is the row
-                        // NeedleRoll actually needed back.
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            // Batch 3, Task 4: MIDI writes files in place —
-                            // no navigation, no panel — so it lost the ▸ a
-                            // navigate/panel-opener keeps.
-                            GrooveActionButton("MIDI", scheme, Modifier.weight(1f), enabled = !midiBusy, accent = true) { exportMidi() }
-                            // SONG ▸ — the same four programs laid into a structure, not
-                            // just cycled: intro/theme/variation/the turn/reprise/outro,
-                            // one tap away from what this screen already has loaded.
-                            GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
-                                clearJustLanded()
-                                onArrange(swingPercent, feel / 100f, feelTemplate)
-                            }
-                            // ORBIT ▸ — the kit on rings of different lengths, one
-                            // needle speed: polymeter and polyrhythm from the same
-                            // pads this screen already has loaded.
-                            GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
-                                clearJustLanded()
-                                onOrbit()
-                            }
-                            // CHART writes a text file in place — no
-                            // navigation, no panel — so it lost its ▸ too
-                            // (Task 4).
-                            GrooveActionButton(
-                                if (chartBusy) Copy.CHART_BUSY else "CHART",
-                                scheme,
-                                Modifier.weight(1f),
-                                enabled = !chartBusy,
-                                accent = true,
-                            ) { exportChart() }
-                        }
-
-                        TapeText(
-                            "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
-                            TapeType.pixelSmall,
-                            scheme.ink3.tape,
-                            Modifier.fillMaxWidth(),
-                            maxLines = 2,
-                        )
-                        if (offLaneCount > 0) {
-                            TapeText(Copy.offLane(offLaneCount), TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
+                        // The fade itself: transparent to `scheme.gray.tape`,
+                        // the exact fill `windowFrame` paints behind this
+                        // whole screen (App.kt's content Box), so a control
+                        // sliced by the viewport's hard bottom edge reads as
+                        // "the rest continues below" rather than "this
+                        // broke". Gated on `canScrollForward` — same rule
+                        // MenuEdge's arrow uses — so a viewport tall enough
+                        // to show every group (a short groove, a tablet,
+                        // whatever) never draws a fade over nothing.
+                        //
+                        // Not `clickable`/`pointerInput`: a bare `background`
+                        // Box takes no part in hit-testing, so it can sit on
+                        // top of the FEEL stepper or whatever else ends up
+                        // under it without stealing its taps.
+                        if (groupedControlsScroll.canScrollForward) {
+                            Box(
+                                Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .height(GROOVE_SCROLL_EDGE_DP.dp)
+                                    .background(Brush.verticalGradient(listOf(Color.Transparent, scheme.gray.tape))),
+                            )
                         }
                     }
 
