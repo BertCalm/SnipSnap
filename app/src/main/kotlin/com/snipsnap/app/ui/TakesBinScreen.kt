@@ -596,7 +596,9 @@ private fun TakeRowLine(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                        .let { if (!busy) it.tapeClick(label = null) { onRestore(file, row.label, row.lastModifiedMillis) } else it }
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12).
+                        .tapeClick(label = null, enabled = !busy) { onRestore(file, row.label, row.lastModifiedMillis) }
                         .padding(horizontal = 8.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -653,7 +655,9 @@ private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (K
             Modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                .let { if (!busy) it.tapeClick(label = null) { onRestore(row.entry) } else it }
+                // Always clickable, `!busy` forwarded rather than dropped
+                // (accessibility audit finding 12).
+                .tapeClick(label = null, enabled = !busy) { onRestore(row.entry) }
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {

@@ -826,7 +826,11 @@ internal fun SlotChooserOverlay(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                        .let { if (!busy) it.tapeClick(label = null, onClick = onCancel) else it }
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12) — the
+                        // "…" label swap below is this control's visual
+                        // distinction, so no separate colour dim is needed.
+                        .tapeClick(label = null, enabled = !busy, onClick = onCancel)
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {

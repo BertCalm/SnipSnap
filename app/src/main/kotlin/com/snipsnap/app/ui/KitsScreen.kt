@@ -740,7 +740,9 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
             Modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .border(1.dp, scheme.ink2.tape, RoundedCornerShape(4.dp))
-                .let { if (!busy) it.tapeClick(label = null) { onShare(room) } else it }
+                // Always clickable, `!busy` forwarded rather than dropped
+                // (accessibility audit finding 12).
+                .tapeClick(label = null, enabled = !busy) { onShare(room) }
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -753,7 +755,9 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
                     .border(2.dp, Brush.linearGradient(listOf(BinRedGlow, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
-                    .let { if (!busy) it.tapeClick(label = null) { onForget(room) } else it },
+                    // Always clickable, `!busy` forwarded rather than
+                    // dropped (accessibility audit finding 12).
+                    .tapeClick(label = null, enabled = !busy) { onForget(room) },
                 contentAlignment = Alignment.Center,
             ) {
                 TapeText("FORGET → BIN", TapeType.pixel, if (busy) scheme.ink3.tape else BinRedGlow)
@@ -793,7 +797,9 @@ private fun BinnedRoomRow(binned: Rooms.Binned, busy: Boolean, onRestore: (Rooms
             Modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                .let { if (!busy) it.tapeClick(label = null) { onRestore(binned) } else it }
+                // Always clickable, `!busy` forwarded rather than dropped
+                // (accessibility audit finding 12).
+                .tapeClick(label = null, enabled = !busy) { onRestore(binned) }
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -927,7 +933,9 @@ private fun KitRow(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme)
-                        .let { if (!busy) it.tapeClick(label = null) { onRequestRename(entry) } else it }
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12).
+                        .tapeClick(label = null, enabled = !busy) { onRequestRename(entry) }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -938,7 +946,9 @@ private fun KitRow(
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme)
                         .border(2.dp, Brush.linearGradient(listOf(BinRedGlow, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
-                        .let { if (!busy) it.tapeClick(label = null) { onRequestDelete(entry) } else it }
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12).
+                        .tapeClick(label = null, enabled = !busy) { onRequestDelete(entry) }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {

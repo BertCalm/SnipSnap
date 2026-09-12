@@ -2468,7 +2468,11 @@ private fun TreatmentCard(
                                     else -> null
                                 },
                             )
-                            .let { if (tappable) it.tapeClick(label = null) { onSegmentTap(seg) } else it }
+                            // Always clickable, `tappable` forwarded rather
+                            // than dropped so a non-tappable segment still
+                            // announces itself instead of vanishing from the
+                            // accessibility tree (finding 12).
+                            .tapeClick(label = null, enabled = tappable) { onSegmentTap(seg) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -2615,11 +2619,13 @@ private fun MutateCard(
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                            .let { if (!busy) it.tapeClick(label = null) { onMode(m) } else it }
+                            // Always clickable, `!busy` forwarded rather
+                            // than dropped (accessibility audit finding 12).
+                            .tapeClick(label = null, enabled = !busy) { onMode(m) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(m, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                        TapeText(m, TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
                     }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -2637,11 +2643,17 @@ private fun MutateCard(
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                            .let { if (!busy) it.tapeClick(label = null) { onPartner(p) } else it }
+                            // Always clickable, `!busy` forwarded rather
+                            // than dropped (accessibility audit finding 12).
+                            .tapeClick(label = null, enabled = !busy) { onPartner(p) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(MutateSheet.padTag(p), TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                        TapeText(
+                            MutateSheet.padTag(p),
+                            TapeType.pixel,
+                            if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                        )
                     }
                 }
                 // A short last row keeps the same chip width as a full one.
@@ -2662,11 +2674,19 @@ private fun MutateCard(
                                 .weight(1f)
                                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                                 .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                                .let { if (!busy) it.tapeClick(label = null) { onRoom(r) } else it }
+                                // Always clickable, `!busy` forwarded
+                                // rather than dropped (accessibility audit
+                                // finding 12).
+                                .tapeClick(label = null, enabled = !busy) { onRoom(r) }
                                 .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            TapeText(r, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 1)
+                            TapeText(
+                                r,
+                                TapeType.pixel,
+                                if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                                maxLines = 1,
+                            )
                         }
                     }
                     repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -2687,11 +2707,19 @@ private fun MutateCard(
                                 .weight(1f)
                                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                                 .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                                .let { if (!busy) it.tapeClick(label = null) { onPickKit(k) } else it }
+                                // Always clickable, `!busy` forwarded
+                                // rather than dropped (accessibility audit
+                                // finding 12).
+                                .tapeClick(label = null, enabled = !busy) { onPickKit(k) }
                                 .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            TapeText(k, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 1)
+                            TapeText(
+                                k,
+                                TapeType.pixel,
+                                if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                                maxLines = 1,
+                            )
                         }
                     }
                     repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -2708,11 +2736,18 @@ private fun MutateCard(
                                     .weight(1f)
                                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                                     .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                                    .let { if (!busy) it.tapeClick(label = null) { onOtherPad(p) } else it }
+                                    // Always clickable, `!busy` forwarded
+                                    // rather than dropped (accessibility
+                                    // audit finding 12).
+                                    .tapeClick(label = null, enabled = !busy) { onOtherPad(p) }
                                     .padding(horizontal = 4.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                TapeText(MutateSheet.padTag(p), TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                                TapeText(
+                                    MutateSheet.padTag(p),
+                                    TapeType.pixel,
+                                    if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                                )
                             }
                         }
                         repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -2835,11 +2870,13 @@ private fun OutsideCard(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                        .let { if (!busy) it.tapeClick(label = null) { onMove(m) } else it }
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12).
+                        .tapeClick(label = null, enabled = !busy) { onMove(m) }
                         .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(m, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                    TapeText(m, TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
                 }
             }
         }

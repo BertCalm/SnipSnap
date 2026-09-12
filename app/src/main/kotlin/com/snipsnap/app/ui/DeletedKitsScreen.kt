@@ -283,7 +283,9 @@ private fun DeletedKitRow(row: KitShelf.BinnedKit, busy: Boolean, onRestore: () 
             Modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                .let { if (!busy) it.tapeClick(label = null, onClick = onRestore) else it }
+                // Always clickable, `!busy` forwarded rather than dropped
+                // (accessibility audit finding 12).
+                .tapeClick(label = null, enabled = !busy, onClick = onRestore)
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
