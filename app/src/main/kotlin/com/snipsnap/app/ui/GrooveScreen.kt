@@ -216,6 +216,39 @@ fun GrooveScreen(
     onSwingPercentChange: (Int) -> Unit = {},
     progIndex: Int = 0,
     onProgIndexChange: (Int) -> Unit = {},
+    /**
+     * Follow-up to the fix above: `seed` was left behind when
+     * feel/swingPercent/progIndex were hoisted, but it is one setting split
+     * across two variables with `feel`, not a separate one — `feelTemplate`
+     * below is `remember(seed) { GrooveFeel.generated(seed) }`, and
+     * [FeelRow]'s own label reads `FEEL · LOOSE 40% · #$seed`. Restoring
+     * `feel` alone after a tab switch while `seed` silently reset to 1 would
+     * show that label claiming template #3 while PROG A–D were actually
+     * rendering template #1 underneath it — a readout stating something
+     * false, not merely a forgotten setting. Hoisted the same way, for the
+     * same reason: keyed on the open kit's dir so a KIT CHANGE still resets
+     * it.
+     */
+    seed: Int = 1,
+    onSeedChange: (Int) -> Unit = {},
+    /**
+     * Follow-up to the fix above, the second half of it: `justLanded` (the
+     * post-take EDIT THIS TAKE / UNDO TAKE row) and `preTake` (the pre-record
+     * snapshot UNDO TAKE restores) were the ORIGINAL motivation for
+     * `9a0a9772`'s fix — the take is already written to disk by the time
+     * this row shows, so these two are the only route back to the pre-take
+     * state — but they were left as plain `remember(kitDir)` locals when
+     * FEEL/SWING/PROG were hoisted, so a tab switch after RECORDing a take
+     * reached the same data loss through a second door: record a take,
+     * switch tabs, come back, and the row (and the only way back) is gone.
+     * Hoisted the same way as the other three: a KIT CHANGE must still reset
+     * both, since a `preTake` snapshot captured under one kit must never be
+     * restorable onto a different kit that's since been opened.
+     */
+    justLanded: Boolean = false,
+    onJustLandedChange: (Boolean) -> Unit = {},
+    preTake: Mpc3Clip? = null,
+    onPreTakeChange: (Mpc3Clip?) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
 
@@ -346,7 +379,9 @@ fun GrooveScreen(
     // push local writes back up so a tab switch (which tears this whole
     // composable down) doesn't lose them.
     var progIndex by remember(kitDir) { mutableIntStateOf(progIndex) }
-    var seed by remember(kitDir) { mutableIntStateOf(1) }
+    // Shadows the incoming `seed` parameter — see this function's own KDoc
+    // on why `seed` had to be hoisted alongside feel/swingPercent/progIndex.
+    var seed by remember(kitDir) { mutableIntStateOf(seed) }
     // Rolled once per seed, not per frame: the clock reads this every tick.
     val feelTemplate = remember(seed) { GrooveFeel.generated(seed) }
     var swingPercent by remember(kitDir) { mutableIntStateOf(swingPercent) }
@@ -355,15 +390,16 @@ fun GrooveScreen(
     // an export.
     var feel by remember(kitDir) { mutableIntStateOf(feel) }
     // Bug fix (tab-switch data loss) — see this function's own KDoc on the
-    // `feel`/`swingPercent`/`progIndex` parameters just above: these three
+    // `feel`/`swingPercent`/`progIndex`/`seed` parameters just above: these
     // effects are the ONLY thing keeping App's hoisted copies in sync with
     // whatever this screen's many mutation sites do to the locals of the
     // same name, so a tab switch mid-session (App tears this whole
     // composable down, `remember(kitDir)` and all) restores exactly what
     // was on screen instead of quietly resetting to AS PLAYED / default
-    // swing / PROG A.
+    // swing / PROG A / template #1.
     LaunchedEffect(feel) { onFeelChange(feel) }
     LaunchedEffect(swingPercent) { onSwingPercentChange(swingPercent) }
+    LaunchedEffect(seed) { onSeedChange(seed) }
     LaunchedEffect(progIndex) { onProgIndexChange(progIndex) }
     var playing by remember(kitDir) { mutableStateOf(false) }
     var posSteps by remember(kitDir) { mutableFloatStateOf(0f) }
@@ -381,7 +417,11 @@ fun GrooveScreen(
     // `recording`/`countingIn` themselves flip.
     var recording by remember(kitDir) { mutableStateOf(false) }
     var countingIn by remember(kitDir) { mutableStateOf(false) }
-    var preTake by remember(kitDir) { mutableStateOf<Mpc3Clip?>(null) }
+    // Shadows the incoming `preTake` parameter — see this function's own
+    // KDoc on why `preTake` (and `justLanded` below) had to be hoisted
+    // alongside feel/swingPercent/progIndex/seed.
+    var preTake by remember(kitDir) { mutableStateOf<Mpc3Clip?>(preTake) }
+    LaunchedEffect(preTake) { onPreTakeChange(preTake) }
     var recordBars by remember(kitDir) { mutableIntStateOf(2) }
     var take by remember(kitDir) { mutableStateOf<LiveRecord.Take?>(null) }
 
@@ -410,7 +450,15 @@ fun GrooveScreen(
     // is exactly what a person does BEFORE deciding whether to keep it, and
     // losing the offer because they listened first would be data loss
     // dressed as a UI reset.
-    var justLanded by remember(kitDir) { mutableStateOf(false) }
+    //
+    // Bug fix (tab-switch data loss, follow-up): shadows the incoming
+    // `justLanded` parameter — this flag (and `preTake` above) used to be
+    // `remember(kitDir)` locals only, so a tab switch after RECORDing a
+    // take reset both and lost this row — the only route back to the
+    // pre-take state — the same way FEEL used to reset before `9a0a9772`.
+    // See this function's own KDoc on the `justLanded`/`preTake` parameters.
+    var justLanded by remember(kitDir) { mutableStateOf(justLanded) }
+    LaunchedEffect(justLanded) { onJustLandedChange(justLanded) }
 
     // EDIT THIS TAKE's own armed confirm (bug fix, live-record plan Task 6):
     // [GrooveEdit.fork] silently hands back a pre-existing E when one is

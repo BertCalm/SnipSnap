@@ -90,6 +90,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.KitStore
+import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.InstantKit
@@ -334,6 +335,24 @@ fun App(shelf: KitShelf) {
     var grooveFeel by remember(open?.dir) { mutableIntStateOf(0) }
     var grooveSwingPercent by remember(open?.dir) { mutableIntStateOf(GROOVE_SWING_DEFAULT) }
     var grooveProgIndex by remember(open?.dir) { mutableIntStateOf(0) }
+    // Follow-up to the three above: `seed` is one setting split across two
+    // variables with `grooveFeel`, not a separate one — GrooveScreen's own
+    // FeelRow label reads `FEEL · LOOSE 40% · #$seed`, and its feelTemplate
+    // is derived from `seed` alone. Leaving `seed` behind meant a tab switch
+    // could restore the FEEL percentage while silently rerolling the
+    // template underneath it — the readout would show a stale `#n` for a
+    // groove that no longer matched what was on screen. `grooveJustLanded`/
+    // `groovePreTake` are the post-take EDIT THIS TAKE / UNDO TAKE row and
+    // its restore snapshot — the SAME data-loss bug `9a0a9772` fixed for the
+    // FEEL stepper, reached through a second door: recording a take,
+    // switching tabs, and coming back used to lose the row (and the only
+    // way back to the pre-take state) exactly as FEEL used to reset. All
+    // three keyed identically to the block above — a KIT CHANGE must still
+    // reset them, so a `preTake` snapshot captured under one kit can never
+    // be restored onto a different kit that's since been opened.
+    var grooveSeed by remember(open?.dir) { mutableIntStateOf(1) }
+    var grooveJustLanded by remember(open?.dir) { mutableStateOf(false) }
+    var groovePreTake by remember(open?.dir) { mutableStateOf<Mpc3Clip?>(null) }
     /** ORBIT: GROOVE's other overlay, the circular sequencer — same lifecycle as [arrangeOpen]. */
     var orbitOpen by remember { mutableStateOf(false) }
     // SNIPS (Task 3): a shelf-level overlay, not KIT-scoped like PAD SHEET/
@@ -680,6 +699,27 @@ fun App(shelf: KitShelf) {
     // GROOVE's reload request: bumped when TAPE rewrites the open kit's
     // groove (READ AS GROOVE, STEAL THE FEEL) so a GROOVE already up reloads.
     var grooveReload by remember { mutableStateOf(0) }
+    // Follow-up, a door the hoist above opened: `grooveJustLanded`/
+    // `groovePreTake` surviving a tab switch means they can now ALSO survive
+    // a trip through TAPE and back — READ AS GROOVE / STEAL THE FEEL below
+    // rewrite the open kit's groove.json out from under GROOVE and bump
+    // `grooveReload` for exactly that reason, but neither ever touches
+    // `justLanded`. Before this hoist that never mattered: leaving GROOVE
+    // for TAPE tore the whole composable (and `justLanded` with it) down
+    // regardless. Now it doesn't, so without this: land a take, hop to TAPE,
+    // steal a different feel into the SAME kit, hop back — GROOVE would show
+    // a stale UNDO TAKE row over a base that isn't this take's own pre-state
+    // at all. Tapping it would clobber TAPE's rewrite with an unrelated
+    // snapshot and toast [Copy.TAKE_UNDONE], a claim about what happened
+    // that wouldn't be true. `grooveReload` only ever increments from those
+    // two TAPE actions — never from GROOVE's own writes, which deliberately
+    // avoid bumping it (see `GrooveScreen.stopRecording`'s own KDoc) — so
+    // keying on it alone here, not `open?.dir` too, is deliberate: a KIT
+    // CHANGE is already covered by the `remember(open?.dir)` block above.
+    // `groovePreTake` is left alone, same as `clearJustLanded` itself never
+    // nulls `preTake` — `justLanded` alone gates whether the row (and the
+    // snapshot it would restore) is ever reachable.
+    LaunchedEffect(grooveReload) { grooveJustLanded = false }
     LaunchedEffect(shared) {
         val uri = shared ?: return@LaunchedEffect
         // The status line is borrowed only when nothing else holds it: a
@@ -2341,6 +2381,12 @@ fun App(shelf: KitShelf) {
                                     onSwingPercentChange = { grooveSwingPercent = it },
                                     progIndex = grooveProgIndex,
                                     onProgIndexChange = { grooveProgIndex = it },
+                                    seed = grooveSeed,
+                                    onSeedChange = { grooveSeed = it },
+                                    justLanded = grooveJustLanded,
+                                    onJustLandedChange = { grooveJustLanded = it },
+                                    preTake = groovePreTake,
+                                    onPreTakeChange = { groovePreTake = it },
                                 )
                             }
                         }
