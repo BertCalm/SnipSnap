@@ -890,11 +890,14 @@ fun OrbitScreen(
                 // The readout is THE SET's door: tap it for the bar. Past the
                 // clip's 64-bar ceiling the cycle line turns warn-coloured,
                 // so OUT's refusal is never the first anyone hears of it.
-                // No label of its own: a label here would replace the two
-                // lines' text for a screen reader, and the readout's values
-                // are the point. The footer names the tap.
+                // Named for what the tap does, not the live numbers it
+                // shows (an accessibility-tree dump showed the two
+                // TapeText lines below don't merge into this clickable
+                // Column's name for free, and re-reading a live playhead
+                // position on every swipe would be noise, not signal
+                // anyway) — follows setPanelOpen the way a toggle should.
                 Column(
-                    Modifier.tapeClick(label = null) {
+                    Modifier.tapeClick(label = if (setPanelOpen) "CLOSE THE SET" else "OPEN THE SET") {
                         setPanelOpen = !setPanelOpen
                         snipPickerOpen = false
                         outOpen = false
@@ -1012,7 +1015,7 @@ fun OrbitScreen(
                                     .height(40.dp)
                                     .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
                                     .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(4.dp))
-                                    .tapeClick(label = null) { addSnipRing(file) }
+                                    .tapeClick(label = "ADD RING ${SnipStore.displayName(file).uppercase()}") { addSnipRing(file) }
                                     .padding(horizontal = 10.dp),
                                 contentAlignment = Alignment.CenterStart,
                             ) {
@@ -1348,7 +1351,11 @@ fun OrbitScreen(
                             Modifier
                                 .weight(1f)
                                 .heightIn(min = 36.dp)
-                                .tapeClick(label = null) { stepsPickerOpen = true },
+                                // Names the action the chevron draws, not the
+                                // live count it opens onto (an accessibility-
+                                // tree dump showed the TapeText below doesn't
+                                // merge into this clickable Box for free).
+                                .tapeClick(label = "EDIT STEPS") { stepsPickerOpen = true },
                             contentAlignment = Alignment.CenterStart,
                         ) {
                             TapeText(
@@ -1389,13 +1396,15 @@ fun OrbitScreen(
                         }
                     }
                     // The ring's place in the mix: level in tenths, pan in quarters.
-                    // Tap the readout to put it back — 100, or centre. The readouts
-                    // are unlabelled so a screen reader hears their values, not a
-                    // label in place of them; the − + ◀ ▶ chips carry the names.
+                    // Tap the readout to put it back — 100, or centre. Named
+                    // for that reset action rather than left to a descendant
+                    // merge (an accessibility-tree dump showed Compose does
+                    // not fold the TapeText below into this clickable Box
+                    // for free); the − + ◀ ▶ chips carry their own names.
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         SmallChip("−", scheme, description = "QUIETER") { updateRing(selected) { it.copy(level = (it.level - LEVEL_STEP).coerceAtLeast(0f)) } }
                         Box(
-                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = null) {
+                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "RESET LEVEL TO 100") {
                                 updateRing(selected) { it.copy(level = 1f) }
                             },
                             contentAlignment = Alignment.Center,
@@ -1405,7 +1414,7 @@ fun OrbitScreen(
                         SmallChip("+", scheme, description = "LOUDER") { updateRing(selected) { it.copy(level = (it.level + LEVEL_STEP).coerceAtMost(MAX_LEVEL)) } }
                         SmallChip("◀", scheme, description = "PAN LEFT") { updateRing(selected) { it.copy(pan = (it.pan - PAN_STEP).coerceAtLeast(-1f)) } }
                         Box(
-                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = null) {
+                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "RESET PAN TO CENTRE") {
                                 updateRing(selected) { it.copy(pan = 0f) }
                             },
                             contentAlignment = Alignment.Center,
@@ -2208,6 +2217,7 @@ private fun ActionButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     accent: Boolean = false,
+    /** What a screen reader says instead of [label], for a glyph-only button ("↺"). */
     description: String? = null,
     onClick: () -> Unit,
 ) {
@@ -2216,7 +2226,10 @@ private fun ActionButton(
             .height(Layout.MIN_HIT_TARGET.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
             .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(6.dp))
-            .tapeClick(label = description, enabled = enabled, onClick = onClick),
+            // Falls back to label itself (matches HeaderChip/SmallChip in
+            // this file) rather than to a descendant merge that Compose's
+            // clickable semantics do not actually perform.
+            .tapeClick(label = description ?: label, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape)
