@@ -1148,6 +1148,16 @@ object Copy {
     const val ORBIT_CLIP_FAILED = "CLIP FAILED. TRY AGAIN."
 
     /**
+     * The set could not be written to the kit's folder.
+     *
+     * Not "try again", because the edit is not lost — it is on screen and
+     * it is playing, and the thing that failed is the writing down. What
+     * the player needs to know is that leaving now costs them the edit,
+     * which is why this names the consequence rather than the operation.
+     */
+    const val ORBIT_SAVE_FAILED = "THE RINGS DID NOT SAVE. THEY PLAY, BUT THIS EDIT WILL NOT BE HERE NEXT TIME."
+
+    /**
      * The generic "X failed, try again" toast for the handful of call sites
      * where [action] is a runtime value, not a fixed verb — `App.kt`'s
      * `texture` (`TextureKits.Spec.verb`: SCULPT, STRETCH or FREEZE) and the

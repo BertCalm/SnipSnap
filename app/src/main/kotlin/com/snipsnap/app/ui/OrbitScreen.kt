@@ -216,9 +216,18 @@ fun OrbitScreen(
     // this an older bank and an older set reached the engine LAST and the
     // player heard the edit before the one they had just made.
     var edits by remember(kitDir) { mutableStateOf(0) }
-    // And the saves go one at a time, in the order they were asked for.
-    // `OrbitStore.save` writes the whole file; two of them at once is a
-    // file interleaved from two arrangements, which is not either of them.
+    // Which edit the prepared audio belongs to. `bank` and `set` are two
+    // variables and an edit moves them at different moments: `set` the
+    // instant the player acts, `bank` when its preparation finishes. Any
+    // path that hands the engine a (set, bank) PAIR has to know they are
+    // the same edit's, or it renders the new arrangement against the old
+    // audio — a ring whose sample has just changed, or a snip refitted to
+    // a tempo it no longer has.
+    var bankEdit by remember(kitDir) { mutableStateOf(0) }
+    // And the writes to the kit's folder go one at a time, in the order
+    // they were asked for. `OrbitStore.save` and `OrbitClip.save` each
+    // write a whole file; two at once is a file interleaved from two
+    // arrangements, which is not either of them.
     val savingOrder = remember(kitDir) { Mutex() }
 
     // The transport: null until PLAY. Bank and engine live across edits;
@@ -227,6 +236,11 @@ fun OrbitScreen(
     var engine by remember(kitDir) { mutableStateOf<OrbitEngine?>(null) }
     var sink by remember(kitDir) { mutableStateOf<AndroidAudioSink?>(null) }
     var audioThread by remember(kitDir) { mutableStateOf<Thread?>(null) }
+    // The start that is still preparing, held so backgrounding can cancel
+    // it: until the bank is ready there is no engine and no thread for
+    // `stopPlayback` to stop, and the continuation would otherwise open a
+    // sink and start audio after the screen had gone.
+    var startJob by remember(kitDir) { mutableStateOf<Job?>(null) }
     var bank by remember(kitDir) { mutableStateOf<OrbitBank?>(null) }
     var playing by remember(kitDir) { mutableStateOf(false) }
     var frame by remember(kitDir) { mutableLongStateOf(0L) }
@@ -279,6 +293,11 @@ fun OrbitScreen(
     }
 
     fun stopPlayback() {
+        // Before the engine, because there may not be one yet: a start
+        // still preparing its bank has no engine and no thread, and only
+        // cancelling its job stops it opening a sink a moment later.
+        startJob?.cancel()
+        startJob = null
         engine?.stop()
         audioThread?.join(300)
         sink?.close()
@@ -337,22 +356,44 @@ fun OrbitScreen(
         val edit = ++edits
         scope.launch {
             preparing = true
-            val prepared = withContext(Dispatchers.IO) {
+            val saved = withContext(Dispatchers.IO) {
                 savingOrder.withLock {
-                    runCatching { OrbitStore.save(next, kitDir) }
-                    OrbitBank.prepare(next, source, previous = bank)
+                    val wrote = runCatching { OrbitStore.save(next, kitDir) }
+                    wrote to OrbitBank.prepare(next, source, previous = bank)
                 }
+            }
+            val (wrote, prepared) = saved
+            // A save that failed is not a detail to swallow: the screen
+            // would go on showing an arrangement the next launch will not
+            // have. The edit still reaches the engine — what is on screen
+            // is what should be heard — but the player is told.
+            wrote.onFailure { e ->
+                Log.e("OrbitScreen", "commit: could not save the set", e)
+                onToast(Copy.ORBIT_SAVE_FAILED)
             }
             // Only the newest edit publishes. An older one that finished
             // late would put its own bank and its own set back on the
-            // engine — the edit before the one the player just made.
+            // engine — the edit before the one the player just made — and
+            // would clear `preparing` while the newest is still working,
+            // letting PLAY start against a bank that is not ready.
             if (edit == edits) {
                 bank = prepared
+                bankEdit = edit
                 engine?.apply(OrbitEngine.Prepared(next, prepared, solo))
+                preparing = false
             }
-            preparing = false
         }
     }
+
+    /**
+     * The prepared audio, but only while it belongs to the set on screen.
+     *
+     * Null while an edit is still preparing, and a caller with a (set,
+     * bank) pair to hand the engine must then do nothing: the preparation
+     * in flight will publish both together a moment later. Anything else
+     * plays the new arrangement through the old audio.
+     */
+    fun readyBank(): OrbitBank? = bank?.takeIf { bankEdit == edits }
 
     fun startPlayback() {
         val s = set ?: return
@@ -364,8 +405,13 @@ fun OrbitScreen(
         // arrangement the player had a moment ago and nothing was
         // guaranteed to correct it.
         val startedAt = edits
-        scope.launch {
+        // Held so it can be CANCELLED. Backgrounding calls `stopPlayback`,
+        // which could not reach this: while the bank is preparing there is
+        // no engine and no thread to stop, and the continuation would go
+        // on to open a sink and start audio after the app had gone away.
+        startJob = scope.launch {
             val prepared = withContext(Dispatchers.IO) { OrbitBank.prepare(s, source, previous = bank) }
+            if (!isActive) return@launch
             val audioSink = AndroidAudioSink(s.sampleRate)
             val e = OrbitEngine(s, prepared, audioSink, initialSolo = solo)
             sink = audioSink
@@ -373,14 +419,15 @@ fun OrbitScreen(
             audioThread = thread(name = "snipsnap-orbit", isDaemon = true) { e.run() }
             playing = true
             preparing = false
+            bank = prepared
+            bankEdit = startedAt
             val now = set
-            val newer = bank
-            if (edits != startedAt && now != null && newer != null) {
-                // Something was edited while this was starting. The engine
-                // exists now, so hand it what the screen shows.
-                e.apply(OrbitEngine.Prepared(now, newer, solo))
-            } else {
-                bank = prepared
+            // Something was edited while this was starting. Hand the new
+            // engine the current set ONLY with the bank prepared for it;
+            // if that preparation is still running, it publishes both
+            // together in a moment and the engine exists to receive it now.
+            if (edits != startedAt && now != null) {
+                readyBank()?.let { e.apply(OrbitEngine.Prepared(now, it, solo)) }
             }
         }
     }
@@ -395,7 +442,11 @@ fun OrbitScreen(
     fun toggleSolo(index: Int) {
         solo = if (solo == index) null else index
         val s = set ?: return
-        val b = bank ?: return
+        // Only with the bank prepared for THIS set. While an edit is still
+        // preparing, `bank` is the previous set's, and pairing them plays
+        // the new rings through the old audio; the edit in flight carries
+        // the solo over when it publishes, since it reads it then.
+        val b = readyBank() ?: return
         engine?.apply(OrbitEngine.Prepared(s, b, solo))
     }
 
@@ -695,7 +746,9 @@ fun OrbitScreen(
         // at the old tempo until the debounce fired - or for good, if the
         // player left before it did.
         edits++
-        val b = bank
+        // As in `toggleSolo`: the tempo may move while a ring edit is
+        // still preparing, and the old bank is not this set's.
+        val b = readyBank()
         if (b != null && next.orbits.none { it.content is SnipOrbit }) {
             engine?.apply(OrbitEngine.Prepared(next, b, solo))
         }
@@ -841,7 +894,13 @@ fun OrbitScreen(
         OrbitClip.clipRefusal(s)?.let { onToast(it); return }
         outOpen = false
         scope.launch {
-            val result = withContext(Dispatchers.IO) { runCatching { OrbitClip.save(kitDir, s) } }
+            // Through the same lock as the set's own save: both write whole
+            // files into the kit's folder, and two exports at once can load
+            // different grooves and finish in the other order, leaving the
+            // older arrangement's clips on top of the newer one's.
+            val result = withContext(Dispatchers.IO) {
+                savingOrder.withLock { runCatching { OrbitClip.save(kitDir, s) } }
+            }
             result.onSuccess { clip ->
                 // Snips are audio and a clip holds notes, so a snip ring
                 // cannot ride along. Say how many stayed behind rather than

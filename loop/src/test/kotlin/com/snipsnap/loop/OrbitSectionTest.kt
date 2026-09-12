@@ -3,6 +3,7 @@ package com.snipsnap.loop
 import com.snipsnap.audio.Snip
 import com.snipsnap.mpc3.Mpc3Clip
 import java.nio.file.Files
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -28,6 +29,26 @@ class OrbitSectionTest {
     private val bpm = 120f
     private val step = 6_000 // frames per 16th at 120 BPM, 48 kHz
     private val bar = 16L * step // one reference bar of 16 steps
+
+    /** Temporary kit folders this test made, taken away again when it ends. */
+    private val temps = mutableListOf<java.io.File>()
+
+    /**
+     * A temporary kit folder that does not outlive the test.
+     *
+     * Every case here that writes a `groove.json` or an `orbits.json` goes
+     * through this. Seven of them made their own and left them behind, so
+     * a machine that runs the suite often accumulated a heap of orphaned
+     * arrangements in its temp directory.
+     */
+    private fun tempKit(name: String): java.io.File =
+        Files.createTempDirectory(name).toFile().also { temps += it }
+
+    @AfterTest
+    fun takeTheTempKitsAway() {
+        temps.forEach { it.deleteRecursively() }
+        temps.clear()
+    }
 
     private fun ring(name: String, slot: Int, vararg steps: Int) =
         Orbit(name, 16, PatternOrbit("kit", steps.map { OrbitHit(it, slot) }))
@@ -242,7 +263,7 @@ class OrbitSectionTest {
 
     @Test
     fun `the clips are appended, so an arrangement never becomes the kit's base`() {
-        val dir = Files.createTempDirectory("orbit-sections").toFile()
+        val dir = tempKit("orbit-sections")
         val base = Mpc3Clip("Break", 2, listOf(com.snipsnap.mpc3.Mpc3Note(36, 0, 0.9f)))
         com.snipsnap.kit.GrooveStore.save(dir, listOf(base))
         val s = set(OrbitSection("INTRO", 1, setOf(0)), OrbitSection("DROP", 1, setOf(0, 1)))
@@ -449,7 +470,7 @@ class OrbitSectionTest {
 
     @Test
     fun `the kit refuses more grooves than a project can carry`() {
-        val dir = Files.createTempDirectory("orbit-seq-cap").toFile()
+        val dir = tempKit("orbit-seq-cap")
         val room = com.snipsnap.mpc3.Mpc3ProjectWriter.MAX_SEQUENCES
         val others = (1..room - 1).map { Mpc3Clip("Groove $it", 1, listOf(com.snipsnap.mpc3.Mpc3Note(36, 0, 0.9f))) }
         com.snipsnap.kit.GrooveStore.save(dir, others)
@@ -565,7 +586,7 @@ class OrbitSectionTest {
     @Test
     fun `sections round-trip through orbits json`() {
         val s = set(OrbitSection("INTRO", 2, setOf(0)), OrbitSection("DROP", 4, setOf(0, 1)), OrbitSection("BREAK", 1, emptySet()))
-        val dir = Files.createTempDirectory("orbit-sec-json").toFile()
+        val dir = tempKit("orbit-sec-json")
         OrbitStore.save(s, dir)
         // No version literal. I removed exactly this from a YYY7 test one
         // PR ago because a bump failed a test that has nothing to say
@@ -574,7 +595,7 @@ class OrbitSectionTest {
         assertEquals(s.sections, OrbitStore.load(dir).sections)
         // A set with no arrangement writes no `sections` key at all.
         val plain = OrbitSet(listOf(ring("A", 1, 0)), bpm, rate)
-        val plainDir = Files.createTempDirectory("orbit-sec-none").toFile()
+        val plainDir = tempKit("orbit-sec-none")
         OrbitStore.save(plain, plainDir)
         assertTrue(!java.io.File(plainDir, OrbitStore.FILE_NAME).readText().contains("sections"))
         assertEquals(emptyList(), OrbitStore.load(plainDir).sections)
@@ -582,7 +603,7 @@ class OrbitSectionTest {
 
     @Test
     fun `a version 6 file still loads, with no arrangement`() {
-        val dir = Files.createTempDirectory("orbit-v6").toFile()
+        val dir = tempKit("orbit-v6")
         java.io.File(dir, OrbitStore.FILE_NAME).writeText(
             """
             {"version":6,"bpm":90.0,"lapSteps":16,"swing":50,"sampleRate":48000,"seed":3,"orbits":[
@@ -678,7 +699,7 @@ class OrbitSectionTest {
         // inside `clips` was written out of the arrangement in silence:
         // the sections either side of it went into groove.json as though
         // that were the whole plan.
-        val dir = Files.createTempDirectory("orbit-partial").toFile()
+        val dir = tempKit("orbit-partial")
         // Its ring is a snip — audio, which a note-only clip cannot carry.
         val tape = OrbitSet(
             listOf(ring("A", 1, 0), Orbit("tape", 16, SnipOrbit("a.wav"))),
@@ -959,7 +980,7 @@ class OrbitSectionTest {
 
     @Test
     fun `a section with no rings written down is malformed, not a break`() {
-        val dir = Files.createTempDirectory("orbit-plays").toFile()
+        val dir = tempKit("orbit-plays")
         fun write(section: String) = java.io.File(dir, OrbitStore.FILE_NAME).writeText(
             """
             {"version":7,"bpm":120.0,"lapSteps":16,"swing":50,"sampleRate":48000,"seed":1,"orbits":[
@@ -995,6 +1016,39 @@ class OrbitSectionTest {
         val under = assertFailsWith<IllegalArgumentException> { OrbitClip.clip(s, "X", steps = -16) }
         assertTrue(under.message!!.contains("not a length"), "said: ${under.message}")
         assertEquals(1, OrbitClip.clip(s, "X", steps = 16).notes.size)
+    }
+
+    @Test
+    fun `a voice already fading is ended by the boundary, not let run past it`() {
+        // `hush` leaves a voice inside its own ramp alone, because
+        // re-deriving the ramp from the boundary would set its gain back
+        // to FULL and the voice would jump up mid-fade. But a ramp still
+        // running at the boundary is still audible past it, and a section
+        // that leaves a ring out means silence, not nearly.
+        //
+        // The hit is on step 12 — the pad is 48,000 frames long, so one on
+        // the downbeat cannot still be sounding at the bar and there would
+        // be nothing to hush — and it is gated to end 100 frames before
+        // the boundary, so its fade (`AutoPlace.CHOKE_FADE`, 128 frames)
+        // straddles it.
+        val strike = 12L * step
+        val length = (bar - 100 - strike) / 25 // 240 pulses to a 16th, 6,000 frames to a 16th
+        val r = Orbit("A", 16, PatternOrbit("kit", listOf(OrbitHit(12, 1, length = length))))
+        val s = OrbitSet(
+            listOf(r),
+            bpm,
+            rate,
+            sections = listOf(OrbitSection("A", 1, setOf(0)), OrbitSection("DROP", 1, emptySet())),
+        )
+        val out = OrbitEngine.render(s, OrbitBank.prepare(s, Sustain()), (2 * bar).toInt()).samples
+        // Sounding before its gate, mid-ramp just before the boundary.
+        assertTrue(out[(bar - 1_000L).toInt() * 2] > 0.4f, "the hit did not sound in its own section")
+        // Still at full gain a hundred frames before its gate, so the ramp
+        // really is the thing that crosses the boundary.
+        assertTrue(out[(bar - 200L).toInt() * 2] > 0.4f, "the fixture's gate does not straddle the boundary")
+        // And nothing at all in the break, from the boundary on.
+        assertEquals(0f, out[bar.toInt() * 2 + 40], 1e-3f, "a fading voice ran into the break")
+        assertEquals(0f, out[(bar + 200L).toInt() * 2], 1e-3f, "a fading voice ran into the break")
     }
 
     @Test

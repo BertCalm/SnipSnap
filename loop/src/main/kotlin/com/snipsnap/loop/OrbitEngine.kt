@@ -272,7 +272,26 @@ class OrbitEngine(
             if (OrbitClock.playsAt(set, ring, at)) continue
             val cut = v.pos + offset * 2
             if (cut < 0) continue
-            if (cut >= v.limit - v.fadeLen) continue
+            val ramp = v.limit - v.fadeLen
+            if (cut >= ramp) {
+                // Already inside its own ramp — from a choke, or its hit's
+                // own gate — and [endAt] must not touch it: re-deriving
+                // from here would set the gain back to full and the voice
+                // would jump UP mid-fade. But a ramp that is still running
+                // at the boundary is still audible past it, and a section
+                // that excludes this ring means silence, not "nearly".
+                //
+                // So the ramp is RE-SLANTED to land on the boundary rather
+                // than restarted: it keeps the gain it has reached (the
+                // slope still begins at `ramp`, where it began) and
+                // steepens to reach zero exactly at the cut. Continuous at
+                // both ends, which is the whole reason a fade exists.
+                if (v.limit > cut) {
+                    v.limit = cut
+                    v.fadeLen = cut - ramp
+                }
+                continue
+            }
             endAt(v, cut)
         }
     }
