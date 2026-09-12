@@ -460,6 +460,75 @@ TEST(surface_engine_retriggers_the_loop_on_touch_down) {
     CHECK(run(50) == run(311));
 }
 
+TEST(surface_engine_retriggers_even_when_release_and_touch_share_one_drain) {
+    // onAudioReady used to drain the ring straight to its newest frame,
+    // treating the control stream as a position and nothing else. But the
+    // gate's *edge* is an event: if a lift and a fast retouch both land in
+    // the ring before the next audio callback (entirely possible - it
+    // holds up to 64 frames, and the UI can push faster than one callback
+    // drains), jumping to "newest" collapses them into a single gate=true
+    // apply against a gated_ that was never told about the intervening
+    // false, and the retrigger is missed. Forcing the release into its own
+    // drain (a plain callback() in between) must land on the exact same
+    // settled output as leaving them queued together.
+    auto run = [](bool sameDrain) {
+        SurfaceEngine e(kRate);
+        std::vector<float> ramp(1000);
+        for (size_t i = 0; i < ramp.size(); ++i) ramp[i] = static_cast<float>(i) / 1000.0f - 0.5f;
+        e.loadSample(ramp.data(), ramp.size(), kRate);
+
+        ControlFrame on;
+        on.mode = 0;
+        on.gate = true;
+        on.x = 0.5f;
+        on.y = 1.0f;
+        e.pushControl(on);
+        for (int i = 0; i < 137; ++i) callback(e, 64);
+
+        ControlFrame off = on;
+        off.gate = false;
+        e.pushControl(off);
+        if (!sameDrain) callback(e, 64);  // force the release into a drain of its own
+        e.pushControl(on);
+
+        std::vector<float> tail;
+        for (int i = 0; i < 400; ++i) tail = callback(e, 64);
+        return tail;
+    };
+
+    CHECK(run(true) == run(false));
+}
+
+TEST(surface_engine_does_not_retrigger_while_the_touch_is_only_held) {
+    // The edge, not the level: a second gate=true frame while already
+    // gated - a moved finger re-sending its position, say - must not yank
+    // phase_ back to the head mid-note. An implementation that reset on
+    // every true frame instead of the false -> true edge would still pass
+    // the touch-down tests above (they only ever push one true frame per
+    // touch) but would fail this one.
+    auto run = [](bool resendWhileHeld) {
+        SurfaceEngine e(kRate);
+        std::vector<float> ramp(1000);
+        for (size_t i = 0; i < ramp.size(); ++i) ramp[i] = static_cast<float>(i) / 1000.0f - 0.5f;
+        e.loadSample(ramp.data(), ramp.size(), kRate);
+
+        ControlFrame on;
+        on.mode = 0;
+        on.gate = true;
+        on.x = 0.5f;
+        on.y = 1.0f;
+        e.pushControl(on);
+        for (int i = 0; i < 137; ++i) callback(e, 64);
+        if (resendWhileHeld) e.pushControl(on);  // still gate=true - a level, not an edge
+
+        std::vector<float> tail;
+        for (int i = 0; i < 400; ++i) tail = callback(e, 64);
+        return tail;
+    };
+
+    CHECK(run(true) == run(false));
+}
+
 TEST(surface_engine_morph_tilt_reaches_the_filter) {
     // Two frames identical but for tilt, both weighted fully onto corner A:
     // if the tilt nudge in morphed() reaches applyControl (as it should -
