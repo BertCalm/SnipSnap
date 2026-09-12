@@ -2,7 +2,10 @@ package com.snipsnap.loop
 
 import com.snipsnap.audio.Snip
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -121,24 +124,60 @@ class Residency(
      * player undoes before it lands is wasted work, not a wrong buffer. The
      * caller warms, then [LoopEngine.apply]s; the engine's own [update] at the
      * next boundary keeps what was warmed and drops what went stale.
+     *
+     * **This blocks until the oven is empty**, which is the whole point and
+     * was missing from the first version: submitting the bakes and returning
+     * left the caller free to apply the session immediately, so the engine
+     * could adopt the new interval length while those bakes were still
+     * running and take the stall anyway. Moving the call to a background
+     * dispatcher did not help — it moved the *enqueue*, not the wait. Call it
+     * off the audio thread and off the main thread; it is a second of work
+     * by design.
+     *
+     * The wait is bounded ([WARM_TIMEOUT_MS]) because this sits under a
+     * finger: a bake wedged on a bad file must cost a stall, which is what
+     * used to happen anyway, and never a frozen screen.
      */
     fun warm(session: Session, vararg intervals: Int) {
         incoming.set(session)
+        // Deduped across intervals before anything is submitted: consecutive
+        // intervals of a six-track grid usually want many of the same blocks,
+        // and a latch has to count the work exactly once to be waited on.
+        val wanted = LinkedHashSet<CacheKey>()
         for (i in intervals) {
             for (track in session.tracks) {
-                val block = Arrangement.blockAt(track, i)
-                val key = CacheKey(block, session.intervalFrames)
-                if (baked.containsKey(key)) continue
-                executor.execute {
-                    // Still wanted? The same early-out prefetch makes, against
-                    // both sessions this cache serves: the one playing and the
-                    // one on its way in.
-                    val wanted = session.intervalFrames == current.get().intervalFrames ||
-                        session.intervalFrames == incoming.get()?.intervalFrames
-                    if (wanted) baked.putIfAbsent(key, BlockBaker.bake(block, session, source))
-                }
+                val key = CacheKey(Arrangement.blockAt(track, i), session.intervalFrames)
+                if (!baked.containsKey(key)) wanted += key
             }
         }
+        if (wanted.isEmpty()) return
+
+        val done = CountDownLatch(wanted.size)
+        for (key in wanted) {
+            try {
+                executor.execute {
+                    try {
+                        // Still wanted? The same early-out prefetch makes,
+                        // against both sessions this cache serves: the one
+                        // playing and the one on its way in.
+                        val live = session.intervalFrames == current.get().intervalFrames ||
+                            session.intervalFrames == incoming.get()?.intervalFrames
+                        if (live) baked.putIfAbsent(key, BlockBaker.bake(key.block, session, source))
+                    } finally {
+                        // In a finally, so a bake that throws releases the
+                        // waiter. Without it one bad sample file hangs the
+                        // caller for the whole timeout instead of costing it
+                        // one cold block.
+                        done.countDown()
+                    }
+                }
+            } catch (_: RejectedExecutionException) {
+                // The pool is shutting down — the screen is closing under us.
+                // Nothing left to wait for on this key.
+                done.countDown()
+            }
+        }
+        done.await(WARM_TIMEOUT_MS, TimeUnit.MILLISECONDS)
     }
 
     /**
@@ -182,5 +221,19 @@ class Residency(
         // unreachable either way — the keys are stamped — so this is about
         // memory, and about keeping the warm.
         baked.keys.removeIf { it.intervalFrames != session.intervalFrames }
+    }
+
+    companion object {
+        /**
+         * How long [warm] will wait for the bakes it submitted.
+         *
+         * Generous against the work — six blocks across a pool, tens of
+         * milliseconds each — and short against a person: a tempo nudge that
+         * did nothing for a second reads as a slow app, where the same nudge
+         * freezing the screen reads as a broken one. Timing out is not a
+         * failure, it is the old behaviour: the engine applies anyway and
+         * pays for the cold blocks on the audio thread.
+         */
+        const val WARM_TIMEOUT_MS = 1_500L
     }
 }

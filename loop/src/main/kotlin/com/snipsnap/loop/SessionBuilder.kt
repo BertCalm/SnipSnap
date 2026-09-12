@@ -122,6 +122,18 @@ object SessionBuilder {
      * snips could share. Re-sending the same snip rewrites the same filenames
      * with the same contents, so sending twice costs nothing extra on disk.
      *
+     * Kept exactly, not run through `Names.sanitizeStem`, when [stem] is
+     * already `Names.isMpcSafe` — which every stem SNIPS hands this is,
+     * since a SNIPS filename is either auto-classified (never an unsafe
+     * character) or a typed name `SnipStore.rename` already gated on that
+     * same check. `sanitizeStem` is stricter than `isMpcSafe` — it also
+     * collapses `__` and trims edge `_`/`.` — so running an already-safe
+     * stem through it can CHANGE it, and [sourceOf] recovers the piece's
+     * name by reversing this exact step: skipping it when it would be a
+     * no-op keeps that recovery exact instead of merely close. Only a
+     * stem `isMpcSafe` refuses falls back to the stricter form, for a
+     * caller other than SNIPS itself.
+     *
      * Returns null when there is nothing to send: an empty or unreadable decode.
      * A caller that gets null must say so rather than pretending a track was
      * filled.
@@ -148,7 +160,7 @@ object SessionBuilder {
         val blocks = wanted.coerceAtMost(Session.MAX_CHAIN)
 
         dir.mkdirs()
-        val safe = Names.sanitizeStem(stem)
+        val safe = if (Names.isMpcSafe(stem)) stem else Names.sanitizeStem(stem)
         val chain = (0 until blocks).map { n ->
             val file = File(dir, "${safe}_${n + 1}.wav")
             writePiece(file, pieceAt(audio, n * frames, frames))
@@ -163,6 +175,34 @@ object SessionBuilder {
             blocks = blocks,
             truncated = wanted > blocks,
         )
+    }
+
+    /**
+     * The snip a piece was cut from, recovered from the name [send] gave it.
+     *
+     * Every piece is `<stem>_<block>.wav`, `<block>` a plain 1-based index
+     * ([send]'s own contract, one always appended, even for a chain of
+     * one) — so this only strips a trailing `_`-delimited segment that IS
+     * one: all digits. That is the difference between undoing [send]'s own
+     * suffix and guessing at one: `LoopBlock` only requires a bare
+     * filename, nothing enforces that every value ever stored there went
+     * through [send], and a stem that legitimately ends in a word after an
+     * underscore (`snip_<millis>_kick`, with no piece suffix at all — not
+     * a shape [send] writes today, but one a hand-edited sidecar or a
+     * future caller could) must come back unchanged rather than losing
+     * "kick" to a strip that assumed it was a piece index. A stem that
+     * itself ends in digits after an underscore before [send] ever ran —
+     * `snip_<millis>_take_2` — still recovers correctly: only the
+     * PIECE's own trailing digits are stripped, whatever the stem already
+     * ends with, because the check runs once, on the outermost segment,
+     * not by scanning for the first place digits appear.
+     */
+    fun sourceOf(sampleFile: String): String {
+        val base = sampleFile.removeSuffix(".wav")
+        val cut = base.lastIndexOf('_')
+        if (cut < 0) return base
+        val suffix = base.substring(cut + 1)
+        return if (suffix.isNotEmpty() && suffix.all(Char::isDigit)) base.substring(0, cut) else base
     }
 
     /**

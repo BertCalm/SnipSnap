@@ -30,6 +30,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.text.style.TextOverflow
+import java.io.File
 import androidx.compose.runtime.setValue
 import com.snipsnap.loop.Arrangement
 import com.snipsnap.loop.Bouncer
@@ -136,6 +139,13 @@ fun LoopGrid(
                 color = if (selected != null) Tape.Panel else Tape.Dim,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
+                // A renamed snip's name is user text with no length cap
+                // (Names.isMpcSafe checks characters, not length), and this
+                // row sits above the fixed bounce button — matching
+                // TapeText's own one-line-and-ellipsis rule keeps a long
+                // name from pushing that button off the bottom of the screen.
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
             BounceButton(session = session, bouncing = bouncing, onBounce = onBounce)
@@ -144,19 +154,33 @@ fun LoopGrid(
 }
 
 /**
- * What a block is, for the readout: the snip's own filename, the kit a
+ * What a block is, for the readout: the snip it came from, the kit a
  * pattern plays, or null for a track nothing has been sent to.
  *
- * The filename rather than a prettier name on purpose — it is what SNIPS
- * shows, what the session folder holds, and the only thing that lets a player
- * match a column on screen to a catch in the list.
+ * [LoopBlock.sampleFile] is a generated piece name (`SessionBuilder.send`'s
+ * `<stem>_<block>.wav`), not a name anything else in the app would show —
+ * SNIPS itself never lists it, since SNIPS' own row is a classified or typed
+ * label parsed from the SOURCE filename (`SnipStore.displayName`), "SNIP"
+ * when there is none. `SessionBuilder.sourceOf` undoes the piece suffix to
+ * recover that source filename, so this reads the same label SNIPS does —
+ * the thing that actually lets a player match a column here to a row there.
+ *
+ * A chain longer than one block plays the same snip in pieces, so every
+ * block in it resolves to the same label; PIECE n/total says which piece
+ * without repeating a name multiple columns would otherwise show identically.
  */
-private fun describe(session: Session, track: Int, block: Int): String? =
-    when (val b = session.tracks.getOrNull(track)?.chain?.getOrNull(block)) {
-        is LoopBlock -> b.sampleFile
+private fun describe(session: Session, track: Int, block: Int): String? {
+    val chain = session.tracks.getOrNull(track)?.chain ?: return null
+    return when (val b = chain.getOrNull(block)) {
+        is LoopBlock -> {
+            val stem = SessionBuilder.sourceOf(b.sampleFile)
+            val name = SnipStore.displayName(File("$stem.wav"))
+            if (chain.size > 1) "$name · PIECE ${block + 1}/${chain.size}" else name
+        }
         is PatternBlock -> b.kit
         else -> null
     }
+}
 
 /**
  * The tempo, and one step either way.
@@ -372,6 +396,20 @@ private fun BlockCell(
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // pointerInput below is keyed on `filled`, not on these two lambdas —
+    // restarting the gesture detector on every recomposition would cancel
+    // a press mid-gesture, which is worse than what this guards against.
+    // But that means the detector's own coroutine, once started, closes
+    // over whatever `onSelect`/`onClear` it was first handed; a session
+    // edit elsewhere (a mute, a tempo settle) hands this cell fresh
+    // lambdas closing over the new session on every recomposition, and
+    // without this a HOLD gesture that started before such an edit would
+    // still fire the stale one — clearing a track from state that no
+    // longer includes the mute or the tempo the player just set.
+    // `rememberUpdatedState` keeps the detector itself stable while every
+    // read inside it sees the latest callback.
+    val currentOnSelect by rememberUpdatedState(onSelect)
+    val currentOnClear by rememberUpdatedState(onClear)
     androidx.compose.material3.Text(
         text = label,
         // Dark ink on the panel, but the LCD green an empty cell draws on is
@@ -395,11 +433,14 @@ private fun BlockCell(
             // something to clear.
             .pointerInput(filled) {
                 detectTapGestures(
-                    onTap = { onSelect() },
-                    onLongPress = if (filled) ({ onClear() }) else null,
+                    onTap = { currentOnSelect() },
+                    onLongPress = if (filled) ({ currentOnClear() }) else null,
                 )
             }
             .semantics(mergeDescendants = true) {
+                // Semantics actions are plain lambda properties re-read on
+                // every recomposition — no restart to key, so these already
+                // saw the latest callback and stay as they were.
                 onClick(label = "WHAT IS THIS BLOCK") { onSelect(); true }
                 if (filled) onLongClick(label = "CLEAR THIS TRACK") { onClear(); true }
             }
