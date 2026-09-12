@@ -1525,6 +1525,17 @@ private fun RingsCanvas(
     val inkColor = scheme.lcdInk.tape
     val amber = scheme.amber.tape
     val dim = scheme.ink3.tape.copy(alpha = 0.6f)
+    // One definition of "this ring is being heard right now": its own
+    // mute, another ring's solo, and the section playing at this instant.
+    // The picture says it in two places — the ring's own colour and the
+    // meeting pulse — and two copies of a predicate is how they come to
+    // disagree, which they did: the pulse asked only about the section, so
+    // it flashed "every ring on its downbeat" over a section whose rings
+    // are all muted, or over one the solo leaves out.
+    fun heardRing(i: Int): Boolean =
+        set.orbits[i].engaged && (solo == null || solo == i) &&
+            OrbitClock.playsAt(set, i, transportFrame)
+
     // Display order: shortest period innermost, then fewer steps, then as added.
     val order = remember(set) {
         set.orbits.indices.sortedWith(
@@ -1598,8 +1609,7 @@ private fun RingsCanvas(
                 // section playing now is not being heard, however engaged
                 // it is. Asked of the TRANSPORT's frame, since which
                 // section it is is a question about the arrangement.
-                val heard = ring.engaged && (solo == null || solo == i) &&
-                    OrbitClock.playsAt(set, i, transportFrame)
+                val heard = heardRing(i)
                 val ringInk = when (val content = ring.content) {
                     is PatternOrbit -> padColor(kit, ring.pads.first(), inkColor)
                     is SnipOrbit -> Schemes.classColor(com.snipsnap.audio.DrumClass.LOOP).tape
@@ -1719,8 +1729,7 @@ private fun RingsCanvas(
             // included, so without asking whether the section plays
             // anything the panel flashed "every ring on its downbeat"
             // into silence.
-            val anyPlaying = set.orbits.indices.any { OrbitClock.playsAt(set, it, transportFrame) }
-            if (playing && set.orbits.isNotEmpty() && anyPlaying) {
+            if (playing && set.orbits.indices.any(::heardRing)) {
                 val cycle = OrbitClock.cycleFrames(set)
                 val since = Math.floorMod(frame, cycle)
                 val pulse = (1f - since.toFloat() / (set.sampleRate * MEET_SECONDS)).coerceIn(0f, 1f)

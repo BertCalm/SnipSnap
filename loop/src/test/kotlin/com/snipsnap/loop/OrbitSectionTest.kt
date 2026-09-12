@@ -884,6 +884,58 @@ class OrbitSectionTest {
     }
 
     @Test
+    fun `the writer names the section it refuses, not just its length`() {
+        // `clipRefusal` named the section through `barCap` while `clips`
+        // reached `clip`, which knows only the length it was handed and
+        // threw a nameless "128 BARS OF 4/4". Same question, same sentence.
+        val s = OrbitSet(
+            listOf(ring("A", 1, 0)),
+            bpm,
+            rate,
+            lapSteps = 32,
+            sections = listOf(OrbitSection("LONG", 64, setOf(0))),
+        )
+        val preflight = OrbitClip.clipRefusal(s)
+        val written = assertFailsWith<IllegalArgumentException> { OrbitClip.clips(s) }.message
+        assertEquals(preflight, written)
+        assertTrue(written!!.contains("LONG") && written.contains("128"), "said: $written")
+    }
+
+    @Test
+    fun `a ring whose hits are all outside a section is not called muted`() {
+        // "EVERY RING WITH A HIT ON IT IS MUTED. ENGAGE ONE TO CLIP IT." is
+        // a remedy that does nothing when the hit is outside the window:
+        // engage it and the clip is just as empty. The section is silent,
+        // and that is the sentence with a remedy in it.
+        val late = Orbit("L", 64, PatternOrbit("kit", listOf(OrbitHit(63, 1)))).copy(engaged = false)
+        val s = OrbitSet(listOf(late), bpm, rate, sections = listOf(OrbitSection("LATE", 1, setOf(0))))
+        val why = OrbitClip.clipRefusal(s)
+        assertTrue(why != null && why.contains("SILENT"), "said: $why")
+        assertTrue(!why!!.contains("MUTED"), "the muted remedy does not apply here: $why")
+        // A hit the section DOES reach, on a muted ring, still says muted -
+        // there the remedy works.
+        val here = s.copy(sections = listOf(OrbitSection("LATE", 4, setOf(0))))
+        assertTrue(OrbitClip.clipRefusal(here)!!.contains("MUTED"), "said: ${OrbitClip.clipRefusal(here)}")
+    }
+
+    @Test
+    fun `the renderer refuses a length it cannot count, whatever block it is given`() {
+        // The bounce holds its turn INTERLEAVED, so the ceiling is half an
+        // Int - and the block count used to be `(frames + blockFrames - 1)`,
+        // which a large block carries past an Int on its own. The renderer
+        // owns both now, and `OrbitClip.MAX_BOUNCE_FRAMES` reads its number
+        // rather than deriving a second opinion from the DEFAULT block.
+        val s = set(OrbitSection("A", 1, setOf(0)))
+        val bank = OrbitBank.prepare(s, Sustain())
+        assertFailsWith<IllegalArgumentException> {
+            OrbitEngine.render(s, bank, OrbitEngine.MAX_RENDER_FRAMES + 1)
+        }
+        assertEquals(OrbitEngine.MAX_RENDER_FRAMES.toLong(), OrbitClip.MAX_BOUNCE_FRAMES)
+        // And an ordinary render still counts its blocks the same way.
+        assertEquals(1_000, OrbitEngine.render(s, bank, 1_000, blockFrames = 300).frameCount)
+    }
+
+    @Test
     fun `a solo hands back every ring it does not change, as itself`() {
         // The engine matches a sounding voice to its ring by identity, so
         // a set that copies every ring on every edit loses every voice

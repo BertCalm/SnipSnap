@@ -454,14 +454,34 @@ class OrbitEngine(
 
 
         /**
+         * The longest render this can even count, in frames.
+         *
+         * Half an `Int`, because the result is INTERLEAVED: [frames] of
+         * stereo is `frames * 2` floats and the array holding them is
+         * indexed by an `Int`. Owned here rather than by the caller
+         * guarding it, because it is this function's arithmetic - a
+         * preflight elsewhere derived its own copy from
+         * [DEFAULT_BLOCK_FRAMES] and was wrong for any caller passing a
+         * different `blockFrames`.
+         */
+        const val MAX_RENDER_FRAMES = Int.MAX_VALUE / 2
+
+        /**
          * Play [frames] of [set] offline into a [Snip] — the bounce, the
          * preview, and the way a test listens without a device.
          */
         fun render(set: OrbitSet, bank: OrbitBank, frames: Int, blockFrames: Int = DEFAULT_BLOCK_FRAMES): Snip {
             require(frames >= 0) { "frames must not be negative: $frames" }
+            require(frames <= MAX_RENDER_FRAMES) {
+                "frames past what a stereo buffer holds: $frames > $MAX_RENDER_FRAMES"
+            }
             val sink = CollectingSink(set.sampleRate)
             val engine = OrbitEngine(set, bank, sink, blockFrames)
-            val blocks = (frames + blockFrames - 1) / blockFrames
+            // Divided before it is added to, so no block size can carry the
+            // sum past an `Int`: `(frames + blockFrames - 1)` overflows for
+            // a large frame count and a large block, and a negative block
+            // count renders nothing at all.
+            val blocks = frames / blockFrames + if (frames % blockFrames == 0) 0 else 1
             engine.runFor(blocks)
             return Snip(sink.samples.copyOf(frames * 2), 2, set.sampleRate)
         }

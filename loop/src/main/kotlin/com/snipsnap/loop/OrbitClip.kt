@@ -26,17 +26,19 @@ object OrbitClip {
     const val MAX_BARS = 64
 
     /**
-     * The longest bounce the renderer can even count, in frames.
+     * The longest bounce, in frames — [OrbitEngine.MAX_RENDER_FRAMES], not
+     * a second opinion about it.
      *
-     * Not [Int.MAX_VALUE]: `OrbitEngine.render` takes an `Int`, allocates
-     * the turn INTERLEAVED (`frames * 2` floats) and rounds up to whole
-     * blocks (`frames + blockFrames - 1`), so the ceiling is half of an
-     * `Int`, less one block. A turn between the two passed the first cut
-     * of this guard and then overflowed inside the renderer instead — 64
-     * bars at 3 MHz and 40 BPM is 1,152,000,000 frames, which fits an
-     * `Int` and doubles straight past it.
+     * Not [Int.MAX_VALUE]: the render is INTERLEAVED, so a turn between
+     * half an `Int` and a whole one passed the first cut of this guard and
+     * overflowed inside the renderer instead — 64 bars at 3 MHz and 40 BPM
+     * is 1,152,000,000 frames, which fits an `Int` and doubles straight
+     * past it. The second cut derived the number here from the DEFAULT
+     * block size, which is not the block size a caller may pass; the
+     * renderer owns its own arithmetic now and this reads it, so a
+     * refusal in words and the `require` behind it cannot disagree.
      */
-    val MAX_BOUNCE_FRAMES: Long = ((Int.MAX_VALUE - OrbitEngine.DEFAULT_BLOCK_FRAMES) / 2).toLong()
+    val MAX_BOUNCE_FRAMES: Long = OrbitEngine.MAX_RENDER_FRAMES.toLong()
 
     /** The clip's bar is always 16 sixteenths: [Mpc3Clip] has bars but no time signature. */
     const val CLIP_BAR_STEPS = 16
@@ -187,18 +189,30 @@ object OrbitClip {
             return ringsMeet(set, bars, if (countsDifferently(set)) "BARS OF 4/4" else "BARS")
         }
         set.sections.indices.forEach { index ->
-            // A break writes no clip, so there is no clip of its length to
-            // be too long: a 64-bar 8/4 break beside a short playable
-            // section refused an export in which every clip written fits.
-            // The BOUNCE still counts it, through the plan's own ceiling
-            // in [refusal] - a break is silence and silence has a length.
-            if (set.sections[index].plays.isEmpty()) return@forEach
-            val sectionBars = barsFor(sectionSteps(set, index))
-            if (sectionBars > MAX_BARS) {
-                return "SECTION ${set.sections[index].name} IS $sectionBars BARS OF 4/4 — A CLIP STOPS AT $MAX_BARS. SHORTEN IT."
-            }
+            sectionBarCap(set, index)?.let { return it }
         }
         return null
+    }
+
+    /**
+     * Why [index]'s section is too long to be a clip, or null.
+     *
+     * A break answers null: it writes no clip, so there is no clip of its
+     * length to be too long. A 64-bar 8/4 break beside a short playable
+     * section refused an export in which every clip written fits. The
+     * BOUNCE still counts it, through the plan's own ceiling in [refusal] -
+     * a break is silence and silence has a length.
+     *
+     * Asked by [barCap] for the preflight AND by [sectionRefusal] for the
+     * writer, because the two disagreed about the sentence: `clipRefusal`
+     * named the section and `clips` then reached [clip], which knows only
+     * the length it was handed and threw a nameless "128 BARS OF 4/4".
+     */
+    private fun sectionBarCap(set: OrbitSet, index: Int): String? {
+        if (set.sections[index].plays.isEmpty()) return null
+        val bars = barsFor(sectionSteps(set, index))
+        if (bars <= MAX_BARS) return null
+        return "SECTION ${set.sections[index].name} IS $bars BARS OF 4/4 — A CLIP STOPS AT $MAX_BARS. SHORTEN IT."
     }
 
     /**
@@ -264,15 +278,16 @@ object OrbitClip {
     private fun sectionRefusal(set: OrbitSet, index: Int): String? {
         val section = set.sections[index]
         if (section.plays.isEmpty()) return null
+        sectionBarCap(set, index)?.let { return it }
         val sub = sectionSet(set, index)
         // Over the section's own WINDOW, because that is what gets
         // written. Asked of the rings' metadata instead, a one-bar section
         // holding a 64-step kitB ring whose only hit is step 63 was
         // refused as a two-kit clip - while the clip it would have written
         // has kitA's note and nothing of kitB's in it at all.
-        oneProgram(sub, clipPulses(sectionSteps(set, index)))
-            ?.let { return "SECTION ${section.name}: $it" }
-        noNotes(sub)?.let { return "SECTION ${section.name}: $it" }
+        val window = clipPulses(sectionSteps(set, index))
+        oneProgram(sub, window)?.let { return "SECTION ${section.name}: $it" }
+        noNotes(sub, window)?.let { return "SECTION ${section.name}: $it" }
         // And the question `noNotes` cannot ask, because it knows the
         // rings but not the window they are being cut to.
         if (!sectionSounds(set, index)) {
@@ -366,7 +381,7 @@ object OrbitClip {
      * deliberately. Readers still have to cope, which is why
      * `Arranger.arrange` refuses one by name.
      */
-    private fun noNotes(set: OrbitSet): String? {
+    private fun noNotes(set: OrbitSet, limitPulses: Long? = null): String? {
         if (set.orbits.isEmpty()) return "THERE ARE NO RINGS TO CLIP."
         val patterns = set.orbits.filter { it.content is PatternOrbit }
         if (patterns.isEmpty()) {
@@ -378,8 +393,17 @@ object OrbitClip {
         // one plainly does. So ask what exists before asking what is
         // audible: a set with no hits anywhere has not been played yet, and
         // a set whose every played ring is muted has a mute to undo.
-        val played = patterns.filter { (it.content as PatternOrbit).hits.isNotEmpty() }
-        if (played.isEmpty()) return "NO RING HAS A HIT ON IT YET. TAP A STEP FIRST."
+        // Over the window where there is one: a ring whose only hit falls
+        // outside this section is not a ring with a hit in it, and calling
+        // it one made the muted sentence below a remedy that does nothing -
+        // engage it and the clip is just as empty.
+        val played = patterns.filter { sounds(set, it, limitPulses).isNotEmpty() }
+        // With a window, "nothing lands here" belongs to [sectionSounds],
+        // which says WHICH section and how long it is; this answers only
+        // what a longer window could not change.
+        if (played.isEmpty()) {
+            return if (limitPulses == null) "NO RING HAS A HIT ON IT YET. TAP A STEP FIRST." else null
+        }
         if (played.none { it.engaged }) {
             return "EVERY RING WITH A HIT ON IT IS MUTED. ENGAGE ONE TO CLIP IT."
         }
@@ -422,7 +446,7 @@ object OrbitClip {
         // note in the file, so it names no kit here and its pad is not
         // this clip's to hold.
         oneProgram(set, limit)?.let { throw IllegalArgumentException(it) }
-        noNotes(set)?.let { throw IllegalArgumentException(it) }
+        noNotes(set, limit)?.let { throw IllegalArgumentException(it) }
         val notes = ArrayList<Mpc3Note>()
         for (ring in set.orbits) {
             if (!ring.engaged || ring.content !is PatternOrbit) continue
