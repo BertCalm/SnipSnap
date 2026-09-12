@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.LoopBounce
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
@@ -105,7 +107,15 @@ fun SnipsScreen(
     val scope = rememberCoroutineScope()
 
     var snips by remember { mutableStateOf<List<SnipStore.Info>>(emptyList()) }
-    LaunchedEffect(Unit) {
+    // Keyed on LOOP's bounce rather than on `Unit`: a bounce is the one thing
+    // that writes a snip while this list is on screen — it outlives the screen
+    // that started it, so it can land seconds after the player has walked back
+    // here — and its own toast says IT IS IN SNIPS NOW. A one-shot load would
+    // make that sentence false for exactly the person reading it. On mount the
+    // flow is false and this is the load it always was; the false edge at the
+    // end of a render runs it again, by which point the file is written.
+    val bouncing by LoopBounce.busy.collectAsState()
+    LaunchedEffect(bouncing) {
         snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(shelf.root) }
     }
 

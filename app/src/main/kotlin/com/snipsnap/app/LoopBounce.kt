@@ -13,7 +13,9 @@ import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.SnipStore
 import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 private const val TAG = "LoopBounce"
 
@@ -49,10 +51,21 @@ object LoopBounce {
         Thread(r, "snipsnap-bounce").apply { isDaemon = true }
     }
 
-    private val inFlight = AtomicBoolean(false)
+    private val inFlight = MutableStateFlow(false)
 
-    /** True while a render is running, for any screen that wants to say so. */
-    fun busy(): Boolean = inFlight.get()
+    /**
+     * True while a render is running.
+     *
+     * A flow rather than a flag, because two screens ask different questions
+     * of it. LOOP's button asks "am I bouncing" to label itself. SNIPS asks
+     * "did a bounce just finish", because a snip that lands while that list is
+     * open would otherwise stay invisible until the screen was built again —
+     * and the bounce's own toast says IT IS IN SNIPS NOW, which has to be true
+     * of the screen the player is looking at. A false edge here is that
+     * signal: the render is over and the file is written by the time it
+     * arrives.
+     */
+    val busy: StateFlow<Boolean> = inFlight.asStateFlow()
 
     /**
      * Start a bounce of [session], reading its audio through [source].
@@ -69,7 +82,7 @@ object LoopBounce {
      */
     fun start(context: Context, session: Session, source: SampleSource): String? {
         if (session.tracks.all { SessionBuilder.isEmpty(it) }) return Copy.LOOP_BOUNCE_EMPTY
-        if (!inFlight.compareAndSet(false, true)) return Copy.LOOP_BOUNCE_ALREADY
+        if (!inFlight.compareAndSet(expect = false, update = true)) return Copy.LOOP_BOUNCE_ALREADY
 
         val app = context.applicationContext
         worker.execute {
@@ -80,10 +93,12 @@ object LoopBounce {
                     Log.e(TAG, "bounce: failed", e)
                     Copy.LOOP_BOUNCE_FAILED
                 }
-            // Cleared before the toast, not after: the flag is what the button
-            // reads, and a player watching BOUNCING… should see it finish when
+            // Cleared after the import and before the toast. Both halves
+            // matter: the file exists by the time anything sees false, so
+            // SNIPS reloading on that edge finds the new snip rather than
+            // racing it — and a player watching BOUNCING… sees it finish when
             // the work finishes, not when a message queue gets round to it.
-            inFlight.set(false)
+            inFlight.value = false
             Handler(Looper.getMainLooper()).post {
                 Toast.makeText(app, line, Toast.LENGTH_LONG).show()
             }
