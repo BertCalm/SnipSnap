@@ -8,7 +8,6 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import java.io.File
 import kotlin.math.abs
-import kotlin.math.sqrt
 
 /**
  * A tape's dust, made once and kept beside the tape (`docs/DUST.md` §3).
@@ -63,12 +62,18 @@ object DustPrints {
         return print
     }
 
-    /** A print read back off disk, re-levelled to the contract: HISS at unit RMS, ROOM's absolute values summing to one. */
-    private fun levelled(p: Dust.Print): Dust.Print {
-        val hissRms = sqrt(p.hiss.samples.fold(0.0) { a, v -> a + v.toDouble() * v } / p.hiss.frameCount.coerceAtLeast(1)).toFloat()
-        val hiss = if (hissRms > 1e-6f) Snip(FloatArray(p.hiss.samples.size) { p.hiss.samples[it] / hissRms }, 1, p.hiss.sampleRate) else p.hiss
-        val l1 = p.room.samples.fold(0.0) { a, v -> a + abs(v) }.toFloat()
-        val room = if (l1 > 1e-6f) Snip(FloatArray(p.room.samples.size) { p.room.samples[it] / l1 }, 1, p.room.sampleRate) else p.room
-        return Dust.Print(hiss, room)
+    /** A print read back off disk, re-levelled to the contract (`Dust.Print.levelled`). */
+    private fun levelled(p: Dust.Print): Dust.Print = p.levelled()
+
+    /**
+     * The cached print of [tape] removed — called when the tape leaves
+     * the shelf (`SnipStore.delete`) or changes its name
+     * (`SnipStore.rename`), so `.dust` never fills with prints of tapes
+     * that are gone or renamed. Idempotent; nothing to remove is fine.
+     */
+    fun forget(tape: File) {
+        val dir = File(tape.parentFile ?: return, DIR)
+        File(dir, "${tape.name}.hiss.wav").delete()
+        File(dir, "${tape.name}.room.wav").delete()
     }
 }

@@ -93,6 +93,9 @@ object Dust {
     /** A window quieter than this is digital silence, not a floor. */
     private const val SILENCE_RMS = 1e-6f
 
+    /** The least of the dust [apply] will ever settle for when a hit leaves it no room: see the clip guard. */
+    const val MIN_DUST_SHARE = 0.5f
+
     /**
      * A tape's dust: both parts mono at [sampleRate], HISS at unit RMS,
      * ROOM with its absolute values summing to one — so a hit convolved
@@ -106,6 +109,37 @@ object Dust {
             require(hiss.channels == 1 && room.channels == 1) { "a print is mono" }
             require(hiss.sampleRate == room.sampleRate) { "hiss and room share a rate" }
             require(room.frameCount > 0) { "a print has a room" }
+        }
+
+        /**
+         * This print back on its contract — HISS at unit RMS, ROOM's
+         * absolute values summing to one — after anything that moved
+         * its levels: a 24-bit round trip through the shelf's cache, or
+         * a resample to another rate (which changes the sample count and
+         * so both sums). A silent part stays silent.
+         */
+        fun levelled(): Print {
+            val hissRms = sqrt(hiss.samples.fold(0.0) { a, v -> a + v.toDouble() * v } / hiss.frameCount.coerceAtLeast(1)).toFloat()
+            val h = if (hissRms > SILENCE_RMS) Snip(FloatArray(hiss.samples.size) { hiss.samples[it] / hissRms }, 1, hiss.sampleRate) else hiss
+            val l1 = room.samples.fold(0.0) { a, v -> a + kotlin.math.abs(v) }.toFloat()
+            val r = if (l1 > SILENCE_RMS) Snip(FloatArray(room.samples.size) { room.samples[it] / l1 }, 1, room.sampleRate) else room
+            return Print(h, r)
+        }
+
+        /**
+         * This print at [rate]. The loop is resampled as three copies
+         * end to end and the middle one kept, so the resampler's edge
+         * taper never lands on the seam; then both parts are [levelled].
+         */
+        fun at(rate: Int): Print {
+            if (rate == sampleRate) return this
+            val n = hiss.frameCount
+            val tiled = Snip(FloatArray(n * 3) { hiss.samples[it % n] }, 1, hiss.sampleRate)
+            val wide = Resampler.resample(tiled, rate)
+            val len = Math.round(n.toDouble() * rate / hiss.sampleRate).toInt().coerceAtLeast(1)
+            val from = ((wide.frameCount - len) / 2).coerceAtLeast(0)
+            val loop = Snip(wide.samples.copyOfRange(from, min(wide.frameCount, from + len)), 1, rate)
+            return Print(loop, Resampler.resample(room, rate)).levelled()
         }
     }
 
@@ -239,11 +273,7 @@ object Dust {
     fun apply(hit: Snip, print: Print, amount: Float): Snip {
         require(amount in 0f..1f) { "amount is 0..1, got $amount" }
         if (amount <= 0f || hit.frameCount == 0) return hit
-        val p = if (print.sampleRate == hit.sampleRate) {
-            print
-        } else {
-            Print(Resampler.resample(print.hiss, hit.sampleRate), Resampler.resample(print.room, hit.sampleRate))
-        }
+        val p = print.at(hit.sampleRate)
         val rate = hit.sampleRate
         val predelay = (ROOM_PREDELAY_SEC * rate).toInt()
         val n = hit.frameCount + predelay + p.room.frameCount - 1
@@ -295,26 +325,36 @@ object Dust {
                 added[f * hit.channels + ch] = dust
             }
         }
-        // Never clip, and never touch the hit: when hit plus dust would crest,
-        // the dust alone is scaled down — the largest share of it that fits,
-        // found by halving.
+        // Never clip, and never touch the hit: when hit plus dust would crest
+        // the ceiling — full scale, or the hit's own peak when the hit already
+        // sits above it (a capture that clipped) — the dust alone is scaled
+        // down to the largest share that fits, found by halving. A hit that
+        // sits exactly at the ceiling leaves no room on its loudest samples
+        // at all, and a search that found "none" would write the pad back
+        // undusted under a recipe that says it is: below MIN_DUST_SHARE the
+        // dust rides at that share and the few overshooting samples are held
+        // at the ceiling instead — a hair of clipping on the attack over
+        // losing the room and the floor entirely.
+        var dryPeak = 0f
+        for (v in out) dryPeak = max(dryPeak, kotlin.math.abs(v))
+        val ceiling = max(0.999f, dryPeak)
         var s = 1f
-        if (crests(out, added, 1f)) {
+        if (crests(out, added, 1f, ceiling)) {
             var lo = 0f
             var hi = 1f
             repeat(12) {
                 val mid = (lo + hi) / 2f
-                if (crests(out, added, mid)) hi = mid else lo = mid
+                if (crests(out, added, mid, ceiling)) hi = mid else lo = mid
             }
-            s = lo
+            s = max(lo, MIN_DUST_SHARE)
         }
-        for (i in out.indices) out[i] += added[i] * s
+        for (i in out.indices) out[i] = (out[i] + added[i] * s).coerceIn(-ceiling, ceiling)
         return Snip(out, hit.channels, rate)
     }
 
-    /** Whether [dry] plus [added] at [scale] would exceed full scale anywhere. */
-    private fun crests(dry: FloatArray, added: FloatArray, scale: Float): Boolean {
-        for (i in dry.indices) if (kotlin.math.abs(dry[i] + added[i] * scale) > 0.999f) return true
+    /** Whether [dry] plus [added] at [scale] would exceed [ceiling] anywhere. */
+    private fun crests(dry: FloatArray, added: FloatArray, scale: Float, ceiling: Float): Boolean {
+        for (i in dry.indices) if (kotlin.math.abs(dry[i] + added[i] * scale) > ceiling) return true
         return false
     }
 

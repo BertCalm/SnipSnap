@@ -65,6 +65,13 @@ class DustPrintsTest {
         for (i in first.room.samples.indices) diff += abs(first.room.samples[i] - again.room.samples[i])
         assertTrue(diff / first.room.frameCount < 1e-4, "24-bit round trip keeps the room: $diff")
         assertNull(DustPrints.forTape(File(snips, "not_there.wav")))
+        // The print follows its tape off the shelf, and off a rename.
+        val renamed = assertNotNull(SnipStore.rename(tape, "ROOM SIX"))
+        assertTrue(!File(dir, "${tape.name}.room.wav").exists(), "a renamed tape's print is forgotten")
+        assertNotNull(DustPrints.forTape(renamed))
+        assertTrue(File(dir, "${renamed.name}.room.wav").isFile)
+        assertTrue(SnipStore.delete(renamed))
+        assertTrue(!File(dir, "${renamed.name}.room.wav").exists() && !File(dir, "${renamed.name}.hiss.wav").exists(), "a binned tape's print is forgotten")
         // A silent tape has no hits and no dust, and leaves no cache behind.
         val silent = File(snips, "snip_2000_SILENT.wav").also { WavWriter.write(it, Snip(FloatArray(rate * 2), 1, rate)) }
         assertNull(DustPrints.forTape(silent))

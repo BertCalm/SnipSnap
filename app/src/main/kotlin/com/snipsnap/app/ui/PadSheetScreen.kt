@@ -928,9 +928,27 @@ fun PadSheetScreen(
         }
         val padName = model?.kit?.pad(slot)?.displayName?.uppercase() ?: return
         var said: String? = null
+        if (plan is RecipeReplay.Plan.Dust) {
+            // A dust recipe needs its tape's print. Resolved here, on IO and
+            // before the lock, so the refusals are the app's own words
+            // (the tape gone, or nothing between its hits) rather than a
+            // PASTE FAILED, and the extraction never runs under the mutex.
+            scope.launch {
+                val tapeFile = File(snipsDir, plan.tape)
+                val print = withContext(Dispatchers.IO) { DustPrints.forTape(tapeFile) }
+                if (print == null) {
+                    onToast(if (tapeFile.isFile) Copy.DUST_NO_GHOSTS else Copy.dustTapeGone(plan.tape))
+                    return@launch
+                }
+                commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
+                    said = RecipeReplay.apply(mm, slot, clip.recipe, padName) { print }.toast
+                }
+            }
+            return
+        }
         commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
             said = try {
-                RecipeReplay.apply(mm, slot, clip.recipe, padName) { tape -> DustPrints.forTape(File(snipsDir, tape)) }.toast
+                RecipeReplay.apply(mm, slot, clip.recipe, padName).toast
             } catch (e: KitBuilderModel.Unpitched) {
                 Copy.notANote(e.message ?: "not a note")
             }
