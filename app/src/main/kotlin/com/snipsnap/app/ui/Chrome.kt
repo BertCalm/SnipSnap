@@ -111,20 +111,46 @@ fun TapeText(
  * default: every call site has to make an explicit choice, so a new
  * control can't silently ship without one the way all 97 of this app's
  * pre-existing interactive sites did (see the 2026-09-08 accessibility
- * audit). Pass `null` when a descendant `TapeText`/`TapeText`-bearing
- * child already says what the control does — `clickable` merges
- * descendant semantics into this node automatically, so a real
- * [label] here would *replace* that text in what TalkBack announces,
- * not add to it. Reserve an explicit [label] for controls with no
- * text child (scrim dismissers, glyph-only chips, colour swatches) or
- * whose visible glyph is itself an accessibility risk (single-letter
- * chips TalkBack may spell out instead of reading as a word).
+ * audit). Pass a real [label] always — including when a descendant
+ * `TapeText` already shows the same words on screen. This modifier used
+ * to say `clickable` merges descendant semantics into this node
+ * automatically, so `null` was "fine" whenever visible text was nearby;
+ * an accessibility-tree dump (2026-09 followup) proved that claim false
+ * for the unlabelled case: `clickable`'s own semantics node did not
+ * fold sibling text into itself, so every call site relying on it
+ * shipped a clickable node with an empty name.
+ *
+ * What that same followup could NOT settle: whether an explicit
+ * [label] here lands on the same accessibility node `clickable` makes
+ * actionable, or on an adjacent one. `uiautomator dump` (the only tool
+ * this pass was permitted — TalkBack itself destabilised the test
+ * emulator in an earlier session) shows both `clickable().semantics {
+ * contentDescription = label }` and the same call with
+ * `mergeDescendants = true` added producing byte-identical trees, and
+ * this file's own KNOWN-GOOD reference (`KitRow` in KitsScreen.kt,
+ * explicit `mergeDescendants = true`, reviewed and shipped) shows that
+ * same shape too — an outer node with an empty raw `content-desc` and
+ * separate child text nodes beneath it. That means the dump cannot
+ * distinguish "TalkBack speaks [label] once, correctly" from "TalkBack
+ * speaks it as a second, adjacent, non-actionable node": both render
+ * the same way to this tool. Left at the pre-existing, reviewed shape
+ * (`clickable(...).semantics { contentDescription = label }`, no merge
+ * flag) rather than shipping an unverified change across the ~113
+ * call sites that route through this one function. Flagged for
+ * adjudication with real TalkBack, not re-guessed here.
+ *
+ * `null` is for controls that genuinely have no accessible name to
+ * give — not a shorthand for "the text nearby covers it." (A control
+ * whose `onClick` is genuinely empty, e.g. a tap-absorbing scrim card,
+ * isn't reachable through `tapeClick` at all for that purpose — see
+ * call sites using a raw `Modifier.pointerInput { detectTapGestures {}
+ * }` instead, which registers no semantics node.)
  *
  * [enabled] mirrors `clickable`'s own flag: a disabled control keeps
- * its semantics node (and its merged/explicit name) but exposes
- * Compose's `disabled()` state instead of an actionable one, so a
- * screen-reader user is told "temporarily unavailable" instead of the
- * control silently vanishing from the tree (audit finding 12).
+ * its semantics node (and its name) but exposes Compose's `disabled()`
+ * state instead of an actionable one, so a screen-reader user is told
+ * "temporarily unavailable" instead of the control silently vanishing
+ * from the tree (audit finding 12).
  */
 @Composable
 fun Modifier.tapeClick(label: String?, enabled: Boolean = true, onClick: () -> Unit): Modifier =
@@ -282,12 +308,16 @@ fun MenuRow(
                         .fillMaxHeight()
                         .let { if (isSelected) it.pressedBevel(scheme, 3.dp) else it }
                         // The tab's own name (item.label) is the accessible
-                        // name via the merged descendant TapeText below;
-                        // selection is the one thing that text can't say on
+                        // name, passed explicitly — an accessibility-tree
+                        // dump showed the descendant TapeText below does
+                        // NOT merge into this clickable node for free (that
+                        // was the assumption this comment used to make; all
+                        // 11 tabs spoke as unnamed nodes with it). Selection
+                        // is the one thing the label text still can't say on
                         // its own (audit finding 7 — selection state had no
                         // programmatic exposure anywhere in the app).
                         .semantics { selected = isSelected }
-                        .tapeClick(label = null) { onSelect(item.screen) }
+                        .tapeClick(label = item.label) { onSelect(item.screen) }
                         .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {

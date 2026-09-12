@@ -209,8 +209,23 @@ class Mpc3ProjectWriter(
         s.replace("\\", "\\\\").replace("\"", "\\\"")
 
     private fun sequence(key: Int, trackNames: List<String>, clipByTrack: Map<String, Mpc3Clip>, tempoBpm: Float): J {
+        // One sequence, one meter: `timeSignatureTrack` is the sequence's,
+        // not each track's, so two tracks in different meters is not a
+        // thing this format can express and is a caller mistake rather
+        // than something to pick a winner for.
+        val meters = clipByTrack.values.map { it.pulsesPerBar }.distinct()
+        require(meters.size <= 1) {
+            "a sequence carries one meter, got ${meters.sorted()} pulses per bar"
+        }
+        val pulsesPerBar = meters.singleOrNull() ?: Mpc3Clip.PULSES_PER_BAR
         val bars = clipByTrack.values.maxOfOrNull { it.bars } ?: 2
-        val pulses = bars * Mpc3Clip.PULSES_PER_BAR
+        // Every length below comes from here: the meter entry, the
+        // sequence's own `lengthPulses`, the loop bounds, and each clip's
+        // `endPulses` through `clipValue`. The corpus's own cross-check
+        // (`lengthBars` × `beatsPerBar` × `beatLength` == `lengthPulses`,
+        // proved against DD1 Chamber) holds by construction because there
+        // is one number rather than two expressions that happen to agree.
+        val pulses = bars * pulsesPerBar
         return obj(
             "key" to i(key.toLong()),
             "value" to obj(
@@ -226,9 +241,23 @@ class Mpc3ProjectWriter(
                 "smpteStart" to obj(
                     "hours" to i(0), "mins" to i(0), "secs" to i(0), "frames" to i(0), "subframes" to i(0),
                 ),
+                // The meter. One entry at bar 0 — the only shape the corpus
+                // has ever shown, though the array is keyed by `barStart`
+                // and so could hold changes. `beatLength` is a pulse count
+                // (a quarter note), not a denominator; see
+                // docs/MPC3_FORMAT.md, "Meter", including what the corpus
+                // could NOT show: no file anywhere carries a value other
+                // than 4, so any other numerator we write here is the
+                // first a Live III has been asked to read.
                 "timeSignatureTrack" to obj(
                     "timeSignatures" to J.A(
-                        listOf(obj("beatsPerBar" to i(4), "beatLength" to i(960), "barStart" to i(0))),
+                        listOf(
+                            obj(
+                                "beatsPerBar" to i((pulsesPerBar / Mpc3Clip.PULSES_PER_BEAT)),
+                                "beatLength" to i(Mpc3Clip.PULSES_PER_BEAT),
+                                "barStart" to i(0),
+                            ),
+                        ),
                     ),
                 ),
                 // One clip row mapping every track by name, as DD1 does —
@@ -238,8 +267,18 @@ class Mpc3ProjectWriter(
                         J.A(
                             trackNames.map { trackName ->
                                 val clip = clipByTrack[trackName]
-                                    ?: Mpc3Clip(trackName, bars, emptyList())
-                                obj("key" to s(trackName), "value" to trackWriter.clipValue(clip, includeMidiBank = false))
+                                    ?: Mpc3Clip(trackName, bars, emptyList(), pulsesPerBar)
+                                obj(
+                                    "key" to s(trackName),
+                                    "value" to trackWriter.clipValue(
+                                        clip,
+                                        includeMidiBank = false,
+                                        // A sequence states its meter above, so a clip
+                                        // inside one is as long as its music. A track's
+                                        // own clips cannot and are padded - Mpc3Clip.
+                                        meterDeclared = true,
+                                    ),
+                                )
                             },
                         ),
                     ),

@@ -20,6 +20,68 @@ class GrooveVariationsTest {
     )
 
     @Test
+    fun `a clip's own bar survives every transform that rebuilds it`() {
+        // `GrooveStore` round-trips a clip's meter now, so an ORBIT 3/4
+        // clip reaches these paths. Each one used to compute the clip's
+        // length as `bars * 3840`: quantize would have found 32 steps in
+        // 24 steps of music, halfTime would have handed back a 4/4 clip,
+        // and feel would have wrapped a late note past the end, where
+        // `Mpc3Clip` refuses to hold it. Every one asks the clip now.
+        val bar34 = 3 * Mpc3Clip.PULSES_PER_BEAT
+        val waltz = Mpc3Clip(
+            "ORBIT 3/4", 2,
+            listOf(
+                Mpc3Note(36, 0, 1.0f, 240),
+                Mpc3Note(42, 503, 0.30f, 120),
+                Mpc3Note(38, bar34, 0.85f, 240),
+                Mpc3Note(42, 2 * bar34 - 41, 0.25f, 120),
+            ),
+            pulsesPerBar = bar34,
+        )
+        assertEquals(5760L, waltz.lengthPulses)
+
+        val tight = GrooveVariations.quantize(waltz, Mpc3Clip.PULSES_PER_16TH, "Tight")
+        assertEquals(bar34, tight.pulsesPerBar)
+        assertTrue(tight.notes.all { it.timePulses < waltz.lengthPulses }, "quantize wrapped past the end")
+
+        val half = GrooveVariations.halfTime(waltz)
+        assertEquals(bar34, half.pulsesPerBar, "half time keeps the meter, it does not reset it to 4/4")
+        assertEquals(4, half.bars)
+        assertEquals(2 * waltz.lengthPulses, half.lengthPulses)
+
+        val swung = GrooveVariations.swing(waltz, 60)
+        assertEquals(bar34, swung.pulsesPerBar)
+        assertTrue(swung.notes.all { it.timePulses < waltz.lengthPulses })
+
+        // The feel axis wraps, which is where a 4/4 limit actually threw -
+        // but only for a note the lean pushes past the clip's own end, so
+        // the fixture puts one there deliberately. A hit on the last 16th
+        // of the last 3/4 bar, leaned late, lands past 5760 and under the
+        // 7680 a 4/4 reading would have allowed: wrapped against the clip
+        // it comes back to the top, wrapped against `bars * 3840` it stays
+        // outside and `Mpc3Clip` refuses to hold it.
+        val late = Mpc3Clip(
+            "ORBIT 3/4 LATE", 2,
+            listOf(Mpc3Note(36, 0, 0.9f), Mpc3Note(38, 23 * Mpc3Clip.PULSES_PER_16TH, 0.9f)),
+            pulsesPerBar = bar34,
+        )
+        val push = GrooveFeel.Template(
+            offsets = List(16) { 300L },
+            accents = List(16) { 1f },
+            laneOffsets = emptyMap(),
+            laneAccents = emptyMap(),
+        )
+        val leaned = GrooveFeel.applyFeel(late, 1f, push)
+        assertEquals(bar34, leaned.pulsesPerBar)
+        assertTrue(leaned.notes.all { it.timePulses < late.lengthPulses }, "feel put a note past the clip's end")
+
+        val edited = GrooveEdit.quantized(waltz, "Snapped")
+        assertEquals(bar34, edited.pulsesPerBar, "the step editor's snap keeps the meter")
+        assertEquals(12, GrooveEdit.stepsPerBar(waltz), "a 3/4 bar is twelve cells, not sixteen")
+        assertEquals(16, GrooveEdit.stepsPerBar(base))
+    }
+
+    @Test
     fun `the fill owns the turn of every fourth bar and nothing else`() {
         val s16 = Mpc3Clip.PULSES_PER_16TH
         val ppb = Mpc3Clip.PULSES_PER_BAR

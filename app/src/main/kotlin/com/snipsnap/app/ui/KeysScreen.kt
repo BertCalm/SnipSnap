@@ -144,7 +144,7 @@ fun KeysScreen(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                        .tapeClick(label = null) { player.allOff(); layout = l }
+                        .tapeClick(label = l) { player.allOff(); layout = l }
                         .padding(horizontal = 2.dp),
                     contentAlignment = Alignment.Center,
                 ) {

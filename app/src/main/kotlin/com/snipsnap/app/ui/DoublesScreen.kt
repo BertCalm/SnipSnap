@@ -236,7 +236,7 @@ private fun HeaderChip(
             // `enabled` goes through `tapeClick`, not around it: a dimmed
             // chip stays in the semantics tree instead of silently
             // vanishing from it (accessibility audit finding 12).
-            .tapeClick(label = null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

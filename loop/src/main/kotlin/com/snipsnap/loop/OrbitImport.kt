@@ -76,6 +76,23 @@ object OrbitImport {
     data class Skipped(val note: Int, val slot: Int, val notes: Int)
 
     /**
+     * The steps a ring built from [clip] holds — the clip's own length in
+     * 16ths, not `bars × 16`.
+     *
+     * The two were the same number until a clip could declare its bar
+     * ([Mpc3Clip.pulsesPerBar]). They are not now: a 3/4 clip of four bars
+     * is 48 steps, and `bars × 16` would build a 64-step ring whose extra
+     * sixteen steps are silence the clip never had. CLIP ▸ KIT is supposed
+     * to be exact (FEATURE_PLAN YYY6), and this is what keeps it exact
+     * for a meter that is not 4/4. A 4/4 clip gets the same number it
+     * always did, since `bars × 3840 / 240` is `bars × 16`.
+     */
+    fun importSteps(clip: Mpc3Clip): Int = (clip.lengthPulses / Mpc3Clip.PULSES_PER_16TH).toInt()
+
+    /** The lap a set imported from [clip] counts in: the clip's bar, in 16ths. */
+    fun importLapSteps(clip: Mpc3Clip): Int = (clip.pulsesPerBar / Mpc3Clip.PULSES_PER_16TH).toInt()
+
+    /**
      * Why [clip] cannot become a set of rings, or null when it can.
      *
      * Only two things genuinely do not fit, and neither can be worked
@@ -84,7 +101,7 @@ object OrbitImport {
      */
     fun refusal(clip: Mpc3Clip): String? {
         if (clip.notes.isEmpty()) return "'${clip.name}' has no notes to put on a ring"
-        val steps = clip.bars * OrbitClip.CLIP_BAR_STEPS
+        val steps = importSteps(clip)
         if (steps > Orbit.MAX_STEPS) {
             return "'${clip.name}' is ${clip.bars} bars, and a ring holds " +
                 "${Orbit.MAX_STEPS / OrbitClip.CLIP_BAR_STEPS}"
@@ -133,7 +150,7 @@ object OrbitImport {
     ): Imported {
         refusal(clip)?.let { throw IllegalArgumentException(it) }
         require(maxRings in 1..OrbitSet.MAX_ORBITS) { "a set holds 1..${OrbitSet.MAX_ORBITS} rings, asked for $maxRings" }
-        val steps = clip.bars * OrbitClip.CLIP_BAR_STEPS
+        val steps = importSteps(clip)
         val have = kit.pads.map { it.slot }.toSet()
 
         // The export's own collision rule, not a second copy of it: a clip
@@ -179,7 +196,7 @@ object OrbitImport {
             )
         }
         return Imported(
-            set = OrbitSet(rings, bpm, sampleRate, lapSteps = OrbitClip.CLIP_BAR_STEPS, swing = swing),
+            set = OrbitSet(rings, bpm, sampleRate, lapSteps = importLapSteps(clip), swing = swing),
             skipped = skipped,
             shared = sharing,
             collisions = collisions,

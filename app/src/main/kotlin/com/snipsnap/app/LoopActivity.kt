@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -99,8 +100,11 @@ class LoopActivity : ComponentActivity() {
             // tapped beside it.
             var onDisk by remember { mutableStateOf(loaded) }
             var interval by remember { mutableIntStateOf(0) }
-            // One bounce at a time, and the button says so while it runs.
-            var bouncing by remember { mutableStateOf(false) }
+            // Read from the app, not held here: a render outlives this screen,
+            // so opening LOOP again while one is still going has to show
+            // BOUNCING… too. `LoopBounce.start` flips this before it returns,
+            // so the button changes on the tap rather than a frame later.
+            val bouncing by LoopBounce.busy.collectAsState()
 
             val s = session
             if (s == null) {
@@ -147,11 +151,6 @@ class LoopActivity : ComponentActivity() {
                         val refused = LoopBounce.start(this@LoopActivity, s, samples)
                         if (refused != null) {
                             Toast.makeText(applicationContext, refused, Toast.LENGTH_SHORT).show()
-                        } else {
-                            // Immediate, rather than waiting up to a tick for
-                            // the poll below to notice: a button that takes
-                            // 50ms to acknowledge a press reads as a missed tap.
-                            bouncing = true
                         }
                     },
                 )
@@ -159,10 +158,6 @@ class LoopActivity : ComponentActivity() {
                 androidx.compose.runtime.LaunchedEffect(Unit) {
                     while (true) {
                         interval = engine?.position() ?: 0
-                        // Read, not owned: a render started here can still be
-                        // running when this screen is opened again, and the
-                        // button has to say so on that second visit too.
-                        bouncing = LoopBounce.busy()
                         kotlinx.coroutines.delay(50)
                     }
                 }

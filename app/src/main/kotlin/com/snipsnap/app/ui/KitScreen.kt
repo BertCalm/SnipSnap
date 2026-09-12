@@ -311,7 +311,9 @@ fun KitScreen(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .let { if (here) it.raisedBevel(scheme) else it.sunkenField(scheme) }
-                        .tapeClick(label = null, onClick = {
+                        // Same text the TapeText below shows — it already
+                        // reads as a state ("BANK B · EMPTY"/"BANK A · 12").
+                        .tapeClick(label = "BANK ${PadBanks.letter(b)} · ${if (empty) "EMPTY" else filled.toString()}", onClick = {
                             bank = b
                             if (empty && !here) onBankEmpty(b)
                         }),
@@ -431,7 +433,7 @@ fun KitScreen(
                         // temporarily unavailable instead of it silently
                         // vanishing from the tree (accessibility audit
                         // finding 12 — see ActionButton in PadSheetScreen.kt).
-                        .tapeClick(label = null, enabled = !busy) { panelKind = if (keyOpen) null else KEY_PANEL }
+                        .tapeClick(label = if (keyOpen) "CLOSE KEY" else "OPEN KEY", enabled = !busy) { panelKind = if (keyOpen) null else KEY_PANEL }
                         .padding(horizontal = 8.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -497,7 +499,7 @@ fun KitScreen(
                             // this door is temporarily unavailable instead
                             // of it silently vanishing from the tree
                             // (accessibility audit finding 12).
-                            .tapeClick(label = null, enabled = doorEnabled) { panelKind = if (open) null else kind }
+                            .tapeClick(label = if (open) "CLOSE $kind" else "OPEN $kind", enabled = doorEnabled) { panelKind = if (open) null else kind }
                             .padding(horizontal = 8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -609,7 +611,7 @@ private fun KeyPanel(
                             // than dropped — see ActionButton's own note in
                             // PadSheetScreen.kt (accessibility audit finding
                             // 12).
-                            .tapeClick(label = null, enabled = !busy) { onSetKey(KeyPicker.key(r, scaleLabel)) }
+                            .tapeClick(label = KeyPicker.ROOTS[r], enabled = !busy) { onSetKey(KeyPicker.key(r, scaleLabel)) }
                             .padding(horizontal = 2.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -628,7 +630,7 @@ private fun KeyPanel(
                         .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
                         // Always clickable, `!busy` forwarded rather than
                         // dropped (accessibility audit finding 12).
-                        .tapeClick(label = null, enabled = !busy) { onSetKey(KeyPicker.key(root, s)) }
+                        .tapeClick(label = s, enabled = !busy) { onSetKey(KeyPicker.key(root, s)) }
                         .padding(horizontal = 2.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -683,9 +685,9 @@ private fun TexturePanel(
         TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW TAPE", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            ActionButton("◄", scheme, enabled = !busy, onClick = { onSourceStep(-1) })
+            ActionButton("◄", scheme, enabled = !busy, accessibilityLabel = "PREVIOUS SOURCE", onClick = { onSourceStep(-1) })
             TapeText("SOURCE  $sourceLabel", TapeType.pixel, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
-            ActionButton("►", scheme, enabled = !busy, onClick = { onSourceStep(1) })
+            ActionButton("►", scheme, enabled = !busy, accessibilityLabel = "NEXT SOURCE", onClick = { onSourceStep(1) })
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -698,7 +700,7 @@ private fun TexturePanel(
                         .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
                         // Always clickable, `!busy` forwarded rather than
                         // dropped (accessibility audit finding 12).
-                        .tapeClick(label = null, enabled = !busy) { onMode(m) }
+                        .tapeClick(label = m, enabled = !busy) { onMode(m) }
                         .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {

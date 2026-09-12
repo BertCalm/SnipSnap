@@ -285,7 +285,7 @@ private fun DeletedKitRow(row: KitShelf.BinnedKit, busy: Boolean, onRestore: () 
                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
                 // Always clickable, `!busy` forwarded rather than dropped
                 // (accessibility audit finding 12).
-                .tapeClick(label = null, enabled = !busy, onClick = onRestore)
+                .tapeClick(label = "RESTORE ${row.name.uppercase()}", enabled = !busy, onClick = onRestore)
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -296,6 +296,8 @@ private fun DeletedKitRow(row: KitShelf.BinnedKit, busy: Boolean, onRestore: () 
 
 @Composable
 private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onClick: () -> Unit) {
+    // Same text the TapeText below shows — it already follows `armed`.
+    val label = if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS"
     Box(
         Modifier
             .fillMaxWidth()
@@ -306,13 +308,13 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(
             // `TakesBinScreen.kt`'s own armed-label swap, copied verbatim.
-            if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS",
+            label,
             TapeType.pixel,
             if (enabled) BinRedGlow else scheme.ink3.tape,
             maxLines = 1,
@@ -336,7 +338,7 @@ private fun HeaderChip(
             // `enabled` goes through `tapeClick`, not around it: a dimmed
             // chip stays in the semantics tree instead of silently
             // vanishing from it (accessibility audit finding 12).
-            .tapeClick(label = null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

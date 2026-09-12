@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.snipsnap.app.KitShelf
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -70,7 +69,18 @@ private const val EMPTY_BIN_ARM_MS = 3_000L
  */
 @Composable
 fun DeletedSnipsScreen(
-    shelf: KitShelf,
+    /**
+     * Where snips live: the app's own files directory, NOT the shelf root.
+     *
+     * Every writer in the app — the mic commit in `SnipSnapApplication`, the
+     * share import, SPLIT, SURFACE, PAD CAPTURE, ORBIT's bounce and LOOP's —
+     * passes `filesDir`, so a snip is at `<files>/snips/`. This screen used to
+     * take the `KitShelf` and read `shelf.root`, which `MainActivity` builds as
+     * `<files>/Kits`: it was listing `<files>/Kits/snips`, a directory nothing
+     * has ever written. The bin it showed was always empty, whatever was
+     * actually in it.
+     */
+    snipsRoot: File,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onRestored: (File) -> Unit,
@@ -80,7 +90,7 @@ fun DeletedSnipsScreen(
 
     var binned by remember { mutableStateOf<List<SnipStore.BinnedSnip>>(emptyList()) }
     LaunchedEffect(Unit) {
-        binned = withContext(Dispatchers.IO) { SnipStore.binned(shelf.root) }
+        binned = withContext(Dispatchers.IO) { SnipStore.binned(snipsRoot) }
     }
 
     var busy by remember { mutableStateOf(false) }
@@ -111,7 +121,7 @@ fun DeletedSnipsScreen(
         busy = true
         scope.launch {
             try {
-                val restored = withContext(Dispatchers.IO) { SnipStore.restore(shelf.root, target) }
+                val restored = withContext(Dispatchers.IO) { SnipStore.restore(snipsRoot, target) }
                 if (restored != null) {
                     binned = binned.filter { it.file != target.file }
                     // The name it actually landed under, off the returned
@@ -124,7 +134,7 @@ fun DeletedSnipsScreen(
                     // Not an exception — a row that outran the tap (a stale
                     // list, a second restore/sweep racing this one). Still
                     // worth a fresh list, `DeletedKitsScreen.kt`'s own shape.
-                    binned = withContext(Dispatchers.IO) { SnipStore.binned(shelf.root) }
+                    binned = withContext(Dispatchers.IO) { SnipStore.binned(snipsRoot) }
                     onToast(Copy.BIN_ITEM_GONE)
                 }
             } catch (e: Exception) {
@@ -146,7 +156,7 @@ fun DeletedSnipsScreen(
         busy = true
         scope.launch {
             try {
-                withContext(Dispatchers.IO) { SnipStore.emptyBin(shelf.root) }
+                withContext(Dispatchers.IO) { SnipStore.emptyBin(snipsRoot) }
                 binned = emptyList()
                 onToast(Copy.snipBinEmptied)
             } catch (e: Exception) {
@@ -277,7 +287,7 @@ private fun DeletedSnipRow(row: SnipStore.BinnedSnip, busy: Boolean, onRestore: 
                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
                 // Always clickable, `!busy` forwarded rather than dropped
                 // (accessibility audit finding 12).
-                .tapeClick(label = null, enabled = !busy, onClick = onRestore)
+                .tapeClick(label = "RESTORE ${row.displayName.uppercase()}", enabled = !busy, onClick = onRestore)
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -288,6 +298,8 @@ private fun DeletedSnipRow(row: SnipStore.BinnedSnip, busy: Boolean, onRestore: 
 
 @Composable
 private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onClick: () -> Unit) {
+    // Same text the TapeText below shows — it already follows `armed`.
+    val label = if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS"
     Box(
         Modifier
             .fillMaxWidth()
@@ -298,13 +310,13 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(
             // `TakesBinScreen.kt`'s own armed-label swap, copied verbatim.
-            if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS",
+            label,
             TapeType.pixel,
             if (enabled) BinRedGlow else scheme.ink3.tape,
             maxLines = 1,
@@ -328,7 +340,7 @@ private fun HeaderChip(
             // `enabled` goes through `tapeClick`, not around it: a dimmed
             // chip stays in the semantics tree instead of silently
             // vanishing from it (accessibility audit finding 12).
-            .tapeClick(label = null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

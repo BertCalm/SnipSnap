@@ -323,7 +323,13 @@ fun GrainFieldScreen(
             TapeText("PAD ${padTag(slot)}", TapeType.lcdHeader, scheme.lcdInk.tape)
             Spacer(Modifier.weight(1f))
             if (projector != null) {
-                HeaderChip("DUET", scheme, Modifier.width(64.dp), engaged = duetOn) { duetOn = !duetOn }
+                HeaderChip(
+                    "DUET",
+                    scheme,
+                    Modifier.width(64.dp),
+                    engaged = duetOn,
+                    accessibilityLabel = "DUET ${if (duetOn) "ON" else "OFF"}",
+                ) { duetOn = !duetOn }
             } else {
                 Spacer(Modifier.width(64.dp))
             }
@@ -506,6 +512,13 @@ private fun HeaderChip(
     // DeckButton's raised bevel. Every other HeaderChip call leaves this at
     // the default and renders exactly as before.
     engaged: Boolean = false,
+    /**
+     * Accessible name override, for the one call site (DUET) where
+     * [engaged] is a real toggle a screen reader needs to hear the state
+     * of. `null` (every other call site, where [engaged] never changes)
+     * falls back to [label] alone.
+     */
+    accessibilityLabel: String? = null,
     onClick: () -> Unit,
 ) {
     Box(
@@ -519,7 +532,7 @@ private fun HeaderChip(
                 },
             )
             .border(1.dp, if (engaged) scheme.accent.tape else scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .tapeClick(label = null, onClick = onClick)
+            .tapeClick(label = accessibilityLabel ?: label, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

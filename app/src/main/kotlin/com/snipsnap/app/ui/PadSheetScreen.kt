@@ -2433,7 +2433,7 @@ private fun HeaderChip(
             // `enabled` goes through `tapeClick`, not around it: a dimmed
             // chip stays in the semantics tree, so TalkBack finds ◀ BEFORE
             // (and ◄ KIT) during the same busy spell sighted users see it.
-            .tapeClick(label = null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -2581,7 +2581,9 @@ private fun ToggleChip(
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton, above in this file).
-            .tapeClick(label = null, enabled = enabled, onClick = onToggle)
+            // State follows `engaged` (ON/OFF), the same as the visible
+            // fill this chip already carries.
+            .tapeClick(label = "$label, ${if (engaged) "ON" else "OFF"}", enabled = enabled, onClick = onToggle)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -2655,7 +2657,7 @@ private fun TreatmentCard(
                             // than dropped so a non-tappable segment still
                             // announces itself instead of vanishing from the
                             // accessibility tree (finding 12).
-                            .tapeClick(label = null, enabled = tappable) { onSegmentTap(seg) }
+                            .tapeClick(label = PadSheet.displayLabel(seg), enabled = tappable) { onSegmentTap(seg) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -2860,7 +2862,7 @@ private fun MutateCard(
                             .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
                             // Always clickable, `!busy` forwarded rather
                             // than dropped (accessibility audit finding 12).
-                            .tapeClick(label = null, enabled = !busy) { onMode(m) }
+                            .tapeClick(label = m, enabled = !busy) { onMode(m) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -2884,7 +2886,7 @@ private fun MutateCard(
                             .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
                             // Always clickable, `!busy` forwarded rather
                             // than dropped (accessibility audit finding 12).
-                            .tapeClick(label = null, enabled = !busy) { onPartner(p) }
+                            .tapeClick(label = MutateSheet.padTag(p), enabled = !busy) { onPartner(p) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -2916,7 +2918,7 @@ private fun MutateCard(
                                 // Always clickable, `!busy` forwarded
                                 // rather than dropped (accessibility audit
                                 // finding 12).
-                                .tapeClick(label = null, enabled = !busy) { onRoom(r) }
+                                .tapeClick(label = r, enabled = !busy) { onRoom(r) }
                                 .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -2949,7 +2951,7 @@ private fun MutateCard(
                                 // Always clickable, `!busy` forwarded
                                 // rather than dropped (accessibility audit
                                 // finding 12).
-                                .tapeClick(label = null, enabled = !busy) { onPickKit(k) }
+                                .tapeClick(label = k, enabled = !busy) { onPickKit(k) }
                                 .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -2978,7 +2980,7 @@ private fun MutateCard(
                                     // Always clickable, `!busy` forwarded
                                     // rather than dropped (accessibility
                                     // audit finding 12).
-                                    .tapeClick(label = null, enabled = !busy) { onOtherPad(p) }
+                                    .tapeClick(label = MutateSheet.padTag(p), enabled = !busy) { onOtherPad(p) }
                                     .padding(horizontal = 4.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -3131,7 +3133,7 @@ private fun OutsideCard(
                         .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
                         // Always clickable, `!busy` forwarded rather than
                         // dropped (accessibility audit finding 12).
-                        .tapeClick(label = null, enabled = !busy) { onMove(m) }
+                        .tapeClick(label = m, enabled = !busy) { onMove(m) }
                         .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -3189,11 +3191,18 @@ internal fun ActionButton(
      */
     lit: Boolean = false,
     /**
-     * Override for [label] as the accessible name — for the rare button
-     * whose visible glyph is too short/acronym-shaped to trust TalkBack
-     * to read as a word (e.g. SplitScreen's "M"/"S" mute/solo chips).
-     * `null` (the default, and every call site but those two) lets
-     * [label] serve as its own name via `tapeClick`'s merge.
+     * Override for [label] as the accessible name — for the button whose
+     * visible glyph is too short/acronym-shaped to trust TalkBack to read
+     * as a word (e.g. SplitScreen's "M"/"S" mute/solo chips, or "▶"/"▲"
+     * transport glyphs elsewhere). `null` (the default) falls back to
+     * [label] itself below — *not* to a descendant-merge, which an
+     * accessibility-tree dump showed [tapeClick]'s clickable node does
+     * not actually receive (compose's semantics tree does not fold a
+     * sibling `TapeText` into a `clickable` ancestor for free; that was
+     * this constant's founding bug, audit finding: every plain-glyph
+     * `ActionButton` across ~14 screens spoke as unnamed). Deriving from
+     * [label] here fixes every one of those call sites at once, since
+     * [label] is real word-shaped text at all but the handful above.
      */
     accessibilityLabel: String? = null,
     modifier: Modifier = Modifier,
@@ -3209,7 +3218,7 @@ internal fun ActionButton(
             // a screen reader is told this control is temporarily
             // unavailable instead of it silently vanishing from the tree
             // (accessibility audit finding 12).
-            .tapeClick(label = accessibilityLabel, enabled = enabled, onClick = onClick)
+            .tapeClick(label = accessibilityLabel ?: label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -3249,7 +3258,7 @@ private fun DeleteButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) 
             .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
             .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
             // enabled forwarded, not dropped — see ActionButton's own note.
-            .tapeClick(label = null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = "DELETE → BIN", enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {

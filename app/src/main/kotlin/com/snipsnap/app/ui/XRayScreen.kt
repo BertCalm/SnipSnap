@@ -177,7 +177,7 @@ private fun HeaderChip(label: String, scheme: Scheme, modifier: Modifier = Modif
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .tapeClick(label = null, onClick = onClick)
+            .tapeClick(label = label, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

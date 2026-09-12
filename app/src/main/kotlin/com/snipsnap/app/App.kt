@@ -13,6 +13,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
@@ -693,7 +695,9 @@ fun App(shelf: KitShelf) {
         // Same promise, for deleted snips (name-and-find task): SNIPS's own
         // bin empties itself of whatever DELETE put there more than 30 days
         // ago — no kit write involved, so no KitWrites.mutex needed here.
-        withContext(Dispatchers.IO) { runCatching { SnipStore.sweepBin(shelf.root) } }
+        // context.filesDir, not shelf.root: snips live at `<files>/snips`, and
+        // the shelf is `<files>/Kits`. This swept a bin that never existed.
+        withContext(Dispatchers.IO) { runCatching { SnipStore.sweepBin(context.filesDir) } }
         // Orphaned import-staging left by a crashed/killed import, and
         // regenerable derived output (share-sheet temp copies) — never a
         // live kit or snip. Exports are deliberately NOT swept here: see
@@ -2007,6 +2011,7 @@ fun App(shelf: KitShelf) {
                         } else if (snipsOpen) {
                             SnipsScreen(
                                 shelf = shelf,
+                                snipsRoot = context.filesDir,
                                 onBack = { snipsOpen = false },
                                 onToast = { toast = it },
                                 onOpenInTape = { file ->
@@ -2705,7 +2710,18 @@ private fun BlockedDialog(message: String, buttonLabel: String, onDismiss: () ->
                 .fillMaxWidth()
                 .padding(24.dp)
                 .raisedBevel(scheme)
-                .tapeClick(label = null) { }
+                // Swallows the tap so it doesn't fall through to the
+                // scrim's dismiss handler below. A raw pointerInput, not
+                // tapeClick: this Column's real children (the message,
+                // PrimaryAction) carry their own accessible names below,
+                // and clickable()'s own semantics would add a second,
+                // nameless actionable node wrapping all of them — worse
+                // than the thing this pass is fixing, not better. A bare
+                // gesture detector registers no semantics node at all, so
+                // it consumes the touch without touching the accessibility
+                // tree (KitScreen.kt's PadCell uses the same "pointerInput
+                // registers no click action" idiom).
+                .pointerInput(Unit) { detectTapGestures { } }
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {

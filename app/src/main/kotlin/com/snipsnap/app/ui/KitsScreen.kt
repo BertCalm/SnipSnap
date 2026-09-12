@@ -7,6 +7,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -311,14 +313,17 @@ fun KitsScreen(
                         // SORT chip it sits beside. Offered only once the
                         // stamps are read - see `shownKits` above.
                         if (filterOffered) {
+                            val filterLabel = Copy.shelfFilter(shelfFilter)
                             Box(
                                 Modifier
                                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                                    // null for the same reason SORT passes null:
-                                    // the TapeText below already says which state
-                                    // is active, and an explicit label would
-                                    // REPLACE it for TalkBack.
-                                    .tapeClick(label = null) {
+                                    // Same text the TapeText below shows —
+                                    // it already reads as a state ("SHOW ▸
+                                    // ALL") the way Copy.shelfFilter's own
+                                    // KDoc intends. (A descendant TapeText
+                                    // does NOT merge into this node for
+                                    // free; see tapeClick's KDoc.)
+                                    .tapeClick(label = filterLabel) {
                                         shelfFilter =
                                             ShelfFilter.nextFrom(shelfFilter, shownKits.isEmpty())
                                     }
@@ -326,33 +331,32 @@ fun KitsScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 TapeText(
-                                    Copy.shelfFilter(shelfFilter),
+                                    filterLabel,
                                     TapeType.pixelSmall,
                                     scheme.amber.tape,
                                     maxLines = 1,
                                 )
                             }
                         }
-                        Box(
-                            Modifier
-                                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                                // null, not an explicit label: the descendant
-                                // TapeText below already says which mode is
-                                // active ("SORT ▸ RECENT"/"SORT ▸ A–Z") — an
-                                // explicit label here would REPLACE that merged
-                                // text for TalkBack (Chrome.kt's own tapeClick
-                                // KDoc), leaving a screen-reader user unable to
-                                // hear which state they're toggling out of.
-                                .tapeClick(label = null, onClick = onToggleSort)
-                                .padding(horizontal = 4.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            TapeText(
-                                if (shelfSort == KitShelf.ShelfSort.RECENT) Copy.SHELF_SORT_RECENT else Copy.SHELF_SORT_ALPHA,
-                                TapeType.pixelSmall,
-                                scheme.amber.tape,
-                                maxLines = 1,
-                            )
+                        run {
+                            val sortLabel = if (shelfSort == KitShelf.ShelfSort.RECENT) Copy.SHELF_SORT_RECENT else Copy.SHELF_SORT_ALPHA
+                            Box(
+                                Modifier
+                                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                                    // Same text as the TapeText below — it
+                                    // already reads as a state ("SORT ▸
+                                    // RECENT"/"SORT ▸ A–Z").
+                                    .tapeClick(label = sortLabel, onClick = onToggleSort)
+                                    .padding(horizontal = 4.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                TapeText(
+                                    sortLabel,
+                                    TapeType.pixelSmall,
+                                    scheme.amber.tape,
+                                    maxLines = 1,
+                                )
+                            }
                         }
                     }
                 }
@@ -678,7 +682,7 @@ private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.Ins
         Modifier
             .fillMaxWidth()
             .raisedBevel(scheme)
-            .tapeClick(label = null) { onOpen(entry) }
+            .tapeClick(label = "OPEN ${i.name.uppercase()}") { onOpen(entry) }
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -765,7 +769,7 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
                 .border(1.dp, scheme.ink2.tape, RoundedCornerShape(4.dp))
                 // Always clickable, `!busy` forwarded rather than dropped
                 // (accessibility audit finding 12).
-                .tapeClick(label = null, enabled = !busy) { onShare(room) }
+                .tapeClick(label = "SHARE ${room.name.uppercase()}", enabled = !busy) { onShare(room) }
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -780,7 +784,7 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
                     .border(2.dp, Brush.linearGradient(listOf(BinRedGlow, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
                     // Always clickable, `!busy` forwarded rather than
                     // dropped (accessibility audit finding 12).
-                    .tapeClick(label = null, enabled = !busy) { onForget(room) },
+                    .tapeClick(label = "FORGET ${room.name.uppercase()}", enabled = !busy) { onForget(room) },
                 contentAlignment = Alignment.Center,
             ) {
                 TapeText("FORGET → BIN", TapeType.pixel, if (busy) scheme.ink3.tape else BinRedGlow)
@@ -822,7 +826,7 @@ private fun BinnedRoomRow(binned: Rooms.Binned, busy: Boolean, onRestore: (Rooms
                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
                 // Always clickable, `!busy` forwarded rather than dropped
                 // (accessibility audit finding 12).
-                .tapeClick(label = null, enabled = !busy) { onRestore(binned) }
+                .tapeClick(label = "RESTORE ${binned.room.name.uppercase()}", enabled = !busy) { onRestore(binned) }
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -841,6 +845,10 @@ private fun BinnedRoomRow(binned: Rooms.Binned, busy: Boolean, onRestore: (Rooms
  */
 @Composable
 private fun EmptyRoomsBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onClick: () -> Unit) {
+    // Same text the TapeText below shows — it already follows `armed`,
+    // so the accessible name follows it too rather than freezing on
+    // whichever state happened to be current when null was written.
+    val label = if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS"
     Box(
         Modifier
             .fillMaxWidth()
@@ -851,7 +859,7 @@ private fun EmptyRoomsBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -860,7 +868,7 @@ private fun EmptyRoomsBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean
             // own `EmptyBinButton` — no `Copy` constant for this text there
             // either (see that file's own KDoc: a deliberate deviation from
             // the artboard, which shows no confirm affordance to match).
-            if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS",
+            label,
             TapeType.pixel,
             if (enabled) BinRedGlow else scheme.ink3.tape,
             maxLines = 1,
@@ -915,7 +923,7 @@ private fun KitRow(
             .let { if (revealActions) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
             .then(
                 if (pickModeActive) {
-                    Modifier.tapeClick(label = null) { onOpen(entry) }
+                    Modifier.tapeClick(label = "OPEN ${kit.name.uppercase()}") { onOpen(entry) }
                 } else {
                     // A plain tap/long-press pair with no drag — the
                     // sharpest instance the audit found (finding 1): with
@@ -958,7 +966,7 @@ private fun KitRow(
                         .raisedBevel(scheme)
                         // Always clickable, `!busy` forwarded rather than
                         // dropped (accessibility audit finding 12).
-                        .tapeClick(label = null, enabled = !busy) { onRequestRename(entry) }
+                        .tapeClick(label = "RENAME ${kit.name.uppercase()}", enabled = !busy) { onRequestRename(entry) }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -971,7 +979,7 @@ private fun KitRow(
                         .border(2.dp, Brush.linearGradient(listOf(BinRedGlow, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
                         // Always clickable, `!busy` forwarded rather than
                         // dropped (accessibility audit finding 12).
-                        .tapeClick(label = null, enabled = !busy) { onRequestDelete(entry) }
+                        .tapeClick(label = "DELETE ${kit.name.uppercase()}", enabled = !busy) { onRequestDelete(entry) }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -1019,7 +1027,16 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
                 .fillMaxWidth()
                 .padding(24.dp)
                 .raisedBevel(scheme)
-                .tapeClick(label = null) { }
+                // Swallows the tap so it doesn't fall through to the
+                // scrim's CANCEL below. A raw pointerInput, not tapeClick:
+                // this Column's real children below (CANCEL/DELETE or
+                // CANCEL/RENAME) carry their own accessible names, and
+                // clickable()'s own semantics would add a second, nameless
+                // actionable node wrapping all of them. A bare gesture
+                // detector registers no semantics node at all, consuming
+                // the touch without touching the accessibility tree
+                // (MessageBox.kt's pattern).
+                .pointerInput(Unit) { detectTapGestures { } }
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -1032,7 +1049,7 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
                         .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
-                        .tapeClick(label = null, onClick = onConfirm)
+                        .tapeClick(label = "DELETE", onClick = onConfirm)
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -1075,7 +1092,16 @@ private fun KitRenameDialog(initialName: String, onCancel: () -> Unit, onConfirm
                 .fillMaxWidth()
                 .padding(24.dp)
                 .raisedBevel(scheme)
-                .tapeClick(label = null) { }
+                // Swallows the tap so it doesn't fall through to the
+                // scrim's CANCEL below. A raw pointerInput, not tapeClick:
+                // this Column's real children below (CANCEL/DELETE or
+                // CANCEL/RENAME) carry their own accessible names, and
+                // clickable()'s own semantics would add a second, nameless
+                // actionable node wrapping all of them. A bare gesture
+                // detector registers no semantics node at all, consuming
+                // the touch without touching the accessibility tree
+                // (MessageBox.kt's pattern).
+                .pointerInput(Unit) { detectTapGestures { } }
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -1131,7 +1157,7 @@ fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = null, enabled = enabled, onClick = onClick),
+            .tapeClick(label = label, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(
@@ -1162,7 +1188,12 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
                 .padding(12.dp)
                 .raisedBevel(scheme)
                 // Swallow taps so the scrim's dismiss doesn't fire through.
-                .tapeClick(label = null) { }
+                // A raw pointerInput, not tapeClick: the starter rows below
+                // carry their own accessible names, and clickable()'s own
+                // semantics would add a second, nameless actionable node
+                // wrapping all of them. A bare gesture detector registers
+                // no semantics node at all (MessageBox.kt's pattern).
+                .pointerInput(Unit) { detectTapGestures { } }
                 .padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -1172,7 +1203,7 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
                     Modifier
                         .fillMaxWidth()
                         .sunkenField(scheme)
-                        .tapeClick(label = null) { onPick(starter) }
+                        .tapeClick(label = "PICK ${starter.displayName.uppercase()}") { onPick(starter) }
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
@@ -1262,7 +1293,7 @@ private fun ArmControl(
                     .height(Layout.PRIMARY_ACTION_H.dp)
                     .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                     .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(6.dp))
-                    .tapeClick(label = null, onClick = onEject),
+                    .tapeClick(label = "STOP", onClick = onEject),
                 contentAlignment = Alignment.Center,
             ) {
                 TapeText("STOP", TapeType.displayBig, BinRedGlow)
@@ -1273,7 +1304,7 @@ private fun ArmControl(
                     .height(Layout.PRIMARY_ACTION_H.dp)
                     .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                     .border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-                    .tapeClick(label = null, onClick = onSnip),
+                    .tapeClick(label = "SNIP ▸ UP TO 60s", onClick = onSnip),
                 contentAlignment = Alignment.Center,
             ) {
                 TapeText("SNIP ▸ UP TO 60s", TapeType.displayBig, scheme.amber.tape)

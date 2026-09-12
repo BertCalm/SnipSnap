@@ -299,7 +299,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
                 Modifier
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
-                    .tapeClick(label = null, onClick = ::panic)
+                    .tapeClick(label = "PANIC", onClick = ::panic)
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -309,7 +309,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
                 Modifier
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
-                    .tapeClick(label = null) { fullscreen = true }
+                    .tapeClick(label = "FULLSCREEN") { fullscreen = true }
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -415,7 +415,7 @@ private fun FullscreenPlayGrid(
                 Modifier
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
-                    .tapeClick(label = null, onClick = onExit)
+                    .tapeClick(label = "EXIT FULLSCREEN", onClick = onExit)
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
