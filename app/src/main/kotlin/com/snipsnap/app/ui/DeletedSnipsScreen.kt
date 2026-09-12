@@ -292,7 +292,11 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
             .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(5.dp))
-            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
+            // Always clickable, `enabled` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 — see ActionButton in PadSheetScreen.kt).
+            .tapeClick(label = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -319,7 +323,10 @@ private fun HeaderChip(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
+            // `enabled` goes through `tapeClick`, not around it: a dimmed
+            // chip stays in the semantics tree instead of silently
+            // vanishing from it (accessibility audit finding 12).
+            .tapeClick(label = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

@@ -782,7 +782,11 @@ private fun LabButton(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme)
-            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
+            // Always clickable, `enabled` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 — see ActionButton in PadSheetScreen.kt).
+            .tapeClick(label = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -874,16 +878,24 @@ private fun SlotCell(
     val tag = padTag(slot)
 
     if (pad == null) {
+        // Disabled dims the same amount branch two's locked cells do
+        // (0.35×) — one "can't drop here right now" look shared by empty
+        // and occupied slots, rather than a third treatment invented here.
+        val fade = if (enabled) 1f else 0.35f
         Box(
             modifier
                 .height(Layout.PAD_H.dp)
                 .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-                .border(2.dp, previewColor.copy(alpha = 0.55f), shape)
-                .let { if (enabled) it.tapeClick(label = null, onClick = onTap) else it }
+                .border(2.dp, previewColor.copy(alpha = 0.55f * fade), shape)
+                // Always clickable, `enabled` forwarded rather than dropped:
+                // a screen reader is told this cell is temporarily
+                // unavailable instead of it silently vanishing from the
+                // tree (accessibility audit finding 12).
+                .tapeClick(label = null, enabled = enabled, onClick = onTap)
                 .padding(5.dp),
             contentAlignment = Alignment.TopEnd,
         ) {
-            TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f))
+            TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f * fade))
         }
         return
     }
@@ -891,13 +903,19 @@ private fun SlotCell(
     val locked = pad.velocityLayers.isNotEmpty() || pad.chain != null
     val tappable = enabled && !locked
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(pad.drumClass)
-    val fade = if (locked) 0.35f else 1f
+    // Locked (chained/layered, refused by replaceAudio) and explicitly
+    // disabled (SlotChooserOverlay's `busy`) read as the same "can't tap
+    // this" state — one fade, not a distinct look per reason.
+    val fade = if (tappable) 1f else 0.35f
     Box(
         modifier
             .height(Layout.PAD_H.dp)
             .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
             .border(2.dp, cls.tape.copy(alpha = fade), shape)
-            .let { if (tappable) it.tapeClick(label = null, onClick = onTap) else it }
+            // Always clickable, `tappable` forwarded rather than dropped so
+            // a locked or disabled cell still announces itself instead of
+            // vanishing from the accessibility tree (finding 12).
+            .tapeClick(label = null, enabled = tappable, onClick = onTap)
             .padding(5.dp),
     ) {
         TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f * fade), Modifier.align(Alignment.TopEnd))

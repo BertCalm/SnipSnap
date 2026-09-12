@@ -233,7 +233,10 @@ private fun HeaderChip(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
+            // `enabled` goes through `tapeClick`, not around it: a dimmed
+            // chip stays in the semantics tree instead of silently
+            // vanishing from it (accessibility audit finding 12).
+            .tapeClick(label = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

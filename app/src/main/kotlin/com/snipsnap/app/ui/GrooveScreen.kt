@@ -1714,10 +1714,14 @@ private fun GrooveActionButton(
             .height(Layout.MIN_HIT_TARGET.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
             .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(6.dp))
-            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it },
+            // Always clickable, `enabled` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 — see ActionButton in PadSheetScreen.kt).
+            .tapeClick(label = null, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (accent) scheme.accent.tape else scheme.ink2.tape)
+        TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape)
     }
 }
 

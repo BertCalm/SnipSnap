@@ -912,7 +912,11 @@ private fun SecondaryButton(
     Box(
         modifier
             .raisedBevel(scheme)
-            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
+            // Always clickable, `enabled` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 — see ActionButton in PadSheetScreen.kt).
+            .tapeClick(label = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {

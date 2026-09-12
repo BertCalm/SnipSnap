@@ -2394,11 +2394,20 @@ private fun ToggleChip(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme, fill = if (engaged) color.copy(alpha = 0.85f) else null)
-            .let { if (enabled) it.tapeClick(label = null, onClick = onToggle) else it }
+            // Always clickable, `enabled` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 — see ActionButton, above in this file).
+            .tapeClick(label = null, enabled = enabled, onClick = onToggle)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (engaged) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 1)
+        TapeText(
+            label,
+            TapeType.pixel,
+            if (!enabled) scheme.ink3.tape else if (engaged) scheme.titleInk.tape else scheme.ink2.tape,
+            maxLines = 1,
+        )
     }
 }
 
@@ -2948,6 +2957,12 @@ private fun DeleteButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) 
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText("DELETE → BIN", TapeType.pixel, BinRedGlow)
+        // The glow was fixed regardless of `enabled` — a dead DELETE button
+        // that still glows red reads as live. Falling back to `ink3` (not a
+        // dimmed BinRedGlow) matches the convention already used by every
+        // sibling BIN-red button (EmptyBinButton × 3, EmptyRoomsBinButton):
+        // BinRedGlow at reduced alpha risks failing contrast against the
+        // dark LCD fill, where ink3 is a scheme token already tuned for it.
+        TapeText("DELETE → BIN", TapeType.pixel, if (enabled) BinRedGlow else scheme.ink3.tape)
     }
 }

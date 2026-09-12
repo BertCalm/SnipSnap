@@ -818,7 +818,11 @@ private fun EmptyRoomsBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
             .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(5.dp))
-            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
+            // Always clickable, `enabled` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 — see ActionButton in PadSheetScreen.kt).
+            .tapeClick(label = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -1090,7 +1094,11 @@ fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
             .height(Layout.PRIMARY_ACTION_H.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
             .then(rim)
-            .then(if (enabled) Modifier.tapeClick(label = null, onClick = onClick) else Modifier),
+            // Always clickable, `enabled` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 — see ActionButton in PadSheetScreen.kt).
+            .tapeClick(label = null, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(
