@@ -413,6 +413,7 @@ object Copy {
         "· DUST: THE TAPE'S OWN HISS, ROOM AND CRACKLE UNDER A PAD. OR ANOTHER'S.",
         "· CHOP'S CUT BENCH: HITS, EAR, GRID. MERGE OR SPLIT UNDER A CHIP.",
         "· FOLD ON CHOP: ONE PAD PER SOUND, THE REPEATS CYCLE UNDER IT.",
+        "· GHOSTS ON CHOP: THE SPACES BETWEEN HITS. HOLD A PAD, HOLD THE ROOM.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -1008,6 +1009,11 @@ object Copy {
     /** FOLD's strip: how many slices became how many pads. */
     fun folded(slices: Int, pads: Int): String =
         "FOLD: $slices ${if (slices == 1) "SLICE" else "SLICES"} → $pads ${if (pads == 1) "PAD" else "PADS"}. TAP A PAD, HEAR ITS TAKES IN TURN."
+    // ---- GHOST CHOP (docs/CHOP_CONTROLS.md §9) ----
+    /** The GHOSTS segment's toast: what the rows are now. */
+    const val CHOP_GHOSTS_ON = "GHOSTS: THE SPACES BETWEEN THE HITS, EACH NAMED FOR THE HIT BEFORE IT. HOLD A PAD, HOLD THE ROOM."
+    /** GHOSTS on a tape with nothing between its hits: the strip says so instead of showing an empty grid in silence. */
+    const val CHOP_GHOSTS_NONE = "NOTHING BETWEEN THE HITS ON THIS TAPE. A GATED BREAK HAS NO GHOSTS."
     /** SEND TO GRID's toast when the layout was FOLD: both numbers, then the choke word SEND's own toast uses. */
     fun foldedToGrid(slices: Int, pads: Int, chokeSet: Boolean): String =
         "$slices ${if (slices == 1) "SLICE" else "SLICES"} FOLDED ONTO $pads ${if (pads == 1) "PAD" else "PADS"}." + if (chokeSet) " CHOKE GROUP SET." else ""

@@ -1,8 +1,9 @@
 # CHOP CONTROLS — the CUT bench, MERGE and SPLIT, live markers
 
-**Status: round two built.** Round one: the plain controls (HITS, EAR,
+**Status: round three built.** Round one: the plain controls (HITS, EAR,
 CUT, GRID), the two local moves (MERGE, SPLIT), and the markers that
 show what any of them did. Round two (§8): ON THE GRID and FOLD DOUBLES.
+Round three (§9): GHOST CHOP.
 
 ## 1. What was wrong
 
@@ -222,3 +223,68 @@ That is the trade, and the pad sheet already says so.
   rather than capture order, so the top of the cycle is the hardest hit.
 - Whether the grid wants an anchor other than the first cut — a downbeat
   the user taps — for captures that start on a pickup.
+
+## 9. Round three: GHOST CHOP
+
+The chopper only ever keeps the hits. The tape between them — the
+decays, the room, the floor — is thrown away, and it is a texture kit
+nobody has heard yet. GHOSTS is the third segment on the CUT bench's
+mode row (BY HITS · GRID · GHOSTS): the rows flip from the hits to the
+spaces between them, each named for the hit it follows (`AFTER SNARE
+3`), and they land as **gate pads** — hold the pad, hold the room; let
+go, it stops.
+
+- **Where a ghost starts** (`Chopper.ghosts`): the hit's peak in its
+  first 50 ms, then the first 5 ms window whose RMS has fallen 18 dB
+  below that peak (`GHOST_DROP_DB`) — where the hit has died down and
+  the room is what is left. It runs to the next hit's cut; the last to
+  the end of the tape. DUST reads the same tails for its room; here the
+  whole tail is the pad.
+- **A ghost shorter than 60 ms is not a ghost** (`GHOST_MIN_SEC`). A
+  tight, gated break has none, and the strip says NOTHING BETWEEN THE
+  HITS ON THIS TAPE. A GATED BREAK HAS NO GHOSTS. rather than showing
+  sixteen pads of scraps.
+- **A ghost is texture, not a drum.** The rows are classed LOOP with
+  full confidence — never sent to the drum classifier, which would call
+  every one NOT SURE — and their features still ride along, so FOLD
+  works on ghosts too. The chip can still be relabelled.
+- **Named for the hit before it**, as the chip would have read that hit
+  (`AFTER HAT CL 2`); the name is the pad's name on the grid
+  (`ArrangedPad.displayName`, carried through SEND and ONTO alike) and
+  rides in provenance as `ghost`.
+- **Balanced on landing.** Ghosts are quiet by nature; a ghost chop
+  goes through the kit-level balancer (`Balance`), which sets the
+  mixer level per pad and never touches the WAVs — the same balancer
+  the CLI's chop applies. A chop of hits lands as it always has.
+- **The bench reaches the hits underneath.** Count, EAR, CUT and ON THE
+  GRID all act on the hits chop the ghosts are the spaces of
+  (`ChopMode.Ghosts(hits)`, `hitsOf`, `withHits`); the readout says both
+  (`4 GHOSTS · 8 HITS`). MERGE and SPLIT work on ghosts; a split ghost's
+  second half is still the space after the same hit. Every ghost carries
+  RE-TRIM's keys, so a ghost pad can go back to its tape like any slice.
+- **A second page.** Chop the hits, SEND; switch to GHOSTS, ONTO the
+  same kit's empty bank B: the hits on A, their rooms on B.
+
+### Laws the tests hold
+
+- Four hits give four ghosts, named AFTER KICK 1 … AFTER HAT OP 4,
+  classed LOOP and never NOT SURE; each starts after its hit's attack
+  and runs exactly to the next cut, at least 60 ms long.
+- The bench reaches the hits underneath (three hits, three ghosts; the
+  header carries CUT EARLY); a grid becomes the hits.
+- The landing is gate pads named for their hits, through the balancer,
+  with RE-TRIM's keys and `ghost` in provenance, through SEND and ONTO
+  alike.
+- A gated break's hits are heard and its ghosts are none.
+- MERGE and SPLIT keep the names.
+
+### What the phone should judge
+
+- Whether 18 dB below the peak is where a ghost should start: earlier
+  and the pad carries the tail of the drum, later and short rooms are
+  lost. One constant.
+- Whether the balancer's LOOP target (0.85) brings ghosts up enough on
+  a phone speaker, or whether a ghost chop wants its own target.
+- Whether the SPLIT engine's air separation over each ghost (the room
+  without the tonal ring) is worth a second pass — the richer version
+  the idea named, left for when the plain one has been heard.

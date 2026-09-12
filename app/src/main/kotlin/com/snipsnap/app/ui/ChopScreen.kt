@@ -420,12 +420,14 @@ private fun ChopContent(
 
     /** HITS ◀ ▶: one fewer or one more than the chop has now, so the step is always visible when the tape allows it. */
     fun stepHits(delta: Int) {
-        val hits = model.mode as? ChopReviewModel.ChopMode.ByHits ?: return
-        val want = (model.sliceCount + delta).coerceIn(1, ChopReviewModel.MAX_HITS)
-        if (want == model.sliceCount) return
-        val before = model.sliceCount
-        rechopTo(hits.copy(maxSlices = want)) { fresh ->
-            if (delta > 0 && fresh.sliceCount <= before) onToast(Copy.chopOnlyHits(fresh.sliceCount))
+        val hits = ChopReviewModel.hitsOf(model.mode) ?: return
+        // The step is from the hits the ear heard (on GHOSTS, the hits the
+        // spaces are the spaces of), so it is always visible when the tape allows it.
+        val have = model.hitsHeard
+        val want = (have + delta).coerceIn(1, ChopReviewModel.MAX_HITS)
+        if (want == have) return
+        rechopTo(ChopReviewModel.withHits(model.mode, hits.copy(maxSlices = want))) { fresh ->
+            if (delta > 0 && fresh.hitsHeard <= have) onToast(Copy.chopOnlyHits(fresh.hitsHeard))
         }
     }
 
@@ -539,6 +541,8 @@ private fun ChopContent(
     val stripText = when {
         melodic && melodicBusy -> "…"
         melodic -> Copy.MELODIC_ON
+        // A ghost chop of a gated break: the honest line, not an empty grid in silence.
+        model.ghosts && model.sliceCount == 0 -> Copy.CHOP_GHOSTS_NONE
         else -> classicPlacement!!.second
     }
 
@@ -571,14 +575,27 @@ private fun ChopContent(
             scheme = scheme,
             onToggle = { cutOpen = !cutOpen },
             onByHits = {
-                if (model.mode !is ChopReviewModel.ChopMode.ByHits) rechopTo(ChopReviewModel.ChopMode.ByHits(model.sliceCount.coerceIn(1, ChopReviewModel.MAX_HITS)))
+                // From GHOSTS, back to the hits it was the spaces of; from a grid, that many hits.
+                if (model.mode !is ChopReviewModel.ChopMode.ByHits) {
+                    rechopTo(ChopReviewModel.hitsOf(model.mode) ?: ChopReviewModel.ChopMode.ByHits(model.sliceCount.coerceIn(1, ChopReviewModel.MAX_HITS)))
+                }
             },
             onGrid = {
                 if (model.mode !is ChopReviewModel.ChopMode.Grid) rechopTo(ChopReviewModel.ChopMode.Grid(model.sliceCount.coerceIn(1, ChopReviewModel.MAX_HITS)))
             },
+            onGhosts = {
+                // GHOST CHOP (docs/CHOP_CONTROLS.md §9): the spaces between
+                // the hits this chop makes (or would make, from a grid).
+                if (model.mode !is ChopReviewModel.ChopMode.Ghosts) {
+                    val hits = ChopReviewModel.hitsOf(model.mode) ?: ChopReviewModel.ChopMode.ByHits(model.sliceCount.coerceIn(1, ChopReviewModel.MAX_HITS))
+                    rechopTo(ChopReviewModel.ChopMode.Ghosts(hits)) { fresh ->
+                        onToast(if (fresh.sliceCount == 0) Copy.CHOP_GHOSTS_NONE else Copy.CHOP_GHOSTS_ON)
+                    }
+                }
+            },
             onStep = { delta -> if (model.mode is ChopReviewModel.ChopMode.Grid) stepGrid(delta) else stepHits(delta) },
             onAuto = {
-                val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
+                val hits = ChopReviewModel.hitsOf(model.mode)
                 if (hits != null && !rechopBusy && !sendBusy) {
                     rechopBusy = true
                     val current = model
@@ -586,7 +603,7 @@ private fun ChopContent(
                         try {
                             val (count, fresh) = withContext(Dispatchers.IO) {
                                 val n = current.autoCount()
-                                n to n?.let { current.rechopKeeping(hits.copy(maxSlices = it)) }
+                                n to n?.let { current.rechopKeeping(ChopReviewModel.withHits(current.mode, hits.copy(maxSlices = it))) }
                             }
                             // No hit at all is a refusal, not a count of one.
                             if (count == null || fresh == null) {
@@ -606,22 +623,22 @@ private fun ChopContent(
                 }
             },
             onEar = { ear ->
-                val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
-                if (hits != null && hits.ear != ear) rechopTo(hits.copy(ear = ear))
+                val hits = ChopReviewModel.hitsOf(model.mode)
+                if (hits != null && hits.ear != ear) rechopTo(ChopReviewModel.withHits(model.mode, hits.copy(ear = ear)))
             },
             onCut = { cut ->
-                val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
-                if (hits != null && hits.cut != cut) rechopTo(hits.copy(cut = cut))
+                val hits = ChopReviewModel.hitsOf(model.mode)
+                if (hits != null && hits.cut != cut) rechopTo(ChopReviewModel.withHits(model.mode, hits.copy(cut = cut)))
             },
             tempo = tempoMeasured,
             onSnap = { grid ->
-                val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
+                val hits = ChopReviewModel.hitsOf(model.mode)
                 if (hits != null && hits.grid != grid) {
                     // Without a pulse the choice is still recorded — the cuts
                     // stay where the hits were and the header reads (NO
                     // TEMPO) — and the toast says why nothing moved.
                     if (grid != ChopReviewModel.GridSnap.OFF && tempoMeasured.first && tempoMeasured.second == null) onToast(Copy.CHOP_NO_TEMPO)
-                    rechopTo(hits.copy(grid = grid))
+                    rechopTo(ChopReviewModel.withHits(model.mode, hits.copy(grid = grid)))
                 }
             },
         )
@@ -671,7 +688,8 @@ private fun ChopContent(
                 Column(Modifier.fillMaxWidth()) {
                     SliceRow(
                         row = row,
-                        pitchLabel = if (melodic) pitchLabels?.getOrNull(row.n - 1) else foldTags?.getOrNull(row.n - 1),
+                        // The small text beside the chip: the pitch on MELODIC, the fold on FOLD, else a ghost's name.
+                        pitchLabel = if (melodic) pitchLabels?.getOrNull(row.n - 1) else foldTags?.getOrNull(row.n - 1) ?: row.ghostOf,
                         // The chip opens the list rather than advancing one
                         // step (September UAT, finding 6): the cycle ran one
                         // way through ten classes with no back step, so a
@@ -1046,6 +1064,8 @@ private fun CutBench(
     onToggle: () -> Unit,
     onByHits: () -> Unit,
     onGrid: () -> Unit,
+    /** GHOSTS: the spaces between the hits (§9). */
+    onGhosts: () -> Unit,
     onStep: (Int) -> Unit,
     onAuto: () -> Unit,
     onEar: (ChopReviewModel.Ear) -> Unit,
@@ -1055,9 +1075,11 @@ private fun CutBench(
     /** ON THE GRID's row: the snap picked. (`onGrid` above is the BY HITS / GRID segment; the two are different things.) */
     onSnap: (ChopReviewModel.GridSnap) -> Unit,
 ) {
-    val hits = model.mode as? ChopReviewModel.ChopMode.ByHits
+    val hits = ChopReviewModel.hitsOf(model.mode)
     val readout = when (val mode = model.mode) {
         is ChopReviewModel.ChopMode.ByHits -> "${model.sliceCount} ${if (model.sliceCount == 1) "HIT" else "HITS"}"
+        // GHOSTS: the spaces, and the hits they are the spaces of.
+        is ChopReviewModel.ChopMode.Ghosts -> "${model.sliceCount} ${if (model.sliceCount == 1) "GHOST" else "GHOSTS"} · ${model.hitsHeard} HITS"
         is ChopReviewModel.ChopMode.Grid -> "GRID ×${mode.parts}"
     }
     // By hits the count and the mode are two things (12 HITS · BY HITS ·
@@ -1072,8 +1094,9 @@ private fun CutBench(
         scheme = scheme,
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            SegmentButton("BY HITS", active = hits != null, modifier = Modifier.weight(1f), onClick = onByHits)
-            SegmentButton("GRID", active = hits == null, modifier = Modifier.weight(1f), onClick = onGrid)
+            SegmentButton("BY HITS", active = model.mode is ChopReviewModel.ChopMode.ByHits, modifier = Modifier.weight(1f), onClick = onByHits)
+            SegmentButton("GRID", active = model.mode is ChopReviewModel.ChopMode.Grid, modifier = Modifier.weight(1f), onClick = onGrid)
+            SegmentButton("GHOSTS", active = model.ghosts, modifier = Modifier.weight(1f), onClick = onGhosts)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             SecondaryButton("◀", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy, spoken = "ONE $unit FEWER") { onStep(-1) }
