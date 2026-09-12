@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -1374,6 +1375,53 @@ fun GrooveScreen(
         }
     }
 
+    // STEP EDIT's semantics leak (accessibility audit, oilslick followups):
+    // `StepEditorOverlay` below is stacked as a Box sibling, not swapped in
+    // via `if (isEditing) overlay else content` — the content MUST stay
+    // composed while editing (that's what keeps every `remember` above
+    // alive across a DONE round-trip; see this function's own KDoc on why
+    // the from-scratch branch didn't fork into a second composable
+    // either). Staying composed means staying in the semantics tree too,
+    // so a covered control (`● RECORD`, `FEEL TIGHTER`, `SWING DOWN`, PROG
+    // prev/next…) was still focusable and `ACTION_CLICK`-able by TalkBack
+    // even though the overlay visually owns the screen and correctly wins
+    // hit-testing for touch (confirmed on-device: tapping RECORD's exact
+    // coordinates through the overlay toggles a step, not RECORD — this
+    // bug is accessibility-only).
+    //
+    // Fixed by clearing semantics on the content root while `isEditing`,
+    // not by hiding the overlay's own tree — same
+    // `Modifier.clearAndSetSemantics { }` Chrome.kt's `MenuEdge` already
+    // uses for a decorative element, applied here to something that DOES
+    // matter when visible, just not while buried under STEP EDIT.
+    // `hideFromAccessibility()` (Compose 1.8) isn't available on this
+    // BOM's Compose 1.7.x, hence `clearAndSetSemantics` instead.
+    //
+    // Only the `else` (loaded-base) branch below gets the guard. The
+    // `if (loadedBase == null)` branch's STEPS button (`startSteps()`)
+    // does set `isEditing = true`, but in the same synchronous
+    // continuation it also sets `base = b` first, with no suspension
+    // point between them — Compose applies both snapshot writes before
+    // the next recomposition, so `loadedBase` is never read as null in
+    // the same frame `isEditing` reads true. `forkToE`/`forkTakeToE` (the
+    // only other two call sites) both bail via `currentClip ?: return`,
+    // and `currentClip` is null exactly when `base` is (see this file's
+    // own comment above `currentClip`'s declaration), so neither can set
+    // `isEditing = true` from a null `base` either.
+    //
+    // Nor can `base` fall back to null *after* entry: the only site that
+    // ever nulls it is `undoTake`'s `base = snapshot` (`preTake` can be
+    // null), and `undoTake` is gated on `justLanded`, which every
+    // `isEditing = true` call site (`startSteps`, `forkToE`,
+    // `forkTakeToE`) clears via `clearJustLanded()` before or as part of
+    // the same transition. Re-arming `justLanded` requires landing a new
+    // take, which requires tapping `● RECORD` — itself GROOVE content,
+    // unreachable by touch under the overlay and (as of this fix)
+    // unreachable by TalkBack too. So the empty-state branch can reach
+    // `isEditing == true` for zero frames, on entry or afterward; a guard
+    // there would be untestable dead code, not latent safety — if the
+    // empty state ever grows its own editor entry point, add the guard
+    // then.
     Box(Modifier.fillMaxSize()) {
         val loadedBase = base
         if (loadedBase == null) {
@@ -1495,7 +1543,10 @@ fun GrooveScreen(
                 }
             }
         } else {
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Column(
+                Modifier.fillMaxSize().then(if (isEditing) Modifier.clearAndSetSemantics { } else Modifier),
+                verticalArrangement = Arrangement.spacedBy(9.dp),
+            ) {
                 Box(
                     Modifier.fillMaxWidth().height(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
                     contentAlignment = Alignment.CenterStart,
