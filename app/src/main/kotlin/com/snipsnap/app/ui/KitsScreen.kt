@@ -1189,11 +1189,36 @@ private fun ArmControl(
     val scheme = LocalScheme.current
     if (!armed) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // "LISTEN" is load-bearing text, not just this button's label:
+            // half a dozen toasts and the quick-settings tile
+            // (`Copy.TILE_LABEL_IDLE`) all say "PRESS LISTEN AGAIN"/"LISTEN
+            // STILL WORKS" expecting that exact word, so it stays put
+            // rather than being reworded for parallelism with the button
+            // beside it (truncation pass).
             Box(Modifier.weight(1f)) {
                 PrimaryAction(label = "LISTEN", enabled = true, onClick = onArm)
             }
-            Box(Modifier.weight(1f)) {
-                PrimaryAction(label = "LISTEN INSIDE ▸ OTHER APPS' AUDIO", enabled = true, onClick = onArmInside)
+            // Was equal-weighted against "LISTEN" above at 33 characters,
+            // rendering as "LISTEN INSIDE ▸ …" — the half of the pair that
+            // actually says which audio this arms (another app's, not the
+            // mic) was exactly what got cut. PrimaryAction sets
+            // TapeType.displayBig (12sp + 2sp tracking, much wider per
+            // character than ActionButton's own pixel face), so even
+            // weight(2f) against "LISTEN" still ellipsized on-device at
+            // "LISTEN INSIDE ▸ APP A…" — confirmed by screenshot, not just
+            // estimated. "LISTEN" dropped from this half too: it already
+            // sits beside the button of that exact name, so INSIDE alone
+            // (the term this feature's own KDoc above already uses:
+            // "ARM INSIDE") reads as the sibling action without repeating
+            // the word. Weighted 2:1 (same idiom as STOP/SNIP ▸ below).
+            // ▸ kept — `onArmInside` (`App.kt`'s `requestArmInside`) always
+            // opens the system's screen-capture consent dialog first
+            // (`projectionLauncher`/`createScreenCaptureIntent`, asked
+            // fresh every session, never cached), which is genuinely
+            // "opens something," unlike LISTEN's occasional one-time mic
+            // permission prompt.
+            Box(Modifier.weight(2f)) {
+                PrimaryAction(label = "INSIDE ▸ APP AUDIO", enabled = true, onClick = onArmInside)
             }
         }
         return
