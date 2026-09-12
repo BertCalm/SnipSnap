@@ -296,9 +296,7 @@ private fun SectionRow(
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(if (selected) scheme.field.tape else scheme.lcd.tape, RoundedCornerShape(4.dp))
             .border(1.dp, if (active) scheme.amber.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
-            // A text child already covers the accessible name (index, name,
-            // bar count) — see `tapeClick`'s own KDoc on when null is right.
-            .tapeClick(label = null) { onTap() }
+            .tapeClick(label = "SECTION ${index + 1}: ${section.name.uppercase()}, ${section.bars} BARS") { onTap() }
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -318,7 +316,7 @@ private fun HeaderChip(label: String, scheme: Scheme, modifier: Modifier = Modif
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .tapeClick(label = null, onClick = onClick)
+            .tapeClick(label = label, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
