@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -90,6 +91,7 @@ import com.snipsnap.loop.OrbitSpan
 import com.snipsnap.loop.OrbitStore
 import com.snipsnap.loop.PatternOrbit
 import com.snipsnap.loop.SnipOrbit
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
@@ -490,8 +492,8 @@ fun OrbitScreen(
 
     fun addPatternRing() {
         val s = set ?: return
-        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast("EIGHT RINGS IS THE SKY"); return }
-        val firstPad = kit.pads.minOfOrNull { it.slot } ?: run { onToast("NO PADS ON THIS KIT"); return }
+        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast(Copy.ORBIT_RINGS_FULL); return }
+        val firstPad = kit.pads.minOfOrNull { it.slot } ?: run { onToast(Copy.ORBIT_NO_PADS); return }
         val name = "RING ${s.orbits.size + 1}"
         commit(s.copy(orbits = s.orbits + OrbitPresets.emptyPattern(kitDir.name, name, listOf(firstPad))))
         selected = s.orbits.size
@@ -500,13 +502,13 @@ fun OrbitScreen(
     fun addSnipRing(file: File) {
         val s = set ?: return
         snipPickerOpen = false
-        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast("EIGHT RINGS IS THE SKY"); return }
+        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast(Copy.ORBIT_RINGS_FULL); return }
         scope.launch {
             // The header alone says how long the snip is — no decode, no
             // size ceiling to worry about. The bank decodes (capped) when
             // the ring is actually prepared for playback.
             val info = withContext(Dispatchers.IO) { runCatching { WavInfo.read(file) }.getOrNull() }
-            if (info == null) { onToast("COULD NOT READ ${file.name}"); return@launch }
+            if (info == null) { onToast(Copy.orbitFileUnreadable(file.name)); return@launch }
             val current = set ?: return@launch
             // Frames at the set's rate, since the bank resamples before it fits.
             val frames = (info.frameCount.toDouble() / info.sampleRate * current.sampleRate).roundToInt()
@@ -527,7 +529,7 @@ fun OrbitScreen(
 
     /** Step back one edit: the set before it, saved and handed to the engine like any other change. */
     fun undo() {
-        val previous = history.lastOrNull() ?: run { onToast("NOTHING TO UNDO"); return }
+        val previous = history.lastOrNull() ?: run { onToast(Copy.ORBIT_NOTHING_TO_UNDO); return }
         history = history.dropLast(1)
         bpmJob?.cancel()
         bpmPending = false
@@ -576,7 +578,7 @@ fun OrbitScreen(
     fun duplicateRing(index: Int) {
         val s = set ?: return
         val ring = s.orbits.getOrNull(index) ?: return
-        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast("EIGHT RINGS IS THE SKY"); return }
+        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast(Copy.ORBIT_RINGS_FULL); return }
         val copy = ring.copy(name = OrbitPatterns.copyName(ring.name))
         // Through the set, so the arrangement moves with the rings: a
         // section names them by index, and an insert shifts every index
@@ -647,8 +649,11 @@ fun OrbitScreen(
             bouncing = false
             result.onSuccess { imported ->
                 snips = SnipStore.list(filesDir)
-                onToast("ON TAPE: ${cycleLabel(what)}. TRIM IT, CHOP IT, KIT IT.")
-            }.onFailure { e -> onToast("BOUNCE FAILED: ${e.message ?: e.javaClass.simpleName}") }
+                onToast(Copy.orbitBounced(cycleLabel(what)))
+            }.onFailure { e ->
+                Log.e("OrbitScreen", "bounceToTape: failed", e)
+                onToast(Copy.ORBIT_BOUNCE_FAILED)
+            }
         }
     }
 
@@ -773,25 +778,23 @@ fun OrbitScreen(
                 // but it is where the player just was, since CLIP ▸ KIT is
                 // a button inside it, and OUT ▸ reopens it.
                 val behind = OrbitClip.snipRings(s)
-                // One clip, or one per section. A section that plays no
-                // ring writes none, so the count is the clips actually
-                // written rather than the sections asked for - the toast
-                // says what is in the kit, not what was intended.
+                // One clip, or one per section. The count is the clips
+                // actually written rather than the sections asked for: a
+                // section that plays no rings is a break and writes none,
+                // so the line says what is in the kit, not what was meant.
                 val bars = clip.sumOf { it.bars }
                 val notes = clip.sumOf { it.notes.size }
-                val what = if (clip.size == 1) {
-                    "${clip[0].name} IS IN THE KIT'S GROOVES — $bars BARS, $notes NOTES"
-                } else {
-                    "${clip.size} SECTIONS ARE IN THE KIT'S GROOVES — $bars BARS, $notes NOTES, ONE SEQUENCE EACH"
-                }
                 onToast(
-                    if (behind.isEmpty()) {
-                        "$what. ${if (clip.size == 1) "IT RIDES" else "THEY RIDE"} TO THE MPC."
+                    if (clip.size == 1) {
+                        Copy.clippedIntoKit(clip[0].name, bars, notes, behind.size)
                     } else {
-                        "$what. ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED OUT."
+                        Copy.clippedSectionsIntoKit(clip.size, bars, notes, behind.size)
                     },
                 )
-            }.onFailure { e -> onToast("CLIP FAILED: ${e.message ?: e.javaClass.simpleName}") }
+            }.onFailure { e ->
+                Log.e("OrbitScreen", "clipIntoKit: failed", e)
+                onToast(Copy.ORBIT_CLIP_FAILED)
+            }
         }
     }
 
@@ -910,7 +913,7 @@ fun OrbitScreen(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         SmallChip("SET ${offer.bpm.roundToInt()}", scheme, accent = true) { acceptTempo(offer) }
                         SmallChip("KEEP ${current.bpm.roundToInt()}", scheme) { tempoOffer = null }
-                        TapeText("SET MOVES THE WHOLE SET AND RE-SIZES THE RING TO FIT.", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 2)
+                        TapeText(Copy.ORBIT_SET_TEMPO_HINT, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 2)
                     }
                 }
             }
@@ -1348,11 +1351,7 @@ fun OrbitScreen(
                 }
             }
             TapeText(
-                if (snips.isEmpty()) {
-                    "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · NO SNIPS ON THE SHELF YET FOR + SNIP."
-                } else {
-                    "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · HOLD BPM TO RUN IT · TAP THE READOUT FOR THE BAR · SHORTEST RING INSIDE COMES ROUND FIRST."
-                },
+                Copy.orbitLegend(hasSnips = snips.isNotEmpty()),
                 TapeType.pixelSmall,
                 scheme.ink3.tape,
                 Modifier.fillMaxWidth(),

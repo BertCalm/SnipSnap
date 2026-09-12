@@ -77,8 +77,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * The KIT screen: bank A as the 4×4 grid, physically laid out — A13–A16
- * across the top, A01 bottom-left, exactly the MPC's own geometry (and
- * the geometry `Copy.KONAMI_PADS` assumes).
+ * across the top, A01 bottom-left, exactly the MPC's own geometry.
  */
 private val GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
 
@@ -144,7 +143,7 @@ fun KitScreen(
                 .padding(14.dp),
             contentAlignment = Alignment.Center,
         ) {
-            TapeText("NO TAPE IN THE DECK. OPEN ONE ON THE SHELF.", TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+            TapeText(Copy.NO_TAPE_IN_DECK, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
         }
         return
     }
@@ -584,7 +583,7 @@ private fun KeyPanel(
         }
 
         if (readouts.isEmpty()) {
-            TapeText("NO TONAL PADS. DRUMS LAND AS CAPTURED.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText(Copy.NO_TONAL_PADS, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         } else {
             for (line in readouts) TapeText(line, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         }

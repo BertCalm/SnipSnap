@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -99,7 +100,8 @@ fun DeletedKitsScreen(
     }
 
     fun failure(action: String, e: Exception) {
-        onToast("$action FAILED: ${e.message ?: e.javaClass.simpleName}")
+        Log.e("DeletedKitsScreen", "$action: failed", e)
+        onToast(Copy.actionFailed(action))
     }
 
     fun doRestore(target: KitShelf.BinnedKit) {
@@ -198,7 +200,7 @@ fun DeletedKitsScreen(
                 // Plain, not the tape-metaphor voice — SNIPS's own locked
                 // tone (`SnipsScreen.kt`'s "NO SNIPS YET"), not the tape
                 // shelf's usual quips.
-                TapeText("NOTHING DELETED.", TapeType.lcdSmall, scheme.lcdInk.tape)
+                TapeText(Copy.NOTHING_DELETED, TapeType.lcdSmall, scheme.lcdInk.tape)
             }
         } else {
             LazyColumn(

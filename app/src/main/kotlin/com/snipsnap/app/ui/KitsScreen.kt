@@ -352,7 +352,7 @@ fun KitsScreen(
             // the shelf yet, the empty-state panel just below carries the
             // real instruction instead (Copy.EMPTY_SHELF_FOR_ASSIGN).
             if (assigningSnip && kits.isNotEmpty()) {
-                TapeText("TAP A KIT, THEN LONG-PRESS AN EMPTY PAD.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                TapeText(Copy.ASSIGN_PICK_HINT, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
             } else if (breedingFrom != null && kits.size > 1) {
                 TapeText(Copy.BREED_PICK_HINT, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
             }
@@ -477,7 +477,7 @@ fun KitsScreen(
                         }
                         if (rooms.isNotEmpty()) {
                             item(key = "rooms-note") {
-                                TapeText("HOLD A ROOM TO FORGET IT · THE BIN KEEPS IT ${Rooms.BIN_DAYS} DAYS", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                                TapeText(Copy.ROOMS_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
                             }
                         }
                         // The bin's door on the phone: every forgotten room, its days

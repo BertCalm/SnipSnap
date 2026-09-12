@@ -1,6 +1,7 @@
 package com.snipsnap.app.ui
 
 import android.os.SystemClock
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -50,6 +51,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.PadCapture
 import com.snipsnap.kit.Kit
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
@@ -163,7 +165,7 @@ fun PadCaptureScreen(
         gesture: Gesture,
         successLabel: String,
         nothingLabel: String,
-        failurePrefix: String,
+        failureAction: String,
         producer: suspend () -> PadTape.Landing?,
     ) {
         if (!armed || committing != null) return
@@ -188,7 +190,7 @@ fun PadCaptureScreen(
                     // mid-commit (EJECT from the notification, most likely),
                     // and this read is what keeps the toast honest about
                     // which of the two actually happened.
-                    onToast(if (!MicSessionService.armed.value) "NOT LISTENING YET" else nothingLabel)
+                    onToast(if (!MicSessionService.armed.value) Copy.PAD_CAPTURE_NOT_LISTENING else nothingLabel)
                 } else {
                     onKitUpdated(updated)
                     onToast(successLabel)
@@ -197,7 +199,8 @@ fun PadCaptureScreen(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                onToast("$failurePrefix: ${e.message ?: e.javaClass.simpleName}")
+                Log.e("PadCaptureScreen", "commitToPad ($gesture): failed", e)
+                onToast(Copy.actionFailed(failureAction))
             } finally {
                 committing = null
             }
@@ -207,9 +210,9 @@ fun PadCaptureScreen(
     fun grab() {
         commitToPad(
             gesture = Gesture.GRAB,
-            successLabel = "GRABBED → PAD ${padTag(slot)}",
-            nothingLabel = "NOTHING TO GRAB YET",
-            failurePrefix = "GRAB FAILED",
+            successLabel = Copy.padGestureLanded("GRABBED", padTag(slot)),
+            nothingLabel = Copy.GRAB_NOTHING_YET,
+            failureAction = "GRAB",
         ) {
             val raw = MicSessionService.snapshotTail(GRAB_FRAMES) ?: return@commitToPad null
             PadTape.grab(raw, MicSessionService.SAMPLE_RATE)
@@ -225,7 +228,7 @@ fun PadCaptureScreen(
         holding = false
         val heldMs = SystemClock.elapsedRealtime() - holdStart
         if (heldMs < MIN_HOLD_MS) {
-            onToast("HOLD TO RECORD")
+            onToast(Copy.PAD_CAPTURE_HOLD_TOO_SHORT)
             return
         }
         // The ring was recording the whole time this control was held down —
@@ -238,9 +241,9 @@ fun PadCaptureScreen(
             .coerceIn(1, PadCapture.MAX_HOLD_FRAMES)
         commitToPad(
             gesture = Gesture.HOLD,
-            successLabel = "RECORDED → PAD ${padTag(slot)}",
-            nothingLabel = "NOTHING RECORDED",
-            failurePrefix = "RECORD FAILED",
+            successLabel = Copy.padGestureLanded("RECORDED", padTag(slot)),
+            nothingLabel = Copy.HOLD_NOTHING_RECORDED,
+            failureAction = "RECORD",
         ) {
             MicSessionService.snapshotTail(frames)?.let { PadTape.hold(it, MicSessionService.SAMPLE_RATE) }
         }
@@ -295,14 +298,14 @@ fun PadCaptureScreen(
                     // GRAB genuinely gets less than this. Same reason SNIP
                     // says "UP TO 60s" rather than "LAST 60s".
                     TapeText(
-                        "GRAB KEEPS UP TO THE LAST ${GRAB_SECONDS}s HEARD. HOLD RECORDS WHILE YOU HOLD.",
+                        Copy.padCaptureReady(GRAB_SECONDS),
                         TapeType.lcdSmall,
                         scheme.lcdInk.tape,
                         maxLines = 3,
                     )
                 } else {
                     TapeText(
-                        "NOT LISTENING YET. START THE MIC, THEN HIT SOMETHING.",
+                        Copy.PAD_CAPTURE_NEEDS_MIC,
                         TapeType.lcdSmall,
                         scheme.lcdInk.tape,
                         maxLines = 3,
