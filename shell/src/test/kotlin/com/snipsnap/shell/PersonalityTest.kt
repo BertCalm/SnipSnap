@@ -645,4 +645,16 @@ class PersonalityTest {
         assertEquals("HIT -/7", Copy.hitReadout(-1, 7))
         assertEquals("NO HITS", Copy.hitReadout(-1, 0), "known the moment the search comes back empty, not on a tap")
     }
+
+    @Test
+    fun `one section clipped is a sentence, not a count with an S on it`() {
+        val one = Copy.clippedSectionsIntoKit(1, 2, 8, 0)
+        assertTrue(one.startsWith("1 SECTION IS"), "said: $one")
+        assertTrue(one.contains("IT RIDES TO THE MPC"), "said: $one")
+        val many = Copy.clippedSectionsIntoKit(3, 6, 24, 0)
+        assertTrue(many.startsWith("3 SECTIONS ARE") && many.contains("THEY RIDE"), "said: $many")
+        // And the same on the branch that counts what stayed behind.
+        assertTrue(Copy.clippedSectionsIntoKit(1, 2, 8, 1).startsWith("1 SECTION IN"))
+        assertTrue(Copy.clippedSectionsIntoKit(2, 2, 8, 2).startsWith("2 SECTIONS IN"))
+    }
 }

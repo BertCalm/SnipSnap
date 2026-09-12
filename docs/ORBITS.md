@@ -201,9 +201,10 @@ choice, not a surprise.
 | `loop/OrbitBank.kt` | The prepared audio for a set: pads at the device rate, snips fitted to their periods, each with its `FitReport` and its peaks for the ring's waveform. Immutable; an edit prepares a new one reusing the last |
 | `loop/LoopFit.kt` | `LoopFit` (as is · trimmed · padded · sliced), `FitReport` and its label, `FittedLoop` — what `BlockBaker.fitLoopReported` says it did |
 | `loop/OrbitEngine.kt` | The transport: fixed 2048-frame blocks, hits scheduled per block, voices mixed, snips wrapped, written to the same `AudioSink` the loop grid uses. `render` is the offline bounce and the test harness |
-| `loop/OrbitStore.kt` | `orbits.json` (version 6; versions 1–5 still load — a v1/v2 lock becomes a one-bar span, a hit with no `offset` sits on its step, one with no `length` plays its sample out, and one with no `chance`, conditional or `ratchet` strikes once on every lap), a sidecar beside the kit like `groove.json` |
-| `loop/OrbitClip.kt` | One cycle as an MPC clip in `groove.json`, counted in the clip's own 4/4 bars whatever the set's bar, and the 64-bar refusal both outputs share |
+| `loop/OrbitStore.kt` | `orbits.json` (version 7; versions 1–6 still load — a v1/v2 lock becomes a one-bar span, a hit with no `offset` sits on its step, one with no `length` plays its sample out, one with no `chance`, conditional or `ratchet` strikes once on every lap, and a set with no `sections` plays every ring forever), a sidecar beside the kit like `groove.json` |
+| `loop/OrbitClip.kt` | The set as MPC clips in `groove.json` — one cycle where there is no arrangement, one per playable section where there is, counted in the clip's own 4/4 bars whatever the set's bar. The 64-bar ceiling is **two** ceilings once there is an arrangement: `clipRefusal` asks whether every clip WRITTEN fits (each section on its own), `refusal` whether one turn of the transport does (the plan, plus the frames the renderer can hold) — eight sections of 32 bars are eight legal sequences and one impossible bounce |
 | `loop/OrbitLength` (in `Orbit.kt`, `OrbitEngine.kt`, `OrbitClip.kt`) | How long a hit sounds. `OrbitHit.length` in pulses, `WHOLE_SAMPLE` (0) meaning play the sample out — what every hit meant before, and what a drum wants. A gated hit ends live over the choke's own ramp, and exports its own `lengthPulses` where an ungated one still writes a 16th. Whether the hardware acts on that number is the pad's `triggerMode` — One Shot fires the whole sample and ends, Note Off plays while held, Note On covers vocals, loops, keys and sustained chops (docs/MPC3_FORMAT.md) — and `KitPad.oneShot` is a boolean over all three, so nothing in this model can tell which. The engine therefore gates any positive length on any pad rather than guessing, and the export writes the number either way |
+| `loop/OrbitSection` (in `Orbit.kt`, `OrbitClip.kt`, `OrbitEngine.kt`) | The arrangement: "these rings for eight bars, then those". A section names how long it lasts, in the set's own bars, and which rings play in it; an empty set of rings is a break, not a default. **A section restarts its rings** — the clock's one number is counted from where the section began (`OrbitClock.localFrame`), so a section is self-contained and repeats. The alternative, a mute lane over a set that keeps turning underneath, fails both things a section is for: the arrangement would only come round when the sections and the rings' cycle agreed, and the clip exported for a section would be true on its first pass and a lie on its second. The drift is unhurt — inside a section the rings are the same pure function of the same number they always were. Each section that plays something becomes its own clip and so its own sequence on the hardware, because `ExportFormats` already turns every stored groove into one — a break writes none, since there is nothing for the switcher to flip *to* for silence; what does **not** ride along is the order, since `Mpc3Song`'s step schema has never been captured (GG3.2), so a player flips the sections by hand. A set with no sections is untouched by all of it |
 | `loop/OrbitChance` (in `Orbit.kt`, `OrbitBrush.kt`) | Whether a hit happens at all. `OrbitHit.chance` is a percent, `everyLaps`/`onLap` the every-N-laps conditional (laps of *this ring*, so on a free 20-step ring it is every other turn of the twenty), `ratchet` how many times it strikes across its own step. The roll is `OrbitClock.sounds`: a pure function of `OrbitSet.seed`, the ring's name, length and span, the hit's step, pad and lean, and the lap number — so a set is a **take** that renders the same every time, and the engine and the export decide each lap identically. A new seed is a new arrangement of the same hits, with nothing moved. A conditional lengthens the cycle (`OrbitClock.turnSteps`) because the set does not repeat until it does; a chance does not, because it never repeats at all — except a chance of zero, which takes its hit out of that sum altogether, since a hit nothing can hear must not cost a clip four bars. `OrbitBrush` is what a long-press writes — the grid's two gestures were spent, so the chip above the strip is the third |
 | `loop/OrbitImport.kt` | The other direction: a `groove.json` clip as rings, one per pad, each the clip's own length. A note's pulse becomes the 16th it is nearest plus its lean off *where that step fires*, so a clip goes out and comes back on the same pulse rather than snapped to the grid — which needed `OrbitHit.offset` to exist, and needs the destination's swing, since `stepPulses` adds a push the inverse has to take off. A note in the last half-16th wraps to step 0 as a pickup. Pads past the ring budget share the last circle instead of being dropped; a note whose pad the kit lacks is left out and named; two notes the clip holds on one pad at one pulse become the louder, by the export's own rule, and are counted |
 | `loop/OrbitFeel.kt` | Pocket for rings: a `GrooveFeel` donor's sixteen per-position offsets laid onto hits, a seeded humanised take, or straight again. Writes `OrbitHit.offset` — pulses late or early of the step, which is the only place a feel or a jitter can live on a ring |
@@ -214,21 +215,42 @@ choice, not a surprise.
 
 ## Out the door
 
-Two ways a set leaves the screen, both one cycle long and both refused in
-words when the cycle passes 64 bars (`OrbitClip.refusal`):
+Two ways a set leaves the screen, both refused in words — and **not by
+the same question once there is an arrangement**: a clip is refused when
+any clip it would write is longer than 64 bars (`OrbitClip.clipRefusal`,
+asking each section on its own), a bounce when one turn of the transport
+is (`OrbitClip.refusal`, asking the plan). The bounce has a second
+ceiling a clip has not, and it is not musical: the renderer holds a turn
+INTERLEAVED in one array, so a turn of more than `MAX_BOUNCE_FRAMES`
+frames is refused however few bars it is — 64 bars at a 6 MHz sample rate
+is 2.3 billion frames, and the conversion used to wrap negative. With no
+arrangement the two are one length and one sentence. The OUT panel asks them separately
+and shows whichever button is still open. **What "one cycle" means depends
+on whether the set has an arrangement**: with no sections it is the rings' meeting, as it
+always was; with sections it is the plan, which is the length the
+transport actually goes round (`OrbitClock.transportSteps`) — an arranged
+set never reaches the rings' meeting, which is what arranging it did.
 
-- **BOUNCE ▸ TAPE** renders one cycle of what is heard (`OrbitEngine.render`
-  over `cycleFrames`; a solo bounces alone) and drops it on the TAPE shelf
-  through `SnipStore.import`, so rings feed the app's own loop: tape, chop,
-  kit, MPC.
-- **CLIP ▸ KIT** flattens one cycle of every engaged pattern ring's firings
+- **BOUNCE ▸ TAPE** renders one turn of what is heard (`OrbitEngine.render`
+  over `transportFrames`; a solo bounces alone) and drops it on the TAPE
+  shelf through `SnipStore.import`, so rings feed the app's own loop: tape,
+  chop, kit, MPC.
+- **CLIP ▸ KIT** writes one clip where there is no arrangement and **one
+  per section** where there is — each becoming a sequence the hardware's
+  switcher flips between, capped per section rather than by the rings'
+  cycle, and a section that plays no rings writes none. It flattens the
+  firings of every engaged pattern ring **that section plays** — a ring the
+  section leaves out contributes nothing to it —
   onto the 960-PPQ grid (`OrbitClip.clip`: pad A0N plays note 35+N, the
   writer's chromatic map; `Mpc3Clip` has no time signature, so the clip
   counts bars of sixteen 16ths whatever the set's bar — a 3/4 set's
   four-bar cycle is 48 steps, three of the clip's, and the OUT panel says
   so — and the 64-bar ceiling is measured in those bars, with the header's
   cycle line turning warn-coloured past it) and writes it into the kit's `groove.json` as
-  "ORBIT 4:5", replacing the last ORBIT clip and leaving the captured base,
+  "ORBIT 4:5" — or, with an arrangement, one named clip per playable
+  section, APPENDED in the plan's order after the kit's other grooves so
+  the base stays the base — replacing EVERY previous ORBIT clip rather
+  than only the last, and leaving the captured base,
   the variations and PROG E untouched — so the native export embeds it and
   it rides to the MPC with the kit. A kit with no groove yet gets the ORBIT
   clip as its first, which is what GROOVE then shows.

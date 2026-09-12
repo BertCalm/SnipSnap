@@ -32,10 +32,30 @@ class OrbitEngine(
     initialBank: OrbitBank,
     private val sink: AudioSink,
     val blockFrames: Int = DEFAULT_BLOCK_FRAMES,
+    initialSolo: Int? = null,
 ) {
+    init {
+        // Before the buffer below is allocated, not after: a property
+        // initializer runs ahead of an `init` block further down the file,
+        // so `FloatArray(blockFrames * 2)` threw NegativeArraySizeException
+        // for a huge or negative block size and this check never ran.
+        requireBlockFrames(blockFrames)
+    }
 
-    /** A set and the audio prepared for it, swapped in together. */
-    data class Prepared(val set: OrbitSet, val bank: OrbitBank)
+    /**
+     * A set, the audio prepared for it, and the ring being soloed —
+     * swapped in together.
+     *
+     * The solo rides ALONGSIDE the set rather than inside it. Baking it in
+     * means copying every ring the solo silences, and a copy is a
+     * different ring to [hush], which finds a sounding voice's ring by
+     * identity: every voice struck before a solo then answered to no
+     * section and slipped through the one place the arrangement is
+     * enforced. It was never part of the set anyway — the screen's own
+     * word for it is "a listening choice, not part of the set: applied to
+     * the engine, never saved".
+     */
+    data class Prepared(val set: OrbitSet, val bank: OrbitBank, val solo: Int? = null)
 
     private class Voice(
         val samples: FloatArray,
@@ -44,6 +64,20 @@ class OrbitEngine(
         /** The kit whose rule this is — a group number means nothing outside it. */
         val kit: String,
         val muteGroup: Int,
+        /**
+         * The ring that struck it, held as the ring ITSELF rather than as
+         * its index.
+         *
+         * An index is only true of the set it was read from, and a voice
+         * outlives a set: an edit arrives through [apply] while a tail is
+         * still sounding, and `withoutOrbit`/`withOrbitAfter` shift every
+         * index after the one that moved. A voice still holding 2 across a
+         * deletion then answers for whichever ring is 2 now, and [hush]
+         * cuts, or spares, the wrong tail. A ring cannot go stale that
+         * way: it is either still in the set or it is not, and [hush] asks
+         * which by identity.
+         */
+        val orbit: Orbit,
     ) {
         var pos = 0 // interleaved index
         /** Interleaved index past which this voice is silent; a choke moves it in. */
@@ -85,17 +119,20 @@ class OrbitEngine(
     private val running = AtomicBoolean(true)
     private val pending = AtomicReference<Prepared?>(null)
     private val rewindRequested = AtomicBoolean(false)
-    private val current = AtomicReference(Prepared(initial, initialBank))
+    private val current = AtomicReference(Prepared(initial, initialBank, initialSolo))
 
     private val block = FloatArray(blockFrames * 2)
     private val voices = ArrayList<Voice>()
     private val due = ArrayList<Scheduled>()
 
-    init {
-        require(blockFrames > 0) { "blockFrames must be positive: $blockFrames" }
-    }
-
-    /** Frames played since the start — every ring's phase is a function of this one number. */
+    /**
+     * Frames played since the start.
+     *
+     * Every ring's phase is a function of this one number — through
+     * [OrbitClock.localFrame], which on a set with an arrangement counts
+     * from where the current section began and on one without hands this
+     * number straight back.
+     */
     fun position(): Long = frame.get()
 
     /** What is playing right now — the set the UI should draw. */
@@ -130,36 +167,132 @@ class OrbitEngine(
             voices.clear()
         }
 
-        val (set, bank) = current.get()
+        val (set, bank, solo) = current.get()
         val from = frame.get()
         val until = from + blockFrames
         block.fill(0f)
 
-        due.clear()
-        for (orbit in set.orbits) {
-            if (!orbit.engaged || orbit.level == 0f) continue
-            when (orbit.content) {
-                is PatternOrbit -> collect(set, orbit, from, until)
-                is SnipOrbit -> addLoop(set, bank, orbit, from)
+        // A block is a slice of wall-clock time and a section boundary does
+        // not wait for one to end, so a block that straddles one is played
+        // as two pieces. Each piece is handed its OWN local frame, which is
+        // the whole of what a section does: the rings inside it are the
+        // same pure function of the same one number they always were,
+        // counted from where the section began rather than from play.
+        //
+        // A set with no arrangement takes this loop exactly once, with
+        // `local == at` and `shift == 0` - the code it ran before.
+        var at = from
+        while (at < until) {
+            val edge = min(until, OrbitClock.nextBoundary(set, at))
+            val local = OrbitClock.localFrame(set, at)
+            // Back to the transport's own numbering, which is what a voice
+            // offset inside this block is measured against.
+            val shift = at - local
+            hush(set, from, at)
+            due.clear()
+            for ((index, orbit) in set.orbits.withIndex()) {
+                // The ring's own mute, another ring's solo, and the
+                // section's choice are three different questions, and all
+                // three silence a ring. A muted ring stays muted whatever a
+                // section says; a solo silences the rest without touching
+                // the set they are in.
+                if (!orbit.engaged || orbit.level == 0f) continue
+                if (solo != null && index != solo) continue
+                if (!OrbitClock.playsAt(set, index, at)) continue
+                when (orbit.content) {
+                    is PatternOrbit -> collect(set, orbit, local, local + (edge - at), shift)
+                    is SnipOrbit -> addLoop(set, bank, orbit, local, (at - from).toInt(), (edge - from).toInt())
+                }
             }
+            // Choke means "the newest hit in the group wins", so the hits
+            // have to be started in the order they are heard. Each ring's
+            // firings are sorted, but rings are not sorted against each
+            // other - ring two's downbeat can fall before ring one's third
+            // step - so the merged order is what makes "newest" mean newest.
+            //
+            // Started here, piece by piece, rather than once the whole
+            // block has been walked: a hit landing just before a boundary
+            // was still only a plan when that boundary's [hush] ran, so
+            // nothing ended it and it sounded on into a section that
+            // leaves its ring out - a break, audible for the rest of the
+            // block. Pieces run in time order, so starting them piece by
+            // piece keeps the merged order "newest" needs.
+            due.sortBy { it.frame }
+            for (s in due) start(set, bank, s, from)
+            at = edge
         }
-        // Choke means "the newest hit in the group wins", so the hits have
-        // to be started in the order they are heard. Each ring's firings
-        // are sorted, but rings are not sorted against each other - ring
-        // two's downbeat can fall before ring one's third step - so the
-        // merged order is what makes "newest" mean newest.
-        due.sortBy { it.frame }
-        for (s in due) start(set, bank, s, from)
         mixVoices()
 
         sink.write(block)
         frame.set(until)
     }
 
-    /** Note every hit of [orbit] that lands inside this block; starting them is [start]'s. */
-    private fun collect(set: OrbitSet, orbit: Orbit, from: Long, until: Long) {
+    /**
+     * Note every hit of [orbit] that lands inside this piece of the block;
+     * starting them is [start]'s.
+     *
+     * [from] and [until] are the section's own frames; [shift] puts the
+     * answer back on the transport's numbering, since that is what the
+     * voice offset inside the block is measured against. With no
+     * arrangement [shift] is zero and this is what it always was.
+     */
+    private fun collect(set: OrbitSet, orbit: Orbit, from: Long, until: Long, shift: Long) {
         for (firing in OrbitClock.firings(set, orbit, from, until)) {
-            due.add(Scheduled(orbit, firing.hit, firing.frame))
+            due.add(Scheduled(orbit, firing.hit, firing.frame + shift))
+        }
+    }
+
+    /**
+     * End any voice whose ring the section at [at] leaves out.
+     *
+     * A section says which rings play, and a voice already sounding is not
+     * exempt from that: without this, a pad struck just before a boundary
+     * rang on into the section after it, and a BREAK - a section that
+     * plays nothing at all - was audible. Verified before it was fixed:
+     * the buffer read full gain a thousand frames into a break.
+     *
+     * Over [endAt]'s ramp, and asking the ramp rather than a flag, exactly
+     * as [choke] does - this is the same act as a choke, a voice ended
+     * before its sample, and a third copy of that arithmetic is how the
+     * three of them come to disagree. A ring the next section still plays
+     * keeps its tail, which is the point of asking per ring rather than
+     * silencing everything at every boundary.
+     */
+    private fun hush(set: OrbitSet, from: Long, at: Long) {
+        if (set.sections.isEmpty()) return
+        val offset = (at - from).toInt()
+        for (v in voices) {
+            // By identity, against the set being played right now. A ring
+            // that is no longer in it was deleted, or edited into a new
+            // ring, while this tail was still sounding: it belongs to no
+            // section, so it rings out, which is what deleting a ring did
+            // before sections existed.
+            val ring = set.orbits.indexOfFirst { it === v.orbit }
+            if (ring < 0) continue
+            if (OrbitClock.playsAt(set, ring, at)) continue
+            val cut = v.pos + offset * 2
+            if (cut < 0) continue
+            val ramp = v.limit - v.fadeLen
+            if (cut >= ramp) {
+                // Already inside its own ramp — from a choke, or its hit's
+                // own gate — and [endAt] must not touch it: re-deriving
+                // from here would set the gain back to full and the voice
+                // would jump UP mid-fade. But a ramp that is still running
+                // at the boundary is still audible past it, and a section
+                // that excludes this ring means silence, not "nearly".
+                //
+                // So the ramp is RE-SLANTED to land on the boundary rather
+                // than restarted: it keeps the gain it has reached (the
+                // slope still begins at `ramp`, where it began) and
+                // steepens to reach zero exactly at the cut. Continuous at
+                // both ends, which is the whole reason a fade exists.
+                if (v.limit > cut) {
+                    v.limit = cut
+                    v.fadeLen = cut - ramp
+                }
+                continue
+            }
+            endAt(v, cut)
         }
     }
 
@@ -171,7 +304,7 @@ class OrbitEngine(
         val group = bank.muteGroup(content.kit, s.hit.slot)
         if (group != 0) choke(content.kit, group, offset)
         val gain = s.hit.velocity * s.orbit.level
-        val voice = Voice(pad.samples, gain * leftLaw(s.orbit.pan), gain * rightLaw(s.orbit.pan), content.kit, group)
+        val voice = Voice(pad.samples, gain * leftLaw(s.orbit.pan), gain * rightLaw(s.orbit.pan), content.kit, group, s.orbit)
         // The voice starts partway into the block; anything before its
         // start is not played, which the negative position expresses
         // without a second offset field.
@@ -285,8 +418,24 @@ class OrbitEngine(
         }
     }
 
-    /** Add [blockFrames] of a snip ring, wrapping at its period. */
-    private fun addLoop(set: OrbitSet, bank: OrbitBank, orbit: Orbit, from: Long) {
+    /**
+     * Add one piece of a snip ring to the block, wrapping at its period.
+     *
+     * [from] is the section's own frame, so a snip ring restarts with its
+     * section exactly as a pattern ring does — a taped loop that carried
+     * on through a section change would be the one thing on screen still
+     * playing the section before. [blockStart] and [blockEnd] bound the
+     * piece inside this block; with no arrangement they are the whole of
+     * it and this is what it always was.
+     */
+    private fun addLoop(
+        set: OrbitSet,
+        bank: OrbitBank,
+        orbit: Orbit,
+        from: Long,
+        blockStart: Int,
+        blockEnd: Int,
+    ) {
         val loop = bank.loop(set, orbit) ?: return
         val period = loop.frameCount
         if (period == 0) return
@@ -294,7 +443,7 @@ class OrbitEngine(
         val gainR = orbit.level * rightLaw(orbit.pan)
         var src = Math.floorMod(from, period.toLong()).toInt()
         val samples = loop.samples
-        for (f in 0 until blockFrames) {
+        for (f in blockStart until blockEnd) {
             block[f * 2] += samples[src * 2] * gainL
             block[f * 2 + 1] += samples[src * 2 + 1] * gainR
             src++
@@ -344,26 +493,75 @@ class OrbitEngine(
 
 
         /**
+         * The longest render this can even count, in frames.
+         *
+         * Half an `Int`, because the result is INTERLEAVED: [frames] of
+         * stereo is `frames * 2` floats and the array holding them is
+         * indexed by an `Int`. Owned here rather than by the caller
+         * guarding it, because it is this function's arithmetic - a
+         * preflight elsewhere derived its own copy from
+         * [DEFAULT_BLOCK_FRAMES] and was wrong for any caller passing a
+         * different `blockFrames`.
+         */
+        const val MAX_RENDER_FRAMES = Int.MAX_VALUE / 2
+
+        /**
+         * What a block size has to be, asked in ONE place.
+         *
+         * The constructor asks it before allocating its own buffer, and
+         * [render] asks it before allocating the output — which is the
+         * order that matters: `render` sized its sink first, so a bad
+         * block size arrived at the constructor's check only after an
+         * eight-gigabyte allocation had been attempted for a render that
+         * was never going to run.
+         */
+        fun requireBlockFrames(blockFrames: Int) {
+            require(blockFrames > 0) { "blockFrames must be positive: $blockFrames" }
+            require(blockFrames <= MAX_RENDER_FRAMES) { "blockFrames past a stereo buffer: $blockFrames" }
+        }
+
+        /**
          * Play [frames] of [set] offline into a [Snip] — the bounce, the
          * preview, and the way a test listens without a device.
          */
         fun render(set: OrbitSet, bank: OrbitBank, frames: Int, blockFrames: Int = DEFAULT_BLOCK_FRAMES): Snip {
             require(frames >= 0) { "frames must not be negative: $frames" }
-            val sink = CollectingSink(set.sampleRate)
+            require(frames <= MAX_RENDER_FRAMES) {
+                "frames past what a stereo buffer holds: $frames > $MAX_RENDER_FRAMES"
+            }
+            // Both lengths answered for before either is allocated.
+            requireBlockFrames(blockFrames)
+            val sink = CollectingSink(set.sampleRate, frames * 2)
             val engine = OrbitEngine(set, bank, sink, blockFrames)
-            val blocks = (frames + blockFrames - 1) / blockFrames
+            // Divided before it is added to, so no block size can carry the
+            // sum past an `Int`: `(frames + blockFrames - 1)` overflows for
+            // a large frame count and a large block, and a negative block
+            // count renders nothing at all.
+            val blocks = frames / blockFrames + if (frames % blockFrames == 0) 0 else 1
             engine.runFor(blocks)
-            return Snip(sink.samples.copyOf(frames * 2), 2, set.sampleRate)
+            return Snip(sink.samples, 2, set.sampleRate)
         }
 
-        private class CollectingSink(override val sampleRate: Int) : AudioSink {
+        /**
+         * Holds exactly the render it was asked for and drops the rest.
+         *
+         * Sized once, up front, rather than grown by doubling and trimmed
+         * at the end: the engine writes WHOLE blocks, so the old sink held
+         * the requested frames rounded up to a block — and near the
+         * ceiling that padding is what carried `size + block.size` past an
+         * `Int`, on a render the guard above had just allowed. Now nothing
+         * is ever held that is not returned, and the last block is simply
+         * cut where the answer ends.
+         */
+        private class CollectingSink(override val sampleRate: Int, limit: Int) : AudioSink {
             override val channels = 2
-            var samples = FloatArray(0)
+            val samples = FloatArray(limit)
             private var size = 0
             override fun write(block: FloatArray) {
-                if (size + block.size > samples.size) samples = samples.copyOf(maxOf(samples.size * 2, size + block.size))
-                System.arraycopy(block, 0, samples, size, block.size)
-                size += block.size
+                val room = min(block.size, samples.size - size)
+                if (room <= 0) return
+                System.arraycopy(block, 0, samples, size, room)
+                size += room
             }
             override fun close() {}
         }

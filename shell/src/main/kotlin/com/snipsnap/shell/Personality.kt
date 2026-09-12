@@ -1148,6 +1148,16 @@ object Copy {
     const val ORBIT_CLIP_FAILED = "CLIP FAILED. TRY AGAIN."
 
     /**
+     * The set could not be written to the kit's folder.
+     *
+     * Not "try again", because the edit is not lost — it is on screen and
+     * it is playing, and the thing that failed is the writing down. What
+     * the player needs to know is that leaving now costs them the edit,
+     * which is why this names the consequence rather than the operation.
+     */
+    const val ORBIT_SAVE_FAILED = "THE RINGS DID NOT SAVE. THEY PLAY, BUT THIS EDIT WILL NOT BE HERE NEXT TIME."
+
+    /**
      * The generic "X failed, try again" toast for the handful of call sites
      * where [action] is a runtime value, not a fixed verb — `App.kt`'s
      * `texture` (`TextureKits.Spec.verb`: SCULPT, STRETCH or FREEZE) and the
@@ -1236,6 +1246,35 @@ object Copy {
         } else {
             "$name IN THE GROOVES: $bars BARS, $notes NOTES. $snipRingsLeftOut SNIP RING${if (snipRingsLeftOut == 1) "" else "S"} STAYED OUT."
         }
+
+    /**
+     * CLIP ▸ KIT landed for a set with an arrangement: [sections] clips
+     * rather than one, each becoming a sequence the hardware's switcher
+     * flips between.
+     *
+     * [sections] is the clips actually WRITTEN, not the sections asked
+     * for — a section that plays no rings is a break and writes none, so
+     * the line says what is in the kit rather than what was intended.
+     */
+    fun clippedSectionsIntoKit(sections: Int, bars: Int, notes: Int, snipRingsLeftOut: Int): String {
+        // One section is a sentence, not a count with an S on it.
+        //
+        // This function IS the multi-section path from CLIP ▸ KIT; what
+        // has no caller today is the [sections] == 1 case, because a save
+        // that wrote one clip goes to [clippedIntoKit] and names it. But a
+        // line that reads "1 SECTIONS ARE" the first time anything calls
+        // it that way is a trap left lying about, and the plural is two
+        // words.
+        val many = sections != 1
+        val subject = if (many) "$sections SECTIONS ARE" else "1 SECTION IS"
+        val them = if (many) "THEY RIDE" else "IT RIDES"
+        return if (snipRingsLeftOut == 0) {
+            "$subject IN THE KIT'S GROOVES — $bars BARS, $notes NOTES, ONE SEQUENCE EACH. $them TO THE MPC."
+        } else {
+            "$sections SECTION${if (many) "S" else ""} IN THE GROOVES: $bars BARS, $notes NOTES. " +
+                "$snipRingsLeftOut SNIP RING${if (snipRingsLeftOut == 1) "" else "S"} STAYED OUT."
+        }
+    }
 
     // ---- GRAIN FIELD ----
     const val GRAIN_FIELD_TOO_SHORT = "TOO SHORT TO MAP. THE FIELD NEEDS MORE TAPE."
