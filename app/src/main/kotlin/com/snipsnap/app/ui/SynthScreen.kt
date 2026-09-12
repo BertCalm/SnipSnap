@@ -41,6 +41,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -53,6 +54,7 @@ import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
+import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
@@ -370,7 +372,10 @@ fun SynthScreen(
                         },
                     contentAlignment = Alignment.CenterStart,
                 ) {
-                    TapeText("${engine.name} ▸", TapeType.lcdHeader, scheme.lcdInk.tape)
+                    // Batch 3, Task 4: no ▸ — the tap cycles to the next
+                    // engine in place, same as the cyclers below; it doesn't
+                    // navigate or open a panel.
+                    TapeText(engine.name, TapeType.lcdHeader, scheme.lcdInk.tape)
                 }
                 TapeText(chipLabel(engine, voice), TapeType.lcdSmall, scheme.amber.tape)
             }
@@ -615,6 +620,22 @@ private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
 // ---------- voice picker ----------
 
+/**
+ * Batch 3, Task 5: bright border + sub-label, not a solid fill — SETUP's
+ * own selected-state treatment (`PropertiesScreen.kt`'s `SchemeRow`,
+ * [pressedBevel] vs [raisedBevel]), applied here so this picker agrees with
+ * every other one in the app. [pressedBevel]'s own KDoc already makes the
+ * colourblindness case for a border over a fill (a thicker, distinctly-hued
+ * ring reads even to someone who can't use the hue at all); this call site
+ * is citing that, not re-deriving it. The move matters more here than on
+ * CHOP: this screen's solid fill already carries THREE meanings at once —
+ * selected voice (this fill), a macro slider's value ([MacroSlider]'s own
+ * fill), and AUDITION's primary-action fill — and the same fill standing
+ * for "selected engine" too is exactly why it couldn't also mean that.
+ * [Schemes.classColor] moves onto the label text instead of the
+ * background, so the kick/snare/hat colour coding survives the swap rather
+ * than disappearing with the fill.
+ */
 @Composable
 private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSelect: (Enum<*>) -> Unit) {
     val voices = engine.voices()
@@ -633,21 +654,27 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
                 for (v in row) {
                     val selected = v == current
                     val color = Schemes.classColor(engine.drumClass(v)).tape
-                    Box(
+                    Column(
                         Modifier
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .raisedBevel(scheme, fill = if (selected) color.copy(alpha = 0.85f) else null)
+                            .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                            .semantics { this.selected = selected }
                             .tapeClick(label = null) { onSelect(v) }
-                            .padding(horizontal = 2.dp),
-                        contentAlignment = Alignment.Center,
+                            .padding(horizontal = 2.dp, vertical = 3.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         TapeText(
                             chipLabel(engine, v),
                             TapeType.pixelSmall,
-                            if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                            color,
                             maxLines = 1,
                         )
+                        // Reserved on every chip, not just the selected one
+                        // (blank when not selected) — so one selection
+                        // doesn't grow only its own cell and leave the row
+                        // jagged against its neighbours.
+                        TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
                     }
                 }
             }

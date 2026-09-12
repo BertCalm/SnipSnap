@@ -41,6 +41,8 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -52,6 +54,7 @@ import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
+import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
@@ -882,6 +885,20 @@ private fun GridPreview(placed: List<ChopReviewModel.Row?>, scheme: Scheme) {
     }
 }
 
+/**
+ * Batch 3, Task 5: bright border + sub-label, not a solid fill — SETUP's
+ * own selected-state treatment (`PropertiesScreen.kt`'s `SchemeRow`,
+ * [pressedBevel] vs [raisedBevel]), applied here so CLASSIC/MELODIC agrees
+ * with every other picker in the app rather than inventing its own third
+ * convention. [pressedBevel]'s own KDoc is where the colourblindness case
+ * for a border over a fill is made (a thicker, distinctly-hued ring reads
+ * even to someone who can't use the hue at all, where two fills measured
+ * 1.02–1.07:1 contrast against each other); this call site is citing that
+ * precedent, not re-deriving it. The "SELECTED" line is reserved — not
+ * conditionally inserted — on BOTH segments, so the row doesn't grow a
+ * second line only on the active half and read as jagged against its
+ * neighbour.
+ */
 @Composable
 private fun SegmentButton(
     label: String,
@@ -890,14 +907,17 @@ private fun SegmentButton(
     onClick: () -> Unit,
 ) {
     val scheme = LocalScheme.current
-    Box(
+    Column(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .raisedBevel(scheme, fill = if (active) scheme.accent.tape else null)
-            .tapeClick(label = null, onClick = onClick),
-        contentAlignment = Alignment.Center,
+            .let { if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+            .semantics { this.selected = active }
+            .tapeClick(label = null, onClick = onClick)
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        TapeText(label, TapeType.pixel, if (active) scheme.titleInk.tape else scheme.ink2.tape)
+        TapeText(label, TapeType.pixel, if (active) scheme.ink.tape else scheme.ink2.tape)
+        TapeText(if (active) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape)
     }
 }
 
