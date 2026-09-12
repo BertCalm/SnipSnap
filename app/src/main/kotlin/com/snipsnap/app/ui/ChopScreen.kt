@@ -712,12 +712,7 @@ private fun ClassPicker(
                                 if (picked) Schemes.classColor(dc).tape else scheme.ink3.tape.copy(alpha = 0.15f),
                                 RoundedCornerShape(4.dp),
                             )
-                            // label = null: the TapeText below already says
-                            // the class name, and clickable merges descendant
-                            // semantics into this node - an explicit label
-                            // would replace that text rather than add to it
-                            // (tapeClick's own contract, Chrome.kt).
-                            .tapeClick(label = null, onClick = { onPick(dc) }),
+                            .tapeClick(label = ChopReviewModel.chipName(dc), onClick = { onPick(dc) }),
                         contentAlignment = Alignment.Center,
                     ) {
                         TapeText(
@@ -738,7 +733,10 @@ private fun ClassPicker(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .tapeClick(label = null, onClick = onMachine),
+                // Tapping accepts the machine's own guess back (clears the
+                // manual override) — named as that action, not just the
+                // readout it shows.
+                .tapeClick(label = "ACCEPT THE MACHINE'S GUESS: ${ChopReviewModel.chipName(machine)}", onClick = onMachine),
             contentAlignment = Alignment.Center,
         ) {
             TapeText(
@@ -767,7 +765,7 @@ private fun SliceRow(
         Modifier
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .tapeClick(label = null, onClick = onTapRow)
+            .tapeClick(label = "HEAR SLICE ${row.n}", onClick = onTapRow)
             .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -912,7 +910,7 @@ private fun SegmentButton(
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .let { if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
             .semantics { this.selected = active }
-            .tapeClick(label = null, onClick = onClick)
+            .tapeClick(label = label, onClick = onClick)
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -936,7 +934,7 @@ private fun SecondaryButton(
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
