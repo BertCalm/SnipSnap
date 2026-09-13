@@ -3,6 +3,7 @@ package com.snipsnap.app.ui
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -738,13 +739,21 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
 private fun PresetList(engine: Engine, voice: Enum<*>, current: String?, scheme: Scheme, onSelect: (Patch) -> Unit) {
     val presets = remember(engine, voice) { Presets.forVoice(engine.name, voice.name) }
     if (presets.isEmpty()) return
+    // Keyed on (engine, voice), not the plain `rememberScrollState()` every
+    // other scroll in this file uses: those all sit inside a screen-level
+    // Column that never itself changes identity, but this strip is rebuilt
+    // fresh per voice. Unkeyed, a scroll position picked up browsing one
+    // voice's roster would carry into the next voice's — Copilot's own
+    // finding — and could open a shorter roster already scrolled past its
+    // first presets.
+    val scrollState = remember(engine, voice) { ScrollState(0) }
     Row(
         Modifier
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .clip(RoundedCornerShape(4.dp))
             .sunkenField(scheme)
-            .horizontalScroll(rememberScrollState())
+            .horizontalScroll(scrollState)
             .padding(horizontal = 6.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
