@@ -80,8 +80,8 @@ internal object Punch {
         // Cubic, both of them: a multi-onset voice like THUMP's CLAP (several
         // equal-height bursts a few ms apart) only has its very first burst
         // inside this window, so any shaping here inflates burst 1 relative
-        // to the others - and Dsp.normalize's peak-rescale right after Punch
-        // then shrinks every other burst by the same factor. Classifier.kt's
+        // to the others - and the loudness-match rescale below then shrinks
+        // every other burst by the same factor. Classifier.kt's
         // attackBurstCount needs each burst above 40% of the take's peak, so
         // burst 1 can't end up more than 2.5x the rest. Cubic keeps full
         // strength at punch=1 (where PunchTest's single-onset crest-factor
@@ -90,13 +90,14 @@ internal object Punch {
         val satAmount = punch * punch * punch * 0.3f
         val boostGain = punch * punch * punch * 6f
         val cutoffSamples = windowSamples * 4
+        val lastShaped = minOf(cutoffSamples, buf.size) - 1
         // exp() never actually reaches zero, so a raw exp(-i/window) cut off
-        // at cutoffSamples leaves a small but real step in the gain right at
-        // the boundary - subtracting its own value there pulls the whole
-        // taper down to exactly zero at the cutoff instead, so the last
-        // shaped sample meets the first untouched one at the same gain.
-        val cutoffTaper = exp(-cutoffSamples.toFloat() / windowSamples)
-        for (i in 0 until minOf(cutoffSamples, buf.size)) {
+        // at the last shaped sample leaves a small but real step in the gain
+        // right at the boundary - subtracting the taper's own value AT that
+        // last sample pulls the whole taper down to exactly zero there
+        // instead, so it meets the first untouched sample at the same gain.
+        val cutoffTaper = if (lastShaped >= 0) exp(-lastShaped.toFloat() / windowSamples) else 0f
+        for (i in 0..lastShaped) {
             val taper = exp(-i.toFloat() / windowSamples) - cutoffTaper
             buf[i] = Dsp.drive(buf[i], satAmount * taper) * (1f + boostGain * taper)
         }
