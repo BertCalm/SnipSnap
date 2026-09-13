@@ -266,7 +266,7 @@ fun KitScreen(
             val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
             val keyed = kit.key?.let { "${KeyPicker.label(it)}  " } ?: ""
             val banks = if (bankCount > 1 || showing > 0) "${PadBanks.letter(showing)}  " else ""
-            TapeText("$keyed$tempo$banks${kit.pads.size} PADS", TapeType.lcdSmall, scheme.amber.tape)
+            TapeText("$keyed$tempo$banks${Copy.countOf(kit.pads.size, "PAD", "PADS")}", TapeType.lcdSmall, scheme.amber.tape)
         }
 
         if (kit.pads.isEmpty()) {

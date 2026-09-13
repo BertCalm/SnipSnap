@@ -200,7 +200,7 @@ fun ArrangeScreen(
             TapeText("ARRANGE", TapeType.lcd(21), scheme.lcdInk.tape)
             val p = plan
             TapeText(
-                if (p != null) "${p.totalBars} BARS · ${p.sections.size} SECTIONS" else "",
+                if (p != null) "${Copy.countOf(p.totalBars, "BAR", "BARS")} · ${Copy.countOf(p.sections.size, "SECTION", "SECTIONS")}" else "",
                 TapeType.lcdSmall,
                 scheme.amber.tape,
             )
@@ -296,7 +296,7 @@ private fun SectionRow(
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(if (selected) scheme.field.tape else scheme.lcd.tape, RoundedCornerShape(4.dp))
             .border(1.dp, if (active) scheme.amber.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
-            .tapeClick(label = "SECTION ${index + 1}: ${section.name.uppercase()}, ${section.bars} BARS") { onTap() }
+            .tapeClick(label = "SECTION ${index + 1}: ${section.name.uppercase()}, ${Copy.countOf(section.bars, "BAR", "BARS")}") { onTap() }
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -305,7 +305,7 @@ private fun SectionRow(
             TapeText(if (active) "▶" else "%02d".format(java.util.Locale.ROOT, index + 1), TapeType.pixel, scheme.amber.tape)
             TapeText(section.name.uppercase(), TapeType.pixel, scheme.ink.tape)
         }
-        TapeText("${section.bars} BARS", TapeType.pixelSmall, scheme.ink2.tape)
+        TapeText(Copy.countOf(section.bars, "BAR", "BARS"), TapeType.pixelSmall, scheme.ink2.tape)
     }
 }
 

@@ -1745,7 +1745,8 @@ fun GrooveScreen(
                         // used to say "2 BARS" of the same clip.
                         val meter = currentClip?.let { GrooveEdit.meterLabel(it) }?.let { " · $it" } ?: ""
                         TapeText(
-                            "%.1f BPM · %d BARS%s · %d NOTES".format(java.util.Locale.ROOT, bpm, currentClip?.bars ?: 0, meter, currentClip?.notes?.size ?: 0),
+                            "${"%.1f".format(java.util.Locale.ROOT, bpm)} BPM · ${Copy.countOf(currentClip?.bars ?: 0, "BAR", "BARS")}$meter · " +
+                                Copy.countOf(currentClip?.notes?.size ?: 0, "NOTE", "NOTES"),
                             TapeType.lcdSmall,
                             scheme.ink.tape,
                         )

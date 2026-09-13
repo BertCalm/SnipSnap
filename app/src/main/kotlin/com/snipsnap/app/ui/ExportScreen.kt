@@ -551,7 +551,7 @@ private fun ExportContent(
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
-                TapeText("${model.fileCount} FILES", TapeType.lcdSmall, scheme.lcdInk.tape)
+                TapeText(Copy.countOf(model.fileCount, "FILE", "FILES"), TapeType.lcdSmall, scheme.lcdInk.tape)
             }
         }
 

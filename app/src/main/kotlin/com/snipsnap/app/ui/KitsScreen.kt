@@ -956,7 +956,7 @@ private fun KitRow(
             // placeholder before the read landed would be worse than a row
             // that gains a word.
             val age = editedAge?.let { "  ·  $it" } ?: ""
-            TapeText("${kit.pads.size} PADS$tempo$age", TapeType.pixelSmall, scheme.ink2.tape)
+            TapeText("${Copy.countOf(kit.pads.size, "PAD", "PADS")}$tempo$age", TapeType.pixelSmall, scheme.ink2.tape)
         }
         if (revealActions) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -722,7 +722,7 @@ private fun ChopContent(
             contentAlignment = Alignment.CenterStart,
         ) {
             TapeText(
-                "${model.sliceCount} SLICES — ${model.modeLabel()}",
+                "${Copy.countOf(model.sliceCount, "SLICE", "SLICES")} — ${model.modeLabel()}",
                 TapeType.lcdHeader,
                 scheme.lcdInk.tape,
             )
@@ -1275,7 +1275,7 @@ private fun CutBench(
     val readout = when (val mode = model.mode) {
         is ChopReviewModel.ChopMode.ByHits -> "${model.sliceCount} ${if (model.sliceCount == 1) "HIT" else "HITS"}"
         // GHOSTS: the spaces, and the hits they are the spaces of.
-        is ChopReviewModel.ChopMode.Ghosts -> "${model.sliceCount} ${if (model.sliceCount == 1) "GHOST" else "GHOSTS"} · ${model.hitsHeard} HITS"
+        is ChopReviewModel.ChopMode.Ghosts -> "${model.sliceCount} ${if (model.sliceCount == 1) "GHOST" else "GHOSTS"} · ${Copy.countOf(model.hitsHeard, "HIT", "HITS")}"
         is ChopReviewModel.ChopMode.Grid -> "GRID ×${mode.parts}"
         is ChopReviewModel.ChopMode.Hummed -> "${model.sliceCount} HUMMED"
         is ChopReviewModel.ChopMode.Ladder -> if (model.pulse != null) "${mode.rung.label} ×${model.sliceCount}" else "${mode.rung.label} · NO TEMPO"

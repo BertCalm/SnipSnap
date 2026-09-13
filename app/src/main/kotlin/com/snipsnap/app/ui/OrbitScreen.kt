@@ -1529,7 +1529,7 @@ fun OrbitScreen(
                     TapeText("FREE IS AS LONG AS ITS STEPS. A SPAN IS ½, 1, 2 OR 4 BARS WHATEVER THE STEPS: 3 STEPS ACROSS 2 BARS IS THREE HITS IN EIGHT BEATS.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3)
                 } else if (spreadOpen && ring != null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        TapeText("SPREAD HOW MANY HITS ROUND ${ring.steps} STEPS?", TapeType.pixel, scheme.ink.tape)
+                        TapeText("SPREAD HOW MANY HITS ROUND ${Copy.countOf(ring.steps, "STEP", "STEPS")}?", TapeType.pixel, scheme.ink.tape)
                         SmallChip("CLOSE", scheme) { spreadOpen = false }
                     }
                     Row(
@@ -1574,7 +1574,7 @@ fun OrbitScreen(
                             contentAlignment = Alignment.CenterStart,
                         ) {
                             TapeText(
-                                "${ring.steps} STEPS · ${OrbitClock.lengthLabel(current, ring)} ▾",
+                                "${Copy.countOf(ring.steps, "STEP", "STEPS")} · ${OrbitClock.lengthLabel(current, ring)} ▾",
                                 TapeType.pixel,
                                 scheme.ink.tape,
                             )
@@ -1668,7 +1668,7 @@ fun OrbitScreen(
                                 else -> "FILE MISSING — NOTHING TO WRAP"
                             }
                             TapeText(
-                                "WRAPS ${content.sampleFile.uppercase()}${if (seconds != null) " ($seconds S)" else ""} ROUND ${ring.steps} STEPS · $what",
+                                "WRAPS ${content.sampleFile.uppercase()}${if (seconds != null) " ($seconds S)" else ""} ROUND ${Copy.countOf(ring.steps, "STEP", "STEPS")} · $what",
                                 TapeType.pixelSmall,
                                 if (report?.fit == com.snipsnap.loop.LoopFit.SLICED) scheme.amber.tape else scheme.ink2.tape,
                                 maxLines = 3,
