@@ -429,6 +429,25 @@ class FxTest {
         assertTrue(ringLikeness < 0.9, "RING at full MIX barely changed the sound: likeness $ringLikeness")
     }
 
+    // ---------- PHASE ----------
+
+    @Test
+    fun `PHASE DEPTH zero is a copy and a swept tone moves`() {
+        val dry = Phase.process(tone, mapOf("DEPTH" to 0f))
+        assertTrue(dry.samples.contentEquals(tone.samples), "PHASE at DEPTH 0 is not a copy")
+        val wet = Phase.process(tone, mapOf("RATE" to 0.5f, "DEPTH" to 1f, "FEEDBACK" to 0.5f))
+        assertTrue(
+            abs(peakIn(wet, 0.1f, 0.2f) - peakIn(wet, 0.5f, 0.6f)) > 0.001f,
+            "PHASE swept nothing - the notches are not moving",
+        )
+    }
+
+    @Test
+    fun `a phased kick is still a kick`() {
+        assertEquals(DrumClass.KICK, Classifier.classify(Phase.process(kick)).drumClass)
+        assertEquals(DrumClass.SNARE, Classifier.classify(Phase.process(snare)).drumClass)
+    }
+
     // ---------- DUB + SWELL + the smear's FLOOR ----------
 
     /** How much of the source survives, 0..1: the normalized correlation of the two, mono-folded, at zero lag. */

@@ -8,7 +8,7 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → SQUASH → CRUNCH → RING → DUB → TAPE → ECHO → SPRING → MOTION
+ *    SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → SQUASH → CRUNCH → RING → DUB → TAPE → PHASE → ECHO → SPRING → MOTION
  *
  * Swell before everything, so the rack sees the arrival and the hit as
  * one sound; reverse next because you effect the flipped sample, not
@@ -33,6 +33,7 @@ data class FxChain(
     val crunch: Map<String, Float>? = null,
     val ring: Map<String, Float>? = null,
     val tape: Map<String, Float>? = null,
+    val phase: Map<String, Float>? = null,
     val echo: Map<String, Float>? = null,
     val spring: Map<String, Float>? = null,
     /** Later in the parameter list (they arrived later) than in the rack: see the order above. */
@@ -161,6 +162,7 @@ data class FxChain(
             Section("ring", Ring.MACROS, { it.ring }, { c, m -> c.copy(ring = m) }, Ring::process),
             Section("dub", Dub.MACROS, { it.dub }, { c, m -> c.copy(dub = m) }, Dub::process),
             Section("tape", Tape.MACROS, { it.tape }, { c, m -> c.copy(tape = m) }, Tape::process),
+            Section("phase", Phase.MACROS, { it.phase }, { c, m -> c.copy(phase = m) }, Phase::process),
             Section("echo", Echo.MACROS, { it.echo }, { c, m -> c.copy(echo = m) }, Echo::process),
             Section("spring", Spring.MACROS, { it.spring }, { c, m -> c.copy(spring = m) }, Spring::process),
             Section("motion", Motion.MACROS, { it.motion }, { c, m -> c.copy(motion = m) }, Motion::process),
