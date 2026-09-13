@@ -24,8 +24,9 @@ it and the deck loops — the selection when there is one, else the whole
 tape — and the pad grid comes up where the transport and destination
 rows were: one bank as the 4×4 window KIT and PLAY draw in portrait,
 with a `BANK A · 3 FREE` / `BANK B · 16 FREE` switch over it that
-counts the pads a catch can still land on, and opens on the first bank
-that has one. Over that, one line: `HOLD A PAD AS THE HIT GOES BY. LET
+counts the pads a catch can land on — the ones empty when CATCH began;
+a pad caught this session stays catchable, the next pass replaces it —
+and opens on the first bank that has one. Over that, one line: `HOLD A PAD AS THE HIT GOES BY. LET
 GO, IT'S CAUGHT.` and beside it a ▶/■ and DONE.
 
 - **Hold A01 as the kick goes by.** It lands on A01 with a flash, named
@@ -120,9 +121,11 @@ through the door every capture uses.
   ones to catch onto. Every other screen leaves them inert. Not
   `BankRow`: that is PLAY's landscape shape, two banks of eight abreast,
   and TAPE is portrait-locked, so it fell to its scroll branch and put
-  bank B a scroll away during a hold. The switch reads the free count
-  live off the kit, so a landing moves it; with no free pad on either
-  bank the button refuses before the loop starts.
+  bank B a scroll away during a hold. The switch's count is the
+  model's own `taken` set inverted — the room the bank had when CATCH
+  began, which holds for the session since a caught pad stays
+  catchable; with no free pad on either bank the button refuses before
+  the loop starts.
 
 ## 4. What it says
 
@@ -130,7 +133,7 @@ through the door every capture uses.
 - `LISTENING FOR HITS…` (the button, while the hits are found)
 - `NO HITS ON THIS TAPE TO CATCH. KEEP, OR INSTANT KIT, INSTEAD.`
 - `HOLD A PAD AS THE HIT GOES BY. LET GO, IT'S CAUGHT.`
-- `BANK A · 3 FREE` (the switch; the count is the pads a catch can land on)
+- `BANK A · 3 FREE` (the switch; the pads a catch can land on, empty when CATCH began)
 - `NO EMPTY PAD ON A OR B. CATCH LANDS ON EMPTY PADS ONLY.`
 - `KICK 01 CAUGHT ONTO A01.` · `NO HIT WENT BY. A07 TOOK THE TAPE YOU HELD.`
 - `NOTHING WENT BY. HOLD THE PAD AS THE HIT PASSES.`

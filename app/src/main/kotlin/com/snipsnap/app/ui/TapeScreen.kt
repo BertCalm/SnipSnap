@@ -927,7 +927,8 @@ private fun TapeDeckContent(
         // viewport that can't fit all three groups plus a live RE-TRIM's
         // HITS row at once.
         val catchKit = entry?.kit
-        if (catching != null && catchKit != null) {
+        val live = catching
+        if (live != null && catchKit != null) {
             // CATCH A HIT (docs/CATCH.md): the grid takes the controls'
             // place while the loop runs — one bank as the 4×4 window every
             // portrait screen draws, with a switch for the other. Not
@@ -950,13 +951,15 @@ private fun TapeDeckContent(
                     DeckButton(if (model.playing) "■" else "▶", Modifier.width(56.dp)) { onPlayStop() }
                     DeckButton(Copy.CATCH_DONE_BUTTON, Modifier.width(80.dp)) { finishCatch() }
                 }
-                // The switch counts the pads still FREE on each bank, not
-                // the pads on it as KIT's does: free pads are the only
-                // ones a catch can land on, and the count falls as they
-                // do. Read live off `entry.kit`, so a landing moves it.
+                // The switch counts the pads FREE on each bank, not the
+                // pads on it as KIT's does: the model's own answer, the
+                // pads that were empty when CATCH began. A pad this
+                // session caught stays catchable (the next pass replaces
+                // it), so the count does not fall as pads land — it is
+                // the room the bank has, and it holds for the session.
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     for (b in 0 until CATCH_BANKS) {
-                        val free = PadBanks.slots(b).count { catchKit.pad(it) == null }
+                        val free = PadBanks.slots(b).count { it !in live.taken }
                         val label = Copy.catchBank(PadBanks.letter(b), free)
                         DeckButton(
                             label,
