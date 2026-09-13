@@ -31,19 +31,56 @@ class VelvetTest {
     }
 
     @Test
-    fun `scrambles are reproducible and never garbage`() {
+    fun `scrambles are reproducible and stay in range`() {
         for (voice in VelvetVoice.entries) {
             assertEquals(Velvet.scramble(voice, Random(3)), Velvet.scramble(voice, Random(3)))
             repeat(8) { seed ->
                 val snip = Velvet.render(voice, Velvet.scramble(voice, Random(seed)))
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice roll $seed broke")
-                val c = Classifier.classify(snip)
-                assertTrue(
-                    c.drumClass != DrumClass.KICK && c.drumClass != DrumClass.LOOP &&
-                        c.drumClass != DrumClass.UNKNOWN,
-                    "$voice roll $seed classified ${c.drumClass}",
-                )
             }
+        }
+    }
+
+    @Test
+    fun `scrambled hits usually still read as playable percussion`() {
+        // SCRAMBLE now rolls near a preset (docs/SYNTH_UPGRADE.md, U2), so a
+        // roll can land close to a classifier boundary the same way a
+        // preset itself can - BASS's darkest presets (low TUNE, low CUTOFF)
+        // measured ~17% of rolls landing on KICK there. "Most of the time",
+        // not "always", is the contract the doc itself sets for a roll.
+        for (voice in VelvetVoice.entries) {
+            var misses = 0
+            val rolls = 30
+            repeat(rolls) { seed ->
+                val c = Classifier.classify(Velvet.render(voice, Velvet.scramble(voice, Random(seed))))
+                if (c.drumClass == DrumClass.KICK || c.drumClass == DrumClass.LOOP || c.drumClass == DrumClass.UNKNOWN) misses++
+            }
+            assertTrue(misses <= rolls / 3, "$voice: $misses/$rolls scrambled rolls came back unplayable")
+        }
+    }
+
+    @Test
+    fun `scramble honors temperature and near`() {
+        // The Dsp.scrambleNear boundary contract, proven end-to-end through
+        // Velvet's own wiring: see DspTest for the central proof.
+        for (voice in VelvetVoice.entries) {
+            val preset = VelvetPresets.forVoice(voice).first()
+            assertEquals(
+                preset.macros,
+                Velvet.scramble(voice, Random(1), temperature = 0f, near = preset),
+                "$voice: temperature 0 should return the seed untouched",
+            )
+            val flat = Velvet.scramble(voice, Random(1), temperature = 1f, near = preset)
+            assertTrue(flat.values.all { it in 0f..1f }, "$voice: temperature 1 left the 0..1 range")
+
+            // Copilot's review of this PR: at temperature >= 1 with no
+            // `near`, scramble must not spend a random draw picking a
+            // preset first - see ThumpTest's own version of this test.
+            assertEquals(
+                Dsp.scrambleNear(Velvet.defaults(voice), 1f, Random(2)),
+                Velvet.scramble(voice, Random(2), temperature = 1f),
+                "$voice: temperature 1 with no near must not consume a preset-selection draw",
+            )
         }
     }
 

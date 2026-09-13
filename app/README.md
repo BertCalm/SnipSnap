@@ -151,7 +151,15 @@ logcat tag to grab when something is wrong.
   morphing the corners should sound the same as it does in MORPH - while
   the readout's SMPL line (with PAD2/PAD3/PAD4 loaded) keeps moving too:
   one finger, two independent blends, neither one visibly affecting the
-  other's numbers.
+  other's numbers. Then stage 4b, the named preset library: ARM B (it
+  should dim in and the others stay lit), then PRESET ► - the readout
+  should read "LBP +", then "ECHO +" on the next press, wrapping around
+  through "LBP -" and back; morph toward B and it should sound like
+  whichever preset is showing. PRESET ◄ ► with no corner armed should do
+  nothing and the row should read "ARM A CORNER". Leave the screen and
+  come back - a stepped corner is stored exactly like a captured one (the
+  same `corners` field in `surface.json`), so it is still there, though
+  the PRESET row itself starts unarmed again (arming doesn't persist).
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad

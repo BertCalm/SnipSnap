@@ -53,8 +53,16 @@ object Vox {
     fun defaults(voice: VoxVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
 
-    fun scramble(voice: VoxVoice, random: Random): Map<String, Float> =
-        macrosFor(voice).associate { it.name to random.nextFloat() }
+    /** SCRAMBLE near a preset; see [Thump.scramble] (docs/SYNTH_UPGRADE.md, U2). */
+    fun scramble(voice: VoxVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
+        val base = defaults(voice)
+        val seed = when {
+            near != null -> base + near.macros.filterKeys { it in base }
+            temperature >= 1f -> base
+            else -> base + VoxPresets.forVoice(voice).random(random).macros.filterKeys { it in base }
+        }
+        return Dsp.scrambleNear(seed, temperature, random)
+    }
 
     fun frequencyFor(voice: VoxVoice, tune: Float): Float {
         val root = when (voice) {
