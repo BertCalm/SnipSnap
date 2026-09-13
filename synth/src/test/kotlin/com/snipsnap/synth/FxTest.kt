@@ -15,12 +15,14 @@ import kotlin.test.assertTrue
 class FxTest {
 
     /**
-     * Sections not yet held to the determinism / finite-and-in-range /
-     * peak-match contract, with the clause each fails. These are
-     * pre-existing: they were never in the three-section list this test
-     * replaced. Each is a bug to fix on its own, not here.
+     * Sections not yet held to the peak-match clause, with why each
+     * fails. These are pre-existing: they were never in the three-section
+     * list this test replaced. Each is a bug to fix on its own, not here.
+     * Stale check: if a section's DSP changes, delete its entry and rerun
+     * `every effect is deterministic, clean and peak-matched everywhere` -
+     * if it now passes, the exclusion is no longer needed.
      */
-    private val CONTRACT_EXCLUDED: Map<String, String> = mapOf(
+    private val contractExcluded: Map<String, String> = mapOf(
         "smear" to "peak-match: falls under the source peak instead of matching it " +
             "(roll 0: out 0.8939 vs snare 0.9500, diff 0.0561; roll 2: out 0.8637 vs " +
             "snare 0.9500, diff 0.0863 - tolerance is 0.05)",
@@ -31,11 +33,13 @@ class FxTest {
     )
 
     /**
-     * Sections not yet held to the stereo contract (both channels identical
-     * out if identical in), with the observed divergence. Pre-existing bugs,
-     * each its own fix.
+     * Sections not yet held to the per-frame stereo-identity clause, with
+     * the observed divergence. Pre-existing bugs, each its own fix. Stale
+     * check: if a section's DSP changes, delete its entry and rerun
+     * `stereo stays stereo with identical channels intact` - if it now
+     * passes, the exclusion is no longer needed.
      */
-    private val STEREO_EXCLUDED: Map<String, String> = mapOf(
+    private val stereoExcluded: Map<String, String> = mapOf(
         "swell" to "left/right diverge starting at frame 1 of 48337 (L=0.0, R=-0.0 - a " +
             "signed-zero mismatch that assertEquals(Float, Float) treats as unequal); 33073 " +
             "of 48337 frames fail assertEquals, of which 33072 also differ under plain != " +
@@ -187,7 +191,6 @@ class FxTest {
         // would drag in capTail and the TRANSPORT/ARRIVAL stages, which the
         // three original sections were never measured through.
         for (sec in FxChain.SECTIONS) {
-            if (sec.name in CONTRACT_EXCLUDED) continue
             val defaults = sec.macros.associate { it.name to it.default }
             assertTrue(
                 sec.run(snare, defaults).samples.contentEquals(sec.run(snare, defaults).samples),
@@ -198,7 +201,9 @@ class FxTest {
                 val macros = sec.macros.associate { it.name to rng.nextFloat() }
                 val out = sec.run(snare, macros)
                 assertTrue(out.samples.all { it.isFinite() && it in -1f..1f }, "${sec.name} roll $seed broke")
-                assertTrue(abs(out.peak() - snare.peak()) < 0.05f, "${sec.name} roll $seed changed loudness")
+                if (sec.name !in contractExcluded) {
+                    assertTrue(abs(out.peak() - snare.peak()) < 0.05f, "${sec.name} roll $seed changed loudness")
+                }
             }
         }
     }
@@ -207,11 +212,12 @@ class FxTest {
     fun `stereo stays stereo with identical channels intact`() {
         val stereo = Snip(FloatArray(kick.frameCount * 2) { kick.samples[it / 2] }, 2, 44_100)
         for (sec in FxChain.SECTIONS) {
-            if (sec.name in STEREO_EXCLUDED) continue
             val out = sec.run(stereo, sec.macros.associate { it.name to it.default })
             assertEquals(2, out.channels, "${sec.name} changed the channel count")
-            for (f in 0 until out.frameCount) {
-                assertEquals(out.samples[f * 2], out.samples[f * 2 + 1], "${sec.name}: channels diverged at $f")
+            if (sec.name !in stereoExcluded) {
+                for (f in 0 until out.frameCount) {
+                    assertEquals(out.samples[f * 2], out.samples[f * 2 + 1], "${sec.name}: channels diverged at $f")
+                }
             }
         }
     }
