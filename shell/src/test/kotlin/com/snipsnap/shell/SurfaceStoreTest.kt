@@ -121,6 +121,20 @@ class SurfaceStoreTest {
     }
 
     @Test
+    fun `a capture recomputes the blend from position, ignoring a stale reading's own a-b-c-d`() {
+        // SurfaceScreen holds the last touch across a mode switch with no
+        // new touch: switch from XY to MORPH/VECTOR and press SET right
+        // away, and the held reading still carries XY's flat 0.25 each
+        // (TouchSurface.read never computes morph weights outside
+        // MORPH/VECTOR) even though the finger is at a corner. Capture
+        // must use the position, not whatever weights happen to be
+        // sitting on the reading already.
+        val staleFlatAtCornerA = Reading(0f, 1f, 0f, 0.25f, 0.25f, 0.25f, 0.25f, touching = true)
+        assertEquals(Corner.CLEAN, Corner.from(Mode.MORPH, staleFlatAtCornerA, 0.5f, Corner.DEFAULTS))
+        assertEquals(Corner.CLEAN, Corner.from(Mode.VECTOR, staleFlatAtCornerA, 0.5f, Corner.DEFAULTS))
+    }
+
+    @Test
     fun `VECTOR captures a corner exactly like MORPH does - the same blend, not a different one`() {
         val atA = Reading(0f, 1f, 0f, 1f, 0f, 0f, 0f, touching = true)
         assertEquals(
@@ -147,7 +161,11 @@ class SurfaceStoreTest {
 
         // HOT already carries resonance 0.2 (Corner.HOT = Corner(0.75f, 0.85f, 0.2f, 0.9f));
         // a full-tilt nudge of +0.25 lands on top of that, not in place of it.
-        val atD = Reading(0f, 0f, 0f, 0f, 0f, 0f, 1f, touching = true)
+        // D is bottom-right (x=1, y=0 - see morphWeights), which the blend
+        // now derives the weights from itself; a/b/c/d are set to match
+        // that position rather than a mismatched one the old
+        // implementation didn't check.
+        val atD = Reading(1f, 0f, 0f, 0f, 0f, 0f, 1f, touching = true)
         near(0.45f, Corner.from(Mode.MORPH, atD, 1f, Corner.DEFAULTS).resonance)
         near(1f, Corner.from(Mode.MORPH, atD, 1f, listOf(Corner(0.5f, 0.5f, 0.9f, 0f), Corner.DARK, Corner.LOW, Corner(0.5f, 0.5f, 0.9f, 0f))).resonance)
     }
