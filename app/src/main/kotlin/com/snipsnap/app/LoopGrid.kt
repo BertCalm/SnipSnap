@@ -363,7 +363,12 @@ private fun TrackHeader(name: String, engaged: Boolean, onToggle: () -> Unit) {
             .fillMaxWidth()
             .background(Tape.Lcd)
             .border(width = 1.dp, color = Tape.BevelDark)
-            .clickable { onToggle() }
+            // The visible text is the track's name alone; ON vs MUTED lives
+            // only in the ink colour, which a screen reader cannot read. The
+            // label carries the state and what a tap does, like ORBIT's ring
+            // chip. tapeClick, not clickable, so the semantics node is a
+            // real one — the same swap BOUNCE above got.
+            .tapeClick(label = Copy.loopTrackToggle(name.uppercase(), engaged), onClick = onToggle)
             .padding(vertical = 6.dp, horizontal = 4.dp),
     )
 }

@@ -1577,6 +1577,16 @@ object Copy {
      */
     fun loopTrackFilled(name: String, track: Int, blocks: Int): String =
         "$name IS ON TRACK $track, ${countOf(blocks, "BLOCK", "BLOCKS")} LONG."
+
+    /**
+     * The track header's spoken name. The header is a mute toggle, and its
+     * visible text is the track's name alone — the state lives in the ink
+     * colour, which a screen reader cannot read. Says the state and what a
+     * tap does, the same shape as ORBIT's own ring chip ("RING ON — TAP TO
+     * MUTE"), because the two controls do the same job on the two grids.
+     */
+    fun loopTrackToggle(name: String, engaged: Boolean): String =
+        if (engaged) "$name ON — TAP TO MUTE" else "$name OFF — TAP TO HEAR"
     /**
      * The same landing, for a snip that ran past what a chain holds: it is on
      * the grid, but only its first [blocks] intervals are. Its own line
