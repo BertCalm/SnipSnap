@@ -575,6 +575,39 @@ TEST(surface_engine_treats_sample_weights_as_a_ratio_not_absolute_level) {
     CHECK(run(1.0f) == run(5.0f));
 }
 
+TEST(surface_engine_one_loaded_slot_plays_full_level_at_any_touch_weight) {
+    // With only slot 0 loaded, the other two vertices' touch weight is
+    // never really "requesting" anything - there is nothing there to
+    // read. Before this fix, wSum summed every weight the touch sent
+    // regardless of what was loaded, so a touch anywhere but the exact
+    // apex (weights 0.25/0.25 on the unloaded base vertices at the pad's
+    // own centre, say - TouchSurface.sampleWeights(0.5, 0.5)) silently
+    // halved the one loaded sample's level: the opposite of the "no dead
+    // zone" the vertex blend exists for. Settling at the apex and at the
+    // pad's centre must sound the same.
+    auto settle = [](float a, float b, float c) {
+        SurfaceEngine e(kRate);
+        std::vector<float> tone(100, 0.9f);
+        e.loadSample(tone.data(), tone.size(), kRate, 0);
+        ControlFrame f;
+        f.mode = 0;
+        f.gate = true;
+        f.x = 0.5f;
+        f.y = 1.0f;  // cutoff wide open
+        f.sampleA = a; f.sampleB = b; f.sampleC = c;
+        e.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 400; ++i) out = callback(e, 64);
+        float sum = 0.0f;
+        for (float v : out) sum += v;
+        return sum / static_cast<float>(out.size());
+    };
+
+    const float atApex = settle(1.0f, 0.0f, 0.0f);
+    const float atCentre = settle(0.5f, 0.25f, 0.25f);  // weight split across two unloaded vertices too
+    CHECK_NEAR(atApex, atCentre, 0.02f);
+}
+
 TEST(surface_engine_unloaded_slots_are_silent_until_loaded) {
     // A weight aimed entirely at a slot nothing was ever loaded into must
     // settle to honest silence, not NaN. "Settle" matters here as much as

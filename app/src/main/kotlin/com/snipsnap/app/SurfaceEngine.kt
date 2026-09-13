@@ -74,11 +74,30 @@ class SurfaceEngine(preferredSampleRate: Int) {
     }
 
     /**
+     * Clears a source slot back to silence - call this when the pad that
+     * used to live there is no longer chosen (a load failed, or a new kit
+     * has none), so a stale sample from before cannot keep sounding at
+     * that vertex once the caller's own state says the slot is empty. A
+     * zero-length load, through the same handshake [load] uses: the
+     * engine already treats a too-short sample as silence and excludes it
+     * from the blend's renormalisation (see readSlot/slotLoaded in
+     * SurfaceEngine.cpp), so there is no separate native "unload" to keep
+     * in sync with this one.
+     */
+    @Synchronized
+    fun clearSlot(slot: Int) {
+        if (!open) return
+        require(slot in 0 until MAX_SOURCES) { "slot is 0..${MAX_SOURCES - 1}, got $slot" }
+        NativeSurface.loadSample(handle, FloatArray(0), 0, slot)
+    }
+
+    /**
      * One control frame; call at screen rate with the smoothed reading.
      * [sampleA]/[sampleB]/[sampleC] weight slots 0/1/2 - a barycentric
-     * blend across the pad, independent of [mode]; an unloaded slot's
-     * weight is just silence, so the blend needs no gating of its own.
-     * Not required to sum to 1 - the engine renormalises every sample.
+     * blend across the pad, independent of [mode]. Not required to sum to
+     * 1 - the engine renormalises every sample, over whichever slots are
+     * actually loaded. An unloaded slot's own weight is silence, but only
+     * once it is genuinely empty - see [clearSlot].
      */
     @Synchronized
     fun control(

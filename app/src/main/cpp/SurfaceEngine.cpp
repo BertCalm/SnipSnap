@@ -222,6 +222,11 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
     gain_.setTarget(f.gate ? 1.0f : 0.0f);
 }
 
+bool SurfaceEngine::slotLoaded(int32_t slot) const {
+    const Sample* s = current_[slot];
+    return s && s->frames.size() >= 2;
+}
+
 float SurfaceEngine::readSlot(int32_t slot, double fs, float pitchRatioValue) {
     const Sample* s = current_[slot];
     if (!s || s->frames.size() < 2) return 0.0f;
@@ -265,15 +270,24 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         // drift a little off 1 mid-glide (unlike stage 1's paired
         // mix/1-mix) - renormalising here keeps the blend from ever
         // spiking or dipping in loudness while a weight is still catching
-        // up, and reads as silence rather than dividing by ~0 if all three
-        // ever glide through together near zero. Slot 3 isn't mixed in yet
-        // (see kMaxSources).
-        const float wSum = w0 + w1 + w2;
+        // up. Normalising is over the *loaded* slots only, not every
+        // weight the touch position sends: an empty vertex's share of the
+        // blend would otherwise just vanish rather than fall to whichever
+        // slots are actually loaded, quietly halving a single loaded
+        // sample's level anywhere the puck sits closer to an empty vertex
+        // than a full one - exactly the dead zone the vertex blend exists
+        // to avoid. Reads as silence, rather than dividing by ~0, only
+        // when every loaded slot's weight is near zero at once. Slot 3
+        // isn't mixed in yet (see kMaxSources).
+        const float w0Loaded = slotLoaded(0) ? w0 : 0.0f;
+        const float w1Loaded = slotLoaded(1) ? w1 : 0.0f;
+        const float w2Loaded = slotLoaded(2) ? w2 : 0.0f;
+        const float wSum = w0Loaded + w1Loaded + w2Loaded;
         const float wInv = wSum > 1e-6f ? 1.0f / wSum : 0.0f;
         const float pr = pitchRatio(pitch);
-        const float v0 = (w0 * wInv) * readSlot(0, fs, pr) +
-                         (w1 * wInv) * readSlot(1, fs, pr) +
-                         (w2 * wInv) * readSlot(2, fs, pr);
+        const float v0 = (w0Loaded * wInv) * readSlot(0, fs, pr) +
+                         (w1Loaded * wInv) * readSlot(1, fs, pr) +
+                         (w2Loaded * wInv) * readSlot(2, fs, pr);
 
         // Drive: a soft clip with its make-up baked in, so DRIVE is a colour and not a volume knob.
         const float pre = 1.0f + drive * 15.0f;

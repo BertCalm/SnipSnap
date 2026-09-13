@@ -226,9 +226,11 @@ fun SurfaceScreen(
     // The engine's second source slot - the sample triangle's base-left
     // vertex. Failure is quieter than the first pad's: a second voice is
     // optional, so a toast for every unreadable file would be noise the
-    // first pad already covers when it matters. An unloaded slot is just
-    // silence at its vertex (see readSlot in the engine), so there is
-    // nothing else here to reset on failure.
+    // first pad already covers when it matters. clearSlot on failure
+    // matters here specifically because the touch position, not this
+    // screen, decides how much of slot 1 to play - a failed load that
+    // left the *previous* sample sitting in the engine would still sound
+    // wherever the puck favours that vertex, while padName2 said NO PAD2.
     suspend fun loadPad2(dir: File, pad: KitPad, generation: Int) {
         val snip = withContext(Dispatchers.IO) {
             runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
@@ -236,6 +238,7 @@ fun SurfaceScreen(
         if (generation != pad2Generation) return  // a later press already superseded this one
         if (snip == null) {
             padName2 = null
+            engine.clearSlot(1)
         } else {
             engine.load(snip, slot = 1)
             padName2 = pad.displayName
@@ -251,6 +254,7 @@ fun SurfaceScreen(
         if (generation != pad3Generation) return  // a later press already superseded this one
         if (snip == null) {
             padName3 = null
+            engine.clearSlot(2)
         } else {
             engine.load(snip, slot = 2)
             padName3 = pad.displayName
@@ -265,7 +269,17 @@ fun SurfaceScreen(
     fun persist(dir: File, next: SurfaceStore.Settings) {
         settings = next
         scope.launch {
-            withContext(Dispatchers.IO) { runCatching { SurfaceStore.save(dir, next) } }
+            // Write `settings` fresh here, not the `next` this call
+            // captured: two persist() calls close together (a fast PAD3
+            // double-tap, say) each launch their own IO write, and those
+            // can finish in either order - a write of its own captured
+            // value could let an older call's write land on disk after a
+            // newer one's and leave a stale choice there. By the time any
+            // of these coroutines actually runs, every synchronous
+            // `settings = next` above it has already happened, so reading
+            // `settings` here means every one of them writes the same,
+            // latest content - the write order stops mattering.
+            withContext(Dispatchers.IO) { runCatching { SurfaceStore.save(dir, settings) } }
                 .onFailure {
                     Log.e("SurfaceScreen", "persist: settings not saved", it)
                     onToast(Copy.SURFACE_SETTINGS_NOT_SAVED)
@@ -281,6 +295,8 @@ fun SurfaceScreen(
             padSlot2 = null
             padName3 = null
             padSlot3 = null
+            engine.clearSlot(1)
+            engine.clearSlot(2)
             // Orphan any in-flight load from before the kit closed.
             pad2Generation++
             pad3Generation++
@@ -309,6 +325,13 @@ fun SurfaceScreen(
         if (pad2 == null) {
             padName2 = null
             padSlot2 = null
+            engine.clearSlot(1)
+            // Orphan any load stepPad2 kicked off against the previous
+            // entry - without this, its generation check still passes
+            // against this kit's unchanged pad2Generation, and it can
+            // repopulate padName2/slot 1 with the old kit's sample after
+            // this effect has already decided there is none here.
+            pad2Generation++
         } else {
             loadPad2(entry.dir, pad2, ++pad2Generation)
         }
@@ -316,6 +339,9 @@ fun SurfaceScreen(
         if (pad3 == null) {
             padName3 = null
             padSlot3 = null
+            engine.clearSlot(2)
+            // Same reasoning as pad2Generation above, for stepPad3.
+            pad3Generation++
         } else {
             loadPad3(entry.dir, pad3, ++pad3Generation)
         }

@@ -110,6 +110,8 @@ private:
     void renderMono(float* out, int32_t numFrames);
     /** Audio thread. One source's interpolated read, advancing its own phase_[slot]. Silence if slot is empty. */
     float readSlot(int32_t slot, double fs, float pitchRatioValue);
+    /** Audio thread. Whether slot has an adopted sample worth reading - the same test readSlot itself applies. */
+    bool slotLoaded(int32_t slot) const;
 
     std::shared_ptr<oboe::AudioStream> stream_;
     int32_t preferredRate_;
