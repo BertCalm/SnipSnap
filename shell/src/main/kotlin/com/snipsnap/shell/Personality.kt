@@ -763,8 +763,15 @@ object Copy {
      * with no route to it (September wiring review, finding 4).
      */
     const val HUM_NOT_LISTENING = "THE MIC ISN'T LISTENING. LISTEN · MIC ON KITS, THEN HUM."
-    /** HUM with the INSIDE armed: that ring holds other apps' playback, not a mouth. The route is the same button. */
-    const val HUM_INSIDE = "THE INSIDE IS LISTENING, NOT THE MIC. LISTEN · MIC ON KITS, THEN HUM."
+    /**
+     * HUM with the INSIDE armed: that ring holds other apps' playback, not
+     * a mouth. The route has a step the not-listening one lacks: while a
+     * session runs, KITS shows STOP where `LISTEN · MIC` was, and arming
+     * again only re-enters the running session (`MicSessionService`'s
+     * ACTION_ARM on an existing ring), so the INSIDE has to be stopped
+     * before the mic can be started.
+     */
+    const val HUM_INSIDE = "THE INSIDE IS LISTENING, NOT THE MIC. STOP ON KITS, THEN LISTEN · MIC, THEN HUM."
     /** HUM began: the tape is playing, the mic is on. Headphones, or the mic hears the tape and every hit matches. */
     const val HUM_START = "HUM ALONG. HEADPHONES ON, OR THE MIC HEARS THE TAPE TOO. TAP HUM AGAIN TO STOP."
     /** The bench's readout while the hum runs. */
