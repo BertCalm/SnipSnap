@@ -9,6 +9,7 @@ import com.snipsnap.audio.Scale
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.Tuner
+import com.snipsnap.synth.Gate
 import com.snipsnap.synth.Roll
 import com.snipsnap.synth.Wobble
 import java.util.Locale
@@ -29,14 +30,17 @@ import java.util.Locale
  *   because its tail is the point and the rack's tail budget would cut it;
  * - **rolled** — the hit's own head, struck again on a note division at
  *   the kit's tempo ([Roll]): shares WOBBLE's grid, so the two land on the
- *   same beats.
+ *   same beats;
+ * - **gated** — the hit chopped into a square envelope at a note division
+ *   at the kit's tempo ([Gate]): shares WOBBLE's grid too, so a gate and a
+ *   roll and a filter sweep land on the same beats.
  *
  * Each is `Snip → Snip` with AMOUNT how far, peak matched, and its own
  * honest refusal in words.
  */
 object Keyed {
 
-    val NAMES: List<String> = listOf("retuned", "bodied", "wobbled", "eternal", "rolled")
+    val NAMES: List<String> = listOf("retuned", "bodied", "wobbled", "eternal", "rolled", "gated")
 
     /** The honest refusal: the sound is not what the treatment wants. */
     class Refused(message: String) : IllegalArgumentException(message)
@@ -79,6 +83,7 @@ object Keyed {
             "retuned" -> Retune.analyze(snip, context.key ?: NO_KEY).refusal
             "eternal" -> if (amount <= 0f) null else Eternal.refusal(snip, dials.tail ?: Eternal.tailFor(amount), dials.knee)
             "rolled" -> if (amount <= 0f) null else Roll.refusal(snip, context.bpm, dials.division)
+            "gated" -> if (amount <= 0f) null else Gate.refusal(snip, context.bpm, dials.division)
             else -> null
         }
     }
@@ -117,6 +122,15 @@ object Keyed {
                 }
                 Result(
                     Roll.roll(snip, context.bpm, dials.division, amount),
+                    "%s AT %d BPM".format(Locale.ROOT, dials.division, Math.round(context.bpm)),
+                )
+            }
+            "gated" -> {
+                if (amount > 0f) {
+                    Gate.refusal(snip, context.bpm, dials.division)?.let { throw Refused(it) }
+                }
+                Result(
+                    Gate.chop(snip, context.bpm, dials.division, amount),
                     "%s AT %d BPM".format(Locale.ROOT, dials.division, Math.round(context.bpm)),
                 )
             }
