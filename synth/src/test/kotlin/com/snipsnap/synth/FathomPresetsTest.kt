@@ -1,22 +1,49 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Classifier
+import com.snipsnap.audio.DrumClass
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
  * U1 of `docs/SYNTH_UPGRADE.md`, FATHOM's turn: twelve presets per voice
- * (thirty-six total). No classifier "identity" check — every FATHOM voice
- * is statically TONAL, not judged from its render — so this covers the
- * rest of the playability contract: a real, clean sound; a faithful JSON
- * round-trip; listbox-legal names; and a roster that doesn't cluster.
- * Names are unique and thresholds are set per voice rather than globally,
- * same as every other engine here — DEEP/GRIND/GLASS each carry a
- * different sixth macro (`SWEEP`/`SPREAD`/`RATIO`), which the spread
- * check picks up for free since it runs over whatever keys the voice's
- * own macro map actually has.
+ * (thirty-six total).
+ *
+ * Copilot's review of this PR caught a real mistake in an earlier version
+ * of this file: FATHOM is *not* like TINES/PLUCK/VELVET/TONEWHEEL/VOX
+ * here. Those five are statically TONAL in `SynthScreen`'s own mapping,
+ * never judged from a render — but FATHOM isn't in `SynthScreen`'s
+ * `Engine` enum at all yet (a pre-existing gap this PR doesn't close; see
+ * the file's own top KDoc, which already named only five engines joining
+ * THUMP), and `FathomTest`'s own `factory defaults classify consistently`
+ * establishes that FATHOM's raw voices carry real classifier ambiguity:
+ * DEEP and GRIND read as `DrumClass.KICK`, GLASS as `DrumClass.PERC` — and
+ * GRIND/GLASS were each *re-pinned* once already as their DSP changed. A
+ * preset is exactly the kind of macro move that could push a voice across
+ * that boundary silently, so this needs the same identity check THUMP's
+ * own preset suite has, not the "no ambiguity" claim this file used to
+ * make.
  */
 class FathomPresetsTest {
+
+    private val classifiedVoices = mapOf(
+        FathomVoice.DEEP to DrumClass.KICK,
+        FathomVoice.GRIND to DrumClass.KICK,
+        FathomVoice.GLASS to DrumClass.PERC,
+    )
+
+    @Test
+    fun `every preset classifies as its own voice`() {
+        val failures = mutableListOf<String>()
+        for ((voice, expected) in classifiedVoices) {
+            for (preset in FathomPresets.forVoice(voice)) {
+                val got = Classifier.classify(preset.render()).drumClass
+                if (got != expected) failures += "${voice.name}/${preset.name}: expected $expected, got $got"
+            }
+        }
+        assertTrue(failures.isEmpty(), "presets that don't classify as their own voice:\n${failures.joinToString("\n")}")
+    }
 
     @Test
     fun `every preset renders clean non-silent audio`() {
