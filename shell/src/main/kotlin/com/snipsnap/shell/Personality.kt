@@ -662,7 +662,7 @@ object Copy {
     /**
      * RECORD landed a take as the new PROG A; echoes [grooveRead]'s shape,
      * but names what was PLAYED, not what was heard. [meter] is the clip's
-     * when it is not 4/4 (`GrooveEdit.meterLabel`), so a player who
+     * meter when it is not 4/4 (`GrooveEdit.meterLabel`), so a player who
      * overdubbed a 3/4 ORBIT clip is told the bar they played in.
      */
     fun takeLanded(notes: Int, bars: Int, meter: String? = null): String {

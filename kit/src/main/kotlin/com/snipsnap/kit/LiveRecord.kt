@@ -80,8 +80,16 @@ object LiveRecord {
         private val hits = mutableListOf<Mpc3Note>()
 
         init {
+            // The same bounds [Mpc3Clip] holds its own bar to, checked at
+            // the arm rather than at the first hit or the landing: a take
+            // that cannot become a clip is refused before it records.
             require(bars in 1..64) { "bars out of range: $bars" }
-            require(pulsesPerBar > 0) { "a bar is positive, not $pulsesPerBar" }
+            require(pulsesPerBar > 0 && pulsesPerBar % Mpc3Clip.PULSES_PER_BEAT == 0L) {
+                "a bar is whole beats of ${Mpc3Clip.PULSES_PER_BEAT} pulses, not $pulsesPerBar"
+            }
+            require(pulsesPerBar <= Mpc3Clip.MAX_BEATS_PER_BAR * Mpc3Clip.PULSES_PER_BEAT) {
+                "a bar of ${pulsesPerBar / Mpc3Clip.PULSES_PER_BEAT} beats is past the ${Mpc3Clip.MAX_BEATS_PER_BAR} a clip can hold"
+            }
         }
 
         /** The take's loop, in pulses — what a hit wraps into. */

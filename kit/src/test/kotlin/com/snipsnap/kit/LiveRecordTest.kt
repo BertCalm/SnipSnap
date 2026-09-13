@@ -193,6 +193,15 @@ class LiveRecordTest {
     }
 
     @Test
+    fun `a take refuses a bar a clip could not hold, at the arm`() {
+        assertFailsWith<IllegalArgumentException> { LiveRecord.Take(bars = 1, pulsesPerBar = 1L) }
+        assertFailsWith<IllegalArgumentException> { LiveRecord.Take(bars = 1, pulsesPerBar = Long.MAX_VALUE) }
+        assertFailsWith<IllegalArgumentException> { LiveRecord.Take(bars = 1, pulsesPerBar = (Mpc3Clip.MAX_BEATS_PER_BAR + 1) * Mpc3Clip.PULSES_PER_BEAT) }
+        // The largest bar a clip holds is a take's too.
+        LiveRecord.Take(bars = 64, pulsesPerBar = Mpc3Clip.MAX_BEATS_PER_BAR * Mpc3Clip.PULSES_PER_BEAT)
+    }
+
+    @Test
     fun `a from-scratch take is 4 over 4 and lands as one`() {
         val take = LiveRecord.Take(bars = 2)
         assertEquals(Mpc3Clip.PULSES_PER_BAR, take.pulsesPerBar)

@@ -1503,7 +1503,10 @@ fun GrooveScreen(
                 withContext(Dispatchers.IO) { LiveRecord.land(kitDir, clip) }
                 base = clip
                 justLanded = true
-                onToast(Copy.takeLanded(clip.notes.size, clip.bars, GrooveEdit.meterLabel(clip)))
+                // The take's own count, not the merged clip's: "TOOK n
+                // HITS" names what was played this time, and an overdub
+                // on a full base used to claim the base's hits as new.
+                onToast(Copy.takeLanded(t.notes().size, clip.bars, GrooveEdit.meterLabel(clip)))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 failure("RECORD", e)
