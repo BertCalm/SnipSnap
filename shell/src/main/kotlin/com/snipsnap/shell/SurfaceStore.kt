@@ -25,6 +25,9 @@ object SurfaceStore {
     const val FILE_NAME = "surface.json"
     const val VERSION = 1
 
+    /** One entry of [Corner.LIBRARY]: a [Corner] worth stepping onto a pad corner by its name, not its position. */
+    data class NamedCorner(val name: String, val corner: Corner)
+
     data class Corner(val pitch: Float, val cutoff: Float, val resonance: Float, val drive: Float) {
         init {
             for ((name, v) in listOf("pitch" to pitch, "cutoff" to cutoff, "resonance" to resonance, "drive" to drive)) {
@@ -39,6 +42,25 @@ object SurfaceStore {
             val LOW = Corner(0.25f, 0.6f, 0.5f, 0.4f)
             val HOT = Corner(0.75f, 0.85f, 0.2f, 0.9f)
             val DEFAULTS: List<Corner> = listOf(CLEAN, DARK, LOW, HOT)
+
+            /**
+             * A second, named quartet - `design/surface-vector`'s boards
+             * sketch a MORPH/VECTOR pad whose corners read LBP +/ECHO
+             * +/ECHO -/LBP -, a preset library to *step* onto a corner
+             * instead of always capturing one live. The names are
+             * evocative shorthand the same way CLEAN/DARK/LOW/HOT already
+             * are - the engine has no actual band-pass or delay stage, so
+             * nothing here claims to *be* one; each is still just a point
+             * in the same four-macro space a [Corner] is. LBP leans
+             * mellow and rounded, ECHO brighter and more resonant; +/-
+             * is each pair's own brighter/darker sibling.
+             */
+            val LIBRARY: List<NamedCorner> = listOf(
+                NamedCorner("LBP +", Corner(0.5f, 0.55f, 0.1f, 0.0f)),
+                NamedCorner("ECHO +", Corner(0.65f, 0.7f, 0.5f, 0.1f)),
+                NamedCorner("ECHO -", Corner(0.35f, 0.4f, 0.45f, 0.2f)),
+                NamedCorner("LBP -", Corner(0.5f, 0.2f, 0.15f, 0.0f)),
+            )
 
             /**
              * The macro state under the finger, by the same map the engine
