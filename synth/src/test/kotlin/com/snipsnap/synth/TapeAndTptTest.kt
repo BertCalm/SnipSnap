@@ -58,7 +58,7 @@ class TapeAndTptTest {
         // PadFilter, Wobble, and every other test in this file) needs the
         // exact old linear filter, proven here so a future refactor can't
         // quietly flip the default. VELVET is the one caller that opts in.
-        fun ring(saturate: Boolean): Float {
+        fun ring(saturate: Boolean?): Float {
             val svf = Dsp.TptSvf()
             var peak = 0f
             for (i in 0 until 8_820) {
@@ -68,14 +68,21 @@ class TapeAndTptTest {
                 // meant to tame, not a single decaying impulse (too brief
                 // for the resonant buildup to reach a compressed region).
                 val input = sin(2.0 * PI * 500.0 * i / 44_100).toFloat()
-                svf.process(input, 500f, 0.1f, saturate)
-                if (i > 2_000) { val a = abs(svf.low); if (a > peak) peak = a }
+                // null exercises the parameter's own default - Copilot's
+                // review of this PR: passing saturate = false explicitly
+                // for the "off" path would let an accidental default flip
+                // to true still pass this test.
+                if (saturate == null) svf.process(input, 500f, 0.1f) else svf.process(input, 500f, 0.1f, saturate)
+                if (i > 2_000) {
+                    val a = abs(svf.low)
+                    assertTrue(a.isFinite(), "blew up at sample $i (saturate=$saturate)")
+                    if (a > peak) peak = a
+                }
             }
             return peak
         }
-        val clean = ring(saturate = false)
+        val clean = ring(saturate = null)
         val saturated = ring(saturate = true)
-        assertTrue(clean.isFinite() && saturated.isFinite(), "neither path should blow up")
         assertTrue(
             saturated < clean * 0.8f,
             "saturate=true should visibly tame a hot resonant ring: clean=$clean, saturated=$saturated",
