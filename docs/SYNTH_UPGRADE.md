@@ -223,19 +223,37 @@ people who want the far end. Still always undoable, per rule 4.
 the kick on the reference track, and they cannot say why.
 
 The cause is in the code: every engine ends with `Dsp.normalize(buf, 0.95f)`
-(`Dsp.kt:188`) — **peak** normalisation. Peak is not loudness. A commercial
+(`Dsp.kt`) — **peak** normalisation. Peak is not loudness. A commercial
 kick hits because of transient shaping and saturation, not because its peak
 sample is high, and two sounds normalised to the same peak can differ by more
-than 10 dB in perceived level.
+than 10 dB in perceived level. (Post-Punch, THUMP no longer ends this way -
+see below.)
 
 ### The fix
 
-A `Punch` stage in `:synth`, engine-owned and applied before the final
-normalise:
+A `Punch` stage in `:synth`, engine-owned. `Dsp.normalize` moves *before* it
+(fixing the reference peak Punch then preserves) and a new `Dsp.limitPeak` -
+a clipping safety net that only rescales if the shaping below actually pushed
+a sample past what's safe, unlike `normalize`'s unconditional rescale - takes
+its old spot after, so swapping the peak target for a perceived-level one
+(below) actually reaches the output instead of being overwritten back to a
+fixed peak on the way out:
 
-- **Transient shaping** — an envelope-follower difference (fast vs. slow) used
-  to emphasise the attack, the standard transient-designer trick.
-- **Soft saturation** — glue and harmonics, reusing `Dsp.drive`.
+- **Transient shaping** — a boost strongest at the very onset, tapering to
+  nothing over a short fixed window. An envelope-follower difference (fast
+  vs. slow), the standard transient-designer trick, was the first attempt and
+  didn't survive contact with THUMP's own range of voices: getting a
+  fast/slow follower pair to track cleanly from RIM's ~30ms decay to KICK's
+  ~850ms one, without lagging a short hit's true onset or staying elevated
+  for most of the hit, turned into per-voice tuning fragility. Every one-shot
+  voice here starts its attack at exactly t=0 by construction, so a fixed
+  early window facing that already-known onset is simpler and more reliable
+  than detecting it.
+- **Soft saturation** — glue and harmonics, reusing `Dsp.drive`, scoped to
+  that same short onset window rather than the whole buffer (whole-buffer
+  saturation, even at an inaudible amount, was enough to tip a bass-heavy
+  voice like KICK across its classifier's bass-dominance threshold once a
+  downstream stage like DUB compounded it further).
 - **Loudness-targeted normalise** — swap the peak target for a perceived-level
   target using `Loudness` in `:audio`, which already exists for kit balance.
 

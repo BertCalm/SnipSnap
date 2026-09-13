@@ -103,8 +103,21 @@ object Thump {
             ThumpVoice.COWBELL -> cowbell(m)
             ThumpVoice.RIM -> rim(m)
         }
-        Punch.apply(buf, m.getValue("PUNCH"))
+        // Punch (U3, docs/SYNTH_UPGRADE.md) swaps the peak target below for a
+        // perceived-level one, so normalize has to set the reference loudness
+        // BEFORE Punch reshapes the hit, not after: normalizing again
+        // afterward would silently rescale Punch's own loudness-matched
+        // result right back to a fixed peak, undoing the "more PUNCH reshapes
+        // the hit, it doesn't just make it louder" guarantee PunchTest
+        // proves for Punch.apply in isolation. limitPeak is the actual
+        // clipping safety net now - only stepping in if the transient boost
+        // pushed a sample past what's safe, same as normalize always did for
+        // amount 0 (Punch's own no-op path leaves the buffer exactly at
+        // normalize's peak, so nothing changes for the many voices that
+        // never touch PUNCH away from a beat-safe default).
         Dsp.normalize(buf)
+        Punch.apply(buf, m.getValue("PUNCH"))
+        Dsp.limitPeak(buf)
         Dsp.fadeTail(buf)
         return Snip(buf, channels = 1, sampleRate = RATE)
     }

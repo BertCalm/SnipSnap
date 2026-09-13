@@ -9,9 +9,16 @@ import kotlin.math.exp
  *
  * Peak normalisation says nothing about how hard a hit feels: a commercial
  * kick hits because of transient shaping and saturation, not because its
- * peak sample happens to be high. This stage sits before an engine's own
- * final peak-[Dsp.normalize] (which still runs afterward, as the clipping
- * safety net it always was) and does the actual work, in order:
+ * peak sample happens to be high. U3's own framing (docs/SYNTH_UPGRADE.md)
+ * is to *swap* the peak target for a perceived-level one, not add a second
+ * target alongside it - so an engine calls [Dsp.normalize] **before** this
+ * stage, to fix the reference level Punch then preserves, and
+ * [Dsp.limitPeak] **after**, as a true safety net that only steps in if the
+ * shaping below pushed a sample past what's safe, instead of unconditionally
+ * overwriting the level this stage just chose (which a second
+ * [Dsp.normalize] afterward would have done silently, cancelling the "more
+ * PUNCH reshapes the hit, it doesn't just get louder" guarantee below). The
+ * actual work, in order:
  *
  * 1. **Soft saturation, transient-only** — glue and harmonics, reusing
  *    [Dsp.drive], scoped to the same short onset window as the boost below
@@ -70,21 +77,28 @@ internal object Punch {
         val before = Loudness.of(Snip(buf.copyOf(), channels = 1, sampleRate = rate))
 
         val windowSamples = (ATTACK_WINDOW_SECONDS * rate).toInt().coerceAtLeast(1)
-        val satAmount = punch * 0.3f
-        // Cubic: a multi-onset voice like THUMP's CLAP (several equal-height
-        // bursts a few ms apart) only has its very first burst inside this
-        // window, so any boost here inflates burst 1 relative to the others -
-        // and Dsp.normalize's peak-rescale right after Punch then shrinks
+        // Cubic, both of them: a multi-onset voice like THUMP's CLAP (several
+        // equal-height bursts a few ms apart) only has its very first burst
+        // inside this window, so any shaping here inflates burst 1 relative
+        // to the others - and the loudness-match rescale below then shrinks
         // every other burst by the same factor. Classifier.kt's
         // attackBurstCount needs each burst above 40% of the take's peak, so
         // burst 1 can't end up more than 2.5x the rest. Cubic keeps full
         // strength at punch=1 (where PunchTest's single-onset crest-factor
         // proof lives) while keeping PUNCH's default (0.5) mild enough that
         // CLAP still reads as four bursts, not one.
+        val satAmount = punch * punch * punch * 0.3f
         val boostGain = punch * punch * punch * 6f
-        for (i in buf.indices) {
-            if (i >= windowSamples * 4) break
-            val taper = exp(-i.toFloat() / windowSamples)
+        val cutoffSamples = windowSamples * 4
+        val lastShaped = minOf(cutoffSamples, buf.size) - 1
+        // exp() never actually reaches zero, so a raw exp(-i/window) cut off
+        // at the last shaped sample leaves a small but real step in the gain
+        // right at the boundary - subtracting the taper's own value AT that
+        // last sample pulls the whole taper down to exactly zero there
+        // instead, so it meets the first untouched sample at the same gain.
+        val cutoffTaper = if (lastShaped >= 0) exp(-lastShaped.toFloat() / windowSamples) else 0f
+        for (i in 0..lastShaped) {
+            val taper = exp(-i.toFloat() / windowSamples) - cutoffTaper
             buf[i] = Dsp.drive(buf[i], satAmount * taper) * (1f + boostGain * taper)
         }
 
