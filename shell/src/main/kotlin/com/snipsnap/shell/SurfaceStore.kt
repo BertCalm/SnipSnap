@@ -52,6 +52,18 @@ object SurfaceStore {
              * VECTOR shares MORPH's formula exactly: it is the same corner
              * blend, just also driving the sample triangle at once - there
              * is nothing about the sample side for a *corner* to capture.
+             *
+             * The weights come from [reading]'s own a/b/c/d, not recomputed
+             * from x/y: [reading] is screen-rate *independently* smoothed
+             * axis by axis (`TouchSurface.SmoothedReading`), and morph
+             * weights are a nonlinear (bilinear) function of position, so a
+             * fresh `morphWeights(reading.x, reading.y)` can disagree with
+             * the a/b/c/d the engine is actually blending with right now,
+             * particularly while the touch is still moving - the callers of
+             * this function are responsible for handing it a [reading]
+             * whose a/b/c/d are trustworthy for the mode being captured
+             * (see `SurfaceScreen`'s `lastHeld`, reset on every mode
+             * switch), not for this function to second-guess them.
              */
             fun from(mode: TouchSurface.Mode, reading: TouchSurface.Reading, tilt: Float, corners: List<Corner>): Corner {
                 val t = tilt.coerceIn(0f, 1f)
@@ -59,7 +71,7 @@ object SurfaceStore {
                     TouchSurface.Mode.XY -> Corner(reading.x, reading.y, t * 0.5f, 0f)
                     TouchSurface.Mode.XYZ -> Corner(reading.x, reading.y, t, reading.z)
                     TouchSurface.Mode.MORPH, TouchSurface.Mode.VECTOR -> {
-                        require(corners.size == 4) { "a morph blends four corners, got ${corners.size}" }
+                        require(corners.size == 4) { "a morph or vector blends four corners, got ${corners.size}" }
                         val w = listOf(reading.a, reading.b, reading.c, reading.d)
                         fun blend(pick: (Corner) -> Float) =
                             corners.indices.sumOf { (w[it] * pick(corners[it])).toDouble() }.toFloat().coerceIn(0f, 1f)
