@@ -179,10 +179,15 @@ class SurfaceStoreTest {
     fun `the preset library names LBP+ECHO+ECHO-LBP- distinctly`() {
         // design/surface-vector's boards sketch these four names in this
         // order (LBP +, ECHO +, ECHO -, LBP -) - the order is a promise a
-        // stepper can rely on, not an implementation detail.
-        assertEquals(listOf("LBP +", "ECHO +", "ECHO -", "LBP -"), Corner.LIBRARY.map { it.name })
-        // Four distinct sounds, not four names on the same one.
-        assertEquals(4, Corner.LIBRARY.map { it.corner }.distinct().size)
+        // stepper can rely on, not an implementation detail. CRUSH and
+        // GLITCH (stage 6) are appended after them, not interleaved, so
+        // this original ordering promise still holds.
+        assertEquals(
+            listOf("LBP +", "ECHO +", "ECHO -", "LBP -", "CRUSH +", "CRUSH -", "GLITCH +", "GLITCH -"),
+            Corner.LIBRARY.map { it.name },
+        )
+        // Eight distinct sounds, not eight names on fewer.
+        assertEquals(8, Corner.LIBRARY.map { it.corner }.distinct().size)
         // The ECHO pair is the one telling itself apart from LBP by
         // actually using the delay the engine now has - LBP stays a pure
         // filter pair, crush/echo both off.
@@ -191,6 +196,16 @@ class SurfaceStoreTest {
         assertTrue(byName("ECHO -").echo > 0f)
         near(0f, byName("LBP +").echo); near(0f, byName("LBP +").crush)
         near(0f, byName("LBP -").echo); near(0f, byName("LBP -").crush)
+        // CRUSH is a pure bitcrush pair - echo stays off, same shape as LBP
+        // being a pure filter pair.
+        assertTrue(byName("CRUSH +").crush > 0f)
+        assertTrue(byName("CRUSH -").crush > byName("CRUSH +").crush)
+        near(0f, byName("CRUSH +").echo); near(0f, byName("CRUSH -").echo)
+        // GLITCH is the one pair reaching for both macros together - a
+        // territory neither LBP nor ECHO nor CRUSH alone can reach.
+        assertTrue(byName("GLITCH +").crush > 0f); assertTrue(byName("GLITCH +").echo > 0f)
+        assertTrue(byName("GLITCH -").crush > byName("GLITCH +").crush)
+        assertTrue(byName("GLITCH -").echo > byName("GLITCH +").echo)
     }
 
     @Test
