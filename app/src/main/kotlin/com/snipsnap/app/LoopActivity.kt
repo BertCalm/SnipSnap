@@ -1,5 +1,6 @@
 package com.snipsnap.app
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -63,6 +64,16 @@ private const val BOUNCE_SYNC_TIMEOUT_MS = 8_000L
  * render outlives this screen, so it belongs to [LoopBounce] and the app.
  */
 class LoopActivity : ComponentActivity() {
+
+    companion object {
+        /**
+         * Set when the player left through the empty grid's own SNIPS door,
+         * so `App` opens SNIPS rather than dropping them back on the shelf
+         * they came from. The result is otherwise unread — the session on
+         * disk is the answer, as `loopLauncher`'s own KDoc says.
+         */
+        const val EXTRA_OPEN_SNIPS = "com.snipsnap.app.OPEN_SNIPS"
+    }
 
     private val bakers = Executors.newFixedThreadPool(2)
 
@@ -152,7 +163,19 @@ class LoopActivity : ComponentActivity() {
                 // Never a black screen: say which door fills the grid, or say
                 // the file would not read. This activity is reachable by adb
                 // regardless of what the shelf shows.
-                LoopEmpty(emptyLine)
+                LoopEmpty(
+                    emptyLine,
+                    // Only the genuinely-empty line gets the door; see
+                    // LoopEmpty's own KDoc on why LOOP_UNREADABLE does not.
+                    onGoToSnips = if (emptyLine == Copy.LOOP_EMPTY) {
+                        {
+                            setResult(RESULT_OK, Intent().putExtra(EXTRA_OPEN_SNIPS, true))
+                            finish()
+                        }
+                    } else {
+                        null
+                    },
+                )
             } else {
                 LoopGrid(
                     session = s,

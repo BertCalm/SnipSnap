@@ -142,7 +142,12 @@ logcat tag to grab when something is wrong.
   no PAD3 silence-hole); with nothing but PAD loaded, the whole pad
   should sound exactly like before PAD2/PAD3 existed. This is stage 2 of
   `design/surface-vector`'s concept - the sample side of the sketch, now
-  actually touch-driven; the effects-corner overlay is still ahead.
+  actually touch-driven. Then switch to VECTOR (stage 3, the effects
+  side): the corner bars should appear exactly as they do in MORPH -
+  SET A..D still works, and morphing the corners should sound the same
+  as it does in MORPH - while the readout's SMPL line (with PAD2/PAD3
+  loaded) keeps moving too: one finger, two independent blends, neither
+  one visibly affecting the other's numbers.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad

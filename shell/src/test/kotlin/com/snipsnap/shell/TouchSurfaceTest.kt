@@ -93,6 +93,21 @@ class TouchSurfaceTest {
     }
 
     @Test
+    fun `vector mode computes the same corner weights as morph, not the flat default`() {
+        for (x in listOf(0f, 100f, 200f, 300f, 400f)) {
+            for (y in listOf(0f, 100f, 200f)) {
+                val morph = TouchSurface.read(Mode.MORPH, listOf(Touch(1, x, y)), w, h, Reading.REST)
+                val vector = TouchSurface.read(Mode.VECTOR, listOf(Touch(1, x, y)), w, h, Reading.REST)
+                near(morph.a, vector.a); near(morph.b, vector.b)
+                near(morph.c, vector.c); near(morph.d, vector.d)
+            }
+        }
+        // And it is genuinely the corner blend, not every mode's flat 0.25 fallback.
+        val atCorner = TouchSurface.read(Mode.VECTOR, listOf(Touch(1, 0f, 0f)), w, h, Reading.REST)
+        near(1f, atCorner.a)
+    }
+
+    @Test
     fun `sample weights are one at each vertex of the inscribed triangle`() {
         val apex = TouchSurface.sampleWeights(0.5f, 1f)
         near(1f, apex.first); near(0f, apex.second); near(0f, apex.third)

@@ -188,7 +188,11 @@ MacroState SurfaceEngine::morphed(const ControlFrame& f) const {
 void SurfaceEngine::applyControl(const ControlFrame& f) {
     MacroState target;
     switch (f.mode) {
-        case 2:  // MORPH: the puck weights four states, tilt nudges resonance
+        case 2:   // MORPH: the puck weights four states, tilt nudges resonance
+        case 3:   // VECTOR: MORPH's exact corner blend - the sample triangle
+                  // (sampleA/B/C, applied below) reads the same touch at
+                  // once, independently; there is no separate VECTOR macro
+                  // formula to have.
             target = morphed(f);
             break;
         case 1:  // XYZ: X pitch, Y cutoff, Z drive, tilt resonance

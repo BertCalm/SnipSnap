@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -301,18 +303,49 @@ private fun BounceButton(session: Session, bouncing: Boolean, onBounce: () -> Un
  * drawing an empty grid, because an empty grid looks like a bug.
  */
 @Composable
-fun LoopEmpty(line: String, modifier: Modifier = Modifier) {
+fun LoopEmpty(line: String, modifier: Modifier = Modifier, onGoToSnips: (() -> Unit)? = null) {
     Box(
         modifier = modifier.fillMaxSize().background(Tape.Desk).padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
-        androidx.compose.material3.Text(
-            text = line,
-            color = Tape.Panel,
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            textAlign = TextAlign.Center,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            androidx.compose.material3.Text(
+                text = line,
+                color = Tape.Panel,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace,
+                textAlign = TextAlign.Center,
+            )
+            // The route the line above names, offered rather than described.
+            // This screen is its own Activity, so unlike every other empty
+            // state in the app there is no tab row behind it: without this
+            // button the only way out is the system Back gesture, which is
+            // the one real dead end the journey review found.
+            //
+            // Null for LOOP_UNREADABLE — that line says the sidecar will not
+            // parse, and sending another snip is refused precisely so the
+            // file is not overwritten, so a SNIPS button there would be the
+            // false advice this screen's own load comment warns about.
+            if (onGoToSnips != null) {
+                Spacer(Modifier.height(16.dp))
+                Box(
+                    Modifier
+                        .background(Tape.Lcd)
+                        .border(width = 1.dp, color = Tape.BevelDark)
+                        .tapeClick(label = "SNIPS", onClick = onGoToSnips)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    androidx.compose.material3.Text(
+                        text = "SNIPS \u25b8",
+                        color = Tape.Ink,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -363,7 +396,12 @@ private fun TrackHeader(name: String, engaged: Boolean, onToggle: () -> Unit) {
             .fillMaxWidth()
             .background(Tape.Lcd)
             .border(width = 1.dp, color = Tape.BevelDark)
-            .clickable { onToggle() }
+            // The visible text is the track's name alone; ON vs MUTED lives
+            // only in the ink colour, which a screen reader cannot read. The
+            // label carries the state and what a tap does, like ORBIT's ring
+            // chip. tapeClick, not clickable, so the semantics node is a
+            // real one — the same swap BOUNCE above got.
+            .tapeClick(label = Copy.loopTrackToggle(name.uppercase(), engaged), onClick = onToggle)
             .padding(vertical = 6.dp, horizontal = 4.dp),
     )
 }
