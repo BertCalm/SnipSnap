@@ -114,15 +114,41 @@ class PeaksPyramid private constructor(
         for (c in 0 until count) {
             val from = startFrame + (span * c / count).toInt()
             val to = startFrame + (span * (c + 1) / count).toInt()
-            val col = rangeMinMax(max(0, from), min(samples.size, to))
-            out[c * 2] = col.min
-            out[c * 2 + 1] = col.max
+            scanInto(max(0, from), min(samples.size, to), out, c * 2)
         }
     }
 
     /** Exact min/max over `[from, to)`; (0,0) when the range is empty. */
     fun rangeMinMax(from: Int, to: Int): Column {
-        if (to <= from || samples.isEmpty()) return Column(0f, 0f)
+        val pair = FloatArray(2)
+        scanInto(from, to, pair, 0)
+        return Column(pair[0], pair[1])
+    }
+
+    /**
+     * The scan itself, writing `min` to `out[at]` and `max` to `out[at+1]`.
+     *
+     * Split out so the hot path allocates nothing. [columnsInto] exists
+     * because "a fresh List + lambda + boxed Column per call is real
+     * per-frame GC churn" (its own KDoc) — but it used to reach that answer
+     * through [rangeMinMax], which returns a `data class`, so it still built
+     * one Column per column per frame. At TAPE's ~400 columns that is ~24k
+     * allocations a second while the waveform is being dragged, on the
+     * thread drawing it. The List and the lambda went; the third thing the
+     * comment named stayed.
+     *
+     * [rangeMinMax] keeps its boxed return — it is public API and asserted
+     * by PeaksTest — and now pays one tiny array instead of one Column,
+     * which is a wash on the cold path. One implementation either way: two
+     * copies of this scan is how the first fix drifted from its own
+     * comment.
+     */
+    private fun scanInto(from: Int, to: Int, out: FloatArray, at: Int) {
+        if (to <= from || samples.isEmpty()) {
+            out[at] = 0f
+            out[at + 1] = 0f
+            return
+        }
         var lo = Float.MAX_VALUE
         var hi = -Float.MAX_VALUE
 
@@ -165,6 +191,7 @@ class PeaksPyramid private constructor(
             if (s > hi) hi = s
             i++
         }
-        return Column(lo, hi)
+        out[at] = lo
+        out[at + 1] = hi
     }
 }
