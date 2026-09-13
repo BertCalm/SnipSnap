@@ -176,6 +176,10 @@ fun KitsScreen(
 ) {
     val scheme = LocalScheme.current
     var menuOpen by remember { mutableStateOf(false) }
+    // TOOLS door (oilslick followups): BACKUP/CHOP ALL/X-RAY/DOUBLES nested
+    // behind one row instead of pinned individually — see [ToolsMenu]'s own
+    // KDoc for why this follows [StarterMenu]'s shape, not a stacked overlay.
+    var toolsMenuOpen by remember { mutableStateOf(false) }
 
     // The dub chips (September UAT, finding 15). Read once per shelf render
     // on IO, not per row in a composable body: a row's chip is a file read,
@@ -538,34 +542,23 @@ fun KitsScreen(
                 enabled = !busy,
                 onClick = { menuOpen = true },
             )
-            // BACKUP: the whole shelf as one file, out the share sheet -
-            // the "new phone" story; the same file shared back in lands
-            // every kit again.
-            ActionButton(
-                "BACKUP ▸ EVERY KIT, ONE FILE",
-                scheme,
-                enabled = !busy && kits.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onBackup,
-            )
-            // CHOP ALL (XX3 wired in): a multi-file picker's worth of .wav
-            // files, each through the same auto-chop CHOP itself uses with
-            // the defaults, one new kit per file — the crate-digging verb.
-            // Shelf-level, not CHOP's own action row: CHOP SHOP always
-            // works on one already-loaded source (TAPE's last commit, or
-            // the open kit's own fallback sample); this has no such source
-            // and makes many kits, not many pads in one, so it lives beside
-            // BACKUP/SNIPS instead.
-            ActionButton(
-                "CHOP ALL ▸ EVERY FILE, ONE KIT",
-                scheme,
-                enabled = !busy,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onChopAll,
+            // The capture pair moved up to sit directly under NEW KIT
+            // (oilslick followups regroup): STARTERS/LISTEN/INSIDE are the
+            // three "make something" actions, and used to be split by a
+            // run of five dim tool rows — the furthest apart controls on
+            // the screen. ArmControl itself is unchanged, only its position.
+            ArmControl(
+                armed = armed,
+                onArm = onArm,
+                onArmInside = onArmInside,
+                onSnip = onSnip,
+                onEject = onEject,
             )
             // SNIPS: always openable, even with zero snips yet (its own
-            // empty state says so) — unlike BACKUP above, this isn't gated
-            // on the shelf holding anything.
+            // empty state says so) — unlike BACKUP (now behind TOOLS
+            // below), this isn't gated on the shelf holding anything. A
+            // sibling library reached for often, not a tool, so it stays
+            // top-level rather than moving behind the new door.
             ActionButton(
                 "SNIPS ▸ EVERY CATCH, ONE LIST",
                 scheme,
@@ -587,26 +580,6 @@ fun KitsScreen(
                     onClick = onLoop,
                 )
             }
-            // X-RAY: reads any MPC file the system picker hands back — never
-            // gated on the shelf holding anything, same as SNIPS above,
-            // since this never lands what it reads onto the shelf at all.
-            ActionButton(
-                "X-RAY ▸ INSPECT A FILE",
-                scheme,
-                enabled = !busy,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onXRay,
-            )
-            // DOUBLES: the same read-only posture as X-RAY, pointed at the
-            // shelf itself. Never gated on the shelf holding anything - an
-            // empty shelf's screen says NO DOUBLES in words, not a dead row.
-            ActionButton(
-                "DOUBLES ▸ SAME SOUND, ANY KIT",
-                scheme,
-                enabled = !busy,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onDoubles,
-            )
             // DELETED KITS: gated on the bin actually holding something —
             // unlike SNIPS/BACKUP above, this is never shown merely dimmed;
             // a user who has never deleted a kit sees no door to an empty
@@ -620,12 +593,18 @@ fun KitsScreen(
                     onClick = onDeletedKits,
                 )
             }
-            ArmControl(
-                armed = armed,
-                onArm = onArm,
-                onArmInside = onArmInside,
-                onSnip = onSnip,
-                onEject = onEject,
+            // TOOLS (oilslick followups): BACKUP, CHOP ALL, X-RAY and
+            // DOUBLES nested behind one door — see [ToolsMenu]'s own KDoc.
+            // These four are the shelf's utility rows, not "make
+            // something"/library actions, so they're the ones that moved;
+            // NEW KIT/LISTEN/INSIDE/SNIPS and the conditional rows above
+            // all stay top-level per the owner's ruling.
+            ActionButton(
+                "TOOLS ▸ BACKUP, CHOP, X-RAY, DOUBLES",
+                scheme,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { toolsMenuOpen = true },
             )
         }
 
@@ -636,6 +615,22 @@ fun KitsScreen(
                 onDismiss = dismissStarter,
             )
             BackHandler(onBack = dismissStarter)
+        }
+
+        if (toolsMenuOpen) {
+            val dismissTools = { toolsMenuOpen = false }
+            ToolsMenu(
+                canBackup = !busy && kits.isNotEmpty(),
+                canChopAll = !busy,
+                canXRay = !busy,
+                canDoubles = !busy,
+                onBackup = { dismissTools(); onBackup() },
+                onChopAll = { dismissTools(); onChopAll() },
+                onXRay = { dismissTools(); onXRay() },
+                onDoubles = { dismissTools(); onDoubles() },
+                onDismiss = dismissTools,
+            )
+            BackHandler(onBack = dismissTools)
         }
 
         confirmDeleteKit?.let { target ->
@@ -1217,6 +1212,99 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
                     TapeText(starter.blurb, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                 }
             }
+        }
+    }
+}
+
+/**
+ * The TOOLS door (oilslick followups): BACKUP, CHOP ALL, X-RAY and DOUBLES,
+ * nested behind one row instead of pinned as four individual rows on the
+ * shelf — measured cost was the pinned button stack running to 43% of the
+ * screen regardless of how many kits were on it. Follows [StarterMenu]'s
+ * shape immediately above, NOT `GrooveScreen.kt`'s `StepEditorOverlay`
+ * (fixed in this same session for leaking nine of GROOVE's controls to
+ * TalkBack): confirmed on-device with an accessibility-tree dump that the
+ * shelf behind this menu (`NEW KIT`, `SNIPS`, the kit rows, etc.) is not
+ * exposed while this is open — same scrim + `tapeClick(label = "CANCEL")`
+ * dismiss + tap-swallowing card as `StarterMenu`, so the same result holds
+ * here, not merely assumed from precedent.
+ *
+ * Unlike `StarterMenu`, this carries an explicit CANCEL row rather than
+ * relying on the scrim tap alone — the four rows inside are actions with
+ * consequences (a picker launch, a share sheet), not a single "pick one and
+ * you're in" list, so a written-out way out matters more here.
+ */
+@Composable
+private fun ToolsMenu(
+    canBackup: Boolean,
+    canChopAll: Boolean,
+    canXRay: Boolean,
+    canDoubles: Boolean,
+    onBackup: () -> Unit,
+    onChopAll: () -> Unit,
+    onXRay: () -> Unit,
+    onDoubles: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val scheme = LocalScheme.current
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            // Same reasoning as StarterMenu's own scrim above: tapping
+            // outside the card is a genuine dismiss path and needs its own
+            // label even though CANCEL below also reaches it.
+            .tapeClick(label = "CANCEL", onClick = onDismiss),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+                .raisedBevel(scheme)
+                // Swallows the tap so it doesn't fall through to the
+                // scrim's CANCEL — same reasoning as StarterMenu's own
+                // pointerInput above.
+                .pointerInput(Unit) { detectTapGestures { } }
+                .padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            TapeText("TOOLS", TapeType.display, scheme.ink.tape)
+            ActionButton(
+                "BACKUP ▸ EVERY KIT, ONE FILE",
+                scheme,
+                enabled = canBackup,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onBackup,
+            )
+            ActionButton(
+                "CHOP ALL ▸ EVERY FILE, ONE KIT",
+                scheme,
+                enabled = canChopAll,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onChopAll,
+            )
+            ActionButton(
+                "X-RAY ▸ INSPECT A FILE",
+                scheme,
+                enabled = canXRay,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onXRay,
+            )
+            ActionButton(
+                "DOUBLES ▸ SAME SOUND, ANY KIT",
+                scheme,
+                enabled = canDoubles,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onDoubles,
+            )
+            ActionButton(
+                "CANCEL",
+                scheme,
+                enabled = true,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onDismiss,
+            )
         }
     }
 }
