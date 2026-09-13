@@ -2863,7 +2863,7 @@ fun App(shelf: KitShelf) {
                     screenLabel = screen.label,
                     shelfLabel = "KITS: ${kits.size}",
                     busy = busy,
-                    kitName = open?.kit?.name.orEmpty(),
+                    kitName = open?.kit?.name ?: Copy.NO_KIT_STATUS,
                 )
             }
             // A toast raised while the box is up (a share landing behind it)

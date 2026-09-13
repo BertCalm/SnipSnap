@@ -402,6 +402,9 @@ class PersonalityTest {
         // EVIL TWINS' and INSTANT KIT's own busy overlays - the same
         // `…`-suffixed shape as every other *_BUSY constant above.
         "EVIL_TWINS_BUSY", "INSTANT_KIT_BUSY",
+        // The status bar's third cell resting label with no kit open - a
+        // standing chip value like CARD_NONE above, not a toast said once.
+        "NO_KIT_STATUS",
     )
 
     /**

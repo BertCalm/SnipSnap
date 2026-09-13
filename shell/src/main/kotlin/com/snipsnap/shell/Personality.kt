@@ -1293,6 +1293,18 @@ object Copy {
      */
     const val CREATE_FAILED = "COULDN'T MAKE THAT TAPE."
 
+    /**
+     * `StatusBar`'s third cell (`Chrome.kt`) when no kit is open — its own
+     * resting label, not the empty string `open?.kit?.name.orEmpty()` used
+     * to leave there. An empty bordered box next to the populated `KITS: n`
+     * cell read as a rendering gap, not a state: the same "is this broken
+     * or just empty" confusion [EMPTY_GROOVE]'s own KDoc names for a blank
+     * screen. No full stop, same register as [CARD_NONE]: this is a
+     * standing label the row wears until a kit opens, not a line the app
+     * says once.
+     */
+    const val NO_KIT_STATUS = "NO KIT OPEN"
+
     // ==================== Escaped strings, brought in (name-and-find follow-ups, Part C) ====================
     //
     // 78 strings across `:app`'s newer screens lived as inline literals

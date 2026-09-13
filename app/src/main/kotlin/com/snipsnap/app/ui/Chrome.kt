@@ -342,6 +342,12 @@ fun MenuRow(
  * `Personality.kt`'s own KDoc on why that gate was removed); this is
  * real state in a slot shaped for state, so it names the kit that is
  * actually open instead of the machine talking to itself.
+ *
+ * With no kit open, [kitName] is `Copy.NO_KIT_STATUS`, not the empty
+ * string — an empty cell sat there as a bordered box with nothing in it,
+ * reading as a rendering gap next to the populated `KITS: n` cell beside
+ * it rather than a state. The caller (`App.kt`) is the one that decides
+ * this, not this composable: it already owns `open?.kit?.name`.
  */
 @Composable
 fun StatusBar(
