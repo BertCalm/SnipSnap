@@ -15,10 +15,10 @@ import java.io.File
  * under the same rules as every sidecar - unknown fields ignored, unknown
  * versions refused, a torn file a [JsonException] in words.
  *
- * The corners are the same six macros the engine runs (pitch, cutoff,
- * resonance, drive, crush, echo, each 0..1), so a corner *is* a position
- * on the pad: [Corner.from] turns the current reading in any mode into
- * one, which is how SET A..D captures the sound under the finger.
+ * The corners are the same seven macros the engine runs (pitch, cutoff,
+ * resonance, drive, crush, echo, spring, each 0..1), so a corner *is* a
+ * position on the pad: [Corner.from] turns the current reading in any mode
+ * into one, which is how SET A..D captures the sound under the finger.
  */
 object SurfaceStore {
 
@@ -37,11 +37,13 @@ object SurfaceStore {
         val crush: Float = 0f,
         /** 0 = dry, 1 = fully wet - a fixed-time delay's own mix, never its time (see SurfaceEngine.cpp). */
         val echo: Float = 0f,
+        /** 0 = dry, 1 = fully wet - a fixed-room reverb's own mix, never its size or tone (see SurfaceEngine.cpp). */
+        val spring: Float = 0f,
     ) {
         init {
             for ((name, v) in listOf(
                 "pitch" to pitch, "cutoff" to cutoff, "resonance" to resonance,
-                "drive" to drive, "crush" to crush, "echo" to echo,
+                "drive" to drive, "crush" to crush, "echo" to echo, "spring" to spring,
             )) {
                 require(v.isFinite() && v in 0f..1f) { "$name is 0..1, got $v" }
             }
@@ -73,6 +75,11 @@ object SurfaceStore {
              * bitcrushed signal bouncing through its own repeats. +/- is
              * still each pair's own brighter/lighter vs. darker/heavier
              * sibling, same convention as LBP/ECHO.
+             *
+             * SPRING (stage 7, once [Corner.spring] existed to reach for)
+             * is a pure reverb pair, the same shape as CRUSH but for the
+             * engine's own fixed-room Schroeder network - [crush]/[echo]
+             * both left at 0, [spring]'s wet mix the only thing moving.
              */
             val LIBRARY: List<NamedCorner> = listOf(
                 NamedCorner("LBP +", Corner(0.5f, 0.55f, 0.1f, 0.0f)),
@@ -83,6 +90,8 @@ object SurfaceStore {
                 NamedCorner("CRUSH -", Corner(0.5f, 0.3f, 0.2f, 0.15f, crush = 0.65f)),
                 NamedCorner("GLITCH +", Corner(0.5f, 0.65f, 0.3f, 0.25f, crush = 0.45f, echo = 0.2f)),
                 NamedCorner("GLITCH -", Corner(0.4f, 0.35f, 0.35f, 0.35f, crush = 0.75f, echo = 0.4f)),
+                NamedCorner("SPRING +", Corner(0.5f, 0.6f, 0.15f, 0.05f, spring = 0.35f)),
+                NamedCorner("SPRING -", Corner(0.5f, 0.3f, 0.2f, 0.1f, spring = 0.6f)),
             )
 
             /**
@@ -121,7 +130,10 @@ object SurfaceStore {
                         fun blend(pick: (Corner) -> Float) =
                             corners.indices.sumOf { (w[it] * pick(corners[it])).toDouble() }.toFloat().coerceIn(0f, 1f)
                         val resonance = (blend { it.resonance } + (t - 0.5f) * 0.5f).coerceIn(0f, 1f)
-                        Corner(blend { it.pitch }, blend { it.cutoff }, resonance, blend { it.drive }, blend { it.crush }, blend { it.echo })
+                        Corner(
+                            blend { it.pitch }, blend { it.cutoff }, resonance, blend { it.drive },
+                            blend { it.crush }, blend { it.echo }, blend { it.spring },
+                        )
                     }
                 }
             }
@@ -183,6 +195,7 @@ object SurfaceStore {
                             "drive" to JsonValue.Num(c.drive.toDouble()),
                             "crush" to JsonValue.Num(c.crush.toDouble()),
                             "echo" to JsonValue.Num(c.echo.toDouble()),
+                            "spring" to JsonValue.Num(c.spring.toDouble()),
                         ),
                     )
                 },
@@ -217,7 +230,7 @@ object SurfaceStore {
             fun newMacro(name: String) = if (o[name] != null) macro(name) else 0f
             Corner(
                 macro("pitch"), macro("cutoff"), macro("resonance"), macro("drive"),
-                newMacro("crush"), newMacro("echo"),
+                newMacro("crush"), newMacro("echo"), newMacro("spring"),
             )
         } ?: Corner.DEFAULTS
         if (corners.size != 4) throw JsonException("surface.json has ${corners.size} corners, not 4")

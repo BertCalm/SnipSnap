@@ -120,14 +120,14 @@ class SurfaceEngine(preferredSampleRate: Int) {
     }
 
     /**
-     * Corner 0..3 = A, B, C, D of the morph pad; every macro 0..1. [crush]
-     * and [echo] default to 0 (transparent, dry) so a caller that never
-     * sets them plays exactly as before those macros existed.
+     * Corner 0..3 = A, B, C, D of the morph pad; every macro 0..1. [crush],
+     * [echo] and [spring] default to 0 (transparent, dry) so a caller that
+     * never sets them plays exactly as before those macros existed.
      */
     @Synchronized
-    fun setCorner(index: Int, pitch: Float, cutoff: Float, resonance: Float, drive: Float, crush: Float = 0f, echo: Float = 0f) {
+    fun setCorner(index: Int, pitch: Float, cutoff: Float, resonance: Float, drive: Float, crush: Float = 0f, echo: Float = 0f, spring: Float = 0f) {
         require(index in 0..3) { "corner is 0..3, got $index" }
-        if (open) NativeSurface.setCorner(handle, index, pitch, cutoff, resonance, drive, crush, echo)
+        if (open) NativeSurface.setCorner(handle, index, pitch, cutoff, resonance, drive, crush, echo, spring)
     }
 
     // ---- the resample tap -----------------------------------------------------

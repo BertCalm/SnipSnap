@@ -154,9 +154,9 @@ logcat tag to grab when something is wrong.
   other's numbers. Then stage 4b, the named preset library: ARM B (it
   should dim in and the others stay lit), then PRESET ► - the readout
   should read "LBP +", then "ECHO +" on the next press, continuing through
-  "ECHO -"/"LBP -"/"CRUSH +"/"CRUSH -"/"GLITCH +"/"GLITCH -" and wrapping
-  back to "LBP +"; morph toward B and it should sound like whichever
-  preset is showing. PRESET ◄ ► with no corner armed should do
+  "ECHO -"/"LBP -"/"CRUSH +"/"CRUSH -"/"GLITCH +"/"GLITCH -"/"SPRING +"/
+  "SPRING -" and wrapping back to "LBP +"; morph toward B and it should
+  sound like whichever preset is showing. PRESET ◄ ► with no corner armed should do
   nothing and the row should read "ARM A CORNER". Leave the screen and
   come back - a stepped corner is stored exactly like a captured one (the
   same `corners` field in `surface.json`), so it is still there, though
@@ -181,6 +181,18 @@ logcat tag to grab when something is wrong.
   "GLITCH -" the more extreme, chaotic end of the pair (pitched down
   slightly, heavier on both macros) - a texture neither LBP nor ECHO nor
   CRUSH alone can reach.
+  Then stage 7, a real SPRING (reverb) in the engine itself: PRESET ►
+  through to "SPRING +" and morph a corner toward it - a diffuse, smeared
+  tail should bloom after the dry sound rather than a single discrete
+  repeat, and should keep decaying on its own for roughly half a second
+  or so after you lift off the pad, fading smoothly to silence rather
+  than looping or cutting off with the touch. "SPRING -" should sound
+  darker and further stacked than "SPRING +", with neither carrying any
+  crush or echo. SET A..D still captures spring the same way it captures
+  the other macros when the mode is MORPH or VECTOR. CLEAN/DARK/LOW/HOT
+  and every corner from stages 4b/5/6 stay untouched (no spring) - the
+  whole pad should sound exactly as before this stage existed until a
+  corner actually carries a nonzero spring.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad
