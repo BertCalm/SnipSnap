@@ -14,6 +14,39 @@ import kotlin.test.assertTrue
 
 class FxTest {
 
+    /**
+     * Sections not yet held to the determinism / finite-and-in-range /
+     * peak-match contract, with the clause each fails. These are
+     * pre-existing: they were never in the three-section list this test
+     * replaced. Each is a bug to fix on its own, not here.
+     */
+    private val CONTRACT_EXCLUDED: Map<String, String> = mapOf(
+        "smear" to "peak-match: falls under the source peak instead of matching it " +
+            "(roll 0: out 0.8939 vs snare 0.9500, diff 0.0561; roll 2: out 0.8637 vs " +
+            "snare 0.9500, diff 0.0863 - tolerance is 0.05)",
+        "motion" to "peak-match: by design, STOP/START fade the level toward silence; at " +
+            "random macro values this lands far outside the 0.05 tolerance meant for " +
+            "level-preserving effects (roll 0: out 0.2681 vs snare 0.9500, diff 0.6819; " +
+            "worst roll 3: out 0.2220 vs snare 0.9500, diff 0.7280)",
+    )
+
+    /**
+     * Sections not yet held to the stereo contract (both channels identical
+     * out if identical in), with the observed divergence. Pre-existing bugs,
+     * each its own fix.
+     */
+    private val STEREO_EXCLUDED: Map<String, String> = mapOf(
+        "swell" to "left/right diverge starting at frame 1 of 48337 (L=0.0, R=-0.0 - a " +
+            "signed-zero mismatch that assertEquals(Float, Float) treats as unequal); 33073 " +
+            "of 48337 frames fail assertEquals, of which 33072 also differ under plain != " +
+            "(i.e. are genuinely different values, not just a sign-of-zero artifact, e.g. " +
+            "frame 2: L=4.16e-10, R=-3.12e-10) - independently randomized per-channel phases " +
+            "in the stretch wash, not a shared computation across channels",
+        "dub" to "left/right diverge by audible amounts, not float noise - 15256 of 15262 " +
+            "frames differ, starting at frame 0 (L=0.3433, R=0.3370) - the per-channel dub " +
+            "processing does not keep identical input channels identical",
+    )
+
     private val kick = Thump.render(ThumpVoice.KICK)
     private val snare = Thump.render(ThumpVoice.SNARE)
 
@@ -149,23 +182,23 @@ class FxTest {
 
     @Test
     fun `every effect is deterministic, clean and peak-matched everywhere`() {
-        val processors = listOf<Pair<String, (Snip, Map<String, Float>) -> Snip>>(
-            "SQUASH" to Squash::process, "ECHO" to Echo::process, "SPRING" to Spring::process,
-        )
-        val scramblers = listOf<Pair<String, (Random) -> Map<String, Float>>>(
-            "SQUASH" to Squash::scramble, "ECHO" to Echo::scramble, "SPRING" to Spring::scramble,
-        )
-        for (i in processors.indices) {
-            val (name, fx) = processors[i]
+        // The section's own process, not the whole chain: this is the old test
+        // widened to every section, not a new and stricter one. A chain call
+        // would drag in capTail and the TRANSPORT/ARRIVAL stages, which the
+        // three original sections were never measured through.
+        for (sec in FxChain.SECTIONS) {
+            if (sec.name in CONTRACT_EXCLUDED) continue
+            val defaults = sec.macros.associate { it.name to it.default }
             assertTrue(
-                fx(snare, emptyMap()).samples.contentEquals(fx(snare, emptyMap()).samples),
-                "$name not deterministic",
+                sec.run(snare, defaults).samples.contentEquals(sec.run(snare, defaults).samples),
+                "${sec.name} not deterministic",
             )
-            repeat(6) { seed ->
-                val macros = scramblers[i].second(Random(seed))
-                val out = fx(snare, macros)
-                assertTrue(out.samples.all { it.isFinite() && it in -1f..1f }, "$name roll $seed broke")
-                assertTrue(abs(out.peak() - snare.peak()) < 0.05f, "$name roll $seed changed loudness")
+            for (seed in 0 until 6) {
+                val rng = Random(seed)
+                val macros = sec.macros.associate { it.name to rng.nextFloat() }
+                val out = sec.run(snare, macros)
+                assertTrue(out.samples.all { it.isFinite() && it in -1f..1f }, "${sec.name} roll $seed broke")
+                assertTrue(abs(out.peak() - snare.peak()) < 0.05f, "${sec.name} roll $seed changed loudness")
             }
         }
     }
@@ -173,10 +206,12 @@ class FxTest {
     @Test
     fun `stereo stays stereo with identical channels intact`() {
         val stereo = Snip(FloatArray(kick.frameCount * 2) { kick.samples[it / 2] }, 2, 44_100)
-        for (out in listOf(Squash.process(stereo), Echo.process(stereo), Spring.process(stereo))) {
-            assertEquals(2, out.channels)
+        for (sec in FxChain.SECTIONS) {
+            if (sec.name in STEREO_EXCLUDED) continue
+            val out = sec.run(stereo, sec.macros.associate { it.name to it.default })
+            assertEquals(2, out.channels, "${sec.name} changed the channel count")
             for (f in 0 until out.frameCount) {
-                assertEquals(out.samples[f * 2], out.samples[f * 2 + 1], "channels diverged at $f")
+                assertEquals(out.samples[f * 2], out.samples[f * 2 + 1], "${sec.name}: channels diverged at $f")
             }
         }
     }
