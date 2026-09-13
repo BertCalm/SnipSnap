@@ -54,21 +54,12 @@ object Treatments {
         // silently become "no treatment". Checked above, before bypass.
         if (amount <= 0f) return FxChain()
         if (amount >= 0.999f) return base
-        fun scale(params: Map<String, Float>?): Map<String, Float>? =
-            params?.mapValues { (_, v) -> (v * amount).coerceIn(0f, 1f) }
-        return base.copy(
-            smear = scale(base.smear),
-            ghost = scale(base.ghost),
-            motion = scale(base.motion),
-            dub = scale(base.dub),
-            swell = scale(base.swell),
-            eq = scale(base.eq),
-            squash = scale(base.squash),
-            crunch = scale(base.crunch),
-            tape = scale(base.tape),
-            echo = scale(base.echo),
-            spring = scale(base.spring),
-        )
+        var out = base
+        for (name in FxChain.SECTION_NAMES) {
+            val macros = base.section(name) ?: continue
+            out = out.withSection(name, macros.mapValues { (_, v) -> (v * amount).coerceIn(0f, 1f) })
+        }
+        return out
     }
 
     data class Treated(val snip: Snip, val recipe: JsonValue.Obj)

@@ -464,4 +464,26 @@ class FxTest {
         assertEquals(positions.sorted(), positions, "json order is not rack order")
         assertTrue(positions.all { it > 0 }, "a section was not emitted")
     }
+
+    @Test
+    fun `AMT scales every section a treatment sets`() {
+        for (name in Treatments.names) {
+            val full = Treatments.chain(name, 1f)
+            val half = Treatments.chain(name, 0.5f)
+            for (section in FxChain.SECTION_NAMES) {
+                val a = full.section(section) ?: continue
+                val b = half.section(section)
+                    ?: throw AssertionError("$name: AMT 0.5 dropped section $section entirely")
+                for ((macro, v) in a) {
+                    // "Moved", not "smaller": once macros have neutrals, a centered
+                    // macro below its neutral rises as AMT falls. Task 6's own test
+                    // pins the exact rule; this one only proves the section is seen.
+                    assertTrue(
+                        b.getValue(macro) != v,
+                        "$name: AMT 0.5 left $section.$macro at $v - the section is not scaled",
+                    )
+                }
+            }
+        }
+    }
 }
