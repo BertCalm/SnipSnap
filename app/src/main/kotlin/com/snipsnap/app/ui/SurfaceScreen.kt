@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -75,11 +76,16 @@ import kotlinx.coroutines.withContext
  * writes the performance to TAPE as a new sample the way an SP-404
  * resamples: what you played is now one pad, no DSP to run later.
  *
- * Three modes, one pad:
- *  - XY: one finger, X pitch, Y filter.
+ * Three modes, one pad. The phone's tilt nudges resonance in every one
+ * of them (`SurfaceEngine::applyControl`), not just XYZ - flat (tilt
+ * 0.5) is a no-op, so a corner saved with the phone level still sounds
+ * as captured:
+ *  - XY: one finger, X pitch, Y filter; tilt is a half-weighted nudge.
  *  - XYZ: a second finger's distance is Z (drive); the roll of the
- *    phone is resonance.
- *  - MORPH: the puck weights four corner states, A B C D.
+ *    phone is resonance outright.
+ *  - MORPH: the puck weights four corner states, A B C D; tilt nudges
+ *    resonance on top of the blend, the same half-weighted amount XY
+ *    gets.
  *
  * PAD ◄ ► picks which of the kit's pads the surface plays; SET A..D
  * captures the sound under the last touch as a morph corner. Both live
@@ -538,7 +544,11 @@ fun SurfaceScreen(
                         scheme = scheme,
                         enabled = true,
                         dimmed = m != mode,
-                        modifier = Modifier.weight(1f),
+                        // Three equal-sounding buttons to TalkBack otherwise
+                        // (finding #21) - the same `selected` semantics the
+                        // CUT bench's SegmentButtons already carry for their
+                        // own mutually-exclusive row.
+                        modifier = Modifier.weight(1f).semantics { selected = m == mode },
                     ) {
                         mode = m
                         target = Reading.REST // the frame loop snaps to it on the mode change
@@ -666,9 +676,16 @@ fun SurfaceScreen(
                     // scope), so reading it again here costs nothing new.
                     .semantics {
                         contentDescription = "TOUCH SURFACE, $mode MODE"
+                        // Mirrors the visible `readout` TapeText below,
+                        // corner-for-corner: MORPH used to report only X/Y
+                        // here, the least of any mode's state, while its
+                        // own on-screen readout already prints A/B/C/D and
+                        // TILT (finding #21).
                         stateDescription = buildString {
                             append("X %.2f  Y %.2f".format(java.util.Locale.ROOT, painted.x, painted.y))
                             if (mode == Mode.XYZ) append("  Z %.2f".format(java.util.Locale.ROOT, painted.z))
+                            if (mode == Mode.MORPH) append("  A %.2f B %.2f C %.2f D %.2f".format(java.util.Locale.ROOT, painted.a, painted.b, painted.c, painted.d))
+                            if (tilt.available) append("  TILT %.2f".format(java.util.Locale.ROOT, tilt.tilt))
                         }
                     }
                     .pointerInput(mode) {
