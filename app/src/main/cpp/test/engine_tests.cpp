@@ -666,41 +666,52 @@ TEST(surface_engine_unloaded_pad4_falls_back_to_the_pad2_pad3_blend_at_the_seam)
     // point (TouchSurface.sampleWeights(0.5, 0) = {0, 0, 0, 1}), the fix
     // must recover the even PAD2/PAD3 split this seam gave before PAD4
     // existed, at full level - not near silence.
-    SurfaceEngine e(kRate);
-    std::vector<float> hi(100, 0.9f), lo(100, -0.9f);
-    e.loadSample(hi.data(), hi.size(), kRate, 1);   // PAD2
-    e.loadSample(lo.data(), lo.size(), kRate, 2);   // PAD3
-    // Slot 0 (PAD) and slot 3 (PAD4) are deliberately left unloaded.
-    ControlFrame f;
-    f.mode = 0;
-    f.gate = true;
-    f.x = 0.5f;
-    f.y = 1.0f;  // cutoff wide open
-    f.sampleA = 0.0f; f.sampleB = 0.0f; f.sampleC = 0.0f; f.sampleD = 1.0f;  // the seam, per sampleWeights(0.5, 0)
-    e.pushControl(f);
-    std::vector<float> out;
-    for (int i = 0; i < 400; ++i) out = callback(e, 64);
-    float sum = 0.0f;
-    for (float v : out) sum += v;
-    // An even 0.9/-0.9 split cancels to exactly zero - the same "exact
-    // cancellation" shape the three-vertex even-split test above uses -
-    // but the point here is that it is a *cancellation*, not silence: peak
-    // level must still be near 0.9, not near 0 the way true silence (or a
-    // half-fallen-through fallback) would be.
-    CHECK_NEAR(sum / static_cast<float>(out.size()), 0.0f, 0.02f);
-    CHECK(peak(out) > 0.5f);
+    //
+    // Two different *same-sign* DC levels, not a cancelling +/- pair: a
+    // constant source has no peak distinct from its average, so an evenly
+    // *cancelling* pair would read back at 0 whether the fallback fired or
+    // the point were genuinely silent - indistinguishable, and no test at
+    // all. Rather than predict the exact level through the drive stage's
+    // tanh and the filter (both nonlinear/dynamic), this compares against
+    // each source played alone: monotonic, DC-preserving stages keep an
+    // even blend of the two strictly between them - nowhere near the 0.0
+    // true silence would settle to.
+    auto settle = [](float sampleA, float sampleB, float sampleC, float sampleD, int32_t slot1, int32_t slot2) {
+        SurfaceEngine e(kRate);
+        std::vector<float> hi(100, 0.8f), lo(100, 0.2f);
+        if (slot1 >= 0) e.loadSample(hi.data(), hi.size(), kRate, slot1);
+        if (slot2 >= 0) e.loadSample(lo.data(), lo.size(), kRate, slot2);
+        ControlFrame f;
+        f.mode = 0;
+        f.gate = true;
+        f.x = 0.5f;
+        f.y = 1.0f;  // cutoff wide open
+        f.sampleA = sampleA; f.sampleB = sampleB; f.sampleC = sampleC; f.sampleD = sampleD;
+        e.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 400; ++i) out = callback(e, 64);
+        float sum = 0.0f;
+        for (float v : out) sum += v;
+        return sum / static_cast<float>(out.size());
+    };
+
+    // PAD2 (0.8) and PAD3 (0.2) each alone, slot 0/3 unloaded either way -
+    // the same door every other case in this file already plays through.
+    const float pad2Alone = settle(0.0f, 1.0f, 0.0f, 0.0f, 1, -1);
+    const float pad3Alone = settle(0.0f, 0.0f, 1.0f, 0.0f, 2, -1);
+    CHECK(pad2Alone > pad3Alone + 0.05f);  // sanity: the levels are actually different
+
+    // At the seam (per sampleWeights(0.5, 0) = {0, 0, 0, 1}), with slot 3
+    // unloaded: the fallback must land strictly between the two, not at
+    // the 0.0 a broken (or missing) fallback would settle to.
+    const float atSeam = settle(0.0f, 0.0f, 0.0f, 1.0f, 1, 2);
+    CHECK(atSeam > pad3Alone + 0.02f);
+    CHECK(atSeam < pad2Alone - 0.02f);
 
     // With only PAD2 loaded (PAD3 also empty), the whole fallback share
-    // goes to PAD2 alone, at full level.
-    SurfaceEngine only2(kRate);
-    only2.loadSample(hi.data(), hi.size(), kRate, 1);
-    ControlFrame g = f;
-    only2.pushControl(g);
-    std::vector<float> out2;
-    for (int i = 0; i < 400; ++i) out2 = callback(only2, 64);
-    float sum2 = 0.0f;
-    for (float v : out2) sum2 += v;
-    CHECK(sum2 / static_cast<float>(out2.size()) > 0.5f);
+    // goes to PAD2 alone - the same level as PAD2 played directly.
+    const float onlyPad2AtSeam = settle(0.0f, 0.0f, 0.0f, 1.0f, 1, -1);
+    CHECK_NEAR(onlyPad2AtSeam, pad2Alone, 0.02f);
 }
 
 TEST(surface_engine_unloaded_slots_are_silent_until_loaded) {
