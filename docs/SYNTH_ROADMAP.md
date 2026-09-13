@@ -212,3 +212,11 @@ everything else. S4 is the one that needs hardware again.
 This slots after the app MVP (capture → kit → export must ship first — the
 synth makes kits better, capture makes the app exist). CRUNCH is the likely
 queue-jumper: it improves captured kits, which is MVP territory.
+
+## What comes after S5
+
+S1–S5 are shipped, so this roadmap is finished — but it built thirty voices
+and no presets, and rule 1 above ("preset-first, knobs-second") is therefore
+only half true. [`docs/SYNTH_UPGRADE.md`](SYNTH_UPGRADE.md) picks up there:
+the preset library, a SCRAMBLE that lands, punch, stereo, and MATCH — the
+capture-aware preset pick that no standalone synth can copy.
