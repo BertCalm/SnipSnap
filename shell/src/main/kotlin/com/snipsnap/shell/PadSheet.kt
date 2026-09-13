@@ -8,12 +8,15 @@ import com.snipsnap.synth.Treatments
 /**
  * The PAD SHEET's TREATMENT card, as data.
  *
- * Five rows. Row one draws five segments: four of them are the design's
- * Time Machine eras, and [SMEAR] — a fifth, deliberately not an era (see
- * below). The rest are the rack's named characters — the FX chains
- * `treat` and bank B already speak — reachable one tap at a time; row
- * four ends on TUNE and row five is the keyed family ([Keyed]), the
- * treatments that read the kit's own key.
+ * Six rows, grouped by what an effect *does* rather than by which family
+ * implements it. Row one draws five segments: four of them are the
+ * design's Time Machine eras, and [SMEAR] — a fifth, deliberately not an
+ * era (see below). Row two is the hit's anatomy — its arrival, its
+ * attack, its body. Row three is its character once it is itself — the
+ * damage done to it. Row four is what happens to it in time — repeats,
+ * rooms, the grid. Row five is the machine's own transport. Row six is
+ * the keyed family ([Keyed]), the treatments that read the kit's own key
+ * and tempo.
  * Every row is a vocabulary mapping and nothing more: the words are the
  * app's, not the engine's, so [Eras] and [Treatments] never learn what a
  * "segment" is.
@@ -49,26 +52,36 @@ object PadSheet {
     /** Row one, left to right, as the card draws it — the eras, plus SMEAR. */
     val SEGMENTS: List<String> = listOf(NONE, "CRUSH", "TAPE", "DIRT", SMEAR)
 
-    /** Row two, first chip: the rack's transient-removal character (`"smeared"`) — see the object KDoc for why it isn't named SMEAR. */
+    /** Row two, second chip: the rack's transient-removal character (`"smeared"`) — see the object KDoc for why it isn't named SMEAR. */
     const val TAIL = "TAIL"
 
-    /** Row two — the rack's characters. */
-    val CHARACTER_SEGMENTS: List<String> = listOf(TAIL, "SLAP", "WASH", "PUNCH")
-
-    /** Row three — the anatomy and the transport. */
-    val MORE_SEGMENTS: List<String> = listOf("GHOST", "STOP", "START", "FLIP")
-
-    /** Row four — the room, the tape's last two, and the key. */
-    val EXTRA_SEGMENTS: List<String> = listOf("SKIM", "DUB", "SWELL", "TUNE")
-
-    /** Row five — the treatments that read the kit itself: its key, its tempo. */
-    val KEYED_SEGMENTS: List<String> = listOf("BODY", "WOBBLE", "ETERNAL")
-
-    /** Row four's last word: the spectral retune, the first treatment that reads the kit's key. */
+    /** The spectral retune, the first treatment that reads the kit's key. */
     const val TUNE = "TUNE"
 
-    /** All rows, in drawing order. */
-    val ROWS: List<List<String>> = listOf(SEGMENTS, CHARACTER_SEGMENTS, MORE_SEGMENTS, EXTRA_SEGMENTS, KEYED_SEGMENTS)
+    /** Row two — what the hit *is*: its arrival, its attack, its body. */
+    val ANATOMY_SEGMENTS: List<String> = listOf("SWELL", TAIL, "SKIM", "GHOST", "SPIKE")
+
+    /** Row three — what the hit sounds like once it is itself: the damage. */
+    val CHARACTER_SEGMENTS: List<String> = listOf("PUNCH", "RING", "DUB", "DUST", "PHASE")
+
+    /** Row four — what happens to it in time: repeats, rooms, the grid. */
+    val TIME_SEGMENTS: List<String> = listOf("SLAP", "WASH", "ROLL", "GATE")
+
+    /** Row five — the machine's own transport. */
+    val TRANSPORT_SEGMENTS: List<String> = listOf("FLIP", "STOP", "START", "PITCH")
+
+    /** Row six — the treatments that read the kit itself: its key, its tempo. */
+    val KEYED_SEGMENTS: List<String> = listOf(TUNE, "BODY", "WOBBLE", "ETERNAL")
+
+    /**
+     * All rows, in drawing order. Grouped by what an effect *does*, not by
+     * which family implements it: ROLL and GATE are keyed treatments sitting
+     * on the TIME row because that is what they sound like, the way TUNE has
+     * always sat among the characters.
+     */
+    val ROWS: List<List<String>> = listOf(
+        SEGMENTS, ANATOMY_SEGMENTS, CHARACTER_SEGMENTS, TIME_SEGMENTS, TRANSPORT_SEGMENTS, KEYED_SEGMENTS,
+    )
 
     /** Every segment on any row. */
     val ALL_SEGMENTS: List<String> get() = ROWS.flatten()
@@ -160,6 +173,16 @@ object PadSheet {
         "DUB" to "dubbed",
         // The sound arrives before it strikes.
         "SWELL" to "swelled",
+        // The attack leaned on rather than taken away.
+        "SPIKE" to "spiked",
+        // Multiplied by a sine: metal, bells, radio.
+        "RING" to "ringed",
+        // The record under the hit.
+        "DUST" to "dusted",
+        // Four allpasses, swept.
+        "PHASE" to "phased",
+        // The transport: pitch is speed. AMT fades it back toward native, not toward silence.
+        "PITCH" to "pitched",
         // "crushed" stays off the card: CRUSH already draws the crunchier
         // era. It remains reachable from `treat`.
     )
@@ -173,12 +196,17 @@ object PadSheet {
         "WOBBLE" to "wobbled",
         // The attack kept, the tail slowed toward forever.
         "ETERNAL" to "eternal",
+        // The hit's own head, struck again on the grid.
+        "ROLL" to "rolled",
+        // The hit chopped on the grid.
+        "GATE" to "gated",
     )
 
     /**
      * The era behind a row-one segment, or null for [NONE]. Throws on a
      * segment row one does not draw — a typo should not silently become
-     * "no treatment". Row-two segments are not eras: ask [treatmentFor].
+     * "no treatment". Segments on any row but the first are not eras: ask
+     * [treatmentFor].
      */
     fun eraFor(segment: String): String? {
         require(segment in SEGMENTS) {

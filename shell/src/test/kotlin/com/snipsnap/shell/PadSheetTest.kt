@@ -69,9 +69,9 @@ class PadSheetTest {
 
         // They sit on different rows, and only one of them is on row one.
         assertTrue(PadSheet.SMEAR in PadSheet.SEGMENTS, "SMEAR is row one")
-        assertTrue(PadSheet.TAIL in PadSheet.CHARACTER_SEGMENTS, "TAIL is row two")
+        assertTrue(PadSheet.TAIL in PadSheet.ANATOMY_SEGMENTS, "TAIL is row two")
         assertFalse(PadSheet.TAIL in PadSheet.SEGMENTS)
-        assertFalse(PadSheet.SMEAR in PadSheet.CHARACTER_SEGMENTS)
+        assertFalse(PadSheet.SMEAR in PadSheet.ANATOMY_SEGMENTS)
 
         // And the card never draws one word for both.
         assertTrue(
@@ -103,16 +103,40 @@ class PadSheetTest {
         assertNull(PadSheet.segmentFor("phone"))
     }
 
-    // ---- row two: the characters ----
+    // ---- rows two through six: the regroup ----
 
     @Test
-    fun `rows two and three draw four characters each and all rows read in order`() {
-        assertEquals(listOf("TAIL", "SLAP", "WASH", "PUNCH"), PadSheet.CHARACTER_SEGMENTS)
-        assertEquals(listOf("GHOST", "STOP", "START", "FLIP"), PadSheet.MORE_SEGMENTS)
-        assertEquals(listOf("SKIM", "DUB", "SWELL", "TUNE"), PadSheet.EXTRA_SEGMENTS)
-        assertEquals(listOf("BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
-        assertEquals(listOf(PadSheet.SEGMENTS, PadSheet.CHARACTER_SEGMENTS, PadSheet.MORE_SEGMENTS, PadSheet.EXTRA_SEGMENTS, PadSheet.KEYED_SEGMENTS), PadSheet.ROWS)
-        assertEquals(PadSheet.ALL_SEGMENTS.size, PadSheet.ALL_SEGMENTS.toSet().size, "no word on two rows")
+    fun `the card reads in zones, and holds every chip`() {
+        assertEquals(listOf("NONE", "CRUSH", "TAPE", "DIRT", "SMEAR"), PadSheet.SEGMENTS)
+        assertEquals(listOf("SWELL", "TAIL", "SKIM", "GHOST", "SPIKE"), PadSheet.ANATOMY_SEGMENTS)
+        assertEquals(listOf("PUNCH", "RING", "DUB", "DUST", "PHASE"), PadSheet.CHARACTER_SEGMENTS)
+        assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE"), PadSheet.TIME_SEGMENTS)
+        assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
+        assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
+        assertEquals(27, PadSheet.ALL_SEGMENTS.size, "the card should draw 27 chips")
+    }
+
+    /**
+     * The regroup moves every chip but row one. A chip silently dropped
+     * during the rearrangement would not be caught by the duplicate/width/
+     * registry checks below — a deleted segment is simply never iterated —
+     * so this test checks the inventory itself, independent of which row
+     * anything ended up on.
+     */
+    @Test
+    fun `the regroup keeps every chip the card already drew and adds the seven new ones`() {
+        val expected = setOf(
+            // the twenty that existed before the regroup
+            "NONE", "CRUSH", "TAPE", "DIRT", "SMEAR",
+            "TAIL", "SLAP", "WASH", "PUNCH",
+            "GHOST", "STOP", "START", "FLIP",
+            "SKIM", "DUB", "SWELL", "TUNE",
+            "BODY", "WOBBLE", "ETERNAL",
+            // the seven this plan adds
+            "SPIKE", "RING", "DUST", "PHASE", "PITCH", "ROLL", "GATE",
+        )
+        assertEquals(expected, PadSheet.ALL_SEGMENTS.toSet(), "the card's inventory changed")
+        assertEquals(27, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
     }
 
     @Test
