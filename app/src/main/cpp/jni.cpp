@@ -127,8 +127,8 @@ Java_com_snipsnap_app_NativeSurface_control(
 JNIEXPORT void JNICALL
 Java_com_snipsnap_app_NativeSurface_setCorner(
     JNIEnv*, jobject, jlong handle, jint index,
-    jfloat pitch, jfloat cutoff, jfloat resonance, jfloat drive) {
-    engine(handle)->setCorner(index, MacroState{pitch, cutoff, resonance, drive});
+    jfloat pitch, jfloat cutoff, jfloat resonance, jfloat drive, jfloat crush, jfloat echo) {
+    engine(handle)->setCorner(index, MacroState{pitch, cutoff, resonance, drive, crush, echo});
 }
 
 /**

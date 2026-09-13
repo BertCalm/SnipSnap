@@ -333,7 +333,7 @@ fun SurfaceScreen(
     }
 
     fun pushCorners(corners: List<SurfaceStore.Corner>) {
-        corners.forEachIndexed { i, c -> engine.setCorner(i, c.pitch, c.cutoff, c.resonance, c.drive) }
+        corners.forEachIndexed { i, c -> engine.setCorner(i, c.pitch, c.cutoff, c.resonance, c.drive, c.crush, c.echo) }
     }
 
     fun persist(dir: File, next: SurfaceStore.Settings) {

@@ -15,10 +15,10 @@ import java.io.File
  * under the same rules as every sidecar - unknown fields ignored, unknown
  * versions refused, a torn file a [JsonException] in words.
  *
- * The corners are the same four macros the engine runs (pitch, cutoff,
- * resonance, drive, each 0..1), so a corner *is* a position on the pad:
- * [Corner.from] turns the current reading in any mode into one, which is
- * how SET A..D captures the sound under the finger.
+ * The corners are the same six macros the engine runs (pitch, cutoff,
+ * resonance, drive, crush, echo, each 0..1), so a corner *is* a position
+ * on the pad: [Corner.from] turns the current reading in any mode into
+ * one, which is how SET A..D captures the sound under the finger.
  */
 object SurfaceStore {
 
@@ -28,9 +28,21 @@ object SurfaceStore {
     /** One entry of [Corner.LIBRARY]: a [Corner] worth stepping onto a pad corner by its name, not its position. */
     data class NamedCorner(val name: String, val corner: Corner)
 
-    data class Corner(val pitch: Float, val cutoff: Float, val resonance: Float, val drive: Float) {
+    data class Corner(
+        val pitch: Float,
+        val cutoff: Float,
+        val resonance: Float,
+        val drive: Float,
+        /** 0 = transparent, 1 = heavily bit/rate-reduced - see SurfaceEngine.cpp's renderMono. */
+        val crush: Float = 0f,
+        /** 0 = dry, 1 = fully wet - a fixed-time delay's own mix, never its time (see SurfaceEngine.cpp). */
+        val echo: Float = 0f,
+    ) {
         init {
-            for ((name, v) in listOf("pitch" to pitch, "cutoff" to cutoff, "resonance" to resonance, "drive" to drive)) {
+            for ((name, v) in listOf(
+                "pitch" to pitch, "cutoff" to cutoff, "resonance" to resonance,
+                "drive" to drive, "crush" to crush, "echo" to echo,
+            )) {
                 require(v.isFinite() && v in 0f..1f) { "$name is 0..1, got $v" }
             }
         }
@@ -47,18 +59,18 @@ object SurfaceStore {
              * A second, named quartet - `design/surface-vector`'s boards
              * sketch a MORPH/VECTOR pad whose corners read LBP +/ECHO
              * +/ECHO -/LBP -, a preset library to *step* onto a corner
-             * instead of always capturing one live. The names are
-             * evocative shorthand the same way CLEAN/DARK/LOW/HOT already
-             * are - the engine has no actual band-pass or delay stage, so
-             * nothing here claims to *be* one; each is still just a point
-             * in the same four-macro space a [Corner] is. LBP leans
-             * mellow and rounded, ECHO brighter and more resonant; +/-
-             * is each pair's own brighter/darker sibling.
+             * instead of always capturing one live. LBP leans mellow and
+             * rounded (a pure filter pair, [crush]/[echo] both 0); ECHO
+             * brighter and more resonant, and - now that the engine
+             * actually has a delay stage (see [Corner.echo]) - genuinely
+             * echoing, [echo]'s wet mix the one thing telling its own +/-
+             * pair apart from LBP's. +/- is each pair's own
+             * brighter/darker sibling.
              */
             val LIBRARY: List<NamedCorner> = listOf(
                 NamedCorner("LBP +", Corner(0.5f, 0.55f, 0.1f, 0.0f)),
-                NamedCorner("ECHO +", Corner(0.65f, 0.7f, 0.5f, 0.1f)),
-                NamedCorner("ECHO -", Corner(0.35f, 0.4f, 0.45f, 0.2f)),
+                NamedCorner("ECHO +", Corner(0.65f, 0.7f, 0.5f, 0.1f, echo = 0.25f)),
+                NamedCorner("ECHO -", Corner(0.35f, 0.4f, 0.45f, 0.2f, echo = 0.5f)),
                 NamedCorner("LBP -", Corner(0.5f, 0.2f, 0.15f, 0.0f)),
             )
 
@@ -98,7 +110,7 @@ object SurfaceStore {
                         fun blend(pick: (Corner) -> Float) =
                             corners.indices.sumOf { (w[it] * pick(corners[it])).toDouble() }.toFloat().coerceIn(0f, 1f)
                         val resonance = (blend { it.resonance } + (t - 0.5f) * 0.5f).coerceIn(0f, 1f)
-                        Corner(blend { it.pitch }, blend { it.cutoff }, resonance, blend { it.drive })
+                        Corner(blend { it.pitch }, blend { it.cutoff }, resonance, blend { it.drive }, blend { it.crush }, blend { it.echo })
                     }
                 }
             }
@@ -158,6 +170,8 @@ object SurfaceStore {
                             "cutoff" to JsonValue.Num(c.cutoff.toDouble()),
                             "resonance" to JsonValue.Num(c.resonance.toDouble()),
                             "drive" to JsonValue.Num(c.drive.toDouble()),
+                            "crush" to JsonValue.Num(c.crush.toDouble()),
+                            "echo" to JsonValue.Num(c.echo.toDouble()),
                         ),
                     )
                 },
@@ -181,7 +195,19 @@ object SurfaceStore {
         val corners = obj["corners"]?.arr()?.map { c ->
             val o = c.obj()
             fun macro(name: String) = o[name]?.num()?.toFloat() ?: throw JsonException("corner has no $name")
-            Corner(macro("pitch"), macro("cutoff"), macro("resonance"), macro("drive"))
+            // crush/echo default to 0 (transparent, dry) only when the key
+            // is truly absent - a file saved before they existed, the same
+            // backward-compatible shape as secondPad/thirdPad/fourthPad.
+            // `o[name] != null` here means the key is *present* (even as
+            // an explicit JSON null): a malformed or wrong-typed present
+            // value still goes through macro()'s own throwing path rather
+            // than being silently swallowed into "off" (Copilot review,
+            // PR #197).
+            fun newMacro(name: String) = if (o[name] != null) macro(name) else 0f
+            Corner(
+                macro("pitch"), macro("cutoff"), macro("resonance"), macro("drive"),
+                newMacro("crush"), newMacro("echo"),
+            )
         } ?: Corner.DEFAULTS
         if (corners.size != 4) throw JsonException("surface.json has ${corners.size} corners, not 4")
         return Settings(pad, corners, secondPad, thirdPad, fourthPad)

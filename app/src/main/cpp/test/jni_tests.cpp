@@ -15,8 +15,10 @@
 // ours - that the bridge does not write into a null array before it
 // returns - and not what Kotlin then sees. `jni.cpp` never calls
 // ExceptionCheck, so the stub has no exception machinery to model.
+#include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstring>
 #include <thread>
 #include <vector>
@@ -44,6 +46,7 @@ jfloatArray Java_com_snipsnap_app_NativePads_stopPrint(JNIEnv*, jobject, jlong);
 jlong Java_com_snipsnap_app_NativeSurface_create(JNIEnv*, jobject, jint);
 void Java_com_snipsnap_app_NativeSurface_destroy(JNIEnv*, jobject, jlong);
 void Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv*, jobject, jlong, jfloatArray, jint, jint);
+void Java_com_snipsnap_app_NativeSurface_setCorner(JNIEnv*, jobject, jlong, jint, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat);
 jboolean Java_com_snipsnap_app_NativeSurface_armPrint(JNIEnv*, jobject, jlong, jint);
 jfloatArray Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv*, jobject, jlong);
 }
@@ -159,6 +162,11 @@ std::vector<float> ramp(int n) {
 }
 
 std::vector<float> pull(PadEngine* e, int32_t frames) {
+    std::vector<float> out(static_cast<size_t>(frames) * 2, 123.0f);
+    e->onAudioReady(nullptr, out.data(), frames);
+    return out;
+}
+std::vector<float> pull(SurfaceEngine* e, int32_t frames) {
     std::vector<float> out(static_cast<size_t>(frames) * 2, 123.0f);
     e->onAudioReady(nullptr, out.data(), frames);
     return out;
@@ -338,6 +346,48 @@ TEST(jni_surface_refuses_a_sample_it_cannot_copy) {
     // all rather than terminating on an exception crossing the bridge.
     Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floatsClaiming(-1000, ramp(16)), 48000, 0);
     Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+}
+
+TEST(jni_surface_set_corner_forwards_crush_and_echo_without_swapping_them) {
+    // setCorner gained two more floats this stage - crush and echo. A
+    // swapped or dropped argument in the bridge (jni.cpp) would pass
+    // every SurfaceEngine-level test, since none of those go through
+    // this JNI entry point at all - they all call setCorner directly in
+    // C++ (see SurfaceEngine.h). Toggling the two macros individually
+    // (1,0 then 0,1) and checking echo's own observable effect - a tail
+    // that keeps ringing after release, see engine_tests.cpp - catches
+    // both a swap (crush's "1" landing in echo's slot would produce a
+    // tail where none is asserted) and a drop (echo's "1" never
+    // reaching the engine would produce no tail where one is asserted).
+    JNIEnv* e = env();
+    std::vector<float> tone(100, 0.33f);
+
+    auto tailPeakAfterRelease = [&](float crush, float echo) {
+        const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+        auto* surf = reinterpret_cast<SurfaceEngine*>(h);
+        surf->loadSample(tone.data(), tone.size(), 48000);
+        Java_com_snipsnap_app_NativeSurface_setCorner(e, nullptr, h, 0, 0.5f, 1.0f, 0.0f, 0.0f, crush, echo);
+        ControlFrame f;
+        f.mode = 2;
+        f.gate = true;
+        f.a = 1.0f; f.b = f.c = f.d = 0.0f;
+        surf->pushControl(f);
+        for (int i = 0; i < 20; ++i) pull(surf, 64);
+        ControlFrame off = f;
+        off.gate = false;
+        surf->pushControl(off);
+        for (int i = 0; i < 40; ++i) pull(surf, 64);
+        float peak = 0.0f;
+        for (int i = 0; i < 400; ++i) {
+            auto out = pull(surf, 64);
+            for (float v : out) peak = std::max(peak, std::fabs(v));
+        }
+        Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+        return peak;
+    };
+
+    CHECK(tailPeakAfterRelease(1.0f, 0.0f) < 1e-4f);  // crush on, echo off: no tail
+    CHECK(tailPeakAfterRelease(0.0f, 1.0f) > 0.01f);  // echo on, crush off: a real tail
 }
 
 TEST(jni_drain_survives_a_jvm_that_cannot_allocate) {
