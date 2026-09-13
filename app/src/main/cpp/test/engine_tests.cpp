@@ -1080,9 +1080,18 @@ TEST(surface_engine_crush_holds_samples_and_kills_alternation_above_the_hold_rat
         f.a = 1.0f; f.b = f.c = f.d = 0.0f;
         e.pushControl(f);
         for (int i = 0; i < 300; ++i) callback(e, 64);  // let gain/filter settle
-        std::vector<float> out;
-        for (int i = 0; i < 100; ++i) out = callback(e, 64);
-        return out;
+        // Accumulate the left channel only across every callback in the
+        // measurement window - callback's own output is stereo
+        // interleaved, and both a bare `out = callback(...)` (keeping
+        // only the last 64-frame chunk) and a raw walk through L,R,L,R
+        // (comparing each frame's duplicated pair against itself, never
+        // a crossing) would silently starve this count.
+        std::vector<float> mono;
+        for (int i = 0; i < 100; ++i) {
+            auto out = callback(e, 64);
+            for (size_t j = 0; j < out.size(); j += 2) mono.push_back(out[j]);
+        }
+        return mono;
     };
 
     const int transparentCrossings = countCrossings(settle(0.0f));
