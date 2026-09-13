@@ -38,6 +38,7 @@ class SurfaceStoreTest {
             corners = listOf(Corner(0f, 1f, 0.5f, 0.25f), Corner.DARK, Corner.LOW, Corner(1f, 0f, 0f, 1f)),
             secondPadSlot = 12,
             thirdPadSlot = 34,
+            fourthPadSlot = 56,
         )
         val first = SurfaceStore.save(temp, s).readBytes()
         assertEquals(s, SurfaceStore.load(temp))
@@ -65,6 +66,7 @@ class SurfaceStoreTest {
         assertEquals(3, loaded.padSlot)
         assertEquals(null, loaded.secondPadSlot)
         assertEquals(null, loaded.thirdPadSlot)
+        assertEquals(null, loaded.fourthPadSlot)
     }
 
     @Test
@@ -80,6 +82,23 @@ class SurfaceStoreTest {
         val loaded = SurfaceStore.load(temp)
         assertEquals(9, loaded.secondPadSlot)
         assertEquals(null, loaded.thirdPadSlot)
+        assertEquals(null, loaded.fourthPadSlot)
+    }
+
+    @Test
+    fun `a file saved before fourthPad existed still loads, with the second and third samples intact`() {
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"secondPad":9,"thirdPad":21,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        val loaded = SurfaceStore.load(temp)
+        assertEquals(9, loaded.secondPadSlot)
+        assertEquals(21, loaded.thirdPadSlot)
+        assertEquals(null, loaded.fourthPadSlot)
     }
 
     @Test
@@ -89,6 +108,7 @@ class SurfaceStoreTest {
         assertFailsWith<IllegalArgumentException> { Settings(padSlot = 0) }
         assertFailsWith<IllegalArgumentException> { Settings(padSlot = 1, secondPadSlot = 0) }
         assertFailsWith<IllegalArgumentException> { Settings(padSlot = 1, thirdPadSlot = 0) }
+        assertFailsWith<IllegalArgumentException> { Settings(padSlot = 1, fourthPadSlot = 0) }
         assertFailsWith<IllegalArgumentException> { Settings(padSlot = 1, corners = Corner.DEFAULTS.take(3)) }
         File(temp, SurfaceStore.FILE_NAME).writeText("""{"version":2,"pad":1,"corners":[]}""")
         assertFailsWith<JsonException> { SurfaceStore.load(temp) }
@@ -147,7 +167,11 @@ class SurfaceStoreTest {
 
         // HOT already carries resonance 0.2 (Corner.HOT = Corner(0.75f, 0.85f, 0.2f, 0.9f));
         // a full-tilt nudge of +0.25 lands on top of that, not in place of it.
-        val atD = Reading(0f, 0f, 0f, 0f, 0f, 0f, 1f, touching = true)
+        // D is bottom-right (x=1, y=0 - see morphWeights), which the blend
+        // now derives the weights from itself; a/b/c/d are set to match
+        // that position rather than a mismatched one the old
+        // implementation didn't check.
+        val atD = Reading(1f, 0f, 0f, 0f, 0f, 0f, 1f, touching = true)
         near(0.45f, Corner.from(Mode.MORPH, atD, 1f, Corner.DEFAULTS).resonance)
         near(1f, Corner.from(Mode.MORPH, atD, 1f, listOf(Corner(0.5f, 0.5f, 0.9f, 0f), Corner.DARK, Corner.LOW, Corner(0.5f, 0.5f, 0.9f, 0f))).resonance)
     }

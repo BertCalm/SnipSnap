@@ -133,21 +133,25 @@ logcat tag to grab when something is wrong.
   from its head, like a drum hit, not continue from wherever it had
   drifted to while released. With a kit that has a tempo, BARS to 2
   and PRINT: the print should stop itself on the bar (5.2 s at 92 BPM)
-  and the toast should say so. Then PAD2 ► and PAD3 ► to pick two more
-  pads: the finger should now blend all three continuously by its own
-  position - PAD loudest near the top, PAD2 near the bottom-left, PAD3
-  near the bottom-right, with no dead spot anywhere on the pad - while
-  pitch/filter/mode keep moving exactly as PAD alone did. With only PAD2
-  loaded, the bottom-right corner should still sound (PAD/PAD2 blended,
-  no PAD3 silence-hole); with nothing but PAD loaded, the whole pad
-  should sound exactly like before PAD2/PAD3 existed. This is stage 2 of
-  `design/surface-vector`'s concept - the sample side of the sketch, now
-  actually touch-driven. Then switch to VECTOR (stage 3, the effects
-  side): the corner bars should appear exactly as they do in MORPH -
-  SET A..D still works, and morphing the corners should sound the same
-  as it does in MORPH - while the readout's SMPL line (with PAD2/PAD3
-  loaded) keeps moving too: one finger, two independent blends, neither
-  one visibly affecting the other's numbers.
+  and the toast should say so. Then PAD2 ►, PAD3 ► and PAD4 ► to pick
+  three more pads: the finger should now blend all four continuously by
+  its own position - PAD loudest near the top, PAD2 near the bottom-left,
+  PAD3 near the bottom-right, PAD4 near the bottom-centre (directly under
+  PAD), with no dead spot anywhere on the pad - while pitch/filter/mode
+  keep moving exactly as PAD alone did. With only PAD2 loaded, the
+  bottom-right corner should still sound (PAD/PAD2 blended, no PAD3
+  silence-hole); with nothing but PAD loaded, the whole pad should sound
+  exactly like before PAD2/PAD3/PAD4 existed. Sweep the finger slowly
+  across the bottom-centre seam (where the pad's two half-triangles
+  meet, directly under PAD) - PAD4 should fade in and out smoothly with
+  no click at the seam. This is stage 2 of `design/surface-vector`'s
+  concept - the sample side of the sketch, now actually touch-driven.
+  Then switch to VECTOR (stage 3, the effects side): the corner bars
+  should appear exactly as they do in MORPH - SET A..D still works, and
+  morphing the corners should sound the same as it does in MORPH - while
+  the readout's SMPL line (with PAD2/PAD3/PAD4 loaded) keeps moving too:
+  one finger, two independent blends, neither one visibly affecting the
+  other's numbers.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad

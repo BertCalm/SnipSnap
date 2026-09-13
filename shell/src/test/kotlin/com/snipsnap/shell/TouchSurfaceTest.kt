@@ -108,47 +108,66 @@ class TouchSurfaceTest {
     }
 
     @Test
-    fun `sample weights are one at each vertex of the inscribed triangle`() {
-        val apex = TouchSurface.sampleWeights(0.5f, 1f)
-        near(1f, apex.first); near(0f, apex.second); near(0f, apex.third)
-        val baseLeft = TouchSurface.sampleWeights(0f, 0f)
-        near(1f, baseLeft.second)
-        val baseRight = TouchSurface.sampleWeights(1f, 0f)
-        near(1f, baseRight.third)
-        // The triangle's centroid is a third of the way up, not the pad's
-        // own centre (0.5, 0.5) - that point is inside the triangle but off
-        // its centroid, so it is not an equal three-way split (see below).
-        val centroid = TouchSurface.sampleWeights(0.5f, 1f / 3f)
-        near(1f / 3f, centroid.first); near(1f / 3f, centroid.second); near(1f / 3f, centroid.third)
+    fun `sample weights are one at each of the four vertices`() {
+        val (apex, baseLeft, baseRight, baseMid) = TouchSurface.sampleWeights(0.5f, 1f)
+        near(1f, apex); near(0f, baseLeft); near(0f, baseRight); near(0f, baseMid)
+        val atBaseLeft = TouchSurface.sampleWeights(0f, 0f)
+        near(1f, atBaseLeft[1])
+        val atBaseRight = TouchSurface.sampleWeights(1f, 0f)
+        near(1f, atBaseRight[2])
+        val atBaseMid = TouchSurface.sampleWeights(0.5f, 0f)
+        near(1f, atBaseMid[3])
+        // Each half-triangle's own centroid (the average of its own three
+        // vertices - apex (0.5,1), base-left (0,0), base-mid (0.5,0) for
+        // the left half) is an even third apex/base-left/base-mid.
+        val leftCentroid = TouchSurface.sampleWeights(1f / 3f, 1f / 3f)
+        near(1f / 3f, leftCentroid[0]); near(1f / 3f, leftCentroid[1]); near(1f / 3f, leftCentroid[3])
+        near(0f, leftCentroid[2])
     }
 
     @Test
-    fun `sample weights have no dead zone outside the triangle`() {
-        // The pad's own centre sits inside the triangle (apex-heavier than
-        // the centroid, since it is higher up), and still sums to one.
-        val centre = TouchSurface.sampleWeights(0.5f, 0.5f)
-        near(1f, centre.first + centre.second + centre.third)
-        assertTrue(centre.first > 1f / 3f)
+    fun `sample weights agree exactly at the seam between the two half-triangles`() {
+        // The two halves are computed by entirely separate formulas (see
+        // sampleWeights), so agreement at x = 0.5 isn't structural - it has
+        // to be checked. A discontinuity here would be an audible click
+        // sweeping the puck straight across the middle of the pad.
+        for (y in 0..10) {
+            val py = y / 10f
+            val justLeft = TouchSurface.sampleWeights(0.49999f, py)
+            val justRight = TouchSurface.sampleWeights(0.50001f, py)
+            for (i in 0..3) near(justLeft[i], justRight[i], 1e-3f)
+        }
+    }
 
-        // The two top corners sit outside the triangle - one vertex's raw
+    @Test
+    fun `sample weights have no dead zone outside either triangle`() {
+        // The pad's own centre sits inside the left half (apex-heavier than
+        // that half's own centroid, since it is higher up), and still sums
+        // to one.
+        val centre = TouchSurface.sampleWeights(0.5f, 0.5f)
+        near(1f, centre.sum())
+        assertTrue(centre[0] > 1f / 3f)
+
+        // The two top corners sit outside both triangles - one vertex's raw
         // coordinate goes negative there - but the blend stays defined,
         // clamped, and normalised rather than leaving a hole.
         val topLeft = TouchSurface.sampleWeights(0f, 1f)
-        near(0f, topLeft.third)
-        near(1f, topLeft.first + topLeft.second + topLeft.third)
-        assertTrue(topLeft.first > 0f && topLeft.second > 0f)
+        near(0f, topLeft[3])  // base-mid: not part of the left half at all
+        near(1f, topLeft.sum())
+        assertTrue(topLeft[0] > 0f && topLeft[1] > 0f)
 
         val topRight = TouchSurface.sampleWeights(1f, 1f)
-        near(0f, topRight.second)
-        near(1f, topRight.first + topRight.second + topRight.third)
+        near(0f, topRight[3])
+        near(1f, topRight.sum())
+        assertTrue(topRight[0] > 0f && topRight[2] > 0f)
     }
 
     @Test
     fun `sample weights always sum to one and never go negative`() {
-        for (x in 0..10) for (y in 0..10) {
-            val (a, b, c) = TouchSurface.sampleWeights(x / 10f, y / 10f)
-            near(1f, a + b + c)
-            assertTrue(a >= 0f && b >= 0f && c >= 0f)
+        for (x in 0..20) for (y in 0..10) {
+            val w = TouchSurface.sampleWeights(x / 20f, y / 10f)
+            near(1f, w.sum())
+            assertTrue(w.all { it >= 0f })
         }
     }
 

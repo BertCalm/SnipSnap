@@ -25,7 +25,7 @@ object NativeSurface {
         handle: Long, mode: Int,
         x: Float, y: Float, z: Float, tilt: Float,
         a: Float, b: Float, c: Float, d: Float,
-        sampleA: Float, sampleB: Float, sampleC: Float, gate: Boolean,
+        sampleA: Float, sampleB: Float, sampleC: Float, sampleD: Float, gate: Boolean,
     )
     external fun setCorner(handle: Long, index: Int, pitch: Float, cutoff: Float, resonance: Float, drive: Float)
     external fun armPrint(handle: Long, maxFrames: Int): Boolean

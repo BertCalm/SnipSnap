@@ -125,9 +125,12 @@ Open a kit, tap SURFACE.
 
 - The readout line under the pad opens with the latency; note it here too.
 - XY: a finger loops the pad, pitch across, filter up. Smooth, or stepped?
+  Tilt the phone too — it nudges resonance here as well, half-weighted.
 - XYZ: a second finger's pinch opens the drive. The roll of the phone
-  moves resonance.
-- MORPH: do the four corners sound like four different pads?
+  moves resonance outright.
+- MORPH: do the four corners sound like four different pads? Tilt
+  nudges the blended resonance on top of them, the same half-weighted
+  amount XY gets — flat should sound exactly like the corner as set.
 - PRINT, play for a few seconds, STOP PRINT: the toast names the length
   and the print is on TAPE. Chop it — it should behave like any snip.
 - LATCH on, lift your finger: does the loop hold where you left it?

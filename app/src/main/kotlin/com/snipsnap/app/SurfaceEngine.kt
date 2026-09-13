@@ -56,10 +56,10 @@ class SurfaceEngine(preferredSampleRate: Int) {
 
     /**
      * Load a snip as one of the engine's source slots; stereo is folded to
-     * mono, the file's own rate is kept (the engine repitches). Slots 0/1/2
-     * are the three vertices [control]'s `sampleA/B/C` blend between. See
-     * [MAX_SOURCES] (kept in sync with SurfaceEngine.h's kMaxSources by
-     * hand, not by any shared build-time constant).
+     * mono, the file's own rate is kept (the engine repitches). Slots
+     * 0/1/2/3 are the four vertices [control]'s `sampleA/B/C/D` blend
+     * between. See [MAX_SOURCES] (kept in sync with SurfaceEngine.h's
+     * kMaxSources by hand, not by any shared build-time constant).
      */
     @Synchronized
     fun load(snip: Snip, slot: Int = 0) {
@@ -93,11 +93,11 @@ class SurfaceEngine(preferredSampleRate: Int) {
 
     /**
      * One control frame; call at screen rate with the smoothed reading.
-     * [sampleA]/[sampleB]/[sampleC] weight slots 0/1/2 - a barycentric
-     * blend across the pad, independent of [mode]. Not required to sum to
-     * 1 - the engine renormalises every sample, over whichever slots are
-     * actually loaded. An unloaded slot's own weight is silence, but only
-     * once it is genuinely empty - see [clearSlot].
+     * [sampleA]/[sampleB]/[sampleC]/[sampleD] weight slots 0/1/2/3 - a
+     * barycentric blend across the pad, independent of [mode]. Not
+     * required to sum to 1 - the engine renormalises every sample, over
+     * whichever slots are actually loaded. An unloaded slot's own weight
+     * is silence, but only once it is genuinely empty - see [clearSlot].
      */
     @Synchronized
     fun control(
@@ -107,6 +107,7 @@ class SurfaceEngine(preferredSampleRate: Int) {
         sampleA: Float = 1f,
         sampleB: Float = 0f,
         sampleC: Float = 0f,
+        sampleD: Float = 0f,
         gate: Boolean,
     ) {
         if (!open) return
@@ -114,7 +115,7 @@ class SurfaceEngine(preferredSampleRate: Int) {
             handle, mode.ordinal,
             reading.x, reading.y, reading.z, tilt,
             reading.a, reading.b, reading.c, reading.d,
-            sampleA, sampleB, sampleC, gate,
+            sampleA, sampleB, sampleC, sampleD, gate,
         )
     }
 

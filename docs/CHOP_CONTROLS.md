@@ -16,13 +16,17 @@ with two in the wrong place, had no answer but "try another tape".
 ## 2. The CUT bench
 
 A `GroupBox` under the tape strip on CHOP, closed to one summary line
-(`12 HITS · BY HITS · FINE`) so the review is what it was; open, four
-rows. Every change is a fresh chop off the main thread through
-`ChopReviewModel.rechopKeeping`, and the markers move with it.
+(`12 HITS · BY HITS · FINE`) so the review is what it was; open, the
+row count depends on mode now, not fixed at four the way round one
+shipped it. The mode segment (BY HITS / GRID / GHOSTS / HUM) and the
+count are always there; BY HITS and GHOSTS then add EAR, CUT and ON
+THE GRID (§8), five rows in all, where GRID adds THE ZOOM LADDER (§11)
+instead, three. Every change is a fresh chop off the main thread
+through `ChopReviewModel.rechopKeeping`, and the markers move with it.
 
 | Control | What it does | Where it lives |
 |---|---|---|
-| **BY HITS / GRID** | follow the hits, or divide evenly | `ChopMode.ByHits` / `ChopMode.Grid` |
+| **BY HITS / GRID / GHOSTS / HUM** | follow the hits, divide evenly, gate the spaces between hits (§9), or beatbox the cuts in (§10) | `ChopMode.ByHits` / `.Grid` / `.Ghosts` / `.Hummed` |
 | **◀ N ▶** | one hit fewer or more than the chop has now (BY HITS), one part fewer or more (GRID); 1..64 | `ByHits.maxSlices`, `Grid.parts`, `MAX_HITS` |
 | **AUTO** | the count the tape wants: the knee in the sorted loudness curve where the real hits end and the detector's scraps begin (the CLI's own rule) | `autoCount` → `Chopper.autoSliceCount` |
 | **EAR · COARSE / NORMAL / FINE** | how hard the detector listens: FINE lowers the bar a hit must clear and lets hits sit closer, so ghost notes and fast hats come through; COARSE raises it and keeps them apart | `Ear.config` → `Transients.Config` (threshold factor, floor, minimum gap) |
