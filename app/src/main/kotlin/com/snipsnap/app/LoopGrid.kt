@@ -259,15 +259,25 @@ private fun BounceButton(session: Session, bouncing: Boolean, onBounce: () -> Un
             .border(width = 2.dp, color = Tape.BevelDark)
             // Through the app's own wrapper rather than a raw `clickable`: it
             // drops Compose's ripple (TapeOS draws its own feedback) and makes
-            // the accessible-name decision explicit. Null, because the text
-            // inside this control already says what it does.
+            // the accessible-name decision explicit.
+            //
+            // `label = null` used to sit here on the theory that the visible
+            // text covers it. It doesn't: `tapeClick`'s own KDoc (Chrome.kt)
+            // found that a plain `clickable` node does not fold sibling text
+            // into itself, so `null` ships a clickable node with no name at
+            // all — this was the only `tapeClick(label = null)` call site
+            // left in the app. The label tracks the same two states the
+            // visible `Text` below does, the way `ActionButton`'s toggle rows
+            // do (`"$label, ON/OFF"` in PadSheetScreen.kt) — here there's no
+            // separate state word, just the same two strings the screen
+            // already shows.
             //
             // Enabled even while bouncing, which is the same call SNIPS' own
             // → LOOP makes: a dead button says only "no". This one is already
             // labelled BOUNCING…, and pressing it says a bounce is running and
             // where it will land — which is the answer someone pressing a
             // second time is actually looking for.
-            .tapeClick(label = null, onClick = onBounce)
+            .tapeClick(label = if (bouncing) Copy.LOOP_BOUNCE_BUSY else "BOUNCE · $bars BARS", onClick = onBounce)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
