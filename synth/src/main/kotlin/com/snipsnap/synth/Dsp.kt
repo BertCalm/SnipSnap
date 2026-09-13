@@ -90,7 +90,21 @@ internal object Dsp {
         var low = 0f; var band = 0f; var high = 0f
         private var ic1 = 0f
         private var ic2 = 0f
-        fun process(input: Float, freqHz: Float, k: Float) {
+        /**
+         * [saturate] self-limits the feedback state instead of letting it
+         * ring cleanly into the final normalise (docs/SYNTH_UPGRADE.md, U5)
+         * - plain tanh, near-identity below ~0.5, only compressing as a
+         * state genuinely runs toward and past unity (self-oscillation
+         * territory). Defaults to off: every existing caller keeps today's
+         * exact linear filter. It's opt-in per call, not a blanket switch,
+         * because it isn't free even at typical settings - FATHOM's states
+         * run hot enough even at its fixed, moderate damping that turning
+         * it on there shifted DEEP's own factory default off KICK entirely
+         * and drifted several GRIND presets toward TOM. Enable it only for
+         * a filter whose caller has actually checked its own tests stay
+         * green with it on.
+         */
+        fun process(input: Float, freqHz: Float, k: Float, saturate: Boolean = false) {
             val g = kotlin.math.tan(PI * (freqHz.coerceIn(10f, rate * 0.49f)) / rate).toFloat()
             val kk = k.coerceAtLeast(0.1f)
             val a1 = 1f / (1f + g * (g + kk))
@@ -99,8 +113,10 @@ internal object Dsp {
             val v3 = input - ic2
             val v1 = a1 * ic1 + a2 * v3
             val v2 = ic2 + a2 * ic1 + a3 * v3
-            ic1 = 2f * v1 - ic1
-            ic2 = 2f * v2 - ic2
+            val nextIc1 = 2f * v1 - ic1
+            val nextIc2 = 2f * v2 - ic2
+            ic1 = if (saturate) tanh(nextIc1.toDouble()).toFloat() else nextIc1
+            ic2 = if (saturate) tanh(nextIc2.toDouble()).toFloat() else nextIc2
             low = v2
             band = v1
             high = input - kk * v1 - v2
