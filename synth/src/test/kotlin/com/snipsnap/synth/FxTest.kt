@@ -704,4 +704,36 @@ class FxTest {
             assertTrue(Treatments.chain(name, 0f).isBypass, "'$name' at AMT 0 is not a bypass")
         }
     }
+
+    @Test
+    fun `the tail budget is measured from the pitched sound, not the original`() {
+        val chain = FxChain(speed = mapOf("SEMITONES" to 0f))
+        val out = chain.process(kick)
+        assertTrue(
+            out.frameCount > kick.frameCount * 1.5,
+            "capTail truncated an octave-down hit to ${out.frameCount} from ${kick.frameCount}",
+        )
+    }
+
+    @Test
+    fun `SPEED runs before SWELL so the swell is grown from the pitched sound`() {
+        assertEquals("speed", FxChain.SECTION_NAMES.first(), "speed is not first in the rack")
+        assertEquals("swell", FxChain.SECTION_NAMES[1], "swell is not second in the rack")
+    }
+
+    @Test
+    fun `AMT fades a pitched treatment back toward native`() {
+        val full = Treatments.chain("pitched", 1f).speed!!.getValue("SEMITONES")
+        val half = Treatments.chain("pitched", 0.5f).speed!!.getValue("SEMITONES")
+        assertTrue(abs(half - 0.5f) < abs(full - 0.5f), "AMT 0.5 did not move PITCH toward native")
+        assertTrue(Treatments.chain("pitched", 0f).isBypass, "AMT 0 is not a bypass")
+    }
+
+    @Test
+    fun `a kit saved before PITCH existed still loads`() {
+        val old = """{"fx":1,"reverse":false,"echo":{"TIME":0.4,"REPEAT":0.4,"TONE":0.5,"MIX":0.4}}"""
+        val chain = FxChain.fromJsonText(old)
+        assertEquals(null, chain.speed, "an absent speed key is not a bypass")
+        assertEquals(1, FxChain.VERSION, "VERSION was bumped - every existing kit.json would throw")
+    }
 }

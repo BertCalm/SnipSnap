@@ -46,6 +46,8 @@ object Treatments {
         "dusted" to FxChain(dust = mapOf("CRACKLE" to 0.5f, "RUMBLE" to 0.3f, "HISS" to 0.35f)),
         // Four allpasses, swept.
         "phased" to FxChain(phase = mapOf("RATE" to 0.3f, "DEPTH" to 0.7f, "FEEDBACK" to 0.4f)),
+        // The transport: the same hit, played slower.
+        "pitched" to FxChain(speed = mapOf("SEMITONES" to 0.25f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

@@ -8,27 +8,31 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → SQUASH → CRUNCH → RING → DUB → DUST → TAPE → PHASE → ECHO → SPRING → MOTION
+ *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → SQUASH → CRUNCH → RING → DUB → DUST → TAPE → PHASE → ECHO → SPRING → MOTION
  *
- * Swell before everything, so the rack sees the arrival and the hit as
- * one sound; reverse next because you effect the flipped sample, not
- * flip the effected one (the sampling-era way); smear and ghost after
- * that because they decide what the hit *is* before anything decides
- * how it sounds (anatomy before tone); dynamics before character (crunch
- * and dub are the converter's own damage, quantized and honest; ring sits
- * between them as damage of a different species, inharmonic rather than
- * coarse); then dust, because a record dubbed to tape needs its surface
- * noise to exist before tape can process it along with everything else;
- * then time, space always last — echoes belong *in* the room — and
- * motion after even that, because the tape stops with the reverb still
- * on it. A fixed order is
- * a playability rule wearing an architecture hat: no routing screen, no
- * wrong answers.
+ * Pitch before everything, because in a sampler pitch *is* the transport:
+ * SWELL's stretched head, REVERSE's flip and the whole rack all see the
+ * pitched sound, since that is what a sampler plays. Swell next, so the
+ * rack sees the arrival and the hit as one sound; reverse after that
+ * because you effect the flipped sample, not flip the effected one (the
+ * sampling-era way); smear and ghost after that because they decide what
+ * the hit *is* before anything decides how it sounds (anatomy before
+ * tone); dynamics before character (crunch and dub are the converter's
+ * own damage, quantized and honest; ring sits between them as damage of
+ * a different species, inharmonic rather than coarse); then dust,
+ * because a record dubbed to tape needs its surface noise to exist
+ * before tape can process it along with everything else; then time,
+ * space always last — echoes belong *in* the room — and motion after
+ * even that, because the tape stops with the reverb still on it. A fixed
+ * order is a playability rule wearing an architecture hat: no routing
+ * screen, no wrong answers.
  *
  * A `null` section is a hard bypass. Serializes next to the pad's WAV in
  * `kit.json` so the recipe stays editable forever, same as synth patches.
  */
 data class FxChain(
+    /** The transport: pitch is speed, and it runs before everything. */
+    val speed: Map<String, Float>? = null,
     val reverse: Boolean = false,
     val eq: Map<String, Float>? = null,
     val squash: Map<String, Float>? = null,
@@ -134,7 +138,13 @@ data class FxChain(
     companion object {
         const val VERSION = 1
 
-        /** Most tail the whole rack may add over its input, seconds. */
+        /**
+         * Most tail the whole rack may add over its input, seconds —
+         * measured from the *pitched, swelled* sound, not the original. A
+         * hit pitched down an octave is twice as long by instruction, and
+         * that length is not tail; the budget exists to stop ECHO and
+         * SPRING running away, not to truncate a note.
+         */
         const val MAX_CHAIN_TAIL_SECONDS = 1.0f
 
         /** Which pass a section belongs to: the two before the tail budget is measured, and the rack. */
@@ -143,7 +153,9 @@ data class FxChain(
         /**
          * One rack section, described rather than hand-written. The list below
          * IS the order — in the signal path and in JSON alike — so the two can
-         * no longer drift apart.
+         * no longer drift apart. `process()` follows this declaration order
+         * for the pre-[Stage.RACK] stages too, so a [Stage.TRANSPORT] entry
+         * must be declared ahead of the [Stage.ARRIVAL] one.
          */
         internal class Section(
             val name: String,
@@ -155,6 +167,7 @@ data class FxChain(
         )
 
         internal val SECTIONS: List<Section> = listOf(
+            Section("speed", Speed.MACROS, { it.speed }, { c, m -> c.copy(speed = m) }, Speed::process, Stage.TRANSPORT),
             Section("swell", Swell.MACROS, { it.swell }, { c, m -> c.copy(swell = m) }, Swell::process, Stage.ARRIVAL),
             Section("smear", Smear.MACROS, { it.smear }, { c, m -> c.copy(smear = m) }, Smear::process),
             Section("ghost", Ghost.MACROS, { it.ghost }, { c, m -> c.copy(ghost = m) }, Ghost::process),
