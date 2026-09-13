@@ -62,7 +62,20 @@ import com.snipsnap.shell.Schemes
  * shape that can diverge between call sites is the bug pattern this
  * codebase specifically tests against.
  */
-internal val WINDOW_GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
+/**
+ * One bank as the 4×4 window every portrait screen draws — KIT's grid,
+ * PLAY's in-window view, GROOVE's record grid, and CATCH on TAPE — top
+ * row first, bottom-up numbering, so B is laid out exactly as A.
+ * [BankRow] is the landscape shape: two banks of eight abreast, whose
+ * floor (888 dp for both) a portrait phone never meets; the app is
+ * portrait-locked at the manifest everywhere but PLAY's fullscreen route.
+ */
+internal fun windowRows(bank: Int): List<IntRange> {
+    val base = bank * PadBanks.SIZE
+    return listOf(13..16, 9..12, 5..8, 1..4).map { (it.first + base)..(it.last + base) }
+}
+
+internal val WINDOW_GRID_ROWS = windowRows(0)
 internal val BANK_A_ROWS = listOf(9..16, 1..8)
 internal val BANK_B_ROWS = listOf(25..32, 17..24)
 

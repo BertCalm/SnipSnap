@@ -341,8 +341,8 @@ private fun loadChopSource(entry: KitShelf.Entry?, lastCommit: TapeCommit?): Cho
 private fun pitchLabel(estimate: PitchEstimate): String =
     Scales.nameOf(Scales.hzToMidi(estimate.hz).roundToInt())
 
-/** Pad-numbered like the real 4×4 (A13–A16 top row, A01 bottom-left) — see KitScreen. */
-private val CHOP_GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
+/** Pad-numbered like the real 4×4 (A13–A16 top row, A01 bottom-left) — PadGrid's one definition. */
+private val CHOP_GRID_ROWS = WINDOW_GRID_ROWS
 
 /** HUM THE CHOP: how long after the tape's end the mic keeps listening, for a last "tss" on the tape's last hit. */
 private const val HUM_TAIL_MS = 400L

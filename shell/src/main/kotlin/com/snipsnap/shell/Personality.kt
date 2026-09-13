@@ -779,6 +779,10 @@ object Copy {
     const val CATCH_NO_HITS = "NO HITS ON THIS TAPE TO CATCH. KEEP, OR INSTANT KIT, INSTEAD."
     /** Over the grid while catching. */
     const val CATCH_HEADER = "HOLD A PAD AS THE HIT GOES BY. LET GO, IT'S CAUGHT."
+    /** The grid's bank switch: a bank is worth flipping to for the pads still free on it, since catches land only on those. */
+    fun catchBank(letter: Char, free: Int): String = "BANK $letter · $free FREE"
+    /** CATCH A HIT with no empty pad on either bank: nothing could land, so the loop never starts. */
+    const val CATCH_NO_ROOM = "NO EMPTY PAD ON A OR B. CATCH LANDS ON EMPTY PADS ONLY."
     /** The grid's own button while catching: leave, and go play what landed. */
     const val CATCH_DONE_BUTTON = "DONE"
     /** A pad caught a hit, classed by ear. */
