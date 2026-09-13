@@ -232,9 +232,14 @@ fun PadSheetScreen(
         // Still opening the model, the open failed, or (mid-EJECT) this
         // slot just emptied — the header's own back arrow is the one piece
         // of chrome that must work regardless, so it renders alone. A load
-        // failure reuses EMPTY_SHELF rather than a one-off sentence, the
-        // same "nothing to show here" line ChopScreen's own EmptyChop
-        // reuses for its unreadable-source case — zero copy literals.
+        // failure uses KIT_WONT_OPEN, not EMPTY_SHELF: `entry` here is a
+        // specific, already-open kit's folder — KitBuilderModel.open just
+        // failed to parse it — which is false to claim as an empty shelf.
+        // Same reasoning (and same constant) as TakesBinScreen's own
+        // load-failure shell and ExportScreen's KIT_WONT_OPEN branch — zero
+        // copy literals. No route offered, same precedent as both: a
+        // folder that won't parse isn't fixed by anything this screen can
+        // do.
         // Still opening/failed/mid-EJECT — nothing dirty to flush yet, so
         // Back matches the header's own bare `onBack()` here, not the full
         // `requestBack()` below (which needs a live `model` to check).
@@ -242,7 +247,7 @@ fun PadSheetScreen(
         Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp)) {
             HeaderChip("◄ KIT", scheme, Modifier.align(Alignment.TopStart).width(64.dp)) { onBack() }
             if (loadFailed) {
-                TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.align(Alignment.Center), maxLines = 3)
+                TapeText(Copy.KIT_WONT_OPEN, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.align(Alignment.Center), maxLines = 3)
             }
         }
         return
