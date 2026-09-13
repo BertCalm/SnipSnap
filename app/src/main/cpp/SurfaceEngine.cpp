@@ -253,6 +253,7 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
     // happened to drift to, not at its head.
     if (f.gate && !gated_) {
         for (int32_t i = 0; i < kMaxSources; ++i) phase_[i] = 0.0;
+        crushRetrigger_ = true;
     }
     gated_ = f.gate;
     gain_.setTarget(f.gate ? 1.0f : 0.0f);
@@ -358,15 +359,28 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         // integer downsample count - crushPhase_ crosses a threshold that
         // itself glides with crush, so there is no added snap on top of
         // the crush's own stair-stepped texture as a corner blend moves
-        // through it. crush = 0 holds every sample (holdSamples = 1) at
-        // close to full 14-bit resolution, i.e. transparent; crush = 1
-        // holds for 25 samples at as few as ~8 levels.
-        crushPhase_ += 1.0f;
-        const float holdSamples = 1.0f + crush * 24.0f;
-        if (crushPhase_ >= holdSamples) {
-            crushPhase_ = std::fmod(crushPhase_, holdSamples);
-            const float levels = std::exp2(14.0f - crush * 11.0f);
-            heldCrush_ = std::round(v0 * levels) / levels;
+        // through it. crush = 0 bypasses the hold/quantise entirely
+        // (exactly transparent, not just close to it - a corner that has
+        // never touched this macro must reproduce the legacy waveform
+        // bit-for-bit, since quantising even at "off" would quietly
+        // change every corner shipped before crush existed); crush = 1
+        // holds for 25 samples at as few as ~8 levels. crushRetrigger_
+        // (see its own declaration) forces an immediate re-latch on a
+        // fresh touch-down rather than carrying a hold in from whatever
+        // the previous note last latched.
+        if (crush <= 0.0f) {
+            heldCrush_ = v0;
+            crushPhase_ = 0.0f;
+            crushRetrigger_ = false;
+        } else {
+            crushPhase_ += 1.0f;
+            const float holdSamples = 1.0f + crush * 24.0f;
+            if (crushRetrigger_ || crushPhase_ >= holdSamples) {
+                crushPhase_ = crushRetrigger_ ? 0.0f : std::fmod(crushPhase_, holdSamples);
+                crushRetrigger_ = false;
+                const float levels = std::exp2(14.0f - crush * 11.0f);
+                heldCrush_ = std::round(v0 * levels) / levels;
+            }
         }
 
         // Drive: a soft clip with its make-up baked in, so DRIVE is a colour and not a volume knob.

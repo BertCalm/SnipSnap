@@ -195,10 +195,15 @@ object SurfaceStore {
         val corners = obj["corners"]?.arr()?.map { c ->
             val o = c.obj()
             fun macro(name: String) = o[name]?.num()?.toFloat() ?: throw JsonException("corner has no $name")
-            // crush/echo are absent on a file saved before they existed -
-            // 0 (transparent, dry) there, same backward-compatible
-            // "absent means off" shape as secondPad/thirdPad/fourthPad.
-            fun newMacro(name: String) = o[name]?.num()?.toFloat() ?: 0f
+            // crush/echo default to 0 (transparent, dry) only when the key
+            // is truly absent - a file saved before they existed, the same
+            // backward-compatible shape as secondPad/thirdPad/fourthPad.
+            // `o[name] != null` here means the key is *present* (even as
+            // an explicit JSON null): a malformed or wrong-typed present
+            // value still goes through macro()'s own throwing path rather
+            // than being silently swallowed into "off" (Copilot review,
+            // PR #197).
+            fun newMacro(name: String) = if (o[name] != null) macro(name) else 0f
             Corner(
                 macro("pitch"), macro("cutoff"), macro("resonance"), macro("drive"),
                 newMacro("crush"), newMacro("echo"),

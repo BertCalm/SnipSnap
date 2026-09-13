@@ -157,9 +157,15 @@ private:
     // CRUSH's own state: a sample-and-hold accumulator (crushPhase_ crosses
     // a continuously-variable threshold rather than an integer downsample
     // count, so gliding the macro never snaps the hold length) and the
-    // currently-held, currently-quantised sample.
+    // currently-held, currently-quantised sample. crushRetrigger_ is set on
+    // every touch-down (see applyControl) and consumed by the very next
+    // renderMono sample, forcing an immediate re-latch from that note's own
+    // first sample rather than a hold still carrying the previous note's
+    // value - the same reasoning phase_'s own touch-down reset already
+    // applies to sample playback (Copilot review, PR #197).
     float crushPhase_ = 0.0f;
     float heldCrush_ = 0.0f;
+    bool crushRetrigger_ = false;
 
     // ECHO's delay line: a fixed-length ring buffer, sized to kDelayTimeMs
     // in the constructor (at the default sampleRate_, so it is never empty

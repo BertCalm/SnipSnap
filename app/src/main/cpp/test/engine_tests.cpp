@@ -1044,8 +1044,51 @@ TEST(surface_engine_crush_quantises_a_dc_level_the_more_it_is_turned_up) {
     const float transparent = settle(0.0f);
     const float crushed = settle(1.0f);
     // crush=1's ~8-level step is coarse enough to snap 0.33 measurably;
-    // crush=0's ~14-bit step is far below anything this test could see.
+    // crush=0 bypasses quantisation entirely (see renderMono), so
+    // `transparent` is exactly 0.33 run through drive/filter/gain, not
+    // merely close to it.
     CHECK(std::fabs(crushed - transparent) > 0.005f);
+}
+
+TEST(surface_engine_crush_holds_samples_and_kills_alternation_above_the_hold_rate) {
+    // The quantisation test above deliberately uses a signal that never
+    // changes, so it cannot see CRUSH's *other* half - sample-and-hold.
+    // A square wave that flips sign every 10 samples does: at crush = 1
+    // each hold spans ~25 samples, more than two full periods of the
+    // wave, so most of its sign flips get eaten inside a single held
+    // value and never reach the filter at all. Counting sign changes in
+    // the settled output - not amplitude, which a pure hold does not
+    // change - isolates exactly that effect: an implementation that
+    // dropped crushPhase_ and only quantised would still flip on every
+    // sample and fail this test even while passing the one above.
+    auto countCrossings = [](const std::vector<float>& v) {
+        int crossings = 0;
+        for (size_t i = 1; i < v.size(); ++i) {
+            if ((v[i] > 0.0f) != (v[i - 1] > 0.0f)) ++crossings;
+        }
+        return crossings;
+    };
+    auto settle = [](float crush) {
+        SurfaceEngine e(kRate);
+        std::vector<float> square(100);
+        for (int i = 0; i < 100; ++i) square[i] = (i % 10 < 5) ? 0.5f : -0.5f;
+        e.loadSample(square.data(), square.size(), kRate);
+        e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, crush, 0.0f});
+        ControlFrame f;
+        f.mode = 2;
+        f.gate = true;
+        f.a = 1.0f; f.b = f.c = f.d = 0.0f;
+        e.pushControl(f);
+        for (int i = 0; i < 300; ++i) callback(e, 64);  // let gain/filter settle
+        std::vector<float> out;
+        for (int i = 0; i < 100; ++i) out = callback(e, 64);
+        return out;
+    };
+
+    const int transparentCrossings = countCrossings(settle(0.0f));
+    const int crushedCrossings = countCrossings(settle(1.0f));
+    CHECK(transparentCrossings > 500);              // the wave's own ~5-sample half-period, largely intact
+    CHECK(crushedCrossings < transparentCrossings / 2);  // most flips eaten by the ~25-sample hold
 }
 
 TEST(surface_engine_echo_repeats_after_the_delay_and_only_when_wet) {
@@ -1083,6 +1126,57 @@ TEST(surface_engine_echo_repeats_after_the_delay_and_only_when_wet) {
 
     CHECK(run(0.0f) < 1e-4f);   // dry: released is released, nothing left to hear
     CHECK(run(1.0f) > 0.01f);   // wet: the tail is still there, ringing on its own
+}
+
+TEST(surface_engine_echo_repeats_specifically_after_the_fixed_delay_time) {
+    // The test above only proves *something* is audible somewhere in a
+    // wide window - a materially different delay length would still
+    // pass it. This one finds exactly where the repeat lands: a brief
+    // blip (gate open a handful of callbacks, then fully released)
+    // rather than a long tone gives one localised feature to look for a
+    // delayed copy of.
+    SurfaceEngine e(kRate);
+    std::vector<float> tone(200, 0.9f);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f});  // fully wet
+    ControlFrame on;
+    on.mode = 2;
+    on.gate = true;
+    on.a = 1.0f; on.b = on.c = on.d = 0.0f;
+    e.pushControl(on);
+    for (int i = 0; i < 10; ++i) callback(e, 64);  // a short, mostly gain-open blip
+
+    ControlFrame off = on;
+    off.gate = false;
+    e.pushControl(off);
+
+    // Render continuously from here (elapsed = 0 at the moment of
+    // release) far enough to bracket the expected repeat at 10560
+    // samples (220 ms at kRate); extract the left channel only -
+    // callback's own output is stereo-interleaved.
+    std::vector<float> elapsed;
+    while (elapsed.size() < 16000) {
+        auto chunk = callback(e, 64);
+        for (size_t i = 0; i < chunk.size(); i += 2) elapsed.push_back(chunk[i]);
+    }
+
+    // Skip the first 1500 samples (~31 ms) - the blip's own release
+    // tail, not its echo - before looking for the repeat's peak. Between
+    // there and the repeat the delay line is reading back pure silence
+    // (this is the first note this engine has ever played, so a full
+    // 220 ms ago is still the buffer's original zero-fill), so there is
+    // nothing else in this window for the search to mistake for it.
+    size_t peakIndex = 1500;
+    float peakValue = 0.0f;
+    for (size_t i = 1500; i < elapsed.size(); ++i) {
+        if (std::fabs(elapsed[i]) > peakValue) { peakValue = std::fabs(elapsed[i]); peakIndex = i; }
+    }
+    CHECK(peakValue > 0.01f);  // the repeat is actually audible
+    // ±1500 samples (~31 ms) absorbs the gain envelope's own
+    // attack/release shaping the blip, while still failing on a
+    // materially different delay length.
+    CHECK(peakIndex > 10560 - 1500);
+    CHECK(peakIndex < 10560 + 1500);
 }
 
 TEST(surface_engine_survives_a_reading_that_is_not_a_number) {

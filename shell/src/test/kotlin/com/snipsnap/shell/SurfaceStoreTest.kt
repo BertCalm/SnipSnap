@@ -119,6 +119,33 @@ class SurfaceStoreTest {
     }
 
     @Test
+    fun `a present but malformed crush or echo is refused, not silently read as off`() {
+        // Unlike an absent key (the test above), a key that is *there*
+        // with the wrong type is exactly what pitch/cutoff/resonance/drive
+        // already refuse - crush/echo follow the same rule rather than
+        // quietly defaulting a torn value to 0.
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0,"crush":0,"echo":"bad"},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0,"crush":null,"echo":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+    }
+
+    @Test
     fun `crush and echo round-trip alongside the older macros`() {
         val withFx = Corner(0.5f, 0.5f, 0.5f, 0.5f, crush = 0.4f, echo = 0.7f)
         SurfaceStore.save(temp, Settings(padSlot = 1, corners = listOf(withFx, withFx, withFx, withFx)))
