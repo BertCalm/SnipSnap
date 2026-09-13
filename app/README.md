@@ -160,6 +160,18 @@ logcat tag to grab when something is wrong.
   come back - a stepped corner is stored exactly like a captured one (the
   same `corners` field in `surface.json`), so it is still there, though
   the PRESET row itself starts unarmed again (arming doesn't persist).
+  Then stage 5, a real CRUSH and ECHO in the engine itself: PRESET ►
+  through to "ECHO +" or "ECHO -" (now genuinely wet) and morph a corner
+  toward it - repeats should be audible roughly a fifth of a second
+  behind the dry sound, and should keep ringing on their own for a
+  moment after you lift off the pad, fading rather than cutting off
+  with the touch. SET A..D still captures crush/echo the same way it
+  captures pitch/cutoff/resonance/drive when the mode is MORPH or
+  VECTOR - blend toward a crushed/echoing corner, SET a fresh one, and
+  the fresh capture should carry the same crush/echo the blend was
+  playing. CLEAN/DARK/LOW/HOT and LBP +/LBP - stay untouched (no crush,
+  no echo) - the whole pad should sound exactly as before this stage
+  existed until a corner actually carries a nonzero crush or echo.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad

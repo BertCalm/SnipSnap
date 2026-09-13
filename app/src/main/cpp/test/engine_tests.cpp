@@ -1018,6 +1018,73 @@ TEST(surface_engine_morph_tilt_reaches_the_filter) {
     CHECK(lo != hi);
 }
 
+TEST(surface_engine_crush_quantises_a_dc_level_the_more_it_is_turned_up) {
+    // A DC level that is not a "nice" fraction at a coarse quantisation
+    // step, so crush moving it is measurable rather than a coincidence.
+    // A flat, unchanging signal isolates CRUSH's *quantisation* half from
+    // its sample-and-hold half - sample-and-hold has nothing to do to a
+    // signal that never changes anyway (see renderMono's own comment).
+    auto settle = [](float crush) {
+        SurfaceEngine e(kRate);
+        std::vector<float> tone(100, 0.33f);
+        e.loadSample(tone.data(), tone.size(), kRate);
+        e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, crush, 0.0f});
+        ControlFrame f;
+        f.mode = 2;
+        f.gate = true;
+        f.a = 1.0f; f.b = f.c = f.d = 0.0f;
+        e.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 400; ++i) out = callback(e, 64);
+        float sum = 0.0f;
+        for (float v : out) sum += v;
+        return sum / static_cast<float>(out.size());
+    };
+
+    const float transparent = settle(0.0f);
+    const float crushed = settle(1.0f);
+    // crush=1's ~8-level step is coarse enough to snap 0.33 measurably;
+    // crush=0's ~14-bit step is far below anything this test could see.
+    CHECK(std::fabs(crushed - transparent) > 0.005f);
+}
+
+TEST(surface_engine_echo_repeats_after_the_delay_and_only_when_wet) {
+    // A tone held open, then released - once truly silent (the gate fully
+    // closed), anything still audible can only be the delay line's own
+    // stored tail, fed by the *gated* signal while the note was actually
+    // sounding (see renderMono's own reasoning: this is why a released
+    // touch's echoes keep ringing instead of cutting off with the gate,
+    // and also why an unplayed pad never bleeds a phantom loop into it).
+    // 400 callbacks (25600 samples) comfortably exceeds one full delay
+    // length (220 ms => 10560 samples at kRate) so the ring buffer's
+    // write pointer is guaranteed to wrap back through the loud segment
+    // it recorded at least once inside the window this test checks.
+    auto run = [](float echo) {
+        SurfaceEngine e(kRate);
+        std::vector<float> tone(2000, 0.5f);
+        e.loadSample(tone.data(), tone.size(), kRate);
+        e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, 0.0f, echo});
+        ControlFrame on;
+        on.mode = 2;
+        on.gate = true;
+        on.a = 1.0f; on.b = on.c = on.d = 0.0f;
+        e.pushControl(on);
+        for (int i = 0; i < 20; ++i) callback(e, 64);  // long enough for the gain envelope to fully open
+
+        ControlFrame off = on;
+        off.gate = false;
+        e.pushControl(off);
+        for (int i = 0; i < 40; ++i) callback(e, 64);  // and fully close again
+
+        float peakAfterRelease = 0.0f;
+        for (int i = 0; i < 400; ++i) peakAfterRelease = std::max(peakAfterRelease, peak(callback(e, 64)));
+        return peakAfterRelease;
+    };
+
+    CHECK(run(0.0f) < 1e-4f);   // dry: released is released, nothing left to hear
+    CHECK(run(1.0f) > 0.01f);   // wet: the tail is still there, ringing on its own
+}
+
 TEST(surface_engine_survives_a_reading_that_is_not_a_number) {
     // A gravity sensor may report NaN, and TILT is resonance in XYZ. Before
     // the door, one such frame was permanent: the smoothers latch NaN
@@ -1060,7 +1127,7 @@ TEST(surface_engine_corner_that_is_not_a_number_falls_back) {
     std::vector<float> tone(100, 0.5f);
     e.loadSample(tone.data(), tone.size(), kRate);
     const float nan = std::nanf("");
-    e.setCorner(0, MacroState{nan, nan, nan, nan});
+    e.setCorner(0, MacroState{nan, nan, nan, nan, nan, nan});
     ControlFrame f;
     f.mode = 2;
     f.gate = true;

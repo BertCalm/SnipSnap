@@ -15,6 +15,13 @@ namespace snipsnap {
 namespace {
 constexpr float kPi = 3.14159265358979f;
 
+// ECHO's fixed delay line: 220 ms (a short-to-medium slapback-to-echo
+// range) at 35% feedback (several audible repeats before it fades under
+// the noise floor, not a runaway loop). Only the corner-blended `echo`
+// macro ever changes what you hear of it (the wet mix) - see renderMono.
+constexpr float kDelayTimeMs = 220.0f;
+constexpr float kDelayFeedback = 0.35f;
+
 /**
  * 0..1, and NaN-safe: the test is written `!(v > 0)` rather than `v < 0`
  * so a NaN lands on 0 instead of sailing through - `NaN < 0` and
@@ -46,6 +53,14 @@ inline float pitchRatio(float macro) { return std::exp2((clamp01(macro) - 0.5f) 
 
 SurfaceEngine::SurfaceEngine(int32_t preferredSampleRate)
     : preferredRate_(preferredSampleRate), scratch_(kScratchFrames, 0.0f) {
+    // Sized here too, not only in start(), at the member's own default
+    // sampleRate_ (48000) - renderMono indexes delayBuffer_[delayWrite_]
+    // unconditionally on every sample, so onAudioReady must never see it
+    // empty. start() resizes it again once the device's real rate is
+    // known; nothing here needs to survive that (delayWrite_ is 0 in
+    // both places). The host test suite calls onAudioReady directly and
+    // never start() at all, which is exactly the case this guards.
+    delayBuffer_.assign(std::max<size_t>(static_cast<size_t>(kDelayTimeMs * 0.001f * static_cast<float>(sampleRate_)), 1), 0.0f);
     // std::atomic's default constructor is trivial in C++17 and does not
     // reliably value-initialize the contained pointer - set every slot to
     // nullptr explicitly rather than trust an array member initializer.
@@ -54,12 +69,12 @@ SurfaceEngine::SurfaceEngine(int32_t preferredSampleRate)
         retired_[i].store(nullptr, std::memory_order_relaxed);
     }
     // The four corners of the morph pad, before the UI says otherwise:
-    // A clean, B dark, C low and thick, D hot.
+    // A clean, B dark, C low and thick, D hot - none crushed or echoed.
     const MacroState defaults[4] = {
-        {0.5f, 1.0f, 0.0f, 0.0f},
-        {0.5f, 0.25f, 0.3f, 0.1f},
-        {0.25f, 0.6f, 0.5f, 0.4f},
-        {0.75f, 0.85f, 0.2f, 0.9f},
+        {0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f},
+        {0.5f, 0.25f, 0.3f, 0.1f, 0.0f, 0.0f},
+        {0.25f, 0.6f, 0.5f, 0.4f, 0.0f, 0.0f},
+        {0.75f, 0.85f, 0.2f, 0.9f, 0.0f, 0.0f},
     };
     for (int i = 0; i < 4; ++i) setCorner(i, defaults[i]);
 }
@@ -93,11 +108,21 @@ bool SurfaceEngine::start() {
     cutoff_.configure(10.0f, fs);
     resonance_.configure(10.0f, fs);
     drive_.configure(10.0f, fs);
+    crush_.configure(10.0f, fs);
+    echo_.configure(10.0f, fs);
     for (auto& w : sampleWeight_) w.configure(10.0f, fs);
     gain_.configure(50.0f, fs);
     gain_.snap(0.0f);
     untilCoefficients_ = 0;
     ic1eq_ = ic2eq_ = 0.0f;
+    crushPhase_ = 0.0f;
+    heldCrush_ = 0.0f;
+    // Sized to the rate the device actually gave us, not preferredRate_ -
+    // resized (and zeroed, so a restart never plays back the previous
+    // session's tail) every time start() runs, same as the filter state above.
+    const size_t delaySamples = static_cast<size_t>(kDelayTimeMs * 0.001f * fs);
+    delayBuffer_.assign(std::max<size_t>(delaySamples, 1), 0.0f);
+    delayWrite_ = 0;
 
     const oboe::Result started = stream_->requestStart();
     if (started != oboe::Result::OK) {
@@ -145,6 +170,8 @@ void SurfaceEngine::setCorner(int index, const MacroState& state) {
     corners_[index][1].store(control01(state.cutoff, 1.0f), std::memory_order_relaxed);
     corners_[index][2].store(control01(state.resonance, 0.0f), std::memory_order_relaxed);
     corners_[index][3].store(control01(state.drive, 0.0f), std::memory_order_relaxed);
+    corners_[index][4].store(control01(state.crush, 0.0f), std::memory_order_relaxed);
+    corners_[index][5].store(control01(state.echo, 0.0f), std::memory_order_relaxed);
 }
 
 // ---- audio thread from here down ---------------------------------------------
@@ -167,12 +194,14 @@ void SurfaceEngine::adoptPendingSample(int32_t slot) {
 
 MacroState SurfaceEngine::morphed(const ControlFrame& f) const {
     const float w[4] = {f.a, f.b, f.c, f.d};
-    MacroState out{0.0f, 0.0f, 0.0f, 0.0f};
+    MacroState out{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     for (int i = 0; i < 4; ++i) {
         out.pitch += w[i] * corners_[i][0].load(std::memory_order_relaxed);
         out.cutoff += w[i] * corners_[i][1].load(std::memory_order_relaxed);
         out.resonance += w[i] * corners_[i][2].load(std::memory_order_relaxed);
         out.drive += w[i] * corners_[i][3].load(std::memory_order_relaxed);
+        out.crush += w[i] * corners_[i][4].load(std::memory_order_relaxed);
+        out.echo += w[i] * corners_[i][5].load(std::memory_order_relaxed);
     }
     // Tilt nudges resonance on top of the blend, the same half-weighted
     // amount XY gives it (see the XY case below) - a flat phone (tilt
@@ -209,6 +238,8 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
     cutoff_.setTarget(control01(target.cutoff, 1.0f));
     resonance_.setTarget(control01(target.resonance, 0.0f));
     drive_.setTarget(control01(target.drive, 0.0f));
+    crush_.setTarget(control01(target.crush, 0.0f));
+    echo_.setTarget(control01(target.echo, 0.0f));
     sampleWeight_[0].setTarget(control01(f.sampleA, 1.0f));
     sampleWeight_[1].setTarget(control01(f.sampleB, 0.0f));
     sampleWeight_[2].setTarget(control01(f.sampleC, 0.0f));
@@ -263,6 +294,8 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         cutoff_.next();
         resonance_.next();
         const float drive = drive_.next();
+        const float crush = crush_.next();
+        const float echo = echo_.next();
         const float gain = gain_.next();
         const float w0 = sampleWeight_[0].next();
         const float w1 = sampleWeight_[1].next();
@@ -320,9 +353,25 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
                          (w2Loaded * wInv) * readSlot(2, fs, pr) +
                          (w3Loaded * wInv) * readSlot(3, fs, pr);
 
+        // CRUSH: sample-and-hold downsampling plus shrinking quantisation
+        // levels, both continuous functions of the macro rather than an
+        // integer downsample count - crushPhase_ crosses a threshold that
+        // itself glides with crush, so there is no added snap on top of
+        // the crush's own stair-stepped texture as a corner blend moves
+        // through it. crush = 0 holds every sample (holdSamples = 1) at
+        // close to full 14-bit resolution, i.e. transparent; crush = 1
+        // holds for 25 samples at as few as ~8 levels.
+        crushPhase_ += 1.0f;
+        const float holdSamples = 1.0f + crush * 24.0f;
+        if (crushPhase_ >= holdSamples) {
+            crushPhase_ = std::fmod(crushPhase_, holdSamples);
+            const float levels = std::exp2(14.0f - crush * 11.0f);
+            heldCrush_ = std::round(v0 * levels) / levels;
+        }
+
         // Drive: a soft clip with its make-up baked in, so DRIVE is a colour and not a volume knob.
         const float pre = 1.0f + drive * 15.0f;
-        const float driven = std::tanh(v0 * pre) / std::tanh(pre * 0.5f + 0.5f);
+        const float driven = std::tanh(heldCrush_ * pre) / std::tanh(pre * 0.5f + 0.5f);
 
         // The lowpass.
         const float v3 = driven - ic2eq_;
@@ -331,7 +380,22 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         ic1eq_ = 2.0f * v1 - ic1eq_;
         ic2eq_ = 2.0f * v2 - ic2eq_;
 
-        out[i] = v2 * gain * 0.8f;
+        // ECHO: a fixed-length ring buffer read and written through the
+        // same rotating index, delayBuffer_.size() samples apart - that
+        // length *is* the delay time, so there is no separate offset to
+        // keep in sync with it (see delayBuffer_'s own declaration). Fed
+        // with `gated`, not v2 directly: silence must stay silence going
+        // in, so a released touch lets an already-ringing tail decay on
+        // its own via kDelayFeedback rather than the loop echoing into
+        // itself for ever while nobody is touching the pad. `echo` is
+        // only ever the wet MIX read out here, never the time or
+        // feedback - see kDelayTimeMs/kDelayFeedback's own comment.
+        const float gated = v2 * gain;
+        const float wet = delayBuffer_[delayWrite_];
+        delayBuffer_[delayWrite_] = gated + wet * kDelayFeedback;
+        delayWrite_ = (delayWrite_ + 1) % delayBuffer_.size();
+
+        out[i] = (gated + wet * echo) * 0.8f;
     }
 }
 

@@ -27,7 +27,7 @@ object NativeSurface {
         a: Float, b: Float, c: Float, d: Float,
         sampleA: Float, sampleB: Float, sampleC: Float, sampleD: Float, gate: Boolean,
     )
-    external fun setCorner(handle: Long, index: Int, pitch: Float, cutoff: Float, resonance: Float, drive: Float)
+    external fun setCorner(handle: Long, index: Int, pitch: Float, cutoff: Float, resonance: Float, drive: Float, crush: Float, echo: Float)
     external fun armPrint(handle: Long, maxFrames: Int): Boolean
     external fun printState(handle: Long): Int
     external fun stopPrint(handle: Long): FloatArray?

@@ -35,13 +35,16 @@ struct MacroState {
     float cutoff = 1.0f;     // 80 Hz .. 16 kHz, exponential
     float resonance = 0.0f;
     float drive = 0.0f;
+    float crush = 0.0f;      // 0 = transparent, 1 = heavily bit/rate-reduced
+    float echo = 0.0f;       // 0 = dry, 1 = fully wet - a fixed-time delay's own mix, never its time
 };
 
 /**
  * The tactile surface's voice: one looping sample through pitch, a
- * state-variable lowpass and a drive stage, every macro fed from the UI
- * through a lock-free ring and de-zippered per sample. Oboe owns the
- * thread; this class owns nothing that allocates on it.
+ * bitcrusher, a drive stage, a state-variable lowpass and a fixed-time
+ * echo, every macro fed from the UI through a lock-free ring and
+ * de-zippered per sample. Oboe owns the thread; this class owns nothing
+ * that allocates on it.
  *
  * Threading, in one place:
  *  - UI thread: `start`/`stop`, `loadSample`, `pushControl`, `setCorner`,
@@ -136,11 +139,13 @@ private:
     // false -> true edge) is told apart from a touch merely held - see
     // applyControl.
     bool gated_ = false;
-    std::atomic<float> corners_[4][4];  // [corner][pitch, cutoff, resonance, drive]
+    // [corner][pitch, cutoff, resonance, drive, crush, echo] - see MacroState.
+    static constexpr int32_t kMacroCount = 6;
+    std::atomic<float> corners_[4][kMacroCount];
 
     // Per-sample smoothing of every macro plus the gate and the four
     // sample-blend weights (index i glides toward sampleA/B/C/D for slot i).
-    ParameterSmoother pitch_, cutoff_, resonance_, drive_, gain_;
+    ParameterSmoother pitch_, cutoff_, resonance_, drive_, crush_, echo_, gain_;
     ParameterSmoother sampleWeight_[kMaxSources];
 
     // The filter (Cytomic trapezoidal SVF), coefficients refreshed every kControlInterval samples.
@@ -148,6 +153,24 @@ private:
     float ic1eq_ = 0.0f, ic2eq_ = 0.0f;
     float svfA1_ = 0.0f, svfA2_ = 0.0f, svfA3_ = 0.0f;
     int32_t untilCoefficients_ = 0;
+
+    // CRUSH's own state: a sample-and-hold accumulator (crushPhase_ crosses
+    // a continuously-variable threshold rather than an integer downsample
+    // count, so gliding the macro never snaps the hold length) and the
+    // currently-held, currently-quantised sample.
+    float crushPhase_ = 0.0f;
+    float heldCrush_ = 0.0f;
+
+    // ECHO's delay line: a fixed-length ring buffer, sized to kDelayTimeMs
+    // in the constructor (at the default sampleRate_, so it is never empty
+    // for a caller that renders without ever starting a real stream - see
+    // the constructor's own comment) and again in start() once the device's
+    // real rate is known. Reading and writing through the same rotating
+    // index is the whole delay - the buffer's own length is the time, so
+    // there is no separate "how far back" offset to keep in sync with it.
+    // See renderMono.
+    std::vector<float> delayBuffer_;
+    size_t delayWrite_ = 0;
 
     // Pre-sized scratch so the callback never allocates; larger bursts render in chunks.
     static constexpr size_t kScratchFrames = 4096;
