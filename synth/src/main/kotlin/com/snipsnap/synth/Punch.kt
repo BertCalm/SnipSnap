@@ -177,4 +177,41 @@ internal object Punch {
         boostEnvelope(buf, amount, rate)
         rescaleToLoudness(buf, amount, before, rate)
     }
+
+    /**
+     * The full U6-aware application (docs/SYNTH_UPGRADE.md) an oversampling
+     * engine needs: [saturate] and [boostEnvelope] together on [raw] while
+     * it's still at [renderRate], decimated down to [rate] via
+     * [Dsp.decimate], renormalized (decimation's own resampling kernel
+     * loses some of a signal's peak wherever it relies on energy above the
+     * new Nyquist a correct band-limiting filter has to remove), then
+     * [rescaleToLoudness] against the pre-PUNCH reference - measured by
+     * decimating and normalizing an unshaped copy of [raw], the same
+     * treatment the real buffer gets, rather than on [raw] itself, which
+     * would target a systematically louder reference than any decimated
+     * render could actually reach.
+     *
+     * Extracted out of [Thump]'s own render loop so the ordering that keeps
+     * U6 actually anti-alias-safe - both stages before [Dsp.decimate], only
+     * the (genuinely spectrally transparent) final rescale after - is
+     * proven once, here, rather than trusted at each call site: PunchTest
+     * exercises this function directly, so a future edit that moves either
+     * stage back across the decimate boundary fails that test, not just a
+     * hand-reconstructed stand-in for it.
+     */
+    fun applyOversampled(raw: FloatArray, amount: Float, renderRate: Int, rate: Int): FloatArray {
+        val before = if (amount > 0f) {
+            val reference = Dsp.decimate(raw.copyOf(), rate)
+            Dsp.normalize(reference)
+            Loudness.of(Snip(reference, channels = 1, sampleRate = rate))
+        } else {
+            0f
+        }
+        saturate(raw, amount, renderRate)
+        boostEnvelope(raw, amount, renderRate)
+        val buf = Dsp.decimate(raw, rate)
+        Dsp.normalize(buf)
+        rescaleToLoudness(buf, amount, before, rate)
+        return buf
+    }
 }
