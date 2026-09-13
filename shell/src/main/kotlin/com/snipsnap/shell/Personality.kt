@@ -126,8 +126,14 @@ object Copy {
      * re-runs the same deterministic detector over the same source and
      * mode. Agrees with [CHOP_AUTO_NONE], which points AUTO's own
      * no-onset refusal at the same door.
+     *
+     * "OPEN CUT AND": GRID is a segment inside the CUT box, which is
+     * closed by default, so a toast that said only "TRY GRID" pointed at
+     * a control the screen was not showing (September wiring review,
+     * finding 14). [CHOP_AUTO_NONE] does not need the phrase: AUTO is in
+     * the same box, so the box is open when that toast fires.
      */
-    const val CHOP_NO_HITS = "NO HITS IN THIS SOURCE. TRY GRID, OR TAPE SOMETHING ELSE."
+    const val CHOP_NO_HITS = "NO HITS IN THIS SOURCE. OPEN CUT AND TRY GRID, OR TAPE SOMETHING ELSE."
     /** CHOP SHOP's empty face when the classic (non-melodic) layout itself fails — agrees with the toast `ChopScreen` fires alongside it, whose own fallback is this same "couldn't lay out the slices". */
     const val CHOP_LAYOUT_FAILED = "CHOP FAILED. COULDN'T LAY OUT THE SLICES."
 
@@ -748,16 +754,23 @@ object Copy {
     const val LADDER_NO_TEMPO = "NO TEMPO HEARD. THE LADDER NEEDS A PULSE."
 
     // ---- HUM THE CHOP: your mouth places and names the cuts (docs/CHOP_CONTROLS.md §10) ----
-    /** HUM with the mic not armed: the hum comes off the same ring GRAB and HOLD use. */
-    const val HUM_NOT_LISTENING = "ARM THE MIC FIRST. HUM LISTENS THROUGH IT."
-    /** HUM with the INSIDE armed: that ring holds other apps' playback, not a mouth. */
-    const val HUM_INSIDE = "THE INSIDE IS ARMED, NOT THE MIC. HUM NEEDS THE MIC."
+    /**
+     * HUM with the mic not armed: the hum comes off the same ring GRAB and
+     * HOLD use, and the one door that starts that ring is the `LISTEN ·
+     * MIC` button on KITS. Named exactly as the button reads, tab and all:
+     * this toast used to say "ARM THE MIC" and nothing on any screen is
+     * called ARM, so a first-time user was stopped two tabs from the door
+     * with no route to it (September wiring review, finding 4).
+     */
+    const val HUM_NOT_LISTENING = "THE MIC ISN'T LISTENING. LISTEN · MIC ON KITS, THEN HUM."
+    /** HUM with the INSIDE armed: that ring holds other apps' playback, not a mouth. The route is the same button. */
+    const val HUM_INSIDE = "THE INSIDE IS LISTENING, NOT THE MIC. LISTEN · MIC ON KITS, THEN HUM."
     /** HUM began: the tape is playing, the mic is on. Headphones, or the mic hears the tape and every hit matches. */
     const val HUM_START = "HUM ALONG. HEADPHONES ON, OR THE MIC HEARS THE TAPE TOO. TAP HUM AGAIN TO STOP."
     /** The bench's readout while the hum runs. */
     const val HUM_BUSY = "HUMMING…"
-    /** The ring gave nothing back: it stopped listening while the hum ran. */
-    const val HUM_NOTHING = "THE MIC HEARD NOTHING. ARM IT, THEN HUM AGAIN."
+    /** The ring gave nothing back: it stopped listening while the hum ran, so the way back is the same button. */
+    const val HUM_NOTHING = "THE MIC HEARD NOTHING. LISTEN · MIC ON KITS, THEN HUM AGAIN."
     /** Every mouth sound missed every hit (or none was heard). */
     const val HUM_NO_MATCH = "NOTHING YOU HUMMED LANDED ON A HIT. HEADPHONES ON, AND HUM WITH THE BEAT."
     /** SEND of a hummed chop: the beat you sang went onto the new kit as its groove. */

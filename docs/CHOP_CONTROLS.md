@@ -304,10 +304,11 @@ CATCH's own list (`CatchModel.hitsOf`, every hit, not a chop's sixteen).
 
 ### In the hand
 
-- **HUM** on the mode row. With the mic not armed it refuses and says
-  which door arms it (`ARM THE MIC FIRST. HUM LISTENS THROUGH IT.`); the
-  hum comes off the same sixty-second ring GRAB and HOLD use, so nothing
-  starts or stops recording here. Armed, the source plays from its top
+- **HUM** on the mode row. With the mic not listening it refuses and
+  names the door, as the button reads and where it is (`THE MIC ISN'T
+  LISTENING. LISTEN · MIC ON KITS, THEN HUM.`); the hum comes off the
+  same sixty-second ring GRAB and HOLD use, so nothing starts or stops
+  recording here. Armed, the source plays from its top
   through the same voice that auditions a row, the readout reads
   `HUMMING…`, and the toast says what to do: `HUM ALONG. HEADPHONES ON,
   OR THE MIC HEARS THE TAPE TOO. TAP HUM AGAIN TO STOP.`
@@ -407,10 +408,10 @@ inside 64 bars there is no clip.
 ### What it says
 
 
-- `ARM THE MIC FIRST. HUM LISTENS THROUGH IT.` · `THE INSIDE IS ARMED, NOT THE MIC. HUM NEEDS THE MIC.`
+- `THE MIC ISN'T LISTENING. LISTEN · MIC ON KITS, THEN HUM.` · `THE INSIDE IS LISTENING, NOT THE MIC. LISTEN · MIC ON KITS, THEN HUM.`
 - `HUM ALONG. HEADPHONES ON, OR THE MIC HEARS THE TAPE TOO. TAP HUM AGAIN TO STOP.`
 - `HUMMING…` (the readout) · `6 HUMMED` · header `6 SLICES — HUMMED`
-- `THE MIC HEARD NOTHING. ARM IT, THEN HUM AGAIN.`
+- `THE MIC HEARD NOTHING. LISTEN · MIC ON KITS, THEN HUM AGAIN.`
 - `NOTHING YOU HUMMED LANDED ON A HIT. HEADPHONES ON, AND HUM WITH THE BEAT.`
 - `HUMMED: 6 CUTS, YOUR MOUTH'S WORDS ON THEM. 2 SOUNDS FOUND NO HIT.`
 - `SENT. THE BEAT YOU SANG IS ON THE GRID: 2 BARS. GROOVE HAS IT.`
