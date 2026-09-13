@@ -549,6 +549,52 @@ TEST(surface_engine_blends_samples_at_each_vertex_by_weight) {
     CHECK(std::fabs(settle(0.5f, 0.5f, 0.0f)) < 0.01f);   // slot 0/1 even split cancels exactly
 }
 
+TEST(surface_engine_blends_the_fourth_vertex_too_and_renormalises_over_all_four) {
+    // Same idea as the three-vertex test above, extended to slot 3
+    // (sampleD, the pad's base-mid vertex) - proving the fourth slot is
+    // actually wired into renderMono's blend and its renormalisation,
+    // not just accepted by applyControl and then dropped on the floor.
+    SurfaceEngine e(kRate);
+    std::vector<float> hi(100, 0.9f), lo(100, -0.9f);
+    e.loadSample(hi.data(), hi.size(), kRate, 0);
+    e.loadSample(lo.data(), lo.size(), kRate, 3);
+    ControlFrame f;
+    f.mode = 0;
+    f.gate = true;
+    f.x = 0.5f;
+    f.y = 1.0f;  // cutoff wide open
+    f.sampleA = 0.0f; f.sampleD = 1.0f;  // slot 3 alone
+    e.pushControl(f);
+    std::vector<float> out;
+    for (int i = 0; i < 400; ++i) out = callback(e, 64);
+    float sum = 0.0f;
+    for (float v : out) sum += v;
+    CHECK(sum / static_cast<float>(out.size()) < -0.5f);  // loud negative, full level
+
+    // All four loaded, all four weighted evenly: a loud positive (slot 0)
+    // and a loud negative (slot 3) at equal weight cancel toward zero the
+    // same way the three-vertex even split does above.
+    SurfaceEngine four(kRate);
+    std::vector<float> quietA(100, 0.3f), quietB(100, -0.3f);
+    four.loadSample(hi.data(), hi.size(), kRate, 0);
+    four.loadSample(quietA.data(), quietA.size(), kRate, 1);
+    four.loadSample(quietB.data(), quietB.size(), kRate, 2);
+    four.loadSample(lo.data(), lo.size(), kRate, 3);
+    ControlFrame even;
+    even.mode = 0;
+    even.gate = true;
+    even.x = 0.5f;
+    even.y = 1.0f;
+    even.sampleA = even.sampleB = even.sampleC = even.sampleD = 1.0f;  // a quarter each
+    four.pushControl(even);
+    std::vector<float> evenOut;
+    for (int i = 0; i < 400; ++i) evenOut = callback(four, 64);
+    float evenSum = 0.0f;
+    for (float v : evenOut) evenSum += v;
+    // 0.9 + 0.3 - 0.3 - 0.9, each at a quarter weight, is exactly zero.
+    CHECK(std::fabs(evenSum / static_cast<float>(evenOut.size())) < 0.01f);
+}
+
 TEST(surface_engine_treats_sample_weights_as_a_ratio_not_absolute_level) {
     // renderMono renormalises sampleA/B/C every frame, so a caller sending
     // {2, 0, 0} must sound identical to {1, 0, 0} - the blend is a ratio
@@ -608,6 +654,71 @@ TEST(surface_engine_one_loaded_slot_plays_full_level_at_any_touch_weight) {
     CHECK_NEAR(atApex, atCentre, 0.02f);
 }
 
+TEST(surface_engine_unloaded_pad4_falls_back_to_the_pad2_pad3_blend_at_the_seam) {
+    // Copilot review finding on PR #192: TouchSurface.sampleWeights splits
+    // the pad into two half-triangles meeting at PAD4's own vertex, so
+    // PAD2 and PAD3's raw weights both collapse toward zero approaching
+    // it - unlike an ordinary unloaded slot, there is no third loaded
+    // neighbour left there for the plain renormalisation to fall back on,
+    // so without this fallback an unloaded PAD4 (the common case - it is
+    // brand new) leaves a real hole at the bottom-centre of the pad, not
+    // just the single point PAD4's own vertex sits at. At that exact
+    // point (TouchSurface.sampleWeights(0.5, 0) = {0, 0, 0, 1}), the fix
+    // must recover the even PAD2/PAD3 split this seam gave before PAD4
+    // existed, at full level - not near silence.
+    //
+    // Two different *same-sign* DC levels, not a cancelling +/- pair: a
+    // constant source has no peak distinct from its average, so an evenly
+    // *cancelling* pair would read back at 0 whether the fallback fired or
+    // the point were genuinely silent - indistinguishable, and no test at
+    // all. Rather than predict the exact level through the drive stage's
+    // tanh and the filter (both nonlinear/dynamic), this compares against
+    // each source played alone: monotonic, DC-preserving stages keep an
+    // even blend of the two strictly between them - nowhere near the 0.0
+    // true silence would settle to.
+    // loadPad2/loadPad3 name which of PAD2 (always sourced from the 0.8
+    // buffer, slot 1) and PAD3 (always the 0.2 buffer, slot 2) is loaded -
+    // rather than generic slot-index arguments, so a transposed call can't
+    // quietly load the wrong level into the wrong slot the way it did the
+    // first time this test was written (caught by CI, not by this file).
+    auto settle = [](float sampleA, float sampleB, float sampleC, float sampleD, bool loadPad2, bool loadPad3) {
+        SurfaceEngine e(kRate);
+        std::vector<float> hi(100, 0.8f), lo(100, 0.2f);
+        if (loadPad2) e.loadSample(hi.data(), hi.size(), kRate, 1);
+        if (loadPad3) e.loadSample(lo.data(), lo.size(), kRate, 2);
+        ControlFrame f;
+        f.mode = 0;
+        f.gate = true;
+        f.x = 0.5f;
+        f.y = 1.0f;  // cutoff wide open
+        f.sampleA = sampleA; f.sampleB = sampleB; f.sampleC = sampleC; f.sampleD = sampleD;
+        e.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 400; ++i) out = callback(e, 64);
+        float sum = 0.0f;
+        for (float v : out) sum += v;
+        return sum / static_cast<float>(out.size());
+    };
+
+    // PAD2 (0.8) and PAD3 (0.2) each alone, slot 0/3 unloaded either way -
+    // the same door every other case in this file already plays through.
+    const float pad2Alone = settle(0.0f, 1.0f, 0.0f, 0.0f, true, false);
+    const float pad3Alone = settle(0.0f, 0.0f, 1.0f, 0.0f, false, true);
+    CHECK(pad2Alone > pad3Alone + 0.05f);  // sanity: the levels are actually different
+
+    // At the seam (per sampleWeights(0.5, 0) = {0, 0, 0, 1}), with slot 3
+    // unloaded: the fallback must land strictly between the two, not at
+    // the 0.0 a broken (or missing) fallback would settle to.
+    const float atSeam = settle(0.0f, 0.0f, 0.0f, 1.0f, true, true);
+    CHECK(atSeam > pad3Alone + 0.02f);
+    CHECK(atSeam < pad2Alone - 0.02f);
+
+    // With only PAD2 loaded (PAD3 also empty), the whole fallback share
+    // goes to PAD2 alone - the same level as PAD2 played directly.
+    const float onlyPad2AtSeam = settle(0.0f, 0.0f, 0.0f, 1.0f, true, false);
+    CHECK_NEAR(onlyPad2AtSeam, pad2Alone, 0.02f);
+}
+
 TEST(surface_engine_unloaded_slots_are_silent_until_loaded) {
     // A weight aimed entirely at a slot nothing was ever loaded into must
     // settle to honest silence, not NaN. "Settle" matters here as much as
@@ -646,6 +757,7 @@ TEST(surface_engine_unloaded_slots_are_silent_until_loaded) {
     };
     checkSlotSilentUntilLoaded(&ControlFrame::sampleB);
     checkSlotSilentUntilLoaded(&ControlFrame::sampleC);
+    checkSlotSilentUntilLoaded(&ControlFrame::sampleD);
 }
 
 TEST(surface_engine_morph_blends_the_corners) {
@@ -831,28 +943,30 @@ TEST(surface_engine_retrigger_resets_every_loaded_slot) {
     // A touch-down must restart every loaded source, not just whichever
     // ones currently dominate the blend - otherwise moving the puck after
     // a retrigger could reveal a source that quietly kept drifting the
-    // whole time it sat inaudible. Three different ramps (not copies of
-    // one) so a bug that only resets slot 0 (or 0 and 1) still shows up
+    // whole time it sat inaudible. Four different ramps (not copies of
+    // one) so a bug that only resets some of the slots still shows up
     // even though a drifting slot's own weight is small - the two runs'
     // tails just fail to match.
     auto run = [](int32_t releaseCallbacks) {
         SurfaceEngine e(kRate);
-        std::vector<float> rampA(1000), rampB(1000), rampC(1000);
+        std::vector<float> rampA(1000), rampB(1000), rampC(1000), rampD(1000);
         for (size_t i = 0; i < rampA.size(); ++i) {
             rampA[i] = static_cast<float>(i) / 1000.0f - 0.5f;
             rampB[i] = 0.5f - static_cast<float>(i) / 1000.0f;
             rampC[i] = std::fmod(static_cast<float>(i) / 333.0f, 1.0f) - 0.5f;
+            rampD[i] = std::fmod(static_cast<float>(i) / 177.0f, 1.0f) - 0.5f;
         }
         e.loadSample(rampA.data(), rampA.size(), kRate, 0);
         e.loadSample(rampB.data(), rampB.size(), kRate, 1);
         e.loadSample(rampC.data(), rampC.size(), kRate, 2);
+        e.loadSample(rampD.data(), rampD.size(), kRate, 3);
 
         ControlFrame on;
         on.mode = 0;
         on.gate = true;
         on.x = 0.5f;
         on.y = 1.0f;
-        on.sampleA = on.sampleB = on.sampleC = 1.0f;  // renormalised to a third each
+        on.sampleA = on.sampleB = on.sampleC = on.sampleD = 1.0f;  // renormalised to a quarter each
         e.pushControl(on);
         for (int i = 0; i < 137; ++i) callback(e, 64);
 
