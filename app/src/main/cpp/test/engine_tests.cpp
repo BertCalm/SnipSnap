@@ -455,7 +455,13 @@ TEST(surface_engine_second_slot_is_silent_until_loaded) {
     }  // let mix_ (and the gain envelope) glide all the way to their targets
     float p = 0.0f;
     for (int i = 0; i < 100; ++i) p = std::max(p, peak(callback(e, 64)));
-    CHECK_NEAR(p, 0.0f, 1e-6f);
+    // A one-pole glide never reaches its target bit-exactly in finite time
+    // (CI measured a ~2e-6 residual against a 1e-6 tolerance here) - 1e-4
+    // is still four orders of magnitude tighter than the ~0.14 this test
+    // catches when the glide hasn't happened at all, so it stays a real
+    // assertion without depending on exactly how many samples a given
+    // compiler's float rounding takes to underflow the rest of the way.
+    CHECK_NEAR(p, 0.0f, 1e-4f);
 }
 
 TEST(surface_engine_morph_blends_the_corners) {
