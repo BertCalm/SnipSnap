@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
@@ -114,16 +115,38 @@ object Thump {
         // afterward would silently rescale Punch's own loudness-matched
         // result right back to a fixed peak, undoing the "more PUNCH reshapes
         // the hit, it doesn't just make it louder" guarantee PunchTest
-        // proves for Punch.apply in isolation. Punch.saturate is the one
-        // exception to "after decimate": [Dsp.drive] is a nonlinearity and
-        // mints new harmonics right where it runs, so applying it after
-        // decimation would hand U6's whole anti-aliasing story right back to
-        // a raw oscillator's problem - those harmonics would alias into the
-        // audible band with nothing downstream left to band-limit them.
-        // Running it here, before decimate, means the same decimation step
-        // that cleans up the voice's own oscillators also catches this one.
+        // proves for Punch.apply in isolation.
         Dsp.normalize(raw)
+        // The pre-PUNCH reference Punch.rescaleToLoudness targets below:
+        // exactly what this voice's loudness would be with PUNCH off,
+        // i.e. decimate-then-normalize on an unshaped copy of `raw`,
+        // mirroring the two steps the real buffer still goes through
+        // further down. Measuring on `raw` itself (pre-decimate) instead
+        // would target a systematically louder reference than any decimated
+        // render could actually reach - decimation legitimately removes
+        // real energy, not just peak - quietly turning PUNCH into a level
+        // *cut* instead of a neutral reshape. Skipped when PUNCH is off:
+        // Punch.rescaleToLoudness would no-op anyway, and decimating twice
+        // for an unused reference is real, avoidable render cost.
+        val before = if (punch > 0f) {
+            val reference = Dsp.decimate(raw.copyOf(), RATE)
+            Dsp.normalize(reference)
+            Loudness.of(Snip(reference, channels = 1, sampleRate = RATE))
+        } else {
+            0f
+        }
+        // Punch.saturate/boostEnvelope's own exception to "after decimate":
+        // both are nonlinear or fast-changing enough to mint content outside
+        // the buffer's own band wherever they run (Dsp.drive is a static
+        // nonlinearity; the boost envelope changes quickly enough, and cuts
+        // off sharply enough, to add sidebands of its own), so applying
+        // either after decimation would hand U6's whole anti-aliasing story
+        // right back to a raw oscillator's problem, with nothing downstream
+        // left to remove what they create. Running both here, before
+        // decimate, means the same decimation step that cleans up the
+        // voice's own oscillators also catches these.
         Punch.saturate(raw, punch, renderRate)
+        Punch.boostEnvelope(raw, punch, renderRate)
         val buf = Dsp.decimate(raw, RATE)
         // Decimation's own resampling kernel loses some of the peak
         // normalize just set - a sharp, narrow peak (exactly what a naive
@@ -131,12 +154,14 @@ object Thump {
         // new Nyquist that a correct band-limiting filter has to remove, so
         // the true peak of the properly-decimated signal can land well
         // under 1. Renormalizing restores a full-scale reference before
-        // Punch.boost's own gain envelope and loudness-match run - matching
-        // what this line already did pre-U6, when Punch always saw a
-        // freshly peak-normalized buffer, never one decimation had quietly
-        // dimmed.
+        // Punch.rescaleToLoudness runs - matching what this line already
+        // did pre-U6, when Punch always saw a freshly peak-normalized
+        // buffer, never one decimation had quietly dimmed.
         Dsp.normalize(buf)
-        Punch.boost(buf, punch, RATE)
+        // A uniform gain, unlike saturate/boostEnvelope above, can't mint
+        // new frequency content - it's the one piece of Punch safe to keep
+        // after decimation, and the only one still needed here.
+        Punch.rescaleToLoudness(buf, punch, before, RATE)
         // The actual clipping safety net, run last: only steps in if the
         // transient boost pushed a sample past what's safe, same as
         // normalize always did for PUNCH amount 0.
