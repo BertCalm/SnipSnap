@@ -78,11 +78,16 @@ In `FxTest.kt`:
 ```kotlin
     @Test
     fun `the section table agrees with the hand-written fields`() {
+        // Structure, not a literal list: five later tasks add sections, and the
+        // exact rack order is pinned by the json-order test and by SPEED's own.
+        assertTrue(FxChain.SECTION_NAMES.isNotEmpty(), "the rack has no sections")
         assertEquals(
-            listOf("swell", "smear", "ghost", "eq", "squash", "crunch", "dub", "tape", "echo", "spring", "motion"),
-            FxChain.SECTION_NAMES,
+            FxChain.SECTION_NAMES.size,
+            FxChain.SECTION_NAMES.toSet().size,
+            "two sections share a name",
         )
         for (name in FxChain.SECTION_NAMES) {
+            assertTrue(FxChain.macrosOf(name).isNotEmpty(), "$name declares no macros")
             val macros = FxChain.macrosOf(name).associate { it.name to 0.7f }
             val chain = FxChain().withSection(name, macros)
             assertEquals(macros, chain.section(name), "$name: withSection and section disagree")
@@ -341,8 +346,11 @@ In `FxTest.kt`:
                 val b = half.section(section)
                     ?: throw AssertionError("$name: AMT 0.5 dropped section $section entirely")
                 for ((macro, v) in a) {
+                    // "Moved", not "smaller": once macros have neutrals, a centered
+                    // macro below its neutral rises as AMT falls. Task 6's own test
+                    // pins the exact rule; this one only proves the section is seen.
                     assertTrue(
-                        b.getValue(macro) < v + 1e-6f,
+                        b.getValue(macro) != v,
                         "$name: AMT 0.5 left $section.$macro at $v - the section is not scaled",
                     )
                 }
@@ -1732,11 +1740,13 @@ object Speed {
         val frames = (snip.frameCount / speed).toInt().coerceAtLeast(1)
         val out = Dsp.readAt(snip, frames) { k -> (k * speed).toDouble() to 1f }
 
-        // Speed is not loudness: interpolation can overshoot, so hold the input's peak.
+        // Speed is not loudness. Matched both ways, like every other section:
+        // interpolation can overshoot, and a pitch-up that steps over the peak
+        // sample can undershoot — neither is a musical level change.
         var outPeak = 0f
         for (v in out.samples) { val a = abs(v); if (a > outPeak) outPeak = a }
         val inPeak = snip.peak()
-        if (inPeak > 0f && outPeak > inPeak) {
+        if (inPeak > 0f && outPeak > 0f) {
             val k = inPeak / outPeak
             for (i in out.samples.indices) out.samples[i] *= k
         }
