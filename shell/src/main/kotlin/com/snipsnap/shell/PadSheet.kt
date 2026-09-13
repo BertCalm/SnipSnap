@@ -105,9 +105,9 @@ object PadSheet {
      * SWELL, BODY, WOBBLE — none of those needed a friendlier word).
      */
     private val DISPLAY_LABELS: Map<String, String> = mapOf(
-        // Row four's key-snap treatment: the card's own word for "retuned".
+        // The keyed family's key-snap treatment: the card's own word for "retuned".
         "TUNE" to "IN KEY",
-        // The capstan release / spin-up pair, not a transport STOP/START.
+        // The capstan release / spin-up pair, not a DAW's STOP/START.
         "STOP" to "SPIN DOWN",
         "START" to "SPIN UP",
         // One tape-delay repeat.
@@ -216,7 +216,7 @@ object PadSheet {
     }
 
     /**
-     * What tapping [segment] does, on either row, or null for [NONE].
+     * What tapping [segment] does, whatever row it sits on, or null for [NONE].
      * Throws on a segment the card does not draw.
      */
     fun treatmentFor(segment: String): Treatment? {
@@ -242,7 +242,7 @@ object PadSheet {
      */
     fun segmentFor(era: String): String? = ERA_FOR.entries.firstOrNull { it.value == era }?.key
 
-    /** The phone ruling, rows two and three: "crushed" lights no segment; the provenance line says so. */
+    /** The phone ruling on the rack's characters: "crushed" lights no segment; the provenance line says so. */
     fun segmentForCharacter(character: String): String? =
         CHARACTER_FOR.entries.firstOrNull { it.value == character }?.key
 
