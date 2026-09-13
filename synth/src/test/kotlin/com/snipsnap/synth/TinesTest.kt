@@ -30,6 +30,21 @@ class TinesTest {
     }
 
     @Test
+    fun `voices ramp in over the first millisecond instead of jumping to full level`() {
+        // Regression for the U5 attack ramp (Dsp.Env, 1ms), applied here via
+        // the shared strike() primitive plus ZAP and TOY's own inline loops:
+        // proves every voice actually starts at zero and rises, not just
+        // that it's clean - reverting to the old instant onset would still
+        // pass every other TINES test in this file.
+        for (voice in TinesVoice.entries) {
+            val snip = Tines.render(voice)
+            assertEquals(0f, snip.samples[0], "$voice: first sample should start at zero, not jump to full level")
+            val earlyPeak = snip.samples.take((Dsp.RATE * 0.02f).toInt()).maxOf { kotlin.math.abs(it) }
+            assertTrue(earlyPeak > 0.1f, "$voice: should audibly ramp up within the first 20ms, peaked at $earlyPeak")
+        }
+    }
+
+    @Test
     fun `scrambles are reproducible and stay in range`() {
         for (voice in TinesVoice.entries) {
             assertEquals(Tines.scramble(voice, Random(4)), Tines.scramble(voice, Random(4)))

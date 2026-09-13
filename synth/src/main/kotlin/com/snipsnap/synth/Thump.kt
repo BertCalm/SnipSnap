@@ -135,7 +135,14 @@ object Thump {
             phase += f / RATE
             var s = env.at(t) * sin(2.0 * PI * phase).toFloat()
             if (t < 0.005f) {
-                s += click * 0.6f * clickLp.lp(noise.next(), 1000f) * (1f - t / 0.005f) * 2f
+                // Copilot's review of this PR: the click burst had its own
+                // 5ms linear fade-out but no fade-in, so it still jumped to
+                // full level at t=0 even after the sine body was declicked.
+                // Its own attack, independent of the body's decay-bearing
+                // env above - stacking t60's decay onto a 5ms burst would
+                // also quietly change the click's shape, not just declick it.
+                val clickAttack = (t / 0.001f).coerceAtMost(1f)
+                s += click * 0.6f * clickLp.lp(noise.next(), 1000f) * (1f - t / 0.005f) * clickAttack * 2f
             }
             out[i] = Dsp.drive(s, driveAmt)
         }

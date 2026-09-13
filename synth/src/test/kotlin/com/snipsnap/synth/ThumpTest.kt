@@ -80,6 +80,25 @@ class ThumpTest {
     }
 
     @Test
+    fun `voices ramp in over the first millisecond instead of jumping to full level`() {
+        // Regression for the U5 attack ramp (Dsp.Env, 1ms): proves the
+        // ramped voices actually start at zero and rise, not just that
+        // they're clean - reverting to the old instant onset would still
+        // pass every other THUMP test in this file. CLAP and RIM are the
+        // documented exceptions (their own envelopes don't fit the
+        // primitive), so they're excluded here rather than asserted false.
+        val ramped = ThumpVoice.entries - ThumpVoice.CLAP - ThumpVoice.RIM
+        for (voice in ramped) {
+            // Max CLICK so KICK's own click burst - which needed its own
+            // fix for this same bug - is exercised too, not just its sine.
+            val snip = Thump.render(voice, mapOf("CLICK" to 1f))
+            assertEquals(0f, snip.samples[0], "$voice: first sample should start at zero, not jump to full level")
+            val earlyPeak = snip.samples.take((Dsp.RATE * 0.02f).toInt()).maxOf { kotlin.math.abs(it) }
+            assertTrue(earlyPeak > 0.1f, "$voice: should audibly ramp up within the first 20ms, peaked at $earlyPeak")
+        }
+    }
+
+    @Test
     fun `scramble is reproducible and always playable`() {
         for (voice in ThumpVoice.entries) {
             val a = Thump.scramble(voice, Random(42))
