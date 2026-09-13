@@ -258,6 +258,31 @@ class FathomTest {
     }
 
     @Test
+    fun `scramble honors temperature and near`() {
+        // The Dsp.scrambleNear boundary contract, proven end-to-end through
+        // Fathom's own wiring: see DspTest for the central proof.
+        for (voice in FathomVoice.entries) {
+            val preset = FathomPresets.forVoice(voice).first()
+            assertEquals(
+                preset.macros,
+                Fathom.scramble(voice, Random(1), temperature = 0f, near = preset),
+                "$voice: temperature 0 should return the seed untouched",
+            )
+            val flat = Fathom.scramble(voice, Random(1), temperature = 1f, near = preset)
+            assertTrue(flat.values.all { it in 0f..1f }, "$voice: temperature 1 left the 0..1 range")
+
+            // Copilot's review of this PR: at temperature >= 1 with no
+            // `near`, scramble must not spend a random draw picking a
+            // preset first - see ThumpTest's own version of this test.
+            assertEquals(
+                Dsp.scrambleNear(Fathom.defaults(voice), 1f, Random(2)),
+                Fathom.scramble(voice, Random(2), temperature = 1f),
+                "$voice: temperature 1 with no near must not consume a preset-selection draw",
+            )
+        }
+    }
+
+    @Test
     fun `factory defaults classify consistently`() {
         // Labels observed, not predicted — see `a bass note is harmonic, not
         // noise` for why we don't guess them.
