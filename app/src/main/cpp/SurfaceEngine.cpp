@@ -61,6 +61,8 @@ SurfaceEngine::SurfaceEngine(int32_t preferredSampleRate)
     // both places). The host test suite calls onAudioReady directly and
     // never start() at all, which is exactly the case this guards.
     delayBuffer_.assign(std::max<size_t>(static_cast<size_t>(kDelayTimeMs * 0.001f * static_cast<float>(sampleRate_)), 1), 0.0f);
+    // Same reasoning, same place - see configureSpring's own comment.
+    configureSpring(static_cast<float>(sampleRate_));
     // std::atomic's default constructor is trivial in C++17 and does not
     // reliably value-initialize the contained pointer - set every slot to
     // nullptr explicitly rather than trust an array member initializer.
@@ -69,14 +71,34 @@ SurfaceEngine::SurfaceEngine(int32_t preferredSampleRate)
         retired_[i].store(nullptr, std::memory_order_relaxed);
     }
     // The four corners of the morph pad, before the UI says otherwise:
-    // A clean, B dark, C low and thick, D hot - none crushed or echoed.
+    // A clean, B dark, C low and thick, D hot - none crushed, echoed or sprung.
     const MacroState defaults[4] = {
-        {0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-        {0.5f, 0.25f, 0.3f, 0.1f, 0.0f, 0.0f},
-        {0.25f, 0.6f, 0.5f, 0.4f, 0.0f, 0.0f},
-        {0.75f, 0.85f, 0.2f, 0.9f, 0.0f, 0.0f},
+        {0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
+        {0.5f, 0.25f, 0.3f, 0.1f, 0.0f, 0.0f, 0.0f},
+        {0.25f, 0.6f, 0.5f, 0.4f, 0.0f, 0.0f, 0.0f},
+        {0.75f, 0.85f, 0.2f, 0.9f, 0.0f, 0.0f, 0.0f},
     };
     for (int i = 0; i < 4; ++i) setCorner(i, defaults[i]);
+}
+
+void SurfaceEngine::configureSpring(float fs) {
+    for (int32_t c = 0; c < kSpringCombCount; ++c) {
+        springCombBuf_[c].assign(std::max<size_t>(static_cast<size_t>(kSpringCombMs[c] * 0.001f * fs), 1), 0.0f);
+        springCombWrite_[c] = 0;
+        springCombLp_[c] = 0.0f;
+        // -60 dB at kSpringRt60Seconds, whatever this comb's own length -
+        // synth/Spring.kt's own combFb formula is `10^(-3d/(rt60*fs))`,
+        // where d is the comb's length in samples; d/fs is this comb's
+        // delay in *seconds* (kSpringCombMs[c] * 0.001), which the sample
+        // rate cancels out of entirely, so the same feedback gain applies
+        // whatever fs turns out to be.
+        springCombFb_[c] = std::pow(10.0f, -3.0f * (kSpringCombMs[c] * 0.001f) / kSpringRt60Seconds);
+    }
+    for (int32_t a = 0; a < kSpringAllpassCount; ++a) {
+        springApBuf_[a].assign(std::max<size_t>(static_cast<size_t>(kSpringAllpassMs[a] * 0.001f * fs), 1), 0.0f);
+        springApWrite_[a] = 0;
+    }
+    springLpA_ = 1.0f - std::exp(-2.0f * kPi * std::min(kSpringToneHz, 0.45f * fs) / fs);
 }
 
 SurfaceEngine::~SurfaceEngine() {
@@ -110,6 +132,7 @@ bool SurfaceEngine::start() {
     drive_.configure(10.0f, fs);
     crush_.configure(10.0f, fs);
     echo_.configure(10.0f, fs);
+    spring_.configure(10.0f, fs);
     for (auto& w : sampleWeight_) w.configure(10.0f, fs);
     gain_.configure(50.0f, fs);
     gain_.snap(0.0f);
@@ -123,6 +146,7 @@ bool SurfaceEngine::start() {
     const size_t delaySamples = static_cast<size_t>(kDelayTimeMs * 0.001f * fs);
     delayBuffer_.assign(std::max<size_t>(delaySamples, 1), 0.0f);
     delayWrite_ = 0;
+    configureSpring(fs);
 
     const oboe::Result started = stream_->requestStart();
     if (started != oboe::Result::OK) {
@@ -172,6 +196,7 @@ void SurfaceEngine::setCorner(int index, const MacroState& state) {
     corners_[index][3].store(control01(state.drive, 0.0f), std::memory_order_relaxed);
     corners_[index][4].store(control01(state.crush, 0.0f), std::memory_order_relaxed);
     corners_[index][5].store(control01(state.echo, 0.0f), std::memory_order_relaxed);
+    corners_[index][6].store(control01(state.spring, 0.0f), std::memory_order_relaxed);
 }
 
 // ---- audio thread from here down ---------------------------------------------
@@ -194,7 +219,7 @@ void SurfaceEngine::adoptPendingSample(int32_t slot) {
 
 MacroState SurfaceEngine::morphed(const ControlFrame& f) const {
     const float w[4] = {f.a, f.b, f.c, f.d};
-    MacroState out{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    MacroState out{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     for (int i = 0; i < 4; ++i) {
         out.pitch += w[i] * corners_[i][0].load(std::memory_order_relaxed);
         out.cutoff += w[i] * corners_[i][1].load(std::memory_order_relaxed);
@@ -202,6 +227,7 @@ MacroState SurfaceEngine::morphed(const ControlFrame& f) const {
         out.drive += w[i] * corners_[i][3].load(std::memory_order_relaxed);
         out.crush += w[i] * corners_[i][4].load(std::memory_order_relaxed);
         out.echo += w[i] * corners_[i][5].load(std::memory_order_relaxed);
+        out.spring += w[i] * corners_[i][6].load(std::memory_order_relaxed);
     }
     // Tilt nudges resonance on top of the blend, the same half-weighted
     // amount XY gives it (see the XY case below) - a flat phone (tilt
@@ -240,6 +266,7 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
     drive_.setTarget(control01(target.drive, 0.0f));
     crush_.setTarget(control01(target.crush, 0.0f));
     echo_.setTarget(control01(target.echo, 0.0f));
+    spring_.setTarget(control01(target.spring, 0.0f));
     sampleWeight_[0].setTarget(control01(f.sampleA, 1.0f));
     sampleWeight_[1].setTarget(control01(f.sampleB, 0.0f));
     sampleWeight_[2].setTarget(control01(f.sampleC, 0.0f));
@@ -297,6 +324,7 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         const float drive = drive_.next();
         const float crush = crush_.next();
         const float echo = echo_.next();
+        const float spring = spring_.next();
         const float gain = gain_.next();
         const float w0 = sampleWeight_[0].next();
         const float w1 = sampleWeight_[1].next();
@@ -409,7 +437,43 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         delayBuffer_[delayWrite_] = gated + wet * kDelayFeedback;
         delayWrite_ = (delayWrite_ + 1) % delayBuffer_.size();
 
-        out[i] = (gated + wet * echo) * 0.8f;
+        // SPRING: SIZE and TONE are fixed (see kSpringCombMs's own
+        // comment), so only the wet MIX - this macro - is ever
+        // corner-blended, the same reasoning ECHO's own comment gives.
+        // Four parallel combs (each summing its own delayed, TONE-
+        // lowpassed feedback back into the loop) build the density; two
+        // series allpasses smear it into a tail - synth/Spring.kt's
+        // offline network, ported to run one sample at a time instead of
+        // baking a whole buffer at once. Fed with `gated`, not v2
+        // directly, for the same reason ECHO is: silence in stays silence,
+        // and a released touch's tail rings down on its own via each
+        // comb's own feedback rather than cutting off with the gate. The
+        // network runs unconditionally every sample regardless of
+        // `spring`'s own value (like the delay line above) - multiplying
+        // its output by `spring` in the final sum is what makes spring = 0
+        // exactly silent, not the network itself switching off, so a
+        // corner that has never touched this macro reproduces the legacy
+        // waveform bit-for-bit.
+        float springWet = 0.0f;
+        for (int32_t c = 0; c < kSpringCombCount; ++c) {
+            const size_t idx = springCombWrite_[c];
+            const float fed = springCombBuf_[c][idx];
+            springWet += fed;
+            springCombLp_[c] += springLpA_ * (fed - springCombLp_[c]);
+            springCombBuf_[c][idx] = gated + springCombFb_[c] * springCombLp_[c];
+            springCombWrite_[c] = (idx + 1) % springCombBuf_[c].size();
+        }
+        springWet *= 0.25f;
+        for (int32_t a = 0; a < kSpringAllpassCount; ++a) {
+            const size_t idx = springApWrite_[a];
+            const float delayed = springApBuf_[a][idx];
+            const float fedIn = springWet + kSpringAllpassGain * delayed;
+            springApBuf_[a][idx] = fedIn;
+            springWet = delayed - kSpringAllpassGain * fedIn;
+            springApWrite_[a] = (idx + 1) % springApBuf_[a].size();
+        }
+
+        out[i] = (gated + wet * echo + springWet * spring) * 0.8f;
     }
 }
 

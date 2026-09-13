@@ -1188,6 +1188,77 @@ TEST(surface_engine_echo_repeats_specifically_after_the_fixed_delay_time) {
     CHECK(peakIndex < 10560 + 1500);
 }
 
+TEST(surface_engine_spring_rings_a_tail_and_only_when_wet) {
+    // Exactly ECHO's own transparency test, above, but for the reverb:
+    // once the gate is fully closed, anything still audible can only be
+    // the comb/allpass network's own stored energy, fed by the *gated*
+    // signal while the note was sounding (see renderMono's own reasoning -
+    // spring shares ECHO's exact logic here, right down to why a released
+    // touch's tail keeps ringing instead of cutting off with the gate).
+    // The network runs every sample regardless of `spring`'s own value
+    // (see renderMono); multiplying its output by spring = 0 in the final
+    // sum is what must silence it completely, not the network switching
+    // off - so this doubles as spring's own bit-exact-at-zero proof.
+    auto run = [](float spring) {
+        SurfaceEngine e(kRate);
+        std::vector<float> tone(2000, 0.5f);
+        e.loadSample(tone.data(), tone.size(), kRate);
+        e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, spring});
+        ControlFrame on;
+        on.mode = 2;
+        on.gate = true;
+        on.a = 1.0f; on.b = on.c = on.d = 0.0f;
+        e.pushControl(on);
+        for (int i = 0; i < 20; ++i) callback(e, 64);  // long enough for the gain envelope to fully open
+
+        ControlFrame off = on;
+        off.gate = false;
+        e.pushControl(off);
+        for (int i = 0; i < 40; ++i) callback(e, 64);  // and fully close again
+
+        float peakAfterRelease = 0.0f;
+        for (int i = 0; i < 400; ++i) peakAfterRelease = std::max(peakAfterRelease, peak(callback(e, 64)));
+        return peakAfterRelease;
+    };
+
+    CHECK(run(0.0f) < 1e-4f);   // dry: released is released, nothing left to hear
+    CHECK(run(1.0f) > 0.01f);   // wet: the room is still ringing on its own
+}
+
+TEST(surface_engine_spring_tail_decays_rather_than_looping_forever) {
+    // Every comb's own feedback gain is under 1 (derived from
+    // kSpringRt60Seconds - see configureSpring), so the tail must
+    // actually die down rather than ringing at a fixed level or growing -
+    // unlike ECHO's single repeat, there is no one moment to look for,
+    // only whether the energy
+    // shrinks between an early window and a much later one.
+    SurfaceEngine e(kRate);
+    std::vector<float> tone(2000, 0.5f);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f});  // fully wet
+    ControlFrame on;
+    on.mode = 2;
+    on.gate = true;
+    on.a = 1.0f; on.b = on.c = on.d = 0.0f;
+    e.pushControl(on);
+    for (int i = 0; i < 20; ++i) callback(e, 64);
+    ControlFrame off = on;
+    off.gate = false;
+    e.pushControl(off);
+    for (int i = 0; i < 40; ++i) callback(e, 64);
+
+    float peakEarly = 0.0f;
+    for (int i = 0; i < 100; ++i) peakEarly = std::max(peakEarly, peak(callback(e, 64)));  // the first ~130 ms of tail
+    // Several RT60s further on (kSpringRt60Seconds ~= 0.457 s): skip ahead
+    // without measuring, then measure a late window.
+    for (int i = 0; i < 2000; ++i) callback(e, 64);  // ~2.7 s of silence into the room
+    float peakLate = 0.0f;
+    for (int i = 0; i < 100; ++i) peakLate = std::max(peakLate, peak(callback(e, 64)));
+
+    CHECK(peakEarly > 0.01f);        // the room was actually excited
+    CHECK(peakLate < peakEarly / 4);  // and has decayed well down by ~2.7 s later, not sustained or growing
+}
+
 TEST(surface_engine_survives_a_reading_that_is_not_a_number) {
     // A gravity sensor may report NaN, and TILT is resonance in XYZ. Before
     // the door, one such frame was permanent: the smoothers latch NaN
@@ -1230,7 +1301,7 @@ TEST(surface_engine_corner_that_is_not_a_number_falls_back) {
     std::vector<float> tone(100, 0.5f);
     e.loadSample(tone.data(), tone.size(), kRate);
     const float nan = std::nanf("");
-    e.setCorner(0, MacroState{nan, nan, nan, nan, nan, nan});
+    e.setCorner(0, MacroState{nan, nan, nan, nan, nan, nan, nan});
     ControlFrame f;
     f.mode = 2;
     f.gate = true;

@@ -102,7 +102,7 @@ class SurfaceStoreTest {
     }
 
     @Test
-    fun `a file saved before crush or echo existed still loads, transparent and dry`() {
+    fun `a file saved before crush, echo or spring existed still loads, transparent and dry`() {
         File(temp, SurfaceStore.FILE_NAME).writeText(
             """{"version":1,"pad":3,"corners":[
                 {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
@@ -115,15 +115,16 @@ class SurfaceStoreTest {
         for (c in loaded.corners) {
             near(0f, c.crush)
             near(0f, c.echo)
+            near(0f, c.spring)
         }
     }
 
     @Test
-    fun `a present but malformed crush or echo is refused, not silently read as off`() {
+    fun `a present but malformed crush, echo or spring is refused, not silently read as off`() {
         // Unlike an absent key (the test above), a key that is *there*
         // with the wrong type is exactly what pitch/cutoff/resonance/drive
-        // already refuse - crush/echo follow the same rule rather than
-        // quietly defaulting a torn value to 0.
+        // already refuse - crush/echo/spring follow the same rule rather
+        // than quietly defaulting a torn value to 0.
         File(temp, SurfaceStore.FILE_NAME).writeText(
             """{"version":1,"pad":3,"corners":[
                 {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0,"crush":0,"echo":"bad"},
@@ -143,15 +144,26 @@ class SurfaceStoreTest {
             ]}""",
         )
         assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0,"crush":0,"echo":0,"spring":"bad"},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
     }
 
     @Test
-    fun `crush and echo round-trip alongside the older macros`() {
-        val withFx = Corner(0.5f, 0.5f, 0.5f, 0.5f, crush = 0.4f, echo = 0.7f)
+    fun `crush, echo and spring round-trip alongside the older macros`() {
+        val withFx = Corner(0.5f, 0.5f, 0.5f, 0.5f, crush = 0.4f, echo = 0.7f, spring = 0.6f)
         SurfaceStore.save(temp, Settings(padSlot = 1, corners = listOf(withFx, withFx, withFx, withFx)))
         val loaded = SurfaceStore.load(temp).corners.first()
         near(0.4f, loaded.crush)
         near(0.7f, loaded.echo)
+        near(0.6f, loaded.spring)
     }
 
     @Test
@@ -160,6 +172,8 @@ class SurfaceStoreTest {
         assertFailsWith<IllegalArgumentException> { Corner(Float.NaN, 0f, 0f, 0f) }
         assertFailsWith<IllegalArgumentException> { Corner(0f, 0f, 0f, 0f, crush = 1.2f) }
         assertFailsWith<IllegalArgumentException> { Corner(0f, 0f, 0f, 0f, echo = Float.NaN) }
+        assertFailsWith<IllegalArgumentException> { Corner(0f, 0f, 0f, 0f, spring = 1.2f) }
+        assertFailsWith<IllegalArgumentException> { Corner(0f, 0f, 0f, 0f, spring = Float.NaN) }
         assertFailsWith<IllegalArgumentException> { Settings(padSlot = 0) }
         assertFailsWith<IllegalArgumentException> { Settings(padSlot = 1, secondPadSlot = 0) }
         assertFailsWith<IllegalArgumentException> { Settings(padSlot = 1, thirdPadSlot = 0) }
@@ -179,15 +193,18 @@ class SurfaceStoreTest {
     fun `the preset library names LBP+ECHO+ECHO-LBP- distinctly`() {
         // design/surface-vector's boards sketch these four names in this
         // order (LBP +, ECHO +, ECHO -, LBP -) - the order is a promise a
-        // stepper can rely on, not an implementation detail. CRUSH and
-        // GLITCH (stage 6) are appended after them, not interleaved, so
-        // this original ordering promise still holds.
+        // stepper can rely on, not an implementation detail. CRUSH, GLITCH
+        // (stage 6) and SPRING (stage 7) are appended after them, not
+        // interleaved, so this original ordering promise still holds.
         assertEquals(
-            listOf("LBP +", "ECHO +", "ECHO -", "LBP -", "CRUSH +", "CRUSH -", "GLITCH +", "GLITCH -"),
+            listOf(
+                "LBP +", "ECHO +", "ECHO -", "LBP -", "CRUSH +", "CRUSH -",
+                "GLITCH +", "GLITCH -", "SPRING +", "SPRING -",
+            ),
             Corner.LIBRARY.map { it.name },
         )
-        // Eight distinct sounds, not eight names on fewer.
-        assertEquals(8, Corner.LIBRARY.map { it.corner }.distinct().size)
+        // Ten distinct sounds, not ten names on fewer.
+        assertEquals(10, Corner.LIBRARY.map { it.corner }.distinct().size)
         // The ECHO pair is the one telling itself apart from LBP by
         // actually using the delay the engine now has - LBP stays a pure
         // filter pair, crush/echo both off.
@@ -206,6 +223,13 @@ class SurfaceStoreTest {
         assertTrue(byName("GLITCH +").crush > 0f); assertTrue(byName("GLITCH +").echo > 0f)
         assertTrue(byName("GLITCH -").crush > byName("GLITCH +").crush)
         assertTrue(byName("GLITCH -").echo > byName("GLITCH +").echo)
+        // SPRING is a pure reverb pair - crush and echo both stay off, the
+        // same shape CRUSH has for the bitcrusher.
+        assertTrue(byName("SPRING +").spring > 0f)
+        assertTrue(byName("SPRING -").spring > byName("SPRING +").spring)
+        for (name in listOf("SPRING +", "SPRING -")) {
+            near(0f, byName(name).crush); near(0f, byName(name).echo)
+        }
     }
 
     @Test
@@ -242,6 +266,20 @@ class SurfaceStoreTest {
         val centre = Reading(0.5f, 0.5f, 0f, 0.25f, 0.25f, 0.25f, 0.25f, touching = true)
         val mid = Corner.from(Mode.MORPH, centre, 0.5f, corners)
         near(0.25f, mid.crush); near(0.25f, mid.echo)  // an even quarter each, same as pitch/drive above
+    }
+
+    @Test
+    fun `spring blends in MORPH exactly like crush and echo already do`() {
+        val corners = listOf(
+            Corner(0.5f, 0.5f, 0f, 0f, spring = 1f),
+            Corner.DARK,
+            Corner.LOW,
+            Corner.HOT,
+        )
+        val atA = Reading(0f, 1f, 0f, 1f, 0f, 0f, 0f, touching = true)  // 100% corner A
+        near(1f, Corner.from(Mode.MORPH, atA, 0.5f, corners).spring)
+        val centre = Reading(0.5f, 0.5f, 0f, 0.25f, 0.25f, 0.25f, 0.25f, touching = true)
+        near(0.25f, Corner.from(Mode.MORPH, centre, 0.5f, corners).spring)  // an even quarter, same as crush/echo above
     }
 
     @Test

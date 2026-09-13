@@ -46,7 +46,7 @@ jfloatArray Java_com_snipsnap_app_NativePads_stopPrint(JNIEnv*, jobject, jlong);
 jlong Java_com_snipsnap_app_NativeSurface_create(JNIEnv*, jobject, jint);
 void Java_com_snipsnap_app_NativeSurface_destroy(JNIEnv*, jobject, jlong);
 void Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv*, jobject, jlong, jfloatArray, jint, jint);
-void Java_com_snipsnap_app_NativeSurface_setCorner(JNIEnv*, jobject, jlong, jint, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat);
+void Java_com_snipsnap_app_NativeSurface_setCorner(JNIEnv*, jobject, jlong, jint, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat);
 jboolean Java_com_snipsnap_app_NativeSurface_armPrint(JNIEnv*, jobject, jlong, jint);
 jfloatArray Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv*, jobject, jlong);
 }
@@ -366,7 +366,7 @@ TEST(jni_surface_set_corner_forwards_crush_and_echo_without_swapping_them) {
         const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
         auto* surf = reinterpret_cast<SurfaceEngine*>(h);
         surf->loadSample(tone.data(), tone.size(), 48000);
-        Java_com_snipsnap_app_NativeSurface_setCorner(e, nullptr, h, 0, 0.5f, 1.0f, 0.0f, 0.0f, crush, echo);
+        Java_com_snipsnap_app_NativeSurface_setCorner(e, nullptr, h, 0, 0.5f, 1.0f, 0.0f, 0.0f, crush, echo, 0.0f);
         ControlFrame f;
         f.mode = 2;
         f.gate = true;
@@ -388,6 +388,65 @@ TEST(jni_surface_set_corner_forwards_crush_and_echo_without_swapping_them) {
 
     CHECK(tailPeakAfterRelease(1.0f, 0.0f) < 1e-4f);  // crush on, echo off: no tail
     CHECK(tailPeakAfterRelease(0.0f, 1.0f) > 0.01f);  // echo on, crush off: a real tail
+}
+
+TEST(jni_surface_set_corner_forwards_spring_without_swapping_it_with_echo) {
+    // setCorner gained a seventh float this stage - spring, appended right
+    // after echo. The same swap/drop risk the crush/echo test above
+    // guards against applies to this new neighbouring pair, but spring
+    // and echo both ring after release (unlike crush), so telling them
+    // apart needs a different signature than "has a tail at all": spring
+    // is diffuse and immediate - no built-in delay, so it is already at
+    // its loudest in the instant the gate closes - while echo is silent
+    // for its own fixed 220 ms round trip before its first repeat lands.
+    // Measuring right at release (well under 220 ms) isolates spring;
+    // measuring a window straddling 220-430 ms isolates echo's first
+    // repeat, by which point spring's own short default room (SIZE/TONE
+    // baked in - see SurfaceEngine.h's own comment) has already decayed
+    // well down. A swap lands one macro's value in the other's slot,
+    // which flips which of the two windows lights up; a drop leaves both
+    // windows reading whatever the *other*, untouched macro alone
+    // produces - either mistake fails at least one of the four checks
+    // below.
+    JNIEnv* e = env();
+    std::vector<float> tone(2000, 0.5f);
+
+    auto peakInWindow = [&](float echo, float spring, int extraCallbacksBeforeWindow) {
+        const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+        auto* surf = reinterpret_cast<SurfaceEngine*>(h);
+        surf->loadSample(tone.data(), tone.size(), 48000);
+        Java_com_snipsnap_app_NativeSurface_setCorner(e, nullptr, h, 0, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, echo, spring);
+        ControlFrame f;
+        f.mode = 2;
+        f.gate = true;
+        f.a = 1.0f; f.b = f.c = f.d = 0.0f;
+        surf->pushControl(f);
+        for (int i = 0; i < 20; ++i) pull(surf, 64);
+        ControlFrame off = f;
+        off.gate = false;
+        surf->pushControl(off);
+        for (int i = 0; i < 40; ++i) pull(surf, 64);
+        for (int i = 0; i < extraCallbacksBeforeWindow; ++i) pull(surf, 64);
+        float peak = 0.0f;
+        for (int i = 0; i < 100; ++i) {
+            auto out = pull(surf, 64);
+            for (float v : out) peak = std::max(peak, std::fabs(v));
+        }
+        Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+        return peak;
+    };
+
+    // Right at release (window ends ~133 ms in, comfortably under echo's
+    // 220 ms trip): spring's immediate diffuse energy shows; echo cannot
+    // have produced a repeat yet.
+    CHECK(peakInWindow(0.0f, 1.0f, 0) > 0.05f);   // spring on, echo off: rings immediately
+    CHECK(peakInWindow(1.0f, 0.0f, 0) < 0.01f);   // echo on, spring off: too early for a repeat
+
+    // 185 more callbacks (~247 ms) later, the window sits at 300-433 ms:
+    // echo's first repeat lands squarely inside it, while spring's own
+    // short room has already decayed well below its immediate peak.
+    CHECK(peakInWindow(1.0f, 0.0f, 185) > 0.05f);  // echo on, spring off: the repeat has landed
+    CHECK(peakInWindow(0.0f, 1.0f, 185) < 0.03f);  // spring on, echo off: mostly decayed by now
 }
 
 TEST(jni_drain_survives_a_jvm_that_cannot_allocate) {

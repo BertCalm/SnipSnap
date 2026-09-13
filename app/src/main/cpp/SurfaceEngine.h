@@ -37,14 +37,15 @@ struct MacroState {
     float drive = 0.0f;
     float crush = 0.0f;      // 0 = transparent, 1 = heavily bit/rate-reduced
     float echo = 0.0f;       // 0 = dry, 1 = fully wet - a fixed-time delay's own mix, never its time
+    float spring = 0.0f;     // 0 = dry, 1 = fully wet - a fixed-room reverb's own mix, never its size or tone
 };
 
 /**
  * The tactile surface's voice: one looping sample through pitch, a
- * bitcrusher, a drive stage, a state-variable lowpass and a fixed-time
- * echo, every macro fed from the UI through a lock-free ring and
- * de-zippered per sample. Oboe owns the thread; this class owns nothing
- * that allocates on it.
+ * bitcrusher, a drive stage, a state-variable lowpass, a fixed-time echo
+ * and a fixed-room spring reverb, every macro fed from the UI through a
+ * lock-free ring and de-zippered per sample. Oboe owns the thread; this
+ * class owns nothing that allocates on it.
  *
  * Threading, in one place:
  *  - UI thread: `start`/`stop`, `loadSample`, `pushControl`, `setCorner`,
@@ -139,13 +140,13 @@ private:
     // false -> true edge) is told apart from a touch merely held - see
     // applyControl.
     bool gated_ = false;
-    // [corner][pitch, cutoff, resonance, drive, crush, echo] - see MacroState.
-    static constexpr int32_t kMacroCount = 6;
+    // [corner][pitch, cutoff, resonance, drive, crush, echo, spring] - see MacroState.
+    static constexpr int32_t kMacroCount = 7;
     std::atomic<float> corners_[4][kMacroCount];
 
     // Per-sample smoothing of every macro plus the gate and the four
     // sample-blend weights (index i glides toward sampleA/B/C/D for slot i).
-    ParameterSmoother pitch_, cutoff_, resonance_, drive_, crush_, echo_, gain_;
+    ParameterSmoother pitch_, cutoff_, resonance_, drive_, crush_, echo_, spring_, gain_;
     ParameterSmoother sampleWeight_[kMaxSources];
 
     // The filter (Cytomic trapezoidal SVF), coefficients refreshed every kControlInterval samples.
@@ -177,6 +178,42 @@ private:
     // See renderMono.
     std::vector<float> delayBuffer_;
     size_t delayWrite_ = 0;
+
+    // SPRING's fixed room: a Schroeder (1962) network ported straight from
+    // synth/Spring.kt's offline design - four parallel combs (mutually
+    // prime delays) build the density, two series allpasses smear it into
+    // a tail, each comb's feedback running through a shared one-pole
+    // lowpass (TONE) so the room darkens as it rings. SIZE and TONE are
+    // baked in at that file's own defaults (0.35, 0.55) rather than
+    // exposed - continuously stretching a comb's own delay length while a
+    // finger drags a corner blend would detune its resonance the same way
+    // stretching ECHO's delay time would pitch-warble a repeat (see
+    // kDelayTimeMs above), so only the wet MIX - the `spring` macro - is
+    // ever corner-blended. The *Ms arrays are each comb/allpass's own
+    // fixed delay in milliseconds, not samples, because a comb's length
+    // as a *time* is what has to stay fixed across a sample-rate change,
+    // not its length in samples (see configureSpring). kSpringRt60Seconds
+    // is the shared decay time every comb's own feedback gain is derived
+    // from; the derivation (see configureSpring) works out sample-rate
+    // independent for the same reason the *Ms arrays are in milliseconds.
+    static constexpr int32_t kSpringCombCount = 4;
+    static constexpr int32_t kSpringAllpassCount = 2;
+    static constexpr float kSpringCombMs[kSpringCombCount] = {32.516f, 30.858f, 39.570f, 43.387f};
+    static constexpr float kSpringAllpassMs[kSpringAllpassCount] = {6.688f, 2.178f};
+    static constexpr float kSpringAllpassGain = 0.7f;
+    static constexpr float kSpringRt60Seconds = 0.457f;
+    static constexpr float kSpringToneHz = 4495.0f;
+
+    /** Sizes/clears every comb+allpass buffer and recomputes their feedback/lowpass coefficients for `fs` - the constructor and start() both call it, the same reason delayBuffer_ is sized in both (see the constructor's own comment). */
+    void configureSpring(float fs);
+
+    std::vector<float> springCombBuf_[kSpringCombCount];
+    size_t springCombWrite_[kSpringCombCount] = {};
+    float springCombLp_[kSpringCombCount] = {};  // one-pole feedback-path state, per comb
+    float springCombFb_[kSpringCombCount] = {};  // feedback gain per comb, from kSpringRt60Seconds
+    std::vector<float> springApBuf_[kSpringAllpassCount];
+    size_t springApWrite_[kSpringAllpassCount] = {};
+    float springLpA_ = 0.0f;  // the one-pole coefficient every comb's feedback path filters through
 
     // Pre-sized scratch so the callback never allocates; larger bursts render in chunks.
     static constexpr size_t kScratchFrames = 4096;
