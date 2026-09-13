@@ -104,6 +104,35 @@ object TouchSurface {
     }
 
     /**
+     * Barycentric weights for the pad's inscribed sample triangle - apex
+     * top-centre (slot 0), base-left (slot 1), base-right (slot 2), the
+     * same geometry `design/surface-vector`'s boards draw. Runs off the
+     * raw touch position, independent of [Mode] and [morphWeights]: the
+     * vector-synthesis idea is that a sample blend and an FX blend can
+     * both read the same finger at once, each its own overlay on one pad.
+     *
+     * Outside the triangle (the two top corners) one raw coordinate goes
+     * negative; clamping it to 0 and renormalising the rest keeps the
+     * blend continuous over the *whole* pad rather than leaving a region
+     * where it is undefined - there is deliberately no dead zone. Sums to
+     * 1 everywhere.
+     */
+    fun sampleWeights(x: Float, y: Float): Triple<Float, Float, Float> {
+        val px = x.coerceIn(0f, 1f)
+        val py = y.coerceIn(0f, 1f)
+        // Closed-form barycentric coordinates for this specific triangle
+        // (apex (0.5, 1), base (0, 0)-(1, 0)); always sum to 1 before clamping.
+        var w0 = py
+        var w1 = (1f - px) - 0.5f * py
+        var w2 = px - 0.5f * py
+        w0 = w0.coerceAtLeast(0f)
+        w1 = w1.coerceAtLeast(0f)
+        w2 = w2.coerceAtLeast(0f)
+        val sum = w0 + w1 + w2
+        return if (sum > 1e-6f) Triple(w0 / sum, w1 / sum, w2 / sum) else Triple(1f, 0f, 0f)
+    }
+
+    /**
      * A one-pole lowpass: `y += k·(x − y)` per step. [k] is the fraction of
      * the remaining distance closed each step; [coefficient] turns a
      * cutoff in Hz at a given step rate into that fraction. The same

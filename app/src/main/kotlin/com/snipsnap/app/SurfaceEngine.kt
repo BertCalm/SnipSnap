@@ -56,10 +56,10 @@ class SurfaceEngine(preferredSampleRate: Int) {
 
     /**
      * Load a snip as one of the engine's source slots; stereo is folded to
-     * mono, the file's own rate is kept (the engine repitches). Slot 0 is
-     * what every mode has always played; slot 1 is [control]'s `sampleMix`
-     * other end. See [MAX_SOURCES] (kept in sync with SurfaceEngine.h's
-     * kMaxSources by hand, not by any shared build-time constant).
+     * mono, the file's own rate is kept (the engine repitches). Slots 0/1/2
+     * are the three vertices [control]'s `sampleA/B/C` blend between. See
+     * [MAX_SOURCES] (kept in sync with SurfaceEngine.h's kMaxSources by
+     * hand, not by any shared build-time constant).
      */
     @Synchronized
     fun load(snip: Snip, slot: Int = 0) {
@@ -74,18 +74,47 @@ class SurfaceEngine(preferredSampleRate: Int) {
     }
 
     /**
-     * One control frame; call at screen rate with the smoothed reading.
-     * [sampleMix] crossfades slot 0 (0f) toward slot 1 (1f); it does
-     * nothing until a sample is loaded into slot 1.
+     * Clears a source slot back to silence - call this when the pad that
+     * used to live there is no longer chosen (a load failed, or a new kit
+     * has none), so a stale sample from before cannot keep sounding at
+     * that vertex once the caller's own state says the slot is empty. A
+     * zero-length load, through the same handshake [load] uses: the
+     * engine already treats a too-short sample as silence and excludes it
+     * from the blend's renormalisation (see readSlot/slotLoaded in
+     * SurfaceEngine.cpp), so there is no separate native "unload" to keep
+     * in sync with this one.
      */
     @Synchronized
-    fun control(mode: TouchSurface.Mode, reading: TouchSurface.Reading, tilt: Float, sampleMix: Float = 0f, gate: Boolean) {
+    fun clearSlot(slot: Int) {
+        if (!open) return
+        require(slot in 0 until MAX_SOURCES) { "slot is 0..${MAX_SOURCES - 1}, got $slot" }
+        NativeSurface.loadSample(handle, FloatArray(0), 0, slot)
+    }
+
+    /**
+     * One control frame; call at screen rate with the smoothed reading.
+     * [sampleA]/[sampleB]/[sampleC] weight slots 0/1/2 - a barycentric
+     * blend across the pad, independent of [mode]. Not required to sum to
+     * 1 - the engine renormalises every sample, over whichever slots are
+     * actually loaded. An unloaded slot's own weight is silence, but only
+     * once it is genuinely empty - see [clearSlot].
+     */
+    @Synchronized
+    fun control(
+        mode: TouchSurface.Mode,
+        reading: TouchSurface.Reading,
+        tilt: Float,
+        sampleA: Float = 1f,
+        sampleB: Float = 0f,
+        sampleC: Float = 0f,
+        gate: Boolean,
+    ) {
         if (!open) return
         NativeSurface.control(
             handle, mode.ordinal,
             reading.x, reading.y, reading.z, tilt,
             reading.a, reading.b, reading.c, reading.d,
-            sampleMix, gate,
+            sampleA, sampleB, sampleC, gate,
         )
     }
 

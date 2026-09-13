@@ -86,11 +86,13 @@ import kotlinx.coroutines.withContext
  * in `surface.json` beside the kit (`SurfaceStore`), so a morph you set
  * up is there when you come back.
  *
- * PAD2 ◄ ► and MIX are a second voice: the engine crossfades toward
- * whatever pad PAD2 names, independent of mode, corners or where the
- * finger is. It is a plain fader for now, not a touch gesture - proving
- * the engine can mix two live sources at all comes before deciding how a
- * finger should control it.
+ * PAD2/PAD3 ◄ ► load two more voices onto the pad's inscribed sample
+ * triangle - PAD at the apex, PAD2 at the base-left, PAD3 at the
+ * base-right (`TouchSurface.sampleWeights`, `design/surface-vector`'s
+ * boards) - and the finger blends all three at once, continuously, with
+ * no dead zone: the same position that drives the mode's own macros
+ * drives this too, independently. A slot nobody has loaded is just
+ * silence at its vertex, not a hole in the pad.
  *
  * LATCH keeps the loop sounding where the finger left it, so one hand can
  * set corners while the other is free; BARS locks a print to a whole
@@ -126,17 +128,18 @@ fun SurfaceScreen(
     var painted by remember { mutableStateOf(Reading.REST) }
     var padName by remember { mutableStateOf<String?>(null) }
     var padSlot by remember { mutableStateOf<Int?>(null) }
-    // Slot 1 of the engine's source array - sampleMix crossfades toward
-    // this pad, independent of mode or corners. Stage-1 placeholder UI: a
-    // plain fader, not yet the touch-driven blend a fuller version would
-    // use - see design/surface-vector for that direction.
+    // Slots 1 and 2 of the engine's source array - the sample triangle's
+    // base-left and base-right vertices (TouchSurface.sampleWeights); the
+    // apex is padName/padSlot above. Independent of mode or corners.
     var padName2 by remember { mutableStateOf<String?>(null) }
     var padSlot2 by remember { mutableStateOf<Int?>(null) }
-    var mixFraction by remember { mutableStateOf(0f) }
-    // Bumped by every stepPad2 press before its IO read starts, and checked
-    // after: a press whose read finishes after a later one's is stale and
-    // must not overwrite the newer result.
+    var padName3 by remember { mutableStateOf<String?>(null) }
+    var padSlot3 by remember { mutableStateOf<Int?>(null) }
+    // Bumped by every stepPad2/stepPad3 press before its IO read starts,
+    // and checked after: a press whose read finishes after a later one's
+    // is stale and must not overwrite the newer result.
     var pad2Generation by remember { mutableStateOf(0) }
+    var pad3Generation by remember { mutableStateOf(0) }
     var settings by remember { mutableStateOf(SurfaceStore.Settings.DEFAULT) }
     var lastHeld by remember { mutableStateOf<Reading?>(null) }
     var printing by remember { mutableStateOf(false) }
@@ -220,10 +223,14 @@ fun SurfaceScreen(
         }
     }
 
-    // The engine's second source slot - sampleMix's other end. Failure is
-    // quieter than the first pad's: a second voice is optional, so a
-    // toast for every unreadable file would be noise the first pad
-    // already covers when it matters.
+    // The engine's second source slot - the sample triangle's base-left
+    // vertex. Failure is quieter than the first pad's: a second voice is
+    // optional, so a toast for every unreadable file would be noise the
+    // first pad already covers when it matters. clearSlot on failure
+    // matters here specifically because the touch position, not this
+    // screen, decides how much of slot 1 to play - a failed load that
+    // left the *previous* sample sitting in the engine would still sound
+    // wherever the puck favours that vertex, while padName2 said NO PAD2.
     suspend fun loadPad2(dir: File, pad: KitPad, generation: Int) {
         val snip = withContext(Dispatchers.IO) {
             runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
@@ -231,13 +238,27 @@ fun SurfaceScreen(
         if (generation != pad2Generation) return  // a later press already superseded this one
         if (snip == null) {
             padName2 = null
-            // No working second pad, so MIX must not leak a slot 1 that is
-            // either stale (the old sample) or was never loaded at all.
-            mixFraction = 0f
+            engine.clearSlot(1)
         } else {
             engine.load(snip, slot = 1)
             padName2 = pad.displayName
             padSlot2 = pad.slot
+        }
+    }
+
+    // The engine's third source slot - the sample triangle's base-right vertex.
+    suspend fun loadPad3(dir: File, pad: KitPad, generation: Int) {
+        val snip = withContext(Dispatchers.IO) {
+            runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+        }
+        if (generation != pad3Generation) return  // a later press already superseded this one
+        if (snip == null) {
+            padName3 = null
+            engine.clearSlot(2)
+        } else {
+            engine.load(snip, slot = 2)
+            padName3 = pad.displayName
+            padSlot3 = pad.slot
         }
     }
 
@@ -248,7 +269,17 @@ fun SurfaceScreen(
     fun persist(dir: File, next: SurfaceStore.Settings) {
         settings = next
         scope.launch {
-            withContext(Dispatchers.IO) { runCatching { SurfaceStore.save(dir, next) } }
+            // Write `settings` fresh here, not the `next` this call
+            // captured: two persist() calls close together (a fast PAD3
+            // double-tap, say) each launch their own IO write, and those
+            // can finish in either order - a write of its own captured
+            // value could let an older call's write land on disk after a
+            // newer one's and leave a stale choice there. By the time any
+            // of these coroutines actually runs, every synchronous
+            // `settings = next` above it has already happened, so reading
+            // `settings` here means every one of them writes the same,
+            // latest content - the write order stops mattering.
+            withContext(Dispatchers.IO) { runCatching { SurfaceStore.save(dir, settings) } }
                 .onFailure {
                     Log.e("SurfaceScreen", "persist: settings not saved", it)
                     onToast(Copy.SURFACE_SETTINGS_NOT_SAVED)
@@ -262,8 +293,13 @@ fun SurfaceScreen(
             padSlot = null
             padName2 = null
             padSlot2 = null
-            mixFraction = 0f
-            pad2Generation++  // orphan any in-flight load from before the kit closed
+            padName3 = null
+            padSlot3 = null
+            engine.clearSlot(1)
+            engine.clearSlot(2)
+            // Orphan any in-flight load from before the kit closed.
+            pad2Generation++
+            pad3Generation++
             return@LaunchedEffect
         }
         // The kit's surface settings first (a torn file is the defaults,
@@ -282,16 +318,32 @@ fun SurfaceScreen(
         } else {
             loadPad(entry.dir, pad)
         }
-        // The second slot is optional - null unless a kit was saved with
-        // one chosen, and never falls back to the kit's lowest the way
-        // the first slot does.
+        // The second and third slots are optional - null unless a kit was
+        // saved with one chosen, and never fall back to the kit's lowest
+        // the way the first slot does.
         val pad2 = pads.firstOrNull { it.slot == settings.secondPadSlot }
         if (pad2 == null) {
             padName2 = null
             padSlot2 = null
-            mixFraction = 0f
+            engine.clearSlot(1)
+            // Orphan any load stepPad2 kicked off against the previous
+            // entry - without this, its generation check still passes
+            // against this kit's unchanged pad2Generation, and it can
+            // repopulate padName2/slot 1 with the old kit's sample after
+            // this effect has already decided there is none here.
+            pad2Generation++
         } else {
             loadPad2(entry.dir, pad2, ++pad2Generation)
+        }
+        val pad3 = pads.firstOrNull { it.slot == settings.thirdPadSlot }
+        if (pad3 == null) {
+            padName3 = null
+            padSlot3 = null
+            engine.clearSlot(2)
+            // Same reasoning as pad2Generation above, for stepPad3.
+            pad3Generation++
+        } else {
+            loadPad3(entry.dir, pad3, ++pad3Generation)
         }
     }
 
@@ -321,6 +373,19 @@ fun SurfaceScreen(
         persist(dir, settings.copy(secondPadSlot = pad.slot))
         val generation = ++pad2Generation
         scope.launch { loadPad2(dir, pad, generation) }
+    }
+
+    // PAD3 ◄ ►: same stepping, over the third source slot.
+    fun stepPad3(delta: Int) {
+        val dir = entry?.dir ?: return
+        val pads = entry.kit.pads.sortedBy { it.slot }
+        if (pads.isEmpty()) return
+        val chosen = settings.thirdPadSlot ?: padSlot3
+        val at = pads.indexOfFirst { it.slot == chosen }.let { if (it < 0) 0 else it }
+        val pad = pads[((at + delta) % pads.size + pads.size) % pads.size]
+        persist(dir, settings.copy(thirdPadSlot = pad.slot))
+        val generation = ++pad3Generation
+        scope.launch { loadPad3(dir, pad, generation) }
     }
 
     // SET A..D: the sound under the last touch becomes a morph corner.
@@ -455,7 +520,10 @@ fun SurfaceScreen(
             val held = lastHeld
             val play = if (latched && !target.touching && held != null) held else smooth
             painted = play
-            engine.control(mode, play, tilt.tilt, sampleMix = mixFraction, gate = (target.touching || latched) && padName != null)
+            // The sample blend reads the same position as the mode's own
+            // macros, but independently - see the class doc on PAD2/PAD3.
+            val (wA, wB, wC) = TouchSurface.sampleWeights(play.x, play.y)
+            engine.control(mode, play, tilt.tilt, sampleA = wA, sampleB = wB, sampleC = wC, gate = (target.touching || latched) && padName != null)
             if (engine.needsRestart()) started(engine.start())
             if (printing && !finishing && engine.printState() == SurfaceEngine.PrintState.DONE) finishPrint()
         }
@@ -534,36 +602,35 @@ fun SurfaceScreen(
 
             Spacer(Modifier.height(6.dp))
 
-            // PAD2 ◄ name ► and MIX: the engine's second source slot and
-            // the crossfade toward it. A stage-1 placeholder, decoupled
-            // from the touch pad on purpose - see the note on padName2.
+            // PAD2/PAD3 ◄ name ►: the sample triangle's other two vertices,
+            // blended in by the finger's own position - see the class doc.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 // Unlike PAD's enabled = padName != null: a pad always
-                // auto-loads on entry, but slot 2 starts empty and only
-                // this button ever fills it, so gating on entry alone
-                // (not padName2) is what lets the first press work at all.
-                ActionButton("◄ PAD2", scheme, enabled = entry != null) { stepPad2(-1) }
+                // auto-loads on entry, but slots 2/3 start empty and only
+                // these buttons ever fill them, so gating on entry alone
+                // (not padName2/3) is what lets the first press work at all.
+                ActionButton("◄ PAD2", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad2(-1) }
                 TapeText(
                     padName2?.let { "${padLabel(padSlot2)} ${it.uppercase()}" } ?: "NO PAD2",
                     TapeType.pixel,
                     scheme.ink.tape,
-                    Modifier.weight(1f).padding(horizontal = 4.dp),
+                    Modifier.weight(1.2f).padding(horizontal = 4.dp),
                 )
-                ActionButton("PAD2 ►", scheme, enabled = entry != null) { stepPad2(+1) }
+                ActionButton("PAD2 ►", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad2(+1) }
             }
 
             Spacer(Modifier.height(6.dp))
 
-            StepperSlider(
-                label = "MIX",
-                fraction = mixFraction,
-                valueText = "%.0f%% PAD2".format(java.util.Locale.ROOT, mixFraction * 100),
-                fillColor = scheme.amber.tape,
-                scheme = scheme,
-                enabled = padName2 != null,
-                onFractionChange = { f -> mixFraction = f },
-                onFractionCommit = {},
-            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                ActionButton("◄ PAD3", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad3(-1) }
+                TapeText(
+                    padName3?.let { "${padLabel(padSlot3)} ${it.uppercase()}" } ?: "NO PAD3",
+                    TapeType.pixel,
+                    scheme.ink.tape,
+                    Modifier.weight(1.2f).padding(horizontal = 4.dp),
+                )
+                ActionButton("PAD3 ►", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad3(+1) }
+            }
 
             Spacer(Modifier.height(6.dp))
 
@@ -643,6 +710,22 @@ fun SurfaceScreen(
                         drawLine(ink.copy(alpha = 0.18f), Offset(fx, 0f), Offset(fx, h), strokeWidth = 1f)
                         drawLine(ink.copy(alpha = 0.18f), Offset(0f, fy), Offset(w, fy), strokeWidth = 1f)
                     }
+                    // The sample triangle: apex top-centre (PAD), base-left
+                    // (PAD2), base-right (PAD3) - drawn in every mode, since
+                    // the blend it represents runs off the same touch
+                    // position independently of whatever the mode's own
+                    // macros are doing with it. The puck below doubles as
+                    // its own live indicator: it sits at the exact position
+                    // TouchSurface.sampleWeights reads, so there is no
+                    // second dot to keep in sync.
+                    val apex = Offset(w * 0.5f, 0f)
+                    val baseLeft = Offset(0f, h)
+                    val baseRight = Offset(w, h)
+                    val triangleInk = ink.copy(alpha = 0.3f)
+                    drawLine(triangleInk, apex, baseLeft, strokeWidth = 1f)
+                    drawLine(triangleInk, baseLeft, baseRight, strokeWidth = 1f)
+                    drawLine(triangleInk, baseRight, apex, strokeWidth = 1f)
+
                     val px = painted.x * w
                     val py = (1f - painted.y) * h
                     // The crosshair, brighter when a finger holds it.
@@ -691,6 +774,13 @@ fun SurfaceScreen(
                 append("X %.2f  Y %.2f".format(java.util.Locale.ROOT, painted.x, painted.y))
                 if (mode == Mode.XYZ) append("  Z %.2f".format(java.util.Locale.ROOT, painted.z))
                 if (mode == Mode.MORPH) append("  A %.2f B %.2f C %.2f D %.2f".format(java.util.Locale.ROOT, painted.a, painted.b, painted.c, painted.d))
+                // Only worth a line once there is a second or third source
+                // actually in the blend - with just PAD loaded the weights
+                // are trivially (1, 0, 0) and say nothing new.
+                if (padName2 != null || padName3 != null) {
+                    val (wA, wB, wC) = TouchSurface.sampleWeights(painted.x, painted.y)
+                    append("  SMPL %.2f/%.2f/%.2f".format(java.util.Locale.ROOT, wA, wB, wC))
+                }
                 if (tilt.available) append("  TILT %.2f".format(java.util.Locale.ROOT, tilt.tilt))
                 padName?.let { append("  ·  ").append(it.uppercase()) }
             }
