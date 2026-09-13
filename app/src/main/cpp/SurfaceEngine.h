@@ -19,6 +19,10 @@ struct ControlFrame {
     int32_t mode = 0;  // 0 XY, 1 XYZ, 2 MORPH - TouchSurface.Mode.ordinal
     float x = 0.5f, y = 0.5f, z = 0.0f, tilt = 0.5f;
     float a = 0.25f, b = 0.25f, c = 0.25f, d = 0.25f;
+    // 0 = source slot 0 only, 1 = slot 1 only; a plain crossfade between
+    // the two, independent of mode/corners. Slots 2/3 are not mixed yet -
+    // see SurfaceEngine::kMaxSources.
+    float sampleMix = 0.0f;
     bool gate = false;
 };
 
@@ -40,12 +44,19 @@ struct MacroState {
  *  - UI thread: `start`/`stop`, `loadSample`, `pushControl`, `setCorner`,
  *    the print arm/stop/take calls.
  *  - Audio thread: `onAudioReady` only. It reads the ring, the corner
- *    atomics, the pending-sample pointer and the print state; it never
+ *    atomics, the pending-sample pointers and the print state; it never
  *    calls anything that can block or allocate.
- *  - A sample swap is a pointer handshake: the UI parks the new buffer
- *    in `pending_`, the callback adopts it and parks the old one in
- *    `retired_`, and the UI frees `retired_` on its next call. The audio
- *    thread frees nothing.
+ *  - A sample swap is a pointer handshake, one per source slot: the UI
+ *    parks the new buffer in `pending_[slot]`, the callback adopts it and
+ *    parks the old one in `retired_[slot]`, and the UI frees
+ *    `retired_[slot]` on its next call for that slot. The audio thread
+ *    frees nothing.
+ *
+ * Up to `kMaxSources` samples can be loaded at once (slot 0 is what
+ * every mode has always played; slot 1 is `sampleMix`'s other end -
+ * see `ControlFrame`). Slots 2/3 exist so a later vertex/corner-style
+ * blend across more sources doesn't have to resize this array again,
+ * but nothing mixes them in yet.
  */
 class SurfaceEngine : public oboe::AudioStreamDataCallback, public oboe::AudioStreamErrorCallback {
 public:
@@ -61,8 +72,11 @@ public:
     /** Round-trip latency in ms, or -1 when unknown. UI thread only (see OboeOutput.h). */
     double latencyMillis() const;
 
-    /** UI thread. `mono` is copied; `sourceRate` is the file's own rate (the engine repitches). */
-    void loadSample(const float* mono, size_t frames, int32_t sourceRate);
+    /** How many source slots exist. Only 0 and 1 are mixed today (see `ControlFrame::sampleMix`). */
+    static constexpr int32_t kMaxSources = 4;
+
+    /** UI thread. `mono` is copied; `sourceRate` is the file's own rate (the engine repitches). `slot` is 0..kMaxSources-1. */
+    void loadSample(const float* mono, size_t frames, int32_t sourceRate, int32_t slot = 0);
 
     /** UI thread. Never blocks; a full ring drops the frame (the next one is milliseconds away). */
     void pushControl(const ControlFrame& frame) { controls_.push(frame); }
@@ -88,10 +102,12 @@ private:
         int32_t rate = 44100;
     };
 
-    void adoptPendingSample();
+    void adoptPendingSample(int32_t slot);
     void applyControl(const ControlFrame& frame);
     MacroState morphed(const ControlFrame& frame) const;
     void renderMono(float* out, int32_t numFrames);
+    /** Audio thread. One source's interpolated read, advancing its own phase_[slot]. Silence if slot is empty. */
+    float readSlot(int32_t slot, double fs, float pitchRatioValue);
 
     std::shared_ptr<oboe::AudioStream> stream_;
     int32_t preferredRate_;
@@ -99,11 +115,15 @@ private:
     std::atomic<bool> restartNeeded_{false};
     std::atomic<bool> sharedMode_{false};
 
-    // The sample handshake.
-    std::atomic<Sample*> pending_{nullptr};
-    std::atomic<Sample*> retired_{nullptr};
-    Sample* current_ = nullptr;  // audio thread only
-    double phase_ = 0.0;
+    // The sample handshake, one per source slot (see kMaxSources above).
+    // pending_/retired_ are set to nullptr explicitly in the constructor
+    // body, not via a member initializer - std::atomic's default
+    // constructor is trivial in C++17 and does not reliably
+    // value-initialize the contained pointer through an array's `{}`.
+    std::atomic<Sample*> pending_[kMaxSources];
+    std::atomic<Sample*> retired_[kMaxSources];
+    Sample* current_[kMaxSources] = {};  // audio thread only; plain pointers zero-init fine
+    double phase_[kMaxSources] = {};
 
     // Controls.
     SpscRing<ControlFrame, 64> controls_;
@@ -114,8 +134,8 @@ private:
     bool gated_ = false;
     std::atomic<float> corners_[4][4];  // [corner][pitch, cutoff, resonance, drive]
 
-    // Per-sample smoothing of every macro plus the gate.
-    ParameterSmoother pitch_, cutoff_, resonance_, drive_, gain_;
+    // Per-sample smoothing of every macro plus the gate and the sample crossfade.
+    ParameterSmoother pitch_, cutoff_, resonance_, drive_, gain_, mix_;
 
     // The filter (Cytomic trapezoidal SVF), coefficients refreshed every kControlInterval samples.
     static constexpr int32_t kControlInterval = 32;

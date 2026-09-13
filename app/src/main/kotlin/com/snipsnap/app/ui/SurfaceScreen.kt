@@ -86,6 +86,12 @@ import kotlinx.coroutines.withContext
  * in `surface.json` beside the kit (`SurfaceStore`), so a morph you set
  * up is there when you come back.
  *
+ * PAD2 ◄ ► and MIX are a second voice: the engine crossfades toward
+ * whatever pad PAD2 names, independent of mode, corners or where the
+ * finger is. It is a plain fader for now, not a touch gesture - proving
+ * the engine can mix two live sources at all comes before deciding how a
+ * finger should control it.
+ *
  * LATCH keeps the loop sounding where the finger left it, so one hand can
  * set corners while the other is free; BARS locks a print to a whole
  * number of bars at the kit's tempo, so it drops onto the groove grid.
@@ -120,6 +126,13 @@ fun SurfaceScreen(
     var painted by remember { mutableStateOf(Reading.REST) }
     var padName by remember { mutableStateOf<String?>(null) }
     var padSlot by remember { mutableStateOf<Int?>(null) }
+    // Slot 1 of the engine's source array - sampleMix crossfades toward
+    // this pad, independent of mode or corners. Stage-1 placeholder UI: a
+    // plain fader, not yet the touch-driven blend a fuller version would
+    // use - see design/surface-vector for that direction.
+    var padName2 by remember { mutableStateOf<String?>(null) }
+    var padSlot2 by remember { mutableStateOf<Int?>(null) }
+    var mixFraction by remember { mutableStateOf(0f) }
     var settings by remember { mutableStateOf(SurfaceStore.Settings.DEFAULT) }
     var lastHeld by remember { mutableStateOf<Reading?>(null) }
     var printing by remember { mutableStateOf(false) }
@@ -203,6 +216,23 @@ fun SurfaceScreen(
         }
     }
 
+    // The engine's second source slot - sampleMix's other end. Failure is
+    // quieter than the first pad's: a second voice is optional, so a
+    // toast for every unreadable file would be noise the first pad
+    // already covers when it matters.
+    suspend fun loadPad2(dir: File, pad: KitPad) {
+        val snip = withContext(Dispatchers.IO) {
+            runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+        }
+        if (snip == null) {
+            padName2 = null
+        } else {
+            engine.load(snip, slot = 1)
+            padName2 = pad.displayName
+            padSlot2 = pad.slot
+        }
+    }
+
     fun pushCorners(corners: List<SurfaceStore.Corner>) {
         corners.forEachIndexed { i, c -> engine.setCorner(i, c.pitch, c.cutoff, c.resonance, c.drive) }
     }
@@ -222,6 +252,8 @@ fun SurfaceScreen(
         if (entry == null) {
             padName = null
             padSlot = null
+            padName2 = null
+            padSlot2 = null
             return@LaunchedEffect
         }
         // The kit's surface settings first (a torn file is the defaults,
@@ -240,6 +272,16 @@ fun SurfaceScreen(
         } else {
             loadPad(entry.dir, pad)
         }
+        // The second slot is optional - null unless a kit was saved with
+        // one chosen, and never falls back to the kit's lowest the way
+        // the first slot does.
+        val pad2 = pads.firstOrNull { it.slot == settings.secondPadSlot }
+        if (pad2 == null) {
+            padName2 = null
+            padSlot2 = null
+        } else {
+            loadPad2(entry.dir, pad2)
+        }
     }
 
     // PAD ◄ ►: the next pad by slot, wrapping; remembered in surface.json.
@@ -255,6 +297,18 @@ fun SurfaceScreen(
         val pad = pads[((at + delta) % pads.size + pads.size) % pads.size]
         persist(dir, settings.copy(padSlot = pad.slot))
         scope.launch { loadPad(dir, pad) }
+    }
+
+    // PAD2 ◄ ►: same stepping, over the second source slot.
+    fun stepPad2(delta: Int) {
+        val dir = entry?.dir ?: return
+        val pads = entry.kit.pads.sortedBy { it.slot }
+        if (pads.isEmpty()) return
+        val chosen = settings.secondPadSlot ?: padSlot2
+        val at = pads.indexOfFirst { it.slot == chosen }.let { if (it < 0) 0 else it }
+        val pad = pads[((at + delta) % pads.size + pads.size) % pads.size]
+        persist(dir, settings.copy(secondPadSlot = pad.slot))
+        scope.launch { loadPad2(dir, pad) }
     }
 
     // SET A..D: the sound under the last touch becomes a morph corner.
@@ -389,7 +443,7 @@ fun SurfaceScreen(
             val held = lastHeld
             val play = if (latched && !target.touching && held != null) held else smooth
             painted = play
-            engine.control(mode, play, tilt.tilt, gate = (target.touching || latched) && padName != null)
+            engine.control(mode, play, tilt.tilt, sampleMix = mixFraction, gate = (target.touching || latched) && padName != null)
             if (engine.needsRestart()) started(engine.start())
             if (printing && !finishing && engine.printState() == SurfaceEngine.PrintState.DONE) finishPrint()
         }
@@ -465,6 +519,39 @@ fun SurfaceScreen(
                     dimmed = barsIndex == 0,
                 ) { barsIndex = (barsIndex + 1) % PrintLength.BARS.size }
             }
+
+            Spacer(Modifier.height(6.dp))
+
+            // PAD2 ◄ name ► and MIX: the engine's second source slot and
+            // the crossfade toward it. A stage-1 placeholder, decoupled
+            // from the touch pad on purpose - see the note on padName2.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                // Unlike PAD's enabled = padName != null: a pad always
+                // auto-loads on entry, but slot 2 starts empty and only
+                // this button ever fills it, so gating on entry alone
+                // (not padName2) is what lets the first press work at all.
+                ActionButton("◄ PAD2", scheme, enabled = entry != null) { stepPad2(-1) }
+                TapeText(
+                    padName2?.let { "${padLabel(padSlot2)} ${it.uppercase()}" } ?: "NO PAD2",
+                    TapeType.pixel,
+                    scheme.ink.tape,
+                    Modifier.weight(1f).padding(horizontal = 4.dp),
+                )
+                ActionButton("PAD2 ►", scheme, enabled = entry != null) { stepPad2(+1) }
+            }
+
+            Spacer(Modifier.height(6.dp))
+
+            StepperSlider(
+                label = "MIX",
+                fraction = mixFraction,
+                valueText = "%.0f%% PAD2".format(java.util.Locale.ROOT, mixFraction * 100),
+                fillColor = scheme.amber.tape,
+                scheme = scheme,
+                enabled = padName2 != null,
+                onFractionChange = { f -> mixFraction = f },
+                onFractionCommit = {},
+            )
 
             Spacer(Modifier.height(6.dp))
 

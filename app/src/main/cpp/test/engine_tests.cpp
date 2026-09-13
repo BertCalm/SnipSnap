@@ -399,6 +399,59 @@ TEST(surface_engine_prints_the_mono_bus_and_finishes_on_the_callback) {
     CHECK(e.printState() == PrintBuffer::State::Idle);
 }
 
+TEST(surface_engine_mixes_two_loaded_samples_by_crossfade_weight) {
+    // Two constant sources tell the crossfade's sign apart cleanly: a
+    // lowpass's DC gain and tanh's odd symmetry both preserve sign, so
+    // mix=0 must settle positive, mix=1 negative, and mix=0.5 - an exact
+    // +0.9/-0.9 average computed before the filter ever sees it - at
+    // exactly zero. This is the one native check that the crossfade
+    // itself, not just the wiring, reaches the DSP.
+    auto settle = [](float mix) {
+        SurfaceEngine e(kRate);
+        std::vector<float> hi(100, 0.9f), lo(100, -0.9f);
+        e.loadSample(hi.data(), hi.size(), kRate, 0);
+        e.loadSample(lo.data(), lo.size(), kRate, 1);
+        ControlFrame f;
+        f.mode = 0;
+        f.gate = true;
+        f.x = 0.5f;
+        f.y = 1.0f;  // cutoff wide open
+        f.sampleMix = mix;
+        e.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 400; ++i) out = callback(e, 64);
+        float sum = 0.0f;
+        for (float v : out) sum += v;
+        return sum / static_cast<float>(out.size());
+    };
+
+    CHECK(settle(0.0f) > 0.1f);
+    CHECK(settle(1.0f) < -0.1f);
+    CHECK(std::fabs(settle(0.5f)) < 0.01f);
+}
+
+TEST(surface_engine_second_slot_is_silent_until_loaded) {
+    // sampleMix all the way toward a slot nothing was ever loaded into
+    // must behave like any other empty slot: honest silence, not NaN.
+    SurfaceEngine e(kRate);
+    std::vector<float> tone(100, 0.5f);
+    e.loadSample(tone.data(), tone.size(), kRate, 0);
+    ControlFrame f;
+    f.mode = 0;
+    f.gate = true;
+    f.x = 0.5f;
+    f.y = 1.0f;
+    f.sampleMix = 1.0f;
+    e.pushControl(f);
+    float p = 0.0f;
+    for (int i = 0; i < 300; ++i) {
+        auto out = callback(e, 64);
+        for (float v : out) CHECK(std::isfinite(v));
+        p = std::max(p, peak(out));
+    }
+    CHECK_NEAR(p, 0.0f, 1e-6f);
+}
+
 TEST(surface_engine_morph_blends_the_corners) {
     SurfaceEngine e(kRate);
     // Corner A = full cutoff and no drive, corner D = no cutoff (dark): the
@@ -527,6 +580,47 @@ TEST(surface_engine_does_not_retrigger_while_the_touch_is_only_held) {
     };
 
     CHECK(run(true) == run(false));
+}
+
+TEST(surface_engine_retrigger_resets_both_loaded_slots) {
+    // A touch-down must restart every loaded source, not just whichever
+    // one currently dominates the mix - otherwise dragging the crossfade
+    // after a retrigger could reveal a source that quietly kept drifting
+    // the whole time it sat inaudible. Two ramps (not two copies of the
+    // same one) so a bug that only resets slot 0 still shows up even
+    // though slot 1's drift never crosses the "audible" threshold on its
+    // own - the two runs' tails just fail to match.
+    auto run = [](int32_t releaseCallbacks) {
+        SurfaceEngine e(kRate);
+        std::vector<float> rampA(1000), rampB(1000);
+        for (size_t i = 0; i < rampA.size(); ++i) {
+            rampA[i] = static_cast<float>(i) / 1000.0f - 0.5f;
+            rampB[i] = 0.5f - static_cast<float>(i) / 1000.0f;
+        }
+        e.loadSample(rampA.data(), rampA.size(), kRate, 0);
+        e.loadSample(rampB.data(), rampB.size(), kRate, 1);
+
+        ControlFrame on;
+        on.mode = 0;
+        on.gate = true;
+        on.x = 0.5f;
+        on.y = 1.0f;
+        on.sampleMix = 0.5f;
+        e.pushControl(on);
+        for (int i = 0; i < 137; ++i) callback(e, 64);
+
+        ControlFrame off = on;
+        off.gate = false;
+        e.pushControl(off);
+        for (int i = 0; i < releaseCallbacks; ++i) callback(e, 64);
+
+        e.pushControl(on);
+        std::vector<float> tail;
+        for (int i = 0; i < 400; ++i) tail = callback(e, 64);
+        return tail;
+    };
+
+    CHECK(run(50) == run(311));
 }
 
 TEST(surface_engine_morph_tilt_reaches_the_filter) {

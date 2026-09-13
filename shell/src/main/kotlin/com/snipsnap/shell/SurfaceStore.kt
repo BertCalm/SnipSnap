@@ -7,10 +7,12 @@ import com.snipsnap.kit.AtomicFile
 import java.io.File
 
 /**
- * `surface.json` beside `kit.json`: what the SURFACE plays from this kit
- * and the four corner states its MORPH pad blends between. Small, typed,
- * and under the same rules as every sidecar - unknown fields ignored,
- * unknown versions refused, a torn file a [JsonException] in words.
+ * `surface.json` beside `kit.json`: what the SURFACE plays from this kit,
+ * the four corner states its MORPH pad blends between, and (since
+ * [Settings.secondPadSlot]) a second pad the engine crossfades toward via
+ * `sampleMix`, independent of mode or corners. Small, typed, and under the
+ * same rules as every sidecar - unknown fields ignored, unknown versions
+ * refused, a torn file a [JsonException] in words.
  *
  * The corners are the same four macros the engine runs (pitch, cutoff,
  * resonance, drive, each 0..1), so a corner *is* a position on the pad:
@@ -69,10 +71,13 @@ object SurfaceStore {
         /** The pad the surface plays, by slot; null = the kit's lowest. */
         val padSlot: Int?,
         val corners: List<Corner> = Corner.DEFAULTS,
+        /** The pad in the engine's second source slot, for `sampleMix`'s crossfade; null = none loaded. */
+        val secondPadSlot: Int? = null,
     ) {
         init {
             require(corners.size == 4) { "four corners, got ${corners.size}" }
             padSlot?.let { require(it in 1..128) { "slot out of range: $it" } }
+            secondPadSlot?.let { require(it in 1..128) { "slot out of range: $it" } }
         }
 
         companion object {
@@ -98,6 +103,7 @@ object SurfaceStore {
         linkedMapOf(
             "version" to JsonValue.Num(VERSION.toDouble()),
             "pad" to (s.padSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
+            "secondPad" to (s.secondPadSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
             "corners" to JsonValue.Arr(
                 s.corners.map { c ->
                     JsonValue.Obj(
@@ -120,12 +126,15 @@ object SurfaceStore {
             throw JsonException("surface.json version $version is not supported (this build reads $VERSION)")
         }
         val pad = obj["pad"]?.takeUnless { it is JsonValue.Null }?.int()
+        // Absent on a file saved before secondPad existed, same as an
+        // explicit null - both mean "no second sample loaded".
+        val secondPad = obj["secondPad"]?.takeUnless { it is JsonValue.Null }?.int()
         val corners = obj["corners"]?.arr()?.map { c ->
             val o = c.obj()
             fun macro(name: String) = o[name]?.num()?.toFloat() ?: throw JsonException("corner has no $name")
             Corner(macro("pitch"), macro("cutoff"), macro("resonance"), macro("drive"))
         } ?: Corner.DEFAULTS
         if (corners.size != 4) throw JsonException("surface.json has ${corners.size} corners, not 4")
-        return Settings(pad, corners)
+        return Settings(pad, corners, secondPad)
     }
 }
