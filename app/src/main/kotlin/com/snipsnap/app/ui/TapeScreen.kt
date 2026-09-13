@@ -1591,7 +1591,7 @@ private fun WaveformLcd(
                     var lastTimeMs = down.uptimeMillis
                     var totalDelta = 0f
                     var dragging = false
-                    // SPIKE (pinch zoom). Deliberately NOT detectTransformGestures:
+                    // Pinch zoom. Deliberately NOT detectTransformGestures:
                     // that hands back pan+zoom+centroid for free but throws away
                     // the per-event dx/dt this loop feeds `model.dragBy`, which is
                     // the whole tape coast. Two fingers are handled here instead so
@@ -1671,7 +1671,7 @@ private fun WaveformLcd(
                                 onTouch()
                                 if (snapped != null) onSnapToast()
                             } else if (!pinched) {
-                                // SPIKE: a pinch that ends is not a tap, so it
+                                // A pinch that ends is not a tap, so it
                                 // must not seek to wherever the last finger was.
                                 onScrubStart()
                                 val frame = frameAtX(change.position.x, widthPx, model)

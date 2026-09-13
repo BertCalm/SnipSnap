@@ -83,7 +83,7 @@ class TapeDeckModel(
 
     val hasSelection: Boolean get() = inFrame >= 0 && outFrame > inFrame
 
-    // SPIKE (pinch zoom): px-per-second is continuous now, not a three-rung
+    // Px-per-second is continuous, not a three-rung
     // ladder. The ladder survives as the ZOOM button's snap points so the
     // button still steps x1 -> x2 -> x4 and stays the accessible path.
     private var zoomPx: Float = ZOOM_PX_PER_SEC[0].toFloat()
@@ -100,7 +100,7 @@ class TapeDeckModel(
     }
 
     /**
-     * SPIKE: pinch. `factor` is the ratio between this frame's two-finger
+     * Pinch. `factor` is the ratio between this frame's two-finger
      * span and the last one, so a steady spread multiplies up smoothly.
      * Clamped to the ladder's own ends — past x4 the waveform is drawing
      * more columns than the peaks pyramid has detail for, and below x1 the
