@@ -22,9 +22,11 @@ the gesture.
 On TAPE, under the EDIT rows, a full-width button: **CATCH A HIT**. Tap
 it and the deck loops — the selection when there is one, else the whole
 tape — and the pad grid comes up where the transport and destination
-rows were, both banks, drawn as PLAY draws them. Over it, one line:
-`HOLD A PAD AS THE HIT GOES BY. LET GO, IT'S CAUGHT.` and beside that a
-▶/■ and DONE.
+rows were: one bank as the 4×4 window KIT and PLAY draw in portrait,
+with a `BANK A · 3 FREE` / `BANK B · 16 FREE` switch over it that
+counts the pads a catch can still land on, and opens on the first bank
+that has one. Over that, one line: `HOLD A PAD AS THE HIT GOES BY. LET
+GO, IT'S CAUGHT.` and beside it a ▶/■ and DONE.
 
 - **Hold A01 as the kick goes by.** It lands on A01 with a flash, named
   by ear (`KICK 01`), and the band it took shows on the waveform inside
@@ -112,10 +114,15 @@ through the door every capture uses.
   not announced, and KIT never opens a beat before the pads it promises
   are there. No busy line: the pad's name lighting on the grid is the
   signal.
-- **The grid.** PLAY's `BankRow`, with one addition: `emptyHits` gives
-  an empty slot the same press-and-release an assigned one has, since
-  the empty pads are the ones to catch onto. Every other screen leaves
-  them inert.
+- **The grid.** `PlayBank` on `windowRows(bank)`, the 4×4 window of
+  one bank, with one addition: `emptyHits` gives an empty slot the same
+  press-and-release an assigned one has, since the empty pads are the
+  ones to catch onto. Every other screen leaves them inert. Not
+  `BankRow`: that is PLAY's landscape shape, two banks of eight abreast,
+  and TAPE is portrait-locked, so it fell to its scroll branch and put
+  bank B a scroll away during a hold. The switch reads the free count
+  live off the kit, so a landing moves it; with no free pad on either
+  bank the button refuses before the loop starts.
 
 ## 4. What it says
 
@@ -123,6 +130,8 @@ through the door every capture uses.
 - `LISTENING FOR HITS…` (the button, while the hits are found)
 - `NO HITS ON THIS TAPE TO CATCH. KEEP, OR INSTANT KIT, INSTEAD.`
 - `HOLD A PAD AS THE HIT GOES BY. LET GO, IT'S CAUGHT.`
+- `BANK A · 3 FREE` (the switch; the count is the pads a catch can land on)
+- `NO EMPTY PAD ON A OR B. CATCH LANDS ON EMPTY PADS ONLY.`
 - `KICK 01 CAUGHT ONTO A01.` · `NO HIT WENT BY. A07 TOOK THE TAPE YOU HELD.`
 - `NOTHING WENT BY. HOLD THE PAD AS THE HIT PASSES.`
 - `A05 IS SNARE 02 ALREADY. CATCH ONTO AN EMPTY PAD INSTEAD.`

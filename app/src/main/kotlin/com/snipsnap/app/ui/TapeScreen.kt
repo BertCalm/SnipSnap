@@ -622,6 +622,10 @@ private fun TapeDeckContent(
     // comes back as `entry.kit`, which is what lights the pad's name.
     var catching by remember(model) { mutableStateOf<CatchModel?>(null) }
     var catchBusy by remember(model) { mutableStateOf(false) }
+    // Which bank the 4×4 grid shows (0 is A). TAPE is a portrait screen,
+    // so both banks abreast never fit (PadGrid's `windowRows`); the grid
+    // opens on the first bank with a free pad and a switch flips it.
+    var catchBank by remember(model) { mutableStateOf(0) }
     val catchGlow = remember(model) { (1..PadBanks.SIZE * 2).associateWith { Animatable(0f) } }
     // Slots whose press the model accepted, so a null release can be told
     // apart: a tap that met no hit (said) from a refused, taken pad
@@ -752,6 +756,16 @@ private fun TapeDeckContent(
             onToast(Copy.CATCH_NEEDS_KIT)
             return
         }
+        // Catches land only on empty pads: with none on either bank there
+        // is nothing to start, and the grid would open with both tabs at
+        // 0 FREE and every press refusing.
+        val taken = kit.pads.map { it.slot }.toSet()
+        val firstFree = (0 until CATCH_BANKS).firstOrNull { b -> PadBanks.slots(b).any { it !in taken } }
+        if (firstFree == null) {
+            onToast(Copy.CATCH_NO_ROOM)
+            return
+        }
+        catchBank = firstFree
         catchBusy = true
         onToast(Copy.CATCH_BUSY)
         digScope.launch {
@@ -771,7 +785,7 @@ private fun TapeDeckContent(
                     model.select(model.inFrame, model.lengthFrames - 2)
                 }
                 val region = model.inFrame until model.outFrame
-                catching = CatchModel(mono, region, hits, taken = kit.pads.map { it.slot }.toSet())
+                catching = CatchModel(mono, region, hits, taken = taken)
                 catchPressed.clear()
                 catchPass[0] = 0
                 model.loopPreview = true
@@ -915,11 +929,17 @@ private fun TapeDeckContent(
         val catchKit = entry?.kit
         if (catching != null && catchKit != null) {
             // CATCH A HIT (docs/CATCH.md): the grid takes the controls'
-            // place while the loop runs — both banks, as PLAY draws them.
-            // A pad that lands shows its name the moment App's write comes
-            // back as `entry.kit`; a pad that had a sound already refuses
-            // at the press. PLAY/STOP stays, since the transport row is
-            // under this; DONE puts the deck back and hands over to KIT.
+            // place while the loop runs — one bank as the 4×4 window every
+            // portrait screen draws, with a switch for the other. Not
+            // `BankRow`: that is PLAY's landscape shape, two banks of eight
+            // abreast, and on this portrait screen it fell to its scroll
+            // branch, so bank A's last column was clipped and bank B was a
+            // scroll away during a hold (September wiring review, finding
+            // 3). A pad that lands shows its name the moment App's write
+            // comes back as `entry.kit`; a pad that had a sound already
+            // refuses at the press. PLAY/STOP stays, since the transport
+            // row is under this; DONE puts the deck back and hands over to
+            // KIT.
             Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(
                     Modifier.fillMaxWidth(),
@@ -930,8 +950,25 @@ private fun TapeDeckContent(
                     DeckButton(if (model.playing) "■" else "▶", Modifier.width(56.dp)) { onPlayStop() }
                     DeckButton(Copy.CATCH_DONE_BUTTON, Modifier.width(80.dp)) { finishCatch() }
                 }
-                BankRow(
+                // The switch counts the pads still FREE on each bank, not
+                // the pads on it as KIT's does: free pads are the only
+                // ones a catch can land on, and the count falls as they
+                // do. Read live off `entry.kit`, so a landing moves it.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (b in 0 until CATCH_BANKS) {
+                        val free = PadBanks.slots(b).count { catchKit.pad(it) == null }
+                        val label = Copy.catchBank(PadBanks.letter(b), free)
+                        DeckButton(
+                            label,
+                            Modifier.weight(1f),
+                            engaged = b == catchBank,
+                            accessibilityLabel = "$label, ${if (b == catchBank) "SHOWING" else "SHOW"}",
+                        ) { catchBank = b }
+                    }
+                }
+                PlayBank(
                     catchKit,
+                    windowRows(catchBank),
                     catchGlow,
                     onHit = { slot, _, uptime -> catchPress(slot, uptime) },
                     onRelease = ::catchRelease,
@@ -1207,6 +1244,9 @@ private fun ReadoutRow(model: TapeDeckModel, readoutPos: State<Long>, onToast: (
         }
     }
 }
+
+/** The banks CATCH can land on: A and B, the two the glow map and DONE's hand-off to KIT cover. */
+private const val CATCH_BANKS = 2
 
 @Composable
 private fun DeckButton(
