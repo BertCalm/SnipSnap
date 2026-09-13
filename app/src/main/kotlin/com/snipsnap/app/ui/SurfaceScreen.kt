@@ -499,6 +499,22 @@ fun SurfaceScreen(
         scope.launch { loadPad4(dir, pad, generation) }
     }
 
+    fun presetIndexFor(corner: Int): Int? = when (corner) {
+        0 -> presetIndexA
+        1 -> presetIndexB
+        2 -> presetIndexC
+        else -> presetIndexD
+    }
+
+    fun setPresetIndexFor(corner: Int, index: Int?) {
+        when (corner) {
+            0 -> presetIndexA = index
+            1 -> presetIndexB = index
+            2 -> presetIndexC = index
+            else -> presetIndexD = index
+        }
+    }
+
     // SET A..D: the sound under the last touch becomes a morph corner.
     fun setCorner(index: Int) {
         val dir = entry?.dir ?: return
@@ -517,22 +533,6 @@ fun SurfaceScreen(
         // matches what SET just wrote (Copilot review, PR #195).
         setPresetIndexFor(index, null)
         onToast(Copy.surfaceCornerSet('A' + index))
-    }
-
-    fun presetIndexFor(corner: Int): Int? = when (corner) {
-        0 -> presetIndexA
-        1 -> presetIndexB
-        2 -> presetIndexC
-        else -> presetIndexD
-    }
-
-    fun setPresetIndexFor(corner: Int, index: Int?) {
-        when (corner) {
-            0 -> presetIndexA = index
-            1 -> presetIndexB = index
-            2 -> presetIndexC = index
-            else -> presetIndexD = index
-        }
     }
 
     // PRESET ◄ ►: steps SurfaceStore.Corner.LIBRARY's named quartet onto
