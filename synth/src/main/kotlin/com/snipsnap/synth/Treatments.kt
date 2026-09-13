@@ -55,9 +55,9 @@ object Treatments {
         if (amount <= 0f) return FxChain()
         if (amount >= 0.999f) return base
         var out = base
-        for (name in FxChain.SECTION_NAMES) {
-            val macros = base.section(name) ?: continue
-            out = out.withSection(name, macros.mapValues { (_, v) -> (v * amount).coerceIn(0f, 1f) })
+        for (section in FxChain.SECTION_NAMES) {
+            val macros = base.section(section) ?: continue
+            out = out.withSection(section, macros.mapValues { (_, v) -> (v * amount).coerceIn(0f, 1f) })
         }
         return out
     }
