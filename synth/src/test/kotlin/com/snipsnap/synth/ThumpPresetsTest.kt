@@ -91,24 +91,40 @@ class ThumpPresetsTest {
 
     /**
      * `docs/SYNTH_ROADMAP.md`'s guardrail: no trademarked names or model
-     * numbers, "not obvious near-misses of them" either. `808-ADJACENT`
-     * would pass a bare substring check on "808" failing safe in the wrong
-     * direction — hyphenated join and suffix words are exactly the
-     * near-miss shape the rule forbids — so this matches the number
-     * wherever it appears as its own token, and the well-known maker and
-     * family names as substrings.
+     * numbers, "not obvious near-misses of them" either — so the model
+     * numbers match as bare substrings, deliberately unbounded. A `\b`
+     * word-boundary version looks stricter but is actually a hole: `\b`
+     * only fires at a transition between a word character and a
+     * non-word one, and a digit run into a following letter never makes
+     * that transition, so `\b808\b` fails to match inside `808ISH` or
+     * `909CORE` — exactly the near-miss shape the rule forbids, sliding
+     * through the guard meant to catch it. Plain substrings close that
+     * hole and still catch the hyphenated and spaced forms for free.
      */
     private val trademarkBlocklist = Regex(
-        """(?i)\b(808|909|606|707|727|626|636|637)\b""" +
+        """(?i)(808|909|606|707|727|626|636|637|303)""" +
             """|roland|akai|yamaha|korg|native\s*instruments|elektron""" +
             """|linn(drum)?|oberheim|simmons|emu|e-mu|fairlight""" +
-            """|tr-?\d{3}|tr\d{3}|cr-?78|sp-?1200|sp-?12|dmx""",
+            """|tr-?\d{3}|cr-?78|sp-?1200|sp-?12|dmx|acid""",
     )
 
     @Test
     fun `no preset name references a real drum machine`() {
         val offenders = ThumpPresets.all().filter { trademarkBlocklist.containsMatchIn(it.name) }
         assertTrue(offenders.isEmpty(), "names that read as a real machine: ${offenders.map { it.name }}")
+    }
+
+    @Test
+    fun `the blocklist actually catches near-misses, not just exact names`() {
+        // A guard proven by what it rejects, not just what it once caught:
+        // suffix concatenation (no separator at all) and the classic
+        // "acid" family name the roadmap's own examples call out.
+        for (nearMiss in listOf("808ISH", "909CORE", "TB303", "ACID 303", "808-ADJACENT")) {
+            assertTrue(trademarkBlocklist.containsMatchIn(nearMiss), "blocklist let '$nearMiss' through")
+        }
+        for (clean in listOf("CONCRETE", "DUSTY BOOM", "PEAK TIME", "DEEP DUB")) {
+            assertTrue(!trademarkBlocklist.containsMatchIn(clean), "blocklist wrongly flagged '$clean'")
+        }
     }
 
     // ---------- spread: sixteen presets must actually differ ----------
