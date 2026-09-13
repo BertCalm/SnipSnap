@@ -70,42 +70,90 @@ internal object Punch {
      */
     private const val ATTACK_WINDOW_SECONDS = 0.0005f
 
-    fun apply(buf: FloatArray, amount: Float, rate: Int = Dsp.RATE) {
-        if (amount <= 0f || buf.isEmpty()) return
-        val punch = amount.coerceIn(0f, 1f)
+    /** The onset window's own geometry, shared by [saturate] and [boost] so
+     * both taper identically across whichever rate they're called at. */
+    private class Window(rate: Int, bufSize: Int) {
+        val samples = (ATTACK_WINDOW_SECONDS * rate).toInt().coerceAtLeast(1)
+        val cutoffSamples = samples * 4
+        val lastShaped = minOf(cutoffSamples, bufSize) - 1
 
-        val before = Loudness.of(Snip(buf.copyOf(), channels = 1, sampleRate = rate))
-
-        val windowSamples = (ATTACK_WINDOW_SECONDS * rate).toInt().coerceAtLeast(1)
-        // Cubic, both of them: a multi-onset voice like THUMP's CLAP (several
-        // equal-height bursts a few ms apart) only has its very first burst
-        // inside this window, so any shaping here inflates burst 1 relative
-        // to the others - and the loudness-match rescale below then shrinks
-        // every other burst by the same factor. Classifier.kt's
-        // attackBurstCount needs each burst above 40% of the take's peak, so
-        // burst 1 can't end up more than 2.5x the rest. Cubic keeps full
-        // strength at punch=1 (where PunchTest's single-onset crest-factor
-        // proof lives) while keeping PUNCH's default (0.5) mild enough that
-        // CLAP still reads as four bursts, not one.
-        val satAmount = punch * punch * punch * 0.3f
-        val boostGain = punch * punch * punch * 6f
-        val cutoffSamples = windowSamples * 4
-        val lastShaped = minOf(cutoffSamples, buf.size) - 1
         // exp() never actually reaches zero, so a raw exp(-i/window) cut off
         // at the last shaped sample leaves a small but real step in the gain
         // right at the boundary - subtracting the taper's own value AT that
-        // last sample pulls the whole taper down to exactly zero there
-        // instead, so it meets the first untouched sample at the same gain.
-        val cutoffTaper = if (lastShaped >= 0) exp(-lastShaped.toFloat() / windowSamples) else 0f
-        for (i in 0..lastShaped) {
-            val taper = exp(-i.toFloat() / windowSamples) - cutoffTaper
-            buf[i] = Dsp.drive(buf[i], satAmount * taper) * (1f + boostGain * taper)
-        }
+        // last sample (which, for a buffer shorter than the window's own
+        // cutoff, is the buffer's own last sample, not the window's) pulls
+        // the whole taper down to exactly zero there instead, so it meets
+        // the first untouched sample at the same gain.
+        private val cutoffTaper = if (lastShaped >= 0) exp(-lastShaped.toFloat() / samples) else 0f
+        fun taperAt(i: Int): Float = exp(-i.toFloat() / samples) - cutoffTaper
+    }
 
+    /**
+     * The nonlinear half of Punch's transient shaping: soft saturation
+     * (reusing [Dsp.drive]), confined to the onset window. Split out from
+     * [boost] so a U6-oversampling engine (docs/SYNTH_UPGRADE.md) can call
+     * this BEFORE [Dsp.decimate], at its own renderRate: [Dsp.drive] is a
+     * static nonlinearity and mints new harmonics wherever it runs, so
+     * applying it after decimation would hand U6's whole anti-aliasing
+     * story right back to a raw oscillator's problem, with nothing left
+     * downstream to band-limit what it creates. [apply] calls this for the
+     * ordinary (non-oversampled) case.
+     */
+    fun saturate(buf: FloatArray, amount: Float, rate: Int = Dsp.RATE) {
+        if (amount <= 0f || buf.isEmpty()) return
+        val punch = amount.coerceIn(0f, 1f)
+        // Cubic: see the doc comment on [apply] for why.
+        val satAmount = punch * punch * punch * 0.3f
+        val window = Window(rate, buf.size)
+        for (i in 0..window.lastShaped) {
+            buf[i] = Dsp.drive(buf[i], satAmount * window.taperAt(i))
+        }
+    }
+
+    /**
+     * The linear half: a transient boost - a smooth per-sample gain
+     * envelope, strongest at t=0 - plus a loudness-targeted rescale back to
+     * [buf]'s own level from right before this call. A gain envelope this
+     * slow-moving doesn't mint new harmonics the way [saturate]'s static
+     * nonlinearity does, so unlike that stage it's safe to run after
+     * [Dsp.decimate] - which is exactly where a U6 engine calls it, on the
+     * already-decimated buffer.
+     */
+    fun boost(buf: FloatArray, amount: Float, rate: Int = Dsp.RATE) {
+        if (amount <= 0f || buf.isEmpty()) return
+        val punch = amount.coerceIn(0f, 1f)
+        val before = Loudness.of(Snip(buf.copyOf(), channels = 1, sampleRate = rate))
+        // Cubic: see the doc comment on [apply] for why.
+        val boostGain = punch * punch * punch * 6f
+        val window = Window(rate, buf.size)
+        for (i in 0..window.lastShaped) {
+            buf[i] *= 1f + boostGain * window.taperAt(i)
+        }
         val after = Loudness.of(Snip(buf.copyOf(), channels = 1, sampleRate = rate))
         if (after > 1e-6f && before > 1e-6f) {
             val gain = before / after
             for (i in buf.indices) buf[i] *= gain
         }
+    }
+
+    /**
+     * Both stages together, for an engine that doesn't oversample: [saturate]
+     * then [boost], back to back on the same buffer at the same rate - the
+     * combination PunchTest proves standalone.
+     *
+     * A multi-onset voice like THUMP's CLAP (several equal-height bursts a
+     * few ms apart) only has its very first burst inside the onset window,
+     * so any shaping there inflates burst 1 relative to the others - and
+     * [boost]'s own loudness-match rescale then shrinks every other burst by
+     * the same factor. Classifier.kt's attackBurstCount needs each burst
+     * above 40% of the take's peak, so burst 1 can't end up more than 2.5x
+     * the rest. Cubic scaling (above, on both amounts) keeps full strength
+     * at punch=1 - where PunchTest's single-onset crest-factor proof lives -
+     * while keeping PUNCH's default (0.5) mild enough that CLAP still reads
+     * as four bursts, not one.
+     */
+    fun apply(buf: FloatArray, amount: Float, rate: Int = Dsp.RATE) {
+        saturate(buf, amount, rate)
+        boost(buf, amount, rate)
     }
 }

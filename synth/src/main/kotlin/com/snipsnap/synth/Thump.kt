@@ -95,8 +95,7 @@ object Thump {
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
         // U6 (docs/SYNTH_UPGRADE.md): every voice synthesizes at 4x RATE, so
         // its own oscillators' aliasing folds down above 22.05kHz instead of
-        // into the audible band, then Dsp.decimate brings it back to RATE
-        // before anything downstream (Punch, normalize) ever sees it.
+        // into the audible band, then Dsp.decimate brings it back to RATE.
         val renderRate = RATE * Dsp.OVERSAMPLE
         val raw = when (voice) {
             ThumpVoice.KICK -> kick(m, renderRate)
@@ -108,21 +107,39 @@ object Thump {
             ThumpVoice.COWBELL -> cowbell(m, renderRate)
             ThumpVoice.RIM -> rim(m, renderRate)
         }
-        val buf = Dsp.decimate(raw, RATE)
+        val punch = m.getValue("PUNCH")
         // Punch (U3, docs/SYNTH_UPGRADE.md) swaps the peak target below for a
         // perceived-level one, so normalize has to set the reference loudness
         // BEFORE Punch reshapes the hit, not after: normalizing again
         // afterward would silently rescale Punch's own loudness-matched
         // result right back to a fixed peak, undoing the "more PUNCH reshapes
         // the hit, it doesn't just make it louder" guarantee PunchTest
-        // proves for Punch.apply in isolation. limitPeak is the actual
-        // clipping safety net now - only stepping in if the transient boost
-        // pushed a sample past what's safe, same as normalize always did for
-        // amount 0 (Punch's own no-op path leaves the buffer exactly at
-        // normalize's peak, so nothing changes for the many voices that
-        // never touch PUNCH away from a beat-safe default).
+        // proves for Punch.apply in isolation. Punch.saturate is the one
+        // exception to "after decimate": [Dsp.drive] is a nonlinearity and
+        // mints new harmonics right where it runs, so applying it after
+        // decimation would hand U6's whole anti-aliasing story right back to
+        // a raw oscillator's problem - those harmonics would alias into the
+        // audible band with nothing downstream left to band-limit them.
+        // Running it here, before decimate, means the same decimation step
+        // that cleans up the voice's own oscillators also catches this one.
+        Dsp.normalize(raw)
+        Punch.saturate(raw, punch, renderRate)
+        val buf = Dsp.decimate(raw, RATE)
+        // Decimation's own resampling kernel loses some of the peak
+        // normalize just set - a sharp, narrow peak (exactly what a naive
+        // voice like HAT tends to have) partly relies on energy above the
+        // new Nyquist that a correct band-limiting filter has to remove, so
+        // the true peak of the properly-decimated signal can land well
+        // under 1. Renormalizing restores a full-scale reference before
+        // Punch.boost's own gain envelope and loudness-match run - matching
+        // what this line already did pre-U6, when Punch always saw a
+        // freshly peak-normalized buffer, never one decimation had quietly
+        // dimmed.
         Dsp.normalize(buf)
-        Punch.apply(buf, m.getValue("PUNCH"))
+        Punch.boost(buf, punch, RATE)
+        // The actual clipping safety net, run last: only steps in if the
+        // transient boost pushed a sample past what's safe, same as
+        // normalize always did for PUNCH amount 0.
         Dsp.limitPeak(buf)
         Dsp.fadeTail(buf)
         return Snip(buf, channels = 1, sampleRate = RATE)
