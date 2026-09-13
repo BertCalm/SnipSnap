@@ -124,12 +124,16 @@ object Thump {
         var phase = 0.0
         val noise = Dsp.Noise(7)
         val clickLp = Dsp.OnePole()
+        // A 1ms attack ramp (U5, docs/SYNTH_UPGRADE.md) - short enough to
+        // leave the punch alone, long enough to declick the instant onset
+        // every THUMP voice used to jump straight into.
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
             val t = i.toFloat() / RATE
             // The defining kick shape: frequency falls fast onto the base.
             val f = base * (1f + (sweepMult - 1f) * exp((-90.0 * t)).toFloat())
             phase += f / RATE
-            var s = Dsp.envAt(t, t60) * sin(2.0 * PI * phase).toFloat()
+            var s = env.at(t) * sin(2.0 * PI * phase).toFloat()
             if (t < 0.005f) {
                 s += click * 0.6f * clickLp.lp(noise.next(), 1000f) * (1f - t / 0.005f) * 2f
             }
@@ -147,14 +151,15 @@ object Thump {
         val out = FloatArray(frames(t60 * 1.4f))
         val noise = Dsp.Noise(3)
         val lp = Dsp.OnePole()
+        val bodyEnv = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60 * 0.45f)
+        val rattleEnv = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         var p1 = 0.0; var p2 = 0.0
         for (i in out.indices) {
             val t = i.toFloat() / RATE
             p1 += tune / RATE
             p2 += tune * 1.83 / RATE
-            val body = (0.6f * sin(2.0 * PI * p1) + 0.4f * sin(2.0 * PI * p2)).toFloat() *
-                Dsp.envAt(t, t60 * 0.45f)
-            val rattle = lp.lp(noise.next(), toneHz) * 2.4f * Dsp.envAt(t, t60)
+            val body = (0.6f * sin(2.0 * PI * p1) + 0.4f * sin(2.0 * PI * p2)).toFloat() * bodyEnv.at(t)
+            val rattle = lp.lp(noise.next(), toneHz) * 2.4f * rattleEnv.at(t)
             out[i] = (1f - snap) * body + snap * rattle
         }
         return out
@@ -176,6 +181,7 @@ object Thump {
         val phases = DoubleArray(6)
         val lp1 = Dsp.OnePole(); val lp2 = Dsp.OnePole()
         val hpHz = Dsp.lin(metal, 6800f, 9200f)
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
             val t = i.toFloat() / RATE
             var s = 0f
@@ -187,7 +193,7 @@ object Thump {
             // Two cascaded one-pole high-passes: keep the sizzle, dump the body.
             val hp = s - lp1.lp(s, hpHz)
             val hp2 = hp - lp2.lp(hp, hpHz)
-            out[i] = hp2 * 2.2f * Dsp.envAt(t, t60)
+            out[i] = hp2 * 2.2f * env.at(t)
         }
         return out
     }
@@ -220,11 +226,12 @@ object Thump {
 
         val out = FloatArray(frames(t60 * 1.4f))
         var phase = 0.0
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
             val t = i.toFloat() / RATE
             val f = base * (1f + (sweep - 1f) * exp((-30.0 * t)).toFloat())
             phase += f / RATE
-            out[i] = Dsp.envAt(t, t60) * sin(2.0 * PI * phase).toFloat()
+            out[i] = env.at(t) * sin(2.0 * PI * phase).toFloat()
         }
         return out
     }
@@ -236,13 +243,14 @@ object Thump {
         val out = FloatArray(frames(t60 * 1.4f))
         var p1 = 0.0; var p2 = 0.0
         val svf = Dsp.Svf()
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
             val t = i.toFloat() / RATE
             p1 += base / RATE
             p2 += base * 1.48 / RATE
             val s = (Dsp.square(p1) + Dsp.square(p2)) * 0.5f
             svf.process(s, base * 1.2f, 0.6f)
-            out[i] = svf.band * 1.6f * Dsp.envAt(t, t60)
+            out[i] = svf.band * 1.6f * env.at(t)
         }
         return out
     }
