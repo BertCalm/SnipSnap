@@ -99,7 +99,13 @@ object Fathom {
     /** Naive saw from a 0..1 phase. Aliases; lo-fi is on-brand. */
     private fun saw(phase: Double): Float = (2.0 * (phase - Math.floor(phase)) - 1.0).toFloat()
 
-    fun render(voice: FathomVoice, macros: Map<String, Float> = emptyMap()): Snip {
+    /**
+     * The raw synth loop, at whatever [rate] the caller wants - split out of
+     * [render] so U6's oversampled dispatch (docs/SYNTH_UPGRADE.md) can be
+     * tested directly against a native-rate render, rather than trusting
+     * that reading [render]'s own source matches what it actually does.
+     */
+    internal fun synthesize(voice: FathomVoice, macros: Map<String, Float>, rate: Int): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -141,15 +147,15 @@ object Fathom {
         val fmRatio = ratioFor(m["RATIO"] ?: 0f)
         val fmIndex = Dsp.lin(driveAmt, 1f, 14f)
 
-        val out = FloatArray((t60 * 1.4f * RATE).toInt().coerceAtLeast(64))
-        val svf = Dsp.TptSvf()
+        val out = FloatArray((t60 * 1.4f * rate).toInt().coerceAtLeast(64))
+        val svf = Dsp.TptSvf(rate)
         val env = Dsp.Env(attackSeconds = 0.004f, decay2T60 = t60)
         var phase = 0.0
         var phaseLow = 0.0
         var phase2 = 0.0
         var phaseMod = 0.0
         for (i in out.indices) {
-            val t = i.toFloat() / RATE
+            val t = i.toFloat() / rate
             val blip = 2f.pow(sweepSemis * Dsp.envAt(t, sweepT60) / 12f)
             // Linear in semitones, which is what a portamento should be:
             // constant semitones per second reads as an even slide.
@@ -159,13 +165,13 @@ object Fathom {
             // SWEEP blip and the GLIDE slide, or it will drift away from
             // the others mid-note.
             val pitchHz = base * blip * slide
-            phase += pitchHz / RATE
+            phase += pitchHz / rate
 
             val source = when (voice) {
                 FathomVoice.DEEP -> sin(2.0 * PI * phase).toFloat()
                 FathomVoice.GRIND -> {
-                    phaseLow += pitchHz / detune / RATE
-                    phase2 += pitchHz * detune / RATE
+                    phaseLow += pitchHz / detune / rate
+                    phase2 += pitchHz * detune / rate
                     // The hollowness *is* the beating between the two saws.
                     // No comb or notch stage — interference alone does it.
                     0.5f * (saw(phaseLow) + saw(phase2))
@@ -174,7 +180,7 @@ object Fathom {
                     // Derived from the same pitchHz as the carrier: if the
                     // modulator missed the glide, the FM ratio would drift
                     // during the slide and the timbre would smear.
-                    phaseMod += pitchHz * fmRatio / RATE
+                    phaseMod += pitchHz * fmRatio / rate
                     // The index rides the amp envelope, so the metallic edge
                     // decays faster than the fundamental. That is what real FM
                     // basses do, and it is what stops this being a static buzz.
@@ -187,7 +193,17 @@ object Fathom {
 
             out[i] = svf.low * env.at(t)
         }
+        return out
+    }
 
+    fun render(voice: FathomVoice, macros: Map<String, Float> = emptyMap()): Snip {
+        // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE so the naive saw/FM
+        // oscillators' and the DRIVE saturation's own harmonics fold down
+        // above 22.05kHz instead of into the audible band, then
+        // Dsp.decimate brings it back to RATE.
+        val renderRate = RATE * Dsp.OVERSAMPLE
+        val raw = synthesize(voice, macros, renderRate)
+        val out = Dsp.decimate(raw, RATE)
         Dsp.normalize(out)
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
