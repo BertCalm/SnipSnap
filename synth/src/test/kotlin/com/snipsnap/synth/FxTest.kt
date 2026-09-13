@@ -485,6 +485,46 @@ class FxTest {
         assertTrue(Dub.process(bright, mapOf("GENERATIONS" to 1f)).samples.contentEquals(g12.samples), "deterministic")
     }
 
+    // ---------- DUST ----------
+
+    @Test
+    fun `DUST at all zeros is bit-identical, not merely quiet`() {
+        val out = Dust.process(kick, mapOf("CRACKLE" to 0f, "RUMBLE" to 0f, "HISS" to 0f))
+        assertTrue(out.samples.contentEquals(kick.samples), "DUST at zero added something")
+    }
+
+    @Test
+    fun `DUST is the same record every time`() {
+        val a = Dust.process(kick, mapOf("CRACKLE" to 0.8f, "RUMBLE" to 0.5f, "HISS" to 0.5f))
+        val b = Dust.process(kick, mapOf("CRACKLE" to 0.8f, "RUMBLE" to 0.5f, "HISS" to 0.5f))
+        assertTrue(a.samples.contentEquals(b.samples), "DUST is not deterministic")
+    }
+
+    @Test
+    fun `DUST puts noise in the silence after the hit`() {
+        val quiet = Snip(FloatArray(44_100), 1, 44_100)
+        val dusty = Dust.process(quiet, mapOf("CRACKLE" to 0f, "RUMBLE" to 0f, "HISS" to 1f))
+        // Silence in, silence out: there is no peak to scale the beds against.
+        assertTrue(dusty.samples.all { it == 0f }, "DUST made noise out of pure silence")
+        val over = Dust.process(kick, mapOf("CRACKLE" to 0f, "RUMBLE" to 0f, "HISS" to 1f))
+        // sustainRms's 80 ms mark still sits inside the kick's own decay (its
+        // envelope is only ~-19 dB down there), which swamps an honest -48
+        // dBFS hiss bed - the natural tail moved as much as the hiss did, in
+        // either direction, so that window can't tell them apart. The kick's
+        // last 46 ms (0.30s-0.346s) is genuinely near-silent (~4.8e-4 peak),
+        // well beneath HISS_CEILING - that's where the hiss is provably audible.
+        assertTrue(
+            peakIn(over, 0.3f, kick.durationSeconds) > peakIn(kick, 0.3f, kick.durationSeconds) * 3f,
+            "HISS did not reach the hit's true tail",
+        )
+    }
+
+    @Test
+    fun `a dusted kick is still a kick`() {
+        assertEquals(DrumClass.KICK, Classifier.classify(Dust.process(kick)).drumClass)
+        assertEquals(DrumClass.SNARE, Classifier.classify(Dust.process(snare)).drumClass)
+    }
+
     @Test
     fun `SWELL arrives before the strike and leaves the strike itself untouched`() {
         val swelled = Swell.process(snare, mapOf("RISE" to 0.5f)) // a 0.75 s rise
