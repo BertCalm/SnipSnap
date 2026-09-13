@@ -93,7 +93,7 @@ bool SurfaceEngine::start() {
     cutoff_.configure(10.0f, fs);
     resonance_.configure(10.0f, fs);
     drive_.configure(10.0f, fs);
-    mix_.configure(10.0f, fs);
+    for (auto& w : sampleWeight_) w.configure(10.0f, fs);
     gain_.configure(50.0f, fs);
     gain_.snap(0.0f);
     untilCoefficients_ = 0;
@@ -205,7 +205,9 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
     cutoff_.setTarget(control01(target.cutoff, 1.0f));
     resonance_.setTarget(control01(target.resonance, 0.0f));
     drive_.setTarget(control01(target.drive, 0.0f));
-    mix_.setTarget(control01(f.sampleMix, 0.0f));
+    sampleWeight_[0].setTarget(control01(f.sampleA, 1.0f));
+    sampleWeight_[1].setTarget(control01(f.sampleB, 0.0f));
+    sampleWeight_[2].setTarget(control01(f.sampleC, 0.0f));
     // A touch-down restarts every loaded source from its head, so a tapped
     // rhythm triggers like a drum hit regardless of where the crossfade
     // sits; a held note still rides wherever each loop has turned to
@@ -252,15 +254,26 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         resonance_.next();
         const float drive = drive_.next();
         const float gain = gain_.next();
-        const float mix = mix_.next();
+        const float w0 = sampleWeight_[0].next();
+        const float w1 = sampleWeight_[1].next();
+        const float w2 = sampleWeight_[2].next();
 
-        // The source: slot 0 and slot 1 each loop independently (their own
-        // phase_[slot], the same linear-interpolation read as always), then
-        // crossfade by `mix` before drive/filter ever sees the result -
-        // weights sum to 1, so the crossfade doesn't spike loudness at the
-        // midpoint. Slots 2/3 aren't mixed in yet (see kMaxSources).
+        // The source: slots 0/1/2 each loop independently (their own
+        // phase_[slot], the same linear-interpolation read as always),
+        // then blend by sampleA/B/C before drive/filter ever sees the
+        // result. Each weight glides on its own smoother, so their sum can
+        // drift a little off 1 mid-glide (unlike stage 1's paired
+        // mix/1-mix) - renormalising here keeps the blend from ever
+        // spiking or dipping in loudness while a weight is still catching
+        // up, and reads as silence rather than dividing by ~0 if all three
+        // ever glide through together near zero. Slot 3 isn't mixed in yet
+        // (see kMaxSources).
+        const float wSum = w0 + w1 + w2;
+        const float wInv = wSum > 1e-6f ? 1.0f / wSum : 0.0f;
         const float pr = pitchRatio(pitch);
-        const float v0 = (1.0f - mix) * readSlot(0, fs, pr) + mix * readSlot(1, fs, pr);
+        const float v0 = (w0 * wInv) * readSlot(0, fs, pr) +
+                         (w1 * wInv) * readSlot(1, fs, pr) +
+                         (w2 * wInv) * readSlot(2, fs, pr);
 
         // Drive: a soft clip with its make-up baked in, so DRIVE is a colour and not a volume knob.
         const float pre = 1.0f + drive * 15.0f;

@@ -56,10 +56,10 @@ class SurfaceEngine(preferredSampleRate: Int) {
 
     /**
      * Load a snip as one of the engine's source slots; stereo is folded to
-     * mono, the file's own rate is kept (the engine repitches). Slot 0 is
-     * what every mode has always played; slot 1 is [control]'s `sampleMix`
-     * other end. See [MAX_SOURCES] (kept in sync with SurfaceEngine.h's
-     * kMaxSources by hand, not by any shared build-time constant).
+     * mono, the file's own rate is kept (the engine repitches). Slots 0/1/2
+     * are the three vertices [control]'s `sampleA/B/C` blend between. See
+     * [MAX_SOURCES] (kept in sync with SurfaceEngine.h's kMaxSources by
+     * hand, not by any shared build-time constant).
      */
     @Synchronized
     fun load(snip: Snip, slot: Int = 0) {
@@ -75,17 +75,27 @@ class SurfaceEngine(preferredSampleRate: Int) {
 
     /**
      * One control frame; call at screen rate with the smoothed reading.
-     * [sampleMix] crossfades slot 0 (0f) toward slot 1 (1f); it does
-     * nothing until a sample is loaded into slot 1.
+     * [sampleA]/[sampleB]/[sampleC] weight slots 0/1/2 - a barycentric
+     * blend across the pad, independent of [mode]; an unloaded slot's
+     * weight is just silence, so the blend needs no gating of its own.
+     * Not required to sum to 1 - the engine renormalises every sample.
      */
     @Synchronized
-    fun control(mode: TouchSurface.Mode, reading: TouchSurface.Reading, tilt: Float, sampleMix: Float = 0f, gate: Boolean) {
+    fun control(
+        mode: TouchSurface.Mode,
+        reading: TouchSurface.Reading,
+        tilt: Float,
+        sampleA: Float = 1f,
+        sampleB: Float = 0f,
+        sampleC: Float = 0f,
+        gate: Boolean,
+    ) {
         if (!open) return
         NativeSurface.control(
             handle, mode.ordinal,
             reading.x, reading.y, reading.z, tilt,
             reading.a, reading.b, reading.c, reading.d,
-            sampleMix, gate,
+            sampleA, sampleB, sampleC, gate,
         )
     }
 

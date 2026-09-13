@@ -93,6 +93,51 @@ class TouchSurfaceTest {
     }
 
     @Test
+    fun `sample weights are one at each vertex of the inscribed triangle`() {
+        val apex = TouchSurface.sampleWeights(0.5f, 1f)
+        near(1f, apex.first); near(0f, apex.second); near(0f, apex.third)
+        val baseLeft = TouchSurface.sampleWeights(0f, 0f)
+        near(1f, baseLeft.second)
+        val baseRight = TouchSurface.sampleWeights(1f, 0f)
+        near(1f, baseRight.third)
+        // The triangle's centroid is a third of the way up, not the pad's
+        // own centre (0.5, 0.5) - that point is inside the triangle but off
+        // its centroid, so it is not an equal three-way split (see below).
+        val centroid = TouchSurface.sampleWeights(0.5f, 1f / 3f)
+        near(1f / 3f, centroid.first); near(1f / 3f, centroid.second); near(1f / 3f, centroid.third)
+    }
+
+    @Test
+    fun `sample weights have no dead zone outside the triangle`() {
+        // The pad's own centre sits inside the triangle (apex-heavier than
+        // the centroid, since it is higher up), and still sums to one.
+        val centre = TouchSurface.sampleWeights(0.5f, 0.5f)
+        near(1f, centre.first + centre.second + centre.third)
+        assertTrue(centre.first > 1f / 3f)
+
+        // The two top corners sit outside the triangle - one vertex's raw
+        // coordinate goes negative there - but the blend stays defined,
+        // clamped, and normalised rather than leaving a hole.
+        val topLeft = TouchSurface.sampleWeights(0f, 1f)
+        near(0f, topLeft.third)
+        near(1f, topLeft.first + topLeft.second + topLeft.third)
+        assertTrue(topLeft.first > 0f && topLeft.second > 0f)
+
+        val topRight = TouchSurface.sampleWeights(1f, 1f)
+        near(0f, topRight.second)
+        near(1f, topRight.first + topRight.second + topRight.third)
+    }
+
+    @Test
+    fun `sample weights always sum to one and never go negative`() {
+        for (x in 0..10) for (y in 0..10) {
+            val (a, b, c) = TouchSurface.sampleWeights(x / 10f, y / 10f)
+            near(1f, a + b + c)
+            assertTrue(a >= 0f && b >= 0f && c >= 0f)
+        }
+    }
+
+    @Test
     fun `a pad with no size is refused in words`() {
         assertFailsWith<IllegalArgumentException> {
             TouchSurface.read(Mode.XY, emptyList(), 0f, 100f, Reading.REST)
