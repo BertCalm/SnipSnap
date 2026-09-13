@@ -223,10 +223,11 @@ people who want the far end. Still always undoable, per rule 4.
 the kick on the reference track, and they cannot say why.
 
 The cause is in the code: every engine ends with `Dsp.normalize(buf, 0.95f)`
-(`Dsp.kt:188`) — **peak** normalisation. Peak is not loudness. A commercial
+(`Dsp.kt`) — **peak** normalisation. Peak is not loudness. A commercial
 kick hits because of transient shaping and saturation, not because its peak
 sample is high, and two sounds normalised to the same peak can differ by more
-than 10 dB in perceived level.
+than 10 dB in perceived level. (Post-Punch, THUMP no longer ends this way -
+see below.)
 
 ### The fix
 

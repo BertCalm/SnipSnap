@@ -64,6 +64,25 @@ class PunchTest {
     }
 
     @Test
+    fun `the transient window's taper reaches exactly zero at its own boundary`() {
+        // A constant-amplitude buffer isolates the taper itself: the last
+        // shaped sample and the very next (fully untouched) one see
+        // identical input, so if the taper reaches zero exactly at the
+        // boundary they must come out identical too. A regression to the
+        // un-offset exp(-i/window) taper left a small but real step here -
+        // the review that caught it asked for exactly this proof.
+        val windowSamples = (0.0005f * Dsp.RATE).toInt().coerceAtLeast(1) // mirrors Punch.ATTACK_WINDOW_SECONDS
+        val cutoffSamples = windowSamples * 4
+        val buf = FloatArray(cutoffSamples + 10) { 0.7f }
+        Punch.apply(buf, 1f)
+        assertTrue(
+            abs(buf[cutoffSamples - 1] - buf[cutoffSamples]) < 1e-5f,
+            "the last shaped sample should meet the first untouched one at the same gain: " +
+                "${buf[cutoffSamples - 1]} vs ${buf[cutoffSamples]}",
+        )
+    }
+
+    @Test
     fun `roughly preserves loudness - it reshapes, it does not just get louder`() {
         val buf = tone(seconds = 0.2f, amp = 0.6f)
         val loudBefore = Loudness.of(Snip(buf.copyOf(), channels = 1, sampleRate = Dsp.RATE))

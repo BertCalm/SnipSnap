@@ -64,4 +64,33 @@ class DspTest {
         val high = meanAbsDelta(0.9f)
         assertTrue(low < high, "low-temperature rolls ($low) should land closer to the seed than high-temperature rolls ($high)")
     }
+
+    // ---------- Dsp.limitPeak (U3, docs/SYNTH_UPGRADE.md) ----------
+    // A clipping safety net, not a level target: unlike normalize, it must
+    // leave an already-safe buffer's level exactly alone.
+
+    @Test
+    fun `limitPeak leaves a buffer under the ceiling untouched`() {
+        val buf = floatArrayOf(0.1f, -0.3f, 0.5f, -0.2f)
+        val original = buf.copyOf()
+        Dsp.limitPeak(buf, ceiling = 1f)
+        assertTrue(original.contentEquals(buf), "a peak already under the ceiling must not be rescaled")
+    }
+
+    @Test
+    fun `limitPeak rescales an over-ceiling buffer down to exactly the ceiling`() {
+        val buf = floatArrayOf(0.5f, -2f, 1f)
+        Dsp.limitPeak(buf, ceiling = 1f)
+        val peak = buf.maxOf { kotlin.math.abs(it) }
+        assertEquals(1f, peak, 1e-5f)
+        // A uniform rescale: every sample keeps its share of the original peak.
+        assertEquals(0.25f, buf[0], 1e-5f)
+    }
+
+    @Test
+    fun `limitPeak leaves silence alone`() {
+        val buf = FloatArray(8)
+        Dsp.limitPeak(buf, ceiling = 1f)
+        assertTrue(buf.all { it == 0f }, "silence has no peak to rescale from")
+    }
 }
