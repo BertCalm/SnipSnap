@@ -59,14 +59,42 @@ internal class Section(
     val macros: List<MacroSpec>,
     val get: (FxChain) -> Map<String, Float>?,
     val with: (FxChain, Map<String, Float>?) -> FxChain,
-    val process: (Snip, Map<String, Float>) -> Snip,
-    /** Runs at the transport, before SWELL — not in processRest. */
-    val transport: Boolean = false,
+    val run: (Snip, Map<String, Float>) -> Snip,
+    /** TRANSPORT (speed) and ARRIVAL (swell) run before the tail budget is measured. */
+    val stage: Stage = Stage.RACK,
 )
+
+enum class Stage { TRANSPORT, ARRIVAL, RACK }
 
 /** Rack order. This list IS the order — in the signal path and in JSON alike. */
 internal val SECTIONS: List<Section> = listOf(/* speed, swell, smear, ghost, ... */)
 ```
+
+**`Section` stays `internal`; the accessors must be public.** Kotlin `internal`
+is Gradle-module-scoped, and `Breed` lives in `:shell` while `FxChain` lives in
+`:synth` — so an internal `SECTIONS` would be invisible to the site with the
+worst silent-failure trap. `FxChain` exposes:
+
+```kotlin
+companion object {
+    /** Every section's name, in rack order. */
+    val SECTION_NAMES: List<String>
+    /** [name]'s macro specs. */
+    fun macrosOf(name: String): List<MacroSpec>
+}
+/** [name]'s macros on this chain, or null when bypassed. */
+fun section(name: String): Map<String, Float>?
+/** This chain with [name] set to [macros] (null bypasses it). */
+fun withSection(name: String, macros: Map<String, Float>?): FxChain
+```
+
+`Treatments` and `Breed` iterate `SECTION_NAMES` and use those two accessors,
+never the `Section` descriptor.
+
+**Stage, not a boolean.** `process()` already runs SWELL before the tail budget
+is measured, so a single `transport` flag cannot describe the rack. `Section`
+carries `stage: Stage` where `Stage` is `TRANSPORT` (speed), `ARRIVAL` (swell)
+and `RACK` (everything else, run by `processRest`).
 
 Sites that become iterations over `SECTIONS`:
 
@@ -210,7 +238,7 @@ What changes:
 
 - `MAX_CHAIN_TAIL_SECONDS`'s doc comment — measured from the pitched, swelled sound
 - PITCH declares **no length cap of its own**; capping a varispeed truncates the note
-- `Section.transport = true` so `processRest` skips it and `process` runs it first
+- `Section.stage = Stage.TRANSPORT` so `processRest` skips it and `process` runs it first
 - `Section.name` is `"speed"`, matching the field, so the JSON key is `"speed"` like
   every other section's. PITCH is the chip's display word only. It emits first in
   JSON; an old `kit.json` without the key round-trips as bypass
