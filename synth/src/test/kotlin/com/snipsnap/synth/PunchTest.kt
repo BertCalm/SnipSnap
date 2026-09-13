@@ -122,7 +122,7 @@ class PunchTest {
             (0.8f * sin(2.0 * PI * hz * i / oversampledRate)).toFloat()
         }
 
-        val correct = Punch.applyOversampled(tone176k(), 1f, oversampledRate, Dsp.RATE)
+        val correct = Punch.applyOversampled(tone176k(), 1f, Dsp.RATE)
 
         // The buggy ordering this test exists to catch: decimate first,
         // then run both stages on the already-final-rate buffer - what

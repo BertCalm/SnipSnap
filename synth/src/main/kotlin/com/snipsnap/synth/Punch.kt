@@ -181,7 +181,7 @@ internal object Punch {
     /**
      * The full U6-aware application (docs/SYNTH_UPGRADE.md) an oversampling
      * engine needs: [saturate] and [boostEnvelope] together on [raw] while
-     * it's still at [renderRate], decimated down to [rate] via
+     * it's still at `rate * Dsp.OVERSAMPLE`, decimated down to [rate] via
      * [Dsp.decimate], renormalized (decimation's own resampling kernel
      * loses some of a signal's peak wherever it relies on energy above the
      * new Nyquist a correct band-limiting filter has to remove), then
@@ -191,6 +191,13 @@ internal object Punch {
      * would target a systematically louder reference than any decimated
      * render could actually reach.
      *
+     * [raw]'s own rate isn't a separate parameter: [Dsp.decimate] always
+     * treats its input as `rate * Dsp.OVERSAMPLE`, so a caller-supplied
+     * render rate could silently disagree with what decimate assumes -
+     * this derives it the same way decimate does, closing off that
+     * mismatch at the boundary rather than trusting every caller to keep
+     * the two in sync.
+     *
      * Extracted out of [Thump]'s own render loop so the ordering that keeps
      * U6 actually anti-alias-safe - both stages before [Dsp.decimate], only
      * the (genuinely spectrally transparent) final rescale after - is
@@ -199,7 +206,8 @@ internal object Punch {
      * stage back across the decimate boundary fails that test, not just a
      * hand-reconstructed stand-in for it.
      */
-    fun applyOversampled(raw: FloatArray, amount: Float, renderRate: Int, rate: Int): FloatArray {
+    fun applyOversampled(raw: FloatArray, amount: Float, rate: Int): FloatArray {
+        val renderRate = rate * Dsp.OVERSAMPLE
         val before = if (amount > 0f) {
             val reference = Dsp.decimate(raw.copyOf(), rate)
             Dsp.normalize(reference)

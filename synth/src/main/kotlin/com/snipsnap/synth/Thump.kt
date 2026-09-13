@@ -124,7 +124,7 @@ object Thump {
         // anti-aliasing story right back to a raw oscillator's problem.
         // PunchTest exercises this exact function, so that ordering is
         // proven there, not just trusted here.
-        val buf = Punch.applyOversampled(raw, punch, renderRate, RATE)
+        val buf = Punch.applyOversampled(raw, punch, RATE)
         // The actual clipping safety net, run last: only steps in if the
         // transient boost pushed a sample past what's safe, same as
         // normalize always did for PUNCH amount 0.
