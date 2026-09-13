@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.FeatureExtractor
+import com.snipsnap.audio.Loudness
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -199,5 +200,23 @@ class ThumpTest {
         assertFailsWith<IllegalArgumentException> { ThumpPatch("x", ThumpVoice.KICK, mapOf("CUTOFF" to 0.5f)) }
         assertFailsWith<IllegalArgumentException> { ThumpPatch("x", ThumpVoice.KICK, mapOf("TUNE" to 2f)) }
         assertFailsWith<com.snipsnap.json.JsonException> { ThumpPatch.fromJsonText("""{"engine":"VELVET"}""") }
+    }
+
+    @Test
+    fun `PUNCH at its factory default roughly preserves loudness through the full render`() {
+        // PunchTest proves Punch.apply's own loudness match in isolation;
+        // this proves the ordering contract survives contact with render()'s
+        // own Dsp.normalize/Dsp.limitPeak either side of it. Getting that
+        // ordering backwards (normalize running again *after* Punch, silently
+        // overwriting the level Punch just matched) would go uncaught by
+        // PunchTest alone, since it never touches Thump.render at all.
+        for (voice in ThumpVoice.entries) {
+            val off = Loudness.of(Thump.render(voice, mapOf("PUNCH" to 0f)))
+            val default = Loudness.of(Thump.render(voice))
+            assertTrue(
+                kotlin.math.abs(default - off) < off * 0.2f,
+                "$voice: PUNCH off vs its factory default should stay close: $off -> $default",
+            )
+        }
     }
 }
