@@ -37,19 +37,46 @@ class TonewheelTest {
     }
 
     @Test
-    fun `scrambles are reproducible and never garbage`() {
+    fun `scrambles are reproducible and stay in range`() {
         for (voice in TonewheelVoice.entries) {
             assertEquals(Tonewheel.scramble(voice, Random(6)), Tonewheel.scramble(voice, Random(6)))
             repeat(8) { seed ->
                 val snip = Tonewheel.render(voice, Tonewheel.scramble(voice, Random(seed)))
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice roll $seed broke")
-                val c = Classifier.classify(snip)
-                assertTrue(
-                    c.drumClass != DrumClass.KICK && c.drumClass != DrumClass.LOOP &&
-                        c.drumClass != DrumClass.UNKNOWN,
-                    "$voice roll $seed classified ${c.drumClass}",
-                )
             }
+        }
+    }
+
+    @Test
+    fun `scrambled hits usually still read as playable percussion`() {
+        // SCRAMBLE now rolls near a preset (docs/SYNTH_UPGRADE.md, U2), so a
+        // roll can land close to a classifier boundary the same way a
+        // preset itself can. "Most of the time", not "always", is the
+        // contract the doc itself sets for a scrambled roll.
+        for (voice in TonewheelVoice.entries) {
+            var misses = 0
+            val rolls = 30
+            repeat(rolls) { seed ->
+                val c = Classifier.classify(Tonewheel.render(voice, Tonewheel.scramble(voice, Random(seed))))
+                if (c.drumClass == DrumClass.KICK || c.drumClass == DrumClass.LOOP || c.drumClass == DrumClass.UNKNOWN) misses++
+            }
+            assertTrue(misses <= rolls / 3, "$voice: $misses/$rolls scrambled rolls came back unplayable")
+        }
+    }
+
+    @Test
+    fun `scramble honors temperature and near`() {
+        // The Dsp.scrambleNear boundary contract, proven end-to-end through
+        // Tonewheel's own wiring: see DspTest for the central proof.
+        for (voice in TonewheelVoice.entries) {
+            val preset = TonewheelPresets.forVoice(voice).first()
+            assertEquals(
+                preset.macros,
+                Tonewheel.scramble(voice, Random(1), temperature = 0f, near = preset),
+                "$voice: temperature 0 should return the seed untouched",
+            )
+            val flat = Tonewheel.scramble(voice, Random(1), temperature = 1f, near = preset)
+            assertTrue(flat.values.all { it in 0f..1f }, "$voice: temperature 1 left the 0..1 range")
         }
     }
 

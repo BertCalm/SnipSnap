@@ -55,8 +55,12 @@ object Tonewheel {
     fun defaults(voice: TonewheelVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
 
-    fun scramble(voice: TonewheelVoice, random: Random): Map<String, Float> =
-        macrosFor(voice).associate { it.name to random.nextFloat() }
+    /** SCRAMBLE near a preset; see [Thump.scramble] (docs/SYNTH_UPGRADE.md, U2). */
+    fun scramble(voice: TonewheelVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
+        val base = defaults(voice)
+        val seed = base + (near?.macros ?: TonewheelPresets.forVoice(voice).random(random).macros).filterKeys { it in base }
+        return Dsp.scrambleNear(seed, temperature, random)
+    }
 
     fun frequencyFor(tune: Float): Float {
         val semis = Math.round(tune.coerceIn(0f, 1f) * TUNE_SEMITONES)

@@ -60,11 +60,19 @@ object Thump {
         macrosFor(voice).associate { it.name to it.default }
 
     /**
-     * SCRAMBLE: a uniform roll of the macro space. Bounded ranges mean any
-     * roll is playable; a seeded [random] makes rolls reproducible.
+     * SCRAMBLE: rolls near a seed instead of flat across the macro box
+     * (docs/SYNTH_UPGRADE.md, U2) — [near] picks the seed, defaulting to a
+     * random factory preset for [voice]; [temperature] scales the gaussian
+     * perturbation, clamped to 0..1. `temperature = 0` returns the seed
+     * untouched; `temperature = 1` discards it and rolls every macro
+     * flat-uniform, the pre-U2 behaviour, still reachable. Bounded ranges
+     * mean any roll is playable; a seeded [random] makes rolls reproducible.
      */
-    fun scramble(voice: ThumpVoice, random: Random): Map<String, Float> =
-        macrosFor(voice).associate { it.name to random.nextFloat() }
+    fun scramble(voice: ThumpVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
+        val base = defaults(voice)
+        val seed = base + (near?.macros ?: ThumpPresets.forVoice(voice).random(random).macros).filterKeys { it in base }
+        return Dsp.scrambleNear(seed, temperature, random)
+    }
 
     /** Render [voice] with [macros]; missing macros fall back to defaults. */
     fun render(voice: ThumpVoice, macros: Map<String, Float> = emptyMap()): Snip {

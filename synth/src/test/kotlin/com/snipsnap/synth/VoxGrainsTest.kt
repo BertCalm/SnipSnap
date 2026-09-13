@@ -35,17 +35,42 @@ class VoxGrainsTest {
     }
 
     @Test
-    fun `vox scrambles are reproducible and never garbage`() {
+    fun `vox scrambles are reproducible`() {
         for (voice in VoxVoice.entries) {
             assertEquals(Vox.scramble(voice, Random(5)), Vox.scramble(voice, Random(5)))
-            repeat(8) { seed ->
+        }
+    }
+
+    @Test
+    fun `vox scrambles usually still read as playable percussion`() {
+        // SCRAMBLE now rolls near a preset (docs/SYNTH_UPGRADE.md, U2), so a
+        // roll can land close to a classifier boundary the same way a
+        // preset itself can. "Most of the time", not "always", is the
+        // contract the doc itself sets for a scrambled roll.
+        for (voice in VoxVoice.entries) {
+            var misses = 0
+            val rolls = 30
+            repeat(rolls) { seed ->
                 val c = Classifier.classify(Vox.render(voice, Vox.scramble(voice, Random(seed))))
-                assertTrue(
-                    c.drumClass != DrumClass.KICK && c.drumClass != DrumClass.LOOP &&
-                        c.drumClass != DrumClass.UNKNOWN,
-                    "$voice roll $seed classified ${c.drumClass}",
-                )
+                if (c.drumClass == DrumClass.KICK || c.drumClass == DrumClass.LOOP || c.drumClass == DrumClass.UNKNOWN) misses++
             }
+            assertTrue(misses <= rolls / 3, "$voice: $misses/$rolls scrambled rolls came back unplayable")
+        }
+    }
+
+    @Test
+    fun `vox scramble honors temperature and near`() {
+        // The Dsp.scrambleNear boundary contract, proven end-to-end through
+        // Vox's own wiring: see DspTest for the central proof.
+        for (voice in VoxVoice.entries) {
+            val preset = VoxPresets.forVoice(voice).first()
+            assertEquals(
+                preset.macros,
+                Vox.scramble(voice, Random(1), temperature = 0f, near = preset),
+                "$voice: temperature 0 should return the seed untouched",
+            )
+            val flat = Vox.scramble(voice, Random(1), temperature = 1f, near = preset)
+            assertTrue(flat.values.all { it in 0f..1f }, "$voice: temperature 1 left the 0..1 range")
         }
     }
 

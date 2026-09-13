@@ -1,11 +1,14 @@
 package com.snipsnap.synth
 
 import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.min
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.math.tanh
+import kotlin.random.Random
 
 /** Small DSP toolbox for offline voice rendering. Nothing here is real-time. */
 internal object Dsp {
@@ -21,6 +24,29 @@ internal object Dsp {
      */
     fun expMap(macro: Float, lo: Float, hi: Float): Float =
         (lo * exp(ln((hi / lo).toDouble()) * macro.coerceIn(0f, 1f))).toFloat()
+
+    /**
+     * SCRAMBLE near a seed: perturb each of [seed]'s macros by a gaussian
+     * scaled by [temperature], clamped back to 0..1. `temperature = 0`
+     * returns [seed] untouched; `temperature = 1` discards it and rolls
+     * every macro flat-uniform, exactly the pre-U2 SCRAMBLE — so that
+     * behaviour stays reachable at the extreme (docs/SYNTH_UPGRADE.md, U2).
+     */
+    fun scrambleNear(seed: Map<String, Float>, temperature: Float, random: Random): Map<String, Float> {
+        val t = temperature.coerceIn(0f, 1f)
+        return when {
+            t <= 0f -> seed
+            t >= 1f -> seed.mapValues { random.nextFloat() }
+            else -> seed.mapValues { (_, v) -> (v + gaussian(random) * t).coerceIn(0f, 1f) }
+        }
+    }
+
+    /** Standard-normal sample via Box-Muller; `kotlin.random.Random` has no `nextGaussian()`. */
+    private fun gaussian(random: Random): Float {
+        val u1 = 1f - random.nextFloat() // (0, 1], never 0, so ln() stays finite
+        val u2 = random.nextFloat()
+        return sqrt(-2f * ln(u1)) * cos(2f * PI.toFloat() * u2)
+    }
 
     /** Deterministic noise; same seed, same grains, stable tests. */
     class Noise(seed: Int) {

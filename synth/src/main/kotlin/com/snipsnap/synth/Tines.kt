@@ -55,8 +55,12 @@ object Tines {
     fun defaults(voice: TinesVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
 
-    fun scramble(voice: TinesVoice, random: Random): Map<String, Float> =
-        macrosFor(voice).associate { it.name to random.nextFloat() }
+    /** SCRAMBLE near a preset; see [Thump.scramble] (docs/SYNTH_UPGRADE.md, U2). */
+    fun scramble(voice: TinesVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
+        val base = defaults(voice)
+        val seed = base + (near?.macros ?: TinesPresets.forVoice(voice).random(random).macros).filterKeys { it in base }
+        return Dsp.scrambleNear(seed, temperature, random)
+    }
 
     fun render(voice: TinesVoice, macros: Map<String, Float> = emptyMap()): Snip {
         val m = defaults(voice).toMutableMap()

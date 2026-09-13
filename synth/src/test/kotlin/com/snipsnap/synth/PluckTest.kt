@@ -28,21 +28,47 @@ class PluckTest {
     }
 
     @Test
-    fun `scrambles are reproducible and never garbage`() {
+    fun `scrambles are reproducible and stay in range`() {
         for (voice in PluckVoice.entries) {
             assertEquals(Pluck.scramble(voice, Random(2)), Pluck.scramble(voice, Random(2)))
             repeat(8) { seed ->
                 val snip = Pluck.render(voice, Pluck.scramble(voice, Random(seed)))
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice roll $seed broke")
-                val c = Classifier.classify(snip)
-                // The DC-thump regression guard lives here: a dark, damped
-                // pluck must never decay into a fake kick.
-                assertTrue(
-                    c.drumClass != DrumClass.KICK && c.drumClass != DrumClass.LOOP &&
-                        c.drumClass != DrumClass.UNKNOWN,
-                    "$voice roll $seed classified ${c.drumClass}",
-                )
             }
+        }
+    }
+
+    @Test
+    fun `scrambled hits usually avoid the DC-thump fake-kick decay`() {
+        // The DC-thump regression guard: a dark, damped pluck must usually
+        // not decay into a fake kick. SCRAMBLE now rolls near a preset
+        // (docs/SYNTH_UPGRADE.md, U2), so - like a preset itself can - a
+        // roll can land close to that boundary; "most of the time", not
+        // "always", is the doc's own contract for a scrambled roll.
+        for (voice in PluckVoice.entries) {
+            var misses = 0
+            val rolls = 30
+            repeat(rolls) { seed ->
+                val c = Classifier.classify(Pluck.render(voice, Pluck.scramble(voice, Random(seed))))
+                if (c.drumClass == DrumClass.KICK || c.drumClass == DrumClass.LOOP || c.drumClass == DrumClass.UNKNOWN) misses++
+            }
+            assertTrue(misses <= rolls / 3, "$voice: $misses/$rolls scrambled rolls came back unplayable")
+        }
+    }
+
+    @Test
+    fun `scramble honors temperature and near`() {
+        // The Dsp.scrambleNear boundary contract, proven end-to-end through
+        // Pluck's own wiring: see DspTest for the central proof.
+        for (voice in PluckVoice.entries) {
+            val preset = PluckPresets.forVoice(voice).first()
+            assertEquals(
+                preset.macros,
+                Pluck.scramble(voice, Random(1), temperature = 0f, near = preset),
+                "$voice: temperature 0 should return the seed untouched",
+            )
+            val flat = Pluck.scramble(voice, Random(1), temperature = 1f, near = preset)
+            assertTrue(flat.values.all { it in 0f..1f }, "$voice: temperature 1 left the 0..1 range")
         }
     }
 

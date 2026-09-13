@@ -97,6 +97,22 @@ class ThumpTest {
     }
 
     @Test
+    fun `scramble honors temperature and near`() {
+        // The Dsp.scrambleNear boundary contract, proven end-to-end through
+        // Thump's own wiring: see DspTest for the central proof.
+        for (voice in ThumpVoice.entries) {
+            val preset = ThumpPresets.forVoice(voice).first()
+            assertEquals(
+                preset.macros,
+                Thump.scramble(voice, Random(1), temperature = 0f, near = preset),
+                "$voice: temperature 0 should return the seed untouched",
+            )
+            val flat = Thump.scramble(voice, Random(1), temperature = 1f, near = preset)
+            assertTrue(flat.values.all { it in 0f..1f }, "$voice: temperature 1 left the 0..1 range")
+        }
+    }
+
+    @Test
     fun `scrambled kicks still read as kicks most of the time`() {
         // The whole point of bounded ranges: the dice land somewhere musical.
         var kicks = 0
