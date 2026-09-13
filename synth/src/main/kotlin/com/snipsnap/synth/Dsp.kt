@@ -1,5 +1,7 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Resampler
+import com.snipsnap.audio.Snip
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.exp
@@ -14,6 +16,13 @@ import kotlin.random.Random
 internal object Dsp {
 
     const val RATE = 44_100
+
+    /**
+     * U6 (docs/SYNTH_UPGRADE.md): every engine's per-voice synthesis runs at
+     * `RATE * OVERSAMPLE` internally (see [decimate]) so naive oscillators'
+     * own aliasing folds down above audible range instead of into it.
+     */
+    const val OVERSAMPLE = 4
 
     /** Linear macro map: macro 0..1 onto [lo, hi]. */
     fun lin(macro: Float, lo: Float, hi: Float): Float = lo + (hi - lo) * macro.coerceIn(0f, 1f)
@@ -283,6 +292,22 @@ internal object Dsp {
         if (peak <= ceiling || peak <= 1e-9f) return
         val g = ceiling / peak
         for (i in buf.indices) buf[i] *= g
+    }
+
+    /**
+     * Decimates [buf] (rendered at `rate * OVERSAMPLE`) back down to [rate],
+     * via [Resampler] - the same windowed-sinc kernel already used for
+     * device-rate conversion at bake time. Two cascaded 2x steps, not one
+     * 4x step: `Resampler`'s own doc comment scopes its well-rejected range
+     * to roughly 0.5x-2x of unity, and a straight 4:1 pass measured only
+     * -10.9 dB rejection just above the new Nyquist versus -17.9 dB
+     * cascaded (25 kHz probe, 176.4 kHz source) - each stage this way stays
+     * inside the kernel's own documented comfort zone.
+     */
+    fun decimate(buf: FloatArray, rate: Int): FloatArray {
+        val oversampled = Snip(buf, channels = 1, sampleRate = rate * OVERSAMPLE)
+        val half = Resampler.resample(oversampled, rate * OVERSAMPLE / 2)
+        return Resampler.resample(half, rate).samples
     }
 
     /** Short linear fade-out so a truncated tail never clicks. */
