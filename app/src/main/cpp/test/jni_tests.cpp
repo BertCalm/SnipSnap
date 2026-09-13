@@ -43,7 +43,7 @@ jint Java_com_snipsnap_app_NativePads_printState(JNIEnv*, jobject, jlong);
 jfloatArray Java_com_snipsnap_app_NativePads_stopPrint(JNIEnv*, jobject, jlong);
 jlong Java_com_snipsnap_app_NativeSurface_create(JNIEnv*, jobject, jint);
 void Java_com_snipsnap_app_NativeSurface_destroy(JNIEnv*, jobject, jlong);
-void Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv*, jobject, jlong, jfloatArray, jint);
+void Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv*, jobject, jlong, jfloatArray, jint, jint);
 jboolean Java_com_snipsnap_app_NativeSurface_armPrint(JNIEnv*, jobject, jlong, jint);
 jfloatArray Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv*, jobject, jlong);
 }
@@ -336,7 +336,7 @@ TEST(jni_surface_refuses_a_sample_it_cannot_copy) {
     const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
     // Nothing to assert but survival: the point is that this returns at
     // all rather than terminating on an exception crossing the bridge.
-    Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floatsClaiming(-1000, ramp(16)), 48000);
+    Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floatsClaiming(-1000, ramp(16)), 48000, 0);
     Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
 }
 
@@ -371,7 +371,7 @@ TEST(jni_a_print_the_jvm_cannot_hold_comes_back_empty_handed) {
     JNIEnv* e = env();
     const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
     auto* surf = reinterpret_cast<SurfaceEngine*>(h);
-    Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floats(ramp(500)), 48000);
+    Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floats(ramp(500)), 48000, 0);
     CHECK(Java_com_snipsnap_app_NativeSurface_armPrint(e, nullptr, h, 4096) == JNI_TRUE);
 
     // Play a little so there is something captured to hand back.

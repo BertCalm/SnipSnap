@@ -46,6 +46,13 @@ inline float pitchRatio(float macro) { return std::exp2((clamp01(macro) - 0.5f) 
 
 SurfaceEngine::SurfaceEngine(int32_t preferredSampleRate)
     : preferredRate_(preferredSampleRate), scratch_(kScratchFrames, 0.0f) {
+    // std::atomic's default constructor is trivial in C++17 and does not
+    // reliably value-initialize the contained pointer - set every slot to
+    // nullptr explicitly rather than trust an array member initializer.
+    for (int32_t i = 0; i < kMaxSources; ++i) {
+        pending_[i].store(nullptr, std::memory_order_relaxed);
+        retired_[i].store(nullptr, std::memory_order_relaxed);
+    }
     // The four corners of the morph pad, before the UI says otherwise:
     // A clean, B dark, C low and thick, D hot.
     const MacroState defaults[4] = {
@@ -60,10 +67,12 @@ SurfaceEngine::SurfaceEngine(int32_t preferredSampleRate)
 SurfaceEngine::~SurfaceEngine() {
     stop();
     // With the stream closed the audio thread is gone; every slot is ours.
-    delete pending_.exchange(nullptr);
-    delete retired_.exchange(nullptr);
-    delete current_;
-    current_ = nullptr;
+    for (int32_t i = 0; i < kMaxSources; ++i) {
+        delete pending_[i].exchange(nullptr);
+        delete retired_[i].exchange(nullptr);
+        delete current_[i];
+        current_[i] = nullptr;
+    }
 }
 
 bool SurfaceEngine::start() {
@@ -84,6 +93,7 @@ bool SurfaceEngine::start() {
     cutoff_.configure(10.0f, fs);
     resonance_.configure(10.0f, fs);
     drive_.configure(10.0f, fs);
+    mix_.configure(10.0f, fs);
     gain_.configure(50.0f, fs);
     gain_.snap(0.0f);
     untilCoefficients_ = 0;
@@ -118,14 +128,15 @@ void SurfaceEngine::onErrorAfterClose(oboe::AudioStream*, oboe::Result error) {
     restartNeeded_.store(true, std::memory_order_release);
 }
 
-void SurfaceEngine::loadSample(const float* mono, size_t frames, int32_t sourceRate) {
+void SurfaceEngine::loadSample(const float* mono, size_t frames, int32_t sourceRate, int32_t slot) {
+    if (slot < 0 || slot >= kMaxSources) return;
     auto* sample = new Sample();
     sample->frames.assign(mono, mono + frames);
     sample->rate = sourceRate > 0 ? sourceRate : 44100;
     // A sample the callback never got round to adopting is ours to free.
-    delete pending_.exchange(sample, std::memory_order_acq_rel);
+    delete pending_[slot].exchange(sample, std::memory_order_acq_rel);
     // And the one it retired last time.
-    delete retired_.exchange(nullptr, std::memory_order_acq_rel);
+    delete retired_[slot].exchange(nullptr, std::memory_order_acq_rel);
 }
 
 void SurfaceEngine::setCorner(int index, const MacroState& state) {
@@ -138,20 +149,20 @@ void SurfaceEngine::setCorner(int index, const MacroState& state) {
 
 // ---- audio thread from here down ---------------------------------------------
 
-void SurfaceEngine::adoptPendingSample() {
+void SurfaceEngine::adoptPendingSample(int32_t slot) {
     // Only take a pending sample when there is room to retire the current
     // one. Checking first means nothing is ever handed *back* to pending_ -
     // a store there could overwrite a newer sample the UI parked meanwhile
     // and leak it. retired_ only goes null -> non-null on this thread, so
     // the check-then-store below cannot race the UI, which only ever
     // exchanges it to null.
-    if (pending_.load(std::memory_order_acquire) == nullptr) return;
-    if (retired_.load(std::memory_order_acquire) != nullptr) return;  // next callback
-    Sample* incoming = pending_.exchange(nullptr, std::memory_order_acq_rel);
+    if (pending_[slot].load(std::memory_order_acquire) == nullptr) return;
+    if (retired_[slot].load(std::memory_order_acquire) != nullptr) return;  // next callback
+    Sample* incoming = pending_[slot].exchange(nullptr, std::memory_order_acq_rel);
     if (!incoming) return;
-    retired_.store(current_, std::memory_order_release);
-    current_ = incoming;
-    phase_ = 0.0;
+    retired_[slot].store(current_[slot], std::memory_order_release);
+    current_[slot] = incoming;
+    phase_[slot] = 0.0;
 }
 
 MacroState SurfaceEngine::morphed(const ControlFrame& f) const {
@@ -194,19 +205,35 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
     cutoff_.setTarget(control01(target.cutoff, 1.0f));
     resonance_.setTarget(control01(target.resonance, 0.0f));
     drive_.setTarget(control01(target.drive, 0.0f));
-    // A touch-down restarts the loop from its head, so a tapped rhythm
-    // triggers like a drum hit; a held note still rides wherever the loop
-    // has turned to since. Without this, phase_ keeps advancing even while
-    // ungated (the loop is muted, not paused - renderMono reads and
-    // advances it regardless of gain), so the next touch would land
-    // wherever the loop happened to drift to, not at its head.
-    if (f.gate && !gated_) phase_ = 0.0;
+    mix_.setTarget(control01(f.sampleMix, 0.0f));
+    // A touch-down restarts every loaded source from its head, so a tapped
+    // rhythm triggers like a drum hit regardless of where the crossfade
+    // sits; a held note still rides wherever each loop has turned to
+    // since. Without this, phase_ keeps advancing even while ungated (the
+    // loop is muted, not paused - renderMono reads and advances it
+    // regardless of gain), so the next touch would land wherever the loop
+    // happened to drift to, not at its head.
+    if (f.gate && !gated_) {
+        for (int32_t i = 0; i < kMaxSources; ++i) phase_[i] = 0.0;
+    }
     gated_ = f.gate;
     gain_.setTarget(f.gate ? 1.0f : 0.0f);
 }
 
+float SurfaceEngine::readSlot(int32_t slot, double fs, float pitchRatioValue) {
+    const Sample* s = current_[slot];
+    if (!s || s->frames.size() < 2) return 0.0f;
+    const size_t n = s->frames.size();
+    const size_t i0 = static_cast<size_t>(phase_[slot]);
+    const size_t i1 = (i0 + 1) % n;
+    const float frac = static_cast<float>(phase_[slot] - static_cast<double>(i0));
+    const float v = s->frames[i0] + (s->frames[i1] - s->frames[i0]) * frac;
+    phase_[slot] += (static_cast<double>(s->rate) / fs) * static_cast<double>(pitchRatioValue);
+    while (phase_[slot] >= static_cast<double>(n)) phase_[slot] -= static_cast<double>(n);
+    return v;
+}
+
 void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
-    const Sample* s = current_;
     const double fs = static_cast<double>(sampleRate_);
     for (int32_t i = 0; i < numFrames; ++i) {
         // Control-rate work: the filter's trig once per 32 samples, the
@@ -225,19 +252,15 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         resonance_.next();
         const float drive = drive_.next();
         const float gain = gain_.next();
+        const float mix = mix_.next();
 
-        // The source: a looping read with linear interpolation, repitched by
-        // the file rate over the stream rate times the pitch macro.
-        float v0 = 0.0f;
-        if (s && s->frames.size() >= 2) {
-            const size_t n = s->frames.size();
-            const size_t i0 = static_cast<size_t>(phase_);
-            const size_t i1 = (i0 + 1) % n;
-            const float frac = static_cast<float>(phase_ - static_cast<double>(i0));
-            v0 = s->frames[i0] + (s->frames[i1] - s->frames[i0]) * frac;
-            phase_ += (static_cast<double>(s->rate) / fs) * static_cast<double>(pitchRatio(pitch));
-            while (phase_ >= static_cast<double>(n)) phase_ -= static_cast<double>(n);
-        }
+        // The source: slot 0 and slot 1 each loop independently (their own
+        // phase_[slot], the same linear-interpolation read as always), then
+        // crossfade by `mix` before drive/filter ever sees the result -
+        // weights sum to 1, so the crossfade doesn't spike loudness at the
+        // midpoint. Slots 2/3 aren't mixed in yet (see kMaxSources).
+        const float pr = pitchRatio(pitch);
+        const float v0 = (1.0f - mix) * readSlot(0, fs, pr) + mix * readSlot(1, fs, pr);
 
         // Drive: a soft clip with its make-up baked in, so DRIVE is a colour and not a volume knob.
         const float pre = 1.0f + drive * 15.0f;
@@ -255,7 +278,7 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
 }
 
 oboe::DataCallbackResult SurfaceEngine::onAudioReady(oboe::AudioStream*, void* audioData, int32_t numFrames) {
-    adoptPendingSample();
+    for (int32_t slot = 0; slot < kMaxSources; ++slot) adoptPendingSample(slot);
 
     // Drain the ring, applying every frame in the order it arrived: the
     // continuous macros (pitch/cutoff/...) are a position, not a history,

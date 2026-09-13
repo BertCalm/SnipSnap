@@ -90,7 +90,7 @@ Java_com_snipsnap_app_NativeSurface_latencyMillis(JNIEnv*, jobject, jlong handle
 }
 
 JNIEXPORT void JNICALL
-Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv* env, jobject, jlong handle, jfloatArray mono, jint sourceRate) {
+Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv* env, jobject, jlong handle, jfloatArray mono, jint sourceRate, jint slot) {
     const jsize n = env->GetArrayLength(mono);
     // A copy on the UI thread, then the engine copies again into its own
     // Sample: two copies of a few seconds of floats is nothing next to a
@@ -106,18 +106,20 @@ Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv* env, jobject, jlong handl
         return;
     }
     env->GetFloatArrayRegion(mono, 0, n, frames.data());
-    engine(handle)->loadSample(frames.data(), frames.size(), sourceRate);
+    engine(handle)->loadSample(frames.data(), frames.size(), sourceRate, slot);
 }
 
 JNIEXPORT void JNICALL
 Java_com_snipsnap_app_NativeSurface_control(
     JNIEnv*, jobject, jlong handle, jint mode,
     jfloat x, jfloat y, jfloat z, jfloat tilt,
-    jfloat a, jfloat b, jfloat c, jfloat d, jboolean gate) {
+    jfloat a, jfloat b, jfloat c, jfloat d,
+    jfloat sampleMix, jboolean gate) {
     ControlFrame f;
     f.mode = mode;
     f.x = x; f.y = y; f.z = z; f.tilt = tilt;
     f.a = a; f.b = b; f.c = c; f.d = d;
+    f.sampleMix = sampleMix;
     f.gate = gate == JNI_TRUE;
     engine(handle)->pushControl(f);
 }
