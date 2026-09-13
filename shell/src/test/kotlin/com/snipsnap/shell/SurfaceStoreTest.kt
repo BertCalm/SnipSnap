@@ -121,6 +121,16 @@ class SurfaceStoreTest {
     }
 
     @Test
+    fun `the preset library names LBP+ECHO+ECHO-LBP- distinctly`() {
+        // design/surface-vector's boards sketch these four names in this
+        // order (LBP +, ECHO +, ECHO -, LBP -) - the order is a promise a
+        // stepper can rely on, not an implementation detail.
+        assertEquals(listOf("LBP +", "ECHO +", "ECHO -", "LBP -"), Corner.LIBRARY.map { it.name })
+        // Four distinct sounds, not four names on the same one.
+        assertEquals(4, Corner.LIBRARY.map { it.corner }.distinct().size)
+    }
+
+    @Test
     fun `a corner captured from XY and XYZ follows the engine's map`() {
         val r = Reading(0.2f, 0.9f, 0.6f, 0.25f, 0.25f, 0.25f, 0.25f, touching = true)
         val xy = Corner.from(Mode.XY, r, tilt = 0.8f, corners = Corner.DEFAULTS)

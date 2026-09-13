@@ -100,6 +100,14 @@ import kotlinx.coroutines.withContext
  * `surface.json` beside the kit (`SurfaceStore`), so a morph you set up
  * is there when you come back.
  *
+ * ARM A..D picks a corner without touching the pad at all; PRESET ◄ ►
+ * then steps `SurfaceStore.Corner.LIBRARY`'s named quartet - LBP +/ECHO
+ * +/ECHO -/LBP -, `design/surface-vector`'s own idea - onto whichever
+ * corner is armed. It writes the very same `corners` SET A..D does, just
+ * from a curated library instead of a live capture, so the two are
+ * interchangeable afterwards: a stepped corner can be re-captured by
+ * touch, and a captured one overwritten by stepping.
+ *
  * PAD2/PAD3/PAD4 ◄ ► load three more voices onto the pad's sample area -
  * PAD at the apex, PAD2 at the base-left, PAD3 at the base-right, PAD4 at
  * the base-mid, directly under the apex (`TouchSurface.sampleWeights`,
@@ -166,6 +174,27 @@ fun SurfaceScreen(
     var pad3Generation by remember { mutableStateOf(0) }
     var pad4Generation by remember { mutableStateOf(0) }
     var settings by remember { mutableStateOf(SurfaceStore.Settings.DEFAULT) }
+    // Which corner PRESET ◄ ► targets - armed by its own ARM A..D row, a
+    // separate gesture from SET A..D (which always captures the live
+    // touch): arming only picks a target, it never itself changes a
+    // corner's sound.
+    var armedCorner by remember { mutableStateOf<Int?>(null) }
+    // Where each corner's stepper last landed in SurfaceStore.Corner.
+    // LIBRARY, null until PRESET ◄ ► has actually been pressed for that
+    // corner - so the readout below never claims a corner already reads
+    // (say) "LBP +" before a preset has actually been stepped onto it.
+    var presetIndexA by remember { mutableStateOf<Int?>(null) }
+    var presetIndexB by remember { mutableStateOf<Int?>(null) }
+    var presetIndexC by remember { mutableStateOf<Int?>(null) }
+    var presetIndexD by remember { mutableStateOf<Int?>(null) }
+    // The kit `settings` (and so its `corners`) actually belong to - null
+    // while LaunchedEffect(entry) below is still loading a kit's
+    // surface.json. setCorner/stepPreset both refuse to persist while this
+    // disagrees with the current entry, so a fast SET/PRESET press landing
+    // in that window can't write the outgoing kit's other corners into the
+    // incoming kit's surface.json (Copilot review, PR #195) - `settings`
+    // itself, not just armedCorner/presetIndex*, is stale until this is set.
+    var settingsLoadedFor by remember { mutableStateOf<File?>(null) }
     var lastHeld by remember { mutableStateOf<Reading?>(null) }
     var printing by remember { mutableStateOf(false) }
     var printToPad by remember { mutableStateOf(false) }
@@ -329,6 +358,19 @@ fun SurfaceScreen(
     }
 
     LaunchedEffect(entry) {
+        // Synchronous, before any suspension below: the moment `entry`
+        // changes, `settings` (and so armedCorner's targets) are for a kit
+        // that is no longer showing, so nothing may act on them until this
+        // effect says otherwise. Resetting armedCorner/presetIndex* here
+        // rather than only after the load below closes most of the window
+        // a fast ARM+PRESET press could land in; settingsLoadedFor closes
+        // the rest (see its own declaration).
+        settingsLoadedFor = null
+        armedCorner = null
+        presetIndexA = null
+        presetIndexB = null
+        presetIndexC = null
+        presetIndexD = null
         if (entry == null) {
             padName = null
             padSlot = null
@@ -355,6 +397,7 @@ fun SurfaceScreen(
             SurfaceStore.Settings.DEFAULT
         }
         pushCorners(settings.corners)
+        settingsLoadedFor = entry.dir
         val pads = entry.kit.pads.sortedBy { it.slot }
         val pad = pads.firstOrNull { it.slot == settings.padSlot } ?: pads.firstOrNull()
         if (pad == null) {
@@ -456,9 +499,26 @@ fun SurfaceScreen(
         scope.launch { loadPad4(dir, pad, generation) }
     }
 
+    fun presetIndexFor(corner: Int): Int? = when (corner) {
+        0 -> presetIndexA
+        1 -> presetIndexB
+        2 -> presetIndexC
+        else -> presetIndexD
+    }
+
+    fun setPresetIndexFor(corner: Int, index: Int?) {
+        when (corner) {
+            0 -> presetIndexA = index
+            1 -> presetIndexB = index
+            2 -> presetIndexC = index
+            else -> presetIndexD = index
+        }
+    }
+
     // SET A..D: the sound under the last touch becomes a morph corner.
     fun setCorner(index: Int) {
         val dir = entry?.dir ?: return
+        if (settingsLoadedFor != dir) return  // settings.corners is still the outgoing kit's - see settingsLoadedFor
         val held = lastHeld ?: run {
             onToast(Copy.SURFACE_SET_NEEDS_TOUCH)
             return
@@ -467,7 +527,37 @@ fun SurfaceScreen(
         val corners = settings.corners.toMutableList().also { it[index] = corner }
         pushCorners(corners)
         persist(dir, settings.copy(corners = corners))
+        // A captured corner is no longer whatever preset it may have been
+        // stepped to before - clearing this corner's tracked position stops
+        // the PRESET readout from going on claiming a name that no longer
+        // matches what SET just wrote (Copilot review, PR #195).
+        setPresetIndexFor(index, null)
         onToast(Copy.surfaceCornerSet('A' + index))
+    }
+
+    // PRESET ◄ ►: steps SurfaceStore.Corner.LIBRARY's named quartet onto
+    // whichever corner ARM A..D last armed - see armedCorner's own
+    // declaration for why arming is a separate step from SET A..D.
+    fun stepPreset(delta: Int) {
+        val corner = armedCorner ?: return
+        val dir = entry?.dir ?: return
+        if (settingsLoadedFor != dir) return  // settings.corners is still the outgoing kit's - see settingsLoadedFor
+        val library = SurfaceStore.Corner.LIBRARY
+        val at = presetIndexFor(corner)
+        // A corner with no tracked position yet starts the stepper at
+        // library's own ends - 0 stepping forward, the last entry stepping
+        // back - rather than folding a sentinel through the same modulo
+        // arithmetic an already-set index uses, which put the first ◄
+        // press one short of the end (Copilot review, PR #195).
+        val next = if (at == null) {
+            if (delta >= 0) 0 else library.lastIndex
+        } else {
+            ((at + delta) % library.size + library.size) % library.size
+        }
+        setPresetIndexFor(corner, next)
+        val corners = settings.corners.toMutableList().also { it[corner] = library[next].corner }
+        pushCorners(corners)
+        persist(dir, settings.copy(corners = corners))
     }
 
     // The print's landing, once: `finishing` guards the frame loop from
@@ -743,6 +833,42 @@ fun SurfaceScreen(
                         modifier = Modifier.weight(1f),
                     ) { setCorner(i) }
                 }
+            }
+
+            Spacer(Modifier.height(6.dp))
+
+            // ARM A..D: picks which corner PRESET ◄ ► targets - see armedCorner.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                for (i in 0 until 4) {
+                    ActionButton(
+                        "ARM ${'A' + i}",
+                        scheme,
+                        enabled = padName != null,
+                        dimmed = armedCorner != i,
+                        // A mutually-exclusive row, same as the mode row
+                        // above - TalkBack otherwise has no way to tell
+                        // which corner is armed or when it changes
+                        // (Copilot review, PR #195).
+                        modifier = Modifier.weight(1f).semantics { selected = armedCorner == i },
+                    ) { armedCorner = if (armedCorner == i) null else i }
+                }
+            }
+
+            Spacer(Modifier.height(6.dp))
+
+            // PRESET ◄ ►: design/surface-vector's LBP+/ECHO+/ECHO-/LBP-
+            // idea, a named library stepped onto the armed corner - see
+            // SurfaceStore.Corner.LIBRARY and the class doc.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                val armed = armedCorner
+                ActionButton("◄ PRESET", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(-1) }
+                TapeText(
+                    armed?.let { c -> presetIndexFor(c)?.let { SurfaceStore.Corner.LIBRARY[it].name } ?: "◄ ► TO STEP" } ?: "ARM A CORNER",
+                    TapeType.pixel,
+                    scheme.ink.tape,
+                    Modifier.weight(1.2f).padding(horizontal = 4.dp),
+                )
+                ActionButton("PRESET ►", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(+1) }
             }
 
             Spacer(Modifier.height(8.dp))
