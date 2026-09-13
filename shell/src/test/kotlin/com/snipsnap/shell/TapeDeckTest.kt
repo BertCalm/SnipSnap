@@ -61,7 +61,7 @@ class TapeDeckTest {
 
         // At zoom x2 the same pixels cover half the tape-time.
         d.cycleZoom()
-        assertEquals(180, d.pxPerSec)
+        assertEquals(180f, d.pxPerSec)
         d.dragBy(-90.0, 100.0)
         d.step(rate * 3)
         assertTrue(abs(d.position - rate * 1.5) < rate * 0.03)

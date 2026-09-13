@@ -78,6 +78,7 @@ import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.TapeDeckModel
 import java.io.File
 import kotlin.math.abs
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -1590,9 +1591,72 @@ private fun WaveformLcd(
                     var lastTimeMs = down.uptimeMillis
                     var totalDelta = 0f
                     var dragging = false
-                    val pointerId = down.id
+                    // SPIKE (pinch zoom). Deliberately NOT detectTransformGestures:
+                    // that hands back pan+zoom+centroid for free but throws away
+                    // the per-event dx/dt this loop feeds `model.dragBy`, which is
+                    // the whole tape coast. Two fingers are handled here instead so
+                    // the single-finger path below stays byte-for-byte what it was.
+                    var pinching = false
+                    var pinched = false
+                    var lastSpan = 0f
+                    var pointerId = down.id
                     while (true) {
                         val event = awaitPointerEvent()
+                        val pressed = event.changes.filter { it.pressed }
+                        if (pressed.size >= 2) {
+                            val a = pressed[0].position
+                            val b = pressed[1].position
+                            val span = hypot(b.x - a.x, b.y - a.y)
+                            if (!pinching) {
+                                pinching = true
+                                pinched = true
+                                // End any drag WITHOUT its fling: a pinch is not
+                                // a throw, and coasting out of one would feel like
+                                // the tape got away from you.
+                                if (dragging) {
+                                    model.dragEnd()
+                                    dragging = false
+                                }
+                                lastSpan = span
+                            } else if (lastSpan > 1f && span > 1f) {
+                                model.zoomBy(span / lastSpan)
+                                onTouch()
+                                lastSpan = span
+                            }
+                            event.changes.forEach { it.consume() }
+                            continue
+                        }
+                        if (pinching && pressed.size == 1) {
+                            // Down to one finger again. Adopt it and restart the
+                            // timing, or the next dragBy gets a dt spanning the
+                            // whole pinch and the coast launches.
+                            pinching = false
+                            val only = pressed[0]
+                            pointerId = only.id
+                            lastPosition = only.position
+                            lastTimeMs = only.uptimeMillis
+                            // Resume the drag here rather than letting this
+                            // finger re-cross touchSlop. Measured: making it
+                            // re-cross ate the first slop-worth of travel AND
+                            // re-ran dragStart() a second time, and dragStart
+                            // zeroes dragVelocity — so the fling on release
+                            // was nearly gone (a 420px drag coasted ~1.77s
+                            // normally, ~0.13s out of a pinch).
+                            //
+                            // dragStart() still zeroes the velocity once, and
+                            // that is deliberate: the motion before this point
+                            // was a pinch, not a throw, so it should not
+                            // carry. The drag simply builds its own from the
+                            // first pixel, like any other drag.
+                            if (!dragging) {
+                                dragging = true
+                                onScrubStart()
+                                model.dragStart()
+                                onTouch()
+                            }
+                            only.consume()
+                            continue
+                        }
                         val change = event.changes.firstOrNull { it.id == pointerId }
                         if (change == null) {
                             if (dragging) {
@@ -1606,7 +1670,9 @@ private fun WaveformLcd(
                                 val snapped = model.dragEnd()
                                 onTouch()
                                 if (snapped != null) onSnapToast()
-                            } else {
+                            } else if (!pinched) {
+                                // SPIKE: a pinch that ends is not a tap, so it
+                                // must not seek to wherever the last finger was.
                                 onScrubStart()
                                 val frame = frameAtX(change.position.x, widthPx, model)
                                 model.seekTo(model.snapPoint(frame))
