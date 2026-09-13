@@ -69,13 +69,18 @@ object Tines {
     fun render(voice: TinesVoice, macros: Map<String, Float> = emptyMap()): Snip {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
-        val buf = when (voice) {
-            TinesVoice.BELL -> bell(m)
-            TinesVoice.CHIME -> chime(m)
-            TinesVoice.BLOCK -> block(m)
-            TinesVoice.ZAP -> zap(m)
-            TinesVoice.TOY -> toy(m)
+        // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE so the FM
+        // operators' own aliasing folds down above 22.05kHz instead of
+        // into the audible band, then Dsp.decimate brings it back to RATE.
+        val renderRate = RATE * Dsp.OVERSAMPLE
+        val raw = when (voice) {
+            TinesVoice.BELL -> bell(m, renderRate)
+            TinesVoice.CHIME -> chime(m, renderRate)
+            TinesVoice.BLOCK -> block(m, renderRate)
+            TinesVoice.ZAP -> zap(m, renderRate)
+            TinesVoice.TOY -> toy(m, renderRate)
         }
+        val buf = Dsp.decimate(raw, RATE)
         Dsp.normalize(buf)
         Dsp.fadeTail(buf)
         return Snip(buf, channels = 1, sampleRate = RATE)
@@ -83,7 +88,7 @@ object Tines {
 
     // ---------- the one FM shape everything here is made of ----------
 
-    private fun frames(seconds: Float) = (seconds * RATE).toInt().coerceAtLeast(64)
+    private fun frames(seconds: Float, rate: Int) = (seconds * rate).toInt().coerceAtLeast(64)
 
     private fun snapRatio(macro: Float): Float =
         RATIOS[(macro.coerceIn(0f, 1f) * (RATIOS.size - 1)).toInt().coerceIn(0, RATIOS.size - 1)]
@@ -104,6 +109,7 @@ object Tines {
         t60: Float,
         bite: Float,
         gain: Float = 1f,
+        rate: Int = RATE,
     ) {
         var pc = 0.0
         var pm = 0.0
@@ -113,9 +119,9 @@ object Tines {
         // enough that the "struck" bite is untouched.
         val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
-            val t = i.toFloat() / RATE
-            pc += carrierHz / RATE
-            pm += modHz / RATE
+            val t = i.toFloat() / rate
+            pc += carrierHz / rate
+            pm += modHz / rate
             val idx = index * Dsp.envAt(t, t60 / bite)
             out[i] += gain * env.at(t) *
                 sin(2.0 * PI * pc + idx * sin(2.0 * PI * pm)).toFloat()
@@ -124,47 +130,47 @@ object Tines {
 
     // ---------- voices ----------
 
-    private fun bell(m: Map<String, Float>): FloatArray {
+    private fun bell(m: Map<String, Float>, rate: Int): FloatArray {
         val carrier = Dsp.expMap(m.getValue("TUNE"), 220f, 740f)
         val ratio = snapRatio(m.getValue("RATIO"))
         val index = Dsp.lin(m.getValue("BRIGHT"), 0.8f, 5f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.25f, 1.1f)
 
-        val out = FloatArray(frames(t60 * 1.3f))
+        val out = FloatArray(frames(t60 * 1.3f, rate))
         // A quiet second strike an octave up thickens the hit without a
         // third operator; bite 2.5 keeps the clang at the front.
-        strike(out, carrier, ratio, index, t60, bite = 2.5f)
-        strike(out, carrier * 2.01f, ratio, index * 0.6f, t60 * 0.6f, bite = 2.5f, gain = 0.35f)
+        strike(out, carrier, ratio, index, t60, bite = 2.5f, rate = rate)
+        strike(out, carrier * 2.01f, ratio, index * 0.6f, t60 * 0.6f, bite = 2.5f, gain = 0.35f, rate = rate)
         return out
     }
 
-    private fun chime(m: Map<String, Float>): FloatArray {
+    private fun chime(m: Map<String, Float>, rate: Int): FloatArray {
         val carrier = Dsp.expMap(m.getValue("TUNE"), 520f, 1500f)
         val shimmer = m.getValue("SHIMMER")
         val index = Dsp.lin(m.getValue("BRIGHT"), 0.6f, 4f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.2f, 0.9f)
 
-        val out = FloatArray(frames(t60 * 1.3f))
+        val out = FloatArray(frames(t60 * 1.3f, rate))
         // Glass is two near-identical bells beating against each other:
         // SHIMMER is the detune between them, in cents-ish territory.
         val detune = Dsp.lin(shimmer, 1.001f, 1.02f)
-        strike(out, carrier, 3.5f, index, t60, bite = 3f, gain = 0.6f)
-        strike(out, carrier * detune, 3.5f, index, t60 * 0.9f, bite = 3f, gain = 0.6f)
+        strike(out, carrier, 3.5f, index, t60, bite = 3f, gain = 0.6f, rate = rate)
+        strike(out, carrier * detune, 3.5f, index, t60 * 0.9f, bite = 3f, gain = 0.6f, rate = rate)
         return out
     }
 
-    private fun block(m: Map<String, Float>): FloatArray {
+    private fun block(m: Map<String, Float>, rate: Int): FloatArray {
         val carrier = Dsp.expMap(m.getValue("TUNE"), 380f, 950f)
         val index = Dsp.lin(m.getValue("BRIGHT"), 0.4f, 2.2f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.045f, 0.16f)
 
         // Woodblock: a near-harmonic ratio and a low index, gone in a blink.
-        val out = FloatArray(frames(maxOf(t60 * 1.5f, 0.06f)))
-        strike(out, carrier, 1.4f, index, t60, bite = 2f)
+        val out = FloatArray(frames(maxOf(t60 * 1.5f, 0.06f), rate))
+        strike(out, carrier, 1.4f, index, t60, bite = 2f, rate = rate)
         return out
     }
 
-    private fun zap(m: Map<String, Float>): FloatArray {
+    private fun zap(m: Map<String, Float>, rate: Int): FloatArray {
         val endHz = Dsp.expMap(m.getValue("TUNE"), 55f, 120f)
         val dropMult = Dsp.lin(m.getValue("DROP"), 4f, 16f)
         val index = Dsp.lin(m.getValue("BRIGHT"), 0.5f, 3f)
@@ -172,15 +178,15 @@ object Tines {
 
         // The laser tom: carrier and modulator ride the same exponential
         // drop, so the FM colour holds while the pitch falls onto the floor.
-        val out = FloatArray(frames(t60 * 1.4f))
+        val out = FloatArray(frames(t60 * 1.4f, rate))
         var pc = 0.0
         var pm = 0.0
         val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
-            val t = i.toFloat() / RATE
+            val t = i.toFloat() / rate
             val f = endHz * (1f + (dropMult - 1f) * Math.exp(-24.0 * t).toFloat())
-            pc += f / RATE
-            pm += f * 2.7f / RATE
+            pc += f / rate
+            pm += f * 2.7f / rate
             val idx = index * Dsp.envAt(t, t60 / 2f)
             out[i] = env.at(t) *
                 sin(2.0 * PI * pc + idx * sin(2.0 * PI * pm)).toFloat()
@@ -188,7 +194,7 @@ object Tines {
         return out
     }
 
-    private fun toy(m: Map<String, Float>): FloatArray {
+    private fun toy(m: Map<String, Float>, rate: Int): FloatArray {
         val carrier = Dsp.expMap(m.getValue("TUNE"), 300f, 900f)
         val wobble = m.getValue("WOBBLE")
         val index = Dsp.lin(m.getValue("BRIGHT"), 1f, 4.5f)
@@ -198,15 +204,15 @@ object Tines {
         // into the render. It's the cheap-keyboard laser/game hit.
         val wobHz = Dsp.lin(wobble, 6f, 34f)
         val wobDepth = Dsp.lin(wobble, 0.02f, 0.35f)
-        val out = FloatArray(frames(t60 * 1.4f))
+        val out = FloatArray(frames(t60 * 1.4f, rate))
         var pc = 0.0
         var pm = 0.0
         val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
-            val t = i.toFloat() / RATE
+            val t = i.toFloat() / rate
             val f = carrier * (1f + wobDepth * sin(2.0 * PI * wobHz * t).toFloat())
-            pc += f / RATE
-            pm += f * 2f / RATE
+            pc += f / rate
+            pm += f * 2f / rate
             val idx = index * Dsp.envAt(t, t60 / 1.8f)
             out[i] = env.at(t) *
                 sin(2.0 * PI * pc + idx * sin(2.0 * PI * pm)).toFloat()

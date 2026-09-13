@@ -38,7 +38,14 @@ class TinesTest {
         // pass every other TINES test in this file.
         for (voice in TinesVoice.entries) {
             val snip = Tines.render(voice)
-            assertEquals(0f, snip.samples[0], "$voice: first sample should start at zero, not jump to full level")
+            // A small tolerance, not exact zero: U6's oversample/decimate
+            // (docs/SYNTH_UPGRADE.md) runs every render through a linear-
+            // phase resample filter, which pre-rings a hair ahead of any
+            // sharp edge - including this envelope's own onset. That's an
+            // unavoidable property of a band-limited filter, not a revival
+            // of the instant-onset bug this test exists to catch (see
+            // ThumpTest's own version of this same fix).
+            assertEquals(0f, snip.samples[0], 0.02f, "$voice: first sample should start at zero, not jump to full level")
             val earlyPeak = snip.samples.take((Dsp.RATE * 0.02f).toInt()).maxOf { kotlin.math.abs(it) }
             assertTrue(earlyPeak > 0.1f, "$voice: should audibly ramp up within the first 20ms, peaked at $earlyPeak")
         }
