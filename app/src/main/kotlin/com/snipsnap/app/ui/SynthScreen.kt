@@ -204,7 +204,14 @@ fun SynthScreen(
     }
     fun loadPreset(patch: Patch) {
         touched = true
-        macrosByVoice[engine to voice] = patch.macros
+        // Merged over the engine's own defaults, same as macrosByVoice's own
+        // seeding above: a preset only has to name the macros it cares
+        // about (PUNCH, added after every existing THUMP preset was
+        // written, names none of them), and every read site here relies on
+        // that "no missing key" invariant - a bare `patch.macros` would
+        // otherwise leave PUNCH's slider crashing on getValue the moment
+        // someone loaded a pre-PUNCH preset.
+        macrosByVoice[engine to voice] = engine.defaults(voice) + patch.macros
         currentPresetByVoice[engine to voice] = patch.name
     }
 

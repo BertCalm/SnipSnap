@@ -268,6 +268,23 @@ internal object Dsp {
         for (i in buf.indices) buf[i] *= g
     }
 
+    /**
+     * Scales down only if [buf]'s peak exceeds [ceiling] - a clipping safety
+     * net, not a level target (unlike [normalize], which always rescales).
+     * A stage like [Punch] that deliberately sets its own final level (U3,
+     * docs/SYNTH_UPGRADE.md - "swap the peak target for a perceived-level
+     * target") needs exactly this after it: something that only intervenes
+     * when the shaping pushed a sample past what's safe, rather than
+     * unconditionally overwriting the level that stage just chose.
+     */
+    fun limitPeak(buf: FloatArray, ceiling: Float = 1f) {
+        var peak = 0f
+        for (v in buf) { val a = if (v < 0) -v else v; if (a > peak) peak = a }
+        if (peak <= ceiling || peak <= 1e-9f) return
+        val g = ceiling / peak
+        for (i in buf.indices) buf[i] *= g
+    }
+
     /** Short linear fade-out so a truncated tail never clicks. */
     fun fadeTail(buf: FloatArray, ms: Float = 4f) {
         val n = min(buf.size, (ms / 1000f * RATE).toInt())
