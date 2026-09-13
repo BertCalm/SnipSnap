@@ -49,7 +49,11 @@ object Pluck {
     /** SCRAMBLE near a preset; see [Thump.scramble] (docs/SYNTH_UPGRADE.md, U2). */
     fun scramble(voice: PluckVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
         val base = defaults(voice)
-        val seed = base + (near?.macros ?: PluckPresets.forVoice(voice).random(random).macros).filterKeys { it in base }
+        val seed = when {
+            near != null -> base + near.macros.filterKeys { it in base }
+            temperature >= 1f -> base
+            else -> base + PluckPresets.forVoice(voice).random(random).macros.filterKeys { it in base }
+        }
         return Dsp.scrambleNear(seed, temperature, random)
     }
 

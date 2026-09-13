@@ -17,7 +17,9 @@ import kotlin.random.Random
  * The playability rules from docs/SYNTH_ROADMAP.md are enforced by
  * construction here: macros are 0..1 and mapped internally onto bounded
  * musical ranges, so the worst any knob position can sound is "not for me" —
- * never broken. SCRAMBLE is just a uniform roll of that same space.
+ * never broken. SCRAMBLE rolls near a factory preset (docs/SYNTH_UPGRADE.md,
+ * U2); a flat uniform roll of the whole space is still reachable at
+ * `temperature = 1` (see [scramble]).
  */
 enum class ThumpVoice { KICK, SNARE, HAT_CLOSED, HAT_OPEN, CLAP, TOM, COWBELL, RIM }
 
@@ -70,7 +72,16 @@ object Thump {
      */
     fun scramble(voice: ThumpVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
         val base = defaults(voice)
-        val seed = base + (near?.macros ?: ThumpPresets.forVoice(voice).random(random).macros).filterKeys { it in base }
+        // At temperature >= 1, Dsp.scrambleNear ignores the seed's values
+        // (only its keys matter) - so skip picking a preset there. Copilot
+        // caught this: picking one anyway spent a random draw before the
+        // per-macro rolls, shifting a seeded/shared Random's downstream
+        // sequence away from the pre-U2 behaviour temperature = 1 promises.
+        val seed = when {
+            near != null -> base + near.macros.filterKeys { it in base }
+            temperature >= 1f -> base
+            else -> base + ThumpPresets.forVoice(voice).random(random).macros.filterKeys { it in base }
+        }
         return Dsp.scrambleNear(seed, temperature, random)
     }
 

@@ -72,6 +72,15 @@ class TinesTest {
             )
             val flat = Tines.scramble(voice, Random(1), temperature = 1f, near = preset)
             assertTrue(flat.values.all { it in 0f..1f }, "$voice: temperature 1 left the 0..1 range")
+
+            // Copilot's review of this PR: at temperature >= 1 with no
+            // `near`, scramble must not spend a random draw picking a
+            // preset first - see ThumpTest's own version of this test.
+            assertEquals(
+                Dsp.scrambleNear(Tines.defaults(voice), 1f, Random(2)),
+                Tines.scramble(voice, Random(2), temperature = 1f),
+                "$voice: temperature 1 with no near must not consume a preset-selection draw",
+            )
         }
     }
 

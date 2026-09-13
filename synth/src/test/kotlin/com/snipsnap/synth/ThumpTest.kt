@@ -109,6 +109,18 @@ class ThumpTest {
             )
             val flat = Thump.scramble(voice, Random(1), temperature = 1f, near = preset)
             assertTrue(flat.values.all { it in 0f..1f }, "$voice: temperature 1 left the 0..1 range")
+
+            // Copilot's review of this PR: at temperature >= 1 with no
+            // `near`, scramble must not spend a random draw picking a
+            // preset first - Dsp.scrambleNear ignores the seed's values
+            // there anyway, and a spent draw would shift a shared
+            // Random's downstream sequence from the pre-U2 behaviour
+            // this boundary promises.
+            assertEquals(
+                Dsp.scrambleNear(Thump.defaults(voice), 1f, Random(2)),
+                Thump.scramble(voice, Random(2), temperature = 1f),
+                "$voice: temperature 1 with no near must not consume a preset-selection draw",
+            )
         }
     }
 
