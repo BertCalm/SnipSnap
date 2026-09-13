@@ -676,11 +676,16 @@ TEST(surface_engine_unloaded_pad4_falls_back_to_the_pad2_pad3_blend_at_the_seam)
     // each source played alone: monotonic, DC-preserving stages keep an
     // even blend of the two strictly between them - nowhere near the 0.0
     // true silence would settle to.
-    auto settle = [](float sampleA, float sampleB, float sampleC, float sampleD, int32_t slot1, int32_t slot2) {
+    // loadPad2/loadPad3 name which of PAD2 (always sourced from the 0.8
+    // buffer, slot 1) and PAD3 (always the 0.2 buffer, slot 2) is loaded -
+    // rather than generic slot-index arguments, so a transposed call can't
+    // quietly load the wrong level into the wrong slot the way it did the
+    // first time this test was written (caught by CI, not by this file).
+    auto settle = [](float sampleA, float sampleB, float sampleC, float sampleD, bool loadPad2, bool loadPad3) {
         SurfaceEngine e(kRate);
         std::vector<float> hi(100, 0.8f), lo(100, 0.2f);
-        if (slot1 >= 0) e.loadSample(hi.data(), hi.size(), kRate, slot1);
-        if (slot2 >= 0) e.loadSample(lo.data(), lo.size(), kRate, slot2);
+        if (loadPad2) e.loadSample(hi.data(), hi.size(), kRate, 1);
+        if (loadPad3) e.loadSample(lo.data(), lo.size(), kRate, 2);
         ControlFrame f;
         f.mode = 0;
         f.gate = true;
@@ -697,20 +702,20 @@ TEST(surface_engine_unloaded_pad4_falls_back_to_the_pad2_pad3_blend_at_the_seam)
 
     // PAD2 (0.8) and PAD3 (0.2) each alone, slot 0/3 unloaded either way -
     // the same door every other case in this file already plays through.
-    const float pad2Alone = settle(0.0f, 1.0f, 0.0f, 0.0f, 1, -1);
-    const float pad3Alone = settle(0.0f, 0.0f, 1.0f, 0.0f, 2, -1);
+    const float pad2Alone = settle(0.0f, 1.0f, 0.0f, 0.0f, true, false);
+    const float pad3Alone = settle(0.0f, 0.0f, 1.0f, 0.0f, false, true);
     CHECK(pad2Alone > pad3Alone + 0.05f);  // sanity: the levels are actually different
 
     // At the seam (per sampleWeights(0.5, 0) = {0, 0, 0, 1}), with slot 3
     // unloaded: the fallback must land strictly between the two, not at
     // the 0.0 a broken (or missing) fallback would settle to.
-    const float atSeam = settle(0.0f, 0.0f, 0.0f, 1.0f, 1, 2);
+    const float atSeam = settle(0.0f, 0.0f, 0.0f, 1.0f, true, true);
     CHECK(atSeam > pad3Alone + 0.02f);
     CHECK(atSeam < pad2Alone - 0.02f);
 
     // With only PAD2 loaded (PAD3 also empty), the whole fallback share
     // goes to PAD2 alone - the same level as PAD2 played directly.
-    const float onlyPad2AtSeam = settle(0.0f, 0.0f, 0.0f, 1.0f, 1, -1);
+    const float onlyPad2AtSeam = settle(0.0f, 0.0f, 0.0f, 1.0f, true, false);
     CHECK_NEAR(onlyPad2AtSeam, pad2Alone, 0.02f);
 }
 
