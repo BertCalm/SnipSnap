@@ -8,15 +8,17 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → SQUASH → CRUNCH → DUB → TAPE → ECHO → SPRING → MOTION
+ *    SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → SQUASH → CRUNCH → RING → DUB → TAPE → ECHO → SPRING → MOTION
  *
  * Swell before everything, so the rack sees the arrival and the hit as
  * one sound; reverse next because you effect the flipped sample, not
  * flip the effected one (the sampling-era way); smear and ghost after
  * that because they decide what the hit *is* before anything decides
- * how it sounds (anatomy before tone); dynamics before character (dub
- * beside crunch: both are the converter's own damage) before time, space
- * always last — echoes belong *in* the room — and motion after even
+ * how it sounds (anatomy before tone); dynamics before character (crunch
+ * and dub are the converter's own damage, quantized and honest; ring sits
+ * between them as damage of a different species, inharmonic rather than
+ * coarse) before time, space always last — echoes belong *in* the room —
+ * and motion after even
  * that, because the tape stops with the reverb still on it. A fixed order is
  * a playability rule wearing an architecture hat: no routing screen, no
  * wrong answers.
@@ -29,6 +31,7 @@ data class FxChain(
     val eq: Map<String, Float>? = null,
     val squash: Map<String, Float>? = null,
     val crunch: Map<String, Float>? = null,
+    val ring: Map<String, Float>? = null,
     val tape: Map<String, Float>? = null,
     val echo: Map<String, Float>? = null,
     val spring: Map<String, Float>? = null,
@@ -155,6 +158,7 @@ data class FxChain(
             Section("eq", Eq.MACROS, { it.eq }, { c, m -> c.copy(eq = m) }, Eq::process),
             Section("squash", Squash.MACROS, { it.squash }, { c, m -> c.copy(squash = m) }, Squash::process),
             Section("crunch", Crunch.MACROS, { it.crunch }, { c, m -> c.copy(crunch = m) }, Crunch::process),
+            Section("ring", Ring.MACROS, { it.ring }, { c, m -> c.copy(ring = m) }, Ring::process),
             Section("dub", Dub.MACROS, { it.dub }, { c, m -> c.copy(dub = m) }, Dub::process),
             Section("tape", Tape.MACROS, { it.tape }, { c, m -> c.copy(tape = m) }, Tape::process),
             Section("echo", Echo.MACROS, { it.echo }, { c, m -> c.copy(echo = m) }, Echo::process),

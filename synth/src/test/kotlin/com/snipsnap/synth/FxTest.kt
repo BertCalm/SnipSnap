@@ -406,6 +406,29 @@ class FxTest {
         assertEquals(DrumClass.SNARE, Classifier.classify(Spike.process(snare)).drumClass)
     }
 
+    // ---------- RING ----------
+
+    @Test
+    fun `RING MIX zero is a copy and a rung tone gains sidebands`() {
+        val dry = Ring.process(tone, mapOf("MIX" to 0f))
+        assertTrue(dry.samples.contentEquals(tone.samples), "RING at MIX 0 is not a copy")
+        val wet = Ring.process(tone, mapOf("FREQ" to 0.5f, "MIX" to 1f))
+        val toneCrossings = crossings(tone, 0.2f, 0.8f)
+        val wetCrossings = crossings(wet, 0.2f, 0.8f)
+        assertTrue(
+            wetCrossings != toneCrossings,
+            "RING left the tone's pitch untouched: $toneCrossings crossings -> $wetCrossings",
+        )
+    }
+
+    @Test
+    fun `a ringed hit is no longer the hit it was`() {
+        // The GHOST exemption: ring mod destroys pitch identity by design.
+        val wet = Ring.process(kick, mapOf("FREQ" to 0.6f, "MIX" to 1f))
+        val ringLikeness = likeness(kick, wet)
+        assertTrue(ringLikeness < 0.9, "RING at full MIX barely changed the sound: likeness $ringLikeness")
+    }
+
     // ---------- DUB + SWELL + the smear's FLOOR ----------
 
     /** How much of the source survives, 0..1: the normalized correlation of the two, mono-folded, at zero lag. */
