@@ -379,6 +379,33 @@ class FxTest {
         assertTrue(Classifier.classify(ghosted).drumClass != DrumClass.KICK, "what's left of a kick is not a kick")
     }
 
+    // ---------- SPIKE ----------
+
+    @Test
+    fun `SPIKE at its neutral is a copy, and ATTACK sharpens the transient`() {
+        val flat = Spike.process(kick, mapOf("ATTACK" to 0f, "SUSTAIN" to 0.5f))
+        assertTrue(flat.samples.contentEquals(kick.samples), "SPIKE at neutral is not a copy")
+        val sharp = Spike.process(kick, mapOf("ATTACK" to 1f, "SUSTAIN" to 0.5f))
+        assertTrue(
+            peakIn(sharp, 0f, 0.01f) / rms(sharp) > peakIn(kick, 0f, 0.01f) / rms(kick),
+            "ATTACK did not raise the transient against the body",
+        )
+    }
+
+    @Test
+    fun `SPIKE SUSTAIN below centre dries the tail and above it swells`() {
+        val dry = Spike.process(kick, mapOf("ATTACK" to 0f, "SUSTAIN" to 0f))
+        val wet = Spike.process(kick, mapOf("ATTACK" to 0f, "SUSTAIN" to 1f))
+        assertTrue(sustainRms(dry) < sustainRms(kick), "SUSTAIN 0 did not dry the tail")
+        assertTrue(sustainRms(wet) > sustainRms(dry), "SUSTAIN 1 is not fuller than SUSTAIN 0")
+    }
+
+    @Test
+    fun `a spiked kick is still a kick`() {
+        assertEquals(DrumClass.KICK, Classifier.classify(Spike.process(kick)).drumClass)
+        assertEquals(DrumClass.SNARE, Classifier.classify(Spike.process(snare)).drumClass)
+    }
+
     // ---------- DUB + SWELL + the smear's FLOOR ----------
 
     /** How much of the source survives, 0..1: the normalized correlation of the two, mono-folded, at zero lag. */
