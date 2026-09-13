@@ -96,6 +96,10 @@ class PersonalityTest {
         }
         assertTrue("STOP ON KITS" in Copy.HUM_INSIDE, "the INSIDE has to be stopped before the mic can start: ${Copy.HUM_INSIDE}")
         assertTrue("OPEN CUT" in Copy.CHOP_NO_HITS, "GRID is inside the closed CUT box: ${Copy.CHOP_NO_HITS}")
+        // BOUNCE on a stopped GROOVE used to just dim with no reason
+        // (wiring review finding 8) - tapping it now names the control
+        // that actually resolves it, the same PLAY button GROOVE draws.
+        assertTrue("PLAY" in Copy.GROOVE_BOUNCE_NEEDS_PLAY, "names the control that unblocks BOUNCE: ${Copy.GROOVE_BOUNCE_NEEDS_PLAY}")
         assertEquals("BANK B · 16 FREE", Copy.catchBank('B', 16))
         assertEquals("NO GROOVE: NO BEAT HEARD - THE EAR FINDS HITS, NOT TONES.", Copy.grooveRefused("no beat heard - the ear finds hits, not tones."))
         assertEquals("BREAK FOUND AT 1:12-1:20. IN AND OUT ARE SET. INSTANT KIT IS ONE TAP AWAY.", Copy.dug("1:12", "1:20"))
