@@ -33,7 +33,7 @@ object Roll {
         val period = Wobble.periodSec(bpm, division)
         val need = period * MIN_DIVISIONS
         if (snip.durationSeconds < need) {
-            return "the hit is shorter than $MIN_DIVISIONS of $division at ${Math.round(bpm)} BPM " +
+            return "the hit is shorter than $MIN_DIVISIONS divisions of $division at ${Math.round(bpm)} BPM " +
                 "- it has %.2f s and needs %.2f s".format(java.util.Locale.ROOT, snip.durationSeconds, need)
         }
         return null

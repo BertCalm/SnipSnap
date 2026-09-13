@@ -22,10 +22,18 @@ class RollTest {
         val out = Roll.roll(kick, 92f, "1/16", 1f)
         assertEquals(kick.frameCount, out.frameCount, "ROLL changed the hit's length")
         val period = (Wobble.periodSec(92f, "1/16") * kick.sampleRate).toInt()
-        // The second repeat starts with the same audio the first one did.
+        val head = out.samples[0]
+        assertTrue(abs(head) > 1e-6f, "the head is silent, the ratio check is meaningless")
+        // Each repeat is the head again, decayed by DECAY compounding - a
+        // relative ratio, not an absolute difference against a small sample
+        // value, so a regression that drops the decay entirely cannot pass.
         assertTrue(
-            abs(out.samples[period] - out.samples[0] * Roll.DECAY) < 0.05f,
-            "the second repeat is not the head again, decayed",
+            abs(out.samples[period] / head - Roll.DECAY) < 0.02f,
+            "first repeat is not the head decayed: ${out.samples[period] / head} vs ${Roll.DECAY}",
+        )
+        assertTrue(
+            abs(out.samples[2 * period] / head - Roll.DECAY * Roll.DECAY) < 0.02f,
+            "second repeat does not compound the decay: ${out.samples[2 * period] / head} vs ${Roll.DECAY * Roll.DECAY}",
         )
     }
 
