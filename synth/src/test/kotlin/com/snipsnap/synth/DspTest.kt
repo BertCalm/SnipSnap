@@ -93,4 +93,60 @@ class DspTest {
         Dsp.limitPeak(buf, ceiling = 1f)
         assertTrue(buf.all { it == 0f }, "silence has no peak to rescale from")
     }
+
+    // ---------- Dsp.decimate (U6, docs/SYNTH_UPGRADE.md) ----------
+    // The whole point of rendering oversampled: content above the target
+    // rate's Nyquist must actually be rejected here, not just resized away.
+    // A regression to a single direct 4:1 Resampler.resample call (instead
+    // of the two cascaded 2x steps) would still pass every other synth
+    // test in this build - it only shows up as weaker rejection right
+    // above the new Nyquist, which is exactly what these measure.
+
+    private fun sine(hz: Double, seconds: Float, rate: Int, amp: Float = 0.5f): FloatArray {
+        val n = (seconds * rate).toInt()
+        return FloatArray(n) { i -> (amp * kotlin.math.sin(2.0 * kotlin.math.PI * hz * i / rate)).toFloat() }
+    }
+
+    private fun rms(buf: FloatArray): Float =
+        kotlin.math.sqrt(buf.sumOf { (it * it).toDouble() } / buf.size).toFloat()
+
+    @Test
+    fun `decimate rejects a tone above the target rate's Nyquist`() {
+        val oversampledRate = Dsp.RATE * Dsp.OVERSAMPLE
+        // 30kHz sits above 44.1kHz's 22.05kHz Nyquist but well inside the
+        // oversampled rate's own (88.2kHz) - exactly the band the render
+        // loop is free to produce harmonics into, that decimate then has
+        // to remove before the audio ships at RATE.
+        val above = sine(30_000.0, seconds = 0.05f, rate = oversampledRate)
+        val before = rms(above)
+        val after = rms(Dsp.decimate(above, Dsp.RATE))
+        assertTrue(
+            after < before * 0.3f,
+            "a 30kHz tone should be substantially rejected decimating to 44.1kHz: $before -> $after",
+        )
+    }
+
+    @Test
+    fun `decimate preserves an in-band tone`() {
+        val oversampledRate = Dsp.RATE * Dsp.OVERSAMPLE
+        val inBand = sine(1_000.0, seconds = 0.05f, rate = oversampledRate)
+        val before = rms(inBand)
+        val after = rms(Dsp.decimate(inBand, Dsp.RATE))
+        assertTrue(
+            kotlin.math.abs(after - before) < before * 0.1f,
+            "a 1kHz tone should pass through decimation to 44.1kHz essentially unchanged: $before -> $after",
+        )
+    }
+
+    @Test
+    fun `decimate returns audio at a quarter the sample count`() {
+        val oversampledRate = Dsp.RATE * Dsp.OVERSAMPLE
+        val buf = sine(1_000.0, seconds = 0.05f, rate = oversampledRate)
+        val decimated = Dsp.decimate(buf, Dsp.RATE)
+        val expected = buf.size / Dsp.OVERSAMPLE
+        assertTrue(
+            kotlin.math.abs(decimated.size - expected) <= 2,
+            "decimating by ${Dsp.OVERSAMPLE}x should return about $expected frames, got ${decimated.size}",
+        )
+    }
 }
