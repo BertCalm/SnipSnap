@@ -31,29 +31,33 @@ object Thump {
     fun macrosFor(voice: ThumpVoice): List<MacroSpec> = when (voice) {
         ThumpVoice.KICK -> listOf(
             MacroSpec("TUNE", 0.35f), MacroSpec("SWEEP", 0.5f), MacroSpec("DECAY", 0.45f),
-            MacroSpec("CLICK", 0.35f), MacroSpec("DRIVE", 0.25f),
+            MacroSpec("CLICK", 0.35f), MacroSpec("DRIVE", 0.25f), MacroSpec("PUNCH", 0.5f),
         )
         ThumpVoice.SNARE -> listOf(
             MacroSpec("TUNE", 0.4f), MacroSpec("SNAP", 0.55f), MacroSpec("DECAY", 0.4f),
-            MacroSpec("TONE", 0.55f),
+            MacroSpec("TONE", 0.55f), MacroSpec("PUNCH", 0.5f),
         )
         ThumpVoice.HAT_CLOSED -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.3f), MacroSpec("METAL", 0.5f),
+            MacroSpec("PUNCH", 0.5f),
         )
         ThumpVoice.HAT_OPEN -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.55f), MacroSpec("METAL", 0.5f),
+            MacroSpec("PUNCH", 0.5f),
         )
         ThumpVoice.CLAP -> listOf(
             MacroSpec("SPREAD", 0.5f), MacroSpec("DECAY", 0.45f), MacroSpec("TONE", 0.5f),
+            MacroSpec("PUNCH", 0.5f),
         )
         ThumpVoice.TOM -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("SWEEP", 0.4f), MacroSpec("DECAY", 0.5f),
+            MacroSpec("PUNCH", 0.5f),
         )
         ThumpVoice.COWBELL -> listOf(
-            MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.4f),
+            MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.4f), MacroSpec("PUNCH", 0.5f),
         )
         ThumpVoice.RIM -> listOf(
-            MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.3f),
+            MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.3f), MacroSpec("PUNCH", 0.5f),
         )
     }
 
@@ -99,6 +103,7 @@ object Thump {
             ThumpVoice.COWBELL -> cowbell(m)
             ThumpVoice.RIM -> rim(m)
         }
+        Punch.apply(buf, m.getValue("PUNCH"))
         Dsp.normalize(buf)
         Dsp.fadeTail(buf)
         return Snip(buf, channels = 1, sampleRate = RATE)
